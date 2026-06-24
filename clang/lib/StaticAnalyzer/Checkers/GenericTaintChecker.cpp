@@ -404,7 +404,7 @@ private:
 
   /// The taint rules are initalized with the help of a CheckerContext to
   /// access user-provided configuration.
-  void initTaintRules(CheckerContext &C) const;
+  LLVM_ATTRIBUTE_MINSIZE void initTaintRules(CheckerContext &C) const;
 
   // TODO: The two separate `CallDescriptionMap`s were introduced when
   // `CallDescription` was unable to restrict matches to the global namespace
@@ -561,6 +561,223 @@ GenericTaintRuleParser::parseConfiguration(const std::string &Option,
   return Rules;
 }
 
+enum class TaintRuleKind : uint8_t { Source, Prop, Sink };
+enum class TaintRuleMessage : uint8_t {
+  None,
+  SanitizeSystemArgs,
+  UncontrolledFormatString,
+};
+
+struct ArgSetDescriptor {
+  int8_t Args[4];
+  uint8_t Count;
+  int8_t VariadicIndex;
+};
+
+struct TaintRuleDescriptor {
+  uint16_t NameOffset;
+  uint8_t NameLength;
+  uint8_t Mode;
+  TaintRuleKind Kind;
+  TaintRuleMessage Message;
+  ArgSetDescriptor First;
+  ArgSetDescriptor Second;
+};
+
+static_assert(sizeof(ArgSetDescriptor) == 6);
+static_assert(sizeof(TaintRuleDescriptor) == 18);
+
+// Keep each rule in a compact static descriptor. Construct the dynamic
+// CallDescription and GenericTaintRule objects once when the checker is
+// first used.
+// clang-format off
+#define TAINT_ARGS(A0, A1, A2, A3, Count, Variadic) \
+  {{A0, A1, A2, A3}, Count, Variadic}
+#define TAINT_CLIB static_cast<uint8_t>(CDM::CLibrary)
+#define TAINT_CLIB_HARDENED \
+  static_cast<uint8_t>(CDM::CLibraryMaybeHardened)
+#define TAINT_SOURCE TaintRuleKind::Source
+#define TAINT_PROP TaintRuleKind::Prop
+#define TAINT_SINK TaintRuleKind::Sink
+#define TAINT_NO_MESSAGE TaintRuleMessage::None
+#define TAINT_SANITIZE_SYSTEM_ARGS TaintRuleMessage::SanitizeSystemArgs
+#define TAINT_UNCONTROLLED_FORMAT_STRING \
+  TaintRuleMessage::UncontrolledFormatString
+#define TAINT_RULES(M) \
+  /* Sources. */ \
+  M(fdopen, TAINT_CLIB, TAINT_SOURCE, TAINT_NO_MESSAGE, TAINT_ARGS(-1, 0, 0, 0, 1, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(fopen, TAINT_CLIB, TAINT_SOURCE, TAINT_NO_MESSAGE, TAINT_ARGS(-1, 0, 0, 0, 1, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(freopen, TAINT_CLIB, TAINT_SOURCE, TAINT_NO_MESSAGE, TAINT_ARGS(-1, 0, 0, 0, 1, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(getch, TAINT_CLIB, TAINT_SOURCE, TAINT_NO_MESSAGE, TAINT_ARGS(-1, 0, 0, 0, 1, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(getchar, TAINT_CLIB, TAINT_SOURCE, TAINT_NO_MESSAGE, TAINT_ARGS(-1, 0, 0, 0, 1, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(getchar_unlocked, TAINT_CLIB, TAINT_SOURCE, TAINT_NO_MESSAGE, TAINT_ARGS(-1, 0, 0, 0, 1, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(gets, TAINT_CLIB, TAINT_SOURCE, TAINT_NO_MESSAGE, TAINT_ARGS(0, -1, 0, 0, 2, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(gets_s, TAINT_CLIB, TAINT_SOURCE, TAINT_NO_MESSAGE, TAINT_ARGS(0, -1, 0, 0, 2, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(scanf, TAINT_CLIB, TAINT_SOURCE, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 0, 1), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(scanf_s, TAINT_CLIB, TAINT_SOURCE, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 0, 1), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(wgetch, TAINT_CLIB, TAINT_SOURCE, TAINT_NO_MESSAGE, TAINT_ARGS(-1, 0, 0, 0, 1, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  /* _IO_getc could be a propagator, but that would require modeling all */ \
+  /* possible sources of the _IO_FILE * argument. */ \
+  M(_IO_getc, TAINT_CLIB, TAINT_SOURCE, TAINT_NO_MESSAGE, TAINT_ARGS(-1, 0, 0, 0, 1, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(getcwd, TAINT_CLIB, TAINT_SOURCE, TAINT_NO_MESSAGE, TAINT_ARGS(0, -1, 0, 0, 2, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(getwd, TAINT_CLIB, TAINT_SOURCE, TAINT_NO_MESSAGE, TAINT_ARGS(0, -1, 0, 0, 2, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(readlink, TAINT_CLIB, TAINT_SOURCE, TAINT_NO_MESSAGE, TAINT_ARGS(1, -1, 0, 0, 2, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(readlinkat, TAINT_CLIB, TAINT_SOURCE, TAINT_NO_MESSAGE, TAINT_ARGS(2, -1, 0, 0, 2, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(get_current_dir_name, TAINT_CLIB, TAINT_SOURCE, TAINT_NO_MESSAGE, TAINT_ARGS(-1, 0, 0, 0, 1, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(gethostname, TAINT_CLIB, TAINT_SOURCE, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(getnameinfo, TAINT_CLIB, TAINT_SOURCE, TAINT_NO_MESSAGE, TAINT_ARGS(2, 4, 0, 0, 2, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(getseuserbyname, TAINT_CLIB, TAINT_SOURCE, TAINT_NO_MESSAGE, TAINT_ARGS(1, 2, 0, 0, 2, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(getgroups, TAINT_CLIB, TAINT_SOURCE, TAINT_NO_MESSAGE, TAINT_ARGS(1, -1, 0, 0, 2, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(getlogin, TAINT_CLIB, TAINT_SOURCE, TAINT_NO_MESSAGE, TAINT_ARGS(-1, 0, 0, 0, 1, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(getlogin_r, TAINT_CLIB, TAINT_SOURCE, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  /* Propagators. */ \
+  M(accept, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(atoi, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(atol, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(atoll, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(fgetc, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(fgetln, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(fgets, TAINT_CLIB_HARDENED, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(2, 0, 0, 0, 1, -2), TAINT_ARGS(0, -1, 0, 0, 2, -2)) \
+  M(fgetws, TAINT_CLIB_HARDENED, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(2, 0, 0, 0, 1, -2), TAINT_ARGS(0, -1, 0, 0, 2, -2)) \
+  M(fscanf, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(0, 0, 0, 0, 0, 2)) \
+  M(fscanf_s, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(0, 0, 0, 0, 0, 2)) \
+  M(sscanf, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(0, 0, 0, 0, 0, 2)) \
+  M(sscanf_s, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(0, 0, 0, 0, 0, 2)) \
+  M(getc, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(getc_unlocked, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(getdelim, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(3, 0, 0, 0, 1, -2), TAINT_ARGS(0, 0, 0, 0, 1, -2)) \
+  /* TODO: This also matches std::getline(); rule it out explicitly. */ \
+  M(getline, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(2, 0, 0, 0, 1, -2), TAINT_ARGS(0, 0, 0, 0, 1, -2)) \
+  M(getw, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(pread, TAINT_CLIB_HARDENED, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 1, 2, 3, 4, -2), TAINT_ARGS(1, -1, 0, 0, 2, -2)) \
+  M(read, TAINT_CLIB_HARDENED, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 2, 0, 0, 2, -2), TAINT_ARGS(1, -1, 0, 0, 2, -2)) \
+  M(fread, TAINT_CLIB_HARDENED, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(3, 0, 0, 0, 1, -2), TAINT_ARGS(0, -1, 0, 0, 2, -2)) \
+  M(recv, TAINT_CLIB_HARDENED, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(1, -1, 0, 0, 2, -2)) \
+  M(recvfrom, TAINT_CLIB_HARDENED, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(1, -1, 0, 0, 2, -2)) \
+  M(ttyname, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(ttyname_r, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(1, -1, 0, 0, 2, -2)) \
+  M(basename, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(dirname, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(fnmatch, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(1, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(mbtowc, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(1, 0, 0, 0, 1, -2), TAINT_ARGS(0, -1, 0, 0, 2, -2)) \
+  M(wctomb, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(1, 0, 0, 0, 1, -2), TAINT_ARGS(0, -1, 0, 0, 2, -2)) \
+  M(wcwidth, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(memcmp, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 1, 2, 0, 3, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(memcpy, TAINT_CLIB_HARDENED, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(1, 2, 0, 0, 2, -2), TAINT_ARGS(0, -1, 0, 0, 2, -2)) \
+  M(memmove, TAINT_CLIB_HARDENED, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(1, 2, 0, 0, 2, -2), TAINT_ARGS(0, -1, 0, 0, 2, -2)) \
+  M(bcopy, TAINT_CLIB_HARDENED, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 2, 0, 0, 2, -2), TAINT_ARGS(1, 0, 0, 0, 1, -2)) \
+  /* These search functions only propagate taint from the haystack. */ \
+  M(memmem, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 1, 0, 0, 2, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(strstr, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(strcasestr, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(memchr, TAINT_CLIB_HARDENED, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(memrchr, TAINT_CLIB_HARDENED, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(rawmemchr, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(strchr, TAINT_CLIB_HARDENED, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(strrchr, TAINT_CLIB_HARDENED, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(strchrnul, TAINT_CLIB_HARDENED, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(index, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(rindex, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  /* FIXME: For arrays, only the first array element gets tainted. */ \
+  M(qsort, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(0, 0, 0, 0, 1, -2)) \
+  M(qsort_r, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(0, 0, 0, 0, 1, -2)) \
+  M(strcmp, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 1, 0, 0, 2, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(strcasecmp, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 1, 0, 0, 2, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(strncmp, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 1, 2, 0, 3, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(strncasecmp, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 1, 2, 0, 3, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(strspn, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 1, 0, 0, 2, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(strcspn, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 1, 0, 0, 2, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(strpbrk, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(strndup, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 1, 0, 0, 2, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(strndupa, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 1, 0, 0, 2, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(strdup, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(strdupa, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(wcsdup, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  /* strlen, wcslen, strnlen, and similar functions intentionally do not */ \
+  /* propagate taint. See https://github.com/llvm/llvm-project/pull/66086. */ \
+  M(strtol, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(1, -1, 0, 0, 2, -2)) \
+  M(strtoll, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(1, -1, 0, 0, 2, -2)) \
+  M(strtoul, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(1, -1, 0, 0, 2, -2)) \
+  M(strtoull, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(1, -1, 0, 0, 2, -2)) \
+  M(tolower, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(toupper, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(isalnum, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(isalpha, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(isascii, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(isblank, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(iscntrl, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(isdigit, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(isgraph, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(islower, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(isprint, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(ispunct, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(isspace, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(isupper, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(isxdigit, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(-1, 0, 0, 0, 1, -2)) \
+  M(strcpy, TAINT_CLIB_HARDENED, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(1, 0, 0, 0, 1, -2), TAINT_ARGS(0, -1, 0, 0, 2, -2)) \
+  M(stpcpy, TAINT_CLIB_HARDENED, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(1, 0, 0, 0, 1, -2), TAINT_ARGS(0, -1, 0, 0, 2, -2)) \
+  M(strcat, TAINT_CLIB_HARDENED, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 1, 0, 0, 2, -2), TAINT_ARGS(0, -1, 0, 0, 2, -2)) \
+  M(wcsncat, TAINT_CLIB_HARDENED, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 1, 0, 0, 2, -2), TAINT_ARGS(0, -1, 0, 0, 2, -2)) \
+  M(strncpy, TAINT_CLIB_HARDENED, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(1, 2, 0, 0, 2, -2), TAINT_ARGS(0, -1, 0, 0, 2, -2)) \
+  M(strncat, TAINT_CLIB_HARDENED, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 1, 2, 0, 3, -2), TAINT_ARGS(0, -1, 0, 0, 2, -2)) \
+  M(strlcpy, TAINT_CLIB_HARDENED, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(1, 2, 0, 0, 2, -2), TAINT_ARGS(0, 0, 0, 0, 1, -2)) \
+  M(strlcat, TAINT_CLIB_HARDENED, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(0, 1, 2, 0, 3, -2), TAINT_ARGS(0, 0, 0, 0, 1, -2)) \
+  /* The hardened sprintf variants insert parameters in the middle, so */ \
+  /* CLibraryMaybeHardened cannot model them together with the base calls. */ \
+  M(snprintf, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(1, 2, 0, 0, 2, 3), TAINT_ARGS(0, -1, 0, 0, 2, -2)) \
+  M(sprintf, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(1, 0, 0, 0, 1, 2), TAINT_ARGS(0, -1, 0, 0, 2, -2)) \
+  M(__snprintf_chk, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(1, 4, 0, 0, 2, 5), TAINT_ARGS(0, -1, 0, 0, 2, -2)) \
+  M(__sprintf_chk, TAINT_CLIB, TAINT_PROP, TAINT_NO_MESSAGE, TAINT_ARGS(3, 0, 0, 0, 1, 4), TAINT_ARGS(0, -1, 0, 0, 2, -2)) \
+  /* Sinks. */ \
+  M(system, TAINT_CLIB, TAINT_SINK, TAINT_SANITIZE_SYSTEM_ARGS, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(popen, TAINT_CLIB, TAINT_SINK, TAINT_SANITIZE_SYSTEM_ARGS, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(execl, TAINT_CLIB, TAINT_SINK, TAINT_SANITIZE_SYSTEM_ARGS, TAINT_ARGS(0, 0, 0, 0, 0, 0), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(execle, TAINT_CLIB, TAINT_SINK, TAINT_SANITIZE_SYSTEM_ARGS, TAINT_ARGS(0, 0, 0, 0, 0, 0), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(execlp, TAINT_CLIB, TAINT_SINK, TAINT_SANITIZE_SYSTEM_ARGS, TAINT_ARGS(0, 0, 0, 0, 0, 0), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(execv, TAINT_CLIB, TAINT_SINK, TAINT_SANITIZE_SYSTEM_ARGS, TAINT_ARGS(0, 1, 0, 0, 2, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(execve, TAINT_CLIB, TAINT_SINK, TAINT_SANITIZE_SYSTEM_ARGS, TAINT_ARGS(0, 1, 2, 0, 3, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(fexecve, TAINT_CLIB, TAINT_SINK, TAINT_SANITIZE_SYSTEM_ARGS, TAINT_ARGS(0, 1, 2, 0, 3, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(execvp, TAINT_CLIB, TAINT_SINK, TAINT_SANITIZE_SYSTEM_ARGS, TAINT_ARGS(0, 1, 0, 0, 2, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(execvpe, TAINT_CLIB, TAINT_SINK, TAINT_SANITIZE_SYSTEM_ARGS, TAINT_ARGS(0, 1, 2, 0, 3, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(dlopen, TAINT_CLIB, TAINT_SINK, TAINT_SANITIZE_SYSTEM_ARGS, TAINT_ARGS(0, 0, 0, 0, 1, -2), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  /* Allocation functions are intentionally not unconditional sinks because */ \
+  /* that produces false positives; specialized checkers should model them. */ \
+  M(setproctitle, TAINT_CLIB, TAINT_SINK, TAINT_UNCONTROLLED_FORMAT_STRING, TAINT_ARGS(0, 0, 0, 0, 1, 1), TAINT_ARGS(0, 0, 0, 0, 0, -2)) \
+  M(setproctitle_fast, TAINT_CLIB, TAINT_SINK, TAINT_UNCONTROLLED_FORMAT_STRING, TAINT_ARGS(0, 0, 0, 0, 1, 1), TAINT_ARGS(0, 0, 0, 0, 0, -2))
+// clang-format on
+
+struct TaintRuleNameTable {
+#define TAINT_RULE_NAME(Name, ...) char N_##Name[sizeof(#Name)];
+  TAINT_RULES(TAINT_RULE_NAME)
+#undef TAINT_RULE_NAME
+};
+
+constexpr TaintRuleNameTable TaintRuleNames = {
+#define TAINT_RULE_NAME(Name, ...) #Name,
+    TAINT_RULES(TAINT_RULE_NAME)
+#undef TAINT_RULE_NAME
+};
+
+static_assert(sizeof(TaintRuleNameTable) <=
+              std::numeric_limits<uint16_t>::max());
+
+#define TAINT_RULE_DESCRIPTOR(Name, ...)                                       \
+  {static_cast<uint16_t>(offsetof(TaintRuleNameTable, N_##Name)),              \
+   static_cast<uint8_t>(sizeof(TaintRuleNames.N_##Name) - 1), __VA_ARGS__},
+constexpr TaintRuleDescriptor TaintRuleDescriptors[] = {
+    TAINT_RULES(TAINT_RULE_DESCRIPTOR)};
+#undef TAINT_RULE_DESCRIPTOR
+#undef TAINT_RULES
+#undef TAINT_UNCONTROLLED_FORMAT_STRING
+#undef TAINT_SANITIZE_SYSTEM_ARGS
+#undef TAINT_NO_MESSAGE
+#undef TAINT_SINK
+#undef TAINT_PROP
+#undef TAINT_SOURCE
+#undef TAINT_CLIB_HARDENED
+#undef TAINT_CLIB
+#undef TAINT_ARGS
+
 void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
   // Check for exact name match for functions without builtin substitutes.
   // Use qualified name, because these are C functions without namespace.
@@ -572,226 +789,50 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       std::vector<std::pair<CallDescription, GenericTaintRule>>;
   using TR = GenericTaintRule;
 
-  RulesConstructionTy GlobalCRules{
-      // Sources
-      {{CDM::CLibrary, {"fdopen"}}, TR::Source({{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"fopen"}}, TR::Source({{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"freopen"}}, TR::Source({{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"getch"}}, TR::Source({{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"getchar"}}, TR::Source({{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"getchar_unlocked"}}, TR::Source({{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"gets"}}, TR::Source({{0, ReturnValueIndex}})},
-      {{CDM::CLibrary, {"gets_s"}}, TR::Source({{0, ReturnValueIndex}})},
-      {{CDM::CLibrary, {"scanf"}}, TR::Source({{}, 1})},
-      {{CDM::CLibrary, {"scanf_s"}}, TR::Source({{}, 1})},
-      {{CDM::CLibrary, {"wgetch"}}, TR::Source({{ReturnValueIndex}})},
-      // Sometimes the line between taint sources and propagators is blurry.
-      // _IO_getc is choosen to be a source, but could also be a propagator.
-      // This way it is simpler, as modeling it as a propagator would require
-      // to model the possible sources of _IO_FILE * values, which the _IO_getc
-      // function takes as parameters.
-      {{CDM::CLibrary, {"_IO_getc"}}, TR::Source({{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"getcwd"}}, TR::Source({{0, ReturnValueIndex}})},
-      {{CDM::CLibrary, {"getwd"}}, TR::Source({{0, ReturnValueIndex}})},
-      {{CDM::CLibrary, {"readlink"}}, TR::Source({{1, ReturnValueIndex}})},
-      {{CDM::CLibrary, {"readlinkat"}}, TR::Source({{2, ReturnValueIndex}})},
-      {{CDM::CLibrary, {"get_current_dir_name"}},
-       TR::Source({{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"gethostname"}}, TR::Source({{0}})},
-      {{CDM::CLibrary, {"getnameinfo"}}, TR::Source({{2, 4}})},
-      {{CDM::CLibrary, {"getseuserbyname"}}, TR::Source({{1, 2}})},
-      {{CDM::CLibrary, {"getgroups"}}, TR::Source({{1, ReturnValueIndex}})},
-      {{CDM::CLibrary, {"getlogin"}}, TR::Source({{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"getlogin_r"}}, TR::Source({{0}})},
+  RulesConstructionTy GlobalCRules;
+  GlobalCRules.reserve(std::size(TaintRuleDescriptors) + 2);
 
-      // Props
-      {{CDM::CLibrary, {"accept"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"atoi"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"atol"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"atoll"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"fgetc"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"fgetln"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibraryMaybeHardened, {"fgets"}},
-       TR::Prop({{2}}, {{0, ReturnValueIndex}})},
-      {{CDM::CLibraryMaybeHardened, {"fgetws"}},
-       TR::Prop({{2}}, {{0, ReturnValueIndex}})},
-      {{CDM::CLibrary, {"fscanf"}}, TR::Prop({{0}}, {{}, 2})},
-      {{CDM::CLibrary, {"fscanf_s"}}, TR::Prop({{0}}, {{}, 2})},
-      {{CDM::CLibrary, {"sscanf"}}, TR::Prop({{0}}, {{}, 2})},
-      {{CDM::CLibrary, {"sscanf_s"}}, TR::Prop({{0}}, {{}, 2})},
+  auto MakeArgSet = [](const ArgSetDescriptor &Desc) {
+    ArgVecTy Args;
+    Args.append(Desc.Args, Desc.Args + Desc.Count);
+    std::optional<ArgIdxTy> VariadicIndex;
+    if (Desc.VariadicIndex != -2)
+      VariadicIndex = Desc.VariadicIndex;
+    return ArgSet(std::move(Args), VariadicIndex);
+  };
 
-      {{CDM::CLibrary, {"getc"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"getc_unlocked"}},
-       TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"getdelim"}}, TR::Prop({{3}}, {{0}})},
-      // TODO: this intends to match the C function `getline()`, but the call
-      // description also matches the C++ function `std::getline()`; it should
-      // be ruled out by some additional logic.
-      {{CDM::CLibrary, {"getline"}}, TR::Prop({{2}}, {{0}})},
-      {{CDM::CLibrary, {"getw"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibraryMaybeHardened, {"pread"}},
-       TR::Prop({{0, 1, 2, 3}}, {{1, ReturnValueIndex}})},
-      {{CDM::CLibraryMaybeHardened, {"read"}},
-       TR::Prop({{0, 2}}, {{1, ReturnValueIndex}})},
-      {{CDM::CLibraryMaybeHardened, {"fread"}},
-       TR::Prop({{3}}, {{0, ReturnValueIndex}})},
-      {{CDM::CLibraryMaybeHardened, {"recv"}},
-       TR::Prop({{0}}, {{1, ReturnValueIndex}})},
-      {{CDM::CLibraryMaybeHardened, {"recvfrom"}},
-       TR::Prop({{0}}, {{1, ReturnValueIndex}})},
-
-      {{CDM::CLibrary, {"ttyname"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"ttyname_r"}},
-       TR::Prop({{0}}, {{1, ReturnValueIndex}})},
-
-      {{CDM::CLibrary, {"basename"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"dirname"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"fnmatch"}}, TR::Prop({{1}}, {{ReturnValueIndex}})},
-
-      {{CDM::CLibrary, {"mbtowc"}}, TR::Prop({{1}}, {{0, ReturnValueIndex}})},
-      {{CDM::CLibrary, {"wctomb"}}, TR::Prop({{1}}, {{0, ReturnValueIndex}})},
-      {{CDM::CLibrary, {"wcwidth"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-
-      {{CDM::CLibrary, {"memcmp"}},
-       TR::Prop({{0, 1, 2}}, {{ReturnValueIndex}})},
-      {{CDM::CLibraryMaybeHardened, {"memcpy"}},
-       TR::Prop({{1, 2}}, {{0, ReturnValueIndex}})},
-      {{CDM::CLibraryMaybeHardened, {"memmove"}},
-       TR::Prop({{1, 2}}, {{0, ReturnValueIndex}})},
-      {{CDM::CLibraryMaybeHardened, {"bcopy"}}, TR::Prop({{0, 2}}, {{1}})},
-
-      // Note: "memmem" and its variants search for a byte sequence ("needle")
-      // in a larger area ("haystack"). Currently we only propagate taint from
-      // the haystack to the result, but in theory tampering with the needle
-      // could also produce incorrect results.
-      {{CDM::CLibrary, {"memmem"}}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"strstr"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"strcasestr"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-
-      // Analogously, the following functions search for a byte within a buffer
-      // and we only propagate taint from the buffer to the result.
-      {{CDM::CLibraryMaybeHardened, {"memchr"}},
-       TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibraryMaybeHardened, {"memrchr"}},
-       TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"rawmemchr"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibraryMaybeHardened, {"strchr"}},
-       TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibraryMaybeHardened, {"strrchr"}},
-       TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibraryMaybeHardened, {"strchrnul"}},
-       TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"index"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"rindex"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-
-      // FIXME: In case of arrays, only the first element of the array gets
-      // tainted.
-      {{CDM::CLibrary, {"qsort"}}, TR::Prop({{0}}, {{0}})},
-      {{CDM::CLibrary, {"qsort_r"}}, TR::Prop({{0}}, {{0}})},
-
-      {{CDM::CLibrary, {"strcmp"}}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"strcasecmp"}},
-       TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"strncmp"}},
-       TR::Prop({{0, 1, 2}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"strncasecmp"}},
-       TR::Prop({{0, 1, 2}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"strspn"}}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"strcspn"}}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"strpbrk"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-
-      {{CDM::CLibrary, {"strndup"}}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"strndupa"}}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"strdup"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"strdupa"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"wcsdup"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-
-      // strlen, wcslen, strnlen and alike intentionally don't propagate taint.
-      // See the details here: https://github.com/llvm/llvm-project/pull/66086
-
-      {{CDM::CLibrary, {"strtol"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
-      {{CDM::CLibrary, {"strtoll"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
-      {{CDM::CLibrary, {"strtoul"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
-      {{CDM::CLibrary, {"strtoull"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
-
-      {{CDM::CLibrary, {"tolower"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"toupper"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-
-      {{CDM::CLibrary, {"isalnum"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"isalpha"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"isascii"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"isblank"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"iscntrl"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"isdigit"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"isgraph"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"islower"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"isprint"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"ispunct"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"isspace"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"isupper"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDM::CLibrary, {"isxdigit"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-
-      {{CDM::CLibraryMaybeHardened, {"strcpy"}},
-       TR::Prop({{1}}, {{0, ReturnValueIndex}})},
-      {{CDM::CLibraryMaybeHardened, {"stpcpy"}},
-       TR::Prop({{1}}, {{0, ReturnValueIndex}})},
-      {{CDM::CLibraryMaybeHardened, {"strcat"}},
-       TR::Prop({{0, 1}}, {{0, ReturnValueIndex}})},
-      {{CDM::CLibraryMaybeHardened, {"wcsncat"}},
-       TR::Prop({{0, 1}}, {{0, ReturnValueIndex}})},
-      {{CDM::CLibraryMaybeHardened, {"strncpy"}},
-       TR::Prop({{1, 2}}, {{0, ReturnValueIndex}})},
-      {{CDM::CLibraryMaybeHardened, {"strncat"}},
-       TR::Prop({{0, 1, 2}}, {{0, ReturnValueIndex}})},
-      {{CDM::CLibraryMaybeHardened, {"strlcpy"}}, TR::Prop({{1, 2}}, {{0}})},
-      {{CDM::CLibraryMaybeHardened, {"strlcat"}}, TR::Prop({{0, 1, 2}}, {{0}})},
-
-      // Usually the matching mode `CDM::CLibraryMaybeHardened` is sufficient
-      // for unified handling of a function `FOO()` and its hardened variant
-      // `__FOO_chk()`, but in the "sprintf" family the extra parameters of the
-      // hardened variants are inserted into the middle of the parameter list,
-      // so that would not work in their case.
-      // int snprintf(char * str, size_t maxlen, const char * format, ...);
-      {{CDM::CLibrary, {"snprintf"}},
-       TR::Prop({{1, 2}, 3}, {{0, ReturnValueIndex}})},
-      // int sprintf(char * str, const char * format, ...);
-      {{CDM::CLibrary, {"sprintf"}},
-       TR::Prop({{1}, 2}, {{0, ReturnValueIndex}})},
-      // int __snprintf_chk(char * str, size_t maxlen, int flag, size_t strlen,
-      //                    const char * format, ...);
-      {{CDM::CLibrary, {"__snprintf_chk"}},
-       TR::Prop({{1, 4}, 5}, {{0, ReturnValueIndex}})},
-      // int __sprintf_chk(char * str, int flag, size_t strlen, const char *
-      //                   format, ...);
-      {{CDM::CLibrary, {"__sprintf_chk"}},
-       TR::Prop({{3}, 4}, {{0, ReturnValueIndex}})},
-
-      // Sinks
-      {{CDM::CLibrary, {"system"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{CDM::CLibrary, {"popen"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{CDM::CLibrary, {"execl"}}, TR::Sink({{}, {0}}, MsgSanitizeSystemArgs)},
-      {{CDM::CLibrary, {"execle"}}, TR::Sink({{}, {0}}, MsgSanitizeSystemArgs)},
-      {{CDM::CLibrary, {"execlp"}}, TR::Sink({{}, {0}}, MsgSanitizeSystemArgs)},
-      {{CDM::CLibrary, {"execv"}}, TR::Sink({{0, 1}}, MsgSanitizeSystemArgs)},
-      {{CDM::CLibrary, {"execve"}},
-       TR::Sink({{0, 1, 2}}, MsgSanitizeSystemArgs)},
-      {{CDM::CLibrary, {"fexecve"}},
-       TR::Sink({{0, 1, 2}}, MsgSanitizeSystemArgs)},
-      {{CDM::CLibrary, {"execvp"}}, TR::Sink({{0, 1}}, MsgSanitizeSystemArgs)},
-      {{CDM::CLibrary, {"execvpe"}},
-       TR::Sink({{0, 1, 2}}, MsgSanitizeSystemArgs)},
-      {{CDM::CLibrary, {"dlopen"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-
-      // malloc, calloc, alloca, realloc, memccpy
-      // are intentionally not marked as taint sinks because unconditional
-      // reporting for these functions generates many false positives.
-      // These taint sinks should be implemented in other checkers with more
-      // sophisticated sanitation heuristics.
-
-      {{CDM::CLibrary, {"setproctitle"}},
-       TR::Sink({{0}, 1}, MsgUncontrolledFormatString)},
-      {{CDM::CLibrary, {"setproctitle_fast"}},
-       TR::Sink({{0}, 1}, MsgUncontrolledFormatString)}};
+  for (const TaintRuleDescriptor &Desc : TaintRuleDescriptors) {
+    StringRef Name(reinterpret_cast<const char *>(&TaintRuleNames) +
+                       Desc.NameOffset,
+                   Desc.NameLength);
+    CallDescription Call(static_cast<CDM>(Desc.Mode), {Name});
+    ArgSet First = MakeArgSet(Desc.First);
+    ArgSet Second = MakeArgSet(Desc.Second);
+    GenericTaintRule Rule = [&]() {
+      switch (Desc.Kind) {
+      case TaintRuleKind::Source:
+        return TR::Source(std::move(First));
+      case TaintRuleKind::Prop:
+        return TR::Prop(std::move(First), std::move(Second));
+      case TaintRuleKind::Sink: {
+        std::optional<StringRef> Message;
+        switch (Desc.Message) {
+        case TaintRuleMessage::None:
+          break;
+        case TaintRuleMessage::SanitizeSystemArgs:
+          Message = MsgSanitizeSystemArgs;
+          break;
+        case TaintRuleMessage::UncontrolledFormatString:
+          Message = MsgUncontrolledFormatString;
+          break;
+        }
+        return TR::Sink(std::move(First), Message);
+      }
+      }
+      llvm_unreachable("unknown taint rule kind");
+    }();
+    GlobalCRules.emplace_back(std::move(Call), std::move(Rule));
+  }
 
   if (TR::UntrustedEnv(C)) {
     // void setproctitle_init(int argc, char *argv[], char *envp[])
