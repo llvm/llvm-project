@@ -3,6 +3,10 @@
 ; RUN:     | FileCheck %s --check-prefix=RV64
 ; RUN: llc -mtriple=riscv32 -relocation-model=pic -enable-tlsdesc < %s \
 ; RUN:     | FileCheck %s --check-prefix=RV32
+; RUN: llc -mtriple=riscv64 -mattr=+v -relocation-model=pic -enable-tlsdesc < %s \
+; RUN:     | FileCheck %s --check-prefix=RV64
+; RUN: llc -mtriple=riscv32 -mattr=+v -relocation-model=pic -enable-tlsdesc < %s \
+; RUN:     | FileCheck %s --check-prefix=RV32
 
 ;; Verify that the TLSDESC resolver only clobbers a0 and t0 per the psABI.
 ;; Arguments in ra/a1-a3 need not be saved/restored across the TLSDESC call,
