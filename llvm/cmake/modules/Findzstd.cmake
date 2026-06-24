@@ -32,7 +32,19 @@ if(zstd_FOUND)
   if(zstd_LIBRARY MATCHES "${zstd_STATIC_LIBRARY_SUFFIX}$" AND NOT zstd_LIBRARY MATCHES "\\.dll\\.a$")
     set(zstd_STATIC_LIBRARY "${zstd_LIBRARY}")
   elseif (NOT TARGET zstd::libzstd_shared)
-    add_library(zstd::libzstd_shared SHARED IMPORTED)
+    # An IMPORTED target only references an already-built library, but under
+    # CMP0164 NEW the SHARED keyword is rejected on platforms that do not
+    # support shared libraries (e.g. CMAKE_SYSTEM_NAME of "Generic"). Use
+    # UNKNOWN IMPORTED there since we just link against the found library file.
+    get_property(zstd_target_supports_shared_libs
+      GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS)
+    if(DEFINED zstd_target_supports_shared_libs AND
+       NOT zstd_target_supports_shared_libs)
+      add_library(zstd::libzstd_shared UNKNOWN IMPORTED)
+    else()
+      add_library(zstd::libzstd_shared SHARED IMPORTED)
+    endif()
+    unset(zstd_target_supports_shared_libs)
     if(WIN32 OR CYGWIN)
       include(GNUInstallDirs) # For CMAKE_INSTALL_LIBDIR and friends.
       # IMPORTED_LOCATION is the path to the DLL and IMPORTED_IMPLIB is the "library".
