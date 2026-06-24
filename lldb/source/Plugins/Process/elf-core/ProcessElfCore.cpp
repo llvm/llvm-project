@@ -384,34 +384,34 @@ bool ProcessElfCore::GetMainExecutableModuleSpec(ModuleSpec &exe_spec) {
 }
 
 bool ProcessElfCore::FindModuleUUID(ModuleSpec &spec) {
-  if (!spec.GetUUID().IsValid()) {
-    // Lookup the UUID for the given path in the map.
-    // Note that this could be called by multiple threads so make sure
-    // we access the map in a thread safe way (i.e. don't use operator[]).
-    std::string path;
-    // Sometimes the path to a file or shared library from the dynamic loader,
-    // one of the main clients of this function, is a symlink. The information
-    // in the NT_FILE note contains resolved paths and might not match. The
-    // best way for us to find a module is by load address, so use this trick
-    // if the load address is set in the module specification.
-    if (std::optional<lldb::addr_t> load_addr = spec.GetLoadAddress()) {
-      if (std::optional<NT_FILE_Entry> nt =
-              GetNTFileEntryContainingAddress(*load_addr))
-        path = nt->path;
-    }
-    // If we didn't find a file spec from the load address, fall back to using
-    // the file spec.
-    if (path.empty())
-      path = spec.GetFileSpec().GetPath();
+  if (spec.GetUUID().IsValid())
+    return true;
+  // Lookup the UUID for the given path in the map.
+  // Note that this could be called by multiple threads so make sure
+  // we access the map in a thread safe way (i.e. don't use operator[]).
+  std::string path;
+  // Sometimes the path to a file or shared library from the dynamic loader,
+  // one of the main clients of this function, is a symlink. The information
+  // in the NT_FILE note contains resolved paths and might not match. The
+  // best way for us to find a module is by load address, so use this trick
+  // if the load address is set in the module specification.
+  if (std::optional<lldb::addr_t> load_addr = spec.GetLoadAddress()) {
+    if (std::optional<NT_FILE_Entry> nt =
+            GetNTFileEntryContainingAddress(*load_addr))
+      path = nt->path;
+  }
+  // If we didn't find a file spec from the load address, fall back to using
+  // the file spec.
+  if (path.empty())
+    path = spec.GetFileSpec().GetPath();
 
-    auto it = m_uuids.find(path);
-    if (it != m_uuids.end()) {
-      Log *log = GetLog(LLDBLog::Process);
-      spec.GetUUID() = it->second;
-      LLDB_LOGF(log, "ProcessElfCore::FindModuleUUID() found UUID for %s: %s",
-                spec.GetFileSpec().GetPath().c_str(),
-                it->second.GetAsString().c_str());
-    }
+  auto it = m_uuids.find(path);
+  if (it != m_uuids.end()) {
+    Log *log = GetLog(LLDBLog::Process);
+    spec.GetUUID() = it->second;
+    LLDB_LOGF(log, "ProcessElfCore::FindModuleUUID() found UUID for %s: %s",
+              spec.GetFileSpec().GetPath().c_str(),
+              it->second.GetAsString().c_str());
   }
   return spec.GetUUID().IsValid();
 }
