@@ -15,7 +15,7 @@
 ; RUNx: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_bfloat16_arithmetic,+SPV_KHR_bfloat16 %t/bf16_result.ll -o - -filetype=obj | spirv-val %}
 ; RUNx: %if spirv-tools %{ llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_bfloat16_arithmetic,+SPV_KHR_bfloat16 %t/bf16_operand.ll -o - -filetype=obj | spirv-val %}
 
-; COMMON-NOT: OpCapability BFloat16ArithmeticINTEL
+; COMMON-DAG: OpCapability BFloat16ArithmeticINTEL
 ; COMMON-DAG: OpCapability BFloat16TypeKHR
 ; COMMON-DAG: OpExtension "SPV_KHR_bfloat16"
 ; COMMON-DAG: OpExtension "SPV_INTEL_bfloat16_arithmetic"

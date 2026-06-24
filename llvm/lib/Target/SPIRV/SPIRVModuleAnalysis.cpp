@@ -1696,6 +1696,7 @@ void addInstrRequirements(const MachineInstr &MI,
               MI, "OpenCL Extended instructions with bfloat16 require the "
                   "following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic");
         Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic);
+        Reqs.addCapability(SPIRV::Capability::BFloat16ArithmeticINTEL);
       }
     }
     break;
