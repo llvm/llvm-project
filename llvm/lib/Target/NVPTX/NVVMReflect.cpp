@@ -217,7 +217,7 @@ bool NVVMReflect::runOnModule(Module &M) {
   if (!NVVMReflectEnabled)
     return false;
   populateReflectMap(M);
-  bool Changed = true;
+  bool Changed = false;
   Changed |= handleReflectFunction(M, NVVM_REFLECT_FUNCTION);
   Changed |= handleReflectFunction(M, NVVM_REFLECT_OCL_FUNCTION);
   Changed |=
