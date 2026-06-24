@@ -179,8 +179,7 @@ static cl::opt<bool> EnableEpilogueVectorization(
     cl::desc("Enable vectorization of epilogue loops."));
 
 static cl::opt<ElementCount> EpilogueVectorizationForceVF(
-    "epilogue-vectorization-force-VF", cl::init(ElementCount::getFixed(1)),
-    cl::Hidden,
+    "epilogue-vectorization-force-VF", cl::Hidden,
     cl::desc("When epilogue vectorization is enabled, and a value greater than "
              "1 is specified, forces the given VF for all applicable epilogue "
              "loops."));
@@ -417,13 +416,6 @@ static cl::opt<bool> EnableEarlyExitVectorizationWithSideEffects(
     cl::Hidden,
     cl::desc("Enable vectorization of early exit loops with uncountable exits "
              "and side effects"));
-
-// Returns true if the epilogue VF has been set to a non-zero value other than
-// VF=1 (scalar).
-static bool hasForcedEpilogueVF() {
-  return EpilogueVectorizationForceVF.isNonZero() &&
-         EpilogueVectorizationForceVF != ElementCount::getFixed(1);
-}
 
 // Likelyhood of bypassing the vectorized loop because there are zero trips left
 // after prolog. See `emitIterationCountCheck`.
@@ -3457,7 +3449,7 @@ std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
     return nullptr;
   }
 
-  if (hasForcedEpilogueVF()) {
+  if (EpilogueVectorizationForceVF.isNonZero()) {
     if (estimateElementCount(EpilogueVectorizationForceVF,
                              Config.getVScaleForTuning()) >=
         IC * estimateElementCount(MainLoopVF, Config.getVScaleForTuning())) {
@@ -5783,7 +5775,7 @@ LoopVectorizationPlanner::computeBestVF() {
     return {VectorizationFactor(FirstPlan.getSingleVF(), 0, 0), &FirstPlan};
   }
 
-  if (hasPlanWithVF(UserVF) && hasForcedEpilogueVF()) {
+  if (hasPlanWithVF(UserVF) && EpilogueVectorizationForceVF.isNonZero()) {
     assert(VPlans.size() == 2 && "Must have exactly 2 VPlans built");
     assert(VPlans[0]->getSingleVF() == EpilogueVectorizationForceVF &&
            "expected first plan to be for the forced epilogue VF");
