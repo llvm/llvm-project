@@ -96,11 +96,12 @@ public:
   BumpPtrAllocatorImpl(BumpPtrAllocatorImpl &&Old)
       : AllocTy(std::move(Old.getAllocator())), CurPtr(Old.CurPtr),
         EndSentinel(Old.EndSentinel), Slabs(std::move(Old.Slabs)),
-        CustomSizedSlabs(std::move(Old.CustomSizedSlabs)),
-        BytesAllocated(Old.BytesAllocated), RedZoneSize(Old.RedZoneSize) {
+        CustomSizedSlabs(std::move(Old.CustomSizedSlabs)) {
+#if LLVM_ADDRESS_SANITIZER_BUILD
+    RedZoneSize = Old.RedZoneSize;
+#endif
     Old.CurPtr = nullptr;
     Old.EndSentinel = 0;
-    Old.BytesAllocated = 0;
     Old.Slabs.clear();
     Old.CustomSizedSlabs.clear();
   }
@@ -116,15 +117,15 @@ public:
 
     CurPtr = RHS.CurPtr;
     EndSentinel = RHS.EndSentinel;
-    BytesAllocated = RHS.BytesAllocated;
+#if LLVM_ADDRESS_SANITIZER_BUILD
     RedZoneSize = RHS.RedZoneSize;
+#endif
     Slabs = std::move(RHS.Slabs);
     CustomSizedSlabs = std::move(RHS.CustomSizedSlabs);
     AllocTy::operator=(std::move(RHS.getAllocator()));
 
     RHS.CurPtr = nullptr;
     RHS.EndSentinel = 0;
-    RHS.BytesAllocated = 0;
     RHS.Slabs.clear();
     RHS.CustomSizedSlabs.clear();
     return *this;
@@ -141,7 +142,6 @@ public:
       return;
 
     // Reset the state.
-    BytesAllocated = 0;
     CurPtr = (char *)Slabs.front();
     EndSentinel = uintptr_t(CurPtr) + SlabSize + 1;
 
@@ -158,9 +158,6 @@ public:
   // Allocate(0, N) is valid, it returns a non-null pointer (which should not
   // be dereferenced).
   LLVM_ATTRIBUTE_RETURNS_NONNULL void *Allocate(size_t Size, Align Alignment) {
-    // Keep track of how many bytes we've allocated.
-    BytesAllocated += Size;
-
     size_t SizeToAllocate = Size;
 #if LLVM_ADDRESS_SANITIZER_BUILD
     // Add trailing bytes as a "red zone" under ASan.
@@ -308,15 +305,18 @@ public:
     return TotalMemory;
   }
 
-  size_t getBytesAllocated() const { return BytesAllocated; }
+  /// BumpPtrAllocator no longer tracks the number of bytes requested; this
+  /// always returns 0. Use getTotalMemory() for the amount of memory held.
+  size_t getBytesAllocated() const { return 0; }
 
-  void setRedZoneSize(size_t NewSize) {
+  void setRedZoneSize([[maybe_unused]] size_t NewSize) {
+#if LLVM_ADDRESS_SANITIZER_BUILD
     RedZoneSize = NewSize;
+#endif
   }
 
   void PrintStats() const {
-    detail::printBumpPtrAllocatorStats(Slabs.size(), BytesAllocated,
-                                       getTotalMemory());
+    detail::printBumpPtrAllocatorStats(Slabs.size(), 0, getTotalMemory());
   }
 
 private:
@@ -335,14 +335,11 @@ private:
   /// Custom-sized slabs allocated for too-large allocation requests.
   SmallVector<std::pair<void *, size_t>, 0> CustomSizedSlabs;
 
-  /// How many bytes we've allocated.
-  ///
-  /// Used so that we can compute how much space was wasted.
-  size_t BytesAllocated = 0;
-
+#if LLVM_ADDRESS_SANITIZER_BUILD
   /// The number of bytes to put between allocations when running under
   /// a sanitizer.
   size_t RedZoneSize = 1;
+#endif
 
   static size_t computeSlabSize(unsigned SlabIdx) {
     // Scale the actual allocated slab size based on the number of slabs

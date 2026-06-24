@@ -82,15 +82,9 @@ public:
     return TotalMemory;
   }
 
-  /// Return allocated size by all allocators.
-  size_t getBytesAllocated() const {
-    size_t BytesAllocated = 0;
-
-    for (size_t Idx = 0; Idx < getNumberOfAllocators(); Idx++)
-      BytesAllocated += Allocators[Idx].getBytesAllocated();
-
-    return BytesAllocated;
-  }
+  /// The underlying allocators no longer track the number of bytes requested;
+  /// this always returns 0. Use getTotalMemory() for the memory held.
+  size_t getBytesAllocated() const { return 0; }
 
   /// Set red zone for all allocators.
   void setRedZoneSize(size_t NewSize) {
