@@ -199,6 +199,35 @@ private:
       FreeParagraphs;
 };
 
+struct KernelDocParam {
+  std::string Name;
+  std::string Description;
+};
+
+struct KernelDocDescriptionBlock {
+  enum Kind { Paragraph, Code } BlockKind;
+  std::string Text;
+  std::string Language;
+};
+
+struct KernelDocSection {
+  std::string Name;
+  std::string Description;
+};
+
+struct KernelDocInfo {
+  std::string Brief;
+  llvm::SmallVector<KernelDocDescriptionBlock> Description;
+  llvm::SmallVector<KernelDocParam> Params;
+  std::string Returns;
+  llvm::SmallVector<std::string> ReturnItems;
+  llvm::SmallVector<KernelDocSection> Sections;
+};
+
+KernelDocInfo parseKernelDoc(llvm::StringRef Doc);
+void renderKernelDocToMarkup(const KernelDocInfo &Info,
+                             markup::Document &Output);
+
 } // namespace clangd
 } // namespace clang
 

@@ -1528,6 +1528,32 @@ void HoverInfo::sizeToMarkupParagraph(markup::Paragraph &P) const {
     P.appendText(", alignment " + formatSize(*Align));
 }
 
+void HoverInfo::appendCommonMetadata(markup::Document &Output) const {
+  Output.addRuler();
+
+  // Don't print Type after Parameters or ReturnType as this will just duplicate
+  // the information
+  if (Type && !ReturnType && !Parameters)
+    Output.addParagraph().appendText("Type: ").appendCode(
+        llvm::to_string(*Type));
+
+  if (Value)
+    valueToMarkupParagraph(Output.addParagraph());
+
+  if (Offset)
+    offsetToMarkupParagraph(Output.addParagraph());
+  if (Size)
+    sizeToMarkupParagraph(Output.addParagraph());
+
+  if (CalleeArgInfo)
+    calleeArgInfoToMarkupParagraph(Output.addParagraph());
+
+  if (!UsedSymbolNames.empty()) {
+    Output.addRuler();
+    usedSymbolNamesToMarkup(Output);
+  }
+}
+
 markup::Document HoverInfo::presentDoxygen() const {
 
   markup::Document Output;
@@ -1650,32 +1676,44 @@ markup::Document HoverInfo::presentDoxygen() const {
     SymbolDoc.detailedDocToMarkup(Output);
   }
 
-  Output.addRuler();
+  appendCommonMetadata(Output);
 
-  // Don't print Type after Parameters or ReturnType as this will just duplicate
-  // the information
-  if (Type && !ReturnType && !Parameters)
-    Output.addParagraph().appendText("Type: ").appendCode(
-        llvm::to_string(*Type));
+  return Output;
+}
 
-  if (Value) {
-    valueToMarkupParagraph(Output.addParagraph());
-  }
+markup::Document HoverInfo::presentKernelDoc() const {
+  markup::Document Output;
 
-  if (Offset)
-    offsetToMarkupParagraph(Output.addParagraph());
-  if (Size) {
-    sizeToMarkupParagraph(Output.addParagraph());
-  }
-
-  if (CalleeArgInfo) {
-    calleeArgInfoToMarkupParagraph(Output.addParagraph());
-  }
-
-  if (!UsedSymbolNames.empty()) {
+  markup::Paragraph &Header = Output.addHeading(3);
+  if (!Definition.empty()) {
     Output.addRuler();
-    usedSymbolNamesToMarkup(Output);
+    definitionScopeToMarkup(Output);
+  } else {
+    Header.appendCode(Name);
   }
+
+  Output.addRuler();
+  KernelDocInfo DocInfo = parseKernelDoc(Documentation);
+  renderKernelDocToMarkup(DocInfo, Output);
+
+  if (Parameters && !Parameters->empty() && DocInfo.Params.empty()) {
+    Output.addHeading(3).appendText("Parameters");
+    markup::BulletList &L = Output.addBulletList();
+    for (const auto &Param : *Parameters)
+      L.addItem().addParagraph().appendCode(llvm::to_string(Param));
+  }
+
+  if (ReturnType && ReturnType->AKA.value_or(ReturnType->Type) != "void") {
+    if (DocInfo.Returns.empty() && DocInfo.ReturnItems.empty()) {
+      Output.addHeading(3).appendText("Returns");
+      Output.addParagraph().appendCode(llvm::to_string(*ReturnType));
+    }
+  }
+
+  appendCommonMetadata(Output);
+
+  if (!Provider.empty())
+    providerToMarkupParagraph(Output);
 
   return Output;
 }
@@ -1770,6 +1808,9 @@ std::string HoverInfo::present(MarkupKind Kind) const {
       return presentDefault().asMarkdown();
     if (Cfg.Documentation.CommentFormat == Config::CommentFormatPolicy::Doxygen)
       return presentDoxygen().asMarkdown();
+    if (Cfg.Documentation.CommentFormat ==
+        Config::CommentFormatPolicy::KernelDoc)
+      return presentKernelDoc().asMarkdown();
     if (Cfg.Documentation.CommentFormat ==
         Config::CommentFormatPolicy::PlainText)
       // If the user prefers plain text, we use the present() method to generate

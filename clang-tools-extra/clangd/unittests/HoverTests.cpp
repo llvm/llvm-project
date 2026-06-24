@@ -5245,6 +5245,135 @@ TEST(Hover, FunctionParameters) {
   }
 }
 
+TEST(Hover, CDoxygenFunction) {
+  Annotations T(R"c(
+    /**
+     * \brief Appends an element to the list.
+     *
+     * \param list The list to append to.
+     * \param data The data for the new element.
+     * \returns The new start of the list.
+     */
+    int *[[^my_list_append]](int *list, int data);
+  )c");
+
+  TestTU TU = TestTU::withCode(T.code());
+  TU.Filename = "TestTU.c";
+  TU.ExtraArgs = {"-std=c17"};
+  auto AST = TU.build();
+
+  Config Cfg;
+  Cfg.Documentation.CommentFormat = Config::CommentFormatPolicy::Doxygen;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+
+  auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+  ASSERT_TRUE(H);
+
+  EXPECT_EQ(H->Name, "my_list_append");
+  EXPECT_EQ(H->Kind, index::SymbolKind::Function);
+  EXPECT_EQ(H->ReturnType->Type, "int *");
+  ASSERT_TRUE(H->Parameters);
+  ASSERT_EQ(H->Parameters->size(), 2u);
+  EXPECT_EQ(H->Parameters->at(0).Name, "list");
+  EXPECT_EQ(H->Parameters->at(1).Name, "data");
+
+  auto Rendered = H->present(MarkupKind::Markdown);
+  llvm::StringRef ExpectedRender =
+      "### function\n"
+      "\n"
+      "---\n"
+      "```cpp\n"
+      "int *my_list_append(int *list, int data)\n"
+      "```\n"
+      "\n"
+      "---\n"
+      "### Brief\n"
+      "\n"
+      "Appends an element to the list.\n"
+      "\n"
+      "---\n"
+      "### Parameters\n"
+      "\n"
+      "- `int * list` - The list to append to.\n"
+      "- `int data` - The data for the new element.\n"
+      "\n"
+      "---\n"
+      "### Returns\n"
+      "\n"
+      "`int *` - The new start of the list.";
+  EXPECT_EQ(Rendered, ExpectedRender);
+}
+
+TEST(Hover, CKernelDocFunction) {
+  Annotations T(R"c(
+    /**
+     * my_alloc() - Allocate a buffer.
+     * @size: the size of the buffer to allocate
+     * @flags: allocation flags
+     *
+     * Allocates a contiguous buffer of at least @size bytes.
+     *
+     * Context: Process context. May sleep if %GFP_KERNEL is used.
+     * Return: Pointer to the buffer or %NULL on failure.
+     */
+    void *[[^my_alloc]](int size, int flags);
+  )c");
+
+  TestTU TU = TestTU::withCode(T.code());
+  TU.Filename = "TestTU.c";
+  TU.ExtraArgs = {"-std=c17"};
+  auto AST = TU.build();
+
+  Config Cfg;
+  Cfg.Documentation.CommentFormat = Config::CommentFormatPolicy::KernelDoc;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+
+  auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+  ASSERT_TRUE(H);
+
+  EXPECT_EQ(H->Name, "my_alloc");
+  EXPECT_EQ(H->Kind, index::SymbolKind::Function);
+
+  auto Rendered = H->present(MarkupKind::Markdown);
+  EXPECT_NE(Rendered.find("Allocate a buffer."), std::string::npos);
+  EXPECT_NE(Rendered.find("`size`"), std::string::npos);
+  EXPECT_NE(Rendered.find("`flags`"), std::string::npos);
+  EXPECT_NE(Rendered.find("### Parameters"), std::string::npos);
+  EXPECT_NE(Rendered.find("### Returns"), std::string::npos);
+  EXPECT_NE(Rendered.find("### Context"), std::string::npos);
+  EXPECT_NE(Rendered.find("`GFP_KERNEL`"), std::string::npos);
+  EXPECT_NE(Rendered.find("`NULL`"), std::string::npos);
+}
+
+TEST(Hover, CKernelDocInlineMember) {
+  Annotations T(R"c(
+    /**
+     * struct my_device - A device structure.
+     * @name: the device name
+     */
+    struct my_device {
+      /** @bar: the status flags */
+      int [[^bar]];
+    };
+  )c");
+
+  TestTU TU = TestTU::withCode(T.code());
+  TU.Filename = "TestTU.c";
+  TU.ExtraArgs = {"-std=c17"};
+  auto AST = TU.build();
+
+  Config Cfg;
+  Cfg.Documentation.CommentFormat = Config::CommentFormatPolicy::KernelDoc;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+
+  auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
+  ASSERT_TRUE(H);
+
+  EXPECT_EQ(H->Name, "bar");
+  auto Rendered = H->present(MarkupKind::Markdown);
+  EXPECT_NE(Rendered.find("the status flags"), std::string::npos);
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

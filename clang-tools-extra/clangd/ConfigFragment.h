@@ -409,6 +409,7 @@ struct Fragment {
     /// - Plaintext: Treat comments as plain text.
     /// - Markdown: Treat comments as Markdown.
     /// - Doxygen: Treat comments as doxygen.
+    /// - KernelDoc: Treat comments as kernel-doc.
     std::optional<Located<std::string>> CommentFormat;
   };
   DocumentationBlock Documentation;
