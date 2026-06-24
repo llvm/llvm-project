@@ -7,6 +7,7 @@
 // RUN: %clang -### -c -fveclib=Darwin_libsystem_m %s 2>&1 | FileCheck --check-prefix=CHECK-DARWIN_LIBSYSTEM_M %s
 // RUN: %clang -### -c --target=aarch64 -fveclib=SLEEF %s 2>&1 | FileCheck --check-prefix=CHECK-SLEEF %s
 // RUN: %clang -### -c --target=riscv64-unknown-linux-gnu -fveclib=SLEEF -march=rv64gcv %s 2>&1 | FileCheck -check-prefix CHECK-SLEEF-RISCV %s
+// RUN: %clang -### -c --target=riscv64-unknown-linux-gnu -fveclib=libmvec -march=rv64gcv %s 2>&1 | FileCheck -check-prefix CHECK-libmvec %s
 // RUN: %clang -### -c --target=aarch64 -fveclib=ArmPL %s 2>&1 | FileCheck --check-prefix=CHECK-ARMPL %s
 // RUN: not %clang -c -fveclib=something %s 2>&1 | FileCheck --check-prefix=CHECK-INVALID %s
 
@@ -61,6 +62,9 @@
 
 // RUN: %clang -### --target=riscv64-unknown-linux-gnu -fveclib=SLEEF -flto -march=rv64gcv %s 2>&1 | FileCheck -check-prefix CHECK-LTO-SLEEF-RISCV %s
 // CHECK-LTO-SLEEF-RISCV: "-plugin-opt=-vector-library=sleefgnuabi"
+
+// RUN: %clang -### --target=riscv64-unknown-linux-gnu -fveclib=LIBMVEC -flto -march=rv64gcv %s 2>&1 | FileCheck -check-prefix CHECK-LTO-LIBMVEC-RISCV %s
+// CHECK-LTO-LIBMVEC-RISCV: "-plugin-opt=-vector-library=LIBMVEC"
 
 // RUN: %clang -### --target=aarch64-linux-gnu -fveclib=ArmPL -flto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-ARMPL %s
 // CHECK-LTO-ARMPL: "-plugin-opt=-vector-library=ArmPL"

@@ -5841,6 +5841,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     } else if (Name == "libmvec") {
       if (Triple.getArch() != llvm::Triple::x86 &&
           Triple.getArch() != llvm::Triple::x86_64 &&
+          Triple.getArch() != llvm::Triple::riscv32 &&
+          Triple.getArch() != llvm::Triple::riscv64 &&
           Triple.getArch() != llvm::Triple::aarch64 &&
           Triple.getArch() != llvm::Triple::aarch64_be)
         D.Diag(diag::err_drv_unsupported_opt_for_target)

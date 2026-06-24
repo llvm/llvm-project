@@ -497,6 +497,79 @@ TLI_DEFINE_VECFUNC("llvm.tanh.f32", "_ZGVnN4v_tanhf", FIXED(4), NOMASK, "_ZGV_LL
 TLI_DEFINE_VECFUNC("llvm.tanh.f64", "_ZGVsMxv_tanh", SCALABLE(2), MASKED, "_ZGVsMxv", NOCC)
 TLI_DEFINE_VECFUNC("llvm.tanh.f32", "_ZGVsMxv_tanhf", SCALABLE(4), MASKED, "_ZGVsMxv", NOCC)
 
+#elif defined(TLI_DEFINE_LIBMVEC_RVV_VECFUNCS)
+// GLIBC Vector math Functions for RISC-V
+
+TLI_DEFINE_VECFUNC("sin", "_ZGVr1Nxv_sin", SCALABLE(1), "_ZGVr1Nxv")
+TLI_DEFINE_VECFUNC("sin", "_ZGVr2Nxv_sin", SCALABLE(2), "_ZGVr2Nxv")
+TLI_DEFINE_VECFUNC("sin", "_ZGVr4Nxv_sin", SCALABLE(4), "_ZGVr4Nxv")
+TLI_DEFINE_VECFUNC("sin", "_ZGVr8Nxv_sin", SCALABLE(8), "_ZGVr8Nxv")
+
+TLI_DEFINE_VECFUNC("llvm.sin.f64", "_ZGVr1Nxv_sin", SCALABLE(1), "_ZGVr1Nxv")
+TLI_DEFINE_VECFUNC("llvm.sin.f64", "_ZGVr2Nxv_sin", SCALABLE(2), "_ZGVr2Nxv")
+TLI_DEFINE_VECFUNC("llvm.sin.f64", "_ZGVr4Nxv_sin", SCALABLE(4), "_ZGVr4Nxv")
+TLI_DEFINE_VECFUNC("llvm.sin.f64", "_ZGVr8Nxv_sin", SCALABLE(8), "_ZGVr8Nxv")
+
+TLI_DEFINE_VECFUNC("cos", "_ZGVr1Nxv_cos", SCALABLE(1), "_ZGVr1Nxv")
+TLI_DEFINE_VECFUNC("cos", "_ZGVr2Nxv_cos", SCALABLE(2), "_ZGVr2Nxv")
+TLI_DEFINE_VECFUNC("cos", "_ZGVr4Nxv_cos", SCALABLE(4), "_ZGVr4Nxv")
+TLI_DEFINE_VECFUNC("cos", "_ZGVr8Nxv_cos", SCALABLE(8), "_ZGVr8Nxv")
+
+TLI_DEFINE_VECFUNC("llvm.cos.f64", "_ZGVr1Nxv_cos", SCALABLE(1), "_ZGVr1Nxv")
+TLI_DEFINE_VECFUNC("llvm.cos.f64", "_ZGVr2Nxv_cos", SCALABLE(2), "_ZGVr2Nxv")
+TLI_DEFINE_VECFUNC("llvm.cos.f64", "_ZGVr4Nxv_cos", SCALABLE(4), "_ZGVr4Nxv")
+TLI_DEFINE_VECFUNC("llvm.cos.f64", "_ZGVr8Nxv_cos", SCALABLE(8), "_ZGVr8Nxv")
+
+TLI_DEFINE_VECFUNC("tan", "_ZGVr1Nxv_tan", SCALABLE(1), "_ZGVr1Nxv")
+TLI_DEFINE_VECFUNC("tan", "_ZGVr2Nxv_tan", SCALABLE(2), "_ZGVr2Nxv")
+TLI_DEFINE_VECFUNC("tan", "_ZGVr4Nxv_tan", SCALABLE(4), "_ZGVr4Nxv")
+TLI_DEFINE_VECFUNC("tan", "_ZGVr8Nxv_tan", SCALABLE(8), "_ZGVr8Nxv")
+
+TLI_DEFINE_VECFUNC("llvm.tan.f64", "_ZGVr1Nxv_tan", SCALABLE(1), "_ZGVr1Nxv")
+TLI_DEFINE_VECFUNC("llvm.tan.f64", "_ZGVr2Nxv_tan", SCALABLE(2), "_ZGVr2Nxv")
+TLI_DEFINE_VECFUNC("llvm.tan.f64", "_ZGVr4Nxv_tan", SCALABLE(4), "_ZGVr4Nxv")
+TLI_DEFINE_VECFUNC("llvm.tan.f64", "_ZGVr8Nxv_tan", SCALABLE(8), "_ZGVr8Nxv")
+
+TLI_DEFINE_VECFUNC("pow", "_ZGVr1Nxvv_pow", SCALABLE(1), "_ZGVr1Nxvv")
+TLI_DEFINE_VECFUNC("pow", "_ZGVr2Nxvv_pow", SCALABLE(2), "_ZGVr2Nxvv")
+TLI_DEFINE_VECFUNC("pow", "_ZGVr4Nxvv_pow", SCALABLE(4), "_ZGVr4Nxvv")
+TLI_DEFINE_VECFUNC("pow", "_ZGVr8Nxvv_pow", SCALABLE(8), "_ZGVr8Nxvv")
+
+TLI_DEFINE_VECFUNC("llvm.pow.f64", "_ZGVr1Nxvv_pow", SCALABLE(1), "_ZGVr1Nxvv")
+TLI_DEFINE_VECFUNC("llvm.pow.f64", "_ZGVr2Nxvv_pow", SCALABLE(2), "_ZGVr2Nxvv")
+TLI_DEFINE_VECFUNC("llvm.pow.f64", "_ZGVr4Nxvv_pow", SCALABLE(4), "_ZGVr4Nxvv")
+TLI_DEFINE_VECFUNC("llvm.pow.f64", "_ZGVr8Nxvv_pow", SCALABLE(8), "_ZGVr8Nxvv")
+
+TLI_DEFINE_VECFUNC("exp", "_ZGVr1Nxv_exp", SCALABLE(1), "_ZGVr1Nxv")
+TLI_DEFINE_VECFUNC("exp", "_ZGVr2Nxv_exp", SCALABLE(2), "_ZGVr2Nxv")
+TLI_DEFINE_VECFUNC("exp", "_ZGVr4Nxv_exp", SCALABLE(4), "_ZGVr4Nxv")
+TLI_DEFINE_VECFUNC("exp", "_ZGVr8Nxv_exp", SCALABLE(8), "_ZGVr8Nxv")
+
+TLI_DEFINE_VECFUNC("expf", "_ZGVr1Nxv_expf", SCALABLE(2), "_ZGVr1Nxv")
+TLI_DEFINE_VECFUNC("expf", "_ZGVr2Nxv_expf", SCALABLE(4), "_ZGVr2Nxv")
+TLI_DEFINE_VECFUNC("expf", "_ZGVr4Nxv_expf", SCALABLE(8), "_ZGVr4Nxv")
+TLI_DEFINE_VECFUNC("expf", "_ZGVr8Nxv_expf", SCALABLE(16), "_ZGVr8Nxv")
+
+TLI_DEFINE_VECFUNC("llvm.exp.f64", "_ZGVr1Nxv_exp", SCALABLE(1), "_ZGVr1Nxv")
+TLI_DEFINE_VECFUNC("llvm.exp.f64", "_ZGVr2Nxv_exp", SCALABLE(2), "_ZGVr2Nxv")
+TLI_DEFINE_VECFUNC("llvm.exp.f64", "_ZGVr4Nxv_exp", SCALABLE(4), "_ZGVr4Nxv")
+TLI_DEFINE_VECFUNC("llvm.exp.f64", "_ZGVr8Nxv_exp", SCALABLE(8), "_ZGVr8Nxv")
+
+TLI_DEFINE_VECFUNC("llvm.exp.f32", "_ZGVr1Nxv_expf", SCALABLE(2), "_ZGVr1Nxv")
+TLI_DEFINE_VECFUNC("llvm.exp.f32", "_ZGVr2Nxv_expf", SCALABLE(4), "_ZGVr2Nxv")
+TLI_DEFINE_VECFUNC("llvm.exp.f32", "_ZGVr4Nxv_expf", SCALABLE(8), "_ZGVr4Nxv")
+TLI_DEFINE_VECFUNC("llvm.exp.f32", "_ZGVr8Nxv_expf", SCALABLE(16), "_ZGVr8Nxv")
+
+TLI_DEFINE_VECFUNC("log", "_ZGVr1Nxv_log", SCALABLE(1), "_ZGVr1Nxv")
+TLI_DEFINE_VECFUNC("log", "_ZGVr2Nxv_log", SCALABLE(2), "_ZGVr2Nxv")
+TLI_DEFINE_VECFUNC("log", "_ZGVr4Nxv_log", SCALABLE(4), "_ZGVr4Nxv")
+TLI_DEFINE_VECFUNC("log", "_ZGVr8Nxv_log", SCALABLE(8), "_ZGVr8Nxv")
+
+TLI_DEFINE_VECFUNC("llvm.log.f64", "_ZGVr1Nxv_log", SCALABLE(1), "_ZGVr1Nxv")
+TLI_DEFINE_VECFUNC("llvm.log.f64", "_ZGVr2Nxv_log", SCALABLE(2), "_ZGVr2Nxv")
+TLI_DEFINE_VECFUNC("llvm.log.f64", "_ZGVr4Nxv_log", SCALABLE(4), "_ZGVr4Nxv")
+TLI_DEFINE_VECFUNC("llvm.log.f64", "_ZGVr8Nxv_log", SCALABLE(8), "_ZGVr8Nxv")
+
 #elif defined(TLI_DEFINE_MASSV_VECFUNCS)
 // IBM MASS library's vector Functions
 
