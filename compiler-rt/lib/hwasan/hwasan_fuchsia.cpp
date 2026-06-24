@@ -46,12 +46,19 @@ bool InitShadow() {
   __sanitizer::InitShadowBounds();
   CHECK_NE(__sanitizer::ShadowBounds.shadow_limit, 0);
 
-  // These variables are used by MemIsShadow for asserting we have a correct
-  // shadow address. On Fuchsia, we only have one region of shadow, so the
-  // bounds of Low shadow can be zero while High shadow represents the true
-  // bounds. Note that these are inclusive ranges.
-  kLowShadowStart = 0;
-  kLowShadowEnd = 0;
+  // These variables are used by MemIsShadow and MemIsApp for asserting we have
+  // a correct shadow/app address. On Fuchsia, the shadow may be dynamically
+  // placed, resulting in two regions of application memory (above and below the
+  // shadow). If the shadow happens to start at zero, then only the high region
+  // of app memory exists. Within the shadow, there may also be a gap which
+  // should never be accessed since it's above the range of shadow for low app
+  // memory and below the range of shadow below high app memory. See the diagram
+  // in hwasan_mapping.h for visual details. Note these are inclusive ranges.
+  //
+  // TODO: We should protect the gap to catch any stray accesses into it.
+  kLowShadowStart = GetShadowOffset();
+  const uintptr_t kLowMemEnd = kLowShadowStart ? kLowShadowStart - 1 : 0;
+  kLowShadowEnd = MemToShadow(kLowMemEnd);
   kHighShadowStart = __sanitizer::ShadowBounds.shadow_base;
   kHighShadowEnd = __sanitizer::ShadowBounds.shadow_limit - 1;
 
@@ -60,8 +67,9 @@ bool InitShadow() {
 
 bool MemIsApp(uptr p) {
   CHECK(GetTagFromPointer(p) == 0);
-  return __sanitizer::ShadowBounds.shadow_limit <= p &&
-         p <= (__sanitizer::ShadowBounds.memory_limit - 1);
+  return p < kLowShadowStart ||
+         (__sanitizer::ShadowBounds.shadow_limit <= p &&
+          p <= (__sanitizer::ShadowBounds.memory_limit - 1));
 }
 
 // These are known parameters passed to the hwasan runtime on thread creation.
