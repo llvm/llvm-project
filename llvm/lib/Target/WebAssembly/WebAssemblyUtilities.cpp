@@ -104,12 +104,19 @@ const MachineOperand &WebAssembly::getCalleeOp(const MachineInstr &MI) {
 MCSymbolWasm *WebAssembly::getOrCreateFunctionTableSymbol(
     MCContext &Ctx, const WebAssemblySubtarget *Subtarget) {
   StringRef Name = "__indirect_function_table";
+  bool is64 = Subtarget && Subtarget->getTargetTriple().isArch64Bit();
   auto *Sym = static_cast<MCSymbolWasm *>(Ctx.lookupSymbol(Name));
   if (Sym) {
-    if (!Sym->isFunctionTable())
-      Ctx.reportError(SMLoc(), "symbol is not a wasm funcref table");
+    if (!Sym->isFunctionTable()) {
+      // The symbol may have been created for debug info. If so, set it up as
+      // a function table.
+      if (!Sym->getType()) {
+        Sym->setFunctionTable(is64);
+      } else {
+        Ctx.reportError(SMLoc(), "symbol is not a wasm funcref table");
+      }
+    }
   } else {
-    bool is64 = Subtarget && Subtarget->getTargetTriple().isArch64Bit();
     Sym = static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(Name));
     Sym->setFunctionTable(is64);
     // The default function table is synthesized by the linker.
