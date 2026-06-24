@@ -330,6 +330,13 @@ ARMTargetInfo::ARMTargetInfo(const llvm::Triple &Triple,
                            : "\01mcount";
 
   SoftFloatABI = llvm::is_contained(Opts.FeaturesAsWritten, "+soft-float-abi");
+
+  // Enable strict floating-point support so that -ffp-exception-behavior=maytrap
+  // is honored.  The ARM backend handles STRICT_F* nodes via the
+  // mutateStrictFPToFP expansion path, which converts them to normal FP ops at
+  // instruction selection time while preserving the ordering side-effects that
+  // prevent speculative execution of FP operations past branches.
+  HasStrictFP = true;
 }
 
 StringRef ARMTargetInfo::getABI() const { return ABI; }
