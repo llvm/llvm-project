@@ -19,6 +19,7 @@ add_orc_rt_unittest(CoreTests
   CallableTraitsHelperTest.cpp
   SimpleSymbolTableTest.cpp
   EndianTest.cpp
+  CommandLineTest.cpp
   ErrorCAPITest.cpp
   ErrorTest.cpp
   ErrorExceptionInteropTest.cpp

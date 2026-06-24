@@ -68,7 +68,7 @@ configure_file(
 #===============================================================================
 
 if (ORC_RT_INCLUDE_DOCS)
-    add_subdirectory(docs)
+  add_subdirectory(docs)
 endif()
 
 add_subdirectory(include)
