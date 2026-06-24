@@ -984,12 +984,6 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
         opts.ProfileInstrumentUsePath, "", opts.ProfileRemappingFile,
         opts.MemoryProfileUsePath, llvm::PGOOptions::IRUse, CSAction,
         llvm::PGOOptions::ColdFuncOpt::Default, opts.DebugInfoForProfiling);
-  } else if (opts.DebugInfoForProfiling) {
-    // -fdebug-info-for-profiling
-    pgoOpt = llvm::PGOOptions("", "", "", /*MemoryProfile=*/"",
-                              llvm::PGOOptions::NoAction,
-                              llvm::PGOOptions::NoCSAction,
-                              llvm::PGOOptions::ColdFuncOpt::Default, true);
   } else if (!opts.SampleProfileFile.empty()) {
     pgoOpt = llvm::PGOOptions(
         opts.SampleProfileFile, "", opts.ProfileRemappingFile,
@@ -997,11 +991,19 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
         llvm::PGOOptions::NoCSAction, llvm::PGOOptions::ColdFuncOpt::Default,
         opts.DebugInfoForProfiling, opts.PseudoProbeForProfiling);
   } else if (opts.PseudoProbeForProfiling) {
-    // -fpseudo-probe-for-profiling
     pgoOpt = llvm::PGOOptions(
-        "", "", "", /*MemoryProfile=*/"", llvm::PGOOptions::NoAction,
+        /*ProfileFile=*/"", /*CSProfileGenFile=*/"",
+        /*ProfileRemappingFile=*/"",
+        /*MemoryProfile=*/"", llvm::PGOOptions::NoAction,
         llvm::PGOOptions::NoCSAction, llvm::PGOOptions::ColdFuncOpt::Default,
-        opts.DebugInfoForProfiling, true);
+        opts.DebugInfoForProfiling, /*PseudoProbeForProfiling=*/true);
+  } else if (opts.DebugInfoForProfiling) {
+    pgoOpt = llvm::PGOOptions(/*ProfileFile=*/"", /*CSProfileGenFile=*/"",
+                              /*ProfileRemappingFile=*/"", /*MemoryProfile=*/"",
+                              llvm::PGOOptions::NoAction,
+                              llvm::PGOOptions::NoCSAction,
+                              llvm::PGOOptions::ColdFuncOpt::Default,
+                              /*PseudoProbeForProfiling=*/true);
   }
 
   llvm::StandardInstrumentations si(llvmModule->getContext(),
