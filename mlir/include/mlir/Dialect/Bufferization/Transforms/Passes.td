@@ -184,6 +184,23 @@ def OptimizeAllocationLivenessPass
   let dependentDialects = ["mlir::memref::MemRefDialect"];
 }
 
+def PrintBufferLifetimeStatsPass
+    : Pass<"print-buffer-lifetime-stats", "func::FuncOp"> {
+  let summary = "Print buffer lifetime statistics for allocations in a "
+                "function";
+  let description = [{
+    This analysis-only pass walks a function, collects memref.alloc /
+    memref.dealloc pairs via MemoryEffectOpInterface, computes lifetime
+    intervals based on operation ordering within a block, and prints
+    statistics: number of tracked allocations, total allocated bytes, peak
+    live bytes, and the number of non-overlapping allocation pairs that
+    could potentially share memory.
+
+    The pass does not modify the IR.
+  }];
+  let dependentDialects = ["mlir::memref::MemRefDialect"];
+}
+
 def LowerDeallocationsPass : Pass<"bufferization-lower-deallocations"> {
   let summary = "Lowers `bufferization.dealloc` operations to `memref.dealloc`"
                 "operations";
