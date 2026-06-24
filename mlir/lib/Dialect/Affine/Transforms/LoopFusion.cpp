@@ -1015,7 +1015,8 @@ public:
         // redundant execution of the source happens (1:1 pointwise dep on the
         // producer-consumer memref access for example). Check this and allow
         // fusion accordingly.
-        if (hasCyclicDependence(srcAffineForOp)) {
+        bool srcHasCyclicDep = hasCyclicDependence(srcAffineForOp);
+        if (srcHasCyclicDep) {
           LDBG() << "Source nest has a cyclic dependence.";
           // Maximal fusion does not check for compute tolerance threshold; so
           // perform the maximal fusion only when the redundanation computation
@@ -1074,6 +1075,17 @@ public:
         bool removeSrcNode = canRemoveSrcNodeAfterFusion(
             srcId, dstId, bestSlice, fusedLoopInsPoint, srcEscapingMemRefs,
             *mdg);
+
+        // If the source loop has a cyclic dependence (e.g., a reduction that
+        // reads and writes the same memref) and cannot be removed after fusion,
+        // skip this fusion. Fusing a cyclic source without removing it would
+        // result in its cyclic computation executing twice: once in the
+        // original source and once in the fused copy.
+        if (srcHasCyclicDep && !removeSrcNode) {
+          LDBG() << "Can't fuse: source has cyclic dependence and "
+                 << "can't be removed after fusion";
+          continue;
+        }
 
         DenseSet<Value> privateMemrefs;
         for (Value memref : producerConsumerMemrefs) {
