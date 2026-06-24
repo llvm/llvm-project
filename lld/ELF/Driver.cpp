@@ -57,6 +57,7 @@
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
@@ -1540,6 +1541,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   }
   ctx.arg.printMemoryUsage = args.hasArg(OPT_print_memory_usage);
   ctx.arg.printArchiveStats = args.getLastArgValue(OPT_print_archive_stats);
+  ctx.arg.printRelaxStats = args.getLastArgValue(OPT_print_relax_stats);
   ctx.arg.printSymbolOrder = args.getLastArgValue(OPT_print_symbol_order);
   ctx.arg.rejectMismatch = !args.hasArg(OPT_no_warn_mismatch);
   ctx.arg.relax = args.hasFlag(OPT_relax, OPT_no_relax, true);
@@ -2543,6 +2545,56 @@ static void writeArchiveStats(Ctx &ctx) {
     // If the archive occurs multiple times, other instances have a count of 0.
     v = 0;
   }
+}
+
+static void writeRelaxStats(Ctx &ctx) {
+  if (ctx.arg.printRelaxStats.empty())
+    return;
+
+  std::error_code ec;
+  raw_fd_ostream os = ctx.openAuxiliaryFile(ctx.arg.printRelaxStats, ec);
+  if (ec) {
+    ErrAlways(ctx) << "--print-relax-stats=: cannot open "
+                   << ctx.arg.printRelaxStats << ": " << ec.message();
+    return;
+  }
+
+  // Seed with relaxable relocation types, then single-pass count.
+  llvm::DenseMap<uint32_t, std::pair<uint64_t, uint64_t>> stats;
+  if (ctx.arg.emachine == EM_X86_64)
+    for (RelType type :
+         {R_X86_64_GOTPCRELX, R_X86_64_REX_GOTPCRELX, R_X86_64_CODE_4_GOTPCRELX,
+          R_X86_64_GOTPC32_TLSDESC, R_X86_64_CODE_4_GOTPC32_TLSDESC,
+          R_X86_64_TLSGD, R_X86_64_TLSLD, R_X86_64_GOTTPOFF,
+          R_X86_64_CODE_4_GOTTPOFF, R_X86_64_CODE_6_GOTTPOFF})
+      stats[type] = {0, 0};
+
+  for (InputSectionBase *sec : ctx.inputSections)
+    if (sec && sec->isLive())
+      for (const Relocation &rel : sec->relocs())
+        if (stats.count(rel.type)) {
+          ++stats[rel.type].first;
+          if (rel.relaxed)
+            ++stats[rel.type].second;
+        }
+
+  llvm::json::OStream j(os, 2);
+  j.object([&] {
+    j.attributeObject("relaxations", [&] {
+      for (auto &entry : stats) {
+        uint64_t total = entry.second.first;
+        if (total == 0)
+          continue;
+        uint64_t relaxed = entry.second.second;
+        j.attributeObject(toStr(ctx, RelType(entry.first)), [&] {
+          j.attribute("total", int64_t(total));
+          j.attribute("relaxed", int64_t(relaxed));
+          j.attribute("pct_relaxed", relaxed * 100.0 / total);
+        });
+      }
+    });
+  });
+  os << '\n';
 }
 
 static void writeWhyExtract(Ctx &ctx) {
@@ -3588,4 +3640,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Write the result to the file.
   writeResult<ELFT>(ctx);
+
+  writeRelaxStats(ctx);
 }

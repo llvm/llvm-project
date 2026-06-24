@@ -918,6 +918,7 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
                         Symbol &sym, int64_t addend) const {
   // If non-ifunc non-preemptible, change PLT to direct call and optimize GOT
   // indirection.
+  bool relaxed = false;
   const bool isIfunc = sym.isGnuIFunc();
   if (!sym.isPreemptible && !isIfunc) {
     if (expr != R_GOT_PC) {
@@ -925,6 +926,7 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
     } else if (!isAbsoluteOrTls(sym)) {
       expr = ctx.target->adjustGotPcExpr(type, addend,
                                          sec->content().data() + offset);
+      relaxed = expr != R_GOT_PC;
       // If the target adjusted the expression to R_RELAX_GOT_PC, we may end up
       // needing the GOT if we can't relax everything.
       if (expr == R_RELAX_GOT_PC)
@@ -962,21 +964,21 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
     sym.setFlags(HAS_DIRECT_RELOC);
   }
 
-  processAux(expr, type, offset, sym, addend);
+  processAux(expr, type, offset, sym, addend, relaxed);
 }
 
 // Process relocation after needsGot/needsPlt flags are already handled.
 // This is the bottom half of process(), handling isStaticLinkTimeConstant
 // check, dynamic relocations, copy relocations, and error reporting.
 void RelocScan::processAux(RelExpr expr, RelType type, uint64_t offset,
-                           Symbol &sym, int64_t addend) const {
+                           Symbol &sym, int64_t addend, bool relaxed) const {
   const bool isIfunc = sym.isGnuIFunc();
 
   // If the relocation is known to be a link-time constant, we know no dynamic
   // relocation will be created, pass the control to relocateAlloc() or
   // relocateNonAlloc() to resolve it.
   if (isStaticLinkTimeConstant(expr, type, sym, offset)) {
-    sec->addReloc({expr, type, offset, addend, &sym});
+    sec->addReloc({expr, type, offset, addend, &sym, relaxed});
     return;
   }
 
