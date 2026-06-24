@@ -382,6 +382,9 @@ public:
   /// Returns true if the AffineMap represents a symbol-less permutation map.
   bool isPermutation() const;
 
+  /// Returns true if the AffineMap contains non-positive coefficients
+  bool isNonPositiveCoefficients() const;
+
   /// Returns the map consisting of the `resultPos` subset.
   AffineMap getSubMap(ArrayRef<unsigned> resultPos) const;
 
