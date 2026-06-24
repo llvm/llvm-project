@@ -6,6 +6,8 @@ CheckOptions:
     value:           CamelCase
   - key:             readability-identifier-naming.StructCase
     value:           aNy_CasE
+  - key:             readability-identifier-naming.StructIgnoredRegexp
+    value:           "_?(_[A-Za-z0-9]+)*"
   - key:             readability-identifier-naming.MemberCase
     value:           lower_case
   - key:             readability-identifier-naming.MemberIgnoredRegexp
@@ -13,6 +15,10 @@ CheckOptions:
   - key:             readability-identifier-naming.VariableCase
     value:           lower_case
   - key:             readability-identifier-naming.VariableIgnoredRegexp
+    value:           "_?(_[A-Za-z0-9]+)*"
+  - key:             readability-identifier-naming.ParameterCase
+    value:           lower_case
+  - key:             readability-identifier-naming.ParameterIgnoredRegexp
     value:           "_?(_[A-Za-z0-9]+)*"
   - key:             readability-identifier-naming.FunctionCase
     value:           lower_case
@@ -26,6 +32,8 @@ CheckOptions:
     value:           UPPER_CASE
   - key:             readability-identifier-naming.ConstexprVariableCase
     value:           UPPER_CASE
+  - key:             readability-identifier-naming.ConstexprVariableIgnoredRegexp
+    value:           "is(_[A-Za-z0-9]+)*_v"
   - key:             readability-identifier-naming.ConstexprFunctionCase
     value:           lower_case
   - key:             readability-identifier-naming.GetConfigPerFile
