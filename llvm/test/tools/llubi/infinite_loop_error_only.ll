@@ -10,4 +10,5 @@ loop:
 }
 ; CHECK: Stacktrace:
 ; CHECK-NEXT: #0   br label %loop at @main <stdin>:9
+; CHECK-NEXT: Error: Exceeded maximum number of execution steps.
 ; CHECK-NEXT: error: Execution of function 'main' failed.
