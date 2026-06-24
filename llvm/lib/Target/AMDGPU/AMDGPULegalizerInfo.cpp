@@ -36,6 +36,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
+#include "llvm/Support/CheckedArithmetic.h"
 
 #define DEBUG_TYPE "amdgpu-legalinfo"
 
@@ -6493,60 +6494,115 @@ bool AMDGPULegalizerInfo::legalizeIsAddrSpace(MachineInstr &MI,
   return true;
 }
 
+static bool canMoveBufferOffsetToSOffset(const GCNSubtarget &ST,
+                                         bool HasLinearOOB, bool IsNUW,
+                                         uint32_t Offset) {
+  // There is a hardware bug in SI and CI which prevents address clamping in
+  // MUBUF instructions from working correctly with SOffsets. The immediate
+  // offset is unaffected.
+  return HasLinearOOB && IsNUW && static_cast<int32_t>(Offset) > 0 &&
+         ST.getGeneration() > AMDGPUSubtarget::SEA_ISLANDS;
+}
+
+static std::optional<uint32_t>
+getCombinedBufferSOffset(MachineRegisterInfo &MRI, Register SOffset,
+                         uint32_t Offset) {
+  APInt C;
+  if (!mi_match(SOffset, MRI, m_ICst(C)))
+    return std::nullopt;
+  return checkedAddUnsigned<uint32_t>(static_cast<uint32_t>(C.getZExtValue()),
+                                      Offset);
+}
+
 // The raw.(t)buffer and struct.(t)buffer intrinsics have two offset args:
 // offset (the offset that is included in bounds checking and swizzling, to be
 // split between the instruction's voffset and immoffset fields) and soffset
 // (the offset that is excluded from bounds checking and swizzling, to go in
-// the instruction's soffset field).  This function takes the first kind of
-// offset and figures out how to split it between voffset and immoffset.
-std::pair<Register, unsigned>
+// the instruction's soffset field, except that it does affect num_records and
+// so can (if there's no unsigned overflow) be used for bounds checking in raw.*
+// intrinsics). This function takes both offsets and figures out how to split
+// them between voffset, soffset, and immoffset.
+std::tuple<Register, Register, unsigned>
 AMDGPULegalizerInfo::splitBufferOffsets(MachineIRBuilder &B,
-                                        Register OrigOffset) const {
+                                        Register OrigOffset,
+                                        Register OrigSOffset, bool HasLinearOOB,
+                                        GISelValueTracking *VT) const {
   const unsigned MaxImm = SIInstrInfo::getMaxMUBUFImmOffset(ST);
   Register BaseReg;
   unsigned ImmOffset;
   const LLT S32 = LLT::scalar(32);
   MachineRegisterInfo &MRI = *B.getMRI();
-
+  Register SOffset = OrigSOffset;
   // On GFX1250+, voffset and immoffset are zero-extended from 32 bits before
   // being added, so we can only safely match a 32-bit addition with no unsigned
   // overflow.
   bool CheckNUW = ST.hasGFX1250Insts();
-  std::tie(BaseReg, ImmOffset) = AMDGPU::getBaseWithConstantOffset(
-      MRI, OrigOffset, /*KnownBits=*/nullptr, CheckNUW);
+  std::tie(BaseReg, ImmOffset) =
+      AMDGPU::getBaseWithConstantOffset(MRI, OrigOffset, VT, CheckNUW);
+  bool IsNUW = false;
+  if (ImmOffset) {
+    if (!BaseReg) {
+      IsNUW = true;
+    } else if (MachineInstr *OffsetDef =
+                   getDefIgnoringCopies(OrigOffset, MRI)) {
+      // Match SelectionDAG: a G_OR with a constant reaches here only when it is
+      // add-like, and such an OR satisfies the no-wrap condition.
+      IsNUW = OffsetDef->getOpcode() == TargetOpcode::G_OR ||
+              (OffsetDef->getOpcode() == TargetOpcode::G_ADD &&
+               OffsetDef->getFlag(MachineInstr::NoUWrap));
+    }
+  }
 
   // If BaseReg is a pointer, convert it to int.
-  if (MRI.getType(BaseReg).isPointer())
+  if (BaseReg && MRI.getType(BaseReg).isPointer())
     BaseReg = B.buildPtrToInt(MRI.getType(OrigOffset), BaseReg).getReg(0);
 
-  // If the immediate value is too big for the immoffset field, put only bits
-  // that would normally fit in the immoffset field. The remaining value that
-  // is copied/added for the voffset field is a large power of 2, and it
-  // stands more chance of being CSEd with the copy/add for another similar
-  // load/store.
-  // However, do not do that rounding down if that is a negative
-  // number, as it appears to be illegal to have a negative offset in the
-  // vgpr, even if adding the immediate offset makes it positive.
   unsigned Overflow = ImmOffset & ~MaxImm;
   ImmOffset -= Overflow;
+
+  // If the immediate value is too big for the immoffset field, put only bits
+  // that would normally fit in the immoffset field. The remaining value
+  // copied/added for the voffset field is a large power of 2, and it stands
+  // more chance of being CSEd with the copy/add for another similar
+  // load/store. For eligible raw.(t)buffer.* operations, the branch below may
+  // instead move this overflow to soffset.
+  //
+  // Do not do the rounding-down split for negative numbers, as the addition of
+  // immoffset and voffset is checked for unsigned overflow (which causes the
+  // load/store to be marked OOB) and the soffset is (on gfx8 through gfx12; see
+  // the ISA MUBUF/MTBUF addressing description) subtracted from num_records and
+  // not added to the offset.
   if ((int32_t)Overflow < 0) {
     Overflow += ImmOffset;
     ImmOffset = 0;
   }
 
-  if (Overflow != 0) {
-    if (!BaseReg) {
-      BaseReg = B.buildConstant(S32, Overflow).getReg(0);
-    } else {
-      auto OverflowVal = B.buildConstant(S32, Overflow);
-      BaseReg = B.buildAdd(S32, BaseReg, OverflowVal).getReg(0);
+  std::optional<uint32_t> NewSOffset;
+  if (Overflow &&
+      canMoveBufferOffsetToSOffset(ST, HasLinearOOB, IsNUW, Overflow))
+    NewSOffset = getCombinedBufferSOffset(MRI, SOffset, Overflow);
+
+  if (NewSOffset) {
+    // For raw.(t)buffer.* operations with a bare constant or no-wrap add, the
+    // overflow can be added to an existing soffset if the addition would not
+    // cause unsigned overflow. We conservatively restrict ourselves to
+    // constant soffsets here.
+    SOffset = B.buildConstant(S32, *NewSOffset).getReg(0);
+  } else {
+    if (Overflow != 0) {
+      if (!BaseReg) {
+        BaseReg = B.buildConstant(S32, Overflow).getReg(0);
+      } else {
+        auto OverflowVal = B.buildConstant(S32, Overflow);
+        BaseReg = B.buildAdd(S32, BaseReg, OverflowVal).getReg(0);
+      }
     }
   }
 
   if (!BaseReg)
     BaseReg = B.buildConstant(S32, 0).getReg(0);
 
-  return std::pair(BaseReg, ImmOffset);
+  return {BaseReg, SOffset, ImmOffset};
 }
 
 /// Handle register layout difference for f16 images for some subtargets.
@@ -6694,7 +6750,8 @@ bool AMDGPULegalizerInfo::legalizeBufferStore(MachineInstr &MI,
 
   unsigned AuxiliaryData = MI.getOperand(5 + OpOffset).getImm();
 
-  std::tie(VOffset, ImmOffset) = splitBufferOffsets(B, VOffset);
+  std::tie(VOffset, SOffset, ImmOffset) = splitBufferOffsets(
+      B, VOffset, SOffset, !HasVIndex, Helper.getValueTracking());
 
   unsigned Opc;
   if (IsTyped) {
@@ -6832,7 +6889,8 @@ bool AMDGPULegalizerInfo::legalizeBufferLoad(MachineInstr &MI,
   const bool IsD16 = IsFormat && (EltTy.getSizeInBits() == 16);
   const bool Unpacked = ST.hasUnpackedD16VMem();
 
-  std::tie(VOffset, ImmOffset) = splitBufferOffsets(B, VOffset);
+  std::tie(VOffset, SOffset, ImmOffset) = splitBufferOffsets(
+      B, VOffset, SOffset, !HasVIndex, Helper.getValueTracking());
 
   unsigned Opc;
 
@@ -7016,8 +7074,9 @@ static unsigned getBufferAtomicPseudo(Intrinsic::ID IntrID) {
 }
 
 bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
-                                               MachineIRBuilder &B,
+                                               LegalizerHelper &Helper,
                                                Intrinsic::ID IID) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
   const bool IsCmpSwap =
       IID == Intrinsic::amdgcn_raw_buffer_atomic_cmpswap ||
       IID == Intrinsic::amdgcn_struct_buffer_atomic_cmpswap ||
@@ -7058,7 +7117,8 @@ bool AMDGPULegalizerInfo::legalizeBufferAtomic(MachineInstr &MI,
   MachineMemOperand *MMO = *MI.memoperands_begin();
 
   unsigned ImmOffset;
-  std::tie(VOffset, ImmOffset) = splitBufferOffsets(B, VOffset);
+  std::tie(VOffset, SOffset, ImmOffset) = splitBufferOffsets(
+      B, VOffset, SOffset, !HasVIndex, Helper.getValueTracking());
 
   auto MIB = B.buildInstr(getBufferAtomicPseudo(IID))
       .addDef(Dst)
@@ -8511,7 +8571,7 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_fadd:
   case Intrinsic::amdgcn_struct_buffer_atomic_fadd:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_fadd:
-    return legalizeBufferAtomic(MI, B, IntrID);
+    return legalizeBufferAtomic(MI, Helper, IntrID);
   case Intrinsic::amdgcn_rsq_clamp:
     return legalizeRsqClampIntrinsic(MI, MRI, B);
   case Intrinsic::amdgcn_image_bvh_intersect_ray:

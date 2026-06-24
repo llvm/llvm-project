@@ -14,14 +14,16 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUMACHINELEGALIZER_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUMACHINELEGALIZER_H
 
-#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "AMDGPUArgumentUsageInfo.h"
 #include "SIInstrInfo.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
+#include <tuple>
 
 namespace llvm {
 
 class GCNTargetMachine;
 class GCNSubtarget;
+class GISelValueTracking;
 class MachineIRBuilder;
 
 namespace AMDGPU {
@@ -207,8 +209,10 @@ public:
   bool legalizeIsAddrSpace(MachineInstr &MI, MachineRegisterInfo &MRI,
                            MachineIRBuilder &B, unsigned AddrSpace) const;
 
-  std::pair<Register, unsigned> splitBufferOffsets(MachineIRBuilder &B,
-                                                   Register OrigOffset) const;
+  std::tuple<Register, Register, unsigned>
+  splitBufferOffsets(MachineIRBuilder &B, Register OrigOffset,
+                     Register OrigSOffset, bool HasLinearOOB,
+                     GISelValueTracking *VT) const;
 
   Register handleD16VData(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                           Register Reg, bool ImageStore = false) const;
@@ -219,7 +223,7 @@ public:
                            bool IsTyped, bool IsFormat) const;
   bool legalizeBufferLoad(MachineInstr &MI, LegalizerHelper &Helper,
                           bool IsFormat, bool IsTyped) const;
-  bool legalizeBufferAtomic(MachineInstr &MI, MachineIRBuilder &B,
+  bool legalizeBufferAtomic(MachineInstr &MI, LegalizerHelper &Helper,
                             Intrinsic::ID IID) const;
 
   bool legalizeBVHIntersectRayIntrinsic(MachineInstr &MI,

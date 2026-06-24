@@ -1807,66 +1807,6 @@ Register AMDGPURegisterBankInfo::handleD16VData(MachineIRBuilder &B,
       .getReg(0);
 }
 
-static std::pair<Register, unsigned>
-getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg) {
-  int64_t Const;
-  if (mi_match(Reg, MRI, m_ICst(Const)))
-    return std::pair(Register(), Const);
-
-  Register Base;
-  if (mi_match(Reg, MRI, m_GAdd(m_Reg(Base), m_ICst(Const))))
-    return std::pair(Base, Const);
-
-  // TODO: Handle G_OR used for add case
-  return std::pair(Reg, 0);
-}
-
-std::pair<Register, unsigned>
-AMDGPURegisterBankInfo::splitBufferOffsets(MachineIRBuilder &B,
-                                           Register OrigOffset) const {
-  const unsigned MaxImm = SIInstrInfo::getMaxMUBUFImmOffset(Subtarget);
-  Register BaseReg;
-  unsigned ImmOffset;
-  const LLT S32 = LLT::scalar(32);
-
-  // TODO: Use AMDGPU::getBaseWithConstantOffset() instead.
-  std::tie(BaseReg, ImmOffset) = getBaseWithConstantOffset(*B.getMRI(),
-                                                           OrigOffset);
-
-  unsigned C1 = 0;
-  if (ImmOffset != 0) {
-    // If the immediate value is too big for the immoffset field, put only bits
-    // that would normally fit in the immoffset field. The remaining value that
-    // is copied/added for the voffset field is a large power of 2, and it
-    // stands more chance of being CSEd with the copy/add for another similar
-    // load/store.
-    // However, do not do that rounding down if that is a negative
-    // number, as it appears to be illegal to have a negative offset in the
-    // vgpr, even if adding the immediate offset makes it positive.
-    unsigned Overflow = ImmOffset & ~MaxImm;
-    ImmOffset -= Overflow;
-    if (static_cast<int32_t>(Overflow) < 0) {
-      Overflow += ImmOffset;
-      ImmOffset = 0;
-    }
-
-    C1 = ImmOffset;
-    if (Overflow != 0) {
-      if (!BaseReg)
-        BaseReg = B.buildConstant(S32, Overflow).getReg(0);
-      else {
-        auto OverflowVal = B.buildConstant(S32, Overflow);
-        BaseReg = B.buildAdd(S32, BaseReg, OverflowVal).getReg(0);
-      }
-    }
-  }
-
-  if (!BaseReg)
-    BaseReg = B.buildConstant(S32, 0).getReg(0);
-
-  return {BaseReg, C1};
-}
-
 bool AMDGPURegisterBankInfo::buildVCopy(MachineIRBuilder &B, Register DstReg,
                                         Register SrcReg) const {
   MachineRegisterInfo &MRI = *B.getMRI();

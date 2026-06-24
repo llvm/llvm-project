@@ -44,6 +44,7 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/Support/CheckedArithmetic.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/ModRef.h"
@@ -11384,8 +11385,10 @@ SDValue SITargetLowering::lowerRawBufferAtomicIntrin(SDValue Op,
 
   SDValue VData = Op.getOperand(2);
   SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(3), DAG);
-  auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(4), DAG);
-  auto SOffset = selectSOffset(Op.getOperand(5), DAG, Subtarget);
+  auto [VOffset, SOffset, Offset] =
+      splitBufferOffsets(Op.getOperand(4), Op.getOperand(5), DAG,
+                         /*HasLinearOOB=*/true);
+  SOffset = selectSOffset(SOffset, DAG, Subtarget);
   SDValue Ops[] = {
       Op.getOperand(0),                      // Chain
       VData,                                 // vdata
@@ -11412,8 +11415,10 @@ SITargetLowering::lowerStructBufferAtomicIntrin(SDValue Op, SelectionDAG &DAG,
 
   SDValue VData = Op.getOperand(2);
   SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(3), DAG);
-  auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(5), DAG);
-  auto SOffset = selectSOffset(Op.getOperand(6), DAG, Subtarget);
+  auto [VOffset, SOffset, Offset] =
+      splitBufferOffsets(Op.getOperand(5), Op.getOperand(6), DAG,
+                         /*HasLinearOOB=*/false);
+  SOffset = selectSOffset(SOffset, DAG, Subtarget);
   SDValue Ops[] = {
       Op.getOperand(0),                      // Chain
       VData,                                 // vdata
@@ -11513,8 +11518,10 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
         IntrID == Intrinsic::amdgcn_raw_ptr_buffer_load_format;
 
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(2), DAG);
-    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(3), DAG);
-    auto SOffset = selectSOffset(Op.getOperand(4), DAG, Subtarget);
+    auto [VOffset, SOffset, Offset] =
+        splitBufferOffsets(Op.getOperand(3), Op.getOperand(4), DAG,
+                           /*HasLinearOOB=*/true);
+    SOffset = selectSOffset(SOffset, DAG, Subtarget);
     SDValue Ops[] = {
         Op.getOperand(0),                      // Chain
         Rsrc,                                  // rsrc
@@ -11540,8 +11547,10 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
         IntrID == Intrinsic::amdgcn_struct_ptr_buffer_load_format;
 
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(2), DAG);
-    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(4), DAG);
-    auto SOffset = selectSOffset(Op.getOperand(5), DAG, Subtarget);
+    auto [VOffset, SOffset, Offset] =
+        splitBufferOffsets(Op.getOperand(4), Op.getOperand(5), DAG,
+                           /*HasLinearOOB=*/false);
+    SOffset = selectSOffset(SOffset, DAG, Subtarget);
     SDValue Ops[] = {
         Op.getOperand(0),                      // Chain
         Rsrc,                                  // rsrc
@@ -11560,8 +11569,10 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     MemSDNode *M = cast<MemSDNode>(Op);
     EVT LoadVT = Op.getValueType();
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(2), DAG);
-    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(3), DAG);
-    auto SOffset = selectSOffset(Op.getOperand(4), DAG, Subtarget);
+    auto [VOffset, SOffset, Offset] =
+        splitBufferOffsets(Op.getOperand(3), Op.getOperand(4), DAG,
+                           /*HasLinearOOB=*/true);
+    SOffset = selectSOffset(SOffset, DAG, Subtarget);
 
     SDValue Ops[] = {
         Op.getOperand(0),                      // Chain
@@ -11587,8 +11598,10 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     MemSDNode *M = cast<MemSDNode>(Op);
     EVT LoadVT = Op.getValueType();
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(2), DAG);
-    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(4), DAG);
-    auto SOffset = selectSOffset(Op.getOperand(5), DAG, Subtarget);
+    auto [VOffset, SOffset, Offset] =
+        splitBufferOffsets(Op.getOperand(4), Op.getOperand(5), DAG,
+                           /*HasLinearOOB=*/false);
+    SOffset = selectSOffset(SOffset, DAG, Subtarget);
 
     SDValue Ops[] = {
         Op.getOperand(0),                      // Chain
@@ -11725,8 +11738,10 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_raw_buffer_atomic_cmpswap:
   case Intrinsic::amdgcn_raw_ptr_buffer_atomic_cmpswap: {
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(4), DAG);
-    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(5), DAG);
-    auto SOffset = selectSOffset(Op.getOperand(6), DAG, Subtarget);
+    auto [VOffset, SOffset, Offset] =
+        splitBufferOffsets(Op.getOperand(5), Op.getOperand(6), DAG,
+                           /*HasLinearOOB=*/true);
+    SOffset = selectSOffset(SOffset, DAG, Subtarget);
     SDValue Ops[] = {
         Op.getOperand(0),                      // Chain
         Op.getOperand(2),                      // src
@@ -11749,8 +11764,10 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_struct_buffer_atomic_cmpswap:
   case Intrinsic::amdgcn_struct_ptr_buffer_atomic_cmpswap: {
     SDValue Rsrc = bufferRsrcPtrToVector(Op->getOperand(4), DAG);
-    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(6), DAG);
-    auto SOffset = selectSOffset(Op.getOperand(7), DAG, Subtarget);
+    auto [VOffset, SOffset, Offset] =
+        splitBufferOffsets(Op.getOperand(6), Op.getOperand(7), DAG,
+                           /*HasLinearOOB=*/false);
+    SOffset = selectSOffset(SOffset, DAG, Subtarget);
     SDValue Ops[] = {
         Op.getOperand(0),                      // Chain
         Op.getOperand(2),                      // src
@@ -12258,8 +12275,10 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     if (IsD16)
       VData = handleD16VData(VData, DAG);
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(3), DAG);
-    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(5), DAG);
-    auto SOffset = selectSOffset(Op.getOperand(6), DAG, Subtarget);
+    auto [VOffset, SOffset, Offset] =
+        splitBufferOffsets(Op.getOperand(5), Op.getOperand(6), DAG,
+                           /*HasLinearOOB=*/false);
+    SOffset = selectSOffset(SOffset, DAG, Subtarget);
     SDValue Ops[] = {
         Chain,
         VData,                                 // vdata
@@ -12286,8 +12305,10 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     if (IsD16)
       VData = handleD16VData(VData, DAG);
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(3), DAG);
-    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(4), DAG);
-    auto SOffset = selectSOffset(Op.getOperand(5), DAG, Subtarget);
+    auto [VOffset, SOffset, Offset] =
+        splitBufferOffsets(Op.getOperand(4), Op.getOperand(5), DAG,
+                           /*HasLinearOOB=*/true);
+    SOffset = selectSOffset(SOffset, DAG, Subtarget);
     SDValue Ops[] = {
         Chain,
         VData,                                 // vdata
@@ -12331,8 +12352,10 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     }
 
     SDValue Rsrc = bufferRsrcPtrToVector(Op.getOperand(3), DAG);
-    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(4), DAG);
-    auto SOffset = selectSOffset(Op.getOperand(5), DAG, Subtarget);
+    auto [VOffset, SOffset, Offset] =
+        splitBufferOffsets(Op.getOperand(4), Op.getOperand(5), DAG,
+                           /*HasLinearOOB=*/true);
+    SOffset = selectSOffset(SOffset, DAG, Subtarget);
     SDValue Ops[] = {
         Chain,
         VData,
@@ -12382,8 +12405,10 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     }
 
     auto Rsrc = bufferRsrcPtrToVector(Op.getOperand(3), DAG);
-    auto [VOffset, Offset] = splitBufferOffsets(Op.getOperand(5), DAG);
-    auto SOffset = selectSOffset(Op.getOperand(6), DAG, Subtarget);
+    auto [VOffset, SOffset, Offset] =
+        splitBufferOffsets(Op.getOperand(5), Op.getOperand(6), DAG,
+                           /*HasLinearOOB=*/false);
+    SOffset = selectSOffset(SOffset, DAG, Subtarget);
     SDValue Ops[] = {
         Chain,
         VData,
@@ -12771,6 +12796,25 @@ static bool isNoUnsignedWrap(SDValue Addr) {
          Addr->getOpcode() == ISD::OR;
 }
 
+static bool canMoveBufferOffsetToSOffset(const GCNSubtarget *Subtarget,
+                                         bool HasLinearOOB, bool IsNUW,
+                                         uint32_t Offset) {
+  // There is a hardware bug in SI and CI which prevents address clamping in
+  // MUBUF instructions from working correctly with SOffsets. The immediate
+  // offset is unaffected.
+  return HasLinearOOB && IsNUW && static_cast<int32_t>(Offset) > 0 &&
+         Subtarget->getGeneration() > AMDGPUSubtarget::SEA_ISLANDS;
+}
+
+static std::optional<uint32_t> getCombinedBufferSOffset(SDValue SOffset,
+                                                        uint32_t Offset) {
+  auto *C = dyn_cast<ConstantSDNode>(SOffset);
+  if (!C)
+    return std::nullopt;
+  return checkedAddUnsigned<uint32_t>(static_cast<uint32_t>(C->getZExtValue()),
+                                      Offset);
+}
+
 bool SITargetLowering::shouldPreservePtrArith(const Function &F,
                                               EVT PtrVT) const {
   return PtrVT == MVT::i64;
@@ -12785,23 +12829,30 @@ bool SITargetLowering::canTransformPtrArithOutOfBounds(const Function &F,
 // offset (the offset that is included in bounds checking and swizzling, to be
 // split between the instruction's voffset and immoffset fields) and soffset
 // (the offset that is excluded from bounds checking and swizzling, to go in
-// the instruction's soffset field).  This function takes the first kind of
-// offset and figures out how to split it between voffset and immoffset.
-std::pair<SDValue, SDValue>
-SITargetLowering::splitBufferOffsets(SDValue Offset, SelectionDAG &DAG) const {
+// the instruction's soffset field, except that it does affect num_records and
+// so can (if there's no unsigned overflow) be used for bounds checking in raw.*
+// intrinsics). This function takes both offsets and figures out how to split
+// them between voffset, soffset, and immoffset.
+std::tuple<SDValue, SDValue, SDValue>
+SITargetLowering::splitBufferOffsets(SDValue Offset, SDValue SOffset,
+                                     SelectionDAG &DAG,
+                                     bool HasLinearOOB) const {
   SDLoc DL(Offset);
   const unsigned MaxImm = SIInstrInfo::getMaxMUBUFImmOffset(*Subtarget);
   SDValue N0 = Offset;
   ConstantSDNode *C1 = nullptr;
+  bool IsNUW = false;
 
-  if ((C1 = dyn_cast<ConstantSDNode>(N0)))
+  if ((C1 = dyn_cast<ConstantSDNode>(N0))) {
     N0 = SDValue();
-  else if (DAG.isBaseWithConstantOffset(N0)) {
+    IsNUW = true;
+  } else if (DAG.isBaseWithConstantOffset(N0)) {
     // On GFX1250+, voffset and immoffset are zero-extended from 32 bits before
     // being added, so we can only safely match a 32-bit addition with no
     // unsigned overflow.
     bool CheckNUW = Subtarget->hasGFX1250Insts();
-    if (!CheckNUW || isNoUnsignedWrap(N0)) {
+    IsNUW = isNoUnsignedWrap(N0);
+    if (!CheckNUW || IsNUW) {
       C1 = cast<ConstantSDNode>(N0.getOperand(1));
       N0 = N0.getOperand(0);
     }
@@ -12809,36 +12860,55 @@ SITargetLowering::splitBufferOffsets(SDValue Offset, SelectionDAG &DAG) const {
 
   if (C1) {
     unsigned ImmOffset = C1->getZExtValue();
-    // If the immediate value is too big for the immoffset field, put only bits
-    // that would normally fit in the immoffset field. The remaining value that
-    // is copied/added for the voffset field is a large power of 2, and it
-    // stands more chance of being CSEd with the copy/add for another similar
-    // load/store.
-    // However, do not do that rounding down if that is a negative
-    // number, as it appears to be illegal to have a negative offset in the
-    // vgpr, even if adding the immediate offset makes it positive.
     unsigned Overflow = ImmOffset & ~MaxImm;
     ImmOffset -= Overflow;
+
+    // If the immediate value is too big for the immoffset field, put only
+    // bits that would normally fit in the immoffset field. The remaining
+    // value copied/added for the voffset field is a large power of 2, and it
+    // stands more chance of being CSEd with the copy/add for another similar
+    // load/store. For eligible raw.(t)buffer.* operations, the branch below
+    // may instead move this overflow to soffset.
+    //
+    // Do not do the rounding-down split for negative numbers, as the addition
+    // of immoffset and voffset is checked for unsigned overflow (which causes
+    // the load/store to be marked OOB) and the soffset is (on gfx8 through
+    // gfx12; see the ISA MUBUF/MTBUF addressing description) subtracted from
+    // num_records and not added to the offset.
     if ((int32_t)Overflow < 0) {
       Overflow += ImmOffset;
       ImmOffset = 0;
     }
-    C1 = cast<ConstantSDNode>(DAG.getTargetConstant(ImmOffset, DL, MVT::i32));
-    if (Overflow) {
-      auto OverflowVal = DAG.getConstant(Overflow, DL, MVT::i32);
-      if (!N0)
-        N0 = OverflowVal;
-      else {
-        SDValue Ops[] = {N0, OverflowVal};
-        N0 = DAG.getNode(ISD::ADD, DL, MVT::i32, Ops);
+
+    std::optional<uint32_t> NewSOffset;
+    if (Overflow &&
+        canMoveBufferOffsetToSOffset(Subtarget, HasLinearOOB, IsNUW, Overflow))
+      NewSOffset = getCombinedBufferSOffset(SOffset, Overflow);
+
+    if (NewSOffset) {
+      // For raw.(t)buffer.* operations with a bare constant or no-wrap add,
+      // the overflow can be added to an existing soffset if the addition would
+      // not cause unsigned overflow. We conservatively restrict ourselves to
+      // constant soffsets here.
+      SOffset = DAG.getConstant(*NewSOffset, DL, MVT::i32);
+    } else {
+      if (Overflow) {
+        auto OverflowVal = DAG.getConstant(Overflow, DL, MVT::i32);
+        if (!N0)
+          N0 = OverflowVal;
+        else {
+          SDValue Ops[] = {N0, OverflowVal};
+          N0 = DAG.getNode(ISD::ADD, DL, MVT::i32, Ops);
+        }
       }
     }
+    C1 = cast<ConstantSDNode>(DAG.getTargetConstant(ImmOffset, DL, MVT::i32));
   }
   if (!N0)
     N0 = DAG.getConstant(0, DL, MVT::i32);
   if (!C1)
     C1 = cast<ConstantSDNode>(DAG.getTargetConstant(0, DL, MVT::i32));
-  return {N0, SDValue(C1, 0)};
+  return {N0, SOffset, SDValue(C1, 0)};
 }
 
 // Analyze a combined offset from an amdgcn_s_buffer_load intrinsic and store
