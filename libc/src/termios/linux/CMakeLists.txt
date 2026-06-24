@@ -51,9 +51,8 @@ add_entrypoint_object(
   HDRS
     ../tcgetsid.h
   DEPENDS
-    libc.include.sys_syscall
     libc.include.termios
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
 )
 
@@ -64,9 +63,8 @@ add_entrypoint_object(
   HDRS
     ../tcdrain.h
   DEPENDS
-    libc.include.sys_syscall
     libc.include.termios
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
 )
 
@@ -77,9 +75,8 @@ add_entrypoint_object(
   HDRS
     ../tcflush.h
   DEPENDS
-    libc.include.sys_syscall
     libc.include.termios
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
 )
 
@@ -90,9 +87,8 @@ add_entrypoint_object(
   HDRS
     ../tcflow.h
   DEPENDS
-    libc.include.sys_syscall
     libc.include.termios
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
 )
 
@@ -103,9 +99,8 @@ add_entrypoint_object(
   HDRS
     ../tcsendbreak.h
   DEPENDS
-    libc.include.sys_syscall
     libc.include.termios
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
 )
 
@@ -123,9 +118,8 @@ add_entrypoint_object(
     ../tcgetattr.h
   DEPENDS
     .kernel_termios
-    libc.include.sys_syscall
     libc.include.termios
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
 )
 
@@ -137,8 +131,7 @@ add_entrypoint_object(
     ../tcsetattr.h
   DEPENDS
     .kernel_termios
-    libc.include.sys_syscall
     libc.include.termios
-    libc.src.__support.OSUtil.osutil
+    libc.src.__support.OSUtil.linux.syscall_wrappers.ioctl
     libc.src.errno.errno
 )
