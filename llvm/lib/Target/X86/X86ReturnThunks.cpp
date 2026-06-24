@@ -114,3 +114,5 @@ INITIALIZE_PASS(X86ReturnThunksLegacy, PASS_KEY, "X86 Return Thunks", false,
 FunctionPass *llvm::createX86ReturnThunksLegacyPass() {
   return new X86ReturnThunksLegacy();
 }
+
+#undef PASS_KEY

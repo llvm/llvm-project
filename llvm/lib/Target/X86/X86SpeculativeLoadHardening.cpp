@@ -2288,3 +2288,5 @@ INITIALIZE_PASS_END(X86SpeculativeLoadHardeningLegacy, PASS_KEY,
 FunctionPass *llvm::createX86SpeculativeLoadHardeningLegacyPass() {
   return new X86SpeculativeLoadHardeningLegacy();
 }
+
+#undef PASS_KEY
