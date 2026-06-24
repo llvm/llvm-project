@@ -888,8 +888,8 @@ replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
 ///
 /// If necessary this method will version the stride of the pointer according
 /// to \p PtrToStride and therefore add further predicates to \p PSE.
-/// The \p Assume parameter indicates if we are allowed to make additional
-/// run-time assumptions.
+///
+/// If \p Predicates is non-null, add no-wrap SCEV predicates if needed.
 ///
 /// Note that the analysis results are defined if-and-only-if the original
 /// memory access was defined.  If that access was dead, or UB, then the
@@ -899,7 +899,17 @@ getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
              const Loop *Lp, const DominatorTree &DT,
              const DenseMap<Value *, const SCEV *> &StridesMap =
                  DenseMap<Value *, const SCEV *>(),
-             bool Assume = false, bool ShouldCheckWrap = true);
+             bool ShouldCheckWrap = true,
+             SmallVectorImpl<const SCEVPredicate *> *Predicates = nullptr);
+
+/// Overload of \ref getPtrStride that adds the no-wrap predicates directly to
+/// \p PSE. The \p Assume parameter indicates whether such additional run-time
+/// assumptions are allowed.
+LLVM_ABI std::optional<int64_t>
+getPtrStride(PredicatedScalarEvolution &PSE, Type *AccessTy, Value *Ptr,
+             const Loop *Lp, const DominatorTree &DT,
+             const DenseMap<Value *, const SCEV *> &StridesMap, bool Assume,
+             bool ShouldCheckWrap = true);
 
 /// Returns the distance between the pointers \p PtrA and \p PtrB iff they are
 /// compatible and it is possible to calculate the distance between them. This

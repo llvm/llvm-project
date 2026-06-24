@@ -284,7 +284,7 @@ public:
                             uint8_t FillLen = 1,
                             unsigned MaxBytesToEmit = 0) override;
 
-  void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
+  void emitCodeAlignment(Align Alignment, const MCSubtargetInfo &STI,
                          unsigned MaxBytesToEmit = 0) override;
   void emitPrefAlign(Align Alignment, const MCSymbol &End, bool EmitNops,
                      uint8_t Fill, const MCSubtargetInfo &STI) override;
@@ -1573,7 +1573,7 @@ void MCAsmStreamer::emitValueToAlignment(Align Alignment, int64_t Fill,
 }
 
 void MCAsmStreamer::emitCodeAlignment(Align Alignment,
-                                      const MCSubtargetInfo *STI,
+                                      const MCSubtargetInfo &STI,
                                       unsigned MaxBytesToEmit) {
   // Emit with a text fill value.
   if (MAI->getTextAlignFillValue())

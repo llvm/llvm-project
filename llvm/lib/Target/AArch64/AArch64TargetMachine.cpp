@@ -815,8 +815,10 @@ void AArch64PassConfig::addMachineSSAOptimization() {
   // Run default MachineSSAOptimization first.
   TargetPassConfig::addMachineSSAOptimization();
 
-  if (TM->getOptLevel() != CodeGenOptLevel::None)
+  if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createAArch64MIPeepholeOptLegacyPass());
+    addPass(&DeadMachineInstructionElimID);
+  }
 }
 
 bool AArch64PassConfig::addILPOpts() {
