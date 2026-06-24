@@ -1339,6 +1339,9 @@ private:
   RangeSet VisitBinaryOperator(RangeSet LHS, BinaryOperator::Opcode Op,
                                RangeSet RHS, QualType T);
 
+  RangeSet handleConcreteModulo(Range LHS, llvm::APSInt Modulo, QualType T);
+  RangeSet handleRangeModulo(Range LHS, Range RHS, QualType T);
+
   //===----------------------------------------------------------------------===//
   //                         Ranges and operators
   //===----------------------------------------------------------------------===//
@@ -1788,6 +1791,14 @@ template <>
 RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_Rem>(Range LHS,
                                                             Range RHS,
                                                             QualType T) {
+  if (const llvm::APSInt *ModOrNull = RHS.getConcreteValue())
+    return handleConcreteModulo(LHS, *ModOrNull, T);
+
+  return handleRangeModulo(LHS, RHS, T);
+}
+
+RangeSet SymbolicRangeInferrer::handleRangeModulo(Range LHS, Range RHS,
+                                                  QualType T) {
   llvm::APSInt Zero = ValueFactory.getAPSIntType(T).getZeroValue();
 
   Range ConservativeRange = getSymmetricalRange(RHS, T);
@@ -1841,6 +1852,101 @@ RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_Rem>(Range LHS,
   return {RangeFactory, ValueFactory.getValue(Min), ValueFactory.getValue(Max)};
 }
 
+RangeSet SymbolicRangeInferrer::handleConcreteModulo(Range LHS,
+                                                     llvm::APSInt Modulo,
+                                                     QualType T) {
+  APSIntType ResultType = ValueFactory.getAPSIntType(T);
+  llvm::APSInt Zero = ResultType.getZeroValue();
+  llvm::APSInt One = ResultType.getValue(1);
+
+  if (Modulo == Zero)
+    return RangeFactory.getEmptySet();
+
+  // Quick path, this also avoids unary '-' overflow on MinValue modulo.
+  if (Modulo == ValueFactory.getMinValue(T) ||
+      Modulo == ValueFactory.getMaxValue(T))
+    return RangeFactory.getRangeSet(LHS);
+
+  // Normalize to positive modulo since a % N == a % -N
+  if (Modulo < 0)
+    Modulo = -Modulo;
+
+  auto ComputeModuloN = [&](llvm::APSInt From, llvm::APSInt To,
+                            llvm::APSInt N) -> RangeSet {
+    assert(N > Zero && "Positive N expected!");
+    bool NonNegative = From >= Zero;
+    assert(NonNegative == (To >= Zero) && "Signedness mismatch!");
+
+    if (From > To)
+      return RangeFactory.getEmptySet();
+
+    llvm::APSInt N1 = N - One;
+
+    // spans [0, N - 1] if NonNegative or [-(N - 1), 0] otherwise.
+    if ((To - From) / N > Zero)
+      return {RangeFactory, ValueFactory.getValue(NonNegative ? Zero : -N1),
+              ValueFactory.getValue(NonNegative ? N1 : Zero)};
+
+    llvm::APSInt Min = From % N;
+    llvm::APSInt Max = To % N;
+
+    if (Min < Max) // [Min, Max]
+      return {RangeFactory, ValueFactory.getValue(Min),
+              ValueFactory.getValue(Max)};
+
+    // [0, Max] U [Min, N - 1] if NonNegative, or
+    // [-(N - 1), Max] U [Min, 0] otherwise.
+    const llvm::APSInt &Min1 = ValueFactory.getValue(NonNegative ? Zero : -N1);
+    const llvm::APSInt &Max1 = ValueFactory.getValue(Max);
+    RangeSet RS1{RangeFactory, Min1, Max1};
+
+    const llvm::APSInt &Min2 = ValueFactory.getValue(Min);
+    const llvm::APSInt &Max2 = ValueFactory.getValue(NonNegative ? N1 : Zero);
+    RangeSet RS2{RangeFactory, Min2, Max2};
+
+    return RangeFactory.unite(RS1, RS2);
+  };
+
+  if (!LHS.Includes(Zero))
+    return ComputeModuloN(LHS.From(), LHS.To(), Modulo);
+
+  // split over [From, -1] U [0, To] for easy handling.
+  return RangeFactory.unite(ComputeModuloN(LHS.From(), -One, Modulo),
+                            ComputeModuloN(Zero, LHS.To(), Modulo));
+}
+
+template <>
+RangeSet SymbolicRangeInferrer::VisitBinaryOperator<BO_Div>(Range LHS,
+                                                            Range RHS,
+                                                            QualType T) {
+  const llvm::APSInt *DividerOrNull = RHS.getConcreteValue();
+  if (!DividerOrNull)
+    return infer(T);
+
+  const llvm::APSInt &D = *DividerOrNull;
+
+  APSIntType ResultType = ValueFactory.getAPSIntType(T);
+  llvm::APSInt Zero = ResultType.getZeroValue();
+  llvm::APSInt One = ResultType.getValue(1);
+  if (D == Zero)
+    return RangeFactory.getEmptySet();
+
+  if (D == -One) { // might overflow
+    if (LHS.To().isMinSignedValue())
+      return {RangeFactory, LHS.To(), LHS.To()};
+    else if (LHS.From().isMinSignedValue()) {
+      const llvm::APSInt &From = ValueFactory.getValue((LHS.From() + One) / D);
+      const llvm::APSInt &To = ValueFactory.getValue(LHS.To() / D);
+      RangeSet RS{RangeFactory, To, From};
+      return RangeFactory.unite(RS, LHS.From());
+    }
+  }
+
+  const llvm::APSInt &From = ValueFactory.getValue(LHS.From() / D);
+  const llvm::APSInt &To = ValueFactory.getValue(LHS.To() / D);
+  return {RangeFactory, D < Zero ? To : From, D < Zero ? From : To};
+}
+
 RangeSet SymbolicRangeInferrer::VisitBinaryOperator(RangeSet LHS,
                                                     BinaryOperator::Opcode Op,
                                                     RangeSet RHS, QualType T) {
@@ -1859,6 +1965,8 @@ RangeSet SymbolicRangeInferrer::VisitBinaryOperator(RangeSet LHS,
     return VisitBinaryOperator<BO_And>(LHS, RHS, T);
   case BO_Rem:
     return VisitBinaryOperator<BO_Rem>(LHS, RHS, T);
+  case BO_Div:
+    return VisitBinaryOperator<BO_Div>(LHS, RHS, T);
   default:
     return infer(T);
   }
@@ -2093,12 +2201,61 @@ public:
     if (Sym->getOpcode() != BO_Rem)
       return true;
     // a % b != 0 implies that a != 0.
+    // Z3 verification:
+    //   (declare-const a Int)
+    //   (declare-const m Int)
+    //   (assert (not (= m 0)))
+    //   (assert (not (= (mod a m) 0)))
+    //   (assert (= a 0))
+    //   (check-sat)
+    //   ; unsat
     if (!Constraint.containsZero()) {
       SVal SymSVal = Builder.makeSymbolVal(Sym->getLHS());
       if (auto NonLocSymSVal = SymSVal.getAs<nonloc::SymbolVal>()) {
         State = State->assume(*NonLocSymSVal, true);
         if (!State)
           return false;
+      }
+    } else if (const auto *SIE = dyn_cast<SymIntExpr>(Sym);
+               SIE && Constraint.encodesFalseRange()) {
+      // a % m == 0 && a in [x, y] && y - x < m implies that
+      // a = (y < 0 ? x : y) / m * m which is a 'ConcreteInt'
+      // where x and m are 'ConcreteInt'.
+      //
+      // Z3 verification:
+      //   (declare-const a Int)
+      //   (declare-const m Int)
+      //   (declare-const x Int)
+      //   (declare-const y Int)
+      //   (assert (= (mod a m) 0))
+      //   (assert (< (- y x) m))
+      //   (assert (and (>= a x) (<= a y)))
+      //   (assert (not (= a (* (div y m) m))))
+      //   (check-sat)
+      //   ; unsat
+      BasicValueFactory &ValueFactory = RangeFactory.getValueFactory();
+      APSIntType ResultType = ValueFactory.getAPSIntType(SIE->getType());
+      llvm::APSInt N = SIE->getRHS();
+      if (N < 0)
+        N = -N;
+      N = ResultType.convert(N);
+
+      SymbolRef Sym = SIE->getLHS();
+      RangeSet RS = SymbolicRangeInferrer::inferRange(RangeFactory, State, Sym);
+      if (RS.size() == 1) {
+        Range R = *RS.begin();
+        llvm::APSInt Distance = ResultType.convert(R.To()).extend(64) -
+                                ResultType.convert(R.From()).extend(64);
+        if (Distance < 0) // overflows
+          return true;
+
+        if (Distance < N.extend(64)) {
+          const llvm::APSInt &Point = ValueFactory.getValue(
+              (ResultType.convert(R.To() > 0 ? R.To() : R.From())) / N * N);
+          State = assign(Sym, {RangeFactory, Point, Point});
+          if (!State)
+            return false;
+        }
       }
     }
     return true;
