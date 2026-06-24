@@ -136,6 +136,7 @@ if(WIN32 OR LLVM_WINSYSROOT)
   set(RUNTIMES_${target}_CMAKE_EXE_LINKER_FLAGS ${WINDOWS_LINK_FLAGS} CACHE STRING "")
   set(RUNTIMES_${target}_CMAKE_SHARED_LINKER_FLAGS ${WINDOWS_LINK_FLAGS} CACHE STRING "")
   set(RUNTIMES_${target}_CMAKE_MODULE_LINKER_FLAGS ${WINDOWS_LINK_FLAGS} CACHE STRING "")
+  set(RUNTIMES_${target}_LIBCXX_TEST_PARAMS "std=c++23" CACHE STRING "")
 endif()
 
 foreach(target aarch64-unknown-linux-gnu;armv7-unknown-linux-gnueabihf;i386-unknown-linux-gnu;riscv64-unknown-linux-gnu;x86_64-unknown-linux-gnu)
