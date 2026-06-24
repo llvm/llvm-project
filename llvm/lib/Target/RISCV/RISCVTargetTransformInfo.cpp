@@ -783,14 +783,32 @@ RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
       // 2 x (vrgather + cost of generating the mask constant) + cost of mask
       // register for the second vrgather. We model this for an unknown
       // (shuffle) mask.
-      if (LT.first == 1 && (LT.second.getScalarSizeInBits() != 8 ||
-                            LT.second.getVectorNumElements() <= 256)) {
+      if (unsigned NumElts = LT.second.getVectorNumElements();
+          LT.first == 1 &&
+          (LT.second.getScalarSizeInBits() != 8 || NumElts <= 256)) {
         auto &C = SrcTy->getContext();
         auto EC = SrcTy->getElementCount();
         VectorType *IdxTy = getVRGatherIndexType(LT.second, *ST, C);
         VectorType *MaskTy = VectorType::get(IntegerType::getInt1Ty(C), EC);
         InstructionCost IndexCost = getConstantPoolLoadCost(IdxTy, CostKind);
         InstructionCost MaskCost = getConstantPoolLoadCost(MaskTy, CostKind);
+        // See if cheaper to use a load immediate + VMV rather than loading
+        // the mask from the constant pool
+        // - Mask must be known
+        // - Mask must fit into element in vector unit so VMV won't require a
+        // VSETVL prior to VMV
+        // - Mask must fit into a scalar register
+        if (!Mask.empty() && Mask.size() <= ST->getXLen() &&
+            Mask.size() <= LT.second.getScalarSizeInBits()) {
+          APInt Imm(Mask.size(), 0);
+          for (auto [Idx, M] : enumerate(Mask))
+            if (M >= (int)FVTp->getNumElements())
+              Imm.setBit(Idx);
+          InstructionCost ImmMaskCost =
+              getIntImmCost(Imm, Type::getIntNTy(C, Mask.size()), CostKind) +
+              getRISCVInstructionCost(RISCV::VMV_S_X, LT.second, CostKind);
+          MaskCost = std::min(ImmMaskCost, MaskCost);
+        }
         return 2 * IndexCost +
                getRISCVInstructionCost({RISCV::VRGATHER_VV, RISCV::VRGATHER_VV},
                                        LT.second, CostKind) +
