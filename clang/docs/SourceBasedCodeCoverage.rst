@@ -64,6 +64,14 @@ To compile code with coverage enabled, pass ``-fprofile-instr-generate
 Note that linking together code with and without coverage instrumentation is
 supported. Uninstrumented code simply won't be accounted for in reports.
 
+You can also pass the path with ``-fprofile-instr-generate=`` parameter to bake
+the coverage directory at compile-time. Instrumented program will use this path
+for coverage profile, unless ``LLVM_PROFILE_FILE`` environment variable is specified.
+
+.. code-block:: console
+
+    % clang++ -fprofile-instr-generate="foo.profraw" -fcoverage-mapping foo.cc -o foo
+
 To compile code with Modified Condition/Decision Coverage (MC/DC) enabled,
 pass ``-fcoverage-mcdc`` in addition to the clang options specified above.
 MC/DC is an advanced form of code coverage most applicable to the embedded
@@ -74,7 +82,9 @@ Running the instrumented program
 
 The next step is to run the instrumented program. When the program exits, it
 will write a **raw profile** to the path specified by the ``LLVM_PROFILE_FILE``
-environment variable. If that variable does not exist, the profile is written
+environment variable. If that variable does not exist, program will write coverage
+profile to the path specified by ``-fprofile-instr-generate=`` option. If that 
+value does not exist, the profile is written
 to ``default.profraw`` in the current directory of the program. If
 ``LLVM_PROFILE_FILE`` specifies a path to a non-existent directory, the missing
 directory structure will be created.  Additionally, the following special
