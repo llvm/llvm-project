@@ -915,3 +915,44 @@ void nullPointerWarning(void) {
   (void)__atomic_fetch_max(&vi, 0, memory_order_relaxed);
   (void)__atomic_fetch_max(&i, 0, memory_order_relaxed);
 }
+
+// C23 §7.17.7.5p1: atomic_fetch_* operations are not permitted on atomic_bool.
+void test_atomic_fetch_bool_rejected(atomic_bool *b, _Bool *b_plain) {
+  // C11 stdatomic.h high-level macros
+  atomic_fetch_add(b, 1);                            // expected-error {{must not be a pointer to a boolean type}}
+  atomic_fetch_sub(b, 1);                            // expected-error {{must not be a pointer to a boolean type}}
+  atomic_fetch_and(b, 1);                            // expected-error {{must not be a pointer to a boolean type}}
+  atomic_fetch_or(b, 1);                             // expected-error {{must not be a pointer to a boolean type}}
+  atomic_fetch_xor(b, 1);                            // expected-error {{must not be a pointer to a boolean type}}
+  atomic_fetch_add_explicit(b, 1, memory_order_seq_cst); // expected-error {{must not be a pointer to a boolean type}}
+  atomic_fetch_sub_explicit(b, 1, memory_order_seq_cst); // expected-error {{must not be a pointer to a boolean type}}
+  atomic_fetch_and_explicit(b, 1, memory_order_seq_cst); // expected-error {{must not be a pointer to a boolean type}}
+  atomic_fetch_or_explicit(b, 1, memory_order_seq_cst);  // expected-error {{must not be a pointer to a boolean type}}
+  atomic_fetch_xor_explicit(b, 1, memory_order_seq_cst); // expected-error {{must not be a pointer to a boolean type}}
+
+  // Low-level __c11_atomic_fetch_* builtins
+  __c11_atomic_fetch_add(b, 1, memory_order_seq_cst); // expected-error {{must not be a pointer to a boolean type}}
+  __c11_atomic_fetch_sub(b, 1, memory_order_seq_cst); // expected-error {{must not be a pointer to a boolean type}}
+  __c11_atomic_fetch_and(b, 1, memory_order_seq_cst); // expected-error {{must not be a pointer to a boolean type}}
+  __c11_atomic_fetch_or(b, 1, memory_order_seq_cst);  // expected-error {{must not be a pointer to a boolean type}}
+  __c11_atomic_fetch_xor(b, 1, memory_order_seq_cst); // expected-error {{must not be a pointer to a boolean type}}
+  __c11_atomic_fetch_min(b, 1, memory_order_seq_cst); // expected-error {{must not be a pointer to a boolean type}}
+  __c11_atomic_fetch_max(b, 1, memory_order_seq_cst); // expected-error {{must not be a pointer to a boolean type}}
+
+  // GNU __atomic_fetch_* builtins (take plain pointer, not _Atomic)
+  __atomic_fetch_add(b_plain, 1, memory_order_seq_cst); // expected-error {{must not be a pointer to a boolean type}}
+  __atomic_fetch_sub(b_plain, 1, memory_order_seq_cst); // expected-error {{must not be a pointer to a boolean type}}
+  __atomic_fetch_and(b_plain, 1, memory_order_seq_cst); // expected-error {{must not be a pointer to a boolean type}}
+  __atomic_fetch_or(b_plain, 1, memory_order_seq_cst);  // expected-error {{must not be a pointer to a boolean type}}
+  __atomic_fetch_xor(b_plain, 1, memory_order_seq_cst); // expected-error {{must not be a pointer to a boolean type}}
+  __atomic_fetch_min(b_plain, 1, memory_order_seq_cst); // expected-error {{must not be a pointer to a boolean type}}
+  __atomic_fetch_max(b_plain, 1, memory_order_seq_cst); // expected-error {{must not be a pointer to a boolean type}}
+}
+
+// Non-arithmetic _n ops on _Bool must remain valid. Load/store/exchange are
+// not covered by C23 §7.17.7.5p1 and must not be rejected.
+void test_atomic_n_bool_allowed(_Bool *b_plain) {
+  __atomic_load_n(b_plain, memory_order_seq_cst);
+  __atomic_store_n(b_plain, 1, memory_order_seq_cst);
+  (void)__atomic_exchange_n(b_plain, 1, memory_order_seq_cst);
+}
