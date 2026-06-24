@@ -709,11 +709,11 @@ and within the compound statement:
 
 .. code-block:: c
 
-    truct _block_byref_obj obj = {( .forwarding=&obj, .flags=(1<<25), .size=sizeof(struct _block_byref_obj),
+    struct _block_byref_obj obj = {( .forwarding=&obj, .flags=(1<<25), .size=sizeof(struct _block_byref_obj),
                      .byref_keep=_block_byref_obj_keep, .byref_dispose=_block_byref_obj_dispose,
                      .captured_obj = <initialization expression> )};
 
-    truct __block_literal_5 _block_literal = {
+    struct __block_literal_5 _block_literal = {
          &_NSConcreteStackBlock,
          (1<<25)|(1<<29), <uninitialized>,
          __block_invoke_5,
