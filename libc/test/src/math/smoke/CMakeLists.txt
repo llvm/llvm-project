@@ -4759,6 +4759,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  asinh_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    asinh_test.cpp
+  DEPENDS
+    libc.src.math.asinh
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   asinhf_test
   SUITE
     libc-math-smoke-tests
