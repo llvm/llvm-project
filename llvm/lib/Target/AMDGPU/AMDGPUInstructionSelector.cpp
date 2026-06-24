@@ -1719,39 +1719,51 @@ bool AMDGPUInstructionSelector::selectBallot(MachineInstr &I) const {
   Register SrcReg = I.getOperand(2).getReg();
   const unsigned BallotSize = MRI->getType(DstReg).getSizeInBits();
   const unsigned WaveSize = STI.getWavefrontSize();
-
-  // In the common case, the return type matches the wave size.
-  // However we also support emitting i64 ballots in wave32 mode.
-  if (BallotSize != WaveSize && (BallotSize != 64 || WaveSize != 32))
-    return false;
-
   std::optional<ValueAndVReg> Arg =
       getIConstantVRegValWithLookThrough(SrcReg, *MRI);
+  if (!Arg && SrcReg.isVirtual()) {
+    MachineInstr *SrcDef = MRI->getVRegDef(SrcReg);
+    if (SrcDef && SrcDef->getOpcode() == AMDGPU::G_AMDGPU_COPY_VCC_SCC)
+      Arg = getIConstantVRegValWithLookThrough(SrcDef->getOperand(1).getReg(),
+                                               *MRI);
+  }
+  const bool IsI64OnWave32 = BallotSize == 64 && WaveSize == 32;
+  const bool IsConstantI32OnWave64 = Arg && BallotSize == 32 && WaveSize == 64;
+
+  // In the common case, the return type matches the wave size.
+  // However we also support emitting i64 ballots in wave32 mode. Constant i32
+  // ballots in wave64 mode do not need the full wave mask.
+  if (BallotSize != WaveSize && !IsI64OnWave32 && !IsConstantI32OnWave64)
+    return false;
 
   Register Dst = DstReg;
   // i64 ballot on Wave32: new Dst(i32) for WaveSize ballot.
-  if (BallotSize != WaveSize) {
+  if (IsI64OnWave32) {
     Dst = MRI->createVirtualRegister(TRI.getBoolRC());
   }
+  const unsigned DstSize = IsI64OnWave32 ? WaveSize : BallotSize;
+  const TargetRegisterClass &DstRC =
+      DstSize == 64 ? AMDGPU::SReg_64RegClass : AMDGPU::SReg_32RegClass;
 
   if (Arg) {
     const int64_t Value = Arg->Value.getZExtValue();
     if (Value == 0) {
       // Dst = S_MOV 0
-      unsigned Opcode = WaveSize == 64 ? AMDGPU::S_MOV_B64 : AMDGPU::S_MOV_B32;
+      unsigned Opcode = DstSize == 64 ? AMDGPU::S_MOV_B64 : AMDGPU::S_MOV_B32;
       BuildMI(*BB, &I, DL, TII.get(Opcode), Dst).addImm(0);
     } else {
       // Dst = COPY EXEC
       assert(Value == 1);
-      BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), Dst).addReg(TRI.getExec());
+      Register Exec = DstSize == 64 ? AMDGPU::EXEC : AMDGPU::EXEC_LO;
+      BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), Dst).addReg(Exec);
     }
-    if (!RBI.constrainGenericRegister(Dst, *TRI.getBoolRC(), *MRI))
+    if (!RBI.constrainGenericRegister(Dst, DstRC, *MRI))
       return false;
   } else {
     if (isLaneMaskFromSameBlock(SrcReg, *MRI, BB)) {
       // Dst = COPY SrcReg
       BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), Dst).addReg(SrcReg);
-      if (!RBI.constrainGenericRegister(Dst, *TRI.getBoolRC(), *MRI))
+      if (!RBI.constrainGenericRegister(Dst, DstRC, *MRI))
         return false;
     } else {
       // Dst = S_AND SrcReg, EXEC
@@ -1765,7 +1777,7 @@ bool AMDGPUInstructionSelector::selectBallot(MachineInstr &I) const {
   }
 
   // i64 ballot on Wave32: zero-extend i32 ballot to i64.
-  if (BallotSize != WaveSize) {
+  if (IsI64OnWave32) {
     Register HiReg = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
     BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_MOV_B32), HiReg).addImm(0);
     BuildMI(*BB, &I, DL, TII.get(AMDGPU::REG_SEQUENCE), DstReg)
