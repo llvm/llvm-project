@@ -125,7 +125,7 @@ protected:
       m_objc_trampoline_handler_up;
   lldb::BreakpointSP m_objc_exception_bp_sp;
   lldb::ModuleWP m_objc_module_wp;
-  std::unique_ptr<FunctionCaller> m_print_object_caller_up;
+  std::unique_ptr<UtilityFunction> m_print_object_utility_up;
 
   std::optional<uint32_t> m_Foundation_major;
 };
