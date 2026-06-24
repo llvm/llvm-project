@@ -280,14 +280,11 @@ std::unique_ptr<PathSensitiveBugReport>
 NonNullParamChecker::genReportNullAttrNonNull(const ExplodedNode *ErrorNode,
                                               const Expr *ArgE,
                                               unsigned IdxOfArg) const {
-  llvm::SmallString<256> SBuf;
-  llvm::raw_svector_ostream OS(SBuf);
-  OS << "Null pointer passed to "
-     << IdxOfArg << llvm::getOrdinalSuffix(IdxOfArg)
-     << " parameter expecting 'nonnull'";
-
-  auto R =
-      std::make_unique<PathSensitiveBugReport>(BTAttrNonNull, SBuf, ErrorNode);
+  auto R = std::make_unique<PathSensitiveBugReport>(
+      BTAttrNonNull,
+      "Null pointer passed to " + Twine(IdxOfArg) +
+          llvm::getOrdinalSuffix(IdxOfArg) + " parameter expecting 'nonnull'",
+      ErrorNode);
   if (ArgE)
     bugreporter::trackExpressionValue(ErrorNode, ArgE, *R);
 

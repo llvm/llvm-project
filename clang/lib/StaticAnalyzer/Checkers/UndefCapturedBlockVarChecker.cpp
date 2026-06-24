@@ -70,14 +70,11 @@ UndefCapturedBlockVarChecker::checkPostStmt(const BlockExpr *BE,
     if (std::optional<UndefinedVal> V =
             state->getSVal(Var.getOriginalRegion()).getAs<UndefinedVal>()) {
       if (ExplodedNode *N = C.generateErrorNode()) {
-        // Generate a bug report.
-        SmallString<128> buf;
-        llvm::raw_svector_ostream os(buf);
-
-        os << "Variable '" << VD->getName()
-           << "' is uninitialized when captured by block";
-
-        auto R = std::make_unique<PathSensitiveBugReport>(BT, os.str(), N);
+        auto R = std::make_unique<PathSensitiveBugReport>(
+            BT,
+            "Variable '" + VD->getName() +
+                "' is uninitialized when captured by block",
+            N);
         if (const Expr *Ex = FindBlockDeclRefExpr(BE->getBody(), VD))
           R->addRange(Ex->getSourceRange());
         bugreporter::trackStoredValue(*V, VR, *R,
