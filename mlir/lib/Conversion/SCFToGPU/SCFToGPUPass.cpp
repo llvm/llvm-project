@@ -9,6 +9,7 @@
 #include "mlir/Conversion/SCFToGPU/SCFToGPUPass.h"
 
 #include "mlir/Conversion/SCFToGPU/SCFToGPU.h"
+#include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -29,11 +30,33 @@ namespace {
 struct ForLoopMapper
     : public impl::ConvertAffineForToGPUPassBase<ForLoopMapper> {
   using Base::Base;
+  /// Checks if the loop nest rooted at 'forOp' has parallelism for the first
+  /// `numMappedLoops` loops.
+  static bool areMappedLoopsParallel(affine::AffineForOp forOp,
+                                     unsigned numMappedLoops) {
+    affine::AffineForOp currentLoop = forOp;
+    for (unsigned i = 0; i < numMappedLoops; ++i) {
+      if (!affine::isLoopParallel(currentLoop))
+        return false;
+      if (i + 1 < numMappedLoops) {
+        auto nestedLoops = currentLoop.getBody()->getOps<affine::AffineForOp>();
+        if (nestedLoops.empty())
+          // Return true here to let the conversion fail later on structural
+          // mismatch if the nest is not deep enough.
+          return true;
+        // Target only the first nested loop in a perfect nest.
+        currentLoop = *nestedLoops.begin();
+      }
+    }
+    return true;
+  }
 
   void runOnOperation() override {
     for (Operation &op : llvm::make_early_inc_range(
              getOperation().getFunctionBody().getOps())) {
       if (auto forOp = dyn_cast<affine::AffineForOp>(&op)) {
+        if (!areMappedLoopsParallel(forOp, numBlockDims + numThreadDims))
+          continue;
         if (failed(convertAffineLoopNestToGPULaunch(forOp, numBlockDims,
                                                     numThreadDims)))
           signalPassFailure();
