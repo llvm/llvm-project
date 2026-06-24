@@ -240,6 +240,10 @@ let Definition = "debugger", Path = "" in {
     Global,
     DefaultTrue,
     Desc<"If true, LLDB will automatically display small structs in one-liner format (default: true).">;
+  def PrintBraces: Property<"print-braces", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"Print curly braces around structures when displaying variable values.">;
   def AutoIndent: Property<"auto-indent", "Boolean">,
     Global,
     DefaultTrue,
