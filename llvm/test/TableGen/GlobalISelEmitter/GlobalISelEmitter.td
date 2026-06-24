@@ -359,10 +359,10 @@ def HasC : Predicate<"Subtarget->hasC()"> { let RecomputePerFunction = 1; }
 // EXTENDED:       // Label [[CASE_ADD_NUM]]: @[[CASE_ADD]]
 // EXTENDED:       // Label [[CASE_SELECT_NUM]]: @[[CASE_SELECT]]
 // EXTENDED-NEXT:  GIM_Try, /*On fail goto*//*Label [[GROUP_NUM:[0-9]+]]*/ GIMT_Encode4([[GROUP:[0-9]+]]),
-// EXTENDED-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_i32,
-// EXTENDED-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_i32,
-// EXTENDED-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_i32,
-// EXTENDED-NEXT:    GIM_RootCheckType, /*Op*/3, /*Type*/GILLT_i32,
+// EXTENDED-NEXT:    GIM_RootCheckType, /*Op*/0, /*Type*/GILLT_s32,
+// EXTENDED-NEXT:    GIM_RootCheckType, /*Op*/1, /*Type*/GILLT_s32,
+// EXTENDED-NEXT:    GIM_RootCheckType, /*Op*/2, /*Type*/GILLT_s32,
+// EXTENDED-NEXT:    GIM_RootCheckType, /*Op*/3, /*Type*/GILLT_s32,
 
 def INSN3 : I<(outs GPR32:$dst),
               (ins GPR32Op:$src1, GPR32:$src2a, GPR32:$src2b, GPR32:$scr), []>;
