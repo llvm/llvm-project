@@ -39,6 +39,7 @@
 ; CHECK-NEXT:       Assignment Tracking Analysis
 ; CHECK-NEXT:       RISC-V DAG->DAG Pattern Instruction Selection
 ; CHECK-NEXT:       Finalize ISel and expand pseudo-instructions
+; CHECK-NEXT:       Remove unused oracle functions
 ; CHECK-NEXT:       Local Stack Slot Allocation
 ; CHECK-NEXT:       RISC-V Pre-RA pseudo instruction expansion pass
 ; CHECK-NEXT:       RISC-V Insert Read/Write CSR Pass

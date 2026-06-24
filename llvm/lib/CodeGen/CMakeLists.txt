@@ -208,6 +208,7 @@ add_llvm_component_library(LLVMCodeGen
   RegUsageInfoCollector.cpp
   RegUsageInfoPropagate.cpp
   RemoveLoadsIntoFakeUses.cpp
+  RemoveOracleFunctions.cpp
   ReplaceWithVeclib.cpp
   ResetMachineFunctionPass.cpp
   RegisterBank.cpp

@@ -81,6 +81,7 @@
 ; CHECK-NEXT:      Lazy Block Frequency Analysis
 ; CHECK-NEXT:      ARM Instruction Selection
 ; CHECK-NEXT:      Finalize ISel and expand pseudo-instructions
+; CHECK-NEXT:      Remove unused oracle functions
 ; CHECK-NEXT:      Lazy Machine Block Frequency Analysis
 ; CHECK-NEXT:      Early Tail Duplication
 ; CHECK-NEXT:      Optimize machine instruction PHIs

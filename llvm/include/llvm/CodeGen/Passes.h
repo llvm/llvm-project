@@ -495,6 +495,11 @@ LLVM_ABI FunctionPass *createInterleavedLoadCombinePass();
 ///
 LLVM_ABI ModulePass *createLowerEmuTLSPass();
 
+/// RemoveOracleFunctions - Remove unused functions with the "oracle-function"
+/// attribute. Runs right after ISel and prevents subsequent passes from
+/// processing oracle functions.
+LLVM_ABI MachineFunctionPass *createRemoveOracleFunctionsPass();
+
 LLVM_ABI ModulePass *createLibcallLoweringInfoWrapper();
 
 /// This pass lowers the \@llvm.load.relative and \@llvm.objc.* intrinsics to

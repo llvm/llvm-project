@@ -88,6 +88,7 @@
 ; LAXX-NEXT:       Lazy Block Frequency Analysis
 ; LAXX-NEXT:       LoongArch DAG->DAG Pattern Instruction Selection
 ; LAXX-NEXT:       Finalize ISel and expand pseudo-instructions
+; LAXX-NEXT:       Remove unused oracle functions
 ; LAXX-NEXT:       Lazy Machine Block Frequency Analysis
 ; LAXX-NEXT:       Early Tail Duplication
 ; LAXX-NEXT:       Optimize machine instruction PHIs
