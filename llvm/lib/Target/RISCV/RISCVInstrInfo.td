@@ -1959,9 +1959,13 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8,
 def PseudoLA_TLS_GD : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), [],
                              "la.tls.gd", "$dst, $src">;
 
+defvar TLSDESCVClobbers = !listconcat(
+    !foreach(i, !range(32), !cast<Register>("V"#i)),
+    [VTYPE, VL, VXSAT, VXRM]);
+
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0, Size = 32 in
 def PseudoLA_TLSDESC : Pseudo<(outs GPR:$dst), (ins bare_symbol:$src), []> {
-  let Defs = [X5, X10];
+  let Defs = !listconcat([X5, X10], TLSDESCVClobbers);
 }
 
 def TLSDESCCallSymbol : AsmOperandClass {
@@ -1986,7 +1990,7 @@ def PseudoTLSDESCCall : Pseudo<(outs GPR:$rd),
                          (ins GPR:$rs1, simm12_lo:$imm12, tlsdesc_call_symbol:$src), [],
                          "jalr", "$rd, ${imm12}(${rs1}), $src">,
                          Sched<[WriteJalr, ReadJalr]> {
-  let Defs = [X10];
+  let Defs = !listconcat([X10], TLSDESCVClobbers);
   let Uses = [X10];
 }
 
