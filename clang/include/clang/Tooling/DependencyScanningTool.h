@@ -119,10 +119,20 @@ public:
 
   dependencies::DependencyScanningWorker &getWorker() { return Worker; }
 
+  llvm::Error initializeForByNameLookup(
+      StringRef CWD, ArrayRef<std::string> CommandLine,
+      dependencies::DependencyActionController &Controller);
+
+  llvm::Expected<dependencies::TranslationUnitDeps>
+  computeDependenciesByNameOrError(
+      StringRef ModuleName,
+      const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
+      dependencies::DependencyActionController &Controller);
+
 private:
   dependencies::DependencyScanningWorker Worker;
-
-  friend class CompilerInstanceWithContext;
+  std::unique_ptr<dependencies::TextDiagnosticsPrinterWithOutput> DiagPrinter;
+  std::unique_ptr<CompilerInstanceWithContext> ByNameCIWC;
 };
 
 /// Run the dependency scanning worker for the given driver or frontend
@@ -149,13 +159,6 @@ class CompilerInstanceWithContext {
   dependencies::DependencyScanningWorker &Worker;
   llvm::StringRef CWD;
   std::vector<std::string> CommandLine;
-
-  // Context - Diagnostics engine.
-  DiagnosticConsumer *DiagConsumer = nullptr;
-  std::unique_ptr<dependencies::DiagnosticsEngineWithDiagOpts>
-      DiagEngineWithCmdAndOpts;
-  std::unique_ptr<dependencies::TextDiagnosticsPrinterWithOutput>
-      DiagPrinterWithOS;
 
   // Context - compiler invocation
   std::unique_ptr<CompilerInvocation> OriginalInvocation;
@@ -201,41 +204,10 @@ public:
       IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS,
       dependencies::DependencyActionController &Controller);
 
-  /// @brief Initializing the context and the compiler instance.
-  ///        This method must be called before calling
-  ///        computeDependenciesByNameWithContext.
-  /// @param CWD The current working directory used during the scan.
-  /// @param CommandLine The commandline used for the scan.
-  /// @return Error if the initializaiton fails.
-  static llvm::Expected<CompilerInstanceWithContext>
-  initializeOrError(DependencyScanningTool &Tool, StringRef CWD,
-                    ArrayRef<std::string> CommandLine,
-                    dependencies::DependencyActionController &Controller);
-
   bool
   computeDependencies(StringRef ModuleName,
                       dependencies::DependencyConsumer &Consumer,
                       dependencies::DependencyActionController &Controller);
-
-  /// @brief Computes the dependeny for the module named ModuleName.
-  /// @param ModuleName The name of the module for which this method computes
-  ///.                  dependencies.
-  /// @param AlreadySeen This stores modules which have previously been
-  ///                    reported. Use the same instance for all calls to this
-  ///                    function for a single \c DependencyScanningTool in a
-  ///                    single build. Note that this parameter is not part of
-  ///                    the context because it can be shared across different
-  ///                    worker threads and each worker thread may update it.
-  /// @param LookupModuleOutput This function is called to fill in
-  ///                           "-fmodule-file=", "-o" and other output
-  ///                           arguments for dependencies.
-  /// @return An instance of \c TranslationUnitDeps if the scan is successful.
-  ///         Otherwise it returns an error.
-  llvm::Expected<dependencies::TranslationUnitDeps>
-  computeDependenciesByNameOrError(
-      StringRef ModuleName,
-      const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
-      dependencies::DependencyActionController &Controller);
 
   // MaxNumOfQueries is the upper limit of the number of names the by-name
   // scanning API (computeDependencies) can support after a
