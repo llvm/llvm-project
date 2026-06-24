@@ -4,7 +4,7 @@
 # RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sme2 -run-pass=aarch64-expand-pseudo \
 # RUN:   -force-streaming -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=SVE2P1
 # RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve2p1 -run-pass=aarch64-expand-pseudo \
-# RUN:   -aarch64-enable-multivec-spill-fill=false -verify-machineinstrs %s -o - \
+# RUN:   -aarch64-disable-multivector-spill-fill -verify-machineinstrs %s -o - \
 # RUN:   | FileCheck %s --check-prefix=NOPT
 # RUN: llc -mtriple=aarch64-linux-gnu -mattr=+sve -run-pass=aarch64-expand-pseudo \
 # RUN:   -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=NOPT
