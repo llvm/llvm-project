@@ -15,7 +15,7 @@
 define float @whichever_float(float %0, float %1, float %2) {
   %result = call float @llvm.fmuladd.f32(float %0, float %1, float %2)
   ret float %result
-; CHECK: {{^}}whichever_float:
+; CHECK-LABEL: {{^}}whichever_float:
 ; FP: fmadd s0, s0, s1, s2
 ; NOFP: bl __mulsf3
 ; NOFP: bl __addsf3
@@ -24,7 +24,7 @@ define float @whichever_float(float %0, float %1, float %2) {
 define double @whichever_double(double %0, double %1, double %2) {
   %result = call double @llvm.fmuladd.f64(double %0, double %1, double %2)
   ret double %result
-; CHECK: {{^}}whichever_double:
+; CHECK-LABEL: {{^}}whichever_double:
 ; FP: fmadd d0, d0, d1, d2
 ; NOFP: bl __muldf3
 ; NOFP: bl __adddf3
@@ -33,7 +33,7 @@ define double @whichever_double(double %0, double %1, double %2) {
 define float @force_fma_float(float %0, float %1, float %2) {
   %result = call float @llvm.fma.f32(float %0, float %1, float %2)
   ret float %result
-; CHECK: {{^}}force_fma_float:
+; CHECK-LABEL: {{^}}force_fma_float:
 ; FP: fmadd s0, s0, s1, s2
 ; NOFP: bl fmaf
 }
@@ -41,7 +41,7 @@ define float @force_fma_float(float %0, float %1, float %2) {
 define double @force_fma_double(double %0, double %1, double %2) {
   %result = call double @llvm.fma.f64(double %0, double %1, double %2)
   ret double %result
-; CHECK: {{^}}force_fma_double:
+; CHECK-LABEL: {{^}}force_fma_double:
 ; FP: fmadd d0, d0, d1, d2
 ; NOFP: bl fma
 }
