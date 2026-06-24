@@ -4,7 +4,8 @@
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
 // RUN: %clang -std=gnu11 -O3 -glldb %s -o %t
-// RUN: %dexter -w --use-script %dexter_lldb_args --binary %t -- %s | FileCheck %s
+// RUN: %dexter -w --use-script %dexter_lldb_args --binary %t -- %s \
+// RUN:   | FileCheck %s
 
 //// Adapted from https://bugs.llvm.org/show_bug.cgi?id=34136#c4
 

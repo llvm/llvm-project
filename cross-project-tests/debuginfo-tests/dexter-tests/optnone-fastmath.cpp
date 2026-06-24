@@ -123,7 +123,8 @@ int main() {
     !value A: '9.11999988'
     !value B: '61.050003'
     !value C: '1002.11102'
-  !and {lines: !range [!label fp_operations_2_subtract, !label fp_operations_2_ret]}:
-    !value result: ["1072.28101", "70.1699829"]
+  ? !and
+    lines: !range [!label fp_operations_2_subtract, !label fp_operations_2_ret]
+  : !value result: ["1072.28101", "70.1699829"]
 ...
 */

@@ -2,7 +2,8 @@
 // UNSUPPORTED: system-windows
 //
 // RUN: %clang -std=gnu11 -O -glldb %s -o %t
-// RUN: %dexter -w --use-script --binary %t %dexter_lldb_args -- %s | FileCheck %s
+// RUN: %dexter -w --use-script --binary %t %dexter_lldb_args -- %s \
+// RUN:  | FileCheck %s
 
 void __attribute__((noinline, optnone)) bar(int *test) {}
 int main() {

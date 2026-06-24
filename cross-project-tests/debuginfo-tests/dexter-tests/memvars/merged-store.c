@@ -4,7 +4,8 @@
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
 // RUN: %clang -std=gnu11 -O3 -glldb %s -o %t
-// RUN: %dexter -w --use-script %dexter_lldb_args --binary %t -- %s | FileCheck %s
+// RUN: %dexter -w --use-script %dexter_lldb_args --binary %t -- %s \
+// RUN:   | FileCheck %s
 
 // 1. parama is escaped by esc(&parama) so it is not promoted by
 //    SROA/mem2reg.

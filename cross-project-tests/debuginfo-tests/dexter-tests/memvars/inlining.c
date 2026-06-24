@@ -1,7 +1,8 @@
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
 // RUN: %clang -std=gnu11 -O2 -glldb %s -o %t
-// RUN: %dexter -w --use-script %dexter_lldb_args --binary %t -- %s | FileCheck %s
+// RUN: %dexter -w --use-script %dexter_lldb_args --binary %t -- %s \
+// RUN:   | FileCheck %s
 //
 //// Check that the once-escaped variable 'param' can still be read after
 //// we perform inlining + mem2reg. See D89810 and D85555.

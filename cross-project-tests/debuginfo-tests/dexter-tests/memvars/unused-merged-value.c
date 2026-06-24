@@ -6,7 +6,8 @@
 // REQUIRES: lldb
 // UNSUPPORTED: system-windows
 // RUN: %clang -std=gnu11 -O3 -glldb %s -o %t
-// RUN: %dexter -w --use-script %dexter_lldb_args --binary %t -- %s | FileCheck %s
+// RUN: %dexter -w --use-script %dexter_lldb_args --binary %t -- %s \
+// RUN:   | FileCheck %s
 // See NOTE at end for more info about the RUN command.
 
 // 1. SROA/mem2reg fully promotes parama.
@@ -38,7 +39,15 @@ int main() {
   return fun(5, 20);
 }
 
-// CHECK-DAG: missing_var_steps: 0
+// NOTE: we check for optimized_out_steps instead of correct_steps, because
+// parama being 'optimized out' instead of missing is the best we can do without
+// using conditional DWARF operators in the location expression. Therefore, this
+// test will still pass if we see "optimized out" instead of "missing".
+// If we ever manage to recover this variable information, then we can update
+// this test to expect correctness.
+
+// CHECK: optimized_out_steps: 1
+// CHECK: missing_var_steps: 0
 
 /*
 ---
@@ -46,10 +55,3 @@ int main() {
   !value parama: 20
 ...
 */
-
-// DexExpectWatchValue('parama', 20, on_line=ref('s0'))
-//
-// NOTE: the dexter command uses --fail-lt 0.1 (instead of the standard 1.0)
-// because seeing 'optimized out' would still be a win; it's the best we can do
-// without using conditional DWARF operators in the location expression. Seeing
-// 'optimized out' should result in a score higher than 0.1.
