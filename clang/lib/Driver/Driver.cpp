@@ -675,7 +675,8 @@ static llvm::Triple computeTargetTriple(const Driver &D,
       llvm::Triple::ArchType AT = llvm::Triple::UnknownArch;
 
       // Silently accept '32_64' and 'any'
-      const bool OtherAllowedMode = ObjectMode == "32_64" || ObjectMode == "any";
+      const bool OtherAllowedMode =
+          ObjectMode == "32_64" || ObjectMode == "any";
       if (ObjectMode == "64") {
         AT = Target.get64BitArchVariant().getArch();
       } else if (ObjectMode == "32") {
