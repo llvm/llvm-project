@@ -331,8 +331,8 @@ protected:
   /// offset d. The rest 773 branches were preceded by a different sequence
   /// of branches, from func, offset 18 to offset 60 and then from offset 71 to
   /// offset d.
-  std::error_code parse();
-
+  ///
+  /// No LBR mode:
   /// When no_lbr is the first line of the file, activate No LBR mode. In this
   /// mode we read the addresses where samples were recorded directly instead of
   /// LBR entries. The line format is almost the same, except for a missing <to>
@@ -347,8 +347,7 @@ protected:
   /// no_lbr                           # First line of fdata file
   ///  1 BZ2_compressBlock 466c 3
   ///  1 BZ2_hbMakeCodeLengths 29c 1
-  ///
-  std::error_code parseInNoLBRMode();
+  std::error_code parse();
 
   /// Return branch data matching one of the names in \p FuncNames.
   FuncBranchData *
