@@ -28,6 +28,7 @@
 #  include <__configuration/language.h>
 #  include <__configuration/namespace.h>
 #  include <__configuration/platform.h>
+#  include <__configuration/utility.h>
 
 // The attributes supported by clang are documented at https://clang.llvm.org/docs/AttributeReference.html
 
@@ -35,10 +36,6 @@
 // Given a LLVM release LLVM XX.YY.ZZ (e.g. LLVM 17.0.1 == 17.00.01), _LIBCPP_VERSION is
 // defined to XXYYZZ.
 #  define _LIBCPP_VERSION 230000
-
-#  define _LIBCPP_CONCAT_IMPL(_X, _Y) _X##_Y
-#  define _LIBCPP_CONCAT(_X, _Y) _LIBCPP_CONCAT_IMPL(_X, _Y)
-#  define _LIBCPP_CONCAT3(X, Y, Z) _LIBCPP_CONCAT(X, _LIBCPP_CONCAT(Y, Z))
 
 #  ifndef __has_constexpr_builtin
 #    define __has_constexpr_builtin(x) 0
