@@ -577,6 +577,16 @@ public:
   /// false, the definition can be emitted lazily if it's used.
   bool mustBeEmitted(const clang::ValueDecl *d);
 
+  /// Check if `fd` ends up calling itself directly through asm label or
+  /// builtin-pointer-to-self trickery (e.g., glibc's `extern inline` libc
+  /// wrappers that call `__builtin_strrchr`, which the codegen lowers to a
+  /// call on the same asm-named symbol).  Emitting an
+  /// `available_externally` body for such a function feeds the LLVM
+  /// Decide whether to emit the body of `gd` to CIR.  Returns false for
+  /// available_externally functions that are trivially recursive (PR9614).
+  /// Mirrors classic CodeGen's `CodeGenModule::shouldEmitFunction`.
+  bool shouldEmitFunction(clang::GlobalDecl gd);
+
   /// Determine whether the definition can be emitted eagerly, or should be
   /// delayed until the end of the translation unit. This is relevant for
   /// definitions whose linkage can change, e.g. implicit function
