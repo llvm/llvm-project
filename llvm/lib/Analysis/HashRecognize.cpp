@@ -376,52 +376,80 @@ CRCTable HashRecognize::genSarwateTable(const APInt &GenPoly,
   return Table;
 }
 
-// Divide one GF(2) polynomial by another.
-static APInt calculateGF2Quotient(APInt Dividend, const APInt &Divisor) {
-  unsigned DivisorDeg = Divisor.getActiveBits() - 1;
-  APInt Quotient = APInt::getZero(Dividend.getBitWidth());
+// Perform polynomial (GF(2)) floor division. This is based on the
+// floor_division(S, P) algorithm in
+// https://www.corsix.org/content/barrett-reduction-polynomials. Note that the
+// maximum degree of the returned polynomial is max(0, deg(Dividend) -
+// deg(Divisor)), but the bit width will be the same as that of Dividend.
+static APInt floorDivideGF2(APInt Dividend, APInt Divisor) {
+  assert(!Divisor.isZero() && "Cannot divide by zero");
+
+  // Extend the divisor bit width to match the dividend.
+  Divisor = Divisor.zext(Dividend.getBitWidth());
+
+  // The Poly argument should never be zero, or else this underflows.
+  auto Deg = [](const APInt &Poly) { return Poly.getActiveBits() - 1; };
+
+  // Calculate deg(Divisor) once since it never changes.
+  unsigned DivisorDeg = Deg(Divisor);
+  // Only calculate deg(Dividend) after Dividend is known to be nonzero.
   unsigned DividendDeg;
-  while (!Dividend.isZero() &&
-         (DividendDeg = Dividend.getActiveBits() - 1) >= DivisorDeg) {
+
+  // Q = 0
+  APInt Quotient = APInt::getZero(Dividend.getBitWidth());
+  // S != 0 and deg(S) >= deg(P)
+  while (!Dividend.isZero() && (DividendDeg = Deg(Dividend)) >= DivisorDeg) {
+    // T = S[deg(S)] / P[deg(P)]
     unsigned Shift = DividendDeg - DivisorDeg;
+    // Q = Q + T
     Quotient.setBit(Shift);
+    // S = S - T * P
     Dividend ^= Divisor.shl(Shift);
   }
   return Quotient;
 }
 
-// Generate constants (mu/reciprocal, P/generator) for a Barrett-style
-// reduction. This reduction allows the Sarwate table entry to be computed on
-// the fly, rather than requiring a load from memory (on supporting hardware).
+// Generate the constants for performing a Polynomial (GF(2)) Barrett Reduction
+// according to Intel's Fast CRC Computation white paper
+// (https://www.researchgate.net/publication/263424619_Fast_CRC_computation),
+// with some adjustments to account for the fact that CRCBW and DataBW can vary.
 CRCBarrettConstants HashRecognize::genBarrettConstants(const APInt &GenPoly,
-                                                       bool ByteOrderSwapped) {
-  unsigned BW = GenPoly.getBitWidth();
-  unsigned ClmulBW = BW * 2;
-  unsigned DivBW = ClmulBW + 1;
-  APInt Dividend = APInt::getSignedMinValue(DivBW);
-  CRCBarrettConstants C;
+                                                       unsigned DataBW,
+                                                       bool IsBigEndian) {
+  unsigned CRCBW = GenPoly.getBitWidth();
 
-  if (ByteOrderSwapped) {
-    APInt G = GenPoly.zext(DivBW);
-    G.setBit(BW);
-    APInt Mu = calculateGF2Quotient(Dividend, G);
-    C.Reciprocal = Mu.trunc(ClmulBW);
-    C.Generator = G.trunc(ClmulBW);
-    return C;
+  // Recover the full generating polynomial in normal form by reflecting the LE
+  // case and adding the implied x^CRCBW term.
+  APInt FullGenPoly = IsBigEndian ? GenPoly : GenPoly.reverseBits();
+  // deg(P(x)) = CRCBW due to the implied term, and thus P(x) must fit in
+  // exactly CRCBW+1 bits.
+  FullGenPoly = FullGenPoly.zext(CRCBW + 1);
+  FullGenPoly.setBit(CRCBW);
+
+  // Calculate mu = floor(x^(CRCBW+DataBW) / P(x)).
+  unsigned DivBW = CRCBW + DataBW + 1;
+  APInt Mu =
+      floorDivideGF2(APInt::getOneBitSet(DivBW, CRCBW + DataBW), FullGenPoly);
+  // deg(mu) <= deg(x^(CRCBW+DataBW)) - deg(P(x)) = CRCBW+DataBW - CRCBW =
+  // DataBW, and thus mu must fit in at most DataBW+1 bits.
+  Mu = Mu.trunc(DataBW + 1);
+
+  // In the bit-reflected case, mu and P(x) must be bit-reflected across their
+  // respective widths for the corresponding Barrett reduction steps.
+  if (!IsBigEndian) {
+    Mu = Mu.reverseBits();
+    FullGenPoly = FullGenPoly.reverseBits();
   }
 
-  APInt G = GenPoly.reverseBits().zext(DivBW);
-  G.setBit(BW);
-  APInt Mu = calculateGF2Quotient(Dividend, G);
-  // Only the low byte of the reciprocal is useful in LE because it will get
-  // multiplied by another byte and then immediately masked by 0xFF.
-  C.Reciprocal = Mu.trunc(BW + 1).reverseBits().zext(ClmulBW).getLoBits(8);
-  // shl(1) here enables an optimization where two shifts then XOR can be
-  // replaced with an XOR then one shift. Normally one of the shifts would be by
-  // 7 and the other by 8, but by shifting here the shift by 7 becomes another
-  // shift by 8.
-  C.Generator = GenPoly.zext(ClmulBW).shl(1);
-  return C;
+  // The width used for clmul operations should be a power of 2, and should be
+  // at least CRCBW + DataBW.
+  unsigned ClmulBW = 2 * std::max(CRCBW, DataBW);
+
+  // Finally, cast mu/mu' and P(x)/P(x)' to the width used for clmul operations.
+  CRCBarrettConstants Constants;
+  Constants.Mu = Mu.zext(ClmulBW);
+  Constants.FullGenPoly = FullGenPoly.zext(ClmulBW);
+  return Constants;
 }
 
 /// Checks that \p P1 and \p P2 are used together in an XOR in the use-def chain
@@ -580,7 +608,7 @@ void CRCTable::dump() const { print(dbgs()); }
 #endif
 
 void CRCBarrettConstants::print(raw_ostream &OS) const {
-  OS << "Reciprocal = " << Reciprocal << ", Generator = " << Generator << '\n';
+  OS << "Reciprocal = " << Mu << ", Generator = " << FullGenPoly << '\n';
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -622,7 +650,8 @@ void HashRecognize::print(raw_ostream &OS) const {
   OS.indent(2) << "Computed CRC lookup table:\n";
   genSarwateTable(Info.RHS, Info.IsBigEndian).print(OS);
   OS.indent(2) << "Computed CRC Barrett constants:\n";
-  genBarrettConstants(Info.RHS, Info.IsBigEndian).print(OS);
+  genBarrettConstants(Info.RHS, Info.TripCount, Info.IsBigEndian)
+      .print(OS);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

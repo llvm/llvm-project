@@ -258,7 +258,8 @@ private:
                                   const SCEV *BECount);
   bool avoidLIRForMultiBlockLoop(bool IsMemset = false,
                                  bool IsLoopMemset = false);
-  bool optimizeCRCLoop(const PolynomialInfo &Info);
+  bool optimizeCRCLoopToClmul(const PolynomialInfo &Info);
+  bool optimizeCRCLoopToLookup(const PolynomialInfo &Info);
 
   /// @}
   /// \name Noncountable Loop Idiom Handling
@@ -397,11 +398,12 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
     MadeChange |= runOnLoopBlock(BB, BECount, ExitBlocks);
   }
 
-  // Optimize a CRC loop if HashRecognize found one, provided we're not
-  // optimizing for size.
-  if (!DisableLIRP::HashRecognize && !ApplyCodeSizeHeuristics)
+  // Optimize a CRC loop if HashRecognize found one, but don't generate a lookup
+  // table if we're optimizing for size.
+  if (!DisableLIRP::HashRecognize)
     if (auto Res = HashRecognize(*CurLoop, *SE).getResult())
-      optimizeCRCLoop(*Res);
+      MadeChange |= optimizeCRCLoopToClmul(*Res) ||
+                    (!ApplyCodeSizeHeuristics && optimizeCRCLoopToLookup(*Res));
 
   return MadeChange;
 }
@@ -1549,7 +1551,121 @@ bool LoopIdiomRecognize::avoidLIRForMultiBlockLoop(bool IsMemset,
   return false;
 }
 
-bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
+bool LoopIdiomRecognize::optimizeCRCLoopToClmul(const PolynomialInfo &Info) {
+  Type *CRCTy = Info.LHS->getType();
+  unsigned CRCBW = CRCTy->getIntegerBitWidth();
+  // The TripCount determines how many bits of data are processed, regardless of
+  // whether the actual data bit width matches (if auxiliary data is even used
+  // at all).
+  unsigned EffectiveDataBW = Info.TripCount;
+  // The width used for clmul operations should be a power of 2, and should be
+  // at least CRCBW + DataBW.
+  unsigned ClmulBW = 2 * std::max(CRCBW, EffectiveDataBW);
+  Type *ClmulTy = IntegerType::get(CRCTy->getContext(), ClmulBW);
+
+  // This optimization should not be applied if there is no fast clmul operation
+  // for the required width on the target.
+  // TODO: If EffectiveDataBW > CRCBW, then the data could probably be split
+  // into multiple chunks and processed in a loop.
+  if (!TTI->haveFastClmul(ClmulTy))
+    return false;
+
+  // First, generate the constants required for GF(2) Barrett reduction.
+  CRCBarrettConstants Constants = HashRecognize::genBarrettConstants(
+      Info.RHS, EffectiveDataBW, Info.IsBigEndian);
+  Value *Mu = ConstantInt::get(ClmulTy, Constants.Mu.zext(ClmulBW));
+  Value *FullGenPoly =
+      ConstantInt::get(ClmulTy, Constants.FullGenPoly.zext(ClmulBW));
+
+  IRBuilder<> Builder(CurLoop->getLoopPreheader()->getTerminator());
+
+  Value *CRCExt = Builder.CreateZExt(Info.LHS, ClmulTy, "crc.ext");
+
+  // For the big-endian case, align the leftmost bit of the CRC with the
+  // leftmost bit of the data. For the little-endian case, align the rightmost
+  // bits (nothing to do).
+  Value *CRCAlignData = CRCExt;
+  if (Info.IsBigEndian) {
+    if (CRCBW > EffectiveDataBW)
+      CRCAlignData = Builder.CreateLShr(CRCAlignData, CRCBW - EffectiveDataBW,
+                                        "crc.be.lshr");
+    else if (EffectiveDataBW > CRCBW)
+      CRCAlignData = Builder.CreateShl(CRCAlignData, EffectiveDataBW - CRCBW,
+                                       "crc.be.shl");
+  }
+
+  // If auxiliary data is present, XOR it in with the CRC.
+  Value *ClmulMuInput = CRCAlignData;
+  if (Value *Data = Info.LHSAux) {
+    unsigned ActualDataBW = Data->getType()->getIntegerBitWidth();
+    if (ActualDataBW > EffectiveDataBW) {
+      // Extract the useful bits of the data and discard the rest.
+      Data = Info.IsBigEndian
+                 ? Builder.CreateLShr(Data, ActualDataBW - EffectiveDataBW,
+                                      "data.be.lshr")
+                 : Builder.CreateAnd(
+                       Data,
+                       ConstantInt::get(
+                           Data->getType(),
+                           APInt::getLowBitsSet(ActualDataBW, EffectiveDataBW)),
+                       "data.le.mask");
+    }
+    // This isn't necessarily a zext-- ActualDataBW could be greater than
+    // ClmulBW.
+    Value *DataExt = Builder.CreateZExtOrTrunc(Data, ClmulTy, "data.ext");
+    // For the big-endian case, ensure the data is aligned properly.
+    if (Info.IsBigEndian && EffectiveDataBW > ActualDataBW) {
+      DataExt = Builder.CreateShl(DataExt, EffectiveDataBW - ActualDataBW,
+                                  "data.be.shl");
+    }
+
+    ClmulMuInput = Builder.CreateXor(CRCAlignData, DataExt, "xor.crc.data");
+  }
+
+  // Perform the first clmul operation with the mu/mu' constant. Input is DataBW
+  // bits and Mu is DataBW+1 bits, so the result will be 2*DataBW bits.
+  Value *ClmulMu = Builder.CreateBinaryIntrinsic(Intrinsic::clmul, ClmulMuInput,
+                                                 Mu, {}, "clmul.mu");
+
+  // Extract the relevant DataBW bits from the result.
+  Value *ClmulGPInput =
+      Info.IsBigEndian
+          ? Builder.CreateLShr(ClmulMu, EffectiveDataBW, "quot.be.lshr")
+          : Builder.CreateAnd(
+                ClmulMu,
+                ConstantInt::get(
+                    ClmulTy, APInt::getLowBitsSet(ClmulBW, EffectiveDataBW)),
+                "quot.le.mask");
+
+  // Perform the second clmul operation with the P(x)/P(x)' constant. Input is
+  // DataBW bits and GP is CRCBW+1 bits, so the result will be CRCBW+DataBW
+  // bits.
+  Value *ClmulGP = Builder.CreateBinaryIntrinsic(Intrinsic::clmul, ClmulGPInput,
+                                                 FullGenPoly, {}, "clmul.gp");
+
+  // For the big-endian case, align the leftmost bit of the CRC with the
+  // leftmost bit of the clmul result. For the little-endian case, align the
+  // rightmost bits (nothing to do).
+  Value *CRCAlignClmul = CRCExt;
+  if (Info.IsBigEndian) {
+    CRCAlignClmul = Builder.CreateShl(CRCExt, EffectiveDataBW, "crc.be.shl");
+  }
+  // Get the remainder by subtracting (XORing) the calculated multiple of
+  // GenPoly from the CRC.
+  Value *CRCNext = Builder.CreateXor(CRCAlignClmul, ClmulGP, "xor.crc.mult");
+  // For the little-endian case, the leftmost bits of the XOR are relevant.
+  if (!Info.IsBigEndian) {
+    CRCNext = Builder.CreateLShr(CRCNext, EffectiveDataBW, "crc.le.lshr");
+  }
+  CRCNext = Builder.CreateTrunc(CRCNext, CRCTy, "crc.next");
+
+  // Replace the result of the loop with the new computed CRC value.
+  Info.ComputedValue->replaceUsesOutsideBlock(CRCNext, CurLoop->getLoopLatch());
+
+  return true;
+}
+
+bool LoopIdiomRecognize::optimizeCRCLoopToLookup(const PolynomialInfo &Info) {
   // FIXME: Hexagon has a special HexagonLoopIdiom that optimizes CRC using
   // carry-less multiplication instructions, which is more efficient than our
   // Sarwate table-lookup optimization. Hence, until we're able to emit
@@ -1560,13 +1676,24 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   if (TT.getArch() == Triple::hexagon)
     return false;
 
+  // First, create a new GlobalVariable corresponding to the
+  // Sarwate-lookup-table.
   Type *CRCTy = Info.LHS->getType();
   unsigned CRCBW = CRCTy->getIntegerBitWidth();
+  std::array<Constant *, 256> CRCConstants;
+  transform(HashRecognize::genSarwateTable(Info.RHS, Info.IsBigEndian),
+            CRCConstants.begin(),
+            [CRCTy](const APInt &E) { return ConstantInt::get(CRCTy, E); });
+  Constant *ConstArray =
+      ConstantArray::get(ArrayType::get(CRCTy, 256), CRCConstants);
+  GlobalVariable *GV =
+      new GlobalVariable(M, ConstArray->getType(), true,
+                         GlobalValue::PrivateLinkage, ConstArray, ".crctable");
 
   PHINode *IV = CurLoop->getCanonicalInductionVariable();
   SmallVector<PHINode *, 2> Cleanup;
 
-  // First, mark all PHIs for removal except IV.
+  // Next, mark all PHIs for removal except IV.
   {
     for (PHINode &PN : CurLoop->getHeader()->phis()) {
       if (&PN == IV)
@@ -1593,8 +1720,13 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
     deleteDeadInstruction(ExitCond);
   }
 
-  // Finally, fill the loop with the logic to compute 8 bits at a time, and
-  // replace all uses of ComputedValue.
+  // Finally, fill the loop with the Sarwate-table-lookup logic, and replace all
+  // uses of ComputedValue.
+  //
+  // Little-endian:
+  //   crc = (crc >> 8) ^ tbl[(iv'th byte of data) ^ (bottom byte of crc)]
+  // Big-Endian:
+  //   crc = (crc << 8) ^ tbl[(iv'th byte of data) ^ (top byte of crc)]
   {
     auto LoByte = [](IRBuilderBase &Builder, Value *Op, const Twine &Name) {
       return Builder.CreateZExtOrTrunc(
@@ -1648,105 +1780,24 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
     Indexer = Info.IsBigEndian ? HiIdx(Builder, Indexer, "indexer.hi")
                                : LoByte(Builder, Indexer, "indexer.lo");
 
-    // Compute the next value of the CRC register based on Indexer. This could
-    // either be a table load or an on-the-fly computation, depending on whether
-    // llvm.clmul is fast on the target.
-    Value *CRCNext;
-    Type *ClmulTy = IntegerType::get(CRCTy->getContext(), 2 * CRCBW);
-    if (TTI->haveFastClmul(ClmulTy)) {
-      // Use a Barrett-style reduction to calculate CRCNext with two clmuls.
-      // Little-endian:
-      //   q = ((iv'th byte of data) ^ (bottom byte of crc)) clmul (reciprocal)
-      //   entry = (bottom byte of q) clmul (genpoly)
-      //   crc = (crc >> 8) ^ (entry >> 7)
-      //   Equivalently, to save one shift instruction:
-      //   (genBarrettConstants gives us genpoly << 1)
-      //   entry = (bottom byte of q) clmul (genpoly << 1)
-      //   crc = (crc ^ entry) >> 8
-      // Big-Endian:
-      //   q = ((iv'th byte of data) ^ (top byte of crc)) clmul (reciprocal)
-      //   entry = (top byte of q) clmul (genpoly)
-      //   crc = (crc << 8) ^ (bottom CRCBW bits of entry)
+    // Always index into a GEP using the index type.
+    Indexer = Builder.CreateZExt(
+        Indexer, SE->getDataLayout().getIndexType(GV->getType()),
+        "indexer.ext");
 
-      // First, generate the two constants required for a Barrett-style
-      // reduction.
-      CRCBarrettConstants Constants =
-          HashRecognize::genBarrettConstants(Info.RHS, Info.IsBigEndian);
-      Value *Reciprocal = ConstantInt::get(ClmulTy, Constants.Reciprocal);
-      Value *Generator = ConstantInt::get(ClmulTy, Constants.Generator);
+    // CRCTableLd = CRCTable[(iv'th byte of data) ^ (top|bottom) byte of CRC].
+    Value *CRCTableGEP =
+        Builder.CreateInBoundsGEP(CRCTy, GV, Indexer, "tbl.ptradd");
+    Value *CRCTableLd = Builder.CreateLoad(CRCTy, CRCTableGEP, "tbl.ld");
 
-      // Approximate floor(Indexer / GenPoly) using Indexer * Reciprocal.
-      Indexer = Builder.CreateZExt(Indexer, ClmulTy, "indexer.ext");
-      Value *Quotient = Builder.CreateBinaryIntrinsic(Intrinsic::clmul, Indexer,
-                                                      Reciprocal, {}, "quot");
-      Quotient = Info.IsBigEndian
-                     ? Builder.CreateLShr(Quotient, CRCBW, "quot.be.shift")
-                     : Builder.CreateAnd(Quotient, 0xFF, "quot.le.mask");
-
-      // floor(Indexer / GenPoly) * GenPoly should give us the equivalent of the
-      // Sarwate table entry.
-      Value *ComputedByte = Builder.CreateBinaryIntrinsic(
-          Intrinsic::clmul, Quotient, Generator, {}, "entry");
-      if (Info.IsBigEndian) {
-        // Keep the low bits of the clmul.
-        ComputedByte = Builder.CreateTrunc(ComputedByte, CRCTy, "entry.lo");
-        // CRCNext = (CRC << 8) ^ ComputedByte, or simply ComputedByte in case
-        // of CRC-8.
-        CRCNext = ComputedByte;
-        if (CRCBW > 8) {
-          Value *CRCShift = Builder.CreateShl(CRC, 8, "crc.be.shift");
-          CRCNext = Builder.CreateXor(CRCShift, ComputedByte, "crc.next");
-        }
-      } else {
-        // CRCNext = (CRC ^ ComputedByte) >> 8, or simply ComputedByte >> 8 in
-        // case of CRC-8.
-        Value *CRCNextPreshift = ComputedByte;
-        if (CRCBW > 8) {
-          Value *CRCWide = Builder.CreateZExt(CRC, ClmulTy, "crc.wide");
-          CRCNextPreshift =
-              Builder.CreateXor(CRCWide, ComputedByte, "crc.wide.xor");
-        }
-        CRCNext = Builder.CreateLShr(CRCNextPreshift, 8, "crc.next.wide");
-        CRCNext = Builder.CreateTrunc(CRCNext, CRCTy, "crc.next");
-      }
-    } else {
-      // Use the Sarwate algorithm to calculate CRCNext with one lookup table
-      // load. Little-endian:
-      //   crc = (crc >> 8) ^ tbl[(iv'th byte of data) ^ (bottom byte of crc)]
-      // Big-Endian:
-      //   crc = (crc << 8) ^ tbl[(iv'th byte of data) ^ (top byte of crc)]
-
-      // First, create a new GlobalVariable corresponding to the
-      // Sarwate-lookup-table.
-      std::array<Constant *, 256> CRCConstants;
-      transform(HashRecognize::genSarwateTable(Info.RHS, Info.IsBigEndian),
-                CRCConstants.begin(),
-                [CRCTy](const APInt &E) { return ConstantInt::get(CRCTy, E); });
-      Constant *ConstArray =
-          ConstantArray::get(ArrayType::get(CRCTy, 256), CRCConstants);
-      GlobalVariable *GV = new GlobalVariable(M, ConstArray->getType(), true,
-                                              GlobalValue::PrivateLinkage,
-                                              ConstArray, ".crctable");
-
-      // Always index into a GEP using the index type.
-      Indexer = Builder.CreateZExt(
-          Indexer, SE->getDataLayout().getIndexType(GV->getType()),
-          "indexer.ext");
-
-      // CRCTableLd = CRCTable[(iv'th byte of data) ^ (top|bottom) byte of CRC].
-      Value *CRCTableGEP =
-          Builder.CreateInBoundsGEP(CRCTy, GV, Indexer, "tbl.ptradd");
-      Value *CRCTableLd = Builder.CreateLoad(CRCTy, CRCTableGEP, "tbl.ld");
-
-      // CRCNext = (CRC (<<|>>) 8) ^ CRCTableLd, or simply CRCTableLd in case of
-      // CRC-8.
-      CRCNext = CRCTableLd;
-      if (CRCBW > 8) {
-        Value *CRCShift = Info.IsBigEndian
-                              ? Builder.CreateShl(CRC, 8, "crc.be.shift")
-                              : Builder.CreateLShr(CRC, 8, "crc.le.shift");
-        CRCNext = Builder.CreateXor(CRCShift, CRCTableLd, "crc.next");
-      }
+    // CRCNext = (CRC (<<|>>) 8) ^ CRCTableLd, or simply CRCTableLd in case of
+    // CRC-8.
+    Value *CRCNext = CRCTableLd;
+    if (CRCBW > 8) {
+      Value *CRCShift = Info.IsBigEndian
+                            ? Builder.CreateShl(CRC, 8, "crc.be.shift")
+                            : Builder.CreateLShr(CRC, 8, "crc.le.shift");
+      CRCNext = Builder.CreateXor(CRCShift, CRCTableLd, "crc.next");
     }
 
     // Connect the back-edge for the loop, and RAUW the ComputedValue.
