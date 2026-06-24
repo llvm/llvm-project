@@ -996,6 +996,38 @@ public:
   SectionChunk chunk;
 };
 
+class COFFDebugRecordChunk : public NonSectionChunk {
+public:
+  COFFDebugRecordChunk(COFFLinkerContext &c) : ctx(c) {}
+  size_t getSize() const override;
+  void writeTo(uint8_t *b) const override;
+  void computeRecords();
+
+private:
+  static constexpr const char *const pgoSectionNames[] = {
+      ".text$_00hot", ".text$_01", ".text$_02", ".text$unlikely", ".text$zzzz"};
+
+  struct COFFGrpRecord {
+    Chunk *first;
+    Chunk *last;
+    StringRef name;
+
+    uint32_t size() const { return sizeof(uint32_t) * 2 + nameSize(); }
+    uint32_t nameSize() const { return llvm::alignTo(name.size() + 1, 4); }
+    uint32_t getRecSize() const {
+      return last->getRVA() + last->getSize() - first->getRVA();
+    }
+    void dump(COFFLinkerContext &ctx) const {
+      Log(ctx) << "coffgrp rec " << name
+               << " RVA = " << llvm::format_hex(first->getRVA(), 4)
+               << " size = " << llvm::format_hex(getRecSize(), 4);
+    }
+  };
+
+  COFFLinkerContext &ctx;
+  std::vector<COFFGrpRecord> records;
+};
+
 } // namespace lld::coff
 
 namespace llvm {
