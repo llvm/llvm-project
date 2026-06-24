@@ -47,18 +47,19 @@ public:
   /// the generated code.
   template <typename TypeT, typename NameT, typename DefaultT>
   MethodParameter(TypeT &&type, NameT &&name, DefaultT &&defaultValue,
-                  bool optional = false)
+                  bool optional = false, bool is_enum_param = false)
       : type(stringify(std::forward<TypeT>(type))),
         name(stringify(std::forward<NameT>(name))),
         defaultValue(stringify(std::forward<DefaultT>(defaultValue))),
-        optional(optional) {}
+        optional(optional),
+        is_enum_param(is_enum_param) {}
 
   /// Create a method parameter with a C++ type, parameter name, and no default
   /// value.
   template <typename TypeT, typename NameT>
-  MethodParameter(TypeT &&type, NameT &&name, bool optional = false)
+  MethodParameter(TypeT &&type, NameT &&name, bool optional = false, bool is_enum_param = false)
       : MethodParameter(std::forward<TypeT>(type), std::forward<NameT>(name),
-                        /*defaultValue=*/"", optional) {}
+                        /*defaultValue=*/"", optional, is_enum_param) {}
 
   /// Write the parameter as part of a method declaration.
   void writeDeclTo(raw_indented_ostream &os) const;
@@ -75,6 +76,8 @@ public:
   StringRef getDefaultValue() const { return defaultValue; }
   /// Returns true if the parameter is optional.
   bool isOptional() const { return optional; }
+  /// Returns true if the parameter is an Enum type vs an object
+  bool isEnumParam() const { return is_enum_param; }
 
 private:
   /// The C++ type.
@@ -86,6 +89,8 @@ private:
   std::string defaultValue;
   /// Whether the parameter should be indicated as "optional".
   bool optional;
+  /// Whether the parameter is an Enum type vs an object
+  bool is_enum_param;
 };
 
 /// This class contains a list of method parameters for constructor, class

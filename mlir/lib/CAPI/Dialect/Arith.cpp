@@ -9,5 +9,8 @@
 #include "mlir-c/Dialect/Arith.h"
 #include "mlir/CAPI/Registration.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "llvm/Support/Casting.h"
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Arith, arith, mlir::arith::ArithDialect)
+
+// #include "mlir/Dialect/Arith/IR/ArithOpsCAPIAttrs.cpp.inc"

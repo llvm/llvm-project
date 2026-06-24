@@ -12,3 +12,5 @@
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Affine, affine,
                                       mlir::affine::AffineDialect)
+
+#include "mlir/Dialect/Affine/IR/AffineOpsCAPIAttrs.cpp.inc"
