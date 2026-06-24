@@ -2015,7 +2015,11 @@ static std::optional<clang::APValue> MakeAPValue(const clang::ASTContext &ast,
     return std::nullopt;
 
   bool is_signed = false;
-  const bool is_integral = clang_type.IsIntegerOrEnumerationType(is_signed);
+  const bool is_integral = clang_type.IsIntegerOrEnumerationType(is_signed) ||
+                           clang_type.IsPointerOrReferenceType() ||
+                           clang_type.IsMemberFunctionPointerType() ||
+                           clang_type.IsMemberDataPointerType() ||
+                           clang_type.IsNullPtrType();
 
   llvm::APSInt apint(*bit_width, !is_signed);
   apint = value;
@@ -2023,13 +2027,122 @@ static std::optional<clang::APValue> MakeAPValue(const clang::ASTContext &ast,
   if (is_integral)
     return clang::APValue(apint);
 
+  if (clang_type.IsRealFloatingPointType()) {
+    return clang::APValue(llvm::APFloat(
+        ast.getFloatTypeSemantics(ClangUtil::GetQualType(clang_type)), apint));
+  }
+
   // FIXME: we currently support a limited set of floating point types.
   // E.g., 16-bit floats are not supported.
-  if (!clang_type.IsRealFloatingPointType())
-    return std::nullopt;
 
-  return clang::APValue(llvm::APFloat(
-      ast.getFloatTypeSemantics(ClangUtil::GetQualType(clang_type)), apint));
+  LLDB_LOG(GetLog(LLDBLog::Types),
+           "MakeAPValue: Unsupported NTTP type class: {0}",
+           clang_type.GetTypeClass());
+
+  lldbassert(false && "Unsupported type for non-type template parameter");
+
+  return std::nullopt;
+}
+
+clang::FieldDecl *DWARFASTParserClang::ResolveFieldFromPtrToMemberValue(
+    const DWARFDIE &die, uint64_t member_byte_offset) {
+  // die (DW_AT_type) → DW_TAG_ptr_to_member_type
+  DWARFDIE type_die = die.GetReferencedDIE(DW_AT_type);
+  if (!type_die || type_die.Tag() != DW_TAG_ptr_to_member_type)
+    return nullptr;
+
+  // → DW_AT_containing_type → struct/class DIE
+  DWARFDIE containing_die = type_die.GetReferencedDIE(DW_AT_containing_type);
+  if (!containing_die)
+    return nullptr;
+
+  // Resolve and complete the containing class
+  Type *containing_type = die.ResolveTypeUID(containing_die);
+  if (!containing_type)
+    return nullptr;
+
+  CompilerType containing_ct = containing_type->GetFullCompilerType();
+  auto *record_decl =
+      m_ast.GetAsCXXRecordDecl(containing_ct.GetOpaqueQualType());
+  if (!record_decl)
+    return nullptr;
+
+  // Walk fields, match by byte offset
+  clang::ASTContext &ast = m_ast.getASTContext();
+  for (auto *field : record_decl->fields()) {
+    if (ast.getFieldOffset(field) / 8 == member_byte_offset)
+      return field;
+  }
+
+  return nullptr;
+}
+
+clang::VarDecl *
+DWARFASTParserClang::ResolveVarDeclFromAddress(const DWARFDIE &die,
+                                               uint64_t file_address) {
+  SymbolFileDWARF *dwarf = die.GetDWARF();
+  if (!dwarf)
+    return nullptr;
+
+  ModuleSP module_sp = dwarf->GetObjectFile()->GetModule();
+  if (!module_sp)
+    return nullptr;
+
+  // Resolve the file address to a Symbol to get the variable name
+  Address addr;
+  if (!module_sp->ResolveFileAddress(file_address, addr))
+    return nullptr;
+
+  Symbol *symbol = addr.CalculateSymbolContextSymbol();
+  if (!symbol)
+    return nullptr;
+
+  ConstString var_name = symbol->GetName();
+  if (!var_name)
+    return nullptr;
+
+  // Search DWARF for a DW_TAG_variable with this name
+  VariableList variables;
+  dwarf->FindGlobalVariables(var_name, CompilerDeclContext(), 1, variables);
+  if (variables.GetSize() == 0)
+    return nullptr;
+
+  VariableSP var_sp = variables.GetVariableAtIndex(0);
+  if (!var_sp)
+    return nullptr;
+
+  // Get the DWARFDIE for this variable and create a VarDecl
+  // Only resolve if the variable's type matches the pointer's pointee type.
+  // This prevents resolving &struct_var.member as &struct_var when the
+  // member happens to be at offset 0.
+  DWARFDIE var_die = dwarf->GetDIE(var_sp->GetID());
+  if (!var_die)
+    return nullptr;
+
+  Type *var_type = die.ResolveTypeUID(var_die.GetAttributeValueAsReferenceDIE(DW_AT_type));
+  if (!var_type)
+    return nullptr;
+
+  DWARFDIE ptr_type_die = die.GetReferencedDIE(DW_AT_type);
+  if (!ptr_type_die)
+    return nullptr;
+
+  DWARFDIE pointee_die = ptr_type_die.GetReferencedDIE(DW_AT_type);
+  if (!pointee_die)
+    return nullptr;
+
+  Type *pointee_type = die.ResolveTypeUID(pointee_die);
+  if (!pointee_type)
+    return nullptr;
+
+  if (var_type->GetID() != pointee_type->GetID())
+    return nullptr;
+
+  if (auto *decl = llvm::dyn_cast_or_null<clang::VarDecl>(
+          GetClangDeclForDIE(var_die)))
+    return decl;
+
+  return nullptr;
 }
 
 bool DWARFASTParserClang::ParseTemplateDIE(
@@ -2095,6 +2208,24 @@ bool DWARFASTParserClang::ParseTemplateDIE(
           uval64 = form_value.Unsigned();
         }
         break;
+      case DW_AT_location:
+        if (attributes.ExtractFormValueAtIndex(i, form_value)) {
+          if (const uint8_t *block = form_value.BlockData()) {
+            const DWARFDataExtractor &debug_info_data = die.GetData();
+            uint32_t block_length = form_value.Unsigned();
+            uint32_t block_offset = block - debug_info_data.GetDataStart();
+            Value initial_value(0);
+            if (auto result = DWARFExpression::Evaluate(
+                    nullptr, nullptr,
+                    die.GetDWARF()->GetObjectFile()->GetModule(),
+                    DataExtractor(debug_info_data, block_offset, block_length),
+                    die.GetCU(), eRegisterKindDWARF, &initial_value, nullptr)) {
+              uval64 = result->GetScalar().ULongLong();
+              uval64_valid = true;
+            }
+          }
+        }
+        break;
       case DW_AT_default_value:
         if (attributes.ExtractFormValueAtIndex(i, form_value))
           is_default_template_arg = form_value.Boolean();
@@ -2115,6 +2246,31 @@ bool DWARFASTParserClang::ParseTemplateDIE(
 
       if (tag == DW_TAG_template_value_parameter && uval64_valid) {
         if (auto value = MakeAPValue(ast, clang_type, uval64)) {
+          // For pointer-to-member types, try to resolve to the actual FieldDecl
+          if (clang_type.IsMemberDataPointerType()) {
+            if (auto *field = ResolveFieldFromPtrToMemberValue(die, uval64)) {
+              template_param_infos.InsertArg(
+                  name, clang::TemplateArgument(
+                            field, ClangUtil::GetQualType(clang_type),
+                            is_default_template_arg));
+              return true;
+            }
+            // Failed to resolve FieldDecl, fall through to integer path
+          }
+
+          // For pointer types, try to resolve the address to the actual
+          // VarDecl so it doesn't displays a value.
+          if (clang_type.IsPointerType() && uval64 != 0) {
+            if (auto *var = ResolveVarDeclFromAddress(die, uval64)) {
+              template_param_infos.InsertArg(
+                  name, clang::TemplateArgument(
+                            var, ClangUtil::GetQualType(clang_type),
+                            is_default_template_arg));
+              return true;
+            }
+            // Failed to resolve VarDecl, fall through to integer path
+          }
+
           template_param_infos.InsertArg(
               name, clang::TemplateArgument(
                         ast, ClangUtil::GetQualType(clang_type),

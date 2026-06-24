@@ -185,6 +185,19 @@ protected:
                         lldb_private::TypeSystemClang::TemplateParameterInfos
                             &template_param_infos);
 
+  /// Given a DW_TAG_template_value_parameter DIE whose type is a
+  /// pointer-to-member, follow the DWARF chain to find the FieldDecl
+  /// at the given byte offset within the containing class.
+  clang::FieldDecl *ResolveFieldFromPtrToMemberValue(
+      const lldb_private::plugin::dwarf::DWARFDIE &die,
+      uint64_t member_byte_offset);
+
+  /// Given a DW_TAG_template_value_parameter DIE whose type is a pointer,
+  /// resolve the file address to the corresponding global VarDecl.
+  clang::VarDecl *
+  ResolveVarDeclFromAddress(const lldb_private::plugin::dwarf::DWARFDIE &die,
+                            uint64_t file_address);
+
   bool ParseTemplateParameterInfos(
       const lldb_private::plugin::dwarf::DWARFDIE &parent_die,
       lldb_private::TypeSystemClang::TemplateParameterInfos
