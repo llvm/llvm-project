@@ -192,6 +192,22 @@ void test_incomplete_array_dest_type(std::span<char> S) {
   (IncompleteStruct(*)[])S.data(); // expected-warning{{unsafe invocation of 'data'}}
 }
 
+template <typename DestType>
+void test_dependent_dest_type(std::span<char> S) {
+  (DestType *)S.data(); // expected-warning{{unsafe invocation of 'data'}}
+}
+
+template <typename SourceType>
+void test_dependent_source_type(std::span<SourceType> S) {
+  (float *)S.data(); // expected-warning{{unsafe invocation of 'data'}}
+}
+
+void instantiate_dependent_tests(std::span<char> char_span,
+                                 std::span<IncompleteStruct> incomplete_span) {
+  test_dependent_dest_type<IncompleteStruct>(char_span);
+  test_dependent_source_type<IncompleteStruct>(incomplete_span);
+}
+
 void test_complete_type(std::span<long> S) {
   (struct CompleteStruct *)S.data(); // no warn as the struct size is smaller than long
   (class CompleteClass *)S.data();   // no warn as the class size is smaller than long
