@@ -1,3 +1,6 @@
+if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+  add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
+endif()
 add_header(off64_t HDR off64_t.h)
 add_header(size_t HDR size_t.h)
 add_header(
@@ -48,6 +51,11 @@ add_header(
 )
 add_header(ldiv_t HDR ldiv_t.h)
 add_header(lldiv_t HDR lldiv_t.h)
+if(TARGET libc.include.llvm-libc-types.${LIBC_TARGET_OS}.loff_t)
+  add_header(loff_t HDR loff_t.h DEPENDS .${LIBC_TARGET_OS}.loff_t)
+else()
+  add_header(loff_t HDR loff_t.h)
+endif()
 add_header(FILE HDR FILE.h)
 add_header(fd_set HDR fd_set.h DEPENDS libc.include.llvm-libc-macros.sys_select_macros)
 add_header(fenv_t HDR fenv_t.h)
