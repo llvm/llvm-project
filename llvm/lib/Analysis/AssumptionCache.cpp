@@ -119,10 +119,6 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
   SmallVector<AssumptionCache::ResultElem, 16> Affected;
   findAffectedValues(CI, TTI, Affected);
 
-#ifndef NDEBUG
-  DenseMap<Value *, int> ExpectedMatches;
-#endif
-
   // If a value appears more than once in an AssumeInst e.g., 'ptr %arg1' in:
   //     call void @llvm.assume(i1 true)
   //                   [ "dereferenceable"(ptr %arg1, i64 1),
@@ -135,6 +131,7 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
   // an assertion failure. Avoid this by counting the number of expected
   // matches.
 #ifndef NDEBUG
+  DenseMap<Value *, int> ExpectedMatches;
   for (auto &AV : Affected)
     if (AffectedValues.find_as(AV.Assume) != AffectedValues.end())
       ExpectedMatches[AV.Assume]++;
