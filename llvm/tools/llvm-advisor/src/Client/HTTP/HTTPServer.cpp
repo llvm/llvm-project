@@ -1131,6 +1131,278 @@ static HTTPResult handleGetCompareCapability(CoreClient &Client,
   return makeJSONSuccess(200, Client.compareCapability(Before, After, CapID));
 }
 
+struct FuncProfile {
+  int64_t Total = 0, Missed = 0, Passed = 0, Analysis = 0, HotnessSum = 0;
+};
+
+static void buildFuncProfiles(CoreClient &Client, StringRef SnapID,
+                              StringMap<FuncProfile> &Out) {
+  const SmallVector<std::string, 1> Caps{"llvm.remarks.relational"};
+  SmallVector<UnitRecord, 64> Units =
+      Client.storage().metadata().listUnits(SnapID);
+  for (const UnitRecord &U : Units) {
+    Expected<json::Array> Results = Client.queryUnit(U.ID, Caps);
+    if (!Results) { consumeError(Results.takeError()); continue; }
+    for (const json::Value &RV : *Results) {
+      const json::Object *RO = RV.getAsObject();
+      if (!RO || RO->getString("capability").value_or("") != "llvm.remarks.relational")
+        continue;
+      const json::Object *VO = RO->getObject("value");
+      if (!VO) continue;
+      const json::Object *Cols = VO->getObject("columns");
+      const json::Object *Strs = VO->getObject("strings");
+      if (!Cols || !Strs) continue;
+      const json::Array *TypeCol = Cols->getArray("type");
+      const json::Array *FuncCol = Cols->getArray("function");
+      const json::Array *HotnessCol = Cols->getArray("hotness");
+      const json::Array *FuncStrs = Strs->getArray("function");
+      if (!TypeCol || !FuncCol || !HotnessCol || !FuncStrs) continue;
+      size_t N = TypeCol->size();
+      for (size_t I = 0; I < N; ++I) {
+        int64_t FI = (*FuncCol)[I].getAsInteger().value_or(-1);
+        if (FI < 0 || FI >= (int64_t)FuncStrs->size()) continue;
+        StringRef Func = (*FuncStrs)[FI].getAsString().value_or("");
+        if (Func.empty()) continue;
+        int64_t T = (*TypeCol)[I].getAsInteger().value_or(0);
+        int64_t H = (*HotnessCol)[I].getAsInteger().value_or(0);
+        FuncProfile &P = Out[Func];
+        P.Total++;
+        if (T == 1) P.Passed++;
+        else if (T == 2) P.Missed++;
+        else if (T == 3) P.Analysis++;
+        if (H > 0) P.HotnessSum += H;
+      }
+    }
+  }
+}
+
+static HTTPResult handleGetCompareRemarks(CoreClient &Client,
+                                          StringRef Before, StringRef After,
+                                          int64_t Offset, int64_t Limit) {
+  std::lock_guard<std::mutex> Lock(HeavyQueryMutex);
+
+  StringMap<FuncProfile> BeforeProf, AfterProf;
+  buildFuncProfiles(Client, Before, BeforeProf);
+  buildFuncProfiles(Client, After, AfterProf);
+
+  struct FuncDiff {
+    StringRef Name;
+    FuncProfile Before, After;
+    int64_t DeltaMissed;
+    int64_t DeltaTotal;
+  };
+
+  SmallVector<FuncDiff, 256> Diffs;
+  StringSet<> Seen;
+
+  for (auto &KV : AfterProf) {
+    Seen.insert(KV.first());
+    FuncProfile B = BeforeProf.lookup(KV.first());
+    FuncDiff D;
+    D.Name = KV.first();
+    D.Before = B;
+    D.After = KV.second;
+    D.DeltaMissed = KV.second.Missed - B.Missed;
+    D.DeltaTotal = KV.second.Total - B.Total;
+    if (D.DeltaMissed != 0 || D.DeltaTotal != 0 || B.Total == 0)
+      Diffs.push_back(D);
+  }
+  for (auto &KV : BeforeProf) {
+    if (Seen.contains(KV.first())) continue;
+    FuncDiff D;
+    D.Name = KV.first();
+    D.Before = KV.second;
+    D.DeltaMissed = -KV.second.Missed;
+    D.DeltaTotal = -KV.second.Total;
+    Diffs.push_back(D);
+  }
+
+  llvm::sort(Diffs, [](const FuncDiff &A, const FuncDiff &B) {
+    return std::abs(A.DeltaMissed) > std::abs(B.DeltaMissed);
+  });
+
+  int64_t TotalChanged = Diffs.size();
+  int64_t Added = 0, Removed = 0, NewMissed = 0, ResolvedMissed = 0;
+  for (auto &D : Diffs) {
+    if (D.Before.Total == 0) Added++;
+    else if (D.After.Total == 0) Removed++;
+    if (D.DeltaMissed > 0) NewMissed += D.DeltaMissed;
+    else ResolvedMissed += -D.DeltaMissed;
+  }
+
+  if (Offset < 0) Offset = 0;
+  if (Limit <= 0) Limit = 100;
+
+  std::string Body;
+  raw_string_ostream OS(Body);
+  writeSuccessEnvelope(OS, [&](json::OStream &JOS) {
+    JOS.object([&] {
+      JOS.attribute("total", TotalChanged);
+      JOS.attribute("offset", Offset);
+      JOS.attribute("limit", Limit);
+      JOS.attributeBegin("summary");
+      JOS.object([&] {
+        JOS.attribute("functions_changed", TotalChanged);
+        JOS.attribute("functions_added", Added);
+        JOS.attribute("functions_removed", Removed);
+        JOS.attribute("new_missed", NewMissed);
+        JOS.attribute("resolved_missed", ResolvedMissed);
+      });
+      JOS.attributeEnd();
+      JOS.attributeBegin("functions");
+      JOS.arrayBegin();
+      int64_t End = std::min(Offset + Limit, TotalChanged);
+      for (int64_t I = Offset; I < End; ++I) {
+        auto &D = Diffs[I];
+        JOS.object([&] {
+          JOS.attribute("name", D.Name);
+          JOS.attributeBegin("before");
+          JOS.object([&] {
+            JOS.attribute("total", D.Before.Total);
+            JOS.attribute("missed", D.Before.Missed);
+            JOS.attribute("passed", D.Before.Passed);
+            JOS.attribute("analysis", D.Before.Analysis);
+            JOS.attribute("hotness_sum", D.Before.HotnessSum);
+          });
+          JOS.attributeEnd();
+          JOS.attributeBegin("after");
+          JOS.object([&] {
+            JOS.attribute("total", D.After.Total);
+            JOS.attribute("missed", D.After.Missed);
+            JOS.attribute("passed", D.After.Passed);
+            JOS.attribute("analysis", D.After.Analysis);
+            JOS.attribute("hotness_sum", D.After.HotnessSum);
+          });
+          JOS.attributeEnd();
+          JOS.attribute("delta_missed", D.DeltaMissed);
+          JOS.attribute("delta_total", D.DeltaTotal);
+        });
+      }
+      JOS.arrayEnd();
+      JOS.attributeEnd();
+    });
+  });
+  OS.flush();
+  return HTTPResult{200, "application/json", std::move(Body)};
+}
+
+static HTTPResult handleGetCompareFunctionDetail(CoreClient &Client,
+                                                 StringRef Before,
+                                                 StringRef After,
+                                                 StringRef FuncName) {
+  std::lock_guard<std::mutex> Lock(HeavyQueryMutex);
+
+  struct Remark { std::string Pass, Name; int64_t Type, Line, Hotness; };
+
+  auto collectRemarks = [&](StringRef SnapID) {
+    std::vector<Remark> Out;
+    const SmallVector<std::string, 1> Caps{"llvm.remarks.relational"};
+    SmallVector<UnitRecord, 64> Units =
+        Client.storage().metadata().listUnits(SnapID);
+    for (const UnitRecord &U : Units) {
+      Expected<json::Array> Results = Client.queryUnit(U.ID, Caps);
+      if (!Results) { consumeError(Results.takeError()); continue; }
+      for (const json::Value &RV : *Results) {
+        const json::Object *RO = RV.getAsObject();
+        if (!RO || RO->getString("capability").value_or("") != "llvm.remarks.relational")
+          continue;
+        const json::Object *VO = RO->getObject("value");
+        if (!VO) continue;
+        const json::Object *Cols = VO->getObject("columns");
+        const json::Object *Strs = VO->getObject("strings");
+        if (!Cols || !Strs) continue;
+        const json::Array *FuncCol = Cols->getArray("function");
+        const json::Array *FuncStrs = Strs->getArray("function");
+        const json::Array *PassCol = Cols->getArray("pass");
+        const json::Array *NameCol = Cols->getArray("name");
+        const json::Array *TypeCol = Cols->getArray("type");
+        const json::Array *LineCol = Cols->getArray("line");
+        const json::Array *HotnessCol = Cols->getArray("hotness");
+        const json::Array *PassStrs = Strs->getArray("pass");
+        const json::Array *NameStrs = Strs->getArray("name");
+        if (!FuncCol || !FuncStrs || !PassCol || !NameCol || !TypeCol ||
+            !LineCol || !HotnessCol || !PassStrs || !NameStrs) continue;
+        size_t N = FuncCol->size();
+        for (size_t I = 0; I < N; ++I) {
+          int64_t FI = (*FuncCol)[I].getAsInteger().value_or(-1);
+          if (FI < 0 || FI >= (int64_t)FuncStrs->size()) continue;
+          if ((*FuncStrs)[FI].getAsString().value_or("") != FuncName) continue;
+          int64_t PI = (*PassCol)[I].getAsInteger().value_or(-1);
+          int64_t NI = (*NameCol)[I].getAsInteger().value_or(-1);
+          Remark R;
+          R.Pass = PI >= 0 && PI < (int64_t)PassStrs->size()
+              ? (*PassStrs)[PI].getAsString().value_or("").str() : "";
+          R.Name = NI >= 0 && NI < (int64_t)NameStrs->size()
+              ? (*NameStrs)[NI].getAsString().value_or("").str() : "";
+          R.Type = (*TypeCol)[I].getAsInteger().value_or(-1);
+          R.Line = (*LineCol)[I].getAsInteger().value_or(-1);
+          R.Hotness = (*HotnessCol)[I].getAsInteger().value_or(-1);
+          Out.push_back(std::move(R));
+        }
+      }
+    }
+    return Out;
+  };
+
+  std::vector<Remark> BeforeRems = collectRemarks(Before);
+  std::vector<Remark> AfterRems = collectRemarks(After);
+
+  // Match by (pass, name, type) — group and count
+  struct Key { std::string Pass, Name; int64_t Type; };
+  auto makeKey = [](const Remark &R) { return R.Pass + "\0" + R.Name + "\0" + std::to_string(R.Type); };
+
+  StringMap<int64_t> BeforeCounts, AfterCounts;
+  for (auto &R : BeforeRems) BeforeCounts[makeKey(R)]++;
+  for (auto &R : AfterRems) AfterCounts[makeKey(R)]++;
+
+  json::Array Added, Removed;
+  StringSet<> AllKeys;
+  for (auto &KV : AfterCounts) AllKeys.insert(KV.first());
+  for (auto &KV : BeforeCounts) AllKeys.insert(KV.first());
+
+  for (auto &K : AllKeys) {
+    int64_t B = BeforeCounts.lookup(K.getKey());
+    int64_t A = AfterCounts.lookup(K.getKey());
+    if (A > B) {
+      // Parse key back
+      StringRef S = K.getKey();
+      auto [PassName, Rest] = S.split('\0');
+      auto [Name, TypeStr] = Rest.split('\0');
+      int64_t Type = 0; TypeStr.getAsInteger(10, Type);
+      for (int64_t I = 0; I < A - B; ++I)
+        Added.push_back(json::Object{{"pass", PassName}, {"name", Name}, {"type", Type}, {"count", A - B}});
+      // Only push once
+      break;
+    }
+  }
+  // Rebuild properly
+  Added.clear();
+  Removed.clear();
+  for (auto &K : AllKeys) {
+    int64_t B = BeforeCounts.lookup(K.getKey());
+    int64_t A = AfterCounts.lookup(K.getKey());
+    if (A == B) continue;
+    StringRef S = K.getKey();
+    auto [Pass, Rest] = S.split('\0');
+    auto [Name, TypeStr] = Rest.split('\0');
+    int64_t Type = 0; TypeStr.getAsInteger(10, Type);
+    json::Object Entry;
+    Entry["pass"] = Pass; Entry["name"] = Name; Entry["type"] = Type;
+    Entry["before_count"] = B; Entry["after_count"] = A;
+    Entry["delta"] = A - B;
+    if (A > B) Added.push_back(std::move(Entry));
+    else Removed.push_back(std::move(Entry));
+  }
+
+  json::Object Result;
+  Result["function"] = FuncName.str();
+  Result["before_total"] = static_cast<int64_t>(BeforeRems.size());
+  Result["after_total"] = static_cast<int64_t>(AfterRems.size());
+  Result["added"] = std::move(Added);
+  Result["removed"] = std::move(Removed);
+  return makeJSONSuccess(200, std::move(Result));
+}
+
 static HTTPResult handleInspect(CoreClient &Client, StringRef Mode,
                                 StringRef Body) {
   Expected<json::Value> Parsed = json::parse(Body);
@@ -1428,6 +1700,23 @@ Error llvm::advisor::HTTPServer::run() {
           Res = handleGetCompareCapability(Client, resolveSnapshotHTTP(Client, urlDecode(Segs[3])),
                                            resolveSnapshotHTTP(Client, urlDecode(Segs[4])),
                                            urlDecode(Segs[6]));
+        else if (IsAPI && Segs.size() == 6 && Segs[2] == "compare" &&
+                 Segs[5] == "remarks") {
+          int64_t Off = 0, Lim = 100;
+          auto OIt = QueryParams.find("offset");
+          if (OIt != QueryParams.end()) StringRef(OIt->second).getAsInteger(10, Off);
+          auto LIt = QueryParams.find("limit");
+          if (LIt != QueryParams.end()) StringRef(LIt->second).getAsInteger(10, Lim);
+          Res = handleGetCompareRemarks(Client,
+              resolveSnapshotHTTP(Client, urlDecode(Segs[3])),
+              resolveSnapshotHTTP(Client, urlDecode(Segs[4])), Off, Lim);
+        }
+        else if (IsAPI && Segs.size() == 7 && Segs[2] == "compare" &&
+                 Segs[5] == "remarks")
+          Res = handleGetCompareFunctionDetail(Client,
+              resolveSnapshotHTTP(Client, urlDecode(Segs[3])),
+              resolveSnapshotHTTP(Client, urlDecode(Segs[4])),
+              urlDecode(Segs[6]));
         else if (!IsAPI)
           Res = {200, "text/html", Index};
       } else if (Method == "POST") {
