@@ -301,6 +301,7 @@ void LineEditor::setHistorySize(int size) {}
 
 std::optional<std::string> LineEditor::readLine() const {
   ::fprintf(Data->Out, "%s", Prompt.c_str());
+  ::fflush(Data->Out);
 
   std::string Line;
   do {
