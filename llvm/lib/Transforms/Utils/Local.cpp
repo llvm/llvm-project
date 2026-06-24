@@ -982,7 +982,8 @@ static void replaceUndefValuesInPhi(PHINode *PN,
   for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
     Value *V = PN->getIncomingValue(i);
 
-    if (!isa<UndefValue>(V)) continue;
+    if (!isa<UndefValue>(V))
+      continue;
 
     BasicBlock *BB = PN->getIncomingBlock(i);
     IncomingValueMap::const_iterator It = IncomingValues.find(BB);
@@ -1084,7 +1085,7 @@ static bool introduceTooManyPhiEntries(BasicBlock *BB, BasicBlock *Succ) {
 /// \param BBPreds The predecessors of BB.
 /// \param PN The phi that we are updating.
 /// \param CommonPred The common predecessor of BB and PN's BasicBlock
-static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
+static bool redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
                                                 const PredBlockVector &BBPreds,
                                                 PHINode *PN,
                                                 BasicBlock *CommonPred) {
@@ -1104,6 +1105,17 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
   // consistent with the non-undef values.
 
   gatherIncomingValuesToPhi(PN, BBPreds, IncomingValues);
+  SmallVector<std::pair<Value *, BasicBlock *>> NewIncoming;
+
+  auto IsUnsafeUndefReplacement = [&](BasicBlock *PredBB,
+                                      Value *Selected) -> bool {
+    int BlockIdx = PN->getBasicBlockIndex(PredBB);
+    if (BlockIdx < 0 || !isa<UndefValue>(PN->getIncomingValue(BlockIdx)))
+      return false;
+
+    return !isa<Constant>(Selected) ||
+           !isGuaranteedNotToBeUndefOrPoison(Selected);
+  };
 
   // If this incoming value is one of the PHI nodes in BB, the new entries
   // in the PHI node are the entries from the old PHI.
@@ -1123,13 +1135,16 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
       Value *PredVal = OldValPN->getIncomingValue(i);
       Value *Selected =
           selectIncomingValueForBlock(PredVal, PredBB, IncomingValues);
+      if (IsUnsafeUndefReplacement(PredBB, Selected)) {
+        PN->addIncoming(OldVal, BB);
+        return false;
+      }
 
-      // And add a new incoming value for this predecessor for the
-      // newly retargeted branch.
-      PN->addIncoming(Selected, PredBB);
+      NewIncoming.emplace_back(Selected, PredBB);
     }
     if (CommonPred)
-      PN->addIncoming(OldValPN->getIncomingValueForBlock(CommonPred), BB);
+      NewIncoming.emplace_back(OldValPN->getIncomingValueForBlock(CommonPred),
+                               BB);
 
   } else {
     for (BasicBlock *PredBB : BBPreds) {
@@ -1140,16 +1155,22 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
 
       Value *Selected =
           selectIncomingValueForBlock(OldVal, PredBB, IncomingValues);
+      if (IsUnsafeUndefReplacement(PredBB, Selected)) {
+        PN->addIncoming(OldVal, BB);
+        return false;
+      }
 
-      // And add a new incoming value for this predecessor for the
-      // newly retargeted branch.
-      PN->addIncoming(Selected, PredBB);
+      NewIncoming.emplace_back(Selected, PredBB);
     }
     if (CommonPred)
-      PN->addIncoming(OldVal, BB);
+      NewIncoming.emplace_back(OldVal, BB);
   }
 
+  for (auto [V, PredBB] : NewIncoming)
+    PN->addIncoming(V, PredBB);
+
   replaceUndefValuesInPhi(PN, IncomingValues);
+  return true;
 }
 
 bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
@@ -1327,7 +1348,8 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
     // Loop over all of the PHI nodes in the successor of BB.
     for (BasicBlock::iterator I = Succ->begin(); isa<PHINode>(I); ++I) {
       PHINode *PN = cast<PHINode>(I);
-      redirectValuesFromPredecessorsToPhi(BB, BBPreds, PN, CommonPred);
+      if (!redirectValuesFromPredecessorsToPhi(BB, BBPreds, PN, CommonPred))
+        return false;
     }
   }
 
