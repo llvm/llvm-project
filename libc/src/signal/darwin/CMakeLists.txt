@@ -1,0 +1,70 @@
+add_entrypoint_object(
+  sigprocmask
+  SRCS
+    sigprocmask.cpp
+  HDRS
+    ../sigprocmask.h
+  DEPENDS
+    libc.hdr.types.sigset_t
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sigemptyset
+  SRCS
+    sigemptyset.cpp
+  HDRS
+    ../sigemptyset.h
+  DEPENDS
+    libc.hdr.types.sigset_t
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sigfillset
+  SRCS
+    sigfillset.cpp
+  HDRS
+    ../sigfillset.h
+  DEPENDS
+    libc.hdr.types.sigset_t
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sigaddset
+  SRCS
+    sigaddset.cpp
+  HDRS
+    ../sigaddset.h
+  DEPENDS
+    libc.hdr.types.sigset_t
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  sigdelset
+  SRCS
+    sigdelset.cpp
+  HDRS
+    ../sigdelset.h
+  DEPENDS
+    libc.hdr.types.sigset_t
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
