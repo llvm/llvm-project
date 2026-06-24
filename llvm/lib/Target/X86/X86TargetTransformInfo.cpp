@@ -5629,6 +5629,127 @@ X86TTIImpl::getAddressComputationCost(Type *PtrTy, ScalarEvolution *SE,
   return BaseT::getAddressComputationCost(PtrTy, SE, Ptr, CostKind);
 }
 
+InstructionCost X86TTIImpl::getPartialReductionCost(
+    unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+    ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+    TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+    TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const {
+  InstructionCost Invalid = InstructionCost::getInvalid();
+
+  if (CostKind != TTI::TCK_RecipThroughput)
+    return Invalid;
+
+  if (!BinOp)
+    return Invalid;
+
+  // Both input types must match.
+  if (InputTypeB && InputTypeA != InputTypeB)
+    return Invalid;
+
+  // Floating-point partial reductions require reassoc and contract to allow
+  // the fusion into a single instruction (e.g. vdpbf16ps).
+  if (AccumType->isFloatingPointTy()) {
+    assert(FMF && "Missing FastMathFlags for floating-point partial reduction");
+    if (!FMF->allowReassoc() || !FMF->allowContract())
+      return Invalid;
+  } else {
+    assert(!FMF &&
+           "FastMathFlags only apply to floating-point partial reductions");
+  }
+
+  assert(OpBExtend != TTI::PR_None && InputTypeB &&
+         "Unexpected values for OpBExtend or InputTypeB");
+
+  unsigned ScaleFactor = 0;
+  unsigned PartialReduceOpcode = 0;
+
+  // BF16 dot product: bf16 x bf16 -> f32 (vdpbf16ps, scale=2).
+  if (Opcode == Instruction::FAdd && *BinOp == Instruction::FMul &&
+      InputTypeA->isBFloatTy() && AccumType->isFloatTy()) {
+    if (!ST->hasBF16())
+      return Invalid;
+    ScaleFactor = 2;
+    PartialReduceOpcode = ISD::PARTIAL_REDUCE_FMLA;
+    if (!VF.isKnownMultipleOf(2))
+      return Invalid;
+  }
+  // i8 x i8 -> i32 (vpdpbusd/vpdpbssd/vpdpbuud, scale=4).
+  else if (Opcode == Instruction::Add && *BinOp == Instruction::Mul &&
+           InputTypeA->isIntegerTy(8) && AccumType->isIntegerTy(32)) {
+    ScaleFactor = 4;
+    if (!VF.isKnownMultipleOf(4))
+      return Invalid;
+    if (OpAExtend == TTI::PR_None)
+      return Invalid;
+    // Check that the sign combination is supported by available instructions.
+    bool HasVNNI = ST->hasVNNI() || ST->hasAVXVNNI();
+    bool HasVNNIINT8 = ST->hasAVXVNNIINT8() || ST->hasAVX10_2();
+    bool IsSUMLA = OpAExtend != OpBExtend; // mixed sign -> VPDPBUSD
+    bool IsSMLA =
+        OpAExtend == TTI::PR_SignExtend && OpBExtend == TTI::PR_SignExtend;
+    bool IsUMLA =
+        OpAExtend == TTI::PR_ZeroExtend && OpBExtend == TTI::PR_ZeroExtend;
+    PartialReduceOpcode = IsSUMLA  ? ISD::PARTIAL_REDUCE_SUMLA
+                          : IsSMLA ? ISD::PARTIAL_REDUCE_SMLA
+                                   : ISD::PARTIAL_REDUCE_UMLA;
+    if (IsSUMLA && !HasVNNI)
+      return Invalid;
+    if ((IsSMLA || IsUMLA) && !HasVNNIINT8)
+      return Invalid;
+  }
+  // i16 x i16 -> i32 (vpdpwssd/vpdpwsud/vpdpwuud, scale=2).
+  else if (Opcode == Instruction::Add && *BinOp == Instruction::Mul &&
+           InputTypeA->isIntegerTy(16) && AccumType->isIntegerTy(32)) {
+    ScaleFactor = 2;
+    if (!VF.isKnownMultipleOf(2))
+      return Invalid;
+    if (OpAExtend == TTI::PR_None)
+      return Invalid;
+    // Check that the sign combination is supported by available instructions.
+    bool HasVNNI = ST->hasVNNI() || ST->hasAVXVNNI();
+    bool HasVNNIINT16 = ST->hasAVXVNNIINT16() || ST->hasAVX10_2();
+    bool IsSMLA =
+        OpAExtend == TTI::PR_SignExtend && OpBExtend == TTI::PR_SignExtend;
+    bool IsSUMLA = OpAExtend != OpBExtend; // mixed sign -> VPDPWSUD
+    bool IsUMLA =
+        OpAExtend == TTI::PR_ZeroExtend && OpBExtend == TTI::PR_ZeroExtend;
+    PartialReduceOpcode = IsSUMLA  ? ISD::PARTIAL_REDUCE_SUMLA
+                          : IsSMLA ? ISD::PARTIAL_REDUCE_SMLA
+                                   : ISD::PARTIAL_REDUCE_UMLA;
+    if (IsSMLA && !HasVNNI)
+      return Invalid;
+    if ((IsSUMLA || IsUMLA) && !HasVNNIINT16)
+      return Invalid;
+  } else {
+    return Invalid;
+  }
+
+  // Check the exact partial-reduction shape has a lowering action. Type
+  // legalization alone may accept smaller accumulator vectors than the X86 dot
+  // product lowerings support.
+  Type *AccVecTy =
+      VectorType::get(AccumType, VF.divideCoefficientBy(ScaleFactor));
+  Type *InputVecTy = VectorType::get(InputTypeA, VF);
+  EVT AccVT = TLI->getValueType(DL, AccVecTy);
+  EVT InputVT = TLI->getValueType(DL, InputVecTy);
+  if (!AccVT.isSimple() || !InputVT.isSimple() ||
+      !TLI->isPartialReduceMLALegalOrCustom(PartialReduceOpcode, AccVT,
+                                            InputVT))
+    return Invalid;
+
+  auto LT = getTypeLegalizationCost(AccVecTy);
+  if (LT.second == MVT::INVALID_SIMPLE_VALUE_TYPE)
+    return Invalid;
+
+  unsigned CostOpcode =
+      AccumType->isFloatingPointTy() ? Instruction::FMul : Instruction::Mul;
+  InstructionCost DotProductCost =
+      getArithmeticInstrCost(CostOpcode, AccVecTy, CostKind);
+  if (!DotProductCost.isValid())
+    return Invalid;
+  return std::max(InstructionCost(LT.first), DotProductCost);
+}
+
 InstructionCost
 X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
                                        std::optional<FastMathFlags> FMF,
