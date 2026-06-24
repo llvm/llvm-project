@@ -268,9 +268,7 @@ end
 !CHECK: %[[DVAL:.*]] = load i32, ptr %[[D]]
 !CHECK: %[[RES:.*]] = cmpxchg ptr %[[X]], i32 %[[EVAL]], i32 %[[DVAL]] monotonic monotonic
 !CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
-!CHECK: %[[SUCCESS:.*]] = extractvalue { i32, i1 } %[[RES]], 1
-!CHECK: %[[CAPTURED:.*]] = select i1 %[[SUCCESS]], i32 %[[EVAL]], i32 %[[OLD]]
-!CHECK: store i32 %[[CAPTURED]], ptr %[[V]]
+!CHECK: store i32 %[[OLD]], ptr %[[V]]
 subroutine atomic_compare_capture_int_eq(x, e, d, v)
   integer :: x, e, d, v
   !$omp atomic compare capture
@@ -286,9 +284,7 @@ end
 !CHECK: %[[DVAL:.*]] = load i32, ptr %[[D]]
 !CHECK: %[[RES:.*]] = cmpxchg ptr %[[X]], i32 %[[EVAL]], i32 %[[DVAL]] monotonic monotonic
 !CHECK: %[[OLD:.*]] = extractvalue { i32, i1 } %[[RES]], 0
-!CHECK: %[[SUCCESS:.*]] = extractvalue { i32, i1 } %[[RES]], 1
-!CHECK: %[[CAPTURED:.*]] = select i1 %[[SUCCESS]], i32 %[[EVAL]], i32 %[[OLD]]
-!CHECK: store i32 %[[CAPTURED]], ptr %[[V]]
+!CHECK: store i32 %[[OLD]], ptr %[[V]]
 subroutine atomic_capture_compare_int_eq(x, e, d, v)
   integer :: x, e, d, v
   !$omp atomic capture compare

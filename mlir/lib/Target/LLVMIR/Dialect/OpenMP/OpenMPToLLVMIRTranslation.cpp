@@ -5499,25 +5499,23 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
     llvmAtomicX.IsSigned = isSigned;
 
     llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
-    // In OMPIRBuilder::createAtomicCompare:
-    //   IsPostfixUpdate=true  → select(success, D, OldValue) → new value
-    //   IsPostfixUpdate=false → select(success, E, OldValue) → old value
-    // Prefix read (v=x; if(x==e) x=d): v captures old → IsPostfixUpdate=false
-    // Postfix read (if(x==e) x=d; v=x): v captures new → IsPostfixUpdate=true
-    // Fail-only: conditional store only on failure → IsPostfixUpdate=false
-    bool isPostfixUpdate =
-        !isa<omp::AtomicReadOp>(atomicCaptureOp.getFirstOp());
+    bool isReadFirst = isa<omp::AtomicReadOp>(atomicCaptureOp.getFirstOp());
+    bool isPostfixCapture = !isReadFirst;
     bool isFailOnly = atomicCaptureOp.getFailOnly();
 
-    // For fail-only, the OMPIRBuilder's conditional store logic is under
-    // the !IsPostfixUpdate path, so force it to false.
-    if (isFailOnly)
-      isPostfixUpdate = false;
+    llvm::OpenMPIRBuilder::AtomicOpValue llvmAtomicVForCall = llvmAtomicV;
+    // Postfix: bypass V in OMPIRBuilder, handled manually below.
+    if (isPostfixCapture && !isFailOnly)
+      llvmAtomicVForCall = {nullptr, nullptr, false, false};
+
+    // Prefix: IsPostfixUpdate=true → direct store of old value.
+    // Fail-only: IsPostfixUpdate=false → conditional store on failure.
+    bool isPostfixUpdate = !isFailOnly;
 
     bool isWeak = atomicCompareOp.getWeak();
     bool savedHandleFPNegZero = ompBuilder->setHandleFPNegZero(true);
     llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
-        ompBuilder->createAtomicCompare(ompLoc, llvmAtomicX, llvmAtomicV,
+        ompBuilder->createAtomicCompare(ompLoc, llvmAtomicX, llvmAtomicVForCall,
                                         llvmAtomicR, eVal, dVal, atomicOrdering,
                                         compareOp, isXBinopExpr,
                                         isPostfixUpdate, isFailOnly, isWeak);
@@ -5527,6 +5525,25 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
       return failure();
 
     builder.restoreIP(*afterIP);
+
+    // Postfix: v = select(success, D, old) — captures new value of x.
+    if (isPostfixCapture && !isFailOnly) {
+      llvm::BasicBlock *curBB = builder.GetInsertBlock();
+      llvm::Instruction *cmpxchgInst = nullptr;
+      for (auto &inst : llvm::reverse(*curBB)) {
+        if (isa<llvm::AtomicCmpXchgInst>(&inst)) {
+          cmpxchgInst = &inst;
+          break;
+        }
+      }
+      assert(cmpxchgInst && "expected cmpxchg instruction");
+      llvm::Value *oldVal = builder.CreateExtractValue(cmpxchgInst, /*Idxs=*/0);
+      llvm::Value *successVal =
+          builder.CreateExtractValue(cmpxchgInst, /*Idxs=*/1);
+      llvm::Value *newVal = builder.CreateSelect(successVal, dVal, oldVal);
+      builder.CreateStore(newVal, llvmAtomicV.Var, llvmAtomicV.IsVolatile);
+    }
+
     return success();
   }
 
