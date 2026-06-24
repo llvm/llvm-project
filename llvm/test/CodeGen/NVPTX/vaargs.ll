@@ -216,7 +216,7 @@ define i32 @test_foo(i32 %i, i64 %l, double %d, ptr %p) {
 ; CHECK32-NEXT:    .reg .b32 %SPL;
 ; CHECK32-NEXT:    .reg .b32 %r<9>;
 ; CHECK32-NEXT:    .reg .b64 %rd<3>;
-; CHECK32-NEXT:  prototype_1 : .callprototype (.param .b32 _) _ (.param .b32 _, .param .b32 _);
+; CHECK32-NEXT:  $L__prototype_1 : .callprototype (.param .b32 _) _ (.param .b32 _, .param .b32 _);
 ; CHECK32-NEXT:  // %bb.0: // %entry
 ; CHECK32-NEXT:    mov.b32 %SPL, __local_depot1;
 ; CHECK32-NEXT:    ld.param.b32 %r2, [test_foo_param_3];
@@ -238,7 +238,7 @@ define i32 @test_foo(i32 %i, i64 %l, double %d, ptr %p) {
 ; CHECK32-NEXT:    .param .b32 retval0;
 ; CHECK32-NEXT:    st.param.b32 [param1], %r3;
 ; CHECK32-NEXT:    st.param.b32 [param0], 4;
-; CHECK32-NEXT:    call (retval0), %r7, (param0, param1), prototype_1;
+; CHECK32-NEXT:    call (retval0), %r7, (param0, param1), $L__prototype_1;
 ; CHECK32-NEXT:    ld.param.b32 %r8, [retval0];
 ; CHECK32-NEXT:    } // callseq 1
 ; CHECK32-NEXT:    st.param.b32 [func_retval0], %r8;
@@ -251,7 +251,7 @@ define i32 @test_foo(i32 %i, i64 %l, double %d, ptr %p) {
 ; CHECK64-NEXT:    .reg .b64 %SPL;
 ; CHECK64-NEXT:    .reg .b32 %r<3>;
 ; CHECK64-NEXT:    .reg .b64 %rd<9>;
-; CHECK64-NEXT:  prototype_1 : .callprototype (.param .b32 _) _ (.param .b32 _, .param .b64 _);
+; CHECK64-NEXT:  $L__prototype_1 : .callprototype (.param .b32 _) _ (.param .b32 _, .param .b64 _);
 ; CHECK64-NEXT:  // %bb.0: // %entry
 ; CHECK64-NEXT:    mov.b64 %SPL, __local_depot1;
 ; CHECK64-NEXT:    ld.param.b64 %rd3, [test_foo_param_3];
@@ -273,7 +273,7 @@ define i32 @test_foo(i32 %i, i64 %l, double %d, ptr %p) {
 ; CHECK64-NEXT:    .param .b32 retval0;
 ; CHECK64-NEXT:    st.param.b64 [param1], %rd4;
 ; CHECK64-NEXT:    st.param.b32 [param0], 4;
-; CHECK64-NEXT:    call (retval0), %rd8, (param0, param1), prototype_1;
+; CHECK64-NEXT:    call (retval0), %rd8, (param0, param1), $L__prototype_1;
 ; CHECK64-NEXT:    ld.param.b32 %r2, [retval0];
 ; CHECK64-NEXT:    } // callseq 1
 ; CHECK64-NEXT:    st.param.b32 [func_retval0], %r2;
