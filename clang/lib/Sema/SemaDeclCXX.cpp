@@ -19826,8 +19826,9 @@ bool Sema::BuildCtorClosureDefaultArgs(SourceLocation Loc,
     Args[0] = nullptr; // Copy ctor closure will provide the first argument.
 
   for (unsigned I = IsCopy ? 1 : 0; I != NumParams; ++I) {
+    EnterExpressionEvaluationContext EvalContext(
+        *this, ExpressionEvaluationContext::Unevaluated);
     ExprResult R = BuildCXXDefaultArgExpr(Loc, Ctor, Ctor->getParamDecl(I));
-    CleanupVarDeclMarking();
     if (R.isInvalid())
       return true;
     Args[I] = cast<CXXDefaultArgExpr>(R.get());
