@@ -19,6 +19,7 @@
 
 #include "config.h"
 #include "properties/architectures.h"
+#include "properties/compiler.h"
 
 #ifndef __has_attribute
 #define __has_attribute(x) 0
@@ -138,6 +139,8 @@ LIBC_THREAD_MODE_EXTERNAL.
 #define LIBC_CONSTINIT constinit
 #elif __has_attribute(__require_constant_initialization__)
 #define LIBC_CONSTINIT __attribute__((__require_constant_initialization__))
+#elif defined(LIBC_COMPILER_IS_GCC) && (LIBC_COMPILER_GCC_VER >= 1202L)
+#define LIBC_CONSTINIT __constinit
 #else
 #define LIBC_CONSTINIT
 #endif
