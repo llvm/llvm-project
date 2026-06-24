@@ -15,6 +15,32 @@
 // CIR-DAG: !s128i = !cir.int<s, 128>
 // CIR-DAG: !s256i_bitint = !cir.int<s, 256, bitint>
 
+// Explicitly-initialized _BitInt globals (emitted before the tentative
+// definitions below) exercise the constant emitter's in-memory path.
+signed _BitInt(128) bitint128_init = 1234;
+unsigned _BitInt(17) bitint17_init = 100;
+signed _BitInt(254) bitint254_init = 5;
+signed _BitInt(257) bitint257_init = 7;
+unsigned _BitInt(1) bitint1_init = 1;
+
+// CIR: cir.global external @bitint128_init = #cir.int<1234> : !s128i_bitint {alignment = 8 : i64}
+// CIR: cir.global external @bitint17_init = #cir.int<100> : !cir.int<u, 17, bitint> {alignment = 4 : i64}
+// CIR: cir.global external @bitint254_init = #cir.int<5> : !cir.int<s, 254, bitint> {alignment = 8 : i64}
+// CIR: cir.global external @bitint257_init = #cir.int<7> : !cir.int<s, 257, bitint> {alignment = 8 : i64}
+// CIR: cir.global external @bitint1_init = #cir.int<1> : !cir.int<u, 1, bitint> {alignment = 1 : i64}
+
+// LLVM: @bitint128_init = global i128 1234, align 8
+// LLVM: @bitint17_init = global i17 100, align 4
+// LLVM: @bitint254_init = global i254 5, align 8
+// LLVM: @bitint257_init = global i257 7, align 8
+// LLVM: @bitint1_init = global i1 true, align 1
+
+// OGCG: @bitint128_init = global i128 1234, align 8
+// OGCG: @bitint17_init = global i32 100, align 4
+// OGCG: @bitint254_init = global i256 5, align 8
+// OGCG: @bitint257_init = global <{ i8, [39 x i8] }> <{ i8 7, [39 x i8] zeroinitializer }>, align 8
+// OGCG: @bitint1_init = global i8 1, align 1
+
 // _BitInt(128) has alignment 8 while __int128 has alignment 16.
 signed _BitInt(128) bitint128_var;
 __int128 int128_var;

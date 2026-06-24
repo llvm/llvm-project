@@ -1819,10 +1819,11 @@ mlir::Attribute ConstantEmitter::emitForMemory(CIRGenModule &cgm,
     cgm.errorNYI("emitForMemory: zero-extend HLSL bool vectors");
   }
 
-  if (destType->isBitIntType()) {
-    cgm.errorNYI("emitForMemory: _BitInt type");
-  }
-
+  // CIR represents a _BitInt(N) value in memory at its exact width
+  // (!cir.int<N, bitint>), unlike classic CodeGen which widens to a separate
+  // load/store type (e.g. i8 for _BitInt(7)) or a byte array for long
+  // _BitInt.  The value constant is therefore already in its in-memory
+  // representation and needs no adjustment here.
   return c;
 }
 
