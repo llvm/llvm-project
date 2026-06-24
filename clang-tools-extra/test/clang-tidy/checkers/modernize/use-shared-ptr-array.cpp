@@ -710,7 +710,6 @@ void negative_macro_deleter_only() {
   std::shared_ptr<A> sp(new A[10], ARR_DEL);
 }
 
-
 template <typename T>
 void negative_dependent_element(int n) {
   std::shared_ptr<T> sp(
