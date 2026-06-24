@@ -220,6 +220,9 @@ private:
   bool canGuaranteeAssignmentAfterRemat(Register VReg, MachineInstr &MI);
   bool hasPhysRegAvailable(const MachineInstr &MI);
   bool reMaterializeFor(LiveInterval &, MachineInstr &MI);
+  bool tryExtendOperandsForRemat(MachineInstr *DefMI, SlotIndex UseIdx,
+                                 MachineInstr &MI,
+                                 SmallSetVector<Register, 4> &Extendable);
   void reMaterializeAll();
 
   bool coalesceStackAccess(MachineInstr *MI, Register Reg);
@@ -652,6 +655,76 @@ bool InlineSpiller::hasPhysRegAvailable(const MachineInstr &MI) {
   return false;
 }
 
+/// Check if unavailable operands of DefMI can have their live ranges extended
+/// within the same basic block to enable rematerialization at UseIdx. Returns
+/// true if all operands can be resolved; populates Extendable with registers
+/// that need extension after the remat instruction is inserted.
+bool InlineSpiller::tryExtendOperandsForRemat(
+    MachineInstr *DefMI, SlotIndex UseIdx, MachineInstr &MI,
+    SmallSetVector<Register, 4> &Extendable) {
+  if (!TII.isReMaterializable(*DefMI) || DefMI->getOperand(0).getSubReg())
+    return false;
+
+  SlotIndex OrigIdx = LIS.getInstructionIndex(*DefMI).getRegSlot(true);
+  if (SlotIndex::isSameInstr(OrigIdx, UseIdx))
+    return false;
+
+  MachineBasicBlock *UseMBB = MI.getParent();
+  for (const MachineOperand &MO : DefMI->operands()) {
+    if (!MO.isReg() || !MO.getReg() || !MO.readsReg())
+      continue;
+    if (MO.getReg().isPhysical()) {
+      if (MRI.isConstantPhysReg(MO.getReg()) || TII.isIgnorableUse(MO))
+        continue;
+      return false;
+    }
+    if (MO.getSubReg())
+      return false;
+    if (!LIS.hasInterval(MO.getReg()))
+      continue;
+    LiveInterval &OpLI = LIS.getInterval(MO.getReg());
+    if (OpLI.hasSubRanges())
+      return false;
+    const VNInfo *OVNI = OpLI.getVNInfoAt(OrigIdx);
+    if (!OVNI)
+      continue;
+    if (OVNI == OpLI.getVNInfoAt(UseIdx))
+      continue;
+
+    // Operand not available. Check if we can extend within the same block.
+    if (!VRM.hasPhys(MO.getReg()) || !Matrix)
+      return false;
+    auto SegIt = OpLI.find(UseIdx);
+    if (SegIt == OpLI.begin() || (--SegIt)->end >= UseIdx ||
+        SegIt->end < OrigIdx)
+      return false;
+    if (LIS.getMBBFromIndex(SegIt->end.getPrevSlot()) != UseMBB)
+      return false;
+
+    MCRegister PhysReg = VRM.getPhys(MO.getReg());
+    SlotIndex ExtEnd = UseIdx.getRegSlot();
+    if (Matrix->checkInterference(SegIt->end, ExtEnd, PhysReg))
+      return false;
+    // Check physical register clobbers via regunit liveness.
+    for (MCRegUnit Unit : TRI.regunits(PhysReg))
+      if (LIS.getRegUnit(Unit).overlaps(SegIt->end, ExtEnd))
+        return false;
+    // Check call clobbers via register masks.
+    ArrayRef<SlotIndex> RMS = LIS.getRegMaskSlotsInBlock(UseMBB->getNumber());
+    ArrayRef<const uint32_t *> RMB =
+        LIS.getRegMaskBitsInBlock(UseMBB->getNumber());
+    for (unsigned I = 0, E = RMS.size(); I < E; ++I)
+      if (RMS[I] >= SegIt->end && RMS[I] < ExtEnd &&
+          MachineOperand::clobbersPhysReg(RMB[I], PhysReg))
+        return false;
+
+    LLVM_DEBUG(dbgs() << "\twill extend " << printReg(MO.getReg(), &TRI)
+                      << " from " << SegIt->end << " to " << ExtEnd << "\n");
+    Extendable.insert(MO.getReg());
+  }
+  return true;
+}
+
 /// reMaterializeFor - Attempt to rematerialize before MI instead of reloading.
 bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   // Analyze instruction
@@ -737,7 +810,12 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
 
   LiveRangeEdit::Remat RM(ParentVNI);
   RM.OrigMI = DefMI;
-  if (!Edit->canRematerializeAt(RM, UseIdx)) {
+
+  // Track operands whose live ranges need same-block extension after remat.
+  SmallSetVector<Register, 4> OperandsToExtend;
+
+  if (!Edit->canRematerializeAt(RM, UseIdx) &&
+      !tryExtendOperandsForRemat(DefMI, UseIdx, MI, OperandsToExtend)) {
     markValueUsed(&VirtReg, ParentVNI);
     LLVM_DEBUG(dbgs() << "\tcannot remat for " << UseIdx << '\t' << MI);
     return false;
@@ -787,6 +865,22 @@ bool InlineSpiller::reMaterializeFor(LiveInterval &VirtReg, MachineInstr &MI) {
   // Finally we can rematerialize OrigMI before MI.
   SlotIndex DefIdx = Edit->rematerializeAt(*MI.getParent(), MI, NewVReg, RM,
                                            TRI, false, 0, nullptr, UsedLanes);
+
+  // Extend operand live ranges within the same block to cover the remat point.
+  for (Register OpReg : OperandsToExtend) {
+    LiveInterval &OpLI = LIS.getInterval(OpReg);
+    MCRegister PhysReg = VRM.getPhys(OpReg);
+    auto SegIt = OpLI.find(DefIdx);
+    assert(SegIt != OpLI.begin() && "Expected segment before DefIdx");
+    --SegIt;
+    assert(SegIt->end <= DefIdx && "Segment should end before DefIdx");
+    Matrix->unassign(OpLI);
+    OpLI.addSegment(
+        LiveRange::Segment(SegIt->end, DefIdx.getRegSlot(), SegIt->valno));
+    Matrix->assign(OpLI, PhysReg);
+    LLVM_DEBUG(dbgs() << "\textended " << printReg(OpReg, &TRI)
+                      << " to " << DefIdx << "\n");
+  }
 
   // We take the DebugLoc from MI, since OrigMI may be attributed to a
   // different source location.
