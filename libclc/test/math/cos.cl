@@ -3,8 +3,46 @@
 
 // RUN: %clang --target=%target -mcpu=%cpu %libclc_lib -cl-std=CL3.0 -O2 -fno-discard-value-names -emit-llvm -S -o - %s | FileCheck %s --check-prefix=%check_prefix
 
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+// AMDGCN-LABEL: define hidden half @test_half(
+// AMDGCN-SAME: half noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// AMDGCN-NEXT:  [[ENTRY:.*:]]
+// AMDGCN-NEXT:    [[TMP0:%.*]] = tail call half @llvm.fabs.f16(half [[X]])
+// AMDGCN-NEXT:    [[TMP1:%.*]] = fcmp une half [[TMP0]], +inf
+// AMDGCN-NEXT:    [[TMP2:%.*]] = select contract i1 [[TMP1]], half [[TMP0]], half +qnan
+// AMDGCN-NEXT:    [[TMP3:%.*]] = fpext contract half [[TMP2]] to float
+// AMDGCN-NEXT:    [[TMP4:%.*]] = fmul float [[TMP3]], f0x3F22F983
+// AMDGCN-NEXT:    [[TMP5:%.*]] = tail call contract noundef float @llvm.rint.f32(float [[TMP4]])
+// AMDGCN-NEXT:    [[TMP6:%.*]] = tail call noundef float @llvm.fmuladd.f32(float [[TMP5]], float f0xBFC90000, float [[TMP3]])
+// AMDGCN-NEXT:    [[TMP7:%.*]] = tail call noundef float @llvm.fmuladd.f32(float [[TMP5]], float f0xB9FD0000, float [[TMP6]])
+// AMDGCN-NEXT:    [[TMP8:%.*]] = tail call noundef float @llvm.fmuladd.f32(float [[TMP5]], float f0xB5AA2217, float [[TMP7]])
+// AMDGCN-NEXT:    [[TMP9:%.*]] = fptrunc contract float [[TMP8]] to half
+// AMDGCN-NEXT:    [[TMP10:%.*]] = fptosi float [[TMP5]] to i32
+// AMDGCN-NEXT:    [[TMP11:%.*]] = fmul half [[TMP9]], [[TMP9]]
+// AMDGCN-NEXT:    [[TMP12:%.*]] = tail call noundef half @llvm.fmuladd.f16(half [[TMP11]], half 4.043580e-02, half -4.997560e-01)
+// AMDGCN-NEXT:    [[TMP13:%.*]] = tail call noundef half @llvm.fmuladd.f16(half [[TMP11]], half [[TMP12]], half 1.000000e+00)
+// AMDGCN-NEXT:    [[TMP14:%.*]] = tail call noundef half @llvm.fmuladd.f16(half [[TMP11]], half 8.148190e-03, half -1.666260e-01)
+// AMDGCN-NEXT:    [[TMP15:%.*]] = fmul half [[TMP11]], [[TMP14]]
+// AMDGCN-NEXT:    [[TMP16:%.*]] = tail call noundef half @llvm.fmuladd.f16(half [[TMP9]], half [[TMP15]], half [[TMP9]])
+// AMDGCN-NEXT:    [[TMP17:%.*]] = and i32 [[TMP10]], 1
+// AMDGCN-NEXT:    [[DOTNOT_I_I_I:%.*]] = icmp eq i32 [[TMP17]], 0
+// AMDGCN-NEXT:    [[TMP18:%.*]] = trunc i32 [[TMP10]] to i16
+// AMDGCN-NEXT:    [[TMP19:%.*]] = shl i16 [[TMP18]], 14
+// AMDGCN-NEXT:    [[TMP20:%.*]] = and i16 [[TMP19]], -32768
+// AMDGCN-NEXT:    [[TMP21:%.*]] = fneg contract half [[TMP16]]
+// AMDGCN-NEXT:    [[TMP22:%.*]] = select contract i1 [[DOTNOT_I_I_I]], half [[TMP13]], half [[TMP21]]
+// AMDGCN-NEXT:    [[TMP23:%.*]] = bitcast half [[TMP22]] to i16
+// AMDGCN-NEXT:    [[TMP24:%.*]] = xor i16 [[TMP20]], [[TMP23]]
+// AMDGCN-NEXT:    [[TMP25:%.*]] = bitcast i16 [[TMP24]] to half
+// AMDGCN-NEXT:    ret half [[TMP25]]
+//
+half test_half(half x) {
+  return cos(x);
+}
+
 // AMDGCN-LABEL: define hidden float @test_float(
-// AMDGCN-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// AMDGCN-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
 // AMDGCN-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
 // AMDGCN-NEXT:    [[TMP1:%.*]] = fcmp une float [[TMP0]], +inf
@@ -152,5 +190,155 @@
 // AMDGCN-NEXT:    ret float [[TMP132]]
 //
 float test_float(float x) {
+  return cos(x);
+}
+
+// AMDGCN-LABEL: define hidden double @test_double(
+// AMDGCN-SAME: double noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// AMDGCN-NEXT:  [[ENTRY:.*:]]
+// AMDGCN-NEXT:    [[TMP0:%.*]] = tail call double @llvm.fabs.f64(double [[X]])
+// AMDGCN-NEXT:    [[TMP1:%.*]] = fcmp une double [[TMP0]], +inf
+// AMDGCN-NEXT:    [[TMP2:%.*]] = select contract i1 [[TMP1]], double [[X]], double +qnan
+// AMDGCN-NEXT:    [[TMP3:%.*]] = tail call contract noundef double @llvm.fabs.f64(double [[TMP2]])
+// AMDGCN-NEXT:    [[TMP4:%.*]] = fcmp ult double [[TMP3]], f0x41D0000000000000
+// AMDGCN-NEXT:    [[TMP5:%.*]] = fmul double [[TMP3]], f0x3FE45F306DC9C883
+// AMDGCN-NEXT:    [[TMP6:%.*]] = tail call contract noundef double @llvm.rint.f64(double [[TMP5]])
+// AMDGCN-NEXT:    [[TMP7:%.*]] = tail call contract noundef double @llvm.fma.f64(double [[TMP6]], double f0xBFF921FB54442D18, double [[TMP3]])
+// AMDGCN-NEXT:    [[TMP8:%.*]] = tail call contract noundef double @llvm.fma.f64(double [[TMP6]], double f0xBC91A62633145C00, double [[TMP7]])
+// AMDGCN-NEXT:    [[TMP9:%.*]] = fmul double [[TMP6]], f0x3C91A62633145C00
+// AMDGCN-NEXT:    [[TMP10:%.*]] = fneg contract double [[TMP9]]
+// AMDGCN-NEXT:    [[TMP11:%.*]] = tail call contract noundef double @llvm.fma.f64(double [[TMP6]], double f0x3C91A62633145C00, double [[TMP10]])
+// AMDGCN-NEXT:    [[TMP12:%.*]] = fsub double [[TMP7]], [[TMP9]]
+// AMDGCN-NEXT:    [[TMP13:%.*]] = fsub double [[TMP7]], [[TMP12]]
+// AMDGCN-NEXT:    [[TMP14:%.*]] = fsub double [[TMP13]], [[TMP9]]
+// AMDGCN-NEXT:    [[TMP15:%.*]] = fsub double [[TMP12]], [[TMP8]]
+// AMDGCN-NEXT:    [[TMP16:%.*]] = fadd double [[TMP15]], [[TMP14]]
+// AMDGCN-NEXT:    [[TMP17:%.*]] = fsub double [[TMP16]], [[TMP11]]
+// AMDGCN-NEXT:    [[TMP18:%.*]] = tail call contract noundef double @llvm.fma.f64(double [[TMP6]], double f0xB97B839A252049C0, double [[TMP17]])
+// AMDGCN-NEXT:    [[TMP19:%.*]] = fadd double [[TMP8]], [[TMP18]]
+// AMDGCN-NEXT:    [[TMP20:%.*]] = fsub double [[TMP19]], [[TMP8]]
+// AMDGCN-NEXT:    [[TMP21:%.*]] = fsub double [[TMP18]], [[TMP20]]
+// AMDGCN-NEXT:    [[TMP22:%.*]] = fptosi double [[TMP6]] to i32
+// AMDGCN-NEXT:    [[TMP23:%.*]] = tail call contract noundef double @llvm.amdgcn.trig.preop.f64(double [[TMP2]], i32 2)
+// AMDGCN-NEXT:    [[TMP24:%.*]] = tail call contract noundef double @llvm.amdgcn.trig.preop.f64(double [[TMP2]], i32 1)
+// AMDGCN-NEXT:    [[TMP25:%.*]] = tail call contract noundef double @llvm.amdgcn.trig.preop.f64(double [[TMP2]], i32 0)
+// AMDGCN-NEXT:    [[TMP26:%.*]] = fcmp ult double [[TMP3]], f0x7B00000000000000
+// AMDGCN-NEXT:    [[TMP27:%.*]] = fmul contract double [[TMP3]], f0x37F0000000000000
+// AMDGCN-NEXT:    [[TMP28:%.*]] = select i1 [[TMP26]], double [[TMP3]], double [[TMP27]]
+// AMDGCN-NEXT:    [[TMP29:%.*]] = fmul double [[TMP23]], [[TMP28]]
+// AMDGCN-NEXT:    [[TMP30:%.*]] = fneg contract double [[TMP29]]
+// AMDGCN-NEXT:    [[TMP31:%.*]] = tail call contract noundef double @llvm.fma.f64(double [[TMP23]], double [[TMP28]], double [[TMP30]])
+// AMDGCN-NEXT:    [[TMP32:%.*]] = fmul double [[TMP24]], [[TMP28]]
+// AMDGCN-NEXT:    [[TMP33:%.*]] = fneg contract double [[TMP32]]
+// AMDGCN-NEXT:    [[TMP34:%.*]] = tail call contract noundef double @llvm.fma.f64(double [[TMP24]], double [[TMP28]], double [[TMP33]])
+// AMDGCN-NEXT:    [[TMP35:%.*]] = fmul double [[TMP25]], [[TMP28]]
+// AMDGCN-NEXT:    [[TMP36:%.*]] = fneg contract double [[TMP35]]
+// AMDGCN-NEXT:    [[TMP37:%.*]] = tail call contract noundef double @llvm.fma.f64(double [[TMP25]], double [[TMP28]], double [[TMP36]])
+// AMDGCN-NEXT:    [[TMP38:%.*]] = fadd double [[TMP32]], [[TMP37]]
+// AMDGCN-NEXT:    [[TMP39:%.*]] = fsub double [[TMP38]], [[TMP37]]
+// AMDGCN-NEXT:    [[TMP40:%.*]] = fsub double [[TMP38]], [[TMP39]]
+// AMDGCN-NEXT:    [[TMP41:%.*]] = fsub double [[TMP37]], [[TMP40]]
+// AMDGCN-NEXT:    [[TMP42:%.*]] = fsub double [[TMP32]], [[TMP39]]
+// AMDGCN-NEXT:    [[TMP43:%.*]] = fadd double [[TMP42]], [[TMP41]]
+// AMDGCN-NEXT:    [[TMP44:%.*]] = fadd double [[TMP29]], [[TMP34]]
+// AMDGCN-NEXT:    [[TMP45:%.*]] = fsub double [[TMP44]], [[TMP34]]
+// AMDGCN-NEXT:    [[TMP46:%.*]] = fsub double [[TMP44]], [[TMP45]]
+// AMDGCN-NEXT:    [[TMP47:%.*]] = fsub double [[TMP34]], [[TMP46]]
+// AMDGCN-NEXT:    [[TMP48:%.*]] = fsub double [[TMP29]], [[TMP45]]
+// AMDGCN-NEXT:    [[TMP49:%.*]] = fadd double [[TMP48]], [[TMP47]]
+// AMDGCN-NEXT:    [[TMP50:%.*]] = fadd double [[TMP44]], [[TMP43]]
+// AMDGCN-NEXT:    [[TMP51:%.*]] = fsub double [[TMP50]], [[TMP43]]
+// AMDGCN-NEXT:    [[TMP52:%.*]] = fsub double [[TMP51]], [[TMP50]]
+// AMDGCN-NEXT:    [[TMP53:%.*]] = fadd double [[TMP43]], [[TMP52]]
+// AMDGCN-NEXT:    [[TMP54:%.*]] = fsub double [[TMP44]], [[TMP51]]
+// AMDGCN-NEXT:    [[TMP55:%.*]] = fadd double [[TMP54]], [[TMP53]]
+// AMDGCN-NEXT:    [[TMP56:%.*]] = fadd double [[TMP49]], [[TMP55]]
+// AMDGCN-NEXT:    [[TMP57:%.*]] = fadd double [[TMP31]], [[TMP56]]
+// AMDGCN-NEXT:    [[TMP58:%.*]] = fadd double [[TMP35]], [[TMP38]]
+// AMDGCN-NEXT:    [[TMP59:%.*]] = fsub double [[TMP35]], [[TMP58]]
+// AMDGCN-NEXT:    [[TMP60:%.*]] = fadd double [[TMP38]], [[TMP59]]
+// AMDGCN-NEXT:    [[TMP61:%.*]] = fadd double [[TMP60]], [[TMP50]]
+// AMDGCN-NEXT:    [[TMP62:%.*]] = fsub double [[TMP60]], [[TMP61]]
+// AMDGCN-NEXT:    [[TMP63:%.*]] = fadd double [[TMP50]], [[TMP62]]
+// AMDGCN-NEXT:    [[TMP64:%.*]] = fadd double [[TMP63]], [[TMP57]]
+// AMDGCN-NEXT:    [[TMP65:%.*]] = fmul contract double [[TMP58]], 2.500000e-01
+// AMDGCN-NEXT:    [[TMP66:%.*]] = tail call contract noundef double @llvm.floor.f64(double [[TMP65]])
+// AMDGCN-NEXT:    [[TMP67:%.*]] = fsub contract double [[TMP65]], [[TMP66]]
+// AMDGCN-NEXT:    [[TMP68:%.*]] = fcmp contract oge double [[TMP67]], f0x3FEFFFFFFFFFFFFF
+// AMDGCN-NEXT:    [[TMP69:%.*]] = select contract i1 [[TMP68]], double f0x3FEFFFFFFFFFFFFF, double [[TMP67]]
+// AMDGCN-NEXT:    [[TMP70:%.*]] = tail call double @llvm.fabs.f64(double [[TMP65]])
+// AMDGCN-NEXT:    [[TMP71:%.*]] = fcmp une double [[TMP70]], +inf
+// AMDGCN-NEXT:    [[TMP72:%.*]] = fmul contract double [[TMP69]], 4.000000e+00
+// AMDGCN-NEXT:    [[TMP73:%.*]] = select i1 [[TMP71]], double [[TMP72]], double 0.000000e+00
+// AMDGCN-NEXT:    [[TMP74:%.*]] = fadd double [[TMP61]], [[TMP73]]
+// AMDGCN-NEXT:    [[TMP75:%.*]] = fcmp olt double [[TMP74]], 0.000000e+00
+// AMDGCN-NEXT:    [[TMP76:%.*]] = select contract i1 [[TMP75]], double 4.000000e+00, double 0.000000e+00
+// AMDGCN-NEXT:    [[TMP77:%.*]] = fadd double [[TMP73]], [[TMP76]]
+// AMDGCN-NEXT:    [[TMP78:%.*]] = fadd double [[TMP61]], [[TMP77]]
+// AMDGCN-NEXT:    [[TMP79:%.*]] = fptosi double [[TMP78]] to i32
+// AMDGCN-NEXT:    [[TMP80:%.*]] = sitofp i32 [[TMP79]] to double
+// AMDGCN-NEXT:    [[TMP81:%.*]] = fsub double [[TMP77]], [[TMP80]]
+// AMDGCN-NEXT:    [[TMP82:%.*]] = fadd double [[TMP61]], [[TMP81]]
+// AMDGCN-NEXT:    [[TMP83:%.*]] = fsub double [[TMP82]], [[TMP81]]
+// AMDGCN-NEXT:    [[TMP84:%.*]] = fsub double [[TMP61]], [[TMP83]]
+// AMDGCN-NEXT:    [[TMP85:%.*]] = fadd double [[TMP64]], [[TMP84]]
+// AMDGCN-NEXT:    [[TMP86:%.*]] = fcmp oge double [[TMP82]], 5.000000e-01
+// AMDGCN-NEXT:    [[TMP87:%.*]] = zext i1 [[TMP86]] to i32
+// AMDGCN-NEXT:    [[TMP88:%.*]] = add nsw i32 [[TMP87]], [[TMP79]]
+// AMDGCN-NEXT:    [[TMP89:%.*]] = select contract i1 [[TMP86]], double 1.000000e+00, double 0.000000e+00
+// AMDGCN-NEXT:    [[TMP90:%.*]] = fsub double [[TMP82]], [[TMP89]]
+// AMDGCN-NEXT:    [[TMP91:%.*]] = fadd double [[TMP90]], [[TMP85]]
+// AMDGCN-NEXT:    [[TMP92:%.*]] = fsub double [[TMP91]], [[TMP90]]
+// AMDGCN-NEXT:    [[TMP93:%.*]] = fsub double [[TMP85]], [[TMP92]]
+// AMDGCN-NEXT:    [[TMP94:%.*]] = fmul double [[TMP91]], f0x3FF921FB54442D18
+// AMDGCN-NEXT:    [[TMP95:%.*]] = fneg contract double [[TMP94]]
+// AMDGCN-NEXT:    [[TMP96:%.*]] = tail call contract noundef double @llvm.fma.f64(double [[TMP91]], double f0x3FF921FB54442D18, double [[TMP95]])
+// AMDGCN-NEXT:    [[TMP97:%.*]] = tail call contract noundef double @llvm.fma.f64(double [[TMP91]], double f0x3C91A62633145C07, double [[TMP96]])
+// AMDGCN-NEXT:    [[TMP98:%.*]] = tail call contract noundef double @llvm.fma.f64(double [[TMP93]], double f0x3FF921FB54442D18, double [[TMP97]])
+// AMDGCN-NEXT:    [[TMP99:%.*]] = fadd double [[TMP94]], [[TMP98]]
+// AMDGCN-NEXT:    [[TMP100:%.*]] = fsub double [[TMP99]], [[TMP94]]
+// AMDGCN-NEXT:    [[TMP101:%.*]] = fsub double [[TMP98]], [[TMP100]]
+// AMDGCN-NEXT:    [[TMP102:%.*]] = select contract i1 [[TMP4]], double [[TMP21]], double [[TMP101]]
+// AMDGCN-NEXT:    [[TMP103:%.*]] = select contract i1 [[TMP4]], double [[TMP19]], double [[TMP99]]
+// AMDGCN-NEXT:    [[TMP104:%.*]] = select i1 [[TMP4]], i32 [[TMP22]], i32 [[TMP88]]
+// AMDGCN-NEXT:    [[TMP105:%.*]] = and i32 [[TMP104]], 2
+// AMDGCN-NEXT:    [[TMP106:%.*]] = fmul double [[TMP103]], [[TMP103]]
+// AMDGCN-NEXT:    [[TMP107:%.*]] = fmul double [[TMP106]], 5.000000e-01
+// AMDGCN-NEXT:    [[TMP108:%.*]] = fsub double 1.000000e+00, [[TMP107]]
+// AMDGCN-NEXT:    [[TMP109:%.*]] = fsub double 1.000000e+00, [[TMP108]]
+// AMDGCN-NEXT:    [[TMP110:%.*]] = fsub double [[TMP109]], [[TMP107]]
+// AMDGCN-NEXT:    [[TMP111:%.*]] = fmul double [[TMP106]], [[TMP106]]
+// AMDGCN-NEXT:    [[TMP112:%.*]] = tail call noundef double @llvm.fmuladd.f64(double [[TMP106]], double f0xBDA907DB46CC5E42, double f0x3E21EEB69037AB78)
+// AMDGCN-NEXT:    [[TMP113:%.*]] = tail call noundef double @llvm.fmuladd.f64(double [[TMP106]], double [[TMP112]], double f0xBE927E4FA17F65F6)
+// AMDGCN-NEXT:    [[TMP114:%.*]] = tail call noundef double @llvm.fmuladd.f64(double [[TMP106]], double [[TMP113]], double f0x3EFA01A019F4EC90)
+// AMDGCN-NEXT:    [[TMP115:%.*]] = tail call noundef double @llvm.fmuladd.f64(double [[TMP106]], double [[TMP114]], double f0xBF56C16C16C16967)
+// AMDGCN-NEXT:    [[TMP116:%.*]] = tail call noundef double @llvm.fmuladd.f64(double [[TMP106]], double [[TMP115]], double f0x3FA5555555555555)
+// AMDGCN-NEXT:    [[TMP117:%.*]] = fneg contract double [[TMP102]]
+// AMDGCN-NEXT:    [[TMP118:%.*]] = tail call noundef double @llvm.fmuladd.f64(double [[TMP103]], double [[TMP117]], double [[TMP110]])
+// AMDGCN-NEXT:    [[TMP119:%.*]] = tail call noundef double @llvm.fmuladd.f64(double [[TMP111]], double [[TMP116]], double [[TMP118]])
+// AMDGCN-NEXT:    [[TMP120:%.*]] = fadd double [[TMP108]], [[TMP119]]
+// AMDGCN-NEXT:    [[TMP121:%.*]] = tail call noundef double @llvm.fmuladd.f64(double [[TMP106]], double f0x3DE5E0B2F9A43BB8, double f0xBE5AE600B42FDFA7)
+// AMDGCN-NEXT:    [[TMP122:%.*]] = tail call noundef double @llvm.fmuladd.f64(double [[TMP106]], double [[TMP121]], double f0x3EC71DE3796CDE01)
+// AMDGCN-NEXT:    [[TMP123:%.*]] = tail call noundef double @llvm.fmuladd.f64(double [[TMP106]], double [[TMP122]], double f0xBF2A01A019E83E5C)
+// AMDGCN-NEXT:    [[TMP124:%.*]] = tail call noundef double @llvm.fmuladd.f64(double [[TMP106]], double [[TMP123]], double f0x3F81111111110BB3)
+// AMDGCN-NEXT:    [[TMP125:%.*]] = fneg contract double [[TMP106]]
+// AMDGCN-NEXT:    [[TMP126:%.*]] = fmul contract double [[TMP103]], [[TMP125]]
+// AMDGCN-NEXT:    [[TMP127:%.*]] = fmul double [[TMP102]], 5.000000e-01
+// AMDGCN-NEXT:    [[TMP128:%.*]] = tail call noundef double @llvm.fmuladd.f64(double [[TMP126]], double [[TMP124]], double [[TMP127]])
+// AMDGCN-NEXT:    [[TMP129:%.*]] = tail call noundef double @llvm.fmuladd.f64(double [[TMP106]], double [[TMP128]], double [[TMP117]])
+// AMDGCN-NEXT:    [[TMP130:%.*]] = tail call noundef double @llvm.fmuladd.f64(double [[TMP126]], double f0xBFC5555555555555, double [[TMP129]])
+// AMDGCN-NEXT:    [[TMP131:%.*]] = fsub double [[TMP103]], [[TMP130]]
+// AMDGCN-NEXT:    [[TMP132:%.*]] = zext nneg i32 [[TMP105]] to i64
+// AMDGCN-NEXT:    [[TMP133:%.*]] = shl nuw i64 [[TMP132]], 62
+// AMDGCN-NEXT:    [[TMP134:%.*]] = and i32 [[TMP104]], 1
+// AMDGCN-NEXT:    [[TMP135:%.*]] = icmp eq i32 [[TMP134]], 0
+// AMDGCN-NEXT:    [[TMP136:%.*]] = fneg contract double [[TMP131]]
+// AMDGCN-NEXT:    [[TMP137:%.*]] = select contract i1 [[TMP135]], double [[TMP120]], double [[TMP136]]
+// AMDGCN-NEXT:    [[TMP138:%.*]] = bitcast double [[TMP137]] to i64
+// AMDGCN-NEXT:    [[TMP139:%.*]] = xor i64 [[TMP133]], [[TMP138]]
+// AMDGCN-NEXT:    [[TMP140:%.*]] = bitcast i64 [[TMP139]] to double
+// AMDGCN-NEXT:    ret double [[TMP140]]
+//
+double test_double(double x) {
   return cos(x);
 }
