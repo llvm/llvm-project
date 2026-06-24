@@ -12534,15 +12534,17 @@ SDValue DAGCombiner::visitCTPOP(SDNode *N) {
 }
 
 static bool isLegalToCombineMinNumMaxNum(SelectionDAG &DAG, SDValue LHS,
-                                         SDValue RHS, const SDNodeFlags Flags,
+                                         SDValue RHS,
+                                         const SDNodeFlags SelectFlags,
+                                         const SDNodeFlags CmpFlags,
                                          const TargetLowering &TLI) {
   EVT VT = LHS.getValueType();
   if (!VT.isFloatingPoint())
     return false;
 
-  return Flags.hasNoSignedZeros() &&
+  return SelectFlags.hasNoSignedZeros() &&
          TLI.isProfitableToCombineMinNumMaxNum(VT) &&
-         (Flags.hasNoNaNs() ||
+         (SelectFlags.hasNoNaNs() || CmpFlags.hasNoNaNs() ||
           (DAG.isKnownNeverNaN(RHS) && DAG.isKnownNeverNaN(LHS)));
 }
 
@@ -12551,7 +12553,16 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
                                        ISD::CondCode CC,
                                        const TargetLowering &TLI,
                                        SelectionDAG &DAG) {
-  EVT TransformVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  EVT TransformVT = VT;
+  while (TLI.getTypeAction(*DAG.getContext(), TransformVT) !=
+         TargetLoweringBase::TypeLegal)
+    TransformVT = TLI.getTypeToTransformTo(*DAG.getContext(), TransformVT);
+
+  // We have checked nnan and nsz as pre-conditions for the transform.
+  SDNodeFlags Flags;
+  Flags.setNoNaNs(true);
+  Flags.setNoSignedZeros(true);
+
   switch (CC) {
   case ISD::SETOLT:
   case ISD::SETOLE:
@@ -12564,11 +12575,11 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
     // expanded in terms of it.
     unsigned IEEEOpcode = (LHS == True) ? ISD::FMINNUM_IEEE : ISD::FMAXNUM_IEEE;
     if (TLI.isOperationLegalOrCustom(IEEEOpcode, VT))
-      return DAG.getNode(IEEEOpcode, DL, VT, LHS, RHS);
+      return DAG.getNode(IEEEOpcode, DL, VT, LHS, RHS, Flags);
 
     unsigned Opcode = (LHS == True) ? ISD::FMINNUM : ISD::FMAXNUM;
     if (TLI.isOperationLegalOrCustom(Opcode, TransformVT))
-      return DAG.getNode(Opcode, DL, VT, LHS, RHS);
+      return DAG.getNode(Opcode, DL, VT, LHS, RHS, Flags);
     return SDValue();
   }
   case ISD::SETOGT:
@@ -12579,11 +12590,11 @@ static SDValue combineMinNumMaxNumImpl(const SDLoc &DL, EVT VT, SDValue LHS,
   case ISD::SETUGE: {
     unsigned IEEEOpcode = (LHS == True) ? ISD::FMAXNUM_IEEE : ISD::FMINNUM_IEEE;
     if (TLI.isOperationLegalOrCustom(IEEEOpcode, VT))
-      return DAG.getNode(IEEEOpcode, DL, VT, LHS, RHS);
+      return DAG.getNode(IEEEOpcode, DL, VT, LHS, RHS, Flags);
 
     unsigned Opcode = (LHS == True) ? ISD::FMAXNUM : ISD::FMINNUM;
     if (TLI.isOperationLegalOrCustom(Opcode, TransformVT))
-      return DAG.getNode(Opcode, DL, VT, LHS, RHS);
+      return DAG.getNode(Opcode, DL, VT, LHS, RHS, Flags);
     return SDValue();
   }
   default:
@@ -13184,7 +13195,8 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
     // select (fcmp gt x, y), x, y -> fmaxnum x, y
     //
     // This is OK if we don't care what happens if either operand is a NaN.
-    if (N0.hasOneUse() && isLegalToCombineMinNumMaxNum(DAG, N1, N2, Flags, TLI))
+    if (N0.hasOneUse() &&
+        isLegalToCombineMinNumMaxNum(DAG, N1, N2, Flags, N0->getFlags(), TLI))
       if (SDValue FMinMax =
               combineMinNumMaxNum(DL, VT, Cond0, Cond1, N1, N2, CC))
         return FMinMax;
@@ -14218,7 +14230,8 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
     // NaN.
     //
     if (N0.hasOneUse() &&
-        isLegalToCombineMinNumMaxNum(DAG, LHS, RHS, N->getFlags(), TLI)) {
+        isLegalToCombineMinNumMaxNum(DAG, LHS, RHS, N->getFlags(),
+                                     N0->getFlags(), TLI)) {
       if (SDValue FMinMax = combineMinNumMaxNum(DL, VT, LHS, RHS, N1, N2, CC))
         return FMinMax;
     }
