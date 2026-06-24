@@ -68,6 +68,27 @@ struct AffineMinOpInterface
           expr.replaceDimsAndSymbols(dimReplacements, symReplacements);
       cstr.bound(value) <= bound;
     }
+    // Get all constant lower bounds, choose minimum, and set lower bound to it.
+    MLIRContext *ctx = op->getContext();
+    AffineMap map = minOp.getAffineMap();
+    SmallVector<Value> mapOperands = minOp.getOperands();
+    std::optional<int64_t> minBound;
+    for (AffineExpr expr : map.getResults()) {
+      auto exprMap =
+          AffineMap::get(map.getNumDims(), map.getNumSymbols(), expr, ctx);
+      ValueBoundsConstraintSet::Variable exprVar(exprMap, mapOperands);
+      FailureOr<int64_t> exprBound =
+          cstr.computeConstantBound(presburger::BoundType::LB, exprVar,
+                                    /*stopCondition=*/nullptr);
+      // If any LB cannot be computed, then the total LB cannot be known.
+      if (failed(exprBound))
+        return;
+      if (!minBound.has_value() || exprBound.value() < minBound.value())
+        minBound = exprBound.value();
+    }
+    if (!minBound.has_value())
+      return;
+    cstr.bound(value) >= minBound.value();
   };
 };
 
@@ -89,6 +110,27 @@ struct AffineMaxOpInterface
           expr.replaceDimsAndSymbols(dimReplacements, symReplacements);
       cstr.bound(value) >= bound;
     }
+    // Get all constant upper bounds, choose maximum, and set upper bound to it.
+    MLIRContext *ctx = op->getContext();
+    AffineMap map = maxOp.getAffineMap();
+    SmallVector<Value> mapOperands = maxOp.getOperands();
+    std::optional<int64_t> maxBound;
+    for (AffineExpr expr : map.getResults()) {
+      auto exprMap =
+          AffineMap::get(map.getNumDims(), map.getNumSymbols(), expr, ctx);
+      ValueBoundsConstraintSet::Variable exprVar(exprMap, mapOperands);
+      FailureOr<int64_t> exprBound = cstr.computeConstantBound(
+          presburger::BoundType::UB, exprVar,
+          /*stopCondition=*/nullptr, /*closedUB=*/true);
+      // If any UB cannot be computed, then the total UB cannot be known.
+      if (failed(exprBound))
+        return;
+      if (!maxBound.has_value() || exprBound.value() > maxBound.value())
+        maxBound = exprBound.value();
+    }
+    if (!maxBound.has_value())
+      return;
+    cstr.bound(value) <= maxBound.value();
   };
 };
 
