@@ -964,6 +964,14 @@ fp16_fml_fallthrough:
     }
   }
 
+  // -mlong-calls + -mexecute-only + -fPIC/-fPIE is incompatible.
+  if (llvm::is_contained(Features, std::string("+long-calls")) &&
+      llvm::is_contained(Features, std::string("+execute-only"))) {
+    if (Args.getLastArg(options::OPT_fPIC, options::OPT_fpic, options::OPT_fPIE,
+                        options::OPT_fpie))
+      D.Diag(diag::err_drv_long_calls_unsupported_with_execute_only_pic);
+  }
+
   if (Arg *A = Args.getLastArg(options::OPT_mno_unaligned_access,
                                       options::OPT_munaligned_access,
                                       options::OPT_mstrict_align,
