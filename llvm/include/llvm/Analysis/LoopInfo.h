@@ -686,6 +686,14 @@ LLVM_ABI bool isMustProgress(const Loop *L);
 /// iterations.
 LLVM_ABI bool isFinite(const Loop *L);
 
+/// Return true if \p L or any of its sub-loops may execute an unbounded
+/// number of iterations. A loop is considered potentially infinite when it
+/// (or one of its sub-loops) is not mustprogress and its constant max
+/// backedge-taken count is unknown, or when it contains an irreducible
+/// sub-CFG.
+LLVM_ABI bool hasPotentialInfiniteLoop(Loop *L, ScalarEvolution &SE,
+                                       const LoopInfo &LI);
+
 /// Return whether an MDNode might represent an access group.
 ///
 /// Access group metadata nodes have to be distinct and empty. Being

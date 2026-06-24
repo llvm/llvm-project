@@ -16,6 +16,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopNestAnalysis.h"
@@ -1178,6 +1179,34 @@ CallBase *llvm::getLoopConvergenceHeart(const Loop *TheLoop) {
 
 bool llvm::isFinite(const Loop *L) {
   return L->getHeader()->getParent()->willReturn();
+}
+
+bool llvm::hasPotentialInfiniteLoop(Loop *L, ScalarEvolution &SE,
+                                    const LoopInfo &LI) {
+  // L (or one of its sub-loops) may execute an unbounded number of iterations
+  // if any of the following holds:
+  //   a. it contains an irreducible sub-CFG; or
+  //   b. it is not mustprogress and its constant max backedge-taken count
+  //      cannot be computed.
+  LoopBlocksRPO RPOT(L);
+  RPOT.perform(&LI);
+  if (containsIrreducibleCFG<const BasicBlock *>(RPOT, LI))
+    return true;
+
+  SmallVector<Loop *, 8> WorkList;
+  WorkList.push_back(L);
+  while (!WorkList.empty()) {
+    Loop *Current = WorkList.pop_back_val();
+    if (hasMustProgress(Current))
+      continue;
+
+    const SCEV *S = SE.getConstantMaxBackedgeTakenCount(Current);
+    if (isa<SCEVCouldNotCompute>(S))
+      return true;
+    WorkList.append(Current->begin(), Current->end());
+  }
+
+  return false;
 }
 
 static const char *LLVMLoopMustProgress = "llvm.loop.mustprogress";
