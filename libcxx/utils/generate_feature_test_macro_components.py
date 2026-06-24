@@ -557,7 +557,7 @@ feature_test_macros = [
         },
         {
             "name": "__cpp_lib_expected",
-            "values": {"c++23": 202211},
+            "values": {"c++23": 202606},
             "headers": ["expected"],
         },
         {

@@ -28,15 +28,16 @@ typedef orc_rt_WrapperFunctionBuffer (*AllocActionFn)(const char *ArgData,
 
 struct AllocActionFunction {
 
-  template <typename Deserializer, typename Handler>
+  template <typename Deserializer, typename Serializer, typename Handler>
   static WrapperFunctionBuffer handle(const char *ArgData, size_t ArgSize,
-                                      Deserializer &&D, Handler &&H) {
+                                      Deserializer &&D, Serializer &&S,
+                                      Handler &&H) {
     typename CallableArgInfo<Handler>::args_tuple_type Args;
     if (!D.deserialize(ArgData, ArgSize, Args))
       return WrapperFunctionBuffer::createOutOfBandError(
           "Could not deserialize allocation action argument buffer");
 
-    return std::apply(std::forward<Handler>(H), std::move(Args));
+    return S.serialize(std::apply(std::forward<Handler>(H), std::move(Args)));
   }
 };
 
