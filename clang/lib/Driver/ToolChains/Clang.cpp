@@ -5645,6 +5645,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     MemProfUseArg->render(Args, CmdArgs);
   }
 
+  auto *CopyProfArg =
+      Args.getLastArg(options::OPT_fcopyprof, options::OPT_fno_copyprof);
+  if (CopyProfArg &&
+      !CopyProfArg->getOption().matches(options::OPT_fno_copyprof)) {
+    CopyProfArg->render(Args, CmdArgs);
+    Args.AddLastArg(CmdArgs, options::OPT_fcopyprof_static_size_threshold_EQ);
+  }
+
   // Embed-bitcode option.
   // Only white-listed flags below are allowed to be embedded.
   if (C.getDriver().embedBitcodeInObject() && !IsUsingLTO &&

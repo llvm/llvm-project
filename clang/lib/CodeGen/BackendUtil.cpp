@@ -74,6 +74,7 @@
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
+#include "llvm/Transforms/Instrumentation/CopyProf.h"
 #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
@@ -1059,6 +1060,23 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
               MPM.addPass(InferFunctionAttrsPass());
             }
           });
+
+      if (CodeGenOpts.CopyProf) {
+        // Early pass: insert callbacks into special member functions before the
+        // inliner removes function boundaries.
+        PB.registerPipelineEarlySimplificationEPCallback(
+            [](ModulePassManager &MPM, OptimizationLevel, ThinOrFullLTOPhase) {
+              MPM.addPass(createModuleToFunctionPassAdaptor(CopyProfPass()));
+              MPM.addPass(ModuleCopyProfPass());
+            });
+        // Late pass: to reduce runtime overhead, instrument stores only after
+        // optimizations have been run so only useful stores are instrumented.
+        PB.registerOptimizerLastEPCallback([](ModulePassManager &MPM,
+                                              OptimizationLevel,
+                                              ThinOrFullLTOPhase) {
+          MPM.addPass(createModuleToFunctionPassAdaptor(CopyProfStoresPass()));
+        });
+      }
     }
 
     if (std::optional<GCOVOptions> Options =
