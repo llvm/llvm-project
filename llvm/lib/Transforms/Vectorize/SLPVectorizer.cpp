@@ -7010,8 +7010,7 @@ static bool isReverseOrder(ArrayRef<unsigned> Order) {
 /// %x + c_2 * stride
 /// ...
 /// ```
-/// where each `c_i` is constant. The `Coeffs` will contain `c_0, c_1, c_2, ..`
-/// and the SCEV of the `stride` will be returned.
+/// where each `c_i` is constant. The SCEV of the `stride` will be returned.
 static const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
                                      const DataLayout &DL, ScalarEvolution &SE,
                                      SmallVectorImpl<unsigned> &SortedIndices) {
@@ -7733,13 +7732,9 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   // PointerOps_(NumOffsets - 1)[SortedIndices_(NumOffsets - 1)[VecSz - 1]] =
   // PointerOps[IndicesInAllPointerOps_(NumOffsets - 1)[VecSz - 1]],
   // ```
-  // In order to be able to generate a strided load, we need the following
-  // checks to pass:
-  //
-  //  (1) for each `PointerOps_j` check that the distance
-  // between adjacent pointers are all equal to the same value (stride).
-  //  (2) for each `PointerOps_j` check that coefficients calculated by
-  //  `calculateRtStride` are all the same.
+  // In order to be able to generate a strided load, for each `PointerOps_j`
+  // check that the distance between adjacent pointers are all equal to the same
+  // value (stride).
   //
   // As we do that, also calculate SortedIndices. Since we should not modify
   // `SortedIndices` unless we know that all the checks succeed, record the
