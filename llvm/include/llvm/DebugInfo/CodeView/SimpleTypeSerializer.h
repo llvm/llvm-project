@@ -33,6 +33,19 @@ public:
   ArrayRef<uint8_t> serialize(const FieldListRecord &Record) = delete;
 };
 
+// Needed by RandomAccessVisitorTest.cpp
+#define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
+  class Name##Record;                                                          \
+  extern template LLVM_TEMPLATE_ABI ArrayRef<uint8_t>                          \
+  llvm::codeview::SimpleTypeSerializer::serialize(Name##Record &Record);
+#define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
+#define MEMBER_RECORD(EnumName, EnumVal, Name)
+#define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
+#include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
+#undef TYPE_RECORD
+#undef TYPE_RECORD_ALIAS
+#undef MEMBER_RECORD
+#undef MEMBER_RECORD_ALIAS
 } // end namespace codeview
 } // end namespace llvm
 

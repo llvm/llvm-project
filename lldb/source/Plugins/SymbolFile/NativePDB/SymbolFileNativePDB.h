@@ -32,7 +32,7 @@ class ClassRecord;
 class EnumRecord;
 class ModifierRecord;
 class PointerRecord;
-struct UnionRecord;
+class UnionRecord;
 } // namespace codeview
 } // namespace llvm
 
