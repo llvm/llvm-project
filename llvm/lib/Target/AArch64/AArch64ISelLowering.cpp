@@ -163,6 +163,15 @@ static cl::opt<bool> UseFEATCPACodegen(
              "SelectionDAG for FEAT_CPA"),
     cl::init(false));
 
+// FPMR writes might be a synchronization barrier and thus carry a significant
+// cost. Give users the option to skip writes when the requested value is
+// already set.
+static cl::opt<bool> UseConditionalFPMRWrite(
+    "aarch64-use-conditional-fpmr-write", cl::Hidden,
+    cl::desc("Only write FPMR when the requested value differs from the "
+             "current value"),
+    cl::init(false));
+
 /// Value type used for condition codes.
 constexpr MVT CondCodeVT = MVT::i32;
 
@@ -3197,6 +3206,52 @@ MachineBasicBlock *AArch64TargetLowering::EmitLoweredCatchRet(
 }
 
 MachineBasicBlock *
+AArch64TargetLowering::EmitLoweredSetFpmr(MachineInstr &MI,
+                                          MachineBasicBlock *MBB) const {
+  MachineFunction *MF = MBB->getParent();
+  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+
+  if (!UseConditionalFPMRWrite) {
+    BuildMI(*MBB, MI, DL, TII->get(AArch64::MSR))
+        .addImm(0xda22)
+        .add(MI.getOperand(0))
+        .addDef(AArch64::FPMR, RegState::Implicit);
+    MI.eraseFromParent();
+    return MBB;
+  }
+
+  Register NewFpmrVal = MI.getOperand(0).getReg();
+  const BasicBlock *LLVM_BB = MBB->getBasicBlock();
+  MachineBasicBlock *MsrBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *EndBB = MBB->splitAt(MI);
+  MF->insert(++MBB->getIterator(), MsrBB);
+
+  Register CurrentFpmrVal =
+      MF->getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
+  BuildMI(*MBB, MI, DL, TII->get(AArch64::MRS), CurrentFpmrVal)
+      .addImm(0xda22)
+      .addUse(AArch64::FPMR, RegState::Implicit);
+  BuildMI(*MBB, MI, DL, TII->get(AArch64::SUBSXrs), AArch64::XZR)
+      .addReg(CurrentFpmrVal, RegState::Kill)
+      .addReg(NewFpmrVal)
+      .addImm(0);
+  BuildMI(*MBB, MI, DL, TII->get(AArch64::Bcc))
+      .addImm(AArch64CC::EQ)
+      .addMBB(EndBB);
+  BuildMI(*MsrBB, MsrBB->begin(), DL, TII->get(AArch64::MSR))
+      .addImm(0xda22)
+      .addReg(NewFpmrVal, getKillRegState(MI.getOperand(0).isDead()))
+      .addDef(AArch64::FPMR, RegState::Implicit);
+
+  MBB->addSuccessor(MsrBB);
+  MsrBB->addSuccessor(EndBB);
+
+  MI.eraseFromParent();
+  return EndBB;
+}
+
+MachineBasicBlock *
 AArch64TargetLowering::EmitDynamicProbedAlloc(MachineInstr &MI,
                                               MachineBasicBlock *MBB) const {
   MachineFunction &MF = *MBB->getParent();
@@ -3568,6 +3623,8 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     return EmitZTInstr(MI, BB, AArch64::ZERO_T, /*Op0IsDef=*/true);
   case AArch64::MOVT_TIZ_PSEUDO:
     return EmitZTInstr(MI, BB, AArch64::MOVT_TIZ, /*Op0IsDef=*/true);
+  case AArch64::MSR_FPMR:
+    return EmitLoweredSetFpmr(MI, BB);
 
   case AArch64::PAC:
     fixupPtrauthDiscriminator(MI, BB, MI.getOperand(3), MI.getOperand(4),

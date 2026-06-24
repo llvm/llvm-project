@@ -255,6 +255,7 @@ Makes programs 10x faster by doing Special New Thing.
 * Adds experimental assembler support for batched dot-product extensions(Zvqwbdota8i, Zvqwbdota16i, Zvfwbdota16bf, Zvfqwbdota8f and Zvfbdota32f).
 * Adds experimental assembler support for dot-product extensions(Zvqwdota8i, Zvqwdota16i, Zvfwdota16bf and Zvfqwdota8f).
 * `-mtune=generic` now uses the scheduling model from SpacemiT X60 instead of an empty scheduling model.
+* The Xqcilo pseudos now emit sequences that can be relaxed.
 
 ### Changes to the WebAssembly Backend
 
@@ -345,6 +346,9 @@ Makes programs 10x faster by doing Special New Thing.
 * `llvm-profgen` now supports ETM trace decoding using the OpenCSD library for Cortex-M targets. OpenCSD version 1.5.4 or higher is required.
 
 * `llvm-objcopy` no longer corrupts the symbol table when `--update-section` is called for ELF files.
+* `llvm-objcopy` now reports an error when `--compress-sections` requests unavailable zlib or zstd support.
+  The diagnostic is emitted while parsing the option, matching `--compress-debug-sections`.
+  Such commands may now fail even if the input file contains no sections that would be compressed.
 * `FileCheck` option `-check-prefix` now accepts a comma-separated list of
   prefixes, making it an alias of the existing `-check-prefixes` option.
 * Add `-mtune` option to `llc`.
