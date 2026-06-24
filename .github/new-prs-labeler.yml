@@ -1084,10 +1084,14 @@ backend:MIPS:
 backend:RISC-V:
   - changed-files:
     - any-glob-to-any-file:
-      - '**/*riscv*'
-      - '**/*RISCV*'
-      - '**/*riscv*/**'
-      - '**/*RISCV*/**'
+      - 'llvm/**/*riscv*'
+      - 'llvm/**/*RISCV*'
+      - 'llvm/**/*riscv*/**'
+      - 'llvm/**/*RISCV*/**'
+      - 'clang/**/*riscv*'
+      - 'clang/**/*RISCV*'
+      - 'clang/**/*riscv*/**'
+      - 'clang/**/*RISCV*/**'
 
 backend:Xtensa:
   - changed-files:
