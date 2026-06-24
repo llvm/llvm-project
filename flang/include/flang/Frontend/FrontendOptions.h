@@ -31,6 +31,9 @@ enum ActionKind {
   /// -E mode
   PrintPreprocessedInput,
 
+  /// -Eonly mode: prescan only and write just the dependency file (-M, -MM)
+  RunPreprocessorOnly,
+
   /// -fsyntax-only
   ParseSyntaxOnly,
 
@@ -272,6 +275,12 @@ struct FrontendOptions {
 
   /// The output file, if any.
   std::string outputFile;
+
+  /// The dependency-file (.d) to write, if any (-dependency-file).
+  std::string dependencyOutputFile;
+
+  /// Target name(s) for the dependency rule (-MT), already quoted for Make.
+  std::vector<std::string> dependencyTargets;
 
   /// The frontend action to perform.
   frontend::ActionKind programAction = ParseSyntaxOnly;

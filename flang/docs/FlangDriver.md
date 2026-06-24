@@ -236,6 +236,21 @@ is `ParseSyntaxOnlyAction`, which corresponds to `-fsyntax-only`. In other
 words, `flang -fc1 <input-file>` is equivalent to `flang -fc1 -fsyntax-only
 <input-file>`.
 
+## Dependency File Generation
+Flang can emit Makefile-style dependency rules with `-M`, `-MM`, `-MD` and
+`-MMD` (paired with `-MF`, `-MT` and `-MQ` to control the output file and the
+rule target).
+
+There is one behavioural difference to be aware of regarding module
+dependencies (the `.mod` files brought in by `use` statements):
+
+* `-MD` and `-MMD` run a full compilation, so the `.mod` files opened during
+  semantic analysis are recorded and appear in the dependency rule.
+* `-M` and `-MM` run the prescanner only. They report textual dependencies
+  (`INCLUDE` and `#include`) but do **not** resolve `use` statements, so module
+  `.mod` files are not listed. If you need module dependencies, use `-MD` or
+  `-MMD`.
+
 ## Adding new Compiler Options
 Adding a new compiler option in Flang consists of two steps:
 * define the new option in a dedicated TableGen file,

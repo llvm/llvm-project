@@ -40,6 +40,8 @@ createFrontendAction(CompilerInstance &ci) {
     return std::make_unique<InputOutputTestAction>();
   case PrintPreprocessedInput:
     return std::make_unique<PrintPreprocessedAction>();
+  case RunPreprocessorOnly:
+    return std::make_unique<RunPreprocessorOnlyAction>();
   case ParseSyntaxOnly:
     return std::make_unique<ParseSyntaxOnlyAction>();
   case EmitFIR:

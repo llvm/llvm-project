@@ -48,6 +48,12 @@ class PrintPreprocessedAction : public PrescanAction {
   void executeAction() override;
 };
 
+// Runs the prescanner only (for -Eonly). The dependency file, if requested, is
+// written by PrescanAction::beginSourceFileAction; no other output is produced.
+class RunPreprocessorOnlyAction : public PrescanAction {
+  void executeAction() override {}
+};
+
 class DebugDumpProvenanceAction : public PrescanAction {
   void executeAction() override;
 };
