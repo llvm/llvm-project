@@ -551,8 +551,8 @@ define void @vabd_loop_u32(ptr nocapture readonly %x, ptr nocapture readonly %y,
 ; CHECK-NEXT:    vmov q2[2], q2[0], r3, r12
 ; CHECK-NEXT:    vmov r3, s23
 ; CHECK-NEXT:    sub.w r12, r4, r3
-; CHECK-NEXT:    vmov r4, s22
-; CHECK-NEXT:    vmov r3, s26
+; CHECK-NEXT:    vmov r4, s21
+; CHECK-NEXT:    vmov r3, s25
 ; CHECK-NEXT:    vand q5, q5, q0
 ; CHECK-NEXT:    vand q6, q6, q0
 ; CHECK-NEXT:    subs r3, r3, r4

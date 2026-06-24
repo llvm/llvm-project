@@ -235,22 +235,20 @@ define arm_aapcs_vfpcc void @ssatmul_4_q31(ptr nocapture readonly %pSrcA, ptr no
 ; CHECK-NEXT:    mov.w r2, #-1
 ; CHECK-NEXT:    vmov.f32 s16, s10
 ; CHECK-NEXT:    str r5, [sp, #8] @ 4-byte Spill
-; CHECK-NEXT:    vmov.f32 s20, s14
-; CHECK-NEXT:    mov.w r8, #0
 ; CHECK-NEXT:    vmov.f32 s18, s11
+; CHECK-NEXT:    mov.w r8, #0
+; CHECK-NEXT:    vmov.f32 s20, s14
 ; CHECK-NEXT:    vmov.f32 s22, s15
 ; CHECK-NEXT:    vmullb.s32 q6, q5, q4
-; CHECK-NEXT:    vmov.f32 s14, s13
+; CHECK-NEXT:    vmov r6, s13
 ; CHECK-NEXT:    vmov r4, r7, d12
 ; CHECK-NEXT:    asrl r4, r7, #31
-; CHECK-NEXT:    vmov.f32 s10, s9
 ; CHECK-NEXT:    rsbs.w r5, r4, #-2147483648
 ; CHECK-NEXT:    sbcs.w r5, r2, r7
 ; CHECK-NEXT:    csetm r5, lt
 ; CHECK-NEXT:    bfi r8, r5, #0, #8
 ; CHECK-NEXT:    vmov r10, r5, d13
 ; CHECK-NEXT:    asrl r10, r5, #31
-; CHECK-NEXT:    vmov r6, s14
 ; CHECK-NEXT:    rsbs.w r3, r10, #-2147483648
 ; CHECK-NEXT:    vmov q4[2], q4[0], r4, r10
 ; CHECK-NEXT:    sbcs.w r3, r2, r5
@@ -282,7 +280,7 @@ define arm_aapcs_vfpcc void @ssatmul_4_q31(ptr nocapture readonly %pSrcA, ptr no
 ; CHECK-NEXT:    sbcs.w r3, r2, r7
 ; CHECK-NEXT:    csetm r3, lt
 ; CHECK-NEXT:    bfi r5, r3, #0, #8
-; CHECK-NEXT:    vmov r3, s10
+; CHECK-NEXT:    vmov r3, s9
 ; CHECK-NEXT:    smull r6, r3, r6, r3
 ; CHECK-NEXT:    asrl r6, r3, #31
 ; CHECK-NEXT:    rsbs.w r1, r6, #-2147483648

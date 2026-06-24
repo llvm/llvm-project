@@ -583,7 +583,7 @@ define protected amdgpu_kernel void @nested_waterfalls(ptr addrspace(1) %tex.coe
   ; SI-NEXT:   [[GLOBAL_LOAD_DWORDX2_SADDR:%[0-9]+]]:vreg_64 = GLOBAL_LOAD_DWORDX2_SADDR killed %11, killed [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s64) from %ir.idx, addrspace 1)
   ; SI-NEXT:   [[GLOBAL_LOAD_DWORDX4_:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 [[GLOBAL_LOAD_DWORDX2_SADDR]], 16, 0, implicit $exec :: (invariant load (s128) from %ir.3 + 16, addrspace 4)
   ; SI-NEXT:   [[GLOBAL_LOAD_DWORDX4_1:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 [[GLOBAL_LOAD_DWORDX2_SADDR]], 0, 0, implicit $exec :: (invariant load (s128) from %ir.3, align 32, addrspace 4)
-  ; SI-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_256 = REG_SEQUENCE killed [[GLOBAL_LOAD_DWORDX4_1]].sub0, %subreg.sub0, [[GLOBAL_LOAD_DWORDX4_1]].sub1, %subreg.sub1, [[GLOBAL_LOAD_DWORDX4_1]].sub2, %subreg.sub2, [[GLOBAL_LOAD_DWORDX4_1]].sub3, %subreg.sub3, killed [[GLOBAL_LOAD_DWORDX4_]].sub0, %subreg.sub4, [[GLOBAL_LOAD_DWORDX4_]].sub1, %subreg.sub5, [[GLOBAL_LOAD_DWORDX4_]].sub2, %subreg.sub6, [[GLOBAL_LOAD_DWORDX4_]].sub3, %subreg.sub7
+  ; SI-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_256 = REG_SEQUENCE [[GLOBAL_LOAD_DWORDX4_1]].sub0, %subreg.sub0, [[GLOBAL_LOAD_DWORDX4_1]].sub1, %subreg.sub1, [[GLOBAL_LOAD_DWORDX4_1]].sub2, %subreg.sub2, [[GLOBAL_LOAD_DWORDX4_1]].sub3, %subreg.sub3, [[GLOBAL_LOAD_DWORDX4_]].sub0, %subreg.sub4, [[GLOBAL_LOAD_DWORDX4_]].sub1, %subreg.sub5, [[GLOBAL_LOAD_DWORDX4_]].sub2, %subreg.sub6, [[GLOBAL_LOAD_DWORDX4_]].sub3, %subreg.sub7
   ; SI-NEXT:   [[GLOBAL_LOAD_DWORDX4_2:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 killed [[GLOBAL_LOAD_DWORDX2_SADDR]], 48, 0, implicit $exec :: (invariant load (s128) from %ir.add.ptr.i, addrspace 4)
   ; SI-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_MOV_B32 $exec_lo
   ; SI-NEXT: {{  $}}
@@ -591,17 +591,17 @@ define protected amdgpu_kernel void @nested_waterfalls(ptr addrspace(1) %tex.coe
   ; SI-NEXT:   successors: %bb.3(0x80000000)
   ; SI-NEXT: {{  $}}
   ; SI-NEXT:   [[PHI:%[0-9]+]]:sreg_32_xm0_xexec = PHI [[S_MOV_B32_]], %bb.1, %38, %bb.6
-  ; SI-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub0, implicit $exec
-  ; SI-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub1, implicit $exec
+  ; SI-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[GLOBAL_LOAD_DWORDX4_1]].sub0, implicit $exec
+  ; SI-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[GLOBAL_LOAD_DWORDX4_1]].sub1, implicit $exec
   ; SI-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_]], %subreg.sub0, [[V_READFIRSTLANE_B32_1]], %subreg.sub1
-  ; SI-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub2, implicit $exec
-  ; SI-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub3, implicit $exec
+  ; SI-NEXT:   [[V_READFIRSTLANE_B32_2:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[GLOBAL_LOAD_DWORDX4_1]].sub2, implicit $exec
+  ; SI-NEXT:   [[V_READFIRSTLANE_B32_3:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[GLOBAL_LOAD_DWORDX4_1]].sub3, implicit $exec
   ; SI-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_2]], %subreg.sub0, [[V_READFIRSTLANE_B32_3]], %subreg.sub1
-  ; SI-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub4, implicit $exec
-  ; SI-NEXT:   [[V_READFIRSTLANE_B32_5:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub5, implicit $exec
+  ; SI-NEXT:   [[V_READFIRSTLANE_B32_4:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[GLOBAL_LOAD_DWORDX4_]].sub0, implicit $exec
+  ; SI-NEXT:   [[V_READFIRSTLANE_B32_5:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[GLOBAL_LOAD_DWORDX4_]].sub1, implicit $exec
   ; SI-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_4]], %subreg.sub0, [[V_READFIRSTLANE_B32_5]], %subreg.sub1
-  ; SI-NEXT:   [[V_READFIRSTLANE_B32_6:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub6, implicit $exec
-  ; SI-NEXT:   [[V_READFIRSTLANE_B32_7:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[REG_SEQUENCE]].sub7, implicit $exec
+  ; SI-NEXT:   [[V_READFIRSTLANE_B32_6:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[GLOBAL_LOAD_DWORDX4_]].sub2, implicit $exec
+  ; SI-NEXT:   [[V_READFIRSTLANE_B32_7:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 [[GLOBAL_LOAD_DWORDX4_]].sub3, implicit $exec
   ; SI-NEXT:   [[REG_SEQUENCE4:%[0-9]+]]:sgpr_64 = REG_SEQUENCE [[V_READFIRSTLANE_B32_6]], %subreg.sub0, [[V_READFIRSTLANE_B32_7]], %subreg.sub1
   ; SI-NEXT:   [[REG_SEQUENCE5:%[0-9]+]]:sgpr_256 = REG_SEQUENCE killed [[V_READFIRSTLANE_B32_]], %subreg.sub0, killed [[V_READFIRSTLANE_B32_1]], %subreg.sub1, killed [[V_READFIRSTLANE_B32_2]], %subreg.sub2, killed [[V_READFIRSTLANE_B32_3]], %subreg.sub3, killed [[V_READFIRSTLANE_B32_4]], %subreg.sub4, killed [[V_READFIRSTLANE_B32_5]], %subreg.sub5, killed [[V_READFIRSTLANE_B32_6]], %subreg.sub6, killed [[V_READFIRSTLANE_B32_7]], %subreg.sub7
   ; SI-NEXT:   V_CMPX_EQ_U64_nosdst_e32_term killed [[REG_SEQUENCE1]], [[REG_SEQUENCE]].sub0_sub1, implicit-def $exec, implicit $exec

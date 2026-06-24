@@ -2003,7 +2003,10 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
       if (isCoalescableCopy(*MI) && optimizeCoalescableCopy(*MI)) {
         // MI is just rewritten.
         Changed = true;
-        continue;
+
+        if (!MI->isRegSequence())
+          continue;
+        // Allow REG_SEQUENCE use folding to run.
       }
 
       if (MI->isRegSequence()) {
@@ -2014,8 +2017,9 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
             MI->eraseFromParent();
           }
           Changed = true;
-          continue;
         }
+        // Always continue. No further REG_SEQUENCE opts.
+        continue;
       }
 
       if (MI->isCopy() && (foldRedundantCopy(*MI) ||

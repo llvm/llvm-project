@@ -13,22 +13,23 @@ define void @vgpr_descriptor_waterfall_loop_idom_update(ptr %arg) #0 {
 ; GCN-NEXT:    v_add_co_ci_u32_e32 v7, vcc_lo, 0, v1, vcc_lo
 ; GCN-NEXT:    s_mov_b32 s8, exec_lo
 ; GCN-NEXT:    s_clause 0x1
-; GCN-NEXT:    flat_load_dwordx2 v[4:5], v[6:7]
-; GCN-NEXT:    flat_load_dwordx2 v[2:3], v[0:1]
+; GCN-NEXT:    flat_load_dwordx2 v[2:3], v[6:7]
+; GCN-NEXT:    flat_load_dwordx2 v[4:5], v[0:1]
 ; GCN-NEXT:    s_mov_b32 s9, s8
 ; GCN-NEXT:  .LBB0_2: ; Parent Loop BB0_1 Depth=1
 ; GCN-NEXT:    ; => This Inner Loop Header: Depth=2
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_readfirstlane_b32 s4, v2
-; GCN-NEXT:    v_readfirstlane_b32 s5, v3
-; GCN-NEXT:    v_readfirstlane_b32 s6, v4
-; GCN-NEXT:    v_readfirstlane_b32 s7, v5
+; GCN-NEXT:    v_readfirstlane_b32 s4, v4
+; GCN-NEXT:    v_readfirstlane_b32 s5, v5
+; GCN-NEXT:    v_readfirstlane_b32 s6, v2
+; GCN-NEXT:    v_readfirstlane_b32 s7, v3
 ; GCN-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
-; GCN-NEXT:    v_cmpx_eq_u64_e32 s[4:5], v[2:3]
-; GCN-NEXT:    v_cmpx_eq_u64_e32 s[6:7], v[4:5]
+; GCN-NEXT:    v_cmpx_eq_u64_e32 s[4:5], v[4:5]
+; GCN-NEXT:    v_cmpx_eq_u64_e32 s[6:7], v[2:3]
 ; GCN-NEXT:    buffer_store_dword v0, v0, s[4:7], 0 offen
 ; GCN-NEXT:    s_andn2_wrexec_b32 s9, s9
-; GCN-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5
+; GCN-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; GCN-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GCN-NEXT:    s_cbranch_execnz .LBB0_2
 ; GCN-NEXT:  ; %bb.3: ; in Loop: Header=BB0_1 Depth=1
 ; GCN-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)

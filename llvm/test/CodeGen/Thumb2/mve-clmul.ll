@@ -6246,18 +6246,18 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    sub sp, #496
 ; CHECK-NEXT:    vmov q2, q0
 ; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    vmov.f32 s2, s9
+; CHECK-NEXT:    vmov r12, s9
 ; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov r0, s8
 ; CHECK-NEXT:    vmov q6, q1
 ; CHECK-NEXT:    vmov.f32 s12, s24
 ; CHECK-NEXT:    mov.w lr, #0
 ; CHECK-NEXT:    vmov.f32 s14, s25
-; CHECK-NEXT:    vmov r12, s2
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r4, r5, #1
+; CHECK-NEXT:    vmov.f32 s2, s9
 ; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    lsll r2, r3, #1
+; CHECK-NEXT:    lsll r4, r5, #1
 ; CHECK-NEXT:    vmov q4[2], q4[0], r4, r2
 ; CHECK-NEXT:    adr.w r2, .LCPI22_32
 ; CHECK-NEXT:    vldrw.u32 q1, [r2]
