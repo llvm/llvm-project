@@ -170,15 +170,15 @@ static void insertComment(Object &Description, json::Value &Comment,
   }
 
   auto DescriptionIt = Description.find(Key);
-
   if (DescriptionIt == Description.end()) {
-    auto CommentsArray = json::Array();
-    CommentsArray.push_back(Comment);
+    json::Array CommentsArray;
+    CommentsArray.push_back(std::move(Comment));
     Description[Key] = std::move(CommentsArray);
     Description["Has" + Key.str()] = true;
-  } else {
-    DescriptionIt->getSecond().getAsArray()->push_back(Comment);
+    return;
   }
+  json::Array &DestArray = *DescriptionIt->getSecond().getAsArray();
+  DestArray.push_back(std::move(Comment));
 }
 
 /// Takes the nested "Children" array from a comment Object.
@@ -203,6 +203,40 @@ static json::Value extractTextComments(Object *ParagraphComment) {
     ++ChildrenIt;
   }
   return ChildrenArray;
+}
+
+/// Extract text comments from a ParagraphComment and append them flat into
+/// the appropriate Description key for single-paragraph block commands.
+///
+/// Used for \\brief, \\return and their aliases, where every occurrence is
+/// logically one paragraph, so repeated uses should accumulate into a single
+/// flat array of text comments. The destination key is chosen from
+/// \p I.Name. If \p I.Name is not a recognized single-paragraph command,
+/// this is a no-op.
+static void extractTextComments(Object *ParagraphComment, Object &Description,
+                                const CommentInfo &I) {
+  StringRef Key;
+  if (I.Name == "brief" || I.Name == "short")
+    Key = "BriefComments";
+  else if (I.Name == "return" || I.Name == "returns" || I.Name == "result")
+    Key = "ReturnComments";
+  else
+    return;
+
+  json::Value Extracted = extractTextComments(ParagraphComment);
+  json::Array *Children = Extracted.getAsArray();
+  if (!Children || Children->empty())
+    return;
+
+  auto DescriptionIt = Description.find(Key);
+  if (DescriptionIt == Description.end()) {
+    Description[Key] = std::move(Extracted);
+    Description["Has" + Key.str()] = true;
+    return;
+  }
+  json::Array &DestArray = *DescriptionIt->getSecond().getAsArray();
+  for (auto &Element : *Children)
+    DestArray.push_back(std::move(Element));
 }
 
 static json::Value extractVerbatimComments(json::Array VerbatimLines) {
@@ -238,16 +272,13 @@ static Object serializeComment(const CommentInfo &I, Object &Description) {
   }
 
   case CommentKind::CK_BlockCommandComment: {
-    auto TextCommentsArray = extractTextComments(CARef.front().getAsObject());
-    if (I.Name == "brief")
-      insertComment(Description, TextCommentsArray, "BriefComments");
-    else if (I.Name == "return")
-      insertComment(Description, TextCommentsArray, "ReturnComments");
-    else if (I.Name == "throws" || I.Name == "throw") {
+    Object *Paragraph = CARef.front().getAsObject();
+    extractTextComments(Paragraph, Description, I);
+    if (I.Name == "throws" || I.Name == "throw") {
       json::Value ThrowsVal = Object();
       auto &ThrowsObj = *ThrowsVal.getAsObject();
       ThrowsObj["Exception"] = I.Args.front();
-      ThrowsObj["Children"] = TextCommentsArray;
+      ThrowsObj["Children"] = extractTextComments(Paragraph);
       insertComment(Description, ThrowsVal, "ThrowsComments");
     }
     return Obj;
