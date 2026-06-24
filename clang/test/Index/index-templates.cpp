@@ -54,7 +54,7 @@ void template_exprs() {
   f<Unsigned, OneDimension, value>(value<Unsigned, OneDimension>());
   Z4().getAs<Unsigned>();
 }
-
+extern template float Z4::getAs<float>();
 template<typename T> void swap(T&, T&);
 template<typename T, typename U> void swap(Y<T, U>&, Y<T, U>&);
 void swap(Z4&, Z4&);
@@ -109,6 +109,8 @@ void foo(T Value) {}
 static const int FxnTmpl_Var = 7;
 template <>
 void foo<float, 9, FxnTmplEnum_B, FxnTmpl_Var + 7>(float Value);
+
+template void foo<char, 2, FxnTmplEnum_A, FxnTmpl_Var + 3>(char Value);
 
 template <class T>
 using alias = T;
@@ -166,6 +168,8 @@ using alias = T;
 // CHECK-LOAD: index-templates.cpp:47:16: ClassDecl=vector:47:16 (Definition) [Specialization of vector:14:7] [Template arg 0: kind: 1, type: int *] [Template arg 1: kind: 1, type: allocator<int *>] Extent=[47:1 - 47:28]
 // CHECK-LOAD: index-templates.cpp:49:8: StructDecl=Z4:49:8 (Definition) Extent=[49:1 - 51:2]
 // CHECK-LOAD: index-templates.cpp:50:26: FunctionTemplate=getAs:50:26 Extent=[50:3 - 50:33]
+// CHECK: index-templates.cpp:50:26: CXXMethod=template<> unsigned int getAs<unsigned int>():50:26 [Specialization of getAs:50:26] [Template arg 0: kind: 1, type: unsigned int] Extent=[50:24 - 50:33] [access=public]
+// CHECK: index-templates.cpp:50:26: CXXMethod=template<> float getAs<float>():50:26 [Specialization of getAs:50:26] [Template arg 0: kind: 1, type: float] Extent=[50:24 - 50:33] [access=public]
 // CHECK-LOAD: index-templates.cpp:50:21: TemplateTypeParameter=T:50:21 (Definition) Extent=[50:12 - 50:22]
 // CHECK-LOAD: index-templates.cpp:53:6: FunctionDecl=template_exprs:53:6 (Definition)
 // CHECK-LOAD: index-templates.cpp:54:3: CallExpr=f:4:6 Extent=[54:3 - 54:68]
@@ -177,7 +181,7 @@ using alias = T;
 // CHECK-LOAD: index-templates.cpp:55:8: MemberRefExpr=getAs:50:26 SingleRefName=[55:8 - 55:13] RefName=[55:8 - 55:13] Extent=[55:3 - 55:23]
 // CHECK-LOAD: index-templates.cpp:55:3: CallExpr=Z4:49:8 Extent=[55:3 - 55:7]
 // CHECK-LOAD: index-templates.cpp:55:14: TypeRef=Unsigned:42:18 Extent=[55:14 - 55:22]
-// CHECK-LOAD: index-templates.cpp:68:6: FunctionTemplate=unresolved_exprs:68:6 (Definition)
+// CHECK-LOAD: index-templates.cpp:68:6: FunctionTemplate=unresolved_exprs:68:6 (Definition) Extent=[67:1 - 73:2]
 // CHECK-LOAD: index-templates.cpp:69:3: OverloadedDeclRef=swap[60:6, 59:39, 58:27]
 // CHECK-LOAD: index-templates.cpp:71:6: OverloadedDeclRef=f[63:7, 64:9]
 // CHECK-LOAD: index-templates.cpp:72:3: OverloadedDeclRef=swap[58:27, 59:39]
@@ -192,11 +196,12 @@ using alias = T;
 // CHECK-LOAD: index-templates.cpp:100:31: TemplateTypeParameter=U:100:31 (Definition) Extent=[100:22 - 100:32]
 // CHECK-LOAD: index-templates.cpp:101:20: C++ base class specifier=Pair<int, int>:98:16 [access=public isVirtual=false] Extent=[101:20 - 101:34]
 // CHECK-LOAD: index-templates.cpp:101:36: C++ base class specifier=Pair<T, U>:76:8 [access=public isVirtual=false] Extent=[101:36 - 101:46]
+// CHECK-LOAD: index-templates.cpp:107:6: FunctionDecl=foo:107:6 (Definition) [Specialization of foo:107:6] [Template arg 0: kind: 1, type: char] [Template arg 1: kind: 4, intval: 2] [Template arg 2: kind: 4, intval: 0] [Template arg 3: kind: 4, intval: 10] Extent=[107:1 - 107:21]
 // CHECK-LOAD: index-templates.cpp:111:6: FunctionDecl=foo:111:6 [Specialization of foo:107:6] [Template arg 0: kind: 1, type: float] [Template arg 1: kind: 4, intval: 9] [Template arg 2: kind: 4, intval: 1] [Template arg 3: kind: 4, intval: 14] Extent=[110:1 - 111:64]
-// CHECK-LOAD: index-templates.cpp:114:1: TypeAliasTemplateDecl=alias:114:1 (Definition) Extent=[113:1 - 114:16]
-// CHECK-LOAD: index-templates.cpp:113:17: TemplateTypeParameter=T:113:17 (Definition) Extent=[113:11 - 113:18] [access=public]
-// CHECK-LOAD: index-templates.cpp:114:7: TypeAliasDecl=alias:114:7 (Definition) Extent=[114:1 - 114:16]
-// CHECK-LOAD: index-templates.cpp:114:15: TypeRef=T:113:17 Extent=[114:15 - 114:16]
+// CHECK-LOAD: index-templates.cpp:116:1: TypeAliasTemplateDecl=alias:116:1 (Definition) Extent=[115:1 - 116:16]
+// CHECK-LOAD: index-templates.cpp:115:17: TemplateTypeParameter=T:115:17 (Definition) Extent=[115:11 - 115:18] [access=public]
+// CHECK-LOAD: index-templates.cpp:116:7: TypeAliasDecl=alias:116:7 (Definition) Extent=[116:1 - 116:16]
+// CHECK-LOAD: index-templates.cpp:116:15: TypeRef=T:115:17 Extent=[116:15 - 116:16]
 
 // RUN: c-index-test -test-load-source-usrs all -fno-delayed-template-parsing %s | FileCheck -check-prefix=CHECK-USRS %s
 // CHECK-USRS: index-templates.cpp c:@FT@>3#T#Nt0.0#t>2#T#Nt1.0f#>t0.22S0_#v# Extent=[3:1 - 4:22]
