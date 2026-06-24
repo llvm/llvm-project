@@ -68,7 +68,8 @@ inline void logWarningFromError(llvm::Error Err) {
 
 /// Find all contributors in an AST.
 void findContributors(ASTContext &Ctx,
-                      std::vector<const NamedDecl *> &Contributors);
+                      std::vector<const NamedDecl *> &Contributors,
+                      bool ExtractFromSystemHeaders = true);
 
 /// Perform "MatchAction" on each Stmt and Decl belonging to the `Contributor`.
 /// \param Contributor
