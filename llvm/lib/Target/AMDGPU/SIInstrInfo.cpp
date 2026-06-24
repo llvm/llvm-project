@@ -3417,7 +3417,6 @@ bool SIInstrInfo::isXcntDrain(const MachineInstr &MI) {
 bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case AMDGPU::V_MOV_B16_t16_e32:
-  case AMDGPU::V_MOV_B16_t16_e64:
   case AMDGPU::V_MOV_B32_e32:
   case AMDGPU::V_MOV_B32_e64:
   case AMDGPU::V_MOV_B64_PSEUDO:
@@ -3434,34 +3433,10 @@ bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) {
   case AMDGPU::AV_MOV_B32_IMM_PSEUDO:
   case AMDGPU::AV_MOV_B64_IMM_PSEUDO:
     return true;
+  case AMDGPU::V_MOV_B16_t16_e64:
+    return !hasAnyModifiersSet(MI);
   default:
     return false;
-  }
-}
-
-unsigned SIInstrInfo::getFoldableCopySrcIdx(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  case AMDGPU::V_MOV_B16_t16_e32:
-  case AMDGPU::V_MOV_B16_t16_e64:
-    return 2;
-  case AMDGPU::V_MOV_B32_e32:
-  case AMDGPU::V_MOV_B32_e64:
-  case AMDGPU::V_MOV_B64_PSEUDO:
-  case AMDGPU::V_MOV_B64_e32:
-  case AMDGPU::V_MOV_B64_e64:
-  case AMDGPU::S_MOV_B32:
-  case AMDGPU::S_MOV_B64:
-  case AMDGPU::S_MOV_B64_IMM_PSEUDO:
-  case AMDGPU::COPY:
-  case AMDGPU::WWM_COPY:
-  case AMDGPU::V_ACCVGPR_WRITE_B32_e64:
-  case AMDGPU::V_ACCVGPR_READ_B32_e64:
-  case AMDGPU::V_ACCVGPR_MOV_B32:
-  case AMDGPU::AV_MOV_B32_IMM_PSEUDO:
-  case AMDGPU::AV_MOV_B64_IMM_PSEUDO:
-    return 1;
-  default:
-    llvm_unreachable("MI is not a foldable copy");
   }
 }
 
@@ -4837,12 +4812,12 @@ bool SIInstrInfo::hasModifiers(unsigned Opcode) const {
 }
 
 bool SIInstrInfo::hasModifiersSet(const MachineInstr &MI,
-                                  AMDGPU::OpName OpName) const {
+                                  AMDGPU::OpName OpName) {
   const MachineOperand *Mods = getNamedOperand(MI, OpName);
   return Mods && Mods->getImm();
 }
 
-bool SIInstrInfo::hasAnyModifiersSet(const MachineInstr &MI) const {
+bool SIInstrInfo::hasAnyModifiersSet(const MachineInstr &MI) {
   return any_of(ModifierOpNames,
                 [&](AMDGPU::OpName Name) { return hasModifiersSet(MI, Name); });
 }
@@ -9795,7 +9770,7 @@ Register SIInstrInfo::findUsedSGPR(const MachineInstr &MI,
 }
 
 MachineOperand *SIInstrInfo::getNamedOperand(MachineInstr &MI,
-                                             AMDGPU::OpName OperandName) const {
+                                             AMDGPU::OpName OperandName) {
   if (OperandName == AMDGPU::OpName::NUM_OPERAND_NAMES)
     return nullptr;
 
