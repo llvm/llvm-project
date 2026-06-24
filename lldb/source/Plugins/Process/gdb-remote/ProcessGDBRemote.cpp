@@ -1002,6 +1002,7 @@ Status ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
 
 void ProcessGDBRemote::DidLaunchOrAttach(ArchSpec &process_arch) {
   Log *log = GetLog(GDBRLog::Process);
+  BuildDynamicRegisterInfo(false);
 
   // See if the GDB server supports qHostInfo or qProcessInfo packets. Prefer
   // qProcessInfo as it will be more specific to our process.
@@ -1079,8 +1080,6 @@ void ProcessGDBRemote::DidLaunchOrAttach(ArchSpec &process_arch) {
       GetTarget().SetArchitecture(process_arch);
     }
   }
-
-  BuildDynamicRegisterInfo(false);
 
   // Target and Process are reasonably initailized;
   // load any binaries we have metadata for / set load address.
