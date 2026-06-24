@@ -103,8 +103,6 @@ protected:
                                    llvm::StringRef name,
                                    lldb_private::ModuleSpec module_spec);
 
-  JITLoaderList &GetJITLoaders() override;
-
 private:
   lldb::DataBufferSP m_core_data;
   llvm::ArrayRef<minidump::Thread> m_thread_list;
