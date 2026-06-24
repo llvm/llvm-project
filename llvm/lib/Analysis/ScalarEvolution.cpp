@@ -8843,39 +8843,50 @@ void ScalarEvolution::forgetValue(Value *V) {
 }
 
 void ScalarEvolution::forgetLcssaPhiWithNewPredecessor(Loop *L, PHINode *V) {
-  if (!isSCEVable(V->getType()))
-    return;
-
   // If SCEV looked through a trivial LCSSA phi node, we might have SCEV's
   // directly using a SCEVUnknown/SCEVAddRec defined in the loop. After an
   // extra predecessor is added, this is no longer valid. Find all Unknowns and
   // AddRecs defined in the loop and invalidate any SCEV's making use of them.
-  if (const SCEV *S = getExistingSCEV(V)) {
-    struct InvalidationRootCollector {
-      Loop *L;
-      SmallVector<SCEVUse, 8> Roots;
+  auto InvalidateValue = [&](Value *Val) {
+    if (!isSCEVable(Val->getType()))
+      return;
+    if (const SCEV *S = getExistingSCEV(Val)) {
+      struct InvalidationRootCollector {
+        Loop *L;
+        SmallVector<SCEVUse, 8> Roots;
 
-      InvalidationRootCollector(Loop *L) : L(L) {}
+        InvalidationRootCollector(Loop *L) : L(L) {}
 
-      bool follow(const SCEV *S) {
-        if (auto *SU = dyn_cast<SCEVUnknown>(S)) {
-          if (auto *I = dyn_cast<Instruction>(SU->getValue()))
-            if (L->contains(I))
+        bool follow(const SCEV *S) {
+          if (auto *SU = dyn_cast<SCEVUnknown>(S)) {
+            if (auto *I = dyn_cast<Instruction>(SU->getValue()))
+              if (L->contains(I))
+                Roots.push_back(S);
+          } else if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(S)) {
+            if (L->contains(AddRec->getLoop()))
               Roots.push_back(S);
-        } else if (auto *AddRec = dyn_cast<SCEVAddRecExpr>(S)) {
-          if (L->contains(AddRec->getLoop()))
-            Roots.push_back(S);
+          }
+          return true;
         }
-        return true;
-      }
-      bool isDone() const { return false; }
-    };
+        bool isDone() const { return false; }
+      };
 
-    InvalidationRootCollector C(L);
-    visitAll(S, C);
-    forgetMemoizedResults(C.Roots);
-  }
+      InvalidationRootCollector C(L);
+      visitAll(S, C);
+      forgetMemoizedResults(C.Roots);
+    }
+  };
 
+  InvalidateValue(V);
+
+  // If V has a non-SCEV-able type (e.g. {i64, i1} from a with.overflow
+  // intrinsic), its users (e.g. extractvalue) may have stale SCEV
+  // expressions referencing loop-internal values.
+  if (!isSCEVable(V->getType()) && any_of(V->incoming_values(), [](Value *Inc) {
+        return isa<WithOverflowInst>(Inc);
+      }))
+    for (User *U : V->users())
+      InvalidateValue(U);
   // Also perform the normal invalidation.
   forgetValue(V);
 }
