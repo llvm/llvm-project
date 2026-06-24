@@ -60,6 +60,10 @@ std::pair<mlir::Type, unsigned> inferMMAType(mlir::NVVM::MMATypes type,
                                              mlir::NVVM::MMAFrag frag, int nRow,
                                              int nCol,
                                              mlir::MLIRContext *context);
+
+/// Register the `NVVMInlinerInterface` implementation of
+/// `DialectInlinerInterface` with the NVVM dialect.
+void registerInlinerInterface(DialectRegistry &registry);
 } // namespace NVVM
 } // namespace mlir
 

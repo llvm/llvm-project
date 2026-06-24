@@ -5543,6 +5543,7 @@ cc_library(
             "lib/Dialect/LLVMIR/Transforms/DIExpressionLegalization.cpp",
             "lib/Dialect/LLVMIR/Transforms/DIExpressionRewriter.cpp",
             "lib/Dialect/LLVMIR/Transforms/LegalizeForExport.cpp",
+            "lib/Dialect/LLVMIR/Transforms/OptimizeForNVVM.cpp",
         ],
     ),
     hdrs = glob(
@@ -5563,12 +5564,24 @@ cc_library(
         ":LLVMDialect",
         ":LLVMIRTransformsLegalizeForExport",
         ":LLVMPassIncGen",
-        ":NVVMDialect",
+        "//llvm:BinaryFormat",
+        "//llvm:Support",
         ":Pass",
         ":TransformUtils",
         ":ViewLikeInterface",
-        "//llvm:BinaryFormat",
-        "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "LLVMIRNVVMTransforms",
+    srcs = ["lib/Dialect/LLVMIR/Transforms/OptimizeForNVVM.cpp"],
+    hdrs = ["include/mlir/Dialect/LLVMIR/Transforms/OptimizeForNVVM.h"],
+    includes = ["include"],
+    deps = [
+        ":LLVMIRTransforms",
+        ":NVVMDialect",
+        ":Pass",
+        ":Transforms",
     ],
 )
 

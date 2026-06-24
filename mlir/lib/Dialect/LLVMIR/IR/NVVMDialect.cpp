@@ -16,6 +16,9 @@
 
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 
+#include "mlir/IR/IRMapping.h"
+#include "mlir/Transforms/InliningUtils.h"
+
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/GPU/IR/CompilationInterfaces.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
@@ -6552,3 +6555,19 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/LLVMIR/NVVMOpsAttributes.cpp.inc"
+
+namespace {
+struct NVVMInlinerInterface : public DialectInlinerInterface {
+  using DialectInlinerInterface::DialectInlinerInterface;
+
+  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
+    return true;
+  }
+};
+} // namespace
+
+void mlir::NVVM::registerInlinerInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, NVVM::NVVMDialect *dialect) {
+    dialect->addInterfaces<NVVMInlinerInterface>();
+  });
+}
