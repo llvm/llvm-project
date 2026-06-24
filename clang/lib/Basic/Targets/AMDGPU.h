@@ -415,6 +415,12 @@ public:
     return static_cast<unsigned>(llvm::AMDGPUAS::CONSTANT_ADDRESS);
   }
 
+  /// \returns Target specific flat ptr address space; a flat ptr is a ptr that
+  /// can be casted to / from all other target address spaces.
+  std::optional<unsigned> getFlatPtrAddressSpace() const override {
+    return static_cast<unsigned>(llvm::AMDGPUAS::FLAT_ADDRESS);
+  }
+
   /// \returns If a target requires an address within a target specific address
   /// space \p AddressSpace to be converted in order to be used, then return the
   /// corresponding target specific DWARF address space.
