@@ -38,12 +38,11 @@ public:
   // See https://github.com/llvm/llvm-project/issues/63843
   template <typename Container>
 #else
-  template <typename Container,
-            std::enable_if_t<
-                std::is_constructible_v<
-                    IteratorT, std::add_rvalue_reference_t<
-                                   llvm::detail::IterOfRange<Container>>>,
-                int> = 0>
+  template <
+      typename Container,
+      std::enable_if_t<std::is_constructible_v<
+                           IteratorT, llvm::detail::IterOfRange<Container> &&>,
+                       int> = 0>
 #endif
   iterator_range(Container &&c)
       : begin_iterator(adl_begin(c)), end_iterator(adl_end(c)) {
