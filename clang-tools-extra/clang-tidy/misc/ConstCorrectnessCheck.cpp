@@ -139,16 +139,13 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
 
   const auto CommonExcludeTypes =
       anyOf(ConstType, ConstReference, RValueReference, TemplateType,
-            FunctionPointerRef, hasType(cxxRecordDecl(isLambda())),
-            AutoTemplateType, isImplicit(), AllowedType);
+            FunctionPointerRef, isImplicit(), AllowedType);
 
   // Match local variables which could be 'const' if not modified later.
   // Example: `int i = 10` would match `int i`.
   const auto LocalValDecl = varDecl(
-      isLocal(), hasInitializer(anything()),
-      unless(anyOf(ConstType, ConstReference, TemplateType,
-                   hasInitializer(isInstantiationDependent()), RValueReference,
-                   FunctionPointerRef, isImplicit(), AllowedType)),
+      isLocal(), hasInitializer(unless(isInstantiationDependent())),
+      unless(CommonExcludeTypes),
       AnalyzeLambdas
           ? Matcher<VarDecl>(anything())
           : Matcher<VarDecl>(unless(hasType(cxxRecordDecl(isLambda())))),
@@ -171,7 +168,9 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
 
   if (AnalyzeParameters) {
     const auto ParamMatcher =
-        parmVarDecl(unless(CommonExcludeTypes), unless(isUnnamed()),
+        parmVarDecl(unless(CommonExcludeTypes), unless(AutoTemplateType),
+                    unless(hasType(cxxRecordDecl(isLambda()))),
+                    unless(isUnnamed()),
                     anyOf(hasType(referenceType()), hasType(pointerType())))
             .bind("value");
 
