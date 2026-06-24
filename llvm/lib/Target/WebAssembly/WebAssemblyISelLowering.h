@@ -29,6 +29,11 @@ public:
   MVT getPointerTy(const DataLayout &DL, uint32_t AS = 0) const override;
   MVT getPointerMemTy(const DataLayout &DL, uint32_t AS = 0) const override;
 
+  MVT::SimpleValueType getCmpLibcallReturnType() const override {
+    // i32 may be more efficient than the default word size for wasm64 targets
+    return MVT::i32;
+  }
+
 private:
   /// Keep a pointer to the WebAssemblySubtarget around so that we can make the
   /// right decision when generating code for different targets.
