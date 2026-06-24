@@ -81,10 +81,10 @@ class USRGenerator : public ConstDeclVisitor<USRGenerator> {
   const LangOptions &LangOpts;
   bool IgnoreResults = false;
   // The flag below ensures that, when a source location needs to be printed,
-  // the file entry is printed at most once during the recursive visit.  The
+  // the filename is printed at most once during the recursive visit.  The
   // offset part may be printed multiple times, since sub-decls along the
-  // path may each need a distinct location to disambiguate them.
-  bool GeneratedFileEntry = false;
+  // visit may each need a distinct location to disambiguate them.
+  bool GeneratedFilename = false;
 
   llvm::DenseMap<const Type *, unsigned> TypeSubstitutions;
 
@@ -661,16 +661,16 @@ bool USRGenerator::GenLoc(const Decl *D, bool IncludeOffset) {
     IgnoreResults = true;
     return true;
   }
-  // Do nothing if file entry has been printed and no need to print the offset.
-  if (GeneratedFileEntry && !IncludeOffset)
+  // Do nothing if no need to print the offset nor the filename:
+  if (!IncludeOffset && GeneratedFilename)
     return IgnoreResults;
 
   bool PrintErr = false;
 
   // Use the location of canonical decl.
   D = D->getCanonicalDecl();
-  if (!GeneratedFileEntry) {
-    GeneratedFileEntry = true;
+  if (!GeneratedFilename) {
+    GeneratedFilename = true;
     PrintErr = printLoc(Out, D->getBeginLoc(), Context->getSourceManager(),
                         IncludeOffset);
   } else {
