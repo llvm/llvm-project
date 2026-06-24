@@ -23,6 +23,8 @@ half half_disabled(half *p, // expected-error{{declaring function return value o
   half *allowed3 = p + 1;
 
 #ifdef HAVE_BUILTINS
+  half2 h2; // expected-error{{declaring variable of type '__private half2' (vector of 2 'half' values) is not allowed}}
+  half4 h4a[2]; // expected-error{{declaring variable of type '__private half4[2]' is not allowed}}
   (void)ilogb(*p); // expected-error{{loading directly from pointer to type '__private half' requires cl_khr_fp16. Use vector data load builtin functions instead}}
   vstore_half(42.0f, 0, p);
 #endif
@@ -55,6 +57,8 @@ half half_enabled(half *p, half h)
   half *allowed3 = p + 1;
 
 #ifdef HAVE_BUILTINS
+  half2 h2;
+  half4 h4a[2];
   (void)ilogb(*p);
   vstore_half(42.0f, 0, p);
 #endif
