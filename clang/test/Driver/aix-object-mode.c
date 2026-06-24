@@ -13,16 +13,16 @@
 // RUN: %clang -print-target-triple | FileCheck -check-prefix=CHECK32 %s
 
 // RUN: env OBJECT_MODE=32_64 \
-// RUN: %clang --target=powerpc64-ibm-aix -print-target-triple | FileCheck -check-prefix=CHECK64 %s
+// RUN: %clang --target=powerpc-ibm-aix -print-target-triple | FileCheck -check-prefix=CHECK32 %s
 
 // RUN: env OBJECT_MODE=32_64 \
-// RUN: %clang -print-target-triple | FileCheck -check-prefix=CHECK32 %s
+// RUN: %clang -print-target-triple | FileCheck -check-prefix=CHECK64 %s
 
 // RUN: env OBJECT_MODE=any \
-// RUN: %clang --target=powerpc64-ibm-aix -print-target-triple | FileCheck -check-prefix=CHECK64 %s
+// RUN: %clang --target=powerpc-ibm-aix -print-target-triple | FileCheck -check-prefix=CHECK32 %s
 
 // RUN: env OBJECT_MODE=any \
-// RUN: %clang -print-target-triple | FileCheck -check-prefix=CHECK32 %s
+// RUN: %clang -print-target-triple | FileCheck -check-prefix=CHECK64 %s
 
 // Command-line options win.
 // RUN: env OBJECT_MODE=64 \
