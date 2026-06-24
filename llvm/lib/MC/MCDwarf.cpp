@@ -1332,7 +1332,7 @@ void MCCFIInstruction::replaceRegister(unsigned FromReg, unsigned ToReg) {
         ReplaceReg(F.MaskRegister);
       },
       [](LLVMSetRAStateFields &) {
-        assert(false && ".cfi_set_ra_state does not have registers");
+        assert(false && ".cfi_llvm_set_ra_state does not have registers");
       });
   std::visit(Visitor, ExtraFields);
 }
