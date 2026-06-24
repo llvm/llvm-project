@@ -672,6 +672,8 @@ Improvements to Clang's diagnostics
 - Diagnostics for the C++11 range-based for statement now report the correct
   iterator type in notes for invalid iterator types.
 
+- The `-Wnrvo` compiler flag is now ignored in C mode.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
