@@ -12,11 +12,11 @@ import tempfile
 import threading
 import traceback
 
-import lit.InprocBuiltins as InprocBuiltins
 import lit.ShUtil as ShUtil
 import lit.Test as Test
 import lit.util
 from lit.BooleanExpression import BooleanExpression
+from lit.InProcessBuiltins import InProcessBuiltinIOStreams, get_default_inproc_builtins
 from lit.ShCommands import Command
 from lit.ShellEnvironment import (
     InternalShellError,
@@ -255,19 +255,7 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
     builtin_commands_dir = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "builtin_commands"
     )
-    inproc_builtins = {
-        "cd": InprocBuiltins.executeBuiltinCd,
-        "export": InprocBuiltins.executeBuiltinExport,
-        "echo": InprocBuiltins.executeBuiltinEcho,
-        "@echo": InprocBuiltins.executeBuiltinEcho,
-        "mkdir": InprocBuiltins.executeBuiltinMkdir,
-        "popd": InprocBuiltins.executeBuiltinPopd,
-        "pushd": InprocBuiltins.executeBuiltinPushd,
-        "rm": InprocBuiltins.executeBuiltinRm,
-        "ulimit": InprocBuiltins.executeBuiltinUlimit,
-        "umask": InprocBuiltins.executeBuiltinUmask,
-        ":": InprocBuiltins.executeBuiltinColon,
-    }
+    inproc_builtins = get_default_inproc_builtins()
     # To avoid deadlock, we use a single stderr stream for piped
     # output. This is null until we have seen some output using
     # stderr.
@@ -355,9 +343,43 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     j,
                     "Unsupported: '{}' cannot be part" " of a pipeline".format(args[0]),
                 )
-            result = inproc_builtin(Command(args, j.redirects), cmd_shenv)
+
+            stdin, stdout, stderr = processRedirects(
+                j, subprocess.PIPE, shenv, opened_files
+            )
+
+            builtin_io = InProcessBuiltinIOStreams(stdin, stdout, stderr)
+
+            args = expand_glob_expressions(args, cmd_shenv.cwd)
+
+            exit_code = inproc_builtin.execute(
+                Command(args, j.redirects), args, cmd_shenv, builtin_io
+            )
+
+            builtin_io.stdout.flush()
+            builtin_io.stderr.flush()
+
             if not_count % 2:
-                result.exitCode = int(not result.exitCode)
+                exit_code = int(not exit_code)
+
+            # Gather output from the streams.
+            out = ""
+            if stdout == subprocess.PIPE:
+                builtin_io.stdout.seek(0)
+                out = builtin_io.stdout.read()
+
+            err = ""
+            if stderr == subprocess.PIPE:
+                builtin_io.stderr.seek(0)
+                err = builtin_io.stderr.read()
+
+            result = ShellCommandResult(
+                j,
+                out,
+                err,
+                exit_code,
+                False,
+            )
             result.command.args = j.args
             results.append(result)
             return result.exitCode
