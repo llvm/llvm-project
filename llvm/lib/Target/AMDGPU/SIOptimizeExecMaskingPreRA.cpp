@@ -18,7 +18,9 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -39,7 +41,15 @@ private:
   MCRegister CondReg;
   MCRegister ExecReg;
 
+  bool matchAndWithExec(MachineInstr &And, MachineOperand *&AndCC,
+                        MachineOperand *&AndExec) const;
+  SlotIndex replaceAndWithAndN2(MachineBasicBlock &MBB, MachineInstr &And,
+                                const MachineOperand &Exec,
+                                const MachineOperand &CC, MachineInstr *&Andn2,
+                                bool IsDstDead, bool IsSCCDead);
+
   bool optimizeVcndVcmpPair(MachineBasicBlock &MBB);
+  bool optimizeSccSelectBranch(MachineBasicBlock &MBB);
   bool optimizeElseBranch(MachineBasicBlock &MBB);
 
 public:
@@ -111,6 +121,78 @@ static bool isDefBetween(const SIRegisterInfo &TRI,
   return false;
 }
 
+static bool isVccBranch(const MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
+  return Opc == AMDGPU::S_CBRANCH_VCCZ || Opc == AMDGPU::S_CBRANCH_VCCNZ;
+}
+
+static bool isSccBranch(const MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
+  return Opc == AMDGPU::S_CBRANCH_SCC0 || Opc == AMDGPU::S_CBRANCH_SCC1;
+}
+
+static bool matchRegImmOperands(MachineOperand *&RegOp, MachineOperand *&ImmOp,
+                                int64_t Imm) {
+  if (RegOp->isImm() && ImmOp->isReg())
+    std::swap(RegOp, ImmOp);
+
+  return RegOp->isReg() && ImmOp->isImm() && ImmOp->getImm() == Imm;
+}
+
+static bool matchImmOperands(const MachineOperand &Op0,
+                             const MachineOperand &Op1, int64_t Imm0,
+                             int64_t Imm1) {
+  return Op0.isImm() && Op1.isImm() && Op0.getImm() == Imm0 &&
+         Op1.getImm() == Imm1;
+}
+
+bool SIOptimizeExecMaskingPreRA::matchAndWithExec(
+    MachineInstr &And, MachineOperand *&AndCC, MachineOperand *&AndExec) const {
+  if (And.getOpcode() != LMC.AndOpc || !And.getOperand(1).isReg() ||
+      !And.getOperand(2).isReg())
+    return false;
+
+  MachineOperand *Op0 = &And.getOperand(1);
+  MachineOperand *Op1 = &And.getOperand(2);
+  if (Op0->getReg() == Register(ExecReg)) {
+    AndExec = Op0;
+    AndCC = Op1;
+  } else if (Op1->getReg() == Register(ExecReg)) {
+    AndExec = Op1;
+    AndCC = Op0;
+  } else
+    return false;
+
+  return true;
+}
+
+SlotIndex SIOptimizeExecMaskingPreRA::replaceAndWithAndN2(
+    MachineBasicBlock &MBB, MachineInstr &And, const MachineOperand &Exec,
+    const MachineOperand &CC, MachineInstr *&Andn2, bool IsDstDead,
+    bool IsSCCDead) {
+  assert(And.getOperand(3).getReg() == AMDGPU::SCC);
+  assert(Exec.getReg() == Register(ExecReg));
+
+  MachineOperand Dst = And.getOperand(0);
+  MachineOperand ExecOp = Exec;
+  MachineOperand CCOp = CC;
+
+  Dst.setIsDead(IsDstDead);
+
+  Andn2 = BuildMI(MBB, And, And.getDebugLoc(), TII->get(LMC.AndN2Opc))
+              .add(Dst)
+              .add(ExecOp)
+              .add(CCOp);
+
+  MachineOperand &Andn2SCC = Andn2->getOperand(3);
+  assert(Andn2SCC.getReg() == AMDGPU::SCC);
+  Andn2SCC.setIsDead(IsSCCDead);
+
+  SlotIndex AndIdx = LIS->ReplaceMachineInstrInMaps(And, *Andn2);
+  And.eraseFromParent();
+  return AndIdx;
+}
+
 // Optimize sequence
 //    %sel = V_CNDMASK_B32_e64 0, 1, %cc
 //    %cmp = V_CMP_NE_U32 1, %sel
@@ -128,31 +210,21 @@ static bool isDefBetween(const SIRegisterInfo &TRI,
 //
 // Returns true on success.
 bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
-  auto I = llvm::find_if(MBB.terminators(), [](const MachineInstr &MI) {
-                           unsigned Opc = MI.getOpcode();
-                           return Opc == AMDGPU::S_CBRANCH_VCCZ ||
-                                  Opc == AMDGPU::S_CBRANCH_VCCNZ; });
+  MachineBasicBlock::iterator I = llvm::find_if(MBB.terminators(), isVccBranch);
   if (I == MBB.terminators().end())
     return false;
 
-  auto *And =
+  MachineInstr *And =
       TRI->findReachingDef(CondReg, AMDGPU::NoSubRegister, *I, *MRI, LIS);
-  if (!And || And->getOpcode() != LMC.AndOpc || !And->getOperand(1).isReg() ||
-      !And->getOperand(2).isReg())
+  MachineOperand *AndCmp = nullptr;
+  MachineOperand *AndExec = nullptr;
+  if (!And || !matchAndWithExec(*And, AndCmp, AndExec))
     return false;
 
-  MachineOperand *AndCC = &And->getOperand(1);
-  Register CmpReg = AndCC->getReg();
-  unsigned CmpSubReg = AndCC->getSubReg();
-  if (CmpReg == Register(ExecReg)) {
-    AndCC = &And->getOperand(2);
-    CmpReg = AndCC->getReg();
-    CmpSubReg = AndCC->getSubReg();
-  } else if (And->getOperand(2).getReg() != Register(ExecReg)) {
-    return false;
-  }
+  Register CmpReg = AndCmp->getReg();
+  unsigned CmpSubReg = AndCmp->getSubReg();
 
-  auto *Cmp = TRI->findReachingDef(CmpReg, CmpSubReg, *And, *MRI, LIS);
+  MachineInstr *Cmp = TRI->findReachingDef(CmpReg, CmpSubReg, *And, *MRI, LIS);
   if (!Cmp || !(Cmp->getOpcode() == AMDGPU::V_CMP_NE_U32_e32 ||
                 Cmp->getOpcode() == AMDGPU::V_CMP_NE_U32_e64) ||
       Cmp->getParent() != And->getParent())
@@ -160,9 +232,7 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
 
   MachineOperand *Op1 = TII->getNamedOperand(*Cmp, AMDGPU::OpName::src0);
   MachineOperand *Op2 = TII->getNamedOperand(*Cmp, AMDGPU::OpName::src1);
-  if (Op1->isImm() && Op2->isReg())
-    std::swap(Op1, Op2);
-  if (!Op1->isReg() || !Op2->isImm() || Op2->getImm() != 1)
+  if (!matchRegImmOperands(Op1, Op2, 1))
     return false;
 
   Register SelReg = Op1->getReg();
@@ -180,8 +250,7 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
   Op1 = TII->getNamedOperand(*Sel, AMDGPU::OpName::src0);
   Op2 = TII->getNamedOperand(*Sel, AMDGPU::OpName::src1);
   MachineOperand *CC = TII->getNamedOperand(*Sel, AMDGPU::OpName::src2);
-  if (!Op1->isImm() || !Op2->isImm() || !CC->isReg() ||
-      Op1->getImm() != 0 || Op2->getImm() != 1)
+  if (!matchImmOperands(*Op1, *Op2, 0, 1) || !CC->isReg())
     return false;
 
   Register CCReg = CC->getReg();
@@ -205,19 +274,14 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
   LLVM_DEBUG(dbgs() << "Folding sequence:\n\t" << *Sel << '\t' << *Cmp << '\t'
                     << *And);
 
-  MachineInstr *Andn2 =
-      BuildMI(MBB, *And, And->getDebugLoc(), TII->get(LMC.AndN2Opc),
-              And->getOperand(0).getReg())
-          .addReg(ExecReg)
-          .addReg(CCReg, getUndefRegState(CC->isUndef()), CC->getSubReg());
-  MachineOperand &AndSCC = And->getOperand(3);
-  assert(AndSCC.getReg() == AMDGPU::SCC);
-  MachineOperand &Andn2SCC = Andn2->getOperand(3);
-  assert(Andn2SCC.getReg() == AMDGPU::SCC);
-  Andn2SCC.setIsDead(AndSCC.isDead());
+  MachineOperand CCOp = *CC;
+  if (CC->isKill())
+    CC->setIsKill(false);
 
-  SlotIndex AndIdx = LIS->ReplaceMachineInstrInMaps(*And, *Andn2);
-  And->eraseFromParent();
+  MachineInstr *Andn2 = nullptr;
+  SlotIndex AndIdx =
+      replaceAndWithAndN2(MBB, *And, *AndExec, CCOp, Andn2, /*IsDstDead=*/false,
+                          /*IsSCCDead=*/And->getOperand(3).isDead());
 
   LLVM_DEBUG(dbgs() << "=>\n\t" << *Andn2 << '\n');
 
@@ -269,6 +333,93 @@ bool SIOptimizeExecMaskingPreRA::optimizeVcndVcmpPair(MachineBasicBlock &MBB) {
     }
   }
 
+  return true;
+}
+
+// Optimize sequence
+//    %cc = S_CSELECT -1, 0, %uniformcc
+//    dead %and = S_AND %cc, $exec
+//    %bool = S_CSELECT_B32 1, 0
+//    S_CMP_LG_U32 %bool, 1
+//    S_CBRANCH_SCC1
+// =>
+//    dead %and = S_ANDN2 $exec, %cc
+//    S_CBRANCH_SCC1
+//
+// This is the scalar form of the negated uniform branch pattern handled by
+// optimizeVcndVcmpPair().
+bool SIOptimizeExecMaskingPreRA::optimizeSccSelectBranch(
+    MachineBasicBlock &MBB) {
+  MachineBasicBlock::iterator I = llvm::find_if(MBB.terminators(), isSccBranch);
+  if (I == MBB.terminators().end())
+    return false;
+
+  MachineInstr *Cmp =
+      TRI->findReachingDef(AMDGPU::SCC, AMDGPU::NoSubRegister, *I, *MRI, LIS);
+  if (!Cmp || Cmp->getOpcode() != AMDGPU::S_CMP_LG_U32 ||
+      Cmp->getParent() != I->getParent())
+    return false;
+
+  MachineOperand *CmpBool = &Cmp->getOperand(0);
+  MachineOperand *CmpOne = &Cmp->getOperand(1);
+  if (!matchRegImmOperands(CmpBool, CmpOne, 1))
+    return false;
+
+  Register BoolReg = CmpBool->getReg();
+  if (BoolReg.isPhysical() || CmpBool->getSubReg() != AMDGPU::NoSubRegister ||
+      !MRI->hasOneNonDBGUse(BoolReg) ||
+      &*MRI->use_instr_nodbg_begin(BoolReg) != Cmp)
+    return false;
+
+  MachineInstr *BoolSel =
+      TRI->findReachingDef(BoolReg, AMDGPU::NoSubRegister, *Cmp, *MRI, LIS);
+  if (!BoolSel || BoolSel->getOpcode() != AMDGPU::S_CSELECT_B32 ||
+      BoolSel->getParent() != Cmp->getParent() ||
+      !matchImmOperands(BoolSel->getOperand(1), BoolSel->getOperand(2), 1, 0))
+    return false;
+
+  MachineInstr *And = TRI->findReachingDef(AMDGPU::SCC, AMDGPU::NoSubRegister,
+                                           *BoolSel, *MRI, LIS);
+  MachineOperand *AndCC = nullptr;
+  MachineOperand *AndExec = nullptr;
+  if (!And || And->getParent() != BoolSel->getParent() ||
+      !matchAndWithExec(*And, AndCC, AndExec))
+    return false;
+
+  Register AndDst = And->getOperand(0).getReg();
+  if (AndDst.isPhysical() || !MRI->use_nodbg_empty(AndDst))
+    return false;
+
+  Register CCReg = AndCC->getReg();
+  if (CCReg.isPhysical())
+    return false;
+
+  MachineInstr *CCSel =
+      TRI->findReachingDef(CCReg, AndCC->getSubReg(), *And, *MRI, LIS);
+  if (!CCSel || CCSel->getOpcode() != LMC.CSelectOpc ||
+      CCSel->getParent() != And->getParent() ||
+      !matchImmOperands(CCSel->getOperand(1), CCSel->getOperand(2), -1, 0))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Folding scalar SCC branch sequence:\n\t" << *And << '\t'
+                    << *BoolSel << '\t' << *Cmp);
+
+  MachineInstr *Andn2 = nullptr;
+  replaceAndWithAndN2(MBB, *And, *AndExec, *AndCC, Andn2,
+                      /*IsDstDead=*/true, /*IsSCCDead=*/false);
+
+  SlotIndex BoolSelIdx = LIS->getInstructionIndex(*BoolSel);
+  LiveInterval &BoolLI = LIS->getInterval(BoolReg);
+  LIS->RemoveMachineInstrFromMaps(*Cmp);
+  Cmp->eraseFromParent();
+
+  LIS->removeVRegDefAt(BoolLI, BoolSelIdx.getRegSlot());
+  LIS->RemoveMachineInstrFromMaps(*BoolSel);
+  BoolSel->eraseFromParent();
+  if (MRI->reg_nodbg_empty(BoolReg))
+    LIS->removeInterval(BoolReg);
+
+  LLVM_DEBUG(dbgs() << "=>\n\t" << *Andn2 << '\n');
   return true;
 }
 
@@ -381,6 +532,11 @@ bool SIOptimizeExecMaskingPreRA::run(MachineFunction &MF) {
     if (optimizeVcndVcmpPair(MBB)) {
       RecalcRegs.insert(AMDGPU::VCC_LO);
       RecalcRegs.insert(AMDGPU::VCC_HI);
+      RecalcRegs.insert(AMDGPU::SCC);
+      Changed = true;
+    }
+
+    if (optimizeSccSelectBranch(MBB)) {
       RecalcRegs.insert(AMDGPU::SCC);
       Changed = true;
     }
