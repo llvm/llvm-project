@@ -100,6 +100,8 @@ class X86TTIImpl final : public BasicTTIImplBase<X86TTIImpl> {
 
       // Perf-tuning flags.
       X86::TuningFastGather,
+      X86::TuningSlowAVX512Gather,
+      X86::TuningSlowAVX512Scatter,
       X86::TuningSlowUAMem32,
       X86::TuningAllowLight256Bit,
 
