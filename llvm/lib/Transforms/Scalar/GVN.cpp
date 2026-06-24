@@ -1161,6 +1161,7 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
     } else {
       Res = getValueForLoad(CoercedLoad, Offset, LoadTy, InsertPt,
                             Load->getFunction());
+      combineAAMetadata(CoercedLoad, Load);
       // We are adding a new user for this load, for which the original
       // metadata may not hold. Additionally, the new load may have a different
       // size and type, so their metadata cannot be combined in any
@@ -1168,13 +1169,13 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
       // Drop all metadata that is not known to cause immediate UB on violation,
       // unless the load has !noundef, in which case all metadata violations
       // will be promoted to UB.
-      // TODO: We can combine noalias/alias.scope metadata here, because it is
-      // independent of the load type.
       if (!CoercedLoad->hasMetadata(LLVMContext::MD_noundef))
         CoercedLoad->dropUnknownNonDebugMetadata(
             {LLVMContext::MD_dereferenceable,
              LLVMContext::MD_dereferenceable_or_null,
-             LLVMContext::MD_invariant_load, LLVMContext::MD_invariant_group});
+             LLVMContext::MD_invariant_load, LLVMContext::MD_invariant_group,
+             LLVMContext::MD_alias_scope, LLVMContext::MD_noalias,
+             LLVMContext::MD_noalias_addrspace});
       LLVM_DEBUG(dbgs() << "GVN COERCED NONLOCAL LOAD:\nOffset: " << Offset
                         << "  " << *getCoercedLoadValue() << '\n'
                         << *Res << '\n'
