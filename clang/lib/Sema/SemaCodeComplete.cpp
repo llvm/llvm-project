@@ -5977,6 +5977,8 @@ void SemaCodeCompletion::CodeCompleteMemberReferenceExpr(
     return;
   QualType ConvertedBaseType =
       getApproximateType(ConvertedBase.get(), Resolver);
+  if (ConvertedBaseType.isNull())
+    return;
 
   enum CodeCompletionContext::Kind contextKind;
 
