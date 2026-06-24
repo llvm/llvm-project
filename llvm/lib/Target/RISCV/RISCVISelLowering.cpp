@@ -19662,7 +19662,7 @@ static SDValue performReverseEVLCombine(SDNode *N, SelectionDAG &DAG,
   SmallVector<VPLoadSDNode *> VPLoads;
   while (!Worklist.empty()) {
     SDValue X = Worklist.pop_back_val();
-    if (!X.hasOneUse())
+    if (!X->hasOneUse())
       return SDValue();
     if (auto *VPLoad = dyn_cast<VPLoadSDNode>(X))
       VPLoads.push_back(VPLoad);
