@@ -3643,8 +3643,7 @@ SDValue AMDGPUTargetLowering::LowerUINT_TO_FP(SDValue Op,
   if (DestVT == MVT::bf16)
     return LowerINT_TO_FP16(Op, DAG, MVT::bf16);
 
-  if (DestVT == MVT::f16 && isTypeLegal(MVT::f16) &&
-      (SrcVT == MVT::i32 || SrcVT == MVT::i64))
+  if (DestVT == MVT::f16 && (SrcVT == MVT::i32 || SrcVT == MVT::i64))
     return LowerINT_TO_FP16(Op, DAG, MVT::f16);
 
   if (SrcVT != MVT::i64)
@@ -3677,8 +3676,7 @@ SDValue AMDGPUTargetLowering::LowerSINT_TO_FP(SDValue Op,
   if (DestVT == MVT::bf16)
     return LowerINT_TO_FP16(Op, DAG, MVT::bf16);
 
-  if (DestVT == MVT::f16 && isTypeLegal(MVT::f16) &&
-      (SrcVT == MVT::i32 || SrcVT == MVT::i64))
+  if (DestVT == MVT::f16 && (SrcVT == MVT::i32 || SrcVT == MVT::i64))
     return LowerINT_TO_FP16(Op, DAG, MVT::f16);
 
   if (SrcVT != MVT::i64)
