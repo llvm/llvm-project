@@ -206,6 +206,17 @@ struct TestVectorUnrollingPatterns
                       resultShape[1] == 1) {
                     return SmallVector<int64_t>{1, 1};
                   }
+                  // Multi-group cases: tile contiguous per reassociation group
+                  // but strided in the whole result.
+                  auto sourceShape = shapeCast.getSourceVectorType().getShape();
+                  if (resultShape.size() == 3 && resultShape[0] == 8 &&
+                      resultShape[1] == 1 && resultShape[2] == 32) {
+                    return SmallVector<int64_t>{8, 1, 4};
+                  }
+                  if (sourceShape.size() == 3 && resultShape.size() == 2 &&
+                      resultShape[0] == 4 && resultShape[1] == 4) {
+                    return SmallVector<int64_t>{2, 2};
+                  }
                   // Default case: [2,4] for all tests.
                   return SmallVector<int64_t>{2, 4};
                 })
