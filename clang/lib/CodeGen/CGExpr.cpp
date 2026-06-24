@@ -1014,6 +1014,25 @@ llvm::Value *CodeGenFunction::LoadPassedObjectSize(const Expr *E,
   return Builder.CreateUDiv(SizeInBytes, SizeOfElement);
 }
 
+static bool shouldIgnoreLastMember(ASTContext &Ctx, const Expr *E) {
+  const Decl *D = nullptr;
+
+  if (const auto *ME = dyn_cast<MemberExpr>(E))
+    D = ME->getMemberDecl();
+  else if (const auto *DRE = dyn_cast<DeclRefExpr>(E))
+    D = DRE->getDecl();
+  else if (const auto *IRE = dyn_cast<ObjCIvarRefExpr>(E))
+    D = IRE->getDecl();
+  else
+    return false;
+
+  auto Loc = D->getSourceRange().getBegin();
+  auto &SM = Ctx.getSourceManager();
+  auto FN = SM.getFilename(SM.getFileLoc(Loc));
+  return Ctx.getNoSanitizeList().containsIgnoreLastMemberFile(
+      SanitizerKind::ArrayBounds, FN);
+}
+
 /// If Base is known to point to the start of an array, return the length of
 /// that array. Return 0 if the length cannot be determined.
 static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
@@ -1031,8 +1050,11 @@ static llvm::Value *getArrayIndexingBound(CodeGenFunction &CGF,
 
   if (const auto *CE = dyn_cast<CastExpr>(Base)) {
     if (CE->getCastKind() == CK_ArrayToPointerDecay &&
-        !CE->getSubExpr()->isFlexibleArrayMemberLike(CGF.getContext(),
-                                                     StrictFlexArraysLevel)) {
+        !CE->getSubExpr()->isFlexibleArrayMemberLike(
+            CGF.getContext(),
+            shouldIgnoreLastMember(CGF.getContext(), CE->getSubExpr())
+                ? LangOptions::StrictFlexArraysLevelKind::Default
+                : StrictFlexArraysLevel)) {
       CodeGenFunction::SanitizerScope SanScope(&CGF);
 
       IndexedType = CE->getSubExpr()->getType();
