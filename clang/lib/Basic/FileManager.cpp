@@ -696,6 +696,30 @@ void FileManager::AddStats(const FileManager &Other) {
   NumFileCacheMisses += Other.NumFileCacheMisses;
 }
 
+// Invalidates and clears all cached results in SeenFileEntries that match
+// the given Filename. Key comparison is performed robustly by converting
+// both the target path and cached keys to their canonical absolute paths.
+void FileManager::invalidateFileCache(StringRef Filename) {
+  SmallString<128> AbsPath(Filename);
+  makeAbsolutePath(AbsPath, /*Canonicalize=*/true);
+  StringRef TargetPath = AbsPath.str();
+
+  // Collect keys to remove in a separate pass to avoid iterator invalidation
+  // during StringMap iteration.
+  SmallVector<StringRef, 4> KeysToRemove;
+  for (const auto &Entry : SeenFileEntries) {
+    SmallString<128> EntryAbsPath(Entry.getKey());
+    makeAbsolutePath(EntryAbsPath, /*Canonicalize=*/true);
+    if (EntryAbsPath.str() == TargetPath) {
+      KeysToRemove.push_back(Entry.getKey());
+    }
+  }
+
+  for (StringRef Key : KeysToRemove) {
+    SeenFileEntries.erase(Key);
+  }
+}
+
 void FileManager::PrintStats() const {
   llvm::errs() << "\n*** File Manager Stats:\n";
   llvm::errs() << UniqueRealFiles.size() << " real files found, "

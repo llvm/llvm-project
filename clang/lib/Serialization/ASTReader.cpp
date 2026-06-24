@@ -123,6 +123,7 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -1885,6 +1886,48 @@ int ASTReader::getSLocEntryID(SourceLocation::UIntTy SLocOffset) {
   return F->SLocEntryBaseID + *std::prev(It);
 }
 
+/// Retrieves the existing InMemoryFileSystem from the active VFS stack,
+/// or dynamically wraps the FileManager's VFS inside a new OverlayFileSystem
+/// with InMemoryFileSystem pushed on top if not found.
+/// It also synchronizes the current working directory from the parent VFS.
+static llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem>
+getOrCreateInMemoryFileSystem(Preprocessor &PP) {
+  FileManager &FileMgr = PP.getFileManager();
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
+      FileMgr.getVirtualFileSystemPtr();
+
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFS;
+  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS;
+  VFS->visit([&](llvm::vfs::FileSystem &SubFS) {
+    if (!InMemoryFS) {
+      if (auto *FS = llvm::dyn_cast<llvm::vfs::InMemoryFileSystem>(&SubFS)) {
+        InMemoryFS = FS;
+      }
+    }
+    if (!OverlayFS) {
+      if (auto *OFS = llvm::dyn_cast<llvm::vfs::OverlayFileSystem>(&SubFS)) {
+        OverlayFS = OFS;
+      }
+    }
+  });
+
+  if (InMemoryFS)
+    return InMemoryFS;
+
+  InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  if (auto CWD = VFS->getCurrentWorkingDirectory()) {
+    InMemoryFS->setCurrentWorkingDirectory(*CWD);
+  }
+
+  if (OverlayFS) {
+    OverlayFS->pushOverlay(InMemoryFS);
+  } else {
+    llvm_unreachable(
+        "OverlayFileSystem must always be present in the active VFS stack!");
+  }
+  return InMemoryFS;
+}
+
 bool ASTReader::ReadSLocEntry(int ID) {
   if (ID == 0)
     return false;
@@ -2025,6 +2068,19 @@ bool ASTReader::ReadSLocEntry(int ID) {
       auto Buffer = ReadBuffer(SLocEntryCursor, File->getName());
       if (!Buffer)
         return true;
+
+      auto MemFS = getOrCreateInMemoryFileSystem(PP);
+      // Only inject into VFS and invalidate cache if a dummy file was
+      // pre-registered in MemFS, preserving FileEntry identity and VFS
+      // cleanliness for physical files.
+      if (MemFS->status(File->getName())) {
+        auto VFSBuffer = llvm::MemoryBuffer::getMemBufferCopy(
+            Buffer->getBuffer(), File->getName());
+        MemFS->addFile(File->getName(), File->getModificationTime(),
+                       std::move(VFSBuffer));
+        PP.getFileManager().invalidateFileCache(File->getName());
+      }
+
       SourceMgr.overrideFileContents(*File, std::move(Buffer));
     }
 
@@ -5208,6 +5264,61 @@ ASTReader::ASTReadResult ASTReader::ReadAST(ModuleFileName FileName,
           M.Mod->InputFilesValidationTimestamp < HSOpts.BuildSessionTimestamp)
         getModuleManager().getModuleCache().updateModuleTimestamp(
             M.Mod->FileName);
+    }
+  }
+
+  // Pre-register empty dummy files in VFS for embedded transient headers to
+  // allow HeaderSearch to pass, while keeping their actual AST content loading
+  // completely lazy (on-demand).
+  for (ImportedModule &M : Loaded) {
+    ModuleFile &F = *M.Mod;
+
+    // Only pre-register if the module is actually defined in the current
+    // compilation's module maps, to avoid polluting VFS with headers from
+    // unrelated loaded PCM files.
+    if (!PP.getHeaderSearchInfo().getModuleMap().findModule(F.ModuleName))
+      continue;
+
+    // If the module map file used to build this module no longer exists
+    // physically, do not pre-register dummy files as we won't be able to
+    // resolve includes to module imports anyway.
+    if (!F.ModuleMapPath.empty() &&
+        !PP.getFileManager().getOptionalFileRef(F.ModuleMapPath).has_value())
+      continue;
+
+    for (unsigned I = 1; I <= F.InputFileInfosLoaded.size(); ++I) {
+      InputFileInfo IFI = getInputFileInfo(F, I);
+      if (IFI.Transient && IFI.isValid()) {
+        // Resolve the unresolved filename to an absolute path using the module
+        // file's BaseDirectory.
+        SmallString<256> ResolvedPath(IFI.UnresolvedImportedFilename);
+        if (llvm::sys::path::is_relative(ResolvedPath)) {
+          ResolvedPath.clear();
+          SmallString<256> AbsBaseDir(F.BaseDirectory);
+          PP.getFileManager().makeAbsolutePath(AbsBaseDir,
+                                               /*Canonicalize=*/true);
+          llvm::sys::path::append(ResolvedPath, AbsBaseDir,
+                                  IFI.UnresolvedImportedFilename);
+        }
+        llvm::sys::path::remove_dots(ResolvedPath, /*remove_dot_dot=*/true);
+
+        // Now we can check physical file existence robustly using the resolved
+        // absolute path.
+        bool PhysicalExists =
+            PP.getFileManager().getOptionalFileRef(ResolvedPath).has_value();
+
+        // Only pre-register if the file is transient, valid, and does NOT exist
+        // on the physical disk.
+        if (!PhysicalExists) {
+          auto MemFS = getOrCreateInMemoryFileSystem(PP);
+          // Create a lightweight empty memory buffer to satisfy VFS existence
+          // checks without memory overhead. Content and actual size will be
+          // overwritten with real content on-demand when the SLocID is loaded.
+          auto DummyBuffer = llvm::MemoryBuffer::getMemBuffer("", ResolvedPath);
+          MemFS->addFile(ResolvedPath, IFI.StoredTime, std::move(DummyBuffer));
+          PP.getFileManager().invalidateFileCache(ResolvedPath);
+        }
+      }
     }
   }
 
