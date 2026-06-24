@@ -14,6 +14,7 @@
 #include "clang/Serialization/ModuleManager.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/IPC2978/IPCManagerCompiler.hpp"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
@@ -213,6 +214,14 @@ AddModuleResult ModuleManager::addModule(
 
       Size = Entry->getSize();
       ModTime = Entry->getModificationTime();
+
+      if (P2978::managerCompiler) {
+        const StringRef EntryName = Entry->getName();
+        return std::unique_ptr(llvm::MemoryBuffer::getMemBuffer(
+            P2978::managerCompiler->filePathProcessMapping
+                .at(std::string(EntryName))
+                .file));
+      }
 
       // RequiresNullTerminator is false because module files don't need it, and
       // this allows the file to still be mmapped.

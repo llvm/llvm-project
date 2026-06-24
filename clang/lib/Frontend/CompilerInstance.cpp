@@ -31,6 +31,7 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Frontend/VerifyDiagnosticConsumer.h"
+#include "clang/IPC2978/IPCManagerCompiler.hpp"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
@@ -1900,9 +1901,22 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
 
   // Select the source and filename for loading the named module.
   ModuleFileName ModuleFilename;
-  ModuleSource Source =
-      selectModuleSource(M, ModuleName, ModuleFilename, BuiltModules, HS);
   SourceLocation ModuleNameLoc = ModuleNameRange.getBegin();
+  ModuleSource Source;
+
+  if (P2978::managerCompiler) {
+    const auto &Result = P2978::managerCompiler->findResponse(
+        std::string(ModuleName), P2978::FileType::MODULE);
+    if (!Result) {
+      // error happened in receiving message
+    }
+    ModuleFilename = ModuleFileName::makeExplicit(Result->filePath);
+    Source = MS_PrebuiltModulePath;
+  } else {
+    Source =
+        selectModuleSource(M, ModuleName, ModuleFilename, BuiltModules, HS);
+  }
+
   if (Source == MS_ModuleNotFound) {
     // We can't find a module, error out here.
     getDiagnostics().Report(ModuleNameLoc, diag::err_module_not_found)
@@ -2427,6 +2441,38 @@ CompilerInstance::lookupMissingImports(StringRef Name,
 
   return false;
 }
+
+static SourceLocation EndLoc;
+void CompilerInstance::makeModuleAndDependenciesVisible(Module *Mod) {
+  if (Mod->NameVisibility == Module::AllVisible)
+    return;
+
+  for (auto *Import : Mod->Imports)
+    makeModuleAndDependenciesVisible(Import);
+
+  getASTReader()->makeModuleVisible(Mod, Module::AllVisible, EndLoc);
+  getPreprocessor().makeModuleVisible(Mod, EndLoc);
+  getSema().makeModuleVisible(Mod, EndLoc);
+}
+
+Module *
+CompilerInstance::loadIPCReceivedHeaderUnit(const StringRef FileName,
+                                            const SourceLocation ImportLoc) {
+  serialization::ModuleFile *ModuleFile =
+      getASTReader()->getModuleManager().lookupByFileName(
+          ModuleFileName::makeExplicit(FileName));
+  if (!ModuleFile)
+    loadModuleFile(ModuleFileName::makeExplicit(FileName), ModuleFile);
+
+  ModuleFile->Kind = serialization::MK_PrebuiltModule;
+
+  Module *Mod = PP->getHeaderSearchInfo().getModuleMap().findModule(
+      ModuleFile->ModuleName);
+  EndLoc = ImportLoc;
+  makeModuleAndDependenciesVisible(Mod);
+  return Mod;
+}
+
 void CompilerInstance::resetAndLeakSema() { llvm::BuryPointer(takeSema()); }
 
 void CompilerInstance::setExternalSemaSource(
