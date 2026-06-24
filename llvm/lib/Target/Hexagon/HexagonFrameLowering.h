@@ -122,8 +122,9 @@ protected:
 private:
   using CSIVect = std::vector<CalleeSavedInfo>;
 
-  void expandAlloca(MachineInstr *AI, const HexagonInstrInfo &TII,
-      Register SP, unsigned CF) const;
+  void expandAlloca(MachineInstr *AI, MachineFunction &MF,
+                    const HexagonInstrInfo &TII, Register SP,
+                    unsigned CF) const;
   void insertPrologueInBlock(MachineBasicBlock &MBB, bool PrologueStubs) const;
   void insertEpilogueInBlock(MachineBasicBlock &MBB) const;
   void insertAllocframe(MachineBasicBlock &MBB,

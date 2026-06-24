@@ -614,7 +614,7 @@ void HexagonFrameLowering::insertPrologueInBlock(MachineBasicBlock &MBB,
 
   for (auto *MI : AdjustRegs) {
     assert((MI->getOpcode() == Hexagon::PS_alloca) && "Expected alloca");
-    expandAlloca(MI, HII, SP, MaxCF);
+    expandAlloca(MI, MF, HII, SP, MaxCF);
     MI->eraseFromParent();
   }
 
@@ -2629,62 +2629,164 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
   }
 }
 
-void HexagonFrameLowering::expandAlloca(MachineInstr *AI,
-      const HexagonInstrInfo &HII, Register SP, unsigned CF) const {
+void HexagonFrameLowering::expandAlloca(MachineInstr *AI, MachineFunction &MF,
+                                        const HexagonInstrInfo &HII,
+                                        Register SP, unsigned CF) const {
   MachineBasicBlock &MB = *AI->getParent();
   DebugLoc DL = AI->getDebugLoc();
   unsigned A = AI->getOperand(2).getImm();
-
-  // Have
-  //    Rd  = alloca Rs, #A
-  //
-  // If Rs and Rd are different registers, use this sequence:
-  //    Rd  = sub(r29, Rs)
-  //    r29 = sub(r29, Rs)
-  //    Rd  = and(Rd, #-A)    ; if necessary
-  //    r29 = and(r29, #-A)   ; if necessary
-  //    Rd  = add(Rd, #CF)    ; CF size aligned to at most A
-  // otherwise, do
-  //    Rd  = sub(r29, Rs)
-  //    Rd  = and(Rd, #-A)    ; if necessary
-  //    r29 = Rd
-  //    Rd  = add(Rd, #CF)    ; CF size aligned to at most A
 
   MachineOperand &RdOp = AI->getOperand(0);
   MachineOperand &RsOp = AI->getOperand(1);
   Register Rd = RdOp.getReg(), Rs = RsOp.getReg();
 
+  auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  auto *TLI = HST.getTargetLowering();
+  bool NeedsProbing = TLI->hasInlineStackProbe(MF);
+
+  if (!NeedsProbing) {
+    // Have
+    //    Rd  = alloca Rs, #A
+    //
+    // If Rs and Rd are different registers, use this sequence:
+    //    Rd  = sub(r29, Rs)
+    //    r29 = sub(r29, Rs)
+    //    Rd  = and(Rd, #-A)    ; if necessary
+    //    r29 = and(r29, #-A)   ; if necessary
+    //    Rd  = add(Rd, #CF)    ; CF size aligned to at most A
+    // otherwise, do
+    //    Rd  = sub(r29, Rs)
+    //    Rd  = and(Rd, #-A)    ; if necessary
+    //    r29 = Rd
+    //    Rd  = add(Rd, #CF)    ; CF size aligned to at most A
+
+    // Rd = sub(r29, Rs)
+    BuildMI(MB, AI, DL, HII.get(Hexagon::A2_sub), Rd).addReg(SP).addReg(Rs);
+    if (Rs != Rd) {
+      // r29 = sub(r29, Rs)
+      BuildMI(MB, AI, DL, HII.get(Hexagon::A2_sub), SP).addReg(SP).addReg(Rs);
+    }
+    if (A > 8) {
+      // Rd  = and(Rd, #-A)
+      BuildMI(MB, AI, DL, HII.get(Hexagon::A2_andir), Rd)
+          .addReg(Rd)
+          .addImm(-int64_t(A));
+      if (Rs != Rd)
+        BuildMI(MB, AI, DL, HII.get(Hexagon::A2_andir), SP)
+            .addReg(SP)
+            .addImm(-int64_t(A));
+    }
+    if (Rs == Rd) {
+      // r29 = Rd
+      BuildMI(MB, AI, DL, HII.get(TargetOpcode::COPY), SP).addReg(Rd);
+    }
+    if (CF > 0) {
+      // Rd = add(Rd, #CF)
+      BuildMI(MB, AI, DL, HII.get(Hexagon::A2_addi), Rd).addReg(Rd).addImm(CF);
+    }
+    return;
+  }
+
+  // Stack probing for dynamic allocation.  The size Rs is a runtime value
+  // so the probe loop is always emitted; it is a no-op when Rs is small.
+  //
+  // Compute the target SP into Rd (with optional alignment), then probe
+  // each page on the way down:
+  //
+  //   Rd  = sub(r29, Rs)
+  //   [Rd = and(Rd, #-A)]   ; if alignment > 8
+  //   LoopMBB:
+  //     r29 = add(r29, #-ProbeSize)
+  //     memw(r29+#0) = #0
+  //     p0 = cmp.gtu(r29, Rd)
+  //     if (p0.new) jump:t LoopMBB
+  //   ExitMBB:
+  //     r29 = Rd
+  //     [Rd = add(Rd, #CF)]  ; if CF > 0
+  //     <rest of original block>
+  //
+  // Rd holds the exact (aligned) target SP throughout the loop, so the
+  // final "r29 = Rd" snaps SP to the correct value even when Rs is not
+  // a multiple of ProbeSize.
+
+  Align StackAlign = getStackAlign();
+  unsigned ProbeSize = TLI->getStackProbeSize(MF, StackAlign);
+  MachineInstr::MIFlag Flags = MachineInstr::FrameSetup;
+
+  // Emit target-SP computation into Rd before splitting the block.
   // Rd = sub(r29, Rs)
   BuildMI(MB, AI, DL, HII.get(Hexagon::A2_sub), Rd)
       .addReg(SP)
-      .addReg(Rs);
-  if (Rs != Rd) {
-    // r29 = sub(r29, Rs)
-    BuildMI(MB, AI, DL, HII.get(Hexagon::A2_sub), SP)
-        .addReg(SP)
-        .addReg(Rs);
-  }
+      .addReg(Rs)
+      .setMIFlags(Flags);
   if (A > 8) {
-    // Rd  = and(Rd, #-A)
+    // Rd = and(Rd, #-A)
     BuildMI(MB, AI, DL, HII.get(Hexagon::A2_andir), Rd)
         .addReg(Rd)
-        .addImm(-int64_t(A));
-    if (Rs != Rd)
-      BuildMI(MB, AI, DL, HII.get(Hexagon::A2_andir), SP)
-          .addReg(SP)
-          .addImm(-int64_t(A));
+        .addImm(-int64_t(A))
+        .setMIFlags(Flags);
   }
-  if (Rs == Rd) {
-    // r29 = Rd
-    BuildMI(MB, AI, DL, HII.get(TargetOpcode::COPY), SP)
-        .addReg(Rd);
-  }
+
+  // Split the block: everything after AI goes into ExitMBB.
+  MachineFunction::iterator InsertPt = std::next(MB.getIterator());
+  MachineBasicBlock *LoopMBB = MF.CreateMachineBasicBlock(MB.getBasicBlock());
+  MF.insert(InsertPt, LoopMBB);
+  MachineBasicBlock *ExitMBB = MF.CreateMachineBasicBlock(MB.getBasicBlock());
+  MF.insert(InsertPt, ExitMBB);
+
+  // Move instructions after AI (exclusive) into ExitMBB.
+  ExitMBB->splice(ExitMBB->end(), &MB, std::next(AI->getIterator()), MB.end());
+  ExitMBB->transferSuccessorsAndUpdatePHIs(&MB);
+
+  // LoopMBB: probe each page.
+  //   r29 = add(r29, #-ProbeSize)
+  //   memw(r29+#0) = #0
+  //   p0 = cmp.gtu(r29, Rd)
+  //   if (p0.new) jump:t LoopMBB
+  BuildMI(*LoopMBB, LoopMBB->end(), DL, HII.get(Hexagon::A2_addi), Hexagon::R29)
+      .addReg(Hexagon::R29)
+      .addImm(-int(ProbeSize))
+      .setMIFlags(Flags);
+
+  BuildMI(*LoopMBB, LoopMBB->end(), DL, HII.get(Hexagon::S4_storeiri_io))
+      .addReg(Hexagon::R29)
+      .addImm(0)
+      .addImm(0)
+      .setMIFlags(Flags);
+
+  BuildMI(*LoopMBB, LoopMBB->end(), DL, HII.get(Hexagon::C2_cmpgtu),
+          Hexagon::P0)
+      .addReg(Hexagon::R29)
+      .addReg(Rd)
+      .setMIFlags(Flags);
+
+  BuildMI(*LoopMBB, LoopMBB->end(), DL, HII.get(Hexagon::J2_jumpt))
+      .addReg(Hexagon::P0)
+      .addMBB(LoopMBB)
+      .setMIFlags(Flags);
+
+  // ExitMBB: snap SP to exact target, then apply CF offset to Rd.
+  //   r29 = Rd
+  //   [Rd = add(Rd, #CF)]
+  MachineBasicBlock::iterator ExitIt = ExitMBB->begin();
+  BuildMI(*ExitMBB, ExitIt, DL, HII.get(Hexagon::A2_tfr), Hexagon::R29)
+      .addReg(Rd)
+      .setMIFlags(Flags);
   if (CF > 0) {
-    // Rd = add(Rd, #CF)
-    BuildMI(MB, AI, DL, HII.get(Hexagon::A2_addi), Rd)
+    BuildMI(*ExitMBB, ExitIt, DL, HII.get(Hexagon::A2_addi), Rd)
         .addReg(Rd)
-        .addImm(CF);
+        .addImm(CF)
+        .setMIFlags(Flags);
   }
+
+  // Wire up CFG edges.
+  MB.addSuccessor(LoopMBB);
+  LoopMBB->addSuccessor(LoopMBB);
+  LoopMBB->addSuccessor(ExitMBB);
+
+  // Recompute live-ins for the new blocks.  AI is still in MB at this
+  // point; the caller erases it after expandAlloca returns.
+  fullyRecomputeLiveIns({ExitMBB, LoopMBB});
 }
 
 bool HexagonFrameLowering::needsAligna(const MachineFunction &MF) const {
