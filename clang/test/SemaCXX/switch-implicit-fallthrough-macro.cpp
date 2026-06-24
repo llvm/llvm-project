@@ -3,6 +3,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++1z -Wimplicit-fallthrough -DCLANG_PREFIX -DCOMMAND_LINE_FALLTHROUGH=[[clang::fallthrough]] %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++1z -Wimplicit-fallthrough -DCOMMAND_LINE_FALLTHROUGH=[[clang::fallthrough]] %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++1z -Wimplicit-fallthrough -DCOMMAND_LINE_FALLTHROUGH=[[fallthrough]] -DUNCHOSEN=[[clang::fallthrough]] %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++1z -Wextra -DCOMMAND_LINE_FALLTHROUGH=[[fallthrough]] -DUNCHOSEN=[[clang::fallthrough]] %s
 
 int fallthrough_compatibility_macro_from_command_line(int n) {
   switch (n) {
