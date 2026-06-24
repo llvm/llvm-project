@@ -386,7 +386,8 @@ private:
   Symbol *DeclareOrMarkOtherAccessEntity(const parser::Name &, Symbol::Flag);
   Symbol *DeclareOrMarkOtherAccessEntity(Symbol &, Symbol::Flag);
   void CheckMultipleAppearances(const parser::Name &, const Symbol &,
-      Symbol::Flag, const parser::AccObject *occurrence = nullptr);
+      Symbol::Flag, const parser::AccObject *occurrence = nullptr,
+      bool warnSameKindDuplicate = true);
   void AllowOnlyArrayAndSubArray(const parser::AccObjectList &objectList);
   void DoNotAllowAssumedSizedArray(const parser::AccObjectList &objectList);
   void AllowOnlyVariable(const parser::AccObject &object);
@@ -1902,6 +1903,41 @@ void AccAttributeVisitor::ResolveAccObjectList(
   }
 }
 
+static bool IsBareNameOrComponentRef(const parser::DataRef &dataRef);
+
+static bool IsBareNameOrComponentRef(
+    const parser::StructureComponent &component) {
+  return IsBareNameOrComponentRef(component.Base());
+}
+
+static bool IsBareNameOrComponentRef(const parser::DataRef &dataRef) {
+  return common::visit(
+      common::visitors{
+          [](const parser::Name &) { return true; },
+          [](const common::Indirection<parser::StructureComponent> &component) {
+            return IsBareNameOrComponentRef(component.value());
+          },
+          [](const common::Indirection<parser::ArrayElement> &) {
+            return false;
+          },
+          [](const common::Indirection<parser::CoindexedNamedObject> &) {
+            return false;
+          },
+      },
+      dataRef.u);
+}
+
+static bool IsBareNameOrComponentRef(const parser::Designator &designator) {
+  return common::visit(
+      common::visitors{
+          [](const parser::DataRef &dataRef) {
+            return IsBareNameOrComponentRef(dataRef);
+          },
+          [](const parser::Substring &) { return false; },
+      },
+      designator.u);
+}
+
 void AccAttributeVisitor::ResolveAccObject(
     const parser::AccObject &accObject, Symbol::Flag accFlag) {
   common::visit(
@@ -1930,9 +1966,10 @@ void AccAttributeVisitor::ResolveAccObject(
             const parser::Name &baseName{parser::GetFirstName(designator)};
             if (auto *symbol{ResolveAcc(baseName, accFlag, currScope())}) {
               AddToContextObjectWithDSA(*symbol, accFlag);
-              if (isDataRef && dataSharingAttributeFlags.test(accFlag)) {
+              if (IsBareNameOrComponentRef(designator) &&
+                  dataSharingAttributeFlags.test(accFlag)) {
                 CheckMultipleAppearances(
-                    baseName, *symbol, accFlag, &accObject);
+                    baseName, *symbol, accFlag, &accObject, isDataRef);
               }
             }
           },
@@ -1990,7 +2027,7 @@ Symbol *AccAttributeVisitor::DeclareOrMarkOtherAccessEntity(
 
 void AccAttributeVisitor::CheckMultipleAppearances(const parser::Name &name,
     const Symbol &symbol, Symbol::Flag accFlag,
-    const parser::AccObject *occurrence) {
+    const parser::AccObject *occurrence, bool warnSameKindDuplicate) {
   const auto *target{&symbol};
   if (HasDataSharingAttributeObject(*target)) {
     // A same-kind duplicate (e.g. private(x, x) or private(x) private(x))
@@ -2002,12 +2039,16 @@ void AccAttributeVisitor::CheckMultipleAppearances(const parser::Name &name,
     // with the same Symbol::Flag may still differ in operator, which is a
     // real conflict that dedup would silently hide.
     auto firstFlag{GetContext().FindSymbolWithDSA(*target)};
-    if (occurrence && firstFlag && *firstFlag == accFlag &&
+    if (warnSameKindDuplicate && occurrence && firstFlag &&
+        *firstFlag == accFlag &&
         accFlag != Symbol::Flag::AccReduction) {
       context_.Warn(common::UsageWarning::OpenAccUsage, name.source,
           "'%s' appears more than once in the same kind of data-sharing clause on an OpenACC directive; duplicate ignored"_warn_en_US,
           name.ToString());
       context_.MarkAccObjectDuplicate(occurrence);
+    } else if (firstFlag && *firstFlag == accFlag &&
+        accFlag != Symbol::Flag::AccReduction) {
+      return;
     } else {
       context_.Say(name.source,
           "'%s' appears in more than one data-sharing clause on the same OpenACC directive"_err_en_US,
