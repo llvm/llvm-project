@@ -1663,6 +1663,34 @@ static MCRegister getRVVBaseRegister(const RISCVRegisterInfo &TRI,
   return BaseReg;
 }
 
+#define GET_REGISTER_MATCHER
+#include "RISCVGenAsmMatcher.inc"
+
+void RISCVFrameLowering::determineUncondPrologCalleeSaves(
+    MachineFunction &MF, const MCPhysReg *CSRegs,
+    BitVector &UncondPrologCSRs) const {
+  const Function &F = MF.getFunction();
+  if (!F.hasFnAttribute("riscv-user-defined-uncond-prolog-csrs"))
+    return;
+  const AttributeList &Attrs = F.getAttributes();
+  StringRef RegString = Attrs.getFnAttr("riscv-user-defined-uncond-prolog-csrs")
+                            .getValueAsString();
+  SmallVector<llvm::StringRef, 4> RegNames;
+  llvm::SplitString(RegString, RegNames, ",");
+  for (auto &Name : RegNames) {
+    Register Reg = MatchRegisterName(Name);
+    if (!Reg)
+      Reg = MatchRegisterAltName(Name);
+    if (!Reg) {
+      reportFatalUsageError(Twine("Couldn't parse register: ") + Name + "\n");
+    }
+    UncondPrologCSRs.set(Reg.id());
+  }
+
+  TargetFrameLowering::determineUncondPrologCalleeSaves(MF, CSRegs,
+                                                        UncondPrologCSRs);
+}
+
 void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                               BitVector &SavedRegs,
                                               RegScavenger *RS) const {
@@ -1676,6 +1704,8 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // Original behavior: If v24 is marked, v24m2, v24m4, v24m8 are also marked.
   // Correct behavior: v24m2 is marked only if v24 and v25 are marked.
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  // TODO: use getMustPreserveRegisters instead? This makes a difference when
+  // function is naked or IPRA is enabled for example.
   const MCPhysReg *CSRegs = MRI.getCalleeSavedRegs();
   const RISCVRegisterInfo &TRI = *STI.getRegisterInfo();
   for (unsigned i = 0; CSRegs[i]; ++i) {
