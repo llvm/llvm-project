@@ -1,0 +1,14 @@
+RUN: mkdir -p %t/server
+RUN: mkdir -p %t/lib
+RUN: %lldb-rpc-gen --output-dir=%t %S/../../Inputs/Client/CheckSBPointer.h
+
+RUN: cat %t/lib/CheckSBPointer.cpp | FileCheck %s
+
+# Pointers to SB objects must be checked to
+# see if they're null. If so, then a new object of the given
+# class must be created and encoded. Otherwise, the original
+# parameter will be encoded.
+CHECK: if (debugger_ptr)
+CHECK-NEXT:   RPCValueEncoder(send, rpc_common::RPCPacket::ValueType::Argument, *debugger_ptr);
+CHECK-NEXT: else
+CHECK-NEXT:    RPCValueEncoder(send, rpc_common::RPCPacket::ValueType::Argument, rpc::ObjectRef(ObjectRefGetConnectionID(), eClass_lldb_SBDebugger, LLDB_RPC_INVALID_OBJECT_ID));
