@@ -7127,6 +7127,7 @@ bool llvm::getUnderlyingObjectsForCodeGen(const Value *V,
                                           SmallVectorImpl<Value *> &Objects) {
   SmallPtrSet<const Value *, 16> Visited;
   SmallVector<const Value *, 4> Working(1, V);
+  bool AllObjectsIdentified = true;
   do {
     V = Working.pop_back_val();
 
@@ -7144,16 +7145,11 @@ bool llvm::getUnderlyingObjectsForCodeGen(const Value *V,
           continue;
         }
       }
-      // If getUnderlyingObjects fails to find an identifiable object,
-      // getUnderlyingObjectsForCodeGen also fails for safety.
-      if (!isIdentifiedObject(V)) {
-        Objects.clear();
-        return false;
-      }
+      AllObjectsIdentified &= isIdentifiedObject(V);
       Objects.push_back(const_cast<Value *>(V));
     }
   } while (!Working.empty());
-  return true;
+  return AllObjectsIdentified;
 }
 
 AllocaInst *llvm::findAllocaForValue(Value *V, bool OffsetZero) {

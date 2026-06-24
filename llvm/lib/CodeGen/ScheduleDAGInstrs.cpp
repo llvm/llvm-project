@@ -116,49 +116,44 @@ static bool getUnderlyingObjectsForInstr(const MachineInstr *MI,
                                          const MachineFrameInfo &MFI,
                                          UnderlyingObjectsVector &Objects,
                                          const DataLayout &DL) {
-  auto AllMMOsOkay = [&]() {
-    for (const MachineMemOperand *MMO : MI->memoperands()) {
-      // TODO: Figure out whether isAtomic is really necessary (see D57601).
-      if (MMO->isVolatile() || MMO->isAtomic())
-        return false;
+  bool AllObjectsIdentified = true;
 
-      if (const PseudoSourceValue *PSV = MMO->getPseudoValue()) {
-        // Function that contain tail calls don't have unique PseudoSourceValue
-        // objects. Two PseudoSourceValues might refer to the same or
-        // overlapping locations. The client code calling this function assumes
-        // this is not the case. So return a conservative answer of no known
-        // object.
-        if (MFI.hasTailCall())
-          return false;
-
-        // For now, ignore PseudoSourceValues which may alias LLVM IR values
-        // because the code that uses this function has no way to cope with
-        // such aliases.
-        if (PSV->isAliased(&MFI))
-          return false;
-
-        Objects.push_back(PSV);
-      } else if (const Value *V = MMO->getValue()) {
-        SmallVector<Value *, 4> Objs;
-        if (!getUnderlyingObjectsForCodeGen(V, Objs))
-          return false;
-
-        for (Value *V : Objs) {
-          assert(isIdentifiedObject(V));
-          Objects.push_back(V);
-        }
-      } else
-        return false;
+  for (const MachineMemOperand *MMO : MI->memoperands()) {
+    // TODO: Figure out whether isAtomic is really necessary (see D57601).
+    if (MMO->isVolatile() || MMO->isAtomic()) {
+      AllObjectsIdentified = false;
+      continue;
     }
-    return true;
-  };
 
-  if (!AllMMOsOkay()) {
-    Objects.clear();
-    return false;
+    if (const PseudoSourceValue *PSV = MMO->getPseudoValue()) {
+      // Function that contain tail calls don't have unique PseudoSourceValue
+      // objects. Two PseudoSourceValues might refer to the same or
+      // overlapping locations. The client code calling this function assumes
+      // this is not the case. So return a conservative answer of no known
+      // object.
+      if (MFI.hasTailCall())
+        AllObjectsIdentified = false;
+
+      // For now, ignore PseudoSourceValues which may alias LLVM IR values
+      // because the code that uses this function has no way to cope with
+      // such aliases.
+      if (PSV->isAliased(&MFI))
+        AllObjectsIdentified = false;
+
+      Objects.push_back(PSV);
+    } else if (const Value *V = MMO->getValue()) {
+      SmallVector<Value *, 4> Objs;
+      AllObjectsIdentified &= getUnderlyingObjectsForCodeGen(V, Objs);
+
+      for (Value *V : Objs) {
+        assert(!AllObjectsIdentified || isIdentifiedObject(V));
+        Objects.push_back(V);
+      }
+    } else
+      AllObjectsIdentified = false;
   }
 
-  return true;
+  return AllObjectsIdentified;
 }
 
 void ScheduleDAGInstrs::startBlock(MachineBasicBlock *bb) {
@@ -700,6 +695,14 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
   // not share any common Value.
   Value2SUsMap Stores, Loads(1 /*TrueMemOrderLatency*/);
 
+  struct UnknownValueFrontier {
+    SUnit *SequencingStore = nullptr;
+    UnderlyingObjectsVector BaseObjects;
+    Value2SUsMap Stores, Loads{1 /*TrueMemOrderLatency*/};
+    bool SeenSequencingLoad = false;
+  };
+  SmallDenseMap<unsigned, UnknownValueFrontier, 2> Frontiers;
+
   // Track all instructions that may raise floating-point exceptions.
   // These do not depend on one other (or normal loads or stores), but
   // must not be rescheduled across global barriers.  Note that we don't
@@ -837,6 +840,16 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
       addBarrierChain(Loads);
       addBarrierChain(FPExceptions);
 
+      for (auto &[_, Frontier] : Frontiers) {
+        addBarrierChain(Frontier.Loads);
+        addBarrierChain(Frontier.Stores);
+        if (Frontier.SequencingStore)
+          Frontier.SequencingStore->addPredBarrier(BarrierChain);
+        Frontier.SequencingStore = nullptr;
+        Frontier.SeenSequencingLoad = false;
+        Frontier.BaseObjects.clear();
+      }
+
       continue;
     }
 
@@ -866,48 +879,111 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
 
     if (MI.mayStore()) {
       if (!ObjsFound) {
-        // An unknown store depends on all stores and loads.
-        addChainDependencies(SU, Stores);
-        addChainDependencies(SU, Loads);
+        UnknownValueFrontier &Frontier =
+            Frontiers[0 /* TODO get address spaces for SU */];
 
-        // Map this store to 'UnknownValue'.
-        Stores.insert(SU, UnknownValue);
+        bool IsSequencing = false;
+        for (const ValueType V : Objs) {
+          if (llvm::all_of(Frontier.BaseObjects,
+                           [=](ValueType Base) { return Base != V; })) {
+            IsSequencing = true;
+            break;
+          }
+        }
+
+        if (!Frontier.SequencingStore || Frontier.SeenSequencingLoad ||
+            IsSequencing) {
+          // Sequence against the previous sequencing store
+          if (Frontier.SequencingStore)
+            Frontier.SequencingStore->addPredBarrier(SU);
+          // Sequence against the entire frontier
+          for (auto &[V, SUs] : Frontier.Loads)
+            for (SUnit *S : SUs)
+              S->addPredBarrier(SU);
+          for (auto &[V, SUs] : Frontier.Stores)
+            for (SUnit *S : SUs)
+              S->addPredBarrier(SU);
+          // Update the sequencing store
+          Frontier.SequencingStore = SU;
+          Frontier.BaseObjects = std::move(Objs);
+          Frontier.SeenSequencingLoad = false;
+          // Clear maps
+          Frontier.Stores.clear();
+          Frontier.Loads.clear();
+        } else {
+          // Always sequence against the sequencing store if there is one
+          Frontier.SequencingStore->addPredBarrier(SU);
+          // Add edges to potentially aliasing memops
+          addChainDependencies(SU, Frontier.Loads, UnknownValue);
+          addChainDependencies(SU, Frontier.Stores, UnknownValue);
+          // Join the frontier
+          Frontier.Stores.insert(SU, UnknownValue);
+        }
+
+        addChainDependencies(SU, Loads);
+        addChainDependencies(SU, Stores);
       } else {
         // Add precise dependencies against all previously seen memory
         // accesses mapped to the same Value(s).
         for (const ValueType V : Objs) {
-          // Add dependencies to previous stores and loads mapped to V.
-          addChainDependencies(SU, Stores, V);
+          // Add dependencies to previous loads and stores mapped to V.
           addChainDependencies(SU, Loads, V);
+          addChainDependencies(SU, Stores, V);
         }
         // Update the store map after all chains have been added to avoid adding
         // self-loop edge if multiple underlying objects are present.
         for (const ValueType V : Objs)
           Stores.insert(SU, V);
 
-        // The store may have dependencies to unanalyzable loads and
-        // stores.
-        addChainDependencies(SU, Loads, UnknownValue);
-        addChainDependencies(SU, Stores, UnknownValue);
+        UnknownValueFrontier &Frontier =
+            Frontiers[0 /* TODO get address spaces for SU */];
+        // Always sequence against the sequencing store if there is one
+        if (Frontier.SequencingStore)
+          Frontier.SequencingStore->addPredBarrier(SU);
+        // Sequence against any relevant loads and stores in the frontier
+        addChainDependencies(SU, Frontier.Loads, UnknownValue);
+        addChainDependencies(SU, Frontier.Stores, UnknownValue);
       }
     } else { // SU is a load.
       if (!ObjsFound) {
-        // An unknown load depends on all stores.
-        addChainDependencies(SU, Stores);
+        UnknownValueFrontier &Frontier =
+            Frontiers[0 /* TODO get address spaces for SU */];
+        // Always sequence against the sequencing store if there is one
+        if (Frontier.SequencingStore)
+          Frontier.SequencingStore->addPredBarrier(SU);
+        // Add edges to potentially aliasing stores
+        addChainDependencies(SU, Frontier.Stores, UnknownValue);
+        // Join the frontier
+        Frontier.Loads.insert(SU, UnknownValue);
 
-        // Map this load to 'UnknownValue'.
-        Loads.insert(SU, UnknownValue);
+        // If we load from a base object other than the sequencing objects, we
+        // become a sequencing load
+        for (const ValueType V : Objs) {
+          if (llvm::all_of(Frontier.BaseObjects,
+                           [=](ValueType Base) { return Base != V; })) {
+            Frontier.SeenSequencingLoad = true;
+            break;
+          }
+        }
+
+        addChainDependencies(SU, Stores);
       } else {
         for (const ValueType V : Objs) {
           // Add precise dependencies against all previously seen stores
-          // mapping to the same Value(s).
+          // mapping to the sam Value(s).
           addChainDependencies(SU, Stores, V);
 
           // Map this load to V.
           Loads.insert(SU, V);
         }
-        // The load may have dependencies to unanalyzable stores.
-        addChainDependencies(SU, Stores, UnknownValue);
+
+        UnknownValueFrontier &Frontier =
+            Frontiers[0 /* TODO get address spaces for SU */];
+        // Always sequence against the sequencing store if there is one
+        if (Frontier.SequencingStore)
+          Frontier.SequencingStore->addPredBarrier(SU);
+        // Sequence against any relevant stores in the frontier
+        addChainDependencies(SU, Frontier.Stores, UnknownValue);
       }
     }
   }
