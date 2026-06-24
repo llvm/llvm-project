@@ -45,8 +45,7 @@ define void @sink_add_mul_multiple(ptr %s1, ptr %s2, i32 %x, ptr %d, ptr %d2, i3
 ; CHECK:      [[TMP2:%.*]] = insertelement <4 x i32> poison, i32 %x, i32 0
 ; CHECK:      [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK:      mul nsw <4 x i32> %wide.load, [[TMP3]]
-; CHECK:      [[TMP2b:%.*]] = insertelement <4 x i32> poison, i32 %x, i32 0
-; CHECK:      [[TMP3b:%.*]] = shufflevector <4 x i32> [[TMP2b]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK:      [[TMP3b:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK:      mul nsw <4 x i32> %wide.load18, [[TMP3b]]
 ;
 entry:
