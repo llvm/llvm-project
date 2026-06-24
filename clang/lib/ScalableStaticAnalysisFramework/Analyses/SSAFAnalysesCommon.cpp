@@ -34,6 +34,11 @@ class ContributorFinder : public DynamicRecursiveASTVisitor {
 public:
   std::set<const NamedDecl *> Contributors;
 
+  ContributorFinder() {
+    ShouldVisitTemplateInstantiations = true;
+    ShouldVisitImplicitCode = false;
+  }
+
   bool VisitFunctionDecl(FunctionDecl *D) override {
     Contributors.insert(D);
     return true;
@@ -119,12 +124,14 @@ public:
 };
 } // namespace
 
-void ssaf::findContributors(ASTContext &Ctx,
-                            std::vector<const NamedDecl *> &Contributors) {
+void ssaf::findContributors(
+    ASTContext &Ctx,
+    llvm::DenseMap<const NamedDecl *, std::vector<const NamedDecl *>>
+        &Contributors) {
   ContributorFinder Finder;
   Finder.TraverseAST(Ctx);
-  Contributors.insert(Contributors.end(), Finder.Contributors.begin(),
-                      Finder.Contributors.end());
+  for (const NamedDecl *C : Finder.Contributors)
+    Contributors[cast<NamedDecl>(C->getCanonicalDecl())].push_back(C);
 }
 
 void ssaf::findMatchesIn(

@@ -101,7 +101,9 @@ LLVM_ABI ArrayRef<unsigned> getOpenMPVersions();
 
 /// Can directive D, under some circumstances, create a private copy
 /// of a variable in given OpenMP version?
-bool isPrivatizingConstruct(Directive D, unsigned Version);
+LLVM_ABI bool isPrivatizingConstruct(Directive D, unsigned Version);
+
+LLVM_ABI ArrayRef<StringRef> getReservedLocatorNames();
 
 /// Create a nicer version of a function name for humans to look at.
 LLVM_ABI std::string prettifyFunctionName(StringRef FunctionName);

@@ -3,7 +3,7 @@
 ! Test declare reduction without initializer clause for intrinsic types.
 ! Without an initializer, the private variable should be zero-initialized.
 
-! CHECK-DAG: omp.declare_reduction @char_max : !fir.ref<!fir.char<1,10>>
+! CHECK-DAG: omp.declare_reduction @_QQFchar_max : !fir.ref<!fir.char<1,10>>
 ! CHECK:       init {
 ! CHECK:       %[[CHZERO:.*]] = fir.zero_bits !fir.char<1,10>
 ! CHECK:       fir.store %[[CHZERO]]
@@ -72,7 +72,7 @@ program test_no_init_intrinsic
   !$omp end parallel do
 
   ! Test fixed-length character reduction without initializer
-  ! CHECK: omp.wsloop {{.*}} reduction(byref @char_max
+  ! CHECK: omp.wsloop {{.*}} reduction(byref @_QQFchar_max
   !$omp parallel do reduction(char_max: s)
   do i = 1, 10
     continue

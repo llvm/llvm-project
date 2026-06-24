@@ -5133,8 +5133,8 @@
 #  ifndef __cpp_lib_expected
 #    error "__cpp_lib_expected should be defined in c++23"
 #  endif
-#  if __cpp_lib_expected != 202211L
-#    error "__cpp_lib_expected should have the value 202211L in c++23"
+#  if __cpp_lib_expected != 202606L
+#    error "__cpp_lib_expected should have the value 202606L in c++23"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_FILESYSTEM
@@ -6609,8 +6609,8 @@
 #  ifndef __cpp_lib_constant_wrapper
 #    error "__cpp_lib_constant_wrapper should be defined in c++26"
 #  endif
-#  if __cpp_lib_constant_wrapper != 202603L
-#    error "__cpp_lib_constant_wrapper should have the value 202603L in c++26"
+#  if __cpp_lib_constant_wrapper != 202606L
+#    error "__cpp_lib_constant_wrapper should have the value 202606L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_constexpr_algorithms
@@ -6903,8 +6903,8 @@
 #  ifndef __cpp_lib_expected
 #    error "__cpp_lib_expected should be defined in c++26"
 #  endif
-#  if __cpp_lib_expected != 202211L
-#    error "__cpp_lib_expected should have the value 202211L in c++26"
+#  if __cpp_lib_expected != 202606L
+#    error "__cpp_lib_expected should have the value 202606L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_FILESYSTEM
@@ -7832,8 +7832,8 @@
 #  ifndef __cpp_lib_raw_memory_algorithms
 #    error "__cpp_lib_raw_memory_algorithms should be defined in c++26"
 #  endif
-#  if __cpp_lib_raw_memory_algorithms != 201606L
-#    error "__cpp_lib_raw_memory_algorithms should have the value 201606L in c++26"
+#  if __cpp_lib_raw_memory_algorithms != 202411L
+#    error "__cpp_lib_raw_memory_algorithms should have the value 202411L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)

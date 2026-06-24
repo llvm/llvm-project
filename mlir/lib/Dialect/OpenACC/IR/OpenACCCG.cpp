@@ -33,7 +33,7 @@ using namespace acc;
 namespace {
 
 /// Generic helper for single-region OpenACC ops that execute their body once
-/// and then return to the parent operation with their results (if any).
+/// and then continue after the operation with their results (if any).
 static void
 getSingleRegionOpSuccessorRegions(Operation *op, Region &region,
                                   RegionBranchPoint point,
@@ -42,12 +42,12 @@ getSingleRegionOpSuccessorRegions(Operation *op, Region &region,
     regions.push_back(RegionSuccessor(&region));
     return;
   }
-  regions.push_back(RegionSuccessor::parent());
+  regions.push_back(RegionSuccessor(op));
 }
 
 static ValueRange getSingleRegionSuccessorInputs(Operation *op,
                                                  RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(op->getResults()) : ValueRange();
+  return successor.isOperation() ? ValueRange(op->getResults()) : ValueRange();
 }
 
 /// Remove empty acc.kernel_environment operations. If the operation has wait
@@ -469,6 +469,33 @@ LogicalResult ReductionCombineRegionOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ReductionAccumulateOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ReductionAccumulateOp::verify() {
+  Type valueType = getValue().getType();
+  auto ptrLikeTy = cast<PointerLikeType>(getMemref().getType());
+  Type elementType = ptrLikeTy.getElementType();
+  if (!elementType)
+    return emitOpError("pointer-like destination must have an element type");
+  if (elementType != valueType)
+    return emitOpError("pointer-like element type must match value type");
+  if (getParDims().getArray().empty())
+    return emitOpError("par_dims must specify at least one parallel dimension");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// ReductionAccumulateArrayOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ReductionAccumulateArrayOp::verify() {
+  if (getParDims().getArray().empty())
+    return emitOpError("par_dims must specify at least one parallel dimension");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ReductionCombineOp
 //===----------------------------------------------------------------------===//
 
@@ -762,6 +789,20 @@ ParseResult ComputeRegionOp::parse(OpAsmParser &parser,
   if (parser.parseOptionalAttrDict(result.attributes))
     return failure();
 
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// PredicateRegionOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult PredicateRegionOp::verify() {
+  if (getRegion().empty())
+    return emitOpError("region needs to have at least one block");
+  if (getRegion().front().getNumArguments() > 0)
+    return emitOpError("region cannot have any arguments");
+  if (!getOperation()->getParentOfType<ComputeRegionOp>())
+    return emitOpError("must be nested within an acc.compute_region operation");
   return success();
 }
 
