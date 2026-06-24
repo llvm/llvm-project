@@ -17,7 +17,6 @@ namespace mlir {
 namespace arith {
 namespace {
 
-
 struct AddIOpInterface
     : public ValueBoundsOpInterface::ExternalModel<AddIOpInterface, AddIOp> {
   void populateBoundsForIndexValue(Operation *op, Value value,
@@ -114,20 +113,24 @@ struct RemSIOpInterface
     Value lhsValue = remSIOp.getLhs();
     Value rhsValue = remSIOp.getRhs();
     AffineExpr rhs = cstr.getExpr(rhsValue);
-    bool rhsPositive = ValueBoundsConstraintSet::isProvablyPositive(rhsValue, cstr);
-    bool rhsNegative = ValueBoundsConstraintSet::isProvablyNegative(rhsValue, cstr);
+    bool rhsPositive =
+        ValueBoundsConstraintSet::isProvablyPositive(rhsValue, cstr);
+    bool rhsNegative =
+        ValueBoundsConstraintSet::isProvablyNegative(rhsValue, cstr);
 
-    // The result of remsi has the same sign as the dividend (lhs) and also fulfills |result| < |rhs|.
-    // The sign of lhs does not need to be a compile-time constant: it is sufficient if
-    // the constraint set can prove it. For lhs == 0 both branches may fire,
-    // which is consistent since the result is then 0. f.e:
+    // The result of remsi has the same sign as the dividend (lhs) and also
+    // fulfills |result| < |rhs|. The sign of lhs does not need to be a
+    // compile-time constant: it is sufficient if the constraint set can prove
+    // it. For lhs == 0 both branches may fire, which is consistent since the
+    // result is then 0. f.e:
     //   lhs   rhs   result   bounds
     //   ----  ----  ------   --------------------------------------------------
     //    7     3      1      0 <= val && val <= rhs-1 = 2      -> [0, 2]
     //    7    -3      1      0 <= val && val <= -rhs-1 = 2     -> [0, 2]
     //   -7     3     -1      val <= 0 && val >= 1-rhs = -2     -> [-2, 0]
     //   -7    -3     -1      val <= 0 && val >= rhs+1 = -2     -> [-2, 0]
-    //    0     3      0      both lhs branches fire (0<=val and val<=0) -> val == 0
+    //    0     3      0      both lhs branches fire (0<=val and val<=0) -> val
+    //    == 0
     if (ValueBoundsConstraintSet::isProvablyNonPositive(lhsValue, cstr)) {
       cstr.bound(value) <= 0;
       if (rhsPositive)
@@ -278,8 +281,10 @@ struct MinUIOpInterface
     // 0xff is treated as -1, not 255). For an unsigned minimum it is enough
     // that a single operand is provably non-negative: minui(x, y) is in
     // [0, y] whenever y >= 0 (and symmetrically for x).
-    bool lhsNonNegative = ValueBoundsConstraintSet::isProvablyNonNegative(minOp.getLhs(), cstr);
-    bool rhsNonNegative = ValueBoundsConstraintSet::isProvablyNonNegative(minOp.getRhs(), cstr);
+    bool lhsNonNegative =
+        ValueBoundsConstraintSet::isProvablyNonNegative(minOp.getLhs(), cstr);
+    bool rhsNonNegative =
+        ValueBoundsConstraintSet::isProvablyNonNegative(minOp.getRhs(), cstr);
     if (!lhsNonNegative && !rhsNonNegative)
       return;
 
@@ -304,7 +309,8 @@ struct MaxUIOpInterface
     assert(value == maxOp.getResult() && "invalid value");
 
     // See MinUIOpInterface comment
-    if (!ValueBoundsConstraintSet::isProvablyNonNegative(maxOp.getLhs(), cstr) ||
+    if (!ValueBoundsConstraintSet::isProvablyNonNegative(maxOp.getLhs(),
+                                                         cstr) ||
         !ValueBoundsConstraintSet::isProvablyNonNegative(maxOp.getRhs(), cstr))
       return;
 

@@ -29,25 +29,29 @@ namespace mlir {
 #include "mlir/Interfaces/ValueBoundsOpInterface.cpp.inc"
 } // namespace mlir
 
-bool ValueBoundsConstraintSet::isProvablyNonNegative(Value value, ValueBoundsConstraintSet &cstr) {
+bool ValueBoundsConstraintSet::isProvablyNonNegative(
+    Value value, ValueBoundsConstraintSet &cstr) {
   return cstr.populateAndCompare(
       /*lhs=*/{value}, ValueBoundsConstraintSet::ComparisonOperator::GE,
       /*rhs=*/{OpFoldResult(Builder(value.getContext()).getIndexAttr(0))});
 }
 
-bool ValueBoundsConstraintSet::isProvablyNonPositive(Value value, ValueBoundsConstraintSet &cstr) {
+bool ValueBoundsConstraintSet::isProvablyNonPositive(
+    Value value, ValueBoundsConstraintSet &cstr) {
   return cstr.populateAndCompare(
       /*lhs=*/{value}, ValueBoundsConstraintSet::ComparisonOperator::LE,
       /*rhs=*/{OpFoldResult(Builder(value.getContext()).getIndexAttr(0))});
 }
 
-bool ValueBoundsConstraintSet::isProvablyPositive(Value value, ValueBoundsConstraintSet &cstr) {
+bool ValueBoundsConstraintSet::isProvablyPositive(
+    Value value, ValueBoundsConstraintSet &cstr) {
   return cstr.populateAndCompare(
       /*lhs=*/{value}, ValueBoundsConstraintSet::ComparisonOperator::GT,
       /*rhs=*/{OpFoldResult(Builder(value.getContext()).getIndexAttr(0))});
 }
 
-bool ValueBoundsConstraintSet::isProvablyNegative(Value value, ValueBoundsConstraintSet &cstr) {
+bool ValueBoundsConstraintSet::isProvablyNegative(
+    Value value, ValueBoundsConstraintSet &cstr) {
   return cstr.populateAndCompare(
       /*lhs=*/{value}, ValueBoundsConstraintSet::ComparisonOperator::LT,
       /*rhs=*/{OpFoldResult(Builder(value.getContext()).getIndexAttr(0))});
