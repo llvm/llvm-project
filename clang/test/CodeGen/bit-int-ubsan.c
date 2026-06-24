@@ -23,7 +23,7 @@ uint32_t implicit_unsigned_integer_truncation() {
   x += float_divide_by_zero();
   x += integer_divide_by_zero();
   x = x + 0xFFFFFFFFFFFFFFFFULL;
-  // CHECK: constant { i16, i16, [23 x i8] } { i16 0, i16 12, [23 x i8] c"'unsigned _BitInt(37)'\00" }
+  // CHECK: constant { i16, i16, [29 x i8] } { i16 2, i16 12, [29 x i8] c"'unsigned _BitInt(37)'\00%\00\00\00\00\00" }
   uint32_t r = x & 0xFFFFFFFF;
   return r;
 }
