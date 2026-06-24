@@ -261,7 +261,6 @@ add_subdirectory(lib)
 add_subdirectory(lib/CAPI)
 
 if (MLIR_INCLUDE_TESTS)
-  add_definitions(-DMLIR_INCLUDE_TESTS)
   add_custom_target(MLIRUnitTests)
   set_target_properties(MLIRUnitTests PROPERTIES FOLDER "MLIR/Tests")
   if (TARGET llvm_gtest)

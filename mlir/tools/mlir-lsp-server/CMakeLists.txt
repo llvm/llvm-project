@@ -45,6 +45,9 @@ add_mlir_tool(mlir-lsp-server
   )
 mlir_target_link_libraries(mlir-lsp-server PRIVATE ${LIBS})
 target_link_libraries(mlir-lsp-server PRIVATE ${test_libs})
+if(MLIR_INCLUDE_TESTS)
+  target_compile_definitions(mlir-lsp-server PRIVATE MLIR_INCLUDE_TESTS)
+endif()
 llvm_update_compile_flags(mlir-lsp-server)
 
 mlir_check_all_link_libraries(mlir-lsp-server)

@@ -8,6 +8,9 @@ add_mlir_tool(mlir-query
   mlir-query.cpp
   )
 llvm_update_compile_flags(mlir-query)
+if(MLIR_INCLUDE_TESTS)
+  target_compile_definitions(mlir-query PRIVATE MLIR_INCLUDE_TESTS)
+endif()
 mlir_target_link_libraries(mlir-query
   PRIVATE
   MLIRQueryLib

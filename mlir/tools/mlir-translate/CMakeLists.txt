@@ -9,6 +9,9 @@ add_mlir_tool(mlir-translate
   mlir-translate.cpp
   )
 llvm_update_compile_flags(mlir-translate)
+if(MLIR_INCLUDE_TESTS)
+  target_compile_definitions(mlir-translate PRIVATE MLIR_INCLUDE_TESTS)
+endif()
 mlir_target_link_libraries(mlir-translate
   PRIVATE
   ${dialect_libs}

@@ -80,6 +80,8 @@ function(llvm_update_compile_flags name)
 endfunction()
 
 function(llvm_update_pch name)
+  cmake_parse_arguments(ARG "DISABLE_PCH_REUSE" "" "" ${ARGN})
+
   if(LLVM_REQUIRES_RTTI OR LLVM_REQUIRES_EH)
     # Non-default RTTI/EH results in incompatible flags, precluding PCH reuse.
     set(ARG_DISABLE_PCH_REUSE ON)
@@ -648,7 +650,14 @@ function(llvm_add_library name)
       ${ALL_FILES}
       )
     llvm_update_compile_flags(${obj_name})
-    llvm_update_pch(${obj_name})
+    if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
+      target_compile_definitions(${obj_name} PRIVATE LLVM_BUILD_STATIC)
+    endif()
+    set(_pch_opts)
+    if(ARG_DISABLE_PCH_REUSE)
+      list(APPEND _pch_opts DISABLE_PCH_REUSE)
+    endif()
+    llvm_update_pch(${obj_name} ${_pch_opts})
     if(CMAKE_GENERATOR STREQUAL "Xcode")
       set(DUMMY_FILE ${CMAKE_CURRENT_BINARY_DIR}/Dummy.c)
       file(WRITE ${DUMMY_FILE} "// This file intentionally empty\n")
@@ -693,10 +702,6 @@ function(llvm_add_library name)
           add_dependencies(${obj_name} ${link_lib})
         endif()
       endforeach()
-    endif()
-
-    if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
-      target_compile_definitions(${obj_name} PRIVATE LLVM_BUILD_STATIC)
     endif()
   endif()
 
@@ -783,7 +788,14 @@ function(llvm_add_library name)
   # $<TARGET_OBJECTS> doesn't require compile flags.
   if(NOT obj_name)
     llvm_update_compile_flags(${name})
-    llvm_update_pch(${name})
+    if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
+      target_compile_definitions(${name} PRIVATE LLVM_BUILD_STATIC)
+    endif()
+    set(_pch_opts)
+    if(ARG_DISABLE_PCH_REUSE)
+      list(APPEND _pch_opts DISABLE_PCH_REUSE)
+    endif()
+    llvm_update_pch(${name} ${_pch_opts})
   else()
     get_target_property(lib_disable_pch ${obj_name} DISABLE_PRECOMPILE_HEADERS)
     if(NOT ${lib_disable_pch})
@@ -1199,10 +1211,22 @@ macro(add_llvm_executable name)
     set(ARG_DISABLE_PCH_REUSE ON)
   endif()
 
+  # Executables in static builds get LLVM_BUILD_STATIC defined, but the PCH
+  # from LLVM component libraries does not have it. This macro changes the
+  # expansion of LLVM_ABI and similar visibility macros, causing a PCH
+  # mismatch that clang-cl warns about (-Wclang-cl-pch).
+  if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB OR NOT LLVM_LINK_LLVM_DYLIB)
+    target_compile_definitions(${name} PRIVATE LLVM_BUILD_STATIC)
+  endif()
+
   # $<TARGET_OBJECTS> doesn't require compile flags.
   if(NOT LLVM_ENABLE_OBJLIB)
     llvm_update_compile_flags(${name})
-    llvm_update_pch(${name})
+    if(ARG_DISABLE_PCH_REUSE)
+      llvm_update_pch(${name} DISABLE_PCH_REUSE)
+    else()
+      llvm_update_pch(${name})
+    endif()
   elseif(NOT ARG_DISABLE_PCH_REUSE)
     get_target_property(lib_disable_pch ${obj_name} DISABLE_PRECOMPILE_HEADERS)
     if(NOT ${lib_disable_pch})
@@ -1274,10 +1298,6 @@ macro(add_llvm_executable name)
 
   if (ARG_EXPORT_SYMBOLS)
     export_executable_symbols(${name})
-  endif()
-
-  if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB OR NOT LLVM_LINK_LLVM_DYLIB)
-    target_compile_definitions(${name} PRIVATE LLVM_BUILD_STATIC)
   endif()
 
   if(LLVM_BUILD_LLVM_DYLIB_VIS AND NOT LLVM_DYLIB_EXPORT_INLINES AND
@@ -1959,7 +1979,9 @@ function(add_benchmark benchmark_name)
     set(EXCLUDE_FROM_ALL ON)
   endif()
 
-  add_llvm_executable(${benchmark_name} IGNORE_EXTERNALIZE_DEBUGINFO NO_INSTALL_RPATH ${ARGN})
+  # DISABLE_PCH_REUSE: the benchmark library propagates BENCHMARK_STATIC_DEFINE
+  # as an INTERFACE definition, which conflicts with the PCH.
+  add_llvm_executable(${benchmark_name} IGNORE_EXTERNALIZE_DEBUGINFO NO_INSTALL_RPATH DISABLE_PCH_REUSE ${ARGN})
   set(outdir ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
   set_output_directory(${benchmark_name} BINARY_DIR ${outdir} LIBRARY_DIR ${outdir})
   get_subproject_title(subproject_title)
