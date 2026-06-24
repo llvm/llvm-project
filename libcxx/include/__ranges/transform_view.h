@@ -85,7 +85,7 @@ public:
     requires default_initializable<_View> && default_initializable<_Fn>
   = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 transform_view(_View __base, _Fn __func)
+  _LIBCPP_HIDE_FROM_ABI constexpr explicit transform_view(_View __base, _Fn __func)
       : __func_(std::in_place, std::move(__func)), __base_(std::move(__base)) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
