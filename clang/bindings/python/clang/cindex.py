@@ -102,10 +102,13 @@ from typing import (
     Union as TUnion,
 )
 
+from functools import wraps
+
 if TYPE_CHECKING:
     from ctypes import _Pointer
     from io import TextIOWrapper
-    from typing_extensions import Protocol, TypeAlias
+    from typing_extensions import Protocol, TypeAlias, ParamSpec, Concatenate
+
 
     StrPath: TypeAlias = TUnion[str, os.PathLike[str]]
     # The type that is compatible with os.fspath:
@@ -120,6 +123,10 @@ if TYPE_CHECKING:
     CObjP: TypeAlias = _Pointer[Any]
 
     TSeq = TypeVar("TSeq", covariant=True)
+
+    P = ParamSpec("P")
+    T = TypeVar("T")
+    CursorCallable: TypeAlias = Callable[Concatenate["Cursor", P], T]
 
     class NoSliceSequence(Protocol[TSeq]):
         def __len__(self) -> int:
@@ -212,7 +219,7 @@ class TranslationUnitSaveError(Exception):
     # Indicates that the translation unit was somehow invalid.
     ERROR_INVALID_TU = 3
 
-    def __init__(self, enumeration, message):
+    def __init__(self, enumeration: int, message: str):
         assert isinstance(enumeration, int)
 
         if enumeration < 1 or enumeration > 3:
@@ -450,15 +457,15 @@ class Diagnostic:
         conf.lib.clang_disposeDiagnostic(self)
 
     @property
-    def severity(self):
+    def severity(self) -> int:
         return conf.lib.clang_getDiagnosticSeverity(self)  # type: ignore [no-any-return]
 
     @property
-    def location(self):
+    def location(self) -> SourceLocation:
         return conf.lib.clang_getDiagnosticLocation(self)  # type: ignore [no-any-return]
 
     @property
-    def spelling(self):
+    def spelling(self) -> str:
         return _CXString.from_result(conf.lib.clang_getDiagnosticSpelling(self))
 
     @property
@@ -516,28 +523,28 @@ class Diagnostic:
         return ChildDiagnosticsIterator(self)
 
     @property
-    def category_number(self):
+    def category_number(self) -> int:
         """The category number for this diagnostic or 0 if unavailable."""
         return conf.lib.clang_getDiagnosticCategory(self)  # type: ignore [no-any-return]
 
     @property
-    def category_name(self):
+    def category_name(self) -> str:
         """The string name of the category for this diagnostic."""
         return _CXString.from_result(conf.lib.clang_getDiagnosticCategoryText(self))
 
     @property
-    def option(self):
+    def option(self) -> str:
         """The command-line option that enables this diagnostic."""
         return _CXString.from_result(conf.lib.clang_getDiagnosticOption(self, None))
 
     @property
-    def disable_option(self):
+    def disable_option(self) -> str:
         """The command-line option that disables this diagnostic."""
         disable = _CXString()
         conf.lib.clang_getDiagnosticOption(self, byref(disable))
         return _CXString.from_result(disable)
 
-    def format(self, options=None):
+    def format(self, options: int | None = None) -> str:
         """
         Format this diagnostic for display. The options argument takes
         Diagnostic.Display* flags, which can be combined using bitwise OR. If
@@ -546,7 +553,7 @@ class Diagnostic:
         """
         if options is None:
             options = conf.lib.clang_defaultDiagnosticDisplayOptions()
-        if options & ~Diagnostic._FormatOptionsMask:
+        if options & ~Diagnostic._FormatOptionsMask: # type: ignore
             raise ValueError("Invalid format options")
         return _CXString.from_result(conf.lib.clang_formatDiagnostic(self, options))
 
@@ -569,7 +576,7 @@ class FixIt:
     with the given value.
     """
 
-    def __init__(self, range, value):
+    def __init__(self, range: SourceRange, value: str):
         self.range = range
         self.value = value
 
@@ -601,7 +608,7 @@ class TokenGroup:
         conf.lib.clang_disposeTokens(self._tu, self._memory, self._count)
 
     @staticmethod
-    def get_tokens(tu, extent):
+    def get_tokens(tu: TranslationUnit, extent: SourceRange) -> Iterator[Token]:
         """Helper method to return all tokens in an extent.
 
         This functionality is needed multiple places in this module. We define
@@ -676,39 +683,39 @@ class CursorKind(BaseEnumeration):
         """Return all CursorKind enumeration instances."""
         return list(CursorKind)
 
-    def is_declaration(self):
+    def is_declaration(self) -> bool:
         """Test if this is a declaration kind."""
         return bool(conf.lib.clang_isDeclaration(self))
 
-    def is_reference(self):
+    def is_reference(self) -> bool:
         """Test if this is a reference kind."""
         return bool(conf.lib.clang_isReference(self))
 
-    def is_expression(self):
+    def is_expression(self) -> bool: 
         """Test if this is an expression kind."""
         return bool(conf.lib.clang_isExpression(self))
 
-    def is_statement(self):
+    def is_statement(self) -> bool:
         """Test if this is a statement kind."""
         return bool(conf.lib.clang_isStatement(self))
 
-    def is_attribute(self):
+    def is_attribute(self) -> bool:
         """Test if this is an attribute kind."""
         return bool(conf.lib.clang_isAttribute(self))
 
-    def is_invalid(self):
+    def is_invalid(self) -> bool:
         """Test if this is an invalid kind."""
         return bool(conf.lib.clang_isInvalid(self))
 
-    def is_translation_unit(self):
+    def is_translation_unit(self) -> bool:
         """Test if this is a translation unit kind."""
         return bool(conf.lib.clang_isTranslationUnit(self))
 
-    def is_preprocessing(self):
+    def is_preprocessing(self) -> bool:
         """Test if this is a preprocessing kind."""
         return bool(conf.lib.clang_isPreprocessing(self))
 
-    def is_unexposed(self):
+    def is_unexposed(self) -> bool:
         """Test if this is an unexposed kind."""
         return bool(conf.lib.clang_isUnexposed(self))
 
@@ -1621,7 +1628,7 @@ class ExceptionSpecificationKind(BaseEnumeration):
 ### Cursors ###
 
 
-def cursor_null_guard(func):
+def cursor_null_guard(func: CursorCallable[P, T]) -> CursorCallable[P, T]:
     """
     This decorator is used to ensure that no methods are called on null-cursors.
     The bindings map null cursors to `None`, so users are not expected
@@ -1631,7 +1638,8 @@ def cursor_null_guard(func):
     calling its `is_null` method.
     """
 
-    def inner(self, *args, **kwargs):
+    @wraps(func)
+    def inner(self: Cursor, *args: P.args, **kwargs: P.kwargs) -> T:
         if self.is_null():
             raise Exception("Tried calling method on a null-cursor.")
         return func(self, *args, **kwargs)
@@ -2427,12 +2435,12 @@ class BinaryOperator(BaseEnumeration):
     Describes the BinaryOperator of a declaration
     """
 
-    def __nonzero__(self):
+    def __nonzero__(self) -> bool:
         """Allows checks of the kind ```if cursor.binary_operator:```"""
         return self.value != 0
 
     @property
-    def is_assignment(self):
+    def is_assignment(self) -> bool:
         return BinaryOperator.Assign.value <= self.value < BinaryOperator.Comma.value
 
     Invalid = 0
@@ -2520,7 +2528,7 @@ class TypeKind(BaseEnumeration):
     """
 
     @property
-    def spelling(self):
+    def spelling(self) -> str:
         """Retrieve the spelling of this TypeKind."""
         return _CXString.from_result(conf.lib.clang_getTypeKindSpelling(self.value))
 
@@ -3414,7 +3422,7 @@ class Index(ClangObject):
     """
 
     @staticmethod
-    def create(excludeDecls=False):
+    def create(excludeDecls: bool = False) -> Index:
         """
         Create a new Index.
         Parameters:
@@ -3425,11 +3433,17 @@ class Index(ClangObject):
     def __del__(self):
         conf.lib.clang_disposeIndex(self)
 
-    def read(self, path):
+    def read(self, path: StrPath) -> TranslationUnit:
         """Load a TranslationUnit from the given AST file."""
         return TranslationUnit.from_ast_file(path, self)
 
-    def parse(self, path, args=None, unsaved_files=None, options=0):
+    def parse(
+        self, 
+        path: StrPath, 
+        args: list[str | bytes] | None = None, 
+        unsaved_files: list[InMemoryFile] | None = None, 
+        options: int = 0
+    ) -> TranslationUnit:
         """Load the translation unit from the given source code file by running
         clang and generating the AST before loading. Additional command line
         parameters can be passed to clang via the args parameter.
@@ -3873,23 +3887,23 @@ class File(ClangObject):
     """
 
     @staticmethod
-    def from_name(translation_unit, file_name):
+    def from_name(translation_unit: TranslationUnit, file_name: StrBytesPath) -> File:
         """Retrieve a file handle within the given translation unit."""
         return File(
             conf.lib.clang_getFile(translation_unit, os.fspath(file_name)),
         )
 
     @property
-    def name(self):
+    def name(self) -> str:
         """Return the complete file and path name of the file."""
         return _CXString.from_result(conf.lib.clang_getFileName(self))
 
     @property
-    def time(self):
+    def time(self) -> int:
         """Return the last modification time of the file."""
         return conf.lib.clang_getFileTime(self)  # type: ignore [no-any-return]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
     def __repr__(self):
@@ -3922,14 +3936,14 @@ class FileInclusion:
     file in the stack. Note that the input file has depth 0.
     """
 
-    def __init__(self, src, tgt, loc, depth):
+    def __init__(self, src: File | None, tgt: File, loc: SourceLocation, depth: int):
         self.source = src
         self.include = tgt
         self.location = loc
         self.depth = depth
 
     @property
-    def is_input_file(self):
+    def is_input_file(self) -> bool:
         """True if the included file is the input file."""
         return self.depth == 0
 
@@ -3948,7 +3962,7 @@ class CompilationDatabaseError(Exception):
     # The database could not be loaded
     ERROR_CANNOTLOADDATABASE = 1
 
-    def __init__(self, enumeration, message):
+    def __init__(self, enumeration: int, message: str):
         assert isinstance(enumeration, int)
 
         if enumeration > 1:
@@ -3971,21 +3985,21 @@ class CompileCommand:
         self.ccmds = ccmds
 
     @property
-    def directory(self):
+    def directory(self) -> str:
         """Get the working directory for this CompileCommand"""
         return _CXString.from_result(
             conf.lib.clang_CompileCommand_getDirectory(self.cmd)
         )
 
     @property
-    def filename(self):
+    def filename(self) -> str:
         """Get the working filename for this CompileCommand"""
         return _CXString.from_result(
             conf.lib.clang_CompileCommand_getFilename(self.cmd)
         )
 
     @property
-    def arguments(self):
+    def arguments(self) -> Iterator[str]:
         """
         Get an iterable object providing each argument in the
         command line for the compiler invocation as a string.
@@ -4011,17 +4025,17 @@ class CompileCommands:
     def __del__(self):
         conf.lib.clang_CompileCommands_dispose(self.ccmds)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return int(conf.lib.clang_CompileCommands_getSize(self.ccmds))
 
-    def __getitem__(self, i):
+    def __getitem__(self, i: int) -> CompileCommand:
         cc = conf.lib.clang_CompileCommands_getCommand(self.ccmds, i)
         if not cc:
             raise IndexError
         return CompileCommand(cc, self)
 
     @staticmethod
-    def from_result(res):
+    def from_result(res) -> CompileCommands | None:
         if not res:
             return None
         return CompileCommands(res)
@@ -4045,7 +4059,7 @@ class CompilationDatabase(ClangObject):
         return CompilationDatabase(res)
 
     @staticmethod
-    def fromDirectory(buildDir):
+    def fromDirectory(buildDir: StrBytesPath) -> CompilationDatabase:
         """Builds a CompilationDatabase from the database found in buildDir"""
         errorCode = c_uint()
         try:
@@ -4060,7 +4074,7 @@ class CompilationDatabase(ClangObject):
             )
         return cdb
 
-    def getCompileCommands(self, filename):
+    def getCompileCommands(self, filename: StrBytesPath) -> CompileCommands | None:
         """
         Get an iterable object providing all the CompileCommands available to
         build filename. Returns None if filename is not found in the database.
@@ -4071,7 +4085,7 @@ class CompilationDatabase(ClangObject):
             )
         )
 
-    def getAllCompileCommands(self):
+    def getAllCompileCommands(self) -> CompileCommands | None:
         """
         Get an iterable object providing all the CompileCommands available from
         the database.
@@ -4094,7 +4108,7 @@ class Token(Structure):
     _fields_ = [("int_data", c_uint * 4), ("ptr_data", c_void_p)]
 
     @property
-    def spelling(self):
+    def spelling(self) -> str:
         """The spelling of this token.
 
         This is the textual representation of the token in source.
@@ -4102,22 +4116,22 @@ class Token(Structure):
         return _CXString.from_result(conf.lib.clang_getTokenSpelling(self._tu, self))
 
     @property
-    def kind(self):
+    def kind(self) -> TokenKind:
         """Obtain the TokenKind of the current token."""
         return TokenKind.from_value(conf.lib.clang_getTokenKind(self))
 
     @property
-    def location(self):
+    def location(self) -> SourceLocation:
         """The SourceLocation this Token occurs at."""
         return conf.lib.clang_getTokenLocation(self._tu, self)  # type: ignore [no-any-return]
 
     @property
-    def extent(self):
+    def extent(self) -> SourceRange:
         """The SourceRange this Token occupies."""
         return conf.lib.clang_getTokenExtent(self._tu, self)  # type: ignore [no-any-return]
 
     @property
-    def cursor(self):
+    def cursor(self) -> Cursor | None:
         """The Cursor this Token corresponds to."""
         cursor = Cursor()
         cursor._tu = self._tu
@@ -4137,7 +4151,7 @@ class Rewriter(ClangObject):
     """
 
     @staticmethod
-    def create(tu):
+    def create(tu: TranslationUnit) -> Rewriter:
         """
         Creates a new Rewriter
         Parameters:
@@ -4151,27 +4165,27 @@ class Rewriter(ClangObject):
     def __del__(self):
         conf.lib.clang_CXRewriter_dispose(self)
 
-    def insert_text_before(self, loc, insert):
+    def insert_text_before(self, loc: SourceLocation, insert: str | bytes):
         """
         Insert the specified string at the specified location in
         the original buffer.
         """
         conf.lib.clang_CXRewriter_insertTextBefore(self, loc, insert)
 
-    def replace_text(self, extent, replacement):
+    def replace_text(self, extent: SourceRange, replacement: str | bytes):
         """
         This method replaces a range of characters in the input buffer with
         a new string.
         """
         conf.lib.clang_CXRewriter_replaceText(self, extent, replacement)
 
-    def remove_text(self, extent):
+    def remove_text(self, extent: SourceRange) -> None:
         """
         Remove the specified text region.
         """
         conf.lib.clang_CXRewriter_removeText(self, extent)
 
-    def overwrite_changed_files(self):
+    def overwrite_changed_files(self) -> int:
         """
         Save all changed files to disk.
 
@@ -4180,7 +4194,7 @@ class Rewriter(ClangObject):
         """
         return conf.lib.clang_CXRewriter_overwriteChangedFiles(self)  # type: ignore [no-any-return]
 
-    def write_main_file_to_stdout(self):
+    def write_main_file_to_stdout(self) -> None:
         """
         Writes the main file to stdout.
         """
@@ -4231,7 +4245,7 @@ class PrintingPolicy(ClangObject):
     """
 
     @staticmethod
-    def create(cursor):
+    def create(cursor: Cursor) -> PrintingPolicy:
         """
         Creates a new PrintingPolicy
         Parameters:
