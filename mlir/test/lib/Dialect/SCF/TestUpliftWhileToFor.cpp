@@ -19,6 +19,28 @@ using namespace mlir;
 
 namespace {
 
+struct TestSCFPrepareUpliftWhileToFor
+    : public PassWrapper<TestSCFPrepareUpliftWhileToFor, OperationPass<void>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestSCFPrepareUpliftWhileToFor)
+
+  StringRef getArgument() const final {
+    return "test-scf-prepare-uplift-while-to-for";
+  }
+
+  StringRef getDescription() const final {
+    return "test scf while to for uplifting preparation";
+  }
+
+  void runOnOperation() override {
+    Operation *op = getOperation();
+    MLIRContext *ctx = op->getContext();
+    RewritePatternSet patterns(ctx);
+    scf::populatePrepareUpliftWhileToForPatterns(patterns);
+    if (failed(applyPatternsAndFoldGreedily(op, std::move(patterns))))
+      signalPassFailure();
+  }
+};
+
 struct TestSCFUpliftWhileToFor
     : public PassWrapper<TestSCFUpliftWhileToFor, OperationPass<void>> {
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestSCFUpliftWhileToFor)
@@ -44,6 +66,7 @@ struct TestSCFUpliftWhileToFor
 namespace mlir {
 namespace test {
 void registerTestSCFUpliftWhileToFor() {
+  PassRegistration<TestSCFPrepareUpliftWhileToFor>();
   PassRegistration<TestSCFUpliftWhileToFor>();
 }
 } // namespace test
