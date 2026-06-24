@@ -74,6 +74,8 @@ Input::~Input() = default;
 
 std::error_code Input::error() { return EC; }
 
+IOKind Input::getKind() const { return IOKind::Inputting; }
+
 bool Input::outputting() const {
   return false;
 }
@@ -515,6 +517,8 @@ Output::Output(raw_ostream &yout, void *context, int WrapColumn)
     : IO(context), Out(yout), WrapColumn(WrapColumn) {}
 
 Output::~Output() = default;
+
+IOKind Output::getKind() const { return IOKind::Outputting; }
 
 bool Output::outputting() const {
   return true;
