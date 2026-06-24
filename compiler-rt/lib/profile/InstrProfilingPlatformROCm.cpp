@@ -8,7 +8,6 @@
 
 extern "C" {
 #include "InstrProfiling.h"
-#include "InstrProfilingInternal.h"
 #include "InstrProfilingPort.h"
 }
 
@@ -32,6 +31,11 @@ extern "C" {
 #include <dlfcn.h>
 #include <pthread.h>
 #endif
+
+#include "InstrProfilingPlatformROCmInternal.h"
+
+// shortcut to shared helper names
+using namespace __prof_rocm;
 
 /* Serialize one-time HIP loader resolution and DynamicModules mutations.
  * Inline to avoid a sanitizer_common dependency. */
@@ -62,11 +66,7 @@ static void unlockDynamicModules(void) {
 }
 #endif
 
-struct OffloadSectionShadowGroup;
-static int processDeviceOffloadPrf(void *DeviceOffloadPrf, const char *Target,
-                                   const OffloadSectionShadowGroup *Sections);
-
-static int isVerboseMode() {
+int __prof_rocm::isVerboseMode() {
   static int IsVerbose = -1;
   if (IsVerbose == -1)
     IsVerbose = getenv("LLVM_PROFILE_VERBOSE") != nullptr;
@@ -265,13 +265,17 @@ static BOOL CALLBACK ensureHipLoadedCb(PINIT_ONCE, PVOID, PVOID *) {
 }
 #endif
 
-static void ensureHipLoaded(void) {
+void __prof_rocm::ensureHipLoaded(void) {
 #ifdef _WIN32
   InitOnceExecuteOnce(&HipLoadedOnce, ensureHipLoadedCb, NULL, NULL);
 #else
   pthread_once(&HipLoadedOnce, doEnsureHipLoaded);
 #endif
 }
+
+// Accessor for the HSA drain: true once the loaded HIP runtime exposes
+// hipMemcpy. Kept here so pHipMemcpy stays file-private to this TU.
+int __prof_rocm::hipMemcpyAvailable() { return pHipMemcpy != nullptr; }
 
 /* -------------------------------------------------------------------------- */
 /*  Public wrappers that forward to the loaded HIP symbols                   */
@@ -295,7 +299,7 @@ static int hipMemcpy(void *dest, const void *src, size_t len,
 
 /* Device section symbols must be registered with CLR first; otherwise
  * hipMemcpy may take a CPU path and crash. */
-static int memcpyDeviceToHost(void *Dst, const void *Src, size_t Size) {
+int __prof_rocm::memcpyDeviceToHost(void *Dst, const void *Src, size_t Size) {
   return hipMemcpy(Dst, Src, Size, 2 /* DToH */);
 }
 
@@ -498,16 +502,10 @@ static int registerPrfSymbol(const char *Name, void *UserData) {
     return 0; /* continue */
   }
 
-  if (MI->NumTUs >= MI->CapTUs) {
-    int NewCap = MI->CapTUs ? MI->CapTUs * 2 : 4;
-    OffloadDynamicTUInfo *New = (OffloadDynamicTUInfo *)realloc(
-        MI->TUs, NewCap * sizeof(OffloadDynamicTUInfo));
-    if (!New) {
-      PROF_ERR("%s\n", "failed to grow TU array");
-      return 0;
-    }
-    MI->TUs = New;
-    MI->CapTUs = NewCap;
+  if (growArray((void **)&MI->TUs, &MI->CapTUs, MI->NumTUs + 1, 4,
+                sizeof(*MI->TUs))) {
+    PROF_ERR("%s\n", "failed to grow TU array");
+    return 0;
   }
   OffloadDynamicTUInfo *TU = &MI->TUs[MI->NumTUs++];
   TU->DeviceVar = DeviceVar;
@@ -535,16 +533,10 @@ __llvm_profile_offload_register_dynamic_module(int ModuleLoadRc, void **Ptr,
     PROF_NOTE("Registering loaded module %d: rc=%d, module=%p, image=%p\n",
               NumDynamicModules, ModuleLoadRc, *Ptr, Image);
 
-  if (NumDynamicModules >= CapDynamicModules) {
-    int NewCap = CapDynamicModules ? CapDynamicModules * 2 : 64;
-    OffloadDynamicModuleInfo *New = (OffloadDynamicModuleInfo *)realloc(
-        DynamicModules, NewCap * sizeof(OffloadDynamicModuleInfo));
-    if (!New) {
-      unlockDynamicModules();
-      return;
-    }
-    DynamicModules = New;
-    CapDynamicModules = NewCap;
+  if (growArray((void **)&DynamicModules, &CapDynamicModules,
+                NumDynamicModules + 1, 64, sizeof(*DynamicModules))) {
+    unlockDynamicModules();
+    return;
   }
 
   OffloadDynamicModuleInfo *MI = &DynamicModules[NumDynamicModules++];
@@ -624,19 +616,6 @@ extern "C" void __llvm_profile_offload_unregister_dynamic_module(void *Ptr) {
   unlockDynamicModules();
 }
 
-/* Grow a void* array, doubling capacity (or starting at InitCap). */
-static int growPtrArray(void ***Arr, int *Num, int *Cap, int InitCap) {
-  if (*Num < *Cap)
-    return 0;
-  int NewCap = *Cap ? *Cap * 2 : InitCap;
-  void **New = (void **)realloc(*Arr, NewCap * sizeof(void *));
-  if (!New)
-    return -1;
-  *Arr = New;
-  *Cap = NewCap;
-  return 0;
-}
-
 static void **OffloadShadowVariables = nullptr;
 static int NumShadowVariables = 0;
 static int CapShadowVariables = 0;
@@ -658,41 +637,20 @@ static OffloadSectionShadowGroup *OffloadSectionShadowGroups = nullptr;
 static int CapSectionShadowGroups = 0;
 
 static int ensureSectionShadowGroupCapacity(void) {
-  if (CapSectionShadowGroups >= CapShadowVariables)
-    return 0;
-  OffloadSectionShadowGroup *New = (OffloadSectionShadowGroup *)realloc(
-      OffloadSectionShadowGroups, CapShadowVariables * sizeof(*New));
-  if (!New)
-    return -1;
-  __builtin_memset(New + CapSectionShadowGroups, 0,
-                   (CapShadowVariables - CapSectionShadowGroups) *
-                       sizeof(*New));
-  OffloadSectionShadowGroups = New;
-  CapSectionShadowGroups = CapShadowVariables;
-  return 0;
+  return growArray((void **)&OffloadSectionShadowGroups,
+                   &CapSectionShadowGroups, CapShadowVariables,
+                   CapShadowVariables, sizeof(*OffloadSectionShadowGroups));
 }
 
 static int ensureSectionShadowCapacity(OffloadSectionShadowGroup *Group,
                                        int MinCapacity) {
-  if (Group->CapShadows >= MinCapacity)
-    return 0;
-  int NewCap = Group->CapShadows ? Group->CapShadows * 2 : 4;
-  while (NewCap < MinCapacity)
-    NewCap *= 2;
-  OffloadSectionShadow *New =
-      (OffloadSectionShadow *)realloc(Group->Shadows, NewCap * sizeof(*New));
-  if (!New)
-    return -1;
-  __builtin_memset(New + Group->CapShadows, 0,
-                   (NewCap - Group->CapShadows) * sizeof(*New));
-  Group->Shadows = New;
-  Group->CapShadows = NewCap;
-  return 0;
+  return growArray((void **)&Group->Shadows, &Group->CapShadows, MinCapacity, 4,
+                   sizeof(*Group->Shadows));
 }
 
 extern "C" void __llvm_profile_offload_register_shadow_variable(void *ptr) {
-  if (growPtrArray(&OffloadShadowVariables, &NumShadowVariables,
-                   &CapShadowVariables, 64))
+  if (growArray((void **)&OffloadShadowVariables, &CapShadowVariables,
+                NumShadowVariables + 1, 64, sizeof(*OffloadShadowVariables)))
     return;
   if (ensureSectionShadowGroupCapacity())
     return;
@@ -731,28 +689,8 @@ __llvm_profile_offload_register_section_shadow_variable(void *ptr) {
   ++Group->NumSections;
 }
 
-namespace {
-
-// free()-based scope guard. Use .release() to transfer ownership.
-struct UniqueFree {
-  void *Ptr;
-  explicit UniqueFree(void *P = nullptr) : Ptr(P) {}
-  ~UniqueFree() { free(Ptr); }
-  UniqueFree(const UniqueFree &) = delete;
-  UniqueFree &operator=(const UniqueFree &) = delete;
-  char *get() const { return static_cast<char *>(Ptr); }
-  void reset(void *P) {
-    free(Ptr);
-    Ptr = P;
-  }
-  void *release() {
-    void *P = Ptr;
-    Ptr = nullptr;
-    return P;
-  }
-};
-
-} // namespace
+// UniqueFree (free()-based scope guard) lives in
+// InstrProfilingPlatformROCmInternal.h so the HSA drain can share it.
 
 static int getRegisteredSectionBounds(void *Shadow, void **DevicePtr,
                                       size_t *Size) {
@@ -787,8 +725,9 @@ hasCompleteSectionShadows(const OffloadSectionShadowGroup *Sections) {
   return 1;
 }
 
-static int processDeviceOffloadPrf(void *DeviceOffloadPrf, const char *Target,
-                                   const OffloadSectionShadowGroup *Sections) {
+int __prof_rocm::processDeviceOffloadPrf(
+    void *DeviceOffloadPrf, const char *Target,
+    const OffloadSectionShadowGroup *Sections) {
   __llvm_profile_gpu_sections HostSections;
 
   if (hipMemcpy(&HostSections, DeviceOffloadPrf, sizeof(HostSections),
@@ -1119,8 +1058,14 @@ static int processDeviceOffloadPrf(void *DeviceOffloadPrf, const char *Target,
 
   if (ret != 0) {
     PROF_ERR("%s\n", "failed to write device profile using shared API");
-  } else if (isVerboseMode()) {
-    PROF_NOTE("%s\n", "Successfully wrote device profile using shared API");
+  } else {
+#if defined(__linux__) && !defined(_WIN32)
+    // Dedup against the supplemental HSA pass: this section is now drained, so
+    // the HSA walk must not drain the same device code object again.
+    profRecordDrainedBounds(DevDataBegin, DevCntsBegin, DevNamesBegin);
+#endif
+    if (isVerboseMode())
+      PROF_NOTE("%s\n", "Successfully wrote device profile using shared API");
   }
 
   return ret;
@@ -1152,13 +1097,11 @@ static int isHipAvailable(void) {
 /*  Collect device-side profile data                                          */
 /* -------------------------------------------------------------------------- */
 
-extern "C" int __llvm_profile_hip_collect_device_data(void) {
-  if (NumShadowVariables == 0 && NumDynamicModules == 0)
-    return 0;
-
-  if (!isHipAvailable())
-    return 0;
-
+/* Host-shadow drain: static-linked kernels (host __hipRegisterVar shadows) and
+ * intercepted dynamic modules. The caller gates this on
+ * (NumShadowVariables || NumDynamicModules) && isHipAvailable(); pure
+ * device-linked programs (RCCL) are handled by the supplemental HSA pass. */
+static int collectHostShadowData(void) {
   int Ret = 0;
 
   /* Shadow variables (static-linked kernels): drain from every device. */
@@ -1172,6 +1115,18 @@ extern "C" int __llvm_profile_hip_collect_device_data(void) {
           PROF_NOTE("Skipping unused device %d\n", Dev);
         continue;
       }
+#if defined(__linux__) && !defined(_WIN32)
+      /* When no kernel launch was tracked at all, shouldCollectDevice() falls
+       * back to collect-all, which can fault/hang reading a non-resident
+       * device's sections on a multi-GPU host. On Linux the supplemental HSA
+       * drain covers those cases safely. */
+      if (!__atomic_load_n(&AnyDeviceUsed, __ATOMIC_ACQUIRE)) {
+        if (isVerboseMode())
+          PROF_NOTE("No tracked launch; deferring device %d to HSA drain\n",
+                    Dev);
+        continue;
+      }
+#endif
       if (hipSetDevice(Dev) != 0) {
         if (isVerboseMode())
           PROF_NOTE("Failed to set device %d, skipping\n", Dev);
@@ -1182,8 +1137,9 @@ extern "C" int __llvm_profile_hip_collect_device_data(void) {
         PROF_NOTE("Collecting static profile data from device %d (%s)\n", Dev,
                   ArchName);
       for (int i = 0; i < NumShadowVariables; ++i) {
-        /* RDC-mode multi-shadow drains need a distinct profraw per TU;
-         * single-TU programs keep the bare arch target. */
+        /* Stable name per shadow so a repeated drain (explicit collect plus the
+         * atexit drain) overwrites its own profraw rather than emitting a
+         * second one: bare arch for a single TU, arch.<i> for RDC multi-TU. */
         const char *Target = ArchName;
         char TargetWithIdx[64];
         if (NumShadowVariables > 1) {
@@ -1214,6 +1170,22 @@ extern "C" int __llvm_profile_hip_collect_device_data(void) {
     }
   }
   unlockDynamicModules();
+
+  return Ret;
+}
+
+extern "C" int __llvm_profile_hip_collect_device_data(void) {
+  int Ret = 0;
+
+  if ((NumShadowVariables != 0 || NumDynamicModules != 0) && isHipAvailable() &&
+      collectHostShadowData() != 0)
+    Ret = -1;
+
+#if defined(__linux__) && !defined(_WIN32)
+  /* Supplemental HSA-introspection drain */
+  if (drainDevicesViaHsa() != 0)
+    Ret = -1;
+#endif
 
   if (Ret != 0)
     PROF_WARN("%s\n", "failed to collect device profile data");
@@ -1268,6 +1240,8 @@ static int recordHipMultiDeviceLaunchResult(int Rc,
   return Rc;
 }
 
+// interceptors must have external linkage
+// NOLINTBEGIN(misc-use-internal-linkage)
 INTERCEPTOR(int, hipLaunchKernel, const void *Function, HipDim3 GridDim,
             HipDim3 BlockDim, void **Args, size_t SharedMemBytes,
             HipStream Stream) {
@@ -1398,6 +1372,7 @@ INTERCEPTOR(int, hipModuleUnload, void *module) {
   __llvm_profile_offload_unregister_dynamic_module(module);
   return REAL(hipModuleUnload)(module);
 }
+// NOLINTEND(misc-use-internal-linkage)
 
 __attribute__((constructor)) static void installHipInterceptors() {
   /* Avoid interception unless the HIP runtime is already loaded. */

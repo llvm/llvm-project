@@ -175,9 +175,9 @@ func.func @mixed_load(%mixed : memref<42x?xf32>, %i : index, %j : index) {
 //   CHECK-DAG:  %[[J:.*]] = builtin.unrealized_conversion_cast %[[Jarg]]
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-//  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] overflow<nsw, nuw> : i64
-//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] overflow<nsw, nuw> : i64
-//  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr inbounds|nuw %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+//  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] overflow<nsw> : i64
+//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] overflow<nsw> : i64
+//  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr inbounds %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 //  CHECK-NEXT:  llvm.load %[[addr]] : !llvm.ptr -> f32
   %0 = memref.load %mixed[%i, %j] : memref<42x?xf32>
   return
@@ -192,9 +192,9 @@ func.func @dynamic_load(%dynamic : memref<?x?xf32>, %i : index, %j : index) {
 //   CHECK-DAG:  %[[J:.*]] = builtin.unrealized_conversion_cast %[[Jarg]]
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-//  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] overflow<nsw, nuw> : i64
-//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] overflow<nsw, nuw> : i64
-//  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr inbounds|nuw %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+//  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] overflow<nsw> : i64
+//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] overflow<nsw> : i64
+//  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr inbounds %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 //  CHECK-NEXT:  llvm.load %[[addr]] : !llvm.ptr -> f32
   %0 = memref.load %dynamic[%i, %j] : memref<?x?xf32>
   return
@@ -230,9 +230,9 @@ func.func @dynamic_store(%dynamic : memref<?x?xf32>, %i : index, %j : index, %va
 //   CHECK-DAG:  %[[J:.*]] = builtin.unrealized_conversion_cast %[[Jarg]]
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-//  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] overflow<nsw, nuw> : i64
-//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] overflow<nsw, nuw> : i64
-//  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr inbounds|nuw %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+//  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] overflow<nsw> : i64
+//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] overflow<nsw> : i64
+//  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr inbounds %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 //  CHECK-NEXT:  llvm.store %{{.*}}, %[[addr]] : f32, !llvm.ptr
   memref.store %val, %dynamic[%i, %j] : memref<?x?xf32>
   return
@@ -247,9 +247,9 @@ func.func @mixed_store(%mixed : memref<42x?xf32>, %i : index, %j : index, %val :
 //   CHECK-DAG:  %[[J:.*]] = builtin.unrealized_conversion_cast %[[Jarg]]
 //       CHECK:  %[[ptr:.*]] = llvm.extractvalue %[[ld:.*]][1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
 //  CHECK-NEXT:  %[[st0:.*]] = llvm.extractvalue %[[ld]][4, 0] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)>
-//  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] overflow<nsw, nuw> : i64
-//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] overflow<nsw, nuw> : i64
-//  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr inbounds|nuw %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+//  CHECK-NEXT:  %[[offI:.*]] = llvm.mul %[[I]], %[[st0]] overflow<nsw> : i64
+//  CHECK-NEXT:  %[[off1:.*]] = llvm.add %[[offI]], %[[J]] overflow<nsw> : i64
+//  CHECK-NEXT:  %[[addr:.*]] = llvm.getelementptr inbounds %[[ptr]][%[[off1]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 //  CHECK-NEXT:  llvm.store %{{.*}}, %[[addr]] : f32, !llvm.ptr
   memref.store %val, %mixed[%i, %j] : memref<42x?xf32>
   return
@@ -644,4 +644,22 @@ func.func @ranked_unranked() {
   %0 = memref.alloc() : memref<1 x memref<* x f32>>
   memref.cast %0 : memref<1 x memref<* x f32>> to memref<* x memref<* x f32>>
   return
+}
+
+// -----
+
+// Verify that loading from a negative-stride memref does not emit nuw on the
+// GEP or the intermediate mul: mul nuw with a negative (unsigned-large) stride
+// would produce poison per LangRef.
+// CHECK-LABEL: func @memref_load_neg_stride(
+func.func @memref_load_neg_stride(%base: memref<2000xf32>) -> f32 {
+  // CHECK: %[[OFF:.*]] = llvm.mul %{{.*}}, %{{.*}} overflow<nsw> : i64
+  // CHECK-NEXT: %[[PTR:.*]] = llvm.getelementptr inbounds %{{.*}}[%[[OFF]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+  // CHECK-NEXT: llvm.load %[[PTR]] : !llvm.ptr -> f32
+  %flip = memref.reinterpret_cast %base to
+      offset: [1000], sizes: [100], strides: [-1]
+      : memref<2000xf32> to memref<100xf32, strided<[-1], offset: 1000>>
+  %c5 = arith.constant 5 : index
+  %v = memref.load %flip[%c5] : memref<100xf32, strided<[-1], offset: 1000>>
+  return %v : f32
 }

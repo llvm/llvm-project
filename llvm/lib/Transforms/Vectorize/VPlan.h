@@ -3482,6 +3482,12 @@ public:
     return isPredicated() ? drop_end(operands()) : operands();
   }
 
+  /// Returns the number of operands, excluding the mask if the recipe is
+  /// predicated.
+  unsigned getNumOperandsWithoutMask() const {
+    return getNumOperands() - isPredicated();
+  }
+
   unsigned getOpcode() const { return getUnderlyingInstr()->getOpcode(); }
 
 protected:
@@ -4930,7 +4936,7 @@ public:
   /// Resets the trip count for the VPlan. The caller must make sure all uses of
   /// the original trip count have been replaced.
   void resetTripCount(VPValue *NewTripCount) {
-    assert(TripCount && NewTripCount && TripCount->getNumUsers() == 0 &&
+    assert(TripCount && NewTripCount && TripCount->user_empty() &&
            "TripCount must be set when resetting");
     TripCount = NewTripCount;
   }

@@ -163,6 +163,15 @@ static cl::opt<bool> UseFEATCPACodegen(
              "SelectionDAG for FEAT_CPA"),
     cl::init(false));
 
+// FPMR writes might be a synchronization barrier and thus carry a significant
+// cost. Give users the option to skip writes when the requested value is
+// already set.
+static cl::opt<bool> UseConditionalFPMRWrite(
+    "aarch64-use-conditional-fpmr-write", cl::Hidden,
+    cl::desc("Only write FPMR when the requested value differs from the "
+             "current value"),
+    cl::init(false));
+
 /// Value type used for condition codes.
 constexpr MVT CondCodeVT = MVT::i32;
 
@@ -3198,6 +3207,52 @@ MachineBasicBlock *AArch64TargetLowering::EmitLoweredCatchRet(
 }
 
 MachineBasicBlock *
+AArch64TargetLowering::EmitLoweredSetFpmr(MachineInstr &MI,
+                                          MachineBasicBlock *MBB) const {
+  MachineFunction *MF = MBB->getParent();
+  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+  DebugLoc DL = MI.getDebugLoc();
+
+  if (!UseConditionalFPMRWrite) {
+    BuildMI(*MBB, MI, DL, TII->get(AArch64::MSR))
+        .addImm(0xda22)
+        .add(MI.getOperand(0))
+        .addDef(AArch64::FPMR, RegState::Implicit);
+    MI.eraseFromParent();
+    return MBB;
+  }
+
+  Register NewFpmrVal = MI.getOperand(0).getReg();
+  const BasicBlock *LLVM_BB = MBB->getBasicBlock();
+  MachineBasicBlock *MsrBB = MF->CreateMachineBasicBlock(LLVM_BB);
+  MachineBasicBlock *EndBB = MBB->splitAt(MI);
+  MF->insert(++MBB->getIterator(), MsrBB);
+
+  Register CurrentFpmrVal =
+      MF->getRegInfo().createVirtualRegister(&AArch64::GPR64RegClass);
+  BuildMI(*MBB, MI, DL, TII->get(AArch64::MRS), CurrentFpmrVal)
+      .addImm(0xda22)
+      .addUse(AArch64::FPMR, RegState::Implicit);
+  BuildMI(*MBB, MI, DL, TII->get(AArch64::SUBSXrs), AArch64::XZR)
+      .addReg(CurrentFpmrVal, RegState::Kill)
+      .addReg(NewFpmrVal)
+      .addImm(0);
+  BuildMI(*MBB, MI, DL, TII->get(AArch64::Bcc))
+      .addImm(AArch64CC::EQ)
+      .addMBB(EndBB);
+  BuildMI(*MsrBB, MsrBB->begin(), DL, TII->get(AArch64::MSR))
+      .addImm(0xda22)
+      .addReg(NewFpmrVal, getKillRegState(MI.getOperand(0).isDead()))
+      .addDef(AArch64::FPMR, RegState::Implicit);
+
+  MBB->addSuccessor(MsrBB);
+  MsrBB->addSuccessor(EndBB);
+
+  MI.eraseFromParent();
+  return EndBB;
+}
+
+MachineBasicBlock *
 AArch64TargetLowering::EmitDynamicProbedAlloc(MachineInstr &MI,
                                               MachineBasicBlock *MBB) const {
   MachineFunction &MF = *MBB->getParent();
@@ -3569,6 +3624,8 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     return EmitZTInstr(MI, BB, AArch64::ZERO_T, /*Op0IsDef=*/true);
   case AArch64::MOVT_TIZ_PSEUDO:
     return EmitZTInstr(MI, BB, AArch64::MOVT_TIZ, /*Op0IsDef=*/true);
+  case AArch64::MSR_FPMR:
+    return EmitLoweredSetFpmr(MI, BB);
 
   case AArch64::PAC:
     fixupPtrauthDiscriminator(MI, BB, MI.getOperand(3), MI.getOperand(4),
@@ -4248,6 +4305,13 @@ static unsigned getCmpOperandFoldingProfit(SDValue Op, bool AllowExtend) {
   return 0;
 }
 
+static unsigned getCmpOrCmnOperandFoldingProfit(SDValue Op, ISD::CondCode CC,
+                                                SelectionDAG &DAG) {
+  if (isCMN(Op, CC, DAG))
+    return getCmpOperandFoldingProfit(Op.getOperand(1), true) + 1;
+  return getCmpOperandFoldingProfit(Op, true);
+}
+
 // emitComparison() converts comparison with one or negative one to comparison
 // with 0. Note that this only works for signed comparisons because of how ANDS
 // works.
@@ -4353,13 +4417,8 @@ static SDValue getAArch64Cmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
   //    cmp     w12, w11, lsl #1
   if (!isa<ConstantSDNode>(RHS) ||
       !AArch64_AM::isLegalCmpImmed(RHS->getAsAPIntVal())) {
-    bool LHSIsCMN = isCMN(LHS, CC, DAG);
-    bool RHSIsCMN = isCMN(RHS, CC, DAG);
-    SDValue TheLHS = LHSIsCMN ? LHS.getOperand(1) : LHS;
-    SDValue TheRHS = RHSIsCMN ? RHS.getOperand(1) : RHS;
-
-    if (getCmpOperandFoldingProfit(TheLHS, true) + (LHSIsCMN ? 1 : 0) >
-        getCmpOperandFoldingProfit(TheRHS, true) + (RHSIsCMN ? 1 : 0)) {
+    if (getCmpOrCmnOperandFoldingProfit(LHS, CC, DAG) >
+        getCmpOrCmnOperandFoldingProfit(RHS, CC, DAG)) {
       std::swap(LHS, RHS);
       CC = ISD::getSetCCSwappedOperands(CC);
     }
@@ -25022,6 +25081,50 @@ static SDValue performExtendDuplaneTruncCombine(SDNode *N, SelectionDAG &DAG) {
   return DAG.getNode(NewDupOpc, SDLoc(N), DstVT, Src, Dup.getOperand(1));
 }
 
+static SDValue
+performExtendToBoolVectorLoadCombine(SDNode *N, SelectionDAG &DAG,
+                                     TargetLowering::DAGCombinerInfo &DCI,
+                                     const AArch64Subtarget &Subtarget) {
+  EVT VT = N->getValueType(0);
+  SDValue N0 = N->getOperand(0);
+  auto *LN0 = dyn_cast<LoadSDNode>(N0);
+  // Match an extend of a normal load from a boolean vector (<N x i1>) to a
+  // fixed-length integer vector.
+  if (!LN0 || !ISD::isNormalLoad(LN0) ||
+      N0.getValueType().getScalarType() != MVT::i1 || !VT.isFixedLengthVector())
+    return SDValue();
+
+  // Only fold a load with a single use that is simple (not volatile or atomic),
+  // so it is safe to replace with a scalar load of the same bytes.
+  if (!N0.hasOneUse() || !LN0->isSimple())
+    return SDValue();
+
+  SDLoc DL(N);
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
+  // Load <N x i1> as a scalar iN, then bitcast it back to <N x i1> so the
+  // generic combineToExtendBoolVectorInReg helper can apply. That helper
+  // requires the scalar to be broadcast across the result elements, so only
+  // proceed when that precondition holds.
+  // TODO: Use a predicate load for SVE vectors.
+  bool CanSplatOrSplit =
+      NumElts <= EltSizeInBits || NumElts % EltSizeInBits == 0;
+  if (Subtarget.isNeonAvailable() && CanSplatOrSplit) {
+    EVT ScalarVT = EVT::getIntegerVT(*DAG.getContext(), NumElts);
+    SDValue ScalarLd = DAG.getLoad(ScalarVT, DL, LN0->getChain(),
+                                   LN0->getBasePtr(), LN0->getMemOperand());
+    SDValue Bitcast = DAG.getBitcast(LN0->getValueType(0), ScalarLd);
+    if (SDValue V = combineToExtendBoolVectorInReg(
+            N->getOpcode(), DL, VT, Bitcast, DAG, DCI, Subtarget)) {
+      // Redirect the old load's chain users to the new scalar load.
+      DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), ScalarLd.getValue(1));
+      return V;
+    }
+  }
+
+  return SDValue();
+}
+
 static SDValue performExtendCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     SelectionDAG &DAG,
@@ -25053,6 +25156,9 @@ static SDValue performExtendCombine(SDNode *N,
   EVT VT = N->getValueType(0);
   if (SDValue V = combineToExtendBoolVectorInReg(N->getOpcode(), dl, VT, N0,
                                                  DAG, DCI, *Subtarget))
+    return V;
+
+  if (SDValue V = performExtendToBoolVectorLoadCombine(N, DAG, DCI, *Subtarget))
     return V;
 
   if (N->getValueType(0).isFixedLengthVector() &&
