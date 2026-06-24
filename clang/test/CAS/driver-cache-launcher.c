@@ -34,12 +34,14 @@
 // SPECIFIC-DAEMON-NOT: "-fdepscan-share-identifier"
 // SPECIFIC-DAEMON: "-cc1depscan" "-fdepscan=daemon" "-fdepscan-daemon=[[PREFIX]]/scand"
 
-// RUN: env LLVM_CACHE_CAS_PATH=%t/cas LLVM_CACHE_PLUGIN_PATH=%t/plugin LLVM_CACHE_PLUGIN_OPTIONS=some-opt=value:opt2=val2 \
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas LLVM_CACHE_PLUGIN_PATH=%t/plugin LLVM_CACHE_PLUGIN_OPTIONS=some-opt=value:opt2=val2 LLVM_CACHE_REMOTE_SERVICE_SOCKET_PATH=%t/ccremote \
 // RUN:   %clang-cache %clang -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=PLUGIN -DPREFIX=%t
 // PLUGIN: "-fcas-path" "[[PREFIX]]/cas"
 // PLUGIN: "-fcas-plugin-path" "[[PREFIX]]/plugin"
 // PLUGIN: "-fcas-plugin-option" "some-opt=value"
 // PLUGIN: "-fcas-plugin-option" "opt2=val2"
+// PLUGIN: "-fcas-plugin-option" "remote-service-path=[[PREFIX]]/ccremote"
+// PLUGIN-NOT: "-fcompilation-caching-service-path"
 
 // RUN: env LLVM_CACHE_CAS_PATH=%t/cas \
 // RUN: %clang-cache %clang -target x86_64-apple-darwin10 -c %s -o %t.o -### 2>&1 | FileCheck %s -check-prefix=ENABLE-MCCAS -DPREFIX=%t

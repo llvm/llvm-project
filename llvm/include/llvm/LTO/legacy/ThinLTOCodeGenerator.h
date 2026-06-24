@@ -162,15 +162,21 @@ public:
 
   struct CachingOptions {
     std::string Path;                    // Path to the cache, empty to disable.
+    std::string PluginPath;
+    std::vector<std::pair<std::string, std::string>> PluginOpts;
     CachePruningPolicy Policy;
     enum class CacheType {
       CacheDirectory,
       CAS,
+      PluginCAS,
       RemoteService,
     } Type;
-    std::unique_ptr<cas::ObjectStore> CAS;
-    std::unique_ptr<cas::ActionCache> Cache;
+    std::shared_ptr<cas::ObjectStore> CAS;
+    std::shared_ptr<cas::ActionCache> Cache;
     std::optional<cas::remote::ClientServices> Service;
+
+    // Init the CAS and Cache
+    Error startCache();
   };
 
   /// Provide a path to a directory where to store the cached files for
@@ -247,9 +253,7 @@ public:
 
   /// Set the path to a directory where to save temporaries from the remote
   /// service.
-  void setRemoteServiceTempsDir(std::string Path) {
-    RemoteServiceTempsDir = std::move(Path);
-  }
+  void setRemoteServiceTempsDir(std::string Path);
 
   /// Set the path to a directory where to save generated object files. This
   /// path can be used by a linker to request on-disk files instead of in-memory

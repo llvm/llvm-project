@@ -13,6 +13,7 @@
 
 #include "llvm/LTO/legacy/ThinLTOCodeGenerator.h"
 #include "llvm/CAS/ActionCache.h"
+#include "llvm/CAS/BuiltinUnifiedCASDatabases.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/RemoteCachingService/Client.h"
 #include "llvm/Support/CommandLine.h"
@@ -1060,23 +1061,21 @@ Error ThinLTOCodeGenerator::setCacheDir(std::string Path) {
   // The environment overwrites the option parameter.
   if (PathStr.consume_front("cas:")) {
     CacheOptions.Type = CachingOptions::CacheType::CAS;
-    // Create ObjectStore and ActionCache.
-    auto MaybeCAS = cas::createOnDiskCAS(PathStr);
-    if (!MaybeCAS)
-      return MaybeCAS.takeError();
-    CacheOptions.CAS = std::move(*MaybeCAS);
-    auto MaybeCache = cas::createOnDiskActionCache(PathStr);
-    if (!MaybeCache)
-      return MaybeCache.takeError();
-    CacheOptions.Cache = std::move(*MaybeCache);
     CacheOptions.Path = PathStr.str();
+  } else if (PathStr.consume_front("plugin:")) {
+    CacheOptions.Type = CachingOptions::CacheType::PluginCAS;
+    auto [PluginPath, Remain] = PathStr.split(':');
+    auto [OnDiskPath, Options] = Remain.split('?');
+    while (!Options.empty()) {
+      auto [Pair, OptRemain] = Options.split(':');
+      auto [Name, Val] = StringRef(Pair).split('=');
+      CacheOptions.PluginOpts.push_back({std::string(Name), std::string(Val)});
+      Options = OptRemain;
+    }
+    CacheOptions.Path = OnDiskPath;
+    CacheOptions.PluginPath = PluginPath.str();
   } else if (PathStr.consume_front("grpc:")) {
     CacheOptions.Type = CachingOptions::CacheType::RemoteService;
-    auto MaybeService =
-        cas::remote::createCompilationCachingRemoteClient(PathStr);
-    if (!MaybeService)
-      return MaybeService.takeError();
-    CacheOptions.Service = std::move(*MaybeService);
     CacheOptions.Path = PathStr.str();
   } else {
     CacheOptions.Type = CachingOptions::CacheType::CacheDirectory;
@@ -1084,6 +1083,47 @@ Error ThinLTOCodeGenerator::setCacheDir(std::string Path) {
   }
 
   return Error::success();
+}
+
+Error ThinLTOCodeGenerator::CachingOptions::startCache() {
+  if (Type == CacheType::CacheDirectory)
+    return Error::success();
+
+  if (Type == CacheType::PluginCAS) {
+    if (Path.empty()) {
+      auto DefaultPath = cas::getDefaultOnDiskCASPath();
+      if (!DefaultPath)
+        return DefaultPath.takeError();
+      Path = *DefaultPath;
+    }
+    auto MaybeCAS = cas::createPluginCASDatabases(PluginPath, Path, PluginOpts);
+    if (!MaybeCAS)
+      return MaybeCAS.takeError();
+    CAS = std::move(MaybeCAS->first);
+    Cache = std::move(MaybeCAS->second);
+  } else if (Type == CacheType::CAS)  {
+    auto MaybeCAS = cas::createOnDiskUnifiedCASDatabases(Path);
+    if (!MaybeCAS)
+      return MaybeCAS.takeError();
+    CAS = std::move(MaybeCAS->first);
+    Cache = std::move(MaybeCAS->second);
+  } else if (Type == CacheType::RemoteService) {
+    auto MaybeService = cas::remote::createCompilationCachingRemoteClient(Path);
+    if (!MaybeService)
+      return MaybeService.takeError();
+    Service = std::move(*MaybeService);
+  }
+
+  return Error::success();
+}
+
+void ThinLTOCodeGenerator::setRemoteServiceTempsDir(std::string Path) {
+  RemoteServiceTempsDir = std::move(Path);
+
+  // If plugin CAS do not have a on disk path, use remote service path.
+  if (CacheOptions.Type == CachingOptions::CacheType::PluginCAS &&
+      CacheOptions.Path.empty())
+    CacheOptions.Path = RemoteServiceTempsDir;
 }
 
 std::unique_ptr<ModuleCacheEntry> ThinLTOCodeGenerator::createModuleCacheEntry(
@@ -1126,6 +1166,7 @@ static std::unique_ptr<AsyncModuleCacheEntry> createAsyncModuleCacheEntry(
 
   switch (CacheOptions.Type) {
   case ThinLTOCodeGenerator::CachingOptions::CacheType::CAS:
+  case ThinLTOCodeGenerator::CachingOptions::CacheType::PluginCAS:
     return std::make_unique<CASModuleCacheEntry>(
         *CacheOptions.CAS, *CacheOptions.Cache, std::move(*Key),
         std::move(Logger));
@@ -1598,6 +1639,11 @@ void ThinLTOCodeGenerator::run() {
   // Prepare the resulting object vector
   assert(ProducedBinaries.empty() && "The generator should not be reused");
 
+  // Start the cache before using.
+  auto Err = CacheOptions.startCache();
+  if (Err)
+    report_fatal_error(std::move(Err));
+
   // When using RemoteService caching, we will always create a saved object
   // directory for remote service to pass back the cached object file.
   // First, we need to remember whether the caller requests buffer API or file
@@ -1781,6 +1827,7 @@ void ThinLTOCodeGenerator::run() {
 
   // We can try running cache queries asynchronously.
   if (CacheOptions.Type == CachingOptions::CacheType::CAS ||
+      CacheOptions.Type == CachingOptions::CacheType::PluginCAS ||
       CacheOptions.Type == CachingOptions::CacheType::RemoteService) {
     enum ModuleState {
       // Initial state, no guarantees.

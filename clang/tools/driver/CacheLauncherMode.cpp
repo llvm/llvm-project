@@ -215,8 +215,12 @@ static void addLauncherArgs(SmallVectorImpl<const char *> &AllArgs,
   const char *ServicePath = ::getenv("LLVM_CACHE_REMOTE_SERVICE_SOCKET_PATH");
 
   if (ServicePath) {
-    AppendArgs({"-Xclang", "-fcompilation-caching-service-path", "-Xclang",
-        ServicePath});
+    if (llvm::sys::Process::GetEnv("LLVM_CACHE_PLUGIN_PATH"))
+      AppendArgs({"-Xclang", "-fcas-plugin-option", "-Xclang",
+                  std::string("remote-service-path=") + ServicePath});
+    else
+      AppendArgs({"-Xclang", "-fcompilation-caching-service-path", "-Xclang",
+                  ServicePath});
   }
   if (IsCOFF) {
     // Suppress timestamp non-determism in COFF object files.

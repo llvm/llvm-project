@@ -571,10 +571,21 @@ thinlto_code_gen_t thinlto_create_codegen(void) {
   if (sys::Process::GetEnv("LLVM_THINLTO_USE_REMOTE_CACHE")) {
     if (auto CacheSocket =
             sys::Process::GetEnv("LLVM_CACHE_REMOTE_SERVICE_SOCKET_PATH")) {
-      std::string Path = std::string("grpc:") + *CacheSocket;
+      std::string Path;
+      // Prefer using plugin CAS to do remote caching before falling back to
+      // using gRPC remote CAS.
+      if (auto PluginPath = sys::Process::GetEnv("LLVM_CACHE_PLUGIN_PATH")) {
+        Path = std::string("plugin:") + *PluginPath + ":" + ThinLTOCacheDir +
+               "?remote-service-path=" + *CacheSocket;
+        if (auto PluginOpts = sys::Process::GetEnv("LLVM_CACHE_PLUGIN_OPTIONS"))
+          Path += ":" + *PluginOpts;
+      } else
+        Path = std::string("grpc:") + *CacheSocket;
+
       auto Err = CodeGen->setCacheDir(Path);
       if (Err)
         report_fatal_error(std::move(Err));
+      return wrap(CodeGen);
     }
   }
 
