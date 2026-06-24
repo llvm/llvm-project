@@ -4933,7 +4933,7 @@ bool SIInstrInfo::isImmOperandLegal(const MCInstrDesc &InstDesc, unsigned OpNo,
                                     int64_t ImmVal) const {
   const unsigned Opc = InstDesc.getOpcode();
   int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
-  if (Src1Idx != -1 && !ST.hasDPPSrc1SGPR() && isDPP(Opc) &&
+  if (Src1Idx != -1 && isDPP(Opc) && !ST.hasDPPSrc1SGPR() &&
       OpNo == static_cast<unsigned>(Src1Idx))
     return false;
 
