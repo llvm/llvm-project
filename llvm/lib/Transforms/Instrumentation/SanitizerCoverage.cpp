@@ -20,6 +20,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
@@ -1321,9 +1322,9 @@ static DIType *stripDITypedefs(DIType *Ty) {
   return Ty;
 }
 
-// Helper: If Ty is a pointer to a struct (DICompositeType), collect byte
-// offsets of all scalar members. Returns the offsets array global and
-// num_fields.
+// Helper: If Ty is a pointer to a struct (DICompositeType) or a struct
+// directly, collect byte offsets of all scalar members. Returns the offsets
+// array global and num_fields.
 static std::pair<GlobalVariable *, unsigned>
 getStructFieldOffsets(DIType *Ty, Module &M, const DataLayout &DL) {
   if (!Ty)
@@ -1331,13 +1332,19 @@ getStructFieldOffsets(DIType *Ty, Module &M, const DataLayout &DL) {
 
   Ty = stripDITypedefs(Ty);
 
-  // Must be a pointer to something
-  auto *PtrTy = dyn_cast_or_null<DIDerivedType>(Ty);
-  if (!PtrTy || PtrTy->getTag() != dwarf::DW_TAG_pointer_type)
-    return {nullptr, 0};
+  DICompositeType *Composite = nullptr;
 
-  DIType *PointeeTy = stripDITypedefs(PtrTy->getBaseType());
-  auto *Composite = dyn_cast_or_null<DICompositeType>(PointeeTy);
+  // Case 1: pointer to struct
+  if (auto *PtrTy = dyn_cast_or_null<DIDerivedType>(Ty)) {
+    if (PtrTy->getTag() == dwarf::DW_TAG_pointer_type) {
+      DIType *PointeeTy = stripDITypedefs(PtrTy->getBaseType());
+      Composite = dyn_cast_or_null<DICompositeType>(PointeeTy);
+    }
+  }
+  // Case 2: direct struct type (for reassembled by-value args)
+  if (!Composite)
+    Composite = dyn_cast_or_null<DICompositeType>(Ty);
+
   if (!Composite || Composite->getTag() != dwarf::DW_TAG_structure_type)
     return {nullptr, 0};
 
@@ -1400,55 +1407,206 @@ void ModuleSanitizerCoverage::InjectTraceForArgs(Function &F) {
   // Get PC as the function address cast to i64
   Value *PC = IRB.CreatePtrToInt(&F, Int64Ty);
 
-  // For each argument, emit a trace call
-  unsigned ArgIdx = 0;
-  for (auto &Arg : F.args()) {
-    // Get debug info for this argument
-    DIType *ArgDIType = nullptr;
-    if (SP->getType()) {
-      auto *SubroutineType = SP->getType();
-      auto TypeArray = SubroutineType->getTypeArray();
-      // TypeArray[0] is return type, TypeArray[1..] are params
-      if (ArgIdx + 1 < TypeArray.size())
-        ArgDIType = TypeArray[ArgIdx + 1];
-    }
+  // Build source-level argument map from debug variable records.
+  // DILocalVariable::getArg() gives the 1-based source parameter number,
+  // which is ABI-stable: unaffected by sret insertion or struct decomposition.
+  //
+  // We scan ALL debug records in the entry block because ABI lowering may
+  // decompose one source argument into derived values (e.g., trunc of a
+  // coerced i64 into two i32 fragments). findDbgValues on the Argument
+  // alone would miss those derived values.
+  struct SourceArg {
+    DILocalVariable *Var = nullptr;
+    DIType *Ty = nullptr;
+    SmallVector<std::pair<Value *, uint64_t>, 2> Fragments; // {val, bit_off}
+  };
+  DenseMap<unsigned, SourceArg> SrcArgs;
 
-    auto [OffsetsGV, NumFields] = getStructFieldOffsets(ArgDIType, M, *DL);
+  // Pass 1: direct argument debug records (batched scan)
+  SmallVector<DbgVariableRecord *, 16> AllDVRs;
+  for (auto &Arg : F.args()) {
+    AllDVRs.clear();
+    findDbgValues(&Arg, AllDVRs);
+    for (auto *DVR : AllDVRs) {
+      DILocalVariable *Var = DVR->getVariable();
+      if (!Var || !Var->getArg())
+        continue;
+      unsigned SrcIdx = Var->getArg();
+      auto &SA = SrcArgs[SrcIdx];
+      SA.Var = Var;
+      SA.Ty = Var->getType();
+      uint64_t FragBitOff = 0;
+      if (auto Frag = DVR->getExpression()->getFragmentInfo())
+        FragBitOff = Frag->OffsetInBits;
+      SA.Fragments.push_back({&Arg, FragBitOff});
+    }
+  }
+
+  // Pass 2: scan entry block for debug records on derived values
+  // (handles struct coercion where debug info points at trunc/extract, not arg)
+  for (auto &I : EntryBB) {
+    for (auto &DVR : I.getDbgRecordRange()) {
+      auto *DVar = dyn_cast<DbgVariableRecord>(&DVR);
+      if (!DVar)
+        continue;
+      DILocalVariable *Var = DVar->getVariable();
+      if (!Var || !Var->getArg())
+        continue;
+      unsigned SrcIdx = Var->getArg();
+      // Skip if pass 1 already found a direct argument reference for this param
+      auto It = SrcArgs.find(SrcIdx);
+      if (It != SrcArgs.end() && !It->second.Fragments.empty() &&
+          isa<Argument>(It->second.Fragments[0].first))
+        continue;
+      Value *V = DVar->getValue();
+      if (!V || isa<Argument>(V))
+        continue; // Direct args handled in pass 1
+      auto &SA = SrcArgs[SrcIdx];
+      SA.Var = Var;
+      SA.Ty = Var->getType();
+      uint64_t FragBitOff = 0;
+      if (auto Frag = DVar->getExpression()->getFragmentInfo())
+        FragBitOff = Frag->OffsetInBits;
+      SA.Fragments.push_back({V, FragBitOff});
+    }
+  }
+
+  // Fallback: if no debug records found (compiled without -g or stripped),
+  // use the original TypeArray-based indexing.
+  if (SrcArgs.empty()) {
+    unsigned ArgIdx = 0;
+    for (auto &Arg : F.args()) {
+      // Skip ABI-inserted hidden args that don't correspond to source params
+      if (Arg.hasStructRetAttr())
+        continue;
+      DIType *ArgDIType = nullptr;
+      if (SP->getType()) {
+        auto TypeArray = SP->getType()->getTypeArray();
+        if (ArgIdx + 1 < TypeArray.size())
+          ArgDIType = TypeArray[ArgIdx + 1];
+      }
+      auto [OffsetsGV, NumFields] = getStructFieldOffsets(ArgDIType, M, *DL);
+      Value *ArgPtr;
+      if (Arg.getType()->isPointerTy()) {
+        ArgPtr = &Arg;
+      } else {
+        AllocaInst *Alloca = IRB.CreateAlloca(Arg.getType());
+        IRB.CreateStore(&Arg, Alloca);
+        ArgPtr = Alloca;
+      }
+      unsigned ArgByteSize = Arg.getType()->isPointerTy()
+                                 ? DL->getPointerSize()
+                                 : DL->getTypeStoreSize(Arg.getType());
+      Value *OffsetsPtr = Constant::getNullValue(PtrTy);
+      if (OffsetsGV) {
+        Value *Indices[] = {ConstantInt::get(Int64Ty, 0),
+                            ConstantInt::get(Int64Ty, 1)};
+        OffsetsPtr = IRB.CreateInBoundsGEP(OffsetsGV->getValueType(),
+                                           OffsetsGV, Indices);
+      }
+      IRB.CreateCall(SanCovTraceArgsFunc,
+                     {PC, ConstantInt::get(Int32Ty, ArgIdx),
+                      ConstantInt::get(Int32Ty, ArgByteSize), ArgPtr,
+                      OffsetsPtr, ConstantInt::get(Int32Ty, NumFields)});
+      ArgIdx++;
+    }
+    return;
+  }
+
+  // Emit one trace call per source-level argument, sorted by source position.
+  // Place trace calls before the entry block terminator so all values dominate.
+  SmallVector<unsigned, 8> SortedKeys;
+  for (auto &[K, _] : SrcArgs)
+    SortedKeys.push_back(K);
+  llvm::sort(SortedKeys);
+
+  IRBuilder<> TraceIRB(EntryBB.getTerminator());
+
+  for (unsigned SrcIdx : SortedKeys) {
+    auto &SA = SrcArgs[SrcIdx];
+    auto [OffsetsGV, NumFields] = getStructFieldOffsets(SA.Ty, M, *DL);
 
     Value *ArgPtr;
-    if (Arg.getType()->isPointerTy()) {
-      ArgPtr = &Arg;
+    unsigned ArgByteSize;
+
+    if (SA.Fragments.size() == 1) {
+      // Single IR arg for this source param (common case: pointers, scalars)
+      Value *V = SA.Fragments[0].first;
+      if (V->getType()->isPointerTy()) {
+        ArgPtr = V;
+        ArgByteSize = DL->getPointerSize();
+      } else {
+        AllocaInst *Alloca = IRB.CreateAlloca(V->getType());
+        TraceIRB.CreateStore(V, Alloca);
+        ArgPtr = Alloca;
+        ArgByteSize = DL->getTypeStoreSize(V->getType());
+      }
     } else {
-      // Spill non-pointer arg to stack so we can pass its address
-      AllocaInst *Alloca = IRB.CreateAlloca(Arg.getType());
-      IRB.CreateStore(&Arg, Alloca);
-      ArgPtr = Alloca;
+      // Multiple IR args for one source param (ABI struct decomposition).
+      // Reassemble fragments into a stack slot matching the source layout.
+      unsigned TotalBits = 0;
+      for (auto &[V, BitOff] : SA.Fragments) {
+        unsigned End = BitOff + DL->getTypeSizeInBits(V->getType());
+        if (End > TotalBits)
+          TotalBits = End;
+      }
+      unsigned TotalBytes = (TotalBits + 7) / 8;
+      AllocaInst *Slot =
+          IRB.CreateAlloca(ArrayType::get(IRB.getInt8Ty(), TotalBytes));
+      Slot->setAlignment(Align(8));
+      TraceIRB.CreateMemSet(Slot, TraceIRB.getInt8(0), TotalBytes,
+                            Slot->getAlign());
+      for (auto &[V, BitOff] : SA.Fragments) {
+        unsigned ByteOff = BitOff / 8;
+        Value *Ptr = TraceIRB.CreateGEP(TraceIRB.getInt8Ty(), Slot,
+                                        ConstantInt::get(Int32Ty, ByteOff));
+        TraceIRB.CreateAlignedStore(V, Ptr, Align(1));
+      }
+      ArgPtr = Slot;
+      ArgByteSize = TotalBytes;
     }
 
-    // Compute arg byte size
-    unsigned ArgByteSize = Arg.getType()->isPointerTy()
-                               ? DL->getPointerSize()
-                               : DL->getTypeStoreSize(Arg.getType());
-
-    // OffsetsGV layout: [hash, off0, sz0, off1, sz1, ...]
-    // Pass pointer to &array[1] so kernel sees field data at offsets[0],
-    // and can read offsets[-1] for the type hash.
-    Value *OffsetsPtr;
+    Value *OffsetsPtr = Constant::getNullValue(PtrTy);
     if (OffsetsGV) {
       Value *Indices[] = {ConstantInt::get(Int64Ty, 0),
                           ConstantInt::get(Int64Ty, 1)};
-      OffsetsPtr =
-          IRB.CreateInBoundsGEP(OffsetsGV->getValueType(), OffsetsGV, Indices);
-    } else {
-      OffsetsPtr = Constant::getNullValue(PtrTy);
+      OffsetsPtr = TraceIRB.CreateInBoundsGEP(OffsetsGV->getValueType(),
+                                              OffsetsGV, Indices);
     }
-    Value *NF = ConstantInt::get(Int32Ty, NumFields);
-    Value *ArgIdxVal = ConstantInt::get(Int32Ty, ArgIdx);
-    Value *ArgSizeVal = ConstantInt::get(Int32Ty, ArgByteSize);
+    // Report 0-based source arg index
+    TraceIRB.CreateCall(SanCovTraceArgsFunc,
+                        {PC, ConstantInt::get(Int32Ty, SrcIdx - 1),
+                         ConstantInt::get(Int32Ty, ArgByteSize), ArgPtr,
+                         OffsetsPtr, ConstantInt::get(Int32Ty, NumFields)});
+  }
 
-    IRB.CreateCall(SanCovTraceArgsFunc,
-                   {PC, ArgIdxVal, ArgSizeVal, ArgPtr, OffsetsPtr, NF});
-    ArgIdx++;
+  // Dead-arg fallback: if the DISubroutineType indicates more source params
+  // than we found via debug records (e.g., arg optimized away entirely at -O2),
+  // emit a null-pointer trace so consumers know the argument existed.
+  if (SP->getType()) {
+    auto TypeArray = SP->getType()->getTypeArray();
+    unsigned NumSrcParams = TypeArray.size() > 0 ? TypeArray.size() - 1 : 0;
+    for (unsigned I = 1; I <= NumSrcParams; ++I) {
+      if (!SrcArgs.count(I)) {
+        // This source param had no debug record — likely optimized away
+        DIType *ArgDIType = TypeArray[I];
+        auto [OffsetsGV, NumFields] = getStructFieldOffsets(ArgDIType, M, *DL);
+        Value *OffsetsPtr = Constant::getNullValue(PtrTy);
+        if (OffsetsGV) {
+          Value *Indices[] = {ConstantInt::get(Int64Ty, 0),
+                              ConstantInt::get(Int64Ty, 1)};
+          OffsetsPtr = TraceIRB.CreateInBoundsGEP(OffsetsGV->getValueType(),
+                                                  OffsetsGV, Indices);
+        }
+        // Pass null pointer — kernel will record 0xBADADD85 for all fields
+        TraceIRB.CreateCall(
+            SanCovTraceArgsFunc,
+            {PC, ConstantInt::get(Int32Ty, I - 1),
+             ConstantInt::get(Int32Ty, 0),
+             Constant::getNullValue(PtrTy), OffsetsPtr,
+             ConstantInt::get(Int32Ty, NumFields)});
+      }
+    }
   }
 }
 
