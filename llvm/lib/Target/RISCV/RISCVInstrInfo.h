@@ -72,8 +72,16 @@ unsigned getBrCond(CondCode CC, unsigned SelectOpc = 0);
 enum RISCVMachineCombinerPattern : unsigned {
   FMADD_AX = MachineCombinerPattern::TARGET_PATTERN_START,
   FMADD_XA,
+  VFMADD_AX,
+  VFMADD_XA,
+  VFMACC_AX,
+  VFMACC_XA,
   FMSUB,
   FNMSUB,
+  VFMSUB,
+  VFNMSUB,
+  VFMSAC,
+  VFNMSAC,
   SHXADD_ADD_SLLI_OP1,
   SHXADD_ADD_SLLI_OP2,
 };

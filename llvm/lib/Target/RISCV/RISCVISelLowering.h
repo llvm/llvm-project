@@ -483,6 +483,9 @@ public:
   static bool isSpreadMask(ArrayRef<int> Mask, unsigned Factor,
                            unsigned &Index);
 
+  bool generateFMAsInMachineCombiner(EVT VT,
+                                     CodeGenOptLevel OptLevel) const override;
+
 private:
   template <class NodeTy>
   SDValue getAddr(NodeTy *N, SelectionDAG &DAG, bool IsLocal = true,
