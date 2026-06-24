@@ -638,6 +638,8 @@ private:
 
   std::pair<const TargetRegisterClass *, uint8_t>
   findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT) const override;
+
+  void createLiveRangesForCSRs(MachineFunction &MF) const;
 };
 
 namespace RISCVVIntrinsicsTable {

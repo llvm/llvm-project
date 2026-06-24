@@ -26861,8 +26861,64 @@ bool RISCVTargetLowering::isIntDivCheap(EVT VT, AttributeList Attr) const {
 }
 
 void RISCVTargetLowering::finalizeLowering(MachineFunction &MF) const {
+  if (Subtarget.savesCSRsEarly())
+    createLiveRangesForCSRs(MF);
   MF.getFrameInfo().computeMaxCallFrameSize(MF);
   TargetLoweringBase::finalizeLowering(MF);
+}
+
+void RISCVTargetLowering::createLiveRangesForCSRs(MachineFunction &MF) const {
+  const RISCVFrameLowering &TFI = *Subtarget.getFrameLowering();
+
+  BitVector EarlyCSRs;
+  TFI.determineEarlyCalleeSaves(MF, EarlyCSRs);
+  if(EarlyCSRs.none())
+    return;
+
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  const RISCVRegisterInfo &TRI = *Subtarget.getRegisterInfo();
+
+  SmallVector<MachineInstr *, 4> RestorePoints;
+  MachineBasicBlock &EntryMBB = MF.front();
+  for (MachineBasicBlock &MBB : MF) {
+    if (MBB.isReturnBlock())
+      RestorePoints.push_back(&MBB.back());
+  }
+
+  SmallVector<Register, 4> VRegs;
+  for (unsigned Reg = 0; Reg < EarlyCSRs.size(); ++Reg) {
+    if (!EarlyCSRs[Reg])
+      continue;
+    EntryMBB.addLiveIn(Reg);
+    // use the most canonical register class for the register.
+    const TargetRegisterClass *RC = TRI.getPhysRegBaseClass(Reg);
+    Register VReg = MRI.createVirtualRegister(RC);
+    VRegs.push_back(VReg);
+    BuildMI(EntryMBB, EntryMBB.begin(),
+            EntryMBB.findDebugLoc(EntryMBB.begin()),
+            TII.get(TargetOpcode::COPY), VReg)
+        .addReg(Reg);
+    MRI.setSimpleHint(VReg, Reg);
+  }
+  EntryMBB.sortUniqueLiveIns();
+
+  for (MachineInstr *RestorePoint : RestorePoints) {
+    auto VRegI = VRegs.begin();
+    for (unsigned Reg = 0; Reg < EarlyCSRs.size(); ++Reg) {
+      if (!EarlyCSRs[Reg])
+        continue;
+      Register VReg = *VRegI;
+      BuildMI(*RestorePoint->getParent(), RestorePoint->getIterator(),
+              RestorePoint->getDebugLoc(), TII.get(TargetOpcode::COPY), Reg)
+          .addReg(VReg);
+      RestorePoint->addOperand(MF,
+                               MachineOperand::CreateReg(Reg,
+                                                         /*isDef=*/false,
+                                                         /*isImplicit=*/true));
+      VRegI++;
+    }
+  }
 }
 
 bool RISCVTargetLowering::preferScalarizeSplat(SDNode *N) const {
