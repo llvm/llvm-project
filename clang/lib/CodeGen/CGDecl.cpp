@@ -2228,13 +2228,8 @@ void CodeGenFunction::EmitAutoVarCleanups(const AutoVarEmission &emission) {
   const VarDecl &D = *emission.Variable;
 
   // Check the type for a cleanup.
-  if (QualType::DestructionKind dtorKind = D.needsDestruction(getContext())) {
-    // Check if we're in a SEH block with /EH, prevent it
-    if (getLangOpts().CXXExceptions && currentFunctionUsesSEHTry())
-      getContext().getDiagnostics().Report(D.getLocation(),
-                                           diag::err_seh_object_unwinding);
+  if (QualType::DestructionKind dtorKind = D.needsDestruction(getContext()))
     emitAutoVarTypeCleanup(emission, dtorKind);
-  }
 
   // In GC mode, honor objc_precise_lifetime.
   if (getLangOpts().getGC() != LangOptions::NonGC &&

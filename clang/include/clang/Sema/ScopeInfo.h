@@ -238,6 +238,11 @@ public:
   /// prior to being emitted.
   SmallVector<PossiblyUnreachableDiag, 4> PossiblyUnreachableDiags;
 
+  /// Source locations of declarations or expressions that require object
+  /// unwinding (non-trivial destruction or throwing new-expressions).
+  /// Checked against SEH __try usage at function end.
+  SmallVector<SourceLocation, 4> ObjUnwindingLocs;
+
   /// A list of parameters which have the nonnull attribute and are
   /// modified in the function.
   llvm::SmallPtrSet<const ParmVarDecl *, 8> ModifiedNonNullParams;
