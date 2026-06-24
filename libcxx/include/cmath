@@ -224,6 +224,14 @@ int ilogb (arithmetic x);
 int ilogbf(float x);
 int ilogbl(long double x);
 
+double         legendre(unsigned n, double x);                    // C++17
+float          legendre(unsigned n, float x);                     // C++17
+long double    legendre(unsigned n, long double x);               // C++17
+float          legendref(unsigned n, float x);                    // C++17
+long double    legendrel(unsigned n, long double x);              // C++17
+template <class Integer>
+double         legendre(unsigned n, Integer x);                   // C++17
+
 floating_point lgamma (arithmetic x);
 float          lgammaf(float x);
 long double    lgammal(long double x);

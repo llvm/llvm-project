@@ -346,12 +346,14 @@ export namespace std {
   using std::laguerre;
   using std::laguerref;
   using std::laguerrel;
+#endif
 
   // [sf.cmath.legendre], Legendre polynomials
   using std::legendre;
   using std::legendref;
   using std::legendrel;
 
+#if 0
   // [sf.cmath.riemann.zeta], Riemann zeta function
   using std::riemann_zeta;
   using std::riemann_zetaf;
