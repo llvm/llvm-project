@@ -81,7 +81,7 @@ std::vector<CompileCommand> ArgumentsAdjustingCompilations::adjustCommands(
 }
 
 llvm::Error CommonOptionsParser::init(
-    int &argc, const char **argv, cl::OptionCategory &Category,
+    int &argc, const char **argv, const cl::OptionCategory &Category,
     llvm::cl::NumOccurrencesFlag OccurrencesFlag, const char *Overview) {
 
   static cl::opt<std::string> BuildPath("p", cl::desc("Build path"),
@@ -153,7 +153,7 @@ llvm::Error CommonOptionsParser::init(
 }
 
 llvm::Expected<CommonOptionsParser> CommonOptionsParser::create(
-    int &argc, const char **argv, llvm::cl::OptionCategory &Category,
+    int &argc, const char **argv, const llvm::cl::OptionCategory &Category,
     llvm::cl::NumOccurrencesFlag OccurrencesFlag, const char *Overview) {
   CommonOptionsParser Parser;
   llvm::Error Err =
@@ -164,7 +164,7 @@ llvm::Expected<CommonOptionsParser> CommonOptionsParser::create(
 }
 
 CommonOptionsParser::CommonOptionsParser(
-    int &argc, const char **argv, cl::OptionCategory &Category,
+    int &argc, const char **argv, const cl::OptionCategory &Category,
     llvm::cl::NumOccurrencesFlag OccurrencesFlag, const char *Overview) {
   llvm::Error Err = init(argc, argv, Category, OccurrencesFlag, Overview);
   if (Err) {
