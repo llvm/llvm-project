@@ -67,6 +67,10 @@ int main(void) {
   return also_before() + also_before(1) + also_before(2.0f) + also_after(3.0) + also_after(4L);
 }
 
+// Make sure we see base calls in the FLOAT versions.
+// In the INT versions we want variant calls for the `*_before` functions
+// but not the `*_after` ones (first 3 vs 2 last ones).
+
 // FLOAT: call {{.*}} @{{.*}}also_beforev
 // FLOAT: call {{.*}} @{{.*}}also_beforei
 // FLOAT: call {{.*}} @{{.*}}also_beforei

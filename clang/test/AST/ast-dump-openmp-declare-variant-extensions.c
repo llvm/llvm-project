@@ -83,18 +83,18 @@ int test(void) {
          overloaded1() + overloaded2();
 }
 
-// CHECK: call {{.*}} @{{.*}}picked1
-// CHECK: call {{.*}} @{{.*}}picked2
-// CHECK: call {{.*}} @{{.*}}picked3
-// CHECK: call {{.*}} @{{.*}}picked4
-// CHECK: call {{.*}} @{{.*}}picked5
-// CHECK: call {{.*}} @{{.*}}base6
-// CHECK: call {{.*}} @{{.*}}base7
-// CHECK: call {{.*}} @{{.*}}not_picked3
-// CHECK: call {{.*}} @{{.*}}base9
-// CHECK: call {{.*}} @{{.*}}base10
-// CHECK: call {{.*}} @{{.*}}base11
-// CHECK: call {{.*}} @{{.*}}picked6
-// CHECK: call {{.*}} @{{.*}}picked7
+// CHECK: call {{.*}} @{{.*}}picked1{{[^$]*"?\(\)}}
+// CHECK: call {{.*}} @{{.*}}picked2{{[^$]*"?\(\)}}
+// CHECK: call {{.*}} @{{.*}}picked3{{[^$]*"?\(\)}}
+// CHECK: call {{.*}} @{{.*}}picked4{{[^$]*"?\(\)}}
+// CHECK: call {{.*}} @{{.*}}picked5{{[^$]*"?\(\)}}
+// CHECK: call {{.*}} @{{.*}}base6{{[^$]*"?\(\)}}
+// CHECK: call {{.*}} @{{.*}}base7{{[^$]*"?\(\)}}
+// CHECK: call {{.*}} @{{.*}}not_picked3{{[^$]*"?\(\)}}
+// CHECK: call {{.*}} @{{.*}}base9{{[^$]*"?\(\)}}
+// CHECK: call {{.*}} @{{.*}}base10{{[^$]*"?\(\)}}
+// CHECK: call {{.*}} @{{.*}}base11{{[^$]*"?\(\)}}
+// CHECK: call {{.*}} @{{.*}}picked6{{[^$]*"?\(\)}}
+// CHECK: call {{.*}} @{{.*}}picked7{{[^$]*"?\(\)}}
 // CHECK: call {{.*}} @{{.*}}overloaded1$ompvariant$S4$s12$Pmatch_any$S2$s6$Pcpu$Pgpu
 // CHECK: call {{.*}} @{{.*}}overloaded2$ompvariant$S4$s12$Pmatch_none$S2$s6$Pfpga$Pgpu

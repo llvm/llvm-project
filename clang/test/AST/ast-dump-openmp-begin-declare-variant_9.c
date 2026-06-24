@@ -31,6 +31,6 @@ int main(void) {
          (1[fns])();
 }
 
-// CHECK: store ptr @{{.*}}also_before
-// CHECK: store ptr @{{.*}}also_after
-// CHECK: call {{.*}} @{{.*}}also_after
+// CHECK: store ptr @{{.*}}also_before{{[^$]*"?}}
+// CHECK: store ptr @{{.*}}also_after{{[^$]*"?}}
+// CHECK: call {{.*}} @{{.*}}also_after{{[^$]*"?\(\)}}

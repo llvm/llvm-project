@@ -45,4 +45,4 @@ int main(void) {
 // CHECK:     call {{.*}} @{{.*}}also_before1$ompvariant$S4$s11$Pllvm
 // CHECK:     call {{.*}} @{{.*}}also_before2$ompvariant$S4$s11$Pllvm
 // CHECK:     call {{.*}} @{{.*}}also_before3$ompvariant$S4$s11$Pllvm
-// CHECK-NOT: call {{.*}} @{{.*}}also_before4$ompvariant$S4$s11$Pllvm
+// CHECK-NOT: call {{.*}} @{{.*}}also_before4{{[^$]*"?\(\)}}

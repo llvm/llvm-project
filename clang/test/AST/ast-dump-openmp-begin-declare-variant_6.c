@@ -24,5 +24,5 @@ int main(void) {
   return also_after() + also_before();
 }
 
-// CHECK: call {{.*}} @{{.*}}also_after
-// CHECK: call {{.*}} @{{.*}}also_before
+// CHECK: call {{.*}} @{{.*}}also_after{{[^$]*"?\(\)}}
+// CHECK: call {{.*}} @{{.*}}also_before{{[^$]*"?\(\)}}

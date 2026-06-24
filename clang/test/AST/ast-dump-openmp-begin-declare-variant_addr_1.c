@@ -30,7 +30,7 @@ int main(void) {
          test(&also_before);
 }
 
-// CHECK: call {{.*}} @{{.*}}also_after
-// CHECK: call {{.*}} @{{.*}}also_before
-// CHECK: call {{.*}} @{{.*}}also_after
-// CHECK: call {{.*}} @{{.*}}also_before
+// CHECK: call {{.*}} @{{.*}}also_after{{[^$]*"?}}
+// CHECK: call {{.*}} @{{.*}}also_before{{[^$]*"?}}
+// CHECK: call {{.*}} @{{.*}}also_after{{[^$]*"?}}
+// CHECK: call {{.*}} @{{.*}}also_before{{[^$]*"?}}

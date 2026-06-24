@@ -17,5 +17,5 @@ int test(void) {
   return also_after() + also_before();
 }
 
-// CHECK: call {{.*}} @{{.*}}also_after
+// CHECK: call {{.*}} @{{.*}}also_after{{[^$]*"?\(\)}}
 // CHECK: call {{.*}} @"{{.*}}also_before$ompvariant$S2$s6$Pcpu
