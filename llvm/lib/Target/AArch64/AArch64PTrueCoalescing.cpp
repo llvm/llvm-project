@@ -43,18 +43,6 @@ static cl::opt<bool> EnablePTrueCoalescing(
 
 namespace {
 
-static bool isAllActivePTrue(const MachineInstr &MI) {
-  switch (MI.getOpcode()) {
-  default:
-    return false;
-  case AArch64::PTRUE_B:
-  case AArch64::PTRUE_H:
-  case AArch64::PTRUE_S:
-  case AArch64::PTRUE_D:
-    return MI.getOperand(1).getImm() == 31;
-  }
-}
-
 class AArch64PTrueCoalescingImpl {
   const AArch64InstrInfo *TII = nullptr;
   MachineRegisterInfo *MRI = nullptr;
@@ -66,8 +54,48 @@ public:
   bool run(MachineFunction &MF);
 
 private:
-  bool allUsersSafeForElementSize(Register Reg, uint64_t ElementSize) const;
-  bool tryCoalesce(MachineInstr &DomPTrue, MachineInstr &PTrue) const;
+  struct PredicateInfo {
+    // Instruction that created the predicate.
+    MachineInstr *MI = nullptr;
+    // Element size of the MI.
+    unsigned ElementSize = AArch64::ElementSizeNone;
+    // Smallest element size of all instructions that use the predicate.
+    unsigned SmallestUsedElementSize = AArch64::ElementSizeNone;
+
+    bool isValid() const {
+      return MI && ElementSize != AArch64::ElementSizeNone &&
+             SmallestUsedElementSize != AArch64::ElementSizeNone;
+    }
+
+    void invalidate() {
+      assert(isValid());
+      MI = nullptr;
+    }
+  };
+
+  std::optional<PredicateInfo> createPredicateInfo(MachineInstr &MI) const {
+    // TODO: Extend support beyond "PTRUE all"?
+    if (!isPTrueOpcode(MI.getOpcode()) || MI.getOperand(1).getImm() != 31)
+      return std::nullopt;
+
+    Register Pred = MI.getOperand(0).getReg();
+    unsigned SmallestUsedElementSize = getSmallestElementSizeInUse(Pred);
+    unsigned ElementSize = TII->getElementSizeForOpcode(MI.getOpcode());
+
+    if (ElementSize == AArch64::ElementSizeNone ||
+        SmallestUsedElementSize == AArch64::ElementSizeNone)
+      return std::nullopt;
+
+    return PredicateInfo{&MI, ElementSize, SmallestUsedElementSize};
+  }
+
+  // Return the smallest element size of all instructions that use Reg, or
+  // AArch64::ElementSizeNone when unknown.
+  unsigned getSmallestElementSizeInUse(Register Reg) const;
+
+  // Try to replace uses of CanPred with DomPred. In some cases that means
+  // modifying DomPred to support smaller element types.
+  bool tryCoalesce(PredicateInfo &DomPred, PredicateInfo &CanPred) const;
 };
 
 class AArch64PTrueCoalescingLegacy : public MachineFunctionPass {
@@ -98,70 +126,80 @@ INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_END(AArch64PTrueCoalescingLegacy, DEBUG_TYPE,
                     "AArch64 PTRUE Coalescing", false, false)
 
-bool AArch64PTrueCoalescingImpl::allUsersSafeForElementSize(
-    Register Reg, uint64_t ElementSize) const {
+unsigned
+AArch64PTrueCoalescingImpl::getSmallestElementSizeInUse(Register Reg) const {
+  // SSA form only applies to virtual registers.
+  if (!Reg.isVirtual())
+    return AArch64::ElementSizeNone;
+
+  unsigned SmallestElementSize = AArch64::ElementSizeNone;
+
   for (MachineOperand &UseMO : MRI->use_nodbg_operands(Reg)) {
     if (UseMO.getSubReg())
-      return false;
+      return AArch64::ElementSizeNone;
 
     MachineInstr *UseMI = UseMO.getParent();
-    uint64_t UseElementSize = TII->getElementSizeForOpcode(UseMI->getOpcode());
-    if (UseElementSize == AArch64::ElementSizeNone ||
-        UseElementSize < ElementSize)
-      return false;
+
+    unsigned ElementSize = TII->getElementSizeForOpcode(UseMI->getOpcode());
+    if (ElementSize == AArch64::ElementSizeNone)
+      return AArch64::ElementSizeNone;
+
+    if (SmallestElementSize == AArch64::ElementSizeNone ||
+        SmallestElementSize > ElementSize)
+      SmallestElementSize = ElementSize;
   }
 
-  return true;
+  return SmallestElementSize;
 }
 
-bool AArch64PTrueCoalescingImpl::tryCoalesce(MachineInstr &DomPTrue,
-                                             MachineInstr &PTrue) const {
-  assert(isAllActivePTrue(DomPTrue) && "Expected all-active PTRUE");
-  assert(isAllActivePTrue(PTrue) && "Expected all-active PTRUE");
+bool AArch64PTrueCoalescingImpl::tryCoalesce(PredicateInfo &DomPI,
+                                             PredicateInfo &CanPI) const {
+  assert(DomPI.isValid() && CanPI.isValid());
+  MachineInstr *DomMI = DomPI.MI;
+  MachineInstr *CanMI = CanPI.MI;
 
-  if (&DomPTrue == &PTrue || !MDT->dominates(&DomPTrue, &PTrue))
+  if (DomMI == CanMI || !MDT->dominates(DomMI, CanMI))
     return false;
 
-  Register DomReg = DomPTrue.getOperand(0).getReg();
-  Register Reg = PTrue.getOperand(0).getReg();
-
-  uint64_t DomElementSize = TII->getElementSizeForOpcode(DomPTrue.getOpcode());
-  uint64_t ElementSize = TII->getElementSizeForOpcode(PTrue.getOpcode());
-  assert(DomElementSize != AArch64::ElementSizeNone &&
-         "PTRUE should have an element size");
-  assert(ElementSize != AArch64::ElementSizeNone &&
-         "PTRUE should have an element size");
-
-  if (!MRI->constrainRegClass(DomReg, MRI->getRegClass(Reg)))
-    return false;
+  // A predicate's observable shape is the larger of the element size of the
+  // instruction writing the predicate and the one reading it. First check if
+  // DomPI can replace CanPI as-is for CanPI's users. If not, try changing DomPI
+  // to CanPI's element size, but only if DomPI's existing users would observe
+  // the same shape after that change.
 
   bool MutateDomPTrue = false;
-  if (DomElementSize < ElementSize) {
-    // DomPTrue sets all lanes set by PTrue, plus extra lanes. Prefer to reuse
-    // DomPTrue as-is when PTrue's users do not observe those extra lanes.
-    if (!allUsersSafeForElementSize(Reg, ElementSize)) {
-      if (!allUsersSafeForElementSize(DomReg, ElementSize))
-        return false;
-      MutateDomPTrue = true;
-    }
-  } else if (DomElementSize > ElementSize) {
-    if (!allUsersSafeForElementSize(DomReg, ElementSize))
+  if (std::max(CanPI.ElementSize, CanPI.SmallestUsedElementSize) !=
+      std::max(DomPI.ElementSize, CanPI.SmallestUsedElementSize)) {
+    if (std::max(CanPI.ElementSize, DomPI.SmallestUsedElementSize) !=
+        std::max(DomPI.ElementSize, DomPI.SmallestUsedElementSize))
       return false;
+
     MutateDomPTrue = true;
   }
 
-  LLVM_DEBUG(dbgs() << "Coalescing PTRUE: " << PTrue);
-  LLVM_DEBUG(dbgs() << "            with: " << DomPTrue);
+  Register DomReg = DomMI->getOperand(0).getReg();
+  Register CanReg = CanMI->getOperand(0).getReg();
+  if (!MRI->constrainRegClass(DomReg, MRI->getRegClass(CanReg)))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Coalescing PTRUE: " << CanMI);
+  LLVM_DEBUG(dbgs() << "            with: " << DomMI);
 
   if (MutateDomPTrue) {
-    LLVM_DEBUG(dbgs() << "        updated: " << DomPTrue);
-    DomPTrue.setDesc(TII->get(PTrue.getOpcode()));
-    LLVM_DEBUG(dbgs() << "             to: " << DomPTrue);
+    LLVM_DEBUG(dbgs() << "        updated: " << DomMI);
+    DomMI->setDesc(TII->get(CanMI->getOpcode()));
+    DomPI.ElementSize = CanPI.ElementSize;
+    LLVM_DEBUG(dbgs() << "             to: " << DomMI);
   }
 
-  MRI->replaceRegWith(Reg, DomReg);
+  MRI->replaceRegWith(CanReg, DomReg);
   MRI->clearKillFlags(DomReg);
-  PTrue.eraseFromParent();
+  CanMI->eraseFromParent();
+
+  // Update DomPI based on uses inherited from CanPI.
+  if (CanPI.SmallestUsedElementSize < DomPI.SmallestUsedElementSize)
+    DomPI.SmallestUsedElementSize = CanPI.SmallestUsedElementSize;
+  CanPI.invalidate();
   return true;
 }
 
@@ -175,26 +213,32 @@ bool AArch64PTrueCoalescingImpl::run(MachineFunction &MF) {
 
   assert(MRI->isSSA() && "Expected to be run on SSA form!");
 
-  SmallVector<MachineInstr *, 8> PTrues;
+  // TODO: Until we prove candidates share the same VG definition, do not
+  // coalesce in functions that define VG.
+  if (!MRI->def_empty(AArch64::VG))
+    return false;
+
+  // A list of predicate setting instructions with some usage information.
+  SmallVector<PredicateInfo, 8> PIs;
+
+  // Build a list of predicates whose uses all have a known size.
   for (MachineBasicBlock &MBB : MF)
     for (MachineInstr &MI : MBB)
-      if (isAllActivePTrue(MI))
-        PTrues.push_back(&MI);
+      if (auto PI = createPredicateInfo(MI))
+        PIs.push_back(*PI);
 
+  LLVM_DEBUG(dbgs() << "Coalescable PTRUE candidates: " << PIs.size() << "\n");
   bool Changed = false;
-  auto tryCoalescePTrue = [&](MachineInstr *PTrue) {
-    for (MachineInstr *Candidate : PTrues)
-      if (tryCoalesce(*Candidate, *PTrue))
-        return true;
-    return false;
-  };
 
-  for (auto I = PTrues.begin(); I != PTrues.end();) {
-    if (tryCoalescePTrue(*I)) {
-      I = PTrues.erase(I);
-      Changed = true;
-    } else {
-      ++I;
+  for (PredicateInfo &DominantPI : PIs) {
+    if (!DominantPI.isValid())
+      continue;
+
+    for (PredicateInfo &CandidatePI : PIs) {
+      if (!CandidatePI.isValid())
+        continue;
+
+      Changed |= tryCoalesce(DominantPI, CandidatePI);
     }
   }
 
