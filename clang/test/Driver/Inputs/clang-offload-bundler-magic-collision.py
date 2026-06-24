@@ -36,9 +36,14 @@ def main():
     if len(sys.argv) < 2:
         sys.exit("usage: %s <clang-offload-bundler> [output.co]" % sys.argv[0])
     bundler = sys.argv[1]
-    out = sys.argv[2] if len(sys.argv) > 2 else \
-        os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                     "clang-offload-bundler-magic-collision.co")
+    out = (
+        sys.argv[2]
+        if len(sys.argv) > 2
+        else os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "clang-offload-bundler-magic-collision.co",
+        )
+    )
 
     with tempfile.TemporaryDirectory() as d:
         dev1 = os.path.join(d, "dev1")
@@ -49,11 +54,18 @@ def main():
             f.write(b"Content of device file 2\n")
         base = os.path.join(d, "base.co")
         subprocess.run(
-            [bundler, "-compress", "-type=bc",
-             "-targets=hip-amdgcn-amd-amdhsa--gfx906,"
-             "hip-amdgcn-amd-amdhsa--gfx908",
-             "-input=" + dev1, "-input=" + dev2, "-output=" + base],
-            check=True)
+            [
+                bundler,
+                "-compress",
+                "-type=bc",
+                "-targets=hip-amdgcn-amd-amdhsa--gfx906,"
+                "hip-amdgcn-amd-amdhsa--gfx908",
+                "-input=" + dev1,
+                "-input=" + dev2,
+                "-output=" + base,
+            ],
+            check=True,
+        )
         data = bytearray(open(base, "rb").read())
 
     if data[:4] != b"CCOB":
@@ -72,8 +84,7 @@ def main():
 
     # Splice a zstd skippable frame carrying "CCOB" right after the header, so
     # the planted magic lands inside the compressed region.
-    skip = struct.pack("<II", ZSTD_SKIPPABLE_MAGIC, len(PLANTED_MAGIC)) \
-        + PLANTED_MAGIC
+    skip = struct.pack("<II", ZSTD_SKIPPABLE_MAGIC, len(PLANTED_MAGIC)) + PLANTED_MAGIC
     data = data[:header_size] + skip + data[header_size:]
     struct.pack_into(fs_fmt, data, fs_off, file_size + len(skip))
 
@@ -83,8 +94,10 @@ def main():
 
     with open(out, "wb") as f:
         f.write(data)
-    print("wrote %s: version=%d header=%d FileSize=%d planted 'CCOB' at %d" %
-          (out, version, header_size, file_size + len(skip), planted))
+    print(
+        "wrote %s: version=%d header=%d FileSize=%d planted 'CCOB' at %d"
+        % (out, version, header_size, file_size + len(skip), planted)
+    )
 
 
 if __name__ == "__main__":
