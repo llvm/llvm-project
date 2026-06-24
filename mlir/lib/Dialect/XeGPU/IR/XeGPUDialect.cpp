@@ -123,6 +123,63 @@ static SmallVector<SmallVector<int64_t>> genStaticCoordinates(
   return coordinates;
 }
 
+/// Expands per-distribution-unit block-start coordinates into the full list of
+/// element coordinates each block covers: every element of the `subShape`-sized
+/// region (row-major) offset by the block start. Comparing these instead of the
+/// bare block starts lets layouts that differ only in `lane_data` blocking, but
+/// own the same elements in the same order, be recognized as equivalent.
+static SmallVector<SmallVector<int64_t>>
+expandBlockCoords(ArrayRef<SmallVector<int64_t>> blockStarts,
+                  ArrayRef<int64_t> subShape) {
+  SmallVector<int64_t> unitTile(subShape.size(), 1);
+  SmallVector<SmallVector<int64_t>> expanded;
+  for (const SmallVector<int64_t> &start : blockStarts) {
+    for (SmallVector<int64_t> off : StaticTileOffsetRange(subShape, unitTile)) {
+      SmallVector<int64_t> coord(start.size());
+      for (size_t i = 0; i < start.size(); ++i)
+        coord[i] = start[i] + off[i];
+      expanded.push_back(std::move(coord));
+    }
+  }
+  return expanded;
+}
+
+/// Returns true if `self` and `other` distribute `shape` identically at
+/// `level`: every id in `[0, size)` owns the same coordinates under both.
+///
+/// At the Lane level, layouts that pack `lane_data` differently can still own
+/// the same per-lane elements in the same order; their block starts differ but
+/// the expanded per-element coordinates match. So block starts are expanded
+/// (via `expandBlockCoords`) before comparing, but only when it can change the
+/// result (Lane level with differing `lane_data`) - otherwise comparing the
+/// cheaper block starts is already exact.
+///
+/// TODO: Extend the same handling to the Subgroup level (sg_data repacks).
+static bool compareDistributedCoords(xegpu::DistributeLayoutAttr self,
+                                     const xegpu::DistributeLayoutAttr &other,
+                                     ArrayRef<int64_t> shape,
+                                     xegpu::LayoutKind level, int64_t size) {
+  bool expandCoords =
+      level == xegpu::LayoutKind::Lane &&
+      self.getEffectiveLaneDataAsInt() != other.getEffectiveLaneDataAsInt();
+  SmallVector<int64_t> selfSubShape, otherSubShape;
+  if (expandCoords) {
+    selfSubShape = self.getEffectiveLaneDataAsInt();
+    otherSubShape = other.getEffectiveLaneDataAsInt();
+  }
+  for (int64_t id : llvm::seq<int64_t>(0, size)) {
+    auto coords = self.computeStaticDistributedCoords(id, shape);
+    auto otherCoords = other.computeStaticDistributedCoords(id, shape);
+    if (expandCoords) {
+      coords = expandBlockCoords(coords, selfSubShape);
+      otherCoords = expandBlockCoords(otherCoords, otherSubShape);
+    }
+    if (coords != otherCoords)
+      return false;
+  }
+  return true;
+}
+
 // Checks if the given memref type represents shared local memory (SLM).
 bool XeGPUDialect::isSharedMemory(const MemRefType &memrefTy) {
   Attribute attr = memrefTy.getMemorySpace();
@@ -661,7 +718,8 @@ DistributeLayoutAttr LayoutAttr::collapseDims(SmallVector<int64_t> dimGroup) {
 //     min(remaining, targetShape[i]); leftover spills into the next inner
 //     dim.
 //   - sg_data: fill innermost-first, capped per dim by
-//     targetShape[i] / sgLayout[i] (the per-sg share of the extent).
+//     targetShape[i] / sgLayout[i] (the per-sg share of the extent),
+//     or targetShape[i] (if sg_data is replicated across all subgroups).
 //   - lane_data: fill innermost-first, capped per dim by
 //     (targetShape[i] / sgLayout[i]) / laneLayout[i] (the per-lane share of
 //     the per-sg extent).
@@ -751,9 +809,11 @@ DistributeLayoutAttr LayoutAttr::expandDim(int64_t dim,
     expSgLayout = spread(origSgLayoutDim, targetShape, /*outerToInner=*/true);
     splice(sgLayout, expSgLayout);
   }
+  bool sgDataReplicated =
+      hasSgData && origSgDataDim == computeProduct(targetShape);
   if (hasSgData) {
     SmallVector<int64_t> dimSizeCap(targetShape.begin(), targetShape.end());
-    if (hasSgLayout)
+    if (hasSgLayout && !sgDataReplicated)
       for (int64_t i = 0; i < expCount; ++i)
         dimSizeCap[i] /= expSgLayout[i];
     SmallVector<int64_t> expSgData =
@@ -762,10 +822,10 @@ DistributeLayoutAttr LayoutAttr::expandDim(int64_t dim,
   }
 
   // Per-sg view used as the base for lane_layout / lane_data / inst_data:
-  // targetShape[i] / sg_layout[i] when sg_layout is present, else
-  // targetShape itself.
+  // targetShape[i] / sg_layout[i] when sg_layout is present (and not
+  // replicated), else targetShape itself.
   SmallVector<int64_t> perSgShape(targetShape.begin(), targetShape.end());
-  if (hasSgLayout)
+  if (hasSgLayout && !sgDataReplicated)
     for (int64_t i = 0; i < expCount; ++i)
       perSgShape[i] /= expSgLayout[i];
 
@@ -948,13 +1008,7 @@ bool LayoutAttr::isCompatibleWith(const xegpu::DistributeLayoutAttr &other,
   }
 
   auto compareCoordsForAllIds = [&](int64_t size) {
-    for (int64_t id : llvm::seq<int64_t>(0, size)) {
-      auto coords = computeStaticDistributedCoords(id, shape);
-      auto otherCoords = other.computeStaticDistributedCoords(id, shape);
-      if (coords != otherCoords)
-        return false;
-    }
-    return true;
+    return compareDistributedCoords(*this, other, shape, level, size);
   };
 
   if (level == xegpu::LayoutKind::Subgroup) {
@@ -1169,13 +1223,7 @@ bool SliceAttr::isCompatibleWith(const xegpu::DistributeLayoutAttr &other,
   }
 
   auto compareCoordsForAllIds = [&](int64_t size) {
-    for (int64_t id : llvm::seq<int64_t>(0, size)) {
-      auto coords = computeStaticDistributedCoords(id, shape);
-      auto otherCoords = other.computeStaticDistributedCoords(id, shape);
-      if (coords != otherCoords)
-        return false;
-    }
-    return true;
+    return compareDistributedCoords(*this, other, shape, level, size);
   };
 
   auto flattenedThis = flatten();

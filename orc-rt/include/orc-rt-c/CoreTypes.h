@@ -14,7 +14,7 @@
 #ifndef ORC_RT_C_CORETYPES_H
 #define ORC_RT_C_CORETYPES_H
 
-#include "orc-rt-c/ExternC.h"
+#include "orc-rt-c/Compiler.h"
 
 ORC_RT_C_EXTERN_C_BEGIN
 
