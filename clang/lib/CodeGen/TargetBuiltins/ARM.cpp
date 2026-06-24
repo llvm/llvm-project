@@ -3796,10 +3796,10 @@ Value *CodeGenFunction::EmitSMELdrStr(const SVETypeFlags &TypeFlags,
                                       SmallVectorImpl<Value *> &Ops,
                                       unsigned IntID) {
   if (Ops.size() == 2)
-    Ops.push_back(Builder.getInt32(0));
+    Ops.push_back(Builder.getInt64(0));
   else
-    Ops[2] = Builder.CreateIntCast(Ops[2], Int32Ty, true);
-  Function *F = CGM.getIntrinsic(IntID, Ops[1]->getType());
+    Ops[2] = Builder.CreateIntCast(Ops[2], Int64Ty, true);
+  Function *F = CGM.getIntrinsic(IntID, {});
   return Builder.CreateCall(F, Ops);
 }
 
