@@ -621,6 +621,44 @@ void SBThread::StepOut(SBError &error) {
     error = Status::FromErrorString(new_plan_status.AsCString());
 }
 
+void SBThread::StepOut(lldb::RunMode stop_other_threads) {
+  LLDB_INSTRUMENT_VA(this, stop_other_threads);
+
+  SBError error; // Ignored
+  StepOut(stop_other_threads, error);
+}
+
+void SBThread::StepOut(lldb::RunMode stop_other_threads, SBError &error) {
+  LLDB_INSTRUMENT_VA(this, stop_other_threads, error);
+
+  llvm::Expected<StoppedExecutionContext> exe_ctx =
+      GetStoppedExecutionContext(m_opaque_sp);
+  if (!exe_ctx) {
+    error = Status::FromError(exe_ctx.takeError());
+    return;
+  }
+
+  if (!exe_ctx->HasThreadScope()) {
+    error = Status::FromErrorString("this SBThread object is invalid");
+    return;
+  }
+
+  bool abort_other_plans = false;
+
+  Thread *thread = exe_ctx->GetThreadPtr();
+
+  const LazyBool avoid_no_debug = eLazyBoolCalculate;
+  Status new_plan_status;
+  ThreadPlanSP new_plan_sp(thread->QueueThreadPlanForStepOut(
+      abort_other_plans, nullptr, false, stop_other_threads == eOnlyThisThread,
+      eVoteYes, eVoteNoOpinion, 0, new_plan_status, avoid_no_debug));
+
+  if (new_plan_status.Success())
+    error = ResumeNewPlan(std::move(*exe_ctx), new_plan_sp.get());
+  else
+    error = Status::FromErrorString(new_plan_status.AsCString());
+}
+
 void SBThread::StepOutOfFrame(SBFrame &sb_frame) {
   LLDB_INSTRUMENT_VA(this, sb_frame);
 

@@ -42,6 +42,7 @@ Error StepInRequestHandler::Run(const StepInArguments &args) const {
   // Remember the thread ID that caused the resume so we can set the
   // "threadCausedFocus" boolean value in the "stopped" events.
   dap.focus_tid = thread.GetThreadID();
+  dap.all_threads_continued = !args.singleThread;
 
   lldb::SBError error;
   if (args.granularity == eSteppingGranularityInstruction) {

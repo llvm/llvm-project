@@ -418,9 +418,13 @@ class DAPTestCaseBase(TestBase):
         targetId=None,
         waitForStop=True,
         granularity="statement",
+        singleThread=None,
     ):
         response = self.dap_server.request_stepIn(
-            threadId=threadId, targetId=targetId, granularity=granularity
+            threadId=threadId,
+            targetId=targetId,
+            granularity=granularity,
+            singleThread=singleThread,
         )
         self.assertTrue(response["success"])
         if waitForStop:
@@ -432,9 +436,10 @@ class DAPTestCaseBase(TestBase):
         threadId=None,
         waitForStop=True,
         granularity="statement",
+        singleThread=None,
     ):
         response = self.dap_server.request_next(
-            threadId=threadId, granularity=granularity
+            threadId=threadId, granularity=granularity, singleThread=singleThread
         )
         self.assertTrue(
             response["success"], f"next request failed: response {response}"
@@ -443,8 +448,11 @@ class DAPTestCaseBase(TestBase):
             return self.dap_server.wait_for_stopped()
         return None
 
-    def stepOut(self, threadId=None, waitForStop=True):
-        self.dap_server.request_stepOut(threadId=threadId)
+    def stepOut(self, threadId=None, waitForStop=True, singleThread=None):
+        response = self.dap_server.request_stepOut(
+            threadId=threadId, singleThread=singleThread
+        )
+        self.assertTrue(response["success"])
         if waitForStop:
             return self.dap_server.wait_for_stopped()
         return None

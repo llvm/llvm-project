@@ -246,6 +246,7 @@ class DebugCommunication(object):
         self.frame_scopes: Dict[str, Any] = {}
         # keyed by breakpoint id
         self.resolved_breakpoints: dict[int, Breakpoint] = {}
+        self.last_continued_event_body: Optional[Dict] = None
 
         # Modifiers used when replaying a log file.
         self._mod = ReplayMods()
@@ -471,6 +472,7 @@ class DebugCommunication(object):
         elif event == "continued" and body:
             # When the process continues, clear the known threads and
             # thread_stop_reasons.
+            self.last_continued_event_body = body
             all_threads_continued = body.get("allThreadsContinued", True)
             tid = body["threadId"]
             if tid in self.thread_stop_reasons:
@@ -1262,14 +1264,18 @@ class DebugCommunication(object):
         self.launch_or_attach_sent = True
         return self.send_packet(command_dict)
 
-    def request_next(self, threadId, granularity="statement"):
+    def request_next(self, threadId, granularity="statement", singleThread=None):
         if self.exit_status is not None:
             raise ValueError("request_continue called after process exited")
         args_dict = {"threadId": threadId, "granularity": granularity}
+        if singleThread is not None:
+            args_dict["singleThread"] = singleThread
         command_dict = {"command": "next", "type": "request", "arguments": args_dict}
         return self._send_recv(command_dict)
 
-    def request_stepIn(self, threadId, targetId, granularity="statement"):
+    def request_stepIn(
+        self, threadId, targetId, granularity="statement", singleThread=None
+    ):
         if self.exit_status is not None:
             raise ValueError("request_stepIn called after process exited")
         if threadId is None:
@@ -1279,6 +1285,8 @@ class DebugCommunication(object):
             "targetId": targetId,
             "granularity": granularity,
         }
+        if singleThread is not None:
+            args_dict["singleThread"] = singleThread
         command_dict = {"command": "stepIn", "type": "request", "arguments": args_dict}
         return self._send_recv(command_dict)
 
@@ -1294,10 +1302,12 @@ class DebugCommunication(object):
         }
         return self._send_recv(command_dict)
 
-    def request_stepOut(self, threadId):
+    def request_stepOut(self, threadId, singleThread=None):
         if self.exit_status is not None:
             raise ValueError("request_stepOut called after process exited")
         args_dict = {"threadId": threadId}
+        if singleThread is not None:
+            args_dict["singleThread"] = singleThread
         command_dict = {"command": "stepOut", "type": "request", "arguments": args_dict}
         return self._send_recv(command_dict)
 

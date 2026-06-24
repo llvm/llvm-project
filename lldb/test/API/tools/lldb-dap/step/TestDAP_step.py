@@ -2,12 +2,11 @@
 Test lldb-dap setBreakpoints request
 """
 
-
 import dap_server
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test import lldbutil
 import lldbdap_testcase
+from lldbsuite.test import lldbutil
 
 
 class TestDAP_step(lldbdap_testcase.DAPTestCaseBase):
@@ -83,6 +82,84 @@ class TestDAP_step(lldbdap_testcase.DAPTestCaseBase):
 
                     # only step one thread that is at the breakpoint and stop
                     break
+
+    @skipIfWindows
+    def test_step_out_single_thread(self):
+        """
+        Tests step out with singleThread=true correctly completes the step.
+        """
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        source = "main.cpp"
+        breakpoint1_line = line_number(source, "// breakpoint 1")
+        lines = [breakpoint1_line]
+        breakpoint_ids = self.set_source_breakpoints(source, lines)
+        self.assertEqual(
+            len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
+        )
+        self.continue_to_breakpoints(breakpoint_ids)
+        threads = self.dap_server.get_threads()
+        for thread in threads:
+            if "reason" in thread:
+                reason = thread["reason"]
+                if reason == "breakpoint":
+                    tid = thread["id"]
+                    x1 = self.get_local_as_int("x", threadId=tid)
+                    (src1, line1) = self.get_source_and_line(threadId=tid)
+
+                    # Step into the recursive call first so we have
+                    # a frame to step out of.
+                    self.stepIn(threadId=tid, waitForStop=True)
+                    x2 = self.get_local_as_int("x", threadId=tid)
+                    (src2, line2) = self.get_source_and_line(threadId=tid)
+                    self.assertEqual(x1, x2 + 1, "verify step in variable")
+
+                    # Now step out with singleThread and verify we
+                    # return to the caller frame.
+                    self.stepOut(threadId=tid, waitForStop=True, singleThread=True)
+                    x3 = self.get_local_as_int("x", threadId=tid)
+                    (src3, line3) = self.get_source_and_line(threadId=tid)
+                    self.assertEqual(x1, x3, "verify step out variable")
+                    self.assertGreaterEqual(line3, line1, "verify step out line")
+                    self.assertEqual(src1, src3, "verify step out source")
+                    break
+
+    @skipIfWindows
+    def test_all_threads_continued_event(self):
+        """
+        Tests that the continued event correctly reports allThreadsContinued
+        based on whether singleThread was set in the stepping request.
+
+        Since the continued event logic is identical for all stepping
+        operations, use only two step operations (stepIn + stepOut) to avoid
+        exhausting the small recursive test program on architectures where steps
+        consume source locations more aggressively.
+        """
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        source = "main.cpp"
+        breakpoint1_line = line_number(source, "// breakpoint 1")
+        breakpoint_ids = self.set_source_breakpoints(source, [breakpoint1_line])
+        self.continue_to_breakpoints(breakpoint_ids)
+
+        tid = self.dap_server.get_thread_id()
+
+        # Step in without singleThread: allThreadsContinued should be true.
+        self.stepIn(threadId=tid, waitForStop=True)
+        self.assertIsNotNone(self.dap_server.last_continued_event_body)
+        self.assertTrue(
+            self.dap_server.last_continued_event_body.get("allThreadsContinued", None),
+            "stepIn without singleThread should report allThreadsContinued=true",
+        )
+
+        # Step out with singleThread=True: allThreadsContinued should be false.
+        self.stepOut(threadId=tid, waitForStop=True, singleThread=True)
+        self.assertFalse(
+            self.dap_server.last_continued_event_body.get("allThreadsContinued", None),
+            "stepOut with singleThread should report allThreadsContinued=false",
+        )
+
+        self.continue_to_exit()
 
     def test_step_over_inlined_function(self):
         """

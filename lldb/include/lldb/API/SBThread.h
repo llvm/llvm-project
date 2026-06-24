@@ -121,6 +121,10 @@ public:
 
   void StepOut(SBError &error);
 
+  void StepOut(lldb::RunMode stop_other_threads);
+
+  void StepOut(lldb::RunMode stop_other_threads, SBError &error);
+
   void StepOutOfFrame(SBFrame &frame);
 
   void StepOutOfFrame(SBFrame &frame, SBError &error);

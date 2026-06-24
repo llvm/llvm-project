@@ -44,6 +44,7 @@ ContinueRequestHandler::Run(const ContinueArguments &args) const {
 
   ContinueResponseBody body;
   body.allThreadsContinued = !args.singleThread;
+  dap.all_threads_continued = body.allThreadsContinued;
   return body;
 }
 
