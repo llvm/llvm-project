@@ -59,6 +59,7 @@ Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
 }
 
 SourceInfo Function::getSource(CodePtr PC) const {
+  llvm::errs() << __PRETTY_FUNCTION__ << '\n';
   assert(PC >= getCodeBegin() && "PC does not belong to this function");
   assert(PC <= getCodeEnd() && "PC Does not belong to this function");
   assert(hasBody() && "Function has no body");
