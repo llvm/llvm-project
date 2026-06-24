@@ -554,11 +554,11 @@ class ValueProvidingFrame(ScriptedFrame):
     def get_register_context(self):
         """No register context."""
         return None
-    
+
     def get_value_type_for_variable(self, var):
         if var.GetName() == "_handler_one":
             return lldb.eValueTypeVariableLocal
-        return None # Inherit the value type for others.
+        return None  # Inherit the value type for others.
 
     def get_variables(self):
         """"""
