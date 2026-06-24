@@ -30651,44 +30651,70 @@ static SDValue LowerMULH(SDValue Op, const X86Subtarget &Subtarget,
     // E.g., PMULUDQ <4 x i32> <a|b|c|d>, <4 x i32> <e|f|g|h>
     // => <2 x i64> <ae|cg>
     //
-    // In other word, to have all the results, we need to perform two PMULxD:
-    // 1. one with the even values.
-    // 2. one with the odd values.
-    // To achieve #2, with need to place the odd values at an even position.
+    // In other word, to have all the results, we need to perform 2 PMULxDQ and
+    // merge the results together. We can use 2 approaches:
+    // 1. mul with even/odd operands and interleave the results together
+    // 2. unpack/extend the operands, mul and pack the results together
     //
-    // Place the odd value at an even position (basically, shift all values 1
-    // step to the left):
-    const int Mask[] = {1, -1,  3, -1,  5, -1,  7, -1,
-                        9, -1, 11, -1, 13, -1, 15, -1};
-    // <a|b|c|d> => <b|undef|d|undef>
-    SDValue Odd0 =
-        DAG.getVectorShuffle(VT, dl, A, A, ArrayRef(&Mask[0], NumElts));
-    // <e|f|g|h> => <f|undef|h|undef>
-    SDValue Odd1 =
-        DAG.getVectorShuffle(VT, dl, B, B, ArrayRef(&Mask[0], NumElts));
+    // We should prefer the packing strategy if the unpacks are likely to
+    // further combine with other shuffles.
+    auto IsMergeableWithShuffle = [&DAG](SDValue V) {
+      return (V.getOpcode() == ISD::VECTOR_SHUFFLE &&
+              V.getOperand(1).isUndef()) ||
+             DAG.isSplatValue(V, /*AllowUndefs=*/true);
+    };
+    bool PreferPacking = IsMergeableWithShuffle(A) || IsMergeableWithShuffle(B);
 
-    // Emit two multiplies, one for the lower 2 ints and one for the higher 2
-    // ints.
-    MVT MulVT = MVT::getVectorVT(MVT::i64, NumElts / 2);
     unsigned Opcode =
         (IsSigned && Subtarget.hasSSE41()) ? X86ISD::PMULDQ : X86ISD::PMULUDQ;
-    // PMULUDQ <4 x i32> <a|b|c|d>, <4 x i32> <e|f|g|h>
-    // => <2 x i64> <ae|cg>
-    SDValue Mul1 = DAG.getBitcast(VT, DAG.getNode(Opcode, dl, MulVT,
-                                                  DAG.getBitcast(MulVT, A),
-                                                  DAG.getBitcast(MulVT, B)));
-    // PMULUDQ <4 x i32> <b|undef|d|undef>, <4 x i32> <f|undef|h|undef>
-    // => <2 x i64> <bf|dh>
-    SDValue Mul2 = DAG.getBitcast(VT, DAG.getNode(Opcode, dl, MulVT,
-                                                  DAG.getBitcast(MulVT, Odd0),
-                                                  DAG.getBitcast(MulVT, Odd1)));
+    MVT MulVT = MVT::getVectorVT(MVT::i64, NumElts / 2);
 
-    // Shuffle it back into the right order.
-    SmallVector<int, 16> ShufMask(NumElts);
-    for (int i = 0; i != (int)NumElts; ++i)
-      ShufMask[i] = (i / 2) * 2 + ((i % 2) * NumElts) + 1;
+    SDValue Res;
+    if (PreferPacking) {
+      SDValue LoA = getUnpackl(DAG, dl, VT, A, DAG.getUNDEF(VT));
+      SDValue LoB = getUnpackl(DAG, dl, VT, B, DAG.getUNDEF(VT));
+      SDValue HiA = getUnpackh(DAG, dl, VT, A, DAG.getUNDEF(VT));
+      SDValue HiB = getUnpackh(DAG, dl, VT, B, DAG.getUNDEF(VT));
 
-    SDValue Res = DAG.getVectorShuffle(VT, dl, Mul1, Mul2, ShufMask);
+      // Emit two multiplies, one for the lower 2 ints and one for the higher 2
+      // ints.
+      // PMULUDQ <4 x i32> <a|b|c|d>, <4 x i32> <e|f|g|h => <2 x i64> <ae|bf>
+      SDValue LoMul = DAG.getNode(Opcode, dl, MulVT, DAG.getBitcast(MulVT, LoA),
+                                  DAG.getBitcast(MulVT, LoB));
+      // PMULUDQ <4 x i32> <a|b|c|d>, <4 x i32> <e|f|g|h => <2 x i64> <cg|dh>
+      SDValue HiMul = DAG.getNode(Opcode, dl, MulVT, DAG.getBitcast(MulVT, HiA),
+                                  DAG.getBitcast(MulVT, HiB));
+      Res = getPack(DAG, Subtarget, dl, VT, LoMul, HiMul, /*PackHiHalf=*/true);
+    } else {
+      // Place the odd value at an even position (basically, shift all values 1
+      // step to the left):
+      const int Mask[] = {1, -1, 3,  -1, 5,  -1, 7,  -1,
+                          9, -1, 11, -1, 13, -1, 15, -1};
+      // <a|b|c|d> => <b|undef|d|undef>
+      SDValue Odd0 =
+          DAG.getVectorShuffle(VT, dl, A, A, ArrayRef(&Mask[0], NumElts));
+      // <e|f|g|h> => <f|undef|h|undef>
+      SDValue Odd1 =
+          DAG.getVectorShuffle(VT, dl, B, B, ArrayRef(&Mask[0], NumElts));
+
+      // Emit two multiplies, one for the even 2 ints and one for the odd 2
+      // ints.
+      // PMULUDQ <4 x i32> <a|b|c|d>, <4 x i32> <e|f|g|h => <2 x i64> <ae|cg>
+      SDValue Mul1 = DAG.getBitcast(VT, DAG.getNode(Opcode, dl, MulVT,
+                                                    DAG.getBitcast(MulVT, A),
+                                                    DAG.getBitcast(MulVT, B)));
+      // PMULUDQ <4 x i32> <b|u|d|u>, <4 x i32> <f|u|h|u> => <2 x i64> <bf|dh>
+      SDValue Mul2 = DAG.getBitcast(
+          VT, DAG.getNode(Opcode, dl, MulVT, DAG.getBitcast(MulVT, Odd0),
+                          DAG.getBitcast(MulVT, Odd1)));
+
+      // Shuffle it back into the right order.
+      SmallVector<int, 16> ShufMask(NumElts);
+      for (int i = 0; i != (int)NumElts; ++i)
+        ShufMask[i] = (i / 2) * 2 + ((i % 2) * NumElts) + 1;
+
+      Res = DAG.getVectorShuffle(VT, dl, Mul1, Mul2, ShufMask);
+    }
 
     // If we have a signed multiply but no PMULDQ fix up the result of an
     // unsigned multiply.
