@@ -627,6 +627,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/return-braced-init-list>` check to apply fix-it
   when type qualifiers and/or reference modifiers are used with parameters.
 
+- Improved :doc:`modernize-type-traits
+  <clang-tidy/checks/modernize/type-traits>` check to suggest usage of
+  ``std::remove_cvref_t`` when applicable.
+
 - Improved :doc:`modernize-use-default-member-init
   <clang-tidy/checks/modernize/use-default-member-init>` check by fixing a
   false positive when a constructor initializer refers to a declaration that
