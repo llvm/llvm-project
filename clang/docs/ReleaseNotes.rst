@@ -888,6 +888,8 @@ X86 Support
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
+- Added support for ``-mcpu=armagicpu`` as an alias for ``neoverse-v3ae``.
+
 Android Support
 ^^^^^^^^^^^^^^^
 
