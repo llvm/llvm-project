@@ -211,7 +211,7 @@ std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
     socket_up = std::make_unique<UDPSocket>(should_close);
     break;
   case ProtocolUnixDomain:
-#if LLDB_ENABLE_POSIX
+#if LLDB_ENABLE_POSIX || defined(_WIN32)
     socket_up = std::make_unique<DomainSocket>(should_close);
 #else
     error = Status::FromErrorString(
