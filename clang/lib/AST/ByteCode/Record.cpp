@@ -12,27 +12,11 @@
 using namespace clang;
 using namespace clang::interp;
 
-Record::Record(const RecordDecl *Decl, BaseList &&SrcBases,
-               FieldList &&SrcFields, VirtualBaseList &&SrcVirtualBases,
-               unsigned VirtualSize, unsigned BaseSize, bool HasPtrField)
-    : Decl(Decl), Bases(std::move(SrcBases)), Fields(std::move(SrcFields)),
-      BaseSize(BaseSize), VirtualSize(VirtualSize), IsUnion(Decl->isUnion()),
-      IsAnonymousUnion(IsUnion && Decl->isAnonymousStructOrUnion()),
-      HasPtrField(HasPtrField) {
-  for (Base &V : SrcVirtualBases)
-    VirtualBases.emplace_back(V.Decl, V.Desc, V.R, V.Offset + BaseSize);
-
-  for (Base &B : Bases) {
-    BaseMap[B.Decl] = &B;
-    if (!this->HasPtrField)
-      this->HasPtrField |= B.R->hasPtrField();
-  }
-  for (Base &V : VirtualBases) {
-    VirtualBaseMap[V.Decl] = &V;
-    if (!this->HasPtrField)
-      this->HasPtrField |= V.R->hasPtrField();
-  }
-}
+Record::Record(const RecordDecl *Decl, unsigned NumBases, unsigned NumFields,
+               unsigned NumVBases)
+    : Decl(Decl), NumBases(NumBases), NumFields(NumFields),
+      NumVBases(NumVBases), IsUnion(Decl->isUnion()),
+      IsAnonymousUnion(IsUnion && Decl->isAnonymousStructOrUnion()) {}
 
 std::string Record::getName() const {
   std::string Ret;

@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_AST_INTERP_RECORD_H
 #define LLVM_CLANG_AST_INTERP_RECORD_H
 
+#include "PrimType.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 
@@ -53,14 +54,13 @@ public:
         : Decl(D), Desc(Desc), R(R), Offset(Offset) {}
   };
 
-  /// Mapping from identifiers to field descriptors.
-  using FieldList = llvm::SmallVector<Field, 8>;
-  /// Mapping from identifiers to base classes.
-  using BaseList = llvm::SmallVector<Base, 8>;
-  /// List of virtual base classes.
-  using VirtualBaseList = llvm::SmallVector<Base, 0>;
-
 public:
+  static size_t allocSize(unsigned NumFields, unsigned NumBases,
+                          unsigned NumVBases) {
+    return align(sizeof(Record)) + align((NumFields * sizeof(Field))) +
+           align((NumBases * sizeof(Base))) + align(NumVBases * sizeof(Base));
+  }
+
   /// Returns the underlying declaration.
   const RecordDecl *getDecl() const { return Decl; }
   /// Returns the name of the underlying declaration.
@@ -86,40 +86,40 @@ public:
   /// with no destructor or for those with a trivial destructor.
   bool hasTrivialDtor() const;
 
-  using const_field_iter = FieldList::const_iterator;
+  using const_field_iter = ArrayRef<Field>::const_iterator;
   llvm::iterator_range<const_field_iter> fields() const {
-    return llvm::make_range(Fields.begin(), Fields.end());
+    return llvm::make_range(getFields(), getFields() + NumFields);
   }
 
-  unsigned getNumFields() const { return Fields.size(); }
-  const Field *getField(unsigned I) const { return &Fields[I]; }
+  unsigned getNumFields() const { return NumFields; }
+  const Field *getField(unsigned I) const { return &getFields()[I]; }
   /// Returns a field.
   const Field *getField(const FieldDecl *FD) const {
-    return &Fields[FD->getFieldIndex()];
+    return &getFields()[FD->getFieldIndex()];
   }
 
-  using const_base_iter = BaseList::const_iterator;
+  using const_base_iter = ArrayRef<Base>::const_iterator;
   llvm::iterator_range<const_base_iter> bases() const {
-    return llvm::make_range(Bases.begin(), Bases.end());
+    return llvm::make_range(getBases(), getBases() + NumBases);
   }
 
-  unsigned getNumBases() const { return Bases.size(); }
+  unsigned getNumBases() const { return NumBases; }
   const Base *getBase(unsigned I) const {
     assert(I < getNumBases());
-    return &Bases[I];
+    return &getBases()[I];
   }
   /// Returns a base descriptor.
   const Base *getBase(QualType T) const;
   /// Returns a base descriptor.
   const Base *getBase(const RecordDecl *FD) const;
 
-  using const_virtual_iter = VirtualBaseList::const_iterator;
-  llvm::iterator_range<const_virtual_iter> virtual_bases() const {
-    return llvm::make_range(VirtualBases.begin(), VirtualBases.end());
+  using const_vbase_iter = ArrayRef<Base>::const_iterator;
+  llvm::iterator_range<const_vbase_iter> virtual_bases() const {
+    return llvm::make_range(getVBases(), getVBases() + NumVBases);
   }
 
-  unsigned getNumVirtualBases() const { return VirtualBases.size(); }
-  const Base *getVirtualBase(unsigned I) const { return &VirtualBases[I]; }
+  unsigned getNumVirtualBases() const { return NumVBases; }
+  const Base *getVirtualBase(unsigned I) const { return &getVBases()[I]; }
   /// Returns a virtual base descriptor.
   const Base *getVirtualBase(const RecordDecl *RD) const;
 
@@ -129,21 +129,34 @@ public:
 
 private:
   /// Constructor used by Program to create record descriptors.
-  Record(const RecordDecl *, BaseList &&Bases, FieldList &&Fields,
-         VirtualBaseList &&VirtualBases, unsigned VirtualSize,
-         unsigned BaseSize, bool HasPtrField = true);
+  Record(const RecordDecl *, unsigned NumBases, unsigned NumFields,
+         unsigned NumVBases);
 
 private:
   friend class Program;
 
+  Field *getFields() const {
+    return reinterpret_cast<Field *>(
+        (reinterpret_cast<char *>(const_cast<Record *>(this))) +
+        align(sizeof(*this)));
+  }
+  Base *getBases() const {
+    return reinterpret_cast<Base *>(
+        (reinterpret_cast<char *>(const_cast<Record *>(this))) +
+        align(sizeof(*this)) + align((NumFields * sizeof(Field))));
+  }
+  Base *getVBases() const {
+    return reinterpret_cast<Base *>(
+        (reinterpret_cast<char *>(const_cast<Record *>(this))) +
+        align(sizeof(*this)) + align((NumFields * sizeof(Field))) +
+        align(NumBases * sizeof(Base)));
+  }
+
   /// Original declaration.
   const RecordDecl *Decl;
-  /// List of all base classes.
-  BaseList Bases;
-  /// List of all the fields in the record.
-  FieldList Fields;
-  /// List o fall virtual bases.
-  VirtualBaseList VirtualBases;
+  unsigned NumBases;
+  const unsigned NumFields;
+  unsigned NumVBases;
 
   /// Mapping from declarations to bases.
   llvm::DenseMap<const RecordDecl *, const Base *> BaseMap;

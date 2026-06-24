@@ -52,6 +52,9 @@ public:
       if (Record *R = RecordPair.second)
         R->~Record();
     }
+
+    for (Function *F : Funcs.values())
+      F->~Function();
   }
 
   const Context &getContext() const { return Ctx; }
@@ -101,8 +104,9 @@ public:
   template <typename... Ts>
   Function *createFunction(const FunctionDecl *Def, Ts &&...Args) {
     Def = Def->getCanonicalDecl();
-    auto *Func = new Function(*this, Def, std::forward<Ts>(Args)...);
-    Funcs.insert({Def, std::unique_ptr<Function>(Func)});
+    auto *Func =
+        new (Allocator) Function(*this, Def, std::forward<Ts>(Args)...);
+    Funcs.insert({Def, Func});
     return Func;
   }
   /// Creates an anonymous function.
@@ -175,8 +179,12 @@ private:
 
   /// Reference to the VM context.
   Context &Ctx;
+  /// Custom allocator for global storage.
+  using PoolAllocTy = llvm::BumpPtrAllocator;
+  /// Allocator for globals.
+  mutable PoolAllocTy Allocator;
   /// Mapping from decls to cached bytecode functions.
-  llvm::DenseMap<const FunctionDecl *, std::unique_ptr<Function>> Funcs;
+  llvm::DenseMap<const FunctionDecl *, Function *> Funcs;
   /// List of anonymous functions.
   std::vector<std::unique_ptr<Function>> AnonFuncs;
 
@@ -184,9 +192,6 @@ private:
   std::vector<const void *> NativePointers;
   /// Cached native pointer indices.
   llvm::DenseMap<const void *, unsigned> NativePointerIndices;
-
-  /// Custom allocator for global storage.
-  using PoolAllocTy = llvm::BumpPtrAllocator;
 
   /// Descriptor + storage for a global object.
   ///
@@ -211,9 +216,6 @@ private:
   private:
     Block B;
   };
-
-  /// Allocator for globals.
-  mutable PoolAllocTy Allocator;
 
   /// Global objects.
   std::vector<Global *> Globals;
