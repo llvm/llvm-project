@@ -19,6 +19,10 @@ __float128   g5_2 = __builtin_inff128();
 double       g6  = __builtin_nan("");
 float        g7  = __builtin_nanf("");
 long double  g8  = __builtin_nanl("");
+
+double       g6_u8  = __builtin_nan(u8"");
+float        g7_u8  = __builtin_nanf(u8"");
+long double  g8_u8  = __builtin_nanl(u8"");
 #if defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__)
 __float128   g8_2 = __builtin_nanf128("");
 #endif
