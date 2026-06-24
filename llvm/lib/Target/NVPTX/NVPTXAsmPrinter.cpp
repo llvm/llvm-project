@@ -96,6 +96,25 @@ using namespace llvm;
 
 #define DEPOTNAME "__local_depot"
 
+// PTX only defines .u{8,16,32,64} as fundamental integer storage types.
+// Round any other width (i2, i3, i7, i12, i24, i33, ...) up to the next
+// supported size. This must be applied consistently to both the emitted
+// type specifier and the emitted initializer literal so the cubin's byte
+// pattern matches the original IR ConstantInt.
+static unsigned getPromotedPtxStorageBits(unsigned NumBits) {
+  if (NumBits <= 8)
+    return 8;
+  if (NumBits <= 16)
+    return 16;
+  if (NumBits <= 32)
+    return 32;
+  if (NumBits <= 64)
+    return 64;
+  // Caller handles >64 bits separately (e.g. i128 globals are emitted as
+  // .b8 byte arrays in emitPTXGlobalVariable).
+  return NumBits;
+}
+
 static StringRef getTextureName(const Value &V) {
   assert(V.hasName() && "Found texture variable with no name");
   return V.getName();
@@ -1259,10 +1278,8 @@ NVPTXAsmPrinter::getPTXFundamentalTypeStr(Type *Ty, bool useB4PTR) const {
     unsigned NumBits = cast<IntegerType>(Ty)->getBitWidth();
     if (NumBits == 1)
       return "pred";
-    if (NumBits <= 64) {
-      std::string name = "u";
-      return name + utostr(NumBits);
-    }
+    if (NumBits <= 64)
+      return "u" + utostr(getPromotedPtxStorageBits(NumBits));
     llvm_unreachable("Integer too large");
     break;
   }
@@ -1604,7 +1621,15 @@ void NVPTXAsmPrinter::printFPConstant(const ConstantFP *Fp,
 
 void NVPTXAsmPrinter::printScalarConstant(const Constant *CPV, raw_ostream &O) {
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(CPV)) {
-    O << CI->getValue();
+    // The emitted PTX storage type for this ConstantInt may have been
+    // width-promoted by getPromotedPtxStorageBits (e.g. an i2 global is
+    // emitted as .u8). Zero-extend the value so its bit pattern matches the
+    // IR ConstantInt's, and print as unsigned so that values whose top bit
+    // is set in the original width do not become signed-extended negative
+    // literals in the promoted storage.
+    CI->getValue()
+        .zextOrTrunc(getPromotedPtxStorageBits(CI->getBitWidth()))
+        .print(O, /*isSigned=*/false);
     return;
   }
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(CPV)) {
