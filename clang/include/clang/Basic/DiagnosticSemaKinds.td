@@ -11056,9 +11056,9 @@ def warn_lifetime_safety_inapplicable_lifetimebound
       DefaultIgnore;
 
 def note_lifetime_safety_used_here : Note<"later used here">;
-def note_lifetime_safety_invalidated_here : Note<"invalidated here">;
-def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
-def note_lifetime_safety_freed_here : Note<"freed here">;
+def note_lifetime_safety_invalidated_here : Note<"%0 is invalidated here">;
+def note_lifetime_safety_destroyed_here : Note<"%0 is destroyed here">;
+def note_lifetime_safety_freed_here : Note<"%0 is freed here">;
 def note_lifetime_safety_returned_here : Note<"returned here">;
 def note_lifetime_safety_moved_here : Note<"potentially moved here">;
 def note_lifetime_safety_dangling_field_here: Note<"this field dangles">;

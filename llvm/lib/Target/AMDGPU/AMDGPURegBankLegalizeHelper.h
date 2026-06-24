@@ -20,6 +20,7 @@ namespace llvm {
 class MachineIRBuilder;
 class SIInstrInfo;
 class SIMachineFunctionInfo;
+class GISelValueTracking;
 
 namespace AMDGPU {
 
@@ -46,6 +47,7 @@ class RegBankLegalizeHelper {
   MachineIRBuilder &B;
   MachineRegisterInfo &MRI;
   const MachineUniformityInfo &MUI;
+  GISelValueTracking *VT;
   const RegisterBankInfo &RBI;
   MachineOptimizationRemarkEmitter MORE;
   const RegBankLegalizeRules &RBLRules;
@@ -95,7 +97,7 @@ class RegBankLegalizeHelper {
 
 public:
   RegBankLegalizeHelper(MachineIRBuilder &B, const MachineUniformityInfo &MUI,
-                        const RegisterBankInfo &RBI,
+                        GISelValueTracking *VT, const RegisterBankInfo &RBI,
                         const RegBankLegalizeRules &RBLRules);
 
   bool findRuleAndApplyMapping(MachineInstr &MI);
@@ -153,6 +155,8 @@ private:
   bool lowerInsVecEltTo32(MachineInstr &MI);
   bool lowerAbsToNegMax(MachineInstr &MI);
   bool lowerAbsToS32(MachineInstr &MI);
+  bool lowerSetRounding(MachineInstr &MI);
+  bool lowerGetRounding(MachineInstr &MI);
   bool applyRegisterBanksVgprWithSgprRsrc(MachineInstr &MI, unsigned RsrcIdx);
 };
 

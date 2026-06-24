@@ -627,6 +627,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/return-braced-init-list>` check to apply fix-it
   when type qualifiers and/or reference modifiers are used with parameters.
 
+- Improved :doc:`modernize-type-traits
+  <clang-tidy/checks/modernize/type-traits>` check to suggest usage of
+  ``std::remove_cvref_t`` when applicable.
+
 - Improved :doc:`modernize-use-default-member-init
   <clang-tidy/checks/modernize/use-default-member-init>` check by fixing a
   false positive when a constructor initializer refers to a declaration that
@@ -848,9 +852,13 @@ Changes in existing checks
   macros that may expand differently in other configurations.
 
 - Improved :doc:`readability-redundant-parentheses
-  <clang-tidy/checks/readability/redundant-parentheses>` check by fixing a
-  false positive for parentheses present around an overloaded operator in the
-  context of a binary operation.
+  <clang-tidy/checks/readability/redundant-parentheses>` check:
+
+  - Fixed a false positive for parentheses present around an overloaded operator
+    in the context of a binary operation.
+
+  - Fixed a bug where clients that apply fix-its without :program:`clang-tidy`'s
+    cleanup could produce invalid code by joining adjacent tokens.
 
 - Improved :doc:`readability-redundant-preprocessor
   <clang-tidy/checks/readability/redundant-preprocessor>` check by fixing a

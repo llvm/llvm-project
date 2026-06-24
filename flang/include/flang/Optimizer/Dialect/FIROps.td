@@ -2560,6 +2560,8 @@ def fir_IfOp
         "bool":$withElseRegion)>
   ];
 
+  let hasCanonicalizer = 1;
+
   let extraClassDeclaration = [{
     mlir::OpBuilder getThenBodyBuilder() {
       assert(!getThenRegion().empty() && "Unexpected empty 'where' region.");
