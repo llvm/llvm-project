@@ -503,7 +503,8 @@ def Bufferization_ToBufferOp : Bufferization_Op<"to_buffer", [
     BufferizableOpInterface,
     SameOperandsAndResultShape,
     SameOperandsAndResultElementType,
-    Pure,
+    AlwaysSpeculatable,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface, ["getEffects"]>,
     Bufferization_TensorAndBufferMatch<"tensor", "buffer">
   ]> {
   let summary = "cast a tensor-like type to buffer-like type";
@@ -522,6 +523,12 @@ def Bufferization_ToBufferOp : Bufferization_Op<"to_buffer", [
     The `read_only` attribute can optionally be set, indicating to the
     bufferization that the buffer returned by this op (or an alias created from
     the returned buffer) will not be written to.
+
+    Memory effects: when `read_only` is not set, this op declares a write
+    effect on its result to prevent passes such as LICM from hoisting it out of
+    loops. (Hoisting would cause all loop iterations to share the same backing
+    buffer.) When `read_only` is set, no write effect is declared and the op
+    may be freely hoisted or CSE'd.
   }];
 
   let arguments = (ins Bufferization_TensorLikeTypeInterface:$tensor, UnitAttr:$read_only);
