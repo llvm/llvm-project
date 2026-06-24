@@ -26,6 +26,7 @@
 #include "clang/Format/Format.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
+#include <set>
 
 #define DEBUG_TYPE "format-formatter"
 
@@ -110,6 +111,12 @@ TokenAnalyzer::process(bool SkipAnnotation) {
   Parser.parse();
   assert(UnwrappedLines.back().empty());
   unsigned Penalty = 0;
+
+  // The same source region is analyzed once per preprocessor branch, so an
+  // editing pass (e.g. EnumTrailingCommaEditor) can emit the same replacement
+  // in more than one run. Ensure that we drop exact duplicates.
+  std::set<tooling::Replacement> SeenReplacements;
+
   for (unsigned Run = 0, RunE = UnwrappedLines.size(); Run + 1 != RunE; ++Run) {
     const auto &Lines = UnwrappedLines[Run];
     LLVM_DEBUG(llvm::dbgs() << "Run " << Run << "...\n");
@@ -136,6 +143,9 @@ TokenAnalyzer::process(bool SkipAnnotation) {
 
     Penalty += RunResult.second;
     for (const auto &R : RunResult.first) {
+      if (!SeenReplacements.insert(R).second)
+        continue;
+
       auto Err = Result.add(R);
       // FIXME: better error handling here. For now, simply return an empty
       // Replacements to indicate failure.
