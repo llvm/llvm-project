@@ -338,3 +338,8 @@
 // RUN: %clang --target=riscv64-unknown-netbsd -mno-relax -### %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=RISCV-FLAGS %s
 // RISCV-FLAGS: "-X" "--no-relax"
+
+// Check passing LTO flags to the linker
+// RUN: %clang --target=amd64-unknown-netbsd -flto -### %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-LTO-FLAGS %s
+// CHECK-LTO-FLAGS: "-plugin-opt=mcpu=x86-64"

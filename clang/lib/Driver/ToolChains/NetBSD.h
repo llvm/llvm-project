@@ -52,6 +52,7 @@ class LLVM_LIBRARY_VISIBILITY NetBSD : public Generic_ELF {
 public:
   NetBSD(const Driver &D, const llvm::Triple &Triple,
          const llvm::opt::ArgList &Args);
+  bool HasNativeLLVMSupport() const override;
 
   bool IsMathErrnoDefault() const override { return false; }
   bool IsObjCNonFragileABIDefault() const override { return true; }
