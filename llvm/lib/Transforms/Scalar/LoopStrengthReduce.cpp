@@ -5238,7 +5238,10 @@ void LSRInstance::NarrowSearchSpaceByMergingUsesOutsideLoop() {
 
   for (size_t LUIdx = 0, NumUses = Uses.size(); LUIdx != NumUses; ++LUIdx) {
     LSRUse &LU = Uses[LUIdx];
-    if (!LU.AllFixupsOutsideLoop || LU.Formulae.empty())
+    // Don't merge ICmpZero uses outside the loop, as ICmpZero needs to be
+    // handled specially when expanding.
+    if (!LU.AllFixupsOutsideLoop || LU.Formulae.empty() ||
+        LU.Kind == LSRUse::ICmpZero)
       continue;
 
     LLVM_DEBUG(dbgs() << "  Trying to eliminate use "; LU.print(dbgs());
