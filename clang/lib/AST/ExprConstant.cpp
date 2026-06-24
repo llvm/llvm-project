@@ -22799,10 +22799,9 @@ template <typename T>
 static bool EvaluateCharRangeAsStringImpl(const Expr *, T &Result,
                                           const Expr *SizeExpression,
                                           const Expr *PtrExpression,
-                                          ASTContext &Ctx,
+                                          ASTContext &Ctx, SemaProxy &SP,
                                           Expr::EvalResult &Status) {
-  EvalInfo Info(Ctx, /*Sema=*/nullptr, Status,
-                EvaluationMode::ConstantExpression);
+  EvalInfo Info(Ctx, &SP, Status, EvaluationMode::ConstantExpression);
   Info.InConstantContext = true;
 
   if (Info.EnableNewConstInterp)
@@ -22855,17 +22854,17 @@ static bool EvaluateCharRangeAsStringImpl(const Expr *, T &Result,
 bool Expr::EvaluateCharRangeAsString(std::string &Result,
                                      const Expr *SizeExpression,
                                      const Expr *PtrExpression, ASTContext &Ctx,
-                                     EvalResult &Status) const {
+                                     SemaProxy &SP, EvalResult &Status) const {
   return EvaluateCharRangeAsStringImpl(this, Result, SizeExpression,
-                                       PtrExpression, Ctx, Status);
+                                       PtrExpression, Ctx, SP, Status);
 }
 
 bool Expr::EvaluateCharRangeAsString(APValue &Result,
                                      const Expr *SizeExpression,
                                      const Expr *PtrExpression, ASTContext &Ctx,
-                                     EvalResult &Status) const {
+                                     SemaProxy &SP, EvalResult &Status) const {
   return EvaluateCharRangeAsStringImpl(this, Result, SizeExpression,
-                                       PtrExpression, Ctx, Status);
+                                       PtrExpression, Ctx, SP, Status);
 }
 
 std::optional<uint64_t> Expr::tryEvaluateStrLen(const ASTContext &Ctx) const {

@@ -228,6 +228,19 @@ template <int V> constexpr int f() { return V; }
 static_assert(g() == 0);
 }  // namespace from_static_assertion
 
+namespace from_static_assert_message {
+struct Msg {
+  consteval const char *data() { return "hello"; }
+  consteval unsigned size() { return 5; }
+};
+
+template <int V> constexpr Msg f();
+consteval Msg g() { return f<0>(); }
+template <int V> constexpr Msg f() { return Msg{}; }
+
+static_assert(true, g());
+}  // namespace from_static_assert_message
+
 namespace from_constexpr_destructor {
 template <int V> constexpr int f() noexcept;
 struct S { constexpr ~S() { (void) f<0>(); } };

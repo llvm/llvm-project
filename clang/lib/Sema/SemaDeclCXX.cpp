@@ -17933,7 +17933,8 @@ static bool EvaluateAsStringImpl(Sema &SemaRef, Expr *Message,
   SmallVector<PartialDiagnosticAt, 8> Notes;
   Status.Diag = &Notes;
   if (!Message->EvaluateCharRangeAsString(Result, EvaluatedSize.get(),
-                                          EvaluatedData.get(), Ctx, Status) ||
+                                          EvaluatedData.get(), Ctx,
+                                          SemaRef.getProxyForEval(), Status) ||
       !Notes.empty()) {
     SemaRef.Diag(Message->getBeginLoc(),
                  ErrorOnInvalidMessage ? diag::err_user_defined_msg_constexpr
