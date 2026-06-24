@@ -351,9 +351,9 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
         verify_locals["argc"]["equals"]["value"] = "123"
         verify_locals["pt"]["children"]["x"]["equals"]["value"] = "111"
-        verify_locals["x @ main.cpp:27"] = {"equals": {"type": "int", "value": "89"}}
-        verify_locals["x @ main.cpp:29"] = {"equals": {"type": "int", "value": "42"}}
-        verify_locals["x @ main.cpp:31"] = {"equals": {"type": "int", "value": "72"}}
+        verify_locals["x @ main.cpp:28"] = {"equals": {"type": "int", "value": "89"}}
+        verify_locals["x @ main.cpp:30"] = {"equals": {"type": "int", "value": "42"}}
+        verify_locals["x @ main.cpp:32"] = {"equals": {"type": "int", "value": "72"}}
 
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
@@ -361,22 +361,22 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.assertFalse(self.set_local("x2", 9)["success"])
         self.assertFalse(self.set_local("x @ main.cpp:0", 9)["success"])
 
-        self.assertTrue(self.set_local("x @ main.cpp:27", 19)["success"])
-        self.assertTrue(self.set_local("x @ main.cpp:29", 21)["success"])
-        self.assertTrue(self.set_local("x @ main.cpp:31", 23)["success"])
+        self.assertTrue(self.set_local("x @ main.cpp:28", 19)["success"])
+        self.assertTrue(self.set_local("x @ main.cpp:30", 21)["success"])
+        self.assertTrue(self.set_local("x @ main.cpp:32", 23)["success"])
 
         # The following should have no effect
-        self.assertFalse(self.set_local("x @ main.cpp:31", "invalid")["success"])
+        self.assertFalse(self.set_local("x @ main.cpp:32", "invalid")["success"])
 
-        verify_locals["x @ main.cpp:27"]["equals"]["value"] = "19"
-        verify_locals["x @ main.cpp:29"]["equals"]["value"] = "21"
-        verify_locals["x @ main.cpp:31"]["equals"]["value"] = "23"
+        verify_locals["x @ main.cpp:28"]["equals"]["value"] = "19"
+        verify_locals["x @ main.cpp:30"]["equals"]["value"] = "21"
+        verify_locals["x @ main.cpp:32"]["equals"]["value"] = "23"
 
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
         # The plain x variable shold refer to the innermost x
         self.assertTrue(self.set_local("x", 22)["success"])
-        verify_locals["x @ main.cpp:31"]["equals"]["value"] = "22"
+        verify_locals["x @ main.cpp:32"]["equals"]["value"] = "22"
 
         self.verify_variables(verify_locals, self.dap_server.get_local_variables())
 
@@ -393,9 +393,9 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         names = [var["name"] for var in locals]
         # The first shadowed x shouldn't have a suffix anymore
         verify_locals["x"] = {"equals": {"type": "int", "value": "19"}}
-        self.assertNotIn("x @ main.cpp:27", names)
-        self.assertNotIn("x @ main.cpp:29", names)
-        self.assertNotIn("x @ main.cpp:31", names)
+        self.assertNotIn("x @ main.cpp:28", names)
+        self.assertNotIn("x @ main.cpp:30", names)
+        self.assertNotIn("x @ main.cpp:32", names)
 
         self.verify_variables(verify_locals, locals)
 
@@ -428,12 +428,13 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
             line_number(source, "// breakpoint 6"),
             line_number(source, "// breakpoint 7"),
             line_number(source, "// breakpoint 8"),
+            line_number(source, "// breakpoint 9"),
         ]
         breakpoint_ids = self.set_source_breakpoints(source, lines)
         self.assertEqual(
             len(breakpoint_ids), len(lines), "expect correct number of breakpoints"
         )
-        [bp1, bp3, bp6, bp7, bp8] = breakpoint_ids
+        [bp1, bp3, bp6, bp7, bp8, bp9] = breakpoint_ids
         self.continue_to_breakpoint(bp1)
 
         # Verify locals
@@ -735,6 +736,28 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                 },
             },
             inner_bitfields_struct,
+        )
+
+        self.continue_to_breakpoint(bp9)
+
+        verify_locals = {
+            "t": {
+                "equals": {
+                    "type": "Test",
+                    "value": "FOO",
+                    "evaluateName": "t",
+                },
+            },
+        }
+        self.verify_variables(
+            verify_locals,
+            self.dap_server.get_local_variables(),
+        )
+        self.assertTrue(self.set_local("t", "Test::BAR")["success"])
+        verify_locals["t"]["equals"]["value"] = "BAR"
+        self.verify_variables(
+            verify_locals,
+            self.dap_server.get_local_variables(),
         )
 
         # Continue to breakpoint 3, permanent variable should still exist
