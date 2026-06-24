@@ -25,7 +25,7 @@ end program allocate_align_tree
 !CHECK:      ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpAllocateDirective
 !CHECK-NEXT: | OmpBeginDirective
 !CHECK-NEXT: | | OmpDirectiveName -> llvm::omp::Directive = allocate
-!CHECK-NEXT: | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'j'
+!CHECK-NEXT: | | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'j'
 !CHECK-NEXT: | | OmpClauseList -> OmpClause -> Align -> OmpAlignClause -> Scalar -> Integer -> Constant -> Expr = '16_4'
 !CHECK-NEXT: | | | LiteralConstant -> IntLiteralConstant = '16'
 !CHECK-NEXT: | | Flags = {}
@@ -33,7 +33,7 @@ end program allocate_align_tree
 !CHECK-NEXT: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpAllocateDirective
 !CHECK-NEXT: | | | OmpBeginDirective
 !CHECK-NEXT: | | | | OmpDirectiveName -> llvm::omp::Directive = allocate
-!CHECK-NEXT: | | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'xarray'
+!CHECK-NEXT: | | | | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'xarray'
 !CHECK-NEXT: | | | | OmpClauseList -> OmpClause -> Align -> OmpAlignClause -> Scalar -> Integer -> Constant -> Expr = '32_4'
 !CHECK-NEXT: | | | | | LiteralConstant -> IntLiteralConstant = '32'
 !CHECK-NEXT: | | | | OmpClause -> Allocator -> Scalar -> Integer -> Expr = '2_8'
