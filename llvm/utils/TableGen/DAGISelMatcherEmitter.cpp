@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Format.h"
@@ -513,6 +514,43 @@ static unsigned emitMVT(MVT VT, raw_ostream &OS) {
   return EmitVBRValue(VT.SimpleTy, OS);
 }
 
+static StringRef getCompactISDOpcode(StringRef Opcode) {
+  return StringSwitch<StringRef>(Opcode)
+      .Case("ISD::SRL", "OPC_CheckOpcodeISD_SRL")
+      .Case("ISD::SIGN_EXTEND_INREG", "OPC_CheckOpcodeISD_SIGN_EXTEND_INREG")
+      .Case("ISD::TargetConstant", "OPC_CheckOpcodeISD_TargetConstant")
+      .Case("ISD::LOAD", "OPC_CheckOpcodeISD_LOAD")
+      .Case("ISD::Constant", "OPC_CheckOpcodeISD_Constant")
+      .Case("ISD::INTRINSIC_WO_CHAIN", "OPC_CheckOpcodeISD_INTRINSIC_WO_CHAIN")
+      .Case("ISD::SRA", "OPC_CheckOpcodeISD_SRA")
+      .Case("ISD::ADD", "OPC_CheckOpcodeISD_ADD")
+      .Case("ISD::EXTRACT_SUBVECTOR", "OPC_CheckOpcodeISD_EXTRACT_SUBVECTOR")
+      .Case("ISD::SPLAT_VECTOR", "OPC_CheckOpcodeISD_SPLAT_VECTOR")
+      .Case("ISD::EXTRACT_VECTOR_ELT", "OPC_CheckOpcodeISD_EXTRACT_VECTOR_ELT")
+      .Case("ISD::XOR", "OPC_CheckOpcodeISD_XOR")
+      .Case("ISD::MUL", "OPC_CheckOpcodeISD_MUL")
+      .Case("ISD::AND", "OPC_CheckOpcodeISD_AND")
+      .Case("ISD::ZERO_EXTEND", "OPC_CheckOpcodeISD_ZERO_EXTEND")
+      .Case("ISD::BITCAST", "OPC_CheckOpcodeISD_BITCAST")
+      .Case("ISD::SIGN_EXTEND", "OPC_CheckOpcodeISD_SIGN_EXTEND")
+      .Case("ISD::UNDEF", "OPC_CheckOpcodeISD_UNDEF")
+      .Case("ISD::CONDCODE", "OPC_CheckOpcodeISD_CONDCODE")
+      .Case("ISD::FMINNUM", "OPC_CheckOpcodeISD_FMINNUM")
+      .Case("ISD::FMAXNUM", "OPC_CheckOpcodeISD_FMAXNUM")
+      .Case("ISD::FMINNUM_IEEE", "OPC_CheckOpcodeISD_FMINNUM_IEEE")
+      .Case("ISD::FMAXNUM_IEEE", "OPC_CheckOpcodeISD_FMAXNUM_IEEE")
+      .Case("ISD::ConstantFP", "OPC_CheckOpcodeISD_ConstantFP")
+      .Case("ISD::VSELECT", "OPC_CheckOpcodeISD_VSELECT")
+      .Case("ISD::TRUNCATE", "OPC_CheckOpcodeISD_TRUNCATE")
+      .Case("ISD::FNEG", "OPC_CheckOpcodeISD_FNEG")
+      .Case("ISD::SHL", "OPC_CheckOpcodeISD_SHL")
+      .Case("ISD::BasicBlock", "OPC_CheckOpcodeISD_BasicBlock")
+      .Case("ISD::SMAX", "OPC_CheckOpcodeISD_SMAX")
+      .Case("ISD::SMIN", "OPC_CheckOpcodeISD_SMIN")
+      .Case("ISD::BUILD_VECTOR", "OPC_CheckOpcodeISD_BUILD_VECTOR")
+      .Default("");
+}
+
 unsigned
 MatcherTableEmitter::emitValueTypeByHwMode(const ValueTypeByHwMode &VTBH,
                                            unsigned Index, raw_ostream &OS) {
@@ -676,10 +714,16 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     return 2 + OperandBytes;
   }
 
-  case Matcher::CheckOpcode:
-    OS << "OPC_CheckOpcode, TARGET_VAL("
-       << cast<CheckOpcodeMatcher>(N)->getOpcode().getEnumName() << "),\n";
+  case Matcher::CheckOpcode: {
+    StringRef Opcode = cast<CheckOpcodeMatcher>(N)->getOpcode().getEnumName();
+    if (StringRef CompactOpcode = getCompactISDOpcode(Opcode);
+        !CompactOpcode.empty()) {
+      OS << CompactOpcode << ",\n";
+      return 1;
+    }
+    OS << "OPC_CheckOpcode, TARGET_VAL(" << Opcode << "),\n";
     return 3;
+  }
 
   case Matcher::SwitchOpcode:
   case Matcher::SwitchType: {
@@ -924,6 +968,28 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     int64_t Val = IM->getValue();
     const std::string &Str = IM->getString();
     const ValueTypeByHwMode &VTBH = IM->getVT();
+    if (VTBH.isSimple()) {
+      MVT VT = VTBH.getSimple();
+      if ((VT == MVT::i32 && Val >= -1 && Val <= 8) ||
+          (VT == MVT::i64 && Val >= -1 && Val <= 7)) {
+        OS << "OPC_EmitIntegerI" << VT.getSizeInBits();
+        if (Val < 0)
+          OS << "Neg1";
+        else
+          OS << '_' << Val;
+        OS << ',';
+        if (!OmitComments) {
+          OS << " // #" << IM->getResultNo() << " = ";
+          if (!Str.empty())
+            OS << Str;
+          else
+            OS << Val;
+        }
+        OS << '\n';
+        return 1;
+      }
+    }
+
     unsigned TypeBytes = 0;
     if (VTBH.isSimple()) {
       MVT VT = VTBH.getSimple();

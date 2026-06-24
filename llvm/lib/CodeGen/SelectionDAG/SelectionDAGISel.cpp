@@ -3016,6 +3016,52 @@ CheckOpcode(const uint8_t *MatcherTable, size_t &MatcherIndex, SDNode *N) {
   return N->getOpcode() == Opc;
 }
 
+static constexpr uint16_t CompactISDOpcodes[] = {
+    ISD::SRL,
+    ISD::SIGN_EXTEND_INREG,
+    ISD::TargetConstant,
+    ISD::LOAD,
+    ISD::Constant,
+    ISD::INTRINSIC_WO_CHAIN,
+    ISD::SRA,
+    ISD::ADD,
+    ISD::EXTRACT_SUBVECTOR,
+    ISD::SPLAT_VECTOR,
+    ISD::EXTRACT_VECTOR_ELT,
+    ISD::XOR,
+    ISD::MUL,
+    ISD::AND,
+    ISD::ZERO_EXTEND,
+    ISD::BITCAST,
+    ISD::SIGN_EXTEND,
+    ISD::UNDEF,
+    ISD::CONDCODE,
+    ISD::FMINNUM,
+    ISD::FMAXNUM,
+    ISD::FMINNUM_IEEE,
+    ISD::FMAXNUM_IEEE,
+    ISD::ConstantFP,
+    ISD::VSELECT,
+    ISD::TRUNCATE,
+    ISD::FNEG,
+    ISD::SHL,
+    ISD::BasicBlock,
+    ISD::SMAX,
+    ISD::SMIN,
+    ISD::BUILD_VECTOR,
+};
+
+static_assert(sizeof(CompactISDOpcodes) / sizeof(*CompactISDOpcodes) ==
+              SelectionDAGISel::OPC_CheckOpcodeISD_BUILD_VECTOR -
+                  SelectionDAGISel::OPC_CheckOpcodeISD_SRL + 1);
+
+LLVM_ATTRIBUTE_ALWAYS_INLINE static bool
+CheckCompactISDOpcode(unsigned MatcherOpcode, SDNode *N) {
+  return N->getOpcode() ==
+         CompactISDOpcodes[MatcherOpcode -
+                           SelectionDAGISel::OPC_CheckOpcodeISD_SRL];
+}
+
 LLVM_ATTRIBUTE_ALWAYS_INLINE static bool CheckType(MVT::SimpleValueType VT,
                                                    SDValue N,
                                                    const TargetLowering *TLI,
@@ -3113,6 +3159,12 @@ static size_t IsPredicateKnownToFail(
     const SelectionDAGISel &SDISel,
     SmallVectorImpl<std::pair<SDValue, SDNode *>> &RecordedNodes) {
   unsigned Opcode = Table[Index++];
+  if (Opcode >= SelectionDAGISel::OPC_CheckOpcodeISD_SRL &&
+      Opcode <= SelectionDAGISel::OPC_CheckOpcodeISD_BUILD_VECTOR) {
+    Result = !::CheckCompactISDOpcode(Opcode, N.getNode());
+    return Index;
+  }
+
   switch (Opcode) {
   default:
     Result = false;
@@ -3756,6 +3808,41 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     case OPC_CheckOpcode:
       if (!::CheckOpcode(MatcherTable, MatcherIndex, N.getNode())) break;
       continue;
+    case OPC_CheckOpcodeISD_SRL:
+    case OPC_CheckOpcodeISD_SIGN_EXTEND_INREG:
+    case OPC_CheckOpcodeISD_TargetConstant:
+    case OPC_CheckOpcodeISD_LOAD:
+    case OPC_CheckOpcodeISD_Constant:
+    case OPC_CheckOpcodeISD_INTRINSIC_WO_CHAIN:
+    case OPC_CheckOpcodeISD_SRA:
+    case OPC_CheckOpcodeISD_ADD:
+    case OPC_CheckOpcodeISD_EXTRACT_SUBVECTOR:
+    case OPC_CheckOpcodeISD_SPLAT_VECTOR:
+    case OPC_CheckOpcodeISD_EXTRACT_VECTOR_ELT:
+    case OPC_CheckOpcodeISD_XOR:
+    case OPC_CheckOpcodeISD_MUL:
+    case OPC_CheckOpcodeISD_AND:
+    case OPC_CheckOpcodeISD_ZERO_EXTEND:
+    case OPC_CheckOpcodeISD_BITCAST:
+    case OPC_CheckOpcodeISD_SIGN_EXTEND:
+    case OPC_CheckOpcodeISD_UNDEF:
+    case OPC_CheckOpcodeISD_CONDCODE:
+    case OPC_CheckOpcodeISD_FMINNUM:
+    case OPC_CheckOpcodeISD_FMAXNUM:
+    case OPC_CheckOpcodeISD_FMINNUM_IEEE:
+    case OPC_CheckOpcodeISD_FMAXNUM_IEEE:
+    case OPC_CheckOpcodeISD_ConstantFP:
+    case OPC_CheckOpcodeISD_VSELECT:
+    case OPC_CheckOpcodeISD_TRUNCATE:
+    case OPC_CheckOpcodeISD_FNEG:
+    case OPC_CheckOpcodeISD_SHL:
+    case OPC_CheckOpcodeISD_BasicBlock:
+    case OPC_CheckOpcodeISD_SMAX:
+    case OPC_CheckOpcodeISD_SMIN:
+    case OPC_CheckOpcodeISD_BUILD_VECTOR:
+      if (!::CheckCompactISDOpcode(Opcode, N.getNode()))
+        break;
+      continue;
 
     case OPC_CheckType:
     case OPC_CheckTypeI32:
@@ -3995,6 +4082,36 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
                          true/*We validate our own chains*/))
         break;
 
+      continue;
+    }
+    case OPC_EmitIntegerI32Neg1:
+    case OPC_EmitIntegerI32_0:
+    case OPC_EmitIntegerI32_1:
+    case OPC_EmitIntegerI32_2:
+    case OPC_EmitIntegerI32_3:
+    case OPC_EmitIntegerI32_4:
+    case OPC_EmitIntegerI32_5:
+    case OPC_EmitIntegerI32_6:
+    case OPC_EmitIntegerI32_7:
+    case OPC_EmitIntegerI32_8:
+    case OPC_EmitIntegerI64Neg1:
+    case OPC_EmitIntegerI64_0:
+    case OPC_EmitIntegerI64_1:
+    case OPC_EmitIntegerI64_2:
+    case OPC_EmitIntegerI64_3:
+    case OPC_EmitIntegerI64_4:
+    case OPC_EmitIntegerI64_5:
+    case OPC_EmitIntegerI64_6:
+    case OPC_EmitIntegerI64_7: {
+      bool IsI32 = Opcode <= OPC_EmitIntegerI32_8;
+      unsigned FirstOpcode =
+          IsI32 ? OPC_EmitIntegerI32Neg1 : OPC_EmitIntegerI64Neg1;
+      MVT::SimpleValueType VT = IsI32 ? MVT::i32 : MVT::i64;
+      int64_t Val = static_cast<int64_t>(Opcode - FirstOpcode) - 1;
+      RecordedNodes.emplace_back(
+          CurDAG->getSignedConstant(Val, SDLoc(NodeToMatch), VT,
+                                    /*isTarget=*/true),
+          nullptr);
       continue;
     }
     case OPC_EmitInteger:
