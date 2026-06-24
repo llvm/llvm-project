@@ -8626,8 +8626,8 @@ SDValue SITargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
 
   const SIRegisterInfo *TRI = getSubtarget()->getRegisterInfo();
   // Get the frame address reg and mark it as an implicit live-in
-  Register Reg = MF.addLiveIn(TRI->getFrameRegister(MF),
-                              getRegClassFor(VT, Op.getNode()->isDivergent()));
+  Register Reg =
+      MF.addLiveIn(TRI->getFrameRegister(MF), &AMDGPU::SReg_32RegClass);
 
   return DAG.getCopyFromReg(DAG.getEntryNode(), DL, Reg, VT);
 }
