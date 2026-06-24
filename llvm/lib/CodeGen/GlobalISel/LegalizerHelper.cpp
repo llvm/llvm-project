@@ -4932,9 +4932,6 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
       MI.eraseFromParent();
       return Legalized;
     }
-    // Look up what sdag does**
-    // The g opcodes should all be supported by gi
-    // Make sdag tests works for GI
   }
   case G_STACKSAVE:
     return lowerStackSave(MI);
