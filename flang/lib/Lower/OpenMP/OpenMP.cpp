@@ -4786,18 +4786,18 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
 namespace {
 struct MetadirectiveCandidate {
-  MetadirectiveCandidate(
-      const parser::OmpDirectiveSpecification *spec,
-      llvm::omp::VariantMatchInfo vmi, bool isExplicit,
-      std::optional<DynamicUserCondition> dynamicCond = std::nullopt,
-      bool conditionShouldBeTrue = true)
+  MetadirectiveCandidate(const parser::OmpDirectiveSpecification *spec,
+                         llvm::omp::VariantMatchInfo vmi, bool isExplicit,
+                         std::optional<semantics::omp::DynamicUserCondition>
+                             dynamicCond = std::nullopt,
+                         bool conditionShouldBeTrue = true)
       : spec(spec), vmi(vmi), isExplicit(isExplicit), dynamicCond(dynamicCond),
         conditionShouldBeTrue(conditionShouldBeTrue) {}
 
   const parser::OmpDirectiveSpecification *spec = nullptr;
   llvm::omp::VariantMatchInfo vmi;
   bool isExplicit = false;
-  std::optional<DynamicUserCondition> dynamicCond;
+  std::optional<semantics::omp::DynamicUserCondition> dynamicCond;
   bool conditionShouldBeTrue = true;
 };
 } // namespace
@@ -4855,9 +4855,25 @@ static void genMetadirective(lower::AbstractConverter &converter,
       const auto &ctxSel = getContextSelector(*whenClause);
       auto [spec, isExplicit] = getDirectiveVariant(*whenClause);
 
+      // METADIRECTIVE cannot yet honour some selector features that are
+      // otherwise accepted; reject them before building the match info.
+      switch (semantics::omp::FindUnsupportedSelectorFeature(ctxSel, semaCtx)) {
+      case semantics::omp::UnsupportedSelectorFeature::TargetDevice:
+        TODO(converter.genLocation(clause.source),
+             "target_device selector in METADIRECTIVE");
+        break;
+      case semantics::omp::UnsupportedSelectorFeature::
+          ClauseOrExtensionProperty:
+        TODO(converter.genLocation(clause.source),
+             "clause or extension trait matching in METADIRECTIVE");
+        break;
+      case semantics::omp::UnsupportedSelectorFeature::None:
+        break;
+      }
+
       llvm::omp::VariantMatchInfo rawVMI;
-      std::optional<DynamicUserCondition> dynamicCond = makeVariantMatchInfo(
-          rawVMI, ctxSel, semaCtx, converter.genLocation(clause.source));
+      std::optional<semantics::omp::DynamicUserCondition> dynamicCond =
+          semantics::omp::MakeVariantMatchInfo(rawVMI, ctxSel, semaCtx);
 
       if (dynamicCond) {
         constexpr llvm::omp::TraitProperty dynamicConditionTrait =
