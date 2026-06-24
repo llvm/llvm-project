@@ -3088,6 +3088,11 @@ public:
     return it->second;
   }
 
+  /// Return true if \p VD has an entry in LocalDeclMap for this function.
+  bool hasLocalDeclEntry(const VarDecl *VD) const {
+    return LocalDeclMap.find(VD) != LocalDeclMap.end();
+  }
+
   /// Given an opaque value expression, return its LValue mapping if it exists,
   /// otherwise create one.
   LValue getOrCreateOpaqueLValueMapping(const OpaqueValueExpr *e);
