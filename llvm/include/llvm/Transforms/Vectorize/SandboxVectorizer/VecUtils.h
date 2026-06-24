@@ -62,8 +62,13 @@ public:
     return *Diff == ElmBytes;
   }
 
-  template <typename LoadOrStoreT, typename ValT>
-  static bool areConsecutive(ArrayRef<ValT *> Bndl, ScalarEvolution &SE,
+  template <
+      typename LoadOrStoreT, typename RangeT,
+      // SFINAE workaround for a GCC 15 -Wtemplate-body error when RangeT is
+      // unconstrained
+      typename = std::void_t<decltype(std::declval<RangeT>()[0]),
+                             decltype(drop_begin(std::declval<RangeT>()))>>
+  static bool areConsecutive(const RangeT &Bndl, ScalarEvolution &SE,
                              const DataLayout &DL) {
     static_assert(std::is_same<LoadOrStoreT, LoadInst>::value ||
                       std::is_same<LoadOrStoreT, StoreInst>::value,
