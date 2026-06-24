@@ -224,37 +224,36 @@ exit:
 define void @reduction_smin(ptr %A, i32 %init) {
 ; CHECK-LABEL: define void @reduction_smin(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[INIT:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[FOR_J_PREHEADER:.*]]
-; CHECK:       [[FOR_I_HEADER_PREHEADER:.*]]:
-; CHECK-NEXT:    br label %[[FOR_I_HEADER:.*]]
-; CHECK:       [[FOR_I_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INC:%.*]], %[[FOR_I_LATCH:.*]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[SMIN_J:%.*]] = phi i32 [ [[SMIN_J_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ [[SMIN_I:%.*]], %[[FOR_I_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[FOR_J_SPLIT1:.*]]
-; CHECK:       [[FOR_J_PREHEADER]]:
+; CHECK-NEXT:  [[FOR_J_PREHEADER:.*:]]
 ; CHECK-NEXT:    br label %[[FOR_J:.*]]
+; CHECK:       [[FOR_I_HEADER_PREHEADER1:.*]]:
+; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER:.*]]
+; CHECK:       [[FOR_I_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INC:%.*]], %[[FOR_I_LATCH:.*]] ], [ 0, %[[FOR_I_HEADER_PREHEADER1]] ]
+; CHECK-NEXT:    [[SMIN_J:%.*]] = phi i32 [ [[SMIN_J_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ [[SMIN_I:%.*]], %[[FOR_I_HEADER_PREHEADER1]] ]
+; CHECK-NEXT:    br label %[[FOR_J_SPLIT1:.*]]
 ; CHECK:       [[FOR_J]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[TMP0:%.*]], %[[FOR_J_SPLIT:.*]] ], [ 0, %[[FOR_J_PREHEADER]] ]
-; CHECK-NEXT:    [[SMIN_I]] = phi i32 [ [[SMIN_I_LCSSA:%.*]], %[[FOR_J_SPLIT]] ], [ [[INIT]], %[[FOR_J_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER]]
+; CHECK-NEXT:    br label %[[FOR_J1:.*]]
+; CHECK:       [[FOR_J1]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[TMP2:%.*]], %[[FOR_J_SPLIT:.*]] ], [ 0, %[[FOR_J]] ]
+; CHECK-NEXT:    [[SMIN_I]] = phi i32 [ [[SMIN_I_LCSSA:%.*]], %[[FOR_J_SPLIT]] ], [ [[INIT]], %[[FOR_J]] ]
+; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER1]]
 ; CHECK:       [[FOR_J_SPLIT1]]:
 ; CHECK-NEXT:    [[IDX:%.*]] = getelementptr inbounds [2 x [2 x i32]], ptr [[A]], i32 0, i32 [[J]], i32 [[I]]
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[IDX]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], [[SMIN_J]]
-; CHECK-NEXT:    [[SMIN_J_NEXT]] = select i1 [[CMP]], i32 [[A]], i32 [[SMIN_J]]
-; CHECK-NEXT:    [[J_INC:%.*]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[CMP_J:%.*]] = icmp slt i32 [[J_INC]], 2
+; CHECK-NEXT:    [[SMIN_J_NEXT]] = call i32 @llvm.smin.i32(i32 [[A]], i32 [[SMIN_J]])
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[J]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP0]], 2
 ; CHECK-NEXT:    br label %[[FOR_I_LATCH]]
 ; CHECK:       [[FOR_J_SPLIT]]:
 ; CHECK-NEXT:    [[SMIN_I_LCSSA]] = phi i32 [ [[SMIN_J_NEXT]], %[[FOR_I_LATCH]] ]
-; CHECK-NEXT:    [[TMP0]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP0]], 2
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_J]], label %[[EXIT:.*]]
+; CHECK-NEXT:    [[TMP2]] = add i32 [[J]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[TMP2]], 2
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[FOR_J1]], label %[[EXIT:.*]]
 ; CHECK:       [[FOR_I_LATCH]]:
 ; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[I_INC]], 2
-; CHECK-NEXT:    br i1 [[CMP_I]], label %[[FOR_I_HEADER]], label %[[FOR_J_SPLIT]]
+; CHECK-NEXT:    br i1 [[CMP_I]], label %[[FOR_I_HEADER_PREHEADER]], label %[[FOR_J_SPLIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -271,8 +270,7 @@ for.j:
   %smin.j = phi i32 [ %smin.i, %for.i.header ], [ %smin.j.next, %for.j ]
   %idx = getelementptr inbounds [2 x [2 x i32]], ptr %A, i32 0, i32 %j, i32 %i
   %a = load i32, ptr %idx, align 4
-  %cmp = icmp slt i32 %a, %smin.j
-  %smin.j.next = select i1 %cmp, i32 %a, i32 %smin.j
+  %smin.j.next = call i32 @llvm.smin(i32 %a, i32 %smin.j)
   %j.inc = add i32 %j, 1
   %cmp.j = icmp slt i32 %j.inc, 2
   br i1 %cmp.j, label %for.j, label %for.i.latch
@@ -297,37 +295,36 @@ exit:
 define void @reduction_smax(ptr %A, i32 %init) {
 ; CHECK-LABEL: define void @reduction_smax(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[INIT:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[FOR_J_PREHEADER:.*]]
-; CHECK:       [[FOR_I_HEADER_PREHEADER:.*]]:
-; CHECK-NEXT:    br label %[[FOR_I_HEADER:.*]]
-; CHECK:       [[FOR_I_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INC:%.*]], %[[FOR_I_LATCH:.*]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[SMAX_J:%.*]] = phi i32 [ [[SMAX_J_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ [[SMAX_I:%.*]], %[[FOR_I_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[FOR_J_SPLIT1:.*]]
-; CHECK:       [[FOR_J_PREHEADER]]:
+; CHECK-NEXT:  [[FOR_J_PREHEADER:.*:]]
 ; CHECK-NEXT:    br label %[[FOR_J:.*]]
+; CHECK:       [[FOR_I_HEADER_PREHEADER1:.*]]:
+; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER:.*]]
+; CHECK:       [[FOR_I_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INC:%.*]], %[[FOR_I_LATCH:.*]] ], [ 0, %[[FOR_I_HEADER_PREHEADER1]] ]
+; CHECK-NEXT:    [[SMAX_J:%.*]] = phi i32 [ [[SMAX_J_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ [[SMAX_I:%.*]], %[[FOR_I_HEADER_PREHEADER1]] ]
+; CHECK-NEXT:    br label %[[FOR_J_SPLIT1:.*]]
 ; CHECK:       [[FOR_J]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[TMP0:%.*]], %[[FOR_J_SPLIT:.*]] ], [ 0, %[[FOR_J_PREHEADER]] ]
-; CHECK-NEXT:    [[SMAX_I]] = phi i32 [ [[SMAX_I_LCSSA:%.*]], %[[FOR_J_SPLIT]] ], [ [[INIT]], %[[FOR_J_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER]]
+; CHECK-NEXT:    br label %[[FOR_J1:.*]]
+; CHECK:       [[FOR_J1]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[TMP2:%.*]], %[[FOR_J_SPLIT:.*]] ], [ 0, %[[FOR_J]] ]
+; CHECK-NEXT:    [[SMAX_I]] = phi i32 [ [[SMAX_I_LCSSA:%.*]], %[[FOR_J_SPLIT]] ], [ [[INIT]], %[[FOR_J]] ]
+; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER1]]
 ; CHECK:       [[FOR_J_SPLIT1]]:
 ; CHECK-NEXT:    [[IDX:%.*]] = getelementptr inbounds [2 x [2 x i32]], ptr [[A]], i32 0, i32 [[J]], i32 [[I]]
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[IDX]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A]], [[SMAX_J]]
-; CHECK-NEXT:    [[SMAX_J_NEXT]] = select i1 [[CMP]], i32 [[A]], i32 [[SMAX_J]]
-; CHECK-NEXT:    [[J_INC:%.*]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[CMP_J:%.*]] = icmp slt i32 [[J_INC]], 2
+; CHECK-NEXT:    [[SMAX_J_NEXT]] = call i32 @llvm.smax.i32(i32 [[A]], i32 [[SMAX_J]])
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[J]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP0]], 2
 ; CHECK-NEXT:    br label %[[FOR_I_LATCH]]
 ; CHECK:       [[FOR_J_SPLIT]]:
 ; CHECK-NEXT:    [[SMAX_I_LCSSA]] = phi i32 [ [[SMAX_J_NEXT]], %[[FOR_I_LATCH]] ]
-; CHECK-NEXT:    [[TMP0]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP0]], 2
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_J]], label %[[EXIT:.*]]
+; CHECK-NEXT:    [[TMP2]] = add i32 [[J]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[TMP2]], 2
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[FOR_J1]], label %[[EXIT:.*]]
 ; CHECK:       [[FOR_I_LATCH]]:
 ; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[I_INC]], 2
-; CHECK-NEXT:    br i1 [[CMP_I]], label %[[FOR_I_HEADER]], label %[[FOR_J_SPLIT]]
+; CHECK-NEXT:    br i1 [[CMP_I]], label %[[FOR_I_HEADER_PREHEADER]], label %[[FOR_J_SPLIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -344,8 +341,7 @@ for.j:
   %smax.j = phi i32 [ %smax.i, %for.i.header ], [ %smax.j.next, %for.j ]
   %idx = getelementptr inbounds [2 x [2 x i32]], ptr %A, i32 0, i32 %j, i32 %i
   %a = load i32, ptr %idx, align 4
-  %cmp = icmp sgt i32 %a, %smax.j
-  %smax.j.next = select i1 %cmp, i32 %a, i32 %smax.j
+  %smax.j.next = call i32 @llvm.smax(i32 %a, i32 %smax.j)
   %j.inc = add i32 %j, 1
   %cmp.j = icmp slt i32 %j.inc, 2
   br i1 %cmp.j, label %for.j, label %for.i.latch
@@ -370,37 +366,36 @@ exit:
 define void @reduction_umin(ptr %A, i32 %init) {
 ; CHECK-LABEL: define void @reduction_umin(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[INIT:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[FOR_J_PREHEADER:.*]]
-; CHECK:       [[FOR_I_HEADER_PREHEADER:.*]]:
-; CHECK-NEXT:    br label %[[FOR_I_HEADER:.*]]
-; CHECK:       [[FOR_I_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INC:%.*]], %[[FOR_I_LATCH:.*]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[UMIN_J:%.*]] = phi i32 [ [[UMIN_J_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ [[UMIN_I:%.*]], %[[FOR_I_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[FOR_J_SPLIT1:.*]]
-; CHECK:       [[FOR_J_PREHEADER]]:
+; CHECK-NEXT:  [[FOR_J_PREHEADER:.*:]]
 ; CHECK-NEXT:    br label %[[FOR_J:.*]]
+; CHECK:       [[FOR_I_HEADER_PREHEADER1:.*]]:
+; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER:.*]]
+; CHECK:       [[FOR_I_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INC:%.*]], %[[FOR_I_LATCH:.*]] ], [ 0, %[[FOR_I_HEADER_PREHEADER1]] ]
+; CHECK-NEXT:    [[UMIN_J:%.*]] = phi i32 [ [[UMIN_J_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ [[UMIN_I:%.*]], %[[FOR_I_HEADER_PREHEADER1]] ]
+; CHECK-NEXT:    br label %[[FOR_J_SPLIT1:.*]]
 ; CHECK:       [[FOR_J]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[TMP0:%.*]], %[[FOR_J_SPLIT:.*]] ], [ 0, %[[FOR_J_PREHEADER]] ]
-; CHECK-NEXT:    [[UMIN_I]] = phi i32 [ [[UMIN_I_LCSSA:%.*]], %[[FOR_J_SPLIT]] ], [ [[INIT]], %[[FOR_J_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER]]
+; CHECK-NEXT:    br label %[[FOR_J1:.*]]
+; CHECK:       [[FOR_J1]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[TMP2:%.*]], %[[FOR_J_SPLIT:.*]] ], [ 0, %[[FOR_J]] ]
+; CHECK-NEXT:    [[UMIN_I]] = phi i32 [ [[UMIN_I_LCSSA:%.*]], %[[FOR_J_SPLIT]] ], [ [[INIT]], %[[FOR_J]] ]
+; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER1]]
 ; CHECK:       [[FOR_J_SPLIT1]]:
 ; CHECK-NEXT:    [[IDX:%.*]] = getelementptr inbounds [2 x [2 x i32]], ptr [[A]], i32 0, i32 [[J]], i32 [[I]]
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[IDX]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[A]], [[UMIN_J]]
-; CHECK-NEXT:    [[UMIN_J_NEXT]] = select i1 [[CMP]], i32 [[A]], i32 [[UMIN_J]]
-; CHECK-NEXT:    [[J_INC:%.*]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[CMP_J:%.*]] = icmp slt i32 [[J_INC]], 2
+; CHECK-NEXT:    [[UMIN_J_NEXT]] = call i32 @llvm.umin.i32(i32 [[A]], i32 [[UMIN_J]])
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[J]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP0]], 2
 ; CHECK-NEXT:    br label %[[FOR_I_LATCH]]
 ; CHECK:       [[FOR_J_SPLIT]]:
 ; CHECK-NEXT:    [[UMIN_I_LCSSA]] = phi i32 [ [[UMIN_J_NEXT]], %[[FOR_I_LATCH]] ]
-; CHECK-NEXT:    [[TMP0]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP0]], 2
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_J]], label %[[EXIT:.*]]
+; CHECK-NEXT:    [[TMP2]] = add i32 [[J]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[TMP2]], 2
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[FOR_J1]], label %[[EXIT:.*]]
 ; CHECK:       [[FOR_I_LATCH]]:
 ; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[I_INC]], 2
-; CHECK-NEXT:    br i1 [[CMP_I]], label %[[FOR_I_HEADER]], label %[[FOR_J_SPLIT]]
+; CHECK-NEXT:    br i1 [[CMP_I]], label %[[FOR_I_HEADER_PREHEADER]], label %[[FOR_J_SPLIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -417,8 +412,7 @@ for.j:
   %umin.j = phi i32 [ %umin.i, %for.i.header ], [ %umin.j.next, %for.j ]
   %idx = getelementptr inbounds [2 x [2 x i32]], ptr %A, i32 0, i32 %j, i32 %i
   %a = load i32, ptr %idx, align 4
-  %cmp = icmp ult i32 %a, %umin.j
-  %umin.j.next = select i1 %cmp, i32 %a, i32 %umin.j
+  %umin.j.next = call i32 @llvm.umin(i32 %a, i32 %umin.j)
   %j.inc = add i32 %j, 1
   %cmp.j = icmp slt i32 %j.inc, 2
   br i1 %cmp.j, label %for.j, label %for.i.latch
@@ -443,37 +437,36 @@ exit:
 define void @reduction_umax(ptr %A) {
 ; CHECK-LABEL: define void @reduction_umax(
 ; CHECK-SAME: ptr [[A:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[FOR_J_PREHEADER:.*]]
-; CHECK:       [[FOR_I_HEADER_PREHEADER:.*]]:
-; CHECK-NEXT:    br label %[[FOR_I_HEADER:.*]]
-; CHECK:       [[FOR_I_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INC:%.*]], %[[FOR_I_LATCH:.*]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[UMAX_J:%.*]] = phi i32 [ [[UMAX_J_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ [[UMAX_I:%.*]], %[[FOR_I_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[FOR_J_SPLIT1:.*]]
-; CHECK:       [[FOR_J_PREHEADER]]:
+; CHECK-NEXT:  [[FOR_J_PREHEADER:.*:]]
 ; CHECK-NEXT:    br label %[[FOR_J:.*]]
+; CHECK:       [[FOR_I_HEADER_PREHEADER1:.*]]:
+; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER:.*]]
+; CHECK:       [[FOR_I_HEADER_PREHEADER]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INC:%.*]], %[[FOR_I_LATCH:.*]] ], [ 0, %[[FOR_I_HEADER_PREHEADER1]] ]
+; CHECK-NEXT:    [[UMAX_J:%.*]] = phi i32 [ [[UMAX_J_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ [[UMAX_I:%.*]], %[[FOR_I_HEADER_PREHEADER1]] ]
+; CHECK-NEXT:    br label %[[FOR_J_SPLIT1:.*]]
 ; CHECK:       [[FOR_J]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[TMP0:%.*]], %[[FOR_J_SPLIT:.*]] ], [ 0, %[[FOR_J_PREHEADER]] ]
-; CHECK-NEXT:    [[UMAX_I]] = phi i32 [ [[UMAX_I_LCSSA:%.*]], %[[FOR_J_SPLIT]] ], [ 0, %[[FOR_J_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER]]
+; CHECK-NEXT:    br label %[[FOR_J1:.*]]
+; CHECK:       [[FOR_J1]]:
+; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[TMP2:%.*]], %[[FOR_J_SPLIT:.*]] ], [ 0, %[[FOR_J]] ]
+; CHECK-NEXT:    [[UMAX_I]] = phi i32 [ [[UMAX_I_LCSSA:%.*]], %[[FOR_J_SPLIT]] ], [ 0, %[[FOR_J]] ]
+; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER1]]
 ; CHECK:       [[FOR_J_SPLIT1]]:
 ; CHECK-NEXT:    [[IDX:%.*]] = getelementptr inbounds [2 x [2 x i32]], ptr [[A]], i32 0, i32 [[J]], i32 [[I]]
 ; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[IDX]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[A]], [[UMAX_J]]
-; CHECK-NEXT:    [[UMAX_J_NEXT]] = select i1 [[CMP]], i32 [[A]], i32 [[UMAX_J]]
-; CHECK-NEXT:    [[J_INC:%.*]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[CMP_J:%.*]] = icmp slt i32 [[J_INC]], 2
+; CHECK-NEXT:    [[UMAX_J_NEXT]] = call i32 @llvm.umax.i32(i32 [[A]], i32 [[UMAX_J]])
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[J]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP0]], 2
 ; CHECK-NEXT:    br label %[[FOR_I_LATCH]]
 ; CHECK:       [[FOR_J_SPLIT]]:
 ; CHECK-NEXT:    [[UMAX_I_LCSSA]] = phi i32 [ [[UMAX_J_NEXT]], %[[FOR_I_LATCH]] ]
-; CHECK-NEXT:    [[TMP0]] = add i32 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[TMP0]], 2
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_J]], label %[[EXIT:.*]]
+; CHECK-NEXT:    [[TMP2]] = add i32 [[J]], 1
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i32 [[TMP2]], 2
+; CHECK-NEXT:    br i1 [[TMP3]], label %[[FOR_J1]], label %[[EXIT:.*]]
 ; CHECK:       [[FOR_I_LATCH]]:
 ; CHECK-NEXT:    [[I_INC]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp slt i32 [[I_INC]], 2
-; CHECK-NEXT:    br i1 [[CMP_I]], label %[[FOR_I_HEADER]], label %[[FOR_J_SPLIT]]
+; CHECK-NEXT:    br i1 [[CMP_I]], label %[[FOR_I_HEADER_PREHEADER]], label %[[FOR_J_SPLIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -490,8 +483,7 @@ for.j:
   %umax.j = phi i32 [ %umax.i, %for.i.header ], [ %umax.j.next, %for.j ]
   %idx = getelementptr inbounds [2 x [2 x i32]], ptr %A, i32 0, i32 %j, i32 %i
   %a = load i32, ptr %idx, align 4
-  %cmp = icmp ugt i32 %a, %umax.j
-  %umax.j.next = select i1 %cmp, i32 %a, i32 %umax.j
+  %umax.j.next = call i32 @llvm.umax(i32 %a, i32 %umax.j)
   %j.inc = add i32 %j, 1
   %cmp.j = icmp slt i32 %j.inc, 2
   br i1 %cmp.j, label %for.j, label %for.i.latch
