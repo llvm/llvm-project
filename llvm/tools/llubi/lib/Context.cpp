@@ -91,6 +91,9 @@ std::optional<AnyValue> Context::getConstantValueImpl(Constant *C) {
   if (isa<PoisonValue>(C))
     return AnyValue::getPoisonValue(*this, C->getType());
 
+  if (isa<UndefValue>(C))
+    return AnyValue::getNullValue(*this, C->getType());
+
   if (isa<ConstantAggregateZero>(C))
     return AnyValue::getNullValue(*this, C->getType());
 
