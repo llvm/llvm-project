@@ -137,23 +137,17 @@ define i1 @cmp_ne_zero_or_rr(i32 %a, i32 %b) {
 define i1 @cmp_ne_zero_or_ri(i32 %a) {
 ; ARM-LABEL: cmp_ne_zero_or_ri:
 ; ARM:       @ %bb.0:
-; ARM-NEXT:    orrs r0, r0, #42
-; ARM-NEXT:    movwne r0, #1
+; ARM-NEXT:    mov r0, #1
 ; ARM-NEXT:    bx lr
 ;
 ; THUMB-LABEL: cmp_ne_zero_or_ri:
 ; THUMB:       @ %bb.0:
-; THUMB-NEXT:    movs r1, #42
-; THUMB-NEXT:    orrs r0, r1
-; THUMB-NEXT:    subs r1, r0, #1
-; THUMB-NEXT:    sbcs r0, r1
+; THUMB-NEXT:    movs r0, #1
 ; THUMB-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: cmp_ne_zero_or_ri:
 ; THUMB2:       @ %bb.0:
-; THUMB2-NEXT:    orrs r0, r0, #42
-; THUMB2-NEXT:    it ne
-; THUMB2-NEXT:    movne r0, #1
+; THUMB2-NEXT:    movs r0, #1
 ; THUMB2-NEXT:    bx lr
   %or = or i32 %a, 42
   %res = icmp ne i32 %or, 0
@@ -726,10 +720,7 @@ define i1 @cmp_eq_zero_or_ri(i32 %a) {
 ;
 ; THUMB-LABEL: cmp_eq_zero_or_ri:
 ; THUMB:       @ %bb.0:
-; THUMB-NEXT:    movs r1, #42
-; THUMB-NEXT:    orrs r0, r1
-; THUMB-NEXT:    rsbs r1, r0, #0
-; THUMB-NEXT:    adcs r0, r1
+; THUMB-NEXT:    movs r0, #0
 ; THUMB-NEXT:    bx lr
 ;
 ; THUMB2-LABEL: cmp_eq_zero_or_ri:
