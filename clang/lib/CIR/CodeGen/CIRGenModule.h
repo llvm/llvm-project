@@ -722,6 +722,11 @@ public:
   /// member, depending on the type of mpt.
   mlir::TypedAttr emitNullMemberAttr(QualType t, const MemberPointerType *mpt);
 
+  /// Build a GEP-style field-index path from \p destClass to \p field.
+  /// Returns std::nullopt and emits errorNYI for virtual-base paths.
+  std::optional<llvm::SmallVector<int32_t>>
+  buildMemberPath(const CXXRecordDecl *destClass, const FieldDecl *field);
+
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
   // This function is to support the OpenACC 'bind' clause, which names an
   // alternate name for the function to be called by. This function mangles
@@ -930,6 +935,12 @@ public:
   void addGlobalAnnotations(const clang::ValueDecl *d, mlir::Operation *gv);
 
 private:
+  /// Search \p currentClass and its non-virtual base subobjects for \p field,
+  /// appending CIR field indices along the path from \p currentClass.
+  bool findFieldMemberPath(const CXXRecordDecl *currentClass,
+                           const FieldDecl *field,
+                           llvm::SmallVectorImpl<int32_t> &path);
+
   // An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<clang::GlobalDecl, llvm::StringRef> mangledDeclNames;
   llvm::StringMap<clang::GlobalDecl, llvm::BumpPtrAllocator> manglings;

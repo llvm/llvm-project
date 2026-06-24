@@ -289,6 +289,44 @@ def CIR_CastOp : CIR_Op<"cast", [
 }
 
 //===----------------------------------------------------------------------===//
+// BuiltinIntCastOp
+//===----------------------------------------------------------------------===//
+
+def CIR_IntOrBuiltinIntType : AnyTypeOf<[CIR_IntType, AnyInteger, Index]>;
+
+def CIR_BuiltinIntCastOp : CIR_Op<"builtin_int_cast", [Pure]> {
+  let summary = "Cast between a CIR integer and a builtin integer";
+  let description = [{
+    Convert between a CIR integer type (`!cir.int`) and a builtin MLIR integer
+    type (`AnyInteger`, e.g. `i32`, `si32`, `ui32`) or `index`, and vice versa.
+
+    This allows using operations from e.g. OpenMP or OpenACC dialects
+    that expect the builtin types with CIR operations. Casting can be done
+    in either direction.
+
+    Example:
+
+    ```mlir
+    // CIR integer cast to a builtin integer.
+    %0 = cir.builtin_int_cast %ciri : !cir.int<s, 32> -> i32
+
+    // Builtin induction variable / bound cast to CIR type.
+    %1 = cir.builtin_int_cast %iv : index -> !cir.int<u, 64>
+    ```
+  }];
+
+  let arguments = (ins CIR_IntOrBuiltinIntType:$src);
+  let results = (outs CIR_IntOrBuiltinIntType:$result);
+
+  let assemblyFormat = [{
+    $src `:` type($src) `->` type($result) attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // DynamicCastOp
 //===----------------------------------------------------------------------===//
 
@@ -694,6 +732,7 @@ def CIR_LoadOp : CIR_Op<"load", [
                            [MemRead]>:$addr,
                        UnitAttr:$isDeref,
                        UnitAttr:$is_volatile,
+                       UnitAttr:$is_nontemporal,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<CIR_SyncScopeKind>:$sync_scope,
                        OptionalAttr<CIR_MemOrder>:$mem_order);
@@ -702,6 +741,7 @@ def CIR_LoadOp : CIR_Op<"load", [
   let assemblyFormat = [{
     (`deref` $isDeref^)?
     (`volatile` $is_volatile^)?
+    (`nontemporal` $is_nontemporal^)?
     (`align` `(` $alignment^ `)`)?
     (`syncscope` `(` $sync_scope^ `)`)?
     (`atomic` `(` $mem_order^ `)`)?
@@ -793,12 +833,14 @@ def CIR_StoreOp : CIR_Op<"store", [
                        Arg<CIR_PointerType, "the address to store the value",
                            [MemWrite]>:$addr,
                        UnitAttr:$is_volatile,
+                       UnitAttr:$is_nontemporal,
                        OptionalAttr<I64Attr>:$alignment,
                        OptionalAttr<CIR_SyncScopeKind>:$sync_scope,
                        OptionalAttr<CIR_MemOrder>:$mem_order);
 
   let assemblyFormat = [{
     (`volatile` $is_volatile^)?
+    (`nontemporal` $is_nontemporal^)?
     (`align` `(` $alignment^ `)`)?
     (`syncscope` `(` $sync_scope^ `)`)?
     (`atomic` `(` $mem_order^ `)`)?
@@ -809,6 +851,7 @@ def CIR_StoreOp : CIR_Op<"store", [
     // Non-volatile, non-atomic store with default alignment.
     OpBuilder<(ins "mlir::Value":$value, "mlir::Value":$addr), [{
       build($_builder, $_state, value, addr, /*is_volatile=*/mlir::UnitAttr(),
+            /*is_nontemporal=*/mlir::UnitAttr(),
             /*alignment=*/mlir::IntegerAttr(),
             /*sync_scope=*/cir::SyncScopeKindAttr(),
             /*mem_order=*/cir::MemOrderAttr());
@@ -3134,6 +3177,9 @@ def CIR_GlobalOp : CIR_Op<"global", [
     mlir::SymbolRefAttr getComdatAttr(cir::GlobalOp &op,
                                       mlir::OpBuilder &builder) const;
   }];
+
+  let customLLVMLoweringConstructorDecl =
+    LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
 }
 
 //===----------------------------------------------------------------------===//

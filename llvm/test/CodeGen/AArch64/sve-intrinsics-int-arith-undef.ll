@@ -301,7 +301,7 @@ define <vscale x 8 x i16> @mul_imm_i16(<vscale x 8 x i1> %pg, <vscale x 8 x i16>
 define <vscale x 4 x i32> @mul_imm_i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) {
 ; CHECK-LABEL: mul_imm_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mul z0.s, z0.s, #5
+; CHECK-NEXT:    adr z0.s, [z0.s, z0.s, lsl #2]
 ; CHECK-NEXT:    ret
   %out = call <vscale x 4 x i32> @llvm.aarch64.sve.mul.u.nxv4i32(<vscale x 4 x i1> %pg,
                                                                  <vscale x 4 x i32> %a,
