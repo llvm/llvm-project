@@ -2052,12 +2052,9 @@ bool ClauseProcessor::processReduction(
 
         auto mod = std::get<std::optional<ReductionModifier>>(clause.t);
         if (mod.has_value()) {
-          if (mod.value() == ReductionModifier::Task)
-            TODO(currentLocation, "Reduction modifier `task` is not supported");
-          else
-            result.reductionMod = mlir::omp::ReductionModifierAttr::get(
-                converter.getFirOpBuilder().getContext(),
-                translateReductionModifier(mod.value()));
+          result.reductionMod = mlir::omp::ReductionModifierAttr::get(
+              converter.getFirOpBuilder().getContext(),
+              translateReductionModifier(mod.value()));
         }
 
         ReductionProcessor rp;
