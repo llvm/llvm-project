@@ -92,16 +92,8 @@ for.end:
 define signext i8 @or_v16i8(ptr %p) {
 ; CHECK-LABEL: @or_v16i8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr [[P:%.*]], align 1, !tbaa [[TBAA6:![0-9]+]]
-; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <16 x i8> [[TMP1]], <16 x i8> poison, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = or <16 x i8> [[TMP1]], [[RDX_SHUF]]
-; CHECK-NEXT:    [[RDX_SHUF4:%.*]] = shufflevector <16 x i8> [[BIN_RDX]], <16 x i8> poison, <16 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[BIN_RDX5:%.*]] = or <16 x i8> [[BIN_RDX]], [[RDX_SHUF4]]
-; CHECK-NEXT:    [[RDX_SHUF6:%.*]] = shufflevector <16 x i8> [[BIN_RDX5]], <16 x i8> poison, <16 x i32> <i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[BIN_RDX7:%.*]] = or <16 x i8> [[BIN_RDX5]], [[RDX_SHUF6]]
-; CHECK-NEXT:    [[RDX_SHUF8:%.*]] = shufflevector <16 x i8> [[BIN_RDX7]], <16 x i8> poison, <16 x i32> <i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[BIN_RDX9:%.*]] = or <16 x i8> [[BIN_RDX7]], [[RDX_SHUF8]]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <16 x i8> [[BIN_RDX9]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[P:%.*]], align 1, !tbaa [[TBAA6:![0-9]+]]
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> [[TMP0]])
 ; CHECK-NEXT:    ret i8 [[TMP2]]
 ;
 entry:
