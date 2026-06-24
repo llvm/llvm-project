@@ -22,75 +22,77 @@
 #if HWASAN_REPLACE_OPERATORS_NEW_AND_DELETE
 
 // TODO(alekseys): throw std::bad_alloc instead of dying on OOM.
-#  define OPERATOR_NEW_BODY                  \
-    GET_MALLOC_STACK_TRACE;                  \
-    void *res = hwasan_malloc(size, &stack); \
-    if (UNLIKELY(!res))                      \
-      ReportOutOfMemory(size, &stack);       \
+#  define OPERATOR_NEW_BODY               \
+    GET_MALLOC_STACK_TRACE;               \
+    void *res = hwasan_new(size, &stack); \
+    if (UNLIKELY(!res))                   \
+      ReportOutOfMemory(size, &stack);    \
     return res
 #  define OPERATOR_NEW_BODY_NOTHROW \
     GET_MALLOC_STACK_TRACE;         \
-    return hwasan_malloc(size, &stack)
-#  define OPERATOR_NEW_BODY_ARRAY            \
-    GET_MALLOC_STACK_TRACE;                  \
-    void *res = hwasan_malloc(size, &stack); \
-    if (UNLIKELY(!res))                      \
-      ReportOutOfMemory(size, &stack);       \
+    return hwasan_new(size, &stack)
+#  define OPERATOR_NEW_BODY_ARRAY               \
+    GET_MALLOC_STACK_TRACE;                     \
+    void *res = hwasan_new_array(size, &stack); \
+    if (UNLIKELY(!res))                         \
+      ReportOutOfMemory(size, &stack);          \
     return res
 #  define OPERATOR_NEW_BODY_ARRAY_NOTHROW \
     GET_MALLOC_STACK_TRACE;               \
-    return hwasan_malloc(size, &stack)
-#  define OPERATOR_NEW_BODY_ALIGN                                        \
-    GET_MALLOC_STACK_TRACE;                                              \
-    void *res = hwasan_memalign(static_cast<uptr>(align), size, &stack); \
-    if (UNLIKELY(!res))                                                  \
-      ReportOutOfMemory(size, &stack);                                   \
+    return hwasan_new_array(size, &stack)
+#  define OPERATOR_NEW_BODY_ALIGN                                           \
+    GET_MALLOC_STACK_TRACE;                                                 \
+    void *res = hwasan_new_aligned(size, static_cast<uptr>(align), &stack); \
+    if (UNLIKELY(!res))                                                     \
+      ReportOutOfMemory(size, &stack);                                      \
     return res
 #  define OPERATOR_NEW_BODY_ALIGN_NOTHROW \
     GET_MALLOC_STACK_TRACE;               \
-    return hwasan_memalign(static_cast<uptr>(align), size, &stack)
-#  define OPERATOR_NEW_BODY_ALIGN_ARRAY                                  \
-    GET_MALLOC_STACK_TRACE;                                              \
-    void *res = hwasan_memalign(static_cast<uptr>(align), size, &stack); \
-    if (UNLIKELY(!res))                                                  \
-      ReportOutOfMemory(size, &stack);                                   \
+    return hwasan_new_aligned(size, static_cast<uptr>(align), &stack)
+#  define OPERATOR_NEW_BODY_ALIGN_ARRAY                                   \
+    GET_MALLOC_STACK_TRACE;                                               \
+    void *res =                                                           \
+        hwasan_new_array_aligned(size, static_cast<uptr>(align), &stack); \
+    if (UNLIKELY(!res))                                                   \
+      ReportOutOfMemory(size, &stack);                                    \
     return res
 #  define OPERATOR_NEW_BODY_ALIGN_ARRAY_NOTHROW \
     GET_MALLOC_STACK_TRACE;                     \
-    return hwasan_memalign(static_cast<uptr>(align), size, &stack)
+    return hwasan_new_array_aligned(size, static_cast<uptr>(align), &stack)
 
 #  define OPERATOR_DELETE_BODY \
     GET_MALLOC_STACK_TRACE;    \
     if (ptr)                   \
-    hwasan_free(ptr, &stack)
+    hwasan_delete(ptr, &stack)
 #  define OPERATOR_DELETE_BODY_ARRAY \
     GET_MALLOC_STACK_TRACE;          \
     if (ptr)                         \
-    hwasan_free(ptr, &stack)
+    hwasan_delete_array(ptr, &stack)
 #  define OPERATOR_DELETE_BODY_ALIGN \
     GET_MALLOC_STACK_TRACE;          \
     if (ptr)                         \
-    hwasan_free(ptr, &stack)
+    hwasan_delete_aligned(ptr, static_cast<uptr>(align), &stack)
 #  define OPERATOR_DELETE_BODY_ALIGN_ARRAY \
     GET_MALLOC_STACK_TRACE;                \
     if (ptr)                               \
-    hwasan_free(ptr, &stack)
+    hwasan_delete_array_aligned(ptr, static_cast<uptr>(align), &stack)
 #  define OPERATOR_DELETE_BODY_SIZE \
     GET_MALLOC_STACK_TRACE;         \
     if (ptr)                        \
-    hwasan_free(ptr, &stack)
+    hwasan_delete_sized(ptr, size, &stack)
 #  define OPERATOR_DELETE_BODY_SIZE_ARRAY \
     GET_MALLOC_STACK_TRACE;               \
     if (ptr)                              \
-    hwasan_free(ptr, &stack)
+    hwasan_delete_array_sized(ptr, size, &stack)
 #  define OPERATOR_DELETE_BODY_SIZE_ALIGN \
     GET_MALLOC_STACK_TRACE;               \
     if (ptr)                              \
-    hwasan_free(ptr, &stack)
-#  define OPERATOR_DELETE_BODY_SIZE_ALIGN_ARRAY \
-    GET_MALLOC_STACK_TRACE;                     \
-    if (ptr)                                    \
-    hwasan_free(ptr, &stack)
+    hwasan_delete_sized_aligned(ptr, size, static_cast<uptr>(align), &stack)
+#  define OPERATOR_DELETE_BODY_SIZE_ALIGN_ARRAY                            \
+    GET_MALLOC_STACK_TRACE;                                                \
+    if (ptr)                                                               \
+    hwasan_delete_array_sized_aligned(ptr, size, static_cast<uptr>(align), \
+                                      &stack)
 
 #elif defined(__ANDROID__)
 
@@ -151,11 +153,11 @@ INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete[](
   OPERATOR_DELETE_BODY_ARRAY;
 }
 INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete(
-    void *ptr, size_t) NOEXCEPT {
+    void *ptr, size_t size) NOEXCEPT {
   OPERATOR_DELETE_BODY_SIZE;
 }
 INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete[](
-    void *ptr, size_t) NOEXCEPT {
+    void *ptr, size_t size) NOEXCEPT {
   OPERATOR_DELETE_BODY_SIZE_ARRAY;
 }
 
@@ -189,31 +191,33 @@ INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete(
   OPERATOR_DELETE_BODY_ALIGN;
 }
 INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete[](
-    void *ptr, std::align_val_t) NOEXCEPT {
+    void *ptr, std::align_val_t align) NOEXCEPT {
   OPERATOR_DELETE_BODY_ALIGN_ARRAY;
 }
 INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete(
-    void *ptr, std::align_val_t, std::nothrow_t const &) NOEXCEPT {
+    void *ptr, std::align_val_t align, std::nothrow_t const &) NOEXCEPT {
   OPERATOR_DELETE_BODY_ALIGN;
 }
 INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete[](
-    void *ptr, std::align_val_t, std::nothrow_t const &) NOEXCEPT {
+    void *ptr, std::align_val_t align, std::nothrow_t const &) NOEXCEPT {
   OPERATOR_DELETE_BODY_ALIGN_ARRAY;
 }
 INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete(
-    void *ptr, size_t, std::align_val_t) NOEXCEPT {
+    void *ptr, size_t size, std::align_val_t align) NOEXCEPT {
   OPERATOR_DELETE_BODY_SIZE_ALIGN;
 }
 INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete[](
-    void *ptr, size_t, std::align_val_t) NOEXCEPT {
+    void *ptr, size_t size, std::align_val_t align) NOEXCEPT {
   OPERATOR_DELETE_BODY_SIZE_ALIGN_ARRAY;
 }
 INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete(
-    void *ptr, size_t, std::align_val_t, std::nothrow_t const &) NOEXCEPT {
+    void *ptr, size_t size, std::align_val_t align,
+    std::nothrow_t const &) NOEXCEPT {
   OPERATOR_DELETE_BODY_SIZE_ALIGN;
 }
 INTERCEPTOR_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void operator delete[](
-    void *ptr, size_t, std::align_val_t, std::nothrow_t const &) NOEXCEPT {
+    void *ptr, size_t size, std::align_val_t align,
+    std::nothrow_t const &) NOEXCEPT {
   OPERATOR_DELETE_BODY_SIZE_ALIGN_ARRAY;
 }
 
