@@ -12073,9 +12073,7 @@ SDValue AArch64TargetLowering::LowerBitreverse(SDValue Op,
 // A CCMP folds in only a 5-bit unsigned immediate (or its negation, via CCMN);
 // any other constant must be materialized into a register first.
 static bool isLegalCondCmpImmediate(const APInt &Imm) {
-  if (Imm.isNegative())
-    return Imm.sgt(-32);
-  return Imm.getLimitedValue(32) <= 31;
+  return Imm.sgt(-32) && Imm.slt(32);
 }
 
 // True unless one of the operands is a constant that cannot be encoded as a
@@ -12191,6 +12189,12 @@ static SDValue performOrXorChainCombine(SDNode *N, SelectionDAG &DAG) {
       isOrXorChain(LHS, DAG, NumXors, SawXor, RequireLegalCmpImmediates,
                    WorkList) &&
       SawXor) {
+    // A CCMP sequence serializes the comparisons through NZCV. Keep the
+    // transform to short chains where the instruction-count reduction outweighs
+    // the longer dependency chain.
+    if (WorkList.size() > 5)
+      return SDValue();
+
     if (WorkList.size() > 2 &&
         any_of(WorkList, hasCheapXorImmediateThatNeedsCondCmpReg))
       return SDValue();
