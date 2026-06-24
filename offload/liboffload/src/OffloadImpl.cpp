@@ -454,6 +454,11 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
     return Info.write<uint64_t>(Mem);
   } break;
 
+  case OL_DEVICE_INFO_IS_VA_SUPPORTED:
+    return Info.write<bool>(Device->Device->supportVAManagement());
+  case OL_DEVICE_INFO_USE_AUTO_ZERO_COPY:
+    return Info.write<bool>(Device->Device->useAutoZeroCopy());
+
   default:
     break;
   }
