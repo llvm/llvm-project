@@ -135,6 +135,8 @@ struct SubViewOpInterface
         ++ctr;
       if (ctr == dim) {
         cstr.bound(value)[dim] == subViewOp.getMixedSizes()[i];
+        cstr.bound(value)[dim] <= cstr.getExpr(subViewOp.getSource(), i) -
+                                  cstr.getExpr(subViewOp.getMixedOffsets()[i]);
         return;
       }
     }
