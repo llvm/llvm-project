@@ -124,7 +124,7 @@
 ;; Empty <to> without --source-dir: relative path is not resolved; warn once, no crash.
 ; RUN: llvm-objdump --no-print-imm-hex -d --source --substitute-path /wrong "" %t.o 2>&1 | \
 ; RUN:   FileCheck %s --check-prefix=SOURCE-EMPTY-TO -DFILE=%t.o \
-; RUN:     --implicit-check-not="; int foo() {"
+; RUN:     --implicit-check-not="foo()"
 
 ; SOURCE-EMPTY-TO: <foo>:
 ; SOURCE-EMPTY-TO: warning: '[[FILE]]': failed to find source Inputs{{[/\\]}}source-interleave-x86_64.c
