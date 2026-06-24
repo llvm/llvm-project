@@ -7,10 +7,13 @@
 ; RUN: llc < %s -mtriple=x86_64-windows-msvc -mattr=+push2pop2 | FileCheck %s --check-prefix=WIN
 ; RUN: llc < %s -mtriple=x86_64-windows-msvc -mattr=+push2pop2,+ppx | FileCheck %s --check-prefix=WIN-PPX
 
-; EPGR normally required unwind v3 info, but that changes the SEH directives
-; that get emitted, so disable epgr so that we can validate diamondrapids
-; enables push2pop2. diamondrapids also enables +nf, so the prologue stack
-; adjustment uses an NF sub; use a separate prefix from the +ppx line above.
+; diamondrapids enables EGPR, which would require V3 unwind info and emit
+; V3-style SEH directives; disable EGPR so this runs with default (V1) unwind.
+; This validates that the push2/pop2 candidacy gate suppresses push2/pop2 under
+; V1 (individual pushp/popp emitted): the function emits unwind info, and the
+; V1/V2 epilogue unwinder can't decode EVEX push2/pop2. diamondrapids also
+; enables +nf, but the stack adjustment here has dead EFLAGS so it stays a plain
+; (non-NF) subq/addq.
 ; RUN: llc < %s -mtriple=x86_64-windows-msvc -mcpu=diamondrapids -mattr=-egpr | FileCheck %s --check-prefix=WIN-DR
 
 define i32 @csr6_alloc16(ptr %argv) {
@@ -137,7 +140,7 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; LIN-DR-NEXT:    .cfi_def_cfa_offset 48
 ; LIN-DR-NEXT:    pushp %rbx
 ; LIN-DR-NEXT:    .cfi_def_cfa_offset 56
-; LIN-DR-NEXT:    {nf} subq $24, %rsp
+; LIN-DR-NEXT:    subq $24, %rsp
 ; LIN-DR-NEXT:    .cfi_def_cfa_offset 80
 ; LIN-DR-NEXT:    .cfi_offset %rbx, -56
 ; LIN-DR-NEXT:    .cfi_offset %r12, -48
@@ -150,7 +153,7 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; LIN-DR-NEXT:    xorl %ecx, %ecx
 ; LIN-DR-NEXT:    xorl %eax, %eax
 ; LIN-DR-NEXT:    callq *%rcx
-; LIN-DR-NEXT:    {nf} addq $24, %rsp
+; LIN-DR-NEXT:    addq $24, %rsp
 ; LIN-DR-NEXT:    .cfi_def_cfa_offset 56
 ; LIN-DR-NEXT:    popp %rbx
 ; LIN-DR-NEXT:    .cfi_def_cfa_offset 48
@@ -278,7 +281,7 @@ define i32 @csr6_alloc16(ptr %argv) {
 ; WIN-DR-NEXT:    .seh_pushreg %rbp
 ; WIN-DR-NEXT:    pushp %rbx
 ; WIN-DR-NEXT:    .seh_pushreg %rbx
-; WIN-DR-NEXT:    {nf} subq $56, %rsp
+; WIN-DR-NEXT:    subq $56, %rsp
 ; WIN-DR-NEXT:    .seh_stackalloc 56
 ; WIN-DR-NEXT:    .seh_endprologue
 ; WIN-DR-NEXT:    #APP

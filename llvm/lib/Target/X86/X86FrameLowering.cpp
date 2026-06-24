@@ -383,35 +383,36 @@ MachineInstrBuilder X86FrameLowering::BuildStackAdjustment(
   }
 
   MachineInstrBuilder MI;
-  // Use NF (no-flags) variants when the target supports it, avoiding
-  // gratuitous EFLAGS clobber. The NF stack-adjust opcodes below are 64-bit
-  // (SUB64ri32_NF/ADD64ri32_NF), so don't use them for the x32 ABI where the
-  // stack pointer is 32-bit. On Windows whether NF is safe in the epilogue
-  // depends on how the OS unwinder reads the code: the prologue unwinder is
-  // data-driven (it walks the unwind codes and never disassembles the
-  // prologue), so NF is always safe there; but the v1/v2 epilogue unwinder
-  // disassembles the epilogue and doesn't recognize EVEX NF add/sub
-  // instructions, so only use NF in a Windows epilogue under unwind v3 (which
-  // encodes epilog operations declaratively and needs no disassembly).
-  bool UseNF = STI.hasNF() && Uses64BitFramePtr &&
-               !(InEpilogue && needsWin64NonV3EpilogueUnwind(*MBB.getParent()));
-  if (UseLEA && !UseNF) {
+  // Use an NF (no-flags) variant as a smaller replacement for LEA when EFLAGS
+  // must be preserved (i.e. only when we would otherwise emit LEA). If EFLAGS
+  // is dead we prefer the plain SUB/ADD, which is shorter than the EVEX-encoded
+  // NF form. The NF stack-adjust opcodes below are 64-bit (SUB64ri32_NF/
+  // ADD64ri32_NF), so don't use them for the x32 ABI where the stack pointer is
+  // 32-bit. NF cannot reach a Win64 epilogue (which never uses LEA for the SP
+  // adjustment unless it has a frame pointer, and that path doesn't go through
+  // here), so the Windows epilogue unwinder never sees an undisassemblable NF
+  // add/sub.
+  bool UseNF = UseLEA && STI.hasNF() && Uses64BitFramePtr;
+  bool IsSub = Offset < 0;
+  uint64_t AbsOffset = IsSub ? -Offset : Offset;
+  if (UseNF) {
+    const unsigned Opc = IsSub ? X86::SUB64ri32_NF : X86::ADD64ri32_NF;
+    MI = BuildMI(MBB, MBBI, DL, TII.get(Opc), StackPtr)
+             .addReg(StackPtr)
+             .addImm(AbsOffset);
+    // NF instructions define no EFLAGS, so there is nothing to mark dead.
+  } else if (UseLEA) {
     MI = addRegOffset(BuildMI(MBB, MBBI, DL,
                               TII.get(getLEArOpcode(Uses64BitFramePtr)),
                               StackPtr),
                       StackPtr, false, Offset);
   } else {
-    bool IsSub = Offset < 0;
-    uint64_t AbsOffset = IsSub ? -Offset : Offset;
-    const unsigned Opc = IsSub ? (UseNF ? (unsigned)X86::SUB64ri32_NF
-                                        : getSUBriOpcode(Uses64BitFramePtr))
-                               : (UseNF ? (unsigned)X86::ADD64ri32_NF
-                                        : getADDriOpcode(Uses64BitFramePtr));
+    const unsigned Opc = IsSub ? getSUBriOpcode(Uses64BitFramePtr)
+                               : getADDriOpcode(Uses64BitFramePtr);
     MI = BuildMI(MBB, MBBI, DL, TII.get(Opc), StackPtr)
              .addReg(StackPtr)
              .addImm(AbsOffset);
-    if (!UseNF)
-      MI->getOperand(3).setIsDead(); // The EFLAGS implicit def is dead.
+    MI->getOperand(3).setIsDead(); // The EFLAGS implicit def is dead.
   }
   return MI;
 }
@@ -2795,16 +2796,6 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
         // register).
         if (Opc == X86::POP2 || Opc == X86::POP2P)
           Offset += SlotSize;
-        BuildCFI(MBB, MBBI, DL,
-                 MCCFIInstruction::cfiDefCfaOffset(nullptr, -Offset),
-                 MachineInstr::FrameDestroy);
-      } else if (PI->getFlag(MachineInstr::FrameDestroy) &&
-                 PI->getOperand(0).getReg() == StackPtr &&
-                 (Opc == X86::ADD64ri32 || Opc == X86::ADD64ri32_NF ||
-                  Opc == X86::ADD32ri || Opc == X86::LEA64r)) {
-        int64_t SPAdj = Opc == X86::LEA64r ? PI->getOperand(4).getImm()
-                                           : PI->getOperand(2).getImm();
-        Offset += SPAdj;
         BuildCFI(MBB, MBBI, DL,
                  MCCFIInstruction::cfiDefCfaOffset(nullptr, -Offset),
                  MachineInstr::FrameDestroy);

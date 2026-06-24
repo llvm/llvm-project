@@ -432,7 +432,7 @@ define void @lea_in_epilog(i1 %arg, ptr %arg1, ptr %arg2, i64 %arg3, i64 %arg4, 
 ; PPX-NF-NEXT:    push2p %r14, %r15
 ; PPX-NF-NEXT:    push2p %r12, %r13
 ; PPX-NF-NEXT:    pushp %rbx
-; PPX-NF-NEXT:    {nf} subq $24, %rsp
+; PPX-NF-NEXT:    subq $24, %rsp
 ; PPX-NF-NEXT:    movq %r9, %r14
 ; PPX-NF-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; PPX-NF-NEXT:    addq {{[0-9]+}}(%rsp), %r14
