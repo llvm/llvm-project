@@ -6,3 +6,5 @@ utils/bazel
 # include Bazel configs.
 libcxx/utils/google-benchmark
 third-party/benchmark
+.git
+.git
