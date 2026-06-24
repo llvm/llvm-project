@@ -11519,6 +11519,9 @@ bool ScalarEvolution::isKnownPredicate(CmpPredicate Pred, SCEVUse LHS,
   if (isKnownPredicateViaSplitting(Pred, LHS, RHS))
     return true;
 
+  if (isKnownPredicateViaMaxValue(Pred, LHS, RHS))
+    return true;
+
   // Otherwise see what can be done with some simple reasoning.
   return isKnownViaNonRecursiveReasoning(Pred, LHS, RHS);
 }
@@ -13253,6 +13256,35 @@ static bool isKnownPredicateExtendIdiom(CmpPredicate Pred, const SCEV *LHS,
     return false;
   };
   llvm_unreachable("unhandled case");
+}
+
+// Prove LHS Pred RHS by replacing an affine nuw AddRec LHS with its value at
+// the maximum iteration count and comparing that loop-invariant bound against
+// RHS. nuw makes the AddRec unsigned non-decreasing, so its max is at that
+// iteration regardless of the step's sign.
+bool ScalarEvolution::isKnownPredicateViaMaxValue(CmpPredicate Pred,
+                                                  SCEVUse LHS, SCEVUse RHS) {
+  if (Pred == ICmpInst::ICMP_UGE || Pred == ICmpInst::ICMP_UGT) {
+    std::swap(LHS, RHS);
+    Pred = ICmpInst::getSwappedCmpPredicate(Pred);
+  }
+  if (Pred != ICmpInst::ICMP_ULE && Pred != ICmpInst::ICMP_ULT)
+    return false;
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(LHS);
+  if (!AR || !AR->isAffine() || !AR->hasNoUnsignedWrap())
+    return false;
+  const Loop *L = AR->getLoop();
+  if (!isLoopInvariant(RHS, L))
+    return false;
+
+  const SCEV *BTC = getSymbolicMaxBackedgeTakenCount(L);
+  if (isa<SCEVCouldNotCompute>(BTC))
+    return false;
+
+  const SCEV *MaxVal = AR->evaluateAtIteration(BTC, *this);
+
+  // MaxVal is loop-invariant for L, so this does not recurse.
+  return isKnownViaNonRecursiveReasoning(Pred, MaxVal, RHS);
 }
 
 bool ScalarEvolution::isKnownViaNonRecursiveReasoning(CmpPredicate Pred,
