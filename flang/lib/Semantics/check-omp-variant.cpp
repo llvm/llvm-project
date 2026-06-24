@@ -688,7 +688,7 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
             CheckProcedureSymbol(base, arg.source);
             CheckProcedureSymbol(variant, arg.source);
           },
-          [&](const parser::OmpLocator &y) {
+          [&](const parser::OmpObject &y) {
             variant = GetArgumentSymbol(arg);
             CheckProcedureSymbol(variant, arg.source);
             const Scope &containingScope{context_.FindScope(x.source)};
