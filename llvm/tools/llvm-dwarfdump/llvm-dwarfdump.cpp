@@ -23,6 +23,7 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
@@ -198,6 +199,11 @@ static opt<bool> DumpNonSkeleton(
          "skeleton DIE from the main executable. This allows dumping the .dwo "
          "files with resolved addresses."),
     value_desc("d"), cat(DwarfDumpCategory));
+static opt<bool> NoDebugMap(
+    "no-debug-map",
+    desc("Do not follow Mach-O debug map (N_OSO) references to dump DWARF "
+         "from referenced object files."),
+    cat(DwarfDumpCategory));
 
 static alias IgnoreCaseAlias("i", desc("Alias for --ignore-case."),
                              aliasopt(IgnoreCase), cl::NotHidden);
@@ -369,15 +375,19 @@ static void error(Error Err) {
   exit(1);
 }
 
-static void error(StringRef Prefix, Error Err) {
+static bool error(StringRef Prefix, Error Err, bool Fatal = true) {
   if (!Err)
-    return;
-  WithColor::error() << Prefix << ": " << toString(std::move(Err)) << "\n";
-  exit(1);
+    return false;
+  if (Fatal) {
+    WithColor::error() << Prefix << ": " << toString(std::move(Err)) << "\n";
+    exit(1);
+  }
+  WithColor::warning() << Prefix << ": " << toString(std::move(Err)) << "\n";
+  return true;
 }
 
-static void error(StringRef Prefix, std::error_code EC) {
-  error(Prefix, errorCodeToError(EC));
+static bool error(StringRef Prefix, std::error_code EC, bool Fatal = true) {
+  return error(Prefix, errorCodeToError(EC), Fatal);
 }
 
 static DIDumpOptions getDumpOpts(DWARFContext &C) {
@@ -790,20 +800,68 @@ static bool verifyObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
 
 static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
                          HandlerFn HandleObj, raw_ostream &OS);
+static bool handleArchive(StringRef Filename, Archive &Arch,
+                          HandlerFn HandleObj, raw_ostream &OS,
+                          StringRef MemberFilter = "", bool Fatal = true);
+
+/// Extract unique N_OSO object file paths from a Mach-O binary's symbol table.
+static SmallVector<std::string> collectOSOPaths(const MachOObjectFile &MachO) {
+  StringSet<> Seen;
+  SmallVector<std::string> Paths;
+
+  for (const SymbolRef &Sym : MachO.symbols()) {
+    DataRefImpl DRI = Sym.getRawDataRefImpl();
+    uint8_t NType = MachO.is64Bit() ? MachO.getSymbol64TableEntry(DRI).n_type
+                                    : MachO.getSymbolTableEntry(DRI).n_type;
+    if (NType != MachO::N_OSO)
+      continue;
+
+    Expected<StringRef> NameOrErr = Sym.getName();
+    if (!NameOrErr) {
+      WithColor::warning() << "N_OSO symbol has no name: "
+                           << toString(NameOrErr.takeError()) << "\n";
+      continue;
+    }
+
+    if (!NameOrErr->empty() && Seen.insert(*NameOrErr).second)
+      Paths.push_back(NameOrErr->str());
+  }
+
+  return Paths;
+}
+
+static bool handleFile(StringRef Filename, HandlerFn HandleObj, raw_ostream &OS,
+                       bool Fatal = true);
+
+static bool handleDebugMap(const MachOObjectFile &MachO, HandlerFn HandleObj,
+                           raw_ostream &OS) {
+  for (const std::string &OSOPath : collectOSOPaths(MachO))
+    handleFile(OSOPath, HandleObj, OS, /*Fatal=*/false);
+  return true;
+}
 
 static bool handleArchive(StringRef Filename, Archive &Arch,
-                          HandlerFn HandleObj, raw_ostream &OS) {
+                          HandlerFn HandleObj, raw_ostream &OS,
+                          StringRef MemberName, bool Fatal) {
+  bool FilterByMember = !MemberName.empty();
   bool Result = true;
   Error Err = Error::success();
   for (const auto &Child : Arch.children(Err)) {
-    auto BuffOrErr = Child.getMemoryBufferRef();
-    error(Filename, BuffOrErr.takeError());
     auto NameOrErr = Child.getName();
-    error(Filename, NameOrErr.takeError());
-    std::string Name = (Filename + "(" + NameOrErr.get() + ")").str();
-    Result &= handleBuffer(Name, BuffOrErr.get(), HandleObj, OS);
+    if (error(Filename, NameOrErr.takeError(), Fatal))
+      continue;
+    if (FilterByMember && *NameOrErr != MemberName)
+      continue;
+    auto BuffOrErr = Child.getMemoryBufferRef();
+    if (error(Filename, BuffOrErr.takeError(), Fatal))
+      continue;
+    std::string Name = (Filename + "(" + *NameOrErr + ")").str();
+    Result &= handleBuffer(Name, *BuffOrErr, HandleObj, OS);
+    // Archive member names are generally unique, stop after the first match.
+    if (FilterByMember)
+      break;
   }
-  error(Filename, std::move(Err));
+  error(Filename, std::move(Err), Fatal);
 
   return Result;
 }
@@ -827,6 +885,10 @@ static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
       DICtx->setParseCUTUIndexManually(ManuallyGenerateUnitIndex);
       if (!HandleObj(*Obj, *DICtx, Filename, OS))
         Result = false;
+
+      if (DICtx->getNumCompileUnits() == 0 && !NoDebugMap)
+        if (auto *MachO = dyn_cast<MachOObjectFile>(Obj))
+          Result &= handleDebugMap(*MachO, HandleObj, OS);
     }
   } else if (auto *Fat = dyn_cast<MachOUniversalBinary>(BinOrErr->get()))
     for (auto &ObjForArch : Fat->objects()) {
@@ -857,13 +919,43 @@ static bool handleBuffer(StringRef Filename, MemoryBufferRef Buffer,
   return Result;
 }
 
-static bool handleFile(StringRef Filename, HandlerFn HandleObj,
-                       raw_ostream &OS) {
+static bool handleArchiveMember(StringRef Filename, HandlerFn HandleObj,
+                                raw_ostream &OS, bool Fatal) {
+  StringRef ArchivePath = Filename.substr(0, Filename.rfind('('));
+  StringRef MemberName = Filename.substr(ArchivePath.size() + 1).drop_back();
+
+  ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
+      MemoryBuffer::getFile(ArchivePath);
+  if (error(ArchivePath, BuffOrErr.getError(), Fatal))
+    return false;
+
+  Expected<std::unique_ptr<Binary>> BinOrErr =
+      object::createBinary(BuffOrErr->get()->getMemBufferRef());
+  if (error(ArchivePath, BinOrErr.takeError(), Fatal))
+    return false;
+
+  auto *Arch = dyn_cast<Archive>(BinOrErr->get());
+  if (!Arch) {
+    WithColor::error() << ArchivePath << ": is not an archive\n";
+    if (Fatal)
+      exit(1);
+    return false;
+  }
+
+  return handleArchive(ArchivePath, *Arch, HandleObj, OS, MemberName, Fatal);
+}
+
+static bool handleFile(StringRef Filename, HandlerFn HandleObj, raw_ostream &OS,
+                       bool Fatal) {
+  if (Filename.ends_with(")"))
+    return handleArchiveMember(Filename, HandleObj, OS, Fatal);
+
   ErrorOr<std::unique_ptr<MemoryBuffer>> BuffOrErr =
       MemoryBuffer::getFileOrSTDIN(Filename);
-  error(Filename, BuffOrErr.getError());
-  std::unique_ptr<MemoryBuffer> Buffer = std::move(BuffOrErr.get());
-  return handleBuffer(Filename, *Buffer, HandleObj, OS);
+  if (error(Filename, BuffOrErr.getError(), Fatal))
+    return false;
+
+  return handleBuffer(Filename, **BuffOrErr, HandleObj, OS);
 }
 
 int main(int argc, char **argv) {
