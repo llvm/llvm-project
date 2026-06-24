@@ -17,29 +17,6 @@ namespace mlir {
 namespace arith {
 namespace {
 
-static bool isProvablyNonNegative(Value value, ValueBoundsConstraintSet &cstr) {
-  return cstr.populateAndCompare(
-      /*lhs=*/{value}, ValueBoundsConstraintSet::ComparisonOperator::GE,
-      /*rhs=*/{OpFoldResult(Builder(value.getContext()).getIndexAttr(0))});
-}
-
-static bool isProvablyNonPositive(Value value, ValueBoundsConstraintSet &cstr) {
-  return cstr.populateAndCompare(
-      /*lhs=*/{value}, ValueBoundsConstraintSet::ComparisonOperator::LE,
-      /*rhs=*/{OpFoldResult(Builder(value.getContext()).getIndexAttr(0))});
-}
-
-static bool isProvablyPositive(Value value, ValueBoundsConstraintSet &cstr) {
-  return cstr.populateAndCompare(
-      /*lhs=*/{value}, ValueBoundsConstraintSet::ComparisonOperator::GT,
-      /*rhs=*/{OpFoldResult(Builder(value.getContext()).getIndexAttr(0))});
-}
-
-static bool isProvablyNegative(Value value, ValueBoundsConstraintSet &cstr) {
-  return cstr.populateAndCompare(
-      /*lhs=*/{value}, ValueBoundsConstraintSet::ComparisonOperator::LT,
-      /*rhs=*/{OpFoldResult(Builder(value.getContext()).getIndexAttr(0))});
-}
 
 struct AddIOpInterface
     : public ValueBoundsOpInterface::ExternalModel<AddIOpInterface, AddIOp> {
@@ -137,21 +114,21 @@ struct RemSIOpInterface
     Value lhsValue = remSIOp.getLhs();
     Value rhsValue = remSIOp.getRhs();
     AffineExpr rhs = cstr.getExpr(rhsValue);
-    bool rhsPositive = isProvablyPositive(rhsValue, cstr);
-    bool rhsNegative = isProvablyNegative(rhsValue, cstr);
+    bool rhsPositive = ValueBoundsConstraintSet::isProvablyPositive(rhsValue, cstr);
+    bool rhsNegative = ValueBoundsConstraintSet::isProvablyNegative(rhsValue, cstr);
 
     // The result of remsi has the same sign as the dividend (lhs). The sign
     // of lhs does not need to be a compile-time constant: it is sufficient if
     // the constraint set can prove it. For lhs == 0 both branches may fire,
     // which is consistent since the result is then 0.
-    if (isProvablyNonPositive(lhsValue, cstr)) {
+    if (ValueBoundsConstraintSet::isProvablyNonPositive(lhsValue, cstr)) {
       cstr.bound(value) <= 0;
       if (rhsPositive)
         cstr.bound(value) >= 1 - rhs;
       if (rhsNegative)
         cstr.bound(value) >= rhs + 1;
     }
-    if (isProvablyNonNegative(lhsValue, cstr)) {
+    if (ValueBoundsConstraintSet::isProvablyNonNegative(lhsValue, cstr)) {
       cstr.bound(value) >= 0;
       if (rhsPositive)
         cstr.bound(value) <= rhs - 1;
@@ -173,7 +150,7 @@ struct RemUIOpInterface
 
     // remui computes an unsigned remainder, so for a provably positive divisor
     // the result is always in [0, rhs - 1].
-    if (isProvablyPositive(rhsValue, cstr)) {
+    if (ValueBoundsConstraintSet::isProvablyPositive(rhsValue, cstr)) {
       cstr.bound(value) >= 0;
       cstr.bound(value) <= rhs - 1;
     }
@@ -294,8 +271,8 @@ struct MinUIOpInterface
     // 0xff is treated as -1, not 255). For an unsigned minimum it is enough
     // that a single operand is provably non-negative: minui(x, y) is in
     // [0, y] whenever y >= 0 (and symmetrically for x).
-    bool lhsNonNegative = isProvablyNonNegative(minOp.getLhs(), cstr);
-    bool rhsNonNegative = isProvablyNonNegative(minOp.getRhs(), cstr);
+    bool lhsNonNegative = ValueBoundsConstraintSet::isProvablyNonNegative(minOp.getLhs(), cstr);
+    bool rhsNonNegative = ValueBoundsConstraintSet::isProvablyNonNegative(minOp.getRhs(), cstr);
     if (!lhsNonNegative && !rhsNonNegative)
       return;
 
@@ -320,8 +297,8 @@ struct MaxUIOpInterface
     assert(value == maxOp.getResult() && "invalid value");
 
     // See MinUIOpInterface comment
-    if (!isProvablyNonNegative(maxOp.getLhs(), cstr) ||
-        !isProvablyNonNegative(maxOp.getRhs(), cstr))
+    if (!ValueBoundsConstraintSet::isProvablyNonNegative(maxOp.getLhs(), cstr) ||
+        !ValueBoundsConstraintSet::isProvablyNonNegative(maxOp.getRhs(), cstr))
       return;
 
     AffineExpr lhs = cstr.getExpr(maxOp.getLhs());

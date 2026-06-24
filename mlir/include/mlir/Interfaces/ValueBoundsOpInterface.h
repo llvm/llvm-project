@@ -313,6 +313,22 @@ public:
   static FailureOr<bool>
   areEquivalentSlices(MLIRContext *ctx, const HyperrectangularSlice &slice1,
                       const HyperrectangularSlice &slice2);
+  
+  /// Return "true" if the given value is provably non-negative. If it's provably positive,
+  /// or nothing can be proven, return "false".
+  static bool isProvablyNonNegative(Value value, ValueBoundsConstraintSet &cstr);
+
+  /// Return "true" if the given value is provably non-positive. If it's provably negative,
+  /// or nothing can be proven, return "false".
+  static bool isProvablyNonPositive(Value value, ValueBoundsConstraintSet &cstr);
+
+  /// Return "true" if the given value is provably positive. If it's provably non-negative,
+  /// or nothing can be proven, return "false".
+  static bool isProvablyPositive(Value value, ValueBoundsConstraintSet &cstr);
+  
+  /// Return "true" if the given value is provably negative. If it's provably non-positive,
+  /// or nothing can be proven, return "false".
+  static bool isProvablyNegative(Value value, ValueBoundsConstraintSet &cstr);
 
   /// Add a bound for the given index-typed value or shaped value. This function
   /// returns a builder that adds the bound.
