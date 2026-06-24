@@ -243,9 +243,9 @@ define void @entry_count_too_wide_import() !prof !7 {
 
 ; // -----
 
-; LLVM treats real uint64_t(-1) entry counts as unknown.
+; Preserve the raw i64 metadata bit pattern.
 ; CHECK-LABEL: @entry_count_negative_count
-; CHECK-NOT: function_entry_count
+; CHECK-SAME:  attributes {function_entry_count = #llvm.function_entry_count<entry_count = 18446744073709551615>}
 define void @entry_count_negative_count() !prof !8 {
   ret void
 }

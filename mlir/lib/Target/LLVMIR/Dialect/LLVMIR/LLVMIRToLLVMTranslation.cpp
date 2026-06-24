@@ -138,9 +138,6 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
         getUInt64Metadata(node->getOperand(1));
     if (!entryCountValue)
       return failure();
-    if (profileCountType == llvm::Function::PCT_Real &&
-        *entryCountValue == uint64_t(-1))
-      return success();
 
     SmallVector<uint64_t> importGUIDValues;
     importGUIDValues.reserve(node->getNumOperands() - 2);
