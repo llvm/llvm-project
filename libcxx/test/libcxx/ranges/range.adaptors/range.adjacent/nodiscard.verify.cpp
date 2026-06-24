@@ -76,4 +76,11 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   c_it - st;
 
+  // [range.adjacent.overview]
+    
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::views::adjacent<0>(range);
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::views::adjacent<2>(range);
 }
