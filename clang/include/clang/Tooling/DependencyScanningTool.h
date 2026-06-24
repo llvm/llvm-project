@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_TOOLING_DEPENDENCYSCANNINGTOOL_H
 #define LLVM_CLANG_TOOLING_DEPENDENCYSCANNINGTOOL_H
 
+#include "clang/DependencyScanning/CompilerInstanceWithContext.h"
 #include "clang/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/DependencyScanning/DependencyScanningService.h"
 #include "clang/DependencyScanning/DependencyScanningUtils.h"
@@ -132,7 +133,7 @@ public:
 private:
   dependencies::DependencyScanningWorker Worker;
   std::unique_ptr<dependencies::TextDiagnosticsPrinterWithOutput> DiagPrinter;
-  std::unique_ptr<CompilerInstanceWithContext> ByNameCIWC;
+  std::unique_ptr<dependencies::CompilerInstanceWithContext> ByNameCIWC;
 };
 
 /// Run the dependency scanning worker for the given driver or frontend
@@ -153,72 +154,6 @@ bool computeDependencies(
     dependencies::DependencyActionController &Controller,
     DiagnosticConsumer &DiagConsumer,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS = nullptr);
-
-class CompilerInstanceWithContext {
-  // Context
-  dependencies::DependencyScanningWorker &Worker;
-  llvm::StringRef CWD;
-  std::vector<std::string> CommandLine;
-
-  // Context - compiler invocation
-  std::unique_ptr<CompilerInvocation> OriginalInvocation;
-
-  // Context - output options
-  std::unique_ptr<DependencyOutputOptions> OutputOpts;
-
-  // Context - stable directory handling
-  llvm::SmallVector<StringRef> StableDirs;
-  dependencies::PrebuiltModulesAttrsMap PrebuiltModuleASTMap;
-
-  // Compiler Instance
-  std::unique_ptr<CompilerInstance> CIPtr;
-
-  // Source location offset.
-  int32_t SrcLocOffset = 0;
-
-  CompilerInstanceWithContext(dependencies::DependencyScanningWorker &Worker,
-                              StringRef CWD, ArrayRef<std::string> CMD)
-      : Worker(Worker), CWD(CWD), CommandLine(CMD.begin(), CMD.end()) {}
-
-  bool initialize(dependencies::DependencyActionController &Controller,
-                  std::unique_ptr<dependencies::DiagnosticsEngineWithDiagOpts>
-                      DiagEngineWithDiagOpts,
-                  IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS);
-
-public:
-  /// @brief Initialize the tool's compiler instance from the cc1 commandline.
-  /// @param Worker The dependency scanning worker to initialize the compiler
-  ///        instance.
-  /// @param CWD The current working directory.
-  /// @param CC1CommandLine A cc1 command.
-  /// @param DiagEngineWithDiagOpts The diagnostic engine used during scan.
-  /// @param OverlayFS An overlay FS containing the input file, which may be
-  ///        from an in-memory buffer.
-  /// @param Controller A dependency action controller to gather some results.
-  static std::optional<CompilerInstanceWithContext>
-  initializeFromCC1Commandline(
-      dependencies::DependencyScanningWorker &Worker, StringRef CWD,
-      ArrayRef<std::string> CC1CommandLine,
-      std::unique_ptr<dependencies::DiagnosticsEngineWithDiagOpts>
-          DiagEngineWithDiagOpts,
-      IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS,
-      dependencies::DependencyActionController &Controller);
-
-  bool
-  computeDependencies(StringRef ModuleName,
-                      dependencies::DependencyConsumer &Consumer,
-                      dependencies::DependencyActionController &Controller);
-
-  // MaxNumOfQueries is the upper limit of the number of names the by-name
-  // scanning API (computeDependencies) can support after a
-  // CompilerInstanceWithContext is initialized. At the time of this commit, the
-  // estimated number of total unique importable names is around 3000 from
-  // Apple's SDKs. We usually import them in parallel, so it is unlikely that
-  // all names are all scanned by the same dependency scanning worker. Therefore
-  // the 64k (20x bigger than our estimate) size is sufficient to hold the
-  // unique source locations to report diagnostics per worker.
-  static const int32_t MaxNumOfQueries = 1 << 16;
-};
 
 } // end namespace tooling
 } // end namespace clang
