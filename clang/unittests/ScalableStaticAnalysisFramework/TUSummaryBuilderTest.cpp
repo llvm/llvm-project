@@ -9,6 +9,7 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
 #include "FindDecl.h"
 #include "TestFixture.h"
+#include "clang/Frontend/SSAFOptions.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/BuildNamespace.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityLinkage.h"
@@ -89,10 +90,11 @@ void PrintTo(const MockSummaryData3 &S, std::ostream *OS) {
 }
 
 struct TUSummaryBuilderTest : ssaf::TestFixture {
+  SSAFOptions Opts;
   TUSummary Summary{
       llvm::Triple("arm64-apple-macosx"),
       BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")};
-  TUSummaryBuilder Builder{Summary};
+  TUSummaryBuilder Builder{Summary, Opts};
   TUSummaryExtractor Extractor{Builder};
 
   [[nodiscard]] EntityId addTestEntity(llvm::StringRef USR) {
