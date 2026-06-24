@@ -3134,6 +3134,8 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
       Diag(clang::diag::warn_drv_unused_x) << LastXArg->getValue();
   }
 
+  bool IsSYCL = Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false);
+
   for (Arg *A : Args) {
     if (A->getOption().getKind() == Option::InputClass) {
       const char *Value = A->getValue();
@@ -3151,6 +3153,8 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
             Ty = types::TY_Fortran;
           } else if (IsDXCMode()) {
             Ty = types::TY_HLSL;
+          } else if (IsSYCL) {
+            Ty = types::TY_CXX;
           } else {
             // If running with -E, treat as a C input (this changes the
             // builtin macros, for example). This may be overridden by -ObjC
