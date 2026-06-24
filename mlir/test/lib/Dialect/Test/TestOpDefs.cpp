@@ -1300,6 +1300,19 @@ LogicalResult TestOpWithPropertiesAndInferredType::inferReturnTypes(
 }
 
 //===----------------------------------------------------------------------===//
+// TestOpWithAttrInferredType
+//===----------------------------------------------------------------------===//
+
+LogicalResult TestOpWithAttrInferredType::inferReturnTypes(
+    MLIRContext *context, std::optional<Location>, ValueRange operands,
+    DictionaryAttr attributes, PropertyRef properties, RegionRange regions,
+    SmallVectorImpl<Type> &inferredReturnTypes) {
+  Adaptor adaptor(operands, attributes, properties, regions);
+  inferredReturnTypes.push_back(IntegerType::get(context, adaptor.getLhs()));
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // LoopBlockOp
 //===----------------------------------------------------------------------===//
 

@@ -3603,6 +3603,15 @@ def TestOpWithPropertiesAndInferredType
   let results = (outs AnyType:$result);
 }
 
+def TestOpWithAttrInferredType
+  : TEST_Op<"with_attr_inferred_type", [
+    DeclareOpInterfaceMethods<InferTypeOpInterface, ["inferReturnTypes"]>
+  ]> {
+  let assemblyFormat = "$input attr-dict `:` type($input)";
+  let arguments = (ins I32:$input, I32Attr:$lhs);
+  let results = (outs AnyType:$output);
+}
+
 // Demonstrate how to wrap an existing C++ class named MyPropStruct.
 def MyStructProperty : Property<"MyPropStruct"> {
   let convertToAttribute = "return $_storage.asAttribute($_ctxt);";
