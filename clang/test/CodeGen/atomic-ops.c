@@ -720,36 +720,155 @@ void test_underaligned(void) {
   __atomic_compare_exchange(&aligned_a, &aligned_b, &aligned_c, 1, memory_order_seq_cst, memory_order_seq_cst);
 }
 
-void test_c11_minmax(_Atomic(int) * si, _Atomic(unsigned) * ui, _Atomic(short) * ss, _Atomic(unsigned char) * uc, _Atomic(long long) * sll) {
-  // CHECK-LABEL: @test_c11_minmax
+void test_c11_minmax(_Atomic(int) * si, _Atomic(unsigned) * ui, _Atomic(short) * ss, _Atomic(unsigned char) * uc, _Atomic(long long) * sll, _Atomic(int*) * aip, int* ip) {
+  // CHECK-LABEL: @test_c11_minmax(
+  // CHECK-SAME: ptr noundef [[SI_ARG:%.*]], ptr noundef [[UI_ARG:%.*]], ptr noundef [[SS_ARG:%.*]], ptr noundef [[UC_ARG:%.*]], ptr noundef [[SLL_ARG:%.*]], ptr noundef [[AIP_ARG:%.*]], ptr noundef [[IP_ARG:%.*]])
 
-  // CHECK: atomicrmw max ptr {{.*}} acquire, align 4
+  // CHECK: store ptr [[SI_ARG]], ptr [[SI_ADDR:%.*]], align 4
+  // CHECK: store ptr [[UI_ARG]], ptr [[UI_ADDR:%.*]], align 4
+  // CHECK: store ptr [[SS_ARG]], ptr [[SS_ADDR:%.*]], align 4
+  // CHECK: store ptr [[UC_ARG]], ptr [[UC_ADDR:%.*]], align 4
+  // CHECK: store ptr [[SLL_ARG]], ptr [[SLL_ADDR:%.*]], align 4
+  // CHECK: store ptr [[AIP_ARG]], ptr [[AIP_ADDR:%.*]], align 4
+  // CHECK: store ptr [[IP_ARG]], ptr [[IP_ADDR:%.*]], align 4
+
+  // CHECK: [[SI_LOC:%.*]] = load ptr, ptr [[SI_ADDR]], align 4
+  // CHECK-NEXT: store i32 42, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[SI_RHS:%.*]] = load i32, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[SI_OLD:%.*]] = atomicrmw max ptr [[SI_LOC]], i32 [[SI_RHS]] acquire, align 4
+  // CHECK-NEXT: store i32 [[SI_OLD]], ptr {{.*}}, align 4
+  // CHECK-NEXT: [[SI_RES:%.*]] = load i32, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[SI_LOC2:%.*]] = load ptr, ptr [[SI_ADDR]], align 4
+  // CHECK-NEXT: store atomic i32 [[SI_RES]], ptr [[SI_LOC2]] seq_cst, align 4
   *si = __c11_atomic_fetch_max(si, 42, memory_order_acquire);
-  // CHECK: atomicrmw min ptr {{.*}} acquire, align 4
+  // CHECK: [[SI_LOC3:%.*]] = load ptr, ptr [[SI_ADDR]], align 4
+  // CHECK-NEXT: store i32 42, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[SI_RHS2:%.*]] = load i32, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[SI_OLD2:%.*]] = atomicrmw min ptr [[SI_LOC3]], i32 [[SI_RHS2]] acquire, align 4
+  // CHECK-NEXT: store i32 [[SI_OLD2]], ptr {{.*}}, align 4
+  // CHECK-NEXT: [[SI_RES2:%.*]] = load i32, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[SI_LOC4:%.*]] = load ptr, ptr [[SI_ADDR]], align 4
+  // CHECK-NEXT: store atomic i32 [[SI_RES2]], ptr [[SI_LOC4]] seq_cst, align 4
   *si = __c11_atomic_fetch_min(si, 42, memory_order_acquire);
-  // CHECK: atomicrmw umax ptr {{.*}} acquire, align 4
+
+  // CHECK: [[UI_LOC:%.*]] = load ptr, ptr [[UI_ADDR]], align 4
+  // CHECK-NEXT: store i32 42, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[UI_RHS:%.*]] = load i32, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[UI_OLD:%.*]] = atomicrmw umax ptr [[UI_LOC]], i32 [[UI_RHS]] acquire, align 4
+  // CHECK-NEXT: store i32 [[UI_OLD]], ptr {{.*}}, align 4
+  // CHECK-NEXT: [[UI_RES:%.*]] = load i32, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[UI_LOC2:%.*]] = load ptr, ptr [[UI_ADDR]], align 4
+  // CHECK-NEXT: store atomic i32 [[UI_RES]], ptr [[UI_LOC2]] seq_cst, align 4
   *ui = __c11_atomic_fetch_max(ui, 42, memory_order_acquire);
-  // CHECK: atomicrmw umin ptr {{.*}} acquire, align 4
+  // CHECK: [[UI_LOC3:%.*]] = load ptr, ptr [[UI_ADDR]], align 4
+  // CHECK-NEXT: store i32 42, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[UI_RHS2:%.*]] = load i32, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[UI_OLD2:%.*]] = atomicrmw umin ptr [[UI_LOC3]], i32 [[UI_RHS2]] acquire, align 4
+  // CHECK-NEXT: store i32 [[UI_OLD2]], ptr {{.*}}, align 4
+  // CHECK-NEXT: [[UI_RES2:%.*]] = load i32, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[UI_LOC4:%.*]] = load ptr, ptr [[UI_ADDR]], align 4
+  // CHECK-NEXT: store atomic i32 [[UI_RES2]], ptr [[UI_LOC4]] seq_cst, align 4
   *ui = __c11_atomic_fetch_min(ui, 42, memory_order_acquire);
 
-  // CHECK: atomicrmw max ptr {{.*}} acquire, align 2
+  // CHECK: [[SS_LOC:%.*]] = load ptr, ptr [[SS_ADDR]], align 4
+  // CHECK-NEXT: store i16 42, ptr {{.*}}, align 2
+  // CHECK-NEXT: [[SS_RHS:%.*]] = load i16, ptr {{.*}}, align 2
+  // CHECK-NEXT: [[SS_OLD:%.*]] = atomicrmw max ptr [[SS_LOC]], i16 [[SS_RHS]] acquire, align 2
+  // CHECK-NEXT: store i16 [[SS_OLD]], ptr {{.*}}, align 2
+  // CHECK-NEXT: [[SS_RES:%.*]] = load i16, ptr {{.*}}, align 2
+  // CHECK-NEXT: [[SS_LOC2:%.*]] = load ptr, ptr [[SS_ADDR]], align 4
+  // CHECK-NEXT: store atomic i16 [[SS_RES]], ptr [[SS_LOC2]] seq_cst, align 2
   *ss = __c11_atomic_fetch_max(ss, 42, memory_order_acquire);
-  // CHECK: atomicrmw min ptr {{.*}} acquire, align 2
+  // CHECK: [[SS_LOC3:%.*]] = load ptr, ptr [[SS_ADDR]], align 4
+  // CHECK-NEXT: store i16 42, ptr {{.*}}, align 2
+  // CHECK-NEXT: [[SS_RHS2:%.*]] = load i16, ptr {{.*}}, align 2
+  // CHECK-NEXT: [[SS_OLD2:%.*]] = atomicrmw min ptr [[SS_LOC3]], i16 [[SS_RHS2]] acquire, align 2
+  // CHECK-NEXT: store i16 [[SS_OLD2]], ptr {{.*}}, align 2
+  // CHECK-NEXT: [[SS_RES2:%.*]] = load i16, ptr {{.*}}, align 2
+  // CHECK-NEXT: [[SS_LOC4:%.*]] = load ptr, ptr [[SS_ADDR]], align 4
+  // CHECK-NEXT: store atomic i16 [[SS_RES2]], ptr [[SS_LOC4]] seq_cst, align 2
   *ss = __c11_atomic_fetch_min(ss, 42, memory_order_acquire);
 
-  // CHECK: atomicrmw umax ptr {{.*}} acquire, align 1
+  // CHECK: [[UC_LOC:%.*]] = load ptr, ptr [[UC_ADDR]], align 4
+  // CHECK-NEXT: store i8 42, ptr {{.*}}, align 1
+  // CHECK-NEXT: [[UC_RHS:%.*]] = load i8, ptr {{.*}}, align 1
+  // CHECK-NEXT: [[UC_OLD:%.*]] = atomicrmw umax ptr [[UC_LOC]], i8 [[UC_RHS]] acquire, align 1
+  // CHECK-NEXT: store i8 [[UC_OLD]], ptr {{.*}}, align 1
+  // CHECK-NEXT: [[UC_RES:%.*]] = load i8, ptr {{.*}}, align 1
+  // CHECK-NEXT: [[UC_LOC2:%.*]] = load ptr, ptr [[UC_ADDR]], align 4
+  // CHECK-NEXT: store atomic i8 [[UC_RES]], ptr [[UC_LOC2]] seq_cst, align 1
   *uc = __c11_atomic_fetch_max(uc, 42, memory_order_acquire);
-  // CHECK: atomicrmw umin ptr {{.*}} acquire, align 1
+  // CHECK: [[UC_LOC3:%.*]] = load ptr, ptr [[UC_ADDR]], align 4
+  // CHECK-NEXT: store i8 42, ptr {{.*}}, align 1
+  // CHECK-NEXT: [[UC_RHS2:%.*]] = load i8, ptr {{.*}}, align 1
+  // CHECK-NEXT: [[UC_OLD2:%.*]] = atomicrmw umin ptr [[UC_LOC3]], i8 [[UC_RHS2]] acquire, align 1
+  // CHECK-NEXT: store i8 [[UC_OLD2]], ptr {{.*}}, align 1
+  // CHECK-NEXT: [[UC_RES2:%.*]] = load i8, ptr {{.*}}, align 1
+  // CHECK-NEXT: [[UC_LOC4:%.*]] = load ptr, ptr [[UC_ADDR]], align 4
+  // CHECK-NEXT: store atomic i8 [[UC_RES2]], ptr [[UC_LOC4]] seq_cst, align 1
   *uc = __c11_atomic_fetch_min(uc, 42, memory_order_acquire);
 
-  // CHECK: atomicrmw max ptr {{.*}} acquire, align 8
+  // CHECK: [[SLL_LOC:%.*]] = load ptr, ptr [[SLL_ADDR]], align 4
+  // CHECK-NEXT: store i64 42, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[SLL_RHS:%.*]] = load i64, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[SLL_OLD:%.*]] = atomicrmw max ptr [[SLL_LOC]], i64 [[SLL_RHS]] acquire, align 8
+  // CHECK-NEXT: store i64 [[SLL_OLD]], ptr {{.*}}, align 8
+  // CHECK-NEXT: [[SLL_RES:%.*]] = load i64, ptr {{.*}}, align 8
+  // CHECK-NEXT: [[SLL_LOC2:%.*]] = load ptr, ptr [[SLL_ADDR]], align 4
+  // CHECK-NEXT: store atomic i64 [[SLL_RES]], ptr [[SLL_LOC2]] seq_cst, align 8
   *sll = __c11_atomic_fetch_max(sll, 42, memory_order_acquire);
-  // CHECK: atomicrmw min ptr {{.*}} acquire, align 8
+  // CHECK: [[SLL_LOC3:%.*]] = load ptr, ptr [[SLL_ADDR]], align 4
+  // CHECK-NEXT: store i64 42, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[SLL_RHS2:%.*]] = load i64, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[SLL_OLD2:%.*]] = atomicrmw min ptr [[SLL_LOC3]], i64 [[SLL_RHS2]] acquire, align 8
+  // CHECK-NEXT: store i64 [[SLL_OLD2]], ptr {{.*}}, align 8
+  // CHECK-NEXT: [[SLL_RES2:%.*]] = load i64, ptr {{.*}}, align 8
+  // CHECK-NEXT: [[SLL_LOC4:%.*]] = load ptr, ptr [[SLL_ADDR]], align 4
+  // CHECK-NEXT: store atomic i64 [[SLL_RES2]], ptr [[SLL_LOC4]] seq_cst, align 8
   *sll = __c11_atomic_fetch_min(sll, 42, memory_order_acquire);
 
+  // CHECK: [[AIP_LOC:%.*]] = load ptr, ptr [[AIP_ADDR]], align 4
+  // CHECK-NEXT: [[IP_LOAD:%.*]] = load ptr, ptr [[IP_ADDR]], align 4
+  // CHECK-NEXT: store ptr [[IP_LOAD]], ptr {{.*}}, align 4
+  // CHECK-NEXT: [[AIP_RHS:%.*]] = load i32, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[AIP_OLD:%.*]] = atomicrmw umax ptr [[AIP_LOC]], i32 [[AIP_RHS]] acquire, align 4
+  // CHECK-NEXT: store i32 [[AIP_OLD]], ptr {{.*}}, align 4
+  // CHECK-NEXT: [[AIP_RES:%.*]] = load ptr, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[AIP_LOC2:%.*]] = load ptr, ptr [[AIP_ADDR]], align 4
+  // CHECK-NEXT: store atomic ptr [[AIP_RES]], ptr [[AIP_LOC2]] seq_cst, align 4
+  *aip = __c11_atomic_fetch_max(aip, ip, memory_order_acquire);
+  // CHECK: [[AIP_LOC3:%.*]] = load ptr, ptr [[AIP_ADDR]], align 4
+  // CHECK-NEXT: [[IP_LOAD2:%.*]] = load ptr, ptr [[IP_ADDR]], align 4
+  // CHECK-NEXT: store ptr [[IP_LOAD2]], ptr {{.*}}, align 4
+  // CHECK-NEXT: [[AIP_RHS2:%.*]] = load i32, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[AIP_OLD2:%.*]] = atomicrmw umin ptr [[AIP_LOC3]], i32 [[AIP_RHS2]] acquire, align 4
+  // CHECK-NEXT: store i32 [[AIP_OLD2]], ptr {{.*}}, align 4
+  // CHECK-NEXT: [[AIP_RES2:%.*]] = load ptr, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[AIP_LOC4:%.*]] = load ptr, ptr [[AIP_ADDR]], align 4
+  // CHECK-NEXT: store atomic ptr [[AIP_RES2]], ptr [[AIP_LOC4]] seq_cst, align 4
+  *aip = __c11_atomic_fetch_min(aip, ip, memory_order_acquire);
+
+  // CHECK: [[AIP_N1:%.*]] = load ptr, ptr [[AIP_ADDR]], align 4
+  // CHECK-NEXT: store ptr null, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[AIP_N1_RHS:%.*]] = load i32, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[AIP_N1_OLD:%.*]] = atomicrmw umax ptr [[AIP_N1]], i32 [[AIP_N1_RHS]] acquire, align 4
+  // CHECK-NEXT: store i32 [[AIP_N1_OLD]], ptr {{.*}}, align 4
+  // CHECK-NEXT: [[AIP_N1_RES:%.*]] = load ptr, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[AIP_N1_DST:%.*]] = load ptr, ptr [[AIP_ADDR]], align 4
+  // CHECK-NEXT: store atomic ptr [[AIP_N1_RES]], ptr [[AIP_N1_DST]] seq_cst, align 4
+  *aip = __c11_atomic_fetch_max(aip, NULL, memory_order_acquire);
+  // CHECK: [[AIP_N2:%.*]] = load ptr, ptr [[AIP_ADDR]], align 4
+  // CHECK-NEXT: store ptr null, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[AIP_N2_RHS:%.*]] = load i32, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[AIP_N2_OLD:%.*]] = atomicrmw umin ptr [[AIP_N2]], i32 [[AIP_N2_RHS]] acquire, align 4
+  // CHECK-NEXT: store i32 [[AIP_N2_OLD]], ptr {{.*}}, align 4
+  // CHECK-NEXT: [[AIP_N2_RES:%.*]] = load ptr, ptr {{.*}}, align 4
+  // CHECK-NEXT: [[AIP_N2_DST:%.*]] = load ptr, ptr [[AIP_ADDR]], align 4
+  // CHECK-NEXT: store atomic ptr [[AIP_N2_RES]], ptr [[AIP_N2_DST]] seq_cst, align 4
+  *aip = __c11_atomic_fetch_min(aip, NULL, memory_order_acquire);
 }
 
-void test_minmax_postop(int *si, unsigned *ui, unsigned short *us, signed char *sc, unsigned long long *ull) {
+void test_minmax_postop(int *si, unsigned *ui, unsigned short *us, signed char *sc, unsigned long long *ull, int **ip) {
   int val = 42;
   // CHECK-LABEL: @test_minmax_postop
 
@@ -794,6 +913,18 @@ void test_minmax_postop(int *si, unsigned *ui, unsigned short *us, signed char *
   // CHECK: [[NEW:%.*]] = select i1 [[TST]], i64 [[OLD]], i64 [[RHS]]
   // CHECK: store i64 [[NEW]], ptr
   *ull = __atomic_min_fetch(ull, 42, memory_order_release);
+
+  // CHECK: [[OLD:%.*]] = atomicrmw umax ptr [[PTR:%.*]], i32 [[RHS:%.*]] release, align 4
+  // CHECK: [[TST:%.*]] = icmp ugt i32 [[OLD]], [[RHS]]
+  // CHECK: [[NEW:%.*]] = select i1 [[TST]], i32 [[OLD]], i32 [[RHS]]
+  // CHECK: store i32 [[NEW]], ptr
+  *ip = __atomic_max_fetch(ip, si, memory_order_release);
+
+  // CHECK: [[OLD:%.*]] = atomicrmw umin ptr [[PTR:%.*]], i32 [[RHS:%.*]] release, align 4
+  // CHECK: [[TST:%.*]] = icmp ult i32 [[OLD]], [[RHS]]
+  // CHECK: [[NEW:%.*]] = select i1 [[TST]], i32 [[OLD]], i32 [[RHS]]
+  // CHECK: store i32 [[NEW]], ptr
+  *ip = __atomic_min_fetch(ip, si, memory_order_release);
 
 }
 

@@ -5006,6 +5006,9 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   // Bit mask for extra allowed value types other than integers for atomic
   // arithmetic operations. Add/sub allow pointer and floating point. Min/max
   // allow floating point.
+
+  bool TakesPointerDiffForAtomicPointer = false;
+
   enum ArithOpExtraValueType {
     AOEVT_None = 0,
     AOEVT_Pointer = 1,
@@ -5060,6 +5063,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__hip_atomic_fetch_sub:
     ArithAllows = AOEVT_Pointer | AOEVT_FP;
     Form = Arithmetic;
+    TakesPointerDiffForAtomicPointer = true;
     break;
   case AtomicExpr::AO__atomic_fetch_max:
   case AtomicExpr::AO__atomic_fetch_min:
@@ -5075,7 +5079,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__opencl_atomic_fetch_min:
   case AtomicExpr::AO__hip_atomic_fetch_max:
   case AtomicExpr::AO__hip_atomic_fetch_min:
-    ArithAllows = AOEVT_FP;
+    ArithAllows = AOEVT_Pointer | AOEVT_FP;
     Form = Arithmetic;
     break;
   case AtomicExpr::AO__c11_atomic_fetch_and:
@@ -5393,7 +5397,8 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
         // passed by address. For the rest, GNU uses by-address and C11 uses
         // by-value.
         assert(Form != Load);
-        if (Form == Arithmetic && ValType->isPointerType())
+        if (Form == Arithmetic && ValType->isPointerType() &&
+            TakesPointerDiffForAtomicPointer)
           Ty = Context.getPointerDiffType();
         else if (Form == Init || Form == Arithmetic)
           Ty = ValType;
