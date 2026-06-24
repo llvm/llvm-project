@@ -1,6 +1,7 @@
 // RUN: mlir-tblgen -gen-op-defs -I %S/../../include %s | FileCheck %s
 
 include "mlir/IR/OpBase.td"
+include "mlir/IR/EnumAttr.td"
 
 def TestDialect : Dialect {
   let name = "test";
@@ -49,6 +50,47 @@ def CustomStringLiteralC : TestFormat_Op<[{
 def CustomStringLiteralD : TestFormat_Op<[{
   custom<Foo>(prop-dict) attr-dict
 }]>;
+
+//===----------------------------------------------------------------------===//
+// EnumAttr formatting
+//===----------------------------------------------------------------------===//
+
+// Test that EnumAttr (backed by EnumInfo, not EnumAttrInfo) is recognized as
+// an enum attribute and uses the enum-keyword format path.
+
+def TestEnumCase0 : I32EnumCase<"Case0", 0>;
+def TestEnumCase1 : I32EnumCase<"Case1", 1>;
+
+def TestEnum : I32Enum<"TestEnum", "a test enum", [TestEnumCase0, TestEnumCase1]> {
+  let cppNamespace = "::test";
+}
+
+def TestEnumAttr : EnumAttr<TestDialect, TestEnum, "enum">;
+
+// CHECK-LABEL: EnumAttrOp::parse
+// CHECK: symbolizeTestEnum
+// CHECK-LABEL: EnumAttrOp::print
+// CHECK: stringifyTestEnum
+def EnumAttrOp : TestFormat_Op<"$attr attr-dict">,
+    Arguments<(ins TestEnumAttr:$attr)>;
+
+// Test that legacy EnumAttrInfo-based attributes (I32EnumAttr) also use the
+// enum-keyword format path.
+
+def LegacyEnumCase0 : I32EnumAttrCase<"LCase0", 0>;
+def LegacyEnumCase1 : I32EnumAttrCase<"LCase1", 1>;
+
+def LegacyTestEnum : I32EnumAttr<"LegacyTestEnum", "a legacy test enum",
+                                 [LegacyEnumCase0, LegacyEnumCase1]> {
+  let cppNamespace = "::test";
+}
+
+// CHECK-LABEL: LegacyEnumAttrOp::parse
+// CHECK: symbolizeLegacyTestEnum
+// CHECK-LABEL: LegacyEnumAttrOp::print
+// CHECK: stringifyLegacyTestEnum
+def LegacyEnumAttrOp : TestFormat_Op<"$attr attr-dict">,
+    Arguments<(ins LegacyTestEnum:$attr)>;
 
 //===----------------------------------------------------------------------===//
 // Optional Groups
