@@ -19,42 +19,40 @@ define void @interchange_08(i32 %t){
 ; CHECK-SAME: i32 [[T:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    br label %[[FOR_BODY6_PREHEADER:.*]]
-; CHECK:       [[FOR_COND1_PREHEADER_PREHEADER:.*]]:
+; CHECK:       [[FOR_COND4_PREHEADER_PREHEADER:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND1_PREHEADER:.*]]
 ; CHECK:       [[FOR_COND1_PREHEADER]]:
-; CHECK-NEXT:    [[I_028:%.*]] = phi i64 [ [[INC16:%.*]], %[[FOR_INC16:.*]] ], [ 0, %[[FOR_COND1_PREHEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[I_028:%.*]] = phi i64 [ [[INC16:%.*]], %[[FOR_INC16:.*]] ], [ 0, %[[FOR_COND4_PREHEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY6_SPLIT1:.*]]
-; CHECK:       [[FOR_COND4_PREHEADER_PREHEADER:.*]]:
+; CHECK:       [[FOR_COND4_PREHEADER_PREHEADER1:.*]]:
 ; CHECK-NEXT:    br label %[[FOR_COND4_PREHEADER:.*]]
 ; CHECK:       [[FOR_COND4_PREHEADER]]:
-; CHECK-NEXT:    [[J_027:%.*]] = phi i64 [ [[TMP3:%.*]], %[[FOR_INC12_SPLIT:.*]] ], [ 0, %[[FOR_COND4_PREHEADER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[FOR_COND1_PREHEADER_PREHEADER]]
+; CHECK-NEXT:    [[J_027:%.*]] = phi i64 [ [[TMP3:%.*]], %[[FOR_INC12:.*]] ], [ 0, %[[FOR_COND4_PREHEADER_PREHEADER1]] ]
+; CHECK-NEXT:    br label %[[FOR_COND1_PREHEADER_PREHEADER:.*]]
 ; CHECK:       [[FOR_BODY6_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR_BODY6:.*]]
 ; CHECK:       [[FOR_BODY6]]:
-; CHECK-NEXT:    [[K_026:%.*]] = phi i64 [ [[TMP5:%.*]], %[[FOR_BODY6_SPLIT:.*]] ], [ 0, %[[FOR_BODY6_PREHEADER]] ]
+; CHECK-NEXT:    [[K_026:%.*]] = phi i64 [ [[TMP5:%.*]], %[[FOR_INC12_SPLIT:.*]] ], [ 0, %[[FOR_BODY6_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_COND4_PREHEADER_PREHEADER]]
 ; CHECK:       [[FOR_BODY6_SPLIT1]]:
+; CHECK-NEXT:    br label %[[FOR_COND4_PREHEADER_PREHEADER1]]
+; CHECK:       [[FOR_COND1_PREHEADER_PREHEADER]]:
 ; CHECK-NEXT:    [[ARRAYIDX8:%.*]] = getelementptr inbounds [100 x [100 x [100 x i32]]], ptr @D, i64 0, i64 [[K_026]], i64 [[J_027]], i64 [[I_028]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX8]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[T]]
 ; CHECK-NEXT:    store i32 [[ADD]], ptr [[ARRAYIDX8]], align 4
 ; CHECK-NEXT:    [[INC:%.*]] = add nuw nsw i64 [[K_026]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INC]], 100
-; CHECK-NEXT:    br label %[[FOR_INC12:.*]]
-; CHECK:       [[FOR_INC15:.*]]:
+; CHECK-NEXT:    br label %[[FOR_INC12]]
+; CHECK:       [[FOR_BODY6_SPLIT:.*]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i64 [[K_026]], 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 100
 ; CHECK-NEXT:    br label %[[FOR_INC16]]
-; CHECK:       [[FOR_BODY6_SPLIT]]:
+; CHECK:       [[FOR_INC12_SPLIT]]:
 ; CHECK-NEXT:    [[TMP5]] = add nuw nsw i64 [[K_026]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[TMP5]], 100
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[FOR_END17:.*]], label %[[FOR_BODY6]]
 ; CHECK:       [[FOR_INC12]]:
-; CHECK-NEXT:    [[INC13:%.*]] = add nuw nsw i64 [[J_027]], 1
-; CHECK-NEXT:    [[EXITCOND29:%.*]] = icmp eq i64 [[INC13]], 100
-; CHECK-NEXT:    br label %[[FOR_INC15]]
-; CHECK:       [[FOR_INC12_SPLIT]]:
 ; CHECK-NEXT:    [[TMP3]] = add nuw nsw i64 [[J_027]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[TMP3]], 100
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[FOR_BODY6_SPLIT]], label %[[FOR_COND4_PREHEADER]]
