@@ -140,7 +140,7 @@ TEST_F(ObjectContainerUniversalMachOTest, NfatArchTruncatedSlices) {
           /*file_offset=*/0, /*length=*/sizeof(kData)));
   ASSERT_NE(Container.get(), nullptr);
 
-  // m_fat_archs has zero emlement, returns false.
+  // m_fat_archs has zero elements, returns false.
   ArchSpec Arch;
   EXPECT_FALSE(Container->GetArchitectureAtIndex(0, Arch));
 }
