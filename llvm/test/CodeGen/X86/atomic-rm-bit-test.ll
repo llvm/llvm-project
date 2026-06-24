@@ -7014,3 +7014,58 @@ cont11:  ; No predecessors!
 if.end19:  ; preds = %cont11, %entry
   ret void
 }
+
+; Regression tests that bts recognizes trunc to i1
+define i1 @atomic_or_1_trunc_i1(ptr %v) nounwind {
+; X86-LABEL: atomic_or_1_trunc_i1:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    lock btsl $0, (%eax)
+; X86-NEXT:    setb %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: atomic_or_1_trunc_i1:
+; X64:       # %bb.0:
+; X64-NEXT:    lock btsl $0, (%rdi)
+; X64-NEXT:    setb %al
+; X64-NEXT:    retq
+  %x = atomicrmw or ptr %v, i32 1 monotonic, align 4
+  %r = trunc i32 %x to i1
+  ret i1 %r
+}
+
+define i1 @atomic_xor_1_trunc_i1(ptr %v) nounwind {
+; X86-LABEL: atomic_xor_1_trunc_i1:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    lock btcl $0, (%eax)
+; X86-NEXT:    setb %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: atomic_xor_1_trunc_i1:
+; X64:       # %bb.0:
+; X64-NEXT:    lock btcl $0, (%rdi)
+; X64-NEXT:    setb %al
+; X64-NEXT:    retq
+  %x = atomicrmw xor ptr %v, i32 1 monotonic, align 4
+  %r = trunc i32 %x to i1
+  ret i1 %r
+}
+
+define i1 @atomic_and_not1_trunc_i1(ptr %v) nounwind {
+; X86-LABEL: atomic_and_not1_trunc_i1:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    lock btrl $0, (%eax)
+; X86-NEXT:    setb %al
+; X86-NEXT:    retl
+;
+; X64-LABEL: atomic_and_not1_trunc_i1:
+; X64:       # %bb.0:
+; X64-NEXT:    lock btrl $0, (%rdi)
+; X64-NEXT:    setb %al
+; X64-NEXT:    retq
+  %x = atomicrmw and ptr %v, i32 -2 monotonic, align 4
+  %r = trunc i32 %x to i1
+  ret i1 %r
+}
