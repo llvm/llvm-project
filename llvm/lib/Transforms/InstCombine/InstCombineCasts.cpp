@@ -3304,6 +3304,70 @@ static Value *foldCopySignIdioms(BitCastInst &CI,
   return Builder.CreateCopySign(Builder.CreateBitCast(Y, FTy), X);
 }
 
+/// bitcast (shuf X, Y, splat_mask) to iN --> (zext x) * C
+/// where x is the splatted integer source element with bitwidth W and
+///       C = 1 + 2^W + 2^(2W) + ... = (2^N - 1)/(2^W - 1)
+/// E.g.,
+///   x: i1, y = bitcast [x, x, x, x] --> y = x * 15
+///   x: i8, y = bitcast [x, x, x, x] --> y = x * 16843009
+static Instruction *foldSplatShuffleToMul(const ShuffleVectorInst &Shuf,
+                                          IntegerType *DstTy,
+                                          InstCombiner::BuilderTy &Builder) {
+  // If Shuf has other user besides the bitcast, bail out.
+  if (!Shuf.hasOneUse())
+    return nullptr;
+
+  assert(isa<BitCastInst>(*Shuf.user_begin()) &&
+         "The sole user of shuf must be a bitcast");
+
+  auto *ShufTy = dyn_cast<FixedVectorType>(Shuf.getType());
+  // Cannot support scalable vector.
+  if (!ShufTy)
+    return nullptr;
+  auto *EltTy = dyn_cast<IntegerType>(ShufTy->getElementType());
+  // Restrict this fold to integer splats. Reinterpreting a non-integer splat
+  // element as an integer and then multiplying by C is algebraically sound, but
+  // llvm-mca shows that it can generate worse code than keeping the
+  // splat-vector bitcast form.
+  if (!EltTy)
+    return nullptr;
+
+  const unsigned DstWidth = DstTy->getBitWidth();
+  assert(DstWidth == ShufTy->getPrimitiveSizeInBits().getFixedValue() &&
+         "bitcast width mismatch");
+  // It would be less beneficial when the dest type is so large that it needs to
+  // be legalized in the backend.
+  if (!Shuf.getDataLayout().fitsInLegalInteger(DstWidth))
+    return nullptr;
+
+  ArrayRef<int> Mask = Shuf.getShuffleMask();
+
+  // Check if this is a splat-shuffle with a valid index
+  if (!all_equal(Mask) || Mask[0] == PoisonMaskElem)
+    return nullptr;
+
+  // Get the value to splat via the splat index.
+  unsigned SplatIndex = static_cast<unsigned>(Mask[0]);
+  Value *SplatSource = Shuf.getOperand(0);
+  unsigned NumElts =
+      cast<FixedVectorType>(SplatSource->getType())->getNumElements();
+  if (SplatIndex >= NumElts) {
+    SplatSource = Shuf.getOperand(1);
+    SplatIndex -= NumElts;
+  }
+
+  assert(SplatIndex < NumElts &&
+         "splat index must be within the selected shuffle source");
+
+  // bitcast (splat x) to integer is:
+  //   y = x * C, where C = 1 + 2^W + 2^(2W) + ...
+  // and W is the source element width.
+  Value *Splat = Builder.CreateExtractElement(SplatSource, SplatIndex);
+  APInt MulC = APInt::getSplat(DstWidth, APInt(EltTy->getBitWidth(), 1));
+  Value *WideSplat = Builder.CreateZExt(Splat, DstTy);
+  return BinaryOperator::CreateMul(WideSplat, ConstantInt::get(DstTy, MulC));
+}
+
 Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
   // If the operands are integer typed then apply the integer transforms,
   // otherwise just apply the common ones.
@@ -3382,8 +3446,14 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
   }
 
   if (auto *Shuf = dyn_cast<ShuffleVectorInst>(Src)) {
-    // Okay, we have (bitcast (shuffle ..)).  Check to see if this is
-    // a bitcast to a vector with the same # elts.
+    // Okay, we have (bitcast (shuffle ..)).
+
+    // Try to fold `bitcast [x, ..., x] to iN` into `(zext x) * C`
+    if (auto *DstIntTy = dyn_cast<IntegerType>(DestTy))
+      if (Instruction *I = foldSplatShuffleToMul(*Shuf, DstIntTy, Builder))
+        return I;
+
+    // Check to see if this is a bitcast to a vector with the same # elts.
     Value *ShufOp0 = Shuf->getOperand(0);
     Value *ShufOp1 = Shuf->getOperand(1);
     auto ShufElts = cast<VectorType>(Shuf->getType())->getElementCount();
