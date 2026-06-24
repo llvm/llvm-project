@@ -74,6 +74,11 @@ class IntrWrite<list<IntrinsicMemoryLocation> idx> : IntrinsicProperty {
    list<IntrinsicMemoryLocation> MemLoc=idx;
 }
 
+// Constrain intrinsic to not write any memory location.
+defvar IntrReadOnly = IntrWrite<[]>;
+// Constrain intrinsic to not read any memory location.
+defvar IntrWriteOnly = IntrRead<[]>;
+
 // Commutative - This intrinsic is commutative: X op Y == Y op X.
 def Commutative : IntrinsicProperty;
 
