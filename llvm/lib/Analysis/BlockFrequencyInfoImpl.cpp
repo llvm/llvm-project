@@ -593,7 +593,7 @@ BlockFrequencyInfoImplBase::getProfileCountFromFreq(const Function &F,
   if (!EntryCount)
     return std::nullopt;
   // Use 128 bit APInt to do the arithmetic to avoid overflow.
-  APInt BlockCount(128, EntryCount->getCount());
+  APInt BlockCount(128, *EntryCount);
   APInt BlockFreq(128, Freq.getFrequency());
   APInt EntryFreq(128, getEntryFreq().getFrequency());
   BlockCount *= BlockFreq;

@@ -1581,12 +1581,12 @@ void DevirtModule::applyICallBranchFunnel(VTableSlotInfo &SlotInfo,
         auto EC = BFI.getBlockFreq(&F.getEntryBlock());
         auto CC = F.getEntryCount();
         double CallCount = 0.0;
-        if (EC.getFrequency() != 0 && CC && CC->getCount() != 0) {
+        if (EC.getFrequency() != 0 && CC && *CC != 0) {
           double CallFreq =
               static_cast<double>(
                   BFI.getBlockFreq(CB.getParent()).getFrequency()) /
               EC.getFrequency();
-          CallCount = CallFreq * CC->getCount();
+          CallCount = CallFreq * *CC;
         }
         FunctionEntryCounts[&JT] += CallCount;
       }

@@ -291,41 +291,19 @@ public:
     }
   }
 
-  enum ProfileCountType { PCT_Real, PCT_Synthetic };
-
-  /// Class to represent profile counts.
-  ///
-  /// This class represents both real and synthetic profile counts.
-  class ProfileCount {
-  private:
-    uint64_t Count = 0;
-    ProfileCountType PCT = PCT_Real;
-
-  public:
-    ProfileCount(uint64_t Count, ProfileCountType PCT)
-        : Count(Count), PCT(PCT) {}
-    uint64_t getCount() const { return Count; }
-    ProfileCountType getType() const { return PCT; }
-    bool isSynthetic() const { return PCT == PCT_Synthetic; }
-  };
-
   /// Set the entry count for this function.
   ///
   /// Entry count is the number of times this function was executed based on
   /// pgo data. \p Imports points to a set of GUIDs that needs to
   /// be imported by the function for sample PGO, to enable the same inlines as
   /// the profiled optimized binary.
-  void setEntryCount(ProfileCount Count,
-                     const DenseSet<GlobalValue::GUID> *Imports = nullptr);
-
-  /// A convenience wrapper for setting entry count
-  void setEntryCount(uint64_t Count, ProfileCountType Type = PCT_Real,
+  void setEntryCount(uint64_t Count,
                      const DenseSet<GlobalValue::GUID> *Imports = nullptr);
 
   /// Get the entry count for this function.
   ///
   /// Entry count is the number of times the function was executed.
-  std::optional<ProfileCount> getEntryCount() const;
+  std::optional<uint64_t> getEntryCount() const;
 
   /// Return true if the function is annotated with profile data.
   ///
