@@ -50,8 +50,6 @@ static ValueLatticeElement::MergeOptions getMaxWidenStepsOpts() {
       MaxNumRangeExtensions);
 }
 
-namespace llvm {
-
 bool SCCPSolver::isConstant(const ValueLatticeElement &LV) {
   return LV.isConstant() ||
          (LV.isConstantRange() && LV.getConstantRange().isSingleElement());
@@ -260,9 +258,9 @@ static bool replaceSignedInst(SCCPSolver &Solver,
 }
 
 /// Try to use \p Inst's value range from \p Solver to simplify it.
-static Value *simplifyInstruction(SCCPSolver &Solver,
-                                  SmallPtrSetImpl<Value *> &InsertedValues,
-                                  Instruction &Inst) {
+static Value *simplifyAnInstruction(SCCPSolver &Solver,
+                                    SmallPtrSetImpl<Value *> &InsertedValues,
+                                    Instruction &Inst) {
   auto GetRange = [&Solver, &InsertedValues](Value *Op) {
     return getRange(Op, Solver, InsertedValues);
   };
@@ -392,7 +390,7 @@ bool SCCPSolver::simplifyInstsInBlock(BasicBlock &BB,
       ++InstReplacedStat;
     } else if (refineInstruction(*this, InsertedValues, Inst)) {
       MadeChanges = true;
-    } else if (auto *V = simplifyInstruction(*this, InsertedValues, Inst)) {
+    } else if (auto *V = simplifyAnInstruction(*this, InsertedValues, Inst)) {
       Inst.replaceAllUsesWith(V);
       Inst.eraseFromParent();
       ++InstRemovedStat;
@@ -542,7 +540,7 @@ void SCCPSolver::inferArgAttributes() const {
 
 /// Helper class for SCCPSolver. This implements the instruction visitor and
 /// holds all the state.
-class SCCPInstVisitor : public InstVisitor<SCCPInstVisitor> {
+class llvm::SCCPInstVisitor : public InstVisitor<SCCPInstVisitor> {
   const DataLayout &DL;
   std::function<const TargetLibraryInfo &(Function &)> GetTLI;
   /// Basic blocks that are executable (but may not have been visited yet).
@@ -1054,8 +1052,6 @@ public:
     Invalidated.clear();
   }
 };
-
-} // namespace llvm
 
 bool SCCPInstVisitor::markBlockExecutable(BasicBlock *BB) {
   if (!BBExecutable.insert(BB).second)
