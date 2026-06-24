@@ -1198,6 +1198,85 @@ Instruction *InstCombinerImpl::foldSignBitTest(ICmpInst &I) {
                           X, ConstantInt::getNullValue(XTy));
 }
 
+/// Handles:
+///   icmp eq/ne (add select((icmp slt/sgt/ult/ugt X, CondC), TrueC, FalseC),
+///               X), 0
+///   icmp eq/ne (add X,
+///               select((icmp slt/sgt/ult/ugt X, CondC), TrueC,FalseC)), 0
+///
+/// Fold into (when roots are consistent with select arms):
+///   eq : (X == -TrueC) || (X == -FalseC)
+///   ne : (X != -TrueC) && (X != -FalseC)
+///
+/// Caller guarantees: RHS of icmp is zero.
+static Instruction *foldICmpAddSelectZero(ICmpInst &Cmp, InstCombinerImpl &IC) {
+  CmpPredicate Pred = Cmp.getPredicate();
+  if (!ICmpInst::isEquality(Pred))
+    return nullptr;
+
+  Value *X;
+  const APInt *CondC, *TrueC, *FalseC;
+  CmpPredicate InnerPred;
+
+  // Match: add (select (icmp X, CondC), TrueC, FalseC), X — or commuted form.
+  // The outer OneUse guards the add (we're replacing it).
+  // The inner OneUse on the select is a profitability guard: this fold adds
+  // 3 instructions and removes 2, so it isn't profitable if the select is
+  // reused elsewhere.
+  if (!match(Cmp.getOperand(0),
+             m_OneUse(m_c_Add(m_OneUse(m_Select(
+                                  m_ICmp(InnerPred, m_Value(X), m_APInt(CondC)),
+                                  m_APInt(TrueC), m_APInt(FalseC))),
+                              m_Deferred(X)))))
+    return nullptr;
+
+  APInt TrueRoot = -(*TrueC);
+  APInt FalseRoot = -(*FalseC);
+
+  // The fold is valid only if each root matches the select arm that would
+  // produce it:
+  //   InnerPred(TrueRoot,  CondC) == true
+  //   InnerPred(FalseRoot, CondC) == false
+  //
+  // (sle/sge/ule/uge are canonicalized to slt/sgt/ult/ugt before reaching
+  // here.)
+  switch (InnerPred) {
+  case ICmpInst::ICMP_SLT:
+    if (!TrueRoot.slt(*CondC) || FalseRoot.slt(*CondC))
+      return nullptr;
+    break;
+  case ICmpInst::ICMP_SGT:
+    if (!TrueRoot.sgt(*CondC) || FalseRoot.sgt(*CondC))
+      return nullptr;
+    break;
+  case ICmpInst::ICMP_ULT:
+    if (!TrueRoot.ult(*CondC) || FalseRoot.ult(*CondC))
+      return nullptr;
+    break;
+  case ICmpInst::ICMP_UGT:
+    if (!TrueRoot.ugt(*CondC) || FalseRoot.ugt(*CondC))
+      return nullptr;
+    break;
+  default:
+    return nullptr;
+  }
+
+  InstCombiner::BuilderTy &Builder = IC.Builder;
+  Type *Ty = X->getType();
+  Constant *TrueConst = ConstantInt::get(Ty, TrueRoot);
+  Constant *FalseConst = ConstantInt::get(Ty, FalseRoot);
+
+  // eq -> (X == TrueRoot) || (X == FalseRoot)
+  // ne -> (X != TrueRoot) && (X != FalseRoot)
+  bool IsEq = Pred == ICmpInst::ICMP_EQ;
+  Value *CmpA = Builder.CreateICmp(IsEq ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE,
+                                   X, TrueConst);
+  Value *CmpB = Builder.CreateICmp(IsEq ? CmpInst::ICMP_EQ : CmpInst::ICMP_NE,
+                                   X, FalseConst);
+  return IsEq ? BinaryOperator::CreateOr(CmpA, CmpB)
+              : BinaryOperator::CreateAnd(CmpA, CmpB);
+}
+
 // Handle  icmp pred X, 0
 Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
   CmpInst::Predicate Pred = Cmp.getPredicate();
@@ -1214,6 +1293,9 @@ Instruction *InstCombinerImpl::foldICmpWithZero(ICmpInst &Cmp) {
         return new ICmpInst(Pred, A, Cmp.getOperand(1));
     }
   }
+
+  if (Instruction *New = foldICmpAddSelectZero(Cmp, *this))
+    return New;
 
   if (Instruction *New = foldIRemByPowerOfTwoToBitTest(Cmp))
     return New;
