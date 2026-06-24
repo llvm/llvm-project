@@ -29,6 +29,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/CarolinesTimers.h"
 #include "lldb/Utility/ValueType.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
@@ -728,9 +729,31 @@ protected:
                 StackFrame::eExpressionPathOptionsInspectAnonymousUnions |
                 StackFrame::eExpressionPathOptionsAllowVarUpdates;
             lldb::VariableSP var_sp;
+            timespec start_time1;
+            timespec start_time2;
+            timespec end_time1;
+            timespec end_time2;
+
+            llvm::StringRef expr_ref = entry.ref();
+            std::string expr = expr_ref.str();
+            CarolineTimeStamp(eCarolineStartFrameVar, expr, &start_time1);
             valobj_sp = frame->GetValueForVariableExpressionPath(
                 entry.ref(), m_varobj_options.use_dynamic, expr_path_options,
                 var_sp, error);
+            CarolineTimeStamp(eCarolineEndFrameVar, expr, &end_time1);
+            lldb::ValueObjectSP valobj_sp2;
+            std::string fixed_expression;
+            lldb::TargetSP target_sp = frame->CalculateTarget();
+            ExecutionContextScope *exe_scope = target_sp.get();
+            SourceLanguage language = target_sp->GetLanguage();
+            EvaluateExpressionOptions eval_options;
+            eval_options.SetUseDynamic(m_varobj_options.use_dynamic);
+            eval_options.SetUnwindOnError(true);
+            eval_options.SetIgnoreBreakpoints(true);
+            eval_options.SetLanguage(language.name, language.version);
+            CarolineTimeStamp(eCarolineStartExprEval, expr, &start_time2);
+            ExpressionResults expr_result = target_sp->EvaluateExpression(expr, exe_scope, valobj_sp2, eval_options, &fixed_expression);
+            CarolineTimeStamp(eCarolineEndExprEval, expr, &end_time2);
             // Check only the `error` argument, because doing
             // `valobj_sp->GetError()` will update the value and potentially
             // return a new error that happens during the update, even if
