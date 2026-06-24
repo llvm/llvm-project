@@ -130,7 +130,8 @@ void LoopVectorizationUtils::reportVectorization(OptimizationRemarkEmitter *ORE,
                               TheLoop->getHeader())
            << "vectorized " << LoopType << "loop (vectorization width: "
            << ore::NV("VectorizationFactor", VFWidth)
-           << ", interleaved count: " << ore::NV("InterleaveCount", IC) << ")";
+           << ", interleaved count: " << ore::NV("InterleaveCount", IC)
+           << ore::NV("LoopDepth", TheLoop->getLoopDepth()) << ")";
   });
 }
 
