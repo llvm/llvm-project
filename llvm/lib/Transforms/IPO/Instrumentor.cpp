@@ -905,31 +905,31 @@ static void readValuePack(const Range &R, Value &Pack,
   }
 }
 
-Value *llvm::instrumentor::getOpcode(Value &V, Type &Ty,
-                                     InstrumentationConfig &IConf,
-                                     InstrumentorIRBuilderTy &IIRB) {
+Value *BaseInstructionIO::getOpcode(Value &V, Type &Ty,
+                                    InstrumentationConfig &IConf,
+                                    InstrumentorIRBuilderTy &IIRB) {
   auto &I = cast<Instruction>(V);
   return getCI(&Ty, I.getOpcode());
 }
 
-Value *llvm::instrumentor::getTypeSize(Value &V, Type &Ty,
-                                       InstrumentationConfig &IConf,
-                                       InstrumentorIRBuilderTy &IIRB) {
+Value *BaseInstructionIO::getTypeSize(Value &V, Type &Ty,
+                                      InstrumentationConfig &IConf,
+                                      InstrumentorIRBuilderTy &IIRB) {
   auto &I = cast<Instruction>(V);
   auto &DL = I.getDataLayout();
   return getCI(&Ty, DL.getTypeStoreSize(V.getType()));
 }
 
-Value *llvm::instrumentor::getLeft(Value &V, Type &Ty,
-                                   InstrumentationConfig &IConf,
-                                   InstrumentorIRBuilderTy &IIRB) {
+Value *BaseInstructionIO::getLeftOperand(Value &V, Type &Ty,
+                                         InstrumentationConfig &IConf,
+                                         InstrumentorIRBuilderTy &IIRB) {
   auto &I = cast<Instruction>(V);
   return I.getOperand(0);
 }
 
-Value *llvm::instrumentor::getRight(Value &V, Type &Ty,
-                                    InstrumentationConfig &IConf,
-                                    InstrumentorIRBuilderTy &IIRB) {
+Value *BaseInstructionIO::getRightOperand(Value &V, Type &Ty,
+                                          InstrumentationConfig &IConf,
+                                          InstrumentorIRBuilderTy &IIRB) {
   auto &I = cast<Instruction>(V);
   if (I.getNumOperands() > 1)
     return I.getOperand(1);
@@ -937,9 +937,9 @@ Value *llvm::instrumentor::getRight(Value &V, Type &Ty,
     return PoisonValue::get(&Ty);
 }
 
-Value *llvm::instrumentor::getTypeId(Value &V, Type &Ty,
-                                     InstrumentationConfig &IConf,
-                                     InstrumentorIRBuilderTy &IIRB) {
+Value *BaseInstructionIO::getTypeId(Value &V, Type &Ty,
+                                    InstrumentationConfig &IConf,
+                                    InstrumentorIRBuilderTy &IIRB) {
   return getCI(&Ty, V.getType()->getTypeID());
 }
 
@@ -1777,12 +1777,12 @@ void NumericIO::init(InstrumentationConfig &IConf,
   if (Config.has(PassLeft))
     IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "left",
                              "The operation's left operand.", ValArgOpts,
-                             getLeft));
+                             getLeftOperand));
   if (Config.has(PassRight))
     IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "right",
                              "The operation's right operand. This value is "
                              "poison for unary operations.",
-                             ValArgOpts, getRight));
+                             ValArgOpts, getRightOperand));
   if (!IsPRE && Config.has(PassResult))
     IRTArgs.push_back(
         IRTArg(IIRB.Int64Ty, "result", "Result of the operation.",
@@ -1867,11 +1867,11 @@ void CompareIO::init(InstrumentationConfig &IConf,
   if (Config.has(PassLeft))
     IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "left",
                              "The comparison's left operand.", OperandArgOpts,
-                             getLeft));
+                             getLeftOperand));
   if (Config.has(PassRight))
     IRTArgs.push_back(IRTArg(IIRB.Int64Ty, "right",
                              "The comparison's right operand.", OperandArgOpts,
-                             getRight));
+                             getRightOperand));
   if (!IsPRE && Config.has(PassResultSize))
     IRTArgs.push_back(IRTArg(IIRB.Int32Ty, "result_type_id",
                              "The result value's type ID.", IRTArg::NONE,

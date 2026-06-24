@@ -583,18 +583,42 @@ struct InstrumentationOpportunity {
   }
 };
 
-/// The base instrumentation opportunity class for instruction opportunities.
+/// The base class that implements basic logic for any instruction
+/// instrumentation opportunity that inherits from InstructionIO.
+struct BaseInstructionIO : public InstrumentationOpportunity {
+  virtual ~BaseInstructionIO() {}
+
+  BaseInstructionIO(InstrumentationLocation::KindTy Kind)
+      : InstrumentationOpportunity(InstrumentationLocation(Kind)) {}
+
+  LLVM_ABI static Value *getOpcode(Value &V, Type &Ty,
+                                   InstrumentationConfig &IConf,
+                                   InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getTypeSize(Value &V, Type &Ty,
+                                     InstrumentationConfig &IConf,
+                                     InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getLeftOperand(Value &V, Type &Ty,
+                                        InstrumentationConfig &IConf,
+                                        InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getRightOperand(Value &V, Type &Ty,
+                                         InstrumentationConfig &IConf,
+                                         InstrumentorIRBuilderTy &IIRB);
+  LLVM_ABI static Value *getTypeId(Value &V, Type &Ty,
+                                   InstrumentationConfig &IConf,
+                                   InstrumentorIRBuilderTy &IIRB);
+};
+
+/// The common instrumentation opportunity class for instruction opportunities.
 /// Each instruction opportunity should inherit from this class and implement
 /// the virtual class members. If multiple opcodes are provided, all of them
 /// are instrumented using the same logic, and a name must be explicitly
 /// provided by overriding getName().
-template <unsigned... Opcodes>
-struct InstructionIO : public InstrumentationOpportunity {
+template <unsigned... Opcodes> struct InstructionIO : public BaseInstructionIO {
   virtual ~InstructionIO() {}
 
   /// Construct an instruction opportunity.
   InstructionIO(InstrumentationLocation::KindTy Kind)
-      : InstrumentationOpportunity(InstrumentationLocation(Kind)) {
+      : BaseInstructionIO(Kind) {
     static_assert(sizeof...(Opcodes) >= 1,
                   "InstructionIO must have at least one opcode");
   }
@@ -621,20 +645,6 @@ struct InstructionIO : public InstrumentationOpportunity {
     return Instruction::getOpcodeName(OpcodesArray[0]);
   }
 };
-
-/// Common getters use across different instrumentation opportunities.
-///{
-LLVM_ABI Value *getOpcode(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                          InstrumentorIRBuilderTy &IIRB);
-LLVM_ABI Value *getTypeSize(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                            InstrumentorIRBuilderTy &IIRB);
-LLVM_ABI Value *getLeft(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                        InstrumentorIRBuilderTy &IIRB);
-LLVM_ABI Value *getRight(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                         InstrumentorIRBuilderTy &IIRB);
-LLVM_ABI Value *getTypeId(Value &V, Type &Ty, InstrumentationConfig &IConf,
-                          InstrumentorIRBuilderTy &IIRB);
-///}
 
 /// The instrumentation opportunity for functions.
 struct FunctionIO final : public InstrumentationOpportunity {
