@@ -142,7 +142,9 @@ private:
   resolveCatchCopyThunk(cir::ConstructCatchParamOp op);
   mlir::LogicalResult lowerFunc(cir::FuncOp funcOp);
   mlir::LogicalResult
-  lowerEhInitiate(cir::EhInitiateOp initiateOp, EhTokenMap &ehTokenMap,
+  lowerEhInitiate(cir::EhInitiateOp initiateOp,
+                  llvm::ArrayRef<cir::EhDispatchOp> reachedDispatches,
+                  bool reachesCleanup, EhTokenMap &ehTokenMap,
                   SmallVectorImpl<mlir::Operation *> &deadOps);
   void lowerDispatch(cir::EhDispatchOp dispatch, mlir::Value exnPtr,
                      mlir::Value typeId,
@@ -301,6 +303,53 @@ mlir::Block *ItaniumEHLowering::buildTerminateBlock(cir::FuncOp funcOp,
   return terminateBlock;
 }
 
+/// Read-only walk of the eh_token graph from an initiate's root token,
+/// collecting every cir.eh.dispatch its exception can reach, innermost first.
+/// The token flows through cleanups to the innermost dispatch and then, via
+/// that dispatch's continue-unwind edge, on to each enclosing dispatch (nested
+/// try/catch).  The walk follows the token into catch-handler blocks too, but
+/// it dead-ends there because cir.begin_catch consumes the eh_token (producing
+/// a catch_token), so only the unwind chain yields further dispatches.
+///
+/// This is computed before any destructive lowering so a landing pad's catch
+/// types -- which are a property of the EH graph -- do not depend on the order
+/// in which the destructive per-initiate traversal tears down shared
+/// token-graph edges.  \p dispatches is left empty for a cleanup-only initiate
+/// that reaches no dispatch (e.g. a path that only resumes).
+static void
+collectReachableDispatches(mlir::Value rootToken,
+                           llvm::SmallVectorImpl<cir::EhDispatchOp> &dispatches,
+                           bool &reachesCleanup) {
+  llvm::SmallVector<mlir::Value> worklist;
+  llvm::SmallPtrSet<mlir::Value, 8> visited;
+  worklist.push_back(rootToken);
+  // Breadth-first (process in insertion order) so dispatches are discovered
+  // innermost first, matching the order catch clauses must appear in the
+  // landing pad.
+  for (unsigned i = 0; i < worklist.size(); ++i) {
+    mlir::Value current = worklist[i];
+    if (!visited.insert(current).second)
+      continue;
+    for (mlir::OpOperand &use : current.getUses()) {
+      mlir::Operation *user = use.getOwner();
+      // A cleanup anywhere on the unwind path (this initiate's own cleanup or
+      // an enclosing scope's) means the landing pad must carry the cleanup
+      // clause so destructors still run when a foreign exception unwinds
+      // through this frame.
+      if (mlir::isa<cir::BeginCleanupOp>(user))
+        reachesCleanup = true;
+      if (auto dispatch = mlir::dyn_cast<cir::EhDispatchOp>(user))
+        if (!llvm::is_contained(dispatches, dispatch))
+          dispatches.push_back(dispatch);
+      // Follow the token into eh_token block arguments of successor blocks.
+      for (unsigned s = 0, e = user->getNumSuccessors(); s < e; ++s)
+        for (mlir::BlockArgument arg : user->getSuccessor(s)->getArguments())
+          if (mlir::isa<cir::EhTokenType>(arg.getType()))
+            worklist.push_back(arg);
+    }
+  }
+}
+
 /// Lower all EH operations in a single function.
 mlir::LogicalResult ItaniumEHLowering::lowerFunc(cir::FuncOp funcOp) {
   if (funcOp.isDeclaration())
@@ -325,19 +374,47 @@ mlir::LogicalResult ItaniumEHLowering::lowerFunc(cir::FuncOp funcOp) {
   if (!funcOp.getPersonality())
     funcOp.setPersonality(kGxxPersonality);
 
-  // Lower each initiate and all EH ops connected to it. The token map is
-  // shared across all initiate operations. Multiple initiates may flow into the
-  // same dispatch block, and the map ensures the arguments are registered
-  // only once. Dispatch ops are scheduled for deferred removal so that sibling
-  // initiates can still read catch types from a shared dispatch.
+  // Compute, read-only and before any destructive lowering, the dispatches each
+  // initiate's exception can reach (innermost first; more than one for nested
+  // try/catch).  A landing pad's catch types are a property of the EH graph, so
+  // deriving them here keeps them independent of the order in which the
+  // destructive per-initiate traversal in lowerEhInitiate tears down shared
+  // token-graph edges.  Otherwise a sibling or outer dispatch could be missed,
+  // leaving a landing pad without its catch clause (it would resume past the
+  // handler to std::terminate) or an un-lowered leftover dispatch.
+  llvm::DenseMap<mlir::Operation *, SmallVector<cir::EhDispatchOp>>
+      reachedDispatches;
+  llvm::DenseMap<mlir::Operation *, bool> reachesCleanup;
+  SmallVector<cir::EhDispatchOp> dispatchesToLower;
+  for (cir::EhInitiateOp initiateOp : initiateOps) {
+    SmallVector<cir::EhDispatchOp> reached;
+    bool cleanupOnPath = false;
+    collectReachableDispatches(initiateOp.getEhToken(), reached, cleanupOnPath);
+    for (cir::EhDispatchOp dispatch : reached)
+      if (!llvm::is_contained(dispatchesToLower, dispatch))
+        dispatchesToLower.push_back(dispatch);
+    reachedDispatches[initiateOp.getOperation()] = std::move(reached);
+    reachesCleanup[initiateOp.getOperation()] = cleanupOnPath;
+  }
+
   EhTokenMap ehTokenMap;
   SmallVector<mlir::Operation *> deadOps;
   for (cir::EhInitiateOp initiateOp : initiateOps)
-    if (mlir::failed(lowerEhInitiate(initiateOp, ehTokenMap, deadOps)))
+    if (mlir::failed(lowerEhInitiate(
+            initiateOp, reachedDispatches[initiateOp.getOperation()],
+            reachesCleanup[initiateOp.getOperation()], ehTokenMap, deadOps)))
       return mlir::failure();
 
+  // Lower each dispatch exactly once.  Every initiate's token block-argument
+  // (ptr, u32) replacements are registered in ehTokenMap by now, so each
+  // dispatch's own (exnPtr, typeId) pair is available.
+  for (cir::EhDispatchOp dispatch : dispatchesToLower) {
+    auto [exnPtr, typeId] = ehTokenMap.lookup(dispatch.getEhToken());
+    lowerDispatch(dispatch, exnPtr, typeId, deadOps);
+  }
+
   // Erase operations that were deferred during per-initiate processing
-  // (dispatch ops whose catch types were read by multiple initiates).
+  // (the dispatch ops, lowered above).
   for (mlir::Operation *op : deadOps)
     op->erase();
 
@@ -397,17 +474,40 @@ mlir::LogicalResult ItaniumEHLowering::lowerFunc(cir::FuncOp funcOp) {
 /// \p ehTokenMap is shared across all initiates in the function so that block
 /// arguments reachable from multiple sibling initiates are registered once.
 mlir::LogicalResult ItaniumEHLowering::lowerEhInitiate(
-    cir::EhInitiateOp initiateOp, EhTokenMap &ehTokenMap,
-    SmallVectorImpl<mlir::Operation *> &deadOps) {
+    cir::EhInitiateOp initiateOp,
+    llvm::ArrayRef<cir::EhDispatchOp> reachedDispatches, bool reachesCleanup,
+    EhTokenMap &ehTokenMap, SmallVectorImpl<mlir::Operation *> &deadOps) {
   mlir::Value rootToken = initiateOp.getEhToken();
 
-  // Create the inflight_exception without a catch_type_list. The catch types
-  // will be set once we encounter the dispatch during the traversal below.
+  // The catch clauses for this landing pad come from the dispatches its
+  // exception reaches (computed read-only by the caller before any destructive
+  // lowering).  For nested try/catch the exception can reach several dispatches
+  // innermost first, so the landing pad lists their catch types in that order
+  // (matching classic CodeGen), stopping at a catch-all since nothing escapes
+  // it.  Deriving this from the original EH graph -- rather than during the
+  // destructive token-graph traversal below -- keeps it correct regardless of
+  // the order in which sibling/nested initiates are lowered.
+  mlir::ArrayAttr catchTypeList;
+  bool catchAll = false;
+  SmallVector<mlir::Attribute> typeSymbols;
+  for (cir::EhDispatchOp dispatch : reachedDispatches) {
+    if (mlir::ArrayAttr catchTypes = dispatch.getCatchTypesAttr())
+      for (mlir::Attribute attr : catchTypes)
+        typeSymbols.push_back(
+            mlir::cast<cir::GlobalViewAttr>(attr).getSymbol());
+    if (dispatch.getDefaultIsCatchAll()) {
+      catchAll = true;
+      break;
+    }
+  }
+  if (!typeSymbols.empty())
+    catchTypeList = builder.getArrayAttr(typeSymbols);
+
   builder.setInsertionPoint(initiateOp);
   auto inflightOp = cir::EhInflightOp::create(
-      builder, initiateOp.getLoc(), /*cleanup=*/initiateOp.getCleanup(),
-      /*catch_all=*/false,
-      /*catch_type_list=*/mlir::ArrayAttr{});
+      builder, initiateOp.getLoc(),
+      /*cleanup=*/initiateOp.getCleanup() || reachesCleanup,
+      /*catch_all=*/catchAll, catchTypeList);
 
   ehTokenMap[rootToken] = {inflightOp.getExceptionPtr(),
                            inflightOp.getTypeId()};
@@ -495,25 +595,12 @@ mlir::LogicalResult ItaniumEHLowering::lowerEhInitiate(
         auto [exnPtr, typeId] = ehTokenMap.lookup(op.getEhToken());
         if (mlir::failed(lowerConstructCatchParam(op, exnPtr)))
           return mlir::failure();
-      } else if (auto op = mlir::dyn_cast<cir::EhDispatchOp>(user)) {
-        // Read catch types from the dispatch and set them on the inflight op.
-        mlir::ArrayAttr catchTypes = op.getCatchTypesAttr();
-        if (catchTypes && catchTypes.size() > 0) {
-          SmallVector<mlir::Attribute> typeSymbols;
-          for (mlir::Attribute attr : catchTypes)
-            typeSymbols.push_back(
-                mlir::cast<cir::GlobalViewAttr>(attr).getSymbol());
-          inflightOp.setCatchTypeListAttr(builder.getArrayAttr(typeSymbols));
-        }
-        if (op.getDefaultIsCatchAll())
-          inflightOp.setCatchAllAttr(builder.getUnitAttr());
-        // Only lower the dispatch once. A sibling initiate sharing the same
-        // dispatch will still read its catch types (above), but the comparison
-        // chain and branch replacement are only created the first time.
-        if (!llvm::is_contained(deadOps, op.getOperation())) {
-          auto [exnPtr, typeId] = ehTokenMap.lookup(op.getEhToken());
-          lowerDispatch(op, exnPtr, typeId, deadOps);
-        }
+      } else if (mlir::isa<cir::EhDispatchOp>(user)) {
+        // The dispatch's catch types were already read into every reaching
+        // landing pad (read-only, before this traversal).  The dispatch op
+        // itself is lowered once by the caller after all initiates are
+        // processed, so nothing is done here; the successor catch-handler
+        // blocks are still reached via the block-argument registration above.
       } else if (auto op = mlir::dyn_cast<cir::EhTerminateOp>(user)) {
         auto [exnPtr, typeId] = ehTokenMap.lookup(op.getEhToken());
         ensureClangCallTerminate(op.getLoc());
