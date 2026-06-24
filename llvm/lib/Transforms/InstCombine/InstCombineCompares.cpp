@@ -956,6 +956,85 @@ Instruction *InstCombinerImpl::foldICmpAddOpConst(Value *X, const APInt &C,
                       ConstantInt::get(X->getType(), SMax - (C - 1)));
 }
 
+static Instruction* foldFCmpMulConst(FCmpInst &I, InstCombinerImpl &IC)
+{
+  /// Handling the pattern fcmp pred (fmul X, imm), 0.0.
+    auto Op0 = I.getOperand(0);
+    auto Op1 = I.getOperand(1);
+    auto Pred = I.getPredicate();
+    Value* FMulOperand1;
+    Constant* ImmediateValue;
+    /// fcmp(fmul(X,Immediate(Float), 0.0)) to fcmp(X,0.0)
+    if((match(Op0,m_c_FMul(m_Value(FMulOperand1),m_ImmConstant(ImmediateValue))) &&
+      match(Op1,m_AnyZeroFP())))
+    {
+      ConstantFP* CastedValue = dyn_cast<ConstantFP>(ImmediateValue);
+      if(CastedValue == nullptr)
+      {
+        return(nullptr);
+      }
+      if(CmpInst::isEquality(Pred))
+      {
+        if(((!CastedValue->isZero()) && (!ImmediateValue->isNaN())))
+        {
+          IC.replaceOperand(I,0,FMulOperand1);
+          IC.replaceOperand(I,1,ConstantFP::getZero(FMulOperand1->getType()));
+          return(&I);
+        }
+        return(nullptr);
+      }
+      else if(CmpInst::isRelational(Pred))
+      {
+        if( (!CastedValue->isZero())  && (!ImmediateValue->isNaN()) && (!CastedValue->isNegative()))
+        {
+          IC.replaceOperand(I,0,FMulOperand1);
+          IC.replaceOperand(I,1,ConstantFP::getZero(FMulOperand1->getType()));
+          return(&I);
+        }
+        return(nullptr);
+      }
+    }
+    /// fcmp(0.0,fmul(X,Immediate(Float)) to fcmp(0.0,X)
+    else if((match(Op1,m_c_FMul(m_Value(FMulOperand1),m_ImmConstant(ImmediateValue))) &&
+    match(Op0,m_AnyZeroFP())))
+    {
+      ConstantFP* CastedValue = dyn_cast<ConstantFP>(ImmediateValue);
+      if(CastedValue == nullptr)
+      {
+        return(nullptr);
+      }
+      if(CmpInst::isEquality(Pred))
+      {
+        if(((!CastedValue->isZero()) && (!ImmediateValue->isNaN())))
+        {
+          IC.replaceOperand(I,0,FMulOperand1);
+          IC.replaceOperand(I,1,ConstantFP::getZero(FMulOperand1->getType()));
+          Pred = CmpInst::getInversePredicate(Pred);
+          I.setPredicate(Pred);
+          return(&I);
+        }
+        return(nullptr);
+      }
+      else if(CmpInst::isRelational(Pred))
+      {
+        if( (!CastedValue->isZero())  && (!ImmediateValue->isNaN()) && (!CastedValue->isNegative()))
+        {
+          IC.replaceOperand(I,0,FMulOperand1);
+          IC.replaceOperand(I,1,ConstantFP::getZero(FMulOperand1->getType()));
+          Pred = CmpInst::getInversePredicate(Pred);
+          I.setPredicate(Pred);
+          return(&I);
+        }
+        return(nullptr);
+      }
+  }
+  else
+  {
+    return(nullptr);
+  }
+  return(nullptr);
+}
+
 /// Handle "(icmp eq/ne (ashr/lshr AP2, A), AP1)" ->
 /// (icmp eq/ne A, Log2(AP2/AP1)) ->
 /// (icmp eq/ne A, Log2(AP2) - Log2(AP1)).
@@ -9253,6 +9332,9 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
       break;
     }
   }
+
+  if (Instruction *R = foldFCmpMulConst(I, *this))
+    return R;
 
   if (Instruction *R = foldFabsWithFcmpZero(I, *this))
     return R;
