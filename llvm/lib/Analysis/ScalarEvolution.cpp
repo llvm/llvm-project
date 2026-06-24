@@ -3578,6 +3578,10 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
   if (match(LHS, m_scev_Zero()))
     return LHS;
 
+  // X udiv X == 1
+  if (LHS == RHS)
+    return getConstant(LHS->getType(), 1);
+
   if (const SCEVConstant *RHSC = dyn_cast<SCEVConstant>(RHS)) {
     if (RHSC->getValue()->isOne())
       return LHS;                               // X udiv 1 --> x
@@ -3655,38 +3659,6 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
             }
           }
         }
-      // (A*B)/C --> A*(B/C) if safe and B/C can be folded.
-      if (const SCEVMulExpr *M = dyn_cast<SCEVMulExpr>(LHS)) {
-        SmallVector<SCEVUse, 4> Operands;
-        for (const SCEV *Op : M->operands())
-          Operands.push_back(getZeroExtendExpr(Op, ExtTy));
-        if (getZeroExtendExpr(M, ExtTy) == getMulExpr(Operands)) {
-          // Find an operand that's safely divisible.
-          for (unsigned i = 0, e = M->getNumOperands(); i != e; ++i) {
-            const SCEV *Op = M->getOperand(i);
-            const SCEV *Div = getUDivExpr(Op, RHSC);
-            if (!isa<SCEVUDivExpr>(Div) && getMulExpr(Div, RHSC) == Op) {
-              Operands = SmallVector<SCEVUse, 4>(M->operands());
-              Operands[i] = Div;
-              return getMulExpr(Operands);
-            }
-          }
-
-          // Even if it's not divisible, try to remove a common factor.
-          if (const auto *LHSC = dyn_cast<SCEVConstant>(M->getOperand(0))) {
-            APInt Factor = APIntOps::GreatestCommonDivisor(LHSC->getAPInt(),
-                                                           RHSC->getAPInt());
-            if (!Factor.isIntN(1)) {
-              SmallVector<SCEVUse, 2> NewOperands;
-              NewOperands.push_back(getConstant(LHSC->getAPInt().udiv(Factor)));
-              append_range(NewOperands, M->operands().drop_front());
-              const SCEV *NewMul = getMulExpr(NewOperands);
-              return getUDivExpr(NewMul,
-                                 getConstant(RHSC->getAPInt().udiv(Factor)));
-            }
-          }
-        }
-      }
 
       // (A/B)/C --> A/(B*C) if safe and B*C can be folded.
       if (const SCEVUDivExpr *OtherDiv = dyn_cast<SCEVUDivExpr>(LHS)) {
@@ -3755,25 +3727,61 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
       NegC->isNegative() && !NegC->isMinSignedValue() && *C == -*NegC)
     return getZero(LHS->getType());
 
-  // (%a * %b)<nuw> / %b -> %a
-  const auto *Mul = dyn_cast<SCEVMulExpr>(LHS);
-  if (Mul && Mul->hasNoUnsignedWrap()) {
-    for (int i = 0, e = Mul->getNumOperands(); i != e; ++i) {
-      if (Mul->getOperand(i) == RHS) {
-        SmallVector<SCEVUse, 2> Operands;
-        append_range(Operands, Mul->operands().take_front(i));
-        append_range(Operands, Mul->operands().drop_front(i + 1));
-        return getMulExpr(Operands);
+  // (A * B)/(B * C) --> A/C if safe
+  bool MulOptimized = false;
+  SmallVector<SCEVUse> RHSOperands, LHSOperands;
+  if (const SCEVMulExpr *RHSMul = dyn_cast<SCEVMulExpr>(RHS);
+      RHSMul && RHSMul->hasNoUnsignedWrap())
+    RHSOperands = to_vector(RHSMul->operands());
+  else
+    RHSOperands.push_back(RHS);
+  if (const SCEVMulExpr *LHSMul = dyn_cast<SCEVMulExpr>(LHS);
+      LHSMul && LHSMul->hasNoUnsignedWrap())
+    LHSOperands = to_vector(LHSMul->operands());
+  else
+    LHSOperands.push_back(LHS);
+
+  for (unsigned RHSIdx = 0; RHSIdx < RHSOperands.size(); ++RHSIdx) {
+    SCEVUse RHSOp = RHSOperands[RHSIdx];
+
+    if (const SCEVConstant *RHSCst = dyn_cast<SCEVConstant>(RHSOp)) {
+      // If the mulexpr multiplies by a constant, then that constant must be the
+      // first element of the mulexpr.
+      if (const auto *LHSCst = dyn_cast<SCEVConstant>(LHSOperands[0])) {
+        if (LHSCst == RHSCst) {
+          RHSOperands[RHSIdx] = getConstant(RHSOp->getType(), 1);
+          LHSOperands[0] = getConstant(RHSOp->getType(), 1);
+          MulOptimized = true;
+          continue;
+        }
+
+        // Even if it's not divisible, try to remove a common factor.
+        APInt Factor = APIntOps::GreatestCommonDivisor(LHSCst->getAPInt(),
+                                                       RHSCst->getAPInt());
+        if (!Factor.isIntN(1)) {
+          LHSOperands[0] =
+              cast<SCEVConstant>(getConstant(LHSCst->getAPInt().udiv(Factor)));
+          RHSOperands[RHSIdx] =
+              cast<SCEVConstant>(getConstant(RHSCst->getAPInt().udiv(Factor)));
+          MulOptimized = true;
+        }
+        continue;
+      }
+    }
+
+    for (unsigned LHSIdx = 0; LHSIdx < LHSOperands.size(); ++LHSIdx) {
+      const SCEV *LHSOp = LHSOperands[LHSIdx];
+      if (LHSOp == RHSOp) {
+        RHSOperands[RHSIdx] = getConstant(RHSOp->getType(), 1);
+        LHSOperands[LHSIdx] = getConstant(LHSOperands[LHSIdx]->getType(), 1);
+        MulOptimized = true;
+        break;
       }
     }
   }
-
-  // TODO: Generalize to handle any common factors.
-  // udiv (mul nuw a, vscale), (mul nuw b, vscale) --> udiv a, b
-  const SCEV *NewLHS, *NewRHS;
-  if (match(LHS, m_scev_c_NUWMul(m_SCEV(NewLHS), m_SCEVVScale())) &&
-      match(RHS, m_scev_c_NUWMul(m_SCEV(NewRHS), m_SCEVVScale())))
-    return getUDivExpr(NewLHS, NewRHS);
+  if (MulOptimized)
+    return getUDivExpr(getMulExpr(LHSOperands, SCEV::FlagNUW),
+                       getMulExpr(RHSOperands, SCEV::FlagNUW));
 
   // The Insertion Point (IP) might be invalid by now (due to UniqueSCEVs
   // changes). Make sure we get a new one.
