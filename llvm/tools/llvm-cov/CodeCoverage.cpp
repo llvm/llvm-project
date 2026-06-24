@@ -696,12 +696,13 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
 
   cl::opt<CoverageViewOptions::OutputFormat> Format(
       "format", cl::desc("Output format for line-based coverage reports"),
-      cl::values(clEnumValN(CoverageViewOptions::OutputFormat::Text, "text",
-                            "Text output"),
-                 clEnumValN(CoverageViewOptions::OutputFormat::HTML, "html",
-                            "HTML output"),
-                 clEnumValN(CoverageViewOptions::OutputFormat::Lcov, "lcov",
-                            "lcov tracefile output")),
+      cl::values(
+          clEnumValN(CoverageViewOptions::OutputFormat::Text, "text",
+                     "Text output"),
+          clEnumValN(CoverageViewOptions::OutputFormat::HTML, "html",
+                     "HTML output (only available with 'show')"),
+          clEnumValN(CoverageViewOptions::OutputFormat::Lcov, "lcov",
+                     "lcov tracefile output (only available with 'export')")),
       cl::init(CoverageViewOptions::OutputFormat::Text));
 
   cl::list<std::string> PathRemaps(
