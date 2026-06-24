@@ -5,6 +5,7 @@
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi compat.s -o compat.o
 // RUN: not ld.lld hf.o softfp.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR -DF1=softfp.o -DF2=hf.o
 // RUN: ld.lld hf.o compat.o -o /dev/null
+// RUN: ld.lld softfp.o compat.o -o /dev/null
 
 // ERR: error: [[F1]]: cannot link object files with different floating-point ABI from [[F2]]
 
