@@ -470,9 +470,14 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
 
   MachineBasicBlock *MBB = LIS.getMBBFromIndex(SrcVNI->def);
   MachineBasicBlock::iterator MII;
-  if (SrcVNI->isPHIDef())
+  if (SrcVNI->isPHIDef()) {
     MII = MBB->SkipPHIsLabelsAndDebug(MBB->begin(), SrcReg);
-  else {
+    // Ensure the insertion point is not past CopyMI as CopyMI kills SrcReg,
+    // so the spill must be placed before it to be within SrcReg's live
+    // range.
+    if (MII == MBB->end() || LIS.getInstructionIndex(*MII) >= Idx)
+      MII = MachineBasicBlock::iterator(CopyMI);
+  } else {
     MachineInstr *DefMI = LIS.getInstructionFromIndex(SrcVNI->def);
     assert(DefMI && "Defining instruction disappeared");
     MII = DefMI;
