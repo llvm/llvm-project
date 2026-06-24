@@ -243,10 +243,18 @@ private:
   /// Used to indicate the ClangdLSPServer is being destroyed.
   std::atomic<bool> IsBeingDestroyed = {false};
 
-  // FIXME: The caching is a temporary solution to get corresponding clangd 
-  // diagnostic from a LSP diagnostic.
-  // Ideally, ClangdServer can generate an identifier for each diagnostic,
-  // emit them via the LSP's data field (which was newly added in LSP 3.16).
+  // The cache maps each published LSP diagnostic back to the underlying
+  // clangd::Diag so we can look up its Fix-Its when the client sends a
+  // codeAction request later.
+  //
+  // Preferred path: each published Diagnostic gets a unique id stamped into
+  // its `data` field under the "clangdFixId" key. LSP spec (3.16+) preserves
+  // `data` between publishDiagnostics and codeAction's `context.diagnostics`,
+  // so we look up by id and the lookup is immune to clients that mutate
+  // `message` for display (e.g. capitalizing, stripping suffixes).
+  //
+  // Fallback path: legacy (range, message) key, retained for clients that
+  // drop `data` round-trip.
   std::mutex DiagRefMutex;
   struct DiagKey {
     clangd::Range Rng;
@@ -255,15 +263,25 @@ private:
       return std::tie(Rng, Message) < std::tie(Other.Rng, Other.Message);
     }
   };
+  static constexpr llvm::StringLiteral DiagDataIdKey = "clangdFixId";
   DiagKey toDiagKey(const clangd::Diagnostic &LSPDiag) {
     return {LSPDiag.range, LSPDiag.message};
+  }
+  /// Reads the clangdFixId from a diagnostic's `data` field, if present.
+  static std::optional<int64_t>
+  diagFixIdFromData(const clangd::Diagnostic &LSPDiag) {
+    return LSPDiag.data.getInteger(DiagDataIdKey);
   }
   /// A map from LSP diagnostic to clangd-naive diagnostic.
   typedef std::map<DiagKey, ClangdServer::DiagRef>
       DiagnosticToDiagRefMap;
+  typedef std::map<int64_t, ClangdServer::DiagRef> DiagIdToDiagRefMap;
   /// Caches the mapping LSP and clangd-naive diagnostics per file.
-  llvm::StringMap<DiagnosticToDiagRefMap>
-      DiagRefMap;
+  /// Both maps are populated on every publish; lookup tries IdMap first.
+  llvm::StringMap<DiagnosticToDiagRefMap> DiagRefMap;
+  llvm::StringMap<DiagIdToDiagRefMap> DiagIdRefMap;
+  /// Monotonically-increasing fix-it id stamped into Diagnostic.data.
+  std::atomic<int64_t> NextDiagFixId = {1};
 
   // Last semantic-tokens response, for incremental requests.
   std::mutex SemanticTokensMutex;

@@ -7,6 +7,9 @@
 # CHECK-NEXT:    "diagnostics": [
 # CHECK-NEXT:      {
 # CHECK-NEXT:        "code": "-Wmain-return-type",
+# CHECK-NEXT:        "data": {
+# CHECK-NEXT:          "clangdFixId": {{[0-9]+}}
+# CHECK-NEXT:        },
 # CHECK-NEXT:        "message": "Return type of 'main' is not 'int' (fix available)",
 # CHECK-NEXT:        "range": {
 # CHECK-NEXT:          "end": {

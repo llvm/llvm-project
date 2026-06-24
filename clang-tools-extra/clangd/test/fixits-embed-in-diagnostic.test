@@ -33,6 +33,9 @@
 # CHECK-NEXT:            "title": "change 'union' to 'struct'"
 # CHECK-NEXT:          }
 # CHECK-NEXT:        ],
+# CHECK-NEXT:        "data": {
+# CHECK-NEXT:          "clangdFixId": {{[0-9]+}}
+# CHECK-NEXT:        },
 # CHECK-NEXT:        "message": "Use of 'Point' with tag type that does not match previous declaration (fix available)\n\nfoo.c:1:8: note: previous use is here",
 # CHECK-NEXT:        "range": {
 # CHECK-NEXT:          "end": {
