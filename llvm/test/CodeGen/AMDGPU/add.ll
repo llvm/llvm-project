@@ -1174,7 +1174,6 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX6-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX6-NEXT:    s_endpgm
 ; GFX6-NEXT:  .LBB9_4:
-; GFX6-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; GFX6-NEXT:    s_branch .LBB9_2
 ;
 ; GFX8-LABEL: add64_in_branch:
@@ -1200,7 +1199,6 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX8-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GFX8-NEXT:    s_endpgm
 ; GFX8-NEXT:  .LBB9_4:
-; GFX8-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; GFX8-NEXT:    s_branch .LBB9_2
 ;
 ; GFX9-LABEL: add64_in_branch:
@@ -1225,7 +1223,6 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
 ; GFX9-NEXT:    s_endpgm
 ; GFX9-NEXT:  .LBB9_4:
-; GFX9-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; GFX9-NEXT:    s_branch .LBB9_2
 ;
 ; GFX10-LABEL: add64_in_branch:
@@ -1248,7 +1245,6 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX10-NEXT:    global_store_dwordx2 v2, v[0:1], s[8:9]
 ; GFX10-NEXT:    s_endpgm
 ; GFX10-NEXT:  .LBB9_4:
-; GFX10-NEXT:    ; implicit-def: $sgpr0_sgpr1
 ; GFX10-NEXT:    s_branch .LBB9_2
 ;
 ; GFX11-LABEL: add64_in_branch:
@@ -1270,7 +1266,6 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
 ; GFX11-NEXT:  .LBB9_4:
-; GFX11-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; GFX11-NEXT:    s_branch .LBB9_2
 ;
 ; GFX12-LABEL: add64_in_branch:
@@ -1291,7 +1286,6 @@ define amdgpu_kernel void @add64_in_branch(ptr addrspace(1) %out, ptr addrspace(
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_endpgm
 ; GFX12-NEXT:  .LBB9_4:
-; GFX12-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; GFX12-NEXT:    s_branch .LBB9_2
 entry:
   %0 = icmp eq i64 %a, 0

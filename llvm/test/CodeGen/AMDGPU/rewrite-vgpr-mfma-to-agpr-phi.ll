@@ -31,7 +31,6 @@ define amdgpu_kernel void @test_rewrite_mfma_copy_to_agpr_phi(ptr addrspace(1) %
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_3
 ; CHECK-NEXT:    s_branch .LBB0_4
 ; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    ; implicit-def: $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15_agpr16_agpr17_agpr18_agpr19_agpr20_agpr21_agpr22_agpr23_agpr24_agpr25_agpr26_agpr27_agpr28_agpr29_agpr30_agpr31
 ; CHECK-NEXT:  .LBB0_3: ; %if
 ; CHECK-NEXT:    s_nop 15
 ; CHECK-NEXT:    global_load_dwordx4 a[28:31], v32, s[0:1] offset:112

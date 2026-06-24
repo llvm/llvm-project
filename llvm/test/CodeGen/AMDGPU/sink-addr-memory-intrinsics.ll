@@ -19,7 +19,6 @@ define amdgpu_kernel void @memoryIntrinstic(ptr addrspace(3) %inptr, i1 %cond, p
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_3
 ; CHECK-NEXT:    s_branch .LBB0_4
 ; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    ; implicit-def: $vgpr1
 ; CHECK-NEXT:  .LBB0_3: ; %then
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s0
 ; CHECK-NEXT:    ds_read_b64_tr_b16 v[2:3], v0 offset:8192
@@ -73,7 +72,6 @@ define amdgpu_kernel void @badIntrinsicUse(ptr addrspace(3) %inptr, i1 %cond, pt
 ; CHECK-NEXT:    s_cbranch_execz .LBB1_3
 ; CHECK-NEXT:    s_branch .LBB1_4
 ; CHECK-NEXT:  .LBB1_2:
-; CHECK-NEXT:    ; implicit-def: $vgpr1
 ; CHECK-NEXT:  .LBB1_3: ; %then
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s3
 ; CHECK-NEXT:    ds_read_b64_tr_b16 v[2:3], v0
@@ -129,7 +127,6 @@ define amdgpu_kernel void @badIntrinsicUse2(ptr addrspace(3) %inptr, i1 %cond, p
 ; CHECK-NEXT:    s_cbranch_execz .LBB2_3
 ; CHECK-NEXT:    s_branch .LBB2_4
 ; CHECK-NEXT:  .LBB2_2:
-; CHECK-NEXT:    ; implicit-def: $vgpr1
 ; CHECK-NEXT:  .LBB2_3: ; %then
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    ds_read_b64_tr_b16 v[2:3], v0

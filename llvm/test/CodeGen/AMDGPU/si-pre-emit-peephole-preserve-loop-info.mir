@@ -11,12 +11,14 @@
 
 ---
 name: vcc_and_removal_preserves_mli
+tracksRegLiveness: true
 body: |
   bb.0:
     S_BRANCH %bb.1
 
   ; S_AND gets removed
   bb.1:
+    liveins: $vgpr0
     V_CMP_EQ_U32_e32 0, $vgpr0, implicit-def $vcc, implicit $exec
     $vcc = S_AND_B64 $exec, $vcc, implicit-def dead $scc
     S_CBRANCH_VCCNZ %bb.1, implicit $vcc
@@ -33,6 +35,7 @@ body: |
 
 ---
 name: vcc_branch_destroys_loop
+tracksRegLiveness: true
 body: |
   bb.0:
     S_BRANCH %bb.1

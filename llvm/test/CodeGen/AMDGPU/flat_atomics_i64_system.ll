@@ -718,7 +718,6 @@ define amdgpu_gfx i64 @flat_atomic_xchg_i64_ret_scalar(ptr inreg %ptr, i64 inreg
 ; GCN1-NEXT:    s_cbranch_execz .LBB6_3
 ; GCN1-NEXT:    s_branch .LBB6_4
 ; GCN1-NEXT:  .LBB6_2:
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN1-NEXT:  .LBB6_3: ; %atomicrmw.private
 ; GCN1-NEXT:    v_cmp_ne_u64_e64 s[34:35], s[4:5], 0
 ; GCN1-NEXT:    v_mov_b32_e32 v4, s6
@@ -757,7 +756,6 @@ define amdgpu_gfx i64 @flat_atomic_xchg_i64_ret_scalar(ptr inreg %ptr, i64 inreg
 ; GCN2-NEXT:    s_cbranch_execz .LBB6_3
 ; GCN2-NEXT:    s_branch .LBB6_4
 ; GCN2-NEXT:  .LBB6_2:
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN2-NEXT:  .LBB6_3: ; %atomicrmw.private
 ; GCN2-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GCN2-NEXT:    s_cselect_b32 s34, s4, -1
@@ -793,7 +791,6 @@ define amdgpu_gfx i64 @flat_atomic_xchg_i64_ret_scalar(ptr inreg %ptr, i64 inreg
 ; GCN3-NEXT:    s_cbranch_execz .LBB6_3
 ; GCN3-NEXT:    s_branch .LBB6_4
 ; GCN3-NEXT:  .LBB6_2:
-; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:  .LBB6_3: ; %atomicrmw.private
 ; GCN3-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GCN3-NEXT:    s_cselect_b32 s34, s4, -1
@@ -835,7 +832,6 @@ define amdgpu_gfx i64 @flat_atomic_xchg_i64_ret_offset_scalar(ptr inreg %out, i6
 ; GCN1-NEXT:    s_cbranch_execz .LBB7_3
 ; GCN1-NEXT:    s_branch .LBB7_4
 ; GCN1-NEXT:  .LBB7_2:
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN1-NEXT:  .LBB7_3: ; %atomicrmw.private
 ; GCN1-NEXT:    v_cmp_ne_u64_e64 s[36:37], s[34:35], 0
 ; GCN1-NEXT:    v_mov_b32_e32 v4, s6
@@ -876,7 +872,6 @@ define amdgpu_gfx i64 @flat_atomic_xchg_i64_ret_offset_scalar(ptr inreg %out, i6
 ; GCN2-NEXT:    s_cbranch_execz .LBB7_3
 ; GCN2-NEXT:    s_branch .LBB7_4
 ; GCN2-NEXT:  .LBB7_2:
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN2-NEXT:  .LBB7_3: ; %atomicrmw.private
 ; GCN2-NEXT:    s_cmp_lg_u64 s[34:35], 0
 ; GCN2-NEXT:    s_cselect_b32 s34, s34, -1
@@ -914,7 +909,6 @@ define amdgpu_gfx i64 @flat_atomic_xchg_i64_ret_offset_scalar(ptr inreg %out, i6
 ; GCN3-NEXT:    s_cbranch_execz .LBB7_3
 ; GCN3-NEXT:    s_branch .LBB7_4
 ; GCN3-NEXT:  .LBB7_2:
-; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:  .LBB7_3: ; %atomicrmw.private
 ; GCN3-NEXT:    s_cmp_lg_u64 s[34:35], 0
 ; GCN3-NEXT:    s_cselect_b32 s34, s34, -1
@@ -1878,7 +1872,6 @@ define amdgpu_gfx double @flat_atomic_xchg_f64_ret_scalar(ptr inreg %ptr, double
 ; GCN1-NEXT:    s_cbranch_execz .LBB16_3
 ; GCN1-NEXT:    s_branch .LBB16_4
 ; GCN1-NEXT:  .LBB16_2:
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN1-NEXT:  .LBB16_3: ; %atomicrmw.private
 ; GCN1-NEXT:    v_cmp_ne_u64_e64 s[34:35], s[4:5], 0
 ; GCN1-NEXT:    v_mov_b32_e32 v4, s6
@@ -1917,7 +1910,6 @@ define amdgpu_gfx double @flat_atomic_xchg_f64_ret_scalar(ptr inreg %ptr, double
 ; GCN2-NEXT:    s_cbranch_execz .LBB16_3
 ; GCN2-NEXT:    s_branch .LBB16_4
 ; GCN2-NEXT:  .LBB16_2:
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN2-NEXT:  .LBB16_3: ; %atomicrmw.private
 ; GCN2-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GCN2-NEXT:    s_cselect_b32 s34, s4, -1
@@ -1953,7 +1945,6 @@ define amdgpu_gfx double @flat_atomic_xchg_f64_ret_scalar(ptr inreg %ptr, double
 ; GCN3-NEXT:    s_cbranch_execz .LBB16_3
 ; GCN3-NEXT:    s_branch .LBB16_4
 ; GCN3-NEXT:  .LBB16_2:
-; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:  .LBB16_3: ; %atomicrmw.private
 ; GCN3-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GCN3-NEXT:    s_cselect_b32 s34, s4, -1
@@ -1995,7 +1986,6 @@ define amdgpu_gfx double @flat_atomic_xchg_f64_ret_offset_scalar(ptr inreg %out,
 ; GCN1-NEXT:    s_cbranch_execz .LBB17_3
 ; GCN1-NEXT:    s_branch .LBB17_4
 ; GCN1-NEXT:  .LBB17_2:
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN1-NEXT:  .LBB17_3: ; %atomicrmw.private
 ; GCN1-NEXT:    v_cmp_ne_u64_e64 s[36:37], s[34:35], 0
 ; GCN1-NEXT:    v_mov_b32_e32 v4, s6
@@ -2036,7 +2026,6 @@ define amdgpu_gfx double @flat_atomic_xchg_f64_ret_offset_scalar(ptr inreg %out,
 ; GCN2-NEXT:    s_cbranch_execz .LBB17_3
 ; GCN2-NEXT:    s_branch .LBB17_4
 ; GCN2-NEXT:  .LBB17_2:
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN2-NEXT:  .LBB17_3: ; %atomicrmw.private
 ; GCN2-NEXT:    s_cmp_lg_u64 s[34:35], 0
 ; GCN2-NEXT:    s_cselect_b32 s34, s34, -1
@@ -2074,7 +2063,6 @@ define amdgpu_gfx double @flat_atomic_xchg_f64_ret_offset_scalar(ptr inreg %out,
 ; GCN3-NEXT:    s_cbranch_execz .LBB17_3
 ; GCN3-NEXT:    s_branch .LBB17_4
 ; GCN3-NEXT:  .LBB17_2:
-; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:  .LBB17_3: ; %atomicrmw.private
 ; GCN3-NEXT:    s_cmp_lg_u64 s[34:35], 0
 ; GCN3-NEXT:    s_cselect_b32 s34, s34, -1
@@ -3126,7 +3114,6 @@ define amdgpu_gfx i64 @flat_atomic_add_i64_ret_scalar(ptr inreg %ptr, i64 inreg 
 ; GCN1-NEXT:    s_cbranch_execz .LBB26_3
 ; GCN1-NEXT:    s_branch .LBB26_4
 ; GCN1-NEXT:  .LBB26_2:
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN1-NEXT:  .LBB26_3: ; %atomicrmw.private
 ; GCN1-NEXT:    v_cmp_ne_u64_e64 s[34:35], s[4:5], 0
 ; GCN1-NEXT:    v_mov_b32_e32 v4, s7
@@ -3168,7 +3155,6 @@ define amdgpu_gfx i64 @flat_atomic_add_i64_ret_scalar(ptr inreg %ptr, i64 inreg 
 ; GCN2-NEXT:    s_cbranch_execz .LBB26_3
 ; GCN2-NEXT:    s_branch .LBB26_4
 ; GCN2-NEXT:  .LBB26_2:
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN2-NEXT:  .LBB26_3: ; %atomicrmw.private
 ; GCN2-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GCN2-NEXT:    s_cselect_b32 s34, s4, -1
@@ -3207,7 +3193,6 @@ define amdgpu_gfx i64 @flat_atomic_add_i64_ret_scalar(ptr inreg %ptr, i64 inreg 
 ; GCN3-NEXT:    s_cbranch_execz .LBB26_3
 ; GCN3-NEXT:    s_branch .LBB26_4
 ; GCN3-NEXT:  .LBB26_2:
-; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:  .LBB26_3: ; %atomicrmw.private
 ; GCN3-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; GCN3-NEXT:    s_cselect_b32 s34, s4, -1
@@ -3252,7 +3237,6 @@ define amdgpu_gfx i64 @flat_atomic_add_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GCN1-NEXT:    s_cbranch_execz .LBB27_3
 ; GCN1-NEXT:    s_branch .LBB27_4
 ; GCN1-NEXT:  .LBB27_2:
-; GCN1-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN1-NEXT:  .LBB27_3: ; %atomicrmw.private
 ; GCN1-NEXT:    v_cmp_ne_u64_e64 s[36:37], s[34:35], 0
 ; GCN1-NEXT:    v_mov_b32_e32 v4, s7
@@ -3296,7 +3280,6 @@ define amdgpu_gfx i64 @flat_atomic_add_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GCN2-NEXT:    s_cbranch_execz .LBB27_3
 ; GCN2-NEXT:    s_branch .LBB27_4
 ; GCN2-NEXT:  .LBB27_2:
-; GCN2-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN2-NEXT:  .LBB27_3: ; %atomicrmw.private
 ; GCN2-NEXT:    s_cmp_lg_u64 s[34:35], 0
 ; GCN2-NEXT:    s_cselect_b32 s34, s34, -1
@@ -3337,7 +3320,6 @@ define amdgpu_gfx i64 @flat_atomic_add_i64_ret_offset_scalar(ptr inreg %out, i64
 ; GCN3-NEXT:    s_cbranch_execz .LBB27_3
 ; GCN3-NEXT:    s_branch .LBB27_4
 ; GCN3-NEXT:  .LBB27_2:
-; GCN3-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GCN3-NEXT:  .LBB27_3: ; %atomicrmw.private
 ; GCN3-NEXT:    s_cmp_lg_u64 s[34:35], 0
 ; GCN3-NEXT:    s_cselect_b32 s34, s34, -1

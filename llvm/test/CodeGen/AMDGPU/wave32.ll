@@ -878,7 +878,6 @@ define amdgpu_kernel void @test_udiv64(ptr addrspace(1) %arg) #0 {
 ; GFX1032-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7] offset:16
 ; GFX1032-NEXT:    s_endpgm
 ; GFX1032-NEXT:  .LBB15_4:
-; GFX1032-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; GFX1032-NEXT:    s_branch .LBB15_2
 ;
 ; GFX1064-LABEL: test_udiv64:
@@ -1029,7 +1028,6 @@ define amdgpu_kernel void @test_udiv64(ptr addrspace(1) %arg) #0 {
 ; GFX1064-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7] offset:16
 ; GFX1064-NEXT:    s_endpgm
 ; GFX1064-NEXT:  .LBB15_4:
-; GFX1064-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; GFX1064-NEXT:    s_branch .LBB15_2
 bb:
   %tmp = getelementptr inbounds i64, ptr addrspace(1) %arg, i64 1
@@ -1807,8 +1805,6 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) #0 {
 ; GFX1032-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX1032-NEXT:    s_cbranch_vccz .LBB33_1
 ; GFX1032-NEXT:  ; %bb.3:
-; GFX1032-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
-; GFX1032-NEXT:    ; implicit-def: $vgpr8
 ; GFX1032-NEXT:  .LBB33_4: ; %break
 ; GFX1032-NEXT:    s_and_b32 exec_lo, exec_lo, s0
 ; GFX1032-NEXT:    s_waitcnt vmcnt(0)
@@ -1839,8 +1835,6 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) #0 {
 ; GFX1064-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX1064-NEXT:    s_cbranch_vccz .LBB33_1
 ; GFX1064-NEXT:  ; %bb.3:
-; GFX1064-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
-; GFX1064-NEXT:    ; implicit-def: $vgpr8
 ; GFX1064-NEXT:  .LBB33_4: ; %break
 ; GFX1064-NEXT:    s_and_b64 exec, exec, s[0:1]
 ; GFX1064-NEXT:    s_waitcnt vmcnt(0)

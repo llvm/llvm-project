@@ -601,7 +601,6 @@ define amdgpu_kernel void @frem_constant_sel_constants(ptr addrspace(1) %p, i1 %
 ; GFX9-NEXT:    s_cbranch_execz .LBB26_3
 ; GFX9-NEXT:    s_branch .LBB26_7
 ; GFX9-NEXT:  .LBB26_2:
-; GFX9-NEXT:    ; implicit-def: $vgpr0
 ; GFX9-NEXT:  .LBB26_3: ; %frem.compute
 ; GFX9-NEXT:    v_frexp_mant_f32_e64 v0, |v1|
 ; GFX9-NEXT:    v_ldexp_f32 v0, v0, 1
@@ -676,7 +675,6 @@ define amdgpu_kernel void @frem_constant_sel_constants(ptr addrspace(1) %p, i1 %
 ; GFX942-NEXT:    s_cbranch_execz .LBB26_3
 ; GFX942-NEXT:    s_branch .LBB26_7
 ; GFX942-NEXT:  .LBB26_2:
-; GFX942-NEXT:    ; implicit-def: $vgpr0
 ; GFX942-NEXT:  .LBB26_3: ; %frem.compute
 ; GFX942-NEXT:    v_frexp_mant_f32_e64 v0, |v1|
 ; GFX942-NEXT:    v_ldexp_f32 v0, v0, 1
