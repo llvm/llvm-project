@@ -153,6 +153,7 @@ func.func @f1ext(%a: vector<5xi8>) -> vector<8xi16> {
   // CHECK-DAG: %[[MASK1:.*]] = arith.constant dense<[0, 3, 0, 15, 1, 0, 7, 0]> : vector<8xi8>
   // CHECK-DAG: %[[SHR0_CST:.*]] = arith.constant dense<[0, 5, 2, 7, 4, 1, 6, 3]> : vector<8xi8>
   // CHECK-DAG: %[[SHL1_CST:.*]] = arith.constant dense<[5, 3, 5, 1, 4, 5, 2, 5]> : vector<8xi8>
+  // CHECK-DAG: %[[SIGN_CST:.*]] = arith.constant dense<3> : vector<8xi8>
   // CHECK: %[[V0:.*]] = vector.shuffle %[[A]], %[[A]] [0, 0, 1, 1, 2, 3, 3, 4] : vector<5xi8>, vector<5xi8>
   // CHECK: %[[A0:.*]] = arith.andi %[[V0]], %[[MASK0]] : vector<8xi8>
   // CHECK: %[[SHR0:.*]] = arith.shrui %[[A0]], %[[SHR0_CST]] : vector<8xi8>
@@ -160,7 +161,11 @@ func.func @f1ext(%a: vector<5xi8>) -> vector<8xi16> {
   // CHECK: %[[A1:.*]] = arith.andi %[[V1]], %[[MASK1]] : vector<8xi8>
   // CHECK: %[[SHL1:.*]] = arith.shli %[[A1]], %[[SHL1_CST]] : vector<8xi8>
   // CHECK: %[[O1:.*]] = arith.ori %[[SHR0]], %[[SHL1]] : vector<8xi8>
-  // CHECK: %[[RES:.*]] = arith.extsi %[[O1]] : vector<8xi8> to vector<8xi16>
+  // The bitwise assembly above leaves each i5 zero-extended in an i8 lane; for
+  // a *signed* extension the i5 sign bit must be propagated first.
+  // CHECK: %[[SHLS:.*]] = arith.shli %[[O1]], %[[SIGN_CST]] : vector<8xi8>
+  // CHECK: %[[SHRS:.*]] = arith.shrsi %[[SHLS]], %[[SIGN_CST]] : vector<8xi8>
+  // CHECK: %[[RES:.*]] = arith.extsi %[[SHRS]] : vector<8xi8> to vector<8xi16>
   // return %[[RES]] : vector<8xi16>
 
   %0 = vector.bitcast %a : vector<5xi8> to vector<8xi5>
@@ -211,6 +216,28 @@ func.func @i7_transpose(%a: vector<8x16xi7>) -> vector<16x8xi7> {
 // CHECK:           %[[TRUNC:.*]] = arith.trunci %[[TRANS]] : vector<16x8xi8> to vector<16x8xi7>
   %0 = vector.transpose %a, [1, 0] : vector<8x16xi7> to vector<16x8xi7>
   return %0 : vector<16x8xi7>
+}
+
+// Signed extension of a bitcast that splits each i16 into two i8 lanes. The
+// byte assembly is purely bitwise (mask + *logical* shift), so each byte ends
+// up zero-extended in its i16 lane; the signed extension must then be
+// completed by the arith.shli/arith.shrsi pair. Regression test for the sign
+// extension being silently dropped (turning extsi into a zero extension).
+// CHECK-LABEL: func.func @ext_of_bitcast_i16_to_i8_signed(
+//  CHECK-SAME: %[[A:[0-9a-z]*]]: vector<4xi16>) -> vector<8xi16> {
+func.func @ext_of_bitcast_i16_to_i8_signed(%a: vector<4xi16>) -> vector<8xi16> {
+  // CHECK-DAG: %[[SIGN_CST:.*]] = arith.constant dense<8> : vector<8xi16>
+  // CHECK-DAG: %[[SHR_CST:.*]] = arith.constant dense<[0, 8, 0, 8, 0, 8, 0, 8]> : vector<8xi16>
+  // CHECK-DAG: %[[MASK:.*]] = arith.constant dense<[255, -256, 255, -256, 255, -256, 255, -256]> : vector<8xi16>
+  // CHECK: %[[SHUF:.*]] = vector.shuffle %[[A]], %[[A]] [0, 0, 1, 1, 2, 2, 3, 3] : vector<4xi16>, vector<4xi16>
+  // CHECK: %[[AND:.*]] = arith.andi %[[SHUF]], %[[MASK]] : vector<8xi16>
+  // CHECK: %[[SHRU:.*]] = arith.shrui %[[AND]], %[[SHR_CST]] : vector<8xi16>
+  // CHECK: %[[SHL:.*]] = arith.shli %[[SHRU]], %[[SIGN_CST]] : vector<8xi16>
+  // CHECK: %[[RES:.*]] = arith.shrsi %[[SHL]], %[[SIGN_CST]] : vector<8xi16>
+  // CHECK: return %[[RES]] : vector<8xi16>
+  %0 = vector.bitcast %a : vector<4xi16> to vector<8xi8>
+  %1 = arith.extsi %0 : vector<8xi8> to vector<8xi16>
+  return %1 : vector<8xi16>
 }
 
 module attributes {transform.with_named_sequence} {

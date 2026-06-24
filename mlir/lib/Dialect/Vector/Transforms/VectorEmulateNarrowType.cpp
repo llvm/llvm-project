@@ -2068,6 +2068,31 @@ struct RewriteExtOfBitCast : OpRewritePattern<ExtOpType> {
           rewriter, bitCastOp->getLoc(), sourceValue, runningResult, metadata);
     }
 
+    // `genericRewriteStep` assembles each bitcast-result element with bitwise
+    // ops (mask + *logical* shifts), so every element lands zero-extended in a
+    // `shuffledElementType`-wide lane. That is what an unsigned extension
+    // wants, but for a signed extension the bitcast-result elements must be
+    // sign-extended. Recover the sign here with an arithmetic shift pair that
+    // sign-extends from the bitcast-result element width up to the lane width;
+    // without this the `extsi` is silently turned into a zero extension.
+    if (std::is_same<ExtOpType, arith::ExtSIOp>::value) {
+      auto runningVecTy = cast<VectorType>(runningResult.getType());
+      int64_t laneWidth = runningVecTy.getElementTypeBitWidth();
+      int64_t elemWidth =
+          bitCastOp.getResultVectorType().getElementTypeBitWidth();
+      if (elemWidth < laneWidth) {
+        Value shiftAmount = arith::ConstantOp::create(
+            rewriter, bitCastOp->getLoc(),
+            DenseElementsAttr::get(
+                runningVecTy, IntegerAttr::get(runningVecTy.getElementType(),
+                                               laneWidth - elemWidth)));
+        Value shiftedLeft = arith::ShLIOp::create(rewriter, bitCastOp->getLoc(),
+                                                  runningResult, shiftAmount);
+        runningResult = arith::ShRSIOp::create(rewriter, bitCastOp->getLoc(),
+                                               shiftedLeft, shiftAmount);
+      }
+    }
+
     // Finalize the rewrite.
     bool narrowing =
         cast<VectorType>(extOp.getOut().getType()).getElementTypeBitWidth() <=
