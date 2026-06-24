@@ -38,12 +38,27 @@ function(add_ocaml_library name)
   set(ocaml_inputs)
 
   set(ocaml_outputs "${bin}/${name}.cma")
+
+  # The -custom flag causes bytecode executables to fail upon creating the
+  # runtime when installing the bindings for an out-of-tree build.
+  #
+  # However, the -custom flag is necessary when running the in-tree
+  # test suite, otherwise multiple libraries will link to the same libLLVM and
+  # runtime errors of the form
+  # "CommandLine Error: Option *opt* registered more than once!" will occur.
+  if (NOT LLVM_OCAML_OUT_OF_TREE AND NOT BUILD_SHARED_LIBS)
+    set(ocaml_custom TRUE)
+  else()
+    set(ocaml_custom FALSE)
+  endif()
+
   if( ARG_C )
+    # ocamlmklib outputs .a and .so
     list(APPEND ocaml_outputs
-         "${bin}/lib${name}${CMAKE_STATIC_LIBRARY_SUFFIX}")
-    if ( BUILD_SHARED_LIBS )
+         "${bin}/lib${name}.a")
+    if ( NOT ocaml_custom )
       list(APPEND ocaml_outputs
-           "${bin}/dll${name}${CMAKE_SHARED_LIBRARY_SUFFIX}")
+           "${bin}/dll${name}.so")
     endif()
   endif()
   if( HAVE_OCAMLOPT )
@@ -52,7 +67,12 @@ function(add_ocaml_library name)
          "${bin}/${name}${CMAKE_STATIC_LIBRARY_SUFFIX}")
   endif()
 
-  set(ocaml_flags "-lstdc++" "-ldopt" "-L${LLVM_LIBRARY_DIR}"
+  if ( LLVM_OCAML_OUT_OF_TREE )
+    set(ocaml_llvm_libdir "-L${LLVM_OCAML_EXTERNAL_LLVM_LIBDIR}")
+  else()
+    set(ocaml_llvm_libdir "-L${LLVM_LIBRARY_DIR}")
+  endif()
+  set(ocaml_flags "-lstdc++" "${ocaml_llvm_libdir}"
                   "-ccopt" "-L\\$CAMLORIGIN/../.."
                   "-ccopt" "-Wl,-rpath,\\$CAMLORIGIN/../.."
                   ${ocaml_pkgs})
@@ -65,12 +85,12 @@ function(add_ocaml_library name)
     list(APPEND ocaml_dep_inputs ${dep_ocaml_outputs})
   endforeach()
 
-  if( NOT BUILD_SHARED_LIBS )
+  if(ocaml_custom)
     list(APPEND ocaml_flags "-custom")
   endif()
 
   if(LLVM_LINK_LLVM_DYLIB)
-    list(APPEND ocaml_flags "-lLLVM")
+    list(APPEND ocaml_flags "-lLLVM-${LLVM_VERSION_MAJOR}")
   else()
     explicit_map_components_to_libraries(llvm_libs ${ARG_LLVM})
     foreach( llvm_lib ${llvm_libs} )
@@ -206,9 +226,9 @@ function(add_ocaml_library name)
     if( NOT (ext STREQUAL ".cmo" OR
              ext STREQUAL ".ml" OR
              ext STREQUAL CMAKE_C_OUTPUT_EXTENSION OR
-             ext STREQUAL CMAKE_SHARED_LIBRARY_SUFFIX) )
+             ext STREQUAL ".so") )
       list(APPEND install_files "${ocaml_output}")
-    elseif( ext STREQUAL CMAKE_SHARED_LIBRARY_SUFFIX)
+    elseif( ext STREQUAL ".so")
       list(APPEND install_shlibs "${ocaml_output}")
     endif()
   endforeach()
