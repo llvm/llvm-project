@@ -3,13 +3,27 @@
 #include <thread>
 
 using namespace __ctx_profile;
+using namespace __asan;
 
 class ContextTest : public ::testing::Test {
-  void SetUp() override { Root.getOrAllocateContextRoot(); }
+  int SomethingWithAddress = 0;
+  void SetUp() override {
+    Root.EntryAddress = &SomethingWithAddress;
+    Root.getOrAllocateContextRoot();
+  }
   void TearDown() override { __llvm_ctx_profile_free(); }
 
 public:
   FunctionData Root;
+  void initializeFData(std::vector<FunctionData> &FData,
+                       const std::vector<int> &FuncAddresses, bool AsRoots) {
+    ASSERT_EQ(FData.size(), FuncAddresses.size());
+    for (size_t I = 0, E = FData.size(); I < E; ++I) {
+      FData[I].EntryAddress = &FuncAddresses[I];
+      if (AsRoots)
+        FData[I].getOrAllocateContextRoot();
+    }
+  }
 };
 
 TEST(ArenaTest, ZeroInit) {
@@ -85,7 +99,11 @@ TEST_F(ContextTest, Callsite) {
 
   EXPECT_EQ(Subctx->size(), sizeof(ContextNode) + 3 * sizeof(uint64_t) +
                                 1 * sizeof(ContextNode *));
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+  __llvm_ctx_profile_release_context(&FData);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
   __llvm_ctx_profile_release_context(&Root);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, nullptr);
 }
 
 TEST_F(ContextTest, ScratchNoCollectionProfilingNotStarted) {
@@ -122,11 +140,41 @@ TEST_F(ContextTest, ScratchNoCollectionProfilingStarted) {
   EXPECT_NE(FData.FlatCtx, nullptr);
   EXPECT_EQ(reinterpret_cast<uintptr_t>(FData.FlatCtx) + 1,
             reinterpret_cast<uintptr_t>(Ctx));
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, nullptr);
+  __llvm_ctx_profile_release_context(&FData);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, nullptr);
+}
+
+TEST_F(ContextTest, RootCallingRootDoesNotChangeCurrentContext) {
+  ASSERT_EQ(__llvm_ctx_profile_current_context_root, nullptr);
+  int FakeCalleeAddress[2]{0, 0};
+  FunctionData FData[2];
+  FData[0].EntryAddress = &FakeCalleeAddress[0];
+  FData[1].EntryAddress = &FakeCalleeAddress[1];
+  FData[0].getOrAllocateContextRoot();
+  FData[1].getOrAllocateContextRoot();
+  __llvm_ctx_profile_start_collection();
+  auto *Ctx1 = __llvm_ctx_profile_get_context(&FData[0], &FakeCalleeAddress[0],
+                                              1234U, 1U, 1U);
+  EXPECT_EQ(Ctx1, FData[0].CtxRoot->FirstNode);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, FData[0].CtxRoot);
+
+  __llvm_ctx_profile_expected_callee[0] = &FakeCalleeAddress[0];
+  __llvm_ctx_profile_callsite[0] = &Ctx1->subContexts()[0];
+  auto *Ctx2 =
+      __llvm_ctx_profile_get_context(&FData[1], &FakeCalleeAddress[1], 2, 1, 0);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, FData[0].CtxRoot);
+  __llvm_ctx_profile_release_context(&FData[1]);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, FData[0].CtxRoot);
+  __llvm_ctx_profile_release_context(&FData[0]);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, nullptr);
 }
 
 TEST_F(ContextTest, ScratchDuringCollection) {
   __llvm_ctx_profile_start_collection();
   auto *Ctx = __llvm_ctx_profile_start_context(&Root, 1, 10, 4);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+
   int FakeCalleeAddress = 0;
   int OtherFakeCalleeAddress = 0;
   __llvm_ctx_profile_expected_callee[0] = &FakeCalleeAddress;
@@ -164,7 +212,71 @@ TEST_F(ContextTest, ScratchDuringCollection) {
   EXPECT_TRUE(isScratch(Subctx3));
   EXPECT_EQ(FData[2].FlatCtx, nullptr);
 
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+  __llvm_ctx_profile_release_context(&FData[2]);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+  __llvm_ctx_profile_release_context(&FData[1]);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+  __llvm_ctx_profile_release_context(&FData[0]);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
   __llvm_ctx_profile_release_context(&Root);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, nullptr);
+}
+
+TEST_F(ContextTest, RecursiveRootExplicitlyRegistered) {
+  __llvm_ctx_profile_start_collection();
+  auto *Ctx = __llvm_ctx_profile_start_context(&Root, 1, 10, 4);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+
+  auto *Subctx = __llvm_ctx_profile_start_context(&Root, 1, 10, 4);
+  EXPECT_TRUE(isScratch(Subctx));
+
+  EXPECT_EQ(__sanitizer::atomic_load_relaxed(&Root.CtxRoot->TotalEntries), 1U);
+
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+  __llvm_ctx_profile_release_context(&Root);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+  __llvm_ctx_profile_release_context(&Root);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, nullptr);
+}
+
+TEST_F(ContextTest, RecursiveRootAutoDiscovered) {
+  __llvm_ctx_profile_start_collection();
+  auto *Ctx =
+      __llvm_ctx_profile_get_context(&Root, Root.EntryAddress, 1, 10, 4);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+
+  auto *Subctx =
+      __llvm_ctx_profile_get_context(&Root, Root.EntryAddress, 1, 10, 4);
+  EXPECT_TRUE(isScratch(Subctx));
+
+  EXPECT_EQ(__sanitizer::atomic_load_relaxed(&Root.CtxRoot->TotalEntries), 1U);
+
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+  __llvm_ctx_profile_release_context(&Root);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+  __llvm_ctx_profile_release_context(&Root);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, nullptr);
+}
+
+TEST_F(ContextTest, RootEntersOtherRoot) {
+  __llvm_ctx_profile_start_collection();
+  FData Roots[2];
+  std::vector<int> Addresses(2);
+  initializeFData(Roots, Addresses, true);
+  auto *Ctx = __llvm_ctx_profile_start_context(&Roots[0], 1, 10, 4);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Roots[0].CtxRoot);
+
+  auto *Subctx = __llvm_ctx_profile_start_context(&Roots[1], 1, 10, 4);
+  EXPECT_FALSE(isScratch(Subctx));
+
+  EXPECT_EQ(__sanitizer::atomic_load_relaxed(&Root.CtxRoot->TotalEntries), 1U);
+
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+  __llvm_ctx_profile_release_context(&Root);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+  __llvm_ctx_profile_release_context(&Root);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, nullptr);  
 }
 
 TEST_F(ContextTest, NeedMoreMemory) {
@@ -185,6 +297,7 @@ TEST_F(ContextTest, NeedMoreMemory) {
   EXPECT_EQ(Ctx->subContexts()[2], Subctx);
   EXPECT_NE(CurrentMem, CtxRoot.CurrentMem);
   EXPECT_NE(CtxRoot.CurrentMem, nullptr);
+  __llvm_ctx_profile_release_context(&Root);
 }
 
 TEST_F(ContextTest, ConcurrentRootCollection) {
