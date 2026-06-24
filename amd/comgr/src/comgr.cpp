@@ -2142,14 +2142,23 @@ amd_comgr_populate_name_expression_map(amd_comgr_data_t Data, size_t *Count) {
     auto Rodata = std::move(RodataOrError.get());
 
     // Collect an unmangled name for each name expression
+    StringRef RodataStr(reinterpret_cast<const char *>(Rodata.data()),
+                        Rodata.size());
     for (auto *ExpData : NameExpDataVec) {
       // TODO: If/when an accessor API becomes available to get the starting
       // address for the section, switch to that
       size_t Offset = ExpData->RodataOffset - RodataShdr.sh_offset;
 
-      // Store from the offset up until the first '\0'
-      const char *Unmangled = reinterpret_cast<const char *>(&Rodata[Offset]);
-      ExpData->UnmangledName = StringRef(Unmangled);
+      // RodataOffset derives from the untrusted ELF r_addend; reject offsets
+      // outside .rodata (a too-small value also wraps to a large Offset here).
+      if (Offset >= Rodata.size()) {
+        for (auto *Ptr : NameExpDataVec)
+          delete Ptr;
+        return AMD_COMGR_STATUS_ERROR;
+      }
+
+      // Store from the offset up until the first '\0', bounded to .rodata.
+      ExpData->UnmangledName = RodataStr.substr(Offset).split('\0').first;
     }
 
     // Populate mangled names now that mangled values are set

@@ -1,0 +1,32 @@
+# Malformed name-expression code object for ROCM-26343.
+#
+# A .dynsym symbol named __amdgcn_name_expr_* pairs with a .rela.dyn entry whose
+# r_offset matches the symbol value, so the parser uses that entry's r_addend as
+# an offset into .rodata. Here r_addend (0xffffffff) is far past the 8-byte
+# .rodata section, which previously caused an out-of-bounds read.
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AMDGPU
+Sections:
+  - Name:    .rodata
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x1000
+    Content: "0000000000000000"
+  - Name:    .rela.dyn
+    Type:    SHT_RELA
+    Flags:   [ SHF_ALLOC ]
+    Info:    0
+    Relocations:
+      - Offset: 0x1000
+        Type:   R_AMDGPU_ABS64
+        Addend: 0xFFFFFFFF
+DynamicSymbols:
+  - Name:    __amdgcn_name_expr_0
+    Type:    STT_OBJECT
+    Section: .rodata
+    Value:   0x1000
+    Size:    8
