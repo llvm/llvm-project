@@ -70,12 +70,11 @@ struct Float128 {
   template <typename T, cpp::enable_if_t<cpp::is_integral_v<T>, int> = 0>
   LIBC_INLINE constexpr explicit operator T() const {
     FPBits<Float128> x_bits(*this);
-    int  x_bits_exp = x_bits.get_explicit_exponent() - FPBits<Float128>::FRACTION_LEN;
+    int x_bits_exp =
+        x_bits.get_explicit_exponent() - FPBits<Float128>::FRACTION_LEN;
     // sign * mantissa * 2(exp-bias)
     DyadicFloat<FPBits<Float128>::STORAGE_LEN> xd(
-        x_bits.sign(),
-       x_bits_exp,
-        x_bits.get_explicit_mantissa());
+        x_bits.sign(), x_bits_exp, x_bits.get_explicit_mantissa());
     return static_cast<T>(xd.as_mantissa_type());
   }
 
