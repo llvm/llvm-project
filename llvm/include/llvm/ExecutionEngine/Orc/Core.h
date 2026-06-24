@@ -1092,6 +1092,16 @@ public:
   lookupInitSymbolsAsync(unique_function<void(Error)> OnComplete,
                          ExecutionSession &ES,
                          const DenseMap<JITDylib *, SymbolLookupSet> &InitSyms);
+
+  /// Like lookupInitSymbols but does not trigger materialization:
+  /// symbols whose state is < SymbolState::Resolved are dropped from
+  /// the result. Intended for deinit paths -- a symbol that never
+  /// materialized never ran its initializer, so skipping its
+  /// deinitializer is correct.
+  LLVM_ABI static Expected<DenseMap<JITDylib *, SymbolMap>>
+  lookupResolvedInitSymbols(
+      ExecutionSession &ES,
+      const DenseMap<JITDylib *, SymbolLookupSet> &InitSyms);
 };
 
 /// A materialization task.

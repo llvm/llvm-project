@@ -525,4 +525,30 @@ TEST_F(InterpreterTest, TranslationUnit_CanonicalDecl) {
             sema.getASTContext().getTranslationUnitDecl()->getCanonicalDecl());
 }
 
+TEST_F(InterpreterTest, ShutdownDoesNotMaterializeAgainstDestroyedGlobals) {
+#ifdef CLANG_INTERPRETER_PLATFORM_CANNOT_CREATE_LLJIT
+  GTEST_SKIP() << "Platform cannot create LLJIT";
+#endif
+  EXPECT_EXIT(
+      {
+        // Function-local statics so the dtors run during process exit,
+        // not when the lambda returns.
+        static auto I1 = createInterpreter();
+        static auto I2 = createInterpreter();
+
+        // Static initializers in JIT'd code emit init + deinit symbols
+        // that the JIT lazily materializes on demand. Two interpreters
+        // is the minimal repro for the original embedder pattern.
+        cantFail(I1->ParseAndExecute(
+            "struct S1 { S1() {} ~S1() {} }; static S1 s1;"));
+        cantFail(I2->ParseAndExecute(
+            "struct S2 { S2() {} ~S2() {} }; static S2 s2;"));
+
+        // Trigger the C++ static-dtor phase explicitly (death-test
+        // _exit otherwise skips it).
+        std::exit(0);
+      },
+      ::testing::ExitedWithCode(0), "");
+}
+
 } // end anonymous namespace

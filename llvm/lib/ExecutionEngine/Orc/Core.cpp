@@ -1507,6 +1507,29 @@ Expected<DenseMap<JITDylib *, SymbolMap>> Platform::lookupInitSymbols(
   return std::move(CompoundResult);
 }
 
+Expected<DenseMap<JITDylib *, SymbolMap>> Platform::lookupResolvedInitSymbols(
+    ExecutionSession &ES,
+    const DenseMap<JITDylib *, SymbolLookupSet> &InitSyms) {
+  // Filter to already-resolved symbols, then defer to lookupInitSymbols
+  // -- the filtered lookup triggers no fresh materialization.
+  DenseMap<JITDylib *, SymbolLookupSet> Filtered;
+  ES.runSessionLocked([&]() {
+    for (const auto &KV : InitSyms) {
+      JITDylib *JD = KV.first;
+      SymbolLookupSet Keep;
+      for (const auto &[Name, Flags] : KV.second) {
+        auto SymI = JD->Symbols.find(Name);
+        if (SymI != JD->Symbols.end() &&
+            SymI->second.getState() >= SymbolState::Resolved)
+          Keep.add(Name, Flags);
+      }
+      if (!Keep.empty())
+        Filtered.try_emplace(JD, std::move(Keep));
+    }
+  });
+  return lookupInitSymbols(ES, Filtered);
+}
+
 void Platform::lookupInitSymbolsAsync(
     unique_function<void(Error)> OnComplete, ExecutionSession &ES,
     const DenseMap<JITDylib *, SymbolLookupSet> &InitSyms) {
