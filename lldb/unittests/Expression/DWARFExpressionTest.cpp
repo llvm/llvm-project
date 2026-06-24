@@ -48,11 +48,20 @@ public:
   static constexpr uint16_t DEFAULT_DWARF_VERSION = 5;
   static MockDwarfDelegate Dwarf5() { return MockDwarfDelegate(5); }
   static MockDwarfDelegate Dwarf2() { return MockDwarfDelegate(2); }
+  static MockDwarfDelegate Dwarf64() {
+    return MockDwarfDelegate(5, llvm::dwarf::DWARF64);
+  }
 
   MockDwarfDelegate() : MockDwarfDelegate(DEFAULT_DWARF_VERSION) {}
-  explicit MockDwarfDelegate(uint16_t version) : m_dwarf_version(version) {}
+  explicit MockDwarfDelegate(
+      uint16_t version,
+      llvm::dwarf::DwarfFormat dwarf_format = llvm::dwarf::DWARF32)
+      : m_dwarf_version(version), m_dwarf_format(dwarf_format) {}
 
   uint16_t GetVersion() const override { return m_dwarf_version; }
+  llvm::dwarf::DwarfFormat GetDwarfFormat() const override {
+    return m_dwarf_format;
+  }
 
   dw_addr_t GetBaseAddress() const override { return 0; }
 
@@ -83,6 +92,7 @@ public:
 
 private:
   uint16_t m_dwarf_version;
+  llvm::dwarf::DwarfFormat m_dwarf_format;
 };
 
 /// Mock memory implementation for testing.
@@ -1020,17 +1030,30 @@ TEST(DWARFExpression, DW_OP_call_ref_unhandled) {
           "unhandled opcode DW_OP_call_ref in DWARFExpression"));
 }
 
-TEST(DWARFExpression, DW_OP_implicit_pointer_unimplemented) {
-  EXPECT_THAT_EXPECTED(
-      Evaluate({DW_OP_implicit_pointer, 0x00, 0x00, 0x00, 0x00, 0x00}),
-      llvm::Failed());
+TEST(DWARFExpression, DW_OP_implicit_pointer) {
+  MockDwarfDelegate dwarf32 = MockDwarfDelegate::Dwarf5();
+  llvm::Expected<Value> result = Evaluate(
+      {DW_OP_implicit_pointer, 0x34, 0x12, 0x00, 0x00, 0x00}, {}, &dwarf32);
+  ASSERT_THAT_EXPECTED(result, llvm::Succeeded());
+  ASSERT_TRUE(result->IsImplicitPointer());
+  Value::ImplicitPointerInfo implicit_pointer =
+      result->GetImplicitPointerInfo();
+  EXPECT_EQ(implicit_pointer.die_offset, 0x1234u);
+  EXPECT_EQ(implicit_pointer.byte_offset, 0);
 }
 
-TEST(DWARFExpression, DW_OP_GNU_implicit_pointer_unhandled) {
-  EXPECT_THAT_EXPECTED(
-      Evaluate({DW_OP_GNU_implicit_pointer, 0x00, 0x00, 0x00, 0x00, 0x00}),
-      llvm::FailedWithMessage(
-          "unhandled opcode DW_OP_GNU_implicit_pointer in DWARFExpression"));
+TEST(DWARFExpression, DW_OP_implicit_pointer_DWARF64) {
+  MockDwarfDelegate dwarf64 = MockDwarfDelegate::Dwarf64();
+  llvm::Expected<Value> result =
+      Evaluate({DW_OP_implicit_pointer, 0x78, 0x56, 0x34, 0x12, 0x00, 0x00,
+                0x00, 0x00, 0x02},
+               {}, &dwarf64);
+  ASSERT_THAT_EXPECTED(result, llvm::Succeeded());
+  ASSERT_TRUE(result->IsImplicitPointer());
+  Value::ImplicitPointerInfo implicit_pointer =
+      result->GetImplicitPointerInfo();
+  EXPECT_EQ(implicit_pointer.die_offset, 0x12345678u);
+  EXPECT_EQ(implicit_pointer.byte_offset, 2);
 }
 
 TEST(DWARFExpression, DW_OP_const_type_unhandled) {

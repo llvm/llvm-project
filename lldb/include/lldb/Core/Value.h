@@ -19,6 +19,7 @@
 
 #include "llvm/ADT/APInt.h"
 
+#include <optional>
 #include <vector>
 
 #include <cstdint>
@@ -37,6 +38,11 @@ namespace lldb_private {
 
 class Value {
 public:
+  struct ImplicitPointerInfo {
+    uint64_t die_offset = 0;
+    int64_t byte_offset = 0;
+  };
+
   /// Type that describes Value::m_value.
   enum class ValueType {
     Invalid = -1,
@@ -91,6 +97,17 @@ public:
   void ClearContext() {
     m_context = nullptr;
     m_context_type = ContextType::Invalid;
+  }
+
+  bool IsImplicitPointer() const { return m_implicit_pointer_info.has_value(); }
+
+  ImplicitPointerInfo GetImplicitPointerInfo() const {
+    return *m_implicit_pointer_info;
+  }
+
+  void SetImplicitPointer(ImplicitPointerInfo implicit_pointer) {
+    m_implicit_pointer_info = implicit_pointer;
+    m_value_type = ValueType::Invalid;
   }
 
   void SetContext(ContextType context_type, void *p) {
@@ -182,6 +199,7 @@ protected:
   ValueType m_value_type = ValueType::Scalar;
   ContextType m_context_type = ContextType::Invalid;
   DataBufferHeap m_data_buffer;
+  std::optional<ImplicitPointerInfo> m_implicit_pointer_info;
 };
 
 class ValueList {
