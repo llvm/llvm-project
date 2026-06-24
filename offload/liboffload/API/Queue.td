@@ -125,7 +125,7 @@ def olLaunchHostFunction : Function {
   ];
   let returns = [];
 }
-
+     
 def olQueryQueue : Function {
     let desc = "Query for queue work completion in a non-blocking manner.";
     let details = [
@@ -137,3 +137,12 @@ def olQueryQueue : Function {
     ];
     let returns = [];
 }
+
+def olDataFence : Function {
+    let desc = "Insert a data fence between data operations if necessary for the device.";
+    let details = [];
+    let params = [
+        Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>
+    ];
+    let returns = [];
+} 
