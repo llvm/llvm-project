@@ -1003,7 +1003,7 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
                               llvm::PGOOptions::NoAction,
                               llvm::PGOOptions::NoCSAction,
                               llvm::PGOOptions::ColdFuncOpt::Default,
-                              /*PseudoProbeForProfiling=*/true);
+                              /*DebugInfoForProfiling=*/true);
   }
 
   llvm::StandardInstrumentations si(llvmModule->getContext(),
