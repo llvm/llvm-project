@@ -11056,9 +11056,9 @@ def warn_lifetime_safety_inapplicable_lifetimebound
       DefaultIgnore;
 
 def note_lifetime_safety_used_here : Note<"later used here">;
-def note_lifetime_safety_invalidated_here : Note<"invalidated here">;
-def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
-def note_lifetime_safety_freed_here : Note<"freed here">;
+def note_lifetime_safety_invalidated_here : Note<"%0 is invalidated here">;
+def note_lifetime_safety_destroyed_here : Note<"%0 is destroyed here">;
+def note_lifetime_safety_freed_here : Note<"%0 is freed here">;
 def note_lifetime_safety_returned_here : Note<"returned here">;
 def note_lifetime_safety_moved_here : Note<"potentially moved here">;
 def note_lifetime_safety_dangling_field_here: Note<"this field dangles">;
@@ -11838,6 +11838,8 @@ def err_sampler_initializer_not_integer : Error<
   "sampler_t initialization requires 32-bit integer, not %0">;
 def warn_sampler_initializer_invalid_bits : Warning<
   "sampler initializer has invalid %0 bits">, InGroup<SpirCompat>, DefaultIgnore;
+def warn_sampler_argument_invalid_filter : Warning<
+  "'%0' sampler must use CLK_FILTER_NEAREST">, InGroup<SpirCompat>;
 def err_sampler_argument_required : Error<
   "sampler_t variable required - got %0">;
 def err_wrong_sampler_addressspace: Error<

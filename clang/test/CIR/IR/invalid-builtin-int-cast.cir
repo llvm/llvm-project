@@ -1,0 +1,37 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+
+module {
+  cir.func @both_cir(%arg0: !s32i) {
+    // expected-error@+1 {{requires exactly one '!cir.int' operand or result; the other must be a builtin integer or 'index' type}}
+    %0 = cir.builtin_int_cast %arg0 : !s32i -> !s64i
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @both_builtin(%arg0: !s32i) {
+    %0 = cir.builtin_int_cast %arg0 : !s32i -> i32
+    // expected-error@+1 {{requires exactly one '!cir.int' operand or result; the other must be a builtin integer or 'index' type}}
+    %1 = cir.builtin_int_cast %0 : i32 -> i64
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @width_mismatch(%arg0: !s32i) {
+    // expected-error@+1 {{requires the CIR and builtin integer types to have the same width; use 'cir.cast' for width conversions}}
+    %0 = cir.builtin_int_cast %arg0 : !s32i -> i64
+    cir.return
+  }
+}

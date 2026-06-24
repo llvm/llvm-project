@@ -36,7 +36,7 @@ void DWARFCFIState::update(const MCCFIInstruction &Directive) {
   // updated row and following the previous rows. These middle rows are stored
   // in `PrecedingRows`. For now, there is no need to store these rows in the
   // state, so they are ignored in the end.
-  dwarf::UnwindTable::RowContainer PrecedingRows;
+  // dwarf::UnwindTable::RowContainer PrecedingRows;
 
   // TODO: `.cfi_remember_state` and `.cfi_restore_state` directives are not
   // supported yet. The reason is that `parseRows` expects the stack of states

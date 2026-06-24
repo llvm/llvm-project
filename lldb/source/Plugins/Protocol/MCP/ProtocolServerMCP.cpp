@@ -98,8 +98,6 @@ llvm::Error ProtocolServerMCP::Start(ProtocolServer::Connection connection) {
   auto listening_uris = m_listener->GetListeningConnectionURI();
   if (listening_uris.empty())
     return createStringError("failed to get listening connections");
-  std::string address =
-      llvm::join(m_listener->GetListeningConnectionURI(), ", ");
 
   ServerInfo info{listening_uris[0]};
   llvm::Expected<ServerInfoHandle> server_info_handle = ServerInfo::Write(info);
