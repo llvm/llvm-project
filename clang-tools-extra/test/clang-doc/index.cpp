@@ -2,6 +2,9 @@
 // RUN: clang-doc --format=html --pretty-json --output=%t --executor=standalone %s
 // RUN: FileCheck %s < %t/json/index.json -check-prefix=CHECK-JSON
 // RUN: FileCheck %s < %t/html/index.html -check-prefix=CHECK-HTML
+// RUN: clang-doc --doxygen --format=md_mustache --output=%t --executor=standalone %s
+// RUN: FileCheck %s --input-file=%t/md/index.md --check-prefix=MD-MUSTACHE-INDEX
+// RUN: FileCheck %s --input-file=%t/md/GlobalNamespace/index.md --check-prefix=MD-MUSTACHE-GLOBAL
 
 class Foo {};
 
@@ -65,4 +68,12 @@ namespace inner {
 // CHECK-HTML-NEXT:        </div>
 // CHECK-HTML-NEXT:    </main>
 
-// COM: TODO: Add Markdown index test
+// MD-MUSTACHE-INDEX: C/C++ Reference
+// MD-MUSTACHE-INDEX: * Namespace: [GlobalNamespace](GlobalNamespace)
+// MD-MUSTACHE-INDEX: * Namespace: [inner](inner)
+
+// MD-MUSTACHE-GLOBAL: # Global Namespace
+// MD-MUSTACHE-GLOBAL: ## Namespaces
+// MD-MUSTACHE-GLOBAL: * [inner](../inner/index.md)
+// MD-MUSTACHE-GLOBAL: ## Records
+// MD-MUSTACHE-GLOBAL: * [Foo](Foo.md)
