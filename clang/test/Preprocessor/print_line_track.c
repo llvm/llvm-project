@@ -9,9 +9,8 @@
 
 #define t(x) x
 
-t(a
-3)
+t(
+  a 3)
 
-t(b
-__LINE__)
-
+t(
+  b __LINE__)
