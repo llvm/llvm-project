@@ -151,6 +151,8 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   const auto LocalValDecl = varDecl(
       isLocal(), hasInitializer(unless(isInstantiationDependent())),
       unless(CommonExcludeTypes),
+      unless(
+          allOf(hasType(referenceType(pointee(autoType()))), isInstantiated())),
       AnalyzeLambdas
           ? Matcher<VarDecl>(anything())
           : Matcher<VarDecl>(unless(hasType(cxxRecordDecl(isLambda())))),

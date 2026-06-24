@@ -269,8 +269,6 @@ void more_template_locals() {
   T *np_local_ptr = &np_local1;
 
   const auto np_local3 = T{};
-  // FIXME: False positive, the reference points to a template type and needs
-  // to be excluded from analysis, but somehow isn't (matchers don't work)
   auto &np_local4 = np_local3;
 
   const auto *np_local5 = &np_local3;
@@ -278,16 +276,18 @@ void more_template_locals() {
 
   using TypedefToTemplate = T;
   TypedefToTemplate np_local7{};
-  // FIXME: False positive, the reference points to a template type and needs
-  // to be excluded from analysis, but somehow isn't (matchers don't work)
-  // auto &np_local8 = np_local7;
+  // 'auto' variables deduced from a dependent type are excluded inside template
+  // instantiations, so this reference is no longer a false positive.
+  auto &np_local8 = np_local7;
   const auto &np_local9 = np_local7;
   auto np_local10 = np_local7;
   auto *np_local11 = &np_local10;
   const auto *const np_local12 = &np_local10;
 
   // FIXME: False positive, the reference points to a template type and needs
-  // to be excluded from analysis, but somehow isn't (matchers don't work)
+  // to be excluded from analysis. Unlike the 'auto &' cases above, the type is
+  // spelled through a typedef to a template parameter, so 'auto' deduction does
+  // not kick in and the dedicated exclusion does not apply.
   // TypedefToTemplate &np_local13 = np_local7;
   TypedefToTemplate *np_local14 = &np_local7;
 }
