@@ -15836,7 +15836,6 @@ private:
 
   ///@}
 public:
-
 };
 
 DeductionFailureInfo

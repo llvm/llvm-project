@@ -753,9 +753,10 @@ public:
 
   /// Evaluate an expression that is required by the language to be a constant
   /// expression.
-  bool EvaluateAsMandatedConstantInitializer(
-      EvalResult &Result, const ASTContext &Ctx, SemaProxy &SP,
-      const VarDecl *VD) const;
+  bool EvaluateAsMandatedConstantInitializer(EvalResult &Result,
+                                             const ASTContext &Ctx,
+                                             SemaProxy &SP,
+                                             const VarDecl *VD) const;
 
   /// EvaluateWithSubstitution - Evaluate an expression as if from the context
   /// of a call to the given function with the given arguments, inside an

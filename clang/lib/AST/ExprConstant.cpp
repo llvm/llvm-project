@@ -912,8 +912,8 @@ namespace {
 
     EvalInfo(const ASTContext &C, SemaProxy *Sema, Expr::EvalStatus &S,
              EvaluationMode Mode)
-        : State(const_cast<ASTContext &>(C), Sema, S),
-          CurrentCall(nullptr), CallStackDepth(0), NextCallIndex(1),
+        : State(const_cast<ASTContext &>(C), Sema, S), CurrentCall(nullptr),
+          CallStackDepth(0), NextCallIndex(1),
           StepsLeft(C.getLangOpts().ConstexprStepLimit),
           EnableNewConstInterp(C.getLangOpts().EnableNewConstInterp),
           BottomFrame(*this, SourceLocation(), /*Callee=*/nullptr,
@@ -21649,7 +21649,7 @@ static bool EvaluateConstantExpr(Expr::EvalResult &Result,
   // If we're evaluating a prvalue, fake up a MaterializeTemporaryExpr to
   // represent the result of the evaluation. CheckConstantExpression ensures
   // this doesn't escape.
-  MaterializeTemporaryExpr BaseMTE(T, const_cast<Expr*>(E), true);
+  MaterializeTemporaryExpr BaseMTE(T, const_cast<Expr *>(E), true);
   APValue::LValueBase Base(&BaseMTE);
   Info.setEvaluatingDecl(Base, Result.Val);
 
@@ -21660,8 +21660,8 @@ static bool EvaluateConstantExpr(Expr::EvalResult &Result,
   // So we need to make sure temporary objects are destroyed after having
   // evaluating the expression (per C++23 [class.temporary]/p4).
   FullExpressionRAII Scope(Info);
-  if (!::EvaluateInPlace(Result.Val, Info, LVal, E) ||
-      Result.HasSideEffects || !Scope.destroy())
+  if (!::EvaluateInPlace(Result.Val, Info, LVal, E) || Result.HasSideEffects ||
+      !Scope.destroy())
     return false;
 
   if (!Info.discardCleanups())
@@ -21704,9 +21704,9 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
 }
 
 bool Expr::EvaluateAsMandatedConstantExpr(EvalResult &Result,
-                                         const ASTContext &Ctx,
-                                         SemaProxy &Sema,
-                                         ConstantExprKind Kind) const {
+                                          const ASTContext &Ctx,
+                                          SemaProxy &Sema,
+                                          ConstantExprKind Kind) const {
   assert(!isValueDependent() &&
          "Expression evaluator can't be called on a dependent expression.");
   bool IsConst;
@@ -21877,7 +21877,7 @@ bool VarDecl::evaluateDestruction(
   return ::evaluateDestruction(EStatus, Info, this, IsConstantDestruction);
 }
 
-bool VarDecl::evaluateMandatedConstantDestruction(
+bool VarDecl::evaluateConstantDestruction(
     SmallVectorImpl<PartialDiagnosticAt> &Notes, SemaProxy &SP) const {
   Expr::EvalStatus EStatus;
   EStatus.Diag = &Notes;
@@ -22802,7 +22802,7 @@ static bool EvaluateCharRangeAsStringImpl(const Expr *, T &Result,
                                           ASTContext &Ctx,
                                           Expr::EvalResult &Status) {
   EvalInfo Info(Ctx, /*Sema=*/nullptr, Status,
-                 EvaluationMode::ConstantExpression);
+                EvaluationMode::ConstantExpression);
   Info.InConstantContext = true;
 
   if (Info.EnableNewConstInterp)

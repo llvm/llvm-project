@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/Decl.h"
 #include "clang/AST/SemaProxy.h"
+#include "clang/AST/Decl.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/SemaInternal.h"
 
@@ -35,8 +35,8 @@ private:
 void SemaProxyImpl::instantiateFunctionDefinition(
     SourceLocation PointOfInstantiation, FunctionDecl *Function) {
   SemaRef.InstantiateFunctionDefinition(
-        PointOfInstantiation, Function, /*Recursive=*/true,
-        /*DefinitionRequired=*/true, /*AtEndOfTU=*/false);
+      PointOfInstantiation, Function, /*Recursive=*/true,
+      /*DefinitionRequired=*/true, /*AtEndOfTU=*/false);
 }
 
 } // anonymous namespace

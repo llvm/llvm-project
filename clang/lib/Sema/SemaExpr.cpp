@@ -18049,11 +18049,10 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
 
   // Try to evaluate the expression, and produce diagnostics explaining why it's
   // not a constant expression as a side-effect.
-  bool Folded =
-      E->EvaluateAsMandatedConstantRValue(EvalResult, Context,
-                                          getProxyForEval()) &&
-      EvalResult.Val.isInt() && !EvalResult.HasSideEffects &&
-      (!getLangOpts().CPlusPlus || !EvalResult.HasUndefinedBehavior);
+  bool Folded = E->EvaluateAsMandatedConstantRValue(EvalResult, Context,
+                                                    getProxyForEval()) &&
+                EvalResult.Val.isInt() && !EvalResult.HasSideEffects &&
+                (!getLangOpts().CPlusPlus || !EvalResult.HasUndefinedBehavior);
 
   if (!isa<ConstantExpr>(E))
     E = ConstantExpr::Create(Context, E, EvalResult.Val);

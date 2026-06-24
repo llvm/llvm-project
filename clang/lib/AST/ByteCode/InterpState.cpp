@@ -20,8 +20,8 @@ using namespace clang::interp;
 InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
                          Context &Ctx, SourceMapper *M)
     : State(Ctx.getASTContext(), Parent.getSemaProxy(), Parent.getEvalStatus()),
-      M(M), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
-      Current(&BottomFrame), StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
+      M(M), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this), Current(&BottomFrame),
+      StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
       InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
   InConstantContext = Parent.InConstantContext;
   CheckingPotentialConstantExpression =
