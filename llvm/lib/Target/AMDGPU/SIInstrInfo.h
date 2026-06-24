@@ -1197,6 +1197,21 @@ public:
     return Opcode == AMDGPU::SCHED_GROUP_BARRIER || Opcode == AMDGPU::IGLP_OPT;
   }
 
+  /// DS latency modes. The latency of DS load/store instructions
+  /// is variable depending on LDS contention.
+  enum class DSLatencyMode {
+    Fast,      ///< Use default/pinned latency (no contention)
+    Loaded,    ///< Use loaded latency (moderate contention, 3x latency)
+    Overloaded ///< Use overloaded latency (high contention, 5x latency)
+  };
+
+  /// \p returns the DS instruction latency multiplier based on the selected
+  /// DSLatencyMode. \p returns 1 if the default
+  /// scheduling model latency should be used (fast mode).
+  /// Checks the function attribute first, then if using coexec scheduler
+  /// defaults to "loaded", then falls back to the global command line option.
+  static unsigned getDSLatencyMultiplier(const MachineFunction &MF);
+
   static unsigned getNonSoftWaitcntOpcode(unsigned Opcode) {
     switch (Opcode) {
     case AMDGPU::S_WAITCNT_soft:
@@ -1738,9 +1753,14 @@ public:
                                       LiveIntervals *LIS = nullptr,
                                       VirtRegMap *VRM = nullptr) const override;
 
+  // Silence a hidden overloaded virtual function warning.
+  using TargetInstrInfo::getInstrLatency;
+
   unsigned getInstrLatency(const InstrItineraryData *ItinData,
                            const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
+
+  unsigned getInstrLatency(const MachineInstr &MI) const;
 
   const MachineOperand &getCalleeOperand(const MachineInstr &MI) const override;
 
