@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=amdgcn < %s 2>&1 | FileCheck -check-prefix=ERROR %s
+; RUN: not llc -mtriple=amdgcn < %s 2>&1 | FileCheck -check-prefix=ERROR --implicit-check-not="exceeds limit" %s
 
 ; ERROR: error: <unknown>:0:0: scalar registers (106) exceeds limit (104) in function 'use_too_many_sgprs_tahiti'
 define amdgpu_kernel void @use_too_many_sgprs_tahiti() #0 {

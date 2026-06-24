@@ -1294,18 +1294,15 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       ProgInfo.VCCUsed, ProgInfo.FlatUsed,
       getTargetStreamer()->getTargetID()->isXnackOnOrAny(), Ctx);
 
-  // Check the addressable register limit before we add ExtraSGPRs.
+  // Clamp the addressable register count before we add ExtraSGPRs.
+  // The diagnostic is emitted by validateMCResourceInfo() during
+  // doFinalization to avoid duplicate error messages.
   if (STM.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS &&
       !STM.hasSGPRInitBug()) {
     unsigned MaxAddressableNumSGPRs = STM.getAddressableNumSGPRs();
     uint64_t NumSgpr;
     if (TryGetMCExprValue(ProgInfo.NumSGPR, NumSgpr) &&
         NumSgpr > MaxAddressableNumSGPRs) {
-      // This can happen due to a compiler bug or when using inline asm.
-      LLVMContext &Ctx = MF.getFunction().getContext();
-      Ctx.diagnose(DiagnosticInfoResourceLimit(
-          MF.getFunction(), "addressable scalar registers", NumSgpr,
-          MaxAddressableNumSGPRs, DS_Error, DK_ResourceLimit));
       ProgInfo.NumSGPR = CreateExpr(MaxAddressableNumSGPRs - 1);
     }
   }
@@ -1349,18 +1346,15 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                                    MaxWaves, MFI->getDynamicVGPRBlockSize()))},
                               Ctx);
 
+  // Clamp total SGPRs (including ExtraSGPRs) for correct register block
+  // encoding. The diagnostic is emitted by validateMCResourceInfo() during
+  // doFinalization to avoid duplicate error messages.
   if (STM.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS ||
       STM.hasSGPRInitBug()) {
     unsigned MaxAddressableNumSGPRs = STM.getAddressableNumSGPRs();
     uint64_t NumSgpr;
     if (TryGetMCExprValue(ProgInfo.NumSGPR, NumSgpr) &&
         NumSgpr > MaxAddressableNumSGPRs) {
-      // This can happen due to a compiler bug or when using inline asm to use
-      // the registers which are usually reserved for vcc etc.
-      LLVMContext &Ctx = MF.getFunction().getContext();
-      Ctx.diagnose(DiagnosticInfoResourceLimit(
-          MF.getFunction(), "scalar registers", NumSgpr, MaxAddressableNumSGPRs,
-          DS_Error, DK_ResourceLimit));
       ProgInfo.NumSGPR = CreateExpr(MaxAddressableNumSGPRs);
       ProgInfo.NumSGPRsForWavesPerEU = CreateExpr(MaxAddressableNumSGPRs);
     }
