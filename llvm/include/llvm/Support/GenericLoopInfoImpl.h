@@ -690,8 +690,8 @@ void LoopInfoBase<BlockT, LoopT>::print(raw_ostream &OS) const {
 
 template <typename T>
 bool compareVectors(std::vector<T> &BB1, std::vector<T> &BB2) {
-  llvm::sort(BB1);
-  llvm::sort(BB2);
+  llvm::sort</*AllowPointers=*/true>(BB1);
+  llvm::sort</*AllowPointers=*/true>(BB2);
   return BB1 == BB2;
 }
 
