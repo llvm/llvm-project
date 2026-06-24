@@ -146,3 +146,48 @@ gpu.func @if_basic(
   gpu.return
 }
 }
+
+// -----
+// Test scf.for with a dead loop-carried result: %bias is used inside the loop
+// but the loop result %2#1 is unused. The dead chain (arith.negf -> scf.yield
+// -> %2#1) only gets its layout from the loop block-arg uses, so recovery must
+// iterate to a fixed point to fill it in.
+
+gpu.module @test_dead_carry {
+// CHECK-LABEL: gpu.func @for_dead_carry
+gpu.func @for_dead_carry(%arg0: memref<8x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<8x16xf32>) {
+  %c0 = arith.constant 0 : index
+  %c128 = arith.constant 128 : index
+  %c16 = arith.constant 16 : index
+  %0 = xegpu.create_nd_tdesc %arg0 : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
+  %1 = xegpu.create_nd_tdesc %arg1 : memref<16x16xf16> -> !xegpu.tensor_desc<16x16xf16>
+  %cst = arith.constant dense<0.000000e+00> : vector<8x16xf32>
+  %cst_0 = arith.constant dense<1.000000e+00> : vector<8x16xf32>
+  // CHECK: scf.for
+  %2:2 = scf.for %arg3 = %c0 to %c128 step %c16
+      iter_args(%acc = %cst, %bias = %cst_0) -> (vector<8x16xf32>, vector<8x16xf32>) {
+    %4 = xegpu.load_nd %0[%c0, %c0] {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+        : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
+    %5 = xegpu.load_nd %1[%c0, %c0] {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>}
+        : !xegpu.tensor_desc<16x16xf16> -> vector<16x16xf16>
+    %6 = xegpu.dpas %4, %5, %acc
+        {layout_a = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+         layout_b = #xegpu.layout<lane_layout = [1, 16], lane_data = [2, 1]>,
+         layout_cd = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+        : vector<8x16xf16>, vector<16x16xf16>, vector<8x16xf32> -> vector<8x16xf32>
+    %7 = arith.addf %6, %bias : vector<8x16xf32>
+    // CHECK: arith.negf
+    // CHECK-SAME: layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    // CHECK-SAME: layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    %8 = arith.negf %bias : vector<8x16xf32>
+    // CHECK: scf.yield
+    // CHECK-SAME: layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    // CHECK-SAME: layout_operand_1 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
+    scf.yield %7, %8 : vector<8x16xf32>, vector<8x16xf32>
+  }
+  %3 = xegpu.create_nd_tdesc %arg2 : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32>
+  xegpu.store_nd %2#0, %3[%c0, %c0] {layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+      : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32>
+  gpu.return
+}
+}
