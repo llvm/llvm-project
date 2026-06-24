@@ -1334,9 +1334,10 @@ struct PushDownUnPackThroughPadOp : public OpRewritePattern<tensor::PadOp> {
                                           paddingVal, padOp.getNofold());
 
     // Inject the linalg.unpack right after the packed padOp.
-    Value outputUnPack =
-        tensor::EmptyOp::create(rewriter, loc, padOp.getResultType().getShape(),
-                                padOp.getResultType().getElementType());
+    // Compute the unpacked output size directly from the padded packed tensor.
+    Value outputUnPack = linalg::UnPackOp::createDestinationTensor(
+        rewriter, loc, newPadOp.getResult(), unpackOp.getMixedTiles(),
+        innerDimsPos, outerDimsPerm);
 
     UnPackOp replacement = linalg::UnPackOp::create(
         rewriter, loc, newPadOp.getResult(), outputUnPack, innerDimsPos,
