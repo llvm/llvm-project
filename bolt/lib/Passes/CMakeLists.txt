@@ -6,6 +6,7 @@ add_llvm_library(LLVMBOLTPasses
   BinaryPasses.cpp
   CMOVConversion.cpp
   CacheMetrics.cpp
+  CreateClonesAtOrigin.cpp
   DataflowAnalysis.cpp
   DataflowInfoManager.cpp
   FrameAnalysis.cpp
