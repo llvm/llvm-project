@@ -571,9 +571,7 @@ private:
       rewriter.setInsertionPoint(linalgOp);
       RankedTensorType dstTp = stt.withDimToLvl(dimToLvl).getRankedTensorType();
       Value dst = ConvertOp::create(rewriter, tval.getLoc(), dstTp, tval);
-      rewriter.modifyOpInPlace(linalgOp, [&]() {
-        linalgOp->setOperand(t->getOperandNumber(), dst);
-      });
+      rewriter.setOperand(linalgOp, t->getOperandNumber(), dst);
 
       // Release the transposed form afterwards.
       // TODO: CSE when used in more than one following op?

@@ -2039,8 +2039,7 @@ struct TestTypeConsumerForward
   LogicalResult
   matchAndRewrite(TestTypeConsumerOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const final {
-    rewriter.modifyOpInPlace(op,
-                             [&] { op->setOperands(adaptor.getOperands()); });
+    rewriter.setOperands(op, adaptor.getOperands());
     return success();
   }
 };

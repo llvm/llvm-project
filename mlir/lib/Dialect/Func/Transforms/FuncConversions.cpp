@@ -108,8 +108,7 @@ public:
           newOperands[idx] = operands[idx];
       }
     }
-    rewriter.modifyOpInPlace(
-        op, [newOperands, op]() { op->setOperands(newOperands); });
+    rewriter.setOperands(op, newOperands);
     return success();
   }
 

@@ -233,8 +233,7 @@ public:
   LogicalResult
   matchAndRewrite(ConditionOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    rewriter.modifyOpInPlace(
-        op, [&]() { op->setOperands(flattenValues(adaptor.getOperands())); });
+    rewriter.setOperands(op, flattenValues(adaptor.getOperands()));
     return success();
   }
 };

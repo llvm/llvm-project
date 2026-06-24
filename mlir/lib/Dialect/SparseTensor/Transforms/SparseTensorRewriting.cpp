@@ -1074,7 +1074,7 @@ public:
       auto denseTp =
           RankedTensorType::get(rtp.getShape(), rtp.getElementType());
       auto convert = ConvertOp::create(rewriter, loc, denseTp, op.getSrc());
-      rewriter.modifyOpInPlace(op, [&]() { op->setOperand(0, convert); });
+      rewriter.setOperand(op, 0, convert);
       return success();
     }
     if (encDst) {

@@ -178,9 +178,8 @@ LogicalResult mlir::bufferization::eliminateEmptyTensors(
                                              replacement);
       }
       // Replace the specific use of the tensor::EmptyOp.
-      rewriter.modifyOpInPlace(user, [&]() {
-        user->setOperand(useToBeReplaced->getOperandNumber(), replacement);
-      });
+      rewriter.setOperand(user, useToBeReplaced->getOperandNumber(),
+                          replacement);
       state.resetCache();
     }
 

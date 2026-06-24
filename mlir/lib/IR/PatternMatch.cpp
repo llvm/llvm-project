@@ -244,6 +244,31 @@ void RewriterBase::eraseBlock(Block *block) {
   block->erase();
 }
 
+void RewriterBase::eraseBlockArgument(Block *block, unsigned index) {
+  eraseBlockArguments(block, index, /*num=*/1);
+}
+
+void RewriterBase::eraseBlockArguments(Block *block, unsigned start,
+                                       unsigned num) {
+  if (Operation *parentOp = block->getParentOp()) {
+    modifyOpInPlace(
+        parentOp, [start, num, &block] { block->eraseArguments(start, num); });
+    return;
+  }
+  llvm_unreachable("block doesn't have a parentOp");
+}
+
+void RewriterBase::eraseBlockArguments(Block *block,
+                                       const BitVector &eraseIndices) {
+  if (Operation *parentOp = block->getParentOp()) {
+    modifyOpInPlace(parentOp, [&eraseIndices, &block] {
+      block->eraseArguments(eraseIndices);
+    });
+    return;
+  }
+  llvm_unreachable("block doesn't have a parentOp");
+}
+
 Operation *RewriterBase::eraseOpResults(Operation *op,
                                         const BitVector &eraseIndices) {
   assert(op->getNumResults() == eraseIndices.size() &&
@@ -278,6 +303,19 @@ Operation *RewriterBase::eraseOpResults(Operation *op,
       replacements[i] = newOp->getResult(nextResultIdx++);
   replaceOp(op, replacements);
   return newOp;
+}
+
+void RewriterBase::setOperands(Operation *op, ValueRange operands) {
+  modifyOpInPlace(op, [&] { op->setOperands(operands); });
+}
+
+void RewriterBase::setOperands(Operation *op, unsigned start, unsigned length,
+                               ValueRange operands) {
+  modifyOpInPlace(op, [&] { op->setOperands(start, length, operands); });
+}
+
+void RewriterBase::setOperand(Operation *op, unsigned index, Value value) {
+  modifyOpInPlace(op, [&] { op->setOperand(index, value); });
 }
 
 void RewriterBase::finalizeOpModification(Operation *op) {

@@ -1185,9 +1185,7 @@ struct FuncOpVectorUnroll final : OpRewritePattern<func::FuncOp> {
         continue;
       if (auto vecOp = dyn_cast<vector::InsertStridedSliceOp>(op)) {
         size_t unrolledInputNo = unrolledInputNums[unrolledInputIdx];
-        rewriter.modifyOpInPlace(&curOp, [&] {
-          curOp.setOperand(0, newFuncOp.getArgument(unrolledInputNo));
-        });
+        rewriter.setOperand(&curOp, 0, newFuncOp.getArgument(unrolledInputNo));
         ++unrolledInputIdx;
       }
     }

@@ -92,8 +92,7 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
     for (auto yieldOp : afterBlock->getOps<scf::YieldOp>()) {
       SmallVector<Value> yieldOperands = yieldOp.getOperands();
       yieldOperands.insert(yieldOperands.begin(), ivIncOp.getResult());
-      rewriter.modifyOpInPlace(yieldOp,
-                               [&]() { yieldOp->setOperands(yieldOperands); });
+      rewriter.setOperands(yieldOp, yieldOperands);
     }
 
     // We cannot do a direct replacement of the forOp since the while op returns

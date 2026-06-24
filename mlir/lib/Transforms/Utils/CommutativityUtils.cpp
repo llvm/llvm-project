@@ -303,7 +303,7 @@ public:
       sortedOperands.push_back(commOperand->operand);
     if (sortedOperands == operands)
       return failure();
-    rewriter.modifyOpInPlace(op, [&] { op->setOperands(sortedOperands); });
+    rewriter.setOperands(op, sortedOperands);
     return success();
   }
 };

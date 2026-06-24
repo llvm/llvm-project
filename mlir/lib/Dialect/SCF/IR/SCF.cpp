@@ -1582,10 +1582,7 @@ struct ForallOpIterArgsFolder : public OpRewritePattern<ForallOp> {
       rewriter.replaceAllUsesWith(blockArg, out);
       rewriter.replaceAllUsesWith(result, out);
     }
-    // TODO: There is no rewriter API for erasing block arguments.
-    rewriter.modifyOpInPlace(forallOp, [&]() {
-      forallOp.getBody()->eraseArguments(blockIndicesToDelete);
-    });
+    rewriter.eraseBlockArguments(forallOp.getBody(), blockIndicesToDelete);
 
     // Step 3. Create a new scf.forall op with only the shared_outs/results
     //         that should be retained.
