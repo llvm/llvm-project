@@ -9,16 +9,17 @@
 
 void walk() {} // !dex_label walk
 
-const char *Red = "Red";
-const char *Green = "Green";
+bool Red = false;
+bool Green = true;
 
 int main() {
-  const char *Light = Red;
+  bool Light = Red;
   for (int I = 0; I < 16; ++I) {
     if (I % 8 == 0)
       Light = Green;
     else if (I % 4 == 0)
       Light = Red;
+    // Light == Green from [0-3], [8-11]
     walk(); // !dex_label call
   }
   return 0;

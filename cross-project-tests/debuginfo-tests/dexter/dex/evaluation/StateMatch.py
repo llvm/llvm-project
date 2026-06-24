@@ -37,11 +37,12 @@ class StateMatchContext:
         cached_conditions = self._cached_frame_conditions[reverse_frame_idx]
         if condition in cached_conditions:
             return cached_conditions[condition]
-        # In an ideal world we would always cache conditions in a callee frame before moving to a called frame, but
+        # In an ideal world we would always cache conditions in a caller frame before moving to a called frame, but
         # some optimized code makes this infeasible, so we settle for computing it after reaching the called frame
         # instead.
         result = self._check_condition(step, frame_idx, condition)
-        # We cache this now, but we won't actually use it *unless* we end up stepping into a lower frame next step.
+        # We cache this now, but we won't actually use it *unless* the next step adds a new frame (i.e. we step into a
+        # call).
         self._cached_frame_conditions[reverse_frame_idx][condition] = result
         return result
 

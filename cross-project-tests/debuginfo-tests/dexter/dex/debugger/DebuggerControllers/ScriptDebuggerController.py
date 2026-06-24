@@ -91,7 +91,16 @@ class ScriptDebuggerController(DebuggerControllerBase):
             debuggee must be stopped."""
             cond_value = self.debugger.evaluate_expression(condition, frame_idx)
             step.frames[frame_idx].watches[condition] = cond_value
-            # FIXME: This is a language-specific test (albeit it covers all languages Dexter is currently used with).
+            if (
+                cond_value.could_evaluate
+                and cond_value.value.lower() != "true"
+                and cond_value.value.lower() == "false"
+            ):
+                self.context.logger.warning(
+                    f"Condition '{condition}' evaluated to non-bool value '{cond_value.value}'"
+                )
+            # FIXME: This is a language-specific test (albeit it covers all languages Dexter is currently used with). If
+            #        this assumption is broken, the warning above should be triggered.
             return cond_value.could_evaluate and cond_value.value.lower() == "true"
 
         script: DexterScript = self.script
