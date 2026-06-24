@@ -168,6 +168,45 @@ static inline Error defaultWarningHandler(const Twine &Msg) {
   return createError(Msg);
 }
 
+namespace elf_detail {
+
+// Keep error construction out of every ELFT/T instantiation below.
+LLVM_ATTRIBUTE_NOINLINE LLVM_ATTRIBUTE_MINSIZE inline Error
+createELFSectionInvalidEntsizeError(std::string SectionIndex, uint64_t Expected,
+                                    uint64_t Actual) {
+  return createError("section " + SectionIndex +
+                     " has invalid sh_entsize: expected " + Twine(Expected) +
+                     ", but got " + Twine(Actual));
+}
+
+LLVM_ATTRIBUTE_NOINLINE LLVM_ATTRIBUTE_MINSIZE inline Error
+createELFSectionInvalidSizeError(std::string SectionIndex, uint64_t Size,
+                                 uint64_t Entsize) {
+  return createError(
+      "section " + SectionIndex + " has an invalid sh_size (" + Twine(Size) +
+      ") which is not a multiple of its sh_entsize (" + Twine(Entsize) + ")");
+}
+
+LLVM_ATTRIBUTE_NOINLINE LLVM_ATTRIBUTE_MINSIZE inline Error
+createELFSectionOffsetOverflowError(std::string SectionIndex, uint64_t Offset,
+                                    uint64_t Size) {
+  return createError("section " + SectionIndex + " has a sh_offset (0x" +
+                     Twine::utohexstr(Offset) + ") + sh_size (0x" +
+                     Twine::utohexstr(Size) + ") that cannot be represented");
+}
+
+LLVM_ATTRIBUTE_NOINLINE LLVM_ATTRIBUTE_MINSIZE inline Error
+createELFSectionPastEndError(std::string SectionIndex, uint64_t Offset,
+                             uint64_t Size, uint64_t FileSize) {
+  return createError("section " + SectionIndex + " has a sh_offset (0x" +
+                     Twine::utohexstr(Offset) + ") + sh_size (0x" +
+                     Twine::utohexstr(Size) +
+                     ") that is greater than the file size (0x" +
+                     Twine::utohexstr(FileSize) + ")");
+}
+
+} // namespace elf_detail
+
 template <class ELFT>
 static bool checkSectionOffsets(const typename ELFT::Phdr &Phdr,
                                 const typename ELFT::Shdr &Sec) {
@@ -689,29 +728,21 @@ template <typename T>
 Expected<ArrayRef<T>>
 ELFFile<ELFT>::getSectionContentsAsArray(const Elf_Shdr &Sec) const {
   if (Sec.sh_entsize != sizeof(T) && sizeof(T) != 1)
-    return createError("section " + getSecIndexForError(*this, Sec) +
-                       " has invalid sh_entsize: expected " + Twine(sizeof(T)) +
-                       ", but got " + Twine(Sec.sh_entsize));
+    return elf_detail::createELFSectionInvalidEntsizeError(
+        getSecIndexForError(*this, Sec), sizeof(T), Sec.sh_entsize);
 
   uintX_t Offset = Sec.sh_offset;
   uintX_t Size = Sec.sh_size;
 
   if (Size % sizeof(T))
-    return createError("section " + getSecIndexForError(*this, Sec) +
-                       " has an invalid sh_size (" + Twine(Size) +
-                       ") which is not a multiple of its sh_entsize (" +
-                       Twine(Sec.sh_entsize) + ")");
+    return elf_detail::createELFSectionInvalidSizeError(
+        getSecIndexForError(*this, Sec), Size, Sec.sh_entsize);
   if (std::numeric_limits<uintX_t>::max() - Offset < Size)
-    return createError("section " + getSecIndexForError(*this, Sec) +
-                       " has a sh_offset (0x" + Twine::utohexstr(Offset) +
-                       ") + sh_size (0x" + Twine::utohexstr(Size) +
-                       ") that cannot be represented");
+    return elf_detail::createELFSectionOffsetOverflowError(
+        getSecIndexForError(*this, Sec), Offset, Size);
   if (Offset + Size > Buf.size())
-    return createError("section " + getSecIndexForError(*this, Sec) +
-                       " has a sh_offset (0x" + Twine::utohexstr(Offset) +
-                       ") + sh_size (0x" + Twine::utohexstr(Size) +
-                       ") that is greater than the file size (0x" +
-                       Twine::utohexstr(Buf.size()) + ")");
+    return elf_detail::createELFSectionPastEndError(
+        getSecIndexForError(*this, Sec), Offset, Size, Buf.size());
 
   if (Offset % alignof(T))
     // TODO: this error is untested.
