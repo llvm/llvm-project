@@ -11,3 +11,12 @@ evaluates to ``false`` (but is not a ``false`` literal itself).
 Move constructors of all the types used with STL containers, for example,
 should be declared ``noexcept``. Otherwise STL may choose copy constructors
 instead. The same is valid for move assignment operations.
+
+Options
+-------
+
+.. option:: AllowFalseEvaluated
+
+    When `true`, the check will not generate any warning
+    if the ``expr`` in ``noexcept(expr)`` evaluates to ``false``.
+    Default is `false`.

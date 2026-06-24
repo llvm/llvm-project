@@ -880,6 +880,12 @@ Changes in existing checks
   note to suggest materializing the temporary range when iterating over temporary
   range expressions or initializer lists, as reusing them directly could be unsafe.
 
+- Improved :doc:`performance-noexcept-move-constructor
+  <clang-tidy/checks/performance/noexcept-move-constructor>` check by adding
+  a new (off-by-default) option `AllowFalseEvaluated`, which allows marking
+  move constructors with ``noexcept(expr)`` even if ``expr``
+  evaluates to ``false``.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
