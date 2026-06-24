@@ -353,16 +353,6 @@ public:
     return (Imm & 0x780) ? nullptr : DelayAlu;
   }
 
-  static bool isCmpX(const MachineInstr &MI) {
-    if (!MI.isCompare())
-      return false;
-
-    if (MI.definesRegister(AMDGPU::EXEC, /*TRI=*/nullptr))
-      return true;
-
-    return false;
-  }
-
   // Fast-forward producers: instructions that write VCC/carry as an
   // explicit output and are covered by the hardware fast-forward path.
   // TODO: V_CMPX writes EXEC implicitly
@@ -377,7 +367,8 @@ public:
       return true;
     default:
       // All V_CMP* instructions excluding V_CMPX.
-      return SIInstrInfo::isVALU(MI) && MI.isCompare() && !isCmpX(MI);
+      return SIInstrInfo::isVALU(MI) && MI.isCompare() &&
+             !SIInstrInfo::isCmpX(MI);
     }
   }
 
@@ -393,10 +384,10 @@ public:
     case AMDGPU::V_SUBBREV_U32_e64:
     case AMDGPU::V_CNDMASK_B32_e64:
     // Implicit VCC carry-in
-    // Included here so the fast-forward suppression is correct once the pass
-    // is extended to track implicit uses (see TODO at line 403).
-    // TODO: include VALU that use implicit EXEC (produced by V_CMPX*) as
-    // a condition, once we track implicit uses.
+    // Included here so the fast-forward suppression is correct once
+    // the pass is extended to track implicit uses.
+    // TODO: include VALU that use implicit EXEC (produced by V_CMPX*)
+    // as a condition, once we track implicit uses.
     case AMDGPU::V_ADDC_U32_e32:
     case AMDGPU::V_SUBB_U32_e32:
     case AMDGPU::V_SUBBREV_U32_e32:
