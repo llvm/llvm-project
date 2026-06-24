@@ -285,9 +285,7 @@ bool AArch64TargetInfo::isValidCPUName(StringRef Name) const {
   return llvm::AArch64::parseCpu(Name).has_value();
 }
 
-bool AArch64TargetInfo::setCPU(const std::string &Name) {
-  return isValidCPUName(Name);
-}
+bool AArch64TargetInfo::setCPU(StringRef Name) { return isValidCPUName(Name); }
 
 void AArch64TargetInfo::fillValidCPUList(
     SmallVectorImpl<StringRef> &Values) const {
