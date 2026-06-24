@@ -1,14 +1,18 @@
 // RUN: %clang_cc1 %std_cxx98-14 -w -fdump-record-layouts-simple %s > %t.layouts
 // RUN: %clang_cc1 %std_cxx98-14 -w -fdump-record-layouts-simple %s > %t.before
-// RUN: %clang_cc1 %std_cxx98-14 -w -DPACKED= -DALIGNED16= -fdump-record-layouts-simple -foverride-record-layout=%t.layouts %s > %t.after
+// RUN: %clang_cc1 %std_cxx98-14 -w -DPACKED= -DALIGNED16= -DNO_UNIQUE_ADDRESS= -fdump-record-layouts-simple -foverride-record-layout=%t.layouts %s > %t.after
 // RUN: diff -u %t.before %t.after
 // RUN: FileCheck --check-prefixes=CHECK,PRE17 %s < %t.after
 
 // RUN: %clang_cc1 -std=c++17 -w -fdump-record-layouts-simple %s > %t.layouts
 // RUN: %clang_cc1 -std=c++17 -w -fdump-record-layouts-simple %s > %t.before
-// RUN: %clang_cc1 -std=c++17 -w -DPACKED= -DALIGNED16= -fdump-record-layouts-simple -foverride-record-layout=%t.layouts %s > %t.after
+// RUN: %clang_cc1 -std=c++17 -w -DPACKED= -DALIGNED16= -DNO_UNIQUE_ADDRESS= -fdump-record-layouts-simple -foverride-record-layout=%t.layouts %s > %t.after
 // RUN: diff -u %t.before %t.after
 // RUN: FileCheck --check-prefixes=CHECK,CXX17 %s < %t.after
+
+// Generate IR with the externally defined layout to exercise IR generation the
+// way LLDB does.
+// RUN: %clang_cc1 -std=c++17 -w -DPACKED= -DALIGNED16= -DNO_UNIQUE_ADDRESS= -foverride-record-layout=%t.layouts %s -emit-llvm -o - | FileCheck %s --check-prefix=CHECK-IR
 
 // CXX17: Type: struct X6
 
@@ -102,3 +106,43 @@ void use_structs() {
   x4s[1].a = 1;
   x5s[1].a = 17;
 }
+
+// Test various uses of no_unique_address.
+#ifndef NO_UNIQUE_ADDRESS
+#define NO_UNIQUE_ADDRESS [[no_unique_address]]
+#endif
+
+struct HasTailPadding {
+  HasTailPadding() = default;
+  constexpr HasTailPadding(int x, short y) : x(x), y(y) {}
+private:
+  int x;
+  short y;
+};
+static_assert(sizeof(HasTailPadding) == 8);
+// CHECK: Type: struct HasTailPadding
+
+struct NoTailPacking {
+  HasTailPadding xy;
+  char z;
+};
+static_assert(sizeof(NoTailPacking) == 12);
+// CHECK: Type: struct NoTailPacking
+
+struct NUAUsesTailPadding {
+  NO_UNIQUE_ADDRESS HasTailPadding xy;
+  NO_UNIQUE_ADDRESS char z;
+};
+
+// CHECK: Type: struct NUAUsesTailPadding
+static_assert(sizeof(NUAUsesTailPadding) == 8);
+
+NUAUsesTailPadding nua_gv_zeroinit;
+NUAUsesTailPadding nua_gv_braces{};
+NUAUsesTailPadding nua_gv_123{{1, 2}, 3};
+// CHECK-IR: %struct.NUAUsesTailPadding = type { %struct.HasTailPadding.base, i8, i8 }
+// CHECK-IR: %struct.HasTailPadding.base = type <{ i32, i16 }>
+
+// CHECK-IR: @nua_gv_zeroinit = global %struct.NUAUsesTailPadding zeroinitializer, align 4
+// CHECK-IR: @nua_gv_braces = global { [6 x i8], i8, [1 x i8] } zeroinitializer, align 4
+// CHECK-IR: @nua_gv_123 = global { i32, i16, i8 } { i32 1, i16 2, i8 3 }, align 4
