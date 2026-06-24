@@ -291,17 +291,22 @@ define void @test_2xi64_mul_sub_mismatched_ops2(ptr noalias %data, ptr noalias %
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF2-NEXT:    [[TMP14:%.*]] = add i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[INDEX]]
 ; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP0]], align 8
 ; VF2-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[INDEX]], 1
+; VF2-NEXT:    [[TMP15:%.*]] = shl nsw i64 [[TMP14]], 1
 ; VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP1]]
 ; VF2-NEXT:    [[TMP3:%.*]] = mul <2 x i64> [[WIDE_LOAD]], splat (i64 3)
 ; VF2-NEXT:    [[TMP4:%.*]] = sub <2 x i64> [[TMP3]], splat (i64 2)
 ; VF2-NEXT:    [[TMP9:%.*]] = or disjoint i64 [[TMP1]], 1
+; VF2-NEXT:    [[TMP16:%.*]] = or disjoint i64 [[TMP15]], 1
 ; VF2-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP9]]
-; VF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP10]], i64 0
-; VF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT]], <2 x ptr> poison, <2 x i32> zeroinitializer
-; VF2-NEXT:    [[STRIDED_VEC1:%.*]] = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> align 8 [[BROADCAST_SPLAT]], <2 x i1> splat (i1 true), <2 x i64> poison)
+; VF2-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP16]]
+; VF2-NEXT:    [[TMP11:%.*]] = load i64, ptr [[TMP10]], align 8
+; VF2-NEXT:    [[TMP12:%.*]] = load i64, ptr [[TMP17]], align 8
+; VF2-NEXT:    [[TMP13:%.*]] = insertelement <2 x i64> poison, i64 [[TMP11]], i32 0
+; VF2-NEXT:    [[STRIDED_VEC1:%.*]] = insertelement <2 x i64> [[TMP13]], i64 [[TMP12]], i32 1
 ; VF2-NEXT:    [[TMP5:%.*]] = mul <2 x i64> [[WIDE_LOAD]], [[STRIDED_VEC1]]
 ; VF2-NEXT:    [[TMP6:%.*]] = sub <2 x i64> [[TMP5]], splat (i64 2)
 ; VF2-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i64> [[TMP4]], <2 x i64> [[TMP6]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -590,18 +595,23 @@ define void @test_2xi64_mul_add_xor_mismatched_ops(ptr noalias %data, ptr noalia
 ; VF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VF2:       [[VECTOR_BODY]]:
 ; VF2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; VF2-NEXT:    [[TMP15:%.*]] = add i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[FACTOR]], i64 [[INDEX]]
 ; VF2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[TMP0]], align 8
 ; VF2-NEXT:    [[TMP1:%.*]] = shl nsw i64 [[INDEX]], 1
+; VF2-NEXT:    [[TMP16:%.*]] = shl nsw i64 [[TMP15]], 1
 ; VF2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP1]]
 ; VF2-NEXT:    [[TMP3:%.*]] = mul <2 x i64> [[WIDE_LOAD]], splat (i64 3)
 ; VF2-NEXT:    [[TMP4:%.*]] = add <2 x i64> [[TMP3]], splat (i64 2)
 ; VF2-NEXT:    [[TMP5:%.*]] = xor <2 x i64> splat (i64 4), [[TMP4]]
 ; VF2-NEXT:    [[TMP11:%.*]] = or disjoint i64 [[TMP1]], 1
+; VF2-NEXT:    [[TMP17:%.*]] = or disjoint i64 [[TMP16]], 1
 ; VF2-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP11]]
-; VF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP12]], i64 0
-; VF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT]], <2 x ptr> poison, <2 x i32> zeroinitializer
-; VF2-NEXT:    [[STRIDED_VEC1:%.*]] = call <2 x i64> @llvm.masked.gather.v2i64.v2p0(<2 x ptr> align 8 [[BROADCAST_SPLAT]], <2 x i1> splat (i1 true), <2 x i64> poison)
+; VF2-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i64, ptr [[DATA]], i64 [[TMP17]]
+; VF2-NEXT:    [[TMP19:%.*]] = load i64, ptr [[TMP12]], align 8
+; VF2-NEXT:    [[TMP13:%.*]] = load i64, ptr [[TMP18]], align 8
+; VF2-NEXT:    [[TMP14:%.*]] = insertelement <2 x i64> poison, i64 [[TMP19]], i32 0
+; VF2-NEXT:    [[STRIDED_VEC1:%.*]] = insertelement <2 x i64> [[TMP14]], i64 [[TMP13]], i32 1
 ; VF2-NEXT:    [[TMP6:%.*]] = mul <2 x i64> [[WIDE_LOAD]], [[STRIDED_VEC1]]
 ; VF2-NEXT:    [[TMP7:%.*]] = add <2 x i64> [[TMP6]], splat (i64 2)
 ; VF2-NEXT:    [[TMP8:%.*]] = xor <2 x i64> splat (i64 4), [[TMP7]]
