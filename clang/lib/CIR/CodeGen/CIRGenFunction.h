@@ -730,6 +730,12 @@ public:
   /// been resolved.
   mlir::Block *indirectGotoBlock = nullptr;
 
+  /// Labels whose address is taken in a constant context (e.g. a static
+  /// computed-goto dispatch table).  These have no function-local
+  /// BlockAddressOp, so they are tracked here and added as indirect-goto
+  /// branch successors in finishIndirectBranch.
+  llvm::SmallVector<cir::BlockAddrInfoAttr> constBlockAddressLabels;
+
   void resolveBlockAddresses();
   void finishIndirectBranch();
 
@@ -1704,6 +1710,10 @@ public:
   int64_t getAccessedFieldNo(unsigned idx, mlir::ArrayAttr elts);
 
   void instantiateIndirectGotoBlock();
+
+  /// Record a label whose address is taken from a constant initializer and
+  /// ensure the indirect-goto block exists.
+  void takeAddressOfConstantLabel(cir::BlockAddrInfoAttr info);
 
   /// Emit a simple LLVM intrinsic that takes N scalar arguments.  The intrinsic
   /// name is used verbatim; any overload mangling (e.g. `.f32`, `.p1`) must be
