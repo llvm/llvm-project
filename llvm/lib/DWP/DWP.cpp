@@ -43,13 +43,17 @@ static uint64_t debugStrOffsetsHeaderSize(DataExtractor StrOffsetsData,
 // DW_FORM_implicit_const is the only form that stores an extra value -- an
 // SLEB128 -- in the abbreviation declaration itself; consume it here so the
 // (attribute, form) walk stays aligned with the rest of the table.
-static void readAbbrevAttribute(const DataExtractor &AbbrevData,
+// return True if can keep going- Name or Form is not 0
+static bool readAbbrevAttribute(const DataExtractor &AbbrevData,
                                 uint64_t *Offset, uint64_t &Name,
                                 dwarf::Form &Form) {
   Name = AbbrevData.getULEB128(Offset);
   Form = static_cast<dwarf::Form>(AbbrevData.getULEB128(Offset));
   if (Form == dwarf::DW_FORM_implicit_const)
     AbbrevData.getSLEB128(Offset);
+  if (Name != 0 || Form != 0)
+    return true;
+  return false;
 }
 
 static uint64_t getCUAbbrev(StringRef Abbrev, uint64_t AbbrCode) {
@@ -63,9 +67,7 @@ static uint64_t getCUAbbrev(StringRef Abbrev, uint64_t AbbrCode) {
     // Attributes
     uint64_t Name;
     dwarf::Form Form;
-    for (readAbbrevAttribute(AbbrevData, &Offset, Name, Form);
-         Name != 0 || Form != 0;
-         readAbbrevAttribute(AbbrevData, &Offset, Name, Form))
+    while (readAbbrevAttribute(AbbrevData, &Offset, Name, Form))
       ;
   }
   return Offset;
@@ -132,9 +134,7 @@ getCUIdentifiers(InfoSectionUnitHeader &Header, StringRef Abbrev,
   AbbrevData.getU8(&AbbrevOffset);
   uint64_t Name;
   dwarf::Form Form;
-  for (readAbbrevAttribute(AbbrevData, &AbbrevOffset, Name, Form);
-       Name != 0 || Form != 0;
-       readAbbrevAttribute(AbbrevData, &AbbrevOffset, Name, Form)) {
+  while (readAbbrevAttribute(AbbrevData, &AbbrevOffset, Name, Form)) {
     switch (Name) {
     case dwarf::DW_AT_name: {
       Expected<const char *> EName = getIndexedString(
