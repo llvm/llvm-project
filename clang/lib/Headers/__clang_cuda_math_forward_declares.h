@@ -12,12 +12,23 @@
 #error "This file is for CUDA/HIP compilation only."
 #endif
 
-// This file forward-declares of some math functions we (or the CUDA headers)
-// will define later.  We need to do this, and do it before cmath is included,
-// because the standard library may have constexpr math functions.  In the
-// absence of a prior __device__ decl, those constexpr functions may become
-// implicitly host+device.  host+device functions can't be overloaded, so that
-// would preclude the use of our own __device__ overloads for these functions.
+// PURPOSE: Forward-declare __device__ math functions before <cmath> is included.
+// Prevents standard library constexpr functions from becoming implicit
+// __host__ __device__, which would clash with our __device__ overloads.
+
+// ---------------------------------------------------------------------------
+// Return Type: CUDA headers return 'bool' on MSVC, but 'int' on POSIX.
+// Mismatches here cause "functions differ only in return type" errors.
+// ---------------------------------------------------------------------------
+// CORRECTED: Force 'int' for all CUDA compilations to match CUDA SDK headers
+// (math_functions.hpp), which define these as returning int regardless of host.
+#if defined(__CUDA__)
+#define __CUDA_CLASSIFIER_RET_TYPE int
+#elif defined(__OPENMP_NVPTX__)
+#define __CUDA_CLASSIFIER_RET_TYPE int
+#else
+#define __CUDA_CLASSIFIER_RET_TYPE int
+#endif
 
 #pragma push_macro("__DEVICE__")
 #define __DEVICE__                                                             \
@@ -89,31 +100,38 @@ __DEVICE__ double hypot(double, double);
 __DEVICE__ float hypot(float, float);
 __DEVICE__ int ilogb(double);
 __DEVICE__ int ilogb(float);
-#ifdef _MSC_VER
-__DEVICE__ bool isfinite(long double);
+
+// ---------------------------------------------------------------------------
+// Classification Functions
+// ---------------------------------------------------------------------------
+// Note: We declare long double versions here if not MSVC to match
+// __clang_cuda_cmath.h logic, but they require implementations in
+// __clang_cuda_device_functions.h to avoid link errors.
+#if !defined(_MSC_VER)
+__DEVICE__ __CUDA_CLASSIFIER_RET_TYPE isfinite(long double);
 #endif
-__DEVICE__ bool isfinite(double);
-__DEVICE__ bool isfinite(float);
+__DEVICE__ __CUDA_CLASSIFIER_RET_TYPE isfinite(double);
+__DEVICE__ __CUDA_CLASSIFIER_RET_TYPE isfinite(float);
 __DEVICE__ bool isgreater(double, double);
 __DEVICE__ bool isgreaterequal(double, double);
 __DEVICE__ bool isgreaterequal(float, float);
 __DEVICE__ bool isgreater(float, float);
-#ifdef _MSC_VER
-__DEVICE__ bool isinf(long double);
+#if !defined(_MSC_VER)
+__DEVICE__ __CUDA_CLASSIFIER_RET_TYPE isinf(long double);
 #endif
-__DEVICE__ bool isinf(double);
-__DEVICE__ bool isinf(float);
+__DEVICE__ __CUDA_CLASSIFIER_RET_TYPE isinf(double);
+__DEVICE__ __CUDA_CLASSIFIER_RET_TYPE isinf(float);
 __DEVICE__ bool isless(double, double);
 __DEVICE__ bool islessequal(double, double);
 __DEVICE__ bool islessequal(float, float);
 __DEVICE__ bool isless(float, float);
 __DEVICE__ bool islessgreater(double, double);
 __DEVICE__ bool islessgreater(float, float);
-#ifdef _MSC_VER
-__DEVICE__ bool isnan(long double);
+#if !defined(_MSC_VER)
+__DEVICE__ __CUDA_CLASSIFIER_RET_TYPE isnan(long double);
 #endif
-__DEVICE__ bool isnan(double);
-__DEVICE__ bool isnan(float);
+__DEVICE__ __CUDA_CLASSIFIER_RET_TYPE isnan(double);
+__DEVICE__ __CUDA_CLASSIFIER_RET_TYPE isnan(float);
 __DEVICE__ bool isnormal(double);
 __DEVICE__ bool isnormal(float);
 __DEVICE__ bool isunordered(double, double);
@@ -165,11 +183,11 @@ __DEVICE__ double scalbln(double, long);
 __DEVICE__ float scalbln(float, long);
 __DEVICE__ double scalbn(double, int);
 __DEVICE__ float scalbn(float, int);
-#ifdef _MSC_VER
-__DEVICE__ bool signbit(long double);
+#if !defined(_MSC_VER)
+__DEVICE__ __CUDA_CLASSIFIER_RET_TYPE signbit(long double);
 #endif
-__DEVICE__ bool signbit(double);
-__DEVICE__ bool signbit(float);
+__DEVICE__ __CUDA_CLASSIFIER_RET_TYPE signbit(double);
+__DEVICE__ __CUDA_CLASSIFIER_RET_TYPE signbit(float);
 __DEVICE__ double sin(double);
 __DEVICE__ float sin(float);
 __DEVICE__ double sinh(double);
@@ -185,9 +203,6 @@ __DEVICE__ float tgamma(float);
 __DEVICE__ double trunc(double);
 __DEVICE__ float trunc(float);
 
-// Notably missing above is nexttoward, which we don't define on
-// the device side because libdevice doesn't give us an implementation, and we
-// don't want to be in the business of writing one ourselves.
 
 // We need to define these overloads in exactly the namespace our standard
 // library uses (including the right inline namespace), otherwise they won't be
