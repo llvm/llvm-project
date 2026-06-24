@@ -890,6 +890,27 @@ static bool areStringsSameIgnoreSpaces(const StringRef Left,
   return L.empty() && R.empty();
 }
 
+static std::optional<bool>
+areExprsSameSourceTextIgnoreSpaces(const Expr *Lhs, const Expr *Rhs,
+                                   const ASTContext *Context) {
+  if (!Lhs || !Rhs || !Context)
+    return std::nullopt;
+  const SourceManager &SM = Context->getSourceManager();
+  const LangOptions &LO = Context->getLangOpts();
+  const SourceRange Lsr = Lhs->getSourceRange();
+  const SourceRange Rsr = Rhs->getSourceRange();
+  if (Lsr.isInvalid() || Rsr.isInvalid())
+    return std::nullopt;
+
+  const StringRef L = Lexer::getSourceText(CharSourceRange::getTokenRange(Lsr),
+                                           SM, LO);
+  const StringRef R = Lexer::getSourceText(CharSourceRange::getTokenRange(Rsr),
+                                           SM, LO);
+  if (L.empty() || R.empty())
+    return std::nullopt;
+  return areStringsSameIgnoreSpaces(L, R);
+}
+
 static bool areExprsSameMacroOrLiteral(const BinaryOperator *BinOp,
                                        const ASTContext *Context) {
   if (!BinOp)
@@ -1369,6 +1390,15 @@ void RedundantExpressionCheck::check(const MatchFinder::MatchResult &Result) {
           return;
       }
     }
+
+    // Suppress diagnostics for equivalent expressions that are spelled
+    // differently in source. This avoids false positives for cases like
+    // variable-template specializations that canonicalize to the same entity
+    // through type aliases.
+    if (const std::optional<bool> SameText =
+            areExprsSameSourceTextIgnoreSpaces(LHS, RHS, Result.Context);
+        SameText && !*SameText)
+      return;
     diag(BinOp->getOperatorLoc(), "both sides of operator are equivalent");
   }
 
