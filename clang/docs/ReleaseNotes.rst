@@ -672,6 +672,8 @@ Improvements to Clang's diagnostics
 - Diagnostics for the C++11 range-based for statement now report the correct
   iterator type in notes for invalid iterator types.
 
+- Clang now doesn't throw assertion errors when comparing unsigned vector types (#GH173614).
+
 Improvements to Clang's time-trace
 ----------------------------------
 

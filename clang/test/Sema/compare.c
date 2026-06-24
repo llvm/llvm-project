@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -fsyntax-only -pedantic -verify -Wsign-compare -Wtautological-constant-in-range-compare %s -Wno-unreachable-code -DTEST=1
-// RUN: %clang_cc1 -triple x86_64-apple-darwin -fsyntax-only -pedantic -verify -Wsign-compare -Wtype-limits %s -Wno-unreachable-code -DTEST=2
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -fsyntax-only -pedantic -verify -Wsign-compare -Wtautological-constant-in-range-compare %s -Wno-unreachable-code -fenable-matrix -DTEST=1
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -fsyntax-only -pedantic -verify -Wsign-compare -Wtype-limits %s -Wno-unreachable-code -fenable-matrix -DTEST=2
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -pedantic -verify -Wsign-compare -Wtype-limits -fsyntax-only %s -fenable-matrix -DTEST=3
 
 int test(char *C) { // nothing here should warn.
   return C != ((void*)0);
@@ -479,5 +480,63 @@ int test25(unsigned short n) {
 
 int test26(short n) {
   return ~n == 32768; // expected-warning {{result of comparison of 16-bit signed value == 32768 is always false}}
+}
+#endif
+
+typedef unsigned long __attribute__((__vector_size__(8))) V;
+
+void test27(void) {
+  int i;
+  V v;
+  
+  V v1 = i == (-v);
+  // expected-warning@-1 {{comparison of integers of different signs: 'int' and 'V'}}
+  
+  V v2 = i == (+v);
+  // expected-warning@-1 {{comparison of integers of different signs: 'int' and 'V'}}
+  
+  V v3 = i == (~v);
+  // expected-warning@-1 {{comparison of integers of different signs: 'int' and 'V'}}
+  
+  V v4 = i == (!v);
+  // expected-error@-1 {{invalid argument type 'V' (vector of 1 'unsigned long' value) to unary expression}}
+  
+  V v5 = i == (++v);
+  // expected-error@-1 {{cannot increment value of type 'V'}}
+  
+  V v6 = i == (v++);
+  // expected-error@-1 {{cannot increment value of type 'V'}}
+  
+  V v7 = i == (--v);
+  // expected-error@-1 {{cannot decrement value of type 'V'}}
+  
+  V v8 = i == (v--);
+  // expected-error@-1 {{cannot decrement value of type 'V'}}
+  
+  V v9 = i == (*v);
+  // expected-error@-1 {{indirection requires pointer operand ('V' (vector of 1 'unsigned long' value) invalid)}}
+}
+
+typedef unsigned long __attribute__((matrix_type(8, 8))) M;
+
+void test28(void) {
+  int i;
+  M m;
+
+  M m1 = i == (-m);
+  // expected-error@-1 {{invalid argument type 'M' (aka 'unsigned long __attribute__((matrix_type(8, 8)))') to unary expression}}
+  M m2 = i == (~m);
+  // expected-error@-1 {{invalid argument type 'M' (aka 'unsigned long __attribute__((matrix_type(8, 8)))') to unary expression}}
+}
+
+#if TEST == 3
+#include <arm_sve.h>
+void test29(void) {
+  int i;
+  svuint8_t v = svdup_u8(5);
+  svuint8_t v1 = i == (-v); 
+  // expected-error@-1 {{cannot convert between scalar type 'int' and vector type 'svuint8_t' (aka '__SVUint8_t') as implicit conversion would cause truncation}}
+  svuint8_t v2 = i == (~v);
+  // expected-error@-1 {{cannot convert between scalar type 'int' and vector type 'svuint8_t' (aka '__SVUint8_t') as implicit conversion would cause truncation}}
 }
 #endif
