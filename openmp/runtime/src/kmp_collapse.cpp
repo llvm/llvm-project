@@ -338,10 +338,11 @@ bool kmp_calc_one_iv_XX(const bounds_infoXX_template<T> *bounds,
   if (start_with_lower_bound) {
     // we moved to the next iteration on one of outer loops, should start
     // with the lower bound here:
-    temp = bounds->lb0 + bounds->lb1 * outer_iv;
+    temp = bounds->lb0 + static_cast<kmp_uint64>(bounds->lb1) * outer_iv;
   } else {
     auto iteration = iterations[ind];
-    temp = bounds->lb0 + bounds->lb1 * outer_iv + iteration * bounds->step;
+    temp = bounds->lb0 + static_cast<kmp_uint64>(bounds->lb1) * outer_iv +
+           iteration * bounds->step;
   }
 
   // Now trim original iv according to its type:
@@ -831,14 +832,15 @@ kmp_calc_number_of_iterations_XX(const bounds_infoXX_template<T> *bounds,
   kmp_loop_nest_iv_t iterations = 0;
 
   if (bounds->comparison == comparison_t::comp_less_or_eq) {
-    iterations =
-        (static_cast<T>(original_ivs[ind]) - bounds->lb0 -
-         bounds->lb1 * static_cast<T>(original_ivs[bounds->outer_iv])) /
-        __kmp_abs(bounds->step);
+    iterations = (static_cast<T>(original_ivs[ind]) - bounds->lb0 -
+                  static_cast<kmp_loop_nest_iv_t>(bounds->lb1) *
+                      static_cast<T>(original_ivs[bounds->outer_iv])) /
+                 __kmp_abs(bounds->step);
   } else {
     KMP_DEBUG_ASSERT(bounds->comparison == comparison_t::comp_greater_or_eq);
     iterations = (bounds->lb0 +
-                  bounds->lb1 * static_cast<T>(original_ivs[bounds->outer_iv]) -
+                  static_cast<kmp_loop_nest_iv_t>(bounds->lb1) *
+                      static_cast<T>(original_ivs[bounds->outer_iv]) -
                   static_cast<T>(original_ivs[ind])) /
                  __kmp_abs(bounds->step);
   }
