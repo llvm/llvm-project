@@ -11,6 +11,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/LiteralSupport.h"
 #include <optional>
 
 using namespace clang::ast_matchers;
@@ -23,6 +24,74 @@ AST_MATCHER(ImplicitCastExpr, isPartOfExplicitCast) {
 }
 AST_MATCHER(Expr, containsErrors) { return Node.containsErrors(); }
 } // namespace
+
+static std::optional<StringRef> getLiteralSuffix(QualType Ty,
+                                                 const ASTContext &Context) {
+  if (!Ty->isIntegerType() || Ty->isBitIntType())
+    return std::nullopt;
+
+  const LangOptions &LangOpts = Context.getLangOpts();
+  const QualType CanonTy = Ty.getCanonicalType();
+
+  if (Context.getIntWidth(CanonTy) <= Context.getIntWidth(Context.IntTy))
+    return std::nullopt;
+
+  if (ASTContext::hasSameType(CanonTy, Context.LongTy))
+    return "l";
+  if (ASTContext::hasSameType(CanonTy, Context.UnsignedLongTy))
+    return "ul";
+
+  const bool HasLongLongLiteralSuffix = LangOpts.CPlusPlus11 || LangOpts.C99;
+  if (!HasLongLongLiteralSuffix)
+    return std::nullopt;
+
+  if (ASTContext::hasSameType(CanonTy, Context.LongLongTy))
+    return "ll";
+  if (ASTContext::hasSameType(CanonTy, Context.UnsignedLongLongTy))
+    return "ull";
+
+  return std::nullopt;
+}
+
+static std::optional<FixItHint> getIntegerLiteralWideningFixIt(
+    const Expr *E, QualType WideTy,
+    const ast_matchers::MatchFinder::MatchResult &R) {
+  E = E->IgnoreParenImpCasts();
+  const auto *Literal = dyn_cast<IntegerLiteral>(E);
+  if (!Literal || Literal->getLocation().isMacroID())
+    return std::nullopt;
+
+  const auto Suffix = getLiteralSuffix(WideTy, *R.Context);
+  if (!Suffix)
+    return std::nullopt;
+
+  const StringRef LiteralText = Lexer::getSourceText(
+      CharSourceRange::getTokenRange(Literal->getSourceRange()),
+      *R.SourceManager, R.Context->getLangOpts());
+  if (LiteralText.empty())
+    return std::nullopt;
+
+  const NumericLiteralParser LiteralParser(
+      LiteralText, Literal->getLocation(), *R.SourceManager,
+      R.Context->getLangOpts(), R.Context->getTargetInfo(),
+      R.Context->getDiagnostics());
+  // Only rewrite plain unsuffixed integer literals. If the literal already
+  // carries a builtin integer suffix such as u/l/ll, fall back to the cast
+  // fix-it instead of trying to rewrite the existing suffix.
+  if (LiteralParser.hadError || !LiteralParser.isIntegerLiteral() ||
+      LiteralParser.hasUDSuffix() || LiteralParser.isUnsigned ||
+      LiteralParser.isLong || LiteralParser.isLongLong ||
+      LiteralParser.MicrosoftInteger || LiteralParser.isSizeT ||
+      LiteralParser.isBitInt)
+    return std::nullopt;
+
+  const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
+      Literal->getEndLoc(), 0, *R.SourceManager, R.Context->getLangOpts());
+  if (EndLoc.isInvalid())
+    return std::nullopt;
+
+  return FixItHint::CreateInsertion(EndLoc, Suffix->str());
+}
 
 static const Expr *getLHSOfMulBinOp(const Expr *E) {
   assert(E == E->IgnoreParens() && "Already skipped all parens!");
@@ -149,8 +218,13 @@ void ImplicitWideningOfMultiplicationResultCheck::handleImplicitCastExpr(
     auto Diag = diag(E->getBeginLoc(), "perform multiplication in a wider type",
                      DiagnosticIDs::Note)
                 << LHS->getSourceRange();
+    // prefer literal suffix than static_cast.
+    const auto LiteralFix =
+        getIntegerLiteralWideningFixIt(LHS, WideExprTy, *Result);
 
-    if (ShouldUseCXXStaticCast)
+    if (LiteralFix)
+      Diag << *LiteralFix;
+    else if (ShouldUseCXXStaticCast)
       Diag << FixItHint::CreateInsertion(LHS->getBeginLoc(),
                                          "static_cast<" +
                                              WideExprTy.getAsString() + ">(")
@@ -162,7 +236,8 @@ void ImplicitWideningOfMultiplicationResultCheck::handleImplicitCastExpr(
     else
       Diag << FixItHint::CreateInsertion(LHS->getBeginLoc(),
                                          "(" + WideExprTy.getAsString() + ")");
-    Diag << includeStddefHeader(LHS->getBeginLoc());
+    if (!LiteralFix)
+      Diag << includeStddefHeader(LHS->getBeginLoc());
   }
 }
 
@@ -249,7 +324,13 @@ void ImplicitWideningOfMultiplicationResultCheck::handlePointerOffsetting(
              DiagnosticIDs::Note)
         << LHS->getSourceRange();
 
-    if (ShouldUseCXXStaticCast)
+    // prefer literal suffix than static_cast.
+    const auto LiteralFix =
+        getIntegerLiteralWideningFixIt(LHS, SizeTy, *Result);
+
+    if (LiteralFix)
+      Diag << *LiteralFix;
+    else if (ShouldUseCXXStaticCast)
       Diag << FixItHint::CreateInsertion(
                   LHS->getBeginLoc(),
                   (Twine("static_cast<") + TyAsString + ">(").str())
@@ -261,7 +342,8 @@ void ImplicitWideningOfMultiplicationResultCheck::handlePointerOffsetting(
     else
       Diag << FixItHint::CreateInsertion(LHS->getBeginLoc(),
                                          (Twine("(") + TyAsString + ")").str());
-    Diag << includeStddefHeader(LHS->getBeginLoc());
+    if (!LiteralFix)
+      Diag << includeStddefHeader(LHS->getBeginLoc());
   }
 }
 

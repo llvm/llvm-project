@@ -392,6 +392,11 @@ Changes in existing checks
   loss in overloads with transparent standard functors (e.g. ``std::plus<>``)
   for ``std::accumulate``, ``std::reduce``, and ``std::inner_product``.
 
+- Improved :doc:`bugprone-implicit-widening-of-multiplication-result
+  <clang-tidy/checks/bugprone/implicit-widening-of-multiplication-result>` check
+  by suggesting literal suffixes (e.g. ``ll``) instead of ``static_cast<>`` for
+  integer literals.
+
 - Improved :doc:`bugprone-inc-dec-in-conditions
   <clang-tidy/checks/bugprone/inc-dec-in-conditions>` check by fixing a false
   positive when increment/decrement operators appear inside lambda bodies that
