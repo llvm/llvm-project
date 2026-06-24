@@ -185,3 +185,11 @@ A<int, int> foo() { // expected-error {{implicit instantiation of undefined temp
   return A<int, int>(1); // expected-error 2{{implicit instantiation of undefined template}}
 }
 }
+
+namespace test17 {
+// Verify we do not crash on trailing expression with template keyword.
+int a((enum b )b {       } // expected-error {{ISO C++ forbids forward references to 'enum' types}} \
+                          // expected-error {{invalid use of incomplete type}} \
+                          // expected-note {{forward declaration of}}
+         -> template c);
+}

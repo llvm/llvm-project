@@ -7057,6 +7057,8 @@ ExprResult Sema::ActOnStartCXXMemberReference(Scope *S, Expr *Base,
   // call.  We'll do more incomplete-type checks later in the lookup process,
   // so just skip this check for ObjC types.
   if (!BaseType->isRecordType()) {
+    if (Base->containsErrors() && BaseType->isIncompleteType())
+      return ExprError();
     ObjectType = ParsedType::make(BaseType);
     MayBePseudoDestructor = true;
     return Base;
