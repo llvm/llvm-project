@@ -84,7 +84,7 @@ static_assert(0, "0 is nonzero"); // ms-error {{static assertion failed: 0 is no
 #define assert(expr)
 static_assert(1, "1 is nonzero"); // ok
 
-#undef static_assert // ms-warning {{keyword or identifier with special meaning is used as a macro name}}
+#undef static_assert
 static_assert(1, "1 is nonzero"); // yes, still ok.
 #endif
 

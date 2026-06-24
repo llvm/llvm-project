@@ -25,6 +25,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include <memory>
 #include <optional>
@@ -107,6 +108,8 @@ PointerFlowMatcher::addEdges(Expected<EntityPointerLevelSet> &&LHS,
     return LHS.takeError();
   if (!RHS)
     return RHS.takeError();
+  if (RHS->empty())
+    return llvm::Error::success();
   for (auto L : *LHS)
     Results[L].insert(RHS->begin(), RHS->end());
   return llvm::Error::success();
@@ -222,9 +225,8 @@ llvm::Error matchInitializerListForRecordDecl(PointerFlowMatcher &Matcher,
   if (RecordTy->isUnion()) {
     auto *InitField = ILE->getInitializedFieldInUnion();
 
-    if (!InitField)
+    if (!InitField || ILE->inits().empty())
       return llvm::Error::success();
-    assert(!ILE->inits().empty());
     return Matcher.matchesInitializerList(InitField, ILE->getInit(0));
   }
   // Handle struct/class:
@@ -299,59 +301,51 @@ PointerFlowMatcher::matchesInitializerList(const ValueDecl *Base,
   if (Type->isArrayType())
     return matchInitializerListForArray(*this, Base, ILE,
                                         ArrayElementIndirectLevel);
-  // Must be the case of using a initializer-list for a scalar:
+
+  // Must be the case of using a initializer-list for a scalar.
+  // The initializer-list can be either singleton or empty:
+  if (ILE->getNumInits() == 0)
+    return llvm::Error::success();
   return matchesInitializerList(Base, ILE->getInit(0));
 }
 
 class PointerFlowTUSummaryExtractor : public TUSummaryExtractor {
 public:
-  PointerFlowTUSummaryExtractor(TUSummaryBuilder &Builder)
-      : TUSummaryExtractor(Builder) {}
+  using TUSummaryExtractor::TUSummaryExtractor;
 
-  Expected<std::unique_ptr<PointerFlowEntitySummary>>
-  extractEntitySummary(const NamedDecl *Contributor, ASTContext &Ctx,
-                       TUSummaryExtractor &Extractor) {
+  /// \return a non-null unique pointer to a PointerFlowEntitySummary
+  std::unique_ptr<PointerFlowEntitySummary>
+  extractEntitySummary(const std::vector<const NamedDecl *> &ContributorDecls,
+                       ASTContext &Ctx, TUSummaryExtractor &Extractor) {
     PointerFlowMatcher Matcher(Ctx, Extractor);
-    auto MatchAction = [&Matcher, &Contributor](const DynTypedNode &Node) {
-      auto Err = Matcher.matches(Node, Contributor);
 
-      if (Err)
-        llvm::report_fatal_error(std::move(Err));
-    };
+    for (const auto *Contrib : ContributorDecls) {
+      auto MatchAction = [&Matcher, Contrib](const DynTypedNode &Node) {
+        if (auto Err = Matcher.matches(Node, Contrib))
+          logWarningFromError(std::move(Err));
+      };
 
-    findMatchesIn(Contributor, MatchAction);
+      findMatchesIn(Contrib, MatchAction);
+    }
     return std::make_unique<PointerFlowEntitySummary>(
         buildPointerFlowEntitySummary(std::move(Matcher.Results)));
   }
 
   void HandleTranslationUnit(ASTContext &Ctx) override {
-    std::vector<const NamedDecl *> Contributors;
-
-    findContributors(Ctx, Contributors);
-    for (auto *CD : Contributors) {
-      auto EntitySummary = extractEntitySummary(CD, Ctx, *this);
-
-      if (!EntitySummary)
-        llvm::reportFatalInternalError(EntitySummary.takeError());
-      assert(*EntitySummary);
-      if ((*EntitySummary)->empty())
-        continue;
-
-      std::optional<EntityId> ContributorId = addEntity(CD);
-      if (!ContributorId)
-        llvm::reportFatalInternalError(makeEntityNameErr(Ctx, CD));
-
-      [[maybe_unused]] auto [_, InsertionSucceeded] =
-          SummaryBuilder.addSummary(*ContributorId, std::move(*EntitySummary));
-
-      assert(InsertionSucceeded && "duplicated contributor extraction");
-    }
+    extractAndAddSummaries(
+        *this, SummaryBuilder, Ctx,
+        [&](const std::vector<const NamedDecl *> &Decls) {
+          return extractEntitySummary(Decls, Ctx, *this);
+        },
+        "PointerFlow");
   }
 };
 } // namespace
 
+namespace clang::ssaf {
 // NOLINTNEXTLINE(misc-use-internal-linkage)
-volatile int PointerFlowTUSummaryExtractorAnchorSource = 0;
+volatile int PointerFlowExtractorAnchorSource = 0;
+} // namespace clang::ssaf
 
 static TUSummaryExtractorRegistry::Add<PointerFlowTUSummaryExtractor>
     RegisterExtractor(PointerFlowEntitySummary::Name,

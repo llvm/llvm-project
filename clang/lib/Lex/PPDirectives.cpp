@@ -186,9 +186,13 @@ static bool isReservedCXXAttributeName(Preprocessor &PP, IdentifierInfo *II) {
   if (Lang.CPlusPlus &&
       hasAttribute(AttributeCommonInfo::AS_CXX11, /* Scope*/ nullptr, II,
                    PP.getTargetInfo(), Lang, /*CheckPlugins*/ false) > 0) {
-    StringRef Name = II->getName();
+    AttributeCommonInfo::AttrArgsInfo AttrArgsInfo =
+        AttributeCommonInfo::getCXX11AttrArgsInfo(II);
+    if (AttrArgsInfo == AttributeCommonInfo::AttrArgsInfo::Required)
+      return PP.isNextPPTokenOneOf(tok::l_paren);
+
     return !PP.isNextPPTokenOneOf(tok::l_paren) ||
-           (Name != "likely" && Name != "unlikely");
+           AttrArgsInfo == AttributeCommonInfo::AttrArgsInfo::Optional;
   }
   return false;
 }
@@ -209,11 +213,7 @@ static MacroDiag shouldWarnOnMacroDef(Preprocessor &PP, IdentifierInfo *II) {
 
 static MacroDiag shouldWarnOnMacroUndef(Preprocessor &PP, IdentifierInfo *II) {
   const LangOptions &Lang = PP.getLangOpts();
-  StringRef Text = II->getName();
-  if (II->isKeyword(Lang))
-    return MD_KeywordDef;
-  if (Lang.CPlusPlus11 && (Text == "override" || Text == "final"))
-    return MD_KeywordDef;
+  // Do not warn on keyword undef.  It is generally harmless and widely used.
   if (isReservedInAllContexts(II->isReserved(Lang)))
     return MD_ReservedMacro;
   if (isReservedCXXAttributeName(PP, II))
@@ -410,10 +410,8 @@ bool Preprocessor::CheckMacroName(Token &MacroNameTok, MacroUse isDefineUndef,
       // We do not want to warn on some patterns widely used in configuration
       // scripts.  This requires analyzing next tokens, so do not issue warnings
       // now, only inform caller.
-      if (isDefineUndef == MU_Define && ShadowFlag)
+      if (ShadowFlag)
         *ShadowFlag = true;
-      else
-        Diag(MacroNameTok, diag::warn_pp_macro_name_is_keyword);
     }
     if (D == MD_ReservedMacro)
       Diag(MacroNameTok, diag::warn_pp_macro_is_reserved_id);
@@ -1197,9 +1195,8 @@ OptionalFileEntryRef Preprocessor::LookupEmbedFile(StringRef Filename,
   FileManager &FM = this->getFileManager();
   if (llvm::sys::path::is_absolute(Filename)) {
     // lookup path or immediately fail
-    llvm::Expected<FileEntryRef> ShouldBeEntry = FM.getFileRef(
-        Filename, OpenFile, /*CacheFailure=*/true, /*IsText=*/false);
-    return llvm::expectedToOptional(std::move(ShouldBeEntry));
+    return FM.getOptionalFileRef(Filename, OpenFile, /*CacheFailure=*/true,
+                                 /*IsText=*/false);
   }
 
   auto SeparateComponents = [](SmallVectorImpl<char> &LookupPath,
@@ -1226,27 +1223,25 @@ OptionalFileEntryRef Preprocessor::LookupEmbedFile(StringRef Filename,
       TmpDir = LookupFromFile->getDir().getName();
       llvm::sys::path::append(TmpDir, Filename);
       if (!TmpDir.empty()) {
-        llvm::Expected<FileEntryRef> ShouldBeEntry = FM.getFileRef(
+        OptionalFileEntryRef ShouldBeEntry = FM.getOptionalFileRef(
             TmpDir, OpenFile, /*CacheFailure=*/true, /*IsText=*/false);
         if (ShouldBeEntry)
-          return llvm::expectedToOptional(std::move(ShouldBeEntry));
-        llvm::consumeError(ShouldBeEntry.takeError());
+          return ShouldBeEntry;
       }
     }
 
     // Otherwise, do working directory lookup.
     LookupPath.clear();
-    auto MaybeWorkingDirEntry = FM.getDirectoryRef(".");
+    auto MaybeWorkingDirEntry = FM.getOptionalDirectoryRef(".");
     if (MaybeWorkingDirEntry) {
       DirectoryEntryRef WorkingDirEntry = *MaybeWorkingDirEntry;
       StringRef WorkingDir = WorkingDirEntry.getName();
       if (!WorkingDir.empty()) {
         SeparateComponents(LookupPath, WorkingDir, Filename, false);
-        llvm::Expected<FileEntryRef> ShouldBeEntry = FM.getFileRef(
+        OptionalFileEntryRef ShouldBeEntry = FM.getOptionalFileRef(
             LookupPath, OpenFile, /*CacheFailure=*/true, /*IsText=*/false);
         if (ShouldBeEntry)
-          return llvm::expectedToOptional(std::move(ShouldBeEntry));
-        llvm::consumeError(ShouldBeEntry.takeError());
+          return ShouldBeEntry;
       }
     }
   }
@@ -1254,11 +1249,10 @@ OptionalFileEntryRef Preprocessor::LookupEmbedFile(StringRef Filename,
   for (const auto &Entry : PPOpts.EmbedEntries) {
     LookupPath.clear();
     SeparateComponents(LookupPath, Entry, Filename, false);
-    llvm::Expected<FileEntryRef> ShouldBeEntry = FM.getFileRef(
+    OptionalFileEntryRef ShouldBeEntry = FM.getOptionalFileRef(
         LookupPath, OpenFile, /*CacheFailure=*/true, /*IsText=*/false);
     if (ShouldBeEntry)
-      return llvm::expectedToOptional(std::move(ShouldBeEntry));
-    llvm::consumeError(ShouldBeEntry.takeError());
+      return ShouldBeEntry;
   }
   return std::nullopt;
 }
@@ -1353,27 +1347,7 @@ void Preprocessor::HandleDirective(Token &Result) {
   // not support this for #include-like directives, since that can result in
   // terrible diagnostics, and does not work in GCC.
   if (InMacroArgs) {
-    enum IntroduceKind {
-      IK_HASH = 0,
-      IK_AT = 1,
-      IK_KEYWORD = 2,
-    };
-
-    IntroduceKind IK = IK_HASH;
-    switch (Introducer.getKind()) {
-    case tok::hash:
-      IK = IK_HASH;
-      break;
-    case tok::at:
-      IK = IK_AT;
-      break;
-    default:
-      IK = IK_KEYWORD;
-      break;
-    }
-    SmallString<16> DirectiveSpelling;
     if (IdentifierInfo *II = Result.getIdentifierInfo()) {
-      DirectiveSpelling.append(II->getName());
       switch (II->getPPKeywordID()) {
       case tok::pp_include:
       case tok::pp_import:
@@ -1383,19 +1357,18 @@ void Preprocessor::HandleDirective(Token &Result) {
       case tok::pp_embed:
       case tok::pp_module:
       case tok::pp___preprocessed_module:
-      case tok::pp___preprocessed_import: {
-        Diag(Result, diag::err_embedded_directive) << IK << DirectiveSpelling;
+      case tok::pp___preprocessed_import:
+        Diag(Result, diag::err_embedded_directive)
+            << Introducer.is(tok::hash) << II->getName();
         Diag(*ArgMacro, diag::note_macro_expansion_here)
             << ArgMacro->getIdentifierInfo();
         DiscardUntilEndOfDirective();
         return;
-      }
       default:
         break;
       }
     }
-
-    Diag(Result, diag::warn_embedded_directive) << IK << DirectiveSpelling;
+    Diag(Result, diag::ext_embedded_directive);
   }
 
   // Temporarily enable macro expansion if set so
@@ -2405,6 +2378,11 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   // error.
   if (Filename.empty())
     return {ImportAction::None};
+  if (Filename.ends_with(' ') || Filename.ends_with('.')) {
+    unsigned Selection = Filename.ends_with('.') ? 1 : 0;
+    Diag(FilenameTok, diag::pp_nonportable_path_trailing)
+        << Filename << Selection;
+  }
 
   bool IsImportDecl = HashLoc.isInvalid();
   SourceLocation StartLoc = IsImportDecl ? IncludeTok.getLocation() : HashLoc;
@@ -3352,8 +3330,9 @@ void Preprocessor::HandleDefineDirective(
   if (!MI) return;
 
   if (MacroShadowsKeyword &&
-      !isConfigurationPattern(MacroNameTok, MI, getLangOpts()))
+      !isConfigurationPattern(MacroNameTok, MI, getLangOpts())) {
     Diag(MacroNameTok, diag::warn_pp_macro_hides_keyword);
+  }
   // Check that there is no paste (##) operator at the beginning or end of the
   // replacement list.
   unsigned NumTokens = MI->getNumTokens();

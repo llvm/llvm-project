@@ -67,16 +67,25 @@ int main(int, char**)
 
     // _BitInt(N): max is 2^N - 1 for unsigned and 2^(N-1) - 1 for signed.
     // Exercises the digits fix through `__max = ~0 ^ __min`.
-#if TEST_HAS_EXTENSION(bit_int)
+    // TODO: Remove guards for MSan once https://llvm.org/PR204217 is fixed.
+    // MSan does not track _BitInt padding bits, so non-byte-aligned widths
+    // surface as false-positive use-of-uninitialized-value through the
+    // numeric_limits::max() shift; restrict to byte-aligned widths under
+    // memory sanitizer.
+#if TEST_HAS_BITINT
     test<unsigned _BitInt(8)>((unsigned _BitInt(8)) ~(unsigned _BitInt(8))0);
     test<signed _BitInt(8)>((signed _BitInt(8))0x7F);
+#  if !TEST_HAS_FEATURE(memory_sanitizer)
     test<unsigned _BitInt(13)>((unsigned _BitInt(13))0x1FFF);
     test<signed _BitInt(13)>((signed _BitInt(13))0x0FFF);
+#  endif
     test<unsigned _BitInt(64)>((unsigned _BitInt(64)) ~(unsigned _BitInt(64))0);
     test<signed _BitInt(64)>((signed _BitInt(64))0x7FFFFFFFFFFFFFFFLL);
 #  if __BITINT_MAXWIDTH__ >= 128
+#    if !TEST_HAS_FEATURE(memory_sanitizer)
     test<unsigned _BitInt(77)>((unsigned _BitInt(77)) ~(unsigned _BitInt(77))0);
     test<signed _BitInt(77)>((signed _BitInt(77)) ~((signed _BitInt(77))1 << 76));
+#    endif
     test<unsigned _BitInt(128)>((unsigned _BitInt(128)) ~(unsigned _BitInt(128))0);
     test<signed _BitInt(128)>((signed _BitInt(128)) ~((signed _BitInt(128))1 << 127));
 #  endif

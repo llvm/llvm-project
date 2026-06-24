@@ -21,6 +21,7 @@
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/MatrixUtils.h"
 #include "clang/AST/NSAPI.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
@@ -1922,7 +1923,7 @@ llvm::Constant *ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &D) {
 
   // Try to emit the initializer.  Note that this can allow some things that
   // are not allowed by tryEmitPrivateForMemory alone.
-  if (APValue *value = D.evaluateValue()) {
+  if (const APValue *value = D.evaluateValue()) {
     assert(!value->allowConstexprUnknown() &&
            "Constexpr unknown values are not allowed in CodeGen");
     return tryEmitPrivateForMemory(*value, destType);
@@ -2645,8 +2646,7 @@ ConstantEmitter::tryEmitPrivate(const APValue &Value, QualType DestType,
     unsigned NumElts = NumRows * NumCols;
     SmallVector<llvm::Constant *, 16> Inits(NumElts);
 
-    bool IsRowMajor = CGM.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                      LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+    bool IsRowMajor = isMatrixRowMajor(CGM.getLangOpts(), DestType);
 
     for (unsigned Row = 0; Row != NumRows; ++Row) {
       for (unsigned Col = 0; Col != NumCols; ++Col) {

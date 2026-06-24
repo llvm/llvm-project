@@ -180,8 +180,7 @@ OptionalFileEntryRef ModuleMap::findHeader(
   SmallString<128> FullPathName(Directory->getName());
 
   auto GetFile = [&](StringRef Filename) -> OptionalFileEntryRef {
-    auto File =
-        expectedToOptional(SourceMgr.getFileManager().getFileRef(Filename));
+    auto File = SourceMgr.getFileManager().getOptionalFileRef(Filename);
     if (!File || (Header.Size && File->getSize() != *Header.Size) ||
         (Header.ModTime && File->getModificationTime() != *Header.ModTime))
       return std::nullopt;

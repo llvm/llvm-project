@@ -672,6 +672,23 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
   }
   assert(!isa<FieldDecl>(D) && "Didn't expect a FieldDecl!");
 
+  // FIXME: This gives internal linkage to names that should have no linkage
+  // (those not covered by [basic.link]p6).
+  if (D->isInAnonymousNamespace()) {
+    const auto *Var = dyn_cast<VarDecl>(D);
+    const auto *Func = dyn_cast<FunctionDecl>(D);
+    // FIXME: The check for extern "C" here is not justified by the standard
+    // wording, but we retain it from the pre-DR1113 model to avoid breaking
+    // code.
+    //
+    // C++11 [basic.link]p4:
+    //   An unnamed namespace or a namespace declared directly or indirectly
+    //   within an unnamed namespace has internal linkage.
+    if ((!Var || !isFirstInExternCContext(Var)) &&
+        (!Func || !isFirstInExternCContext(Func)))
+      return LinkageInfo::internal();
+  }
+
   // Set up the defaults.
 
   // C99 6.2.2p5:
@@ -679,12 +696,6 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
   //   scope and no storage-class specifier, its linkage is
   //   external.
   LinkageInfo LV = getExternalLinkageFor(D);
-
-  // Inherit linkage from the enclosing namespace, if there is any.
-  if (const auto *ND = dyn_cast<NamespaceDecl>(
-          D->getDeclContext()->getEnclosingNamespaceContext())) {
-    LV.setLinkage(ND->getLinkageInternal());
-  }
 
   if (!hasExplicitVisibilityAlready(computation)) {
     if (std::optional<Visibility> Vis = getExplicitVisibility(D, computation)) {
@@ -738,14 +749,6 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
 
   //     - a variable; or
   if (const auto *Var = dyn_cast<VarDecl>(D)) {
-    // FIXME: The check for extern "C" here is not justified by the standard
-    // wording, but we retain it from the pre-DR1113 model to avoid breaking
-    // code.
-    if (isFirstInExternCContext(Var)) {
-      LV.setLinkage(Linkage::External);
-      return LV;
-    }
-
     // GCC applies the following optimization to variables and static
     // data members, but not to functions:
     //
@@ -768,7 +771,8 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     // Note that we don't want to make the variable non-external
     // because of this, but unique-external linkage suits us.
 
-    if (Context.getLangOpts().CPlusPlus && !IgnoreVarTypeLinkage) {
+    if (Context.getLangOpts().CPlusPlus && !isFirstInExternCContext(Var) &&
+        !IgnoreVarTypeLinkage) {
       LinkageInfo TypeLV = getLVForType(*Var->getType(), computation);
       if (!isExternallyVisible(TypeLV.getLinkage()))
         return LinkageInfo::uniqueExternal();
@@ -813,27 +817,18 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
     // merging storage classes and visibility attributes, so we don't have to
     // look at previous decls in here.
 
-    // FIXME: The check for extern "C" here is not justified by the standard
-    // wording, but we retain it from the pre-DR1113 model to avoid breaking
-    // code.
-    if (isFirstInExternCContext(Function)) {
-      LV.setLinkage(Linkage::External);
-      return LV;
-    }
-
     // In C++, then if the type of the function uses a type with
     // unique-external linkage, it's not legally usable from outside
-    // this translation unit.
-    if (Context.getLangOpts().CPlusPlus) {
+    // this translation unit.  However, we should use the C linkage
+    // rules instead for extern "C" declarations.
+    if (Context.getLangOpts().CPlusPlus && !isFirstInExternCContext(Function)) {
       // Only look at the type-as-written. Otherwise, deducing the return type
       // of a function could change its linkage.
       QualType TypeAsWritten = Function->getType();
       if (TypeSourceInfo *TSI = Function->getTypeSourceInfo())
         TypeAsWritten = TSI->getType();
-      if (!isExternallyVisible(TypeAsWritten->getLinkage())) {
-        LV.mergeLinkage(LinkageInfo::uniqueExternal());
-        return LV;
-      }
+      if (!isExternallyVisible(TypeAsWritten->getLinkage()))
+        return LinkageInfo::uniqueExternal();
     }
 
     // Consider LV from the template and the template arguments.
@@ -881,13 +876,13 @@ LinkageComputer::getLVForNamespaceScopeDecl(const NamedDecl *D,
   //     An unnamed namespace or a namespace declared directly or indirectly
   //     within an unnamed namespace has internal linkage. All other namespaces
   //     have external linkage.
-  } else if (auto *ND = dyn_cast<NamespaceDecl>(D)) {
-    if (ND->isAnonymousNamespace()) {
-      LV.mergeLinkage(Linkage::Internal);
-    }
+  //
+  // We handled names in anonymous namespaces above.
+  } else if (isa<NamespaceDecl>(D)) {
+    return LV;
 
-    // By extension, we assign external linkage to Objective-C
-    // interfaces.
+  // By extension, we assign external linkage to Objective-C
+  // interfaces.
   } else if (isa<ObjCInterfaceDecl>(D)) {
     // fallout
 
@@ -2556,13 +2551,13 @@ EvaluatedStmt *VarDecl::getEvaluatedStmt() const {
   return dyn_cast_if_present<EvaluatedStmt *>(Init);
 }
 
-APValue *VarDecl::evaluateValue() const {
-  SmallVector<PartialDiagnosticAt, 8> Notes;
-  return evaluateValueImpl(Notes, hasConstantInitialization());
+const APValue *VarDecl::evaluateValue() const {
+  return evaluateValueImpl(/*Notes=*/nullptr, hasConstantInitialization());
 }
 
-APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
-                                    bool IsConstantInitialization) const {
+const APValue *
+VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
+                           bool IsConstantInitialization) const {
   EvaluatedStmt *Eval = ensureEvaluatedStmt();
 
   const auto *Init = getInit();
@@ -2582,8 +2577,11 @@ APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
   Eval->IsEvaluating = true;
 
   ASTContext &Ctx = getASTContext();
-  bool Result = Init->EvaluateAsInitializer(Eval->Evaluated, Ctx, this, Notes,
-                                            IsConstantInitialization);
+  Expr::EvalResult EStatus;
+  EStatus.Diag = Notes;
+  bool Result =
+      Init->EvaluateAsInitializer(Ctx, this, EStatus, IsConstantInitialization);
+  Eval->Evaluated = std::move(EStatus.Val);
 
   // In C++, or in C23 if we're initialising a 'constexpr' variable, this isn't
   // a constant initializer if we produced notes. In that case, we can't keep
@@ -2592,7 +2590,7 @@ APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
   if (IsConstantInitialization &&
       (Ctx.getLangOpts().CPlusPlus ||
        (isConstexpr() && Ctx.getLangOpts().C23)) &&
-      !Notes.empty())
+      EStatus.DiagEmitted)
     Result = false;
 
   // Ensure the computed APValue is cleaned up later if evaluation succeeded,
@@ -2609,10 +2607,10 @@ APValue *VarDecl::evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> &Notes,
   return Result ? &Eval->Evaluated : nullptr;
 }
 
-APValue *VarDecl::getEvaluatedValue() const {
-  if (EvaluatedStmt *Eval = getEvaluatedStmt())
-    if (Eval->WasEvaluated)
-      return &Eval->Evaluated;
+const APValue *VarDecl::getEvaluatedValue() const {
+  if (EvaluatedStmt *Eval = getEvaluatedStmt();
+      Eval && Eval->WasEvaluated && !Eval->Evaluated.isAbsent())
+    return &Eval->Evaluated;
 
   return nullptr;
 }
@@ -2661,7 +2659,7 @@ bool VarDecl::checkForConstantInitialization(
 
   // Evaluate the initializer to check whether it's a constant expression.
   Eval->HasConstantInitialization =
-      evaluateValueImpl(Notes, true) && Notes.empty();
+      evaluateValueImpl(&Notes, true) && Notes.empty();
 
   // If evaluation as a constant initializer failed, allow re-evaluation as a
   // non-constant initializer if we later find we want the value.
@@ -2669,14 +2667,6 @@ bool VarDecl::checkForConstantInitialization(
     Eval->WasEvaluated = false;
 
   return Eval->HasConstantInitialization;
-}
-
-template<typename DeclT>
-static DeclT *getDefinitionOrSelf(DeclT *D) {
-  assert(D);
-  if (auto *Def = D->getDefinition())
-    return Def;
-  return D;
 }
 
 bool VarDecl::isEscapingByref() const {
@@ -2720,7 +2710,7 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
             break;
           VTD = NewVTD;
         }
-        return getDefinitionOrSelf(VTD->getTemplatedDecl());
+        return VTD->getTemplatedDecl();
       }
       if (auto *VTPSD =
               From.dyn_cast<VarTemplatePartialSpecializationDecl *>()) {
@@ -2730,27 +2720,14 @@ VarDecl *VarDecl::getTemplateInstantiationPattern() const {
             break;
           VTPSD = NewVTPSD;
         }
-        return getDefinitionOrSelf<VarDecl>(VTPSD);
+        return VTPSD;
       }
     }
   }
 
-  // If this is the pattern of a variable template, find where it was
-  // instantiated from. FIXME: Is this necessary?
-  if (VarTemplateDecl *VarTemplate = VD->getDescribedVarTemplate()) {
-    while (!VarTemplate->isMemberSpecialization()) {
-      auto *NewVT = VarTemplate->getInstantiatedFromMemberTemplate();
-      if (!NewVT)
-        break;
-      VarTemplate = NewVT;
-    }
-
-    return getDefinitionOrSelf(VarTemplate->getTemplatedDecl());
-  }
-
   if (VD == this)
     return nullptr;
-  return getDefinitionOrSelf(const_cast<VarDecl*>(VD));
+  return const_cast<VarDecl *>(VD);
 }
 
 VarDecl *VarDecl::getInstantiatedFromStaticDataMember() const {
@@ -4274,7 +4251,7 @@ FunctionDecl::getTemplateInstantiationPattern(bool ForDefinition) const {
   if (isGenericLambdaCallOperatorSpecialization(
           dyn_cast<CXXMethodDecl>(this))) {
     assert(getPrimaryTemplate() && "not a generic lambda call operator?");
-    return getDefinitionOrSelf(getPrimaryTemplate()->getTemplatedDecl());
+    return getPrimaryTemplate()->getTemplatedDecl();
   }
 
   // Check for a declaration of this function that was instantiated from a
@@ -4287,7 +4264,7 @@ FunctionDecl::getTemplateInstantiationPattern(bool ForDefinition) const {
     if (ForDefinition &&
         !clang::isTemplateInstantiation(Info->getTemplateSpecializationKind()))
       return nullptr;
-    return getDefinitionOrSelf(cast<FunctionDecl>(Info->getInstantiatedFrom()));
+    return cast<FunctionDecl>(Info->getInstantiatedFrom());
   }
 
   if (ForDefinition &&
@@ -4304,7 +4281,7 @@ FunctionDecl::getTemplateInstantiationPattern(bool ForDefinition) const {
       Primary = NewPrimary;
     }
 
-    return getDefinitionOrSelf(Primary->getTemplatedDecl());
+    return Primary->getTemplatedDecl();
   }
 
   return nullptr;
@@ -4509,6 +4486,26 @@ FunctionDecl::setTemplateSpecializationKind(TemplateSpecializationKind TSK,
     }
   } else
     llvm_unreachable("Function cannot have a template specialization kind");
+}
+
+bool FunctionDecl::isImplicitHDExplicitInstantiation() const {
+  auto HasImplicitAttr = [this](const Attr *A) {
+    return A ? A->isImplicit() : isImplicit();
+  };
+  if (!HasImplicitAttr(getAttr<CUDAHostAttr>()) ||
+      !HasImplicitAttr(getAttr<CUDADeviceAttr>()))
+    return false;
+  auto IsExplicitInstTSK = [](TemplateSpecializationKind TSK) {
+    return TSK == TSK_ExplicitInstantiationDeclaration ||
+           TSK == TSK_ExplicitInstantiationDefinition;
+  };
+  if (IsExplicitInstTSK(getTemplateSpecializationKind()))
+    return true;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(this))
+    if (const auto *Spec =
+            dyn_cast<ClassTemplateSpecializationDecl>(MD->getParent()))
+      return IsExplicitInstTSK(Spec->getTemplateSpecializationKind());
+  return false;
 }
 
 SourceLocation FunctionDecl::getPointOfInstantiation() const {
@@ -5142,7 +5139,7 @@ EnumDecl *EnumDecl::getTemplateInstantiationPattern() const {
       EnumDecl *ED = getInstantiatedFromMemberEnum();
       while (auto *NewED = ED->getInstantiatedFromMemberEnum())
         ED = NewED;
-      return ::getDefinitionOrSelf(ED);
+      return ED;
     }
   }
 

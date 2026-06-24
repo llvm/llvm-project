@@ -175,6 +175,9 @@ public:
   MachineBasicBlock *EmitLoweredCatchRet(MachineInstr &MI,
                                            MachineBasicBlock *BB) const;
 
+  MachineBasicBlock *EmitLoweredSetFpmr(MachineInstr &MI,
+                                        MachineBasicBlock *MBB) const;
+
   MachineBasicBlock *EmitDynamicProbedAlloc(MachineInstr &MI,
                                             MachineBasicBlock *MBB) const;
 
@@ -441,6 +444,10 @@ public:
   preferredShiftLegalizationStrategy(SelectionDAG &DAG, SDNode *N,
                                      unsigned ExpansionFactor) const override;
 
+  CondMergingParams
+  getJumpConditionMergingParams(Instruction::BinaryOps Opc, const Value *Lhs,
+                                const Value *Rhs) const override;
+
   bool shouldTransformSignedTruncationCheck(EVT XVT,
                                             unsigned KeptBits) const override {
     // For vectors, we don't have a preference..
@@ -545,7 +552,7 @@ public:
     return 128;
   }
 
-  bool isAllActivePredicate(SelectionDAG &DAG, SDValue N) const;
+  bool isAllActivePredicate(const SelectionDAG &DAG, SDValue N) const;
   EVT getPromotedVTForPredicate(EVT VT) const;
 
   EVT getAsmOperandValueType(const DataLayout &DL, Type *Ty,
@@ -596,6 +603,11 @@ public:
   /// semantics to be preserved for instruction selection.
   bool shouldPreservePtrArith(const Function &F, EVT PtrVT) const override;
 
+  // Match a register name (e.g. "x5", "d5", "sp") to its register number, with
+  // no validity filtering. This is the single entry point for the generated
+  // register-name matcher, shared with getRegisterByName.
+  Register matchRegisterName(StringRef RegName) const;
+
 private:
   /// Keep a pointer to the AArch64Subtarget around so that we can
   /// make the right decision when generating code for different targets.
@@ -638,6 +650,7 @@ private:
   SDValue LowerABS(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFMUL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFMA(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerCLMUL(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue LowerMGATHER(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerMSCATTER(SDValue Op, SelectionDAG &DAG) const;
@@ -840,6 +853,7 @@ private:
   Register getRegisterByName(const char* RegName, LLT VT,
                              const MachineFunction &MF) const override;
 
+private:
   /// Examine constraint string and operand type and determine a weight value.
   /// The operand object must already have been set up with the operand type.
   ConstraintWeight
@@ -899,7 +913,7 @@ private:
                                        SmallVectorImpl<SDValue> &Results,
                                        SelectionDAG &DAG) const;
 
-  bool shouldNormalizeToSelectSequence(LLVMContext &, EVT) const override;
+  bool shouldNormalizeToSelectSequence(LLVMContext &, EVT, EVT) const override;
 
   void finalizeLowering(MachineFunction &MF) const override;
 

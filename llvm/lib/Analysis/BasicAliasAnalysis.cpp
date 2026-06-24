@@ -166,9 +166,9 @@ static TypeSize getMinimalExtentFrom(const Value &V,
   // extent as accesses for a lower offset would be valid. We need to exclude
   // the "or null" part if null is a valid pointer. We can ignore frees, as an
   // access after free would be undefined behavior.
-  bool CanBeNull, CanBeFreed;
+  bool CanBeNull;
   uint64_t DerefBytes =
-    V.getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
+      V.getPointerDereferenceableBytes(DL, CanBeNull, /*CanBeFreed=*/nullptr);
   DerefBytes = (CanBeNull && NullIsValidLoc) ? 0 : DerefBytes;
   // If queried with a precise location size, we assume that location size to be
   // accessed, thus valid.
@@ -1124,14 +1124,20 @@ AliasResult BasicAAResult::aliasGEP(
   };
 
   if (!V1Size.hasValue() && !V2Size.hasValue()) {
-    // TODO: This limitation exists for compile-time reasons. Relax it if we
-    // can avoid exponential pathological cases.
-    if (!isa<GEPOperator>(V2))
+    // Skip if V2 is itself a phi or select, leave the recursive walk to
+    // aliasPHI/aliasSelect.
+    if (isa<PHINode, SelectInst>(V2))
       return AliasResult::MayAlias;
 
-    // If both accesses have unknown size, we can only check whether the base
-    // objects don't alias.
-    return BaseObjectsAlias();
+    // Otherwise check whether the base objects don't alias. Only do so if V2
+    // is a GEP or an underlying object is a GEP/phi/select, which can be
+    // analyzed further.
+    if (isa<GEPOperator>(V2) ||
+        isa<GEPOperator, PHINode, SelectInst>(UnderlyingV1) ||
+        isa<GEPOperator, PHINode, SelectInst>(UnderlyingV2))
+      return BaseObjectsAlias();
+
+    return AliasResult::MayAlias;
   }
 
   DominatorTree *DT = getDT(AAQI);

@@ -17,8 +17,9 @@
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Error.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <memory>
 
 using namespace clang;
 using namespace ssaf;
@@ -29,21 +30,24 @@ public:
   UnsafeBufferUsageTUSummaryExtractor(TUSummaryBuilder &Builder)
       : TUSummaryExtractor(Builder) {}
 
-  Expected<std::unique_ptr<UnsafeBufferUsageEntitySummary>>
-  extractEntitySummary(const NamedDecl *Contributor, ASTContext &Ctx);
+  /// \return a non-null unique pointer to a UnsafeBufferUsageEntitySummary
+  std::unique_ptr<UnsafeBufferUsageEntitySummary>
+  extractEntitySummary(const std::vector<const NamedDecl *> &ContributorDecls,
+                       ASTContext &Ctx);
   void HandleTranslationUnit(ASTContext &Ctx) override;
 };
 } // namespace clang::ssaf
 
-Expected<std::unique_ptr<UnsafeBufferUsageEntitySummary>>
+std::unique_ptr<UnsafeBufferUsageEntitySummary>
 clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::extractEntitySummary(
-    const NamedDecl *Contributor, ASTContext &Ctx) {
+    const std::vector<const NamedDecl *> &ContributorDecls, ASTContext &Ctx) {
   std::set<const Expr *> UnsafePointers;
-
   auto MatchAction = [&UnsafePointers, &Ctx](const DynTypedNode &Node) {
     matchUnsafePointers(Node, Ctx, UnsafePointers);
   };
-  findMatchesIn(Contributor, MatchAction);
+
+  for (const auto *Contrib : ContributorDecls)
+    findMatchesIn(Contrib, MatchAction);
 
   EntityPointerLevelSet Results;
 
@@ -61,7 +65,7 @@ clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::extractEntitySummary(
       Results.insert(FilteredTranslation.begin(), FilteredTranslation.end());
       continue;
     }
-    return Translation.takeError();
+    logWarningFromError(Translation.takeError());
   }
 
   return std::make_unique<UnsafeBufferUsageEntitySummary>(
@@ -70,32 +74,17 @@ clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::extractEntitySummary(
 
 void clang::ssaf::UnsafeBufferUsageTUSummaryExtractor::HandleTranslationUnit(
     ASTContext &Ctx) {
-  std::vector<const NamedDecl *> Contributors;
-
-  findContributors(Ctx, Contributors);
-  for (auto *CD : Contributors) {
-    auto EntitySummary = extractEntitySummary(CD, Ctx);
-
-    if (!EntitySummary)
-      llvm::reportFatalInternalError(EntitySummary.takeError());
-    assert(*EntitySummary);
-    if ((*EntitySummary)->empty())
-      continue;
-
-    auto ContributorId = addEntity(CD);
-
-    if (!ContributorId)
-      llvm::reportFatalInternalError(makeEntityNameErr(Ctx, CD));
-
-    [[maybe_unused]] auto [Ignored, InsertionSucceeded] =
-        SummaryBuilder.addSummary(*ContributorId, std::move(*EntitySummary));
-
-    assert(InsertionSucceeded && "duplicated contributor extraction");
-  }
+  extractAndAddSummaries(
+      *this, SummaryBuilder, Ctx,
+      [&](const std::vector<const NamedDecl *> &Decls) {
+        return extractEntitySummary(Decls, Ctx);
+      },
+      "UnsafeBufferUsage");
 }
-
+namespace clang::ssaf {
 // NOLINTNEXTLINE(misc-use-internal-linkage)
-volatile int UnsafeBufferUsageTUSummaryExtractorAnchorSource = 0;
+volatile int UnsafeBufferUsageExtractorAnchorSource = 0;
+} // namespace clang::ssaf
 
 static clang::ssaf::TUSummaryExtractorRegistry::Add<
     UnsafeBufferUsageTUSummaryExtractor>

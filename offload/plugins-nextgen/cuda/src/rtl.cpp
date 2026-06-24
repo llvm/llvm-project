@@ -260,7 +260,7 @@ struct CUDAEventRef final : public GenericDeviceResourceRef {
       return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                            "creating an existing event");
 
-    CUresult Res = cuEventCreate(&Event, CU_EVENT_DEFAULT);
+    CUresult Res = cuEventCreate(&Event, CU_EVENT_DISABLE_TIMING);
     if (auto Err = Plugin::check(Res, "error in cuEventCreate: %s"))
       return Err;
 
@@ -396,6 +396,20 @@ struct CUDADeviceTy : public GenericDeviceTy {
             CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK, MaxSharedMem))
       return Err;
     MaxBlockSharedMemSize = MaxSharedMem;
+
+    CUmemAllocationProp Prop = {};
+    Prop.type = CU_MEM_ALLOCATION_TYPE_PINNED;
+    Prop.location.type = CU_MEM_LOCATION_TYPE_DEVICE;
+    Prop.location.id = DeviceId;
+
+    Res = cuMemGetAllocationGranularity(&Granularity, &Prop,
+                                        CU_MEM_ALLOC_GRANULARITY_MINIMUM);
+    if (auto Err = Plugin::check(
+            Res, "error in cuMemGetAllocationGranularity for the device: %s"))
+      return Err;
+    if (Granularity == 0)
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "wrong device page size");
 
     return Plugin::success();
   }
@@ -586,7 +600,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate memory on the device or related to the device.
-  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind) override {
+  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind,
+                            size_t Alignment = 0) override {
     if (Size == 0)
       return nullptr;
 
@@ -596,6 +611,13 @@ struct CUDADeviceTy : public GenericDeviceTy {
     void *MemAlloc = nullptr;
     CUdeviceptr DevicePtr;
     CUresult Res;
+
+    if (Alignment > 0 && Alignment > Granularity) {
+      return Plugin::error(ErrorCode::UNSUPPORTED,
+                           "requested alignment (%lu) larger than maximum "
+                           "supported alignment (%lu)",
+                           Alignment, Granularity);
+    }
 
     switch (Kind) {
     case TARGET_ALLOC_DEFAULT:
@@ -614,6 +636,19 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     if (auto Err = Plugin::check(Res, "error in cuMemAlloc[Host|Managed]: %s"))
       return std::move(Err);
+
+    if (Alignment > 0 && !isAddrAligned(Align(Alignment), MemAlloc)) {
+      if (auto FreeErr = free(MemAlloc, Kind)) {
+        return Plugin::error(ErrorCode::UNKNOWN,
+                             "Failure in deallcation of the incorrectly "
+                             "aligned pointer; requested alignemnt: %lu",
+                             Alignment);
+      }
+
+      return Plugin::error(ErrorCode::UNSUPPORTED,
+                           "unsupported alignment size");
+    }
+
     return MemAlloc;
   }
 
@@ -968,21 +1003,31 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "error in cuStreamLaunchHostFunc: %s");
   };
 
-  /// Create an event.
-  Error createEventImpl(void **EventPtrStorage) override {
+  /// Non-profiling events use CU_EVENT_DISABLE_TIMING from the pool.
+  /// Profiling events are created directly with timing and not pooled.
+  Error createEventImpl(void **EventPtrStorage, bool EnableProfiling) override {
     CUevent *Event = reinterpret_cast<CUevent *>(EventPtrStorage);
+    if (EnableProfiling) {
+      CUresult Res = cuEventCreate(Event, CU_EVENT_DEFAULT);
+      return Plugin::check(Res, "error in cuEventCreate: %s");
+    }
     return CUDAEventManager.getResource(*Event);
   }
 
-  /// Destroy a previously created event.
-  Error destroyEventImpl(void *EventPtr) override {
+  /// Profiling events are destroyed directly; non-profiling events return to
+  /// the pool.
+  Error destroyEventImpl(void *EventPtr, bool EnableProfiling) override {
     CUevent Event = reinterpret_cast<CUevent>(EventPtr);
+    if (EnableProfiling) {
+      CUresult Res = cuEventDestroy(Event);
+      return Plugin::check(Res, "error in cuEventDestroy: %s");
+    }
     return CUDAEventManager.returnResource(Event);
   }
 
   /// Record the event.
-  Error recordEventImpl(void *EventPtr,
-                        AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+  Error recordEventImpl(void *EventPtr, AsyncInfoWrapperTy &AsyncInfoWrapper,
+                        bool EnableProfiling) override {
     CUevent Event = reinterpret_cast<CUevent>(EventPtr);
 
     CUstream Stream;
@@ -1450,6 +1495,9 @@ private:
   /// simultaneously.
   uint32_t HardwareParallelism = 0;
 
+  /// Device page size.
+  size_t Granularity = 0;
+
   /// Tracker for virtual address reservations.
   VMemTrackerTy<CUmemGenericAllocationHandle> VMemTracker;
 };
@@ -1462,17 +1510,23 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   CUDADeviceTy &CUDADevice = static_cast<CUDADeviceTy &>(GenericDevice);
 
-  // The args size passed in LaunchParams may have tail padding, which is not
-  // accepted by the CUDA driver.
-  if (ArgsSize > LaunchParams.Size)
-    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                         "mismatch in kernel arguments");
+  void **KernelParams = nullptr;
+  if (KernelArgs.Flags.IsPtrArgs) {
+    KernelParams = KernelArgs.ArgPtrs;
+  } else {
+    // The args size passed in LaunchParams may have tail padding,
+    // which is not accepted by the CUDA driver.
+    if (ArgsSize > LaunchParams.Size)
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "mismatch in kernel arguments");
+  }
 
   CUstream Stream;
   if (auto Err = CUDADevice.getStream(AsyncInfoWrapper, Stream))
     return Err;
 
   size_t ConfigArgsSize = ArgsSize;
+  // Valid only for a contiguous buffer passed through LaunchParams.
   void *Config[] = {CU_LAUNCH_PARAM_BUFFER_POINTER, LaunchParams.Data,
                     CU_LAUNCH_PARAM_BUFFER_SIZE,
                     reinterpret_cast<void *>(&ConfigArgsSize),
@@ -1504,7 +1558,8 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                  DynBlockMemSize, Stream,
                                  &CoopAttr,       1};
 
-  CUresult Res = cuLaunchKernelEx(&LaunchConfig, Func, nullptr, Config);
+  CUresult Res = cuLaunchKernelEx(&LaunchConfig, Func, KernelParams,
+                                  KernelParams ? nullptr : Config);
 
   // Register a callback to indicate when the kernel is complete.
   if (GenericDevice.getRPCServer())

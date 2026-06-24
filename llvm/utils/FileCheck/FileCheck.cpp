@@ -168,6 +168,16 @@ static cl::list<unsigned> DumpInputContexts(
              "this option, the largest specified <N> has precedence.  The\n"
              "default is 5.\n"));
 
+static cl::opt<unsigned> DumpInputLabelWidth(
+    "dump-input-label-width", cl::value_desc("N"), cl::init(0), cl::Hidden,
+    cl::desc("In the dump requested by -dump-input, set <N> as the minimum\n"
+             "width for the initial label column.  When there are multiple\n"
+             "occurrences of this option, the last specified has precedence.\n"
+             "The default is 0, meaning that the actual labels fully\n"
+             "determine the width.  FileCheck's own test suite uses this\n"
+             "option to avoid a fluctuating column width when checking input\n"
+             "dumps.  This option is not expected to be useful elsewhere.\n"));
+
 typedef cl::list<std::string>::const_iterator prefix_iterator;
 
 
@@ -759,6 +769,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
   // One space would be enough to achieve that, but more makes it even easier
   // to see.
   LabelWidthGlobal = std::max(LabelWidthGlobal, LineNoWidth) + 3;
+  LabelWidthGlobal = std::max(LabelWidthGlobal, DumpInputLabelWidth.getValue());
 
   // Print annotated input lines.
   unsigned PrevLineInFilter = 0; // 0 means none so far

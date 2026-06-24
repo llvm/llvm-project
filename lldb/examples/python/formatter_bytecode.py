@@ -336,7 +336,7 @@ class BytecodeSection:
         print(
             textwrap.dedent(
                 """\
-                #if swift(>=6.3)
+                #if swift(>=6.3) && !objectFormat(Wasm)
                 #if objectFormat(MachO)
                 @section("__DATA_CONST,__lldbformatters")
                 #else

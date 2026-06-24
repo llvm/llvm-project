@@ -24,7 +24,6 @@ define i1 @foo(ptr %p) {
 !0 = !{i32 0, !"typeid1"}
 !1 = !{i32 8, !"cf-protection-branch", i32 1}
 
-
 ;.
 ; X86_32: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [2 x ptr] [ptr @f, ptr @g], align 16
 ; X86_32: @[[GLOB1:[0-9]+]] = private constant [0 x i8] zeroinitializer
