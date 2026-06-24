@@ -88,8 +88,12 @@ unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
   auto Kind = Fixup.getKind();
   AArch64::Specifier RefKind =
       static_cast<AArch64::Specifier>(Target.getSpecifier());
-  AArch64::Specifier SymLoc = AArch64::getSymbolLoc(RefKind);
-  bool IsNC = AArch64::isNotChecked(RefKind);
+  AArch64::Specifier SymLoc = RefKind & AArch64::S_SymLocBits;
+  bool IsNC = RefKind & AArch64::S_NC;
+  if (RefKind >= MCSymbolRefExpr::FirstTargetSpecifier) {
+    SymLoc = AArch64::getSymbolLoc(RefKind);
+    IsNC = AArch64::isNotChecked(RefKind);
+  }
 
   switch (SymLoc) {
   case AArch64::S_DTPREL:

@@ -67,17 +67,19 @@ unsigned AArch64WinCOFFObjectWriter::getRelocType(
 
   if (auto *A64E = dyn_cast<MCSpecifierExpr>(Expr)) {
     AArch64::Specifier Spec = A64E->getSpecifier();
-    switch (AArch64::getSymbolLoc(Spec)) {
-    case AArch64::S_ABS:
-    case AArch64::S_SECREL:
-      // Supported
-      break;
-    default:
-      Ctx.reportError(Fixup.getLoc(),
-                      "relocation specifier " +
-                          AArch64::getSpecifierName(A64E->getSpecifier()) +
-                          " unsupported on COFF targets");
-      return COFF::IMAGE_REL_ARM64_ABSOLUTE; // Dummy return value
+    if (Spec >= MCSymbolRefExpr::FirstTargetSpecifier) {
+      switch (AArch64::getSymbolLoc(Spec)) {
+      case AArch64::S_ABS:
+      case AArch64::S_SECREL:
+        // Supported
+        break;
+      default:
+        Ctx.reportError(Fixup.getLoc(),
+                        "relocation specifier " +
+                            AArch64::getSpecifierName(A64E->getSpecifier()) +
+                            " unsupported on COFF targets");
+        return COFF::IMAGE_REL_ARM64_ABSOLUTE; // Dummy return value
+      }
     }
   }
 
