@@ -51,6 +51,10 @@ OPTIONS
 
  Print universal headers.
 
+.. option:: -function_offsets
+
+ Print the decimal offset from the last label when disassembling.
+
 .. option:: -G
 
  Print data-in-code table.

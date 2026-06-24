@@ -3828,6 +3828,8 @@ static void parseOtoolOptions(const llvm::opt::InputArgList &InputArgs) {
 
   UseMemberSyntax = !InputArgs.hasArg(OTOOL_m);
 
+  FunctionOffsets = InputArgs.hasArg(OTOOL_function_offsets);
+
   InputFilenames = InputArgs.getAllArgValues(OTOOL_INPUT);
   if (InputFilenames.empty())
     reportCmdLineError("no input file");
