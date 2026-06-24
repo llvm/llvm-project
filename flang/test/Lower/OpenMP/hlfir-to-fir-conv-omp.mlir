@@ -14,8 +14,11 @@ func.func @_QPfoo() {
   %host_decl:2 = hlfir.declare %host_alloc(%1) {uniq_name = "_QFfooEarr"} : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1xi32>>, !fir.ref<!fir.array<1xi32>>)
   %map_info = omp.map.info var_ptr(%host_decl#1 : !fir.ref<!fir.array<1xi32>>, !fir.array<1xi32>) map_clauses(implicit, tofrom) capture(ByRef)  -> !fir.ref<!fir.array<1xi32>> {name = "arr"}
 
+  %c1_3 = arith.constant 1 : i32
+  %c10 = arith.constant 10 : i32
+
   // CHECK: omp.target
-  omp.target map_entries(%map_info -> %arg1 : !fir.ref<!fir.array<1xi32>>)  {
+  omp.target kernel_type(spmd) host_eval(%c1_3 -> %constarg0, %c10 -> %constarg1 : i32, i32) map_entries(%map_info -> %arg1 : !fir.ref<!fir.array<1xi32>>) {
     %c1_2 = arith.constant 1 : index
     %21 = fir.shape %c1_2 : (index) -> !fir.shape<1>
 
@@ -24,8 +27,6 @@ func.func @_QPfoo() {
 
     // CHECK: omp.teams
     omp.teams {
-      %c1_3 = arith.constant 1 : i32
-      %c10 = arith.constant 10 : i32
 
       // CHECK: omp.parallel
       omp.parallel {
@@ -35,7 +36,7 @@ func.func @_QPfoo() {
           // CHECK: omp.wsloop
           omp.wsloop {
             // CHECK: omp.loop_nest
-            omp.loop_nest (%arg2) : i32 = (%c1_3) to (%c10) inclusive step (%c1_3) {
+            omp.loop_nest (%arg2) : i32 = (%constarg0) to (%constarg1) inclusive step (%constarg0) {
               %25 = fir.address_of(@_QQro.1xi4.0) : !fir.ref<!fir.array<1xi32>>
               %26 = fir.shape %c1_2 : (index) -> !fir.shape<1>
               %27:2 = hlfir.declare %25(%26) {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.1xi4.0"} : (!fir.ref<!fir.array<1xi32>>, !fir.shape<1>) -> (!fir.ref<!fir.array<1xi32>>, !fir.ref<!fir.array<1xi32>>)
@@ -56,9 +57,9 @@ func.func @_QPfoo() {
       } {omp.composite}
       // CHECK: omp.terminator
       omp.terminator
-    }
+    } {omp.combined}
     // CHECK: omp.terminator
     omp.terminator
-  }
+  } {omp.combined}
   return
 }

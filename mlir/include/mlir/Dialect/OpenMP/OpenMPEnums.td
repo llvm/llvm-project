@@ -303,7 +303,7 @@ def ScheduleModifierAttr : OpenMP_EnumAttr<ScheduleModifier, "sched_mod">;
 def TargetExecModeBare : I32EnumAttrCase<"bare", 0>;
 def TargetExecModeGeneric : I32EnumAttrCase<"generic", 1>;
 def TargetExecModeSpmd : I32EnumAttrCase<"spmd", 2>;
-def TargetExecModeSpmdNoLoop : I32EnumAttrCase<"no_loop", 3>;
+def TargetExecModeSpmdNoLoop : I32EnumAttrCase<"spmd_no_loop", 3>;
 
 def TargetExecMode : OpenMP_I32EnumAttr<
     "TargetExecMode",
@@ -313,6 +313,10 @@ def TargetExecMode : OpenMP_I32EnumAttr<
       TargetExecModeSpmd,
       TargetExecModeSpmdNoLoop,
     ]>;
+
+def TargetExecModeAttr : OpenMP_EnumAttr<TargetExecMode, "kernel_type"> {
+  let assemblyFormat = "`(` $value `)`";
+}
 
 //===----------------------------------------------------------------------===//
 // variable_capture_kind enum.

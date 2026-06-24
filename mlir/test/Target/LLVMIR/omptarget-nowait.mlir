@@ -8,7 +8,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
     %3 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%2 : !llvm.ptr, f64)  -> !llvm.ptr {name = ""}
     %4 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>) map_clauses(to) capture(ByRef) members(%3 : [0] : !llvm.ptr) -> !llvm.ptr {name = "a"}
     %5 = omp.map.info var_ptr(%1 : !llvm.ptr, f64) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "n"}
-    omp.target nowait map_entries(%4 -> %arg1, %5 -> %arg2, %3 -> %arg3 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+    omp.target kernel_type(generic) nowait map_entries(%4 -> %arg1, %5 -> %arg2, %3 -> %arg3 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       %two_f = llvm.mlir.constant(2.000000e+00 : f64) : f64
       %one_i = llvm.mlir.constant(1 : index) : i64
       %6 = llvm.getelementptr %arg1[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)>

@@ -164,7 +164,7 @@ llvm.func @single_private(%x : !llvm.ptr) {
 llvm.func @target_allocate(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.target operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target allocate(%x : !llvm.ptr -> %x : !llvm.ptr) {
+  omp.target kernel_type(generic) allocate(%x : !llvm.ptr -> %x : !llvm.ptr) {
     omp.terminator
   }
   llvm.return
@@ -192,7 +192,7 @@ atomic {
 llvm.func @target_in_reduction(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause in_reduction in omp.target operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target in_reduction(@add_f32 %x -> %prv : !llvm.ptr) {
+  omp.target kernel_type(generic) in_reduction(@add_f32 %x -> %prv : !llvm.ptr) {
     omp.terminator
   }
   llvm.return
@@ -372,7 +372,7 @@ llvm.func @taskloop_allocate(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) 
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 
@@ -397,7 +397,7 @@ llvm.func @taskloop_inreduction_byref(%lb : i32, %ub : i32, %step : i32, %x : !l
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 
@@ -422,7 +422,7 @@ llvm.func @taskloop_reduction_byref(%lb : i32, %ub : i32, %step : i32, %x : !llv
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 
@@ -450,7 +450,7 @@ llvm.func @taskloop_reduction_cleanup(%lb : i32, %ub : i32, %step : i32, %x : !l
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 
@@ -476,7 +476,7 @@ llvm.func @taskloop_reduction_modifier(%lb : i32, %ub : i32, %step : i32, %x : !
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 
@@ -504,7 +504,7 @@ llvm.func @taskloop_reduction_two_arg_init(%lb : i32, %ub : i32, %step : i32, %x
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 
@@ -689,7 +689,7 @@ llvm.func @target_map_iterated_unsupported(%addr : !llvm.ptr) {
   } -> !omp.iterated<!llvm.ptr>
   // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target map_iterated(%it : !omp.iterated<!llvm.ptr>) map_entries(%map -> %arg0 : !llvm.ptr) {
+  omp.target kernel_type(generic) map_iterated(%it : !omp.iterated<!llvm.ptr>) map_entries(%map -> %arg0 : !llvm.ptr) {
     omp.terminator
   }
   llvm.return

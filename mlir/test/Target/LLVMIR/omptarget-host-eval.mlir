@@ -8,7 +8,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
     %out_ub = llvm.mlir.constant(3000 : i32) : i32
     %out_step = llvm.mlir.constant(1 : i32) : i32
 
-    omp.target
+    omp.target kernel_type(spmd)
       host_eval(%out_teams -> %teams, %out_threads -> %threads,
                 %out_lb -> %lb, %out_ub -> %ub, %out_step -> %step :
                 i32, i32, i32, i32, i32) {
@@ -24,9 +24,9 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
           omp.terminator
         } {omp.composite}
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
 }

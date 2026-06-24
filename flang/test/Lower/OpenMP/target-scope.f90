@@ -27,7 +27,7 @@ subroutine target_scope_basic()
 
   !$omp target
     ! CHECK: omp.map.info var_ptr(%{{.*}} : !fir.ref<i32>, i32)
-    ! CHECK: omp.target map_entries(%{{.*}} -> %{{.*}} : !fir.ref<i32>) private({{.*}} -> %[[XARG:.*]] [map_idx=0] : !fir.ref<i32>) {
+    ! CHECK: omp.target kernel_type(generic) map_entries(%{{.*}} -> %{{.*}} : !fir.ref<i32>) private({{.*}} -> %[[XARG:.*]] [map_idx=0] : !fir.ref<i32>) {
     ! CHECK:   hlfir.declare %[[XARG]] {uniq_name = "_QFtarget_scope_basicEx"}
     ! CHECK:   omp.scope {
     !$omp scope
@@ -44,7 +44,7 @@ subroutine target_scope_nowait()
   x = 10
 
   !$omp target
-    ! CHECK: omp.target map_entries(%{{.*}} -> %{{.*}} : !fir.ref<i32>) private({{.*}} -> %[[XARG:.*]] [map_idx=0] : !fir.ref<i32>) {
+    ! CHECK: omp.target kernel_type(generic) map_entries(%{{.*}} -> %{{.*}} : !fir.ref<i32>) private({{.*}} -> %[[XARG:.*]] [map_idx=0] : !fir.ref<i32>) {
     ! CHECK:   hlfir.declare %[[XARG]] {uniq_name = "_QFtarget_scope_nowaitEx"}
     ! CHECK:   omp.scope nowait {
     !$omp scope
@@ -61,7 +61,7 @@ subroutine target_scope_private()
   i = 0
 
   !$omp target
-    ! CHECK: omp.target map_entries(%{{.*}} -> %[[IARG:.*]] : !fir.ref<i32>) {
+    ! CHECK: omp.target kernel_type(generic) map_entries(%{{.*}} -> %[[IARG:.*]] : !fir.ref<i32>) {
     ! CHECK:   hlfir.declare %[[IARG]] {uniq_name = "_QFtarget_scope_privateEi"}
     ! CHECK:   omp.scope private(@_QFtarget_scope_privateEi_private_i32 %{{.*}}#0 -> %[[PRIV:.*]] : !fir.ref<i32>) {
     ! CHECK:     %[[PDECL:.*]]:2 = hlfir.declare %[[PRIV]] {uniq_name = "_QFtarget_scope_privateEi"}
@@ -80,7 +80,7 @@ subroutine target_scope_reduction()
   sum = 0
 
   !$omp target
-    ! CHECK: omp.target map_entries(%{{.*}} -> %[[SARG:.*]] : !fir.ref<i32>) {
+    ! CHECK: omp.target kernel_type(generic) map_entries(%{{.*}} -> %[[SARG:.*]] : !fir.ref<i32>) {
     ! CHECK:   hlfir.declare %[[SARG]] {uniq_name = "_QFtarget_scope_reductionEsum"}
     ! CHECK:   omp.scope reduction(@add_reduction_i32 %{{.*}}#0 -> %[[REDUC:.*]] : !fir.ref<i32>) {
     ! CHECK:     %[[RDECL:.*]]:2 = hlfir.declare %[[REDUC]] {uniq_name = "_QFtarget_scope_reductionEsum"}
@@ -100,7 +100,7 @@ subroutine target_scope_firstprivate()
   i = 42
 
   !$omp target
-    ! CHECK: omp.target map_entries(%{{.*}} -> %[[IARG:.*]] : !fir.ref<i32>) {
+    ! CHECK: omp.target kernel_type(generic) map_entries(%{{.*}} -> %[[IARG:.*]] : !fir.ref<i32>) {
     ! CHECK:   hlfir.declare %[[IARG]] {uniq_name = "_QFtarget_scope_firstprivateEi"}
     ! CHECK:   omp.scope private(@_QFtarget_scope_firstprivateEi_firstprivate_i32 %{{.*}}#0 -> %[[FP:.*]] : !fir.ref<i32>) {
     ! CHECK:     %[[FPDECL:.*]]:2 = hlfir.declare %[[FP]] {uniq_name = "_QFtarget_scope_firstprivateEi"}
@@ -120,7 +120,7 @@ subroutine target_scope_allocate()
   i = 0
 
   !$omp target
-    ! CHECK: omp.target map_entries(%{{.*}} -> %[[IARG:.*]] : !fir.ref<i32>) {
+    ! CHECK: omp.target kernel_type(generic) map_entries(%{{.*}} -> %[[IARG:.*]] : !fir.ref<i32>) {
     ! CHECK:   hlfir.declare %[[IARG]] {uniq_name = "_QFtarget_scope_allocateEi"}
     ! CHECK:   omp.scope allocate(%{{.*}} : i32 -> %{{.*}}#0 : !fir.ref<i32>) private(@_QFtarget_scope_allocateEi_private_i32 %{{.*}}#0 -> %[[APRIV:.*]] : !fir.ref<i32>) {
     ! CHECK:     %[[ADECL:.*]]:2 = hlfir.declare %[[APRIV]] {uniq_name = "_QFtarget_scope_allocateEi"}
