@@ -457,6 +457,7 @@ namespace llvm {
     bool isTruncateFree(Type *Ty1, Type *Ty2) const override;
     bool isTruncateFree(EVT VT1, EVT VT2) const override;
 
+    bool isZExtFree(Type *Ty1, Type *Ty2) const override;
     bool isZExtFree(SDValue Val, EVT VT2) const override;
 
     bool isFPExtFree(EVT DestVT, EVT SrcVT) const override;
