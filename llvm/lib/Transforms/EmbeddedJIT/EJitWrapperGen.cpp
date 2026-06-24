@@ -132,13 +132,28 @@ EJitWrapperGenPass::run(Module &M, ModuleAnalysisManager &AM) {
     auto *JitFallback = BasicBlock::Create(Ctx, "jit_fallback", F);
     auto *JitDispatch = BasicBlock::Create(Ctx, "jit_dispatch", F);
 
+    // Update PHI incoming blocks in successors that reference OrigEntry.
+    //
+    // NOTE: replaceAllUsesWith does NOT update PHI incoming blocks — a
+    // PHINode's incoming block is stored inside the PHINode and is NOT part
+    // of the BasicBlock's use list (OrigEntry can be a PHI incoming block
+    // while getNumUses() == 0). Without this explicit rewrite, erasing
+    // OrigEntry leaves dangling PHI incoming block pointers, crashing later
+    // passes. This triggers whenever the ejit_entry function's entry block
+    // is an incoming predecessor of a PHI — e.g. short-circuit && / || inside
+    // __builtin_expect(!!(a && b), 1) produces a PHI in the merge block whose
+    // incoming block is the entry block; lower-expect's handlePhiDef then
+    // dereferences the dangling pointer.
+    //
+    // Must run before splice(): replaceSuccessorsPhiUsesWith walks OrigEntry's
+    // successors via its terminator, which the splice below moves away.
+    OrigEntry.replaceSuccessorsPhiUsesWith(JitFallback);
+
     // Splice all instructions from OrigEntry to jit_fallback
     JitFallback->splice(JitFallback->end(), &OrigEntry, OrigEntry.begin(),
                         OrigEntry.end());
 
-    // Fix PHI nodes in successor blocks that reference the original entry block.
-    // Optimization passes may have created PHI nodes pointing at the entry block,
-    // and after we replace it with jit_fallback those PHI entries must be updated.
+    // Handle any remaining non-PHI uses of OrigEntry (e.g. blockaddress).
     OrigEntry.replaceAllUsesWith(JitFallback);
 
     // Delete the now-empty original entry block
