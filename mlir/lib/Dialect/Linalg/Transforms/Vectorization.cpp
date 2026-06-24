@@ -2381,6 +2381,18 @@ vectorizeScalableVectorPrecondition(Operation *op,
     return success(isa<linalg::UnPackOp>(op));
   }
 
+  // Ensure that the number of vector sizes and scalable flags provided by the
+  // user does not exceed the number of loops in the target Linalg op.
+  // Accessing iterator types with an out-of-bounds index would cause an
+  // assertion failure (SmallVector::operator[]). This check converts such a
+  // crash into a clean failure, allowing the transform interpreter to report
+  // an error gracefully.
+  // Regression test:
+  // mlir/test/Dialect/Vector/transform-op-vector-to-llvm.mlir
+  if (inputScalableVecDims.size() > linalgOp.getNumLoops() ||
+      inputVectorSizes.size() > linalgOp.getNumLoops())
+    return failure();
+
   // Cond 2: There's been no need for more than 2 scalable dims so far
   if (numOfScalableDims > 2)
     return failure();

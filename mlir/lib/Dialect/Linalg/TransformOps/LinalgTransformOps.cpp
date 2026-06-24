@@ -4174,7 +4174,6 @@ DiagnosedSilenceableFailure transform::VectorizeOp::apply(
       return mlir::emitSilenceableFailure(target->getLoc())
              << "Unsupported Op, cannot vectorize";
     }
-    FailureOr<VectorizationResult> vectorResults =
         linalg::vectorize(rewriter, target, vectorSizes, getScalableSizes(),
                           getVectorizeNdExtract().value_or(false),
                           /*flatten1DDepthwiseConv=*/false,

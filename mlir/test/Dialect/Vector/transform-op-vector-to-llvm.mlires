@@ -20,8 +20,6 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-// -----
-
 // RUN: mlir-opt %s -transform-interpreter -verify-diagnostics
 // Regression test for bug #204100.
 // Assertion idx < size() in SmallVector.h used to happen here.
@@ -41,7 +39,5 @@ module {
     }
   }
 }
-
-
 
 
