@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
@@ -18600,7 +18601,7 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return SDValue();
 
   // expandABS but only for i8 and i16
-  if (N->getOpcode() == ISD::ABS && !N->isDivergent() &&
+  if (ISD::isAbsOpcode(N->getOpcode()) && !N->isDivergent() &&
       (N->getValueType(0) == MVT::i8 || N->getValueType(0) == MVT::i16))
     return expandABS(N, DCI.DAG);
 
