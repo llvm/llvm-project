@@ -4846,6 +4846,18 @@ const SCEV *ScalarEvolution::getMinusSCEV(SCEVUse LHS, SCEVUse RHS,
   if (LHS == RHS)
     return getZero(LHS->getType());
 
+  // URem identity: X - C*(X u/ C) --> X u% C, for power-of-two C.
+  if (const auto *Mul = dyn_cast<SCEVMulExpr>(RHS);
+      Mul && Mul->getNumOperands() == 2 && LHS->getType() == RHS->getType()) {
+    const auto *MC = dyn_cast<SCEVConstant>(Mul->getOperand(0));
+    const auto *UD = dyn_cast<SCEVUDivExpr>(Mul->getOperand(1));
+    if (MC && UD && MC->getAPInt().isPowerOf2() && UD->getLHS() == LHS) {
+      const auto *UDC = dyn_cast<SCEVConstant>(UD->getRHS());
+      if (UDC && UDC->getAPInt() == MC->getAPInt())
+        return getURemExpr(LHS, MC);
+    }
+  }
+
   // If we subtract two pointers with different pointer bases, bail.
   // Eventually, we're going to add an assertion to getMulExpr that we
   // can't multiply by a pointer.
