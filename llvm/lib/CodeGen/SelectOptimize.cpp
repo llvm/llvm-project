@@ -58,6 +58,9 @@ STATISTIC(NumSelectColdBB,
           "Number of select groups not converted due to cold basic block");
 STATISTIC(NumSelectConvertedLoop,
           "Number of select groups converted due to loop-level analysis");
+STATISTIC(NumSelectConvertedNoPGO,
+          "Number of select groups converted due to high select density "
+          "without profile data");
 STATISTIC(NumSelectsConverted, "Number of selects converted");
 
 namespace llvm {
@@ -99,6 +102,16 @@ static cl::opt<bool>
     DisableLoopLevelHeuristics("disable-loop-level-heuristics", cl::Hidden,
                                cl::init(false),
                                cl::desc("Disable loop-level heuristics."));
+
+// When no profile data is available, use the count of select instructions in a
+// basic block as a proxy for over-speculation by SimplifyCFG. A BB containing
+// at least this many selects is assumed to have had predictable branches
+// speculatively converted, and will be reverted to branch form.
+static cl::opt<unsigned> SelectDensityNoPGOThreshold(
+    "select-opti-nopgo-density-threshold",
+    cl::desc("Min scalar selects per non-loop basic block to trigger branch "
+             "conversion without profile data (default: 4)"),
+    cl::init(4), cl::Hidden);
 
 namespace {
 
@@ -999,6 +1012,17 @@ void SelectOptimizeImpl::findProfitableSIGroupsInnerLoops(
   }
 
   for (SelectGroup &ASI : SIGroups) {
+    // Skip groups that contain an unpredictable select: forming a branch around
+    // an unpredictable condition is never profitable.
+    if (llvm::any_of(ASI.Selects, [](const SelectLike &SI) {
+          return SI.getI()->getMetadata(LLVMContext::MD_unpredictable);
+        })) {
+      OptimizationRemarkMissed ORmiss(DEBUG_TYPE, "SelectOpti",
+                                      ASI.Selects.front().getI());
+      ORmiss << "Not converted to branch because of unpredictable select condition. ";
+      EmitAndPrintRemark(ORE, ORmiss);
+      continue;
+    }
     // Assuming infinite resources, the cost of a group of instructions is the
     // cost of the most expensive instruction of the group.
     Scaled64 SelectCost = Scaled64::getZero(), BranchCost = Scaled64::getZero();
@@ -1046,7 +1070,7 @@ bool SelectOptimizeImpl::isConvertToBranchProfitableBase(
   // If unpredictable, branch form is less profitable.
   if (SI.getI()->getMetadata(LLVMContext::MD_unpredictable)) {
     ++NumSelectUnPred;
-    ORmiss << "Not converted to branch because of unpredictable branch. ";
+    ORmiss << "Not converted to branch because of unpredictable select condition. ";
     EmitAndPrintRemark(ORE, ORmiss);
     return false;
   }
@@ -1079,6 +1103,27 @@ bool SelectOptimizeImpl::isConvertToBranchProfitableBase(
     OR << "Converted to branch because select group in the latch block is big.";
     EmitAndPrintRemark(ORE, OR);
     return true;
+  }
+
+  // When no profile data is available on a target where predictable selects
+  // are expensive (e.g., modern out-of-order x86), use the total number of
+  // select instructions in the basic block as a proxy for over-speculation
+  // by SimplifyCFG.  SimplifyCFG's isProfitableToSpeculate() returns true
+  // for every branch when no branch-weight metadata exists, which can convert
+  // large groups of predictable branches into select chains.  Revert to
+  // branches when the select density exceeds the configured threshold.
+  if (!PSI->hasProfileSummary() && TLI->isPredictableSelectExpensive()) {
+    unsigned SelectCount = llvm::count_if(*BB, [](const Instruction &I) {
+      // Count only scalar selects; vector selects must not revert to branches.
+      auto *S = dyn_cast<SelectInst>(&I);
+      return S && !S->getType()->isVectorTy();
+    });
+    if (SelectCount >= SelectDensityNoPGOThreshold) {
+      ++NumSelectConvertedNoPGO;
+      OR << "Converted to branch: high select density without profile data. ";
+      EmitAndPrintRemark(ORE, OR);
+      return true;
+    }
   }
 
   ORmiss << "Not profitable to convert to branch (base heuristic).";

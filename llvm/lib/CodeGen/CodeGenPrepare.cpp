@@ -7730,9 +7730,10 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   if (DisableSelectToBranch)
     return false;
 
-  // If the SelectOptimize pass is enabled, selects have already been optimized.
-  if (!getCGPassBuilderOption().DisableSelectOptimize)
-    return false;
+  // Note: SelectOptimize (if enabled) runs earlier in the pipeline and handles
+  // profitability-guided select-to-branch conversion. CodeGenPrepare handles
+  // the remaining selects using target-lowering queries, so both passes are
+  // complementary and safe to run together.
 
   // Find all consecutive select instructions that share the same condition.
   SmallVector<SelectInst *, 2> ASI;
