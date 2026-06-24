@@ -122,6 +122,8 @@ private:
   bool checkMovImmInstr(MachineInstr &MI, MachineInstr *&MovMI,
                         MachineInstr *&SubregToRegMI);
 
+  bool removeRedundantAndMask(MachineInstr &MI);
+
   template <typename T>
   bool visitADDSUB(unsigned PosOpc, unsigned NegOpc, MachineInstr &MI);
   template <typename T>
@@ -652,6 +654,51 @@ bool AArch64MIPeepholeOptImpl::splitTwoPartImm(MachineInstr &MI,
   return true;
 }
 
+// Remove AND[W|X]ri when the mask is redundant because the source
+// operand's width already guarantees the upper bits are zero.
+//   %1:gpr32common = LDRBBui %0, 0
+//   %2:gpr32common = ANDWri %1, #0xff
+// All uses of %2 are replaced by %1, since the load is already zero extending.
+bool AArch64MIPeepholeOptImpl::removeRedundantAndMask(MachineInstr &MI) {
+  assert((MI.getOpcode() == AArch64::ANDWri ||
+          MI.getOpcode() == AArch64::ANDXri) &&
+         "Unsupported masking instructions");
+
+  unsigned RegSize = MI.getOpcode() == AArch64::ANDWri ? 32 : 64;
+  auto EncodedImm = MI.getOperand(2).getImm();
+  uint64_t Mask = AArch64_AM::decodeLogicalImmediate(EncodedImm, RegSize);
+
+  MachineInstr *SrcMI = MRI->getUniqueVRegDef(MI.getOperand(1).getReg());
+  if (!SrcMI || !SrcMI->hasOneMemOperand())
+    return false;
+
+  const MachineMemOperand *MMO = *SrcMI->memoperands_begin();
+  if (!MMO || !MMO->isLoad())
+    return false;
+
+  if (!AArch64InstrInfo::isZExtLoad(*SrcMI))
+    return false;
+
+  LocationSize Bits = MMO->getSizeInBits();
+  if (!Bits.hasValue() || Bits.isScalable())
+    return false;
+  uint64_t LoadSize = Bits.getValue().getFixedValue();
+  if (Mask != maskTrailingOnes<uint64_t>(LoadSize))
+    return false;
+
+  Register DstReg = MI.getOperand(0).getReg();
+  Register SrcReg = SrcMI->getOperand(0).getReg();
+  if (DstReg.isVirtual()) {
+    MRI->replaceRegWith(DstReg, SrcReg);
+  } else {
+    BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
+            DstReg)
+        .addReg(SrcReg);
+  }
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AArch64MIPeepholeOptImpl::visitINSviGPR(MachineInstr &MI, unsigned Opc) {
   // Check if this INSvi[X]gpr comes from COPY of a source FPR128
   //
@@ -969,6 +1016,10 @@ bool AArch64MIPeepholeOptImpl::run(MachineFunction &MF) {
       case AArch64::ANDSXrr:
         Changed |= trySplitLogicalImm<uint64_t>(
             AArch64::ANDXri, MI, SplitStrategy::Intersect, AArch64::ANDSXri);
+        break;
+      case AArch64::ANDXri:
+      case AArch64::ANDWri:
+        Changed |= removeRedundantAndMask(MI);
         break;
       case AArch64::EORWrr:
         Changed |= trySplitLogicalImm<uint32_t>(AArch64::EORWri, MI,
