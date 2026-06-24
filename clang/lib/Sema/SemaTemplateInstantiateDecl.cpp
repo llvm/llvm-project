@@ -4777,11 +4777,10 @@ Decl *TemplateDeclInstantiator::VisitFriendTemplateDecl(FriendTemplateDecl *D) {
     if (SubstTemplateParameterLists(TPLists, TPL))
       return nullptr;
 
-    if (cast_or_null<NamedDecl>(SemaRef.FindInstantiatedDecl(
+    if (auto *InstND = cast_or_null<NamedDecl>(SemaRef.FindInstantiatedDecl(
             D->getLocation(), D->getFriendDecl(), TemplateArgs)))
       FTD = FriendTemplateDecl::Create(SemaRef.Context, Owner, D->getLocation(),
-                                       D->getFriendDecl(), D->getFriendLoc(),
-                                       TPL);
+                                       InstND, D->getFriendLoc(), TPL);
   }
 
   if (FTD) {
