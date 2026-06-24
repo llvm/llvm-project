@@ -51,12 +51,17 @@ def make_lib_name(name):
     return "clang_rt.instrumentor_" + name + "_osx"
 
 
+def make_lib_substitutions(name):
+    config.substitutions.append(("%" + name + "_lib", make_lib_name(name)))
+
+
 # Add clang substitutions.
 config.substitutions.append(("%clang ", build_invocation(clang_cflags)))
 config.substitutions.append(("%clangxx ", build_invocation(clang_cxxflags)))
 
-flop_counter_lib = make_lib_name("flop_counter")
-config.substitutions.append(("%flop_counter_lib", flop_counter_lib))
+tools = ["flop_counter", "fp_precision_analysis"]
+for tool in tools:
+    make_lib_substitutions(tool)
 
 config.substitutions.append(("%lib_dir", config.compiler_rt_libdir))
 
