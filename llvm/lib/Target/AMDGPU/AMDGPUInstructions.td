@@ -69,8 +69,8 @@ class ILFormat<dag outs, dag ins, string asmstr, list<dag> pattern>
 }
 
 // Get the union of two Register lists
-class RegListUnion<list<Register> lstA, list<Register> lstB> {
-  list<Register> ret = !listconcat(lstA, !listremove(lstB, lstA));
+class RegListUnion<list<RegisterLike> lstA, list<RegisterLike> lstB> {
+  list<RegisterLike> ret = !listconcat(lstA, !listremove(lstB, lstA));
 }
 
 class AMDGPUPat<dag pattern, dag result> : Pat<pattern, result>,

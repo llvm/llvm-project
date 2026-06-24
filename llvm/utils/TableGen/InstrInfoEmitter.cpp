@@ -13,6 +13,7 @@
 
 #include "Basic/SequenceToOffsetTable.h"
 #include "Common/CodeGenDAGPatterns.h"
+#include "Common/CodeGenHwModes.h"
 #include "Common/CodeGenInstruction.h"
 #include "Common/CodeGenRegisters.h"
 #include "Common/CodeGenSchedule.h"
@@ -902,6 +903,21 @@ void InstrInfoEmitter::buildTargetSpecializedPseudoInstsMap() {
 //===----------------------------------------------------------------------===//
 
 // run - Emit the main instruction description records for the target...
+/// If R is an ImplicitRegByHwMode record, return the default-mode Register
+/// record. Otherwise return R unchanged. The default-mode register is used as
+/// the canonical value in MCInstrDesc implicit operand slots and as the lookup
+/// key in ImplicitRegByHwModeTables (row 0) for runtime resolution.
+static const Record *resolveImplicitRegByHwMode(const Record *R,
+                                                const CodeGenHwModes &CGH) {
+  if (!R->isSubClassOf("ImplicitRegByHwMode"))
+    return R;
+  const HwModeSelect &MS = CGH.getHwModeSelect(R);
+  for (const auto &P : MS.Items)
+    if (P.first == CodeGenHwModes::DefaultMode)
+      return P.second;
+  PrintFatalError(R->getLoc(), "ImplicitRegByHwMode has no default mode entry");
+}
+
 void InstrInfoEmitter::run(raw_ostream &OS) {
   TGTimer &Timer = Records.getTimer();
   Timer.startTimer("Analyze DAG patterns");
@@ -933,18 +949,38 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   bool HasUseLogicalOperandMappings = false;
   bool HasUseNamedOperandTable = false;
 
+  const CodeGenHwModes &CGH = Target.getHwModes();
+
   Timer.startTimer("Collect uses/defs");
   std::map<std::vector<const Record *>, unsigned> EmittedLists;
   std::vector<std::vector<const Record *>> ImplicitLists;
   unsigned ImplicitListSize = 0;
+
+  // Collect all unique ImplicitRegByHwMode records for table generation.
+  std::vector<const Record *> ImplicitRegByHwModes;
+  auto addImplicitRegByHwMode = [&](const Record *R) {
+    if (R->isSubClassOf("ImplicitRegByHwMode") &&
+        !llvm::is_contained(ImplicitRegByHwModes, R))
+      ImplicitRegByHwModes.push_back(R);
+  };
+
   for (const CodeGenInstruction *Inst : NumberedInstructions) {
     HasUseLogicalOperandMappings |=
         Inst->TheDef->getValueAsBit("UseLogicalOperandMappings");
     HasUseNamedOperandTable |=
         Inst->TheDef->getValueAsBit("UseNamedOperandTable");
 
-    std::vector<const Record *> ImplicitOps = Inst->ImplicitUses;
-    llvm::append_range(ImplicitOps, Inst->ImplicitDefs);
+    // Resolve ImplicitRegByHwMode records to their default-mode Register
+    // for the ImplicitOps array.  Collect the originals for table generation.
+    std::vector<const Record *> ImplicitOps;
+    for (const Record *R : Inst->ImplicitUses) {
+      addImplicitRegByHwMode(R);
+      ImplicitOps.push_back(resolveImplicitRegByHwMode(R, CGH));
+    }
+    for (const Record *R : Inst->ImplicitDefs) {
+      addImplicitRegByHwMode(R);
+      ImplicitOps.push_back(resolveImplicitRegByHwMode(R, CGH));
+    }
     if (EmittedLists.try_emplace(ImplicitOps, ImplicitListSize).second) {
       ImplicitLists.push_back(ImplicitOps);
       ImplicitListSize += ImplicitOps.size();
@@ -976,7 +1012,6 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   }
 
   const CodeGenRegBank &RegBank = Target.getRegBank();
-  const CodeGenHwModes &CGH = Target.getHwModes();
   unsigned NumModes = CGH.getNumModeIds();
   ArrayRef<const Record *> RegClassByHwMode = Target.getAllRegClassByHwMode();
   unsigned NumClassesByHwMode = RegClassByHwMode.size();
@@ -1132,6 +1167,40 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
       OS << "};\n\n";
     }
 
+    unsigned NumImplicitRegByHwModes = ImplicitRegByHwModes.size();
+    if (NumImplicitRegByHwModes != 0) {
+      // Emit the RegisterByHwMode lookup table: for each HwMode, the resolved
+      // MCPhysReg for each ImplicitRegByHwMode definition.
+      OS << "extern const MCPhysReg " << TargetName
+         << "ImplicitRegByHwModeTables[" << NumModes << "]["
+         << NumImplicitRegByHwModes << "] = {\n";
+
+      for (unsigned M = 0; M < NumModes; ++M) {
+        OS << "  { // " << CGH.getModeName(M, /*IncludeDefault=*/true) << '\n';
+        for (unsigned I = 0; I != NumImplicitRegByHwModes; ++I) {
+          const Record *Def = ImplicitRegByHwModes[I];
+          const HwModeSelect &ModeSelect = CGH.getHwModeSelect(Def);
+
+          auto FoundMode =
+              find_if(ModeSelect.Items, [=](const HwModeSelect::PairType P) {
+                return P.first == M;
+              });
+
+          if (FoundMode == ModeSelect.Items.end()) {
+            // Fall back to the default-mode register.
+            const Record *DefaultReg = resolveImplicitRegByHwMode(Def, CGH);
+            OS << indent(4) << getQualifiedName(DefaultReg) << ", // "
+               << Def->getName() << " (default)\n";
+          } else {
+            OS << indent(4) << getQualifiedName(FoundMode->second) << ", // "
+               << Def->getName() << "\n";
+          }
+        }
+        OS << "  },\n";
+      }
+      OS << "};\n\n";
+    }
+
     OS << "static inline void Init" << TargetName
        << "MCInstrInfo(MCInstrInfo *II) {\n";
     OS << "  II->InitMCInstrInfo(" << TargetName << "Descs.Insts, "
@@ -1149,6 +1218,13 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     if (NumClassesByHwMode != 0) {
       OS << '&' << TargetName << "RegClassByHwModeTables[0][0], "
          << NumClassesByHwMode;
+    } else
+      OS << "nullptr, 0";
+
+    OS << ", ";
+    if (NumImplicitRegByHwModes != 0) {
+      OS << '&' << TargetName << "ImplicitRegByHwModeTables[0][0], "
+         << NumImplicitRegByHwModes;
     } else
       OS << "nullptr, 0";
 
@@ -1175,6 +1251,11 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
       if (NumClassesByHwMode != 0) {
         OS << "extern const int16_t " << TargetName << "RegClassByHwModeTables["
            << NumModes << "][" << NumClassesByHwMode << "];\n";
+      }
+      if (!ImplicitRegByHwModes.empty()) {
+        OS << "extern const MCPhysReg " << TargetName
+           << "ImplicitRegByHwModeTables[" << NumModes << "]["
+           << ImplicitRegByHwModes.size() << "];\n";
       }
     } // end llvm namespace.
 
@@ -1218,6 +1299,9 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     if (HasComplexDeprecationInfos)
       OS << "extern const MCInstrInfo::ComplexDeprecationPredicate "
          << TargetName << "InstrComplexDeprecationInfos[];\n";
+
+    unsigned NumImplicitRegByHwModes = ImplicitRegByHwModes.size();
+
     Twine ClassName = TargetName + "GenInstrInfo";
     OS << ClassName << "::" << ClassName
        << "(const TargetSubtargetInfo &STI, const TargetRegisterInfo &TRI, "
@@ -1229,6 +1313,13 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
     if (NumClassesByHwMode != 0)
       OS << ", " << TargetName
          << "RegClassByHwModeTables[STI.getHwMode(MCSubtargetInfo::HwMode_"
+            "RegInfo)]";
+    else
+      OS << ", nullptr";
+
+    if (NumImplicitRegByHwModes != 0)
+      OS << ", " << TargetName
+         << "ImplicitRegByHwModeTables[STI.getHwMode(MCSubtargetInfo::HwMode_"
             "RegInfo)]";
 
     OS << ") {\n"
@@ -1242,12 +1333,20 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
       OS << TargetName << "InstrComplexDeprecationInfos, ";
     else
       OS << "nullptr, ";
-    OS << NumberedInstructions.size();
+    OS << NumberedInstructions.size() << ", ";
 
-    if (NumClassesByHwMode != 0) {
-      OS << ", &" << TargetName << "RegClassByHwModeTables[0][0], "
+    if (NumClassesByHwMode != 0)
+      OS << "&" << TargetName << "RegClassByHwModeTables[0][0], "
          << NumClassesByHwMode;
-    }
+    else
+      OS << "nullptr, 0";
+
+    OS << ", ";
+    if (NumImplicitRegByHwModes != 0)
+      OS << "&" << TargetName << "ImplicitRegByHwModeTables[0][0], "
+         << NumImplicitRegByHwModes;
+    else
+      OS << "nullptr, 0";
 
     OS << ");\n"
           "}\n";
@@ -1303,9 +1402,15 @@ void InstrInfoEmitter::emitRecord(
   const CodeGenTarget &Target = CDP.getTargetInfo();
 
   // Emit the implicit use/def list...
+  // Resolve ImplicitRegByHwMode to default-mode registers so the lookup
+  // into EmittedLists matches the resolved keys used during collection.
+  const CodeGenHwModes &CGH = Target.getHwModes();
   OS << Inst.ImplicitUses.size() << ",\t" << Inst.ImplicitDefs.size() << ",\t";
-  std::vector<const Record *> ImplicitOps = Inst.ImplicitUses;
-  llvm::append_range(ImplicitOps, Inst.ImplicitDefs);
+  std::vector<const Record *> ImplicitOps;
+  for (const Record *R : Inst.ImplicitUses)
+    ImplicitOps.push_back(resolveImplicitRegByHwMode(R, CGH));
+  for (const Record *R : Inst.ImplicitDefs)
+    ImplicitOps.push_back(resolveImplicitRegByHwMode(R, CGH));
 
   // Emit the operand info offset.
   OperandInfoTy OperandInfo = GetOperandInfo(Inst);
