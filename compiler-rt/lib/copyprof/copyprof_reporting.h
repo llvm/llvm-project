@@ -19,8 +19,9 @@
 namespace __copyprof {
 
 // Prints a CopyProf report to stderr. `pc` and `bp` are the program counter
-// and frame pointer where the copy was destroyed, `obj_size` its flat size in
-// bytes, and `did_allocate` whether the copy allocated memory.
+// and frame pointer where the copy was destroyed, `obj_size` its size in bytes
+// (including memory allocated while copying it), and `did_allocate` whether
+// the copy allocated memory.
 void LogCopyProfReport(uptr pc, uptr bp, uptr obj_size, bool did_allocate);
 
 }  // namespace __copyprof
