@@ -147,6 +147,10 @@ static Value *memToShadow(Module &M, IRBuilder<> &IRB, Type *IntptrTy,
   return IRB.CreateAdd(Shadow, ShadowBase);
 }
 
+// Instrument a standard-sized (1/2/4/8/16-byte), well-aligned memory access.
+// When UseCalls is true, emits a call to a sized ASan callback
+// (e.g. __asan_load4, __asan_store8). Otherwise, emits an inline shadow
+// memory check with a report block on failure.
 static void instrumentAddressImpl(Module &M, IRBuilder<> &IRB,
                                   Instruction *OrigIns,
                                   Instruction *InsertBefore, Value *Addr,
@@ -158,6 +162,32 @@ static void instrumentAddressImpl(Module &M, IRBuilder<> &IRB,
   Type *IntptrTy = M.getDataLayout().getIntPtrType(
       M.getContext(), AddrTy->getPointerAddressSpace());
   IRB.SetInsertPoint(InsertBefore);
+
+  if (UseCalls) {
+    SmallString<64> CallbackName{"__asan_"};
+    CallbackName += IsWrite ? "store" : "load";
+    Value *AddrLong = IRB.CreatePtrToInt(Addr, IntptrTy);
+    if (SizeArgument) {
+      CallbackName += "N";
+      if (Recover)
+        CallbackName += "_noabort";
+      FunctionCallee Callback = M.getOrInsertFunction(
+          CallbackName,
+          FunctionType::get(IRB.getVoidTy(), {IntptrTy, IntptrTy}, false));
+      IRB.CreateCall(Callback, {AddrLong, SizeArgument});
+    } else {
+      raw_svector_ostream OS(CallbackName);
+      size_t AccessSizeIndex = TypeStoreSizeToSizeIndex(TypeStoreSize);
+      OS << (1ULL << AccessSizeIndex);
+      if (Recover)
+        CallbackName += "_noabort";
+      FunctionCallee Callback = M.getOrInsertFunction(
+          CallbackName, FunctionType::get(IRB.getVoidTy(), {IntptrTy}, false));
+      IRB.CreateCall(Callback, AddrLong);
+    }
+    return;
+  }
+
   size_t AccessSizeIndex = TypeStoreSizeToSizeIndex(TypeStoreSize);
   Type *ShadowTy = IntegerType::get(M.getContext(),
                                     std::max(8U, TypeStoreSize >> AsanScale));
@@ -180,6 +210,10 @@ static void instrumentAddressImpl(Module &M, IRBuilder<> &IRB,
   Crash->setDebugLoc(OrigIns->getDebugLoc());
 }
 
+// Instrument a memory access for ASan. For standard-sized (1/2/4/8/16-byte),
+// well-aligned accesses, delegates to instrumentAddressImpl. For unusual sizes
+// or alignments, emits __asan_loadN/__asan_storeN when UseCalls is true, or
+// inline checks on the first and last byte otherwise.
 void instrumentAddress(Module &M, IRBuilder<> &IRB, Instruction *OrigIns,
                        Instruction *InsertBefore, Value *Addr, Align Alignment,
                        TypeSize TypeStoreSize, bool IsWrite,
@@ -207,6 +241,21 @@ void instrumentAddress(Module &M, IRBuilder<> &IRB, Instruction *OrigIns,
   Type *IntptrTy = M.getDataLayout().getIntPtrType(AddrTy);
   Value *NumBits = IRB.CreateTypeSize(IntptrTy, TypeStoreSize);
   Value *Size = IRB.CreateLShr(NumBits, ConstantInt::get(IntptrTy, 3));
+
+  if (UseCalls) {
+    Value *AddrLong = IRB.CreatePtrToInt(Addr, IntptrTy);
+    SmallString<64> CallbackName{"__asan_"};
+    CallbackName += IsWrite ? "store" : "load";
+    CallbackName += "N";
+    if (Recover)
+      CallbackName += "_noabort";
+    FunctionCallee Callback = M.getOrInsertFunction(
+        CallbackName,
+        FunctionType::get(IRB.getVoidTy(), {IntptrTy, IntptrTy}, false));
+    IRB.CreateCall(Callback, {AddrLong, Size});
+    return;
+  }
+
   Value *AddrLong = IRB.CreatePtrToInt(Addr, IntptrTy);
   Value *SizeMinusOne =
       IRB.CreateAdd(Size, ConstantInt::getAllOnesValue(IntptrTy));

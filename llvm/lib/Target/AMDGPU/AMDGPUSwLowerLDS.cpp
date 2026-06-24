@@ -1347,8 +1347,8 @@ bool AMDGPUSwLowerLDS::run() {
       Value *Addr = Operand.getPtr();
       instrumentAddress(M, IRB, Operand.getInsn(), Operand.getInsn(), Addr,
                         Operand.Alignment.valueOrOne(), Operand.TypeStoreSize,
-                        Operand.IsWrite, nullptr, false, false, AsanInfo.Scale,
-                        AsanInfo.Offset);
+                        Operand.IsWrite, nullptr, /*UseCalls=*/true,
+                        /*Recover=*/false, AsanInfo.Scale, AsanInfo.Offset);
       Changed = true;
     }
   }
