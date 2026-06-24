@@ -5578,9 +5578,13 @@ cc_library(
     hdrs = ["include/mlir/Dialect/LLVMIR/Transforms/OptimizeForNVVM.h"],
     includes = ["include"],
     deps = [
+        ":IR",
+        ":LLVMDialect",
         ":LLVMIRTransforms",
+        ":LLVMPassIncGen",
         ":NVVMDialect",
         ":Pass",
+        ":TransformUtils",
         ":Transforms",
     ],
 )
