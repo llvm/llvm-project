@@ -29,12 +29,9 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-
-#define DEBUG_TYPE "assumption-cache"
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -122,7 +119,9 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
   SmallVector<AssumptionCache::ResultElem, 16> Affected;
   findAffectedValues(CI, TTI, Affected);
 
-  [[maybe_unused]] DenseMap<Value *, int> ExpectedMatches;
+#ifndef NDEBUG
+  DenseMap<Value *, int> ExpectedMatches;
+#endif
 
   // If a value appears more than once in an AssumeInst e.g., 'ptr %arg1' in:
   //     call void @llvm.assume(i1 true)
@@ -135,9 +134,11 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
   // loop may then find only a match to a different AssumeInst, resulting in
   // an assertion failure. Avoid this by counting the number of expected
   // matches.
-  LLVM_DEBUG(for (auto &AV : Affected) if (AffectedValues.find_as(AV.Assume) !=
-                                           AffectedValues.end())
-                 ExpectedMatches[AV.Assume]++;);
+#ifndef NDEBUG
+  for (auto &AV : Affected)
+    if (AffectedValues.find_as(AV.Assume) != AffectedValues.end())
+      ExpectedMatches[AV.Assume]++;
+#endif
 
   for (auto &AV : Affected) {
     auto AVI = AffectedValues.find_as(AV.Assume);
@@ -150,7 +151,9 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
         Found = true;
         Elem.Assume = nullptr;
 
-        LLVM_DEBUG(ExpectedMatches[AV.Assume]--;);
+#ifndef NDEBUG
+        ExpectedMatches[AV.Assume]--;
+#endif
         assert(ExpectedMatches[AV.Assume] >= 0);
         // After ExpectedMatches[AV.Assume] == 0, we still need to iterate
         // through this loop to determine the value of HasNonnull, to avoid
