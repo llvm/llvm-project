@@ -112,16 +112,7 @@ public:
   /// will be forwarded to the constructor.
   template <typename... ArgTs> static void link(ArgTs &&... Args) {
     auto L = std::make_unique<LinkerImpl>(std::forward<ArgTs>(Args)...);
-
-    // Ownership of the linker is passed into the linker's doLink function to
-    // allow it to be passed on to async continuations.
-    //
-    // FIXME: Remove LTmp once we have c++17.
-    // C++17 sequencing rules guarantee that function name expressions are
-    // sequenced before arguments, so L->linkPhase1(std::move(L), ...) will be
-    // well formed.
-    auto &LTmp = *L;
-    LTmp.linkPhase1(std::move(L));
+    L->linkPhase1(std::move(L));
   }
 
 private:
