@@ -1045,8 +1045,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::shrink_to_fit() _NOE
 
 template <class _Tp, class _Allocator>
 template <class... _Args>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void
-vector<_Tp, _Allocator>::__emplace_back_slow_path(_Args&&... __args) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__emplace_back_slow_path(_Args&&... __args) {
   _SplitBuffer __v(__recommend(size() + 1), size(), this->__layout_.__alloc());
   //    __v.emplace_back(std::forward<_Args>(__args)...);
   pointer __end = __v.end();
@@ -1077,12 +1076,12 @@ template <class _Tp, class _Alloc>
 template <class... _Args>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Alloc>::__emplace_back_result_t
 vector<_Tp, _Alloc>::emplace_back(_Args&&... __args) {
-    std::__if_likely_else(
-        !__layout_.__is_full(),
-        [&] { __emplace_back_assume_capacity(std::forward<_Args>(__args)...); },
-        [&] { __emplace_back_slow_path(std::forward<_Args>(__args)...); });
+  std::__if_likely_else(
+      !__layout_.__is_full(),
+      [&] { __emplace_back_assume_capacity(std::forward<_Args>(__args)...); },
+      [&] { __emplace_back_slow_path(std::forward<_Args>(__args)...); });
 #if _LIBCPP_STD_VER >= 17
-    return back();
+  return back();
 #endif
 }
 

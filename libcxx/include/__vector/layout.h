@@ -369,7 +369,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __vector_layout<_Tp, _Alloc>::__invariants() 
     return __size_ == 0 && __capacity_ == 0;
   return __size_ <= __capacity_;
 }
-#else // !defined(_LIBCPP_ABI_VECTOR_LAYOUT_SIZE_BASED)
+#else  // !defined(_LIBCPP_ABI_VECTOR_LAYOUT_SIZE_BASED)
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 __vector_layout<_Tp, _Alloc>::__vector_layout(__vector_layout&& __other)
     _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
