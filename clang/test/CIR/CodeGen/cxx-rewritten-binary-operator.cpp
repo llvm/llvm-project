@@ -62,6 +62,8 @@ void cxx_rewritten_binary_operator_complex_expr() {
 // CIR: %[[RESULT:.*]] = cir.call @_ZNK22SpaceshipComplexResultltEi(%[[TMP_ADDR]], %[[CONST_0]]) : (!cir.ptr<!rec_SpaceshipComplexResult> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, !s32i {llvm.noundef}) -> (!cir.complex<!s32i> {llvm.noundef})
 // CIR: cir.store {{.*}} %[[RESULT]], %[[R_ADDR]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
+// The difference between LLVM and OGCG is due to missing ABI lowering.
+
 // LLVM: %[[A_ADDR:.*]] = alloca %struct.ComplexItem, i64 1, align 1
 // LLVM: %[[B_ADDR:.*]] = alloca %struct.ComplexItem, i64 1, align 1
 // LLVM: %[[R_ADDR:.*]] = alloca { i32, i32 }, i64 1, align 4
