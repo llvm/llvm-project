@@ -3924,6 +3924,8 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicWriteInt) {
   F->setName("func");
   IRBuilder<> Builder(BB);
 
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+
   LLVMContext &Ctx = M->getContext();
   IntegerType *Int32 = Type::getInt32Ty(Ctx);
   AllocaInst *XVal = Builder.CreateAlloca(Int32);
