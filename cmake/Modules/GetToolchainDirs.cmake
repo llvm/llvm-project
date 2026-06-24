@@ -79,7 +79,15 @@ function(get_runtimes_target_libdir_common default_target_triple arch variable)
   string(FIND "${default_target_triple}" "-" dash_index)
   string(SUBSTRING "${default_target_triple}" "${dash_index}" -1 triple_suffix)
   string(SUBSTRING "${default_target_triple}" 0 "${dash_index}" triple_cpu)
-  if(ANDROID AND "${arch}" STREQUAL "i386")
+  if("${triple_suffix}" MATCHES "linux-ohos")
+    if("${arch}" STREQUAL "i386")
+      set(target "i686-linux-ohos")
+    elseif("${arch}" MATCHES "^arm")
+      set(target "arm-linux-ohos")
+    else()
+      set(target "${arch}-linux-ohos")
+    endif()
+  elseif(ANDROID AND "${arch}" STREQUAL "i386")
     set(target "i686${triple_suffix}")
   elseif("${arch}" STREQUAL "amd64")
     set(target "x86_64${triple_suffix}")
@@ -125,25 +133,26 @@ function(get_runtimes_target_libdir_common default_target_triple arch variable)
   set("${variable}" "${target}" PARENT_SCOPE)
 endfunction()
 
-
-# Corresponds to Clang's ToolChain::getRuntimePath().
-function (get_toolchain_target_dirname outvar)
-  string(FIND "${LLVM_TARGET_TRIPLE}" "-" dash_index)
+function(get_runtimes_target_dirname default_target_triple variable)
+  string(FIND "${default_target_triple}" "-" dash_index)
   if (dash_index EQUAL "-1")
-    # This means LLVM_TARGET_TRIPLE is not set and we cannot derive the dirname
-    # from it. The proper behavior here would be to emit an error since we have
-    # no target we can build for. However, compiler-rt uses
-    # COMPILER_RT_DEFAULT_TARGET_TRIPLE instead and ignores LLVM_TARGET_TRIPLE.
-    # To not break the build when building only compiler-rt, we skip the triple
-    # subdirectory.
     set(target "")
   else ()
-    string(SUBSTRING "${LLVM_TARGET_TRIPLE}" 0 "${dash_index}" triple_cpu)
+    string(SUBSTRING "${default_target_triple}" 0 "${dash_index}" triple_cpu)
     set(arch "${triple_cpu}")
     if("${arch}" MATCHES "^i.86$")
       set(arch "i386")
     endif()
-    get_runtimes_target_libdir_common("${LLVM_TARGET_TRIPLE}" "${arch}" target)
-  endif ()
+    get_runtimes_target_libdir_common("${default_target_triple}" "${arch}" target)
+  endif()
+  set("${variable}" "${target}" PARENT_SCOPE)
+endfunction()
+
+
+# Corresponds to Clang's ToolChain::getRuntimePath().
+function (get_toolchain_target_dirname outvar)
+  # If LLVM_TARGET_TRIPLE is unset, this intentionally returns an empty
+  # directory to preserve the historical compiler-rt-only behavior.
+  get_runtimes_target_dirname("${LLVM_TARGET_TRIPLE}" target)
   set("${outvar}" "${target}" PARENT_SCOPE)
 endfunction()

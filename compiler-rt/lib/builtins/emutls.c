@@ -12,7 +12,7 @@
 
 #include "int_lib.h"
 
-#ifdef __BIONIC__
+#if defined(__BIONIC__) || defined(__OHOS__)
 // There are 4 pthread key cleanup rounds on Bionic. Delay emutls deallocation
 // to round 2. We need to delay deallocation because:
 //  - Android versions older than M lack __cxa_thread_atexit_impl, so apps
@@ -51,7 +51,7 @@ static void emutls_shutdown(emutls_address_array *array);
 
 static pthread_mutex_t emutls_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_key_t emutls_pthread_key;
-#ifdef __BIONIC__
+#if defined(__BIONIC__) || defined(__OHOS__)
 static bool emutls_key_created = false;
 #endif
 
@@ -401,8 +401,8 @@ void *__emutls_get_address(__emutls_control *control) {
   return array->data[index];
 }
 
-#ifdef __BIONIC__
-// Called by Bionic on dlclose to delete the emutls pthread key.
+#if defined(__BIONIC__) || defined(__OHOS__)
+// Called by Bionic/OHOS on dlclose to delete the emutls pthread key.
 __attribute__((visibility("hidden"))) void __emutls_unregister_key(void) {
   if (emutls_key_created) {
     pthread_key_delete(emutls_pthread_key);

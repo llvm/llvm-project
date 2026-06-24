@@ -1,0 +1,48 @@
+# This testing configuration handles running the test suite against LLVM's
+# libc++ using HDC on OHOS.
+
+lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
+
+config.substitutions.append(('%{flags}',
+    ('--sysroot @CMAKE_SYSROOT@ ' if '@CMAKE_SYSROOT@' else '') + '-pthread'
+))
+config.substitutions.append(('%{compile_flags}',
+    '-nostdinc++ -I %{target-include-dir} -I %{include-dir} -I %{libcxx-dir}/test/support'
+))
+config.substitutions.append(('%{link_flags}',
+    # Link libc++abi/libunwind directly: lld won't resolve libc++'s transitive
+    # DT_NEEDED entries when building the test executable.
+    '-nostdlib++ -L %{lib-dir} -l@LIBCXX_SHARED_OUTPUT_NAME@ -lc++abi -lunwind'
+))
+config.substitutions.append(('%{exec}',
+    '%{executor} --execdir %{temp} -- '
+))
+
+import os, site
+site.addsitedir(os.path.join('@LIBCXX_SOURCE_DIR@', 'utils'))
+import libcxx.test.params, libcxx.test.config
+
+config.available_features.add('LIBCXX-OHOS-FIXME')
+config.available_features.add('ohos-hdc')
+
+libcxx.test.config.configure(
+    libcxx.test.params.DEFAULT_PARAMETERS,
+    libcxx.test.features.DEFAULT_FEATURES,
+    config,
+    lit_config
+)
+
+# The generic libc++ hardening-mode feature probe executes a target binary via
+# %{exec}. On OHOS/HDC that probe can fail for runner reasons even though the
+# configured libc++ headers still expose the selected hardening mode. Preserve
+# the configured mode so UNSUPPORTED/REQUIRES annotations remain stable.
+detected_hardening_features = [
+    feature for feature in config.available_features
+    if feature.startswith('libcpp-hardening-mode=')
+]
+configured_hardening_mode = '@LIBCXX_HARDENING_MODE@'
+if (
+    not detected_hardening_features and
+    configured_hardening_mode in ('none', 'fast', 'extensive', 'debug')
+):
+    config.available_features.add(f'libcpp-hardening-mode={configured_hardening_mode}')

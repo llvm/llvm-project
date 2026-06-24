@@ -43,6 +43,8 @@
 #  define _LIBCPP_ELAST (_sys_nerr - 1)
 #elif defined(_AIX)
 #  define _LIBCPP_ELAST 127
+#elif defined(__OHOS_FAMILY__)
+// No _LIBCPP_ELAST needed on OHOS
 #else
 // Warn here so that the person doing the libcxx port has an easier time:
 #  warning ELAST for this platform not yet implemented

@@ -36,6 +36,10 @@ extern fp __CTOR_LIST_END__[];
 
 extern void __cxa_finalize(void *) __attribute__((weak));
 
+#if defined(__OHOS__)
+extern void __at_fini() __attribute__((weak));
+#endif
+
 static void __attribute__((used)) __do_init(void) {
   static _Bool __initialized;
   if (__builtin_expect(__initialized, 0))
@@ -113,6 +117,11 @@ static void __attribute__((used)) __do_fini(void) {
   if (__builtin_expect(__finalized, 0))
     return;
   __finalized = 1;
+
+#if defined(__OHOS__)
+  if (__at_fini)
+    __at_fini();
+#endif
 
   if (__cxa_finalize)
     __cxa_finalize(__dso_handle);

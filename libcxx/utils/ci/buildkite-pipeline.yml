@@ -172,3 +172,30 @@ steps:
       queue: libcxx-builders
       os: android
     <<: *common
+
+- group: OHOS
+  steps:
+  - label: OHOS AArch64 HDC Smoke
+    command: libcxx/utils/ci/run-buildbot ohos-hdc-aarch64-smoke
+    env:
+      CC: clang
+      CXX: clang++
+      OHOS_TARGET_TRIPLE: aarch64-linux-ohos
+      HDC_TIMEOUT_SECONDS: 240
+    agents:
+      queue: libcxx-builders
+      os: linux
+      device: ohos-hdc
+    <<: *common
+  - label: OHOS AArch64 HDC Full
+    command: libcxx/utils/ci/run-buildbot ohos-hdc-aarch64-full
+    env:
+      CC: clang
+      CXX: clang++
+      OHOS_TARGET_TRIPLE: aarch64-linux-ohos
+      HDC_TIMEOUT_SECONDS: 240
+    agents:
+      queue: libcxx-builders
+      os: linux
+      device: ohos-hdc
+    <<: *common

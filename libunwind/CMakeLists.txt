@@ -142,7 +142,12 @@ set(LIBUNWIND_STATIC_OUTPUT_NAME "unwind" CACHE STRING "Output name for the stat
 
 # TODO: Use common runtimes infrastructure for output and install paths
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
-  set(LIBUNWIND_TARGET_SUBDIR ${LLVM_DEFAULT_TARGET_TRIPLE})
+  if(CMAKE_SYSTEM_NAME STREQUAL "OHOS")
+    include(GetToolchainDirs)
+    get_runtimes_target_dirname("${LLVM_DEFAULT_TARGET_TRIPLE}" LIBUNWIND_TARGET_SUBDIR)
+  else()
+    set(LIBUNWIND_TARGET_SUBDIR ${LLVM_DEFAULT_TARGET_TRIPLE})
+  endif()
   if(LIBUNWIND_LIBDIR_SUBDIR)
     string(APPEND LIBUNWIND_TARGET_SUBDIR /${LIBUNWIND_LIBDIR_SUBDIR})
   endif()

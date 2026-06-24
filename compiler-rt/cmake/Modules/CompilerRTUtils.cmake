@@ -491,8 +491,12 @@ endfunction()
 
 function(get_compiler_rt_target arch variable)
   if(COMPILER_RT_DEFAULT_TARGET_ONLY)
-    # Use exact spelling when building only for the target specified to CMake.
-    set(target "${COMPILER_RT_DEFAULT_TARGET_TRIPLE}")
+    if(CMAKE_SYSTEM_NAME STREQUAL "OHOS")
+      get_runtimes_target_libdir_common("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" "${arch}" target)
+    else()
+      # Use exact spelling when building only for the target specified to CMake.
+      set(target "${COMPILER_RT_DEFAULT_TARGET_TRIPLE}")
+    endif()
   else()
     get_runtimes_target_libdir_common("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" "${arch}" target)
   endif()
