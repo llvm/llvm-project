@@ -14427,6 +14427,23 @@ libc_function(
 #     ],
 # )
 
+libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_ioctl",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/ioctl.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_cpp_type_traits",
+        ":__support_error_or",
+        ":__support_macros_attributes",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+    ],
+)
+
 libc_function(
     name = "isatty",
     srcs = ["src/unistd/linux/isatty.cpp"],
@@ -14435,6 +14452,7 @@ libc_function(
         ":__support_common",
         ":__support_libc_errno",
         ":__support_macros_config",
+        ":__support_osutil_linux_syscall_wrappers_ioctl",
         ":__support_osutil_syscall",
         ":errno",
         ":hdr_unistd_macros",

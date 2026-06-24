@@ -828,7 +828,7 @@ class PatCoreVMacGprGprUimm5 <string intr, string asm>
   : Pat<(!cast<Intrinsic>("int_riscv_cv_mac_" # intr) GPR:$rs1, GPR:$rs2, cv_tuimm5:$imm5),
         (!cast<RVInst>("CV_" # asm) GPR:$rs1, GPR:$rs2, cv_tuimm5:$imm5)>;
 
-let Predicates = [HasVendorXCVmac] in {
+let Predicates = [HasVendorXCVmac, IsRV32] in {
   def : PatCoreVMacGprGprGpr<"mac", "MAC">;
   def : PatCoreVMacGprGprGpr<"msu", "MSU">;
 
