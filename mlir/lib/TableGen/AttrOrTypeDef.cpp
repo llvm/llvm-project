@@ -211,6 +211,8 @@ bool AttrOrTypeDef::genMnemonicAlias() const {
   return def->getValueAsBit("genMnemonicAlias");
 }
 
+bool AttrOrTypeDef::isPrivate() const { return getDialect().isPrivate(); }
+
 ArrayRef<SMLoc> AttrOrTypeDef::getLoc() const { return def->getLoc(); }
 
 bool AttrOrTypeDef::skipDefaultBuilders() const {

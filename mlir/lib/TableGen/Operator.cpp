@@ -68,6 +68,8 @@ std::string Operator::getOperationName() const {
   return std::string(llvm::formatv("{0}.{1}", prefix, opName));
 }
 
+bool Operator::isPrivate() const { return dialect.isPrivate(); }
+
 std::string Operator::getAdaptorName() const {
   return std::string(llvm::formatv("{0}Adaptor", getCppClassName()));
 }

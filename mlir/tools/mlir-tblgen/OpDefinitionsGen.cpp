@@ -24,6 +24,7 @@
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
 #include "mlir/TableGen/Operator.h"
+#include "mlir/TableGen/PrivateName.h"
 #include "mlir/TableGen/Property.h"
 #include "mlir/TableGen/Region.h"
 #include "mlir/TableGen/SideEffects.h"
@@ -273,6 +274,23 @@ static std::string getArgumentName(const Operator &op, int index) {
   return std::string(formatv("{0}_{1}", generatedArgName, index));
 }
 
+/// Returns true if a private op should behave as if it did not specify any
+/// custom or declarative assembly format. The op remains registered and can
+/// still be printed in generic form, but its custom textual syntax is not
+/// accepted in private-name obfuscation builds.
+static bool shouldStripPrivateAssemblyFormat(const Operator &op) {
+  return op.isPrivate() && tblgen::obfuscatePrivateNamesEnabled();
+}
+
+/// Returns a diagnostic label for generated verifier text. For private ops in
+/// obfuscation builds, avoid emitting user-authored operand/result/region/etc.
+/// names into release binaries.
+static StringRef getEmittedDiagnosticName(const Operator &op, StringRef name) {
+  if (op.isPrivate() && tblgen::obfuscatePrivateNamesEnabled())
+    return "";
+  return name;
+}
+
 // Returns true if we can use unwrapped value for the given `attr` in builders.
 static bool canUseUnwrappedRawValue(const tblgen::Attribute &attr) {
   return attr.getReturnType() != attr.getStorageType() &&
@@ -381,7 +399,9 @@ public:
     return [this](raw_ostream &os) -> raw_ostream & {
       if (emitForOp)
         return os << "emitOpError(\"";
-      return os << formatv("emitError(loc, \"'{0}' op ", op.getOperationName());
+      return os << formatv("emitError(loc, \"'{0}' op ",
+                           tblgen::maybeObfuscateDotted(op.getOperationName(),
+                                                        op.isPrivate()));
     };
   }
 
@@ -1168,7 +1188,8 @@ OpEmitter::OpEmitter(const Operator &op,
   genFolderDecls();
   genTypeInterfaceMethods();
   genOpInterfaceMethods();
-  generateOpFormat(op, opClass, emitHelper.hasProperties());
+  if (!shouldStripPrivateAssemblyFormat(op))
+    generateOpFormat(op, opClass, emitHelper.hasProperties());
   genSideEffectInterfaceMethods();
 }
 void OpEmitter::emitDecl(
@@ -1210,6 +1231,7 @@ void OpEmitter::genAttrNameGetters() {
       emitHelper.getAttrMetadata();
   bool hasOperandSegmentsSize =
       op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments");
+
   // Emit the getAttributeNames method.
   {
     auto *method = opClass.addStaticInlineMethod(
@@ -3835,6 +3857,9 @@ void OpEmitter::genTypeInterfaceMethods() {
 }
 
 void OpEmitter::genParser() {
+  if (shouldStripPrivateAssemblyFormat(op))
+    return;
+
   if (hasStringAttribute(def, "assemblyFormat"))
     return;
 
@@ -3851,6 +3876,9 @@ void OpEmitter::genParser() {
 }
 
 void OpEmitter::genPrinter() {
+  if (shouldStripPrivateAssemblyFormat(op))
+    return;
+
   if (hasStringAttribute(def, "assemblyFormat"))
     return;
 
@@ -3978,8 +4006,8 @@ void OpEmitter::genOperandResultVerifier(MethodBody &body,
           "    if (::mlir::failed(::mlir::OpTrait::impl::verifyValueSizeAttr("
           "*this, \"{0}\", \"{1}\", valueGroup{2}.size())))\n"
           "      return ::mlir::failure();\n",
-          value.constraint.getVariadicOfVariadicSegmentSizeAttr(), value.name,
-          staticValue.index());
+          value.constraint.getVariadicOfVariadicSegmentSizeAttr(),
+          getEmittedDiagnosticName(op, value.name), staticValue.index());
     }
 
     // Otherwise, if there is no predicate there is nothing left to do.
@@ -4031,7 +4059,8 @@ void OpEmitter::genRegionVerifier(MethodBody &body) {
                          : formatv(getSingleRegion, it.index()).str();
     auto constraintFn =
         staticVerifierEmitter.getRegionConstraintFn(region.constraint);
-    body << formatv(verifyRegion, getRegion, constraintFn, region.name);
+    body << formatv(verifyRegion, getRegion, constraintFn,
+                    getEmittedDiagnosticName(op, region.name));
   }
   body << "  }\n";
 }
@@ -4069,7 +4098,7 @@ void OpEmitter::genSuccessorVerifier(MethodBody &body) {
     auto constraintFn =
         staticVerifierEmitter.getSuccessorConstraintFn(successor.constraint);
     body << formatv(verifySuccessor, getSuccessor, constraintFn,
-                    successor.name);
+                    getEmittedDiagnosticName(op, successor.name));
   }
   body << "  }\n";
 }
@@ -4173,7 +4202,9 @@ void OpEmitter::genOpNameGetter() {
   auto *method = opClass.addStaticMethod<Method::Constexpr>(
       "::llvm::StringLiteral", "getOperationName");
   ERROR_IF_PRUNED(method, "getOperationName", op);
-  method->body() << "  return ::llvm::StringLiteral(\"" << op.getOperationName()
+  method->body() << "  return ::llvm::StringLiteral(\""
+                 << tblgen::maybeObfuscateDotted(op.getOperationName(),
+                                                 op.isPrivate())
                  << "\");";
 }
 
@@ -4440,7 +4471,7 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
     body.indent() << "if (odsAttrs)\n";
     body.indent() << formatv(
         "odsOpName.emplace(\"{0}\", odsAttrs.getContext());\n",
-        op.getOperationName());
+        tblgen::maybeObfuscateDotted(op.getOperationName(), op.isPrivate()));
 
     paramList.insert(paramList.begin(), MethodParameter("RangeT", "values"));
     auto *constructor = genericAdaptor.addConstructor(paramList);

@@ -152,6 +152,59 @@ set(MLIR_ENABLE_NVPTXCOMPILER 0 CACHE BOOL
 
 set(MLIR_ENABLE_PDL_IN_PATTERNMATCH 1 CACHE BOOL "Enable PDL in PatternMatch")
 
+#-------------------------------------------------------------------------------
+# Private name obfuscation
+#
+# Three knobs, all supplied by the build (privacy of a dialect or a pass
+# depends on the tool consuming it, not on the source definition):
+#
+#   MLIR_PRIVATE_NAME_OBFUSCATOR : a shell command that obfuscates one name.
+#                                  mlir-tblgen pipes each name into this
+#                                  command via stdin and uses the first
+#                                  whitespace-delimited token of stdout
+#                                  (prefixed with `_`) as the obfuscated
+#                                  name.
+#   MLIR_PRIVATE_DIALECTS        : a list of dialect names whose ops,
+#                                  attributes, and types should have their
+#                                  mnemonics obfuscated.
+#   MLIR_PRIVATE_PASSES          : if ON, all passes are treated as private:
+#                                  their arguments / names are obfuscated
+#                                  and their description / per-option /
+#                                  per-statistic descriptions are emitted
+#                                  as empty strings.
+#
+# Obfuscation only happens for items that are private AND when
+# MLIR_PRIVATE_NAME_OBFUSCATOR is also set. This makes it harder to reverse
+# engineer the resulting binary while keeping registration, pattern
+# matching, bytecode, and IR printing internally consistent across
+# translation units of one build.
+#
+# Choosing a stable obfuscator is the user's responsibility: e.g.
+# `md5sum | awk '{print $1}'`, an HMAC with a salt, or any custom script.
+# The obfuscator must produce a unique output per unique input (no
+# collisions); hashing tools usually satisfy this in practice. Bytecode
+# produced by a build with one obfuscator is generally unreadable by any
+# build that uses a different obfuscator.
+#-------------------------------------------------------------------------------
+set(MLIR_PRIVATE_NAME_OBFUSCATOR "" CACHE STRING
+    "Shell command fed to mlir-tblgen for private-name obfuscation; empty disables obfuscation.")
+set(MLIR_PRIVATE_DIALECTS "" CACHE STRING
+    "Semicolon-separated list of dialect names whose ops/attrs/types are obfuscated.")
+option(MLIR_PRIVATE_PASSES
+       "Treat all passes as private (obfuscate names, empty descriptions)."
+       OFF)
+
+if(MLIR_PRIVATE_NAME_OBFUSCATOR)
+  list(APPEND LLVM_TABLEGEN_FLAGS "--mlir-private-name-obfuscator=${MLIR_PRIVATE_NAME_OBFUSCATOR}")
+endif()
+if(MLIR_PRIVATE_DIALECTS)
+  string(REPLACE ";" "," _mlir_private_dialects_csv "${MLIR_PRIVATE_DIALECTS}")
+  list(APPEND LLVM_TABLEGEN_FLAGS "--mlir-private-dialects=${_mlir_private_dialects_csv}")
+endif()
+if(MLIR_PRIVATE_PASSES)
+  list(APPEND LLVM_TABLEGEN_FLAGS "--mlir-private-passes")
+endif()
+
 option(MLIR_INCLUDE_TESTS
        "Generate build targets for the MLIR unit tests."
        ${LLVM_INCLUDE_TESTS})
