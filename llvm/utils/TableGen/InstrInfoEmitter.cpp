@@ -25,6 +25,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/SourceMgr.h"
@@ -34,6 +35,7 @@
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TGTimer.h"
 #include "llvm/TableGen/TableGenBackend.h"
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -69,7 +71,6 @@ private:
                  ArrayRef<const CodeGenInstruction *> NumberedInstructions);
 
   using OperandInfoTy = std::vector<std::string>;
-  using OperandInfoListTy = std::vector<OperandInfoTy>;
   using OperandInfoMapTy = std::map<OperandInfoTy, unsigned>;
 
   DenseMap<const CodeGenInstruction *, const CodeGenInstruction *>
@@ -108,9 +109,9 @@ private:
       ArrayRef<const CodeGenInstruction *> TargetInstructions);
 
   // Operand information.
-  unsigned CollectOperandInfo(OperandInfoListTy &OperandInfoList,
+  unsigned CollectOperandInfo(OperandInfoTy &PackedOperandInfo,
                               OperandInfoMapTy &OperandInfoMap);
-  void EmitOperandInfo(raw_ostream &OS, OperandInfoListTy &OperandInfoList);
+  void EmitOperandInfo(raw_ostream &OS, const OperandInfoTy &PackedOperandInfo);
   OperandInfoTy GetOperandInfo(const CodeGenInstruction &Inst);
 };
 
@@ -226,33 +227,75 @@ InstrInfoEmitter::GetOperandInfo(const CodeGenInstruction &Inst) {
 }
 
 unsigned
-InstrInfoEmitter::CollectOperandInfo(OperandInfoListTy &OperandInfoList,
+InstrInfoEmitter::CollectOperandInfo(OperandInfoTy &PackedOperandInfo,
                                      OperandInfoMapTy &OperandInfoMap) {
   const CodeGenTarget &Target = CDP.getTargetInfo();
-  unsigned Offset = 0;
   for (const CodeGenInstruction *Inst : Target.getInstructions()) {
     auto OverrideEntry = TargetSpecializedPseudoInsts.find(Inst);
     if (OverrideEntry != TargetSpecializedPseudoInsts.end())
       Inst = OverrideEntry->second;
 
-    OperandInfoTy OperandInfo = GetOperandInfo(*Inst);
-    if (OperandInfoMap.try_emplace(OperandInfo, Offset).second) {
-      OperandInfoList.push_back(OperandInfo);
-      Offset += OperandInfo.size();
-    }
+    OperandInfoMap.try_emplace(GetOperandInfo(*Inst), 0);
   }
-  return Offset;
+
+  SmallVector<const OperandInfoTy *> OperandInfos;
+  OperandInfos.reserve(OperandInfoMap.size());
+  for (const auto &Entry : OperandInfoMap)
+    OperandInfos.push_back(&Entry.first);
+  llvm::sort(OperandInfos,
+             [](const OperandInfoTy *LHS, const OperandInfoTy *RHS) {
+               if (LHS->size() != RHS->size())
+                 return LHS->size() > RHS->size();
+               return *LHS < *RHS;
+             });
+
+  StringMap<SmallVector<unsigned>> ElementPositions;
+  for (const OperandInfoTy *OperandInfo : OperandInfos) {
+    if (OperandInfo->empty()) {
+      OperandInfoMap.find(*OperandInfo)->second = 0;
+      continue;
+    }
+
+    std::optional<unsigned> ExistingOffset;
+    for (unsigned Offset : ElementPositions.lookup(OperandInfo->front())) {
+      if (Offset + OperandInfo->size() <= PackedOperandInfo.size() &&
+          std::equal(OperandInfo->begin(), OperandInfo->end(),
+                     PackedOperandInfo.begin() + Offset)) {
+        ExistingOffset = Offset;
+        break;
+      }
+    }
+    if (ExistingOffset) {
+      OperandInfoMap.find(*OperandInfo)->second = *ExistingOffset;
+      continue;
+    }
+
+    unsigned Overlap = std::min(PackedOperandInfo.size(), OperandInfo->size());
+    while (Overlap &&
+           !std::equal(PackedOperandInfo.end() - Overlap,
+                       PackedOperandInfo.end(), OperandInfo->begin()))
+      --Overlap;
+
+    OperandInfoMap.find(*OperandInfo)->second =
+        PackedOperandInfo.size() - Overlap;
+    unsigned OldSize = PackedOperandInfo.size();
+    PackedOperandInfo.insert(PackedOperandInfo.end(),
+                             OperandInfo->begin() + Overlap,
+                             OperandInfo->end());
+    for (unsigned I = OldSize; I != PackedOperandInfo.size(); ++I)
+      ElementPositions[PackedOperandInfo[I]].push_back(I);
+  }
+  return PackedOperandInfo.size();
 }
 
 void InstrInfoEmitter::EmitOperandInfo(raw_ostream &OS,
-                                       OperandInfoListTy &OperandInfoList) {
-  unsigned Offset = 0;
-  for (auto &OperandInfo : OperandInfoList) {
-    OS << "    /* " << Offset << " */";
-    for (auto &Info : OperandInfo)
-      OS << " { " << Info << " },";
-    OS << '\n';
-    Offset += OperandInfo.size();
+                                       const OperandInfoTy &PackedOperandInfo) {
+  for (auto [Index, Info] : enumerate(PackedOperandInfo)) {
+    if (Index % 4 == 0)
+      OS << "    /* " << Index << " */";
+    OS << " { " << Info << " },";
+    if (Index % 4 == 3 || Index + 1 == PackedOperandInfo.size())
+      OS << '\n';
   }
 }
 
@@ -921,10 +964,10 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
   Timer.startTimer("Collect operand info");
   buildTargetSpecializedPseudoInstsMap();
 
-  OperandInfoListTy OperandInfoList;
+  OperandInfoTy PackedOperandInfo;
   OperandInfoMapTy OperandInfoMap;
   unsigned OperandInfoSize =
-      CollectOperandInfo(OperandInfoList, OperandInfoMap);
+      CollectOperandInfo(PackedOperandInfo, OperandInfoMap);
 
   // Collect all of the instruction's implicit uses and defs.
   // Also collect which features are enabled by instructions to control
@@ -1040,7 +1083,7 @@ void InstrInfoEmitter::run(raw_ostream &OS) {
 
     // Emit all of the operand info records.
     Timer.startTimer("Emit operand info");
-    EmitOperandInfo(OS, OperandInfoList);
+    EmitOperandInfo(OS, PackedOperandInfo);
 
     OS << "  }\n};\n\n";
 
