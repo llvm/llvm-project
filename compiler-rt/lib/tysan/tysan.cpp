@@ -509,6 +509,7 @@ static void TySanInitializePlatformEarly() {
 namespace __tysan {
 bool tysan_inited = false;
 bool tysan_init_is_running;
+void InitializeDeadlySignals();
 } // namespace __tysan
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __tysan_init() {
@@ -524,6 +525,7 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __tysan_init() {
   TySanInitializePlatformEarly();
 
   InitializeInterceptors();
+  InitializeDeadlySignals();
 
   if (!MmapFixedNoReserve(ShadowAddr(), AppAddr() - ShadowAddr()))
     Die();
