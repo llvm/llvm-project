@@ -608,9 +608,6 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
 }
 
 Error GenericDeviceTy::unloadBinary(DeviceImageTy *Image) {
-  if (auto Err = callGlobalDestructors(Plugin, *Image))
-    return Err;
-
   GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
   auto ProfOrErr = Handler.readProfilingGlobals(*this, *Image);
   if (!ProfOrErr)
@@ -631,6 +628,18 @@ Error GenericDeviceTy::unloadBinary(DeviceImageTy *Image) {
 }
 
 Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
+  // Run the global destructors first in case they required the RPC server.
+  for (auto &I : LoadedImages) {
+    if (auto Err = callGlobalDestructors(Plugin, *I))
+      return Err;
+  }
+
+  if (RPCServer) {
+    if (auto Err = RPCServer->deinitDevice(*this))
+      return Err;
+    RPCServer = nullptr;
+  }
+
   for (auto &I : LoadedImages)
     if (auto Err = unloadBinary(I))
       return Err;
@@ -648,10 +657,6 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     delete RecordReplay;
     RecordReplay = nullptr;
   }
-
-  if (RPCServer)
-    if (auto Err = RPCServer->deinitDevice(*this))
-      return Err;
 
 #ifdef OMPT_SUPPORT
   if (ompt::Initialized) {
