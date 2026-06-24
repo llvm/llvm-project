@@ -30,13 +30,8 @@ PluginManager *PM = nullptr;
 #define PLUGIN_TARGET(Name) extern "C" GenericPluginTy *createPlugin_##Name();
 #include "Shared/Targets.def"
 
-void PluginManager::init() {
+void PluginManager::initPlugins() {
   TIMESCOPE();
-  if (OffloadPolicy::isOffloadDisabled()) {
-    ODBG(ODT_Init) << "Offload is disabled. Skipping plugin initialization";
-    return;
-  }
-
   ODBG(ODT_Init) << "Loading RTLs";
 
   // Attempt to create an instance of each supported plugin.

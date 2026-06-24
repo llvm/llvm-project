@@ -23,47 +23,47 @@ using namespace llvm::omp::target::debug;
 
 static std::mutex PluginMtx;
 static uint32_t RefCount = 0;
+static bool PluginsInitialized = 0;
 std::atomic<bool> RTLAlive{false};
 std::atomic<int> RTLOngoingSyncs{0};
 
-/// Check deleted and deprecated features, such as environment variables.
-static void checkRuntimeEnvironment() {
-  const char *ShmemEnvarName = "LIBOMPTARGET_SHARED_MEMORY_SIZE";
-  if (std::getenv(ShmemEnvarName))
-    MESSAGE("Warning: %s is no longer valid. Please use OpenMP clause "
-            "'dyn_groupprivate' instead.\n",
-            ShmemEnvarName);
-}
-
-void initRuntime() {
+void initRuntime(bool InitializePlugins) {
   std::scoped_lock<decltype(PluginMtx)> Lock(PluginMtx);
   Profiler::get();
   TIMESCOPE();
 
-  checkRuntimeEnvironment();
-
-  if (PM == nullptr)
-    PM = new PluginManager();
-
   RefCount++;
   if (RefCount == 1) {
+    assert(PM == nullptr);
+    PM = new PluginManager();
+
     ODBG(ODT_Init) << "Init offload library!";
 #ifdef OMPT_SUPPORT
     // Initialize OMPT first
     llvm::omp::target::ompt::connectLibrary();
 #endif
 
-    PM->init();
-    PM->registerDelayedLibraries();
+    if (!InitializePlugins)
+      ODBG(ODT_Init) << "Offload is disabled. Skipping plugin initialization";
 
     // RTL initialization is complete
     RTLAlive = true;
+  }
+
+  // Initialize the plugins at the first call to this function with
+  // InitializePlugins == true
+  if (!PluginsInitialized && InitializePlugins) {
+    ODBG(ODT_Init) << "Offload is enabled. Initializating plugins";
+    PM->initPlugins();
+    PM->registerDelayedLibraries();
+    PluginsInitialized = true;
   }
 }
 
 void deinitRuntime() {
   std::scoped_lock<decltype(PluginMtx)> Lock(PluginMtx);
   assert(PM && "Runtime not initialized");
+  assert(RefCount != 0 && "Unmatched init and deinit");
 
   if (RefCount == 1) {
     ODBG(ODT_Deinit) << "Deinit offload library!";
@@ -77,6 +77,7 @@ void deinitRuntime() {
     PM->deinit();
     delete PM;
     PM = nullptr;
+    PluginsInitialized = false;
   }
 
   RefCount--;

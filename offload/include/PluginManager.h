@@ -50,7 +50,7 @@ struct PluginManager {
 
   PluginManager() {}
 
-  void init();
+  void initPlugins();
 
   void deinit();
 
@@ -183,10 +183,10 @@ private:
   __tgt_bin_desc *upgradeLegacyEntries(__tgt_bin_desc *Desc);
 };
 
-/// Initialize the plugin manager and OpenMP runtime.
-void initRuntime();
+/// Initialize the plugin manager.
+void initRuntime(bool InitializePlugins);
 
-/// Deinitialize the plugin and delete it.
+/// Deinitialize the plugin manager and delete it.
 void deinitRuntime();
 
 extern PluginManager *PM;

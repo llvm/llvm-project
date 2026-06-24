@@ -75,6 +75,15 @@ bool checkDevice(int64_t &DeviceID, ident_t *Loc) {
   return false;
 }
 
+/// Check deleted and deprecated features, such as environment variables.
+static void checkRuntimeEnvironment() {
+  const char *ShmemEnvarName = "LIBOMPTARGET_SHARED_MEMORY_SIZE";
+  if (std::getenv(ShmemEnvarName))
+    MESSAGE("Warning: %s is no longer valid. Please use OpenMP clause "
+            "'dyn_groupprivate' instead.\n",
+            ShmemEnvarName);
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 /// adds requires flags
 EXTERN void __tgt_register_requires(int64_t Flags) {
@@ -83,13 +92,14 @@ EXTERN void __tgt_register_requires(int64_t Flags) {
           __PRETTY_FUNCTION__);
 }
 
-EXTERN void __tgt_rtl_init() { initRuntime(); }
+EXTERN void __tgt_rtl_init(bool OffloadEnabled) { initRuntime(OffloadEnabled); }
 EXTERN void __tgt_rtl_deinit() { deinitRuntime(); }
 
 ////////////////////////////////////////////////////////////////////////////////
 /// adds a target shared library to the target execution image
 EXTERN void __tgt_register_lib(__tgt_bin_desc *Desc) {
-  initRuntime();
+  checkRuntimeEnvironment();
+  initRuntime(!OffloadPolicy::isOffloadDisabled());
   if (PM->delayRegisterLib(Desc))
     return;
 

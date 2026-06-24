@@ -328,7 +328,7 @@ void *llvm_omp_target_dynamic_shared_alloc();
 void __tgt_register_requires(int64_t Flags);
 
 /// Initializes the runtime library.
-void __tgt_rtl_init();
+void __tgt_rtl_init(bool OffloadEnabled);
 
 /// Deinitializes the runtime library.
 void __tgt_rtl_deinit();
