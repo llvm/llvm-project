@@ -403,8 +403,8 @@ statements, etc. When parsed, these literals are converted to integers.
 A question mark represents an uninitialized value.
 
 .. productionlist::
-   SimpleValue4: "{" [`ValueList`] "}"
-   ValueList: `ValueListNE`
+   SimpleValue4: "{" `ValueList` "}"
+   ValueList: [`ValueListNE`]
    ValueListNE: `Value` ("," `Value`)*
 
 This value represents a sequence of bits, which can be used to initialize a
