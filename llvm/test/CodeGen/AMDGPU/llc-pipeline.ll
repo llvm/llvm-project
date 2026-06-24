@@ -103,6 +103,7 @@
 ; GCN-O0-NEXT:        Assignment Tracking Analysis
 ; GCN-O0-NEXT:        AMDGPU DAG->DAG Pattern Instruction Selection
 ; GCN-O0-NEXT:        MachineDominator Tree Construction
+; GCN-O0-NEXT:        Machine Natural Loop Construction
 ; GCN-O0-NEXT:        SI Fix SGPR copies
 ; GCN-O0-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O0-NEXT:        SI Lower i1 Copies
@@ -314,6 +315,7 @@
 ; GCN-O1-NEXT:        Lazy Block Frequency Analysis
 ; GCN-O1-NEXT:        AMDGPU DAG->DAG Pattern Instruction Selection
 ; GCN-O1-NEXT:        MachineDominator Tree Construction
+; GCN-O1-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-NEXT:        SI Fix SGPR copies
 ; GCN-O1-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O1-NEXT:        SI Lower i1 Copies
@@ -625,6 +627,7 @@
 ; GCN-O1-OPTS-NEXT:        Lazy Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:        AMDGPU DAG->DAG Pattern Instruction Selection
 ; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
+; GCN-O1-OPTS-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-OPTS-NEXT:        SI Fix SGPR copies
 ; GCN-O1-OPTS-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        SI Lower i1 Copies
@@ -947,6 +950,7 @@
 ; GCN-O2-NEXT:        Lazy Block Frequency Analysis
 ; GCN-O2-NEXT:        AMDGPU DAG->DAG Pattern Instruction Selection
 ; GCN-O2-NEXT:        MachineDominator Tree Construction
+; GCN-O2-NEXT:        Machine Natural Loop Construction
 ; GCN-O2-NEXT:        SI Fix SGPR copies
 ; GCN-O2-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O2-NEXT:        SI Lower i1 Copies
@@ -1283,6 +1287,7 @@
 ; GCN-O3-NEXT:        Lazy Block Frequency Analysis
 ; GCN-O3-NEXT:        AMDGPU DAG->DAG Pattern Instruction Selection
 ; GCN-O3-NEXT:        MachineDominator Tree Construction
+; GCN-O3-NEXT:        Machine Natural Loop Construction
 ; GCN-O3-NEXT:        SI Fix SGPR copies
 ; GCN-O3-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O3-NEXT:        SI Lower i1 Copies

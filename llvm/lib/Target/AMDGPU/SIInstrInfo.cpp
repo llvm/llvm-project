@@ -6716,6 +6716,24 @@ void SIInstrInfo::legalizeOperandsVOP2(MachineRegisterInfo &MRI,
   fixImplicitOperands(MI);
 }
 
+std::optional<unsigned> SIInstrInfo::getReadlaneOperandOnVALUConversion(
+    const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  case AMDGPU::SI_INIT_M0:
+    return 0;
+  case AMDGPU::S_BITREPLICATE_B64_B32:
+  case AMDGPU::S_QUADMASK_B32:
+  case AMDGPU::S_QUADMASK_B64:
+  case AMDGPU::S_WQM_B32:
+  case AMDGPU::S_WQM_B64:
+  case AMDGPU::S_INVERSE_BALLOT_U32:
+  case AMDGPU::S_INVERSE_BALLOT_U64:
+    return 1;
+  default:
+    return std::nullopt;
+  }
+}
+
 // Legalize VOP3 operands. All operand types are supported for any operand
 // but only one literal constant and only starting from GFX10.
 void SIInstrInfo::legalizeOperandsVOP3(MachineRegisterInfo &MRI,
@@ -7516,23 +7534,8 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return CreatedBB;
   }
 
-  // Legalize SI_INIT_M0
-  if (MI.getOpcode() == AMDGPU::SI_INIT_M0) {
-    MachineOperand &Src = MI.getOperand(0);
-    if (Src.isReg() && RI.hasVectorRegisters(MRI.getRegClass(Src.getReg())))
-      Src.setReg(readlaneVGPRToSGPR(Src.getReg(), MI, MRI));
-    return CreatedBB;
-  }
-
-  // Legalize S_BITREPLICATE, S_QUADMASK and S_WQM
-  if (MI.getOpcode() == AMDGPU::S_BITREPLICATE_B64_B32 ||
-      MI.getOpcode() == AMDGPU::S_QUADMASK_B32 ||
-      MI.getOpcode() == AMDGPU::S_QUADMASK_B64 ||
-      MI.getOpcode() == AMDGPU::S_WQM_B32 ||
-      MI.getOpcode() == AMDGPU::S_WQM_B64 ||
-      MI.getOpcode() == AMDGPU::S_INVERSE_BALLOT_U32 ||
-      MI.getOpcode() == AMDGPU::S_INVERSE_BALLOT_U64) {
-    MachineOperand &Src = MI.getOperand(1);
+  if (auto SrcIdx = getReadlaneOperandOnVALUConversion(MI)) {
+    MachineOperand &Src = MI.getOperand(*SrcIdx);
     if (Src.isReg() && RI.hasVectorRegisters(MRI.getRegClass(Src.getReg())))
       Src.setReg(readlaneVGPRToSGPR(Src.getReg(), MI, MRI));
     return CreatedBB;

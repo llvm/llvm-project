@@ -1500,6 +1500,11 @@ public:
   /// Fix operands in \p MI to satisfy constant bus requirements.
   void legalizeOperandsVOP3(MachineRegisterInfo &MRI, MachineInstr &MI) const;
 
+  /// Returns the source operand index that would need a readfirstlane insertion
+  /// if this instruction were reached via VALU conversion, or std::nullopt
+  /// if the instruction has a proper VALU equivalent.
+  std::optional<unsigned> getReadlaneOperandOnVALUConversion(const MachineInstr &MI) const;
+
   /// Copy a value from a VGPR (\p SrcReg) to SGPR. The desired register class
   /// for the dst register (\p DstRC) can be optionally supplied. This function
   /// can only be used when it is know that the value in SrcReg is same across
