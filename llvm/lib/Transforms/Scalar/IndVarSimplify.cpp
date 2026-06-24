@@ -35,6 +35,7 @@
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
@@ -135,6 +136,7 @@ class IndVarSimplify {
   const DataLayout &DL;
   TargetLibraryInfo *TLI;
   const TargetTransformInfo *TTI;
+  OptimizationRemarkEmitter *ORE;
   std::unique_ptr<MemorySSAUpdater> MSSAU;
 
   SmallVector<WeakTrackingVH, 16> DeadInsts;
@@ -167,8 +169,9 @@ class IndVarSimplify {
 public:
   IndVarSimplify(LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
                  const DataLayout &DL, TargetLibraryInfo *TLI,
-                 TargetTransformInfo *TTI, MemorySSA *MSSA, bool WidenIndVars)
-      : LI(LI), SE(SE), DT(DT), DL(DL), TLI(TLI), TTI(TTI),
+                 TargetTransformInfo *TTI, OptimizationRemarkEmitter *ORE,
+                 MemorySSA *MSSA, bool WidenIndVars)
+      : LI(LI), SE(SE), DT(DT), DL(DL), TLI(TLI), TTI(TTI), ORE(ORE),
         WidenIndVars(WidenIndVars) {
     if (MSSA)
       MSSAU = std::make_unique<MemorySSAUpdater>(MSSA);
@@ -1842,6 +1845,136 @@ static bool crashingBBWithoutEffect(const BasicBlock &BB) {
   });
 }
 
+namespace {
+/// Structured description of an exiting branch condition for remarks.
+/// Each field is emitted as a separate ore::NV so tools can consume them.
+struct ExitConditionInfo {
+  StringRef Predicate; // "sgt", "ult", "eq", ... or empty if no ICmp
+  std::string Type;    // "i64", "ptr", ... or empty if unknown
+  std::string Stride;  // "+4", "-1", "varying", "invariant", or "none"
+  bool IsTrapExit = false;
+  bool IsNormalExit = false;
+};
+} // namespace
+
+/// Describe an exiting branch for optimization remarks: predicate kind, the
+/// type being compared, the IV stride if the operand is an AddRec on \p L,
+/// and whether the exit target is an unreachable block or a normal exit.
+static ExitConditionInfo describeExitingBranch(BasicBlock *ExitingBB, Loop *L,
+                                               ScalarEvolution *SE) {
+  ExitConditionInfo Info;
+
+  // Trap/normal classification is meaningful for any terminator kind
+  // (conditional branch, unconditional branch, switch, invoke, ...), so
+  // do it first before we decide whether to dig out predicate/stride info.
+  for (BasicBlock *Succ : successors(ExitingBB)) {
+    if (L->contains(Succ))
+      continue;
+    if (isa<UnreachableInst>(Succ->getTerminator()))
+      Info.IsTrapExit = true;
+    else
+      Info.IsNormalExit = true;
+  }
+
+  auto *BI = dyn_cast<CondBrInst>(ExitingBB->getTerminator());
+  if (!BI)
+    return Info;
+
+  auto *Cmp = dyn_cast_or_null<ICmpInst>(BI->getCondition());
+  if (!Cmp)
+    return Info;
+
+  Info.Predicate = CmpInst::getPredicateName(Cmp->getPredicate());
+
+  Type *OpTy = Cmp->getOperand(0)->getType();
+  if (OpTy->isPointerTy()) {
+    Info.Type = "ptr";
+  } else if (OpTy->isIntegerTy()) {
+    std::string Buf;
+    raw_string_ostream OS(Buf);
+    OS << "i" << OpTy->getIntegerBitWidth();
+    Info.Type = std::move(Buf);
+  }
+
+  // Look for an AddRec operand in L to extract the stride.
+  Info.Stride = "none";
+  for (unsigned I = 0; I < 2; ++I) {
+    const SCEV *OpSCEV = SE->getSCEV(Cmp->getOperand(I));
+    auto *AR = dyn_cast<SCEVAddRecExpr>(OpSCEV);
+    if (!AR || AR->getLoop() != L)
+      continue;
+    const SCEV *Step = AR->getStepRecurrence(*SE);
+    if (auto *SC = dyn_cast<SCEVConstant>(Step)) {
+      int64_t V = SC->getAPInt().getSExtValue();
+      std::string Buf;
+      raw_string_ostream OS(Buf);
+      if (V > 0)
+        OS << "+" << V;
+      else
+        OS << V;
+      Info.Stride = std::move(Buf);
+    } else if (SE->isLoopInvariant(Step, L)) {
+      Info.Stride = "invariant";
+    } else {
+      Info.Stride = "varying";
+    }
+    break;
+  }
+
+  return Info;
+}
+
+/// Emit a structured per-exit remark classifying each exiting block as
+/// having a computable or not-computable exit count. Fields are exposed via
+/// ore::NV so YAML consumers (e.g. opt-viewer) can filter by them.
+///
+/// Returns the pair (NumComputable, NumNotComputable).
+static std::pair<unsigned, unsigned>
+emitPerExitCountRemarks(Loop *L, ScalarEvolution *SE, DominatorTree *DT,
+                        OptimizationRemarkEmitter *ORE,
+                        ArrayRef<BasicBlock *> ExitingBlocks) {
+  unsigned NumComputable = 0;
+  unsigned NumNotComputable = 0;
+  const BasicBlock *Latch = L->getLoopLatch();
+
+  for (BasicBlock *ExitBB : ExitingBlocks) {
+    const SCEV *EC = SE->getExitCount(L, ExitBB);
+    Instruction *Term = ExitBB->getTerminator();
+    if (isa<SCEVCouldNotCompute>(EC)) {
+      ++NumNotComputable;
+      ExitConditionInfo Info = describeExitingBranch(ExitBB, L, SE);
+      StringRef Reason = (Latch && !DT->dominates(ExitBB, Latch))
+                             ? "not_dominating_latch"
+                             : "unknown";
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "ExitCountNotComputable",
+                                        Term)
+               << "Exit count not computable for exit "
+               << ore::NV("Exit", ExitBB->getName())
+               << " (predicate=" << ore::NV("Predicate", Info.Predicate)
+               << ", type=" << ore::NV("Type", Info.Type)
+               << ", stride=" << ore::NV("Stride", Info.Stride)
+               << ", trapExit=" << ore::NV("IsTrapExit", Info.IsTrapExit)
+               << ", normalExit=" << ore::NV("IsNormalExit", Info.IsNormalExit)
+               << ", reason=" << ore::NV("Reason", Reason) << ")";
+      });
+    } else {
+      ++NumComputable;
+      std::string ECStr;
+      raw_string_ostream ECOS(ECStr);
+      EC->print(ECOS);
+      ORE->emit([&]() {
+        return OptimizationRemark(DEBUG_TYPE, "ExitCountComputable", Term)
+               << "Exit count computable for exit "
+               << ore::NV("Exit", ExitBB->getName()) << " ("
+               << ore::NV("ExitCount", ECStr) << ")";
+      });
+    }
+  }
+
+  return {NumComputable, NumNotComputable};
+}
+
 bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   SmallVector<BasicBlock*, 16> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
@@ -1862,23 +1995,56 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
   // through *explicit* control flow.  We have to eliminate the possibility of
   // implicit exits (see below) before we know it's truly exact.
   const SCEV *ExactBTC = SE->getBackedgeTakenCount(L);
-  if (isa<SCEVCouldNotCompute>(ExactBTC) || !Rewriter.isSafeToExpand(ExactBTC))
+
+  // Always emit per-exit diagnostics so YAML consumers can inspect exit-count
+  // state regardless of whether the loop-level ExactBTC is known.
+  unsigned NumComputable = 0, NumNotComputable = 0;
+  std::tie(NumComputable, NumNotComputable) =
+      emitPerExitCountRemarks(L, SE, DT, ORE, ExitingBlocks);
+
+  if (isa<SCEVCouldNotCompute>(ExactBTC) ||
+      !Rewriter.isSafeToExpand(ExactBTC)) {
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "ExactBTCUnknown",
+                                      L->getHeader()->getTerminator())
+             << "Unable to predicate loop exits: could not compute an "
+                "exact trip count for the loop ("
+             << ore::NV("NumExits", (unsigned)ExitingBlocks.size())
+             << " exits, " << ore::NV("Computable", NumComputable)
+             << " computable, " << ore::NV("NotComputable", NumNotComputable)
+             << " not computable). See per-exit remarks for detail.";
+    });
     return false;
+  }
 
   assert(SE->isLoopInvariant(ExactBTC, L) && "BTC must be loop invariant");
   assert(ExactBTC->getType()->isIntegerTy() && "BTC must be integer");
 
   auto BadExit = [&](BasicBlock *ExitingBB) {
-    // If our exiting block exits multiple loops, we can only rewrite the
-    // innermost one.  Otherwise, we're changing how many times the innermost
-    // loop runs before it exits.
-    if (LI->getLoopFor(ExitingBB) != L)
+    Instruction *Term = ExitingBB->getTerminator();
+    // The exiting block belongs to a loop other than L (an inner, nested
+    // loop).  We can only rewrite the innermost loop; otherwise we'd be
+    // changing how many times that inner loop runs before it exits.
+    if (LI->getLoopFor(ExitingBB) != L) {
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "ExitNotInCurrentLoop",
+                                        Term)
+               << "Unable to predicate loop exit: exiting block belongs to "
+                  "a different (inner) loop than the one being processed.";
+      });
       return true;
+    }
 
     // Can't rewrite non-branch yet.
-    CondBrInst *BI = dyn_cast<CondBrInst>(ExitingBB->getTerminator());
-    if (!BI)
+    CondBrInst *BI = dyn_cast<CondBrInst>(Term);
+    if (!BI) {
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "NonBranchExit", Term)
+               << "Unable to predicate loop exit: exit is not a conditional "
+                  "branch (e.g. switch or invoke).";
+      });
       return true;
+    }
 
     // If already constant, nothing to do.
     if (isa<Constant>(BI->getCondition()))
@@ -1889,12 +2055,19 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     // have already been removed; TODO: generalize
     BasicBlock *ExitBlock =
     BI->getSuccessor(L->contains(BI->getSuccessor(0)) ? 1 : 0);
-    if (!ExitBlock->phis().empty())
+    if (!ExitBlock->phis().empty()) {
+      ORE->emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "ExitBlockHasPhis", Term)
+               << "Unable to predicate loop exit: values computed inside "
+                  "the loop are used after the exit.";
+      });
       return true;
+    }
 
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
     if (isa<SCEVCouldNotCompute>(ExitCount) ||
         !Rewriter.isSafeToExpand(ExitCount))
+      // Already diagnosed by emitPerExitCountRemarks above.
       return true;
 
     assert(SE->isLoopInvariant(ExitCount, L) &&
@@ -1905,6 +2078,14 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
 
   // Make sure all exits dominate the latch. This means there is a linear chain
   // of exits. We check this before sorting so we have a total order.
+  //
+  // Note: SCEV's computeExitLimit already bails to CouldNotCompute for any
+  // exit that does not dominate the latch, so in practice we will have
+  // returned above via the ExactBTCUnknown path before reaching this check
+  // whenever a non-dominating exit is present. The per-exit remark emitted by
+  // emitPerExitCountRemarks attaches Reason=not_dominating_latch in that case
+  // so tools can tell this apart from other not-computable reasons. The check
+  // below is retained as a defensive guard.
   BasicBlock *Latch = L->getLoopLatch();
   for (BasicBlock *ExitingBB : ExitingBlocks)
     if (!DT->dominates(ExitingBB, Latch))
@@ -1943,8 +2124,15 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
       break;
     }
 
-  if (ExitingBlocks.empty())
+  if (ExitingBlocks.empty()) {
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "NoPredicatableExits",
+                                      L->getHeader()->getTerminator())
+             << "Unable to predicate loop exits: no predicatable exit "
+                "remaining after filtering (see per-exit remarks).";
+    });
     return false;
+  }
 
   // At this point, ExitingBlocks consists of only those blocks which are
   // predicatable.  Given that, we know we have at least one exit we can
@@ -1959,17 +2147,37 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     for (auto &I : *BB) {
       // TODO:isGuaranteedToTransfer
       if (I.mayHaveSideEffects()) {
-        if (!LoopPredicationTraps)
+        if (!LoopPredicationTraps) {
+          ORE->emit([&]() {
+            return OptimizationRemarkMissed(DEBUG_TYPE, "LoopSideEffects",
+                                            L->getHeader()->getTerminator())
+                   << "Unable to predicate loop exits: loop body has "
+                      "side effects and LoopPredicationTraps is disabled.";
+          });
           return false;
+        }
         HasThreadLocalSideEffects = true;
         if (StoreInst *SI = dyn_cast<StoreInst>(&I)) {
           // Simple stores cannot be observed by other threads.
           // If HasThreadLocalSideEffects is set, we check
           // crashingBBWithoutEffect to make sure that the crashing BB cannot
           // observe them either.
-          if (!SI->isSimple())
+          if (!SI->isSimple()) {
+            ORE->emit([&]() {
+              return OptimizationRemarkMissed(DEBUG_TYPE, "AtomicStoreInLoop",
+                                              L->getHeader()->getTerminator())
+                     << "Unable to predicate loop exits: loop contains "
+                        "an atomic or volatile store.";
+            });
             return false;
+          }
         } else {
+          ORE->emit([&]() {
+            return OptimizationRemarkMissed(DEBUG_TYPE, "LoopSideEffects",
+                                            L->getHeader()->getTerminator())
+                   << "Unable to predicate loop exits: loop body has "
+                      "side effects (e.g. call or fence).";
+          });
           return false;
         }
       }
@@ -2014,8 +2222,16 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
       // a trap can still be optimized, because local side effects cannot
       // be observed in the exit case (the trap). We could be smarter about
       // this, but for now lets pattern match common cases that directly trap.
-      if (Unreachable == nullptr || !crashingBBWithoutEffect(*Unreachable))
+      if (Unreachable == nullptr || !crashingBBWithoutEffect(*Unreachable)) {
+        ORE->emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE,
+                                          "TrapBlockObservesSideEffects",
+                                          ExitingBB->getTerminator())
+                 << "Unable to predicate loop exit: trap block may observe "
+                    "side effects from the loop body.";
+        });
         return Changed;
+      }
     }
     Value *NewCond;
     if (ExitCount == ExactBTC) {
@@ -2039,6 +2255,11 @@ bool IndVarSimplify::predicateLoopExits(Loop *L, SCEVExpander &Rewriter) {
     BI->setCondition(NewCond);
     if (OldCond->use_empty())
       DeadInsts.emplace_back(OldCond);
+    ORE->emit([&]() {
+      return OptimizationRemark(DEBUG_TYPE, "PredicatedExit",
+                                ExitingBB->getTerminator())
+             << "Loop exit predicated and hoisted to preheader.";
+    });
     Changed = true;
     RunUnswitching = true;
   }
@@ -2219,8 +2440,12 @@ PreservedAnalyses IndVarSimplifyPass::run(Loop &L, LoopAnalysisManager &AM,
   Function *F = L.getHeader()->getParent();
   const DataLayout &DL = F->getDataLayout();
 
-  IndVarSimplify IVS(&AR.LI, &AR.SE, &AR.DT, DL, &AR.TLI, &AR.TTI, AR.MSSA,
-                     WidenIndVars && AllowIVWidening);
+  // For the old PM, we can't use OptimizationRemarkEmitter as an analysis
+  // pass. Function analyses need to be preserved across loop transformations
+  // but ORE cannot be preserved. See the same pattern in LICM.
+  OptimizationRemarkEmitter ORE(F);
+  IndVarSimplify IVS(&AR.LI, &AR.SE, &AR.DT, DL, &AR.TLI, &AR.TTI, &ORE,
+                     AR.MSSA, WidenIndVars && AllowIVWidening);
   if (!IVS.run(&L))
     return PreservedAnalyses::all();
 
