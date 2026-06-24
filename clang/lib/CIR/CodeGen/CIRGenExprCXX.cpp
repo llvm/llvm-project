@@ -1068,10 +1068,10 @@ void CIRGenFunction::emitNewArrayInitializer(
       remainingSize = builder.createSub(loc, remainingSize, initSizeOp);
     }
 
-    // Create the memset.
-    mlir::Value castOp =
-        builder.createPtrBitcast(curPtr.getPointer(), cgm.voidTy);
-    builder.createMemSet(loc, castOp, builder.getConstInt(loc, cgm.uInt8Ty, 0),
+    // Create the memset.  Use the Address overload so the destination
+    // alignment from curPtr is carried onto the memset.
+    Address voidPtr = curPtr.withElementType(builder, cgm.voidTy);
+    builder.createMemSet(loc, voidPtr, builder.getConstInt(loc, cgm.uInt8Ty, 0),
                          remainingSize);
     return true;
   };
