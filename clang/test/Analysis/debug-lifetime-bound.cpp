@@ -1,10 +1,11 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.LifetimeAnnotations,debug.DebugLifetimeAnnotations -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.cplusplus.UseAfterLifetimeEnd,debug.DebugUseAfterLifetimeEnd -verify %s
 
 // expected-no-diagnostics
 
-void clang_analyzer_lifetime_bound(int);
+void clang_analyzer_dumpLifetimeOriginsOf(int);
 
 void test() {
   int x = 5;
-  clang_analyzer_lifetime_bound(x); // no-warning: verifies debug checker does not crash standalone
+  clang_analyzer_dumpLifetimeOriginsOf(x); // no-warning
 }
+
