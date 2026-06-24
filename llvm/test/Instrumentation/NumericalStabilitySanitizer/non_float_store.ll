@@ -30,4 +30,32 @@ entry:
   ret void
 }
 
+; An element width other than 32/64/80 bits (here i16) has no FT type to
+; bitcast to, so the shadow is reset to unknown instead of crashing.
+define void @store_non_float_unsupported_size(ptr %dst) sanitize_numerical_stability {
+; CHECK-LABEL: @store_non_float_unsupported_size(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i16 42, ptr [[DST:%.*]], align 1
+; CHECK-NEXT:    call void @__nsan_set_value_unknown(ptr [[DST]], i64 2)
+; CHECK-NEXT:    ret void
+;
+entry:
+  store i16 42, ptr %dst, align 1
+  ret void
+}
+
+; Same for a vector with an unsupported element width (i16): no crash,
+; the shadow is reset to unknown.
+define void @store_non_float_vector_unsupported_size(ptr %dst) sanitize_numerical_stability {
+; CHECK-LABEL: @store_non_float_vector_unsupported_size(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store <4 x i16> splat (i16 42), ptr [[DST:%.*]], align 1
+; CHECK-NEXT:    call void @__nsan_set_value_unknown(ptr [[DST]], i64 8)
+; CHECK-NEXT:    ret void
+;
+entry:
+  store <4 x i16> splat (i16 42), ptr %dst, align 1
+  ret void
+}
+
 attributes #0 = { nounwind readonly uwtable sanitize_numerical_stability "correctly-rounded-divide-sqrt-fp-math"="false" denormal_fpenv(preservesign, float: ieee) "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="true" "no-jump-tables"="false" "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+cx8,+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="true" "use-soft-float"="false" }

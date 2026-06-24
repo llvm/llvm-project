@@ -195,17 +195,16 @@ Error DWARFLinkerImpl::link() {
         GlobalData.error(std::move(Err), Context->InputDWARFFile.FileName);
     }
   } else {
-    DefaultThreadPool Pool(llvm::parallel::strategy);
+    assert(ThreadPool && "setThreadPool() must be called before link()");
+    ThreadPoolTaskGroup Group(*ThreadPool);
     for (std::unique_ptr<LinkContext> &Context : ObjectContexts)
-      Pool.async([&]() {
+      Group.async([&]() {
         // Link object file.
         if (Error Err = Context->link(ArtificialTypeUnit.get()))
           GlobalData.error(std::move(Err), Context->InputDWARFFile.FileName);
         if (Error Err = Context->unloadInput())
           GlobalData.error(std::move(Err), Context->InputDWARFFile.FileName);
       });
-
-    Pool.wait();
   }
 
   // Merge staged parseable Swift interface entries into the shared map. Done

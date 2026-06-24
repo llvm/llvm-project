@@ -3429,7 +3429,6 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
     });
   };
   if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
-    std::string sizes = op.getGetterName(operandSegmentAttrName);
     body << "  ::llvm::copy(::llvm::ArrayRef<int32_t>({";
     emitSegment();
     body << "}), " << builderOpStateProperties

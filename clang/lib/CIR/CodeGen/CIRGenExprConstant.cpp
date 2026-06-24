@@ -1239,6 +1239,8 @@ struct ConstantLValue {
       : value(nullptr), hasOffsetApplied(false) {}
   /*implicit*/ ConstantLValue(cir::GlobalViewAttr address)
       : value(address), hasOffsetApplied(false) {}
+  /*implicit*/ ConstantLValue(cir::BlockAddrInfoAttr address)
+      : value(address), hasOffsetApplied(true) {}
 
   ConstantLValue() : value(nullptr), hasOffsetApplied(false) {}
 };
@@ -1519,8 +1521,10 @@ ConstantLValueEmitter::VisitPredefinedExpr(const PredefinedExpr *e) {
 
 ConstantLValue
 ConstantLValueEmitter::VisitAddrLabelExpr(const AddrLabelExpr *e) {
-  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: addr label expr");
-  return {};
+  auto func = cast<cir::FuncOp>(emitter.cgf->curFn);
+  return cir::BlockAddrInfoAttr::get(cgm.getBuilder().getContext(),
+                                     func.getSymName(),
+                                     e->getLabel()->getName());
 }
 
 ConstantLValue ConstantLValueEmitter::VisitCallExpr(const CallExpr *e) {
@@ -1721,7 +1725,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &d) {
 
   // Try to emit the initializer.  Note that this can allow some things that
   // are not allowed by tryEmitPrivateForMemory alone.
-  if (APValue *value = d.evaluateValue())
+  if (const APValue *value = d.evaluateValue())
     return tryEmitPrivateForMemory(*value, destType);
 
   return {};

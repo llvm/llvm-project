@@ -19,6 +19,7 @@
 #include <iostream>
 #include <map>
 #include <mutex>
+#include <optional>
 #include <shared_mutex>
 #include <tuple>
 
@@ -253,6 +254,24 @@ struct MMAInstructionInterface {
   virtual llvm::SmallVector<uint32_t, 8> getSupportedN(Type type) const = 0;
   virtual bool isLaneLayoutRowMajorOrder() const = 0;
   virtual ~MMAInstructionInterface() = default;
+};
+
+// Interface for subgroup-level 2D block instructions (load / store / prefetch).
+// All three describe the set of hardware-supported block shapes via
+// (width, height, count) tuples and share a packed-format bit size. The
+// transform / transpose / upConv flags are only meaningful for loads; store
+// and prefetch implementations ignore them.
+struct BlockIOInstructionInterface {
+  // Returns the supported (widths, heights, counts) for the given element
+  // type, or std::nullopt if the element type is unsupported.
+  virtual std::optional<
+      std::tuple<llvm::ArrayRef<int>, llvm::ArrayRef<int>, llvm::ArrayRef<int>>>
+  getBlockWidthHeightCount(Type elemTy, bool hasTransform = false,
+                           bool hasTranspose = false,
+                           bool upConv = false) const = 0;
+  // Bit size of the packed format used by this block instruction.
+  virtual int32_t getPackedFormatBitSize() const = 0;
+  virtual ~BlockIOInstructionInterface() = default;
 };
 
 //===----------------------------------------------------------------------===//

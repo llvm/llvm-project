@@ -257,6 +257,14 @@ LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::MatMulOp op) {
 }
 
 template <>
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::MatMulTOp op) {
+  addValue(op.getA());
+  addValue(op.getB());
+  addValue(op.getOutput());
+  return success();
+}
+
+template <>
 LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::VariableOp op) {
   addType(op.getType());
   return success();
@@ -315,6 +323,7 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   POPULATE_PROFILE_INFO_CUSTOM(Select)
   POPULATE_PROFILE_INFO_CUSTOM(Rescale)
   POPULATE_PROFILE_INFO_CUSTOM(MatMul)
+  POPULATE_PROFILE_INFO_CUSTOM(MatMulT)
   POPULATE_PROFILE_INFO_CUSTOM(Variable)
   POPULATE_PROFILE_INFO_CUSTOM(VariableWrite)
   POPULATE_PROFILE_INFO_CUSTOM(Dim)

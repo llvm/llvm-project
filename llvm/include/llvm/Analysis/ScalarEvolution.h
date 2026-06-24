@@ -1983,10 +1983,11 @@ private:
   /// operands iteratively first.
   const ConstantRange &getRangeRefIter(const SCEV *S, RangeSignHint Hint);
 
-  /// Determines the range for the affine SCEVAddRecExpr {\p Start,+,\p Step}.
-  /// Helper for \c getRange.
-  ConstantRange getRangeForAffineAR(const SCEV *Start, const SCEV *Step,
-                                    const APInt &MaxBECount);
+  /// Determines the range for the affine SCEVAddRecExpr {\p Start,+,\p Step},
+  /// and whether it may wrap. Helper for \c getRange.
+  std::pair<ConstantRange, SCEV::NoWrapFlags>
+  getRangeForAffineAR(const SCEV *Start, const SCEV *Step,
+                      const APInt &MaxBECount);
 
   /// Determines the range for the affine non-self-wrapping SCEVAddRecExpr {\p
   /// Start,+,\p Step}<nw>.
@@ -2386,8 +2387,8 @@ private:
   bool proveNoWrapByVaryingStart(const SCEV *Start, const SCEV *Step,
                                  const Loop *L);
 
-  /// Try to prove NSW or NUW on \p AR relying on ConstantRange manipulation.
-  SCEV::NoWrapFlags proveNoWrapViaConstantRanges(const SCEVAddRecExpr *AR);
+  /// Try to infer NSW or NUW on \p AR relying on ConstantRange manipulation.
+  void inferNoWrapViaConstantRanges(const SCEVAddRecExpr *AR);
 
   /// Try to prove NSW on \p AR by proving facts about conditions known  on
   /// entry and backedge.

@@ -7526,7 +7526,7 @@ void ASTRecordWriter::AddVarDeclInit(const VarDecl *VD) {
     assert(ES->CheckedForSideEffects);
     Val |= (ES->HasConstantInitialization ? 2 : 0);
     Val |= (ES->HasConstantDestruction ? 4 : 0);
-    APValue *Evaluated = VD->getEvaluatedValue();
+    const APValue *Evaluated = VD->getEvaluatedValue();
     // If the evaluated result is constant, emit it.
     if (Evaluated && (Evaluated->isInt() || Evaluated->isFloat()))
       Val |= 8;
