@@ -87,6 +87,62 @@ class SendSignalTestCase(TestBase):
 
         self.match("statistics dump", [r'"signals": \[', r'"SIGUSR1": 1'])
 
+    @expectedFailureNetBSD(bugnumber="llvm.org/pr43959")
+    @skipIfWindows  # Windows does not support signals
+    def test_send_signal_while_stopped(self):
+        """Test that 'process signal SIGUSR1' works when the process is stopped."""
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+
+        breakpoint = target.BreakpointCreateByLocation("main.c", self.line)
+        self.assertTrue(
+            breakpoint and breakpoint.GetNumLocations() == 1, VALID_BREAKPOINT
+        )
+
+        process_listener = lldb.SBListener("signal_test_listener")
+        launch_info = target.GetLaunchInfo()
+        launch_info.SetWorkingDirectory(self.get_process_working_directory())
+        launch_info.SetListener(process_listener)
+        error = lldb.SBError()
+        process = target.Launch(launch_info, error)
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        # Configure SIGUSR1 to stop and pass through to the inferior.
+        self.runCmd("process handle -n False -p True -s True SIGUSR1")
+
+        thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertTrue(thread.IsValid(), "We hit the first breakpoint.")
+
+        # The process is now stopped. Disable the breakpoint so we don't hit
+        # it again.
+        breakpoint.SetEnabled(False)
+
+        self.setAsync(True)
+
+        # Send a signal while the process is stopped. This should resume the
+        # process with the signal, matching GDB's behavior.
+        self.runCmd("process signal SIGUSR1")
+
+        self.match_state(process_listener, lldb.eStateRunning)
+        self.match_state(process_listener, lldb.eStateStopped)
+
+        # Verify the process stopped because of SIGUSR1.
+        threads = lldbutil.get_stopped_threads(process, lldb.eStopReasonSignal)
+        self.assertEqual(len(threads), 1, "One thread stopped for a signal.")
+        thread = threads[0]
+
+        self.assertGreaterEqual(
+            thread.GetStopReasonDataCount(), 1, "There was data in the event."
+        )
+        self.assertEqual(
+            thread.GetStopReasonDataAtIndex(0),
+            lldbutil.get_signal_number("SIGUSR1"),
+            "The stop signal was SIGUSR1",
+        )
+
     def match_state(self, process_listener, expected_state):
         num_seconds = 5
         broadcaster = self.process().GetBroadcaster()
