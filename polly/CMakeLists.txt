@@ -105,16 +105,20 @@ include_directories(
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(DIRECTORY include/
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+    COMPONENT polly-headers
     FILES_MATCHING
     PATTERN "*.h"
     )
 
   install(DIRECTORY ${POLLY_BINARY_DIR}/include/
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+    COMPONENT polly-headers
     FILES_MATCHING
     PATTERN "*.h"
     PATTERN "CMakeFiles" EXCLUDE
     )
+  add_llvm_install_targets(install-polly-headers
+    COMPONENT polly-headers)
 endif()
 
 # add_llvm_pass_plugin() already declares the option, but we need access to
