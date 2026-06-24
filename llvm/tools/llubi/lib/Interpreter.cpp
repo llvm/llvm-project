@@ -708,7 +708,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     // TODO: Handle isvolatile argument.
     if (Length.isPoison()) {
       reportImmediateUB() << "Memory transfer intrinsic with poison length.";
-      return AnyValue::poison();
+      return AnyValue();
     }
 
     const APInt &LengthInt = Args[2].asInteger();
@@ -807,7 +807,7 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
 
     Byte FillByte = Val.isPoison()
                         ? Byte::poison()
-                        : Byte::concrete(Args[1].asInteger().getZExtValue());
+                        : Byte::concrete(Val.asInteger().getZExtValue());
     fill(DstMO->getBytes().slice(DstOffset, Len), FillByte);
     return AnyValue();
   }
