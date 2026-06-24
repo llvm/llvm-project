@@ -7167,7 +7167,7 @@ AMDGPUInstructionSelector::selectSMRDBufferSgprImm(MachineOperand &Root) const {
   unsigned Offset;
   std::tie(SOffset, Offset) = AMDGPU::getBaseWithConstantOffset(
       *MRI, Root.getReg(), VT, /*CheckNUW*/ true);
-  if (!SOffset)
+  if (!SOffset || MRI->getType(SOffset).getSizeInBits() != 32)
     return std::nullopt;
 
   std::optional<int64_t> EncodedOffset =
@@ -7175,7 +7175,6 @@ AMDGPUInstructionSelector::selectSMRDBufferSgprImm(MachineOperand &Root) const {
   if (!EncodedOffset)
     return std::nullopt;
 
-  assert(MRI->getType(SOffset) == LLT::scalar(32));
   return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(SOffset); },
            [=](MachineInstrBuilder &MIB) { MIB.addImm(*EncodedOffset); }}};
 }
