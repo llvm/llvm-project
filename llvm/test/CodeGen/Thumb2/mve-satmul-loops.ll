@@ -642,13 +642,13 @@ define arm_aapcs_vfpcc void @usatmul_2_q31(ptr nocapture readonly %pSrcA, ptr no
 ; CHECK-NEXT:    ldrd r7, r3, [r1], #8
 ; CHECK-NEXT:    umull r4, r9, r7, r4
 ; CHECK-NEXT:    lsrl r4, r9, #31
-; CHECK-NEXT:    subs.w r5, r4, #-1
+; CHECK-NEXT:    adds r5, r4, #1
 ; CHECK-NEXT:    sbcs r5, r9, #0
 ; CHECK-NEXT:    csetm r5, lo
 ; CHECK-NEXT:    bfi r8, r5, #0, #8
 ; CHECK-NEXT:    umull r6, r5, r3, r6
 ; CHECK-NEXT:    lsrl r6, r5, #31
-; CHECK-NEXT:    subs.w r7, r6, #-1
+; CHECK-NEXT:    adds r7, r6, #1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r4, r6
 ; CHECK-NEXT:    sbcs r3, r5, #0
 ; CHECK-NEXT:    vmov q1[3], q1[1], r9, r5
@@ -672,7 +672,7 @@ define arm_aapcs_vfpcc void @usatmul_2_q31(ptr nocapture readonly %pSrcA, ptr no
 ; CHECK-NEXT:    ldr r1, [r10], #4
 ; CHECK-NEXT:    umull r0, r1, r1, r0
 ; CHECK-NEXT:    lsrl r0, r1, #31
-; CHECK-NEXT:    subs.w r2, r0, #-1
+; CHECK-NEXT:    adds r2, r0, #1
 ; CHECK-NEXT:    sbcs r1, r1, #0
 ; CHECK-NEXT:    it hs
 ; CHECK-NEXT:    movhs.w r0, #-1
@@ -799,14 +799,14 @@ define arm_aapcs_vfpcc void @usatmul_4_q31(ptr nocapture readonly %pSrcA, ptr no
 ; CHECK-NEXT:    vmov r4, r9, d10
 ; CHECK-NEXT:    lsrl r4, r9, #31
 ; CHECK-NEXT:    vmov.f32 s10, s9
-; CHECK-NEXT:    subs.w r5, r4, #-1
+; CHECK-NEXT:    adds r5, r4, #1
 ; CHECK-NEXT:    sbcs r5, r9, #0
 ; CHECK-NEXT:    vmullb.u32 q4, q2, q1
 ; CHECK-NEXT:    csetm r5, lo
 ; CHECK-NEXT:    bfi r6, r5, #0, #8
 ; CHECK-NEXT:    vmov r8, r5, d11
 ; CHECK-NEXT:    lsrl r8, r5, #31
-; CHECK-NEXT:    subs.w r11, r8, #-1
+; CHECK-NEXT:    adds.w r11, r8, #1
 ; CHECK-NEXT:    vmov q3[2], q3[0], r4, r8
 ; CHECK-NEXT:    sbcs r7, r5, #0
 ; CHECK-NEXT:    vmov q3[3], q3[1], r9, r5
@@ -815,7 +815,7 @@ define arm_aapcs_vfpcc void @usatmul_4_q31(ptr nocapture readonly %pSrcA, ptr no
 ; CHECK-NEXT:    vmov r4, r7, d8
 ; CHECK-NEXT:    lsrl r4, r7, #31
 ; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    subs.w r5, r4, #-1
+; CHECK-NEXT:    adds r5, r4, #1
 ; CHECK-NEXT:    mov.w r6, #0
 ; CHECK-NEXT:    sbcs r5, r7, #0
 ; CHECK-NEXT:    vpsel q3, q3, q0
@@ -823,7 +823,7 @@ define arm_aapcs_vfpcc void @usatmul_4_q31(ptr nocapture readonly %pSrcA, ptr no
 ; CHECK-NEXT:    bfi r6, r5, #0, #8
 ; CHECK-NEXT:    vmov r2, r5, d9
 ; CHECK-NEXT:    lsrl r2, r5, #31
-; CHECK-NEXT:    subs.w r3, r2, #-1
+; CHECK-NEXT:    adds r3, r2, #1
 ; CHECK-NEXT:    vmov q1[2], q1[0], r4, r2
 ; CHECK-NEXT:    sbcs r3, r5, #0
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
@@ -850,7 +850,7 @@ define arm_aapcs_vfpcc void @usatmul_4_q31(ptr nocapture readonly %pSrcA, ptr no
 ; CHECK-NEXT:    ldr r2, [r10], #4
 ; CHECK-NEXT:    umull r0, r3, r2, r0
 ; CHECK-NEXT:    lsrl r0, r3, #31
-; CHECK-NEXT:    subs.w r2, r0, #-1
+; CHECK-NEXT:    adds r2, r0, #1
 ; CHECK-NEXT:    sbcs r2, r3, #0
 ; CHECK-NEXT:    it hs
 ; CHECK-NEXT:    movhs.w r0, #-1

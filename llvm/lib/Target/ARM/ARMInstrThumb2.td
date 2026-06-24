@@ -132,7 +132,9 @@ def t2_so_imm_notSext : Operand<i32>, PatLeaf<(imm), [{
 // t2_so_imm_neg - Match an immediate that is a negation of a t2_so_imm.
 def t2_so_imm_neg_asmoperand : AsmOperandClass { let Name = "T2SOImmNeg"; }
 def t2_so_imm_neg : Operand<i32>, ImmLeaf<i32, [{
-  return Imm && ARM_AM::getT2SOImmVal(-(uint32_t)Imm) != -1;
+  if (Imm == 0 || Imm == 0x80000000)
+    return false;
+  return ARM_AM::getT2SOImmVal(-(uint32_t)Imm) != -1;
 }], t2_so_imm_neg_XFORM> {
   let ParserMatchClass = t2_so_imm_neg_asmoperand;
 }
@@ -2507,9 +2509,13 @@ defm t2RSBS : T2I_rbin_s_is <ARMsubc>;
 // details.
 // The AddedComplexity preferences the first variant over the others since
 // it can be shrunk to a 16-bit wide encoding, while the others cannot.
-let AddedComplexity = 1 in
+let AddedComplexity = 1 in {
 def : T2Pat<(add        rGPR:$src, imm1_255_neg:$imm),
             (t2SUBri    rGPR:$src, imm1_255_neg:$imm)>;
+def : T2Pat<(sub        rGPR:$src, imm1_255_neg:$imm),
+            (t2ADDri    rGPR:$src, imm1_255_neg:$imm)>;
+}
+
 def : T2Pat<(add        rGPR:$src, t2_so_imm_neg:$imm),
             (t2SUBri    rGPR:$src, t2_so_imm_neg:$imm)>;
 def : T2Pat<(add        rGPR:$src, imm0_4095_neg:$imm),
@@ -2517,28 +2523,57 @@ def : T2Pat<(add        rGPR:$src, imm0_4095_neg:$imm),
 def : T2Pat<(add        GPR:$src, imm0_65535_neg:$imm),
             (t2SUBrr    GPR:$src, (t2MOVi16 (imm_neg_XFORM imm:$imm)))>;
 
+def : T2Pat<(sub        rGPR:$src, t2_so_imm_neg:$imm),
+            (t2ADDri    rGPR:$src, t2_so_imm_neg:$imm)>;
+def : T2Pat<(sub        rGPR:$src, imm0_4095_neg:$imm),
+            (t2ADDri12  rGPR:$src, imm0_4095_neg:$imm)>;
+def : T2Pat<(sub        GPR:$src, imm0_65535_neg:$imm),
+            (t2ADDrr    GPR:$src, (t2MOVi16 (imm_neg_XFORM imm:$imm)))>;
+
 // Do the same for v8m targets since they support movw with a 16-bit value.
 def : T1Pat<(add tGPR:$src, imm0_65535_neg:$imm),
              (tSUBrr tGPR:$src, (t2MOVi16 (imm_neg_XFORM imm:$imm)))>,
              Requires<[HasV8MBaseline]>;
+def : T1Pat<(sub tGPR:$src, imm0_65535_neg:$imm),
+             (tADDrr tGPR:$src, (t2MOVi16 (imm_neg_XFORM imm:$imm)))>,
+             Requires<[HasV8MBaseline]>;
 
-let AddedComplexity = 1 in
+let AddedComplexity = 1 in {
 def : T2Pat<(ARMaddc    rGPR:$src, imm1_255_neg:$imm),
             (t2SUBSri   rGPR:$src, imm1_255_neg:$imm)>;
+def : T2Pat<(ARMsubc    rGPR:$src, imm1_255_neg:$imm),
+            (t2ADDSri   rGPR:$src, imm1_255_neg:$imm)>;
+}
+
 def : T2Pat<(ARMaddc    rGPR:$src, t2_so_imm_neg:$imm),
             (t2SUBSri   rGPR:$src, t2_so_imm_neg:$imm)>;
-def : T2Pat<(ARMaddc    rGPR:$src, imm0_65535_neg:$imm),
+def : T2Pat<(ARMaddc    rGPR:$src, imm1_65535_neg:$imm),
             (t2SUBSrr   rGPR:$src, (t2MOVi16 (imm_neg_XFORM imm:$imm)))>;
+
+def : T2Pat<(ARMsubc    rGPR:$src, t2_so_imm_neg:$imm),
+            (t2ADDSri   rGPR:$src, t2_so_imm_neg:$imm)>;
+def : T2Pat<(ARMsubc    rGPR:$src, imm1_65535_neg:$imm),
+            (t2ADDSrr   rGPR:$src, (t2MOVi16 (imm_neg_XFORM imm:$imm)))>;
+
 // The with-carry-in form matches bitwise not instead of the negation.
 // Effectively, the inverse interpretation of the carry flag already accounts
 // for part of the negation.
-let AddedComplexity = 1 in
+let AddedComplexity = 1 in {
 def : T2Pat<(ARMadde    rGPR:$src, imm0_255_not:$imm, CPSR),
             (t2SBCri    rGPR:$src, imm0_255_not:$imm)>;
+def : T2Pat<(ARMsube    rGPR:$src, imm0_255_not:$imm, CPSR),
+            (t2ADCri    rGPR:$src, imm0_255_not:$imm)>;
+}
+
 def : T2Pat<(ARMadde    rGPR:$src, t2_so_imm_not:$imm, CPSR),
             (t2SBCri    rGPR:$src, t2_so_imm_not:$imm)>;
-def : T2Pat<(ARMadde    rGPR:$src, imm0_65535_neg:$imm, CPSR),
+def : T2Pat<(ARMadde    rGPR:$src, imm1_65535_neg:$imm, CPSR),
             (t2SBCrr    rGPR:$src, (t2MOVi16 (imm_not_XFORM imm:$imm)))>;
+
+def : T2Pat<(ARMsube    rGPR:$src, t2_so_imm_not:$imm, CPSR),
+            (t2ADCri    rGPR:$src, t2_so_imm_not:$imm)>;
+def : T2Pat<(ARMsube    rGPR:$src, imm1_65535_neg:$imm, CPSR),
+            (t2ADCrr    rGPR:$src, (t2MOVi16 (imm_not_XFORM imm:$imm)))>;
 
 def t2SEL : T2ThreeReg<(outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm),
                 NoItinerary, "sel", "\t$Rd, $Rn, $Rm",

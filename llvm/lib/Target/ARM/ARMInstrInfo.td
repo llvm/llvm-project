@@ -987,8 +987,10 @@ def mod_imm_not : Operand<i32>, ImmLeaf<i32, [{
 
 def ModImmNegAsmOperand : AsmOperandClass { let Name = "ModImmNeg"; }
 def mod_imm_neg : Operand<i32>, PatLeaf<(imm), [{
-    unsigned Value = -(unsigned)N->getZExtValue();
-    return Value && ARM_AM::getSOImmVal(Value) != -1;
+    unsigned Value = N->getZExtValue();
+    if (Value == 0 || Value == 0x80000000)
+      return false;
+    return ARM_AM::getSOImmVal(-Value) != -1;
   }], imm_neg_XFORM> {
   let ParserMatchClass = ModImmNegAsmOperand;
 }
@@ -1138,6 +1140,12 @@ def imm0_65535 : Operand<i32>, ImmLeaf<i32, [{
 // imm0_65535_neg - An immediate whose negative value is in the range [0.65535].
 def imm0_65535_neg : Operand<i32>, ImmLeaf<i32, [{
   return -Imm >= 0 && -Imm < 65536;
+}]>;
+
+// imm1_65535_neg - An immediate whose negative value is in the range [1, 65535].
+// This matters because flags are set differently in adds->subs
+def imm1_65535_neg : Operand<i32>, ImmLeaf<i32, [{
+  return -Imm > 0 && -Imm < 65536;
 }]>;
 
 // imm0_65535_expr - For movt/movw - 16-bit immediate that can also reference
@@ -4031,26 +4039,47 @@ defm RSC : AI1_rsc_irs<0b0111, "rsc", ARMsube>;
 // assume opposite meanings of the carry flag (i.e., carry == !borrow).
 // See the definition of AddWithCarry() in the ARM ARM A2.2.1 for the gory
 // details.
+let AddedComplexity = 1 in {
 def : ARMPat<(add     GPR:$src, mod_imm_neg:$imm),
              (SUBri   GPR:$src, mod_imm_neg:$imm)>;
 def : ARMPat<(ARMaddc GPR:$src, mod_imm_neg:$imm),
              (SUBSri  GPR:$src, mod_imm_neg:$imm)>;
+def : ARMPat<(sub     GPR:$src, mod_imm_neg:$imm),
+             (ADDri   GPR:$src, mod_imm_neg:$imm)>;
+def : ARMPat<(ARMsubc GPR:$src, mod_imm_neg:$imm),
+             (ADDSri  GPR:$src, mod_imm_neg:$imm)>;
+}
 
+let AddedComplexity = 1 in {
 def : ARMPat<(add     GPR:$src, imm0_65535_neg:$imm),
              (SUBrr   GPR:$src, (MOVi16 (imm_neg_XFORM imm:$imm)))>,
              Requires<[IsARM, HasV6T2]>;
-def : ARMPat<(ARMaddc GPR:$src, imm0_65535_neg:$imm),
+def : ARMPat<(ARMaddc GPR:$src, imm1_65535_neg:$imm),
              (SUBSrr  GPR:$src, (MOVi16 (imm_neg_XFORM imm:$imm)))>,
              Requires<[IsARM, HasV6T2]>;
+def : ARMPat<(sub     GPR:$src, imm0_65535_neg:$imm),
+             (ADDrr   GPR:$src, (MOVi16 (imm_neg_XFORM imm:$imm)))>,
+             Requires<[IsARM, HasV6T2]>;
+def : ARMPat<(ARMsubc GPR:$src, imm1_65535_neg:$imm),
+             (ADDSrr  GPR:$src, (MOVi16 (imm_neg_XFORM imm:$imm)))>,
+             Requires<[IsARM, HasV6T2]>;
+}
 
 // The with-carry-in form matches bitwise not instead of the negation.
 // Effectively, the inverse interpretation of the carry flag already accounts
 // for part of the negation.
+let AddedComplexity = 1 in {
 def : ARMPat<(ARMadde GPR:$src, mod_imm_not:$imm, CPSR),
              (SBCri   GPR:$src, mod_imm_not:$imm)>;
-def : ARMPat<(ARMadde GPR:$src, imm0_65535_neg:$imm, CPSR),
+def : ARMPat<(ARMadde GPR:$src, imm1_65535_neg:$imm, CPSR),
              (SBCrr   GPR:$src, (MOVi16 (imm_not_XFORM imm:$imm)))>,
              Requires<[IsARM, HasV6T2]>;
+def : ARMPat<(ARMsube GPR:$src, mod_imm_not:$imm, CPSR),
+             (ADCri   GPR:$src, mod_imm_not:$imm)>;
+def : ARMPat<(ARMsube GPR:$src, imm1_65535_neg:$imm, CPSR),
+             (ADCrr   GPR:$src, (MOVi16 (imm_not_XFORM imm:$imm)))>,
+             Requires<[IsARM, HasV6T2]>;
+}
 
 // Note: These are implemented in C++ code, because they have to generate
 // ADD/SUBrs instructions, which use a complex pattern that a xform function

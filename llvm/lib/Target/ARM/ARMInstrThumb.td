@@ -1406,6 +1406,17 @@ let hasPostISelHook = 1, Defs = [CPSR] in {
                 Sched<[WriteALU]>;
 }
 
+let AddedComplexity = 1 in {
+def : T1Pat<(ARMaddc tGPR:$src, mod_imm1_7_neg:$imm),
+            (tSUBSi3 tGPR:$src, mod_imm1_7_neg:$imm)>;
+def : T1Pat<(ARMaddc tGPR:$src, mod_imm8_255_neg:$imm),
+            (tSUBSi8 tGPR:$src, mod_imm8_255_neg:$imm)>;
+def : T1Pat<(ARMsubc tGPR:$src, mod_imm1_7_neg:$imm),
+            (tADDSi3 tGPR:$src, mod_imm1_7_neg:$imm)>;
+def : T1Pat<(ARMsubc tGPR:$src, mod_imm8_255_neg:$imm),
+            (tADDSi8 tGPR:$src, mod_imm8_255_neg:$imm)>;
+}
+
 // Sign-extend byte
 def tSXTB :                     // A8.6.222
   T1pIMiscEncode<{0,0,1,0,0,1,?}, (outs tGPR:$Rd), (ins tGPR:$Rm),
