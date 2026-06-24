@@ -391,12 +391,10 @@ void SampleProfileMatcher::runStaleProfileMatching(
     }
 
     // Conflicting profile previously matched
-    uint64_t IRHash = IR.second.getHashCode();
-    uint64_t ProfHash = ProfAnchor.getHashCode();
-    auto Cached = MatchedAnchorCache.find(ProfHash);
+    auto Cached = MatchedAnchorCache.find(ProfAnchor);
     if (Cached == MatchedAnchorCache.end())
-      MatchedAnchorCache[ProfHash] = IRHash;
-    else if (Cached->second != IRHash)
+      MatchedAnchorCache[ProfAnchor] = Callee;
+    else if (Cached->second != Callee)
       ProfileConflicted = true;
 
     if (ProfileConflicted) {
@@ -903,6 +901,7 @@ void SampleProfileMatcher::matchFunctionsWithoutProfileByBasename() {
       continue;
 
     FuncToProfileNameMap[OrphanFunc] = ProfId;
+    MatchedAnchorCache[ProfId] = OrphanFunc;
     if (const auto *FS = Reader.getSamplesFor(ProfId.stringRef()))
       NewlyLoadedProfiles.create(FS->getFunction()).merge(*FS);
     MatchCount++;
