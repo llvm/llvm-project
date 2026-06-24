@@ -1598,12 +1598,30 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     emitCXXGlobalVarDeclInitFunc(vd, gv, needsGlobalCtor);
 }
 
+bool CIRGenModule::shouldEmitFunction(GlobalDecl gd) {
+  if (getFunctionLinkage(gd) !=
+      cir::GlobalLinkageKind::AvailableExternallyLinkage)
+    return true;
+
+  const auto *fd = cast<FunctionDecl>(gd.getDecl());
+  // Inline builtins must be emitted; the body is redirected to a `.inline`
+  // symbol in CIRGenFunction::generateCode.
+  if (fd->isInlineBuiltinDeclaration())
+    return true;
+
+  // PR9614 / glibc btowc workaround: an available_externally function whose
+  // body just calls itself (via asm label or __builtin_* lowering on the
+  // same name) is not a valid stand-in for the real implementation.  Drop
+  // it from the IR so the optimizer doesn't reason about its body.
+  return !getCXXABI().getMangleContext().isTriviallyRecursive(fd);
+}
+
 void CIRGenModule::emitGlobalDefinition(clang::GlobalDecl gd,
                                         mlir::Operation *op) {
   const auto *decl = cast<ValueDecl>(gd.getDecl());
   if (const auto *fd = dyn_cast<FunctionDecl>(decl)) {
-    // TODO(CIR): Skip generation of CIR for functions with available_externally
-    // linkage at -O0.
+    if (!shouldEmitFunction(gd))
+      return;
 
     if (const auto *method = dyn_cast<CXXMethodDecl>(decl)) {
       // Make sure to emit the definition(s) before we emit the thunks. This is
