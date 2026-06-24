@@ -54,21 +54,22 @@ struct LiveReason {
   StringRef desc;
 };
 
-template <class ELFT, bool TrackWhyLive> class MarkLive {
+template <bool TrackWhyLive> class MarkLive {
 public:
   MarkLive(Ctx &ctx) : ctx(ctx) {}
 
-  void run();
+  LLVM_ATTRIBUTE_NOINLINE void seed();
+  LLVM_ATTRIBUTE_NOINLINE void reportWhyLive() const;
   void printWhyLive(Symbol *s) const;
+  template <class ELFT> void mark();
 
 private:
   void enqueue(InputSectionBase *sec, uint64_t offset, Symbol *sym,
                LiveReason reason);
   void markSymbol(Symbol *sym, StringRef reason);
-  void mark();
-  void markParallel();
+  template <class ELFT> void markParallel();
 
-  template <class RelTy>
+  template <class ELFT, class RelTy>
   void resolveReloc(InputSectionBase &sec, const RelTy &rel, bool fromFDE);
 
   void scanEhFrameSection(EhInputSection &eh);
@@ -110,11 +111,10 @@ static uint64_t getAddend(Ctx &, InputSectionBase &sec,
   return rel.r_addend;
 }
 
-template <class ELFT, bool TrackWhyLive>
-template <class RelTy>
-void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
-                                                const RelTy &rel,
-                                                bool fromFDE) {
+template <bool TrackWhyLive>
+template <class ELFT, class RelTy>
+void MarkLive<TrackWhyLive>::resolveReloc(InputSectionBase &sec,
+                                          const RelTy &rel, bool fromFDE) {
   // If a symbol is referenced in a live section, it is used.
   Symbol *sym;
   if constexpr (std::is_same_v<RelTy, Relocation>) {
@@ -200,15 +200,15 @@ void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
 // A possible improvement would be to fully process .eh_frame in the middle of
 // the gc pass. With that we would be able to also gc some sections holding
 // LSDAs and personality functions if we found that they were unused.
-template <class ELFT, bool TrackWhyLive>
-void MarkLive<ELFT, TrackWhyLive>::scanEhFrameSection(EhInputSection &eh) {
+template <bool TrackWhyLive>
+void MarkLive<TrackWhyLive>::scanEhFrameSection(EhInputSection &eh) {
   if (TrackWhyLive)
     whyLive.try_emplace(&eh,
                         LiveReason{std::nullopt, "exception handling frame"});
   ArrayRef<Relocation> rels = eh.rels;
   for (const EhSectionPiece &cie : eh.cies)
     if (cie.firstRelocation != unsigned(-1))
-      resolveReloc(eh, rels[cie.firstRelocation], false);
+      resolveReloc<void>(eh, rels[cie.firstRelocation], false);
   for (const EhSectionPiece &fde : eh.fdes) {
     size_t firstRelI = fde.firstRelocation;
     if (firstRelI == (unsigned)-1)
@@ -216,7 +216,7 @@ void MarkLive<ELFT, TrackWhyLive>::scanEhFrameSection(EhInputSection &eh) {
     uint64_t pieceEnd = fde.inputOff + fde.size;
     for (size_t j = firstRelI, end2 = rels.size();
          j < end2 && rels[j].offset < pieceEnd; ++j)
-      resolveReloc(eh, rels[j], true);
+      resolveReloc<void>(eh, rels[j], true);
   }
 }
 
@@ -242,10 +242,9 @@ static bool isReserved(InputSectionBase *sec) {
   }
 }
 
-template <class ELFT, bool TrackWhyLive>
-void MarkLive<ELFT, TrackWhyLive>::enqueue(InputSectionBase *sec,
-                                           uint64_t offset, Symbol *sym,
-                                           LiveReason reason) {
+template <bool TrackWhyLive>
+void MarkLive<TrackWhyLive>::enqueue(InputSectionBase *sec, uint64_t offset,
+                                     Symbol *sym, LiveReason reason) {
   // Usually, a whole section is marked as live or dead, but in mergeable
   // (splittable) sections, each piece of data has independent liveness bit.
   // So we explicitly tell it which offset is in use.
@@ -274,8 +273,8 @@ void MarkLive<ELFT, TrackWhyLive>::enqueue(InputSectionBase *sec,
 }
 
 // Print the stack of reasons that the given symbol is live.
-template <class ELFT, bool TrackWhyLive>
-void MarkLive<ELFT, TrackWhyLive>::printWhyLive(Symbol *s) const {
+template <bool TrackWhyLive>
+void MarkLive<TrackWhyLive>::printWhyLive(Symbol *s) const {
   // Skip dead symbols. A symbol is dead if it belongs to a dead section.
   if (auto *d = dyn_cast<Defined>(s)) {
     auto *sec = dyn_cast_or_null<InputSectionBase>(d->section);
@@ -332,8 +331,8 @@ void MarkLive<ELFT, TrackWhyLive>::printWhyLive(Symbol *s) const {
   }
 }
 
-template <class ELFT, bool TrackWhyLive>
-void MarkLive<ELFT, TrackWhyLive>::markSymbol(Symbol *sym, StringRef reason) {
+template <bool TrackWhyLive>
+void MarkLive<TrackWhyLive>::markSymbol(Symbol *sym, StringRef reason) {
   if (auto *d = dyn_cast_or_null<Defined>(sym))
     if (auto *isec = dyn_cast_or_null<InputSectionBase>(d->section))
       enqueue(isec, d->value, sym, {std::nullopt, reason});
@@ -342,8 +341,7 @@ void MarkLive<ELFT, TrackWhyLive>::markSymbol(Symbol *sym, StringRef reason) {
 // This is the main function of the garbage collector.
 // Starting from GC-root sections, this function visits all reachable
 // sections to set their "Live" bits.
-template <class ELFT, bool TrackWhyLive>
-void MarkLive<ELFT, TrackWhyLive>::run() {
+template <bool TrackWhyLive> void MarkLive<TrackWhyLive>::seed() {
   // Add GC root symbols.
 
   // Preserve externally-visible symbols if the symbols defined by this
@@ -424,34 +422,37 @@ void MarkLive<ELFT, TrackWhyLive>::run() {
       cNamedSections[ctx.saver.save("__stop_" + sec->name)].push_back(sec);
     }
   }
-
-  mark();
-
-  if (TrackWhyLive) {
-    const auto handleSym = [&](Symbol *sym) {
-      if (llvm::any_of(ctx.arg.whyLive, [sym](const llvm::GlobPattern &pat) {
-            return pat.match(sym->getName());
-          }))
-        printWhyLive(sym);
-    };
-
-    for (Symbol *sym : ctx.symtab->getSymbols())
-      handleSym(sym);
-    // Handle local symbols, skipping the symbol at index 0 and section
-    // symbols, which usually have empty names and technically not live. Note:
-    // a live section may lack an associated section symbol, making them
-    // unreliable liveness indicators.
-    for (ELFFileBase *file : ctx.objectFiles)
-      for (Symbol *sym : file->getSymbols())
-        if (sym->isLocal() && sym->isDefined() && !sym->isSection())
-          handleSym(sym);
-  }
 }
 
-template <class ELFT, bool TrackWhyLive>
-void MarkLive<ELFT, TrackWhyLive>::mark() {
+template <bool TrackWhyLive>
+void MarkLive<TrackWhyLive>::reportWhyLive() const {
+  if (!TrackWhyLive)
+    return;
+
+  const auto handleSym = [&](Symbol *sym) {
+    if (llvm::any_of(ctx.arg.whyLive, [sym](const llvm::GlobPattern &pat) {
+          return pat.match(sym->getName());
+        }))
+      printWhyLive(sym);
+  };
+
+  for (Symbol *sym : ctx.symtab->getSymbols())
+    handleSym(sym);
+  // Handle local symbols, skipping the symbol at index 0 and section symbols,
+  // which usually have empty names and technically not live. Note: a live
+  // section may lack an associated section symbol, making them unreliable
+  // liveness indicators.
+  for (ELFFileBase *file : ctx.objectFiles)
+    for (Symbol *sym : file->getSymbols())
+      if (sym->isLocal() && sym->isDefined() && !sym->isSection())
+        handleSym(sym);
+}
+
+template <bool TrackWhyLive>
+template <class ELFT>
+void MarkLive<TrackWhyLive>::mark() {
   if constexpr (!TrackWhyLive) {
-    markParallel();
+    markParallel<ELFT>();
     return;
   }
   while (!queue.empty()) {
@@ -459,11 +460,11 @@ void MarkLive<ELFT, TrackWhyLive>::mark() {
 
     const RelsOrRelas<ELFT> rels = sec.template relsOrRelas<ELFT>();
     for (const typename ELFT::Rel &rel : rels.rels)
-      resolveReloc(sec, rel, false);
+      resolveReloc<ELFT>(sec, rel, false);
     for (const typename ELFT::Rela &rel : rels.relas)
-      resolveReloc(sec, rel, false);
+      resolveReloc<ELFT>(sec, rel, false);
     for (const typename ELFT::Crel &rel : rels.crels)
-      resolveReloc(sec, rel, false);
+      resolveReloc<ELFT>(sec, rel, false);
 
     for (InputSectionBase *isec : sec.dependentSections)
       enqueue(isec, /*offset=*/0, /*sym=*/nullptr,
@@ -529,8 +530,9 @@ static void processSectionEdges(
 // Parallel mark using level-synchronized BFS with depth-limited inline
 // recursion. Each parallelFor iteration processes a subtree up to depth 3
 // (DFS for cache locality), then queues deeper discoveries for the next level.
-template <class ELFT, bool TrackWhyLive>
-void MarkLive<ELFT, TrackWhyLive>::markParallel() {
+template <bool TrackWhyLive>
+template <class ELFT>
+void MarkLive<TrackWhyLive>::markParallel() {
   const size_t numThreads = parallel::getThreadCount();
   auto visit = [&](InputSection *sec, int depth,
                    SmallVector<InputSection *, 0> &localQueue,
@@ -586,10 +588,16 @@ template <class ELFT> void elf::markLive(Ctx &ctx) {
                   [](InputSectionBase *sec) { sec->markDead(); });
 
   // Follow the graph to mark all live sections.
-  if (ctx.arg.whyLive.empty())
-    MarkLive<ELFT, false>(ctx).run();
-  else
-    MarkLive<ELFT, true>(ctx).run();
+  if (ctx.arg.whyLive.empty()) {
+    MarkLive<false> marker(ctx);
+    marker.seed();
+    marker.template mark<ELFT>();
+  } else {
+    MarkLive<true> marker(ctx);
+    marker.seed();
+    marker.template mark<ELFT>();
+    marker.reportWhyLive();
+  }
 
   // Determine which DSOs are needed. A DSO is needed if a non-weak SharedSymbol
   // is used from a live section.
