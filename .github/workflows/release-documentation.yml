@@ -67,12 +67,7 @@ jobs:
 
   release-documentation:
     name: Build and Upload Release Documentation and Man Pages
-    environment:
-      name: release
-      deployment: false
     runs-on: ubuntu-24.04
-    permissions:
-      contents: write
     needs:
       - release-man-pages-validate-input
     outputs:
