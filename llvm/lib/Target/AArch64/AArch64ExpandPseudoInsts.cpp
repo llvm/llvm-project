@@ -1282,8 +1282,8 @@ bool AArch64ExpandPseudoImpl::expandMultiVecPseudo(
   return true;
 }
 
-struct CopyReg {
-  Register Dest;
+struct Copy {
+  Register Dst;
   Register Src;
   int SrcTupleIdx = -1;
 };
@@ -1292,55 +1292,64 @@ bool AArch64ExpandPseudoImpl::expandFormTuplePseudo(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
     MachineBasicBlock::iterator &NextMBBI, unsigned Size) {
   assert((Size == 2 || Size == 4) && "Invalid Tuple Size");
+
   const TargetRegisterInfo *TRI =
       MBB.getParent()->getSubtarget().getRegisterInfo();
+
   MachineInstr &MI = *MBBI;
-  Register ReturnTuple = MI.getOperand(0).getReg();
-
-  // Collect the copies required to form the tuple. Count if any return tuple
-  // members appear as operands to the FORM_TRANSPOSED_REG_TUPLE. If a
-  // destination appears as a source operand, we can't write to that register
-  // until we've handled the other copies that use it.
-  CopyReg Copies[4] = {};
-  unsigned DestUseCount[4] = {};
-  for (unsigned I = 0; I < Size; ++I) {
-    Register ReturnTupleSubReg =
-        TRI->getSubReg(ReturnTuple, AArch64::zsub0 + I);
-    Register FormTupleOpReg = MI.getOperand(I + 1).getReg();
-    Copies[I] = {ReturnTupleSubReg, FormTupleOpReg};
-    if (FormTupleOpReg != ReturnTupleSubReg &&
-        TRI->isSubRegister(ReturnTuple, FormTupleOpReg)) {
-      int SrcTupleIdx =
-          TRI->getSubRegIndex(ReturnTuple, FormTupleOpReg) - AArch64::zsub0;
-      ++DestUseCount[SrcTupleIdx];
-      Copies[I].SrcTupleIdx = SrcTupleIdx;
-    }
-  }
-
-  SmallVector<CopyReg, 4> Worklist;
-  for (unsigned I = 0; I < Size; ++I)
-    if (DestUseCount[I] == 0)
-      Worklist.push_back(Copies[I]);
-
-  // Emit the copies in reverse dependency order.
   DebugLoc DL = MI.getDebugLoc();
-  unsigned CopiesHandled = 0;
-  while (!Worklist.empty()) {
-    CopyReg Copy = Worklist.pop_back_val();
-    if (Copy.Dest != Copy.Src) {
-      BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORR_ZZZ))
-          .addReg(Copy.Dest, RegState::Define)
-          .addReg(Copy.Src)
-          .addReg(Copy.Src);
-      if (Copy.SrcTupleIdx != -1) {
-        if (--DestUseCount[Copy.SrcTupleIdx] == 0)
-          Worklist.push_back(Copies[Copy.SrcTupleIdx]);
-      }
+  Register Tuple = MI.getOperand(0).getReg();
+
+  // Collect the copies required to form the tuple. Count if any tuple members
+  // appear as operands to the FORM_TRANSPOSED_REG_TUPLE. If a destination
+  // also appears as a source operand, we can't write to that register until
+  // we've handled the other copies that use it.
+
+  Copy Copies[4] = {};
+  unsigned Users[4] = {};
+
+  for (unsigned I = 0; I < Size; ++I) {
+    Register Dst = TRI->getSubReg(Tuple, AArch64::zsub0 + I);
+    Register Src = MI.getOperand(I + 1).getReg();
+
+    Copies[I] = {Dst, Src};
+
+    if (Dst != Src && TRI->isSubRegister(Tuple, Src)) {
+      int SrcTupleIdx = TRI->getSubRegIndex(Tuple, Src) - AArch64::zsub0;
+      Copies[I].SrcTupleIdx = SrcTupleIdx;
+      ++Users[SrcTupleIdx];
     }
-    ++CopiesHandled;
   }
 
-  if (CopiesHandled == Size) {
+  auto EmitCopy = [&](Register Dst, Register Src) {
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::ORR_ZZZ))
+        .addReg(Dst, RegState::Define)
+        .addReg(Src)
+        .addReg(Src);
+  };
+
+  SmallVector<unsigned, 4> Ready;
+  for (unsigned I = 0; I < Size; ++I)
+    if (Users[I] == 0)
+      Ready.push_back(I);
+
+  unsigned Done = 0;
+
+  // Emit copies in reverse dependency order.
+  while (!Ready.empty()) {
+    unsigned I = Ready.pop_back_val();
+    const Copy &Copy = Copies[I];
+
+    if (Copy.Dst != Copy.Src)
+      EmitCopy(Copy.Dst, Copy.Src);
+
+    if (Copy.SrcTupleIdx != -1 && --Users[Copy.SrcTupleIdx] == 0)
+      Ready.push_back(Copy.SrcTupleIdx);
+
+    ++Done;
+  }
+
+  if (Done == Size) {
     MI.eraseFromParent();
     return true;
   }
@@ -1353,31 +1362,17 @@ bool AArch64ExpandPseudoImpl::expandFormTuplePseudo(
   // so we can't rely on scavenging. So, we handle this by emitting a sequence
   // of XOR swaps. Again FIXME -- we should not need to do this!
 
-  auto EmitZRegSwap = [&](Register ZA, Register ZB) {
-    assert(ZA != ZB && "xor-swap of same reg clobbers it");
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::EOR_ZZZ), ZA)
-        .addReg(ZA)
-        .addReg(ZB);
-
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::EOR_ZZZ), ZB)
-        .addReg(ZB)
-        .addReg(ZA);
-
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::EOR_ZZZ), ZA)
-        .addReg(ZA)
-        .addReg(ZB);
+  auto EmitSwap = [&](Register A, Register B) {
+    assert(A != B && "xor-swap of same reg clobbers it");
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::EOR_ZZZ), A).addReg(A).addReg(B);
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::EOR_ZZZ), B).addReg(B).addReg(A);
+    BuildMI(MBB, MBBI, DL, TII->get(AArch64::EOR_ZZZ), A).addReg(A).addReg(B);
   };
 
   // Extract the permutation.
   unsigned Perm[4] = {};
-  for (unsigned I = 0; I < Size; ++I) {
-    if (DestUseCount[I] > 0) {
-      assert(DestUseCount[I] == 1);
-      Perm[I] = Copies[I].SrcTupleIdx;
-    } else {
-      Perm[I] = I;
-    }
-  }
+  for (unsigned I = 0; I < Size; ++I)
+    Perm[I] = Users[I] ? Copies[I].SrcTupleIdx : I;
 
   // Decompose the permutation to swaps and emit.
   bool Visited[4] = {};
@@ -1385,18 +1380,15 @@ bool AArch64ExpandPseudoImpl::expandFormTuplePseudo(
     if (Visited[I])
       continue;
 
-    int J = I;
     SmallVector<int, 4> Cycle;
-    while (!Visited[J]) {
+    for (unsigned J = I; !Visited[J]; J = Perm[J]) {
       Visited[J] = true;
       Cycle.push_back(J);
-      J = Perm[J];
     }
 
     for (int K = Cycle.size() - 1; K > 0; --K) {
-      Register ZA = TRI->getSubReg(ReturnTuple, AArch64::zsub0 + Cycle[0]);
-      Register ZB = TRI->getSubReg(ReturnTuple, AArch64::zsub0 + Cycle[K]);
-      EmitZRegSwap(ZA, ZB);
+      EmitSwap(TRI->getSubReg(Tuple, AArch64::zsub0 + Cycle[0]),
+               TRI->getSubReg(Tuple, AArch64::zsub0 + Cycle[K]));
     }
   }
 
