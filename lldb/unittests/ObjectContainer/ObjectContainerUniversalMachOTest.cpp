@@ -140,8 +140,7 @@ TEST_F(ObjectContainerUniversalMachOTest, NfatArchTruncatedSlices) {
           /*file_offset=*/0, /*length=*/sizeof(kData)));
   ASSERT_NE(Container.get(), nullptr);
 
-  // Before the fix, this m_fat_archs[0] causes an OOB std::vector access; after
-  // the fix the bounds check against m_fat_archs.size() returns false.
+  // m_fat_archs has zero emlement, returns false.
   ArchSpec Arch;
   EXPECT_FALSE(Container->GetArchitectureAtIndex(0, Arch));
 }

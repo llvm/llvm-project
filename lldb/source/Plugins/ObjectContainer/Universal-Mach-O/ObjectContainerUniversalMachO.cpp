@@ -142,8 +142,6 @@ size_t ObjectContainerUniversalMachO::GetNumArchitectures() const {
 
 bool ObjectContainerUniversalMachO::GetArchitectureAtIndex(
     uint32_t idx, ArchSpec &arch) const {
-  // guard against m_fat_archs.size() to keep this safe regardless of
-  // how the header was populated.
   if (idx < m_fat_archs.size()) {
     arch.SetArchitecture(eArchTypeMachO, m_fat_archs[idx].GetCPUType(),
                          m_fat_archs[idx].GetCPUSubType());
