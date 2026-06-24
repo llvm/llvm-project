@@ -22,6 +22,7 @@ STRING_EXTENSION_OUTSIDE(SBValue)
                     count = len(self)
                     if -count <= key < count:
                         key %= count
+                    if key >= 0:
                         return self.sbvalue.GetChildAtIndex(key)
                 return None
 
