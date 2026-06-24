@@ -47,6 +47,27 @@ namespace vector {
 /// [ContractionOpToOuterProductOpLowering]
 /// Progressively lower a `vector.contract` with row-major matmul semantics to
 /// linearized `vector.extract` + `vector.outerproduct` + `vector.insert`.
+
+using FilterConstraintType = std::function<LogicalResult(ContractionOp op)>;
+
+LogicalResult defaultFilter(ContractionOp op);
+
+void populateVectorContractToDotPatterns(
+    RewritePatternSet &patterns, FilterConstraintType filter = defaultFilter,
+    PatternBenefit benefit = 1);
+
+void populateVectorContractToOuterProductPatterns(
+    RewritePatternSet &patterns, FilterConstraintType filter = defaultFilter,
+    PatternBenefit benefit = 1);
+
+void populateVectorContractToParallelArithPatterns(
+    RewritePatternSet &patterns, FilterConstraintType filter = defaultFilter,
+    PatternBenefit benefit = 1);
+
+void populateVectorContractGenericLoweringPatterns(
+    RewritePatternSet &patterns, FilterConstraintType filter = defaultFilter,
+    PatternBenefit benefit = 1);
+
 void populateVectorContractLoweringPatterns(
     RewritePatternSet &patterns,
     VectorContractLowering vectorContractLoweringOption,
