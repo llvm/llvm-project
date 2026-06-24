@@ -3502,7 +3502,7 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
     return false;
   }
 
-  Result = VD->getEvaluatedValue();
+  Result = const_cast<APValue *>(VD->getEvaluatedValue());
 
   if (!Result && !AllowConstexprUnknown)
     return false;
@@ -21719,7 +21719,7 @@ bool VarDecl::evaluateDestruction(
   // Otherwise, treat the value as default-initialized; if the destructor works
   // anyway, then the destruction is constant (and must be essentially empty).
   APValue DestroyedValue;
-  if (getEvaluatedValue() && !getEvaluatedValue()->isAbsent())
+  if (getEvaluatedValue())
     DestroyedValue = *getEvaluatedValue();
   else if (!handleDefaultInitValue(getType(), DestroyedValue))
     return false;
