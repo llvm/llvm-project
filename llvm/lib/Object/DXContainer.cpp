@@ -543,9 +543,6 @@ Error DXContainer::parsePartOffsets() {
       sizeof(dxbc::Header) + (Header.PartCount * sizeof(uint32_t));
   const char *Current = Data.getBuffer().data() + sizeof(dxbc::Header);
   for (uint32_t Part = 0; Part < Header.PartCount; ++Part) {
-    if (PrivateData)
-      return parseFailed("PRIV must be the last section in a DXContainer");
-
     uint32_t PartOffset;
     if (Error Err = readInteger(Data.getBuffer(), Current, PartOffset))
       return Err;
