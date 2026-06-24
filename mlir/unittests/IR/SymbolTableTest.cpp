@@ -28,12 +28,14 @@ protected:
   void SetUp() override {
     ::test::registerTestDialect(registry);
     context = std::make_unique<MLIRContext>(registry);
+    builder = std::make_unique<OpBuilder>(context.get());
   }
 
   void testReplaceAllSymbolUses(ReplaceFnType replaceFn) {
     // Set up IR and find func ops.
     OwningOpRef<ModuleOp> module =
         parseSourceString<ModuleOp>(kInput, context.get());
+    ASSERT_TRUE(module);
     SymbolTable symbolTable(module.get());
     auto opIterator = module->getBody(0)->getOperations().begin();
     auto fooOp = cast<FunctionOpInterface>(opIterator++);
@@ -46,7 +48,7 @@ protected:
     ASSERT_TRUE(succeeded(res));
     ASSERT_TRUE(succeeded(verify(module.get())));
 
-    // Check that it got renamed.
+    // Check that callee of the call op got renamed.
     bool calleeFound = false;
     fooOp->walk([&](CallOpInterface callOp) {
       StringAttr callee = dyn_cast<SymbolRefAttr>(callOp.getCallableForCallee())
@@ -55,13 +57,19 @@ protected:
       calleeFound = true;
     });
     EXPECT_TRUE(calleeFound);
+
+    // Check that module attribute did *not* get renamed.
+    auto moduleAttr = (*module)->getAttrOfType<FlatSymbolRefAttr>("test.attr");
+    ASSERT_TRUE(moduleAttr);
+    EXPECT_EQ(moduleAttr.getValue(), StringRef("bar"));
   }
 
   std::unique_ptr<MLIRContext> context;
+  std::unique_ptr<OpBuilder> builder;
 
 private:
   constexpr static llvm::StringLiteral kInput = R"MLIR(
-      module {
+      module attributes { test.attr = @bar } {
         test.conversion_func_op private @foo() {
           "test.conversion_call_op"() { callee=@bar } : () -> ()
           "test.return"() : () -> ()
@@ -80,7 +88,7 @@ TEST_F(ReplaceAllSymbolUsesTest, OperationInModuleOp) {
   testReplaceAllSymbolUses([&](const auto &symbolTable, auto module, auto fooOp,
                                auto barOp) -> LogicalResult {
     return symbolTable.replaceAllSymbolUses(
-        barOp, StringAttr::get(context.get(), "baz"), module);
+        barOp, builder->getStringAttr("baz"), module);
   });
 }
 
@@ -89,8 +97,7 @@ TEST_F(ReplaceAllSymbolUsesTest, StringAttrInModuleOp) {
   testReplaceAllSymbolUses([&](const auto &symbolTable, auto module, auto fooOp,
                                auto barOp) -> LogicalResult {
     return symbolTable.replaceAllSymbolUses(
-        StringAttr::get(context.get(), "bar"),
-        StringAttr::get(context.get(), "baz"), module);
+        builder->getStringAttr("bar"), builder->getStringAttr("baz"), module);
   });
 }
 
@@ -99,7 +106,7 @@ TEST_F(ReplaceAllSymbolUsesTest, OperationInModuleBody) {
   testReplaceAllSymbolUses([&](const auto &symbolTable, auto module, auto fooOp,
                                auto barOp) -> LogicalResult {
     return symbolTable.replaceAllSymbolUses(
-        barOp, StringAttr::get(context.get(), "baz"), &module->getRegion(0));
+        barOp, builder->getStringAttr("baz"), &module->getRegion(0));
   });
 }
 
@@ -107,9 +114,9 @@ TEST_F(ReplaceAllSymbolUsesTest, StringAttrInModuleBody) {
   // Symbol as `StringAttr`, rename within module body.
   testReplaceAllSymbolUses([&](const auto &symbolTable, auto module, auto fooOp,
                                auto barOp) -> LogicalResult {
-    return symbolTable.replaceAllSymbolUses(
-        StringAttr::get(context.get(), "bar"),
-        StringAttr::get(context.get(), "baz"), &module->getRegion(0));
+    return symbolTable.replaceAllSymbolUses(builder->getStringAttr("bar"),
+                                            builder->getStringAttr("baz"),
+                                            &module->getRegion(0));
   });
 }
 
@@ -118,7 +125,7 @@ TEST_F(ReplaceAllSymbolUsesTest, OperationInFuncOp) {
   testReplaceAllSymbolUses([&](const auto &symbolTable, auto module, auto fooOp,
                                auto barOp) -> LogicalResult {
     return symbolTable.replaceAllSymbolUses(
-        barOp, StringAttr::get(context.get(), "baz"), fooOp);
+        barOp, builder->getStringAttr("baz"), fooOp);
   });
 }
 
@@ -127,8 +134,7 @@ TEST_F(ReplaceAllSymbolUsesTest, StringAttrInFuncOp) {
   testReplaceAllSymbolUses([&](const auto &symbolTable, auto module, auto fooOp,
                                auto barOp) -> LogicalResult {
     return symbolTable.replaceAllSymbolUses(
-        StringAttr::get(context.get(), "bar"),
-        StringAttr::get(context.get(), "baz"), fooOp);
+        builder->getStringAttr("bar"), builder->getStringAttr("baz"), fooOp);
   });
 }
 
