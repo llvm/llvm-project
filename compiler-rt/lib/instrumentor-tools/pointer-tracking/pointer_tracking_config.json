@@ -1,0 +1,95 @@
+{
+  "configuration": {
+    "runtime_prefix": "__pointer_tracking_",
+    "runtime_prefix.description": "The runtime API prefix.",
+    "runtime_stubs_file": "",
+    "target_regex": "",
+    "target_regex.description": "Regular expression to be matched against the module target. Only targets that match this regex will be instrumented.",
+    "function_regex": "",
+    "function_regex.description": "Regular expression to be matched against a function name. Only functions that match this regex will be instrumented.",
+    "demangle_function_names": true,
+    "demangle_function_names.description": "Demangle functions names passed to the runtime.",
+    "host_enabled": true,
+    "host_enabled.description": "Instrument non-GPU targets",
+    "gpu_enabled": false,
+    "gpu_enabled.description": "Instrument GPU targets"
+  },
+  "instruction_post": {
+    "alloca": {
+      "enabled": true,
+      "address": true,
+      "address.replace": true,
+      "address.description": "The address of the allocated memory.",
+      "size": true,
+      "size.description": "The size of the allocation in bytes.",
+      "id": true,
+      "id.description": "A unique ID associated with the alloca."
+    },
+    "load": {
+      "enabled": false
+    },
+    "store": {
+      "enabled": false
+    }
+  },
+  "instruction_pre": {
+    "alloca": {
+      "enabled": false
+    },
+    "load": {
+      "enabled": true,
+      "pointer": true,
+      "pointer.replace": true,
+      "pointer.description": "The pointer being loaded from.",
+      "id": true,
+      "id.description": "A unique ID associated with the load."
+    },
+    "store": {
+      "enabled": true,
+      "pointer": true,
+      "pointer.replace": true,
+      "pointer.description": "The pointer being stored to.",
+      "id": true,
+      "id.description": "A unique ID associated with the store."
+    }
+  },
+  "module_pre": {
+    "module": {
+      "enabled": true,
+      "filter": "",
+      "filter.description": "Static property filter to exclude instrumentation."
+    }
+  },
+  "global_pre": {
+    "global": {
+      "enabled": true,
+      "address": true,
+      "address.replace": true,
+      "address.description": "The address of the global variable.",
+      "declared_size": true,
+      "declared_size.description": "The size of the global in bytes.",
+      "name": true,
+      "name.description": "The name of the global variable.",
+      "id": true,
+      "id.description": "A unique ID associated with the global."
+    }
+  },
+  "function_pre": {
+    "function": {
+      "enabled": true,
+      "name": true,
+      "name.description": "The function name.",
+      "id": true,
+      "id.description": "A unique ID associated with the function."
+    }
+  },
+  "function_post": {
+    "function": {
+      "enabled": true,
+      "name": true,
+      "name.description": "The function name.",
+      "id": true,
+      "id.description": "A unique ID associated with the function."
+    }
+  }
+}

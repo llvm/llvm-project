@@ -65,6 +65,12 @@ for tool in tools:
 
 config.substitutions.append(("%lib_dir", config.compiler_rt_libdir))
 
+# Add path to Pointer Tracking runtime library
+config.substitutions.append(("%pointer_tracking_lib_dir", config.compiler_rt_libdir))
+
+pointer_tracking_lib = make_lib_name("pointer_tracking")
+config.substitutions.append(("%pointer_tracking_lib", pointer_tracking_lib))
+
 # Add path to instrumentor config files
 config_dir = os.path.join(
     config.test_source_root, "..", "..", "lib", "instrumentor-tools"
