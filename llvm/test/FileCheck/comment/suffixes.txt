@@ -1,5 +1,5 @@
-# Comment prefixes plus check directive suffixes are not comment directives
-# and are treated as plain text.
+# Comment prefixes plus check directive suffixes are forbidden.
+# FIXME: currently not verified bq ValidatePrefixes missing defaulted comment prefixes?
 
 RUN: echo foo                    >  %t.in
 RUN: echo bar                    >> %t.in
@@ -12,11 +12,11 @@ RUN:   FileCheck -check-prefix=CHECK1 %s
 CHECK1: .chk:1:18: remark: CHECK: expected string found in input
 CHECK1: .chk:2:17: remark: CHECK: expected string found in input
 
-# But we can define them as comment prefixes.
+# But we can define them as comment prefixes; still forbidden.
 
 RUN: %ProtectFileCheckOutput \
 RUN: FileCheck -dump-input=never -vv -comment-prefixes=COM,RUN,RUN-NOT %t.chk < %t.in 2>&1 | \
 RUN:   FileCheck -check-prefix=CHECK2 %s
 
-CHECK2: .chk:1:18: remark: CHECK: expected string found in input
+CHECK2: error: supplied comment prefix must not end with directive: '-NOT', prefix: 'RUN-NOT'
 CHECK2-NOT: .chk:2
