@@ -2201,12 +2201,63 @@ void erase(Container &C, ValueType V) {
   C.erase(std::remove(C.begin(), C.end(), V), C.end());
 }
 
+namespace detail {
+template <typename Range>
+using check_has_member_iterator_category_t =
+    typename decltype(std::declval<Range &>().begin())::iterator_category;
+
+template <typename Range>
+static constexpr bool HasMemberIteratorCategory =
+    is_detected<check_has_member_iterator_category_t, Range>::value;
+
+template <typename Container>
+using check_has_member_capacity_t =
+    decltype(std::declval<Container &>().capacity());
+
+template <typename Container>
+static constexpr bool HasMemberCapacity =
+    is_detected<check_has_member_capacity_t, Container>::value;
+
+template <typename Container>
+using check_has_member_reserve_t =
+    decltype(std::declval<Container &>().reserve(1U));
+
+template <typename Container>
+static constexpr bool HasMemberReserve =
+    is_detected<check_has_member_reserve_t, Container>::value;
+} // namespace detail
+
 /// Wrapper function to append range `R` to container `C`.
 ///
 /// C.insert(C.end(), R.begin(), R.end());
 template <typename Container, typename Range>
 void append_range(Container &C, Range &&R) {
+  size_t Before = 0;
+  size_t After = 0;
+
+  if constexpr (detail::HasMemberReserve<Container>) {
+    using IteratorType = decltype(adl_begin(R));
+    if constexpr (std::is_pointer<IteratorType>::value) {
+      C.reserve(C.size() + std::distance(adl_begin(R), adl_end(R)));
+    } else if constexpr (detail::HasMemberIteratorCategory<Range>) {
+      if constexpr (std::is_convertible<
+                        typename IteratorType::iterator_category,
+                        std::random_access_iterator_tag>::value) {
+        C.reserve(C.size() + std::distance(adl_begin(R), adl_end(R)));
+      }
+    }
+  }
+
+  if constexpr (detail::HasMemberCapacity<Container>)
+    Before = C.capacity();
+
   C.insert(C.end(), adl_begin(R), adl_end(R));
+
+  if constexpr (detail::HasMemberCapacity<Container>)
+    After = C.capacity();
+
+  if (Before != After)
+    llvm_unreachable("capacity changed");
 }
 
 /// Appends all `Values` to container `C`.
