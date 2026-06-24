@@ -811,15 +811,6 @@ def : InstRW<[WLat30, WLat30, MCD], (instregex "NNPA$")>;
 // Execute
 def : InstRW<[WLat1, FXb, GroupAlone], (instregex "EX(RL)?$")>;
 
-//===----------------------------------------------------------------------===//
-// .insn directive instructions
-//===----------------------------------------------------------------------===//
-
-// An "empty" sched-class will be assigned instead of the "invalid sched-class".
-// getNumDecoderSlots() will then return 1 instead of 0.
-def : InstRW<[], (instregex "Insn.*")>;
-
-
 // ----------------------------- Floating point ----------------------------- //
 
 //===----------------------------------------------------------------------===//

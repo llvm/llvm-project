@@ -397,11 +397,14 @@ public:
   bool isU4Imm() const { return isImm(0, 15); }
   bool isU8Imm() const { return isImm(0, 255); }
   bool isS8Imm() const { return isImm(-128, 127); }
+  bool isX8Imm() const { return isS8Imm() || isU8Imm(); }
   bool isU12Imm() const { return isImm(0, 4095); }
   bool isU16Imm() const { return isImm(0, 65535); }
   bool isS16Imm() const { return isImm(-32768, 32767); }
+  bool isX16Imm() const { return isS16Imm() || isU16Imm(); }
   bool isU32Imm() const { return isImm(0, (1LL << 32) - 1); }
   bool isS32Imm() const { return isImm(-(1LL << 31), (1LL << 31) - 1); }
+  bool isX32Imm() const { return isS32Imm() || isU32Imm(); }
   bool isU48Imm() const { return isImm(0, (1LL << 48) - 1); }
 };
 
@@ -663,70 +666,7 @@ struct CompareInsn {
 
 // Table initializing information for parsing the .insn directive.
 static struct InsnMatchEntry InsnMatchTable[] = {
-  /* Format, Opcode, NumOperands, OperandKinds */
-  { "e", SystemZ::InsnE, 1,
-    { MCK_U16Imm } },
-  { "ri", SystemZ::InsnRI, 3,
-    { MCK_U32Imm, MCK_AnyReg, MCK_S16Imm } },
-  { "rie", SystemZ::InsnRIE, 4,
-    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_PCRel16 } },
-  { "ril", SystemZ::InsnRIL, 3,
-    { MCK_U48Imm, MCK_AnyReg, MCK_PCRel32 } },
-  { "rilu", SystemZ::InsnRILU, 3,
-    { MCK_U48Imm, MCK_AnyReg, MCK_U32Imm } },
-  { "ris", SystemZ::InsnRIS, 5,
-    { MCK_U48Imm, MCK_AnyReg, MCK_S8Imm, MCK_U4Imm, MCK_BDAddr64Disp12 } },
-  { "rr", SystemZ::InsnRR, 3,
-    { MCK_U16Imm, MCK_AnyReg, MCK_AnyReg } },
-  { "rre", SystemZ::InsnRRE, 3,
-    { MCK_U32Imm, MCK_AnyReg, MCK_AnyReg } },
-  { "rrf", SystemZ::InsnRRF, 5,
-    { MCK_U32Imm, MCK_AnyReg, MCK_AnyReg, MCK_AnyReg, MCK_U4Imm } },
-  { "rrs", SystemZ::InsnRRS, 5,
-    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_U4Imm, MCK_BDAddr64Disp12 } },
-  { "rs", SystemZ::InsnRS, 4,
-    { MCK_U32Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDAddr64Disp12 } },
-  { "rse", SystemZ::InsnRSE, 4,
-    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDAddr64Disp12 } },
-  { "rsi", SystemZ::InsnRSI, 4,
-    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_PCRel16 } },
-  { "rsy", SystemZ::InsnRSY, 4,
-    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDAddr64Disp20 } },
-  { "rx", SystemZ::InsnRX, 3,
-    { MCK_U32Imm, MCK_AnyReg, MCK_BDXAddr64Disp12 } },
-  { "rxe", SystemZ::InsnRXE, 3,
-    { MCK_U48Imm, MCK_AnyReg, MCK_BDXAddr64Disp12 } },
-  { "rxf", SystemZ::InsnRXF, 4,
-    { MCK_U48Imm, MCK_AnyReg, MCK_AnyReg, MCK_BDXAddr64Disp12 } },
-  { "rxy", SystemZ::InsnRXY, 3,
-    { MCK_U48Imm, MCK_AnyReg, MCK_BDXAddr64Disp20 } },
-  { "s", SystemZ::InsnS, 2,
-    { MCK_U32Imm, MCK_BDAddr64Disp12 } },
-  { "si", SystemZ::InsnSI, 3,
-    { MCK_U32Imm, MCK_BDAddr64Disp12, MCK_S8Imm } },
-  { "sil", SystemZ::InsnSIL, 3,
-    { MCK_U48Imm, MCK_BDAddr64Disp12, MCK_U16Imm } },
-  { "siy", SystemZ::InsnSIY, 3,
-    { MCK_U48Imm, MCK_BDAddr64Disp20, MCK_U8Imm } },
-  { "ss", SystemZ::InsnSS, 4,
-    { MCK_U48Imm, MCK_BDXAddr64Disp12, MCK_BDAddr64Disp12, MCK_AnyReg } },
-  { "sse", SystemZ::InsnSSE, 3,
-    { MCK_U48Imm, MCK_BDAddr64Disp12, MCK_BDAddr64Disp12 } },
-  { "ssf", SystemZ::InsnSSF, 4,
-    { MCK_U48Imm, MCK_BDAddr64Disp12, MCK_BDAddr64Disp12, MCK_AnyReg } },
-  { "vri", SystemZ::InsnVRI, 6,
-    { MCK_U48Imm, MCK_VR128, MCK_VR128, MCK_U12Imm, MCK_U4Imm, MCK_U4Imm } },
-  { "vrr", SystemZ::InsnVRR, 7,
-    { MCK_U48Imm, MCK_VR128, MCK_VR128, MCK_VR128, MCK_U4Imm, MCK_U4Imm,
-      MCK_U4Imm } },
-  { "vrs", SystemZ::InsnVRS, 5,
-    { MCK_U48Imm, MCK_AnyReg, MCK_VR128, MCK_BDAddr64Disp12, MCK_U4Imm } },
-  { "vrv", SystemZ::InsnVRV, 4,
-    { MCK_U48Imm, MCK_VR128, MCK_BDVAddr64Disp12, MCK_U4Imm } },
-  { "vrx", SystemZ::InsnVRX, 4,
-    { MCK_U48Imm, MCK_VR128, MCK_BDXAddr64Disp12, MCK_U4Imm } },
-  { "vsi", SystemZ::InsnVSI, 4,
-    { MCK_U48Imm, MCK_VR128, MCK_BDAddr64Disp12, MCK_U8Imm } }
+#include "SystemZGenInsnMatchTable.inc"
 };
 
 void SystemZOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
@@ -1311,6 +1251,12 @@ bool SystemZAsmParser::parseDirectiveInsn(SMLoc L) {
       ResTy = parsePCRel32(Operands);
     else if (Kind == MCK_PCRel16)
       ResTy = parsePCRel16(Operands);
+    else if (Kind == MCK_PCRel12)
+      ResTy = parsePCRel12(Operands);
+    else if (Kind == MCK_PCRel24)
+      ResTy = parsePCRel24(Operands);
+    else if (Kind == MCK_BDLAddr64Disp12Len4 || Kind == MCK_BDLAddr64Disp12Len8)
+      ResTy = parseBDLAddr64(Operands);
     else {
       // Only remaining operand kind is an immediate.
       const MCExpr *Expr;
@@ -1319,7 +1265,6 @@ bool SystemZAsmParser::parseDirectiveInsn(SMLoc L) {
       // Expect immediate expression.
       if (Parser.parseExpression(Expr))
         return Error(StartLoc, "unexpected token in directive");
-
       SMLoc EndLoc =
         SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
 
@@ -1353,6 +1298,8 @@ bool SystemZAsmParser::parseDirectiveInsn(SMLoc L) {
       ZOperand.addBDXAddrOperands(Inst, 3);
     else if (ZOperand.isMem(BDVMem))
       ZOperand.addBDVAddrOperands(Inst, 3);
+    else if (ZOperand.isMem(BDLMem))
+      ZOperand.addBDLAddrOperands(Inst, 3);
     else if (ZOperand.isMem(LXAMem))
       ZOperand.addLXAAddrOperands(Inst, 3);
     else if (ZOperand.isImm())
