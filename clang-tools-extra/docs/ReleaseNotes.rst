@@ -171,6 +171,9 @@ Code actions
 - A new tweak "Create function body out-of-line" was added that creates
   an implementation for a function declaration.
 
+- The inline concept requirement tweak was introduced.
+  It allows inlining of simple require clauses into the template declaration.
+
 Signature help
 ^^^^^^^^^^^^^^
 
