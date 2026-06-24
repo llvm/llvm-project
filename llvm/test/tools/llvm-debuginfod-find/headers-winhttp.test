@@ -1,4 +1,4 @@
-REQUIRES: system-windows, http-server, disabled-temp
+REQUIRES: system-windows, http-server
 
 RUN: not llvm-debuginfod-find --debuginfo 0 2>&1 | FileCheck %s --check-prefix CHECK-STDOUT
 CHECK-STDOUT: Build ID 00 could not be found
