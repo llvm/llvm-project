@@ -11,14 +11,14 @@ RealtimeSanitizer (a.k.a. RTSan) is a real-time safety testing tool for C and C+
 projects. RTSan can be used to detect real-time violations, i.e. calls to methods
 that are not safe for use in functions with deterministic run time requirements.
 RTSan considers any function marked with the ``[[clang::nonblocking]]`` attribute
-to be a real-time function. At run-time, if RTSan detects a call to ``malloc``, 
-``free``, ``pthread_mutex_lock``, or anything else known to have a 
+to be a real-time function. At run-time, if RTSan detects a call to ``malloc``,
+``free``, ``pthread_mutex_lock``, or anything else known to have a
 non-deterministic execution time in a function marked ``[[clang::nonblocking]]``
-it raises an error. 
+it raises an error.
 
-RTSan performs its analysis at run-time but shares the ``[[clang::nonblocking]]`` 
-attribute with the :doc:`FunctionEffectAnalysis` system, which operates at 
-compile-time to detect potential real-time safety violations. For comprehensive 
+RTSan performs its analysis at run-time but shares the ``[[clang::nonblocking]]``
+attribute with the :doc:`FunctionEffectAnalysis` system, which operates at
+compile-time to detect potential real-time safety violations. For comprehensive
 detection of real-time safety issues, it is recommended to use both systems together.
 
 The runtime slowdown introduced by RealtimeSanitizer is negligible.
@@ -224,7 +224,7 @@ To be notified on every error reported by RTsan, provide a definition of ``__san
       /* do other custom things */
    }
 
-The error summary will be of the form: 
+The error summary will be of the form:
 
 .. code-block:: console
 
@@ -280,7 +280,7 @@ In general, ``ScopedDisabler`` should be preferred, as it is the most performant
      - Stack
      - High
      - Suppresses any stack trace containing the specified pattern.
-    
+
 
 ``ScopedDisabler``
 ##################
@@ -318,6 +318,8 @@ In C, you can use the ``__rtsan_disable()`` and ``rtsan_enable()`` functions to 
     }
 
 Each call to ``__rtsan_disable()`` must be paired with a subsequent call to ``__rtsan_enable()`` to restore normal sanitizer functionality. If a corresponding ``rtsan_enable()`` call is not made, the behavior is undefined.
+
+Invoking `[[clang::nonblocking]]` functions within a disabled scope does not reactivate the sanitizer.
 
 Suppression file
 ################
