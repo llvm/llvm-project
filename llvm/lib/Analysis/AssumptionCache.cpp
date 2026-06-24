@@ -137,7 +137,7 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
   // matches.
   LLVM_DEBUG(for (auto &AV : Affected) if (AffectedValues.find_as(AV.Assume) !=
                                            AffectedValues.end())
-                 ExpectedMatches[AV.Assume]++);
+                 ExpectedMatches[AV.Assume]++;);
 
   for (auto &AV : Affected) {
     auto AVI = AffectedValues.find_as(AV.Assume);
