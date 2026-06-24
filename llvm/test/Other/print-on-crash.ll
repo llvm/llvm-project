@@ -17,6 +17,8 @@
 
 ; RUN: not --crash opt -print-on-crash -print-module-scope -passes=trigger-crash-module -filter-passes=blah < %s 2>&1 | FileCheck %s --check-prefix=CHECK_FILTERED
 
+; RUN: not --crash opt -print-on-crash -passes=trigger-crash-function < %s 2>&1 | FileCheck %s --check-prefix=CHECK_FUNCTION
+
 ; CHECK_SIMPLE: ; *** Dump of IR Before Last Pass {{.*}} Started ***
 ; CHECK_SIMPLE: @main
 ; CHECK_SIMPLE: entry:
@@ -24,6 +26,8 @@
 ; CHECK_MODULE: *** Dump of Module IR Before Last Pass {{.*}} Started ***
 ; CHECK_MODULE: ; ModuleID = {{.*}}
 ; CHECK_FILTERED: *** Dump of Module IR Before Last Pass {{.*}} Filtered Out ***
+; CHECK_FUNCTION: *** Dump of IR Before Last Pass {{.*}} Started ***
+; CHECK_FUNCTION: define i32 @main()
 
 define i32 @main() {
 entry:
