@@ -11,17 +11,12 @@ func.func @loop_simple(%A : memref<?x?xf32>, %B : memref<?x?x?xf32>) {
        // expected-remark@above {{invariant along loop 1}}
        affine.load %A[%c0, 8 * %i + %j] : memref<?x?xf32>
        // expected-remark@above {{contiguous along loop 1}}
-       // Note/FIXME: access stride isn't being checked.
-       // expected-remark@-3 {{contiguous along loop 0}}
 
        // These are all non-contiguous along both loops. Nothing is emitted.
        affine.load %A[%i, %c0] : memref<?x?xf32>
        // expected-remark@above {{invariant along loop 1}}
-       // Note/FIXME: access stride isn't being checked.
        affine.load %A[%i, 8 * %j] : memref<?x?xf32>
-       // expected-remark@above {{contiguous along loop 1}}
        affine.load %A[%j, 4 * %i] : memref<?x?xf32>
-       // expected-remark@above {{contiguous along loop 0}}
      }
    }
    return
@@ -70,7 +65,6 @@ func.func @tiled(%arg0: memref<*xf32>) {
             // expected-remark@above {{invariant along loop 4}}
             affine.store %0, %alloc_0[0, %arg1 * -16 + %arg4, 0, %arg3 * -16 + %arg5] : memref<1x16x1x16xf32>
             // expected-remark@above {{contiguous along loop 4}}
-            // expected-remark@above {{contiguous along loop 2}}
             // expected-remark@above {{invariant along loop 1}}
           }
         }
@@ -79,7 +73,6 @@ func.func @tiled(%arg0: memref<*xf32>) {
             affine.for %arg6 = #map(%arg3) to #map1(%arg3) {
               %0 = affine.load %alloc_0[0, %arg1 * -16 + %arg4, -%arg2 + %arg5, %arg3 * -16 + %arg6] : memref<1x16x1x16xf32>
               // expected-remark@above {{contiguous along loop 5}}
-              // expected-remark@above {{contiguous along loop 2}}
               affine.store %0, %alloc[0, %arg5, %arg6, %arg4] : memref<1x224x224x64xf32>
               // expected-remark@above {{contiguous along loop 3}}
               // expected-remark@above {{invariant along loop 0}}
