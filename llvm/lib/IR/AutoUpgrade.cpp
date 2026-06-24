@@ -493,8 +493,9 @@ static bool shouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
           Name.starts_with("vcvtph2ps.")); // Added in 11.0
 }
 
-static bool upgradeX86IntrinsicFunction(Function *F, StringRef Name,
-                                        Function *&NewFn) {
+[[maybe_unused]] static bool upgradeX86IntrinsicFunction(Function *F,
+                                                        StringRef Name,
+                                                        Function *&NewFn) {
   // Only handle intrinsics that start with "x86.".
   if (!Name.consume_front("x86."))
     return false;
@@ -1581,8 +1582,10 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
     break;
 
   case 'x':
+#ifndef EJIT_TRIM_LLVM_BACKEND
     if (upgradeX86IntrinsicFunction(F, Name, NewFn))
       return true;
+#endif
   }
 
   auto *ST = dyn_cast<StructType>(F->getReturnType());
@@ -2572,8 +2575,9 @@ static Value *upgradeNVVMIntrinsicCall(StringRef Name, CallBase *CI,
   return Rep;
 }
 
-static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
-                                      IRBuilder<> &Builder) {
+[[maybe_unused]] static Value *upgradeX86IntrinsicCall(StringRef Name,
+                                                       CallBase *CI, Function *F,
+                                                       IRBuilder<> &Builder) {
   LLVMContext &C = F->getContext();
   Value *Rep = nullptr;
 
@@ -4550,7 +4554,9 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     } else if (IsNVVM) {
       Rep = upgradeNVVMIntrinsicCall(Name, CI, F, Builder);
     } else if (IsX86) {
+#ifndef EJIT_TRIM_LLVM_BACKEND
       Rep = upgradeX86IntrinsicCall(Name, CI, F, Builder);
+#endif
     } else if (IsAArch64) {
       Rep = upgradeAArch64IntrinsicCall(Name, CI, F, Builder);
     } else if (IsARM) {
