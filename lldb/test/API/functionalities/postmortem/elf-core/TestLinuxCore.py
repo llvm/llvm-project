@@ -1533,11 +1533,31 @@ class LinuxCoreTestCase(TestBase):
         prefix = "ProcessElfCore::FindModuleUUID() found UUID for "
         with open(log_path, "r") as f:
             log_text = f.read()
-            self.assertIn(prefix + "/lib64/libm.so.6: 25C2A650-E3E6-C2F3-25C8-AD803DBB58B3-13899C93", log_text)
-            self.assertIn(prefix + "/lib64/libgcc_s.so.1: A29B0CF0-634D-ECD5-76D6-36CF5B9B6412-AFEB4FAC", log_text)
-            self.assertIn(prefix + "/lib64/libstdc++.so.6: 0C8999CC-A62E-9B9F-0075-566ECB23D564-443ED68F", log_text)
-            self.assertIn(prefix + "/lib64/libc.so.6: CFCCBA85-5FC7-2F10-BC9D-E0ABC5AD605E-D8B1AA72", log_text)
-            self.assertIn(prefix + "/lib64/ld-linux-x86-64.so.2: ECBDF3F8-784D-7A13-EFF2-FDD4352ABBEE-93CCE02C", log_text)
+            self.assertIn(
+                prefix
+                + "/lib64/libm.so.6: 25C2A650-E3E6-C2F3-25C8-AD803DBB58B3-13899C93",
+                log_text,
+            )
+            self.assertIn(
+                prefix
+                + "/lib64/libgcc_s.so.1: A29B0CF0-634D-ECD5-76D6-36CF5B9B6412-AFEB4FAC",
+                log_text,
+            )
+            self.assertIn(
+                prefix
+                + "/lib64/libstdc++.so.6: 0C8999CC-A62E-9B9F-0075-566ECB23D564-443ED68F",
+                log_text,
+            )
+            self.assertIn(
+                prefix
+                + "/lib64/libc.so.6: CFCCBA85-5FC7-2F10-BC9D-E0ABC5AD605E-D8B1AA72",
+                log_text,
+            )
+            self.assertIn(
+                prefix
+                + "/lib64/ld-linux-x86-64.so.2: ECBDF3F8-784D-7A13-EFF2-FDD4352ABBEE-93CCE02C",
+                log_text,
+            )
         self.dbg.DeleteTarget(target)
 
 
