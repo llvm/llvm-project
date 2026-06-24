@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=both,expected %s
 // RUN: %clang_cc1                                         -verify=both,ref      %s
-
-// ref-no-diagnostics
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -verify=both,expected %s -std=c++2c -Winvalid-constexpr
+// RUN: %clang_cc1                                         -verify=both,ref      %s -std=c++2c -Winvalid-constexpr
 
 typedef __SIZE_TYPE__ size_t;
 
@@ -50,8 +50,27 @@ namespace InvalidBase {
   constexpr size_t bos_name = __builtin_object_size(invalid_base().name, 1); // expected-error {{must be initialized by a constant expression}} \
                                                                              // expected-note {{non-constexpr function 'invalid_base'}}
 
+#if __cplusplus < 202002L
   struct T { ~T(); };
   T invalid_base_2();
   constexpr size_t bos_dtor = __builtin_object_size(&(T&)(T&&)invalid_base_2(), 0); // expected-error {{must be initialized by a constant expression}} \
                                                                                     // expected-note {{non-literal type 'T'}}
+#endif
 }
+
+constexpr int stringLength(const char *p) { // ref-error {{never produces a constant expression}}
+  return __builtin_dynamic_object_size(p, 0); // ref-note 2{{subexpression not valid in a constant expression}}
+}
+static_assert(stringLength("hello") == 6); // ref-error {{not an integral constant expression}} \
+                                           // ref-note {{in call to}}
+#if __cplusplus >= 202002L
+
+constexpr int allocation(unsigned n) {
+  const char * ptr = new char[n];
+  int res = stringLength(ptr);
+  delete[] ptr;
+  return res;
+}
+static_assert(allocation(1) == 1);
+static_assert(allocation(14) == 14);
+#endif
