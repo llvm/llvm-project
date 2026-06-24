@@ -483,16 +483,14 @@ TEST_F(TUSummaryExtractorFrontendActionTest,
   EXPECT_THAT(Log, Contains("Wrapped::Initialize"));
   EXPECT_THAT(Log, Contains("Wrapped::HandleTranslationUnit"));
 
-  EXPECT_THAT(
-      errorsMsgsOf(DiagBuf),
-      UnorderedElementsAre("option '--ssaf-tu-summary-file=' requires "
-                           "'--ssaf-compilation-unit-id=' to be set"));
+  EXPECT_THAT(errorsMsgsOf(DiagBuf),
+              UnorderedElementsAre("option '--ssaf-tu-summary-file=' requires "
+                                   "'--ssaf-compilation-unit-id=' to be set"));
 
   EXPECT_FALSE(llvm::sys::fs::exists(Output));
 }
 
-TEST_F(TUSummaryExtractorFrontendActionTest,
-       EmptyCompilationUnitIdDiagnoses) {
+TEST_F(TUSummaryExtractorFrontendActionTest, EmptyCompilationUnitIdDiagnoses) {
   std::string Output = makePath("output.MockSerializationFormat");
   Compiler->getSSAFOpts().TUSummaryFile = Output;
   Compiler->getSSAFOpts().ExtractSummaries = {"NoOpExtractor"};
@@ -507,10 +505,9 @@ TEST_F(TUSummaryExtractorFrontendActionTest,
   EXPECT_THAT(Log, Contains("Wrapped::Initialize"));
   EXPECT_THAT(Log, Contains("Wrapped::HandleTranslationUnit"));
 
-  EXPECT_THAT(
-      errorsMsgsOf(DiagBuf),
-      UnorderedElementsAre("option '--ssaf-tu-summary-file=' requires "
-                           "'--ssaf-compilation-unit-id=' to be set"));
+  EXPECT_THAT(errorsMsgsOf(DiagBuf),
+              UnorderedElementsAre("option '--ssaf-tu-summary-file=' requires "
+                                   "'--ssaf-compilation-unit-id=' to be set"));
 
   EXPECT_FALSE(llvm::sys::fs::exists(Output));
 }
