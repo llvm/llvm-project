@@ -59,7 +59,7 @@ static bool printLoc(llvm::raw_ostream &OS, SourceLocation Loc,
     // Use the offest into the FileID to represent the location.  Using
     // a line/column can cause us to look back at the original source file,
     // which is expensive.
-    OS << '@' << Decomposed.second;
+    printLocOffset(OS, Loc, SM);
   }
   return false;
 }
