@@ -47,6 +47,7 @@ struct RVYCapabilityFormat
   friend struct CHERICapabilityFormatBase<
       RVYCapabilityFormat<AddressType, MW, MAX_E>, AddressType>;
 
+private:
   LLVM_ABI static AddressType getAlignmentMaskImpl(uint64_t Length);
 };
 
@@ -57,6 +58,7 @@ struct CHERIoTCapabilityFormat
     : public CHERICapabilityFormatBase<CHERIoTCapabilityFormat, uint32_t> {
   friend struct CHERICapabilityFormatBase<CHERIoTCapabilityFormat, uint32_t>;
 
+private:
   LLVM_ABI static uint32_t getAlignmentMaskImpl(uint32_t Length);
 };
 
