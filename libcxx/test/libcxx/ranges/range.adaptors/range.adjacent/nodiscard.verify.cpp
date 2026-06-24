@@ -11,25 +11,13 @@
 // Test the libc++ extension that std::ranges::adjacent_view and std::views::adjacent are marked as [[nodiscard]].
 #include <ranges>
 #include <utility>
-#include <functional>
-
-#include "test_iterators.h"
-
-template<size_t N>
-    requires (N > 0)
-struct NonCommonSimpleView<N> : std::ranges::adjacent_view<NonCommonSimpleView, N> {
-  int* begin();
-  int* begin() const;
-  sized_sentinel<int*> end();
-  sized_sentinel<int*> end() const;
-};
-
-static_assert(!std::ranges::common_range<View>);
-static_assert(
-    std::same_as<std::ranges::iterator_t<NonCommonSimpleView>, std::ranges::iterator_t<const NonCommonSimpleView>>);
-static_assert(
-    std::same_as<std::ranges::sentinel_t<NonCommonSimpleView>, std::ranges::sentinel_t<const NonCommonSimpleView>>);
 
 void test() {
-  auto v = NonCommonSimpleView<2>{} | std::views::transform(std::identity{});
+  int range[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  auto v      = range | std::views::adjacent<2>;
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::as_const(v).base();
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::move(v).base();
 }
