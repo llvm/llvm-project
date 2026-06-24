@@ -13,14 +13,17 @@
 #include "CIRGenBuilder.h"
 #include "CIRGenFunction.h"
 
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/Location.h"
-#include "mlir/Support/LLVM.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "clang/CIR/MissingFeatures.h"
+
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/Location.h"
+#include "mlir/Support/LLVM.h"
+#include "llvm/ADT/SmallPtrSet.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -588,6 +591,80 @@ mlir::LogicalResult CIRGenFunction::emitDeclStmt(const DeclStmt &s) {
   return mlir::success();
 }
 
+/// Heuristically search for a dominating store to the return-value slot.
+/// Mirrors \c findDominatingStoreToReturnValue in CGCall.cpp (LLVM codegen).
+static cir::StoreOp findDominatingStoreToReturnValue(CIRGenFunction &cgf) {
+  mlir::Value returnValuePtr = *cgf.fnRetAlloca;
+
+  // Check if a Operation is a store which address operand is the return-value
+  // slot. We are looking for stores to the ReturnValue, not for stores of the
+  // ReturnValue to some other location.
+  auto getStoreIfValid = [&cgf,
+                          returnValuePtr](mlir::Operation *u) -> cir::StoreOp {
+    auto storeOp = mlir::dyn_cast<cir::StoreOp>(u);
+    if (!storeOp || storeOp.getAddr() != returnValuePtr ||
+        storeOp.getValue().getType() != cgf.returnValue.getElementType())
+      return {};
+    // These aren't actually possible for non-coerced returns, and we
+    // only care about non-coerced returns on this code path.
+    // All memory instructions inside __try block are volatile.
+    // TODO: SEH is not implemented in CIR yet. Once it is, allow volatile stores
+    // to the return-value slot when the enclosing function uses __try
+    assert(!storeOp.getMemOrder() && !storeOp.getIsVolatile());
+    return storeOp;
+  };
+  // If there are multiple uses of the return-value slot, just check
+  // for something immediately preceding the IP.  Sometimes this can
+  // happen with how we generate implicit-returns; it can also happen
+  // with noreturn cleanups.
+  if (!returnValuePtr.hasOneUse()) {
+    mlir::Block *ip = cgf.getBuilder().getInsertionBlock();
+    if (!ip || ip->empty())
+      return {};
+
+    // Look at directly preceding instruction, skipping bitcasts, lifetime
+    // markers, and fake uses and their operands.
+    const mlir::Operation *loadIntoFakeUse = nullptr;
+    for (mlir::Operation &op : llvm::reverse(*ip)) {
+      // Ignore instructions that are just loads for fake uses; the load should
+      // immediately precede the fake use, so we only need to remember the
+      // operand for the last fake use seen.
+      if (loadIntoFakeUse == &op)
+        continue;
+      if (mlir::isa<cir::CastOp>(op))
+        continue;
+      if (mlir::isa<mlir::LLVM::BitcastOp>(op))
+        continue;
+      if (mlir::isa<mlir::LLVM::LifetimeEndOp>(op))
+        continue;
+      // TODO(cir): skip llvm.fake_use and the defining load of its operand when
+      // those appear in CIR regions.
+
+      return getStoreIfValid(&op);
+    }
+    return {};
+  }
+
+  mlir::OpOperand &use = *returnValuePtr.use_begin();
+  cir::StoreOp store = getStoreIfValid(use.getOwner());
+  if (!store)
+    return {};
+
+  // Now do a first-and-dirty dominance check: just walk up the
+  // single-predecessors chain from the current insertion point.
+  mlir::Block *storeBB = store->getBlock();
+  mlir::Block *ip = cgf.getBuilder().getInsertionBlock();
+  llvm::SmallPtrSet<mlir::Block *, 4> seenBBs;
+  while (ip != storeBB) {
+    if (!seenBBs.insert(ip).second || !(ip = ip->getSinglePredecessor()))
+      return {};
+  }
+
+  // Okay, the store's basic block dominates the insertion point; we
+  // can do our thing.
+  return store;
+}
+
 mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
   mlir::Location loc = getLoc(s.getSourceRange());
   const Expr *rv = s.getRetValue();
@@ -665,15 +742,21 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
   // a shared return block. Because CIR handles branching through cleanups
   // during the CFG flattening phase, we can just emit the return statement
   // directly.
-  // TODO(cir): Eliminate this redundant load and the store above when we can.
   if (fnRetAlloca) {
-    // Load the value from `__retval` and return it via the `cir.return` op.
-    cir::AllocaOp retAlloca =
-        mlir::cast<cir::AllocaOp>(fnRetAlloca->getDefiningOp());
-    auto value = cir::LoadOp::create(builder, loc, retAlloca.getAllocaType(),
-                                     *fnRetAlloca);
+    mlir::Value returnValue;
+    if (cir::StoreOp storeOp = findDominatingStoreToReturnValue(*this)) {
+      returnValue = storeOp.getValue();
+      storeOp.erase();
+    } else {
+      // Load the value from `__retval` and return it via the `cir.return` op.
+      cir::AllocaOp retAlloca =
+          mlir::cast<cir::AllocaOp>(fnRetAlloca->getDefiningOp());
+      auto loadOp = cir::LoadOp::create(builder, loc, retAlloca.getAllocaType(),
+                                        *fnRetAlloca);
+      returnValue = loadOp.getResult();
+    }
 
-    cir::ReturnOp::create(builder, loc, {value});
+    cir::ReturnOp::create(builder, loc, {returnValue});
   } else {
     cir::ReturnOp::create(builder, loc);
   }
