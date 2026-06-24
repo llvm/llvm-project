@@ -77,7 +77,8 @@ protected:
     const auto &SM = AST.sourceManager();
     llvm::SmallVector<Decl *> TopLevelDecls;
     for (Decl *D : AST.context().getTranslationUnitDecl()->decls()) {
-      if (!SM.isWrittenInMainFile(SM.getExpansionLoc(D->getLocation())))
+      if (!isUsedAsMainFile(SM.getFileID(SM.getExpansionLoc(D->getLocation())),
+                            SM, &PI))
         continue;
       TopLevelDecls.emplace_back(D);
     }
@@ -85,7 +86,7 @@ protected:
     walkUsed(TopLevelDecls, MacroRefs, &PI, AST.preprocessor(),
              [&](const SymbolReference &Ref, llvm::ArrayRef<Header> Providers) {
                auto [FID, Offset] = SM.getDecomposedLoc(Ref.RefLocation);
-               if (FID != SM.getMainFileID())
+               if (!isUsedAsMainFile(FID, SM, &PI))
                  ADD_FAILURE() << "Reference outside of the main file!";
                OffsetToProviders.emplace(Offset, Providers.vec());
              });
@@ -136,6 +137,28 @@ TEST_F(WalkUsedTest, Basic) {
           Pair(Code.point("v"), UnorderedElementsAre(MainFile)),
           Pair(Code.point("builtin"), testing::IsEmpty()),
           Pair(Code.point("move"), UnorderedElementsAre(UtilitySTL))));
+}
+
+TEST_F(WalkUsedTest, NonSelfContained) {
+  llvm::Annotations Code(R"cpp(
+  #include "header.inc"
+  void $bar^bar() {
+    $foo^foo();
+  }
+  )cpp");
+  Inputs.Code = Code.code();
+  Inputs.ExtraFiles["header.inc"] = R"cpp(
+  void foo();
+  )cpp";
+  TestAST AST(Inputs);
+  auto &SM = AST.sourceManager();
+  auto HeaderFile = Header(*AST.fileManager().getOptionalFileRef("header.inc"));
+  auto MainFile = Header(*SM.getFileEntryRefForID(SM.getMainFileID()));
+  EXPECT_THAT(
+      offsetToProviders(AST),
+      UnorderedElementsAre(
+          Pair(Code.point("bar"), UnorderedElementsAre(MainFile)),
+          Pair(Code.point("foo"), UnorderedElementsAre(MainFile, HeaderFile))));
 }
 
 TEST_F(WalkUsedTest, MultipleProviders) {

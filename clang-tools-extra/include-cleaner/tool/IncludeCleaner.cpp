@@ -132,7 +132,9 @@ class Action : public clang::ASTFrontendAction {
 public:
   Action(llvm::function_ref<bool(llvm::StringRef)> HeaderFilter,
          llvm::StringMap<std::string> &EditedFiles)
-      : HeaderFilter(HeaderFilter), EditedFiles(EditedFiles) {}
+      : HeaderFilter(HeaderFilter), EditedFiles(EditedFiles) {
+    AST.PI = &PI;
+  }
 
 private:
   RecordedAST AST;
