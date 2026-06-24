@@ -862,6 +862,79 @@ def SPIRV_GLAtanhOp : SPIRV_GLUnaryArithmeticOp<"Atanh", 24, SPIRV_Float16or32, 
 
 // -----
 
+def SPIRV_GLAtan2Op : SPIRV_GLBinaryArithmeticOp<"Atan2", 25, SPIRV_Float16or32> {
+  let summary = "Arc tangent of y / x in radians";
+
+  let description = [{
+    Result is the arc tangent of y / x. The signs of x and y are used to
+    determine what quadrant the angle is in. The range of result values is
+    [-π, π]. Result is poison if x and y are both 0.
+
+    The operand y and x must be a scalar or vector whose component type is
+    16-bit or 32-bit floating-point.
+
+    Result Type and the type of all operands must be the same type. Results are
+    computed per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Atan2 %0, %1 : f32
+    %3 = spirv.GL.Atan2 %0, %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_GLRadiansOp : SPIRV_GLUnaryArithmeticOp<"Radians", 11, SPIRV_Float16or32, [AlwaysSpeculatable]> {
+  let summary = "Convert a quantity in degrees to radians";
+
+  let description = [{
+    Result is the quantity in radians for the quantity x given in degrees, i.e.,
+    (π / 180) * x.
+
+    The operand x must be a scalar or vector whose component type is 16-bit or
+    32-bit floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed
+    per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Radians %0 : f32
+    %3 = spirv.GL.Radians %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_GLDegreesOp : SPIRV_GLUnaryArithmeticOp<"Degrees", 12, SPIRV_Float16or32, [AlwaysSpeculatable]> {
+  let summary = "Convert a quantity in radians to degrees";
+
+  let description = [{
+    Result is the quantity in degrees for the quantity x given in radians, i.e.,
+    (180 / π) * x.
+
+    The operand x must be a scalar or vector whose component type is 16-bit or
+    32-bit floating-point.
+
+    Result Type and the type of x must be the same type. Results are computed
+    per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.Degrees %0 : f32
+    %3 = spirv.GL.Degrees %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_GLExp2Op : SPIRV_GLUnaryArithmeticOp<"Exp2", 29, SPIRV_Float16or32, [AlwaysSpeculatable]> {
   let summary = "Result is 2 raised to the x power";
 

@@ -14,13 +14,13 @@
 #ifndef LLVM_LIB_TARGET_BPF_BTFDEBUG_H
 #define LLVM_LIB_TARGET_BPF_BTFDEBUG_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/DebugHandlerBase.h"
 #include "llvm/DebugInfo/BTF/BTF.h"
 #include <cstdint>
 #include <map>
 #include <set>
-#include <unordered_map>
 
 namespace llvm {
 
@@ -301,7 +301,7 @@ class BTFDebug : public DebugHandlerBase {
   bool MapDefNotCollected;
   BTFStringTable StringTable;
   std::vector<std::unique_ptr<BTFTypeBase>> TypeEntries;
-  std::unordered_map<const DIType *, uint32_t> DIToIdMap;
+  DenseMap<const DIType *, uint32_t> DIToIdMap;
   std::map<uint32_t, std::vector<BTFFuncInfo>> FuncInfoTable;
   std::map<uint32_t, std::vector<BTFLineInfo>> LineInfoTable;
   std::map<uint32_t, std::vector<BTFFieldReloc>> FieldRelocTable;
