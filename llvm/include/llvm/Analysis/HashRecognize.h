@@ -50,7 +50,7 @@ struct CRCBarrettConstants {
   // CRCBW+1.
   APInt FullGenPoly;
 
-  LLVM_ABI CRCBarrettConstants(const APInt &Mu, const APInt &FullGenPoly)
+  CRCBarrettConstants(const APInt &Mu, const APInt &FullGenPoly)
       : Mu(Mu), FullGenPoly(FullGenPoly) {}
 
   LLVM_ABI void print(raw_ostream &OS) const;
