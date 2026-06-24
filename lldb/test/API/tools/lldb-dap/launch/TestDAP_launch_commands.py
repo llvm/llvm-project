@@ -42,6 +42,7 @@ class TestDAP_launch_commands(lldbdap_testcase.DAPTestCaseBase):
             stopCommands=stopCommands,
             exitCommands=exitCommands,
             terminateCommands=terminateCommands,
+            disconnectAutomatically=False,
         )
         self.dap_server.wait_for_initialized()
 
@@ -83,6 +84,7 @@ class TestDAP_launch_commands(lldbdap_testcase.DAPTestCaseBase):
 
         # Continue until the program exits
         self.continue_to_exit()
+        self.dap_server.request_disconnect(terminateDebuggee=True)
         # Get output from the console. This should contain both the
         # "exitCommands" that were run after the second breakpoint was hit
         # and the "terminateCommands" due to the debugging session ending
