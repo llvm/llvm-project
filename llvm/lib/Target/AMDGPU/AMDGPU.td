@@ -2058,10 +2058,6 @@ def FeatureISAVersion11_5_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_5_Common.Features,
     [FeaturePointSampleAccel])>;
 
-def FeatureISAVersion11_5_3 : FeatureSet<
-  !listconcat(FeatureISAVersion11_5_Common.Features,
-    [])>;
-
 def FeatureISAVersion11_7_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureGFX11_7Insts,
