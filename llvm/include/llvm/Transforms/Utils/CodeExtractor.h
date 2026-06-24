@@ -272,8 +272,8 @@ protected:
 
 private:
   struct LifetimeMarkerInfo {
-    bool SinkLifeStart = false;
-    bool HoistLifeEnd = false;
+    bool LifeStartInRegion = false;
+    bool LifeEndInRegion = false;
     Instruction *LifeStart = nullptr;
     Instruction *LifeEnd = nullptr;
   };
