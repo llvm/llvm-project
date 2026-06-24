@@ -19,6 +19,7 @@
 // clang-format on
 
 #undef NDEBUG
+#include "../src/config.h"
 #include "support/func_bounds.h"
 #include <assert.h>
 #include <inttypes.h>
@@ -106,6 +107,7 @@ __attribute__((noinline)) uint64_t check_vanilla() {
 }
 
 __attribute__((naked, target("pauth"))) uint64_t check_negate() {
+  // clang-format off
   asm(".cfi_negate_ra_state\n"
       "pacibsp\n"
 
@@ -114,7 +116,7 @@ __attribute__((naked, target("pauth"))) uint64_t check_negate() {
       ".cfi_offset x29, -16\n"
       ".cfi_offset x30, -8\n"
 
-      "bl _get_main_ra_sign_state\n"
+      "bl " SYMBOL_NAME(get_main_ra_sign_state) "\n"
 
       "ldp x29, x30, [sp], #16\n"
       ".cfi_def_cfa_offset 0\n"
@@ -123,6 +125,7 @@ __attribute__((naked, target("pauth"))) uint64_t check_negate() {
 
       ".cfi_negate_ra_state\n"
       "retab");
+  // clang-format on
 }
 
 FUNC_ATTR(main_func) int main(int, char **) {
