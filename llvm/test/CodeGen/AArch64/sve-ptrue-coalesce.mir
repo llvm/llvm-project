@@ -447,26 +447,16 @@ body:             |
   bb.0:
     liveins: $z0, $z1
 
-    ; ENABLED-LABEL: name: keep_ptrue_s_when_existing_b_user_would_observe_extra_lanes
-    ; ENABLED: liveins: $z0, $z1
-    ; ENABLED-NEXT: {{  $}}
-    ; ENABLED-NEXT: [[COPY:%[0-9]+]]:zpr = COPY $z0
-    ; ENABLED-NEXT: [[COPY1:%[0-9]+]]:zpr = COPY $z1
-    ; ENABLED-NEXT: [[PTRUE_B:%[0-9]+]]:ppr_3b = PTRUE_B 31, implicit $vg
-    ; ENABLED-NEXT: [[ADD_ZPmZ_B:%[0-9]+]]:zpr = ADD_ZPmZ_B [[PTRUE_B]], [[COPY]], [[COPY1]]
-    ; ENABLED-NEXT: [[CMPEQ_PPzZZ_B:%[0-9]+]]:ppr = CMPEQ_PPzZZ_B [[PTRUE_B]], [[ADD_ZPmZ_B]], [[COPY1]], implicit-def dead $nzcv
-    ; ENABLED-NEXT: RET_ReallyLR
-    ;
-    ; DISABLED-LABEL: name: keep_ptrue_s_when_existing_b_user_would_observe_extra_lanes
-    ; DISABLED: liveins: $z0, $z1
-    ; DISABLED-NEXT: {{  $}}
-    ; DISABLED-NEXT: [[COPY:%[0-9]+]]:zpr = COPY $z0
-    ; DISABLED-NEXT: [[COPY1:%[0-9]+]]:zpr = COPY $z1
-    ; DISABLED-NEXT: [[PTRUE_S:%[0-9]+]]:ppr_3b = PTRUE_S 31, implicit $vg
-    ; DISABLED-NEXT: [[ADD_ZPmZ_B:%[0-9]+]]:zpr = ADD_ZPmZ_B [[PTRUE_S]], [[COPY]], [[COPY1]]
-    ; DISABLED-NEXT: [[PTRUE_B:%[0-9]+]]:ppr_3b = PTRUE_B 31, implicit $vg
-    ; DISABLED-NEXT: [[CMPEQ_PPzZZ_B:%[0-9]+]]:ppr = CMPEQ_PPzZZ_B [[PTRUE_B]], [[ADD_ZPmZ_B]], [[COPY1]], implicit-def dead $nzcv
-    ; DISABLED-NEXT: RET_ReallyLR
+    ; CHECK-LABEL: name: keep_ptrue_s_when_existing_b_user_would_observe_extra_lanes
+    ; CHECK: liveins: $z0, $z1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:zpr = COPY $z0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:zpr = COPY $z1
+    ; CHECK-NEXT: [[PTRUE_S:%[0-9]+]]:ppr_3b = PTRUE_S 31, implicit $vg
+    ; CHECK-NEXT: [[ADD_ZPmZ_B:%[0-9]+]]:zpr = ADD_ZPmZ_B [[PTRUE_S]], [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[PTRUE_B:%[0-9]+]]:ppr_3b = PTRUE_B 31, implicit $vg
+    ; CHECK-NEXT: [[CMPEQ_PPzZZ_B:%[0-9]+]]:ppr = CMPEQ_PPzZZ_B [[PTRUE_B]], [[ADD_ZPmZ_B]], [[COPY1]], implicit-def dead $nzcv
+    ; CHECK-NEXT: RET_ReallyLR
     %2:zpr = COPY $z0
     %3:zpr = COPY $z1
     %0:ppr_3b = PTRUE_S 31, implicit $vg
@@ -494,28 +484,17 @@ body:             |
   bb.0:
     liveins: $z0, $z1
 
-    ; ENABLED-LABEL: name: do_notcoalesce_across_vg_definitions
-    ; ENABLED: liveins: $z0, $z1
-    ; ENABLED-NEXT: {{  $}}
-    ; ENABLED-NEXT: [[COPY:%[0-9]+]]:zpr = COPY $z0
-    ; ENABLED-NEXT: [[COPY1:%[0-9]+]]:zpr = COPY $z1
-    ; ENABLED-NEXT: [[PTRUE_B:%[0-9]+]]:ppr_3b = PTRUE_B 31, implicit $vg
-    ; ENABLED-NEXT: [[CMPEQ_PPzZZ_B:%[0-9]+]]:ppr = CMPEQ_PPzZZ_B [[PTRUE_B]], [[COPY]], [[COPY1]], implicit-def dead $nzcv
-    ; ENABLED-NEXT: MSRpstatesvcrImm1 1, 1, csr_aarch64_smstartstop, implicit-def dead $nzcv, implicit $vg, implicit-def $vg
-    ; ENABLED-NEXT: [[CMPEQ_PPzZZ_H:%[0-9]+]]:ppr = CMPEQ_PPzZZ_H [[PTRUE_B]], [[COPY]], [[COPY1]], implicit-def dead $nzcv
-    ; ENABLED-NEXT: RET_ReallyLR
-    ;
-    ; DISABLED-LABEL: name: do_notcoalesce_across_vg_definitions
-    ; DISABLED: liveins: $z0, $z1
-    ; DISABLED-NEXT: {{  $}}
-    ; DISABLED-NEXT: [[COPY:%[0-9]+]]:zpr = COPY $z0
-    ; DISABLED-NEXT: [[COPY1:%[0-9]+]]:zpr = COPY $z1
-    ; DISABLED-NEXT: [[PTRUE_B:%[0-9]+]]:ppr_3b = PTRUE_B 31, implicit $vg
-    ; DISABLED-NEXT: [[CMPEQ_PPzZZ_B:%[0-9]+]]:ppr = CMPEQ_PPzZZ_B [[PTRUE_B]], [[COPY]], [[COPY1]], implicit-def dead $nzcv
-    ; DISABLED-NEXT: MSRpstatesvcrImm1 1, 1, csr_aarch64_smstartstop, implicit-def dead $nzcv, implicit $vg, implicit-def $vg
-    ; DISABLED-NEXT: [[PTRUE_H:%[0-9]+]]:ppr_3b = PTRUE_H 31, implicit $vg
-    ; DISABLED-NEXT: [[CMPEQ_PPzZZ_H:%[0-9]+]]:ppr = CMPEQ_PPzZZ_H [[PTRUE_H]], [[COPY]], [[COPY1]], implicit-def dead $nzcv
-    ; DISABLED-NEXT: RET_ReallyLR
+    ; CHECK-LABEL: name: do_notcoalesce_across_vg_definitions
+    ; CHECK: liveins: $z0, $z1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:zpr = COPY $z0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:zpr = COPY $z1
+    ; CHECK-NEXT: [[PTRUE_B:%[0-9]+]]:ppr_3b = PTRUE_B 31, implicit $vg
+    ; CHECK-NEXT: [[CMPEQ_PPzZZ_B:%[0-9]+]]:ppr = CMPEQ_PPzZZ_B [[PTRUE_B]], [[COPY]], [[COPY1]], implicit-def dead $nzcv
+    ; CHECK-NEXT: MSRpstatesvcrImm1 1, 1, csr_aarch64_smstartstop, implicit-def dead $nzcv, implicit $vg, implicit-def $vg
+    ; CHECK-NEXT: [[PTRUE_H:%[0-9]+]]:ppr_3b = PTRUE_H 31, implicit $vg
+    ; CHECK-NEXT: [[CMPEQ_PPzZZ_H:%[0-9]+]]:ppr = CMPEQ_PPzZZ_H [[PTRUE_H]], [[COPY]], [[COPY1]], implicit-def dead $nzcv
+    ; CHECK-NEXT: RET_ReallyLR
     %2:zpr = COPY $z0
     %3:zpr = COPY $z1
     %0:ppr_3b = PTRUE_B 31, implicit $vg
