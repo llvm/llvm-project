@@ -42,9 +42,18 @@ import re
 import sys
 
 from UpdateTestChecks import common
+import merge_check_prefixes
 
 
 def update_test(ti: common.TestInfo):
+    if ti.args.merge:
+        new_lines = merge_check_prefixes.process_lines(
+            ti.input_lines, ti.path, split=True
+        )
+        if new_lines is not None:
+            ti.input_lines = new_lines
+            ti.run_lines = common.find_run_lines(ti.path, new_lines)
+
     # If requested we scrub trailing attribute annotations, e.g., '#0', together with whitespaces
     if ti.args.scrub_attributes:
         common.SCRUB_TRAILING_WHITESPACE_TEST_RE = (
@@ -317,8 +326,13 @@ def update_test(ti: common.TestInfo):
         )
     common.debug("Writing %d lines to %s..." % (len(output_lines), ti.path))
 
+    lines_to_write = ["{}\n".format(l) for l in output_lines]
+    if ti.args.merge:
+        merged = merge_check_prefixes.process_lines(lines_to_write, ti.path)
+        if merged is not None:
+            lines_to_write = merged
     with open(ti.path, "wb") as f:
-        f.writelines(["{}\n".format(l).encode("utf-8") for l in output_lines])
+        f.writelines([l.encode("utf-8") for l in lines_to_write])
 
 
 def main():
@@ -376,6 +390,12 @@ def main():
         help="Reset all variable names to correspond closely to the variable names in IR. "
         "This tends to result in larger diffs.",
     )
+    parser.add_argument(
+        "--merge",
+        action="store_true",
+        help="After updating, run merge_check_prefixes.py --split on files with "
+        "conflicting RUN lines, then run merge_check_prefixes.py on all updated files.",
+    )
     parser.add_argument("tests", nargs="+")
     initial_args = common.parse_commandline_args(parser)
 
@@ -397,6 +417,7 @@ def main():
             stderr.write(f"Error: Failed to update test {ti.path}\n")
             print_exc()
             returncode = 1
+
     return returncode
 
 
