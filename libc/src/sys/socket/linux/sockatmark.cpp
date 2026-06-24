@@ -12,10 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/sys/socket/sockatmark.h"
-#include "hdr/sys_ioctl_macros.h" // For SIOCATMARK.
 #include "src/__support/OSUtil/linux/syscall_wrappers/ioctl.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
+
+// For SIOCATMARK. Can't use hdr/sys_ioctl_macros, as not all system library
+// versions define it.
+#include <linux/sockios.h> // For SIOCATMARK.
 
 namespace LIBC_NAMESPACE_DECL {
 
