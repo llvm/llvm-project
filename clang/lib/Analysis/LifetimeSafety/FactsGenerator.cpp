@@ -801,21 +801,6 @@ void FactsGenerator::VisitCXXDeleteExpr(const CXXDeleteExpr *DE) {
       FactMgr.createFact<InvalidateOriginFact>(List->getOuterOriginID(), DE));
 }
 
-void FactsGenerator::VisitStmtExpr(const StmtExpr *SE) {
-  // A statement expression (`({ ...; e; })`) yields the value of its final
-  // expression `e`. Flow `e`'s origins into the statement expression's origin
-  // so a borrow `e` carries reaches the value's users.
-  const auto *CS = SE->getSubStmt();
-  if (!CS || CS->body_empty())
-    return;
-  const auto *Last = dyn_cast<Expr>(CS->body_back());
-  if (!Last)
-    return;
-  if (OriginList *Dst = getOriginsList(*SE))
-    if (OriginList *Src = getRValueOrigins(Last, getOriginsList(*Last)))
-      flow(Dst, Src, /*Kill=*/true);
-}
-
 bool FactsGenerator::escapesViaReturn(OriginID OID) const {
   return llvm::any_of(EscapesInCurrentBlock, [OID](const Fact *F) {
     if (const auto *EF = F->getAs<ReturnEscapeFact>())
