@@ -333,6 +333,19 @@ uint64_t TestTypeWithLayoutType::extractKind(DataLayoutEntryListRef params,
 }
 
 //===----------------------------------------------------------------------===//
+// TestSymbolUserType
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+TestSymbolUserType::verifySymbolUses(Operation *op,
+                                     SymbolTableCollection &symbolTable) const {
+  if (!symbolTable.lookupNearestSymbolFrom<SymbolOpInterface>(op, getSymbol()))
+    return op->emitOpError()
+           << "'" << getSymbol() << "' does not reference a valid symbol";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // Dynamic Types
 //===----------------------------------------------------------------------===//
 

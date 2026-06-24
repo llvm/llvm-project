@@ -2,6 +2,8 @@ add_mlir_interface(SymbolInterfaces)
 set(LLVM_TARGET_DEFINITIONS SymbolInterfaces.td)
 mlir_tablegen(SymbolInterfacesAttrInterface.h.inc -gen-attr-interface-decls)
 mlir_tablegen(SymbolInterfacesAttrInterface.cpp.inc -gen-attr-interface-defs)
+mlir_tablegen(SymbolInterfacesTypeInterface.h.inc -gen-type-interface-decls)
+mlir_tablegen(SymbolInterfacesTypeInterface.cpp.inc -gen-type-interface-defs)
 add_mlir_interface(RegionKindInterface)
 
 add_mlir_type_interface(QuantStorageTypeInterface)

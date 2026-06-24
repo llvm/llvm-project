@@ -476,6 +476,51 @@ raw_ostream &mlir::operator<<(raw_ostream &os,
 // SymbolTable Trait Types
 //===----------------------------------------------------------------------===//
 
+/// Verify the symbol uses held by the types owned by `op`: its operand,
+/// result, and block-argument types, and any types nested within its
+/// attributes. `op` is the anchor used for symbol lookups. `verifiedTypes`
+/// records the types already verified within the current symbol table so that
+/// each type, which may be uniqued and shared across many positions or
+/// operations, is verified at most once. Verification fails fast on the first
+/// invalid symbol use.
+static LogicalResult verifyOpTypeSymbolUses(Operation *op,
+                                            SymbolTableCollection &symbolTable,
+                                            SetVector<Type> &verifiedTypes) {
+  // Walk `type` and any nested type parameters reachable from it, verifying
+  // each not-yet-seen type and interrupting on the first failure.
+  auto verify = [&](Type type) {
+    return type.walk<WalkOrder::PreOrder>([&](Type nestedType) {
+      if (!verifiedTypes.insert(nestedType))
+        return WalkResult::advance();
+      if (auto user = dyn_cast<SymbolUserTypeInterface>(nestedType))
+        if (failed(user.verifySymbolUses(op, symbolTable)))
+          return WalkResult::interrupt();
+      return WalkResult::advance();
+    });
+  };
+
+  for (Type type : op->getOperandTypes())
+    if (verify(type).wasInterrupted())
+      return failure();
+  for (Type type : op->getResultTypes())
+    if (verify(type).wasInterrupted())
+      return failure();
+  for (Region &region : op->getRegions())
+    for (Block &block : region)
+      for (BlockArgument argument : block.getArguments())
+        if (verify(argument.getType()).wasInterrupted())
+          return failure();
+
+  // Verify types nested within the operation's attributes.
+  WalkResult attrResult =
+      op->getAttrDictionary().walk<WalkOrder::PreOrder>([&](Type type) {
+        if (verify(type).wasInterrupted())
+          return WalkResult::interrupt();
+        return WalkResult::advance();
+      });
+  return failure(attrResult.wasInterrupted());
+}
+
 LogicalResult detail::verifySymbolTable(Operation *op) {
   if (op->getNumRegions() != 1)
     return op->emitOpError()
@@ -506,16 +551,27 @@ LogicalResult detail::verifySymbolTable(Operation *op) {
 
   // Verify any nested symbol user operations.
   SymbolTableCollection symbolTable;
+  // walkSymbolTable does not descend into nested symbol tables, so every
+  // operation visited here shares the same nearest symbol table. A uniqued
+  // attribute or type therefore resolves its symbol uses identically
+  // regardless of which operation anchors the lookup, so each is verified at
+  // most once across the whole scope.
+  SetVector<Attribute> verifiedAttrs;
+  SetVector<Type> verifiedTypes;
   auto verifySymbolUserFn = [&](Operation *op) -> std::optional<WalkResult> {
     if (SymbolUserOpInterface user = dyn_cast<SymbolUserOpInterface>(op))
       if (failed(user.verifySymbolUses(symbolTable)))
         return WalkResult::interrupt();
     for (auto &attr : op->getDiscardableAttrs()) {
       if (auto user = dyn_cast<SymbolUserAttrInterface>(attr.getValue())) {
+        if (!verifiedAttrs.insert(attr.getValue()))
+          continue;
         if (failed(user.verifySymbolUses(op, symbolTable)))
           return WalkResult::interrupt();
       }
     }
+    if (failed(verifyOpTypeSymbolUses(op, symbolTable, verifiedTypes)))
+      return WalkResult::interrupt();
     return WalkResult::advance();
   };
 
@@ -1137,3 +1193,4 @@ ParseResult impl::parseOptionalVisibilityKeyword(OpAsmParser &parser,
 /// Include the generated symbol interfaces.
 #include "mlir/IR/SymbolInterfaces.cpp.inc"
 #include "mlir/IR/SymbolInterfacesAttrInterface.cpp.inc"
+#include "mlir/IR/SymbolInterfacesTypeInterface.cpp.inc"
