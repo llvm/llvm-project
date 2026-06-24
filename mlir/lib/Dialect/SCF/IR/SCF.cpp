@@ -256,13 +256,15 @@ void ExecuteRegionOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
   results.add<MultiBlockExecuteInliner>(context);
   populateRegionBranchOpInterfaceCanonicalizationPatterns(
-      results, ExecuteRegionOp::getOperationName());
+      results, ExecuteRegionOp::getOperationName(), /*benefit=*/1);
   // Inline ops with a single block that are not marked as "no_inline".
   populateRegionBranchOpInterfaceInliningPattern(
       results, ExecuteRegionOp::getOperationName(),
-      mlir::detail::defaultReplBuilderFn, [](Operation *op) {
+      mlir::detail::defaultReplBuilderFn,
+      [](Operation *op) {
         return failure(cast<ExecuteRegionOp>(op).getNoInline());
-      });
+      },
+      /*benefit=*/2);
 }
 
 void ExecuteRegionOp::getSuccessorRegions(
@@ -1008,10 +1010,13 @@ void ForOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
   results.add<ForOpTensorCastFolder>(context);
   populateRegionBranchOpInterfaceCanonicalizationPatterns(
-      results, ForOp::getOperationName());
+      results, ForOp::getOperationName(), /*benefit=*/1);
+  // Apply the inlining pattern with a higher benefit. There is no need to
+  // simplify the scf.for op when it can fold away entirely.
   populateRegionBranchOpInterfaceInliningPattern(
       results, ForOp::getOperationName(),
-      /*replBuilderFn=*/[](OpBuilder &builder, Location loc, Value value) {
+      /*replBuilderFn=*/
+      [](OpBuilder &builder, Location loc, Value value) {
         // scf.for has only one non-successor input value: the loop induction
         // variable. In case of a single acyclic path through the op, the IV can
         // be safely replaced with the lower bound.
@@ -1019,7 +1024,8 @@ void ForOp::getCanonicalizationPatterns(RewritePatternSet &results,
         assert(blockArg.getArgNumber() == 0 && "expected induction variable");
         auto forOp = cast<ForOp>(blockArg.getOwner()->getParentOp());
         return forOp.getLowerBound();
-      });
+      },
+      mlir::detail::defaultMatcherFn, /*benefit=*/2);
 }
 
 std::optional<APInt> ForOp::getConstantStep() {
@@ -2727,9 +2733,13 @@ void IfOp::getCanonicalizationPatterns(RewritePatternSet &results,
               ConvertTrivialIfToSelect, RemoveEmptyElseBranch,
               ReplaceIfYieldWithConditionOrValue>(context);
   populateRegionBranchOpInterfaceCanonicalizationPatterns(
-      results, IfOp::getOperationName());
-  populateRegionBranchOpInterfaceInliningPattern(results,
-                                                 IfOp::getOperationName());
+      results, IfOp::getOperationName(), /*benefit=*/1);
+  // Apply the inlining pattern with a higher benefit. There is no need to
+  // simplify the scf.if op when it can fold away entirely.
+  populateRegionBranchOpInterfaceInliningPattern(
+      results, IfOp::getOperationName(), mlir::detail::defaultReplBuilderFn,
+      mlir::detail::defaultMatcherFn,
+      /*benefit=*/2);
 }
 
 Block *IfOp::thenBlock() { return &getThenRegion().back(); }
@@ -3733,9 +3743,13 @@ void WhileOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<WhileConditionTruth, WhileCmpCond, WhileOpAlignBeforeArgs,
               WhileMoveIfDown>(context);
   populateRegionBranchOpInterfaceCanonicalizationPatterns(
-      results, WhileOp::getOperationName());
-  populateRegionBranchOpInterfaceInliningPattern(results,
-                                                 WhileOp::getOperationName());
+      results, WhileOp::getOperationName(), /*benefit=*/1);
+  // Apply the inlining pattern with a higher benefit. There is no need to
+  // simplify the scf.while op when it can fold away entirely.
+  populateRegionBranchOpInterfaceInliningPattern(
+      results, WhileOp::getOperationName(), mlir::detail::defaultReplBuilderFn,
+      mlir::detail::defaultMatcherFn,
+      /*benefit=*/2);
 }
 
 //===----------------------------------------------------------------------===//
@@ -3885,9 +3899,13 @@ void IndexSwitchOp::getRegionInvocationBounds(
 void IndexSwitchOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                 MLIRContext *context) {
   populateRegionBranchOpInterfaceCanonicalizationPatterns(
-      results, IndexSwitchOp::getOperationName());
+      results, IndexSwitchOp::getOperationName(), /*benefit=*/1);
+  // Apply the inlining pattern with a higher benefit. There is no need to
+  // simplify the scf.index_switch op when it can fold away entirely.
   populateRegionBranchOpInterfaceInliningPattern(
-      results, IndexSwitchOp::getOperationName());
+      results, IndexSwitchOp::getOperationName(),
+      mlir::detail::defaultReplBuilderFn, mlir::detail::defaultMatcherFn,
+      /*benefit=*/2);
 }
 
 //===----------------------------------------------------------------------===//
