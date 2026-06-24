@@ -26,6 +26,11 @@ using Y = ns::F^oo;
 ns::Foo A;
 )cpp");
 
+  EXPECT_AVAILABLE(std::string(Header) + R"cpp(
+using ns::F^oo;
+ns::Foo A;
+)cpp");
+
   EXPECT_UNAVAILABLE(std::string(Header) + R"cpp(
 using Y = ns::Foo;^
 ns::Foo A;

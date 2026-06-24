@@ -102,9 +102,15 @@ bool ReplaceQualifiedWithAlias::prepare(const Selection &Inputs) {
     return false;
 
   for (auto *N = Node; N; N = N->Parent) {
-    const auto *Alias = N->ASTNode.get<TypeAliasDecl>();
-    if (!Alias)
+    const NamedDecl *Alias = nullptr;
+    if (const auto *TAD = N->ASTNode.get<TypeAliasDecl>(); TAD) {
+      Alias = TAD;
+    } else if (const auto *UD = N->ASTNode.get<UsingDecl>(); UD) {
+      Alias = UD;
+    } else {
       continue;
+    }
+
     if (!Alias->getIdentifier())
       return false;
 
