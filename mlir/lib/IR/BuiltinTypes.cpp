@@ -616,6 +616,12 @@ bool mlir::detail::isSupportedMemorySpace(Attribute memorySpace) {
   if (llvm::isa<IntegerAttr, StringAttr, DictionaryAttr>(memorySpace))
     return true;
 
+  // Allow opaque attributes if unregistered dialects are allowed.
+  // They hold unregistered custom dialect attributes.
+  if (memorySpace.getContext()->allowsUnregisteredDialects() &&
+      isa<OpaqueAttr>(memorySpace))
+    return true;
+
   // Allow custom dialect attributes.
   if (!isa<BuiltinDialect>(memorySpace.getDialect()))
     return true;
