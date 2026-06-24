@@ -4269,12 +4269,13 @@ void TaskwaitOp::build(OpBuilder &builder, OperationState &state,
                        const TaskwaitOperands &clauses) {
   // TODO Store clauses in op: depend_iterated_kinds, depend_iterated, nowait.
   MLIRContext *ctx = builder.getContext();
-  TaskwaitOp::build(builder, state,
-                    /*depend_kinds=*/makeArrayAttr(ctx, clauses.dependKinds),
-                    /*depend_vars=*/clauses.dependVars,
-                    /*depend_iterated_kinds=*/nullptr,
-                    /*depend_iterated=*/{},
-                    /*nowait=*/nullptr);
+  TaskwaitOp::build(
+      builder, state,
+      /*depend_kinds=*/makeArrayAttr(ctx, clauses.dependKinds),
+      /*depend_vars=*/clauses.dependVars,
+      /*depend_iterated_kinds=*/makeArrayAttr(ctx, clauses.dependIteratedKinds),
+      /*depend_iterated=*/ValueRange(clauses.dependIterated),
+      /*nowait=*/nullptr);
 }
 
 //===----------------------------------------------------------------------===//

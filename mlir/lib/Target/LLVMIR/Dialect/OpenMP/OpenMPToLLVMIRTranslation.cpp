@@ -3487,6 +3487,10 @@ convertOmpTaskwaitOp(omp::TaskwaitOp twOp, llvm::IRBuilderBase &builder,
   }
 
   moduleTranslation.getOpenMPBuilder()->createTaskwait(builder.saveIP(), dds);
+  if (dds.DepArray) {
+    builder.CreateFree(dds.DepArray);
+  }
+
   return success();
 }
 
