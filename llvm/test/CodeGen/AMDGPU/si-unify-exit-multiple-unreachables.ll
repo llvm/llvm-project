@@ -96,7 +96,6 @@ define amdgpu_kernel void @kernel(i32 %a, ptr addrspace(1) %x, i32 noundef %n) {
 ; UNIFY-NEXT:    br label [[IF_END6]]
 ; UNIFY:       if.end6:
 ; UNIFY-NEXT:    ret void
-;
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %cmp = icmp eq i32 %n, 256
@@ -134,55 +133,118 @@ if.end6:
 define amdgpu_kernel void @kernel_callbr(i32 %a, ptr addrspace(1) %x, i32 noundef %n) {
 ; CHECK-LABEL: kernel_callbr:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    s_load_dword s1, s[8:9], 0x10
-; CHECK-NEXT:    s_load_dword s0, s[8:9], 0x0
+; CHECK-NEXT:    s_load_dword s0, s[8:9], 0x10
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_cmpk_eq_i32 s1, 0x100
-; CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[2:3]
+; CHECK-NEXT:    s_cmpk_eq_i32 s0, 0x100
+; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:  ; %bb.1: ; %if.then
-; CHECK-NEXT:    s_cmp_eq_u32 s0, 0
-; CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[2:3]
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:  .LBB1_2: ; %if.end6.sink.split
-; CHECK-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x8
-; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
-; CHECK-NEXT:    v_mov_b32_e32 v1, s0
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    global_store_dword v0, v1, s[2:3]
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:  .LBB1_3: ; Inline asm indirect target
-; CHECK-NEXT:    ; %UnifiedReturnBlock
-; CHECK-NEXT:    ; Label of block must be emitted
-; CHECK-NEXT:    s_endpgm
-; CHECK-NEXT:  .LBB1_4: ; Inline asm indirect target
-; CHECK-NEXT:    ; %if.else
-; CHECK-NEXT:    ; Label of block must be emitted
+; CHECK-NEXT:  ; %bb.1: ; %entry.target.if.then
+; CHECK-NEXT:    s_mov_b64 s[0:1], -1
+; CHECK-NEXT:  .LBB1_2: ; %Flow
+; CHECK-NEXT:    s_load_dword s10, s[8:9], 0x0
+; CHECK-NEXT:    s_andn2_b64 vcc, exec, s[0:1]
+; CHECK-NEXT:    s_cbranch_vccz .LBB1_11
+; CHECK-NEXT:  ; %bb.3: ; %if.else
 ; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc, 10, v0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:  ; %bb.5: ; %if.then3
-; CHECK-NEXT:    s_cmp_eq_u32 s0, 0
+; CHECK-NEXT:  ; %bb.4: ; %if.else.target.if.then3
+; CHECK-NEXT:    s_mov_b64 s[6:7], -1
+; CHECK-NEXT:  .LBB1_5: ; %Flow11
+; CHECK-NEXT:    s_mov_b64 s[2:3], 0
+; CHECK-NEXT:    s_mov_b64 s[0:1], 0
+; CHECK-NEXT:    s_mov_b64 s[4:5], 0
+; CHECK-NEXT:    s_and_saveexec_b64 s[12:13], s[6:7]
+; CHECK-NEXT:    s_xor_b64 s[6:7], exec, s[12:13]
+; CHECK-NEXT:    s_cbranch_execz .LBB1_10
+; CHECK-NEXT:  ; %bb.6: ; %if.then3
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_cmp_eq_u32 s10, 0
+; CHECK-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:  ; %bb.7: ; %if.then3.target.Flow7
+; CHECK-NEXT:  .LBB1_8:
+; CHECK-NEXT:    s_mov_b64 s[0:1], 0
+; CHECK-NEXT:    s_mov_b64 s[4:5], -1
+; CHECK-NEXT:  .LBB1_9: ; %Flow19
+; CHECK-NEXT:    s_and_b64 s[4:5], s[4:5], exec
+; CHECK-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; CHECK-NEXT:  .LBB1_10: ; %Flow18
+; CHECK-NEXT:    s_or_b64 exec, exec, s[6:7]
+; CHECK-NEXT:    s_and_b64 vcc, exec, s[2:3]
+; CHECK-NEXT:    s_cbranch_vccnz .LBB1_12
+; CHECK-NEXT:    s_branch .LBB1_15
+; CHECK-NEXT:  .LBB1_11:
+; CHECK-NEXT:    s_mov_b64 s[0:1], 0
+; CHECK-NEXT:    s_mov_b64 s[4:5], 0
+; CHECK-NEXT:    s_cbranch_execz .LBB1_15
+; CHECK-NEXT:  .LBB1_12: ; %if.then
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    s_cmp_eq_u32 s10, 0
 ; CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[2:3]
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_branch .LBB1_2
-; CHECK-NEXT:  .LBB1_6: ; Inline asm indirect target
-; CHECK-NEXT:    ; %cond.false.i8
-; CHECK-NEXT:    ; Label of block must be emitted
-; CHECK-NEXT:  .LBB1_7: ; Inline asm indirect target
-; CHECK-NEXT:    ; %cond.false
-; CHECK-NEXT:    ; Label of block must be emitted
-; CHECK-NEXT:    s_trap 2
+; CHECK-NEXT:  ; %bb.13: ; %if.then.target.if.end6.sink.split
+; CHECK-NEXT:    s_mov_b64 s[2:3], -1
+; CHECK-NEXT:  .LBB1_14: ; %Flow4
+; CHECK-NEXT:    s_andn2_b64 vcc, exec, s[2:3]
+; CHECK-NEXT:    s_mov_b64 s[4:5], -1
+; CHECK-NEXT:    s_cbranch_vccnz .LBB1_20
+; CHECK-NEXT:  .LBB1_15: ; %Flow20
+; CHECK-NEXT:    s_and_saveexec_b64 s[2:3], s[0:1]
+; CHECK-NEXT:  .LBB1_16: ; %UnifiedUnreachableBlock
 ; CHECK-NEXT:    ; divergent unreachable
-; CHECK-NEXT:    s_branch .LBB1_3
+; CHECK-NEXT:  .LBB1_17: ; %Flow22
+; CHECK-NEXT:    s_or_b64 exec, exec, s[2:3]
+; CHECK-NEXT:    s_and_saveexec_b64 s[0:1], s[4:5]
+; CHECK-NEXT:    s_cbranch_execz .LBB1_19
+; CHECK-NEXT:  ; %bb.18: ; %if.end6.sink.split
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x8
+; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v1, s10
+; CHECK-NEXT:    global_store_dword v0, v1, s[0:1]
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:  .LBB1_19: ; %UnifiedReturnBlock
+; CHECK-NEXT:    s_endpgm
+; CHECK-NEXT:  .LBB1_20: ; %cond.false
+; CHECK-NEXT:    s_mov_b64 s[4:5], 0
+; CHECK-NEXT:    s_or_b64 s[0:1], s[0:1], exec
+; CHECK-NEXT:    s_trap 2
+; CHECK-NEXT:    s_and_saveexec_b64 s[2:3], s[0:1]
+; CHECK-NEXT:    s_cbranch_execnz .LBB1_16
+; CHECK-NEXT:    s_branch .LBB1_17
+; CHECK-NEXT:  .LBB1_21: ; Inline asm indirect target
+; CHECK-NEXT:    ; %entry.target.if.else
+; CHECK-NEXT:    ; Label of block must be emitted
+; CHECK-NEXT:    s_mov_b64 s[0:1], 0
+; CHECK-NEXT:    s_branch .LBB1_2
+; CHECK-NEXT:  .LBB1_22: ; Inline asm indirect target
+; CHECK-NEXT:    ; %if.else.target.UnifiedReturnBlock
+; CHECK-NEXT:    ; Label of block must be emitted
+; CHECK-NEXT:    s_mov_b64 s[6:7], 0
+; CHECK-NEXT:    s_branch .LBB1_5
+; CHECK-NEXT:  .LBB1_23: ; Inline asm indirect target
+; CHECK-NEXT:    ; %if.then.target.cond.false
+; CHECK-NEXT:    ; Label of block must be emitted
+; CHECK-NEXT:    s_mov_b64 s[2:3], 0
+; CHECK-NEXT:    s_branch .LBB1_14
+; CHECK-NEXT:  .LBB1_24: ; Inline asm indirect target
+; CHECK-NEXT:    ; %if.then3.target.cond.false.i8
+; CHECK-NEXT:    ; Label of block must be emitted
+; CHECK-NEXT:    s_cbranch_execz .LBB1_8
+; CHECK-NEXT:  ; %bb.25: ; %cond.false.i8
+; CHECK-NEXT:    s_mov_b64 s[0:1], -1
+; CHECK-NEXT:    s_mov_b64 s[4:5], 0
+; CHECK-NEXT:    s_trap 2
+; CHECK-NEXT:    s_branch .LBB1_9
 ; UNIFY-LABEL: @kernel_callbr(
 ; UNIFY-NEXT:  entry:
 ; UNIFY-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
@@ -218,7 +280,6 @@ define amdgpu_kernel void @kernel_callbr(i32 %a, ptr addrspace(1) %x, i32 nounde
 ; UNIFY-NEXT:            to label [[IF_END6:%.*]] []
 ; UNIFY:       if.end6:
 ; UNIFY-NEXT:    ret void
-;
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %cmp = icmp eq i32 %n, 256
