@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// clang-format-off
+// clang-format off
 
 // REQUIRES: target={{aarch64.*}}
 // UNSUPPORTED: target={{.*-windows.*}}
@@ -16,7 +16,7 @@
 // least through OS version 27.0
 // XFAIL: stdlib=apple-libc++ && target={{.*}}-apple-{{.*}}{{11|12|13|14|15|26|27.0}}
 
-// clang-format-on
+// clang-format on
 
 #undef NDEBUG
 #include "support/func_bounds.h"
