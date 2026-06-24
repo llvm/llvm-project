@@ -211,7 +211,29 @@ typedef enum { CSK_MD5, CSK_SHA1, CSK_SHA256 } LLVMChecksumKind;
 /**
  * An LLVM DWARF type encoding.
  */
-typedef unsigned LLVMDWARFTypeEncoding;
+typedef enum {
+  LLVMDWARFAddressTypeEncoding = 0x01,
+  LLVMDWARFBooleanTypeEncoding = 0x02,
+  LLVMDWARFComplexFloatTypeEncoding = 0x03,
+  LLVMDWARFFloatTypeEncoding = 0x04,
+  LLVMDWARFSignedTypeEncoding = 0x05,
+  LLVMDWARFSignedCharTypeEncoding = 0x06,
+  LLVMDWARFUnsignedTypeEncoding = 0x07,
+  LLVMDWARFUnsignedCharTypeEncoding = 0x08,
+  // New in DWARF v3:
+  LLVMDWARFImmaginaryFloatTypeEncoding = 0x09,
+  LLVMDWARFPackedDecimalTypeEncoding = 0x0a,
+  LLVMDWARFNumericStringTypeEncoding = 0x0b,
+  LLVMDWARFEditedTypeEncoding = 0x0c,
+  LLVMDWARFSignedFixedTypeEncoding = 0x0d,
+  LLVMDWARFUnsignedFixedTypeEncoding = 0x0e,
+  LLVMDWARFDecimalFloatTypeEncoding = 0x0f,
+  // New in DWARF v4:
+  LLVMDWARFUTFTypeEncoding = 0x10,
+  // New in DWARF v5:
+  LLVMDWARFUCSTypeEncoding = 0x11,
+  LLVMDWARFASCIITypeEncoding = 0x12,
+} LLVMDWARFTypeEncoding;
 
 /**
  * Describes the kind of macro declaration used for LLVMDIBuilderCreateMacro.
