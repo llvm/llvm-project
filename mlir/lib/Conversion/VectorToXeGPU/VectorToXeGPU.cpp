@@ -528,13 +528,13 @@ static LogicalResult lowerToScatteredStoreOp(vector::TransferWriteOp writeOp,
   Value mask = vector::ConstantMaskOp::create(
       rewriter, loc, VectorType::get(vectorShape, rewriter.getI1Type()),
       vectorShape);
-  xegpu::StoreScatterOp::create(rewriter, loc, writeOp.getVector(), flatMemref,
-                                localOffsets, mask,
-                                /*chunk_size=*/IntegerAttr{},
-                                /*l1_hint=*/xegpu::CachePolicyAttr{},
-                                /*l2_hint=*/xegpu::CachePolicyAttr{},
-                                /*l3_hint=*/xegpu::CachePolicyAttr{},
-                                /*layout=*/nullptr, /*contiguous_chunk=*/nullptr);
+  xegpu::StoreScatterOp::create(
+      rewriter, loc, writeOp.getVector(), flatMemref, localOffsets, mask,
+      /*chunk_size=*/IntegerAttr{},
+      /*l1_hint=*/xegpu::CachePolicyAttr{},
+      /*l2_hint=*/xegpu::CachePolicyAttr{},
+      /*l3_hint=*/xegpu::CachePolicyAttr{},
+      /*layout=*/nullptr, /*contiguous_chunk=*/nullptr);
   rewriter.eraseOp(writeOp);
   return success();
 }
