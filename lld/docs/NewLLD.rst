@@ -42,7 +42,7 @@ between speed, simplicity and extensibility.
 
 * Speed by design
 
-  One of the most important things in archiving high performance is to
+  One of the most important things in achieving high performance is to
   do less rather than do it efficiently.
   Therefore, the high-level design matters more than local optimizations.
   Since we are trying to create a high-performance linker,
@@ -77,7 +77,7 @@ between speed, simplicity and extensibility.
 
   This algorithm sometimes leads to a counter-intuitive behavior.  If you give
   archive files before object files, nothing will happen because when the linker
-  visits archives, there is no undefined symbols in the set.  As a result, no
+  visits archives, there are no undefined symbols in the set.  As a result, no
   files are extracted from the first archive file, and the link is done at that
   point because the set is empty after it visits one file.
 
@@ -221,9 +221,9 @@ There are mainly three actors in this linker.
 * Writer
 
   The writer is responsible for writing file headers and InputSections/Chunks to
-  a file.  It creates OutputSections, put all InputSections/Chunks into them,
-  assign unique, non-overlapping addresses and file offsets to them, and then
-  write them down to a file.
+  a file.  It creates OutputSections, puts all InputSections/Chunks into them,
+  assigns unique, non-overlapping addresses and file offsets to them, and then
+  writes them down to a file.
 
 * Driver
 
@@ -297,7 +297,7 @@ Glossary
   and it usually reduces C++ program's size by a few percent or more.
 
   Note that this is not an entirely sound optimization. C/C++ require
-  different functions have different addresses. If a program depends on
+  different functions to have different addresses. If a program depends on
   that property, it would fail at runtime.
 
   On Windows, that's not really an issue because MSVC link.exe enabled
