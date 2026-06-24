@@ -14,6 +14,7 @@
 #include <__functional/invoke.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_constructible.h>
+#include <__type_traits/is_same.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/declval.h>
 #include <__utility/forward.h>
@@ -27,44 +28,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 26
 
-template <class _Tp>
-struct __cw_fixed_value {
-  using __type _LIBCPP_NODEBUG = _Tp;
-  _LIBCPP_HIDE_FROM_ABI constexpr __cw_fixed_value(__type __v) noexcept : __data(__v) {}
-  _Tp __data;
-};
-
-template <class _Tp, size_t _Extent>
-struct __cw_fixed_value<_Tp[_Extent]> {
-  using __type _LIBCPP_NODEBUG = _Tp[_Extent];
-  _Tp __data[_Extent];
-
-  _LIBCPP_HIDE_FROM_ABI constexpr __cw_fixed_value(_Tp (&__arr)[_Extent]) noexcept
-      : __cw_fixed_value(__arr, make_index_sequence<_Extent>{}) {}
-
-private:
-  template <size_t... _Idxs>
-  _LIBCPP_HIDE_FROM_ABI constexpr __cw_fixed_value(_Tp (&__arr)[_Extent], index_sequence<_Idxs...>) noexcept
-      : __data{__arr[_Idxs]...} {}
-};
-
-template <class _Tp, size_t _Extent>
-__cw_fixed_value(_Tp (&)[_Extent]) -> __cw_fixed_value<_Tp[_Extent]>;
-
-template <__cw_fixed_value _Xp,
-#  ifdef _LIBCPP_COMPILER_GCC
-          // gcc bug:  https://gcc.gnu.org/PR117392
-          class = typename decltype(__cw_fixed_value(_Xp))::__type
-#  else
-          class = typename decltype(_Xp)::__type
-#  endif
-          >
+template <auto _Xp, class = remove_cvref_t<decltype(_Xp)>>
 struct constant_wrapper;
 
 template <class _Tp>
 concept __constexpr_param = requires { typename constant_wrapper<_Tp::value>; };
 
-template <__cw_fixed_value _Xp>
+template <auto _Xp>
 constexpr auto cw = constant_wrapper<_Xp>{};
 
 struct __cw_operators {
@@ -202,7 +172,8 @@ struct __cw_operators {
 
   template <__constexpr_param _Lp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr auto operator->*(_Lp, _Rp) noexcept
-      -> constant_wrapper<(_Lp::value->*_Rp::value)> {
+      // TODO: Remove `auto` when all support versions of Clang have https://llvm.org/PR202693 fixed.
+      -> constant_wrapper<auto(_Lp::value->*_Rp::value)> {
     return {};
   }
 
@@ -228,52 +199,62 @@ struct __cw_operators {
 
   template <__constexpr_param _Tp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator+=(this _Tp, _Rp) noexcept
-      -> constant_wrapper<(_Tp::value += _Rp::value)> {
+      // TODO: Remove `auto` when all support versions of Clang have https://llvm.org/PR202693 fixed.
+      -> constant_wrapper<auto(_Tp::value += _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Tp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator-=(this _Tp, _Rp) noexcept
-      -> constant_wrapper<(_Tp::value -= _Rp::value)> {
+      // TODO: Remove `auto` when all support versions of Clang have https://llvm.org/PR202693 fixed.
+      -> constant_wrapper<auto(_Tp::value -= _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Tp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator*=(this _Tp, _Rp) noexcept
-      -> constant_wrapper<(_Tp::value *= _Rp::value)> {
+      // TODO: Remove `auto` when all support versions of Clang have https://llvm.org/PR202693 fixed.
+      -> constant_wrapper<auto(_Tp::value *= _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Tp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator/=(this _Tp, _Rp) noexcept
-      -> constant_wrapper<(_Tp::value /= _Rp::value)> {
+      // TODO: Remove `auto` when all support versions of Clang have https://llvm.org/PR202693 fixed.
+      -> constant_wrapper<auto(_Tp::value /= _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Tp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator%=(this _Tp, _Rp) noexcept
-      -> constant_wrapper<(_Tp::value %= _Rp::value)> {
+      // TODO: Remove `auto` when all support versions of Clang have https://llvm.org/PR202693 fixed.
+      -> constant_wrapper<auto(_Tp::value %= _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Tp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator&=(this _Tp, _Rp) noexcept
-      -> constant_wrapper<(_Tp::value &= _Rp::value)> {
+      // TODO: Remove `auto` when all support versions of Clang have https://llvm.org/PR202693 fixed.
+      -> constant_wrapper<auto(_Tp::value &= _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Tp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator|=(this _Tp, _Rp) noexcept
-      -> constant_wrapper<(_Tp::value |= _Rp::value)> {
+      // TODO: Remove `auto` when all support versions of Clang have https://llvm.org/PR202693 fixed.
+      -> constant_wrapper<auto(_Tp::value |= _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Tp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator^=(this _Tp, _Rp) noexcept
-      -> constant_wrapper<(_Tp::value ^= _Rp::value)> {
+      // TODO: Remove `auto` when all support versions of Clang have https://llvm.org/PR202693 fixed.
+      -> constant_wrapper<auto(_Tp::value ^= _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Tp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator<<=(this _Tp, _Rp) noexcept
-      -> constant_wrapper<(_Tp::value <<= _Rp::value)> {
+      // TODO: Remove `auto` when all support versions of Clang have https://llvm.org/PR202693 fixed.
+      -> constant_wrapper<auto(_Tp::value <<= _Rp::value)> {
     return {};
   }
   template <__constexpr_param _Tp, __constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator>>=(this _Tp, _Rp) noexcept
-      -> constant_wrapper<(_Tp::value >>= _Rp::value)> {
+      // TODO: Remove `auto` when all support versions of Clang have https://llvm.org/PR202693 fixed.
+      -> constant_wrapper<auto(_Tp::value >>= _Rp::value)> {
     return {};
   }
 };
@@ -285,18 +266,23 @@ concept __constexpr_callable = (__constexpr_param<remove_cvref_t<_Args>> && ...)
 
 template <const auto& _Obj, class... _Args>
 concept __constexpr_indexable = (__constexpr_param<remove_cvref_t<_Args>> && ...) && requires {
-  typename constant_wrapper<_Obj[remove_cvref_t<_Args>::value...]>;
+  typename constant_wrapper<auto(_Obj[remove_cvref_t<_Args>::value...])>;
 };
 
-template <__cw_fixed_value _Xp, class>
+template <auto _Xp, class _Tp>
 struct constant_wrapper : __cw_operators {
-  static constexpr const auto& value = _Xp.__data;
-  using type                         = constant_wrapper;
-  using value_type                   = decltype(_Xp)::__type;
+  static constexpr decltype((_Xp)) value = (_Xp);
+
+  using type       = constant_wrapper;
+  using value_type = decltype(_Xp);
+
+  static_assert(is_same_v<_Tp, value_type>,
+                "the second template parameter of std::constant_wrapper must be its value_type");
 
   template <__constexpr_param _Rp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator=(_Rp) const noexcept
-      -> constant_wrapper<(value = _Rp::value)> {
+      // TODO: Remove `auto` when all support versions of Clang have https://llvm.org/PR202693 fixed.
+      -> constant_wrapper<auto(value = _Rp::value)> {
     return {};
   }
 
@@ -320,7 +306,7 @@ struct constant_wrapper : __cw_operators {
   template <class... _Args>
     requires __constexpr_indexable<value, _Args...>
   [[nodiscard]]
-  _LIBCPP_HIDE_FROM_ABI static constexpr constant_wrapper<value[remove_cvref_t<_Args>::value...]>
+  _LIBCPP_HIDE_FROM_ABI static constexpr constant_wrapper<auto(value[remove_cvref_t<_Args>::value...])>
   operator[](_Args&&...) noexcept {
     return {};
   }
