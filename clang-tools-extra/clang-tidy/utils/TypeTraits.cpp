@@ -148,10 +148,7 @@ bool hasNonTrivialMoveAssignment(QualType Type) {
 }
 
 static bool declIsStdInitializerList(const NamedDecl *D) {
-  // First use the fast getName() method to avoid unnecessary calls to the
-  // slow getQualifiedNameAsString().
-  return D->getName() == "initializer_list" &&
-         D->getQualifiedNameAsString() == "std::initializer_list";
+  return D->isInStdNamespace() && D->getName() == "initializer_list";
 }
 
 bool isStdInitializerList(QualType Type) {
@@ -162,7 +159,7 @@ bool isStdInitializerList(QualType Type) {
   }
   if (const auto *RT = Type->getAs<RecordType>()) {
     if (const auto *Specialization =
-            dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl()))
+            dyn_cast_if_present<ClassTemplateSpecializationDecl>(RT->getDecl()))
       return declIsStdInitializerList(Specialization->getSpecializedTemplate());
   }
   return false;
