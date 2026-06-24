@@ -2460,8 +2460,8 @@ void RewriteInstance::adjustCommandLineOptions() {
   BC->UseCompactAligner = opts::UseCompactAligner;
   BC->X86AlignBranchBoundaryHotOnly = opts::X86AlignBranchBoundaryHotOnly;
 
-  if (BC->isX86() && opts::Lite.getNumOccurrences() == 0 && !opts::StrictMode &&
-      !opts::UseOldText)
+  if ((BC->isX86() || BC->isAArch64()) && opts::Lite.getNumOccurrences() == 0 &&
+      !opts::StrictMode && !opts::UseOldText)
     opts::Lite = true;
 
   if (opts::Lite && opts::UseOldText) {
