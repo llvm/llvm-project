@@ -178,7 +178,8 @@ def OpenACC_ReductionAccumulateArrayOp
     : OpenACC_Op<"reduction_accumulate_array", []> {
   let summary = "Accumulates elements of an array";
   let description = [{
-    Accumulates elements of an array across threads given an acc.bounds op.
+    Accumulates elements of an array across the specified parallel dimension 
+    given an acc.bounds op.
   }];
   let arguments = (ins Arg<OpenACC_PointerLikeTypeInterface,
                            "Reduction variable to update",
