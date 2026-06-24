@@ -164,17 +164,17 @@ static void emitAUTCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       // DWARF CFI is evaluated linearly over the byte stream, not along control
       // flow edges. The toggle semantics of this directive therefore cannot
       // faithfully represent the signed/unsigned RA state for all possible CFG
-      // paths. The added complexity versus DW_CFA_AARCH64_negate_ra_state is that
-      // an unwinder must also reconstruct the PC of the PACI[AB]SPPC in order to
-      // verify the signed LR, and that address is derived from the location of this
-      // directive in the linear CFI stream.
+      // paths. The added complexity versus DW_CFA_AARCH64_negate_ra_state is
+      // that an unwinder must also reconstruct the PC of the PACI[AB]SPPC in
+      // order to verify the signed LR, and that address is derived from the
+      // location of this directive in the linear CFI stream.
       //
-      // The correct fix is to use DW_CFA_AARCH64_set_ra_state_with_pc, which sets
-      // the RA state and signing address absolutely rather than toggling them. An
-      // unwinder that supports this directive can reconstruct the correct state on
-      // any CFG path, regardless of how many signing/authenticating pairs exist in
-      // the function. However, not all unwinders support this directive, so we
-      // cannot rely on it exclusively.
+      // The correct fix is to use DW_CFA_AARCH64_set_ra_state_with_pc, which
+      // sets the RA state and signing address absolutely rather than toggling
+      // them. An unwinder that supports this directive can reconstruct the
+      // correct state on any CFG path, regardless of how many
+      // signing/authenticating pairs exist in the function. However, not all
+      // unwinders support this directive, so we cannot rely on it exclusively.
       //
       // For unwinders that only support DW_CFA_AARCH64_negate_ra_state_with_pc,
       // libunwind exploits a loophole: it records the address at the
@@ -185,8 +185,8 @@ static void emitAUTCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       // for the signing site, as long as each function has at most one such
       // signing location. That invariant holds today because shrinkwrapping
       // does not yet hoist or sink PAuth_LR frame code across CFG join/split
-      // points; once it does, we must avoid those transformations on platforms that
-      // have this limitation.
+      // points; once it does, we must avoid those transformations on platforms
+      // that have this limitation.
       //
       // https://github.com/ARM-software/abi-aa/issues/327
       // https://github.com/ARM-software/abi-aa/pull/346
