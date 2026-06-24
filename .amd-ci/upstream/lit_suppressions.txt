@@ -19,6 +19,7 @@ AddressSanitizer-i386-linux-dynamic :: TestCases/strcat-overlap.cpp
 # "KMP_HW_SUBSET ignored: all hardware resources would be filtered"
 libomp :: affinity/kmp-abs-hw-subset.c
 
-# libcxx/test/std/time/time.zone/time.zone.timezone/time.zone.members/sys_info.zdump.pass.cpp
-# System timezone database inconsistencies (RHEL8).
+# libcxx/test/std/time/time.zone/... - System timezone database inconsistencies (RHEL8).
 llvm-libc++-shared.cfg.in :: std/time/time.zone/time.zone.timezone/time.zone.members/sys_info.zdump.pass.cpp
+llvm-libc++-shared.cfg.in :: std/time/time.zone/time.zone.db/time.zone.db.access/current_zone.pass.cpp
+llvm-libc++-shared.cfg.in :: std/time/time.zone/time.zone.db/time.zone.db.tzdb/current_zone.pass.cpp
