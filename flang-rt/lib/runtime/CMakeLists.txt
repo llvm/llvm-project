@@ -12,15 +12,10 @@ find_package(Backtrace)
 set(HAVE_BACKTRACE ${Backtrace_FOUND})
 set(BACKTRACE_HEADER ${Backtrace_HEADER})
 
-# Module sources that are required by other modules
-# Compiled sequentially to ensure dependencies
-set(intrinsics_sources
-  __fortran_builtins.f90
-  __cuda_builtins.f90
-)
-
 # Fortran sources for builtin .mod files
 set(module_sources
+  __fortran_builtins.f90
+  __cuda_builtins.f90
   __fortran_ieee_exceptions.f90
   __fortran_type_info.f90
   flang_debug.f90
@@ -216,10 +211,8 @@ file(GLOB_RECURSE private_headers
   )
 
 if (LLVM_TARGET_TRIPLE MATCHES "^ppc|^powerpc")
-  list(APPEND intrinsics_sources
-    __ppc_types.f90
-  )
   list(APPEND module_sources
+    __ppc_types.f90
     __ppc_intrinsics.f90
     mma.f90
   )
@@ -265,21 +258,6 @@ if (TARGET FortranFloat128MathILib)
 endif ()
 
 
-# When a target depends on an object library, CMake seems to try to only build
-# the object files that the target actual needs. If we are only interested
-# in the module files, nothing gets built at all. To ensure that the module
-# files are built, insert a custom target that is opaque to CMake so it cannot
-# apply this optimization. Dependees on module files must depend on this
-# barrier instead. An actual COMMAND (that does nothing) seems to be necessary
-# on Windows to work.
-function (add_module_barrier barriername objlib)
-  add_custom_target(${barriername}
-    COMMAND ${CMAKE_COMMAND} -E true
-  )
-  add_dependencies(${barriername} ${objlib})
-endfunction ()
-
-
 # Build module files if requested.
 # The object files written by Flang for these are unused. In the future parts
 # of flang-rt may itself be implemented in Fortran in which case these Fortran
@@ -287,67 +265,10 @@ endfunction ()
 # libflang_rt.runtime{.a/.so}. If they also provide an importable .mod, add them
 # to flang_module_target(... PUBLIC).
 if (FLANG_RT_FORTRAN_MODULES)
-  # CMake ignores intrinsic USE dependencies
-  # CMake has an option Fortran_BUILDING_INSTRINSIC_MODULES/Fortran_BUILDING_INTRINSIC_MODULES
-  # to disable this behavior, unfortunately it does not work with Ninja
-  # (https://gitlab.kitware.com/cmake/cmake/-/issues/26803)
-  # As a workaround, we build those intrinsic modules first such that the main
-  # runtime can depend on it. To ensure that modules files are also transitively
-  # updated if a USE'd .mod file changes (a .mod stores the checksums of all
-  # .mod files it depends on and therefore needs to be updated as well), inject
-  # an file-level dependency via OBJECT_DEPENDS.
-  if (RUNTIMES_NEED_INTRINSIC_MODULES_WORKAROUND)
-    # When a target depends on an object library, CMake seems to try to only build
-    # the object files that the target actual needs. If we are only interested
-    # in the module files, nothing gets built at all. To ensure that the module
-    # files are built, insert a custom target that is opaque to CMake so it cannot
-    # apply this optimization. Dependees on module files must depend on this
-    # barrier instead. An actual COMMAND (that does nothing) seems to be necessary
-    # on Windows to work.
-    set(intr_mod_deps "")
-    set(intr_mod_barriers "")
-    macro (module_dependency _srcfile)
-      set(_libname "flang_rt.mod.${_srcfile}")
-      set(_barriername "flang_rt.mod.${_srcfile}.barrier")
-      set(_objpath "${CMAKE_BINARY_DIR}/modules/${CMAKE_CFG_INTDIR}/${_srcfile}${CMAKE_Fortran_OUTPUT_EXTENSION}")
-
-      add_flangrt_library("${_libname}" OBJECT "${_srcfile}")
-      set_property(SOURCE "${_srcfile}" PROPERTY OBJECT_OUTPUTS "${_objpath}")
-      set_property(SOURCE "${_srcfile}" APPEND PROPERTY OBJECT_DEPENDS "${intr_mod_deps}"
-      )
-      flang_module_target("${_libname}" PUBLIC)
-      if (intr_mod_barriers)
-        add_dependencies("${_libname}" ${intr_mod_barriers})
-      endif ()
-      add_module_barrier("${_barriername}" "${_libname}")
-
-      list(APPEND intr_mod_deps "${_objpath}")
-      list(APPEND intr_mod_barriers "${_barriername}")
-    endmacro ()
-
-    foreach (_srcfile IN LISTS intrinsics_sources)
-      module_dependency("${_srcfile}")
-    endforeach ()
-
-    # The modules that CMake correctly tracks dependencies of
-    add_flangrt_library(flang_rt.mod OBJECT
-      ${module_sources}
-    )
-    add_dependencies(flang_rt.mod ${intr_mod_barriers})
-    foreach(_srcfile IN LISTS module_sources)
-      set_property(SOURCE ${_srcfile}
-        APPEND PROPERTY OBJECT_DEPENDS "${intr_mod_deps}"
-      )
-    endforeach()
-  else ()
-    # Workaround not needed
-    add_flangrt_library(flang_rt.mod OBJECT
-      ${intrinsics_sources}
-      ${module_sources}
-    )
-  endif ()
-  flang_module_target(flang_rt.mod PUBLIC)
-  add_module_barrier(flang-rt-mod flang_rt.mod)
+  add_flangrt_library(flang-rt-mod OBJECT
+    ${module_sources}
+  )
+  flang_module_target(flang-rt-mod PUBLIC)
 
   if (RUNTIMES_FORTRAN_MODULES)
     set(_mod_install_dest "${RUNTIMES_INSTALL_RESOURCE_MOD_PATH}/..")

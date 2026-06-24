@@ -23,8 +23,6 @@
 # RUNTIMES_INSTALL_RESOURCE_MOD_PATH - Where to install intrinsic module files
 # in the install prefix. Relative to CMAKE_INSTALL_PREFIX. Only used when
 # RUNTIMES_FORTRAN_MODULES is ON.
-#
-# RUNTIMES_NEED_INTRINSIC_MODULES_WORKAROUND
 
 
 # Check whether the Fortran compiler already has access to builtin modules. Sets
@@ -76,14 +74,8 @@ endfunction ()
 
 set(RUNTIMES_ENABLE_FORTRAN OFF)
 
-# Insert at least one element for
-#
-#    add_dependencies(target ${RUNTIMES_FORTRAN_BUILD_DEPS})
-#
-# to not fail
-add_custom_target(fortran-dummy-dep)
-set(RUNTIMES_FORTRAN_BUILD_DEPS fortran-dummy-dep)
 
+set(RUNTIMES_FORTRAN_BUILD_DEPS "")
 
 if (CMAKE_Fortran_COMPILER)
   # Workarounds for older versions of CMake not recognizing FLang. Hence, we
@@ -190,25 +182,6 @@ option(RUNTIMES_FORTRAN_MODULES "Make Fortran .mod files available to Flang; sho
 
 # Determine the paths for Fortran .mod files.
 if (RUNTIMES_FORTRAN_MODULES)
-  set(RUNTIMES_NEED_INTRINSIC_MODULES_WORKAROUND ON)
-  if (CMAKE_GENERATOR STREQUAL "Unix Makefiles")
-    # "Unix Makefiles" generator supports CMAKE_Fortran_BUILDING_IN(S)TRINSIC_MODULES
-    set(RUNTIMES_NEED_INTRINSIC_MODULES_WORKAROUND OFF)
-  elseif (CMAKE_GENERATOR MATCHES "^Ninja")
-    # Ninja generator supports CMAKE_Fortran_BUILDING_IN(S)TRINSIC_MODULES
-    # starting with CMake 4.5
-    if (CMAKE_VERSION VERSION_GREATER_EQUAL "4.5")
-      set(RUNTIMES_NEED_INTRINSIC_MODULES_WORKAROUND OFF)
-    endif ()
-  endif ()
-  if (RUNTIMES_NEED_INTRINSIC_MODULES_WORKAROUND)
-    message(STATUS "CMAKE_Fortran_BUILDING_IN(S)TRINSIC_MODULES: workaround enabled")
-  else ()
-    message(STATUS "CMAKE_Fortran_BUILDING_IN(S)TRINSIC_MODULES: assumed to work")
-  endif ()
-
-
-
   # Flang expects its builtin modules in Clang's resource directory.
   get_toolchain_module_subdir(toolchain_mod_subdir)
   extend_path(RUNTIMES_OUTPUT_RESOURCE_MOD_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "${toolchain_mod_subdir}")
@@ -265,11 +238,19 @@ function (flang_module_target tgtname)
     "$<$<COMPILE_LANGUAGE:Fortran>:-fintrinsic-modules-path=${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}>"
   )
 
+  # Make CMake not ignore "use, intrinsic ::"-dependencies
+  # Only considered by
+  #  * CMake >= 3.22 with the "Unix Makefiles" generator
+  #  * CMake >= 4.5 with the Ninja generator
   set_target_properties(${tgtname}
     PROPERTIES
       Fortran_BUILDING_INTRINSIC_MODULES ON
       Fortran_BUILDING_INSTRINSIC_MODULES ON
   )
+
+  if (NOT tgtname STREQUAL "flang-rt-mod" AND RUNTIMES_FORTRAN_BUILD_DEPS)
+    target_link_libraries(libomp-mod PRIVATE ${RUNTIMES_FORTRAN_BUILD_DEPS})
+  endif ()
 
   if (CMAKE_Fortran_COMPILER_ID MATCHES "LLVM")
     target_compile_options(${tgtname} PRIVATE
