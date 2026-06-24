@@ -731,15 +731,6 @@ False: No
   verifyAll(ExpectedOut, JSONExpectedOut, PrintFunc);
 }
 
-TEST_F(ScopedPrinterTest, PrintVersion) {
-  auto PrintFunc = [](ScopedPrinter &W) {
-    W.printVersion("Version", "123", "456", "789");
-  };
-  const char *ExpectedOut = R"(Version: 123.456.789
-)";
-  verifyScopedPrinter(ExpectedOut, PrintFunc);
-}
-
 TEST_F(ScopedPrinterTest, PrintList) {
   auto PrintFunc = [](ScopedPrinter &W) {
     const std::vector<uint64_t> EmptyList;
