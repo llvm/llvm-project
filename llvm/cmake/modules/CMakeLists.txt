@@ -80,11 +80,6 @@ if (LLVM_BUILD_UTILS)
   endif()
 endif()
 
-if (LLVM_LINK_LLVM_DYLIB)
-  set(LLVM_CONFIG_LINK_LLVM_DYLIB
-      "set(LLVM_LINK_LLVM_DYLIB ${LLVM_LINK_LLVM_DYLIB})")
-endif()
-
 # We need to use the full path to the LLVM Exports file to make sure we get the
 # one from the build tree. This is due to our cmake files being split between
 # this source dir and the binary dir in the build tree configuration and the
