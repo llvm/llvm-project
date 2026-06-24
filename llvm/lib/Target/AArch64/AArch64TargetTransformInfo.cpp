@@ -5384,7 +5384,8 @@ static bool isLoopSizeWithinBudget(Loop *L, const AArch64TTIImpl &TTI,
 }
 
 static bool shouldUnrollMultiExitLoop(Loop *L, ScalarEvolution &SE,
-                                      const AArch64TTIImpl &TTI) {
+                                      const AArch64TTIImpl &TTI,
+                                      const unsigned SizeBudget) {
   // Only consider loops with unknown trip counts for which we can determine
   // a symbolic expression. Multi-exit loops with small known trip counts will
   // likely be unrolled anyway.
@@ -5398,8 +5399,8 @@ static bool shouldUnrollMultiExitLoop(Loop *L, ScalarEvolution &SE,
   if (MaxTC > 0 && MaxTC <= 32)
     return false;
 
-  // Make sure the loop size is <= 5.
-  if (!isLoopSizeWithinBudget(L, TTI, 5, nullptr))
+  // Make sure the loop size is small.
+  if (!isLoopSizeWithinBudget(L, TTI, SizeBudget, nullptr))
     return false;
 
   // Small search loops with multiple exits can be highly beneficial to unroll.
@@ -5416,6 +5417,9 @@ static bool shouldUnrollMultiExitLoop(Loop *L, ScalarEvolution &SE,
 
   return true;
 }
+
+// Size budget for Apple-M-family unrolling heuristics.
+static constexpr unsigned AppleMLoopSizeBudget = 10;
 
 /// For Apple CPUs, we want to runtime-unroll loops to make better use if the
 /// OOO engine's wide instruction window and various predictors.
@@ -5481,8 +5485,7 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
   if (Header == Latch) {
     // Estimate the size of the loop.
     unsigned Size;
-    unsigned Width = 10;
-    if (!isLoopSizeWithinBudget(L, TTI, Width, &Size))
+    if (!isLoopSizeWithinBudget(L, TTI, AppleMLoopSizeBudget, &Size))
       return;
 
     // Try to find an unroll count that maximizes the use of the instruction
@@ -5619,7 +5622,9 @@ void AArch64TTIImpl::getUnrollingPreferences(
 
   // If this is a small, multi-exit loop similar to something like std::find,
   // then there is typically a performance improvement achieved by unrolling.
-  if (!L->getExitBlock() && shouldUnrollMultiExitLoop(L, SE, *this)) {
+  if (!L->getExitBlock() &&
+      shouldUnrollMultiExitLoop(
+          L, SE, *this, ST->isAppleMLike() ? AppleMLoopSizeBudget : 5)) {
     UP.RuntimeUnrollMultiExit = true;
     UP.Runtime = true;
     // Limit unroll count.
