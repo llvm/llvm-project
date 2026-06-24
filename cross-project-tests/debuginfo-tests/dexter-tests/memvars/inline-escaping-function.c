@@ -35,7 +35,7 @@ __attribute__((noinline))
 int fun(int param) {
   if (param)
     param = inlineme(&param);
-  fluff();           // !dex_label s0
+  fluff(); // !dex_label s0
   return param;
 }
 

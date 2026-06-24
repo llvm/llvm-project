@@ -9,7 +9,7 @@ void __attribute__((noinline, optnone)) bar(int *test) {}
 int main() {
   int test;
   test = 23;
-  bar(&test); // !dex_label before_bar
+  bar(&test);  // !dex_label before_bar
   return test; // !dex_label after_bar
 }
 
@@ -24,4 +24,3 @@ int main() {
   !value test: 23
 ...
 */
-

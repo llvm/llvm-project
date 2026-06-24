@@ -32,7 +32,6 @@ T test1(T x, T y) {
   return tmp; // !dex_label break_1
 }
 
-
 template<typename T>
 __attribute__((optnone))
 T test2(T x, T y) {
@@ -53,7 +52,7 @@ T test3(T InVec) {
   T result;
   for (unsigned i=0; i != TypeTraits<T>::NumElements; ++i)
     result[i] = InVec[i]; // !dex_label break_6
-  return result; // !dex_label break_7
+  return result;          // !dex_label break_7
 }
 
 template<typename T>

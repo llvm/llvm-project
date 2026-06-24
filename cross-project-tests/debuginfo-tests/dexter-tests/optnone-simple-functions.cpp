@@ -54,7 +54,7 @@ int test4(int test4_a, int test4_b) {
   val2 = val1;
   val2 += val1;
 
-  for (unsigned i=0; i != num_iterations; ++i) {
+  for (unsigned i = 0; i != num_iterations; ++i) {
     val1--;
     val2 += i;
     if (val2 % 2 == 0)

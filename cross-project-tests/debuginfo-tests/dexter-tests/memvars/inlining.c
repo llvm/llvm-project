@@ -15,9 +15,9 @@ static void use(int* p) {
 
 __attribute__((__noinline__))
 void fun(int param) {
-  volatile int step1 = 0;  // !dex_label s1
+  volatile int step1 = 0; // !dex_label s1
   use(&param);
-  volatile int step2 = 0;  // !dex_label s2
+  volatile int step2 = 0; // !dex_label s2
 }
 
 int main() {

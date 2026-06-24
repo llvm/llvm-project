@@ -22,7 +22,6 @@ __attribute__((optnone)) void simple_memcpy_loop(int *dest, const int *src,
     dest[i] = src[i]; // !dex_label simple_memcpy_loop
 }
 
-
 // A trivial loop that could be optimized into a builtin memcpy
 // which is either expanded into a optimal sequence of mov
 // instructions or directly into a call to memset@plt
@@ -30,7 +29,6 @@ __attribute__((optnone)) void trivial_memcpy_loop(int *dest, const int *src) {
   for (unsigned i = 0; i != 16; ++i)
     dest[i] = src[i]; // !dex_label trivial_memcpy_loop
 }
-
 
 __attribute__((always_inline)) int foo(int a) { return a + 5; }
 
@@ -40,7 +38,6 @@ __attribute__((optnone)) void nonleaf_function_with_loop(int *dest,
   for (unsigned i = 0; i != 16; ++i)
     dest[i] = foo(src[i]); // !dex_label nonleaf_function_with_loop
 }
-
 
 // This entire function could be optimized into a
 // simple movl %esi, %eax.
@@ -52,7 +49,6 @@ __attribute__((optnone)) int counting_loop(unsigned values) {
     i++;
   return i;
 }
-
 
 // This loop could be rotated.
 // while(cond){
@@ -83,7 +79,6 @@ __attribute__((optnone)) int loop_rotate_test(int *src, unsigned count) {
   return result; // !dex_label loop_rotate_test_ret
 }
 
-
 typedef int *intptr __attribute__((aligned(16)));
 
 // This loop can be vectorized if we enable
@@ -93,19 +88,18 @@ __attribute__((optnone)) void loop_vectorize_test(intptr dest, intptr src) {
 
   int tempArray[16];
 
-  while(count != 16) { // !dex_label loop_vectorize_test
+  while (count != 16) { // !dex_label loop_vectorize_test
     tempArray[count] = src[count];
-    tempArray[count+1] = src[count+1]; // !dex_label loop_vectorize_test_2
-    tempArray[count+2] = src[count+2]; // !dex_label loop_vectorize_test_3
-    tempArray[count+3] = src[count+3]; // !dex_label loop_vectorize_test_4
-    dest[count] = tempArray[count]; // !dex_label loop_vectorize_test_5
-    dest[count+1] = tempArray[count+1]; // !dex_label loop_vectorize_test_6
-    dest[count+2] = tempArray[count+2]; // !dex_label loop_vectorize_test_7
-    dest[count+3] = tempArray[count+3]; // !dex_label loop_vectorize_test_8
-    count += 4; // !dex_label loop_vectorize_test_9
+    tempArray[count + 1] = src[count + 1];  // !dex_label loop_vectorize_test_2
+    tempArray[count + 2] = src[count + 2];  // !dex_label loop_vectorize_test_3
+    tempArray[count + 3] = src[count + 3];  // !dex_label loop_vectorize_test_4
+    dest[count] = tempArray[count];         // !dex_label loop_vectorize_test_5
+    dest[count + 1] = tempArray[count + 1]; // !dex_label loop_vectorize_test_6
+    dest[count + 2] = tempArray[count + 2]; // !dex_label loop_vectorize_test_7
+    dest[count + 3] = tempArray[count + 3]; // !dex_label loop_vectorize_test_8
+    count += 4;                             // !dex_label loop_vectorize_test_9
   }
 }
-
 
 int main() {
   int A[] = {3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9};

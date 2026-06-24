@@ -28,7 +28,7 @@ void do_thing(int x) {
 
 __attribute__((__noinline__))
 int fun(int param) {
-  do_thing(0);                        // !dex_label s2
+  do_thing(0); // !dex_label s2
   for (int i = 0; i < param; ++i) {
     use(&param);
   }
@@ -46,7 +46,7 @@ int fun(int param) {
   ////    [0x0000000000400495, 0x00000000004004a2): DW_OP_reg3 RBX)
   //// DW_AT_name       ("param")
 
-  return g;                           // !dex_label s3
+  return g; // !dex_label s3
 }
 
 int main() {

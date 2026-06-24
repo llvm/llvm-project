@@ -21,8 +21,8 @@
 __attribute__((optnone))
 float test_fdiv(float A) {
   float result;
-  result = A / 10.f;  // !dex_label fdiv_assign
-  return result;      // !dex_label fdiv_ret
+  result = A / 10.f; // !dex_label fdiv_assign
+  return result;     // !dex_label fdiv_ret
 }
 
 //// (A * B) - (A * C) ==> A * (B - C)
@@ -30,9 +30,9 @@ __attribute__((optnone))
 float test_distributivity(float A, float B, float C) {
   float result;
   float op1 = A * B;
-  float op2 = A * C;    // !dex_label distributivity_op2
-  result = op1 - op2;   // !dex_label distributivity_result
-  return result;        // !dex_label distributivity_ret
+  float op2 = A * C;  // !dex_label distributivity_op2
+  result = op1 - op2; // !dex_label distributivity_result
+  return result;      // !dex_label distributivity_ret
 }
 
 //// (A + B) + C  == A + (B + C)

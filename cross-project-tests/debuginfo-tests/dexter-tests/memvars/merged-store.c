@@ -32,7 +32,7 @@ __attribute__((noinline))
 int fun(int parama, int paramb) {
   if (parama)
     parama = paramb;
-  fluff();           // !dex_label s0
+  fluff(); // !dex_label s0
   esc(&parama);
   return 0;
 }

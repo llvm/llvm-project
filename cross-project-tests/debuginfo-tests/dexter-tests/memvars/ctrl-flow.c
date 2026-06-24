@@ -16,12 +16,12 @@ void leak(int *ptr) {
 
 __attribute__((__noinline__))
 int fun(int cond) {
-  int local = 0;   // !dex_label s1
+  int local = 0; // !dex_label s1
   if (cond)
     leak(&local);
   else
     local = 1;
-  return local;    // !dex_label s2
+  return local; // !dex_label s2
 }
 
 int main() {

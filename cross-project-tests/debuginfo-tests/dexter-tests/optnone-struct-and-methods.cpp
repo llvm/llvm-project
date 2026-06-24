@@ -67,18 +67,18 @@ public:
   __attribute__((optnone))
   A() {
     __builtin_memset(this, 0xFF, sizeof(*this));
-  } //!dex_label break_0
+  } // !dex_label break_0
 
   __attribute__((optnone))
   ~A() {
     *getOtherData()->a.long_ptr = 0xADDF00DL;
-  } //!dex_label break_1
+  } // !dex_label break_1
 
   __attribute__((optnone))
   long getData() {
     setSomeData1(B_VALUE, A_VALUE);
     setOtherData();
-    return getOtherData()->a.long_ptr[1]; //!dex_label break_2
+    return getOtherData()->a.long_ptr[1]; // !dex_label break_2
   }
 };
 
