@@ -24,6 +24,11 @@ set(FLOP_COUNTER_CFLAGS
   -std=c++17
   )
 
+# flop counter uses C++ standard library headers.
+if (TARGET cxx-headers OR HAVE_LIBCXX)
+  set(DEPS cxx-headers)
+endif()
+
 # Determine supported architectures
 if(APPLE)
   # On Darwin, use the darwin OSX architectures
@@ -50,6 +55,7 @@ if(APPLE)
     CFLAGS ${FLOP_COUNTER_CFLAGS}
     SOURCES ${FLOP_COUNTER_SOURCES}
     ADDITIONAL_HEADERS ${FLOP_COUNTER_HEADERS}
+    DEPS ${DEPS}
     PARENT_TARGET flop-counter)
 else()
   add_compiler_rt_runtime(clang_rt.instrumentor_flop_counter
@@ -58,6 +64,7 @@ else()
     CFLAGS ${FLOP_COUNTER_CFLAGS}
     SOURCES ${FLOP_COUNTER_SOURCES}
     ADDITIONAL_HEADERS ${FLOP_COUNTER_HEADERS}
+    DEPS ${DEPS}
     PARENT_TARGET flop-counter)
 endif()
 
