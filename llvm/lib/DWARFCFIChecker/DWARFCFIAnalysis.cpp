@@ -9,6 +9,7 @@
 #include "llvm/DWARFCFIChecker/DWARFCFIAnalysis.h"
 #include "Registers.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
@@ -86,16 +87,17 @@ DWARFCFIAnalysis::DWARFCFIAnalysis(MCContext *Context, MCInstrInfo const &MCII,
     : State(Context), Context(Context), MCII(MCII),
       MCRI(Context->getRegisterInfo()), IsEH(IsEH) {
 
+  // target's MCRegisterInfo sets up callee-saved regs, e.g. createX86MCRegisterInfo, set them to same_value
+  ArrayRef<MCPhysReg> CSRs = MCRI->getDefaultCalleeSavedRegs();
   for (auto LLVMReg : getTrackingRegs(MCRI)) {
     if (MCRI->get(LLVMReg).IsArtificial || MCRI->get(LLVMReg).IsConstant)
       continue;
 
     DWARFRegNum Reg = MCRI->getDwarfRegNum(LLVMReg, IsEH);
-    // TODO: this should be `undefined` instead of `same_value`, but because
-    // initial frame state doesn't have any directives about callee saved
-    // registers, every register is tracked. After initial frame state is
-    // corrected, this should be changed.
-    State.update(MCCFIInstruction::createSameValue(nullptr, Reg));
+    if (is_contained(CSRs, LLVMReg))
+      State.update(MCCFIInstruction::createSameValue(nullptr, Reg));
+    else
+      State.update(MCCFIInstruction::createUndefined(nullptr, Reg));
   }
 
   // TODO: Ignoring PC should be in the initial frame state.
