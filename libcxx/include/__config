@@ -244,12 +244,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_EXPLICIT_SINCE_CXX14 explicit
 #  endif
 
-#  if _LIBCPP_STD_VER >= 23
-#    define _LIBCPP_EXPLICIT_SINCE_CXX23 explicit
-#  else
-#    define _LIBCPP_EXPLICIT_SINCE_CXX23
-#  endif
-
 #  if _LIBCPP_STD_VER >= 14
 #    define _LIBCPP_CONSTEXPR_SINCE_CXX14 constexpr
 #  else

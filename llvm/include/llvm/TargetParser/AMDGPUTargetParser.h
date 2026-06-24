@@ -108,7 +108,7 @@ fillAMDGPUFeatureMap(StringRef GPU, const Triple &T, StringMap<bool> &Features);
 
 enum class TargetIDSetting { Unsupported, Any, Off, On };
 
-class LLVM_ABI AMDGPUTargetID {
+class LLVM_ABI TargetID {
 private:
   GPUKind Arch;
   std::string TargetTripleString;
@@ -117,10 +117,10 @@ private:
   bool IsAMDHSA;
 
 public:
-  AMDGPUTargetID(GPUKind Arch, const Triple &TT, TargetIDSetting XnackSetting,
-                 TargetIDSetting SramEccSetting);
+  TargetID(GPUKind Arch, const Triple &TT, TargetIDSetting XnackSetting,
+           TargetIDSetting SramEccSetting);
 
-  ~AMDGPUTargetID() = default;
+  ~TargetID() = default;
 
   /// \return True if the current xnack setting is not "Unsupported".
   bool isXnackSupported() const {
@@ -185,26 +185,18 @@ public:
   /// \returns True if this is an AMDHSA target.
   bool isAMDHSA() const { return IsAMDHSA; }
 
-  /// Parse a target ID directive string (e.g.,
-  /// "amdgcn-amd-amdhsa--gfx1010:xnack-") and return an AMDGPUTargetID.
-  /// \returns AMDGPUTargetID or std::nullopt if malformed.
-  static std::optional<AMDGPUTargetID>
+  static std::optional<TargetID>
   parseTargetIDString(StringRef TargetIDDirective);
 
-  /// Write string representation to \p OS
   void print(raw_ostream &OS) const;
 
-  /// \returns String representation of an object.
   std::string toString() const;
 
-  bool operator==(const AMDGPUTargetID &Other) const;
-  bool operator!=(const AMDGPUTargetID &Other) const {
-    return !(*this == Other);
-  }
+  bool operator==(const TargetID &Other) const;
+  bool operator!=(const TargetID &Other) const { return !(*this == Other); }
 };
 
-inline raw_ostream &operator<<(raw_ostream &OS,
-                               const AMDGPUTargetID &TargetID) {
+inline raw_ostream &operator<<(raw_ostream &OS, const TargetID &TargetID) {
   TargetID.print(OS);
   return OS;
 }

@@ -244,12 +244,8 @@ def Arith_ConstantOp : Op<Arith_Dialect, "constant",
   }];
 
   let arguments = (ins TypedAttrInterface:$value);
-  // TODO: Disallow arith.constant to return anything other than a signless
-  // integer or float like. Downstream users of Arith should only be
-  // working with signless integers, floats, or vectors/tensors thereof.
-  // However, it is necessary to allow arith.constant to return vectors/tensors
-  // of strings and signed/unsigned integers (for now) as an artefact of
-  // splitting the Standard dialect.
+  // Keep this broad so the custom verifier can produce arith.constant-specific
+  // diagnostics after checking that the value and result types match.
   let results = (outs /*SignlessIntegerOrIndexOrFloatLike*/AnyType:$result);
 
   let extraClassDeclaration = [{

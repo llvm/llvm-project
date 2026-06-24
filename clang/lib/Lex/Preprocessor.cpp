@@ -417,14 +417,16 @@ StringRef Preprocessor::getLastMacroWithSpelling(
 }
 
 void Preprocessor::recomputeCurLexerKind() {
-  if (CurLexer)
+  if (InCachingLexMode())
+    CurLexerCallback = CLK_CachingLexer;
+  else if (CurLexer)
     CurLexerCallback = CurLexer->isDependencyDirectivesLexer()
                            ? CLK_DependencyDirectivesLexer
                            : CLK_Lexer;
   else if (CurTokenLexer)
     CurLexerCallback = CLK_TokenLexer;
   else
-    CurLexerCallback = CLK_CachingLexer;
+    CurLexerCallback = CLK_Lexer;
 }
 
 bool Preprocessor::SetCodeCompletionPoint(FileEntryRef File,
