@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -fnamed-loops -std=c++23 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fnamed-loops -std=c++23 -fsyntax-only -verify %s -fexperimental-new-constant-interpreter
-// expected-no-diagnostics
 
 struct Tracker {
   bool& destroyed;
@@ -168,3 +167,12 @@ constexpr T f12() {
 }
 static_assert(f12<int>() == 93);
 static_assert(f12<unsigned>() == 93u);
+
+
+constexpr int labelNotFound() {
+  a: for (;;) {
+    break azzz; // expected-error {{'break' label does not name an enclosing loop or 'switch'}}
+  }
+  return 1;
+}
+static_assert(labelNotFound() == 1);
