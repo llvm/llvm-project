@@ -304,14 +304,17 @@ private:
   unsigned sizeOf(const MachineInstr &MI) const {
     // When !Cfg.CountPhis, PHIs do not contribute to distances/sizes since they
     // generally don't result in the generation of a machine instruction.
-    // FIXME: Consider using MI.isPseudo() or maybe MI.isMetaInstruction().
+
+    // FIXME: Consider using MI.isPseudo(), MI.isMetaInstruction(), or maybe
+    //        MI.isTransient(). Any such change will likely require fixing up
+    //        places in the code where we assume that only PHIs can have 0 size.
     return Cfg.CountPhis ? 1 : !MI.isPHI();
   }
 
   void calcInstrIds(const MachineBasicBlock *BB,
                     InstrToIdMap &MutableInstrToId) const {
     InstrIdTy Id = 0;
-    for (auto &MI : BB->instrs()) {
+    for (const MachineInstr &MI : BB->instrs()) {
       MutableInstrToId[&MI] = Id;
       Id += sizeOf(MI);
     }
@@ -402,11 +405,15 @@ private:
 
   enum class EdgeKind { Back = -1, None = 0, Forward = 1 };
   static constexpr StringRef toString(EdgeKind EK) {
-    if (EK == EdgeKind::Back)
+    switch (EK) {
+    case EdgeKind::Back:
       return "back";
-    if (EK == EdgeKind::Forward)
+    case EdgeKind::Forward:
       return "fwd";
-    return "none";
+    case EdgeKind::None:
+      return "none";
+    }
+    llvm_unreachable("Unexpected EdgeKind");
   }
 
   struct PathInfo {
@@ -878,8 +885,8 @@ private:
                 Curr.try_emplace(DestBlockNum, WeightedDist, UnweightedDist);
             if (!First) {
               InterBlockDistance &Slot = I->second;
-              Slot.Weighted = min(Slot.Weighted, WeightedDist);
-              Slot.Unweighted = min(Slot.Unweighted, UnweightedDist);
+              Slot.Weighted = std::min(Slot.Weighted, WeightedDist);
+              Slot.Unweighted = std::min(Slot.Unweighted, UnweightedDist);
             }
           }
         }
@@ -2078,6 +2085,10 @@ public:
   AMDGPUNextUseAnalysisImpl(const MachineFunction *, const MachineLoopInfo *);
   ~AMDGPUNextUseAnalysisImpl() { clearTables(); }
 
+  static MachineFunctionProperties getRequiredProperties() {
+    return MachineFunctionProperties().setIsSSA();
+  }
+
   AMDGPUNextUseAnalysis::Config getConfig() const { return Cfg; }
   void setConfig(AMDGPUNextUseAnalysis::Config NewCfg) {
     Cfg = NewCfg;
@@ -2274,12 +2285,23 @@ void AMDGPUNextUseAnalysis::getReachableUses(
 //------------------------------------------------------------------------------
 AMDGPUNextUseAnalysisLegacyPass::AMDGPUNextUseAnalysisLegacyPass()
     : MachineFunctionPass(ID) {}
+
+StringRef AMDGPUNextUseAnalysisLegacyPass::name() {
+  return "AMDGPU Next Use Analysis";
+}
+
 StringRef AMDGPUNextUseAnalysisLegacyPass::getPassName() const {
-  return "Next Use Analysis";
+  return name();
+}
+
+MachineFunctionProperties
+AMDGPUNextUseAnalysisLegacyPass::getRequiredProperties() const {
+  return AMDGPUNextUseAnalysisImpl::getRequiredProperties();
 }
 
 bool AMDGPUNextUseAnalysisLegacyPass::runOnMachineFunction(
     MachineFunction &MF) {
+  MFPropsModifier _(*this, MF);
   const MachineLoopInfo *MLI =
       &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   NUA.reset(new AMDGPUNextUseAnalysis(&MF, MLI));
@@ -2296,10 +2318,11 @@ void AMDGPUNextUseAnalysisLegacyPass::getAnalysisUsage(
 char AMDGPUNextUseAnalysisLegacyPass::ID = 0;
 char &llvm::AMDGPUNextUseAnalysisLegacyID = AMDGPUNextUseAnalysisLegacyPass::ID;
 
-INITIALIZE_PASS_BEGIN(AMDGPUNextUseAnalysisLegacyPass, DEBUG_TYPE,
+using AMDGPUNextUseAnalysisLegacy = AMDGPUNextUseAnalysisLegacyPass;
+INITIALIZE_PASS_BEGIN(AMDGPUNextUseAnalysisLegacy, DEBUG_TYPE,
                       "Next Use Analysis", false, true)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
-INITIALIZE_PASS_END(AMDGPUNextUseAnalysisLegacyPass, DEBUG_TYPE,
+INITIALIZE_PASS_END(AMDGPUNextUseAnalysisLegacy, DEBUG_TYPE,
                     "Next Use Analysis", false, true)
 
 FunctionPass *llvm::createAMDGPUNextUseAnalysisLegacyPass() {
@@ -2311,9 +2334,15 @@ FunctionPass *llvm::createAMDGPUNextUseAnalysisLegacyPass() {
 //------------------------------------------------------------------------------
 AnalysisKey AMDGPUNextUseAnalysisPass::Key;
 
+MachineFunctionProperties
+AMDGPUNextUseAnalysisPass::getRequiredProperties() const {
+  return AMDGPUNextUseAnalysisImpl::getRequiredProperties();
+}
+
 AMDGPUNextUseAnalysisPass::Result
 AMDGPUNextUseAnalysisPass::run(MachineFunction &MF,
                                MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
   const MachineLoopInfo &MLI = MFAM.getResult<MachineLoopAnalysis>(MF);
   return AMDGPUNextUseAnalysis(&MF, &MLI);
 }
@@ -2544,12 +2573,22 @@ void printAsJson(raw_ostream &FallbackOS, TimerGroup &JsonTimerGroup,
 AMDGPUNextUseAnalysisPrinterLegacyPass::AMDGPUNextUseAnalysisPrinterLegacyPass()
     : MachineFunctionPass(ID) {}
 
-StringRef AMDGPUNextUseAnalysisPrinterLegacyPass::getPassName() const {
+StringRef AMDGPUNextUseAnalysisPrinterLegacyPass::name() {
   return "AMDGPU Next Use Analysis Printer";
+}
+
+StringRef AMDGPUNextUseAnalysisPrinterLegacyPass::getPassName() const {
+  return name();
+}
+
+MachineFunctionProperties
+AMDGPUNextUseAnalysisPrinterLegacyPass::getRequiredProperties() const {
+  return AMDGPUNextUseAnalysisImpl::getRequiredProperties();
 }
 
 bool AMDGPUNextUseAnalysisPrinterLegacyPass::runOnMachineFunction(
     MachineFunction &MF) {
+  MFPropsModifier _(*this, MF);
   TimerGroup JsonTimerGroup("amdgpu-next-use-analysis-json",
                             "AMDGPU Next Use Analysis JSON Printer", false);
   Timer JsonTimer("json", "Total time spent generating json", JsonTimerGroup);
@@ -2577,14 +2616,16 @@ char AMDGPUNextUseAnalysisPrinterLegacyPass::ID = 0;
 char &AMDGPUNextUseAnalysisPrinterLegacyID =
     AMDGPUNextUseAnalysisPrinterLegacyPass::ID;
 
-INITIALIZE_PASS_BEGIN(AMDGPUNextUseAnalysisPrinterLegacyPass,
+using AMDGPUNextUseAnalysisPrinterLegacy =
+    AMDGPUNextUseAnalysisPrinterLegacyPass;
+INITIALIZE_PASS_BEGIN(AMDGPUNextUseAnalysisPrinterLegacy,
                       "amdgpu-next-use-printer",
                       "AMDGPU Next Use Analysis Printer", false, false)
 
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 
-INITIALIZE_PASS_END(AMDGPUNextUseAnalysisPrinterLegacyPass,
+INITIALIZE_PASS_END(AMDGPUNextUseAnalysisPrinterLegacy,
                     "amdgpu-next-use-printer",
                     "AMDGPU Next Use Analysis Printer", false, false)
 
@@ -2595,10 +2636,15 @@ FunctionPass *llvm::createAMDGPUNextUseAnalysisPrinterLegacyPass() {
 //------------------------------------------------------------------------------
 // New Pass Manager Printer Pass
 //------------------------------------------------------------------------------
+MachineFunctionProperties
+AMDGPUNextUseAnalysisPrinterPass::getRequiredProperties() const {
+  return AMDGPUNextUseAnalysisImpl::getRequiredProperties();
+}
+
 PreservedAnalyses
 AMDGPUNextUseAnalysisPrinterPass::run(MachineFunction &MF,
                                       MachineFunctionAnalysisManager &MFAM) {
-
+  MFPropsModifier _(*this, MF);
   TimerGroup JsonTimerGroup("amdgpu-next-use-analysis-json",
                             "AMDGPU Next Use Analysis JSON Printer", false);
   Timer JsonTimer("json", "Total time spent generating json", JsonTimerGroup);

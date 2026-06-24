@@ -199,10 +199,10 @@ extern char &SIFixSGPRCopiesLegacyID;
 void initializeSIFixVGPRCopiesLegacyPass(PassRegistry &);
 extern char &SIFixVGPRCopiesID;
 
-void initializeAMDGPUNextUseAnalysisLegacyPassPass(PassRegistry &);
+void initializeAMDGPUNextUseAnalysisLegacyPass(PassRegistry &);
 extern char &AMDGPUNextUseAnalysisLegacyID;
 
-void initializeAMDGPUNextUseAnalysisPrinterLegacyPassPass(PassRegistry &);
+void initializeAMDGPUNextUseAnalysisPrinterLegacyPass(PassRegistry &);
 extern char &AMDGPUNextUseAnalysisPrinterLegacyID;
 
 void initializeSILowerWWMCopiesLegacyPass(PassRegistry &);

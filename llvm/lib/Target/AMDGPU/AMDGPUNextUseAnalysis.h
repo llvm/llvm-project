@@ -215,14 +215,6 @@ constexpr inline NextUseDistance operator-(NextUseDistance A,
   return A -= B;
 }
 
-constexpr inline NextUseDistance min(NextUseDistance A, NextUseDistance B) {
-  return A < B ? A : B;
-}
-
-constexpr inline NextUseDistance max(NextUseDistance A, NextUseDistance B) {
-  return A > B ? A : B;
-}
-
 //==============================================================================
 // AMDGPUNextUseAnalysis - Provides next-use distances for live registers or
 // sub-registers at a given MachineInstruction suitable for making spilling
@@ -322,9 +314,12 @@ public:
   static char ID;
 
   AMDGPUNextUseAnalysisLegacyPass();
+  MachineFunctionProperties getRequiredProperties() const override;
 
   AMDGPUNextUseAnalysis &getNextUseAnalysis() { return *NUA; }
   const AMDGPUNextUseAnalysis &getNextUseAnalysis() const { return *NUA; }
+
+  static StringRef name();
   StringRef getPassName() const override;
 
 protected:
@@ -341,6 +336,8 @@ class AMDGPUNextUseAnalysisPass
   static AnalysisKey Key;
 
 public:
+  MachineFunctionProperties getRequiredProperties() const;
+
   using Result = AMDGPUNextUseAnalysis;
   Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
 };
@@ -355,7 +352,9 @@ public:
   static char ID;
 
   AMDGPUNextUseAnalysisPrinterLegacyPass();
+  MachineFunctionProperties getRequiredProperties() const override;
 
+  static StringRef name();
   StringRef getPassName() const override;
 
 protected:
@@ -368,6 +367,8 @@ class AMDGPUNextUseAnalysisPrinterPass
   raw_ostream &OS;
 
 public:
+  MachineFunctionProperties getRequiredProperties() const;
+
   explicit AMDGPUNextUseAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
