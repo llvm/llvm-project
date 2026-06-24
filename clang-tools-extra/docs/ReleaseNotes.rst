@@ -221,6 +221,12 @@ New checks
 
   Finds assignments within selection statements.
 
+- New :doc:`bugprone-container-bounds-check-overflow
+  <clang-tidy/checks/bugprone/container-bounds-check-overflow>` check.
+
+  Finds potential overflow in unsigned integer addition before comparison
+  with a container's ``size()`` method.
+
 - New :doc:`bugprone-missing-end-comparison
   <clang-tidy/checks/bugprone/missing-end-comparison>` check.
 

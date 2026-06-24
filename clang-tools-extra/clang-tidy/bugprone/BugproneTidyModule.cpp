@@ -21,6 +21,7 @@
 #include "ChainedComparisonCheck.h"
 #include "CommandProcessorCheck.h"
 #include "ComparePointerToMemberVirtualFunctionCheck.h"
+#include "ContainerBoundsCheckOverflowCheck.h"
 #include "CopyConstructorInitCheck.h"
 #include "CopyConstructorMutatesArgumentCheck.h"
 #include "CrtpConstructorAccessibilityCheck.h"
@@ -150,6 +151,8 @@ public:
         "bugprone-command-processor");
     CheckFactories.registerCheck<ComparePointerToMemberVirtualFunctionCheck>(
         "bugprone-compare-pointer-to-member-virtual-function");
+    CheckFactories.registerCheck<ContainerBoundsCheckOverflowCheck>(
+        "bugprone-container-bounds-check-overflow");
     CheckFactories.registerCheck<CopyConstructorInitCheck>(
         "bugprone-copy-constructor-init");
     CheckFactories.registerCheck<CopyConstructorMutatesArgumentCheck>(
