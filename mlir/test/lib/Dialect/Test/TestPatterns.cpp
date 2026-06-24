@@ -366,7 +366,9 @@ struct CloneOp : public RewritePattern {
     if (op->hasAttr("was_cloned"))
       return failure();
     Operation *cloned = rewriter.clone(*op);
-    cloned->setAttr("was_cloned", rewriter.getUnitAttr());
+    rewriter.modifyOpInPlace(cloned, [&]() {
+      cloned->setAttr("was_cloned", rewriter.getUnitAttr());
+    });
     return success();
   }
 };
@@ -384,7 +386,8 @@ struct CloneRegionBeforeOp : public RewritePattern {
       return failure();
     for (Region &r : op->getRegions())
       rewriter.cloneRegionBefore(r, op->getBlock());
-    op->setAttr("was_cloned", rewriter.getUnitAttr());
+    rewriter.modifyOpInPlace(
+        op, [&]() { op->setAttr("was_cloned", rewriter.getUnitAttr()); });
     return success();
   }
 };
