@@ -3,11 +3,11 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=fiji -o - < %s | FileCheck %s --check-prefixes=SDAG8
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -o - < %s | FileCheck %s --check-prefixes=SDAG10
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -o - < %s | FileCheck %s --check-prefixes=SDAG1250
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=tahiti -o - < %s | FileCheck %s --check-prefixes=GFX,GFX6
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=fiji -o - < %s | FileCheck %s --check-prefixes=GFX,GFX8
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1010 -o - < %s | FileCheck %s --check-prefixes=GFX,GFX10
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1250 -mattr=-real-true16 -o - < %s | FileCheck %s --check-prefixes=GFX1250,GFX1250-FAKE16
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 -o - < %s | FileCheck %s --check-prefixes=GFX1250,GFX1250-REAL16
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=tahiti -o - < %s | FileCheck %s --check-prefixes=GFX,GFX6
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=fiji -o - < %s | FileCheck %s --check-prefixes=GFX,GFX8
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1010 -o - < %s | FileCheck %s --check-prefixes=GFX,GFX10
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1250 -mattr=-real-true16 -o - < %s | FileCheck %s --check-prefixes=GFX1250,GFX1250-FAKE16
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx1250 -mattr=+real-true16 -o - < %s | FileCheck %s --check-prefixes=GFX1250,GFX1250-REAL16
 
 declare i16 @llvm.abs.i16(i16, i1)
 declare i32 @llvm.abs.i32(i32, i1)
@@ -930,17 +930,17 @@ define amdgpu_cs <3 x i8> @abs_sgpr_v3i8(<3 x i8> inreg %arg) {
 ; SDAG10-NEXT:    s_bfe_i32 s1, s1, 0x80000
 ; SDAG10-NEXT:    s_bfe_i32 s0, s0, 0x80000
 ; SDAG10-NEXT:    s_sext_i32_i16 s1, s1
-; SDAG10-NEXT:    s_sext_i32_i16 s0, s0
 ; SDAG10-NEXT:    s_bfe_i32 s2, s2, 0x80000
+; SDAG10-NEXT:    s_sext_i32_i16 s0, s0
 ; SDAG10-NEXT:    s_abs_i32 s1, s1
 ; SDAG10-NEXT:    s_abs_i32 s0, s0
-; SDAG10-NEXT:    s_sext_i32_i16 s2, s2
 ; SDAG10-NEXT:    s_lshl_b32 s1, s1, 8
-; SDAG10-NEXT:    s_abs_i32 s2, s2
+; SDAG10-NEXT:    s_sext_i32_i16 s2, s2
 ; SDAG10-NEXT:    s_or_b32 s0, s0, s1
-; SDAG10-NEXT:    s_lshl_b32 s1, s2, 16
-; SDAG10-NEXT:    s_and_b32 s3, s0, 0xffff
-; SDAG10-NEXT:    s_or_b32 s1, s3, s1
+; SDAG10-NEXT:    s_abs_i32 s2, s2
+; SDAG10-NEXT:    s_and_b32 s1, s0, 0xffff
+; SDAG10-NEXT:    s_lshl_b32 s3, s2, 16
+; SDAG10-NEXT:    s_or_b32 s1, s1, s3
 ; SDAG10-NEXT:    s_lshr_b32 s1, s1, 8
 ; SDAG10-NEXT:    ; return to shader part epilog
 ;
@@ -950,18 +950,18 @@ define amdgpu_cs <3 x i8> @abs_sgpr_v3i8(<3 x i8> inreg %arg) {
 ; SDAG1250-NEXT:    s_bfe_i32 s1, s1, 0x80000
 ; SDAG1250-NEXT:    s_bfe_i32 s0, s0, 0x80000
 ; SDAG1250-NEXT:    s_sext_i32_i16 s1, s1
-; SDAG1250-NEXT:    s_sext_i32_i16 s0, s0
 ; SDAG1250-NEXT:    s_bfe_i32 s2, s2, 0x80000
+; SDAG1250-NEXT:    s_sext_i32_i16 s0, s0
 ; SDAG1250-NEXT:    s_abs_i32 s1, s1
 ; SDAG1250-NEXT:    s_abs_i32 s0, s0
-; SDAG1250-NEXT:    s_sext_i32_i16 s2, s2
 ; SDAG1250-NEXT:    s_lshl_b32 s1, s1, 8
-; SDAG1250-NEXT:    s_abs_i32 s2, s2
+; SDAG1250-NEXT:    s_sext_i32_i16 s2, s2
 ; SDAG1250-NEXT:    s_or_b32 s0, s0, s1
-; SDAG1250-NEXT:    s_lshl_b32 s1, s2, 16
-; SDAG1250-NEXT:    s_and_b32 s3, s0, 0xffff
+; SDAG1250-NEXT:    s_abs_i32 s2, s2
+; SDAG1250-NEXT:    s_and_b32 s1, s0, 0xffff
+; SDAG1250-NEXT:    s_lshl_b32 s3, s2, 16
 ; SDAG1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; SDAG1250-NEXT:    s_or_b32 s1, s3, s1
+; SDAG1250-NEXT:    s_or_b32 s1, s1, s3
 ; SDAG1250-NEXT:    s_lshr_b32 s1, s1, 8
 ; SDAG1250-NEXT:    ; return to shader part epilog
 ;
