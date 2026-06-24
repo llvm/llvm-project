@@ -411,3 +411,104 @@ module attributes {transform.with_named_sequence} {
     transform.yield
   }
 }
+
+// -----
+
+// Convolution-like generic where inputChannel was folded away (size-1) but
+// outputChannel survived, producing asymmetric channel dims. Conv1DGenerator
+// cannot handle this and should gracefully reject it.
+
+func.func @conv1d_asymmetric_channel_folded(%filter: tensor<3xf32>,
+                                            %image: tensor<1x3xf32>,
+                                            %output: tensor<1x1xf32>) -> tensor<1x1xf32> {
+  // expected-error @+1 {{Attempted to vectorize, but failed}}
+  %res = linalg.generic {
+    indexing_maps = [affine_map<(d0, d1, d2) -> (d1 + d2)>,
+                     affine_map<(d0, d1, d2) -> (d0, d2)>,
+                     affine_map<(d0, d1, d2) -> (d0, d1)>],
+    iterator_types = ["parallel", "parallel", "reduction"]
+  } ins(%filter, %image : tensor<3xf32>, tensor<1x3xf32>)
+    outs(%output : tensor<1x1xf32>) {
+  ^bb0(%in: f32, %in_1: f32, %out: f32):
+    %mul = arith.mulf %in, %in_1 : f32
+    %add = arith.addf %out, %mul : f32
+    linalg.yield %add : f32
+  } -> tensor<1x1xf32>
+  return %res : tensor<1x1xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Convolution where both inputChannel and outputChannel had size 1 and were
+// folded away. After decomposition to 1D the structural classification marks
+// the op as "pooling" (no channels) but the body is a multiply+add
+// convolution. Conv1DGenerator should reject this mismatch instead of
+// producing an invalid vector.contract with scalar operands.
+
+func.func @conv1d_both_channels_folded(%lhs: tensor<2x4x7xf32>,
+                                       %rhs: tensor<3xf32>,
+                                       %out: tensor<2x4x5xf32>) -> tensor<2x4x5xf32> {
+  // expected-error @+1 {{Attempted to vectorize, but failed}}
+  %res = linalg.generic {
+    indexing_maps = [affine_map<(d0, d1, d2, d3) -> (d0, d1, d2 + d3)>,
+                     affine_map<(d0, d1, d2, d3) -> (d3)>,
+                     affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>],
+    iterator_types = ["parallel", "parallel", "parallel", "reduction"]
+  } ins(%lhs, %rhs : tensor<2x4x7xf32>, tensor<3xf32>)
+    outs(%out : tensor<2x4x5xf32>) {
+  ^bb0(%in: f32, %in_1: f32, %acc: f32):
+    %mul = arith.mulf %in, %in_1 : f32
+    %add = arith.addf %acc, %mul : f32
+    linalg.yield %add : f32
+  } -> tensor<2x4x5xf32>
+  return %res : tensor<2x4x5xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Channel-wise sliding-window reduction (e.g. from LRN) where the batch
+// dimensions [N, H, W] produce more than one N-like batch dim after
+// classification. The canonical shapes in Conv1DGenerator only support a
+// single N-like batch dim, so this must be rejected.
+
+func.func @pooling_multi_batch_reject(%lhs: tensor<5x5x5x5xf32>,
+                                      %rhs: tensor<3xf32>,
+                                      %out: tensor<5x5x5x3xf32>) -> tensor<5x5x5x3xf32> {
+  // expected-error @+1 {{Attempted to vectorize, but failed}}
+  %res = linalg.generic {
+    indexing_maps = [affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2, d3 + d4)>,
+                     affine_map<(d0, d1, d2, d3, d4) -> (d4)>,
+                     affine_map<(d0, d1, d2, d3, d4) -> (d0, d1, d2, d3)>],
+    iterator_types = ["parallel", "parallel", "parallel", "parallel", "reduction"]
+  } ins(%lhs, %rhs : tensor<5x5x5x5xf32>, tensor<3xf32>)
+    outs(%out : tensor<5x5x5x3xf32>) {
+  ^bb0(%in: f32, %in_1: f32, %acc: f32):
+    %add = arith.addf %acc, %in : f32
+    linalg.yield %add : f32
+  } -> tensor<5x5x5x3xf32>
+  return %res : tensor<5x5x5x3xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 : !transform.any_op
+    transform.yield
+  }
+}

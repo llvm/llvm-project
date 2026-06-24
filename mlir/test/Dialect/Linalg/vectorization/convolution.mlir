@@ -196,3 +196,162 @@ module attributes {transform.with_named_sequence} {
 // CHECK:           %[[FMA_2:.*]] = vector.fma %[[IN_2]], %[[FLT_2_B]], %[[FMA_1]] : vector<3x2x[4]xf32>
 // CHECK:           %[[OUT_INS:.*]] = vector.insert_strided_slice %[[FMA_2]], %[[VEC_OUT]] {offsets = [0, 0, 0], strides = [1, 1, 1]} : vector<3x2x[4]xf32> into vector<3x2x[4]xf32>
 // CHECK:           vector.mask %[[MASK_OUT]] { vector.transfer_write %[[OUT_INS]], %[[OUTPUT]]{{\[}}%[[C0]], %[[C0]], %[[C0]]] {in_bounds = [true, true, true]} : vector<3x2x[4]xf32>, memref<3x2x?xf32> } : vector<3x2x[4]xi1>
+
+// -----
+
+// Batchless canonical depthwise (WC / <Kw, C> / WC) with a dynamic channel dim.
+
+#bl_canon_lhs = affine_map<(w, c, kw) -> (w + kw, c)>
+#bl_canon_rhs = affine_map<(w, c, kw) -> (kw, c)>
+#bl_canon_res = affine_map<(w, c, kw) -> (w, c)>
+
+func.func @depthwise_conv1d_wc_wc_8x3xi8_tensor(%input: tensor<8x?xi8>,
+                                                %filter: tensor<1x?xi8>,
+                                                %output: tensor<8x?xi8>) -> tensor<8x?xi8> {
+  %0 = linalg.generic {
+    indexing_maps = [#bl_canon_lhs, #bl_canon_rhs, #bl_canon_res],
+    iterator_types = ["parallel", "parallel", "reduction"]
+  } ins(%input, %filter : tensor<8x?xi8>, tensor<1x?xi8>)
+    outs(%output : tensor<8x?xi8>) {
+  ^bb0(%a: i8, %b: i8, %c: i8):
+    %m = arith.muli %a, %b : i8
+    %r = arith.addi %c, %m : i8
+    linalg.yield %r : i8
+  } -> tensor<8x?xi8>
+  return %0 : tensor<8x?xi8>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [8, 4, 1] : !transform.any_op
+    transform.yield
+  }
+}
+
+// CHECK-LABEL:   func.func @depthwise_conv1d_wc_wc_8x3xi8_tensor(
+// CHECK-SAME:      %[[INPUT:.*]]: tensor<8x?xi8>,
+// CHECK-SAME:      %[[FILTER:.*]]: tensor<1x?xi8>,
+// CHECK-SAME:      %[[OUTPUT:.*]]: tensor<8x?xi8>) -> tensor<8x?xi8> {
+
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[PAD:.*]] = arith.constant 0 : i8
+
+/// Create a mask for the input tensor (2D: W x C).
+// CHECK:           %[[CH_DIM_IN:.*]] = tensor.dim %[[INPUT]], %[[C1]] : tensor<8x?xi8>
+// CHECK:           %[[C8:.*]] = arith.constant 8 : index
+// CHECK:           %[[MASK_IN:.*]] = vector.create_mask %[[C8]], %[[CH_DIM_IN]] : vector<8x4xi1>
+/// Read the input tensor.
+// CHECK:           %[[VEC_IN:.*]] = vector.mask %[[MASK_IN]] { vector.transfer_read %[[INPUT]]{{\[}}%[[C0]], %[[C0]]], %[[PAD]] {in_bounds = [true, true]} : tensor<8x?xi8>, vector<8x4xi8> } : vector<8x4xi1> -> vector<8x4xi8>
+
+/// Create a mask for the filter tensor.
+// CHECK:           %[[CH_DIM_FLT:.*]] = tensor.dim %[[FILTER]], %[[C1]] : tensor<1x?xi8>
+// CHECK:           %[[MASK_FLT:.*]] = vector.create_mask %[[C1]], %[[CH_DIM_FLT]] : vector<1x4xi1>
+/// Read the filter tensor.
+// CHECK:           %[[VEC_FLT:.*]] = vector.mask %[[MASK_FLT]] { vector.transfer_read %[[FILTER]]{{\[}}%[[C0]], %[[C0]]], %[[PAD]] {in_bounds = [true, true]} : tensor<1x?xi8>, vector<1x4xi8> } : vector<1x4xi1> -> vector<1x4xi8>
+
+/// Create a mask for the output tensor.
+// CHECK:           %[[CH_DIM_OUT:.*]] = tensor.dim %[[OUTPUT]], %[[C1]] : tensor<8x?xi8>
+// CHECK:           %[[MASK_OUT:.*]] = vector.create_mask %[[C8]], %[[CH_DIM_OUT]] : vector<8x4xi1>
+/// Read the output tensor.
+// CHECK:           %[[VEC_OUT:.*]] = vector.mask %[[MASK_OUT]] { vector.transfer_read %[[OUTPUT]]{{\[}}%[[C0]], %[[C0]]], %[[PAD]] {in_bounds = [true, true]} : tensor<8x?xi8>, vector<8x4xi8> } : vector<8x4xi1> -> vector<8x4xi8>
+
+/// Batchless layout: expand the 2D operand vectors to 3D <1, W, C> for the
+/// depthwise kernel; collapse back before the masked write.
+// CHECK:           %[[VEC_IN_3D:.*]] = vector.shape_cast %[[VEC_IN]] : vector<8x4xi8> to vector<1x8x4xi8>
+// CHECK:           %[[VEC_OUT_3D:.*]] = vector.shape_cast %[[VEC_OUT]] : vector<8x4xi8> to vector<1x8x4xi8>
+
+/// Convolution (on 3D NWC vectors).
+// CHECK:           %[[IN_1:.*]] = vector.extract_strided_slice %[[VEC_IN_3D]] {offsets = [0, 0, 0], sizes = [1, 8, 4], strides = [1, 1, 1]} : vector<1x8x4xi8> to vector<1x8x4xi8>
+// CHECK:           %[[FLT_1:.*]] = vector.extract %[[VEC_FLT]][0] : vector<4xi8> from vector<1x4xi8>
+// CHECK:           %[[OUT_1:.*]] = vector.extract_strided_slice %[[VEC_OUT_3D]] {offsets = [0, 0, 0], sizes = [1, 8, 4], strides = [1, 1, 1]} : vector<1x8x4xi8> to vector<1x8x4xi8>
+// CHECK:           %[[FLT_1_B:.*]] = vector.broadcast %[[FLT_1]] : vector<4xi8> to vector<1x8x4xi8>
+// CHECK:           %[[MULI:.*]] = arith.muli %[[IN_1]], %[[FLT_1_B]] : vector<1x8x4xi8>
+// CHECK:           %[[ADDI:.*]] = arith.addi %[[MULI]], %[[OUT_1]] : vector<1x8x4xi8>
+// CHECK:           %[[OUT_INS:.*]] = vector.insert_strided_slice %[[ADDI]], %[[VEC_OUT_3D]] {offsets = [0, 0, 0], strides = [1, 1, 1]} : vector<1x8x4xi8> into vector<1x8x4xi8>
+
+/// Collapse back to 2D and masked-write.
+// CHECK:           %[[OUT_2D:.*]] = vector.shape_cast %[[OUT_INS]] : vector<1x8x4xi8> to vector<8x4xi8>
+// CHECK:           %[[OUT:.*]] = vector.mask %[[MASK_OUT]] { vector.transfer_write %[[OUT_2D]], %[[OUTPUT]]{{\[}}%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<8x4xi8>, tensor<8x?xi8> } : vector<8x4xi1> -> tensor<8x?xi8>
+// CHECK:           return %[[OUT]] : tensor<8x?xi8>
+
+// -----
+
+#bl_canon_lhs = affine_map<(w, c, kw) -> (w + kw, c)>
+#bl_canon_rhs = affine_map<(w, c, kw) -> (kw, c)>
+#bl_canon_res = affine_map<(w, c, kw) -> (w, c)>
+
+func.func @depthwise_conv1d_wc_wc_8x3xi8_tensor_scalable(
+      %input: tensor<8x?xi8>,
+      %filter: tensor<1x?xi8>,
+      %output: tensor<8x?xi8>) -> tensor<8x?xi8> {
+  %0 = linalg.generic {
+    indexing_maps = [#bl_canon_lhs, #bl_canon_rhs, #bl_canon_res],
+    iterator_types = ["parallel", "parallel", "reduction"]
+  } ins(%input, %filter : tensor<8x?xi8>, tensor<1x?xi8>)
+    outs(%output : tensor<8x?xi8>) {
+  ^bb0(%a: i8, %b: i8, %c: i8):
+    %m = arith.muli %a, %b : i8
+    %r = arith.addi %c, %m : i8
+    linalg.yield %r : i8
+  } -> tensor<8x?xi8>
+  return %0 : tensor<8x?xi8>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.generic"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    transform.structured.vectorize %0 vector_sizes [8, [4], 1] : !transform.any_op
+    transform.yield
+  }
+}
+
+// CHECK-LABEL:   func.func @depthwise_conv1d_wc_wc_8x3xi8_tensor_scalable(
+// CHECK-SAME:      %[[INPUT:.*]]: tensor<8x?xi8>,
+// CHECK-SAME:      %[[FILTER:.*]]: tensor<1x?xi8>,
+// CHECK-SAME:      %[[OUTPUT:.*]]: tensor<8x?xi8>) -> tensor<8x?xi8> {
+
+// CHECK:           %[[C1:.*]] = arith.constant 1 : index
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[PAD:.*]] = arith.constant 0 : i8
+
+/// Create a mask for the input tensor (2D: W x C); the trailing dim is
+/// scalable `[4]`.
+// CHECK:           %[[CH_DIM_IN:.*]] = tensor.dim %[[INPUT]], %[[C1]] : tensor<8x?xi8>
+// CHECK:           %[[C8:.*]] = arith.constant 8 : index
+// CHECK:           %[[MASK_IN:.*]] = vector.create_mask %[[C8]], %[[CH_DIM_IN]] : vector<8x[4]xi1>
+/// Read the input tensor.
+// CHECK:           %[[VEC_IN:.*]] = vector.mask %[[MASK_IN]] { vector.transfer_read %[[INPUT]]{{\[}}%[[C0]], %[[C0]]], %[[PAD]] {in_bounds = [true, true]} : tensor<8x?xi8>, vector<8x[4]xi8> } : vector<8x[4]xi1> -> vector<8x[4]xi8>
+
+/// Create a mask for the filter tensor.
+// CHECK:           %[[CH_DIM_FLT:.*]] = tensor.dim %[[FILTER]], %[[C1]] : tensor<1x?xi8>
+// CHECK:           %[[MASK_FLT:.*]] = vector.create_mask %[[C1]], %[[CH_DIM_FLT]] : vector<1x[4]xi1>
+/// Read the filter tensor.
+// CHECK:           %[[VEC_FLT:.*]] = vector.mask %[[MASK_FLT]] { vector.transfer_read %[[FILTER]]{{\[}}%[[C0]], %[[C0]]], %[[PAD]] {in_bounds = [true, true]} : tensor<1x?xi8>, vector<1x[4]xi8> } : vector<1x[4]xi1> -> vector<1x[4]xi8>
+
+/// Create a mask for the output tensor.
+// CHECK:           %[[CH_DIM_OUT:.*]] = tensor.dim %[[OUTPUT]], %[[C1]] : tensor<8x?xi8>
+// CHECK:           %[[MASK_OUT:.*]] = vector.create_mask %[[C8]], %[[CH_DIM_OUT]] : vector<8x[4]xi1>
+/// Read the output tensor.
+// CHECK:           %[[VEC_OUT:.*]] = vector.mask %[[MASK_OUT]] { vector.transfer_read %[[OUTPUT]]{{\[}}%[[C0]], %[[C0]]], %[[PAD]] {in_bounds = [true, true]} : tensor<8x?xi8>, vector<8x[4]xi8> } : vector<8x[4]xi1> -> vector<8x[4]xi8>
+
+/// Batchless layout: expand the 2D operand vectors to 3D <1, W, C> for the
+/// depthwise kernel; the shape_cast preserves the scalable flag on the
+/// trailing dim.
+// CHECK:           %[[VEC_IN_3D:.*]] = vector.shape_cast %[[VEC_IN]] : vector<8x[4]xi8> to vector<1x8x[4]xi8>
+// CHECK:           %[[VEC_OUT_3D:.*]] = vector.shape_cast %[[VEC_OUT]] : vector<8x[4]xi8> to vector<1x8x[4]xi8>
+
+/// Convolution (on 3D NWC vectors).
+// CHECK:           %[[IN_1:.*]] = vector.extract_strided_slice %[[VEC_IN_3D]] {offsets = [0, 0, 0], sizes = [1, 8, 4], strides = [1, 1, 1]} : vector<1x8x[4]xi8> to vector<1x8x[4]xi8>
+// CHECK:           %[[FLT_1:.*]] = vector.extract %[[VEC_FLT]][0] : vector<[4]xi8> from vector<1x[4]xi8>
+// CHECK:           %[[OUT_1:.*]] = vector.extract_strided_slice %[[VEC_OUT_3D]] {offsets = [0, 0, 0], sizes = [1, 8, 4], strides = [1, 1, 1]} : vector<1x8x[4]xi8> to vector<1x8x[4]xi8>
+// CHECK:           %[[FLT_1_B:.*]] = vector.broadcast %[[FLT_1]] : vector<[4]xi8> to vector<1x8x[4]xi8>
+// CHECK:           %[[MULI:.*]] = arith.muli %[[IN_1]], %[[FLT_1_B]] : vector<1x8x[4]xi8>
+// CHECK:           %[[ADDI:.*]] = arith.addi %[[MULI]], %[[OUT_1]] : vector<1x8x[4]xi8>
+// CHECK:           %[[OUT_INS:.*]] = vector.insert_strided_slice %[[ADDI]], %[[VEC_OUT_3D]] {offsets = [0, 0, 0], strides = [1, 1, 1]} : vector<1x8x[4]xi8> into vector<1x8x[4]xi8>
+
+/// Collapse back to 2D and masked-write.
+// CHECK:           %[[OUT_2D:.*]] = vector.shape_cast %[[OUT_INS]] : vector<1x8x[4]xi8> to vector<8x[4]xi8>
+// CHECK:           %[[OUT:.*]] = vector.mask %[[MASK_OUT]] { vector.transfer_write %[[OUT_2D]], %[[OUTPUT]]{{\[}}%[[C0]], %[[C0]]] {in_bounds = [true, true]} : vector<8x[4]xi8>, tensor<8x?xi8> } : vector<8x[4]xi1> -> tensor<8x?xi8>
+// CHECK:           return %[[OUT]] : tensor<8x?xi8>
