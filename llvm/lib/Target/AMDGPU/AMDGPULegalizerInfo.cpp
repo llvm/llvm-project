@@ -964,6 +964,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   getActionDefinitionsBuilder({G_GET_FPENV, G_SET_FPENV}).customFor({S64});
 
+  getActionDefinitionsBuilder({G_GET_ROUNDING, G_SET_ROUNDING}).legalFor({S32});
+
   getActionDefinitionsBuilder(G_GLOBAL_VALUE)
     .customIf(typeIsNot(0, PrivatePtr));
 

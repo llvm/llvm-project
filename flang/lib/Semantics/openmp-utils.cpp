@@ -121,6 +121,21 @@ std::string TryVersion(unsigned version) {
   return "try -fopenmp-version=" + std::to_string(version);
 }
 
+static const Symbol *GetFunctionReferenceSymbol(
+    const parser::FunctionReference &ref) {
+  auto &proc{std::get<parser::ProcedureDesignator>(ref.v.t)};
+  return common::visit(
+      common::visitors{
+          [](const parser::Name &x) { return x.symbol; },
+          [](const parser::ProcComponentRef &x) {
+            return parser::UnwrapRef<parser::StructureComponent>(x.v)
+                .Component()
+                .symbol;
+          },
+      },
+      proc.u);
+}
+
 const Symbol *GetObjectSymbol(const parser::OmpObject &object, bool ultimate) {
   // Some symbols may be missing if the resolution failed, e.g. when an
   // undeclared name is used with implicit none.
@@ -137,16 +152,28 @@ const Symbol *GetObjectSymbol(const parser::OmpObject &object, bool ultimate) {
     } else {
       return last.symbol;
     }
+  } else if (auto *locator{std::get_if<parser::OmpLocator>(&object.u)}) {
+    const Symbol *sym = common::visit( //
+        common::visitors{
+            [](const parser::OmpReservedIdentifier &x) { return x.v.symbol; },
+            [](const parser::FunctionReference &x) {
+              return GetFunctionReferenceSymbol(x);
+            },
+        },
+        locator->u);
+    if (sym && ultimate) {
+      return &sym->GetUltimate();
+    } else {
+      return sym;
+    }
   }
   return nullptr;
 }
 
 const Symbol *GetArgumentSymbol(
     const parser::OmpArgument &argument, bool ultimate) {
-  if (auto *locator{std::get_if<parser::OmpLocator>(&argument.u)}) {
-    if (auto *object{std::get_if<parser::OmpObject>(&locator->u)}) {
-      return GetObjectSymbol(*object, ultimate);
-    }
+  if (auto *object{GetArgumentObject(argument)}) {
+    return GetObjectSymbol(*object, ultimate);
   }
   return nullptr;
 }
@@ -233,17 +260,21 @@ bool IsExtendedListItem(
   if (IsVariableListItem(object, semaCtx)) {
     return true;
   }
-  if (auto *sym{GetObjectSymbol(object, /*ultimate=*/true)}) {
-    return IsProcedure(*sym);
+  if (!std::holds_alternative<parser::OmpLocator>(object.u)) {
+    if (auto *sym{GetObjectSymbol(object, /*ultimate=*/true)}) {
+      return IsProcedure(*sym);
+    }
   }
   return false;
 }
 
 bool IsLocatorListItem(
     const parser::OmpObject &object, SemanticsContext *semaCtx) {
-  if (IsVariableListItem(object, semaCtx)) {
+  if (IsVariableListItem(object, semaCtx) ||
+      std::holds_alternative<parser::OmpLocator>(object.u)) {
     return true;
   }
+  // A statement function call may look like an array element access.
   if (auto *desg{parser::Unwrap<parser::Designator>(object)}) {
     evaluate::ExpressionAnalyzer ea(*semaCtx);
     auto restorer{ea.GetContextualMessages().DiscardMessages()};
@@ -310,6 +341,29 @@ bool IsMapExitingType(parser::OmpMapType::Value type) {
   default:
     return false;
   }
+}
+
+// This function aims to return true when a symbol is going to result
+// in a temporary stack descriptor being allocated for it in the
+// lowering that may pose an issue for data mapping if left on
+// device accidentally.
+bool HasTemporaryStackDescriptor(const Symbol &symbol) {
+  const Symbol &ultimate(symbol.GetUltimate());
+  bool isDummy = IsDummy(ultimate);
+
+  if (IsAllocatableOrPointer(ultimate)) {
+    return !isDummy;
+  }
+
+  if (!isDummy) {
+    return false;
+  }
+
+  if (const auto *obj = ultimate.detailsIf<ObjectEntityDetails>()) {
+    return obj->IsAssumedShape() || obj->IsAssumedRank();
+  }
+
+  return false;
 }
 
 static MaybeExpr GetEvaluateExprFromTyped(const parser::TypedExpr &typedExpr) {
@@ -445,6 +499,9 @@ std::optional<bool> IsContiguous(
             if (MaybeExpr maybeExpr{ea.Analyze(x)}) {
               return ContiguousHelper{semaCtx}.Visit(*maybeExpr);
             }
+            return std::optional<bool>{};
+          },
+          [&](const parser::OmpLocator &) { //
             return std::optional<bool>{};
           },
           [&](const parser::OmpObject::Invalid &) {
@@ -2230,4 +2287,111 @@ void ProcessTraitProperties(llvm::omp::VariantMatchInfo &vmi,
   }
 }
 
+UnsupportedSelectorFeature FindUnsupportedSelectorFeature(
+    const parser::traits::OmpContextSelectorSpecification &ctxSel,
+    SemanticsContext &semaCtx) {
+  for (const parser::OmpTraitSetSelector &traitSet : ctxSel.v) {
+    using TSSName = parser::OmpTraitSetSelectorName;
+    auto setName{std::get<TSSName>(traitSet.t).v};
+    if (MapTraitSet(setName) == llvm::omp::TraitSet::target_device) {
+      return UnsupportedSelectorFeature::TargetDevice;
+    }
+
+    for (const parser::OmpTraitSelector &selector :
+        std::get<std::list<parser::OmpTraitSelector>>(traitSet.t)) {
+      const auto &props{
+          std::get<std::optional<parser::OmpTraitSelector::Properties>>(
+              selector.t)};
+      if (!props) {
+        continue;
+      }
+      for (const auto &prop :
+          std::get<std::list<parser::OmpTraitProperty>>(props->t)) {
+        if (std::holds_alternative<common::Indirection<parser::OmpClause>>(
+                prop.u) ||
+            std::holds_alternative<parser::OmpTraitPropertyExtension>(prop.u)) {
+          return UnsupportedSelectorFeature::ClauseOrExtensionProperty;
+        }
+      }
+    }
+  }
+  return UnsupportedSelectorFeature::None;
+}
+
+static void AddTraitPropertiesFromSelector(llvm::omp::TraitSet set,
+    const parser::OmpTraitSelector &selector, llvm::omp::VariantMatchInfo &vmi,
+    SemanticsContext &semaCtx,
+    std::optional<DynamicUserCondition> &dynamicCond) {
+  const auto &traitName{std::get<parser::OmpTraitSelectorName>(selector.t)};
+  const auto &props{
+      std::get<std::optional<parser::OmpTraitSelector::Properties>>(
+          selector.t)};
+
+  std::optional<llvm::APInt> scoreStorage;
+  llvm::APInt *scorePtr{GetTraitScore(props, semaCtx, scoreStorage)};
+
+  // user={condition(...)}: constant-fold to user_condition_true/false. A
+  // non-constant expression is recorded as user_condition_unknown and the
+  // first such expression is captured for later runtime lowering.
+  llvm::omp::TraitSelector selectorKind{MapTraitSelector(traitName, set)};
+  if (selectorKind == llvm::omp::TraitSelector::user_condition) {
+    if (!props) {
+      return;
+    }
+    for (const auto &prop :
+        std::get<std::list<parser::OmpTraitProperty>>(props->t)) {
+      const auto *scalarExpr{std::get_if<parser::ScalarExpr>(&prop.u)};
+      if (!scalarExpr) {
+        continue;
+      }
+      if (auto constValue{EvaluateUserCondition(semaCtx, *scalarExpr)}) {
+        vmi.addTrait(set,
+            *constValue ? llvm::omp::TraitProperty::user_condition_true
+                        : llvm::omp::TraitProperty::user_condition_false,
+            "<condition>", scorePtr);
+        continue;
+      }
+      if (!dynamicCond) {
+        dynamicCond = DynamicUserCondition{scalarExpr, prop.source};
+      }
+      vmi.addTrait(set, llvm::omp::TraitProperty::user_condition_unknown,
+          "<condition>", scorePtr);
+    }
+    return;
+  }
+
+  ProcessTraitProperties(vmi, set, selectorKind, props, scorePtr);
+
+  if (props || set != llvm::omp::TraitSet::construct) {
+    return;
+  }
+
+  // Construct trait selector with no properties (e.g. `construct={simd}`):
+  // the selector itself implies the property.
+  llvm::omp::TraitProperty propKind{
+      llvm::omp::getOpenMPContextTraitPropertyForSelector(selectorKind)};
+  if (propKind != llvm::omp::TraitProperty::invalid) {
+    vmi.addTrait(set, propKind, traitName.ToString(), scorePtr);
+  }
+}
+
+std::optional<DynamicUserCondition> MakeVariantMatchInfo(
+    llvm::omp::VariantMatchInfo &vmi,
+    const parser::traits::OmpContextSelectorSpecification &ctxSel,
+    SemanticsContext &semaCtx) {
+  CHECK(FindUnsupportedSelectorFeature(ctxSel, semaCtx) ==
+      UnsupportedSelectorFeature::None);
+  std::optional<DynamicUserCondition> dynamicCond;
+  for (const parser::OmpTraitSetSelector &traitSet : ctxSel.v) {
+    using TSSName = parser::OmpTraitSetSelectorName;
+    auto setName{std::get<TSSName>(traitSet.t).v};
+    llvm::omp::TraitSet set{MapTraitSet(setName)};
+
+    for (const parser::OmpTraitSelector &selector :
+        std::get<std::list<parser::OmpTraitSelector>>(traitSet.t)) {
+      AddTraitPropertiesFromSelector(set, selector, vmi, semaCtx, dynamicCond);
+    }
+  }
+  return dynamicCond;
+}
 } // namespace Fortran::semantics::omp

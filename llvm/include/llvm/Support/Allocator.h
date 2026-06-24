@@ -95,10 +95,11 @@ public:
   // slabs as a matter of correctness.
   BumpPtrAllocatorImpl(BumpPtrAllocatorImpl &&Old)
       : AllocTy(std::move(Old.getAllocator())), CurPtr(Old.CurPtr),
-        End(Old.End), Slabs(std::move(Old.Slabs)),
+        EndSentinel(Old.EndSentinel), Slabs(std::move(Old.Slabs)),
         CustomSizedSlabs(std::move(Old.CustomSizedSlabs)),
         BytesAllocated(Old.BytesAllocated), RedZoneSize(Old.RedZoneSize) {
-    Old.CurPtr = Old.End = nullptr;
+    Old.CurPtr = nullptr;
+    Old.EndSentinel = 0;
     Old.BytesAllocated = 0;
     Old.Slabs.clear();
     Old.CustomSizedSlabs.clear();
@@ -114,14 +115,15 @@ public:
     DeallocateCustomSizedSlabs();
 
     CurPtr = RHS.CurPtr;
-    End = RHS.End;
+    EndSentinel = RHS.EndSentinel;
     BytesAllocated = RHS.BytesAllocated;
     RedZoneSize = RHS.RedZoneSize;
     Slabs = std::move(RHS.Slabs);
     CustomSizedSlabs = std::move(RHS.CustomSizedSlabs);
     AllocTy::operator=(std::move(RHS.getAllocator()));
 
-    RHS.CurPtr = RHS.End = nullptr;
+    RHS.CurPtr = nullptr;
+    RHS.EndSentinel = 0;
     RHS.BytesAllocated = 0;
     RHS.Slabs.clear();
     RHS.CustomSizedSlabs.clear();
@@ -141,7 +143,7 @@ public:
     // Reset the state.
     BytesAllocated = 0;
     CurPtr = (char *)Slabs.front();
-    End = CurPtr + SlabSize;
+    EndSentinel = uintptr_t(CurPtr) + SlabSize + 1;
 
     __asan_poison_memory_region(*Slabs.begin(), computeSlabSize(0));
     DeallocateSlabs(std::next(Slabs.begin()), Slabs.end());
@@ -174,10 +176,9 @@ public:
     assert(AllocEndPtr >= uintptr_t(CurPtr) &&
            "Alignment + Size must not overflow");
 
-    // Check if we have enough space.
-    if (LLVM_LIKELY(AllocEndPtr <= uintptr_t(End)
-                    // We can't return nullptr even for a zero-sized allocation!
-                    && CurPtr != nullptr)) {
+    // Check if we have enough space. `EndSentinel` is 0 for an empty allocator,
+    // so this also rejects a null CurPtr when `SizeToAllocate` is 0.
+    if (LLVM_LIKELY(AllocEndPtr < EndSentinel)) {
       CurPtr = reinterpret_cast<char *>(AllocEndPtr);
       // Update the allocation point of this memory block in MemorySanitizer.
       // Without this, MemorySanitizer messages for values originated from here
@@ -214,7 +215,7 @@ public:
     // Otherwise, start a new slab and try again.
     StartNewSlab();
     uintptr_t AlignedAddr = alignAddr(CurPtr, Alignment);
-    assert(AlignedAddr + SizeToAllocate <= (uintptr_t)End &&
+    assert(AlignedAddr + SizeToAllocate < EndSentinel &&
            "Unable to allocate memory!");
     char *AlignedPtr = (char*)AlignedAddr;
     CurPtr = AlignedPtr + SizeToAllocate;
@@ -324,8 +325,9 @@ private:
   /// This points to the next free byte in the slab.
   char *CurPtr = nullptr;
 
-  /// The end of the current slab.
-  char *End = nullptr;
+  /// One past the slab end (0 when there is no slab). +1 is so that the fast
+  /// path condition also rejects a empty allocator with a 0-size allocation.
+  uintptr_t EndSentinel = 0;
 
   /// The slabs allocated so far.
   SmallVector<void *, 4> Slabs;
@@ -352,7 +354,7 @@ private:
   }
 
   /// Allocate a new slab and move the bump pointers over into the new
-  /// slab, modifying CurPtr and End.
+  /// slab, modifying CurPtr and EndSentinel.
   void StartNewSlab() {
     size_t AllocatedSlabSize = computeSlabSize(Slabs.size());
 
@@ -364,7 +366,7 @@ private:
 
     Slabs.push_back(NewSlab);
     CurPtr = (char *)(NewSlab);
-    End = ((char *)NewSlab) + AllocatedSlabSize;
+    EndSentinel = uintptr_t(NewSlab) + AllocatedSlabSize + 1;
   }
 
   /// Deallocate a sequence of slabs.

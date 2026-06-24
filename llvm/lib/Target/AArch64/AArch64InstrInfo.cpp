@@ -7296,8 +7296,25 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI,
   if (MinOff <= NewOffset && NewOffset <= MaxOff)
     Offset = Remainder;
   else {
-    NewOffset = NewOffset < 0 ? MinOff : MaxOff;
-    Offset = Offset - (NewOffset * Scale);
+    // Try to minimise the number of instructions required to materialise the
+    // offset calculation. Specifically, for fixed offsets, if masking out the
+    // low 12 bits leaves a legal add immediate, we can realise the offset
+    // calculation with a single add instruction. Whenever this is possible,
+    // prefer this split.
+    int64_t HighPart = Offset & ~0xFFF;
+    int64_t LowPart = Offset & 0xFFF;
+    int64_t LowScaled = LowPart / Scale;
+    if (!IsMulVL && NewOffset >= 0 && LowPart % Scale == 0 &&
+        MinOff <= LowScaled && LowScaled <= MaxOff &&
+        AArch64_AM::isLegalArithImmed(HighPart)) {
+      NewOffset = LowScaled;
+      Offset = HighPart;
+    } else {
+      // Default to a greedy split: take the memop immediate to be maximum /
+      // minimum expressible offset and materialise the remainder.
+      NewOffset = NewOffset < 0 ? MinOff : MaxOff;
+      Offset = Offset - (NewOffset * Scale);
+    }
   }
 
   if (EmittableOffset)

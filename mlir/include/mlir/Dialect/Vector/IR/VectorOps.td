@@ -1717,6 +1717,9 @@ def Vector_LoadOp : Vector_Op<"load", [
     %result = vector.load %memref[%i, %j] : memref<200x100xvector<4x8xf32>>, vector<4x8xf32>
     ```
 
+    The memref must have non-negative strides. Negative strides are not supported
+    and will trigger a verification error.
+
     Representation-wise, the 'vector.load' operation permits out-of-bounds
     reads. Support and implementation of out-of-bounds vector loads is
     target-specific. No assumptions should be made on the value of elements
@@ -1834,6 +1837,9 @@ def Vector_StoreOp : Vector_Op<"store", [
     ```mlir
     vector.store %valueToStore, %memref[%i, %j] : memref<200x100xvector<4x8xf32>>, vector<4x8xf32>
     ```
+
+    The memref must have non-negative strides. Negative strides are not supported
+    and will trigger a verification error.
 
     Representation-wise, the 'vector.store' operation permits out-of-bounds
     writes. Support and implementation of out-of-bounds vector stores are

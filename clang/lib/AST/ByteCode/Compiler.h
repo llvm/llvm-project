@@ -317,8 +317,8 @@ protected:
                                 bool Toplevel = false);
   VarCreationState visitDecl(const VarDecl *VD);
   /// Visit an APValue.
-  bool visitAPValue(const APValue &Val, PrimType ValType, const Expr *E);
-  bool visitAPValueInitializer(const APValue &Val, const Expr *E, QualType T);
+  bool visitAPValue(const APValue &Val, PrimType ValType, SourceInfo Info);
+  bool visitAPValueInitializer(const APValue &Val, SourceInfo Info, QualType T);
   /// Visit the given decl as if we have a reference to it.
   bool visitDeclRef(const ValueDecl *D, const Expr *E);
 
@@ -366,15 +366,15 @@ private:
   bool visitAssignment(const Expr *LHS, const Expr *RHS, const Expr *E);
 
   /// Emits an APSInt constant.
-  bool emitConst(const llvm::APSInt &Value, PrimType Ty, const Expr *E);
-  bool emitConst(const llvm::APInt &Value, PrimType Ty, const Expr *E);
+  bool emitConst(const llvm::APSInt &Value, PrimType Ty, SourceInfo Info);
+  bool emitConst(const llvm::APInt &Value, PrimType Ty, SourceInfo Info);
   bool emitConst(const llvm::APSInt &Value, const Expr *E);
   bool emitConst(const llvm::APInt &Value, const Expr *E) {
     return emitConst(Value, classifyPrim(E), E);
   }
 
   /// Emits an integer constant.
-  template <typename T> bool emitConst(T Value, PrimType Ty, const Expr *E);
+  template <typename T> bool emitConst(T Value, PrimType Ty, SourceInfo Info);
   template <typename T> bool emitConst(T Value, const Expr *E);
   bool emitBool(bool V, const Expr *E) override {
     return this->emitConst(V, E);
@@ -421,7 +421,7 @@ private:
   bool emitRecordDestructionPop(const Record *R, SourceInfo Loc);
   bool emitDestructionPop(const Descriptor *Desc, SourceInfo Loc);
   bool emitDummyPtr(const DeclTy &D, const Expr *E, bool CU = false);
-  bool emitFloat(const APFloat &F, const Expr *E);
+  bool emitFloat(const APFloat &F, SourceInfo Info);
   unsigned collectBaseOffset(const QualType BaseType,
                              const QualType DerivedType);
   bool emitLambdaStaticInvokerBody(const CXXMethodDecl *MD);
