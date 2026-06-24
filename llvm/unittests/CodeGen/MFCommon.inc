@@ -129,7 +129,7 @@ public:
     STI = std::make_unique<MCSubtargetInfo>(
         Triple(""), "", "", "", ArrayRef<StringRef>{},
         ArrayRef<SubtargetFeatureKV>{}, ArrayRef<SubtargetSubTypeKV>{}, nullptr,
-        nullptr, nullptr, nullptr, nullptr, nullptr);
+        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
   }
 
   ~BogusTargetMachine() override = default;

@@ -12,10 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "TargetFeaturesEmitter.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
+#include <limits>
 
 using namespace llvm;
 
@@ -64,15 +67,49 @@ FeatureMapTy TargetFeaturesEmitter::enumeration(raw_ostream &OS) {
   return FeatureMap;
 }
 
-void TargetFeaturesEmitter::printFeatureMask(
-    raw_ostream &OS, ArrayRef<const Record *> FeatureList,
-    const FeatureMapTy &FeatureMap) {
-  std::array<uint64_t, MAX_SUBTARGET_WORDS> Mask = {};
-  for (const Record *Feature : FeatureList) {
-    unsigned Bit = FeatureMap.lookup(Feature);
-    Mask[Bit / 64] |= 1ULL << (Bit % 64);
-  }
+TargetFeaturesEmitter::FeatureMask
+TargetFeaturesEmitter::getFeatureMask(ArrayRef<const Record *> FeatureList,
+                                      const FeatureMapTy &FeatureMap) {
+  // Match the transitive closure computed by MCSubtargetInfo. Unnamed features
+  // are not present in its runtime feature table, so their implications are not
+  // expanded.
+  FeatureMask Mask = {};
+  SmallVector<const Record *, 16> Worklist(FeatureList);
+  SmallPtrSet<const Record *, 16> Visited;
+  while (!Worklist.empty()) {
+    const Record *Feature = Worklist.pop_back_val();
+    if (!Visited.insert(Feature).second)
+      continue;
 
+    auto I = FeatureMap.find(Feature);
+    assert(I != FeatureMap.end() && "SubtargetFeature is not enumerated");
+    unsigned Bit = I->second;
+    Mask[Bit / 64] |= 1ULL << (Bit % 64);
+    if (Feature->getValueAsString("Name").empty())
+      continue;
+    for (const Record *Implied : Feature->getValueAsListOfDefs("Implies"))
+      Worklist.push_back(Implied);
+  }
+  return Mask;
+}
+
+unsigned
+TargetFeaturesEmitter::getFeatureMaskIndex(ArrayRef<const Record *> FeatureList,
+                                           const FeatureMapTy &FeatureMap,
+                                           FeatureMaskTable &FeatureMasks) {
+  FeatureMask Mask = getFeatureMask(FeatureList, FeatureMap);
+  auto I = llvm::find(FeatureMasks, Mask);
+  if (I != FeatureMasks.end())
+    return I - FeatureMasks.begin();
+
+  if (FeatureMasks.size() > std::numeric_limits<FeatureBitsetIndex>::max())
+    PrintFatalError("Too many unique subtarget feature masks");
+  FeatureMasks.push_back(Mask);
+  return FeatureMasks.size() - 1;
+}
+
+void TargetFeaturesEmitter::printFeatureMask(raw_ostream &OS,
+                                             const FeatureMask &Mask) {
   OS << "{ { { ";
   for (unsigned I = 0; I != Mask.size(); ++I) {
     OS << "0x";
@@ -82,8 +119,23 @@ void TargetFeaturesEmitter::printFeatureMask(
   OS << "} } }";
 }
 
+void TargetFeaturesEmitter::printFeatureMaskTable(
+    raw_ostream &OS, StringRef TableName, ArrayRef<FeatureMask> FeatureMasks) {
+  if (FeatureMasks.empty())
+    return;
+
+  OS << "extern const llvm::FeatureBitArray " << TableName << "[] = {\n";
+  for (const FeatureMask &Mask : FeatureMasks) {
+    OS << "  ";
+    printFeatureMask(OS, Mask);
+    OS << ",\n";
+  }
+  OS << "};\n";
+}
+
 void TargetFeaturesEmitter::printFeatureKeyValues(
-    raw_ostream &OS, const FeatureMapTy &FeatureMap) {
+    raw_ostream &OS, const FeatureMapTy &FeatureMap,
+    FeatureMaskTable &FeatureMasks) {
   std::vector<const Record *> FeatureList =
       Records.getAllDerivedDefinitions("SubtargetFeature");
 
@@ -111,7 +163,7 @@ void TargetFeaturesEmitter::printFeatureKeyValues(
 
     ConstRecVec ImpliesList = Feature->getValueAsListOfDefs("Implies");
 
-    printFeatureMask(OS, ImpliesList, FeatureMap);
+    OS << getFeatureMaskIndex(ImpliesList, FeatureMap, FeatureMasks);
 
     OS << " },\n";
   }
@@ -121,7 +173,8 @@ void TargetFeaturesEmitter::printFeatureKeyValues(
 }
 
 void TargetFeaturesEmitter::printCPUKeyValues(raw_ostream &OS,
-                                              const FeatureMapTy &FeatureMap) {
+                                              const FeatureMapTy &FeatureMap,
+                                              FeatureMaskTable &FeatureMasks) {
   // Gather and sort processor information
   std::vector<const Record *> ProcessorList =
       Records.getAllDerivedDefinitions("Processor");
@@ -138,7 +191,7 @@ void TargetFeaturesEmitter::printCPUKeyValues(raw_ostream &OS,
 
     OS << " { " << "\"" << Name << "\", ";
 
-    printFeatureMask(OS, FeatureList, FeatureMap);
+    OS << getFeatureMaskIndex(FeatureList, FeatureMap, FeatureMasks);
     OS << " },\n";
   }
 
@@ -159,11 +212,16 @@ void TargetFeaturesEmitter::run(raw_ostream &OS) {
   {
     IfDefEmitter IfDef(OS, "GET_SUBTARGETFEATURES_KV");
     NamespaceEmitter NS(OS, "llvm");
+    FeatureMaskTable FeatureMasks;
 
-    printFeatureKeyValues(OS, FeatureMap);
+    printFeatureKeyValues(OS, FeatureMap, FeatureMasks);
     OS << "\n";
 
-    printCPUKeyValues(OS, FeatureMap);
+    printCPUKeyValues(OS, FeatureMap, FeatureMasks);
+    OS << "\n";
+
+    printFeatureMaskTable(OS, "Basic" + Target + "FeatureBitsets",
+                          FeatureMasks);
     OS << "\n";
   }
 }

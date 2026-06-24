@@ -69,6 +69,7 @@ protected: // Can only create subclasses...
                       StringRef FS, ArrayRef<StringRef> PN,
                       ArrayRef<SubtargetFeatureKV> PF,
                       ArrayRef<SubtargetSubTypeKV> PD,
+                      const FeatureBitArray *PFB,
                       const MCWriteProcResEntry *WPR,
                       const MCWriteLatencyEntry *WL,
                       const MCReadAdvanceEntry *RA, const InstrStage *IS,

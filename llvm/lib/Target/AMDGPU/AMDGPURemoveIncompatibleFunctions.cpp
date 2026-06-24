@@ -123,15 +123,6 @@ constexpr unsigned FeaturesToCheck[] = {AMDGPU::FeatureGFX11Insts,
                                         AMDGPU::FeatureSMemTimeInst,
                                         AMDGPU::FeatureGWS};
 
-FeatureBitset expandImpliedFeatures(const FeatureBitset &Features) {
-  FeatureBitset Result = Features;
-  for (const SubtargetFeatureKV &FE : AMDGPUFeatureKV) {
-    if (Features.test(FE.Value) && FE.Implies.any())
-      Result |= expandImpliedFeatures(FE.Implies.getAsBitset());
-  }
-  return Result;
-}
-
 void reportFunctionRemoved(Function &F, unsigned Feature) {
   OptimizationRemarkEmitter ORE(&F);
   ORE.emit([&]() {
@@ -175,13 +166,11 @@ bool AMDGPURemoveIncompatibleFunctions::checkFunction(Function &F) {
   if (!GPUInfo)
     return false;
 
-  // Get all the features implied by the current GPU, and recursively expand
-  // the features that imply other features.
+  // CPU feature masks include all transitively implied features.
   //
   // e.g. GFX90A implies FeatureGFX9, and FeatureGFX9 implies a whole set of
   // other features.
-  const FeatureBitset GPUFeatureBits =
-      expandImpliedFeatures(GPUInfo->Implies.getAsBitset());
+  const FeatureBitset &GPUFeatureBits = ST->getFeatureMask(GPUInfo->Implies);
 
   // Now that the have a FeatureBitset containing all possible features for
   // the chosen GPU, check our list of "suspicious" features.

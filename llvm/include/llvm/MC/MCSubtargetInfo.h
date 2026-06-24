@@ -37,7 +37,7 @@ struct SubtargetFeatureKV {
   const char *Key;                      ///< K-V key string
   const char *Desc;                     ///< Help descriptor
   unsigned Value;                       ///< K-V integer value
-  FeatureBitArray Implies;              ///< K-V bit mask
+  FeatureBitsetIndex Implies; ///< Index into transitive feature mask table
 
   /// Compare routine for std::lower_bound
   bool operator<(StringRef S) const {
@@ -49,14 +49,16 @@ struct SubtargetFeatureKV {
     return StringRef(Key) < StringRef(Other.Key);
   }
 };
+static_assert(sizeof(void *) != 8 || sizeof(SubtargetFeatureKV) == 24);
+static_assert(sizeof(void *) != 4 || sizeof(SubtargetFeatureKV) == 16);
 
 //===----------------------------------------------------------------------===//
 
 /// Used to provide key value pairs for feature and CPU bit flags.
 struct SubtargetSubTypeKV {
   const char *Key;                      ///< K-V key string
-  FeatureBitArray Implies;              ///< K-V bit mask
-  FeatureBitArray TuneImplies;          ///< K-V bit mask
+  FeatureBitsetIndex Implies;     ///< Index into transitive feature mask table
+  FeatureBitsetIndex TuneImplies; ///< Index into transitive feature mask table
   const MCSchedModel *SchedModel;
 
   /// Compare routine for std::lower_bound
@@ -69,6 +71,8 @@ struct SubtargetSubTypeKV {
     return StringRef(Key) < StringRef(Other.Key);
   }
 };
+static_assert(sizeof(void *) != 8 || sizeof(SubtargetSubTypeKV) == 24);
+static_assert(sizeof(void *) != 4 || sizeof(SubtargetSubTypeKV) == 12);
 
 //===----------------------------------------------------------------------===//
 ///
@@ -81,6 +85,7 @@ class LLVM_ABI MCSubtargetInfo {
   ArrayRef<StringRef> ProcNames; // Processor list, including aliases
   ArrayRef<SubtargetFeatureKV> ProcFeatures;  // Processor feature list
   ArrayRef<SubtargetSubTypeKV> ProcDesc;  // Processor descriptions
+  const FeatureBitArray *ProcFeatureMasks;
 
   // Scheduler machine model
   const MCWriteProcResEntry *WriteProcResTable;
@@ -99,7 +104,7 @@ public:
   MCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef TuneCPU,
                   StringRef FS, ArrayRef<StringRef> PN,
                   ArrayRef<SubtargetFeatureKV> PF,
-                  ArrayRef<SubtargetSubTypeKV> PD,
+                  ArrayRef<SubtargetSubTypeKV> PD, const FeatureBitArray *PFB,
                   const MCWriteProcResEntry *WPR, const MCWriteLatencyEntry *WL,
                   const MCReadAdvanceEntry *RA, const InstrStage *IS,
                   const unsigned *OC, const unsigned *FP);
@@ -241,6 +246,10 @@ public:
   /// Return processor features.
   ArrayRef<SubtargetFeatureKV> getAllProcessorFeatures() const {
     return ProcFeatures;
+  }
+
+  const FeatureBitset &getFeatureMask(FeatureBitsetIndex Index) const {
+    return ProcFeatureMasks[Index].getAsBitset();
   }
 
   /// Return the list of processor features currently enabled.

@@ -28,20 +28,10 @@ find(StringRef S, ArrayRef<BasicSubtargetSubTypeKV> A) {
   return F;
 }
 
-/// For each feature that is (transitively) implied by this feature, set it.
-static void setImpliedBits(FeatureBitset &Bits, const FeatureBitset &Implies,
-                           ArrayRef<BasicSubtargetFeatureKV> FeatureTable) {
-  // OR the Implies bits in outside the loop. This allows the Implies for CPUs
-  // which might imply features not in FeatureTable to use this.
-  Bits |= Implies;
-  for (const auto &FE : FeatureTable)
-    if (Implies.test(FE.Value))
-      setImpliedBits(Bits, FE.Implies.getAsBitset(), FeatureTable);
-}
-
 std::optional<llvm::StringMap<bool>> llvm::getCPUDefaultTargetFeatures(
     StringRef CPU, ArrayRef<BasicSubtargetSubTypeKV> ProcDesc,
-    ArrayRef<BasicSubtargetFeatureKV> ProcFeatures) {
+    ArrayRef<BasicSubtargetFeatureKV> ProcFeatures,
+    ArrayRef<FeatureBitArray> FeatureMasks) {
   if (CPU.empty())
     return std::nullopt;
 
@@ -52,7 +42,7 @@ std::optional<llvm::StringMap<bool>> llvm::getCPUDefaultTargetFeatures(
   // Set the features implied by this CPU feature if there is a match.
   FeatureBitset Bits;
   llvm::StringMap<bool> DefaultFeatures;
-  setImpliedBits(Bits, CPUEntry->Implies.getAsBitset(), ProcFeatures);
+  Bits |= FeatureMasks[CPUEntry->Implies].getAsBitset();
 
   [[maybe_unused]] unsigned BitSize = Bits.size();
   for (const BasicSubtargetFeatureKV &FE : ProcFeatures) {
