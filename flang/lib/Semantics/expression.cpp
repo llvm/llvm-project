@@ -4885,10 +4885,16 @@ void ArgumentAnalyzer::Analyze(
               common::visit(
                   common::visitors{
                       [&](const common::Indirection<parser::Expr> &expr) {
-                        // F2023 15.5.2.3-2: consequent-args are actual
-                        // arguments, so TYPE(*) dummies are permitted here
-                        // (F2018 C710 (F2023 C715) waived).
-                        auto restorer{context_.AllowAssumedTypeDummy()};
+                        // F2023 15.5.2.3-2: a consequent-arg is an actual
+                        // argument, so a bare TYPE(*) assumed-type dummy is
+                        // permitted as the whole consequent (F2018 C710 /
+                        // F2023 C715 waived).  The waiver applies only to the
+                        // consequent expression itself; an assumed-type entity
+                        // nested in a larger expression (e.g. (a) or a + 1)
+                        // remains illegal, so the allowance is not extended to
+                        // sub-expressions.
+                        auto restorer{context_.AllowAssumedTypeDummy(
+                            AssumedTypeDummy(expr.value()) != nullptr)};
                         if (MaybeExpr valExpr{context_.Analyze(expr.value())}) {
                           if (!valExpr->GetType()) {
                             context_.Say(
@@ -5008,9 +5014,10 @@ bool ArgumentAnalyzer::CheckConsequentTypesAndRanks(
     return true; // all .NIL.; caller checks separately
   }
   auto refType{refExpr->GetType()};
-  if (!refType) {
-    return true; // typeless; should have been caught earlier
-  }
+  // A non-.NIL. consequent always has a type: typeless consequents are
+  // rejected during analysis (analyzeConsequent), which aborts before this
+  // check runs, so refType is never null here.
+  CHECK(refType);
   int refRank{-1};
   bool allSameRank{true};
   bool hasAssumedRank{false};
@@ -5023,52 +5030,49 @@ bool ArgumentAnalyzer::CheckConsequentTypesAndRanks(
       return true; // .NIL. is ok
     }
     auto thisType{cons->value().GetType()};
-    if (thisType) {
-      if (refType->category() != thisType->category() ||
-          (refType->category() != TypeCategory::Derived &&
-              refType->kind() != thisType->kind())) {
+    // As with refType above, a non-.NIL. consequent always has a type.
+    CHECK(thisType);
+    if (refType->category() != thisType->category() ||
+        (refType->category() != TypeCategory::Derived &&
+            refType->kind() != thisType->kind())) {
+      context_.Say(
+          "All consequent-args in a conditional argument must have the same type and kind; have %s and %s"_err_en_US,
+          refType->AsFortran(), thisType->AsFortran());
+      return false;
+    }
+    if (refType->category() == TypeCategory::Derived) {
+      // C1538: same declared type required.  Unlimited polymorphic
+      // (CLASS(*)) and assumed type (TYPE(*)) have no declared type,
+      // so mixing them with other types is invalid.
+      if (refType->IsUnlimitedPolymorphic() !=
+          thisType->IsUnlimitedPolymorphic()) {
         context_.Say(
             "All consequent-args in a conditional argument must have the same type and kind; have %s and %s"_err_en_US,
             refType->AsFortran(), thisType->AsFortran());
         return false;
       }
-      if (refType->category() == TypeCategory::Derived) {
-        // C1538: same declared type required.  Unlimited polymorphic
-        // (CLASS(*)) and assumed type (TYPE(*)) have no declared type,
-        // so mixing them with other types is invalid.
-        if (refType->IsUnlimitedPolymorphic() !=
-            thisType->IsUnlimitedPolymorphic()) {
+      if (refType->IsAssumedType() != thisType->IsAssumedType()) {
+        context_.Say(
+            "All consequent-args in a conditional argument must have the same type and kind; have %s and %s"_err_en_US,
+            refType->AsFortran(), thisType->AsFortran());
+        return false;
+      }
+      // AssumedType (TYPE(*)) implies IsUnlimitedPolymorphic, so checking
+      // !IsUnlimitedPolymorphic() alone excludes both CLASS(*) and TYPE(*).
+      if (!refType->IsUnlimitedPolymorphic()) {
+        const auto &resSpec{refType->GetDerivedTypeSpec()};
+        const auto &thisSpec{thisType->GetDerivedTypeSpec()};
+        // C1538: same declared type and kind type parameters.  Length type
+        // parameters may differ.  AreSameDerivedTypeIgnoringLengthParameters
+        // resolves symbol aliases (GetUltimate) and honors the structure
+        // equivalence of separately-declared SEQUENCE/BIND(C) types
+        // (F2023 7.5.2.4).
+        if (!evaluate::AreSameDerivedTypeIgnoringLengthParameters(
+                resSpec, thisSpec)) {
           context_.Say(
-              "All consequent-args in a conditional argument must have the same type and kind; have %s and %s"_err_en_US,
+              "All consequent-args in a conditional argument must be the same derived type; have %s and %s"_err_en_US,
               refType->AsFortran(), thisType->AsFortran());
           return false;
-        }
-        if (refType->IsAssumedType() != thisType->IsAssumedType()) {
-          context_.Say(
-              "All consequent-args in a conditional argument must have the same type and kind; have %s and %s"_err_en_US,
-              refType->AsFortran(), thisType->AsFortran());
-          return false;
-        }
-        if (!refType->IsUnlimitedPolymorphic() && !refType->IsAssumedType()) {
-          const auto &resSpec{refType->GetDerivedTypeSpec()};
-          const auto &thisSpec{thisType->GetDerivedTypeSpec()};
-          if (&resSpec.typeSymbol() != &thisSpec.typeSymbol()) {
-            context_.Say(
-                "All consequent-args in a conditional argument must be the same derived type; have %s and %s"_err_en_US,
-                refType->AsFortran(), thisType->AsFortran());
-            return false;
-          }
-          for (const auto &[pName, pValue] : resSpec.parameters()) {
-            if (pValue.isKind()) {
-              auto it{thisSpec.parameters().find(pName)};
-              if (it == thisSpec.parameters().end() || pValue != it->second) {
-                context_.Say(
-                    "All consequent-args in a conditional argument must have the same kind type parameters; have %s and %s"_err_en_US,
-                    refType->AsFortran(), thisType->AsFortran());
-                return false;
-              }
-            }
-          }
         }
       }
     }

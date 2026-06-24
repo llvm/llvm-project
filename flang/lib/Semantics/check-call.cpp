@@ -1453,12 +1453,22 @@ static void CheckConditionalArg(
           "Each consequent-arg in conditional argument associated with a coarray %s must be a coarray"_err_en_US,
           dummyName);
     }
+    // C1544: the requirement that each consequent-arg match the dummy's
+    // ALLOCATABLE/POINTER attribute is enforced by the standard
+    // explicit-interface check (checkOneExpr) run on each non-.NIL.
+    // consequent below.
   }};
   condArg.ForEachConsequent(checkOneConsequent);
-  // C1545: each consequent-arg shall have the same corank, and if any
-  // has the ALLOCATABLE or POINTER attribute, each shall have it.
-  // (Strictly applies only to generic procedure references, but enforced
-  // unconditionally for consistency.)
+  // C1545: in a reference to a generic procedure, each consequent-arg shall
+  // have the same corank, and if any has the ALLOCATABLE or POINTER attribute,
+  // each shall have it.  Strictly, this requirement applies only to references
+  // to generic procedures, where it avoids ambiguity when resolving the generic
+  // to a specific procedure; for a specific procedure reference these
+  // combinations are otherwise allowed.  For now it is enforced unconditionally
+  // here.
+  // TODO: move this check into generic resolution (ResolveGeneric) and enforce
+  // it precisely, i.e. only for references to generic procedures, where the
+  // ambiguity it guards against can actually arise.
   std::optional<int> firstCorank;
   std::optional<bool> firstIsAllocatable;
   std::optional<bool> firstIsPointer;

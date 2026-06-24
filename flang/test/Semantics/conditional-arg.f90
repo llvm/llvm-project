@@ -924,3 +924,147 @@ subroutine test_class_different_types
   !ERROR: All consequent-args in a conditional argument must be the same derived type; have CLASS(t1) and CLASS(t2)
   call sub_class_star((flag ? a : b))
 end subroutine
+
+! =========================================================================
+! Assumed-type (TYPE(*)) usage in a consequent (F2018 C710 / F2023 C715).
+! A consequent-arg is an actual argument, so a *bare* TYPE(*) dummy is
+! permitted as a whole consequent.  But an assumed-type entity nested inside
+! a larger consequent expression remains illegal: the waiver must apply only
+! to the consequent expression itself, not to its sub-expressions.
+! =========================================================================
+
+! Valid: a bare TYPE(*) consequent is an actual argument.
+subroutine test_assumed_type_bare_ok(a, b)
+  implicit none
+  type(*), intent(in) :: a, b
+  logical :: flag
+  interface
+    subroutine sub_star(x)
+      type(*), intent(in) :: x
+    end subroutine
+  end interface
+  call sub_star((flag ? a : b))
+end subroutine
+
+! A parenthesized assumed-type consequent is an expression, not a bare actual
+! argument, so it is illegal.  This is the case that escaped diagnosis when the
+! TYPE(*) waiver leaked into the whole consequent sub-expression tree.
+subroutine test_assumed_type_parenthesized(a, b)
+  implicit none
+  type(*), intent(in) :: a, b
+  logical :: flag
+  interface
+    subroutine sub_star(x)
+      type(*), intent(in) :: x
+    end subroutine
+  end interface
+  !ERROR: TYPE(*) dummy argument may only be used as an actual argument
+  call sub_star((flag ? (a) : b))
+  !ERROR: TYPE(*) dummy argument may only be used as an actual argument
+  call sub_star((flag ? ((a)) : b))
+end subroutine
+
+! Assumed-type nested in a larger consequent expression is illegal.  These cases
+! are also independently diagnosed when each operand/argument is analyzed, but
+! they must remain errors regardless of the conditional-argument waiver.
+subroutine test_assumed_type_in_subexpr(a, b)
+  implicit none
+  type(*), intent(in) :: a, b
+  integer :: other, arr(3)
+  logical :: flag, flag2
+  interface
+    subroutine sub_int(x)
+      integer, intent(in) :: x
+    end subroutine
+  end interface
+  !ERROR: TYPE(*) dummy argument may only be used as an actual argument
+  call sub_int((flag ? a + 1 : other))
+  !ERROR: TYPE(*) dummy argument may only be used as an actual argument
+  call sub_int((flag ? other : b + 1))
+  !ERROR: TYPE(*) dummy argument may only be used as an actual argument
+  call sub_int((flag ? -a : other))
+  !ERROR: Assumed type TYPE(*) dummy argument not allowed for 'a=' intrinsic argument
+  call sub_int((flag ? iabs(a) : other))
+  !ERROR: TYPE(*) dummy argument may only be used as an actual argument
+  call sub_int((flag ? other : flag2 ? a + 1 : other))
+  !ERROR: TYPE(*) dummy argument may only be used as an actual argument
+  call sub_int((flag ? arr(a) : other))
+end subroutine
+
+! =========================================================================
+! C1538 derived-type identity via structure equivalence and type parameters.
+! The consequent-arg type check uses AreSameDerivedTypeIgnoringLengthParameters,
+! which (a) resolves symbol aliases, (b) treats separately-declared SEQUENCE /
+! BIND(C) types as the same type when structurally equivalent (F2023 7.5.2.4),
+! and (c) requires equal kind type parameters while allowing length type
+! parameters to differ.
+! =========================================================================
+
+module m_seq_cond
+contains
+  function f1()
+    type :: point
+      sequence
+      integer :: x, y, z
+    end type
+    type(point) :: f1
+  end function
+  function f2()
+    type :: point
+      sequence
+      integer :: x, y, z
+    end type
+    type(point) :: f2
+  end function
+  subroutine foo(p)
+    type :: point
+      sequence
+      integer :: x, y, z
+    end type
+    type(point), intent(in) :: p
+  end subroutine
+  ! Valid: f1() and f2() return separately-declared but structurally identical
+  ! SEQUENCE types, which are the same type per F2023 7.5.2.4.
+  subroutine test_seq_equiv(cdt)
+    logical :: cdt
+    call foo((cdt ? f1() : f2()))
+  end subroutine
+end module
+
+module m_param_cond
+  type :: tlen(l)
+    integer, len :: l
+    integer :: a(l)
+  end type
+  type :: tkind(k)
+    integer, kind :: k
+    integer(k) :: a
+  end type
+  interface
+    subroutine sub_tlen(x)
+      import :: tlen
+      type(tlen(*)), intent(in) :: x
+    end subroutine
+    subroutine sub_tkind4(x)
+      import :: tkind
+      type(tkind(4)), intent(in) :: x
+    end subroutine
+  end interface
+contains
+  ! Valid: length type parameters may differ between consequent-args (C1538
+  ! constrains only the declared type and kind type parameters).
+  subroutine test_len_param_differ(cdt)
+    logical :: cdt
+    type(tlen(3)) :: a
+    type(tlen(5)) :: b
+    call sub_tlen((cdt ? a : b))
+  end subroutine
+  ! Error: kind type parameters must match.
+  subroutine test_kind_param_differ(cdt)
+    logical :: cdt
+    type(tkind(4)) :: a
+    type(tkind(8)) :: b
+    !ERROR: All consequent-args in a conditional argument must be the same derived type; have tkind(k=4_4) and tkind(k=8_4)
+    call sub_tkind4((cdt ? a : b))
+  end subroutine
+end module

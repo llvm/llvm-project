@@ -1288,6 +1288,24 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
     // This is NOT valid for non-elemental intrinsics like RESHAPE or
     // TRANSFER whose results depend on seeing all arguments together.
     //
+    // TODO (conformance):
+    // Type-inquiry intrinsics whose result depends only on the argument's
+    // declared type/rank (e.g. KIND, BIT_SIZE, DIGITS, HUGE, TINY, EPSILON,
+    // PRECISION, RANGE, RADIX, MAXEXPONENT, MINEXPONENT, STORAGE_SIZE, RANK)
+    // are foldable even when the condition is not constant, because C1538/C1539
+    // guarantee every consequent has the same type and rank.  Because they are
+    // not folded here, a reference such as
+    //   integer, parameter :: k = kind((flag ? a : b))
+    // is wrongly rejected ("cannot be computed as a constant value") even
+    // though it is a valid F2023 constant expression.
+    // Fix:
+    // For such a curated allow-list of type-only inquiries, before the bailout
+    // below, a curated allow-list of type-only inquiries, before the bailout
+    // below, replace the conditional-arg argument with its first non-.NIL.
+    // consequent (a representative) and fold normally.  This must NOT be
+    // applied to shape/value inquiries (SIZE, SHAPE, LBOUND/UBOUND, LEN of
+    // deferred length, ALLOCATED, ASSOCIATED, PRESENT, IS_CONTIGUOUS), whose
+    // results can differ between consequents.
     for (const std::optional<ActualArgument> &arg : args) {
       if (arg && arg->isConditionalArg()) {
         return Expr<T>{std::move(funcRef)};

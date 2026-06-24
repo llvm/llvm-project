@@ -268,14 +268,10 @@ public:
   common::Restorer<bool> AllowWholeAssumedSizeArray(bool yes = true) {
     return common::ScopedSet(isWholeAssumedSizeArrayOk_, yes);
   }
-  // Allows a TYPE(*) assumed-type dummy to appear as an expression
-  // (F2023 15.5.2.3-2: If the chosen consequent is a consequent-arg, its expr
-  // or variable is the actual argument for the corres-
-  // ponding dummy argument, and if it is an expr, it is evaluated. If the
-  // chosen consequent is .NIL., the actual argument for that dummy argument is
-  // not present.).
-  common::Restorer<bool> AllowAssumedTypeDummy() {
-    return common::ScopedSet(isAssumedTypeDummyOk_, true);
+  // Allows a TYPE(*) assumed-type dummy to appear as an expression for the
+  // lifetime of the returned restorer.
+  common::Restorer<bool> AllowAssumedTypeDummy(bool yes = true) {
+    return common::ScopedSet(isAssumedTypeDummyOk_, yes);
   }
 
 protected:
