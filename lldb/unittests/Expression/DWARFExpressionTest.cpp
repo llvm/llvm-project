@@ -574,6 +574,20 @@ DWARF:
   EXPECT_THAT_ERROR(
       t.Eval({DW_OP_const1s, 'X', DW_OP_convert, 0x1d}).takeError(),
       llvm::Failed());
+
+  // A non-zero DIE offset with no DWARF unit must report an error rather than
+  // dereferencing a null Delegate (caught by lldb-dwarf-expression-fuzzer).
+  EXPECT_THAT_ERROR(
+      Evaluate({DW_OP_const1s, 'X', DW_OP_convert, 0x01}, nullptr, nullptr)
+          .takeError(),
+      llvm::Failed());
+
+  // DW_OP_convert with an empty stack must report an error rather than
+  // accessing the back of an empty stack (caught by
+  // lldb-dwarf-expression-fuzzer).
+  EXPECT_THAT_ERROR(
+      Evaluate({DW_OP_convert, 0x00}, nullptr, nullptr).takeError(),
+      llvm::Failed());
 }
 
 TEST(DWARFExpression, DW_OP_stack_value) {
