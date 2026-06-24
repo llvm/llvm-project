@@ -26,18 +26,6 @@ static_assert(!std::ranges::common_range<View>);
 static_assert(!std::same_as<std::ranges::iterator_t<View>, std::ranges::iterator_t<const View>>);
 static_assert(!std::same_as<std::ranges::sentinel_t<View>, std::ranges::sentinel_t<const View>>);
 
-struct NonCommonSimpleView : std::ranges::view_interface<NonCommonSimpleView> {
-  int* begin();
-  int* begin() const;
-  sized_sentinel<int*> end();
-  sized_sentinel<int*> end() const;
-};
-static_assert(!std::ranges::common_range<View>);
-static_assert(
-    std::same_as<std::ranges::iterator_t<NonCommonSimpleView>, std::ranges::iterator_t<const NonCommonSimpleView>>);
-static_assert(
-    std::same_as<std::ranges::sentinel_t<NonCommonSimpleView>, std::ranges::sentinel_t<const NonCommonSimpleView>>);
-
 void test() {
   auto v = View{} | std::views::transform(std::identity{});
 
