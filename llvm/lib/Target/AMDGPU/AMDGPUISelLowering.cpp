@@ -3640,11 +3640,8 @@ SDValue AMDGPUTargetLowering::LowerUINT_TO_FP(SDValue Op,
     return DAG.getNode(ISD::UINT_TO_FP, DL, DestVT, Ext);
   }
 
-  if (DestVT == MVT::bf16)
-    return LowerINT_TO_FP16(Op, DAG, MVT::bf16);
-
-  if (DestVT == MVT::f16 && (SrcVT == MVT::i32 || SrcVT == MVT::i64))
-    return LowerINT_TO_FP16(Op, DAG, MVT::f16);
+  if (DestVT == MVT::bf16 || DestVT == MVT::f16)
+    return LowerINT_TO_FP16(Op, DAG, DestVT);
 
   if (SrcVT != MVT::i64)
     return Op;
@@ -3673,11 +3670,8 @@ SDValue AMDGPUTargetLowering::LowerSINT_TO_FP(SDValue Op,
     return DAG.getNode(ISD::SINT_TO_FP, DL, DestVT, Ext);
   }
 
-  if (DestVT == MVT::bf16)
-    return LowerINT_TO_FP16(Op, DAG, MVT::bf16);
-
-  if (DestVT == MVT::f16 && (SrcVT == MVT::i32 || SrcVT == MVT::i64))
-    return LowerINT_TO_FP16(Op, DAG, MVT::f16);
+  if (DestVT == MVT::bf16 || DestVT == MVT::f16)
+    return LowerINT_TO_FP16(Op, DAG, DestVT);
 
   if (SrcVT != MVT::i64)
     return Op;
