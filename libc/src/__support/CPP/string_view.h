@@ -205,6 +205,15 @@ public:
     return npos;
   }
 
+  LIBC_INLINE constexpr size_t find_last_not_of(const char c,
+                                                size_t end = npos) const {
+    end = end >= size() ? size() : end + 1;
+    for (; end > 0; --end)
+      if ((*this)[end - 1] != c)
+        return end - 1;
+    return npos;
+  }
+
   // Finds the first character not equal to c in this view, starting at
   // position From.
   LIBC_INLINE constexpr size_t find_first_not_of(const char c,
