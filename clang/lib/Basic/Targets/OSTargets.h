@@ -446,6 +446,38 @@ public:
   }
 };
 
+// MorphOS Target
+template <typename Target>
+class LLVM_LIBRARY_VISIBILITY MorphOSTargetInfo : public OSTargetInfo<Target> {
+protected:
+  void getOSDefines(const LangOptions &Opts, const llvm::Triple &Triple,
+                    MacroBuilder &Builder) const override {
+    // MorphOS defines; list based off of gcc output
+    Builder.defineMacro("__MORPHOS__");
+    Builder.defineMacro("__morphos__");
+    Builder.defineMacro("__AMIGA__");
+    Builder.defineMacro("__AMIGA");
+    Builder.defineMacro("_AMIGA");
+    Builder.defineMacro("AMIGA");
+    Builder.defineMacro("__amigaos__");
+    Builder.defineMacro("__amigaos");
+    Builder.defineMacro("amigaos");
+    if (Opts.NoIxemul) {
+      Builder.defineMacro("__libnix__");
+      Builder.defineMacro("__libnix");
+      Builder.defineMacro("libnix");
+    } else {
+      Builder.defineMacro("__ixemul__");
+      Builder.defineMacro("__ixemul");
+      Builder.defineMacro("ixemul");
+    }
+  }
+
+public:
+  MorphOSTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
+      : OSTargetInfo<Target>(Triple, Opts) {}
+};
+
 // NetBSD Target
 template <typename Target>
 class LLVM_LIBRARY_VISIBILITY NetBSDTargetInfo : public OSTargetInfo<Target> {

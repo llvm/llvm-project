@@ -8247,6 +8247,16 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   addOpenMPHostOffloadingArgs(C, JA, Args, CmdArgs);
 
+  if (TC.getTriple().isOSMorphOS()) {
+    Args.AddLastArg(CmdArgs, options::OPT_noixemul);
+  } else {
+    // Reject MorphOS-specific link options on other targets.
+    for (const Arg *A : Args.filtered(options::OPT_noixemul)) {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getSpelling() << TripleStr;
+    }
+  }
+
   if (Args.hasFlag(options::OPT_fdevirtualize_speculatively,
                    options::OPT_fno_devirtualize_speculatively,
                    /*Default value*/ false))

@@ -9866,3 +9866,10 @@ def wasm_opt : Flag<["--"], "wasm-opt">,
   Group<m_Group>,
   HelpText<"Enable the wasm-opt optimizer (default)">,
   MarshallingInfoNegativeFlag<LangOpts<"NoWasmOpt">>;
+
+// Unfortunate naming to keep compatibility with GCC.
+defm noixemul : BoolOption<"", "noixemul",
+  LangOpts<"NoIxemul">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption], "Do not use ixemul on MorphOS">,
+  NegFlag<SetFalse>,
+  BothFlags<[], [ClangOption, CC1Option]>>;

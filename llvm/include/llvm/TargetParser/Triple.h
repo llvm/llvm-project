@@ -261,7 +261,8 @@ public:
     Firmware,
     QURT,
     H2,
-    LastOSType = H2
+    MorphOS,
+    LastOSType = MorphOS
   };
   enum EnvironmentType {
     UnknownEnvironment,
@@ -676,6 +677,8 @@ public:
   bool isOSSolaris() const { return getOS() == Triple::Solaris; }
 
   bool isOSIAMCU() const { return getOS() == Triple::ELFIAMCU; }
+
+  bool isOSMorphOS() const { return getOS() == Triple::MorphOS; }
 
   bool isOSUnknown() const { return getOS() == Triple::UnknownOS; }
 
