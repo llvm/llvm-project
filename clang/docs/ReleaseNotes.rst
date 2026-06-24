@@ -822,6 +822,8 @@ Bug Fixes to AST Handling
 - Added missing AST nodes representing the ``decltype`` specifiers in destructor call to AST.
 - Fixed a missing ODR violation diagnostic introduced by the inline assembly string or clobber list. (#GH198616)
 
+- Fixed assertion crash in bytecode interpreter when checking initialization of
+  constexpr pointer arrays with GlobalInlineDescriptor. (#GH175432)
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a crash whith the AST text dumper, when dumping a reference to a
