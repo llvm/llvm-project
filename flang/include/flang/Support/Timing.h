@@ -19,7 +19,7 @@ namespace Fortran::support {
 
 /// Create a strategy to render the captured times in plain text. This is
 /// intended to be passed to a TimingManager.
-std::unique_ptr<mlir::OutputStrategy> createTimingFormatterText(
+std::unique_ptr<mlir::timing::OutputStrategy> createTimingFormatterText(
     llvm::raw_ostream &os);
 
 } // namespace Fortran::support
