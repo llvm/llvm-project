@@ -214,6 +214,11 @@ opt_viewer_cmd = "%s %s/tools/opt-viewer/opt-viewer.py" % (
     config.llvm_src_root,
 )
 
+stack_size_estimator_cmd = "%s %s/tools/stack-size-estimator/stack_estimator.py" % (
+    sys.executable,
+    config.llvm_src_root,
+)
+
 llvm_original_di_preservation_cmd = os.path.join(
     config.llvm_src_root, "utils", "llvm-original-di-preservation.py"
 )
@@ -239,6 +244,7 @@ tools = [
     ToolSubst("%ocamlc", ocamlc_command, unresolved="ignore"),
     ToolSubst("%ocamlopt", ocamlopt_command, unresolved="ignore"),
     ToolSubst("%opt-viewer", opt_viewer_cmd),
+    ToolSubst("%stack-size-estimator", stack_size_estimator_cmd),
     ToolSubst("%llvm-objcopy", FindTool("llvm-objcopy")),
     ToolSubst("%llvm-strip", FindTool("llvm-strip")),
     ToolSubst("%llvm-install-name-tool", FindTool("llvm-install-name-tool")),
