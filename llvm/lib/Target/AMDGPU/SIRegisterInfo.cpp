@@ -4144,8 +4144,110 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
     return false;
   }
   default:
-    return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
-                                                     VRM);
+    break;
+  }
+
+  bool BaseImplRetVal =
+      TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF, VRM);
+
+  // Append v_wmma_* bank-conflict avoidance candidates (gfx11/gfx12). This only
+  // augments the candidate order for VirtReg and never changes BaseImplRetVal.
+  addWMMABankConflictHints(VirtReg, Order, Hints, MF, VRM);
+
+  return BaseImplRetVal;
+}
+
+// VGPR bank-conflict avoidance for v_wmma_* operands on gfx11/gfx12.
+//
+// A WMMA reads src0/src1/src2 through per-bank read ports (bank = first VGPR
+// % 4); when two operands share a bank the instruction pays an extra
+// issue-latency cycle. GCNPreRAOptimizations records, for each operand of a
+// bank-sensitive WMMA, that instruction's other operands (WMMABankSiblings).
+// Here, for the siblings that already have a physreg, append the candidates
+// from a not-yet-used bank so the allocator prefers them.
+//
+// The bias is applied via the candidate list (not by recording an MRI
+// allocation hint) on purpose: an MRI hint feeds the allocation-priority
+// computation (VRM::hasKnownPreference) and can reorder allocation so the
+// result register displaces the live-in source operands, introducing copies.
+// Appending here happens after the copy hints emitted by the base
+// implementation, so coalescing keeps priority and only this register's
+// candidate order is affected (never the global allocation order).
+void SIRegisterInfo::addWMMABankConflictHints(Register VirtReg,
+                                              ArrayRef<MCPhysReg> Order,
+                                              SmallVectorImpl<MCPhysReg> &Hints,
+                                              const MachineFunction &MF,
+                                              const VirtRegMap *VRM) const {
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  if (!VRM || !isVGPR(MRI, VirtReg))
+    return;
+
+  const SIMachineFunctionInfo &FuncInfo = *MF.getInfo<SIMachineFunctionInfo>();
+  const DenseMap<Register, SmallVector<Register, 3>> &Siblings =
+      FuncInfo.getWMMABankSiblings();
+
+  auto It = Siblings.find(VirtReg);
+  if (It == Siblings.end())
+    return;
+
+  // Banks already taken by allocated siblings.
+  unsigned UsedBankMask = 0;
+  for (Register Sibling : It->second) {
+    Register Phys = Sibling;
+    if (Phys.isVirtual()) {
+      if (!VRM->hasPhys(Phys))
+        continue;
+      Phys = VRM->getPhys(Phys);
+    }
+    if (Phys.isPhysical() && isVGPR(MRI, Phys))
+      UsedBankMask |= 1u << (getHWRegIndex(Phys) % 4);
+  }
+
+  unsigned W = getRegSizeInBits(VirtReg, MRI) / 32;
+  if (W && (W % 4) != 0)
+    return;
+
+  // Build a hardware-index -> physreg map and record the highest start index.
+  // Order is not guaranteed to be sorted (non-kernel functions reorder their
+  // callee-saved VGPRs), so we look candidates up by index instead of trusting
+  // Order's sequence or its last element.
+  DenseMap<unsigned, MCPhysReg> IdxToReg;
+  unsigned MaxIdx = 0;
+  for (MCPhysReg PhysReg : Order) {
+    unsigned Idx = getHWRegIndex(PhysReg);
+    IdxToReg[Idx] = PhysReg;
+    MaxIdx = std::max(MaxIdx, Idx);
+  }
+
+  // Anchor the candidate window to the function's actual VGPR footprint: peak
+  // WMMA-region pressure, rounded up to the allocation granule and capped by
+  // the VGPR budget. Without this the window is the top of the whole VGPR file
+  // (~v256) for any function without an occupancy cap, so operands get steered
+  // to very high registers, inflating the footprint and dropping occupancy on
+  // low-pressure functions (and triggering MSG_DEALLOC_VGPRS).
+  unsigned MaxVGPR = MaxIdx + W;
+  if (unsigned Peak = FuncInfo.getWMMAPeakVGPRPressure()) {
+    unsigned Gran = AMDGPU::IsaInfo::getVGPRAllocGranule(
+        ST, FuncInfo.getDynamicVGPRBlockSize());
+    unsigned Want = alignTo(Peak, std::max(Gran, 1u));
+    if (unsigned Budget = ST.getMaxNumVGPRs(MF))
+      Want = std::min(Want, Budget);
+    if (Want && Want < MaxVGPR)
+      MaxVGPR = Want;
+  }
+  if (MaxVGPR < 4 * W + 3)
+    return;
+  unsigned N = (MaxVGPR - 3) / (4 * W); // blocks per bank region
+  unsigned BankSize = N * W;
+  for (unsigned n = 0; n < N; n++) {
+    for (unsigned Bank = 0; Bank < 4; Bank++) {
+      if (((UsedBankMask >> Bank) & 1) != 0)
+        continue;
+      unsigned Start = Bank * BankSize + Bank + n * W;
+      auto RIt = IdxToReg.find(Start);
+      if (RIt != IdxToReg.end())
+        Hints.push_back(RIt->second);
+    }
   }
 }
 

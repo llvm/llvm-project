@@ -409,20 +409,20 @@ define amdgpu_ps void @test_wmma_f16_16x16x16_f16_negC_pack(<8 x half> %A, <8 x 
 ; GFX1170-LABEL: test_wmma_f16_16x16x16_f16_negC_pack:
 ; GFX1170:       ; %bb.0: ; %bb
 ; GFX1170-NEXT:    s_clause 0x1
-; GFX1170-NEXT:    flat_load_b128 v[12:15], v[8:9]
-; GFX1170-NEXT:    flat_load_b128 v[16:19], v[8:9] offset:16
+; GFX1170-NEXT:    flat_load_b128 v[15:18], v[8:9]
+; GFX1170-NEXT:    flat_load_b128 v[19:22], v[8:9] offset:16
 ; GFX1170-NEXT:    s_waitcnt vmcnt(1) lgkmcnt(1)
-; GFX1170-NEXT:    v_mov_b16_e32 v14.h, v15.l
+; GFX1170-NEXT:    v_mov_b16_e32 v17.h, v18.l
 ; GFX1170-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX1170-NEXT:    v_mov_b16_e32 v16.h, v17.l
-; GFX1170-NEXT:    v_mov_b16_e32 v18.h, v19.l
-; GFX1170-NEXT:    v_mov_b16_e32 v12.h, v13.l
+; GFX1170-NEXT:    v_mov_b16_e32 v19.h, v20.l
+; GFX1170-NEXT:    v_mov_b16_e32 v21.h, v22.l
+; GFX1170-NEXT:    v_mov_b16_e32 v15.h, v16.l
 ; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1170-NEXT:    v_dual_mov_b32 v13, v14 :: v_dual_mov_b32 v14, v16
-; GFX1170-NEXT:    v_mov_b32_e32 v15, v18
+; GFX1170-NEXT:    v_dual_mov_b32 v16, v17 :: v_dual_mov_b32 v17, v19
+; GFX1170-NEXT:    v_mov_b32_e32 v18, v21
 ; GFX1170-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1170-NEXT:    v_wmma_f16_16x16x16_f16 v[12:15], v[0:3], v[4:7], v[12:15] neg_lo:[0,0,1]
-; GFX1170-NEXT:    global_store_b128 v[10:11], v[12:15], off
+; GFX1170-NEXT:    v_wmma_f16_16x16x16_f16 v[15:18], v[0:3], v[4:7], v[15:18] neg_lo:[0,0,1]
+; GFX1170-NEXT:    global_store_b128 v[10:11], v[15:18], off
 ; GFX1170-NEXT:    s_endpgm
 bb:
   %C = load <16 x half>, ptr %Caddr

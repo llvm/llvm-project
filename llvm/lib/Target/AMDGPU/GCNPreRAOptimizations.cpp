@@ -32,8 +32,10 @@
 
 #include "GCNPreRAOptimizations.h"
 #include "AMDGPU.h"
+#include "GCNRegPressure.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIMachineFunctionInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -54,6 +56,8 @@ private:
 
   bool processReg(Register Reg);
   void hintTrue16Copy(const MachineInstr &MI);
+  void recordWMMABankSiblings(const MachineInstr &MI,
+                              SIMachineFunctionInfo &MFI);
   bool optimizeBVHStack(MachineInstr &MI);
 
 public:
@@ -262,6 +266,41 @@ void GCNPreRAOptimizationsImpl::hintTrue16Copy(const MachineInstr &MI) {
     MRI->setRegAllocationHint(Dst, AMDGPURI::Size16, Src);
 }
 
+void GCNPreRAOptimizationsImpl::recordWMMABankSiblings(
+    const MachineInstr &MI, SIMachineFunctionInfo &MFI) {
+  // The consecutive-allocation VGPR bank collision only happens when each
+  // matrix operand is a multiple of 4 VGPRs (128 bits) wide; with narrower
+  // operands the start registers already fall on different banks. Restrict the
+  // hint to WMMAs whose matrix source operands are a multiple of 128 bits.
+  auto Is128BitMultiple = [&](AMDGPU::OpName Name) {
+    const MachineOperand *MO = TII->getNamedOperand(MI, Name);
+    return MO && MO->isReg() && MO->getReg() &&
+           TRI->getRegSizeInBits(MO->getReg(), *MRI) % 128 == 0;
+  };
+  if (!Is128BitMultiple(AMDGPU::OpName::src0) ||
+      !Is128BitMultiple(AMDGPU::OpName::src1))
+    return;
+
+  // Record, for each virtual register operand, the other operands of this WMMA
+  // so SIRegisterInfo::getRegAllocationHints can steer them onto distinct
+  // VGPR banks. A register used by several WMMAs accumulates the union of their
+  // siblings.
+  SmallVector<Register, 4> Regs;
+  for (const MachineOperand &MO : MI.operands())
+    if (MO.isReg() && MO.getReg() && MO.getReg().isVirtual() &&
+        !is_contained(Regs, MO.getReg()))
+      Regs.push_back(MO.getReg());
+
+  DenseMap<Register, SmallVector<Register, 3>> &Siblings =
+      MFI.getWMMABankSiblings();
+  for (Register Reg : Regs) {
+    SmallVector<Register, 3> &S = Siblings[Reg];
+    for (Register Other : Regs)
+      if (Other != Reg && !is_contained(S, Other))
+        S.push_back(Other);
+  }
+}
+
 bool GCNPreRAOptimizationsImpl::optimizeBVHStack(MachineInstr &MI) {
   SmallVector<Register, 2> UseRegs;
 
@@ -321,15 +360,25 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
 
   const bool HasBVHStack = ST.hasBVHDualAndBVH8Insts();
   const bool HasRealTrue16 = ST.useRealTrue16Insts();
+  // On gfx11/gfx12 the operands of a WMMA should be placed on distinct VGPR
+  // banks to avoid an issue-latency penalty.
+  const bool HasWMMABankHint = ST.hasFeature(AMDGPU::FeatureGFX11) ||
+                               ST.hasFeature(AMDGPU::FeatureGFX12);
 
-  if (!HasRealTrue16 && !HasBVHStack)
+  if (!HasRealTrue16 && !HasBVHStack && !HasWMMABankHint)
     return Changed;
 
+  SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       // Add RA hints to improve True16 COPY elimination.
       if (HasRealTrue16 && MI.getOpcode() == AMDGPU::COPY) {
         hintTrue16Copy(MI);
+        continue;
+      }
+      // Record WMMA operand siblings for VGPR bank-conflict avoidance hints.
+      if (HasWMMABankHint && SIInstrInfo::isWMMA(MI)) {
+        recordWMMABankSiblings(MI, *MFI);
         continue;
       }
       // Add implicit uses to avoid early wait on intersect ray instructions.
@@ -341,6 +390,22 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
         continue;
       }
     }
+  }
+
+  // If any bank-sensitive WMMA was tagged, record the function's peak ArchVGPR
+  // pressure (the actual VGPR demand). The bank hint anchors its reserved
+  // regions to this instead of the top of the whole VGPR file.
+  if (HasWMMABankHint && !MFI->getWMMABankSiblings().empty()) {
+    unsigned Peak = 0;
+    GCNUpwardRPTracker RPT(*LIS);
+    for (const MachineBasicBlock &MBB : MF) {
+      RPT.reset(*MRI, LIS->getSlotIndexes()->getMBBEndIdx(&MBB).getPrevSlot());
+      for (const MachineInstr &MI : reverse(MBB)) {
+        RPT.recede(MI);
+        Peak = std::max(Peak, RPT.getPressure().getArchVGPRNum());
+      }
+    }
+    MFI->setWMMAPeakVGPRPressure(Peak);
   }
 
   return Changed;

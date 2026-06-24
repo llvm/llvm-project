@@ -364,6 +364,15 @@ public:
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
 
+  /// Append physreg candidates that keep the v_wmma_* operand \p VirtReg in a
+  /// VGPR bank distinct from its already-allocated WMMA siblings (gfx11/gfx12).
+  /// Only augments \p Hints for \p VirtReg; the global allocation order is
+  /// unchanged.
+  void addWMMABankConflictHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
+                                SmallVectorImpl<MCPhysReg> &Hints,
+                                const MachineFunction &MF,
+                                const VirtRegMap *VRM) const;
+
   const int *getRegUnitPressureSets(MCRegUnit RegUnit) const override;
 
   MCRegister getReturnAddressReg(const MachineFunction &MF) const;

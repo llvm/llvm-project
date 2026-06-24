@@ -617,6 +617,19 @@ private:
   // load/store is enabled.
   IndexedMap<uint32_t, VGPRBlock2IndexFunctor> MaskForVGPRBlockOps;
 
+  // Maps each virtual register that is an operand of a bank-sensitive v_wmma_*
+  // (matrix sources a multiple of 128 bits) to that instruction's other operand
+  // registers. Populated once by GCNPreRAOptimizations and consumed by
+  // SIRegisterInfo::getRegAllocationHints for VGPR bank-conflict avoidance, so
+  // the hint hook does not rescan the function for every virtual register.
+  DenseMap<Register, SmallVector<Register, 3>> WMMABankSiblings;
+
+  // Peak ArchVGPR pressure of the function (the "actual demand"), computed once
+  // by GCNPreRAOptimizations. Used by the WMMA bank hint to anchor its reserved
+  // bank regions to the top of the real footprint instead of the top of the
+  // whole VGPR file, so it does not inflate the VGPR count of small kernels.
+  unsigned WMMAPeakVGPRPressure = 0;
+
 private:
   Register VGPRForAGPRCopy;
 
@@ -649,6 +662,18 @@ public:
   bool hasMaskForVGPRBlockOps(Register RegisterBlock) const {
     return MaskForVGPRBlockOps.inBounds(RegisterBlock);
   }
+
+  // Accessors for the WMMA bank-hint map (see WMMABankSiblings).
+  DenseMap<Register, SmallVector<Register, 3>> &getWMMABankSiblings() {
+    return WMMABankSiblings;
+  }
+  const DenseMap<Register, SmallVector<Register, 3>> &
+  getWMMABankSiblings() const {
+    return WMMABankSiblings;
+  }
+
+  unsigned getWMMAPeakVGPRPressure() const { return WMMAPeakVGPRPressure; }
+  void setWMMAPeakVGPRPressure(unsigned P) { WMMAPeakVGPRPressure = P; }
 
 public:
   SIMachineFunctionInfo(const SIMachineFunctionInfo &MFI) = default;
