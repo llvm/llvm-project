@@ -30,7 +30,7 @@ namespace {
     typedef RecursiveASTVisitor<ASTPrinter> base;
 
   public:
-    enum Kind { DumpFull, Dump, Print, None };
+    enum Kind { DumpFull, Dump, Print, List, None };
     ASTPrinter(std::unique_ptr<raw_ostream> Out, Kind K,
                ASTDumpOutputFormat Format, StringRef FilterString,
                bool DumpLookups = false, bool DumpDeclTypes = false)
@@ -48,6 +48,11 @@ namespace {
     void HandleTranslationUnit(ASTContext &Context) override {
       TranslationUnitDecl *D = Context.getTranslationUnitDecl();
 
+      if (OutputKind == List) {
+        TraverseDecl(D);
+        return;
+      }
+
       if (FilterString.empty())
         return print(D);
 
@@ -57,7 +62,7 @@ namespace {
     bool shouldWalkTypesOfTypeLocs() const { return false; }
 
     bool TraverseDecl(Decl *D) {
-      if (D && filterMatches(D)) {
+      if (OutputKind != List && D && filterMatches(D)) {
         bool ShowColors = Out.has_colors();
         if (ShowColors)
           Out.changeColor(raw_ostream::BLUE);
@@ -74,6 +79,14 @@ namespace {
         return true;
       }
       return base::TraverseDecl(D);
+    }
+
+    bool VisitNamedDecl(NamedDecl *D) {
+      if (OutputKind == List) {
+        D->printQualifiedName(Out);
+        Out << '\n';
+      }
+      return true;
     }
 
   private:
@@ -140,28 +153,6 @@ namespace {
     /// Whether to dump the type for each declaration dumped.
     bool DumpDeclTypes;
   };
-
-  class ASTDeclNodeLister : public ASTConsumer,
-                     public RecursiveASTVisitor<ASTDeclNodeLister> {
-  public:
-    ASTDeclNodeLister(raw_ostream *Out = nullptr)
-        : Out(Out ? *Out : llvm::outs()) {}
-
-    void HandleTranslationUnit(ASTContext &Context) override {
-      TraverseDecl(Context.getTranslationUnitDecl());
-    }
-
-    bool shouldWalkTypesOfTypeLocs() const { return false; }
-
-    bool VisitNamedDecl(NamedDecl *D) {
-      D->printQualifiedName(Out);
-      Out << '\n';
-      return true;
-    }
-
-  private:
-    raw_ostream &Out;
-  };
 } // end anonymous namespace
 
 std::unique_ptr<ASTConsumer>
@@ -197,7 +188,8 @@ clang::CreateASTDumper(raw_ostream &Out, StringRef FilterString, bool DumpDecls,
 }
 
 std::unique_ptr<ASTConsumer> clang::CreateASTDeclNodeLister() {
-  return std::make_unique<ASTDeclNodeLister>(nullptr);
+  return std::make_unique<ASTPrinter>(llvm::outs(), ASTPrinter::List,
+                                      ADOF_Default, StringRef());
 }
 
 //===----------------------------------------------------------------------===//
