@@ -28,6 +28,7 @@
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassInstrumentation.h"
+#include "llvm/Transforms/Scalar/SimpleLoopUnswitch.h"
 
 using namespace llvm;
 
@@ -70,6 +71,10 @@ void ejit::EJitPassBuilder::registerLoopAnalyses(LoopAnalysisManager &LAM) {
   // Loop passes obtain DT/LI/SE/TTI via the FAM proxy (FunctionToLoopPassAdaptor).
   // Only register analyses that operate directly on Loop&.
   LAM.registerPass([&] { return PassInstrumentationAnalysis(); });
+  // IndVarSimplifyPass queries ShouldRunExtraSimpleLoopUnswitch via the LAM
+  // when it decides the loop is worth re-unswitching. Without it registered,
+  // AnalysisManager::getResult dereferences a null pass and crashes.
+  LAM.registerPass([&] { return ShouldRunExtraSimpleLoopUnswitch(); });
 }
 
 void ejit::EJitPassBuilder::registerCGSCCAnalyses(

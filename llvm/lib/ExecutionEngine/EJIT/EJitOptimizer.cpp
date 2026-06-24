@@ -14,6 +14,8 @@
 #include "llvm/Transforms/Scalar/ADCE.h"
 #include "llvm/Transforms/Scalar/SCCP.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
+#include "llvm/Transforms/Scalar/IndVarSimplify.h"
+#include "llvm/Transforms/Scalar/LoopDeletion.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Scalar/LoopUnrollPass.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
@@ -41,14 +43,24 @@ EJitOptimizer::EJitOptimizer(PeriodArrayRegistry &reg)
   // L2: SimplifyCFG cleanup after inlining.
   L2FPM_.addPass(SimplifyCFGPass());
 
-  // L3: LoopSimplify + FullUnroll + Promote (Mem2Reg) + SimplifyCFG.
+  // L3: LoopSimplify → FullUnroll → IndVarSimplify → LoopDeletion →
+  //     Promote → SCCP → SimplifyCFG.
+  //
+  // FullUnroll handles small bounded loops (budget ~150 instructions).
+  // For larger loops whose trip count is a may_const, IndVarSimplify uses SCEV
+  // to replace the accumulator phi with a closed-form exit value, then
+  // LoopDeletion removes the now-dead loop.  A second SCCP pass propagates the
+  // freshly-computed loop-exit constants through the rest of the function.
   L3FPM_.addPass(LoopSimplifyPass());
   {
     LoopPassManager LPM;
     LPM.addPass(LoopFullUnrollPass());
+    LPM.addPass(IndVarSimplifyPass());
+    LPM.addPass(LoopDeletionPass());
     L3FPM_.addPass(createFunctionToLoopPassAdaptor(std::move(LPM)));
   }
   L3FPM_.addPass(PromotePass());
+  L3FPM_.addPass(SCCPPass());
   L3FPM_.addPass(SimplifyCFGPass());
 }
 
