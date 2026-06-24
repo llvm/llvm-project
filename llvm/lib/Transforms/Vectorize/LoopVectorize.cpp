@@ -1953,7 +1953,8 @@ static bool isIndvarOverflowCheckKnownFalse(
           getMaxVScale(*Cost->TheFunction, Cost->TTI);
       if (!MaxVScale)
         return false;
-      MaxVF *= *MaxVScale;
+      if (VF.isScalable())
+        MaxVF *= *MaxVScale;
       if (TC->isScalable()) {
         bool Overflow;
         MaxTC = SaturatingMultiply(MaxTC, *MaxVScale, &Overflow);
