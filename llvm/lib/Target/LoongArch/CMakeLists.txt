@@ -24,6 +24,7 @@ add_llvm_target(LoongArchCodeGen
   LoongArchInstrInfo.cpp
   LoongArchISelDAGToDAG.cpp
   LoongArchISelLowering.cpp
+  LoongArchLateBranchOpt.cpp
   LoongArchMCInstLower.cpp
   LoongArchMergeBaseOffset.cpp
   LoongArchOptWInstrs.cpp
