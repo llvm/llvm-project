@@ -1,4 +1,5 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc -analyzer-max-loop 4 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-config unroll-loops=false -analyzer-checker=core,unix.Malloc -analyzer-max-loop 4 -verify %s
+// Note: unroll-loops=false is intentional - this test checks coverage behavior when loops cause the analyzer to give up.
 #include "Inputs/system-header-simulator.h"
 
 typedef __typeof(sizeof(int)) size_t;
