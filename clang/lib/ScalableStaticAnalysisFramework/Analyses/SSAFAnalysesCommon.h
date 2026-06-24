@@ -15,10 +15,16 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/Model/EntityId.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryBuilder.h"
+#include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/TUSummaryExtractor.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
+#include <memory>
 
 namespace clang::ssaf {
 ///\return a short descriptions of a json::Value
@@ -45,9 +51,16 @@ llvm::Error makeSawButExpectedError(const JSONTy &Saw, llvm::StringRef Expected,
   return llvm::createStringError(Fmt.c_str(), SawStr.c_str(), ExpectedArgs...);
 }
 
-template <typename DeclOrExpr> bool hasPtrOrArrType(const DeclOrExpr *E) {
+///\return true iff expression `E` has pointer or array type.
+inline bool hasPtrOrArrType(const Expr *E) {
   return llvm::isa<clang::PointerType, clang::ArrayType>(
       E->getType().getCanonicalType());
+}
+
+///\return true iff Decl `D` has (reference-to) pointer or array type.
+inline bool hasPtrOrArrType(const ValueDecl *D) {
+  return llvm::isa<clang::PointerType, clang::ArrayType>(
+      D->getType().getNonReferenceType().getCanonicalType());
 }
 
 llvm::Error makeEntityNameErr(clang::ASTContext &Ctx,
@@ -59,9 +72,13 @@ inline void logWarningFromError(llvm::Error Err) {
   llvm::consumeError(std::move(Err));
 }
 
-/// Find all contributors in an AST.
-void findContributors(ASTContext &Ctx,
-                      std::vector<const NamedDecl *> &Contributors);
+/// Find all contributors in an AST. The found contributors are organized as a
+/// map from the canonical declaration of each entity to all of its
+/// declarations.
+void findContributors(
+    ASTContext &Ctx,
+    llvm::DenseMap<const NamedDecl *, std::vector<const NamedDecl *>>
+        &Contributors);
 
 /// Perform "MatchAction" on each Stmt and Decl belonging to the `Contributor`.
 /// \param Contributor
@@ -69,6 +86,49 @@ void findContributors(ASTContext &Ctx,
 void findMatchesIn(
     const NamedDecl *Contributor,
     llvm::function_ref<void(const DynTypedNode &)> MatchActionRef);
+
+/// The standard contributor-summary extraction procedure:
+///   1. Find and group all contributor decls by their canonical decls.
+///   2. Use \p Extract to get an EntitySummary of a contributor from all of its
+///   decls.
+///   3. Insert the EntitySummary into the \p Builder.
+///
+/// \param ExtractorFnT the template parameter that should be a function type
+/// 'std::unique_ptr<SummaryT>(std::vector<const NamedDecl *>)' for different
+/// entity summary type `SummaryT`s
+/// \param ExtractFn The function that extracts summaries of a contributor from
+/// its decls.
+/// \param ExtractorName The optional information inserted into the warning
+/// message when duplicate contributor names (EntityNames) are seen.
+template <typename ExtractorFnT>
+void extractAndAddSummaries(TUSummaryExtractor &Extractor,
+                            TUSummaryBuilder &Builder, ASTContext &Ctx,
+                            ExtractorFnT ExtractFn,
+                            const char *ExtractorName = "") {
+  llvm::DenseMap<const NamedDecl *, std::vector<const NamedDecl *>>
+      Contributors;
+  findContributors(Ctx, Contributors);
+  for (const auto &[Cano, Decls] : Contributors) {
+    // Templates are skipped, but their instantiations are handled. The idea
+    // is that we can conclude facts about a template through all of its
+    // instantiations.
+    if (Cano->isTemplated())
+      continue;
+
+    auto Summary = ExtractFn(Decls);
+    assert(Summary);
+    if (Summary->empty())
+      continue;
+
+    if (auto Id = Extractor.addEntity(Cano)) {
+      if (!Builder.addSummary(*Id, std::move(Summary)).second)
+        logWarningFromError(makeErrAtNode(
+            Ctx, Cano, "dropping duplicate %s summary for entity %s",
+            ExtractorName, Cano->getNameAsString().c_str()));
+    } else
+      logWarningFromError(makeEntityNameErr(Ctx, Cano));
+  }
+}
 
 } // namespace clang::ssaf
 
