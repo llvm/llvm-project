@@ -6546,7 +6546,6 @@ calculateBoundsOffset(LLVM::ModuleTranslation &moduleTranslation,
     // to use or standardizing/canonicalizing the order of the bounds to compute
     // the offset may be useful in the future when there's other frontends with
     // different formats.
-    std::vector<llvm::Value *> dimensionIndexSizeOffset;
     for (int i = bounds.size() - 1; i >= 0; --i) {
       if (auto boundOp = dyn_cast_if_present<omp::MapBoundsOp>(
               bounds[i].getDefiningOp())) {
@@ -8194,10 +8193,6 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
   attrs.MinThreads = 1;
   attrs.MaxThreads.front() = combinedMaxThreadsVal;
   attrs.ReductionDataSize = reductionDataSize;
-  // TODO: Allow modified buffer length similar to
-  // fopenmp-cuda-teams-reduction-recs-num flag in clang.
-  if (attrs.ReductionDataSize != 0)
-    attrs.ReductionBufferLength = 1024;
 }
 
 /// Gather LLVM runtime values for all clauses evaluated in the host that are

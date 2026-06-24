@@ -492,8 +492,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
     setOperationAction({ISD::BSWAP, ISD::CTTZ, ISD::CTLZ}, VT, Expand);
 
-    // AMDGPU uses ADDC/SUBC/ADDE/SUBE
-    setOperationAction({ISD::ADDC, ISD::SUBC, ISD::ADDE, ISD::SUBE}, VT, Legal);
+    setOperationAction({ISD::ADDC, ISD::SUBC, ISD::ADDE, ISD::SUBE}, VT,
+                       Expand);
   }
 
   // The hardware supports 32-bit FSHR, but not FSHL.
