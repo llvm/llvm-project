@@ -20,11 +20,11 @@ func.func @gemm(%a : memref<?x?xf32>, %b : memref<?x?xf32>, %c : memref<?x?xf32>
 //      CHECK:       %[[svC:.+]] = memref.subview %[[ARG2]]
 
 //      CHECK:       %[[tmpA:.*]] = memref.alloc() : memref<1024xi8>
-//      CHECK:       %[[VA:.*]] = memref.view %[[tmpA]][%[[C0]]][] : memref<1024xi8> to memref<16x16xf32>
+//      CHECK:       %[[VA:.*]] = memref.view %[[tmpA]][%[[C0]]][16, 16] : memref<1024xi8> to memref<16x16xf32>
 //      CHECK:       %[[svAA:.+]] = memref.subview %[[VA]]
 
 //      CHECK:       %[[tmpC:.*]] = memref.alloc() : memref<1024xi8>
-//      CHECK:       %[[VC:.*]] = memref.view %[[tmpC]][%[[C0]]][] : memref<1024xi8> to memref<16x16xf32>
+//      CHECK:       %[[VC:.*]] = memref.view %[[tmpC]][%[[C0]]][16, 16] : memref<1024xi8> to memref<16x16xf32>
 //      CHECK:       %[[svCC:.+]] = memref.subview %[[VC]]
 
 //      CHECK:       linalg.copy ins(%[[svA]] : memref<?x?xf32, strided<[?, 1], offset: ?>>) outs(%[[svAA]] : memref<?x?xf32, strided<[16, 1]>>)

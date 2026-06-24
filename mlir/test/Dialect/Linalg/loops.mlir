@@ -22,9 +22,9 @@ func.func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
 //  CHECK-SAME: [[M:arg[0-9]+]]: index
 //  CHECK-SAME: [[N:arg[0-9]+]]: index
 //  CHECK-SAME: [[K:arg[0-9]+]]: index
-//       CHECK: %[[A:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
-//       CHECK: %[[B:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
-//       CHECK: %[[C:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
+//       CHECK: %[[A:.*]] = memref.view %{{.*}}[{{.*}}][{{.*}}, {{.*}}] : memref<?xi8> to memref<?x?xf32>
+//       CHECK: %[[B:.*]] = memref.view %{{.*}}[{{.*}}][{{.*}}, {{.*}}] : memref<?xi8> to memref<?x?xf32>
+//       CHECK: %[[C:.*]] = memref.view %{{.*}}[{{.*}}][{{.*}}, {{.*}}] : memref<?xi8> to memref<?x?xf32>
 //       CHECK: scf.for {{.*}} to %[[M]]
 //       CHECK:   scf.for {{.*}} to %[[N]]
 //       CHECK:     scf.for {{.*}} to %[[K]]
@@ -39,9 +39,9 @@ func.func @matmul(%arg0: memref<?xi8>, %M: index, %N: index, %K: index) {
 //  CHECKPARALLEL-SAME: [[M:arg[0-9]+]]: index
 //  CHECKPARALLEL-SAME: [[N:arg[0-9]+]]: index
 //  CHECKPARALLEL-SAME: [[K:arg[0-9]+]]: index
-//       CHECKPARALLEL: %[[A:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
-//       CHECKPARALLEL: %[[B:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
-//       CHECKPARALLEL: %[[C:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
+//       CHECKPARALLEL: %[[A:.*]] = memref.view %{{.*}}[{{.*}}][{{.*}}, {{.*}}] : memref<?xi8> to memref<?x?xf32>
+//       CHECKPARALLEL: %[[B:.*]] = memref.view %{{.*}}[{{.*}}][{{.*}}, {{.*}}] : memref<?xi8> to memref<?x?xf32>
+//       CHECKPARALLEL: %[[C:.*]] = memref.view %{{.*}}[{{.*}}][{{.*}}, {{.*}}] : memref<?xi8> to memref<?x?xf32>
 //       CHECKPARALLEL: scf.parallel {{.*}} to (%[[M]], %[[N]]) step (%{{.*}}, %{{.*}} {
 //       CHECKPARALLEL:   scf.for {{.*}} to %[[K]]
 //   CHECKPARALLEL-DAG:     %[[a:.*]] = memref.load %[[A]][%{{.*}}, %{{.*}}] : memref<?x?xf32>
@@ -66,9 +66,9 @@ func.func @matvec(%arg0: memref<?xi8>, %M: index, %N: index) {
 // CHECK-LABEL: func @matvec(%{{.*}}: memref<?xi8>,
 //  CHECK-SAME: [[M:arg[0-9]+]]: index
 //  CHECK-SAME: [[K:arg[0-9]+]]: index
-//       CHECK: %[[A:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
-//       CHECK: %[[B:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?xf32>
-//       CHECK: %[[C:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?xf32>
+//       CHECK: %[[A:.*]] = memref.view %{{.*}}[{{.*}}][{{.*}}, {{.*}}] : memref<?xi8> to memref<?x?xf32>
+//       CHECK: %[[B:.*]] = memref.view %{{.*}}[{{.*}}][{{.*}}] : memref<?xi8> to memref<?xf32>
+//       CHECK: %[[C:.*]] = memref.view %{{.*}}[{{.*}}][{{.*}}] : memref<?xi8> to memref<?xf32>
 //       CHECK: scf.for {{.*}} to %[[M]]
 //       CHECK:   scf.for {{.*}} to %[[K]]
 //   CHECK-DAG:     %[[a:.*]] = memref.load %[[A]][%{{.*}}, %{{.*}}] : memref<?x?xf32>
@@ -81,9 +81,9 @@ func.func @matvec(%arg0: memref<?xi8>, %M: index, %N: index) {
 // CHECKPARALLEL-LABEL: func @matvec(%{{.*}}: memref<?xi8>,
 //  CHECKPARALLEL-SAME: [[M:arg[0-9]+]]: index
 //  CHECKPARALLEL-SAME: [[K:arg[0-9]+]]: index
-//       CHECKPARALLEL: %[[A:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?x?xf32>
-//       CHECKPARALLEL: %[[B:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?xf32>
-//       CHECKPARALLEL: %[[C:.*]] = memref.view %{{.*}}[{{.*}}] : memref<?xi8> to memref<?xf32>
+//       CHECKPARALLEL: %[[A:.*]] = memref.view %{{.*}}[{{.*}}][{{.*}}, {{.*}}] : memref<?xi8> to memref<?x?xf32>
+//       CHECKPARALLEL: %[[B:.*]] = memref.view %{{.*}}[{{.*}}][{{.*}}] : memref<?xi8> to memref<?xf32>
+//       CHECKPARALLEL: %[[C:.*]] = memref.view %{{.*}}[{{.*}}][{{.*}}] : memref<?xi8> to memref<?xf32>
 //       CHECKPARALLEL: scf.parallel (%{{.*}}) = (%{{.*}}) to (%[[M]]) step (%{{.*}}) {
 //       CHECKPARALLEL:   scf.for {{.*}} to %[[K]]
 //   CHECKPARALLEL-DAG:     %[[a:.*]] = memref.load %[[A]][%{{.*}}, %{{.*}}] : memref<?x?xf32>

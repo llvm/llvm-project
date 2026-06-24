@@ -3,9 +3,9 @@
 module {
   func.func private @func_with_reverse_order_no_result_no_calls(%arg0: memref<1xi8, 1>, %arg1: memref<2xi8, 1>, %arg2: memref<3xi8, 1>) {
     %c0 = arith.constant 0 : index
-    %view = memref.view %arg0[%c0][] : memref<1xi8, 1> to memref<1xi8, 1>
-    %view0 = memref.view %arg1[%c0][] : memref<2xi8, 1> to memref<2xi8, 1>
-    %view1 = memref.view %arg2[%c0][] : memref<3xi8, 1> to memref<3xi8, 1>
+    %view = memref.view %arg0[%c0][1] : memref<1xi8, 1> to memref<1xi8, 1>
+    %view0 = memref.view %arg1[%c0][2] : memref<2xi8, 1> to memref<2xi8, 1>
+    %view1 = memref.view %arg2[%c0][3] : memref<3xi8, 1> to memref<3xi8, 1>
     return
   }
 }
@@ -25,9 +25,9 @@ module attributes {transform.with_named_sequence} {
 module {
   func.func private @func_with_reverse_order_no_result_no_calls(%arg0: memref<1xi8, 1>, %arg1: memref<2xi8, 1>, %arg2: memref<3xi8, 1>) {
     %c0 = arith.constant 0 : index
-    %view = memref.view %arg0[%c0][] : memref<1xi8, 1> to memref<1xi8, 1>
-    %view0 = memref.view %arg1[%c0][] : memref<2xi8, 1> to memref<2xi8, 1>
-    %view1 = memref.view %arg2[%c0][] : memref<3xi8, 1> to memref<3xi8, 1>
+    %view = memref.view %arg0[%c0][1] : memref<1xi8, 1> to memref<1xi8, 1>
+    %view0 = memref.view %arg1[%c0][2] : memref<2xi8, 1> to memref<2xi8, 1>
+    %view1 = memref.view %arg2[%c0][3] : memref<3xi8, 1> to memref<3xi8, 1>
     return
   }
 }
@@ -47,9 +47,9 @@ module attributes {transform.with_named_sequence} {
 module {
   func.func private @func_with_reverse_order_no_result_no_calls(%arg0: memref<1xi8, 1>, %arg1: memref<2xi8, 1>, %arg2: memref<3xi8, 1>) {
     %c0 = arith.constant 0 : index
-    %view = memref.view %arg0[%c0][] : memref<1xi8, 1> to memref<1xi8, 1>
-    %view0 = memref.view %arg1[%c0][] : memref<2xi8, 1> to memref<2xi8, 1>
-    %view1 = memref.view %arg2[%c0][] : memref<3xi8, 1> to memref<3xi8, 1>
+    %view = memref.view %arg0[%c0][1] : memref<1xi8, 1> to memref<1xi8, 1>
+    %view0 = memref.view %arg1[%c0][2] : memref<2xi8, 1> to memref<2xi8, 1>
+    %view1 = memref.view %arg2[%c0][3] : memref<3xi8, 1> to memref<3xi8, 1>
     return
   }
 }
@@ -69,9 +69,9 @@ module attributes {transform.with_named_sequence} {
 module {
   func.func private @func_with_reverse_order_no_result_no_calls(%arg0: memref<1xi8, 1>, %arg1: memref<2xi8, 1>, %arg2: memref<3xi8, 1>) {
     %c0 = arith.constant 0 : index
-    %view = memref.view %arg0[%c0][] : memref<1xi8, 1> to memref<1xi8, 1>
-    %view0 = memref.view %arg1[%c0][] : memref<2xi8, 1> to memref<2xi8, 1>
-    %view1 = memref.view %arg2[%c0][] : memref<3xi8, 1> to memref<3xi8, 1>
+    %view = memref.view %arg0[%c0][1] : memref<1xi8, 1> to memref<1xi8, 1>
+    %view0 = memref.view %arg1[%c0][2] : memref<2xi8, 1> to memref<2xi8, 1>
+    %view1 = memref.view %arg2[%c0][3] : memref<3xi8, 1> to memref<3xi8, 1>
     return
   }
 }
@@ -90,9 +90,9 @@ module attributes {transform.with_named_sequence} {
 
 func.func private @func_with_no_duplicate_args(%arg0: memref<1xi8, 1>, %arg1: memref<2xi8, 1>, %arg2: memref<3xi8, 1>) {
   %c0 = arith.constant 0 : index
-  %view = memref.view %arg0[%c0][] : memref<1xi8, 1> to memref<1xi8, 1>
-  %view0 = memref.view %arg1[%c0][] : memref<2xi8, 1> to memref<2xi8, 1>
-  %view1 = memref.view %arg2[%c0][] : memref<3xi8, 1> to memref<3xi8, 1>
+  %view = memref.view %arg0[%c0][1] : memref<1xi8, 1> to memref<1xi8, 1>
+  %view0 = memref.view %arg1[%c0][2] : memref<2xi8, 1> to memref<2xi8, 1>
+  %view1 = memref.view %arg2[%c0][3] : memref<3xi8, 1> to memref<3xi8, 1>
   return
 }
 
@@ -113,9 +113,9 @@ module attributes {transform.with_named_sequence} {
 
 func.func private @func_not_found(%arg0: memref<1xi8, 1>, %arg1: memref<2xi8, 1>, %arg2: memref<3xi8, 1>) {
   %c0 = arith.constant 0 : index
-  %view = memref.view %arg0[%c0][] : memref<1xi8, 1> to memref<1xi8, 1>
-  %view0 = memref.view %arg1[%c0][] : memref<2xi8, 1> to memref<2xi8, 1>
-  %view1 = memref.view %arg2[%c0][] : memref<3xi8, 1> to memref<3xi8, 1>
+  %view = memref.view %arg0[%c0][1] : memref<1xi8, 1> to memref<1xi8, 1>
+  %view0 = memref.view %arg1[%c0][2] : memref<2xi8, 1> to memref<2xi8, 1>
+  %view1 = memref.view %arg2[%c0][3] : memref<3xi8, 1> to memref<3xi8, 1>
   return
 }
 
@@ -131,8 +131,8 @@ module attributes {transform.with_named_sequence} {
 
 func.func private @func_with_multiple_calls(%arg0: memref<1xi8, 1>, %arg1: memref<1xi8, 1>) {
   %c0 = arith.constant 0 : index
-  %view = memref.view %arg0[%c0][] : memref<1xi8, 1> to memref<1xi8, 1>
-  %view0 = memref.view %arg1[%c0][] : memref<1xi8, 1> to memref<1xi8, 1>
+  %view = memref.view %arg0[%c0][1] : memref<1xi8, 1> to memref<1xi8, 1>
+  %view0 = memref.view %arg1[%c0][1] : memref<1xi8, 1> to memref<1xi8, 1>
   return
 }
 
@@ -158,8 +158,8 @@ module attributes {transform.with_named_sequence} {
 
 func.func private @func_with_no_calls(%arg0: memref<1xi8, 1>, %arg1: memref<1xi8, 1>) {
   %c0 = arith.constant 0 : index
-  %view = memref.view %arg0[%c0][] : memref<1xi8, 1> to memref<1xi8, 1>
-  %view0 = memref.view %arg1[%c0][] : memref<1xi8, 1> to memref<1xi8, 1>
+  %view = memref.view %arg0[%c0][1] : memref<1xi8, 1> to memref<1xi8, 1>
+  %view0 = memref.view %arg1[%c0][1] : memref<1xi8, 1> to memref<1xi8, 1>
   return
 }
 

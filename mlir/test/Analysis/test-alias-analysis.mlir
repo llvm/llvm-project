@@ -228,7 +228,7 @@ func.func @view_like(%arg: memref<2xf32>, %size: index) attributes {test.ptr = "
 
   %c0 = arith.constant 0 : index
   %2 = memref.alloca (%size) {test.ptr = "alloca_1"} : memref<?xi8>
-  %3 = memref.view %2[%c0][] {test.ptr = "view"} : memref<?xi8> to memref<8x64xf32>
+  %3 = memref.view %2[%c0][8, 64] {test.ptr = "view"} : memref<?xi8> to memref<8x64xf32>
   return
 }
 

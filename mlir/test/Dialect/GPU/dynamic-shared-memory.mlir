@@ -14,10 +14,10 @@ gpu.module @modules {
     %shmem = gpu.dynamic_shared_memory : memref<?xi8, #gpu.address_space<workgroup>>
     %shmem2 = gpu.dynamic_shared_memory : memref<?xi8, #gpu.address_space<workgroup>>
 
-    %0 = memref.view %shmem[%c8192][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<32x64xf32, #gpu.address_space<workgroup>>
+    %0 = memref.view %shmem[%c8192][32, 64] : memref<?xi8, #gpu.address_space<workgroup>> to memref<32x64xf32, #gpu.address_space<workgroup>>
     "test.use.shared.memory"(%0) : (memref<32x64xf32, #gpu.address_space<workgroup>>) -> ()
 
-    %1 = memref.view %shmem[%c16384][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<32x64xf32, #gpu.address_space<workgroup>>
+    %1 = memref.view %shmem[%c16384][32, 64] : memref<?xi8, #gpu.address_space<workgroup>> to memref<32x64xf32, #gpu.address_space<workgroup>>
     "test.use.shared.memory"(%1) : (memref<32x64xf32, #gpu.address_space<workgroup>>) -> ()
 
 // CHECK-DAG: %[[S0:.+]] = llvm.mlir.constant(32 : index) : i64
@@ -52,7 +52,7 @@ gpu.module @modules {
   gpu.func @gpu_device_function()  {
     %c8192 = arith.constant 8192 : index
     %shmem = gpu.dynamic_shared_memory : memref<?xi8, #gpu.address_space<workgroup>>
-    %0 = memref.view %shmem[%c8192][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<32x64xf32, #gpu.address_space<workgroup>>
+    %0 = memref.view %shmem[%c8192][32, 64] : memref<?xi8, #gpu.address_space<workgroup>> to memref<32x64xf32, #gpu.address_space<workgroup>>
     "test.use.shared.memory"(%0) : (memref<32x64xf32, #gpu.address_space<workgroup>>) -> ()
 // CHECK-DAG: %[[S0:.+]] = llvm.mlir.constant(32 : index) : i64
 // CHECK-DAG: %[[S1:.+]] = llvm.mlir.constant(64 : index) : i64
@@ -78,7 +78,7 @@ gpu.module @modules {
   func.func @func_device_function()  {
     %c8192 = arith.constant 8192 : index
     %shmem = gpu.dynamic_shared_memory : memref<?xi8, #gpu.address_space<workgroup>>
-    %0 = memref.view %shmem[%c8192][] : memref<?xi8, #gpu.address_space<workgroup>> to memref<32x64xf32, #gpu.address_space<workgroup>>
+    %0 = memref.view %shmem[%c8192][32, 64] : memref<?xi8, #gpu.address_space<workgroup>> to memref<32x64xf32, #gpu.address_space<workgroup>>
     "test.use.shared.memory"(%0) : (memref<32x64xf32, #gpu.address_space<workgroup>>) -> ()
 // CHECK-DAG: %[[S0:.+]] = llvm.mlir.constant(32 : index) : i64
 // CHECK-DAG: %[[S1:.+]] = llvm.mlir.constant(64 : index) : i64
