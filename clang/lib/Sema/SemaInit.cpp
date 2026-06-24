@@ -8346,11 +8346,10 @@ ExprResult InitializationSequence::Perform(Sema &S,
 
     case SK_ConversionSequence:
     case SK_ConversionSequenceNoNarrowing: {
-      if (const auto *FromPtrType =
-              CurInit.get()->getType()->getAs<PointerType>()) {
-        if (const auto *ToPtrType = Step->Type->getAs<PointerType>()) {
-          if (FromPtrType->getPointeeType()->hasAttr(attr::NoDeref) &&
-              !ToPtrType->getPointeeType()->hasAttr(attr::NoDeref)) {
+      if (CurInit.get()->getType()->getAs<PointerType>()) {
+        if (Step->Type->getAs<PointerType>()) {
+          if (CurInit.get()->getType()->hasAttr(attr::NoDeref) &&
+              !Step->Type->hasAttr(attr::NoDeref)) {
             // Do not check static casts here because they are checked earlier
             // in Sema::ActOnCXXNamedCast()
             if (!Kind.isStaticCast()) {

@@ -550,8 +550,14 @@ ExprResult Sema::DefaultFunctionArrayConversion(Expr *E, bool Diagnose) {
     // T" can be converted to an rvalue of type "pointer to T".
     //
     if (getLangOpts().C99 || getLangOpts().CPlusPlus || E->isLValue()) {
-      ExprResult Res = ImpCastExprToType(E, Context.getArrayDecayedType(Ty),
-                                         CK_ArrayToPointerDecay);
+      QualType PtrTy = Context.getArrayDecayedType(Ty);
+
+      // When the array is `noderef` and we promote to a pointer, also apply
+      // `noderef` on the pointer.
+      if (Ty->hasAttr(attr::NoDeref))
+        PtrTy = Context.getAttributedType(attr::NoDeref, PtrTy, PtrTy);
+
+      ExprResult Res = ImpCastExprToType(E, PtrTy, CK_ArrayToPointerDecay);
       if (Res.isInvalid())
         return ExprError();
       E = Res.get();
@@ -5347,7 +5353,7 @@ ExprResult Sema::CreateBuiltinMatrixSubscriptExpr(Expr *Base, Expr *RowIdx,
                                            MTy->getElementType(), RBLoc);
 }
 
-void Sema::CheckAddressOfNoDeref(const Expr *E) {
+bool Sema::CheckAddressOfNoDeref(const Expr *E) {
   ExpressionEvaluationContextRecord &LastRecord = ExprEvalContexts.back();
   const Expr *StrippedExpr = E->IgnoreParenImpCasts();
 
@@ -5357,7 +5363,7 @@ void Sema::CheckAddressOfNoDeref(const Expr *E) {
   while ((Member = dyn_cast<MemberExpr>(StrippedExpr)) && !Member->isArrow())
     StrippedExpr = Member->getBase()->IgnoreParenImpCasts();
 
-  LastRecord.PossibleDerefs.erase(StrippedExpr);
+  return LastRecord.PossibleDerefs.erase(StrippedExpr);
 }
 
 void Sema::CheckSubscriptAccessOfNoDeref(const ArraySubscriptExpr *E) {
@@ -5371,15 +5377,16 @@ void Sema::CheckSubscriptAccessOfNoDeref(const ArraySubscriptExpr *E) {
   if (isa<ArrayType>(ResultTy))
     return;
 
-  if (ResultTy->hasAttr(attr::NoDeref)) {
+  const Expr *Base = E->getBase();
+  QualType BaseTy = Base->getType();
+
+  if (BaseTy->hasAttr(attr::NoDeref)) {
     LastRecord.PossibleDerefs.insert(E);
     return;
   }
 
   // Check if the base type is a pointer to a member access of a struct
   // marked with noderef.
-  const Expr *Base = E->getBase();
-  QualType BaseTy = Base->getType();
   if (!(isa<ArrayType>(BaseTy) || isa<PointerType>(BaseTy)))
     // Not a pointer access
     return;
@@ -5389,8 +5396,8 @@ void Sema::CheckSubscriptAccessOfNoDeref(const ArraySubscriptExpr *E) {
          Member->isArrow())
     Base = Member->getBase();
 
-  if (const auto *Ptr = dyn_cast<PointerType>(Base->getType())) {
-    if (Ptr->getPointeeType()->hasAttr(attr::NoDeref))
+  if (Base->getType()->getAs<PointerType>()) {
+    if (Base->getType()->hasAttr(attr::NoDeref))
       LastRecord.PossibleDerefs.insert(E);
   }
 }
@@ -10171,10 +10178,10 @@ AssignConvertType Sema::CheckSingleAssignmentConstraints(QualType LHSType,
   ExprResult LocalRHS = CallerRHS;
   ExprResult &RHS = ConvertRHS ? CallerRHS : LocalRHS;
 
-  if (const auto *LHSPtrType = LHSType->getAs<PointerType>()) {
-    if (const auto *RHSPtrType = RHS.get()->getType()->getAs<PointerType>()) {
-      if (RHSPtrType->getPointeeType()->hasAttr(attr::NoDeref) &&
-          !LHSPtrType->getPointeeType()->hasAttr(attr::NoDeref)) {
+  if (LHSType->getAs<PointerType>()) {
+    if (RHS.get()->getType()->getAs<PointerType>()) {
+      if (RHS.get()->getType()->hasAttr(attr::NoDeref) &&
+          !LHSType->hasAttr(attr::NoDeref)) {
         Diag(RHS.get()->getExprLoc(),
              diag::warn_noderef_to_dereferenceable_pointer)
             << RHS.get()->getSourceRange();
@@ -16257,7 +16264,13 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
       break;
     case UO_AddrOf:
       resultType = CheckAddressOfOperand(Input, OpLoc);
-      CheckAddressOfNoDeref(InputExpr);
+
+      // Since the expression is noderef, the resulting type should also be
+      // noderef.
+      if (CheckAddressOfNoDeref(InputExpr))
+        resultType =
+            Context.getAttributedType(attr::NoDeref, resultType, resultType);
+
       RecordModifiableNonNullParam(*this, InputExpr);
       break;
     case UO_Deref: {
@@ -16458,7 +16471,7 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
       UnaryOperator::Create(Context, Input.get(), Opc, resultType, VK, OK,
                             OpLoc, CanOverflow, CurFPFeatureOverrides());
 
-  if (Opc == UO_Deref && UO->getType()->hasAttr(attr::NoDeref) &&
+  if (Opc == UO_Deref && Input.get()->getType()->hasAttr(attr::NoDeref) &&
       !isa<ArrayType>(UO->getType().getDesugaredType(Context)) &&
       !isUnevaluatedContext())
     ExprEvalContexts.back().PossibleDerefs.insert(UO);
@@ -18259,17 +18272,11 @@ const DeclRefExpr *CheckPossibleDeref(Sema &S, const Expr *PossibleDeref) {
   } else if (const auto *E = dyn_cast<MemberExpr>(PossibleDeref)) {
     return CheckPossibleDeref(S, E->getBase());
   } else if (const auto E = dyn_cast<DeclRefExpr>(PossibleDeref)) {
-    QualType Inner;
     QualType Ty = E->getType();
-    if (const auto *Ptr = Ty->getAs<PointerType>())
-      Inner = Ptr->getPointeeType();
-    else if (const auto *Arr = S.Context.getAsArrayType(Ty))
-      Inner = Arr->getElementType();
-    else
-      return nullptr;
-
-    if (Inner->hasAttr(attr::NoDeref))
-      return E;
+    if (Ty->getAs<PointerType>() || S.Context.getAsArrayType(Ty)) {
+      if (Ty->hasAttr(attr::NoDeref))
+        return E;
+    }
   }
   return nullptr;
 }

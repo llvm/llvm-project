@@ -47,6 +47,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <algorithm>
 #include <bitset>
 #include <optional>
 
@@ -217,10 +218,6 @@ namespace {
     /// stored in a MacroQualifiedTypeLoc.
     llvm::DenseMap<const MacroQualifiedType *, SourceLocation> LocsForMacros;
 
-    /// Flag to indicate we parsed a noderef attribute. This is used for
-    /// validating that noderef was used on a pointer or array.
-    bool parsedNoDeref;
-
     // Flag to indicate that we already parsed a HLSL parameter modifier
     // attribute. This prevents double-mutating the type.
     bool ParsedHLSLParamMod;
@@ -228,7 +225,7 @@ namespace {
   public:
     TypeProcessingState(Sema &sema, Declarator &declarator)
         : sema(sema), declarator(declarator),
-          chunkIndex(declarator.getNumTypeObjects()), parsedNoDeref(false),
+          chunkIndex(declarator.getNumTypeObjects()),
           ParsedHLSLParamMod(false) {}
 
     Sema &getSema() const {
@@ -359,10 +356,6 @@ namespace {
                                               SourceLocation Loc) {
       LocsForMacros[MQT] = Loc;
     }
-
-    void setParsedNoDeref(bool parsed) { parsedNoDeref = parsed; }
-
-    bool didParseNoDeref() const { return parsedNoDeref; }
 
     void setParsedHLSLParamMod(bool Parsed) { ParsedHLSLParamMod = Parsed; }
 
@@ -4705,8 +4698,19 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     }
   }
 
+  // GNU attributes on a declaration (e.g., __attribute__((noderef)) int *p;)
+  // are parsed as part of the DeclSpec, but they are intended to apply to
+  // the first pointer or array declarator chunk encountered. Standard
+  // C++11 attribute syntax `[[clang::noderef]]` has stricter placement
+  // rules and should not "float" to the pointer. If a standard noderef
+  // attribute is found on the DeclSpec, we skip setting `ExpectNoDerefChunk`
+  // to ensure it is diagnosed for being applied to a non-pointer type,
+  // rather than silently moving it to the pointer.
   bool ExpectNoDerefChunk =
-      state.getCurrentAttributes().hasAttribute(ParsedAttr::AT_NoDeref);
+      llvm::any_of(state.getCurrentAttributes(), [](const ParsedAttr &AL) {
+        return AL.getKind() == ParsedAttr::AT_NoDeref &&
+               !AL.isStandardAttributeSyntax();
+      });
 
   // Walk the DeclTypeInfo, building the recursive type as we go.
   // DeclTypeInfos are ordered from the identifier out, which is
@@ -5488,17 +5492,58 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     processTypeAttrs(state, T, TAL_DeclChunk, DeclType.getAttrs(),
                      S.CUDA().IdentifyTarget(D.getAttributes()));
 
-    if (DeclType.Kind != DeclaratorChunk::Paren) {
-      if (ExpectNoDerefChunk && !IsNoDerefableChunk(DeclType))
+    if (DeclType.Kind != DeclaratorChunk::Paren && ExpectNoDerefChunk) {
+      // This block handles explicit indirection in the declaration
+      //
+      //   __attribute__((noderef)) int *p;
+      //
+      // If we are looking for a GNU-style noderef attribute that was declared
+      // on the DeclSpec, we try to apply it to the first pointer or array
+      // declarator chunk encountered. Once we apply it (or diagnose a warning),
+      // we set ExpectNoDerefChunk to false so that it only applies to the
+      // outermost pointer or array chunk and doesn't "bleed" into deeper
+      // indirection levels as this loop continues.
+      if (!IsNoDerefableChunk(DeclType)) {
         S.Diag(DeclType.Loc, diag::warn_noderef_on_non_pointer_or_array);
-
-      ExpectNoDerefChunk = state.didParseNoDeref();
+      } else {
+        for (ParsedAttr &AL :
+             state.getDeclarator().getMutableDeclSpec().getAttributes()) {
+          if (AL.getKind() == ParsedAttr::AT_NoDeref) {
+            T = state.getAttributedType(
+                createSimpleAttr<NoDerefAttr>(S.Context, AL), T, T);
+            break;
+          }
+        }
+      }
+      ExpectNoDerefChunk = false;
     }
   }
 
-  if (ExpectNoDerefChunk)
-    S.Diag(state.getDeclarator().getBeginLoc(),
-           diag::warn_noderef_on_non_pointer_or_array);
+  // This block handles implicit indirection, such as through a typedef or when
+  // the base type is already a pointer
+  //
+  //   typedef int *IntPtr;
+  //   __attribute__((noderef)) IntPtr p;
+  //
+  // If the loop above finished without finding an explicit pointer or array
+  // chunk to attach the attribute to, we check the final resolved type and
+  // apply it if it's a pointer or array.
+  if (ExpectNoDerefChunk) {
+    if (T->isPointerType() || T->isArrayType()) {
+      for (ParsedAttr &AL :
+           state.getDeclarator().getMutableDeclSpec().getAttributes()) {
+        if (AL.getKind() == ParsedAttr::AT_NoDeref) {
+          ASTContext &Ctx = S.Context;
+          T = state.getAttributedType(createSimpleAttr<NoDerefAttr>(Ctx, AL), T,
+                                      T);
+          break;
+        }
+      }
+    } else {
+      S.Diag(state.getDeclarator().getBeginLoc(),
+             diag::warn_noderef_on_non_pointer_or_array);
+    }
+  }
 
   // GNU warning -Wstrict-prototypes
   //   Warn if a function declaration or definition is without a prototype.
@@ -9025,7 +9070,6 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
                              const ParsedAttributesView &attrs,
                              CUDAFunctionTarget CFT) {
 
-  state.setParsedNoDeref(false);
   if (attrs.empty())
     return;
 
@@ -9199,20 +9243,16 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       break;
 
     case ParsedAttr::AT_NoDeref: {
-      // FIXME: `noderef` currently doesn't work correctly in [[]] syntax.
-      // See https://github.com/llvm/llvm-project/issues/55790 for details.
-      // For the time being, we simply emit a warning that the attribute is
-      // ignored.
-      if (attr.isStandardAttributeSyntax()) {
-        state.getSema().Diag(attr.getLoc(), diag::warn_attribute_ignored)
-            << attr;
-        break;
-      }
-      ASTContext &Ctx = state.getSema().Context;
-      type = state.getAttributedType(createSimpleAttr<NoDerefAttr>(Ctx, attr),
-                                     type, type);
       attr.setUsedAsTypeAttr();
-      state.setParsedNoDeref(true);
+      if (!state.isProcessingDeclSpec() || attr.isStandardAttributeSyntax()) {
+        if (!type->isPointerType() && !type->isArrayType()) {
+          state.getSema().Diag(attr.getLoc(),
+                               diag::warn_noderef_on_non_pointer_or_array);
+        }
+        ASTContext &Ctx = state.getSema().Context;
+        type = state.getAttributedType(createSimpleAttr<NoDerefAttr>(Ctx, attr),
+                                       type, type);
+      }
       break;
     }
 
