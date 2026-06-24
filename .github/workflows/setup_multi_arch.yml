@@ -15,7 +15,7 @@ on:
           for release builds. Controls artifact bucket selection, IAM role,
           and package versioning.
         type: string
-        default: ""
+        default: ci
       prerelease_version:
         description: Prerelease version number such as '2'. This gets appended to the computed version after 'rc', like '7.10.0rc2'
         type: string
@@ -92,7 +92,7 @@ jobs:
       rocm_package_version: ${{ steps.rocm_package_version.outputs.rocm_package_version }}
     steps:
       - name: Checking out repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           # We need the parent commit to do a diff
           repository: "ROCm/TheRock"
@@ -145,5 +145,5 @@ jobs:
         id: rocm_package_version
         run: |
           python ./build_tools/compute_rocm_package_version.py \
-            --release-type=${{ inputs.release_type || 'dev' }} \
+            --release-type=${{ inputs.release_type }} \
             --prerelease-version=${{ inputs.prerelease_version }}

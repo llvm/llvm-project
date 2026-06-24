@@ -43,7 +43,7 @@ on:
       release_type:
         description: 'Release type: "" for CI, or "dev", "nightly", "prerelease".'
         type: string
-        default: ""
+        default: ci
       test_type:
         type: string   # Temp addiiton until release type is fixed
 
