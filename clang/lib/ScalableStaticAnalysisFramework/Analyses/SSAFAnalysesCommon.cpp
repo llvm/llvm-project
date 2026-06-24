@@ -76,11 +76,6 @@ public:
   }
 
 private:
-  // Returns true when the contributor shall be skipped because its location
-  // is in a system header. The `Loc.isValid()` guard matches the in-tree
-  // precedent at `ReferenceBindingEntityExtractor.cpp` — compiler-generated
-  // decls (builtin FunctionDecls, implicit template instantiations) can reach
-  // the visitor with invalid locations and shall NOT be inadvertently skipped.
   bool skipForSystemHeader(const Decl *D) const {
     if (ExtractFromSystemHeaders)
       return false;
