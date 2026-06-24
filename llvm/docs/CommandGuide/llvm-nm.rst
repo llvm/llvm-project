@@ -168,8 +168,11 @@ OPTIONS
 
 .. option:: --export-symbols
 
- Print sorted symbols with their visibility (if applicable), with duplicates
- removed.
+ Print sorted exportable symbols, with duplicates removed. For XCOFF the
+ symbol visibility is additionally displayed. Consult your toolchain
+ documentation to determine which of these symbols will eventually be
+ exported as this depends on linker behaviour. This option is currently
+ only implemented for ELF and XCOFF.
 
 .. option:: --extern-only, -g
 
