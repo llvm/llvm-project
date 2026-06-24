@@ -693,6 +693,8 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         return LT.first * 6;
       case MVT::v4i32:
         return LT.first * 11;
+      case MVT::v4i16:
+        return LT.first * 14;
       default:
         break;
       }
