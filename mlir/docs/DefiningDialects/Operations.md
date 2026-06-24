@@ -663,7 +663,52 @@ MyOp::build(::mlir::OpBuilder &builder, ::mlir::OperationState &state,
 
 ### Custom parser and printer methods
 
-Functions to parse and print the operation's custom assembly form.
+Most operations should define their custom assembly form declaratively with
+[`assemblyFormat`](#declarative-assembly-format). If an operation needs parsing
+or printing logic that cannot be expressed with the declarative format, set
+`hasCustomAssemblyFormat` to `1`.
+
+```tablegen
+def MyOp : Op<"my_op", []> {
+  let arguments = (ins AnyType:$input);
+  let results = (outs AnyType:$output);
+
+  let hasCustomAssemblyFormat = 1;
+}
+```
+
+This generates declarations for custom parser and printer methods on the op
+class:
+
+```c++
+static ::mlir::ParseResult parse(::mlir::OpAsmParser &parser,
+                                 ::mlir::OperationState &result);
+void print(::mlir::OpAsmPrinter &printer);
+```
+
+The parser consumes the operation's custom assembly form and populates the
+provided `OperationState` with operands, result types, attributes, properties,
+regions, and successors as needed. The printer emits the same custom form from
+the operation instance.
+
+The implementations are defined in C++:
+
+```c++
+ParseResult MyOp::parse(OpAsmParser &parser, OperationState &result) {
+  // Parse the custom syntax and populate `result`.
+  return success();
+}
+
+void MyOp::print(OpAsmPrinter &printer) {
+  // Print the custom syntax for this operation.
+}
+```
+
+If `assemblyFormat` is specified, it takes precedence over
+`hasCustomAssemblyFormat`. Shared helper logic can still be factored into
+ordinary C++ functions, or into declarations/definitions provided with
+[`extraClassDeclaration`](#extra-declarations) and
+[`extraClassDefinition`](#extra-definitions).
 
 ### Custom verifier code
 
