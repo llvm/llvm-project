@@ -800,3 +800,19 @@ add_fp_unittest(
   LINK_LIBRARIES
     -lpthread
 )
+
+add_fp_unittest(
+  lgammaf_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    lgammaf_test.cpp
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.lgammaf
+    libc.src.__support.FPUtil.fp_bits
+  LINK_LIBRARIES
+    -lpthread
+)

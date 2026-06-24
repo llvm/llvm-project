@@ -244,6 +244,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  lgammaf_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    lgammaf_test.cpp
+  DEPENDS
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.math.lgammaf
+)
+
+add_fp_unittest(
   lgammaf16_test
   NEED_MPFR
   SUITE
