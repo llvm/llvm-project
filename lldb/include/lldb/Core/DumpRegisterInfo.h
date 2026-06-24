@@ -19,6 +19,7 @@ class Stream;
 class RegisterContext;
 struct RegisterInfo;
 class RegisterFlags;
+class RegisterUnion;
 
 void DumpRegisterInfo(Stream &strm, RegisterContext &ctx,
                       const RegisterInfo &info, uint32_t terminal_width);
@@ -29,7 +30,8 @@ void DoDumpRegisterInfo(
     const std::vector<const char *> &invalidates,
     const std::vector<const char *> &read_from,
     const std::vector<std::pair<const char *, uint32_t>> &in_sets,
-    const RegisterFlags *flags_type, uint32_t terminal_width);
+    const RegisterFlags *flags_type, const RegisterUnion *union_type,
+    uint32_t terminal_width);
 
 } // namespace lldb_private
 

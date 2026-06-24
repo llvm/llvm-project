@@ -196,7 +196,10 @@ CompilerType ValueObjectRegister::GetCompilerTypeImpl() {
   if (!m_compiler_type.IsValid()) {
     ExecutionContext exe_ctx(GetExecutionContextRef());
     if (auto *target = exe_ctx.GetTargetPtr()) {
-      if (auto *exe_module = target->GetExecutableModulePointer()) {
+      if (m_reg_info.union_type) {
+        m_compiler_type = target->GetRegisterUnionType(
+            m_reg_info.name, *m_reg_info.union_type, m_reg_info.byte_size);
+      } else if (auto *exe_module = target->GetExecutableModulePointer()) {
         auto type_system_or_err =
             exe_module->GetTypeSystemForLanguage(eLanguageTypeC);
         if (auto err = type_system_or_err.takeError()) {

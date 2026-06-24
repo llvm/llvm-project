@@ -9,6 +9,8 @@
 #ifndef LLDB_TARGET_REGISTERFLAGS_H
 #define LLDB_TARGET_REGISTERFLAGS_H
 
+#include "lldb/lldb-enumerations.h"
+
 #include <stdint.h>
 #include <string>
 #include <vector>
@@ -190,6 +192,60 @@ private:
   const std::string m_id;
   /// Size in bytes
   const unsigned m_size;
+  std::vector<Field> m_fields;
+};
+
+/// Represents a union type from a GDB remote target description XML. Each
+/// field is an alternative interpretation of the same register data (e.g.,
+/// viewing an FPU register as both ieee_single and ieee_double).
+class RegisterUnion {
+public:
+  class Field {
+  public:
+    /// Construct a union field. For scalar fields, \p vector_count should be 0.
+    /// For vector fields, \p byte_size is the element size and \p vector_count
+    /// is the number of elements.
+    Field(std::string name, lldb::Encoding encoding, lldb::Format format,
+          uint32_t byte_size, uint32_t vector_count = 0);
+
+    const std::string &GetName() const { return m_name; }
+    lldb::Encoding GetEncoding() const { return m_encoding; }
+    lldb::Format GetFormat() const { return m_format; }
+    uint32_t GetByteSize() const { return m_byte_size; }
+    uint32_t GetVectorCount() const { return m_vector_count; }
+    bool IsVector() const { return m_vector_count > 0; }
+    /// For scalar fields, returns byte_size. For vector fields, returns
+    /// element byte_size * vector_count.
+    uint32_t GetTotalByteSize() const {
+      if (m_vector_count > 0) {
+        uint64_t total = static_cast<uint64_t>(m_byte_size) * m_vector_count;
+        assert(total <= UINT32_MAX && "Vector type size overflow");
+        return static_cast<uint32_t>(total);
+      }
+      return m_byte_size;
+    }
+    void DumpToLog(Log *log) const;
+
+  private:
+    std::string m_name;
+    lldb::Encoding m_encoding;
+    lldb::Format m_format;
+    uint32_t m_byte_size;
+    uint32_t m_vector_count;
+  };
+
+  /// \p fields must not be empty.
+  RegisterUnion(std::string id, std::vector<Field> fields);
+
+  const std::vector<Field> &GetFields() const { return m_fields; }
+  const std::string &GetID() const { return m_id; }
+  /// Returns the size of the largest field in bytes.
+  uint32_t GetSize() const { return m_size; }
+  void DumpToLog(Log *log) const;
+
+private:
+  const std::string m_id;
+  uint32_t m_size;
   std::vector<Field> m_fields;
 };
 

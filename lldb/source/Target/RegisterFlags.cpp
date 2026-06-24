@@ -427,3 +427,34 @@ FieldEnum::FieldEnum(std::string id, const Enumerators &enumerators)
     assert(enumerator.m_name.size() && "Enumerator name cannot be empty");
   }
 }
+
+RegisterUnion::Field::Field(std::string name, lldb::Encoding encoding,
+                            lldb::Format format, uint32_t byte_size,
+                            uint32_t vector_count)
+    : m_name(std::move(name)), m_encoding(encoding), m_format(format),
+      m_byte_size(byte_size), m_vector_count(vector_count) {
+  assert(m_name.size() && "Union field name cannot be empty");
+  assert(m_byte_size > 0 && "Union field byte size cannot be zero");
+}
+
+void RegisterUnion::Field::DumpToLog(Log *log) const {
+  if (m_vector_count > 0)
+    LLDB_LOG(log, "  Name: \"{0}\" Vector: {1} x {2} bytes", m_name.c_str(),
+             m_vector_count, m_byte_size);
+  else
+    LLDB_LOG(log, "  Name: \"{0}\" Size: {1} bytes", m_name.c_str(),
+             m_byte_size);
+}
+
+RegisterUnion::RegisterUnion(std::string id, std::vector<Field> fields)
+    : m_id(std::move(id)), m_size(0), m_fields(std::move(fields)) {
+  assert(!m_fields.empty() && "Union must have at least one field");
+  for (const Field &field : m_fields)
+    m_size = std::max(m_size, field.GetTotalByteSize());
+}
+
+void RegisterUnion::DumpToLog(Log *log) const {
+  LLDB_LOG(log, "Union ID: \"{0}\" Fields: {1}", m_id.c_str(), m_fields.size());
+  for (const Field &field : m_fields)
+    field.DumpToLog(log);
+}

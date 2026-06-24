@@ -32,6 +32,11 @@ public:
                                const lldb_private::RegisterFlags &flags,
                                uint32_t byte_size) override;
 
+  CompilerType
+  GetRegisterUnionType(const std::string &name,
+                       const lldb_private::RegisterUnion &union_type,
+                       uint32_t byte_size) override;
+
 private:
   Target &m_target;
 };

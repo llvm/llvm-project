@@ -15,28 +15,29 @@ using namespace lldb_private;
 
 TEST(DoDumpRegisterInfoTest, MinimumInfo) {
   StreamString strm;
-  DoDumpRegisterInfo(strm, "foo", nullptr, 4, {}, {}, {}, nullptr, 0);
+  DoDumpRegisterInfo(strm, "foo", nullptr, 4, {}, {}, {}, nullptr, nullptr, 0);
   ASSERT_EQ(strm.GetString(), "       Name: foo\n"
                               "       Size: 4 bytes (32 bits)");
 }
 
 TEST(DoDumpRegisterInfoTest, AltName) {
   StreamString strm;
-  DoDumpRegisterInfo(strm, "foo", "bar", 4, {}, {}, {}, nullptr, 0);
+  DoDumpRegisterInfo(strm, "foo", "bar", 4, {}, {}, {}, nullptr, nullptr, 0);
   ASSERT_EQ(strm.GetString(), "       Name: foo (bar)\n"
                               "       Size: 4 bytes (32 bits)");
 }
 
 TEST(DoDumpRegisterInfoTest, Invalidates) {
   StreamString strm;
-  DoDumpRegisterInfo(strm, "foo", nullptr, 4, {"foo2"}, {}, {}, nullptr, 0);
+  DoDumpRegisterInfo(strm, "foo", nullptr, 4, {"foo2"}, {}, {}, nullptr,
+                     nullptr, 0);
   ASSERT_EQ(strm.GetString(), "       Name: foo\n"
                               "       Size: 4 bytes (32 bits)\n"
                               "Invalidates: foo2");
 
   strm.Clear();
   DoDumpRegisterInfo(strm, "foo", nullptr, 4, {"foo2", "foo3", "foo4"}, {}, {},
-                     nullptr, 0);
+                     nullptr, nullptr, 0);
   ASSERT_EQ(strm.GetString(), "       Name: foo\n"
                               "       Size: 4 bytes (32 bits)\n"
                               "Invalidates: foo2, foo3, foo4");
@@ -44,14 +45,15 @@ TEST(DoDumpRegisterInfoTest, Invalidates) {
 
 TEST(DoDumpRegisterInfoTest, ReadFrom) {
   StreamString strm;
-  DoDumpRegisterInfo(strm, "foo", nullptr, 4, {}, {"foo1"}, {}, nullptr, 0);
+  DoDumpRegisterInfo(strm, "foo", nullptr, 4, {}, {"foo1"}, {}, nullptr,
+                     nullptr, 0);
   ASSERT_EQ(strm.GetString(), "       Name: foo\n"
                               "       Size: 4 bytes (32 bits)\n"
                               "  Read from: foo1");
 
   strm.Clear();
   DoDumpRegisterInfo(strm, "foo", nullptr, 4, {}, {"foo1", "foo2", "foo3"}, {},
-                     nullptr, 0);
+                     nullptr, nullptr, 0);
   ASSERT_EQ(strm.GetString(), "       Name: foo\n"
                               "       Size: 4 bytes (32 bits)\n"
                               "  Read from: foo1, foo2, foo3");
@@ -60,14 +62,15 @@ TEST(DoDumpRegisterInfoTest, ReadFrom) {
 TEST(DoDumpRegisterInfoTest, InSets) {
   StreamString strm;
   DoDumpRegisterInfo(strm, "foo", nullptr, 4, {}, {}, {{"set1", 101}}, nullptr,
-                     0);
+                     nullptr, 0);
   ASSERT_EQ(strm.GetString(), "       Name: foo\n"
                               "       Size: 4 bytes (32 bits)\n"
                               "    In sets: set1 (index 101)");
 
   strm.Clear();
   DoDumpRegisterInfo(strm, "foo", nullptr, 4, {}, {},
-                     {{"set1", 0}, {"set2", 1}, {"set3", 2}}, nullptr, 0);
+                     {{"set1", 0}, {"set2", 1}, {"set3", 2}}, nullptr, nullptr,
+                     0);
   ASSERT_EQ(strm.GetString(),
             "       Name: foo\n"
             "       Size: 4 bytes (32 bits)\n"
@@ -77,7 +80,8 @@ TEST(DoDumpRegisterInfoTest, InSets) {
 TEST(DoDumpRegisterInfoTest, MaxInfo) {
   StreamString strm;
   DoDumpRegisterInfo(strm, "foo", nullptr, 4, {"foo2", "foo3"},
-                     {"foo3", "foo4"}, {{"set1", 1}, {"set2", 2}}, nullptr, 0);
+                     {"foo3", "foo4"}, {{"set1", 1}, {"set2", 2}}, nullptr,
+                     nullptr, 0);
   ASSERT_EQ(strm.GetString(), "       Name: foo\n"
                               "       Size: 4 bytes (32 bits)\n"
                               "Invalidates: foo2, foo3\n"
@@ -94,7 +98,7 @@ TEST(DoDumpRegisterInfoTest, FieldsTable) {
       {RegisterFlags::Field("A", 24, 31), RegisterFlags::Field("B", 16, 23),
        RegisterFlags::Field("C", 8, 15), RegisterFlags::Field("D", 0, 7)});
 
-  DoDumpRegisterInfo(strm, "foo", nullptr, 4, {}, {}, {}, &flags, 100);
+  DoDumpRegisterInfo(strm, "foo", nullptr, 4, {}, {}, {}, &flags, nullptr, 100);
   ASSERT_EQ(strm.GetString(), "       Name: foo\n"
                               "       Size: 4 bytes (32 bits)\n"
                               "\n"
@@ -115,7 +119,7 @@ TEST(DoDumpRegisterInfoTest, Enumerators) {
                        RegisterFlags::Field("B", 16, 23),
                        RegisterFlags::Field("C", 8, 15, &enum_two)});
 
-  DoDumpRegisterInfo(strm, "abc", nullptr, 4, {}, {}, {}, &flags, 100);
+  DoDumpRegisterInfo(strm, "abc", nullptr, 4, {}, {}, {}, &flags, nullptr, 100);
   ASSERT_EQ(strm.GetString(),
             "       Name: abc\n"
             "       Size: 4 bytes (32 bits)\n"
@@ -127,4 +131,40 @@ TEST(DoDumpRegisterInfoTest, Enumerators) {
             "A: 0 = an_enumerator\n"
             "\n"
             "C: 1 = another_enumerator, 2 = another_enumerator_2");
+}
+
+TEST(DoDumpRegisterInfoTest, UnionFields) {
+  StreamString strm;
+  RegisterUnion union_type(
+      "fpu_type", {RegisterUnion::Field("float", lldb::eEncodingIEEE754,
+                                        lldb::eFormatFloat, 4),
+                   RegisterUnion::Field("double", lldb::eEncodingIEEE754,
+                                        lldb::eFormatFloat, 8)});
+
+  DoDumpRegisterInfo(strm, "ft0", nullptr, 8, {}, {}, {}, nullptr, &union_type,
+                     100);
+  ASSERT_EQ(strm.GetString(), "       Name: ft0\n"
+                              "       Size: 8 bytes (64 bits)\n"
+                              "\n"
+                              "  Union members:\n"
+                              "    float (4 bytes)\n"
+                              "    double (8 bytes)");
+}
+
+TEST(DoDumpRegisterInfoTest, UnionWithVectorFields) {
+  StreamString strm;
+  RegisterUnion union_type(
+      "vec_union", {RegisterUnion::Field("v4_float", lldb::eEncodingIEEE754,
+                                         lldb::eFormatFloat, 4, 4),
+                    RegisterUnion::Field("uint128", lldb::eEncodingUint,
+                                         lldb::eFormatHex, 16)});
+
+  DoDumpRegisterInfo(strm, "xmm0", nullptr, 16, {}, {}, {}, nullptr,
+                     &union_type, 100);
+  ASSERT_EQ(strm.GetString(), "       Name: xmm0\n"
+                              "       Size: 16 bytes (128 bits)\n"
+                              "\n"
+                              "  Union members:\n"
+                              "    v4_float (4 x 4 bytes)\n"
+                              "    uint128 (16 bytes)");
 }

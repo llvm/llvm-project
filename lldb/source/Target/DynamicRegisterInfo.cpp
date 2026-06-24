@@ -424,7 +424,8 @@ size_t DynamicRegisterInfo::SetRegisterInfo(
         // value_regs and invalidate_regs are filled by Finalize()
         nullptr,
         nullptr,
-        reg.flags_type};
+        reg.flags_type,
+        reg.union_type};
 
     m_regs.push_back(reg_info);
 

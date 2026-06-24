@@ -130,11 +130,13 @@ TEST(RegisterFlagsTest, RegisterFlagsPadding) {
 TEST(RegisterFieldsTest, ReverseFieldOrder) {
   // Unchanged
   RegisterFlags rf("", 4, {make_field(0, 31)});
-  ASSERT_EQ(0x12345678ULL, (unsigned long long)rf.ReverseFieldOrder(0x12345678));
+  ASSERT_EQ(0x12345678ULL,
+            (unsigned long long)rf.ReverseFieldOrder(0x12345678));
 
   // Swap the two halves around.
   RegisterFlags rf2("", 4, {make_field(16, 31), make_field(0, 15)});
-  ASSERT_EQ(0x56781234ULL, (unsigned long long)rf2.ReverseFieldOrder(0x12345678));
+  ASSERT_EQ(0x56781234ULL,
+            (unsigned long long)rf2.ReverseFieldOrder(0x12345678));
 
   // Many small fields.
   RegisterFlags rf3(
@@ -480,4 +482,48 @@ TEST(RegisterFlagsTest, EnumsToXML) {
                               "<enum id=\"enum_b\" size=\"4\">\n"
                               "  <evalue name=\"one\" value=\"1\"/>\n"
                               "</enum>\n");
+}
+
+TEST(RegisterUnionTest, ScalarField) {
+  RegisterUnion::Field f("float_view", eEncodingIEEE754, eFormatFloat, 4);
+  ASSERT_EQ(f.GetName(), "float_view");
+  ASSERT_EQ(f.GetEncoding(), eEncodingIEEE754);
+  ASSERT_EQ(f.GetFormat(), eFormatFloat);
+  ASSERT_EQ(f.GetByteSize(), 4u);
+  ASSERT_EQ(f.GetVectorCount(), 0u);
+  ASSERT_FALSE(f.IsVector());
+  ASSERT_EQ(f.GetTotalByteSize(), 4u);
+}
+
+TEST(RegisterUnionTest, VectorField) {
+  RegisterUnion::Field f("v4_float", eEncodingIEEE754, eFormatFloat, 4, 4);
+  ASSERT_EQ(f.GetName(), "v4_float");
+  ASSERT_TRUE(f.IsVector());
+  ASSERT_EQ(f.GetByteSize(), 4u);
+  ASSERT_EQ(f.GetVectorCount(), 4u);
+  ASSERT_EQ(f.GetTotalByteSize(), 16u);
+}
+
+TEST(RegisterUnionTest, Construction) {
+  RegisterUnion u(
+      "test_union",
+      {RegisterUnion::Field("f32", eEncodingIEEE754, eFormatFloat, 4),
+       RegisterUnion::Field("f64", eEncodingIEEE754, eFormatFloat, 8)});
+  ASSERT_EQ(u.GetID(), "test_union");
+  ASSERT_EQ(u.GetFields().size(), 2u);
+  ASSERT_EQ(u.GetFields()[0].GetName(), "f32");
+  ASSERT_EQ(u.GetFields()[1].GetName(), "f64");
+}
+
+TEST(RegisterUnionTest, MixedScalarAndVector) {
+  RegisterUnion u(
+      "mixed",
+      {RegisterUnion::Field("f", eEncodingIEEE754, eFormatFloat, 4),
+       RegisterUnion::Field("v4f", eEncodingIEEE754, eFormatFloat, 4, 4),
+       RegisterUnion::Field("i", eEncodingUint, eFormatHex, 8)});
+  ASSERT_EQ(u.GetFields().size(), 3u);
+  ASSERT_FALSE(u.GetFields()[0].IsVector());
+  ASSERT_TRUE(u.GetFields()[1].IsVector());
+  ASSERT_EQ(u.GetFields()[1].GetTotalByteSize(), 16u);
+  ASSERT_FALSE(u.GetFields()[2].IsVector());
 }

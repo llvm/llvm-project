@@ -22,11 +22,15 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/RegisterFlags.h"
 #include "lldb/Target/SectionLoadList.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "lldb/Utility/Endian.h"
 #include "lldb/Utility/RegisterValue.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "llvm/Support/Errno.h"
 
 using namespace lldb;
@@ -204,18 +208,64 @@ protected:
           auto arg_str = entry.ref();
           arg_str.consume_front("$");
 
-          if (const RegisterInfo *reg_info =
-                  reg_ctx->GetRegisterInfoByName(arg_str)) {
-            // If they have asked for a specific format don't obscure that by
-            // printing flags afterwards.
+          // Try the full name first. If not found and the name contains a
+          // dot, try splitting into "register.field" for union member access.
+          llvm::StringRef reg_name_part = arg_str;
+          llvm::StringRef field_name;
+          const RegisterInfo *reg_info =
+              reg_ctx->GetRegisterInfoByName(arg_str);
+          if (!reg_info) {
+            if (auto dot_pos = arg_str.find('.');
+                dot_pos != llvm::StringRef::npos) {
+              reg_name_part = arg_str.substr(0, dot_pos);
+              field_name = arg_str.substr(dot_pos + 1);
+              reg_info = reg_ctx->GetRegisterInfoByName(reg_name_part);
+            }
+          }
+
+          if (!reg_info) {
+            result.AppendErrorWithFormat("Invalid register name '%s'",
+                                         arg_str.str().c_str());
+          } else if (field_name.empty()) {
             bool print_flags =
                 !m_format_options.GetFormatValue().OptionWasSet();
             if (!DumpRegister(m_exe_ctx, strm, *reg_ctx, *reg_info,
                               print_flags))
               strm.Printf("%-12s = error: unavailable\n", reg_info->name);
+          } else if (!reg_info->union_type) {
+            result.AppendErrorWithFormat(
+                "Register '%s' does not have a union type",
+                reg_name_part.str().c_str());
+          } else if (reg_info->byte_size != 4 && reg_info->byte_size != 8) {
+            result.AppendErrorWithFormat(
+                "Union field access not supported for %u-byte registers",
+                reg_info->byte_size);
           } else {
-            result.AppendErrorWithFormat("Invalid register name '%s'",
-                                         arg_str.str().c_str());
+            RegisterValue reg_value;
+            if (!reg_ctx->ReadRegister(reg_info, reg_value)) {
+              strm.Printf("%-12s = error: unavailable\n", reg_info->name);
+            } else if (auto target_sp = m_exe_ctx.GetTargetSP()) {
+              CompilerType union_ct = target_sp->GetRegisterUnionType(
+                  reg_info->name, *reg_info->union_type, reg_info->byte_size);
+              uint64_t raw = reg_info->byte_size == 4 ? reg_value.GetAsUInt32()
+                                                      : reg_value.GetAsUInt64();
+              DataExtractor de{&raw, reg_info->byte_size,
+                               endian::InlHostByteOrder(), 8};
+              auto vobj_sp = ValueObjectConstResult::Create(
+                  m_exe_ctx.GetBestExecutionContextScope(), union_ct,
+                  ConstString(reg_info->name), de);
+              if (auto child = vobj_sp->GetChildMemberWithName(field_name)) {
+                const char *value_str = child->GetValueAsCString();
+                strm.Indent();
+                strm.Printf("%s.%s = %s\n", reg_info->name,
+                            field_name.str().c_str(),
+                            value_str ? value_str : "<unavailable>");
+              } else {
+                result.AppendErrorWithFormat("No field '%s' in register '%s'",
+                                             field_name.str().c_str(),
+                                             reg_info->name);
+              }
+            }
           }
         }
       }

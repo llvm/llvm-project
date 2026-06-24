@@ -11,6 +11,8 @@
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "RegisterTypeBuilderClang.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/DataFormatters/DataVisualization.h"
+#include "lldb/DataFormatters/TypeSummary.h"
 #include "lldb/Target/RegisterFlags.h"
 #include "lldb/lldb-enumerations.h"
 
@@ -118,4 +120,64 @@ CompilerType RegisterTypeBuilderClang::GetRegisterType(
   }
 
   return fields_type;
+}
+
+CompilerType RegisterTypeBuilderClang::GetRegisterUnionType(
+    const std::string &name, const lldb_private::RegisterUnion &union_type,
+    uint32_t byte_size) {
+  lldb::TypeSystemClangSP type_system =
+      ScratchTypeSystemClang::GetForTarget(m_target);
+  assert(type_system && "ScratchTypeSystemClang must be available");
+
+  std::string register_type_name = "__lldb_register_union_" + name;
+  // See if we have made this type before and can reuse it.
+  CompilerType existing_type =
+      type_system->GetTypeForIdentifier<clang::CXXRecordDecl>(
+          type_system->getASTContext(), register_type_name);
+
+  if (existing_type)
+    return existing_type;
+
+  CompilerType union_ct = type_system->CreateRecordType(
+      nullptr, OptionalClangModuleID(), register_type_name,
+      llvm::to_underlying(clang::TagTypeKind::Union), lldb::eLanguageTypeC);
+  type_system->StartTagDeclarationDefinition(union_ct);
+
+  for (const RegisterUnion::Field &field : union_type.GetFields()) {
+    CompilerType field_type;
+
+    if (field.IsVector()) {
+      // Create element type from encoding and element byte size.
+      CompilerType element_type =
+          type_system->GetBuiltinTypeForEncodingAndBitSize(
+              field.GetEncoding(), field.GetByteSize() * 8);
+      // Create a constant-size array type for the vector.
+      field_type = type_system->CreateArrayType(
+          element_type, field.GetVectorCount(), /*is_vector=*/false);
+    } else {
+      // Scalar field: use the full byte size.
+      field_type = type_system->GetBuiltinTypeForEncodingAndBitSize(
+          field.GetEncoding(), field.GetByteSize() * 8);
+    }
+
+    // 0 for bitfield size means a full-type member (not a bitfield).
+    type_system->AddFieldToRecordType(union_ct, field.GetName(), field_type,
+                                      /*bitfield_bit_size=*/0);
+  }
+
+  type_system->CompleteTagDeclarationDefinition(union_ct);
+
+  // Register an inline-children summary so GetSummary() returns
+  // "(field1 = val1, field2 = val2)" for union-typed registers.
+  TypeSummaryImpl::Flags summary_flags;
+  summary_flags.SetShowMembersOneLiner(true);
+  auto summary_sp = std::make_shared<StringSummaryFormat>(summary_flags, "");
+  lldb::TypeCategoryImplSP category_sp;
+  DataVisualization::Categories::GetCategory(ConstString("default"),
+                                             category_sp);
+  if (category_sp)
+    category_sp->AddTypeSummary(register_type_name, lldb::eFormatterMatchExact,
+                                summary_sp);
+
+  return union_ct;
 }

@@ -24,6 +24,7 @@ namespace lldb_private {
 class Platform;
 class ExecutionContext;
 class RegisterFlags;
+class RegisterUnion;
 
 typedef llvm::SmallString<256> PathSmallString;
 
@@ -68,6 +69,7 @@ struct RegisterInfo {
   /// this is mutable. The data pointed to is still const, so you must swap a
   /// whole set of flags for another.
   mutable const RegisterFlags *flags_type;
+  mutable const RegisterUnion *union_type;
 
   llvm::ArrayRef<uint8_t> data(const uint8_t *context_base) const {
     return llvm::ArrayRef<uint8_t>(context_base + byte_offset, byte_size);

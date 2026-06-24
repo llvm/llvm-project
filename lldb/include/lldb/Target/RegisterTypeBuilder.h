@@ -14,6 +14,8 @@
 
 namespace lldb_private {
 
+class RegisterUnion;
+
 class RegisterTypeBuilder : public PluginInterface {
 public:
   ~RegisterTypeBuilder() override = default;
@@ -21,6 +23,11 @@ public:
   virtual CompilerType GetRegisterType(const std::string &name,
                                        const lldb_private::RegisterFlags &flags,
                                        uint32_t byte_size) = 0;
+
+  virtual CompilerType
+  GetRegisterUnionType(const std::string &name,
+                       const lldb_private::RegisterUnion &union_type,
+                       uint32_t byte_size) = 0;
 
 protected:
   RegisterTypeBuilder() = default;
