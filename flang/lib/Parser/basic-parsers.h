@@ -848,6 +848,28 @@ public:
   std::optional<resultType> Parse(ParseState &state) const {
     if (UserState * ustate{state.userState()}) {
       if (!ustate->features().IsEnabled(LF)) {
+        if constexpr (LF == LanguageFeature::LogicalAbbreviations) {
+          // The feature is disabled, but if the source actually spells a
+          // logical abbreviation here, remember its location so that a later
+          // parse failure at this spot can suggest -flogical-abbreviations.
+          // Every such abbreviation begins with '.', so only attempt the
+          // speculative parse (which copies the parse state) when the next
+          // non-blank character could start one; this keeps the common case --
+          // a primary or operator that is not an abbreviation -- cheap.
+          const char *at{state.GetLocation()};
+          const char *p{at};
+          const char *limit{at + state.BytesRemaining()};
+          while (p < limit && *p == ' ') {
+            ++p;
+          }
+          if (p < limit && *p == '.') {
+            ParseState fork{state};
+            if (parser_.Parse(fork)) {
+              ustate->NoteDisabledLogicalAbbreviation(
+                  CharBlock{at, std::max(fork.GetLocation(), at + 1)});
+            }
+          }
+        }
         return std::nullopt;
       }
     }

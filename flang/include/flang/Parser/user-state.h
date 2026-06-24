@@ -89,6 +89,24 @@ public:
     return oldStructureComponents_.find(name) != oldStructureComponents_.end();
   }
 
+  // When the LogicalAbbreviations feature is disabled, the parser records the
+  // source location of any logical abbreviation (.T./.F./.N./.A./.O.) it
+  // encounters, so that a parse failure on that same source line can suggest
+  // enabling the -flogical-abbreviations option.  Matching by source line
+  // (rather than by exact position) is deliberate: a misparse triggered by an
+  // abbreviation typically reports its failure a few columns away from the
+  // abbreviation itself (e.g. 'OnGPU = .F.' is first misread as a statement
+  // function, so the error points at the '='), while requiring the same line
+  // still prevents the hint from firing on an unrelated failure elsewhere in a
+  // file that merely uses such a spelling as a defined operator.
+  void NoteDisabledLogicalAbbreviation(CharBlock at) {
+    disabledLogicalAbbreviations_.insert(at);
+  }
+  // Recorded in increasing source order (std::set ordered by CharBlock).
+  const std::set<CharBlock> &disabledLogicalAbbreviations() const {
+    return disabledLogicalAbbreviations_;
+  }
+
 private:
   const AllCookedSources &allCooked_;
 
@@ -101,6 +119,7 @@ private:
   int nonlabelDoConstructNestingDepth_{0};
 
   std::set<CharBlock> oldStructureComponents_;
+  std::set<CharBlock> disabledLogicalAbbreviations_;
 
   common::LanguageFeatureControl features_;
 };

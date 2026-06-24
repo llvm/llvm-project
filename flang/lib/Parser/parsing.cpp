@@ -13,7 +13,10 @@
 #include "flang/Parser/preprocessor.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Parser/source.h"
+#include "flang/Parser/user-state.h"
 #include "llvm/Support/raw_ostream.h"
+#include <set>
+#include <utility>
 
 namespace Fortran::parser {
 
@@ -292,8 +295,49 @@ void Parsing::Parse(llvm::raw_ostream &out) {
   CHECK(
       !parseState.anyErrorRecovery() || parseState.messages().AnyFatalError());
   consumedWholeFile_ = parseState.IsAtEnd();
-  messages_.Annex(std::move(parseState.messages()));
   finalRestingPlace_ = parseState.GetLocation();
+  SuggestLogicalAbbreviations(userState, parseState.messages());
+  messages_.Annex(std::move(parseState.messages()));
+}
+
+// When the LogicalAbbreviations feature is disabled, the parser records the
+// location of every logical abbreviation (.T./.F./.N./.A./.O.) it sees.  If the
+// parse then failed on a source line where such a spelling appears, suggest the
+// -flogical-abbreviations option.  Matching the suggestion to a failing source
+// line (rather than firing on any recorded spelling) keeps it from appearing
+// when an unrelated failure occurs in a file that legitimately uses such a
+// spelling as a defined operator on a different line.  Only one suggestion is
+// emitted, anchored at the first such abbreviation in source order.
+void Parsing::SuggestLogicalAbbreviations(
+    const UserState &userState, Messages &messages) {
+  const std::set<CharBlock> &abbreviations{
+      userState.disabledLogicalAbbreviations()};
+  if (abbreviations.empty()) {
+    return;
+  }
+  std::set<std::pair<const SourceFile *, int>> errorLines;
+  for (const Message &message : messages.messages()) {
+    if (!message.IsFatal()) {
+      continue;
+    }
+    if (std::optional<CharBlock> errorLoc{message.GetCookedSourceLocation()}) {
+      if (auto pos{allCooked_.GetSourcePositionRange(*errorLoc)}) {
+        errorLines.emplace(&*pos->first.sourceFile, pos->first.line);
+      }
+    }
+  }
+  if (errorLines.empty()) {
+    return;
+  }
+  for (const CharBlock &abbreviation : abbreviations) {
+    if (auto pos{allCooked_.GetSourcePositionRange(abbreviation)}) {
+      if (errorLines.count({&*pos->first.sourceFile, pos->first.line}) > 0) {
+        messages.Say(abbreviation,
+            "This nonstandard logical abbreviation requires the '-flogical-abbreviations' option"_en_US);
+        return;
+      }
+    }
+  }
 }
 
 void Parsing::ClearLog() { log_.clear(); }
