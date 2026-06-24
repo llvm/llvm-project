@@ -90,6 +90,7 @@ Clang-Tidy Checks
    :doc:`bugprone-chained-comparison <bugprone/chained-comparison>`,
    :doc:`bugprone-command-processor <bugprone/command-processor>`,
    :doc:`bugprone-compare-pointer-to-member-virtual-function <bugprone/compare-pointer-to-member-virtual-function>`,
+   :doc:`bugprone-container-bounds-check-overflow <bugprone/container-bounds-check-overflow>`, "Yes"
    :doc:`bugprone-copy-constructor-init <bugprone/copy-constructor-init>`, "Yes"
    :doc:`bugprone-copy-constructor-mutates-argument <bugprone/copy-constructor-mutates-argument>`,
    :doc:`bugprone-crtp-constructor-accessibility <bugprone/crtp-constructor-accessibility>`, "Yes"
