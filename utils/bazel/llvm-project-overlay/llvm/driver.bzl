@@ -117,18 +117,20 @@ def select_driver_tools(flag):
     return tools
 
 def _generate_driver_tools_def_impl(ctx):
-    # Depending on how the LLVM build files are included,
-    # it may or may not have the @llvm-project repo prefix.
-    # Compare just on the name. We could also include the package,
-    # but the name itself is unique in practice.
-    label_to_name = {Label(v).name: k for k, v in _TOOLS.items()}
+    label_to_name = {
+        (Label(v).package, Label(v).name): k
+        for k, v in _TOOLS.items()
+    }
 
     # Reverse sort by the *main* tool name, but keep aliases together.
     # This is consistent with how tools/llvm-driver/CMakeLists.txt does it,
     # and this makes sure that more specific tools are checked first.
     # For example, "clang-scan-deps" should not match "clang".
     tools = sorted(
-        [label_to_name[tool.label.name] for tool in ctx.attr.driver_tools],
+        [
+            label_to_name[(tool.label.package, tool.label.name)]
+            for tool in ctx.attr.driver_tools
+        ],
         reverse = True,
     )
     tool_alias_pairs = []
