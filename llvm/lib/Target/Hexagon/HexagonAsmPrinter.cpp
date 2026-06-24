@@ -753,6 +753,16 @@ void HexagonAsmPrinter::emitInstruction(const MachineInstr *MI) {
   Hexagon_MC::verifyInstructionPredicates(MI->getOpcode(),
                                           getSubtargetInfo().getFeatureBits());
 
+  // Crash is emitted as R1 = memw(R1++#0): the load destination and the
+  // post-increment destination both write R1, so the hardware raises a
+  // "multiple writes to register" exception.  We bypass the normal MCInst
+  // path because the assembler would (correctly) reject the duplicate
+  // destination.
+  if (MI->getOpcode() == Hexagon::PS_crash) {
+    OutStreamer->emitInt32(LOAD_MULT_REG_WRITE);
+    return;
+  }
+
   MCInst MCB;
   MCB.setOpcode(Hexagon::BUNDLE);
   MCB.addOperand(MCOperand::createImm(0));

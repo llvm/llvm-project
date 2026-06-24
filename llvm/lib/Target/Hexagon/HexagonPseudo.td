@@ -617,7 +617,11 @@ defm PS_storeri : NewCircularStore<IntRegs, WordAccess>;
 defm PS_storerd : NewCircularStore<DoubleRegs, WordAccess>;
 
 // A pseudo that generates a runtime crash. This is used to implement
-// __builtin_trap.
+// llvm.trap.  It is emitted directly by the AsmPrinter as the 32-bit
+// word 0x9b810001, which encodes R1 = memw(R1++#0) (L2_loadri_pi with
+// Rd==Rx==R1).  The load destination and the post-increment destination
+// both write R1, so the hardware raises a "multiple writes to register"
+// exception.
 let hasSideEffects = 1, isPseudo = 1, isCodeGenOnly = 1, isSolo = 1 in
 def PS_crash: InstHexagon<(outs), (ins), "", [], "", PSEUDO, TypePSEUDO>;
 
