@@ -43,9 +43,7 @@ public:
 
   /// Extract from system-header declarations during SSAF contributor
   /// enumeration. Defaults to true to preserve the original behavior.
-  /// Cleared by `--ssaf-no-extract-from-system-headers` (negative-marshalled
-  /// flag) when the caller wants to scope contributor enumeration to
-  /// user-source decls.
+  /// Controlled by: --ssaf-no-extract-from-system-headers
   LLVM_PREFERRED_TYPE(bool)
   unsigned ExtractFromSystemHeaders : 1;
 
