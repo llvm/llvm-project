@@ -217,19 +217,5 @@ SupportFileNSP SupportFileList::GetSupportFileAtIndex(size_t idx) const {
   return std::make_shared<SupportFile>();
 }
 
-// Return the size in bytes that this object takes in memory. This returns the
-// size in bytes of this object's member variables and any FileSpec objects its
-// member variables contain, the result doesn't not include the string values
-// for the directories any filenames as those are in shared string pools.
-size_t FileSpecList::MemorySize() const {
-  size_t mem_size = sizeof(FileSpecList);
-  collection::const_iterator pos, end = m_files.end();
-  for (pos = m_files.begin(); pos != end; ++pos) {
-    mem_size += pos->MemorySize();
-  }
-
-  return mem_size;
-}
-
 // Return the number of files in the file spec list.
 size_t FileSpecList::GetSize() const { return m_files.size(); }

@@ -90,8 +90,6 @@ public:
   // the location that contains this address.
   bool DumpLocations(Stream *s, const Address &address);
 
-  size_t MemorySize() const;
-
   void CalculateSymbolContext(SymbolContext *sc);
 
   bool IsInScope(StackFrame *frame);
