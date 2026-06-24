@@ -1100,7 +1100,7 @@ enum {
 };
 
 // Values for dyld_chained_starts_in_segment::pointer_format.
-enum {
+enum ChainedPointerFormat {
   DYLD_CHAINED_PTR_ARM64E = 1,
   DYLD_CHAINED_PTR_64 = 2,
   DYLD_CHAINED_PTR_32 = 3,
