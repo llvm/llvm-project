@@ -19564,6 +19564,16 @@ SDValue DAGCombiner::combineRepeatedFPDivisors(SDNode *N) {
   if (N0CFP && (N0CFP->isOne() || N0CFP->isMinusOne()))
     return SDValue();
 
+  // Skip if we have subnormals, multiplying with the reciprocal will introduce
+  // infinities.
+  ConstantFPSDNode *N1CFP = isConstOrConstSplatFP(N1, /* AllowUndefs */ true);
+  if (N1CFP) {
+    FPClassTest FPClass = N1CFP->getValueAPF().classify();
+    if (FPClass == fcPosSubnormal || FPClass == fcNegSubnormal) {
+      return SDValue();
+    }
+  }
+
   // Exit early if the target does not want this transform or if there can't
   // possibly be enough uses of the divisor to make the transform worthwhile.
   unsigned MinUses = TLI.combineRepeatedFPDivisors();
