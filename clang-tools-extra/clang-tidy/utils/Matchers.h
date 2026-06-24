@@ -74,6 +74,22 @@ AST_MATCHER(Expr, hasUnevaluatedContext) {
   return false;
 }
 
+AST_MATCHER_P(Expr, ignoringCleanups, ast_matchers::internal::Matcher<Expr>,
+              InnerMatcher) {
+  const Expr *E = &Node;
+  const Expr *LastE = nullptr;
+  while (E != LastE) {
+    LastE = E;
+    if (const auto *EWC = dyn_cast<ExprWithCleanups>(E))
+      E = EWC->getSubExpr();
+    else if (const auto *BTE = dyn_cast<CXXBindTemporaryExpr>(E))
+      E = BTE->getSubExpr();
+  }
+  if (!E)
+    return false;
+  return InnerMatcher.matches(*E, Finder, Builder);
+}
+
 // A matcher implementation that matches a list of type name regular expressions
 // against a NamedDecl. If a regular expression contains the substring "::"
 // matching will occur against the qualified name, otherwise only the typename.
