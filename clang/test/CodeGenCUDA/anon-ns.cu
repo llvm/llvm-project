@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -cuid=abc \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device -cuid=abc \
 // RUN:   -aux-triple x86_64-unknown-linux-gnu -std=c++17 -fgpu-rdc \
 // RUN:   -emit-llvm -o - -x hip %s > %t.dev
 
