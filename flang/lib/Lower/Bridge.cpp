@@ -5569,8 +5569,8 @@ private:
 
     // Helper to generate the code evaluating the right-hand side.
     auto evaluateRhs = [&](Fortran::lower::StatementContext &stmtCtx) {
-      hlfir::Entity rhs = Fortran::lower::convertExprToHLFIR(
-          loc, *this, assign.rhs, localSymbols, stmtCtx);
+      hlfir::Entity rhs = Fortran::lower::convertAssignmentRhsToHLFIR(
+          loc, *this, assign.lhs, assign.rhs, localSymbols, stmtCtx);
       // Load trivial scalar RHS to allow the loads to be hoisted outside of
       // loops early if possible. This also dereferences pointer and
       // allocatable RHS: the target is being assigned from.

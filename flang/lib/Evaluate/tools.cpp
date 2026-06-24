@@ -1321,6 +1321,67 @@ bool HasVectorSubscript(const ActualArgument &actual) {
   return expr && HasVectorSubscript(*expr);
 }
 
+namespace {
+
+struct HasParenthesesHelper : public AnyTraverse<HasParenthesesHelper> {
+  using Base = AnyTraverse<HasParenthesesHelper>;
+  HasParenthesesHelper() : Base{*this} {}
+  using Base::operator();
+  template <typename T> bool operator()(const Parentheses<T> &) const {
+    return true;
+  }
+};
+
+struct HasProcedureRefHelper : public AnyTraverse<HasProcedureRefHelper> {
+  using Base = AnyTraverse<HasProcedureRefHelper>;
+  HasProcedureRefHelper() : Base{*this} {}
+  using Base::operator();
+  bool operator()(const ProcedureRef &) const { return true; }
+};
+
+struct HasSubtractHelper : public AnyTraverse<HasSubtractHelper> {
+  using Base = AnyTraverse<HasSubtractHelper>;
+  HasSubtractHelper() : Base{*this} {}
+  using Base::operator();
+  template <typename T> bool operator()(const Subtract<T> &) const {
+    return true;
+  }
+};
+
+struct HasVolatileOrAsynchronousSymbolHelper
+    : public AnyTraverse<HasVolatileOrAsynchronousSymbolHelper> {
+  using Base = AnyTraverse<HasVolatileOrAsynchronousSymbolHelper>;
+  HasVolatileOrAsynchronousSymbolHelper() : Base{*this} {}
+  using Base::operator();
+  bool operator()(const Symbol &symbol) const {
+    const Symbol &ultimate{symbol.GetUltimate()};
+    if (ultimate.attrs().HasAny(
+            {semantics::Attr::VOLATILE, semantics::Attr::ASYNCHRONOUS}))
+      return true;
+    if (const auto *assoc{ultimate.detailsIf<semantics::AssocEntityDetails>()})
+      return (*this)(assoc->expr());
+    return false;
+  }
+};
+
+} // namespace
+
+bool HasParentheses(const Expr<SomeType> &expr) {
+  return HasParenthesesHelper{}(expr);
+}
+
+bool HasProcedureRef(const Expr<SomeType> &expr) {
+  return HasProcedureRefHelper{}(expr);
+}
+
+bool HasSubtract(const Expr<SomeType> &expr) {
+  return HasSubtractHelper{}(expr);
+}
+
+bool HasVolatileOrAsynchronousSymbol(const Expr<SomeType> &expr) {
+  return HasVolatileOrAsynchronousSymbolHelper{}(expr);
+}
+
 bool IsArraySection(const Expr<SomeType> &expr) {
   return expr.Rank() > 0 && IsVariable(expr) && !UnwrapWholeSymbolDataRef(expr);
 }

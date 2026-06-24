@@ -33,10 +33,16 @@
 #include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/IR/IRMapping.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/CommandLine.h"
 #include <optional>
 
 namespace {
+
+static llvm::cl::opt<bool> enableSplitSumExpressionTreeLowering(
+    "enable-split-sum-expression-tree-lowering", llvm::cl::Hidden,
+    llvm::cl::desc("Enable experimental split sum expression tree lowering"));
 
 // This was modelled after isParenthesizedVariable()
 template <typename T>
@@ -49,6 +55,113 @@ static bool isParenthesized(const Fortran::evaluate::Expr<T> &expr) {
     return Fortran::common::visit(
         [&](const auto &x) { return isParenthesized(x); }, expr.u);
   }
+}
+
+template <int KIND>
+using Real = Fortran::evaluate::Type<Fortran::common::TypeCategory::Real, KIND>;
+
+template <int KIND>
+using RealExpr = Fortran::evaluate::Expr<Real<KIND>>;
+
+template <int KIND>
+static void flattenTopLevelAdds(const RealExpr<KIND> &expr,
+                                llvm::SmallVectorImpl<RealExpr<KIND>> &terms) {
+  if (const auto *add =
+          std::get_if<Fortran::evaluate::Add<Real<KIND>>>(&expr.u)) {
+    flattenTopLevelAdds(add->left(), terms);
+    flattenTopLevelAdds(add->right(), terms);
+    return;
+  }
+  terms.push_back(expr);
+}
+
+template <int KIND>
+static RealExpr<KIND>
+buildRightAssociatedAddFold(llvm::ArrayRef<RealExpr<KIND>> terms) {
+  assert(!terms.empty() && "cannot build empty add fold");
+  if (terms.size() == 1)
+    return terms.front();
+  RealExpr<KIND> result{terms.back()};
+  for (const RealExpr<KIND> &term : llvm::reverse(terms.drop_back()))
+    result = RealExpr<KIND>{Fortran::evaluate::Add<Real<KIND>>{term, result}};
+  return result;
+}
+
+template <typename L, typename R>
+static std::optional<Fortran::lower::SomeExpr>
+tryBuildSplitSumExpressionTree(const L &, const R &) {
+  return std::nullopt;
+}
+
+template <int KIND>
+static std::optional<Fortran::lower::SomeExpr>
+tryBuildSplitSumExpressionTree(const RealExpr<KIND> &lhs,
+                               const RealExpr<KIND> &rhs) {
+  if (!std::get_if<Fortran::evaluate::Add<Real<KIND>>>(&rhs.u))
+    return std::nullopt;
+
+  llvm::SmallVector<RealExpr<KIND>, 8> terms;
+  flattenTopLevelAdds(rhs, terms);
+  if (terms.size() <= 2)
+    return std::nullopt;
+
+  llvm::SmallVector<RealExpr<KIND>, 2> head{terms[0], terms[1]};
+  llvm::SmallVector<RealExpr<KIND>, 8> tail(terms.begin() + 2, terms.end());
+  RealExpr<KIND> headExpr = buildRightAssociatedAddFold<KIND>(head);
+  RealExpr<KIND> tailExpr = buildRightAssociatedAddFold<KIND>(tail);
+  return Fortran::lower::SomeExpr{RealExpr<KIND>{
+      Fortran::evaluate::Add<Real<KIND>>{std::move(tailExpr), headExpr}}};
+}
+
+template <Fortran::common::TypeCategory CAT>
+static std::optional<Fortran::lower::SomeExpr> tryBuildSplitSumExpressionTree(
+    const Fortran::evaluate::Expr<Fortran::evaluate::SomeKind<CAT>> &lhs,
+    const Fortran::evaluate::Expr<Fortran::evaluate::SomeKind<CAT>> &rhs) {
+  if constexpr (CAT == Fortran::common::TypeCategory::Real) {
+    return Fortran::common::visit(
+        [&](const auto &typedLhs) -> std::optional<Fortran::lower::SomeExpr> {
+          return Fortran::common::visit(
+              [&](const auto &typedRhs)
+                  -> std::optional<Fortran::lower::SomeExpr> {
+                return tryBuildSplitSumExpressionTree(typedLhs, typedRhs);
+              },
+              rhs.u);
+        },
+        lhs.u);
+  }
+  return std::nullopt;
+}
+
+static bool
+canBuildSplitSumExpressionTree(const Fortran::lower::SomeExpr &lhs,
+                               const Fortran::lower::SomeExpr &rhs) {
+  // The split rewrites a top-level addition chain. Subtraction would need to
+  // be carried as signed terms; division is safe here because it remains inside
+  // an individual term rather than changing the additive chain.
+  return rhs.Rank() == 0 && lhs.Rank() == 0 &&
+         !Fortran::evaluate::HasVectorSubscript(rhs) &&
+         !Fortran::evaluate::HasVectorSubscript(lhs) &&
+         !Fortran::evaluate::HasParentheses(rhs) &&
+         !Fortran::evaluate::HasSubtract(rhs) &&
+         !Fortran::evaluate::HasProcedureRef(rhs) &&
+         !Fortran::evaluate::HasProcedureRef(lhs) &&
+         !Fortran::evaluate::HasVolatileOrAsynchronousSymbol(rhs) &&
+         !Fortran::evaluate::HasVolatileOrAsynchronousSymbol(lhs);
+}
+
+static std::optional<Fortran::lower::SomeExpr>
+tryBuildSplitSumExpressionTree(const Fortran::lower::SomeExpr &lhs,
+                               const Fortran::lower::SomeExpr &rhs) {
+  return Fortran::common::visit(
+      [&](const auto &typedLhs) -> std::optional<Fortran::lower::SomeExpr> {
+        return Fortran::common::visit(
+            [&](const auto &typedRhs)
+                -> std::optional<Fortran::lower::SomeExpr> {
+              return tryBuildSplitSumExpressionTree(typedLhs, typedRhs);
+            },
+            rhs.u);
+      },
+      lhs.u);
 }
 
 /// Lower Designators to HLFIR.
@@ -2311,6 +2424,18 @@ hlfir::EntityWithAttributes Fortran::lower::convertExprToHLFIR(
     const Fortran::lower::SomeExpr &expr, Fortran::lower::SymMap &symMap,
     Fortran::lower::StatementContext &stmtCtx) {
   return HlfirBuilder(loc, converter, symMap, stmtCtx).gen(expr);
+}
+
+hlfir::EntityWithAttributes Fortran::lower::convertAssignmentRhsToHLFIR(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const Fortran::lower::SomeExpr &lhs, const Fortran::lower::SomeExpr &rhs,
+    Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx) {
+  if (enableSplitSumExpressionTreeLowering &&
+      canBuildSplitSumExpressionTree(lhs, rhs))
+    if (std::optional<Fortran::lower::SomeExpr> rewritten =
+            tryBuildSplitSumExpressionTree(lhs, rhs))
+      return HlfirBuilder(loc, converter, symMap, stmtCtx).gen(*rewritten);
+  return convertExprToHLFIR(loc, converter, rhs, symMap, stmtCtx);
 }
 
 fir::ExtendedValue Fortran::lower::convertToBox(
