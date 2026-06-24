@@ -528,11 +528,11 @@ class InlineBehavior;
 
 // Arbitrary differences are allowed.
 def InlineIgnore : InlineBehavior;
-// Allow caller to enable feature even if callee does not.
-// (InlineDefault caller features are a superset of callee features.)
+// A callee with this feature enabled cannot be inlined into a caller without
+// it enabled.
 def InlineDefault : InlineBehavior;
-// Allow callee to enable feature even if caller does not.
-// (InlineInverse caller features are a subset of callee features.)
+// A callee without this feature enabled cannot be inlined into a caller with
+// it enabled.
 def InlineInverse : InlineBehavior;
 
 //===----------------------------------------------------------------------===//
