@@ -505,7 +505,7 @@ struct SgToLaneLoadGather : public OpConversionPattern<xegpu::LoadGatherOp> {
     auto newOp = xegpu::LoadGatherOp::create(
         rewriter, op.getLoc(), distResultTy1D, distSource, distOffsets,
         distMask, op.getChunkSizeAttr(), op.getL1HintAttr(), op.getL2HintAttr(),
-        op.getL3HintAttr(), /*layout=*/nullptr, /*coalesce_hint=*/nullptr);
+        op.getL3HintAttr(), /*layout=*/nullptr, /*contiguous_chunk=*/nullptr);
 
     Value result = newOp->getResult(0);
     if (distResultTy1D != distResultTy)
@@ -1038,7 +1038,7 @@ struct SgToLaneStoreScatter
                                   distOffsets, distMask, op.getChunkSizeAttr(),
                                   op.getL1HintAttr(), op.getL2HintAttr(),
                                   op.getL3HintAttr(), /*layout=*/nullptr,
-                                  /*coalesce_hint=*/nullptr);
+                                  /*contiguous_chunk=*/nullptr);
     rewriter.eraseOp(op);
     return success();
   }

@@ -791,25 +791,17 @@ func.func @dpas_mx_scale_b_layout_not_distributable(%a : vector<8x16xf8E5M2>, %b
 }
 
 // -----
-func.func @coalesce_hint_not_power_of_two(%src: i64, %offset: vector<16xindex>, %mask: vector<16xi1>) {
-  // expected-error@+1 {{'factor' : 6 must be a power of two}}
-  %val = xegpu.load %src[%offset], %mask <{coalesce_hint = #xegpu.coalesce_hint<factor = 6>}>
+func.func @contiguous_chunk_too_small(%src: i64, %offset: vector<16xindex>, %mask: vector<16xi1>) {
+  // expected-error@+1 {{contiguous_chunk 1 must be >= 2}}
+  %val = xegpu.load %src[%offset], %mask <{contiguous_chunk = 1 : i64}>
       : i64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
   return
 }
 
 // -----
-func.func @coalesce_hint_factor_too_small(%src: i64, %offset: vector<16xindex>, %mask: vector<16xi1>) {
-  // expected-error@+1 {{'factor' : 1 must be >= 2}}
-  %val = xegpu.load %src[%offset], %mask <{coalesce_hint = #xegpu.coalesce_hint<factor = 1>}>
-      : i64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
-  return
-}
-
-// -----
-func.func @coalesce_hint_factor_does_not_divide(%src: i64, %offset: vector<6xindex>, %mask: vector<6xi1>) {
-  // expected-error@+1 {{coalesce_hint factor 4 must divide the innermost offsets dim 6}}
-  %val = xegpu.load %src[%offset], %mask <{coalesce_hint = #xegpu.coalesce_hint<factor = 4>}>
+func.func @contiguous_chunk_exceeds_inner(%src: i64, %offset: vector<6xindex>, %mask: vector<6xi1>) {
+  // expected-error@+1 {{contiguous_chunk 8 must not exceed the innermost offsets dim 6}}
+  %val = xegpu.load %src[%offset], %mask <{contiguous_chunk = 8 : i64}>
       : i64, vector<6xindex>, vector<6xi1> -> vector<6xf32>
   return
 }

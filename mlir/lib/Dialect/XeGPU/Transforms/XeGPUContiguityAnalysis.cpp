@@ -6,31 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the gather/scatter coalescing analysis. It decides
-// whether an `xegpu.load` / `xegpu.store` gather/scatter accesses `N`
-// contiguous elements per lane along the innermost dimension, and, if so,
-// stamps a `xegpu.coalesce_hint<factor = N>` attribute recording the chosen
-// factor. The decision is driven by a small XeGPU-local axis-info dataflow
-// analysis tracking per-axis `contiguity`, `constancy`, and `divisibility`.
+// This file implements the contiguity analysis. It computes, for a memory
+// operation (i.e., `xegpu.load` / `xegpu.store`), how many elements are
+// contiguous along the innermost offsets dimension, and stamps that count as an
+// attribute on the op. The analysis is a small XeGPU-local
+// axis-info dataflow tracking per-axis `contiguity`, `constancy`, and
+// `divisibility`; the stamped value is the inner-dim `contiguity`.
 //
-// The analysis performs no rewrite. The hint it stamps is turned into a
-// `lane_data` layout by `coalesceGatherScatter` (used by the test pass) or
-// read directly by layout propagation; the actual memory-message rewrite is
-// left to the downstream WG-to-SG / SG-to-Lane distribution passes, which
-// interpret `lane_data`.
+// Contiguity is a target-independent property of the offsets.
 //
 // The analysis tracks per-axis information for vectors of integer / index
-// type at any rank. The coalescing decision is computed against the
-// innermost dimension. 2-D offsets vectors with a leading unit dimension
-// (e.g. `vector<1x32xindex>`) are handled by treating the inner dim as the
-// lane dim.
+// type at any rank, against the innermost dimension.
 //
-// All-equal offsets ("uniform inner dim") are detected by the analysis
-// but the pass currently leaves such ops alone — there is no layout-only
-// encoding for "all lanes load the same scalar", and the previous
-// length-1-load + `vector.broadcast` rewrite was removed because it
-// conflicts with downstream layout propagation.
-//
+// The analysis gets it's inspiration from the Triton Axis info analysis.
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
@@ -43,14 +31,9 @@
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
-#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Matchers.h"
-#include "mlir/IR/PatternMatch.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/bit.h"
 #include "llvm/Support/MathExtras.h"
 #include <numeric>
 #include <optional>
@@ -74,25 +57,16 @@ namespace mlir::xegpu::detail::axis_dataflow {
 static constexpr int64_t kAxisInfoTop = 1LL << 30;
 
 /// Per-dimension axis information for an SSA value of integer / index type.
-///   - `contiguity[d]`: the largest N such that consecutive lanes along
-///     dimension `d` differ by exactly 1 in runs of length `N` (lane-stride
-///     1 contiguity).
-///   - `constancy[d]`: the largest N such that consecutive lanes along
-///     dimension `d` are all equal in runs of length `N`.
-///   - `divisibility[d]`: a power-of-two divisor of every element along
-///     dimension `d`.
-///   - `knownConstant`: scalar value if the entire vector is uniformly
-///     known to be a single constant.
-///   - `innerStride`: when set, every "row" along the innermost dimension
-///     is an arithmetic progression with this (constant) step. This is the
-///     general form of which `contiguity`/`constancy` are the two special
-///     cases: `innerStride = 1` is the stride-1 contiguous case (and implies
-///     `contiguity[innerDim] > 1`), `innerStride = 0` is the all-equal case
-///     (implies `constancy[innerDim] > 1`), and any other value (e.g. 4) is a
-///     strided progression that neither `contiguity` nor `constancy` can
-///     represent — both read 1 there. Per-row base may differ across outer
-///     indices; per-row alignment is captured by `divisibility[innerDim]`.
-///     The coalescing decision only acts on the `innerStride = 1` case.
+/// All fields describe runs of consecutive elements along a dimension `d`:
+///   - `contiguity[d]`: longest run that increases by exactly 1.
+///   - `constancy[d]`: longest run of equal values.
+///   - `divisibility[d]`: a power-of-two divisor of every element.
+///   - `knownConstant`: the value, if the whole vector is one constant.
+///   - `innerStride`: if set, each row along the innermost dim is an
+///     arithmetic progression with this step. `1` is the contiguous case,
+///     `0` the all-equal case; any other value is a strided progression that
+///     `contiguity`/`constancy` can't represent (both read 1). Per-row base
+///     may vary; per-row alignment lives in `divisibility[innerDim]`.
 ///
 /// Pessimistic / entry value: contiguity=1, constancy=1, divisibility=1,
 /// innerStride absent.
@@ -586,9 +560,9 @@ private:
     unsigned r = vt.getRank();
     auto shape = vt.getShape();
     AxisInfo v = AxisInfo::getPessimistic(r);
-    auto unitConstant = [](const AxisInfo &a, unsigned d, int64_t lanes) {
+    auto unitConstant = [](const AxisInfo &a, unsigned d, int64_t extent) {
       return a.knownConstant && *a.knownConstant == 1 &&
-             a.constancy[d] >= lanes;
+             a.constancy[d] >= extent;
     };
     for (unsigned d = 0; d < r; ++d) {
       v.constancy[d] = std::min({shape[d], lhs.constancy[d], rhs.constancy[d]});
@@ -617,22 +591,17 @@ private:
   }
 
   // arith.divui / arith.divsi / arith.remui / arith.remsi by a uniform
-  // positive constant `c`.
+  // positive constant `c`. The lhs must be an arithmetic progression (AP)
+  // along the inner dim, i.e. its values step by a constant stride `s`, and
+  // `c` must divide `s`.
   //
-  // Division (IsRem=false): when the lhs is an inner-dim AP `(base, s, n)`
-  // with `c | s` and `c | divisibility[inner]` (so the per-row base / c is
-  // exact), the result is an AP with stride `s / c` and inner divisibility
-  // `divisibility[inner] / c`. Special cases: `s/c == 1` flags inner-dim
-  // contiguity; `s/c == 0` flags inner-dim constancy.
+  // Take the inner row `[0, 2, 4, 6, 8, 10, 12, 14]` (stride s = 2) and c = 2:
+  //   - Division `/ 2` gives `[0, 1, 2, 3, 4, 5, 6, 7]`: a new AP with stride
+  //     `s / c = 1`. A resulting stride of 1 is contiguous, 0 is constant.
+  //   - Remainder `% 2` gives `[0, 0, 0, 0, 0, 0, 0, 0]`: every element folds
+  //     to the same residue, so the row is constant (stride 0).
   //
-  // Remainder (IsRem=true): when `c | s`, every element of a row sits at
-  // the same residue class -> inner-dim constant -> `innerStride = 0`,
-  // `constancy[inner] = inner` (matches the analysis's notion of
-  // chunk-uniform values along the inner dim).
-  //
-  // Signed vs unsigned only differs in the constant interpretation; we
-  // require positive constants so the signed/unsigned distinction is moot
-  // here.
+  // We require positive `c`, so signed and unsigned behave the same.
   template <bool IsSigned, bool IsRem, typename OpTy>
   LogicalResult visitDivRem(OpTy op, ArrayRef<const AxisInfoLattice *> operands,
                             ArrayRef<AxisInfoLattice *> results) {
@@ -694,12 +663,16 @@ private:
     return success();
   }
 
-  // arith.andi: `x & m` with a uniform positive constant mask `m`.
-  // The most useful case is `x & (P - 1)` for `P` a power of 2: this is
-  // equivalent to `x mod P`, so when the lhs is an inner-dim AP with stride
-  // divisible by `P` the result is inner-dim constant. We also handle the
-  // trivial `m == 0` (always zero) and `m == -1`/all-ones (identity)
-  // shapes.
+  // arith.andi: `x & m` with a uniform positive constant mask `m`. The
+  // interesting case is `m = P - 1` for a power of 2 `P`, which is the same
+  // as `x % P` (see visitDivRem): masking an inner row whose stride is a
+  // multiple of `P` folds it to a constant.
+  //
+  // Take the row `[0, 2, 4, 6, 8, 10, 12, 14]` (stride 2) and m = 1 (P = 2):
+  //   `x & 1` gives `[0, 0, 0, 0, 0, 0, 0, 0]`: constant along the inner dim.
+  //
+  // Also handles the trivial masks `m == 0` (always zero) and all-ones
+  // (identity).
   LogicalResult visitAndI(arith::AndIOp op,
                           ArrayRef<const AxisInfoLattice *> operands,
                           ArrayRef<AxisInfoLattice *> results) {
@@ -865,286 +838,40 @@ using ::mlir::xegpu::detail::axis_dataflow::AxisInfo;
 using ::mlir::xegpu::detail::axis_dataflow::AxisInfoLattice;
 
 //===----------------------------------------------------------------------===//
-// Coalescing decision.
+// Analysis driver.
 //===----------------------------------------------------------------------===//
 
-struct CoalesceDecision {
-  enum class Kind { None, Chunked };
-  Kind kind = Kind::None;
-  int64_t laneLayout = 1; // lane_layout along the innermost dim
-  int64_t factor = 1;     // lane_data factor along the innermost dim
-};
-
-/// Largest power-of-two `<= bound` that divides `numLanes`.
-static int64_t largestPow2Divisor(int64_t numLanes, int64_t bound) {
-  if (bound < 2 || numLanes < 2)
-    return 1;
-  int64_t f = std::min<int64_t>(bound, numLanes);
-  // Round down to power of 2.
-  if (!llvm::isPowerOf2_64(f))
-    f = static_cast<int64_t>(llvm::bit_floor(static_cast<uint64_t>(f)));
-  while (f >= 2) {
-    if (numLanes % f == 0)
-      return f;
-    f /= 2;
-  }
-  return 1;
-}
-
-/// Decide how to coalesce given the offsets axis info.
-///
-/// We pick `lane_layout[inner]` first using the same default rule as
-/// `XeGPUPropagateLayout`: `lane_layout[inner] = min(subgroupSize, inner)`,
-/// rounded down to a power-of-2 divisor of `inner`. The remaining lane
-/// budget then becomes `lane_data[inner] = inner / lane_layout`, capped by
-/// `maxChunkSize` and the offsets contiguity.
-static CoalesceDecision decide(const AxisInfo &info,
-                               ArrayRef<int64_t> offsetsShape,
-                               unsigned maxChunkSize, unsigned subgroupSize) {
-  CoalesceDecision d;
-  if (!info.isInitialized() || offsetsShape.empty())
-    return d;
-  unsigned innerDim = offsetsShape.size() - 1;
-  int64_t inner = offsetsShape[innerDim];
-  if (inner < 2)
-    return d;
-
-  // All-equal offsets: every lane sees the same address. There is no
-  // layout-only encoding for this; we leave the op alone.
-  if (info.constancy[innerDim] >= inner)
-    return d;
-
-  // Pick lane_layout first: PropagateLayout's default for a 1-D / inner dim
-  // is `min(subgroupSize, inner)`, rounded down to a divisor of inner.
-  int64_t laneLayout =
-      largestPow2Divisor(inner, std::min<int64_t>(subgroupSize, inner));
-  if (laneLayout < 1)
-    laneLayout = 1;
-
-  // Each lane sees `inner / laneLayout` elements of the offsets vector.
-  int64_t perLane = inner / laneLayout;
-  if (perLane < 2)
-    return d; // already one element per lane, nothing to coalesce.
-
-  int64_t budget = static_cast<int64_t>(maxChunkSize);
-  if (budget < 2)
-    return d;
-
-  int64_t bound = std::min<int64_t>(info.contiguity[innerDim], budget);
-  bound = std::min<int64_t>(bound, perLane);
-  if (bound < 2)
-    return d;
-
-  int64_t factor = largestPow2Divisor(perLane, bound);
-  if (factor < 2)
-    return d;
-  d.kind = CoalesceDecision::Kind::Chunked;
-  d.laneLayout = laneLayout;
-  d.factor = factor;
-  return d;
-}
-
-/// Returns true if `mask` is a constant `dense<true>` vector.
-static bool isAllTrueMask(Value mask) {
-  auto vecTy = dyn_cast<VectorType>(mask.getType());
-  if (!vecTy)
-    return false;
-  auto cst = mask.getDefiningOp<arith::ConstantOp>();
-  if (!cst)
-    return false;
-  auto dense = dyn_cast<DenseIntElementsAttr>(cst.getValue());
-  if (!dense || !dense.isSplat())
-    return false;
-  return dense.getSplatValue<APInt>().getBoolValue();
-}
-
-/// Build a `lane_layout`/`lane_data`/`inst_data` layout of rank `rank`,
-/// with the given lane_layout / lane_data on the innermost dim (1
-/// elsewhere). `inst_data` is `lane_layout * lane_data` per dim, so the
-/// invariant `inst_data[d] == lane_layout[d] * lane_data[d]` holds.
-static xegpu::LayoutAttr buildLaneDataLayout(MLIRContext *ctx, unsigned rank,
-                                             int64_t innerLaneLayout,
-                                             int64_t innerLaneData) {
-  SmallVector<int32_t> laneLayout(rank, 1);
-  SmallVector<int32_t> laneData(rank, 1);
-  SmallVector<int32_t> instData(rank, 1);
-  laneLayout.back() = static_cast<int32_t>(innerLaneLayout);
-  laneData.back() = static_cast<int32_t>(innerLaneData);
-  instData.back() = static_cast<int32_t>(innerLaneLayout * innerLaneData);
-  return xegpu::LayoutAttr::get(ctx, instData, laneLayout, laneData);
-}
-
-//===----------------------------------------------------------------------===//
-// Analysis driver + hint apply.
-//===----------------------------------------------------------------------===//
-
-/// Look up the subgroup size from the enclosing gpu.module's xevm.target.
-/// Falls back to 16 when no target chip is found or the chip is unknown,
-/// matching the typical Intel Xe2 default. This keeps the pass usable on
-/// plain `module { ... }` IR (e.g. unit lit tests) where there's no
-/// gpu.module / xevm.target wrapper.
-static unsigned lookupSubgroupSize(Operation *op) {
-  const auto *uArch =
-      xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
-  return uArch ? static_cast<unsigned>(uArch->getSubgroupSize()) : 16u;
-}
-
-/// Common analysis preconditions: vector offsets/value, all-true mask,
-/// no existing non-trivial lane_data.
+/// Stamp a `contiguous_chunk` attribute on `op` recording the inner-dim
+/// contiguity computed by the analysis. The contiguity is a target-independent
+/// property of the offsets.
 template <typename OpTy>
-static bool isCandidateForCoalesce(OpTy op) {
+static void analyzeAndStampContiguity(OpTy op, DataFlowSolver &solver) {
   auto offsetsTy = dyn_cast<VectorType>(op.getOffsets().getType());
   if (!offsetsTy || offsetsTy.getNumElements() <= 1)
-    return false;
-  if (!op.getValueType())
-    return false;
-  if (!isAllTrueMask(op.getMask()))
-    return false;
-  if (auto layout = op.getLayoutAttr())
-    if (!layout.getEffectiveLaneDataAsInt().empty())
-      return false;
-  return true;
-}
-
-/// True when `op` (a gather load or scatter store) is tied to a
-/// `vector.multi_reduction`: a load whose result feeds a reduction, or a
-/// store whose stored value comes from one (through layout-neutral /
-/// elementwise / insert glue).
-///
-/// Coalescing such an access is gated off for now: the analysis only sets
-/// `lane_data[FCD]`, and consuming that on a reduction requires reduction-
-/// aware layout handling that is not part of this change. A coalesced store
-/// fed (transitively) by a reduction would seed `lane_data[FCD] = N` that the
-/// reduction result (kept at `lane_data = 1`) cannot match, producing an
-/// unlowerable `xegpu.convert_layout lane_data=[1]<->[N]`. Follow-up PRs that
-/// add reduction coalescing relax this gate.
-template <typename OpTy>
-static bool isReductionTied(OpTy op) {
-  if constexpr (std::is_same_v<OpTy, xegpu::StoreScatterOp>) {
-    // Backward walk of the stored value's slice through the reassembly
-    // (convert_layout / shape_cast / insert(_strided_slice) / elementwise)
-    // that typically sits between a reduction and the store.
-    SmallVector<Value, 8> worklist{op.getValue()};
-    llvm::SmallPtrSet<Operation *, 16> seen;
-    unsigned steps = 0;
-    while (!worklist.empty() && steps++ < 64) {
-      Value v = worklist.pop_back_val();
-      Operation *def = v.getDefiningOp();
-      if (!def || !seen.insert(def).second)
-        continue;
-      if (isa<vector::MultiDimReductionOp>(def))
-        return true;
-      if (isa<vector::ShapeCastOp, vector::BitCastOp, xegpu::ConvertLayoutOp,
-              vector::InsertOp, vector::InsertStridedSliceOp>(def) ||
-          OpTrait::hasElementwiseMappableTraits(def))
-        for (Value operand : def->getOperands())
-          if (isa<VectorType>(operand.getType()))
-            worklist.push_back(operand);
-    }
-    return false;
-  } else {
-    for (Operation *user : op->getUsers()) {
-      Operation *u = user;
-      while (
-          u &&
-          isa<vector::ShapeCastOp, vector::BitCastOp, xegpu::ConvertLayoutOp>(
-              u)) {
-        if (u->getNumResults() != 1 || u->getResult(0).use_empty())
-          break;
-        u = *u->getResult(0).getUsers().begin();
-      }
-      if (u && isa<vector::MultiDimReductionOp>(u))
-        return true;
-    }
-    return false;
-  }
-}
-
-/// Run the analysis on a single op. If the offsets analyze as `Chunked`,
-/// stamp a `xegpu.coalesce_hint` attribute carrying the FCD lane_data
-/// factor.
-template <typename OpTy>
-static void analyzeAndStampHint(OpTy op, DataFlowSolver &solver,
-                                unsigned maxChunkSize) {
-  if (!isCandidateForCoalesce(op))
     return;
-  // A user-provided `coalesce_hint` takes precedence: if the op already
-  // carries one (authored by the user, or stamped by an earlier propagation
-  // level), leave it untouched. The analysis is only a fallback that fills in
-  // a hint where the user did not request one. This also makes the analysis
-  // idempotent across the lane and inst-data propagation runs.
-  if (op.getCoalesceHintAttr())
+  // A pre-existing `contiguous_chunk` (user-authored, or stamped by an earlier
+  // run) takes precedence; leave it untouched so the analysis is idempotent.
+  if (op.getContiguousChunk())
     return;
-  // Do not coalesce accesses tied to a reduction (see isReductionTied);
-  // reduction coalescing is added in follow-up PRs.
-  if (isReductionTied(op))
-    return;
-  auto offsetsTy = cast<VectorType>(op.getOffsets().getType());
-  unsigned subgroupSize = lookupSubgroupSize(op);
   const auto *lat = solver.lookupState<AxisInfoLattice>(op.getOffsets());
   if (!lat || !lat->getValue().isInitialized())
     return;
-  auto d =
-      decide(lat->getValue(), offsetsTy.getShape(), maxChunkSize, subgroupSize);
-  if (d.kind != CoalesceDecision::Kind::Chunked)
+  const AxisInfo &info = lat->getValue();
+  unsigned innerDim = offsetsTy.getRank() - 1;
+  int64_t inner = offsetsTy.getShape()[innerDim];
+  int64_t chunk = std::min<int64_t>(info.contiguity[innerDim], inner);
+  if (chunk < 2)
     return;
-  op.setCoalesceHintAttr(
-      xegpu::CoalesceHintAttr::get(op.getContext(), d.factor));
-}
-
-/// Apply a stamped hint on `op`: build a lane_layout/lane_data/inst_data
-/// layout from the hint's `factor` and the op's offsets inner extent +
-/// chip-derived subgroup size, install it, and remove the hint. Returns
-/// success on apply (or no-op when no hint), failure when the hint is
-/// malformed.
-template <typename OpTy>
-static LogicalResult applyHintOnOp(OpTy op) {
-  auto hint = op.getCoalesceHintAttr();
-  if (!hint)
-    return success(); // no hint: idempotent no-op.
-
-  auto offsetsTy = dyn_cast<VectorType>(op.getOffsets().getType());
-  auto valueTy = op.getValueType();
-  if (!offsetsTy || !valueTy || offsetsTy.getNumElements() <= 1)
-    return failure();
-
-  int64_t factor = hint.getFactor().getInt();
-  int64_t inner = offsetsTy.getShape().back();
-  unsigned subgroupSize = lookupSubgroupSize(op);
-  int64_t laneLayout =
-      largestPow2Divisor(inner, std::min<int64_t>(subgroupSize, inner));
-  if (laneLayout < 1 || inner % (laneLayout * factor) != 0)
-    return failure();
-
-  auto layout = buildLaneDataLayout(op.getContext(), valueTy.getRank(),
-                                    laneLayout, factor);
-  op.setLayoutAttr(layout);
-  op.removeCoalesceHintAttr();
-  return success();
-}
-
-/// Apply a stamped `xegpu.coalesce_hint` on a single op. A hint on an op
-/// that cannot be coalesced (anything other than a gather/scatter) is just
-/// dropped. Returns failure only when the hint is malformed for a real
-/// gather/scatter.
-static LogicalResult applyHintOnOp(Operation *op) {
-  if (auto load = dyn_cast<xegpu::LoadGatherOp>(op))
-    return applyHintOnOp(load);
-  if (auto store = dyn_cast<xegpu::StoreScatterOp>(op))
-    return applyHintOnOp(store);
-  // `coalesce_hint` is an inherent attribute of LoadGatherOp / StoreScatterOp
-  // only, so no other op can carry one.
-  return success();
+  op.setContiguousChunk(chunk);
 }
 
 } // namespace
 
 //===----------------------------------------------------------------------===//
-// Public APIs.
+// Public API.
 //===----------------------------------------------------------------------===//
 
-void mlir::xegpu::runCoalesceGatherScatterAnalysis(
-    Operation *root, const CoalesceGatherScatterAnalysisOptions &options) {
+void mlir::xegpu::runCoalesceGatherScatterAnalysis(Operation *root) {
   DataFlowSolver solver;
   solver.load<dataflow::DeadCodeAnalysis>();
   solver.load<mlir::xegpu::detail::axis_dataflow::AxisInfoAnalysis>();
@@ -1154,24 +881,11 @@ void mlir::xegpu::runCoalesceGatherScatterAnalysis(
   // The solver computed AxisInfo for the whole region in the single
   // `initializeAndRun` above; offsets shared by several gather/scatter ops are
   // analyzed only once. This walk is just per-op point lookups into that
-  // result (no re-analysis), turning each cached fact into a hint.
+  // result (no re-analysis), turning each cached fact into an attribute.
   root->walk([&](Operation *op) {
     if (auto load = dyn_cast<xegpu::LoadGatherOp>(op))
-      analyzeAndStampHint(load, solver, options.maxChunkSize);
+      analyzeAndStampContiguity(load, solver);
     else if (auto store = dyn_cast<xegpu::StoreScatterOp>(op))
-      analyzeAndStampHint(store, solver, options.maxChunkSize);
-  });
-}
-
-void mlir::xegpu::coalesceGatherScatter(Operation *root) {
-  root->walk([&](Operation *op) { (void)applyHintOnOp(op); });
-}
-
-void mlir::xegpu::clearCoalesceGatherScatterHints(Operation *root) {
-  root->walk([&](Operation *op) {
-    if (auto load = dyn_cast<xegpu::LoadGatherOp>(op))
-      load.removeCoalesceHintAttr();
-    else if (auto store = dyn_cast<xegpu::StoreScatterOp>(op))
-      store.removeCoalesceHintAttr();
+      analyzeAndStampContiguity(store, solver);
   });
 }

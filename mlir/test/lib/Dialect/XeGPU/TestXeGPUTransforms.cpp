@@ -16,12 +16,16 @@
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpl.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/bit.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -455,7 +459,7 @@ struct TestXeGPUCoalesceGatherScatter
   }
 
   StringRef getDescription() const final {
-    return "Test the XeGPU coalesce-gather-scatter analysis + apply APIs.";
+    return "Test the XeGPU contiguity analysis and its coalescing consumer.";
   }
 
   void getDependentDialects(::mlir::DialectRegistry &registry) const override {
@@ -475,16 +479,163 @@ struct TestXeGPUCoalesceGatherScatter
 
   Option<bool> analyzeOnly{
       *this, "analyze-only",
-      llvm::cl::desc("Only run the analysis (stamp xegpu.coalesce_hint "
+      llvm::cl::desc("Only run the analysis (stamp contiguous_chunk "
                      "attributes); do not apply."),
       llvm::cl::init(false)};
 
   void runOnOperation() override {
-    xegpu::CoalesceGatherScatterAnalysisOptions options;
-    options.maxChunkSize = maxChunkSize;
-    xegpu::runCoalesceGatherScatterAnalysis(getOperation(), options);
-    if (!analyzeOnly)
-      xegpu::coalesceGatherScatter(getOperation());
+    xegpu::runCoalesceGatherScatterAnalysis(getOperation());
+    if (analyzeOnly)
+      return;
+    getOperation()->walk([&](Operation *op) {
+      if (auto load = dyn_cast<xegpu::LoadGatherOp>(op))
+        applyContiguousChunk(load, maxChunkSize);
+      else if (auto store = dyn_cast<xegpu::StoreScatterOp>(op))
+        applyContiguousChunk(store, maxChunkSize);
+    });
+  }
+
+private:
+  /// Largest power-of-two `<= bound` that divides `numLanes`.
+  static int64_t largestPow2Divisor(int64_t numLanes, int64_t bound) {
+    if (bound < 2 || numLanes < 2)
+      return 1;
+    int64_t f = std::min<int64_t>(bound, numLanes);
+    // Round down to power of 2.
+    if (!llvm::isPowerOf2_64(f))
+      f = static_cast<int64_t>(llvm::bit_floor(static_cast<uint64_t>(f)));
+    while (f >= 2) {
+      if (numLanes % f == 0)
+        return f;
+      f /= 2;
+    }
+    return 1;
+  }
+
+  /// Look up the subgroup size from the enclosing gpu.module's xevm.target.
+  /// Falls back to 16 when no target chip is found or the chip is unknown,
+  /// matching the typical Intel Xe2 default.
+  static unsigned lookupSubgroupSize(Operation *op) {
+    const auto *uArch =
+        xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
+    return uArch ? static_cast<unsigned>(uArch->getSubgroupSize()) : 16u;
+  }
+
+  /// Build a `lane_layout`/`lane_data`/`inst_data` layout of rank `rank`, with
+  /// the given lane_layout / lane_data on the innermost dim (1 elsewhere).
+  /// `inst_data` is `lane_layout * lane_data` per dim.
+  static xegpu::LayoutAttr buildLaneDataLayout(MLIRContext *ctx, unsigned rank,
+                                               int64_t innerLaneLayout,
+                                               int64_t innerLaneData) {
+    SmallVector<int32_t> laneLayout(rank, 1);
+    SmallVector<int32_t> laneData(rank, 1);
+    SmallVector<int32_t> instData(rank, 1);
+    laneLayout.back() = static_cast<int32_t>(innerLaneLayout);
+    laneData.back() = static_cast<int32_t>(innerLaneData);
+    instData.back() = static_cast<int32_t>(innerLaneLayout * innerLaneData);
+    return xegpu::LayoutAttr::get(ctx, instData, laneLayout, laneData);
+  }
+
+  /// Returns true if `mask` is a constant `dense<true>` vector.
+  static bool isAllTrueMask(Value mask) {
+    auto vecTy = dyn_cast<VectorType>(mask.getType());
+    if (!vecTy)
+      return false;
+    auto cst = mask.getDefiningOp<arith::ConstantOp>();
+    if (!cst)
+      return false;
+    auto dense = dyn_cast<DenseIntElementsAttr>(cst.getValue());
+    if (!dense || !dense.isSplat())
+      return false;
+    return dense.getSplatValue<APInt>().getBoolValue();
+  }
+
+  /// True when `op` (a gather load or scatter store) is tied to a
+  /// `vector.multi_reduction`: a load whose result feeds a reduction, or a
+  /// store whose stored value comes from one (through layout-neutral /
+  /// elementwise / insert glue). Coalescing such an access is gated off here;
+  /// it requires reduction-aware layout handling added in follow-up PRs.
+  template <typename OpTy>
+  static bool isReductionTied(OpTy op) {
+    if constexpr (std::is_same_v<OpTy, xegpu::StoreScatterOp>) {
+      SmallVector<Value, 8> worklist{op.getValue()};
+      llvm::SmallPtrSet<Operation *, 16> seen;
+      unsigned steps = 0;
+      while (!worklist.empty() && steps++ < 64) {
+        Value v = worklist.pop_back_val();
+        Operation *def = v.getDefiningOp();
+        if (!def || !seen.insert(def).second)
+          continue;
+        if (isa<vector::MultiDimReductionOp>(def))
+          return true;
+        if (isa<vector::ShapeCastOp, vector::BitCastOp, xegpu::ConvertLayoutOp,
+                vector::InsertOp, vector::InsertStridedSliceOp>(def) ||
+            OpTrait::hasElementwiseMappableTraits(def))
+          for (Value operand : def->getOperands())
+            if (isa<VectorType>(operand.getType()))
+              worklist.push_back(operand);
+      }
+      return false;
+    } else {
+      for (Operation *user : op->getUsers()) {
+        Operation *u = user;
+        while (
+            u &&
+            isa<vector::ShapeCastOp, vector::BitCastOp, xegpu::ConvertLayoutOp>(
+                u)) {
+          if (u->getNumResults() != 1 || u->getResult(0).use_empty())
+            break;
+          u = *u->getResult(0).getUsers().begin();
+        }
+        if (u && isa<vector::MultiDimReductionOp>(u))
+          return true;
+      }
+      return false;
+    }
+  }
+
+  /// Turn a stamped `contiguous_chunk` on `op` into a lane_layout / lane_data /
+  /// inst_data layout, capped by `maxChunkSize`, then remove the attribute.
+  /// Skips ops with a non-uniform mask, an existing lane_data, or a reduction
+  /// tie — these are coalescing concerns, not properties of the offsets.
+  template <typename OpTy>
+  static void applyContiguousChunk(OpTy op, unsigned maxChunkSize) {
+    std::optional<uint64_t> chunk = op.getContiguousChunk();
+    if (!chunk)
+      return;
+    auto cleanup = llvm::scope_exit([&] { op.removeContiguousChunkAttr(); });
+
+    auto offsetsTy = dyn_cast<VectorType>(op.getOffsets().getType());
+    auto valueTy = op.getValueType();
+    if (!offsetsTy || !valueTy || offsetsTy.getNumElements() <= 1)
+      return;
+    if (!isAllTrueMask(op.getMask()))
+      return;
+    if (auto layout = op.getLayoutAttr())
+      if (!layout.getEffectiveLaneDataAsInt().empty())
+        return;
+    if (isReductionTied(op))
+      return;
+
+    int64_t inner = offsetsTy.getShape().back();
+    unsigned subgroupSize = lookupSubgroupSize(op);
+    // lane_layout default: min(subgroupSize, inner) rounded to a divisor.
+    int64_t laneLayout =
+        largestPow2Divisor(inner, std::min<int64_t>(subgroupSize, inner));
+    if (laneLayout < 1)
+      return;
+    int64_t perLane = inner / laneLayout;
+    // lane_data = min(contiguity, maxChunkSize, perLane), pow2 divisor of
+    // perLane.
+    int64_t bound =
+        std::min<int64_t>({static_cast<int64_t>(*chunk),
+                           static_cast<int64_t>(maxChunkSize), perLane});
+    int64_t factor = largestPow2Divisor(perLane, bound);
+    if (factor < 2)
+      return;
+
+    op.setLayoutAttr(buildLaneDataLayout(op.getContext(), valueTy.getRank(),
+                                         laneLayout, factor));
   }
 };
 

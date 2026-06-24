@@ -956,49 +956,6 @@ def XeGPU_MemLayoutAttr : XeGPUAttr<"MemLayout", "mem_layout"> {
 
 }
 
-def XeGPU_CoalesceHintAttr : XeGPUAttr<"CoalesceHint", "coalesce_hint"> {
-  let summary = [{Optional request to coalesce a gather/scatter access.}];
-
-  let description = [{
-    `CoalesceHintAttr` is the optional `coalesce_hint` attribute of
-    `xegpu.load` / `xegpu.store`. It requests that the access group `factor`
-    contiguous elements per lane along the innermost (fastest-changing)
-    dimension of the offsets. `factor` must be a power of two `>= 2`, and the
-    innermost offsets dimension must be a multiple of it.
-
-    The hint has two sources:
-      - it can be set directly by the user (or a higher-level frontend that
-        already knows the access is contiguous-per-lane), in which case the
-        coalesce-gather-scatter analysis is not consulted for that op; or
-      - it is stamped by the analysis when it proves the access coalescible.
-
-    The hint is a *request*, not a commitment: a consumer turns `factor` into
-    a concrete `xegpu.layout` (deriving the `lane_layout` / `lane_data` split
-    from the op's offsets inner extent and the chip's subgroup size) and
-    clears the hint. A consumer that declines (for example, layout propagation
-    detecting a conflict with an anchor-driven layout) likewise clears it
-    rather than leaving it dangling.
-
-    Example:
-    ```mlir
-    %v = xegpu.load %ptr[%offsets], %mask <{coalesce_hint = #xegpu.coalesce_hint<factor = 4>}>
-            : i64, vector<64xindex>, vector<64xi1> -> vector<64xf32>
-    ```
-  }];
-
-  let parameters = (ins "IntegerAttr": $factor);
-
-  let builders = [
-    AttrBuilder<(ins "int64_t":$factor), [{
-      return $_get($_ctxt, IntegerAttr::get(IntegerType::get($_ctxt, 64),
-                                            factor));
-    }]>
-  ];
-
-  let assemblyFormat = "`<` `factor` `=` $factor `>`";
-  let genVerifyDecl = 1;
-}
-
 def AnchorLayoutInterface : OpInterface<"AnchorLayoutInterface"> {
   let cppNamespace = "::mlir::xegpu";
 
