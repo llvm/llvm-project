@@ -124,6 +124,7 @@ class PPCAsmParser : public MCTargetAsmParser {
   bool parseDirectiveMachine(SMLoc L);
   bool parseDirectiveAbiVersion(SMLoc L);
   bool parseDirectiveLocalEntry(SMLoc L);
+  void ParseDirectiveSetEndian(bool little);
   bool parseGNUAttribute(SMLoc L);
 
   bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
@@ -1686,9 +1687,22 @@ bool PPCAsmParser::ParseDirective(AsmToken DirectiveID) {
     parseDirectiveLocalEntry(DirectiveID.getLoc());
   else if (IDVal.starts_with(".gnu_attribute"))
     parseGNUAttribute(DirectiveID.getLoc());
-  else
+  else if (IDVal == ".big") {
+    ParseDirectiveSetEndian(false);
+  } else if (IDVal == ".little") {
+    ParseDirectiveSetEndian(true);
+  } else
     return true;
   return false;
+}
+
+/// ParseDirectiveSetEndian
+///  ::= .big | .little
+void PPCAsmParser::ParseDirectiveSetEndian(bool little) {
+  PPCTargetStreamer *TStreamer = static_cast<PPCTargetStreamer *>(
+      getParser().getStreamer().getTargetStreamer());
+  if (TStreamer != nullptr)
+    TStreamer->emitEndianSet(little);
 }
 
 ///  ::= .word [ expression (, expression)* ]
