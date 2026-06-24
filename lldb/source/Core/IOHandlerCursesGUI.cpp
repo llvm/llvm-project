@@ -309,7 +309,9 @@ enum {
   // Other colors, as needed.
   BlackOnWhite,
   MagentaOnWhite,
-  LastColorPairIndex = MagentaOnWhite
+  BlackOnCyan,
+  WhiteOnCyan,
+  LastColorPairIndex = WhiteOnCyan
 };
 
 class WindowDelegate {
@@ -491,13 +493,13 @@ public:
   // visible characters were skipped due to first_skip_count.
   bool OutputColoredStringTruncated(int right_pad, StringRef string,
                                     size_t skip_first_count,
-                                    bool use_blue_background) {
+                                    bool use_highlight_background) {
     attr_t saved_attr;
     short saved_pair;
     bool result = false;
     wattr_get(m_window, &saved_attr, &saved_pair, nullptr);
-    if (use_blue_background)
-      ::wattron(m_window, COLOR_PAIR(WhiteOnBlue));
+    if (use_highlight_background)
+      ::wattron(m_window, COLOR_PAIR(BlackOnCyan));
     while (!string.empty()) {
       size_t esc_pos = string.find(ANSI_ESC_START);
       if (esc_pos == StringRef::npos) {
@@ -543,14 +545,15 @@ public:
       }
       if (value == 0) { // Reset.
         wattr_set(m_window, saved_attr, saved_pair, nullptr);
-        if (use_blue_background)
-          ::wattron(m_window, COLOR_PAIR(WhiteOnBlue));
+        if (use_highlight_background)
+          ::wattron(m_window, COLOR_PAIR(BlackOnCyan));
       } else if (value == ANSI_CTRL_UNDERLINE) {
         ::wattron(m_window, A_UNDERLINE);
       } else {
-        // Mapped directly to first 16 color pairs (black/blue background).
-        ::wattron(m_window, COLOR_PAIR(value - ANSI_FG_COLOR_BLACK + 1 +
-                                       (use_blue_background ? 8 : 0)));
+        if (!use_highlight_background) {
+          // Mapped directly to first 16 color pairs (black/blue background).
+          ::wattron(m_window, COLOR_PAIR(value - ANSI_FG_COLOR_BLACK + 1));
+        }
       }
     }
     wattr_set(m_window, saved_attr, saved_pair, nullptr);
@@ -7129,7 +7132,7 @@ public:
                   window.Printf("%*s", desc_x - window.GetCursorX(), "");
                 window.MoveCursor(window_width - stop_description_len - 16,
                                   line_y);
-                const attr_t stop_reason_attr = COLOR_PAIR(WhiteOnBlue);
+                const attr_t stop_reason_attr = COLOR_PAIR(BlackOnCyan);
                 window.AttributeOn(stop_reason_attr);
                 window.PrintfTruncated(1, " <<< Thread %u: %s ",
                                        thread->GetIndexID(), stop_description);
@@ -7167,7 +7170,7 @@ public:
         }
 
         const attr_t selected_highlight_attr = A_REVERSE;
-        const attr_t pc_highlight_attr = COLOR_PAIR(WhiteOnBlue);
+        const attr_t pc_highlight_attr = COLOR_PAIR(BlackOnCyan);
 
         StreamString strm;
 
@@ -7768,7 +7771,9 @@ void IOHandlerCursesGUI::Activate() {
     // These must match the order in the color indexes enum.
     init_pair(17, COLOR_BLACK, COLOR_WHITE);
     init_pair(18, COLOR_MAGENTA, COLOR_WHITE);
-    static_assert(LastColorPairIndex == 18, "Color indexes do not match.");
+    init_pair(19, COLOR_BLACK, COLOR_CYAN);
+    init_pair(20, COLOR_WHITE, COLOR_CYAN);
+    static_assert(LastColorPairIndex == 20, "Color indexes do not match.");
 
     define_key("\033[Z", KEY_SHIFT_TAB);
     define_key("\033\015", KEY_ALT_ENTER);
