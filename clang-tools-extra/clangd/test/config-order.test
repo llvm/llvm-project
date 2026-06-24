@@ -1,0 +1,56 @@
+# We specify a custom path in XDG_CONFIG_HOME, which only works on some systems.
+# UNSUPPORTED: system-windows
+# UNSUPPORTED: system-darwin
+
+# RUN: rm -rf %t.config.d %t.project.d
+# RUN: mkdir -p %t.config.d/clangd %t.project.d
+
+# Create a config file that injects a flag we can observe, and has an error.
+# RUN: echo 'CompileFlags: {Remove: -DCONFIG=LOCAL, Add: -DCONFIG=USER}' > %t.config.d/clangd/config.yaml
+# RUN: echo 'CompileFlags: {Remove: -DCONFIG=USER, Add: -DCONFIG=LOCAL}' > %t.project.d/.clangd
+
+# RUN: sed '/^#/!s|PROJECT_DIR|%t.project.d|g' %s | env XDG_CONFIG_HOME=%t.config.d clangd -lit-test -enable-config | FileCheck -strict-whitespace %s
+
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{"uri":"file://PROJECT_DIR/foo.c","languageId":"c","text":"int FOO = CONFIG;"}}}
+# No errors in either config.
+#      CHECK:  "method": "textDocument/publishDiagnostics",
+# CHECK-NEXT:  "params": {
+# CHECK-NEXT:    "diagnostics": [],
+# CHECK-NEXT:    "uri": [[URI:"file://.*/(config\.yaml|\.clangd)"]]
+# CHECK-NEXT:  }
+#      CHECK:  "method": "textDocument/publishDiagnostics",
+# CHECK-NEXT:  "params": {
+# CHECK-NEXT:    "diagnostics": [],
+#  CHECK-NOT:    "uri": [[URI]]
+# CHECK-NEXT:    "uri": "file://{{.*}}/{{config\.yaml|\.clangd}}"
+# CHECK-NEXT:  }
+# LOCAL rather than USER means the local .clangd applied later and overrode the user config.
+#      CHECK:  "method": "textDocument/publishDiagnostics",
+# CHECK-NEXT:  "params": {
+# CHECK-NEXT:    "diagnostics": [
+# CHECK-NEXT:      {
+# CHECK-NEXT:        "code": "undeclared_var_use",
+# CHECK-NEXT:        "message": "Use of undeclared identifier 'LOCAL'",
+# CHECK-NEXT:        "range": {
+# CHECK-NEXT:          "end": {
+# CHECK-NEXT:            "character": 16,
+# CHECK-NEXT:            "line": 0
+# CHECK-NEXT:          },
+# CHECK-NEXT:          "start": {
+# CHECK-NEXT:            "character": 10,
+# CHECK-NEXT:            "line": 0
+# CHECK-NEXT:          }
+# CHECK-NEXT:        },
+# CHECK-NEXT:        "severity": 1,
+# CHECK-NEXT:        "source": "clang"
+# CHECK-NEXT:      }
+# CHECK-NEXT:    ],
+# CHECK-NEXT:    "uri": "file://{{.*}}/foo.c",
+# CHECK-NEXT:    "version": 0
+# CHECK-NEXT:  }
+---
+{"jsonrpc":"2.0","id":4,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}
