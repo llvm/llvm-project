@@ -1137,7 +1137,7 @@ regex_traits<_CharT>::__transform_primary(_ForwardIterator __f, _ForwardIterator
     __d.clear();
     break;
   }
-#endif
+#      endif
   return __d;
 }
 
@@ -1167,7 +1167,7 @@ regex_traits<_CharT>::__transform_primary(_ForwardIterator __f, _ForwardIterator
     __d.clear();
     break;
   }
-#endif
+#      endif
   return __d;
 }
 #endif

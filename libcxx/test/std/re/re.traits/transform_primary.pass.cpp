@@ -34,7 +34,7 @@ int main(int, char**)
         std::regex_traits<char> t;
         const char A[] = "A";
         const char AA[]      = "AA";
-        const char B[]      = "B";
+        const char B[]       = "B";
         const char BB[]      = "BB";
         const char Aacute[]  = "\xC1";
         const char AAacute[] = "\xC1\xC1";
