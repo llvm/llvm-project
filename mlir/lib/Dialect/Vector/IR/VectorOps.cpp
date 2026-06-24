@@ -6195,7 +6195,9 @@ LogicalResult vector::LoadOp::verify() {
   if (failed(verifyLoadStoreMemRefLayout(*this, resVecTy, memRefTy)))
     return failure();
 
-  // Negative strides are not supported on vector.load.
+  // Negative strides are not supported on vector.load. The lowering to LLVM
+  // emits arithmetic operations (e.g., GEP, mul) with nuw flags that assume
+  // non-negative strides to avoid undefined behavior.
   if (memref::hasNegativeStaticStride(memRefTy))
     return emitOpError("memref strides must be non-negative");
 
@@ -6245,7 +6247,9 @@ LogicalResult vector::StoreOp::verify() {
   if (failed(verifyLoadStoreMemRefLayout(*this, valueVecTy, memRefTy)))
     return failure();
 
-  // Negative strides are not supported on vector.store.
+  // Negative strides are not supported on vector.store. The lowering to LLVM
+  // emits arithmetic operations (e.g., GEP, mul) with nuw flags that assume
+  // non-negative strides to avoid undefined behavior.
   if (memref::hasNegativeStaticStride(memRefTy))
     return emitOpError("memref strides must be non-negative");
 
@@ -6299,11 +6303,8 @@ LogicalResult MaskedLoadOp::verify() {
   // Negative strides are not supported on vector.maskedload. The lowering to
   // LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
   // assume non-negative strides to avoid undefined behavior.
-  auto [strides, offset] = memType.getStridesAndOffset();
-  for (int64_t stride : strides) {
-    if (ShapedType::isStatic(stride) && stride < 0)
-      return emitOpError("memref strides must be non-negative");
-  }
+  if (memref::hasNegativeStaticStride(memType))
+    return emitOpError("memref strides must be non-negative");
 
   if (failed(
           verifyElementTypesMatch(*this, memType, resVType, "base", "result")))
@@ -6371,11 +6372,8 @@ LogicalResult MaskedStoreOp::verify() {
   // Negative strides are not supported on vector.maskedstore. The lowering to
   // LLVM emits arithmetic operations (e.g., GEP, mul) with nuw flags that
   // assume non-negative strides to avoid undefined behavior.
-  auto [strides, offset] = memType.getStridesAndOffset();
-  for (int64_t stride : strides) {
-    if (ShapedType::isStatic(stride) && stride < 0)
-      return emitOpError("memref strides must be non-negative");
-  }
+  if (memref::hasNegativeStaticStride(memType))
+    return emitOpError("memref strides must be non-negative");
 
   if (failed(verifyElementTypesMatch(*this, memType, valueVType, "base",
                                      "valueToStore")))
@@ -6441,13 +6439,9 @@ LogicalResult GatherOp::verify() {
   // Negative strides are not supported on vector.gather.
   // The lowering to LLVM emits arithmetic operations (e.g., GEP, mul) with nuw
   // flags that assume non-negative strides to avoid undefined behavior.
-  if (auto memRefType = dyn_cast<MemRefType>(baseType)) {
-    auto [strides, offset] = memRefType.getStridesAndOffset();
-    for (int64_t stride : strides) {
-      if (ShapedType::isStatic(stride) && stride < 0)
-        return emitOpError("memref strides must be non-negative");
-    }
-  }
+  if (auto memRefType = dyn_cast<MemRefType>(baseType))
+    if (memref::hasNegativeStaticStride(memRefType))
+      return emitOpError("memref strides must be non-negative");
 
   if (failed(
           verifyElementTypesMatch(*this, baseType, resVType, "base", "result")))
@@ -6566,13 +6560,9 @@ LogicalResult ScatterOp::verify() {
   // Negative strides are not supported on vector.scatter.
   // The lowering to LLVM emits arithmetic operations (e.g., GEP, mul) with nuw
   // flags that assume non-negative strides to avoid undefined behavior.
-  if (auto memRefType = dyn_cast<MemRefType>(baseType)) {
-    auto [strides, offset] = memRefType.getStridesAndOffset();
-    for (int64_t stride : strides) {
-      if (ShapedType::isStatic(stride) && stride < 0)
-        return emitOpError("memref strides must be non-negative");
-    }
-  }
+  if (auto memRefType = dyn_cast<MemRefType>(baseType))
+    if (memref::hasNegativeStaticStride(memRefType))
+      return emitOpError("memref strides must be non-negative");
 
   if (failed(verifyElementTypesMatch(*this, baseType, valueVType, "base",
                                      "valueToStore")))
