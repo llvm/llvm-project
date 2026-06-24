@@ -1489,11 +1489,8 @@ TEST_F(PointerFlowTest, SystemHeader_ExtractDefault) {
   )cpp";
   ASSERT_TRUE(setUpTestWithSystemHeader(Main, SysHeader,
                                         /*ExtractFromSystemHeaders=*/true));
-  // sys_fn is in a system header but the default (extract-true) enumerates
-  // it as a contributor — summary is non-null.
-  EXPECT_NE(getEntitySummary("sys_fn"), nullptr);
-  // user_fn is enumerated either way (positive control).
-  EXPECT_NE(getEntitySummary("user_fn"), nullptr);
+  EXPECT_TRUE(getEntitySummary("sys_fn"));
+  EXPECT_TRUE(getEntitySummary("user_fn"));
 }
 
 // Opt-out: ExtractFromSystemHeaders == false. The system-header decl
