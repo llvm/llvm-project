@@ -227,7 +227,6 @@ class ScriptExpectRewriter:
             assert isinstance(expect, Value), "Non-Value expects currently unsupported"
             if expected_value is None:
                 self.unknown_expect_rewrites[expect] = []
-
         script.visit_script(visit_expect=collect_expects_to_rewrite)
 
         # If there are no expects to update, then there is no rewriting to be done - exit early.
