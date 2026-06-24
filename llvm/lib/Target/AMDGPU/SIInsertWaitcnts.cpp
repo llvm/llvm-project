@@ -1113,47 +1113,8 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
 
   for (auto T : inst_counter_types(Context->MaxCounter)) {
     unsigned SR = getScoreRange(T);
-    switch (T) {
-    case AMDGPU::LOAD_CNT:
-      OS << "    " << (ST.hasExtendedWaitCounts() ? "LOAD" : "VM") << "_CNT("
-         << SR << "):";
-      break;
-    case AMDGPU::DS_CNT:
-      OS << "    " << (ST.hasExtendedWaitCounts() ? "DS" : "LGKM") << "_CNT("
-         << SR << "):";
-      break;
-    case AMDGPU::EXP_CNT:
-      OS << "    EXP_CNT(" << SR << "):";
-      break;
-    case AMDGPU::STORE_CNT:
-      OS << "    " << (ST.hasExtendedWaitCounts() ? "STORE" : "VS") << "_CNT("
-         << SR << "):";
-      break;
-    case AMDGPU::SAMPLE_CNT:
-      OS << "    SAMPLE_CNT(" << SR << "):";
-      break;
-    case AMDGPU::BVH_CNT:
-      OS << "    BVH_CNT(" << SR << "):";
-      break;
-    case AMDGPU::KM_CNT:
-      OS << "    KM_CNT(" << SR << "):";
-      break;
-    case AMDGPU::X_CNT:
-      OS << "    X_CNT(" << SR << "):";
-      break;
-    case AMDGPU::ASYNC_CNT:
-      OS << "    ASYNC_CNT(" << SR << "):";
-      break;
-    case AMDGPU::VA_VDST:
-      OS << "    VA_VDST(" << SR << "): ";
-      break;
-    case AMDGPU::VM_VSRC:
-      OS << "    VM_VSRC(" << SR << "): ";
-      break;
-    default:
-      OS << "    UNKNOWN(" << SR << "):";
-      break;
-    }
+    OS << "    " << getInstCounterName(T, ST.hasExtendedWaitCounts()) << "("
+       << SR << "):";
 
     if (SR != 0) {
       // Print vgpr scores.
@@ -1220,41 +1181,7 @@ void WaitcntBrackets::print(raw_ostream &OS) const {
   for (const auto &Mark : AsyncMarks) {
     for (auto T : AMDGPU::inst_counter_types()) {
       unsigned MarkedScore = Mark[T];
-      switch (T) {
-      case AMDGPU::LOAD_CNT:
-        OS << "  " << (ST.hasExtendedWaitCounts() ? "LOAD" : "VM")
-           << "_CNT: " << MarkedScore;
-        break;
-      case AMDGPU::DS_CNT:
-        OS << "  " << (ST.hasExtendedWaitCounts() ? "DS" : "LGKM")
-           << "_CNT: " << MarkedScore;
-        break;
-      case AMDGPU::EXP_CNT:
-        OS << "  EXP_CNT: " << MarkedScore;
-        break;
-      case AMDGPU::STORE_CNT:
-        OS << "  " << (ST.hasExtendedWaitCounts() ? "STORE" : "VS")
-           << "_CNT: " << MarkedScore;
-        break;
-      case AMDGPU::SAMPLE_CNT:
-        OS << "  SAMPLE_CNT: " << MarkedScore;
-        break;
-      case AMDGPU::BVH_CNT:
-        OS << "  BVH_CNT: " << MarkedScore;
-        break;
-      case AMDGPU::KM_CNT:
-        OS << "  KM_CNT: " << MarkedScore;
-        break;
-      case AMDGPU::X_CNT:
-        OS << "  X_CNT: " << MarkedScore;
-        break;
-      case AMDGPU::ASYNC_CNT:
-        OS << "  ASYNC_CNT: " << MarkedScore;
-        break;
-      default:
-        OS << "  UNKNOWN: " << MarkedScore;
-        break;
-      }
+      OS << getInstCounterName(T, ST.hasExtendedWaitCounts()) << MarkedScore;
     }
     OS << '\n';
   }
@@ -1404,7 +1331,9 @@ AMDGPU::Waitcnt WaitcntBrackets::determineAsyncWait(unsigned N) {
   });
   AsyncMarks.erase(AsyncMarks.begin(), AsyncMarks.begin() + MarkIndex + 1);
 
-  LLVM_DEBUG(dbgs() << "Waits to add: " << Wait);
+  LLVM_DEBUG(
+      dbgs() << "Waits to add: "
+             << Wait.getPrintable(dbgs(), Context->ST.hasExtendedWaitCounts()));
   return Wait;
 }
 
@@ -1647,11 +1576,16 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
         WaitcntInstr = &II;
     } else if (Opcode == AMDGPU::S_WAITCNT_lds_direct) {
       assert(ST.hasVMemToLDSLoad());
-      LLVM_DEBUG(dbgs() << "Processing S_WAITCNT_lds_direct: " << II
-                        << "Before: " << Wait << '\n';);
+      LLVM_DEBUG(
+          dbgs() << "Processing S_WAITCNT_lds_direct: " << II << "Before: "
+                 << Wait.getPrintable(dbgs(), /*HasExtendedWaitcnts=*/false)
+                 << '\n');
       ScoreBrackets.determineWaitForLDSDMA(AMDGPU::LOAD_CNT, LDSDMA_BEGIN,
                                            Wait);
-      LLVM_DEBUG(dbgs() << "After: " << Wait << '\n';);
+      LLVM_DEBUG(
+          dbgs() << "After: "
+                 << Wait.getPrintable(dbgs(), /*HasExtendedWaitcnts=*/false)
+                 << '\n');
 
       // It is possible (but unlikely) that this is the only wait instruction,
       // in which case, we exit this loop without a WaitcntInstr to consume

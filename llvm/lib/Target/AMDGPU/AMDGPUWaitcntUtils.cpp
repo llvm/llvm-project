@@ -16,16 +16,19 @@ iota_range<InstCounterType> inst_counter_types(InstCounterType MaxCounter) {
   return enum_seq(LOAD_CNT, MaxCounter);
 }
 
-StringLiteral getInstCounterName(InstCounterType T) {
+StringLiteral getInstCounterName(InstCounterType T, bool HasExtendedWaitcnts) {
   switch (T) {
   case LOAD_CNT:
-    return "LOAD_CNT";
+    return HasExtendedWaitcnts ? StringLiteral("LOAD_CNT")
+                               : StringLiteral("VM_CNT");
   case DS_CNT:
-    return "DS_CNT";
+    return HasExtendedWaitcnts ? StringLiteral("DS_CNT")
+                               : StringLiteral("LGKM_CNT");
   case EXP_CNT:
     return "EXP_CNT";
   case STORE_CNT:
-    return "STORE_CNT";
+    return HasExtendedWaitcnts ? StringLiteral("STORE_CNT")
+                               : StringLiteral("VS_CNT");
   case SAMPLE_CNT:
     return "SAMPLE_CNT";
   case BVH_CNT:
@@ -96,7 +99,9 @@ unsigned HardwareLimits::get(InstCounterType T) const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void Waitcnt::dump() const { dbgs() << *this << '\n'; }
+void Waitcnt::dump(bool HasExtendedWaitcnts) const {
+  dbgs() << getPrintable(dbgs(), HasExtendedWaitcnts) << '\n';
+}
 #endif
 
 Waitcnt decodeWaitcnt(const IsaVersion &Version, unsigned Encoded) {

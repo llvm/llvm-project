@@ -12,6 +12,7 @@
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Printable.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/AMDGPUTargetParser.h"
 
@@ -38,7 +39,7 @@ enum InstCounterType {
   NUM_INST_CNTS = NUM_EXPERT_INST_CNTS
 };
 
-StringLiteral getInstCounterName(InstCounterType T);
+StringLiteral getInstCounterName(InstCounterType T, bool HasExtendedWaitcnts);
 
 // Return an iterator over all counters between LOAD_CNT (the first counter)
 // and \c MaxCounter (exclusive, default value yields an enumeration over
@@ -152,23 +153,25 @@ public:
     return Wait;
   }
 
-  void print(raw_ostream &OS) const {
-    ListSeparator LS;
-    for (InstCounterType T : inst_counter_types())
-      OS << LS << getInstCounterName(T) << ": " << Cnt[T];
-    if (LS.unused())
-      OS << "none";
-    OS << '\n';
+  Printable getPrintable(raw_ostream &OS, bool HasExtendedWaitcnts) const {
+    return Printable([HasExtendedWaitcnts, this](raw_ostream &OS) {
+      ListSeparator LS;
+      for (InstCounterType T : inst_counter_types())
+        OS << LS << getInstCounterName(T, HasExtendedWaitcnts) << ": "
+           << Cnt[T];
+      if (LS.unused())
+        OS << "none";
+      OS << '\n';
+    });
+  }
+
+  void print(raw_ostream &OS, bool HasExtendedWaitcnts) const {
+    OS << getPrintable(OS, HasExtendedWaitcnts);
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  LLVM_DUMP_METHOD void dump() const;
+  LLVM_DUMP_METHOD void dump(bool HasExtendedWaitcnts) const;
 #endif
-
-  friend raw_ostream &operator<<(raw_ostream &OS, const AMDGPU::Waitcnt &Wait) {
-    Wait.print(OS);
-    return OS;
-  }
 };
 
 Waitcnt decodeWaitcnt(const IsaVersion &Version, unsigned Encoded);
