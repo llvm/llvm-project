@@ -545,13 +545,6 @@ private:
   ScopedPrinterKind Kind;
 };
 
-template <>
-inline void
-ScopedPrinter::printHex<support::ulittle16_t>(StringRef Label,
-                                              support::ulittle16_t Value) {
-  startLine() << Label << ": " << hex(Value) << "\n";
-}
-
 struct DelimitedScope {
   DelimitedScope(ScopedPrinter &W) : W(&W) {}
   DelimitedScope() : W(nullptr) {}

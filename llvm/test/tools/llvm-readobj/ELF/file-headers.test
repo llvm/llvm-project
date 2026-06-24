@@ -233,3 +233,22 @@ Sections:
 # RUN:  | FileCheck %s -DFILE=%t.invalid2 -DSECHDRCOUNT="<?>" -DSECHDRSTRTABINDEX="<?>" --check-prefix=INVALID-LLVM
 # RUN: not llvm-readelf --file-headers %t.invalid2 2>&1 \
 # RUN:  | FileCheck %s -DFILE=%t.invalid2 -DSECHDRCOUNT="<?>" -DSECHDRSTRTABINDEX="<?>" --check-prefix=INVALID-GNU
+
+## --elf-output-style=JSON must emit well-formed JSON when e_machine is not
+## in any known enum table.
+# RUN: yaml2obj %s --docnum=5 -o %t.unknown-machine
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --file-header \
+# RUN:   %t.unknown-machine > %t.unknown-machine.json
+# RUN: FileCheck %s --check-prefix=JSON-UNKNOWN-MACHINE < %t.unknown-machine.json
+# RUN: %python -c 'import json, sys; json.load(sys.stdin)' < %t.unknown-machine.json
+
+# JSON-UNKNOWN-MACHINE:      "Type": "SharedObject (0x3)",
+# JSON-UNKNOWN-MACHINE-NEXT: "Machine": 36902,
+# JSON-UNKNOWN-MACHINE-NEXT: "Version": 1,
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: 0x9026
