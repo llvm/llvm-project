@@ -24,6 +24,8 @@
 /// done already
 void __ompt_force_initialization();
 
+int __ompt_set_frame_enter_internal(void *addr, int flags, int state);
+
 void __ompt_team_assign_id(kmp_team_t *team, ompt_data_t ompt_pid);
 void __ompt_thread_assign_wait_id(void *variable);
 
