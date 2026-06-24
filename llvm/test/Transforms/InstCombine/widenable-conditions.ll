@@ -173,11 +173,14 @@ define i1 @test4(i1 %a, i1 %b, i1 %c) {
   ret i1 %and
 }
 
+; note that and's instruction operands are swapped.
+; That is because of combining selects
+; leading to slightly different transformation.
 define i1 @test4_logical(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @test4_logical(
 ; CHECK-NEXT:    [[WC:%.*]] = call i1 @llvm.experimental.widenable.condition()
 ; CHECK-NEXT:    [[LHS:%.*]] = select i1 [[A:%.*]], i1 [[B:%.*]], i1 false
-; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[LHS]], [[WC]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[WC]], [[LHS]]
 ; CHECK-NEXT:    [[AND:%.*]] = select i1 [[TMP1]], i1 [[C:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[AND]]
 ;
