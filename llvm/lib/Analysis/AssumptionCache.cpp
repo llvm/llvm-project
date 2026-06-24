@@ -161,14 +161,16 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
         break;
     }
 
-    assert(ExpectedMatches[AV.Assume] == 0 || Found && "already unregistered or incorrect cache state");
+    assert(ExpectedMatches[AV.Assume] == 0 ||
+           Found && "already unregistered or incorrect cache state");
 
     if (!HasNonnull)
       AffectedValues.erase(AVI);
   }
 
-  assert(none_of(Affected, [&](auto& AV) { return ExpectedMatches[AV.Assume]; }) &&
-           "already unregistered or incorrect cache state");
+  assert(
+      none_of(Affected, [&](auto &AV) { return ExpectedMatches[AV.Assume]; }) &&
+      "already unregistered or incorrect cache state");
 }
 
 void AssumptionCache::unregisterAssumption(AssumeInst *CI) {
