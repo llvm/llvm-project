@@ -1501,15 +1501,15 @@ static std::optional<bool> checkCondition(CmpInst::Predicate Pred, Value *A,
     return std::nullopt;
   };
 
-  const auto &R = Info.getConstraintForSolving(Pred, A, B);
+  auto R = Info.getConstraintForSolving(Pred, A, B);
   if (auto ImpliedCondition = TryWithConstraint(R))
     return ImpliedCondition;
 
   // Additionally, query the signed system for eq/ne predicates.
   if (CmpInst::isEquality(Pred)) {
     SmallVector<Value *> NewVariables;
-    const auto &SR = Info.getConstraint(Pred, A, B, NewVariables,
-                                        /*ForceSignedSystem=*/true);
+    auto SR = Info.getConstraint(Pred, A, B, NewVariables,
+                                 /*ForceSignedSystem=*/true);
     if (NewVariables.empty())
       if (auto ImpliedCondition = TryWithConstraint(SR))
         return ImpliedCondition;
