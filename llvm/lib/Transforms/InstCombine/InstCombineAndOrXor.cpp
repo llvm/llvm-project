@@ -1974,6 +1974,41 @@ static Instruction *foldOrToXor(BinaryOperator &I,
   return nullptr;
 }
 
+static bool matchConstantMaskBitfieldClear(Value *OldBits, Value *NewBits,
+                                           Value *&X, Value *&NotYAndM) {
+  const APInt *Mask, *NotMask, *YMask;
+
+  if (!match(OldBits, m_c_And(m_Value(X), m_APInt(NotMask))))
+    return false;
+
+  if (!match(NewBits,
+             m_c_And(
+                 m_c_And(m_Specific(X), m_APInt(Mask)),
+                 m_Value(NotYAndM, m_Not(m_c_And(m_Value(), m_APInt(YMask)))))))
+    return false;
+
+  return *Mask == *YMask && *NotMask == ~*Mask;
+}
+
+static Instruction *foldOrOfConstantMaskBitfieldClear(BinaryOperator &I) {
+  assert(I.getOpcode() == Instruction::Or);
+
+  if (!I.getType()->isIntegerTy())
+    return nullptr;
+
+  // (X & ~M) | ((X & M) & ~(Y & M)) --> X & ~(Y & M)
+  // Match only the exact constant-mask shape. The replacement reuses the
+  // existing complement of (Y & M), so multi-use operands are not duplicated.
+  Value *X, *NotYAndM;
+  if (matchConstantMaskBitfieldClear(I.getOperand(0), I.getOperand(1), X,
+                                     NotYAndM) ||
+      matchConstantMaskBitfieldClear(I.getOperand(1), I.getOperand(0), X,
+                                     NotYAndM))
+    return BinaryOperator::CreateAnd(X, NotYAndM);
+
+  return nullptr;
+}
+
 /// Return true if a constant shift amount is always less than the specified
 /// bit-width. If not, the shift could create poison in the narrower type.
 static bool canNarrowShiftAmt(Constant *C, unsigned BitWidth) {
@@ -4131,6 +4166,9 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   // (A & B) | (C & D) -> A ^ C where A == ~D && B == ~C
   if (Value *V = foldOrOfInversions(I, Builder))
     return replaceInstUsesWith(I, V);
+
+  if (Instruction *R = foldOrOfConstantMaskBitfieldClear(I))
+    return R;
 
   // (A&B)|(A&C) -> A&(B|C) etc
   if (Value *V = foldUsingDistributiveLaws(I))
