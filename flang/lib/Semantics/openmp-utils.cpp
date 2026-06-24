@@ -2236,22 +2236,26 @@ UnsupportedSelectorFeature FindUnsupportedSelectorFeature(
   for (const parser::OmpTraitSetSelector &traitSet : ctxSel.v) {
     using TSSName = parser::OmpTraitSetSelectorName;
     auto setName{std::get<TSSName>(traitSet.t).v};
-    if (MapTraitSet(setName) == llvm::omp::TraitSet::target_device)
+    if (MapTraitSet(setName) == llvm::omp::TraitSet::target_device) {
       return UnsupportedSelectorFeature::TargetDevice;
+    }
 
     for (const parser::OmpTraitSelector &selector :
         std::get<std::list<parser::OmpTraitSelector>>(traitSet.t)) {
       const auto &props{
           std::get<std::optional<parser::OmpTraitSelector::Properties>>(
               selector.t)};
-      if (!props)
+      if (!props) {
         continue;
+      }
       for (const auto &prop :
-          std::get<std::list<parser::OmpTraitProperty>>(props->t))
+          std::get<std::list<parser::OmpTraitProperty>>(props->t)) {
         if (std::holds_alternative<common::Indirection<parser::OmpClause>>(
                 prop.u) ||
-            std::holds_alternative<parser::OmpTraitPropertyExtension>(prop.u))
+            std::holds_alternative<parser::OmpTraitPropertyExtension>(prop.u)) {
           return UnsupportedSelectorFeature::ClauseOrExtensionProperty;
+        }
+      }
     }
   }
   return UnsupportedSelectorFeature::None;
@@ -2274,13 +2278,15 @@ static void AddTraitPropertiesFromSelector(llvm::omp::TraitSet set,
   // first such expression is captured for later runtime lowering.
   llvm::omp::TraitSelector selectorKind{MapTraitSelector(traitName, set)};
   if (selectorKind == llvm::omp::TraitSelector::user_condition) {
-    if (!props)
+    if (!props) {
       return;
+    }
     for (const auto &prop :
         std::get<std::list<parser::OmpTraitProperty>>(props->t)) {
       const auto *scalarExpr{std::get_if<parser::ScalarExpr>(&prop.u)};
-      if (!scalarExpr)
+      if (!scalarExpr) {
         continue;
+      }
       if (auto constValue{EvaluateUserCondition(semaCtx, *scalarExpr)}) {
         vmi.addTrait(set,
             *constValue ? llvm::omp::TraitProperty::user_condition_true
@@ -2288,8 +2294,9 @@ static void AddTraitPropertiesFromSelector(llvm::omp::TraitSet set,
             "<condition>", scorePtr);
         continue;
       }
-      if (!dynamicCond)
+      if (!dynamicCond) {
         dynamicCond = DynamicUserCondition{scalarExpr, prop.source};
+      }
       vmi.addTrait(set, llvm::omp::TraitProperty::user_condition_unknown,
           "<condition>", scorePtr);
     }
@@ -2298,15 +2305,17 @@ static void AddTraitPropertiesFromSelector(llvm::omp::TraitSet set,
 
   ProcessTraitProperties(vmi, set, selectorKind, props, scorePtr);
 
-  if (props || set != llvm::omp::TraitSet::construct)
+  if (props || set != llvm::omp::TraitSet::construct) {
     return;
+  }
 
   // Construct trait selector with no properties (e.g. `construct={simd}`):
   // the selector itself implies the property.
   llvm::omp::TraitProperty propKind{
       llvm::omp::getOpenMPContextTraitPropertyForSelector(selectorKind)};
-  if (propKind != llvm::omp::TraitProperty::invalid)
+  if (propKind != llvm::omp::TraitProperty::invalid) {
     vmi.addTrait(set, propKind, traitName.ToString(), scorePtr);
+  }
 }
 
 std::optional<DynamicUserCondition> MakeVariantMatchInfo(
@@ -2322,8 +2331,9 @@ std::optional<DynamicUserCondition> MakeVariantMatchInfo(
     llvm::omp::TraitSet set{MapTraitSet(setName)};
 
     for (const parser::OmpTraitSelector &selector :
-        std::get<std::list<parser::OmpTraitSelector>>(traitSet.t))
+        std::get<std::list<parser::OmpTraitSelector>>(traitSet.t)) {
       AddTraitPropertiesFromSelector(set, selector, vmi, semaCtx, dynamicCond);
+    }
   }
   return dynamicCond;
 }
