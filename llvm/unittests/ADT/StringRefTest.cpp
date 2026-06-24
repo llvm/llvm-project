@@ -1209,8 +1209,8 @@ TEST(StringRefTest, LFCRLineEnding) {
 }
 
 TEST(StringRefTest, NonEmptyOr) {
-  constexpr StringRef empty;
-  constexpr StringRef populated("yay!");
+  constexpr StringLiteral empty("");
+  constexpr StringLiteral populated("yay!");
   EXPECT_EQ(populated, empty.nonEmptyOr("yay!"));
   EXPECT_EQ(populated, populated.nonEmptyOr("boo!"));
 }
