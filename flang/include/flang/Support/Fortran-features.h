@@ -114,23 +114,13 @@ public:
     }
   }
   void WarnOnAllNonstandard(bool yes = true);
-  bool IsWarnOnAllNonstandard() const { return warnAllLanguage_; }
   void WarnOnAllUsage(bool yes = true);
-  bool IsWarnOnAllUsage() const { return warnAllUsage_; }
-  void DisableAllNonstandardWarnings() {
-    warnAllLanguage_ = false;
-    warnLanguage_.clear();
-  }
-  void DisableAllUsageWarnings() {
-    warnAllUsage_ = false;
-    warnUsage_.clear();
-  }
+  void DisableAllNonstandardWarnings() { warnLanguage_.clear(); }
+  void DisableAllUsageWarnings() { warnUsage_.clear(); }
   void DisableAllWarnings() {
-    disableAllWarnings_ = true;
     DisableAllNonstandardWarnings();
     DisableAllUsageWarnings();
   }
-  bool AreWarningsDisabled() const { return disableAllWarnings_; }
   bool IsEnabled(LanguageFeature f) const { return !disable_.test(f); }
   bool ShouldWarn(LanguageFeature f) const { return warnLanguage_.test(f); }
   bool ShouldWarn(UsageWarning w) const { return warnUsage_.test(w); }
@@ -190,10 +180,7 @@ private:
       usageWarningCliCanonicalSpelling_;
   LanguageFeatures disable_;
   LanguageFeatures warnLanguage_;
-  bool warnAllLanguage_{false};
   UsageWarnings warnUsage_;
-  bool warnAllUsage_{false};
-  bool disableAllWarnings_{false};
 };
 } // namespace Fortran::common
 #endif // FORTRAN_SUPPORT_FORTRAN_FEATURES_H_
