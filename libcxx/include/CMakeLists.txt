@@ -532,8 +532,6 @@ set(files
   __locale_dir/check_grouping.h
   __locale_dir/get_c_locale.h
   __locale_dir/locale_base_api.h
-  __locale_dir/locale_base_api/bsd_locale_fallbacks.h
-  __locale_dir/locale_base_api/ibm.h
   __locale_dir/messages.h
   __locale_dir/money.h
   __locale_dir/num.h
@@ -546,6 +544,7 @@ set(files
   __locale_dir/support/fuchsia.h
   __locale_dir/support/linux.h
   __locale_dir/support/llvm_libc.h
+  __locale_dir/support/mvs.h
   __locale_dir/support/netbsd.h
   __locale_dir/support/newlib.h
   __locale_dir/support/no_locale/characters.h
@@ -781,9 +780,7 @@ set(files
   __string/constexpr_c_functions.h
   __string/extern_template_lists.h
   __support/ibm/gettod_zos.h
-  __support/ibm/locale_mgmt_zos.h
   __support/ibm/nanosleep.h
-  __support/xlocale/__posix_l_fallback.h
   __system_error/errc.h
   __system_error/error_category.h
   __system_error/error_code.h
