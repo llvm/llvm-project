@@ -30,11 +30,17 @@ static bool printLocOffset(llvm::raw_ostream &OS, SourceLocation Loc,
                            const SourceManager &SM) {
   if (Loc.isInvalid())
     return true;
-  Loc = SM.getExpansionLoc(Loc);
-  // Use the offest into the FileID to represent the location.  Using
-  // a line/column can cause us to look back at the original source file,
-  // which is expensive.
-  OS << '@' << SM.getDecomposedLoc(Loc).second;
+  if (SM.getExpansionLoc(Loc) == SM.getSpellingLoc(Loc)) {
+    // Use the offest into the FileID to represent the location.  Using
+    // a line/column can cause us to look back at the original source file,
+    // which is expensive.
+    OS << '@' << SM.getDecomposedLoc(Loc).second;
+    return false;
+  }
+  // In case expansion and spelling locations differ, we need both of them to
+  // make the USR distinguishable:
+  OS << '@' << SM.getDecomposedLoc(SM.getExpansionLoc(Loc)).second;
+  OS << '@' << SM.getDecomposedLoc(SM.getSpellingLoc(Loc)).second;
   return false;
 }
 

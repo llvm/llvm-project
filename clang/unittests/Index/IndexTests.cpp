@@ -486,14 +486,15 @@ TEST(USRTest, NestedLambdaTagsInTemplateArg) {
 }
 
 // A variant of `NestedLambdaTagsInTemplateArg` that tests when the template
-// specialization is a macro expansion.
-TEST(USRTest, NestedLambdaTagsInTemplateArgWithTheSameSpellingLoc) {
+// specializations have identical expansion location but distinct spelling
+// location.
+TEST(USRTest, NestedLambdaTagsInTemplateArgWithSameSpellingDistinctExpansion) {
   auto AST = tooling::buildASTFromCodeWithArgs(
       R"cpp(
-        #define MY_SPEC Holder<decltype([]{})>().reset(nullptr)
+        #define MY_SPEC Holder<decltype([]{})>().reset(nullptr); \
+                        Holder<decltype([]{})>().reset(nullptr)
         template <class T> struct Holder { void reset(T*) {} };
         void caller() {
-          MY_SPEC;
           MY_SPEC;
         }
       )cpp",
@@ -525,13 +526,13 @@ TEST(USRTest, NestedLambdaTagsInTemplateArgWithTheSameSpellingLoc) {
   ASSERT_FALSE(generateUSRForDecl(CTSD2, U1));
   ASSERT_NE(U0, U1) << "U0=" << U0.str() << "  U1=" << U1.str();
 
-  // Second, check that the two lambda types have identical spellingLoc offsets
-  // but distinct expansionLoc offsets:
+  // Second, check that the two lambda types have distinct spellingLoc offsets
+  // but identical expansionLoc offsets:
   SourceManager &SM = AST->getASTContext().getSourceManager();
 
-  ASSERT_EQ(SM.getDecomposedLoc(SM.getSpellingLoc(CRD1->getBeginLoc())),
+  ASSERT_NE(SM.getDecomposedLoc(SM.getSpellingLoc(CRD1->getBeginLoc())),
             SM.getDecomposedLoc(SM.getSpellingLoc(CRD2->getBeginLoc())));
-  ASSERT_NE(SM.getDecomposedLoc(SM.getExpansionLoc(CRD1->getBeginLoc())),
+  ASSERT_EQ(SM.getDecomposedLoc(SM.getExpansionLoc(CRD1->getBeginLoc())),
             SM.getDecomposedLoc(SM.getExpansionLoc(CRD2->getBeginLoc())));
 }
 
