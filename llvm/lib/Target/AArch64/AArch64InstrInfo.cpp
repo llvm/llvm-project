@@ -2078,12 +2078,16 @@ static unsigned sForm(MachineInstr &Instr) {
   case AArch64::ADDSXri:
   case AArch64::ADDSWrx:
   case AArch64::ADDSXrx:
+  case AArch64::ADDSWrs:
+  case AArch64::ADDSXrs:
   case AArch64::SUBSWrr:
   case AArch64::SUBSWri:
   case AArch64::SUBSWrx:
+  case AArch64::SUBSWrs:
   case AArch64::SUBSXrr:
   case AArch64::SUBSXri:
   case AArch64::SUBSXrx:
+  case AArch64::SUBSXrs:
   case AArch64::ANDSWri:
   case AArch64::ANDSWrr:
   case AArch64::ANDSWrs:
@@ -2094,6 +2098,10 @@ static unsigned sForm(MachineInstr &Instr) {
   case AArch64::BICSXrr:
   case AArch64::BICSWrs:
   case AArch64::BICSXrs:
+  case AArch64::ADCSWr:
+  case AArch64::ADCSXr:
+  case AArch64::SBCSWr:
+  case AArch64::SBCSXr:
     return Instr.getOpcode();
 
   case AArch64::ADDWrr:
@@ -2108,6 +2116,10 @@ static unsigned sForm(MachineInstr &Instr) {
     return AArch64::ADDSWrx;
   case AArch64::ADDXrx:
     return AArch64::ADDSXrx;
+  case AArch64::ADDWrs:
+    return AArch64::ADDSWrs;
+  case AArch64::ADDXrs:
+    return AArch64::ADDSXrs;
   case AArch64::ADCWr:
     return AArch64::ADCSWr;
   case AArch64::ADCXr:
@@ -2124,6 +2136,10 @@ static unsigned sForm(MachineInstr &Instr) {
     return AArch64::SUBSWrx;
   case AArch64::SUBXrx:
     return AArch64::SUBSXrx;
+  case AArch64::SUBWrs:
+    return AArch64::SUBSWrs;
+  case AArch64::SUBXrs:
+    return AArch64::SUBSXrs;
   case AArch64::SBCWr:
     return AArch64::SBCSWr;
   case AArch64::SBCXr:
@@ -2315,13 +2331,13 @@ static bool isANDOpcode(MachineInstr &MI) {
 ///        MI and CmpInstr
 ///        or if MI opcode is not the S form there must be neither defs of flags
 ///        nor uses of flags between MI and CmpInstr.
-/// - and, if C/V flags are not used after CmpInstr
-///        or if N flag is used but MI produces poison value if signed overflow
-///        occurs.
+/// - and, C is not used after CmpInstr; CmpInstr's C is from adds/subs #0 on
+///        SrcReg and can differ from MI (e.g. carry out of ADCS/SBCS).
+/// - and, V is not used after CmpInstr unless MI is AND/BIC (V cleared) or MI
+///        has NoSWrap (overflow is poison and the fold is still safe).
 static bool canInstrSubstituteCmpInstr(MachineInstr &MI, MachineInstr &CmpInstr,
                                        const TargetRegisterInfo &TRI) {
-  // NOTE this assertion guarantees that MI.getOpcode() is add or subtraction
-  // that may or may not set flags.
+  // MI is an opcode sForm maps (add/sub/adc/sbc/and/bic and their S forms).
   assert(sForm(MI) != AArch64::INSTRUCTION_LIST_END);
 
   const unsigned CmpOpcode = CmpInstr.getOpcode();
@@ -2336,13 +2352,11 @@ static bool canInstrSubstituteCmpInstr(MachineInstr &MI, MachineInstr &CmpInstr,
   if (!NZVCUsed || NZVCUsed->C)
     return false;
 
-  // CmpInstr is either 'ADDS %vreg, 0' or 'SUBS %vreg, 0', and MI is either
-  // '%vreg = add ...' or '%vreg = sub ...'.
-  // Condition flag V is used to indicate signed overflow.
-  // 1) MI and CmpInstr set N and V to the same value.
-  // 2) If MI is add/sub with no-signed-wrap, it produces a poison value when
-  //    signed overflow occurs, so CmpInstr could still be simplified away.
-  // Note that Ands and Bics instructions always clear the V flag.
+  // CmpInstr is ADDS/SUBS with immediate 0 on SrcReg (compare SrcReg to zero).
+  // After the fold, users see NZCV from MI (or its S form), not from CmpInstr.
+  // N/Z match CmpInstr for the value in SrcReg; C/V need not match in general
+  // (e.g. ADCS vs adds #0), so we require C unused after CmpInstr and gate V
+  // as below. NoSWrap makes signed overflow poison; AND/BIC clear V.
   if (NZVCUsed->V && !MI.getFlag(MachineInstr::NoSWrap) && !isANDOpcode(MI))
     return false;
 

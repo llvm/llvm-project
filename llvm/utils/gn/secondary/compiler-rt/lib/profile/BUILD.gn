@@ -44,6 +44,7 @@ static_library("profile") {
     "InstrProfilingPlatformGPU.c",
     "InstrProfilingPlatformLinux.c",
     "InstrProfilingPlatformOther.c",
+    "InstrProfilingPlatformROCm.cpp",
     "InstrProfilingPlatformWindows.c",
     "InstrProfilingPort.h",
     "InstrProfilingRuntime.cpp",

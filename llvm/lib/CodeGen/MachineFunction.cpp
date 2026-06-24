@@ -1799,7 +1799,7 @@ void MachineConstantPool::print(raw_ostream &OS) const {
 // ProfileSummaryInfo::getEntryCount().
 //===----------------------------------------------------------------------===//
 template <>
-std::optional<Function::ProfileCount>
+std::optional<uint64_t>
 ProfileSummaryInfo::getEntryCount<llvm::MachineFunction>(
     const llvm::MachineFunction *F) const {
   return F->getFunction().getEntryCount();

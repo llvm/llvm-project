@@ -45,7 +45,8 @@ protected:
 //===----------------------------------------------------------------------===//
 // uArch instructions
 //===----------------------------------------------------------------------===//
-struct Subgroup2DBlockStoreInstruction : public Instruction {
+struct Subgroup2DBlockStoreInstruction : public Instruction,
+                                         public BlockIOInstructionInterface {
   Subgroup2DBlockStoreInstruction()
       : Instruction(InstructionKind::Subgroup2DBlockStore,
                     InstructionScope::Subgroup) {}
@@ -54,9 +55,12 @@ struct Subgroup2DBlockStoreInstruction : public Instruction {
   }
   // Source :
   // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_2d_block_io.html#_add_a_new_section_5_2_x_cl_intel_subgroup_2d_block_io
+  // Stores ignore the transform / transpose / upConv flags.
   std::optional<
       std::tuple<llvm::ArrayRef<int>, llvm::ArrayRef<int>, llvm::ArrayRef<int>>>
-  getBlockWidthHeightCount(Type elemTy) const {
+  getBlockWidthHeightCount(Type elemTy, bool /*hasTransform*/ = false,
+                           bool /*hasTranspose*/ = false,
+                           bool /*upConv*/ = false) const override {
     const static int kHeight[] = {1, 2, 4, 8};
     const static int kWidth16[] = {16};
     const static int kWidth32[] = {16};
@@ -73,10 +77,11 @@ struct Subgroup2DBlockStoreInstruction : public Instruction {
     return std::nullopt;
   }
 
-  int32_t getPackedFormatBitSize() const { return 16; }
+  int32_t getPackedFormatBitSize() const override { return 16; }
 };
 
-struct Subgroup2DBlockLoadInstruction : public Instruction {
+struct Subgroup2DBlockLoadInstruction : public Instruction,
+                                        public BlockIOInstructionInterface {
   Subgroup2DBlockLoadInstruction()
       : Instruction(InstructionKind::Subgroup2DBlockLoad,
                     InstructionScope::Subgroup) {}
@@ -88,48 +93,63 @@ struct Subgroup2DBlockLoadInstruction : public Instruction {
   // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_2d_block_io.html#_add_a_new_section_5_2_x_cl_intel_subgroup_2d_block_io
   std::optional<
       std::tuple<llvm::ArrayRef<int>, llvm::ArrayRef<int>, llvm::ArrayRef<int>>>
-  getBlockWidthHeightCount(Type elemTy, bool hasTransform, bool hasTranspose,
-                           bool upConv = false) const {
+  getBlockWidthHeightCount(Type elemTy, bool hasTransform = false,
+                           bool hasTranspose = false,
+                           bool upConv = false) const override {
     static const int kHeightAtLeast1[] = {1, 2, 4, 8, 16, 32};
     static const int kHeightAtLeast8[] = {8, 16, 32};
     static const int kHeightAtLeast16[] = {16, 32};
-    static const int kHeightAtLeast32[] = {32};
+    static const int kHeight32[] = {32};
+    static const int kHeight64[] = {64};
 
+    static const int kWidth64[] = {64};
     static const int kWidth32[] = {32};
     static const int kWidth16[] = {16};
+    static const int kWidthAtLeast16[] = {16, 32};
+    static const int kWidthAtLeast32[] = {32, 64};
     static const int kWidth8[] = {8};
 
     static const int32_t kCount1[] = {1};
     static const int32_t kCount2[] = {1, 2};
     static const int32_t kCount4[] = {1, 2, 4};
     static const int32_t kCount4Only[] = {4};
-    // (elemBytes, transform, transpose, upConvert)
+    // (elemBits, transform, transpose, upConvert)
     using Key = std::tuple<int, uint8_t, uint8_t, uint8_t>;
     // (widths, heights, counts)
     using Value = std::tuple<llvm::ArrayRef<int32_t>, llvm::ArrayRef<int32_t>,
                              llvm::ArrayRef<int32_t>>;
+    // The table is keyed on element bit width so sub-byte elements can be
+    // expressed directly. 4-bit elements are packed two-per-byte, so their
+    // widths (or heights, when transformed) are double the 8-bit rows.
     static const llvm::DenseMap<Key, Value> kMap = {
-        {{1, false, false, false}, {kWidth32, kHeightAtLeast1, kCount2}},
-        {{1, false, false, true}, {kWidth16, kHeightAtLeast8, kCount4Only}},
-        {{2, false, false, false}, {kWidth16, kHeightAtLeast1, kCount2}},
-        {{4, false, false, false}, {kWidth16, kHeightAtLeast1, kCount1}},
+        {{8, false, false, false}, {kWidthAtLeast16, kHeightAtLeast1, kCount2}},
+        {{8, false, false, true}, {kWidth16, kHeightAtLeast8, kCount4Only}},
+        {{16, false, false, false}, {kWidth16, kHeightAtLeast1, kCount2}},
+        {{32, false, false, false}, {kWidth16, kHeightAtLeast1, kCount1}},
         // Block Loads with Transform:
-        {{1, true, false, false}, {kWidth16, kHeightAtLeast32, kCount4}},
-        {{2, true, false, false}, {kWidth16, kHeightAtLeast16, kCount2}},
+        {{8, true, false, false}, {kWidth16, kHeight32, kCount4}},
+        {{16, true, false, false}, {kWidth16, kHeightAtLeast16, kCount2}},
         // Block Loads with Transpose:
-        {{4, false, true, false}, {kWidth8, kHeightAtLeast16, kCount1}},
-    };
-    const int elemByteSize = elemTy.getIntOrFloatBitWidth() / 8;
-    auto it = kMap.find({elemByteSize, hasTransform, hasTranspose, upConv});
+        {{8, false, true, false}, {kWidth32, kHeightAtLeast16, kCount1}},
+        {{16, false, true, false}, {kWidth16, kHeightAtLeast16, kCount1}},
+        {{32, false, true, false}, {kWidth8, kHeightAtLeast16, kCount1}},
+        // 4-bit elements (sub-byte):
+        {{4, false, false, false}, {kWidthAtLeast32, kHeightAtLeast1, kCount2}},
+        {{4, false, false, true}, {kWidth32, kHeightAtLeast8, kCount4Only}},
+        {{4, true, false, false}, {kWidth16, kHeight64, kCount4}},
+        {{4, false, true, false}, {kWidth64, kHeightAtLeast16, kCount1}}};
+    int elemBitSize = elemTy.getIntOrFloatBitWidth();
+    auto it = kMap.find({elemBitSize, hasTransform, hasTranspose, upConv});
     if (it != kMap.end())
       return it->second;
     return std::nullopt;
   }
 
-  int32_t getPackedFormatBitSize() const { return 16; }
+  int32_t getPackedFormatBitSize() const override { return 16; }
 };
 
-struct Subgroup2DBlockPrefetchInstruction : public Instruction {
+struct Subgroup2DBlockPrefetchInstruction : public Instruction,
+                                            public BlockIOInstructionInterface {
   Subgroup2DBlockPrefetchInstruction()
       : Instruction(InstructionKind::Subgroup2DBlockPrefetch,
                     InstructionScope::Subgroup) {}
@@ -138,9 +158,12 @@ struct Subgroup2DBlockPrefetchInstruction : public Instruction {
   }
   // Source :
   // https://registry.khronos.org/OpenCL/extensions/intel/cl_intel_subgroup_buffer_prefetch.html#_add_a_new_section_6_15_x_sub_group_prefetch_functions
+  // Prefetches ignore the transform / transpose / upConv flags.
   std::optional<
       std::tuple<llvm::ArrayRef<int>, llvm::ArrayRef<int>, llvm::ArrayRef<int>>>
-  getBlockWidthHeightCount(Type elemTy) const {
+  getBlockWidthHeightCount(Type elemTy, bool /*hasTransform*/ = false,
+                           bool /*hasTranspose*/ = false,
+                           bool /*upConv*/ = false) const override {
     static const int kHeightAtLeast1[] = {1, 2, 4, 8, 16, 32};
 
     static const int kWidth32[] = {32};
@@ -164,7 +187,7 @@ struct Subgroup2DBlockPrefetchInstruction : public Instruction {
       return it->second;
     return std::nullopt;
   }
-  int32_t getPackedFormatBitSize() const { return 16; }
+  int32_t getPackedFormatBitSize() const override { return 16; }
 };
 
 struct SubgroupMatrixMultiplyAcc : public Instruction,

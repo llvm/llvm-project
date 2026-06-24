@@ -5,15 +5,15 @@
 
 typedef int v4si __attribute__((vector_size(16)));
 
-int test_builtin_reduce_or_undef_rvalue(v4si x) {
-  // expected-error@+1 {{unimplemented X86 builtin call: __builtin_reduce_or}}
-  return __builtin_reduce_or(x);
+int test_builtin_reduce_add_undef_rvalue(v4si x) {
+  // expected-error@+1 {{unimplemented X86 builtin call: __builtin_reduce_add}}
+  return __builtin_reduce_add(x);
 }
 
-// CIR-LABEL: @_Z35test_builtin_reduce_or_undef_rvalueDv4_i
+// CIR-LABEL: @_Z36test_builtin_reduce_add_undef_rvalueDv4_i
 // CIR:         cir.const #cir.undef : !s32i
 // CIR:         cir.return
 
-// LLVM-LABEL: @_Z35test_builtin_reduce_or_undef_rvalueDv4_i
+// LLVM-LABEL: @_Z36test_builtin_reduce_add_undef_rvalueDv4_i
 // LLVM:         store i32 undef, ptr %{{.+}}, align 4
 // LLVM:         ret i32 %{{.+}}

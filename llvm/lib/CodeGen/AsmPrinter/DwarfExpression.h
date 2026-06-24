@@ -248,6 +248,9 @@ public:
   /// Emit an unsigned constant.
   void addUnsignedConstant(const APInt &Value);
 
+  /// Emit an implicit value.
+  void addImplicitValue(const APInt &Value, const AsmPrinter &AP);
+
   /// Emit an floating point constant.
   void addConstantFP(const APFloat &Value, const AsmPrinter &AP);
 

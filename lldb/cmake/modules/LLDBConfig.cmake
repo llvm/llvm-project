@@ -190,7 +190,7 @@ else()
   set(LLDB_ENABLE_MTE OFF)
 endif()
 
-if (CMAKE_SYSTEM_NAME MATCHES "Darwin|FreeBSD")
+if (CMAKE_SYSTEM_NAME MATCHES "Darwin|FreeBSD" AND NOT CMAKE_GENERATOR MATCHES "Xcode")
   set(default_enable_dynamic_scriptinterpreters ON)
 else()
   set(default_enable_dynamic_scriptinterpreters OFF)

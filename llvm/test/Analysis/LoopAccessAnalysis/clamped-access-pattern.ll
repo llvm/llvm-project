@@ -308,7 +308,7 @@ define void @clamped_small_bound(ptr %a) {
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep = getelementptr inbounds i32, ptr %a, i64 %idx:
 ; CHECK-NEXT:        ((4 * (zext i1 {false,+,true}<%loop> to i64))<nuw><nsw> + %a)<nuw>
-; CHECK-NEXT:        --> {%a,+,-4}<%loop>
+; CHECK-NEXT:        --> {%a,+,-4}<nw><%loop>
 ;
 entry:
   br label %loop
@@ -1040,7 +1040,7 @@ define void @clamped_mul_huge_scale_as1(ptr addrspace(1) %a) {
 ; CHECK-LABEL: 'clamped_mul_huge_scale_as1'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
-; CHECK-NEXT:    Unsafe indirect dependence.
+; CHECK-NEXT:  Unsafe indirect dependence.
 ; CHECK-NEXT:      Dependences:
 ; CHECK-NEXT:        IndirectUnsafe:
 ; CHECK-NEXT:            %ld = load i64, ptr addrspace(1) %gep, align 8 ->
@@ -1054,7 +1054,7 @@ define void @clamped_mul_huge_scale_as1(ptr addrspace(1) %a) {
 ; CHECK-NEXT:      {0,+,1}<%loop> Added Flags: <nusw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
-; CHECK-NEXT:      [PSE]  %gep = getelementptr inbounds i8, ptr addrspace(1) %a, i128 %off:
+; CHECK-NEXT:      [PSE] %gep = getelementptr inbounds i8, ptr addrspace(1) %a, i128 %off:
 ; CHECK-NEXT:        ((36893488147419103232 * (zext i2 {0,+,1}<%loop> to i128))<nuw><nsw> + %a)<nuw>
 ; CHECK-NEXT:        --> {%a,+,36893488147419103232}<nw><%loop>
 ;

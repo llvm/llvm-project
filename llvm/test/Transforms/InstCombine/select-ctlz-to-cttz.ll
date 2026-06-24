@@ -340,3 +340,31 @@ define i4 @PR45762_logical(i3 %x4) {
   %sel_71 = select i1 %t12, i4 %one_hot_16, i4 %umul_23
   ret i4 %sel_71
 }
+
+define i32 @select_clz_to_ctz_sub_constant_for_zero(i32 %a) {
+; CHECK-LABEL: @select_clz_to_ctz_sub_constant_for_zero(
+; CHECK-NEXT:    [[COND:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[A:%.*]], i1 false)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub i32 0, %a
+  %and = and i32 %a, %sub
+  %lz = tail call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 %and, i1 false)
+  %tobool = icmp eq i32 %a, 0
+  %sub1 = sub nsw i32 31, %lz
+  %cond = select i1 %tobool, i32 32, i32 %sub1
+  ret i32 %cond
+}
+
+define i33 @select_clz_to_ctz_sub_constant_for_zero_33(i33 %a) {
+; CHECK-LABEL: @select_clz_to_ctz_sub_constant_for_zero_33(
+; CHECK-NEXT:    [[COND:%.*]] = call range(i33 0, 34) i33 @llvm.cttz.i33(i33 [[A:%.*]], i1 false)
+; CHECK-NEXT:    ret i33 [[COND]]
+;
+  %sub = sub i33 0, %a
+  %and = and i33 %a, %sub
+  %lz = tail call range(i33 0, 34) i33 @llvm.ctlz.i33(i33 %and, i1 false)
+  %tobool = icmp eq i33 %a, 0
+  %sub1 = sub nsw i33 32, %lz
+  %cond = select i1 %tobool, i33 33, i33 %sub1
+  ret i33 %cond
+}
