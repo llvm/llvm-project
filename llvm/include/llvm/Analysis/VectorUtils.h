@@ -631,6 +631,14 @@ public:
   /// Return true if this group is full, i.e. it has no gaps.
   bool isFull() const { return getNumMembers() == getFactor(); }
 
+  void addRequiredPredicates(ArrayRef<const SCEVPredicate *> Preds) {
+    Predicates.append(Preds.begin(), Preds.end());
+  }
+
+  ArrayRef<const SCEVPredicate *> getRequiredPredicates() const {
+    return Predicates;
+  }
+
 private:
   uint32_t Factor; // Interleave Factor.
   bool Reverse;
@@ -651,6 +659,8 @@ private:
   //      %odd = add i32               // Def of %odd
   //      store i32 %odd               // Insert Position
   InstTy *InsertPos;
+
+  SmallVector<const SCEVPredicate *> Predicates;
 };
 
 /// Drive the analysis of interleaved memory accesses in the loop.
