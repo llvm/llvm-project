@@ -59,4 +59,21 @@ void test() {
   it - 0;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   it - it;
+
+  // [range.adjacent.sentinel]
+
+  auto st = v.end();
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  it - st;
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  st - it;
+
+  auto c_it = std::as_const(v).begin();
+
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  st - c_it;
+  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
+  c_it - st;
+
 }
