@@ -224,7 +224,8 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate memory. Use std::malloc in all cases.
-  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind) override {
+  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind,
+                            size_t /* Alignment */) override {
     if (Size == 0)
       return nullptr;
 
