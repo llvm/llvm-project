@@ -194,6 +194,23 @@ struct AllocaDerivedValueTracker {
 };
 } // namespace
 
+/// Check if the callee of CI directly uses @llvm.returnaddress or
+/// @llvm.frameaddress. Tail-calling such a function would alter the observed
+/// return/frame address, because the caller's stack frame is eliminated by the
+/// tail call optimization.
+static bool calleeUsesReturnOrFrameAddress(const CallInst *CI) {
+  const Function *Callee = CI->getCalledFunction();
+  if (!Callee || Callee->isDeclaration())
+    return false;
+  for (const auto &BB : *Callee)
+    for (const auto &I : BB)
+      if (const auto *II = dyn_cast<IntrinsicInst>(&I))
+        if (II->getIntrinsicID() == Intrinsic::returnaddress ||
+            II->getIntrinsicID() == Intrinsic::frameaddress)
+          return true;
+  return false;
+}
+
 static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
   if (F.callsFunctionThatReturnsTwice())
     return false;
@@ -281,7 +298,7 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
           SafeToTail = false;
           break;
         }
-        if (SafeToTail) {
+        if (SafeToTail && !calleeUsesReturnOrFrameAddress(CI)) {
           using namespace ore;
           ORE->emit([&]() {
             return OptimizationRemark(DEBUG_TYPE, "tailcall-readnone", CI)
@@ -326,6 +343,8 @@ static bool markTails(Function &F, OptimizationRemarkEmitter *ORE) {
 
   for (CallInst *CI : DeferredTails) {
     if (Visited[CI->getParent()] != ESCAPED) {
+      if (calleeUsesReturnOrFrameAddress(CI))
+        continue;
       // If the escape point was part way through the block, calls after the
       // escape point wouldn't have been put into DeferredTails.
       LLVM_DEBUG(dbgs() << "Marked as tail call candidate: " << *CI << "\n");
