@@ -23,6 +23,8 @@
 # RUNTIMES_INSTALL_RESOURCE_MOD_PATH - Where to install intrinsic module files
 # in the install prefix. Relative to CMAKE_INSTALL_PREFIX. Only used when
 # RUNTIMES_FORTRAN_MODULES is ON.
+#
+# RUNTIMES_NEED_INTRINSIC_MODULES_WORKAROUND
 
 
 # Check whether the Fortran compiler already has access to builtin modules. Sets
@@ -188,6 +190,31 @@ option(RUNTIMES_FORTRAN_MODULES "Make Fortran .mod files available to Flang; sho
 
 # Determine the paths for Fortran .mod files.
 if (RUNTIMES_FORTRAN_MODULES)
+  set(RUNTIMES_NEED_INTRINSIC_MODULES_WORKAROUND ON)
+  if (CMAKE_GENERATOR STREQUAL "Unix Makefiles")
+    # "Unix Makefiles" generator supports CMAKE_Fortran_BUILDING_IN(S)TRINSIC_MODULES
+    set(RUNTIMES_NEED_INTRINSIC_MODULES_WORKAROUND OFF)
+  elseif (CMAKE_GENERATOR MATCHES "^Ninja")
+    # Ninja generator supports CMAKE_Fortran_BUILDING_IN(S)TRINSIC_MODULES
+    # starting with CMake 4.5
+    if (CMAKE_VERSION VERSION_GREATER_EQUAL "4.5")
+      set(RUNTIMES_NEED_INTRINSIC_MODULES_WORKAROUND OFF)
+    endif ()
+  endif ()
+  if (RUNTIMES_NEED_INTRINSIC_MODULES_WORKAROUND)
+    message(STATUS "CMAKE_Fortran_BUILDING_IN(S)TRINSIC_MODULES: workaround enabled")
+  else ()
+    message(STATUS "CMAKE_Fortran_BUILDING_IN(S)TRINSIC_MODULES: assumed to work")
+  endif ()
+  set(RUNTIMES_NEED_INTRINSIC_MODULES_WORKAROUND "${RUNTIMES_NEED_INTRINSIC_MODULES_WORKAROUND}" PARENT_SCOPE)
+
+  # Always track intrinsic module dependencies; Even if not supported in the
+  # current setup, at worst they are ignored.
+  set(CMAKE_Fortran_BUILDING_INTRINSIC_MODULES ON)
+  set(CMAKE_Fortran_BUILDING_INSTRINSIC_MODULES ON)
+
+
+
   # Flang expects its builtin modules in Clang's resource directory.
   get_toolchain_module_subdir(toolchain_mod_subdir)
   extend_path(RUNTIMES_OUTPUT_RESOURCE_MOD_DIR "${RUNTIMES_OUTPUT_RESOURCE_DIR}" "${toolchain_mod_subdir}")

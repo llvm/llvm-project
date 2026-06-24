@@ -295,7 +295,7 @@ if (FLANG_RT_FORTRAN_MODULES)
   # updated if a USE'd .mod file changes (a .mod stores the checksums of all
   # .mod files it depends on and therefore needs to be updated as well), inject
   # an file-level dependency via OBJECT_DEPENDS.
-
+  if (RUNTIMES_NEED_INTRINSIC_MODULES_WORKAROUND)
   add_flangrt_library(flang_rt.mod.fortran.builtins OBJECT
     __fortran_builtins.f90
   )
@@ -330,6 +330,15 @@ if (FLANG_RT_FORTRAN_MODULES)
 
   flang_module_target(flang_rt.mod PUBLIC)
   add_module_barrier(flang-rt-mod flang_rt.mod)
+  else ()
+    # Workaround not needed
+    add_flangrt_library(flang_rt.mod OBJECT
+      ${intrinsics_sources}
+      ${module_sources}
+    )
+    flang_module_target(flang_rt.mod PUBLIC)
+    add_module_barrier(flang-rt-mod flang_rt.mod)
+  endif ()
 
   if (RUNTIMES_FORTRAN_MODULES)
     set(_mod_install_dest "${RUNTIMES_INSTALL_RESOURCE_MOD_PATH}/..")
