@@ -55266,8 +55266,8 @@ static SDValue combineVEXTRACT_STORE(SDNode *N, SelectionDAG &DAG,
 /// A horizontal-op B, for some already available A and B, and if so then LHS is
 /// set to A, RHS to B, and the routine returns 'true'.
 static bool isHorizontalBinOp(unsigned HOpcode, SDValue &LHS, SDValue &RHS,
-                              SelectionDAG &DAG, const X86Subtarget &Subtarget,
-                              bool IsCommutative,
+                              const SelectionDAG &DAG,
+                              const X86Subtarget &Subtarget, bool IsCommutative,
                               SmallVectorImpl<int> &PostShuffleMask,
                               bool ForceHorizOp) {
   // If either operand is undef, bail out. The binop should be simplified.
@@ -55312,8 +55312,11 @@ static bool isHorizontalBinOp(unsigned HOpcode, SDValue &LHS, SDValue &RHS,
         ShuffleMask.assign(ScaledMask.begin(), ScaledMask.end());
       }
       if (UseSubVector && SrcOps.size() == 1 &&
-          scaleShuffleElements(SrcMask, 2 * NumElts, ScaledMask)) {
-        std::tie(N0, N1) = DAG.SplitVector(SrcOps[0], SDLoc(Op));
+          scaleShuffleElements(SrcMask, 2 * NumElts, ScaledMask) &&
+          SrcOps[0].getOpcode() == ISD::CONCAT_VECTORS &&
+          SrcOps[0].getNumOperands() == 2) {
+        N0 = SrcOps[0].getOperand(0);
+        N1 = SrcOps[0].getOperand(1);
         ArrayRef<int> Mask = ArrayRef<int>(ScaledMask).slice(0, NumElts);
         ShuffleMask.assign(Mask.begin(), Mask.end());
       }
@@ -55449,8 +55452,8 @@ static bool isHorizontalBinOp(unsigned HOpcode, SDValue &LHS, SDValue &RHS,
                              DAG, Subtarget))
     return false;
 
-  LHS = DAG.getBitcast(VT, NewLHS);
-  RHS = DAG.getBitcast(VT, NewRHS);
+  LHS = NewLHS;
+  RHS = NewRHS;
   return true;
 }
 
@@ -55481,7 +55484,9 @@ static SDValue combineToHorizontalAddSub(SDNode *N, SelectionDAG &DAG,
       auto HorizOpcode = IsAdd ? X86ISD::FHADD : X86ISD::FHSUB;
       if (isHorizontalBinOp(HorizOpcode, LHS, RHS, DAG, Subtarget, IsAdd,
                             PostShuffleMask, MergableHorizOp(HorizOpcode))) {
-        SDValue HorizBinOp = DAG.getNode(HorizOpcode, SDLoc(N), VT, LHS, RHS);
+        SDValue HorizBinOp =
+            DAG.getNode(HorizOpcode, SDLoc(N), VT, DAG.getBitcast(VT, LHS),
+                        DAG.getBitcast(VT, RHS));
         if (!PostShuffleMask.empty())
           HorizBinOp = DAG.getVectorShuffle(VT, SDLoc(HorizBinOp), HorizBinOp,
                                             DAG.getUNDEF(VT), PostShuffleMask);
@@ -55497,7 +55502,6 @@ static SDValue combineToHorizontalAddSub(SDNode *N, SelectionDAG &DAG,
       break;
     if (VT == MVT::v8i16 || VT == MVT::v16i16 ||
         (!IsSat && (VT == MVT::v4i32 || VT == MVT::v8i32))) {
-
       SDValue LHS = N->getOperand(0);
       SDValue RHS = N->getOperand(1);
       auto HorizOpcode = IsSat ? (IsAdd ? X86ISD::HADDS : X86ISD::HSUBS)
@@ -55508,8 +55512,9 @@ static SDValue combineToHorizontalAddSub(SDNode *N, SelectionDAG &DAG,
                                         ArrayRef<SDValue> Ops) {
           return DAG.getNode(HorizOpcode, DL, Ops[0].getValueType(), Ops);
         };
-        SDValue HorizBinOp = SplitOpsAndApply(DAG, Subtarget, SDLoc(N), VT,
-                                              {LHS, RHS}, HOpBuilder);
+        SDValue HorizBinOp = SplitOpsAndApply(
+            DAG, Subtarget, SDLoc(N), VT,
+            {DAG.getBitcast(VT, LHS), DAG.getBitcast(VT, RHS)}, HOpBuilder);
         if (!PostShuffleMask.empty())
           HorizBinOp = DAG.getVectorShuffle(VT, SDLoc(HorizBinOp), HorizBinOp,
                                             DAG.getUNDEF(VT), PostShuffleMask);
