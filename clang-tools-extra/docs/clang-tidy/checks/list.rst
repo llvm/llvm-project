@@ -332,6 +332,7 @@ Clang-Tidy Checks
    :doc:`modernize-use-std-format <modernize/use-std-format>`, "Yes"
    :doc:`modernize-use-std-numbers <modernize/use-std-numbers>`, "Yes"
    :doc:`modernize-use-std-print <modernize/use-std-print>`, "Yes"
+   :doc:`modernize-use-std-tie <modernize/use-std-tie>`, "Yes"
    :doc:`modernize-use-string-view <modernize/use-string-view>`, "Yes"
    :doc:`modernize-use-structured-binding <modernize/use-structured-binding>`, "Yes"
    :doc:`modernize-use-trailing-return-type <modernize/use-trailing-return-type>`, "Yes"

@@ -51,6 +51,7 @@
 #include "UseStdFormatCheck.h"
 #include "UseStdNumbersCheck.h"
 #include "UseStdPrintCheck.h"
+#include "UseStdTieCheck.h"
 #include "UseStringViewCheck.h"
 #include "UseStructuredBindingCheck.h"
 #include "UseTrailingReturnTypeCheck.h"
@@ -134,6 +135,8 @@ public:
     CheckFactories.registerCheck<UseNoexceptCheck>("modernize-use-noexcept");
     CheckFactories.registerCheck<UseNullptrCheck>("modernize-use-nullptr");
     CheckFactories.registerCheck<UseOverrideCheck>("modernize-use-override");
+    CheckFactories.registerCheck<UseStdTieCheck>(
+        "modernize-use-std-tie");
     CheckFactories.registerCheck<UseStringViewCheck>(
         "modernize-use-string-view");
     CheckFactories.registerCheck<UseStructuredBindingCheck>(
