@@ -1274,6 +1274,18 @@ void ASTContext::InitBuiltinType(CanQualType &R, BuiltinType::Kind K) {
 
 void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
                                   const TargetInfo *AuxTarget) {
+  struct BuiltinTypeInit {
+    CanQualType ASTContext::*Field;
+    BuiltinType::Kind Kind;
+  };
+  static_assert(sizeof(BuiltinTypeInit) <= 2 * sizeof(void *),
+                "Builtin type initializer grew unexpectedly");
+
+  auto InitBuiltinTypeGroup = [this](ArrayRef<BuiltinTypeInit> Inits) {
+    for (const BuiltinTypeInit &Init : Inits)
+      InitBuiltinType(this->*Init.Field, Init.Kind);
+  };
+
   assert((!this->Target || this->Target == &Target) &&
          "Incorrect target reinitialization");
   assert(VoidTy.isNull() && "Context reinitialized?");
@@ -1284,79 +1296,69 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   ABI.reset(createCXXABI(Target));
   AddrSpaceMapMangling = isAddrSpaceMapManglingEnabled(Target, LangOpts);
 
-  // C99 6.2.5p19.
-  InitBuiltinType(VoidTy,              BuiltinType::Void);
+  static constexpr BuiltinTypeInit InitialTypes[] = {
+      {&ASTContext::VoidTy, BuiltinType::Void},
+      {&ASTContext::BoolTy, BuiltinType::Bool},
+  };
+  InitBuiltinTypeGroup(InitialTypes);
 
-  // C99 6.2.5p2.
-  InitBuiltinType(BoolTy,              BuiltinType::Bool);
   // C99 6.2.5p3.
   if (LangOpts.CharIsSigned)
-    InitBuiltinType(CharTy,            BuiltinType::Char_S);
+    InitBuiltinType(CharTy, BuiltinType::Char_S);
   else
-    InitBuiltinType(CharTy,            BuiltinType::Char_U);
-  // C99 6.2.5p4.
-  InitBuiltinType(SignedCharTy,        BuiltinType::SChar);
-  InitBuiltinType(ShortTy,             BuiltinType::Short);
-  InitBuiltinType(IntTy,               BuiltinType::Int);
-  InitBuiltinType(LongTy,              BuiltinType::Long);
-  InitBuiltinType(LongLongTy,          BuiltinType::LongLong);
+    InitBuiltinType(CharTy, BuiltinType::Char_U);
 
-  // C99 6.2.5p6.
-  InitBuiltinType(UnsignedCharTy,      BuiltinType::UChar);
-  InitBuiltinType(UnsignedShortTy,     BuiltinType::UShort);
-  InitBuiltinType(UnsignedIntTy,       BuiltinType::UInt);
-  InitBuiltinType(UnsignedLongTy,      BuiltinType::ULong);
-  InitBuiltinType(UnsignedLongLongTy,  BuiltinType::ULongLong);
-
-  // C99 6.2.5p10.
-  InitBuiltinType(FloatTy,             BuiltinType::Float);
-  InitBuiltinType(DoubleTy,            BuiltinType::Double);
-  InitBuiltinType(LongDoubleTy,        BuiltinType::LongDouble);
-
-  // GNU extension, __float128 for IEEE quadruple precision
-  InitBuiltinType(Float128Ty,          BuiltinType::Float128);
-
-  // __ibm128 for IBM extended precision
-  InitBuiltinType(Ibm128Ty, BuiltinType::Ibm128);
-
-  // C11 extension ISO/IEC TS 18661-3
-  InitBuiltinType(Float16Ty,           BuiltinType::Float16);
-
-  // ISO/IEC JTC1 SC22 WG14 N1169 Extension
-  InitBuiltinType(ShortAccumTy,            BuiltinType::ShortAccum);
-  InitBuiltinType(AccumTy,                 BuiltinType::Accum);
-  InitBuiltinType(LongAccumTy,             BuiltinType::LongAccum);
-  InitBuiltinType(UnsignedShortAccumTy,    BuiltinType::UShortAccum);
-  InitBuiltinType(UnsignedAccumTy,         BuiltinType::UAccum);
-  InitBuiltinType(UnsignedLongAccumTy,     BuiltinType::ULongAccum);
-  InitBuiltinType(ShortFractTy,            BuiltinType::ShortFract);
-  InitBuiltinType(FractTy,                 BuiltinType::Fract);
-  InitBuiltinType(LongFractTy,             BuiltinType::LongFract);
-  InitBuiltinType(UnsignedShortFractTy,    BuiltinType::UShortFract);
-  InitBuiltinType(UnsignedFractTy,         BuiltinType::UFract);
-  InitBuiltinType(UnsignedLongFractTy,     BuiltinType::ULongFract);
-  InitBuiltinType(SatShortAccumTy,         BuiltinType::SatShortAccum);
-  InitBuiltinType(SatAccumTy,              BuiltinType::SatAccum);
-  InitBuiltinType(SatLongAccumTy,          BuiltinType::SatLongAccum);
-  InitBuiltinType(SatUnsignedShortAccumTy, BuiltinType::SatUShortAccum);
-  InitBuiltinType(SatUnsignedAccumTy,      BuiltinType::SatUAccum);
-  InitBuiltinType(SatUnsignedLongAccumTy,  BuiltinType::SatULongAccum);
-  InitBuiltinType(SatShortFractTy,         BuiltinType::SatShortFract);
-  InitBuiltinType(SatFractTy,              BuiltinType::SatFract);
-  InitBuiltinType(SatLongFractTy,          BuiltinType::SatLongFract);
-  InitBuiltinType(SatUnsignedShortFractTy, BuiltinType::SatUShortFract);
-  InitBuiltinType(SatUnsignedFractTy,      BuiltinType::SatUFract);
-  InitBuiltinType(SatUnsignedLongFractTy,  BuiltinType::SatULongFract);
-
-  // GNU extension, 128-bit integers.
-  InitBuiltinType(Int128Ty,            BuiltinType::Int128);
-  InitBuiltinType(UnsignedInt128Ty,    BuiltinType::UInt128);
+  static constexpr BuiltinTypeInit FundamentalTypes[] = {
+      {&ASTContext::SignedCharTy, BuiltinType::SChar},
+      {&ASTContext::ShortTy, BuiltinType::Short},
+      {&ASTContext::IntTy, BuiltinType::Int},
+      {&ASTContext::LongTy, BuiltinType::Long},
+      {&ASTContext::LongLongTy, BuiltinType::LongLong},
+      {&ASTContext::UnsignedCharTy, BuiltinType::UChar},
+      {&ASTContext::UnsignedShortTy, BuiltinType::UShort},
+      {&ASTContext::UnsignedIntTy, BuiltinType::UInt},
+      {&ASTContext::UnsignedLongTy, BuiltinType::ULong},
+      {&ASTContext::UnsignedLongLongTy, BuiltinType::ULongLong},
+      {&ASTContext::FloatTy, BuiltinType::Float},
+      {&ASTContext::DoubleTy, BuiltinType::Double},
+      {&ASTContext::LongDoubleTy, BuiltinType::LongDouble},
+      {&ASTContext::Float128Ty, BuiltinType::Float128},
+      {&ASTContext::Ibm128Ty, BuiltinType::Ibm128},
+      {&ASTContext::Float16Ty, BuiltinType::Float16},
+      {&ASTContext::ShortAccumTy, BuiltinType::ShortAccum},
+      {&ASTContext::AccumTy, BuiltinType::Accum},
+      {&ASTContext::LongAccumTy, BuiltinType::LongAccum},
+      {&ASTContext::UnsignedShortAccumTy, BuiltinType::UShortAccum},
+      {&ASTContext::UnsignedAccumTy, BuiltinType::UAccum},
+      {&ASTContext::UnsignedLongAccumTy, BuiltinType::ULongAccum},
+      {&ASTContext::ShortFractTy, BuiltinType::ShortFract},
+      {&ASTContext::FractTy, BuiltinType::Fract},
+      {&ASTContext::LongFractTy, BuiltinType::LongFract},
+      {&ASTContext::UnsignedShortFractTy, BuiltinType::UShortFract},
+      {&ASTContext::UnsignedFractTy, BuiltinType::UFract},
+      {&ASTContext::UnsignedLongFractTy, BuiltinType::ULongFract},
+      {&ASTContext::SatShortAccumTy, BuiltinType::SatShortAccum},
+      {&ASTContext::SatAccumTy, BuiltinType::SatAccum},
+      {&ASTContext::SatLongAccumTy, BuiltinType::SatLongAccum},
+      {&ASTContext::SatUnsignedShortAccumTy, BuiltinType::SatUShortAccum},
+      {&ASTContext::SatUnsignedAccumTy, BuiltinType::SatUAccum},
+      {&ASTContext::SatUnsignedLongAccumTy, BuiltinType::SatULongAccum},
+      {&ASTContext::SatShortFractTy, BuiltinType::SatShortFract},
+      {&ASTContext::SatFractTy, BuiltinType::SatFract},
+      {&ASTContext::SatLongFractTy, BuiltinType::SatLongFract},
+      {&ASTContext::SatUnsignedShortFractTy, BuiltinType::SatUShortFract},
+      {&ASTContext::SatUnsignedFractTy, BuiltinType::SatUFract},
+      {&ASTContext::SatUnsignedLongFractTy, BuiltinType::SatULongFract},
+      {&ASTContext::Int128Ty, BuiltinType::Int128},
+      {&ASTContext::UnsignedInt128Ty, BuiltinType::UInt128},
+  };
+  InitBuiltinTypeGroup(FundamentalTypes);
 
   // C++ 3.9.1p5
   if (TargetInfo::isTypeSigned(Target.getWCharType()))
-    InitBuiltinType(WCharTy,           BuiltinType::WChar_S);
-  else  // -fshort-wchar makes wchar_t be unsigned.
-    InitBuiltinType(WCharTy,           BuiltinType::WChar_U);
+    InitBuiltinType(WCharTy, BuiltinType::WChar_S);
+  else // -fshort-wchar makes wchar_t be unsigned.
+    InitBuiltinType(WCharTy, BuiltinType::WChar_U);
   if (LangOpts.CPlusPlus && LangOpts.WChar)
     WideCharTy = WCharTy;
   else {
@@ -1366,52 +1368,38 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
 
   WIntTy = getFromTargetType(Target.getWIntType());
 
-  // C++20 (proposed)
-  InitBuiltinType(Char8Ty,              BuiltinType::Char8);
+  InitBuiltinType(Char8Ty, BuiltinType::Char8);
 
   if (LangOpts.CPlusPlus) // C++0x 3.9.1p5, extension for C++
-    InitBuiltinType(Char16Ty,           BuiltinType::Char16);
+    InitBuiltinType(Char16Ty, BuiltinType::Char16);
   else // C99
     Char16Ty = getFromTargetType(Target.getChar16Type());
 
   if (LangOpts.CPlusPlus) // C++0x 3.9.1p5, extension for C++
-    InitBuiltinType(Char32Ty,           BuiltinType::Char32);
+    InitBuiltinType(Char32Ty, BuiltinType::Char32);
   else // C99
     Char32Ty = getFromTargetType(Target.getChar32Type());
 
-  // Placeholder type for type-dependent expressions whose type is
-  // completely unknown. No code should ever check a type against
-  // DependentTy and users should never see it; however, it is here to
-  // help diagnose failures to properly check for type-dependent
-  // expressions.
-  InitBuiltinType(DependentTy,         BuiltinType::Dependent);
-
-  // Placeholder type for functions.
-  InitBuiltinType(OverloadTy,          BuiltinType::Overload);
-
-  // Placeholder type for bound members.
-  InitBuiltinType(BoundMemberTy,       BuiltinType::BoundMember);
-
-  // Placeholder type for unresolved templates.
-  InitBuiltinType(UnresolvedTemplateTy, BuiltinType::UnresolvedTemplate);
-
-  // Placeholder type for pseudo-objects.
-  InitBuiltinType(PseudoObjectTy,      BuiltinType::PseudoObject);
-
-  // "any" type; useful for debugger-like clients.
-  InitBuiltinType(UnknownAnyTy,        BuiltinType::UnknownAny);
-
-  // Placeholder type for unbridged ARC casts.
-  InitBuiltinType(ARCUnbridgedCastTy,  BuiltinType::ARCUnbridgedCast);
-
-  // Placeholder type for builtin functions.
-  InitBuiltinType(BuiltinFnTy,  BuiltinType::BuiltinFn);
+  static constexpr BuiltinTypeInit PlaceholderTypes[] = {
+      {&ASTContext::DependentTy, BuiltinType::Dependent},
+      {&ASTContext::OverloadTy, BuiltinType::Overload},
+      {&ASTContext::BoundMemberTy, BuiltinType::BoundMember},
+      {&ASTContext::UnresolvedTemplateTy, BuiltinType::UnresolvedTemplate},
+      {&ASTContext::PseudoObjectTy, BuiltinType::PseudoObject},
+      {&ASTContext::UnknownAnyTy, BuiltinType::UnknownAny},
+      {&ASTContext::ARCUnbridgedCastTy, BuiltinType::ARCUnbridgedCast},
+      {&ASTContext::BuiltinFnTy, BuiltinType::BuiltinFn},
+  };
+  InitBuiltinTypeGroup(PlaceholderTypes);
 
   // Placeholder type for OMP array sections.
   if (LangOpts.OpenMP) {
-    InitBuiltinType(ArraySectionTy, BuiltinType::ArraySection);
-    InitBuiltinType(OMPArrayShapingTy, BuiltinType::OMPArrayShaping);
-    InitBuiltinType(OMPIteratorTy, BuiltinType::OMPIterator);
+    static constexpr BuiltinTypeInit OpenMPTypes[] = {
+        {&ASTContext::ArraySectionTy, BuiltinType::ArraySection},
+        {&ASTContext::OMPArrayShapingTy, BuiltinType::OMPArrayShaping},
+        {&ASTContext::OMPIteratorTy, BuiltinType::OMPIterator},
+    };
+    InitBuiltinTypeGroup(OpenMPTypes);
   }
   // Placeholder type for OpenACC array sections, if we are ALSO in OMP mode,
   // don't bother, as we're just using the same type as OMP.
@@ -1421,59 +1409,89 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   if (LangOpts.MatrixTypes)
     InitBuiltinType(IncompleteMatrixIdxTy, BuiltinType::IncompleteMatrixIdx);
 
-  // Builtin types for 'id', 'Class', and 'SEL'.
-  InitBuiltinType(ObjCBuiltinIdTy, BuiltinType::ObjCId);
-  InitBuiltinType(ObjCBuiltinClassTy, BuiltinType::ObjCClass);
-  InitBuiltinType(ObjCBuiltinSelTy, BuiltinType::ObjCSel);
+  static constexpr BuiltinTypeInit ObjCTypes[] = {
+      {&ASTContext::ObjCBuiltinIdTy, BuiltinType::ObjCId},
+      {&ASTContext::ObjCBuiltinClassTy, BuiltinType::ObjCClass},
+      {&ASTContext::ObjCBuiltinSelTy, BuiltinType::ObjCSel},
+  };
+  InitBuiltinTypeGroup(ObjCTypes);
 
   if (LangOpts.OpenCL) {
-#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
-    InitBuiltinType(SingletonId, BuiltinType::Id);
+#define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix)                   \
+  {&ASTContext::SingletonId, BuiltinType::Id},
+    static constexpr BuiltinTypeInit OpenCLImageTypes[] = {
 #include "clang/Basic/OpenCLImageTypes.def"
+    };
+    InitBuiltinTypeGroup(OpenCLImageTypes);
 
-    InitBuiltinType(OCLSamplerTy, BuiltinType::OCLSampler);
-    InitBuiltinType(OCLEventTy, BuiltinType::OCLEvent);
-    InitBuiltinType(OCLClkEventTy, BuiltinType::OCLClkEvent);
-    InitBuiltinType(OCLQueueTy, BuiltinType::OCLQueue);
-    InitBuiltinType(OCLReserveIDTy, BuiltinType::OCLReserveID);
+    static constexpr BuiltinTypeInit OpenCLTypes[] = {
+        {&ASTContext::OCLSamplerTy, BuiltinType::OCLSampler},
+        {&ASTContext::OCLEventTy, BuiltinType::OCLEvent},
+        {&ASTContext::OCLClkEventTy, BuiltinType::OCLClkEvent},
+        {&ASTContext::OCLQueueTy, BuiltinType::OCLQueue},
+        {&ASTContext::OCLReserveIDTy, BuiltinType::OCLReserveID},
+    };
+    InitBuiltinTypeGroup(OpenCLTypes);
 
-#define EXT_OPAQUE_TYPE(ExtType, Id, Ext) \
-    InitBuiltinType(Id##Ty, BuiltinType::Id);
+#define EXT_OPAQUE_TYPE(ExtType, Id, Ext)                                      \
+  {&ASTContext::Id##Ty, BuiltinType::Id},
+    static constexpr BuiltinTypeInit OpenCLExtensionTypes[] = {
 #include "clang/Basic/OpenCLExtensionTypes.def"
+    };
+    InitBuiltinTypeGroup(OpenCLExtensionTypes);
   }
 
   if (LangOpts.HLSL) {
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId)                            \
-  InitBuiltinType(SingletonId, BuiltinType::Id);
+  {&ASTContext::SingletonId, BuiltinType::Id},
+    static constexpr BuiltinTypeInit HLSLTypes[] = {
 #include "clang/Basic/HLSLIntangibleTypes.def"
+    };
+    InitBuiltinTypeGroup(HLSLTypes);
   }
 
   if (Target.hasAArch64ACLETypes() ||
       (AuxTarget && AuxTarget->hasAArch64ACLETypes())) {
 #define SVE_TYPE(Name, Id, SingletonId)                                        \
-  InitBuiltinType(SingletonId, BuiltinType::Id);
+  {&ASTContext::SingletonId, BuiltinType::Id},
+    static constexpr BuiltinTypeInit AArch64ACLETypes[] = {
 #include "clang/Basic/AArch64ACLETypes.def"
+    };
+    InitBuiltinTypeGroup(AArch64ACLETypes);
   }
 
   if (Target.getTriple().isPPC64()) {
-#define PPC_VECTOR_MMA_TYPE(Name, Id, Size) \
-      InitBuiltinType(Id##Ty, BuiltinType::Id);
+#define PPC_VECTOR_MMA_TYPE(Name, Id, Size)                                    \
+  {&ASTContext::Id##Ty, BuiltinType::Id},
+    static constexpr BuiltinTypeInit PPCMMATypes[] = {
 #include "clang/Basic/PPCTypes.def"
-#define PPC_VECTOR_VSX_TYPE(Name, Id, Size) \
-    InitBuiltinType(Id##Ty, BuiltinType::Id);
+    };
+    InitBuiltinTypeGroup(PPCMMATypes);
+
+#define PPC_VECTOR_VSX_TYPE(Name, Id, Size)                                    \
+  {&ASTContext::Id##Ty, BuiltinType::Id},
+    static constexpr BuiltinTypeInit PPCVSXTypes[] = {
 #include "clang/Basic/PPCTypes.def"
+    };
+    InitBuiltinTypeGroup(PPCVSXTypes);
   }
 
   if (Target.hasRISCVVTypes()) {
 #define RVV_TYPE(Name, Id, SingletonId)                                        \
-  InitBuiltinType(SingletonId, BuiltinType::Id);
+  {&ASTContext::SingletonId, BuiltinType::Id},
+    static constexpr BuiltinTypeInit RISCVVTypes[] = {
 #include "clang/Basic/RISCVVTypes.def"
+    };
+    InitBuiltinTypeGroup(RISCVVTypes);
   }
 
   if (Target.getTriple().isWasm() && Target.hasFeature("reference-types")) {
 #define WASM_TYPE(Name, Id, SingletonId)                                       \
-  InitBuiltinType(SingletonId, BuiltinType::Id);
+  {&ASTContext::SingletonId, BuiltinType::Id},
+    static constexpr BuiltinTypeInit WebAssemblyReferenceTypes[] = {
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+    };
+    InitBuiltinTypeGroup(WebAssemblyReferenceTypes);
   }
 
   if (Target.getTriple().isAMDGPU() ||
@@ -1484,13 +1502,16 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
         ((AuxTarget->getTriple().isSPIRV() &&
           AuxTarget->getTriple().getVendor() == llvm::Triple::AMD))))) {
 #define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align)                       \
-  InitBuiltinType(SingletonId, BuiltinType::Id);
+  {&ASTContext::SingletonId, BuiltinType::Id},
+    static constexpr BuiltinTypeInit AMDGPUTypes[] = {
 #include "clang/Basic/AMDGPUTypes.def"
+    };
+    InitBuiltinTypeGroup(AMDGPUTypes);
   }
 
   // Builtin type for __objc_yes and __objc_no
-  ObjCBuiltinBoolTy = (Target.useSignedCharForObjCBool() ?
-                       SignedCharTy : BoolTy);
+  ObjCBuiltinBoolTy =
+      (Target.useSignedCharForObjCBool() ? SignedCharTy : BoolTy);
 
   ObjCConstantStringType = QualType();
 
@@ -1500,19 +1521,18 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   if (LangOpts.OpenCLGenericAddressSpace) {
     auto Q = VoidTy.getQualifiers();
     Q.setAddressSpace(LangAS::opencl_generic);
-    VoidPtrTy = getPointerType(getCanonicalType(
-        getQualifiedType(VoidTy.getUnqualifiedType(), Q)));
+    VoidPtrTy = getPointerType(
+        getCanonicalType(getQualifiedType(VoidTy.getUnqualifiedType(), Q)));
   } else {
     VoidPtrTy = getPointerType(VoidTy);
   }
 
-  // nullptr type (C++0x 2.14.7)
-  InitBuiltinType(NullPtrTy,           BuiltinType::NullPtr);
-
-  // half type (OpenCL 6.1.1.1) / ARM NEON __fp16
-  InitBuiltinType(HalfTy, BuiltinType::Half);
-
-  InitBuiltinType(BFloat16Ty, BuiltinType::BFloat16);
+  static constexpr BuiltinTypeInit FinalTypes[] = {
+      {&ASTContext::NullPtrTy, BuiltinType::NullPtr},
+      {&ASTContext::HalfTy, BuiltinType::Half},
+      {&ASTContext::BFloat16Ty, BuiltinType::BFloat16},
+  };
+  InitBuiltinTypeGroup(FinalTypes);
 
   // Builtin type used to help define __builtin_va_list.
   VaListTagDecl = nullptr;
