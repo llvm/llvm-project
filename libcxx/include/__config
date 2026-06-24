@@ -66,10 +66,6 @@
 #    define _LIBCPP_ABI_VCRUNTIME
 #  endif
 
-#  if defined(__MVS__)
-#    include <features.h> // for __NATIVE_ASCII_F
-#  endif
-
 #  if defined(_WIN32)
 #    define _LIBCPP_WIN32API
 #    define _LIBCPP_SHORT_WCHAR 1
