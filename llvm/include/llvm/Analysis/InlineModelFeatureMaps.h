@@ -161,9 +161,9 @@ inlineCostFeatureToMlFeature(InlineCostFeatureIndex Feature) {
 }
 
 LLVM_ABI extern const char *const DecisionName;
-LLVM_ABI extern const TensorSpec InlineDecisionSpec;
+LLVM_ABI const TensorSpec &getInlineDecisionSpec();
 LLVM_ABI extern const char *const DefaultDecisionName;
-LLVM_ABI extern const TensorSpec DefaultDecisionSpec;
+LLVM_ABI extern const TensorSpec &getDefaultDecisionSpec();
 LLVM_ABI extern const char *const RewardName;
 
 using InlineFeatures = std::vector<int64_t>;
