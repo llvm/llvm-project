@@ -1314,7 +1314,8 @@ kmp_identify_nested_loop_structure(/*in*/ bounds_info_t *original_bounds_nest,
                                         original_bounds_nest[1].ub1_u64);
   // lower triangle loop inner bounds need to be {0,0}:{0/-1,1}
   if (inner_lb0_u64 == 0 && inner_lb1_u64 == 0 &&
-      (inner_ub0_u64 == 0 || inner_ub0_u64 == -1) && inner_ub1_u64 == 1) {
+      (inner_ub0_u64 == 0 || inner_ub0_u64 == (kmp_uint64)-1) &&
+      inner_ub1_u64 == 1) {
     return nested_loop_type_lower_triangular_matrix;
   }
   // upper triangle loop inner bounds need to be {0,1}:{N,0}
