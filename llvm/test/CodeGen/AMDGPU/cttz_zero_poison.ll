@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefixes=SI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefixes=VI %s
 ; RUN: llc -mtriple=r600 -mcpu=cypress < %s | FileCheck -check-prefixes=EG %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9-GISEL %s
+; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9-GISEL %s
 
 declare i7 @llvm.cttz.i7(i7, i1) nounwind readnone
 declare i8 @llvm.cttz.i8(i8, i1) nounwind readnone
@@ -630,7 +630,7 @@ define amdgpu_kernel void @v_cttz_zero_poison_i8_with_select(ptr addrspace(1) no
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-GISEL-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX9-GISEL-NEXT:    s_ff1_i32_b32 s3, s2
-; GFX9-GISEL-NEXT:    s_and_b32 s2, s2, 0xff
+; GFX9-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX9-GISEL-NEXT:    s_cselect_b32 s2, s3, 32
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX9-GISEL-NEXT:    global_store_byte v0, v1, s[0:1]
@@ -1551,7 +1551,6 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(ptr addrspace(1) noalias %
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-GISEL-NEXT:    v_readfirstlane_b32 s2, v1
 ; GFX9-GISEL-NEXT:    s_or_b32 s3, s2, 0x100
-; GFX9-GISEL-NEXT:    s_and_b32 s2, s2, 0xff
 ; GFX9-GISEL-NEXT:    s_ff1_i32_b32 s3, s3
 ; GFX9-GISEL-NEXT:    s_cmp_eq_u32 s2, 0
 ; GFX9-GISEL-NEXT:    s_cselect_b32 s2, 0xffff, s3

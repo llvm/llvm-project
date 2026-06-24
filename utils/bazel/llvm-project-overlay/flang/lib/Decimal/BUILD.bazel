@@ -1,0 +1,37 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+# flang-rt re-compiles these sources with -fno-exceptions/-fno-rtti as part of
+# the runtime archive, so the source files (and their internal header) need to
+# be visible to that package.
+exports_files([
+    "big-radix-floating-point.h",
+    "binary-to-decimal.cpp",
+    "decimal-to-binary.cpp",
+])
+
+cc_library(
+    name = "FortranDecimal",
+    srcs = [
+        "big-radix-floating-point.h",
+        "binary-to-decimal.cpp",
+        "decimal-to-binary.cpp",
+    ],
+    deps = [
+        "//flang:CommonHeaders",
+        "//flang:DecimalHeaders",
+        "//flang:RuntimeHeaders",
+    ],
+)

@@ -68,6 +68,7 @@ func.func @parallel_loop_auto_collapse(%buf: memref<1xi32>, %lb0 : index, %ub0 :
   // CHECK: scf.for
   // CHECK-NOT: scf.for
   // CHECK-NOT: scf.parallel
+  // CHECK: acc.collapse_count = 2 : i64
   acc.parallel dataOperands(%dev : memref<1xi32>) {
     acc.loop control(%i : index, %j : index) = (%lb0, %lb1 : index, index) to (%ub0, %ub1 : index, index) step (%c1, %c1 : index, index) {
       %vi = arith.index_cast %i : index to i32

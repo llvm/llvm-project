@@ -131,6 +131,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  libgen
+  ../libc/include/libgen.yaml
+  libgen.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   limits
   ../libc/include/limits.yaml
   limits.h
@@ -224,6 +232,7 @@ add_header_macro(
     .llvm-libc-types.in_port_t
     .llvm-libc-types.sa_family_t
     .llvm-libc-types.struct_sockaddr_in
+    .llvm-libc-types.struct_sockaddr_in6
     .llvm-libc-types.struct_in_addr
     .llvm-libc-types.struct_in6_addr
     .llvm_libc_common_h
@@ -363,6 +372,7 @@ add_header_macro(
     .llvm-libc-types.struct_timeval
     .llvm-libc-types.clockid_t
     .llvm-libc-types.rsize_t
+    .llvm-libc-types.tm_gmtoff_t
 )
 
 add_header_macro(
@@ -661,6 +671,7 @@ add_header_macro(
   DEPENDS
     .llvm_libc_common_h
     .llvm-libc-macros.sys_ioctl_macros
+    .llvm-libc-types.struct_winsize
 )
 
 add_header_macro(
@@ -713,6 +724,15 @@ add_header_macro(
   sys/prctl.h
   DEPENDS
     .llvm_libc_common_h
+)
+
+add_header_macro(
+  sys_ptrace
+  ../libc/include/sys/ptrace.yaml
+  sys/ptrace.h
+  DEPENDS
+    .llvm_libc_common_h
+    .llvm-libc-macros.sys_ptrace_macros
 )
 
 add_header(
@@ -865,6 +885,7 @@ add_header_macro(
     .llvm-libc-types.gid_t
     .llvm-libc-types.ino_t
     .llvm-libc-types.key_t
+    .llvm-libc-types.loff_t
     .llvm-libc-types.mode_t
     .llvm-libc-types.nlink_t
     .llvm-libc-types.off_t

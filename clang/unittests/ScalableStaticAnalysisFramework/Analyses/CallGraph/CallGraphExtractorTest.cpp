@@ -11,6 +11,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Frontend/SSAFOptions.h"
 #include "clang/ScalableStaticAnalysisFramework/Analyses/CallGraph/CallGraphSummary.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/ASTEntityMapping.h"
 #include "clang/ScalableStaticAnalysisFramework/Core/TUSummary/ExtractorRegistry.h"
@@ -123,9 +124,11 @@ template <typename... Matchers> auto hasSummaryThat(const Matchers &...Ms) {
 static const SummaryName CallGraphName{CallGraphSummary::Name.str()};
 
 struct CallGraphExtractorTest : ssaf::TestFixture {
+  SSAFOptions Opts;
   TUSummary Summary{
+      llvm::Triple("arm64-apple-macosx"),
       BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")};
-  TUSummaryBuilder Builder = TUSummaryBuilder(Summary);
+  TUSummaryBuilder Builder = TUSummaryBuilder(Summary, Opts);
 
   /// Creates the AST and extractor, then extracts the summaries from the AST.
   /// This will update the \c AST \c Builder and \c Summary data members.
@@ -416,6 +419,48 @@ TEST_F(CallGraphExtractorTest, ObjCMessageExprs) {
     void caller(void) {
         id msg = [@"Hello" stringByAppendingString:@", World!"];
     }
+  )cpp",
+               {"-x", "objective-c"});
+
+  ASSERT_THAT_EXPECTED(
+      findSummary("caller"),
+      hasSummaryThat(HasNoDirectCallees(), HasNoVirtualCallees()));
+}
+
+TEST_F(CallGraphExtractorTest, ObjCMessageToLocallyImplementedMethod) {
+  // When the receiver class is implemented in the same TU, `clang::CallGraph`
+  // resolves the ObjCMessageExpr (via `lookupPrivateMethod`) to an
+  // ObjCMethodDecl and adds it as a callee. The extractor must not abort on
+  // these — ObjC dispatch is dynamic and we don't model it as a direct callee.
+  runExtractor(R"cpp(
+    @interface NSObject @end
+    @interface Inner : NSObject
+    - (int) val;
+    @end
+    @implementation Inner
+    - (int) val { return 42; }
+    @end
+    int caller(Inner *x) { return [x val]; }
+  )cpp",
+               {"-x", "objective-c"});
+
+  ASSERT_THAT_EXPECTED(
+      findSummary("caller"),
+      hasSummaryThat(HasNoDirectCallees(), HasNoVirtualCallees()));
+}
+
+TEST_F(CallGraphExtractorTest, ObjCPropertyDotSyntax) {
+  // Property dot-syntax (`x.val`) desugars to an ObjCMessageExpr to the
+  // synthesized getter; same dynamic dispatch as bracket syntax. Cover it
+  // explicitly because real-world hits often come through dot-syntax.
+  runExtractor(R"cpp(
+    @interface NSObject @end
+    @interface Inner : NSObject
+    @property (readonly) int val;
+    @end
+    @implementation Inner
+    @end
+    int caller(Inner *x) { return x.val; }
   )cpp",
                {"-x", "objective-c"});
 
