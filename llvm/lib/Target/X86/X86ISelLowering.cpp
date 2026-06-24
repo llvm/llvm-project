@@ -59814,15 +59814,12 @@ static SDValue combineAddOfPMADDWD(SelectionDAG &DAG, SDValue N0, SDValue N1,
 
   unsigned NumElts = VT.getVectorNumElements();
   MVT OpVT = N0.getOperand(0).getSimpleValueType();
-  APInt DemandedBits = APInt::getAllOnes(OpVT.getScalarSizeInBits());
   APInt DemandedHiElts = APInt::getSplat(2 * NumElts, APInt(2, 2));
 
-  bool Op0HiZero =
-      DAG.MaskedValueIsZero(N0.getOperand(0), DemandedBits, DemandedHiElts) ||
-      DAG.MaskedValueIsZero(N0.getOperand(1), DemandedBits, DemandedHiElts);
-  bool Op1HiZero =
-      DAG.MaskedValueIsZero(N1.getOperand(0), DemandedBits, DemandedHiElts) ||
-      DAG.MaskedValueIsZero(N1.getOperand(1), DemandedBits, DemandedHiElts);
+  bool Op0HiZero = DAG.MaskedVectorIsZero(N0.getOperand(0), DemandedHiElts) ||
+                   DAG.MaskedVectorIsZero(N0.getOperand(1), DemandedHiElts);
+  bool Op1HiZero = DAG.MaskedVectorIsZero(N1.getOperand(0), DemandedHiElts) ||
+                   DAG.MaskedVectorIsZero(N1.getOperand(1), DemandedHiElts);
 
   // TODO: Check for zero lower elements once we have actual codegen that
   // creates them.
