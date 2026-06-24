@@ -1,3 +1,4 @@
+// UNSUPPORTED: darwin
 // RUN: %clangxx_memprof %s -o %t
 
 // RUN: %env_memprof_opts=print_text=true:log_path=stdout %run %t | FileCheck %s

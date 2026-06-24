@@ -7,7 +7,9 @@ set(MEMPROF_SOURCES
   memprof_interceptors.cpp
   memprof_interceptors_memintrinsics.cpp
   memprof_linux.cpp
+  memprof_mac.cpp
   memprof_malloc_linux.cpp
+  memprof_malloc_mac.cpp
   memprof_mibmap.cpp
   memprof_posix.cpp
   memprof_rawprofile.cpp
@@ -78,7 +80,7 @@ append_list_if(COMPILER_RT_HAS_LIBLOG log MEMPROF_DYNAMIC_LIBS)
 # Compile MemProf sources into an object library.
 
 add_compiler_rt_object_libraries(RTMemprof_dynamic
-  OS ${SANITIZER_COMMON_SUPPORTED_OS}
+  OS ${MEMPROF_SUPPORTED_OS}
   ARCHS ${MEMPROF_SUPPORTED_ARCH}
   SOURCES ${MEMPROF_SOURCES} ${MEMPROF_CXX_SOURCES}
   ADDITIONAL_HEADERS ${MEMPROF_HEADERS}
@@ -86,6 +88,7 @@ add_compiler_rt_object_libraries(RTMemprof_dynamic
   DEFS ${MEMPROF_DYNAMIC_DEFINITIONS}
   DEPS ${MEMPROF_DEPS})
 
+if(NOT APPLE)
 add_compiler_rt_object_libraries(RTMemprof
   ARCHS ${MEMPROF_SUPPORTED_ARCH}
   SOURCES ${MEMPROF_SOURCES}
@@ -115,94 +118,115 @@ add_compiler_rt_object_libraries(RTMemprof_dynamic_version_script_dummy
   CFLAGS ${MEMPROF_DYNAMIC_CFLAGS}
   DEFS ${MEMPROF_DYNAMIC_DEFINITIONS}
   DEPS ${MEMPROF_DEPS})
+endif()
 
 # Build MemProf runtimes shipped with Clang.
 add_compiler_rt_component(memprof)
 
-# Build separate libraries for each target.
-
-set(MEMPROF_COMMON_RUNTIME_OBJECT_LIBS
-  RTInterception
-  RTSanitizerCommon
-  RTSanitizerCommonLibc
-  RTSanitizerCommonCoverage
-  RTSanitizerCommonSymbolizer
-  # FIXME: hangs.
-  # RTSanitizerCommonSymbolizerInternal
-)
-
-add_compiler_rt_runtime(clang_rt.memprof
-  STATIC
-  ARCHS ${MEMPROF_SUPPORTED_ARCH}
-  OBJECT_LIBS RTMemprof_preinit
-              RTMemprof
-              ${MEMPROF_COMMON_RUNTIME_OBJECT_LIBS}
-  CFLAGS ${MEMPROF_CFLAGS}
-  DEFS ${MEMPROF_COMMON_DEFINITIONS}
-  PARENT_TARGET memprof)
-
-add_compiler_rt_runtime(clang_rt.memprof_cxx
-  STATIC
-  ARCHS ${MEMPROF_SUPPORTED_ARCH}
-  OBJECT_LIBS RTMemprof_cxx
-  CFLAGS ${MEMPROF_CFLAGS}
-  DEFS ${MEMPROF_COMMON_DEFINITIONS}
-  PARENT_TARGET memprof)
-
-add_compiler_rt_runtime(clang_rt.memprof-preinit
-  STATIC
-  ARCHS ${MEMPROF_SUPPORTED_ARCH}
-  OBJECT_LIBS RTMemprof_preinit
-  CFLAGS ${MEMPROF_CFLAGS}
-  DEFS ${MEMPROF_COMMON_DEFINITIONS}
-  PARENT_TARGET memprof)
-
-foreach(arch ${MEMPROF_SUPPORTED_ARCH})
-  if (UNIX)
-    add_sanitizer_rt_version_list(clang_rt.memprof-dynamic-${arch}
-                                  LIBS clang_rt.memprof-${arch} clang_rt.memprof_cxx-${arch}
-                                  EXTRA memprof.syms.extra)
-    set(VERSION_SCRIPT_FLAG
-         -Wl,--version-script,${CMAKE_CURRENT_BINARY_DIR}/clang_rt.memprof-dynamic-${arch}.vers)
-    set_property(SOURCE
-      ${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp
-      APPEND PROPERTY
-      OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/clang_rt.memprof-dynamic-${arch}.vers)
-  else()
-    set(VERSION_SCRIPT_FLAG)
-  endif()
-
-  set(MEMPROF_DYNAMIC_WEAK_INTERCEPTION)
+if(APPLE)
+  add_weak_symbols("memprof" WEAK_SYMBOL_LINK_FLAGS)
+  add_weak_symbols("sanitizer_common" WEAK_SYMBOL_LINK_FLAGS)
 
   add_compiler_rt_runtime(clang_rt.memprof
     SHARED
-    ARCHS ${arch}
-    OBJECT_LIBS ${MEMPROF_COMMON_RUNTIME_OBJECT_LIBS}
-            RTMemprof_dynamic
-            # The only purpose of RTMemprof_dynamic_version_script_dummy is to
-            # carry a dependency of the shared runtime on the version script.
-            # Replacing it with a straightforward
-            # add_dependencies(clang_rt.memprof-dynamic-${arch} clang_rt.memprof-dynamic-${arch}-version-list)
-            # generates an order-only dependency in ninja.
-            RTMemprof_dynamic_version_script_dummy
-            ${MEMPROF_DYNAMIC_WEAK_INTERCEPTION}
+    OS ${MEMPROF_SUPPORTED_OS}
+    ARCHS ${MEMPROF_SUPPORTED_ARCH}
+    OBJECT_LIBS RTMemprof_dynamic
+                RTInterception
+                RTSanitizerCommon
+                RTSanitizerCommonLibc
+                RTSanitizerCommonCoverage
+                RTSanitizerCommonSymbolizer
     CFLAGS ${MEMPROF_DYNAMIC_CFLAGS}
-    LINK_FLAGS ${MEMPROF_DYNAMIC_LINK_FLAGS}
-              ${VERSION_SCRIPT_FLAG}
-    LINK_LIBS ${MEMPROF_DYNAMIC_LIBS}
+    LINK_FLAGS ${WEAK_SYMBOL_LINK_FLAGS}
     DEFS ${MEMPROF_DYNAMIC_DEFINITIONS}
     PARENT_TARGET memprof)
+else()
+  # Build separate libraries for each target.
 
-  if (SANITIZER_USE_SYMBOLS)
-    add_sanitizer_rt_symbols(clang_rt.memprof_cxx
-      ARCHS ${arch})
-    add_dependencies(memprof clang_rt.memprof_cxx-${arch}-symbols)
-    add_sanitizer_rt_symbols(clang_rt.memprof
+  set(MEMPROF_COMMON_RUNTIME_OBJECT_LIBS
+    RTInterception
+    RTSanitizerCommon
+    RTSanitizerCommonLibc
+    RTSanitizerCommonCoverage
+    RTSanitizerCommonSymbolizer
+    # FIXME: hangs.
+    # RTSanitizerCommonSymbolizerInternal
+  )
+
+  add_compiler_rt_runtime(clang_rt.memprof
+    STATIC
+    ARCHS ${MEMPROF_SUPPORTED_ARCH}
+    OBJECT_LIBS RTMemprof_preinit
+                RTMemprof
+                ${MEMPROF_COMMON_RUNTIME_OBJECT_LIBS}
+    CFLAGS ${MEMPROF_CFLAGS}
+    DEFS ${MEMPROF_COMMON_DEFINITIONS}
+    PARENT_TARGET memprof)
+
+  add_compiler_rt_runtime(clang_rt.memprof_cxx
+    STATIC
+    ARCHS ${MEMPROF_SUPPORTED_ARCH}
+    OBJECT_LIBS RTMemprof_cxx
+    CFLAGS ${MEMPROF_CFLAGS}
+    DEFS ${MEMPROF_COMMON_DEFINITIONS}
+    PARENT_TARGET memprof)
+
+  add_compiler_rt_runtime(clang_rt.memprof-preinit
+    STATIC
+    ARCHS ${MEMPROF_SUPPORTED_ARCH}
+    OBJECT_LIBS RTMemprof_preinit
+    CFLAGS ${MEMPROF_CFLAGS}
+    DEFS ${MEMPROF_COMMON_DEFINITIONS}
+    PARENT_TARGET memprof)
+
+  foreach(arch ${MEMPROF_SUPPORTED_ARCH})
+    if (UNIX)
+      add_sanitizer_rt_version_list(clang_rt.memprof-dynamic-${arch}
+                                    LIBS clang_rt.memprof-${arch} clang_rt.memprof_cxx-${arch}
+                                    EXTRA memprof.syms.extra)
+      set(VERSION_SCRIPT_FLAG
+           -Wl,--version-script,${CMAKE_CURRENT_BINARY_DIR}/clang_rt.memprof-dynamic-${arch}.vers)
+      set_property(SOURCE
+        ${CMAKE_CURRENT_BINARY_DIR}/dummy.cpp
+        APPEND PROPERTY
+        OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/clang_rt.memprof-dynamic-${arch}.vers)
+    else()
+      set(VERSION_SCRIPT_FLAG)
+    endif()
+
+    set(MEMPROF_DYNAMIC_WEAK_INTERCEPTION)
+
+    add_compiler_rt_runtime(clang_rt.memprof
+      SHARED
       ARCHS ${arch}
-      EXTRA memprof.syms.extra)
-    add_dependencies(memprof clang_rt.memprof-${arch}-symbols)
-  endif()
-endforeach()
+      OBJECT_LIBS ${MEMPROF_COMMON_RUNTIME_OBJECT_LIBS}
+              RTMemprof_dynamic
+              # The only purpose of RTMemprof_dynamic_version_script_dummy is to
+              # carry a dependency of the shared runtime on the version script.
+              # Replacing it with a straightforward
+              # add_dependencies(clang_rt.memprof-dynamic-${arch} clang_rt.memprof-dynamic-${arch}-version-list)
+              # generates an order-only dependency in ninja.
+              RTMemprof_dynamic_version_script_dummy
+              ${MEMPROF_DYNAMIC_WEAK_INTERCEPTION}
+      CFLAGS ${MEMPROF_DYNAMIC_CFLAGS}
+      LINK_FLAGS ${MEMPROF_DYNAMIC_LINK_FLAGS}
+                ${VERSION_SCRIPT_FLAG}
+      LINK_LIBS ${MEMPROF_DYNAMIC_LIBS}
+      DEFS ${MEMPROF_DYNAMIC_DEFINITIONS}
+      PARENT_TARGET memprof)
+
+    if (SANITIZER_USE_SYMBOLS)
+      add_sanitizer_rt_symbols(clang_rt.memprof_cxx
+        ARCHS ${arch})
+      add_dependencies(memprof clang_rt.memprof_cxx-${arch}-symbols)
+      add_sanitizer_rt_symbols(clang_rt.memprof
+        ARCHS ${arch}
+        EXTRA memprof.syms.extra)
+      add_dependencies(memprof clang_rt.memprof-${arch}-symbols)
+    endif()
+  endforeach()
+endif()
 
 
 if(COMPILER_RT_INCLUDE_TESTS)

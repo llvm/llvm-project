@@ -29,7 +29,12 @@ extern uptr kHighMemEnd; // Initialized in __memprof_init.
 } // namespace __memprof
 
 // Size of memory block mapped to a single shadow location
+#if SANITIZER_APPLE
+#define MEM_GRANULARITY 8ULL
+#define MEM_GRANULARITY_MAX_COUNTER 255U
+#else
 #define MEM_GRANULARITY 64ULL
+#endif
 
 #define SHADOW_MASK ~(MEM_GRANULARITY - 1)
 
@@ -129,14 +134,22 @@ inline bool AddrIsAlignedByGranularity(uptr a) {
 }
 
 inline void RecordAccess(uptr a) {
-  // If we use a different shadow size then the type below needs adjustment.
+#if SANITIZER_APPLE
+  // Fine-granularity shadow: each entry is a u8 counter with saturation.
+  CHECK_EQ(SHADOW_ENTRY_SIZE, 1);
+  u8 *shadow_address = (u8 *)MEM_TO_SHADOW(a);
+  if (*shadow_address < MEM_GRANULARITY_MAX_COUNTER) {
+    (*shadow_address)++;
+  }
+#else
+  // Standard shadow: each entry is a u64 counter.
   CHECK_EQ(SHADOW_ENTRY_SIZE, 8);
   u64 *shadow_address = (u64 *)MEM_TO_SHADOW(a);
   (*shadow_address)++;
+#endif
 }
 
 inline void RecordAccessHistogram(uptr a) {
-  CHECK_EQ(SHADOW_ENTRY_SIZE, 8);
   u8 *shadow_address = (u8 *)HISTOGRAM_MEM_TO_SHADOW(a);
   if (*shadow_address < HISTOGRAM_MAX_COUNTER) {
     (*shadow_address)++;
