@@ -133,7 +133,8 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
   // an assertion failure. Avoid this by counting the number of expected
   // matches.
   for (auto &AV : Affected)
-    ExpectedMatches[AV.Assume]++;
+    if (AffectedValues.find_as(AV.Assume) != AffectedValues.end())
+      ExpectedMatches[AV.Assume]++;
 
   for (auto &AV : Affected) {
     auto AVI = AffectedValues.find_as(AV.Assume);
@@ -163,6 +164,10 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
     if (!HasNonnull)
       AffectedValues.erase(AVI);
   }
+
+  for (auto &AV : Affected)
+    assert(!ExpectedMatches[AV.Assume] &&
+           "already unregistered or incorrect cache state");
 }
 
 void AssumptionCache::unregisterAssumption(AssumeInst *CI) {
