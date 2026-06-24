@@ -143,6 +143,7 @@
 #include "llvm/Transforms/Utils/CountVisits.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/ExtraPassManager.h"
+#include "llvm/Transforms/Utils/InjectOpenMPVFABIMappings.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
 #include "llvm/Transforms/Utils/LibCallsShrinkWrap.h"
 #include "llvm/Transforms/Utils/LowerCommentStringPass.h"
@@ -212,6 +213,10 @@ static cl::opt<bool> RunPartialInlining("enable-partial-inlining",
 static cl::opt<bool> ExtraVectorizerPasses(
     "extra-vectorizer-passes", cl::init(false), cl::Hidden,
     cl::desc("Run cleanup optimization passes after vectorization"));
+
+static cl::opt<bool> EnableOpenMPVFABIMappings(
+    "enable-openmp-vfabi-mappings", cl::init(false), cl::Hidden,
+    cl::desc("Inject OpenMP declare simd VFABI mappings for LoopVectorize"));
 
 static cl::opt<bool> RunNewGVN("enable-newgvn", cl::init(false), cl::Hidden,
                                cl::desc("Run the NewGVN pass"));
@@ -1677,6 +1682,10 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
                           .speculateUnpredictables(true)
                           .hoistLoadsStoresWithCondFaulting(true)));
 
+  // Enable LoopVectorize for OpenMP declare simd.
+  if (EnableOpenMPVFABIMappings)
+    MPM.addPass(InjectOpenMPVFABIMappings());
+
   // Add the core optimizing pipeline.
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(OptimizePM),
                                                 PTO.EagerlyInvalidateAnalyses));
@@ -2317,6 +2326,10 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // Run the OpenMPOpt CGSCC pass again late.
   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(
       OpenMPOptCGSCCPass(ThinOrFullLTOPhase::FullLTOPostLink)));
+
+  // Enable LoopVectorize for OpenMP declare simd.
+  if (EnableOpenMPVFABIMappings)
+    MPM.addPass(InjectOpenMPVFABIMappings());
 
   invokePeepholeEPCallbacks(MainFPM, Level);
   MainFPM.addPass(JumpThreadingPass());
