@@ -191,11 +191,12 @@ DEFAULT_PARAMETERS = [
     ),
     Parameter(
         name="optimization",
-        choices=["none", "speed", "size"],
+        choices=["default", "none", "speed", "size"],
         type=str,
         help="The optimization level to use when compiling the test suite.",
-        default="none",
+        default="default", # defaults, test -> none, benchmarks -> speed
         actions=lambda opt: filter(None, [
+            AddBenchmarkCompileFlag(lambda cfg: getSpeedOptimizationFlag(cfg)) if opt == "default" else None,
             AddCompileFlag(lambda cfg: getSpeedOptimizationFlag(cfg)) if opt == "speed" else None,
             AddCompileFlag(lambda cfg: getSizeOptimizationFlag(cfg)) if opt == "size" else None,
             AddFeature(f'optimization={opt}'),
