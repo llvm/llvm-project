@@ -4928,7 +4928,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_s_getpc:
     case Intrinsic::amdgcn_groupstaticsize:
     case Intrinsic::amdgcn_reloc_constant:
-    case Intrinsic::returnaddress: {
+    case Intrinsic::returnaddress:
+    case Intrinsic::frameaddress: {
       unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
       OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, Size);
       break;
