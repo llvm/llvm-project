@@ -19,9 +19,13 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if __has_builtin(__builtin_verbose_trap)
-#  define _LIBCPP_VERBOSE_TRAP(message) __builtin_verbose_trap("libc++", message)
+#  define _LIBCPP_VERBOSE_TRAP(message) ({ [[clang::__nomerge__]] __builtin_verbose_trap("libc++", message); })
 #else
-#  define _LIBCPP_VERBOSE_TRAP(message) ((void)message, __builtin_trap())
+#  define _LIBCPP_VERBOSE_TRAP(message)                                                                                \
+    ({                                                                                                                 \
+      (void)message;                                                                                                   \
+      [[clang::__nomerge__]] __builtin_trap();                                                                         \
+    })
 #endif
 
 _LIBCPP_END_NAMESPACE_STD
