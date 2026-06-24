@@ -604,11 +604,15 @@ void PPCallbacksTracker::appendArgument(const char *Name,
   llvm::raw_string_ostream SS(Str);
   SS << "[";
 
+  // Output ", " before outputing next argument
+  bool Comma = false;
   // Each argument is a series of contiguous Tokens, terminated by a eof.
   // Go through each argument printing tokens until we reach eof.
   for (unsigned I = 0; I < Value->getNumMacroArguments(); ++I) {
     const Token *Current = Value->getUnexpArgument(I);
-    if (I)
+    if (Current->is(tok::eof))
+      continue;
+    if (Comma)
       SS << ", ";
     bool First = true;
     while (Current->isNot(tok::eof)) {
@@ -625,6 +629,7 @@ void PPCallbacksTracker::appendArgument(const char *Name,
       ++Current;
       First = false;
     }
+    Comma = true;
   }
   SS << "]";
   appendArgument(Name, SS.str());
