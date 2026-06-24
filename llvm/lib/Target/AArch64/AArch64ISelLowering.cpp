@@ -28215,8 +28215,7 @@ static SDValue performSETCCCARRYCombine(SDNode *N, SelectionDAG &DAG) {
     return DAG.getNode(ISD::AND, DL, VT, HiEq, LoCmp);
   }
 
-  SDValue HiNe = DAG.getSetCC(
-      DL, VT, HiRHS, DAG.getConstant(0, DL, HiRHS.getValueType()), ISD::SETNE);
+  SDValue HiNe = DAG.getSetCC(DL, VT, HiRHS, HiLHS, ISD::SETNE);
   return DAG.getNode(ISD::OR, DL, VT, HiNe, LoCmp);
 }
 
