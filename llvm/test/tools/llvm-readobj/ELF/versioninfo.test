@@ -5,6 +5,8 @@
 # RUN: yaml2obj %s --docnum=1 -o %t1
 # RUN: llvm-readobj -V %t1 | FileCheck %s --check-prefix=LLVM
 # RUN: llvm-readelf -V %t1 | FileCheck %s --check-prefix=GNU
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print -V %t1 \
+# RUN:   | FileCheck %s --check-prefix=JSON
 
 --- !ELF
 FileHeader:
@@ -273,3 +275,278 @@ DynamicSymbols:
 # GNU-NEXT:    0x0050:   Name: v2  Flags: <unknown>  Version: 5
 # GNU-NEXT:    0x0060: Version: 1  File: verneed2.so.0  Cnt: 1
 # GNU-NEXT:    0x0070:   Name: v3  Flags: none  Version: 6
+
+# JSON:      [
+# JSON-NEXT:   {
+# JSON-NEXT:     "FileSummary": {
+# JSON-NEXT:       "File": "{{.*}}",
+# JSON-NEXT:       "Format": "elf64-unknown",
+# JSON-NEXT:       "Arch": "unknown",
+# JSON-NEXT:       "AddressSize": "64bit",
+# JSON-NEXT:       "LoadName": "<Not found>"
+# JSON-NEXT:     },
+# JSON-NEXT:     "VersionSymbols": [
+# JSON-NEXT:       {
+# JSON-NEXT:         "Symbol": {
+# JSON-NEXT:           "Version": 0,
+# JSON-NEXT:           "Name": ""
+# JSON-NEXT:         }
+# JSON-NEXT:       },
+# JSON-NEXT:       {
+# JSON-NEXT:         "Symbol": {
+# JSON-NEXT:           "Version": 2,
+# JSON-NEXT:           "Name": "sym1@VERSION1"
+# JSON-NEXT:         }
+# JSON-NEXT:       },
+# JSON-NEXT:       {
+# JSON-NEXT:         "Symbol": {
+# JSON-NEXT:           "Version": 3,
+# JSON-NEXT:           "Name": "sym2@VERSION2"
+# JSON-NEXT:         }
+# JSON-NEXT:       },
+# JSON-NEXT:       {
+# JSON-NEXT:         "Symbol": {
+# JSON-NEXT:           "Version": 4,
+# JSON-NEXT:           "Name": "sym3@v1"
+# JSON-NEXT:         }
+# JSON-NEXT:       },
+# JSON-NEXT:       {
+# JSON-NEXT:         "Symbol": {
+# JSON-NEXT:           "Version": 5,
+# JSON-NEXT:           "Name": "sym4@v2"
+# JSON-NEXT:         }
+# JSON-NEXT:       },
+# JSON-NEXT:       {
+# JSON-NEXT:         "Symbol": {
+# JSON-NEXT:           "Version": 6,
+# JSON-NEXT:           "Name": "sym5@v3"
+# JSON-NEXT:         }
+# JSON-NEXT:       }
+# JSON-NEXT:     ],
+# JSON-NEXT:     "VersionDefinitions": [
+# JSON-NEXT:       {
+# JSON-NEXT:         "Definition": {
+# JSON-NEXT:           "Version": 1,
+# JSON-NEXT:           "Flags": {
+# JSON-NEXT:             "Value": 0,
+# JSON-NEXT:             "Flags": []
+# JSON-NEXT:           },
+# JSON-NEXT:           "Index": 0,
+# JSON-NEXT:           "Hash": 0,
+# JSON-NEXT:           "Name": "VERSION1",
+# JSON-NEXT:           "Predecessors": []
+# JSON-NEXT:         }
+# JSON-NEXT:       },
+# JSON-NEXT:       {
+# JSON-NEXT:         "Definition": {
+# JSON-NEXT:           "Version": 1,
+# JSON-NEXT:           "Flags": {
+# JSON-NEXT:             "Value": 1,
+# JSON-NEXT:             "Flags": [
+# JSON-NEXT:               {
+# JSON-NEXT:                 "Name": "Base",
+# JSON-NEXT:                 "Value": 1
+# JSON-NEXT:               }
+# JSON-NEXT:             ]
+# JSON-NEXT:           },
+# JSON-NEXT:           "Index": 0,
+# JSON-NEXT:           "Hash": 0,
+# JSON-NEXT:           "Name": "VERSION1",
+# JSON-NEXT:           "Predecessors": []
+# JSON-NEXT:         }
+# JSON-NEXT:       },
+# JSON-NEXT:       {
+# JSON-NEXT:         "Definition": {
+# JSON-NEXT:           "Version": 1,
+# JSON-NEXT:           "Flags": {
+# JSON-NEXT:             "Value": 2,
+# JSON-NEXT:             "Flags": [
+# JSON-NEXT:               {
+# JSON-NEXT:                 "Name": "Weak",
+# JSON-NEXT:                 "Value": 2
+# JSON-NEXT:               }
+# JSON-NEXT:             ]
+# JSON-NEXT:           },
+# JSON-NEXT:           "Index": 0,
+# JSON-NEXT:           "Hash": 0,
+# JSON-NEXT:           "Name": "VERSION1",
+# JSON-NEXT:           "Predecessors": []
+# JSON-NEXT:         }
+# JSON-NEXT:       },
+# JSON-NEXT:       {
+# JSON-NEXT:         "Definition": {
+# JSON-NEXT:           "Version": 1,
+# JSON-NEXT:           "Flags": {
+# JSON-NEXT:             "Value": 4,
+# JSON-NEXT:             "Flags": [
+# JSON-NEXT:               {
+# JSON-NEXT:                 "Name": "Info",
+# JSON-NEXT:                 "Value": 4
+# JSON-NEXT:               }
+# JSON-NEXT:             ]
+# JSON-NEXT:           },
+# JSON-NEXT:           "Index": 0,
+# JSON-NEXT:           "Hash": 0,
+# JSON-NEXT:           "Name": "VERSION1",
+# JSON-NEXT:           "Predecessors": []
+# JSON-NEXT:         }
+# JSON-NEXT:       },
+# JSON-NEXT:       {
+# JSON-NEXT:         "Definition": {
+# JSON-NEXT:           "Version": 1,
+# JSON-NEXT:           "Flags": {
+# JSON-NEXT:             "Value": 7,
+# JSON-NEXT:             "Flags": [
+# JSON-NEXT:               {
+# JSON-NEXT:                 "Name": "Base",
+# JSON-NEXT:                 "Value": 1
+# JSON-NEXT:               },
+# JSON-NEXT:               {
+# JSON-NEXT:                 "Name": "Info",
+# JSON-NEXT:                 "Value": 4
+# JSON-NEXT:               },
+# JSON-NEXT:               {
+# JSON-NEXT:                 "Name": "Weak",
+# JSON-NEXT:                 "Value": 2
+# JSON-NEXT:               }
+# JSON-NEXT:             ]
+# JSON-NEXT:           },
+# JSON-NEXT:           "Index": 2,
+# JSON-NEXT:           "Hash": 175630257,
+# JSON-NEXT:           "Name": "VERSION1",
+# JSON-NEXT:           "Predecessors": []
+# JSON-NEXT:         }
+# JSON-NEXT:       },
+# JSON-NEXT:       {
+# JSON-NEXT:         "Definition": {
+# JSON-NEXT:           "Version": 1,
+# JSON-NEXT:           "Flags": {
+# JSON-NEXT:             "Value": 8,
+# JSON-NEXT:             "Flags": []
+# JSON-NEXT:           },
+# JSON-NEXT:           "Index": 3,
+# JSON-NEXT:           "Hash": 175630258,
+# JSON-NEXT:           "Name": "VERSION2",
+# JSON-NEXT:           "Predecessors": [
+# JSON-NEXT:             "VERSION1",
+# JSON-NEXT:             "VERSION3"
+# JSON-NEXT:           ]
+# JSON-NEXT:         }
+# JSON-NEXT:       }
+# JSON-NEXT:     ],
+# JSON-NEXT:     "VersionRequirements": [
+# JSON-NEXT:       {
+# JSON-NEXT:         "Dependency": {
+# JSON-NEXT:           "Version": 1,
+# JSON-NEXT:           "Count": 5,
+# JSON-NEXT:           "FileName": "verneed1.so.0",
+# JSON-NEXT:           "Entries": [
+# JSON-NEXT:             {
+# JSON-NEXT:               "Entry": {
+# JSON-NEXT:                 "Hash": 0,
+# JSON-NEXT:                 "Flags": {
+# JSON-NEXT:                   "Value": 1,
+# JSON-NEXT:                   "Flags": [
+# JSON-NEXT:                     {
+# JSON-NEXT:                       "Name": "Base",
+# JSON-NEXT:                       "Value": 1
+# JSON-NEXT:                     }
+# JSON-NEXT:                   ]
+# JSON-NEXT:                 },
+# JSON-NEXT:                 "Index": 0,
+# JSON-NEXT:                 "Name": "v1"
+# JSON-NEXT:               }
+# JSON-NEXT:             },
+# JSON-NEXT:             {
+# JSON-NEXT:               "Entry": {
+# JSON-NEXT:                 "Hash": 0,
+# JSON-NEXT:                 "Flags": {
+# JSON-NEXT:                   "Value": 2,
+# JSON-NEXT:                   "Flags": [
+# JSON-NEXT:                     {
+# JSON-NEXT:                       "Name": "Weak",
+# JSON-NEXT:                       "Value": 2
+# JSON-NEXT:                     }
+# JSON-NEXT:                   ]
+# JSON-NEXT:                 },
+# JSON-NEXT:                 "Index": 0,
+# JSON-NEXT:                 "Name": "v1"
+# JSON-NEXT:               }
+# JSON-NEXT:             },
+# JSON-NEXT:             {
+# JSON-NEXT:               "Entry": {
+# JSON-NEXT:                 "Hash": 0,
+# JSON-NEXT:                 "Flags": {
+# JSON-NEXT:                   "Value": 4,
+# JSON-NEXT:                   "Flags": [
+# JSON-NEXT:                     {
+# JSON-NEXT:                       "Name": "Info",
+# JSON-NEXT:                       "Value": 4
+# JSON-NEXT:                     }
+# JSON-NEXT:                   ]
+# JSON-NEXT:                 },
+# JSON-NEXT:                 "Index": 0,
+# JSON-NEXT:                 "Name": "v1"
+# JSON-NEXT:               }
+# JSON-NEXT:             },
+# JSON-NEXT:             {
+# JSON-NEXT:               "Entry": {
+# JSON-NEXT:                 "Hash": 1938,
+# JSON-NEXT:                 "Flags": {
+# JSON-NEXT:                   "Value": 7,
+# JSON-NEXT:                   "Flags": [
+# JSON-NEXT:                     {
+# JSON-NEXT:                       "Name": "Base",
+# JSON-NEXT:                       "Value": 1
+# JSON-NEXT:                     },
+# JSON-NEXT:                     {
+# JSON-NEXT:                       "Name": "Info",
+# JSON-NEXT:                       "Value": 4
+# JSON-NEXT:                     },
+# JSON-NEXT:                     {
+# JSON-NEXT:                       "Name": "Weak",
+# JSON-NEXT:                       "Value": 2
+# JSON-NEXT:                     }
+# JSON-NEXT:                   ]
+# JSON-NEXT:                 },
+# JSON-NEXT:                 "Index": 4,
+# JSON-NEXT:                 "Name": "v1"
+# JSON-NEXT:               }
+# JSON-NEXT:             },
+# JSON-NEXT:             {
+# JSON-NEXT:               "Entry": {
+# JSON-NEXT:                 "Hash": 1939,
+# JSON-NEXT:                 "Flags": {
+# JSON-NEXT:                   "Value": 8,
+# JSON-NEXT:                   "Flags": []
+# JSON-NEXT:                 },
+# JSON-NEXT:                 "Index": 5,
+# JSON-NEXT:                 "Name": "v2"
+# JSON-NEXT:               }
+# JSON-NEXT:             }
+# JSON-NEXT:           ]
+# JSON-NEXT:         }
+# JSON-NEXT:       },
+# JSON-NEXT:       {
+# JSON-NEXT:         "Dependency": {
+# JSON-NEXT:           "Version": 1,
+# JSON-NEXT:           "Count": 1,
+# JSON-NEXT:           "FileName": "verneed2.so.0",
+# JSON-NEXT:           "Entries": [
+# JSON-NEXT:             {
+# JSON-NEXT:               "Entry": {
+# JSON-NEXT:                 "Hash": 1937,
+# JSON-NEXT:                 "Flags": {
+# JSON-NEXT:                   "Value": 0,
+# JSON-NEXT:                   "Flags": []
+# JSON-NEXT:                 },
+# JSON-NEXT:                 "Index": 6,
+# JSON-NEXT:                 "Name": "v3"
+# JSON-NEXT:               }
+# JSON-NEXT:             }
+# JSON-NEXT:           ]
+# JSON-NEXT:         }
+# JSON-NEXT:       }
+# JSON-NEXT:     ]
+# JSON-NEXT:   }
+# JSON-NEXT: ]

@@ -8075,9 +8075,8 @@ void LLVMELFDumper<ELFT>::printVersionDefinitionSection(const Elf_Shdr *Sec) {
     W.printNumber("Index", D.Ndx);
     W.printNumber("Hash", D.Hash);
     W.printString("Name", D.Name);
-    W.printList(
-        "Predecessors", D.AuxV,
-        [](raw_ostream &OS, const VerdAux &Aux) { OS << Aux.Name.c_str(); });
+    W.printList("Predecessors", D.AuxV,
+                [](const VerdAux &Aux) { return Aux.Name; });
   }
 }
 

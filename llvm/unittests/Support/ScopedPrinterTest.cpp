@@ -849,16 +849,23 @@ APSIntList: [9999999999999999999999, -9999999999999999999999]
   verifyAll(ExpectedOut, JSONExpectedOut, PrintFunc);
 }
 
-TEST_F(ScopedPrinterTest, PrintListPrinter) {
+TEST_F(ScopedPrinterTest, PrintListMapper) {
   auto PrintFunc = [](ScopedPrinter &W) {
     const std::string StringList[] = {"a", "ab", "abc"};
     W.printList("StringSizeList", StringList,
-                [](raw_ostream &OS, StringRef Item) { OS << Item.size(); });
+                [](StringRef Item) { return Item.size(); });
   };
 
   const char *ExpectedOut = R"(StringSizeList: [1, 2, 3]
 )";
-  verifyScopedPrinter(ExpectedOut, PrintFunc);
+  const char *JSONExpectedOut = R"({
+  "StringSizeList": [
+    1,
+    2,
+    3
+  ]
+})";
+  verifyAll(ExpectedOut, JSONExpectedOut, PrintFunc);
 }
 
 TEST_F(ScopedPrinterTest, PrintHex) {
