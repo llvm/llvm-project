@@ -54,3 +54,24 @@ struct S8 {
   int *p;
   S8(int *a) : p(&a[0]) {}
 };
+
+namespace std {
+template <typename CharT> struct basic_string {};
+using string = basic_string<char>;
+
+template <typename CharT> struct basic_string_view {
+  basic_string_view(const basic_string<CharT> &);
+};
+using string_view = basic_string_view<char>;
+} // namespace std
+
+struct S9 {
+  std::string_view s; // expected-note {{pointer member declared here}}
+  // expected-warning@+1 {{initializing pointer member 's' with the stack address of parameter 'c'}}
+  S9(std::string c) : s(c) {}
+};
+
+struct S10 {
+  std::string s;
+  S10(std::string c) : s(c) {}
+};
