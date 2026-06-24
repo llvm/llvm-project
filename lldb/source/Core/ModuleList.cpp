@@ -545,6 +545,18 @@ void ModuleList::FindGlobalVariables(const RegularExpression &regex,
     module_sp->FindGlobalVariables(regex, max_matches, variable_list);
 }
 
+const Symbol *
+ModuleList::FindFirstSymbolWithNameAndType(ConstString name,
+                                           lldb::SymbolType symbol_type) const {
+  std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
+  for (const ModuleSP &module_sp : m_modules) {
+    if (const Symbol *symbol =
+            module_sp->FindFirstSymbolWithNameAndType(name, symbol_type))
+      return symbol;
+  }
+  return nullptr;
+}
+
 void ModuleList::FindSymbolsWithNameAndType(ConstString name,
                                             SymbolType symbol_type,
                                             SymbolContextList &sc_list) const {
