@@ -96,7 +96,7 @@ endif()
 umbrella_lit_testsuite_begin(check-compiler-rt)
 
 set(COMPILER_RT_KNOWN_TEST_SUITES
-    builtins;ctx_profile;fuzzer;interception;lsan;memprof;metadata
+    builtins;ctx_profile;fuzzer;interception;lsan;memprof;copyprof;metadata
     ;orc;profile;sanitizer_common;shadowcallstack
     ;ubsan;xray)
 list(APPEND COMPILER_RT_KNOWN_TEST_SUITES ${ALL_SANITIZERS})
@@ -203,6 +203,9 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
   endif()
   if(COMPILER_RT_BUILD_MEMPROF)
     compiler_rt_test_runtime(memprof)
+  endif()
+  if(COMPILER_RT_BUILD_COPYPROF)
+    compiler_rt_test_runtime(copyprof)
   endif()
   if(COMPILER_RT_BUILD_XRAY)
     compiler_rt_test_runtime(xray)
