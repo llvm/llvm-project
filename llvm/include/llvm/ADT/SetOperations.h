@@ -25,7 +25,7 @@ using check_has_member_remove_if_t =
     decltype(std::declval<Set>().remove_if(std::declval<Fn>()));
 
 template <typename Set, typename Fn>
-static constexpr bool HasMemberRemoveIf =
+inline constexpr bool HasMemberRemoveIf =
     is_detected<check_has_member_remove_if_t, Set, Fn>::value;
 
 template <typename Set>
@@ -33,7 +33,7 @@ using check_has_member_erase_iter_t =
     decltype(std::declval<Set>().erase(std::declval<Set>().begin()));
 
 template <typename Set>
-static constexpr bool HasMemberEraseIter =
+inline constexpr bool HasMemberEraseIter =
     is_detected<check_has_member_erase_iter_t, Set>::value;
 
 } // namespace detail

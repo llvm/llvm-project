@@ -144,7 +144,7 @@ enum : unsigned {
 namespace impl {
 // TODO: Move this into mapToDWARFAddrSpace when we switch to C++23
 // (see https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2022/p2647r1.html)
-static constexpr unsigned LLVMToDWARFAddrSpaceMapping[] = {
+inline constexpr unsigned LLVMToDWARFAddrSpaceMapping[] = {
     DWARFAS::GENERIC,     //< AMDGPUAS::FLAT_ADDRESS
     DWARFAS::GLOBAL,      //< AMDGPUAS::GLOBAL_ADDRESS
     DWARFAS::REGION,      //< AMDGPUAS::REGION_ADDRESS

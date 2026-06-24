@@ -1218,8 +1218,8 @@ willBeValidAffineMap(unsigned dimCount, unsigned symbolCount,
                      ArrayRef<AffineExpr> results) {
   int64_t maxDimPosition = -1;
   int64_t maxSymbolPosition = -1;
-  getMaxDimAndSymbol(ArrayRef<ArrayRef<AffineExpr>>(results), maxDimPosition,
-                     maxSymbolPosition);
+  detail::getMaxDimAndSymbol(ArrayRef<ArrayRef<AffineExpr>>(results),
+                             maxDimPosition, maxSymbolPosition);
   if ((maxDimPosition >= dimCount) || (maxSymbolPosition >= symbolCount)) {
     LDBG()
         << "maximum dimensional identifier position in result expression must "

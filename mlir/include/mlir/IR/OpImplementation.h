@@ -21,7 +21,8 @@
 #include "llvm/Support/SMLoc.h"
 #include <optional>
 
-namespace {
+namespace mlir {
+namespace detail {
 // reference https://stackoverflow.com/a/16000226
 template <typename T, typename = void>
 struct HasStaticName : std::false_type {};
@@ -32,9 +33,7 @@ struct HasStaticName<T,
                          std::is_same<::llvm::StringLiteral,
                                       std::decay_t<decltype(T::name)>>::value,
                          void>::type> : std::true_type {};
-} // namespace
-
-namespace mlir {
+} // namespace detail
 class AsmParsedResourceEntry;
 class AsmResourceBuilder;
 class Builder;
@@ -1313,7 +1312,7 @@ public:
     if (!result) {
       InFlightDiagnostic diag =
           emitError(loc, "invalid kind of type specified");
-      if constexpr (HasStaticName<TypeT>::value)
+      if constexpr (detail::HasStaticName<TypeT>::value)
         diag << ": expected " << TypeT::name << ", but found " << type;
       return diag;
     }
@@ -1350,7 +1349,7 @@ public:
     if (!result) {
       InFlightDiagnostic diag =
           emitError(loc, "invalid kind of type specified");
-      if constexpr (HasStaticName<TypeT>::value)
+      if constexpr (detail::HasStaticName<TypeT>::value)
         diag << ": expected " << TypeT::name << ", but found " << type;
       return diag;
     }
@@ -1392,7 +1391,7 @@ public:
     if (!result) {
       InFlightDiagnostic diag =
           emitError(loc, "invalid kind of type specified");
-      if constexpr (HasStaticName<TypeType>::value)
+      if constexpr (detail::HasStaticName<TypeType>::value)
         diag << ": expected " << TypeType::name << ", but found " << type;
       return diag;
     }

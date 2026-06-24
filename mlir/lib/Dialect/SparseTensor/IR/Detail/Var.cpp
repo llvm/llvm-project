@@ -59,8 +59,8 @@ bool Ranks::isValid(DimLvlExpr expr) const {
   // Compute the maximum identifiers for symbol-vars and dim/lvl-vars
   // (each `DimLvlExpr` only allows one kind of non-symbol variable).
   int64_t maxSym = -1, maxVar = -1;
-  mlir::getMaxDimAndSymbol<ArrayRef<AffineExpr>>({{expr.getAffineExpr()}},
-                                                 maxVar, maxSym);
+  mlir::detail::getMaxDimAndSymbol<ArrayRef<AffineExpr>>(
+      {{expr.getAffineExpr()}}, maxVar, maxSym);
   return maxSym < getSymRank() && maxVar < getRank(expr.getAllowedVarKind());
 }
 

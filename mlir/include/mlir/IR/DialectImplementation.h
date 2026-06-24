@@ -17,8 +17,8 @@
 #include "mlir/IR/OpImplementation.h"
 #include <type_traits>
 
-namespace {
-
+namespace mlir {
+namespace detail {
 // reference https://stackoverflow.com/a/16000226
 template <typename T, typename = void>
 struct HasStaticDialectName : std::false_type {};
@@ -29,10 +29,7 @@ struct HasStaticDialectName<
            std::is_same<::llvm::StringLiteral,
                         std::decay_t<decltype(T::dialectName)>>::value,
            void>::type> : std::true_type {};
-
-} // namespace
-
-namespace mlir {
+} // namespace detail
 
 //===----------------------------------------------------------------------===//
 // DialectAsmPrinter
@@ -79,7 +76,7 @@ struct FieldParser<
     AttributeT, std::enable_if_t<std::is_base_of<Attribute, AttributeT>::value,
                                  AttributeT>> {
   static FailureOr<AttributeT> parse(AsmParser &parser) {
-    if constexpr (HasStaticDialectName<AttributeT>::value) {
+    if constexpr (detail::HasStaticDialectName<AttributeT>::value) {
       parser.getContext()->getOrLoadDialect(AttributeT::dialectName);
     }
     AttributeT value;
@@ -132,7 +129,7 @@ struct FieldParser<
     std::enable_if_t<std::is_base_of<Attribute, AttributeT>::value,
                      std::optional<AttributeT>>> {
   static FailureOr<std::optional<AttributeT>> parse(AsmParser &parser) {
-    if constexpr (HasStaticDialectName<AttributeT>::value) {
+    if constexpr (detail::HasStaticDialectName<AttributeT>::value) {
       parser.getContext()->getOrLoadDialect(AttributeT::dialectName);
     }
     AttributeT attr;

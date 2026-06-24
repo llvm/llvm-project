@@ -19,7 +19,7 @@
 #include <optional>
 #include <type_traits>
 
-namespace {
+namespace llvm::detail {
 
 /// Utility function to apply a given method of \c APInt \p F to \p LHS and
 /// \p RHS.
@@ -27,15 +27,16 @@ namespace {
 template <typename T, typename F>
 std::enable_if_t<std::is_integral_v<T> && sizeof(T) * 8 <= 64, std::optional<T>>
 checkedOp(T LHS, T RHS, F Op, bool Signed = true) {
-  llvm::APInt ALHS(sizeof(T) * 8, LHS, Signed);
-  llvm::APInt ARHS(sizeof(T) * 8, RHS, Signed);
+  APInt ALHS(sizeof(T) * 8, LHS, Signed);
+  APInt ARHS(sizeof(T) * 8, RHS, Signed);
   bool Overflow;
-  llvm::APInt Out = (ALHS.*Op)(ARHS, Overflow);
+  APInt Out = (ALHS.*Op)(ARHS, Overflow);
   if (Overflow)
     return std::nullopt;
   return Signed ? Out.getSExtValue() : Out.getZExtValue();
 }
-}
+
+} // namespace llvm::detail
 
 namespace llvm {
 
@@ -45,7 +46,7 @@ namespace llvm {
 template <typename T>
 std::enable_if_t<std::is_signed_v<T>, std::optional<T>> checkedAdd(T LHS,
                                                                    T RHS) {
-  return checkedOp(LHS, RHS, &llvm::APInt::sadd_ov);
+  return detail::checkedOp(LHS, RHS, &APInt::sadd_ov);
 }
 
 /// Subtract two signed integers \p LHS and \p RHS.
@@ -54,7 +55,7 @@ std::enable_if_t<std::is_signed_v<T>, std::optional<T>> checkedAdd(T LHS,
 template <typename T>
 std::enable_if_t<std::is_signed_v<T>, std::optional<T>> checkedSub(T LHS,
                                                                    T RHS) {
-  return checkedOp(LHS, RHS, &llvm::APInt::ssub_ov);
+  return detail::checkedOp(LHS, RHS, &APInt::ssub_ov);
 }
 
 /// Multiply two signed integers \p LHS and \p RHS.
@@ -63,7 +64,7 @@ std::enable_if_t<std::is_signed_v<T>, std::optional<T>> checkedSub(T LHS,
 template <typename T>
 std::enable_if_t<std::is_signed_v<T>, std::optional<T>> checkedMul(T LHS,
                                                                    T RHS) {
-  return checkedOp(LHS, RHS, &llvm::APInt::smul_ov);
+  return detail::checkedOp(LHS, RHS, &APInt::smul_ov);
 }
 
 /// Multiply A and B, and add C to the resulting product.
@@ -83,7 +84,7 @@ std::enable_if_t<std::is_signed_v<T>, std::optional<T>> checkedMulAdd(T A, T B,
 template <typename T>
 std::enable_if_t<std::is_unsigned_v<T>, std::optional<T>>
 checkedAddUnsigned(T LHS, T RHS) {
-  return checkedOp(LHS, RHS, &llvm::APInt::uadd_ov, /*Signed=*/false);
+  return detail::checkedOp(LHS, RHS, &APInt::uadd_ov, /*Signed=*/false);
 }
 
 /// Multiply two unsigned integers \p LHS and \p RHS.
@@ -92,7 +93,7 @@ checkedAddUnsigned(T LHS, T RHS) {
 template <typename T>
 std::enable_if_t<std::is_unsigned_v<T>, std::optional<T>>
 checkedMulUnsigned(T LHS, T RHS) {
-  return checkedOp(LHS, RHS, &llvm::APInt::umul_ov, /*Signed=*/false);
+  return detail::checkedOp(LHS, RHS, &APInt::umul_ov, /*Signed=*/false);
 }
 
 /// Multiply unsigned integers A and B, and add C to the resulting product.
