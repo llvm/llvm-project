@@ -1553,6 +1553,7 @@ bool LoopIdiomRecognize::avoidLIRForMultiBlockLoop(bool IsMemset,
 
 bool LoopIdiomRecognize::optimizeCRCLoopToClmul(const PolynomialInfo &Info) {
   Type *CRCTy = Info.LHS->getType();
+  LLVMContext &Ctx = CRCTy->getContext();
   unsigned CRCBW = CRCTy->getIntegerBitWidth();
   // The TripCount determines how many bits of data are processed, regardless of
   // whether the actual data bit width matches (if auxiliary data is even used
@@ -1561,14 +1562,14 @@ bool LoopIdiomRecognize::optimizeCRCLoopToClmul(const PolynomialInfo &Info) {
   // The width used for clmul operations should be a power of 2, and should be
   // at least CRCBW + DataBW.
   unsigned ClmulBW = 2 * std::max(CRCBW, EffectiveDataBW);
-  Type *ClmulTy = IntegerType::get(CRCTy->getContext(), ClmulBW);
+  Type *ClmulTy = IntegerType::get(Ctx, ClmulBW);
 
   // For big-endian CRC loops where the auxiliary data is XORed with the CRC
   // inside the loop, the bits won't be aligned properly if the bit widths don't
   // match, and thus the CRC computation is incorrect, but HashRecognize will
   // still detect the loop. Since this optimization always produces a correct
   // CRC computation, bail in this edge case.
-  if (Info.ByteOrderSwapped && Info.LHSAux &&
+  if (Info.IsBigEndian && Info.LHSAux &&
       (EffectiveDataBW != CRCBW ||
        Info.LHSAux->getType()->getIntegerBitWidth() != CRCBW))
     return false;
@@ -1583,9 +1584,9 @@ bool LoopIdiomRecognize::optimizeCRCLoopToClmul(const PolynomialInfo &Info) {
   // First, generate the constants required for GF(2) Barrett reduction.
   CRCBarrettConstants Constants = HashRecognize::genBarrettConstants(
       Info.RHS, EffectiveDataBW, Info.IsBigEndian);
-  Value *Mu = ConstantInt::get(ClmulTy, Constants.Mu.zext(ClmulBW));
+  Value *Mu = ConstantInt::get(Ctx, Constants.Mu.zext(ClmulBW));
   Value *FullGenPoly =
-      ConstantInt::get(ClmulTy, Constants.FullGenPoly.zext(ClmulBW));
+      ConstantInt::get(Ctx, Constants.FullGenPoly.zext(ClmulBW));
 
   IRBuilder<> Builder(CurLoop->getLoopPreheader()->getTerminator());
 
@@ -1608,26 +1609,24 @@ bool LoopIdiomRecognize::optimizeCRCLoopToClmul(const PolynomialInfo &Info) {
   Value *ClmulMuInput = CRCAlignData;
   if (Value *Data = Info.LHSAux) {
     unsigned ActualDataBW = Data->getType()->getIntegerBitWidth();
-    if (ActualDataBW > EffectiveDataBW) {
+    if (ActualDataBW > EffectiveDataBW)
       // Extract the useful bits of the data and discard the rest.
-      Data = Info.IsBigEndian
-                 ? Builder.CreateLShr(Data, ActualDataBW - EffectiveDataBW,
-                                      "data.be.lshr")
-                 : Builder.CreateAnd(
-                       Data,
-                       ConstantInt::get(
-                           Data->getType(),
-                           APInt::getLowBitsSet(ActualDataBW, EffectiveDataBW)),
-                       "data.le.mask");
-    }
+      Data =
+          Info.IsBigEndian
+              ? Builder.CreateLShr(Data, ActualDataBW - EffectiveDataBW,
+                                   "data.be.lshr")
+              : Builder.CreateAnd(
+                    Data,
+                    ConstantInt::get(Ctx, APInt::getLowBitsSet(
+                                              ActualDataBW, EffectiveDataBW)),
+                    "data.le.mask");
     // This isn't necessarily a zext-- ActualDataBW could be greater than
     // ClmulBW.
     Value *DataExt = Builder.CreateZExtOrTrunc(Data, ClmulTy, "data.ext");
     // For the big-endian case, ensure the data is aligned properly.
-    if (Info.IsBigEndian && EffectiveDataBW > ActualDataBW) {
+    if (Info.IsBigEndian && EffectiveDataBW > ActualDataBW)
       DataExt = Builder.CreateShl(DataExt, EffectiveDataBW - ActualDataBW,
                                   "data.be.shl");
-    }
 
     ClmulMuInput = Builder.CreateXor(CRCAlignData, DataExt, "xor.crc.data");
   }
@@ -1644,7 +1643,7 @@ bool LoopIdiomRecognize::optimizeCRCLoopToClmul(const PolynomialInfo &Info) {
           : Builder.CreateAnd(
                 ClmulMu,
                 ConstantInt::get(
-                    ClmulTy, APInt::getLowBitsSet(ClmulBW, EffectiveDataBW)),
+                    Ctx, APInt::getLowBitsSet(ClmulBW, EffectiveDataBW)),
                 "quot.le.mask");
 
   // Perform the second clmul operation with the P(x)/P(x)' constant. Input is
@@ -1657,16 +1656,14 @@ bool LoopIdiomRecognize::optimizeCRCLoopToClmul(const PolynomialInfo &Info) {
   // leftmost bit of the clmul result. For the little-endian case, align the
   // rightmost bits (nothing to do).
   Value *CRCAlignClmul = CRCExt;
-  if (Info.IsBigEndian) {
+  if (Info.IsBigEndian)
     CRCAlignClmul = Builder.CreateShl(CRCExt, EffectiveDataBW, "crc.be.shl");
-  }
   // Get the remainder by subtracting (XORing) the calculated multiple of
   // GenPoly from the CRC.
   Value *CRCNext = Builder.CreateXor(CRCAlignClmul, ClmulGP, "xor.crc.mult");
   // For the little-endian case, the leftmost bits of the XOR are relevant.
-  if (!Info.IsBigEndian) {
+  if (!Info.IsBigEndian)
     CRCNext = Builder.CreateLShr(CRCNext, EffectiveDataBW, "crc.le.lshr");
-  }
   CRCNext = Builder.CreateTrunc(CRCNext, CRCTy, "crc.next");
 
   // Replace the result of the loop with the new computed CRC value.
