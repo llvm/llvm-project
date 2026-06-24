@@ -390,17 +390,12 @@ static APInt floorDivideGF2(APInt Dividend, APInt Divisor) {
   // The Poly argument should never be zero, or else this underflows.
   auto Deg = [](const APInt &Poly) { return Poly.getActiveBits() - 1; };
 
-  // Calculate deg(Divisor) once since it never changes.
-  unsigned DivisorDeg = Deg(Divisor);
-  // Only calculate deg(Dividend) after Dividend is known to be nonzero.
-  unsigned DividendDeg;
-
   // Q = 0
   APInt Quotient = APInt::getZero(Dividend.getBitWidth());
   // S != 0 and deg(S) >= deg(P)
-  while (!Dividend.isZero() && (DividendDeg = Deg(Dividend)) >= DivisorDeg) {
+  while (!Dividend.isZero() && Deg(Dividend) >= Deg(Divisor)) {
     // T = S[deg(S)] / P[deg(P)]
-    unsigned Shift = DividendDeg - DivisorDeg;
+    unsigned Shift = Deg(Dividend) - Deg(Divisor);
     // Q = Q + T
     Quotient.setBit(Shift);
     // S = S - T * P
@@ -420,19 +415,19 @@ CRCBarrettConstants HashRecognize::genBarrettConstants(const APInt &GenPoly,
 
   // Recover the full generating polynomial in normal form by reflecting the LE
   // case and adding the implied x^CRCBW term.
-  APInt FullGenPoly = IsBigEndian ? GenPoly : GenPoly.reverseBits();
   // deg(P(x)) = CRCBW due to the implied term, and thus P(x) must fit in
   // exactly CRCBW+1 bits.
-  FullGenPoly = FullGenPoly.zext(CRCBW + 1);
+  APInt FullGenPoly =
+      (IsBigEndian ? GenPoly : GenPoly.reverseBits()).zext(CRCBW + 1);
   FullGenPoly.setBit(CRCBW);
 
   // Calculate mu = floor(x^(CRCBW+DataBW) / P(x)).
-  unsigned DivBW = CRCBW + DataBW + 1;
-  APInt Mu =
-      floorDivideGF2(APInt::getOneBitSet(DivBW, CRCBW + DataBW), FullGenPoly);
   // deg(mu) <= deg(x^(CRCBW+DataBW)) - deg(P(x)) = CRCBW+DataBW - CRCBW =
   // DataBW, and thus mu must fit in at most DataBW+1 bits.
-  Mu = Mu.trunc(DataBW + 1);
+  unsigned DivBW = CRCBW + DataBW + 1;
+  APInt Mu =
+      floorDivideGF2(APInt::getOneBitSet(DivBW, CRCBW + DataBW), FullGenPoly)
+          .trunc(DataBW + 1);
 
   // In the bit-reflected case, mu and P(x) must be bit-reflected across their
   // respective widths for the corresponding Barrett reduction steps.
@@ -446,10 +441,7 @@ CRCBarrettConstants HashRecognize::genBarrettConstants(const APInt &GenPoly,
   unsigned ClmulBW = 2 * std::max(CRCBW, DataBW);
 
   // Finally, cast mu/mu' and P(x)/P(x)' to the width used for clmul operations.
-  CRCBarrettConstants Constants;
-  Constants.Mu = Mu.zext(ClmulBW);
-  Constants.FullGenPoly = FullGenPoly.zext(ClmulBW);
-  return Constants;
+  return {Mu.zext(ClmulBW), FullGenPoly.zext(ClmulBW)};
 }
 
 /// Checks that \p P1 and \p P2 are used together in an XOR in the use-def chain
