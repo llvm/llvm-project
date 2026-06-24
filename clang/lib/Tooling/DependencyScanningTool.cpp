@@ -490,6 +490,10 @@ bool CompilerInstanceWithContext::initialize(
   // CompilerInstance::ExecuteAction to perform scanning.
   CI.createTarget();
 
+  MDC = std::make_shared<ModuleDepCollector>(
+      Worker.Service, std::make_unique<DependencyOutputOptions>(*OutputOpts),
+      CI, Controller, *OriginalInvocation, PrebuiltModuleASTMap, StableDirs);
+
   return true;
 }
 
@@ -517,13 +521,7 @@ bool CompilerInstanceWithContext::computeDependencies(
     CI.getPreprocessor().removePPCallbacks();
   });
 
-  auto MDC = initializeScanInstanceDependencyCollector(
-      CI, std::make_unique<DependencyOutputOptions>(*OutputOpts),
-      Worker.Service,
-      /* The MDC's constructor makes a copy of the OriginalInvocation, so
-      we can pass it in without worrying that it might be changed across
-      invocations of computeDependencies. */
-      *OriginalInvocation, Controller, PrebuiltModuleASTMap, StableDirs);
+  CI.addDependencyCollector(MDC);
 
   CompilerInvocation ModuleInvocation(*OriginalInvocation);
   if (!Controller.initialize(CI, ModuleInvocation))
@@ -586,6 +584,7 @@ bool CompilerInstanceWithContext::computeDependencies(
 
   MDC->run(Consumer);
   MDC->applyDiscoveredDependencies(ModuleInvocation);
+  MDC->clearLocalState();
 
   if (!Controller.finalize(CI, ModuleInvocation))
     return false;

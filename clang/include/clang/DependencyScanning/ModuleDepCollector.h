@@ -101,6 +101,8 @@ public:
   /// invocation, (e.g. disable implicit modules, add explicit module paths).
   void applyDiscoveredDependencies(CompilerInvocation &CI);
 
+  void clearLocalState();
+
 private:
   class ModuleDepCollectorPP;
 
@@ -115,7 +117,7 @@ private:
   const PrebuiltModulesAttrsMap PrebuiltModulesASTMap;
   /// Directory paths known to be stable through an active development and build
   /// cycle.
-  const ArrayRef<StringRef> StableDirs;
+  const SmallVector<StringRef> StableDirs;
   /// Path to the main source file.
   std::string MainFile;
   /// Non-modular file dependencies. This includes the main source file and
