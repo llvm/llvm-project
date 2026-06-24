@@ -117,10 +117,17 @@ struct RemSIOpInterface
     bool rhsPositive = ValueBoundsConstraintSet::isProvablyPositive(rhsValue, cstr);
     bool rhsNegative = ValueBoundsConstraintSet::isProvablyNegative(rhsValue, cstr);
 
-    // The result of remsi has the same sign as the dividend (lhs). The sign
-    // of lhs does not need to be a compile-time constant: it is sufficient if
+    // The result of remsi has the same sign as the dividend (lhs) and also fulfills |result| < |rhs|.
+    // The sign of lhs does not need to be a compile-time constant: it is sufficient if
     // the constraint set can prove it. For lhs == 0 both branches may fire,
-    // which is consistent since the result is then 0.
+    // which is consistent since the result is then 0. f.e:
+    //   lhs   rhs   result   bounds
+    //   ----  ----  ------   --------------------------------------------------
+    //    7     3      1      0 <= val && val <= rhs-1 = 2      -> [0, 2]
+    //    7    -3      1      0 <= val && val <= -rhs-1 = 2     -> [0, 2]
+    //   -7     3     -1      val <= 0 && val >= 1-rhs = -2     -> [-2, 0]
+    //   -7    -3     -1      val <= 0 && val >= rhs+1 = -2     -> [-2, 0]
+    //    0     3      0      both lhs branches fire (0<=val and val<=0) -> val == 0
     if (ValueBoundsConstraintSet::isProvablyNonPositive(lhsValue, cstr)) {
       cstr.bound(value) <= 0;
       if (rhsPositive)
