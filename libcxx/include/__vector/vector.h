@@ -1075,7 +1075,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void __if_likely_else(bool _
 
 template <class _Tp, class _Alloc>
 template <class... _Args>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI vector<_Tp, _Alloc>::__emplace_back_result_t
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI typename vector<_Tp, _Alloc>::__emplace_back_result_t
 vector<_Tp, _Alloc>::emplace_back(_Args&&... __args) {
     std::__if_likely_else(
         !__layout_.__is_full(),
