@@ -4877,8 +4877,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case G_DYN_STACKALLOC:
     return lowerDynStackAlloc(MI);
   case G_INSERT_SUBVECTOR: {
-    if (MRI.getType(MI.getOperand(1).getReg()).isScalable()
-        || MRI.getType(MI.getOperand(2).getReg()).isScalable())
+    if (MRI.getType(MI.getOperand(1).getReg()).isScalable() ||
+        MRI.getType(MI.getOperand(2).getReg()).isScalable())
       return UnableToLegalize;
 
     // Check that subvector is half size of main vector
@@ -4890,44 +4890,47 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     LLT SubvectorTy = MRI.getType(Subvector);
     // If so, -> concat(subvector, extract(half of vector))
     // (Operands can be either way round depending on insertion point
-    if (VectorTy.getSizeInBits() == SubvectorTy.getSizeInBits() * 2)
-    {
+    if (VectorTy.getSizeInBits() == SubvectorTy.getSizeInBits() * 2) {
       bool insertInLowHalf = insertionPointImm == 0;
-      auto extract = MIRBuilder.buildInstr(TargetOpcode::G_EXTRACT_SUBVECTOR,
-		      {SubvectorTy},
-		      {Vector, (uint64_t)(insertInLowHalf ? VectorTy.getElementCount().getKnownMinValue() / 2 : 0)});
-      
+      auto extract = MIRBuilder.buildInstr(
+          TargetOpcode::G_EXTRACT_SUBVECTOR, {SubvectorTy},
+          {Vector,
+           (uint64_t)(insertInLowHalf
+                          ? VectorTy.getElementCount().getKnownMinValue() / 2
+                          : 0)});
+
       auto LowHalf = insertInLowHalf ? Subvector : extract.getReg(0);
       auto HighHalf = insertInLowHalf ? extract.getReg(0) : Subvector;
 
-      MIRBuilder.buildInstr(TargetOpcode::G_CONCAT_VECTORS,
-			{MI.getOperand(0)},
-			{LowHalf, HighHalf});
+      MIRBuilder.buildInstr(TargetOpcode::G_CONCAT_VECTORS, {MI.getOperand(0)},
+                            {LowHalf, HighHalf});
       MI.eraseFromParent();
       return Legalized;
     }
     // Else -> shuffle(vector, extend(subvector, size(vector)), mask)
-    else
-    {
-	    // Extend subvector to same size as vector
-	    Register ExtendedSubvector = MRI.createGenericVirtualRegister(VectorTy);
-	    MIRBuilder.buildPadVectorWithUndefElements(ExtendedSubvector, Subvector);
+    else {
+      // Extend subvector to same size as vector
+      Register ExtendedSubvector = MRI.createGenericVirtualRegister(VectorTy);
+      MIRBuilder.buildPadVectorWithUndefElements(ExtendedSubvector, Subvector);
 
-	    // Calculate mask required for this shuffle
-	    SmallVector<int> Mask;
-	    for (int i; i < VectorTy.getElementCount().getKnownMinValue(); i++)
-	    {
-		// If this index is within bounds, put subvector's index into mask
-		if (i > insertionPointImm && i < insertionPointImm + SubvectorTy.getElementCount().getKnownMinValue())
-			Mask.push_back(VectorTy.getElementCount().getKnownMinValue() + i - insertionPointImm);
-		else
-			Mask.push_back(i);
-	    }
+      // Calculate mask required for this shuffle
+      SmallVector<int> Mask;
+      for (int i; i < VectorTy.getElementCount().getKnownMinValue(); i++) {
+        // If this index is within bounds, put subvector's index into mask
+        if (i > insertionPointImm &&
+            i < insertionPointImm +
+                    SubvectorTy.getElementCount().getKnownMinValue())
+          Mask.push_back(VectorTy.getElementCount().getKnownMinValue() + i -
+                         insertionPointImm);
+        else
+          Mask.push_back(i);
+      }
 
-	    // Build shuffle
-	    MIRBuilder.buildShuffleVector(MI.getOperand(0), Vector, ExtendedSubvector, Mask);
-	    MI.eraseFromParent();
-	    return Legalized;
+      // Build shuffle
+      MIRBuilder.buildShuffleVector(MI.getOperand(0), Vector, ExtendedSubvector,
+                                    Mask);
+      MI.eraseFromParent();
+      return Legalized;
     }
     // Look up what sdag does**
     // The g opcodes should all be supported by gi
