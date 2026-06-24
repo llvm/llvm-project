@@ -142,8 +142,8 @@ entry:
 ; gaps.
 ;
 ; VF_2-LABEL: Checking a loop in 'i64_factor_8'
-; VF_2:         Cost of 8 for VF 2: REPLICATE ir<%tmp2> = load ir<%tmp0>
-; VF_2-NEXT:    Cost of 8 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_2:         Cost of 4 for VF 2: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_2-NEXT:    Cost of 4 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp1>
 ; VF_2-NEXT:    Cost of 8 for VF 2: REPLICATE store ir<%tmp2>, ir<%tmp0>
 ; VF_2-NEXT:    Cost of 8 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp1>
 for.body:

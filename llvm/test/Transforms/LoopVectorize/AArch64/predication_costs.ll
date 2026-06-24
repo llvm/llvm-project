@@ -220,9 +220,9 @@ for.end:
 ; Cost of add:
 ;   add(1) = 1
 ; Cost of sdiv:
-;   (sdiv(2) + extractelement(8) + insertelement(4)) / 2 = 7
+;   (sdiv(2) + extractelement(8)) / 2 = 5
 ; Cost of udiv:
-;   (udiv(2) + extractelement(4) + insertelement(4)) / 2 = 5
+;   (udiv(2) + extractelement(4)) / 2 = 3
 ; Cost of sub:
 ;   (sub(2) + extractelement(4)) / 2 = 3
 ; Cost of store:
@@ -237,8 +237,8 @@ for.end:
 ; CHECK: Cost of 2 for VF 2: profitable to scalarize   store i32 %tmp5, ptr %tmp0, align 4
 ; CHECK: Cost of 3 for VF 2: profitable to scalarize   %tmp5 = sub i32 %tmp4, %x
 ; CHECK: Cost of 1 for VF 2: WIDEN ir<%tmp2> = add ir<%tmp1>, ir<%x>
-; CHECK: Cost of 7 for VF 2: REPLICATE ir<%tmp3> = sdiv ir<%tmp1>, ir<%tmp2>
-; CHECK: Cost of 5 for VF 2: REPLICATE ir<%tmp4> = udiv ir<%tmp3>, ir<%tmp2>
+; CHECK: Cost of 5 for VF 2: REPLICATE ir<%tmp3> = sdiv ir<%tmp1>, ir<%tmp2>
+; CHECK: Cost of 3 for VF 2: REPLICATE ir<%tmp4> = udiv ir<%tmp3>, ir<%tmp2>
 ;
 define void @predication_multi_context(ptr %a, i1 %c, i32 %x, i64 %n) {
 entry:

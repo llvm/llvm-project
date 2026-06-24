@@ -15,8 +15,8 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i8_factor_2'
-; VF_2:     Cost of 12 for VF 2: REPLICATE ir<%tmp2> = load ir<%tmp0>
-; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_2:     Cost of 4 for VF 2: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp1>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp2>, ir<%tmp0>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp1>
 ; VF_4-LABEL:  Checking a loop in 'i8_factor_2'
@@ -50,8 +50,8 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i16_factor_2'
-; VF_2:     Cost of 12 for VF 2: REPLICATE ir<%tmp2> = load ir<%tmp0>
-; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_2:     Cost of 4 for VF 2: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp1>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp2>, ir<%tmp0>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp1>
 ; VF_4-LABEL:  Checking a loop in 'i16_factor_2'
@@ -85,8 +85,8 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i32_factor_2'
-; VF_2:     Cost of 12 for VF 2: REPLICATE ir<%tmp2> = load ir<%tmp0>
-; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_2:     Cost of 4 for VF 2: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp1>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp2>, ir<%tmp0>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp1>
 ; VF_4-LABEL:  Checking a loop in 'i32_factor_2'
@@ -120,23 +120,23 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i64_factor_2'
-; VF_2:     Cost of 22 for VF 2: REPLICATE ir<%tmp2> = load ir<%tmp0>
-; VF_2-NEXT: Cost of 22 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_2:     Cost of 6 for VF 2: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp1>
 ; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE store ir<%tmp2>, ir<%tmp0>
 ; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp1>
 ; VF_4-LABEL:  Checking a loop in 'i64_factor_2'
-; VF_4:     Cost of 44 for VF 4: REPLICATE ir<%tmp2> = load ir<%tmp0>
-; VF_4-NEXT: Cost of 44 for VF 4: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_4:     Cost of 12 for VF 4: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE ir<%tmp3> = load ir<%tmp1>
 ; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE store ir<%tmp2>, ir<%tmp0>
 ; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE store ir<%tmp3>, ir<%tmp1>
 ; VF_8-LABEL:  Checking a loop in 'i64_factor_2'
-; VF_8:     Cost of 88 for VF 8: REPLICATE ir<%tmp2> = load ir<%tmp0>
-; VF_8-NEXT: Cost of 88 for VF 8: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_8:     Cost of 24 for VF 8: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE ir<%tmp3> = load ir<%tmp1>
 ; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE store ir<%tmp2>, ir<%tmp0>
 ; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE store ir<%tmp3>, ir<%tmp1>
 ; VF_16-LABEL:  Checking a loop in 'i64_factor_2'
-; VF_16:    Cost of 176 for VF 16: REPLICATE ir<%tmp2> = load ir<%tmp0>
-; VF_16-NEXT: Cost of 176 for VF 16: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_16:    Cost of 48 for VF 16: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE ir<%tmp3> = load ir<%tmp1>
 ; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE store ir<%tmp2>, ir<%tmp0>
 ; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE store ir<%tmp3>, ir<%tmp1>
 for.body:
@@ -161,8 +161,8 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'f16_factor_2'
-; VF_2:     Cost of 6 for VF 2: REPLICATE ir<%tmp2> = load ir<%tmp0>
-; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_2:     Cost of 4 for VF 2: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp1>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp2>, ir<%tmp0>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp1>
 ; VF_4-LABEL:  Checking a loop in 'f16_factor_2'
@@ -229,23 +229,23 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'f64_factor_2'
-; VF_2:     Cost of 6 for VF 2: REPLICATE ir<%tmp2> = load ir<%tmp0>
-; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_2:     Cost of 4 for VF 2: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp1>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp2>, ir<%tmp0>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp1>
 ; VF_4-LABEL:  Checking a loop in 'f64_factor_2'
-; VF_4:     Cost of 12 for VF 4: REPLICATE ir<%tmp2> = load ir<%tmp0>
-; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_4:     Cost of 8 for VF 4: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE ir<%tmp3> = load ir<%tmp1>
 ; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp2>, ir<%tmp0>
 ; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp3>, ir<%tmp1>
 ; VF_8-LABEL:  Checking a loop in 'f64_factor_2'
-; VF_8:     Cost of 24 for VF 8: REPLICATE ir<%tmp2> = load ir<%tmp0>
-; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_8:     Cost of 16 for VF 8: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE ir<%tmp3> = load ir<%tmp1>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp2>, ir<%tmp0>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp3>, ir<%tmp1>
 ; VF_16-LABEL:  Checking a loop in 'f64_factor_2'
-; VF_16:    Cost of 48 for VF 16: REPLICATE ir<%tmp2> = load ir<%tmp0>
-; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE ir<%tmp3> = load ir<%tmp1>
+; VF_16:    Cost of 32 for VF 16: REPLICATE ir<%tmp2> = load ir<%tmp0>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE ir<%tmp3> = load ir<%tmp1>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp2>, ir<%tmp0>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp3>, ir<%tmp1>
 for.body:
@@ -274,30 +274,30 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i8_factor_3'
-; VF_2:     Cost of 12 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp0>
-; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp1>
-; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_2:     Cost of 4 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp2>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp0>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp4>, ir<%tmp1>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp5>, ir<%tmp2>
 ; VF_4-LABEL:  Checking a loop in 'i8_factor_3'
-; VF_4:     Cost of 24 for VF 4: REPLICATE ir<%tmp3> = load ir<%tmp0>
-; VF_4-NEXT: Cost of 24 for VF 4: REPLICATE ir<%tmp4> = load ir<%tmp1>
-; VF_4-NEXT: Cost of 24 for VF 4: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_4:     Cost of 8 for VF 4: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE ir<%tmp5> = load ir<%tmp2>
 ; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp3>, ir<%tmp0>
 ; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp4>, ir<%tmp1>
 ; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp5>, ir<%tmp2>
 ; VF_8-LABEL:  Checking a loop in 'i8_factor_3'
-; VF_8:     Cost of 48 for VF 8: REPLICATE ir<%tmp3> = load ir<%tmp0>
-; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp1>
-; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_8:     Cost of 16 for VF 8: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp2>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp3>, ir<%tmp0>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp4>, ir<%tmp1>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp5>, ir<%tmp2>
 ; VF_16-LABEL:  Checking a loop in 'i8_factor_3'
-; VF_16:    Cost of 96 for VF 16: REPLICATE ir<%tmp3> = load ir<%tmp0>
-; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp1>
-; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_16:    Cost of 32 for VF 16: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp2>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp3>, ir<%tmp0>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp4>, ir<%tmp1>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp5>, ir<%tmp2>
@@ -326,30 +326,30 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i16_factor_3'
-; VF_2:     Cost of 12 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp0>
-; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp1>
-; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_2:     Cost of 4 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp2>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp0>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp4>, ir<%tmp1>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp5>, ir<%tmp2>
 ; VF_4-LABEL:  Checking a loop in 'i16_factor_3'
-; VF_4:     Cost of 24 for VF 4: REPLICATE ir<%tmp3> = load ir<%tmp0>
-; VF_4-NEXT: Cost of 24 for VF 4: REPLICATE ir<%tmp4> = load ir<%tmp1>
-; VF_4-NEXT: Cost of 24 for VF 4: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_4:     Cost of 8 for VF 4: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE ir<%tmp5> = load ir<%tmp2>
 ; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp3>, ir<%tmp0>
 ; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp4>, ir<%tmp1>
 ; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp5>, ir<%tmp2>
 ; VF_8-LABEL:  Checking a loop in 'i16_factor_3'
-; VF_8:     Cost of 48 for VF 8: REPLICATE ir<%tmp3> = load ir<%tmp0>
-; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp1>
-; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_8:     Cost of 16 for VF 8: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp2>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp3>, ir<%tmp0>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp4>, ir<%tmp1>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp5>, ir<%tmp2>
 ; VF_16-LABEL:  Checking a loop in 'i16_factor_3'
-; VF_16:    Cost of 96 for VF 16: REPLICATE ir<%tmp3> = load ir<%tmp0>
-; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp1>
-; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_16:    Cost of 32 for VF 16: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp2>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp3>, ir<%tmp0>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp4>, ir<%tmp1>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp5>, ir<%tmp2>
@@ -378,9 +378,9 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i32_factor_3'
-; VF_2:     Cost of 12 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp0>
-; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp1>
-; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_2:     Cost of 4 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp2>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp0>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp4>, ir<%tmp1>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp5>, ir<%tmp2>
@@ -392,16 +392,16 @@ entry:
 ; VF_4-NEXT: Cost of 8 for VF 4: WIDEN store ir<%tmp1>, ir<%tmp4>
 ; VF_4-NEXT: Cost of 8 for VF 4: WIDEN store ir<%tmp2>, ir<%tmp5>
 ; VF_8-LABEL:  Checking a loop in 'i32_factor_3'
-; VF_8:     Cost of 48 for VF 8: REPLICATE ir<%tmp3> = load ir<%tmp0>
-; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp1>
-; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_8:     Cost of 16 for VF 8: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp2>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp3>, ir<%tmp0>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp4>, ir<%tmp1>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp5>, ir<%tmp2>
 ; VF_16-LABEL:  Checking a loop in 'i32_factor_3'
-; VF_16:    Cost of 96 for VF 16: REPLICATE ir<%tmp3> = load ir<%tmp0>
-; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp1>
-; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_16:    Cost of 32 for VF 16: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp2>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp3>, ir<%tmp0>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp4>, ir<%tmp1>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp5>, ir<%tmp2>
@@ -430,30 +430,30 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i64_factor_3'
-; VF_2:     Cost of 22 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp0>
-; VF_2-NEXT: Cost of 22 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp1>
-; VF_2-NEXT: Cost of 22 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_2:     Cost of 6 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp2>
 ; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp0>
 ; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE store ir<%tmp4>, ir<%tmp1>
 ; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE store ir<%tmp5>, ir<%tmp2>
 ; VF_4-LABEL:  Checking a loop in 'i64_factor_3'
-; VF_4:     Cost of 44 for VF 4: REPLICATE ir<%tmp3> = load ir<%tmp0>
-; VF_4-NEXT: Cost of 44 for VF 4: REPLICATE ir<%tmp4> = load ir<%tmp1>
-; VF_4-NEXT: Cost of 44 for VF 4: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_4:     Cost of 12 for VF 4: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE ir<%tmp5> = load ir<%tmp2>
 ; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE store ir<%tmp3>, ir<%tmp0>
 ; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE store ir<%tmp4>, ir<%tmp1>
 ; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE store ir<%tmp5>, ir<%tmp2>
 ; VF_8-LABEL:  Checking a loop in 'i64_factor_3'
-; VF_8:     Cost of 88 for VF 8: REPLICATE ir<%tmp3> = load ir<%tmp0>
-; VF_8-NEXT: Cost of 88 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp1>
-; VF_8-NEXT: Cost of 88 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_8:     Cost of 24 for VF 8: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp2>
 ; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE store ir<%tmp3>, ir<%tmp0>
 ; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE store ir<%tmp4>, ir<%tmp1>
 ; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE store ir<%tmp5>, ir<%tmp2>
 ; VF_16-LABEL:  Checking a loop in 'i64_factor_3'
-; VF_16:    Cost of 176 for VF 16: REPLICATE ir<%tmp3> = load ir<%tmp0>
-; VF_16-NEXT: Cost of 176 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp1>
-; VF_16-NEXT: Cost of 176 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_16:    Cost of 48 for VF 16: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp2>
 ; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE store ir<%tmp3>, ir<%tmp0>
 ; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE store ir<%tmp4>, ir<%tmp1>
 ; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE store ir<%tmp5>, ir<%tmp2>
@@ -482,9 +482,9 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'f16_factor_3'
-; VF_2:     Cost of 6 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp0>
-; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp1>
-; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_2:     Cost of 4 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp2>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp0>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp4>, ir<%tmp1>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp5>, ir<%tmp2>
@@ -562,30 +562,30 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'f64_factor_3'
-; VF_2:     Cost of 6 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp0>
-; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp1>
-; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_2:     Cost of 4 for VF 2: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp2>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp3>, ir<%tmp0>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp4>, ir<%tmp1>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp5>, ir<%tmp2>
 ; VF_4-LABEL:  Checking a loop in 'f64_factor_3'
-; VF_4:     Cost of 12 for VF 4: REPLICATE ir<%tmp3> = load ir<%tmp0>
-; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE ir<%tmp4> = load ir<%tmp1>
-; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_4:     Cost of 8 for VF 4: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE ir<%tmp5> = load ir<%tmp2>
 ; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp3>, ir<%tmp0>
 ; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp4>, ir<%tmp1>
 ; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp5>, ir<%tmp2>
 ; VF_8-LABEL:  Checking a loop in 'f64_factor_3'
-; VF_8:     Cost of 24 for VF 8: REPLICATE ir<%tmp3> = load ir<%tmp0>
-; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp1>
-; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_8:     Cost of 16 for VF 8: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp2>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp3>, ir<%tmp0>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp4>, ir<%tmp1>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp5>, ir<%tmp2>
 ; VF_16-LABEL:  Checking a loop in 'f64_factor_3'
-; VF_16:    Cost of 48 for VF 16: REPLICATE ir<%tmp3> = load ir<%tmp0>
-; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp1>
-; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp2>
+; VF_16:    Cost of 32 for VF 16: REPLICATE ir<%tmp3> = load ir<%tmp0>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp1>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp2>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp3>, ir<%tmp0>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp4>, ir<%tmp1>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp5>, ir<%tmp2>
@@ -617,37 +617,37 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i8_factor_4'
-; VF_2:     Cost of 12 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp0>
-; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp1>
-; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp6> = load ir<%tmp2>
-; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_2:     Cost of 4 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp7> = load ir<%tmp3>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp4>, ir<%tmp0>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp5>, ir<%tmp1>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp6>, ir<%tmp2>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp7>, ir<%tmp3>
 ; VF_4-LABEL:  Checking a loop in 'i8_factor_4'
-; VF_4:     Cost of 24 for VF 4: REPLICATE ir<%tmp4> = load ir<%tmp0>
-; VF_4-NEXT: Cost of 24 for VF 4: REPLICATE ir<%tmp5> = load ir<%tmp1>
-; VF_4-NEXT: Cost of 24 for VF 4: REPLICATE ir<%tmp6> = load ir<%tmp2>
-; VF_4-NEXT: Cost of 24 for VF 4: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_4:     Cost of 8 for VF 4: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE ir<%tmp7> = load ir<%tmp3>
 ; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp4>, ir<%tmp0>
 ; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp5>, ir<%tmp1>
 ; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp6>, ir<%tmp2>
 ; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp7>, ir<%tmp3>
 ; VF_8-LABEL:  Checking a loop in 'i8_factor_4'
-; VF_8:     Cost of 48 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp0>
-; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp1>
-; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp6> = load ir<%tmp2>
-; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_8:     Cost of 16 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE ir<%tmp7> = load ir<%tmp3>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp4>, ir<%tmp0>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp5>, ir<%tmp1>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp6>, ir<%tmp2>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp7>, ir<%tmp3>
 ; VF_16-LABEL:  Checking a loop in 'i8_factor_4'
-; VF_16:    Cost of 96 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp0>
-; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp1>
-; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp6> = load ir<%tmp2>
-; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_16:    Cost of 32 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE ir<%tmp7> = load ir<%tmp3>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp4>, ir<%tmp0>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp5>, ir<%tmp1>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp6>, ir<%tmp2>
@@ -680,37 +680,37 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i16_factor_4'
-; VF_2:     Cost of 12 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp0>
-; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp1>
-; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp6> = load ir<%tmp2>
-; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_2:     Cost of 4 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp7> = load ir<%tmp3>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp4>, ir<%tmp0>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp5>, ir<%tmp1>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp6>, ir<%tmp2>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp7>, ir<%tmp3>
 ; VF_4-LABEL:  Checking a loop in 'i16_factor_4'
-; VF_4:     Cost of 24 for VF 4: REPLICATE ir<%tmp4> = load ir<%tmp0>
-; VF_4-NEXT: Cost of 24 for VF 4: REPLICATE ir<%tmp5> = load ir<%tmp1>
-; VF_4-NEXT: Cost of 24 for VF 4: REPLICATE ir<%tmp6> = load ir<%tmp2>
-; VF_4-NEXT: Cost of 24 for VF 4: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_4:     Cost of 8 for VF 4: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE ir<%tmp7> = load ir<%tmp3>
 ; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp4>, ir<%tmp0>
 ; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp5>, ir<%tmp1>
 ; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp6>, ir<%tmp2>
 ; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp7>, ir<%tmp3>
 ; VF_8-LABEL:  Checking a loop in 'i16_factor_4'
-; VF_8:     Cost of 48 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp0>
-; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp1>
-; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp6> = load ir<%tmp2>
-; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_8:     Cost of 16 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE ir<%tmp7> = load ir<%tmp3>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp4>, ir<%tmp0>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp5>, ir<%tmp1>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp6>, ir<%tmp2>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp7>, ir<%tmp3>
 ; VF_16-LABEL:  Checking a loop in 'i16_factor_4'
-; VF_16:    Cost of 96 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp0>
-; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp1>
-; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp6> = load ir<%tmp2>
-; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_16:    Cost of 32 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE ir<%tmp7> = load ir<%tmp3>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp4>, ir<%tmp0>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp5>, ir<%tmp1>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp6>, ir<%tmp2>
@@ -743,10 +743,10 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i32_factor_4'
-; VF_2:     Cost of 12 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp0>
-; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp1>
-; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp6> = load ir<%tmp2>
-; VF_2-NEXT: Cost of 12 for VF 2: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_2:     Cost of 4 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp7> = load ir<%tmp3>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp4>, ir<%tmp0>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp5>, ir<%tmp1>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp6>, ir<%tmp2>
@@ -761,19 +761,19 @@ entry:
 ; VF_4-NEXT: Cost of 8 for VF 4: WIDEN store ir<%tmp2>, ir<%tmp6>
 ; VF_4-NEXT: Cost of 8 for VF 4: WIDEN store ir<%tmp3>, ir<%tmp7>
 ; VF_8-LABEL:  Checking a loop in 'i32_factor_4'
-; VF_8:     Cost of 48 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp0>
-; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp1>
-; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp6> = load ir<%tmp2>
-; VF_8-NEXT: Cost of 48 for VF 8: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_8:     Cost of 16 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE ir<%tmp7> = load ir<%tmp3>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp4>, ir<%tmp0>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp5>, ir<%tmp1>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp6>, ir<%tmp2>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp7>, ir<%tmp3>
 ; VF_16-LABEL:  Checking a loop in 'i32_factor_4'
-; VF_16:    Cost of 96 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp0>
-; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp1>
-; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp6> = load ir<%tmp2>
-; VF_16-NEXT: Cost of 96 for VF 16: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_16:    Cost of 32 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE ir<%tmp7> = load ir<%tmp3>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp4>, ir<%tmp0>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp5>, ir<%tmp1>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp6>, ir<%tmp2>
@@ -806,37 +806,37 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'i64_factor_4'
-; VF_2:     Cost of 22 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp0>
-; VF_2-NEXT: Cost of 22 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp1>
-; VF_2-NEXT: Cost of 22 for VF 2: REPLICATE ir<%tmp6> = load ir<%tmp2>
-; VF_2-NEXT: Cost of 22 for VF 2: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_2:     Cost of 6 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE ir<%tmp7> = load ir<%tmp3>
 ; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE store ir<%tmp4>, ir<%tmp0>
 ; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE store ir<%tmp5>, ir<%tmp1>
 ; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE store ir<%tmp6>, ir<%tmp2>
 ; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE store ir<%tmp7>, ir<%tmp3>
 ; VF_4-LABEL:  Checking a loop in 'i64_factor_4'
-; VF_4:     Cost of 44 for VF 4: REPLICATE ir<%tmp4> = load ir<%tmp0>
-; VF_4-NEXT: Cost of 44 for VF 4: REPLICATE ir<%tmp5> = load ir<%tmp1>
-; VF_4-NEXT: Cost of 44 for VF 4: REPLICATE ir<%tmp6> = load ir<%tmp2>
-; VF_4-NEXT: Cost of 44 for VF 4: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_4:     Cost of 12 for VF 4: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE ir<%tmp7> = load ir<%tmp3>
 ; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE store ir<%tmp4>, ir<%tmp0>
 ; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE store ir<%tmp5>, ir<%tmp1>
 ; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE store ir<%tmp6>, ir<%tmp2>
 ; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE store ir<%tmp7>, ir<%tmp3>
 ; VF_8-LABEL:  Checking a loop in 'i64_factor_4'
-; VF_8:     Cost of 88 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp0>
-; VF_8-NEXT: Cost of 88 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp1>
-; VF_8-NEXT: Cost of 88 for VF 8: REPLICATE ir<%tmp6> = load ir<%tmp2>
-; VF_8-NEXT: Cost of 88 for VF 8: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_8:     Cost of 24 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE ir<%tmp7> = load ir<%tmp3>
 ; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE store ir<%tmp4>, ir<%tmp0>
 ; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE store ir<%tmp5>, ir<%tmp1>
 ; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE store ir<%tmp6>, ir<%tmp2>
 ; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE store ir<%tmp7>, ir<%tmp3>
 ; VF_16-LABEL:  Checking a loop in 'i64_factor_4'
-; VF_16:    Cost of 176 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp0>
-; VF_16-NEXT: Cost of 176 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp1>
-; VF_16-NEXT: Cost of 176 for VF 16: REPLICATE ir<%tmp6> = load ir<%tmp2>
-; VF_16-NEXT: Cost of 176 for VF 16: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_16:    Cost of 48 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE ir<%tmp7> = load ir<%tmp3>
 ; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE store ir<%tmp4>, ir<%tmp0>
 ; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE store ir<%tmp5>, ir<%tmp1>
 ; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE store ir<%tmp6>, ir<%tmp2>
@@ -953,37 +953,37 @@ entry:
   br label %for.body
 
 ; VF_2-LABEL:  Checking a loop in 'f64_factor_4'
-; VF_2:     Cost of 6 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp0>
-; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp1>
-; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE ir<%tmp6> = load ir<%tmp2>
-; VF_2-NEXT: Cost of 6 for VF 2: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_2:     Cost of 4 for VF 2: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE ir<%tmp7> = load ir<%tmp3>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp4>, ir<%tmp0>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp5>, ir<%tmp1>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp6>, ir<%tmp2>
 ; VF_2-NEXT: Cost of 4 for VF 2: REPLICATE store ir<%tmp7>, ir<%tmp3>
 ; VF_4-LABEL:  Checking a loop in 'f64_factor_4'
-; VF_4:     Cost of 12 for VF 4: REPLICATE ir<%tmp4> = load ir<%tmp0>
-; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE ir<%tmp5> = load ir<%tmp1>
-; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE ir<%tmp6> = load ir<%tmp2>
-; VF_4-NEXT: Cost of 12 for VF 4: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_4:     Cost of 8 for VF 4: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE ir<%tmp7> = load ir<%tmp3>
 ; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp4>, ir<%tmp0>
 ; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp5>, ir<%tmp1>
 ; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp6>, ir<%tmp2>
 ; VF_4-NEXT: Cost of 8 for VF 4: REPLICATE store ir<%tmp7>, ir<%tmp3>
 ; VF_8-LABEL:  Checking a loop in 'f64_factor_4'
-; VF_8:     Cost of 24 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp0>
-; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp1>
-; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE ir<%tmp6> = load ir<%tmp2>
-; VF_8-NEXT: Cost of 24 for VF 8: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_8:     Cost of 16 for VF 8: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE ir<%tmp7> = load ir<%tmp3>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp4>, ir<%tmp0>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp5>, ir<%tmp1>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp6>, ir<%tmp2>
 ; VF_8-NEXT: Cost of 16 for VF 8: REPLICATE store ir<%tmp7>, ir<%tmp3>
 ; VF_16-LABEL:  Checking a loop in 'f64_factor_4'
-; VF_16:    Cost of 48 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp0>
-; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp1>
-; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE ir<%tmp6> = load ir<%tmp2>
-; VF_16-NEXT: Cost of 48 for VF 16: REPLICATE ir<%tmp7> = load ir<%tmp3>
+; VF_16:    Cost of 32 for VF 16: REPLICATE ir<%tmp4> = load ir<%tmp0>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE ir<%tmp5> = load ir<%tmp1>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE ir<%tmp6> = load ir<%tmp2>
+; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE ir<%tmp7> = load ir<%tmp3>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp4>, ir<%tmp0>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp5>, ir<%tmp1>
 ; VF_16-NEXT: Cost of 32 for VF 16: REPLICATE store ir<%tmp6>, ir<%tmp2>
