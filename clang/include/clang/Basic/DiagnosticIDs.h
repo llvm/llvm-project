@@ -15,6 +15,7 @@
 #define LLVM_CLANG_BASIC_DIAGNOSTICIDS_H
 
 #include "clang/Basic/DiagnosticCategories.h"
+#include "clang/Basic/DiagnosticLevel.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
@@ -182,7 +183,14 @@ public:
 class DiagnosticIDs : public RefCountedBase<DiagnosticIDs> {
 public:
   /// The level of the diagnostic, after it has been through mapping.
-  enum Level : uint8_t { Ignored, Note, Remark, Warning, Error, Fatal };
+  enum Level : uint8_t {
+    Ignored = static_cast<uint8_t>(DiagnosticLevel::Ignored),
+    Note = static_cast<uint8_t>(DiagnosticLevel::Note),
+    Remark = static_cast<uint8_t>(DiagnosticLevel::Remark),
+    Warning = static_cast<uint8_t>(DiagnosticLevel::Warning),
+    Error = static_cast<uint8_t>(DiagnosticLevel::Error),
+    Fatal = static_cast<uint8_t>(DiagnosticLevel::Fatal)
+  };
 
   // Diagnostic classes.
   enum Class {
