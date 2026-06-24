@@ -16,10 +16,20 @@ namespace members {
     RefPtr<RefCountable> b;
 
   public:
+    Foo();
+
     RefCountable silenceWarningAboutInit;
     RefCountable& c = silenceWarningAboutInit;
-// expected-warning@-1{{Member variable 'c' in 'members::Foo' is a reference to ref-countable type 'RefCountable'}}
+// expected-warning@-1{{Member variable 'c' in 'members::Foo' is a raw reference to ref-countable type 'RefCountable'}}
     Ref<RefCountable> d;
+    Ref<RefCountable>* e;
+// expected-warning@-1{{Member variable 'e' in 'members::Foo' is a raw pointer to 'Ref<RefCountable>'}}
+    Ref<RefCountable>& f;
+// expected-warning@-1{{Member variable 'f' in 'members::Foo' is a raw reference to 'Ref<RefCountable>'}}
+    Ref<RefCountable>** g;
+// expected-warning@-1{{Member variable 'g' in 'members::Foo' contains a raw pointer to 'Ref<RefCountable>'}}
+    RefPtr<RefCountable>* h;
+// expected-warning@-1{{Member variable 'h' in 'members::Foo' is a raw pointer to 'RefPtr<RefCountable>'}}
   };
 
   template<class T>
@@ -34,6 +44,7 @@ namespace members {
   private:
     RefCountable* a = nullptr;
   };
+
 } // members
 
 namespace unions {
@@ -42,6 +53,10 @@ namespace unions {
     // expected-warning@-1{{Member variable 'a' in 'unions::Foo' is a raw pointer to ref-countable type 'RefCountable'}}
     RefPtr<RefCountable> b;
     Ref<RefCountable> c;
+    RefCountable** d;
+    // expected-warning@-1{{Member variable 'd' in 'unions::Foo' contains a raw pointer to ref-countable type 'RefCountable'}}
+    Ref<RefCountable>* e;
+    // expected-warning@-1{{Member variable 'e' in 'unions::Foo' is a raw pointer to 'Ref<RefCountable>'}}
   };
 
   template<class T>
@@ -94,8 +109,16 @@ namespace ptr_to_ptr_to_ref_counted {
   };
   TemplateList<RefCountable> list;
 
-  struct SafeList {
+  struct FormerlySafeList {
     RefPtr<RefCountable>* elements;
+    // expected-warning@-1{{Member variable 'elements' in 'ptr_to_ptr_to_ref_counted::FormerlySafeList' is a raw pointer to 'RefPtr<RefCountable>'}}
+  };
+
+  struct Container {
+    RefPtr<CheckedObj>* [[clang::annotate_type("webkit.unsafeptr")]] elements1;
+    RefPtr<CheckedObj>** [[clang::annotate_type("webkit.unsafeptr")]] elements2;
+    // expected-warning@-1{{Member variable 'elements2' in 'ptr_to_ptr_to_ref_counted::Container' contains a raw pointer to 'RefPtr<CheckedObj>'}}
+    Ref<CheckedObj>* [[clang::annotate_type("webkit.unsafeptr")]]* [[clang::annotate_type("webkit.unsafeptr")]] elements3;
   };
 
 } // namespace ptr_to_ptr_to_ref_counted
