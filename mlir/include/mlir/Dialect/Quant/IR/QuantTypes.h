@@ -571,6 +571,8 @@ public:
    MLIR:
     !quant.quantile<ui4:f16, {-1.0,-0.696,0.0,0.079,1.0}>
     !quant.quantile<ui4:f16, {-1.0,-0.696,0.0,0.079,1.0}, <-8,7>>
+    !quant.quantile<ui4:si8, {-1.0,-0.696,0.0,0.079,1.0}>
+    !quant.quantile<ui4:ui8, {0.0,0.079,0.696,1.0}>
 
     As an additional explanation for better understanding and readability of the
    above example, the quantile type can be broken down as follows:
@@ -585,6 +587,20 @@ public:
     - `, <-8,7>`: This optional part specifies the explicit minimum and maximum
    storage values. In this case, the minimum storage value is -8 and the maximum
    storage value is 7.
+    - The number of quantile values in the LUT has to be equal to the number of
+   discrete values that can be represented by the storage type. For example, for
+   `ui4`, there are 16 discrete values, so the LUT must contain
+   exactly 16 quantile values. If the number of quantile values in the LUT does
+   not match the number of discrete values that can be represented by the
+   storage type, it will result in an error during type verification. Otherwise,
+   we can specify a storageMin and storageMax to match the number of quantile
+   values in the LUT. For example, for `ui4`, we can specify a storageMin of 0
+   and a storageMax of 5, which allows us to have 6 discrete values that can be
+   represented by the storage type.
+
+    The above examples showcase how a quantile type would look like in MLIR,
+   with the mention that the LUT size is not correct for the given storage
+   types, but it is just for demonstration purposes.
 */
 
 class QuantileType
