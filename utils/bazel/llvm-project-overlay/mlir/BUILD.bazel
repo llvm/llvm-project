@@ -9570,9 +9570,11 @@ cc_library(
     ],
     includes = ["include"],
     deps = [
-        ":AllToLLVMIRTranslations",
+        ":BuiltinToLLVMIRTranslation",
         ":IR",
         ":LLVMDialect",
+        ":LLVMToLLVMIRTranslation",
+        ":OpenMPToLLVMIRTranslation",
         ":Support",
         ":ToLLVMIRTranslation",
         "//llvm:AllTargetsAsmParsers",
