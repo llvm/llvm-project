@@ -17,6 +17,8 @@ add_library(omptarget SHARED
   OpenMP/Mapping.cpp
   OpenMP/InteropAPI.cpp
   OpenMP/OMPT/Callback.cpp
+  OpenMP/OMPT/OmptTracing.cpp
+  OpenMP/OMPT/OmptTracingBuffer.cpp
 
   KernelLanguage/API.cpp
 )
@@ -47,6 +49,22 @@ endforeach()
 
 target_compile_options(omptarget PRIVATE ${offload_compile_flags})
 target_link_options(omptarget PRIVATE ${offload_link_flags})
+if (OMPT_TARGET_DEFAULT AND LIBOMPTARGET_OMPT_SUPPORT)
+  # OmptProfiler.cpp provides the strong getProfilerToAttach() that routes
+  # plugin device events through OmptProfilerTy. It must be compiled directly
+  # into omptarget so its strong definition unconditionally overrides the weak
+  # fallback in GenericProfiler.cpp (which is embedded into each plugin archive
+  # via the PluginCommon OBJECT library and would otherwise win the link).
+  target_sources(omptarget PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../plugins-nextgen/common/OMPT/OmptProfiler.cpp
+  )
+  target_include_directories(omptarget PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../plugins-nextgen/common/OMPT
+    ${CMAKE_CURRENT_SOURCE_DIR}/../plugins-nextgen/common/include
+  )
+  # PluginOmpt provides OmptTracing.cpp (plugin-side GPU tracing).
+  target_link_libraries(omptarget PRIVATE PluginOmpt)
+endif()
 
 # libomptarget.so needs to be aware of where the plugins live as they
 # are now separated in the build directory.

@@ -21,10 +21,7 @@
 #include "Utils/ELF.h"
 #include "omptarget.h"
 
-#ifdef OMPT_SUPPORT
-#include "OpenMP/OMPT/Callback.h"
-#include "omp-tools.h"
-#endif
+#include "GenericProfiler.h"
 
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -47,7 +44,9 @@ using namespace llvm::offload::debug;
 AsyncInfoWrapperTy::AsyncInfoWrapperTy(GenericDeviceTy &Device,
                                        __tgt_async_info *AsyncInfoPtr)
     : Device(Device),
-      AsyncInfoPtr(AsyncInfoPtr ? AsyncInfoPtr : &LocalAsyncInfo) {}
+      AsyncInfoPtr(AsyncInfoPtr ? AsyncInfoPtr : &LocalAsyncInfo) {
+  this->AsyncInfoPtr->ProfilerData = nullptr;
+}
 
 Error AsyncInfoWrapperTy::synchronize() {
   assert(AsyncInfoPtr && "AsyncInfoWrapperTy already finalized");
@@ -167,9 +166,15 @@ GenericKernelTy::getKernelLaunchEnvironment(
        DPxPTR(&LocalKLE), DPxPTR(*AllocOrErr),
        sizeof(KernelLaunchEnvironmentTy));
 
+  // Temporarily suppress ProfilerData so the KLE upload is not traced as
+  // a user data operation.
+  __tgt_async_info *AI = AsyncInfoWrapper;
+  void *SavedProfilerData = AI->ProfilerData;
+  AI->ProfilerData = nullptr;
   auto Err = GenericDevice.dataSubmit(*AllocOrErr, &LocalKLE,
                                       sizeof(KernelLaunchEnvironmentTy),
                                       AsyncInfoWrapper);
+  AI->ProfilerData = SavedProfilerData;
   if (Err)
     return Err;
   return static_cast<KernelLaunchEnvironmentTy *>(*AllocOrErr);
@@ -328,6 +333,9 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
       return RRHandleOrErr.takeError();
     RRHandle = *RRHandleOrErr;
   }
+
+  GenericDevice.Plugin.getProfiler()->handlePreKernelLaunch(
+      &GenericDevice, EffectiveNumBlocks, AsyncInfoWrapper);
 
   if (auto Err = launchImpl(GenericDevice, EffectiveNumThreads,
                             EffectiveNumBlocks, DynBlockMemConf.NativeSize,
@@ -506,22 +514,6 @@ GenericDeviceTy::GenericDeviceTy(GenericPluginTy &Plugin, int32_t DeviceId,
   // vendor (u)uid will become available later.
   setDeviceUidFromVendorUid(std::to_string(static_cast<uint64_t>(DeviceId)));
 
-#ifdef OMPT_SUPPORT
-  OmptInitialized.store(false);
-  // Bind the callbacks to this device's member functions
-#define bindOmptCallback(Name, Type, Code)                                     \
-  if (ompt::Initialized && ompt::lookupCallbackByCode) {                       \
-    ompt::lookupCallbackByCode((ompt_callbacks_t)(Code),                       \
-                               ((ompt_callback_t *)&(Name##_fn)));             \
-    ODBG(OLDT_Tool) << "OMPT: class bound " << #Name << "="                    \
-                    << ((void *)(uint64_t)Name##_fn);                          \
-  }
-
-  FOREACH_OMPT_DEVICE_EVENT(bindOmptCallback);
-#undef bindOmptCallback
-
-#endif
-
   // Envar that indicates whether mapped host buffers should be locked
   // automatically. The possible values are boolean (on/off) and a special:
   //   off:       Mapped host buffers are not locked.
@@ -553,17 +545,7 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
   if (auto Err = initImpl(Plugin))
     return Err;
 
-#ifdef OMPT_SUPPORT
-  if (ompt::Initialized) {
-    bool ExpectedStatus = false;
-    if (OmptInitialized.compare_exchange_strong(ExpectedStatus, true))
-      performOmptCallback(device_initialize, Plugin.getUserId(DeviceId),
-                          /*type=*/getComputeUnitKind().c_str(),
-                          /*device=*/reinterpret_cast<ompt_device_t *>(this),
-                          /*lookup=*/ompt::lookupCallbackByName,
-                          /*documentation=*/nullptr);
-  }
-#endif
+  Plugin.getProfiler()->handleInit(this, &Plugin);
 
   // Read and reinitialize the envars that depend on the device initialization.
   // Notice these two envars may change the stack size and heap size of the
@@ -653,13 +635,7 @@ Error GenericDeviceTy::deinit(GenericPluginTy &Plugin) {
     if (auto Err = RPCServer->deinitDevice(*this))
       return Err;
 
-#ifdef OMPT_SUPPORT
-  if (ompt::Initialized) {
-    bool ExpectedStatus = true;
-    if (OmptInitialized.compare_exchange_strong(ExpectedStatus, false))
-      performOmptCallback(device_finalize, Plugin.getUserId(DeviceId));
-  }
-#endif
+  Plugin.getProfiler()->handleDeinit(this, &Plugin);
 
   return deinitImpl();
 }
@@ -694,17 +670,7 @@ Expected<DeviceImageTy *> GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
   if (auto Err = setupRPCServer(Plugin, *Image))
     return std::move(Err);
 
-#ifdef OMPT_SUPPORT
-  if (ompt::Initialized) {
-    size_t Bytes = InputTgtImage.size();
-    performOmptCallback(
-        device_load, Plugin.getUserId(DeviceId),
-        /*FileName=*/nullptr, /*FileOffset=*/0, /*VmaInFile=*/nullptr,
-        /*ImgSize=*/Bytes,
-        /*HostAddr=*/const_cast<unsigned char *>(InputTgtImage.bytes_begin()),
-        /*DeviceAddr=*/nullptr, /* FIXME: ModuleId */ 0);
-  }
-#endif
+  Plugin.getProfiler()->handleLoadBinary(this, &Plugin, InputTgtImage);
 
   // Call any global constructors present on the device.
   if (auto Err = callGlobalConstructors(Plugin, *Image))
@@ -986,6 +952,9 @@ Error GenericDeviceTy::getDeviceMemorySize(uint64_t &DSize) {
 
 Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
                                             TargetAllocTy Kind) {
+  auto ProfTimer =
+      Plugin.getProfiler()->getScopedDataAllocTimer(this, HostPtr, Size);
+
   void *Alloc = nullptr;
 
   if (RecordReplay && RecordReplay->isRecordingOrReplaying())
@@ -1052,6 +1021,9 @@ Expected<void *> GenericDeviceTy::dataAlloc(int64_t Size, void *HostPtr,
 }
 
 Error GenericDeviceTy::dataDelete(void *TgtPtr, TargetAllocTy Kind) {
+  auto ProfTimer =
+      Plugin.getProfiler()->getScopedDataDeleteTimer(this, TgtPtr);
+
   // Free is a noop when recording or replaying.
   if (RecordReplay && RecordReplay->isRecordingOrReplaying())
     return RecordReplay->deallocate(TgtPtr);

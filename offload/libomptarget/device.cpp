@@ -15,6 +15,8 @@
 #include "OpenMP/Mapping.h"
 #include "OpenMP/OMPT/Callback.h"
 #include "OpenMP/OMPT/Interface.h"
+#include "OpenMP/OMPT/OmptCommonDefs.h"
+#include "OpenMP/OMPT/OmptTracing.h"
 #include "PluginManager.h"
 #include "Shared/APITypes.h"
 #include "Shared/Debug.h"
@@ -34,7 +36,8 @@
 #include <thread>
 
 #ifdef OMPT_SUPPORT
-using namespace llvm::omp::target::ompt;
+using namespace llvm::omp::target;
+using namespace ompt;
 #endif
 
 using namespace llvm::omp::target::plugin;
@@ -249,10 +252,15 @@ DeviceTy::loadBinary(__tgt_device_image *Img) {
 void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
   /// RAII to establish tool anchors before and after data allocation
   void *TargetPtr = nullptr;
-  OMPT_IF_BUILT(InterfaceRAII TargetDataAllocRAII(
-                    RegionInterface.getCallbacks<ompt_target_data_alloc>(),
-                    DeviceID, HstPtr, &TargetPtr, Size,
-                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
+  OMPT_IF_BUILT(
+      InterfaceRAII TargetDataAllocRAII(
+          RegionInterface.getCallbacks<ompt_target_data_alloc>(), DeviceID,
+          HstPtr, &TargetPtr, Size,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
+      InterfaceRAII TargetDataAllocTraceRAII(
+          RegionInterface.getTraceGenerators<ompt_target_data_alloc>(),
+          RTLDeviceID, HstPtr, &TargetPtr, Size,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   TargetPtr = RTL->data_alloc(RTLDeviceID, Size, HstPtr, Kind);
   return TargetPtr;
@@ -260,11 +268,15 @@ void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
 
 int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
   /// RAII to establish tool anchors before and after data deletion
-  OMPT_IF_BUILT(InterfaceRAII TargetDataDeleteRAII(
-                    RegionInterface.getCallbacks<ompt_target_data_delete>(),
-                    DeviceID, TgtAllocBegin,
-                    /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
-
+  OMPT_IF_BUILT(
+      InterfaceRAII TargetDataDeleteRAII(
+          RegionInterface.getCallbacks<ompt_target_data_delete>(), DeviceID,
+          TgtAllocBegin,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
+      InterfaceRAII TargetDataDeleteTraceRAII(
+          RegionInterface.getTraceGenerators<ompt_target_data_delete>(),
+          DeviceID, TgtAllocBegin,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
   return RTL->data_delete(RTLDeviceID, TgtAllocBegin, Kind);
 }
 
@@ -281,6 +293,13 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
       InterfaceRAII TargetDataSubmitRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_to_device>(),
           omp_initial_device, HstPtrBegin, DeviceID, TgtPtrBegin, Size,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
+      TracerInterfaceRAII TargetDataSubmitTraceRAII(
+          RegionInterface
+              .getTraceGenerators<ompt_target_data_transfer_to_device>(),
+          AsyncInfo, RTL->getProfiler(), /*TracedDeviceId=*/DeviceID,
+          /*EventType=*/ompt_callback_target_data_op, omp_initial_device,
+          HstPtrBegin, DeviceID, TgtPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   return RTL->data_submit_async(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
@@ -301,6 +320,13 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
       InterfaceRAII TargetDataRetrieveRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
           DeviceID, TgtPtrBegin, omp_initial_device, HstPtrBegin, Size,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
+      TracerInterfaceRAII TargetDataRetrieveTraceRAII(
+          RegionInterface
+              .getTraceGenerators<ompt_target_data_transfer_from_device>(),
+          AsyncInfo, RTL->getProfiler(), /*TracedDeviceId=*/DeviceID,
+          /*EventType=*/ompt_callback_target_data_op, DeviceID, TgtPtrBegin,
+          omp_initial_device, HstPtrBegin, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
 
   return RTL->data_retrieve_async(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size,
@@ -320,11 +346,15 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
       InterfaceRAII TargetDataExchangeRAII(
           RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
           RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr, Size,
+          /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);
+      TracerInterfaceRAII TargetDataExchangeTraceRAII(
+          RegionInterface
+              .getTraceGenerators<ompt_target_data_transfer_from_device>(),
+          AsyncInfo, RTL->getProfiler(), /*TracedDeviceId=*/RTLDeviceID,
+          /*EventType=*/ompt_callback_target_data_op, RTLDeviceID, SrcPtr,
+          DstDev.RTLDeviceID, DstPtr, Size,
           /*CodePtr=*/OMPT_GET_RETURN_ADDRESS);)
-  if (!AsyncInfo) {
-    return RTL->data_exchange(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID, DstPtr,
-                              Size);
-  }
+
   return RTL->data_exchange_async(RTLDeviceID, SrcPtr, DstDev.RTLDeviceID,
                                   DstPtr, Size, AsyncInfo);
 }
