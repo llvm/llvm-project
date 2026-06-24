@@ -14,6 +14,7 @@
 #include "llvm/Transforms/Scalar/Sink.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/InitializePasses.h"
@@ -84,8 +85,7 @@ static bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo,
   if (SuccToSinkTo->getUniquePredecessor() != Inst->getParent()) {
     // We cannot sink a load across a critical edge - there may be stores in
     // other code paths.
-    if (Inst->mayReadFromMemory() &&
-        !Inst->hasMetadata(LLVMContext::MD_invariant_load))
+    if (Inst->mayReadFromMemory() && !isInvariantLoadLike(*Inst))
       return false;
 
     // Don't sink instructions into a loop.

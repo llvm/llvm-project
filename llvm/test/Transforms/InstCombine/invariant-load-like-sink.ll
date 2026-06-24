@@ -10,10 +10,10 @@ define i32 @dont_sink_ordinary_readonly_call_with_metadata(ptr %p, i1 %cond) {
 ; CHECK-LABEL: define i32 @dont_sink_ordinary_readonly_call_with_metadata(
 ; CHECK-SAME: ptr [[P:%.*]], i1 [[COND:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[V:%.*]] = call i32 @readonly_call(ptr [[P]]), !invariant.load [[META0:![0-9]+]]
 ; CHECK-NEXT:    call void @clobber(ptr [[P]])
 ; CHECK-NEXT:    br i1 [[COND]], label %[[USE:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[USE]]:
-; CHECK-NEXT:    [[V:%.*]] = call i32 @readonly_call(ptr [[P]]), !invariant.load [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret i32 [[V]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret i32 0

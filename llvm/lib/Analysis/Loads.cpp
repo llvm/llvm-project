@@ -23,6 +23,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Operator.h"
 
 using namespace llvm;
@@ -444,6 +445,20 @@ static bool suppressSpeculativeLoadForSanitizers(const Instruction &CtxI) {
 
 bool llvm::mustSuppressSpeculation(const LoadInst &LI) {
   return !LI.isUnordered() || suppressSpeculativeLoadForSanitizers(LI);
+}
+
+bool llvm::isInvariantLoadLike(const Instruction &I) {
+  if (!I.hasMetadata(LLVMContext::MD_invariant_load))
+    return false;
+
+  if (isa<LoadInst>(I))
+    return true;
+
+  auto *II = dyn_cast<IntrinsicInst>(&I);
+  if (!II)
+    return false;
+
+  return II->mayReadFromMemory() && !II->mayWriteToMemory();
 }
 
 bool llvm::isSafeToLoadUnconditionally(Value *V, Align Alignment, const APInt &Size,

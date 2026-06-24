@@ -90,11 +90,11 @@ exit:
 define i32 @dont_sink_ordinary_readonly_call_with_metadata(ptr %p, i1 %cond) {
 ; CHECK-LABEL: @dont_sink_ordinary_readonly_call_with_metadata(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[VAL:%.*]] = call i32 @readonly_call(ptr [[P:%.*]]), !invariant.load [[META0]]
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[BLOCK:%.*]], label [[END:%.*]]
 ; CHECK:       block:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[VAL:%.*]] = call i32 @readonly_call(ptr [[P:%.*]]), !invariant.load [[META0]]
 ; CHECK-NEXT:    ret i32 [[VAL]]
 ;
 entry:

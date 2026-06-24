@@ -21,6 +21,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/PHITransAddr.h"
@@ -192,6 +193,7 @@ MemDepResult MemoryDependenceResults::getCallDependencyFrom(
     CallBase *Call, bool isReadOnlyCall, BasicBlock::iterator ScanIt,
     BasicBlock *BB) {
   unsigned Limit = getDefaultBlockScanLimit();
+  bool IsInvariantLoad = isInvariantLoadLike(*Call);
 
   // Walk backwards through the block, looking for dependencies.
   while (ScanIt != BB->begin()) {
@@ -208,31 +210,48 @@ MemDepResult MemoryDependenceResults::getCallDependencyFrom(
     ModRefInfo MR = GetLocation(Inst, Loc, TLI);
     if (Loc.Ptr) {
       // A simple instruction.
-      if (isModOrRefSet(AA.getModRefInfo(Call, Loc)))
+      if (isModOrRefSet(AA.getModRefInfo(Call, Loc))) {
+        if (IsInvariantLoad)
+          continue;
         return MemDepResult::getClobber(Inst);
+      }
       continue;
     }
 
     if (auto *CallB = dyn_cast<CallBase>(Inst)) {
+      bool IsIdenticalReadOnlyCall =
+          isReadOnlyCall && !isModSet(MR) &&
+          Call->isIdenticalToWhenDefined(CallB);
+
+      // An identical earlier invariant load-like call is an available value
+      // even if AA sees both calls as reading the same memory.
+      if (IsInvariantLoad && IsIdenticalReadOnlyCall)
+        return MemDepResult::getDef(Inst);
+
       // If these two calls do not interfere, look past it.
       if (isNoModRef(AA.getModRefInfo(Call, CallB))) {
         // If the two calls are the same, return Inst as a Def, so that
         // Call can be found redundant and eliminated.
-        if (isReadOnlyCall && !isModSet(MR) &&
-            Call->isIdenticalToWhenDefined(CallB))
+        if (IsIdenticalReadOnlyCall)
           return MemDepResult::getDef(Inst);
 
         // Otherwise if the two calls don't interact (e.g. CallB is readnone)
         // keep scanning.
         continue;
-      } else
+      } else if (IsInvariantLoad) {
+        continue;
+      } else {
         return MemDepResult::getClobber(Inst);
+      }
     }
 
     // If we could not obtain a pointer for the instruction and the instruction
     // touches memory then assume that this is a dependency.
-    if (isModOrRefSet(MR))
+    if (isModOrRefSet(MR)) {
+      if (IsInvariantLoad)
+        continue;
       return MemDepResult::getClobber(Inst);
+    }
   }
 
   // No dependence found.  If this is the entry block of the function, it is
@@ -373,7 +392,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     const MemoryLocation &MemLoc, bool isLoad, BasicBlock::iterator ScanIt,
     BasicBlock *BB, Instruction *QueryInst, unsigned *Limit,
     BatchAAResults &BatchAA) {
-  bool isInvariantLoad = false;
+  bool IsInvariantLoad = false;
   Align MemLocAlign =
       MemLoc.Ptr->getPointerAlignment(BB->getDataLayout());
 
@@ -413,12 +432,11 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
   // do want to respect mustalias results since defs are useful for value
   // forwarding, but any mayalias write can be assumed to be noalias.
   // Arguably, this logic should be pushed inside AliasAnalysis itself.
-  if (isLoad && QueryInst)
-    if (LoadInst *LI = dyn_cast<LoadInst>(QueryInst)) {
-      if (LI->hasMetadata(LLVMContext::MD_invariant_load))
-        isInvariantLoad = true;
+  if (isLoad && QueryInst) {
+    IsInvariantLoad = isInvariantLoadLike(*QueryInst);
+    if (LoadInst *LI = dyn_cast<LoadInst>(QueryInst))
       MemLocAlign = LI->getAlign();
-    }
+  }
 
   // True for volatile instruction.
   // For Load/Store return true if atomic ordering is stronger than AO,
@@ -578,7 +596,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
         continue;
       if (R == AliasResult::MustAlias)
         return MemDepResult::getDef(Inst);
-      if (isInvariantLoad)
+      if (IsInvariantLoad)
         continue;
       if (canSkipClobberingStore(SI, MemLoc, MemLocAlign, BatchAA, *Limit))
         continue;
@@ -602,7 +620,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     if (isa<SelectInst>(Inst) && MemLoc.Ptr == Inst)
       return MemDepResult::getDef(Inst);
 
-    if (isInvariantLoad)
+    if (IsInvariantLoad)
       continue;
 
     // A release fence requires that all stores complete before it, but does
@@ -906,10 +924,10 @@ MemDepResult MemoryDependenceResults::getNonLocalInfoForBlock(
     BasicBlock *BB, NonLocalDepInfo *Cache, unsigned NumSortedEntries,
     BatchAAResults &BatchAA) {
 
-  bool isInvariantLoad = false;
+  bool IsInvariantLoad = false;
 
-  if (LoadInst *LI = dyn_cast_or_null<LoadInst>(QueryInst))
-    isInvariantLoad = LI->getMetadata(LLVMContext::MD_invariant_load);
+  if (QueryInst)
+    IsInvariantLoad = isInvariantLoadLike(*QueryInst);
 
   // Do a binary search to see if we already have an entry for this block in
   // the cache set.  If so, find it.
@@ -925,7 +943,7 @@ MemDepResult MemoryDependenceResults::getNonLocalInfoForBlock(
   // Use cached result for invariant load only if there is no dependency for non
   // invariant load. In this case invariant load can not have any dependency as
   // well.
-  if (ExistingResult && isInvariantLoad &&
+  if (ExistingResult && IsInvariantLoad &&
       !ExistingResult->getResult().isNonFuncLocal())
     ExistingResult = nullptr;
 
@@ -958,7 +976,7 @@ MemDepResult MemoryDependenceResults::getNonLocalInfoForBlock(
                                               QueryInst, nullptr, BatchAA);
 
   // Don't cache results for invariant load.
-  if (isInvariantLoad)
+  if (IsInvariantLoad)
     return Dep;
 
   // If we had a dirty entry for the block, update it.  Otherwise, just add
@@ -1071,9 +1089,9 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
   InitialNLPI.Size = Loc.Size;
   InitialNLPI.AATags = Loc.AATags;
 
-  bool isInvariantLoad = false;
-  if (LoadInst *LI = dyn_cast_or_null<LoadInst>(QueryInst))
-    isInvariantLoad = LI->getMetadata(LLVMContext::MD_invariant_load);
+  bool IsInvariantLoad = false;
+  if (QueryInst)
+    IsInvariantLoad = isInvariantLoadLike(*QueryInst);
 
   // Get the NLPI for CacheKey, inserting one into the map if it doesn't
   // already have one.
@@ -1084,7 +1102,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
   // If we already have a cache entry for this CacheKey, we may need to do some
   // work to reconcile the cache entry and the current query.
   // Invariant loads don't participate in caching. Thus no need to reconcile.
-  if (!isInvariantLoad && !Pair.second) {
+  if (!IsInvariantLoad && !Pair.second) {
     if (CacheInfo->Size != Loc.Size) {
       // The query's Size is not equal to the cached one. Throw out the cached
       // data and proceed with the query with the new size.
@@ -1129,7 +1147,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
   // investigating, just return it with no recomputation.
   // Don't use cached information for invariant loads since it is valid for
   // non-invariant loads only.
-  if (!IsIncomplete && !isInvariantLoad &&
+  if (!IsIncomplete && !IsInvariantLoad &&
       CacheInfo->Pair == BBSkipFirstBlockPair(StartBB, SkipFirstBlock)) {
     // We have a fully cached result for this query then we can just return the
     // cached results and populate the visited set.  However, we have to verify
@@ -1176,7 +1194,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
   //
   // Invariant loads don't affect cache in any way thus no need to update
   // CacheInfo as well.
-  if (!isInvariantLoad) {
+  if (!IsInvariantLoad) {
     if (!IsIncomplete && Cache->empty())
       CacheInfo->Pair = BBSkipFirstBlockPair(StartBB, SkipFirstBlock);
     else
@@ -1425,7 +1443,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
 
     // Results of invariant loads are not cached thus no need to update cached
     // information.
-    if (!isInvariantLoad) {
+    if (!IsInvariantLoad) {
       for (NonLocalDepEntry &I : llvm::reverse(*Cache)) {
         if (I.getBB() != BB)
           continue;
