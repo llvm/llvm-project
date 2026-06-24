@@ -18,9 +18,9 @@
 
 struct View : std::ranges::view_interface<View> {
   int* begin();
-  char* begin() const;
-  const int* end();
-  const char* end() const;
+  const int* begin() const;
+  volatile int* end();
+  const volatile int* end() const;
 };
 static_assert(!std::ranges::common_range<View>);
 static_assert(!std::same_as<std::ranges::iterator_t<View>, std::ranges::iterator_t<const View>>);
@@ -98,14 +98,12 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   st - it;
 
-  auto ncsv = NonCommonSimpleView{} | std::views::transform(std::identity{});
-  auto c_it = std::as_const(ncsv).begin();
-  auto sst  = ncsv.end();
+  auto c_it = std::as_const(v).begin();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  sst - c_it;
+  st - c_it;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  c_it - sst;
+  c_it - st;
 
   // [range.transform.overview]
 
