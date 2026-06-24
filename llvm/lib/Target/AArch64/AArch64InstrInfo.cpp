@@ -11679,7 +11679,7 @@ AArch64InstrInfo::probedStackAlloc(MachineBasicBlock::iterator MBBI,
 namespace {
 class AArch64PipelinerLoopInfo : public TargetInstrInfo::PipelinerLoopInfo {
   MachineFunction *MF;
-  const TargetInstrInfo *TII;
+  const AArch64InstrInfo *TII;
   const TargetRegisterInfo *TRI;
   MachineRegisterInfo &MRI;
 
@@ -11703,6 +11703,10 @@ class AArch64PipelinerLoopInfo : public TargetInstrInfo::PipelinerLoopInfo {
   /// The normalized condition used by createTripCountGreaterCondition()
   SmallVector<MachineOperand, 4> Cond;
 
+  /// True iff \p CondBranch is the only use of \p Comp's NZCV def, making it
+  /// private to the back-edge of the loop.
+  bool IsNZCVBackedgePrivate;
+
 public:
   AArch64PipelinerLoopInfo(MachineBasicBlock *LoopBB, MachineInstr *CondBranch,
                            MachineInstr *Comp, unsigned CompCounterOprNum,
@@ -11710,17 +11714,44 @@ public:
                            Register Init, bool IsUpdatePriorComp,
                            const SmallVectorImpl<MachineOperand> &Cond)
       : MF(Comp->getParent()->getParent()),
-        TII(MF->getSubtarget().getInstrInfo()),
-        TRI(MF->getSubtarget().getRegisterInfo()), MRI(MF->getRegInfo()),
-        LoopBB(LoopBB), CondBranch(CondBranch), Comp(Comp),
-        CompCounterOprNum(CompCounterOprNum), Update(Update),
+        TII(MF->getSubtarget<AArch64Subtarget>().getInstrInfo()),
+        TRI(MF->getSubtarget<AArch64Subtarget>().getRegisterInfo()),
+        MRI(MF->getRegInfo()), LoopBB(LoopBB), CondBranch(CondBranch),
+        Comp(Comp), CompCounterOprNum(CompCounterOprNum), Update(Update),
         UpdateCounterOprNum(UpdateCounterOprNum), Init(Init),
-        IsUpdatePriorComp(IsUpdatePriorComp), Cond(Cond.begin(), Cond.end()) {}
+        IsUpdatePriorComp(IsUpdatePriorComp), Cond(Cond.begin(), Cond.end()),
+        IsNZCVBackedgePrivate(isNZCVBackedgePrivate()) {}
+
+  bool isNZCVBackedgePrivate() {
+    // NZCV is private to the backedge if CondBranch is the only instruction in
+    // LoopBB that uses it.
+    for (const MachineInstr &MI : *LoopBB) {
+      if (&MI == CondBranch)
+        continue;
+      for (const MachineOperand &MO : MI.operands()) {
+        if (MO.isReg() && MO.isUse() && MO.getReg() == AArch64::NZCV) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
 
   bool shouldIgnoreForPipelining(const MachineInstr *MI) const override {
-    // Make the instructions for loop control be placed in stage 0.
-    // The predecessors of Comp are considered by the caller.
-    return MI == Comp;
+    if (MI != Comp)
+      return false;
+    return !IsNZCVBackedgePrivate || TII->isWhileOpcode(Comp->getOpcode());
+  }
+
+  bool allowPhysRegDefInWindowScheduler(const MachineInstr *MI) const override {
+    // An NZCV def-use edge between Comp and CondBranch is safe so long as Comp
+    // is the only NZCV-defining instruction in the loop. We ensure that via
+    // IsNZCVBackedgePrivate, and the fact that the WindowScheduler does not use
+    // ModuloScheduleExpanderMVE. If it were not, we would need to ensure that
+    // either no such instruction is scheduled between Comp and CondBranch, or
+    // adjust the copied SUBS to a SUB (for example).
+    return MI == Comp && IsNZCVBackedgePrivate &&
+           !TII->isWhileOpcode(Comp->getOpcode());
   }
 
   std::optional<bool> createTripCountGreaterCondition(

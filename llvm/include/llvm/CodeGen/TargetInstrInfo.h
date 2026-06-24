@@ -833,6 +833,13 @@ public:
     /// update with no users being pipelined.
     virtual bool shouldIgnoreForPipelining(const MachineInstr *MI) const = 0;
 
+    /// Return true if the given instruction's physical register def is safe for
+    /// window scheduling. By default, physical register defs are not allowed.
+    virtual bool
+    allowPhysRegDefInWindowScheduler(const MachineInstr *MI) const {
+      return false;
+    }
+
     /// Return true if the proposed schedule should used.  Otherwise return
     /// false to not pipeline the loop. This function should be used to ensure
     /// that pipelined loops meet target-specific quality heuristics.

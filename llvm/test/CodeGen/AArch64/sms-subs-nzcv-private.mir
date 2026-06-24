@@ -1,0 +1,126 @@
+# RUN: llc --verify-machineinstrs -mtriple=aarch64-apple-macosx -mcpu=apple-m1 \
+# RUN:   -run-pass pipeliner -debug-only=pipeliner -o /dev/null %s 2>&1 | \
+# RUN:   FileCheck %s
+# RUN: llc --verify-machineinstrs -mtriple=aarch64-apple-macosx -mcpu=apple-m1 \
+# RUN:   -run-pass pipeliner -debug-only=pipeliner -window-sched=force -o /dev/null %s 2>&1 | \
+# RUN:   FileCheck %s
+
+# REQUIRES: asserts
+
+# Check that we allow pipelining of loops with a phys reg def of NZCV, but only
+# when one use is private to the condition on the loop backedge. This allows
+# pipelining on a common class of loops on aarch64 where the exit condition is
+# predicated on the decrement of the trip count.
+
+# CHECK:      Special MI defined by target is not allowed in window scheduling:
+# CHECK-NEXT: %{{.*}}:gpr64 = nsw SUBSXri %{{.*}}:gpr64sp, 1, 0, implicit-def $nzcv
+# CHECK-NOT:  Special MI defined by target is not allowed in window scheduling:
+
+--- |
+  define void @private_nzcv(i64 %n, float %fa, ptr noalias %x, ptr noalias %y) {
+  entry:
+    br i1 false, label %preheader, label %exit
+  preheader:
+    br label %for.body
+  for.body:
+    br i1 false, label %exit, label %for.body
+  exit:
+    ret void
+  }
+  define void @shared_nzcv(i64 %n, float %fa, ptr %fx) {
+  entry:
+    br i1 false, label %preheader, label %exit
+  preheader:
+    br label %for.body
+  for.body:
+    br i1 false, label %exit, label %for.body
+  exit:
+    ret void
+  }
+...
+---
+name:            private_nzcv
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0', virtual-reg: '%3' }
+  - { reg: '$s0', virtual-reg: '%4' }
+  - { reg: '$x1', virtual-reg: '%5' }
+  - { reg: '$x2', virtual-reg: '%6' }
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x50000000), %bb.2(0x30000000)
+    liveins: $x0, $s0, $x1, $x2
+
+    %3:gpr64sp = COPY $x0
+    %4:fpr32 = COPY $s0
+    %5:gpr64sp = COPY $x1
+    %6:gpr64sp = COPY $x2
+    dead $xzr = SUBSXri %3, 1, 0, implicit-def $nzcv
+    Bcc 3, %bb.2, implicit $nzcv
+    B %bb.1
+
+  bb.1.preheader:
+    %0:gpr64sp = COPY %3
+    B %bb.3
+
+  bb.2.exit:
+    RET_ReallyLR
+
+  bb.3.for.body:
+    successors: %bb.2(0x04000000), %bb.3(0x7c000000)
+
+    %1:gpr64sp = PHI %0, %bb.1, %7, %bb.3
+    %8:gpr64sp = PHI %5, %bb.1, %9, %bb.3
+    %10:gpr64sp = PHI %6, %bb.1, %11, %bb.3
+    early-clobber %9:gpr64sp, %12:fpr32 = LDRSpost %8, 4 :: (load (s32) from %ir.x)
+    %13:fpr32 = nofpexcept FMULSrr %4, killed %12, implicit $fpcr
+    %14:fpr32 = nofpexcept FMULSrr %4, killed %13, implicit $fpcr
+    early-clobber %11:gpr64sp = STRSpost killed %14, %10, 4 :: (store (s32) into %ir.y)
+    %15:gpr64 = nsw SUBSXri %1, 1, 0, implicit-def $nzcv
+    %7:gpr64all = COPY %15
+    Bcc 1, %bb.3, implicit $nzcv
+    B %bb.2
+
+...
+---
+name:            shared_nzcv
+tracksRegLiveness: true
+liveins:
+  - { reg: '$x0', virtual-reg: '%3' }
+  - { reg: '$s0', virtual-reg: '%4' }
+  - { reg: '$x1', virtual-reg: '%5' }
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x50000000), %bb.2(0x30000000)
+    liveins: $x0, $s0, $x1
+
+    %3:gpr64sp = COPY $x0
+    %4:fpr32 = COPY $s0
+    %5:gpr64sp = COPY $x1
+    dead $xzr = SUBSXri %3, 1, 0, implicit-def $nzcv
+    Bcc 3, %bb.2, implicit $nzcv
+    B %bb.1
+
+  bb.1.preheader:
+    %0:gpr64sp = COPY %3
+    B %bb.3
+
+  bb.2.exit:
+    RET_ReallyLR
+
+  bb.3.for.body:
+    successors: %bb.2(0x04000000), %bb.3(0x7c000000)
+
+    %1:gpr64sp = PHI %0, %bb.1, %6, %bb.3
+    %9:gpr64sp = PHI %5, %bb.1, %10, %bb.3
+    %11:fpr32 = LDRSui %9, 0 :: (load (s32))
+    %15:gpr64 = nsw SUBSXri %1, 1, 0, implicit-def $nzcv
+    %16:fpr32 = FCSELSrrr %4, killed %11, 1, implicit $nzcv
+    %12:fpr32 = nofpexcept FMULSrr %4, killed %16, implicit $fpcr
+    %14:fpr32 = nofpexcept FMULSrr %4, killed %12, implicit $fpcr
+    early-clobber %10:gpr64sp = STRSpost killed %14, killed %9, 4 :: (store (s32))
+    %6:gpr64all = COPY %15
+    Bcc 1, %bb.3, implicit $nzcv
+    B %bb.2
+
+...
