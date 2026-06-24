@@ -104,9 +104,12 @@ static ELFKind getELFKind(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName) {
 // flag in the ELF Header we need to look at Tag_ABI_VFP_args to find out how
 // the input objects have been compiled.
 static void updateARMVFPArgs(Ctx &ctx, const ARMAttributeParser &attributes,
-                             const InputFile *f) {
+                             InputFile *f) {
   std::optional<unsigned> attr =
       attributes.getAttributeValue(ARMBuildAttrs::ABI_VFP_args);
+  if (attr)
+    cast<ELFFileBase>(f)->armVFPArgs = *attr;
+
   if (!attr)
     // If an ABI tag isn't present then it is implicitly given the value of 0
     // which maps to ARMBuildAttrs::BaseAAPCS. However many assembler files,
@@ -140,6 +143,14 @@ static void updateARMVFPArgs(Ctx &ctx, const ARMAttributeParser &attributes,
     ErrAlways(ctx) << f << ": incompatible Tag_ABI_VFP_args";
   else
     ctx.arg.armVFPArgs = arg;
+}
+
+static void updateARMFPArch(const ARMAttributeParser &attributes,
+                            InputFile *f) {
+  std::optional<unsigned> attr =
+      attributes.getAttributeValue(ARMBuildAttrs::FP_arch);
+  if (attr)
+    cast<ELFFileBase>(f)->armFPArch = *attr;
 }
 
 // The ARM support in lld makes some use of instructions that are not available
@@ -655,6 +666,7 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
         } else {
           updateSupportedARMFeatures(ctx, attributes);
           updateARMVFPArgs(ctx, attributes, this);
+          updateARMFPArch(attributes, this);
 
           // FIXME: Retain the first attribute section we see. The eglibc ARM
           // dynamic loaders require the presence of an attribute section for

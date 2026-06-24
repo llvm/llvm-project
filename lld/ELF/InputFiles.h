@@ -238,6 +238,8 @@ public:
   uint32_t andFeatures = 0;
   bool hasCommonSyms = false;
   std::optional<AArch64PauthAbiCoreInfo> aarch64PauthAbiCoreInfo;
+  std::optional<uint32_t> armVFPArgs;
+  std::optional<uint32_t> armFPArch;
 };
 
 // .o file.
