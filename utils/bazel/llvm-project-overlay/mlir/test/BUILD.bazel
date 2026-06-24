@@ -112,6 +112,7 @@ cc_library(
         "//mlir:Pass",
         "//mlir:SideEffectInterfaces",
         "//mlir:Support",
+        "//mlir:UBDialect",
     ],
 )
 
