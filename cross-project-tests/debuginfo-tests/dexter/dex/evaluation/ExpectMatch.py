@@ -118,7 +118,11 @@ class DebuggerExpectMatch:
         self.expect = expect
         self.expected = expected
         self.actual = actual
-        self.match_context = copy.deepcopy(match_context)
+        # Create a local "provisional" copy of the match context. We may update this local context without affecting the
+        # actual global match context, before this match is selected as the canonical match for the current expect+step.
+        # If this match is selected, then we will commit any changes made in this provisional match_context back to the
+        # global context.
+        self.provisional_match_context = copy.deepcopy(match_context)
         self.actual_result, self.match_result = self._get_actual_result()
         self.match_distance = self._get_match_distance()
 
@@ -126,38 +130,7 @@ class DebuggerExpectMatch:
         self,
     ) -> Tuple[Union[str, Dict[str, "DebuggerExpectMatch"], None], MatchResult]:
         if isinstance(self.expected, dict):
-            sub_expect_results: Dict[str, DebuggerExpectMatch] = OrderedDict()
-            for sub_expect, sub_expected in self.expected.items():
-                # If the value of `actual` is None, we still want this match to reflect the structure of the expected
-                # value, so if we have an expected value: `!value foo: {a: 0, b: 1}`, and `actual == None`, then we
-                # should produce a match `foo: {'a': None, 'b': None}`, rather than `foo: None`, so we unconditionally
-                # traverse the expected value here tree even if we have a None result.
-                value = (
-                    None
-                    if self.actual is None
-                    else next(
-                        (
-                            sub_value
-                            for sub_value in self.actual.sub_values
-                            if sub_value.expression == sub_expect
-                        ),
-                        None,
-                    )
-                )
-                sub_expect_results[sub_expect] = DebuggerExpectMatch(
-                    self.expect, sub_expected, value, self.match_context
-                )
-            match_result = MatchResult.from_bools(
-                any(
-                    result.match_result == MatchResult.TRUE
-                    for result in sub_expect_results.values()
-                ),
-                any(
-                    result.match_result == MatchResult.FALSE
-                    for result in sub_expect_results.values()
-                ),
-            )
-            return sub_expect_results, match_result
+            return self._get_dict_actual_result(self.expected)
 
         actual_result = (
             self.expect.get_variable_result(self.actual)
@@ -167,30 +140,74 @@ class DebuggerExpectMatch:
         if self.expected is None or actual_result is None:
             return actual_result, MatchResult.FALSE
         if isinstance(self.expected, Address):
-            # First check whether the actual value we have is an address.
-            try:
-                actual_addr = int(actual_result.split(maxsplit=1)[0], 16)
-            except ValueError:
-                # Not a valid address, so we can't match.
-                return actual_result, MatchResult.FALSE
-            # If the address is already resolved, we just have to see if it matches.
-            if (
-                resolved_addr := self.match_context.address_label_resolutions.get(
-                    self.expected.name
-                )
-            ) is not None:
-                return actual_result, MatchResult.from_bools(
-                    resolved_addr + self.expected.offset == actual_addr
-                )
-            # If the address is not resolved, then we can assign to it now in our local copy.
-            resolved_addr = actual_addr - self.expected.offset
-            self.match_context.address_label_resolutions[
-                self.expected.name
-            ] = resolved_addr
-            return actual_result, MatchResult.TRUE
+            return self._get_address_actual_result(self.expected, actual_result)
 
         match_result = MatchResult.from_bools(str(self.expected) == actual_result)
         return actual_result, match_result
+
+    def _get_address_actual_result(
+        self, expected: Address, actual_result: str
+    ) -> Tuple[Union[str, Dict[str, "DebuggerExpectMatch"], None], MatchResult]:
+        """Returns the actual result for an !address expected value."""
+        # First check whether the actual value we have is an address.
+        try:
+            actual_addr = int(actual_result.split(maxsplit=1)[0], 16)
+        except ValueError:
+            # Not a valid address, so we can't match.
+            return actual_result, MatchResult.FALSE
+        # If the address is already resolved, we just have to see if it matches.
+        if (
+            resolved_addr := self.provisional_match_context.address_label_resolutions.get(
+                expected.name
+            )
+        ) is not None:
+            return actual_result, MatchResult.from_bools(
+                resolved_addr + expected.offset == actual_addr
+            )
+        # If the address is not resolved, then we can assign to it now in our local copy.
+        resolved_addr = actual_addr - expected.offset
+        self.provisional_match_context.address_label_resolutions[
+            expected.name
+        ] = resolved_addr
+        return actual_result, MatchResult.TRUE
+
+    def _get_dict_actual_result(
+        self, expected: dict
+    ) -> Tuple[Union[str, Dict[str, "DebuggerExpectMatch"], None], MatchResult]:
+        """Returns the actual result for a 'dict' expected value."""
+        sub_expect_results: Dict[str, DebuggerExpectMatch] = OrderedDict()
+        for sub_expect, sub_expected in expected.items():
+            # If the value of `actual` is None, we still want this match to reflect the structure of the expected
+            # value, so if we have an expected value: `!value foo: {a: 0, b: 1}`, and `actual == None`, then we
+            # should produce a match `foo: {'a': None, 'b': None}`, rather than `foo: None`, so we unconditionally
+            # traverse the expected value here tree even if we have a None result.
+            value = (
+                None
+                if self.actual is None
+                else next(
+                    (
+                        sub_value
+                        for sub_value in self.actual.sub_values
+                        if sub_value.expression == sub_expect
+                    ),
+                    None,
+                )
+            )
+            sub_expect_results[sub_expect] = DebuggerExpectMatch(
+                self.expect, sub_expected, value, self.provisional_match_context
+            )
+        match_result = MatchResult.from_bools(
+            any(
+                result.match_result == MatchResult.TRUE
+                for result in sub_expect_results.values()
+            ),
+            any(
+                result.match_result == MatchResult.FALSE
+                for result in sub_expect_results.values()
+            ),
+        )
+        return sub_expect_results, match_result
+
 
     def _get_match_distance(self) -> float:
         if self.match_result == MatchResult.TRUE:
@@ -279,5 +296,5 @@ def get_expect_match(
             best_match = expect_match
             best_match_dist = expect_match.match_distance
 
-    match_context.commit(best_match.match_context)
+    match_context.commit(best_match.provisional_match_context)
     return best_match
