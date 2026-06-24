@@ -11839,9 +11839,6 @@ findArgumentCopyElisionCandidates(const DataLayout &DL,
   StaticAllocas.reserve(NumArgs * 2);
 
   auto GetInfoIfStaticAlloca = [&](const Value *V) -> StaticAllocaInfo * {
-    if (!V)
-      return nullptr;
-    V = V->stripPointerCasts();
     const auto *AI = dyn_cast<AllocaInst>(V);
     if (!AI || !AI->isStaticAlloca() || !FuncInfo->StaticAllocaMap.count(AI))
       return nullptr;
@@ -11868,14 +11865,16 @@ findArgumentCopyElisionCandidates(const DataLayout &DL,
       // This is an unknown instruction. Assume it escapes or writes to all
       // static alloca operands.
       for (const Use &U : I.operands()) {
-        if (StaticAllocaInfo *Info = GetInfoIfStaticAlloca(U))
+        if (StaticAllocaInfo *Info =
+                GetInfoIfStaticAlloca(U->stripPointerCasts()))
           *Info = StaticAllocaInfo::Clobbered;
       }
       continue;
     }
 
     // If the stored value is a static alloca, mark it as escaped.
-    if (StaticAllocaInfo *Info = GetInfoIfStaticAlloca(SI->getValueOperand()))
+    if (StaticAllocaInfo *Info =
+            GetInfoIfStaticAlloca(SI->getValueOperand()->stripPointerCasts()))
       *Info = StaticAllocaInfo::Clobbered;
 
     // Check if the destination is a static alloca.
