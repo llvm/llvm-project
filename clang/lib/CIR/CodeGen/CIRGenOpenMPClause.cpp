@@ -66,6 +66,26 @@ public:
     }
   }
 
+  void VisitOMPIfClause(const OMPIfClause *clause) {
+    if constexpr (std::is_same_v<OpTy, mlir::omp::ParallelOp>) {
+      Expr *ifExpr = clause->getCondition();
+      mlir::Value ifValue = cgf.emitScalarExpr(ifExpr);
+      mlir::Location ifLoc = cgf.cgm.getLoc(ifExpr->getBeginLoc());
+
+      mlir::Type stdBoolType = builder.getI1Type();
+
+      mlir::Value unrealizedCastIf = mlir::UnrealizedConversionCastOp::create(
+                                         builder, ifLoc, stdBoolType, ifValue)
+                                         .getResult(0);
+
+      operation.getIfExprMutable().append(unrealizedCastIf);
+    } else {
+      cgf.cgm.errorNYI(
+          clause->getBeginLoc(),
+          "OMPProcBindClause unimplemented on this directive kind");
+    }
+  }
+
   void emitClauses(ArrayRef<const OMPClause *> clauses) {
     for (const auto *c : clauses)
       this->Visit(c);
