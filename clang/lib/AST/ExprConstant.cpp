@@ -3502,7 +3502,7 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
     return false;
   }
 
-  Result = VD->getEvaluatedValue();
+  Result = const_cast<APValue *>(VD->getEvaluatedValue());
 
   if (!Result && !AllowConstexprUnknown)
     return false;
@@ -12407,6 +12407,45 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(V, E);
   };
 
+  auto EvalVectorDotProduct = [&](bool IsSaturating) -> bool {
+    APValue Source, OperandA, OperandB;
+    if (!EvaluateVector(E->getArg(0), Source, Info) ||
+        !EvaluateVector(E->getArg(1), OperandA, Info) ||
+        !EvaluateVector(E->getArg(2), OperandB, Info)) {
+      return false;
+    }
+
+    unsigned NumSrcElems = Source.getVectorLength();
+    unsigned NumOperandElems = OperandA.getVectorLength();
+    unsigned ElemsPerLane = NumOperandElems / NumSrcElems;
+
+    assert(OperandA.getVectorLength() == OperandB.getVectorLength());
+
+    SmallVector<APValue, 16> Result;
+    Result.reserve(NumSrcElems);
+    for (unsigned I = 0; I != NumSrcElems; ++I) {
+      APSInt DotProduct = Source.getVectorElt(I).getInt();
+      DotProduct = DotProduct.extend(64);
+      for (unsigned J = 0; J != ElemsPerLane; ++J) {
+        APSInt OpA = APSInt(
+            OperandA.getVectorElt(ElemsPerLane * I + J).getInt().extend(64),
+            false);
+        APSInt OpB = APSInt(
+            OperandB.getVectorElt(ElemsPerLane * I + J).getInt().extend(64),
+            false);
+        DotProduct += OpA * OpB;
+      }
+      if (IsSaturating) {
+        DotProduct = APSInt(DotProduct.truncSSat(32), false);
+      } else {
+        DotProduct = APSInt(DotProduct.trunc(32), false);
+      }
+      Result.push_back(APValue(DotProduct));
+    }
+
+    return Success(APValue(Result.data(), Result.size()), E);
+  };
+
   switch (E->getBuiltinCallee()) {
   default:
     return false;
@@ -12696,6 +12735,49 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
             APValue(APSInt(APInt(16, Sad[R]), DestUnsigned)));
     }
 
+    return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+  }
+
+  case clang::X86::BI__builtin_ia32_mpsadbw128:
+  case clang::X86::BI__builtin_ia32_mpsadbw256: {
+    APValue SourceA, SourceB;
+    APSInt SourceImm;
+    if (!EvaluateVector(E->getArg(0), SourceA, Info) ||
+        !EvaluateVector(E->getArg(1), SourceB, Info) ||
+        !EvaluateInteger(E->getArg(2), SourceImm, Info))
+      return false;
+    unsigned SourceLen = SourceA.getVectorLength();
+    constexpr unsigned LaneSize = 16;
+    assert((SourceLen == LaneSize || SourceLen == 2 * LaneSize) &&
+           "MPSADBW operates on 128-bit or 256-bit vectors");
+    unsigned NumLanes = SourceLen / LaneSize;
+    unsigned Imm = SourceImm.getZExtValue();
+
+    QualType DestEltTy = E->getType()->castAs<VectorType>()->getElementType();
+    bool DestUnsigned = DestEltTy->isUnsignedIntegerOrEnumerationType();
+    SmallVector<APValue, 16> ResultElements;
+    ResultElements.reserve(SourceLen / 2);
+
+    for (unsigned Lane = 0; Lane != NumLanes; ++Lane) {
+      unsigned Ctrl = (Imm >> (3 * Lane)) & 0x7;
+      unsigned AOff = ((Ctrl >> 2) & 1) * 4;
+      unsigned BOff = (Ctrl & 3) * 4;
+      for (unsigned J = 0; J != 8; ++J) {
+        uint16_t Sad = 0;
+        for (unsigned K = 0; K != 4; ++K) {
+          uint8_t A = static_cast<uint8_t>(
+              SourceA.getVectorElt(Lane * LaneSize + AOff + J + K)
+                  .getInt()
+                  .getZExtValue());
+          uint8_t B = static_cast<uint8_t>(
+              SourceB.getVectorElt(Lane * LaneSize + BOff + K)
+                  .getInt()
+                  .getZExtValue());
+          Sad += (A > B) ? (A - B) : (B - A);
+        }
+        ResultElements.push_back(APValue(APSInt(APInt(16, Sad), DestUnsigned)));
+      }
+    }
     return Success(APValue(ResultElements.data(), ResultElements.size()), E);
   }
 
@@ -14123,6 +14205,10 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   }
   case Builtin::BI__builtin_elementwise_clmul:
     return EvaluateBinOpExpr(llvm::APIntOps::clmul);
+  case Builtin::BI__builtin_elementwise_pext:
+    return EvaluateBinOpExpr(llvm::APIntOps::compressBits);
+  case Builtin::BI__builtin_elementwise_pdep:
+    return EvaluateBinOpExpr(llvm::APIntOps::expandBits);
   case Builtin::BI__builtin_elementwise_fshl:
   case Builtin::BI__builtin_elementwise_fshr: {
     APValue SourceHi, SourceLo, SourceShift;
@@ -14771,6 +14857,20 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       return false;
     return Success(R, E);
   }
+  case X86::BI__builtin_ia32_vpdpwssd128:
+  case X86::BI__builtin_ia32_vpdpwssd256:
+  case X86::BI__builtin_ia32_vpdpwssd512:
+  case X86::BI__builtin_ia32_vpdpbusd128:
+  case X86::BI__builtin_ia32_vpdpbusd256:
+  case X86::BI__builtin_ia32_vpdpbusd512:
+    return EvalVectorDotProduct(false);
+  case X86::BI__builtin_ia32_vpdpwssds128:
+  case X86::BI__builtin_ia32_vpdpwssds256:
+  case X86::BI__builtin_ia32_vpdpwssds512:
+  case X86::BI__builtin_ia32_vpdpbusds128:
+  case X86::BI__builtin_ia32_vpdpbusds256:
+  case X86::BI__builtin_ia32_vpdpbusds512:
+    return EvalVectorDotProduct(true);
   }
 }
 
@@ -17923,7 +18023,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   }
 
   case clang::X86::BI__builtin_ia32_pdep_si:
-  case clang::X86::BI__builtin_ia32_pdep_di: {
+  case clang::X86::BI__builtin_ia32_pdep_di:
+  case Builtin::BI__builtin_elementwise_pdep: {
     APSInt Val, Msk;
     if (!EvaluateInteger(E->getArg(0), Val, Info) ||
         !EvaluateInteger(E->getArg(1), Msk, Info))
@@ -17932,7 +18033,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   }
 
   case clang::X86::BI__builtin_ia32_pext_si:
-  case clang::X86::BI__builtin_ia32_pext_di: {
+  case clang::X86::BI__builtin_ia32_pext_di:
+  case Builtin::BI__builtin_elementwise_pext: {
     APSInt Val, Msk;
     if (!EvaluateInteger(E->getArg(0), Val, Info) ||
         !EvaluateInteger(E->getArg(1), Msk, Info))
@@ -21617,7 +21719,7 @@ bool VarDecl::evaluateDestruction(
   // Otherwise, treat the value as default-initialized; if the destructor works
   // anyway, then the destruction is constant (and must be essentially empty).
   APValue DestroyedValue;
-  if (getEvaluatedValue() && !getEvaluatedValue()->isAbsent())
+  if (getEvaluatedValue())
     DestroyedValue = *getEvaluatedValue();
   else if (!handleDefaultInitValue(getType(), DestroyedValue))
     return false;

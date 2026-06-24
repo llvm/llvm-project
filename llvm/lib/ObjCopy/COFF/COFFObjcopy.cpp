@@ -226,10 +226,10 @@ static Error handleArgs(const CommonConfig &Config,
     if (Config.SymbolsToRemove.matches(Sym.Name)) {
       // Explicitly removing a referenced symbol is an error.
       if (Sym.Referenced)
-        return createStringError(
-            llvm::errc::invalid_argument,
-            "'" + Config.OutputFilename + "': not stripping symbol '" +
-                Sym.Name.str() + "' because it is named in a relocation");
+        return createStringError(llvm::errc::invalid_argument,
+                                 "'" + Config.OutputFilename +
+                                     "': not stripping symbol '" + Sym.Name +
+                                     "' because it is named in a relocation");
       return true;
     }
 

@@ -32,6 +32,7 @@
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/MigratorOptions.h"
 #include "clang/Frontend/PreprocessorOutputOptions.h"
+#include "clang/Frontend/SSAFOptions.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Frontend/Utils.h"
 #include "clang/Lex/HeaderSearchOptions.h"
@@ -133,7 +134,8 @@ CompilerInvocationBase::CompilerInvocationBase()
       FSOpts(std::make_shared<FileSystemOptions>()),
       FrontendOpts(std::make_shared<FrontendOptions>()),
       DependencyOutputOpts(std::make_shared<DependencyOutputOptions>()),
-      PreprocessorOutputOpts(std::make_shared<PreprocessorOutputOptions>()) {}
+      PreprocessorOutputOpts(std::make_shared<PreprocessorOutputOptions>()),
+      SSAFOpts(std::make_shared<ssaf::SSAFOptions>()) {}
 
 CompilerInvocationBase &
 CompilerInvocationBase::deep_copy_assign(const CompilerInvocationBase &X) {
@@ -151,6 +153,7 @@ CompilerInvocationBase::deep_copy_assign(const CompilerInvocationBase &X) {
     FrontendOpts = make_shared_copy(X.getFrontendOpts());
     DependencyOutputOpts = make_shared_copy(X.getDependencyOutputOpts());
     PreprocessorOutputOpts = make_shared_copy(X.getPreprocessorOutputOpts());
+    SSAFOpts = make_shared_copy(X.getSSAFOpts());
   }
   return *this;
 }
@@ -171,6 +174,7 @@ CompilerInvocationBase::shallow_copy_assign(const CompilerInvocationBase &X) {
     FrontendOpts = X.FrontendOpts;
     DependencyOutputOpts = X.DependencyOutputOpts;
     PreprocessorOutputOpts = X.PreprocessorOutputOpts;
+    SSAFOpts = X.SSAFOpts;
   }
   return *this;
 }
@@ -235,6 +239,10 @@ FileSystemOptions &CowCompilerInvocation::getMutFileSystemOpts() {
 
 FrontendOptions &CowCompilerInvocation::getMutFrontendOpts() {
   return ensureOwned(FrontendOpts);
+}
+
+ssaf::SSAFOptions &CowCompilerInvocation::getMutSSAFOpts() {
+  return ensureOwned(SSAFOpts);
 }
 
 DependencyOutputOptions &CowCompilerInvocation::getMutDependencyOutputOpts() {
@@ -510,58 +518,32 @@ static std::optional<std::string> normalizeTriple(OptSpecifier Opt,
   return llvm::Triple::normalize(Arg->getValue());
 }
 
-template <typename T, typename U>
-static T mergeForwardValue(T KeyPath, U Value) {
-  return static_cast<T>(Value);
-}
-
-template <typename T, typename U>
-[[maybe_unused]] static T mergeMaskValue(T KeyPath, U Value) {
-  return KeyPath | Value;
-}
-
-template <typename T> static T extractForwardValue(T KeyPath) {
-  return KeyPath;
-}
-
-template <typename T, typename U, U Value>
-[[maybe_unused]] static T extractMaskValue(T KeyPath) {
-  return ((KeyPath & Value) == Value) ? static_cast<T>(Value) : T();
-}
-
 #define PARSE_OPTION_WITH_MARSHALLING(                                         \
     ARGS, DIAGS, PREFIX_TYPE, SPELLING_OFFSET, ID, KIND, GROUP, ALIAS,         \
     ALIASARGS, FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS,       \
     METAVAR, VALUES, SUBCOMMANDIDS_OFFSET, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, \
     DEFAULT_VALUE, IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER,     \
-    MERGER, EXTRACTOR, TABLE_INDEX)                                            \
+    TABLE_INDEX)                                                               \
   if ((VISIBILITY) & options::CC1Option) {                                     \
-    KEYPATH = MERGER(KEYPATH, DEFAULT_VALUE);                                  \
+    KEYPATH = static_cast<decltype(KEYPATH)>(DEFAULT_VALUE);                   \
     if (IMPLIED_CHECK)                                                         \
-      KEYPATH = MERGER(KEYPATH, IMPLIED_VALUE);                                \
+      KEYPATH = static_cast<decltype(KEYPATH)>(IMPLIED_VALUE);                 \
     if (SHOULD_PARSE)                                                          \
       if (auto MaybeValue = NORMALIZER(OPT_##ID, TABLE_INDEX, ARGS, DIAGS))    \
-        KEYPATH =                                                              \
-            MERGER(KEYPATH, static_cast<decltype(KEYPATH)>(*MaybeValue));      \
+        KEYPATH = static_cast<decltype(KEYPATH)>(*MaybeValue);                 \
   }
 
-// Capture the extracted value as a lambda argument to avoid potential issues
-// with lifetime extension of the reference.
 #define GENERATE_OPTION_WITH_MARSHALLING(                                      \
     CONSUMER, PREFIX_TYPE, SPELLING_OFFSET, ID, KIND, GROUP, ALIAS, ALIASARGS, \
     FLAGS, VISIBILITY, PARAM, HELPTEXT, HELPTEXTSFORVARIANTS, METAVAR, VALUES, \
     SUBCOMMANDIDS_OFFSET, SHOULD_PARSE, ALWAYS_EMIT, KEYPATH, DEFAULT_VALUE,   \
-    IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER, MERGER, EXTRACTOR, \
-    TABLE_INDEX)                                                               \
+    IMPLIED_CHECK, IMPLIED_VALUE, NORMALIZER, DENORMALIZER, TABLE_INDEX)       \
   if ((VISIBILITY) & options::CC1Option) {                                     \
-    [&](const auto &Extracted) {                                               \
-      if (ALWAYS_EMIT ||                                                       \
-          (Extracted !=                                                        \
-           static_cast<decltype(KEYPATH)>((IMPLIED_CHECK) ? (IMPLIED_VALUE)    \
-                                                          : (DEFAULT_VALUE)))) \
-        DENORMALIZER(CONSUMER, SPELLING_OFFSET, Option::KIND##Class,           \
-                     TABLE_INDEX, Extracted);                                  \
-    }(EXTRACTOR(KEYPATH));                                                     \
+    if (ALWAYS_EMIT || (KEYPATH != static_cast<decltype(KEYPATH)>(             \
+                                       ((IMPLIED_CHECK) ? (IMPLIED_VALUE)      \
+                                                        : (DEFAULT_VALUE)))))  \
+      DENORMALIZER(CONSUMER, SPELLING_OFFSET, Option::KIND##Class,             \
+                   TABLE_INDEX, KEYPATH);                                      \
   }
 
 static StringRef GetInputKindName(InputKind IK);
@@ -1032,6 +1014,30 @@ static void GenerateAnalyzerArgs(const AnalyzerOptions &Opts,
   }
 
   // Nothing to generate for FullCompilerInvocation.
+}
+
+static void GenerateSSAFArgs(const ssaf::SSAFOptions &Opts,
+                             ArgumentConsumer Consumer) {
+  const ssaf::SSAFOptions *SSAFOpts = &Opts;
+
+#define SSAF_OPTION_WITH_MARSHALLING(...)                                      \
+  GENERATE_OPTION_WITH_MARSHALLING(Consumer, __VA_ARGS__)
+#include "clang/Options/Options.inc"
+#undef SSAF_OPTION_WITH_MARSHALLING
+}
+
+static bool ParseSSAFArgs(ssaf::SSAFOptions &Opts, ArgList &Args,
+                          DiagnosticsEngine &Diags) {
+  unsigned NumErrorsBefore = Diags.getNumErrors();
+
+  ssaf::SSAFOptions *SSAFOpts = &Opts;
+
+#define SSAF_OPTION_WITH_MARSHALLING(...)                                      \
+  PARSE_OPTION_WITH_MARSHALLING(Args, Diags, __VA_ARGS__)
+#include "clang/Options/Options.inc"
+#undef SSAF_OPTION_WITH_MARSHALLING
+
+  return Diags.getNumErrors() == NumErrorsBefore;
 }
 
 static bool ParseAnalyzerArgs(AnalyzerOptions &Opts, ArgList &Args,
@@ -3910,10 +3916,6 @@ void CompilerInvocationBase::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_fopenmp_cuda_blocks_per_sm_EQ,
                 Twine(Opts.OpenMPCUDABlocksPerSM));
 
-  if (Opts.OpenMPCUDAReductionBufNum != 1024)
-    GenerateArg(Consumer, OPT_fopenmp_cuda_teams_reduction_recs_num_EQ,
-                Twine(Opts.OpenMPCUDAReductionBufNum));
-
   if (!Opts.OMPTargetTriples.empty()) {
     std::string Targets;
     llvm::raw_string_ostream OS(Targets);
@@ -4359,9 +4361,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
     Opts.OpenMPCUDABlocksPerSM =
         getLastArgIntValue(Args, options::OPT_fopenmp_cuda_blocks_per_sm_EQ,
                            Opts.OpenMPCUDABlocksPerSM, Diags);
-    Opts.OpenMPCUDAReductionBufNum = getLastArgIntValue(
-        Args, options::OPT_fopenmp_cuda_teams_reduction_recs_num_EQ,
-        Opts.OpenMPCUDAReductionBufNum, Diags);
   }
 
   // Set the value of the debugging flag used in the new offloading device RTL.
@@ -5090,6 +5089,7 @@ bool CompilerInvocation::CreateFromArgsImpl(
   ParseFileSystemArgs(Res.getFileSystemOpts(), Args, Diags);
   ParseMigratorArgs(Res.getMigratorOpts(), Args, Diags);
   ParseAnalyzerArgs(Res.getAnalyzerOpts(), Args, Diags);
+  ParseSSAFArgs(Res.getSSAFOpts(), Args, Diags);
   ParseDiagnosticArgs(Res.getDiagnosticOpts(), Args, &Diags,
                       /*DefaultDiagColor=*/false);
   ParseFrontendArgs(Res.getFrontendOpts(), Args, Diags, LangOpts.IsHeaderFile);
@@ -5442,6 +5442,7 @@ void CompilerInvocationBase::generateCC1CommandLine(
   GenerateFileSystemArgs(getFileSystemOpts(), Consumer);
   GenerateMigratorArgs(getMigratorOpts(), Consumer);
   GenerateAnalyzerArgs(getAnalyzerOpts(), Consumer);
+  GenerateSSAFArgs(getSSAFOpts(), Consumer);
   GenerateDiagnosticArgs(getDiagnosticOpts(), Consumer,
                          /*DefaultDiagColor=*/false);
   GenerateFrontendArgs(getFrontendOpts(), Consumer, getLangOpts().IsHeaderFile);

@@ -5093,6 +5093,7 @@ cc_library(
         ":MaskingOpInterface",
         ":MemOpInterfaces",
         ":MemRefDialect",
+        ":MemRefUtils",
         ":SideEffectInterfaces",
         ":SubsetOpInterface",
         ":Support",
@@ -6941,6 +6942,7 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":PtrDialect",
+        "//llvm:Support",
     ],
 )
 
@@ -7350,9 +7352,11 @@ cc_library(
         "lib/Conversion/MathToXeVM",
     ],
     deps = [
+        ":Analysis",
         ":ArithAttrToLLVMConversion",
         ":ArithDialect",
         ":ConversionPassIncGen",
+        ":GPUCommonTransforms",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
@@ -11922,6 +11926,7 @@ cc_library(
         ":LLVMDialect",
         ":MaskableOpInterface",
         ":MemRefDialect",
+        ":MemRefUtils",
         ":Pass",
         ":TensorDialect",
         ":ToLLVMIRTranslation",
@@ -13492,7 +13497,6 @@ cc_library(
         ":AffineDialect",
         ":ArithUtils",
         ":MemRefDialect",
-        ":VectorDialect",
         ":ViewLikeInterface",
         "//llvm:Support",
     ],

@@ -131,6 +131,14 @@ add_header_macro(
 )
 
 add_header_macro(
+  libgen
+  ../libc/include/libgen.yaml
+  libgen.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
+add_header_macro(
   limits
   ../libc/include/limits.yaml
   limits.h
@@ -227,6 +235,11 @@ add_header_macro(
     .llvm-libc-types.struct_sockaddr_in6
     .llvm-libc-types.struct_in_addr
     .llvm-libc-types.struct_in6_addr
+    .llvm-libc-types.struct_ip_mreq
+    .llvm-libc-types.struct_ip_mreq_source
+    .llvm-libc-types.struct_ip_mreqn
+    .llvm-libc-types.struct_ip_msfilter
+    .llvm-libc-types.struct_ip_opts
     .llvm_libc_common_h
 )
 
@@ -877,6 +890,7 @@ add_header_macro(
     .llvm-libc-types.gid_t
     .llvm-libc-types.ino_t
     .llvm-libc-types.key_t
+    .llvm-libc-types.loff_t
     .llvm-libc-types.mode_t
     .llvm-libc-types.nlink_t
     .llvm-libc-types.off_t
