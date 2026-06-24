@@ -672,6 +672,8 @@ Improvements to Clang's diagnostics
 - Diagnostics for the C++11 range-based for statement now report the correct
   iterator type in notes for invalid iterator types.
 
+- Now more analysis-based warnings are emitted before template instantiation.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
