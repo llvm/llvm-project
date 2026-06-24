@@ -600,6 +600,8 @@ MachineInstrBuilder MachineIRBuilder::buildExtOrTrunc(unsigned ExtOpc,
   else if (Res.getLLTTy(*getMRI()).getSizeInBits() <
            Op.getLLTTy(*getMRI()).getSizeInBits())
     Opcode = TargetOpcode::G_TRUNC;
+  else if (Res.getLLTTy(*getMRI()) != Op.getLLTTy(*getMRI()))
+    Opcode = TargetOpcode::G_BITCAST;
   else
     assert(Res.getLLTTy(*getMRI()).getSizeInBits() ==
            Op.getLLTTy(*getMRI()).getSizeInBits());
