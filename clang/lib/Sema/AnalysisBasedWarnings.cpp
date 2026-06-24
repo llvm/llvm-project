@@ -51,6 +51,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
@@ -58,6 +59,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <algorithm>
 #include <deque>
@@ -2851,6 +2853,250 @@ void sema::AnalysisBasedWarnings::issueWarningsForRegisteredVarDecl(
       S, AC, std::make_pair(SecondRange.begin(), SecondRange.end()));
 }
 
+namespace {
+
+static unsigned getDiagnosedBuiltinID(const FunctionDecl *FD) {
+  if (!FD)
+    return 0;
+
+  if (const auto *DABAttr = FD->getAttr<DiagnoseAsBuiltinAttr>())
+    FD = DABAttr->getFunction();
+
+  return FD ? FD->getBuiltinID(/*ConsiderWrappers=*/true) : 0;
+}
+
+static bool isCharacterPointerType(QualType Ty) {
+  const auto *PT = Ty->getAs<PointerType>();
+  return PT && PT->getPointeeType().getUnqualifiedType()->isCharType();
+}
+
+static const VarDecl *getCharacterPointerVar(const Expr *E) {
+  const auto *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParenCasts());
+  const auto *VD = DRE ? dyn_cast<VarDecl>(DRE->getDecl()) : nullptr;
+  if (!VD || !isCharacterPointerType(VD->getType()))
+    return nullptr;
+  return VD;
+}
+
+static const Expr *getDirectStrlenArgument(const Expr *E) {
+  const auto *CE = dyn_cast<CallExpr>(E->IgnoreParenCasts());
+  if (!CE || CE->getNumArgs() != 1)
+    return nullptr;
+
+  switch (getDiagnosedBuiltinID(CE->getDirectCallee())) {
+  case Builtin::BIstrlen:
+  case Builtin::BI__builtin_strlen:
+    return CE->getArg(0)->IgnoreParenCasts();
+  default:
+    return nullptr;
+  }
+}
+
+static bool isLiteralOne(const Expr *E) {
+  const auto *IL = dyn_cast<IntegerLiteral>(E->IgnoreParenCasts());
+  return IL && IL->getValue() == 1;
+}
+
+static const Expr *getDirectStrlenArgumentWithOptionalPlusOne(const Expr *E) {
+  E = E->IgnoreParenCasts();
+  if (const Expr *Arg = getDirectStrlenArgument(E))
+    return Arg;
+
+  const auto *BO = dyn_cast<BinaryOperator>(E);
+  if (!BO || BO->getOpcode() != BO_Add)
+    return nullptr;
+
+  const Expr *LHS = BO->getLHS()->IgnoreParenCasts();
+  const Expr *RHS = BO->getRHS()->IgnoreParenCasts();
+  if (isLiteralOne(LHS))
+    return getDirectStrlenArgument(RHS);
+  if (isLiteralOne(RHS))
+    return getDirectStrlenArgument(LHS);
+  return nullptr;
+}
+
+static bool areSameSimpleDeclRef(const Expr *E1, const Expr *E2) {
+  const auto *D1 = dyn_cast<DeclRefExpr>(E1->IgnoreParenCasts());
+  const auto *D2 = dyn_cast<DeclRefExpr>(E2->IgnoreParenCasts());
+  return D1 && D2 && D1->getDecl() == D2->getDecl();
+}
+
+static std::string getExprAsString(const Expr *E,
+                                   const PrintingPolicy &Policy) {
+  SmallString<64> Text;
+  llvm::raw_svector_ostream OS(Text);
+  E->printPretty(OS, nullptr, Policy);
+  return std::string(OS.str());
+}
+
+static FixItHint getPlusOneFixIt(const Expr *E, const PrintingPolicy &Policy) {
+  const Expr *SimpleExpr = E->IgnoreParenCasts();
+  if (!isa<DeclRefExpr>(SimpleExpr))
+    return {};
+
+  SourceRange Range = E->getSourceRange();
+  if (Range.getBegin().isMacroID() || Range.getEnd().isMacroID())
+    return {};
+
+  SmallString<32> Replacement;
+  llvm::raw_svector_ostream OS(Replacement);
+  E->printPretty(OS, nullptr, Policy);
+  OS << " + 1";
+  return FixItHint::CreateReplacement(Range, OS.str());
+}
+
+struct TrackedCStringAllocation {
+  const Expr *SizeExpr = nullptr;
+  const CallExpr *AllocCall = nullptr;
+  bool IsRealloc = false;
+  bool Warned = false;
+};
+
+class CStringAllocationVisitor : public StmtVisitor<CStringAllocationVisitor> {
+  Sema &S;
+  llvm::DenseMap<const VarDecl *, TrackedCStringAllocation> Tracked;
+  llvm::DenseSet<const VarDecl *> KnownStringBuffers;
+
+  void VisitChildren(Stmt *Node) {
+    for (Stmt *Child : Node->children())
+      if (Child)
+        Visit(Child);
+  }
+
+  void DiagnoseTrackedAllocation(const VarDecl *VD) {
+    auto It = Tracked.find(VD);
+    if (It == Tracked.end() || It->second.Warned)
+      return;
+
+    TrackedCStringAllocation &Info = It->second;
+    std::string SizeText =
+        getExprAsString(Info.SizeExpr, S.getPrintingPolicy());
+    S.Diag(Info.AllocCall->getBeginLoc(),
+           Info.IsRealloc
+               ? diag::warn_fortify_realloc_maybe_removes_null_space
+               : diag::warn_fortify_allocation_maybe_small_for_cstring)
+        << SizeText << getPlusOneFixIt(Info.SizeExpr, S.getPrintingPolicy());
+    Info.Warned = true;
+  }
+
+  void MarkAsStringBuffer(const Expr *E) {
+    const VarDecl *VD = getCharacterPointerVar(E);
+    if (!VD)
+      return;
+
+    KnownStringBuffers.insert(VD);
+    DiagnoseTrackedAllocation(VD);
+  }
+
+  std::optional<TrackedCStringAllocation>
+  getTrackedAllocation(const Expr *E, const VarDecl *AssignedVar) const {
+    const auto *CE = dyn_cast<CallExpr>(E->IgnoreParenCasts());
+    if (!CE)
+      return std::nullopt;
+
+    switch (getDiagnosedBuiltinID(CE->getDirectCallee())) {
+    case Builtin::BImalloc:
+    case Builtin::BI__builtin_malloc: {
+      if (CE->getNumArgs() != 1)
+        return std::nullopt;
+
+      const Expr *SizeArg = CE->getArg(0)->IgnoreParenCasts();
+      if (isa<DeclRefExpr>(SizeArg))
+        return TrackedCStringAllocation{SizeArg, CE, false, false};
+      return std::nullopt;
+    }
+    case Builtin::BIrealloc:
+    case Builtin::BI__builtin_realloc: {
+      if (CE->getNumArgs() != 2 || !AssignedVar)
+        return std::nullopt;
+
+      const Expr *SizeArg = CE->getArg(1)->IgnoreParenCasts();
+      const VarDecl *ReallocVar = getCharacterPointerVar(CE->getArg(0));
+      if (ReallocVar == AssignedVar && isa<DeclRefExpr>(SizeArg))
+        return TrackedCStringAllocation{SizeArg, CE, true, false};
+      return std::nullopt;
+    }
+    default:
+      return std::nullopt;
+    }
+  }
+
+  void UpdateTrackedAllocation(const VarDecl *VD, const Expr *Init) {
+    if (!VD || !Init || !isCharacterPointerType(VD->getType()))
+      return;
+
+    if (std::optional<TrackedCStringAllocation> Info =
+            getTrackedAllocation(Init, VD)) {
+      Tracked[VD] = *Info;
+      if (KnownStringBuffers.contains(VD))
+        DiagnoseTrackedAllocation(VD);
+      return;
+    }
+
+    Tracked.erase(VD);
+  }
+
+public:
+  explicit CStringAllocationVisitor(Sema &S) : S(S) {}
+
+  void VisitStmt(Stmt *Node) { VisitChildren(Node); }
+
+  void VisitLambdaExpr(LambdaExpr *) {}
+
+  void VisitBlockExpr(BlockExpr *) {}
+
+  void VisitDeclStmt(DeclStmt *DS) {
+    for (Decl *D : DS->decls())
+      if (auto *VD = dyn_cast<VarDecl>(D))
+        UpdateTrackedAllocation(VD, VD->getInit());
+    VisitChildren(DS);
+  }
+
+  void VisitBinaryOperator(BinaryOperator *BO) {
+    if (BO->getOpcode() == BO_Assign)
+      if (const auto *VD = getCharacterPointerVar(BO->getLHS()))
+        UpdateTrackedAllocation(VD, BO->getRHS());
+    VisitChildren(BO);
+  }
+
+  void VisitCallExpr(CallExpr *CE) {
+    switch (getDiagnosedBuiltinID(CE->getDirectCallee())) {
+    case Builtin::BIstrlen:
+    case Builtin::BI__builtin_strlen:
+      if (CE->getNumArgs() == 1)
+        MarkAsStringBuffer(CE->getArg(0));
+      break;
+    case Builtin::BIstrcpy:
+    case Builtin::BI__builtin_strcpy:
+    case Builtin::BIstrcat:
+    case Builtin::BI__builtin_strcat:
+      if (CE->getNumArgs() == 2)
+        MarkAsStringBuffer(CE->getArg(0));
+      break;
+    case Builtin::BImemcpy:
+    case Builtin::BI__builtin_memcpy:
+      if (CE->getNumArgs() != 3)
+        break;
+
+      if (const Expr *StrlenArg =
+              getDirectStrlenArgumentWithOptionalPlusOne(CE->getArg(2));
+          StrlenArg && areSameSimpleDeclRef(StrlenArg, CE->getArg(1))) {
+        MarkAsStringBuffer(CE->getArg(0));
+      }
+      break;
+    default:
+      break;
+    }
+    VisitChildren(CE);
+  }
+};
+
+static void CheckCStringBufferAllocations(Sema &S, const Stmt *Body) {
+  CStringAllocationVisitor(S).Visit(const_cast<Stmt *>(Body));
+}
+
+} // namespace
+
 // An AST Visitor that calls a callback function on each callable DEFINITION
 // that is NOT in a dependent context:
 class CallableVisitor : public DynamicRecursiveASTVisitor {
@@ -3033,6 +3279,13 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
 
   const Stmt *Body = D->getBody();
   assert(Body);
+
+  if (!Diags.isIgnored(diag::warn_fortify_allocation_maybe_small_for_cstring,
+                       D->getBeginLoc()) ||
+      !Diags.isIgnored(diag::warn_fortify_realloc_maybe_removes_null_space,
+                       D->getBeginLoc())) {
+    CheckCStringBufferAllocations(S, Body);
+  }
 
   // Construct the analysis context with the specified CFG build options.
   AnalysisDeclContext AC(/* AnalysisDeclContextManager */ nullptr, D);
