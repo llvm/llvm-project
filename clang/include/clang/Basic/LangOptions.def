@@ -177,7 +177,6 @@ VALUE_LANGOPT(AlignDouble            , 1, 0, NotCompatible, "Controls if doubles
 VALUE_LANGOPT(DoubleSize            , 32, 0, NotCompatible, "width of double")
 VALUE_LANGOPT(LongDoubleSize        , 32, 0, NotCompatible, "width of long double")
 LANGOPT(PPCIEEELongDouble            , 1, 0, NotCompatible, "use IEEE 754 quadruple-precision for long double")
-LANGOPT(EnableAIXExtendedAltivecABI  , 1, 0, NotCompatible, "__EXTABI__  predefined macro")
 LANGOPT(EnableAIXQuadwordAtomicsABI  , 1, 0, NotCompatible, "Use 16-byte atomic lock free semantics")
 VALUE_LANGOPT(PICLevel               , 2, 0, Compatible, "__PIC__ level")
 VALUE_LANGOPT(PIE                    , 1, 0, Compatible, "is pie")

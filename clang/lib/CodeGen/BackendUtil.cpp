@@ -466,7 +466,7 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.ForceDwarfFrameSection = CodeGenOpts.ForceDwarfFrameSection;
   Options.EmitCallGraphSection = CodeGenOpts.CallGraphSection;
   Options.EmitCallSiteInfo = CodeGenOpts.EmitCallSiteInfo;
-  Options.EnableAIXExtendedAltivecABI = LangOpts.EnableAIXExtendedAltivecABI;
+  Options.EnableAIXExtendedAltivecABI = TargetOpts.ABI == "vec-extabi";
   Options.XRayFunctionIndex = CodeGenOpts.XRayFunctionIndex;
   Options.LoopAlignment = CodeGenOpts.LoopAlignment;
   Options.DebugStrictDwarf = CodeGenOpts.DebugStrictDwarf;

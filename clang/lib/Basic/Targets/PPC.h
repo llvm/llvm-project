@@ -515,12 +515,28 @@ public:
   BuiltinVaListKind getBuiltinVaListKind() const override {
     return TargetInfo::CharPtrBuiltinVaList;
   }
+
+  bool setABI(const std::string &Name) override {
+    if (Name == "vec-extabi" || Name == "vec-default") {
+      ABI = Name;
+      return true;
+    }
+    return false;
+  }
 };
 
 class LLVM_LIBRARY_VISIBILITY AIXPPC64TargetInfo :
   public AIXTargetInfo<PPC64TargetInfo> {
 public:
   using AIXTargetInfo::AIXTargetInfo;
+
+  bool setABI(const std::string &Name) override {
+    if (Name == "vec-extabi" || Name == "vec-default") {
+      ABI = Name;
+      return true;
+    }
+    return false;
+  }
 };
 
 } // namespace targets

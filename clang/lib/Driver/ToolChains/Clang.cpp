@@ -1998,7 +1998,7 @@ void Clang::AddPPCTargetArgs(const ArgList &Args,
     if (!T.isOSAIX())
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << "-mabi=vec-extabi" << T.str();
-    CmdArgs.push_back("-mabi=vec-extabi");
+    ABIName = "vec-extabi";
   }
 
   if (!Args.hasFlag(options::OPT_mred_zone, options::OPT_mno_red_zone, true))

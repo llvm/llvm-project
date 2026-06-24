@@ -7996,8 +7996,7 @@ def mabi_EQ_ieeelongdouble : Flag<["-"], "mabi=ieeelongdouble">,
   MarshallingInfoFlag<LangOpts<"PPCIEEELongDouble">>;
 def mabi_EQ_vec_extabi : Flag<["-"], "mabi=vec-extabi">,
   Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
-  HelpText<"Enable the extended Altivec ABI on AIX. Use volatile and nonvolatile vector registers">,
-  MarshallingInfoFlag<LangOpts<"EnableAIXExtendedAltivecABI">>;
+  HelpText<"Enable the extended Altivec ABI on AIX. Use volatile and nonvolatile vector registers">;
 def mfloat_abi : Separate<["-"], "mfloat-abi">,
   HelpText<"The float ABI to use">,
   MarshallingInfoString<CodeGenOpts<"FloatABI">>;
