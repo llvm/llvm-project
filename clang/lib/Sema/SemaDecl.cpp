@@ -6559,6 +6559,9 @@ NamedDecl *Sema::HandleDeclarator(Scope *S, Declarator &D,
   TypeSourceInfo *TInfo = GetTypeForDeclarator(D);
   QualType R = TInfo->getType();
 
+  if (DiagnoseVLAInLocalClass(R, D.getIdentifierLoc()))
+    D.setInvalidType();
+
   if (DiagnoseUnexpandedParameterPack(D.getIdentifierLoc(), TInfo,
                                       UPPC_DeclarationType))
     D.setInvalidType();
