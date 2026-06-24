@@ -75,7 +75,9 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ErrorExtras.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/ThreadPool.h"
 
 #include <memory>
@@ -5493,6 +5495,74 @@ bool TargetProperties::GetEnableNotifyAboutFixIts() const {
 FileSpec TargetProperties::GetSaveJITObjectsDir() const {
   const uint32_t idx = ePropertySaveObjectsDir;
   return GetPropertyAtIndexAs<FileSpec>(idx, {});
+}
+
+FileSpecList TargetProperties::GetSourceFileSearchPaths() const {
+  const uint32_t idx = ePropertySourceFileSearchPaths;
+  return GetPropertyAtIndexAs<FileSpecList>(idx, {});
+}
+
+std::optional<FileSpec>
+Target::FindFileInSourceFileSearchPaths(const FileSpec &original_file) {
+  FileSpecList source_dirs = GetSourceFileSearchPaths();
+  if (source_dirs.GetSize() == 0)
+    return std::nullopt;
+
+  std::string original_path = original_file.GetPath();
+  if (original_path.empty())
+    return std::nullopt;
+
+  for (size_t i = 0; i < source_dirs.GetSize(); ++i) {
+    const FileSpec &source_dir = source_dirs.GetFileSpecAtIndex(i);
+
+    llvm::StringRef remaining(original_path);
+    // Strip the root (e.g. leading '/') for absolute paths.
+    llvm::StringRef root = llvm::sys::path::root_path(remaining);
+    if (!root.empty())
+      remaining = remaining.drop_front(root.size());
+
+    llvm::SmallString<128> prefix(root);
+
+    while (!remaining.empty()) {
+      FileSpec candidate(source_dir);
+      candidate.AppendPathComponent(remaining);
+
+      if (FileSystem::Instance().Exists(candidate)) {
+        // Remove trailing separator from prefix.
+        while (!prefix.empty() && llvm::sys::path::is_separator(prefix.back()))
+          prefix.pop_back();
+
+        if (prefix.empty()) {
+          // The entire relative path matched as a suffix. Map "." (the
+          // implicit current directory root of relative paths) to the
+          // source directory so future lookups are remapped automatically.
+          GetSourcePathMap().AppendUnique(".", source_dir.GetPath(),
+                                          /*notify=*/true);
+        } else {
+          GetSourcePathMap().AppendUnique(prefix, source_dir.GetPath(),
+                                          /*notify=*/true);
+        }
+        return candidate;
+      }
+
+      // Strip the first path component and append it to the prefix.
+      auto it = llvm::sys::path::begin(remaining);
+      auto end = llvm::sys::path::end(remaining);
+      if (it == end)
+        break;
+      llvm::StringRef first_component = *it;
+      prefix.append(first_component);
+      remaining = remaining.drop_front(first_component.size());
+      // Also skip the separator after the component.
+      while (!remaining.empty() &&
+             llvm::sys::path::is_separator(remaining[0])) {
+        prefix.push_back(remaining[0]);
+        remaining = remaining.drop_front(1);
+      }
+    }
+  }
+
+  return std::nullopt;
 }
 
 void TargetProperties::CheckJITObjectsDir() {

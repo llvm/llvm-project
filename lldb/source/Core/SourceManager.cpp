@@ -561,6 +561,12 @@ void SourceManager::File::CommonInitializerImpl(SupportFileNSP support_file_nsp,
             if (target_sp->GetImages().FindSourceFile(file_spec, new_spec))
               remapped = new_spec;
           }
+          if (!remapped) {
+            if (auto found =
+                    target_sp->FindFileInSourceFileSearchPaths(file_spec)) {
+              remapped = *found;
+            }
+          }
           if (remapped)
             SetSupportFile(std::make_shared<SupportFile>(
                 *remapped, support_file_nsp->GetChecksum()));

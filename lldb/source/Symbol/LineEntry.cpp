@@ -249,6 +249,10 @@ void LineEntry::ApplyFileMappings(lldb::TargetSP target_sp) {
             original_file_sp->GetSpecOnly())) {
       file_sp = std::make_shared<SupportFile>(*new_file_spec,
                                               original_file_sp->GetChecksum());
+    } else if (auto found = target_sp->FindFileInSourceFileSearchPaths(
+                   original_file_sp->GetSpecOnly())) {
+      file_sp = std::make_shared<SupportFile>(*found,
+                                              original_file_sp->GetChecksum());
     }
   }
 }
