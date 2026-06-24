@@ -57,12 +57,12 @@ int main() {
     !and {lines: !label mid_loop}:
       # 3 correct, 4 unseen, 4 unexpected
       !value Complement:
-        - !float 2 +- 0.0001
-        - !float 3.84 +- 0.0001
-        - !float 6.70 +- 0.0001
-        - !float 9.24 +- 0.0001
-        - !float 9.96 +- 0.0001
-        - !float 9.99 +- 0.0001
-        - !float 10.0 +- 0.0001
+        - !float 2 +- 0.0001      # Correct
+        - !float 3.84 +- 0.0001   # Incorrect, actual=3.84615374
+        - !float 6.70 +- 0.0001   # Incorrect, actual=6.70103121
+        - !float 9.24 +- 0.0001   # Incorrect, actual=9.24893665
+        - !float 9.96 +- 0.0001   # Incorrect, actual=9.96959781
+        - !float 9.99 +- 0.0001   # Correct
+        - !float 10.0 +- 0.0001   # Correct
 ...
 */

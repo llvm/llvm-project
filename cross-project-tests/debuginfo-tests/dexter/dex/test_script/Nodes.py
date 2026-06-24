@@ -555,7 +555,8 @@ class Float:
     There are four possible representations for a !float node, with/without a list of values and with/without a range:
     - `!float <value>` - checks for an exact match using floating point equality, e.g. !float 10 will match 10.0.
     - `!float <value>+-<range>` - checks for a match within the given range, e.g. !float 10 +- 0.2 will match any
-                                  value in the range [9.8, 10.2].
+                                  value in the range [9.8, 10.2]; range must also be a valid float value (and cannot be
+                                  omitted if "+-" is passed).
     - `!float [<value>...] - checks for exact matches against any of the given values, e.g. !float [10, 11, 12] will
                              match 10.0, 11.0, or 12.0. This is effectively a shorthand for using a list of single float
                              values, e.g. `[!float 10, !float 11, !float 12]`.
