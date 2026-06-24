@@ -120,6 +120,9 @@ def action_dump(name, args):
     parser.add_option("-v", "--verbose", dest="verbose",
                       help="show more verbose output [%default]",
                       action="store_true", default=False)
+    parser.add_option("--json", dest="json",
+                      help="output as JSON [%default]",
+                      action="store_true", default=False)
     (opts, args) = parser.parse_args(args)
 
     if len(args) != 1:
@@ -130,7 +133,6 @@ def action_dump(name, args):
     hmap = HeaderMap.frompath(path)
 
     # Dump all of the buckets.
-    print ('Header Map: %s' % (path,))
     if opts.verbose:
         print ('headermap: %r' % (path,))
         print ('  num entries: %d' % (hmap.num_entries,))
@@ -149,7 +151,10 @@ def action_dump(name, args):
 
             print ("  bucket[%d]: %r -> (%r, %r) -- %d" % (
                 i, key, prefix, suffix, (hmap_hash(key) & (len(hmap.buckets) - 1))))
+    elif opts.json:
+        print(json.dumps({"mappings": dict(hmap.mappings)}, indent=4))
     else:
+        print ('Header Map: %s' % (path,))
         mappings = sorted(hmap.mappings)
         for key,value in mappings:
             print ("%s -> %s" % (key, value))
