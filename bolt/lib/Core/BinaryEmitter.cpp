@@ -481,8 +481,10 @@ void BinaryEmitter::emitFunctionBody(BinaryFunction &BF, FunctionFragment &FF,
         }
 
         // Prepare to tag this location with a label if we need to keep track of
-        // the location of calls/returns for BOLT address translation maps
-        if (BF.requiresAddressTranslation() && BC.MIB->getOffset(Instr)) {
+        // an instruction's output address to augment the IO address map (BAT,
+        // SDT/probe address translation, or --update-debug-sections DWARF range
+        // updates).
+        if (BF.requiresPreciseAddressMap() && BC.MIB->getOffset(Instr)) {
           const uint32_t Offset = *BC.MIB->getOffset(Instr);
           if (!InstrLabel)
             InstrLabel = BC.Ctx->createTempSymbol();
