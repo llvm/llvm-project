@@ -1690,6 +1690,11 @@ void AsmPrinter::emitPseudoProbe(const MachineInstr &MI) {
   }
 }
 
+uint64_t AsmPrinter::calculateStackSize(const MachineFunction &MF) {
+  const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
+  return FrameInfo.getStackSize() + FrameInfo.getUnsafeStackSize();
+}
+
 void AsmPrinter::emitStackSizeSection(const MachineFunction &MF) {
   if (!MF.getTarget().Options.EmitStackSizeSection)
     return;
@@ -1708,8 +1713,7 @@ void AsmPrinter::emitStackSizeSection(const MachineFunction &MF) {
   OutStreamer->switchSection(StackSizeSection);
 
   const MCSymbol *FunctionSymbol = getFunctionBegin();
-  uint64_t StackSize =
-      FrameInfo.getStackSize() + FrameInfo.getUnsafeStackSize();
+  const uint64_t StackSize = calculateStackSize(MF);
   OutStreamer->emitSymbolValue(FunctionSymbol, TM.getProgramPointerSize());
   OutStreamer->emitULEB128IntValue(StackSize);
 
@@ -1724,10 +1728,6 @@ void AsmPrinter::emitStackUsage(const MachineFunction &MF) {
   // OutputFilename empty implies -fstack-usage is not passed.
   if (OutputFilename.empty())
     return;
-
-  const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
-  uint64_t StackSize =
-      FrameInfo.getStackSize() + FrameInfo.getUnsafeStackSize();
 
   if (StackUsageStream == nullptr) {
     std::error_code EC;
@@ -1744,6 +1744,8 @@ void AsmPrinter::emitStackUsage(const MachineFunction &MF) {
   else
     *StackUsageStream << MF.getFunction().getParent()->getName();
 
+  const uint64_t StackSize = calculateStackSize(MF);
+  const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
   *StackUsageStream << ':' << MF.getName() << '\t' << StackSize << '\t';
   if (FrameInfo.hasVarSizedObjects())
     *StackUsageStream << "dynamic\n";

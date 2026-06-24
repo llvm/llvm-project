@@ -471,6 +471,12 @@ public:
 
   void emitFrameAlloc(const MachineInstr &MI);
 
+  // Helper function to allow potentially post-fix the stack size of a function
+  // via target-specific override.
+  // Will be called by emitStackUsage or emitStackSizeSection, which usually
+  // wouldn't require target-specific overrides.
+  virtual uint64_t calculateStackSize(const MachineFunction &MF);
+
   void emitStackSizeSection(const MachineFunction &MF);
 
   void emitStackUsage(const MachineFunction &MF);
