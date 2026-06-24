@@ -725,6 +725,11 @@ let Command = "expression" in {
         Desc<
             "Should we run ${a}ll threads if the execution doesn't complete on "
             "one thread.">;
+  def expression_options_trap_exceptions
+      : Option<"trap-exceptions", "e">,
+        Groups<[1, 2]>,
+        Arg<"Boolean">,
+        Desc<"Trap on ${e}xceptions hit during expression execution">;
   def expression_options_ignore_breakpoints
       : Option<"ignore-breakpoints", "i">,
         Groups<[1, 2]>,
