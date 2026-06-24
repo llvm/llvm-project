@@ -22,6 +22,8 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "legalize-types"
@@ -200,6 +202,17 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_Unary(SDNode *N, RTLIB::Libcall LC) {
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpVT = N->getOperand(0 + Offset).getValueType();
   CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0));
+  if (DAG.getLibcalls().getLibcallImpl(LC) == RTLIB::Unsupported) {
+    // Preserve existing behavior for most targets (which aborts in
+    // TargetLowering::makeLibCall), but provide a clean diagnostic for NVPTX.
+    if (DAG.getMachineFunction().getTarget().getTargetTriple().isNVPTX()) {
+      DAG.getContext()->emitError(Twine("no libcall available for ") +
+                                  N->getOperationName(&DAG));
+      if (IsStrict)
+        ReplaceValueWith(SDValue(N, 1), Chain);
+      return DAG.getUNDEF(NVT);
+    }
+  }
   std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, NVT, Op,
                                                     CallOptions, SDLoc(N),
                                                     Chain);
@@ -221,6 +234,17 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_Binary(SDNode *N, RTLIB::Libcall LC) {
   EVT OpsVT[2] = { N->getOperand(0 + Offset).getValueType(),
                    N->getOperand(1 + Offset).getValueType() };
   CallOptions.setTypeListBeforeSoften(OpsVT, N->getValueType(0));
+  if (DAG.getLibcalls().getLibcallImpl(LC) == RTLIB::Unsupported) {
+    // Preserve existing behavior for most targets (which aborts in
+    // TargetLowering::makeLibCall), but provide a clean diagnostic for NVPTX.
+    if (DAG.getMachineFunction().getTarget().getTargetTriple().isNVPTX()) {
+      DAG.getContext()->emitError(Twine("no libcall available for ") +
+                                  N->getOperationName(&DAG));
+      if (IsStrict)
+        ReplaceValueWith(SDValue(N, 1), Chain);
+      return DAG.getUNDEF(NVT);
+    }
+  }
   std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, NVT, Ops,
                                                     CallOptions, SDLoc(N),
                                                     Chain);
