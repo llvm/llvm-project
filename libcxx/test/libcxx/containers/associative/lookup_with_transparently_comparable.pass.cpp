@@ -20,6 +20,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <string_view>
 
 #include "count_new.h"
 #include "test_macros.h"
@@ -134,6 +135,103 @@ int main(int, char**) {
     }
     {
       const std::map<std::string, int>& cc = c;
+      globalMemCounter.reset();
+      (void)cc.at(key);
+      assert(globalMemCounter.checkNewCalledEq(0));
+    }
+  }
+
+  // string_view lookups should also not allocate (tests the new string_view
+  // __is_transparently_comparable_v specializations)
+  {
+    std::map<std::string, int> c;
+    std::string_view key = "long-string-to-exceed-SSO-buffer";
+    c[std::string(key)]  = 1;
+
+    // find
+    {
+      globalMemCounter.reset();
+      (void)c.find(key);
+      assert(globalMemCounter.checkNewCalledEq(0));
+    }
+    {
+      const std::map<std::string, int>& cc = c;
+      globalMemCounter.reset();
+      (void)cc.find(key);
+      assert(globalMemCounter.checkNewCalledEq(0));
+    }
+
+#if TEST_STD_VER >= 20
+    // contains
+    {
+      globalMemCounter.reset();
+      (void)c.contains(key);
+      assert(globalMemCounter.checkNewCalledEq(0));
+    }
+    {
+      const std::map<std::string, int>& cc = c;
+      globalMemCounter.reset();
+      (void)cc.contains(key);
+      assert(globalMemCounter.checkNewCalledEq(0));
+    }
+#endif
+
+    // at
+    {
+      globalMemCounter.reset();
+      (void)c.at(key);
+      assert(globalMemCounter.checkNewCalledEq(0));
+    }
+    {
+      const std::map<std::string, int>& cc = c;
+      globalMemCounter.reset();
+      (void)cc.at(key);
+      assert(globalMemCounter.checkNewCalledEq(0));
+    }
+  }
+
+  // string_view lookups with std::greater
+  {
+    std::map<std::string, int, std::greater<std::string>> c;
+    std::string_view key = "long-string-to-exceed-SSO-buffer";
+    c[std::string(key)]  = 1;
+
+    // find
+    {
+      globalMemCounter.reset();
+      (void)c.find(key);
+      assert(globalMemCounter.checkNewCalledEq(0));
+    }
+    {
+      const std::map<std::string, int, std::greater<std::string>>& cc = c;
+      globalMemCounter.reset();
+      (void)cc.find(key);
+      assert(globalMemCounter.checkNewCalledEq(0));
+    }
+
+#if TEST_STD_VER >= 20
+    // contains
+    {
+      globalMemCounter.reset();
+      (void)c.contains(key);
+      assert(globalMemCounter.checkNewCalledEq(0));
+    }
+    {
+      const std::map<std::string, int, std::greater<std::string>>& cc = c;
+      globalMemCounter.reset();
+      (void)cc.contains(key);
+      assert(globalMemCounter.checkNewCalledEq(0));
+    }
+#endif
+
+    // at
+    {
+      globalMemCounter.reset();
+      (void)c.at(key);
+      assert(globalMemCounter.checkNewCalledEq(0));
+    }
+    {
+      const std::map<std::string, int, std::greater<std::string>>& cc = c;
       globalMemCounter.reset();
       (void)cc.at(key);
       assert(globalMemCounter.checkNewCalledEq(0));

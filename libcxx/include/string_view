@@ -217,6 +217,7 @@ namespace std {
 #  include <__cstddef/ptrdiff_t.h>
 #  include <__cstddef/size_t.h>
 #  include <__functional/hash.h>
+#  include <__functional/is_transparent.h>
 #  include <__functional/unary_function.h>
 #  include <__fwd/ostream.h>
 #  include <__fwd/string.h>
@@ -233,12 +234,14 @@ namespace std {
 #  include <__ranges/enable_view.h>
 #  include <__ranges/size.h>
 #  include <__string/char_traits.h>
+#  include <__type_traits/desugars_to.h>
 #  include <__type_traits/is_array.h>
 #  include <__type_traits/is_convertible.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_standard_layout.h>
 #  include <__type_traits/is_trivially_constructible.h>
 #  include <__type_traits/is_trivially_copyable.h>
+#  include <__type_traits/remove_cv.h>
 #  include <__type_traits/remove_cvref.h>
 #  include <__type_traits/remove_reference.h>
 #  include <__type_traits/type_identity.h>
@@ -932,6 +935,30 @@ struct hash<basic_string_view<char32_t, char_traits<char32_t> > > : __string_vie
 template <>
 struct hash<basic_string_view<wchar_t, char_traits<wchar_t> > > : __string_view_hash<wchar_t> {};
 #  endif
+
+template <class _Comparator, class _CharT2, class _CharT, class _Traits>
+inline const bool __is_transparently_comparable_v<_Comparator, basic_string_view<_CharT, _Traits>, _CharT2*> =
+    is_same<_CharT, __remove_cv_t<_CharT2> >::value &&
+    (__desugars_to_v<__less_tag,
+                     _Comparator,
+                     basic_string_view<_CharT, _Traits>,
+                     basic_string_view<_CharT, _Traits> > ||
+     __desugars_to_v<__greater_tag,
+                     _Comparator,
+                     basic_string_view<_CharT, _Traits>,
+                     basic_string_view<_CharT, _Traits> >);
+
+template <class _Comparator, class _CharT2, class _CharT, class _Traits>
+inline const bool __is_transparently_comparable_v<_Comparator, _CharT2*, basic_string_view<_CharT, _Traits> > =
+    __is_transparently_comparable_v<_Comparator, basic_string_view<_CharT, _Traits>, _CharT2*>;
+
+template <class _Comparator, class _CharT, class _Traits, size_t _Np>
+inline const bool __is_transparently_comparable_v<_Comparator, basic_string_view<_CharT, _Traits>, _CharT[_Np]> =
+    __is_transparently_comparable_v<_Comparator, basic_string_view<_CharT, _Traits>, const _CharT*>;
+
+template <class _Comparator, class _CharT, class _Traits, size_t _Np>
+inline const bool __is_transparently_comparable_v<_Comparator, _CharT[_Np], basic_string_view<_CharT, _Traits> > =
+    __is_transparently_comparable_v<_Comparator, basic_string_view<_CharT, _Traits>, const _CharT*>;
 
 #  if _LIBCPP_STD_VER >= 14
 inline namespace literals {

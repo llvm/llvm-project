@@ -10,6 +10,7 @@
 
 #include <map>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "associative_container_benchmarks.h"
@@ -28,6 +29,56 @@ static void BM_map_find_string_literal(benchmark::State& state) {
 }
 
 BENCHMARK(BM_map_find_string_literal);
+
+// Benchmark: find()/contains()/at() with string_view. Demonstrates the benefit
+// of __is_transparently_comparable_v for basic_string_view: the optimized path
+// avoids constructing a temporary std::string (and its potential heap allocation
+// for keys beyond SSO).
+
+static constexpr const char* kLongKey = "Something very very long to show a long string situation";
+
+static std::map<std::string, int> make_test_map() {
+  std::map<std::string, int> map;
+  map.emplace(kLongKey, 1);
+  map.emplace("Something Else", 2);
+  return map;
+}
+
+static void BM_map_find_string_view(benchmark::State& state) {
+  auto map            = make_test_map();
+  std::string_view sv = kLongKey;
+
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(map);
+    benchmark::DoNotOptimize(map.find(sv));
+  }
+}
+
+BENCHMARK(BM_map_find_string_view);
+
+static void BM_map_contains_string_view(benchmark::State& state) {
+  auto map            = make_test_map();
+  std::string_view sv = kLongKey;
+
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(map);
+    benchmark::DoNotOptimize(map.contains(sv));
+  }
+}
+
+BENCHMARK(BM_map_contains_string_view);
+
+static void BM_map_at_string_view(benchmark::State& state) {
+  auto map            = make_test_map();
+  std::string_view sv = kLongKey;
+
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(map);
+    benchmark::DoNotOptimize(map.at(sv));
+  }
+}
+
+BENCHMARK(BM_map_at_string_view);
 
 template <class K, class V>
 struct support::adapt_operations<std::map<K, V>> {
