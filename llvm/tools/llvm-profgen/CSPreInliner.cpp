@@ -179,11 +179,8 @@ bool CSPreInliner::shouldInline(ProfiledInlineCandidate &Candidate) {
         (NormalizationUpperBound - NormalizationLowerBound);
     if (NormalizedHotness > 1.0)
       NormalizedHotness = 1.0;
-    // Add 1 to ensure hot callsites get a non-zero threshold, which could
-    // happen when SampleColdCallSiteThreshold is 0. This is when we do not
-    // want any inlining for cold callsites.
     SampleThreshold = SampleHotCallSiteThreshold * NormalizedHotness * 100 +
-                      SampleColdCallSiteThreshold + 1;
+                      SampleColdCallSiteThreshold;
     // Bump up the threshold to favor previous compiler inline decision. The
     // compiler has more insight and knowledge about functions based on their IR
     // and attribures and should be able to make a more reasonable inline
@@ -192,7 +189,7 @@ bool CSPreInliner::shouldInline(ProfiledInlineCandidate &Candidate) {
       SampleThreshold *= CSPreinlMultiplierForPrevInl;
   }
 
-  return (Candidate.SizeCost < SampleThreshold);
+  return (Candidate.SizeCost <= SampleThreshold);
 }
 
 void CSPreInliner::processFunction(const FunctionId Name) {
