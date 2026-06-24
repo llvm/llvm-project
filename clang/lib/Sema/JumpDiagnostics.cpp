@@ -921,7 +921,8 @@ static void DiagnoseIndirectOrAsmJumpStmt(Sema &S, Stmt *Jump,
   bool IsAsmGoto = isa<GCCAsmStmt>(Jump);
   S.Diag(Jump->getBeginLoc(), diag::err_indirect_goto_in_protected_scope)
       << IsAsmGoto;
-  S.Diag(Target->getStmt()->getIdentLoc(), diag::note_indirect_goto_target)
+  if (Target && Target->getStmt())
+    S.Diag(Target->getStmt()->getIdentLoc(), diag::note_indirect_goto_target)
       << IsAsmGoto;
   Diagnosed = true;
 }
