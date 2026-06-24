@@ -6,7 +6,7 @@ attributes(global) subroutine g1(a, m)
   call g1<<<1, 1>>>(a, m)
 end subroutine
 
-attributes(global) subroutine g1(a, m)
+attributes(global) subroutine g2(a, m)
   integer :: a(*), m
   !ERROR: not yet implemented: CUDA dynamic parallelism
   call g1<<<1, 1>>>(a, m)
