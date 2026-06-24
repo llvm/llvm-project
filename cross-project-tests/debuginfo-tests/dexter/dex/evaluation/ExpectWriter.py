@@ -88,21 +88,25 @@ class ScriptExpectWriter:
         self.new_expected_values: Dict[Expect, Any] = {}
         self.missing_expect_rewrites: List[Expect] = []
 
-        def collect_unknown_expects(expect: Expect, expected_value: Any, scope: Scope):
-            assert isinstance(expect, Value), "Non-Value expects currently unsupported"
-            if expected_value is None:
-                self.unknown_expect_rewrites[expect] = []
-
         script = dext_ir.script
         assert (
             script is not None
         ), "Cannot use ScriptExpectWriter on a non-script Dexter test."
+
+        # Collect every Expect with an unknown value into the `unknown_expect_rewrites` dict. We expect all Expects in
+        # this dict to have observed values, and don't expect to rewrite any Expects outside of this dict.
+        def collect_unknown_expects(expect: Expect, expected_value: Any, scope: Scope):
+            assert isinstance(expect, Value), "Non-Value expects currently unsupported"
+            if expected_value is None:
+                self.unknown_expect_rewrites[expect] = []
         script.visit_script(visit_expect=collect_unknown_expects)
 
         # If there are no expects to update, then there is no rewriting to be done - exit early.
         if not self.unknown_expect_rewrites:
             return
 
+        # Populate the `unknown_expect_rewrites` dict, mapping each expect with an unknown value to its list of observed
+        # during this run, along with the corresponding step indices.
         self.step_writers = [StepExpectWriter(step, script) for step in dext_ir.steps]
         for step_writer in self.step_writers:
             step_idx = step_writer.step.step_index
@@ -111,6 +115,8 @@ class ScriptExpectWriter:
                     (step_idx, expected_value_writer)
                 )
 
+        # For each unknown expect, merge the observed values into a writable "expected values" entry, which may be a
+        # list or a single value.
         self.new_expected_values = {
             expect: expected_values
             for expect, expect_writers in self.unknown_expect_rewrites.items()
@@ -121,6 +127,8 @@ class ScriptExpectWriter:
             )
             is not None
         }
+
+        # Finally, use the new expected values to rewrite the script.
         self.new_script = rewrite_script(script, self.new_expected_values)
         self.missing_expect_rewrites = [
             expect

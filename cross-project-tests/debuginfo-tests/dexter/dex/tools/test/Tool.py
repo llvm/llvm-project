@@ -333,7 +333,7 @@ class Tool(TestToolBase):
                         f"Rewrote script to add {script_writer.num_successful_rewrites} expected values."
                     )
                     if script_writer.num_unsuccessful_rewrites:
-                        self.context.logger.warning(
+                        self.context.logger.error(
                             f"Failed to rewrite {script_writer.num_unsuccessful_rewrites} expected values."
                         )
                     self._write_updated_structured_script(

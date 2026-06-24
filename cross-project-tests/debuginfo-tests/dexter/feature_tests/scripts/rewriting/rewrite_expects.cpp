@@ -12,6 +12,8 @@
 /// NB: The exact contents of this file are compared against the expect file in
 ///     the Inputs/ directory; any changes to this file, including comments,
 ///     will require updating the corresponding expected file.
+///     Although we perform an exact file comparison, we use `diff` over `cmp`
+///     for more legible lit output.
 
 // CHECK: Rewrote script to add 6 expected values.
 // CHECK: Failed to rewrite 2 expected values.
