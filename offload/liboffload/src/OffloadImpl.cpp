@@ -597,16 +597,17 @@ TargetAllocTy convertOlToPluginAllocTy(ol_alloc_type_t Type) {
 }
 
 constexpr size_t MAX_ALLOC_TRIES = 50;
-Error olMemAlloc_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
-                      size_t Size, void **AllocationOut) {
+Error olMemAllocImplHelper(ol_device_handle_t Device, ol_alloc_type_t Type,
+                           size_t Size, size_t Alignment,
+                           void **AllocationOut) {
   SmallVector<void *> Rejects;
 
   // Repeat the allocation up to a certain amount of times. If it happens to
   // already be allocated (e.g. by a device from another vendor) throw it away
   // and try again.
   for (size_t Count = 0; Count < MAX_ALLOC_TRIES; Count++) {
-    auto NewAlloc = Device->Device->dataAlloc(Size, nullptr,
-                                              convertOlToPluginAllocTy(Type));
+    auto NewAlloc = Device->Device->dataAlloc(
+        Size, nullptr, convertOlToPluginAllocTy(Type), Alignment);
     if (!NewAlloc)
       return NewAlloc.takeError();
 
@@ -651,6 +652,18 @@ Error olMemAlloc_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
   // We've tried multiple times, and can't allocate a non-overlapping region.
   return createOffloadError(ErrorCode::BACKEND_FAILURE,
                             "failed to allocate non-overlapping memory");
+}
+
+Error olMemAlloc_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
+                      size_t Size, void **AllocationOut) {
+  return olMemAllocImplHelper(Device, Type, Size, /*Alignment=*/0,
+                              AllocationOut);
+}
+
+Error olMemAllocAligned_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
+                             size_t Size, size_t Alignment,
+                             void **AllocationOut) {
+  return olMemAllocImplHelper(Device, Type, Size, Alignment, AllocationOut);
 }
 
 Error olMemFree_impl(void *Address) {
