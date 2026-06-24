@@ -91,6 +91,9 @@ llvm::Error launch() {
                          /*add_exe_file_as_first_arg=*/true);
   info.GetArguments().AppendArgument("-O");
   info.GetArguments().AppendArgument("protocol start MCP");
+  info.AppendCloseFileAction(STDIN_FILENO);
+  info.AppendCloseFileAction(STDOUT_FILENO);
+  info.AppendCloseFileAction(STDERR_FILENO);
   return Host::LaunchProcess(info).takeError();
 }
 
