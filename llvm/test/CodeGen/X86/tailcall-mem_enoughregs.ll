@@ -1,5 +1,6 @@
 ; RUN: llc < %s -mtriple=i686-linux-gnu   | FileCheck %s --check-prefix=CHECK --check-prefix=LIN32
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu | FileCheck %s --check-prefix=CHECK --check-prefix=LIN64
+; RUN: llc < %s -mtriple=i686-pc-win32 -relocation-model=pic | FileCheck %s --check-prefix=CHECK --check-prefix=WIN32
 ; RUN: llc < %s -mtriple=x86_64-pc-win32  | FileCheck %s --check-prefix=CHECK --check-prefix=WIN64
 
 ; Check that we only fold the address computation (load) into a tail call
@@ -16,6 +17,7 @@ entry:
 
 ; Call address load gets folded into the tail call.
 ; LIN32: jmpl *(%
+; WIN32: jmpl *(%
 ; LIN64: jmpq *(%
 ; WIN64: jmpq *(%
 }
@@ -29,6 +31,7 @@ entry:
 
 ; Call address load gets folded into the tail call.
 ; LIN32: jmpl *(%
+; WIN32: jmpl *(%
 ; LIN64: jmpq *(%
 ; WIN64: jmpq *(%
 }
@@ -42,6 +45,7 @@ entry:
 
 ; On 32-bit we're not sure there is enough register to fold the load.
 ; LIN32: jmpl *%
+; WIN32: jmpl *%
 ; LIN64: jmpq *(%
 ; WIN64: jmpq *(%
 }
@@ -55,6 +59,7 @@ entry:
 
 ; .. but if the load is from a global, we can fold it.
 ; LIN32: jmpl *globl
+; WIN32: jmpl *_globl
 ; LIN64: jmpq *(%
 ; WIN64: jmpq *globl(%rip)
 }
@@ -67,6 +72,7 @@ entry:
 
 ; and if the load is from the stack (on 32-bit, %func is passed on the stack):
 ; LIN32: jmpl *4(%esp)
+; WIN32: jmpl *4(%esp)
 }
 
 define i32 @test6(ptr %a, ptr %b) {
