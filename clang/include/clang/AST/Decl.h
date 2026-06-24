@@ -1454,8 +1454,8 @@ public:
   ///         not.
   bool evaluateDestruction(SmallVectorImpl<PartialDiagnosticAt> &Notes) const;
 
-  /// Evaluate the destruction of this variable, the destruction of which is
-  /// required by language rules to be constant.
+  /// Evaluate the destruction of a variable that is required by the language to have
+  /// constant destruction.
   ///
   /// \pre hasConstantInitialization()
   /// \return \c true if this variable has constant destruction, \c false if
