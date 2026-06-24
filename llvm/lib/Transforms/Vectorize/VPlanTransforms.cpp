@@ -7237,9 +7237,11 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
           const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, L);
           bool IsSingleScalarLoad = !isa<SCEVCouldNotCompute>(PtrSCEV) &&
                                     PSE.getSE()->isLoopInvariant(PtrSCEV, L);
-          ReplaceWith(VPI, new VPReplicateRecipe(
-                               I, {Ptr}, /*IsSingleScalar=*/IsSingleScalarLoad,
-                               /*Mask=*/nullptr, {}, *VPI, VPI->getDebugLoc()));
+
+          ReplaceWith(VPI,
+                      new VPReplicateRecipe(
+                          I, {Ptr}, /*IsSingleScalar=*/IsSingleScalarLoad,
+                          /*Mask=*/nullptr, *VPI, *VPI, VPI->getDebugLoc()));
           return true;
         });
   }
