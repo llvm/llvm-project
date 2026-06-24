@@ -410,6 +410,45 @@ static ConstantInt *getPreferredVectorIndex(ConstantInt *IndexC) {
                           IndexC->getValue().zextOrTrunc(64));
 }
 
+/// Decide whether extractelement(cast X), Index can be rewritten as
+/// cast(extractelement X, Index), where \p Cast is the source of the
+/// extractelement \p EI.
+static bool canSinkCastThroughExtract(CastInst *Cast, ExtractElementInst &EI,
+                                      Value *Index) {
+  // Bitcasts can change the number of vector elements; they are handled by
+  // foldBitcastExtElt instead.
+  if (Cast->getOpcode() == Instruction::BitCast)
+    return false;
+
+  // Sinking would move the cast next to the extractelement. Avoid sinking it
+  // into a loop: only do so when the index is constant or the cast and the
+  // extractelement are in the same basic block.
+  if (EI.getParent() != Cast->getParent() && !isa<ConstantInt>(Index))
+    return false;
+
+  // A single-use cast is always replaced (its only use is this extract).
+  if (Cast->hasOneUse())
+    return true;
+
+  // With multiple uses, only sink widening casts (sext/zext/fpext) whose every
+  // user is a sinkable extractelement (same block as the cast or a constant
+  // index). This ensures the wide cast is fully removed rather than left
+  // alongside the new scalar casts. Other casts are left to the single-use
+  // case.
+  switch (Cast->getOpcode()) {
+  case Instruction::SExt:
+  case Instruction::ZExt:
+  case Instruction::FPExt:
+    return all_of(Cast->users(), [&](User *U) {
+      auto *EE = dyn_cast<ExtractElementInst>(U);
+      return EE && (EE->getParent() == Cast->getParent() ||
+                    isa<ConstantInt>(EE->getIndexOperand()));
+    });
+  default:
+    return false;
+  }
+}
+
 Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
   Value *SrcVec = EI.getVectorOperand();
   Value *Index = EI.getIndexOperand();
@@ -600,18 +639,8 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
         }
       }
     } else if (auto *CI = dyn_cast<CastInst>(I)) {
-      // Canonicalize extractelement(cast) -> cast(extractelement).
-      // Bitcasts can change the number of vector elements, and they cost
-      // nothing.
-      // If the CI has only one use, but that use is inside a loop, this
-      // canonicalization is not profitable because it would turn a vector
-      // operation into scalar operations inside the loop. Apply the transform
-      // when:
-      //  - the index is constant and CI has one use, or
-      //  - the CI and EI are in the same basic block, so the cast won't be sunk
-      //    into a loop.
-      if (CI->hasOneUse() && (CI->getOpcode() != Instruction::BitCast) &&
-          (EI.getParent() == CI->getParent() || isa<ConstantInt>(Index))) {
+      // Canonicalize extractelement(cast X) -> cast(extractelement X).
+      if (canSinkCastThroughExtract(CI, EI, Index)) {
         Value *EE = Builder.CreateExtractElement(CI->getOperand(0), Index);
         return CastInst::Create(CI->getOpcode(), EE, EI.getType());
       }
