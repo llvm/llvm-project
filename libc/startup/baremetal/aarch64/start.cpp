@@ -32,7 +32,7 @@ extern uintptr_t __data_start[];
 extern uintptr_t __data_size[];
 extern uintptr_t __bss_start[];
 extern uintptr_t __bss_size[];
-[[gnu::weak]] extern uintptr_t __heap_start;
+[[gnu::weak]] extern uintptr_t _end;
 } // extern "C"
 
 namespace {
@@ -48,12 +48,12 @@ constexpr uint64_t PAGE_TABLE_BLOCK_SHIFT = 30; // 1 GiB block entries.
 // Return the base address of the combined stack/heap mapping used by
 // setup_mmu().
 uintptr_t get_stackheap_start() {
-  // __heap_start is weak. If no linker script defines it, its address resolves
-  // to zero; otherwise the symbol's address is the requested heap base.
-  if (reinterpret_cast<uintptr_t>(&__heap_start))
-    return reinterpret_cast<uintptr_t>(&__heap_start);
+  // _end is the heap start used by the baremetal freelist heap. If no linker
+  // script defines it, its weak address resolves to zero.
+  if (reinterpret_cast<uintptr_t>(&_end))
+    return reinterpret_cast<uintptr_t>(&_end);
 
-  // With no linker-provided heap base, choose the 1 GiB page after this startup
+  // With no linker-provided heap start, choose the 1 GiB page after this startup
   // code as the fallback stack/heap page. The page table maps memory in 1 GiB
   // blocks, so the shifts below convert between addresses and 1 GiB page
   // numbers:
