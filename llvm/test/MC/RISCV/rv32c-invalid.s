@@ -6,9 +6,9 @@
 ## GPRC
 .LBB:
 c.lw  ra, 4(sp)
-# CHECK: :[[#@LINE-1]]:7: error: register must be a GPR from x8 to x15
+# CHECK: :[[#@LINE-1]]:1: error: invalid instruction
 c.sw  sp, 4(sp)
-# CHECK: :[[#@LINE-1]]:7: error: register must be a GPR from x8 to x15
+# CHECK: :[[#@LINE-1]]:1: error: invalid instruction
 c.beqz  t0, .LBB
 # CHECK: :[[#@LINE-1]]:9: error: register must be a GPR from x8 to x15
 c.bnez  s8, .LBB
@@ -42,7 +42,7 @@ c.jalr  zero
 c.mv  ra, x0
 # CHECK: :[[#@LINE-1]]:11: error: register must be a GPR excluding zero (x0)
 c.add  ra, ra, x0
-# CHECK: :[[#@LINE-1]]:16: error: invalid operand for instruction
+# CHECK: :[[#@LINE-1]]:16: error: too many operands for instruction
 
 ## GPRNoX2
 c.lui x2, 4
@@ -92,7 +92,9 @@ c.addi t0, %hi(foo)
 
 ## simm6nonzero
 c.nop 32
-# CHECK: :[[#@LINE-1]]:7: error: immediate must be non-zero in the range [-32, 31]
+# CHECK: :[[#@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
+# CHECK: :[[#@LINE-2]]:7: note: too many operands for instruction
+# CHECK: :[[#@LINE-3]]:7: note: immediate must be non-zero in the range [-32, 31]
 
 ## c_lui_imm
 c.lui t0, 0
@@ -113,9 +115,9 @@ c.swsp  ra, -4(sp)
 # CHECK: :[[#@LINE-1]]:13: error: immediate must be a multiple of 4 bytes in the range [0, 252]
 ## uimm7_lsb00
 c.lw  s0, -4(sp)
-# CHECK: :[[#@LINE-1]]:11: error: immediate must be a multiple of 4 bytes in the range [0, 124]
+# CHECK: :[[#@LINE-1]]:1: error: invalid instruction
 c.sw  s0, 128(sp)
-# CHECK: :[[#@LINE-1]]:11: error: immediate must be a multiple of 4 bytes in the range [0, 124]
+# CHECK: :[[#@LINE-1]]:1: error: invalid instruction
 
 ## simm9_lsb0
 c.bnez  s1, -258

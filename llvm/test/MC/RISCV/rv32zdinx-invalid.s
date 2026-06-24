@@ -8,8 +8,8 @@ flw fa4, 12(sp) # CHECK: :[[@LINE]]:1: error: instruction requires the following
 fadd.d fa0, fa1, fa2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'D' (Double-Precision Floating-Point){{$}}
 
 # Invalid instructions
-fsw a5, 12(sp) # CHECK: :[[@LINE]]:5: error: invalid operand for instruction
-fmv.x.w s0, s1 # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
+fsw a5, 12(sp) # CHECK: :[[@LINE]]:1: error: invalid instruction
+fmv.x.w s0, s1 # CHECK: :[[@LINE]]:1: error: invalid instruction
 
 # Invalid register names
 fadd.d a100, a2, a4 # CHECK: :[[@LINE]]:8: error: invalid operand for instruction

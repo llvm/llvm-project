@@ -26,22 +26,22 @@ vsetvli a2, a0, e32,m16
 # CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0, e128,m8
-# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: invalid instruction
 
 vsetvli a2, a0, e256,m8
-# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: invalid instruction
 
 vsetvli a2, a0, e512,m8
-# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: invalid instruction
 
 vsetvli a2, a0, e1024,m8
-# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: invalid instruction
 
 vsetvli a2, a0, e2048,m8
-# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: invalid instruction
 
 vsetvli a2, a0, e1,m8
-# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: invalid instruction
 
 vsetvli a2, a0, e8,m1,tx
 # CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
@@ -50,7 +50,7 @@ vsetvli a2, a0, e8,m1,ta,mx
 # CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0, e8x,m1,tu,mu
-# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: invalid instruction
 
 vsetvli a2, a0, e8,m1z,tu,mu
 # CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
@@ -557,8 +557,11 @@ vadd.vi v0, v2, 1, v0.t
 # CHECK-ERROR-LABEL: vadd.vi v0, v2, 1, v0.t
 
 vmsge.vx v0, v4, a0, v0.t
-# CHECK-ERROR: too few operands for instruction
+# CHECK-ERROR: invalid instruction, any one of the following would fix this:
 # CHECK-ERROR-LABEL: vmsge.vx v0, v4, a0, v0.t
+# CHECK-ERROR: note: too many operands for instruction
+# CHECK-ERROR: note: invalid operand for instruction
+# CHECK-ERROR: note: too few operands for instruction
 
 vmerge.vim v0, v1, 1, v0
 # CHECK-ERROR: the destination vector register group cannot be V0
@@ -737,10 +740,10 @@ vmv8r.v v0, v7
 # CHECK-ERROR: invalid operand for instruction
 
 vmsge.vx v2, v4, a0, v0.t, v0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: too many operands for instruction
 
 vmsgeu.vx v2, v4, a0, v0.t, v0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: too many operands for instruction
 
 vmsge.vx v2, v4, a0, v0.t, v2
 # CHECK-ERROR: the temporary vector register cannot be the same as the destination register
