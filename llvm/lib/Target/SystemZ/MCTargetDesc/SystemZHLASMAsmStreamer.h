@@ -87,7 +87,7 @@ public:
   void emitValueToAlignment(Align Alignment, int64_t Fill, uint8_t FillLen,
                             unsigned MaxBytesToEmit) override;
 
-  void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
+  void emitCodeAlignment(Align Alignment, const MCSubtargetInfo &STI,
                          unsigned MaxBytesToEmit = 0) override;
 
   /// Return true if this streamer supports verbose assembly at all.

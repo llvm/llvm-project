@@ -310,7 +310,11 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
 
   // Apply the transformation
   KMovMI->setDesc(TII->get(MovMskOpc));
-  KMovMI->getOperand(1).setReg(SrcVecReg);
+  MachineOperand &NewSrc = KMovMI->getOperand(1);
+  NewSrc.setReg(SrcVecReg);
+  // setReg() keeps the mask operand's kill flag; take the source's kill
+  // state from the VPMOV instead.
+  NewSrc.setIsKill(MI.getOperand(1).isKill());
   KMovMI->setAsmPrinterFlag(X86::AC_EVEX_2_VEX);
 
   ToErase.push_back(&MI);

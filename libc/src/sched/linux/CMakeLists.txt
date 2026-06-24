@@ -169,6 +169,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  __sched_clrcpuset
+  SRCS
+    sched_clrcpuset.cpp
+  HDRS
+    ../sched_clrcpuset.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    libc.hdr.sched_macros
+    libc.hdr.types.cpu_set_t
+    libc.hdr.types.size_t
+)
+
+add_entrypoint_object(
   __sched_cpualloc
   SRCS
     sched_cpualloc.cpp

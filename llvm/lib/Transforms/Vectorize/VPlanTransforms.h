@@ -42,7 +42,9 @@ LLVM_ABI_FOR_TEST extern cl::opt<bool> VerifyEachVPlan;
 LLVM_ABI_FOR_TEST extern cl::opt<bool> EnableWideActiveLaneMask;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintBeforeAll;
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintAfterAll;
+LLVM_ABI_FOR_TEST extern cl::list<std::string> VPlanPrintBeforePasses;
 LLVM_ABI_FOR_TEST extern cl::list<std::string> VPlanPrintAfterPasses;
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintVectorRegionScope;
 #endif
@@ -54,24 +56,35 @@ struct VPlanTransforms {
   template <bool EnableVerify = true, typename PassTy, typename... ArgsTy>
   static decltype(auto) runPass(StringRef PassName, PassTy &&Pass, VPlan &Plan,
                                 ArgsTy &&...Args) {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+    auto PrintPlan = [&](StringRef BeforeOrAfterStr) {
+      dbgs()
+          << "VPlan for loop in '"
+          << Plan.getScalarHeader()->getIRBasicBlock()->getParent()->getName()
+          << "' " << BeforeOrAfterStr << " " << PassName << '\n';
+      if (VPlanPrintVectorRegionScope && Plan.getVectorLoopRegion())
+        Plan.getVectorLoopRegion()->print(dbgs());
+      else
+        dbgs() << Plan << '\n';
+    };
+
+    auto MatchesPassListOption = [&](const cl::list<std::string> &ListOpt) {
+      return (ListOpt.getNumOccurrences() > 0 &&
+              any_of(ListOpt, [PassName](StringRef Entry) {
+                return Regex(Entry).match(PassName);
+              }));
+    };
+
+    if (VPlanPrintBeforeAll || MatchesPassListOption(VPlanPrintBeforePasses))
+      PrintPlan("before");
+#endif
+
     scope_exit PostTransformActions{[&]() {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       // Make sure to print before verification, so that output is more useful
       // in case of failures:
-      if (VPlanPrintAfterAll ||
-          (VPlanPrintAfterPasses.getNumOccurrences() > 0 &&
-           any_of(VPlanPrintAfterPasses, [PassName](StringRef Entry) {
-             return Regex(Entry).match(PassName);
-           }))) {
-        dbgs()
-            << "VPlan for loop in '"
-            << Plan.getScalarHeader()->getIRBasicBlock()->getParent()->getName()
-            << "' after " << PassName << '\n';
-        if (VPlanPrintVectorRegionScope && Plan.getVectorLoopRegion())
-          Plan.getVectorLoopRegion()->print(dbgs());
-        else
-          dbgs() << Plan << '\n';
-      }
+      if (VPlanPrintAfterAll || MatchesPassListOption(VPlanPrintAfterPasses))
+        PrintPlan("after");
 #endif
       if (VerifyEachVPlan && EnableVerify) {
         if (!verifyVPlanIsValid(Plan))
@@ -387,6 +400,9 @@ struct VPlanTransforms {
 
   /// Perform instcombine-like simplifications on recipes in \p Plan.
   static void simplifyRecipes(VPlan &Plan);
+
+  /// Cancel out redundant reverses in \p Plan, e.g. reverse(reverse(x)) -> x.
+  static void simplifyReverses(VPlan &Plan);
 
   /// Remove BranchOnCond recipes with true or false conditions together with
   /// removing dead edges to their successors. If \p OnlyLatches is true, only

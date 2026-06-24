@@ -934,9 +934,14 @@ public:
     case CK_ToUnion:
     case CK_AddressSpaceConversion:
     case CK_ReinterpretMemberPointer:
+      cgm.errorNYI(e->getBeginLoc(), "ConstExprEmitter::VisitCastExpr");
+      return {};
+
     case CK_DerivedToBaseMemberPointer:
     case CK_BaseToDerivedMemberPointer:
-      cgm.errorNYI(e->getBeginLoc(), "ConstExprEmitter::VisitCastExpr");
+      // Return {} to let the APValue evaluator handle member pointer type
+      // conversions.  The APValue::MemberPointer case in tryEmitPrivate
+      // already builds the correct GEP path for cross-class member pointers.
       return {};
 
     case CK_LValueToRValue:
@@ -1234,6 +1239,8 @@ struct ConstantLValue {
       : value(nullptr), hasOffsetApplied(false) {}
   /*implicit*/ ConstantLValue(cir::GlobalViewAttr address)
       : value(address), hasOffsetApplied(false) {}
+  /*implicit*/ ConstantLValue(cir::BlockAddrInfoAttr address)
+      : value(address), hasOffsetApplied(true) {}
 
   ConstantLValue() : value(nullptr), hasOffsetApplied(false) {}
 };
@@ -1514,8 +1521,10 @@ ConstantLValueEmitter::VisitPredefinedExpr(const PredefinedExpr *e) {
 
 ConstantLValue
 ConstantLValueEmitter::VisitAddrLabelExpr(const AddrLabelExpr *e) {
-  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: addr label expr");
-  return {};
+  auto func = cast<cir::FuncOp>(emitter.cgf->curFn);
+  return cir::BlockAddrInfoAttr::get(cgm.getBuilder().getContext(),
+                                     func.getSymName(),
+                                     e->getLabel()->getName());
 }
 
 ConstantLValue ConstantLValueEmitter::VisitCallExpr(const CallExpr *e) {
@@ -1716,7 +1725,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &d) {
 
   // Try to emit the initializer.  Note that this can allow some things that
   // are not allowed by tryEmitPrivateForMemory alone.
-  if (APValue *value = d.evaluateValue())
+  if (const APValue *value = d.evaluateValue())
     return tryEmitPrivateForMemory(*value, destType);
 
   return {};
@@ -1951,12 +1960,6 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     if (!memberDecl)
       return builder.getZeroInitAttr(cgm.convertType(destType));
 
-    if (value.isMemberPointerToDerivedMember()) {
-      cgm.errorNYI(
-          "ConstExprEmitter::tryEmitPrivate member pointer to derived member");
-      return {};
-    }
-
     if (auto const *cxxDecl = dyn_cast<CXXMethodDecl>(memberDecl)) {
       auto ty = mlir::cast<cir::MethodType>(cgm.convertType(destType));
       if (cxxDecl->isVirtual())
@@ -1968,9 +1971,14 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     }
 
     auto cirTy = mlir::cast<cir::DataMemberType>(cgm.convertType(destType));
-
     const auto *fieldDecl = cast<FieldDecl>(memberDecl);
-    return builder.getDataMemberAttr(cirTy, fieldDecl->getFieldIndex());
+    const auto *mpt = destType->castAs<MemberPointerType>();
+    const auto *destClass = mpt->getMostRecentCXXRecordDecl();
+    std::optional<llvm::SmallVector<int32_t>> path =
+        cgm.buildMemberPath(destClass, fieldDecl);
+    if (!path)
+      return {};
+    return builder.getDataMemberAttr(cirTy, *path);
   }
   case APValue::LValue:
     return ConstantLValueEmitter(*this, value, destType).tryEmit();
