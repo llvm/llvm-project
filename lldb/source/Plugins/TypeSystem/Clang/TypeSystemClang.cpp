@@ -3911,7 +3911,7 @@ TypeSystemClang::GetTypeInfo(lldb::opaque_compiler_type_t type,
                                 ->getDefinitionOrSelf()
                                 ->getIntegerType()
                                 .getAsOpaquePtr());
-    return eTypeIsEnumeration | eTypeHasValue;
+    return eTypeIsEnumeration | eTypeHasValue | eTypeIsScalar;
 
   case clang::Type::FunctionProto:
     return eTypeIsFuncPrototype | eTypeHasValue;

@@ -3216,7 +3216,7 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
   }
 
   if (type.IsInteger()) {
-    if (!is_scalar || is_integer) {
+    if ((is_enum && is_scalar) || !is_scalar || is_integer) {
       auto int_value_or_err = GetValueAsAPSInt();
       if (int_value_or_err) {
         // Get the value as APSInt and extend or truncate it to the requested
