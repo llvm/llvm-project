@@ -155,8 +155,7 @@ loop:
 }
 
 ; CHECK-LABEL: phi_and_gep_unknown_size
-; CHECK: Just Mod:   call void @llvm.memset.p0.i32(ptr %g, i8 0, i32 %size, i1 false) <->   call void @llvm.memset.p0.i32(ptr %z, i8 0, i32 %size, i1 false)
-; TODO: This should be NoModRef.
+; CHECK: NoModRef:   call void @llvm.memset.p0.i32(ptr %g, i8 0, i32 %size, i1 false) <->   call void @llvm.memset.p0.i32(ptr %z, i8 0, i32 %size, i1 false)
 define void @phi_and_gep_unknown_size(i1 %c, ptr %x, ptr %y, ptr noalias %z, i32 %size) {
 entry:
   br i1 %c, label %true, label %false

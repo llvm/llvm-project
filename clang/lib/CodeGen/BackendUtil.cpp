@@ -1324,10 +1324,32 @@ void EmitAssemblyHelper::RunCodegenPipelineNewPM(
 
   MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
 
-  cantFail(TM->buildCodeGenPipeline(MPM, MAM, *OS,
-                                    DwoOS ? &DwoOS->os() : nullptr, CGFT, Opt,
-                                    MMI.getContext(), &PIC));
-  MPM.run(*TheModule, MAM);
+  if (!CodeGenOpts.SplitDwarfOutput.empty()) {
+    DwoOS = openOutputFile(CodeGenOpts.SplitDwarfOutput);
+    if (!DwoOS)
+      return;
+  }
+
+  Error BuildPipelineError =
+      TM->buildCodeGenPipeline(MPM, MAM, *OS, DwoOS ? &DwoOS->os() : nullptr,
+                               CGFT, Opt, MMI.getContext(), &PIC);
+  if (BuildPipelineError) {
+    Diags.Report(diag::err_fe_unable_to_interface_with_target);
+    return;
+  }
+
+  {
+    PrettyStackTraceString CrashInfo("Code generation");
+    llvm::TimeTraceScope TimeScope("CodeGenPasses");
+    Timer timer;
+    if (CI.getCodeGenOpts().TimePasses) {
+      timer.init("codegen", "Machine code generation", CI.getTimerGroup());
+      CI.getFrontendTimer().yieldTo(timer);
+    }
+    MPM.run(*TheModule, MAM);
+    if (CI.getCodeGenOpts().TimePasses)
+      timer.yieldTo(CI.getFrontendTimer());
+  }
 }
 
 void EmitAssemblyHelper::emitAssembly(BackendAction Action,
