@@ -42,6 +42,7 @@ executable("llvm-tblgen") {
     "GlobalISelEmitter.cpp",
     "InstrDocsEmitter.cpp",
     "InstrInfoEmitter.cpp",
+    "IntrinsicFolderEmitter.cpp",
     "MacroFusionPredicatorEmitter.cpp",
     "OptionParserEmitter.cpp",
     "OptionRSTEmitter.cpp",
