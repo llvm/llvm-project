@@ -63,6 +63,17 @@ void findTypeLocForBlockDecl(const clang::TypeSourceInfo *TSInfo,
 
 } // namespace
 
+static std::string OriginalNameTypedef(const clang::QualType &qt,
+                                       const clang::PrintingPolicy &policy) {
+  if (const auto *tt = llvm::dyn_cast<clang::TypedefType>(qt.getTypePtrOrNull())) {
+    const auto *td = tt->getDecl();
+    if (!td->getName().empty())
+      return td->getName().str();
+  }
+  return qt.getAsString(policy);
+}
+
+
 DeclarationFragments &
 DeclarationFragments::appendUnduplicatedTextCharacter(char Character) {
   if (!Fragments.empty()) {
@@ -452,7 +463,8 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
   // Default fragment builder for other kinds of types (BuiltinType etc.)
   SmallString<128> USR;
   clang::index::generateUSRForType(Base, Context, USR);
-  Fragments.append(Base.getAsString(),
+  std::string typestr = OriginalNameTypedef(Base, Context.getPrintingPolicy());
+  Fragments.append(typestr,
                    DeclarationFragments::FragmentKind::TypeIdentifier, USR);
 
   return Fragments;
