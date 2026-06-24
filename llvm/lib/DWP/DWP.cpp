@@ -48,8 +48,18 @@ static uint64_t getCUAbbrev(StringRef Abbrev, uint64_t AbbrCode) {
     // DW_CHILDREN
     AbbrevData.getU8(&Offset);
     // Attributes
-    while (AbbrevData.getULEB128(&Offset) | AbbrevData.getULEB128(&Offset))
-      ;
+    while (true) {
+      uint64_t Name = AbbrevData.getULEB128(&Offset);
+      dwarf::Form Form =
+          static_cast<dwarf::Form>(AbbrevData.getULEB128(&Offset));
+      // DW_FORM_implicit_const carries its value as an SLEB128 in the
+      // abbreviation declaration itself; failing to consume it desyncs the
+      // rest of the abbreviation table walk.
+      if (Form == dwarf::DW_FORM_implicit_const)
+        AbbrevData.getSLEB128(&Offset);
+      if (Name == 0 && Form == 0)
+        break;
+    }
   }
   return Offset;
 }
@@ -115,10 +125,16 @@ getCUIdentifiers(InfoSectionUnitHeader &Header, StringRef Abbrev,
   AbbrevData.getU8(&AbbrevOffset);
   uint32_t Name;
   dwarf::Form Form;
-  while ((Name = AbbrevData.getULEB128(&AbbrevOffset)) |
-             (Form = static_cast<dwarf::Form>(
-                  AbbrevData.getULEB128(&AbbrevOffset))) &&
-         (Name != 0 || Form != 0)) {
+  for (;;) {
+    Name = AbbrevData.getULEB128(&AbbrevOffset);
+    Form = static_cast<dwarf::Form>(AbbrevData.getULEB128(&AbbrevOffset));
+    // DW_FORM_implicit_const stores its value as an SLEB128 in the abbreviation
+    // declaration, not in .debug_info; consume it so the (attribute, form) walk
+    // stays aligned.
+    if (Form == dwarf::DW_FORM_implicit_const)
+      AbbrevData.getSLEB128(&AbbrevOffset);
+    if (Name == 0 && Form == 0)
+      break;
     switch (Name) {
     case dwarf::DW_AT_name: {
       Expected<const char *> EName = getIndexedString(
