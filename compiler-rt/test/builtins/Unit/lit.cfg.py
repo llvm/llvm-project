@@ -112,7 +112,7 @@ else:
         )
         # Check if the linker supports --start-group and --end-group
         # For nvptx64 target, it falls back to the default.
-        if linker_supports_start_group and "nvptx" in target_arch:
+        if linker_supports_start_group and "nvptx" not in config.target_arch:
             config.substitutions.append(
                 (
                     "%librt ",
