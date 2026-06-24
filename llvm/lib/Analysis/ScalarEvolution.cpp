@@ -11784,7 +11784,27 @@ bool ScalarEvolution::isKnownPredicateViaConstantRanges(CmpPredicate Pred,
     return !isa<SCEVCouldNotCompute>(Diff) && isKnownNonZero(Diff);
   }
 
-  return CheckRange(CmpInst::isSigned(Pred));
+  if (CheckRange(CmpInst::isSigned(Pred)))
+    return true;
+
+  // LHS u<= RHS if Diff = RHS - LHS does not underflow.
+  // Range check: max(LHS) + max(Diff) <= UINT_MAX (i.e. DMax u<= ~LMax).
+  // ULT additionally requires Diff != 0.
+  if (Pred == CmpInst::ICMP_ULE || Pred == CmpInst::ICMP_ULT) {
+    SCEVUse Diff = getMinusSCEV(RHS, LHS);
+    if (!isa<SCEVCouldNotCompute>(Diff)) {
+      ConstantRange DR = getUnsignedRange(Diff);
+      ConstantRange LR = getUnsignedRange(LHS);
+      if (!DR.isFullSet() && !LR.isFullSet() &&
+          DR.getUnsignedMax().ule(~LR.getUnsignedMax())) {
+        if (Pred == CmpInst::ICMP_ULE ||
+            DR.getUnsignedMin().ugt(0) /*ULE Diff>0*/)
+          return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 bool ScalarEvolution::isKnownPredicateViaNoOverflow(CmpPredicate Pred,
