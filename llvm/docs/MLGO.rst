@@ -489,10 +489,14 @@ Using IR2Vec
 
 .. note::
 
-   This section describes how to use IR2Vec within LLVM passes. A standalone 
-   tool :doc:`CommandGuide/llvm-ir2vec` is available for generating the
-   embeddings and triplets from LLVM IR files, which can be useful for
-   training vocabularies and generating embeddings outside of compiler passes.
+   This section describes how to use IR2Vec within LLVM passes. For use
+   outside of compiler passes, such as generating embeddings for ML
+   training datasets, IR2Vec is also available as:
+
+   * A standalone command-line tool
+   * Python bindings
+
+   Both are documented in :doc:`CommandGuide/llvm-ir2vec`.
 
 For generating embeddings, first the vocabulary should be obtained. Then, the 
 embeddings can be computed and accessed via an ``ir2vec::Embedder`` instance.
