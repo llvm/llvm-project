@@ -27,10 +27,6 @@ namespace clang {
 
 class DependencyOutputOptions;
 
-namespace tooling {
-class CompilerInstanceWithContext;
-}
-
 namespace dependencies {
 
 class DependencyConsumer;
@@ -88,7 +84,7 @@ private:
   /// The tracing VFS overlaid on top of the base VFS.
   IntrusiveRefCntPtr<llvm::vfs::TracingFileSystem> TracingFS;
 
-  friend tooling::CompilerInstanceWithContext;
+  friend class CompilerInstanceWithContext;
 };
 } // end namespace dependencies
 } // end namespace clang
