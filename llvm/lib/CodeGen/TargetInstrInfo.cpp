@@ -37,6 +37,7 @@
 #include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/MC/MCDwarf.h"
 
 using namespace llvm;
 
@@ -2231,4 +2232,32 @@ bool TargetInstrInfo::isMBBSafeToOutlineFrom(MachineBasicBlock &MBB,
 bool TargetInstrInfo::isGlobalMemoryObject(const MachineInstr *MI) const {
   return MI->isCall() || MI->hasUnmodeledSideEffects() ||
          (MI->hasOrderedMemoryRef() && !MI->isDereferenceableInvariantLoad());
+}
+
+std::optional<unsigned> TargetInstrInfo::isCFIRestoreOfCSR(const MachineInstr *MI) const {
+  if (!MI->isCFIInstruction() || !MI->getFlag(MachineInstr::FrameDestroy))
+    return std::nullopt;
+  const MachineFunction *MF = MI->getParent()->getParent();
+  auto CIs = MF->getFrameInstructions();
+  auto &MO = MI->getOperand(0);
+  MCCFIInstruction CI = CIs[MO.getCFIIndex()];
+  if (CI.getOperation() != MCCFIInstruction::OpRestore)
+    return std::nullopt;
+  auto Reg = TRI.getLLVMRegNum(CI.getRegister(), false);
+  if (!Reg || !TRI.isCalleeSavedPhysReg(*Reg, *MF))
+    return std::nullopt;
+  return Reg->id();
+}
+
+std::optional<unsigned> TargetInstrInfo::isReloadOfCSR(const MachineInstr *MI) const {
+  if (!MI->mayLoad() || !MI->getFlag(MachineInstr::FrameDestroy))
+    return std::nullopt;
+  const MachineOperand &MO = MI->getOperand(0);
+  if (!MO.isReg())
+    return std::nullopt;
+  Register Reg = MO.getReg();
+  const MachineFunction *MF = MI->getParent()->getParent();
+  if (!Reg.isPhysical() || !TRI.isCalleeSavedPhysReg(Reg, *MF))
+    return std::nullopt;
+  return Reg.id();
 }

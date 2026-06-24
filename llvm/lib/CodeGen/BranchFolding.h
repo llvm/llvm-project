@@ -143,6 +143,8 @@ class TargetRegisterInfo;
     void replaceTailWithBranchTo(MachineBasicBlock::iterator OldInst,
                                  MachineBasicBlock &NewDest);
 
+    void tryFixupCFI(MachineBasicBlock::iterator OldInst);
+
     /// Given a machine basic block and an iterator into it, split the MBB so
     /// that the part before the iterator falls into the part starting at the
     /// iterator.  This returns the new MBB.

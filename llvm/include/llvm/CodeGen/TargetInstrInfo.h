@@ -167,6 +167,9 @@ public:
   /// (like a call or something with unmodeled side effects).
   virtual bool isGlobalMemoryObject(const MachineInstr *MI) const;
 
+  std::optional<unsigned> isCFIRestoreOfCSR(const MachineInstr *MI) const;
+  std::optional<unsigned> isReloadOfCSR(const MachineInstr *MI) const;
+
   /// Return true if the instruction is trivially rematerializable, meaning it
   /// has no side effects and requires no operands that aren't always available.
   /// This means the only allowed uses are constants and unallocatable physical

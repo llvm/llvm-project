@@ -99,13 +99,6 @@ static bool isPrologueCFIInstruction(const MachineInstr &MI) {
          MI.getFlag(MachineInstr::FrameSetup);
 }
 
-static bool containsEpilogue(const MachineBasicBlock &MBB) {
-  return llvm::any_of(llvm::reverse(MBB), [](const auto &MI) {
-    return MI.getOpcode() == TargetOpcode::CFI_INSTRUCTION &&
-           MI.getFlag(MachineInstr::FrameDestroy);
-  });
-}
-
 static MachineBasicBlock *
 findPrologueEnd(MachineFunction &MF, MachineBasicBlock::iterator &PrologueEnd) {
   // Even though we should theoretically traverse the blocks in post-order, we
@@ -159,7 +152,7 @@ computeBlockInfo(const MachineFunction &MF,
     bool HasEpilogue = false;
 
     if (Info.HasFrameOnEntry || HasPrologue)
-      HasEpilogue = containsEpilogue(*MBB);
+      HasEpilogue = MBB->isReturnBlock();
 
     // If the function has a call frame at the entry of the current block or the
     // current block contains the prologue, then the function has a call frame
