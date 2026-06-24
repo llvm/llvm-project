@@ -1,0 +1,75 @@
+# RUN: llc -mtriple=spirv-unknown-vulkan1.3-compute -run-pass=spirv-fixup-merge-placement %s -o - | FileCheck %s
+#
+# A loop header whose OpLoopMerge has an instruction wedged between it and the
+# block's OpBranchConditional must be repaired so the merge again immediately
+# precedes the branch.
+#
+# CHECK-LABEL: bb.1.header:
+# CHECK:      OpIMulS
+# CHECK-NEXT: OpLoopMerge %bb.2, %bb.4, 0
+# CHECK-NEXT: OpBranchConditional {{.*}}%bb.3, %bb.2
+
+--- |
+  target triple = "spirv-unknown-vulkan1.3-compute"
+  define spir_func i32 @f() #0 {
+  entry:
+    br label %header
+  header:
+    br i1 true, label %body, label %merge
+  body:
+    br label %continue
+  continue:
+    br label %header
+  merge:
+    ret i32 0
+  }
+  attributes #0 = { convergent noinline nounwind }
+...
+---
+name:            f
+legalized:       true
+regBankSelected: false
+selected:        true
+tracksRegLiveness: true
+isSSA:           true
+registers:
+  - { id: 0, class: iid }
+  - { id: 1, class: type }
+  - { id: 2, class: type }
+  - { id: 9, class: type }
+  - { id: 10, class: type }
+  - { id: 13, class: iid }
+  - { id: 14, class: iid }
+  - { id: 15, class: iid }
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+
+    %2:type = OpTypeFunction %1
+    %10:type = OpTypeBool
+    %13:iid = OpConstantTrue %10
+    %14:iid = OpConstantI %1, 0
+    %1:type = OpTypeInt 32, 0
+    %0:iid = OpFunction %1, 2, %2
+    OpBranch %bb.1
+
+  bb.1.header:
+    successors: %bb.3(0x40000000), %bb.2(0x40000000)
+
+    OpLoopMerge %bb.2, %bb.4, 0
+    %15:iid = OpIMulS %1, %14, %14
+    OpBranchConditional %13, %bb.3, %bb.2
+
+  bb.2.merge:
+    OpReturnValue %14
+
+  bb.3.body:
+    successors: %bb.4(0x80000000)
+
+    OpBranch %bb.4
+
+  bb.4.continue:
+    successors: %bb.1(0x80000000)
+
+    OpBranch %bb.1
+...
