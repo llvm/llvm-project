@@ -59,6 +59,15 @@ public:
 
   void verifyTargetNode(const SelectionDAG &DAG,
                         const SDNode *N) const override;
+
+  /// At -O0, mix the node's DebugLoc into the CSE key so that identical
+  /// operations at different source lines are kept distinct.  Constant nodes
+  /// (and ISD::UNDEF) are excluded so they keep sharing one SDNode across
+  /// the DAG; the DL-clearing logic in SelectionDAG::FindNodeOrInsertPos
+  /// prevents shared-constant nodes from carrying a misleading source
+  /// location.  Higher opt levels are a no-op.
+  void augmentCSEKey(FoldingSetNodeID &ID, unsigned Opcode, const DebugLoc &DL,
+                     const SelectionDAG &DAG) const override;
 };
 
 } // namespace llvm

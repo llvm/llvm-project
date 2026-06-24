@@ -281,9 +281,10 @@ class SelectionDAG {
   /// Pool allocation for nodes.
   NodeAllocatorType NodeAllocator;
 
-  /// This structure is used to memoize nodes, automatically performing
-  /// CSE with existing nodes when a duplicate is requested.
-  FoldingSet<SDNode> CSEMap;
+  /// CSE map for SDNode deduplication.  Uses ContextualFoldingSet so the
+  /// trait Profile() can call SelectionDAGTargetInfo::augmentCSEKey() and
+  /// keep lookup/insertion keys in sync.
+  ContextualFoldingSet<SDNode, const SelectionDAG *> CSEMap;
 
   /// Pool allocation for machine-opcode SDNode operands.
   BumpPtrAllocator OperandAllocator;
@@ -2809,16 +2810,11 @@ private:
   void allnodes_clear();
 
   /// Look up the node specified by ID in CSEMap.  If it exists, return it.  If
-  /// not, return the insertion token that will make insertion faster.  This
-  /// overload is for nodes other than Constant or ConstantFP, use the other one
-  /// for those.
-  SDNode *FindNodeOrInsertPos(const FoldingSetNodeID &ID, void *&InsertPos);
-
-  /// Look up the node specified by ID in CSEMap.  If it exists, return it.  If
-  /// not, return the insertion token that will make insertion faster.  Performs
-  /// additional processing for constant nodes.
+  /// not, return the insertion token that will make insertion faster.
+  /// Opcode is used by target CSE policies to apply node-kind-specific rules.
+  /// Use SDLoc() for DL when there is no associated debug location.
   SDNode *FindNodeOrInsertPos(const FoldingSetNodeID &ID, const SDLoc &DL,
-                              void *&InsertPos);
+                              void *&InsertPos, unsigned Opcode);
 
   /// Maps to auto-CSE operations.
   std::vector<CondCodeSDNode*> CondCodeNodes;

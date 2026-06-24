@@ -7,11 +7,36 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXSelectionDAGInfo.h"
+#include "llvm/ADT/FoldingSet.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/SelectionDAG.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
+#include "llvm/IR/DebugLoc.h"
+#include "llvm/Support/CodeGen.h"
 
 #define GET_SDNODE_DESC
 #include "NVPTXGenSDNodeInfo.inc"
 
 using namespace llvm;
+
+void NVPTXSelectionDAGInfo::augmentCSEKey(FoldingSetNodeID &ID, unsigned Opcode,
+                                          const DebugLoc &DL,
+                                          const SelectionDAG &DAG) const {
+  if (DAG.getOptLevel() != CodeGenOptLevel::None)
+    return;
+  if (!DL)
+    return;
+  switch (Opcode) {
+  case ISD::UNDEF:
+  case ISD::Constant:
+  case ISD::ConstantFP:
+  case ISD::TargetConstant:
+  case ISD::TargetConstantFP:
+    return; // Always CSE constants regardless of location.
+  default:
+    DL.Profile(ID);
+  }
+}
 
 NVPTXSelectionDAGInfo::NVPTXSelectionDAGInfo()
     : SelectionDAGGenTargetInfo(NVPTXGenSDNodeInfo) {}

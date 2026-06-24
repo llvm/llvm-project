@@ -14,6 +14,7 @@
 #ifndef LLVM_IR_DEBUGLOC_H
 #define LLVM_IR_DEBUGLOC_H
 
+#include "llvm/ADT/FoldingSet.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/TrackingMDRef.h"
 #include "llvm/Support/Compiler.h"
@@ -279,6 +280,9 @@ public:
   /// Check if the DebugLoc corresponds to an implicit code.
   LLVM_ABI bool isImplicitCode() const;
   LLVM_ABI void setImplicitCode(bool ImplicitCode);
+
+  /// Add the filename, line, and column to ID.
+  LLVM_ABI void Profile(FoldingSetNodeID &ID) const;
 
   bool operator==(const DebugLoc &DL) const { return Loc == DL.Loc; }
   bool operator!=(const DebugLoc &DL) const { return Loc != DL.Loc; }
