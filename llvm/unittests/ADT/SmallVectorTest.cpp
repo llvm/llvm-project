@@ -515,6 +515,19 @@ TYPED_TEST(SmallVectorTest, AppendTest) {
   assertValuesInOrder(V, 3u, 1, 2, 3);
 }
 
+// Append range test
+TYPED_TEST(SmallVectorTest, AppendRangeTest) {
+  SCOPED_TRACE("AppendRangeTest");
+  auto &V = this->theVector;
+  auto &U = this->otherVector;
+  makeSequence(U, 5, 6);
+
+  V.push_back(Constructable(4));
+  V.append_range(U);
+
+  assertValuesInOrder(V, 3u, 4, 5, 6);
+}
+
 // Append repeated test
 TYPED_TEST(SmallVectorTest, AppendRepeatedTest) {
   SCOPED_TRACE("AppendRepeatedTest");
