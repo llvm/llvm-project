@@ -424,6 +424,76 @@ public:
   }
 
 private:
+  struct LifetimeBoundMacroCache {
+    bool IsBuilt = false;
+    SmallVector<const IdentifierInfo *> Candidates;
+  };
+
+  void buildLifetimeBoundMacroCache(LifetimeBoundMacroCache &Cache,
+                                    ArrayRef<TokenValue> Tokens) {
+    if (Cache.IsBuilt)
+      return;
+
+    const Preprocessor &PP = S.getPreprocessor();
+    // Collect macro names that were ever defined as a lifetimebound attribute.
+    for (const auto &M : PP.macros()) {
+      const IdentifierInfo *II = M.first;
+      const MacroDirective *MD = PP.getLocalMacroDirectiveHistory(II);
+      if (!MD)
+        continue;
+
+      // Include earlier matching definitions to handle redefinitions.
+      for (MacroDirective::DefInfo Def = MD->getDefinition(); Def;
+           Def = Def.getPreviousDefinition()) {
+        const MacroInfo *MI = Def.getMacroInfo();
+        if (MI->isObjectLike() && Tokens.size() == MI->getNumTokens() &&
+            std::equal(Tokens.begin(), Tokens.end(), MI->tokens_begin())) {
+          Cache.Candidates.push_back(II);
+          break;
+        }
+      }
+    }
+    Cache.IsBuilt = true;
+  }
+
+  StringRef getLastCachedMacroWithSpelling(SourceLocation Loc,
+                                           llvm::ArrayRef<TokenValue> Tokens,
+                                           LifetimeBoundMacroCache &Cache) {
+    if (Loc.isInvalid())
+      return {};
+
+    buildLifetimeBoundMacroCache(Cache, Tokens);
+
+    const Preprocessor &PP = S.getPreprocessor();
+    const SourceManager &SM = S.getSourceManager();
+    SourceLocation BestLocation;
+    StringRef BestSpelling;
+    for (const IdentifierInfo *II : Cache.Candidates) {
+      const MacroDirective *MD = PP.getLocalMacroDirectiveHistory(II);
+      const MacroDirective::DefInfo Def = MD->findDirectiveAtLoc(Loc, SM);
+      if (!Def || !Def.getMacroInfo())
+        continue;
+
+      // Ensure the macro definition active at Loc still has this spelling.
+      const MacroInfo *MI = Def.getMacroInfo();
+      if (!MI->isObjectLike() || Tokens.size() != MI->getNumTokens() ||
+          !std::equal(Tokens.begin(), Tokens.end(), MI->tokens_begin()))
+        continue;
+
+      // Choose the matching macro defined latest before Loc.
+      SourceLocation Location = Def.getLocation();
+      assert(Location.isInvalid() ||
+             SM.isBeforeInTranslationUnit(Location, Loc));
+      if (BestLocation.isInvalid() ||
+          (Location.isValid() &&
+           SM.isBeforeInTranslationUnit(BestLocation, Location))) {
+        BestLocation = Location;
+        BestSpelling = II->getName();
+      }
+    }
+    return BestSpelling;
+  }
+
   void reportInvalidationSite(const Expr *InvalidationExpr,
                               StringRef InvalidatedSubject) {
     auto Diag = isa<CXXDeleteExpr>(InvalidationExpr)
@@ -438,16 +508,19 @@ private:
     StringRef Spelling = S.getLangOpts().LifetimeSafetyLifetimeBoundMacro;
     if (Spelling.empty() && Loc.isValid()) {
       const Preprocessor &PP = S.getPreprocessor();
-      Spelling = PP.getLastMacroWithSpelling(
-          Loc, {tok::l_square, tok::l_square, PP.getIdentifierInfo("clang"),
-                tok::coloncolon, PP.getIdentifierInfo("lifetimebound"),
-                tok::r_square, tok::r_square});
+      Spelling = getLastCachedMacroWithSpelling(
+          Loc,
+          {tok::l_square, tok::l_square, PP.getIdentifierInfo("clang"),
+           tok::coloncolon, PP.getIdentifierInfo("lifetimebound"),
+           tok::r_square, tok::r_square},
+          ClangLifetimeBoundMacroCache);
 
       if (Spelling.empty() && AllowGNUAttrMacro)
-        Spelling = PP.getLastMacroWithSpelling(
-            Loc, {tok::kw___attribute, tok::l_paren, tok::l_paren,
-                  PP.getIdentifierInfo("lifetimebound"), tok::r_paren,
-                  tok::r_paren});
+        Spelling = getLastCachedMacroWithSpelling(
+            Loc,
+            {tok::kw___attribute, tok::l_paren, tok::l_paren,
+             PP.getIdentifierInfo("lifetimebound"), tok::r_paren, tok::r_paren},
+            GNULifetimeBoundMacroCache);
     }
     const std::string Text =
         Spelling.empty() ? "[[clang::lifetimebound]]" : Spelling.str();
@@ -580,6 +653,8 @@ private:
     }
   }
 
+  LifetimeBoundMacroCache ClangLifetimeBoundMacroCache;
+  LifetimeBoundMacroCache GNULifetimeBoundMacroCache;
   Sema &S;
 };
 
