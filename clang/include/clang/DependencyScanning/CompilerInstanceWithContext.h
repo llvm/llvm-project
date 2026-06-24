@@ -44,6 +44,12 @@ class CompilerInstanceWithContext {
       std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithDiagOpts,
       IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS);
 
+  bool applyAndReport(ModuleDepCollector &MDC,
+                      CompilerInvocation &ModuleInvocation,
+                      DependencyConsumer &Consumer,
+                      DependencyActionController &Controller,
+                      StringRef Executable);
+
 public:
   /// @brief Initialize the tool's compiler instance from the cc1 commandline.
   /// @param Worker The dependency scanning worker to initialize the compiler

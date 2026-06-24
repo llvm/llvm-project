@@ -85,6 +85,24 @@ bool CompilerInstanceWithContext::initialize(
   return true;
 }
 
+bool CompilerInstanceWithContext::applyAndReport(
+    ModuleDepCollector &MDC, CompilerInvocation &ModuleInvocation,
+    DependencyConsumer &Consumer, DependencyActionController &Controller,
+    StringRef Executable) {
+  MDC.applyDiscoveredDependencies(ModuleInvocation);
+
+  bool Success = ModuleInvocation.withCowRef<bool>(
+      [&](CowCompilerInvocation &CowModuleInvocation) {
+        return Controller.finalize(*CIPtr, CowModuleInvocation);
+      });
+  if (!Success)
+    return false;
+
+  Consumer.handleBuildCommand(
+      {Executable.str(), ModuleInvocation.getCC1CommandLine()});
+  return true;
+}
+
 bool CompilerInstanceWithContext::computeDependencies(
     StringRef ModuleName, DependencyConsumer &Consumer,
     DependencyActionController &Controller) {
@@ -177,17 +195,6 @@ bool CompilerInstanceWithContext::computeDependencies(
     return false;
 
   MDC->run(Consumer);
-  MDC->applyDiscoveredDependencies(ModuleInvocation);
-
-  bool Success = ModuleInvocation.withCowRef<bool>(
-      [&](CowCompilerInvocation &CowModuleInvocation) {
-        return Controller.finalize(CI, CowModuleInvocation);
-      });
-  if (!Success)
-    return false;
-
-  Consumer.handleBuildCommand(
-      {CommandLine[0], ModuleInvocation.getCC1CommandLine()});
-
-  return true;
+  return applyAndReport(*MDC, ModuleInvocation, Consumer, Controller,
+                        CommandLine[0]);
 }
