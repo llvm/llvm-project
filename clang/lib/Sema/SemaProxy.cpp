@@ -1,4 +1,4 @@
-//=== SemaEval.cpp - Sema handling of effectual constant evaluation -------===//
+//=== SemaProxy.cpp - Sema proxy for effectual constant evaluation --------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements Sema handling of language-mandated constant evaluation,
-// which can perform actions and queries against the AST.
+// This file implements a proxy to the Sema class that can be provided to the
+// constant evaluator, thereby facilitating evaluations capable of acting on and
+// querying the AST.
 //
 //===----------------------------------------------------------------------===//
 

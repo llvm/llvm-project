@@ -908,7 +908,7 @@ class Sema final : public SemaBase {
   // 33. Types (SemaType.cpp)
   // 34. FixIt Helpers (SemaFixItUtils.cpp)
   // 35. Function Effects (SemaFunctionEffects.cpp)
-  // 36. Language-Mandated Constant Evaluation (SemaEval.cpp)
+  // 36. Proxy to Sema for Constant Evaluation (SemaProxy.cpp)
 
   /// \name Semantic Analysis
   /// Implementations are in Sema.cpp
@@ -15820,8 +15820,8 @@ public:
   //
   //
 
-  /// \name Language-Mandated Constant Evaluation
-  /// Implementations are in SemaEval.cpp
+  /// \name Proxy to Sema for Constant Evaluation
+  /// Implementations are in SemaProxy.cpp
   ///@{
 public:
   SemaProxy &getProxyForEval() const {
