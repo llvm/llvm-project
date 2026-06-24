@@ -1,4 +1,11 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.fuchsia.Lock -verify %s
+// RUN: %clang_analyze_cc1 \
+// RUN:   -analyzer-checker=alpha.fuchsia.Lock \
+// RUN:   -verify %s
+// RUN: %clang_analyze_cc1 \
+// RUN:   -analyzer-checker=alpha.fuchsia.Lock \
+// RUN:   -analyzer-checker=alpha.unix.PthreadLock \
+// RUN:   -analyzer-config alpha.unix.PthreadLock:WarnOnLockOrderReversal=true \
+// RUN:   -verify=expected,lor %s
 
 typedef int spin_lock_t;
 typedef int zx_status_t;
@@ -38,7 +45,7 @@ void bad3(void) {
 void bad4(void) {
   spin_lock(&mtx1);
   spin_lock(&mtx2);
-  spin_unlock(&mtx1); // expected-warning {{This was not the most recently acquired lock. Possible lock order reversal}}
+  spin_unlock(&mtx1); // lor-warning {{This was not the most recently acquired lock. Possible lock order reversal}}
   spin_unlock(&mtx2);
 }
 
@@ -87,7 +94,7 @@ void bad13(void) {
 void bad14(void) {
   sync_mutex_lock(&smtx1);
   sync_mutex_lock(&smtx2);
-  sync_mutex_unlock(&smtx1); // expected-warning {{This was not the most recently acquired lock. Possible lock order reversal}}
+  sync_mutex_unlock(&smtx1); // lor-warning {{This was not the most recently acquired lock. Possible lock order reversal}}
   sync_mutex_unlock(&smtx2);
 }
 
