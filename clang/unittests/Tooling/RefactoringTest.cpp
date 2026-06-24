@@ -416,6 +416,18 @@ TEST_F(ReplacementTest, AddInsertAtOtherInsertWhenOderIndependent) {
   EXPECT_EQ(Replacement("x.cc", 10, 3, ""), *std::next(Replaces.begin()));
 }
 
+TEST_F(ReplacementTest, AddIdenticalInsertionsAtSameOffsetDeduplicates) {
+  Replacements Replaces;
+  auto Err = Replaces.add(Replacement("x.cc", 10, 0, ","));
+  EXPECT_TRUE(!Err);
+  llvm::consumeError(std::move(Err));
+  Err = Replaces.add(Replacement("x.cc", 10, 0, ","));
+  EXPECT_TRUE(!Err);
+  llvm::consumeError(std::move(Err));
+  EXPECT_EQ(1u, Replaces.size());
+  EXPECT_EQ(Replacement("x.cc", 10, 0, ","), *Replaces.begin());
+}
+
 TEST_F(ReplacementTest, InsertBetweenAdjacentReplacements) {
   Replacements Replaces;
   auto Err = Replaces.add(Replacement("x.cc", 10, 5, "a"));

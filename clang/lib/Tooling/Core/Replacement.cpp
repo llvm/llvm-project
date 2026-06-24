@@ -270,6 +270,12 @@ llvm::Error Replacements::add(const Replacement &R) {
     assert(R.getLength() == 0);
     // `I` is also an insertion, `R` and `I` conflict.
     if (I->getLength() == 0) {
+      // If the two insertions are identical, `R` is redundant; keep the
+      // existing one rather than concatenating. This happens e.g. when
+      // clang-format analyzes the same code under several preprocessor
+      // branches and emits the same insertion in each run.
+      if (R.getReplacementText() == I->getReplacementText())
+        return llvm::Error::success();
       // Check if two insertions are order-independent: if inserting them in
       // either order produces the same text, they are order-independent.
       if ((R.getReplacementText() + I->getReplacementText()).str() !=
