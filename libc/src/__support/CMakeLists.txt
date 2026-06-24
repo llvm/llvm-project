@@ -25,12 +25,10 @@ add_header_library(
     libc.src.__support.math_extras
 )
 
-add_object_library(
+add_header_library(
   freelist
   HDRS
     freelist.h
-  SRCS
-    freelist.cpp
   DEPENDS
     .block
     libc.src.__support.fixedvector
@@ -40,12 +38,10 @@ add_object_library(
     libc.src.__support.CPP.span
 )
 
-add_object_library(
+add_header_library(
   freetrie
   HDRS
     freetrie.h
-  SRCS
-    freetrie.cpp
   DEPENDS
     .block
     .freelist
@@ -59,15 +55,10 @@ add_header_library(
     .freetrie
 )
 
-libc_set_definition(libc_freelist_malloc_size "LIBC_FREELIST_MALLOC_SIZE=${LIBC_CONF_FREELIST_MALLOC_BUFFER_SIZE}")
-add_object_library(
+add_header_library(
   freelist_heap
-  SRCS
-    freelist_heap.cpp
   HDRS
     freelist_heap.h
-  COMPILE_OPTIONS
-    ${libc_freelist_malloc_size}
   DEPENDS
     .block
     .freelist

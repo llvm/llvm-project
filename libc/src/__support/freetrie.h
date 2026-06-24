@@ -15,6 +15,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_FREETRIE_H
 
 #include "freelist.h"
+#include "src/__support/libc_assert.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -87,15 +88,8 @@ public:
     }
   };
 
-  LIBC_INLINE constexpr FreeTrie() : FreeTrie(SizeRange{0, 0}) {}
-  LIBC_INLINE constexpr FreeTrie(SizeRange range) : range(range) {}
-
-  /// Sets the range of possible block sizes. This can only be called when the
-  /// trie is empty.
-  LIBC_INLINE void set_range(FreeTrie::SizeRange new_range) {
-    LIBC_ASSERT(empty() && "cannot change the range of a preexisting trie");
-    range = new_range;
-  }
+  LIBC_INLINE FreeTrie(Node *&root, SizeRange range)
+      : root(root), range(range) {}
 
   /// @returns Whether the trie contains any blocks.
   LIBC_INLINE bool empty() const { return !root; }
@@ -104,21 +98,30 @@ public:
   void push(BlockRef block);
 
   /// Remove a node from this trie node's free list.
-  void remove(Node *node);
+  LIBC_INLINE void remove(Node *node);
 
   /// @returns A smallest node that can allocate the given size; otherwise
   /// nullptr.
   Node *find_best_fit(size_t size);
 
+  /// @returns The node with the minimum size in the trie; otherwise nullptr.
+  LIBC_INLINE Node *find_min();
+
+  /// Removes and returns the node with the minimum size in the trie; otherwise
+  /// nullptr.
+  LIBC_INLINE Node *pop_min();
+
 private:
   /// @returns Whether a node is the head of its containing freelist.
-  bool is_head(Node *node) const { return node->parent || node == root; }
+  LIBC_INLINE bool is_head(Node *node) const {
+    return node->parent || node == root;
+  }
 
   /// Replaces references to one node with another (or nullptr) in all adjacent
   /// parent and child nodes.
-  void replace_node(Node *node, Node *new_node);
+  LIBC_INLINE void replace_node(Node *node, Node *new_node);
 
-  Node *root = nullptr;
+  Node *&root;
   SizeRange range;
 };
 
@@ -235,6 +238,98 @@ LIBC_INLINE FreeTrie::Node *FreeTrie::find_best_fit(size_t size) {
       cur_range = cur_range.lower();
     }
   }
+}
+LIBC_INLINE FreeTrie::Node *FreeTrie::find_min() {
+  if (empty())
+    return nullptr;
+
+  Node *cur = root;
+  SizeRange cur_range = range;
+  Node *best_min = nullptr;
+
+  while (cur) {
+    if (cur->lower) {
+      if (cur_range.lower().contains(cur->size())) {
+        if (!best_min || cur->size() < best_min->size()) {
+          best_min = cur;
+        }
+      }
+      cur = cur->lower;
+      cur_range = cur_range.lower();
+    } else {
+      if (cur_range.lower().contains(cur->size())) {
+        if (!best_min || cur->size() < best_min->size()) {
+          best_min = cur;
+        }
+        break;
+      } else {
+        if (!best_min || cur->size() < best_min->size()) {
+          best_min = cur;
+        }
+        cur = cur->upper;
+        cur_range = cur_range.upper();
+      }
+    }
+  }
+  return best_min;
+}
+
+LIBC_INLINE FreeTrie::Node *FreeTrie::pop_min() {
+  Node *min_node = find_min();
+  if (min_node)
+    remove(min_node);
+  return min_node;
+}
+
+LIBC_INLINE void FreeTrie::remove(Node *node) {
+  LIBC_ASSERT(!empty() && "cannot remove from empty trie");
+  FreeList list = node;
+  list.pop();
+  Node *new_node = static_cast<Node *>(list.begin());
+  if (!new_node) {
+    // The freelist is empty. Replace the subtrie root with an arbitrary leaf.
+    // This is legal because there is no relationship between the size of the
+    // root and its children.
+    Node *leaf = node;
+    while (leaf->lower || leaf->upper)
+      leaf = leaf->lower ? leaf->lower : leaf->upper;
+    if (leaf == node) {
+      // If the root is a leaf, then removing it empties the subtrie.
+      replace_node(node, nullptr);
+      return;
+    }
+
+    replace_node(leaf, nullptr);
+    new_node = leaf;
+  }
+
+  if (!is_head(node))
+    return;
+
+  // Copy the trie links to the new head.
+  new_node->lower = node->lower;
+  new_node->upper = node->upper;
+  new_node->parent = node->parent;
+  replace_node(node, new_node);
+}
+
+LIBC_INLINE void FreeTrie::replace_node(Node *node, Node *new_node) {
+  LIBC_ASSERT(is_head(node) && "only head nodes contain trie links");
+
+  if (node->parent) {
+    Node *&parent_child =
+        node->parent->lower == node ? node->parent->lower : node->parent->upper;
+    LIBC_ASSERT(parent_child == node &&
+                "no reference to child node found in parent");
+    parent_child = new_node;
+  } else {
+    LIBC_ASSERT(root == node && "non-root node had no parent");
+    root = new_node;
+  }
+  if (node->lower)
+    node->lower->parent = new_node;
+  if (node->upper)
+    node->upper->parent = new_node;
 }
 
 } // namespace LIBC_NAMESPACE_DECL
