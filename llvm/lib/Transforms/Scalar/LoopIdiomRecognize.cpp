@@ -1563,6 +1563,16 @@ bool LoopIdiomRecognize::optimizeCRCLoopToClmul(const PolynomialInfo &Info) {
   unsigned ClmulBW = 2 * std::max(CRCBW, EffectiveDataBW);
   Type *ClmulTy = IntegerType::get(CRCTy->getContext(), ClmulBW);
 
+  // For big-endian CRC loops where the auxiliary data is XORed with the CRC
+  // inside the loop, the bits won't be aligned properly if the bit widths don't
+  // match, and thus the CRC computation is incorrect, but HashRecognize will
+  // still detect the loop. Since this optimization always produces a correct
+  // CRC computation, bail in this edge case.
+  if (Info.ByteOrderSwapped && Info.LHSAux &&
+      (EffectiveDataBW != CRCBW ||
+       Info.LHSAux->getType()->getIntegerBitWidth() != CRCBW))
+    return false;
+
   // This optimization should not be applied if there is no fast clmul operation
   // for the required width on the target.
   // TODO: If EffectiveDataBW > CRCBW, then the data could probably be split
