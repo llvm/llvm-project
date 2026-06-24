@@ -1656,3 +1656,5 @@ pluscount(struct parse *p, struct re_guts *g) {
     g->iflags |= REGEX_BAD;
   return (maxnest);
 }
+
+#undef GOODFLAGS

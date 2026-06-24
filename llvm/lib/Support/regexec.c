@@ -160,3 +160,5 @@ llvm_regexec(const llvm_regex_t *preg, const char *string, size_t nmatch,
 	else
 		return(lmatcher(g, string, nmatch, pmatch, eflags));
 }
+
+#undef GOODFLAGS
