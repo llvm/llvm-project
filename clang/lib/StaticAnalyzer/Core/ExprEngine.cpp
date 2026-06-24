@@ -3190,20 +3190,20 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
 void ExprEngine::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *Ex,
                                         ExplodedNode *Pred,
                                         ExplodedNodeSet &Dst) {
+  const Expr *Arr = Ex->getCommonExpr()->getSourceExpr();
+
   ExplodedNodeSet CheckerPreStmt;
   getCheckerManager().runCheckersForPreStmt(CheckerPreStmt, Pred, Ex, *this);
 
   ExplodedNodeSet EvalSet;
-  NodeBuilder Bldr(CheckerPreStmt, EvalSet, *currBldrCtx);
-
-  const Expr *Arr = Ex->getCommonExpr()->getSourceExpr();
+  if (isa<CXXConstructExpr>(Ex->getSubExpr())) {
+    // The constructor visitor has already handled everything, so let's skip
+    // forward to PostStmt handling by clearing the range of the 'for' loop.
+    EvalSet.insert(CheckerPreStmt);
+    CheckerPreStmt.clear();
+  }
 
   for (auto *Node : CheckerPreStmt) {
-
-    // The constructor visitior has already taken care of everything.
-    if (isa<CXXConstructExpr>(Ex->getSubExpr()))
-      break;
-
     const StackFrame *SF = Node->getStackFrame();
     ProgramStateRef state = Node->getState();
 
@@ -3278,7 +3278,7 @@ void ExprEngine::VisitArrayInitLoopExpr(const ArrayInitLoopExpr *Ex,
     else
       Base = UnknownVal();
 
-    Bldr.generateNode(Ex, Node, state->BindExpr(Ex, SF, Base));
+    EvalSet.insert(Engine.makeNodeWithBinding(Node, Ex, Base));
   }
 
   getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, Ex, *this);
