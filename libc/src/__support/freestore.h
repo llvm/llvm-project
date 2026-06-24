@@ -25,6 +25,12 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 
+#if defined(__SIZEOF_POINTER__) && __SIZEOF_POINTER__ == 4
+#define LIBC_LOOP_NOUNROLL_32 _Pragma("clang loop unroll(disable)")
+#else
+#define LIBC_LOOP_NOUNROLL_32
+#endif
+
 namespace LIBC_NAMESPACE_DECL {
 
 /// Configuration for TLSFFreeStore.
@@ -121,16 +127,16 @@ public:
   LIBC_INLINE TLSFFreeStoreImpl &
   operator=(const TLSFFreeStoreImpl &other) = delete;
 
-  LIBC_INLINE void insert(BlockRef block, const FreeListSecrets& secrets);
-  LIBC_INLINE void remove(BlockRef block, const FreeListSecrets& secrets);
+  LIBC_INLINE void insert(BlockRef block, const FreeListSecrets &secrets);
+  LIBC_INLINE void remove(BlockRef block, const FreeListSecrets &secrets);
   LIBC_INLINE BlockRef remove_best_fit(size_t size,
-                                       const FreeListSecrets& secrets) {
+                                       const FreeListSecrets &secrets) {
     return find_and_remove_fit(size, secrets);
   }
   LIBC_INLINE BlockRef find_and_remove_fit(size_t size,
-                                           const FreeListSecrets& secrets);
+                                           const FreeListSecrets &secrets);
 
- protected:
+protected:
   LIBC_INLINE static bool too_small(BlockRef block) {
     return block.outer_size() < MIN_OUTER_SIZE;
   }
@@ -151,7 +157,7 @@ public:
   LIBC_INLINE bool get_bit(size_t bit_index) const;
   LIBC_INLINE size_t find_first_bit_set_after(size_t bit_index) const;
   LIBC_INLINE BlockRef remove_first_fit_in_list(size_t index, size_t size,
-                                                const FreeListSecrets& secrets);
+                                                const FreeListSecrets &secrets);
   LIBC_INLINE FreeTrie get_trie();
   LIBC_INLINE BlockRef find_and_remove_fit_in_trie(size_t size);
   LIBC_INLINE BlockRef pop_min_in_trie();
@@ -208,6 +214,7 @@ TLSFFreeStoreImpl<CONFIG>::find_first_bit_set_after(size_t bit_index) const {
     return start_entry * BITS_PER_ENTRY +
            static_cast<size_t>(cpp::countr_zero(value));
 
+  LIBC_LOOP_NOUNROLL_32
   for (size_t i = start_entry + 1; i < CONFIG::NUM_TABLE_ENTRIES; ++i) {
     value = lookup_table[i];
     if (value != 0)
@@ -248,8 +255,9 @@ LIBC_INLINE BlockRef TLSFFreeStoreImpl<CONFIG>::pop_min_in_trie() {
 }
 
 template <typename CONFIG>
-LIBC_INLINE void TLSFFreeStoreImpl<CONFIG>::insert(
-    BlockRef block, const FreeListSecrets& secrets) {
+LIBC_INLINE void
+TLSFFreeStoreImpl<CONFIG>::insert(BlockRef block,
+                                  const FreeListSecrets &secrets) {
   if (too_small(block))
     return;
   size_t bit_index = size_to_bit_index(block.inner_size());
@@ -266,8 +274,9 @@ LIBC_INLINE void TLSFFreeStoreImpl<CONFIG>::insert(
 }
 
 template <typename CONFIG>
-LIBC_INLINE void TLSFFreeStoreImpl<CONFIG>::remove(
-    BlockRef block, const FreeListSecrets& secrets) {
+LIBC_INLINE void
+TLSFFreeStoreImpl<CONFIG>::remove(BlockRef block,
+                                  const FreeListSecrets &secrets) {
   if (too_small(block))
     return;
   size_t bit_index = size_to_bit_index(block.inner_size());
@@ -282,19 +291,20 @@ LIBC_INLINE void TLSFFreeStoreImpl<CONFIG>::remove(
     }
 
   free_lists[bit_index].list.remove(
-      reinterpret_cast<FreeList::Node*>(block.usable_space()), secrets);
+      reinterpret_cast<FreeList::Node *>(block.usable_space()), secrets);
   if (free_lists[bit_index].list.empty())
     clear_bit(bit_index);
 }
 
 template <typename CONFIG>
 LIBC_INLINE BlockRef TLSFFreeStoreImpl<CONFIG>::remove_first_fit_in_list(
-    size_t index, size_t size, const FreeListSecrets& secrets) {
+    size_t index, size_t size, const FreeListSecrets &secrets) {
   FreeList::Node *begin_node = free_lists[index].list.begin();
   if (begin_node == nullptr)
     return BlockRef();
 
   FreeList::Node *cur = begin_node;
+  LIBC_LOOP_NOUNROLL_32
   do {
     if (cur->size() >= size) {
       free_lists[index].list.remove(cur, secrets);
@@ -310,7 +320,7 @@ LIBC_INLINE BlockRef TLSFFreeStoreImpl<CONFIG>::remove_first_fit_in_list(
 
 template <typename CONFIG>
 LIBC_INLINE BlockRef TLSFFreeStoreImpl<CONFIG>::find_and_remove_fit(
-    size_t size, const FreeListSecrets& secrets) {
+    size_t size, const FreeListSecrets &secrets) {
   size_t bit_index = size_to_bit_index(size);
 
   if (LIBC_UNLIKELY(bit_index >= TOTAL_BITS - 1)) {
@@ -354,7 +364,10 @@ using TLSFFreeStore = TLSFFreeStoreImpl<TLSFFreeStoreConfig<
 #endif
 
 using FreeStore =
-    TLSFFreeStore<BlockRef::MIN_ALIGN, 3, 2, (sizeof(uintptr_t) == 8 ? 3 : 6),
+    TLSFFreeStore<BlockRef::MIN_ALIGN,
+                  (sizeof(uintptr_t) == 8 ? 3 : 2), // STEP_SIZE_BITS
+                  2,                                // NUM_STEP_BITS
+                  (sizeof(uintptr_t) == 8 ? 3 : 2), // NUM_TABLE_ENTRIES
                   LIBC_COPT_USE_TRIE_FOR_OVERFLOW_BIN>;
 
 } // namespace LIBC_NAMESPACE_DECL
