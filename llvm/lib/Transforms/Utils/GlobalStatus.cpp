@@ -78,8 +78,14 @@ static bool analyzeGlobalAux(const Value *V, GlobalStatus &GS,
           return true;
       } else {
         // Ignore dead constant users.
-        if (!isSafeToDestroyConstant(C))
-          return true;
+        if (!isSafeToDestroyConstant(C)) {
+          if (CE) {
+            if (VisitedUsers.insert(CE).second)
+              if (analyzeGlobalAux(CE, GS, VisitedUsers))
+                return true;
+          } else
+            return true;
+        }
       }
     } else if (const Instruction *I = dyn_cast<Instruction>(UR)) {
       if (!GS.HasMultipleAccessingFunctions) {
@@ -166,9 +172,12 @@ static bool analyzeGlobalAux(const Value *V, GlobalStatus &GS,
         if (MTI->getArgOperand(1) == V)
           GS.IsLoaded = true;
       } else if (const MemSetInst *MSI = dyn_cast<MemSetInst>(I)) {
-        assert(MSI->getArgOperand(0) == V && "Memset only takes one pointer!");
+        if (MSI->getArgOperand(0) != V || MSI->getArgOperand(1) == V)
+          return true;
         if (MSI->isVolatile())
           return true;
+        assert(MSI->getArgOperand(0) == V &&
+               "First argument must be the pointer!");
         GS.StoredType = GlobalStatus::Stored;
       } else if (const auto *CB = dyn_cast<CallBase>(I)) {
         if (CB->getIntrinsicID() == Intrinsic::threadlocal_address) {
