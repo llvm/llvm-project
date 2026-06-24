@@ -1,0 +1,30 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+module matching_two_args
+  interface two_args
+    module procedure sub_managed_device
+    module procedure sub_unified_unified
+  end interface
+contains
+  subroutine sub_managed_device(a, b)
+    integer, managed :: a(:)
+    integer, device :: b(:)
+  end
+
+  subroutine sub_unified_unified(a, b)
+    integer, unified :: a(:)
+    integer, unified :: b(:)
+  end
+end module
+
+program test
+  use matching_two_args
+  integer, managed, allocatable :: a(:)
+  integer, managed, allocatable :: b(:)
+
+  allocate(a(10), b(10))
+  call two_args(a, b)
+end
+
+! CHECK: fir.call @_QMmatching_two_argsPsub_managed_device
+! CHECK-NOT: @_QMmatching_two_argsPsub_unified_unified

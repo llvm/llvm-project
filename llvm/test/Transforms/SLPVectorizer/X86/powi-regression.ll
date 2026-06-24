@@ -12,7 +12,7 @@ define <2 x double> @PR53887_v2f64(<2 x double> noundef %x) {
 entry:
   %vecext = extractelement <2 x double> %x, i64 0
   %0 = tail call fast double @llvm.powi.f64.i32(double %vecext, i32 6)
-  %vecinit = insertelement <2 x double> undef, double %0, i64 0
+  %vecinit = insertelement <2 x double> zeroinitializer, double %0, i64 0
   %vecext1 = extractelement <2 x double> %x, i64 1
   %1 = tail call fast double @llvm.powi.f64.i32(double %vecext1, i32 6)
   %vecinit3 = insertelement <2 x double> %vecinit, double %1, i64 1
@@ -28,7 +28,7 @@ define <4 x double> @PR53887_v4f64(<4 x double> noundef %x) {
 entry:
   %vecext = extractelement <4 x double> %x, i64 0
   %0 = tail call fast double @llvm.powi.f64.i32(double %vecext, i32 6) #2
-  %vecinit = insertelement <4 x double> undef, double %0, i64 0
+  %vecinit = insertelement <4 x double> zeroinitializer, double %0, i64 0
   %vecext1 = extractelement <4 x double> %x, i64 1
   %1 = tail call fast double @llvm.powi.f64.i32(double %vecext1, i32 6) #2
   %vecinit3 = insertelement <4 x double> %vecinit, double %1, i64 1

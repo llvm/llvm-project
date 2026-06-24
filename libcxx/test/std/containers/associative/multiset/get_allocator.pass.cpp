@@ -19,15 +19,15 @@
 #include "test_macros.h"
 
 int main(int, char**) {
-    {
-        std::allocator<int> alloc;
-        const std::multiset<int> s(alloc);
-        assert(s.get_allocator() == alloc);
-    }
-    {
-        other_allocator<int> alloc(1);
-        const std::multiset<int, std::less<int>, other_allocator<int> > s(alloc);
-        assert(s.get_allocator() == alloc);
-    }
-    return 0;
+  {
+    std::allocator<int> alloc;
+    const std::multiset<int> s(alloc);
+    assert(s.get_allocator() == alloc);
+  }
+  {
+    other_allocator<int> alloc(1);
+    const std::multiset<int, std::less<int>, other_allocator<int> > s(alloc);
+    assert(s.get_allocator() == alloc);
+  }
+  return 0;
 }

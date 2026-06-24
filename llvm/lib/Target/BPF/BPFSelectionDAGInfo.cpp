@@ -10,20 +10,43 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "BPFSelectionDAGInfo.h"
 #include "BPFTargetMachine.h"
 #include "llvm/CodeGen/SelectionDAG.h"
-#include "llvm/IR/DerivedTypes.h"
+
+#define GET_SDNODE_DESC
+#include "BPFGenSDNodeInfo.inc"
+
 using namespace llvm;
 
 #define DEBUG_TYPE "bpf-selectiondag-info"
 
+static cl::opt<unsigned> BPFMaxStoresPerMemFunc(
+    "bpf-max-stores-per-memfunc", cl::Hidden, cl::init(128),
+    cl::desc("Set the maximum number of stores for inlined BPF memory "
+             "intrinsics"));
+
+BPFSelectionDAGInfo::BPFSelectionDAGInfo()
+    : SelectionDAGGenTargetInfo(BPFGenSDNodeInfo) {}
+
+unsigned BPFSelectionDAGInfo::getCommonMaxStoresPerMemFunc() const {
+  return BPFMaxStoresPerMemFunc;
+}
+
 SDValue BPFSelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
-    SDValue Size, Align Alignment, bool isVolatile, bool AlwaysInline,
-    MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo) const {
+    SDValue Size, Align DstAlign, Align SrcAlign, bool isVolatile,
+    bool AlwaysInline, MachinePointerInfo DstPtrInfo,
+    MachinePointerInfo SrcPtrInfo) const {
+  Align Alignment = std::min(DstAlign, SrcAlign);
+
   // Requires the copy size to be a constant.
   ConstantSDNode *ConstantSize = dyn_cast<ConstantSDNode>(Size);
   if (!ConstantSize)
+    return SDValue();
+
+  // `BPFInstrInfo::expandMEMCPY` supports alignment up to 8 bytes.
+  if (Alignment.value() > 8)
     return SDValue();
 
   unsigned CopyLen = ConstantSize->getZExtValue();
@@ -32,11 +55,7 @@ SDValue BPFSelectionDAGInfo::EmitTargetCodeForMemcpy(
   if (StoresNumEstimate > getCommonMaxStoresPerMemFunc())
     return SDValue();
 
-  SDVTList VTs = DAG.getVTList(MVT::Other, MVT::Glue);
-
-  Dst = DAG.getNode(BPFISD::MEMCPY, dl, VTs, Chain, Dst, Src,
-                    DAG.getConstant(CopyLen, dl, MVT::i64),
-                    DAG.getConstant(Alignment.value(), dl, MVT::i64));
-
-  return Dst.getValue(0);
+  return DAG.getNode(BPFISD::MEMCPY, dl, MVT::Other, Chain, Dst, Src,
+                     DAG.getConstant(CopyLen, dl, MVT::i64),
+                     DAG.getConstant(Alignment.value(), dl, MVT::i64));
 }

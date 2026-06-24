@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Defines the operation interface for atomic operations used in OpenACC and 
+// Defines the operation interface for atomic operations used in OpenACC and
 // OpenMP.
 //
 //===----------------------------------------------------------------------===//
@@ -34,7 +34,7 @@ def AtomicReadOpInterface : OpInterface<"AtomicReadOpInterface"> {
     InterfaceMethod<[{
         Common verifier for operation that implements atomic read interface.
       }],
-      /*retTy=*/"::mlir::LogicalResult",
+      /*retTy=*/"::llvm::LogicalResult",
       /*methodName=*/"verifyCommon",
       /*args=*/(ins),
       /*methodBody=*/"",
@@ -81,7 +81,7 @@ def AtomicWriteOpInterface : OpInterface<"AtomicWriteOpInterface"> {
     InterfaceMethod<[{
         Common verifier for operation that implements atomic write interface.
       }],
-      /*retTy=*/"::mlir::LogicalResult",
+      /*retTy=*/"::llvm::LogicalResult",
       /*methodName=*/"verifyCommon",
       /*args=*/(ins),
       /*methodBody=*/"",
@@ -118,7 +118,7 @@ def AtomicUpdateOpInterface : OpInterface<"AtomicUpdateOpInterface"> {
 
     The interface terminology uses `x` to specify the address where a value
     is atomically written/read.
-    
+
     Since atomic update expression comes in many forms, this interface requires
     that the operation uses a region with a single argument to capture the
     expression.
@@ -162,9 +162,9 @@ def AtomicUpdateOpInterface : OpInterface<"AtomicUpdateOpInterface"> {
       /*defaultImplementation=*/[{
         // The atomic update is a no-op if the terminator is the first and only
         // operation in its region.
-        mlir::Operation* terminator = 
+        mlir::Operation* terminator =
           llvm::dyn_cast<mlir::RegionBranchTerminatorOpInterface>($_op.getFirstOp());
-        return terminator && terminator->getOperands().front() == 
+        return terminator && terminator->getOperands().front() ==
           $_op.getRegion().front().getArgument(0);
       }]
     >,
@@ -177,9 +177,9 @@ def AtomicUpdateOpInterface : OpInterface<"AtomicUpdateOpInterface"> {
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        mlir::Operation* terminator = 
+        mlir::Operation* terminator =
           llvm::dyn_cast<mlir::RegionBranchTerminatorOpInterface>($_op.getFirstOp());
-        if (terminator && terminator->getOperands().front() != 
+        if (terminator && terminator->getOperands().front() !=
           $_op.getRegion().front().getArgument(0)) {
           return terminator->getOperands().front();
         }
@@ -189,7 +189,7 @@ def AtomicUpdateOpInterface : OpInterface<"AtomicUpdateOpInterface"> {
     InterfaceMethod<[{
         Common verifier for operation that implements atomic update interface.
       }],
-      /*retTy=*/"::mlir::LogicalResult",
+      /*retTy=*/"::llvm::LogicalResult",
       /*methodName=*/"verifyCommon",
       /*args=*/(ins),
       /*methodBody=*/"",
@@ -210,7 +210,7 @@ def AtomicUpdateOpInterface : OpInterface<"AtomicUpdateOpInterface"> {
         Common verifier of the required region for operation that implements
         atomic update interface.
       }],
-      /*retTy=*/"::mlir::LogicalResult",
+      /*retTy=*/"::llvm::LogicalResult",
       /*methodName=*/"verifyRegionsCommon",
       /*args=*/(ins),
       /*methodBody=*/"",
@@ -219,7 +219,7 @@ def AtomicUpdateOpInterface : OpInterface<"AtomicUpdateOpInterface"> {
 
         if (terminator->getOperands().size() != 1)
           return $_op.emitError("only updated value must be returned");
-    
+
         if (terminator->getOperands().front().getType() !=
             $_op.getRegion().getArgument(0).getType())
           return $_op.emitError("input and yielded value must have the same type");
@@ -272,7 +272,7 @@ def AtomicCaptureOpInterface : OpInterface<"AtomicCaptureOpInterface"> {
         Common verifier of the required region for operation that implements
         atomic capture interface.
       }],
-      /*retTy=*/"::mlir::LogicalResult",
+      /*retTy=*/"::llvm::LogicalResult",
       /*methodName=*/"verifyRegionsCommon",
       /*args=*/(ins),
       /*methodBody=*/"",
@@ -310,6 +310,177 @@ def AtomicCaptureOpInterface : OpInterface<"AtomicCaptureOpInterface"> {
           return firstReadStmt.emitError()
                 << "captured variable in atomic.read must be updated in "
                     "second operation";
+
+        return mlir::success();
+      }]
+    >,
+  ];
+}
+
+def AtomicCompareOpInterface : OpInterface<"AtomicCompareOpInterface"> {
+  let description = [{
+    This interface is used for OpenMP dialect operation that performs an
+    atomic compare.
+
+    The interface terminology uses `x`, `e`, and `d` like the directive
+    specifications:
+      `if (x == e) x = d`
+    `x` is the address of the variable that is being compared and updated.
+    The region describes the comparison and update logic. It takes
+    the current value of `x` as a single block argument.
+
+    The region has the following structure:
+    ```
+      atomic.compare {
+      ^bb0(%val_x):
+        <compare %val_x with e>
+        <conditionally yield d or %val_x>
+      }
+    ```
+  }];
+  let cppNamespace = "::mlir::accomp";
+
+  let methods = [
+    InterfaceMethod<[{
+        Obtains `x` which is the address of the variable that is being
+        compared and potentially updated.
+      }],
+      /*retTy=*/"::mlir::Value",
+      /*methodName=*/"getX",
+      /*args=*/(ins)
+    >,
+    InterfaceMethod<[{
+        Returns the first operation in the atomic compare region.
+      }],
+      /*retTy=*/"::mlir::Operation *",
+      /*methodName=*/"getFirstOp",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return &($_op.getRegion().front().getOperations().front());
+      }]
+    >,
+    InterfaceMethod<[{
+        Common verifier for operation that implements atomic compare interface.
+      }],
+      /*retTy=*/"::llvm::LogicalResult",
+      /*methodName=*/"verifyCommon",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        if ($_op.getRegion().getNumArguments() != 1)
+          return $_op.emitError("the region must accept exactly one argument");
+
+        Type elementType = $_op.getX().getType().getElementType();
+        if (elementType && elementType != $_op.getRegion().getArgument(0).getType()) {
+          return $_op.emitError("the type of the operand must be a pointer type whose "
+                          "element type is the same as that of the region argument");
+        }
+
+        return mlir::success();
+      }]
+    >,
+    InterfaceMethod<[{
+        Common verifier of the required region for operation that implements
+        atomic compare interface.
+      }],
+      /*retTy=*/"::llvm::LogicalResult",
+      /*methodName=*/"verifyRegionsCommon",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        mlir::Region &region = $_op.getRegion();
+        if (region.empty())
+          return $_op.emitError(
+            "region for atomic compare must not be empty");
+
+        mlir::Block &block = region.front();
+        if (block.empty())
+          return $_op.emitError(
+            "region body for atomic compare must not be empty");
+
+        // The region must contain at least a comparison operation and a
+        // terminator. A region with only a terminator is missing the
+        // required comparison logic.
+        if (block.getOperations().size() < 2)
+          return $_op.emitError(
+            "region must contain a comparison operation");
+
+        return mlir::success();
+      }]
+    >,
+    InterfaceMethod<[{
+        Common verifier for operator that implements atomic compare interface.
+        Checks that the comparison operation in the region uses:
+        1) supported predicate for integer comparison : eq, slt, or sgt
+        2) supported predicate for float comparison : oeq, oglt or lsgt
+      }],
+      /*retTy=*/"::llvm::LogicalResult",
+      /*methodName=*/"verifyOperator",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        mlir::Region &region = $_op.getRegion();
+        if (region.empty())
+          return $_op.emitError(
+            "region for atomic compare must not be empty");
+
+        mlir::Block &block = region.front();
+        bool foundComparison = false;
+        for (mlir::Operation &op : block.getOperations()) {
+          llvm::StringRef opName = op.getName().getStringRef();
+          if (opName == "arith.cmpi" || opName == "llvm.icmp") {
+            foundComparison = true;
+            auto predAttr = op.getAttrOfType<mlir::IntegerAttr>("predicate");
+            if (predAttr) {
+	      auto predName = mlir::arith::stringifyCmpIPredicate(
+                  static_cast<mlir::arith::CmpIPredicate>(predAttr.getInt()));
+              if (predName != "eq" && predName != "slt" && predName != "sgt") { 
+                return $_op.emitError(
+                  "unsupported comparison operator '")
+                  << predName
+                  << "' in atomic compare region, "
+                     "supported operators are: eq, slt, sgt";
+              }
+            }
+            break;
+          } else if (opName == "arith.cmpf" || opName == "llvm.fcmp") {
+            foundComparison = true;
+            auto predAttr = op.getAttrOfType<mlir::IntegerAttr>("predicate");
+            if (predAttr) {
+              auto predName = mlir::arith::stringifyCmpFPredicate(
+                  static_cast<mlir::arith::CmpFPredicate>(predAttr.getInt()));
+              if (predName != "oeq" && predName != "ogt" && predName != "olt") {
+                return $_op.emitError(
+                  "unsupported comparison operator '")
+                  << predName
+                  << "' in atomic compare region, "
+                     "supported operators are: oeq, ogt, olt";
+              }
+            }
+            break;
+          } else if (opName == "fir.cmpc") {
+            foundComparison = true;
+            auto predAttr = op.getAttrOfType<mlir::IntegerAttr>("predicate");
+            if (predAttr) {
+              auto predName = mlir::arith::stringifyCmpFPredicate(
+                  static_cast<mlir::arith::CmpFPredicate>(predAttr.getInt()));
+              if (predName != "oeq") {
+                return $_op.emitError(
+                  "unsupported comparison operator '")
+                  << predName
+                  << "' in atomic compare region for complex type, "
+                     "only 'oeq' is supported";
+              }
+            }
+            break;
+          }
+        }
+
+        if (!foundComparison)
+          return $_op.emitError(
+            "atomic compare region must contain a comparison operation "
+            "(arith.cmpi, arith.cmpf, llvm.icmp, llvm.fcmp, or fir.cmpc)");
 
         return mlir::success();
       }]

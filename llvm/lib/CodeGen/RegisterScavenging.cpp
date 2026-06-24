@@ -32,7 +32,6 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -81,7 +80,8 @@ void RegScavenger::enterBasicBlockEnd(MachineBasicBlock &MBB) {
 
 void RegScavenger::backward() {
   const MachineInstr &MI = *--MBBI;
-  LiveUnits.stepBackward(MI);
+  if (!MI.isDebugInstr())
+    LiveUnits.stepBackward(MI);
 
   // Expire scavenge spill frameindex uses.
   for (ScavengedInfo &I : Scavenged) {
@@ -113,7 +113,7 @@ BitVector RegScavenger::getRegsAvailable(const TargetRegisterClass *RC) {
   BitVector Mask(TRI->getNumRegs());
   for (Register Reg : *RC)
     if (!isRegUsed(Reg))
-      Mask.set(Reg);
+      Mask.set(Reg.id());
   return Mask;
 }
 
@@ -141,6 +141,16 @@ findSurvivorBackwards(const MachineRegisterInfo &MRI,
   assert(From->getParent() == To->getParent() &&
          "Target instruction is in other than current basic block, use "
          "enterBasicBlockEnd first");
+
+  // If RestoreAfter is set, the scavenged register is needed at
+  // std::next(From), so we need to take into account any possible early-clobber
+  // def regs defined there.
+  if (RestoreAfter) {
+    for (const MachineOperand &MOP : std::next(From)->all_defs()) {
+      if (MOP.getReg().isPhysical() && MOP.isEarlyClobber())
+        Used.addReg(MOP.getReg());
+    }
+  }
 
   for (MachineBasicBlock::iterator I = From;; --I) {
     const MachineInstr &MI = *I;
@@ -277,14 +287,14 @@ RegScavenger::spill(Register Reg, const TargetRegisterClass &RC, int SPAdj,
                          ": Cannot scavenge register without an emergency "
                          "spill slot!");
     }
-    TII->storeRegToStackSlot(*MBB, Before, Reg, true, FI, &RC, TRI, Register());
+    TII->storeRegToStackSlot(*MBB, Before, Reg, true, FI, &RC, Register());
     MachineBasicBlock::iterator II = std::prev(Before);
 
     unsigned FIOperandNum = getFrameIndexOperandNum(*II);
     TRI->eliminateFrameIndex(II, SPAdj, FIOperandNum, this);
 
     // Restore the scavenged register before its use (or first terminator).
-    TII->loadRegFromStackSlot(*MBB, UseMI, Reg, FI, &RC, TRI, Register());
+    TII->loadRegFromStackSlot(*MBB, UseMI, Reg, FI, &RC, Register());
     II = std::prev(UseMI);
 
     FIOperandNum = getFrameIndexOperandNum(*II);
@@ -301,7 +311,6 @@ Register RegScavenger::scavengeRegisterBackwards(const TargetRegisterClass &RC,
   const MachineFunction &MF = *MBB.getParent();
 
   // Find the register whose use is furthest away.
-  MachineBasicBlock::iterator UseMI;
   ArrayRef<MCPhysReg> AllocationOrder = RC.getRawAllocationOrder(MF);
   std::pair<MCPhysReg, MachineBasicBlock::iterator> P = findSurvivorBackwards(
       *MRI, std::prev(MBBI), To, LiveUnits, AllocationOrder, RestoreAfter);
@@ -413,8 +422,7 @@ static bool scavengeFrameVirtualRegsInBlock(MachineRegisterInfo &MRI,
         // We only care about virtual registers and ignore virtual registers
         // created by the target callbacks in the process (those will be handled
         // in a scavenging round).
-        if (!Reg.isVirtual() ||
-            Register::virtReg2Index(Reg) >= InitialNumVirtRegs)
+        if (!Reg.isVirtual() || Reg.virtRegIndex() >= InitialNumVirtRegs)
           continue;
         if (!MO.readsReg())
           continue;
@@ -433,8 +441,7 @@ static bool scavengeFrameVirtualRegsInBlock(MachineRegisterInfo &MRI,
         continue;
       Register Reg = MO.getReg();
       // Only vregs, no newly created vregs (see above).
-      if (!Reg.isVirtual() ||
-          Register::virtReg2Index(Reg) >= InitialNumVirtRegs)
+      if (!Reg.isVirtual() || Reg.virtRegIndex() >= InitialNumVirtRegs)
         continue;
       // We have to look at all operands anyway so we can precalculate here
       // whether there is a reading operand. This allows use to skip the use
@@ -470,7 +477,7 @@ void llvm::scavengeFrameVirtualRegs(MachineFunction &MF, RegScavenger &RS) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   // Shortcut.
   if (MRI.getNumVirtRegs() == 0) {
-    MF.getProperties().set(MachineFunctionProperties::Property::NoVRegs);
+    MF.getProperties().setNoVRegs();
     return;
   }
 
@@ -492,7 +499,7 @@ void llvm::scavengeFrameVirtualRegs(MachineFunction &MF, RegScavenger &RS) {
   }
 
   MRI.clearVirtRegs();
-  MF.getProperties().set(MachineFunctionProperties::Property::NoVRegs);
+  MF.getProperties().setNoVRegs();
 }
 
 namespace {

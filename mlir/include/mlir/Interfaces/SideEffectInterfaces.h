@@ -15,6 +15,7 @@
 #define MLIR_INTERFACES_SIDEEFFECTINTERFACES_H
 
 #include "mlir/IR/OpDefinition.h"
+#include "llvm/ADT/Twine.h"
 
 namespace mlir {
 namespace SideEffects {
@@ -75,7 +76,15 @@ private:
 //===----------------------------------------------------------------------===//
 
 /// This class represents a specific resource that an effect applies to. This
-/// class represents an abstract interface for a given resource.
+/// class represents an abstract interface for a given resource. Resources
+/// form a hierarchy via getParent(); disjointness (isDisjointFrom) is used to
+/// determine whether effects can conflict.
+///
+/// Scope: The resource hierarchy is for disjointness of *abstract* resources
+/// (e.g. addressable memory vs. runtime state). It is deliberately *not*
+/// intended for fine-grained regions with specific addresses/sizes, or for
+/// alias classes / offset-based disambiguation; such concerns are out of scope
+/// and should be handled by alias analysis or other mechanisms.
 class Resource {
 public:
   virtual ~Resource() = default;
@@ -84,7 +93,9 @@ public:
   template <typename DerivedResource, typename BaseResource = Resource>
   class Base : public BaseResource {
   public:
-    using BaseT = Base<DerivedResource>;
+    /// Use the current instantiation so get()/getResourceID() refer to this
+    /// hierarchy's singleton, not Base<DerivedResource, Resource>'s.
+    using BaseT = Base<DerivedResource, BaseResource>;
 
     /// Returns a unique instance for the given effect class.
     static DerivedResource *get() {
@@ -95,39 +106,99 @@ public:
     /// Return the unique identifier for the base resource class.
     static TypeID getResourceID() { return TypeID::get<DerivedResource>(); }
 
-    /// 'classof' used to support llvm style cast functionality.
+    /// 'classof' used to support llvm style cast functionality. Returns true
+    /// iff the resource is the same as or a descendant of this resource type
+    /// in the hierarchy (so isa/cast work for ancestor checks).
     static bool classof(const Resource *resource) {
-      return resource->getResourceID() == BaseT::getResourceID();
+      return resource->isSubresourceOf(BaseT::get());
     }
 
   protected:
-    Base() : BaseResource(BaseT::getResourceID()){};
+    Base() : BaseResource(BaseT::getResourceID()) {}
+    /// Constructor for use when this type is used as a parent (BaseResource);
+    /// allows the derived resource to pass its TypeID so the hierarchy is
+    /// correct.
+    Base(TypeID id) : BaseResource(id) {}
   };
 
   /// Return the unique identifier for the base resource class.
   TypeID getResourceID() const { return id; }
 
   /// Return a string name of the resource.
-  virtual StringRef getName() = 0;
+  virtual StringRef getName() const = 0;
+
+  /// Return the parent resource in the hierarchy.
+  virtual Resource *getParent() const;
+
+  /// Returns true if this resource is addressable (effects on it can alias
+  /// pointer-based memory). Default is true.
+  virtual bool isAddressable() const { return true; }
+
+  /// Returns true if this resource is a subresource of (or equal to) another.
+  bool isSubresourceOf(const Resource *other) const {
+    for (const Resource *r = this; r != nullptr; r = r->getParent()) {
+#ifdef EXPENSIVE_CHECKS
+      r->verifyImmediateParentAddressability();
+#endif // EXPENSIVE_CHECKS
+      if (r == other)
+        return true;
+    }
+    return false;
+  }
+
+  /// Returns true if this resource is disjoint from another. Two resources are
+  /// disjoint if neither is an ancestor of the other.
+  bool isDisjointFrom(const Resource *other) const {
+    return !isSubresourceOf(other) && !other->isSubresourceOf(this);
+  }
 
 protected:
   Resource(TypeID id) : id(id) {}
 
 private:
+#ifdef EXPENSIVE_CHECKS
+  /// Verifies the single-link invariant: an addressable resource must not have
+  /// a non-addressable parent. Used from isSubresourceOf() under
+  /// EXPENSIVE_CHECKS so the invariant is checked when the hierarchy is
+  /// traversed.
+  void verifyImmediateParentAddressability() const {
+    Resource *parent = getParent();
+    if (parent && isAddressable() && !parent->isAddressable())
+      llvm::report_fatal_error(
+          llvm::Twine("Resource '") + getName() +
+          "' is addressable but has non-addressable parent '" +
+          parent->getName() + "'");
+  }
+#endif // EXPENSIVE_CHECKS
+
   /// The id of the derived resource class.
   TypeID id;
 };
 
-/// A conservative default resource kind.
+/// The default resource kind. It serves as the root of the resource hierarchy:
+/// all resources that do not override getParent() have DefaultResource as their
+/// parent.
 struct DefaultResource : public Resource::Base<DefaultResource> {
-  StringRef getName() final { return "<Default>"; }
+  DefaultResource() = default;
+  StringRef getName() const override { return "<Default>"; }
+  Resource *getParent() const override { return nullptr; }
+
+protected:
+  /// For use when this type is the parent of another resource; allows the
+  /// derived resource to pass its TypeID so the hierarchy is correct.
+  DefaultResource(TypeID id) : Base(id) {}
 };
+
+/// All resources that do not override getParent() have DefaultResource
+/// as their parent.
+inline Resource *Resource::getParent() const { return DefaultResource::get(); }
 
 /// An automatic allocation-scope resource that is valid in the context of a
 /// parent AutomaticAllocationScope trait.
 struct AutomaticAllocationScopeResource
-    : public Resource::Base<AutomaticAllocationScopeResource> {
-  StringRef getName() final { return "AutomaticAllocationScope"; }
+    : public Resource::Base<AutomaticAllocationScopeResource, DefaultResource> {
+  StringRef getName() const final { return "AutomaticAllocationScope"; }
+  Resource *getParent() const override { return DefaultResource::get(); }
 };
 
 /// This class represents a specific instance of an effect. It contains the
@@ -145,15 +216,26 @@ public:
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), stage(stage),
         effectOnFullRegion(effectOnFullRegion) {}
-  EffectInstance(EffectT *effect, Value value,
+  template <typename T,
+            std::enable_if_t<
+                llvm::is_one_of<T, OpOperand *, OpResult, BlockArgument>::value,
+                bool> = true>
+  EffectInstance(EffectT *effect, T value,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(value), stage(0),
-        effectOnFullRegion(false) {}
-  EffectInstance(EffectT *effect, Value value, int stage,
-                 bool effectOnFullRegion,
+        effectOnFullRegion(false) {
+    checkResourceAllowsValue();
+  }
+  template <typename T,
+            std::enable_if_t<
+                llvm::is_one_of<T, OpOperand *, OpResult, BlockArgument>::value,
+                bool> = true>
+  EffectInstance(EffectT *effect, T value, int stage, bool effectOnFullRegion,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(value), stage(stage),
-        effectOnFullRegion(effectOnFullRegion) {}
+        effectOnFullRegion(effectOnFullRegion) {
+    checkResourceAllowsValue();
+  }
   EffectInstance(EffectT *effect, SymbolRefAttr symbol,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(symbol), stage(0),
@@ -172,16 +254,28 @@ public:
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), parameters(parameters),
         stage(stage), effectOnFullRegion(effectOnFullRegion) {}
-  EffectInstance(EffectT *effect, Value value, Attribute parameters,
+  template <typename T,
+            std::enable_if_t<
+                llvm::is_one_of<T, OpOperand *, OpResult, BlockArgument>::value,
+                bool> = true>
+  EffectInstance(EffectT *effect, T value, Attribute parameters,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(value),
-        parameters(parameters), stage(0), effectOnFullRegion(false) {}
-  EffectInstance(EffectT *effect, Value value, Attribute parameters, int stage,
+        parameters(parameters), stage(0), effectOnFullRegion(false) {
+    checkResourceAllowsValue();
+  }
+  template <typename T,
+            std::enable_if_t<
+                llvm::is_one_of<T, OpOperand *, OpResult, BlockArgument>::value,
+                bool> = true>
+  EffectInstance(EffectT *effect, T value, Attribute parameters, int stage,
                  bool effectOnFullRegion,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(value),
         parameters(parameters), stage(stage),
-        effectOnFullRegion(effectOnFullRegion) {}
+        effectOnFullRegion(effectOnFullRegion) {
+    checkResourceAllowsValue();
+  }
   EffectInstance(EffectT *effect, SymbolRefAttr symbol, Attribute parameters,
                  Resource *resource = DefaultResource::get())
       : effect(effect), resource(resource), value(symbol),
@@ -199,7 +293,26 @@ public:
   /// Return the value the effect is applied on, or nullptr if there isn't a
   /// known value being affected.
   Value getValue() const {
-    return value ? llvm::dyn_cast_if_present<Value>(value) : Value();
+    if (!value || llvm::isa_and_present<SymbolRefAttr>(value)) {
+      return Value();
+    }
+    if (OpOperand *operand = llvm::dyn_cast_if_present<OpOperand *>(value)) {
+      return operand->get();
+    }
+    if (OpResult result = llvm::dyn_cast_if_present<OpResult>(value)) {
+      return result;
+    }
+    return cast_if_present<BlockArgument>(value);
+  }
+
+  /// Returns the OpOperand effect is applied on, or nullptr if there isn't a
+  /// known value being effected.
+  template <typename T,
+            std::enable_if_t<
+                llvm::is_one_of<T, OpOperand *, OpResult, BlockArgument>::value,
+                bool> = true>
+  T getEffectValue() const {
+    return value ? dyn_cast_if_present<T>(value) : nullptr;
   }
 
   /// Return the symbol reference the effect is applied on, or nullptr if there
@@ -222,14 +335,23 @@ public:
   bool getEffectOnFullRegion() const { return effectOnFullRegion; }
 
 private:
+  /// Effect on a non-addressable resource cannot have an associated Value.
+  void checkResourceAllowsValue() {
+    if (value && resource && !resource->isAddressable())
+      llvm::report_fatal_error(
+          llvm::Twine("EffectInstance: resource '") + resource->getName() +
+          "' is non-addressable and cannot have an associated Value");
+  }
+
   /// The specific effect being applied.
   EffectT *effect;
 
   /// The resource that the given value resides in.
   Resource *resource;
 
-  /// The Symbol or Value that the effect applies to. This is optionally null.
-  PointerUnion<SymbolRefAttr, Value> value;
+  /// The Symbol, OpOperand, OpResult or BlockArgument that the effect applies
+  /// to. This is optionally null.
+  PointerUnion<SymbolRefAttr, OpOperand *, OpResult, BlockArgument> value;
 
   /// Additional parameters of the effect instance. An attribute is used for
   /// type-safe structured storage and context-based uniquing. Concrete effects
@@ -348,17 +470,70 @@ struct Write : public Effect::Base<Write> {};
 // SideEffect Utilities
 //===----------------------------------------------------------------------===//
 
-/// Returns true if `op` has only an effect of type `EffectTy` (and of no other
-/// type) on `value`. If no value is provided, simply check if effects of that
-/// type and only of that type are present.
-template <typename EffectTy>
-bool hasSingleEffect(Operation *op, Value value = nullptr);
+/// Return "true" if `op` has unknown effects. I.e., the effects of the
+/// operation itself are unknown and the operation does not derive its effects
+/// from its nested operations. (`HasRecursiveMemoryEffects` trait is not
+/// implemented or it is unknown whether it is implemented or not.)
+bool hasUnknownEffects(Operation *op);
 
-/// Returns true if `op` has an effect of type `EffectTy` on `value`. If no
-/// `value` is provided, simply check if effects of the given type(s) are
-/// present.
+/// Returns "true" if `op` has only an effect of type `EffectTy`. Returns
+/// "false" if `op` has unknown effects or other/additional effects. Recursive
+/// effects are not taken into account.
+template <typename EffectTy>
+bool hasSingleEffect(Operation *op);
+
+/// Returns "true" if `op` has only an effect of type `EffectTy` on `value`.
+/// Returns "false" if `op` has unknown effects or other/additional effects.
+/// Recursive effects are not taken into account.
+template <typename EffectTy>
+bool hasSingleEffect(Operation *op, Value value);
+
+/// Returns "true" if `op` has only an effect of type `EffectTy` on `value` of
+/// type `ValueTy`. Returns "false" if `op` has unknown effects or
+/// other/additional effects. Recursive effects are not taken into account.
+template <typename ValueTy, typename EffectTy>
+bool hasSingleEffect(Operation *op, ValueTy value);
+
+/// Returns "true" if `op` has an effect of type `EffectTy`. Returns "false" if
+/// `op` has unknown effects. Recursive effects are not taken into account.
 template <typename... EffectTys>
-bool hasEffect(Operation *op, Value value = nullptr);
+bool hasEffect(Operation *op);
+
+/// Returns "true" if `op` has an effect of type `EffectTy` on `value`. Returns
+/// "false" if `op` has unknown effects. Recursive effects are not taken into
+/// account.
+template <typename... EffectTys>
+bool hasEffect(Operation *op, Value value);
+
+/// Returns "true" if `op` has an effect of type `EffectTy` on `value` of type
+/// `ValueTy`. Returns "false" if `op` has unknown effects. Recursive effects
+/// are not taken into account.
+template <typename ValueTy, typename... EffectTys>
+bool hasEffect(Operation *op, ValueTy value);
+
+/// Returns "true" if `op` might have an effect of type `EffectTy`. Returns
+/// "true" if the op has unknown effects. Recursive effects are not taken into
+/// account.
+template <typename... EffectTys>
+bool mightHaveEffect(Operation *op) {
+  return hasUnknownEffects(op) || hasEffect<EffectTys...>(op);
+}
+
+/// Returns "true" if `op` might have an effect of type `EffectTy` on `value`.
+/// Returns "true" if the op has unknown effects. Recursive effects are not
+/// taken into account.
+template <typename... EffectTys>
+bool mightHaveEffect(Operation *op, Value value) {
+  return hasUnknownEffects(op) || hasEffect<EffectTys...>(op, value);
+}
+
+/// Returns "true" if `op` might have an effect of type `EffectTy` on `value`
+/// of type `ValueTy`. Returns "true" if the op has unknown effects. Recursive
+/// effects are not taken into account.
+template <typename ValueTy, typename... EffectTys>
+bool mightHaveEffect(Operation *op, ValueTy value) {
+  return hasUnknownEffects(op) || hasEffect<EffectTys...>(op, value);
+}
 
 /// Return true if the given operation is unused, and has no side effects on
 /// memory that prevent erasing.

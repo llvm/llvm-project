@@ -17,7 +17,6 @@
 #include "llvm/TargetParser/Triple.h"
 
 #include <array>
-#include <numeric>
 #include <stdint.h>
 
 namespace llvm {
@@ -47,7 +46,9 @@ struct PSVSignatureElement {
 // modifiable format, and can be used to serialize the data back into valid PSV
 // RuntimeInfo.
 struct PSVRuntimeInfo {
-  PSVRuntimeInfo() : DXConStrTabBuilder(StringTableBuilder::DXContainer) {}
+  PSVRuntimeInfo() : DXConStrTabBuilder(StringTableBuilder::DXContainer) {
+    memset((void *)&BaseData, 0, sizeof(dxbc::PSV::v3::RuntimeInfo));
+  }
   bool IsFinalized = false;
   dxbc::PSV::v3::RuntimeInfo BaseData;
   SmallVector<dxbc::PSV::v2::ResourceBindInfo> Resources;
@@ -67,15 +68,18 @@ struct PSVRuntimeInfo {
   std::array<SmallVector<uint32_t>, 4> InputOutputMap;
   SmallVector<uint32_t> InputPatchMap;
   SmallVector<uint32_t> PatchOutputMap;
-  llvm::StringRef EntryName;
+  StringRef EntryName;
 
   // Serialize PSVInfo into the provided raw_ostream. The version field
   // specifies the data version to encode, the default value specifies encoding
   // the highest supported version.
-  void write(raw_ostream &OS,
-             uint32_t Version = std::numeric_limits<uint32_t>::max()) const;
+  LLVM_ABI void
+  write(raw_ostream &OS,
+        uint32_t Version = std::numeric_limits<uint32_t>::max()) const;
 
-  void finalize(Triple::EnvironmentType Stage);
+  LLVM_ABI void
+  finalize(Triple::EnvironmentType Stage,
+           uint32_t Version = std::numeric_limits<uint32_t>::max());
 
 private:
   SmallVector<uint32_t, 64> IndexBuffer;
@@ -108,7 +112,7 @@ public:
                                Register, Mask, ExclusiveMask, MinPrecision});
   }
 
-  void write(raw_ostream &OS);
+  LLVM_ABI void write(raw_ostream &OS);
 };
 
 } // namespace mcdxbc

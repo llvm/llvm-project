@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
 ; CHECK: v{{[0-9]+}} = vsplat(r{{[0-9]+}})
 ; CHECK: .comm g0,256,256
 ; CHECK: .comm g1,128,128

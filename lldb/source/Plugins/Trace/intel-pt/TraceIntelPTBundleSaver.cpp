@@ -263,8 +263,7 @@ BuildModulesSection(Process &process, FileSpec directory) {
 
     lldb::addr_t load_addr = LLDB_INVALID_ADDRESS;
     Address base_addr(objfile->GetBaseAddress());
-    if (base_addr.IsValid() &&
-        !process.GetTarget().GetSectionLoadList().IsEmpty())
+    if (base_addr.IsValid() && process.GetTarget().HasLoadedSections())
       load_addr = base_addr.GetLoadAddress(&process.GetTarget());
 
     if (load_addr == LLDB_INVALID_ADDRESS)
@@ -273,7 +272,8 @@ BuildModulesSection(Process &process, FileSpec directory) {
     FileSpec path_to_copy_module = directory;
     path_to_copy_module.AppendPathComponent("modules");
     path_to_copy_module.AppendPathComponent(system_path);
-    sys::fs::create_directories(path_to_copy_module.GetDirectory().AsCString());
+    sys::fs::create_directories(
+        path_to_copy_module.GetDirectory().GetStringRef());
 
     if (std::error_code ec =
             llvm::sys::fs::copy_file(file, path_to_copy_module.GetPath()))

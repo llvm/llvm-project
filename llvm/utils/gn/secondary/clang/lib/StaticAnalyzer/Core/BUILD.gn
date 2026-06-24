@@ -10,6 +10,8 @@ static_library("Core") {
     "//clang/lib/CrossTU",
     "//clang/lib/Lex",
     "//clang/lib/Rewrite",
+    "//clang/lib/Tooling/Core",
+    "//clang/lib/UnifiedSymbolResolution",
     "//llvm/lib/Support",
   ]
   sources = [
@@ -33,6 +35,7 @@ static_library("Core") {
     "CoreEngine.cpp",
     "DynamicExtent.cpp",
     "DynamicType.cpp",
+    "EntryPointStats.cpp",
     "Environment.cpp",
     "ExplodedGraph.cpp",
     "ExprEngine.cpp",
@@ -60,5 +63,6 @@ static_library("Core") {
     "SymbolManager.cpp",
     "TextDiagnostics.cpp",
     "WorkList.cpp",
+    "Z3CrosscheckVisitor.cpp",
   ]
 }

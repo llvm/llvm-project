@@ -26,13 +26,13 @@
 
 @ HEAD:          Disassembly of section .text:
 @ HEAD-EMPTY:
-@ AMAP-NEXT:     00000000 <$a.0>:
+@ AMAP-NEXT:     00000000 <$a>:
 @ AAAA-NEXT:     00000000 <aaaa>:
 @ BBBB-NEXT:     00000000 <bbbb>:
 @ AABB-NEXT:            0: e0800080      add     r0, r0, r0, lsl #1
 @ AABB-NEXT:            4: e12fff1e      bx      lr
 @ BOTH-EMPTY:    
-@ TMAP-NEXT:     00000008 <$t.1>:
+@ TMAP-NEXT:     00000008 <$t>:
 @ CCCC-NEXT:     00000008 <cccc>:
 @ DDDD-NEXT:     00000008 <dddd>:
 @ CCDD-NEXT:            8: eb00 0080     add.w   r0, r0, r0, lsl #2

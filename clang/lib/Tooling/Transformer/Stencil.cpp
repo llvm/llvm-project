@@ -19,7 +19,6 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
-#include <atomic>
 #include <memory>
 #include <string>
 
@@ -50,8 +49,14 @@ static Error printNode(StringRef Id, const MatchFinder::MatchResult &Match,
   auto NodeOrErr = getNode(Match.Nodes, Id);
   if (auto Err = NodeOrErr.takeError())
     return Err;
-  NodeOrErr->print(Os, PrintingPolicy(Match.Context->getLangOpts()));
-  *Result += Os.str();
+  const PrintingPolicy PP(Match.Context->getLangOpts());
+  if (const auto *ND = NodeOrErr->get<NamedDecl>()) {
+    // For NamedDecls, we can do a better job than printing the whole thing.
+    ND->getNameForDiagnostic(Os, PP, false);
+  } else {
+    NodeOrErr->print(Os, PP);
+  }
+  *Result += Output;
   return Error::success();
 }
 
@@ -69,7 +74,6 @@ public:
     OS << "\"";
     OS.write_escaped(Text);
     OS << "\"";
-    OS.flush();
     return Result;
   }
 
@@ -371,7 +375,7 @@ public:
       Stream << ", " << DefaultStencil->toString();
     }
     Stream << ")";
-    return Stream.str();
+    return Buffer;
   }
 
 private:

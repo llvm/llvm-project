@@ -12,7 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVBaseInfo.h"
-#include "llvm/ADT/ArrayRef.h"
+#include "RISCVInstrInfo.h"
+#include "RISCVMCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -34,12 +35,32 @@ namespace RISCVInsnOpcode {
 #include "RISCVGenSearchableTables.inc"
 } // namespace RISCVInsnOpcode
 
+namespace RISCVVInversePseudosTable {
+using namespace RISCV;
+#define GET_RISCVVInversePseudosTable_IMPL
+#include "RISCVGenSearchableTables.inc"
+} // namespace RISCVVInversePseudosTable
+
+namespace RISCV {
+#define GET_RISCVVSSEGTable_IMPL
+#define GET_RISCVVLSEGTable_IMPL
+#define GET_RISCVVLXSEGTable_IMPL
+#define GET_RISCVVSXSEGTable_IMPL
+#define GET_RISCVVLETable_IMPL
+#define GET_RISCVVSETable_IMPL
+#define GET_RISCVVLXTable_IMPL
+#define GET_RISCVVSXTable_IMPL
+#define GET_RISCVNDSVLNTable_IMPL
+#include "RISCVGenSearchableTables.inc"
+} // namespace RISCV
+
 namespace RISCVABI {
 ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
                      StringRef ABIName) {
   auto TargetABI = getTargetABI(ABIName);
   bool IsRV64 = TT.isArch64Bit();
   bool IsRVE = FeatureBits[RISCV::FeatureStdExtE];
+  bool IsXCheriot = FeatureBits[RISCV::FeatureVendorXCheriot];
 
   if (!ABIName.empty() && TargetABI == ABI_Unknown) {
     errs()
@@ -53,11 +74,16 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
     errs() << "64-bit ABIs are not supported for 32-bit targets (ignoring "
               "target-abi)\n";
     TargetABI = ABI_Unknown;
-  } else if (!IsRV64 && IsRVE && TargetABI != ABI_ILP32E &&
+  } else if (!IsRV64 && IsRVE && !IsXCheriot && TargetABI != ABI_ILP32E &&
              TargetABI != ABI_Unknown) {
     // TODO: move this checking to RISCVTargetLowering and RISCVAsmParser
     errs()
         << "Only the ilp32e ABI is supported for RV32E (ignoring target-abi)\n";
+    TargetABI = ABI_Unknown;
+  } else if (!IsRV64 && IsRVE && IsXCheriot && TargetABI != ABI_CHERIOT &&
+             TargetABI != ABI_Unknown) {
+    errs() << "Only the cheriot ABI is supported for XCheriot (ignoring "
+              "target-abi)\n";
     TargetABI = ABI_Unknown;
   } else if (IsRV64 && IsRVE && TargetABI != ABI_LP64E &&
              TargetABI != ABI_Unknown) {
@@ -70,7 +96,7 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
   if ((TargetABI == RISCVABI::ABI::ABI_ILP32E ||
        (TargetABI == ABI_Unknown && IsRVE && !IsRV64)) &&
       FeatureBits[RISCV::FeatureStdExtD])
-    report_fatal_error("ILP32E cannot be used with the D ISA extension");
+    reportFatalUsageError("ILP32E cannot be used with the D ISA extension");
 
   if (TargetABI != ABI_Unknown)
     return TargetABI;
@@ -78,7 +104,7 @@ ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
   // If no explicit ABI is given, try to compute the default ABI.
   auto ISAInfo = RISCVFeatures::parseFeatureBits(IsRV64, FeatureBits);
   if (!ISAInfo)
-    report_fatal_error(ISAInfo.takeError());
+    reportFatalUsageError(ISAInfo.takeError());
   return getTargetABI((*ISAInfo)->computeDefaultABI());
 }
 
@@ -88,10 +114,18 @@ ABI getTargetABI(StringRef ABIName) {
                        .Case("ilp32f", ABI_ILP32F)
                        .Case("ilp32d", ABI_ILP32D)
                        .Case("ilp32e", ABI_ILP32E)
+                       .Case("il32pc64", ABI_IL32PC64)
+                       .Case("il32pc64f", ABI_IL32PC64F)
+                       .Case("il32pc64d", ABI_IL32PC64D)
+                       .Case("il32pc64e", ABI_IL32PC64E)
                        .Case("lp64", ABI_LP64)
                        .Case("lp64f", ABI_LP64F)
                        .Case("lp64d", ABI_LP64D)
                        .Case("lp64e", ABI_LP64E)
+                       .Case("l64pc128", ABI_L64PC128)
+                       .Case("l64pc128f", ABI_L64PC128F)
+                       .Case("l64pc128d", ABI_L64PC128D)
+                       .Case("cheriot", ABI_CHERIOT)
                        .Default(ABI_Unknown);
   return TargetABI;
 }
@@ -110,12 +144,12 @@ namespace RISCVFeatures {
 
 void validate(const Triple &TT, const FeatureBitset &FeatureBits) {
   if (TT.isArch64Bit() && !FeatureBits[RISCV::Feature64Bit])
-    report_fatal_error("RV64 target requires an RV64 CPU");
+    reportFatalUsageError("RV64 target requires an RV64 CPU");
   if (!TT.isArch64Bit() && !FeatureBits[RISCV::Feature32Bit])
-    report_fatal_error("RV32 target requires an RV32 CPU");
+    reportFatalUsageError("RV32 target requires an RV32 CPU");
   if (FeatureBits[RISCV::Feature32Bit] &&
       FeatureBits[RISCV::Feature64Bit])
-    report_fatal_error("RV32 and RV64 can't be combined");
+    reportFatalUsageError("RV32 and RV64 can't be combined");
 }
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
@@ -223,14 +257,16 @@ float RISCVLoadFPImm::getFPImm(unsigned Imm) {
   return bit_cast<float>(I);
 }
 
-void RISCVZC::printRlist(unsigned SlistEncode, raw_ostream &OS) {
+void RISCVZC::printRegList(unsigned RlistEncode, raw_ostream &OS) {
+  assert(RlistEncode >= RLISTENCODE::RA &&
+         RlistEncode <= RLISTENCODE::RA_S0_S11 && "Invalid Rlist");
   OS << "{ra";
-  if (SlistEncode > 4) {
+  if (RlistEncode > RISCVZC::RA) {
     OS << ", s0";
-    if (SlistEncode == 15)
+    if (RlistEncode == RISCVZC::RA_S0_S11)
       OS << "-s11";
-    else if (SlistEncode > 5 && SlistEncode <= 14)
-      OS << "-s" << (SlistEncode - 5);
+    else if (RlistEncode > RISCVZC::RA_S0 && RlistEncode <= RISCVZC::RA_S0_S11)
+      OS << "-s" << (RlistEncode - RISCVZC::RA_S0);
   }
   OS << "}";
 }

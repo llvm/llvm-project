@@ -7,23 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "MSVC.h"
-#include "CommonArgs.h"
 #include "Darwin.h"
-#include "clang/Basic/CharInfo.h"
-#include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
-#include "llvm/ADT/StringExtras.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -84,10 +79,63 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   else if (TC.getTriple().isWindowsArm64EC())
     CmdArgs.push_back("-machine:arm64ec");
 
+  if (const Arg *A = Args.getLastArg(options::OPT_fveclib)) {
+    StringRef V = A->getValue();
+    if (V == "ArmPL")
+      CmdArgs.push_back(Args.MakeArgString("--dependent-lib=amath"));
+  }
+
+  // SYCL requires dynamic CRT because STL objects cross DLL boundaries.
+  // Library dependency is added via --dependent-lib at compiler stage.
+  // Here we validate CRT compatibility and add the library search path.
+  if (Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false) &&
+      !Args.hasArg(options::OPT_nolibsycl) &&
+      !Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles)) {
+
+    // Check if static CRT is being used. Use getLastArg to handle overriding
+    // options (e.g., /MT /MD -> /MD wins).
+    bool HasStaticCRT = false;
+
+    if (const Arg *A = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
+      StringRef RuntimeLib = A->getValue();
+      if (RuntimeLib == "static" || RuntimeLib == "static_dbg")
+        HasStaticCRT = true;
+    }
+
+    if (const Arg *A = Args.getLastArg(options::OPT__SLASH_M_Group)) {
+      if (A->getOption().matches(options::OPT__SLASH_MT) ||
+          A->getOption().matches(options::OPT__SLASH_MTd))
+        HasStaticCRT = true;
+    }
+
+    if (HasStaticCRT) {
+      TC.getDriver().Diag(diag::err_drv_sycl_requires_dynamic_crt);
+    } else {
+      // Add library search path so linker can find LLVMSYCL[d].lib.
+      SmallString<128> LibPath(TC.getDriver().Dir);
+      llvm::sys::path::append(LibPath, "..", "lib");
+      CmdArgs.push_back(Args.MakeArgString(Twine("-libpath:") + LibPath));
+    }
+  }
+
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nostartfiles) &&
       !C.getDriver().IsCLMode() && !C.getDriver().IsFlangMode()) {
     CmdArgs.push_back("-defaultlib:libcmt");
     CmdArgs.push_back("-defaultlib:oldnames");
+
+    // SYCL: Add runtime library for clang (non-clang-cl) with MSVC target.
+    // For clang-cl, --dependent-lib is used at compiler stage instead.
+    if (Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false) &&
+        !Args.hasArg(options::OPT_nolibsycl)) {
+      bool IsDebugBuild = false;
+      if (const Arg *A = Args.getLastArg(options::OPT_fms_runtime_lib_EQ)) {
+        StringRef RuntimeVal = A->getValue();
+        if (RuntimeVal == "dll_dbg")
+          IsDebugBuild = true;
+      }
+      CmdArgs.push_back(IsDebugBuild ? "-defaultlib:LLVMSYCLd"
+                                     : "-defaultlib:LLVMSYCL");
+    }
   }
 
   // If the VC environment hasn't been configured (perhaps because the user
@@ -110,8 +158,9 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(Twine("-libpath:") + DIAPath));
   }
   if (!llvm::sys::Process::GetEnv("LIB") ||
-      Args.getLastArg(options::OPT__SLASH_vctoolsdir,
-                      options::OPT__SLASH_winsysroot)) {
+      Args.hasArg(options::OPT__SLASH_vctoolsdir,
+                  options::OPT__SLASH_vctoolsversion,
+                  options::OPT__SLASH_winsysroot)) {
     CmdArgs.push_back(Args.MakeArgString(
         Twine("-libpath:") +
         TC.getSubDirectoryPath(llvm::SubDirectoryType::Lib)));
@@ -120,8 +169,9 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
         TC.getSubDirectoryPath(llvm::SubDirectoryType::Lib, "atlmfc")));
   }
   if (!llvm::sys::Process::GetEnv("LIB") ||
-      Args.getLastArg(options::OPT__SLASH_winsdkdir,
-                      options::OPT__SLASH_winsysroot)) {
+      Args.hasArg(options::OPT__SLASH_winsdkdir,
+                  options::OPT__SLASH_winsdkversion,
+                  options::OPT__SLASH_winsysroot)) {
     if (TC.useUniversalCRT()) {
       std::string UniversalCRTLibPath;
       if (TC.getUniversalCRTLibraryPath(Args, UniversalCRTLibPath))
@@ -138,9 +188,10 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     for (const auto &LibPath : Args.getAllArgValues(options::OPT_L))
       CmdArgs.push_back(Args.MakeArgString("-libpath:" + LibPath));
 
-  if (C.getDriver().IsFlangMode()) {
-    addFortranRuntimeLibraryPath(TC, Args, CmdArgs);
-    addFortranRuntimeLibs(TC, Args, CmdArgs);
+  if (C.getDriver().IsFlangMode() &&
+      !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
+    TC.addFortranRuntimeLibraryPath(Args, CmdArgs);
+    TC.addFortranRuntimeLibs(Args, CmdArgs);
 
     // Inform the MSVC linker that we're generating a console application, i.e.
     // one with `main` as the "user-defined" entry point. The `main` function is
@@ -154,9 +205,19 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     if (TC.getVFS().exists(LibPath))
       CmdArgs.push_back(Args.MakeArgString("-libpath:" + LibPath));
   }
+  for (const auto &LibPath : TC.getFilePaths()) {
+    if (LibPath.length() > 0)
+      CmdArgs.push_back(Args.MakeArgString("-libpath:" + LibPath));
+  }
   auto CRTPath = TC.getCompilerRTPath();
   if (TC.getVFS().exists(CRTPath))
     CmdArgs.push_back(Args.MakeArgString("-libpath:" + CRTPath));
+
+  // SYCL offload compilation creates .llvm.offloading sections in each object
+  // file to store device code and metadata. Suppress linker warning about
+  // multiple sections with different attributes (LNK4078).
+  if (Args.hasFlag(options::OPT_fsycl, options::OPT_fno_sycl, false))
+    CmdArgs.push_back("/IGNORE:4078");
 
   CmdArgs.push_back("-nologo");
 
@@ -201,10 +262,10 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (TC.getSanitizerArgs(Args).needsAsanRt()) {
     CmdArgs.push_back(Args.MakeArgString("-debug"));
     CmdArgs.push_back(Args.MakeArgString("-incremental:no"));
-    if (TC.getSanitizerArgs(Args).needsSharedRt() ||
-        Args.hasArg(options::OPT__SLASH_MD, options::OPT__SLASH_MDd)) {
-      for (const auto &Lib : {"asan_dynamic", "asan_dynamic_runtime_thunk"})
-        CmdArgs.push_back(TC.getCompilerRTArgString(Args, Lib));
+    CmdArgs.push_back(TC.getCompilerRTArgString(Args, "asan_dynamic"));
+    auto defines = Args.getAllArgValues(options::OPT_D);
+    if (Args.hasArg(options::OPT__SLASH_MD, options::OPT__SLASH_MDd) ||
+        llvm::is_contained(defines, "_DLL")) {
       // Make sure the dynamic runtime thunk is not optimized out at link time
       // to ensure proper SEH handling.
       CmdArgs.push_back(Args.MakeArgString(
@@ -213,22 +274,23 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
               : "-include:__asan_seh_interceptor"));
       // Make sure the linker consider all object files from the dynamic runtime
       // thunk.
-      CmdArgs.push_back(Args.MakeArgString(std::string("-wholearchive:") +
+      CmdArgs.push_back(Args.MakeArgString(
+          std::string("-wholearchive:") +
           TC.getCompilerRT(Args, "asan_dynamic_runtime_thunk")));
-    } else if (DLL) {
-      CmdArgs.push_back(TC.getCompilerRTArgString(Args, "asan_dll_thunk"));
     } else {
-      for (const auto &Lib : {"asan", "asan_cxx"}) {
-        CmdArgs.push_back(TC.getCompilerRTArgString(Args, Lib));
-        // Make sure the linker consider all object files from the static lib.
-        // This is necessary because instrumented dlls need access to all the
-        // interface exported by the static lib in the main executable.
-        CmdArgs.push_back(Args.MakeArgString(std::string("-wholearchive:") +
-            TC.getCompilerRT(Args, Lib)));
-      }
+      // Make sure the linker consider all object files from the static runtime
+      // thunk.
+      CmdArgs.push_back(Args.MakeArgString(
+          std::string("-wholearchive:") +
+          TC.getCompilerRT(Args, "asan_static_runtime_thunk")));
     }
   }
 
+  if (TC.isUsingLTO(Args)) {
+    if (Arg *A = tools::getLastProfileSampleUseArg(Args))
+      CmdArgs.push_back(Args.MakeArgString(std::string("-lto-sample-profile:") +
+                                           A->getValue()));
+  }
   Args.AddAllArgValues(CmdArgs, options::OPT__SLASH_link);
 
   // Control Flow Guard checks
@@ -274,12 +336,24 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     AddRunTimeLibs(TC, TC.getDriver(), CmdArgs, Args);
   }
 
-  StringRef Linker =
-      Args.getLastArgValue(options::OPT_fuse_ld_EQ, CLANG_DEFAULT_LINKER);
-  if (Linker.empty())
-    Linker = "link";
+  const Arg *A = Args.getLastArg(options::OPT_fuse_ld_EQ);
+  StringRef Linker = A ? A->getValue() : TC.getDriver().getPreferredLinker();
+
+  if (Linker.empty()) {
+    // If DWARF is requested, use LLD, because MSVC's link.exe will silently
+    // truncate the .debug_* sections to eight characters. PE/COFF doesn't allow
+    // section names longer than eight bytes in executables - LLD uses the same
+    // name length extension as in object files (where long names are allowed).
+    if (Args.hasArg(options::OPT_gdwarf, options::OPT_gdwarf_2,
+                    options::OPT_gdwarf_3, options::OPT_gdwarf_4,
+                    options::OPT_gdwarf_5, options::OPT_gdwarf_6))
+      Linker = "lld-link";
+    else
+      Linker = "link";
+  }
+
   // We need to translate 'lld' into 'lld-link'.
-  else if (Linker.equals_insensitive("lld"))
+  if (Linker.equals_insensitive("lld"))
     Linker = "lld-link";
 
   if (Linker == "lld-link") {
@@ -287,7 +361,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(
           Args.MakeArgString(std::string("/vfsoverlay:") + A->getValue()));
 
-    if (C.getDriver().isUsingLTO() &&
+    if (TC.isUsingLTO(Args) &&
         Args.hasFlag(options::OPT_gsplit_dwarf, options::OPT_gno_split_dwarf,
                      false))
       CmdArgs.push_back(Args.MakeArgString(Twine("/dwodir:") +
@@ -320,7 +394,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     A.renderAsInput(Args, CmdArgs);
   }
 
-  addHIPRuntimeLibArgs(TC, C, Args, CmdArgs);
+  TC.addOffloadRTLibs(C.getActiveOffloadKinds(), Args, CmdArgs);
 
   TC.addProfileRTLibs(Args, CmdArgs);
 
@@ -427,7 +501,7 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 MSVCToolChain::MSVCToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ArgList &Args)
     : ToolChain(D, Triple, Args), CudaInstallation(D, Triple, Args),
-      RocmInstallation(D, Triple, Args) {
+      RocmInstallation(D, Triple, Args), SYCLInstallation(D, Triple, Args) {
   getProgramPaths().push_back(getDriver().Dir);
 
   std::optional<llvm::StringRef> VCToolsDir, VCToolsVersion;
@@ -453,6 +527,8 @@ MSVCToolChain::MSVCToolChain(const Driver &D, const llvm::Triple &Triple,
       llvm::findVCToolChainViaSetupConfig(getVFS(), VCToolsVersion,
                                           VCToolChainPath, VSLayout) ||
       llvm::findVCToolChainViaRegistry(VCToolChainPath, VSLayout);
+
+  loadMultilibsFromYAML(Args, D);
 }
 
 Tool *MSVCToolChain::buildLinker() const {
@@ -506,11 +582,36 @@ void MSVCToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
   RocmInstallation->AddHIPIncludeArgs(DriverArgs, CC1Args);
 }
 
-void MSVCToolChain::AddHIPRuntimeLibArgs(const ArgList &Args,
-                                         ArgStringList &CmdArgs) const {
-  CmdArgs.append({Args.MakeArgString(StringRef("-libpath:") +
-                                     RocmInstallation->getLibPath()),
-                  "amdhip64.lib"});
+void MSVCToolChain::addSYCLIncludeArgs(const ArgList &DriverArgs,
+                                       ArgStringList &CC1Args) const {
+  SYCLInstallation->addSYCLIncludeArgs(DriverArgs, CC1Args);
+}
+
+void MSVCToolChain::addOffloadRTLibs(unsigned ActiveKinds, const ArgList &Args,
+                                     ArgStringList &CmdArgs) const {
+  if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib,
+                    true) ||
+      Args.hasArg(options::OPT_no_hip_rt) || Args.hasArg(options::OPT_r))
+    return;
+
+  if (ActiveKinds & Action::OFK_HIP) {
+    CmdArgs.append({Args.MakeArgString(StringRef("-libpath:") +
+                                       RocmInstallation->getLibPath()),
+                    "amdhip64.lib"});
+
+    // For HIP device PGO, link clang_rt.profile_rocm when available. It is a
+    // self-contained superset of clang_rt.profile, emitted first so the base
+    // archive stays inert (avoiding a /MD-vs-/MT CRT mix in the host image).
+    if (needsProfileRT(Args) &&
+        getVFS().exists(getCompilerRT(Args, "profile_rocm", FT_Static))) {
+      CmdArgs.push_back(getCompilerRTArgString(Args, "profile_rocm"));
+      // Force the linker to retain the constructor-only hipModuleLoad*
+      // interceptor object from clang_rt.profile_rocm (see Linux.cpp). The
+      // constructor self-skips for programs that do not use hipModuleLoad.
+      CmdArgs.push_back(
+          "-include:__llvm_profile_offload_register_dynamic_module");
+    }
+  }
 }
 
 void MSVCToolChain::printVerboseInfo(raw_ostream &OS) const {
@@ -685,10 +786,25 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
+  // Add multilib variant include paths in priority order.
+  for (const Multilib &M : getOrderedMultilibs()) {
+    if (M.isDefault())
+      continue;
+    if (std::optional<std::string> StdlibIncDir = getStdlibIncludePath()) {
+      SmallString<128> Dir(*StdlibIncDir);
+      llvm::sys::path::append(Dir, M.includeSuffix());
+      if (getDriver().getVFS().exists(Dir))
+        addSystemInclude(DriverArgs, CC1Args, Dir);
+    }
+  }
+
   // Honor %INCLUDE% and %EXTERNAL_INCLUDE%. It should have essential search
-  // paths set by vcvarsall.bat. Skip if the user expressly set a vctoolsdir.
-  if (!DriverArgs.getLastArg(options::OPT__SLASH_vctoolsdir,
-                             options::OPT__SLASH_winsysroot)) {
+  // paths set by vcvarsall.bat. Skip if the user expressly set any of the
+  // Windows SDK or VC Tools options.
+  if (!DriverArgs.hasArg(
+          options::OPT__SLASH_vctoolsdir, options::OPT__SLASH_vctoolsversion,
+          options::OPT__SLASH_winsysroot, options::OPT__SLASH_winsdkdir,
+          options::OPT__SLASH_winsdkversion)) {
     bool Found = AddSystemIncludesFromEnv("INCLUDE");
     Found |= AddSystemIncludesFromEnv("EXTERNAL_INCLUDE");
     if (Found)
@@ -799,9 +915,8 @@ VersionTuple MSVCToolChain::computeMSVCVersion(const Driver *D,
   return MSVT;
 }
 
-std::string
-MSVCToolChain::ComputeEffectiveClangTriple(const ArgList &Args,
-                                           types::ID InputType) const {
+std::string MSVCToolChain::ComputeEffectiveClangTriple(
+    const ArgList &Args, llvm::StringRef BoundArch, types::ID InputType) const {
   // The MSVC version doesn't care about the architecture, even though it
   // may look at the triple internally.
   VersionTuple MSVT = computeMSVCVersion(/*D=*/nullptr, Args);
@@ -810,7 +925,8 @@ MSVCToolChain::ComputeEffectiveClangTriple(const ArgList &Args,
 
   // For the rest of the triple, however, a computed architecture name may
   // be needed.
-  llvm::Triple Triple(ToolChain::ComputeEffectiveClangTriple(Args, InputType));
+  llvm::Triple Triple(
+      ToolChain::ComputeEffectiveClangTriple(Args, BoundArch, InputType));
   if (Triple.getEnvironment() == llvm::Triple::MSVC) {
     StringRef ObjFmt = Triple.getEnvironmentName().split('-').second;
     if (ObjFmt.empty())
@@ -822,8 +938,10 @@ MSVCToolChain::ComputeEffectiveClangTriple(const ArgList &Args,
   return Triple.getTriple();
 }
 
-SanitizerMask MSVCToolChain::getSupportedSanitizers() const {
-  SanitizerMask Res = ToolChain::getSupportedSanitizers();
+SanitizerMask MSVCToolChain::getSupportedSanitizers(
+    StringRef BoundArch, Action::OffloadKind DeviceOffloadKind) const {
+  SanitizerMask Res =
+      ToolChain::getSupportedSanitizers(BoundArch, DeviceOffloadKind);
   Res |= SanitizerKind::Address;
   Res |= SanitizerKind::PointerCompare;
   Res |= SanitizerKind::PointerSubtract;
@@ -861,7 +979,7 @@ static void TranslateOptArg(Arg *A, llvm::opt::DerivedArgList &DAL,
           DAL.AddJoinedArg(A, Opts.getOption(options::OPT_O), "s");
         } else if (OptChar == '2' || OptChar == 'x') {
           DAL.AddFlagArg(A, Opts.getOption(options::OPT_fbuiltin));
-          DAL.AddJoinedArg(A, Opts.getOption(options::OPT_O), "2");
+          DAL.AddJoinedArg(A, Opts.getOption(options::OPT_O), "3");
         }
         if (SupportsForcingFramePointer &&
             !DAL.hasArgNoClaim(options::OPT_fno_omit_frame_pointer))
@@ -880,6 +998,7 @@ static void TranslateOptArg(Arg *A, llvm::opt::DerivedArgList &DAL,
           DAL.AddFlagArg(A, Opts.getOption(options::OPT_finline_hint_functions));
           break;
         case '2':
+        case '3':
           DAL.AddFlagArg(A, Opts.getOption(options::OPT_finline_functions));
           break;
         }
@@ -901,7 +1020,7 @@ static void TranslateOptArg(Arg *A, llvm::opt::DerivedArgList &DAL,
       DAL.AddJoinedArg(A, Opts.getOption(options::OPT_O), "s");
       break;
     case 't':
-      DAL.AddJoinedArg(A, Opts.getOption(options::OPT_O), "2");
+      DAL.AddJoinedArg(A, Opts.getOption(options::OPT_O), "3");
       break;
     case 'y': {
       bool OmitFramePointer = true;
@@ -1015,7 +1134,7 @@ MSVCToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 }
 
 void MSVCToolChain::addClangTargetOptions(
-    const ArgList &DriverArgs, ArgStringList &CC1Args,
+    const ArgList &DriverArgs, ArgStringList &CC1Args, StringRef BoundArch,
     Action::OffloadKind DeviceOffloadKind) const {
   // MSVC STL kindly allows removing all usages of typeid by defining
   // _HAS_STATIC_RTTI to 0. Do so, when compiling with -fno-rtti

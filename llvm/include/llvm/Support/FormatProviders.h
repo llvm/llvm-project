@@ -29,35 +29,26 @@ namespace support {
 namespace detail {
 template <typename T>
 struct use_integral_formatter
-    : public std::integral_constant<
-          bool, is_one_of<T, uint8_t, int16_t, uint16_t, int32_t, uint32_t,
-                          int64_t, uint64_t, int, unsigned, long, unsigned long,
-                          long long, unsigned long long>::value> {};
+    : public is_one_of<T, uint8_t, int16_t, uint16_t, int32_t, uint32_t,
+                       int64_t, uint64_t, int, unsigned, long, unsigned long,
+                       long long, unsigned long long> {};
 
 template <typename T>
-struct use_char_formatter
-    : public std::integral_constant<bool, std::is_same_v<T, char>> {};
+struct use_char_formatter : public std::is_same<T, char> {};
 
 template <typename T>
-struct is_cstring
-    : public std::integral_constant<bool,
-                                    is_one_of<T, char *, const char *>::value> {
-};
+struct is_cstring : public is_one_of<T, char *, const char *> {};
 
 template <typename T>
-struct use_string_formatter
-    : public std::integral_constant<bool,
-                                    std::is_convertible_v<T, llvm::StringRef>> {
-};
+struct use_string_formatter : public std::is_convertible<T, llvm::StringRef> {};
 
 template <typename T>
 struct use_pointer_formatter
-    : public std::integral_constant<bool, std::is_pointer_v<T> &&
-                                              !is_cstring<T>::value> {};
+    : public std::bool_constant<std::is_pointer_v<T> && !is_cstring<T>::value> {
+};
 
 template <typename T>
-struct use_double_formatter
-    : public std::integral_constant<bool, std::is_floating_point_v<T>> {};
+struct use_double_formatter : public std::is_floating_point<T> {};
 
 class HelperFunctions {
 protected:
@@ -76,19 +67,19 @@ protected:
     return Result;
   }
 
-  static bool consumeHexStyle(StringRef &Str, HexPrintStyle &Style) {
+  static std::optional<HexPrintStyle> consumeHexStyle(StringRef &Str) {
     if (!Str.starts_with_insensitive("x"))
-      return false;
+      return std::nullopt;
 
     if (Str.consume_front("x-"))
-      Style = HexPrintStyle::Lower;
-    else if (Str.consume_front("X-"))
-      Style = HexPrintStyle::Upper;
-    else if (Str.consume_front("x+") || Str.consume_front("x"))
-      Style = HexPrintStyle::PrefixLower;
-    else if (Str.consume_front("X+") || Str.consume_front("X"))
-      Style = HexPrintStyle::PrefixUpper;
-    return true;
+      return HexPrintStyle::Lower;
+    if (Str.consume_front("X-"))
+      return HexPrintStyle::Upper;
+    if (Str.consume_front("x+") || Str.consume_front("x"))
+      return HexPrintStyle::PrefixLower;
+    if (!Str.consume_front("X+"))
+      Str.consume_front("X");
+    return HexPrintStyle::PrefixUpper;
   }
 
   static size_t consumeNumHexDigits(StringRef &Str, HexPrintStyle Style,
@@ -121,6 +112,9 @@ protected:
 ///   | X+ / X  | Hex + prefix, upper  |   42   |   0x2A  | Minimum # digits   |
 ///   | N / n   | Digit grouped number | 123456 | 123,456 | Ignored            |
 ///   | D / d   | Integer              | 100000 | 100000  | Ignored            |
+///   |+D / +d  | Integer with + prefix| 100000 | +100000 | Ignored            |
+///   |         | for numbers => 0     |        |         |                    |
+///   |   +     | Same as +D / +d      |        |         |                    |
 ///   | (empty) | Same as D / d        |        |         |                    |
 ///   ==========================================================================
 ///
@@ -132,13 +126,16 @@ struct format_provider<
 private:
 public:
   static void format(const T &V, llvm::raw_ostream &Stream, StringRef Style) {
-    HexPrintStyle HS;
     size_t Digits = 0;
-    if (consumeHexStyle(Style, HS)) {
-      Digits = consumeNumHexDigits(Style, HS, 0);
-      write_hex(Stream, V, HS, Digits);
+    if (std::optional<HexPrintStyle> HS = consumeHexStyle(Style)) {
+      Digits = consumeNumHexDigits(Style, *HS, 0);
+      write_hex(Stream, V, *HS, Digits);
       return;
     }
+
+    // A + prefix indicates that a plus sign shall be
+    // prefixed to non-negative numbers.
+    bool NonNegativePlus = Style.consume_front('+');
 
     IntegerStyle IS = IntegerStyle::Integer;
     if (Style.consume_front("N") || Style.consume_front("n"))
@@ -148,7 +145,11 @@ public:
 
     Style.consumeInteger(10, Digits);
     assert(Style.empty() && "Invalid integral format style!");
-    write_integer(Stream, V, Digits, IS);
+
+    // We currently only support the + for integer style numbers.
+    NonNegativePlus = NonNegativePlus && IS == IntegerStyle::Integer;
+
+    write_integer(Stream, V, Digits, IS, NonNegativePlus);
   }
 };
 
@@ -182,7 +183,8 @@ private:
 public:
   static void format(const T &V, llvm::raw_ostream &Stream, StringRef Style) {
     HexPrintStyle HS = HexPrintStyle::PrefixUpper;
-    consumeHexStyle(Style, HS);
+    if (std::optional<HexPrintStyle> consumed = consumeHexStyle(Style))
+      HS = *consumed;
     size_t Digits = consumeNumHexDigits(Style, HS, sizeof(void *) * 2);
     write_hex(Stream, reinterpret_cast<std::uintptr_t>(V), HS, Digits);
   }
@@ -270,7 +272,7 @@ template <> struct format_provider<bool> {
                   .Case("y", B ? "yes" : "no")
                   .CaseLower("D", B ? "1" : "0")
                   .Case("T", B ? "TRUE" : "FALSE")
-                  .Cases("t", "", B ? "true" : "false")
+                  .Cases({"t", ""}, B ? "true" : "false")
                   .Default(B ? "1" : "0");
   }
 };
@@ -330,8 +332,7 @@ using IterValue = typename std::iterator_traits<IterT>::value_type;
 
 template <typename IterT>
 struct range_item_has_provider
-    : public std::integral_constant<
-          bool,
+    : public std::bool_constant<
           !support::detail::uses_missing_provider<IterValue<IterT>>::value> {};
 } // namespace detail
 } // namespace support
@@ -394,7 +395,7 @@ template <typename IterT> class format_provider<llvm::iterator_range<IterT>> {
     StringRef Sep = consumeOneOption(Style, '$', ", ");
     StringRef Args = consumeOneOption(Style, '@', "");
     assert(Style.empty() && "Unexpected text in range option string!");
-    return std::make_pair(Sep, Args);
+    return {Sep, Args};
   }
 
 public:

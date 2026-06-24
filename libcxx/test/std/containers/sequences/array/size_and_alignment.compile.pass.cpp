@@ -24,7 +24,11 @@
 #include <type_traits>
 
 #ifdef _LIBCPP_VERSION
-#  include <__type_traits/datasizeof.h>
+#  ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
+#    include <__cxx03/__type_traits/datasizeof.h>
+#  else
+#    include <__type_traits/datasizeof.h>
+#  endif
 #endif
 
 #include "test_macros.h"

@@ -17,13 +17,13 @@ target triple = "i386-unknown-linux-gnu"
 @f = external global i16, align 2
 @.str = external unnamed_addr constant [12 x i8], align 1
 
-define void @fn1() {
+define void @fn1(i1 %arg) {
 entry:
   %tmp = load i64, ptr @b, align 8
   %or = or i64 0, 3299921317
   %and = and i64 %or, %tmp
   %tmp1 = load i32, ptr @d, align 4
-  br i1 undef, label %lor.rhs, label %lor.end
+  br i1 %arg, label %lor.rhs, label %lor.end
 
 lor.rhs:                                          ; preds = %entry
   %tobool3 = icmp ne i8 undef, 0
@@ -32,7 +32,7 @@ lor.rhs:                                          ; preds = %entry
 lor.end:                                          ; preds = %lor.rhs, %entry
   %lor.ext = zext i1 undef to i32
   %tmp2 = load i64, ptr @e, align 8
-  br i1 undef, label %lor.rhs5, label %lor.end7
+  br i1 %arg, label %lor.rhs5, label %lor.end7
 
 lor.rhs5:                                         ; preds = %lor.end
   br label %lor.end7

@@ -6,11 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This test fails because Clang no longer enables -fdelayed-template-parsing
-// by default on Windows with C++20 (#69431).
-// XFAIL: msvc && (clang-18 || clang-19)
-
 // UNSUPPORTED: c++03, c++11
+
+// Missing lgamma_r
+// XFAIL: LLVM-LIBC-FIXME
 
 #include <cassert>
 #include <cmath>

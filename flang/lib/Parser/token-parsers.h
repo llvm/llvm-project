@@ -215,6 +215,10 @@ template <class PA> inline constexpr auto bracketed(const PA &p) {
   return "[" >> p / "]";
 }
 
+template <class PA> inline constexpr auto braced(const PA &p) {
+  return "{" >> p / "}";
+}
+
 // Quoted character literal constants.
 struct CharLiteralChar {
   using resultType = std::pair<char, bool /* was escaped */>;
@@ -560,6 +564,8 @@ template <char goal> struct SkipPast {
     while (std::optional<const char *> p{state.GetNextChar()}) {
       if (**p == goal) {
         return {Success{}};
+      } else if (**p == '\n') {
+        break;
       }
     }
     return std::nullopt;
@@ -574,8 +580,32 @@ template <char goal> struct SkipTo {
     while (std::optional<const char *> p{state.PeekAtNextChar()}) {
       if (**p == goal) {
         return {Success{}};
+      } else if (**p == '\n') {
+        break;
+      } else {
+        state.UncheckedAdvance();
       }
-      state.UncheckedAdvance();
+    }
+    return std::nullopt;
+  }
+};
+
+template <char left, char right> struct SkipPastNested {
+  using resultType = Success;
+  constexpr SkipPastNested() {}
+  constexpr SkipPastNested(const SkipPastNested &) {}
+  static std::optional<Success> Parse(ParseState &state) {
+    int nesting{1};
+    while (std::optional<const char *> p{state.GetNextChar()}) {
+      if (**p == right) {
+        if (!--nesting) {
+          return {Success{}};
+        }
+      } else if (**p == left) {
+        ++nesting;
+      } else if (**p == '\n') {
+        break;
+      }
     }
     return std::nullopt;
   }

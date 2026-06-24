@@ -8,6 +8,9 @@
 //
 // REQUIRES: long_tests
 
+// Missing lgamma_r
+// XFAIL: LLVM-LIBC-FIXME
+
 // <random>
 
 // template<class IntType = int>
@@ -16,9 +19,10 @@
 // template<class _URNG> result_type operator()(_URNG& g, const param_type& parm);
 
 #include <random>
+#include <cassert>
+#include <cmath>
 #include <numeric>
 #include <vector>
-#include <cassert>
 
 #include "test_macros.h"
 

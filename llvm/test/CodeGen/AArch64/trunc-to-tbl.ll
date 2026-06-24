@@ -57,7 +57,7 @@ define void @trunc_v16i32_to_v16i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    str q1, [x1, x8, lsl #4]
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
-; CHECK-NEXT:    b.eq LBB0_1
+; CHECK-NEXT:    b.ne LBB0_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh0, Lloh1
@@ -83,7 +83,7 @@ define void @trunc_v16i32_to_v16i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-BE-NEXT:    cmp x8, #1000
 ; CHECK-BE-NEXT:    tbl v1.16b, { v1.16b, v2.16b, v3.16b, v4.16b }, v0.16b
 ; CHECK-BE-NEXT:    st1 { v1.16b }, [x9]
-; CHECK-BE-NEXT:    b.eq .LBB0_1
+; CHECK-BE-NEXT:    b.ne .LBB0_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit
 ; CHECK-BE-NEXT:    ret
 ;
@@ -107,7 +107,7 @@ define void @trunc_v16i32_to_v16i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-DISABLE-NEXT:    uzp1 v2.8h, v3.8h, v2.8h
 ; CHECK-DISABLE-NEXT:    uzp1 v0.16b, v0.16b, v2.16b
 ; CHECK-DISABLE-NEXT:    st1 { v0.16b }, [x9]
-; CHECK-DISABLE-NEXT:    b.eq .LBB0_1
+; CHECK-DISABLE-NEXT:    b.ne .LBB0_1
 ; CHECK-DISABLE-NEXT:  // %bb.2: // %exit
 ; CHECK-DISABLE-NEXT:    ret
 entry:
@@ -122,7 +122,7 @@ loop:
   store <16 x i8> %trunc, ptr %gep.dst
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1000
-  br i1 %ec, label %loop, label %exit
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void
@@ -230,7 +230,7 @@ define void @trunc_v8i32_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    str d1, [x1, x8, lsl #3]
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
-; CHECK-NEXT:    b.eq LBB2_1
+; CHECK-NEXT:    b.ne LBB2_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh2, Lloh3
@@ -252,7 +252,7 @@ define void @trunc_v8i32_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-BE-NEXT:    cmp x8, #1000
 ; CHECK-BE-NEXT:    tbl v1.16b, { v1.16b, v2.16b }, v0.16b
 ; CHECK-BE-NEXT:    st1 { v1.8b }, [x9]
-; CHECK-BE-NEXT:    b.eq .LBB2_1
+; CHECK-BE-NEXT:    b.ne .LBB2_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit
 ; CHECK-BE-NEXT:    ret
 ;
@@ -271,7 +271,7 @@ define void @trunc_v8i32_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-DISABLE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-DISABLE-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-DISABLE-NEXT:    st1 { v0.8b }, [x9]
-; CHECK-DISABLE-NEXT:    b.eq .LBB2_1
+; CHECK-DISABLE-NEXT:    b.ne .LBB2_1
 ; CHECK-DISABLE-NEXT:  // %bb.2: // %exit
 ; CHECK-DISABLE-NEXT:    ret
 entry:
@@ -286,7 +286,7 @@ loop:
   store <8 x i8> %trunc, ptr %gep.dst
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1000
-  br i1 %ec, label %loop, label %exit
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void
@@ -348,7 +348,7 @@ define void @trunc_v16i64_to_v16i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    str q1, [x1, x8, lsl #4]
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
-; CHECK-NEXT:    b.eq LBB3_1
+; CHECK-NEXT:    b.ne LBB3_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh4, Lloh5
@@ -384,7 +384,7 @@ define void @trunc_v16i64_to_v16i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-BE-NEXT:    tbl v2.16b, { v16.16b, v17.16b, v18.16b, v19.16b }, v0.16b
 ; CHECK-BE-NEXT:    mov v1.d[1], v2.d[0]
 ; CHECK-BE-NEXT:    st1 { v1.16b }, [x9]
-; CHECK-BE-NEXT:    b.eq .LBB3_1
+; CHECK-BE-NEXT:    b.ne .LBB3_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit
 ; CHECK-BE-NEXT:    ret
 ;
@@ -420,7 +420,7 @@ define void @trunc_v16i64_to_v16i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-DISABLE-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
 ; CHECK-DISABLE-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
 ; CHECK-DISABLE-NEXT:    st1 { v0.16b }, [x9]
-; CHECK-DISABLE-NEXT:    b.eq .LBB3_1
+; CHECK-DISABLE-NEXT:    b.ne .LBB3_1
 ; CHECK-DISABLE-NEXT:  // %bb.2: // %exit
 ; CHECK-DISABLE-NEXT:    ret
 entry:
@@ -435,7 +435,7 @@ loop:
   store <16 x i8> %trunc, ptr %gep.dst
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1000
-  br i1 %ec, label %loop, label %exit
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void
@@ -493,7 +493,7 @@ define void @trunc_v8i64_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    str d1, [x1, x8, lsl #3]
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
-; CHECK-NEXT:    b.eq LBB4_1
+; CHECK-NEXT:    b.ne LBB4_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:    .loh AdrpLdr Lloh6, Lloh7
@@ -519,7 +519,7 @@ define void @trunc_v8i64_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-BE-NEXT:    cmp x8, #1000
 ; CHECK-BE-NEXT:    tbl v1.16b, { v1.16b, v2.16b, v3.16b, v4.16b }, v0.16b
 ; CHECK-BE-NEXT:    st1 { v1.8b }, [x9]
-; CHECK-BE-NEXT:    b.eq .LBB4_1
+; CHECK-BE-NEXT:    b.ne .LBB4_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit
 ; CHECK-BE-NEXT:    ret
 ;
@@ -544,7 +544,7 @@ define void @trunc_v8i64_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-DISABLE-NEXT:    uzp1 v0.8h, v0.8h, v2.8h
 ; CHECK-DISABLE-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-DISABLE-NEXT:    st1 { v0.8b }, [x9]
-; CHECK-DISABLE-NEXT:    b.eq .LBB4_1
+; CHECK-DISABLE-NEXT:    b.ne .LBB4_1
 ; CHECK-DISABLE-NEXT:  // %bb.2: // %exit
 ; CHECK-DISABLE-NEXT:    ret
 entry:
@@ -559,7 +559,7 @@ loop:
   store <8 x i8> %trunc, ptr %gep.dst
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1000
-  br i1 %ec, label %loop, label %exit
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void
@@ -575,7 +575,7 @@ define void @trunc_v8i19_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    ldrb w14, [x0, #18]
 ; CHECK-NEXT:    ldrh w15, [x0, #16]
 ; CHECK-NEXT:    add x0, x0, #32
-; CHECK-NEXT:    ubfx x12, x10, #12, #20
+; CHECK-NEXT:    lsr w12, w10, #12
 ; CHECK-NEXT:    fmov s1, w9
 ; CHECK-NEXT:    lsr x11, x9, #19
 ; CHECK-NEXT:    lsr x13, x10, #31
@@ -586,7 +586,7 @@ define void @trunc_v8i19_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    orr x11, x15, x14, lsl #16
 ; CHECK-NEXT:    mov.s v0[1], w13
 ; CHECK-NEXT:    extr x13, x11, x10, #50
-; CHECK-NEXT:    ubfx x10, x11, #5, #27
+; CHECK-NEXT:    lsr w10, w11, #5
 ; CHECK-NEXT:    mov.s v1[2], w12
 ; CHECK-NEXT:    mov.s v0[2], w13
 ; CHECK-NEXT:    mov.s v1[3], w9
@@ -596,7 +596,7 @@ define void @trunc_v8i19_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    str d0, [x1, x8, lsl #3]
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
-; CHECK-NEXT:    b.eq LBB5_1
+; CHECK-NEXT:    b.ne LBB5_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 ;
@@ -616,14 +616,14 @@ define void @trunc_v8i19_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-BE-NEXT:    lsr x15, x10, #40
 ; CHECK-BE-NEXT:    extr x12, x12, x11, #57
 ; CHECK-BE-NEXT:    fmov s0, w13
-; CHECK-BE-NEXT:    ubfx x13, x10, #7, #25
+; CHECK-BE-NEXT:    lsr w13, w10, #7
 ; CHECK-BE-NEXT:    extr x14, x15, x14, #50
-; CHECK-BE-NEXT:    ubfx x15, x9, #14, #18
+; CHECK-BE-NEXT:    lsr w15, w9, #14
 ; CHECK-BE-NEXT:    extr x9, x10, x9, #40
 ; CHECK-BE-NEXT:    fmov s1, w12
 ; CHECK-BE-NEXT:    orr w12, w17, w16, lsl #8
 ; CHECK-BE-NEXT:    mov v0.s[1], w14
-; CHECK-BE-NEXT:    ubfx x9, x9, #12, #20
+; CHECK-BE-NEXT:    lsr w9, w9, #12
 ; CHECK-BE-NEXT:    orr w11, w12, w11
 ; CHECK-BE-NEXT:    mov v1.s[1], w15
 ; CHECK-BE-NEXT:    lsr w11, w11, #19
@@ -637,7 +637,7 @@ define void @trunc_v8i19_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-BE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-BE-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-BE-NEXT:    st1 { v0.8b }, [x9]
-; CHECK-BE-NEXT:    b.eq .LBB5_1
+; CHECK-BE-NEXT:    b.ne .LBB5_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit
 ; CHECK-BE-NEXT:    ret
 ;
@@ -657,14 +657,14 @@ define void @trunc_v8i19_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-DISABLE-NEXT:    lsr x15, x10, #40
 ; CHECK-DISABLE-NEXT:    extr x12, x12, x11, #57
 ; CHECK-DISABLE-NEXT:    fmov s0, w13
-; CHECK-DISABLE-NEXT:    ubfx x13, x10, #7, #25
+; CHECK-DISABLE-NEXT:    lsr w13, w10, #7
 ; CHECK-DISABLE-NEXT:    extr x14, x15, x14, #50
-; CHECK-DISABLE-NEXT:    ubfx x15, x9, #14, #18
+; CHECK-DISABLE-NEXT:    lsr w15, w9, #14
 ; CHECK-DISABLE-NEXT:    extr x9, x10, x9, #40
 ; CHECK-DISABLE-NEXT:    fmov s1, w12
 ; CHECK-DISABLE-NEXT:    orr w12, w17, w16, lsl #8
 ; CHECK-DISABLE-NEXT:    mov v0.s[1], w14
-; CHECK-DISABLE-NEXT:    ubfx x9, x9, #12, #20
+; CHECK-DISABLE-NEXT:    lsr w9, w9, #12
 ; CHECK-DISABLE-NEXT:    orr w11, w12, w11
 ; CHECK-DISABLE-NEXT:    mov v1.s[1], w15
 ; CHECK-DISABLE-NEXT:    lsr w11, w11, #19
@@ -678,7 +678,7 @@ define void @trunc_v8i19_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-DISABLE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-DISABLE-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-DISABLE-NEXT:    st1 { v0.8b }, [x9]
-; CHECK-DISABLE-NEXT:    b.eq .LBB5_1
+; CHECK-DISABLE-NEXT:    b.ne .LBB5_1
 ; CHECK-DISABLE-NEXT:  // %bb.2: // %exit
 ; CHECK-DISABLE-NEXT:    ret
 entry:
@@ -693,7 +693,7 @@ loop:
   store <8 x i8> %trunc, ptr %gep.dst
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1000
-  br i1 %ec, label %loop, label %exit
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void
@@ -705,25 +705,26 @@ define void @trunc_v11i64_to_v11i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    mov w8, #1000 ; =0x3e8
 ; CHECK-NEXT:  LBB6_1: ; %loop
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    ldp q4, q1, [x0, #48]
-; CHECK-NEXT:    add x9, x1, #10
-; CHECK-NEXT:    ldr d0, [x0, #80]
-; CHECK-NEXT:    ldp q3, q2, [x0]
-; CHECK-NEXT:    ldr q5, [x0, #32]
+; CHECK-NEXT:    ldp q4, q0, [x0, #48]
 ; CHECK-NEXT:    subs x8, x8, #1
+; CHECK-NEXT:    ldp q3, q2, [x0]
+; CHECK-NEXT:    ldr d1, [x0, #80]
+; CHECK-NEXT:    ldr q5, [x0, #32]
 ; CHECK-NEXT:    add x0, x0, #128
-; CHECK-NEXT:    uzp1.4s v0, v1, v0
+; CHECK-NEXT:    uzp1.4s v0, v0, v1
 ; CHECK-NEXT:    uzp1.4s v1, v5, v4
 ; CHECK-NEXT:    uzp1.4s v2, v3, v2
 ; CHECK-NEXT:    xtn.4h v0, v0
 ; CHECK-NEXT:    uzp1.8h v1, v2, v1
 ; CHECK-NEXT:    uzp1.8b v2, v0, v0
 ; CHECK-NEXT:    uzp1.16b v0, v1, v0
-; CHECK-NEXT:    st1.b { v2 }[2], [x9]
-; CHECK-NEXT:    add x9, x1, #8
-; CHECK-NEXT:    st1.h { v0 }[4], [x9]
-; CHECK-NEXT:    str d0, [x1], #16
-; CHECK-NEXT:    b.eq LBB6_1
+; CHECK-NEXT:    mov b1, v2[2]
+; CHECK-NEXT:    mov h2, v0[4]
+; CHECK-NEXT:    str d0, [x1]
+; CHECK-NEXT:    stur b1, [x1, #10]
+; CHECK-NEXT:    str h2, [x1, #8]
+; CHECK-NEXT:    add x1, x1, #16
+; CHECK-NEXT:    b.ne LBB6_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 ;
@@ -742,11 +743,10 @@ define void @trunc_v11i64_to_v11i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-BE-NEXT:    ld1 { v2.2d }, [x9]
 ; CHECK-BE-NEXT:    ldr d5, [x0, #80]
 ; CHECK-BE-NEXT:    ld1 { v4.2d }, [x10]
-; CHECK-BE-NEXT:    add x9, x1, #10
 ; CHECK-BE-NEXT:    subs x8, x8, #1
+; CHECK-BE-NEXT:    add x0, x0, #128
 ; CHECK-BE-NEXT:    uzp1 v1.4s, v3.4s, v1.4s
 ; CHECK-BE-NEXT:    uzp1 v0.4s, v0.4s, v5.4s
-; CHECK-BE-NEXT:    add x0, x0, #128
 ; CHECK-BE-NEXT:    uzp1 v2.4s, v4.4s, v2.4s
 ; CHECK-BE-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-BE-NEXT:    uzp1 v1.8h, v1.8h, v2.8h
@@ -754,11 +754,13 @@ define void @trunc_v11i64_to_v11i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-BE-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-BE-NEXT:    rev16 v2.16b, v1.16b
 ; CHECK-BE-NEXT:    rev64 v1.16b, v1.16b
-; CHECK-BE-NEXT:    st1 { v0.b }[2], [x9]
-; CHECK-BE-NEXT:    add x9, x1, #8
-; CHECK-BE-NEXT:    st1 { v2.h }[4], [x9]
-; CHECK-BE-NEXT:    str d1, [x1], #16
-; CHECK-BE-NEXT:    b.eq .LBB6_1
+; CHECK-BE-NEXT:    mov b0, v0.b[2]
+; CHECK-BE-NEXT:    mov h2, v2.h[4]
+; CHECK-BE-NEXT:    str d1, [x1]
+; CHECK-BE-NEXT:    stur b0, [x1, #10]
+; CHECK-BE-NEXT:    str h2, [x1, #8]
+; CHECK-BE-NEXT:    add x1, x1, #16
+; CHECK-BE-NEXT:    b.ne .LBB6_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit
 ; CHECK-BE-NEXT:    ret
 ;
@@ -777,11 +779,10 @@ define void @trunc_v11i64_to_v11i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-DISABLE-NEXT:    ld1 { v2.2d }, [x9]
 ; CHECK-DISABLE-NEXT:    ldr d5, [x0, #80]
 ; CHECK-DISABLE-NEXT:    ld1 { v4.2d }, [x10]
-; CHECK-DISABLE-NEXT:    add x9, x1, #10
 ; CHECK-DISABLE-NEXT:    subs x8, x8, #1
+; CHECK-DISABLE-NEXT:    add x0, x0, #128
 ; CHECK-DISABLE-NEXT:    uzp1 v1.4s, v3.4s, v1.4s
 ; CHECK-DISABLE-NEXT:    uzp1 v0.4s, v0.4s, v5.4s
-; CHECK-DISABLE-NEXT:    add x0, x0, #128
 ; CHECK-DISABLE-NEXT:    uzp1 v2.4s, v4.4s, v2.4s
 ; CHECK-DISABLE-NEXT:    xtn v0.4h, v0.4s
 ; CHECK-DISABLE-NEXT:    uzp1 v1.8h, v1.8h, v2.8h
@@ -789,11 +790,13 @@ define void @trunc_v11i64_to_v11i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-DISABLE-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-DISABLE-NEXT:    rev16 v2.16b, v1.16b
 ; CHECK-DISABLE-NEXT:    rev64 v1.16b, v1.16b
-; CHECK-DISABLE-NEXT:    st1 { v0.b }[2], [x9]
-; CHECK-DISABLE-NEXT:    add x9, x1, #8
-; CHECK-DISABLE-NEXT:    st1 { v2.h }[4], [x9]
-; CHECK-DISABLE-NEXT:    str d1, [x1], #16
-; CHECK-DISABLE-NEXT:    b.eq .LBB6_1
+; CHECK-DISABLE-NEXT:    mov b0, v0.b[2]
+; CHECK-DISABLE-NEXT:    mov h2, v2.h[4]
+; CHECK-DISABLE-NEXT:    str d1, [x1]
+; CHECK-DISABLE-NEXT:    stur b0, [x1, #10]
+; CHECK-DISABLE-NEXT:    str h2, [x1, #8]
+; CHECK-DISABLE-NEXT:    add x1, x1, #16
+; CHECK-DISABLE-NEXT:    b.ne .LBB6_1
 ; CHECK-DISABLE-NEXT:  // %bb.2: // %exit
 ; CHECK-DISABLE-NEXT:    ret
 entry:
@@ -808,7 +811,7 @@ loop:
   store <11 x i8> %trunc, ptr %gep.dst
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1000
-  br i1 %ec, label %loop, label %exit
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void
@@ -826,7 +829,7 @@ define void @trunc_v16i16_to_v16i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    str q0, [x1, x8, lsl #4]
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
-; CHECK-NEXT:    b.eq LBB7_1
+; CHECK-NEXT:    b.ne LBB7_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 ;
@@ -844,7 +847,7 @@ define void @trunc_v16i16_to_v16i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-BE-NEXT:    cmp x8, #1000
 ; CHECK-BE-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
 ; CHECK-BE-NEXT:    st1 { v0.16b }, [x9]
-; CHECK-BE-NEXT:    b.eq .LBB7_1
+; CHECK-BE-NEXT:    b.ne .LBB7_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit
 ; CHECK-BE-NEXT:    ret
 ;
@@ -862,7 +865,7 @@ define void @trunc_v16i16_to_v16i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-DISABLE-NEXT:    cmp x8, #1000
 ; CHECK-DISABLE-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
 ; CHECK-DISABLE-NEXT:    st1 { v0.16b }, [x9]
-; CHECK-DISABLE-NEXT:    b.eq .LBB7_1
+; CHECK-DISABLE-NEXT:    b.ne .LBB7_1
 ; CHECK-DISABLE-NEXT:  // %bb.2: // %exit
 ; CHECK-DISABLE-NEXT:    ret
 entry:
@@ -877,7 +880,7 @@ loop:
   store <16 x i8> %trunc, ptr %gep.dst
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1000
-  br i1 %ec, label %loop, label %exit
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void
@@ -894,7 +897,7 @@ define void @trunc_v8i16_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-NEXT:    str d0, [x1, x8, lsl #3]
 ; CHECK-NEXT:    add x8, x8, #1
 ; CHECK-NEXT:    cmp x8, #1000
-; CHECK-NEXT:    b.eq LBB8_1
+; CHECK-NEXT:    b.ne LBB8_1
 ; CHECK-NEXT:  ; %bb.2: ; %exit
 ; CHECK-NEXT:    ret
 ;
@@ -910,7 +913,7 @@ define void @trunc_v8i16_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-BE-NEXT:    cmp x8, #1000
 ; CHECK-BE-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-BE-NEXT:    st1 { v0.8b }, [x9]
-; CHECK-BE-NEXT:    b.eq .LBB8_1
+; CHECK-BE-NEXT:    b.ne .LBB8_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit
 ; CHECK-BE-NEXT:    ret
 ;
@@ -926,7 +929,7 @@ define void @trunc_v8i16_to_v8i8_in_loop(ptr %A, ptr %dst) {
 ; CHECK-DISABLE-NEXT:    cmp x8, #1000
 ; CHECK-DISABLE-NEXT:    xtn v0.8b, v0.8h
 ; CHECK-DISABLE-NEXT:    st1 { v0.8b }, [x9]
-; CHECK-DISABLE-NEXT:    b.eq .LBB8_1
+; CHECK-DISABLE-NEXT:    b.ne .LBB8_1
 ; CHECK-DISABLE-NEXT:  // %bb.2: // %exit
 ; CHECK-DISABLE-NEXT:    ret
 entry:
@@ -941,7 +944,7 @@ loop:
   store <8 x i8> %trunc, ptr %gep.dst
   %iv.next = add i64 %iv, 1
   %ec = icmp eq i64 %iv.next, 1000
-  br i1 %ec, label %loop, label %exit
+  br i1 %ec, label %exit, label %loop
 
 exit:
   ret void

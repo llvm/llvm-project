@@ -22,22 +22,15 @@ define <8 x i32> @test_vector_v8i32() {
 ;
 ; SSE-X64-GISEL-LABEL: test_vector_v8i32:
 ; SSE-X64-GISEL:       # %bb.0:
-; SSE-X64-GISEL-NEXT:    movl $128100944, %eax # imm = 0x7A2AA50
-; SSE-X64-GISEL-NEXT:    movl $-632258670, %ecx # imm = 0xDA507F92
-; SSE-X64-GISEL-NEXT:    movl $-408980432, %edx # imm = 0xE79F7430
-; SSE-X64-GISEL-NEXT:    movl $708630551, %esi # imm = 0x2A3CD817
-; SSE-X64-GISEL-NEXT:    movl $-871899055, %r8d # imm = 0xCC07E051
-; SSE-X64-GISEL-NEXT:    movl $-633489957, %r9d # imm = 0xDA3DB5DB
-; SSE-X64-GISEL-NEXT:    movl $591019567, %r10d # imm = 0x233A3E2F
-; SSE-X64-GISEL-NEXT:    movl $708632899, %r11d # imm = 0x2A3CE143
-; SSE-X64-GISEL-NEXT:    movl %eax, (%rdi)
-; SSE-X64-GISEL-NEXT:    movl %ecx, 4(%rdi)
-; SSE-X64-GISEL-NEXT:    movl %edx, 8(%rdi)
-; SSE-X64-GISEL-NEXT:    movl %esi, 12(%rdi)
-; SSE-X64-GISEL-NEXT:    movl %r8d, 16(%rdi)
-; SSE-X64-GISEL-NEXT:    movl %r9d, 20(%rdi)
-; SSE-X64-GISEL-NEXT:    movl %r10d, 24(%rdi)
-; SSE-X64-GISEL-NEXT:    movl %r11d, 28(%rdi)
+; SSE-X64-GISEL-NEXT:    movq %rdi, %rax
+; SSE-X64-GISEL-NEXT:    movl $128100944, (%rdi) # imm = 0x7A2AA50
+; SSE-X64-GISEL-NEXT:    movl $-632258670, 4(%rdi) # imm = 0xDA507F92
+; SSE-X64-GISEL-NEXT:    movl $-408980432, 8(%rdi) # imm = 0xE79F7430
+; SSE-X64-GISEL-NEXT:    movl $708630551, 12(%rdi) # imm = 0x2A3CD817
+; SSE-X64-GISEL-NEXT:    movl $-871899055, 16(%rdi) # imm = 0xCC07E051
+; SSE-X64-GISEL-NEXT:    movl $-633489957, 20(%rdi) # imm = 0xDA3DB5DB
+; SSE-X64-GISEL-NEXT:    movl $591019567, 24(%rdi) # imm = 0x233A3E2F
+; SSE-X64-GISEL-NEXT:    movl $708632899, 28(%rdi) # imm = 0x2A3CE143
 ; SSE-X64-GISEL-NEXT:    retq
 ;
 ; SSE-X86-LABEL: test_vector_v8i32:
@@ -56,22 +49,14 @@ define <8 x i32> @test_vector_v8i32() {
 ; SSE-X86-GISEL-LABEL: test_vector_v8i32:
 ; SSE-X86-GISEL:       # %bb.0:
 ; SSE-X86-GISEL-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE-X86-GISEL-NEXT:    movl $128100944, %ecx # imm = 0x7A2AA50
-; SSE-X86-GISEL-NEXT:    movl %ecx, (%eax)
-; SSE-X86-GISEL-NEXT:    movl $-632258670, %ecx # imm = 0xDA507F92
-; SSE-X86-GISEL-NEXT:    movl %ecx, 4(%eax)
-; SSE-X86-GISEL-NEXT:    movl $-408980432, %ecx # imm = 0xE79F7430
-; SSE-X86-GISEL-NEXT:    movl %ecx, 8(%eax)
-; SSE-X86-GISEL-NEXT:    movl $708630551, %ecx # imm = 0x2A3CD817
-; SSE-X86-GISEL-NEXT:    movl %ecx, 12(%eax)
-; SSE-X86-GISEL-NEXT:    movl $-871899055, %ecx # imm = 0xCC07E051
-; SSE-X86-GISEL-NEXT:    movl %ecx, 16(%eax)
-; SSE-X86-GISEL-NEXT:    movl $-633489957, %ecx # imm = 0xDA3DB5DB
-; SSE-X86-GISEL-NEXT:    movl %ecx, 20(%eax)
-; SSE-X86-GISEL-NEXT:    movl $591019567, %ecx # imm = 0x233A3E2F
-; SSE-X86-GISEL-NEXT:    movl %ecx, 24(%eax)
-; SSE-X86-GISEL-NEXT:    movl $708632899, %ecx # imm = 0x2A3CE143
-; SSE-X86-GISEL-NEXT:    movl %ecx, 28(%eax)
+; SSE-X86-GISEL-NEXT:    movl $128100944, (%eax) # imm = 0x7A2AA50
+; SSE-X86-GISEL-NEXT:    movl $-632258670, 4(%eax) # imm = 0xDA507F92
+; SSE-X86-GISEL-NEXT:    movl $-408980432, 8(%eax) # imm = 0xE79F7430
+; SSE-X86-GISEL-NEXT:    movl $708630551, 12(%eax) # imm = 0x2A3CD817
+; SSE-X86-GISEL-NEXT:    movl $-871899055, 16(%eax) # imm = 0xCC07E051
+; SSE-X86-GISEL-NEXT:    movl $-633489957, 20(%eax) # imm = 0xDA3DB5DB
+; SSE-X86-GISEL-NEXT:    movl $591019567, 24(%eax) # imm = 0x233A3E2F
+; SSE-X86-GISEL-NEXT:    movl $708632899, 28(%eax) # imm = 0x2A3CE143
 ; SSE-X86-GISEL-NEXT:    retl
   ret <8 x i32> <i32 128100944, i32 3662708626, i32 3885986864, i32 708630551, i32 -871899055, i32 3661477339, i32 4885986863, i32 708632899>
 }
@@ -88,6 +73,7 @@ define <4 x i32> @test_vector_v4i32() {
 ;
 ; SSE-X64-GISEL-LABEL: test_vector_v4i32:
 ; SSE-X64-GISEL:       # %bb.0:
+; SSE-X64-GISEL-NEXT:    movq %rdi, %rax
 ; SSE-X64-GISEL-NEXT:    movaps {{.*#+}} xmm0 = [128100944,3662708626,3885986864,708630551]
 ; SSE-X64-GISEL-NEXT:    movaps %xmm0, (%rdi)
 ; SSE-X64-GISEL-NEXT:    retq

@@ -15,6 +15,11 @@
 
 #else // Overlay mode
 
+// GCC will include CXX headers when __cplusplus is defined. This behavior
+// can be suppressed by defining _GLIBCXX_INCLUDE_NEXT_C_HEADERS.
+#if defined(__GNUC__) && !defined(__clang__)
+#define _GLIBCXX_INCLUDE_NEXT_C_HEADERS
+#endif
 #include <math.h>
 
 // Some older math.h header does not have FP_INT_* constants yet.
@@ -38,6 +43,6 @@
 #define FP_INT_TONEAREST 4
 #endif // FP_INT_TONEAREST
 
-#endif // LLVM_LIBC_FULL_BUILD
+#endif // LIBC_FULL_BUILD
 
 #endif // LLVM_LIBC_HDR_MATH_MACROS_H

@@ -60,7 +60,7 @@ void Denormalize(llvm::SmallVectorImpl<char> &path, FileSpec::Style style) {
   if (PathStyleIsPosix(style))
     return;
 
-  std::replace(path.begin(), path.end(), '/', '\\');
+  llvm::replace(path, '/', '\\');
 }
 
 } // end anonymous namespace
@@ -186,7 +186,7 @@ void FileSpec::SetFile(llvm::StringRef pathname, Style style) {
 
   // Normalize back slashes to forward slashes
   if (m_style == Style::windows)
-    std::replace(resolved.begin(), resolved.end(), '\\', '/');
+    llvm::replace(resolved, '\\', '/');
 
   if (resolved.empty()) {
     // If we have no path after normalization set the path to the current
@@ -330,6 +330,13 @@ void FileSpec::Dump(llvm::raw_ostream &s) const {
     s << path_separator;
 }
 
+llvm::json::Value FileSpec::ToJSON() const {
+  std::string str;
+  llvm::raw_string_ostream stream(str);
+  this->Dump(stream);
+  return llvm::json::Value(std::move(str));
+}
+
 FileSpec::Style FileSpec::GetPathStyle() const { return m_style; }
 
 void FileSpec::SetDirectory(ConstString directory) {
@@ -378,10 +385,6 @@ std::string FileSpec::GetPath(bool denormalize) const {
   llvm::SmallString<64> result;
   GetPath(result, denormalize);
   return static_cast<std::string>(result);
-}
-
-ConstString FileSpec::GetPathAsConstString(bool denormalize) const {
-  return ConstString{GetPath(denormalize)};
 }
 
 void FileSpec::GetPath(llvm::SmallVectorImpl<char> &path,

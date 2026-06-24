@@ -1,7 +1,7 @@
 ## Test that permissions for ouput files are mirrored
 ## from their input files.
 
-## The Unix version of this test is seperated because it needs
+## The Unix version of this test is separated because it needs
 ## to use umask(1). Windows has no umask, so it can be considered
 ## to be always 0, the required behavior.
 # REQUIRES: system-windows

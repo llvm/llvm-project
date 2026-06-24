@@ -623,9 +623,9 @@ define arm_aapcs_vfpcc void @three_pointer_iv_v4i32(ptr nocapture readonly %x, p
 ; CHECK-NEXT:    vldrw.u32 q3, [r0, q0]
 ; CHECK-NEXT:    vldrw.u32 q4, [r0, q1, uxtw #2]
 ; CHECK-NEXT:    vldrw.u32 q5, [r0, q2]
-; CHECK-NEXT:    subs r2, #4
+; CHECK-NEXT:    adds r0, #48
 ; CHECK-NEXT:    vmul.i32 q3, q4, q3
-; CHECK-NEXT:    add.w r0, r0, #48
+; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vmul.i32 q5, q4, q5
 ; CHECK-NEXT:    vmul.i32 q4, q4, r3
 ; CHECK-NEXT:    vstrw.32 q4, [r1, q1, uxtw #2]
@@ -705,9 +705,9 @@ define arm_aapcs_vfpcc void @three_pointer_iv_v4i8(ptr nocapture readonly %x, pt
 ; CHECK-NEXT:    vldrb.u32 q3, [r0, q0]
 ; CHECK-NEXT:    vldrb.u32 q4, [r0, q1]
 ; CHECK-NEXT:    vldrb.u32 q5, [r0, q2]
-; CHECK-NEXT:    subs r2, #4
+; CHECK-NEXT:    adds r0, #12
 ; CHECK-NEXT:    vmul.i32 q3, q4, q3
-; CHECK-NEXT:    add.w r0, r0, #12
+; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vmul.i32 q5, q4, q5
 ; CHECK-NEXT:    vmul.i32 q4, q4, r3
 ; CHECK-NEXT:    vstrb.32 q4, [r1, q1]
@@ -793,9 +793,9 @@ define arm_aapcs_vfpcc void @three_pointer_iv_v8i16(ptr nocapture readonly %x, p
 ; CHECK-NEXT:    vldrh.u16 q3, [r0, q0]
 ; CHECK-NEXT:    vldrh.u16 q4, [r0, q1, uxtw #1]
 ; CHECK-NEXT:    vldrh.u16 q5, [r0, q2]
-; CHECK-NEXT:    subs r2, #4
+; CHECK-NEXT:    adds r0, #48
 ; CHECK-NEXT:    vmul.i16 q3, q4, q3
-; CHECK-NEXT:    add.w r0, r0, #48
+; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vmul.i16 q5, q4, q5
 ; CHECK-NEXT:    vmul.i16 q4, q4, r3
 ; CHECK-NEXT:    vstrh.16 q4, [r1, q1, uxtw #1]
@@ -887,9 +887,9 @@ define arm_aapcs_vfpcc void @three_pointer_iv_v16i8(ptr nocapture readonly %x, p
 ; CHECK-NEXT:    vldrb.u8 q3, [r0, q0]
 ; CHECK-NEXT:    vldrb.u8 q4, [r0, q1]
 ; CHECK-NEXT:    vldrb.u8 q5, [r0, q2]
-; CHECK-NEXT:    subs r2, #4
+; CHECK-NEXT:    adds r0, #48
 ; CHECK-NEXT:    vmul.i8 q3, q4, q3
-; CHECK-NEXT:    add.w r0, r0, #48
+; CHECK-NEXT:    subs r2, #4
 ; CHECK-NEXT:    vmul.i8 q5, q4, q5
 ; CHECK-NEXT:    vmul.i8 q4, q4, r3
 ; CHECK-NEXT:    vstrb.8 q4, [r1, q1]

@@ -16,6 +16,12 @@ source_filename = "memprof-tailcall.cc"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
+@a = dso_local global [2 x ptr] [ptr @_Z2a1v, ptr @_Z2a2v], align 16
+
+declare void @_Z2a1v() #0
+
+declare void @_Z2a2v() #0
+
 ; Function Attrs: noinline
 ; IR-LABEL: @_Z3barv()
 define ptr @_Z3barv() local_unnamed_addr #0 {
@@ -58,6 +64,8 @@ define i32 @main() #0 {
   ;; cloned functions.
   ; IR: call ptr @_Z3foov.memprof.1()
   %call1 = tail call ptr @_Z3foov(), !callsite !7
+  %2 = load ptr, ptr @a, align 16
+  call void %2(), !callsite !10
   ret i32 0
 }
 
@@ -79,7 +87,7 @@ attributes #0 = { noinline }
 attributes #1 = { nobuiltin allocsize(0) }
 attributes #2 = { builtin allocsize(0) }
 
-!0 = !{!1, !3}
+!0 = !{!1, !3, !8}
 !1 = !{!2, !"notcold"}
 !2 = !{i64 3186456655321080972, i64 8632435727821051414}
 !3 = !{!4, !"cold"}
@@ -87,3 +95,6 @@ attributes #2 = { builtin allocsize(0) }
 !5 = !{i64 3186456655321080972}
 !6 = !{i64 8632435727821051414}
 !7 = !{i64 -3421689549917153178}
+!8 = !{!9, !"notcold"}
+!9 = !{i64 3186456655321080972, i64 1}
+!10 = !{i64 1}

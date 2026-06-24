@@ -7,14 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "MSP430.h"
-#include "CommonArgs.h"
 #include "Gnu.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/InputInfo.h"
 #include "clang/Driver/Multilib.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 
 using namespace clang::driver;
@@ -158,6 +157,7 @@ void MSP430ToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
 void MSP430ToolChain::addClangTargetOptions(const ArgList &DriverArgs,
                                             ArgStringList &CC1Args,
+                                            StringRef BoundArch,
                                             Action::OffloadKind) const {
   CC1Args.push_back("-nostdsysteminc");
 

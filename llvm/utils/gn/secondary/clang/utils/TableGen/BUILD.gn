@@ -7,9 +7,11 @@ executable("clang-tblgen") {
   ]
   sources = [
     "ASTTableGen.cpp",
+    "CIRLoweringEmitter.cpp",
     "ClangASTNodesEmitter.cpp",
     "ClangASTPropertiesEmitter.cpp",
     "ClangAttrEmitter.cpp",
+    "ClangBuiltinTemplatesEmitter.cpp",
     "ClangBuiltinsEmitter.cpp",
     "ClangCommentCommandInfoEmitter.cpp",
     "ClangCommentHTMLNamedCharacterReferenceEmitter.cpp",
@@ -22,6 +24,7 @@ executable("clang-tblgen") {
     "ClangSACheckersEmitter.cpp",
     "ClangSyntaxEmitter.cpp",
     "ClangTypeNodesEmitter.cpp",
+    "HLSLEmitter.cpp",
     "MveEmitter.cpp",
     "NeonEmitter.cpp",
     "RISCVVEmitter.cpp",

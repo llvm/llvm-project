@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 ; CHECK-NOT: .sdata.4.g0,"aM"
 
 target triple = "hexagon-unknown--elf"

@@ -12,12 +12,12 @@ define void @test(ptr %0) {
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    ldar w8, [x0]
-; CHECK-NEXT:    str w8, [sp, #116] ; 4-byte Folded Spill
+; CHECK-NEXT:    str w8, [sp, #116] ; 4-byte Spill
 ; CHECK-NEXT:    mov x8, #0 ; =0x0
-; CHECK-NEXT:    str x8, [sp, #120] ; 8-byte Folded Spill
+; CHECK-NEXT:    str x8, [sp, #120] ; 8-byte Spill
 ; CHECK-NEXT:    blr x8
-; CHECK-NEXT:    ldr w11, [sp, #116] ; 4-byte Folded Reload
-; CHECK-NEXT:    ldr x8, [sp, #120] ; 8-byte Folded Reload
+; CHECK-NEXT:    ldr w11, [sp, #116] ; 4-byte Reload
+; CHECK-NEXT:    ldr x8, [sp, #120] ; 8-byte Reload
 ; CHECK-NEXT:    mov x9, sp
 ; CHECK-NEXT:    str xzr, [x9]
 ; CHECK-NEXT:    str xzr, [x9, #8]

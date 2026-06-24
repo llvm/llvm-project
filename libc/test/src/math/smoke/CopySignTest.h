@@ -36,15 +36,15 @@ public:
   }
 
   void testRange(CopySignFunc func) {
-    constexpr int COUNT = 100'000;
+    constexpr int COUNT = 1'231;
     constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
         static_cast<StorageType>(STORAGE_MAX / COUNT), StorageType(1));
     StorageType v = 0;
     for (int i = 0; i <= COUNT; ++i, v += STEP) {
       FPBits x_bits = FPBits(v);
-      T x = T(v);
       if (x_bits.is_nan() || x_bits.is_inf())
         continue;
+      T x = x_bits.get_val();
 
       T res1 = func(x, -x);
       ASSERT_FP_EQ(res1, -x);

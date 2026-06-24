@@ -39,7 +39,7 @@ TestBreakpointIgnoreCount.py),::
         #lldbutil.print_stacktraces(process)
         from lldbutil import get_stopped_thread
         thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(thread != None, 'There should be a thread stopped due to breakpoint')
+        self.assertTrue(thread is not None, 'There should be a thread stopped due to breakpoint')
         frame0 = thread.GetFrameAtIndex(0)
         frame1 = thread.GetFrameAtIndex(1)
         frame2 = thread.GetFrameAtIndex(2)

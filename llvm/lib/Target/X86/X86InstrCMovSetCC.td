@@ -25,7 +25,7 @@ let SchedRW = [WriteCMOV.Folded, WriteCMOV.ReadAfterFold] in
                       (ins t.RegClass:$src1, t.MemOperand:$src2, ccode:$cond),
                       "cmov${cond}", args,
                       [(set t.RegClass:$dst, (X86cmov t.RegClass:$src1,
-                                    (t.LoadNode addr:$src2), timm:$cond, EFLAGS))]>, UseEFLAGS, NDD<ndd>;
+                                    (t.LoadNode !if(ndd, ndd_addr, addr):$src2), timm:$cond, EFLAGS))]>, UseEFLAGS, NDD<ndd>;
 }
 
 multiclass Cfcmov<X86TypeInfo t> {
@@ -99,12 +99,12 @@ let Predicates = [HasCMOV, NoNDD] in {
 }
 
 let Predicates = [HasCMOV, HasNDD] in {
-  def : Pat<(X86cmov (loadi16 addr:$src1), GR16:$src2, timm:$cond, EFLAGS),
-            (CMOV16rm_ND GR16:$src2, addr:$src1, (inv_cond_XFORM timm:$cond))>;
-  def : Pat<(X86cmov (loadi32 addr:$src1), GR32:$src2, timm:$cond, EFLAGS),
-            (CMOV32rm_ND GR32:$src2, addr:$src1, (inv_cond_XFORM timm:$cond))>;
-  def : Pat<(X86cmov (loadi64 addr:$src1), GR64:$src2, timm:$cond, EFLAGS),
-            (CMOV64rm_ND GR64:$src2, addr:$src1, (inv_cond_XFORM timm:$cond))>;
+  def : Pat<(X86cmov (loadi16 ndd_addr:$src1), GR16:$src2, timm:$cond, EFLAGS),
+            (CMOV16rm_ND GR16:$src2, ndd_addr:$src1, (inv_cond_XFORM timm:$cond))>;
+  def : Pat<(X86cmov (loadi32 ndd_addr:$src1), GR32:$src2, timm:$cond, EFLAGS),
+            (CMOV32rm_ND GR32:$src2, ndd_addr:$src1, (inv_cond_XFORM timm:$cond))>;
+  def : Pat<(X86cmov (loadi64 ndd_addr:$src1), GR64:$src2, timm:$cond, EFLAGS),
+            (CMOV64rm_ND GR64:$src2, ndd_addr:$src1, (inv_cond_XFORM timm:$cond))>;
 }
 let Predicates = [HasCMOV, HasCF] in {
   def : Pat<(X86cmov GR16:$src1, 0, timm:$cond, EFLAGS),
@@ -113,26 +113,51 @@ let Predicates = [HasCMOV, HasCF] in {
             (CFCMOV32rr GR32:$src1, (inv_cond_XFORM timm:$cond))>;
   def : Pat<(X86cmov GR64:$src1, 0, timm:$cond, EFLAGS),
             (CFCMOV64rr GR64:$src1, (inv_cond_XFORM timm:$cond))>;
+
+  def : Pat<(X86cload addr:$src1, 0, timm:$cond, EFLAGS),
+            (CFCMOV16rm addr:$src1, timm:$cond)>;
+  def : Pat<(X86cload addr:$src1, 0, timm:$cond, EFLAGS),
+            (CFCMOV32rm addr:$src1, timm:$cond)>;
+  def : Pat<(X86cload addr:$src1, 0, timm:$cond, EFLAGS),
+            (CFCMOV64rm addr:$src1, timm:$cond)>;
+
+  def : Pat<(X86cload addr:$src2, GR16:$src1, timm:$cond, EFLAGS),
+            (CFCMOV16rm_ND GR16:$src1, addr:$src2, timm:$cond)>;
+  def : Pat<(X86cload addr:$src2, GR32:$src1, timm:$cond, EFLAGS),
+            (CFCMOV32rm_ND GR32:$src1, addr:$src2, timm:$cond)>;
+  def : Pat<(X86cload addr:$src2, GR64:$src1, timm:$cond, EFLAGS),
+            (CFCMOV64rm_ND GR64:$src1, addr:$src2, timm:$cond)>;
+
+  def : Pat<(X86cstore GR16:$src2, addr:$src1, timm:$cond, EFLAGS),
+            (CFCMOV16mr addr:$src1, GR16:$src2, timm:$cond)>;
+  def : Pat<(X86cstore GR32:$src2, addr:$src1, timm:$cond, EFLAGS),
+            (CFCMOV32mr addr:$src1, GR32:$src2, timm:$cond)>;
+  def : Pat<(X86cstore GR64:$src2, addr:$src1, timm:$cond, EFLAGS),
+            (CFCMOV64mr addr:$src1, GR64:$src2, timm:$cond)>;
 }
 
 // SetCC instructions.
-let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1 in {
+let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1,
+  Predicates = [PreferLegacySetCC] in
   def SETCCr : I<0x90, MRMXrCC, (outs GR8:$dst), (ins ccode:$cond),
                 "set${cond}\t$dst",
                 [(set GR8:$dst, (X86setcc timm:$cond, EFLAGS))]>,
                 TB, Sched<[WriteSETCC]>;
+let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1 in
   def SETCCm : I<0x90, MRMXmCC, (outs), (ins i8mem:$dst, ccode:$cond),
                 "set${cond}\t$dst",
                 [(store (X86setcc timm:$cond, EFLAGS), addr:$dst)]>,
                 TB, Sched<[WriteSETCCStore]>;
-} // Uses = [EFLAGS]
 
 // SetZUCC and promoted SetCC instructions.
 let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1,
-  hasSideEffects = 0, Predicates = [In64BitMode], Predicates = [HasNDD] in {
+  hasSideEffects = 0, Predicates = [In64BitMode, PreferNoLegacySetCC] in
   def SETZUCCr : I<0x40, MRMXrCC, (outs GR8:$dst), (ins ccode:$cond),
-                "setzu${cond}\t$dst", []>,
+                "setzu${cond}\t$dst",
+                [(set GR8:$dst, (X86setcc timm:$cond, EFLAGS))]>,
                 XD, ZU, NoCD8, Sched<[WriteSETCC]>;
+let Uses = [EFLAGS], isCodeGenOnly = 1, ForceDisassemble = 1,
+  hasSideEffects = 0, Predicates = [In64BitMode] in {
   def SETCCr_EVEX : I<0x40, MRMXrCC, (outs GR8:$dst), (ins ccode:$cond),
                 "set${cond}\t$dst", []>,
                 XD, PL, Sched<[WriteSETCC]>;

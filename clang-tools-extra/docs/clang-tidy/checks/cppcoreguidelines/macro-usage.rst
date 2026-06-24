@@ -17,6 +17,7 @@ Examples:
   #define C 0
   #define F1(x, y) ((a) > (b) ? (a) : (b))
   #define F2(...) (__VA_ARGS__)
+  #define F3(x, y) x##y
   #define COMMA ,
   #define NORETURN [[noreturn]]
   #define DEPRECATED attribute((deprecated))

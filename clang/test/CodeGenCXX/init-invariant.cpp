@@ -46,6 +46,8 @@ extern const C c = C();
 int f();
 // CHECK: @d ={{.*}} global i32 0
 extern const int d = f();
+// CHECK: @d2 ={{.*}} addrspace(10) global i32 0
+extern const int __attribute__((address_space(10))) d2 = f();
 
 void e() {
   static const A a = A();
@@ -66,6 +68,10 @@ void e() {
 // CHECK: call noundef i32 @_Z1fv(
 // CHECK: store {{.*}}, ptr @d
 // CHECK: call {{.*}}@llvm.invariant.start.p0(i64 4, ptr @d)
+
+// CHECK: call noundef i32 @_Z1fv(
+// CHECK: store {{.*}}, ptr addrspace(10) @d2
+// CHECK: call {{.*}}@llvm.invariant.start.p10(i64 4, ptr addrspace(10) @d2)
 
 // CHECK-LABEL: define{{.*}} void @_Z1ev(
 // CHECK: call void @_ZN1AC1Ev(ptr noundef {{[^,]*}} @_ZZ1evE1a)

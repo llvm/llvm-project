@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_STRING_STRNDUP_H
 #define LLVM_LIBC_SRC_STRING_STRNDUP_H
 
-#include <string.h>
+#include "include/llvm-libc-types/size_t.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 char *strndup(const char *src, size_t size);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_STRING_STRNDUP_H

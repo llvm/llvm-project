@@ -23,12 +23,12 @@ int main(int argc, char **argv) {
 // CHECK:       [[THEN]]
 // CHECK: call void @__kmpc_taskgroup(ptr [[DEFLOC]], i32 [[GTID]])
 // CHECK: [[TASKV:%.+]] = call ptr @__kmpc_omp_task_alloc(ptr [[DEFLOC]], i32 [[GTID]], i32 33, i64 80, i64 1, ptr [[TASK1:@.+]])
-// CHECK: [[TASK_DATA:%.+]] = getelementptr inbounds %{{.+}}, ptr [[TASKV]], i32 0, i32 0
-// CHECK: [[DOWN:%.+]] = getelementptr inbounds [[TD_TY:%.+]], ptr [[TASK_DATA]], i32 0, i32 5
+// CHECK: [[TASK_DATA:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr [[TASKV]], i32 0, i32 0
+// CHECK: [[DOWN:%.+]] = getelementptr inbounds nuw [[TD_TY:%.+]], ptr [[TASK_DATA]], i32 0, i32 5
 // CHECK: store i64 0, ptr [[DOWN]],
-// CHECK: [[UP:%.+]] = getelementptr inbounds [[TD_TY]], ptr [[TASK_DATA]], i32 0, i32 6
+// CHECK: [[UP:%.+]] = getelementptr inbounds nuw [[TD_TY]], ptr [[TASK_DATA]], i32 0, i32 6
 // CHECK: store i64 9, ptr [[UP]],
-// CHECK: [[ST:%.+]] = getelementptr inbounds [[TD_TY]], ptr [[TASK_DATA]], i32 0, i32 7
+// CHECK: [[ST:%.+]] = getelementptr inbounds nuw [[TD_TY]], ptr [[TASK_DATA]], i32 0, i32 7
 // CHECK: store i64 1, ptr [[ST]],
 // CHECK: [[ST_VAL:%.+]] = load i64, ptr [[ST]],
 // CHECK: call void @__kmpc_taskloop(ptr [[DEFLOC]], i32 [[GTID]], ptr [[TASKV]], i32 1, ptr [[DOWN]], ptr [[UP]], i64 [[ST_VAL]], i32 1, i32 0, i64 0, ptr null)
@@ -44,12 +44,12 @@ int main(int argc, char **argv) {
 // CHECK-NEXT:  br i1 [[IS_MASTER]], label {{%?}}[[THEN:.+]], label {{%?}}[[EXIT:.+]]
 // CHECK:       [[THEN]]
 // CHECK: [[TASKV:%.+]] = call ptr @__kmpc_omp_task_alloc(ptr [[DEFLOC]], i32 [[GTID]], i32 1, i64 80, i64 1, ptr [[TASK2:@.+]])
-// CHECK: [[TASK_DATA:%.+]] = getelementptr inbounds %{{.+}}, ptr [[TASKV]], i32 0, i32 0
-// CHECK: [[DOWN:%.+]] = getelementptr inbounds [[TD_TY:%.+]], ptr [[TASK_DATA]], i32 0, i32 5
+// CHECK: [[TASK_DATA:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr [[TASKV]], i32 0, i32 0
+// CHECK: [[DOWN:%.+]] = getelementptr inbounds nuw [[TD_TY:%.+]], ptr [[TASK_DATA]], i32 0, i32 5
 // CHECK: store i64 0, ptr [[DOWN]],
-// CHECK: [[UP:%.+]] = getelementptr inbounds [[TD_TY]], ptr [[TASK_DATA]], i32 0, i32 6
+// CHECK: [[UP:%.+]] = getelementptr inbounds nuw [[TD_TY]], ptr [[TASK_DATA]], i32 0, i32 6
 // CHECK: store i64 9, ptr [[UP]],
-// CHECK: [[ST:%.+]] = getelementptr inbounds [[TD_TY]], ptr [[TASK_DATA]], i32 0, i32 7
+// CHECK: [[ST:%.+]] = getelementptr inbounds nuw [[TD_TY]], ptr [[TASK_DATA]], i32 0, i32 7
 // CHECK: store i64 1, ptr [[ST]],
 // CHECK: [[ST_VAL:%.+]] = load i64, ptr [[ST]],
 // CHECK: [[GRAINSIZE:%.+]] = zext i32 %{{.+}} to i64
@@ -66,14 +66,14 @@ int main(int argc, char **argv) {
 // CHECK:       [[THEN]]
 // CHECK: call void @__kmpc_taskgroup(ptr [[DEFLOC]], i32 [[GTID]])
 // CHECK: [[TASKV:%.+]] = call ptr @__kmpc_omp_task_alloc(ptr [[DEFLOC]], i32 [[GTID]], i32 1, i64 80, i64 16, ptr [[TASK3:@.+]])
-// CHECK: [[TASK_DATA:%.+]] = getelementptr inbounds %{{.+}}, ptr [[TASKV]], i32 0, i32 0
+// CHECK: [[TASK_DATA:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr [[TASKV]], i32 0, i32 0
 // CHECK: [[IF:%.+]] = icmp ne i32 %{{.+}}, 0
 // CHECK: [[IF_INT:%.+]] = sext i1 [[IF]] to i32
-// CHECK: [[DOWN:%.+]] = getelementptr inbounds [[TD_TY:%.+]], ptr [[TASK_DATA]], i32 0, i32 5
+// CHECK: [[DOWN:%.+]] = getelementptr inbounds nuw [[TD_TY:%.+]], ptr [[TASK_DATA]], i32 0, i32 5
 // CHECK: store i64 0, ptr [[DOWN]],
-// CHECK: [[UP:%.+]] = getelementptr inbounds [[TD_TY]], ptr [[TASK_DATA]], i32 0, i32 6
+// CHECK: [[UP:%.+]] = getelementptr inbounds nuw [[TD_TY]], ptr [[TASK_DATA]], i32 0, i32 6
 // CHECK: store i64 %{{.+}}, ptr [[UP]],
-// CHECK: [[ST:%.+]] = getelementptr inbounds [[TD_TY]], ptr [[TASK_DATA]], i32 0, i32 7
+// CHECK: [[ST:%.+]] = getelementptr inbounds nuw [[TD_TY]], ptr [[TASK_DATA]], i32 0, i32 7
 // CHECK: store i64 1, ptr [[ST]],
 // CHECK: [[ST_VAL:%.+]] = load i64, ptr [[ST]],
 // CHECK: call void @__kmpc_taskloop(ptr [[DEFLOC]], i32 [[GTID]], ptr [[TASKV]], i32 [[IF_INT]], ptr [[DOWN]], ptr [[UP]], i64 [[ST_VAL]], i32 1, i32 2, i64 4, ptr null)
@@ -105,13 +105,13 @@ int main(int argc, char **argv) {
 }
 
 // CHECK: define internal noundef i32 [[TASK1]](
-// CHECK: [[DOWN:%.+]] = getelementptr inbounds [[TD_TY:%.+]], ptr %{{.+}}, i32 0, i32 5
+// CHECK: [[DOWN:%.+]] = getelementptr inbounds nuw [[TD_TY:%.+]], ptr %{{.+}}, i32 0, i32 5
 // CHECK: [[DOWN_VAL:%.+]] = load i64, ptr [[DOWN]],
-// CHECK: [[UP:%.+]] = getelementptr inbounds [[TD_TY]], ptr %{{.+}}, i32 0, i32 6
+// CHECK: [[UP:%.+]] = getelementptr inbounds nuw [[TD_TY]], ptr %{{.+}}, i32 0, i32 6
 // CHECK: [[UP_VAL:%.+]] = load i64, ptr [[UP]],
-// CHECK: [[ST:%.+]] = getelementptr inbounds [[TD_TY]], ptr %{{.+}}, i32 0, i32 7
+// CHECK: [[ST:%.+]] = getelementptr inbounds nuw [[TD_TY]], ptr %{{.+}}, i32 0, i32 7
 // CHECK: [[ST_VAL:%.+]] = load i64, ptr [[ST]],
-// CHECK: [[LITER:%.+]] = getelementptr inbounds [[TD_TY]], ptr %{{.+}}, i32 0, i32 8
+// CHECK: [[LITER:%.+]] = getelementptr inbounds nuw [[TD_TY]], ptr %{{.+}}, i32 0, i32 8
 // CHECK: [[LITER_VAL:%.+]] = load i32, ptr [[LITER]],
 // CHECK: store i64 [[DOWN_VAL]], ptr [[LB:%[^,]+]],
 // CHECK: store i64 [[UP_VAL]], ptr [[UB:%[^,]+]],
@@ -135,13 +135,13 @@ int main(int argc, char **argv) {
 // CHECK: ret i32 0
 
 // CHECK: define internal noundef i32 [[TASK2]](
-// CHECK: [[DOWN:%.+]] = getelementptr inbounds [[TD_TY:%.+]], ptr %{{.+}}, i32 0, i32 5
+// CHECK: [[DOWN:%.+]] = getelementptr inbounds nuw [[TD_TY:%.+]], ptr %{{.+}}, i32 0, i32 5
 // CHECK: [[DOWN_VAL:%.+]] = load i64, ptr [[DOWN]],
-// CHECK: [[UP:%.+]] = getelementptr inbounds [[TD_TY]], ptr %{{.+}}, i32 0, i32 6
+// CHECK: [[UP:%.+]] = getelementptr inbounds nuw [[TD_TY]], ptr %{{.+}}, i32 0, i32 6
 // CHECK: [[UP_VAL:%.+]] = load i64, ptr [[UP]],
-// CHECK: [[ST:%.+]] = getelementptr inbounds [[TD_TY]], ptr %{{.+}}, i32 0, i32 7
+// CHECK: [[ST:%.+]] = getelementptr inbounds nuw [[TD_TY]], ptr %{{.+}}, i32 0, i32 7
 // CHECK: [[ST_VAL:%.+]] = load i64, ptr [[ST]],
-// CHECK: [[LITER:%.+]] = getelementptr inbounds [[TD_TY]], ptr %{{.+}}, i32 0, i32 8
+// CHECK: [[LITER:%.+]] = getelementptr inbounds nuw [[TD_TY]], ptr %{{.+}}, i32 0, i32 8
 // CHECK: [[LITER_VAL:%.+]] = load i32, ptr [[LITER]],
 // CHECK: store i64 [[DOWN_VAL]], ptr [[LB:%[^,]+]],
 // CHECK: store i64 [[UP_VAL]], ptr [[UB:%[^,]+]],
@@ -165,13 +165,13 @@ int main(int argc, char **argv) {
 // CHECK: ret i32 0
 
 // CHECK: define internal noundef i32 [[TASK3]](
-// CHECK: [[DOWN:%.+]] = getelementptr inbounds [[TD_TY:%.+]], ptr %{{.+}}, i32 0, i32 5
+// CHECK: [[DOWN:%.+]] = getelementptr inbounds nuw [[TD_TY:%.+]], ptr %{{.+}}, i32 0, i32 5
 // CHECK: [[DOWN_VAL:%.+]] = load i64, ptr [[DOWN]],
-// CHECK: [[UP:%.+]] = getelementptr inbounds [[TD_TY]], ptr %{{.+}}, i32 0, i32 6
+// CHECK: [[UP:%.+]] = getelementptr inbounds nuw [[TD_TY]], ptr %{{.+}}, i32 0, i32 6
 // CHECK: [[UP_VAL:%.+]] = load i64, ptr [[UP]],
-// CHECK: [[ST:%.+]] = getelementptr inbounds [[TD_TY]], ptr %{{.+}}, i32 0, i32 7
+// CHECK: [[ST:%.+]] = getelementptr inbounds nuw [[TD_TY]], ptr %{{.+}}, i32 0, i32 7
 // CHECK: [[ST_VAL:%.+]] = load i64, ptr [[ST]],
-// CHECK: [[LITER:%.+]] = getelementptr inbounds [[TD_TY]], ptr %{{.+}}, i32 0, i32 8
+// CHECK: [[LITER:%.+]] = getelementptr inbounds nuw [[TD_TY]], ptr %{{.+}}, i32 0, i32 8
 // CHECK: [[LITER_VAL:%.+]] = load i32, ptr [[LITER]],
 // CHECK: store i64 [[DOWN_VAL]], ptr [[LB:%[^,]+]],
 // CHECK: store i64 [[UP_VAL]], ptr [[UB:%[^,]+]],
@@ -207,12 +207,12 @@ struct S {
   S(int c) {
 // CHECK: [[GTID:%.+]] = call i32 @__kmpc_global_thread_num(ptr [[DEFLOC:@.+]])
 // CHECK: [[TASKV:%.+]] = call ptr @__kmpc_omp_task_alloc(ptr [[DEFLOC]], i32 [[GTID]], i32 1, i64 80, i64 16, ptr [[TASK4:@.+]])
-// CHECK: [[TASK_DATA:%.+]] = getelementptr inbounds %{{.+}}, ptr [[TASKV]], i32 0, i32 0
-// CHECK: [[DOWN:%.+]] = getelementptr inbounds [[TD_TY:%.+]], ptr [[TASK_DATA]], i32 0, i32 5
+// CHECK: [[TASK_DATA:%.+]] = getelementptr inbounds nuw %{{.+}}, ptr [[TASKV]], i32 0, i32 0
+// CHECK: [[DOWN:%.+]] = getelementptr inbounds nuw [[TD_TY:%.+]], ptr [[TASK_DATA]], i32 0, i32 5
 // CHECK: store i64 0, ptr [[DOWN]],
-// CHECK: [[UP:%.+]] = getelementptr inbounds [[TD_TY]], ptr [[TASK_DATA]], i32 0, i32 6
+// CHECK: [[UP:%.+]] = getelementptr inbounds nuw [[TD_TY]], ptr [[TASK_DATA]], i32 0, i32 6
 // CHECK: store i64 %{{.+}}, ptr [[UP]],
-// CHECK: [[ST:%.+]] = getelementptr inbounds [[TD_TY]], ptr [[TASK_DATA]], i32 0, i32 7
+// CHECK: [[ST:%.+]] = getelementptr inbounds nuw [[TD_TY]], ptr [[TASK_DATA]], i32 0, i32 7
 // CHECK: store i64 1, ptr [[ST]],
 // CHECK: [[ST_VAL:%.+]] = load i64, ptr [[ST]],
 // CHECK: [[NUM_TASKS:%.+]] = zext i32 %{{.+}} to i64
@@ -224,13 +224,13 @@ struct S {
 } s(1);
 
 // CHECK: define internal noundef i32 [[TASK4]](
-// CHECK: [[DOWN:%.+]] = getelementptr inbounds [[TD_TY:%.+]], ptr %{{.+}}, i32 0, i32 5
+// CHECK: [[DOWN:%.+]] = getelementptr inbounds nuw [[TD_TY:%.+]], ptr %{{.+}}, i32 0, i32 5
 // CHECK: [[DOWN_VAL:%.+]] = load i64, ptr [[DOWN]],
-// CHECK: [[UP:%.+]] = getelementptr inbounds [[TD_TY]], ptr %{{.+}}, i32 0, i32 6
+// CHECK: [[UP:%.+]] = getelementptr inbounds nuw [[TD_TY]], ptr %{{.+}}, i32 0, i32 6
 // CHECK: [[UP_VAL:%.+]] = load i64, ptr [[UP]],
-// CHECK: [[ST:%.+]] = getelementptr inbounds [[TD_TY]], ptr %{{.+}}, i32 0, i32 7
+// CHECK: [[ST:%.+]] = getelementptr inbounds nuw [[TD_TY]], ptr %{{.+}}, i32 0, i32 7
 // CHECK: [[ST_VAL:%.+]] = load i64, ptr [[ST]],
-// CHECK: [[LITER:%.+]] = getelementptr inbounds [[TD_TY]], ptr %{{.+}}, i32 0, i32 8
+// CHECK: [[LITER:%.+]] = getelementptr inbounds nuw [[TD_TY]], ptr %{{.+}}, i32 0, i32 8
 // CHECK: [[LITER_VAL:%.+]] = load i32, ptr [[LITER]],
 // CHECK: store i64 [[DOWN_VAL]], ptr [[LB:%[^,]+]],
 // CHECK: store i64 [[UP_VAL]], ptr [[UB:%[^,]+]],

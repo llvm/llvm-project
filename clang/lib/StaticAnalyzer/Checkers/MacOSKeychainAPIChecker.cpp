@@ -20,7 +20,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -409,7 +408,7 @@ void MacOSKeychainAPIChecker::checkPostStmt(const CallExpr *CE,
   // If the argument entered as an enclosing function parameter, skip it to
   // avoid false positives.
   if (isEnclosingFunctionParam(ArgExpr) &&
-      C.getLocationContext()->getParent() == nullptr)
+      C.getStackFrame()->getParent() == nullptr)
     return;
 
   if (SymbolRef V = getAsPointeeSymbol(ArgExpr, C)) {
@@ -441,7 +440,7 @@ const ExplodedNode *
 MacOSKeychainAPIChecker::getAllocationNode(const ExplodedNode *N,
                                            SymbolRef Sym,
                                            CheckerContext &C) const {
-  const LocationContext *LeakContext = N->getLocationContext();
+  const StackFrame *LeakStackFrame = N->getStackFrame();
   // Walk the ExplodedGraph backwards and find the first node that referred to
   // the tracked symbol.
   const ExplodedNode *AllocNode = N;
@@ -451,9 +450,8 @@ MacOSKeychainAPIChecker::getAllocationNode(const ExplodedNode *N,
       break;
     // Allocation node, is the last node in the current or parent context in
     // which the symbol was tracked.
-    const LocationContext *NContext = N->getLocationContext();
-    if (NContext == LeakContext ||
-        NContext->isParentOf(LeakContext))
+    const StackFrame *NSF = N->getStackFrame();
+    if (NSF == LeakStackFrame || NSF->isParentOf(LeakStackFrame))
       AllocNode = N;
     N = N->pred_empty() ? nullptr : *(N->pred_begin());
   }
@@ -478,13 +476,12 @@ MacOSKeychainAPIChecker::generateAllocatedDataNotReleasedReport(
   const Stmt *AllocStmt = AllocNode->getStmtForDiagnostics();
 
   if (AllocStmt)
-    LocUsedForUniqueing = PathDiagnosticLocation::createBegin(AllocStmt,
-                                              C.getSourceManager(),
-                                              AllocNode->getLocationContext());
+    LocUsedForUniqueing = PathDiagnosticLocation::createBegin(
+        AllocStmt, C.getSourceManager(), AllocNode->getStackFrame());
 
   auto Report = std::make_unique<PathSensitiveBugReport>(
       BT, os.str(), N, LocUsedForUniqueing,
-      AllocNode->getLocationContext()->getDecl());
+      AllocNode->getStackFrame()->getDecl());
 
   Report->addVisitor(std::make_unique<SecKeychainBugVisitor>(AP.first));
   markInteresting(Report.get(), AP);
@@ -557,8 +554,7 @@ void MacOSKeychainAPIChecker::checkDeadSymbols(SymbolReaper &SR,
     return;
   }
 
-  static CheckerProgramPointTag Tag(this, "DeadSymbolsLeak");
-  ExplodedNode *N = C.generateNonFatalErrorNode(C.getState(), &Tag);
+  ExplodedNode *N = C.generateNonFatalErrorNode(C.getState());
   if (!N)
     return;
 
@@ -633,7 +629,7 @@ MacOSKeychainAPIChecker::SecKeychainBugVisitor::VisitNode(
   assert(Idx != InvalidIdx && "This should be a call to an allocator.");
   const Expr *ArgExpr = CE->getArg(FunctionsToTrack[Idx].Param);
   PathDiagnosticLocation Pos(ArgExpr, BRC.getSourceManager(),
-                             N->getLocationContext());
+                             N->getStackFrame());
   return std::make_shared<PathDiagnosticEventPiece>(Pos,
                                                     "Data is allocated here.");
 }

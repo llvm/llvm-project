@@ -13,7 +13,6 @@
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Support/LLVM.h"
-#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
@@ -120,6 +119,7 @@ AsmParserState &AsmParserState::operator=(AsmParserState &&other) {
 
 //===----------------------------------------------------------------------===//
 // Access State
+//===----------------------------------------------------------------------===//
 
 auto AsmParserState::getBlockDefs() const -> iterator_range<BlockDefIterator> {
   return llvm::make_pointee_range(llvm::ArrayRef(impl->blocks));
@@ -217,6 +217,7 @@ SMRange AsmParserState::convertIdLocToRange(SMLoc loc) {
 
 //===----------------------------------------------------------------------===//
 // Populate State
+//===----------------------------------------------------------------------===//
 
 void AsmParserState::initialize(Operation *topLevelOp) {
   startOperationDefinition(topLevelOp->getName());
@@ -290,9 +291,9 @@ void AsmParserState::finalizeRegionDefinition() {
 }
 
 void AsmParserState::addDefinition(Block *block, SMLoc location) {
-  auto it = impl->blocksToIdx.find(block);
-  if (it == impl->blocksToIdx.end()) {
-    impl->blocksToIdx.try_emplace(block, impl->blocks.size());
+  auto [it, inserted] =
+      impl->blocksToIdx.try_emplace(block, impl->blocks.size());
+  if (inserted) {
     impl->blocks.emplace_back(std::make_unique<BlockDefinition>(
         block, convertIdLocToRange(location)));
     return;
@@ -380,11 +381,10 @@ void AsmParserState::addUses(Value value, ArrayRef<SMLoc> locations) {
 }
 
 void AsmParserState::addUses(Block *block, ArrayRef<SMLoc> locations) {
-  auto it = impl->blocksToIdx.find(block);
-  if (it == impl->blocksToIdx.end()) {
-    it = impl->blocksToIdx.try_emplace(block, impl->blocks.size()).first;
+  auto [it, inserted] =
+      impl->blocksToIdx.try_emplace(block, impl->blocks.size());
+  if (inserted)
     impl->blocks.emplace_back(std::make_unique<BlockDefinition>(block));
-  }
 
   BlockDefinition &def = *impl->blocks[it->second];
   for (SMLoc loc : locations)

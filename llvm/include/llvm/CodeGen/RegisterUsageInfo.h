@@ -20,7 +20,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/InitializePasses.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 #include <cstdint>
@@ -29,33 +29,29 @@
 namespace llvm {
 
 class Function;
-class LLVMTargetMachine;
+class TargetMachine;
 
-class PhysicalRegisterUsageInfo : public ImmutablePass {
+class PhysicalRegisterUsageInfo {
 public:
-  static char ID;
-
-  PhysicalRegisterUsageInfo() : ImmutablePass(ID) {
-    PassRegistry &Registry = *PassRegistry::getPassRegistry();
-    initializePhysicalRegisterUsageInfoPass(Registry);
-  }
-
   /// Set TargetMachine which is used to print analysis.
-  void setTargetMachine(const LLVMTargetMachine &TM);
+  LLVM_ABI void setTargetMachine(const TargetMachine &TM);
 
-  bool doInitialization(Module &M) override;
+  LLVM_ABI bool doInitialization(Module &M);
 
-  bool doFinalization(Module &M) override;
+  LLVM_ABI bool doFinalization(Module &M);
 
   /// To store RegMask for given Function *.
-  void storeUpdateRegUsageInfo(const Function &FP,
-                               ArrayRef<uint32_t> RegMask);
+  LLVM_ABI void storeUpdateRegUsageInfo(const Function &FP,
+                                        ArrayRef<uint32_t> RegMask);
 
   /// To query stored RegMask for given Function *, it will returns ane empty
   /// array if function is not known.
-  ArrayRef<uint32_t> getRegUsageInfo(const Function &FP);
+  LLVM_ABI ArrayRef<uint32_t> getRegUsageInfo(const Function &FP);
 
-  void print(raw_ostream &OS, const Module *M = nullptr) const override;
+  LLVM_ABI void print(raw_ostream &OS, const Module *M = nullptr) const;
+
+  LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
+                           ModuleAnalysisManager::Invalidator &Inv);
 
 private:
   /// A Dense map from Function * to RegMask.
@@ -63,7 +59,49 @@ private:
   /// and 1 means content of register will be preserved around function call.
   DenseMap<const Function *, std::vector<uint32_t>> RegMasks;
 
-  const LLVMTargetMachine *TM = nullptr;
+  const TargetMachine *TM = nullptr;
+};
+
+class PhysicalRegisterUsageInfoWrapperLegacy : public ImmutablePass {
+  std::unique_ptr<PhysicalRegisterUsageInfo> PRUI;
+
+public:
+  LLVM_ABI static char ID;
+  PhysicalRegisterUsageInfoWrapperLegacy() : ImmutablePass(ID) {}
+
+  PhysicalRegisterUsageInfo &getPRUI() { return *PRUI; }
+  const PhysicalRegisterUsageInfo &getPRUI() const { return *PRUI; }
+
+  bool doInitialization(Module &M) override {
+    PRUI.reset(new PhysicalRegisterUsageInfo());
+    return PRUI->doInitialization(M);
+  }
+
+  bool doFinalization(Module &M) override { return PRUI->doFinalization(M); }
+
+  void print(raw_ostream &OS, const Module *M = nullptr) const override {
+    PRUI->print(OS, M);
+  }
+};
+
+class PhysicalRegisterUsageAnalysis
+    : public AnalysisInfoMixin<PhysicalRegisterUsageAnalysis> {
+  friend AnalysisInfoMixin<PhysicalRegisterUsageAnalysis>;
+  static AnalysisKey Key;
+
+public:
+  using Result = PhysicalRegisterUsageInfo;
+
+  LLVM_ABI PhysicalRegisterUsageInfo run(Module &M, ModuleAnalysisManager &);
+};
+
+class PhysicalRegisterUsageInfoPrinterPass
+    : public RequiredPassInfoMixin<PhysicalRegisterUsageInfoPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit PhysicalRegisterUsageInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // end namespace llvm

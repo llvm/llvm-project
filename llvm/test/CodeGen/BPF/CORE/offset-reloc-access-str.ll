@@ -18,13 +18,13 @@ target triple = "bpf"
 %struct.t = type { i32, i32 }
 
 ; Function Attrs: nounwind
-define dso_local i32 @test(ptr %arg1, ptr %arg2) local_unnamed_addr #0 !dbg !7 {
+define dso_local i32 @test(ptr %arg1, ptr %arg2) local_unnamed_addr !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata ptr %arg1, metadata !22, metadata !DIExpression()), !dbg !24
   call void @llvm.dbg.value(metadata ptr %arg2, metadata !23, metadata !DIExpression()), !dbg !24
   %0 = tail call ptr @llvm.preserve.struct.access.index.p0.p0.ss(ptr elementtype(%struct.s) %arg1, i32 1, i32 1), !dbg !25, !llvm.preserve.access.index !12
   %1 = tail call ptr @llvm.preserve.struct.access.index.p0.p0.ts(ptr elementtype(%struct.t) %arg2, i32 1, i32 1), !dbg !26, !llvm.preserve.access.index !17
-  %call = tail call i32 @get_value(ptr %0, ptr %1) #4, !dbg !27
+  %call = tail call i32 @get_value(ptr %0, ptr %1), !dbg !27
   ret i32 %call, !dbg !28
 }
 
@@ -46,22 +46,16 @@ entry:
 ; CHECK-NEXT:        .long   [[ACCESS_STR]]
 ; CHECK-NEXT:        .long   0
 
-declare dso_local i32 @get_value(ptr, ptr) local_unnamed_addr #1
+declare dso_local i32 @get_value(ptr, ptr) local_unnamed_addr
 
 ; Function Attrs: nounwind readnone
-declare ptr @llvm.preserve.struct.access.index.p0.p0.ss(ptr, i32 immarg, i32 immarg) #2
+declare ptr @llvm.preserve.struct.access.index.p0.p0.ss(ptr, i32 immarg, i32 immarg)
 
 ; Function Attrs: nounwind readnone
-declare ptr @llvm.preserve.struct.access.index.p0.p0.ts(ptr, i32 immarg, i32 immarg) #2
+declare ptr @llvm.preserve.struct.access.index.p0.p0.ts(ptr, i32 immarg, i32 immarg)
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.value(metadata, metadata, metadata) #3
-
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { nounwind readnone }
-attributes #3 = { nounwind readnone speculatable }
-attributes #4 = { nounwind }
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5}

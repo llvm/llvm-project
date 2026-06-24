@@ -8,10 +8,11 @@
 
 #include "src/__support/CPP/limits.h"
 #include "src/__support/big_int.h"
+#include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT128
 #include "test/UnitTest/Test.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // This just checks against the C spec, almost all implementations will surpass
 // this.
@@ -30,6 +31,14 @@ TEST(LlvmLibcLimitsTest, LimitsFollowSpec) {
   ASSERT_EQ(cpp::numeric_limits<long long>::min(), LLONG_MIN);
 
   ASSERT_EQ(cpp::numeric_limits<unsigned long long>::max(), ULLONG_MAX);
+
+#ifdef SSIZE_MAX
+  ASSERT_EQ(cpp::numeric_limits<__PTRDIFF_TYPE__>::max(), SSIZE_MAX);
+#else
+#ifdef LIBC_FULL_BUILD
+#error "SSIZE_MAX is not defined in full build mode"
+#endif
+#endif
 }
 
 TEST(LlvmLibcLimitsTest, UInt128Limits) {
@@ -42,4 +51,4 @@ TEST(LlvmLibcLimitsTest, UInt128Limits) {
 #endif // LIBC_TYPES_HAS_INT128
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

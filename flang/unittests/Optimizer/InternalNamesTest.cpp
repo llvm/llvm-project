@@ -19,9 +19,8 @@ struct DeconstructedName {
   DeconstructedName(llvm::ArrayRef<std::string> modules,
       llvm::ArrayRef<std::string> procs, std::int64_t blockId,
       llvm::StringRef name, llvm::ArrayRef<std::int64_t> kinds)
-      : modules{modules.begin(), modules.end()}, procs{procs.begin(),
-                                                     procs.end()},
-        blockId{blockId}, name{name}, kinds{kinds.begin(), kinds.end()} {}
+      : modules{modules}, procs{procs}, blockId{blockId}, name{name},
+        kinds{kinds} {}
 
   bool isObjEqual(const NameUniquer::DeconstructedName &actualObj) {
     return actualObj.modules == modules && actualObj.procs == procs &&
@@ -155,9 +154,7 @@ TEST(InternalNamesTest, doNamelistGroup) {
 TEST(InternalNamesTest, deconstructTest) {
   std::pair actual = NameUniquer::deconstruct("_QChello");
   auto expectedNameKind = NameUniquer::NameKind::COMMON;
-  struct DeconstructedName expectedComponents {
-    {}, {}, 0, "hello", {}
-  };
+  struct DeconstructedName expectedComponents{{}, {}, 0, "hello", {}};
   validateDeconstructedName(actual, expectedNameKind, expectedComponents);
 }
 
@@ -217,6 +214,23 @@ TEST(InternalNamesTest, needExternalNameMangling) {
   ASSERT_TRUE(NameUniquer::needExternalNameMangling("_QPfoo"));
   ASSERT_TRUE(NameUniquer::needExternalNameMangling("_QPbar"));
   ASSERT_TRUE(NameUniquer::needExternalNameMangling("_QCa"));
+}
+
+TEST(InternalNamesTest, isModuleScopeDataUniquedName) {
+  // True cases: module-scope variable, constant, common block
+  ASSERT_TRUE(NameUniquer::isModuleScopeDataUniquedName("_QMmodEintvar"));
+  ASSERT_TRUE(NameUniquer::isModuleScopeDataUniquedName("_QMmodECpi"));
+  ASSERT_TRUE(NameUniquer::isModuleScopeDataUniquedName("_QMmodSsubEvar"));
+  // False cases (in order): module procedure, derived type, unqualified common
+  // block (no module), saved variable local to a procedure (nested blocks),
+  // external name, empty name, non-module-scope name.
+  ASSERT_FALSE(NameUniquer::isModuleScopeDataUniquedName("_QMmodPsub"));
+  ASSERT_FALSE(NameUniquer::isModuleScopeDataUniquedName("_QMmodTmytype"));
+  ASSERT_FALSE(NameUniquer::isModuleScopeDataUniquedName("_QCblk"));
+  ASSERT_FALSE(NameUniquer::isModuleScopeDataUniquedName("_QFsubB2Ex"));
+  ASSERT_FALSE(NameUniquer::isModuleScopeDataUniquedName("someExternalName"));
+  ASSERT_FALSE(NameUniquer::isModuleScopeDataUniquedName(""));
+  ASSERT_FALSE(NameUniquer::isModuleScopeDataUniquedName("_QMmFfooEx"));
 }
 
 TEST(InternalNamesTest, isExternalFacingUniquedName) {

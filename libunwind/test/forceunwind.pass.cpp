@@ -7,7 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: linux
+// UNSUPPORTED: target={{.*-aix.*}}
+// UNSUPPORTED: target={{.*-windows.*}}
 
 // TODO: Figure out why this fails with Memory Sanitizer.
 // XFAIL: msan
@@ -16,8 +17,8 @@
 // See libcxxabi/test/forced_unwind* tests too.
 
 #undef NDEBUG
+#include "support/func_bounds.h"
 #include <assert.h>
-#include <dlfcn.h>
 #include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -26,6 +27,8 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <unwind.h>
+
+FUNC_BOUNDS_DECL(main_func);
 
 void foo();
 _Unwind_Exception ex;
@@ -41,14 +44,14 @@ _Unwind_Reason_Code stop(int version, _Unwind_Action actions,
   assert(exceptionObject == &ex);
   assert(stop_parameter == &foo);
 
-  Dl_info info = {0, 0, 0, 0};
-
-  // Unwind util the main is reached, above frames depend on the platform and
+  // Unwind until the main is reached, above frames depend on the platform and
   // architecture.
-  if (dladdr(reinterpret_cast<void *>(_Unwind_GetIP(context)), &info) &&
-      info.dli_sname && !strcmp("main", info.dli_sname)) {
+  uintptr_t ip = _Unwind_GetIP(context);
+  if (ip >= (uintptr_t)FUNC_START(main_func) &&
+      ip < (uintptr_t)FUNC_END(main_func)) {
     _Exit(0);
   }
+
   return _URC_NO_REASON;
 }
 
@@ -66,7 +69,7 @@ __attribute__((noinline)) void foo() {
   _Unwind_ForcedUnwind(e, stop, (void *)&foo);
 }
 
-int main() {
+FUNC_ATTR(main_func) int main(int, char **) {
   foo();
   return -2;
 }

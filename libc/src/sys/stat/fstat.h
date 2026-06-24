@@ -9,12 +9,13 @@
 #ifndef LLVM_LIBC_SRC_SYS_STAT_FSTAT_H
 #define LLVM_LIBC_SRC_SYS_STAT_FSTAT_H
 
-#include <sys/stat.h>
+#include "hdr/types/struct_stat.h"
+#include "src/__support/macros/config.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 int fstat(int fd, struct stat *statbuf);
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC_SYS_STAT_FSTAT_H

@@ -72,4 +72,28 @@ TEST(TimeProfiler, Begin_End_Disabled) {
   timeTraceProfilerEnd();
 }
 
+TEST(TimeProfiler, Instant_Add_Smoke) {
+  setupProfiler();
+
+  timeTraceProfilerBegin("sync event", "sync detail");
+  timeTraceAddInstantEvent("instant event", [&] { return "instant detail"; });
+  timeTraceProfilerEnd();
+
+  std::string json = teardownProfiler();
+  ASSERT_TRUE(json.find(R"("name":"sync event")") != std::string::npos);
+  ASSERT_TRUE(json.find(R"("detail":"sync detail")") != std::string::npos);
+  ASSERT_TRUE(json.find(R"("name":"instant event")") != std::string::npos);
+  ASSERT_TRUE(json.find(R"("detail":"instant detail")") != std::string::npos);
+}
+
+TEST(TimeProfiler, Instant_Not_Added_Smoke) {
+  setupProfiler();
+
+  timeTraceAddInstantEvent("instant event", [&] { return "instant detail"; });
+
+  std::string json = teardownProfiler();
+  ASSERT_TRUE(json.find(R"("name":"instant event")") == std::string::npos);
+  ASSERT_TRUE(json.find(R"("detail":"instant detail")") == std::string::npos);
+}
+
 } // namespace

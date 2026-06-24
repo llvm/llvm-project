@@ -14,10 +14,10 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_READERS_LVDWARFREADER_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_READERS_LVDWARFREADER_H
 
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/LogicalView/Readers/LVBinaryReader.h"
-#include <unordered_set>
 
 namespace llvm {
 namespace logicalview {
@@ -30,7 +30,7 @@ class LVType;
 
 using AttributeSpec = DWARFAbbreviationDeclaration::AttributeSpec;
 
-class LVDWARFReader final : public LVBinaryReader {
+class LLVM_ABI LVDWARFReader final : public LVBinaryReader {
   object::ObjectFile &Obj;
 
   // Indicates if ranges data are available; in the case of split DWARF any
@@ -39,21 +39,12 @@ class LVDWARFReader final : public LVBinaryReader {
   LVAddress CUBaseAddress = 0;
   LVAddress CUHighAddress = 0;
 
-  // Current elements during the processing of a DIE.
-  LVElement *CurrentElement = nullptr;
-  LVScope *CurrentScope = nullptr;
-  LVSymbol *CurrentSymbol = nullptr;
-  LVType *CurrentType = nullptr;
-  LVOffset CurrentOffset = 0;
   LVOffset CurrentEndOffset = 0;
 
   // In DWARF v4, the files are 1-indexed.
   // In DWARF v5, the files are 0-indexed.
   // The DWARF reader expects the indexes as 1-indexed.
   bool IncrementFileIndex = false;
-
-  // Address ranges collected for current DIE.
-  std::vector<LVAddressRange> CurrentRanges;
 
   // Symbols with locations for current compile unit.
   LVSymbols SymbolsWithLocations;
@@ -67,8 +58,11 @@ class LVDWARFReader final : public LVBinaryReader {
   bool FoundLowPC = false;
   bool FoundHighPC = false;
 
+  // The value is updated for each Compile Unit that is processed.
+  std::optional<LVAddress> TombstoneAddress;
+
   // Cross references (Elements).
-  using LVElementSet = std::unordered_set<LVElement *>;
+  using LVElementSet = SmallPtrSet<LVElement *, 0>;
   struct LVElementEntry {
     LVElement *Element;
     LVElementSet References;
@@ -82,7 +76,6 @@ class LVDWARFReader final : public LVBinaryReader {
 
   void mapRangeAddress(const object::ObjectFile &Obj) override;
 
-  LVElement *createElement(dwarf::Tag Tag);
   void traverseDieAndChildren(DWARFDie &DIE, LVScope *Parent,
                               DWARFDie &SkeletonDie);
   // Process the attributes for the given DIE.
@@ -102,11 +95,7 @@ class LVDWARFReader final : public LVBinaryReader {
   }
 
   // Remove offset from global map.
-  void removeGlobalOffset(LVOffset Offset) {
-    LVOffsetElementMap::iterator Iter = GlobalOffsets.find(Offset);
-    if (Iter != GlobalOffsets.end())
-      GlobalOffsets.erase(Iter);
-  }
+  void removeGlobalOffset(LVOffset Offset) { GlobalOffsets.erase(Offset); }
 
   // Get the location information for DW_AT_data_member_location.
   void processLocationMember(dwarf::Attribute Attr,
@@ -134,12 +123,18 @@ public:
         Obj(Obj) {}
   LVDWARFReader(const LVDWARFReader &) = delete;
   LVDWARFReader &operator=(const LVDWARFReader &) = delete;
-  ~LVDWARFReader() = default;
+  ~LVDWARFReader() override = default;
 
   LVAddress getCUBaseAddress() const { return CUBaseAddress; }
   void setCUBaseAddress(LVAddress Address) { CUBaseAddress = Address; }
   LVAddress getCUHighAddress() const { return CUHighAddress; }
   void setCUHighAddress(LVAddress Address) { CUHighAddress = Address; }
+
+  void setTombstoneAddress(LVAddress Address) { TombstoneAddress = Address; }
+  LVAddress getTombstoneAddress() const {
+    assert(TombstoneAddress && "Unset tombstone value");
+    return TombstoneAddress.value();
+  }
 
   const LVSymbols &GetSymbolsWithLocations() const {
     return SymbolsWithLocations;

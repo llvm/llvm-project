@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_NAME_SEARCH_CONTEXT_H
-#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_NAME_SEARCH_CONTEXT_H
+#ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_NAMESEARCHCONTEXT_H
+#define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_NAMESEARCHCONTEXT_H
 
 #include "Plugins/ExpressionParser/Clang/ClangASTImporter.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
@@ -40,7 +40,6 @@ struct NameSearchContext {
   llvm::SmallSet<CompilerType, 5> m_function_types;
 
   bool m_found_variable = false;
-  bool m_found_function_with_type_info = false;
   bool m_found_local_vars_nsp = false;
   bool m_found_type = false;
 
@@ -120,4 +119,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_NAME_SEARCH_CONTEXT_H
+#endif // LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_NAMESEARCHCONTEXT_H

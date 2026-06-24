@@ -18,8 +18,6 @@ In February 2017, the C++ standard committee approved this draft, and sent it to
 
 This page shows the status of libc++; the status of clang's support of the language features is `here <https://clang.llvm.org/cxx_status.html#cxx17>`__.
 
-.. attention:: Features in unreleased drafts of the standard are subject to change.
-
 The groups that have contributed papers:
 
 -  CWG - Core Language Working group
@@ -28,8 +26,6 @@ The groups that have contributed papers:
 
 .. note:: "Nothing to do" means that no library changes were needed to implement this change.
 
-.. _paper-status-cxx17:
-
 Paper Status
 ====================================
 
@@ -37,15 +33,6 @@ Paper Status
    :file: Cxx17Papers.csv
    :header-rows: 1
    :widths: auto
-
-.. note::
-
-   .. [#note-P0067] P0067: ``std::(to|from)_chars`` for integrals has been available since version 7.0. ``std::to_chars`` for ``float`` and ``double`` since version 14.0 ``std::to_chars`` for ``long double`` uses the implementation for ``double``.
-   .. [#note-P0607] P0607: The parts of P0607 that are not done are the ``<regex>`` bits.
-   .. [#note-P0154] P0154: This is currently not implemented for clang because clang does not implement the required macros.
-   .. [#note-P0452] P0452: The changes to ``std::transform_inclusive_scan`` and ``std::transform_exclusive_scan`` have not yet been implemented.
-
-.. _issues-status-cxx17:
 
 Library Working Group Issues Status
 ====================================

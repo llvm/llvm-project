@@ -11,8 +11,8 @@
 target datalayout = "e-p:64:64:64-n32:64"
 
 define void @foo(i64 %n, i64 %m, i64 %o, i64 %q, ptr nocapture %p) nounwind {
-; CHECK-LABEL: define void @foo
-; CHECK-SAME: (i64 [[N:%.*]], i64 [[M:%.*]], i64 [[O:%.*]], i64 [[Q:%.*]], ptr nocapture [[P:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-LABEL: define void @foo(
+; CHECK-SAME: i64 [[N:%.*]], i64 [[M:%.*]], i64 [[O:%.*]], i64 [[Q:%.*]], ptr captures(none) [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP:%.*]] = icmp sgt i64 [[N]], 0
 ; CHECK-NEXT:    br i1 [[TMP]], label [[BB_NPH3:%.*]], label [[RETURN:%.*]]

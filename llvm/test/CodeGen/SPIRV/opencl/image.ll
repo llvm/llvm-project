@@ -1,4 +1,8 @@
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+
+; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ;; FIXME: Write tests to ensure invalid usage of image are rejected, such as:
 ;;  - invalid AS (only global is allowed);
@@ -10,12 +14,12 @@ define void @foo(
   target("spirv.Image", void, 0, 0, 0, 0, 0, 0, 0) %a,
   target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 1) %b,
   target("spirv.Image", void, 2, 0, 0, 0, 0, 0, 2) %c,
-  i32 addrspace(1)* %d
+  ptr addrspace(1) %d
 ) {
   %pixel = call <4 x i32> @_Z11read_imagei14ocl_image1d_roi(target("spirv.Image", void, 0, 0, 0, 0, 0, 0, 0) %a, i32 0)
   call void @_Z12write_imagei14ocl_image2d_woDv2_iDv4_i(target("spirv.Image", void, 1, 0, 0, 0, 0, 0, 1) %b, <2 x i32> zeroinitializer, <4 x i32> %pixel)
   %size = call i32 @_Z15get_image_width14ocl_image3d_rw(target("spirv.Image", void, 2, 0, 0, 0, 0, 0, 2) %c)
-  store i32 %size, i32 addrspace(1)* %d
+  store i32 %size, ptr addrspace(1) %d
   ret void
 }
 

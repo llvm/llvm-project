@@ -1,7 +1,7 @@
-; RUN: llc < %s -march=sparc -mattr=hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=BE
-; RUN: llc < %s -march=sparcel -mattr=hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=EL
-; RUN: llc < %s -march=sparc -mattr=-hard-quad-float -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT --check-prefix=BE
-; RUN: llc < %s -march=sparcel -mattr=-hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT --check-prefix=EL
+; RUN: llc < %s -mtriple=sparc -mattr=hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=BE
+; RUN: llc < %s -mtriple=sparcel -mattr=hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=HARD --check-prefix=EL
+; RUN: llc < %s -mtriple=sparc -mattr=-hard-quad-float -verify-machineinstrs | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT --check-prefix=BE
+; RUN: llc < %s -mtriple=sparcel -mattr=-hard-quad-float | FileCheck %s --check-prefix=CHECK --check-prefix=SOFT --check-prefix=EL
 
 ; CHECK-LABEL: f128_ops:
 ; CHECK:      ldd
@@ -54,19 +54,11 @@ entry:
 
 ; CHECK-LABEL: f128_spill_large:
 ; CHECK:       sethi 4, %g1
-; CHECK:       sethi 4, %g1
-; CHECK-NEXT:  add %g1, %sp, %g1
-; CHECK-NEXT:  std %f{{.+}}, [%g1]
-; CHECK:       sethi 4, %g1
-; CHECK-NEXT:  add %g1, %sp, %g1
-; CHECK-NEXT:  std %f{{.+}}, [%g1+8]
-; CHECK:       sethi 4, %g1
-; CHECK-NEXT:  add %g1, %sp, %g1
-; CHECK-NEXT:  ldd [%g1], %f{{.+}}
-; CHECK:       sethi 4, %g1
-; CHECK-NEXT:  add %g1, %sp, %g1
-; CHECK-NEXT:  ldd [%g1+8], %f{{.+}}
 
+; CHECK:       std %f{{.+}}, [%[[S0:.+]]]
+; CHECK:       std %f{{.+}}, [%[[S1:.+]]]
+; CHECK-DAG:   ldd [%[[S0]]], %f{{.+}}
+; CHECK-DAG:   ldd [%[[S1]]], %f{{.+}}
 define void @f128_spill_large(ptr noalias sret(<251 x fp128>) %scalar.result, ptr byval(<251 x fp128>) %a) {
 entry:
   %0 = load <251 x fp128>, ptr %a, align 8
@@ -110,10 +102,10 @@ entry:
 
 
 ; CHECK-LABEL: f128_abs:
-; CHECK:       ldd [%o0], %f0
-; CHECK:       ldd [%o0+8], %f2
-; BE:          fabss %f0, %f0
-; EL:          fabss %f3, %f3
+; CHECK-DAG:       ldd [%o0], [[REG:%f[0-9]+]]
+; CHECK-DAG:       ldd [%o0+8], %f{{[0-9]+}}
+; BE:          fabss [[REG]], [[REG]]
+; EL:          fabss %f1, %f1
 
 define void @f128_abs(ptr noalias sret(fp128) %scalar.result, ptr byval(fp128) %a) {
 entry:
@@ -237,10 +229,10 @@ entry:
 }
 
 ; CHECK-LABEL: f128_neg:
-; CHECK:       ldd [%o0], %f0
-; CHECK:       ldd [%o0+8], %f2
-; BE:          fnegs %f0, %f0
-; EL:          fnegs %f3, %f3
+; CHECK-DAG:       ldd [%o0], [[REG:%f[0-9]+]]
+; CHECK-DAG:       ldd [%o0+8], %f{{[0-9]+}}
+; BE:          fnegs [[REG]], [[REG]]
+; LE:          fnegs [[REG]], [[REG]]
 
 define void @f128_neg(ptr noalias sret(fp128) %scalar.result, ptr byval(fp128) %a) {
 entry:

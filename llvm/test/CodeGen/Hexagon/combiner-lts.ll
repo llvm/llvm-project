@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -O2 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -O2 < %s | FileCheck %s
 
 ; In DAG combiner, eliminate a store in cases where the store is fed by a
 ; load from the same location.  This is already done in cases where the store's

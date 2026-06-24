@@ -54,6 +54,11 @@ public:
   // Return the size of a pointer (in bytes).
   unsigned getPointerSize() const { return PointerSize; }
 
+  // Emit instructions before MBBI (in MBB) to add NumBytes to Reg.
+  void emitIncrement(MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI,
+                     const DebugLoc &DL, Register Reg, int64_t NumBytes,
+                     const TargetInstrInfo *TII) const;
+
 private:
   unsigned PointerSize;
 };
@@ -86,7 +91,6 @@ public:
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void inlineStackProbe(MachineFunction &MF,
                         MachineBasicBlock &PrologMBB) const override;
-  bool hasFP(const MachineFunction &MF) const override;
   StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
                                      Register &FrameReg) const override;
   void
@@ -113,6 +117,9 @@ public:
 
   // Get or create the frame index of where the old frame pointer is stored.
   int getOrCreateFramePointerSaveIndex(MachineFunction &MF) const override;
+
+protected:
+  bool hasFPImpl(const MachineFunction &MF) const override;
 };
 
 class SystemZXPLINKFrameLowering : public SystemZFrameLowering {
@@ -147,8 +154,6 @@ public:
   void inlineStackProbe(MachineFunction &MF,
                         MachineBasicBlock &PrologMBB) const override;
 
-  bool hasFP(const MachineFunction &MF) const override;
-
   void processFunctionBeforeFrameFinalized(MachineFunction &MF,
                                            RegScavenger *RS) const override;
 
@@ -167,6 +172,9 @@ public:
 
   // Get or create the frame index of where the old frame pointer is stored.
   int getOrCreateFramePointerSaveIndex(MachineFunction &MF) const override;
+
+protected:
+  bool hasFPImpl(const MachineFunction &MF) const override;
 };
 } // end namespace llvm
 

@@ -53,10 +53,10 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT:   liveins: $w0
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %reg:gpr32all = COPY $w0
-  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, %reg, %subreg.sub_32
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY [[SUBREG_TO_REG]]
-  ; CHECK-NEXT:   TBZX [[COPY]], 33, %bb.1
+  ; CHECK-NEXT:   %reg:gpr32 = COPY $w0
+  ; CHECK-NEXT:   [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, %reg, 0
+  ; CHECK-NEXT:   %zext:gpr64 = SUBREG_TO_REG [[ORRWrs]], %subreg.sub_32
+  ; CHECK-NEXT:   TBZX %zext, 33, %bb.1
   ; CHECK-NEXT:   B %bb.0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
@@ -90,9 +90,9 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.0(0x40000000), %bb.1(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   %reg:gpr32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, %reg, %subreg.sub_32
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64 = COPY [[SUBREG_TO_REG]]
-  ; CHECK-NEXT:   TBZX [[COPY]], 33, %bb.1
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG %reg, %subreg.sub_32
+  ; CHECK-NEXT:   %zext:gpr64 = UBFMXri [[SUBREG_TO_REG]], 0, 15
+  ; CHECK-NEXT:   TBZX %zext, 33, %bb.1
   ; CHECK-NEXT:   B %bb.0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:

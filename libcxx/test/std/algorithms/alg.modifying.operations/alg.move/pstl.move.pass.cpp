@@ -18,11 +18,13 @@
 //                         ForwardIterator2 result);
 
 #include <algorithm>
+#include <cassert>
 #include <vector>
 
 #include "test_macros.h"
 #include "test_execution_policies.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 
 EXECUTION_POLICY_SFINAE_TEST(move);
 

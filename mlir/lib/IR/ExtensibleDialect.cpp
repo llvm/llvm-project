@@ -11,7 +11,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/StorageUniquerSupport.h"
-#include "mlir/Support/LogicalResult.h"
+#include "llvm/Support/InterleavedRange.h"
 
 using namespace mlir;
 
@@ -48,9 +48,7 @@ static void typeOrAttrPrinter(AsmPrinter &printer, ArrayRef<Attribute> params) {
   if (params.empty())
     return;
 
-  printer << "<";
-  interleaveComma(params, printer.getStream());
-  printer << ">";
+  printer << "<" << llvm::interleaved(params) << ">";
 }
 
 //===----------------------------------------------------------------------===//
@@ -306,6 +304,8 @@ DynamicOpDefinition::DynamicOpDefinition(
       getCanonicalizationPatternsFn(std::move(getCanonicalizationPatternsFn)),
       populateDefaultAttrsFn(std::move(populateDefaultAttrsFn)) {
   typeID = dialect->allocateTypeID();
+  // DynamicOpDefinition doesn't support properties, so use the ID of void.
+  propertiesTypeID = TypeID();
 }
 
 std::unique_ptr<DynamicOpDefinition> DynamicOpDefinition::get(

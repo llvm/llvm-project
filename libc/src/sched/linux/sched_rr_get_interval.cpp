@@ -10,38 +10,28 @@
 
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
-#include "src/errno/libc_errno.h"
+#include "src/__support/libc_errno.h"
+#include "src/__support/macros/config.h"
 
+#include "hdr/types/pid_t.h"
+#include "hdr/types/struct_timespec.h"
 #include <sys/syscall.h> // For syscall numbers.
 
-#ifdef SYS_sched_rr_get_interval_time64
-#include <linux/time_types.h> // For __kernel_timespec.
-#endif
-
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, sched_rr_get_interval,
                    (pid_t tid, struct timespec *tp)) {
-#ifdef SYS_sched_rr_get_interval
+#if defined(SYS_sched_rr_get_interval_time64)
+  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_sched_rr_get_interval_time64,
+                                              tid, tp);
+#elif defined(SYS_sched_rr_get_interval)
+  static_assert(
+      sizeof(timespec::tv_nsec) == sizeof(long),
+      "This legacy syscall fallback is only safe on platforms where tv_nsec "
+      "matches the register size (long). It is unsafe on 32-bit platforms "
+      "with 64-bit tv_nsec.");
   int ret =
       LIBC_NAMESPACE::syscall_impl<int>(SYS_sched_rr_get_interval, tid, tp);
-#elif defined(SYS_sched_rr_get_interval_time64)
-  // The difference between the  and SYS_sched_rr_get_interval
-  // SYS_sched_rr_get_interval_time64 syscalls is the data type used for the
-  // time interval parameter: the latter takes a struct __kernel_timespec
-  int ret;
-  if (tp) {
-    struct __kernel_timespec ts32;
-    ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_sched_rr_get_interval_time64,
-                                            tid, &ts32);
-    if (ret == 0) {
-      tp->tv_sec = ts32.tv_sec;
-      tp->tv_nsec = ts32.tv_nsec;
-    }
-  } else
-    // When tp is a nullptr, we still do the syscall to set ret and errno
-    ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_sched_rr_get_interval_time64,
-                                            tid, nullptr);
 #else
 #error                                                                         \
     "sched_rr_get_interval and sched_rr_get_interval_time64 syscalls not available."
@@ -53,4 +43,4 @@ LLVM_LIBC_FUNCTION(int, sched_rr_get_interval,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

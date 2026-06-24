@@ -21,7 +21,7 @@
 # LLVM: Sections [
 # LLVM: Relocations [
 # LLVM: Symbols [
-# LLVM: Notes [
+# LLVM: NoteSections [
 # LLVM: ]
 # LLVM: StackSizes [
 # LLVM: ]
@@ -41,7 +41,7 @@
 # LLVM: Sections [
 # LLVM: Relocations [
 # LLVM: Symbols [
-# LLVM: Notes [
+# LLVM: NoteSections [
 # LLVM: ]
 # LLVM: StackSizes [
 # LLVM: ]

@@ -3,7 +3,7 @@
 // RUN: sed -e "s|DSTROOT|%/t|g" %t/inputs.json.in > %t/inputs.json
 
 // RUN: clang-installapi -target arm64-apple-macos13.1 \
-// RUN: -I%t/usr/include \
+// RUN: -I%t/usr/include -dynamiclib \
 // RUN: -install_name @rpath/lib/libasm.dylib \
 // RUN: %t/inputs.json -o %t/output.tbd 2>&1 | FileCheck %s --allow-empty
 // RUN: llvm-readtapi -compare %t/output.tbd %t/expected.tbd 2>&1 | FileCheck %s --allow-empty

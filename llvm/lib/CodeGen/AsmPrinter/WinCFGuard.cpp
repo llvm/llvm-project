@@ -15,8 +15,8 @@
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCStreamer.h"
 
@@ -42,32 +42,38 @@ void WinCFGuard::endFunction(const MachineFunction *MF) {
 /// it an indirect call target. Function::hasAddressTaken gives different
 /// results when a function is called directly with a function prototype
 /// mismatch, which requires a cast.
-static bool isPossibleIndirectCallTarget(const Function *F) {
-  SmallVector<const Value *, 4> Users{F};
+static bool isPossibleIndirectCallTarget(const GlobalValue *GV) {
+  SmallVector<const Value *, 4> Users{GV};
   while (!Users.empty()) {
     const Value *FnOrCast = Users.pop_back_val();
     for (const Use &U : FnOrCast->uses()) {
       const User *FnUser = U.getUser();
-      if (isa<BlockAddress>(FnUser))
-        continue;
       if (const auto *Call = dyn_cast<CallBase>(FnUser)) {
-        if (!Call->isCallee(&U))
+        if ((!Call->isCallee(&U) || U.get() != GV) &&
+            !Call->getFunction()->getName().ends_with("$exit_thunk")) {
+          // Passing a function pointer to a call may lead to an indirect
+          // call. As an exception, ignore ARM64EC exit thunks.
           return true;
+        }
       } else if (isa<Instruction>(FnUser)) {
         // Consider any other instruction to be an escape. This has some weird
         // consequences like no-op intrinsics being an escape or a store *to* a
         // function address being an escape.
         return true;
-      } else if (const auto *C = dyn_cast<Constant>(FnUser)) {
-        // If this is a constant pointer cast of the function, don't consider
-        // this escape. Analyze the uses of the cast as well. This ensures that
-        // direct calls with mismatched prototypes don't end up in the CFG
-        // table. Consider other constants, such as vtable initializers, to
-        // escape the function.
-        if (C->stripPointerCasts() == F)
-          Users.push_back(FnUser);
-        else
-          return true;
+      } else if (isa<GlobalAlias>(FnUser)) {
+        // If the function is used via the alias, it's really the alias that's
+        // a possible call target. See "Consider aliases" in endModule().
+        continue;
+      } else if (const auto *G = dyn_cast<GlobalValue>(FnUser)) {
+        // Ignore llvm.arm64ec.symbolmap; it doesn't lower to an actual address.
+        if (G->getName() == "llvm.arm64ec.symbolmap")
+          continue;
+        // Globals (for example, vtables) are escapes.
+        return true;
+      } else if (isa<Constant>(FnUser)) {
+        // Constants which aren't a global are intermediate values; recursively
+        // analyze the users to see if they actually escape.
+        Users.push_back(FnUser);
       }
     }
   }
@@ -100,6 +106,13 @@ void WinCFGuard::endModule() {
       // section, since this does not introduce security risks.
       GFIDsEntries.push_back(Asm->getSymbol(&F));
     }
+  }
+
+  for (const GlobalAlias &GA : M->aliases()) {
+    // Consider aliases to functions as possible call targets.
+    const GlobalObject *Aliasee = GA.getAliaseeObject();
+    if (Aliasee && isa<Function>(Aliasee) && isPossibleIndirectCallTarget(&GA))
+      GFIDsEntries.push_back(Asm->getSymbol(&GA));
   }
 
   if (GFIDsEntries.empty() && GIATsEntries.empty() && LongjmpTargets.empty())

@@ -9,8 +9,9 @@
 #ifndef MLIR_IR_VERIFIER_H
 #define MLIR_IR_VERIFIER_H
 
+#include "mlir/Support/LLVM.h"
+
 namespace mlir {
-struct LogicalResult;
 class Operation;
 
 /// Perform (potentially expensive) checks of invariants, used to detect

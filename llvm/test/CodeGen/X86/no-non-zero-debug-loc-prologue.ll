@@ -1,10 +1,10 @@
-; RUN: llc -filetype=asm -mtriple=x86_64-apple-macosx12.0.0 -O0 %s -o - | FileCheck %s
+; RUN: llc -filetype=asm -mtriple=x86_64-apple-macosx12.0.0 -O0 %s -o - | FileCheck %s --implicit-check-not=prologue_end
 ; CHECK: Lfunc_begin0:
 ; CHECK-NEXT: .file{{.+}}
 ; CHECK-NEXT: .loc 1 1 0 ## test-small.c:1:0{{$}}
 ; CHECK-NEXT: .cfi_startproc
 ; CHECK-NEXT: ## %bb.{{[0-9]+}}:
-; CHECK-NEXT: .loc 1 0 1 prologue_end{{.*}}
+; CHECK-NEXT: .loc 1 0 1
 define void @test() #0 !dbg !9 {
   ret void, !dbg !12
 }

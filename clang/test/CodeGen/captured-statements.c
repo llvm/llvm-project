@@ -19,17 +19,17 @@ void test1(void) {
     i++;
   }
   // CHECK-1: %struct.anon = type { ptr }
-  // CHECK-1: {{.+}} global float 3.0
+  // CHECK-1: {{.+}} global float 3.000000e+00
   //
   // CHECK-1: @test1(
   // CHECK-1: alloca %struct.anon
-  // CHECK-1: getelementptr inbounds %struct.anon, ptr
+  // CHECK-1: getelementptr inbounds nuw %struct.anon, ptr
   // CHECK-1: store ptr %i
   // CHECK-1: call void @[[HelperName:__captured_stmt[\.0-9]+]]
 }
 
 // CHECK-1: define internal {{.*}}void @[[HelperName]](ptr
-// CHECK-1:   getelementptr inbounds %struct.anon{{.*}}, i32 0, i32 0
+// CHECK-1:   getelementptr inbounds nuw %struct.anon{{.*}}, i32 0, i32 0
 // CHECK-1:   load ptr, ptr
 // CHECK-1:   load i32, ptr
 // CHECK-1:   add nsw i32

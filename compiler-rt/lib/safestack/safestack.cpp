@@ -13,13 +13,38 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "safestack_platform.h"
-#include "safestack_util.h"
+#define SANITIZER_COMMON_NO_REDEFINE_BUILTINS
 
 #include <errno.h>
+#include <string.h>
 #include <sys/resource.h>
 
 #include "interception/interception.h"
+#include "safestack_platform.h"
+#include "safestack_util.h"
+#include "sanitizer/safestack_interface.h"
+#include "sanitizer_common/sanitizer_internal_defs.h"
+
+// interception.h drags in sanitizer_redefine_builtins.h, which in turn
+// creates references to __sanitizer_internal_memcpy etc.  The interceptors
+// aren't needed here, so just forward to libc.
+extern "C" {
+SANITIZER_INTERFACE_ATTRIBUTE void *__sanitizer_internal_memcpy(void *dest,
+                                                                const void *src,
+                                                                size_t n) {
+  return memcpy(dest, src, n);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE void *__sanitizer_internal_memmove(
+    void *dest, const void *src, size_t n) {
+  return memmove(dest, src, n);
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE void *__sanitizer_internal_memset(void *s, int c,
+                                                                size_t n) {
+  return memset(s, c, n);
+}
+}  // extern "C"
 
 using namespace safestack;
 
@@ -224,6 +249,17 @@ INTERCEPTOR(int, pthread_create, pthread_t *thread,
     pthread_attr_destroy(&tmpattr);
   }
 
+#if SANITIZER_SOLARIS
+  // Solaris pthread_attr_init initializes stacksize to 0 (the default), so
+  // hardcode the actual values as documented in pthread_create(3C).
+  if (size == 0)
+#  if defined(_LP64)
+    size = 2 * 1024 * 1024;
+#  else
+    size = 1024 * 1024;
+#  endif
+#endif
+
   SFS_CHECK(size);
   size = RoundUpTo(size, kStackAlign);
 
@@ -241,6 +277,16 @@ INTERCEPTOR(int, pthread_create, pthread_t *thread,
   return REAL(pthread_create)(thread, attr, thread_start, tinfo);
 }
 
+// We are intercepting sigaction in order to keep note of the set sigaction and
+// overwrite it our own function to execute the switching if the unsafe stack
+// pointer before and after the signal is handled.
+// In this version, we are simply making sure the interceptor is functional.
+// sigaction is required to be async-signal-safe.
+INTERCEPTOR(int, sigaction, int sig, const struct sigaction* act,
+            struct sigaction* oldact) {
+  return REAL(sigaction)(sig, act, oldact);
+}
+
 pthread_mutex_t interceptor_init_mutex = PTHREAD_MUTEX_INITIALIZER;
 bool interceptors_inited = false;
 
@@ -251,6 +297,8 @@ void EnsureInterceptorsInitialized() {
 
   // Initialize pthread interceptors for thread allocation
   INTERCEPT_FUNCTION(pthread_create);
+  // Initialize sigaction interceptor to overwrite the signal handler.
+  INTERCEPT_FUNCTION(sigaction);
 
   interceptors_inited = true;
 }
@@ -277,6 +325,8 @@ void __safestack_init() {
 
   // Setup the cleanup handler
   pthread_key_create(&thread_cleanup_key, thread_cleanup_handler);
+
+  EnsureInterceptorsInitialized();
 }
 
 #if SANITIZER_CAN_USE_PREINIT_ARRAY
@@ -289,22 +339,34 @@ __attribute__((section(".preinit_array"),
 }
 #endif
 
-extern "C"
-    __attribute__((visibility("default"))) void *__get_unsafe_stack_bottom() {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE const void*
+__safestack_get_unsafe_stack_bottom() {
   return unsafe_stack_start;
 }
 
-extern "C"
-    __attribute__((visibility("default"))) void *__get_unsafe_stack_top() {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE const void*
+__safestack_get_unsafe_stack_top() {
   return (char*)unsafe_stack_start + unsafe_stack_size;
 }
 
-extern "C"
-    __attribute__((visibility("default"))) void *__get_unsafe_stack_start() {
-  return unsafe_stack_start;
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE const void*
+__safestack_get_unsafe_stack_ptr() {
+  return __safestack_unsafe_stack_ptr;
 }
 
-extern "C"
-    __attribute__((visibility("default"))) void *__get_unsafe_stack_ptr() {
-  return __safestack_unsafe_stack_ptr;
+// Compatibility aliases
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void* __get_unsafe_stack_bottom() {
+  return const_cast<void*>(__safestack_get_unsafe_stack_bottom());
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void* __get_unsafe_stack_top() {
+  return const_cast<void*>(__safestack_get_unsafe_stack_top());
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void* __get_unsafe_stack_start() {
+  return const_cast<void*>(__safestack_get_unsafe_stack_bottom());
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void* __get_unsafe_stack_ptr() {
+  return const_cast<void*>(__safestack_get_unsafe_stack_ptr());
 }

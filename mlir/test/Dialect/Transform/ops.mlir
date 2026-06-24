@@ -68,11 +68,25 @@ transform.sequence failures(propagate) {
 }
 
 // CHECK: transform.sequence
-// CHECK: foreach
 transform.sequence failures(propagate) {
-^bb0(%arg0: !transform.any_op):
-  transform.foreach %arg0 : !transform.any_op {
-  ^bb1(%arg1: !transform.any_op):
+^bb0(%op0: !transform.any_op, %val0: !transform.any_value, %par0: !transform.any_param):
+  // CHECK: foreach %{{.*}} : !transform.any_op
+  transform.foreach %op0 : !transform.any_op {
+  ^bb1(%op1: !transform.any_op):
+  }
+  // CHECK: foreach %{{.*}} : !transform.any_op, !transform.any_value, !transform.any_param
+  transform.foreach %op0, %val0, %par0 : !transform.any_op, !transform.any_value, !transform.any_param {
+  ^bb1(%op1: !transform.any_op, %val1: !transform.any_value, %par1: !transform.any_param):
+  }
+  // CHECK: foreach %{{.*}} : !transform.any_op, !transform.any_value, !transform.any_param -> !transform.any_op
+  transform.foreach %op0, %val0, %par0 : !transform.any_op, !transform.any_value, !transform.any_param -> !transform.any_op {
+  ^bb1(%op1: !transform.any_op, %val1: !transform.any_value, %par1: !transform.any_param):
+    transform.yield %op1 : !transform.any_op
+  }
+  // CHECK: foreach %{{.*}} : !transform.any_op, !transform.any_value, !transform.any_param -> !transform.any_param, !transform.any_value
+  transform.foreach %op0, %val0, %par0 : !transform.any_op, !transform.any_value, !transform.any_param -> !transform.any_param, !transform.any_value {
+  ^bb1(%op1: !transform.any_op, %val1: !transform.any_value, %par1: !transform.any_param):
+    transform.yield %par1, %val1 : !transform.any_param, !transform.any_value
   }
 }
 

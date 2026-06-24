@@ -20,8 +20,8 @@ define double @select_noFMF_nfabs_lt(double %x) {
 ; One test where the neg has fmfs.
 define double @select_nsz_nfabs_lt_fmfProp(double %x) {
 ; CHECK-LABEL: @select_nsz_nfabs_lt_fmfProp(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf nsz double @llvm.fabs.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[SEL:%.*]] = fneg nnan ninf nsz double [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = fneg nnan nsz double [[TMP1]]
 ; CHECK-NEXT:    ret double [[SEL]]
 ;
   %cmp = fcmp olt double %x, 0.000000e+00
@@ -32,8 +32,8 @@ define double @select_nsz_nfabs_lt_fmfProp(double %x) {
 
 define double @select_nsz_nnan_nfabs_lt_fmfProp(double %x) {
 ; CHECK-LABEL: @select_nsz_nnan_nfabs_lt_fmfProp(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf nsz double @llvm.fabs.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[SEL:%.*]] = fneg nnan ninf nsz double [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = fneg nnan nsz double [[TMP1]]
 ; CHECK-NEXT:    ret double [[SEL]]
 ;
   %cmp = fcmp olt double %x, 0.000000e+00
@@ -147,8 +147,9 @@ define double @select_noFMF_nfabs_gt(double %x) {
 ; One test where the neg has fmfs.
 define double @select_nsz_nfabs_gt_fmfProp(double %x) {
 ; CHECK-LABEL: @select_nsz_nfabs_gt_fmfProp(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf nsz double @llvm.fabs.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[SEL:%.*]] = fneg nnan ninf nsz double [[TMP1]]
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt double [[X:%.*]], 0.000000e+00
+; CHECK-NEXT:    [[NEGX:%.*]] = fneg fast double [[X]]
+; CHECK-NEXT:    [[SEL:%.*]] = select nsz i1 [[CMP]], double [[NEGX]], double [[X]]
 ; CHECK-NEXT:    ret double [[SEL]]
 ;
   %cmp = fcmp ogt double %x, 0.000000e+00
@@ -159,8 +160,8 @@ define double @select_nsz_nfabs_gt_fmfProp(double %x) {
 
 define double @select_nsz_nnan_nfabs_gt_fmfProp(double %x) {
 ; CHECK-LABEL: @select_nsz_nnan_nfabs_gt_fmfProp(
-; CHECK-NEXT:    [[TMP1:%.*]] = call nnan ninf nsz double @llvm.fabs.f64(double [[X:%.*]])
-; CHECK-NEXT:    [[SEL:%.*]] = fneg nnan ninf nsz double [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz double @llvm.fabs.f64(double [[X:%.*]])
+; CHECK-NEXT:    [[SEL:%.*]] = fneg nnan nsz double [[TMP1]]
 ; CHECK-NEXT:    ret double [[SEL]]
 ;
   %cmp = fcmp ogt double %x, 0.000000e+00

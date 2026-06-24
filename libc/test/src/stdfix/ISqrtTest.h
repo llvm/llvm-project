@@ -55,7 +55,7 @@ public:
       x_d += 1.0;
       ++x;
       OutType result = func(x);
-      double expected = LIBC_NAMESPACE::fputil::sqrt(x_d);
+      double expected = LIBC_NAMESPACE::fputil::sqrt<double>(x_d);
       testSpecificInput(x, result, expected, ERR);
     }
   }

@@ -26,6 +26,7 @@
 #include "clang/Serialization/SourceLocationEncoding.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Bitstream/BitCodes.h"
+#include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <cstdint>
 
@@ -43,7 +44,7 @@ namespace serialization {
 /// Version 4 of AST files also requires that the version control branch and
 /// revision match exactly, since there is no backward compatibility of
 /// AST files at this time.
-const unsigned VERSION_MAJOR = 31;
+const unsigned VERSION_MAJOR = 38;
 
 /// AST file minor version number supported by this version of
 /// Clang.
@@ -53,13 +54,13 @@ const unsigned VERSION_MAJOR = 31;
 /// for the previous version could still support reading the new
 /// version by ignoring new kinds of subblocks), this number
 /// should be increased.
-const unsigned VERSION_MINOR = 1;
+const unsigned VERSION_MINOR = 0;
 
 /// An ID number that refers to an identifier in an AST file.
 ///
 /// The ID numbers of identifiers are consecutive (in order of discovery)
 /// and start at 1. 0 is reserved for NULL.
-using IdentifierID = uint32_t;
+using IdentifierID = uint64_t;
 
 /// The number of predefined identifier IDs.
 const unsigned int NUM_PREDEF_IDENT_IDS = 1;
@@ -70,53 +71,68 @@ using DeclID = DeclIDBase::DeclID;
 
 /// An ID number that refers to a type in an AST file.
 ///
-/// The ID of a type is partitioned into two parts: the lower
-/// three bits are used to store the const/volatile/restrict
-/// qualifiers (as with QualType) and the upper bits provide a
-/// type index. The type index values are partitioned into two
+/// The ID of a type is partitioned into three parts:
+/// - the lower three bits are used to store the const/volatile/restrict
+///   qualifiers (as with QualType).
+/// - the next 29 bits provide a type index in the corresponding
+///   module file.
+/// - the upper 32 bits provide a module file index.
+///
+/// The type index values are partitioned into two
 /// sets. The values below NUM_PREDEF_TYPE_IDs are predefined type
 /// IDs (based on the PREDEF_TYPE_*_ID constants), with 0 as a
-/// placeholder for "no type". Values from NUM_PREDEF_TYPE_IDs are
-/// other types that have serialized representations.
-using TypeID = uint32_t;
+/// placeholder for "no type". The module file index for predefined
+/// types are always 0 since they don't belong to any modules.
+/// Values from NUM_PREDEF_TYPE_IDs are other types that have
+/// serialized representations.
+using TypeID = uint64_t;
+/// Same with TypeID except that the LocalTypeID is only meaningful
+/// with the corresponding ModuleFile.
+///
+/// FIXME: Make TypeID and LocalTypeID a class to improve the type
+/// safety.
+using LocalTypeID = TypeID;
 
 /// A type index; the type ID with the qualifier bits removed.
+/// Keep structure alignment 32-bit since the blob is assumed as 32-bit
+/// aligned.
 class TypeIdx {
+  uint32_t ModuleFileIndex = 0;
   uint32_t Idx = 0;
 
 public:
   TypeIdx() = default;
-  explicit TypeIdx(uint32_t index) : Idx(index) {}
 
-  uint32_t getIndex() const { return Idx; }
+  explicit TypeIdx(uint32_t ModuleFileIdx, uint32_t Idx)
+      : ModuleFileIndex(ModuleFileIdx), Idx(Idx) {}
+
+  uint32_t getModuleFileIndex() const { return ModuleFileIndex; }
+
+  uint64_t getValue() const { return ((uint64_t)ModuleFileIndex << 32) | Idx; }
 
   TypeID asTypeID(unsigned FastQuals) const {
     if (Idx == uint32_t(-1))
       return TypeID(-1);
 
-    return (Idx << Qualifiers::FastWidth) | FastQuals;
+    unsigned Index = (Idx << Qualifiers::FastWidth) | FastQuals;
+    return ((uint64_t)ModuleFileIndex << 32) | Index;
   }
 
   static TypeIdx fromTypeID(TypeID ID) {
     if (ID == TypeID(-1))
-      return TypeIdx(-1);
+      return TypeIdx(0, -1);
 
-    return TypeIdx(ID >> Qualifiers::FastWidth);
+    return TypeIdx(ID >> 32, (ID & llvm::maskTrailingOnes<TypeID>(32)) >>
+                                 Qualifiers::FastWidth);
   }
 };
+
+static_assert(alignof(TypeIdx) == 4);
 
 /// A structure for putting "fast"-unqualified QualTypes into a
 /// DenseMap.  This uses the standard pointer hash function.
 struct UnsafeQualTypeDenseMapInfo {
   static bool isEqual(QualType A, QualType B) { return A == B; }
-
-  static QualType getEmptyKey() {
-    return QualType::getFromOpaquePtr((void *)1);
-  }
-
-  static QualType getTombstoneKey() {
-    return QualType::getFromOpaquePtr((void *)2);
-  }
 
   static unsigned getHashValue(QualType T) {
     assert(!T.getLocalFastQualifiers() &&
@@ -127,14 +143,14 @@ struct UnsafeQualTypeDenseMapInfo {
 };
 
 /// An ID number that refers to a macro in an AST file.
-using MacroID = uint32_t;
+using MacroID = uint64_t;
 
 /// A global ID number that refers to a macro in an AST file.
-using GlobalMacroID = uint32_t;
+using GlobalMacroID = uint64_t;
 
 /// A local to a module ID number that refers to a macro in an
 /// AST file.
-using LocalMacroID = uint32_t;
+using LocalMacroID = uint64_t;
 
 /// The number of predefined macro IDs.
 const unsigned int NUM_PREDEF_MACRO_IDS = 1;
@@ -155,7 +171,7 @@ using CXXCtorInitializersID = uint32_t;
 
 /// An ID number that refers to an entity in the detailed
 /// preprocessing record.
-using PreprocessedEntityID = uint32_t;
+using PreprocessedEntityID = uint64_t;
 
 /// An ID number that refers to a submodule in a module file.
 using SubmoduleID = uint32_t;
@@ -326,9 +342,8 @@ enum ControlRecordTypes {
   /// and information about the compiler used to build this AST file.
   METADATA = 1,
 
-  /// Record code for the list of other AST files imported by
-  /// this AST file.
-  IMPORTS,
+  /// Record code for another AST file imported by this AST file.
+  IMPORT,
 
   /// Record code for the original file that was used to
   /// generate the AST file, including both its file ID and its
@@ -376,6 +391,9 @@ enum OptionsRecordTypes {
 
   /// Record code for the preprocessor options table.
   PREPROCESSOR_OPTIONS,
+
+  /// Record code for the codegen options table.
+  CODEGEN_OPTIONS,
 };
 
 /// Record codes for the unhashed control block.
@@ -694,6 +712,41 @@ enum ASTRecordTypes {
   /// Record code for lexical and visible block for delayed namespace in
   /// reduced BMI.
   DELAYED_NAMESPACE_LEXICAL_VISIBLE_RECORD = 68,
+
+  /// Record code for \#pragma clang unsafe_buffer_usage begin/end
+  PP_UNSAFE_BUFFER_USAGE = 69,
+
+  /// Record code for vtables to emit.
+  VTABLES_TO_EMIT = 70,
+
+  /// Record code for related declarations that have to be deserialized together
+  /// from the same module.
+  RELATED_DECLS_MAP = 71,
+
+  /// Record code for Sema's vector of functions/blocks with effects to
+  /// be verified.
+  DECLS_WITH_EFFECTS_TO_VERIFY = 72,
+
+  /// Record code for updated specialization
+  UPDATE_SPECIALIZATION = 73,
+
+  CXX_ADDED_TEMPLATE_SPECIALIZATION = 74,
+
+  CXX_ADDED_TEMPLATE_PARTIAL_SPECIALIZATION = 75,
+
+  UPDATE_MODULE_LOCAL_VISIBLE = 76,
+
+  UPDATE_TU_LOCAL_VISIBLE = 77,
+
+  /// Record code for #pragma clang riscv intrinsic vector.
+  RISCV_VECTOR_INTRINSICS_PRAGMA = 78,
+
+  /// Record code for extname-redefined undeclared identifiers.
+  EXTNAME_UNDECLARED_IDENTIFIERS = 79,
+
+  /// Record that encodes the number of submodules, their base ID in the AST
+  /// file, and for each module the relative bit offset into the stream.
+  SUBMODULE_METADATA = 80,
 };
 
 /// Record types used within a source manager block.
@@ -762,8 +815,8 @@ enum PreprocessorDetailRecordTypes {
 
 /// Record types used within a submodule description block.
 enum SubmoduleRecordTypes {
-  /// Metadata for submodules as a whole.
-  SUBMODULE_METADATA = 0,
+  /// Defines the end of a single submodule. Sentinel record without any data.
+  SUBMODULE_END = 0,
 
   /// Defines the major attributes of a submodule, including its
   /// name and parent.
@@ -827,6 +880,10 @@ enum SubmoduleRecordTypes {
 
   /// Specifies affecting modules that were not imported.
   SUBMODULE_AFFECTING_MODULES = 18,
+
+  /// Specifies a direct submodule by name and ID, enabling on-demand
+  /// deserialization of children without loading the entire submodule block.
+  SUBMODULE_CHILD = 19,
 };
 
 /// Record types used within a comments block.
@@ -1081,7 +1138,7 @@ enum PredefinedTypeIDs {
 #include "clang/Basic/OpenCLExtensionTypes.def"
 // \brief SVE types with auto numeration
 #define SVE_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
-#include "clang/Basic/AArch64SVEACLETypes.def"
+#include "clang/Basic/AArch64ACLETypes.def"
 // \brief  PowerPC MMA types with auto numeration
 #define PPC_VECTOR_TYPE(Name, Id, Size) PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/PPCTypes.def"
@@ -1091,6 +1148,12 @@ enum PredefinedTypeIDs {
 // \brief WebAssembly reference types with auto numeration
 #define WASM_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
+// \brief AMDGPU types with auto numeration
+#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) PREDEF_TYPE_##Id##_ID,
+#include "clang/Basic/AMDGPUTypes.def"
+// \brief HLSL intangible types with auto numeration
+#define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) PREDEF_TYPE_##Id##_ID,
+#include "clang/Basic/HLSLIntangibleTypes.def"
 
   /// The placeholder type for unresolved templates.
   PREDEF_TYPE_UNRESOLVED_TEMPLATE,
@@ -1103,7 +1166,7 @@ enum PredefinedTypeIDs {
 ///
 /// Type IDs for non-predefined types will start at
 /// NUM_PREDEF_TYPE_IDs.
-const unsigned NUM_PREDEF_TYPE_IDS = 503;
+const unsigned NUM_PREDEF_TYPE_IDS = 529;
 
 // Ensure we do not overrun the predefined types we reserved
 // in the enum PredefinedTypeIDs above.
@@ -1262,6 +1325,9 @@ enum DeclCode {
   /// A BlockDecl record.
   DECL_BLOCK,
 
+  /// A OutlinedFunctionDecl record.
+  DECL_OUTLINEDFUNCTION,
+
   /// A CapturedDecl record.
   DECL_CAPTURED,
 
@@ -1283,6 +1349,14 @@ enum DeclCode {
   /// IDs. This data is used when performing qualified name lookup
   /// into a DeclContext via DeclContext::lookup.
   DECL_CONTEXT_VISIBLE,
+
+  /// A record containing the set of declarations that are
+  /// only visible from DeclContext in the same module.
+  DECL_CONTEXT_MODULE_LOCAL_VISIBLE,
+
+  /// A record that stores the set of declarations that are only visible
+  /// to the TU.
+  DECL_CONTEXT_TU_LOCAL_VISIBLE,
 
   /// A LabelDecl record.
   DECL_LABEL,
@@ -1457,7 +1531,22 @@ enum DeclCode {
   /// An ImplicitConceptSpecializationDecl record.
   DECL_IMPLICIT_CONCEPT_SPECIALIZATION,
 
-  DECL_LAST = DECL_IMPLICIT_CONCEPT_SPECIALIZATION
+  // A decls specialization record.
+  DECL_SPECIALIZATIONS,
+
+  // A decls specialization record.
+  DECL_PARTIAL_SPECIALIZATIONS,
+
+  // An OpenACCDeclareDecl record.
+  DECL_OPENACC_DECLARE,
+
+  // An OpenACCRoutineDecl record.
+  DECL_OPENACC_ROUTINE,
+
+  /// An ExplicitInstantiationDecl record.
+  DECL_EXPLICIT_INSTANTIATION,
+
+  DECL_LAST = DECL_EXPLICIT_INSTANTIATION
 };
 
 /// Record codes for each kind of statement or expression.
@@ -1531,6 +1620,12 @@ enum StmtCode {
 
   /// A CapturedStmt record.
   STMT_CAPTURED,
+
+  /// A SYCLKernelCallStmt record.
+  STMT_SYCLKERNELCALL,
+
+  /// An UnresolvedSYCLKernelCallStmt record.
+  STMT_UNRESOLVED_SYCL_KERNEL_CALL,
 
   /// A GCC-style AsmStmt record.
   STMT_GCCASM,
@@ -1610,6 +1705,9 @@ enum StmtCode {
   /// An ExtVectorElementExpr record.
   EXPR_EXT_VECTOR_ELEMENT,
 
+  /// A MatrixElementExpr record.
+  EXPR_MATRIX_ELEMENT,
+
   /// An InitListExpr record.
   EXPR_INIT_LIST,
 
@@ -1648,6 +1746,9 @@ enum StmtCode {
 
   /// A SourceLocExpr record.
   EXPR_SOURCE_LOC,
+
+  /// A EmbedExpr record.
+  EXPR_BUILTIN_PP_EMBED,
 
   /// A ShuffleVectorExpr record.
   EXPR_SHUFFLE_VECTOR,
@@ -1839,6 +1940,9 @@ enum StmtCode {
   EXPR_CONCEPT_SPECIALIZATION,            // ConceptSpecializationExpr
   EXPR_REQUIRES,                          // RequiresExpr
 
+  // Reflection
+  EXPR_REFLECT,
+
   // CUDA
   EXPR_CUDA_KERNEL_CALL, // CUDAKernelCallExpr
 
@@ -1861,7 +1965,12 @@ enum StmtCode {
   STMT_OMP_PARALLEL_DIRECTIVE,
   STMT_OMP_SIMD_DIRECTIVE,
   STMT_OMP_TILE_DIRECTIVE,
+  STMP_OMP_STRIPE_DIRECTIVE,
   STMT_OMP_UNROLL_DIRECTIVE,
+  STMT_OMP_REVERSE_DIRECTIVE,
+  STMT_OMP_SPLIT_DIRECTIVE,
+  STMT_OMP_INTERCHANGE_DIRECTIVE,
+  STMT_OMP_FUSE_DIRECTIVE,
   STMT_OMP_FOR_DIRECTIVE,
   STMT_OMP_FOR_SIMD_DIRECTIVE,
   STMT_OMP_SECTIONS_DIRECTIVE,
@@ -1929,6 +2038,7 @@ enum StmtCode {
   STMT_OMP_TARGET_TEAMS_GENERIC_LOOP_DIRECTIVE,
   STMT_OMP_PARALLEL_GENERIC_LOOP_DIRECTIVE,
   STMT_OMP_TARGET_PARALLEL_GENERIC_LOOP_DIRECTIVE,
+  STMT_OMP_ASSUME_DIRECTIVE,
   EXPR_ARRAY_SECTION,
   EXPR_OMP_ARRAY_SHAPING,
   EXPR_OMP_ITERATOR,
@@ -1950,9 +2060,27 @@ enum StmtCode {
   // SYCLUniqueStableNameExpr
   EXPR_SYCL_UNIQUE_STABLE_NAME,
 
-  // OpenACC Constructs
+  // OpenACC Constructs/Exprs
   STMT_OPENACC_COMPUTE_CONSTRUCT,
   STMT_OPENACC_LOOP_CONSTRUCT,
+  STMT_OPENACC_COMBINED_CONSTRUCT,
+  EXPR_OPENACC_ASTERISK_SIZE,
+  STMT_OPENACC_DATA_CONSTRUCT,
+  STMT_OPENACC_ENTER_DATA_CONSTRUCT,
+  STMT_OPENACC_EXIT_DATA_CONSTRUCT,
+  STMT_OPENACC_HOST_DATA_CONSTRUCT,
+  STMT_OPENACC_WAIT_CONSTRUCT,
+  STMT_OPENACC_INIT_CONSTRUCT,
+  STMT_OPENACC_SHUTDOWN_CONSTRUCT,
+  STMT_OPENACC_SET_CONSTRUCT,
+  STMT_OPENACC_UPDATE_CONSTRUCT,
+  STMT_OPENACC_ATOMIC_CONSTRUCT,
+  STMT_OPENACC_CACHE_CONSTRUCT,
+
+  // HLSL Constructs
+  EXPR_HLSL_OUT_ARG,
+
+  STMT_DEFER,
 };
 
 /// The kinds of designators that can occur in a
@@ -1995,9 +2123,9 @@ struct ObjCCategoriesInfo {
 
   ObjCCategoriesInfo() = default;
   ObjCCategoriesInfo(LocalDeclID ID, unsigned Offset)
-      : DefinitionID(ID.get()), Offset(Offset) {}
+      : DefinitionID(ID.getRawValue()), Offset(Offset) {}
 
-  LocalDeclID getDefinitionID() const { return LocalDeclID(DefinitionID); }
+  DeclID getDefinitionID() const { return DefinitionID; }
 
   friend bool operator<(const ObjCCategoriesInfo &X,
                         const ObjCCategoriesInfo &Y) {
@@ -2078,14 +2206,6 @@ public:
 namespace llvm {
 
 template <> struct DenseMapInfo<clang::serialization::DeclarationNameKey> {
-  static clang::serialization::DeclarationNameKey getEmptyKey() {
-    return clang::serialization::DeclarationNameKey(-1, 1);
-  }
-
-  static clang::serialization::DeclarationNameKey getTombstoneKey() {
-    return clang::serialization::DeclarationNameKey(-1, 2);
-  }
-
   static unsigned
   getHashValue(const clang::serialization::DeclarationNameKey &Key) {
     return Key.getHash();

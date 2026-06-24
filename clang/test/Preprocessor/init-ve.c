@@ -45,26 +45,31 @@
 // VE:#define __FLT_MIN_EXP__ (-125)
 // VE:#define __FLT_MIN__ 1.17549435e-38F
 // VE:#define __FLT_RADIX__ 2
+// VE:#define __INT16_C(c) c
 // VE:#define __INT16_C_SUFFIX__
 // VE:#define __INT16_FMTd__ "hd"
 // VE:#define __INT16_FMTi__ "hi"
 // VE:#define __INT16_MAX__ 32767
 // VE:#define __INT16_TYPE__ short
+// VE:#define __INT32_C(c) c
 // VE:#define __INT32_C_SUFFIX__
 // VE:#define __INT32_FMTd__ "d"
 // VE:#define __INT32_FMTi__ "i"
 // VE:#define __INT32_MAX__ 2147483647
 // VE:#define __INT32_TYPE__ int
+// VE:#define __INT64_C(c) c##L
 // VE:#define __INT64_C_SUFFIX__ L
 // VE:#define __INT64_FMTd__ "ld"
 // VE:#define __INT64_FMTi__ "li"
 // VE:#define __INT64_MAX__ 9223372036854775807L
 // VE:#define __INT64_TYPE__ long int
+// VE:#define __INT8_C(c) c
 // VE:#define __INT8_C_SUFFIX__
 // VE:#define __INT8_FMTd__ "hhd"
 // VE:#define __INT8_FMTi__ "hhi"
 // VE:#define __INT8_MAX__ 127
 // VE:#define __INT8_TYPE__ signed char
+// VE:#define __INTMAX_C(c) c##L
 // VE:#define __INTMAX_C_SUFFIX__ L
 // VE:#define __INTMAX_FMTd__ "ld"
 // VE:#define __INTMAX_FMTi__ "li"
@@ -164,6 +169,7 @@
 // VE-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 16UL
 // VE-HOSTED:#define __STDC_HOSTED__ 1
 // VE-FREESTANDING:#define __STDC_HOSTED__ 0
+// VE:#define __UINT16_C(c) c
 // VE:#define __UINT16_C_SUFFIX__
 // VE:#define __UINT16_FMTX__ "hX"
 // VE:#define __UINT16_FMTo__ "ho"
@@ -171,6 +177,7 @@
 // VE:#define __UINT16_FMTx__ "hx"
 // VE:#define __UINT16_MAX__ 65535
 // VE:#define __UINT16_TYPE__ unsigned short
+// VE:#define __UINT32_C(c) c##U
 // VE:#define __UINT32_C_SUFFIX__ U
 // VE:#define __UINT32_FMTX__ "X"
 // VE:#define __UINT32_FMTo__ "o"
@@ -178,6 +185,7 @@
 // VE:#define __UINT32_FMTx__ "x"
 // VE:#define __UINT32_MAX__ 4294967295U
 // VE:#define __UINT32_TYPE__ unsigned int
+// VE:#define __UINT64_C(c) c##UL
 // VE:#define __UINT64_C_SUFFIX__ UL
 // VE:#define __UINT64_FMTX__ "lX"
 // VE:#define __UINT64_FMTo__ "lo"
@@ -185,6 +193,7 @@
 // VE:#define __UINT64_FMTx__ "lx"
 // VE:#define __UINT64_MAX__ 18446744073709551615UL
 // VE:#define __UINT64_TYPE__ long unsigned int
+// VE:#define __UINT8_C(c) c
 // VE:#define __UINT8_C_SUFFIX__
 // VE:#define __UINT8_FMTX__ "hhX"
 // VE:#define __UINT8_FMTo__ "hho"
@@ -192,6 +201,7 @@
 // VE:#define __UINT8_FMTx__ "hhx"
 // VE:#define __UINT8_MAX__ 255
 // VE:#define __UINT8_TYPE__ unsigned char
+// VE:#define __UINTMAX_C(c) c##UL
 // VE:#define __UINTMAX_C_SUFFIX__ UL
 // VE:#define __UINTMAX_FMTX__ "lX"
 // VE:#define __UINTMAX_FMTo__ "lo"

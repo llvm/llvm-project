@@ -84,7 +84,7 @@ define <vscale x 16 x i8> @ld1rqb_i8_imm_dupqlane(<vscale x 8 x i1> %pred, ptr %
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds <16 x i8>, ptr %addr, i16 -1
   %load = load <16 x i8>, ptr %ptr
-  %1 = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> %load, i64 0)
+  %1 = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> poison, <16 x i8> %load, i64 0)
   %2 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> %1, i64 0)
   ret <vscale x 16 x i8> %2
 }
@@ -97,7 +97,7 @@ define <vscale x 16 x i8> @ld1rqb_i8_scalar_dupqlane(<vscale x 8 x i1> %pred, pt
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i8, ptr %addr, i64 %idx
   %load = load <16 x i8>, ptr %ptr
-  %1 = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> %load, i64 0)
+  %1 = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> poison, <16 x i8> %load, i64 0)
   %2 = tail call <vscale x 16 x i8> @llvm.aarch64.sve.dupq.lane.nxv16i8(<vscale x 16 x i8> %1, i64 0)
   ret <vscale x 16 x i8> %2
 }
@@ -201,7 +201,7 @@ define <vscale x 8 x i16> @ld1rqh_i16_imm_dupqlane(<vscale x 8 x i1> %pred, ptr 
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds <8 x i16>, ptr %addr, i16 -1
   %load = load <8 x i16>, ptr %ptr
-  %1 = tail call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> %load, i64 0)
+  %1 = tail call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> poison, <8 x i16> %load, i64 0)
   %2 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16> %1, i64 0)
   ret <vscale x 8 x i16> %2
 }
@@ -214,7 +214,7 @@ define <vscale x 8 x i16> @ld1rqh_i16_scalar_dupqlane(<vscale x 8 x i1> %pred, p
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i16, ptr %addr, i64 %idx
   %load = load <8 x i16>, ptr %ptr
-  %1 = tail call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> undef, <8 x i16> %load, i64 0)
+  %1 = tail call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.v8i16(<vscale x 8 x i16> poison, <8 x i16> %load, i64 0)
   %2 = tail call <vscale x 8 x i16> @llvm.aarch64.sve.dupq.lane.nxv8i16(<vscale x 8 x i16> %1, i64 0)
   ret <vscale x 8 x i16> %2
 }
@@ -227,7 +227,7 @@ define <vscale x 8 x half> @ld1rqh_f16_imm_dupqlane(<vscale x 8 x i1> %pred, ptr
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds <8 x half>, ptr %addr, i16 -1
   %load = load <8 x half>, ptr %ptr
-  %1 = tail call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> undef, <8 x half> %load, i64 0)
+  %1 = tail call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> poison, <8 x half> %load, i64 0)
   %2 = tail call <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half> %1, i64 0)
   ret <vscale x 8 x half> %2
 }
@@ -240,7 +240,7 @@ define <vscale x 8 x half> @ld1rqh_f16_scalar_dupqlane(<vscale x 8 x i1> %pred, 
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds half, ptr %addr, i64 %idx
   %load = load <8 x half>, ptr %ptr
-  %1 = tail call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> undef, <8 x half> %load, i64 0)
+  %1 = tail call <vscale x 8 x half> @llvm.vector.insert.nxv8f16.v8f16(<vscale x 8 x half> poison, <8 x half> %load, i64 0)
   %2 = tail call <vscale x 8 x half> @llvm.aarch64.sve.dupq.lane.nxv8f16(<vscale x 8 x half> %1, i64 0)
   ret <vscale x 8 x half> %2
 }
@@ -253,7 +253,7 @@ define <vscale x 8 x bfloat> @ld1rqh_bf16_imm_dupqlane(<vscale x 8 x i1> %pred, 
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds <8 x bfloat>, ptr %addr, i16 -1
   %load = load <8 x bfloat>, ptr %ptr
-  %1 = tail call <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> undef, <8 x bfloat> %load, i64 0)
+  %1 = tail call <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> poison, <8 x bfloat> %load, i64 0)
   %2 = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> %1, i64 0)
   ret <vscale x 8 x bfloat> %2
 }
@@ -266,7 +266,7 @@ define <vscale x 8 x bfloat> @ld1rqh_bf16_scalar_dupqlane(<vscale x 8 x i1> %pre
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds bfloat, ptr %addr, i64 %idx
   %load = load <8 x bfloat>, ptr %ptr
-  %1 = tail call <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> undef, <8 x bfloat> %load, i64 0)
+  %1 = tail call <vscale x 8 x bfloat> @llvm.vector.insert.nxv8bf16.v8bf16(<vscale x 8 x bfloat> poison, <8 x bfloat> %load, i64 0)
   %2 = tail call <vscale x 8 x bfloat> @llvm.aarch64.sve.dupq.lane.nxv8bf16(<vscale x 8 x bfloat> %1, i64 0)
   ret <vscale x 8 x bfloat> %2
 }
@@ -341,7 +341,7 @@ define <vscale x 4 x i32> @ld1rqw_i32_imm_dupqlane(<vscale x 4 x i1> %pred, ptr 
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds <4 x i32>, ptr %addr, i32 1
   %load = load <4 x i32>, ptr %ptr
-  %1 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> %load, i64 0)
+  %1 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> %load, i64 0)
   %2 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> %1, i64 0)
   ret <vscale x 4 x i32> %2
 }
@@ -354,7 +354,7 @@ define <vscale x 4 x i32> @ld1rqw_i32_scalar_dupqlane(<vscale x 4 x i1> %pred, p
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i32, ptr %addr, i64 %idx
   %load = load <4 x i32>, ptr %ptr
-  %1 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> undef, <4 x i32> %load, i64 0)
+  %1 = tail call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.v4i32(<vscale x 4 x i32> poison, <4 x i32> %load, i64 0)
   %2 = tail call <vscale x 4 x i32> @llvm.aarch64.sve.dupq.lane.nxv4i32(<vscale x 4 x i32> %1, i64 0)
   ret <vscale x 4 x i32> %2
 }
@@ -367,7 +367,7 @@ define <vscale x 4 x float> @ld1rqw_f32_imm_dupqlane(<vscale x 4 x i1> %pred, pt
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds <4 x float>, ptr %addr, i32 1
   %load = load <4 x float>, ptr %ptr
-  %1 = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> %load, i64 0)
+  %1 = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> poison, <4 x float> %load, i64 0)
   %2 = tail call <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float> %1, i64 0)
   ret <vscale x 4 x float> %2
 }
@@ -380,7 +380,7 @@ define <vscale x 4 x float> @ld1rqw_f32_scalar_dupqlane(<vscale x 4 x i1> %pred,
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds float, ptr %addr, i64 %idx
   %load = load <4 x float>, ptr %ptr
-  %1 = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> undef, <4 x float> %load, i64 0)
+  %1 = tail call <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float> poison, <4 x float> %load, i64 0)
   %2 = tail call <vscale x 4 x float> @llvm.aarch64.sve.dupq.lane.nxv4f32(<vscale x 4 x float> %1, i64 0)
   ret <vscale x 4 x float> %2
 }
@@ -455,7 +455,7 @@ define <vscale x 2 x i64> @ld1rqd_i64_imm_dupqlane(<vscale x 2 x i1> %pred, ptr 
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds <2 x i64>, ptr %addr, i64 1
   %load = load <2 x i64>, ptr %ptr
-  %1 = tail call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> %load, i64 0)
+  %1 = tail call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> poison, <2 x i64> %load, i64 0)
   %2 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> %1, i64 0)
   ret <vscale x 2 x i64> %2
 }
@@ -468,7 +468,7 @@ define <vscale x 2 x i64> @ld1rqd_i64_scalar_dupqlane(<vscale x 2 x i1> %pred, p
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds i64, ptr %addr, i64 %idx
   %load = load <2 x i64>, ptr %ptr
-  %1 = tail call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> undef, <2 x i64> %load, i64 0)
+  %1 = tail call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v2i64(<vscale x 2 x i64> poison, <2 x i64> %load, i64 0)
   %2 = tail call <vscale x 2 x i64> @llvm.aarch64.sve.dupq.lane.nxv2i64(<vscale x 2 x i64> %1, i64 0)
   ret <vscale x 2 x i64> %2
 }
@@ -481,7 +481,7 @@ define <vscale x 2 x double> @ld1rqd_f64_imm_dupqlane(<vscale x 2 x i1> %pred, p
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds <2 x double>, ptr %addr, i64 1
   %load = load <2 x double>, ptr %ptr
-  %1 = tail call <vscale x 2 x double> @llvm.vector.insert.nxv2f64.v2f64(<vscale x 2 x double> undef, <2 x double> %load, i64 0)
+  %1 = tail call <vscale x 2 x double> @llvm.vector.insert.nxv2f64.v2f64(<vscale x 2 x double> poison, <2 x double> %load, i64 0)
   %2 = tail call <vscale x 2 x double> @llvm.aarch64.sve.dupq.lane.nxv2f64(<vscale x 2 x double> %1, i64 0)
   ret <vscale x 2 x double> %2
 }
@@ -494,7 +494,7 @@ define <vscale x 2 x double> @ld1rqd_f64_scalar_dupqlane(<vscale x 2 x i1> %pred
 ; CHECK-NEXT:    ret
   %ptr = getelementptr inbounds double, ptr %addr, i64 %idx
   %load = load <2 x double>, ptr %ptr
-  %1 = tail call <vscale x 2 x double> @llvm.vector.insert.nxv2f64.v2f64(<vscale x 2 x double> undef, <2 x double> %load, i64 0)
+  %1 = tail call <vscale x 2 x double> @llvm.vector.insert.nxv2f64.v2f64(<vscale x 2 x double> poison, <2 x double> %load, i64 0)
   %2 = tail call <vscale x 2 x double> @llvm.aarch64.sve.dupq.lane.nxv2f64(<vscale x 2 x double> %1, i64 0)
   ret <vscale x 2 x double> %2
 }

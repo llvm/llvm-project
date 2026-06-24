@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass hexagon-split-double %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-split-double %s -o - | FileCheck %s
 
 # This used to crash because the constant operand was not an immediate.
 # Make sure we can handle such a case.

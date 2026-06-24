@@ -25,28 +25,33 @@
 #  include "asan_thread.h"
 #  include "lsan/lsan_common.h"
 
+namespace __sanitizer {
+// ASan doesn't need to do anything else special in the startup hook.
+void EarlySanitizerInit() {}
+}  // namespace __sanitizer
+
 namespace __asan {
 
-// The system already set up the shadow memory for us.
-// __sanitizer::GetMaxUserVirtualAddress has already been called by
-// AsanInitInternal->InitializeHighMemEnd (asan_rtl.cpp).
-// Just do some additional sanity checks here.
 void InitializeShadowMemory() {
+  // Explicitly setup shadow here right beforer any of the ShadowBounds members
+  // are used.
+  InitShadowBounds();
+
   if (Verbosity())
     PrintAddressSpaceLayout();
 
-  // Make sure SHADOW_OFFSET doesn't use __asan_shadow_memory_dynamic_address.
-  __asan_shadow_memory_dynamic_address = kDefaultShadowSentinel;
-  DCHECK(kLowShadowBeg != kDefaultShadowSentinel);
-  __asan_shadow_memory_dynamic_address = kLowShadowBeg;
+  // TODO(https://fxbug.dev/42085278): Shadow on Fuchsia starts as zero for now.
+  // __asan_shadow_memory_dynamic_address is an uninitialized global that's
+  // zero. This is temporary and will be changed to a non-zero value in the
+  // future.
 
   CHECK_EQ(kShadowGapEnd, kHighShadowBeg - 1);
   CHECK_EQ(kHighMemEnd, __sanitizer::ShadowBounds.memory_limit - 1);
   CHECK_EQ(kHighMemBeg, __sanitizer::ShadowBounds.shadow_limit);
   CHECK_EQ(kHighShadowBeg, __sanitizer::ShadowBounds.shadow_base);
   CHECK_EQ(kShadowGapEnd, __sanitizer::ShadowBounds.shadow_base - 1);
-  CHECK_EQ(kLowShadowEnd, 0);
-  CHECK_EQ(kLowShadowBeg, 0);
+  CHECK_EQ(kLowShadowEnd, MEM_TO_SHADOW(kLowMemEnd));
+  CHECK_EQ(kLowShadowBeg, __asan_shadow_memory_dynamic_address);
 }
 
 void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
@@ -121,8 +126,7 @@ static AsanThread *CreateAsanThread(StackTrace *stack, u32 parent_tid,
   // In lieu of AsanThread::Create.
   AsanThread *thread = (AsanThread *)MmapOrDie(AsanThreadMmapSize(), __func__);
 
-  AsanThreadContext::CreateThreadContextArgs args = {thread, stack};
-  u32 tid = asanThreadRegistry().CreateThread(0, detached, parent_tid, &args);
+  u32 tid = asanThreadRegistry().CreateThread(0, detached, parent_tid, thread);
   asanThreadRegistry().SetThreadName(tid, name);
 
   return thread;

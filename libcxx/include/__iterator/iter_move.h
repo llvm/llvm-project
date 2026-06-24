@@ -11,6 +11,7 @@
 #define _LIBCPP___ITERATOR_ITER_MOVE_H
 
 #include <__concepts/class_or_enum.h>
+#include <__concepts/referenceable.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__type_traits/is_reference.h>
@@ -39,7 +40,7 @@ void iter_move() = delete;
 
 template <class _Tp>
 concept __unqualified_iter_move = __class_or_enum<remove_cvref_t<_Tp>> && requires(_Tp&& __t) {
-  // NOLINTNEXTLINE(libcpp-robust-against-adl) iter_swap ADL calls should only be made through ranges::iter_swap
+  // NOLINTNEXTLINE(libcpp-robust-against-adl) iter_move ADL calls should only be made through ranges::iter_move
   iter_move(std::forward<_Tp>(__t));
 };
 
@@ -90,7 +91,7 @@ inline constexpr auto iter_move = __iter_move::__fn{};
 
 template <__dereferenceable _Tp>
   requires requires(_Tp& __t) {
-    { ranges::iter_move(__t) } -> __can_reference;
+    { ranges::iter_move(__t) } -> __referenceable;
   }
 using iter_rvalue_reference_t = decltype(ranges::iter_move(std::declval<_Tp&>()));
 

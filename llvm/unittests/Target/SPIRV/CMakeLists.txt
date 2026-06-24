@@ -6,13 +6,23 @@ include_directories(
 set(LLVM_LINK_COMPONENTS
   Analysis
   AsmParser
+  BinaryFormat
+  CodeGen
   Core
+  MC
+  Passes
   SPIRVCodeGen
+  SPIRVDesc
+  SPIRVInfo
   SPIRVAnalysis
   Support
+  TargetParser
   )
 
 add_llvm_target_unittest(SPIRVTests
   SPIRVConvergenceRegionAnalysisTests.cpp
-  )
-
+  SPIRVGlobalRegistryTests.cpp
+  SPIRVSortBlocksTests.cpp
+  SPIRVPartialOrderingVisitorTests.cpp
+  SPIRVAPITest.cpp
+)

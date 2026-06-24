@@ -85,10 +85,11 @@
   !15 = !DISubrange(count: 3)
   !16 = !DILocation(line: 8, scope: !8)
   !17 = !DILocation(line: 9, scope: !8)
-  !18 = distinct !DISubprogram(name: "test2", scope: !2, file: !2, line: 7, type: !9, scopeLine: 7, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !1, retainedNodes: !11)
+  !18 = distinct !DISubprogram(name: "test2", scope: !2, file: !2, line: 7, type: !9, scopeLine: 7, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !1, retainedNodes: !22)
   !19 = !DILocalVariable(name: "local", scope: !18, file: !2, line: 8, type: !13)
   !20 = !DILocation(line: 15, scope: !18)
   !21 = !DILocation(line: 16, scope: !18)
+  !22 = !{!19}
 
 ...
 ---

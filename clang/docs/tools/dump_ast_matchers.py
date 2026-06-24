@@ -5,11 +5,9 @@
 
 import collections
 import re
+import os
+from urllib.request import urlopen
 
-try:
-    from urllib.request import urlopen
-except ImportError:
-    from urllib2 import urlopen
 
 CLASS_INDEX_PAGE_URL = "https://clang.llvm.org/doxygen/classes.html"
 try:
@@ -18,7 +16,11 @@ except Exception as e:
     CLASS_INDEX_PAGE = None
     print("Unable to get %s: %s" % (CLASS_INDEX_PAGE_URL, e))
 
-MATCHERS_FILE = "../../include/clang/ASTMatchers/ASTMatchers.h"
+CURRENT_DIR = os.path.dirname(__file__)
+MATCHERS_FILE = os.path.join(
+    CURRENT_DIR, "../../include/clang/ASTMatchers/ASTMatchers.h"
+)
+HTML_FILE = os.path.join(CURRENT_DIR, "../LibASTMatchersReference.html")
 
 # Each matcher is documented in one row of the form:
 #   result | name | argA
@@ -101,7 +103,7 @@ def extract_result_types(comment):
 
 
 def strip_doxygen(comment):
-    """Returns the given comment without \-escaped words."""
+    """Returns the given comment without -escaped words."""
     # If there is only a doxygen keyword in the line, delete the whole line.
     comment = re.sub(r"^\\[^\s]+\n", r"", comment, flags=re.M)
 
@@ -236,7 +238,7 @@ def act_on_decl(declaration, comment, allowed_types):
 
         # Parse the various matcher definition macros.
         m = re.match(
-            """.*AST_TYPE(LOC)?_TRAVERSE_MATCHER(?:_DECL)?\(
+            r""".*AST_TYPE(LOC)?_TRAVERSE_MATCHER(?:_DECL)?\(
                        \s*([^\s,]+\s*),
                        \s*(?:[^\s,]+\s*),
                        \s*AST_POLYMORPHIC_SUPPORTED_TYPES\(([^)]*)\)
@@ -519,7 +521,10 @@ Flags can be combined with '|' example \"IgnoreCase | BasicRegex\"
             if not result_types:
                 if not comment:
                     # Only overloads don't have their own doxygen comments; ignore those.
-                    print('Ignoring "%s"' % name)
+                    # Warn if this name was never successfully documented.
+                    # Overloads of an already-documented matcher are expected.
+                    if ids[name] == 0:
+                        print('Ignoring "%s"' % name)
                 else:
                     print('Cannot determine result type for "%s"' % name)
             else:
@@ -590,7 +595,7 @@ node_matcher_table = sort_table("DECL", node_matchers)
 narrowing_matcher_table = sort_table("NARROWING", narrowing_matchers)
 traversal_matcher_table = sort_table("TRAVERSAL", traversal_matchers)
 
-reference = open("../LibASTMatchersReference.html").read()
+reference = open(HTML_FILE).read()
 reference = re.sub(
     r"<!-- START_DECL_MATCHERS.*END_DECL_MATCHERS -->",
     node_matcher_table,
@@ -610,5 +615,5 @@ reference = re.sub(
     flags=re.S,
 )
 
-with open("../LibASTMatchersReference.html", "w", newline="\n") as output:
+with open(HTML_FILE, "w", newline="\n") as output:
     output.write(reference)

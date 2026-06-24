@@ -50,3 +50,25 @@ module attributes {
     }
   }
 }
+
+// -----
+
+module attributes {
+  gpu.container_module,
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.0, [Addresses, Kernel, Int64], []>, #spirv.resource_limits<>>
+} {
+  // INDEX32-LABEL:  spirv.module @{{.*}} Physical32 OpenCL
+  // INDEX32: spirv.GlobalVariable [[LANEID:@.*]] built_in("SubgroupLocalInvocationId") : !spirv.ptr<i32, Input>
+  // INDEX64-LABEL:  spirv.module @{{.*}} Physical64 OpenCL
+  // INDEX64: spirv.GlobalVariable [[LANEID:@.*]] built_in("SubgroupLocalInvocationId") : !spirv.ptr<i32, Input>
+  gpu.module @kernels {
+    gpu.func @builtin_laneid() kernel
+      attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [16, 1, 1]>} {
+      // INDEX32: [[ADDRESS:%.*]] = spirv.mlir.addressof [[LANEID]]
+      // INDEX32-NEXT: {{%.*}} = spirv.Load "Input" [[ADDRESS]]
+      // INDEX64: spirv.UConvert %{{.+}} : i32 to i64
+      %0 = gpu.lane_id
+      gpu.return
+    }
+  }
+}

@@ -8,11 +8,6 @@
 ;       fold (bitreverse(srl (bitreverse c), x)) -> (shl c, x)
 ;       fold (bitreverse(shl (bitreverse c), x)) -> (srl c, x)
 
-declare i8 @llvm.bitreverse.i8(i8)
-declare i16 @llvm.bitreverse.i16(i16)
-declare i32 @llvm.bitreverse.i32(i32)
-declare i64 @llvm.bitreverse.i64(i64)
-
 define i8 @test_bitreverse_srli_bitreverse_i8(i8 %a) nounwind {
 ; CHECK-LABEL: test_bitreverse_srli_bitreverse_i8:
 ; CHECK:       # %bb.0:
@@ -54,8 +49,9 @@ define i32 @test_bitreverse_srli_bitreverse_i32(i32 %a) nounwind {
 define i64 @test_bitreverse_srli_bitreverse_i64(i64 %a) nounwind {
 ; RV32ZBKB-LABEL: test_bitreverse_srli_bitreverse_i64:
 ; RV32ZBKB:       # %bb.0:
-; RV32ZBKB-NEXT:    slli a1, a0, 1
+; RV32ZBKB-NEXT:    mv a1, a0
 ; RV32ZBKB-NEXT:    li a0, 0
+; RV32ZBKB-NEXT:    slli a1, a1, 1
 ; RV32ZBKB-NEXT:    ret
 ;
 ; RV64ZBKB-LABEL: test_bitreverse_srli_bitreverse_i64:
@@ -123,8 +119,9 @@ define i32 @test_bitreverse_shli_bitreverse_i32(i32 %a) nounwind {
 define i64 @test_bitreverse_shli_bitreverse_i64(i64 %a) nounwind {
 ; RV32ZBKB-LABEL: test_bitreverse_shli_bitreverse_i64:
 ; RV32ZBKB:       # %bb.0:
-; RV32ZBKB-NEXT:    srli a0, a1, 1
+; RV32ZBKB-NEXT:    mv a0, a1
 ; RV32ZBKB-NEXT:    li a1, 0
+; RV32ZBKB-NEXT:    srli a0, a0, 1
 ; RV32ZBKB-NEXT:    ret
 ;
 ; RV64ZBKB-LABEL: test_bitreverse_shli_bitreverse_i64:

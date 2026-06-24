@@ -31,18 +31,17 @@ static void oops() {}
 [shader("pixel")]
 // expected-note@+1 {{conflicting attribute is here}}
 [shader("vertex")]
-int doubledUp() {
+int doubledUp() : A {
   return 1;
 }
 
 // expected-note@+1 {{conflicting attribute is here}}
 [shader("vertex")]
-int forwardDecl();
+void forwardDecl();
 
 // expected-error@+1 {{'shader' attribute parameters do not match the previous declaration}}
 [shader("compute")][numthreads(8,1,1)]
-int forwardDecl() {
-  return 1;
+void forwardDecl() {
 }
 
 // expected-error@+1 {{'shader' attribute takes one argument}}
@@ -57,22 +56,20 @@ int forwardDecl() {
 [shader("library")]
 #endif // END of FAIL
 
-// CHECK:HLSLShaderAttr 0x{{[0-9a-fA-F]+}} <line:62:2, col:18> Compute
+// CHECK:HLSLShaderAttr 0x{{[0-9a-fA-F]+}} <line:61:2, col:18> Compute
 // CHECK:HLSLNumThreadsAttr 0x{{[0-9a-fA-F]+}} <col:21, col:37> 8 1 1
 [shader("compute")][numthreads(8,1,1)]
-int entry() {
-  return 1;
+void entry() {
 }
 
 // Because these two attributes match, they should both appear in the AST
 [shader("compute")][numthreads(8,1,1)]
-// CHECK:HLSLShaderAttr 0x{{[0-9a-fA-F]+}} <line:68:2, col:18> Compute
+// CHECK:HLSLShaderAttr 0x{{[0-9a-fA-F]+}} <line:66:2, col:18> Compute
 // CHECK:HLSLNumThreadsAttr 0x{{[0-9a-fA-F]+}} <col:21, col:37> 8 1 1
-int secondFn();
+void secondFn();
 
 [shader("compute")][numthreads(8,1,1)]
-// CHECK:HLSLShaderAttr 0x{{[0-9a-fA-F]+}} <line:73:2, col:18> Compute
+// CHECK:HLSLShaderAttr 0x{{[0-9a-fA-F]+}} <line:71:2, col:18> Compute
 // CHECK:HLSLNumThreadsAttr 0x{{[0-9a-fA-F]+}} <col:21, col:37> 8 1 1
-int secondFn() {
-  return 1;
+void secondFn() {
 }

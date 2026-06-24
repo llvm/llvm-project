@@ -25,7 +25,7 @@ struct reuse_allocator {
   static size_t const N = 100;
   reuse_allocator() {
     for (size_t i = 0; i < N; ++i)
-      __buffers[i] = malloc(8*1024);
+      __buffers[i] = malloc(8 * 1024);
   }
   ~reuse_allocator() {
     for (size_t i = 0; i < N; ++i)
@@ -46,8 +46,8 @@ struct user_allocator {
   user_allocator() = default;
   template <class U>
   user_allocator(user_allocator<U>) {}
-  friend bool operator==(user_allocator, user_allocator) {return true;}
-  friend bool operator!=(user_allocator x, user_allocator y) {return !(x == y);}
+  friend bool operator==(user_allocator, user_allocator) { return true; }
+  friend bool operator!=(user_allocator x, user_allocator y) { return !(x == y); }
 
   T* allocate(size_t) { return (T*)reuse_buffers.alloc(); }
   void deallocate(T*, size_t) noexcept {}

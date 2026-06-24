@@ -237,7 +237,6 @@ TEST(ElfYamlTextAPI, YAMLWritesTBESymbols) {
   std::string Result;
   raw_string_ostream OS(Result);
   ASSERT_THAT_ERROR(writeIFSToOutputStream(OS, Moved), Succeeded());
-  Result = OS.str();
   compareByLine(Result.c_str(), Expected);
 }
 
@@ -267,6 +266,5 @@ TEST(ElfYamlTextAPI, YAMLWritesNoTBESyms) {
   std::string Result;
   raw_string_ostream OS(Result);
   ASSERT_THAT_ERROR(writeIFSToOutputStream(OS, Stub), Succeeded());
-  Result = OS.str();
   compareByLine(Result.c_str(), Expected);
 }

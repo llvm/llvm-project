@@ -8,13 +8,11 @@
 
 // Can you have a catch clause of array type that catches anything?
 
+// UNSUPPORTED: no-exceptions
+
 // GCC incorrectly allows function pointer to be caught by reference.
 // See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=69372
 // XFAIL: gcc
-// UNSUPPORTED: no-exceptions
-
-// 65ace9daa360 made it in the dylib in macOS 10.11
-// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10}}
 
 #include <cassert>
 

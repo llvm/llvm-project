@@ -87,8 +87,8 @@ void MaybeStartBackgroudThread() {
   if (!common_flags()->hard_rss_limit_mb &&
       !common_flags()->soft_rss_limit_mb &&
       !common_flags()->heap_profile) return;
-  if (!&real_pthread_create) {
-    VPrintf(1, "%s: real_pthread_create undefined\n", SanitizerToolName);
+  if (!&internal_pthread_create) {
+    VPrintf(1, "%s: internal_pthread_create undefined\n", SanitizerToolName);
     return;  // Can't spawn the thread anyway.
   }
 
@@ -169,9 +169,9 @@ void ReserveShadowMemoryRange(uptr beg, uptr end, const char *name,
                      : !MmapFixedNoReserve(beg, size, name)) {
     Report(
         "ReserveShadowMemoryRange failed while trying to map 0x%zx bytes. "
-        "Perhaps you're using ulimit -v\n",
+        "Perhaps you're using ulimit -v or ulimit -d\n",
         size);
-    Abort();
+    Die();
   }
   if (madvise_shadow && common_flags()->use_madv_dontdump)
     DontDumpShadowMemory(beg, size);
@@ -218,6 +218,32 @@ static void StopStackDepotBackgroundThread() {
 // SANITIZER_WEAK_ATTRIBUTE is unsupported.
 static void StopStackDepotBackgroundThread() {}
 #endif
+
+void MemCpyAccessible(void *dest, const void *src, uptr n) {
+  if (TryMemCpy(dest, src, n))
+    return;
+
+  const uptr page_size = GetPageSize();
+  uptr b = reinterpret_cast<uptr>(src);
+  uptr b_up = RoundUpTo(b, page_size);
+
+  uptr e = reinterpret_cast<uptr>(src) + n;
+  uptr e_down = RoundDownTo(e, page_size);
+
+  auto copy_or_zero = [dest, src](uptr beg, uptr end) {
+    const uptr udest = reinterpret_cast<uptr>(dest);
+    const uptr usrc = reinterpret_cast<uptr>(src);
+    void *d = reinterpret_cast<void *>(udest + (beg - usrc));
+    const uptr size = end - beg;
+    if (!TryMemCpy(d, reinterpret_cast<void *>(beg), size))
+      internal_memset(d, 0, size);
+  };
+
+  copy_or_zero(b, b_up);
+  for (uptr p = b_up; p < e_down; p += page_size)
+    copy_or_zero(p, p + page_size);
+  copy_or_zero(e_down, e);
+}
 
 }  // namespace __sanitizer
 

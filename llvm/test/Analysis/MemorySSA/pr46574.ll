@@ -1,4 +1,4 @@
-; RUN: opt -passes='loop-mssa(loop-instsimplify,loop-simplifycfg,licm,simple-loop-unswitch)' -enable-nontrivial-unswitch %s -disable-output
+; RUN: opt -passes='loop-mssa(loop-instsimplify,loop-simplifycfg,licm,simple-loop-unswitch)' -enable-nontrivial-unswitch -verify-memoryssa %s -disable-output
 ; REQUIRES: asserts
 
 %0 = type { i24, i32, i32, i8 }

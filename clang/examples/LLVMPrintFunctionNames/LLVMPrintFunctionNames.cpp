@@ -18,6 +18,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/OptimizationLevel.h"
 #include "llvm/Passes/PassBuilder.h"
@@ -26,7 +27,7 @@ using namespace clang;
 
 namespace {
 
-class PrintPass final : public llvm::AnalysisInfoMixin<PrintPass> {
+class PrintPass final : public llvm::RequiredPassInfoMixin<PrintPass> {
   friend struct llvm::AnalysisInfoMixin<PrintPass>;
 
 public:
@@ -37,7 +38,6 @@ public:
       llvm::outs() << "[PrintPass] Found function: " << F.getName() << "\n";
     return llvm::PreservedAnalyses::all();
   }
-  static bool isRequired() { return true; }
 };
 
 void PrintCallback(llvm::PassBuilder &PB) {

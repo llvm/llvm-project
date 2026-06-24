@@ -2,6 +2,7 @@
 #include "AArch64TargetMachine.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"
@@ -11,8 +12,8 @@
 using namespace llvm;
 
 namespace {
-std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
-  auto TT(Triple::normalize("aarch64--"));
+std::unique_ptr<TargetMachine> createTargetMachine() {
+  Triple TT("aarch64--");
   std::string CPU("generic");
   std::string FS("+pauth,+mops,+mte");
 
@@ -23,17 +24,23 @@ std::unique_ptr<LLVMTargetMachine> createTargetMachine() {
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
 
-  return std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+  return std::unique_ptr<TargetMachine>(
       TheTarget->createTargetMachine(TT, CPU, FS, TargetOptions(), std::nullopt,
-                                     std::nullopt, CodeGenOptLevel::Default)));
+                                     std::nullopt, CodeGenOptLevel::Default));
 }
 
-std::unique_ptr<AArch64InstrInfo> createInstrInfo(TargetMachine *TM) {
-  AArch64Subtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
-                      std::string(TM->getTargetCPU()),
-                      std::string(TM->getTargetFeatureString()), *TM,
-                      /* isLittle */ false);
-  return std::make_unique<AArch64InstrInfo>(ST);
+std::pair<std::unique_ptr<AArch64Subtarget>, std::unique_ptr<AArch64InstrInfo>>
+createInstrInfo(TargetMachine *TM) {
+  auto ST = std::make_unique<AArch64Subtarget>(
+      TM->getTargetTriple(), std::string(TM->getTargetCPU()),
+      std::string(TM->getTargetCPU()),
+      std::string(TM->getTargetFeatureString()), *TM,
+      /* isLittle */ false);
+  // The AArch64InstrInfo constructor takes a const reference to *ST, hence we
+  // cannot stack allocate *ST.
+  auto II = std::make_unique<AArch64InstrInfo>(*ST);
+
+  return {std::move(ST), std::move(II)};
 }
 
 /// The \p InputIRSnippet is only needed for things that can't be expressed in
@@ -41,7 +48,7 @@ std::unique_ptr<AArch64InstrInfo> createInstrInfo(TargetMachine *TM) {
 /// TODO: Some of this might be useful for other architectures as well - extract
 ///       the platform-independent parts somewhere they can be reused.
 void runChecks(
-    LLVMTargetMachine *TM, AArch64InstrInfo *II, const StringRef InputIRSnippet,
+    TargetMachine *TM, AArch64InstrInfo *II, const StringRef InputIRSnippet,
     const StringRef InputMIRSnippet,
     std::function<void(AArch64InstrInfo &, MachineFunction &)> Checks) {
   LLVMContext Context;
@@ -70,7 +77,7 @@ void runChecks(
   std::unique_ptr<Module> M = MParser->parseIRModule();
   ASSERT_TRUE(M);
 
-  M->setTargetTriple(TM->getTargetTriple().getTriple());
+  M->setTargetTriple(TM->getTargetTriple());
   M->setDataLayout(TM->createDataLayout());
 
   MachineModuleInfo MMI(TM);
@@ -87,9 +94,9 @@ void runChecks(
 } // anonymous namespace
 
 TEST(InstSizes, Authenticated) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
   ASSERT_TRUE(TM);
-  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+  auto [ST, II] = createInstrInfo(TM.get());
 
   auto isAuthInst = [](AArch64InstrInfo &II, MachineFunction &MF) {
     auto I = MF.begin()->begin();
@@ -119,9 +126,9 @@ TEST(InstSizes, Authenticated) {
 }
 
 TEST(InstSizes, STACKMAP) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
   ASSERT_TRUE(TM);
-  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+  auto [ST, II] = createInstrInfo(TM.get());
 
   runChecks(TM.get(), II.get(), "", "    STACKMAP 0, 16\n"
                                     "    STACKMAP 1, 32\n",
@@ -134,8 +141,8 @@ TEST(InstSizes, STACKMAP) {
 }
 
 TEST(InstSizes, PATCHPOINT) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
-  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  auto [ST, II] = createInstrInfo(TM.get());
 
   runChecks(TM.get(), II.get(), "",
             "    PATCHPOINT 0, 16, 0, 0, 0, csr_aarch64_aapcs\n"
@@ -149,8 +156,8 @@ TEST(InstSizes, PATCHPOINT) {
 }
 
 TEST(InstSizes, STATEPOINT) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
-  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  auto [ST, II] = createInstrInfo(TM.get());
 
   runChecks(TM.get(), II.get(), "",
             "    STATEPOINT 0, 0, 0, @sizes, 2, 0, 2, 0, 2, 0, 2, 1, 1, 8,"
@@ -162,8 +169,8 @@ TEST(InstSizes, STATEPOINT) {
 }
 
 TEST(InstSizes, SPACE) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
-  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  auto [ST, II] = createInstrInfo(TM.get());
 
   runChecks(TM.get(), II.get(), "",
             "    $xzr = SPACE 1024, undef $xzr\n"
@@ -177,8 +184,8 @@ TEST(InstSizes, SPACE) {
 }
 
 TEST(InstSizes, TLSDESC_CALLSEQ) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
-  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  auto [ST, II] = createInstrInfo(TM.get());
 
   runChecks(
       TM.get(), II.get(),
@@ -191,8 +198,8 @@ TEST(InstSizes, TLSDESC_CALLSEQ) {
 }
 
 TEST(InstSizes, StoreSwiftAsyncContext) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
-  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  auto [ST, II] = createInstrInfo(TM.get());
 
   runChecks(
       TM.get(), II.get(), "",
@@ -205,8 +212,8 @@ TEST(InstSizes, StoreSwiftAsyncContext) {
 }
 
 TEST(InstSizes, SpeculationBarrierISBDSBEndBB) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
-  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  auto [ST, II] = createInstrInfo(TM.get());
 
   runChecks(
       TM.get(), II.get(), "",
@@ -219,8 +226,8 @@ TEST(InstSizes, SpeculationBarrierISBDSBEndBB) {
 }
 
 TEST(InstSizes, SpeculationBarrierSBEndBB) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
-  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  auto [ST, II] = createInstrInfo(TM.get());
 
   runChecks(
       TM.get(), II.get(), "",
@@ -233,8 +240,8 @@ TEST(InstSizes, SpeculationBarrierSBEndBB) {
 }
 
 TEST(InstSizes, JumpTable) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
-  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  auto [ST, II] = createInstrInfo(TM.get());
 
   runChecks(TM.get(), II.get(), "",
             "    $x10, $x11 = JumpTableDest32 $x9, $x8, %jump-table.0\n"
@@ -250,9 +257,98 @@ TEST(InstSizes, JumpTable) {
             });
 }
 
+TEST(InstSizes, MOVaddr) {
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  auto [ST, II] = createInstrInfo(TM.get());
+
+  auto Check8 = [](AArch64InstrInfo &II, MachineFunction &MF) {
+    auto I = MF.begin()->begin();
+    EXPECT_EQ(8u, II.getInstSizeInBytes(*I));
+  };
+
+  runChecks(TM.get(), II.get(), "  @g = external global i32\n",
+            "    $x0 = MOVaddr target-flags(aarch64-page) @g, "
+            "target-flags(aarch64-pageoff, aarch64-nc) @g\n",
+            Check8);
+
+  runChecks(TM.get(), II.get(), "",
+            "    $x0 = MOVaddrJT target-flags(aarch64-page) %jump-table.0, "
+            "target-flags(aarch64-pageoff, aarch64-nc) %jump-table.0\n",
+            Check8);
+
+  runChecks(TM.get(), II.get(), "  @g = external global i32\n",
+            "    $x0 = MOVaddrTLS target-flags(aarch64-page) @g, "
+            "target-flags(aarch64-pageoff, aarch64-nc) @g\n",
+            Check8);
+
+  runChecks(TM.get(), II.get(), "",
+            "    $x0 = MOVaddrEXT target-flags(aarch64-page) &memcpy, "
+            "target-flags(aarch64-pageoff, aarch64-nc) &memcpy\n",
+            Check8);
+
+  runChecks(TM.get(), II.get(),
+            "  define void @test_bb() {\n"
+            "  entry:\n"
+            "    br label %block\n"
+            "  block:\n"
+            "    ret void\n"
+            "  }\n",
+            "    $x0 = MOVaddrBA target-flags(aarch64-page) "
+            "blockaddress(@test_bb, %ir-block.block), "
+            "target-flags(aarch64-pageoff, aarch64-nc) "
+            "blockaddress(@test_bb, %ir-block.block)\n",
+            Check8);
+}
+
+TEST(InstSizes, MOVaddrTagged) {
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  auto [ST, II] = createInstrInfo(TM.get());
+
+  runChecks(TM.get(), II.get(), "  @g = external global i32\n",
+            "    $x0 = MOVaddr target-flags(aarch64-page, aarch64-tagged) @g, "
+            "target-flags(aarch64-pageoff, aarch64-nc) @g\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              EXPECT_EQ(12u, II.getInstSizeInBytes(*I));
+            });
+}
+
+TEST(InstSizes, MOVi32imm) {
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  auto [ST, II] = createInstrInfo(TM.get());
+
+  runChecks(TM.get(), II.get(), "",
+            "    $w0 = MOVi32imm 1\n"
+            "    $w1 = MOVi32imm 65536\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              EXPECT_EQ(4u, II.getInstSizeInBytes(*I));
+              ++I;
+              EXPECT_EQ(4u, II.getInstSizeInBytes(*I));
+            });
+}
+
+TEST(InstSizes, MOVi64imm) {
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  auto [ST, II] = createInstrInfo(TM.get());
+
+  runChecks(TM.get(), II.get(), "",
+            "    $x0 = MOVi64imm 1\n"
+            "    $x1 = MOVi64imm 65537\n"
+            "    $x2 = MOVi64imm 1311768467463790320\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              EXPECT_EQ(4u, II.getInstSizeInBytes(*I));
+              ++I;
+              EXPECT_EQ(8u, II.getInstSizeInBytes(*I));
+              ++I;
+              EXPECT_EQ(16u, II.getInstSizeInBytes(*I));
+            });
+}
+
 TEST(InstSizes, MOPSMemoryPseudos) {
-  std::unique_ptr<LLVMTargetMachine> TM = createTargetMachine();
-  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  auto [ST, II] = createInstrInfo(TM.get());
 
   runChecks(TM.get(), II.get(), "",
             "  $x0, $x1, $x2 = MOPSMemoryMovePseudo $x0, $x1, $x2, "

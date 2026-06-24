@@ -17,22 +17,28 @@
 
 ; LAXX-LABEL: Pass Arguments:
 ; LAXX-NEXT: Target Library Information
+; LAXX-NEXT: Runtime Library Function Analysis
 ; LAXX-NEXT: Target Pass Configuration
 ; LAXX-NEXT: Machine Module Information
 ; LAXX-NEXT: Target Transform Information
+; LAXX-NEXT: Assumption Cache Tracker
+; LAXX-NEXT: Library Function Lowering Analysis
 ; LAXX-NEXT: Type-Based Alias Analysis
 ; LAXX-NEXT: Scoped NoAlias Alias Analysis
-; LAXX-NEXT: Assumption Cache Tracker
-; LAXX-NEXT: Profile summary info
 ; LAXX-NEXT: Create Garbage Collector Module Metadata
+; LAXX-NEXT: Profile summary info
 ; LAXX-NEXT: Machine Branch Probability Analysis
 ; LAXX-NEXT: Default Regalloc Eviction Advisor
 ; LAXX-NEXT: Default Regalloc Priority Advisor
 ; LAXX-NEXT:   ModulePass Manager
+; LAXX-NEXT:     FunctionPass Manager
+; LAXX-NEXT:       Dominator Tree Construction
+; LAXX-NEXT:       Basic Alias Analysis (stateless AA impl)
+; LAXX-NEXT:       Function Alias Analysis Results
+; LAXX-NEXT:       ObjC ARC contraction
 ; LAXX-NEXT:     Pre-ISel Intrinsic Lowering
 ; LAXX-NEXT:     FunctionPass Manager
-; LAXX-NEXT:       Expand large div/rem
-; LAXX-NEXT:       Expand large fp convert
+; LAXX-NEXT:       Expand IR instructions
 ; LAXX-NEXT:       Expand Atomic instructions
 ; LAXX-NEXT:       Module Verifier
 ; LAXX-NEXT:       Dominator Tree Construction
@@ -44,16 +50,8 @@
 ; LAXX-NEXT:         Canonicalize Freeze Instructions in Loops
 ; LAXX-NEXT:         Induction Variable Users
 ; LAXX-NEXT:         Loop Strength Reduction
-; LAXX-NEXT:       Basic Alias Analysis (stateless AA impl)
-; LAXX-NEXT:       Function Alias Analysis Results
-; LAXX-NEXT:       Merge contiguous icmps into a memcmp
-; LAXX-NEXT:       Natural Loop Information
-; LAXX-NEXT:       Lazy Branch Probability Analysis
-; LAXX-NEXT:       Lazy Block Frequency Analysis
-; LAXX-NEXT:       Expand memcmp() to load/stores
 ; LAXX-NEXT:       Lower Garbage Collection Instructions
 ; LAXX-NEXT:       Shadow Stack GC Lowering
-; LAXX-NEXT:       Lower constant intrinsics
 ; LAXX-NEXT:       Remove unreachable blocks from the CFG
 ; LAXX-NEXT:       Natural Loop Information
 ; LAXX-NEXT:       Post-Dominator Tree Construction
@@ -61,17 +59,22 @@
 ; LAXX-NEXT:       Block Frequency Analysis
 ; LAXX-NEXT:       Constant Hoisting
 ; LAXX-NEXT:       Replace intrinsics with calls to vector library
+; LAXX-NEXT:       Lazy Branch Probability Analysis
+; LAXX-NEXT:       Lazy Block Frequency Analysis
+; LAXX-NEXT:       Optimization Remark Emitter
 ; LAXX-NEXT:       Partially inline calls to library functions
-; LAXX-NEXT:       Expand vector predication intrinsics
 ; LAXX-NEXT:       Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; LAXX-NEXT:       Scalarize Masked Memory Intrinsics
 ; LAXX-NEXT:       Expand reduction intrinsics
 ; LAXX-NEXT:       Natural Loop Information
-; LAXX-NEXT:       TLS Variable Hoist
+; LAXX-NEXT:       Type Promotion
+; LAXX-NEXT:       Post-Dominator Tree Construction
+; LAXX-NEXT:       Branch Probability Analysis
+; LAXX-NEXT:       Block Frequency Analysis
 ; LAXX-NEXT:       CodeGen Prepare
 ; LAXX-NEXT:       Dominator Tree Construction
 ; LAXX-NEXT:       Exception handling preparation
-; LAXX-NEXT:       Prepare callbr
+; LAXX-NEXT:       Prepare inline asm insts
 ; LAXX-NEXT:       Safe Stack instrumentation pass
 ; LAXX-NEXT:       Insert stack protectors
 ; LAXX-NEXT:       Module Verifier
@@ -106,6 +109,7 @@
 ; LAXX-NEXT:       Remove dead machine instructions
 ; LA64-NEXT:       LoongArch Optimize W Instructions
 ; LAXX-NEXT:       LoongArch Pre-RA pseudo instruction expansion pass
+; LAXX-NEXT:       LoongArch Merge Base Offset
 ; LAXX-NEXT:       Detect Dead Lanes
 ; LAXX-NEXT:       Init Undef Pass
 ; LAXX-NEXT:       Process Implicit Definitions
@@ -120,7 +124,6 @@
 ; LAXX-NEXT:       Rename Disconnected Subregister Components
 ; LAXX-NEXT:       Machine Instruction Scheduler
 ; LAXX-NEXT:       LoongArch Dead register definitions
-; LAXX-NEXT:       Machine Block Frequency Analysis
 ; LAXX-NEXT:       Debug Variable Analysis
 ; LAXX-NEXT:       Live Stack Slot Analysis
 ; LAXX-NEXT:       Virtual Register Map
@@ -163,6 +166,7 @@
 ; LAXX-NEXT:       Implement the 'patchable-function' attribute
 ; LAXX-NEXT:       Branch relaxation pass
 ; LAXX-NEXT:       Contiguously Lay Out Funclets
+; LAXX-NEXT:       Remove Loads Into Fake Uses
 ; LAXX-NEXT:       StackMap Liveness Analysis
 ; LAXX-NEXT:       Live DEBUG_VALUE analysis
 ; LAXX-NEXT:       Machine Sanitizer Binary Metadata

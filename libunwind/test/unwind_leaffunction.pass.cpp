@@ -8,14 +8,22 @@
 //===----------------------------------------------------------------------===//
 
 // Ensure that leaf function can be unwund.
-// REQUIRES: target={{(aarch64|riscv64|s390x|x86_64)-.+linux.*}}
+// REQUIRES: target={{(aarch64|loongarch64|riscv64|s390x|x86_64)-.+}}
+// UNSUPPORTED: target={{.*-windows.*}}
 
 // TODO: Figure out why this fails with Memory Sanitizer.
 // XFAIL: msan
 
+// Note: this test fails on musl because:
+//
+//  (a) musl disables emission of unwind information for its build, and
+//  (b) musl's signal trampolines don't include unwind information
+//
+// XFAIL: target={{.*}}-musl
+
 #undef NDEBUG
+#include "support/func_bounds.h"
 #include <assert.h>
-#include <dlfcn.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,16 +32,19 @@
 #include <unistd.h>
 #include <unwind.h>
 
+FUNC_BOUNDS_DECL(main_func);
+
 _Unwind_Reason_Code frame_handler(struct _Unwind_Context* ctx, void* arg) {
   (void)arg;
-  Dl_info info = { 0, 0, 0, 0 };
 
   // Unwind until the main is reached, above frames depend on the platform and
   // architecture.
-  if (dladdr(reinterpret_cast<void *>(_Unwind_GetIP(ctx)), &info) &&
-      info.dli_sname && !strcmp("main", info.dli_sname)) {
+  uintptr_t ip = _Unwind_GetIP(ctx);
+  if (ip >= (uintptr_t)FUNC_START(main_func) &&
+      ip < (uintptr_t)FUNC_END(main_func)) {
     _Exit(0);
   }
+
   return _URC_NO_REASON;
 }
 
@@ -56,7 +67,7 @@ __attribute__((noinline)) void crashing_leaf_func(int do_trap) {
     __builtin_trap();
 }
 
-int main(int, char**) {
+FUNC_ATTR(main_func) int main(int, char **) {
   signal(SIGTRAP, signal_handler);
   signal(SIGILL, signal_handler);
   crashing_leaf_func(1);

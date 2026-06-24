@@ -31,6 +31,10 @@
 // CHECK-MESSAGES: [[@LINE-1]]:9: warning: variadic macro 'PROBLEMATIC_VARIADIC2' used; consider using a 'constexpr' variadic template function
 
 // These are all examples of common macros that shouldn't have constexpr suggestions.
+#define CONCAT_NAME(a, b) a##b
+
+#define CONCAT_STR(a, b) #a #b
+
 #define COMMA ,
 
 #define NORETURN [[noreturn]]
@@ -42,5 +46,7 @@
 #else
 #define DLLEXPORTS __declspec(dllimport)
 #endif
+
+#define ATTRIBUTE_MACRO(...) __attribute__(__VA_ARGS__)
 
 #endif

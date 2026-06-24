@@ -1,4 +1,4 @@
-﻿"""Test that lldb command 'process signal SIGUSR1' to send a signal to the inferior works."""
+"""Test that lldb command 'process signal SIGUSR1' to send a signal to the inferior works."""
 
 
 import lldb
@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfNoSignals
 class SendSignalTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().

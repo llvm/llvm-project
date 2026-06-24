@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -99,7 +99,7 @@ def compactPropertyRanges(input: list[PropertyRange]) -> list[PropertyRange]:
     return result
 
 
-DATA_ARRAY_TEMPLATE = """
+DATA_ARRAY_TEMPLATE = r"""
 /// The entries of the characters with an estimated width of 2.
 ///
 /// Contains the entries for [format.string.std]/12
@@ -170,7 +170,8 @@ inline constexpr uint32_t __table_upper_bound = 0x{upper_bound:08x};
   if (__code_point < (__entries[0] >> 14))
     return 1;
 
-  ptrdiff_t __i = std::ranges::upper_bound(__entries, (__code_point << 14) | 0x3fffu) - __entries;
+  ptrdiff_t __i =
+      std::upper_bound(std::begin(__entries), std::end(__entries), (__code_point << 14) | 0x3fffu) - __entries;
   if (__i == 0)
     return 1;
 
@@ -244,9 +245,10 @@ TABLES_HPP_TEMPLATE = """
 #ifndef _LIBCPP___FORMAT_WIDTH_ESTIMATION_TABLE_H
 #define _LIBCPP___FORMAT_WIDTH_ESTIMATION_TABLE_H
 
-#include <__algorithm/ranges_upper_bound.h>
+#include <__algorithm/upper_bound.h>
 #include <__config>
-#include <cstddef>
+#include <__cstddef/ptrdiff_t.h>
+#include <__iterator/access.h>
 #include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -261,7 +263,7 @@ namespace __width_estimation_table {{
 {content}
 }} // namespace __width_estimation_table
 
-#endif //_LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

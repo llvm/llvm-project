@@ -18,6 +18,7 @@
 #include "flang/Optimizer/Support/InitFIR.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
+#include "flang/Support/FPMaxminBehavior.h"
 #include "flang/Tools/CrossToolHelpers.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -51,12 +52,21 @@ static cl::opt<bool> emitFir("emit-fir",
                              cl::desc("Parse and pretty-print the input"),
                              cl::init(false));
 
+static cl::opt<unsigned>
+    OptLevel("O",
+             cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "
+                      "(default = '-O2')"),
+             cl::Prefix, cl::init(2));
+
 static cl::opt<std::string> targetTriple("target",
                                          cl::desc("specify a target triple"),
                                          cl::init("native"));
 
 static cl::opt<std::string>
     targetCPU("target-cpu", cl::desc("specify a target CPU"), cl::init(""));
+
+static cl::opt<std::string> tuneCPU("tune-cpu", cl::desc("specify a tune CPU"),
+                                    cl::init(""));
 
 static cl::opt<std::string>
     targetFeatures("target-features", cl::desc("specify the target features"),
@@ -67,14 +77,66 @@ static cl::opt<bool> codeGenLLVM(
     cl::desc("Run only CodeGen passes and translate FIR to LLVM IR"),
     cl::init(false));
 
-#include "flang/Tools/CLOptions.inc"
+static cl::opt<bool> emitFinalMLIR(
+    "emit-final-mlir",
+    cl::desc("Only translate FIR to MLIR, do not lower to LLVM IR"),
+    cl::init(false));
+
+static cl::opt<bool>
+    simplifyMLIR("simplify-mlir",
+                 cl::desc("Run CSE and canonicalization on MLIR output"),
+                 cl::init(false));
+
+// Enabled by default to accurately reflect -O2
+static cl::opt<bool> enableAliasAnalysis("enable-aa",
+                                         cl::desc("Enable FIR alias analysis"),
+                                         cl::init(true));
+
+static cl::opt<bool> testGeneratorMode(
+    "test-gen", cl::desc("-emit-final-mlir -simplify-mlir -enable-aa=false"),
+    cl::init(false));
+
+static cl::opt<Fortran::common::FPMaxminBehavior> fpMaxminBehavior(
+    "ffp-maxmin-behavior",
+    cl::desc("Control max/min and [max|min][loc|val] behavior "
+             "[legacy|portable|extremum|extremenum] (for future pass use)"),
+    cl::values(clEnumValN(Fortran::common::FPMaxminBehavior::Legacy, "legacy",
+                          "cmp+select"),
+               clEnumValN(Fortran::common::FPMaxminBehavior::Portable,
+                          "portable",
+                          "cmp+select and arith.max/minnumf when nnan and nsz "
+                          "fast math flags are enabled"),
+               clEnumValN(Fortran::common::FPMaxminBehavior::Extremum,
+                          "extremum", "arith.max/minimum"),
+               clEnumValN(Fortran::common::FPMaxminBehavior::ExtremeNum,
+                          "extremenum", "arith.max/minnum")),
+    cl::init(Fortran::common::FPMaxminBehavior::Legacy));
+
+#include "flang/Optimizer/Passes/CommandLineOpts.h"
+#include "flang/Optimizer/Passes/Pipelines.h"
 
 static void printModule(mlir::ModuleOp mod, raw_ostream &output) {
   output << mod << '\n';
 }
 
+static std::optional<llvm::OptimizationLevel>
+getOptimizationLevel(unsigned level) {
+  switch (level) {
+  default:
+    return std::nullopt;
+  case 0:
+    return llvm::OptimizationLevel::O0;
+  case 1:
+    return llvm::OptimizationLevel::O1;
+  case 2:
+    return llvm::OptimizationLevel::O2;
+  case 3:
+    return llvm::OptimizationLevel::O3;
+  }
+}
+
 // compile a .fir file
-static mlir::LogicalResult
+static llvm::LogicalResult
 compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
   // check that there is a file to load
   ErrorOr<std::unique_ptr<MemoryBuffer>> fileOrErr =
@@ -113,6 +175,7 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
   fir::setTargetTriple(*owningRef, targetTriple);
   fir::setKindMapping(*owningRef, kindMap);
   fir::setTargetCPU(*owningRef, targetCPU);
+  fir::setTuneCPU(*owningRef, tuneCPU);
   fir::setTargetFeatures(*owningRef, targetFeatures);
   // tco is a testing tool, so it will happily use the target independent
   // data layout if none is on the module.
@@ -133,8 +196,18 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
     if (mlir::failed(passPipeline.addToPipeline(pm, errorHandler)))
       return mlir::failure();
   } else {
-    MLIRToLLVMPassPipelineConfig config(llvm::OptimizationLevel::O2);
-    config.AliasAnalysis = true; // enabled when optimizing for speed
+    std::optional<llvm::OptimizationLevel> level =
+        getOptimizationLevel(OptLevel);
+    if (!level) {
+      errs() << "Error invalid optimization level\n";
+      return mlir::failure();
+    }
+    MLIRToLLVMPassPipelineConfig config(*level);
+    config.fpMaxminBehavior = fpMaxminBehavior.getValue();
+    // TODO: config.StackArrays should be set here?
+    config.EnableOpenMP = true;  // assume the input contains OpenMP
+    config.AliasAnalysis = enableAliasAnalysis && !testGeneratorMode;
+    config.LoopVersioning = OptLevel > 2;
     if (codeGenLLVM) {
       // Run only CodeGen passes.
       fir::createDefaultFIRCodeGenPassPipeline(pm, config);
@@ -143,13 +216,20 @@ compileFIR(const mlir::PassPipelineCLParser &passPipeline) {
       fir::registerDefaultInlinerPass(config);
       fir::createMLIRToLLVMPassPipeline(pm, config);
     }
-    fir::addLLVMDialectToLLVMPass(pm, out.os());
+    if (simplifyMLIR || testGeneratorMode) {
+      pm.addPass(mlir::createCanonicalizerPass());
+      pm.addPass(mlir::createCSEPass());
+    }
+    if (!emitFinalMLIR && !testGeneratorMode)
+      fir::addLLVMDialectToLLVMPass(pm, out.os());
   }
 
   // run the pass manager
   if (mlir::succeeded(pm.run(*owningRef))) {
     // passes ran successfully, so keep the output
-    if ((emitFir || passPipeline.hasAnyOccurrences()) && !codeGenLLVM)
+    if ((emitFir || passPipeline.hasAnyOccurrences() || emitFinalMLIR ||
+         testGeneratorMode) &&
+        !codeGenLLVM)
       printModule(*owningRef, out.os());
     out.keep();
     return mlir::success();

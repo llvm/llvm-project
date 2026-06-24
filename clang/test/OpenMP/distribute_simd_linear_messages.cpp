@@ -111,7 +111,7 @@ template<int LEN> int test_warn() {
   int ind2 = 0;
   #pragma omp target
   #pragma omp teams
-  #pragma omp parallel for simd linear(ind2:LEN) // expected-warning {{zero linear step (ind2 should probably be const)}}
+  #pragma omp parallel for simd linear(ind2:LEN) // expected-warning {{zero linear step ('ind2' should probably be const)}}
   for (int i = 0; i < 100; i++) {
     ind2 += LEN;
   }

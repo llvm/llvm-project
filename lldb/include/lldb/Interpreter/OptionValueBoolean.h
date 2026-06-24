@@ -29,7 +29,7 @@ public:
   void DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
                  uint32_t dump_mask) override;
 
-  llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) override {
+  llvm::json::Value ToJSON(const ExecutionContext *exe_ctx) const override {
     return m_current_value;
   }
 
@@ -44,6 +44,8 @@ public:
 
   void AutoComplete(CommandInterpreter &interpreter,
                     CompletionRequest &request) override;
+
+  bool IsDefault() const override { return m_current_value == m_default_value; }
 
   // Subclass specific functions
 

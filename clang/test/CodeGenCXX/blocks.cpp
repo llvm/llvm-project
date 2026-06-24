@@ -155,12 +155,12 @@ namespace test5 {
   // CHECK-NEXT: store i8 [[T0]], ptr [[COND]], align 1
   // CHECK-NEXT: call void @_ZN5test51AC1Ev(ptr {{[^,]*}} [[X]])
   // CHECK-NEXT: [[T0:%.*]] = load i8, ptr [[COND]], align 1
-  // CHECK-NEXT: [[T1:%.*]] = trunc i8 [[T0]] to i1
+  // CHECK-NEXT: [[T1:%.*]] = icmp ne i8 [[T0]], 0
   // CHECK-NEXT: store i1 false, ptr [[CLEANUP_ACTIVE]]
   // CHECK-NEXT: br i1 [[T1]],
 
   // CHECK-NOT:  br
-  // CHECK:      [[CAPTURE:%.*]] = getelementptr inbounds [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
+  // CHECK:      [[CAPTURE:%.*]] = getelementptr inbounds nuw [[BLOCK_T]], ptr [[BLOCK]], i32 0, i32 5
   // CHECK-NEXT: call void @_ZN5test51AC1ERKS0_(ptr {{[^,]*}} [[CAPTURE]], ptr noundef nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) [[X]])
   // CHECK-NEXT: store ptr [[CAPTURE]], ptr [[COND_CLEANUP_SAVE]], align 8
   // CHECK-NEXT: store i1 true, ptr [[CLEANUP_ACTIVE]]

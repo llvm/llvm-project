@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import lldb
 import struct
@@ -33,6 +33,9 @@ class OperatingSystemPlugIn(object):
             self.g_value = process.GetTarget().FindFirstGlobalVariable("g_value")
             if not self.g_value.IsValid():
                 print("Could not find g_value")
+
+    def does_plugin_report_all_threads(self):
+        return False
 
     def create_thread(self, tid, context):
         print("Called create thread with tid: ", tid)

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -std=c++20 -fsyntax-only -Wno-vla-cxx-extension -verify
+// RUN: %clang_cc1 %s -std=c++20 -fsyntax-only -Wno-vla-cxx-extension -Wno-coroutines-unsupported-target -verify
 #include "Inputs/std-coroutine.h"
 
 struct promise;
@@ -15,6 +15,12 @@ struct promise
     void return_void();
     void unhandled_exception();
 };
+
+// Test that we won't report the error incorrectly.
+void bar(int n) {
+  int array[n];
+  return;
+}
 
 coroutine foo(int n) {
   int array[n]; // expected-error {{variable length arrays in a coroutine are not supported}}

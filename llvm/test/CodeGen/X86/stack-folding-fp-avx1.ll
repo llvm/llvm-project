@@ -990,7 +990,7 @@ define double @stack_fold_cvtsi2sd(i32 %a0) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vcvtsi2sdl {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm0 # 4-byte Folded Reload
+; CHECK-NEXT:    vcvtsi2sdl {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 4-byte Folded Reload
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    popq %r12
@@ -1034,7 +1034,7 @@ define <2 x double> @stack_fold_cvtsi2sd_int(i32 %a0) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vcvtsi2sdl {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm0 # 4-byte Folded Reload
+; CHECK-NEXT:    vcvtsi2sdl {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 4-byte Folded Reload
 ; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
@@ -1080,7 +1080,7 @@ define double @stack_fold_cvtsi642sd(i64 %a0) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vcvtsi2sdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm0 # 8-byte Folded Reload
+; CHECK-NEXT:    vcvtsi2sdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 8-byte Folded Reload
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    popq %r12
@@ -1124,7 +1124,7 @@ define <2 x double> @stack_fold_cvtsi642sd_int(i64 %a0) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vcvtsi2sdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm0 # 8-byte Folded Reload
+; CHECK-NEXT:    vcvtsi2sdq {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 8-byte Folded Reload
 ; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
@@ -1170,7 +1170,7 @@ define float @stack_fold_cvtsi2ss(i32 %a0) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vcvtsi2ssl {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm0 # 4-byte Folded Reload
+; CHECK-NEXT:    vcvtsi2ssl {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 4-byte Folded Reload
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    popq %r12
@@ -1214,9 +1214,9 @@ define <4 x float> @stack_fold_cvtsi2ss_int(i32 %a0) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vcvtsi2ssl {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm0 # 4-byte Folded Reload
+; CHECK-NEXT:    vcvtsi2ssl {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 4-byte Folded Reload
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    popq %r12
@@ -1261,7 +1261,7 @@ define float @stack_fold_cvtsi642ss(i64 %a0) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vcvtsi2ssq {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm0 # 8-byte Folded Reload
+; CHECK-NEXT:    vcvtsi2ssq {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 8-byte Folded Reload
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    popq %r12
@@ -1305,9 +1305,9 @@ define <4 x float> @stack_fold_cvtsi642ss_int(i64 %a0) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vcvtsi2ssq {{[-0-9]+}}(%r{{[sb]}}p), %xmm1, %xmm0 # 8-byte Folded Reload
+; CHECK-NEXT:    vcvtsi2ssq {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 8-byte Folded Reload
 ; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    popq %r12
@@ -1912,7 +1912,7 @@ define <4 x float> @stack_fold_insertps(<4 x float> %a0, <4 x float> %a1) {
 }
 declare <4 x float> @llvm.x86.sse41.insertps(<4 x float>, <4 x float>, i8) nounwind readnone
 
-define <2 x double> @stack_fold_maxpd(<2 x double> %a0, <2 x double> %a1) #0 {
+define <2 x double> @stack_fold_maxpd(<2 x double> %a0, <2 x double> %a1) {
 ; CHECK-LABEL: stack_fold_maxpd:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -1927,7 +1927,7 @@ define <2 x double> @stack_fold_maxpd(<2 x double> %a0, <2 x double> %a1) #0 {
 }
 declare <2 x double> @llvm.x86.sse2.max.pd(<2 x double>, <2 x double>) nounwind readnone
 
-define <2 x double> @stack_fold_maxpd_commutable(<2 x double> %a0, <2 x double> %a1) #1 {
+define <2 x double> @stack_fold_maxpd_commutable(<2 x double> %a0, <2 x double> %a1) {
 ; CHECK-LABEL: stack_fold_maxpd_commutable:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -1941,7 +1941,7 @@ define <2 x double> @stack_fold_maxpd_commutable(<2 x double> %a0, <2 x double> 
   ret <2 x double> %2
 }
 
-define <4 x double> @stack_fold_maxpd_ymm(<4 x double> %a0, <4 x double> %a1) #0 {
+define <4 x double> @stack_fold_maxpd_ymm(<4 x double> %a0, <4 x double> %a1) {
 ; CHECK-LABEL: stack_fold_maxpd_ymm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -1956,7 +1956,7 @@ define <4 x double> @stack_fold_maxpd_ymm(<4 x double> %a0, <4 x double> %a1) #0
 }
 declare <4 x double> @llvm.x86.avx.max.pd.256(<4 x double>, <4 x double>) nounwind readnone
 
-define <4 x double> @stack_fold_maxpd_ymm_commutable(<4 x double> %a0, <4 x double> %a1) #1 {
+define <4 x double> @stack_fold_maxpd_ymm_commutable(<4 x double> %a0, <4 x double> %a1) {
 ; CHECK-LABEL: stack_fold_maxpd_ymm_commutable:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -1970,7 +1970,7 @@ define <4 x double> @stack_fold_maxpd_ymm_commutable(<4 x double> %a0, <4 x doub
   ret <4 x double> %2
 }
 
-define <4 x float> @stack_fold_maxps(<4 x float> %a0, <4 x float> %a1) #0 {
+define <4 x float> @stack_fold_maxps(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: stack_fold_maxps:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -1985,7 +1985,7 @@ define <4 x float> @stack_fold_maxps(<4 x float> %a0, <4 x float> %a1) #0 {
 }
 declare <4 x float> @llvm.x86.sse.max.ps(<4 x float>, <4 x float>) nounwind readnone
 
-define <4 x float> @stack_fold_maxps_commutable(<4 x float> %a0, <4 x float> %a1) #1 {
+define <4 x float> @stack_fold_maxps_commutable(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: stack_fold_maxps_commutable:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -1999,7 +1999,7 @@ define <4 x float> @stack_fold_maxps_commutable(<4 x float> %a0, <4 x float> %a1
   ret <4 x float> %2
 }
 
-define <8 x float> @stack_fold_maxps_ymm(<8 x float> %a0, <8 x float> %a1) #0 {
+define <8 x float> @stack_fold_maxps_ymm(<8 x float> %a0, <8 x float> %a1) {
 ; CHECK-LABEL: stack_fold_maxps_ymm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -2014,7 +2014,7 @@ define <8 x float> @stack_fold_maxps_ymm(<8 x float> %a0, <8 x float> %a1) #0 {
 }
 declare <8 x float> @llvm.x86.avx.max.ps.256(<8 x float>, <8 x float>) nounwind readnone
 
-define <8 x float> @stack_fold_maxps_ymm_commutable(<8 x float> %a0, <8 x float> %a1) #1 {
+define <8 x float> @stack_fold_maxps_ymm_commutable(<8 x float> %a0, <8 x float> %a1) {
 ; CHECK-LABEL: stack_fold_maxps_ymm_commutable:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -2028,7 +2028,7 @@ define <8 x float> @stack_fold_maxps_ymm_commutable(<8 x float> %a0, <8 x float>
   ret <8 x float> %2
 }
 
-define double @stack_fold_maxsd(double %a0, double %a1) #0 {
+define double @stack_fold_maxsd(double %a0, double %a1) {
 ; CHECK-LABEL: stack_fold_maxsd:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovsd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -2043,7 +2043,7 @@ define double @stack_fold_maxsd(double %a0, double %a1) #0 {
   ret double %3
 }
 
-define double @stack_fold_maxsd_commutable(double %a0, double %a1) #1 {
+define double @stack_fold_maxsd_commutable(double %a0, double %a1) {
 ; CHECK-LABEL: stack_fold_maxsd_commutable:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovsd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -2058,7 +2058,7 @@ define double @stack_fold_maxsd_commutable(double %a0, double %a1) #1 {
   ret double %3
 }
 
-define <2 x double> @stack_fold_maxsd_int(<2 x double> %a0, <2 x double> %a1) #0 {
+define <2 x double> @stack_fold_maxsd_int(<2 x double> %a0, <2 x double> %a1) {
 ; CHECK-LABEL: stack_fold_maxsd_int:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -2073,7 +2073,7 @@ define <2 x double> @stack_fold_maxsd_int(<2 x double> %a0, <2 x double> %a1) #0
 }
 declare <2 x double> @llvm.x86.sse2.max.sd(<2 x double>, <2 x double>) nounwind readnone
 
-define float @stack_fold_maxss(float %a0, float %a1) #0 {
+define float @stack_fold_maxss(float %a0, float %a1) {
 ; CHECK-LABEL: stack_fold_maxss:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -2088,7 +2088,7 @@ define float @stack_fold_maxss(float %a0, float %a1) #0 {
   ret float %3
 }
 
-define float @stack_fold_maxss_commutable(float %a0, float %a1) #1 {
+define float @stack_fold_maxss_commutable(float %a0, float %a1) {
 ; CHECK-LABEL: stack_fold_maxss_commutable:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -2103,7 +2103,7 @@ define float @stack_fold_maxss_commutable(float %a0, float %a1) #1 {
   ret float %3
 }
 
-define <4 x float> @stack_fold_maxss_int(<4 x float> %a0, <4 x float> %a1) #0 {
+define <4 x float> @stack_fold_maxss_int(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: stack_fold_maxss_int:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -2118,7 +2118,7 @@ define <4 x float> @stack_fold_maxss_int(<4 x float> %a0, <4 x float> %a1) #0 {
 }
 declare <4 x float> @llvm.x86.sse.max.ss(<4 x float>, <4 x float>) nounwind readnone
 
-define <2 x double> @stack_fold_minpd(<2 x double> %a0, <2 x double> %a1) #0 {
+define <2 x double> @stack_fold_minpd(<2 x double> %a0, <2 x double> %a1) {
 ; CHECK-LABEL: stack_fold_minpd:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -2133,7 +2133,7 @@ define <2 x double> @stack_fold_minpd(<2 x double> %a0, <2 x double> %a1) #0 {
 }
 declare <2 x double> @llvm.x86.sse2.min.pd(<2 x double>, <2 x double>) nounwind readnone
 
-define <2 x double> @stack_fold_minpd_commutable(<2 x double> %a0, <2 x double> %a1) #1 {
+define <2 x double> @stack_fold_minpd_commutable(<2 x double> %a0, <2 x double> %a1) {
 ; CHECK-LABEL: stack_fold_minpd_commutable:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -2147,7 +2147,7 @@ define <2 x double> @stack_fold_minpd_commutable(<2 x double> %a0, <2 x double> 
   ret <2 x double> %2
 }
 
-define <4 x double> @stack_fold_minpd_ymm(<4 x double> %a0, <4 x double> %a1) #0 {
+define <4 x double> @stack_fold_minpd_ymm(<4 x double> %a0, <4 x double> %a1) {
 ; CHECK-LABEL: stack_fold_minpd_ymm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -2162,7 +2162,7 @@ define <4 x double> @stack_fold_minpd_ymm(<4 x double> %a0, <4 x double> %a1) #0
 }
 declare <4 x double> @llvm.x86.avx.min.pd.256(<4 x double>, <4 x double>) nounwind readnone
 
-define <4 x double> @stack_fold_minpd_ymm_commutable(<4 x double> %a0, <4 x double> %a1) #1 {
+define <4 x double> @stack_fold_minpd_ymm_commutable(<4 x double> %a0, <4 x double> %a1) {
 ; CHECK-LABEL: stack_fold_minpd_ymm_commutable:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -2176,7 +2176,7 @@ define <4 x double> @stack_fold_minpd_ymm_commutable(<4 x double> %a0, <4 x doub
   ret <4 x double> %2
 }
 
-define <4 x float> @stack_fold_minps(<4 x float> %a0, <4 x float> %a1) #0 {
+define <4 x float> @stack_fold_minps(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: stack_fold_minps:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -2191,7 +2191,7 @@ define <4 x float> @stack_fold_minps(<4 x float> %a0, <4 x float> %a1) #0 {
 }
 declare <4 x float> @llvm.x86.sse.min.ps(<4 x float>, <4 x float>) nounwind readnone
 
-define <4 x float> @stack_fold_minps_commutable(<4 x float> %a0, <4 x float> %a1) #1 {
+define <4 x float> @stack_fold_minps_commutable(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: stack_fold_minps_commutable:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -2205,7 +2205,7 @@ define <4 x float> @stack_fold_minps_commutable(<4 x float> %a0, <4 x float> %a1
   ret <4 x float> %2
 }
 
-define <8 x float> @stack_fold_minps_ymm(<8 x float> %a0, <8 x float> %a1) #0 {
+define <8 x float> @stack_fold_minps_ymm(<8 x float> %a0, <8 x float> %a1) {
 ; CHECK-LABEL: stack_fold_minps_ymm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -2220,7 +2220,7 @@ define <8 x float> @stack_fold_minps_ymm(<8 x float> %a0, <8 x float> %a1) #0 {
 }
 declare <8 x float> @llvm.x86.avx.min.ps.256(<8 x float>, <8 x float>) nounwind readnone
 
-define <8 x float> @stack_fold_minps_ymm_commutable(<8 x float> %a0, <8 x float> %a1) #1 {
+define <8 x float> @stack_fold_minps_ymm_commutable(<8 x float> %a0, <8 x float> %a1) {
 ; CHECK-LABEL: stack_fold_minps_ymm_commutable:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovups %ymm1, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -2234,7 +2234,7 @@ define <8 x float> @stack_fold_minps_ymm_commutable(<8 x float> %a0, <8 x float>
   ret <8 x float> %2
 }
 
-define double @stack_fold_minsd(double %a0, double %a1) #0 {
+define double @stack_fold_minsd(double %a0, double %a1) {
 ; CHECK-LABEL: stack_fold_minsd:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovsd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -2249,7 +2249,7 @@ define double @stack_fold_minsd(double %a0, double %a1) #0 {
   ret double %3
 }
 
-define double @stack_fold_minsd_commutable(double %a0, double %a1) #1 {
+define double @stack_fold_minsd_commutable(double %a0, double %a1) {
 ; CHECK-LABEL: stack_fold_minsd_commutable:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovsd %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
@@ -2279,7 +2279,7 @@ define <2 x double> @stack_fold_minsd_int(<2 x double> %a0, <2 x double> %a1) {
 }
 declare <2 x double> @llvm.x86.sse2.min.sd(<2 x double>, <2 x double>) nounwind readnone
 
-define float @stack_fold_minss(float %a0, float %a1) #0 {
+define float @stack_fold_minss(float %a0, float %a1) {
 ; CHECK-LABEL: stack_fold_minss:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -2294,7 +2294,7 @@ define float @stack_fold_minss(float %a0, float %a1) #0 {
   ret float %3
 }
 
-define float @stack_fold_minss_commutable(float %a0, float %a1) #1 {
+define float @stack_fold_minss_commutable(float %a0, float %a1) {
 ; CHECK-LABEL: stack_fold_minss_commutable:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovss %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
@@ -2309,7 +2309,7 @@ define float @stack_fold_minss_commutable(float %a0, float %a1) #1 {
   ret float %3
 }
 
-define <4 x float> @stack_fold_minss_int(<4 x float> %a0, <4 x float> %a1) #0 {
+define <4 x float> @stack_fold_minss_int(<4 x float> %a0, <4 x float> %a1) {
 ; CHECK-LABEL: stack_fold_minss_int:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vmovaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -2861,8 +2861,8 @@ define double @stack_fold_roundsd(double %a0) optsize {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vroundsd $9, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 8-byte Folded Reload
+; CHECK-NEXT:    vxorps %xmm15, %xmm15, %xmm15
+; CHECK-NEXT:    vroundsd $9, {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 8-byte Folded Reload
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = call double @llvm.floor.f64(double %a0)
@@ -2876,7 +2876,7 @@ define double @stack_fold_roundsd_minsize(double %a0) minsize {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vroundsd $9, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 8-byte Folded Reload
+; CHECK-NEXT:    vroundsd $9, {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 8-byte Folded Reload
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = call double @llvm.floor.f64(double %a0)
@@ -2908,8 +2908,8 @@ define float @stack_fold_roundss(float %a0) optsize {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vroundss $9, {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 4-byte Folded Reload
+; CHECK-NEXT:    vxorps %xmm15, %xmm15, %xmm15
+; CHECK-NEXT:    vroundss $9, {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 4-byte Folded Reload
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = call float @llvm.floor.f32(float %a0)
@@ -3106,8 +3106,8 @@ define double @stack_fold_sqrtsd(double %a0) optsize {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vsqrtsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 8-byte Folded Reload
+; CHECK-NEXT:    vxorps %xmm15, %xmm15, %xmm15
+; CHECK-NEXT:    vsqrtsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 8-byte Folded Reload
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = call double @llvm.sqrt.f64(double %a0)
@@ -3124,8 +3124,8 @@ define float @stack_fold_sqrtss(float %a0) optsize {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vsqrtss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 4-byte Folded Reload
+; CHECK-NEXT:    vxorps %xmm15, %xmm15, %xmm15
+; CHECK-NEXT:    vsqrtss {{[-0-9]+}}(%r{{[sb]}}p), %xmm15, %xmm0 # 4-byte Folded Reload
 ; CHECK-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
   %2 = call float @llvm.sqrt.f32(float %a0)
@@ -3632,6 +3632,3 @@ define <8 x float> @stack_fold_xorps_ymm(<8 x float> %a0, <8 x float> %a1) {
   %6 = fadd <8 x float> %5, <float 0x0, float 0x0, float 0x0, float 0x0, float 0x0, float 0x0, float 0x0, float 0x0>
   ret <8 x float> %6
 }
-
-attributes #0 = { "unsafe-fp-math"="false" }
-attributes #1 = { "unsafe-fp-math"="true" }

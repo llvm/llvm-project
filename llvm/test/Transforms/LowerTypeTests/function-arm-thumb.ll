@@ -33,17 +33,20 @@ define void @addrtaken() {
 !0 = !{i32 0, !"typeid1"}
 !1 = !{i32 0, !"typeid2"}
 
-; CHECK: define private void {{.*}} #[[AT:.*]] align 4 {
+; CHECK: define private void {{.*}} #[[AT:.*]] prefalign(4)
 ; CHECK-NEXT: entry:
-; CHECK-NEXT:  call void asm sideeffect "b.w $0\0Ab.w $1\0A", "s,s"(ptr @f1.cfi, ptr @g1.cfi)
+; CHECK-NEXT:  call void asm sideeffect "b.w $0\0A", "s"(ptr @f1.cfi)
+; CHECK-NEXT:  call void asm sideeffect "b.w $0\0A", "s"(ptr @g1.cfi)
 ; CHECK-NEXT:  unreachable
 ; CHECK-NEXT: }
 
-; CHECK: define private void {{.*}} #[[AA:.*]] align 4 {
+; CHECK: define private void {{.*}} #[[AA:.*]] prefalign(4)
 ; CHECK-NEXT: entry:
-; CHECK-NEXT:  call void asm sideeffect "b $0\0Ab $1\0Ab $2\0A", "s,s,s"(ptr @f2.cfi, ptr @g2.cfi, ptr @h2.cfi)
+; CHECK-NEXT:  call void asm sideeffect "b $0\0A", "s"(ptr @f2.cfi)
+; CHECK-NEXT:  call void asm sideeffect "b $0\0A", "s"(ptr @g2.cfi)
+; CHECK-NEXT:  call void asm sideeffect "b $0\0A", "s"(ptr @h2.cfi)
 ; CHECK-NEXT:  unreachable
 ; CHECK-NEXT: }
 
 ; CHECK-DAG: attributes #[[AA]] = { naked noinline "target-features"="-thumb-mode" }
-; CHECK-DAG: attributes #[[AT]] = { naked noinline "branch-target-enforcement"="false" "sign-return-address"="none" "target-cpu"="cortex-a8" "target-features"="+thumb-mode" }
+; CHECK-DAG: attributes #[[AT]] = { naked noinline "target-cpu"="cortex-a8" "target-features"="+thumb-mode" }

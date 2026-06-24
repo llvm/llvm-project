@@ -1,3 +1,6 @@
+.. If you want to modify sections/contents permanently, you should modify both
+   ReleaseNotes.rst and ReleaseNotesTemplate.txt.
+
 ===========================
 lld |release| Release Notes
 ===========================
@@ -26,40 +29,55 @@ Non-comprehensive list of changes in this release
 ELF Improvements
 ----------------
 
-* ``--compress-sections <section-glib>={none,zlib,zstd}[:level]`` is added to compress
-  matched output sections without the ``SHF_ALLOC`` flag.
-  (`#84855 <https://github.com/llvm/llvm-project/pull/84855>`_)
-  (`#90567 <https://github.com/llvm/llvm-project/pull/90567>`_)
-* The default compression level for zlib is now independent of linker
-  optimization level (``Z_BEST_SPEED``).
-* ``GNU_PROPERTY_AARCH64_FEATURE_PAUTH`` notes, ``R_AARCH64_AUTH_ABS64`` and
-  ``R_AARCH64_AUTH_RELATIVE`` relocations are now supported.
-  (`#72714 <https://github.com/llvm/llvm-project/pull/72714>`_)
-* ``--debug-names`` is added to create a merged ``.debug_names`` index
-  from input ``.debug_names`` sections. Type units are not handled yet.
-  (`#86508 <https://github.com/llvm/llvm-project/pull/86508>`_)
-* ``--enable-non-contiguous-regions`` option allows automatically packing input
-  sections into memory regions by automatically spilling to later matches if a
-  region would overflow. This reduces the toil of manually packing regions
-  (typical for embedded). It also makes full LTO feasible in such cases, since
-  IR merging currently prevents the linker script from referring to input
-  files. (`#90007 <https://github.com/llvm/llvm-project/pull/90007>`_)
-* ``--force-group-allocation`` is implemented to discard ``SHT_GROUP`` sections
-  and combine relocation sections if their relocated section group members are
-  placed to the same output section.
-  (`#94704 <https://github.com/llvm/llvm-project/pull/94704>`_)
+* Added ``--bp-compression-sort-section=<glob>[=<layout_priority>[=<match_priority>]]``,
+  replacing the old coarse ``--bp-compression-sort`` modes with a way to split
+  input sections into multiple compression groups, run balanced partitioning
+  independently per group, and leave out sections that are poor candidates for
+  BP.
+  ``layout_priority`` controls group placement order (lower value = placed
+  first, default 0). ``match_priority`` resolves conflicts when multiple globs
+  match the same section (lower value = higher priority; explicit priority
+  beats positional last-match-wins; default: positional). In ELF, the glob
+  matches input section names (e.g. ``.text.unlikely.code1``).
+
+* When a ``SECTIONS`` command interleaves relro and non-relro sections, lld now
+  emits one ``PT_GNU_RELRO`` segment per contiguous run of relro sections
+  instead of reporting a ``not contiguous with other relro sections`` error.
 
 Breaking changes
 ----------------
 
+* The symbol partition feature has been removed. lld no longer recognizes
+  ``SHT_LLVM_SYMPART`` sections, which are now treated as ordinary sections. The
+  feature saw no adoption beyond a Chromium experiment that has since been
+  retired.
+
+* An OutputSection that has an address expression, and is also assigned
+  to a MEMORY region, will now use the address expression in preference
+  to the next available location in the MEMORY region. This brings LLD
+  in line with GNU ld, but is a change in behavior from previous LLD
+  releases.
+  
 COFF Improvements
 -----------------
 
 MinGW Improvements
 ------------------
 
+* Added ``--push-state`` and ``--pop-state``, offering the same semantics as
+  when used with the ELF linker: The state of ``--Bstatic``/``--Bdynamic`` and
+  ``--whole-archive`` are pushed onto a stack and popped from it.
+
 MachO Improvements
 ------------------
+
+* ``--bp-compression-sort-section`` now accepts optional layout and match
+  priorities (same syntax as ELF). In Mach-O, the glob matches the
+  concatenated segment+section name (e.g. ``__TEXT__text``).
+* Restructure thunk generation algorithm to be more efficiently create thunks
+  (`#193367 <https://github.com/llvm/llvm-project/pull/193367>`_)
+* Alphabetically sort LC_LINKER_OPTIONS before processing to match Apple linker behavior
+  (`#201604 https://github.com/llvm/llvm-project/pull/201604`)
 
 WebAssembly Improvements
 ------------------------

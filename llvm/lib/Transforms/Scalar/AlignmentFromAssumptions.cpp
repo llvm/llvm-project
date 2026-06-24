@@ -163,7 +163,7 @@ bool AlignmentFromAssumptionsPass::extractAlignmentInfo(CallInst *I,
                                                         const SCEV *&OffSCEV) {
   Type *Int64Ty = Type::getInt64Ty(I->getContext());
   OperandBundleUse AlignOB = I->getOperandBundleAt(Idx);
-  if (AlignOB.getTagName() != "align")
+  if (AlignOB.getTagID() != LLVMContext::OB_align)
     return false;
   assert(AlignOB.Inputs.size() >= 2);
   AAPtr = AlignOB.Inputs[0].get();
@@ -177,6 +177,9 @@ bool AlignmentFromAssumptionsPass::extractAlignmentInfo(CallInst *I,
     return false;
   if (!cast<SCEVConstant>(AlignSCEV)->getAPInt().isPowerOf2())
     // Only power of two alignments are supported.
+    return false;
+  if (cast<SCEVConstant>(AlignSCEV)->getAPInt().ugt(Value::MaximumAlignment))
+    // Alignment exceeds what LLVM instructions can represent; skip.
     return false;
   if (AlignOB.Inputs.size() == 3)
     OffSCEV = SE->getSCEV(AlignOB.Inputs[2].get());
@@ -208,6 +211,7 @@ bool AlignmentFromAssumptionsPass::processAssumption(CallInst *ACall,
       continue;
 
     if (Instruction *K = dyn_cast<Instruction>(J))
+      if (K->getFunction() == ACall->getFunction())
         WorkList.push_back(K);
   }
 

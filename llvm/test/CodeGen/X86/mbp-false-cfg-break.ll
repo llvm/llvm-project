@@ -9,7 +9,7 @@ define void @test(i1 %cnd) !prof !{!"function_entry_count", i64 1024} {
 ; CHECK: # %rare
 ; CHECK: # %rare.1
 
-  br i1 undef, label %rare.1, label %preheader, !prof !{!"branch_weights", i32 0, i32 1000}
+  br i1 %cnd, label %rare.1, label %preheader, !prof !{!"branch_weights", i32 0, i32 1000}
 rare.1:
   call void @foo()
   br label %preheader
@@ -28,7 +28,7 @@ backedge:
   call void @foo()
   %iv.next = add i32 %iv, 1
   %cmp = icmp eq i32 %iv.next, 200
-  br i1 %cmp, label %loop, label %exit, !prof !{!"branch_weights", i32 1000, i32 1}
+  br i1 %cmp, label %exit, label %loop, !prof !{!"branch_weights", i32 1, i32 1000}
 
 exit:
   ret void

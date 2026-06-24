@@ -33,9 +33,9 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Attempt to free released memory</string>
+     <string>Attempt to release already released memory</string>
      <key>message</key>
-     <string>Attempt to free released memory</string>
+     <string>Attempt to release already released memory</string>
     </dict>
     <dict>
      <key>kind</key><string>control</string>
@@ -232,7 +232,7 @@
       </array>
     </dict>
    </array>
-   <key>description</key><string>Attempt to free released memory</string>
+   <key>description</key><string>Attempt to release already released memory</string>
    <key>category</key><string>Memory error</string>
    <key>type</key><string>Double free</string>
    <key>check_name</key><string>cplusplus.NewDelete</string>
@@ -456,12 +456,12 @@
      </array>
      <key>depth</key><integer>0</integer>
      <key>extended_message</key>
-     <string>Attempt to free released memory</string>
+     <string>Attempt to release already released memory</string>
      <key>message</key>
-     <string>Attempt to free released memory</string>
+     <string>Attempt to release already released memory</string>
     </dict>
    </array>
-   <key>description</key><string>Attempt to free released memory</string>
+   <key>description</key><string>Attempt to release already released memory</string>
    <key>category</key><string>Memory error</string>
    <key>type</key><string>Double free</string>
    <key>check_name</key><string>cplusplus.NewDelete</string>

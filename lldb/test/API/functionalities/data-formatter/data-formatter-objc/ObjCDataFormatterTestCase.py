@@ -11,17 +11,19 @@ from lldbsuite.test import lldbutil
 
 
 class ObjCDataFormatterTestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def appkit_tester_impl(self, commands, use_constant_classes):
         if use_constant_classes:
             self.build()
         else:
             disable_constant_classes = {
-                "CC": "xcrun clang",  # FIXME: Remove when flags are available upstream.
                 "CFLAGS_EXTRAS": "-fno-constant-nsnumber-literals "
                 + "-fno-constant-nsarray-literals "
                 + "-fno-constant-nsdictionary-literals",
             }
-            self.build(dictionary=disable_constant_classes)
+            # FIXME: Remove compiler when flags are available upstream.
+            self.build(dictionary=disable_constant_classes, compiler="xcrun clang")
         self.appkit_common_data_formatters_command()
         commands()
 

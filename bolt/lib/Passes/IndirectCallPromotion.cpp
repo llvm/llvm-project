@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/IndirectCallPromotion.h"
-#include "bolt/Passes/BinaryFunctionCallGraph.h"
+#include "bolt/Core/BinaryFunctionCallGraph.h"
 #include "bolt/Passes/DataflowInfoManager.h"
 #include "bolt/Passes/Inliner.h"
 #include "llvm/ADT/STLExtras.h"
@@ -261,10 +261,7 @@ IndirectCallPromotion::getCallTargets(BinaryBasicBlock &BB,
     for (size_t I = Range.first; I < Range.second; ++I, JI += JIAdj) {
       MCSymbol *Entry = JT->Entries[I];
       const BinaryBasicBlock *ToBB = BF.getBasicBlockForLabel(Entry);
-      assert(ToBB || Entry == BF.getFunctionEndLabel() ||
-             Entry == BF.getFunctionEndLabel(FragmentNum::cold()));
-      if (Entry == BF.getFunctionEndLabel() ||
-          Entry == BF.getFunctionEndLabel(FragmentNum::cold()))
+      if (!ToBB)
         continue;
       const Location To(Entry);
       const BinaryBasicBlock::BinaryBranchInfo &BI = BB.getBranchInfo(*ToBB);
@@ -386,13 +383,15 @@ IndirectCallPromotion::maybeGetHotJumpTableTargets(BinaryBasicBlock &BB,
   JumpTableInfoType HotTargets;
   MCInst *MemLocInstr;
   MCInst *PCRelBaseOut;
+  MCInst *FixedEntryLoadInstr;
   unsigned BaseReg, IndexReg;
   int64_t DispValue;
   const MCExpr *DispExpr;
   MutableArrayRef<MCInst> Insts(&BB.front(), &CallInst);
   const IndirectBranchType Type = BC.MIB->analyzeIndirectBranch(
       CallInst, Insts.begin(), Insts.end(), BC.AsmInfo->getCodePointerSize(),
-      MemLocInstr, BaseReg, IndexReg, DispValue, DispExpr, PCRelBaseOut);
+      MemLocInstr, BaseReg, IndexReg, DispValue, DispExpr, PCRelBaseOut,
+      FixedEntryLoadInstr);
 
   assert(MemLocInstr && "There should always be a load for jump tables");
   if (!MemLocInstr)
@@ -776,8 +775,7 @@ IndirectCallPromotion::rewriteCall(
   InstructionListType TailInsts;
   const MCInst *TailInst = &CallInst;
   if (IsTailCallOrJT)
-    while (TailInst + 1 < &(*IndCallBlock.end()) &&
-           MIB->isPseudo(*(TailInst + 1)))
+    while (TailInst != &IndCallBlock.back() && MIB->isPseudo(*(TailInst + 1)))
       TailInsts.push_back(*++TailInst);
 
   InstructionListType MovedInst = IndCallBlock.splitInstructions(&CallInst);
@@ -1143,6 +1141,11 @@ void IndirectCallPromotion::printCallsiteInfo(
 Error IndirectCallPromotion::runOnFunctions(BinaryContext &BC) {
   if (opts::ICP == ICP_NONE)
     return Error::success();
+
+  if (!BC.isX86()) {
+    BC.errs() << "BOLT-ERROR: " << getName() << " is supported only on X86\n";
+    exit(1);
+  }
 
   auto &BFs = BC.getBinaryFunctions();
 

@@ -12,7 +12,6 @@
 #include "LinkUtils.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/NonRelocatableStringpool.h"
-#include "llvm/MC/MCAsmLayout.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectStreamer.h"
@@ -270,13 +269,19 @@ getSection(const object::MachOObjectFile &Obj,
 //
 // When the eh_frame section is transferred, its offset and size are set resp.
 // to \a EHFrameOffset and \a EHFrameSize.
+//
+// When the __PSEUDO_PROBE segment is transferred, its offset and size are set
+// resp. to \a PseudoProbeOffset and \a PseudoProbeSize, and its sections'
+// offsets are updated using \a PseudoProbeProbesOffset for __probes and
+// \a PseudoProbeDescsOffset for __probe_descs.
 template <typename SegmentTy>
 static void transferSegmentAndSections(
     const object::MachOObjectFile::LoadCommandInfo &LCI, SegmentTy Segment,
     const object::MachOObjectFile &Obj, MachObjectWriter &Writer,
     uint64_t LinkeditOffset, uint64_t LinkeditSize, uint64_t EHFrameOffset,
-    uint64_t EHFrameSize, uint64_t DwarfSegmentSize, uint64_t &GapForDwarf,
-    uint64_t &EndAddress) {
+    uint64_t EHFrameSize, uint64_t PseudoProbeOffset, uint64_t PseudoProbeSize,
+    uint64_t PseudoProbeProbesOffset, uint64_t PseudoProbeDescsOffset,
+    uint64_t DwarfSegmentSize, uint64_t &GapForDwarf, uint64_t &EndAddress) {
   if (StringRef("__DWARF") == Segment.segname)
     return;
 
@@ -288,6 +293,10 @@ static void transferSegmentAndSections(
     Segment.filesize = LinkeditSize;
     // Resize vmsize by rounding to the page size.
     Segment.vmsize = alignTo(LinkeditSize, 0x1000);
+  } else if (StringRef("__PSEUDO_PROBE") == Segment.segname &&
+             PseudoProbeSize > 0) {
+    Segment.fileoff = PseudoProbeOffset;
+    Segment.filesize = PseudoProbeSize;
   } else {
     Segment.fileoff = Segment.filesize = 0;
   }
@@ -313,6 +322,14 @@ static void transferSegmentAndSections(
     if (StringRef("__eh_frame") == Sect.sectname) {
       Sect.offset = EHFrameOffset;
       Sect.reloff = Sect.nreloc = 0;
+    } else if (StringRef("__probes") == Sect.sectname &&
+               PseudoProbeProbesOffset > 0) {
+      Sect.offset = PseudoProbeProbesOffset;
+      Sect.reloff = Sect.nreloc = 0;
+    } else if (StringRef("__probe_descs") == Sect.sectname &&
+               PseudoProbeDescsOffset > 0) {
+      Sect.offset = PseudoProbeDescsOffset;
+      Sect.reloff = Sect.nreloc = 0;
     } else {
       Sect.offset = Sect.reloff = Sect.nreloc = 0;
     }
@@ -323,32 +340,40 @@ static void transferSegmentAndSections(
 }
 
 // Write the __DWARF segment load command to the output file.
-static bool createDwarfSegment(uint64_t VMAddr, uint64_t FileOffset,
-                               uint64_t FileSize, unsigned NumSections,
-                               MCAsmLayout &Layout, MachObjectWriter &Writer) {
+static bool createDwarfSegment(const MCAssembler &Asm, uint64_t VMAddr,
+                               uint64_t FileOffset, uint64_t FileSize,
+                               unsigned NumSections, MachObjectWriter &Writer,
+                               bool AllowSectionHeaderOffsetOverflow) {
   Writer.writeSegmentLoadCommand("__DWARF", NumSections, VMAddr,
                                  alignTo(FileSize, 0x1000), FileOffset,
                                  FileSize, /* MaxProt */ 7,
                                  /* InitProt =*/3);
 
-  for (unsigned int i = 0, n = Layout.getSectionOrder().size(); i != n; ++i) {
-    MCSection *Sec = Layout.getSectionOrder()[i];
-    if (Sec->begin() == Sec->end() || !Layout.getSectionFileSize(Sec))
+  for (unsigned int i = 0, n = Writer.getSectionOrder().size(); i != n; ++i) {
+    auto *Sec = static_cast<MCSectionMachO *>(Writer.getSectionOrder()[i]);
+    if (!Asm.getSectionFileSize(*Sec))
       continue;
 
     Align Alignment = Sec->getAlign();
     if (Alignment > 1) {
       VMAddr = alignTo(VMAddr, Alignment);
       FileOffset = alignTo(FileOffset, Alignment);
-      if (FileOffset > UINT32_MAX)
-        return error("section " + Sec->getName() +
-                     "'s file offset exceeds 4GB."
-                     " Refusing to produce an invalid Mach-O file.");
     }
-    Writer.writeSection(Layout, *Sec, VMAddr, FileOffset, 0, 0, 0);
+    // Mach-O section headers store the file offset in a 32-bit field
+    // (section.offset). For large dSYM files, a section can start beyond 4GB
+    // (UINT32_MAX), so the on-disk offset value may wrap/truncate. Within a
+    // single slice, sections are emitted in file order. If we allow emitting
+    // such non-standard Mach-O, compatible readers can reconstruct the true
+    // 64-bit offsets by walking sections in order and accumulating the sizes of
+    // preceding sections.
+    if (FileOffset > UINT32_MAX && !AllowSectionHeaderOffsetOverflow)
+      return error("section " + Sec->getName() +
+                   "'s file offset exceeds 4GB."
+                   " Refusing to produce an invalid Mach-O file.");
+    Writer.writeSection(Asm, *Sec, VMAddr, FileOffset, 0, 0, 0);
 
-    FileOffset += Layout.getSectionAddressSize(Sec);
-    VMAddr += Layout.getSectionAddressSize(Sec);
+    FileOffset += Asm.getSectionAddressSize(*Sec);
+    VMAddr += Asm.getSectionAddressSize(*Sec);
   }
   return true;
 }
@@ -375,15 +400,14 @@ bool generateDsymCompanion(
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, const DebugMap &DM,
     MCStreamer &MS, raw_fd_ostream &OutFile,
     const std::vector<MachOUtils::DwarfRelocationApplicationInfo>
-        &RelocationsToApply) {
+        &RelocationsToApply,
+    bool AllowSectionHeaderOffsetOverflow) {
   auto &ObjectStreamer = static_cast<MCObjectStreamer &>(MS);
   MCAssembler &MCAsm = ObjectStreamer.getAssembler();
   auto &Writer = static_cast<MachObjectWriter &>(MCAsm.getWriter());
 
   // Layout but don't emit.
-  ObjectStreamer.flushPendingLabels();
-  MCAsmLayout Layout(MCAsm);
-  MCAsm.layout(Layout);
+  MCAsm.layout();
 
   BinaryHolder InputBinaryHolder(VFS, false);
 
@@ -457,6 +481,10 @@ bool generateDsymCompanion(
   // If we have a valid eh_frame to copy, do it.
   uint64_t EHFrameSize = 0;
   StringRef EHFrameData;
+  StringRef PseudoProbeProbesData;
+  uint64_t PseudoProbeProbesSize = 0;
+  StringRef PseudoProbeDescsData;
+  uint64_t PseudoProbeDescsSize = 0;
   for (const object::SectionRef &Section : InputBinary.sections()) {
     Expected<StringRef> NameOrErr = Section.getName();
     if (!NameOrErr) {
@@ -472,8 +500,23 @@ bool generateDsymCompanion(
       } else {
         consumeError(ContentsOrErr.takeError());
       }
+    } else if (SectionName == "probes") {
+      if (Expected<StringRef> ContentsOrErr = Section.getContents()) {
+        PseudoProbeProbesData = *ContentsOrErr;
+        PseudoProbeProbesSize = Section.getSize();
+      } else {
+        consumeError(ContentsOrErr.takeError());
+      }
+    } else if (SectionName == "probe_descs") {
+      if (Expected<StringRef> ContentsOrErr = Section.getContents()) {
+        PseudoProbeDescsData = *ContentsOrErr;
+        PseudoProbeDescsSize = Section.getSize();
+      } else {
+        consumeError(ContentsOrErr.takeError());
+      }
     }
   }
+  uint64_t PseudoProbeSize = PseudoProbeProbesSize + PseudoProbeDescsSize;
 
   unsigned HeaderSize =
       Is64Bit ? sizeof(MachO::mach_header_64) : sizeof(MachO::mach_header);
@@ -491,12 +534,12 @@ bool generateDsymCompanion(
   unsigned NumDwarfSections = 0;
   uint64_t DwarfSegmentSize = 0;
 
-  for (unsigned int i = 0, n = Layout.getSectionOrder().size(); i != n; ++i) {
-    MCSection *Sec = Layout.getSectionOrder()[i];
+  for (unsigned int i = 0, n = Writer.getSectionOrder().size(); i != n; ++i) {
+    MCSection *Sec = Writer.getSectionOrder()[i];
     if (Sec->begin() == Sec->end())
       continue;
 
-    if (uint64_t Size = Layout.getSectionFileSize(Sec)) {
+    if (uint64_t Size = MCAsm.getSectionFileSize(*Sec)) {
       DwarfSegmentSize = alignTo(DwarfSegmentSize, Sec->getAlign());
       DwarfSegmentSize += Size;
       ++NumDwarfSections;
@@ -526,7 +569,8 @@ bool generateDsymCompanion(
   SymtabStart = alignTo(SymtabStart, 0x1000);
 
   // We gathered all the information we need, start emitting the output file.
-  Writer.writeHeader(MachO::MH_DSYM, NumLoadCommands, LoadCommandSize, false);
+  Writer.writeHeader(MachO::MH_DSYM, NumLoadCommands, LoadCommandSize,
+                     /*SubsectionsViaSymbols=*/false);
 
   // Write the load commands.
   assert(OutFile.tell() == HeaderSize);
@@ -554,8 +598,16 @@ bool generateDsymCompanion(
   uint64_t EHFrameStart = StringStart + NewStringsSize;
   EHFrameStart = alignTo(EHFrameStart, 0x1000);
 
-  uint64_t DwarfSegmentStart = EHFrameStart + EHFrameSize;
-  DwarfSegmentStart = alignTo(DwarfSegmentStart, 0x1000);
+  // Place pseudo probe data after the EH frame.
+  uint64_t PseudoProbeStart = PseudoProbeSize > 0
+                                  ? alignTo(EHFrameStart + EHFrameSize, 0x1000)
+                                  : EHFrameStart + EHFrameSize;
+
+  uint64_t PseudoProbeProbesStart = PseudoProbeStart;
+  uint64_t PseudoProbeDescsStart = PseudoProbeStart + PseudoProbeProbesSize;
+
+  uint64_t DwarfSegmentStart =
+      alignTo(PseudoProbeStart + PseudoProbeSize, 0x1000);
 
   // Write the load commands for the segments and sections we 'import' from
   // the original binary.
@@ -566,12 +618,16 @@ bool generateDsymCompanion(
       transferSegmentAndSections(
           LCI, InputBinary.getSegmentLoadCommand(LCI), InputBinary, Writer,
           SymtabStart, StringStart + NewStringsSize - SymtabStart, EHFrameStart,
-          EHFrameSize, DwarfSegmentSize, GapForDwarf, EndAddress);
+          EHFrameSize, PseudoProbeStart, PseudoProbeSize,
+          PseudoProbeProbesStart, PseudoProbeDescsStart, DwarfSegmentSize,
+          GapForDwarf, EndAddress);
     else if (LCI.C.cmd == MachO::LC_SEGMENT_64)
       transferSegmentAndSections(
           LCI, InputBinary.getSegment64LoadCommand(LCI), InputBinary, Writer,
           SymtabStart, StringStart + NewStringsSize - SymtabStart, EHFrameStart,
-          EHFrameSize, DwarfSegmentSize, GapForDwarf, EndAddress);
+          EHFrameSize, PseudoProbeStart, PseudoProbeSize,
+          PseudoProbeProbesStart, PseudoProbeDescsStart, DwarfSegmentSize,
+          GapForDwarf, EndAddress);
   }
 
   uint64_t DwarfVMAddr = alignTo(EndAddress, 0x1000);
@@ -587,8 +643,9 @@ bool generateDsymCompanion(
   }
 
   // Write the load command for the __DWARF segment.
-  if (!createDwarfSegment(DwarfVMAddr, DwarfSegmentStart, DwarfSegmentSize,
-                          NumDwarfSections, Layout, Writer))
+  if (!createDwarfSegment(MCAsm, DwarfVMAddr, DwarfSegmentStart,
+                          DwarfSegmentSize, NumDwarfSections, Writer,
+                          AllowSectionHeaderOffsetOverflow))
     return false;
 
   assert(OutFile.tell() == LoadCommandSize + HeaderSize);
@@ -624,18 +681,24 @@ bool generateDsymCompanion(
     OutFile << EHFrameData;
   assert(OutFile.tell() == EHFrameStart + EHFrameSize);
 
+  // Transfer pseudo probe.
+  if (PseudoProbeSize > 0) {
+    OutFile.write_zeros(PseudoProbeStart - (EHFrameStart + EHFrameSize));
+    assert(OutFile.tell() == PseudoProbeStart);
+    OutFile << PseudoProbeProbesData;
+    OutFile << PseudoProbeDescsData;
+    assert(OutFile.tell() == PseudoProbeStart + PseudoProbeSize);
+  }
+
   // Pad till the Dwarf segment start.
-  OutFile.write_zeros(DwarfSegmentStart - (EHFrameStart + EHFrameSize));
+  OutFile.write_zeros(DwarfSegmentStart - OutFile.tell());
   assert(OutFile.tell() == DwarfSegmentStart);
 
   // Emit the Dwarf sections contents.
   for (const MCSection &Sec : MCAsm) {
-    if (Sec.begin() == Sec.end())
-      continue;
-
     uint64_t Pos = OutFile.tell();
     OutFile.write_zeros(alignTo(Pos, Sec.getAlign()) - Pos);
-    MCAsm.writeSectionData(OutFile, &Sec, Layout);
+    MCAsm.writeSectionData(OutFile, &Sec);
   }
 
   // Apply relocations to the contents of the DWARF segment.

@@ -1,5 +1,5 @@
 // Some simple operations on S, D and Q registers (loads, stores and moves) are
-// also avaliable in MVE, even in the integer-only version. Some of these
+// also available in MVE, even in the integer-only version. Some of these
 // instructions (operating on D or Q registers, or FP16 values) are only
 // available for certain targets.
 

@@ -9,15 +9,18 @@
 #ifndef LLDB_INTERPRETER_INTERFACES_SCRIPTEDINTERFACE_H
 #define LLDB_INTERPRETER_INTERFACES_SCRIPTEDINTERFACE_H
 
+#include "ScriptedInterfaceUsages.h"
+
 #include "lldb/Core/StructuredDataImpl.h"
-#include "lldb/Target/ExecutionContext.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/ScriptedMetadata.h"
 #include "lldb/Utility/UnimplementedError.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/Support/Compiler.h"
 
+#include <optional>
 #include <string>
 
 namespace lldb_private {
@@ -30,13 +33,36 @@ public:
     return m_object_instance_sp;
   }
 
-  virtual llvm::SmallVector<llvm::StringLiteral> GetAbstractMethods() const = 0;
+  const std::optional<ScriptedMetadata> &GetScriptedMetadata() const {
+    return m_scripted_metadata;
+  }
+
+  struct AbstractMethodRequirement {
+    llvm::StringLiteral name;
+    size_t min_arg_count = 0;
+  };
+
+  virtual llvm::SmallVector<AbstractMethodRequirement>
+  GetAbstractMethodRequirements() const = 0;
+
+  virtual llvm::Expected<FileSpec> GetScriptedModulePath() {
+    return llvm::make_error<UnimplementedError>();
+  }
+
+  llvm::SmallVector<llvm::StringLiteral> const GetAbstractMethods() const {
+    llvm::SmallVector<llvm::StringLiteral> abstract_methods;
+    llvm::transform(GetAbstractMethodRequirements(), abstract_methods.begin(),
+                    [](const AbstractMethodRequirement &requirement) {
+                      return requirement.name;
+                    });
+    return abstract_methods;
+  }
 
   template <typename Ret>
   static Ret ErrorWithMessage(llvm::StringRef caller_name,
                               llvm::StringRef error_msg, Status &error,
-                              LLDBLog log_caterogy = LLDBLog::Process) {
-    LLDB_LOGF(GetLog(log_caterogy), "%s ERROR = %s", caller_name.data(),
+                              LLDBLog log_category = LLDBLog::Process) {
+    LLDB_LOGF(GetLog(log_category), "%s ERROR = %s", caller_name.data(),
               error_msg.data());
     std::string full_error_message =
         llvm::Twine(caller_name + llvm::Twine(" ERROR = ") +
@@ -47,12 +73,13 @@ public:
           llvm::Twine(llvm::Twine(" (") + llvm::Twine(detailed_error) +
                       llvm::Twine(")"))
               .str();
-    error.SetErrorString(full_error_message);
+    error = Status(std::move(full_error_message));
     return {};
   }
 
   template <typename T = StructuredData::ObjectSP>
-  bool CheckStructuredDataObject(llvm::StringRef caller, T obj, Status &error) {
+  static bool CheckStructuredDataObject(llvm::StringRef caller, T obj,
+                                        Status &error) {
     if (!obj)
       return ErrorWithMessage<bool>(caller, "Null Structured Data object",
                                     error);
@@ -68,8 +95,14 @@ public:
     return true;
   }
 
+  static bool CreateInstance(lldb::ScriptLanguage language,
+                             ScriptedInterfaceUsages usages) {
+    return false;
+  }
+
 protected:
   StructuredData::GenericSP m_object_instance_sp;
+  std::optional<ScriptedMetadata> m_scripted_metadata;
 };
 } // namespace lldb_private
 #endif // LLDB_INTERPRETER_INTERFACES_SCRIPTEDINTERFACE_H

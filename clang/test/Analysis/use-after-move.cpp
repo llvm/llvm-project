@@ -570,13 +570,8 @@ void differentBranchesTest(int i) {
   {
     A a;
     a.foo() > 0 ? a.foo() : A(std::move(a)).foo();
-#ifdef DFS
-    // peaceful-note@-2 {{Assuming the condition is false}}
-    // peaceful-note@-3 {{'?' condition is false}}
-#else
-    // peaceful-note@-5 {{Assuming the condition is true}}
-    // peaceful-note@-6 {{'?' condition is true}}
-#endif
+    // peaceful-note@-1 {{Assuming the condition is true}}
+    // peaceful-note@-2 {{'?' condition is true}}
   }
   // Same thing, but with a switch statement.
   {

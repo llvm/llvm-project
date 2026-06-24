@@ -10,11 +10,11 @@ and throws exception.
 C++ does often not specify the exact order of evaluation of the operands of an
 operator or arguments of a function. Therefore if a first allocation succeeds
 and a second fails, in an exception handler it is not possible to tell which
-allocation has failed and free the memory. Even if the order is fixed the result
-of a first ``new`` may be stored in a temporary location that is not reachable
-at the time when a second allocation fails. It is best to avoid any expression
-that contains more than one ``operator new`` call, if exception handling is
-used to check for allocation errors.
+allocation has failed and free the memory. Even if the order is fixed the
+result of a first ``new`` may be stored in a temporary location that is not
+reachable at the time when a second allocation fails. It is best to avoid any
+expression that contains more than one ``operator new`` call, if exception
+handling is used to check for allocation errors.
 
 Different rules apply for are the short-circuit operators ``||`` and ``&&`` and
 the ``,`` operator, where evaluation of one side must be completed before the
@@ -31,9 +31,9 @@ For any warning to be emitted the ``new`` calls should be in a code block where
 exception handling is used with catch for ``std::bad_alloc`` or
 ``std::exception``. At ``||``, ``&&``, ``,``, ``?`` (condition and one branch)
 operators no warning is emitted. No warning is emitted if both of the memory
-allocations are not assigned to a variable or not passed directly to a function.
-The reason is that in this case the memory may be intentionally not freed or the
-allocated objects can be self-destructing objects.
+allocations are not assigned to a variable or not passed directly to a
+function. The reason is that in this case the memory may be intentionally not
+freed or the allocated objects can be self-destructing objects.
 
 Examples:
 

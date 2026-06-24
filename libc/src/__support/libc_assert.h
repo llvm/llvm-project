@@ -9,14 +9,16 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_LIBC_ASSERT_H
 #define LLVM_LIBC_SRC___SUPPORT_LIBC_ASSERT_H
 
-#ifdef LIBC_COPT_USE_C_ASSERT
+#if defined(LIBC_COPT_USE_C_ASSERT) || !defined(LIBC_FULL_BUILD)
 
 // The build is configured to just use the public <assert.h> API
 // for libc's internal assertions.
 
+#ifndef LIBC_ASSERT
 #include <assert.h>
 
 #define LIBC_ASSERT(COND) assert(COND)
+#endif // LIBC_ASSERT
 
 #else // Not LIBC_COPT_USE_C_ASSERT
 
@@ -24,8 +26,11 @@
 #include "src/__support/OSUtil/io.h"
 #include "src/__support/integer_to_string.h"
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
+#include "src/__support/macros/config.h"
+#include "src/__support/macros/macro-utils.h"
+#include "src/__support/macros/optimization.h" // For LIBC_UNLIKELY
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 // This is intended to be removed in a future patch to use a similar design to
 // below, but it's necessary for the external assert.
@@ -43,7 +48,7 @@ LIBC_INLINE void report_assertion_failure(const char *assertion,
   write_to_stderr("'\n");
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL
 
 #ifdef LIBC_ASSERT
 #error "Unexpected: LIBC_ASSERT macro already defined"
@@ -61,19 +66,11 @@ LIBC_INLINE void report_assertion_failure(const char *assertion,
   } while (false)
 #else
 
-// Convert __LINE__ to a string using macros. The indirection is necessary
-// because otherwise it will turn "__LINE__" into a string, not its value. The
-// value is evaluated in the indirection step.
-#define __LIBC_MACRO_TO_STR(x) #x
-#define __LIBC_MACRO_TO_STR_INDIR(y) __LIBC_MACRO_TO_STR(y)
-#define __LIBC_LINE_STR__ __LIBC_MACRO_TO_STR_INDIR(__LINE__)
-
 #define LIBC_ASSERT(COND)                                                      \
   do {                                                                         \
-    if (!(COND)) {                                                             \
-      LIBC_NAMESPACE::write_to_stderr(__FILE__ ":" __LIBC_LINE_STR__           \
-                                               ": Assertion failed: '" #COND   \
-                                               "' in function: '");            \
+    if (LIBC_UNLIKELY(!(COND))) {                                              \
+      LIBC_NAMESPACE::write_to_stderr(__FILE__ ":" LLVM_LIBC_STRINGIFY(        \
+          __LINE__) ": Assertion failed: '" #COND "' in function: '");         \
       LIBC_NAMESPACE::write_to_stderr(__PRETTY_FUNCTION__);                    \
       LIBC_NAMESPACE::write_to_stderr("'\n");                                  \
       LIBC_NAMESPACE::internal::exit(0xFF);                                    \

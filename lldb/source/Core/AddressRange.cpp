@@ -162,15 +162,18 @@ bool AddressRange::Dump(Stream *s, Target *target, Address::DumpStyle style,
   default:
     break;
   case Address::DumpStyleSectionNameOffset:
-  case Address::DumpStyleSectionPointerOffset:
+  case Address::DumpStyleSectionPointerOffset: {
     s->PutChar('[');
     m_base_addr.Dump(s, target, style, fallback_style);
     s->PutChar('-');
-    DumpAddress(s->AsRawOstream(), m_base_addr.GetOffset() + GetByteSize(),
-                addr_size);
+    addr_t end = m_base_addr.GetOffset() + GetByteSize();
+    if (m_base_addr.GetSection())
+      s->Format("{0}", end);
+    else
+      DumpAddress(s->AsRawOstream(), end, addr_size);
     s->PutChar(')');
     return true;
-    break;
+  }
 
   case Address::DumpStyleModuleWithFileAddress:
     show_module = true;
@@ -226,7 +229,7 @@ bool AddressRange::GetDescription(Stream *s, Target *target) const {
   const auto section_sp = m_base_addr.GetSection();
   if (section_sp) {
     if (const auto object_file = section_sp->GetObjectFile())
-      file_name = object_file->GetFileSpec().GetFilename().AsCString();
+      file_name = object_file->GetFileSpec().GetFilename().AsCString(nullptr);
   }
   start_addr = m_base_addr.GetFileAddress();
   const addr_t end_addr = (start_addr == LLDB_INVALID_ADDRESS)

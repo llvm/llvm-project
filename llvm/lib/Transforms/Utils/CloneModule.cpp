@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm-c/Core.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -61,7 +62,6 @@ std::unique_ptr<Module> llvm::CloneModule(
   New->setDataLayout(M.getDataLayout());
   New->setTargetTriple(M.getTargetTriple());
   New->setModuleInlineAsm(M.getModuleInlineAsm());
-  New->IsNewDbgInfoFormat = M.IsNewDbgInfoFormat;
 
   // Loop over all of the global variables, making corresponding globals in the
   // new module.  Here we add them to the VMap and to the new Module.  We
@@ -79,7 +79,7 @@ std::unique_ptr<Module> llvm::CloneModule(
   // Loop over the functions in the module, making external functions as before
   for (const Function &I : M) {
     Function *NF =
-        Function::Create(cast<FunctionType>(I.getValueType()), I.getLinkage(),
+        Function::Create(I.getFunctionType(), I.getLinkage(),
                          I.getAddressSpace(), I.getName(), New.get());
     NF->copyAttributesFrom(&I);
     VMap[&I] = NF;
@@ -117,37 +117,23 @@ std::unique_ptr<Module> llvm::CloneModule(
 
   for (const GlobalIFunc &I : M.ifuncs()) {
     // Defer setting the resolver function until after functions are cloned.
+    if (!ShouldCloneDefinition(&I)) {
+      // An ifunc also cannot act as an external reference, so we need to create
+      // a function.
+      GlobalValue *GV;
+      assert(I.getValueType()->isFunctionTy() &&
+             "ValueType of ifunc must be function type!");
+      GV = Function::Create(cast<FunctionType>(I.getValueType()),
+                            GlobalValue::ExternalLinkage, I.getAddressSpace(),
+                            I.getName(), New.get());
+      VMap[&I] = GV;
+      continue;
+    }
     auto *GI =
         GlobalIFunc::create(I.getValueType(), I.getAddressSpace(),
                             I.getLinkage(), I.getName(), nullptr, New.get());
     GI->copyAttributesFrom(&I);
     VMap[&I] = GI;
-  }
-
-  // Now that all of the things that global variable initializer can refer to
-  // have been created, loop through and copy the global variable referrers
-  // over...  We also set the attributes on the global now.
-  //
-  for (const GlobalVariable &G : M.globals()) {
-    GlobalVariable *GV = cast<GlobalVariable>(VMap[&G]);
-
-    SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
-    G.getAllMetadata(MDs);
-    for (auto MD : MDs)
-      GV->addMetadata(MD.first, *MapMetadata(MD.second, VMap));
-
-    if (G.isDeclaration())
-      continue;
-
-    if (!ShouldCloneDefinition(&G)) {
-      // Skip after setting the correct linkage for an external reference.
-      GV->setLinkage(GlobalValue::ExternalLinkage);
-      continue;
-    }
-    if (G.hasInitializer())
-      GV->setInitializer(MapValue(G.getInitializer(), VMap));
-
-    copyComdat(GV, &G);
   }
 
   // Similarly, copy over function bodies now...
@@ -200,6 +186,9 @@ std::unique_ptr<Module> llvm::CloneModule(
   }
 
   for (const GlobalIFunc &I : M.ifuncs()) {
+    // We already dealt with undefined ifuncs above.
+    if (!ShouldCloneDefinition(&I))
+      continue;
     GlobalIFunc *GI = cast<GlobalIFunc>(VMap[&I]);
     if (const Constant *Resolver = I.getResolver())
       GI->setResolver(MapValue(Resolver, VMap));
@@ -208,8 +197,34 @@ std::unique_ptr<Module> llvm::CloneModule(
   // And named metadata....
   for (const NamedMDNode &NMD : M.named_metadata()) {
     NamedMDNode *NewNMD = New->getOrInsertNamedMetadata(NMD.getName());
-    for (unsigned i = 0, e = NMD.getNumOperands(); i != e; ++i)
-      NewNMD->addOperand(MapMetadata(NMD.getOperand(i), VMap));
+    for (const MDNode *N : NMD.operands())
+      NewNMD->addOperand(MapMetadata(N, VMap));
+  }
+
+  // Now that all of the things that global variable initializer can refer to
+  // have been created, loop through and copy the global variable referrers
+  // over...  We also set the attributes on the global now.
+  //
+  for (const GlobalVariable &G : M.globals()) {
+    GlobalVariable *GV = cast<GlobalVariable>(VMap[&G]);
+
+    SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
+    G.getAllMetadata(MDs);
+    for (auto MD : MDs)
+      GV->addMetadata(MD.first, *MapMetadata(MD.second, VMap));
+
+    if (G.isDeclaration())
+      continue;
+
+    if (!ShouldCloneDefinition(&G)) {
+      // Skip after setting the correct linkage for an external reference.
+      GV->setLinkage(GlobalValue::ExternalLinkage);
+      continue;
+    }
+    if (G.hasInitializer())
+      GV->setInitializer(MapValue(G.getInitializer(), VMap));
+
+    copyComdat(GV, &G);
   }
 
   return New;

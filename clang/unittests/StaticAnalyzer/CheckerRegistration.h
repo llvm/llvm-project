@@ -8,6 +8,7 @@
 
 #include "clang/Analysis/PathDiagnostic.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -91,14 +92,17 @@ public:
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &Compiler,
                                                  StringRef File) override {
+    // Suppress the default HTML/text path diagnostic consumers that would
+    // otherwise emit to stderr via DiagnosticsEngine::Report().
+    Compiler.getAnalyzerOpts().AnalysisDiagOpt = PD_NONE;
     std::unique_ptr<AnalysisASTConsumer> AnalysisConsumer =
         CreateAnalysisConsumer(Compiler);
     if (OnlyEmitWarnings)
       AnalysisConsumer->AddDiagnosticConsumer(
-          new OnlyWarningsDiagConsumer(DiagsOutput));
+          std::make_unique<OnlyWarningsDiagConsumer>(DiagsOutput));
     else
       AnalysisConsumer->AddDiagnosticConsumer(
-          new PathDiagConsumer(DiagsOutput));
+          std::make_unique<PathDiagConsumer>(DiagsOutput));
     addChecker<Fns...>(*AnalysisConsumer, Compiler.getAnalyzerOpts());
     return std::move(AnalysisConsumer);
   }

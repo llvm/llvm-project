@@ -13,29 +13,65 @@
 #define DEBUG_TYPE "flang-type-conversion"
 
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
-#include "DescriptorModel.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Optimizer/Builder/Todo.h" // remove when TODO's are done
+#include "flang/Optimizer/CodeGen/DescriptorModel.h"
 #include "flang/Optimizer/CodeGen/TBAABuilder.h"
 #include "flang/Optimizer/CodeGen/Target.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Support/Fortran.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Debug.h"
 
 namespace fir {
 
+static mlir::LowerToLLVMOptions MakeLowerOptions(mlir::ModuleOp module) {
+  llvm::StringRef dataLayoutString;
+  auto dataLayoutAttr = module->template getAttrOfType<mlir::StringAttr>(
+      mlir::LLVM::LLVMDialect::getDataLayoutAttrName());
+  if (dataLayoutAttr)
+    dataLayoutString = dataLayoutAttr.getValue();
+
+  auto options = mlir::LowerToLLVMOptions(module.getContext());
+  auto llvmDL = llvm::DataLayout(dataLayoutString);
+  if (llvmDL.getPointerSizeInBits(0) == 32) {
+    // FIXME: Should translateDataLayout in the MLIR layer be doing this?
+    options.overrideIndexBitwidth(32);
+  }
+  options.dataLayout = llvmDL;
+  return options;
+}
+
+static bool
+appendConvertedMemberType(mlir::Type mem,
+                          llvm::SmallVectorImpl<mlir::Type> &members,
+                          const LLVMTypeConverter &converter) {
+  mlir::Type memTy;
+  if (auto box = mlir::dyn_cast<fir::BaseBoxType>(mem))
+    memTy = converter.convertBoxTypeAsStruct(box);
+  else
+    memTy = converter.convertType(mem);
+  if (!memTy) {
+    LLVM_DEBUG(llvm::dbgs() << "type conversion failed for aggregate member: "
+                            << mem << "\n");
+    return false;
+  }
+  members.push_back(memTy);
+  return true;
+}
+
 LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
                                      bool forceUnifiedTBAATree,
                                      const mlir::DataLayout &dl)
-    : mlir::LLVMTypeConverter(module.getContext()),
+    : mlir::LLVMTypeConverter(module.getContext(), MakeLowerOptions(module)),
       kindMapping(getKindMapping(module)),
       specifics(CodeGenSpecifics::get(
           module.getContext(), getTargetTriple(module), getKindMapping(module),
-          getTargetCPU(module), getTargetFeatures(module), dl)),
+          getTargetCPU(module), getTargetFeatures(module), getTargetABI(module),
+          dl, getTuneCPU(module))),
       tbaaBuilder(std::make_unique<TBAABuilder>(module->getContext(), applyTBAA,
                                                 forceUnifiedTBAATree)),
       dataLayout{&dl} {
@@ -56,8 +92,6 @@ LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
       [&](fir::ClassType classTy) { return convertBoxType(classTy); });
   addConversion(
       [&](fir::CharacterType charTy) { return convertCharType(charTy); });
-  addConversion(
-      [&](fir::ComplexType cmplx) { return convertComplexType(cmplx); });
   addConversion([&](fir::FieldType field) {
     // Convert to i32 because of LLVM GEP indexing restriction.
     return mlir::IntegerType::get(field.getContext(), 32);
@@ -81,16 +115,25 @@ LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
   });
   addConversion(
       [&](fir::PointerType pointer) { return convertPointerLike(pointer); });
-  addConversion(
-      [&](fir::RecordType derived, llvm::SmallVectorImpl<mlir::Type> &results) {
-        return convertRecordType(derived, results);
-      });
-  addConversion(
-      [&](fir::RealType real) { return convertRealType(real.getFKind()); });
+  addConversion([&](fir::RecordType derived) {
+    return convertRecordType(derived, derived.isPacked());
+  });
   addConversion(
       [&](fir::ReferenceType ref) { return convertPointerLike(ref); });
   addConversion([&](fir::SequenceType sequence) {
     return convertSequenceType(sequence);
+  });
+  addConversion([&](fir::ShapeType shape) {
+    mlir::Type i64Ty = mlir::IntegerType::get(&getContext(), 64);
+    llvm::SmallVector<mlir::Type> members(shape.getRank(), i64Ty);
+    return mlir::LLVM::LLVMStructType::getLiteral(&getContext(), members,
+                                                  /*isPacked=*/false);
+  });
+  addConversion([&](fir::ShapeShiftType shapeShift) {
+    mlir::Type i64Ty = mlir::IntegerType::get(&getContext(), 64);
+    llvm::SmallVector<mlir::Type> members(shapeShift.getRank(), i64Ty);
+    return mlir::LLVM::LLVMStructType::getLiteral(&getContext(), members,
+                                                  /*isPacked=*/false);
   });
   addConversion([&](fir::TypeDescType tdesc) {
     return convertTypeDescType(tdesc.getContext());
@@ -99,63 +142,24 @@ LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
     return mlir::VectorType::get(llvm::ArrayRef<int64_t>(vecTy.getLen()),
                                  convertType(vecTy.getEleTy()));
   });
-  addConversion([&](mlir::TupleType tuple) {
+  addConversion([&](mlir::TupleType tuple) -> std::optional<mlir::Type> {
     LLVM_DEBUG(llvm::dbgs() << "type convert: " << tuple << '\n');
     llvm::SmallVector<mlir::Type> members;
-    for (auto mem : tuple.getTypes()) {
-      // Prevent fir.box from degenerating to a pointer to a descriptor in the
-      // context of a tuple type.
-      if (auto box = mlir::dyn_cast<fir::BaseBoxType>(mem))
-        members.push_back(convertBoxTypeAsStruct(box));
-      else
-        members.push_back(mlir::cast<mlir::Type>(convertType(mem)));
-    }
+    for (auto mem : tuple.getTypes())
+      if (!appendConvertedMemberType(mem, members, *this))
+        return std::nullopt;
     return mlir::LLVM::LLVMStructType::getLiteral(&getContext(), members,
                                                   /*isPacked=*/false);
   });
   addConversion([&](mlir::NoneType none) {
-    return mlir::LLVM::LLVMStructType::getLiteral(
-        none.getContext(), std::nullopt, /*isPacked=*/false);
+    return mlir::LLVM::LLVMStructType::getLiteral(none.getContext(), {},
+                                                  /*isPacked=*/false);
   });
   addConversion([&](fir::DummyScopeType dscope) {
     // DummyScopeType values must not have any uses after PreCGRewrite.
     // Convert it here to i1 just in case it survives.
     return mlir::IntegerType::get(&getContext(), 1);
   });
-  // FIXME: https://reviews.llvm.org/D82831 introduced an automatic
-  // materialization of conversion around function calls that is not working
-  // well with fir lowering to llvm (incorrect llvm.mlir.cast are inserted).
-  // Workaround until better analysis: register a handler that does not insert
-  // any conversions.
-  addSourceMaterialization(
-      [&](mlir::OpBuilder &builder, mlir::Type resultType,
-          mlir::ValueRange inputs,
-          mlir::Location loc) -> std::optional<mlir::Value> {
-        if (inputs.size() != 1)
-          return std::nullopt;
-        return inputs[0];
-      });
-  // Similar FIXME workaround here (needed for compare.fir/select-type.fir
-  // as well as rebox-global.fir tests). This is needed to cope with the
-  // the fact that codegen does not lower some operation results to the LLVM
-  // type produced by this LLVMTypeConverter. For instance, inside FIR
-  // globals, fir.box are lowered to llvm.struct, while the fir.box type
-  // conversion translates it into an llvm.ptr<llvm.struct<>> because
-  // descriptors are manipulated in memory outside of global initializers
-  // where this is not possible. Hence, MLIR inserts
-  // builtin.unrealized_conversion_cast after the translation of operations
-  // producing fir.box in fir.global codegen. addSourceMaterialization and
-  // addTargetMaterialization allow ignoring these ops and removing them
-  // after codegen assuming the type discrepencies are intended (like for
-  // fir.box inside globals).
-  addTargetMaterialization(
-      [&](mlir::OpBuilder &builder, mlir::Type resultType,
-          mlir::ValueRange inputs,
-          mlir::Location loc) -> std::optional<mlir::Value> {
-        if (inputs.size() != 1)
-          return std::nullopt;
-        return inputs[0];
-      });
 }
 
 // i32 is used here because LLVM wants i32 constants when indexing into struct
@@ -170,33 +174,25 @@ mlir::Type LLVMTypeConverter::indexType() const {
 }
 
 // fir.type<name(p : TY'...){f : TY...}>  -->  llvm<"%name = { ty... }">
-std::optional<mlir::LogicalResult> LLVMTypeConverter::convertRecordType(
-    fir::RecordType derived, llvm::SmallVectorImpl<mlir::Type> &results) {
+std::optional<mlir::Type>
+LLVMTypeConverter::convertRecordType(fir::RecordType derived, bool isPacked) {
   auto name = fir::NameUniquer::dropTypeConversionMarkers(derived.getName());
   auto st = mlir::LLVM::LLVMStructType::getIdentified(&getContext(), name);
 
   auto &callStack = getCurrentThreadRecursiveStack();
-  if (llvm::count(callStack, derived)) {
-    results.push_back(st);
-    return mlir::success();
-  }
+  if (llvm::count(callStack, derived))
+    return st;
   callStack.push_back(derived);
-  auto popConversionCallStack =
-      llvm::make_scope_exit([&callStack]() { callStack.pop_back(); });
+  llvm::scope_exit popConversionCallStack(
+      [&callStack]() { callStack.pop_back(); });
 
   llvm::SmallVector<mlir::Type> members;
-  for (auto mem : derived.getTypeList()) {
-    // Prevent fir.box from degenerating to a pointer to a descriptor in the
-    // context of a record type.
-    if (auto box = mlir::dyn_cast<fir::BaseBoxType>(mem.second))
-      members.push_back(convertBoxTypeAsStruct(box));
-    else
-      members.push_back(mlir::cast<mlir::Type>(convertType(mem.second)));
-  }
-  if (mlir::failed(st.setBody(members, /*isPacked=*/false)))
-    return mlir::failure();
-  results.push_back(st);
-  return mlir::success();
+  for (auto mem : derived.getTypeList())
+    if (!appendConvertedMemberType(mem.second, members, *this))
+      return std::nullopt;
+  if (mlir::failed(st.setBody(members, isPacked)))
+    return std::nullopt;
+  return st;
 }
 
 // Is an extended descriptor needed given the element type of a fir.box type ?
@@ -210,13 +206,15 @@ bool LLVMTypeConverter::requiresExtendedDesc(mlir::Type boxElementType) const {
 // the addendum defined in descriptor.h.
 mlir::Type LLVMTypeConverter::convertBoxTypeAsStruct(BaseBoxType box,
                                                      int rank) const {
-  // (base_addr*, elem_len, version, rank, type, attribute, f18Addendum, [dim]
+  // (base_addr*, elem_len, version, rank, type, attribute, extra, [dim]
   llvm::SmallVector<mlir::Type> dataDescFields;
   mlir::Type ele = box.getEleTy();
   // remove fir.heap/fir.ref/fir.ptr
   if (auto removeIndirection = fir::dyn_cast_ptrEleTy(ele))
     ele = removeIndirection;
   auto eleTy = convertType(ele);
+  if (!eleTy)
+    return {};
   // base_addr*
   if (mlir::isa<SequenceType>(ele) &&
       mlir::isa<mlir::LLVM::LLVMPointerType>(eleTy))
@@ -239,9 +237,9 @@ mlir::Type LLVMTypeConverter::convertBoxTypeAsStruct(BaseBoxType box,
   // attribute
   dataDescFields.push_back(
       getDescFieldTypeModel<kAttributePosInBox>()(&getContext()));
-  // f18Addendum
+  // extra
   dataDescFields.push_back(
-      getDescFieldTypeModel<kF18AddendumPosInBox>()(&getContext()));
+      getDescFieldTypeModel<kExtraPosInBox>()(&getContext()));
   // [dims]
   if (rank == unknownRank()) {
     if (auto seqTy = mlir::dyn_cast<SequenceType>(ele))
@@ -310,16 +308,15 @@ mlir::Type LLVMTypeConverter::convertCharType(fir::CharacterType charTy) const {
   return mlir::LLVM::LLVMArrayType::get(iTy, charTy.getLen());
 }
 
-// convert a front-end kind value to either a std or LLVM IR dialect type
-// fir.real<n>  -->  llvm.anyfloat  where anyfloat is a kind mapping
-mlir::Type LLVMTypeConverter::convertRealType(fir::KindTy kind) const {
-  return fir::fromRealTypeID(&getContext(), kindMapping.getRealTypeID(kind),
-                             kind);
-}
-
 // fir.array<c ... :any>  -->  llvm<"[...[c x any]]">
-mlir::Type LLVMTypeConverter::convertSequenceType(SequenceType seq) const {
+std::optional<mlir::Type>
+LLVMTypeConverter::convertSequenceType(SequenceType seq) const {
   auto baseTy = convertType(seq.getEleTy());
+  if (!baseTy) {
+    LLVM_DEBUG(llvm::dbgs() << "type conversion failed for sequence element: "
+                            << seq.getEleTy() << "\n");
+    return std::nullopt;
+  }
   if (characterWithDynamicLen(seq.getEleTy()))
     return baseTy;
   auto shape = seq.getShape();

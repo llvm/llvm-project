@@ -84,16 +84,7 @@ json::Array *Object::getArray(StringRef K) {
     return V->getAsArray();
   return nullptr;
 }
-bool operator==(const Object &LHS, const Object &RHS) {
-  if (LHS.size() != RHS.size())
-    return false;
-  for (const auto &L : LHS) {
-    auto R = RHS.find(L.first);
-    if (R == RHS.end() || L.second != R->second)
-      return false;
-  }
-  return true;
-}
+bool operator==(const Object &LHS, const Object &RHS) { return LHS.M == RHS.M; }
 
 Array::Array(std::initializer_list<Value> Elements) {
   V.reserve(Elements.size());
@@ -146,17 +137,16 @@ void Value::moveFrom(const Value &&M) {
     break;
   case T_String:
     create<std::string>(std::move(M.as<std::string>()));
-    M.Type = T_Null;
     break;
   case T_Object:
     create<json::Object>(std::move(M.as<json::Object>()));
-    M.Type = T_Null;
     break;
   case T_Array:
     create<json::Array>(std::move(M.as<json::Array>()));
-    M.Type = T_Null;
     break;
   }
+  const_cast<Value &>(M).destroy();
+  M.Type = T_Null;
 }
 
 void Value::destroy() {
@@ -181,6 +171,15 @@ void Value::destroy() {
     break;
   }
 }
+
+void Value::print(llvm::raw_ostream &OS) const { OS << *this; }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void Value::dump() const {
+  print(llvm::dbgs());
+  llvm::dbgs() << '\n';
+}
+#endif
 
 bool operator==(const Value &L, const Value &R) {
   if (L.kind() != R.kind())
@@ -239,10 +238,8 @@ Error Path::Root::getError() const {
         OS << '[' << S.index() << ']';
     }
   }
-  return createStringError(llvm::inconvertibleErrorCode(), OS.str());
+  return createStringError(llvm::inconvertibleErrorCode(), S);
 }
-
-namespace {
 
 std::vector<const Object::value_type *> sortedElements(const Object &O) {
   std::vector<const Object::value_type *> Elements;
@@ -258,7 +255,7 @@ std::vector<const Object::value_type *> sortedElements(const Object &O) {
 // Prints a one-line version of a value that isn't our main focus.
 // We interleave writes to OS and JOS, exploiting the lack of extra buffering.
 // This is OK as we own the implementation.
-void abbreviate(const Value &V, OStream &JOS) {
+static void abbreviate(const Value &V, OStream &JOS) {
   switch (V.kind()) {
   case Value::Array:
     JOS.rawValue(V.getAsArray()->empty() ? "[]" : "[ ... ]");
@@ -284,7 +281,7 @@ void abbreviate(const Value &V, OStream &JOS) {
 
 // Prints a semi-expanded version of a value that is our main focus.
 // Array/Object entries are printed, but not recursively as they may be huge.
-void abbreviateChildren(const Value &V, OStream &JOS) {
+static void abbreviateChildren(const Value &V, OStream &JOS) {
   switch (V.kind()) {
   case Value::Array:
     JOS.array([&] {
@@ -305,8 +302,6 @@ void abbreviateChildren(const Value &V, OStream &JOS) {
     JOS.value(V);
   }
 }
-
-} // namespace
 
 void Path::Root::printErrorContext(const Value &R, raw_ostream &OS) const {
   OStream JOS(OS, /*IndentSize=*/2);
@@ -414,6 +409,7 @@ private:
   std::optional<Error> Err;
   const char *Start, *P, *End;
 };
+} // namespace
 
 bool Parser::parseValue(Value &Out) {
   eatWhitespace();
@@ -517,7 +513,7 @@ bool Parser::parseNumber(char First, Value &Out) {
   errno = 0;
   int64_t I = std::strtoll(S.c_str(), &End, 10);
   if (End == S.end() && errno != ERANGE) {
-    Out = int64_t(I);
+    Out = I;
     return true;
   }
   // strtroull has a special handling for negative numbers, but in this
@@ -681,7 +677,6 @@ bool Parser::parseError(const char *Msg) {
       std::make_unique<ParseError>(Msg, Line, P - StartOfLine, P - Start));
   return false;
 }
-} // namespace
 
 Expected<Value> parse(StringRef JSON) {
   Parser P(JSON);
@@ -692,7 +687,13 @@ Expected<Value> parse(StringRef JSON) {
         return std::move(E);
   return P.takeError();
 }
+
 char ParseError::ID = 0;
+
+// Defined out-of-line to place vtable in this compilation unit.
+void ParseError::log(llvm::raw_ostream &OS) const {
+  OS << llvm::formatv("[{0}:{1}, byte={2}]: {3}", Line, Column, Offset, Msg);
+}
 
 bool isUTF8(llvm::StringRef S, size_t *ErrOffset) {
   // Fast-path for ASCII, which is valid UTF-8.

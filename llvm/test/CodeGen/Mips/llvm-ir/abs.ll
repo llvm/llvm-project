@@ -1,8 +1,8 @@
-; RUN: llc -march=mips -mcpu=mips32                                    -asm-show-inst < %s | FileCheck %s --check-prefix=MIPS32
-; RUN: llc -march=mips -mcpu=mips32r2 -mattr=+abs2008,+fp64            -asm-show-inst < %s | FileCheck %s --check-prefix=MIPS32FP64
-; RUN: llc -march=mips -mcpu=mips32r3 -mattr=+abs2008,+micromips       -asm-show-inst < %s | FileCheck %s --check-prefix=MM
-; RUN: llc -march=mips -mcpu=mips32r3 -mattr=+abs2008,+micromips,+fp64 -asm-show-inst < %s | FileCheck %s --check-prefix=MMFP64
-; RUN: llc -march=mips -mcpu=mips32r6 -mattr=+micromips                -asm-show-inst < %s | FileCheck %s --check-prefix=MMR6
+; RUN: llc -mtriple=mips -mcpu=mips32                                    -asm-show-inst < %s | FileCheck %s --check-prefix=MIPS32
+; RUN: llc -mtriple=mips -mcpu=mips32r2 -mattr=+abs2008,+fp64            -asm-show-inst < %s | FileCheck %s --check-prefix=MIPS32FP64
+; RUN: llc -mtriple=mips -mcpu=mips32r3 -mattr=+abs2008,+micromips       -asm-show-inst < %s | FileCheck %s --check-prefix=MM
+; RUN: llc -mtriple=mips -mcpu=mips32r3 -mattr=+abs2008,+micromips,+fp64 -asm-show-inst < %s | FileCheck %s --check-prefix=MMFP64
+; RUN: llc -mtriple=mips -mcpu=mips32r6 -mattr=+micromips                -asm-show-inst < %s | FileCheck %s --check-prefix=MMR6
 
 define float @abs_s(float %a) {
 ; MIPS32: {{(ori|ins)}}

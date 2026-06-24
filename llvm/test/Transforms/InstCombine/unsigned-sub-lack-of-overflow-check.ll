@@ -30,7 +30,7 @@ define <2 x i1> @t1_vec(<2 x i8> %x, <2 x i8> %y) {
 
 define i1 @t2_commutative(i8 %x, i8 %y) {
 ; CHECK-LABEL: @t2_commutative(
-; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = sub i8 %x, %y

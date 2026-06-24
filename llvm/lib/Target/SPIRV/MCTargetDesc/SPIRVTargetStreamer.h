@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVTARGETSTREAMER_H
-#define LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVTARGETSTREAMER_H
+#ifndef LLVM_LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVTARGETSTREAMER_H
+#define LLVM_LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVTARGETSTREAMER_H
 
 #include "llvm/MC/MCStreamer.h"
 
@@ -21,8 +21,8 @@ public:
   ~SPIRVTargetStreamer() override;
 
   void changeSection(const MCSection *CurSection, MCSection *Section,
-                     const MCExpr *SubSection, raw_ostream &OS) override {}
+                     uint32_t SubSection, raw_ostream &OS) override {}
 };
 } // namespace llvm
 
-#endif // LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVTARGETSTREAMER_H_
+#endif // LLVM_LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVTARGETSTREAMER_H

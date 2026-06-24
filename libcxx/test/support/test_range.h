@@ -16,6 +16,7 @@
 #include <type_traits>
 
 #include "test_iterators.h"
+#include "test_macros.h"
 
 #if TEST_STD_VER < 17
 #  error "test/support/test_range.h" can only be included in builds supporting ranges
@@ -32,6 +33,16 @@ struct test_range {
   I<T const*> begin() const;
   sentinel end();
   sentinel end() const;
+};
+
+template <template <class...> class I, class T = int>
+  requires std::input_or_output_iterator<I<T*> >
+struct test_sized_range {
+  I<T*> begin();
+  I<T const*> begin() const;
+  sentinel end();
+  sentinel end() const;
+  std::size_t size() const;
 };
 
 template <template <class...> class I, class T = int>

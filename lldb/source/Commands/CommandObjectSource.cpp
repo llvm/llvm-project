@@ -50,20 +50,20 @@ class CommandObjectSourceInfo : public CommandObjectParsed {
       switch (short_option) {
       case 'l':
         if (option_arg.getAsInteger(0, start_line))
-          error.SetErrorStringWithFormat("invalid line number: '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat("invalid line number: '%s'",
+                                                    option_arg.str().c_str());
         break;
 
       case 'e':
         if (option_arg.getAsInteger(0, end_line))
-          error.SetErrorStringWithFormat("invalid line number: '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat("invalid line number: '%s'",
+                                                    option_arg.str().c_str());
         break;
 
       case 'c':
         if (option_arg.getAsInteger(0, num_lines))
-          error.SetErrorStringWithFormat("invalid line count: '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat("invalid line count: '%s'",
+                                                    option_arg.str().c_str());
         break;
 
       case 'f':
@@ -142,8 +142,8 @@ protected:
     uint32_t start_line = m_options.start_line;
     uint32_t end_line = m_options.end_line;
     uint32_t num_lines = m_options.num_lines;
-    Target *target = m_exe_ctx.GetTargetPtr();
-
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
     uint32_t num_matches = 0;
     // Dump all the line entries for the file in the list.
     ConstString last_module_file_name;
@@ -197,13 +197,13 @@ protected:
     uint32_t start_line = m_options.start_line;
     uint32_t end_line = m_options.end_line;
     uint32_t num_lines = m_options.num_lines;
-    Target *target = m_exe_ctx.GetTargetPtr();
-
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
     uint32_t num_matches = 0;
     assert(module);
     if (cu) {
-      assert(file_spec.GetFilename().AsCString());
-      bool has_path = (file_spec.GetDirectory().AsCString() != nullptr);
+      assert(file_spec.GetFilename().AsCString(nullptr));
+      bool has_path = (file_spec.GetDirectory().AsCString(nullptr) != nullptr);
       const SupportFileList &cu_file_list = cu->GetSupportFiles();
       size_t file_idx = cu_file_list.FindFileIndex(0, file_spec, has_path);
       if (file_idx != UINT32_MAX) {
@@ -301,8 +301,9 @@ protected:
     Address so_addr;
     size_t num_matches = 0;
     assert(module_list.GetSize() > 0);
-    Target *target = m_exe_ctx.GetTargetPtr();
-    if (target->GetSectionLoadList().IsEmpty()) {
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
+    if (!target->HasLoadedSections()) {
       // The target isn't loaded yet, we need to lookup the file address in all
       // modules.  Note: the module list option does not apply to addresses.
       const size_t num_modules = module_list.GetSize();
@@ -328,7 +329,7 @@ protected:
     } else {
       // The target has some things loaded, resolve this address to a compile
       // unit + file + line and display
-      if (target->GetSectionLoadList().ResolveLoadAddress(addr, so_addr)) {
+      if (target->ResolveLoadAddress(addr, so_addr)) {
         ModuleSP module_sp(so_addr.GetModule());
         // Check to make sure this module is in our list.
         if (module_sp && module_list.GetIndexForModule(module_sp.get()) !=
@@ -368,9 +369,10 @@ protected:
   // the option.
   bool DumpLinesInFunctions(CommandReturnObject &result) {
     SymbolContextList sc_list_funcs;
-    ConstString name(m_options.symbol_name.c_str());
+    ConstString name(m_options.symbol_name);
     SymbolContextList sc_list_lines;
-    Target *target = m_exe_ctx.GetTargetPtr();
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
     uint32_t addr_byte_size = target->GetArchitecture().GetAddressByteSize();
 
     ModuleFunctionSearchOptions function_options;
@@ -403,7 +405,7 @@ protected:
       }
     }
     if (num_matches == 0) {
-      result.AppendErrorWithFormat("Could not find function named \'%s\'.\n",
+      result.AppendErrorWithFormat("Could not find function named \'%s\'",
                                    m_options.symbol_name.c_str());
       return false;
     }
@@ -428,30 +430,29 @@ protected:
           StreamString error_strm;
           if (!GetSymbolContextsForAddress(module_list, addr, sc_list_lines,
                                            error_strm))
-            result.AppendWarningWithFormat("in symbol '%s': %s",
-                                           sc.GetFunctionName().AsCString(),
-                                           error_strm.GetData());
+            result.AppendWarningWithFormatv("in symbol '{0}': {1}",
+                                            sc.GetFunctionName(),
+                                            error_strm.GetData());
           else
             context_found_for_symbol = true;
         }
       }
       if (!context_found_for_symbol)
-        result.AppendWarningWithFormat("Unable to find line information"
-                                       " for matching symbol '%s'.\n",
-                                       sc.GetFunctionName().AsCString());
+        result.AppendWarningWithFormatv("unable to find line information"
+                                        " for matching symbol '{0}'\n",
+                                        sc.GetFunctionName());
     }
     if (sc_list_lines.GetSize() == 0) {
-      result.AppendErrorWithFormat("No line information could be found"
-                                   " for any symbols matching '%s'.\n",
-                                   name.AsCString());
+      result.AppendErrorWithFormatv("No line information could be found"
+                                    " for any symbols matching '{0}'.\n",
+                                    name);
       return false;
     }
     FileSpec file_spec;
     if (!DumpLinesInSymbolContexts(result.GetOutputStream(), sc_list_lines,
                                    module_list, file_spec)) {
-      result.AppendErrorWithFormat(
-          "Unable to dump line information for symbol '%s'.\n",
-          name.AsCString());
+      result.AppendErrorWithFormatv(
+          "Unable to dump line information for symbol '{0}'.\n", name);
       return false;
     }
     return true;
@@ -459,21 +460,21 @@ protected:
 
   // Dump the line entries found for the address specified in the option.
   bool DumpLinesForAddress(CommandReturnObject &result) {
-    Target *target = m_exe_ctx.GetTargetPtr();
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
     SymbolContextList sc_list;
 
     StreamString error_strm;
     if (!GetSymbolContextsForAddress(target->GetImages(), m_options.address,
                                      sc_list, error_strm)) {
-      result.AppendErrorWithFormat("%s.\n", error_strm.GetData());
+      result.AppendErrorWithFormat("%s", error_strm.GetData());
       return false;
     }
     ModuleList module_list;
     FileSpec file_spec;
     if (!DumpLinesInSymbolContexts(result.GetOutputStream(), sc_list,
                                    module_list, file_spec)) {
-      result.AppendErrorWithFormat("No modules contain load address 0x%" PRIx64
-                                   ".\n",
+      result.AppendErrorWithFormat("No modules contain load address 0x%" PRIx64,
                                    m_options.address);
       return false;
     }
@@ -484,7 +485,8 @@ protected:
   bool DumpLinesForFile(CommandReturnObject &result) {
     FileSpec file_spec(m_options.file_name);
     const char *filename = m_options.file_name.c_str();
-    Target *target = m_exe_ctx.GetTargetPtr();
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
     const ModuleList &module_list =
         (m_module_list.GetSize() > 0) ? m_module_list : target->GetImages();
 
@@ -498,7 +500,7 @@ protected:
         displayed_something = true;
     }
     if (!displayed_something) {
-      result.AppendErrorWithFormat("No source filenames matched '%s'.\n",
+      result.AppendErrorWithFormat("no source filenames matched '%s'",
                                    filename);
       return false;
     }
@@ -513,7 +515,7 @@ protected:
           "No selected frame to use to find the default source.");
       return false;
     } else if (!cur_frame->HasDebugInformation()) {
-      result.AppendError("No debug info for the selected frame.");
+      result.AppendError("no debug info for the selected frame");
       return false;
     } else {
       const SymbolContext &sc =
@@ -533,20 +535,8 @@ protected:
   }
 
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = m_exe_ctx.GetTargetPtr();
-    if (target == nullptr) {
-      target = GetDebugger().GetSelectedTarget().get();
-      if (target == nullptr) {
-        result.AppendError("invalid target, create a debug target using the "
-                           "'target create' command.");
-        return;
-      }
-    }
-
-    uint32_t addr_byte_size = target->GetArchitecture().GetAddressByteSize();
-    result.GetOutputStream().SetAddressByteSize(addr_byte_size);
-    result.GetErrorStream().SetAddressByteSize(addr_byte_size);
-
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
     // Collect the list of modules to search.
     m_module_list.Clear();
     if (!m_options.modules.empty()) {
@@ -556,16 +546,16 @@ protected:
           ModuleSpec module_spec(module_file_spec);
           target->GetImages().FindModules(module_spec, m_module_list);
           if (m_module_list.IsEmpty())
-            result.AppendWarningWithFormat("No module found for '%s'.\n",
-                                           m_options.modules[i].c_str());
+            result.AppendWarningWithFormatv("no module found for '{0}'",
+                                            m_options.modules[i]);
         }
       }
       if (!m_module_list.GetSize()) {
-        result.AppendError("No modules match the input.");
+        result.AppendError("no modules match the input");
         return;
       }
     } else if (target->GetImages().GetSize() == 0) {
-      result.AppendError("The target has no associated executable images.");
+      result.AppendError("the target has no associated executable images");
       return;
     }
 
@@ -620,14 +610,14 @@ class CommandObjectSourceList : public CommandObjectParsed {
       switch (short_option) {
       case 'l':
         if (option_arg.getAsInteger(0, start_line))
-          error.SetErrorStringWithFormat("invalid line number: '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat("invalid line number: '%s'",
+                                                    option_arg.str().c_str());
         break;
 
       case 'c':
         if (option_arg.getAsInteger(0, num_lines))
-          error.SetErrorStringWithFormat("invalid line count: '%s'",
-                                         option_arg.str().c_str());
+          error = Status::FromErrorStringWithFormat("invalid line count: '%s'",
+                                                    option_arg.str().c_str());
         break;
 
       case 'f':
@@ -657,9 +647,8 @@ class CommandObjectSourceList : public CommandObjectParsed {
         OptionValueFileColonLine value;
         Status fcl_err = value.SetValueFromString(option_arg);
         if (!fcl_err.Success()) {
-          error.SetErrorStringWithFormat(
-              "Invalid value for file:line specifier: %s",
-              fcl_err.AsCString());
+          error = Status::FromErrorStringWithFormat(
+              "Invalid value for file:line specifier: %s", fcl_err.AsCString());
         } else {
           file_name = value.GetFileSpec().GetPath();
           start_line = value.GetLineNumber();
@@ -747,13 +736,17 @@ protected:
 
     bool operator==(const SourceInfo &rhs) const {
       return function == rhs.function &&
-             *line_entry.original_file_sp == *rhs.line_entry.original_file_sp &&
+             line_entry.original_file_sp->Equal(
+                 *rhs.line_entry.original_file_sp,
+                 SupportFile::eEqualFileSpecAndChecksumIfSet) &&
              line_entry.line == rhs.line_entry.line;
     }
 
     bool operator!=(const SourceInfo &rhs) const {
       return function != rhs.function ||
-             *line_entry.original_file_sp != *rhs.line_entry.original_file_sp ||
+             !line_entry.original_file_sp->Equal(
+                 *rhs.line_entry.original_file_sp,
+                 SupportFile::eEqualFileSpecAndChecksumIfSet) ||
              line_entry.line != rhs.line_entry.line;
     }
 
@@ -780,26 +773,26 @@ protected:
     }
 
     if (sc.function) {
-      Target *target = m_exe_ctx.GetTargetPtr();
-
-      FileSpec start_file;
+      Target *target = GetTarget();
+      assert(target && "target guaranteed by eCommandRequiresTarget");
+      SupportFileNSP start_file = std::make_shared<SupportFile>();
       uint32_t start_line;
       uint32_t end_line;
       FileSpec end_file;
 
       if (sc.block == nullptr) {
         // Not an inlined function
-        sc.function->GetStartLineSourceInfo(start_file, start_line);
-        if (start_line == 0) {
-          result.AppendErrorWithFormat("Could not find line information for "
-                                       "start of function: \"%s\".\n",
-                                       source_info.function.GetCString());
+        auto expected_info = sc.function->GetSourceInfo();
+        if (!expected_info) {
+          result.AppendError(llvm::toString(expected_info.takeError()));
           return 0;
         }
-        sc.function->GetEndLineSourceInfo(end_file, end_line);
+        start_file = expected_info->first;
+        start_line = expected_info->second.GetRangeBase();
+        end_line = expected_info->second.GetRangeEnd();
       } else {
         // We have an inlined function
-        start_file = source_info.line_entry.GetFile();
+        start_file = source_info.line_entry.file_sp;
         start_line = source_info.line_entry.line;
         end_line = start_line + m_options.num_lines;
       }
@@ -830,23 +823,23 @@ protected:
 
       if (m_options.show_bp_locs) {
         const bool show_inlines = true;
-        m_breakpoint_locations.Reset(start_file, 0, show_inlines);
+        m_breakpoint_locations.Reset(start_file->GetSpecOnly(), 0,
+                                     show_inlines);
         SearchFilterForUnconstrainedSearches target_search_filter(
             m_exe_ctx.GetTargetSP());
         target_search_filter.Search(m_breakpoint_locations);
       }
 
-      result.AppendMessageWithFormat("File: %s\n",
-                                     start_file.GetPath().c_str());
+      result.AppendMessageWithFormatv(
+          "File: {0}", start_file->GetSpecOnly().GetPath().c_str());
       // We don't care about the column here.
       const uint32_t column = 0;
       return target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
           start_file, line_no, column, 0, m_options.num_lines, "",
           &result.GetOutputStream(), GetBreakpointLocations());
     } else {
-      result.AppendErrorWithFormat(
-          "Could not find function info for: \"%s\".\n",
-          m_options.symbol_name.c_str());
+      result.AppendErrorWithFormat("Could not find function info for: \"%s\"",
+                                   m_options.symbol_name.c_str());
     }
     return 0;
   }
@@ -858,7 +851,7 @@ protected:
   // these somewhere, there should probably be a module-filter-list that can be
   // passed to the various ModuleList::Find* calls, which would either be a
   // vector of string names or a ModuleSpecList.
-  void FindMatchingFunctions(Target *target, ConstString name,
+  void FindMatchingFunctions(Target &target, ConstString name,
                              SymbolContextList &sc_list) {
     // Displaying the source for a symbol:
     if (m_options.num_lines == 0)
@@ -876,19 +869,19 @@ protected:
         if (module_file_spec) {
           ModuleSpec module_spec(module_file_spec);
           matching_modules.Clear();
-          target->GetImages().FindModules(module_spec, matching_modules);
+          target.GetImages().FindModules(module_spec, matching_modules);
 
           matching_modules.FindFunctions(name, eFunctionNameTypeAuto,
                                          function_options, sc_list);
         }
       }
     } else {
-      target->GetImages().FindFunctions(name, eFunctionNameTypeAuto,
-                                        function_options, sc_list);
+      target.GetImages().FindFunctions(name, eFunctionNameTypeAuto,
+                                       function_options, sc_list);
     }
   }
 
-  void FindMatchingFunctionSymbols(Target *target, ConstString name,
+  void FindMatchingFunctionSymbols(Target &target, ConstString name,
                                    SymbolContextList &sc_list) {
     const size_t num_modules = m_options.modules.size();
     if (num_modules > 0) {
@@ -898,31 +891,31 @@ protected:
         if (module_file_spec) {
           ModuleSpec module_spec(module_file_spec);
           matching_modules.Clear();
-          target->GetImages().FindModules(module_spec, matching_modules);
+          target.GetImages().FindModules(module_spec, matching_modules);
           matching_modules.FindFunctionSymbols(name, eFunctionNameTypeAuto,
                                                sc_list);
         }
       }
     } else {
-      target->GetImages().FindFunctionSymbols(name, eFunctionNameTypeAuto,
-                                              sc_list);
+      target.GetImages().FindFunctionSymbols(name, eFunctionNameTypeAuto,
+                                             sc_list);
     }
   }
 
   void DoExecute(Args &command, CommandReturnObject &result) override {
-    Target *target = m_exe_ctx.GetTargetPtr();
-
+    Target *target = GetTarget();
+    assert(target && "target guaranteed by eCommandRequiresTarget");
     if (!m_options.symbol_name.empty()) {
       SymbolContextList sc_list;
-      ConstString name(m_options.symbol_name.c_str());
+      ConstString name(m_options.symbol_name);
 
       // Displaying the source for a symbol. Search for function named name.
-      FindMatchingFunctions(target, name, sc_list);
+      FindMatchingFunctions(*target, name, sc_list);
       if (sc_list.GetSize() == 0) {
         // If we didn't find any functions with that name, try searching for
         // symbols that line up exactly with function addresses.
         SymbolContextList sc_list_symbols;
-        FindMatchingFunctionSymbols(target, name, sc_list_symbols);
+        FindMatchingFunctionSymbols(*target, name, sc_list_symbols);
         for (const SymbolContext &sc : sc_list_symbols) {
           if (sc.symbol && sc.symbol->ValueIsAddress()) {
             const Address &base_address = sc.symbol->GetAddressRef();
@@ -936,7 +929,7 @@ protected:
       }
 
       if (sc_list.GetSize() == 0) {
-        result.AppendErrorWithFormat("Could not find function named: \"%s\".\n",
+        result.AppendErrorWithFormat("Could not find function named: \"%s\"",
                                      m_options.symbol_name.c_str());
         return;
       }
@@ -963,7 +956,7 @@ protected:
       StreamString error_strm;
       SymbolContextList sc_list;
 
-      if (target->GetSectionLoadList().IsEmpty()) {
+      if (!target->HasLoadedSections()) {
         // The target isn't loaded yet, we need to lookup the file address in
         // all modules
         const ModuleList &module_list = target->GetImages();
@@ -983,16 +976,14 @@ protected:
 
         if (sc_list.GetSize() == 0) {
           result.AppendErrorWithFormat(
-              "no modules have source information for file address 0x%" PRIx64
-              ".\n",
+              "no modules have source information for file address 0x%" PRIx64,
               m_options.address);
           return;
         }
       } else {
         // The target has some things loaded, resolve this address to a compile
         // unit + file + line and display
-        if (target->GetSectionLoadList().ResolveLoadAddress(m_options.address,
-                                                            so_addr)) {
+        if (target->ResolveLoadAddress(m_options.address, so_addr)) {
           ModuleSP module_sp(so_addr.GetModule());
           if (module_sp) {
             SymbolContext sc;
@@ -1006,7 +997,7 @@ protected:
                            Address::DumpStyleModuleWithFileAddress);
               result.AppendErrorWithFormat("address resolves to %s, but there "
                                            "is no line table information "
-                                           "available for this address.\n",
+                                           "available for this address",
                                            error_strm.GetData());
               return;
             }
@@ -1015,8 +1006,7 @@ protected:
 
         if (sc_list.GetSize() == 0) {
           result.AppendErrorWithFormat(
-              "no modules contain load address 0x%" PRIx64 ".\n",
-              m_options.address);
+              "no modules contain load address 0x%" PRIx64, m_options.address);
           return;
         }
       }
@@ -1055,7 +1045,7 @@ protected:
                   ? sc.line_entry.column
                   : 0;
           target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
-              sc.comp_unit->GetPrimaryFile(), sc.line_entry.line, column,
+              sc.comp_unit->GetPrimarySupportFile(), sc.line_entry.line, column,
               lines_to_back_up, m_options.num_lines - lines_to_back_up, "->",
               &result.GetOutputStream(), GetBreakpointLocations());
           result.SetStatus(eReturnStatusSuccessFinishResult);
@@ -1071,7 +1061,16 @@ protected:
                 &result.GetOutputStream(), m_options.num_lines,
                 m_options.reverse, GetBreakpointLocations())) {
           result.SetStatus(eReturnStatusSuccessFinishResult);
+        } else {
+          if (target->GetSourceManager().AtLastLine(m_options.reverse)) {
+            result.AppendNoteWithFormatv(
+                "Reached {0} of the file, no more to page",
+                m_options.reverse ? "beginning" : "end");
+          } else {
+            result.AppendNote("no source available");
+          }
         }
+
       } else {
         if (m_options.num_lines == 0)
           m_options.num_lines = 10;
@@ -1081,8 +1080,8 @@ protected:
               target->GetSourceManager().GetLastFile());
           if (last_file_sp) {
             const bool show_inlines = true;
-            m_breakpoint_locations.Reset(last_file_sp->GetFileSpec(), 0,
-                                         show_inlines);
+            m_breakpoint_locations.Reset(
+                last_file_sp->GetSupportFile()->GetSpecOnly(), 0, show_inlines);
             SearchFilterForUnconstrainedSearches target_search_filter(
                 target->shared_from_this());
             target_search_filter.Search(m_breakpoint_locations);
@@ -1103,9 +1102,15 @@ protected:
         }
       }
     } else {
-      const char *filename = m_options.file_name.c_str();
-
+      //      const char *filename = m_options.file_name.c_str();
+      FileSpec file_spec(m_options.file_name);
       bool check_inlines = false;
+      const InlineStrategy inline_strategy = target->GetInlineStrategy();
+      if (inline_strategy == eInlineBreakpointsAlways ||
+          (inline_strategy == eInlineBreakpointsHeaders &&
+           !file_spec.IsSourceImplementationFile()))
+        check_inlines = true;
+
       SymbolContextList sc_list;
       size_t num_matches = 0;
 
@@ -1117,21 +1122,24 @@ protected:
             ModuleSpec module_spec(module_file_spec);
             matching_modules.Clear();
             target->GetImages().FindModules(module_spec, matching_modules);
-            num_matches += matching_modules.ResolveSymbolContextForFilePath(
-                filename, 0, check_inlines,
+            num_matches += matching_modules.ResolveSymbolContextsForFileSpec(
+                file_spec, 1, check_inlines,
                 SymbolContextItem(eSymbolContextModule |
-                                  eSymbolContextCompUnit),
+                                  eSymbolContextCompUnit |
+                                  eSymbolContextLineEntry),
                 sc_list);
           }
         }
       } else {
-        num_matches = target->GetImages().ResolveSymbolContextForFilePath(
-            filename, 0, check_inlines,
-            eSymbolContextModule | eSymbolContextCompUnit, sc_list);
+        num_matches = target->GetImages().ResolveSymbolContextsForFileSpec(
+            file_spec, 1, check_inlines,
+            eSymbolContextModule | eSymbolContextCompUnit |
+                eSymbolContextLineEntry,
+            sc_list);
       }
 
       if (num_matches == 0) {
-        result.AppendErrorWithFormat("Could not find source file \"%s\".\n",
+        result.AppendErrorWithFormat("Could not find source file \"%s\"",
                                      m_options.file_name.c_str());
         return;
       }
@@ -1152,7 +1160,7 @@ protected:
         }
         if (got_multiple) {
           result.AppendErrorWithFormat(
-              "Multiple source files found matching: \"%s.\"\n",
+              "Multiple source files found matching: \"%s.\"",
               m_options.file_name.c_str());
           return;
         }
@@ -1174,18 +1182,28 @@ protected:
           if (m_options.num_lines == 0)
             m_options.num_lines = 10;
           const uint32_t column = 0;
+
+          // Headers aren't always in the DWARF but if they have
+          // executable code (eg., inlined-functions) then the callsite's
+          // file(s) will be found and assigned to
+          // sc.comp_unit->GetPrimarySupportFile, which is NOT what we want to
+          // print. Instead, we want to print the one from the line entry.
+          SupportFileNSP found_file_sp = sc.line_entry.file_sp;
+
           target->GetSourceManager().DisplaySourceLinesWithLineNumbers(
-              sc.comp_unit->GetPrimaryFile(), m_options.start_line, column, 0,
+              found_file_sp, m_options.start_line, column, 0,
               m_options.num_lines, "", &result.GetOutputStream(),
               GetBreakpointLocations());
 
           result.SetStatus(eReturnStatusSuccessFinishResult);
         } else {
-          result.AppendErrorWithFormat("No comp unit found for: \"%s.\"\n",
+          result.AppendErrorWithFormat("No comp unit found for: \"%s.\"",
                                        m_options.file_name.c_str());
         }
       }
     }
+    if (result.GetStatus() != eReturnStatusFailed)
+      result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
   const SymbolContextList *GetBreakpointLocations() {

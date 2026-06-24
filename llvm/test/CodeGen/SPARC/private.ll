@@ -1,6 +1,6 @@
 ; Test to make sure that the 'private' is used correctly.
 ;
-; RUN: llc < %s  -march=sparc | FileCheck %s
+; RUN: llc < %s -mtriple=sparc | FileCheck %s
 
 define private void @foo() {
         ret void

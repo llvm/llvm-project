@@ -13,7 +13,7 @@ define i64 @atomicSub(ptr %a, i64 %b) nounwind {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; CHECK-NEXT:    movl (%ebp), %eax
 ; CHECK-NEXT:    movl 4(%ebp), %edx
-; CHECK-NEXT:    .p2align 4, 0x90
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %atomicrmw.start
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movl %eax, %ebx

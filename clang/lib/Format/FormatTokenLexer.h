@@ -48,6 +48,7 @@ private:
 
   bool tryMergeLessLess();
   bool tryMergeGreaterGreater();
+  bool tryMergeUserDefinedLiteral();
   bool tryMergeNSStringLiteral();
   bool tryMergeJSPrivateIdentifier();
   bool tryMergeCSharpStringLiteral();
@@ -55,7 +56,6 @@ private:
   bool tryMergeNullishCoalescingEqual();
   bool tryTransformCSharpForEach();
   bool tryMergeForEach();
-  bool tryTransformTryUsageForC();
 
   // Merge the most recently lexed tokens into a single token if their kinds are
   // correct.
@@ -70,6 +70,8 @@ private:
   bool precedesOperand(FormatToken *Tok);
 
   bool canPrecedeRegexLiteral(FormatToken *Prev);
+
+  void tryParseJavaTextBlock();
 
   // Tries to parse a JavaScript Regex literal starting at the current token,
   // if that begins with a slash and is in a location where JavaScript allows
@@ -129,18 +131,26 @@ private:
 
   llvm::SmallMapVector<IdentifierInfo *, TokenType, 8> Macros;
 
-  llvm::SmallPtrSet<IdentifierInfo *, 8> TypeNames;
+  llvm::SmallPtrSet<IdentifierInfo *, 8> MacrosSkippedByRemoveParentheses,
+      TemplateNames, TypeNames, VariableTemplates;
 
   bool FormattingDisabled;
+  llvm::Regex FormatOffRegex; // For one line.
 
   llvm::Regex MacroBlockBeginRegex;
   llvm::Regex MacroBlockEndRegex;
 
+  // The next line is a Verilog protected block that should not be split into
+  // tokens. Set at the 'pragma protect' line. Cleared at the next line.
+  bool VerilogProtectedBlock;
+
   // Targets that may appear inside a C# attribute.
   static const llvm::StringSet<> CSharpAttributeTargets;
 
+  /// Handle Verilog opaque protected stuff.
+  bool readVerilogProtected(FormatToken &Tok);
   /// Handle Verilog-specific tokens.
-  bool readRawTokenVerilogSpecific(Token &Tok);
+  bool readRawTokenVerilogSpecific(FormatToken &Tok);
 
   void readRawToken(FormatToken &Tok);
 

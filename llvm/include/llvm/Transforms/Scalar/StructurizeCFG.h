@@ -12,8 +12,18 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
-struct StructurizeCFGPass : PassInfoMixin<StructurizeCFGPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+struct StructurizeCFGPass : OptionalPassInfoMixin<StructurizeCFGPass> {
+private:
+  bool SkipUniformRegions;
+
+public:
+  LLVM_ABI StructurizeCFGPass(bool SkipUniformRegions = false);
+
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
+
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 } // namespace llvm
 

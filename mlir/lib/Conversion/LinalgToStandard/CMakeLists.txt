@@ -15,6 +15,7 @@ add_mlir_conversion_library(MLIRLinalgToStandard
   MLIRIR
   MLIRLinalgDialect
   MLIRLinalgTransforms
+  MLIRLLVMDialect
   MLIRMemRefDialect
   MLIRPass
   MLIRSCFDialect

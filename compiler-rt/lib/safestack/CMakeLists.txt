@@ -5,6 +5,7 @@ set(SAFESTACK_SOURCES
   )
 
 include_directories(..)
+include_directories(../../include)
 
 set(SAFESTACK_CFLAGS ${SANITIZER_COMMON_CFLAGS})
 
@@ -14,6 +15,9 @@ foreach(arch ${SAFESTACK_SUPPORTED_ARCH})
     ARCHS ${arch}
     SOURCES ${SAFESTACK_SOURCES}
             $<TARGET_OBJECTS:RTInterception.${arch}>
+    # Intentionally does not deppend on sanitizer_common,
+    # to keep runtime trivial, and acceptable for security
+    # sensitive applications.
     CFLAGS ${SAFESTACK_CFLAGS}
     PARENT_TARGET safestack)
 endforeach()

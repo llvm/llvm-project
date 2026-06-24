@@ -1,9 +1,5 @@
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=print<polly-function-scops>' -polly-allow-modref-calls \
-; RUN:     -polly-invariant-load-hoisting=true \
-; RUN:     -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=print<polly-function-scops>' -polly-allow-nonaffine \
-; RUN:     -polly-invariant-load-hoisting=true \
-; RUN:     -polly-allow-modref-calls -disable-output < %s 2>&1 | FileCheck %s --check-prefix=NONAFFINE
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<scops>' -polly-print-scops -polly-allow-modref-calls -polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<scops>' -polly-print-scops -polly-allow-nonaffine -polly-invariant-load-hoisting=true -polly-allow-modref-calls -disable-output < %s 2>&1 | FileCheck %s --check-prefix=NONAFFINE
 
 ;  TODO: We should delinearize the accesses despite the use in a call to a
 ;        readonly function. For now we verify we do not delinearize them though.
@@ -21,7 +17,7 @@
 ; CHECK-NEXT:    Assumed Context:
 ; CHECK-NEXT:    [tmp14, p_1] -> {  :  }
 ; CHECK-NEXT:    Invalid Context:
-; CHECK-NEXT:    [tmp14, p_1] -> { : tmp14 > 0 and (p_1 <= -1152921504606846977 or tmp14 >= 1152921504606846977 or p_1 >= 1152921504606846977 - tmp14) }
+; CHECK-NEXT:    [tmp14, p_1] -> { : tmp14 > 0 and (tmp14 >= 1152921504606846977 or p_1 <= -1152921504606846977 or p_1 >= 1152921504606846977 - tmp14) }
 ; CHECK:         p0: %tmp14
 ; CHECK-NEXT:    p1: {0,+,(0 smax %tmp)}<%bb12>
 ; CHECK-NEXT:    Arrays {

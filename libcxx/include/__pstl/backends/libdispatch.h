@@ -16,29 +16,39 @@
 #include <__algorithm/upper_bound.h>
 #include <__atomic/atomic.h>
 #include <__config>
+#include <__cstddef/ptrdiff_t.h>
 #include <__exception/terminate.h>
 #include <__iterator/iterator_traits.h>
 #include <__iterator/move_iterator.h>
 #include <__memory/allocator.h>
 #include <__memory/construct_at.h>
+#include <__memory/destroy.h>
 #include <__memory/unique_ptr.h>
+#include <__new/exceptions.h>
 #include <__numeric/reduce.h>
-#include <__pstl/configuration_fwd.h>
+#include <__pstl/backend_fwd.h>
+#include <__pstl/cpu_algos/any_of.h>
 #include <__pstl/cpu_algos/cpu_traits.h>
+#include <__pstl/cpu_algos/fill.h>
+#include <__pstl/cpu_algos/find_if.h>
+#include <__pstl/cpu_algos/for_each.h>
+#include <__pstl/cpu_algos/merge.h>
+#include <__pstl/cpu_algos/stable_sort.h>
+#include <__pstl/cpu_algos/transform.h>
+#include <__pstl/cpu_algos/transform_reduce.h>
 #include <__utility/empty.h>
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
-#include <cstddef>
-#include <new>
 #include <optional>
 
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-#if !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
+#if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __pstl {
 
 namespace __libdispatch {
@@ -134,11 +144,11 @@ struct __cpu_traits<__libdispatch_backend_tag> {
 
     unique_ptr<__merge_range_t[], decltype(__destroy)> __ranges(
         [&]() -> __merge_range_t* {
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
           try {
 #  endif
             return std::allocator<__merge_range_t>().allocate(__n_ranges);
-#  ifndef _LIBCPP_HAS_NO_EXCEPTIONS
+#  if _LIBCPP_HAS_EXCEPTIONS
           } catch (const std::bad_alloc&) {
             return nullptr;
           }
@@ -260,7 +270,7 @@ struct __cpu_traits<__libdispatch_backend_tag> {
       return __empty{};
     }
 
-    using _Value = __iter_value_type<_RandomAccessIterator>;
+    using _Value = __iterator_value_type<_RandomAccessIterator>;
 
     auto __destroy = [__size](_Value* __ptr) {
       std::destroy_n(__ptr, __size);
@@ -273,7 +283,7 @@ struct __cpu_traits<__libdispatch_backend_tag> {
     // Initialize all elements to a moved-from state
     // TODO: Don't do this - this can be done in the first merge - see https://llvm.org/PR63928
     std::__construct_at(__values.get(), std::move(*__first));
-    for (__iter_diff_t<_RandomAccessIterator> __i = 1; __i != __size; ++__i) {
+    for (__iterator_difference_type<_RandomAccessIterator> __i = 1; __i != __size; ++__i) {
       std::__construct_at(__values.get() + __i, std::move(__values.get()[__i - 1]));
     }
     *__first = std::move(__values.get()[__size - 1]);
@@ -341,21 +351,54 @@ struct __cpu_traits<__libdispatch_backend_tag> {
   static constexpr size_t __lane_size = 64;
 };
 
+// Mandatory implementations of the computational basis
+template <class _ExecutionPolicy>
+struct __find_if<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_find_if<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __for_each<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_for_each<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __merge<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_merge<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __stable_sort<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_stable_sort<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __transform<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_transform<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __transform_binary<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_transform_binary<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __transform_reduce<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_transform_reduce<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __transform_reduce_binary<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_transform_reduce_binary<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+// Not mandatory, but better optimized
+template <class _ExecutionPolicy>
+struct __any_of<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_any_of<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
+template <class _ExecutionPolicy>
+struct __fill<__libdispatch_backend_tag, _ExecutionPolicy>
+    : __cpu_parallel_fill<__libdispatch_backend_tag, _ExecutionPolicy> {};
+
 } // namespace __pstl
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // !defined(_LIBCPP_HAS_NO_INCOMPLETE_PSTL) && _LIBCPP_STD_VER >= 17
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_POP_MACROS
-
-// Implement PSTL algorithms based on the __cpu_traits specialized above
-#include <__pstl/cpu_algos/any_of.h>
-#include <__pstl/cpu_algos/fill.h>
-#include <__pstl/cpu_algos/find_if.h>
-#include <__pstl/cpu_algos/for_each.h>
-#include <__pstl/cpu_algos/merge.h>
-#include <__pstl/cpu_algos/stable_sort.h>
-#include <__pstl/cpu_algos/transform.h>
-#include <__pstl/cpu_algos/transform_reduce.h>
 
 #endif // _LIBCPP___PSTL_BACKENDS_LIBDISPATCH_H

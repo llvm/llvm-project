@@ -36,12 +36,12 @@ void test_five(int x, int y, int z) {
 }
 
 // CHECK: TranslationUnitDecl {{.*}} <<invalid sloc>> <invalid sloc>
-// CHECK: |-FunctionDecl {{.*}} <{{.*}}ast-dump-openmp-simd.c:3:1, line:7:1> line:3:6 test_one 'void (int)'
+// CHECK: |-FunctionDecl {{.*}} <{{.*}}ast-dump-openmp-simd.c:3:1, line:7:1> line:3:6 test_one 'void (int)' external-linkage
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} <col:15, col:19> col:19 used x 'int'
 // CHECK-NEXT: | `-CompoundStmt {{.*}} <col:22, line:7:1>
 // CHECK-NEXT: |   `-OMPSimdDirective {{.*}} <line:4:1, col:17>
 // CHECK-NEXT: |     `-CapturedStmt {{.*}} <line:5:3, line:6:5>
-// CHECK-NEXT: |       |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc>
+// CHECK-NEXT: |       |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       | |-ForStmt {{.*}} <line:5:3, line:6:5>
 // CHECK-NEXT: |       | | |-DeclStmt {{.*}} <line:5:8, col:17>
 // CHECK-NEXT: |       | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
@@ -59,13 +59,13 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       | `-VarDecl {{.*}} <line:5:8, col:16> col:12 used i 'int' cinit
 // CHECK-NEXT: |       |   `-IntegerLiteral {{.*}} <col:16> 'int' 0
 // CHECK-NEXT: |       `-DeclRefExpr {{.*}} <col:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
-// CHECK-NEXT: |-FunctionDecl {{.*}} <line:9:1, line:14:1> line:9:6 test_two 'void (int, int)'
+// CHECK-NEXT: |-FunctionDecl {{.*}} <line:9:1, line:14:1> line:9:6 test_two 'void (int, int)' external-linkage
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} <col:15, col:19> col:19 used x 'int'
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} <col:22, col:26> col:26 used y 'int'
 // CHECK-NEXT: | `-CompoundStmt {{.*}} <col:29, line:14:1>
 // CHECK-NEXT: |   `-OMPSimdDirective {{.*}} <line:10:1, col:17>
 // CHECK-NEXT: |     `-CapturedStmt {{.*}} <line:11:3, line:13:7>
-// CHECK-NEXT: |       |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc>
+// CHECK-NEXT: |       |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       | |-ForStmt {{.*}} <line:11:3, line:13:7>
 // CHECK-NEXT: |       | | |-DeclStmt {{.*}} <line:11:8, col:17>
 // CHECK-NEXT: |       | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
@@ -98,7 +98,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       |-DeclRefExpr {{.*}} <line:11:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
 // CHECK-NEXT: |       `-DeclRefExpr {{.*}} <line:12:25> 'int' lvalue ParmVar {{.*}} 'y' 'int'
-// CHECK-NEXT: |-FunctionDecl {{.*}} <line:16:1, line:21:1> line:16:6 test_three 'void (int, int)'
+// CHECK-NEXT: |-FunctionDecl {{.*}} <line:16:1, line:21:1> line:16:6 test_three 'void (int, int)' external-linkage
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} <col:17, col:21> col:21 used x 'int'
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} <col:24, col:28> col:28 used y 'int'
 // CHECK-NEXT: | `-CompoundStmt {{.*}} <col:31, line:21:1>
@@ -108,7 +108,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |     | |-value: Int 1
 // CHECK-NEXT: |     |   `-IntegerLiteral {{.*}} <col:27> 'int' 1
 // CHECK-NEXT: |     `-CapturedStmt {{.*}} <line:18:3, line:20:7>
-// CHECK-NEXT: |       |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc>
+// CHECK-NEXT: |       |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       | |-ForStmt {{.*}} <line:18:3, line:20:7>
 // CHECK-NEXT: |       | | |-DeclStmt {{.*}} <line:18:8, col:17>
 // CHECK-NEXT: |       | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
@@ -141,7 +141,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       |-DeclRefExpr {{.*}} <line:18:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
 // CHECK-NEXT: |       `-DeclRefExpr {{.*}} <line:19:25> 'int' lvalue ParmVar {{.*}} 'y' 'int'
-// CHECK-NEXT: |-FunctionDecl {{.*}} <line:23:1, line:28:1> line:23:6 test_four 'void (int, int)'
+// CHECK-NEXT: |-FunctionDecl {{.*}} <line:23:1, line:28:1> line:23:6 test_four 'void (int, int)' external-linkage
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} <col:16, col:20> col:20 used x 'int'
 // CHECK-NEXT: | |-ParmVarDecl {{.*}} <col:23, col:27> col:27 used y 'int'
 // CHECK-NEXT: | `-CompoundStmt {{.*}} <col:30, line:28:1>
@@ -151,7 +151,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |     | |-value: Int 2
 // CHECK-NEXT: |     |   `-IntegerLiteral {{.*}} <col:27> 'int' 2
 // CHECK-NEXT: |     `-CapturedStmt {{.*}} <line:25:3, line:27:7>
-// CHECK-NEXT: |       |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc>
+// CHECK-NEXT: |       |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT: |       | |-ForStmt {{.*}} <line:25:3, line:27:7>
 // CHECK-NEXT: |       | | |-DeclStmt {{.*}} <line:25:8, col:17>
 // CHECK-NEXT: |       | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit
@@ -184,7 +184,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT: |       |   `-IntegerLiteral {{.*}} <col:18> 'int' 0
 // CHECK-NEXT: |       |-DeclRefExpr {{.*}} <line:25:23> 'int' lvalue ParmVar {{.*}} 'x' 'int'
 // CHECK-NEXT: |       `-DeclRefExpr {{.*}} <line:26:25> 'int' lvalue ParmVar {{.*}} 'y' 'int'
-// CHECK-NEXT: `-FunctionDecl {{.*}} <line:30:1, line:36:1> line:30:6 test_five 'void (int, int, int)'
+// CHECK-NEXT: `-FunctionDecl {{.*}} <line:30:1, line:36:1> line:30:6 test_five 'void (int, int, int)' external-linkage
 // CHECK-NEXT:   |-ParmVarDecl {{.*}} <col:16, col:20> col:20 used x 'int'
 // CHECK-NEXT:   |-ParmVarDecl {{.*}} <col:23, col:27> col:27 used y 'int'
 // CHECK-NEXT:   |-ParmVarDecl {{.*}} <col:30, col:34> col:34 used z 'int'
@@ -195,7 +195,7 @@ void test_five(int x, int y, int z) {
 // CHECK-NEXT:       | |-value: Int 2
 // CHECK-NEXT:       |   `-IntegerLiteral {{.*}} <col:27> 'int' 2
 // CHECK-NEXT:       `-CapturedStmt {{.*}} <line:32:3, line:35:9>
-// CHECK-NEXT:         |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc>
+// CHECK-NEXT:         |-CapturedDecl {{.*}} <<invalid sloc>> <invalid sloc> nothrow
 // CHECK-NEXT:         | |-ForStmt {{.*}} <line:32:3, line:35:9>
 // CHECK-NEXT:         | | |-DeclStmt {{.*}} <line:32:8, col:17>
 // CHECK-NEXT:         | | | `-VarDecl {{.*}} <col:8, col:16> col:12 used i 'int' cinit

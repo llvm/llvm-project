@@ -8,7 +8,7 @@
 
 // <cwchar>
 
-// XFAIL: no-wide-characters
+// UNSUPPORTED: no-wide-characters
 
 // Tests that include ordering does not affect the definition of wcsstr.
 // See: https://llvm.org/PR62638

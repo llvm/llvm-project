@@ -3,13 +3,13 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @fn2(ptr %P) {
+define void @fn2(ptr %P, i1 %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@fn2
-; CHECK-SAME: (ptr [[P:%.*]]) {
+; CHECK-SAME: (ptr [[P:%.*]], i1 [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       for.cond1:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_END]], label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @fn1(i32 undef)
 ; CHECK-NEXT:    store i32 [[CALL]], ptr [[P]], align 4
@@ -19,7 +19,7 @@ entry:
   br label %if.end
 
 for.cond1:                                        ; preds = %if.end, %for.end
-  br i1 undef, label %if.end, label %if.end
+  br i1 %arg, label %if.end, label %if.end
 
 if.end:                                           ; preds = %lbl, %for.cond1
   %e.2 = phi ptr [ undef, %entry ], [ null, %for.cond1 ], [ null, %for.cond1 ]
@@ -43,15 +43,16 @@ entry:
   ret i32 %cond
 }
 
-define void @fn_no_null_opt(ptr %P) #0 {
+define void @fn_no_null_opt(ptr %P, i1 %arg) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@fn_no_null_opt
-; CHECK-SAME: (ptr [[P:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: (ptr [[P:%.*]], i1 [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       for.cond1:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    br i1 [[ARG]], label [[IF_END]], label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 @fn0(i32 undef)
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr null, align 4
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @fn0(i32 [[TMP0]])
 ; CHECK-NEXT:    store i32 [[CALL]], ptr [[P]], align 4
 ; CHECK-NEXT:    br label [[FOR_COND1:%.*]]
 ;
@@ -59,7 +60,7 @@ entry:
   br label %if.end
 
 for.cond1:                                        ; preds = %if.end, %for.end
-  br i1 undef, label %if.end, label %if.end
+  br i1 %arg, label %if.end, label %if.end
 
 if.end:                                           ; preds = %lbl, %for.cond1
   %e.2 = phi ptr [ undef, %entry ], [ null, %for.cond1 ], [ null, %for.cond1 ]
@@ -73,8 +74,8 @@ define internal i32 @fn0(i32 %p1) {
 ; CHECK-LABEL: define {{[^@]+}}@fn0
 ; CHECK-SAME: (i32 [[P1:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 undef, 0
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 undef, i32 undef
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i32 [[P1]], 0
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], i32 [[P1]], i32 [[P1]]
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
 entry:

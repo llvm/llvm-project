@@ -9,7 +9,7 @@ extern Object* foo(void);
 
 static Derived *test(void)
 {
-   Derived *m = foo();   // expected-warning {{incompatible pointer types initializing 'Derived *' with an expression of type 'Object *'}}
+   Derived *m = foo();   // expected-error {{incompatible pointer types initializing 'Derived *' with an expression of type 'Object *'}}
 
    return m;
 }

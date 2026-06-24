@@ -1,13 +1,13 @@
 ; RUN: llc -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck -check-prefix=HSA %s
 
-@lds.align16.0 = internal unnamed_addr addrspace(3) global [38 x i8] undef, align 16
-@lds.align16.1 = internal unnamed_addr addrspace(3) global [38 x i8] undef, align 16
+@lds.align16.0 = internal unnamed_addr addrspace(3) global [38 x i8] poison, align 16
+@lds.align16.1 = internal unnamed_addr addrspace(3) global [38 x i8] poison, align 16
 
-@lds.align8.0 = internal unnamed_addr addrspace(3) global [38 x i8] undef, align 8
-@lds.align32.0 = internal unnamed_addr addrspace(3) global [38 x i8] undef, align 32
+@lds.align8.0 = internal unnamed_addr addrspace(3) global [38 x i8] poison, align 8
+@lds.align32.0 = internal unnamed_addr addrspace(3) global [38 x i8] poison, align 32
 
-@lds.missing.align.0 = internal unnamed_addr addrspace(3) global [39 x i32] undef
-@lds.missing.align.1 = internal unnamed_addr addrspace(3) global [7 x i64] undef
+@lds.missing.align.0 = internal unnamed_addr addrspace(3) global [39 x i32] poison
+@lds.missing.align.1 = internal unnamed_addr addrspace(3) global [7 x i64] poison
 
 declare void @llvm.memcpy.p3.p1.i32(ptr addrspace(3) nocapture, ptr addrspace(1) nocapture readonly, i32, i1) #0
 declare void @llvm.memcpy.p1.p3.i32(ptr addrspace(1) nocapture, ptr addrspace(3) nocapture readonly, i32, i1) #0

@@ -15,6 +15,9 @@
 //     param_type(size_t nw, double xmin, double xmax,
 //                           UnaryOperation fw);
 
+// There is a bogus diagnostic about a too large allocation
+// ADDITIONAL_COMPILE_FLAGS(gcc): -Wno-alloc-size-larger-than
+
 #include <random>
 
 #include <cassert>

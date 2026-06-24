@@ -1,15 +1,15 @@
-// RUN: llvm-mc -triple i386-pc-win32 -filetype=obj %s | llvm-readobj -S --symbols - | FileCheck %s
-// RUN: llvm-mc -triple x86_64-pc-win32 -filetype=obj %s | llvm-readobj -S --symbols - | FileCheck %s
+// RUN: llvm-mc -triple i386-pc-win32 -filetype=obj %s | llvm-objdump -h -t - | FileCheck %s
+// RUN: llvm-mc -triple x86_64-pc-win32 -filetype=obj %s | llvm-objdump -h -t - | FileCheck %s
 
 .section assocSec, "dr", discard, "assocSym"
 .global assocSym
 assocSym:
-.long 1
+.long assocSec
 
 .section secName, "dr", discard, "Symbol1"
 .globl Symbol1
 Symbol1:
-.long 1
+.long assocSym
 
 .section secName, "dr", one_only, "Symbol2"
 .globl Symbol2
@@ -46,165 +46,51 @@ Symbol7:
 Symbol8:
 .long 1
 
-// CHECK: Sections [
-// CHECK:   Section {
-// CHECK:     Number: 4
-// CHECK:     Name: assocSec
-// CHECK:     Characteristics [
-// CHECK:       IMAGE_SCN_LNK_COMDAT
-// CHECK:     ]
-// CHECK:   }
-// CHECK:   Section {
-// CHECK:     Number: 5
-// CHECK:     Name: secName
-// CHECK:     Characteristics [
-// CHECK:       IMAGE_SCN_LNK_COMDAT
-// CHECK:     ]
-// CHECK:   }
-// CHECK:   Section {
-// CHECK:     Number: 6
-// CHECK:     Name: secName
-// CHECK:     Characteristics [
-// CHECK:       IMAGE_SCN_LNK_COMDAT
-// CHECK:     ]
-// CHECK:   }
-// CHECK:   Section {
-// CHECK:     Number: 7
-// CHECK:     Name: SecName
-// CHECK:     Characteristics [
-// CHECK:       IMAGE_SCN_LNK_COMDAT
-// CHECK:     ]
-// CHECK:   }
-// CHECK:   Section {
-// CHECK:     Number: 8
-// CHECK:     Name: SecName
-// CHECK:     Characteristics [
-// CHECK:       IMAGE_SCN_LNK_COMDAT
-// CHECK:     ]
-// CHECK:   }
-// CHECK:   Section {
-// CHECK:     Number: 9
-// CHECK:     Name: SecName
-// CHECK:     Characteristics [
-// CHECK:       IMAGE_SCN_LNK_COMDAT
-// CHECK:     ]
-// CHECK:   }
-// CHECK:   Section {
-// CHECK:     Number: 10
-// CHECK:     Name: SecName
-// CHECK:     Characteristics [
-// CHECK:       IMAGE_SCN_LNK_COMDAT
-// CHECK:     ]
-// CHECK:   }
-// CHECK:   Section {
-// CHECK:     Number: 11
-// CHECK:     Name: SecName
-// CHECK:     Characteristics [
-// CHECK:       IMAGE_SCN_LNK_COMDAT
-// CHECK:     ]
-// CHECK:   }
-// CHECK: ]
-// CHECK: Symbols [
-// CHECK:   Symbol {
-// CHECK:     Name: assocSec
-// CHECK:     Section: assocSec (4)
-// CHECK:     AuxSectionDef {
-// CHECK:       Selection: Any
-// CHECK:     }
-// CHECK:   }
-// CHECK:   Symbol {
-// CHECK:     Name: assocSym
-// CHECK:     Section: assocSec
-// CHECK:   }
-// CHECK:   Symbol {
-// CHECK:     Name: secName
-// CHECK:     Section: secName (5)
-// CHECK:     AuxSectionDef {
-// CHECK:       Selection: Any
-// CHECK:     }
-// CHECK:   }
-// CHECK:   Symbol {
-// CHECK:     Name: Symbol1
-// CHECK:     Section: secName (5)
-// CHECK:   }
-// CHECK:   Symbol {
-// CHECK:     Name: secName
-// CHECK:     Section: secName (6)
-// CHECK:     AuxSectionDef {
-// CHECK:       Selection: NoDuplicates
-// CHECK:     }
-// CHECK:   }
-// CHECK:   Symbol {
-// CHECK:     Name: Symbol2
-// CHECK:     Section: secName (6)
-// CHECK:   }
-// CHECK:   Symbol {
-// CHECK:     Name: SecName
-// CHECK:     Section: SecName (7)
-// CHECK:     AuxSectionDef {
-// CHECK:       Selection: SameSize
-// CHECK:     }
-// CHECK:   }
-// CHECK:   Symbol {
-// CHECK:     Name: Symbol3
-// CHECK:     Section: SecName (7)
-// CHECK:   }
-// CHECK:   Symbol {
-// CHECK:     Name: SecName
-// CHECK:     Section: SecName (8)
-// CHECK:     AuxSymbolCount: 1
-// CHECK:     AuxSectionDef {
-// CHECK:       Selection: ExactMatch
-// CHECK:     }
-// CHECK:   }
-// CHECK:   Symbol {
-// CHECK:     Name: Symbol4
-// CHECK:     Section: SecName (8)
-// CHECK:   }
-// CHECK:   Symbol {
-// CHECK:     Name: SecName
-// CHECK:     Section: SecName (11)
-// CHECK:     AuxSectionDef {
-// CHECK:       Selection: Associative
-// CHECK:       AssocSection: assocSec (4)
-// CHECK:     }
-// CHECK:   }
-// CHECK:   Symbol {
-// CHECK:     Name: SecName
-// CHECK:     Section: SecName (9)
-// CHECK:     AuxSectionDef {
-// CHECK:       Selection: Largest
-// CHECK:     }
-// CHECK:   }
-// CHECK:   Symbol {
-// CHECK:     Name: Symbol6
-// CHECK:     Section: SecName (9)
-// CHECK:   }
-// CHECK:   Symbol {
-// CHECK:     Name: SecName
-// CHECK:     Section: SecName (10)
-// CHECK:     AuxSectionDef {
-// CHECK:       Selection: Newest (0x7)
-// CHECK:     }
-// CHECK:   }
-// CHECK:   Symbol {
-// CHECK:     Name: Symbol7
-// CHECK:     Section: SecName (10)
-// CHECK:   }
-// CHECK:   Symbol {
-// CHECK:     Name: assocSec
-// CHECK:     Section: assocSec (12)
-// CHECK:     AuxSectionDef {
-// CHECK:       Selection: Associative (0x5)
-// CHECK:       AssocSection: assocSec (4)
-// CHECK:     }
-// CHECK:   }
-// CHECK:   Symbol {
-// CHECK:     Name: Symbol5
-// CHECK:     Section: SecName (11)
-// CHECK:   }
-// CHECK:   Symbol {
-// CHECK:     Name: Symbol8
-// CHECK:     Section: assocSec (12)
-// CHECK:   }
-// CHECK: ]
+# CHECK:      Sections:
+# CHECK-NEXT: Idx Name          Size
+# CHECK-NEXT:   0 .text         00000000
+# CHECK-NEXT:   1 .data         00000000
+# CHECK-NEXT:   2 .bss          00000000
+# CHECK-NEXT:   3 assocSec      00000004
+# CHECK-NEXT:   4 secName       00000004
+# CHECK-NEXT:   5 secName       00000004
+# CHECK-NEXT:   6 SecName       00000004
+# CHECK-NEXT:   7 SecName       00000004
+# CHECK-NEXT:   8 SecName       00000004
+# CHECK-NEXT:   9 SecName       00000004
+# CHECK-NEXT:  10 SecName       00000004
+# CHECK-NEXT:  11 assocSec      00000004
+# CHECK:      SYMBOL TABLE:
+# CHECK-NEXT: [ 0](sec  1)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 .text
+# CHECK-NEXT: AUX scnlen 0x0 nreloc 0 nlnno 0 checksum 0x0 assoc 1 comdat 0
+# CHECK-NEXT: [ 2](sec  2)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 .data
+# CHECK-NEXT: AUX scnlen 0x0 nreloc 0 nlnno 0 checksum 0x0 assoc 2 comdat 0
+# CHECK-NEXT: [ 4](sec  3)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 .bss
+# CHECK-NEXT: AUX scnlen 0x0 nreloc 0 nlnno 0 checksum 0x0 assoc 3 comdat 0
+# CHECK-NEXT: [ 6](sec  4)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 assocSec
+# CHECK-NEXT: AUX scnlen 0x4 nreloc 1 nlnno 0 checksum 0x0 assoc 4 comdat 2
+# CHECK-NEXT: [ 8](sec  4)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 assocSym
+# CHECK-NEXT: [ 9](sec  5)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 secName
+# CHECK-NEXT: AUX scnlen 0x4 nreloc 1 nlnno 0 checksum 0x0 assoc 5 comdat 2
+# CHECK-NEXT: [11](sec  5)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 Symbol1
+# CHECK-NEXT: [12](sec  6)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 secName
+# CHECK-NEXT: AUX scnlen 0x4 nreloc 0 nlnno 0 checksum 0xb8bc6765 assoc 6 comdat 1
+# CHECK-NEXT: [14](sec  6)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 Symbol2
+# CHECK-NEXT: [15](sec  7)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 SecName
+# CHECK-NEXT: AUX scnlen 0x4 nreloc 0 nlnno 0 checksum 0xb8bc6765 assoc 7 comdat 3
+# CHECK-NEXT: [17](sec  7)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 Symbol3
+# CHECK-NEXT: [18](sec  8)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 SecName
+# CHECK-NEXT: AUX scnlen 0x4 nreloc 0 nlnno 0 checksum 0xb8bc6765 assoc 8 comdat 4
+# CHECK-NEXT: [20](sec  8)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 Symbol4
+# CHECK-NEXT: [21](sec 11)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 SecName
+# CHECK-NEXT: AUX scnlen 0x4 nreloc 0 nlnno 0 checksum 0xb8bc6765 assoc 4 comdat 5
+# CHECK-NEXT: [23](sec  9)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 SecName
+# CHECK-NEXT: AUX scnlen 0x4 nreloc 0 nlnno 0 checksum 0xb8bc6765 assoc 9 comdat 6
+# CHECK-NEXT: [25](sec  9)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 Symbol6
+# CHECK-NEXT: [26](sec 10)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 SecName
+# CHECK-NEXT: AUX scnlen 0x4 nreloc 0 nlnno 0 checksum 0xb8bc6765 assoc 10 comdat 7
+# CHECK-NEXT: [28](sec 10)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 Symbol7
+# CHECK-NEXT: [29](sec 12)(fl 0x00)(ty   0)(scl   3) (nx 1) 0x00000000 assocSec
+# CHECK-NEXT: AUX scnlen 0x4 nreloc 0 nlnno 0 checksum 0xb8bc6765 assoc 4 comdat 5
+# CHECK-NEXT: [31](sec 11)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 Symbol5
+# CHECK-NEXT: [32](sec 12)(fl 0x00)(ty   0)(scl   2) (nx 0) 0x00000000 Symbol8

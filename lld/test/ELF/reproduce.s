@@ -76,11 +76,12 @@
 ## Check that directory path is stripped from -o <file-path>
 # RUN: mkdir -p %t.dir/build4/a/b/c
 # RUN: cd %t.dir
-# RUN: ld.lld build1/foo.o -o build4/a/b/c/bar -Map build4/map --print-archive-stats=build4/stats \
+# RUN: ld.lld build1/foo.o -o build4/a/b/c/bar -Map build4/map --dependency-file=build4/bar.d --print-archive-stats=build4/stats \
 # RUN:   --why-extract=build4/why -shared --as-needed --reproduce=repro4.tar
 # RUN: tar xOf repro4.tar repro4/response.txt | FileCheck %s --check-prefix=RSP4
 # RSP4: -o bar
 # RSP4-NEXT: -Map map
+# RSP4-NEXT: --dependency-file bar.d
 # RSP4-NEXT: --print-archive-stats=stats
 # RSP4-NEXT: --why-extract=why
 

@@ -7,22 +7,26 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/spawn/posix_spawn.h"
-
-#include "src/__support/CPP/optional.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
 #include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/common.h"
+#include "src/__support/macros/config.h"
 #include "src/spawn/file_actions.h"
 
-#include <fcntl.h>
+#include "hdr/fcntl_macros.h"
+#include "hdr/types/mode_t.h"
+#include "src/signal/linux/signal_utils.h"
 #include <signal.h> // For SIGCHLD
 #include <spawn.h>
 #include <sys/syscall.h> // For syscall numbers.
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
 
 namespace {
 
 pid_t fork() {
+  // Block signal and stop abort sigaction modification.
+  SigAbortGuard guard(/*exclusive=*/false);
   // TODO: Use only the clone syscall and use a sperate small stack in the child
   // to avoid duplicating the complete stack from the parent. A new stack will
   // be created on exec anyway so duplicating the full stack is unnecessary.
@@ -33,21 +37,6 @@ pid_t fork() {
 #else
 #error "fork or clone syscalls not available."
 #endif
-}
-
-cpp::optional<int> open(const char *path, int oflags, mode_t mode) {
-#ifdef SYS_open
-  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_open, path, oflags, mode);
-#else
-  int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_openat, AT_FDCWD, path, oflags,
-                                             mode);
-#endif
-  if (fd > 0)
-    return fd;
-  // The open function is called as part of the child process' preparatory
-  // steps. If an open fails, the child process just exits. So, unlike
-  // the public open function, we do not need to set errno here.
-  return cpp::nullopt;
 }
 
 void close(int fd) { LIBC_NAMESPACE::syscall_impl<long>(SYS_close, fd); }
@@ -89,7 +78,8 @@ void child_process(const char *__restrict path,
       switch (act->type) {
       case BaseSpawnFileAction::OPEN: {
         auto *open_act = reinterpret_cast<SpawnFileOpenAction *>(act);
-        auto fd = open(open_act->path, open_act->oflag, open_act->mode);
+        ErrorOr<int> fd = linux_syscalls::open(open_act->path, open_act->oflag,
+                                               open_act->mode);
         if (!fd)
           exit();
         int actual_fd = *fd;
@@ -145,4 +135,4 @@ LLVM_LIBC_FUNCTION(int, posix_spawn,
   return 0;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace LIBC_NAMESPACE_DECL

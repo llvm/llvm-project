@@ -87,13 +87,8 @@ public:
   std::vector<ArchSpec>
   GetSupportedArchitectures(const ArchSpec &process_host_arch) override;
 
-  Status
-  ResolveExecutable(const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
-                    const FileSpecList *module_search_paths_ptr) override;
-
   Status GetSharedModule(const ModuleSpec &module_spec, Process *process,
                          lldb::ModuleSP &module_sp,
-                         const FileSpecList *module_search_paths_ptr,
                          llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
                          bool *did_create_ptr) override;
 
@@ -125,7 +120,7 @@ protected:
   std::string m_sdk_name_primary;
   std::string m_sdk_name_secondary;
   bool m_have_searched_for_sdk = false;
-  llvm::StringRef m_sdk;
+  std::string m_sdk;
   XcodeSDK::Type m_sdk_type;
 
   void LoadCoreSimulator();

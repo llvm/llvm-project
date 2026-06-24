@@ -17,6 +17,7 @@
 #include "mlir/Support/LLVM.h"
 
 #include <cstdint>
+#include <optional>
 
 namespace mlir {
 namespace spirv {
@@ -29,6 +30,13 @@ constexpr uint32_t kMagicNumber = 0x07230203;
 
 /// The serializer tool ID registered to the Khronos Group
 constexpr uint32_t kGeneratorNumber = 22;
+
+/// Max number of words
+/// https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#_universal_limits
+constexpr uint32_t kMaxWordCount = 65535;
+
+/// Max number of words for literal
+constexpr uint32_t kMaxLiteralWordCount = kMaxWordCount - 3;
 
 /// Appends a SPRI-V module header to `header` with the given `version` and
 /// `idBound`.
@@ -49,6 +57,25 @@ inline StringRef decodeStringLiteral(ArrayRef<uint32_t> words,
   StringRef str(reinterpret_cast<const char *>(words.data() + wordIndex));
   wordIndex += str.size() / 4 + 1;
   return str;
+}
+
+/// Returns the SPV_INTEL_long_composites continuation opcode that may follow
+/// `parent`, or std::nullopt if `parent` is not a splittable composite/struct
+/// op.
+inline std::optional<spirv::Opcode>
+getContinuationOpcode(spirv::Opcode parent) {
+  switch (parent) {
+  case spirv::Opcode::OpTypeStruct:
+    return spirv::Opcode::OpTypeStructContinuedINTEL;
+  case spirv::Opcode::OpConstantComposite:
+    return spirv::Opcode::OpConstantCompositeContinuedINTEL;
+  case spirv::Opcode::OpSpecConstantComposite:
+    return spirv::Opcode::OpSpecConstantCompositeContinuedINTEL;
+  case spirv::Opcode::OpCompositeConstruct:
+    return spirv::Opcode::OpCompositeConstructContinuedINTEL;
+  default:
+    return std::nullopt;
+  }
 }
 
 } // namespace spirv

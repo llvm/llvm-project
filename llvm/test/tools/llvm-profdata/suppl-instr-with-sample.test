@@ -98,19 +98,19 @@ MIX5-NEXT: Maximum internal block count: 2000
 MIX5-NEXT: Total number of blocks: 9
 MIX5-NEXT: Total count: 6525
 MIX5-NEXT: Detailed summary:
-MIX5-NEXT: 1 blocks with count >= 3000 account for 1 percentage of the total counts.
-MIX5-NEXT: 1 blocks with count >= 3000 account for 10 percentage of the total counts.
-MIX5-NEXT: 1 blocks with count >= 3000 account for 20 percentage of the total counts.
-MIX5-NEXT: 1 blocks with count >= 3000 account for 30 percentage of the total counts.
-MIX5-NEXT: 1 blocks with count >= 3000 account for 40 percentage of the total counts.
-MIX5-NEXT: 2 blocks with count >= 2000 account for 50 percentage of the total counts.
-MIX5-NEXT: 2 blocks with count >= 2000 account for 60 percentage of the total counts.
-MIX5-NEXT: 2 blocks with count >= 2000 account for 70 percentage of the total counts.
-MIX5-NEXT: 3 blocks with count >= 1000 account for 80 percentage of the total counts.
-MIX5-NEXT: 3 blocks with count >= 1000 account for 90 percentage of the total counts.
-MIX5-NEXT: 4 blocks with count >= 500 account for 95 percentage of the total counts.
-MIX5-NEXT: 4 blocks with count >= 500 account for 99 percentage of the total counts.
-MIX5-NEXT: 6 blocks with count >= 12 account for 99.9 percentage of the total counts.
-MIX5-NEXT: 6 blocks with count >= 12 account for 99.99 percentage of the total counts.
-MIX5-NEXT: 6 blocks with count >= 12 account for 99.999 percentage of the total counts.
-MIX5-NEXT: 6 blocks with count >= 12 account for 99.9999 percentage of the total counts.
+MIX5-NEXT: 1 blocks (11.11%) with count >= 3000 account for 1% of the total counts.
+MIX5-NEXT: 1 blocks (11.11%) with count >= 3000 account for 10% of the total counts.
+MIX5-NEXT: 1 blocks (11.11%) with count >= 3000 account for 20% of the total counts.
+MIX5-NEXT: 1 blocks (11.11%) with count >= 3000 account for 30% of the total counts.
+MIX5-NEXT: 1 blocks (11.11%) with count >= 3000 account for 40% of the total counts.
+MIX5-NEXT: 2 blocks (22.22%) with count >= 2000 account for 50% of the total counts.
+MIX5-NEXT: 2 blocks (22.22%) with count >= 2000 account for 60% of the total counts.
+MIX5-NEXT: 2 blocks (22.22%) with count >= 2000 account for 70% of the total counts.
+MIX5-NEXT: 3 blocks (33.33%) with count >= 1000 account for 80% of the total counts.
+MIX5-NEXT: 3 blocks (33.33%) with count >= 1000 account for 90% of the total counts.
+MIX5-NEXT: 4 blocks (44.44%) with count >= 500 account for 95% of the total counts.
+MIX5-NEXT: 4 blocks (44.44%) with count >= 500 account for 99% of the total counts.
+MIX5-NEXT: 6 blocks (66.67%) with count >= 12 account for 99.9% of the total counts.
+MIX5-NEXT: 6 blocks (66.67%) with count >= 12 account for 99.99% of the total counts.
+MIX5-NEXT: 6 blocks (66.67%) with count >= 12 account for 99.999% of the total counts.
+MIX5-NEXT: 6 blocks (66.67%) with count >= 12 account for 99.9999% of the total counts.

@@ -2,6 +2,17 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z10 | FileCheck %s
 
+; Test i64->f16. For z10, this results in just a single a libcall.
+define half @f0(i64 %i) {
+; CHECK-LABEL: f0:
+; CHECK: cegbr
+; CHECK: aebr
+; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %conv = uitofp i64 %i to half
+  ret half %conv
+}
+
 ; Test i64->f32.  There's no native support for unsigned i64-to-fp conversions,
 ; but we should be able to implement them using signed i64-to-fp conversions.
 define float @f1(i64 %i) {

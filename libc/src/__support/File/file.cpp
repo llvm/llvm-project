@@ -8,16 +8,69 @@
 
 #include "file.h"
 
+#include "hdr/errno_macros.h"
+#include "hdr/func/realloc.h"
+#include "hdr/stdio_macros.h"
+#include "hdr/types/off_t.h"
+#include "hdr/wchar_macros.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/span.h"
-#include "src/errno/libc_errno.h" // For error macros
+#include "src/__support/alloc-checker.h"
+#include "src/__support/error_or.h"
+#include "src/__support/macros/config.h"
+#include "src/__support/wchar/character_converter.h"
+#include "src/__support/wchar/wcrtomb.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
-#include <stdio.h>
-#include <stdlib.h>
+namespace LIBC_NAMESPACE_DECL {
+File *File::list_all = nullptr;
+Mutex File::list_lock(/*timed=*/false, /*recursive=*/false, /*robust=*/false,
+                      /*pshared=*/false);
 
-namespace LIBC_NAMESPACE {
+// Adds a file to the global list of all open files.
+void File::add_file(File *f) {
+  File::list_lock.lock();
+  f->next = File::list_all;
+  f->prev = nullptr;
+  if (File::list_all != nullptr)
+    File::list_all->prev = f;
+  File::list_all = f;
+  File::list_lock.unlock();
+}
+
+// Removes a file from the global list of all open files.
+void File::remove_file(File *f) {
+  File::list_lock.lock();
+  if (f->prev != nullptr)
+    f->prev->next = f->next;
+  if (f->next != nullptr)
+    f->next->prev = f->prev;
+  if (File::list_all == f)
+    File::list_all = f->next;
+  f->prev = nullptr;
+  f->next = nullptr;
+  File::list_lock.unlock();
+}
+
+File *File::get_first_file() { return File::list_all; }
+void File::lock_list() { File::list_lock.lock(); }
+void File::unlock_list() { File::list_lock.unlock(); }
 
 FileIOResult File::write_unlocked(const void *data, size_t len) {
+  switch (orientation) {
+  case Orientation::WIDE:
+    err = true;
+    return {0, EINVAL};
+  case Orientation::UNORIENTED:
+    orientation = Orientation::BYTE;
+    break;
+  case Orientation::BYTE:
+    break;
+  }
+  return write_unlocked_impl(data, len);
+}
+
+FileIOResult File::write_unlocked_impl(const void *data, size_t len) {
   if (!write_allowed()) {
     err = true;
     return {0, EBADF};
@@ -30,18 +83,18 @@ FileIOResult File::write_unlocked(const void *data, size_t len) {
         write_unlocked_nbf(static_cast<const uint8_t *>(data), len);
     flush_unlocked();
     return ret_val;
-  } else if (bufmode == _IOFBF) { // fully buffered
-    return write_unlocked_fbf(static_cast<const uint8_t *>(data), len);
-  } else /*if (bufmode == _IOLBF) */ { // line buffered
-    return write_unlocked_lbf(static_cast<const uint8_t *>(data), len);
   }
+  if (bufmode == _IOFBF) // fully buffered
+    return write_unlocked_fbf(static_cast<const uint8_t *>(data), len);
+  return write_unlocked_lbf(static_cast<const uint8_t *>(data),
+                            len); // line buffered
 }
 
 FileIOResult File::write_unlocked_nbf(const uint8_t *data, size_t len) {
   if (pos > 0) { // If the buffer is not empty
     // Flush the buffer
     const size_t write_size = pos;
-    auto write_result = platform_write(this, buf, write_size);
+    FileIOResult write_result = platform_write(this, buf, write_size);
     pos = 0; // Buffer is now empty so reset pos to the beginning.
     // If less bytes were written than expected, then an error occurred.
     if (write_result < write_size) {
@@ -51,7 +104,7 @@ FileIOResult File::write_unlocked_nbf(const uint8_t *data, size_t len) {
     }
   }
 
-  auto write_result = platform_write(this, data, len);
+  FileIOResult write_result = platform_write(this, data, len);
   if (write_result < len)
     err = true;
   return write_result;
@@ -84,9 +137,7 @@ FileIOResult File::write_unlocked_fbf(const uint8_t *data, size_t len) {
   cpp::span<uint8_t> bufref(static_cast<uint8_t *>(buf), bufsize);
 
   // Copy the first piece into the buffer.
-  // TODO: Replace the for loop below with a call to internal memcpy.
-  for (size_t i = 0; i < primary.size(); ++i)
-    bufref[pos + i] = primary[i];
+  inline_memcpy(bufref.data() + pos, primary.data(), primary.size());
   pos += primary.size();
 
   // If there is no remainder, we can return early, since the first piece has
@@ -98,7 +149,7 @@ FileIOResult File::write_unlocked_fbf(const uint8_t *data, size_t len) {
   // is full.
   const size_t write_size = pos;
 
-  auto buf_result = platform_write(this, buf, write_size);
+  FileIOResult buf_result = platform_write(this, buf, write_size);
   size_t bytes_written = buf_result.value;
 
   pos = 0; // Buffer is now empty so reset pos to the beginning.
@@ -114,14 +165,13 @@ FileIOResult File::write_unlocked_fbf(const uint8_t *data, size_t len) {
   // know that if the second piece has data in it then the buffer has been
   // flushed, meaning that pos is always 0.
   if (remainder.size() < bufsize) {
-    // TODO: Replace the for loop below with a call to internal memcpy.
-    for (size_t i = 0; i < remainder.size(); ++i)
-      bufref[i] = remainder[i];
+    inline_memcpy(bufref.data(), remainder.data(), remainder.size());
     pos = remainder.size();
   } else {
 
-    auto result = platform_write(this, remainder.data(), remainder.size());
-    size_t bytes_written = buf_result.value;
+    FileIOResult result =
+        platform_write(this, remainder.data(), remainder.size());
+    bytes_written = result.value;
 
     // If less bytes were written than expected, then an error occurred. Return
     // the number of bytes that have been written from |data|.
@@ -182,6 +232,20 @@ FileIOResult File::write_unlocked_lbf(const uint8_t *data, size_t len) {
 }
 
 FileIOResult File::read_unlocked(void *data, size_t len) {
+  switch (orientation) {
+  case Orientation::WIDE:
+    err = true;
+    return {0, EINVAL};
+  case Orientation::UNORIENTED:
+    orientation = Orientation::BYTE;
+    break;
+  case Orientation::BYTE:
+    break;
+  }
+  return read_unlocked_impl(data, len);
+}
+
+FileIOResult File::read_unlocked_impl(void *data, size_t len) {
   if (!read_allowed()) {
     err = true;
     return {0, EBADF};
@@ -189,6 +253,17 @@ FileIOResult File::read_unlocked(void *data, size_t len) {
 
   prev_op = FileOp::READ;
 
+  if (bufmode == _IONBF) { // unbuffered.
+    return read_unlocked_nbf(static_cast<uint8_t *>(data), len);
+  } else if (bufmode == _IOFBF) { // fully buffered
+    return read_unlocked_fbf(static_cast<uint8_t *>(data), len);
+  } else /*if (bufmode == _IOLBF) */ { // line buffered
+    // There is no line buffered mode for read. Use fully buffered instead.
+    return read_unlocked_fbf(static_cast<uint8_t *>(data), len);
+  }
+}
+
+size_t File::copy_data_from_buf(uint8_t *data, size_t len) {
   cpp::span<uint8_t> bufref(static_cast<uint8_t *>(buf), bufsize);
   cpp::span<uint8_t> dataref(static_cast<uint8_t *>(data), len);
 
@@ -196,44 +271,49 @@ FileIOResult File::read_unlocked(void *data, size_t len) {
   // available_data is never a wrapped around value.
   size_t available_data = read_limit - pos;
   if (len <= available_data) {
-    // TODO: Replace the for loop below with a call to internal memcpy.
-    for (size_t i = 0; i < len; ++i)
-      dataref[i] = bufref[i + pos];
+    inline_memcpy(dataref.data(), bufref.data() + pos, len);
     pos += len;
     return len;
   }
 
   // Copy all of the available data.
-  // TODO: Replace the for loop with a call to internal memcpy.
-  for (size_t i = 0; i < available_data; ++i)
-    dataref[i] = bufref[i + pos];
+  inline_memcpy(dataref.data(), bufref.data() + pos, available_data);
   read_limit = pos = 0; // Reset the pointers.
+
+  return available_data;
+}
+
+FileIOResult File::read_unlocked_fbf(uint8_t *data, size_t len) {
+  // Read data from the buffer first.
+  size_t available_data = copy_data_from_buf(data, len);
+  if (available_data == len)
+    return available_data;
+
   // Update the dataref to reflect that fact that we have already
   // copied |available_data| into |data|.
-  dataref = cpp::span<uint8_t>(dataref.data() + available_data,
-                               dataref.size() - available_data);
-
   size_t to_fetch = len - available_data;
+  cpp::span<uint8_t> dataref(static_cast<uint8_t *>(data) + available_data,
+                             to_fetch);
+
   if (to_fetch > bufsize) {
-    auto result = platform_read(this, dataref.data(), to_fetch);
+    FileIOResult result = platform_read(this, dataref.data(), to_fetch);
     size_t fetched_size = result.value;
     if (result.has_error() || fetched_size < to_fetch) {
       if (!result.has_error())
         eof = true;
       else
         err = true;
-      return {available_data + fetched_size, result.has_error()};
+      return {available_data + fetched_size, result.error};
     }
     return len;
   }
 
   // Fetch and buffer another buffer worth of data.
-  auto result = platform_read(this, buf, bufsize);
+  FileIOResult result = platform_read(this, buf, bufsize);
   size_t fetched_size = result.value;
   read_limit += fetched_size;
   size_t transfer_size = fetched_size >= to_fetch ? to_fetch : fetched_size;
-  for (size_t i = 0; i < transfer_size; ++i)
-    dataref[i] = bufref[i];
+  inline_memcpy(dataref.data(), buf, transfer_size);
   pos += transfer_size;
   if (result.has_error() || fetched_size < to_fetch) {
     if (!result.has_error())
@@ -244,6 +324,26 @@ FileIOResult File::read_unlocked(void *data, size_t len) {
   return {transfer_size + available_data, result.error};
 }
 
+FileIOResult File::read_unlocked_nbf(uint8_t *data, size_t len) {
+  // Check whether there is a character in the ungetc buffer.
+  size_t available_data = copy_data_from_buf(data, len);
+  if (available_data == len)
+    return available_data;
+
+  // Directly copy the data into |data|.
+  cpp::span<uint8_t> dataref(static_cast<uint8_t *>(data) + available_data,
+                             len - available_data);
+  FileIOResult result = platform_read(this, dataref.data(), dataref.size());
+
+  if (result.has_error() || result < dataref.size()) {
+    if (!result.has_error())
+      eof = true;
+    else
+      err = true;
+  }
+  return {result + available_data, result.error};
+}
+
 int File::ungetc_unlocked(int c) {
   // There is no meaning to unget if:
   // 1. You are trying to push back EOF.
@@ -251,6 +351,17 @@ int File::ungetc_unlocked(int c) {
   // 3. The previous operation was a write operation.
   if (c == EOF || !read_allowed() || (prev_op == FileOp::WRITE))
     return EOF;
+
+  switch (orientation) {
+  case Orientation::WIDE:
+    err = true;
+    return EOF;
+  case Orientation::UNORIENTED:
+    orientation = Orientation::BYTE;
+    break;
+  case Orientation::BYTE:
+    break;
+  }
 
   cpp::span<uint8_t> bufref(static_cast<uint8_t *>(buf), bufsize);
   if (read_limit == 0) {
@@ -282,11 +393,11 @@ int File::ungetc_unlocked(int c) {
   return c;
 }
 
-ErrorOr<int> File::seek(long offset, int whence) {
+ErrorOr<int> File::seek(off_t offset, int whence) {
   FileLock lock(this);
   if (prev_op == FileOp::WRITE && pos > 0) {
 
-    auto buf_result = platform_write(this, buf, pos);
+    FileIOResult buf_result = platform_write(this, buf, pos);
     if (buf_result.has_error() || buf_result.value < pos) {
       err = true;
       return Error(buf_result.error);
@@ -297,43 +408,54 @@ ErrorOr<int> File::seek(long offset, int whence) {
     // function. Note that read_limit >= pos is always true.
     offset -= (read_limit - pos);
   }
-  pos = read_limit = 0;
-  prev_op = FileOp::SEEK;
-  // Reset the eof flag as a seek might move the file positon to some place
-  // readable.
-  eof = false;
   auto result = platform_seek(this, offset, whence);
   if (!result.has_value())
     return Error(result.error());
-  else
-    return 0;
+
+  pos = read_limit = 0;
+  prev_op = FileOp::SEEK;
+  // Reset the eof flag as a seek might move the file position to some place
+  // readable.
+  eof = false;
+  if (orientation == Orientation::WIDE ||
+      orientation == Orientation::UNORIENTED)
+    mbstate = internal::mbstate();
+
+  return 0;
 }
 
-ErrorOr<long> File::tell() {
+ErrorOr<off_t> File::tell() {
   FileLock lock(this);
   auto seek_target = eof ? SEEK_END : SEEK_CUR;
   auto result = platform_seek(this, 0, seek_target);
   if (!result.has_value() || result.value() < 0)
     return Error(result.error());
-  long platform_offset = result.value();
+  off_t platform_offset = result.value();
   if (prev_op == FileOp::READ)
     return platform_offset - (read_limit - pos);
-  else if (prev_op == FileOp::WRITE)
+  if (prev_op == FileOp::WRITE)
     return platform_offset + pos;
-  else
-    return platform_offset;
+  return platform_offset;
 }
 
 int File::flush_unlocked() {
   if (prev_op == FileOp::WRITE && pos > 0) {
-    auto buf_result = platform_write(this, buf, pos);
+    FileIOResult buf_result = platform_write(this, buf, pos);
     if (buf_result.has_error() || buf_result.value < pos) {
       err = true;
       return buf_result.error;
     }
     pos = 0;
+  } else if (prev_op == FileOp::READ) {
+    if (read_limit > pos) {
+      if (!platform_seek(this, -static_cast<off_t>(read_limit - pos), SEEK_CUR)
+               .has_value()) {
+        // We ignore seek errors for non-seekable files (like pipes) as per
+        // POSIX.
+      }
+    }
+    pos = read_limit = 0;
   }
-  // TODO: Add POSIX behavior for input streams.
   return 0;
 }
 
@@ -356,7 +478,7 @@ int File::set_buffer(void *buffer, size_t size, int buffer_mode) {
     // We exclude the case of buffer_mode == _IONBF in this branch
     // because we don't need to allocate buffer in such a case.
     if (own_buf) {
-      // This is one of the places where use a C allocation functon
+      // This is one of the places where a C allocation function is used
       // as C++ does not have an equivalent of realloc.
       buf = reinterpret_cast<uint8_t *>(realloc(buf, size));
       if (buf == nullptr)
@@ -433,4 +555,138 @@ File::ModeFlags File::mode_flags(const char *mode) {
   return flags;
 }
 
-} // namespace LIBC_NAMESPACE
+FileIOResult File::write_unlocked(const wchar_t *ws, size_t len) {
+  switch (orientation) {
+  case Orientation::BYTE:
+    err = true;
+    return {0, EINVAL};
+  case Orientation::UNORIENTED:
+    orientation = Orientation::WIDE;
+    break;
+  case Orientation::WIDE:
+    break;
+  }
+
+  size_t written = 0;
+  for (size_t i = 0; i < len; ++i) {
+    internal::CharacterConverter cr(&mbstate);
+    int push_err = cr.push(static_cast<char32_t>(ws[i]));
+    if (push_err != 0) {
+      err = true;
+      return {written, push_err};
+    }
+    // buffer the whole wchar to save on calls to write.
+    char buffer[4];
+    size_t char_size = 0;
+    while (!cr.isEmpty()) {
+      auto pop_res = cr.pop<char8_t>();
+      if (!pop_res.has_value()) {
+        err = true;
+        return {written, pop_res.error()};
+      }
+      char8_t byte = pop_res.value();
+      buffer[char_size] = byte;
+      ++char_size;
+    }
+    auto write_res = write_unlocked_impl(buffer, char_size);
+    if (write_res.has_error())
+      return {written, write_res.error};
+    if (write_res.value < char_size) {
+      err = true;
+      return {written, EIO};
+    }
+    ++written;
+  }
+  return {written, 0};
+}
+
+FileIOResult File::read_unlocked(wchar_t *ws, size_t len) {
+  switch (orientation) {
+  case Orientation::BYTE:
+    err = true;
+    return {0, EINVAL};
+  case Orientation::UNORIENTED:
+    orientation = Orientation::WIDE;
+    break;
+  case Orientation::WIDE:
+    break;
+  }
+
+  size_t read_count = 0;
+  for (size_t i = 0; i < len; ++i) {
+    internal::CharacterConverter cr(&mbstate);
+    while (!cr.isFull()) {
+      uint8_t byte;
+      auto read_res = read_unlocked_impl(&byte, 1);
+      if (read_res.has_error())
+        return {read_count, read_res.error};
+      if (read_res.value == 0) { // EOF
+        if (cr.isEmpty())
+          return {read_count, 0};
+        err = true;
+        return {read_count, EILSEQ}; // Incomplete character at EOF
+      }
+      int push_err = cr.push(static_cast<char8_t>(byte));
+      if (push_err != 0) {
+        err = true;
+        return {read_count, push_err};
+      }
+    }
+    auto pop_res = cr.pop<char32_t>();
+    if (!pop_res.has_value()) {
+      err = true;
+      return {read_count, pop_res.error()};
+    }
+    ws[i] = static_cast<wchar_t>(pop_res.value());
+    ++read_count;
+  }
+  return {read_count, 0};
+}
+
+ErrorOr<wint_t> File::ungetwc_unlocked(wint_t wc) {
+  // There is no meaning to unget if:
+  // 1. You are trying to push back EOF.
+  // 2. Read operations are not allowed on this file.
+  // 3. The previous operation was a write operation.
+  if (wc == WEOF || !read_allowed() || (prev_op == FileOp::WRITE))
+    return WEOF;
+  switch (orientation) {
+  case Orientation::BYTE:
+    err = true;
+    return WEOF;
+  case Orientation::UNORIENTED:
+    orientation = Orientation::WIDE;
+    break;
+  case Orientation::WIDE:
+    break;
+  }
+
+  char mb_buf[4];
+  auto result = internal::wcrtomb(mb_buf, static_cast<wchar_t>(wc), &mbstate);
+  if (!result.has_value())
+    return Error(result.error());
+
+  size_t n = result.value();
+
+  if (read_limit == 0) {
+    if (n > bufsize)
+      return WEOF;
+
+    for (size_t i = 0; i < n; ++i)
+      buf[i] = static_cast<uint8_t>(mb_buf[i]);
+
+    read_limit = n;
+    pos = 0;
+  } else {
+    if (pos < n)
+      return WEOF;
+    pos -= n;
+    for (size_t i = 0; i < n; ++i)
+      buf[pos + i] = static_cast<uint8_t>(mb_buf[i]);
+  }
+  eof = false;
+  err = false;
+  return wc;
+}
+
+} // namespace LIBC_NAMESPACE_DECL

@@ -1,5 +1,5 @@
-// RUN: %clangxx -std=c++1z -faligned-allocation -O0 %s -o %t && %run %t
-// RUN: %clangxx -std=c++1z -faligned-allocation -fsized-deallocation -O0 %s -o %t && %run %t
+// RUN: %clangxx -fno-sized-deallocation -O0 %s -o %t && %run %t
+// RUN: %clangxx -fsized-deallocation -O0 %s -o %t && %run %t
 
 // ubsan does not intercept new/delete.
 // UNSUPPORTED: ubsan

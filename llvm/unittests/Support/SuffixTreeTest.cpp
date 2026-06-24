@@ -78,6 +78,7 @@ TEST(SuffixTreeTest, TestLongerRepetition) {
 // indices 0 and 1.
 //
 // FIXME: Add support for detecting {1, 1} and {1, 1, 1}
+// See Test TestSingleCharacterRepeatWithLeafDescendants for the fix
 TEST(SuffixTreeTest, TestSingleCharacterRepeat) {
   std::vector<unsigned> RepeatedRepetitionData = {1, 1, 1, 1, 1, 1, 2};
   std::vector<unsigned>::iterator RRDIt, RRDIt2;
@@ -86,6 +87,35 @@ TEST(SuffixTreeTest, TestSingleCharacterRepeat) {
   for (auto It = ST.begin(); It != ST.end(); It++)
     SubStrings.push_back(*It);
   EXPECT_EQ(SubStrings.size(), 1u);
+  for (SuffixTree::RepeatedSubstring &RS : SubStrings) {
+    EXPECT_EQ(RS.StartIndices.size(),
+              RepeatedRepetitionData.size() - RS.Length);
+    for (unsigned StartIdx : SubStrings[0].StartIndices) {
+      RRDIt = RRDIt2 = RepeatedRepetitionData.begin();
+      std::advance(RRDIt, StartIdx);
+      std::advance(RRDIt2, StartIdx + SubStrings[0].Length);
+      ASSERT_TRUE(
+          all_of(make_range<std::vector<unsigned>::iterator>(RRDIt, RRDIt2),
+                 [](unsigned Elt) { return Elt == 1; }));
+    }
+  }
+}
+
+// Tests that the SuffixTree is able to find the following substrings:
+// {1, 1} at indices 0, 1, 2, 3, and 4;
+// {1, 1, 1} at indices 0, 1, 2, and 3;
+// {1, 1, 1, 1}  at indices 0, 1, and 2; and
+// {1, 1, 1, 1, 1} at indices 0 and 1.
+//
+// This is the fix for TestSingleCharacterRepeat.
+TEST(SuffixTreeTest, TestSingleCharacterRepeatWithLeafDescendants) {
+  std::vector<unsigned> RepeatedRepetitionData = {1, 1, 1, 1, 1, 1, 2};
+  std::vector<unsigned>::iterator RRDIt, RRDIt2;
+  SuffixTree ST(RepeatedRepetitionData, /*OutlinerLeafDescendants=*/true);
+  std::vector<SuffixTree::RepeatedSubstring> SubStrings;
+  for (auto It = ST.begin(); It != ST.end(); It++)
+    SubStrings.push_back(*It);
+  EXPECT_EQ(SubStrings.size(), 4u);
   for (SuffixTree::RepeatedSubstring &RS : SubStrings) {
     EXPECT_EQ(RS.StartIndices.size(),
               RepeatedRepetitionData.size() - RS.Length);
@@ -136,6 +166,110 @@ TEST(SuffixTreeTest, TestExclusion) {
       EXPECT_TRUE(
           all_of(make_range<std::vector<unsigned>::iterator>(RRDIt, RRDIt2),
                  [](unsigned Elt) { return Elt == 1; }));
+    }
+  }
+}
+
+// Tests that the SuffixTree is able to find three substrings
+// {1, 2, 3} at indices 6 and 10;
+// {2, 3} at indices 7 and 11; and
+// {1, 2} at indicies 0 and 3.
+//
+// FIXME: {1, 2} has indices 6 and 10 missing as it is a substring of {1, 2, 3}
+// See Test TestSubstringRepeatsWithLeafDescendants for the fix
+TEST(SuffixTreeTest, TestSubstringRepeats) {
+  std::vector<unsigned> RepeatedRepetitionData = {1, 2, 100, 1, 2, 101, 1,
+                                                  2, 3, 103, 1, 2, 3,   104};
+  SuffixTree ST(RepeatedRepetitionData);
+  std::vector<SuffixTree::RepeatedSubstring> SubStrings;
+  for (auto It = ST.begin(); It != ST.end(); It++)
+    SubStrings.push_back(*It);
+  EXPECT_EQ(SubStrings.size(), 3u);
+  unsigned Len;
+  for (SuffixTree::RepeatedSubstring &RS : SubStrings) {
+    Len = RS.Length;
+    bool IsExpectedLen = (Len == 3u || Len == 2u);
+    ASSERT_TRUE(IsExpectedLen);
+    bool IsExpectedIndex;
+
+    if (Len == 3u) { // {1, 2, 3}
+      EXPECT_EQ(RS.StartIndices.size(), 2u);
+      for (unsigned StartIdx : RS.StartIndices) {
+        IsExpectedIndex = (StartIdx == 6u || StartIdx == 10u);
+        EXPECT_TRUE(IsExpectedIndex);
+        EXPECT_EQ(RepeatedRepetitionData[StartIdx], 1u);
+        EXPECT_EQ(RepeatedRepetitionData[StartIdx + 1], 2u);
+        EXPECT_EQ(RepeatedRepetitionData[StartIdx + 2], 3u);
+      }
+    } else {
+      if (RepeatedRepetitionData[RS.StartIndices[0]] == 1u) { // {1, 2}
+        EXPECT_EQ(RS.StartIndices.size(), 2u);
+        for (unsigned StartIdx : RS.StartIndices) {
+          IsExpectedIndex = (StartIdx == 0u || StartIdx == 3u);
+          EXPECT_TRUE(IsExpectedIndex);
+          EXPECT_EQ(RepeatedRepetitionData[StartIdx + 1], 2u);
+        }
+      } else { // {2, 3}
+        EXPECT_EQ(RS.StartIndices.size(), 2u);
+        for (unsigned StartIdx : RS.StartIndices) {
+          IsExpectedIndex = (StartIdx == 7u || StartIdx == 11u);
+          EXPECT_TRUE(IsExpectedIndex);
+          EXPECT_EQ(RepeatedRepetitionData[StartIdx], 2u);
+          EXPECT_EQ(RepeatedRepetitionData[StartIdx + 1], 3u);
+        }
+      }
+    }
+  }
+}
+
+// Tests that the SuffixTree is able to find three substrings
+// {1, 2, 3} at indices 6 and 10;
+// {2, 3} at indices 7 and 11; and
+// {1, 2} at indicies 0, 3, 6, and 10.
+//
+// This is the fix for TestSubstringRepeats
+TEST(SuffixTreeTest, TestSubstringRepeatsWithLeafDescendants) {
+  std::vector<unsigned> RepeatedRepetitionData = {1, 2, 100, 1, 2, 101, 1,
+                                                  2, 3, 103, 1, 2, 3,   104};
+  SuffixTree ST(RepeatedRepetitionData, /*OutlinerLeafDescendants=*/true);
+  std::vector<SuffixTree::RepeatedSubstring> SubStrings;
+  for (auto It = ST.begin(); It != ST.end(); It++)
+    SubStrings.push_back(*It);
+  EXPECT_EQ(SubStrings.size(), 3u);
+  unsigned Len;
+  for (SuffixTree::RepeatedSubstring &RS : SubStrings) {
+    Len = RS.Length;
+    bool IsExpectedLen = (Len == 3u || Len == 2u);
+    ASSERT_TRUE(IsExpectedLen);
+    bool IsExpectedIndex;
+
+    if (Len == 3u) { // {1, 2, 3}
+      EXPECT_EQ(RS.StartIndices.size(), 2u);
+      for (unsigned StartIdx : RS.StartIndices) {
+        IsExpectedIndex = (StartIdx == 6u || StartIdx == 10u);
+        EXPECT_TRUE(IsExpectedIndex);
+        EXPECT_EQ(RepeatedRepetitionData[StartIdx], 1u);
+        EXPECT_EQ(RepeatedRepetitionData[StartIdx + 1], 2u);
+        EXPECT_EQ(RepeatedRepetitionData[StartIdx + 2], 3u);
+      }
+    } else {
+      if (RepeatedRepetitionData[RS.StartIndices[0]] == 1u) { // {1, 2}
+        EXPECT_EQ(RS.StartIndices.size(), 4u);
+        for (unsigned StartIdx : RS.StartIndices) {
+          IsExpectedIndex = (StartIdx == 0u || StartIdx == 3u ||
+                             StartIdx == 6u || StartIdx == 10u);
+          EXPECT_TRUE(IsExpectedIndex);
+          EXPECT_EQ(RepeatedRepetitionData[StartIdx + 1], 2u);
+        }
+      } else { // {2, 3}
+        EXPECT_EQ(RS.StartIndices.size(), 2u);
+        for (unsigned StartIdx : RS.StartIndices) {
+          IsExpectedIndex = (StartIdx == 7u || StartIdx == 11u);
+          EXPECT_TRUE(IsExpectedIndex);
+          EXPECT_EQ(RepeatedRepetitionData[StartIdx], 2u);
+          EXPECT_EQ(RepeatedRepetitionData[StartIdx + 1], 3u);
+        }
+      }
     }
   }
 }

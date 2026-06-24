@@ -13,9 +13,26 @@
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 
 namespace llvm {
-struct LoopIdiomVectorizePass : PassInfoMixin<LoopIdiomVectorizePass> {
-  PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
-                        LoopStandardAnalysisResults &AR, LPMUpdater &U);
+enum class LoopIdiomVectorizeStyle { Masked, Predicated };
+
+class LoopIdiomVectorizePass
+    : public OptionalPassInfoMixin<LoopIdiomVectorizePass> {
+  LoopIdiomVectorizeStyle VectorizeStyle = LoopIdiomVectorizeStyle::Masked;
+
+  // The VF used in vectorizing the byte compare pattern.
+  unsigned ByteCompareVF = 16;
+
+public:
+  LoopIdiomVectorizePass() = default;
+  explicit LoopIdiomVectorizePass(LoopIdiomVectorizeStyle S)
+      : VectorizeStyle(S) {}
+
+  LoopIdiomVectorizePass(LoopIdiomVectorizeStyle S, unsigned BCVF)
+      : VectorizeStyle(S), ByteCompareVF(BCVF) {}
+
+  LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
+                                 LoopStandardAnalysisResults &AR,
+                                 LPMUpdater &U);
 };
 } // namespace llvm
 #endif // LLVM_LIB_TRANSFORMS_VECTORIZE_LOOPIDIOMVECTORIZE_H

@@ -7,24 +7,31 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: linux && target={{aarch64-.+}}
+// REQUIRES: target={{aarch64-.+}}
+// UNSUPPORTED: target={{.*-windows.*}}
+
+// TODO: investigate this failure.
+// XFAIL: target={{.*-apple-.*}} && stdlib=system
 
 // Basic test for float registers number are accepted.
 
-#include <dlfcn.h>
+#include "support/func_bounds.h"
 #include <stdlib.h>
 #include <string.h>
 #include <unwind.h>
 
+FUNC_BOUNDS_DECL(main_func);
+
 _Unwind_Reason_Code frame_handler(struct _Unwind_Context *ctx, void *arg) {
   (void)arg;
-  Dl_info info = {0, 0, 0, 0};
 
-  // Unwind util the main is reached, above frames depend on the platform and
+  // Unwind until the main is reached, above frames depend on the platform and
   // architecture.
-  if (dladdr(reinterpret_cast<void *>(_Unwind_GetIP(ctx)), &info) &&
-      info.dli_sname && !strcmp("main", info.dli_sname))
+  uintptr_t ip = _Unwind_GetIP(ctx);
+  if (ip >= (uintptr_t)FUNC_START(main_func) &&
+      ip < (uintptr_t)FUNC_END(main_func)) {
     _Exit(0);
+  }
 
   return _URC_NO_REASON;
 }
@@ -45,7 +52,7 @@ __attribute__((noinline)) void foo() {
   _Unwind_Backtrace(frame_handler, NULL);
 }
 
-int main() {
+FUNC_ATTR(main_func) int main(int, char **) {
   foo();
   return -2;
 }

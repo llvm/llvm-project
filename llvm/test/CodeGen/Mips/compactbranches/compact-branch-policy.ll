@@ -1,7 +1,7 @@
 ; Check that -mips-compact-branches={never,optimal,always} is accepted and honoured.
-; RUN: llc -march=mips -mcpu=mips32r6 -mips-compact-branches=never < %s | FileCheck %s -check-prefix=NEVER
-; RUN: llc -march=mips -mcpu=mips32r6 -mips-compact-branches=optimal < %s | FileCheck %s -check-prefix=OPTIMAL
-; RUN: llc -march=mips -mcpu=mips32r6 -mips-compact-branches=always < %s | FileCheck %s -check-prefix=ALWAYS
+; RUN: llc -mtriple=mips -mcpu=mips32r6 -mips-compact-branches=never < %s | FileCheck %s -check-prefix=NEVER
+; RUN: llc -mtriple=mips -mcpu=mips32r6 -mips-compact-branches=optimal < %s | FileCheck %s -check-prefix=OPTIMAL
+; RUN: llc -mtriple=mips -mcpu=mips32r6 -mips-compact-branches=always < %s | FileCheck %s -check-prefix=ALWAYS
 
 define i32 @l(i32 signext %a, i32 signext %b) {
 entry:

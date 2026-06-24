@@ -58,6 +58,11 @@ void MultiplexASTDeserializationListener::DeclRead(GlobalDeclID ID,
     Listeners[i]->DeclRead(ID, D);
 }
 
+void MultiplexASTDeserializationListener::PredefinedDeclBuilt(PredefinedDeclIDs ID, const Decl *D) {
+  for (size_t i = 0, e = Listeners.size(); i != e; ++i)
+    Listeners[i]->PredefinedDeclBuilt(ID, D);
+}
+
 void MultiplexASTDeserializationListener::SelectorRead(
     serialization::SelectorID ID, Selector Sel) {
   for (size_t i = 0, e = Listeners.size(); i != e; ++i)
@@ -102,6 +107,8 @@ public:
   void ResolvedOperatorDelete(const CXXDestructorDecl *DD,
                               const FunctionDecl *Delete,
                               Expr *ThisArg) override;
+  void ResolvedOperatorGlobDelete(const CXXDestructorDecl *DD,
+                                  const FunctionDecl *GlobDelete) override;
   void CompletedImplicitDefinition(const FunctionDecl *D) override;
   void InstantiationRequested(const ValueDecl *D) override;
   void VariableDefinitionInstantiated(const VarDecl *D) override;
@@ -113,12 +120,12 @@ public:
   void DeclarationMarkedUsed(const Decl *D) override;
   void DeclarationMarkedOpenMPThreadPrivate(const Decl *D) override;
   void DeclarationMarkedOpenMPAllocate(const Decl *D, const Attr *A) override;
+  void DeclarationMarkedOpenMPIndirectCall(const Decl *D) override;
   void DeclarationMarkedOpenMPDeclareTarget(const Decl *D,
                                             const Attr *Attr) override;
   void RedefinedHiddenDefinition(const NamedDecl *D, Module *M) override;
   void AddedAttributeToRecord(const Attr *Attr,
                               const RecordDecl *Record) override;
-  void EnteringModulePurview() override;
   void AddedManglingNumber(const Decl *D, unsigned) override;
   void AddedStaticLocalNumbers(const Decl *D, unsigned) override;
   void AddedAnonymousNamespace(const TranslationUnitDecl *,
@@ -179,6 +186,11 @@ void MultiplexASTMutationListener::ResolvedOperatorDelete(
   for (auto *L : Listeners)
     L->ResolvedOperatorDelete(DD, Delete, ThisArg);
 }
+void MultiplexASTMutationListener::ResolvedOperatorGlobDelete(
+    const CXXDestructorDecl *DD, const FunctionDecl *GlobDelete) {
+  for (auto *L : Listeners)
+    L->ResolvedOperatorGlobDelete(DD, GlobDelete);
+}
 void MultiplexASTMutationListener::CompletedImplicitDefinition(
                                                         const FunctionDecl *D) {
   for (size_t i = 0, e = Listeners.size(); i != e; ++i)
@@ -228,6 +240,11 @@ void MultiplexASTMutationListener::DeclarationMarkedOpenMPAllocate(
   for (ASTMutationListener *L : Listeners)
     L->DeclarationMarkedOpenMPAllocate(D, A);
 }
+void MultiplexASTMutationListener::DeclarationMarkedOpenMPIndirectCall(
+    const Decl *D) {
+  for (ASTMutationListener *L : Listeners)
+    L->DeclarationMarkedOpenMPIndirectCall(D);
+}
 void MultiplexASTMutationListener::DeclarationMarkedOpenMPDeclareTarget(
     const Decl *D, const Attr *Attr) {
   for (auto *L : Listeners)
@@ -244,11 +261,6 @@ void MultiplexASTMutationListener::AddedAttributeToRecord(
                                                     const RecordDecl *Record) {
   for (auto *L : Listeners)
     L->AddedAttributeToRecord(Attr, Record);
-}
-
-void MultiplexASTMutationListener::EnteringModulePurview() {
-  for (auto *L : Listeners)
-    L->EnteringModulePurview();
 }
 
 void MultiplexASTMutationListener::AddedManglingNumber(const Decl *D,
@@ -292,6 +304,13 @@ MultiplexConsumer::MultiplexConsumer(
             serializationListeners);
   }
 }
+
+MultiplexConsumer::MultiplexConsumer(std::unique_ptr<ASTConsumer> C)
+    : MultiplexConsumer([](std::unique_ptr<ASTConsumer> Consumer) {
+        std::vector<std::unique_ptr<ASTConsumer>> Consumers;
+        Consumers.push_back(std::move(Consumer));
+        return Consumers;
+      }(std::move(C))) {}
 
 MultiplexConsumer::~MultiplexConsumer() {}
 
@@ -357,7 +376,7 @@ void MultiplexConsumer::CompleteTentativeDefinition(VarDecl *D) {
     Consumer->CompleteTentativeDefinition(D);
 }
 
-void MultiplexConsumer::CompleteExternalDeclaration(VarDecl *D) {
+void MultiplexConsumer::CompleteExternalDeclaration(DeclaratorDecl *D) {
   for (auto &Consumer : Consumers)
     Consumer->CompleteExternalDeclaration(D);
 }

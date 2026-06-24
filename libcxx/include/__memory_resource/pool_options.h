@@ -10,7 +10,7 @@
 #define _LIBCPP___MEMORY_RESOURCE_POOL_OPTIONS_H
 
 #include <__config>
-#include <cstddef>
+#include <__cstddef/size_t.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -24,7 +24,7 @@ namespace pmr {
 
 // [mem.res.pool.options]
 
-struct _LIBCPP_EXPORTED_FROM_ABI pool_options {
+struct pool_options {
   size_t max_blocks_per_chunk        = 0;
   size_t largest_required_pool_block = 0;
 };

@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o - %s | FileCheck %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o - %s | FileCheck %s
+; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o - %s | FileCheck %s
 
 ; Test that a null check is not emitted for lowered addrspacecast
 
@@ -21,7 +21,7 @@ define void @cast_alloca() {
   ret void
 }
 
-@lds = internal unnamed_addr addrspace(3) global i8 undef, align 4
+@lds = internal unnamed_addr addrspace(3) global i8 poison, align 4
 
 ; CHECK-LABEL: {{^}}cast_lds_gv:
 ; CHECK: s_mov_b64 s[{{[0-9]+}}:[[HIREG:[0-9]+]]], src_shared_base

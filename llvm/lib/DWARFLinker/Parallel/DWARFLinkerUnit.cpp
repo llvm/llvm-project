@@ -70,9 +70,7 @@ void DwarfUnit::emitDwarfAbbrevEntry(const DIEAbbrev &Abbrev,
 
   // For each attribute description.
   const SmallVectorImpl<DIEAbbrevData> &Data = Abbrev.getData();
-  for (unsigned i = 0, N = Data.size(); i < N; ++i) {
-    const DIEAbbrevData &AttrData = Data[i];
-
+  for (const DIEAbbrevData &AttrData : Data) {
     // Emit attribute type.
     encodeULEB128(AttrData.getAttribute(), AbbrevSection.OS);
 
@@ -120,11 +118,14 @@ Error DwarfUnit::emitDebugInfo(const Triple &TargetTriple) {
   return Error::success();
 }
 
-Error DwarfUnit::emitDebugLine(const Triple &TargetTriple,
-                               const DWARFDebugLine::LineTable &OutLineTable) {
+Error DwarfUnit::emitDebugLine(
+    const Triple &TargetTriple, const DWARFDebugLine::LineTable &OutLineTable,
+    ArrayRef<uint64_t> OrigRowIndices,
+    DenseMap<uint64_t, uint64_t> *RowIndexToSeqStartOffset) {
   DebugLineSectionEmitter DebugLineEmitter(TargetTriple, *this);
 
-  return DebugLineEmitter.emit(OutLineTable);
+  return DebugLineEmitter.emit(OutLineTable, OrigRowIndices,
+                               RowIndexToSeqStartOffset);
 }
 
 Error DwarfUnit::emitDebugStringOffsetSection() {

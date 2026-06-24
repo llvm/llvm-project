@@ -2,6 +2,7 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Symbol/SymbolLocation.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrameList.h"
 #include "lldb/Target/Target.h"
@@ -13,18 +14,6 @@ using namespace lldb;
 using namespace lldb_private;
 
 namespace lldb_private {
-
-/// Stores a function module spec, symbol name and possibly an alternate symbol
-/// name.
-struct SymbolLocation {
-  FileSpec module_spec;
-  std::vector<ConstString> symbols;
-
-  // The symbols are regular expressions. In such case all symbols are matched
-  // with their trailing @VER symbol version stripped.
-  bool symbols_are_regex = false;
-};
-
 /// Fetches the abort frame location depending on the current platform.
 ///
 /// \param[in] os
@@ -38,6 +27,12 @@ bool GetAbortLocation(llvm::Triple::OSType os, SymbolLocation &location) {
   switch (os) {
   case llvm::Triple::Darwin:
   case llvm::Triple::MacOSX:
+  case llvm::Triple::IOS:
+  case llvm::Triple::TvOS:
+  case llvm::Triple::WatchOS:
+  case llvm::Triple::BridgeOS:
+  case llvm::Triple::DriverKit:
+  case llvm::Triple::XROS:
     location.module_spec = FileSpec("libsystem_kernel.dylib");
     location.symbols.push_back(ConstString("__pthread_kill"));
     break;
@@ -71,6 +66,12 @@ bool GetAssertLocation(llvm::Triple::OSType os, SymbolLocation &location) {
   switch (os) {
   case llvm::Triple::Darwin:
   case llvm::Triple::MacOSX:
+  case llvm::Triple::IOS:
+  case llvm::Triple::TvOS:
+  case llvm::Triple::WatchOS:
+  case llvm::Triple::BridgeOS:
+  case llvm::Triple::DriverKit:
+  case llvm::Triple::XROS:
     location.module_spec = FileSpec("libsystem_c.dylib");
     location.symbols.push_back(ConstString("__assert_rtn"));
     break;
@@ -100,6 +101,7 @@ void RegisterAssertFrameRecognizer(Process *process) {
     target.GetFrameRecognizerManager().AddRecognizer(
         std::make_shared<AssertFrameRecognizer>(),
         location.module_spec.GetFilename(), location.symbols,
+        Mangled::ePreferDemangled,
         /*first_instruction_only*/ false);
     return;
   }
@@ -123,6 +125,7 @@ void RegisterAssertFrameRecognizer(Process *process) {
       std::make_shared<AssertFrameRecognizer>(),
       std::make_shared<RegularExpression>(std::move(module_re)),
       std::make_shared<RegularExpression>(std::move(symbol_re)),
+      Mangled::ePreferDemangled,
       /*first_instruction_only*/ false);
 }
 
@@ -149,7 +152,7 @@ AssertFrameRecognizer::RecognizeFrame(lldb::StackFrameSP frame_sp) {
 
     if (!prev_frame_sp) {
       Log *log = GetLog(LLDBLog::Unwind);
-      LLDB_LOG(log, "Abort Recognizer: Hit unwinding bound ({1} frames)!",
+      LLDB_LOG(log, "Abort Recognizer: Hit unwinding bound ({} frames)!",
                frames_to_fetch);
       break;
     }

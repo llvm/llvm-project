@@ -31,11 +31,14 @@
 
 namespace Fortran::lower::pft {
 
+struct CompilerDirectiveUnit;
 struct Evaluation;
-struct Program;
-struct ModuleLikeUnit;
 struct FunctionLikeUnit;
+struct ModuleLikeUnit;
+struct Program;
 
+using ContainedUnit = std::variant<CompilerDirectiveUnit, FunctionLikeUnit>;
+using ContainedUnitList = std::list<ContainedUnit>;
 using EvaluationList = std::list<Evaluation>;
 
 /// Provide a variant like container that can hold references. It can hold
@@ -73,7 +76,7 @@ public:
   }
   template <typename VISITOR>
   constexpr auto visit(VISITOR &&visitor) const {
-    return std::visit(
+    return Fortran::common::visit(
         common::visitors{[&visitor](auto ref) { return visitor(ref.get()); }},
         u);
   }
@@ -138,7 +141,7 @@ using Directives =
     std::tuple<parser::CompilerDirective, parser::OpenACCConstruct,
                parser::OpenACCRoutineConstruct,
                parser::OpenACCDeclarativeConstruct, parser::OpenMPConstruct,
-               parser::OpenMPDeclarativeConstruct, parser::OmpEndLoopDirective,
+               parser::OpenMPDeclarativeConstruct,
                parser::CUFKernelDoConstruct>;
 
 using DeclConstructs = std::tuple<parser::OpenMPDeclarativeConstruct,
@@ -180,6 +183,11 @@ template <typename A>
 static constexpr bool isExecutableDirective{common::HasMember<
     A, std::tuple<parser::CompilerDirective, parser::OpenACCConstruct,
                   parser::OpenMPConstruct, parser::CUFKernelDoConstruct>>};
+
+template <typename A>
+static constexpr bool isOpenMPDirective{
+    common::HasMember<A, std::tuple<parser::OpenMPConstruct,
+                                    parser::OpenMPDeclarativeConstruct>>};
 
 template <typename A>
 static constexpr bool isFunctionLike{common::HasMember<
@@ -262,6 +270,11 @@ struct Evaluation : EvaluationVariant {
   constexpr bool isExecutableDirective() const {
     return visit(common::visitors{[](auto &r) {
       return pft::isExecutableDirective<std::decay_t<decltype(r)>>;
+    }});
+  }
+  constexpr bool isOpenMPDirective() const {
+    return visit(common::visitors{[](auto &r) {
+      return pft::isOpenMPDirective<std::decay_t<decltype(r)>>;
     }});
   }
 
@@ -347,6 +360,8 @@ struct Evaluation : EvaluationVariant {
   parser::CharBlock position{};
   std::optional<parser::Label> label{};
   std::unique_ptr<EvaluationList> evaluationList; // nested evaluations
+  // associated compiler directives
+  llvm::SmallVector<const parser::CompilerDirective *, 1> dirs;
   Evaluation *parentConstruct{nullptr};  // set for nodes below the top level
   Evaluation *lexicalSuccessor{nullptr}; // set for leaf nodes, some directives
   Evaluation *controlSuccessor{nullptr}; // set for some leaf nodes
@@ -489,7 +504,8 @@ struct Variable {
 
   /// Is this variable a global?
   bool isGlobal() const {
-    return std::visit([](const auto &x) { return x.isGlobal(); }, var);
+    return Fortran::common::visit([](const auto &x) { return x.isGlobal(); },
+                                  var);
   }
 
   /// Is this a module or submodule variable?
@@ -499,7 +515,7 @@ struct Variable {
   }
 
   const Fortran::semantics::Scope *getOwningScope() const {
-    return std::visit(
+    return Fortran::common::visit(
         common::visitors{
             [](const Nominal &x) { return &x.symbol->GetUltimate().owner(); },
             [](const AggregateStore &agg) { return &agg.getOwningScope(); }},
@@ -592,10 +608,17 @@ VariableList getScopeVariableList(const Fortran::semantics::Scope &scope);
 /// depends on. \p symbol itself will be the last variable in the list.
 VariableList getDependentVariableList(const Fortran::semantics::Symbol &);
 
+struct FunctionLikeUnit;
+/// Create an ordered list of equivalence sets and variables from host
+/// [sub]module scopes of \p funit that are referenced in \p funit. This is
+/// used by lowering of module procedures (and their internal subprograms) to
+/// only instantiate referenced host module variables rather than all of them.
+VariableList getHostModuleVariableList(const FunctionLikeUnit &funit);
+
 void dump(VariableList &, std::string s = {}); // `s` is an optional dump label
 
-/// Function-like units may contain evaluations (executable statements) and
-/// nested function-like units (internal procedures and function statements).
+/// Function-like units may contain evaluations (executable statements),
+/// directives, and internal (nested) function-like units.
 struct FunctionLikeUnit : public ProgramUnit {
   // wrapper statements for function-like syntactic structures
   using FunctionStatement =
@@ -687,6 +710,7 @@ struct FunctionLikeUnit : public ProgramUnit {
   /// Return the host associations for this function like unit. The list of host
   /// associations are kept in the host procedure.
   HostAssociations &getHostAssoc() { return hostAssociations; }
+  const HostAssociations &getHostAssoc() const { return hostAssociations; };
 
   LLVM_DUMP_METHOD void dump() const;
 
@@ -697,10 +721,10 @@ struct FunctionLikeUnit : public ProgramUnit {
   std::optional<FunctionStatement> beginStmt;
   FunctionStatement endStmt;
   const semantics::Scope *scope;
-  EvaluationList evaluationList;
   LabelEvalMap labelEvaluationMap;
   SymbolLabelMap assignSymbolLabelMap;
-  std::list<FunctionLikeUnit> nestedFunctions;
+  ContainedUnitList containedUnitList;
+  EvaluationList evaluationList;
   /// <Symbol, Evaluation> pairs for each entry point. The pair at index 0
   /// is the primary entry point; remaining pairs are alternate entry points.
   /// The primary entry point symbol is Null for an anonymous program.
@@ -716,9 +740,12 @@ struct FunctionLikeUnit : public ProgramUnit {
   bool hasIeeeAccess{false};
   bool mayModifyHaltingMode{false};
   bool mayModifyRoundingMode{false};
+  bool mayModifyUnderflowMode{false};
   /// Terminal basic block (if any)
   mlir::Block *finalBlock{};
   HostAssociations hostAssociations;
+  /// Preserved USE statements for debug info generation
+  std::list<Fortran::semantics::PreservedUseStmt> preservedUseStmts;
 };
 
 /// Module-like units contain a list of function-like units.
@@ -746,8 +773,10 @@ struct ModuleLikeUnit : public ProgramUnit {
 
   ModuleStatement beginStmt;
   ModuleStatement endStmt;
-  std::list<FunctionLikeUnit> nestedFunctions;
+  ContainedUnitList containedUnitList;
   EvaluationList evaluationList;
+  /// Preserved USE statements for debug info generation
+  std::list<Fortran::semantics::PreservedUseStmt> preservedUseStmts;
 };
 
 /// Block data units contain the variables and data initializers for common
@@ -848,6 +877,8 @@ void visitAllSymbols(const Evaluation &eval,
 } // namespace Fortran::lower::pft
 
 namespace Fortran::lower {
+class LoweringOptions;
+
 /// Create a PFT (Pre-FIR Tree) from the parse tree.
 ///
 /// A PFT is a light weight tree over the parse tree that is used to create FIR.
@@ -858,7 +889,8 @@ namespace Fortran::lower {
 /// either a statement, or a construct with a nested list of evaluations.
 std::unique_ptr<pft::Program>
 createPFT(const parser::Program &root,
-          const Fortran::semantics::SemanticsContext &semanticsContext);
+          const Fortran::semantics::SemanticsContext &semanticsContext,
+          const LoweringOptions &loweringOptions);
 
 /// Dumper for displaying a PFT.
 void dumpPFT(llvm::raw_ostream &outputStream, const pft::Program &pft);

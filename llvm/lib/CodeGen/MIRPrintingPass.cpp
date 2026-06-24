@@ -13,7 +13,10 @@
 
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -24,8 +27,12 @@ PreservedAnalyses PrintMIRPreparePass::run(Module &M, ModuleAnalysisManager &) {
 }
 
 PreservedAnalyses PrintMIRPass::run(MachineFunction &MF,
-                                    MachineFunctionAnalysisManager &) {
-  printMIR(OS, MF);
+                                    MachineFunctionAnalysisManager &MFAM) {
+  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                  .getManager();
+
+  const VirtRegMap *VRM = MFAM.getCachedResult<VirtRegMapAnalysis>(MF);
+  printMIR(OS, FAM, MF, VRM);
   return PreservedAnalyses::all();
 }
 
@@ -45,14 +52,23 @@ struct MIRPrintingPass : public MachineFunctionPass {
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
+    AU.addUsedIfAvailable<VirtRegMapWrapperLegacy>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     std::string Str;
     raw_string_ostream StrOS(Str);
-    printMIR(StrOS, MF);
-    MachineFunctions.append(StrOS.str());
+
+    MachineModuleInfo *MMI =
+        &getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
+
+    const VirtRegMap *VRM = nullptr;
+    if (auto *W = getAnalysisIfAvailable<VirtRegMapWrapperLegacy>())
+      VRM = &W->getVRM();
+
+    printMIR(StrOS, *MMI, MF, VRM);
+    MachineFunctions.append(Str);
     return false;
   }
 
@@ -70,10 +86,6 @@ char MIRPrintingPass::ID = 0;
 char &llvm::MIRPrintingPassID = MIRPrintingPass::ID;
 INITIALIZE_PASS(MIRPrintingPass, "mir-printer", "MIR Printer", false, false)
 
-namespace llvm {
-
-MachineFunctionPass *createPrintMIRPass(raw_ostream &OS) {
+MachineFunctionPass *llvm::createPrintMIRPass(raw_ostream &OS) {
   return new MIRPrintingPass(OS);
 }
-
-} // end namespace llvm

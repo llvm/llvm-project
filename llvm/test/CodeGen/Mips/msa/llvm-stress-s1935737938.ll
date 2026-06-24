@@ -1,7 +1,7 @@
-; RUN: llc -march=mips < %s
-; RUN: llc -march=mips -mattr=+msa,+fp64,+mips32r2 < %s
-; RUN: llc -march=mipsel < %s
-; RUN: llc -march=mipsel -mattr=+msa,+fp64,+mips32r2 < %s
+; RUN: llc -mtriple=mips < %s
+; RUN: llc -mtriple=mips -mattr=+msa,+fp64,+mips32r2 < %s
+; RUN: llc -mtriple=mipsel < %s
+; RUN: llc -mtriple=mipsel -mattr=+msa,+fp64,+mips32r2 < %s
 
 ; This test originally failed for MSA with a
 ; `Opc && "Cannot copy registers"' assertion.

@@ -21,29 +21,25 @@
 #include "test_macros.h"
 
 struct Key {
-  template <typename T> Key(const T&) {}
-  bool operator== (const Key&) const { return true; }
+  template <typename T>
+  Key(const T&) {}
+  bool operator==(const Key&) const { return true; }
 };
 
-namespace std
-{
-    template <>
-    struct hash<Key>
-    {
-        std::size_t operator()(Key const &) const {return 0;}
-    };
-}
+template <>
+struct std::hash<Key> {
+  std::size_t operator()(Key const&) const { return 0; }
+};
 
-int main(int, char**)
-{
-    typedef std::unordered_map<Key, int> MapT;
-    typedef MapT::iterator Iter;
-    MapT map;
-    Iter it = map.find(Key(0));
-    assert(it == map.end());
-    std::pair<Iter, bool> result = map.insert(std::make_pair(Key(0), 42));
-    assert(result.second);
-    assert(result.first->second == 42);
+int main(int, char**) {
+  typedef std::unordered_map<Key, int> MapT;
+  typedef MapT::iterator Iter;
+  MapT map;
+  Iter it = map.find(Key(0));
+  assert(it == map.end());
+  std::pair<Iter, bool> result = map.insert(std::make_pair(Key(0), 42));
+  assert(result.second);
+  assert(result.first->second == 42);
 
   return 0;
 }

@@ -49,6 +49,11 @@ __sanitizer_sandbox_on_notify(__sanitizer_sandbox_arguments *args);
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE void
 __sanitizer_report_error_summary(const char *error_summary);
 
+// Returns size of dynamically allocated block. This function can be overridden
+// by the client.
+SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE __sanitizer::uptr
+__sanitizer_get_dtls_size(const void *tls_begin);
+
 SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_cov_dump();
 SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_dump_coverage(
     const __sanitizer::uptr *pcs, const __sanitizer::uptr len);

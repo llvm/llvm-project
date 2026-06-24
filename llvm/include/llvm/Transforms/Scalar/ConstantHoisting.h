@@ -42,6 +42,7 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/PassManager.h"
 #include <algorithm>
 #include <vector>
@@ -58,6 +59,7 @@ class Function;
 class GlobalVariable;
 class Instruction;
 class ProfileSummaryInfo;
+class TargetTransformInfo;
 class TargetTransformInfo;
 
 /// A private "module" namespace for types and utilities used by
@@ -121,24 +123,21 @@ struct ConstantInfo {
 
 } // end namespace consthoist
 
-class ConstantHoistingPass : public PassInfoMixin<ConstantHoistingPass> {
+class ConstantHoistingPass
+    : public OptionalPassInfoMixin<ConstantHoistingPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
   // Glue for old PM.
-  bool runImpl(Function &F, TargetTransformInfo &TTI, DominatorTree &DT,
-               BlockFrequencyInfo *BFI, BasicBlock &Entry,
-               ProfileSummaryInfo *PSI);
+  LLVM_ABI bool runImpl(Function &F, TargetTransformInfo &TTI,
+                        DominatorTree &DT, BlockFrequencyInfo *BFI,
+                        BasicBlock &Entry, ProfileSummaryInfo *PSI);
 
   void cleanup() {
     ClonedCastMap.clear();
     ConstIntCandVec.clear();
-    for (auto MapEntry : ConstGEPCandMap)
-      MapEntry.second.clear();
     ConstGEPCandMap.clear();
     ConstIntInfoVec.clear();
-    for (auto MapEntry : ConstGEPInfoMap)
-      MapEntry.second.clear();
     ConstGEPInfoMap.clear();
   }
 

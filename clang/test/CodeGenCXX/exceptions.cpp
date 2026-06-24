@@ -61,7 +61,7 @@ namespace test1 {
     // CHECK-NEXT: [[NEW:%.*]] = call noalias nonnull ptr @_Znwm(i64 8)
     // CHECK-NEXT: store i1 true, ptr [[ACTIVE]]
     // CHECK-NEXT: invoke void @_ZN5test11BC1Ev(ptr {{[^,]*}} [[T0:%.*]])
-    // CHECK:      [[T1:%.*]] = getelementptr inbounds [[B:%.*]], ptr [[T0]], i32 0, i32 0
+    // CHECK:      [[T1:%.*]] = getelementptr inbounds nuw [[B:%.*]], ptr [[T0]], i32 0, i32 0
     // CHECK-NEXT: [[T2:%.*]] = load i32, ptr [[T1]], align 4
     // CHECK-NEXT: invoke void @_ZN5test11AC1Ei(ptr {{[^,]*}} [[NEW]], i32 [[T2]])
     // CHECK:      store i1 false, ptr [[ACTIVE]]
@@ -221,7 +221,7 @@ namespace test3 {
     // CHECK-NEXT: [[SAVED1:%.*]] = alloca ptr
     // CHECK-NEXT: [[CLEANUPACTIVE:%.*]] = alloca i1
 
-    // CHECK:      [[COND:%.*]] = trunc i8 {{.*}} to i1
+    // CHECK:      [[COND:%.*]] = icmp ne i8 {{.*}}, 0
     // CHECK-NEXT: store i1 false, ptr [[CLEANUPACTIVE]]
     // CHECK-NEXT: br i1 [[COND]]
     return (cond ?
@@ -475,7 +475,7 @@ namespace test10 {
   // CHECK:      invoke void @_ZN6test107cleanupEv()
   // CHECK:      call ptr @__cxa_begin_catch
   // CHECK-NEXT: load i8, ptr @_ZN6test108suppressE, align 1
-  // CHECK-NEXT: trunc
+  // CHECK-NEXT: icmp ne
   // CHECK-NEXT: br i1
 
   // CHECK98:      call void @__cxa_end_catch()
@@ -513,10 +513,9 @@ namespace test11 {
   // CHECK-LABEL:    define{{.*}} void @_ZN6test111CC2Ev(
   // CHECK:      [[THIS:%.*]] = load ptr, ptr {{%.*}}
   //   Construct single.
-  // CHECK-NEXT: [[SINGLE:%.*]] = getelementptr inbounds [[C:%.*]], ptr [[THIS]], i32 0, i32 0
-  // CHECK-NEXT: call void @_ZN6test111AC1Ev(ptr {{[^,]*}} [[SINGLE]])
+  // CHECK-NEXT: call void @_ZN6test111AC1Ev(ptr {{[^,]*}} [[THIS]])
   //   Construct array.
-  // CHECK-NEXT: [[ARRAY:%.*]] = getelementptr inbounds [[C:%.*]], ptr [[THIS]], i32 0, i32 1
+  // CHECK-NEXT: [[ARRAY:%.*]] = getelementptr inbounds nuw [[C:%.*]], ptr [[THIS]], i32 0, i32 1
   // CHECK-NEXT: [[ARRAYBEGIN:%.*]] = getelementptr inbounds [2 x [3 x [[A:%.*]]]], ptr [[ARRAY]], i32 0, i32 0, i32 0
   // CHECK-NEXT: [[ARRAYEND:%.*]] = getelementptr inbounds [[A:%.*]], ptr [[ARRAYBEGIN]], i64 6
   // CHECK-NEXT: br label
@@ -560,8 +559,8 @@ namespace test11 {
   // CHECK:      br label
   //   Finally, the cleanup for single.
 
-  // CHECK98:      invoke void @_ZN6test111AD1Ev(ptr {{[^,]*}} [[SINGLE]])
-  // CHECK11:      call void @_ZN6test111AD1Ev(ptr {{[^,]*}} [[SINGLE]])
+  // CHECK98:      invoke void @_ZN6test111AD1Ev(ptr {{[^,]*}} [[THIS]])
+  // CHECK11:      call void @_ZN6test111AD1Ev(ptr {{[^,]*}} [[THIS]])
 
   // CHECK:      br label
   // CHECK:      resume

@@ -1,4 +1,4 @@
-﻿"""
+"""
 Test that breakpoint by symbol name works correctly with dynamic libs.
 """
 
@@ -10,6 +10,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class LoadUnloadTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -62,7 +63,7 @@ class LoadUnloadTestCase(TestBase):
             for f in shlibs:
                 err = lldb.remote_platform.Put(
                     lldb.SBFileSpec(self.getBuildArtifact(f)),
-                    lldb.SBFileSpec(os.path.join(wd, f)),
+                    lldb.SBFileSpec(lldbutil.join_remote_paths(wd, f)),
                 )
                 if err.Fail():
                     raise RuntimeError(
@@ -71,7 +72,7 @@ class LoadUnloadTestCase(TestBase):
             if hidden_dir:
                 shlib = "libloadunload_d." + ext
                 hidden_dir = os.path.join(wd, "hidden")
-                hidden_file = os.path.join(hidden_dir, shlib)
+                hidden_file = lldbutil.join_remote_paths(hidden_dir, shlib)
                 err = lldb.remote_platform.MakeDirectory(hidden_dir)
                 if err.Fail():
                     raise RuntimeError(
@@ -243,8 +244,7 @@ class LoadUnloadTestCase(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
-        ctx = self.platformContext
-        dylibName = ctx.shlib_prefix + "loadunload_a." + ctx.shlib_extension
+        dylibName = self.platformContext.getFullLibName("loadunload_a")
         localDylibPath = self.getBuildArtifact(dylibName)
         if lldb.remote_platform:
             wd = lldb.remote_platform.GetWorkingDirectory()
@@ -405,8 +405,10 @@ class LoadUnloadTestCase(TestBase):
 
     # We can't find a breakpoint location for d_init before launching because
     # executable dependencies are resolved relative to the debuggers PWD. Bug?
+    # The remote lldb server resolves the executable dependencies correctly.
     @expectedFailureAll(
-        oslist=["freebsd", "linux", "netbsd"], triple=no_match("aarch64-.*-android")
+        oslist=["freebsd", "linux", "netbsd"],
+        remote=False,
     )
     @expectedFailureAll(oslist=["windows"], archs=["aarch64"])
     def test_static_init_during_load(self):

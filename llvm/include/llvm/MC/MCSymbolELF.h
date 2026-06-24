@@ -9,44 +9,44 @@
 #define LLVM_MC_MCSYMBOLELF_H
 
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolTableEntry.h"
 
 namespace llvm {
 class MCSymbolELF : public MCSymbol {
+  friend class MCAsmInfoELF;
   /// An expression describing how to calculate the size of a symbol. If a
   /// symbol has no size this field will be NULL.
   const MCExpr *SymbolSize = nullptr;
 
 public:
-  MCSymbolELF(const StringMapEntry<bool> *Name, bool isTemporary)
-      : MCSymbol(SymbolKindELF, Name, isTemporary) {}
+  MCSymbolELF(const MCSymbolTableEntry *Name, bool isTemporary)
+      : MCSymbol(Name, isTemporary) {}
   void setSize(const MCExpr *SS) { SymbolSize = SS; }
 
   const MCExpr *getSize() const { return SymbolSize; }
 
-  void setVisibility(unsigned Visibility);
-  unsigned getVisibility() const;
+  LLVM_ABI void setVisibility(unsigned Visibility);
+  LLVM_ABI unsigned getVisibility() const;
 
-  void setOther(unsigned Other);
-  unsigned getOther() const;
+  LLVM_ABI void setOther(unsigned Other);
+  LLVM_ABI unsigned getOther() const;
 
-  void setType(unsigned Type) const;
-  unsigned getType() const;
+  LLVM_ABI void setType(unsigned Type) const;
+  LLVM_ABI unsigned getType() const;
 
-  void setBinding(unsigned Binding) const;
-  unsigned getBinding() const;
+  LLVM_ABI void setBinding(unsigned Binding) const;
+  LLVM_ABI unsigned getBinding() const;
 
-  bool isBindingSet() const;
+  LLVM_ABI bool isBindingSet() const;
 
-  void setIsWeakrefUsedInReloc() const;
-  bool isWeakrefUsedInReloc() const;
+  LLVM_ABI void setIsWeakref() const;
+  LLVM_ABI bool isWeakref() const;
 
-  void setIsSignature() const;
-  bool isSignature() const;
+  LLVM_ABI void setIsSignature() const;
+  LLVM_ABI bool isSignature() const;
 
-  void setMemtag(bool Tagged);
-  bool isMemtag() const;
-
-  static bool classof(const MCSymbol *S) { return S->isELF(); }
+  LLVM_ABI void setMemtag(bool Tagged);
+  LLVM_ABI bool isMemtag() const;
 
 private:
   void setIsBindingSet() const;

@@ -37,17 +37,17 @@ end subroutine test
 ! CHECK:           %[[VAL_6:.*]] = fir.embox %[[VAL_3]](%[[VAL_5]]) : (!fir.heap<!fir.array<?xnone>>, !fir.shape<1>) -> !fir.class<!fir.heap<!fir.array<?xnone>>>
 ! CHECK:           fir.store %[[VAL_6]] to %[[VAL_2]] : !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>
 ! CHECK:           %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_2]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtestEx"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>)
-! CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_7]]#1 : !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>
-! CHECK:           %[[VAL_9:.*]] = fir.load %[[VAL_7]]#1 : !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>
+! CHECK:           %[[VAL_8:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>
+! CHECK:           %[[VAL_9:.*]] = fir.load %[[VAL_7]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?xnone>>>>
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 0 : index
 ! CHECK:           %[[VAL_11:.*]]:3 = fir.box_dims %[[VAL_9]], %[[VAL_10]] : (!fir.class<!fir.heap<!fir.array<?xnone>>>, index) -> (index, index, index)
 ! CHECK:           fir.select_type %[[VAL_8]] : !fir.class<!fir.heap<!fir.array<?xnone>>> [#fir.type_is<!fir.type<_QFtestTt>>, ^bb1, unit, ^bb2]
 ! CHECK:         ^bb1:
 ! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_8]] : (!fir.class<!fir.heap<!fir.array<?xnone>>>) -> !fir.box<!fir.heap<!fir.array<?x!fir.type<_QFtestTt>>>>
 ! CHECK:           %[[VAL_13:.*]] = fir.shift %[[VAL_11]]#0 : (index) -> !fir.shift<1>
-! CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_12]](%[[VAL_13]]) {uniq_name = "_QFtestEx"} : (!fir.box<!fir.heap<!fir.array<?x!fir.type<_QFtestTt>>>>, !fir.shift<1>) -> (!fir.box<!fir.heap<!fir.array<?x!fir.type<_QFtestTt>>>>, !fir.box<!fir.heap<!fir.array<?x!fir.type<_QFtestTt>>>>)
+! CHECK:           %[[VAL_14:.*]]:2 = hlfir.declare %[[VAL_12]](%[[VAL_13]]) {uniq_name = "_QFtestEx"} : (!fir.box<!fir.heap<!fir.array<?x!fir.type<_QFtestTt>>>>, !fir.shift<1>) -> (!fir.box<!fir.array<?x!fir.type<_QFtestTt>>>, !fir.box<!fir.array<?x!fir.type<_QFtestTt>>>)
 ! CHECK:           %[[VAL_15:.*]] = arith.constant 0 : index
-! CHECK:           %[[VAL_16:.*]]:3 = fir.box_dims %[[VAL_14]]#0, %[[VAL_15]] : (!fir.box<!fir.heap<!fir.array<?x!fir.type<_QFtestTt>>>>, index) -> (index, index, index)
+! CHECK:           %[[VAL_16:.*]]:3 = fir.box_dims %[[VAL_14]]#0, %[[VAL_15]] : (!fir.box<!fir.array<?x!fir.type<_QFtestTt>>>, index) -> (index, index, index)
 ! CHECK:           %[[VAL_17:.*]] = fir.convert %[[VAL_16]]#1 : (index) -> i64
 ! CHECK:           %[[VAL_18:.*]] = fir.convert %[[VAL_11]]#0 : (index) -> i64
 ! CHECK:           %[[VAL_19:.*]] = arith.addi %[[VAL_17]], %[[VAL_18]] : i64

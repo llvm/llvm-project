@@ -12,7 +12,7 @@ gpu.module @kernel {
     // ROCDL: %[[raw:.*]] = llvm.alloca %[[size]] x f32 : (i64) -> !llvm.ptr<5>
 
     // Populate the memref descriptor.
-    // NVVM: %[[descr1:.*]] = llvm.mlir.undef : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
+    // NVVM: %[[descr1:.*]] = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
     // NVVM: %[[descr2:.*]] = llvm.insertvalue %[[raw]], %[[descr1]][0]
     // NVVM: %[[descr3:.*]] = llvm.insertvalue %[[raw]], %[[descr2]][1]
     // NVVM: %[[c0:.*]] = llvm.mlir.constant(0 : index) : i64
@@ -22,7 +22,7 @@ gpu.module @kernel {
     // NVVM: %[[c1:.*]] = llvm.mlir.constant(1 : index) : i64
     // NVVM: %[[descr6:.*]] = llvm.insertvalue %[[c1]], %[[descr5]][4, 0]
 
-    // ROCDL: %[[descr1:.*]] = llvm.mlir.undef : !llvm.struct<(ptr<5>, ptr<5>, i64, array<1 x i64>, array<1 x i64>)>
+    // ROCDL: %[[descr1:.*]] = llvm.mlir.poison : !llvm.struct<(ptr<5>, ptr<5>, i64, array<1 x i64>, array<1 x i64>)>
     // ROCDL: %[[descr2:.*]] = llvm.insertvalue %[[raw]], %[[descr1]][0]
     // ROCDL: %[[descr3:.*]] = llvm.insertvalue %[[raw]], %[[descr2]][1]
     // ROCDL: %[[c0:.*]] = llvm.mlir.constant(0 : index) : i64
@@ -76,7 +76,7 @@ gpu.module @kernel {
     // ROCDL-SAME: !llvm.ptr<3>
 
     // Populate the memref descriptor.
-    // NVVM: %[[descr1:.*]] = llvm.mlir.undef : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+    // NVVM: %[[descr1:.*]] = llvm.mlir.poison : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
     // NVVM: %[[descr2:.*]] = llvm.insertvalue %[[raw]], %[[descr1]][0]
     // NVVM: %[[descr3:.*]] = llvm.insertvalue %[[raw]], %[[descr2]][1]
     // NVVM: %[[c0:.*]] = llvm.mlir.constant(0 : index) : i64
@@ -86,7 +86,7 @@ gpu.module @kernel {
     // NVVM: %[[c1:.*]] = llvm.mlir.constant(1 : index) : i64
     // NVVM: %[[descr6:.*]] = llvm.insertvalue %[[c1]], %[[descr5]][4, 0]
 
-    // ROCDL: %[[descr1:.*]] = llvm.mlir.undef : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+    // ROCDL: %[[descr1:.*]] = llvm.mlir.poison : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
     // ROCDL: %[[descr2:.*]] = llvm.insertvalue %[[raw]], %[[descr1]][0]
     // ROCDL: %[[descr3:.*]] = llvm.insertvalue %[[raw]], %[[descr2]][1]
     // ROCDL: %[[c0:.*]] = llvm.mlir.constant(0 : index) : i64
@@ -137,7 +137,7 @@ gpu.module @kernel {
     // ROCDL-SAME: !llvm.ptr<3>
 
     // Populate the memref descriptor.
-    // NVVM: %[[descr1:.*]] = llvm.mlir.undef : !llvm.struct<(ptr<3>, ptr<3>, i64, array<3 x i64>, array<3 x i64>)>
+    // NVVM: %[[descr1:.*]] = llvm.mlir.poison : !llvm.struct<(ptr<3>, ptr<3>, i64, array<3 x i64>, array<3 x i64>)>
     // NVVM: %[[descr2:.*]] = llvm.insertvalue %[[raw]], %[[descr1]][0]
     // NVVM: %[[descr3:.*]] = llvm.insertvalue %[[raw]], %[[descr2]][1]
     // NVVM: %[[c0:.*]] = llvm.mlir.constant(0 : index) : i64
@@ -155,7 +155,7 @@ gpu.module @kernel {
     // NVVM: %[[c1:.*]] = llvm.mlir.constant(1 : index) : i64
     // NVVM: %[[descr10:.*]] = llvm.insertvalue %[[c1]], %[[descr9]][4, 2]
 
-    // ROCDL: %[[descr1:.*]] = llvm.mlir.undef : !llvm.struct<(ptr<3>, ptr<3>, i64, array<3 x i64>, array<3 x i64>)>
+    // ROCDL: %[[descr1:.*]] = llvm.mlir.poison : !llvm.struct<(ptr<3>, ptr<3>, i64, array<3 x i64>, array<3 x i64>)>
     // ROCDL: %[[descr2:.*]] = llvm.insertvalue %[[raw]], %[[descr1]][0]
     // ROCDL: %[[descr3:.*]] = llvm.insertvalue %[[raw]], %[[descr2]][1]
     // ROCDL: %[[c0:.*]] = llvm.mlir.constant(0 : index) : i64

@@ -72,10 +72,10 @@ bb5:
 ; CHECK-NEXT:    br label [[BB5:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[A:%.*]] = sub i32 [[TMP0:%.*]], [[TMP1:%.*]]
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 -1, ptr [[F_CE_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[F_CE_LOC]])
 ; CHECK-NEXT:    call void @outlined_ir_func_0(i32 [[TMP0]], i32 [[TMP1]], i32 1, ptr [[F_CE_LOC]], i32 0)
 ; CHECK-NEXT:    [[F_CE_RELOAD:%.*]] = load i32, ptr [[F_CE_LOC]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 -1, ptr [[F_CE_LOC]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[F_CE_LOC]])
 ; CHECK-NEXT:    br label [[BB5]]
 ; CHECK:       bb4:
 ; CHECK-NEXT:    [[E:%.*]] = add i32 [[TMP0]], [[TMP1]]

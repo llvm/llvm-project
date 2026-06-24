@@ -5,9 +5,9 @@ declare float @llvm.powi.f32.i32(float, i32)
 define void @vec_powi_f32(ptr %a, ptr %c, i32 %P) {
 ; CHECK-LABEL: @vec_powi_f32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[TMP1]], i32 [[P:%.*]])
-; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[C:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[A:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[TMP0]], i32 [[P:%.*]])
+; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[C:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

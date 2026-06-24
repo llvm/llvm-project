@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 
 #include <cstddef>
@@ -214,6 +215,16 @@ public:
   ///     The stream to which to dump the object description.
   void Dump(llvm::raw_ostream &s) const;
 
+  /// Convert the filespec object to a json value.
+  ///
+  /// Convert the filespec object to a json value. If the object contains a
+  /// valid directory name, it will be displayed followed by a directory
+  /// delimiter, and the filename.
+  ///
+  /// \return
+  ///     A json value representation of a filespec.
+  llvm::json::Value ToJSON() const;
+
   Style GetPathStyle() const;
 
   /// Directory string const get accessor.
@@ -231,7 +242,6 @@ public:
 
   /// Clear the directory in this object.
   void ClearDirectory();
-
 
   /// Filename string const get accessor.
   ///
@@ -307,14 +317,6 @@ public:
   ///     Returns a std::string with the directory and filename
   ///     concatenated.
   std::string GetPath(bool denormalize = true) const;
-
-  /// Get the full path as a ConstString.
-  ///
-  /// This method should only be used when you need a ConstString or the
-  /// const char * from a ConstString to ensure permanent lifetime of C string.
-  /// Anyone needing the path temporarily should use the GetPath() method that
-  /// returns a std:string.
-  ConstString GetPathAsConstString(bool denormalize = true) const;
 
   /// Extract the full path to the file.
   ///
@@ -413,11 +415,7 @@ protected:
   /// state in this object.
   void PathWasModified() { m_absolute = Absolute::Calculate; }
 
-  enum class Absolute : uint8_t {
-    Calculate,
-    Yes,
-    No
-  };
+  enum class Absolute : uint8_t { Calculate, Yes, No };
 
   /// The unique'd directory path.
   ConstString m_directory;
@@ -460,6 +458,24 @@ template <> struct format_provider<lldb_private::FileSpec> {
   static void format(const lldb_private::FileSpec &F, llvm::raw_ostream &Stream,
                      StringRef Style);
 };
+
+/// DenseMapInfo implementation.
+/// \{
+template <> struct DenseMapInfo<lldb_private::FileSpec> {
+  static unsigned getHashValue(lldb_private::FileSpec file_spec) {
+    return llvm::hash_combine(
+        DenseMapInfo<lldb_private::ConstString>::getHashValue(
+            file_spec.GetDirectory()),
+        DenseMapInfo<lldb_private::ConstString>::getHashValue(
+            file_spec.GetFilename()),
+        DenseMapInfo<llvm::sys::path::Style>::getHashValue(
+            file_spec.GetPathStyle()));
+  }
+  static bool isEqual(lldb_private::FileSpec LHS, lldb_private::FileSpec RHS) {
+    return LHS == RHS;
+  }
+};
+/// \}
 
 } // namespace llvm
 

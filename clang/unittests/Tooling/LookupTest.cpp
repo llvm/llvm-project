@@ -13,31 +13,31 @@
 using namespace clang;
 
 namespace {
-struct GetDeclsVisitor : TestVisitor<GetDeclsVisitor> {
+struct GetDeclsVisitor : TestVisitor {
   std::function<void(CallExpr *)> OnCall;
   std::function<void(RecordTypeLoc)> OnRecordTypeLoc;
   std::function<void(UsingTypeLoc)> OnUsingTypeLoc;
   SmallVector<Decl *, 4> DeclStack;
 
-  bool VisitCallExpr(CallExpr *Expr) {
+  bool VisitCallExpr(CallExpr *Expr) override {
     if (OnCall)
       OnCall(Expr);
     return true;
   }
 
-  bool VisitRecordTypeLoc(RecordTypeLoc Loc) {
+  bool VisitRecordTypeLoc(RecordTypeLoc Loc) override {
     if (OnRecordTypeLoc)
       OnRecordTypeLoc(Loc);
     return true;
   }
 
-  bool VisitUsingTypeLoc(UsingTypeLoc Loc) {
+  bool VisitUsingTypeLoc(UsingTypeLoc Loc) override {
     if (OnUsingTypeLoc)
       OnUsingTypeLoc(Loc);
     return true;
   }
 
-  bool TraverseDecl(Decl *D) {
+  bool TraverseDecl(Decl *D) override {
     DeclStack.push_back(D);
     bool Ret = TestVisitor::TraverseDecl(D);
     DeclStack.pop_back();
@@ -193,8 +193,8 @@ TEST(LookupTest, replaceNestedClassName) {
   auto replaceTypeLoc = [&](const NamedDecl *ND, SourceLocation Loc,
                             StringRef ReplacementString) {
     return tooling::replaceNestedName(
-        nullptr, Loc, Visitor.DeclStack.back()->getDeclContext(), ND,
-        ReplacementString);
+        /*Use=*/std::nullopt, Loc, Visitor.DeclStack.back()->getDeclContext(),
+        ND, ReplacementString);
   };
 
   Visitor.OnRecordTypeLoc = [&](RecordTypeLoc Type) {
@@ -214,7 +214,7 @@ TEST(LookupTest, replaceNestedClassName) {
     // Filter Types by name since there are other `RecordTypeLoc` in the test
     // file.
     // `a::b::Foo` in using shadow decl is not `TypeLoc`.
-    auto *TD = Type.getFoundDecl()->getTargetDecl();
+    auto *TD = Type.getDecl()->getTargetDecl();
     if (TD->getQualifiedNameAsString() == "a::b::Foo") {
       EXPECT_EQ("Bar", replaceTypeLoc(TD, Type.getBeginLoc(), "::a::x::Bar"));
     }

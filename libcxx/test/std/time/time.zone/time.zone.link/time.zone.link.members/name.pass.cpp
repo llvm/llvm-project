@@ -20,6 +20,7 @@
 
 #include <cassert>
 #include <chrono>
+#include <concepts>
 
 #include "test_macros.h"
 

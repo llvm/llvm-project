@@ -7,9 +7,10 @@
 define <vscale x 2 x i64> @no_dag_combine_zext_sext(<vscale x 2 x i1> %pg,
 ; CHECK-LABEL: no_dag_combine_zext_sext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1b { z0.d }, p0/z, [z0.d, #16]
-; CHECK-NEXT:    st1b { z0.d }, p1, [x0]
+; CHECK-NEXT:    ld1b { z1.d }, p0/z, [z0.d, #16]
+; CHECK-NEXT:    movprfx z0, z1
 ; CHECK-NEXT:    and z0.d, z0.d, #0xff
+; CHECK-NEXT:    st1b { z1.d }, p1, [x0]
 ; CHECK-NEXT:    ret
                                                     <vscale x 2 x i64> %base,
                                                     ptr %res_out,
@@ -54,9 +55,10 @@ define <vscale x 2 x i64> @no_dag_combine_sext(<vscale x 2 x i1> %pg,
 define <vscale x 2 x i64> @no_dag_combine_zext(<vscale x 2 x i1> %pg,
 ; CHECK-LABEL: no_dag_combine_zext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ld1b { z0.d }, p0/z, [z0.d, #16]
-; CHECK-NEXT:    st1b { z0.d }, p1, [x0]
+; CHECK-NEXT:    ld1b { z1.d }, p0/z, [z0.d, #16]
+; CHECK-NEXT:    movprfx z0, z1
 ; CHECK-NEXT:    and z0.d, z0.d, #0xff
+; CHECK-NEXT:    st1b { z1.d }, p1, [x0]
 ; CHECK-NEXT:    ret
                                                <vscale x 2 x i64> %base,
                                                ptr %res_out,
@@ -95,7 +97,7 @@ define <vscale x 16 x i8> @narrow_i64_gather_index_i8_zext(ptr %out, ptr %in, <v
   %wide.load = load <vscale x 16 x i8>, ptr %2, align 1
   %3 = zext <vscale x 16 x i8> %wide.load to <vscale x 16 x i64>
   %4 = getelementptr inbounds i8, ptr %in, <vscale x 16 x i64> %3
-  %wide.masked.gather = call <vscale x 16 x i8> @llvm.masked.gather.nxv16i8.nxv16p0(<vscale x 16 x ptr> %4, i32 1, <vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> undef)
+  %wide.masked.gather = call <vscale x 16 x i8> @llvm.masked.gather.nxv16i8.nxv16p0(<vscale x 16 x ptr> %4, i32 1, <vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> poison)
   ret <vscale x 16 x i8> %wide.masked.gather
 }
 
@@ -121,7 +123,7 @@ define <vscale x 16 x i8> @narrow_i64_gather_index_i8_sext(ptr %out, ptr %in, <v
   %wide.load = load <vscale x 16 x i8>, ptr %2, align 1
   %3 = sext <vscale x 16 x i8> %wide.load to <vscale x 16 x i64>
   %4 = getelementptr inbounds i8, ptr %in, <vscale x 16 x i64> %3
-  %wide.masked.gather = call <vscale x 16 x i8> @llvm.masked.gather.nxv16i8.nxv16p0(<vscale x 16 x ptr> %4, i32 1, <vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> undef)
+  %wide.masked.gather = call <vscale x 16 x i8> @llvm.masked.gather.nxv16i8.nxv16p0(<vscale x 16 x ptr> %4, i32 1, <vscale x 16 x i1> splat (i1 true), <vscale x 16 x i8> poison)
   ret <vscale x 16 x i8> %wide.masked.gather
 }
 
@@ -141,7 +143,7 @@ define <vscale x 8 x i16> @narrow_i64_gather_index_i16_zext(ptr %out, ptr %in, <
   %wide.load = load <vscale x 8 x i16>, ptr %2, align 1
   %3 = zext <vscale x 8 x i16> %wide.load to <vscale x 8 x i64>
   %4 = getelementptr inbounds i16, ptr %in, <vscale x 8 x i64> %3
-  %wide.masked.gather = call <vscale x 8 x i16> @llvm.masked.gather.nxv8i16.nxv8p0(<vscale x 8 x ptr> %4, i32 1, <vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> undef)
+  %wide.masked.gather = call <vscale x 8 x i16> @llvm.masked.gather.nxv8i16.nxv8p0(<vscale x 8 x ptr> %4, i32 1, <vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> poison)
   ret <vscale x 8 x i16> %wide.masked.gather
 }
 
@@ -161,7 +163,7 @@ define <vscale x 8 x i16> @narrow_i64_gather_index_i16_sext(ptr %out, ptr %in, <
   %wide.load = load <vscale x 8 x i16>, ptr %2, align 1
   %3 = sext <vscale x 8 x i16> %wide.load to <vscale x 8 x i64>
   %4 = getelementptr inbounds i16, ptr %in, <vscale x 8 x i64> %3
-  %wide.masked.gather = call <vscale x 8 x i16> @llvm.masked.gather.nxv8i16.nxv8p0(<vscale x 8 x ptr> %4, i32 1, <vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> undef)
+  %wide.masked.gather = call <vscale x 8 x i16> @llvm.masked.gather.nxv8i16.nxv8p0(<vscale x 8 x ptr> %4, i32 1, <vscale x 8 x i1> splat (i1 true), <vscale x 8 x i16> poison)
   ret <vscale x 8 x i16> %wide.masked.gather
 }
 
@@ -177,7 +179,7 @@ define <vscale x 4 x i32> @no_narrow_i64_gather_index_i32(ptr %out, ptr %in, <vs
   %wide.load = load <vscale x 4 x i32>, ptr %2, align 1
   %3 = zext <vscale x 4 x i32> %wide.load to <vscale x 4 x i64>
   %4 = getelementptr inbounds i32, ptr %in, <vscale x 4 x i64> %3
-  %wide.masked.gather = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> %4, i32 1, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> undef)
+  %wide.masked.gather = call <vscale x 4 x i32> @llvm.masked.gather.nxv4i32.nxv4p0(<vscale x 4 x ptr> %4, i32 1, <vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> poison)
   ret <vscale x 4 x i32> %wide.masked.gather
 }
 
@@ -192,7 +194,7 @@ define <vscale x 2 x i64> @no_narrow_i64_gather_index_i64(ptr %out, ptr %in, <vs
   %2 = bitcast ptr %1 to ptr
   %wide.load = load <vscale x 2 x i64>, ptr %2, align 1
   %3 = getelementptr inbounds i64, ptr %in, <vscale x 2 x i64> %wide.load
-  %wide.masked.gather = call <vscale x 2 x i64> @llvm.masked.gather.nxv2i64.nxv2p0(<vscale x 2 x ptr> %3, i32 1, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> undef)
+  %wide.masked.gather = call <vscale x 2 x i64> @llvm.masked.gather.nxv2i64.nxv2p0(<vscale x 2 x ptr> %3, i32 1, <vscale x 2 x i1> splat (i1 true), <vscale x 2 x i64> poison)
   ret <vscale x 2 x i64> %wide.masked.gather
 }
 

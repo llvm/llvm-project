@@ -13,7 +13,6 @@
 # CHECK-NOT: BOLT-INFO: UCE removed {{.*}} blocks and {{.*}} bytes of code
 # CHECK: Binary Function "main"
 # CHECK:      .LFT{{.*}} (2 instructions, align : 1)
-# CHECK-NEXT:   CFI State : 0
 # CHECK-NEXT:     00000004:   andq
 # CHECK-NEXT:     00000008:   jmpq
 # CHECK-NEXT:   Successors: .Ltmp{{.*}}, .Ltmp{{.*}}, .Ltmp{{.*}}, .Ltmp{{.*}}

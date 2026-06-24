@@ -1,8 +1,7 @@
-# REQUIRES: python-38, system-linux
+# REQUIRES: system-linux
 
 ## Test the functionality of extract_ir_lib
 
-import os.path
 import sys
 
 from mlgo.corpus import extract_ir_lib
@@ -302,6 +301,43 @@ def test_lld_thinlto_extraction(outer, outdir):
     # CHECK-LLD-THINLTO-EXTRACTION-PY: 1
     # CHECK-LLD-THINLTO-EXTRACTION-PY: 2
     # CHECK-LLD-THINLTO-EXTRACTION-PY: 3
+
+
+## Test that we can load a bazel query JSON as expected.
+
+# RUN: %python %s test_load_bazel_aquery | FileCheck %s --check-prefix CHECK-TEST-LOAD-BAZEL-AQUERY
+
+
+def test_load_bazel_aquery():
+    obj = extract_ir_lib.load_bazel_aquery(
+        {
+            "actions": [
+                {"mnemonic": "not-link", "arguments": []},
+                {
+                    "mnemonic": "CppLink",
+                    "arguments": ["clang", "-o", "output_binary", "test1.o", "test2.o"],
+                },
+            ]
+        },
+        "/some/path",
+        "/tmp/out",
+    )
+    print(obj[0].input_obj())
+    # CHECK-TEST-LOAD-BAZEL-AQUERY: /some/path/test1.o
+    print(obj[0].relative_output_path())
+    # CHECK-TEST-LOAD-BAZEL-AQUERY: test1.o
+    print(obj[0].cmd_file())
+    # CHECK-TEST-LOAD-BAZEL-AQUERY: /tmp/out/test1.o.cmd
+    print(obj[0].bc_file())
+    # CHECK-TEST-LOAD-BAZEL-AQUERY: /tmp/out/test1.o.bc
+    print(obj[1].input_obj())
+    # CHECK-TEST-LOAD-BAZEL-AQUERY: /some/path/test2.o
+    print(obj[1].relative_output_path())
+    # CHECK-TEST-LOAD-BAZEL-AQUERY: test2.o
+    print(obj[1].cmd_file())
+    # CHECK-TEST-LOAD-BAZEL-AQUERY: /tmp/out/test2.o.cmd
+    print(obj[1].bc_file())
+    # CHECK-TEST-LOAD-BAZEL-AQUERY: /tmp/out/test2.o.bc
 
 
 ## Test that filtering works correctly

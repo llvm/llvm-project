@@ -14,11 +14,11 @@
 #ifndef LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEMETADATA_H
 #define LLVM_TOOLS_LLVM_REDUCE_DELTAS_REDUCEMETADATA_H
 
-#include "TestRunner.h"
+#include "Delta.h"
 
 namespace llvm {
-void reduceMetadataDeltaPass(TestRunner &Test);
-void reduceNamedMetadataDeltaPass(TestRunner &Test);
+void reduceMetadataDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
+void reduceNamedMetadataDeltaPass(Oracle &O, ReducerWorkItem &WorkItem);
 } // namespace llvm
 
 #endif

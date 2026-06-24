@@ -79,7 +79,7 @@ def IntegerAttr: DialectAttribute<(attr
   Type:$type,
   KnownWidthAPInt<"type">:$value
 )> {
-  let cBuilder = "get<$_resultType>(context, type, *value)";
+  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, type, *value)";
 }
 
 defvar FloatType = Type;
@@ -87,7 +87,7 @@ def FloatAttr : DialectAttribute<(attr
   FloatType:$type,
   KnownSemanticsAPFloat<"type">:$value
 )> {
-  let cBuilder = "get<$_resultType>(context, type, *value)";
+  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, type, *value)";
 }
 
 def CallSiteLoc : DialectAttribute<(attr
@@ -95,18 +95,36 @@ def CallSiteLoc : DialectAttribute<(attr
   LocationAttr:$caller
 )>;
 
+let cType = "FileLineColRange" in {
+def FileLineColRange : DialectAttribute<(attr
+  StringAttr:$filename,
+  WithBuilder<"$_args",
+    WithType<"SmallVector<uint64_t>",
+    WithParser<"succeeded(readFileLineColRangeLocs($_reader, $_var))",
+    WithPrinter<"writeFileLineColRangeLocs($_writer, $_name)">>>>:$rawLocData
+)> {
+  let cBuilder = "getFileLineColRange(context, filename, rawLocData)";
+  let printerPredicate = "!isStrictFileLineColLoc($_val)";
+}
+
 def FileLineColLoc : DialectAttribute<(attr
   StringAttr:$filename,
-  VarInt:$line,
-  VarInt:$column
-)>;
+  VarInt:$start_line,
+  VarInt:$start_column
+)> {
+  let printerPredicate = "isStrictFileLineColLoc($_val)";
+}
+}
 
-let cType = "FusedLoc",
-    cBuilder = "cast<FusedLoc>(get<FusedLoc>(context, $_args))" in {
+let cType = "FusedLoc" in {
 def FusedLoc : DialectAttribute<(attr
   Array<Location>:$locations
 )> {
   let printerPredicate = "!$_val.getMetadata()";
+  // FusedLoc::get(context, locs) may return UnknownLoc when locs is empty.
+  // Pass Attribute() explicitly to bypass the folding logic and always
+  // construct a FusedLoc via Base::getChecked.
+  let cBuilder = "cast<FusedLoc>(getChecked<FusedLoc>([&]() { return reader.emitError(); }, context, $_args, Attribute()))";
 }
 
 def FusedLocWithMetadata : DialectAttribute<(attr
@@ -114,6 +132,7 @@ def FusedLocWithMetadata : DialectAttribute<(attr
   Attribute:$metadata
 )> {
   let printerPredicate = "$_val.getMetadata()";
+  let cBuilder = "cast<FusedLoc>(getChecked<FusedLoc>([&]() { return reader.emitError(); }, context, $_args))";
 }
 }
 
@@ -129,7 +148,7 @@ def DenseResourceElementsAttr : DialectAttribute<(attr
   ResourceHandle<"DenseResourceElementsHandle">:$rawHandle
 )> {
   // Note: order of serialization does not match order of builder.
-  let cBuilder = "get<$_resultType>(context, type, *rawHandle)";
+  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, type, *rawHandle)";
 }
 
 let cType = "RankedTensorType" in {
@@ -147,7 +166,7 @@ def RankedTensorTypeWithEncoding : DialectType<(type
 )> {
   let printerPredicate = "$_val.getEncoding()";
   // Note: order of serialization does not match order of builder.
-  let cBuilder = "get<$_resultType>(context, shape, elementType, encoding)";
+  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, shape, elementType, encoding)";
 }
 }
 
@@ -158,12 +177,13 @@ def DenseArrayAttr : DialectAttribute<(attr
 )>;
 
 def DenseElementsAttr : WithType<"DenseElementsAttr", Attribute>;
-def DenseIntOrFPElementsAttr : DialectAttribute<(attr
+def DenseTypedElementsAttr : DialectAttribute<(attr
   ShapedType:$type,
-  Blob:$rawData
-)> {
-  let cBuilder = "cast<$_resultType>($_resultType::getFromRawBuffer($_args))";
-}
+  WithBuilder<"$_args",
+    WithType<"SmallVector<char>",
+    WithParser<"succeeded(readDenseTypedElementsAttr($_reader, type, $_var))",
+    WithPrinter<"writeDenseTypedElementsAttr($_writer, $_name)">>>>:$rawData
+)>;
 
 def DenseStringElementsAttr : DialectAttribute<(attr
   ShapedType:$type,
@@ -183,6 +203,15 @@ def SparseElementsAttr : DialectAttribute<(attr
 
 def DistinctAttr : DialectAttribute<(attr
   Attribute:$referencedAttr
+)>;
+
+// Make easy to disable until version number gets added.
+class EnableAffineMapPrintingJuly2026<dag d> : DialectAttribute<d>;
+
+def AffineMapAttr : EnableAffineMapPrintingJuly2026<(attr
+  WithParser<"succeeded(readAffineMap($_reader, context, $_var))",
+    WithPrinter<"writeAffineMap($_writer, $_name)",
+    WithType<"AffineMap">>>:$value
 )>;
 
 // Types
@@ -211,6 +240,14 @@ def BFloat16Type : DialectType<(type)>;
 
 def Float16Type : DialectType<(type)>;
 
+// Make it easy to stage the addition of new floating point types so that
+// readers can be updated first. This is enabled by default, but can be flipped
+// to DialectTypeNoPrint if staging needed.
+// Note: this will be removed post next release.
+class EnableFloatPrintingJune2026<dag d> : DialectType<d>;
+
+def FloatTF32Type : EnableFloatPrintingJune2026<(type)>;
+
 def Float32Type : DialectType<(type)>;
 
 def Float64Type : DialectType<(type)>;
@@ -218,6 +255,28 @@ def Float64Type : DialectType<(type)>;
 def Float80Type : DialectType<(type)>;
 
 def Float128Type : DialectType<(type)>;
+
+def Float8E5M2Type : EnableFloatPrintingJune2026<(type)>;
+
+def Float8E4M3Type : EnableFloatPrintingJune2026<(type)>;
+
+def Float8E4M3FNType : EnableFloatPrintingJune2026<(type)>;
+
+def Float8E5M2FNUZType : EnableFloatPrintingJune2026<(type)>;
+
+def Float8E4M3FNUZType : EnableFloatPrintingJune2026<(type)>;
+
+def Float8E4M3B11FNUZType : EnableFloatPrintingJune2026<(type)>;
+
+def Float8E3M4Type : EnableFloatPrintingJune2026<(type)>;
+
+def Float4E2M1FNType : EnableFloatPrintingJune2026<(type)>;
+
+def Float6E2M3FNType : EnableFloatPrintingJune2026<(type)>;
+
+def Float6E3M2FNType : EnableFloatPrintingJune2026<(type)>;
+
+def Float8E8M0FNUType : EnableFloatPrintingJune2026<(type)>;
 
 def ComplexType : DialectType<(type
   Type:$elementType
@@ -242,7 +301,7 @@ def MemRefTypeWithMemSpace : DialectType<(type
 )> {
   let printerPredicate = "!!$_val.getMemorySpace()";
   // Note: order of serialization does not match order of builder.
-  let cBuilder = "get<$_resultType>(context, shape, elementType, layout, memorySpace)";
+  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, shape, elementType, layout, memorySpace)";
 }
 }
 
@@ -257,7 +316,7 @@ def UnrankedMemRefType : DialectType<(type
   Type:$elementType
 )> {
   let printerPredicate = "!$_val.getMemorySpace()";
-  let cBuilder = "get<$_resultType>(context, elementType, Attribute())";
+  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, elementType, Attribute())";
 }
 
 def UnrankedMemRefTypeWithMemSpace : DialectType<(type
@@ -266,7 +325,7 @@ def UnrankedMemRefTypeWithMemSpace : DialectType<(type
 )> {
   let printerPredicate = "$_val.getMemorySpace()";
   // Note: order of serialization does not match order of builder.
-  let cBuilder = "get<$_resultType>(context, elementType, memorySpace)";
+  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, elementType, memorySpace)";
 }
 }
 
@@ -274,12 +333,17 @@ def UnrankedTensorType : DialectType<(type
   Type:$elementType
 )>;
 
+def TokenType : DialectType<(type)>;
+
 let cType = "VectorType" in {
 def VectorType : DialectType<(type
   Array<SignedVarIntList>:$shape,
   Type:$elementType
 )> {
   let printerPredicate = "!$_val.isScalable()";
+  // Use getChecked to produce a null type (and emit a diagnostic) instead of
+  // asserting when the element type does not implement VectorElementTypeInterface.
+  let cBuilder = "VectorType::getChecked([&]() { return reader.emitError(\"invalid vector type\"); }, shape, elementType)";
 }
 
 def VectorTypeWithScalableDims : DialectType<(type
@@ -289,7 +353,7 @@ def VectorTypeWithScalableDims : DialectType<(type
 )> {
   let printerPredicate = "$_val.isScalable()";
   // Note: order of serialization does not match order of builder.
-  let cBuilder = "get<$_resultType>(context, shape, elementType, scalableDims)";
+  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, shape, elementType, scalableDims)";
 }
 }
 
@@ -318,10 +382,12 @@ def BuiltinDialectAttributes : DialectAttributes<"Builtin"> {
     UnknownLoc,
     DenseResourceElementsAttr,
     DenseArrayAttr,
-    DenseIntOrFPElementsAttr,
+    DenseTypedElementsAttr,
     DenseStringElementsAttr,
     SparseElementsAttr,
-    DistinctAttr
+    DistinctAttr,
+    FileLineColRange,
+    AffineMapAttr,
   ];
 }
 
@@ -347,7 +413,20 @@ def BuiltinDialectTypes : DialectTypes<"Builtin"> {
     UnrankedMemRefTypeWithMemSpace,
     UnrankedTensorType,
     VectorType,
-    VectorTypeWithScalableDims
+    VectorTypeWithScalableDims,
+    FloatTF32Type,
+    Float8E5M2Type,
+    Float8E4M3Type,
+    Float8E4M3FNType,
+    Float8E5M2FNUZType,
+    Float8E4M3FNUZType,
+    Float8E4M3B11FNUZType,
+    Float8E3M4Type,
+    Float4E2M1FNType,
+    Float6E2M3FNType,
+    Float6E3M2FNType,
+    Float8E8M0FNUType,
+    TokenType
   ];
 }
 

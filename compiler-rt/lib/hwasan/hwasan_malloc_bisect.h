@@ -41,7 +41,7 @@ static inline bool malloc_bisect(StackTrace *stack, uptr orig_size) {
   if (h < left || h > right)
     return false;
   if (flags()->malloc_bisect_dump) {
-    Printf("[alloc] %u %zu\n", h, orig_size);
+    Printf("[alloc] %u %zu\n", (u32)h, orig_size);
     stack->Print();
   }
   return true;

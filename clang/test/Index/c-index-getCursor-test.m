@@ -1,4 +1,4 @@
-// RUN: c-index-test -write-pch %t.ast -arch x86_64 -mmacosx-version-min=10.6 -fblocks -x objective-c %s
+// RUN: c-index-test -write-pch %t.ast -arch x86_64 -mmacos-version-min=10.6 -fblocks -x objective-c %s
 // RUN: c-index-test -test-file-scan %t.ast %s > %t 2>&1 && FileCheck --input-file=%t %s
 @interface Foo 
 {

@@ -9,18 +9,22 @@
 #ifndef FORTRAN_LOWER_OPENMPUTILS_H
 #define FORTRAN_LOWER_OPENMPUTILS_H
 
-#include "Clauses.h"
+#include "flang/Lower/OpenMP/Clauses.h"
+#include "flang/Optimizer/Builder/HLFIRTools.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Value.h"
+#include "llvm/Frontend/OpenMP/OMPContext.h"
 #include "llvm/Support/CommandLine.h"
+#include <cstdint>
+#include <optional>
 
 extern llvm::cl::opt<bool> treatIndexAsSection;
-extern llvm::cl::opt<bool> enableDelayedPrivatization;
-extern llvm::cl::opt<bool> enableDelayedPrivatizationStaging;
 
 namespace fir {
 class FirOpBuilder;
+class RecordType;
 } // namespace fir
 namespace Fortran {
 
@@ -34,6 +38,7 @@ struct OmpObjectList;
 } // namespace parser
 
 namespace lower {
+class StatementContext;
 namespace pft {
 struct Evaluation;
 }
@@ -42,45 +47,105 @@ class AbstractConverter;
 
 namespace omp {
 
-using DeclareTargetCapturePair =
-    std::pair<mlir::omp::DeclareTargetCaptureClause, const semantics::Symbol &>;
+struct DeclareTargetCaptureInfo {
+  mlir::omp::DeclareTargetCaptureClause clause;
+  bool automap = false;
+  const semantics::Symbol &symbol;
+
+  DeclareTargetCaptureInfo(mlir::omp::DeclareTargetCaptureClause c,
+                           const semantics::Symbol &s, bool a = false)
+      : clause(c), automap(a), symbol(s) {}
+};
 
 // A small helper structure for keeping track of a component members MapInfoOp
 // and index data when lowering OpenMP map clauses. Keeps track of the
 // placement of the component in the derived type hierarchy it rests within,
 // alongside the generated mlir::omp::MapInfoOp for the mapped component.
-struct OmpMapMemberIndicesData {
+//
+// As an example of what the contents of this data structure may be like,
+// when provided the following derived type and map of that type:
+//
+// type :: bottom_layer
+//   real(8) :: i2
+//   real(4) :: array_i2(10)
+//   real(4) :: array_j2(10)
+// end type bottom_layer
+//
+// type :: top_layer
+//   real(4) :: i
+//   integer(4) :: array_i(10)
+//   real(4) :: j
+//   type(bottom_layer) :: nested
+//   integer, allocatable :: array_j(:)
+//   integer(4) :: k
+// end type top_layer
+//
+// type(top_layer) :: top_dtype
+//
+// map(tofrom: top_dtype%nested%i2, top_dtype%k, top_dtype%nested%array_i2)
+//
+// We would end up with an OmpMapParentAndMemberData populated like below:
+//
+// memberPlacementIndices:
+//  Vector 1: 3, 0
+//  Vector 2: 5
+//  Vector 3: 3, 1
+//
+// memberMap:
+// Entry 1: omp.map.info for "top_dtype%nested%i2"
+// Entry 2: omp.map.info for "top_dtype%k"
+// Entry 3: omp.map.info for "top_dtype%nested%array_i2"
+//
+// And this OmpMapParentAndMemberData would be accessed via the parent
+// symbol for top_dtype. Other parent derived type instances that have
+// members mapped would have there own OmpMapParentAndMemberData entry
+// accessed via their own symbol.
+struct OmpMapParentAndMemberData {
   // The indices representing the component members placement in its derived
   // type parents hierarchy.
-  llvm::SmallVector<int> memberPlacementIndices;
+  llvm::SmallVector<llvm::SmallVector<int64_t>> memberPlacementIndices;
 
   // Placement of the member in the member vector.
-  mlir::omp::MapInfoOp memberMap;
+  llvm::SmallVector<mlir::omp::MapInfoOp> memberMap;
+
+  bool isDuplicateMemberMapInfo(llvm::SmallVectorImpl<int64_t> &memberIndices) {
+    return llvm::find_if(memberPlacementIndices, [&](auto &memberData) {
+             return llvm::equal(memberIndices, memberData);
+           }) != memberPlacementIndices.end();
+  }
+
+  void addChildIndexAndMapToParent(const omp::Object &object,
+                                   mlir::omp::MapInfoOp &mapOp,
+                                   semantics::SemanticsContext &semaCtx);
 };
 
-mlir::omp::MapInfoOp
-createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
-                mlir::Value baseAddr, mlir::Value varPtrPtr, std::string name,
-                mlir::ArrayRef<mlir::Value> bounds,
-                mlir::ArrayRef<mlir::Value> members,
-                mlir::DenseIntElementsAttr membersIndex, uint64_t mapType,
-                mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
-                bool partialMap = false);
-
-void addChildIndexAndMapToParent(
-    const omp::Object &object,
-    std::map<const semantics::Symbol *,
-             llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
-    mlir::omp::MapInfoOp &mapOp, semantics::SemanticsContext &semaCtx);
-
 void insertChildMapInfoIntoParent(
-    lower::AbstractConverter &converter,
-    std::map<const semantics::Symbol *,
-             llvm::SmallVector<OmpMapMemberIndicesData>> &parentMemberIndices,
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::semantics::SemanticsContext &semaCtx,
+    Fortran::lower::StatementContext &stmtCtx,
+    std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
     llvm::SmallVectorImpl<mlir::Value> &mapOperands,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
-    llvm::SmallVectorImpl<mlir::Type> *mapSymTypes,
-    llvm::SmallVectorImpl<mlir::Location> *mapSymLocs);
+    llvm::SmallVectorImpl<Object> &mapObjects);
+
+void generateMemberPlacementIndices(
+    const Object &object, llvm::SmallVectorImpl<int64_t> &indices,
+    Fortran::semantics::SemanticsContext &semaCtx);
+
+bool isMemberOrParentAllocatableOrPointer(
+    const Object &object, Fortran::semantics::SemanticsContext &semaCtx);
+
+mlir::Value createParentSymAndGenIntermediateMaps(
+    mlir::Location clauseLocation, Fortran::lower::AbstractConverter &converter,
+    semantics::SemanticsContext &semaCtx, lower::StatementContext &stmtCtx,
+    omp::ObjectList &objectList, llvm::SmallVectorImpl<int64_t> &indices,
+    OmpMapParentAndMemberData &parentMemberIndices, llvm::StringRef asFortran,
+    mlir::omp::ClauseMapFlags mapTypeBits);
+
+bool requiresImplicitDefaultDeclareMapper(
+    const semantics::DerivedTypeSpec &typeSpec);
+
+omp::ObjectList gatherObjectsOf(omp::Object derivedTypeMember,
+                                semantics::SemanticsContext &semaCtx);
 
 mlir::Type getLoopVarType(lower::AbstractConverter &converter,
                           std::size_t loopVarTypeSize);
@@ -90,15 +155,142 @@ getIterationVariableSymbol(const lower::pft::Evaluation &eval);
 
 void gatherFuncAndVarSyms(
     const ObjectList &objects, mlir::omp::DeclareTargetCaptureClause clause,
-    llvm::SmallVectorImpl<DeclareTargetCapturePair> &symbolAndClause);
+    llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &symbolAndClause,
+    bool automap = false);
 
 int64_t getCollapseValue(const List<Clause> &clauses);
-
-semantics::Symbol *getOmpObjectSymbol(const parser::OmpObject &ompObject);
 
 void genObjectList(const ObjectList &objects,
                    lower::AbstractConverter &converter,
                    llvm::SmallVectorImpl<mlir::Value> &operands);
+
+void lastprivateModifierNotSupported(const omp::clause::Lastprivate &lastp,
+                                     mlir::Location loc);
+
+pft::Evaluation *getNestedDoConstruct(pft::Evaluation &eval);
+
+int64_t collectLoopRelatedInfo(
+    lower::AbstractConverter &converter, mlir::Location currentLocation,
+    lower::pft::Evaluation &eval, lower::pft::Evaluation *nestedEval,
+    const omp::List<omp::Clause> &clauses,
+    mlir::omp::LoopRelatedClauseOps &result,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &iv);
+
+void collectLoopRelatedInfo(
+    lower::AbstractConverter &converter, mlir::Location currentLocation,
+    lower::pft::Evaluation &eval, lower::pft::Evaluation *nestedEval,
+    std::int64_t collapseValue,
+    // const omp::List<omp::Clause> &clauses,
+    mlir::omp::LoopRelatedClauseOps &result,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &iv);
+
+void collectTileSizesFromOpenMPConstruct(
+    const parser::OpenMPConstruct *ompCons,
+    llvm::SmallVectorImpl<int64_t> &tileSizes,
+    Fortran::semantics::SemanticsContext &semaCtx);
+
+mlir::Value genElementSizeInBytes(fir::FirOpBuilder &builder,
+                                  mlir::Location loc,
+                                  const mlir::DataLayout &dl,
+                                  hlfir::Entity entity);
+
+mlir::Value genAffinityAddr(Fortran::lower::AbstractConverter &converter,
+                            const omp::Object &object,
+                            Fortran::lower::StatementContext &stmtCtx,
+                            mlir::Location loc);
+
+mlir::Value genAffinityLen(fir::FirOpBuilder &builder, mlir::Location loc,
+                           const mlir::DataLayout &dl, hlfir::Entity entity,
+                           llvm::ArrayRef<mlir::Value> bounds);
+
+struct IteratorRange {
+  mlir::Value lb;
+  mlir::Value ub;
+  mlir::Value step;
+  Fortran::semantics::Symbol *ivSym = nullptr;
+};
+
+bool hasIteratorIVReference(
+    const omp::Object &object,
+    const llvm::SmallPtrSetImpl<const Fortran::semantics::Symbol *> &ivSyms);
+
+/// Default name mangler for implicit default mappers.
+///
+/// \param converter The converter to use for name mangling.
+/// \param mapperIdName The name of the mapper to mangle.
+/// \param memberName The name of the member to mangle.
+void defaultMangler(Fortran::lower::AbstractConverter &converter,
+                    std::string &mapperIdName, llvm::StringRef memberName);
+
+mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
+                                  hlfir::Entity entity,
+                                  llvm::ArrayRef<mlir::Value> ivs,
+                                  mlir::Location loc);
+
+/// Resolve the declare mapper symbol to attach to a mapped object.
+///
+/// The default mapper path first looks for a user-defined mapper. If none
+/// exists, it may synthesize a compiler-generated mapper, except for mapped
+/// members whose parent object is also mapped and for target enter data,
+/// target exit data, and target update directives.
+///
+/// \param converter The converter used to query and generate mapper symbols.
+/// \param loc The location to use when generating an implicit mapper.
+/// \param object The mapped object whose type controls mapper resolution.
+/// \param mapperIdName An explicit mapper name, `__implicit_mapper`, or an
+///        empty name.
+/// \param mapTypeBits The map flags used when deciding whether an implicit
+///        mapper should be generated.
+/// \param directive The enclosing OpenMP directive.
+/// \param hasParentObj True if a mapped parent object already owns this object.
+/// \return A symbol reference to the resolved mapper, or a null attribute when
+///         no mapper applies.
+mlir::FlatSymbolRefAttr
+resolveMapperId(Fortran::lower::AbstractConverter &converter,
+                mlir::Location loc, const omp::Object &object,
+                llvm::StringRef mapperIdName,
+                mlir::omp::ClauseMapFlags mapTypeBits,
+                llvm::omp::Directive directive, bool hasParentObj);
+
+std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
+    Fortran::lower::AbstractConverter &converter, const omp::Object &object,
+    Fortran::lower::StatementContext &stmtCtx, mlir::Location loc);
+
+/// Walk the already-emitted MLIR parent operations starting from \p op and
+/// collect the implied OpenMP construct traits in outermost-to-innermost
+/// order. Used by metadirective lowering to build the `ConstructTraits` of an
+/// `OMPContext`.
+void collectEnclosingConstructTraits(
+    mlir::Operation *op,
+    llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits);
+
+/// Non-constant user condition expression and source for runtime lowering.
+struct DynamicUserCondition {
+  const parser::ScalarExpr *expr;
+  parser::CharBlock source;
+};
+
+/// Populate \p vmi from a parsed OpenMP context selector. Constant user
+/// conditions are folded into user_condition_true/false traits. A non-constant
+/// user condition is recorded as user_condition_unknown and returned for later
+/// lowering as a runtime condition.
+std::optional<DynamicUserCondition>
+makeVariantMatchInfo(llvm::omp::VariantMatchInfo &vmi,
+                     const parser::modifier::OmpContextSelector &ctxSel,
+                     semantics::SemanticsContext &semaCtx, mlir::Location loc);
+
+/// `OMPContext` flavour used by Flang's OpenMP variant matching. Adds an
+/// ISA-trait override based on the module's target-features attribute.
+class FlangOMPContext final : public llvm::omp::OMPContext {
+public:
+  FlangOMPContext(mlir::ModuleOp module,
+                  llvm::ArrayRef<llvm::omp::TraitProperty> constructTraits);
+  bool matchesISATrait(llvm::StringRef rawString) const override;
+
+private:
+  static bool isDeviceCompilation(mlir::ModuleOp module);
+  mlir::LLVM::TargetFeaturesAttr targetFeatures;
+};
 
 } // namespace omp
 } // namespace lower

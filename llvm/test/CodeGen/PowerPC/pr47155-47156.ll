@@ -4,6 +4,7 @@
 ; RUN:   -stop-after=postmisched -debug-only=machine-scheduler 2>&1 >/dev/null | FileCheck %s
 
 define void @pr47155() {
+; CHECK-LABEL: Machine code for function pr47155
 ; CHECK: *** Final schedule for %bb.0 ***
 ; CHECK: ********** MI Scheduling **********
 ; CHECK-NEXT: pr47155:%bb.0 entry
@@ -23,6 +24,7 @@ entry:
 }
 
 define void @pr47156(ptr %fn) {
+; CHECK-LABEL: Machine code for function pr47156
 ; CHECK: *** Final schedule for %bb.0 ***
 ; CHECK: ********** MI Scheduling **********
 ; CHECK-NEXT: pr47156:%bb.0 entry

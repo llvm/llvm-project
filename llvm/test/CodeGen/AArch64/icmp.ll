@@ -2,6 +2,12 @@
 ; RUN: llc -mtriple=aarch64 -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64 -global-isel -global-isel-abort=2 -verify-machineinstrs %s -o - 2>&1 | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
+; CHECK-GI:       warning: Instruction selection used fallback path for v2p0_p0
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for v3p0_p0
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for v4p0_p0
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for icmp_eq_v2p0_Zero_RHS
+; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for icmp_eq_v2p0_Zero_LHS
+
 define i64 @i64_i64(i64 %a, i64 %b, i64 %d, i64 %e) {
 ; CHECK-LABEL: i64_i64:
 ; CHECK:       // %bb.0: // %entry
@@ -1142,9 +1148,8 @@ define <3 x i64> @v3i64_i64(<3 x i64> %a, <3 x i64> %b, <3 x i64> %d, <3 x i64> 
 ; CHECK-SD-NEXT:    bsl v0.16b, v6.16b, v1.16b
 ; CHECK-SD-NEXT:    cmgt v1.2d, v5.2d, v2.2d
 ; CHECK-SD-NEXT:    mov v2.16b, v1.16b
-; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    bsl v2.16b, v17.16b, v16.16b
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    ret
@@ -1227,18 +1232,10 @@ define <3 x i32> @v3i32_i32(<3 x i32> %a, <3 x i32> %b, <3 x i32> %d, <3 x i32> 
 ;
 ; CHECK-GI-LABEL: v3i32_i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
 ; CHECK-GI-NEXT:    cmgt v0.4s, v1.4s, v0.4s
-; CHECK-GI-NEXT:    fmov s4, w8
-; CHECK-GI-NEXT:    mov v4.s[1], w8
-; CHECK-GI-NEXT:    mov v4.s[2], w8
-; CHECK-GI-NEXT:    mov w8, #-1 // =0xffffffff
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    mov v1.s[1], w8
-; CHECK-GI-NEXT:    ushl v0.4s, v0.4s, v4.4s
-; CHECK-GI-NEXT:    neg v4.4s, v4.4s
-; CHECK-GI-NEXT:    sshl v0.4s, v0.4s, v4.4s
-; CHECK-GI-NEXT:    mov v1.s[2], w8
+; CHECK-GI-NEXT:    movi v1.2d, #0xffffffffffffffff
+; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #31
+; CHECK-GI-NEXT:    cmlt v0.4s, v0.4s, #0
 ; CHECK-GI-NEXT:    eor v1.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    and v0.16b, v2.16b, v0.16b
 ; CHECK-GI-NEXT:    and v1.16b, v3.16b, v1.16b
@@ -1376,6 +1373,119 @@ entry:
   ret <32 x i8> %s
 }
 
+define <2 x i128> @v2i128_i128(<2 x i128> %a, <2 x i128> %b, <2 x i128> %d, <2 x i128> %e) {
+; CHECK-SD-LABEL: v2i128_i128:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    add x10, sp, #32
+; CHECK-SD-NEXT:    mov x11, sp
+; CHECK-SD-NEXT:    cmp x0, x4
+; CHECK-SD-NEXT:    orr x12, x10, #0x8
+; CHECK-SD-NEXT:    orr x13, x11, #0x8
+; CHECK-SD-NEXT:    sbcs xzr, x1, x5
+; CHECK-SD-NEXT:    add x8, sp, #48
+; CHECK-SD-NEXT:    add x9, sp, #16
+; CHECK-SD-NEXT:    csel x12, x13, x12, lt
+; CHECK-SD-NEXT:    csel x10, x11, x10, lt
+; CHECK-SD-NEXT:    cmp x2, x6
+; CHECK-SD-NEXT:    orr x11, x8, #0x8
+; CHECK-SD-NEXT:    orr x13, x9, #0x8
+; CHECK-SD-NEXT:    sbcs xzr, x3, x7
+; CHECK-SD-NEXT:    ldr x0, [x10]
+; CHECK-SD-NEXT:    csel x8, x9, x8, lt
+; CHECK-SD-NEXT:    csel x9, x13, x11, lt
+; CHECK-SD-NEXT:    ldr x1, [x12]
+; CHECK-SD-NEXT:    ldr x2, [x8]
+; CHECK-SD-NEXT:    ldr x3, [x9]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: v2i128_i128:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    cmp x0, x4
+; CHECK-GI-NEXT:    ldp x9, x10, [sp]
+; CHECK-GI-NEXT:    cset w8, lo
+; CHECK-GI-NEXT:    cmp x1, x5
+; CHECK-GI-NEXT:    cset w11, lt
+; CHECK-GI-NEXT:    ldp x14, x15, [sp, #32]
+; CHECK-GI-NEXT:    csel w8, w8, w11, eq
+; CHECK-GI-NEXT:    cmp x2, x6
+; CHECK-GI-NEXT:    cset w11, lo
+; CHECK-GI-NEXT:    cmp x3, x7
+; CHECK-GI-NEXT:    ldp x12, x13, [sp, #16]
+; CHECK-GI-NEXT:    cset w16, lt
+; CHECK-GI-NEXT:    ldp x17, x18, [sp, #48]
+; CHECK-GI-NEXT:    csel w11, w11, w16, eq
+; CHECK-GI-NEXT:    tst w8, #0x1
+; CHECK-GI-NEXT:    csel x0, x9, x14, ne
+; CHECK-GI-NEXT:    csel x1, x10, x15, ne
+; CHECK-GI-NEXT:    tst w11, #0x1
+; CHECK-GI-NEXT:    csel x2, x12, x17, ne
+; CHECK-GI-NEXT:    csel x3, x13, x18, ne
+; CHECK-GI-NEXT:    ret
+entry:
+  %c = icmp slt <2 x i128> %a, %b
+  %s = select <2 x i1> %c, <2 x i128> %d, <2 x i128> %e
+  ret <2 x i128> %s
+}
+
+define <2 x ptr> @v2p0_p0(<2 x ptr> %a, <2 x ptr> %b, <2 x ptr> %d, <2 x ptr> %e) {
+; CHECK-LABEL: v2p0_p0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmeq v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    bsl v0.16b, v3.16b, v2.16b
+; CHECK-NEXT:    ret
+entry:
+  %c = icmp ne <2 x ptr> %a, %b
+  %s = select <2 x i1> %c, <2 x ptr> %d, <2 x ptr> %e
+  ret <2 x ptr> %s
+}
+
+define <3 x ptr> @v3p0_p0(<3 x ptr> %a, <3 x ptr> %b, <3 x ptr> %d, <3 x ptr> %e) {
+; CHECK-LABEL: v3p0_p0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-NEXT:    // kill: def $d3 killed $d3 def $q3
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    // kill: def $d6 killed $d6 def $q6
+; CHECK-NEXT:    // kill: def $d7 killed $d7 def $q7
+; CHECK-NEXT:    // kill: def $d5 killed $d5 def $q5
+; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-NEXT:    ldr d16, [sp, #24]
+; CHECK-NEXT:    ldr d17, [sp]
+; CHECK-NEXT:    mov v3.d[1], v4.d[0]
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    mov v6.d[1], v7.d[0]
+; CHECK-NEXT:    ldp d1, d4, [sp, #8]
+; CHECK-NEXT:    mov v1.d[1], v4.d[0]
+; CHECK-NEXT:    cmgt v0.2d, v3.2d, v0.2d
+; CHECK-NEXT:    bsl v0.16b, v6.16b, v1.16b
+; CHECK-NEXT:    cmgt v1.2d, v5.2d, v2.2d
+; CHECK-NEXT:    mov v2.16b, v1.16b
+; CHECK-NEXT:    mov d1, v0.d[1]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    bsl v2.16b, v17.16b, v16.16b
+; CHECK-NEXT:    // kill: def $d2 killed $d2 killed $q2
+; CHECK-NEXT:    ret
+entry:
+  %c = icmp slt <3 x ptr> %a, %b
+  %s = select <3 x i1> %c, <3 x ptr> %d, <3 x ptr> %e
+  ret <3 x ptr> %s
+}
+
+define <4 x ptr> @v4p0_p0(<4 x ptr> %a, <4 x ptr> %b, <4 x ptr> %d, <4 x ptr> %e) {
+; CHECK-LABEL: v4p0_p0:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    cmgt v1.2d, v3.2d, v1.2d
+; CHECK-NEXT:    cmgt v0.2d, v2.2d, v0.2d
+; CHECK-NEXT:    bsl v1.16b, v5.16b, v7.16b
+; CHECK-NEXT:    bsl v0.16b, v4.16b, v6.16b
+; CHECK-NEXT:    ret
+entry:
+  %c = icmp slt <4 x ptr> %a, %b
+  %s = select <4 x i1> %c, <4 x ptr> %d, <4 x ptr> %e
+  ret <4 x ptr> %s
+}
+
 ; ===== ICMP Zero RHS =====
 
 define <8 x i1> @icmp_eq_v8i8_Zero_RHS(<8 x i8> %a) {
@@ -1441,6 +1551,16 @@ define <2 x i1> @icmp_eq_v2i64_Zero_RHS(<2 x i64> %a) {
 ; CHECK-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-NEXT:    ret
     %c = icmp eq <2 x i64> %a, <i64 0, i64 0>
+    ret <2 x i1> %c
+}
+
+define <2 x i1> @icmp_eq_v2p0_Zero_RHS(<2 x ptr> %a) {
+; CHECK-LABEL: icmp_eq_v2p0_Zero_RHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmeq v0.2d, v0.2d, #0
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    ret
+    %c = icmp eq <2 x ptr> %a, splat (ptr null)
     ret <2 x i1> %c
 }
 
@@ -1776,6 +1896,16 @@ define <2 x i1> @icmp_eq_v2i64_Zero_LHS(<2 x i64> %a) {
     ret <2 x i1> %c
 }
 
+define <2 x i1> @icmp_eq_v2p0_Zero_LHS(<2 x ptr> %a) {
+; CHECK-LABEL: icmp_eq_v2p0_Zero_LHS:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmeq v0.2d, v0.2d, #0
+; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    ret
+    %c = icmp eq <2 x ptr> splat (ptr null), %a
+    ret <2 x i1> %c
+}
+
 define <8 x i1> @icmp_sge_v8i8_Zero_LHS(<8 x i8> %a) {
 ; CHECK-LABEL: icmp_sge_v8i8_Zero_LHS:
 ; CHECK:       // %bb.0:
@@ -2038,4 +2168,55 @@ define <2 x i1> @icmp_slt_v2i64_Zero_LHS(<2 x i64> %a) {
 ; CHECK-NEXT:    ret
     %c = icmp slt <2 x i64> <i64 0, i64 0>, %a
     ret <2 x i1> %c
+}
+
+; Test TST optimization for i8 sign bit testing with cross-type select
+; This tests the pattern: icmp slt i8 %val, 0; select i1 %cmp, i32 %a, i32 %b
+; The optimization should convert sxtb+cmp to tst for sign bit testing.
+
+define i32 @i8_signbit_tst_constants(i8 %x, i8 %y) {
+; CHECK-SD-LABEL: i8_signbit_tst_constants:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    add w9, w0, w1
+; CHECK-SD-NEXT:    mov w8, #42 // =0x2a
+; CHECK-SD-NEXT:    tst w9, #0x80
+; CHECK-SD-NEXT:    mov w9, #20894 // =0x519e
+; CHECK-SD-NEXT:    csel w0, w9, w8, ne
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: i8_signbit_tst_constants:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add w8, w0, w1
+; CHECK-GI-NEXT:    mov w9, #42 // =0x2a
+; CHECK-GI-NEXT:    mov w10, #20894 // =0x519e
+; CHECK-GI-NEXT:    sxtb w8, w8
+; CHECK-GI-NEXT:    cmp w8, #0
+; CHECK-GI-NEXT:    csel w0, w10, w9, mi
+; CHECK-GI-NEXT:    ret
+  %add = add i8 %x, %y
+  %cmp = icmp slt i8 %add, 0
+  %sel = select i1 %cmp, i32 20894, i32 42
+  ret i32 %sel
+}
+
+; Test i8 sign bit testing with variable select values (problematic case)
+define i32 @i8_signbit_variables(i8 %x, i8 %y, i32 %a, i32 %b) {
+; CHECK-SD-LABEL: i8_signbit_variables:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    add w8, w0, w1
+; CHECK-SD-NEXT:    tst w8, #0x80
+; CHECK-SD-NEXT:    csel w0, w2, w3, ne
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: i8_signbit_variables:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    add w8, w0, w1
+; CHECK-GI-NEXT:    sxtb w8, w8
+; CHECK-GI-NEXT:    cmp w8, #0
+; CHECK-GI-NEXT:    csel w0, w2, w3, mi
+; CHECK-GI-NEXT:    ret
+  %add = add i8 %x, %y
+  %cmp = icmp slt i8 %add, 0
+  %sel = select i1 %cmp, i32 %a, i32 %b
+  ret i32 %sel
 }

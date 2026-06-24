@@ -13,7 +13,6 @@
 #include "llvm/DebugInfo/LogicalView/Core/LVElement.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVReader.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVScope.h"
-#include "llvm/DebugInfo/LogicalView/Core/LVSymbol.h"
 #include "llvm/DebugInfo/LogicalView/Core/LVType.h"
 
 using namespace llvm;
@@ -530,7 +529,7 @@ void LVElement::printFileIndex(raw_ostream &OS, bool Full) const {
 
       OS << "  {Source} ";
       if (getInvalidFilename())
-        OS << format("[0x%08x]\n", Index);
+        OS << formatv("[{0:x8}]\n", Index);
       else
         OS << formattedName(getPathname()) << "\n";
     }

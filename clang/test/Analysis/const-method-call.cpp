@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -Wno-error=return-type -analyzer-checker=core,debug.ExprInspection -verify -analyzer-config eagerly-assume=false %s
 
 void clang_analyzer_eval(bool);
 
@@ -271,3 +271,49 @@ void checkThatConstMethodCallDoesInvalidateObjectForCircularReferences() {
   // FIXME: Should be UNKNOWN.
   clang_analyzer_eval(t.x); // expected-warning{{TRUE}}
 }
+
+namespace gh77378 {
+template <typename Signature> class callable;
+
+template <typename R> class callable<R()> {
+  struct CallableType {
+    bool operator()();
+  };
+  using MethodType = R (CallableType::*)();
+  CallableType *object_{nullptr};
+  MethodType method_;
+
+public:
+  callable() = default;
+
+  template <typename T>
+  constexpr callable(const T &obj)
+      : object_{reinterpret_cast<CallableType *>(&const_cast<T &>(obj))},
+        method_{reinterpret_cast<MethodType>(
+            static_cast<bool (T::*)() const>(&T::operator()))} {}
+
+  constexpr bool const_method() const {
+    return (object_->*(method_))();
+  }
+
+  callable call() const & {
+    static const auto L = [this]() {
+      while (true) {
+        // This should not crash when conservative eval calling the member function
+        // when it unwinds the call stack due to exhausting the budget or reaching
+        // the inlining limit.
+        if (this->const_method()) {
+          break;
+        }
+      }
+      return true;
+    };
+    return L;
+  }
+};
+
+void entry() {
+  callable<bool()>{}.call().const_method();
+  // expected-warning@-1 {{Address of stack memory associated with temporary object of type 'callable<bool ()>' is still referred to by the static variable 'L' upon returning to the caller.  This will be a dangling reference}}
+}
+} // namespace gh77378

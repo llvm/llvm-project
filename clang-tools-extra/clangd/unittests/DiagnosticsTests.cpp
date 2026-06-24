@@ -264,10 +264,10 @@ TEST(DiagnosticsTest, DeduplicatedClangTidyDiagnostics) {
     float foo = [[0.1f]];
   )cpp");
   auto TU = TestTU::withCode(Test.code());
-  // Enable alias clang-tidy checks, these check emits the same diagnostics
+  // Enable alias clang-tidy checks, these checks emit the same diagnostics
   // (except the check name).
   TU.ClangTidyProvider = addTidyChecks("readability-uppercase-literal-suffix,"
-                                       "hicpp-uppercase-literal-suffix");
+                                       "cert-dcl16-c");
   // Verify that we filter out the duplicated diagnostic message.
   EXPECT_THAT(
       TU.build().getDiagnostics(),
@@ -318,12 +318,13 @@ TEST(DiagnosticsTest, ClangTidy) {
     }
   )cpp");
   auto TU = TestTU::withCode(Test.code());
-  TU.HeaderFilename = "assert.h"; // Suppress "not found" error.
+  TU.AdditionalFiles["system/assert.h"] = ""; // Suppress "not found" error.
   TU.ClangTidyProvider = addTidyChecks("bugprone-sizeof-expression,"
                                        "bugprone-macro-repeated-side-effects,"
                                        "modernize-deprecated-headers,"
                                        "modernize-use-trailing-return-type,"
                                        "misc-no-recursion");
+  TU.ExtraArgs.push_back("-isystem" + testPath("system"));
   TU.ExtraArgs.push_back("-Wno-unsequenced");
   EXPECT_THAT(
       TU.build().getDiagnostics(),
@@ -748,6 +749,10 @@ TEST(DiagnosticTest, ClangTidyEnablesClangWarning) {
   TU.ExtraArgs = {"-Wunused"};
   TU.ClangTidyProvider = addClangArgs({"-Wno-unused"}, {});
   EXPECT_THAT(TU.build().getDiagnostics(), IsEmpty());
+
+  TU.ExtraArgs = {"-Wno-unused"};
+  TU.ClangTidyProvider = addClangArgs({"-Wunused"}, {"-*, clang-diagnostic-*"});
+  EXPECT_THAT(TU.build().getDiagnostics(), SizeIs(1));
 }
 
 TEST(DiagnosticTest, LongFixMessages) {
@@ -816,6 +821,40 @@ TEST(DiagnosticTest, ClangTidyNoLiteralDataInMacroToken) {
   )cpp");
   TestTU TU = TestTU::withCode(Main.code());
   TU.ClangTidyProvider = addTidyChecks("bugprone-bad-signal-to-kill-thread");
+  EXPECT_THAT(TU.build().getDiagnostics(), UnorderedElementsAre()); // no-crash
+}
+
+TEST(DiagnosticTest, BadSignalToKillThreadInPreamble) {
+  Annotations Main(R"cpp(
+    #include "signal.h"
+    using pthread_t = int;
+    int pthread_kill(pthread_t thread, int sig);
+    int func() {
+      pthread_t thread;
+      return pthread_kill(thread, 15);
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.HeaderFilename = "signal.h";
+  TU.HeaderCode = "#define SIGTERM 15";
+  TU.ClangTidyProvider = addTidyChecks("bugprone-bad-signal-to-kill-thread");
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              ifTidyChecks(UnorderedElementsAre(
+                  diagName("bugprone-bad-signal-to-kill-thread"))));
+}
+
+TEST(DiagnosticTest, ClangTidyMacroToEnumCheck) {
+  Annotations Main(R"cpp(
+    #if 1
+    auto foo();
+    #endif
+  )cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  std::vector<TidyProvider> Providers;
+  Providers.push_back(
+      addTidyChecks("cppcoreguidelines-macro-to-enum,modernize-macro-to-enum"));
+  Providers.push_back(disableUnusableChecks());
+  TU.ClangTidyProvider = combine(std::move(Providers));
   EXPECT_THAT(TU.build().getDiagnostics(), UnorderedElementsAre()); // no-crash
 }
 
@@ -940,6 +979,23 @@ TEST(DiagnosticTest, ClangTidySelfContainedDiagsFormatting) {
                         withFix(equalToFix(ExpectedFix2))))));
 }
 
+TEST(DiagnosticsTest, ClangTidyCallingIntoPreprocessor) {
+  std::string Main = R"cpp(
+    extern "C" {
+    #include "b.h"
+    }
+  )cpp";
+  std::string Header = R"cpp(
+    #define EXTERN extern
+    EXTERN int waldo();
+  )cpp";
+  auto TU = TestTU::withCode(Main);
+  TU.AdditionalFiles["b.h"] = Header;
+  TU.ClangTidyProvider = addTidyChecks("modernize-use-trailing-return-type");
+  // Check that no assertion failures occur during the build
+  TU.build();
+}
+
 TEST(DiagnosticsTest, Preprocessor) {
   // This looks like a preamble, but there's an #else in the middle!
   // Check that:
@@ -1034,6 +1090,18 @@ void foo(int *x);
   const auto *X = cast<FunctionDecl>(findDecl(AST, "foo")).getParamDecl(0);
   ASSERT_TRUE(X->getOriginalType()->getNullability() ==
               NullabilityKind::NonNull);
+}
+
+TEST(DiagnosticsTest, PreamblePragmaDiagnosticPushPop) {
+  auto TU = TestTU::withCode(R"cpp(
+#pragma clang diagnostic push
+int main() {
+   return 0;
+}
+#pragma clang diagnostic pop
+)cpp");
+  auto AST = TU.build();
+  EXPECT_THAT(AST.getDiagnostics(), IsEmpty());
 }
 
 TEST(DiagnosticsTest, PreambleHeaderWithBadPragmaAssumeNonnull) {
@@ -1963,6 +2031,30 @@ TEST(Diagnostics, Tags) {
                 withTag(DiagnosticTag::Deprecated)))));
 }
 
+TEST(Diagnostics, TidyDiagsArentAffectedFromWerror) {
+  TestTU TU;
+  TU.ExtraArgs = {"-Werror"};
+  Annotations Test(R"cpp($typedef[[typedef int INT]]; // error-ok)cpp");
+  TU.Code = Test.code().str();
+  TU.ClangTidyProvider = addTidyChecks("modernize-use-using");
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      ifTidyChecks(UnorderedElementsAre(
+          AllOf(Diag(Test.range("typedef"), "use 'using' instead of 'typedef'"),
+                // Make sure severity for clang-tidy finding isn't bumped to
+                // error due to Werror in compile flags.
+                diagSeverity(DiagnosticsEngine::Warning)))));
+
+  TU.ClangTidyProvider =
+      addTidyChecks("modernize-use-using", /*WarningsAsErrors=*/"modernize-*");
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      ifTidyChecks(UnorderedElementsAre(
+          AllOf(Diag(Test.range("typedef"), "use 'using' instead of 'typedef'"),
+                // Unless bumped explicitly with WarnAsError.
+                diagSeverity(DiagnosticsEngine::Error)))));
+}
+
 TEST(Diagnostics, DeprecatedDiagsAreHints) {
   ClangdDiagnosticOptions Opts;
   std::optional<clangd::Diagnostic> Diag;
@@ -2089,6 +2181,27 @@ TEST(DiagnosticsTest, UnusedInHeader) {
   // https://github.com/clangd/vscode-clangd/issues/360
   TU.Filename = "test.h";
   EXPECT_THAT(TU.build().getDiagnostics(), IsEmpty());
+}
+
+TEST(DiagnosticsTest, DontSuppressSubcategories) {
+  Annotations Source(R"cpp(
+  /*error-ok*/
+    void bar(int x) {
+      switch(x) {
+      default:
+        break;
+        break;
+      }
+    })cpp");
+  TestTU TU;
+  TU.ExtraArgs.push_back("-Wunreachable-code-aggressive");
+  TU.Code = Source.code().str();
+  Config Cfg;
+  // This shouldn't suppress subcategory unreachable-break.
+  Cfg.Diagnostics.Suppress = {"unreachable-code"};
+  WithContextValue SuppressFilterWithCfg(Config::Key, std::move(Cfg));
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              ElementsAre(diagName("-Wunreachable-code-break")));
 }
 
 } // namespace

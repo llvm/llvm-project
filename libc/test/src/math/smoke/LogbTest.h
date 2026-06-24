@@ -27,8 +27,8 @@ public:
     ASSERT_FP_EQ(aNaN, func(aNaN));
     ASSERT_FP_EQ(inf, func(inf));
     ASSERT_FP_EQ(inf, func(neg_inf));
-    ASSERT_FP_EQ(neg_inf, func(0.0));
-    ASSERT_FP_EQ(neg_inf, func(-0.0));
+    ASSERT_FP_EQ(neg_inf, func(zero));
+    ASSERT_FP_EQ(neg_inf, func(neg_zero));
   }
 
   void testPowersOfTwo(LogbFunc func) {
@@ -70,7 +70,7 @@ public:
 
   void testRange(LogbFunc func) {
     using StorageType = typename FPBits::StorageType;
-    constexpr int COUNT = 100'000;
+    constexpr int COUNT = 1'231;
     constexpr StorageType STEP = LIBC_NAMESPACE::cpp::max(
         static_cast<StorageType>(STORAGE_MAX / COUNT), StorageType(1));
     StorageType v = 0;

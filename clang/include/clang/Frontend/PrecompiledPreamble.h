@@ -84,7 +84,7 @@ public:
   static llvm::ErrorOr<PrecompiledPreamble>
   Build(const CompilerInvocation &Invocation,
         const llvm::MemoryBuffer *MainFileBuffer, PreambleBounds Bounds,
-        DiagnosticsEngine &Diagnostics,
+        IntrusiveRefCntPtr<DiagnosticsEngine> Diagnostics,
         IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
         std::shared_ptr<PCHContainerOperations> PCHContainerOps,
         bool StoreInMemory, StringRef StoragePath,
@@ -256,9 +256,7 @@ public:
 std::error_code make_error_code(BuildPreambleError Error);
 } // namespace clang
 
-namespace std {
 template <>
-struct is_error_code_enum<clang::BuildPreambleError> : std::true_type {};
-} // namespace std
+struct std::is_error_code_enum<clang::BuildPreambleError> : std::true_type {};
 
 #endif

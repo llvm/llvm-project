@@ -193,10 +193,10 @@ body:             |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[AND]](s64)
-    ; CHECK-NEXT: [[AMDGPU_CVT_F32_UBYTE0_:%[0-9]+]]:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 [[TRUNC]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C]]
+    ; CHECK-NEXT: [[AMDGPU_CVT_F32_UBYTE0_:%[0-9]+]]:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 [[AND]]
     ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_CVT_F32_UBYTE0_]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_CONSTANT i64 255
@@ -216,10 +216,10 @@ body:             |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 255
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[C]]
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[AND]](s64)
-    ; CHECK-NEXT: [[AMDGPU_CVT_F32_UBYTE0_:%[0-9]+]]:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 [[TRUNC]]
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C]]
+    ; CHECK-NEXT: [[AMDGPU_CVT_F32_UBYTE0_:%[0-9]+]]:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 [[AND]]
     ; CHECK-NEXT: $vgpr0 = COPY [[AMDGPU_CVT_F32_UBYTE0_]](s32)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_CONSTANT i64 255

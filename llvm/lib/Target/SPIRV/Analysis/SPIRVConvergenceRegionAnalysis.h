@@ -12,19 +12,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_SPIRV_SPIRVCONVERGENCEREGIONANALYSIS_H
-#define LLVM_LIB_TARGET_SPIRV_SPIRVCONVERGENCEREGIONANALYSIS_H
+#ifndef LLVM_LIB_TARGET_SPIRV_ANALYSIS_SPIRVCONVERGENCEREGIONANALYSIS_H
+#define LLVM_LIB_TARGET_SPIRV_ANALYSIS_SPIRVCONVERGENCEREGIONANALYSIS_H
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include <iostream>
 #include <optional>
-#include <unordered_set>
 
 namespace llvm {
+class IntrinsicInst;
 class SPIRVSubtarget;
 class MachineFunction;
 class MachineModuleInfo;
@@ -74,7 +72,11 @@ public:
         Entry(std::move(CR.Entry)), Exits(std::move(CR.Exits)),
         Blocks(std::move(CR.Blocks)) {}
 
+  ~ConvergenceRegion() { releaseMemory(); }
+
+  ConvergenceRegion &operator=(ConvergenceRegion &&CR) = delete;
   ConvergenceRegion(const ConvergenceRegion &other) = delete;
+  ConvergenceRegion &operator=(const ConvergenceRegion &other) = delete;
 
   // Returns true if the given basic block belongs to this region, or to one of
   // its subregion.
@@ -101,6 +103,9 @@ public:
       : TopLevelRegion(TopLevelRegion) {}
 
   ~ConvergenceRegionInfo() { releaseMemory(); }
+
+  ConvergenceRegionInfo(const ConvergenceRegionInfo &LHS) = delete;
+  ConvergenceRegionInfo &operator=(const ConvergenceRegionInfo &LHS) = delete;
 
   ConvergenceRegionInfo(ConvergenceRegionInfo &&LHS)
       : TopLevelRegion(LHS.TopLevelRegion) {
@@ -130,6 +135,9 @@ public:
   }
 
   const ConvergenceRegion *getTopLevelRegion() const { return TopLevelRegion; }
+  ConvergenceRegion *getWritableTopLevelRegion() const {
+    return TopLevelRegion;
+  }
 };
 
 } // namespace SPIRV
@@ -173,4 +181,4 @@ ConvergenceRegionInfo getConvergenceRegions(Function &F, DominatorTree &DT,
 } // namespace SPIRV
 
 } // namespace llvm
-#endif // LLVM_LIB_TARGET_SPIRV_SPIRVCONVERGENCEREGIONANALYSIS_H
+#endif // LLVM_LIB_TARGET_SPIRV_ANALYSIS_SPIRVCONVERGENCEREGIONANALYSIS_H

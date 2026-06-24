@@ -44,33 +44,6 @@ X86RegisterBankInfo::X86RegisterBankInfo(const TargetRegisterInfo &TRI) {
          "GPRs should hold up to 64-bit");
 }
 
-const RegisterBank &
-X86RegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
-                                            LLT) const {
-
-  if (X86::GR8RegClass.hasSubClassEq(&RC) ||
-      X86::GR16RegClass.hasSubClassEq(&RC) ||
-      X86::GR32RegClass.hasSubClassEq(&RC) ||
-      X86::GR64RegClass.hasSubClassEq(&RC) ||
-      X86::LOW32_ADDR_ACCESSRegClass.hasSubClassEq(&RC) ||
-      X86::LOW32_ADDR_ACCESS_RBPRegClass.hasSubClassEq(&RC))
-    return getRegBank(X86::GPRRegBankID);
-
-  if (X86::FR32XRegClass.hasSubClassEq(&RC) ||
-      X86::FR64XRegClass.hasSubClassEq(&RC) ||
-      X86::VR128XRegClass.hasSubClassEq(&RC) ||
-      X86::VR256XRegClass.hasSubClassEq(&RC) ||
-      X86::VR512RegClass.hasSubClassEq(&RC))
-    return getRegBank(X86::VECRRegBankID);
-
-  if (X86::RFP80RegClass.hasSubClassEq(&RC) ||
-      X86::RFP32RegClass.hasSubClassEq(&RC) ||
-      X86::RFP64RegClass.hasSubClassEq(&RC))
-    return getRegBank(X86::PSRRegBankID);
-
-  llvm_unreachable("Unsupported register kind yet.");
-}
-
 // \returns true if a given intrinsic only uses and defines FPRs.
 static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
                           const MachineInstr &MI) {
@@ -138,6 +111,7 @@ bool X86RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
   case TargetOpcode::G_FCMP:
+  case X86::G_FIST:
   case TargetOpcode::G_LROUND:
   case TargetOpcode::G_LLROUND:
   case TargetOpcode::G_INTRINSIC_TRUNC:
@@ -156,6 +130,7 @@ bool X86RegisterBankInfo::onlyDefinesFP(const MachineInstr &MI,
   switch (MI.getOpcode()) {
   case TargetOpcode::G_SITOFP:
   case TargetOpcode::G_UITOFP:
+  case X86::G_FILD:
     return true;
   default:
     break;
@@ -226,7 +201,7 @@ void X86RegisterBankInfo::getInstrPartialMappingIdxs(
   unsigned NumOperands = MI.getNumOperands();
   for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
     auto &MO = MI.getOperand(Idx);
-    if (!MO.isReg() || !MO.getReg())
+    if (!MO.isReg() || !MO.getReg().isVirtual())
       OpRegBankIdx[Idx] = PMI_None;
     else
       OpRegBankIdx[Idx] =
@@ -243,7 +218,7 @@ bool X86RegisterBankInfo::getInstrValueMapping(
   for (unsigned Idx = 0; Idx < NumOperands; ++Idx) {
     if (!MI.getOperand(Idx).isReg())
       continue;
-    if (!MI.getOperand(Idx).getReg())
+    if (!MI.getOperand(Idx).getReg().isVirtual())
       continue;
 
     auto Mapping = getValueMapping(OpRegBankIdx[Idx], 1);
@@ -315,15 +290,31 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   SmallVector<PartialMappingIdx, 4> OpRegBankIdx(NumOperands);
 
   switch (Opc) {
+  case TargetOpcode::G_FSQRT:
   case TargetOpcode::G_FPEXT:
+  case TargetOpcode::G_FNEG:
   case TargetOpcode::G_FPTRUNC:
   case TargetOpcode::G_FCONSTANT:
+  case TargetOpcode::G_FPEXTLOAD:
+  case TargetOpcode::G_FPTRUNCSTORE:
     // Instruction having only floating-point operands (all scalars in
     // VECRReg)
     getInstrPartialMappingIdxs(MI, MRI, /* isFP= */ true, OpRegBankIdx);
     break;
+  case X86::G_FIST:
+  case X86::G_FILD: {
+    auto &Op0 = MI.getOperand(0);
+    auto &Op1 = MI.getOperand(1);
+    const LLT Ty0 = MRI.getType(Op0.getReg());
+    const LLT Ty1 = MRI.getType(Op1.getReg());
+    OpRegBankIdx[0] = getPartialMappingIdx(MI, Ty0, /* isFP= */ true);
+    OpRegBankIdx[1] = getPartialMappingIdx(MI, Ty1, /* isFP= */ false);
+    break;
+  }
   case TargetOpcode::G_SITOFP:
-  case TargetOpcode::G_FPTOSI: {
+  case TargetOpcode::G_FPTOSI:
+  case TargetOpcode::G_UITOFP:
+  case TargetOpcode::G_FPTOUI: {
     // Some of the floating-point instructions have mixed GPR and FP
     // operands: fine-tune the computed mapping.
     auto &Op0 = MI.getOperand(0);
@@ -331,10 +322,10 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     const LLT Ty0 = MRI.getType(Op0.getReg());
     const LLT Ty1 = MRI.getType(Op1.getReg());
 
-    bool FirstArgIsFP = Opc == TargetOpcode::G_SITOFP;
-    bool SecondArgIsFP = Opc == TargetOpcode::G_FPTOSI;
+    bool FirstArgIsFP =
+        Opc == TargetOpcode::G_SITOFP || Opc == TargetOpcode::G_UITOFP;
     OpRegBankIdx[0] = getPartialMappingIdx(MI, Ty0, /* isFP= */ FirstArgIsFP);
-    OpRegBankIdx[1] = getPartialMappingIdx(MI, Ty1, /* isFP= */ SecondArgIsFP);
+    OpRegBankIdx[1] = getPartialMappingIdx(MI, Ty1, /* isFP= */ !FirstArgIsFP);
     break;
   }
   case TargetOpcode::G_FCMP: {
@@ -346,13 +337,14 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
     unsigned Size = Ty1.getSizeInBits();
     (void)Size;
-    assert((Size == 32 || Size == 64) && "Unsupported size for G_FCMP");
-
+    assert((Size == 32 || Size == 64 || Size == 80) &&
+           "Unsupported size for G_FCMP");
     auto FpRegBank = getPartialMappingIdx(MI, Ty1, /* isFP= */ true);
     OpRegBankIdx = {PMI_GPR8,
                     /* Predicate */ PMI_None, FpRegBank, FpRegBank};
     break;
   }
+  case TargetOpcode::G_FABS:
   case TargetOpcode::G_TRUNC:
   case TargetOpcode::G_ANYEXT: {
     auto &Op0 = MI.getOperand(0);
@@ -366,9 +358,9 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         Ty0.getSizeInBits() == 128 &&
         (Ty1.getSizeInBits() == 32 || Ty1.getSizeInBits() == 64) &&
         Opc == TargetOpcode::G_ANYEXT;
-
-    getInstrPartialMappingIdxs(MI, MRI, /* isFP= */ isFPTrunc || isFPAnyExt,
-                               OpRegBankIdx);
+    bool isFAbs = (Opc == TargetOpcode::G_FABS);
+    getInstrPartialMappingIdxs(
+        MI, MRI, /* isFP= */ isFPTrunc || isFPAnyExt || isFAbs, OpRegBankIdx);
     break;
   }
   case TargetOpcode::G_LOAD: {

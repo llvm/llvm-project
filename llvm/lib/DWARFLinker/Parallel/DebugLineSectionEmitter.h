@@ -26,7 +26,9 @@ public:
   DebugLineSectionEmitter(const Triple &TheTriple, DwarfUnit &U)
       : TheTriple(TheTriple), U(U) {}
 
-  Error emit(const DWARFDebugLine::LineTable &LineTable) {
+  Error emit(const DWARFDebugLine::LineTable &LineTable,
+             ArrayRef<uint64_t> OrigRowIndices = {},
+             DenseMap<uint64_t, uint64_t> *RowIndexToSeqStartOffset = nullptr) {
     // FIXME: remove dependence on MCDwarfLineAddr::encode.
     // As we reuse MCDwarfLineAddr::encode, we need to create/initialize
     // some MC* classes.
@@ -45,7 +47,8 @@ public:
     emitLineTablePrologue(LineTable.Prologue, OutSection);
 
     // Emit rows.
-    emitLineTableRows(LineTable, OutSection);
+    emitLineTableRows(LineTable, OutSection, OrigRowIndices,
+                      RowIndexToSeqStartOffset);
     uint64_t OffsetAfterEnd = OutSection.OS.tell();
 
     // Update unit length field with actual length value.
@@ -73,26 +76,26 @@ private:
     TripleName = TheTriple.getTriple();
 
     // Create all the MC Objects.
-    MRI.reset(TheTarget->createMCRegInfo(TripleName));
+    MRI.reset(TheTarget->createMCRegInfo(TheTriple));
     if (!MRI)
       return createStringError(std::errc::invalid_argument,
                                "no register info for target %s",
                                TripleName.c_str());
 
-    MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
-    MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+    MCOptions = mc::InitMCTargetOptionsFromFlags();
+    MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
     if (!MAI)
       return createStringError(std::errc::invalid_argument,
                                "no asm info for target %s", TripleName.c_str());
 
-    MSTI.reset(TheTarget->createMCSubtargetInfo(TripleName, "", ""));
+    MSTI.reset(TheTarget->createMCSubtargetInfo(TheTriple, "", ""));
     if (!MSTI)
       return createStringError(std::errc::invalid_argument,
                                "no subtarget info for target %s",
                                TripleName.c_str());
 
-    MC.reset(new MCContext(TheTriple, MAI.get(), MRI.get(), MSTI.get(), nullptr,
-                           nullptr, true, "__DWARF"));
+    MC.reset(
+        new MCContext(TheTriple, *MAI, *MRI, *MSTI, nullptr, true, "__DWARF"));
 
     return Error::success();
   }
@@ -215,7 +218,7 @@ private:
       encodeULEB128(FileNameForm, Section.OS);
 
       encodeULEB128(dwarf::DW_LNCT_directory_index, Section.OS);
-      encodeULEB128(dwarf::DW_FORM_data1, Section.OS);
+      encodeULEB128(dwarf::DW_FORM_udata, Section.OS);
 
       if (HasChecksums) {
         encodeULEB128(dwarf::DW_LNCT_MD5, Section.OS);
@@ -242,7 +245,7 @@ private:
       // A null-terminated string containing the full or relative path name of a
       // source file.
       Section.emitString(FileNameForm, *FileNameStr);
-      Section.emitIntVal(File.DirIdx, 1);
+      encodeULEB128(File.DirIdx, Section.OS);
 
       if (HasChecksums) {
         assert((File.Checksum.size() == 16) &&
@@ -292,8 +295,10 @@ private:
       emitLineTablePrologueV5IncludeAndFileTable(P, Section);
   }
 
-  void emitLineTableRows(const DWARFDebugLine::LineTable &LineTable,
-                         SectionDescriptor &Section) {
+  void emitLineTableRows(
+      const DWARFDebugLine::LineTable &LineTable, SectionDescriptor &Section,
+      ArrayRef<uint64_t> OrigRowIndices = {},
+      DenseMap<uint64_t, uint64_t> *RowIndexToSeqStartOffset = nullptr) {
 
     MCDwarfLineTableParams Params;
     Params.DWARF2LineOpcodeBase = LineTable.Prologue.OpcodeBase;
@@ -315,15 +320,27 @@ private:
     unsigned FileNum = 1;
     unsigned LastLine = 1;
     unsigned Column = 0;
+    unsigned Discriminator = 0;
     unsigned IsStatement = 1;
     unsigned Isa = 0;
     uint64_t Address = -1ULL;
 
     unsigned RowsSinceLastSequence = 0;
+    // Offset of the DW_LNE_set_address opcode that opens the sequence
+    // currently being emitted. Recorded per input row index so that
+    // DW_AT_LLVM_stmt_sequence attributes can be resolved by row — which
+    // is collision-free under ICF, unlike keying by output address.
+    uint64_t CurrentSeqStartOffset = 0;
+    constexpr uint64_t InvalidRowIndex = std::numeric_limits<uint64_t>::max();
+    assert(
+        (!RowIndexToSeqStartOffset ||
+         OrigRowIndices.size() == LineTable.Rows.size()) &&
+        "OrigRowIndices must be supplied alongside RowIndexToSeqStartOffset");
 
-    for (const DWARFDebugLine::Row &Row : LineTable.Rows) {
+    for (auto [Idx, Row] : llvm::enumerate(LineTable.Rows)) {
       int64_t AddressDelta;
       if (Address == -1ULL) {
+        CurrentSeqStartOffset = Section.OS.tell();
         Section.emitIntVal(dwarf::DW_LNS_extended_op, 1);
         encodeULEB128(Section.getFormParams().AddrSize + 1, Section.OS);
         Section.emitIntVal(dwarf::DW_LNE_set_address, 1);
@@ -333,6 +350,11 @@ private:
       } else {
         AddressDelta =
             (Row.Address.Address - Address) / LineTable.Prologue.MinInstLength;
+      }
+      if (RowIndexToSeqStartOffset) {
+        uint64_t InputRowIdx = OrigRowIndices[Idx];
+        if (InputRowIdx != InvalidRowIndex)
+          (*RowIndexToSeqStartOffset)[InputRowIdx] = CurrentSeqStartOffset;
       }
 
       // FIXME: code copied and transformed from
@@ -350,9 +372,15 @@ private:
         Section.emitIntVal(dwarf::DW_LNS_set_column, 1);
         encodeULEB128(Column, Section.OS);
       }
-
-      // FIXME: We should handle the discriminator here, but dsymutil doesn't
-      // consider it, thus ignore it for now.
+      if (Discriminator != Row.Discriminator && MC->getDwarfVersion() >= 4) {
+        Discriminator = Row.Discriminator;
+        unsigned Size = getULEB128Size(Discriminator);
+        Section.emitIntVal(dwarf::DW_LNS_extended_op, 1);
+        encodeULEB128(Size + 1, Section.OS);
+        Section.emitIntVal(dwarf::DW_LNE_set_discriminator, 1);
+        encodeULEB128(Discriminator, Section.OS);
+      }
+      Discriminator = 0;
 
       if (Isa != Row.Isa) {
         Isa = Row.Isa;
@@ -397,7 +425,7 @@ private:
         EncodingBuffer.resize(0);
         Address = -1ULL;
         LastLine = FileNum = IsStatement = 1;
-        RowsSinceLastSequence = Column = Isa = 0;
+        RowsSinceLastSequence = Column = Discriminator = Isa = 0;
       }
     }
 
@@ -412,6 +440,7 @@ private:
   Triple TheTriple;
   DwarfUnit &U;
 
+  MCTargetOptions MCOptions;
   std::unique_ptr<MCRegisterInfo> MRI;
   std::unique_ptr<MCAsmInfo> MAI;
   std::unique_ptr<MCContext> MC;

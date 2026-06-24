@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir-c/Dialect/Linalg.h"
+#include "mlir/CAPI/AffineMap.h"
 #include "mlir/CAPI/Registration.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 
@@ -38,7 +39,139 @@ void mlirLinalgFillBuiltinNamedOpRegion(MlirOperation mlirOp) {
   Region &region = op->getRegion(0);
   Block *body = b.createBlock(&region, /*insertPt=*/{}, argTypes, argLocs);
   b.setInsertionPointToStart(body);
-  fun(b, *body, op->getAttrs());
+  fun(b, *body, op->getAttrs(), /*emitError=*/{});
+}
+
+MLIR_CAPI_EXPORTED bool mlirLinalgIsAContractionOp(MlirOperation op) {
+  auto linalgOp = llvm::dyn_cast<mlir::linalg::LinalgOp>(unwrap(op));
+  // isaContractionOpInterface handles null linalgOp internally.
+  return linalg::isaContractionOpInterface(linalgOp);
+}
+
+MLIR_CAPI_EXPORTED MlirLinalgContractionDimensions
+mlirLinalgInferContractionDimensions(MlirOperation op) {
+  MlirLinalgContractionDimensions result{};
+  auto linalgOp = dyn_cast<linalg::LinalgOp>(unwrap(op));
+  if (!linalgOp)
+    return result;
+
+  FailureOr<linalg::ContractionDimensions> maybeDims =
+      linalg::inferContractionDims(linalgOp);
+  if (failed(maybeDims))
+    return result;
+
+  const linalg::ContractionDimensions &contractionDims = *maybeDims;
+  MLIRContext *ctx = linalgOp.getContext();
+
+  auto toAttr = [ctx](ArrayRef<unsigned> vals) -> MlirAttribute {
+    return wrap(DenseI32ArrayAttr::get(ctx, llvm::to_vector_of<int32_t>(vals)));
+  };
+
+  result.batch = toAttr(contractionDims.batch);
+  result.m = toAttr(contractionDims.m);
+  result.n = toAttr(contractionDims.n);
+  result.k = toAttr(contractionDims.k);
+
+  return result;
+}
+
+MLIR_CAPI_EXPORTED MlirLinalgContractionDimensions
+mlirLinalgInferContractionDimensionsFromMaps(const MlirAffineMap *indexingMaps,
+                                             size_t numMaps) {
+  MlirLinalgContractionDimensions result{};
+  if (!indexingMaps || numMaps == 0)
+    return result;
+
+  SmallVector<AffineMap, 3> maps;
+  maps.reserve(numMaps);
+  for (size_t i = 0; i < numMaps; ++i) {
+    maps.push_back(unwrap(indexingMaps[i]));
+  }
+
+  FailureOr<linalg::ContractionDimensions> maybeDims =
+      linalg::inferContractionDims(maps);
+  if (failed(maybeDims))
+    return result;
+
+  MLIRContext *ctx = maps[0].getContext();
+
+  auto toAttr = [ctx](ArrayRef<unsigned> vals) -> MlirAttribute {
+    return wrap(DenseI32ArrayAttr::get(ctx, llvm::to_vector_of<int32_t>(vals)));
+  };
+
+  result.batch = toAttr(maybeDims->batch);
+  result.m = toAttr(maybeDims->m);
+  result.n = toAttr(maybeDims->n);
+  result.k = toAttr(maybeDims->k);
+
+  return result;
+}
+
+MLIR_CAPI_EXPORTED bool mlirLinalgIsAConvolutionOp(MlirOperation op) {
+  auto linalgOp = llvm::dyn_cast<mlir::linalg::LinalgOp>(unwrap(op));
+  if (!linalgOp)
+    return false;
+
+  return linalg::isaConvolutionOpInterface(linalgOp);
+}
+
+static MlirLinalgConvolutionDimensions
+toConvolutionDimensions(MLIRContext *ctx,
+                        const linalg::ConvolutionDimensions &dims) {
+  auto toI32Attr = [ctx](ArrayRef<unsigned> vals) -> MlirAttribute {
+    return wrap(DenseI32ArrayAttr::get(ctx, llvm::to_vector_of<int32_t>(vals)));
+  };
+  auto toI64Attr = [ctx](ArrayRef<int64_t> vals) -> MlirAttribute {
+    return wrap(DenseI64ArrayAttr::get(ctx, vals));
+  };
+  return {toI32Attr(dims.batch),         toI32Attr(dims.outputImage),
+          toI32Attr(dims.outputChannel), toI32Attr(dims.filterLoop),
+          toI32Attr(dims.inputChannel),  toI32Attr(dims.depth),
+          toI64Attr(dims.strides),       toI64Attr(dims.dilations)};
+}
+
+MLIR_CAPI_EXPORTED MlirLinalgConvolutionDimensions
+mlirLinalgInferConvolutionDimensions(MlirOperation op) {
+  auto linalgOp = llvm::dyn_cast<mlir::linalg::LinalgOp>(unwrap(op));
+  if (!linalgOp)
+    return {};
+
+  FailureOr<linalg::ConvolutionDimensions> maybeDims =
+      linalg::inferConvolutionDims(linalgOp);
+  if (failed(maybeDims))
+    return {};
+
+  return toConvolutionDimensions(linalgOp.getContext(), *maybeDims);
+}
+
+MLIR_CAPI_EXPORTED MlirLinalgConvolutionDimensions
+mlirLinalgInferConvolutionDimensionsFromMaps(const MlirAffineMap *indexingMaps,
+                                             size_t numMaps) {
+  // inferConvolutionDims requires exactly 3 maps (input, filter, output);
+  // keep this check in sync with its contract
+  if (!indexingMaps || numMaps != 3)
+    return {};
+
+  SmallVector<AffineMap, 3> maps;
+  for (size_t i = 0; i < numMaps; ++i)
+    maps.push_back(unwrap(indexingMaps[i]));
+
+  FailureOr<linalg::ConvolutionDimensions> maybeDims =
+      linalg::inferConvolutionDims(maps);
+  if (failed(maybeDims))
+    return {};
+
+  return toConvolutionDimensions(maps[0].getContext(), *maybeDims);
+}
+
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirLinalgGetIndexingMapsAttribute(MlirOperation op) {
+  auto linalgOp = llvm::dyn_cast<mlir::linalg::LinalgOp>(unwrap(op));
+  if (!linalgOp)
+    return MlirAttribute{nullptr};
+
+  ArrayAttr attr = linalgOp.getIndexingMaps();
+  return wrap(attr);
 }
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(Linalg, linalg, LinalgDialect)
