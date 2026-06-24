@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,LLVMCIR --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
+// RUN: FileCheck --check-prefixes=LLVM,OGCG --input-file=%t.ll %s
 
 struct S {
   int a;
@@ -19,11 +19,8 @@ S *makeVar(unsigned n) { return new S[n](); }
 
 // LLVM-LABEL: @_Z7makeVarj
 // LLVM:   call {{.*}} ptr @_Znam(
-// LLVM:   call void @llvm.memset.p0.i64(ptr %{{.*}}, i8 0, i64 %{{.*}}, i1 false)
-
-// OGCG-LABEL: @_Z7makeVarj
-// OGCG:   call {{.*}} ptr @_Znam(
-// OGCG:   call void @llvm.memset.p0.i64(ptr align 8 %{{.*}}, i8 0, i64 %{{.*}}, i1 false)
+// LLVMCIR: call void @llvm.memset.p0.i64(ptr %{{.*}}, i8 0, i64 %{{.*}}, i1 false)
+// OGCG:    call void @llvm.memset.p0.i64(ptr align 8 %{{.*}}, i8 0, i64 %{{.*}}, i1 false)
 
 // Constant element count: the size is folded to a constant.
 S *makeConst() { return new S[4](); }
@@ -34,11 +31,8 @@ S *makeConst() { return new S[4](); }
 
 // LLVM-LABEL: @_Z9makeConstv
 // LLVM:   call {{.*}} ptr @_Znam(i64 noundef 32)
-// LLVM:   call void @llvm.memset.p0.i64(ptr %{{.*}}, i8 0, i64 32, i1 false)
-
-// OGCG-LABEL: @_Z9makeConstv
-// OGCG:   call {{.*}} ptr @_Znam(i64 noundef 32)
-// OGCG:   call void @llvm.memset.p0.i64(ptr align 8 %{{.*}}, i8 0, i64 32, i1 false)
+// LLVMCIR: call void @llvm.memset.p0.i64(ptr %{{.*}}, i8 0, i64 32, i1 false)
+// OGCG:    call void @llvm.memset.p0.i64(ptr align 8 %{{.*}}, i8 0, i64 32, i1 false)
 
 // No parens: default-init of a trivial type is a no-op (no memset).
 S *makeNoInit(unsigned n) { return new S[n]; }
@@ -51,10 +45,6 @@ S *makeNoInit(unsigned n) { return new S[n]; }
 // LLVM:   call {{.*}} ptr @_Znam(
 // LLVM-NOT: memset
 
-// OGCG-LABEL: @_Z10makeNoInitj
-// OGCG:   call {{.*}} ptr @_Znam(
-// OGCG-NOT: memset
-
 // Braced-empty value-init goes through the InitListExpr path (also memset).
 S *makeBraced(unsigned n) { return new S[n]{}; }
 
@@ -64,11 +54,8 @@ S *makeBraced(unsigned n) { return new S[n]{}; }
 
 // LLVM-LABEL: @_Z10makeBracedj
 // LLVM:   call {{.*}} ptr @_Znam(
-// LLVM:   call void @llvm.memset.p0.i64(ptr %{{.*}}, i8 0, i64 %{{.*}}, i1 false)
-
-// OGCG-LABEL: @_Z10makeBracedj
-// OGCG:   call {{.*}} ptr @_Znam(
-// OGCG:   call void @llvm.memset.p0.i64(ptr align 8 %{{.*}}, i8 0, i64 %{{.*}}, i1 false)
+// LLVMCIR: call void @llvm.memset.p0.i64(ptr %{{.*}}, i8 0, i64 %{{.*}}, i1 false)
+// OGCG:    call void @llvm.memset.p0.i64(ptr align 8 %{{.*}}, i8 0, i64 %{{.*}}, i1 false)
 
 // Non-zero-initializable element (pointer to data member): the null member
 // representation is -1, not 0, so memset is not used; the constructor-loop
@@ -87,8 +74,5 @@ M *makeMember(unsigned n) { return new M[n](); }
 
 // LLVM-LABEL: @_Z10makeMemberj
 // LLVM:   call {{.*}} ptr @_Znam(
-// LLVM:   store %struct.M { i32 0, i64 -1 }, ptr %{{.*}}
-
-// OGCG-LABEL: @_Z10makeMemberj
-// OGCG:   call {{.*}} ptr @_Znam(
-// OGCG:   call void @llvm.memcpy.p0.p0.i64(ptr align 16 %{{.*}}, ptr align 16 @{{.*}}
+// LLVMCIR: store %struct.M { i32 0, i64 -1 }, ptr %{{.*}}
+// OGCG:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 %{{.*}}, ptr align 16 @{{.*}}
