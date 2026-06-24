@@ -1,0 +1,7 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1 -Werror
+
+attributes(global) subroutine g1(a, m)
+  integer :: a(*), m
+  !ERROR: not yet implemented: CUDA dynamic parallelism
+  call g1<<<1, 1>>>(a, m)
+end subroutine
