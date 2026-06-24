@@ -509,3 +509,12 @@ static NSString* const kGlobal = @"";
   (void)self.nd[@""]; // no warning
 }
 @end
+
+extern id mergeQualsVar; // expected-note {{previous declaration is here}}
+extern __weak id mergeQualsVar; // expected-error {{redeclaration of 'mergeQualsVar' with a different type}}
+
+extern const id mergeQualsVar2; // expected-note {{previous declaration is here}}
+extern __strong id mergeQualsVar2; // expected-error {{redeclaration of 'mergeQualsVar2' with a different type}}
+
+extern Class mergeQualsVar3; // expected-note {{previous declaration is here}}
+extern __ptrauth(1,1,1) Class mergeQualsVar3; // expected-error {{redeclaration of 'mergeQualsVar3' with a different type}}
