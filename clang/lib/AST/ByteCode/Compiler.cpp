@@ -5529,6 +5529,11 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
 
     // Bases.
     for (unsigned I = 0, N = Val.getStructNumBases(); I != N; ++I) {
+      // FIXME: APValue doesn't know about virtual bases.
+      //   We simply assume that if the APValue has more bases than the Record,
+      //   those additional bases must be virtual.
+      if (I >= R->getNumBases())
+        break;
       const APValue &B = Val.getStructBase(I);
       const Record::Base *RB = R->getBase(I);
       QualType BaseType = Ctx.getASTContext().getCanonicalTagType(RB->Decl);
