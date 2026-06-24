@@ -459,4 +459,10 @@ bool __ubsan::IsPCSuppressed(ErrorType ET, uptr PC, const char *Filename) {
          suppression_ctx->Match(AI.file, SuppType, &s);
 }
 
+SANITIZER_WEAK_DEFAULT_IMPL
+void __ubsan::__ubsan_handle_error_begin(void) {}
+
+SANITIZER_WEAK_DEFAULT_IMPL
+void __ubsan::__ubsan_handle_error_end(void) {}
+
 #endif  // CAN_SANITIZE_UB
