@@ -1471,16 +1471,7 @@ TEST_F(PointerFlowTest, ReturnRefPtr) {
   EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"foo", 1U, true}, {"f", 1U, true}}}));
 }
 
-//////////////////////////////////////////////////////////////
-//          System-header contributor opt-out gate.         //
-//          Spec: tu-summary-extraction,                    //
-//          "System-header contributor opt-out flag".       //
-//////////////////////////////////////////////////////////////
-
-// Default: ExtractFromSystemHeaders == true. A function decl in a
-// `#pragma clang system_header`-marked included header IS enumerated
-// as a contributor and produces an EntitySummary.
-TEST_F(PointerFlowTest, SystemHeader_ExtractDefault) {
+TEST_F(PointerFlowTest, ExtractFromSystemHeadersByDefault) {
   const char *SysHeader = "int *sys_gp; void sys_fn(int *p) { sys_gp = p; }\n";
   const char *Main = R"cpp(
     #include <sys.h>
@@ -1493,10 +1484,7 @@ TEST_F(PointerFlowTest, SystemHeader_ExtractDefault) {
   EXPECT_TRUE(getEntitySummary("user_fn"));
 }
 
-// Opt-out: ExtractFromSystemHeaders == false. The system-header decl
-// is NOT enumerated; getEntitySummary returns nullptr for it. The
-// user-source decl is still enumerated (gate is per-decl, not TU-wide).
-TEST_F(PointerFlowTest, SystemHeader_SkipOptOut) {
+TEST_F(PointerFlowTest, DontExtractFromSystemHeadersWhenOverridden) {
   const char *SysHeader = "int *sys_gp; void sys_fn(int *p) { sys_gp = p; }\n";
   const char *Main = R"cpp(
     #include <sys.h>
@@ -1505,11 +1493,7 @@ TEST_F(PointerFlowTest, SystemHeader_SkipOptOut) {
   )cpp";
   ASSERT_TRUE(setUpTestWithSystemHeader(Main, SysHeader,
                                         /*ExtractFromSystemHeaders=*/false));
-  // sys_fn lives in a system header and is skipped at the
-  // ContributorFinder layer when ExtractFromSystemHeaders == false.
-  // getEntitySummary returns nullptr (no summary was built for it).
-  EXPECT_EQ(getEntitySummary("sys_fn"), nullptr);
-  // user_fn is in non-system code so the gate does not fire for it.
-  EXPECT_NE(getEntitySummary("user_fn"), nullptr);
+  EXPECT_FALSE(getEntitySummary("sys_fn")); // 'sys_fn' is skipped.
+  EXPECT_TRUE(getEntitySummary("user_fn")); // 'user_fn' is still present.
 }
 } // namespace
