@@ -41,8 +41,7 @@ unsigned QuantizedType::getFlags() const {
 }
 
 bool QuantizedType::classof(Type type) {
-  return llvm::isa<QuantDialect>(type.getDialect()) &&
-         !llvm::isa<QuantileType>(type);
+  return llvm::isa<QuantDialect>(type.getDialect());
 }
 
 LogicalResult
