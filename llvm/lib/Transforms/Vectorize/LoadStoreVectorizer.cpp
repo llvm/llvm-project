@@ -193,47 +193,69 @@ Instruction *propagateMetadata(Instruction *I, const Chain &C) {
   return propagateMetadata(I, Values);
 }
 
+bool isValueAvailableAt(Value *V, Instruction *InsertPt,
+                        const DominatorTree &DT) {
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return true;
+
+  if (I->getParent() == InsertPt->getParent())
+    return I->comesBefore(InsertPt);
+
+  return DT.dominates(I, InsertPt);
+}
+
 bool isInvariantLoad(const Instruction *I) {
   const LoadInst *LI = dyn_cast<LoadInst>(I);
   return LI != nullptr && LI->hasMetadata(LLVMContext::MD_invariant_load);
 }
 
-/// Reorders the instructions that I depends on (the instructions defining its
-/// operands), to ensure they dominate I.
-void reorder(Instruction *I) {
+/// Return Ptr if it is or can be made available at InsertPt.
+Value *reorder(Value *Ptr, Instruction *InsertPt, AssumptionCache &AC,
+               DominatorTree &DT) {
+  if (isValueAvailableAt(Ptr, InsertPt, DT))
+    return Ptr;
+
   SmallPtrSet<Instruction *, 16> InstructionsToMove;
   SmallVector<Instruction *, 16> Worklist;
 
-  Worklist.emplace_back(I);
+  auto *PtrI = cast<Instruction>(Ptr);
+  Worklist.emplace_back(PtrI);
   while (!Worklist.empty()) {
     Instruction *IW = Worklist.pop_back_val();
+
+    if (!InstructionsToMove.insert(IW).second)
+      continue;
+
+    if (IW == InsertPt)
+      return nullptr;
+
+    if (IW->mayReadOrWriteMemory() ||
+        !isGuaranteedToTransferExecutionToSuccessor(IW) ||
+        !isSafeToSpeculativelyExecute(IW, InsertPt, &AC, &DT, /*TLI=*/nullptr,
+                                      /*UseVariableInfo=*/true,
+                                      /*IgnoreUBImplyingAttrs=*/false))
+      return nullptr;
+
     int NumOperands = IW->getNumOperands();
     for (int Idx = 0; Idx < NumOperands; Idx++) {
       Instruction *IM = dyn_cast<Instruction>(IW->getOperand(Idx));
-      if (!IM || IM->getOpcode() == Instruction::PHI)
+      if (!IM || isValueAvailableAt(IM, InsertPt, DT))
         continue;
-
-      // If IM is in another BB, no need to move it, because this pass only
-      // vectorizes instructions within one BB.
-      if (IM->getParent() != I->getParent())
-        continue;
-
-      assert(IM != I && "Unexpected cycle while re-ordering instructions");
-
-      if (!IM->comesBefore(I)) {
-        InstructionsToMove.insert(IM);
-        Worklist.emplace_back(IM);
-      }
+      Worklist.emplace_back(IM);
     }
   }
 
-  // All instructions to move should follow I. Start from I, not from begin().
-  for (auto BBI = I->getIterator(), E = I->getParent()->end(); BBI != E;) {
+  // Preserve dependencies between moved instructions.
+  for (auto BBI = std::next(InsertPt->getIterator()),
+            E = InsertPt->getParent()->end();
+       BBI != E;) {
     Instruction *IM = &*(BBI++);
     if (!InstructionsToMove.contains(IM))
       continue;
-    IM->moveBefore(I->getIterator());
+    IM->moveBefore(InsertPt->getIterator());
   }
+  return Ptr;
 }
 
 class Vectorizer {
@@ -1137,10 +1159,30 @@ bool Vectorizer::vectorizeChain(Chain &C) {
   if (IsLoadChain) {
     // Loads get hoisted to the location of the first load in the chain.  We may
     // also need to hoist the (transitive) operands of the loads.
-    Builder.SetInsertPoint(
-        llvm::min_element(C, [](const auto &A, const auto &B) {
-          return A.Inst->comesBefore(B.Inst);
-        })->Inst);
+    auto FirstInBB = llvm::min_element(C, [](const auto &A, const auto &B) {
+      return A.Inst->comesBefore(B.Inst);
+    });
+    Instruction *InsertPt = FirstInBB->Inst;
+    Builder.SetInsertPoint(InsertPt);
+
+    // Prefer the vector base pointer; otherwise derive it from InsertPt.
+    Value *VecPtr =
+        reorder(getLoadStorePointerOperand(C[0].Inst), InsertPt, AC, DT);
+    if (!VecPtr) {
+      APInt OffsetFromVecBase =
+          FirstInBB->OffsetFromLeader - C[0].OffsetFromLeader;
+      assert(OffsetFromVecBase.sge(0) &&
+             "Fallback requires the first chain element to be at or after the "
+             "vector base in offset order");
+      Value *FirstPtr = getLoadStorePointerOperand(FirstInBB->Inst);
+      assert(isValueAvailableAt(FirstPtr, InsertPt, DT) &&
+             "Pointer operand of the first load should be available");
+      APInt ByteOffset =
+          -OffsetFromVecBase.sextOrTrunc(DL.getIndexSizeInBits(AS));
+      // Do not add inbounds/no-wrap flags to this derived base.
+      VecPtr = Builder.CreatePtrAdd(FirstPtr, Builder.getInt(ByteOffset),
+                                    "loadvec.base");
+    }
 
     // If the chain contains extra loads, we need to vectorize into a
     // masked load.
@@ -1148,17 +1190,13 @@ bool Vectorizer::vectorizeChain(Chain &C) {
       assert(TTI.isLegalMaskedLoad(VecTy, Alignment, AS,
                                    TTI::MaskKind::ConstantMask));
       Value *Mask = createMaskForExtraElements(C, cast<FixedVectorType>(VecTy));
-      VecInst = Builder.CreateMaskedLoad(
-          VecTy, getLoadStorePointerOperand(C[0].Inst), Alignment, Mask);
+      VecInst = Builder.CreateMaskedLoad(VecTy, VecPtr, Alignment, Mask);
     } else {
       // This can happen due to a chain of redundant loads.
       // In this case, just use the element-type, and avoid ExtractElement.
       if (NumElem == 1)
         VecTy = VecElemTy;
-      // Chain is in offset order, so C[0] is the instr with the lowest offset,
-      // i.e. the root of the vector.
-      VecInst = Builder.CreateAlignedLoad(
-          VecTy, getLoadStorePointerOperand(C[0].Inst), Alignment);
+      VecInst = Builder.CreateAlignedLoad(VecTy, VecPtr, Alignment);
     }
 
     for (const ChainElem &E : C) {
@@ -1183,26 +1221,6 @@ bool Vectorizer::vectorizeChain(Chain &C) {
       I->replaceAllUsesWith(V);
     }
 
-    // Finally, we need to reorder the instrs in the BB so that the (transitive)
-    // operands of VecInst appear before it.  To see why, suppose we have
-    // vectorized the following code:
-    //
-    //   ptr1  = gep a, 1
-    //   load1 = load i32 ptr1
-    //   ptr0  = gep a, 0
-    //   load0 = load i32 ptr0
-    //
-    // We will put the vectorized load at the location of the earliest load in
-    // the BB, i.e. load1.  We get:
-    //
-    //   ptr1  = gep a, 1
-    //   loadv = load <2 x i32> ptr0
-    //   load0 = extractelement loadv, 0
-    //   load1 = extractelement loadv, 1
-    //   ptr0 = gep a, 0
-    //
-    // Notice that loadv uses ptr0, which is defined *after* it!
-    reorder(VecInst);
   } else {
     // Stores get sunk to the location of the last store in the chain.
     Builder.SetInsertPoint(llvm::max_element(C, [](auto &A, auto &B) {
