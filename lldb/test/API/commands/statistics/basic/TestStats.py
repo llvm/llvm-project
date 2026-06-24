@@ -437,7 +437,18 @@ class TestCase(TestBase):
 
         command_stats = self.get_command_stats(debug_stats)
         self.assertNotEqual(command_stats, None)
-        self.assertEqual(command_stats["target list"], 2)
+        self.assertEqual(command_stats["target list"]["invocations"], 2)
+
+        # Duration should always be positive.
+        old_duration = command_stats["target list"]["duration"]
+        self.assertGreater(command_stats["target list"]["duration"], 0)
+
+        # Check that duration increases with each command.
+        interp.HandleCommand("target list", result)
+        debug_stats = self.get_stats()
+        command_stats = self.get_command_stats(debug_stats)
+        self.assertGreater(command_stats["target list"]["duration"], old_duration)
+
 
     def test_breakpoints(self):
         """Test "statistics dump"

@@ -3911,8 +3911,12 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line,
 
 llvm::json::Value CommandInterpreter::GetStatistics() {
   llvm::json::Object stats;
-  for (const auto &command_usage : m_command_usages)
-    stats.try_emplace(command_usage.getKey(), command_usage.getValue());
+  for (const auto &command_usage : m_command_stats) {
+    const auto &cmd = command_usage.second;
+    llvm::json::Object cmdObj{{"invocations", cmd.invocations},
+                              {"duration", cmd.totalDuration.get().count()}};
+    stats.try_emplace(command_usage.first(), std::move(cmdObj));
+  }
   return stats;
 }
 
