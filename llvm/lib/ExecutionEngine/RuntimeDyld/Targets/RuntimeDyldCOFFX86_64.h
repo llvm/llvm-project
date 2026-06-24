@@ -251,7 +251,8 @@ public:
     case COFF::IMAGE_REL_AMD64_REL32_5:
     case COFF::IMAGE_REL_AMD64_ADDR32NB: {
       uint8_t *Displacement = (uint8_t *)ObjTarget;
-      Addend = readBytesUnaligned(Displacement, 4);
+      Addend = static_cast<int64_t>(
+          static_cast<int32_t>(readBytesUnaligned(Displacement, 4)));
 
       if (IsExtern)
         std::tie(Offset, RelType, Addend) = generateRelocationStub(
