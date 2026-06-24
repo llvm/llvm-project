@@ -6771,8 +6771,6 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
       RdxUnordered{/*VFScaleFactor=*/Chain.ScaleFactor});
   PartialRed->insertBefore(WidenRecipe);
 
-  // Replace uses of the select (if found) with PartialRed; otherwise
-  // the blend directly produces the reduction backedge value.
   if (ExitValue)
     ExitValue->replaceAllUsesWith(PartialRed);
   if (Chain.Blend)
@@ -7028,7 +7026,8 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
     }
 
     // Look for VPBlend(cond_reduce(PrevValue, Op), PrevValue), where
-    // cond_reduce is equal to CurrentValue.
+    // cond_reduce is equal to CurrentValue. This can be lowered as
+    // a conditional reduction by hoisting the select to the inputs.
     if (Blend && Blend->getIncomingValue(1) != PrevValue)
       return std::nullopt;
 
@@ -7074,9 +7073,8 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
   if (ChainsByPhi.empty())
     return;
 
-  // Build set of partial reduction operations and blends for extend user
-  // validation and a map of reduction bin ops to their scale factors for scale
-  // validation.
+  // Build set of partial reduction operations and blends for user validation
+  // and a map of reduction bin ops to their scale factors for scale validation.
   SmallPtrSet<VPRecipeBase *, 4> PartialReductionOps;
   SmallPtrSet<VPBlendRecipe *, 4> PartialReductionBlends;
   DenseMap<VPSingleDefRecipe *, unsigned> ScaledReductionMap;
