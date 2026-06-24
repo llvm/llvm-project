@@ -11,7 +11,7 @@ void bar(void) {}
 // CHECK: func
 void func(void) {  // CHECK-NEXT: File 0, [[@LINE]]:17 -> [[@LINE+5]]:2 = #0
   int i = 0;
-  // CHECK-NEXT: Expansion,File 0, [[@LINE+1]]:3 -> [[@LINE+1]]:8 = #0
+  // CHECK-NEXT: Expansion,File 0, [[@LINE+1]]:3 -> [[@LINE+1]]:8 = 0
   MACRO;       // CHECK-NEXT: File 0, [[@LINE]]:8 -> [[@LINE+2]]:2 = 0
   i = 2;
 }
@@ -21,7 +21,7 @@ void func(void) {  // CHECK-NEXT: File 0, [[@LINE]]:17 -> [[@LINE+5]]:2 = #0
 // CHECK-NEXT: func2
 void func2(void) { // CHECK-NEXT: File 0, [[@LINE]]:18 -> [[@LINE+5]]:2 = #0
   int i = 0;
-  // CHECK-NEXT: Expansion,File 0, [[@LINE+1]]:3 -> [[@LINE+1]]:10 = #0
+  // CHECK-NEXT: Expansion,File 0, [[@LINE+1]]:3 -> [[@LINE+1]]:10 = 0
   MACRO_1;     // CHECK-NEXT: File 0, [[@LINE]]:10 -> [[@LINE+2]]:2 = 0
   i = 2;
 }
@@ -31,8 +31,8 @@ void func2(void) { // CHECK-NEXT: File 0, [[@LINE]]:18 -> [[@LINE+5]]:2 = #0
 
 // CHECK-NEXT: func3
 void func3(void) { // CHECK-NEXT: File 0, [[@LINE]]:18 -> [[@LINE+3]]:2 = #0
-  MACRO_2; // CHECK-NEXT: Expansion,File 0, [[@LINE]]:3 -> [[@LINE]]:10 = #0
-  MACRO_2; // CHECK-NEXT: Expansion,File 0, [[@LINE]]:3 -> [[@LINE]]:10 = #0
+  MACRO_2; // CHECK-NEXT: Expansion,File 0, [[@LINE]]:3 -> [[@LINE]]:10 = 0
+  MACRO_2; // CHECK-NEXT: Expansion,File 0, [[@LINE]]:3 -> [[@LINE]]:10 = 0
 }
 // CHECK-NEXT: File 1, 4:17 -> 4:22 = #0
 // CHECK-NEXT: File 2, 4:17 -> 4:22 = #0
@@ -45,7 +45,7 @@ void func4(void) { // CHECK-NEXT: File 0, [[@LINE]]:18 -> [[@LINE+8]]:2 = #0
                // CHECK-NEXT: File 0, [[@LINE-1]]:9 -> [[@LINE-1]]:14 = #1
                // CHECK-NEXT: Branch,File 0, [[@LINE-2]]:9 -> [[@LINE-2]]:14 = #2, (#1 - #2)
                // CHECK-NEXT: Gap,File 0, [[@LINE-3]]:15 -> [[@LINE+1]]:7 = #2
-      MACRO_2; // CHECK-NEXT: Expansion,File 0, [[@LINE]]:7 -> [[@LINE]]:14 = #2
+      MACRO_2; // CHECK-NEXT: Expansion,File 0, [[@LINE]]:7 -> [[@LINE]]:14 = 0
 }
 // CHECK-NEXT: File 1, 4:17 -> 4:22 = #2
 // CHECK-NOT: File 1
@@ -56,9 +56,9 @@ void func5(void) { // CHECK-NEXT: File 0, [[@LINE]]:18 -> [[@LINE+6]]:2 = #0
   if (i > 5) // CHECK-NEXT: File 0, [[@LINE]]:7 -> [[@LINE]]:12 = #0
              // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:7 -> [[@LINE-1]]:12 = #1, (#0 - #1)
              // CHECK-NEXT: Gap,File 0, [[@LINE-2]]:13 -> [[@LINE+1]]:5 = #1
-    MACRO_3; // CHECK-NEXT: Expansion,File 0, [[@LINE]]:5 -> [[@LINE]]:12 = #1
+    MACRO_3; // CHECK-NEXT: Expansion,File 0, [[@LINE]]:5 -> [[@LINE]]:12 = 0
 }
-// CHECK-NEXT: Expansion,File 1, 6:17 -> 6:24 = #1
+// CHECK-NEXT: Expansion,File 1, 6:17 -> 6:24 = 0
 // CHECK-NEXT: File 2, 4:17 -> 4:22 = #1
 
 // CHECK-NEXT: func6
@@ -69,7 +69,7 @@ begin:                       // CHECK-NEXT: File 0, [[@LINE]]:1 -> [[@LINE+5]]:2
                              // CHECK-NEXT: Gap,File 0, [[@LINE-2]]:17 -> [[@LINE+1]]:9 = #2
         GOTO begin;          // CHECK-NEXT: File 0, [[@LINE]]:9 -> [[@LINE]]:19 = #2
 }
-// CHECK-NEXT: Expansion,File 0, [[@LINE-2]]:9 -> [[@LINE-2]]:13 = #2
+// CHECK-NEXT: Expansion,File 0, [[@LINE-2]]:9 -> [[@LINE-2]]:13 = 0
 // CHECK-NEXT: File 1, 7:14 -> 7:18 = #2
 
 // Regression test for gap region between macros.
@@ -80,10 +80,10 @@ void func7(void) { // CHECK-NEXT: File 0, [[@LINE]]:18 -> [[@LINE+6]]:2 = #0
   int kk,ll;       // CHECK-NEXT: File 0, [[@LINE+1]]:7 -> [[@LINE+1]]:8 = #0
   if (k)           // CHECK-NEXT: Branch,File 0, [[@LINE]]:7 -> [[@LINE]]:8 = #1
     m(k);          // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:9 -> [[@LINE]]:5 = #1
-  else             // CHECK-NEXT: Expansion,File 0, [[@LINE-1]]:5 -> [[@LINE-1]]:6 = #0
+  else             // CHECK-NEXT: Expansion,File 0, [[@LINE-1]]:5 -> [[@LINE-1]]:6 = 0
     l = m(l);      // CHECK-NEXT: Gap,File 0, [[@LINE-2]]:7 -> [[@LINE]]:5 = (#0 - #1)
 }                  // CHECK-NEXT: File 0, [[@LINE-1]]:5 -> [[@LINE-1]]:10 = (#0 - #1)
-                   // CHECK-NEXT: Expansion,File 0, [[@LINE-2]]:9 -> [[@LINE-2]]:10 = (#0 - #1)
+                   // CHECK-NEXT: Expansion,File 0, [[@LINE-2]]:9 -> [[@LINE-2]]:10 = 0
                    // CHECK-NEXT: File 1, [[@LINE-9]]:14 -> [[@LINE-9]]:18 = #0
                    // CHECK-NEXT: File 1, [[@LINE-10]]:14 -> [[@LINE-10]]:17 = #1
                    // CHECK-NEXT: File 2, [[@LINE-11]]:14 -> [[@LINE-11]]:17 = (#0 - #1)

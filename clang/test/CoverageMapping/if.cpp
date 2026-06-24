@@ -121,7 +121,7 @@ int check_constexpr_init_with_if_def(int i) {   // CHECK-NEXT: [[@LINE]]:{{[0-9]
 
 // CHECK-LABEL: _Z32check_macro_constexpr_if_skippedi:
 int check_macro_constexpr_if_skipped(int i) {   // CHECK-NEXT: [[@LINE]]:{{[0-9]+}} -> {{[0-9]+}}:2 = #0
-#define IF_CONSTEXPR if constexpr               // CHECK-NEXT: Expansion,File 0, [[@LINE+1]]:3 -> [[@LINE+1]]:15 = #0 (Expanded file = 1)
+#define IF_CONSTEXPR if constexpr               // CHECK-NEXT: Expansion,File 0, [[@LINE+1]]:3 -> [[@LINE+1]]:15 = 0 (Expanded file = 1)
   IF_CONSTEXPR(false) {                         // CHECK-NEXT: Skipped,File 0, [[@LINE]]:3 -> [[@LINE+2]]:4 = 0
     i *= 2;                                     // CHECK-NEXT: File 1, [[@LINE-2]]:22 -> [[@LINE-2]]:34 = #0
   }
@@ -227,7 +227,7 @@ constexpr int check_notconsteval_branch_kept(int i) { // CHECK-NEXT: [[@LINE]]:{
 
 // CHECK-LABEL: _Z32check_macro_consteval_if_skippedi:
 constexpr int check_macro_consteval_if_skipped(int i) {   // CHECK-NEXT: [[@LINE]]:{{[0-9]+}} -> {{[0-9]+}}:2 = #0
-#define IF_RUNTIME if !consteval               // CHECK-NEXT: Expansion,File 0, [[@LINE+1]]:3 -> [[@LINE+1]]:13 = #0 (Expanded file = 1)
+#define IF_RUNTIME if !consteval               // CHECK-NEXT: Expansion,File 0, [[@LINE+1]]:3 -> [[@LINE+1]]:13 = 0 (Expanded file = 1)
   IF_RUNTIME {                                 // CHECK-NEXT: Skipped,File 0, [[@LINE]]:3 -> [[@LINE]]:14 = 0
     i *= 2;                                    // CHECK-NEXT: File 0, [[@LINE-1]]:14 -> [[@LINE+1]]:4 = #0
   }                                            // CHECK-NEXT: File 1, [[@LINE-3]]:20 -> [[@LINE-3]]:33 = #0
