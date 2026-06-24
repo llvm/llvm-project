@@ -17,8 +17,11 @@
 #include "CodeGenFunction.h"
 #include "ConstantEmitter.h"
 #include "TargetInfo.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/Sanitizers.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Intrinsics.h"
 
 using namespace clang;
@@ -1500,6 +1503,7 @@ public:
     EmitNewDeleteCall(CGF, OperatorDelete, FPT, DeleteArgs);
   }
 };
+
 } // namespace
 
 /// Enter a cleanup to call 'operator delete' if the initializer in a
@@ -1564,6 +1568,85 @@ static void EnterNewDeleteCleanup(CodeGenFunction &CGF, const CXXNewExpr *E,
   CGF.initFullExprCleanup();
 }
 
+namespace {
+void UndefTrivialField(CodeGenFunction &CGF, QualType const &Ty, Address Dest) {
+  CharUnits Size = CGF.getContext().getTypeSizeInChars(Ty);
+  llvm::Value *SizeVal = CGF.CGM.getSize(Size);
+  llvm::Value *UndefByte = llvm::UndefValue::get(CGF.Builder.getInt8Ty());
+  CGF.Builder.CreateMemSet(Dest, UndefByte, SizeVal, Ty.isVolatileQualified());
+}
+
+void UndefArrayLValue(CodeGenFunction &CGF, QualType const &ElementQualTy,
+                      llvm::Type *ElementTy, LValue const &Dest,
+                      llvm::Value *numElements);
+
+void UndefLValueRecursive(CodeGenFunction &CGF, QualType const &Ty,
+                          LValue const &Dest) {
+  if (Ty.isTriviallyCopyableType(CGF.getContext()) || Ty->isReferenceType()) {
+    return UndefTrivialField(CGF, Ty, Dest.getAddress());
+  }
+
+  auto *RD = Ty->castAsCXXRecordDecl();
+  assert(RD &&
+         "type is not trivially copyable but it is not a record type either");
+  for (auto *FD : RD->fields()) {
+    // There is no need to poison unnamed fields.
+    if (FD->isUnnamedBitField()) {
+      continue;
+    }
+    QualType FieldTy = FD->getType();
+    LValue FieldLV = CGF.EmitLValueForField(Dest, FD);
+    if (FieldTy->isRecordType()) {
+      return UndefLValueRecursive(CGF, FieldTy, FieldLV);
+    }
+    if (auto *AQualTy = dyn_cast<clang::ArrayType>(FieldTy)) {
+      if (auto *ATy =
+              dyn_cast<llvm::ArrayType>(CGF.ConvertTypeForMem(FieldTy))) {
+        if (uint64_t NumArrayElements = ATy->getNumElements()) {
+          UndefArrayLValue(
+              CGF, AQualTy->getElementType(), ATy->getElementType(), FieldLV,
+              llvm::ConstantInt::get(CGF.SizeTy, NumArrayElements));
+        }
+      }
+      return;
+    }
+    // Every other case is trivial to poison.
+    UndefTrivialField(CGF, FieldTy, FieldLV.getAddress());
+  }
+}
+
+void UndefArrayLValue(CodeGenFunction &CGF, QualType const &ElementQualTy,
+                      llvm::Type *ElementTy, LValue const &Dest,
+                      llvm::Value *NumElements) {
+  auto ElementAlign = Dest.getAlignment().alignmentOfArrayElement(
+      CGF.getContext().getTypeSizeInChars(ElementQualTy));
+
+  auto &Builder = CGF.Builder;
+  llvm::Value *BeginPtr = Dest.emitRawPointer(CGF);
+  llvm::Value *EndPtr = Builder.CreateInBoundsGEP(
+      ElementTy, BeginPtr, NumElements, "arraypoison.end");
+  llvm::Value *One = llvm::ConstantInt::get(CGF.SizeTy, 1);
+  auto *EntryBB = Builder.GetInsertBlock();
+  // The loop head.
+  auto *BodyBB = CGF.createBasicBlock("arraypoison.body");
+  CGF.EmitBlock(BodyBB);
+  auto *CurElementPtr =
+      Builder.CreatePHI(BeginPtr->getType(), 2, "arraypoison.cur");
+  CurElementPtr->addIncoming(BeginPtr, EntryBB);
+  LValue ElementDest = CGF.MakeAddrLValue(
+      Address(CurElementPtr, ElementTy, ElementAlign), ElementQualTy);
+  UndefLValueRecursive(CGF, ElementQualTy, ElementDest);
+  llvm::Value *NextElementPtr = Builder.CreateInBoundsGEP(
+      ElementTy, CurElementPtr, One, "arraypoison.next");
+  llvm::Value *Done =
+      Builder.CreateICmpEQ(NextElementPtr, EndPtr, "arraypoison.done");
+  auto *EndBB = CGF.createBasicBlock("arraypoison.end");
+  Builder.CreateCondBr(Done, EndBB, BodyBB);
+  CurElementPtr->addIncoming(NextElementPtr, Builder.GetInsertBlock());
+  CGF.EmitBlock(EndBB);
+}
+} // namespace
+
 llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
   // The element type being allocated.
   QualType allocType = getContext().getBaseElementType(E->getAllocatedType());
@@ -1622,6 +1705,16 @@ llvm::Value *CodeGenFunction::EmitCXXNewExpr(const CXXNewExpr *E) {
       allocatorArgs.add(RValue::get(allocation, *this), arg->getType());
     }
 
+    if (E->getInitializationStyle() == CXXNewInitializationStyle::None &&
+        SanOpts.has(SanitizerKind::Memory)) {
+      auto *ElemTy = ConvertTypeForMem(allocType);
+      auto Dest = MakeAddrLValue(allocation.withElementType(ElemTy), allocType);
+      if (numElements) {
+        UndefArrayLValue(*this, allocType, ElemTy, Dest, numElements);
+      } else {
+        UndefLValueRecursive(*this, allocType, Dest);
+      }
+    }
   } else {
     const FunctionProtoType *allocatorType =
         allocator->getType()->castAs<FunctionProtoType>();

@@ -716,7 +716,7 @@ private:
   FunctionCallee MsanSetOriginFn;
 
   /// MSan runtime replacements for memmove, memcpy and memset.
-  FunctionCallee MemmoveFn, MemcpyFn, MemsetFn;
+  FunctionCallee MemmoveFn, MemcpyFn, MemsetFn, MsanPoisonFn;
 
   /// KMSAN callback for task-local function argument shadow.
   StructType *MsanContextStateTy;
@@ -1015,6 +1015,8 @@ void MemorySanitizer::initializeCallbacks(Module &M,
   MemsetFn = M.getOrInsertFunction("__msan_memset",
                                    TLI.getAttrList(C, {1}, /*Signed=*/true),
                                    PtrTy, PtrTy, IRB.getInt32Ty(), IntptrTy);
+  MsanPoisonFn = M.getOrInsertFunction("__msan_poison", IRB.getVoidTy(), PtrTy,
+                                       IntptrTy);
 
   MsanInstrumentAsmStoreFn = M.getOrInsertFunction(
       "__msan_instrument_asm_store", IRB.getVoidTy(), PtrTy, IntptrTy);
@@ -3403,11 +3405,18 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // Same as memcpy.
   void visitMemSetInst(MemSetInst &I) {
     IRBuilder<> IRB(&I);
-    IRB.CreateCall(
-        MS.MemsetFn,
-        {I.getArgOperand(0),
-         IRB.CreateIntCast(I.getArgOperand(1), IRB.getInt32Ty(), false),
-         IRB.CreateIntCast(I.getArgOperand(2), MS.IntptrTy, false)});
+    Value *Val = I.getArgOperand(1);
+    if (isa<UndefValue>(Val)) {
+      IRB.CreateCall(MS.MsanPoisonFn,
+                     {I.getArgOperand(0),
+                      IRB.CreateIntCast(I.getArgOperand(2), MS.IntptrTy, false)});
+    } else {
+      IRB.CreateCall(
+          MS.MemsetFn,
+          {I.getArgOperand(0),
+           IRB.CreateIntCast(Val, IRB.getInt32Ty(), false),
+           IRB.CreateIntCast(I.getArgOperand(2), MS.IntptrTy, false)});
+    }
     I.eraseFromParent();
   }
 
