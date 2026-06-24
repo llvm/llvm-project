@@ -11,6 +11,7 @@
 #include "../GlobList.h"
 #include "../utils/ASTUtils.h"
 #include "clang/AST/CXXInheritance.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -1164,30 +1165,32 @@ StyleKind IdentifierNamingCheck::findStyleKind(
     if (Decl->isAnonymousStructOrUnion())
       return SK_Invalid;
 
+    if (!Decl->isCompleteDefinition())
+      return SK_Invalid;
+
     if (const auto *Definition = Decl->getDefinition()) {
       if (const auto *CxxRecordDecl = dyn_cast<CXXRecordDecl>(Definition)) {
         if (CxxRecordDecl->isAbstract() && NamingStyles[SK_AbstractClass])
           return SK_AbstractClass;
       }
-
-      if (Definition->isStruct() && NamingStyles[SK_Struct])
-        return SK_Struct;
-
-      if (Definition->isStruct() && NamingStyles[SK_Class])
-        return SK_Class;
-
-      if (Definition->isClass() && NamingStyles[SK_Class])
-        return SK_Class;
-
-      if (Definition->isClass() && NamingStyles[SK_Struct])
-        return SK_Struct;
-
-      if (Definition->isUnion() && NamingStyles[SK_Union])
-        return SK_Union;
-
-      if (Definition->isEnum() && NamingStyles[SK_Enum])
-        return SK_Enum;
     }
+    if (Decl->isStruct() && NamingStyles[SK_Struct])
+      return SK_Struct;
+
+    if (Decl->isStruct() && NamingStyles[SK_Class])
+      return SK_Class;
+
+    if (Decl->isClass() && NamingStyles[SK_Class])
+      return SK_Class;
+
+    if (Decl->isClass() && NamingStyles[SK_Struct])
+      return SK_Struct;
+
+    if (Decl->isUnion() && NamingStyles[SK_Union])
+      return SK_Union;
+
+    if (Decl->isEnum() && NamingStyles[SK_Enum])
+      return SK_Enum;
 
     return undefinedStyle(NamingStyles);
   }
