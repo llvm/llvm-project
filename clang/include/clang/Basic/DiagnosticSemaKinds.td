@@ -8145,6 +8145,11 @@ def warn_tautological_compare_value_range : Warning<
 def warn_mixed_sign_comparison : Warning<
   "comparison of integers of different signs: %0 and %1">,
   InGroup<SignCompare>, DefaultIgnore;
+def warn_bool_integral_comparison : Warning<
+  "comparison between %0 and %select{integral|enumeration}2 type %1 is "
+  "suspicious; the %0 operand is converted to an integral value that can only "
+  "be 0 or 1">,
+  InGroup<BoolIntegralComparison>, DefaultIgnore;
 def warn_out_of_range_compare : Warning<
   "result of comparison of %select{constant %0|true|false}1 with "
   "%select{expression of type %2|boolean expression}3 is always %4">,
