@@ -92,6 +92,22 @@ struct MoveInitOperandsToInput : public OpRewritePattern<GenericOp> {
     for (OpOperand &op : outputOperands) {
       if (genericOp.getMatchingBlockArgument(&op).use_empty())
         continue;
+      // When DropUnitDims folds a unit reduction dim, the generic becomes
+      // all-parallel but the former accumulator remains in outs. Moving it
+      // to ins is correct in general, but NOT when the init participates in
+      // an extract_slice -> generic -> insert_slice chain which is the
+      // canonical in-place update pattern that one-shot bufferize relies on.
+      // Replacing outs with tensor.empty() would force bufferize to allocate
+      // a new buffer and copy.
+      Value initVal = op.get();
+      unsigned resultIdx = op.getOperandNumber() -
+                           genericOp.getDpsInits().getBeginOperandIndex();
+      Value result = genericOp.getResult(resultIdx);
+      if (initVal.getDefiningOp<tensor::ExtractSliceOp>() &&
+          llvm::any_of(result.getUsers(), [](Operation *user) {
+            return isa<tensor::InsertSliceOp>(user);
+          }))
+        continue;
       candidates.insert(&op);
     }
 
