@@ -135,6 +135,10 @@ DeadCodeAnalysis::DeadCodeAnalysis(DataFlowSolver &solver)
   registerAnchorKind<CFGEdge>();
 }
 
+void DeadCodeAnalysis::getDependentAnalyses(AnalysisDependencies &deps) const {
+  deps.insert<SparseConstantPropagation>();
+}
+
 LogicalResult DeadCodeAnalysis::initialize(Operation *top) {
   LDBG() << "Initializing DeadCodeAnalysis for top-level op: "
          << OpWithFlags(top, OpPrintingFlags().skipRegions());
