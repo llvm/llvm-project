@@ -5163,6 +5163,22 @@ struct FormatStyle {
   /// \version 3.5
   bool SpaceAfterCStyleCast;
 
+  /// If ``false``, spaces will be removed after constructor initializer colon.
+  /// \code
+  ///    true:                                  false:
+  ///    Foo::Foo() : a(a) {}           vs.     Foo::Foo() :a(a) {}
+  /// \endcode
+  /// \version 23
+  bool SpaceAfterCtorInitializerColon;
+
+  /// If ``false``, spaces will be removed after constructor initializer comma.
+  /// \code
+  ///    true:                                  false:
+  ///    Foo::Foo() : a(a), b(b) {}     vs.     Foo::Foo() : a(a),b(b) {}
+  /// \endcode
+  /// \version 23
+  bool SpaceAfterCtorInitializerComma;
+
   /// If ``true``, a space is inserted after the logical not operator (``!``).
   /// \code
   ///    true:                                  false:
@@ -6222,6 +6238,8 @@ struct FormatStyle {
            SortIncludes == R.SortIncludes &&
            SortJavaStaticImport == R.SortJavaStaticImport &&
            SpaceAfterCStyleCast == R.SpaceAfterCStyleCast &&
+           SpaceAfterCtorInitializerColon == R.SpaceAfterCtorInitializerColon &&
+           SpaceAfterCtorInitializerComma == R.SpaceAfterCtorInitializerComma &&
            SpaceAfterLogicalNot == R.SpaceAfterLogicalNot &&
            SpaceAfterOperatorKeyword == R.SpaceAfterOperatorKeyword &&
            SpaceAfterTemplateKeyword == R.SpaceAfterTemplateKeyword &&

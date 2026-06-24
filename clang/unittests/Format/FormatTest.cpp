@@ -18616,6 +18616,12 @@ TEST_F(FormatTest, ConfigurableSpaceBeforeColon) {
   CtorInitializerStyle.SpaceBeforeCtorInitializerColon = false;
   verifyFormat("class Foo : public Bar {};", CtorInitializerStyle);
   verifyFormat("Foo::Foo(): foo(1) {}", CtorInitializerStyle);
+  CtorInitializerStyle.SpaceAfterCtorInitializerColon = false;
+  verifyFormat("Foo::Foo():foo(1) {}", CtorInitializerStyle);
+  CtorInitializerStyle.SpaceAfterCtorInitializerComma = false;
+  verifyFormat("Foo::Foo():foo(1),bar(2) {}", CtorInitializerStyle);
+  CtorInitializerStyle.SpaceAfterCtorInitializerColon = true;
+  CtorInitializerStyle.SpaceAfterCtorInitializerComma = true;
   verifyFormat("for (auto a : b) {\n}", CtorInitializerStyle);
   verifyFormat("int x = a ? b : c;", CtorInitializerStyle);
   verifyFormat("{\n"

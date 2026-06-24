@@ -1466,6 +1466,10 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("SortJavaStaticImport", Style.SortJavaStaticImport);
     IO.mapOptional("SortUsingDeclarations", Style.SortUsingDeclarations);
     IO.mapOptional("SpaceAfterCStyleCast", Style.SpaceAfterCStyleCast);
+    IO.mapOptional("SpaceAfterCtorInitializerColon",
+                   Style.SpaceAfterCtorInitializerColon);
+    IO.mapOptional("SpaceAfterCtorInitializerComma",
+                   Style.SpaceAfterCtorInitializerComma);
     IO.mapOptional("SpaceAfterLogicalNot", Style.SpaceAfterLogicalNot);
     IO.mapOptional("SpaceAfterOperatorKeyword",
                    Style.SpaceAfterOperatorKeyword);
@@ -1998,6 +2002,8 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SortJavaStaticImport = FormatStyle::SJSIO_Before;
   LLVMStyle.SortUsingDeclarations = FormatStyle::SUD_LexicographicNumeric;
   LLVMStyle.SpaceAfterCStyleCast = false;
+  LLVMStyle.SpaceAfterCtorInitializerColon = true;
+  LLVMStyle.SpaceAfterCtorInitializerComma = true;
   LLVMStyle.SpaceAfterLogicalNot = false;
   LLVMStyle.SpaceAfterOperatorKeyword = false;
   LLVMStyle.SpaceAfterTemplateKeyword = true;

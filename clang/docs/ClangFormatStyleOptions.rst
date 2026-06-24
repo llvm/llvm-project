@@ -6912,6 +6912,26 @@ the configuration (without a prefix: ``Auto``).
      true:                                  false:
      (int) i;                       vs.     (int)i;
 
+.. _SpaceAfterCtorInitializerColon:
+
+**SpaceAfterCtorInitializerColon** (``Boolean``) :versionbadge:`clang-format 23` :ref:`¶ <SpaceAfterCtorInitializerColon>`
+  If ``false``, spaces will be removed after constructor initializer colon.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     Foo::Foo() : a(a) {}                   Foo::Foo() :a(a) {}
+
+.. _SpaceAfterCtorInitializerComma:
+
+**SpaceAfterCtorInitializerComma** (``Boolean``) :versionbadge:`clang-format 23` :ref:`¶ <SpaceAfterCtorInitializerComma>`
+  If ``false``, spaces will be removed after constructor initializer comma.
+
+  .. code-block:: c++
+
+     true:                                  false:
+     Foo::Foo() : a(a), b(b) {}             Foo::Foo() : a(a),b(b) {}
+
 .. _SpaceAfterLogicalNot:
 
 **SpaceAfterLogicalNot** (``Boolean``) :versionbadge:`clang-format 9` :ref:`¶ <SpaceAfterLogicalNot>`
