@@ -4,6 +4,25 @@ int complete_array_from_init[] = { 1, 2, [10] = 5, 1, 2, [5] = 2, 6 };
 
 int complete_array_from_init_check[((sizeof(complete_array_from_init) / sizeof(int)) == 13)? 1 : -1];
 
+int normal_sparse_designated_initializer[] = { [3] = 1 };
+typedef char normal_sparse_designated_initializer_size[
+    sizeof(normal_sparse_designated_initializer) / sizeof(int) == 4 ? 1 : -1];
+
+struct LargeDesignatedInitializerPoint {
+  int x, y;
+};
+
+void large_designated_initializer(void) {
+  static struct LargeDesignatedInitializerPoint pts[] = {
+      [0x80000000] = { .x = 10, .y = 20 }, // expected-error {{array is too large (2147483649 elements)}}
+      [0x80000001] = { .x = 30, .y = 40 }  // expected-error {{array is too large (2147483650 elements)}}
+  };
+}
+
+int large_fixed_designated_initializer[4] = {
+  [0x80000000] = 1, // expected-error {{array designator index (2147483648) exceeds array bounds (4)}}
+};
+
 int iarray[10] = {
   [0] = 1,
   [1 ... 5] = 2,
