@@ -189,10 +189,12 @@ GS-PAUTH: signing oracle found in function function_name, basic block .LBB016, a
 
 Pointer Authentication analysis is able to search for a number of gadget kinds,
 with the specific set depending on command line options:
-* [`ptrauth-pac-ret`](#return-address-protection-ptrauth-pac-ret) -
+* [`ptrauth-backward-cf`](#return-address-protection-ptrauth-backward-cf) -
   non-protected return instruction
-* [`ptrauth-tail-calls`](#return-address-protection-before-tail-call-ptrauth-tail-calls) -
-  performing a tail call with an untrusted value in the link register
+  * [`ptrauth-pac-ret`](#ptrauth-pac-ret-combination) checks tail calls in
+    addition to regular return instructions
+* [`ptrauth-tail-calls` and `ptrauth-tail-calls-strict`](#return-address-protection-before-tail-call-ptrauth-tail-calls) -
+  performing a tail call with the value in the link register not being protected enough
 * [`ptrauth-forward-cf`](#indirect-branch-call-target-protection-ptrauth-forward-cf) -
   non-protected destination of branch or call instruction
 * [`ptrauth-sign-oracles`](#signing-oracles-ptrauth-sign-oracles) -
@@ -246,7 +248,7 @@ the descriptions refer to AArch64 for simplicity, the implementation of gadget
 detectors in `llvm-bolt-binary-analysis` attempts to be target-neutral by
 isolating AArch64 specifics in target-dependent hooks.
 
-### Return address protection (`ptrauth-pac-ret`)
+### Return address protection (`ptrauth-backward-cf`)
 
 **Instructions:** Return instructions without built-in authentication:
 either `ret` (implicit `x30` register) or `ret <reg>`, but not `retaa` and
@@ -320,19 +322,32 @@ bad_clobber:
 
 ### Return address protection before tail call (`ptrauth-tail-calls`)
 
+This gadget kind exists in two variants: `ptrauth-tail-calls` and
+`ptrauth-tail-calls-strict`.
+
 **Instructions:** Branch instructions (both direct and indirect, regular or
 with built-in authentication), classified as tail calls either by BOLT or by
 PtrAuth gadget scanner's heuristic.
 
-**Property:** link register (`x30` on AArch64) must be trusted.
+**Property:** link register (`x30` on AArch64) must be safe-to-dereference
+(`ptrauth-tail-calls`) or trusted (`ptrauth-tail-calls-strict`).
 
 **Notes:** Heuristics are involved to classify instructions either as a tail
 call or as another kind of branch (such as jump table or computed goto).
 
-A report is generated if a tail call is performed with an untrusted link register.
+The `-strict` variant of this report is generated if a tail call is performed with an untrusted link register.
 This basically means that the tail-called function would have the link register
 untrusted on its entry (unlike the inherently correct address placed in the link
 register by one of the `bl*` instructions when a non-tail call is performed).
+Depending on the assumptions being made on the target environment, enforcing this
+invariant may require inserting an expensive instruction sequence before each
+tail call by the compiler.
+
+On the other hand, as tail call is logically a combination of call and return
+instruction, there is no reason to skip regular link register authentication
+in function's epilogue just before the tail call is performed. The non-`strict`
+variant of this gadget follows the idea of `ptrauth-backward-cf` extended to the
+branch instructions identified as tail calls by the heuristics.
 
 ```asm
 non_protected_tail_call:
@@ -369,6 +384,16 @@ Properly mitigating this issue would usually require inserting an explicit
 check after a regular authentication instruction, which may be either too
 expensive (if a fully-generic XPAC-based sequence is being used) on one hand,
 or not required at all (if `FEAT_FPAC` is known to be implemented) on the other hand.
+
+### `ptrauth-pac-ret` combination
+
+When the `pac-ret` hardening is enabled in the compiler, the link register is
+signed in function's prologue and authenticated in its epilogue, whether the
+function is exited via regular return instruction or a tail call. For that
+reason, a `ptrauth-pac-ret` preset is defined in `llvm-bolt-binary-analysis`
+which enables both `ptrauth-backward-cf` and `ptrauth-tail-calls`. This way,
+it is possible to enable a sensible preset for `pac-ret` hardening by default
+and opt-out of tail call checking in case it results in false positives.
 
 ### Indirect branch / call target protection (`ptrauth-forward-cf`)
 
@@ -713,9 +738,6 @@ which is also supported by Clang.
 
 #### Other known issues
 
-* No lightweight variant of [`ptrauth-tail-calls`](#return-address-protection-before-tail-call-ptrauth-tail-calls),
-  see issue [#186204](https://github.com/llvm/llvm-project/issues/186204)
-  for the details.
 * Not handling "no-return" functions. See issue
   [#115154](https://github.com/llvm/llvm-project/issues/115154) for details and
   pointers to open PRs to fix this.

@@ -2,12 +2,15 @@
 
 // Select single detector:
 //
-// RUN: llvm-bolt-binary-analysis --scanners=ptrauth-pac-ret      %t.exe 2>&1 | \
+// RUN: llvm-bolt-binary-analysis --scanners=ptrauth-backward-cf  %t.exe 2>&1 | \
 // RUN:     FileCheck %s --implicit-check-not="found in function" \
-// RUN:                  --check-prefixes=PACRET
+// RUN:                  --check-prefixes=BACKWARD-CF
 // RUN: llvm-bolt-binary-analysis --scanners=ptrauth-tail-calls   %t.exe 2>&1 | \
 // RUN:     FileCheck %s --implicit-check-not="found in function" \
-// RUN:                  --check-prefixes=TAIL-CALLS-COMMON,TAIL-CALLS-NOFPAC
+// RUN:                  --check-prefixes=TAIL-CALLS-BASIC
+// RUN: llvm-bolt-binary-analysis --scanners=ptrauth-tail-calls-strict %t.exe 2>&1 | \
+// RUN:     FileCheck %s --implicit-check-not="found in function" \
+// RUN:                  --check-prefixes=TAIL-CALLS-BASIC,TAIL-CALLS-NOFPAC-STRICT
 // RUN: llvm-bolt-binary-analysis --scanners=ptrauth-forward-cf   %t.exe 2>&1 | \
 // RUN:     FileCheck %s --implicit-check-not="found in function" \
 // RUN:                  --check-prefixes=FORWARD-CF
@@ -20,33 +23,36 @@
 
 // Select multiple options (either disjoint or not):
 //
-// RUN: llvm-bolt-binary-analysis --scanners=ptrauth-pac-ret,ptrauth-forward-cf %t.exe 2>&1 | \
+// RUN: llvm-bolt-binary-analysis --scanners=ptrauth-backward-cf,ptrauth-forward-cf %t.exe 2>&1 | \
 // RUN:     FileCheck %s --implicit-check-not="found in function" \
-// RUN:                  --check-prefixes=PACRET,FORWARD-CF
-// RUN: llvm-bolt-binary-analysis --scanners=ptrauth-pac-ret,ptrauth-all %t.exe 2>&1 | \
+// RUN:                  --check-prefixes=BACKWARD-CF,FORWARD-CF
+// RUN: llvm-bolt-binary-analysis --scanners=ptrauth-backward-cf,ptrauth-all %t.exe 2>&1 | \
 // RUN:     FileCheck %s --implicit-check-not="found in function" \
-// RUN:                  --check-prefixes=PACRET,TAIL-CALLS-COMMON,TAIL-CALLS-NOFPAC,FORWARD-CF,SIGN-ORACLES-COMMON,SIGN-ORACLES-NOFPAC,AUTH-ORACLES-NOFPAC
+// RUN:                  --check-prefixes=BACKWARD-CF,TAIL-CALLS-BASIC,TAIL-CALLS-NOFPAC-STRICT,FORWARD-CF,SIGN-ORACLES-COMMON,SIGN-ORACLES-NOFPAC,AUTH-ORACLES-NOFPAC
 
-// Select one of "all" options:
+// Select one of preset options:
 //
+// RUN: llvm-bolt-binary-analysis --scanners=ptrauth-pac-ret %t.exe 2>&1 | \
+// RUN:     FileCheck %s --implicit-check-not="found in function" \
+// RUN:                  --check-prefixes=BACKWARD-CF,TAIL-CALLS-BASIC
 // RUN: llvm-bolt-binary-analysis --scanners=ptrauth-all %t.exe 2>&1 | \
 // RUN:     FileCheck %s --implicit-check-not="found in function" \
-// RUN:                  --check-prefixes=PACRET,TAIL-CALLS-COMMON,TAIL-CALLS-NOFPAC,FORWARD-CF,SIGN-ORACLES-COMMON,SIGN-ORACLES-NOFPAC,AUTH-ORACLES-NOFPAC
+// RUN:                  --check-prefixes=BACKWARD-CF,TAIL-CALLS-BASIC,TAIL-CALLS-NOFPAC-STRICT,FORWARD-CF,SIGN-ORACLES-COMMON,SIGN-ORACLES-NOFPAC,AUTH-ORACLES-NOFPAC
 // RUN: llvm-bolt-binary-analysis --scanners=all %t.exe 2>&1 | \
 // RUN:     FileCheck %s --implicit-check-not="found in function" \
-// RUN:                  --check-prefixes=PACRET,TAIL-CALLS-COMMON,TAIL-CALLS-NOFPAC,FORWARD-CF,SIGN-ORACLES-COMMON,SIGN-ORACLES-NOFPAC,AUTH-ORACLES-NOFPAC
+// RUN:                  --check-prefixes=BACKWARD-CF,TAIL-CALLS-BASIC,TAIL-CALLS-NOFPAC-STRICT,FORWARD-CF,SIGN-ORACLES-COMMON,SIGN-ORACLES-NOFPAC,AUTH-ORACLES-NOFPAC
 
 // Implicitly select all scanners by omitting --scanners=... argument.
 //
 // RUN: llvm-bolt-binary-analysis %t.exe 2>&1 | \
 // RUN:     FileCheck %s --implicit-check-not="found in function" \
-// RUN:                  --check-prefixes=PACRET,TAIL-CALLS-COMMON,TAIL-CALLS-NOFPAC,FORWARD-CF,SIGN-ORACLES-COMMON,SIGN-ORACLES-NOFPAC,AUTH-ORACLES-NOFPAC
+// RUN:                  --check-prefixes=BACKWARD-CF,TAIL-CALLS-BASIC,TAIL-CALLS-NOFPAC-STRICT,FORWARD-CF,SIGN-ORACLES-COMMON,SIGN-ORACLES-NOFPAC,AUTH-ORACLES-NOFPAC
 
 // Test FPAC handling:
 //
 // RUN: llvm-bolt-binary-analysis --auth-traps-on-failure --scanners=ptrauth-all %t.exe 2>&1 | \
 // RUN:     FileCheck %s --implicit-check-not="found in function" \
-// RUN:                  --check-prefixes=PACRET,TAIL-CALLS-COMMON,FORWARD-CF,SIGN-ORACLES-COMMON
+// RUN:                  --check-prefixes=BACKWARD-CF,TAIL-CALLS-BASIC,FORWARD-CF,SIGN-ORACLES-COMMON
 // RUN: llvm-bolt-binary-analysis --auth-traps-on-failure --scanners=ptrauth-auth-oracles %t.exe 2>&1 | \
 // RUN:     FileCheck %s --check-prefixes=NO-REPORTS
 
@@ -63,7 +69,7 @@ callee:
         .globl  bad_pacret
         .type   bad_pacret,@function
 bad_pacret:
-// PACRET: GS-PAUTH: non-protected ret found in function bad_pacret
+// BACKWARD-CF: GS-PAUTH: non-protected ret found in function bad_pacret
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
 
@@ -74,7 +80,7 @@ bad_pacret:
         .globl  bad_tail_call_common
         .type   bad_tail_call_common,@function
 bad_tail_call_common:
-// TAIL-CALLS-COMMON: GS-PAUTH: untrusted link register found before tail call in function bad_tail_call_common
+// TAIL-CALLS-BASIC: GS-PAUTH: unauthenticated link register found before tail call in function bad_tail_call_common
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp
 
@@ -85,8 +91,8 @@ bad_tail_call_common:
         .globl  bad_tail_call_nofpac
         .type   bad_tail_call_nofpac,@function
 bad_tail_call_nofpac:
-// TAIL-CALLS-NOFPAC:   GS-PAUTH: untrusted link register found before tail call in function bad_tail_call_nofpac
-// AUTH-ORACLES-NOFPAC: GS-PAUTH: authentication oracle found in function bad_tail_call_nofpac
+// TAIL-CALLS-NOFPAC-STRICT: GS-PAUTH: not fully trusted link register found before tail call in function bad_tail_call_nofpac
+// AUTH-ORACLES-NOFPAC:      GS-PAUTH: authentication oracle found in function bad_tail_call_nofpac
         paciasp
         stp     x29, x30, [sp, #-16]!
         mov     x29, sp

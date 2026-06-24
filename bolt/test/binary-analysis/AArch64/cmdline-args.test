@@ -35,13 +35,15 @@ HELP-NEXT:  BinaryAnalysis options:
 HELP-EMPTY:
 HELP-NEXT:   --auth-traps-on-failure - Assume authentication instructions always trap on failure
 HELP-NEXT:   --scanners=<value> - Which gadget scanners to run
-HELP-NEXT:   =ptrauth-pac-ret        -   Unprotected returns (pac-ret)
-HELP-NEXT:   =ptrauth-tail-calls     -   Tail calls performed with unprotected link register
-HELP-NEXT:   =ptrauth-forward-cf     -   Unprotected calls and branches (forward control-flow)
-HELP-NEXT:   =ptrauth-sign-oracles   -   Signing of untrusted pointers (signing oracles)
-HELP-NEXT:   =ptrauth-auth-oracles   -   Authentication oracles
-HELP-NEXT:   =ptrauth-all            -   All Pointer Authentication scanners
-HELP-NEXT:   =all                    -   All implemented scanners
+HELP-NEXT:   =ptrauth-pac-ret           -   Returning from a function with unprotected link register (backward-cf + tail-calls)
+HELP-NEXT:   =ptrauth-tail-calls        -   Tail calls performed with unauthenticated link register
+HELP-NEXT:   =ptrauth-tail-calls-strict -   Tail calls performed with not fully trusted link register
+HELP-NEXT:   =ptrauth-backward-cf       -   Unprotected return targets (backward control flow)
+HELP-NEXT:   =ptrauth-forward-cf        -   Unprotected call or branch targets (forward control flow)
+HELP-NEXT:   =ptrauth-sign-oracles      -   Signing of untrusted pointers (signing oracles)
+HELP-NEXT:   =ptrauth-auth-oracles      -   Authentication oracles
+HELP-NEXT:   =ptrauth-all               -   All Pointer Authentication scanners
+HELP-NEXT:   =all                       -   All implemented scanners
 
 HELP-EMPTY:
 HELP-NEXT:  Generic Options:

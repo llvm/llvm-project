@@ -1,5 +1,6 @@
 // RUN: %clang %cflags -march=armv9.5-a+pauth-lr -mbranch-protection=pac-ret %s %p/../../Inputs/asm_main.c -o %t.exe
-// RUN: llvm-bolt-binary-analysis --scanners=ptrauth-pac-ret %t.exe 2>&1 | FileCheck %s
+// RUN: llvm-bolt-binary-analysis --scanners=ptrauth-pac-ret %t.exe 2>&1     | FileCheck %s --check-prefixes=CHECK,FULL
+// RUN: llvm-bolt-binary-analysis --scanners=ptrauth-backward-cf %t.exe 2>&1 | FileCheck %s --check-prefixes=CHECK,RET-ONLY
 
         .text
 
@@ -173,9 +174,15 @@ f_nonx30_ret_ok:
 f_detect_clobbered_x30_passed_to_other:
         str x30, [sp]
         ldr x30, [sp]
-// FIXME: Ideally, the pac-ret scanner would report on the following instruction, which
-// performs a tail call, that x30 might be attacker-controlled.
-// CHECK-NOT: function f_detect_clobbered_x30_passed_to_other
+// RET-ONLY-NOT: function f_detect_clobbered_x30_passed_to_other
+// FULL-LABEL: GS-PAUTH: unauthenticated link register found before tail call in function f_detect_clobbered_x30_passed_to_other, basic block {{[0-9a-zA-Z.]+}}, at address
+// FULL-NEXT:  The instruction is     {{[0-9a-f]+}}:       b       f_tail_called
+// FULL-NEXT:  The 1 instructions that write to the affected registers after any authentication are:
+// FULL-NEXT:  1.     {{[0-9a-f]+}}:      ldr     x30, [sp]
+// FULL-NEXT:  This happens in the following basic block:
+// FULL-NEXT:  {{[0-9a-f]+}}:   str     x30, [sp]
+// FULL-NEXT:  {{[0-9a-f]+}}:   ldr     x30, [sp]
+// FULL-NEXT:  {{[0-9a-f]+}}:   b       f_tail_called
         b   f_tail_called
         .size f_detect_clobbered_x30_passed_to_other, .-f_detect_clobbered_x30_passed_to_other
 
