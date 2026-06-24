@@ -11,12 +11,6 @@
 
 #include "clc/internal/clc.h"
 
-_CLC_DECL _CLC_OVERLOAD _CLC_CONST uint __clc_get_sub_group_size(void);
-_CLC_DECL _CLC_OVERLOAD _CLC_CONST uint __clc_get_max_sub_group_size(void);
-_CLC_DECL _CLC_OVERLOAD _CLC_CONST uint __clc_get_num_sub_groups(void);
-_CLC_DECL _CLC_OVERLOAD _CLC_CONST uint __clc_get_enqueued_num_sub_groups(void);
-_CLC_DECL _CLC_OVERLOAD _CLC_CONST uint __clc_get_sub_group_id(void);
-_CLC_DECL _CLC_OVERLOAD _CLC_CONST uint __clc_get_sub_group_local_id(void);
 _CLC_DECL _CLC_OVERLOAD _CLC_CONST int __clc_sub_group_all(int x);
 _CLC_DECL _CLC_OVERLOAD _CLC_CONST int __clc_sub_group_any(int x);
 
