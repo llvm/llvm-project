@@ -6425,15 +6425,16 @@ CodeGenFunction::EmitCheckedInBoundsGEP(llvm::Type *ElemTy, Value *Ptr,
   GEPOffsetAndOverflow EvaluatedGEP =
       EmitGEPOffsetInBytes(Ptr, GEPVal, getLLVMContext(), CGM, Builder);
 
-  assert((!isa<llvm::Constant>(EvaluatedGEP.TotalOffset) ||
-          EvaluatedGEP.OffsetOverflows == Builder.getFalse()) &&
-         "If the offset got constant-folded, we don't expect that there was an "
-         "overflow.");
+  // Note: TotalOffset can be a constant even when the GEP is non-constant
+  // (e.g. runtime base pointer with constant index). In that case,
+  // OffsetOverflows may be true if the constant offset computation overflowed.
 
   auto *Zero = llvm::ConstantInt::getNullValue(IntPtrTy);
 
-  // Common case: if the total offset is zero, don't emit a check.
-  if (EvaluatedGEP.TotalOffset == Zero)
+  // Common case: if the total offset is zero and has not overflowed, don't emit
+  // a check.
+  if (EvaluatedGEP.TotalOffset == Zero &&
+      EvaluatedGEP.OffsetOverflows == Builder.getFalse())
     return GEPVal;
 
   // Now that we've computed the total offset, add it to the base pointer (with
