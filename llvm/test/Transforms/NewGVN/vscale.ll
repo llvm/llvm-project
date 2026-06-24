@@ -272,7 +272,7 @@ if.end:
   ret i32 %result
 }
 
-; TODO: BasicAA return MayAlias for %gep1,%gep2, could improve as NoAlias.
+; NewGVN can use BasicAA's NoAlias result here.
 define void @redundant_load_elimination_2(i1 %c, ptr %p, ptr %q) {
 ; CHECK-LABEL: @redundant_load_elimination_2(
 ; CHECK-NEXT:  entry:
@@ -282,8 +282,7 @@ define void @redundant_load_elimination_2(i1 %c, ptr %p, ptr %q) {
 ; CHECK-NEXT:    store i32 1, ptr [[GEP2]], align 4
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[T:%.*]] = load i32, ptr [[GEP1]], align 4
-; CHECK-NEXT:    store i32 [[T]], ptr [[Q:%.*]], align 4
+; CHECK-NEXT:    store i32 0, ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.else:
 ; CHECK-NEXT:    ret void

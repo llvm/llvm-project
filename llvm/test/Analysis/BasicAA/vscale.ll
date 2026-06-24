@@ -19,8 +19,7 @@ define void @gep_alloca_const_offset_1() {
 ; CHECK-LABEL: gep_alloca_const_offset_2
 ; CHECK-DAG:  MayAlias:     <vscale x 4 x i32>* %alloc, <vscale x 4 x i32>* %gep1
 ; CHECK-DAG:  MayAlias:     <vscale x 4 x i32>* %alloc, <vscale x 4 x i32>* %gep2
-; TODO: AliasResult for gep1,gep2 can be improved as MustAlias
-; CHECK-DAG:  MayAlias:     <vscale x 4 x i32>* %gep1, <vscale x 4 x i32>* %gep2
+; CHECK-DAG:  MustAlias:    <vscale x 4 x i32>* %gep1, <vscale x 4 x i32>* %gep2
 define void @gep_alloca_const_offset_2() {
   %alloc = alloca <vscale x 4 x i32>
   %gep1 = getelementptr <vscale x 4 x i32>, ptr %alloc, i64 1
@@ -76,8 +75,7 @@ define void @gep_alloca_symbolic_offset(i64 %idx1, i64 %idx2) {
 ; CHECK-LABEL: gep_same_base_const_offset
 ; CHECK-DAG:  MayAlias:     i32* %gep1, <vscale x 4 x i32>* %p
 ; CHECK-DAG:  MayAlias:     i32* %gep2, <vscale x 4 x i32>* %p
-; TODO: AliasResult for gep1,gep2 can be improved as NoAlias
-; CHECK-DAG:  MayAlias:     i32* %gep1, i32* %gep2
+; CHECK-DAG:  NoAlias:      i32* %gep1, i32* %gep2
 define void @gep_same_base_const_offset(ptr %p) {
   %gep1 = getelementptr <vscale x 4 x i32>, ptr %p, i64 1, i64 0
   %gep2 = getelementptr <vscale x 4 x i32>, ptr %p, i64 1, i64 1
@@ -171,7 +169,7 @@ define void @gep_bitcast_1(ptr %p) {
 ; CHECK-DAG:  MayAlias:     i32* %gep1, <vscale x 4 x i32>* %p
 ; CHECK-DAG:  MayAlias:     i32* %gep1, <vscale x 4 x float>* %p
 ; CHECK-DAG:  MayAlias:     float* %gep2, <vscale x 4 x i32>* %p
-; CHECK-DAG:  MayAlias:     i32* %gep1, float* %gep2
+; CHECK-DAG:  MustAlias:    i32* %gep1, float* %gep2
 ; CHECK-DAG:  MayAlias:     float* %gep2, <vscale x 4 x float>* %p
 define void @gep_bitcast_2(ptr %p) {
   %gep1 = getelementptr <vscale x 4 x i32>, ptr %p, i64 1, i64 0
@@ -216,7 +214,7 @@ define void @gep_neg_notscalable(ptr %p) vscale_range(1,16) {
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vm16m16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %vm16, <vscale x 4 x i32>* %vm16m16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %vm16m16
-; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %p
+; CHECK-DAG:   MustAlias:    <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %p
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %vm16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %m16pv16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %vm16m16
@@ -240,9 +238,9 @@ define void @gep_neg_scalable(ptr %p) vscale_range(1,16) {
 ; CHECK-DAG:   MayAlias:     <4 x i32>* %p, <4 x i32>* %vm16m16
 ; CHECK-DAG:   NoAlias:      <4 x i32>* %vm16, <4 x i32>* %vm16m16
 ; CHECK-DAG:   MayAlias:     <4 x i32>* %m16, <4 x i32>* %vm16m16
-; CHECK-DAG:   MayAlias:     <4 x i32>* %m16pv16, <4 x i32>* %p
+; CHECK-DAG:   MustAlias:    <4 x i32>* %m16pv16, <4 x i32>* %p
 ; CHECK-DAG:   MayAlias:     <4 x i32>* %m16pv16, <4 x i32>* %vm16
-; CHECK-DAG:   MayAlias:     <4 x i32>* %m16, <4 x i32>* %m16pv16
+; CHECK-DAG:   NoAlias:      <4 x i32>* %m16, <4 x i32>* %m16pv16
 ; CHECK-DAG:   MayAlias:     <4 x i32>* %m16pv16, <4 x i32>* %vm16m16
 define void @gep_pos_notscalable(ptr %p) vscale_range(1,16) {
   %vm16 = getelementptr <vscale x 4 x i32>, ptr %p, i64 1
@@ -264,7 +262,7 @@ define void @gep_pos_notscalable(ptr %p) vscale_range(1,16) {
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %p, <vscale x 4 x i32>* %vm16m16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %vm16, <vscale x 4 x i32>* %vm16m16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %vm16m16
-; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %p
+; CHECK-DAG:   MustAlias:    <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %p
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %vm16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16, <vscale x 4 x i32>* %m16pv16
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %m16pv16, <vscale x 4 x i32>* %vm16m16
@@ -668,5 +666,35 @@ define void @gep_2048_vscalerange(ptr %p) vscale_range(1,16) {
   load <vscale x 4 x i32>, ptr %noff255
   load <vscale x 4 x i32>, ptr %off256
   load <vscale x 4 x i32>, ptr %noff256
+  ret void
+}
+
+; Two GEPs with different scalable vector types but the same known-minimum
+; stride (both 16 bytes/vscale). ScalableOffset cancels after subtraction,
+; so they resolve to MustAlias.
+; <vscale x 4 x i32>: known-min stride = 4 * 4 = 16 bytes
+; <vscale x 2 x i64>: known-min stride = 2 * 8 = 16 bytes
+; CHECK-LABEL: gep_mismatched_scalable_strides_same_size
+; CHECK-DAG:   MustAlias:    <vscale x 4 x i32>* %gep1, <vscale x 2 x i64>* %gep2
+define void @gep_mismatched_scalable_strides_same_size(ptr %p) {
+  %gep1 = getelementptr <vscale x 4 x i32>, ptr %p, i64 1
+  %gep2 = getelementptr <vscale x 2 x i64>, ptr %p, i64 1
+  load <vscale x 4 x i32>, ptr %gep1
+  load <vscale x 2 x i64>, ptr %gep2
+  ret void
+}
+
+; Two GEPs with different scalable vector types and different known-minimum
+; strides. ScalableOffset does not cancel after subtraction, so the result
+; is conservatively MayAlias.
+; <vscale x 4 x i32>: known-min stride = 4 * 4 = 16 bytes
+; <vscale x 4 x i64>: known-min stride = 4 * 8 = 32 bytes
+; CHECK-LABEL: gep_mismatched_scalable_strides_diff_size
+; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %gep1, <vscale x 4 x i64>* %gep2
+define void @gep_mismatched_scalable_strides_diff_size(ptr %p) {
+  %gep1 = getelementptr <vscale x 4 x i32>, ptr %p, i64 1
+  %gep2 = getelementptr <vscale x 4 x i64>, ptr %p, i64 1
+  load <vscale x 4 x i32>, ptr %gep1
+  load <vscale x 4 x i64>, ptr %gep2
   ret void
 }
