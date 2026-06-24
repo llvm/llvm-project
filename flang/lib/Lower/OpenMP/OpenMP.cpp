@@ -679,6 +679,10 @@ static void genNestedEvaluations(lower::AbstractConverter &converter,
     converter.genEval(e);
 }
 
+static mlir::Operation *setLoopVar(lower::AbstractConverter &converter,
+                                   mlir::Location loc, mlir::Value indexVal,
+                                   const semantics::Symbol *sym);
+
 /// Emit the body of a collapsed loop nest, including any intervening code
 /// from imperfect nesting at intermediate levels (CLN relaxation, applied
 /// retroactively for all OMP versions).
@@ -717,9 +721,17 @@ static void genCollapsedLoopNestBody(lower::AbstractConverter &converter,
   };
   llvm::SmallVector<LevelInfo> levels;
 
+  // DO-variable symbol of each collapsed level (index 0 = outermost). Used to
+  // restore an inner loop's variable to its Fortran terminal value before
+  // emitting "after" intervening code (see below).
+  llvm::SmallVector<const semantics::Symbol *> ivSyms;
+
   lower::pft::Evaluation *curEval = &outerEval;
   for (int i = 0; i < collapseValue - 1; ++i) {
     lower::pft::Evaluation *doEval = getNestedDoConstruct(*curEval);
+    const semantics::Symbol *ivSym = getIterationVariableSymbol(*doEval);
+    assert(ivSym && "expected iteration variable on collapsed DO loop");
+    ivSyms.push_back(ivSym);
     LevelInfo level;
     bool pastDo = false;
     for (lower::pft::Evaluation &e : doEval->getNestedEvaluations()) {
@@ -739,44 +751,45 @@ static void genCollapsedLoopNestBody(lower::AbstractConverter &converter,
     levels.push_back(std::move(level));
     curEval = doEval;
   }
+  // DO-variable symbol of the innermost collapsed loop must be restored
+  // inside enclosing "after" regions.
+  const semantics::Symbol *innermostIvSym =
+      getIterationVariableSymbol(*getNestedDoConstruct(*curEval));
+  assert(innermostIvSym && "expected iteration variable on collapsed DO loop");
+  ivSyms.push_back(innermostIvSym);
 
   // Build a guard condition: all induction variables from
   // startLevel..endLevel-1 equal their respective bound values.
   // For "before" guards (useLowerBound=true), compare iv == lb (first iter).
-  // For "after" guards (useLowerBound=false), compare iv == last_iv where
-  // last_iv = lb + ((ub - lb) / step) * step, which accounts for non-unit
-  // steps where the IV may never exactly equal the upper bound.
+  // For "after" guards (useLowerBound=false), compare iv == last_iv.
+  const auto lbs = loopNestOp.getLoopLowerBounds();
+  const auto ubs = loopNestOp.getLoopUpperBounds();
+  const auto steps = loopNestOp.getLoopSteps();
+
+  // Last value the induction variable at \p lvl actually takes:
+  // lb + ((ub - lb) / step) * step. For unit steps this is exactly ub.
+  auto computeLastIV = [&](const int lvl) -> mlir::Value {
+    const auto constStep = fir::getIntIfConstant(steps[lvl]);
+    if (constStep && (*constStep == 1 || *constStep == -1))
+      return ubs[lvl];
+    const mlir::Value lb = lbs[lvl];
+    const mlir::Value ub = ubs[lvl];
+    const mlir::Value step = steps[lvl];
+    const mlir::Value range =
+        mlir::arith::SubIOp::create(firOpBuilder, loc, ub, lb);
+    const mlir::Value tripMinus1 =
+        mlir::arith::DivSIOp::create(firOpBuilder, loc, range, step);
+    const mlir::Value lastOffset =
+        mlir::arith::MulIOp::create(firOpBuilder, loc, tripMinus1, step);
+    return mlir::arith::AddIOp::create(firOpBuilder, loc, lb, lastOffset);
+  };
+
   auto buildGuard = [&](const int startLevel, const int endLevel,
                         const bool useLowerBound) -> mlir::Value {
     mlir::Value cond;
-    const auto lbs = loopNestOp.getLoopLowerBounds();
-    const auto ubs = loopNestOp.getLoopUpperBounds();
-    const auto steps = loopNestOp.getLoopSteps();
     for (int lvl = startLevel; lvl < endLevel; ++lvl) {
       const mlir::Value iv = loopNestOp.getRegion().getArgument(lvl);
-      mlir::Value target;
-      if (useLowerBound) {
-        target = lbs[lvl];
-      } else {
-        // For unit steps, the last induction variable always equals ub.
-        const auto constStep = fir::getIntIfConstant(steps[lvl]);
-        if (constStep && (*constStep == 1 || *constStep == -1)) {
-          target = ubs[lvl];
-        } else {
-          // Compute last_iv = lb + ((ub - lb) / step) * step.
-          const mlir::Value lb = lbs[lvl];
-          const mlir::Value ub = ubs[lvl];
-          const mlir::Value step = steps[lvl];
-          const mlir::Value range =
-              mlir::arith::SubIOp::create(firOpBuilder, loc, ub, lb);
-          const mlir::Value tripMinus1 =
-              mlir::arith::DivSIOp::create(firOpBuilder, loc, range, step);
-          const mlir::Value lastOffset =
-              mlir::arith::MulIOp::create(firOpBuilder, loc, tripMinus1, step);
-          target =
-              mlir::arith::AddIOp::create(firOpBuilder, loc, lb, lastOffset);
-        }
-      }
+      const mlir::Value target = useLowerBound ? lbs[lvl] : computeLastIV(lvl);
       const mlir::Value cmp = mlir::arith::CmpIOp::create(
           firOpBuilder, loc, mlir::arith::CmpIPredicate::eq, iv, target);
       if (!cond)
@@ -812,6 +825,15 @@ static void genCollapsedLoopNestBody(lower::AbstractConverter &converter,
         buildGuard(i + 1, collapseValue, /*useLowerBound=*/false);
     auto ifOp = fir::IfOp::create(firOpBuilder, loc, guard, /*else*/ false);
     firOpBuilder.setInsertionPointToStart(&ifOp.getThenRegion().front());
+    // A normally-terminated Fortran DO loop leaves its variable one step past
+    // the last executed value, but the flattened nest leaves each at its last
+    // executed value. Restore the terminal value before running "after" code
+    // that may read it.
+    for (int lvl = i + 1; lvl < collapseValue; ++lvl) {
+      const mlir::Value terminal = mlir::arith::AddIOp::create(
+          firOpBuilder, loc, computeLastIV(lvl), steps[lvl]);
+      setLoopVar(converter, loc, terminal, ivSyms[lvl]);
+    }
     for (auto *e : levels[i].after)
       converter.genEval(*e);
     firOpBuilder.setInsertionPointAfter(ifOp);

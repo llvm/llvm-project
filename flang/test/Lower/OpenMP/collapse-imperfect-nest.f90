@@ -602,3 +602,47 @@ end subroutine
 ! CHECK:             hlfir.assign
 ! CHECK:           }
 ! CHECK:           omp.yield
+
+! Test that "after" code reading an inner DO variable sees the Fortran
+! terminal value (lb + tripcount*step, i.e. one past the last executed
+! value), not the last executed value the flattened nest leaves it at.
+! The after guard must restore j to ub + step before the after code runs.
+! CHECK-LABEL: func.func @_QPcollapse2_after_reads_inner
+subroutine collapse2_after_reads_inner(n, x)
+  integer, intent(in) :: n
+  integer, intent(inout) :: x
+  integer :: i, j
+
+  !$omp do collapse(2)
+  do i = 1, n
+    do j = 1, n
+      x = x + 1
+    end do
+    x = x + j
+  end do
+  !$omp end do
+end subroutine
+
+! CHECK:       omp.wsloop
+! CHECK-NEXT:    omp.loop_nest (%[[I:.*]], %[[J:.*]]) : i32 =
+! CHECK-SAME:      (%{{[^)]*}}, %{{[^)]*}}) to (%{{[^)]*}}, %[[UB_J:[^)]*]]) inclusive step (%{{[^)]*}}, %[[STEP_J:[^)]*]])
+! CHECK:           hlfir.assign %[[I]]
+! Capture j's storage from the loop-variable store so the restore and the
+! after-code read can be tied to the same address.
+! CHECK:           hlfir.assign %[[J]] to %[[J_ADDR:.*]] : i32, !fir.ref<i32>
+! Innermost body: x = x + 1
+! CHECK:           arith.addi
+! CHECK:           hlfir.assign
+! Guard: j == ub_j (unit-step fast path compares against the upper bound)
+! CHECK:           %[[CMP:.*]] = arith.cmpi eq, %[[J]], %[[UB_J]] : i32
+! CHECK:           fir.if %[[CMP]] {
+! Restore j's storage to its Fortran terminal value (ub + step).
+! CHECK:             %[[TERM:.*]] = arith.addi %[[UB_J]], %[[STEP_J]] : i32
+! CHECK:             hlfir.assign %[[TERM]] to %[[J_ADDR]] : i32, !fir.ref<i32>
+! After code reads the restored j: x = x + j.
+! CHECK:             %[[XLD:.*]] = fir.load %{{.*}} : !fir.ref<i32>
+! CHECK:             %[[JLD:.*]] = fir.load %[[J_ADDR]] : !fir.ref<i32>
+! CHECK:             arith.addi %[[XLD]], %[[JLD]] : i32
+! CHECK:             hlfir.assign
+! CHECK:           }
+! CHECK:           omp.yield
