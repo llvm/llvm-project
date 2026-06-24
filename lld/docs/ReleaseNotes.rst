@@ -44,6 +44,9 @@ ELF Improvements
   emits one ``PT_GNU_RELRO`` segment per contiguous run of relro sections
   instead of reporting a ``not contiguous with other relro sections`` error.
 
+* Added ``--unresolved-symbols=@<file>`` flag to specify path to a file with the
+  list of unresolved symbols that will not trigger an error during lininking.
+
 Breaking changes
 ----------------
 
