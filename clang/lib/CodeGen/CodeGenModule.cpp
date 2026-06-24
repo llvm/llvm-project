@@ -6400,6 +6400,9 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   const VarDecl *InitDecl;
   const Expr *InitExpr = D->getAnyInitializer(InitDecl);
 
+  if (InitExpr->containsErrors())
+    return;
+
   std::optional<ConstantEmitter> emitter;
 
   // CUDA E.2.4.1 "__shared__ variables cannot have an initialization
