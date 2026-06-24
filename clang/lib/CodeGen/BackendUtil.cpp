@@ -46,6 +46,7 @@
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/BuryPointer.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/IOSandbox.h"
@@ -189,9 +190,15 @@ class EmitAssemblyHelper {
   void RunCodegenPipeline(BackendAction Action,
                           std::unique_ptr<raw_pwrite_stream> &OS,
                           std::unique_ptr<llvm::ToolOutputFile> &DwoOS);
+  void RunCodegenPipelineLegacy(BackendAction Action,
+                                std::unique_ptr<raw_pwrite_stream> &OS,
+                                std::unique_ptr<llvm::ToolOutputFile> &DwoOS,
+                                CodeGenFileType CGFT);
   void RunCodegenPipelineNewPM(BackendAction Action,
                                std::unique_ptr<raw_pwrite_stream> &OS,
-                               std::unique_ptr<llvm::ToolOutputFile> &DwoOS);
+                               std::unique_ptr<llvm::ToolOutputFile> &DwoOS,
+                               CodeGenFileType CGFT);
+  void TimeCodegenPasses(llvm::function_ref<void()> RunPasses);
 
   /// Check whether we should emit a module summary for regular LTO.
   /// The module summary should be emitted by default for regular LTO
@@ -1234,6 +1241,22 @@ void EmitAssemblyHelper::RunCodegenPipeline(
       return;
   }
 
+  if (!CodeGenOpts.SplitDwarfOutput.empty()) {
+    DwoOS = openOutputFile(CodeGenOpts.SplitDwarfOutput);
+    if (!DwoOS)
+      return;
+  }
+
+  if (CodeGenOpts.EnableNewPMCodeGen) {
+    RunCodegenPipelineNewPM(Action, OS, DwoOS, CGFT);
+  } else {
+    RunCodegenPipelineLegacy(Action, OS, DwoOS, CGFT);
+  }
+}
+
+void EmitAssemblyHelper::RunCodegenPipelineLegacy(
+    BackendAction Action, std::unique_ptr<raw_pwrite_stream> &OS,
+    std::unique_ptr<llvm::ToolOutputFile> &DwoOS, CodeGenFileType CGFT) {
   // We still use the legacy PM to run the codegen pipeline since the new PM
   // does not work with the codegen pipeline.
   // FIXME: make the new PM work with the codegen pipeline.
@@ -1251,12 +1274,6 @@ void EmitAssemblyHelper::RunCodegenPipeline(
       TargetTriple, Options.ExceptionModel, Options.FloatABIType,
       Options.EABIVersion, Options.MCOptions.ABIName, Options.VecLib));
 
-  if (!CodeGenOpts.SplitDwarfOutput.empty()) {
-    DwoOS = openOutputFile(CodeGenOpts.SplitDwarfOutput);
-    if (!DwoOS)
-      return;
-  }
-
   if (TM->addPassesToEmitFile(CodeGenPasses, *OS,
                               DwoOS ? &DwoOS->os() : nullptr, CGFT,
                               /*DisableVerify=*/!CodeGenOpts.VerifyModule)) {
@@ -1271,37 +1288,12 @@ void EmitAssemblyHelper::RunCodegenPipeline(
     return;
   }
 
-  {
-    PrettyStackTraceString CrashInfo("Code generation");
-    llvm::TimeTraceScope TimeScope("CodeGenPasses");
-    Timer timer;
-    if (CI.getCodeGenOpts().TimePasses) {
-      timer.init("codegen", "Machine code generation", CI.getTimerGroup());
-      CI.getFrontendTimer().yieldTo(timer);
-    }
-    CodeGenPasses.run(*TheModule);
-    if (CI.getCodeGenOpts().TimePasses)
-      timer.yieldTo(CI.getFrontendTimer());
-  }
+  TimeCodegenPasses([&] { CodeGenPasses.run(*TheModule); });
 }
 
 void EmitAssemblyHelper::RunCodegenPipelineNewPM(
     BackendAction Action, std::unique_ptr<raw_pwrite_stream> &OS,
-    std::unique_ptr<llvm::ToolOutputFile> &DwoOS) {
-  if (!actionRequiresCodeGen(Action))
-    return;
-
-  // Normal mode, emit a .s or .o file by running the code generator. Note,
-  // this also adds codegenerator level optimization passes.
-  CodeGenFileType CGFT = getCodeGenFileType(Action);
-
-  // Invoke pre-codegen callback from plugin, which might want to take over the
-  // entire code generation itself.
-  for (const std::unique_ptr<llvm::PassPlugin> &Plugin : CI.getPassPlugins()) {
-    if (Plugin->invokePreCodeGenCallback(*TheModule, *TM, CGFT, *OS))
-      return;
-  }
-
+    std::unique_ptr<llvm::ToolOutputFile> &DwoOS, CodeGenFileType CGFT) {
   ModulePassManager MPM;
   MachineFunctionAnalysisManager MFAM;
   LoopAnalysisManager LAM;
@@ -1324,12 +1316,6 @@ void EmitAssemblyHelper::RunCodegenPipelineNewPM(
 
   MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
 
-  if (!CodeGenOpts.SplitDwarfOutput.empty()) {
-    DwoOS = openOutputFile(CodeGenOpts.SplitDwarfOutput);
-    if (!DwoOS)
-      return;
-  }
-
   Error BuildPipelineError =
       TM->buildCodeGenPipeline(MPM, MAM, *OS, DwoOS ? &DwoOS->os() : nullptr,
                                CGFT, Opt, MMI.getContext(), &PIC);
@@ -1338,18 +1324,21 @@ void EmitAssemblyHelper::RunCodegenPipelineNewPM(
     return;
   }
 
-  {
-    PrettyStackTraceString CrashInfo("Code generation");
-    llvm::TimeTraceScope TimeScope("CodeGenPasses");
-    Timer timer;
-    if (CI.getCodeGenOpts().TimePasses) {
-      timer.init("codegen", "Machine code generation", CI.getTimerGroup());
-      CI.getFrontendTimer().yieldTo(timer);
-    }
-    MPM.run(*TheModule, MAM);
-    if (CI.getCodeGenOpts().TimePasses)
-      timer.yieldTo(CI.getFrontendTimer());
+  TimeCodegenPasses([&] { MPM.run(*TheModule, MAM); });
+}
+
+void EmitAssemblyHelper::TimeCodegenPasses(
+    llvm::function_ref<void()> RunPasses) {
+  PrettyStackTraceString CrashInfo("Code generation");
+  llvm::TimeTraceScope TimeScope("CodeGenPasses");
+  Timer timer;
+  if (CI.getCodeGenOpts().TimePasses) {
+    timer.init("codegen", "Machine code generation", CI.getTimerGroup());
+    CI.getFrontendTimer().yieldTo(timer);
   }
+  RunPasses();
+  if (CI.getCodeGenOpts().TimePasses)
+    timer.yieldTo(CI.getFrontendTimer());
 }
 
 void EmitAssemblyHelper::emitAssembly(BackendAction Action,
@@ -1370,11 +1359,7 @@ void EmitAssemblyHelper::emitAssembly(BackendAction Action,
 
   std::unique_ptr<llvm::ToolOutputFile> ThinLinkOS, DwoOS;
   RunOptimizationPipeline(Action, OS, ThinLinkOS, BC);
-  if (CodeGenOpts.EnableNewPMCodeGen) {
-    RunCodegenPipelineNewPM(Action, OS, DwoOS);
-  } else {
-    RunCodegenPipeline(Action, OS, DwoOS);
-  }
+  RunCodegenPipeline(Action, OS, DwoOS);
 
   if (ThinLinkOS)
     ThinLinkOS->keep();

@@ -4699,8 +4699,7 @@ defm enable_new_pm_codegen
                   NegFlag<SetFalse, [], [CC1Option],
                           "Do not use the NewPM for the Codegen Pipeline">,
                   PosFlag<SetTrue, [], [CC1Option],
-                          "Use the NewPM for the Codegen Pipeline">,
-                  BothFlags<[], [CC1Option]>>,
+                          "Use the NewPM for the Codegen Pipeline">>,
       DocBrief<
           [{When enabled, use the NewPM to drive the Codegen pipeline.}]>;
 defm experimental_loop_fusion
