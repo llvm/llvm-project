@@ -21707,6 +21707,12 @@ bool Expr::EvaluateAsInitializer(const ASTContext &Ctx, const VarDecl *VD,
 
 bool VarDecl::evaluateDestruction(
     SmallVectorImpl<PartialDiagnosticAt> &Notes) const {
+
+  if (getType()->isPointerOrReferenceType()) {
+    ensureEvaluatedStmt()->HasConstantDestruction = true;
+    return true;
+  }
+
   Expr::EvalStatus EStatus;
   EStatus.Diag = &Notes;
 
