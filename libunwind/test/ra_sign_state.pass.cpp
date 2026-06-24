@@ -7,12 +7,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+// clang-format-off
+
 // REQUIRES: target={{aarch64.*}}
 // UNSUPPORTED: target={{.*-windows.*}}
 
 // The libSystem unwinder does not correctly read UNW_AARCH64_RA_SIGN_STATE, at
 // least through OS version 27.0
 // XFAIL: stdlib=apple-libc++ && target={{.*}}-apple-{{.*}}{{11|12|13|14|15|26|27.0}}
+
+// clang-format-on
 
 #undef NDEBUG
 #include "support/func_bounds.h"
