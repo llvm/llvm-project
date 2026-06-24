@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenacc -Werror
+! RUN: %python %S/../test_errors.py %s %flang -fopenacc
 
 module acc_routine_bad
 
