@@ -437,7 +437,7 @@ bool ReorderData::markUnmoveableSymbols(BinaryContext &BC,
 }
 
 Error ReorderData::runOnFunctions(BinaryContext &BC) {
-  static const char *DefaultSections[] = {".rodata", ".data", ".bss", nullptr};
+  static const char *DefaultSections[] = {".rodata", ".data", nullptr};
 
   if (!BC.HasRelocations || opts::ReorderData.empty())
     return Error::success();
