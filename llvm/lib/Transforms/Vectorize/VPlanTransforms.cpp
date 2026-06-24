@@ -6754,10 +6754,9 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
     Cond = BlendCond;
   }
 
-  bool IsLastInChain =
-      RdxPhi->getBackedgeValue() == WidenRecipe ||
-      RdxPhi->getBackedgeValue() == ExitValue ||
-      RdxPhi->getBackedgeValue() == Chain.Blend;
+  bool IsLastInChain = RdxPhi->getBackedgeValue() == WidenRecipe ||
+                       RdxPhi->getBackedgeValue() == ExitValue ||
+                       RdxPhi->getBackedgeValue() == Chain.Blend;
   assert((!ExitValue || IsLastInChain) &&
          "if we found ExitValue, it must match RdxPhi's backedge value");
 
@@ -7075,8 +7074,9 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
   if (ChainsByPhi.empty())
     return;
 
-  // Build set of partial reduction operations and blends for extend user validation
-  // and a map of reduction bin ops to their scale factors for scale validation.
+  // Build set of partial reduction operations and blends for extend user
+  // validation and a map of reduction bin ops to their scale factors for scale
+  // validation.
   SmallPtrSet<VPRecipeBase *, 4> PartialReductionOps;
   SmallPtrSet<VPBlendRecipe *, 4> PartialReductionBlends;
   DenseMap<VPSingleDefRecipe *, unsigned> ScaledReductionMap;
