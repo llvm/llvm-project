@@ -1989,11 +1989,12 @@ void AMDGPUAsmPrinter::emitResourceUsageRemarks(
   EmitResourceUsageRemark("ScratchSize", "ScratchSize [bytes/lane]",
                           getMCExprStr(CurrentProgramInfo.ScratchSize));
   int64_t DynStack;
-  bool DynStackEvaluatable =
-      CurrentProgramInfo.DynamicCallStack->evaluateAsAbsolute(DynStack);
-  StringRef DynamicStackStr =
-      DynStackEvaluatable && DynStack ? "True" : "False";
-  EmitResourceUsageRemark("DynamicStack", "Dynamic Stack", DynamicStackStr);
+  if (CurrentProgramInfo.DynamicCallStack->evaluateAsAbsolute(DynStack))
+    EmitResourceUsageRemark("DynamicStack", "Dynamic Stack",
+                            StringRef(DynStack ? "True" : "False"));
+  else
+    EmitResourceUsageRemark("DynamicStack", "Dynamic Stack",
+                            getMCExprStr(CurrentProgramInfo.DynamicCallStack));
   EmitResourceUsageRemark("Occupancy", "Occupancy [waves/SIMD]",
                           getMCExprStr(CurrentProgramInfo.Occupancy));
   EmitResourceUsageRemark("SGPRSpill", "SGPRs Spill",
