@@ -414,12 +414,18 @@ void OmpStructureChecker::AnalyzeObject(const parser::OmpObject &object) {
       }
     }
   }
+
   evaluate::ExpressionAnalyzer ea{context_};
   auto restore{ea.AllowWholeAssumedSizeArray(true)};
   common::visit( //
       common::visitors{
           [&](auto &&s) { ea.Analyze(s); },
-          [&](const parser::OmpObject::Invalid &invalid) {},
+          [&](const parser::OmpLocator &x) {
+            if (auto *ref{std::get_if<parser::FunctionReference>(&x.u)}) {
+              ea.Analyze(*ref);
+            }
+          },
+          [&](const parser::OmpObject::Invalid &) {},
       },
       object.u);
 }
@@ -614,6 +620,16 @@ bool OmpStructureChecker::HasRequires(llvm::omp::Clause req) {
         return false;
       },
       DEREF(unit.symbol()).details());
+}
+
+void OmpStructureChecker::Enter(const parser::OmpLocator &x) {
+  if (auto *reserved{parser::Unwrap<parser::OmpReservedIdentifier>(x.u)}) {
+    std::string name{parser::ToLowerCaseLetters(reserved->v.source.ToString())};
+    if (!llvm::is_contained(llvm::omp::getReservedLocatorNames(), name)) {
+      context_.Say(reserved->v.source, "'%s' is not a valid locator"_err_en_US,
+          parser::ToUpperCaseLetters(name));
+    }
+  }
 }
 
 void OmpStructureChecker::CheckArgumentObjectKind(const parser::OmpClause &x) {
@@ -1671,7 +1687,8 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
   common::visit( //
       common::visitors{
           [&](auto &&s) { CheckThreadprivateOrDeclareTargetVar(s); },
-          [&](const parser::OmpObject::Invalid &invalid) {},
+          [&](const parser::OmpLocator &) {},
+          [&](const parser::OmpObject::Invalid &) {},
       },
       object.u);
 }
@@ -1685,10 +1702,10 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
 
 void OmpStructureChecker::Enter(const parser::OmpGroupprivateDirective &x) {
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
-    auto *locator{std::get_if<parser::OmpLocator>(&arg.u)};
+    auto *object{std::get_if<parser::OmpObject>(&arg.u)};
     const Symbol *sym{GetArgumentSymbol(arg, /*ultimate=*/true)};
 
-    if (!locator || !sym ||
+    if (!object || !sym ||
         (!IsVariableListItem(*sym) && !IsCommonBlock(*sym))) {
       context_.Say(arg.source,
           "GROUPPRIVATE argument should be a variable or a named common block"_err_en_US);
@@ -3359,6 +3376,10 @@ void OmpStructureChecker::Leave(const parser::OmpEndDirective &x) {
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OmpClauseList &) {
+  ifLeafs_.clear();
+}
+
 // Clauses
 // Mainly categorized as
 // 1. Checks on 'OmpClauseList' from 'parse-tree.h'.
@@ -3553,7 +3574,8 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &x) {
                       }
                     }
                   },
-                  [&](const parser::OmpObject::Invalid &invalid) {},
+                  [&](const parser::OmpLocator &) {},
+                  [&](const parser::OmpObject::Invalid &) {},
               },
               ompObject.u);
         }
@@ -4317,6 +4339,13 @@ void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
     return false;
   }};
 
+  // The directive-name to which the clause applies. [Note: The directive-
+  // name-modifier is not necessarily a valid directive name, but that's how
+  // it's currently modeled.]
+  // This will be set only after other checks pass to avoid emitting irrelevant
+  // diagnostics.
+  llvm::omp::Directive appliesTo{llvm::omp::Directive::OMPD_unknown};
+
   if (!OmpVerifyModifiers(
           x.v, llvm::omp::OMPC_if, GetContext().clauseSource, context_)) {
     return;
@@ -4334,39 +4363,91 @@ void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
     std::string modName{desc.name.str()};
 
     if (!isConstituent(dir, sub)) {
-      context_
-          .Say(modifierSource,
-              "%s is not a constituent of the %s directive"_err_en_US, subName,
-              dirName)
-          .Attach(
-              GetContext().directiveSource, "Cannot apply to directive"_en_US);
+      context_.Say(modifierSource,
+          "%s is not a constituent of the %s directive"_err_en_US, subName,
+          dirName);
     } else {
-      static llvm::omp::Directive valid45[]{
-          llvm::omp::OMPD_cancel, //
-          llvm::omp::OMPD_parallel, //
-          /* OMP 5.0+ also allows OMPD_simd */
-          llvm::omp::OMPD_target, //
-          llvm::omp::OMPD_target_data, //
-          llvm::omp::OMPD_target_enter_data, //
-          llvm::omp::OMPD_target_exit_data, //
-          llvm::omp::OMPD_target_update, //
-          llvm::omp::OMPD_task, //
-          llvm::omp::OMPD_taskloop, //
-          /* OMP 5.2+ also allows OMPD_teams */
+      static OmpDirectiveSet valid45{
+          llvm::omp::Directive::OMPD_cancel, //
+          llvm::omp::Directive::OMPD_parallel, //
+          llvm::omp::Directive::OMPD_target, //
+          llvm::omp::Directive::OMPD_target_data, //
+          llvm::omp::Directive::OMPD_target_enter_data, //
+          llvm::omp::Directive::OMPD_target_exit_data, //
+          llvm::omp::Directive::OMPD_target_update, //
+          llvm::omp::Directive::OMPD_task, //
+          llvm::omp::Directive::OMPD_taskloop, //
       };
-      if (version < 50 && sub == llvm::omp::OMPD_simd) {
+      static OmpDirectiveSet valid50{
+          valid45 | OmpDirectiveSet{llvm::omp::Directive::OMPD_simd}};
+      // 5.1 is the same as 5.0.
+      static OmpDirectiveSet valid52{
+          valid50 | OmpDirectiveSet{llvm::omp::Directive::OMPD_teams}};
+      static OmpDirectiveSet valid60{valid52 |
+          OmpDirectiveSet{llvm::omp::Directive::OMPD_taskgraph,
+              /*TODO llvm::omp::Directive::OMPD_task_iteration*/}};
+
+      static auto minVersion{[&](llvm::omp::Directive d) {
+        if (valid45.test(d)) {
+          return 45;
+        }
+        if (valid50.test(d)) {
+          return 50;
+        }
+        if (valid52.test(d)) {
+          return 52;
+        }
+        if (valid60.test(d)) {
+          return 60;
+        }
+        return 0;
+      }};
+      static auto suggest{[&](unsigned v) -> std::string {
+        if (v != 0) {
+          return ", " + TryVersion(v);
+        } else {
+          return "";
+        }
+      }};
+
+      if (version <= 45 && !valid45.test(sub)) {
         context_.Say(modifierSource,
-            "%s is not allowed as '%s' in %s, %s"_warn_en_US, subName, modName,
-            ThisVersion(version), TryVersion(50));
-      } else if (version < 52 && sub == llvm::omp::OMPD_teams) {
+            "%s is not allowed as '%s' in %s%s"_err_en_US, subName, modName,
+            ThisVersion(version), suggest(minVersion(sub)));
+      } else if (version <= 51 && !valid50.test(sub)) {
         context_.Say(modifierSource,
-            "%s is not allowed as '%s' in %s, %s"_warn_en_US, subName, modName,
-            ThisVersion(version), TryVersion(52));
-      } else if (!llvm::is_contained(valid45, sub) &&
-          sub != llvm::omp::OMPD_simd && sub != llvm::omp::OMPD_teams) {
+            "%s is not allowed as '%s' in %s%s"_err_en_US, subName, modName,
+            ThisVersion(version), suggest(minVersion(sub)));
+      } else if (version <= 52 && !valid52.test(sub)) {
+        context_.Say(modifierSource,
+            "%s is not allowed as '%s' in %s%s"_err_en_US, subName, modName,
+            ThisVersion(version), suggest(minVersion(sub)));
+      } else if (!valid60.test(sub)) {
         context_.Say(modifierSource,
             "%s is not allowed as '%s' in %s"_err_en_US, subName, modName,
             ThisVersion(version));
+      } else {
+        appliesTo = sub;
+      }
+    }
+  } else {
+    appliesTo = GetContext().directive;
+  }
+
+  if (appliesTo != llvm::omp::Directive::OMPD_unknown) {
+    parser::CharBlock source{GetContext().clauseSource};
+    for (auto leaf : llvm::omp::getLeafConstructsOrSelf(appliesTo)) {
+      auto pair{ifLeafs_.try_emplace(leaf, source)};
+      if (!pair.second) {
+        std::string ifName{GetUpperName(llvm::omp::Clause::OMPC_if, version)};
+        context_
+            .Say(source,
+                "At most one %s clause can apply to each directive constituent"_err_en_US,
+                ifName)
+            .Attach(pair.first->second,
+                "Previous %s clause applying to the %s constituent"_en_US,
+                ifName, GetUpperName(leaf, version));
+        break;
       }
     }
   }
