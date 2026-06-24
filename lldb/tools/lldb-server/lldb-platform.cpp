@@ -302,7 +302,8 @@ static void client_handle(GDBRemoteCommunicationServerPlatform &platform,
       break;
   }
 
-  printf("Disconnected.\n");
+  LLDB_LOG(GetLog(LLDBLog::Platform),
+           "lldb-server platform connection disconnected");
 }
 
 static Status spawn_process(const char *progname, const FileSpec &prog,
@@ -625,7 +626,8 @@ int main_platform(int argc, char *argv[]) {
             main_loop, [progname, gdbserver_port, &inferior_arguments, log_file,
                         log_channels, &main_loop, multi_client,
                         &platform_handles](std::unique_ptr<Socket> sock_up) {
-              printf("Connection established.\n");
+              LLDB_LOG(GetLog(LLDBLog::Platform),
+                       "lldb-server platform connection established");
               Status status = spawn_process(
                   progname, HostInfo::GetProgramFileSpec(), sock_up.get(),
                   gdbserver_port, inferior_arguments, log_file, log_channels,
@@ -660,7 +662,7 @@ int main_platform(int argc, char *argv[]) {
     main_loop.Run();
   }
 
-  fprintf(stderr, "lldb-server exiting...\n");
+  LLDB_LOG(GetLog(LLDBLog::Platform), "lldb-server exiting cleanly");
 
   return EXIT_SUCCESS;
 }

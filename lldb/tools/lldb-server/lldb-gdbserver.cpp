@@ -286,7 +286,7 @@ llvm::Error ConnectToRemote(MainLoop &mainloop,
   if (status.Fail())
     return llvm::createStringErrorV("failed to initialize connection: {0}",
                                     status);
-  llvm::outs() << "Connection established.\n";
+  LLDB_LOG(GetLog(LLDBLog::Host), "lldb-server connection established");
   return llvm::Error::success();
 }
 
@@ -485,8 +485,9 @@ int main_gdbserver(int argc, char *argv[]) {
     }
   }
 
-  // Print version info.
-  printf("%s-%s\n", LLGS_PROGRAM_NAME, LLGS_VERSION_STR);
+  // Print version info to the host log channel
+  LLDB_LOG(GetLog(LLDBLog::Host), "{0}-{1}", LLGS_PROGRAM_NAME,
+           LLGS_VERSION_STR);
 
   if (llvm::Error err = ConnectToRemote(
           mainloop, gdb_server, reverse_connect, host_and_port, progname,
@@ -506,7 +507,7 @@ int main_gdbserver(int argc, char *argv[]) {
             ret.AsCString());
     return EXIT_FAILURE;
   }
-  fprintf(stderr, "lldb-server exiting...\n");
+  LLDB_LOG(GetLog(LLDBLog::Host), "lldb-server exiting cleanly");
 
   return EXIT_SUCCESS;
 }
