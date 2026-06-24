@@ -926,8 +926,9 @@ InstructionCost TargetTransformInfo::getPartialReductionCost(
                                           BinOp, CostKind, FMF);
 }
 
-unsigned TargetTransformInfo::getMaxInterleaveFactor(ElementCount VF) const {
-  return TTIImpl->getMaxInterleaveFactor(VF);
+unsigned TargetTransformInfo::getMaxInterleaveFactor(ElementCount VF,
+                                                     bool HasReductions) const {
+  return TTIImpl->getMaxInterleaveFactor(VF, HasReductions);
 }
 
 TargetTransformInfo::OperandValueInfo

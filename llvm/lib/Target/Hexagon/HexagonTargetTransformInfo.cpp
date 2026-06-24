@@ -115,7 +115,8 @@ unsigned HexagonTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   return 32;
 }
 
-unsigned HexagonTTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
+unsigned HexagonTTIImpl::getMaxInterleaveFactor(ElementCount VF,
+                                                bool HasReductions) const {
   return useHVX() ? 2 : 1;
 }
 
