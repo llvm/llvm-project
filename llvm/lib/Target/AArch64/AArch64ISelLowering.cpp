@@ -16173,6 +16173,31 @@ static SDValue tryLowerToBSL(SDValue N, SelectionDAG &DAG) {
   if (VT.isScalableVector() && !Subtarget.hasSVE2())
     return SDValue();
 
+  // Match the trunc-hoisted shape that hides BSP from the cases below:
+  //   (or (trunc (and A B)) (and C (xor (trunc A) -1)))
+  //     => BSP(trunc A, trunc B, C)
+  // m_Or, m_And and m_Xor match operands in any order. The xor constant uses
+  // m_ConstInt + isAllOnes() rather than m_AllOnes because m_AllOnes rejects
+  // post-legalize splats whose element storage is wider than the lane.
+  if (VT.isFixedLengthVector() && Subtarget.isNeonAvailable()) {
+    using namespace SDPatternMatch;
+    SDValue InnerLHS, InnerRHS, MaskWide, C;
+    APInt NotMask;
+    if (sd_match(N, m_Or(m_OneUse(m_Trunc(m_OneUse(
+                             m_And(m_Value(InnerLHS), m_Value(InnerRHS))))),
+                         m_And(m_Xor(m_Trunc(m_Value(MaskWide)),
+                                     m_ConstInt(NotMask)),
+                               m_Value(C))))) {
+      if (NotMask.isAllOnes() &&
+          (MaskWide == InnerLHS || MaskWide == InnerRHS)) {
+        SDValue WideB = MaskWide == InnerLHS ? InnerRHS : InnerLHS;
+        return DAG.getNode(AArch64ISD::BSP, DL, VT,
+                           DAG.getNode(ISD::TRUNCATE, DL, VT, MaskWide),
+                           DAG.getNode(ISD::TRUNCATE, DL, VT, WideB), C);
+      }
+    }
+  }
+
   SDValue N0 = N->getOperand(0);
   if (N0.getOpcode() != ISD::AND)
     return SDValue();
