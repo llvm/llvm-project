@@ -30,6 +30,7 @@
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Mangler.h"
@@ -511,6 +512,27 @@ void X86AsmPrinter::emitBasicBlockEnd(const MachineBasicBlock &MBB) {
   }
   AsmPrinter::emitBasicBlockEnd(MBB);
   SMShadowTracker.emitShadowPadding(*OutStreamer, getSubtargetInfo());
+}
+
+static bool shouldSkipX86OrigGlobal(const GlobalVariable *GV) {
+  if (!GV->hasPrivateLinkage() || !GV->isConstant() || !GV->hasInitializer())
+    return false;
+
+  auto Name = GV->getName();
+  if (!Name.ends_with(".x86.orig"))
+    return false;
+
+  StringRef BaseName = Name.drop_back(StringRef(".x86.orig").size());
+  const Module *M = GV->getParent();
+  const GlobalVariable *NewGV = M->getGlobalVariable(BaseName, true);
+  return NewGV && NewGV->hasInitializer() && NewGV->isConstant();
+}
+
+void X86AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
+  if (shouldSkipX86OrigGlobal(GV))
+    return;
+
+  AsmPrinter::emitGlobalVariable(GV);
 }
 
 void X86AsmPrinter::PrintMemReference(const MachineInstr *MI, unsigned OpNo,

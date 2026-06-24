@@ -20089,6 +20089,47 @@ X86TargetLowering::LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const {
   return Result;
 }
 
+struct OptimizedConstantArrayInfo {
+  Type *Ty;
+  Constant *Init;
+  bool Success = false;
+};
+
+static OptimizedConstantArrayInfo
+optimizeGlobalConstantArray(GlobalVariable *GV, Module *M) {
+  auto *OldInit = GV->getInitializer();
+  auto *CDA = dyn_cast<ConstantDataArray>(OldInit);
+  auto DL = M->getDataLayout();
+  auto Sz = DL.getTypeAllocSize(CDA->getElementType());
+  unsigned PeriodElems = 16 / Sz; // 128 bit load
+
+  unsigned NumElems = CDA->getNumElements();
+  Type *EltTy = CDA->getElementType();
+
+  if (NumElems < PeriodElems || NumElems % PeriodElems != 0)
+    return OptimizedConstantArrayInfo{OldInit->getType(), OldInit, 0};
+
+  for (unsigned I = PeriodElems; I < NumElems; ++I) {
+    Constant *A = CDA->getElementAsConstant(I);
+    Constant *B = CDA->getElementAsConstant(I % PeriodElems);
+    if (A != B)
+      return OptimizedConstantArrayInfo{OldInit->getType(), OldInit, 0};
+  }
+
+  SmallVector<Constant *, 4> NewElems;
+  for (unsigned I = 0; I < PeriodElems; ++I)
+    NewElems.push_back(CDA->getElementAsConstant(I));
+
+  auto *NewArrTy = ArrayType::get(EltTy, PeriodElems);
+  Constant *NewInit = ConstantArray::get(NewArrTy, NewElems);
+
+  return OptimizedConstantArrayInfo{
+      NewInit->getType(),
+      NewInit,
+      true,
+  };
+}
+
 /// Creates target global address or external symbol nodes for calls or
 /// other uses.
 SDValue X86TargetLowering::LowerGlobalOrExternal(SDValue Op, SelectionDAG &DAG,
@@ -54279,6 +54320,98 @@ static SDValue combineAtomicLoad(SDNode *N, SelectionDAG &DAG,
   return DAG.getMergeValues({Cast, IntLoad.getValue(1)}, DL);
 }
 
+static SDValue combineConstantArrayVariable(EVT RegVT, LoadSDNode *Ld,
+                                            SelectionDAG &DAG) {
+  SDValue Ptr = Ld->getBasePtr();
+  GlobalAddressSDNode *GA = nullptr;
+
+  if (Ptr.getOpcode() == ISD::ADD) {
+    SDValue LHS = Ptr.getOperand(0);
+    SDValue RHS = Ptr.getOperand(1);
+    if (isa<ConstantSDNode>(RHS)) {
+      if (auto *MatchedGA = dyn_cast<GlobalAddressSDNode>(LHS)) {
+        GA = MatchedGA;
+      }
+    } else if (isa<ConstantSDNode>(LHS)) {
+      if (auto *MatchedGA = dyn_cast<GlobalAddressSDNode>(RHS)) {
+        GA = MatchedGA;
+      }
+    }
+  } else if (auto *MatchedGA = dyn_cast<GlobalAddressSDNode>(Ptr)) {
+    GA = MatchedGA;
+  }
+
+  if (!GA)
+    return SDValue();
+
+  auto *GVar =
+      const_cast<GlobalVariable *>(dyn_cast<GlobalVariable>(GA->getGlobal()));
+  if (!GVar)
+    return SDValue();
+  if (!GVar->hasInitializer())
+    return SDValue();
+
+  Module *M = GVar->getParent();
+  auto *CDA = dyn_cast<ConstantDataArray>(GVar->getInitializer());
+  if (!CDA)
+    return SDValue();
+  if (CDA->getNumElements() <=
+      16 / M->getDataLayout().getTypeAllocSize(CDA->getElementType()))
+    return SDValue();
+
+  OptimizedConstantArrayInfo Info = optimizeGlobalConstantArray(GVar, M);
+  if (!Info.Success)
+    return SDValue();
+
+  // we set the old variable to XX.x86.orig
+  // XX.x86.orig variable should be filtered in asm printer
+  // TODO: I'm really really not sure whether it's a good design but didn't find
+  // a better way...
+  constexpr StringRef OrigSuffix = ".x86.orig";
+
+  StringRef CurName = GVar->getName();
+  StringRef BaseNameRef(CurName);
+  BaseNameRef = BaseNameRef.ends_with(OrigSuffix)
+                    ? BaseNameRef.drop_back(OrigSuffix.size())
+                    : BaseNameRef;
+
+  std::string OldName = BaseNameRef.str();
+  std::string OrigName = OldName + OrigSuffix.str();
+
+  GlobalVariable *NewGV = M->getGlobalVariable(OldName, true);
+
+  if (NewGV == GVar) {
+    // The global variable node is not optimized yet
+    GVar->setName(OrigName);
+    assert(GVar->getName() == OrigName && "unexpected name collision");
+    NewGV = nullptr;
+  }
+
+  if (!NewGV) {
+    NewGV = new GlobalVariable(
+        *M, Info.Ty,
+        /*isConstant=*/GVar->isConstant(), GlobalValue::PrivateLinkage,
+        Info.Init, OldName,
+        /*InsertBefore=*/nullptr, GVar->getThreadLocalMode(),
+        GVar->getAddressSpace(),
+        /*isExternallyInitialized=*/GVar->isExternallyInitialized());
+
+    NewGV->setAlignment(GVar->getAlign());
+    NewGV->setUnnamedAddr(GVar->getUnnamedAddr());
+    NewGV->setDSOLocal(true);
+  }
+
+  SDLoc DLN(Ld);
+  // TODO: only match the simple case like [1, 2, 3, 4, 1, 2, 3, 4], so the new
+  SDValue NewPtr =
+      DAG.getGlobalAddress(NewGV, DLN, Ptr.getValueType(), /* offset */ 0);
+
+  MachinePointerInfo MPI(NewGV, /* offset */ 0);
+
+  return DAG.getLoad(Ld->getMemoryVT(), DLN, Ld->getChain(), NewPtr, MPI,
+                     Ld->getAlign(), Ld->getMemOperand()->getFlags());
+}
+
 static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
                            TargetLowering::DAGCombinerInfo &DCI,
                            const X86Subtarget &Subtarget) {
@@ -54378,6 +54511,10 @@ static SDValue combineLoad(SDNode *N, SelectionDAG &DAG,
                             Ld->getPointerInfo(), MemVT, Ld->getBaseAlign(),
                             Ld->getMemOperand()->getFlags());
     }
+  }
+
+  if (RegVT.is128BitVector()) {
+    return combineConstantArrayVariable(RegVT, Ld, DAG);
   }
 
   return SDValue();
