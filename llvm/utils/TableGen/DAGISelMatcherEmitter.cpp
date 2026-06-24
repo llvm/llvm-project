@@ -20,6 +20,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Format.h"
@@ -251,6 +252,51 @@ private:
   unsigned EmitMatcher(const Matcher *N, const unsigned Indent,
                        unsigned CurrentIdx, raw_ostream &OS);
 
+  StringRef getFusedOpcode(const Matcher *First, const Matcher *Second) {
+    if (isa<MoveParentMatcher>(First)) {
+      if (isa<MoveParentMatcher>(Second))
+        return "OPC_MoveParent2";
+
+      if (const auto *PM = dyn_cast<CheckPredicateMatcher>(Second)) {
+        if (!PM->getPredicate().usesOperands()) {
+          switch (getNodePredicate(PM->getPredicate())) {
+          case 0:
+            return "OPC_MoveParent_CheckPredicate0";
+          case 1:
+            return "OPC_MoveParent_CheckPredicate1";
+          default:
+            break;
+          }
+        }
+      }
+
+      if (const auto *RCM = dyn_cast<RecordChildMatcher>(Second)) {
+        if (RCM->getChildNo() == 1)
+          return "OPC_MoveParent_RecordChild1";
+        if (RCM->getChildNo() == 2)
+          return "OPC_MoveParent_RecordChild2";
+      }
+
+      if (const auto *CTM = dyn_cast<CheckTypeMatcher>(Second)) {
+        if (CTM->getResNo() == 0 && CTM->getType().isSimple() &&
+            CTM->getType().getSimple() == MVT::i32)
+          return "OPC_MoveParent_CheckTypeI32";
+      }
+    }
+
+    if (const auto *MCM = dyn_cast<MoveChildMatcher>(First)) {
+      if (const auto *COM = dyn_cast<CheckOpcodeMatcher>(Second)) {
+        StringRef Opcode = COM->getOpcode().getEnumName();
+        if (MCM->getChildNo() == 0 && Opcode == "ISD::SRL")
+          return "OPC_MoveChild0_CheckOpcodeISD_SRL";
+        if (MCM->getChildNo() == 1 && Opcode == "ISD::ADD")
+          return "OPC_MoveChild1_CheckOpcodeISD_ADD";
+      }
+    }
+
+    return {};
+  }
+
   unsigned getNodePredicate(TreePredicateFn Pred) {
     // We use the first predicate.
     TreePattern *PredPat =
@@ -377,8 +423,20 @@ static std::string getIncludePath(const Record *R) {
 unsigned MatcherTableEmitter::SizeMatcherList(MatcherList &ML,
                                               raw_ostream &OS) {
   unsigned Size = 0;
-  for (Matcher *N : ML)
+  for (auto I = ML.begin(), E = ML.end(); I != E;) {
+    Matcher *N = *I;
+    ++I;
+    if (I != E && !getFusedOpcode(N, *I).empty()) {
+      unsigned PairSize = SizeMatcher(N, OS) + SizeMatcher(*I, OS);
+      ++I;
+      assert(PairSize == 2 &&
+             "fused matchers must both have one-byte encodings");
+      (void)PairSize;
+      ++Size;
+      continue;
+    }
     Size += SizeMatcher(N, OS);
+  }
   return Size;
 }
 
@@ -511,6 +569,43 @@ static unsigned emitMVT(MVT VT, raw_ostream &OS) {
   if (!OmitComments)
     OS << "/*" << getEnumName(VT) << "*/";
   return EmitVBRValue(VT.SimpleTy, OS);
+}
+
+static StringRef getCompactISDOpcode(StringRef Opcode) {
+  return StringSwitch<StringRef>(Opcode)
+      .Case("ISD::SRL", "OPC_CheckOpcodeISD_SRL")
+      .Case("ISD::SIGN_EXTEND_INREG", "OPC_CheckOpcodeISD_SIGN_EXTEND_INREG")
+      .Case("ISD::TargetConstant", "OPC_CheckOpcodeISD_TargetConstant")
+      .Case("ISD::LOAD", "OPC_CheckOpcodeISD_LOAD")
+      .Case("ISD::Constant", "OPC_CheckOpcodeISD_Constant")
+      .Case("ISD::INTRINSIC_WO_CHAIN", "OPC_CheckOpcodeISD_INTRINSIC_WO_CHAIN")
+      .Case("ISD::SRA", "OPC_CheckOpcodeISD_SRA")
+      .Case("ISD::ADD", "OPC_CheckOpcodeISD_ADD")
+      .Case("ISD::EXTRACT_SUBVECTOR", "OPC_CheckOpcodeISD_EXTRACT_SUBVECTOR")
+      .Case("ISD::SPLAT_VECTOR", "OPC_CheckOpcodeISD_SPLAT_VECTOR")
+      .Case("ISD::EXTRACT_VECTOR_ELT", "OPC_CheckOpcodeISD_EXTRACT_VECTOR_ELT")
+      .Case("ISD::XOR", "OPC_CheckOpcodeISD_XOR")
+      .Case("ISD::MUL", "OPC_CheckOpcodeISD_MUL")
+      .Case("ISD::AND", "OPC_CheckOpcodeISD_AND")
+      .Case("ISD::ZERO_EXTEND", "OPC_CheckOpcodeISD_ZERO_EXTEND")
+      .Case("ISD::BITCAST", "OPC_CheckOpcodeISD_BITCAST")
+      .Case("ISD::SIGN_EXTEND", "OPC_CheckOpcodeISD_SIGN_EXTEND")
+      .Case("ISD::UNDEF", "OPC_CheckOpcodeISD_UNDEF")
+      .Case("ISD::CONDCODE", "OPC_CheckOpcodeISD_CONDCODE")
+      .Case("ISD::FMINNUM", "OPC_CheckOpcodeISD_FMINNUM")
+      .Case("ISD::FMAXNUM", "OPC_CheckOpcodeISD_FMAXNUM")
+      .Case("ISD::FMINNUM_IEEE", "OPC_CheckOpcodeISD_FMINNUM_IEEE")
+      .Case("ISD::FMAXNUM_IEEE", "OPC_CheckOpcodeISD_FMAXNUM_IEEE")
+      .Case("ISD::ConstantFP", "OPC_CheckOpcodeISD_ConstantFP")
+      .Case("ISD::VSELECT", "OPC_CheckOpcodeISD_VSELECT")
+      .Case("ISD::TRUNCATE", "OPC_CheckOpcodeISD_TRUNCATE")
+      .Case("ISD::FNEG", "OPC_CheckOpcodeISD_FNEG")
+      .Case("ISD::SHL", "OPC_CheckOpcodeISD_SHL")
+      .Case("ISD::BasicBlock", "OPC_CheckOpcodeISD_BasicBlock")
+      .Case("ISD::SMAX", "OPC_CheckOpcodeISD_SMAX")
+      .Case("ISD::SMIN", "OPC_CheckOpcodeISD_SMIN")
+      .Case("ISD::BUILD_VECTOR", "OPC_CheckOpcodeISD_BUILD_VECTOR")
+      .Default("");
 }
 
 unsigned
@@ -676,10 +771,16 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     return 2 + OperandBytes;
   }
 
-  case Matcher::CheckOpcode:
-    OS << "OPC_CheckOpcode, TARGET_VAL("
-       << cast<CheckOpcodeMatcher>(N)->getOpcode().getEnumName() << "),\n";
+  case Matcher::CheckOpcode: {
+    StringRef Opcode = cast<CheckOpcodeMatcher>(N)->getOpcode().getEnumName();
+    if (StringRef CompactOpcode = getCompactISDOpcode(Opcode);
+        !CompactOpcode.empty()) {
+      OS << CompactOpcode << ",\n";
+      return 1;
+    }
+    OS << "OPC_CheckOpcode, TARGET_VAL(" << Opcode << "),\n";
     return 3;
+  }
 
   case Matcher::SwitchOpcode:
   case Matcher::SwitchType: {
@@ -924,6 +1025,28 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     int64_t Val = IM->getValue();
     const std::string &Str = IM->getString();
     const ValueTypeByHwMode &VTBH = IM->getVT();
+    if (VTBH.isSimple()) {
+      MVT VT = VTBH.getSimple();
+      if ((VT == MVT::i32 && Val >= -1 && Val <= 8) ||
+          (VT == MVT::i64 && Val >= -1 && Val <= 7)) {
+        OS << "OPC_EmitIntegerI" << VT.getSizeInBits();
+        if (Val < 0)
+          OS << "Neg1";
+        else
+          OS << '_' << Val;
+        OS << ',';
+        if (!OmitComments) {
+          OS << " // #" << IM->getResultNo() << " = ";
+          if (!Str.empty())
+            OS << Str;
+          else
+            OS << Val;
+        }
+        OS << '\n';
+        return 1;
+      }
+    }
+
     unsigned TypeBytes = 0;
     if (VTBH.isSimple()) {
       MVT VT = VTBH.getSimple();
@@ -1301,9 +1424,23 @@ unsigned MatcherTableEmitter::EmitMatcherList(const MatcherList &ML,
                                               unsigned CurrentIdx,
                                               raw_ostream &OS) {
   unsigned Size = 0;
-  for (const Matcher *N : ML) {
+  for (auto I = ML.begin(), E = ML.end(); I != E;) {
+    const Matcher *N = *I;
+    ++I;
     if (!OmitComments)
       OS << "/*" << format_decimal(CurrentIdx, IndexWidth) << "*/";
+
+    if (I != E) {
+      StringRef FusedOpcode = getFusedOpcode(N, *I);
+      if (!FusedOpcode.empty()) {
+        OS.indent(Indent) << FusedOpcode << ",\n";
+        ++I;
+        ++Size;
+        ++CurrentIdx;
+        continue;
+      }
+    }
+
     unsigned MatcherSize = EmitMatcher(N, Indent, CurrentIdx, OS);
     Size += MatcherSize;
     CurrentIdx += MatcherSize;
