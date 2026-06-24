@@ -18,8 +18,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (load (<16 x s8>))
     ; CHECK-NEXT: [[ADDVv16i8v:%[0-9]+]]:fpr8 = ADDVv16i8v [[LDRQui]]
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG [[ADDVv16i8v]], %subreg.bsub
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[SUBREG_TO_REG]]
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr32 = INSERT_SUBREG [[DEF]], [[ADDVv16i8v]], %subreg.bsub
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[INSERT_SUBREG]]
     ; CHECK-NEXT: $w0 = COPY [[COPY1]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(p0) = COPY $x0
@@ -49,8 +50,9 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64sp = COPY $x0
     ; CHECK-NEXT: [[LDRQui:%[0-9]+]]:fpr128 = LDRQui [[COPY]], 0 :: (load (<8 x s16>))
     ; CHECK-NEXT: [[ADDVv8i16v:%[0-9]+]]:fpr16 = ADDVv8i16v [[LDRQui]]
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG [[ADDVv8i16v]], %subreg.hsub
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[SUBREG_TO_REG]]
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr32 = INSERT_SUBREG [[DEF]], [[ADDVv8i16v]], %subreg.hsub
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32all = COPY [[INSERT_SUBREG]]
     ; CHECK-NEXT: $w0 = COPY [[COPY1]]
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:gpr(p0) = COPY $x0

@@ -231,8 +231,9 @@ body:             |
     ; CHECK-LABEL: name: cmp_arith_extended_s32
     ; CHECK: liveins: $w0, $w1, $h0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG $h0, %subreg.hsub
-    ; CHECK-NEXT: %reg0:gpr32all = COPY [[SUBREG_TO_REG]]
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:fpr32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr32 = INSERT_SUBREG [[DEF]], $h0, %subreg.hsub
+    ; CHECK-NEXT: %reg0:gpr32all = COPY [[INSERT_SUBREG]]
     ; CHECK-NEXT: %reg1:gpr32sp = COPY $w1
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY %reg0
     ; CHECK-NEXT: [[SUBSWrx:%[0-9]+]]:gpr32 = SUBSWrx %reg1, [[COPY]], 10, implicit-def $nzcv
