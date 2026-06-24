@@ -259,7 +259,7 @@ public:
 
   constexpr LeafTy coefficientNextPowerOf2() const {
     return LeafTy::get(
-        static_cast<ScalarTy>(llvm::NextPowerOf2(getKnownMinValue())),
+        static_cast<ScalarTy>(llvm::NextPowerOf2Constexpr(getKnownMinValue())),
         isScalable());
   }
 
