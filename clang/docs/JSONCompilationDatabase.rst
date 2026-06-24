@@ -81,7 +81,9 @@ The contracts for each field in the command object are:
 
 -  **directory:** The working directory of the compilation. All paths
    specified in the **command** or **file** fields must be either
-   absolute or relative to this directory.
+   absolute or relative to this directory. This field itself can be a
+   relative path in which case it is evaluated relative to the folder
+   containing the compilation database file.
 -  **file:** The main translation unit source processed by this
    compilation step. This is used by tools as the key into the
    compilation database. There can be multiple command objects for the

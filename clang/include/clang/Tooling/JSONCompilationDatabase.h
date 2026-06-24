@@ -72,8 +72,8 @@ public:
   ///
   /// Returns NULL and sets ErrorMessage if the database could not be loaded.
   static std::unique_ptr<JSONCompilationDatabase>
-  loadFromBuffer(StringRef DatabaseString, std::string &ErrorMessage,
-                 JSONCommandLineSyntax Syntax);
+  loadFromBuffer(StringRef FilePath, StringRef DatabaseString,
+                 std::string &ErrorMessage, JSONCommandLineSyntax Syntax);
 
   /// Returns all compile commands in which the specified file was
   /// compiled.
@@ -94,9 +94,10 @@ public:
 
 private:
   /// Constructs a JSON compilation database on a memory buffer.
-  JSONCompilationDatabase(std::unique_ptr<llvm::MemoryBuffer> Database,
+  JSONCompilationDatabase(SmallString<128> FolderPath,
+                          std::unique_ptr<llvm::MemoryBuffer> Database,
                           JSONCommandLineSyntax Syntax)
-      : Database(std::move(Database)), Syntax(Syntax),
+      : FolderPath(FolderPath), Database(std::move(Database)), Syntax(Syntax),
         YAMLStream(this->Database->getBuffer(), SM) {}
 
   /// Parses the database file and creates the index.
@@ -130,6 +131,7 @@ private:
 
   FileMatchTrie MatchTrie;
 
+  SmallString<128> FolderPath;
   std::unique_ptr<llvm::MemoryBuffer> Database;
   JSONCommandLineSyntax Syntax;
   llvm::SourceMgr SM;
