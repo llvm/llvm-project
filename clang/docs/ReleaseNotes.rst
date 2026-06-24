@@ -725,6 +725,9 @@ Bug Fixes in This Version
 - Fixed a potential stack-use-after-return issue in Clang when copy-initializing
   an array via an element-at-a-time copy loop (#GH192026)
 - Fixed an issue where certain designated initializers would be rejected for constexpr variables. (#GH193373)
+- Fixed ``clang::Preprocessor::recomputeCurLexerKind`` to avoid default fallback to ``CurLexerCallback = CLK_CachingLexer;``. This prevents code-completion
+  EOF handling from accidentally restoring CLK_CachingLexer while a tentative parse is still active, which could trigger a caching lexer re-entry assertion
+  in clangd signature help. (#GH200677)
 - Fixed a crash when ``#embed`` is used with C++ modules (#GH195350)
 - Fixed a bug where ``-x cuda`` caused clang to immediately resolve templates that should not be. (#GH200545)
 - Fixed an issue where ``__typeof_unqual`` and ``__typeof_unqual__`` were rejected as a declaration specifier in block scope in C++.
@@ -1075,11 +1078,6 @@ Sanitizers
   warning for deprecated matches. Version 5 drops backward compatibility and
   requires rules to match canonicalized paths (without leading ``./``).
 
-- Sanitizer Special Case Lists (``-fsanitize-ignorelist``) and warning
-  suppression mappings (``--warning-suppression-mappings``) now recognize version
-  4 of the Special Case List format (indicated by ``#!special-case-list-v4``).
-  On Windows hosts, path matching is slash-agnostic (both forward slashes (``/``)
-  and backslashes (``\``) match either path separator in both patterns and paths).
 
 Python Binding Changes
 ----------------------
