@@ -2881,6 +2881,7 @@ class AssemblyWriter {
   SetVector<const Comdat *> Comdats;
   bool IsForDebug;
   bool ShouldPreserveUseListOrder;
+  bool ShouldSkipIntrinsicDeclarations;
   UseListOrderMap UseListOrders;
   SmallVector<StringRef, 8> MDNames;
   /// Synchronization scope names registered with LLVMContext.
@@ -2891,7 +2892,8 @@ public:
   /// Construct an AssemblyWriter with an external SlotTracker
   AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac, const Module *M,
                  AssemblyAnnotationWriter *AAW, bool IsForDebug,
-                 bool ShouldPreserveUseListOrder = false);
+                 bool ShouldPreserveUseListOrder = false,
+                 bool ShouldSkipIntrinsicDeclarations = false);
 
   AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
                  const ModuleSummaryIndex *Index, bool IsForDebug);
@@ -2980,13 +2982,15 @@ private:
 
 AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
                                const Module *M, AssemblyAnnotationWriter *AAW,
-                               bool IsForDebug, bool ShouldPreserveUseListOrder)
+                               bool IsForDebug, bool ShouldPreserveUseListOrder,
+                               bool ShouldSkipIntrinsicDeclarations)
     : Out(o), TheModule(M), Machine(Mac), TypePrinter(M), AnnotationWriter(AAW),
       IsForDebug(IsForDebug),
       ShouldPreserveUseListOrder(
           PreserveAssemblyUseListOrder.getNumOccurrences()
               ? PreserveAssemblyUseListOrder
-              : ShouldPreserveUseListOrder) {
+              : ShouldPreserveUseListOrder),
+      ShouldSkipIntrinsicDeclarations(ShouldSkipIntrinsicDeclarations) {
   if (!TheModule)
     return;
   for (const GlobalObject &GO : TheModule->global_objects())
@@ -3171,6 +3175,8 @@ void AssemblyWriter::printModule(const Module *M) {
 
   // Output all of the functions.
   for (const Function &F : *M) {
+    if (ShouldSkipIntrinsicDeclarations && F.isIntrinsic() && F.isDeclaration())
+      continue;
     Out << '\n';
     printFunction(&F);
   }
@@ -5086,11 +5092,12 @@ void BasicBlock::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
 }
 
 void Module::print(raw_ostream &ROS, AssemblyAnnotationWriter *AAW,
-                   bool ShouldPreserveUseListOrder, bool IsForDebug) const {
+                   bool ShouldPreserveUseListOrder, bool IsForDebug,
+                   bool ShouldSkipIntrinsicDeclarations) const {
   SlotTracker SlotTable(this);
   formatted_raw_ostream OS(ROS);
   AssemblyWriter W(OS, SlotTable, this, AAW, IsForDebug,
-                   ShouldPreserveUseListOrder);
+                   ShouldPreserveUseListOrder, ShouldSkipIntrinsicDeclarations);
   W.printModule(this);
 }
 
