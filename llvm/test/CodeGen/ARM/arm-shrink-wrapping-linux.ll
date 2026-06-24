@@ -28,13 +28,12 @@ define fastcc ptr @wrongUseOfPostDominate(ptr readonly %s, i32 %off, ptr readnon
 ; ENABLE-NEXT:    cmp r0, r2
 ; ENABLE-NEXT:    pophs {r11, pc}
 ; ENABLE-NEXT:  .LBB0_3: @ %while.body.preheader
-; ENABLE-NEXT:    movw r12, :lower16:skip
-; ENABLE-NEXT:    sub r1, r1, #1
-; ENABLE-NEXT:    movt r12, :upper16:skip
+; ENABLE-NEXT:    sub     r1, r1, #1
 ; ENABLE-NEXT:  .LBB0_4: @ %while.body
 ; ENABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; ENABLE-NEXT:    ldrb r3, [r0]
-; ENABLE-NEXT:    ldrb r3, [r12, r3]
+; ENABLE-NEXT:    ldrb    r12, [r0]
+; ENABLE-NEXT:    adr     r3, .LCPI0_0
+; ENABLE-NEXT:    ldrb    r3, [r3, r12]
 ; ENABLE-NEXT:    add r0, r0, r3
 ; ENABLE-NEXT:    sub r3, r1, #1
 ; ENABLE-NEXT:    cmp r3, r1
@@ -104,6 +103,11 @@ define fastcc ptr @wrongUseOfPostDominate(ptr readonly %s, i32 %off, ptr readnon
 ; ENABLE-NEXT:  .LBB0_18:
 ; ENABLE-NEXT:    mov r0, r3
 ; ENABLE-NEXT:    pop {r11, pc}
+; ENABLE-NEXT:    .p2align 2
+; ENABLE-NEXT:  @ %bb.19:
+; ENABLE-NEXT:  .LCPI0_0:
+; ENABLE-NEXT:  skip:
+; ENABLE-NEXT:    .asciz  "\001\001\000"
 ;
 ; DISABLE-LABEL: wrongUseOfPostDominate:
 ; DISABLE:       @ %bb.0: @ %entry
@@ -118,13 +122,12 @@ define fastcc ptr @wrongUseOfPostDominate(ptr readonly %s, i32 %off, ptr readnon
 ; DISABLE-NEXT:    cmp r0, r2
 ; DISABLE-NEXT:    pophs {r11, pc}
 ; DISABLE-NEXT:  .LBB0_3: @ %while.body.preheader
-; DISABLE-NEXT:    movw r12, :lower16:skip
 ; DISABLE-NEXT:    sub r1, r1, #1
-; DISABLE-NEXT:    movt r12, :upper16:skip
 ; DISABLE-NEXT:  .LBB0_4: @ %while.body
 ; DISABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
-; DISABLE-NEXT:    ldrb r3, [r0]
-; DISABLE-NEXT:    ldrb r3, [r12, r3]
+; DISABLE-NEXT:    ldrb r12, [r0]
+; DISABLE-NEXT:    adr r3, .LCPI0_0
+; DISABLE-NEXT:    ldrb r3, [r3, r12]
 ; DISABLE-NEXT:    add r0, r0, r3
 ; DISABLE-NEXT:    sub r3, r1, #1
 ; DISABLE-NEXT:    cmp r3, r1
@@ -194,6 +197,11 @@ define fastcc ptr @wrongUseOfPostDominate(ptr readonly %s, i32 %off, ptr readnon
 ; DISABLE-NEXT:  .LBB0_18:
 ; DISABLE-NEXT:    mov r0, r3
 ; DISABLE-NEXT:    pop {r11, pc}
+; DISABLE-NEXT:    .p2align 2
+; DISABLE-NEXT:  @ %bb.19:
+; DISABLE-NEXT:  .LCPI0_0:
+; DISABLE-NEXT:  skip:
+; DISABLE-NEXT:    .asciz  "\001\001\000"
 entry:
   %cmp = icmp sgt i32 %off, -1
   br i1 %cmp, label %while.cond.preheader, label %while.cond2.outer
