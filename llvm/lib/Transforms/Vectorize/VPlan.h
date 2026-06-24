@@ -2206,14 +2206,6 @@ protected:
 class LLVM_ABI_FOR_TEST VPWidenGEPRecipe : public VPRecipeWithIRFlags {
   Type *SourceElementTy;
 
-  bool isPointerLoopInvariant() const {
-    return getOperand(0)->isDefinedOutsideLoopRegions();
-  }
-
-  bool isIndexLoopInvariant(unsigned I) const {
-    return getOperand(I + 1)->isDefinedOutsideLoopRegions();
-  }
-
 public:
   VPWidenGEPRecipe(Type *SourceElementTy, ArrayRef<VPValue *> Operands,
                    const VPIRFlags &Flags = {},
@@ -2925,11 +2917,6 @@ public:
     Style = RdxUnordered{ScaleFactor};
   }
 
-  /// Returns the number of incoming values, also number of incoming blocks.
-  /// Note that at the moment, VPWidenPointerInductionRecipe only has a single
-  /// incoming value, its start value.
-  unsigned getNumIncoming() const override { return 2; }
-
   /// Returns the recurrence kind of the reduction.
   RecurKind getRecurrenceKind() const { return Kind; }
 
@@ -3495,6 +3482,12 @@ public:
     return isPredicated() ? drop_end(operands()) : operands();
   }
 
+  /// Returns the number of operands, excluding the mask if the recipe is
+  /// predicated.
+  unsigned getNumOperandsWithoutMask() const {
+    return getNumOperands() - isPredicated();
+  }
+
   unsigned getOpcode() const { return getUnderlyingInstr()->getOpcode(); }
 
 protected:
@@ -3602,8 +3595,9 @@ public:
       : VPExpressionRecipe(ExpressionTypes::NegatedExtendedReduction,
                            {Ext, Neg, Red}) {
     assert((Red->getRecurrenceKind() == RecurKind::Add ||
-            Red->getRecurrenceKind() == RecurKind::FAdd) &&
-           "Expected an add reduction");
+            Red->getRecurrenceKind() == RecurKind::FAdd ||
+            Red->getRecurrenceKind() == RecurKind::AddChainWithSubs) &&
+           "Expected an add or add-chain-with-subs reduction");
     if (Neg->getOpcode() == Instruction::Sub) {
       [[maybe_unused]] auto *SubConst = dyn_cast<VPConstantInt>(getOperand(1));
       assert(SubConst && SubConst->isZero() && "Expected a negating sub");
@@ -3625,8 +3619,9 @@ public:
             Mul->getOpcode() == Instruction::FMul) &&
            "Expected a mul");
     assert((Red->getRecurrenceKind() == RecurKind::Add ||
-            Red->getRecurrenceKind() == RecurKind::FAdd) &&
-           "Expected an add reduction");
+            Red->getRecurrenceKind() == RecurKind::FAdd ||
+            Red->getRecurrenceKind() == RecurKind::AddChainWithSubs) &&
+           "Expected an add or add-chain-with-subs reduction");
     assert(getNumOperands() >= 3 && "Expected at least three operands");
     if (Neg->getOpcode() == Instruction::Sub) {
       [[maybe_unused]] auto *SubConst = dyn_cast<VPConstantInt>(getOperand(2));
@@ -3850,8 +3845,8 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadRecipe final : public VPSingleDefRecipe,
   }
 
 protected:
-  VPRecipeBase *getAsRecipe() override { return this; }
-  const VPRecipeBase *getAsRecipe() const override { return this; }
+  VPRecipeBase *getAsRecipe() override;
+  const VPRecipeBase *getAsRecipe() const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3901,8 +3896,8 @@ struct LLVM_ABI_FOR_TEST VPWidenLoadEVLRecipe final
   }
 
 protected:
-  VPRecipeBase *getAsRecipe() override { return this; }
-  const VPRecipeBase *getAsRecipe() const override { return this; }
+  LLVM_ABI_FOR_TEST VPRecipeBase *getAsRecipe() override;
+  LLVM_ABI_FOR_TEST const VPRecipeBase *getAsRecipe() const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -3953,8 +3948,8 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreRecipe final : public VPRecipeBase,
   }
 
 protected:
-  VPRecipeBase *getAsRecipe() override { return this; }
-  const VPRecipeBase *getAsRecipe() const override { return this; }
+  VPRecipeBase *getAsRecipe() override;
+  const VPRecipeBase *getAsRecipe() const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -4011,8 +4006,8 @@ struct LLVM_ABI_FOR_TEST VPWidenStoreEVLRecipe final
   }
 
 protected:
-  VPRecipeBase *getAsRecipe() override { return this; }
-  const VPRecipeBase *getAsRecipe() const override { return this; }
+  LLVM_ABI_FOR_TEST VPRecipeBase *getAsRecipe() override;
+  LLVM_ABI_FOR_TEST const VPRecipeBase *getAsRecipe() const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -4296,10 +4291,7 @@ public:
 
   /// Return the cost of this VPScalarIVStepsRecipe.
   InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override {
-    // TODO: Compute accurate cost after retiring the legacy cost model.
-    return 0;
-  }
+                              VPCostContext &Ctx) const override;
 
   VPValue *getStepValue() const { return getOperand(1); }
 
@@ -5091,6 +5083,11 @@ public:
   /// Return a VPIRValue wrapping a ConstantInt with the given APInt value.
   VPIRValue *getConstantInt(const APInt &Val) {
     return getOrAddLiveIn(ConstantInt::get(getContext(), Val));
+  }
+
+  /// Return a VPIRValue wrapping a poison value of type \p Ty.
+  VPIRValue *getPoison(Type *Ty) {
+    return getOrAddLiveIn(PoisonValue::get(Ty));
   }
 
   /// Return the live-in VPIRValue for \p V, if there is one or nullptr

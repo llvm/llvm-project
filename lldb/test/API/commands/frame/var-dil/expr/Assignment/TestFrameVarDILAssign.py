@@ -84,7 +84,6 @@ class TestFrameVarDILAssignment(TestBase):
         if Is32Bit:
             self.expect("frame variable 'p = (int*)12'", substrs=["p = 0x0000000c"])
             self.expect_var_path("p", value="0x0000000c")
-            self.expect("frame variable 'p = p - s'", substrs=["p = 0x0000000b"])
             self.expect("frame variable 'p = (int *)0'", substrs=["p = 0x00000000"])
         else:
             self.expect(

@@ -63,7 +63,7 @@ public:
 
     virtual ClassDescriptorSP GetSuperclass() = 0;
 
-    virtual ClassDescriptorSP GetMetaclass() const = 0;
+    virtual std::unique_ptr<ClassDescriptor> GetMetaclass() const = 0;
 
     // virtual if any implementation has some other version-specific rules but
     // for the known v1/v2 this is all that needs to be done
@@ -198,7 +198,7 @@ public:
 
     virtual bool IsPossibleTaggedPointer(lldb::addr_t ptr) = 0;
 
-    virtual ObjCLanguageRuntime::ClassDescriptorSP
+    virtual std::unique_ptr<ClassDescriptor>
     GetClassDescriptor(lldb::addr_t ptr) = 0;
 
   protected:
@@ -225,6 +225,11 @@ public:
     return llvm::cast_or_null<ObjCLanguageRuntime>(
         process.GetLanguageRuntime(lldb::eLanguageTypeObjC));
   }
+
+  /// Returns whether the architecture's object file format supports
+  /// Objective-C code generation. Generating Objective-C for a format that
+  /// does not aborts the compiler.
+  static bool IsSupportedForArchitecture(const ArchSpec &arch);
 
   virtual TaggedPointerVendor *GetTaggedPointerVendor() { return nullptr; }
 

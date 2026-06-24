@@ -2037,6 +2037,25 @@ int GDBRemoteCommunicationClient::SetSTDERR(const FileSpec &file_spec) {
   return -1;
 }
 
+int GDBRemoteCommunicationClient::SetSTDIOWindowSize(uint16_t cols,
+                                                     uint16_t rows) {
+  if (cols == 0 || rows == 0)
+    return -1;
+  StreamString packet;
+  packet.Printf("QSetSTDIOWindowSize:cols=%u;rows=%u",
+                static_cast<unsigned>(cols), static_cast<unsigned>(rows));
+  StringExtractorGDBRemote response;
+  if (SendPacketAndWaitForResponse(packet.GetString(), response) !=
+      PacketResult::Success)
+    return -1;
+  if (response.IsOKResponse())
+    return 0;
+  if (response.IsUnsupportedResponse())
+    return 0;
+  uint8_t error = response.GetError();
+  return error ? error : -1;
+}
+
 bool GDBRemoteCommunicationClient::GetWorkingDir(FileSpec &working_dir) {
   StringExtractorGDBRemote response;
   if (SendPacketAndWaitForResponse("qGetWorkingDir", response) ==
@@ -2406,9 +2425,9 @@ uint32_t GDBRemoteCommunicationClient::FindProcesses(
     packet.PutCString("qfProcessInfo");
     if (!match_info.MatchAllProcesses()) {
       packet.PutChar(':');
-      const char *name = match_info.GetProcessInfo().GetName();
+      llvm::StringRef name = match_info.GetProcessInfo().GetName();
       bool has_name_match = false;
-      if (name && name[0]) {
+      if (!name.empty()) {
         has_name_match = true;
         NameMatch name_match_type = match_info.GetNameMatchType();
         switch (name_match_type) {
@@ -2438,7 +2457,7 @@ uint32_t GDBRemoteCommunicationClient::FindProcesses(
         }
         if (has_name_match) {
           packet.PutCString("name:");
-          packet.PutBytesAsRawHex8(name, ::strlen(name));
+          packet.PutBytesAsRawHex8(name.data(), name.size());
           packet.PutChar(';');
         }
       }

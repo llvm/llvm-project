@@ -5448,7 +5448,7 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
   // Map the 32bit to 64bit opcodes for instructions that are not signed or zero
   // extended themselves, but may have operands who's destination registers of
   // signed or zero extended instructions.
-  std::unordered_map<unsigned, unsigned> OpcodeMap = {
+  DenseMap<unsigned, unsigned> OpcodeMap = {
       {PPC::OR, PPC::OR8},     {PPC::ISEL, PPC::ISEL8},
       {PPC::ORI, PPC::ORI8},   {PPC::XORI, PPC::XORI8},
       {PPC::ORIS, PPC::ORIS8}, {PPC::XORIS, PPC::XORIS8},

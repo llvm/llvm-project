@@ -3,7 +3,7 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize64 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 -mattr=+wavefrontsize64 -amdgpu-enable-delay-alu=0 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX11-12,GFX11-12-SDAG,GFX11 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64 -amdgpu-enable-delay-alu=0 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX11-12,GFX11-12-SDAG,GFX12,GFX12-SDAG %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64 -amdgpu-enable-delay-alu=0 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11-12,GFX12,GFX12-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1200 -mattr=+wavefrontsize64 -amdgpu-enable-delay-alu=0 < %s | FileCheck -enable-var-scope -check-prefixes=GFX11-12,GFX12,GFX12-GISEL %s
 
 define amdgpu_gs void @gs_const() {
 ; SI-LABEL: gs_const:

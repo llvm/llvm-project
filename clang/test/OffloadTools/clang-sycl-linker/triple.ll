@@ -31,7 +31,17 @@
 ; Test error when neither -triple= nor any input supplies a triple.
 ; RUN: not clang-sycl-linker --dry-run %t/no-triple.bc -o a.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=NO-TRIPLE
-; NO-TRIPLE: Target triple must be specified or inferable from inputs
+; NO-TRIPLE: target triple must be specified or inferable from inputs
+;
+; Test that archive members with equivalent but textually different triples are
+; not filtered: spirv64 from --triple= and spirv64-unknown-unknown from the
+; archive member should match and the member should be extracted.
+; RUN: llvm-as %t/archive-full-triple.ll -o %t/archive-full-triple.bc
+; RUN: llvm-ar rc %t/libfulltriple.a %t/archive-full-triple.bc
+; RUN: llvm-as %t/main-undefined.ll -o %t/main-undefined.bc
+; RUN: clang-sycl-linker --dry-run -triple=spirv64 %t/main-undefined.bc -l fulltriple -L %t -o %t/fulltriple.out --print-linked-module 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=ARCHIVE-FULL-TRIPLE
+; ARCHIVE-FULL-TRIPLE: define {{.*}}archiveFunc{{.*}}
 
 ;--- input1.ll
 target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
@@ -70,3 +80,23 @@ define spir_kernel void @kernel_d() #0 {
 }
 
 attributes #0 = { "sycl-module-id"="TU4.cpp" }
+
+;--- archive-full-triple.ll
+target triple = "spirv64-unknown-unknown"
+
+define spir_func i32 @archiveFunc(i32 %a) {
+entry:
+  %res = add nsw i32 %a, 42
+  ret i32 %res
+}
+
+;--- main-undefined.ll
+target triple = "spirv64"
+
+declare spir_func i32 @archiveFunc(i32)
+
+define spir_kernel void @main_kernel() {
+entry:
+  %result = call spir_func i32 @archiveFunc(i32 10)
+  ret void
+}

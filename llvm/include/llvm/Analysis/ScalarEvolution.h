@@ -1235,6 +1235,9 @@ public:
   /// Test if the given expression is known to be non-zero.
   LLVM_ABI bool isKnownNonZero(const SCEV *S);
 
+  /// Returns true if \p Op is guaranteed to not be poison.
+  LLVM_ABI static bool isGuaranteedNotToBePoison(const SCEV *Op);
+
   /// Test if the given expression is known to be a power of 2.  OrNegative
   /// allows matching negative power of 2s, and OrZero allows matching 0.
   LLVM_ABI bool isKnownToBeAPowerOfTwo(const SCEV *S, bool OrZero = false,
@@ -2427,9 +2430,6 @@ private:
   /// Returns true if \p Op is guaranteed not to cause immediate UB.
   bool isGuaranteedNotToCauseUB(const SCEV *Op);
 
-  /// Returns true if \p Op is guaranteed to not be poison.
-  static bool isGuaranteedNotToBePoison(const SCEV *Op);
-
   /// Return true if the SCEV corresponding to \p I is never poison.  Proving
   /// this is more complex than proving that just \p I is never poison, since
   /// SCEV commons expressions across control flow, and you can have cases
@@ -2644,6 +2644,9 @@ public:
   /// Adds a new predicate.
   LLVM_ABI void addPredicate(const SCEVPredicate &Pred);
 
+  /// Adds all predicates in \p Preds.
+  LLVM_ABI void addPredicates(ArrayRef<const SCEVPredicate *> Preds);
+
   /// Attempts to produce an AddRecExpr for V by adding additional SCEV
   /// predicates. If we can't transform the expression into an AddRecExpr we
   /// return nullptr and not add additional SCEV predicates to the current
@@ -2653,19 +2656,15 @@ public:
   getAsAddRec(Value *V,
               SmallVectorImpl<const SCEVPredicate *> *WrapPredsAdded = nullptr);
 
-  /// Proves that V doesn't overflow by adding SCEV predicate.
-  LLVM_ABI void setNoOverflow(Value *V,
-                              SCEVWrapPredicate::IncrementWrapFlags Flags);
-
-  /// Returns true if we've proved that V doesn't wrap by means of a SCEV
-  /// predicate.
+  /// Returns true if we've statically proved that V doesn't wrap.
   LLVM_ABI bool hasNoOverflow(Value *V,
                               SCEVWrapPredicate::IncrementWrapFlags Flags);
 
   /// Returns the ScalarEvolution analysis used.
   ScalarEvolution *getSE() const { return &SE; }
 
-  /// We need to explicitly define the copy constructor because of FlagsMap.
+  /// We need to explicitly define the copy constructor due to the ownership of
+  /// the SCEVUnionPredicate Preds.
   LLVM_ABI PredicatedScalarEvolution(const PredicatedScalarEvolution &);
 
   /// Print the SCEV mappings done by the Predicated Scalar Evolution.
@@ -2693,9 +2692,6 @@ private:
   /// rewrites, we will rewrite the previous result instead of the original
   /// SCEV.
   DenseMap<const SCEV *, RewriteEntry> RewriteMap;
-
-  /// Records what NoWrap flags we've added to a Value *.
-  ValueMap<Value *, SCEVWrapPredicate::IncrementWrapFlags> FlagsMap;
 
   /// The ScalarEvolution analysis.
   ScalarEvolution &SE;

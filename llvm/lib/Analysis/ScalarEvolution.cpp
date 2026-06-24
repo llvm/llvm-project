@@ -7158,9 +7158,9 @@ const ConstantRange &ScalarEvolution::getRangeRef(
     if (U->getType()->isPointerTy() && SignHint == HINT_RANGE_UNSIGNED) {
       // Strengthen the range if the underlying IR value is a
       // global/alloca/heap allocation using the size of the object.
-      bool CanBeNull, CanBeFreed;
-      uint64_t DerefBytes =
-          V->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
+      bool CanBeNull;
+      uint64_t DerefBytes = V->getPointerDereferenceableBytes(
+          DL, CanBeNull, /*CanBeFreed=*/nullptr);
       if (DerefBytes > 1 && isUIntN(BitWidth, DerefBytes)) {
         // The highest address the object can start is DerefBytes bytes before
         // the end (unsigned max value). If this value is not a multiple of the
@@ -7729,14 +7729,15 @@ const SCEV *ScalarEvolution::createSCEVIter(Value *V) {
   using PointerTy = PointerIntPair<Value *, 1, bool>;
   SmallVector<PointerTy> Stack;
 
-  Stack.emplace_back(V, true);
   Stack.emplace_back(V, false);
   while (!Stack.empty()) {
-    auto E = Stack.pop_back_val();
+    auto E = Stack.back();
     Value *CurV = E.getPointer();
 
-    if (getExistingSCEV(CurV))
+    if (getExistingSCEV(CurV)) {
+      Stack.pop_back();
       continue;
+    }
 
     SmallVector<Value *> Ops;
     const SCEV *CreatedSCEV = nullptr;
@@ -7752,10 +7753,10 @@ const SCEV *ScalarEvolution::createSCEVIter(Value *V) {
 
     if (CreatedSCEV) {
       insertValueToMap(CurV, CreatedSCEV);
+      Stack.pop_back();
     } else {
-      // Queue CurV for SCEV creation, followed by its's operands which need to
-      // be constructed first.
-      Stack.emplace_back(CurV, true);
+      Stack.back().setInt(true);
+      // Queue its operands which need to be constructed.
       for (Value *Op : Ops)
         Stack.emplace_back(Op, false);
     }
@@ -8680,18 +8681,6 @@ bool ScalarEvolution::isBackedgeTakenCountMaxOrZero(const Loop *L) {
   return getBackedgeTakenInfo(L).isConstantMaxOrZero(this);
 }
 
-/// Push PHI nodes in the header of the given loop onto the given Worklist.
-static void PushLoopPHIs(const Loop *L,
-                         SmallVectorImpl<Instruction *> &Worklist,
-                         SmallPtrSetImpl<Instruction *> &Visited) {
-  BasicBlock *Header = L->getHeader();
-
-  // Push all Loop-header PHIs onto the Worklist stack.
-  for (PHINode &PN : Header->phis())
-    if (Visited.insert(&PN).second)
-      Worklist.push_back(&PN);
-}
-
 ScalarEvolution::BackedgeTakenInfo &
 ScalarEvolution::getPredicatedBackedgeTakenInfo(const Loop *L) {
   auto &BTI = getBackedgeTakenInfo(L);
@@ -8801,8 +8790,6 @@ void ScalarEvolution::visitAndClearUsers(
 
 void ScalarEvolution::forgetLoop(const Loop *L) {
   SmallVector<const Loop *, 16> LoopWorklist(1, L);
-  SmallVector<Instruction *, 32> Worklist;
-  SmallPtrSet<Instruction *, 16> Visited;
   SmallVector<SCEVUse, 16> ToForget;
 
   // Iterate over all the loops and sub-loops to drop SCEV information.
@@ -8822,8 +8809,12 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
       llvm::append_range(ToForget, LoopUsersItr->second);
 
     // Drop information about expressions based on loop-header PHIs.
-    PushLoopPHIs(CurrL, Worklist, Visited);
-    visitAndClearUsers(Worklist, Visited, ToForget);
+    for (PHINode &PN : CurrL->getHeader()->phis()) {
+      ConstantEvolutionLoopExitValue.erase(&PN);
+      auto VIt = ValueExprMap.find_as(static_cast<Value *>(&PN));
+      if (VIt != ValueExprMap.end())
+        ToForget.push_back(VIt->second);
+    }
 
     LoopPropertiesCache.erase(CurrL);
     // Forget all contained loops too, to avoid dangling entries in the
@@ -9709,10 +9700,11 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeShiftCompareExitLimit(
     return getCouldNotCompute();
 
   // Return true if V is of the form "LHS `shift_op` <positive constant>".
-  // Return LHS in OutLHS and shift_opt in OutOpCode.
-  auto MatchPositiveShift =
-      [](Value *V, Value *&OutLHS, Instruction::BinaryOps &OutOpCode) {
-
+  // Return LHS in OutLHS, shift_op in OutOpCode, and the shift amount in
+  // OutShiftAmt.
+  auto MatchPositiveShift = [](Value *V, Value *&OutLHS,
+                               Instruction::BinaryOps &OutOpCode,
+                               unsigned &OutShiftAmt) {
     using namespace PatternMatch;
 
     ConstantInt *ShiftAmt;
@@ -9725,7 +9717,11 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeShiftCompareExitLimit(
     else
       return false;
 
-    return ShiftAmt->getValue().isStrictlyPositive();
+    uint64_t Amt = ShiftAmt->getValue().getLimitedValue();
+    if (Amt == 0 || Amt >= OutLHS->getType()->getScalarSizeInBits())
+      return false;
+    OutShiftAmt = Amt;
+    return true;
   };
 
   // Recognize a "shift recurrence" either of the form %iv or of %iv.shifted in
@@ -9735,14 +9731,17 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeShiftCompareExitLimit(
   //   %iv.shifted = lshr i32 %iv, <positive constant>
   //
   // Return true on a successful match.  Return the corresponding PHI node (%iv
-  // above) in PNOut and the opcode of the shift operation in OpCodeOut.
-  auto MatchShiftRecurrence =
-      [&](Value *V, PHINode *&PNOut, Instruction::BinaryOps &OpCodeOut) {
+  // above) in PNOut, the opcode of the shift operation in OpCodeOut, and the
+  // shift amount in ShiftAmtOut.
+  auto MatchShiftRecurrence = [&](Value *V, PHINode *&PNOut,
+                                  Instruction::BinaryOps &OpCodeOut,
+                                  unsigned &ShiftAmtOut) {
     std::optional<Instruction::BinaryOps> PostShiftOpCode;
 
     {
       Instruction::BinaryOps OpC;
       Value *V;
+      unsigned Amt;
 
       // If we encounter a shift instruction, "peel off" the shift operation,
       // and remember that we did so.  Later when we inspect %iv's backedge
@@ -9753,7 +9752,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeShiftCompareExitLimit(
       // instruction as the one feeding into the PHI's backedge value.  We only
       // really care about it being the same *kind* of shift instruction --
       // that's all that is required for our later inferences to hold.
-      if (MatchPositiveShift(LHS, V, OpC)) {
+      if (MatchPositiveShift(LHS, V, OpC, Amt)) {
         PostShiftOpCode = OpC;
         LHS = V;
       }
@@ -9769,7 +9768,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeShiftCompareExitLimit(
     return
         // The backedge value for the PHI node must be a shift by a positive
         // amount
-        MatchPositiveShift(BEValue, OpLHS, OpCodeOut) &&
+        MatchPositiveShift(BEValue, OpLHS, OpCodeOut, ShiftAmtOut) &&
 
         // of the PHI node itself
         OpLHS == PNOut &&
@@ -9781,7 +9780,8 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeShiftCompareExitLimit(
 
   PHINode *PN;
   Instruction::BinaryOps OpCode;
-  if (!MatchShiftRecurrence(LHS, PN, OpCode))
+  unsigned ShiftAmt;
+  if (!MatchShiftRecurrence(LHS, PN, OpCode, ShiftAmt))
     return getCouldNotCompute();
 
   const DataLayout &DL = getDataLayout();
@@ -9829,8 +9829,26 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeShiftCompareExitLimit(
 
   if (Result->isNullValue()) {
     unsigned BitWidth = getTypeSizeInBits(RHS->getType());
+    unsigned MaxBTC = BitWidth;
+
+    // For right-shift recurrences (lshr/ashr with non-negative start), we can
+    // compute a tighter max backedge-taken count from the range of the start
+    // value. After k shifts of ShiftAmt, value = start >> (k * ShiftAmt).
+    // The value reaches 0 (the stable value) when k * ShiftAmt >=
+    // activeBits(start), so max BTC = ceil(activeBits(maxStart) / ShiftAmt).
+    if (OpCode == Instruction::LShr || OpCode == Instruction::AShr) {
+      Value *StartValue = PN->getIncomingValueForBlock(Predecessor);
+      const SCEV *StartSCEV = getSCEV(StartValue);
+      APInt MaxStart = getUnsignedRangeMax(StartSCEV);
+      if (MaxStart.isStrictlyPositive()) {
+        unsigned ActiveBits = MaxStart.getActiveBits();
+        unsigned RangeBTC = divideCeil(ActiveBits, ShiftAmt);
+        MaxBTC = std::min(MaxBTC, RangeBTC);
+      }
+    }
+
     const SCEV *UpperBound =
-        getConstant(getEffectiveSCEVType(RHS->getType()), BitWidth);
+        getConstant(getEffectiveSCEVType(RHS->getType()), MaxBTC);
     return ExitLimit(getCouldNotCompute(), UpperBound, UpperBound, false);
   }
 
@@ -15458,8 +15476,25 @@ bool SCEVUnionPredicate::implies(const SCEVPredicate *N,
       return this->implies(I, SE);
     });
 
-  return any_of(Preds,
-                [N, &SE](const SCEVPredicate *I) { return I->implies(N, SE); });
+  if (any_of(Preds,
+             [N, &SE](const SCEVPredicate *I) { return I->implies(N, SE); }))
+    return true;
+
+  // A wrap predicate may be implied by a wrap predicate in Preds after applying
+  // equal predicates.
+  const auto *NWrap = dyn_cast<SCEVWrapPredicate>(N);
+  if (!NWrap)
+    return false;
+  const Loop *L = NWrap->getExpr()->getLoop();
+  return any_of(Preds, [&](const SCEVPredicate *I) {
+    const auto *IWrap = dyn_cast<SCEVWrapPredicate>(I);
+    if (!IWrap)
+      return false;
+    const auto *RewrittenAR = dyn_cast<SCEVAddRecExpr>(
+        SE.rewriteUsingPredicate(IWrap->getExpr(), L, *this));
+    return RewrittenAR &&
+           SE.getWrapPredicate(RewrittenAR, IWrap->getFlags())->implies(N, SE);
+  });
 }
 
 void SCEVUnionPredicate::print(raw_ostream &OS, unsigned Depth) const {
@@ -15585,6 +15620,12 @@ void PredicatedScalarEvolution::addPredicate(const SCEVPredicate &Pred) {
   updateGeneration();
 }
 
+void PredicatedScalarEvolution::addPredicates(
+    ArrayRef<const SCEVPredicate *> Preds) {
+  for (const SCEVPredicate *P : Preds)
+    addPredicate(*P);
+}
+
 const SCEVPredicate &PredicatedScalarEvolution::getPredicate() const {
   return *Preds;
 }
@@ -15599,34 +15640,14 @@ void PredicatedScalarEvolution::updateGeneration() {
   }
 }
 
-void PredicatedScalarEvolution::setNoOverflow(
-    Value *V, SCEVWrapPredicate::IncrementWrapFlags Flags) {
-  const SCEV *Expr = getSCEV(V);
-  const auto *AR = cast<SCEVAddRecExpr>(Expr);
-
-  auto ImpliedFlags = SCEVWrapPredicate::getImpliedFlags(AR, SE);
-
-  // Clear the statically implied flags.
-  Flags = SCEVWrapPredicate::clearFlags(Flags, ImpliedFlags);
-  addPredicate(*SE.getWrapPredicate(AR, Flags));
-
-  auto II = FlagsMap.insert({V, Flags});
-  if (!II.second)
-    II.first->second = SCEVWrapPredicate::setFlags(Flags, II.first->second);
-}
-
 bool PredicatedScalarEvolution::hasNoOverflow(
     Value *V, SCEVWrapPredicate::IncrementWrapFlags Flags) {
-  const SCEV *Expr = getSCEV(V);
-  const auto *AR = cast<SCEVAddRecExpr>(Expr);
+  const auto *AR = dyn_cast<SCEVAddRecExpr>(getSCEV(V));
+  if (!AR)
+    return false;
 
   Flags = SCEVWrapPredicate::clearFlags(
       Flags, SCEVWrapPredicate::getImpliedFlags(AR, SE));
-
-  auto II = FlagsMap.find(V);
-
-  if (II != FlagsMap.end())
-    Flags = SCEVWrapPredicate::clearFlags(Flags, II->second);
 
   return Flags == SCEVWrapPredicate::IncrementAnyWrap;
 }
@@ -15645,8 +15666,7 @@ const SCEVAddRecExpr *PredicatedScalarEvolution::getAsAddRec(
     return New;
   }
 
-  for (const auto *P : NewPreds)
-    addPredicate(*P);
+  addPredicates(NewPreds);
 
   RewriteMap[SE.getSCEV(V)] = {Generation, New};
   return New;
@@ -15657,10 +15677,7 @@ PredicatedScalarEvolution::PredicatedScalarEvolution(
     : RewriteMap(Init.RewriteMap), SE(Init.SE), L(Init.L),
       Preds(std::make_unique<SCEVUnionPredicate>(Init.Preds->getPredicates(),
                                                  SE)),
-      Generation(Init.Generation), BackedgeCount(Init.BackedgeCount) {
-  for (auto I : Init.FlagsMap)
-    FlagsMap.insert(I);
-}
+      Generation(Init.Generation), BackedgeCount(Init.BackedgeCount) {}
 
 void PredicatedScalarEvolution::print(raw_ostream &OS, unsigned Depth) const {
   // For each block.

@@ -416,6 +416,11 @@ public:
     return false;
   };
 
+  /// Add final touches to a `mayLoad` instruction \p MI.
+  virtual bool finalizeLoad(MachineBasicBlock::iterator &MI) const {
+    return false;
+  }
+
   /// Handle cooperative load/store atomics.
   virtual bool handleCooperativeAtomic(MachineInstr &MI) const {
     llvm_unreachable(
@@ -599,6 +604,8 @@ public:
                                       bool IsLastUse) const override;
 
   bool finalizeStore(MachineInstr &MI, bool Atomic) const override;
+
+  bool finalizeLoad(MachineBasicBlock::iterator &MI) const override;
 
   bool handleCooperativeAtomic(MachineInstr &MI) const override;
 
@@ -2241,6 +2248,18 @@ bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
   return Changed;
 }
 
+bool SIGfx12CacheControl::finalizeLoad(MachineBasicBlock::iterator &MI) const {
+  if (!SIInstrInfo::isLoadMonitor(MI->getOpcode()))
+    return false;
+
+  // load_monitor instructions need at least SCOPE_SE to ensure L2 is hit.
+  MachineOperand *CPol = TII->getNamedOperand(*MI, AMDGPU::OpName::cpol);
+  assert(CPol && "load_monitor must have a cpol operand");
+  if ((CPol->getImm() & AMDGPU::CPol::SCOPE) < AMDGPU::CPol::SCOPE_SE)
+    return setScope(MI, AMDGPU::CPol::SCOPE_SE);
+  return false;
+}
+
 bool SIGfx12CacheControl::handleCooperativeAtomic(MachineInstr &MI) const {
   if (!ST.hasGFX1250Insts())
     return false;
@@ -2351,6 +2370,7 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
       }
     }
 
+    Changed |= CC->finalizeLoad(MI);
     return Changed;
   }
 
@@ -2361,6 +2381,7 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
       MI, MOI.getInstrAddrSpace(), SIMemOp::LOAD, MOI.isVolatile(),
       MOI.isNonTemporal(), MOI.isLastUse());
 
+  Changed |= CC->finalizeLoad(MI);
   return Changed;
 }
 
