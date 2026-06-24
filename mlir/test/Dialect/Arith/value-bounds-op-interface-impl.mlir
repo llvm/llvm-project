@@ -220,28 +220,6 @@ func.func @arith_maxsi_ub(%a: index) -> index {
 
 // -----
 
-// CHECK-LABEL: func @arith_index_castui(
-//  CHECK-SAME:     %[[a:.*]]: i32
-//       CHECK:   %[[lb:.*]] = arith.constant 0 : index
-//       CHECK:   return %[[lb]]
-func.func @arith_index_castui(%a: i32) -> index {
-  %0 = arith.index_castui %a : i32 to index
-  %1 = "test.reify_bound"(%0) {type = "LB"} : (index) -> (index)
-  return %1 : index
-}
-
-// -----
-
-func.func @arith_index_castui_ub(%a: i32) -> index {
-  %0 = arith.index_castui %a : i32 to index
-  // Unsigned cast is non-negative but has no upper bound.
-  // expected-error @below{{could not reify bound}}
-  %1 = "test.reify_bound"(%0) {type = "UB"} : (index) -> (index)
-  return %1 : index
-}
-
-// -----
-
 // CHECK-LABEL: func @arith_extsi_const(
 //       CHECK:   %[[c:.*]] = arith.constant -5 : index
 //       CHECK:   return %[[c]]

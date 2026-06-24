@@ -30,17 +30,6 @@ struct ConstantOpInterface
   }
 };
 
-struct IndexCastUIOpInterface
-    : public ValueBoundsOpInterface::ExternalModel<IndexCastUIOpInterface,
-                                                   IndexCastUIOp> {
-  void populateBoundsForIndexValue(Operation *op, Value value,
-                                   ValueBoundsConstraintSet &cstr) const {
-    auto indexCastOp = cast<IndexCastUIOp>(op);
-    assert(value == indexCastOp.getOut() && "invalid value");
-    cstr.bound(value) >= 0;
-  }
-};
-
 struct ExtSIOpInterface
     : public ValueBoundsOpInterface::ExternalModel<ExtSIOpInterface, ExtSIOp> {
   void populateBoundsForIndexValue(Operation *op, Value value,
@@ -220,7 +209,6 @@ void mlir::arith::registerValueBoundsOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, arith::ArithDialect *dialect) {
     arith::ConstantOp::attachInterface<arith::ConstantOpInterface>(*ctx);
-    arith::IndexCastUIOp::attachInterface<arith::IndexCastUIOpInterface>(*ctx);
     arith::ExtSIOp::attachInterface<arith::ExtSIOpInterface>(*ctx);
     arith::AddIOp::attachInterface<arith::AddIOpInterface>(*ctx);
     arith::SubIOp::attachInterface<arith::SubIOpInterface>(*ctx);
