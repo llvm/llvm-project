@@ -817,3 +817,17 @@ namespace GH173347 {
 typedef short __attribute__((__vector_size__(8))) V;
 template <int N> V test(V x) { return (x % 5) * N; }
 }
+
+namespace test_canonical_quals {
+typedef const int cint;
+typedef int __attribute__((vector_size(16))) vec4_int;
+typedef cint __attribute__((vector_size(16))) vec4_cint;
+_Static_assert(!__is_same(vec4_int, const vec4_int), "'vec4_int' and 'const vec4_int' are not different");
+_Static_assert(!__is_same(vec4_int, volatile vec4_int), "'vec4_int' and 'const vec4_int' are not different");
+_Static_assert(__is_same(const vec4_int, vec4_cint), "'const vec4_int' and 'vec4_cint' are different");
+typedef int __attribute__((ext_vector_type(4))) ext_vec4_int;
+typedef cint __attribute__((ext_vector_type(4))) ext_vec4_cint;
+_Static_assert(!__is_same(ext_vec4_int, const ext_vec4_int), "'ext_vec4_int' and 'const ext_vec4_int' are not different");
+_Static_assert(!__is_same(ext_vec4_int, volatile ext_vec4_int), "'ext_vec4_int' and 'const ext_vec4_int' are not different");
+_Static_assert(__is_same(const ext_vec4_int, ext_vec4_cint), "'const ext_vec4_int' and 'ext_vec4_cint' are different");
+} // namespace test_canonical_quals

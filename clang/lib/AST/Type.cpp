@@ -335,7 +335,8 @@ void DependentSizedArrayType::Profile(llvm::FoldingSetNodeID &ID,
     E->Profile(ID, Context, true);
 }
 
-DependentVectorType::DependentVectorType(QualType ElementType,
+DependentVectorType::DependentVectorType(const ASTContext &Context,
+                                         QualType ElementType,
                                          QualType CanonType, Expr *SizeExpr,
                                          SourceLocation Loc, VectorKind VecKind)
     : Type(DependentVector, CanonType,
@@ -343,8 +344,19 @@ DependentVectorType::DependentVectorType(QualType ElementType,
                ElementType->getDependence() |
                (SizeExpr ? toTypeDependence(SizeExpr->getDependence())
                          : TypeDependence::None)),
-      ElementType(ElementType), SizeExpr(SizeExpr), Loc(Loc) {
+      ElementType(ElementType), SizeExpr(SizeExpr), Loc(Loc), Context(Context) {
   VectorTypeBits.VecKind = llvm::to_underlying(VecKind);
+}
+
+SplitQualType DependentVectorType::getSplitUnqualifiedType() const {
+  auto SplitElem = ElementType.getSplitUnqualifiedType();
+  QualType UnqualElemTy(SplitElem.Ty, 0);
+  if (UnqualElemTy == ElementType)
+    return SplitQualType(this, Qualifiers());
+
+  auto UnqualVecTy = Context.getDependentVectorType(
+      UnqualElemTy, getSizeExpr(), getAttributeLoc(), getVectorKind());
+  return SplitQualType(UnqualVecTy.getTypePtr(), SplitElem.Quals);
 }
 
 void DependentVectorType::Profile(llvm::FoldingSetNodeID &ID,
@@ -356,16 +368,27 @@ void DependentVectorType::Profile(llvm::FoldingSetNodeID &ID,
   SizeExpr->Profile(ID, Context, true);
 }
 
-DependentSizedExtVectorType::DependentSizedExtVectorType(QualType ElementType,
-                                                         QualType can,
-                                                         Expr *SizeExpr,
-                                                         SourceLocation loc)
+DependentSizedExtVectorType::DependentSizedExtVectorType(
+    const ASTContext &Context, QualType ElementType, QualType can,
+    Expr *SizeExpr, SourceLocation loc)
     : Type(DependentSizedExtVector, can,
            TypeDependence::DependentInstantiation |
                ElementType->getDependence() |
                (SizeExpr ? toTypeDependence(SizeExpr->getDependence())
                          : TypeDependence::None)),
-      SizeExpr(SizeExpr), ElementType(ElementType), loc(loc) {}
+      SizeExpr(SizeExpr), ElementType(ElementType), loc(loc), Context(Context) {
+}
+
+SplitQualType DependentSizedExtVectorType::getSplitUnqualifiedType() const {
+  auto SplitElem = ElementType.getSplitUnqualifiedType();
+  QualType UnqualElemTy(SplitElem.Ty, 0);
+  if (UnqualElemTy == ElementType)
+    return SplitQualType(this, Qualifiers());
+
+  auto UnqualVecTy = Context.getDependentSizedExtVectorType(
+      UnqualElemTy, getSizeExpr(), getAttributeLoc());
+  return SplitQualType(UnqualVecTy.getTypePtr(), SplitElem.Quals);
+}
 
 void DependentSizedExtVectorType::Profile(llvm::FoldingSetNodeID &ID,
                                           const ASTContext &Context,
@@ -441,15 +464,32 @@ void DependentSizedMatrixType::Profile(llvm::FoldingSetNodeID &ID,
   ColumnExpr->Profile(ID, CTX, true);
 }
 
-VectorType::VectorType(QualType vecType, unsigned nElements, QualType canonType,
+VectorType::VectorType(const ASTContext &Context, QualType vecType,
+                       unsigned nElements, QualType canonType,
                        VectorKind vecKind)
-    : VectorType(Vector, vecType, nElements, canonType, vecKind) {}
+    : VectorType(Context, Vector, vecType, nElements, canonType, vecKind) {}
 
-VectorType::VectorType(TypeClass tc, QualType vecType, unsigned nElements,
-                       QualType canonType, VectorKind vecKind)
-    : Type(tc, canonType, vecType->getDependence()), ElementType(vecType) {
+VectorType::VectorType(const ASTContext &Context, TypeClass tc,
+                       QualType vecType, unsigned nElements, QualType canonType,
+                       VectorKind vecKind)
+    : Type(tc, canonType, vecType->getDependence()), ElementType(vecType),
+      Context(Context) {
   VectorTypeBits.VecKind = llvm::to_underlying(vecKind);
   VectorTypeBits.NumElements = nElements;
+}
+
+SplitQualType VectorType::getSplitUnqualifiedType() const {
+  auto SplitElem = ElementType.getSplitUnqualifiedType();
+  QualType UnqualElemTy(SplitElem.Ty, 0);
+  if (UnqualElemTy == ElementType)
+    return SplitQualType(this, Qualifiers());
+
+  auto UnqualVecTy =
+      getTypeClass() == ExtVector
+          ? Context.getExtVectorType(UnqualElemTy, getNumElements())
+          : Context.getVectorType(UnqualElemTy, getNumElements(),
+                                  getVectorKind());
+  return SplitQualType(UnqualVecTy.getTypePtr(), SplitElem.Quals);
 }
 
 bool Type::isPackedVectorBoolType(const ASTContext &ctx) const {
@@ -628,6 +668,22 @@ SplitQualType QualType::getSplitUnqualifiedTypeImpl(QualType type) {
   }
 
 done:
+  // Vector types can have qualified element type. We need to recursively
+  // process the element type, and possibly construct a new vector type with the
+  // unqualified version of the element type.
+  SplitQualType SplitVec;
+  if (auto *VTy = dyn_cast<VectorType>(split.Ty))
+    SplitVec = VTy->getSplitUnqualifiedType();
+  else if (auto *DVTy = dyn_cast<DependentVectorType>(split.Ty))
+    SplitVec = DVTy->getSplitUnqualifiedType();
+  else if (auto *DSEVTy = dyn_cast<DependentSizedExtVectorType>(split.Ty))
+    SplitVec = DSEVTy->getSplitUnqualifiedType();
+
+  if (SplitVec.Ty) {
+    quals.addConsistentQualifiers(SplitVec.Quals);
+    return SplitQualType(SplitVec.Ty, quals);
+  }
+
   return SplitQualType(lastTypeWithQuals, quals);
 }
 

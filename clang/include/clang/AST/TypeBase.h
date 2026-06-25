@@ -4167,13 +4167,14 @@ class DependentSizedExtVectorType : public Type, public llvm::FoldingSetNode {
 
   Expr *SizeExpr;
 
-  /// The element type of the array.
+  /// The element type of the vector.
   QualType ElementType;
 
   SourceLocation loc;
+  const ASTContext &Context;
 
-  DependentSizedExtVectorType(QualType ElementType, QualType can,
-                              Expr *SizeExpr, SourceLocation loc);
+  DependentSizedExtVectorType(const ASTContext &Context, QualType ElementType,
+                              QualType can, Expr *SizeExpr, SourceLocation loc);
 
 public:
   Expr *getSizeExpr() const { return SizeExpr; }
@@ -4183,11 +4184,13 @@ public:
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
 
+  SplitQualType getSplitUnqualifiedType() const;
+
   static bool classof(const Type *T) {
     return T->getTypeClass() == DependentSizedExtVector;
   }
 
-  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
+  void Profile(llvm::FoldingSetNodeID &ID) {
     Profile(ID, Context, getElementType(), getSizeExpr());
   }
 
@@ -4243,11 +4246,13 @@ protected:
   /// The element type of the vector.
   QualType ElementType;
 
-  VectorType(QualType vecType, unsigned nElements, QualType canonType,
-             VectorKind vecKind);
+  const ASTContext &Context;
 
-  VectorType(TypeClass tc, QualType vecType, unsigned nElements,
+  VectorType(const ASTContext &Context, QualType vecType, unsigned nElements,
              QualType canonType, VectorKind vecKind);
+
+  VectorType(const ASTContext &Context, TypeClass tc, QualType vecType,
+             unsigned nElements, QualType canonType, VectorKind vecKind);
 
 public:
   QualType getElementType() const { return ElementType; }
@@ -4255,6 +4260,8 @@ public:
 
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
+
+  SplitQualType getSplitUnqualifiedType() const;
 
   VectorKind getVectorKind() const {
     return VectorKind(VectorTypeBits.VecKind);
@@ -4294,9 +4301,11 @@ class DependentVectorType : public Type, public llvm::FoldingSetNode {
   QualType ElementType;
   Expr *SizeExpr;
   SourceLocation Loc;
+  const ASTContext &Context;
 
-  DependentVectorType(QualType ElementType, QualType CanonType, Expr *SizeExpr,
-                      SourceLocation Loc, VectorKind vecKind);
+  DependentVectorType(const ASTContext &Context, QualType ElementType,
+                      QualType CanonType, Expr *SizeExpr, SourceLocation Loc,
+                      VectorKind vecKind);
 
 public:
   Expr *getSizeExpr() const { return SizeExpr; }
@@ -4309,11 +4318,13 @@ public:
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
 
+  SplitQualType getSplitUnqualifiedType() const;
+
   static bool classof(const Type *T) {
     return T->getTypeClass() == DependentVector;
   }
 
-  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Context) {
+  void Profile(llvm::FoldingSetNodeID &ID) {
     Profile(ID, Context, getElementType(), getSizeExpr(), getVectorKind());
   }
 
@@ -4331,8 +4342,9 @@ public:
 class ExtVectorType : public VectorType {
   friend class ASTContext; // ASTContext creates these.
 
-  ExtVectorType(QualType vecType, unsigned nElements, QualType canonType)
-      : VectorType(ExtVector, vecType, nElements, canonType,
+  ExtVectorType(const ASTContext &Context, QualType vecType, unsigned nElements,
+                QualType canonType)
+      : VectorType(Context, ExtVector, vecType, nElements, canonType,
                    VectorKind::Generic) {}
 
 public:
