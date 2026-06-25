@@ -45,21 +45,18 @@ class Semaphore {
   LIBC_INLINE int wait_until(internal::AbsTimeout timeout) {
     while (trywait() != 0) {
       auto wait_or = value.wait(/*expected=*/0, timeout, is_shared);
-      if (wait_or.has_value())
-        continue;
 
-      if (wait_or.error() == EAGAIN)
-        continue;
+      // returned error is not a benign race EAGAIN
+      if (!wait_or.has_value() && wait_or.error() != EAGAIN) {
 
-      if (wait_or.error() == ETIMEDOUT) {
-        // Final attempt in case a post() raced with the timeout.
-        if (trywait() == 0)
+        // ETIMEDOUT still needs a final trywait() in case a post() raced with
+        // the deadline
+        if (wait_or.error() == ETIMEDOUT && trywait() == 0)
           return 0;
-        return ETIMEDOUT;
-      }
 
-      // Any other error is unexpected (e.g. EINVAL/EFAULT).
-      return wait_or.error();
+        // Any other error (e.g. EINVAL/EFAULT)
+        return wait_or.error();
+      }
     }
     return 0;
   }
