@@ -10574,6 +10574,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "expbf16",
+    additional_deps = [
+        ":__support_math_expbf16",
+    ],
+)
+
+libc_math_function(
     name = "exp10",
     additional_deps = [
         ":__support_math_exp10",
