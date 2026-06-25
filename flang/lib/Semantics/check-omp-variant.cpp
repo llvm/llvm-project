@@ -40,7 +40,6 @@ namespace Fortran::semantics {
 using namespace Fortran::semantics::omp;
 
 void OmpStructureChecker::Enter(const parser::OmpClause::When &x) {
-  CheckAllowedClause(llvm::omp::Clause::OMPC_when);
   OmpVerifyModifiers(
       x.v, llvm::omp::OMPC_when, GetContext().clauseSource, context_);
 }
