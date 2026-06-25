@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/../test_errors.py %s %flang_fc1
 
 ! Test case 1: Device arrays with ignore_tkr(c)
 subroutine test_device_arrays()

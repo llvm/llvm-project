@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/../test_errors.py %s %flang_fc1
 
 ! Host-side generic wrappers can share names with intrinsics. In device code,
 ! intrinsic resolution must still win when the host wrapper is not
