@@ -170,8 +170,12 @@ public:
         NewI.HeadPayload = {HeapProvenanceLattice::Payload::Kind::Ref, Op};
       }
 
-      if (isa<GEPOperator>(&I) || isa<BitCastInst>(&I) || isa<AddrSpaceCastInst>(&I) ||
-          isa<IntToPtrInst>(&I) || isa<PHINode>(&I) || isa<SelectInst>(&I)) {
+      if (auto *GEP = dyn_cast<GEPOperator>(&I)) {
+        if (GEP->getPointerOperand() == Op)
+          MergeInto(&I, NewI);
+      } else if (isa<BitCastInst>(&I) || isa<AddrSpaceCastInst>(&I) ||
+                 isa<PtrToIntInst>(&I) || isa<IntToPtrInst>(&I) ||
+                 isa<BinaryOperator>(&I) || isa<PHINode>(&I) || isa<SelectInst>(&I)) {
         MergeInto(&I, NewI);
       } else if (auto *CB = dyn_cast<CallBase>(&I)) {
         Function *Callee = CB->getCalledFunction();
@@ -273,8 +277,12 @@ public:
       } else if (auto *ASC = dyn_cast<AddrSpaceCastInst>(&I)) {
         MergeInto(ASC->getOperand(0), BackInfo);
       } else if (auto *ITP = dyn_cast<IntToPtrInst>(&I)) {
-        if (auto *PTI = dyn_cast<PtrToIntOperator>(ITP->getOperand(0)))
-          MergeInto(PTI->getOperand(0), BackInfo);
+        MergeInto(ITP->getOperand(0), BackInfo);
+      } else if (auto *PTI = dyn_cast<PtrToIntInst>(&I)) {
+        MergeInto(PTI->getOperand(0), BackInfo);
+      } else if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
+        for (Value *Op : BO->operands())
+          MergeInto(Op, BackInfo);
       } else if (auto *PHI = dyn_cast<PHINode>(&I)) {
         for (Value *InV : PHI->incoming_values())
           MergeInto(InV, BackInfo);
