@@ -372,7 +372,8 @@ void xegpu::removeTemporaryLayoutAttrs(Operation *op) {
 
 /// Returns true if every dimension of `shape` except the innermost
 /// `numInnerDims` is a unit (size-1) dimension.
-static bool leadingDimsAreUnit(ArrayRef<int64_t> shape, int numInnerDims) {
+[[maybe_unused]] static bool leadingDimsAreUnit(ArrayRef<int64_t> shape,
+                                                int numInnerDims) {
   int numLeading = static_cast<int>(shape.size()) - numInnerDims;
   if (numLeading <= 0)
     return true;
@@ -1453,7 +1454,7 @@ xegpu::setupStoreNdAnchorLayout(xegpu::LayoutKind layoutKind,
   Type elemTy = srcVecTy.getElementType();
   auto subgroupSize = uArch->getSubgroupSize();
   auto dataShape = srcVecTy.getShape();
-  int rank = srcVecTy.getRank();
+  [[maybe_unused]] int rank = srcVecTy.getRank();
   assert(rank >= 2 && "Expected at least 2D shape for ND op");
 
   // Compute the default 2D block IO lane layout / lane data.
@@ -1506,7 +1507,7 @@ xegpu::setupPrefetchNdAnchorLayout(xegpu::LayoutKind layoutKind,
   Type elemTy = tdescTy.getElementType();
   auto subgroupSize = uArch->getSubgroupSize();
   auto dataShape = tdescTy.getShape();
-  int rank = tdescTy.getRank();
+  [[maybe_unused]] int rank = tdescTy.getRank();
   assert(rank >= 2 && "Expected at least 2D shape for ND op");
 
   // Compute the default 2D block IO lane layout / lane data.

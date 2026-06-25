@@ -428,6 +428,7 @@ static bool hasDistinctMetadataIntrinsic(const Function &F) {
 /// Check whether \p F is eligible for function merging.
 static bool isEligibleForMerging(Function &F) {
   return !F.isDeclaration() && !F.hasAvailableExternallyLinkage() &&
+         !F.hasFnAttribute(Attribute::NoIPA) &&
          !hasDistinctMetadataIntrinsic(F);
 }
 
@@ -473,7 +474,8 @@ template <typename FuncContainer> bool MergeFunctions::run(FuncContainer &M) {
       if (!I)
         continue;
       Function *F = cast<Function>(I);
-      if (!F->isDeclaration() && !F->hasAvailableExternallyLinkage()) {
+      if (!F->isDeclaration() && !F->hasAvailableExternallyLinkage() &&
+          !F->hasFnAttribute(Attribute::NoIPA)) {
         Changed |= insert(F);
       }
     }

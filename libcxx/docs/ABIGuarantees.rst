@@ -67,7 +67,7 @@ removes these workarounds for platforms that don't care about ABI compatibility.
 
 ``_LIBCPP_ABI_NO_COMPRESSED_PAIR_PADDING``
 ------------------------------------------
-This removes artificial padding from ``_LIBCPP_COMPRESSED_PAIR`` and ``_LIBCPP_COMPRESSED_TRIPLE``.
+This removes artificial padding from ``_LIBCPP_COMPRESSED_PAIR``.
 
 These macros are used inside the associative and unordered containers, ``deque``, ``forward_list``, ``future``,
 ``list``, ``basic_string``, ``function``, ``shared_ptr``, ``unique_ptr``, and ``vector`` to stay ABI compatible with the

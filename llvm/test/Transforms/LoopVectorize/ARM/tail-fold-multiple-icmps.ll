@@ -21,10 +21,8 @@ define arm_aapcs_vfpcc i32 @minmaxval4(ptr nocapture readonly %x, ptr nocapture 
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ splat (i32 -2147483648), [[VECTOR_PH]] ], [ [[TMP1:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[X:%.*]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], [[VEC_PHI1]]
-; CHECK-NEXT:    [[TMP1]] = select <4 x i1> [[TMP7]], <4 x i32> [[WIDE_LOAD]], <4 x i32> [[VEC_PHI1]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP2]] = select <4 x i1> [[TMP8]], <4 x i32> [[WIDE_LOAD]], <4 x i32> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP1]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[WIDE_LOAD]], <4 x i32> [[VEC_PHI1]])
+; CHECK-NEXT:    [[TMP2]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[WIDE_LOAD]], <4 x i32> [[VEC_PHI]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -53,10 +51,8 @@ define arm_aapcs_vfpcc i32 @minmaxval4(ptr nocapture readonly %x, ptr nocapture 
 ; CHECK-NEXT:    [[MAX_027:%.*]] = phi i32 [ [[COND]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX2]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[X]], i32 [[I_029]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp sgt i32 [[TMP6]], [[MAX_027]]
-; CHECK-NEXT:    [[COND]] = select i1 [[CMP1]], i32 [[TMP6]], i32 [[MAX_027]]
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp slt i32 [[TMP6]], [[MIN_028]]
-; CHECK-NEXT:    [[COND9]] = select i1 [[CMP4]], i32 [[TMP6]], i32 [[MIN_028]]
+; CHECK-NEXT:    [[COND]] = call i32 @llvm.smax.i32(i32 [[TMP6]], i32 [[MAX_027]])
+; CHECK-NEXT:    [[COND9]] = call i32 @llvm.smin.i32(i32 [[TMP6]], i32 [[MIN_028]])
 ; CHECK-NEXT:    [[INC]] = add nuw i32 [[I_029]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[INC]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP_LOOPEXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
@@ -77,10 +73,8 @@ for.body:
   %max.027 = phi i32 [ %cond, %for.body ], [ -2147483648, %entry ]
   %arrayidx = getelementptr inbounds i32, ptr %x, i32 %i.029
   %0 = load i32, ptr %arrayidx, align 4
-  %cmp1 = icmp sgt i32 %0, %max.027
-  %cond = select i1 %cmp1, i32 %0, i32 %max.027
-  %cmp4 = icmp slt i32 %0, %min.028
-  %cond9 = select i1 %cmp4, i32 %0, i32 %min.028
+  %cond = call i32 @llvm.smax(i32 %0, i32 %max.027)
+  %cond9 = call i32 @llvm.smin(i32 %0, i32 %min.028)
   %inc = add nuw i32 %i.029, 1
   %exitcond.not = icmp eq i32 %inc, %N
   br i1 %exitcond.not, label %for.cond.cleanup, label %for.body

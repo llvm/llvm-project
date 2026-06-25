@@ -92,6 +92,10 @@ struct DeviceExprChecker
             }
             return {};
           }
+          if (*attrs == common::CUDASubprogramAttrs::Global) {
+            return parser::MessageFormattedText(
+                "not yet implemented: CUDA dynamic parallelism"_err_en_US);
+          }
         }
       }
 

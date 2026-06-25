@@ -1081,6 +1081,83 @@ def SPIRV_GLSClampOp : SPIRV_GLTernaryArithmeticOp<"SClamp", 45, SPIRV_Integer> 
 
 // -----
 
+def SPIRV_GLNMaxOp : SPIRV_GLBinaryArithmeticOp<"NMax", 80, SPIRV_Float, [AlwaysSpeculatable]> {
+  let summary = "Return maximum of two floating-point operands, NaN-aware";
+
+  let description = [{
+    Result is y if x < y; otherwise result is x, where x and y are interpreted
+    as floating-point. NMax considers a NaN argument as missing, so if one
+    operand is a NaN the result is the other operand. If both operands are NaNs,
+    the result is a NaN.
+
+    The operands must all be a scalar or vector whose component type is
+    floating-point.
+
+    Result Type and the type of all operands must be the same type. Results are
+    computed per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.NMax %0, %1 : f32
+    %3 = spirv.GL.NMax %0, %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_GLNMinOp : SPIRV_GLBinaryArithmeticOp<"NMin", 79, SPIRV_Float, [AlwaysSpeculatable]> {
+  let summary = "Return minimum of two floating-point operands, NaN-aware";
+
+  let description = [{
+    Result is y if y < x; otherwise result is x, where x and y are interpreted
+    as floating-point. NMin considers a NaN argument as missing, so if one
+    operand is a NaN the result is the other operand. If both operands are NaNs,
+    the result is a NaN.
+
+    The operands must all be a scalar or vector whose component type is
+    floating-point.
+
+    Result Type and the type of all operands must be the same type. Results are
+    computed per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.NMin %0, %1 : f32
+    %3 = spirv.GL.NMin %0, %1 : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_GLNClampOp : SPIRV_GLTernaryArithmeticOp<"NClamp", 81, SPIRV_Float> {
+  let summary = "Clamp x between min and max values, NaN-aware";
+
+  let description = [{
+    Result is min(max(x, minVal), maxVal). The resulting value is poison if
+    minVal > maxVal. The semantics used by min() and max() are those of NMin
+    and NMax, so NaN arguments are considered missing.
+
+    The operands must all be a scalar or vector whose component type is
+    floating-point.
+
+    Result Type and the type of all operands must be the same type. Results are
+    computed per component.
+
+    #### Example:
+
+    ```mlir
+    %2 = spirv.GL.NClamp %x, %min, %max : f32
+    %3 = spirv.GL.NClamp %x, %min, %max : vector<3xf16>
+    ```
+  }];
+}
+
+// -----
+
 def SPIRV_GLFmaOp : SPIRV_GLTernaryArithmeticOp<"Fma", 50, SPIRV_Float, [AlwaysSpeculatable]> {
   let summary = "Computes a * b + c.";
 

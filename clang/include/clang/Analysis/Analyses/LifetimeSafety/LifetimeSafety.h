@@ -38,6 +38,9 @@ struct LifetimeSafetyOpts {
   /// Maximum number of CFG blocks to analyze. Functions with larger CFGs will
   /// be skipped.
   size_t MaxCFGBlocks;
+
+  /// Whether to suggest lifetime annotations.
+  bool SuggestAnnotations;
 };
 
 /// Enum to track functions visible across or within TU.
@@ -157,6 +160,7 @@ public:
 /// The main entry point for the analysis.
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                                LifetimeSafetySemaHelper *SemaHelper,
+                               const LifetimeSafetyOpts &Opts,
                                LifetimeSafetyStats &Stats, bool CollectStats);
 
 namespace internal {

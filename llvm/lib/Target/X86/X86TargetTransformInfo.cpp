@@ -6727,8 +6727,10 @@ bool X86TTIImpl::areInlineCompatible(const Function *Caller,
 
   // Check whether callee features are a subset of caller features
   // (apart from the ignore list).
-  FeatureBitset RealCallerBits = CallerBits & ~InlineFeatureIgnoreList;
-  FeatureBitset RealCalleeBits = CalleeBits & ~InlineFeatureIgnoreList;
+  const FeatureBitset &InlineIgnoreFeatures =
+      CallerSubtarget.getInlineIgnoreFeatures();
+  FeatureBitset RealCallerBits = CallerBits & ~InlineIgnoreFeatures;
+  FeatureBitset RealCalleeBits = CalleeBits & ~InlineIgnoreFeatures;
   if ((RealCallerBits & RealCalleeBits) != RealCalleeBits)
     return false;
 

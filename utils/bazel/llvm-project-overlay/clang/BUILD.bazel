@@ -2646,16 +2646,16 @@ cc_library(
 cc_library(
     name = "scalable_static_analysis_core",
     srcs = glob([
-        "lib/ScalableStaticAnalysisFramework/Core/**/*.cpp",
-        "lib/ScalableStaticAnalysisFramework/Core/**/*.h",
+        "lib/ScalableStaticAnalysis/Core/**/*.cpp",
+        "lib/ScalableStaticAnalysis/Core/**/*.h",
     ]),
-    hdrs = glob(["include/clang/ScalableStaticAnalysisFramework/Core/**/*.h"] + [
-        "include/clang/ScalableStaticAnalysisFramework/SSAFBuiltinForceLinker.h",
-        "include/clang/ScalableStaticAnalysisFramework/SSAFForceLinker.h",
+    hdrs = glob(["include/clang/ScalableStaticAnalysis/Core/**/*.h"] + [
+        "include/clang/ScalableStaticAnalysis/SSAFBuiltinForceLinker.h",
+        "include/clang/ScalableStaticAnalysis/SSAFForceLinker.h",
     ]),
     textual_hdrs = glob([
-        "include/clang/ScalableStaticAnalysisFramework/Core/**/*.def",
-        "include/clang/ScalableStaticAnalysisFramework/*.def",
+        "include/clang/ScalableStaticAnalysis/Core/**/*.def",
+        "include/clang/ScalableStaticAnalysis/*.def",
     ]),
     deps = [
         ":ast",
@@ -2669,11 +2669,11 @@ cc_library(
 cc_library(
     name = "scalable_static_analysis_analyses",
     srcs = glob([
-        "lib/ScalableStaticAnalysisFramework/Analyses/**/*.cpp",
-        "lib/ScalableStaticAnalysisFramework/Analyses/**/*.h",
+        "lib/ScalableStaticAnalysis/Analyses/**/*.cpp",
+        "lib/ScalableStaticAnalysis/Analyses/**/*.h",
     ]),
-    hdrs = glob(["include/clang/ScalableStaticAnalysisFramework/Analyses/**/*.h"]),
-    includes = ["lib/ScalableStaticAnalysisFramework/Analyses"],
+    hdrs = glob(["include/clang/ScalableStaticAnalysis/Analyses/**/*.h"]),
+    includes = ["lib/ScalableStaticAnalysis/Analyses"],
     deps = [
         ":analysis",
         ":ast",
@@ -2686,9 +2686,9 @@ cc_library(
 cc_library(
     name = "scalable_static_analysis_tool",
     srcs = glob([
-        "lib/ScalableStaticAnalysisFramework/Tool/**/*.cpp",
+        "lib/ScalableStaticAnalysis/Tool/**/*.cpp",
     ]),
-    hdrs = glob(["include/clang/ScalableStaticAnalysisFramework/Tool/**/*.h"]),
+    hdrs = glob(["include/clang/ScalableStaticAnalysis/Tool/**/*.h"]),
     deps = [
         ":basic",
         ":scalable_static_analysis_core",
@@ -2699,9 +2699,9 @@ cc_library(
 cc_library(
     name = "scalable_static_analysis_source_transformation",
     srcs = glob([
-        "lib/ScalableStaticAnalysisFramework/SourceTransformation/**/*.cpp",
+        "lib/ScalableStaticAnalysis/SourceTransformation/**/*.cpp",
     ]),
-    hdrs = glob(["include/clang/ScalableStaticAnalysisFramework/SourceTransformation/**/*.h"]),
+    hdrs = glob(["include/clang/ScalableStaticAnalysis/SourceTransformation/**/*.h"]),
     deps = [
         ":ast",
         ":basic",
@@ -2715,9 +2715,9 @@ cc_library(
 cc_library(
     name = "scalable_static_analysis_frontend",
     srcs = glob([
-        "lib/ScalableStaticAnalysisFramework/Frontend/**/*.cpp",
+        "lib/ScalableStaticAnalysis/Frontend/**/*.cpp",
     ]),
-    hdrs = glob(["include/clang/ScalableStaticAnalysisFramework/Frontend/**/*.h"]),
+    hdrs = glob(["include/clang/ScalableStaticAnalysis/Frontend/**/*.h"]),
     deps = [
         ":ast",
         ":basic",

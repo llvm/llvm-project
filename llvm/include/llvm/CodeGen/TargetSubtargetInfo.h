@@ -364,6 +364,12 @@ public:
   }
 
   virtual bool isRegisterReservedByUser(Register R) const { return false; }
+
+  /// Target features to ignore for inline compatibility check.
+  virtual const FeatureBitset &getInlineIgnoreFeatures() const = 0;
+  /// Target features where the callee may have an additional feature,
+  /// instead of the caller.
+  virtual const FeatureBitset &getInlineInverseFeatures() const = 0;
 };
 } // end namespace llvm
 

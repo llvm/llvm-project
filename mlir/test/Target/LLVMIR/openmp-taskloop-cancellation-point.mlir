@@ -32,7 +32,7 @@ llvm.func @_QPtest(%arg0: !llvm.ptr {fir.bindc_name = "arg", llvm.noalias, llvm.
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 // CHECK-LABEL: define void @_QPtest(
@@ -164,7 +164,7 @@ llvm.func @_QPtest2(%arg0: !llvm.ptr {fir.bindc_name = "arg", llvm.noalias, llvm
         }
       }
       omp.terminator
-    }
+    } {omp.combined}
     omp.terminator
   }
   llvm.return

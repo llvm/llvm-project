@@ -11705,11 +11705,12 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
         SDValue LastElt = BV.getOperand(NumElts - 1);
         assert(LastElt.getScalarValueSizeInBits() >= EltSizeInBits &&
                "Expected BUILD_VECTOR operand as wide as element type");
-        EVT IntEltVT = EVT::getIntegerVT(*DAG.getContext(), EltSizeInBits);
         LastElt = DAG.getBitcast(LastElt.getValueType().changeTypeToInteger(),
                                  LastElt);
-        return DAG.getZExtOrTrunc(DAG.getZExtOrTrunc(LastElt, DL, IntEltVT), DL,
-                                  VT);
+        SDValue Ext = DAG.getZExtOrTrunc(LastElt, DL, VT);
+        APInt Mask = APInt::getLowBitsSet(VT.getSizeInBits(), EltSizeInBits);
+        return DAG.getNode(ISD::AND, DL, VT, Ext,
+                           DAG.getConstant(Mask, DL, VT));
       }
     }
   }
@@ -12237,7 +12238,7 @@ SDValue DAGCombiner::visitPEXT(SDNode *N) {
   // pext(x, -1) -> x  (all bits selected, packed into low positions = x)
   if (isAllOnesOrAllOnesSplat(N1))
     return N0;
-  // fold pext(c1, c2) -> compressBits(c1, c2)
+  // fold pext(c1, c2) -> c3
   if (SDValue C = DAG.FoldConstantArithmetic(ISD::PEXT, DL, VT, {N0, N1}))
     return C;
   return SDValue();
@@ -12257,7 +12258,7 @@ SDValue DAGCombiner::visitPDEP(SDNode *N) {
   if (isAllOnesOrAllOnesSplat(N1))
     return N0;
 
-  // fold pdep(c1, c2) -> expandBits(c1, c2)
+  // fold pdep(c1, c2) -> c3
   if (SDValue C = DAG.FoldConstantArithmetic(ISD::PDEP, DL, VT, {N0, N1}))
     return C;
 

@@ -96,9 +96,8 @@ struct __num_get : protected __num_get_base {
       _LIBCPP_DIAGNOSTIC_PUSH
       _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wpsabi")
       using __vec   = __simd_vector<char, 32>;
-      __vec __chars = std::__broadcast<__vec>(__val);
       __vec __cmp   = std::__partial_load<__vec, __int_chr_cnt>(__atoms);
-      auto __res    = __chars == __cmp;
+      auto __res    = __vec(__val) == __cmp;
       if (std::__none_of(__res))
         return __int_chr_cnt;
       return std::min(__int_chr_cnt, std::__find_first_set(__res));

@@ -2986,6 +2986,7 @@ struct ModuleSubprogram {
   std::variant<common::Indirection<FunctionSubprogram>,
       common::Indirection<SubroutineSubprogram>,
       common::Indirection<SeparateModuleSubprogram>,
+      common::Indirection<OpenACCRoutineConstruct>,
       common::Indirection<CompilerDirective>>
       u;
 };

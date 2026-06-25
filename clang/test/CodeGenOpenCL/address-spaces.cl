@@ -1,15 +1,15 @@
-// RUN: %clang_cc1 %s -O0 -ffake-address-space-map -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,SPIR
-// RUN: %clang_cc1 %s -O0 -cl-std=CL3.0 -cl-ext=-all -ffake-address-space-map -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,SPIR
-// RUN: %clang_cc1 %s -O0 -cl-std=clc++2021 -cl-ext=-all -ffake-address-space-map -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,SPIR
-// RUN: %clang_cc1 %s -O0 -DCL20 -cl-std=CL2.0 -ffake-address-space-map -emit-llvm -o - | FileCheck %s --check-prefixes=CL20,CL20SPIR
-// RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-mesa3d -emit-llvm -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
-// RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-mesa3d -cl-std=CL3.0 -emit-llvm -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
-// RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-amdhsa -DCL20 -cl-std=CL2.0 -emit-llvm -o - | FileCheck %s --check-prefixes=CL20,CL20AMDGCN
-// RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-amdhsa -DCL20 -cl-std=CL3.0 -emit-llvm -o - | FileCheck %s --check-prefixes=CL20,CL20AMDGCN
-// RUN: %clang_cc1 %s -O0 -triple amdgcn-mesa-mesa3d -emit-llvm -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
-// RUN: %clang_cc1 %s -O0 -triple amdgcn-mesa-mesa3d -cl-std=CL3.0 -emit-llvm -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
-// RUN: %clang_cc1 %s -O0 -triple r600-- -emit-llvm -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
-// RUN: %clang_cc1 %s -O0 -triple r600-- -emit-llvm -cl-std=CL3.0 -o - | FileCheck --check-prefixes=CHECK,AMDGCN %s
+// RUN: %clang_cc1 %s -O0 -ffake-address-space-map -emit-llvm -o - -Wno-deprecated-attributes | FileCheck %s --check-prefixes=CHECK,SPIR
+// RUN: %clang_cc1 %s -O0 -cl-std=CL3.0 -cl-ext=-all -ffake-address-space-map -emit-llvm -o - -Wno-deprecated-attributes | FileCheck %s --check-prefixes=CHECK,SPIR
+// RUN: %clang_cc1 %s -O0 -cl-std=clc++2021 -cl-ext=-all -ffake-address-space-map -emit-llvm -o - -Wno-deprecated-attributes | FileCheck %s --check-prefixes=CHECK,SPIR
+// RUN: %clang_cc1 %s -O0 -DCL20 -cl-std=CL2.0 -ffake-address-space-map -emit-llvm -o - -Wno-deprecated-attributes | FileCheck %s --check-prefixes=CL20,CL20SPIR
+// RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-mesa3d -emit-llvm -o - -Wno-deprecated-attributes | FileCheck --check-prefixes=CHECK,AMDGCN %s
+// RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-mesa3d -cl-std=CL3.0 -emit-llvm -o - -Wno-deprecated-attributes | FileCheck --check-prefixes=CHECK,AMDGCN %s
+// RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-amdhsa -DCL20 -cl-std=CL2.0 -emit-llvm -o - -Wno-deprecated-attributes | FileCheck %s --check-prefixes=CL20,CL20AMDGCN
+// RUN: %clang_cc1 %s -O0 -triple amdgcn-amd-amdhsa -DCL20 -cl-std=CL3.0 -emit-llvm -o - -Wno-deprecated-attributes | FileCheck %s --check-prefixes=CL20,CL20AMDGCN
+// RUN: %clang_cc1 %s -O0 -triple amdgcn-mesa-mesa3d -emit-llvm -o - -Wno-deprecated-attributes | FileCheck --check-prefixes=CHECK,AMDGCN %s
+// RUN: %clang_cc1 %s -O0 -triple amdgcn-mesa-mesa3d -cl-std=CL3.0 -emit-llvm -o - -Wno-deprecated-attributes | FileCheck --check-prefixes=CHECK,AMDGCN %s
+// RUN: %clang_cc1 %s -O0 -triple r600-- -emit-llvm -o - -Wno-deprecated-attributes | FileCheck --check-prefixes=CHECK,AMDGCN %s
+// RUN: %clang_cc1 %s -O0 -triple r600-- -emit-llvm -cl-std=CL3.0 -o - -Wno-deprecated-attributes | FileCheck --check-prefixes=CHECK,AMDGCN %s
 
 // SPIR: %struct.S = type { i32, i32, ptr }
 // CL20SPIR: %struct.S = type { i32, i32, ptr addrspace(4) }

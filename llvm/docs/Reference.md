@@ -11,7 +11,6 @@ LLVM and API reference documentation.
 
 HowToUseAttributes
 CommandGuide/index
-CommandGuide/llvm-reduce
 OptBisect
 SymbolizerMarkupFormat
 PDB/index
@@ -27,7 +26,6 @@ MIRLangRef
 GlobalISel/index
 ConvergentOperations
 TestingGuide
-TestSuiteGuide
 GwpAsan
 XRay
 XRayExample
@@ -147,7 +145,6 @@ XRayFDRFormat
 
 {doc}`TestSuiteGuide`
 :   Describes how to compile and run the test-suite benchmarks.
-
 
 {doc}`GwpAsan`
 :   A sampled heap memory error detection toolkit designed for production use.

@@ -26,7 +26,7 @@ end
 ! HOST: %[[ORIG_J_ALLOC:.*]] = fir.alloca i32 {bindc_name = "j", {{.*}}}
 ! HOST: %[[ORIG_J_DECL:.*]]:2 = hlfir.declare %[[ORIG_J_ALLOC]]
 
-! DEVICE: omp.target {{.*}}map_entries(
+! DEVICE: omp.target kernel_type(spmd) {{.*}}map_entries(
 ! DEVICE-SAME:   %{{[[:alnum:]]+}} -> %{{[^,]+}},
 ! DEVICE-SAME:   %{{[[:alnum:]]+}} -> %{{[^,]+}},
 ! DEVICE-SAME:   %{{[[:alnum:]]+}} -> %{{[^,]+}},

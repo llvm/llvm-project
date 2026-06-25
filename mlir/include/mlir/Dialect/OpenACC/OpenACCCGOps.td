@@ -171,6 +171,29 @@ def OpenACC_ReductionAccumulateOp
 }
 
 //===----------------------------------------------------------------------===//
+// acc.reduction_accumulate_array
+//===----------------------------------------------------------------------===//
+
+def OpenACC_ReductionAccumulateArrayOp
+    : OpenACC_Op<"reduction_accumulate_array", []> {
+  let summary = "Accumulates elements of an array";
+  let description = [{
+    Accumulates elements of an array across the specified parallel dimension 
+    given an acc.bounds op.
+  }];
+  let arguments = (ins Arg<OpenACC_PointerLikeTypeInterface,
+                           "Reduction variable to update",
+                           [MemRead, MemWrite]>:$memref,
+                       OpenACC_DataBoundsType:$bounds,
+                       OpenACC_ReductionOperatorAttr:$reductionOperator,
+                       OpenACC_GPUParallelDimsAttr:$par_dims);
+  let assemblyFormat = [{
+    $memref `bounds` `(` $bounds `)` $reductionOperator `:` type($memref) attr-dict
+  }];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // acc.kernel_environment
 //===----------------------------------------------------------------------===//
 

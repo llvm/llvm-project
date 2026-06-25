@@ -87,12 +87,12 @@ define void @narrow_to_single_scalar_store_address_not_uniform_across_all_parts(
 ; VF4IC1-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 3
 ; VF4IC1-NEXT:    [[TMP4:%.*]] = lshr <4 x i32> [[VEC_IND]], splat (i32 1)
 ; VF4IC1-NEXT:    [[TMP5:%.*]] = extractelement <4 x i32> [[TMP4]], i64 0
-; VF4IC1-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP4]], i64 1
-; VF4IC1-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[TMP4]], i64 2
-; VF4IC1-NEXT:    [[TMP11:%.*]] = extractelement <4 x i32> [[TMP4]], i64 3
 ; VF4IC1-NEXT:    [[TMP6:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP5]]
+; VF4IC1-NEXT:    [[TMP7:%.*]] = extractelement <4 x i32> [[TMP4]], i64 1
 ; VF4IC1-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP7]]
+; VF4IC1-NEXT:    [[TMP9:%.*]] = extractelement <4 x i32> [[TMP4]], i64 2
 ; VF4IC1-NEXT:    [[TMP10:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP9]]
+; VF4IC1-NEXT:    [[TMP11:%.*]] = extractelement <4 x i32> [[TMP4]], i64 3
 ; VF4IC1-NEXT:    [[TMP12:%.*]] = getelementptr i32, ptr [[DST]], i32 [[TMP11]]
 ; VF4IC1-NEXT:    store i32 [[INDEX]], ptr [[TMP6]], align 4
 ; VF4IC1-NEXT:    store i32 [[TMP1]], ptr [[TMP8]], align 4
@@ -298,12 +298,12 @@ define void @narrow_scatter_with_uniform_addr_to_scalar_unroll(ptr noalias %src,
 ; VF4IC1-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF4IC1-NEXT:    [[TMP0:%.*]] = lshr <4 x i64> [[VEC_IND]], splat (i64 1)
 ; VF4IC1-NEXT:    [[TMP1:%.*]] = extractelement <4 x i64> [[TMP0]], i64 0
-; VF4IC1-NEXT:    [[TMP2:%.*]] = extractelement <4 x i64> [[TMP0]], i64 1
-; VF4IC1-NEXT:    [[TMP3:%.*]] = extractelement <4 x i64> [[TMP0]], i64 2
-; VF4IC1-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP0]], i64 3
 ; VF4IC1-NEXT:    [[TMP5:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP1]]
+; VF4IC1-NEXT:    [[TMP2:%.*]] = extractelement <4 x i64> [[TMP0]], i64 1
 ; VF4IC1-NEXT:    [[TMP6:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP2]]
+; VF4IC1-NEXT:    [[TMP3:%.*]] = extractelement <4 x i64> [[TMP0]], i64 2
 ; VF4IC1-NEXT:    [[TMP7:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP3]]
+; VF4IC1-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP0]], i64 3
 ; VF4IC1-NEXT:    [[TMP8:%.*]] = getelementptr i64, ptr [[DST]], i64 [[TMP4]]
 ; VF4IC1-NEXT:    [[TMP9:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[TMP1]]
 ; VF4IC1-NEXT:    [[TMP20:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[TMP2]]
@@ -321,10 +321,10 @@ define void @narrow_scatter_with_uniform_addr_to_scalar_unroll(ptr noalias %src,
 ; VF4IC1-NEXT:    [[TMP11:%.*]] = extractelement <4 x i8> [[TMP10]], i64 3
 ; VF4IC1-NEXT:    store i8 [[TMP11]], ptr [[DST2]], align 4
 ; VF4IC1-NEXT:    [[TMP12:%.*]] = extractelement <4 x i8> [[TMP10]], i64 0
-; VF4IC1-NEXT:    [[TMP13:%.*]] = extractelement <4 x i8> [[TMP10]], i64 1
-; VF4IC1-NEXT:    [[TMP14:%.*]] = extractelement <4 x i8> [[TMP10]], i64 2
 ; VF4IC1-NEXT:    store i8 [[TMP12]], ptr [[TMP5]], align 4
+; VF4IC1-NEXT:    [[TMP13:%.*]] = extractelement <4 x i8> [[TMP10]], i64 1
 ; VF4IC1-NEXT:    store i8 [[TMP13]], ptr [[TMP6]], align 4
+; VF4IC1-NEXT:    [[TMP14:%.*]] = extractelement <4 x i8> [[TMP10]], i64 2
 ; VF4IC1-NEXT:    store i8 [[TMP14]], ptr [[TMP7]], align 4
 ; VF4IC1-NEXT:    store i8 [[TMP11]], ptr [[TMP8]], align 4
 ; VF4IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

@@ -376,6 +376,12 @@ functions:
     return_type: int
     arguments:
       - type: const char *
+  - name: unsetenv
+    standards:
+      - posix
+    return_type: int
+    arguments:
+      - type: const char *
   - name: wctomb
     standards:
       - stdc

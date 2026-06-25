@@ -548,8 +548,8 @@ define void @switch_unconditional_duplicate_target(ptr %start, ptr %dest) {
 ; IC1-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP5]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> [[TMP0]]
 ; IC1-NEXT:    [[PREDPHI2:%.*]] = select <2 x i1> [[TMP5]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> [[PREDPHI]]
 ; IC1-NEXT:    [[TMP1:%.*]] = extractelement <2 x ptr> [[PREDPHI2]], i64 0
-; IC1-NEXT:    [[TMP2:%.*]] = extractelement <2 x ptr> [[PREDPHI2]], i64 1
 ; IC1-NEXT:    store i32 0, ptr [[TMP1]], align 4
+; IC1-NEXT:    [[TMP2:%.*]] = extractelement <2 x ptr> [[PREDPHI2]], i64 1
 ; IC1-NEXT:    store i32 0, ptr [[TMP2]], align 4
 ; IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; IC1-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
@@ -607,15 +607,15 @@ define void @switch_unconditional_duplicate_target(ptr %start, ptr %dest) {
 ; IC2-NEXT:    [[TMP10:%.*]] = icmp ult <2 x i32> [[WIDE_LOAD2]], splat (i32 10)
 ; IC2-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP9]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> [[TMP0]]
 ; IC2-NEXT:    [[PREDPHI2:%.*]] = select <2 x i1> [[TMP9]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> [[PREDPHI]]
-; IC2-NEXT:    [[TMP2:%.*]] = extractelement <2 x ptr> [[PREDPHI2]], i64 0
-; IC2-NEXT:    [[TMP3:%.*]] = extractelement <2 x ptr> [[PREDPHI2]], i64 1
 ; IC2-NEXT:    [[PREDPHI5:%.*]] = select <2 x i1> [[TMP10]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> [[TMP1]]
 ; IC2-NEXT:    [[PREDPHI4:%.*]] = select <2 x i1> [[TMP10]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> [[PREDPHI5]]
-; IC2-NEXT:    [[TMP4:%.*]] = extractelement <2 x ptr> [[PREDPHI4]], i64 0
-; IC2-NEXT:    [[TMP5:%.*]] = extractelement <2 x ptr> [[PREDPHI4]], i64 1
+; IC2-NEXT:    [[TMP2:%.*]] = extractelement <2 x ptr> [[PREDPHI2]], i64 0
 ; IC2-NEXT:    store i32 0, ptr [[TMP2]], align 4
+; IC2-NEXT:    [[TMP3:%.*]] = extractelement <2 x ptr> [[PREDPHI2]], i64 1
 ; IC2-NEXT:    store i32 0, ptr [[TMP3]], align 4
+; IC2-NEXT:    [[TMP4:%.*]] = extractelement <2 x ptr> [[PREDPHI4]], i64 0
 ; IC2-NEXT:    store i32 0, ptr [[TMP4]], align 4
+; IC2-NEXT:    [[TMP5:%.*]] = extractelement <2 x ptr> [[PREDPHI4]], i64 1
 ; IC2-NEXT:    store i32 0, ptr [[TMP5]], align 4
 ; IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; IC2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[STEP_ADD]], splat (i64 2)

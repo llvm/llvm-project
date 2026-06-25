@@ -5418,24 +5418,19 @@ void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
               VPDerivedIVRecipe>(&R))
         continue;
       for (VPValue *Def : R.definedValues()) {
-        // Skip recipes that are single-scalar or only have their first lane
-        // used.
+        // Skip recipes that are single-scalar.
         // TODO: The Defs skipped here may or may not be vector values.
         // Introduce Unpacks, and remove them later, if they are guaranteed to
         // produce scalar values.
-        if (vputils::isSingleScalar(Def) || vputils::onlyFirstLaneUsed(Def))
+        if (vputils::isSingleScalar(Def))
           continue;
 
-        // At the moment, we create unpacks only for scalar users outside
-        // replicate regions. Recipes inside replicate regions still extract the
-        // required lanes implicitly.
-        // TODO: Remove once replicate regions are unrolled completely.
-        auto IsCandidateUnpackUser = [Def](VPUser *U) {
-          VPRegionBlock *ParentRegion = cast<VPRecipeBase>(U)->getRegion();
-          return U->usesScalars(Def) &&
-                 (!ParentRegion || !ParentRegion->isReplicator());
-        };
-        if (none_of(Def->users(), IsCandidateUnpackUser))
+        // Only introduce an Unpack if some, but not all, users use the first
+        // lane only.
+        unsigned NumFirstLaneUsers = count_if(Def->users(), [&Def](VPUser *U) {
+          return U->usesFirstLaneOnly(Def);
+        });
+        if (!NumFirstLaneUsers || NumFirstLaneUsers == Def->getNumUsers())
           continue;
 
         auto *Unpack = new VPInstruction(VPInstruction::Unpack, {Def});
@@ -5443,10 +5438,9 @@ void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
           Unpack->insertBefore(*VPBB, VPBB->getFirstNonPhi());
         else
           Unpack->insertAfter(&R);
-        Def->replaceUsesWithIf(Unpack,
-                               [&IsCandidateUnpackUser](VPUser &U, unsigned) {
-                                 return IsCandidateUnpackUser(&U);
-                               });
+        Def->replaceUsesWithIf(Unpack, [&Def](VPUser &U, unsigned) {
+          return U.usesFirstLaneOnly(Def);
+        });
       }
     }
   }

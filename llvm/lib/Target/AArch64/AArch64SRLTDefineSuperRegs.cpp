@@ -82,6 +82,7 @@
 // [1] https://github.com/llvm/llvm-project/pull/168353
 //===----------------------------------------------------------------------===//
 
+#include "AArch64.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
@@ -89,7 +90,9 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/Debug.h"
@@ -101,15 +104,27 @@ using namespace llvm;
 
 namespace {
 
-struct AArch64SRLTDefineSuperRegs : public MachineFunctionPass {
-  inline static char ID = 0;
-
-  AArch64SRLTDefineSuperRegs() : MachineFunctionPass(ID) {}
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
+class AArch64SRLTDefineSuperRegsImpl {
+private:
+  const AArch64Subtarget *Subtarget = nullptr;
+  const AArch64RegisterInfo *TRI = nullptr;
 
   Register getWidestSuperReg(Register R, const BitVector &RequiredBaseRegUnits,
                              const BitVector &QHiRegUnits);
+
+public:
+  bool run(MachineFunction &MF);
+};
+
+class AArch64SRLTDefineSuperRegsLegacy : public MachineFunctionPass {
+public:
+  inline static char ID = 0;
+
+  AArch64SRLTDefineSuperRegsLegacy() : MachineFunctionPass(ID) {}
+
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    return AArch64SRLTDefineSuperRegsImpl().run(MF);
+  }
 
   StringRef getPassName() const override { return PASS_NAME; }
 
@@ -119,16 +134,12 @@ struct AArch64SRLTDefineSuperRegs : public MachineFunctionPass {
     AU.addPreservedID(MachineDominatorsID);
     MachineFunctionPass::getAnalysisUsage(AU);
   }
-
-private:
-  MachineFunction *MF = nullptr;
-  const AArch64Subtarget *Subtarget = nullptr;
-  const AArch64RegisterInfo *TRI = nullptr;
 };
 
 } // end anonymous namespace
 
-INITIALIZE_PASS(AArch64SRLTDefineSuperRegs, DEBUG_TYPE, PASS_NAME, false, false)
+INITIALIZE_PASS(AArch64SRLTDefineSuperRegsLegacy, DEBUG_TYPE, PASS_NAME, false,
+                false)
 
 // Returns the widest super-reg for a given reg, or NoRegister if no suitable
 // wider super-reg has been found. For example:
@@ -138,7 +149,7 @@ INITIALIZE_PASS(AArch64SRLTDefineSuperRegs, DEBUG_TYPE, PASS_NAME, false, false)
 //  W1_W2 -> X1_X2
 //  D0_D1 -> Q0_Q1 (without SVE)
 //        -> Z0_Z1 (with SVE)
-Register AArch64SRLTDefineSuperRegs::getWidestSuperReg(
+Register AArch64SRLTDefineSuperRegsImpl::getWidestSuperReg(
     Register R, const BitVector &RequiredBaseRegUnits,
     const BitVector &QHiRegUnits) {
   assert(R.isPhysical() &&
@@ -177,8 +188,7 @@ Register AArch64SRLTDefineSuperRegs::getWidestSuperReg(
   return LargestSuperReg;
 }
 
-bool AArch64SRLTDefineSuperRegs::runOnMachineFunction(MachineFunction &MF) {
-  this->MF = &MF;
+bool AArch64SRLTDefineSuperRegsImpl::run(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<AArch64Subtarget>();
   TRI = Subtarget->getRegisterInfo();
   const MachineRegisterInfo *MRI = &MF.getRegInfo();
@@ -243,6 +253,17 @@ bool AArch64SRLTDefineSuperRegs::runOnMachineFunction(MachineFunction &MF) {
   return Changed;
 }
 
-FunctionPass *llvm::createAArch64SRLTDefineSuperRegsPass() {
-  return new AArch64SRLTDefineSuperRegs();
+FunctionPass *llvm::createAArch64SRLTDefineSuperRegsLegacyPass() {
+  return new AArch64SRLTDefineSuperRegsLegacy();
+}
+
+PreservedAnalyses
+AArch64SRLTDefineSuperRegsPass::run(MachineFunction &MF,
+                                    MachineFunctionAnalysisManager &MFAM) {
+  const bool Changed = AArch64SRLTDefineSuperRegsImpl().run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

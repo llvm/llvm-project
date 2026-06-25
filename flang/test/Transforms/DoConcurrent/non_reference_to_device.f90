@@ -28,7 +28,7 @@ end subroutine test_non_refernece
 ! CHECK-SAME:                     capture(ByCopy) -> !fir.ref<index> {name = ""}
 
 
-! CHECK:      omp.target host_eval({{.*}} : index, index, index)
+! CHECK:      omp.target kernel_type(spmd) host_eval({{.*}} : index, index, index)
 ! CHECK-SAME:   map_entries({{.*}}, %[[DIM_MAP]] -> %{{.*}} :
 ! CHECK-SAME:               !fir.ref<i32>, !fir.ref<index>)
 

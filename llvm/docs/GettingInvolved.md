@@ -17,7 +17,6 @@ SphinxQuickstartTemplate
 HowToSubmitABug
 BugLifeCycle
 CodingStandards
-GitHub
 GitBisecting
 GitRepositoryPolicy
 ```

@@ -275,6 +275,27 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
       ReplaceNode(Node, TLSAlign);
       return;
     }
+    case Intrinsic::wasm_ptr_to_funcref: {
+      // Convert a function pointer to a funcref by reading the corresponding
+      // entry from the __indirect_function_table.
+      MachineFunction &MF = CurDAG->getMachineFunction();
+      auto PtrVT = MVT::getIntegerVT(MF.getDataLayout().getPointerSizeInBits());
+      MCSymbol *Table = WebAssembly::getOrCreateFunctionTableSymbol(
+          MF.getContext(), Subtarget);
+      SDValue TableSym = CurDAG->getMCSymbol(Table, PtrVT);
+      SDValue FuncPtr = Node->getOperand(1);
+      if (Subtarget->hasAddr64() && FuncPtr.getValueType() == MVT::i64) {
+        // table.get expects an i32 but on 64 bit platforms the function pointer
+        // is an i64. In that case, i32.wrap_i64 to convert.
+        FuncPtr = SDValue(CurDAG->getMachineNode(WebAssembly::I32_WRAP_I64, DL,
+                                                 MVT::i32, FuncPtr),
+                          0);
+      }
+      MachineSDNode *FuncRef = CurDAG->getMachineNode(
+          WebAssembly::TABLE_GET_FUNCREF, DL, MVT::funcref, TableSym, FuncPtr);
+      ReplaceNode(Node, FuncRef);
+      return;
+    }
     case Intrinsic::wasm_ref_test_func: {
       // First emit the TABLE_GET instruction to convert function pointer ==>
       // funcref

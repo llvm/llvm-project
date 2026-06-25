@@ -155,8 +155,7 @@ GEPNoWrapFlags vputils::getGEPFlagsForPtr(VPValue *Ptr) {
   while (auto *PtrVPI = dyn_cast<VPInstruction>(Ptr)) {
     unsigned Opcode = PtrVPI->getOpcode();
     if (Opcode == Instruction::GetElementPtr) {
-      if (any_of(drop_begin(PtrVPI->operands()),
-                 [](VPValue *Op) { return !match(Op, m_ZeroInt()); }))
+      if (!all_of(drop_begin(PtrVPI->operands()), match_fn(m_ZeroInt())))
         return PtrVPI->getGEPNoWrapFlags();
       Ptr = PtrVPI->getOperand(0);
       continue;

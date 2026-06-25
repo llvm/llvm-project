@@ -11,6 +11,7 @@
 #define _LIBCPP___LOCALE
 
 #include <__config>
+#include <__configuration/availability.h>
 
 #if _LIBCPP_HAS_LOCALIZATION
 
@@ -26,6 +27,7 @@
 #  include <cstdint>
 #  include <cstdlib>
 #  include <string>
+#  include <text_encoding>
 
 // Some platforms require more includes than others. Keep the includes on all plaforms for now.
 #  include <cstddef>
@@ -109,6 +111,13 @@ public:
     return std::use_facet<std::collate<_CharT> >(*this).compare(
                __x.data(), __x.data() + __x.size(), __y.data(), __y.data() + __y.size()) < 0;
   }
+#  if _LIBCPP_STD_VER >= 26
+  [[nodiscard]] _LIBCPP_AVAILABILITY_TEXT_ENCODING_ENVIRONMENT
+      _LIBCPP_HIDE_FROM_ABI std::text_encoding encoding() const {
+    std::string __name = name();
+    return std::__get_locale_encoding(__name.c_str());
+  }
+#  endif
 
   // global locale objects:
   static locale global(const locale&);
