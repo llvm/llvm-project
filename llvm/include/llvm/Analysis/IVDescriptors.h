@@ -59,6 +59,9 @@ enum class RecurKind {
   FMinimumNum, ///< FP min with llvm.minimumnum semantics
   FMaximumNum, ///< FP max with llvm.maximumnum semantics
   FMulAdd,  ///< Sum of float products with llvm.fmuladd(a * b + sum).
+  ComplexFMul, ///< Complex float multiply reduction. Represents one half
+               ///< (real or imaginary) of a paired complex multiplication
+               ///< reduction across two coupled PHI nodes.
   AnyOf,    ///< AnyOf reduction with select(cmp(),x,y) where one of (x,y) is
             ///< loop invariant, and both x and y are integer type.
   FindIV,   ///< FindIV reduction with select(icmp(),x,y) where one of (x,y) is
@@ -94,16 +97,20 @@ public:
                        Type *RT, bool Signed, bool Ordered,
                        SmallPtrSetImpl<Instruction *> &CI,
                        unsigned MinWidthCastToRecurTy,
-                       bool PhiHasUsesOutsideReductionChain = false)
+                       bool PhiHasUsesOutsideReductionChain = false,
+                       PHINode *PartnerPhi = nullptr,
+                       bool IsComplexRealPart = false)
       : IntermediateStore(Store), StartValue(Start), LoopExitInstr(Exit),
         Kind(K), FMF(FMF), ExactFPMathInst(ExactFP), RecurrenceType(RT),
         IsSigned(Signed), IsOrdered(Ordered),
         PhiHasUsesOutsideReductionChain(PhiHasUsesOutsideReductionChain),
-        MinWidthCastToRecurrenceType(MinWidthCastToRecurTy) {
+        MinWidthCastToRecurrenceType(MinWidthCastToRecurTy),
+        PartnerPhi(PartnerPhi), IsComplexRealPart(IsComplexRealPart) {
     CastInsts.insert_range(CI);
     assert(
-        (!PhiHasUsesOutsideReductionChain || isMinMaxRecurrenceKind(K)) &&
-        "Only min/max recurrences are allowed to have multiple uses currently");
+        (!PhiHasUsesOutsideReductionChain || isMinMaxRecurrenceKind(K) ||
+         K == RecurKind::ComplexFMul) &&
+        "Only min/max/complex recurrences are allowed to have multiple uses");
   }
 
   /// Simpler constructor for min/max recurrences that don't track cast
@@ -299,6 +306,23 @@ public:
     return isFindLastRecurrenceKind(Kind) || isFindIVRecurrenceKind(Kind);
   }
 
+  /// Returns true if the recurrence kind is a complex multiply reduction.
+  static bool isComplexRecurrenceKind(RecurKind Kind) {
+    return Kind == RecurKind::ComplexFMul;
+  }
+
+  /// Returns the partner PHI node for complex multiply reductions.
+  PHINode *getPartnerPhi() const { return PartnerPhi; }
+
+  /// Returns true if this is the real part of a complex multiply reduction.
+  bool isComplexRealPart() const { return IsComplexRealPart; }
+
+  /// Check if two PHI nodes form a complex multiply reduction pair.
+  LLVM_ABI static bool
+  isComplexMultiplyReduction(PHINode *PhiA, PHINode *PhiB, Loop *TheLoop,
+                             RecurrenceDescriptor &RdxDescA,
+                             RecurrenceDescriptor &RdxDescB);
+
   /// Returns the type of the recurrence. This type can be narrower than the
   /// actual type of the Phi if the recurrence has been type-promoted.
   Type *getRecurrenceType() const { return RecurrenceType; }
@@ -369,6 +393,10 @@ private:
   SmallPtrSet<Instruction *, 8> CastInsts;
   // The minimum width used by the recurrence.
   unsigned MinWidthCastToRecurrenceType;
+  // For ComplexFMul: the partner PHI node.
+  PHINode *PartnerPhi = nullptr;
+  // For ComplexFMul: true if this is the real part.
+  bool IsComplexRealPart = false;
 };
 
 /// A struct for saving information about induction variables.
