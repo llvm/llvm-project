@@ -4659,6 +4659,9 @@ bool VectorCombine::foldReductionZeroTest(Instruction &I) {
   NewCost += TTI.getArithmeticReductionCost(
       getArithmeticReductionInstruction(NewIID), CmpTy, std::nullopt, CostKind);
 
+  LLVM_DEBUG(dbgs() << "Found a reduction zero test: " << I << "\n  OldCost: "
+                    << OldCost << " vs NewCost: " << NewCost << "\n");
+
   if (!OldCost.isValid() || !NewCost.isValid() || NewCost > OldCost)
     return false;
 
