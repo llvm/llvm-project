@@ -649,7 +649,8 @@ void OmpStructureChecker::Enter(const parser::OmpLocator &x) {
   if (auto *reserved{parser::Unwrap<parser::OmpReservedIdentifier>(x.u)}) {
     std::string name{parser::ToLowerCaseLetters(reserved->v.source.ToString())};
     if (!llvm::is_contained(llvm::omp::getReservedLocatorNames(), name)) {
-      context_.Say(reserved->v.source, "Invalid use of a reserved name '%s'"_err_en_US,
+      context_.Say(reserved->v.source,
+          "Invalid use of a reserved name '%s'"_err_en_US,
           parser::ToUpperCaseLetters(name));
     }
   }
