@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -116,7 +117,7 @@ template <typename Map>
 static StringRef closestOption(const Map &Options, StringRef Missing) {
   uint32_t MaxEdit = 5;
   StringRef Closest;
-  for (auto Key : Options.keys()) {
+  for (const auto &Key : Options.keys()) {
     auto EditDist = Missing.edit_distance_insensitive(Key, true, MaxEdit);
     if (EditDist < MaxEdit) {
       Closest = Key;
@@ -239,9 +240,8 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
       StringSet<> IOOpts;
       IOOpts.insert("enabled");
       IOOpts.insert("filter");
-      for (auto &IRArg : IO->IRTArgs) {
+      for (auto &IRArg : IO->IRTArgs)
         IOOpts.insert(IRArg.Name);
-      }
       for (auto &InnerObjIt : *InnerObj) {
         auto Name = StringRef(InnerObjIt.first);
         if (Name == "filter") {
