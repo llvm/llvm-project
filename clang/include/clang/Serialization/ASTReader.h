@@ -1541,6 +1541,11 @@ private:
                                  SmallVectorImpl<ImportedModule> &Loaded,
                                  const ModuleFile *ImportedBy,
                                  unsigned ClientLoadCapabilities);
+
+  /// Returns true if a header has been added to one of \p F's umbrellas since
+  /// it was built, making the module out of date. Gated by
+  /// HeaderSearchOptions::ModulesValidateUmbrellaDirs.
+  bool isUmbrellaDirOutOfDate(ModuleFile &F);
   static ASTReadResult
   ReadOptionsBlock(llvm::BitstreamCursor &Stream, StringRef Filename,
                    unsigned ClientLoadCapabilities,

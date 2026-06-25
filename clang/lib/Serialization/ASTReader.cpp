@@ -3234,6 +3234,82 @@ ASTReader::getModuleForRelocationChecks(ModuleFile &F, bool DirectoryCheck) {
   return {M, IgnoreError};
 }
 
+/// Check whether the effective umbrella directory of \p M (an umbrella "dir",
+/// or the directory containing an umbrella header) contains a modular header
+/// newer than the module file timestamp \p ModTime, recursing into submodules.
+/// Such a header would have been collected on a clean build, so the module is
+/// out of date. On success the offending header, its module, and which umbrella
+/// kind \p M has are reported via the out-parameters.
+///
+/// Comparing modification times rather than the recorded input set is what lets
+/// this converge: an added umbrella-header sibling is not recorded as an input,
+/// but after a rebuild the module file is newer than the header.
+static bool isUmbrellaContentsNewer(ModuleMap &ModMap, Module *M,
+                                    time_t ModTime, FileManager &FileMgr,
+                                    std::string &OutOfDateHeader,
+                                    Module *&OutOfDateModule,
+                                    bool &OutOfDateIsUmbrellaHeader) {
+  if (OptionalDirectoryEntryRef Dir = M->getEffectiveUmbrellaDir()) {
+    llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
+    SmallString<128> DirNative;
+    llvm::sys::path::native(Dir->getName(), DirNative);
+    std::error_code EC;
+    for (llvm::vfs::recursive_directory_iterator I(FS, DirNative, EC), End;
+         I != End && !EC; I.increment(EC)) {
+      if (!ModMap.isModularHeaderExtension(I->path()))
+        continue;
+
+      auto Header = FileMgr.getOptionalFileRef(I->path());
+      if (!Header)
+        continue;
+
+      // Match collectModuleHeaderIncludes: ignore headers a clean build would
+      // not collect (excluded or otherwise unavailable).
+      if (ModMap.isHeaderUnavailableInModule(*Header, M))
+        continue;
+
+      if (Header->getModificationTime() > ModTime) {
+        OutOfDateHeader = Header->getName().str();
+        OutOfDateModule = M;
+        OutOfDateIsUmbrellaHeader = !M->getUmbrellaDirAsWritten();
+        return true;
+      }
+    }
+  }
+
+  for (Module *Sub : M->submodules())
+    if (isUmbrellaContentsNewer(ModMap, Sub, ModTime, FileMgr, OutOfDateHeader,
+                                OutOfDateModule, OutOfDateIsUmbrellaHeader))
+      return true;
+
+  return false;
+}
+
+bool ASTReader::isUmbrellaDirOutOfDate(ModuleFile &F) {
+  HeaderSearch &HS = PP.getHeaderSearchInfo();
+  // TODO: This is probably too slow due to the extra searching, we should use
+  //       the submodule info from the PCM if the module isn't already in the
+  //       module map.
+  Module *M = HS.lookupModule(F.ModuleName, F.ImportLoc, /*AllowSearch=*/true,
+                              /*AllowExtraModuleMapSearch=*/true);
+  if (!M)
+    return false;
+
+  ModuleMap &ModMap = HS.getModuleMap();
+  std::string OutOfDateHeader;
+  Module *OutOfDateModule = nullptr;
+  bool IsUmbrellaHeader = false;
+  if (!isUmbrellaContentsNewer(ModMap, M, F.ModTime, PP.getFileManager(),
+                               OutOfDateHeader, OutOfDateModule,
+                               IsUmbrellaHeader))
+    return false;
+
+  Diag(diag::remark_module_umbrella_out_of_date)
+      << OutOfDateModule->getFullModuleName() << OutOfDateHeader
+      << IsUmbrellaHeader;
+  return true;
+}
+
 ASTReader::ASTReadResult
 ASTReader::ReadControlBlock(ModuleFile &F,
                             SmallVectorImpl<ImportedModule> &Loaded,
@@ -3325,6 +3401,11 @@ ASTReader::ReadControlBlock(ModuleFile &F,
           if (!IF.getFile() || IF.isOutOfDate())
             return OutOfDate;
         }
+
+        // A header added to an umbrella since the module was built is a
+        // negative dependency that ordinary input-file validation misses.
+        if (HSOpts.ModulesValidateUmbrellaDirs && isUmbrellaDirOutOfDate(F))
+          return OutOfDate;
       } else {
         F.InputFilesValidationStatus = InputFilesValidation::Disabled;
       }

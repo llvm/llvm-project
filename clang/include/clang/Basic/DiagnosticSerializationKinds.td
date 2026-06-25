@@ -112,6 +112,11 @@ def remark_module_check_relocation
 def remark_module_relocated : Remark<"module '%0' relocated from '%1' to '%2'">,
                               ShowInSystemHeader,
                               InGroup<ModuleValidation>;
+def remark_module_umbrella_out_of_date
+    : Remark<"module '%0' is out of date because header '%1' was added to its "
+             "umbrella %select{directory|header's directory}2">,
+      ShowInSystemHeader,
+      InGroup<ModuleValidation>;
 
 def err_imported_module_not_found : Error<
     "module '%0' in precompiled file '%1' %select{(imported by precompiled file '%2') |}4"
