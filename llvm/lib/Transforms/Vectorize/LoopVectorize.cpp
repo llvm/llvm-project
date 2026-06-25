@@ -6126,6 +6126,14 @@ void EpilogueVectorizerEpilogueLoop::printDebugTracesAtEnd() {
   });
 }
 
+bool VPRecipeBuilder::isPredicatedInst(Instruction *I) const {
+  return CM.isPredicatedInst(I);
+}
+
+bool VPRecipeBuilder::prefersVectorizedAddressing() const {
+  return CM.TTI.prefersVectorizedAddressing();
+}
+
 VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
                                                 VFRange &Range) {
   assert((VPI->getOpcode() == Instruction::Load ||
@@ -6720,7 +6728,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
                         OrigLoop);
 
   RUN_VPLAN_PASS(VPlanTransforms::makeMemOpWideningDecisions, *Plan, Range,
-                 RecipeBuilder);
+                 RecipeBuilder, CM.PSE, OrigLoop);
 
   RUN_VPLAN_PASS(VPlanTransforms::makeScalarizationDecisions, *Plan, Range);
 
