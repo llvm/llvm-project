@@ -729,7 +729,10 @@ void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
   auto *Header = L->getHeader();
   Loop *OutermostLoop = L->getOutermostLoop();
 
-  SE.forgetLoop(L);
+  // Erasing L and changing the latch CFG may affect the exit structure and
+  // dominator tree of any enclosing loop, so conservatively forget all
+  // ancestor loops.
+  SE.forgetTopmostLoop(L);
   SE.forgetBlockAndLoopDispositions();
 
   std::unique_ptr<MemorySSAUpdater> MSSAU;
