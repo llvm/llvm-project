@@ -3125,7 +3125,6 @@ add_header_library(
     libc.src.__support.math.exp10_float16_constants
 )
 
-
 add_header_library(
   expbf16
   HDRS
