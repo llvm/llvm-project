@@ -1,9 +1,9 @@
-; RUN: llc < %s -global-isel=0 -mtriple=amdgcn--amdpal -mcpu=tonga | FileCheck --check-prefix=GCN %s
-; RUN: llc < %s -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn--amdpal -mcpu=tonga | FileCheck --check-prefix=GCN %s
-; RUN: llc < %s -global-isel=0 -mtriple=amdgcn--amdpal -mcpu=gfx810 | FileCheck --check-prefix=GCN %s
-; RUN: llc < %s -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn--amdpal -mcpu=gfx810 | FileCheck --check-prefix=GCN %s
-; RUN: llc < %s -global-isel=0 -mtriple=amdgcn--amdpal -mcpu=gfx900 | FileCheck -check-prefixes=GCN,GFX9 %s
-; RUN: llc < %s -global-isel=1 -global-isel-abort=2 -mtriple=amdgcn--amdpal -mcpu=gfx900 | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc < %s -global-isel=0 -mtriple=amdgpu8.02--amdpal | FileCheck --check-prefix=GCN %s
+; RUN: llc < %s -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu8.02--amdpal | FileCheck --check-prefix=GCN %s
+; RUN: llc < %s -global-isel=0 -mtriple=amdgpu8.10--amdpal | FileCheck --check-prefix=GCN %s
+; RUN: llc < %s -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu8.10--amdpal | FileCheck --check-prefix=GCN %s
+; RUN: llc < %s -global-isel=0 -mtriple=amdgpu9.00--amdpal | FileCheck -check-prefixes=GCN,GFX9 %s
+; RUN: llc < %s -global-isel=1 -global-isel-abort=2 -mtriple=amdgpu9.00--amdpal | FileCheck -check-prefixes=GCN,GFX9 %s
 
 ; Testing for failures in divergence calculations when divergent intrinsic is lowered during instruction selection
 
