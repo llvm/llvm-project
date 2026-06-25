@@ -2928,13 +2928,10 @@ LifetimeSafetyTUAnalysis(Sema &S, TranslationUnitDecl *TU,
     AC.getCFGBuildOptions().AddInitializers = true;
     AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
     AC.getCFGBuildOptions().setAllAlwaysAdd();
-    if (AC.getCFG()) {
-      lifetimes::LifetimeSafetyOpts LSOpts;
-      LSOpts.MaxCFGBlocks = S.getLangOpts().LifetimeSafetyMaxCFGBlocks;
-      LSOpts.SuggestAnnotations =
-          lifetimes::ShouldSuggestLifetimeAnnotations(S, FD);
-      runLifetimeSafetyAnalysis(AC, &SemaHelper, LSOpts, LSStats, S.CollectStats);
-    }
+    if (AC.getCFG())
+      runLifetimeSafetyAnalysis(AC, &SemaHelper,
+                                lifetimes::GetLifetimeSafetyOpts(S, FD),
+                                LSStats, S.CollectStats);
   }
 }
 
@@ -3167,12 +3164,9 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   if (EnableLifetimeSafetyAnalysis) {
     if (AC.getCFG()) {
       lifetimes::LifetimeSafetySemaHelperImpl LifetimeSafetySemaHelper(S);
-      lifetimes::LifetimeSafetyOpts LSOpts;
-      LSOpts.MaxCFGBlocks = S.getLangOpts().LifetimeSafetyMaxCFGBlocks;
-      LSOpts.SuggestAnnotations =
-          lifetimes::ShouldSuggestLifetimeAnnotations(S, D);
-      lifetimes::runLifetimeSafetyAnalysis(AC, &LifetimeSafetySemaHelper,
-                                           LSOpts, LSStats, S.CollectStats);
+      lifetimes::runLifetimeSafetyAnalysis(
+          AC, &LifetimeSafetySemaHelper, lifetimes::GetLifetimeSafetyOpts(S, D),
+          LSStats, S.CollectStats);
     }
   }
   // Check for violations of "called once" parameter properties.
