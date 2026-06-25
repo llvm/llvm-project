@@ -222,79 +222,55 @@ static bool isKMovNarrowing(unsigned VPMOVOpc, unsigned KMOVOpc) {
   return KMOVSize < VPMOVBits;
 }
 
-static unsigned getBlendVOpc(unsigned VPMOVOpc, unsigned UseOpc) {
-  switch (VPMOVOpc) {
-  case X86::VPMOVD2MZ128kr:
+static bool isCompressibleBlendVUse(unsigned BlendOpc, unsigned UseOpc) {
+  switch (BlendOpc) {
+  case X86::VBLENDVPSrrr:
     switch (UseOpc) {
     case X86::VMOVAPSZ128rrk:
     case X86::VMOVUPSZ128rrk:
     case X86::VMOVDQA32Z128rrk:
     case X86::VMOVDQU32Z128rrk:
-      return X86::VBLENDVPSrrr;
+      return true;
     default:
-      break;
+      return false;
     }
-    break;
-
-  case X86::VPMOVD2MZ256kr:
+  case X86::VBLENDVPSYrrr:
     switch (UseOpc) {
     case X86::VMOVAPSZ256rrk:
     case X86::VMOVUPSZ256rrk:
     case X86::VMOVDQA32Z256rrk:
     case X86::VMOVDQU32Z256rrk:
-      return X86::VBLENDVPSYrrr;
+      return true;
     default:
-      break;
+      return false;
     }
-    break;
-
-  case X86::VPMOVQ2MZ128kr:
+  case X86::VBLENDVPDrrr:
     switch (UseOpc) {
     case X86::VMOVAPDZ128rrk:
     case X86::VMOVUPDZ128rrk:
     case X86::VMOVDQA64Z128rrk:
     case X86::VMOVDQU64Z128rrk:
-      return X86::VBLENDVPDrrr;
+      return true;
     default:
-      break;
+      return false;
     }
-    break;
-
-  case X86::VPMOVQ2MZ256kr:
+  case X86::VBLENDVPDYrrr:
     switch (UseOpc) {
     case X86::VMOVAPDZ256rrk:
     case X86::VMOVUPDZ256rrk:
     case X86::VMOVDQA64Z256rrk:
     case X86::VMOVDQU64Z256rrk:
-      return X86::VBLENDVPDYrrr;
+      return true;
     default:
-      break;
+      return false;
     }
-    break;
-
-  case X86::VPMOVB2MZ128kr:
-    switch (UseOpc) {
-    case X86::VMOVDQU8Z128rrk:
-      return X86::VPBLENDVBrrr;
-    default:
-      break;
-    }
-    break;
-
-  case X86::VPMOVB2MZ256kr:
-    switch (UseOpc) {
-    case X86::VMOVDQU8Z256rrk:
-      return X86::VPBLENDVBYrrr;
-    default:
-      break;
-    }
-    break;
-
+  case X86::VPBLENDVBrrr:
+    return UseOpc == X86::VMOVDQU8Z128rrk;
+  case X86::VPBLENDVBYrrr:
+    return UseOpc == X86::VMOVDQU8Z256rrk;
   default:
-    break;
+    return false;
   }
-
-  return 0;
 }
 
 // Try to compress VPMOV*2M chain patterns:
@@ -323,24 +299,31 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
   Register SrcVecReg = MI.getOperand(1).getReg();
 
   unsigned MovMskOpc = 0;
+  unsigned BlendOpc = 0;
   switch (Opc) {
   case X86::VPMOVD2MZ128kr:
     MovMskOpc = X86::VMOVMSKPSrr;
+    BlendOpc = X86::VBLENDVPSrrr;
     break;
   case X86::VPMOVD2MZ256kr:
     MovMskOpc = X86::VMOVMSKPSYrr;
+    BlendOpc = X86::VBLENDVPSYrrr;
     break;
   case X86::VPMOVQ2MZ128kr:
     MovMskOpc = X86::VMOVMSKPDrr;
+    BlendOpc = X86::VBLENDVPDrrr;
     break;
   case X86::VPMOVQ2MZ256kr:
     MovMskOpc = X86::VMOVMSKPDYrr;
+    BlendOpc = X86::VBLENDVPDYrrr;
     break;
   case X86::VPMOVB2MZ128kr:
     MovMskOpc = X86::VPMOVMSKBrr;
+    BlendOpc = X86::VPBLENDVBrrr;
     break;
   case X86::VPMOVB2MZ256kr:
     MovMskOpc = X86::VPMOVMSKBYrr;
+    BlendOpc = X86::VPBLENDVBYrrr;
     break;
   default:
     llvm_unreachable("Unknown VPMOV opcode");
@@ -348,7 +331,6 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
 
   MachineInstr *KMovMI = nullptr;
   MachineInstr *BlendMI = nullptr;
-  unsigned BlendOpc = 0;
 
   for (MachineInstr &CurMI : llvm::make_range(
            std::next(MachineBasicBlock::iterator(MI)), MBB.end())) {
@@ -365,7 +347,7 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
         KMovMI = &CurMI;
         // continue scanning to ensure
         // there are no *other* uses of the mask later in the block.
-      } else if (((BlendOpc = getBlendVOpc(Opc, UseOpc))) &&
+      } else if (isCompressibleBlendVUse(BlendOpc, UseOpc) &&
                  CurMI.getOperand(2).getReg() == MaskReg &&
                  !usesExtendedRegister(CurMI) &&
                  checkPredicate(BlendOpc, &ST)) {
@@ -395,6 +377,7 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
       return false;
 
   // Apply the transformation
+  MachineInstr *NewMI = nullptr;
   if (KMovMI) {
     KMovMI->setDesc(TII->get(MovMskOpc));
     MachineOperand &NewSrc = KMovMI->getOperand(1);
@@ -402,8 +385,9 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
     // setReg() keeps the mask operand's kill flag; take the source's kill
     // state from the VPMOV instead.
     NewSrc.setIsKill(MI.getOperand(1).isKill());
-    KMovMI->setAsmPrinterFlag(X86::AC_EVEX_2_VEX);
+    NewMI = KMovMI;
   } else if (BlendMI) {
+    const MachineOperand &MaskVec = MI.getOperand(1);
     const MachineOperand &Dst = BlendMI->getOperand(0);
     const MachineOperand &Passthru = BlendMI->getOperand(1);
     const MachineOperand &Src = BlendMI->getOperand(3);
@@ -416,10 +400,12 @@ static bool tryCompressVPMOVPattern(MachineInstr &MI, MachineBasicBlock &MBB,
             .addReg(Dst.getReg(), getRegState(Dst))
             .addReg(Src.getReg(), getRegState(Src))
             .addReg(Passthru.getReg(), getRegState(Passthru))
-            .addReg(SrcVecReg, getRegState(MI.getOperand(1)));
-    MIB->setAsmPrinterFlag(X86::AC_EVEX_2_VEX);
+            .addReg(MaskVec.getReg(), getRegState(MaskVec));
+    NewMI = MIB;
     ToErase.push_back(BlendMI);
   }
+  assert(NewMI && "Expected a compressed instruction");
+  NewMI->setAsmPrinterFlag(X86::AC_EVEX_2_VEX);
   ToErase.push_back(&MI);
   return true;
 }

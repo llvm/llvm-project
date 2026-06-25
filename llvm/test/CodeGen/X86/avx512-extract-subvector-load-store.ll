@@ -4,6 +4,42 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw,+avx512vl,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle -O2 | FileCheck %s --check-prefixes=AVX512NOTDQ,AVX512NOTDQ-FAST
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw,+avx512vl,+fast-variable-perlane-shuffle -O2 | FileCheck %s --check-prefixes=AVX512NOTDQ,AVX512NOTDQ-FAST-PERLANE
 
+define void @select_v16i8_signbits(<16 x i8> %maskvec,<16 x i8> %a1,<16 x i8> %a2,ptr %a3) {
+; AVX512-LABEL: select_v16i8_signbits:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpblendvb %xmm0, %xmm2, %xmm1, %xmm2
+; AVX512-NEXT:    vmovdqa %xmm2, (%rdi)
+; AVX512-NEXT:    retq
+;
+; AVX512NOTDQ-LABEL: select_v16i8_signbits:
+; AVX512NOTDQ:       # %bb.0:
+; AVX512NOTDQ-NEXT:    vpblendvb %xmm0, %xmm2, %xmm1, %xmm2
+; AVX512NOTDQ-NEXT:    vmovdqa %xmm2, (%rdi)
+; AVX512NOTDQ-NEXT:    retq
+    %mask = icmp slt <16 x i8> %maskvec, zeroinitializer
+    %sel = select <16 x i1> %mask, <16 x i8> %a1, <16 x i8> %a2
+    store <16 x i8> %sel, ptr %a3
+    ret void
+}
+define void @select_v32i8_signbits(<32 x i8> %maskvec,<32 x i8> %a1,<32 x i8> %a2,ptr %a3) {
+; AVX512-LABEL: select_v32i8_signbits:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm2
+; AVX512-NEXT:    vmovdqa %ymm2, (%rdi)
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+;
+; AVX512NOTDQ-LABEL: select_v32i8_signbits:
+; AVX512NOTDQ:       # %bb.0:
+; AVX512NOTDQ-NEXT:    vpblendvb %ymm0, %ymm2, %ymm1, %ymm2
+; AVX512NOTDQ-NEXT:    vmovdqa %ymm2, (%rdi)
+; AVX512NOTDQ-NEXT:    vzeroupper
+; AVX512NOTDQ-NEXT:    retq
+    %mask = icmp slt <32 x i8> %maskvec, zeroinitializer
+    %sel = select <32 x i1> %mask, <32 x i8> %a1, <32 x i8> %a2
+    store <32 x i8> %sel, ptr %a3
+    ret void
+}
 define void @load_v8i1_broadcast_4_v2i1(ptr %a0,<2 x double> %a1,<2 x double> %a2,ptr %a3) {
 ; AVX512-LABEL: load_v8i1_broadcast_4_v2i1:
 ; AVX512:       # %bb.0:
@@ -1599,4 +1635,3 @@ define void @load_v64i1_broadcast_63_v16i1_store(ptr %a0,ptr %a1) {
     store <16 x i1> %d1, ptr %a1
     ret void
 }
-
