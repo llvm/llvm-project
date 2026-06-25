@@ -252,6 +252,16 @@ __device__ void __asan_unpoison_memory_region(const void *addr,
 __device__ int __asan_address_is_poisoned(const void *addr);
 __device__ void *__asan_region_is_poisoned(void *beg, __SIZE_TYPE__ size);
 
+__device__ __attribute__((pure)) _Float16 __ocml_exp_f16(_Float16);
+__device__ __attribute__((pure)) _Float16 __ocml_exp10_f16(_Float16);
+__device__ __attribute__((pure)) _Float16 __ocml_exp2_f16(_Float16);
+__device__ __attribute__((const)) _Float16 __ocml_fma_f16(_Float16, _Float16,
+                                                          _Float16);
+__device__ __attribute__((pure)) _Float16 __ocml_log_f16(_Float16);
+__device__ __attribute__((pure)) _Float16 __ocml_log10_f16(_Float16);
+__device__ __attribute__((pure)) _Float16 __ocml_log2_f16(_Float16);
+
+__device__ __attribute__((const)) _Float16 __ocml_sqrt_f16(_Float16);
 #if __has_feature(address_sanitizer)
 #define ASAN_POISON_MEMORY_REGION(addr, size)                                  \
   __asan_poison_memory_region((addr), (size))
