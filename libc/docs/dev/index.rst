@@ -11,6 +11,7 @@ Navigate to the links below for information on the respective topics:
 
    building_docs
    code_style
+   code_review
    source_tree_layout
    entrypoints
    implementing_a_function
