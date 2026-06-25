@@ -90,7 +90,7 @@ class weak_ptr;
 
 template <class _Tp, class _Dp, class _Alloc>
 class _LIBCPP_HIDE_STRUCT_FROM_ABI __shared_ptr_pointer final : public __shared_weak_count {
-  using __alloc_t = __allocator_traits_rebind_t<_Alloc, __shared_ptr_pointer>;
+  using __alloc_t _LIBCPP_NODEBUG = __allocator_traits_rebind_t<_Alloc, __shared_ptr_pointer>;
 
   _LIBCPP_NO_UNIQUE_ADDRESS __alloc_t __alloc_;
   _LIBCPP_NO_UNIQUE_ADDRESS _Dp __deleter_;
@@ -158,7 +158,7 @@ struct _LIBCPP_HIDE_STRUCT_FROM_ABI __shared_ptr_emplace_for_overwrite : __share
   using __alloc_t _LIBCPP_NODEBUG    = __allocator_traits_rebind_t<_Alloc, __shared_ptr_emplace_for_overwrite>;
   using __value_type _LIBCPP_NODEBUG = __remove_cv_t<_Tp>;
 
-  explicit __shared_ptr_emplace_for_overwrite(_Alloc __a) : __alloc_(std::move(__a)) {}
+  _LIBCPP_HIDE_FROM_ABI explicit __shared_ptr_emplace_for_overwrite(_Alloc __a) : __alloc_(std::move(__a)) {}
 
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared() _NOEXCEPT override { __value_.~__value_type(); }
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL void __on_zero_shared_weak() _NOEXCEPT override {
@@ -168,7 +168,7 @@ struct _LIBCPP_HIDE_STRUCT_FROM_ABI __shared_ptr_emplace_for_overwrite : __share
     __alloc_traits::deallocate(__tmp, pointer_traits<typename __alloc_traits::pointer>::pointer_to(*this), 1);
   }
 
-  __value_type* __get_elem() _NOEXCEPT { return std::addressof(__value_); }
+  _LIBCPP_HIDE_FROM_ABI __value_type* __get_elem() _NOEXCEPT { return std::addressof(__value_); }
 
 private:
   _LIBCPP_NO_UNIQUE_ADDRESS __alloc_t __alloc_;
@@ -602,12 +602,12 @@ private:
 
   template <class _Vp, class = void>
   struct __get_shared_from_this {
-    using type = __nat;
+    using type _LIBCPP_NODEBUG = __nat;
   };
 
   template <class _Vp>
   struct __get_shared_from_this<_Vp, __void_t<decltype(__get_shared_from_this_impl(static_cast<_Vp*>(nullptr)))> > {
-    using type = const enable_shared_from_this<typename decltype(__get_shared_from_this_impl(
+    using type _LIBCPP_NODEBUG = const enable_shared_from_this<typename decltype(__get_shared_from_this_impl(
         static_cast<_Vp*>(nullptr)))::type>*;
   };
 
@@ -616,7 +616,7 @@ private:
       class _OrigPtr,
       __enable_if_t<!is_convertible<_OrigPtr, typename __get_shared_from_this<__remove_pointer_t<_Yp> >::type>::value,
                     int> = 0>
-  void __enable_weak_this(_Yp, _OrigPtr) {}
+  _LIBCPP_HIDE_FROM_ABI void __enable_weak_this(_Yp, _OrigPtr) {}
 
   template <class, class _Yp>
   struct __shared_ptr_default_delete : default_delete<_Yp> {};
