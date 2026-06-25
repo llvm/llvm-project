@@ -19,12 +19,14 @@
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstVisitor.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/TargetParser/Triple.h"
 
 #include <cassert>
+#include <cstring>
 #include <limits>
 
 namespace llvm::ubi {
@@ -696,6 +698,118 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
       return APInt::getZero(64);
     }
     return V.asInteger();
+  }
+
+  AnyValue callMemTransferIntrinsic(CallBase &CB, ArrayRef<AnyValue> Args,
+                                    Intrinsic::ID IID) {
+    const AnyValue &Dest = Args[0];
+    const AnyValue &Src = Args[1];
+    const AnyValue &Length = Args[2];
+    // TODO: Handle isvolatile argument.
+    if (Length.isPoison()) {
+      reportImmediateUB() << "Memory transfer intrinsic with poison length.";
+      return AnyValue();
+    }
+
+    const APInt &LengthInt = Args[2].asInteger();
+    if (LengthInt.getActiveBits() > 64) {
+      reportImmediateUB()
+          << "Memory transfer intrinsic length overflows uint64_t.";
+      return AnyValue();
+    }
+
+    const uint64_t Len = LengthInt.getZExtValue();
+    if (Len == 0)
+      return AnyValue();
+
+    if (Dest.isPoison()) {
+      reportImmediateUB()
+          << "Memory transfer intrinsic with poison destination pointer.";
+      return AnyValue();
+    }
+
+    if (Src.isPoison()) {
+      reportImmediateUB()
+          << "Memory transfer intrinsic with poison source pointer.";
+      return AnyValue();
+    }
+
+    const Pointer &DstPtr = Dest.asPointer();
+    const Pointer &SrcPtr = Src.asPointer();
+
+    Align DstAlign = CB.getParamAlign(0).valueOrOne();
+    Align SrcAlign = CB.getParamAlign(1).valueOrOne();
+
+    auto [SrcMO, SrcOffset] =
+        verifyMemAccess(SrcPtr, Len, SrcAlign, /*IsStore=*/false);
+    if (!SrcMO)
+      return AnyValue();
+
+    auto [DstMO, DstOffset] =
+        verifyMemAccess(DstPtr, Len, DstAlign, /*IsStore=*/true);
+    if (!DstMO)
+      return AnyValue();
+
+    if (IID == Intrinsic::memcpy || IID == Intrinsic::memcpy_inline) {
+      if (SrcMO == DstMO && SrcOffset != DstOffset) {
+        const uint64_t SrcEnd = SrcOffset + Len;
+        const uint64_t DstEnd = DstOffset + Len;
+        if (SrcOffset < DstEnd && DstOffset < SrcEnd) {
+          reportImmediateUB()
+              << "memcpy with overlapping source and destination.";
+          return AnyValue();
+        }
+      }
+    }
+
+    MutableArrayRef<Byte> DstBytes = DstMO->getBytes().slice(DstOffset, Len);
+    if (SrcMO->getState() == MemoryObjectState::Dead) {
+      fill(DstBytes, Byte::poison());
+    } else {
+      ArrayRef<Byte> SrcBytes = SrcMO->getBytes().slice(SrcOffset, Len);
+      std::memmove(DstBytes.data(), SrcBytes.data(), Len * sizeof(Byte));
+    }
+    return AnyValue();
+  }
+
+  AnyValue callMemSetIntrinsic(CallBase &CB, ArrayRef<AnyValue> Args) {
+    const AnyValue &Dest = Args[0];
+    const AnyValue &Val = Args[1];
+    const AnyValue &Length = Args[2];
+
+    if (Length.isPoison()) {
+      reportImmediateUB() << "memset called with poison length.";
+      return AnyValue();
+    }
+
+    const APInt &LengthInt = Length.asInteger();
+    if (LengthInt.getActiveBits() > 64) {
+      reportImmediateUB() << "memset called with length overflows uint64_t.";
+      return AnyValue();
+    }
+
+    const uint64_t Len = LengthInt.getZExtValue();
+    if (Len == 0)
+      return AnyValue();
+
+    if (Dest.isPoison()) {
+      reportImmediateUB() << "memset called with poison destination pointer.";
+      return AnyValue();
+    }
+
+    const Pointer &DstPtr = Dest.asPointer();
+
+    Align DstAlign = CB.getParamAlign(0).valueOrOne();
+    auto [DstMO, DstOffset] =
+        verifyMemAccess(DstPtr, Len, DstAlign, /*IsStore=*/true);
+    if (!DstMO)
+      return AnyValue();
+
+    Byte FillByte = Val.isPoison()
+                        ? Byte::poison()
+                        : Byte::concrete(Val.asInteger().getZExtValue());
+    fill(DstMO->getBytes().slice(DstOffset, Len), FillByte);
+    return AnyValue();
   }
 
 public:
@@ -1502,6 +1616,13 @@ public:
         return V;
       });
     }
+    case Intrinsic::memcpy:
+    case Intrinsic::memcpy_inline:
+    case Intrinsic::memmove:
+      return callMemTransferIntrinsic(CB, Args, IID);
+    case Intrinsic::memset:
+    case Intrinsic::memset_inline:
+      return callMemSetIntrinsic(CB, Args);
     default:
       Handler.onUnrecognizedInstruction(CB);
       setFailed();
