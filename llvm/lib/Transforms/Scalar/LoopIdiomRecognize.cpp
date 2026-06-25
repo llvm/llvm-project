@@ -1671,8 +1671,7 @@ bool LoopIdiomRecognize::optimizeCRCLoopToClmul(const PolynomialInfo &Info) {
   // Get rid of the loop completely.
   for (PHINode *PN : Cleanup)
     RecursivelyDeleteDeadPHINode(PN);
-  MemorySSA *MSSA = MSSAU ? MSSAU->getMemorySSA() : nullptr;
-  deleteDeadLoop(CurLoop, DT, SE, LI, MSSA);
+  SE->forgetLoop(CurLoop);
 
   return true;
 }

@@ -39,7 +39,7 @@ define i16 @crc16.le.tc8(i8 %msg, i16 %checksum) {
 ;
 ; PCLMUL-LABEL: define i16 @crc16.le.tc8(
 ; PCLMUL-SAME: i8 [[MSG:%.*]], i16 [[CHECKSUM:%.*]]) #[[ATTR0:[0-9]+]] {
-; PCLMUL-NEXT:  [[ENTRY:.*]]:
+; PCLMUL-NEXT:  [[ENTRY:.*:]]
 ; PCLMUL-NEXT:    [[CRC_EXT:%.*]] = zext i16 [[CHECKSUM]] to i24
 ; PCLMUL-NEXT:    [[DATA_EXT:%.*]] = zext i8 [[MSG]] to i24
 ; PCLMUL-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i24 [[CRC_EXT]], [[DATA_EXT]]
@@ -49,9 +49,12 @@ define i16 @crc16.le.tc8(i8 %msg, i16 %checksum) {
 ; PCLMUL-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i24 [[CRC_EXT]], [[CLMUL_GP]]
 ; PCLMUL-NEXT:    [[CRC_LE_LSHR:%.*]] = lshr i24 [[XOR_CRC_MULT]], 8
 ; PCLMUL-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[CRC_LE_LSHR]] to i16
-; PCLMUL-NEXT:    br label %[[EXIT:.*]]
+; PCLMUL-NEXT:    br label %[[LOOP:.*]]
+; PCLMUL:       [[LOOP]]:
+; PCLMUL-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 poison, 7
+; PCLMUL-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; PCLMUL:       [[EXIT]]:
-; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[ENTRY]] ]
+; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; PCLMUL-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
 ;
 entry:
@@ -103,7 +106,7 @@ define i16 @crc16.le.tc8.udiv(i8 %msg, i16 %checksum) {
 ;
 ; PCLMUL-LABEL: define i16 @crc16.le.tc8.udiv(
 ; PCLMUL-SAME: i8 [[MSG:%.*]], i16 [[CHECKSUM:%.*]]) #[[ATTR0]] {
-; PCLMUL-NEXT:  [[ENTRY:.*]]:
+; PCLMUL-NEXT:  [[ENTRY:.*:]]
 ; PCLMUL-NEXT:    [[CRC_EXT:%.*]] = zext i16 [[CHECKSUM]] to i24
 ; PCLMUL-NEXT:    [[DATA_EXT:%.*]] = zext i8 [[MSG]] to i24
 ; PCLMUL-NEXT:    [[XOR_CRC_DATA:%.*]] = xor i24 [[CRC_EXT]], [[DATA_EXT]]
@@ -113,9 +116,12 @@ define i16 @crc16.le.tc8.udiv(i8 %msg, i16 %checksum) {
 ; PCLMUL-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i24 [[CRC_EXT]], [[CLMUL_GP]]
 ; PCLMUL-NEXT:    [[CRC_LE_LSHR:%.*]] = lshr i24 [[XOR_CRC_MULT]], 8
 ; PCLMUL-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[CRC_LE_LSHR]] to i16
-; PCLMUL-NEXT:    br label %[[EXIT:.*]]
+; PCLMUL-NEXT:    br label %[[LOOP:.*]]
+; PCLMUL:       [[LOOP]]:
+; PCLMUL-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 poison, 7
+; PCLMUL-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; PCLMUL:       [[EXIT]]:
-; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[ENTRY]] ]
+; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; PCLMUL-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
 ;
 entry:
@@ -168,7 +174,7 @@ define i16 @crc16.le.tc16(i16 %msg, i16 %checksum) {
 ;
 ; PCLMUL-LABEL: define i16 @crc16.le.tc16(
 ; PCLMUL-SAME: i16 [[MSG:%.*]], i16 [[CHECKSUM:%.*]]) #[[ATTR0]] {
-; PCLMUL-NEXT:  [[ENTRY:.*]]:
+; PCLMUL-NEXT:  [[ENTRY:.*:]]
 ; PCLMUL-NEXT:    [[CRC_EXT:%.*]] = zext i16 [[CHECKSUM]] to i32
 ; PCLMUL-NEXT:    [[DATA_EXT:%.*]] = zext i16 [[MSG]] to i32
 ; PCLMUL-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i32 [[CRC_EXT]], [[DATA_EXT]]
@@ -178,9 +184,12 @@ define i16 @crc16.le.tc16(i16 %msg, i16 %checksum) {
 ; PCLMUL-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i32 [[CRC_EXT]], [[CLMUL_GP]]
 ; PCLMUL-NEXT:    [[CRC_LE_LSHR:%.*]] = lshr i32 [[XOR_CRC_MULT]], 16
 ; PCLMUL-NEXT:    [[CRC_NEXT2:%.*]] = trunc i32 [[CRC_LE_LSHR]] to i16
-; PCLMUL-NEXT:    br label %[[EXIT:.*]]
+; PCLMUL-NEXT:    br label %[[LOOP:.*]]
+; PCLMUL:       [[LOOP]]:
+; PCLMUL-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 poison, 15
+; PCLMUL-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; PCLMUL:       [[EXIT]]:
-; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT2]], %[[ENTRY]] ]
+; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; PCLMUL-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
 ;
 entry:
@@ -231,7 +240,7 @@ define i8 @crc8.le.tc16(i16 %msg, i8 %checksum) {
 ;
 ; PCLMUL-LABEL: define i8 @crc8.le.tc16(
 ; PCLMUL-SAME: i16 [[MSG:%.*]], i8 [[CHECKSUM:%.*]]) #[[ATTR0]] {
-; PCLMUL-NEXT:  [[ENTRY:.*]]:
+; PCLMUL-NEXT:  [[ENTRY:.*:]]
 ; PCLMUL-NEXT:    [[CRC_EXT:%.*]] = zext i8 [[CHECKSUM]] to i32
 ; PCLMUL-NEXT:    [[DATA_EXT:%.*]] = zext i16 [[MSG]] to i32
 ; PCLMUL-NEXT:    [[XOR_CRC_DATA1:%.*]] = xor i32 [[CRC_EXT]], [[DATA_EXT]]
@@ -241,9 +250,12 @@ define i8 @crc8.le.tc16(i16 %msg, i8 %checksum) {
 ; PCLMUL-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i32 [[CRC_EXT]], [[CLMUL_GP]]
 ; PCLMUL-NEXT:    [[CRC_LE_LSHR:%.*]] = lshr i32 [[XOR_CRC_MULT]], 16
 ; PCLMUL-NEXT:    [[CRC_NEXT2:%.*]] = trunc i32 [[CRC_LE_LSHR]] to i8
-; PCLMUL-NEXT:    br label %[[EXIT:.*]]
+; PCLMUL-NEXT:    br label %[[LOOP:.*]]
+; PCLMUL:       [[LOOP]]:
+; PCLMUL-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 poison, 15
+; PCLMUL-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; PCLMUL:       [[EXIT]]:
-; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[CRC_NEXT2]], %[[ENTRY]] ]
+; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; PCLMUL-NEXT:    ret i8 [[CRC_NEXT_LCSSA]]
 ;
 entry:
@@ -296,7 +308,7 @@ define i16 @crc16.be.tc8.crc.init.li(i16 %checksum, i8 %msg) {
 ;
 ; PCLMUL-LABEL: define i16 @crc16.be.tc8.crc.init.li(
 ; PCLMUL-SAME: i16 [[CHECKSUM:%.*]], i8 [[MSG:%.*]]) #[[ATTR0]] {
-; PCLMUL-NEXT:  [[ENTRY:.*]]:
+; PCLMUL-NEXT:  [[ENTRY:.*:]]
 ; PCLMUL-NEXT:    [[MSG_EXT:%.*]] = zext i8 [[MSG]] to i16
 ; PCLMUL-NEXT:    [[MSG_SHL:%.*]] = shl nuw i16 [[MSG_EXT]], 8
 ; PCLMUL-NEXT:    [[CRC_INIT:%.*]] = xor i16 [[MSG_SHL]], [[CHECKSUM]]
@@ -308,9 +320,12 @@ define i16 @crc16.be.tc8.crc.init.li(i16 %checksum, i8 %msg) {
 ; PCLMUL-NEXT:    [[CRC_BE_SHL:%.*]] = shl i24 [[CRC_EXT]], 8
 ; PCLMUL-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i24 [[CRC_BE_SHL]], [[CLMUL_GP]]
 ; PCLMUL-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[XOR_CRC_MULT]] to i16
-; PCLMUL-NEXT:    br label %[[EXIT:.*]]
+; PCLMUL-NEXT:    br label %[[LOOP:.*]]
+; PCLMUL:       [[LOOP]]:
+; PCLMUL-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i32 poison, 7
+; PCLMUL-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; PCLMUL:       [[EXIT]]:
-; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[ENTRY]] ]
+; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; PCLMUL-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
 ;
 entry:
@@ -358,7 +373,7 @@ define i16 @crc16.be.tc8.crc.init.arg(i16 %crc.init) {
 ;
 ; PCLMUL-LABEL: define i16 @crc16.be.tc8.crc.init.arg(
 ; PCLMUL-SAME: i16 [[CRC_INIT:%.*]]) #[[ATTR0]] {
-; PCLMUL-NEXT:  [[ENTRY:.*]]:
+; PCLMUL-NEXT:  [[ENTRY:.*:]]
 ; PCLMUL-NEXT:    [[CRC_EXT:%.*]] = zext i16 [[CRC_INIT]] to i24
 ; PCLMUL-NEXT:    [[CRC_BE_LSHR:%.*]] = lshr i24 [[CRC_EXT]], 8
 ; PCLMUL-NEXT:    [[CLMUL_MU:%.*]] = call i24 @llvm.clmul.i24(i24 [[CRC_BE_LSHR]], i24 273)
@@ -367,9 +382,12 @@ define i16 @crc16.be.tc8.crc.init.arg(i16 %crc.init) {
 ; PCLMUL-NEXT:    [[CRC_BE_SHL:%.*]] = shl i24 [[CRC_EXT]], 8
 ; PCLMUL-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i24 [[CRC_BE_SHL]], [[CLMUL_GP]]
 ; PCLMUL-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[XOR_CRC_MULT]] to i16
-; PCLMUL-NEXT:    br label %[[EXIT:.*]]
+; PCLMUL-NEXT:    br label %[[LOOP:.*]]
+; PCLMUL:       [[LOOP]]:
+; PCLMUL-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i32 poison, 7
+; PCLMUL-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; PCLMUL:       [[EXIT]]:
-; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[ENTRY]] ]
+; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; PCLMUL-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
 ;
 entry:
@@ -414,7 +432,7 @@ define i16 @crc16.be.tc8.crc.init.arg.flipped.sb.check(i16 %crc.init) {
 ;
 ; PCLMUL-LABEL: define i16 @crc16.be.tc8.crc.init.arg.flipped.sb.check(
 ; PCLMUL-SAME: i16 [[CRC_INIT:%.*]]) #[[ATTR0]] {
-; PCLMUL-NEXT:  [[ENTRY:.*]]:
+; PCLMUL-NEXT:  [[ENTRY:.*:]]
 ; PCLMUL-NEXT:    [[CRC_EXT:%.*]] = zext i16 [[CRC_INIT]] to i24
 ; PCLMUL-NEXT:    [[CRC_BE_LSHR:%.*]] = lshr i24 [[CRC_EXT]], 8
 ; PCLMUL-NEXT:    [[CLMUL_MU:%.*]] = call i24 @llvm.clmul.i24(i24 [[CRC_BE_LSHR]], i24 273)
@@ -423,9 +441,12 @@ define i16 @crc16.be.tc8.crc.init.arg.flipped.sb.check(i16 %crc.init) {
 ; PCLMUL-NEXT:    [[CRC_BE_SHL:%.*]] = shl i24 [[CRC_EXT]], 8
 ; PCLMUL-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i24 [[CRC_BE_SHL]], [[CLMUL_GP]]
 ; PCLMUL-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[XOR_CRC_MULT]] to i16
-; PCLMUL-NEXT:    br label %[[EXIT:.*]]
+; PCLMUL-NEXT:    br label %[[LOOP:.*]]
+; PCLMUL:       [[LOOP]]:
+; PCLMUL-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i32 poison, 7
+; PCLMUL-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; PCLMUL:       [[EXIT]]:
-; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[ENTRY]] ]
+; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; PCLMUL-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
 ;
 entry:
@@ -500,9 +521,12 @@ define i8 @crc8.be.tc8.ptr.nested.loop(ptr %msg, i32 %loop.limit) {
 ; PCLMUL-NEXT:    [[CRC_BE_SHL:%.*]] = shl i16 [[CRC_EXT]], 8
 ; PCLMUL-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i16 [[CRC_BE_SHL]], [[CLMUL_GP]]
 ; PCLMUL-NEXT:    [[CRC_NEXT1:%.*]] = trunc i16 [[XOR_CRC_MULT]] to i8
-; PCLMUL-NEXT:    br label %[[INNER_EXIT]]
+; PCLMUL-NEXT:    br label %[[INNER_LOOP:.*]]
+; PCLMUL:       [[INNER_LOOP]]:
+; PCLMUL-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i32 poison, 7
+; PCLMUL-NEXT:    br i1 [[EXIT_COND]], label %[[INNER_LOOP]], label %[[INNER_EXIT]]
 ; PCLMUL:       [[INNER_EXIT]]:
-; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA]] = phi i8 [ [[CRC_NEXT1]], %[[PH]] ]
+; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA]] = phi i8 [ [[CRC_NEXT1]], %[[INNER_LOOP]] ]
 ; PCLMUL-NEXT:    [[OUTER_IV_NEXT]] = add i32 [[OUTER_IV]], 1
 ; PCLMUL-NEXT:    br label %[[OUTER_LOOP]]
 ; PCLMUL:       [[EXIT]]:
@@ -571,7 +595,7 @@ define i32 @crc32.le.tc8.data32(i32 %checksum, i32 %msg) {
 ;
 ; PCLMUL-LABEL: define i32 @crc32.le.tc8.data32(
 ; PCLMUL-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR0]] {
-; PCLMUL-NEXT:  [[ENTRY:.*]]:
+; PCLMUL-NEXT:  [[ENTRY:.*:]]
 ; PCLMUL-NEXT:    [[CRC_EXT:%.*]] = zext i32 [[CHECKSUM]] to i40
 ; PCLMUL-NEXT:    [[DATA_LE_MASK:%.*]] = and i32 [[MSG]], 255
 ; PCLMUL-NEXT:    [[DATA_EXT:%.*]] = zext i32 [[DATA_LE_MASK]] to i40
@@ -582,9 +606,12 @@ define i32 @crc32.le.tc8.data32(i32 %checksum, i32 %msg) {
 ; PCLMUL-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i40 [[CRC_EXT]], [[CLMUL_GP]]
 ; PCLMUL-NEXT:    [[CRC_LE_LSHR:%.*]] = lshr i40 [[XOR_CRC_MULT]], 8
 ; PCLMUL-NEXT:    [[CRC_NEXT2:%.*]] = trunc i40 [[CRC_LE_LSHR]] to i32
-; PCLMUL-NEXT:    br label %[[EXIT:.*]]
+; PCLMUL-NEXT:    br label %[[LOOP:.*]]
+; PCLMUL:       [[LOOP]]:
+; PCLMUL-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 poison, 7
+; PCLMUL-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; PCLMUL:       [[EXIT]]:
-; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT2]], %[[ENTRY]] ]
+; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; PCLMUL-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
 ;
 entry:
@@ -634,7 +661,7 @@ define i32 @crc.disabled.optsize(i32 %checksum, i32 %msg) optsize {
 ;
 ; PCLMUL-LABEL: define i32 @crc.disabled.optsize(
 ; PCLMUL-SAME: i32 [[CHECKSUM:%.*]], i32 [[MSG:%.*]]) #[[ATTR1:[0-9]+]] {
-; PCLMUL-NEXT:  [[ENTRY:.*]]:
+; PCLMUL-NEXT:  [[ENTRY:.*:]]
 ; PCLMUL-NEXT:    [[CRC_EXT:%.*]] = zext i32 [[CHECKSUM]] to i40
 ; PCLMUL-NEXT:    [[DATA_LE_MASK:%.*]] = and i32 [[MSG]], 255
 ; PCLMUL-NEXT:    [[DATA_EXT:%.*]] = zext i32 [[DATA_LE_MASK]] to i40
@@ -645,9 +672,12 @@ define i32 @crc.disabled.optsize(i32 %checksum, i32 %msg) optsize {
 ; PCLMUL-NEXT:    [[XOR_CRC_MULT:%.*]] = xor i40 [[CRC_EXT]], [[CLMUL_GP]]
 ; PCLMUL-NEXT:    [[CRC_LE_LSHR:%.*]] = lshr i40 [[XOR_CRC_MULT]], 8
 ; PCLMUL-NEXT:    [[CRC_NEXT2:%.*]] = trunc i40 [[CRC_LE_LSHR]] to i32
-; PCLMUL-NEXT:    br label %[[EXIT:.*]]
+; PCLMUL-NEXT:    br label %[[LOOP:.*]]
+; PCLMUL:       [[LOOP]]:
+; PCLMUL-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 poison, 7
+; PCLMUL-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
 ; PCLMUL:       [[EXIT]]:
-; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT2]], %[[ENTRY]] ]
+; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; PCLMUL-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
 ;
 entry:
