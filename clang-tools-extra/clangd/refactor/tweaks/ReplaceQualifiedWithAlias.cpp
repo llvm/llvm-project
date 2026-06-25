@@ -16,6 +16,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <string>
@@ -49,6 +50,16 @@ const NamedDecl *canonicalDecl(const NamedDecl *D) {
 bool isNamespaceQualifier(NestedNameSpecifierLoc Qualifier) {
   return Qualifier && Qualifier.getNestedNameSpecifier().getKind() ==
                           NestedNameSpecifier::Kind::Namespace;
+}
+
+void collectUsingDecls(const DeclContext *DC,
+                       llvm::SmallVectorImpl<const UsingDecl *> &Out) {
+  for (const Decl *D : DC->decls()) {
+    if (const auto *UD = llvm::dyn_cast<UsingDecl>(D))
+      Out.push_back(UD);
+    if (const auto *Nested = llvm::dyn_cast<DeclContext>(D))
+      collectUsingDecls(Nested, Out);
+  }
 }
 
 SourceLocation getReferenceEnd(SourceLocation NameLoc, const SourceManager &SM,
@@ -101,18 +112,11 @@ bool ReplaceQualifiedWithAlias::prepare(const Selection &Inputs) {
   if (!Node)
     return false;
 
-  for (auto *N = Node; N; N = N->Parent) {
-    const NamedDecl *Alias = nullptr;
-    if (const auto *TAD = N->ASTNode.get<TypeAliasDecl>(); TAD) {
-      Alias = TAD;
-    } else if (const auto *UD = N->ASTNode.get<UsingDecl>(); UD) {
-      Alias = UD;
-    } else {
-      continue;
-    }
-
+  auto SetFromAlias = [&](const NamedDecl *Alias) -> bool {
     if (!Alias->getIdentifier())
       return false;
+
+    llvm::DenseSet<const NamedDecl *> Targets;
 
     ReferenceLoc QualifiedRef;
     bool FoundQualifiedRef = false;
@@ -128,19 +132,123 @@ bool ReplaceQualifiedWithAlias::prepare(const Selection &Inputs) {
         },
         Inputs.AST->getHeuristicResolver());
 
-    if (!FoundQualifiedRef)
-      return false;
-
-    for (const auto *Target : QualifiedRef.Targets) {
-      if (const auto *Canonical = canonicalDecl(Target))
-        RewriteTargets.insert(Canonical);
+    if (FoundQualifiedRef) {
+      for (const auto *Target : QualifiedRef.Targets) {
+        if (const auto *Canonical = canonicalDecl(Target))
+          Targets.insert(Canonical);
+      }
+    } else if (const auto *UD = llvm::dyn_cast<UsingDecl>(Alias)) {
+      for (const auto *Shadow : UD->shadows()) {
+        if (const auto *Canonical = canonicalDecl(Shadow->getTargetDecl()))
+          Targets.insert(Canonical);
+      }
     }
-    if (RewriteTargets.empty())
+
+    if (Targets.empty())
       return false;
 
+    RewriteTargets = std::move(Targets);
     AliasName = Alias->getNameAsString();
     AliasDeclToSkip = Alias->getSourceRange();
     return true;
+  };
+
+  for (auto *N = Node; N; N = N->Parent) {
+    if (const auto *TAD = N->ASTNode.get<TypeAliasDecl>(); TAD) {
+      if (SetFromAlias(TAD))
+        return true;
+    } else if (const auto *UD = N->ASTNode.get<UsingDecl>(); UD) {
+      if (SetFromAlias(UD))
+        return true;
+    }
+  }
+
+  llvm::DenseSet<const NamedDecl *> SelectedTargets;
+  std::string SelectedName;
+  bool FoundSelectedQualifiedRef = false;
+  for (const auto &D : Inputs.AST->getLocalTopLevelDecls()) {
+    findExplicitReferences(
+        D,
+        [&](ReferenceLoc Ref) {
+          if (FoundSelectedQualifiedRef || !Ref.Qualifier || Ref.Targets.empty())
+            return;
+          if (!isNamespaceQualifier(Ref.Qualifier))
+            return;
+
+          auto &SM = Inputs.AST->getSourceManager();
+          const auto &LangOpts = Inputs.AST->getLangOpts();
+
+          SourceLocation QualifierLoc = Ref.Qualifier.getBeginLoc();
+          SourceLocation NameLoc = Ref.NameLoc;
+          if (QualifierLoc.isMacroID()) {
+            if (!SM.isMacroArgExpansion(QualifierLoc))
+              return;
+            QualifierLoc = SM.getFileLoc(QualifierLoc);
+          }
+          if (NameLoc.isMacroID()) {
+            if (!SM.isMacroArgExpansion(NameLoc))
+              return;
+            NameLoc = SM.getFileLoc(NameLoc);
+          }
+          if (SM.getFileID(QualifierLoc) != SM.getMainFileID() ||
+              SM.getFileID(NameLoc) != SM.getMainFileID())
+            return;
+
+          unsigned BeginOffset = SM.getFileOffset(QualifierLoc);
+          SourceLocation EndLoc = getReferenceEnd(NameLoc, SM, LangOpts);
+          if (BeginOffset > SM.getFileOffset(EndLoc))
+            return;
+
+          if (Inputs.SelectionBegin < BeginOffset ||
+              Inputs.SelectionBegin > SM.getFileOffset(EndLoc))
+            return;
+
+          SelectedName =
+              Lexer::getSourceText(CharSourceRange::getTokenRange(NameLoc),
+                                   SM, LangOpts)
+                  .str();
+          for (const auto *Target : Ref.Targets) {
+            if (const auto *Canonical = canonicalDecl(Target))
+              SelectedTargets.insert(Canonical);
+          }
+          FoundSelectedQualifiedRef = true;
+        },
+        Inputs.AST->getHeuristicResolver());
+    if (FoundSelectedQualifiedRef)
+      break;
+  }
+
+  if (!FoundSelectedQualifiedRef)
+    return false;
+
+  llvm::SmallVector<const UsingDecl *> VisibleUsingDecls;
+  collectUsingDecls(Inputs.AST->getASTContext().getTranslationUnitDecl(),
+                    VisibleUsingDecls);
+  auto &SM = Inputs.AST->getSourceManager();
+  for (const auto *UD : VisibleUsingDecls) {
+    if (!UD->getIdentifier())
+      continue;
+    if (!SelectedName.empty() && UD->getName() != SelectedName)
+      continue;
+    SourceLocation UDLoc = UD->getLocation();
+    if (UDLoc.isInvalid() ||
+        SM.getFileID(SM.getExpansionLoc(UDLoc)) != SM.getMainFileID())
+      continue;
+
+    bool MatchesSelection = false;
+    for (const auto *Shadow : UD->shadows()) {
+      const auto *Canonical = canonicalDecl(Shadow->getTargetDecl());
+      if (Canonical &&
+          (SelectedTargets.empty() || SelectedTargets.contains(Canonical))) {
+        MatchesSelection = true;
+        break;
+      }
+    }
+    if (!MatchesSelection)
+      continue;
+
+    if (SetFromAlias(UD))
+      return true;
   }
 
   return false;

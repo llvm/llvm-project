@@ -158,6 +158,73 @@ Y A;
 )cpp");
 }
 
+TEST_F(ReplaceQualifiedWithAliasTest, MustNotReplaceExistingUsingDecl) {
+  EXPECT_EQ(apply(R"cpp(
+namespace b {
+    int test1;
+}
+
+namespace d {
+    int test1;
+}
+
+namespace a {
+    using b::test1;
+
+    void foo() {
+        b::test1 = 1;
+        b::test1 = 1;
+    }
+} // namespace a
+
+namespace c {
+    using d::test1;
+} // namespace c
+
+using namespace a;
+using namespace b;
+
+void foo() {
+    b::te^st1 = 1;
+    a::test1 = 1;
+    c::test1 = 1;
+}
+
+)cpp"),
+            R"cpp(
+namespace b {
+    int test1;
+}
+
+namespace d {
+    int test1;
+}
+
+namespace a {
+    using b::test1;
+
+    void foo() {
+        test1 = 1;
+        test1 = 1;
+    }
+} // namespace a
+
+namespace c {
+    using d::test1;
+} // namespace c
+
+using namespace a;
+using namespace b;
+
+void foo() {
+    test1 = 1;
+    a::test1 = 1;
+    c::test1 = 1;
+}
+
+)cpp");
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang
