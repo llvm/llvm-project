@@ -528,8 +528,11 @@ public:
   /// and conditional branches. With multiple condition registers, the code
   /// generator will not aggressively sink comparisons into the blocks of their
   /// users. \p VT is the type of the condition value, e.g. the type of the
-  /// result of a comparison.
-  virtual bool hasMultipleConditionRegisters(EVT VT) const { return false; }
+  /// result of a comparison. \p IsDivergent indicates whether the condition
+  /// value being produced is divergent.
+  virtual bool hasMultipleConditionRegisters(EVT VT, bool IsDivergent) const {
+    return false;
+  }
 
   /// Return true if the target has BitExtract instructions.
   bool hasExtractBitsInsn() const { return HasExtractBitsInsn; }
@@ -2556,8 +2559,10 @@ public:
   virtual bool shouldNormalizeToSelectSequence(LLVMContext &Context, EVT VT,
                                                EVT CCVT) const {
     // If a target has multiple condition registers, then it likely has logical
-    // operations on those registers.
-    if (hasMultipleConditionRegisters(VT))
+    // operations on those registers. Conservatively assume a divergent
+    // condition here, as uniformity information is not available in this
+    // context.
+    if (hasMultipleConditionRegisters(VT, /*IsDivergent=*/true))
       return false;
     // Only do the transform if the value won't be split into multiple
     // registers.

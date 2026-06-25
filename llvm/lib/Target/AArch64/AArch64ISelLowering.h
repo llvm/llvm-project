@@ -958,7 +958,7 @@ private:
     return VecOp.getOpcode() == ISD::SETCC;
   }
 
-  bool hasMultipleConditionRegisters(EVT VT) const override {
+  bool hasMultipleConditionRegisters(EVT VT, bool IsDivergent) const override {
     return VT.isScalableVector();
   }
 };
