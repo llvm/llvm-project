@@ -1624,7 +1624,7 @@ void X86_64TargetCodeGenInfo::checkFunctionABI(CodeGenModule &CGM,
   Check(FD->getReturnType(), GetReturnTypeLoc(FD), true);
 
   // Go through the parameters and emit a warning for the first vector found
-  // without the matching function AVX level attribute
+  // without the matching function AVX level attribute.
   for (const ParmVarDecl *P : FD->parameters()) {
     SourceLocation Loc = P->getLocation();
     if (Loc.isInvalid())
