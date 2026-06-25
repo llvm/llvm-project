@@ -264,24 +264,6 @@ class ACCOrphanAtomicCaptureOpConversion
   }
 };
 
-// Erase a stray acc.terminator only once it is no longer owned by a live ACC
-// region op; owning ops erase their own terminator when unwrapped.
-class ACCOrphanTerminatorEraseConversion
-    : public OpRewritePattern<acc::TerminatorOp> {
-  using OpRewritePattern<acc::TerminatorOp>::OpRewritePattern;
-
-public:
-  LogicalResult matchAndRewrite(acc::TerminatorOp op,
-                                PatternRewriter &rewriter) const override {
-    if (Operation *parent = op->getParentOp())
-      if (parent->getDialect() ==
-          op->getContext()->getLoadedDialect<acc::OpenACCDialect>())
-        return failure();
-    rewriter.eraseOp(op);
-    return success();
-  }
-};
-
 // Convert orphan acc.loop to scf.for or scf.execute_region.
 // Only matches if NOT inside an ACC compute construct.
 class ACCOrphanLoopOpConversion : public OpRewritePattern<acc::LoopOp> {
@@ -481,10 +463,6 @@ void mlir::acc::populateACCHostFallbackPatterns(RewritePatternSet &patterns,
       ACCOpEraseConversion<acc::InitOp>, ACCOpEraseConversion<acc::ShutdownOp>,
       ACCOpEraseConversion<acc::SetOp>, ACCOpEraseConversion<acc::WaitOp>>(
       context);
-
-  // acc.terminator - erase only stray terminators no longer owned by an ACC
-  // region op; region-bearing ops erase their own terminator when unwrapped.
-  patterns.insert<ACCOrphanTerminatorEraseConversion>(context);
 
   // Compute constructs - unwrap their regions
   patterns.insert<ACCRegionUnwrapConversion<acc::ParallelOp>,
