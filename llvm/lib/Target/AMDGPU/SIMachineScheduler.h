@@ -200,7 +200,6 @@ private:
 
   void nodeScheduled(SUnit *SU);
   void tryCandidateTopDown(SISchedCandidate &Cand, SISchedCandidate &TryCand);
-  void tryCandidateBottomUp(SISchedCandidate &Cand, SISchedCandidate &TryCand);
   SUnit* pickNode();
   void traceCandidate(const SISchedCandidate &Cand);
   void initRegPressure(MachineBasicBlock::iterator BeginBlock,

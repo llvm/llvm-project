@@ -28,8 +28,8 @@ define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%gep.src>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%c.1> = icmp eq ir<%l>, ir<10>
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = any-of ir<%c.1>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:      EMIT branch-on-two-conds vp<[[VP6]]>, vp<[[VP7]]>
 ; CHECK-NEXT:    No successors
@@ -115,8 +115,8 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values() {
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%gep.src>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%c.1> = icmp eq ir<%l>, ir<10>
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = any-of ir<%c.1>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:      EMIT branch-on-two-conds vp<[[VP6]]>, vp<[[VP7]]>
 ; CHECK-NEXT:    No successors
@@ -195,8 +195,8 @@ define i64 @multi_exiting_to_same_exit_live_in_exit_values_2() {
 ; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%gep.src>
 ; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN ir<%c.1> = icmp eq ir<%l>, ir<10>
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = any-of ir<%c.1>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:      EMIT branch-on-two-conds vp<[[VP6]]>, vp<[[VP7]]>
 ; CHECK-NEXT:    No successors
@@ -284,9 +284,9 @@ define i64 @two_early_exits_same_exit_with_constant_live_outs() {
 ; CHECK-NEXT:     vp<[[PTRB:%.+]]> = vector-pointer inbounds ir<%gep.B>
 ; CHECK-NEXT:     WIDEN ir<%ld.B> = load vp<[[PTRB]]>
 ; CHECK-NEXT:     WIDEN ir<%cmp2> = icmp eq ir<%ld.A>, ir<%ld.B>
-; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT vp<[[OR:%.+]]> = logical-or ir<%cmp1>, ir<%cmp2>
 ; CHECK-NEXT:     EMIT vp<[[ANY_OF:%.+]]> = any-of vp<[[OR]]>
+; CHECK-NEXT:     EMIT vp<%index.next> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT vp<[[CMP:%.+]]> = icmp eq vp<%index.next>, vp<[[VTC]]>
 ; CHECK-NEXT:     EMIT branch-on-two-conds vp<[[ANY_OF]]>, vp<[[CMP]]>
 ; CHECK-NEXT:   No successors

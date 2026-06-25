@@ -116,6 +116,8 @@ public:
   bool isEquivalent(const Attr &Other,
                     StructuralEquivalenceContext &Context) const;
 
+  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &Ctx) const;
+
   // Pretty print this attribute.
   void printPretty(raw_ostream &OS, const PrintingPolicy &Policy) const;
 

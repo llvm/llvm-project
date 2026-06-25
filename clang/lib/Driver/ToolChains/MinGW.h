@@ -73,7 +73,9 @@ public:
   bool isPIEDefault(const llvm::opt::ArgList &Args) const override;
   bool isPICDefaultForced() const override;
 
-  SanitizerMask getSupportedSanitizers() const override;
+  SanitizerMask
+  getSupportedSanitizers(BoundArch BA,
+                         Action::OffloadKind DeviceOffloadKind) const override;
 
   llvm::ExceptionHandling GetExceptionModel(
       const llvm::opt::ArgList &Args) const override;
@@ -83,7 +85,7 @@ public:
                             llvm::opt::ArgStringList &CC1Args) const override;
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args,
+                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
                         Action::OffloadKind DeviceOffloadKind) const override;
   void AddClangCXXStdlibIncludeArgs(
       const llvm::opt::ArgList &DriverArgs,

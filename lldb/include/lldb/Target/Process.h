@@ -362,6 +362,7 @@ class Process : public std::enable_shared_from_this<Process>,
   friend class StopInfo;
   friend class Target;
   friend class ThreadList;
+  friend class MemoryCache;
 
 public:
   /// Broadcaster event bits definitions.
@@ -1420,7 +1421,18 @@ public:
 
   virtual bool GetProcessInfo(ProcessInstanceInfo &info);
 
-  virtual lldb_private::UUID FindModuleUUID(const llvm::StringRef path);
+  /// Given a module spec, try to find the UUID information.
+  ///
+  /// \param [in,out] spec
+  ///     A module specification with as much detail as possible about the
+  ///     module for which we are trying to find a UUID. The
+  ///     ModuleSpec.m_file should be filled in. If a dynamic loader is
+  ///     calling this, the load address of the module can be filled in as
+  ///     well. Sometimes the file path for a library can be a symlink and
+  ///     the load address can help resolve the module.
+  ///
+  /// \return True if the UUID was added, false otherwise.
+  virtual bool FindModuleUUID(ModuleSpec &spec);
 
   /// Get the exit status for a process.
   ///
@@ -1619,9 +1631,6 @@ public:
                             Status &error);
 
   /// Read from multiple memory ranges and write the results into buffer.
-  /// This calls ReadMemoryFromInferior multiple times, once per range,
-  /// bypassing the read cache. Process implementations that can perform this
-  /// operation more efficiently should override this.
   ///
   /// \param[in] ranges
   ///     A collection of ranges (base address + size) to read from.
@@ -1636,7 +1645,7 @@ public:
   ///     of the slice indicates how many bytes were read successfully. Partial
   ///     reads are always performed from the start of the requested range,
   ///     never from the middle or end.
-  virtual llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+  llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
   ReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
                    llvm::MutableArrayRef<uint8_t> buffer);
 
@@ -2307,8 +2316,12 @@ protected:
   UpdateBreakpointSites(const BreakpointSiteToActionMap &site_to_action);
 
 public:
+  /// Performs `action` on `site`. If `forbid_delay` is true, the action is
+  /// performed immediately, otherwise the method will delay the breakpoint if
+  /// it is correct to do so.
   llvm::Error ExecuteBreakpointSiteAction(BreakpointSite &site,
-                                          Process::BreakpointAction action);
+                                          Process::BreakpointAction action,
+                                          bool forbid_delay);
 
   // This is implemented completely using the lldb::Process API. Subclasses
   // don't need to implement this function unless the standard flow of read
@@ -3042,6 +3055,13 @@ protected:
   ///     Zero is returned in the case of an error.
   virtual size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
                               Status &error) = 0;
+
+  /// Reads each range individually via ReadMemoryFromInferior, bypassing the
+  /// memory cache. Subclasses may override it to batch the reads more
+  /// efficiently.
+  virtual llvm::SmallVector<llvm::MutableArrayRef<uint8_t>>
+  DoReadMemoryRanges(llvm::ArrayRef<Range<lldb::addr_t, size_t>> ranges,
+                     llvm::MutableArrayRef<uint8_t> buffer);
 
   virtual void DoFindInMemory(lldb::addr_t start_addr, lldb::addr_t end_addr,
                               const uint8_t *buf, size_t size,

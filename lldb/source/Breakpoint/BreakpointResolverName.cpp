@@ -65,7 +65,7 @@ BreakpointResolverName::BreakpointResolverName(
       m_match_type(Breakpoint::Exact), m_language(language),
       m_skip_prologue(skip_prologue) {
   for (const std::string &name : names) {
-    AddNameLookup(ConstString(name.c_str(), name.size()), name_type_mask);
+    AddNameLookup(ConstString(name), name_type_mask);
   }
 }
 
@@ -228,7 +228,7 @@ void BreakpointResolverName::AddNameLookup(ConstString name,
         std::vector<Module::LookupInfo> variant_lookups =
             Module::LookupInfo::MakeLookupInfos(name, variant.GetType(),
                                                 lang->GetLanguageType(),
-                                                variant.GetName());
+                                                ConstString(variant.GetName()));
         llvm::append_range(m_lookups, variant_lookups);
       }
     }

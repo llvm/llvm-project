@@ -45,9 +45,11 @@
 #include "llvm/Support/RWMutex.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
+#include <atomic>
 #include <functional>
 #include <list>
 #include <map>
+#include <mutex>
 #include <optional>
 #include <set>
 #include <string>
@@ -284,11 +286,17 @@ class BinaryContext {
   /// Internal helper for removing section name from a lookup table.
   void deregisterSectionName(const BinarySection &Section);
 
+  /// Mutex used for parallel processing of DWP type units.
+  std::mutex DWPUnitsMutex;
+
 public:
   static Expected<std::unique_ptr<BinaryContext>> createBinaryContext(
       Triple TheTriple, std::shared_ptr<orc::SymbolStringPool> SSP,
       StringRef InputFileName, SubtargetFeatures *Features, bool IsPIC,
       std::unique_ptr<DWARFContext> DwCtx, JournalingStreams Logger);
+
+  /// Returns the mutex guarding concurrent access to DWP units.
+  std::mutex &getUnitsMutex() { return DWPUnitsMutex; }
 
   /// Superset of compiler units that will contain overwritten code that needs
   /// new debug info. In a few cases, functions may end up not being
@@ -803,6 +811,45 @@ public:
   /// final addresses functions will have.
   uint64_t LayoutStartAddress{0};
 
+  /// Maximum alignment of objects emitted into the main (hot) and cold code
+  /// sections, populated by the parallel AlignerPass (updateMaxCodeAlignment).
+  std::atomic<uint16_t> MaxMainCodeAlignment{1};
+  std::atomic<uint16_t> MaxColdCodeAlignment{1};
+
+  /// Alignment-related options sourced from CommandLineOpts. Populated by
+  /// RewriteInstance::adjustCommandLineOptions() so passes and the emitter
+  /// can read them via BinaryContext instead of touching opts::* directly.
+  /// Defaults must stay in sync with the cl::init values in
+  /// bolt/lib/Utils/CommandLineOpts.cpp.
+  unsigned AlignText{0};
+  unsigned AlignFunctions{64};
+  unsigned AlignBlocksMinSize{0};
+  unsigned AlignBlocksThreshold{800};
+  unsigned AlignFunctionsMaxBytes{32};
+  unsigned BlockAlignment{16};
+  bool AlignBlocks{false};
+  bool PreserveBlocksAlignment{false};
+  bool UseCompactAligner{true};
+  bool X86AlignBranchBoundaryHotOnly{true};
+
+  /// Fold \p Alignment into the running max for the main code section (when
+  /// \p InMainSection) and/or the cold code section (when \p InColdSection),
+  /// reflecting which output section(s) the object is emitted into. Safe to
+  /// call concurrently.
+  void updateMaxCodeAlignment(uint16_t Alignment, bool InMainSection,
+                              bool InColdSection) {
+    auto AtomicMax = [](std::atomic<uint16_t> &Max, uint16_t Value) {
+      uint16_t Cur = Max.load(std::memory_order_relaxed);
+      while (Value > Cur &&
+             !Max.compare_exchange_weak(Cur, Value, std::memory_order_relaxed))
+        ;
+    };
+    if (InMainSection)
+      AtomicMax(MaxMainCodeAlignment, Alignment);
+    if (InColdSection)
+      AtomicMax(MaxColdCodeAlignment, Alignment);
+  }
+
   /// Old .text info.
   uint64_t OldTextSectionAddress{0};
   uint64_t OldTextSectionOffset{0};
@@ -892,7 +939,7 @@ public:
            TheTriple->getArch() == llvm::Triple::x86_64;
   }
 
-  bool isRISCV() const { return TheTriple->getArch() == llvm::Triple::riscv64; }
+  bool isRISCV() const { return TheTriple->isRISCV(); }
 
   // AArch64/RISC-V functions to check if symbol is used to delimit
   // code/data in .text. Code is marked by $x, data by $d.

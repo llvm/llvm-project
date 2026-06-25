@@ -15,6 +15,8 @@
 #include <optional>
 #include <unordered_set>
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 
 #include "lldb/Breakpoint/BreakpointPrecondition.h"
@@ -61,7 +63,7 @@ public:
 
     virtual ClassDescriptorSP GetSuperclass() = 0;
 
-    virtual ClassDescriptorSP GetMetaclass() const = 0;
+    virtual std::unique_ptr<ClassDescriptor> GetMetaclass() const = 0;
 
     // virtual if any implementation has some other version-specific rules but
     // for the known v1/v2 this is all that needs to be done
@@ -196,7 +198,7 @@ public:
 
     virtual bool IsPossibleTaggedPointer(lldb::addr_t ptr) = 0;
 
-    virtual ObjCLanguageRuntime::ClassDescriptorSP
+    virtual std::unique_ptr<ClassDescriptor>
     GetClassDescriptor(lldb::addr_t ptr) = 0;
 
   protected:
@@ -223,6 +225,11 @@ public:
     return llvm::cast_or_null<ObjCLanguageRuntime>(
         process.GetLanguageRuntime(lldb::eLanguageTypeObjC));
   }
+
+  /// Returns whether the architecture's object file format supports
+  /// Objective-C code generation. Generating Objective-C for a format that
+  /// does not aborts the compiler.
+  static bool IsSupportedForArchitecture(const ArchSpec &arch);
 
   virtual TaggedPointerVendor *GetTaggedPointerVendor() { return nullptr; }
 
@@ -420,7 +427,15 @@ private:
   typedef std::map<ClassAndSel, lldb::addr_t> MsgImplMap;
   typedef std::map<ClassAndSelStr, lldb::addr_t> MsgImplStrMap;
   typedef llvm::DenseMap<ObjCISA, ClassDescriptorSP> ISAToDescriptorMap;
-  typedef llvm::DenseMap<uint32_t, llvm::SmallVector<ObjCISA, 2>> HashToISAMap;
+
+  /// Keys are already djbHash values, so use identity as the hash function.
+  struct IdentityHashKeyInfo {
+    static unsigned getHashValue(uint32_t Val) { return Val; }
+    static bool isEqual(uint32_t LHS, uint32_t RHS) { return LHS == RHS; }
+  };
+
+  typedef llvm::SmallVector<ObjCISA, 2> ISAVector;
+  typedef llvm::DenseMap<uint32_t, ISAVector, IdentityHashKeyInfo> HashToISAMap;
   typedef ISAToDescriptorMap::iterator ISAToDescriptorIterator;
   typedef ThreadSafeDenseMap<void *, uint64_t> TypeSizeCache;
 

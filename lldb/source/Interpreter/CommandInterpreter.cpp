@@ -2962,7 +2962,6 @@ void CommandInterpreter::HandleCommandsFromFile(
   auto input_file_up =
       FileSystem::Instance().Open(cmd_file, File::eOpenOptionReadOnly);
   if (!input_file_up) {
-    std::string error = llvm::toString(input_file_up.takeError());
     result.AppendErrorWithFormatv(
         "error: an error occurred read file '{0}': {1}\n", cmd_file_path,
         llvm::fmt_consume(input_file_up.takeError()));
@@ -3263,8 +3262,6 @@ void CommandInterpreter::FindCommandsForApropos(llvm::StringRef search_word,
                                                 bool search_user_commands,
                                                 bool search_alias_commands,
                                                 bool search_user_mw_commands) {
-  CommandObject::CommandMap::const_iterator pos;
-
   if (search_builtin_commands)
     FindCommandsForApropos(search_word, commands_found, commands_help,
                            m_command_dict);
@@ -3282,11 +3279,17 @@ void CommandInterpreter::FindCommandsForApropos(llvm::StringRef search_word,
                            m_alias_dict);
 }
 
-ExecutionContext CommandInterpreter::GetExecutionContext() const {
-  return !m_overriden_exe_contexts.empty()
-             ? m_overriden_exe_contexts.top()
-             : m_debugger.GetSelectedExecutionContext(
-                   /*adopt_dummy_target=*/true);
+ExecutionContext
+CommandInterpreter::GetExecutionContext(bool adopt_dummy_target) const {
+  if (m_overriden_exe_contexts.empty())
+    return m_debugger.GetSelectedExecutionContext(adopt_dummy_target);
+
+  ExecutionContext candidate_context = m_overriden_exe_contexts.top();
+  Target *candidate_target = candidate_context.GetTargetPtr();
+  if (!adopt_dummy_target && candidate_target &&
+      candidate_target->IsDummyTarget())
+    return ExecutionContext();
+  return candidate_context;
 }
 
 void CommandInterpreter::OverrideExecutionContext(

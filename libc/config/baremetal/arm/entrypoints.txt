@@ -323,6 +323,8 @@ set(TARGET_LIBC_ENTRYPOINTS
 
 set(TARGET_LIBM_ENTRYPOINTS
     # complex.h entrypoints
+    libc.src.complex.carg
+    libc.src.complex.cargf
     libc.src.complex.creal
     libc.src.complex.crealf
     libc.src.complex.creall
@@ -614,6 +616,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.asinhf16
     libc.src.math.atan2f16
     libc.src.math.canonicalizef16
+    libc.src.math.cbrtf16
     libc.src.math.ceilf16
     libc.src.math.copysignf16
     libc.src.math.cosf16
@@ -665,6 +668,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.hypotf16
     libc.src.math.ilogbf16
     libc.src.math.iscanonicalf16
+    libc.src.math.isnanf16
     libc.src.math.issignalingf16
     libc.src.math.ldexpf16
     libc.src.math.llogbf16
@@ -769,6 +773,7 @@ if(LIBC_TYPES_HAS_FLOAT128)
     libc.src.math.getpayloadf128
     libc.src.math.ilogbf128
     libc.src.math.iscanonicalf128
+    libc.src.math.isnanf128
     libc.src.math.issignalingf128
     libc.src.math.ldexpf128
     libc.src.math.llogbf128
@@ -804,6 +809,7 @@ endif()
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
   libc.src.math.atanbf16
+  libc.src.math.acosbf16
   libc.src.math.asinbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
@@ -870,6 +876,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.setpayloadbf16
   libc.src.math.setpayloadsigbf16
   libc.src.math.sqrtbf16
+  libc.src.math.tanbf16
   libc.src.math.truncbf16
   libc.src.math.totalorderbf16
   libc.src.math.totalordermagbf16
@@ -963,6 +970,16 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.idivulr
     libc.src.stdfix.idivuk
     libc.src.stdfix.idivulk
+  )
+endif()
+
+if(LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
+  list(APPEND TARGET_LIBC_ENTRYPOINTS
+    # regex.h entrypoints
+    libc.src.regex.regcomp
+    libc.src.regex.regexec
+    libc.src.regex.regerror
+    libc.src.regex.regfree
   )
 endif()
 

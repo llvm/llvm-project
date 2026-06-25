@@ -264,11 +264,11 @@ static bool isOnlyUsedInComparisonWithZero(Value *V) {
 }
 
 static bool canTransformToMemCmp(CallInst *CI, Value *Str, uint64_t Len,
-                                 const DataLayout &DL) {
+                                 const SimplifyQuery &SQ) {
   if (!isOnlyUsedInComparisonWithZero(CI))
     return false;
 
-  if (!isDereferenceableAndAlignedPointer(Str, Align(1), APInt(64, Len), DL))
+  if (!isDereferenceablePointer(Str, APInt(64, Len), SQ))
     return false;
 
   if (CI->getFunction()->hasFnAttribute(Attribute::SanitizeMemory))
@@ -608,13 +608,14 @@ Value *LibCallSimplifier::optimizeStrCmp(CallInst *CI, IRBuilderBase &B) {
   }
 
   // strcmp to memcmp
+  SimplifyQuery SQ(DL, TLI, DT, AC, CI);
   if (!HasStr1 && HasStr2) {
-    if (canTransformToMemCmp(CI, Str1P, Len2, DL))
+    if (canTransformToMemCmp(CI, Str1P, Len2, SQ))
       return copyFlags(*CI, emitMemCmp(Str1P, Str2P,
                                        TLI->getAsSizeT(Len2, *CI->getModule()),
                                        B, DL, TLI));
   } else if (HasStr1 && !HasStr2) {
-    if (canTransformToMemCmp(CI, Str2P, Len1, DL))
+    if (canTransformToMemCmp(CI, Str2P, Len1, SQ))
       return copyFlags(*CI, emitMemCmp(Str1P, Str2P,
                                        TLI->getAsSizeT(Len1, *CI->getModule()),
                                        B, DL, TLI));
@@ -1937,7 +1938,7 @@ Value *LibCallSimplifier::optimizeNew(CallInst *CI, IRBuilderBase &B,
 // Replace a libcall \p CI with a call to intrinsic \p IID
 static Value *replaceUnaryCall(CallInst *CI, IRBuilderBase &B,
                                Intrinsic::ID IID) {
-  CallInst *NewCall = B.CreateUnaryIntrinsic(IID, CI->getArgOperand(0), CI);
+  Value *NewCall = B.CreateUnaryIntrinsic(IID, CI->getArgOperand(0), CI);
   NewCall->takeName(CI);
   return copyFlags(*CI, NewCall);
 }
@@ -2251,9 +2252,8 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilderBase &B) {
       hasFloatFn(M, TLI, Ty, LibFunc_exp10, LibFunc_exp10f, LibFunc_exp10l)) {
 
     if (Pow->doesNotAccessMemory()) {
-      CallInst *NewExp10 =
-          B.CreateIntrinsic(Intrinsic::exp10, {Ty}, {Expo}, Pow, "exp10");
-      return copyFlags(*Pow, NewExp10);
+      return B.CreateIntrinsic(Intrinsic::exp10, {Ty}, {Expo}, Pow, "exp10", {},
+                               [Pow](CallInst *CI) { CI->copyIRFlags(Pow); });
     }
 
     return copyFlags(*Pow, emitUnaryFloatFnCall(Expo, TLI, LibFunc_exp10,
@@ -2640,9 +2640,12 @@ Value *LibCallSimplifier::optimizeLog(CallInst *Log, IRBuilderBase &B) {
           Known.isKnownNeverLogicalZero(F->getDenormalMode(FltSem));
     }
     if (IsKnownNoErrno) {
-      auto *NewLog = B.CreateUnaryIntrinsic(LogID, Log->getArgOperand(0), Log);
-      NewLog->copyMetadata(*Log);
-      return copyFlags(*Log, NewLog);
+      Value *NewLog = B.CreateUnaryIntrinsic(LogID, Log->getArgOperand(0), Log);
+      if (auto *I = dyn_cast<Instruction>(NewLog)) {
+        I->copyMetadata(*Log);
+        return copyFlags(*Log, I);
+      }
+      return NewLog;
     }
   } else if (LogID == Intrinsic::log || LogID == Intrinsic::log2 ||
              LogID == Intrinsic::log10) {
@@ -2853,11 +2856,10 @@ Value *LibCallSimplifier::optimizeSqrt(CallInst *CI, IRBuilderBase &B) {
 
 Value *LibCallSimplifier::optimizeFMod(CallInst *CI, IRBuilderBase &B) {
 
-  // fmod(x,y) can set errno if y == 0 or x == +/-inf, and returns Nan in those
-  // case. If we know those do not happen, then we can convert the fmod into
-  // frem.
-  bool IsNoNan = CI->hasNoNaNs();
-  if (!IsNoNan) {
+  // fmod(x,y) sets errno if y == 0 or x == +/-inf. frem does not set errno,
+  // so the fold is valid only when we can prove fmod wouldn't either.
+  bool IsNoErrno = CI->hasNoNaNs();
+  if (!IsNoErrno) {
     SimplifyQuery SQ(DL, TLI, DT, AC, CI, true, true, DC);
     KnownFPClass Known0 = computeKnownFPClass(CI->getOperand(0), fcInf, SQ);
     if (Known0.isKnownNeverInfinity()) {
@@ -2866,16 +2868,12 @@ Value *LibCallSimplifier::optimizeFMod(CallInst *CI, IRBuilderBase &B) {
       Function *F = CI->getParent()->getParent();
       const fltSemantics &FltSem =
           CI->getType()->getScalarType()->getFltSemantics();
-      IsNoNan = Known1.isKnownNeverLogicalZero(F->getDenormalMode(FltSem));
+      IsNoErrno = Known1.isKnownNeverLogicalZero(F->getDenormalMode(FltSem));
     }
   }
 
-  if (IsNoNan) {
-    Value *FRem = B.CreateFRemFMF(CI->getOperand(0), CI->getOperand(1), CI);
-    if (auto *FRemI = dyn_cast<Instruction>(FRem))
-      FRemI->setHasNoNaNs(true);
-    return FRem;
-  }
+  if (IsNoErrno)
+    return B.CreateFRemFMF(CI->getOperand(0), CI->getOperand(1), CI);
   return nullptr;
 }
 
@@ -3194,12 +3192,12 @@ Value *LibCallSimplifier::optimizeFdim(CallInst *CI, IRBuilderBase &B) {
       !match(CI->getArgOperand(1), m_APFloat(Y)))
     return nullptr;
 
+  // C99 fdim(x, y) = (x > y) ? x - y : +0.
+  if (X->compare(*Y) != APFloat::cmpGreaterThan && !X->isNaN() && !Y->isNaN())
+    return ConstantFP::getZero(CI->getType());
   APFloat Difference = *X;
   Difference.subtract(*Y, RoundingMode::NearestTiesToEven);
-
-  APFloat MaxVal =
-      maximum(Difference, APFloat::getZero(CI->getType()->getFltSemantics()));
-  return ConstantFP::get(CI->getType(), MaxVal);
+  return ConstantFP::get(CI->getType(), Difference);
 }
 
 //===----------------------------------------------------------------------===//

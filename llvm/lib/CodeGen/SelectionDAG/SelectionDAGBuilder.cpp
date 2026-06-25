@@ -1978,6 +1978,16 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
               DAG.getConstant(0, getCurSDLoc(), MVT::getIntegerVT(8))));
     }
 
+    if (VT == MVT::externref || VT == MVT::funcref) {
+      assert(C->isNullValue() && "Can only zero this target type!");
+      // The zero value of a WebAssembly reference type is the null reference,
+      // materialized with ref.null.
+      Intrinsic::ID IID = VT == MVT::externref ? Intrinsic::wasm_ref_null_extern
+                                               : Intrinsic::wasm_ref_null_func;
+      return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, getCurSDLoc(), VT,
+                         DAG.getTargetConstant(IID, getCurSDLoc(), MVT::i32));
+    }
+
     VectorType *VecTy = cast<VectorType>(V->getType());
 
     // Now that we know the number and type of the elements, get that number of
@@ -4052,8 +4062,8 @@ void SelectionDAGBuilder::visitUIToFP(const User &I) {
   EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
                                                         I.getType());
   SDNodeFlags Flags;
-  if (auto *PNI = dyn_cast<PossiblyNonNegInst>(&I))
-    Flags.setNonNeg(PNI->hasNonNeg());
+  Flags.setNonNeg(cast<PossiblyNonNegInst>(&I)->hasNonNeg());
+  Flags.copyFMF(*cast<FPMathOperator>(&I));
 
   setValue(&I, DAG.getNode(ISD::UINT_TO_FP, getCurSDLoc(), DestVT, N, Flags));
 }
@@ -4063,7 +4073,10 @@ void SelectionDAGBuilder::visitSIToFP(const User &I) {
   SDValue N = getValue(I.getOperand(0));
   EVT DestVT = DAG.getTargetLoweringInfo().getValueType(DAG.getDataLayout(),
                                                         I.getType());
-  setValue(&I, DAG.getNode(ISD::SINT_TO_FP, getCurSDLoc(), DestVT, N));
+  SDNodeFlags Flags;
+  Flags.copyFMF(*cast<FPMathOperator>(&I));
+
+  setValue(&I, DAG.getNode(ISD::SINT_TO_FP, getCurSDLoc(), DestVT, N, Flags));
 }
 
 void SelectionDAGBuilder::visitPtrToAddr(const User &I) {
@@ -5208,10 +5221,10 @@ void SelectionDAGBuilder::visitAtomicCmpXchg(const AtomicCmpXchgInst &I) {
   auto Flags = TLI.getAtomicMemOperandFlags(I, DAG.getDataLayout());
 
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineMemOperand *MMO = MF.getMachineMemOperand(
-      MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
-      DAG.getEVTAlign(MemVT), AAMDNodes(), nullptr, SSID, SuccessOrdering,
-      FailureOrdering);
+  MachineMemOperand *MMO =
+      MF.getMachineMemOperand(MachinePointerInfo(I.getPointerOperand()), Flags,
+                              MemVT.getStoreSize(), I.getAlign(), AAMDNodes(),
+                              nullptr, SSID, SuccessOrdering, FailureOrdering);
 
   SDValue L = DAG.getAtomicCmpSwap(ISD::ATOMIC_CMP_SWAP_WITH_SUCCESS,
                                    dl, MemVT, VTs, InChain,
@@ -5282,7 +5295,7 @@ void SelectionDAGBuilder::visitAtomicRMW(const AtomicRMWInst &I) {
   MachineFunction &MF = DAG.getMachineFunction();
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo(I.getPointerOperand()), Flags, MemVT.getStoreSize(),
-      DAG.getEVTAlign(MemVT), AAMDNodes(), nullptr, SSID, Ordering);
+      I.getAlign(), AAMDNodes(), nullptr, SSID, Ordering);
 
   SDValue L =
     DAG.getAtomic(NT, dl, MemVT, InChain,
@@ -6692,6 +6705,35 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                             RegName, getValue(RegValue)));
     return;
   }
+  case Intrinsic::write_volatile_register: {
+    Value *Reg = I.getArgOperand(0);
+    Value *RegValue = I.getArgOperand(1);
+    SDValue Chain = getRoot();
+    const MDNode *MD = cast<MDNode>(cast<MetadataAsValue>(Reg)->getMetadata());
+    SDValue RegName = DAG.getMDNode(MD);
+    EVT VT = TLI.getValueType(DAG.getDataLayout(), RegValue->getType());
+    SDValue WriteChain = DAG.getNode(ISD::WRITE_REGISTER, sdl, MVT::Other,
+                                     Chain, RegName, getValue(RegValue));
+    // FAKE_USE of the physical register marks it live after the WRITE_REGISTER,
+    // preventing the backend from dead-eliminating the write.  This is
+    // preferred over READ_REGISTER, which would emit extra register copies
+    // (e.g. fmov xN, dN for FP/SIMD registers).
+    const MDString *RegStr = cast<MDString>(MD->getOperand(0));
+    LLT Ty = VT.isSimple() ? getLLTForMVT(VT.getSimpleVT()) : LLT();
+    const MachineFunction &MF = DAG.getMachineFunction();
+    Register PhysReg =
+        TLI.getRegisterByName(RegStr->getString().data(), Ty, MF);
+    if (PhysReg.isValid()) {
+      const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(PhysReg);
+      MVT RegVT = *TRI->legalclasstypes_begin(*RC);
+      DAG.setRoot(DAG.getNode(ISD::FAKE_USE, sdl, MVT::Other,
+                              {WriteChain, DAG.getRegister(PhysReg, RegVT)}));
+    } else {
+      DAG.setRoot(WriteChain);
+    }
+    return;
+  }
   case Intrinsic::memcpy:
   case Intrinsic::memcpy_inline: {
     const auto &MCI = cast<MemCpyInst>(I);
@@ -6703,13 +6745,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // @llvm.memcpy.inline defines 0 and 1 to both mean no alignment.
     Align DstAlign = MCI.getDestAlign().valueOrOne();
     Align SrcAlign = MCI.getSourceAlign().valueOrOne();
-    Align Alignment = std::min(DstAlign, SrcAlign);
     bool isVol = MCI.isVolatile();
-    // FIXME: Support passing different dest/src alignments to the memcpy DAG
-    // node.
     SDValue Root = isVol ? getRoot() : getMemoryRoot();
-    SDValue MC = DAG.getMemcpy(Root, sdl, Dst, Src, Size, Alignment, isVol,
-                               MCI.isForceInlined(), &I, std::nullopt,
+    SDValue MC = DAG.getMemcpy(Root, sdl, Dst, Src, Size, DstAlign, SrcAlign,
+                               isVol, MCI.isForceInlined(), &I, std::nullopt,
                                MachinePointerInfo(I.getArgOperand(0)),
                                MachinePointerInfo(I.getArgOperand(1)),
                                I.getAAMetadata(), BatchAA);
@@ -6742,16 +6781,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // @llvm.memmove defines 0 and 1 to both mean no alignment.
     Align DstAlign = MMI.getDestAlign().valueOrOne();
     Align SrcAlign = MMI.getSourceAlign().valueOrOne();
-    Align Alignment = std::min(DstAlign, SrcAlign);
     bool isVol = MMI.isVolatile();
-    // FIXME: Support passing different dest/src alignments to the memmove DAG
-    // node.
     SDValue Root = isVol ? getRoot() : getMemoryRoot();
-    SDValue MM = DAG.getMemmove(Root, sdl, Op1, Op2, Op3, Alignment, isVol, &I,
-                                /* OverrideTailCall */ std::nullopt,
-                                MachinePointerInfo(I.getArgOperand(0)),
-                                MachinePointerInfo(I.getArgOperand(1)),
-                                I.getAAMetadata(), BatchAA);
+    SDValue MM = DAG.getMemmove(
+        Root, sdl, Op1, Op2, Op3, DstAlign, SrcAlign, isVol, &I,
+        /* OverrideTailCall */ std::nullopt,
+        MachinePointerInfo(I.getArgOperand(0)),
+        MachinePointerInfo(I.getArgOperand(1)), I.getAAMetadata(), BatchAA);
     updateDAGForMaybeTailCall(MM);
     return;
   }
@@ -7195,6 +7231,43 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              SemConst));
     return;
   }
+  case Intrinsic::convert_to_arbitrary_fp: {
+    // Extract format metadata and convert to semantics enum.
+    EVT DstVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    Metadata *MD = cast<MetadataAsValue>(I.getArgOperand(1))->getMetadata();
+    StringRef FormatStr = cast<MDString>(MD)->getString();
+    const fltSemantics *DstSem =
+        APFloatBase::getArbitraryFPSemantics(FormatStr);
+    if (!DstSem) {
+      DAG.getContext()->emitError(
+          "convert_to_arbitrary_fp: not implemented format '" + FormatStr +
+          "'");
+      setValue(&I, DAG.getPOISON(DstVT));
+      return;
+    }
+    APFloatBase::Semantics SemEnum = APFloatBase::SemanticsToEnum(*DstSem);
+
+    Metadata *RoundMD =
+        cast<MetadataAsValue>(I.getArgOperand(2))->getMetadata();
+    StringRef RoundStr = cast<MDString>(RoundMD)->getString();
+    std::optional<RoundingMode> RoundMode = convertStrToRoundingMode(RoundStr);
+    assert(RoundMode && *RoundMode != RoundingMode::Dynamic &&
+           "Dynamic rounding mode should have been rejected by the verifier");
+
+    uint64_t Saturate =
+        cast<ConstantInt>(I.getArgOperand(3))->getZExtValue() ? 1 : 0;
+
+    SDValue FloatVal = getValue(I.getArgOperand(0));
+
+    SDValue SemConst =
+        DAG.getTargetConstant(static_cast<int>(SemEnum), sdl, MVT::i32);
+    SDValue RoundConst =
+        DAG.getTargetConstant(static_cast<int>(*RoundMode), sdl, MVT::i32);
+    SDValue SatConst = DAG.getTargetConstant(Saturate, sdl, MVT::i32);
+    setValue(&I, DAG.getNode(ISD::CONVERT_TO_ARBITRARY_FP, sdl, DstVT, FloatVal,
+                             SemConst, RoundConst, SatConst));
+    return;
+  }
   case Intrinsic::set_rounding:
     Res = DAG.getNode(ISD::SET_ROUNDING, sdl, MVT::Other,
                       {getRoot(), getValue(I.getArgOperand(0))});
@@ -7381,6 +7454,18 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     setValue(&I, DAG.getNode(ISD::CLMUL, sdl, X.getValueType(), X, Y));
     return;
   }
+  case Intrinsic::pext: {
+    SDValue X = getValue(I.getArgOperand(0));
+    SDValue Y = getValue(I.getArgOperand(1));
+    setValue(&I, DAG.getNode(ISD::PEXT, sdl, X.getValueType(), X, Y));
+    return;
+  }
+  case Intrinsic::pdep: {
+    SDValue X = getValue(I.getArgOperand(0));
+    SDValue Y = getValue(I.getArgOperand(1));
+    setValue(&I, DAG.getNode(ISD::PDEP, sdl, X.getValueType(), X, Y));
+    return;
+  }
   case Intrinsic::sadd_sat: {
     SDValue Op1 = getValue(I.getArgOperand(0));
     SDValue Op2 = getValue(I.getArgOperand(1));
@@ -7474,9 +7559,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::abs: {
-    // TODO: Preserve "int min is poison" arg in SDAG?
     SDValue Op1 = getValue(I.getArgOperand(0));
-    setValue(&I, DAG.getNode(ISD::ABS, sdl, Op1.getValueType(), Op1));
+    bool IntMinIsPoison = cast<ConstantInt>(I.getArgOperand(1))->isOne();
+    unsigned Opc = IntMinIsPoison ? ISD::ABS_MIN_POISON : ISD::ABS;
+    setValue(&I, DAG.getNode(Opc, sdl, Op1.getValueType(), Op1));
     return;
   }
   case Intrinsic::scmp: {
@@ -7967,7 +8053,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // Here we want to make sure that the intrinsic behaves as if it has a
     // specific calling convention.
     const auto &Triple = DAG.getTarget().getTargetTriple();
-    if (!Triple.isAArch64(64) && Triple.getArch() != Triple::x86_64)
+    if (!Triple.isAArch64(64) && Triple.getArch() != Triple::x86_64 &&
+        Triple.getArch() != Triple::hexagon)
       return;
 
     SmallVector<SDValue, 8> Ops;
@@ -7996,7 +8083,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // Here we want to make sure that the intrinsic behaves as if it has a
     // specific calling convention.
     const auto &Triple = DAG.getTarget().getTargetTriple();
-    if (!Triple.isAArch64(64) && Triple.getArch() != Triple::x86_64)
+    if (!Triple.isAArch64(64) && Triple.getArch() != Triple::x86_64 &&
+        Triple.getArch() != Triple::hexagon)
       return;
 
     SmallVector<SDValue, 8> Ops;
@@ -9474,8 +9562,6 @@ bool SelectionDAGBuilder::visitMemPCpyCall(const CallInst &I) {
 
   Align DstAlign = DAG.InferPtrAlign(Dst).valueOrOne();
   Align SrcAlign = DAG.InferPtrAlign(Src).valueOrOne();
-  // DAG::getMemcpy needs Alignment to be defined.
-  Align Alignment = std::min(DstAlign, SrcAlign);
 
   SDLoc sdl = getCurSDLoc();
 
@@ -9484,8 +9570,8 @@ bool SelectionDAGBuilder::visitMemPCpyCall(const CallInst &I) {
   // the copied memory.
   SDValue Root = getMemoryRoot();
   SDValue MC = DAG.getMemcpy(
-      Root, sdl, Dst, Src, Size, Alignment, false, false, /*CI=*/nullptr,
-      std::nullopt, MachinePointerInfo(I.getArgOperand(0)),
+      Root, sdl, Dst, Src, Size, DstAlign, SrcAlign, false, false,
+      /*CI=*/nullptr, std::nullopt, MachinePointerInfo(I.getArgOperand(0)),
       MachinePointerInfo(I.getArgOperand(1)), I.getAAMetadata());
   assert(MC.getNode() != nullptr &&
          "** memcpy should not be lowered as TailCall in mempcpy context **");
@@ -12094,14 +12180,8 @@ void SelectionDAGISel::LowerArguments(const Function &F) {
          "LowerFormalArguments didn't return a valid chain!");
   assert(InVals.size() == Ins.size() &&
          "LowerFormalArguments didn't emit the correct number of values!");
-  LLVM_DEBUG({
-    for (unsigned i = 0, e = Ins.size(); i != e; ++i) {
-      assert(InVals[i].getNode() &&
-             "LowerFormalArguments emitted a null value!");
-      assert(EVT(Ins[i].VT) == InVals[i].getValueType() &&
-             "LowerFormalArguments emitted a value with the wrong type!");
-    }
-  });
+  assert(all_of(InVals, [](SDValue InVal) { return InVal.getNode(); }) &&
+         "LowerFormalArguments emitted a null value!");
 
   // Update the DAG with the new chain value resulting from argument lowering.
   DAG.setRoot(NewRoot);

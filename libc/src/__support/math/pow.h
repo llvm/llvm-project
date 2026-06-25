@@ -177,7 +177,7 @@ LIBC_INLINE_VAR constexpr DoubleDouble LOG2_R_DD[128] = {
     {0.0, 1.0},
 };
 
-LIBC_INLINE LIBC_CONSTEXPR bool is_odd_integer(double x) {
+LIBC_INLINE bool is_odd_integer(double x) {
   using FPBits = fputil::FPBits<double>;
   FPBits xbits(x);
   uint64_t x_u = xbits.uintval();
@@ -189,7 +189,7 @@ LIBC_INLINE LIBC_CONSTEXPR bool is_odd_integer(double x) {
   return (x_e + lsb == UNIT_EXPONENT);
 }
 
-LIBC_INLINE LIBC_CONSTEXPR bool is_integer(double x) {
+LIBC_INLINE bool is_integer(double x) {
   using FPBits = fputil::FPBits<double>;
   FPBits xbits(x);
   uint64_t x_u = xbits.uintval();
@@ -340,8 +340,9 @@ LIBC_INLINE double pow(double x, double y) {
 
     // Normalize denormal inputs.
     if (x_a < FPBits::min_normal().uintval()) {
-      e_x -= 64.0;
-      x_mant = FPBits(x * 0x1.0p64).get_mantissa();
+      FPBits x_norm(x * 0x1.0p64);
+      e_x = static_cast<double>(x_norm.get_exponent()) - 64.0;
+      x_mant = x_norm.get_mantissa();
     }
 
     // x is finite and negative, and y is a finite integer.

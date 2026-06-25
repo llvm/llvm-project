@@ -124,10 +124,6 @@ template <>
 struct DenseMapInfo<std::pair<const MCSymbol *, PPCMCExpr::Specifier>> {
   using TOCKey = std::pair<const MCSymbol *, PPCMCExpr::Specifier>;
 
-  static inline TOCKey getEmptyKey() { return {nullptr, PPC::S_None}; }
-  static inline TOCKey getTombstoneKey() {
-    return {(const MCSymbol *)1, PPC::S_None};
-  }
   static unsigned getHashValue(const TOCKey &PairVal) {
     return detail::combineHashValue(
         DenseMapInfo<const MCSymbol *>::getHashValue(PairVal.first),
@@ -1905,7 +1901,7 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
     //
     // Update compiler-rt/lib/xray/xray_powerpc64.cc accordingly when number
     // of instructions change.
-    OutStreamer->emitCodeAlignment(Align(8), &getSubtargetInfo());
+    OutStreamer->emitCodeAlignment(Align(8), getSubtargetInfo());
     MCSymbol *BeginOfSled = OutContext.createTempSymbol();
     OutStreamer->emitLabel(BeginOfSled);
     EmitToStreamer(*OutStreamer, RetInst);

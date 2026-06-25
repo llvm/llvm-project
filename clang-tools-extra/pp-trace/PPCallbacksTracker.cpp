@@ -60,8 +60,9 @@ static const char *const FileChangeReasonStrings[] = {
 };
 
 // CharacteristicKind strings.
-static const char *const CharacteristicKindStrings[] = { "C_User", "C_System",
-                                                         "C_ExternCSystem" };
+static const char *const CharacteristicKindStrings[] = {
+    "C_User", "C_System", "C_ExternCSystem", "C_User_ModuleMap",
+    "C_System_ModuleMap"};
 
 // MacroDirective::Kind strings.
 static const char *const MacroDirectiveKindStrings[] = {

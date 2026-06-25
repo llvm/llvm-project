@@ -821,12 +821,7 @@ bool X86InstructionSelector::selectConstant(MachineInstr &I,
     NewOpc = X86::MOV32ri;
     break;
   case 64:
-    if (isUInt<32>(Val))
-      NewOpc = X86::MOV32ri64;
-    else if (isInt<32>(Val))
-      NewOpc = X86::MOV64ri32;
-    else
-      NewOpc = X86::MOV64ri;
+    NewOpc = X86::getMOVriOpcode(/*Use64BitReg=*/true, Val);
     break;
   default:
     llvm_unreachable("Can't select G_CONSTANT, unsupported type.");
@@ -1272,14 +1267,15 @@ bool X86InstructionSelector::selectUAddSub(MachineInstr &I,
         Def->getOpcode() == TargetOpcode::G_UADDO ||
         Def->getOpcode() == TargetOpcode::G_USUBE ||
         Def->getOpcode() == TargetOpcode::G_USUBO) {
-      // carry set by prev ADD/SUB.
-
-      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::CMP8ri))
-          .addReg(CarryInReg)
-          .addImm(1);
-
+      // The carry-in is a SETB byte (0 or 1) from a chained add/sub.
+      // Materialize EFLAGS.CF from that byte for the following ADC/SBB
+      // by emitting NEG, which sets CF iff its operand is non-zero.
       if (!RBI.constrainGenericRegister(CarryInReg, *CarryRC, MRI))
         return false;
+
+      Register NegDef = MRI.createVirtualRegister(CarryRC);
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::NEG8r), NegDef)
+          .addReg(CarryInReg);
 
       Opcode = IsSub ? OpSBB : OpADC;
     } else if (auto val = getIConstantVRegVal(CarryInReg, MRI)) {

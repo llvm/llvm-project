@@ -1637,3 +1637,58 @@ define <2 x i1> @test_logical_and_icmp_samesign_vec_with_poison_tv(<2 x i8> %x) 
   %and = select <2 x i1> %cmp1, <2 x i1> %cmp2, <2 x i1> zeroinitializer
   ret <2 x i1> %and
 }
+
+define i1 @test_logical_and_trunc_nuw(i1 %c, i8 noundef range(i8 0,2) %x) {
+; CHECK-LABEL: @test_logical_and_trunc_nuw(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C:%.*]], [[TRUNC]]
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %trunc = trunc nuw i8 %x to i1
+  %and = select i1 %c, i1 %trunc, i1 false
+  ret i1 %and
+}
+
+define i1 @test_logical_or_trunc_nuw(i1 %c, i8 noundef range(i8 0,2) %x) {
+; CHECK-LABEL: @test_logical_or_trunc_nuw(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[C:%.*]], [[TRUNC]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %trunc = trunc nuw i8 %x to i1
+  %or = select i1 %c, i1 true, i1 %trunc
+  ret i1 %or
+}
+
+define <2 x i1> @test_logical_and_trunc_nuw_vec(<2 x i1> %c, <2 x i8> noundef range(i8 0,2) %x) {
+; CHECK-LABEL: @test_logical_and_trunc_nuw_vec(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw <2 x i8> [[X:%.*]] to <2 x i1>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i1> [[C:%.*]], [[TRUNC]]
+; CHECK-NEXT:    ret <2 x i1> [[AND]]
+;
+  %trunc = trunc nuw <2 x i8> %x to <2 x i1>
+  %and = select <2 x i1> %c, <2 x i1> %trunc, <2 x i1> zeroinitializer
+  ret <2 x i1> %and
+}
+
+define i1 @neg_test_logical_and_trunc_nuw_no_range(i1 %c, i8 noundef %x) {
+; CHECK-LABEL: @neg_test_logical_and_trunc_nuw_no_range(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C:%.*]], i1 [[TRUNC]], i1 false
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %trunc = trunc nuw i8 %x to i1
+  %and = select i1 %c, i1 %trunc, i1 false
+  ret i1 %and
+}
+
+define i1 @neg_test_logical_and_trunc_nuw_no_noundef(i1 %c, i8 range(i8 0,2) %x) {
+; CHECK-LABEL: @neg_test_logical_and_trunc_nuw_no_noundef(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[AND:%.*]] = select i1 [[C:%.*]], i1 [[TRUNC]], i1 false
+; CHECK-NEXT:    ret i1 [[AND]]
+;
+  %trunc = trunc nuw i8 %x to i1
+  %and = select i1 %c, i1 %trunc, i1 false
+  ret i1 %and
+}

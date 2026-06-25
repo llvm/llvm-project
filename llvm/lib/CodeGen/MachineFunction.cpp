@@ -264,6 +264,22 @@ void MachineFunction::initTargetMachineFunctionInfo(
   MFInfo = Target.createMachineFunctionInfo(Allocator, F, &STI);
 }
 
+MachineFunctionInfo *MachineFunction::cloneInfoFrom(
+    const MachineFunction &OrigMF,
+    const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB) {
+  assert(!MFInfo && "new function already has MachineFunctionInfo");
+  if (!OrigMF.MFInfo)
+    return nullptr;
+
+  MachineFunctionInfo *ClonedInfo =
+      OrigMF.MFInfo->clone(Allocator, *this, Src2DstMBB);
+  if (!ClonedInfo)
+    return nullptr;
+
+  RegInfo->copyPendingVirtRegMapEntriesFrom(OrigMF.getRegInfo());
+  return ClonedInfo;
+}
+
 MachineFunction::~MachineFunction() {
   clear();
 }
@@ -354,6 +370,16 @@ Align MachineFunction::getPreferredAlignment() const {
 MachineFunction::addFrameInst(const MCCFIInstruction &Inst) {
   FrameInstructions.push_back(Inst);
   return FrameInstructions.size() - 1;
+}
+
+void MachineFunction::replaceFrameInstRegister(MCRegister FromReg,
+                                               MCRegister ToReg) {
+  const MCRegisterInfo *MCRI = Ctx.getRegisterInfo();
+  unsigned DwarfFromReg = MCRI->getDwarfRegNum(FromReg, false);
+  unsigned DwarfToReg = MCRI->getDwarfRegNum(ToReg, false);
+
+  for (MCCFIInstruction &Inst : FrameInstructions)
+    Inst.replaceRegister(DwarfFromReg, DwarfToReg);
 }
 
 /// This discards all of the MachineBasicBlock numbers and recomputes them.
@@ -1640,7 +1666,7 @@ void MachineConstantPool::print(raw_ostream &OS) const {
 // ProfileSummaryInfo::getEntryCount().
 //===----------------------------------------------------------------------===//
 template <>
-std::optional<Function::ProfileCount>
+std::optional<uint64_t>
 ProfileSummaryInfo::getEntryCount<llvm::MachineFunction>(
     const llvm::MachineFunction *F) const {
   return F->getFunction().getEntryCount();

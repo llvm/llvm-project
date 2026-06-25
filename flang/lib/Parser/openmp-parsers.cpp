@@ -281,6 +281,27 @@ TYPE_PARSER(construct<common::OmpMemoryOrderType>(
     "RELEASE" >> pure(common::OmpMemoryOrderType::Release) ||
     "SEQ_CST" >> pure(common::OmpMemoryOrderType::Seq_Cst)))
 
+static bool IsReservedName(const Name &name) {
+  llvm::StringRef s(name.source.begin(), name.source.size());
+  return s.starts_with_insensitive("OMP_") ||
+      s.starts_with_insensitive("OMPX_");
+}
+
+TYPE_PARSER( //
+    construct<OmpReservedIdentifier>(predicated(name, IsReservedName)))
+
+// Parse x(...)(...) as a substring instead of a function reference.
+TYPE_PARSER( //
+    construct<OmpLocator>(functionReference / !lookAhead("("_tok)) ||
+    construct<OmpLocator>(Parser<OmpReservedIdentifier>{}))
+
+TYPE_PARSER( //
+    construct<OmpObject>(Parser<OmpLocator>{}) ||
+    construct<OmpObject>(designator) ||
+    "/" >> construct<OmpObject>(name) / "/" ||
+    construct<OmpObject>(sourced(construct<OmpObject::Invalid>(
+        "//"_tok >> pure(OmpObject::Invalid::Kind::BlankCommonBlock)))))
+
 // --- Modifier helpers -----------------------------------------------
 
 template <typename Clause, typename Separator> struct ModifierList {
@@ -588,10 +609,6 @@ TYPE_PARSER( //
 // At the moment these are only directive arguments. This is needed for
 // parsing directive-specification.
 
-TYPE_PARSER( //
-    construct<OmpLocator>(Parser<OmpObject>{}) ||
-    construct<OmpLocator>(Parser<FunctionReference>{}))
-
 TYPE_PARSER(construct<OmpBaseVariantNames>(
     Parser<OmpObject>{} / ":", Parser<OmpObject>{}))
 
@@ -610,7 +627,7 @@ struct OmpArgumentParser {
         construct<OmpArgument>(Parser<OmpMapperSpecifier>{}),
         // By default, prefer OmpReductionSpecifier over OmpBaseVariantNames.
         construct<OmpArgument>(Parser<OmpReductionSpecifier>{}),
-        construct<OmpArgument>(Parser<OmpLocator>{})))};
+        construct<OmpArgument>(Parser<OmpObject>{})))};
     return parser.Parse(state);
   }
 };
@@ -625,12 +642,10 @@ struct OmpArgumentParser<llvm::omp::Directive::OMPD_declare_variant> {
         // In DECLARE_VARIANT parse OmpBaseVariantNames instead of
         // OmpReductionSpecifier.
         construct<OmpArgument>(Parser<OmpBaseVariantNames>{}),
-        construct<OmpArgument>(Parser<OmpLocator>{})))};
+        construct<OmpArgument>(Parser<OmpObject>{})))};
     return parser.Parse(state);
   }
 };
-
-TYPE_PARSER(construct<OmpLocatorList>(nonemptyList(Parser<OmpLocator>{})))
 
 template <llvm::omp::Directive Id = llvm::omp::Directive::OMPD_unknown>
 struct OmpArgumentListParser {
@@ -1405,12 +1420,6 @@ TYPE_PARSER(construct<OmpNumThreadsClause>(
     maybe(nonemptyList(Parser<OmpNumThreadsClause::Modifier>{}) / ":"),
     nonemptyList(scalarIntExpr)))
 
-TYPE_PARSER( //
-    construct<OmpObject>(designator) ||
-    "/" >> construct<OmpObject>(name) / "/" ||
-    construct<OmpObject>(sourced(construct<OmpObject::Invalid>(
-        "//"_tok >> pure(OmpObject::Invalid::Kind::BlankCommonBlock)))))
-
 // OMP 5.0 2.19.4.5 LASTPRIVATE ([lastprivate-modifier :] list)
 TYPE_PARSER(construct<OmpLastprivateClause>(
     maybe(nonemptyList(Parser<OmpLastprivateClause::Modifier>{}) / ":"),
@@ -1663,6 +1672,7 @@ TYPE_PARSER( //
     "UNTIED" >> construct<OmpClause>(construct<OmpClause::Untied>()) ||
     "UPDATE" >> construct<OmpClause>(construct<OmpClause::Update>(
                     maybe(Parser<OmpUpdateClause>{}))) ||
+    "WEAK" >> construct<OmpClause>(construct<OmpClause::Weak>()) ||
     "WHEN" >> construct<OmpClause>(construct<OmpClause::When>(
                   parenthesized(Parser<OmpWhenClause>{}))) ||
     "WRITE" >> construct<OmpClause>(construct<OmpClause::Write>()) ||
@@ -2442,7 +2452,7 @@ TYPE_PARSER(sourced( //
         OmpDirectiveSpecificationParser{})))
 
 // Assumes Construct
-TYPE_PARSER(sourced(construct<OpenMPDeclarativeAssumes>(
+TYPE_PARSER(sourced(construct<OmpAssumesDirective>(
     predicated(OmpDirectiveNameParser{},
         IsDirective(llvm::omp::Directive::OMPD_assumes)) >=
     OmpDirectiveSpecificationParser{})))
@@ -2451,7 +2461,7 @@ TYPE_PARSER(sourced(construct<OpenMPDeclarativeAssumes>(
 TYPE_PARSER(
     startOmpLine >> withMessage("expected OpenMP construct"_err_en_US,
                         sourced(construct<OpenMPDeclarativeConstruct>(
-                                    Parser<OpenMPDeclarativeAssumes>{}) ||
+                                    Parser<OmpAssumesDirective>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
                                 Parser<OmpDeclareReductionDirective>{}) ||
                             construct<OpenMPDeclarativeConstruct>(
@@ -2476,7 +2486,7 @@ TYPE_PARSER(
                                 Parser<OmpMetadirectiveDirective>{})) /
                             endOmpLine))
 
-TYPE_PARSER(sourced(construct<OpenMPAssumeConstruct>(
+TYPE_PARSER(sourced(construct<OmpAssumeDirective>(
     OmpBlockConstructParser{llvm::omp::Directive::OMPD_assume})))
 
 // Block Construct
@@ -2538,9 +2548,9 @@ TYPE_PARSER(sourced(construct<OpenMPSectionsConstruct>(
     Parser<OmpBeginSectionsDirective>{} / endOmpLine,
     cons( //
         construct<OpenMPConstruct>(sourced(
-            construct<OpenMPSectionConstruct>(maybe(sectionDir), validBlock))),
-        many(construct<OpenMPConstruct>(sourced(
-            construct<OpenMPSectionConstruct>(sectionDir, validBlock))))),
+            construct<OmpSectionDirective>(maybe(sectionDir), validBlock))),
+        many(construct<OpenMPConstruct>(
+            sourced(construct<OmpSectionDirective>(sectionDir, validBlock))))),
     maybe(Parser<OmpEndSectionsDirective>{} / endOmpLine))))
 
 static bool IsExecutionPart(const OmpDirectiveName &name) {
@@ -2569,7 +2579,7 @@ TYPE_CONTEXT_PARSER("OpenMP construct"_en_US,
                 construct<OpenMPConstruct>(Parser<OmpUtilityDirective>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPDispatchConstruct>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPAllocatorsConstruct>{}),
-                construct<OpenMPConstruct>(Parser<OpenMPAssumeConstruct>{}),
+                construct<OpenMPConstruct>(Parser<OmpAssumeDirective>{}),
                 construct<OpenMPConstruct>(Parser<OpenMPCriticalConstruct>{}),
                 construct<OpenMPConstruct>(
                     Parser<OmpDelimitedMetadirectiveDirective>{}))))

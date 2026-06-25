@@ -3429,7 +3429,6 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
     });
   };
   if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
-    std::string sizes = op.getGetterName(operandSegmentAttrName);
     body << "  ::llvm::copy(::llvm::ArrayRef<int32_t>({";
     emitSegment();
     body << "}), " << builderOpStateProperties
@@ -4154,6 +4153,19 @@ void OpEmitter::genTraits() {
       opClass.addTrait(opTrait->getFullyQualifiedTraitName());
     }
   }
+
+  // Auto-derive the builtin token producer/consumer traits whenever the op
+  // statically declares a Token operand or result.
+  constexpr llvm::StringLiteral kTokenCppType = "::mlir::TokenType";
+  auto hasStaticTokenType = [&](auto &&values) {
+    return llvm::any_of(values, [&](const tblgen::NamedTypeConstraint &v) {
+      return v.constraint.getCppType() == kTokenCppType;
+    });
+  };
+  if (hasStaticTokenType(op.getOperands()))
+    opClass.addTrait("::mlir::OpTrait::TokenConsumerTrait");
+  if (hasStaticTokenType(op.getResults()))
+    opClass.addTrait("::mlir::OpTrait::TokenProducerTrait");
 }
 
 void OpEmitter::genOpNameGetter() {

@@ -14,52 +14,27 @@ from __future__ import print_function
 import sys, os, re
 from datetime import date
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-sys.path.insert(0, os.path.abspath("."))
+from llvm_sphinx import *  # see llvm-project/utils/docs/README.md
+
+globals().update(common_conf(tags, markdown=Markdown.EXCEPT_MAN))
 
 # -- General configuration -----------------------------------------------------
 
-# If your documentation needs a minimal Sphinx version, state it here.
-# needs_sphinx = '1.0'
-
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ["sphinx.ext.intersphinx", "sphinx.ext.todo"]
+extensions += ["sphinx.ext.intersphinx", "sphinx.ext.todo", "llvm_sphinx.ext.checks"]
 
-# When building man pages, we do not use the markdown pages,
-# So, we can continue without the myst_parser dependencies.
-# Doing so reduces dependencies of some packaged llvm distributions.
-try:
-    import myst_parser
-
-    extensions.append("myst_parser")
-except ImportError:
-    if not tags.has("builder-man"):
-        raise
-else:
-    myst_enable_extensions = ["substitution"]
-
-# Automatic anchors for markdown titles
-myst_heading_anchors = 6
-myst_heading_slug_func = "llvm_slug.make_slug"
-
-
-# Add any paths that contain templates here, relative to this directory.
-templates_path = ["_templates"]
-
-source_suffix = [".rst", ".md"]
+myst_enable_extensions += ["deflist"]
+myst_url_schemes = {
+    "http": None,
+    "https": None,
+    "mailto": None,
+    "ftp": None,
+    "doxygen": {"url": "/doxygen/{{path}}"},
+}
 
 import sphinx
 
-# The encoding of source files.
-# source_encoding = 'utf-8-sig'
-
-# The master toctree document.
-master_doc = "index"
-
-# General information about the project.
 project = "LLVM"
 copyright = "2003-%d, LLVM Project" % date.today().year
 
@@ -292,7 +267,7 @@ def process_rst(name):
 
 for name in os.listdir(command_guide_path):
     # Process Markdown files
-    if name.endswith(".md"):
+    if name.endswith(".md") and name != "index.md":
         process_md(name)
     # Process ReST files apart from the index page.
     elif name.endswith(".rst") and name != "index.rst":

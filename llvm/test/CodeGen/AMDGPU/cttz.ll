@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global | FileCheck %s -enable-var-scope --check-prefix=VI
 ; RUN: llc < %s -mtriple=r600 -mcpu=cypress | FileCheck %s -enable-var-scope --check-prefix=EG
 ; RUN: llc < %s -mtriple=amdgcn -mcpu=gfx1010 | FileCheck %s -enable-var-scope --check-prefix=GFX10
-; RUN: llc < %s -global-isel -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx1010 | FileCheck %s -enable-var-scope --check-prefix=GFX10-GISEL
+; RUN: llc < %s -global-isel -mtriple=amdgcn -mcpu=gfx1010 | FileCheck %s -enable-var-scope --check-prefix=GFX10-GISEL
 
 declare i7 @llvm.cttz.i7(i7, i1) nounwind readnone
 declare i8 @llvm.cttz.i8(i8, i1) nounwind readnone
@@ -750,10 +750,9 @@ define amdgpu_kernel void @v_cttz_i64(ptr addrspace(1) noalias %out, ptr addrspa
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-GISEL-NEXT:    v_ffbl_b32_e32 v1, v1
 ; GFX10-GISEL-NEXT:    v_ffbl_b32_e32 v0, v0
-; GFX10-GISEL-NEXT:    v_add_nc_u32_e64 v1, v1, 32 clamp
-; GFX10-GISEL-NEXT:    v_min_u32_e32 v0, v0, v1
+; GFX10-GISEL-NEXT:    v_add_nc_u32_e64 v3, v1, 32 clamp
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GFX10-GISEL-NEXT:    v_min_u32_e32 v0, 64, v0
+; GFX10-GISEL-NEXT:    v_min3_u32 v0, v0, v3, 64
 ; GFX10-GISEL-NEXT:    global_store_dwordx2 v2, v[0:1], s[0:1]
 ; GFX10-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -861,8 +860,7 @@ define amdgpu_kernel void @v_cttz_i64_trunc(ptr addrspace(1) noalias %out, ptr a
 ; GFX10-GISEL-NEXT:    v_ffbl_b32_e32 v2, v2
 ; GFX10-GISEL-NEXT:    v_ffbl_b32_e32 v1, v1
 ; GFX10-GISEL-NEXT:    v_add_nc_u32_e64 v2, v2, 32 clamp
-; GFX10-GISEL-NEXT:    v_min_u32_e32 v1, v1, v2
-; GFX10-GISEL-NEXT:    v_min_u32_e32 v1, 64, v1
+; GFX10-GISEL-NEXT:    v_min3_u32 v1, v1, v2, 64
 ; GFX10-GISEL-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1355,14 +1353,14 @@ define amdgpu_kernel void @v_cttz_i32_sel_ne_bitwidth(ptr addrspace(1) noalias %
 ; GFX10-GISEL-NEXT:    v_mov_b32_e32 v2, s3
 ; GFX10-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v1, v0
 ; GFX10-GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v2, v3, vcc_lo
-; GFX10-GISEL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-GISEL-NEXT:    global_load_ubyte v0, v[0:1], off
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-GISEL-NEXT:    v_or_b32_e32 v1, 0x100, v0
-; GFX10-GISEL-NEXT:    v_cmp_eq_u32_sdwa s2, v0, v2 src0_sel:BYTE_0 src1_sel:DWORD
+; GFX10-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-GISEL-NEXT:    v_ffbl_b32_e32 v1, v1
-; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v0, v1, 0xffff, s2
-; GFX10-GISEL-NEXT:    global_store_byte v2, v0, s[0:1]
+; GFX10-GISEL-NEXT:    v_cndmask_b32_e64 v0, v1, 0xffff, vcc_lo
+; GFX10-GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; GFX10-GISEL-NEXT:    global_store_byte v1, v0, s[0:1]
 ; GFX10-GISEL-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %valptr.gep = getelementptr i8, ptr addrspace(1) %valptr, i32 %tid

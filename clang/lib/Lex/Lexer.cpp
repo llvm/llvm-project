@@ -237,7 +237,7 @@ void Lexer::resetExtendedTokenMode() {
 
 /// Create_PragmaLexer: Lexer constructor - Create a new lexer object for
 /// _Pragma expansion.  This has a variety of magic semantics that this method
-/// sets up.  It returns a new'd Lexer that must be delete'd when done.
+/// sets up.
 ///
 /// On entrance to this routine, TokStartLoc is a macro location which has a
 /// spelling loc that indicates the bytes to be lexed for the token and an
@@ -250,16 +250,15 @@ void Lexer::resetExtendedTokenMode() {
 /// interface that could handle this stuff.  This would pull GetMappedTokenLoc
 /// out of the critical path of the lexer!
 ///
-Lexer *Lexer::Create_PragmaLexer(SourceLocation SpellingLoc,
-                                 SourceLocation ExpansionLocStart,
-                                 SourceLocation ExpansionLocEnd,
-                                 unsigned TokLen, Preprocessor &PP) {
+std::unique_ptr<Lexer> Lexer::Create_PragmaLexer(
+    SourceLocation SpellingLoc, SourceLocation ExpansionLocStart,
+    SourceLocation ExpansionLocEnd, unsigned TokLen, Preprocessor &PP) {
   SourceManager &SM = PP.getSourceManager();
 
   // Create the lexer as if we were going to lex the file normally.
   FileID SpellingFID = SM.getFileID(SpellingLoc);
   llvm::MemoryBufferRef InputFile = SM.getBufferOrFake(SpellingFID);
-  Lexer *L = new Lexer(SpellingFID, InputFile, PP);
+  auto L = std::make_unique<Lexer>(SpellingFID, InputFile, PP);
 
   // Now that the lexer is created, change the start/end locations so that we
   // just lex the subsection of the file that we want.  This is lexing from a
@@ -2280,8 +2279,28 @@ bool Lexer::LexStringLiteral(Token &Result, const char *CurPtr,
   while (C != '"') {
     // Skip escaped characters.  Escaped newlines will already be processed by
     // getAndAdvanceChar.
-    if (C == '\\')
+    if (C == '\\') {
+      const char *SavedCurPtr = CurPtr;
       C = getAndAdvanceChar(CurPtr, Result);
+
+      // lex.header
+      //
+      // header-name:
+      //    ...
+      //    " q-char-sequence "
+      //    ...
+      // q-char-sequence:
+      //    q-char q-char-sequence[opt]
+      // q-char:
+      //    any member of the translation character set except new-line and
+      //    U+0022 quotation mark
+      //
+      // The implementation-defined semantics cannot be taken as causing '\' to
+      // "escape" the following " because there is no provision for " in a
+      // q-char-sequence.
+      if (ParsingFilename && C == '"')
+        CurPtr = SavedCurPtr;
+    }
 
     if (C == '\n' || C == '\r' ||             // Newline.
         (C == 0 && CurPtr-1 == BufferEnd)) {  // End of file.

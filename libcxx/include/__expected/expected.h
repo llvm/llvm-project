@@ -10,6 +10,7 @@
 #define _LIBCPP___EXPECTED_EXPECTED_H
 
 #include <__assert>
+#include <__concepts/same_as.h>
 #include <__config>
 #include <__expected/bad_expected_access.h>
 #include <__expected/unexpect.h>
@@ -36,7 +37,6 @@
 #include <__type_traits/is_trivially_destructible.h>
 #include <__type_traits/is_trivially_relocatable.h>
 #include <__type_traits/is_void.h>
-#include <__type_traits/lazy.h>
 #include <__type_traits/negation.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_cvref.h>
@@ -684,12 +684,11 @@ public:
 private:
   template <class _OtherErrQual>
   static constexpr bool __can_assign_from_unexpected =
-      _And< is_constructible<_Err, _OtherErrQual>,
-            is_assignable<_Err&, _OtherErrQual>,
-            _Lazy<_Or,
-                  is_nothrow_constructible<_Err, _OtherErrQual>,
-                  is_nothrow_move_constructible<_Tp>,
-                  is_nothrow_move_constructible<_Err>> >::value;
+      _And<is_constructible<_Err, _OtherErrQual>,
+           is_assignable<_Err&, _OtherErrQual>,
+           _Or<is_nothrow_constructible<_Err, _OtherErrQual>,
+               is_nothrow_move_constructible<_Tp>,
+               is_nothrow_move_constructible<_Err>>>::value;
 
 public:
   template <class _OtherErr>
@@ -825,6 +824,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit operator bool() const noexcept { return this->__has_val(); }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept { return this->__has_val(); }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool has_error() const noexcept { return !this->has_value(); }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& value() const& {
     static_assert(is_copy_constructible_v<_Err>, "error_type has to be copy constructible");
@@ -1161,8 +1162,11 @@ public:
     }
   }
 
-  template <class _T2>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected& __x, const _T2& __v)
+  // The unusual signature avoids constraint recursion via ADL through
+  // std::expected, see https://llvm.org/PR160431. Note that this only
+  // triggers with compilers that implement https://wg21.link/CWG2369.
+  template <class _T2, same_as<_Tp> _Tp2>
+  _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const expected<_Tp2, _Err>& __x, const _T2& __v)
 #  if _LIBCPP_STD_VER >= 26
     requires(!__is_std_expected<_T2>::value) && requires {
       { *__x == __v } -> __core_convertible_to<bool>;
@@ -1596,6 +1600,8 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit operator bool() const noexcept { return this->__has_val(); }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept { return this->__has_val(); }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool has_error() const noexcept { return !this->has_value(); }
 
   _LIBCPP_HIDE_FROM_ABI constexpr void operator*() const noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
