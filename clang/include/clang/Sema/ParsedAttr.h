@@ -576,21 +576,28 @@ public:
     }
   }
 
-  /// If this is an OpenCL address space attribute, returns its SYCL
-  /// representation in LangAS, otherwise returns default address space.
+  /// If this is a SYCL address space attribute, returns its SYCL
+  /// representation in LangAS.
   LangAS asSYCLLangAS() const {
-    switch (getKind()) {
-    case ParsedAttr::AT_OpenCLGlobalAddressSpace:
+    switch (getParsedKind()) {
+    case ParsedAttr::AT_SYCLGlobalAddressSpace:
       return LangAS::sycl_global;
+    // TODO: OpenCLGlobalDeviceAddressSpace, OpenCLGlobalHostAddressSpace,
+    // sycl_global_device, and sycl_global_host will be removed after
+    // deprecation.
+    // https://discourse.llvm.org/t/rfc-remove-opencl-global-device-and-opencl-global-host-address-space-attributes/90677
     case ParsedAttr::AT_OpenCLGlobalDeviceAddressSpace:
       return LangAS::sycl_global_device;
     case ParsedAttr::AT_OpenCLGlobalHostAddressSpace:
       return LangAS::sycl_global_host;
-    case ParsedAttr::AT_OpenCLLocalAddressSpace:
+    case ParsedAttr::AT_SYCLLocalAddressSpace:
       return LangAS::sycl_local;
-    case ParsedAttr::AT_OpenCLPrivateAddressSpace:
+    case ParsedAttr::AT_SYCLPrivateAddressSpace:
       return LangAS::sycl_private;
-    case ParsedAttr::AT_OpenCLGenericAddressSpace:
+    case ParsedAttr::AT_SYCLGenericAddressSpace:
+      return LangAS::sycl_generic;
+    case ParsedAttr::AT_SYCLConstantAddressSpace:
+      return LangAS::sycl_constant;
     default:
       return LangAS::Default;
     }

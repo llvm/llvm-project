@@ -2,23 +2,31 @@
 
 // REQUIRES: x86-registered-target
 
-void foo(__attribute__((opencl_global)) int *);
-void foo(__attribute__((opencl_local)) int *);
-void foo(__attribute__((opencl_private)) int *);
+void foo(int [[clang::sycl_global]] *);
+void foo(int [[clang::sycl_local]] *);
+void foo(int [[clang::sycl_private]] *);
+void foo(int [[clang::sycl_generic]] *);
+void foo(int [[clang::sycl_constant]] *);
 void foo(int *);
 
 // SPIR: declare spir_func void @_Z3fooPU3AS1i(ptr addrspace(1) noundef) #1
 // SPIR: declare spir_func void @_Z3fooPU3AS3i(ptr addrspace(3) noundef) #1
 // SPIR: declare spir_func void @_Z3fooPU3AS0i(ptr noundef) #1
+// SPIR: declare spir_func void @_Z3fooPU3AS4i(ptr addrspace(4) noundef) #1
+// SPIR: declare spir_func void @_Z3fooPU3AS2i(ptr addrspace(2) noundef) #1
 // SPIR: declare spir_func void @_Z3fooPi(ptr addrspace(4) noundef) #1
 
 [[clang::sycl_external]] void test() {
-  __attribute__((opencl_global)) int *glob;
-  __attribute__((opencl_local)) int *loc;
-  __attribute__((opencl_private)) int *priv;
+  int [[clang::sycl_global]] *glob;
+  int [[clang::sycl_local]] *loc;
+  int [[clang::sycl_private]] *priv;
+  int [[clang::sycl_generic]] *gen;
+  int [[clang::sycl_constant]] *cnst;
   int *def;
   foo(glob);
   foo(loc);
   foo(priv);
+  foo(gen);
+  foo(cnst);
   foo(def);
 }

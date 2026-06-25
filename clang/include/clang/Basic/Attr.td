@@ -1825,11 +1825,13 @@ def OpenCLGlobalAddressSpace : TypeAttr {
   let Documentation = [OpenCLAddressSpaceGlobalDocs];
 }
 
+// TODO: Remove OpenCLGlobalDeviceAddressSpace after deprecation.
 def OpenCLGlobalDeviceAddressSpace : TypeAttr {
   let Spellings = [Clang<"opencl_global_device">];
   let Documentation = [OpenCLAddressSpaceGlobalExtDocs];
 }
 
+// TODO: Remove OpenCLGlobalHostAddressSpace after deprecation.
 def OpenCLGlobalHostAddressSpace : TypeAttr {
   let Spellings = [Clang<"opencl_global_host">];
   let Documentation = [OpenCLAddressSpaceGlobalExtDocs];
@@ -1851,6 +1853,36 @@ def OpenCLGenericAddressSpace : TypeAttr {
   let Spellings = [CustomKeyword<"__generic">, CustomKeyword<"generic">,
                    Clang<"opencl_generic">];
   let Documentation = [OpenCLAddressSpaceGenericDocs];
+}
+
+def SYCLPrivateAddressSpace : TypeAttr {
+  let Spellings = [CXX11<"clang", "sycl_private">];
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLAddressSpaceDocs];
+}
+
+def SYCLGlobalAddressSpace : TypeAttr {
+  let Spellings = [CXX11<"clang", "sycl_global">];
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLAddressSpaceDocs];
+}
+
+def SYCLLocalAddressSpace : TypeAttr {
+  let Spellings = [CXX11<"clang", "sycl_local">];
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLAddressSpaceDocs];
+}
+
+def SYCLConstantAddressSpace : TypeAttr {
+  let Spellings = [CXX11<"clang", "sycl_constant">];
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLAddressSpaceDocs];
+}
+
+def SYCLGenericAddressSpace : TypeAttr {
+  let Spellings = [CXX11<"clang", "sycl_generic">];
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [SYCLAddressSpaceDocs];
 }
 
 def OpenCLNoSVM : Attr {

@@ -2,28 +2,29 @@
 
 void bar(int &Data) {}
 void bar2(int &Data) {}
-void bar(__attribute__((opencl_private)) int &Data) {}
+void bar(int [[clang::sycl_private]] &Data) {}
 void foo(int *Data) {}
 void foo2(int *Data) {}
-void foo(__attribute__((opencl_private)) int *Data) {}
-void baz(__attribute__((opencl_private)) int *Data) {} // expected-note {{candidate function not viable: cannot pass pointer to generic address space as a pointer to address space '__private' in 1st argument}}
+void foo(int [[clang::sycl_private]] *Data) {}
+void baz(int [[clang::sycl_private]] *Data) {} // expected-note {{candidate function not viable: cannot pass pointer to generic address space as a pointer to address space '[[clang::sycl_private]]' in 1st argument}}
 
 template <typename T>
 void tmpl(T *t) {}
 
 void usages() {
-  __attribute__((opencl_global)) int *GLOB;
-  __attribute__((opencl_private)) int *PRIV;
-  __attribute__((opencl_local)) int *LOC;
+  int [[clang::sycl_global]] *GLOB;
+  int [[clang::sycl_private]] *PRIV;
+  int [[clang::sycl_local]] *LOC;
+  int [[clang::sycl_constant]] *CONST;
   int *NoAS;
 
-  GLOB = PRIV;                                                     // expected-error {{assigning '__private int *' to '__global int *' changes address space of pointer}}
-  GLOB = LOC;                                                      // expected-error {{assigning '__local int *' to '__global int *' changes address space of pointer}}
-  PRIV = static_cast<__attribute__((opencl_private)) int *>(GLOB); // expected-error {{static_cast from '__global int *' to '__private int *' is not allowed}}
-  PRIV = static_cast<__attribute__((opencl_private)) int *>(LOC);  // expected-error {{static_cast from '__local int *' to '__private int *' is not allowed}}
-  NoAS = GLOB + PRIV;                                              // expected-error {{invalid operands to binary expression ('__global int *' and '__private int *')}}
-  NoAS = GLOB + LOC;                                               // expected-error {{invalid operands to binary expression ('__global int *' and '__local int *')}}
-  NoAS += GLOB;                                                    // expected-error {{invalid operands to binary expression ('int *' and '__global int *')}}
+  GLOB = PRIV;                                                     // expected-error {{assigning '[[clang::sycl_private]] int *' to '[[clang::sycl_global]] int *' changes address space of pointer}}
+  GLOB = LOC;                                                      // expected-error {{assigning '[[clang::sycl_local]] int *' to '[[clang::sycl_global]] int *' changes address space of pointer}}
+  PRIV = static_cast<int [[clang::sycl_private]] *>(GLOB); // expected-error {{static_cast from '[[clang::sycl_global]] int *' to '[[clang::sycl_private]] int *' is not allowed}}
+  PRIV = static_cast<int [[clang::sycl_private]] *>(LOC);  // expected-error {{static_cast from '[[clang::sycl_local]] int *' to '[[clang::sycl_private]] int *' is not allowed}}
+  NoAS = GLOB + PRIV;                                              // expected-error {{invalid operands to binary expression ('[[clang::sycl_global]] int *' and '[[clang::sycl_private]] int *')}}
+  NoAS = GLOB + LOC;                                               // expected-error {{invalid operands to binary expression ('[[clang::sycl_global]] int *' and '[[clang::sycl_local]] int *')}}
+  NoAS += GLOB;                                                    // expected-error {{invalid operands to binary expression ('int *' and '[[clang::sycl_global]] int *')}}
 
   bar(*GLOB);
   bar2(*GLOB);
@@ -53,10 +54,10 @@ void usages() {
 
   // Implicit casts to named address space are disallowed
   baz(NoAS);                                   // expected-error {{no matching function for call to 'baz'}}
-  __attribute__((opencl_local)) int *l = NoAS; // expected-error {{cannot initialize a variable of type '__local int *' with an lvalue of type 'int *'}}
+  int [[clang::sycl_local]] *l = NoAS; // expected-error {{cannot initialize a variable of type '[[clang::sycl_local]] int *' with an lvalue of type 'int *'}}
 
   // Explicit casts between disjoint address spaces are disallowed
-  GLOB = (__attribute__((opencl_global)) int *)PRIV; // expected-error {{C-style cast from '__private int *' to '__global int *' converts between mismatching address spaces}}
+  GLOB = (int [[clang::sycl_global]] *)PRIV; // expected-error {{C-style cast from '[[clang::sycl_private]] int *' to '[[clang::sycl_global]] int *' converts between mismatching address spaces}}
 
   (void)static_cast<int *>(GLOB);
   (void)static_cast<void *>(GLOB);
@@ -69,12 +70,39 @@ void usages() {
   bar(*GLOB_HOST);
   bar2(*GLOB_HOST);
   GLOB = GLOB_HOST;
-  GLOB_HOST = GLOB; // expected-error {{assigning '__global int *' to '__global_host int *' changes address space of pointer}}
-  GLOB_HOST = static_cast<__attribute__((opencl_global_host)) int *>(GLOB); // expected-error {{static_cast from '__global int *' to '__global_host int *' is not allowed}}
+  GLOB_HOST = GLOB; // expected-error {{assigning '[[clang::sycl_global]] int *' to '__global_host int *' changes address space of pointer}}
+  GLOB_HOST = static_cast<__attribute__((opencl_global_host)) int *>(GLOB); // expected-error {{static_cast from '[[clang::sycl_global]] int *' to '__global_host int *' is not allowed}}
   __attribute__((opencl_global_device)) int *GLOB_DEVICE;
   bar(*GLOB_DEVICE);
   bar2(*GLOB_DEVICE);
   GLOB = GLOB_DEVICE;
-  GLOB_DEVICE = GLOB; // expected-error {{assigning '__global int *' to '__global_device int *' changes address space of pointer}}
-  GLOB_DEVICE = static_cast<__attribute__((opencl_global_device)) int *>(GLOB); // expected-error {{static_cast from '__global int *' to '__global_device int *' is not allowed}}
+  GLOB_DEVICE = GLOB; // expected-error {{assigning '[[clang::sycl_global]] int *' to '__global_device int *' changes address space of pointer}}
+  GLOB_DEVICE = static_cast<__attribute__((opencl_global_device)) int *>(GLOB); // expected-error {{static_cast from '[[clang::sycl_global]] int *' to '__global_device int *' is not allowed}}
+
+  // Test sycl_constant conversions
+  // constant -> constant: OK
+  int [[clang::sycl_constant]] *c2 = CONST;
+  (void)c2;
+
+  // constant -> other named: ERROR (disjoint address spaces)
+  GLOB = CONST; // expected-error {{assigning '[[clang::sycl_constant]] int *' to '[[clang::sycl_global]] int *' changes address space of pointer}}
+  PRIV = CONST; // expected-error {{assigning '[[clang::sycl_constant]] int *' to '[[clang::sycl_private]] int *' changes address space of pointer}}
+  LOC = CONST;  // expected-error {{assigning '[[clang::sycl_constant]] int *' to '[[clang::sycl_local]] int *' changes address space of pointer}}
+
+  // constant -> generic: ERROR (constant not a subset of generic)
+  NoAS = CONST; // expected-error {{assigning '[[clang::sycl_constant]] int *' to 'int *' changes address space of pointer}}
+
+  // generic -> constant: ERROR (constant not a superset of generic)
+  CONST = NoAS; // expected-error {{assigning 'int *' to '[[clang::sycl_constant]] int *' changes address space of pointer}}
+
+  // other named -> constant: ERROR (disjoint address spaces)
+  CONST = GLOB; // expected-error {{assigning '[[clang::sycl_global]] int *' to '[[clang::sycl_constant]] int *' changes address space of pointer}}
+  CONST = PRIV; // expected-error {{assigning '[[clang::sycl_private]] int *' to '[[clang::sycl_constant]] int *' changes address space of pointer}}
+  CONST = LOC;  // expected-error {{assigning '[[clang::sycl_local]] int *' to '[[clang::sycl_constant]] int *' changes address space of pointer}}
+
+  // Explicit casts between constant and other spaces are disallowed
+  GLOB = (int [[clang::sycl_global]] *)CONST;   // expected-error {{C-style cast from '[[clang::sycl_constant]] int *' to '[[clang::sycl_global]] int *' converts between mismatching address spaces}}
+  CONST = (int [[clang::sycl_constant]] *)GLOB; // expected-error {{C-style cast from '[[clang::sycl_global]] int *' to '[[clang::sycl_constant]] int *' converts between mismatching address spaces}}
+  PRIV = static_cast<int [[clang::sycl_private]] *>(CONST); // expected-error {{static_cast from '[[clang::sycl_constant]] int *' to '[[clang::sycl_private]] int *' is not allowed}}
+  CONST = static_cast<int [[clang::sycl_constant]] *>(PRIV); // expected-error {{static_cast from '[[clang::sycl_private]] int *' to '[[clang::sycl_constant]] int *' is not allowed}}
 }

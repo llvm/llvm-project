@@ -873,6 +873,27 @@ expression.
   }];
 }
 
+def SYCLAddressSpaceDocs : Documentation {
+  let Category = DocCatType;
+  let Heading = "Address space attributes for SYCL";
+  let Content = [{
+The memory model for SYCL devices is derived from the OpenCL memory model. Accordingly
+SYCL defines five address spaces: global, local, private, generic and constant. The
+following attributes correspond to these address spaces:
+
+[[clang::sycl_global]], [[clang::sycl_local]], [[clang::sycl_private]],
+[[clang::sycl_generic]] and  [[clang::sycl_constant]] (deprecated)
+
+These attributes are intended for use in the implementation of SYCL run-time
+libraries. A direct declaration of pointers with address spaces is discouraged. Users
+should use the sycl::multi_ptr class to handle address space boundaries and
+interoperability.
+
+More details can be found in SYCL 2020 Specification, Section 3.8.2
+"SYCL device memory model" and Section 4.7.7, "Address space classes"
+  }];
+}
+
 def SYCLSpecialClassDocs : Documentation {
   let Category = DocCatStmt;
   let Content = [{

@@ -9117,6 +9117,11 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_OpenCLConstantAddressSpace:
     case ParsedAttr::AT_OpenCLGenericAddressSpace:
     case ParsedAttr::AT_AddressSpace:
+    case ParsedAttr::AT_SYCLPrivateAddressSpace:
+    case ParsedAttr::AT_SYCLGlobalAddressSpace:
+    case ParsedAttr::AT_SYCLLocalAddressSpace:
+    case ParsedAttr::AT_SYCLConstantAddressSpace:
+    case ParsedAttr::AT_SYCLGenericAddressSpace:
       HandleAddressSpaceTypeAttribute(type, attr, state);
       attr.setUsedAsTypeAttr();
       break;
