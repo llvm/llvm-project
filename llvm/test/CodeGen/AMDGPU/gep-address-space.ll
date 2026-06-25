@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck --check-prefix=SI --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck --check-prefix=SI --check-prefix=CHECK %s
 ; RUN: llc -mtriple=amdgcn -mcpu=bonaire < %s | FileCheck --check-prefix=CI --check-prefix=CHECK %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck --check-prefix=CI --check-prefix=CHECK %s
 
@@ -27,17 +27,13 @@ define amdgpu_kernel void @use_gep_address_space_large_offset(ptr addrspace(3) %
 ; SI: s_add_i32
 ; SI: s_add_i32
 ; SI: s_add_i32
+; SI: ds_write_b32 v{{[0-9]+}}, v{{[0-9]+}}{{$}}
 ; SI: s_add_i32
+; SI: ds_write_b32 v{{[0-9]+}}, v{{[0-9]+}}{{$}}
+; SI: ds_write_b32 v{{[0-9]+}}, v{{[0-9]+}}{{$}}
+; SI: ds_write_b32 v{{[0-9]+}}, v{{[0-9]+}}{{$}}
 
-; CHECK-DAG: v_mov_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}
-; CHECK-DAG: v_mov_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}
-; CHECK-DAG: v_mov_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}
-; CHECK-DAG: v_mov_b32_e32 {{v[0-9]+}}, {{s[0-9]+}}
-
-; CI-DAG: ds_write_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:64
-; CI-DAG: ds_write_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:64
-; CI-DAG: ds_write_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:64
-; CI-DAG: ds_write_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:64
+; CI-COUNT-4: ds_write_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:64
 ; CHECK: s_endpgm
 define amdgpu_kernel void @gep_as_vector_v4(<4 x ptr addrspace(3)> %array) nounwind {
   %p = getelementptr [1024 x i32], <4 x ptr addrspace(3)> %array, <4 x i16> zeroinitializer, <4 x i16> <i16 16, i16 16, i16 16, i16 16>

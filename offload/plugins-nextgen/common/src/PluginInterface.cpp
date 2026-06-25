@@ -299,13 +299,13 @@ Error GenericKernelTy::launch(GenericDeviceTy &GenericDevice, void **ArgPtrs,
 
   KernelLaunchParamsTy LaunchParams;
 
-  // Kernel languages (.IsCUDA) don't use indirection, whereas dispatching with
-  // an array of kernel argument pointers (.IsPtrArgs) uses KernelArgs.ArgPtrs
-  // and KernelArgs.ArgSizes directly.
+  // Kernel languages do not use the OpenMP indirection and argument parsing.
   if (KernelArgs.Flags.IsCUDA) {
     LaunchParams =
         *reinterpret_cast<KernelLaunchParamsTy *>(KernelArgs.ArgPtrs);
-  } else if (!KernelArgs.Flags.IsPtrArgs) {
+  } else if (KernelArgs.Flags.IsPtrArgs) {
+    LaunchParams = KernelLaunchParamsTy{KernelArgs.NumArgs, KernelArgs.ArgPtrs};
+  } else {
     LaunchParams =
         prepareArgs(GenericDevice, ArgPtrs, ArgOffsets, KernelArgs.NumArgs,
                     Args, Ptrs, *KernelLaunchEnvOrErr, KernelArgs.Version);
@@ -379,7 +379,7 @@ GenericKernelTy::prepareArgs(GenericDeviceTy &GenericDevice, void **ArgPtrs,
   for (uint32_t I = 0; I < NumArgs; ++I)
     Ptrs[I] = &Args[I];
 
-  return KernelLaunchParamsTy{sizeof(void *) * NumArgs, &Args[0], &Ptrs[0]};
+  return KernelLaunchParamsTy{NumArgs, &Ptrs[0]};
 }
 
 uint32_t
