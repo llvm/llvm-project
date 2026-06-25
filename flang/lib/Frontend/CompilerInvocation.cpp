@@ -360,6 +360,14 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                     clang::options::OPT_fno_integrated_as, true))
     opts.DisableIntegratedAS = 1;
 
+  opts.FunctionSections =
+      args.hasFlag(clang::options::OPT_ffunction_sections,
+                   clang::options::OPT_fno_function_sections,
+                   /*Default=*/false);
+  opts.DataSections = args.hasFlag(clang::options::OPT_fdata_sections,
+                                   clang::options::OPT_fno_data_sections,
+                                   /*Default=*/false);
+
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::options::OPT_mcode_object_version_EQ)) {
     llvm::StringRef s = a->getValue();
@@ -479,6 +487,11 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   opts.SampleProfileFile =
       args.getLastArgValue(clang::options::OPT_fprofile_sample_use_EQ);
+
+  if (args.hasFlag(clang::options::OPT_fpseudo_probe_for_profiling,
+                   clang::options::OPT_fno_pseudo_probe_for_profiling, false)) {
+    opts.PseudoProbeForProfiling = 1;
+  }
 
   // -mcmodel option.
   if (const llvm::opt::Arg *a =
@@ -807,15 +820,10 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
                            : FortranForm::FreeForm;
   }
 
-  // Set fixedFormColumns based on -ffixed-line-length=<value> or
-  // set freeFormColumns based on -ffree-line-length=<value>.
-  for (const auto *arg :
-       args.filtered(clang::options::OPT_ffixed_line_length_EQ,
-                     clang::options::OPT_ffree_line_length_EQ)) {
-
+  // Set fixedFormColumns based on -ffixed-line-length=<value>
+  if (const auto *arg =
+          args.getLastArg(clang::options::OPT_ffixed_line_length_EQ)) {
     llvm::StringRef argValue = llvm::StringRef(arg->getValue());
-    bool isFixedLineFlag =
-        arg->getOption().matches(clang::options::OPT_ffixed_line_length_EQ);
     std::int64_t columns = -1;
     if (argValue == "none") {
       columns = 0;
@@ -823,17 +831,16 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       columns = -1;
     }
     if (columns < 0) {
-      diags.Report(clang::diag::err_drv_invalid_columns)
+      diags.Report(clang::diag::err_drv_negative_columns)
           << arg->getOption().getName() << arg->getValue();
-    } else if (columns == 0 && isFixedLineFlag) {
-      columns = 1000000;
-    } else if (columns < 7 && isFixedLineFlag) {
-      // Specific to the fixed form
+    } else if (columns == 0) {
+      opts.fixedFormColumns = 1000000;
+    } else if (columns < 7) {
       diags.Report(clang::diag::err_drv_small_columns)
           << arg->getOption().getName() << arg->getValue() << "7";
+    } else {
+      opts.fixedFormColumns = columns;
     }
-
-    (isFixedLineFlag ? opts.fixedFormColumns : opts.freeFormColumns) = columns;
   }
 
   // Set conversion based on -fconvert=<value>
@@ -876,15 +883,22 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
 
   // -frelaxed-c-loc-checks
   if (args.hasArg(clang::options::OPT_relaxed_c_loc)) {
-    opts.features.Enable(Fortran::common::LanguageFeature::RelaxedCLoc);
+    opts.features.Enable(Fortran::common::LanguageFeature::RelaxedCLocChecks);
   }
 
-  // -f{no-}acc-allow-default-none-scalars
+  // -f{no-}openacc-default-none-scalars-strict
   opts.features.Enable(
-      Fortran::common::LanguageFeature::AccDefaultNoneScalars,
-      args.hasFlag(clang::options::OPT_facc_allow_default_none_scalars,
-                   clang::options::OPT_fno_acc_allow_default_none_scalars,
-                   false));
+      Fortran::common::LanguageFeature::OpenAccDefaultNoneScalarsStrict,
+      args.hasFlag(clang::options::OPT_fopenacc_default_none_scalars_strict,
+                   clang::options::OPT_fno_openacc_default_none_scalars_strict,
+                   true));
+
+  // -f{no-}openacc-multiple-names-in-routine
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::OpenACCMultipleNamesInRoutine,
+      args.hasFlag(clang::options::OPT_fopenacc_multiple_names_in_routine,
+                   clang::options::OPT_fno_openacc_multiple_names_in_routine,
+                   true));
 
   // -f{no-}xor-operator
   opts.features.Enable(Fortran::common::LanguageFeature::XOROperator,
@@ -933,15 +947,6 @@ static std::string getIntrinsicDir(const char *argv) {
   llvm::sys::path::remove_filename(driverPath);
   driverPath.append("/../include/flang/");
   return std::string(driverPath);
-}
-
-// Generate the path to look for OpenMP headers
-static std::string getOpenMPHeadersDir(const char *argv) {
-  llvm::SmallString<128> includePath;
-  includePath.assign(llvm::sys::fs::getMainExecutable(argv, nullptr));
-  llvm::sys::path::remove_filename(includePath);
-  includePath.append("/../include/flang/OpenMP/");
-  return std::string(includePath);
 }
 
 /// Parses all preprocessor input arguments and populates the preprocessor
@@ -1551,6 +1556,10 @@ static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
       opts.PrepareForThinLTO = true;
   }
 
+  // -fsplit-lto-unit option
+  if (args.hasArg(clang::options::OPT_fsplit_lto_unit))
+    opts.EnableSplitLTOUnit = true;
+
   // -ffat-lto-objects
   if (const llvm::opt::Arg *arg =
           args.getLastArg(clang::options::OPT_ffat_lto_objects,
@@ -1734,6 +1743,9 @@ bool CompilerInvocation::createFromArgs(
   invoc.frontendOpts.llvmArgs = args.getAllArgValues(clang::options::OPT_mllvm);
   invoc.frontendOpts.mlirArgs = args.getAllArgValues(clang::options::OPT_mmlir);
 
+  if (args.hasArg(clang::options::OPT_foffload_device))
+    invoc.getLangOpts().OffloadDevice = 1;
+
   success &= parseLangOptionsArgs(invoc, args, diags);
 
   success &= parseLinkerOptionsArgs(invoc, args, diags);
@@ -1800,11 +1812,6 @@ void CompilerInvocation::setDefaultFortranOpts() {
 
   std::vector<std::string> searchDirectories{"."s};
   fortranOptions.searchDirectories = searchDirectories;
-
-  // Add the location of omp_lib.h to the search directories. Currently this is
-  // identical to the modules' directory.
-  fortranOptions.searchDirectories.emplace_back(
-      getOpenMPHeadersDir(getArgv0()));
 
   fortranOptions.isFixedForm = false;
 }
@@ -1896,7 +1903,6 @@ void CompilerInvocation::setFortranOpts() {
         frontendOptions.fortranForm == FortranForm::FixedForm;
   }
   fortranOptions.fixedFormColumns = frontendOptions.fixedFormColumns;
-  fortranOptions.freeFormColumns = frontendOptions.freeFormColumns;
 
   // -E
   fortranOptions.prescanAndReformat =

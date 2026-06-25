@@ -617,6 +617,10 @@ bool TargetTransformInfo::shouldBuildLookupTablesForConstant(
   return TTIImpl->shouldBuildLookupTablesForConstant(C);
 }
 
+unsigned TargetTransformInfo::getMinimumLookupTableEntryBitWidth() const {
+  return TTIImpl->getMinimumLookupTableEntryBitWidth();
+}
+
 bool TargetTransformInfo::shouldBuildRelLookupTables() const {
   return TTIImpl->shouldBuildRelLookupTables();
 }
@@ -1471,6 +1475,10 @@ bool TargetTransformInfo::preferInLoopReduction(RecurKind Kind,
 
 bool TargetTransformInfo::preferAlternateOpcodeVectorization() const {
   return TTIImpl->preferAlternateOpcodeVectorization();
+}
+
+bool TargetTransformInfo::preferSLPInstCountCheck() const {
+  return TTIImpl->preferSLPInstCountCheck();
 }
 
 bool TargetTransformInfo::preferPredicatedReductionSelect() const {

@@ -19,12 +19,12 @@ end module
 
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpGroupprivateDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = groupprivate
-!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
-!PARSE-TREE: | OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'y'
-!PARSE-TREE: | OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> DeviceTypeDescription = Nohost
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'x'
+!PARSE-TREE: | OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'y'
+!PARSE-TREE: | OmpClauseList -> OmpClause -> DeviceType -> OmpDeviceTypeClause -> OmpDeviceType = Nohost
 !PARSE-TREE: | Flags = {}
 !PARSE-TREE: DeclarationConstruct -> SpecificationConstruct -> OpenMPDeclarativeConstruct -> OmpGroupprivateDirective -> OmpDirectiveSpecification
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = groupprivate
-!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'z'
+!PARSE-TREE: | OmpArgumentList -> OmpArgument -> OmpObject -> Designator -> DataRef -> Name = 'z'
 !PARSE-TREE: | OmpClauseList ->
 !PARSE-TREE: | Flags = {}

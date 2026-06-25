@@ -59,6 +59,7 @@
 #include "clang/Sema/SemaFixItUtils.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaOpenCL.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaPseudoObject.h"
 #include "clang/Sema/Template.h"
@@ -664,8 +665,9 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
 
   // We don't want to throw lvalue-to-rvalue casts on top of
   // expressions of certain types in C++.
+  // In HLSL LvaluetoRvalue conversion is allowed on records.
   if (getLangOpts().CPlusPlus) {
-    if (T == Context.OverloadTy || T->isRecordType() ||
+    if (T == Context.OverloadTy || (T->isRecordType() && !getLangOpts().HLSL) ||
         (T->isDependentType() && !T->isAnyPointerType() &&
          !T->isMemberPointerType()))
       return E;
@@ -1751,6 +1753,10 @@ QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
     return Context.getCommonSugaredType(LHSType, RHSType);
 
   // At this point, we have two different arithmetic types.
+
+  if ((LHSType->isFixedPointType() && RHSType->isBitIntType()) ||
+      (LHSType->isBitIntType() && RHSType->isFixedPointType()))
+    return QualType();
 
   // Diagnose attempts to convert between __ibm128, __float128 and long double
   // where such conversions currently can't be handled.
@@ -3735,6 +3741,20 @@ ExprResult Sema::ActOnIntegerConstant(SourceLocation Loc, int64_t Val) {
   return IntegerLiteral::Create(Context,
                                 llvm::APInt(IntSize, Val, /*isSigned=*/true),
                                 Context.IntTy, Loc);
+}
+
+ExprResult Sema::BuildBoolLiteral(SourceLocation Loc, bool Value) {
+  ExprResult Inner;
+  if (getLangOpts().CPlusPlus) {
+    Inner = ActOnCXXBoolLiteral(Loc, Value ? tok::kw_true : tok::kw_false);
+  } else {
+    // C doesn't actually have a way to represent literal values of type
+    // _Bool. So, we'll use 0/1 and implicit cast to _Bool.
+    Inner = ActOnIntegerConstant(Loc, Value ? 1 : 0);
+    Inner =
+        ImpCastExprToType(Inner.get(), Context.BoolTy, CK_IntegralToBoolean);
+  }
+  return Inner;
 }
 
 static Expr *BuildFloatingLiteral(Sema &S, NumericLiteralParser &Literal,
@@ -7268,6 +7288,12 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
     }
   }
 
+  // Check read_image{i|ui} sampler argument before ConvertArgumentsForCall
+  // replaces sampler DeclRefExprs with their integer initializers.
+  if (getLangOpts().OpenCL && FDecl) {
+    OpenCL().checkBuiltinReadImage(FDecl, TheCall);
+  }
+
   if (Proto) {
     if (ConvertArgumentsForCall(TheCall, Fn, FDecl, Proto, Args, RParenLoc,
                                 IsExecConfig))
@@ -10208,6 +10234,20 @@ AssignConvertType Sema::CheckSingleAssignmentConstraints(QualType LHSType,
       RHS = FixOverloadedFunctionReference(RHS.get(), DAP, FD);
     else
       return AssignConvertType::Incompatible;
+  }
+
+  // For HLSL records, insert derived-to-base conversion if needed.
+  if (getLangOpts().HLSL && LHSType->isRecordType()) {
+    QualType RHSType = RHS.get()->getType();
+    if (!Context.hasSameUnqualifiedType(RHSType, LHSType)) {
+      CXXBasePaths Paths;
+      if (IsDerivedFrom(RHS.get()->getBeginLoc(), RHSType, LHSType, Paths)) {
+        CXXCastPath CastPath;
+        BuildBasePathArray(Paths, CastPath);
+        RHS = ImpCastExprToType(RHS.get(), LHSType, CK_DerivedToBase, VK_LValue,
+                                &CastPath);
+      }
+    }
   }
 
   // This check seems unnatural, however it is necessary to ensure the proper
@@ -14636,15 +14676,7 @@ void Sema::DiagnoseCommaOperator(const Expr *LHS, SourceLocation Loc) {
   // The listed locations are the initialization and increment portions
   // of a for loop.  The additional checks are on the condition of
   // if statements, do/while loops, and for loops.
-  // Differences in scope flags for C89 mode requires the extra logic.
-  const unsigned ForIncrementFlags =
-      getLangOpts().C99 || getLangOpts().CPlusPlus
-          ? Scope::ControlScope | Scope::ContinueScope | Scope::BreakScope
-          : Scope::ContinueScope | Scope::BreakScope;
-  const unsigned ForInitFlags = Scope::ControlScope | Scope::DeclScope;
-  const unsigned ScopeFlags = getCurScope()->getFlags();
-  if ((ScopeFlags & ForIncrementFlags) == ForIncrementFlags ||
-      (ScopeFlags & ForInitFlags) == ForInitFlags)
+  if (getCurScope()->isControlScope())
     return;
 
   // If there are multiple comma operators used together, get the RHS of the
@@ -16110,11 +16142,15 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
   }
 
   if (getLangOpts().CPlusPlus) {
-    // Otherwise, build an overloaded op if either expression is type-dependent
-    // or has an overloadable type.
-    if (LHSExpr->isTypeDependent() || RHSExpr->isTypeDependent() ||
-        LHSExpr->getType()->isOverloadableType() ||
-        RHSExpr->getType()->isOverloadableType())
+    bool CanOverloadBinOp =
+        !getLangOpts().HLSL ||
+        HLSL().canHaveOverloadedBinOp(LHSExpr->getType(), Opc) ||
+        HLSL().canHaveOverloadedBinOp(RHSExpr->getType(), Opc);
+    bool TypeDependent =
+        LHSExpr->isTypeDependent() || RHSExpr->isTypeDependent();
+    bool Overloadable = LHSExpr->getType()->isOverloadableType() ||
+                        RHSExpr->getType()->isOverloadableType();
+    if (CanOverloadBinOp && (TypeDependent || Overloadable))
       return BuildOverloadedBinOp(*this, S, OpLoc, Opc, LHSExpr, RHSExpr);
   }
 
@@ -18315,12 +18351,10 @@ ExprResult Sema::CheckForImmediateInvocation(ExprResult E, FunctionDecl *Decl) {
   // immediate invocation.
   APValue Cached;
   auto CheckConstantExpressionAndKeepResult = [&]() {
-    llvm::SmallVector<PartialDiagnosticAt, 8> Notes;
     Expr::EvalResult Eval;
-    Eval.Diag = &Notes;
     bool Res = E.get()->EvaluateAsConstantExpr(
         Eval, getASTContext(), ConstantExprKind::ImmediateInvocation);
-    if (Res && Notes.empty()) {
+    if (Res && !Eval.DiagEmitted) {
       Cached = std::move(Eval.Val);
       return true;
     }
@@ -18487,6 +18521,11 @@ static void RemoveNestedImmediateInvocation(
       // Lambdas have already been processed inside their eval contexts.
       return E;
     }
+
+    // We do not have enough information to transform opaque expressions and
+    // assume they do not contain immediate subexpressions.
+    ExprResult TransformOpaqueValueExpr(OpaqueValueExpr *E) { return E; }
+
     bool AlwaysRebuild() { return false; }
     bool ReplacingOriginal() { return true; }
     bool AllowSkippingCXXConstructExpr() {

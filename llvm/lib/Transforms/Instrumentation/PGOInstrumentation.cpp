@@ -128,7 +128,6 @@
 #include <vector>
 
 using namespace llvm;
-using ProfileCount = Function::ProfileCount;
 using VPCandidateInfo = ValueProfileCollector::CandidateInfo;
 
 #define DEBUG_TYPE "pgo-instrumentation"
@@ -380,7 +379,8 @@ class FunctionInstrumenter final {
   // another counter range within the context.
   bool isValueProfilingDisabled() const {
     return DisableValueProfiling ||
-           InstrumentationType == PGOInstrumentationType::CTXPROF;
+           InstrumentationType == PGOInstrumentationType::CTXPROF ||
+           M.getTargetTriple().isGPU();
   }
 
   bool shouldInstrumentEntryBB() const {
@@ -1674,7 +1674,7 @@ void PGOUseFunc::populateCounters() {
   // Fix the obviously inconsistent entry count.
   if (FuncMaxCount > 0 && FuncEntryCount == 0)
     FuncEntryCount = 1;
-  F.setEntryCount(ProfileCount(FuncEntryCount, Function::PCT_Real));
+  F.setEntryCount(FuncEntryCount);
   markFunctionAttributes(FuncEntryCount, FuncMaxCount);
 
   LLVM_DEBUG(FuncInfo.dumpInfo("after reading profile."));
@@ -1942,7 +1942,7 @@ static bool skipPGOGen(const Function &F) {
     return true;
   if (PGOInstrumentColdFunctionOnly) {
     if (auto EntryCount = F.getEntryCount())
-      return EntryCount->getCount() > PGOColdInstrumentEntryThreshold;
+      return *EntryCount > PGOColdInstrumentEntryThreshold;
     return !PGOTreatUnknownAsCold;
   }
   return false;
@@ -2030,8 +2030,7 @@ static void fixFuncEntryCount(PGOUseFunc &Func, LoopInfo &LI,
   BlockFrequencyInfo NBFI(F, NBPI, LI);
 #ifndef NDEBUG
   auto BFIEntryCount = F.getEntryCount();
-  assert(BFIEntryCount && (BFIEntryCount->getCount() > 0) &&
-         "Invalid BFI Entrycount");
+  assert(BFIEntryCount && (*BFIEntryCount > 0) && "Invalid BFI Entrycount");
 #endif
   auto SumCount = APFloat::getZero(APFloat::IEEEdouble());
   auto SumBFICount = APFloat::getZero(APFloat::IEEEdouble());
@@ -2062,7 +2061,7 @@ static void fixFuncEntryCount(PGOUseFunc &Func, LoopInfo &LI,
   if (NewEntryCount == 0)
     NewEntryCount = 1;
   if (NewEntryCount != FuncEntryCount) {
-    F.setEntryCount(ProfileCount(NewEntryCount, Function::PCT_Real));
+    F.setEntryCount(NewEntryCount);
     LLVM_DEBUG(dbgs() << "FixFuncEntryCount: in " << F.getName()
                       << ", entry_count " << FuncEntryCount << " --> "
                       << NewEntryCount << "\n");
@@ -2254,7 +2253,7 @@ static bool annotateAllFunctions(
     if (!Func.readCounters(AllZeros, PseudoKind))
       continue;
     if (AllZeros) {
-      F.setEntryCount(ProfileCount(0, Function::PCT_Real));
+      F.setEntryCount(0);
       if (Func.getProgramMaxCount() != 0)
         ColdFunctions.push_back(&F);
       continue;

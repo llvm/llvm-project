@@ -526,8 +526,6 @@ template <class _ValueType>
 
 template <class _ValueType>
 [[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI add_pointer_t<add_const_t<_ValueType>> any_cast(any const* __any) noexcept {
-  static_assert(!is_void_v<_ValueType>, "_ValueType may not be void.");
-  static_assert(!is_reference_v<_ValueType>, "_ValueType may not be a reference.");
   return std::any_cast<_ValueType>(const_cast<any*>(__any));
 }
 
@@ -560,11 +558,11 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 17
 #    include <chrono>
 #  endif
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
 #    include <atomic>
 #    include <concepts>
 #    include <cstdlib>
@@ -576,7 +574,7 @@ _LIBCPP_POP_MACROS
 #    include <variant>
 #  endif
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 23
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 23
 #    include <cstring>
 #    include <limits>
 #  endif

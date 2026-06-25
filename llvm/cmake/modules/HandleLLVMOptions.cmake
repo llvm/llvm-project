@@ -700,7 +700,8 @@ if( MSVC )
     has_msvc_incremental_no_flag("${CMAKE_MODULE_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} ${CMAKE_MODULE_LINKER_FLAGS}" NO_INCR_MODULE)
     has_msvc_incremental_no_flag("${CMAKE_SHARED_LINKER_FLAGS_${uppercase_CMAKE_BUILD_TYPE}} ${CMAKE_SHARED_LINKER_FLAGS}" NO_INCR_SHARED)
     if (NO_INCR_EXE AND NO_INCR_MODULE AND NO_INCR_SHARED)
-      append("/Brepro" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+      # The /Brepro flag in `clang-cl` omits the timestamp for .obj files while the linker flag omits the timestamp for .exe and .dll files.
+      append("/Brepro" CMAKE_C_FLAGS CMAKE_CXX_FLAGS CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
     else()
       message(WARNING "/Brepro not compatible with /INCREMENTAL linking - builds will be non-deterministic")
     endif()
@@ -973,7 +974,7 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   endif()
 
   # Enable -Wctad-maybe-unsupported to catch unintended use of CTAD.
-  add_flag_if_supported("-Wctad-maybe-unsupported" CTAD_MAYBE_UNSPPORTED_FLAG)
+  add_flag_if_supported("-Wctad-maybe-unsupported" CTAD_MAYBE_UNSUPPORTED_FLAG)
 endif (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
 
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT LLVM_ENABLE_WARNINGS)

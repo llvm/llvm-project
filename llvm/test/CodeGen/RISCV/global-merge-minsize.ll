@@ -24,13 +24,13 @@ define void @f1(i32 %a) nounwind {
 ; RV32-MINSIZE-LABEL: f1:
 ; RV32-MINSIZE:       # %bb.0:
 ; RV32-MINSIZE-NEXT:    lui a1, %hi(ig1)
+; RV32-MINSIZE-NEXT:    lui a2, %hi(ig2)
 ; RV32-MINSIZE-NEXT:    sw a0, %lo(ig1)(a1)
-; RV32-MINSIZE-NEXT:    lui a1, %hi(ig2)
-; RV32-MINSIZE-NEXT:    sw a0, %lo(ig2)(a1)
+; RV32-MINSIZE-NEXT:    sw a0, %lo(ig2)(a2)
 ; RV32-MINSIZE-NEXT:    lui a1, %hi(eg1)
+; RV32-MINSIZE-NEXT:    lui a2, %hi(eg2)
 ; RV32-MINSIZE-NEXT:    sw a0, %lo(eg1)(a1)
-; RV32-MINSIZE-NEXT:    lui a1, %hi(eg2)
-; RV32-MINSIZE-NEXT:    sw a0, %lo(eg2)(a1)
+; RV32-MINSIZE-NEXT:    sw a0, %lo(eg2)(a2)
 ; RV32-MINSIZE-NEXT:    ret
   store i32 %a, ptr @ig1, align 4
   store i32 %a, ptr @ig2, align 4

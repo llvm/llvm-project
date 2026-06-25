@@ -10,6 +10,7 @@
 
 #include "Generators.h"
 #include "Representation.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -28,13 +29,12 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(EnumValueInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(TemplateParamInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(TypedefInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(BaseRecordInfo)
-LLVM_YAML_IS_SEQUENCE_VECTOR(OwnedPtr<CommentInfo>)
 
 namespace llvm {
 
 template <typename T>
-bool operator==(const llvm::simple_ilist<T> &LHS,
-                const llvm::simple_ilist<T> &RHS) {
+static bool operator==(const llvm::simple_ilist<T> &LHS,
+                       const llvm::simple_ilist<T> &RHS) {
   auto LIt = LHS.begin(), LEnd = LHS.end();
   auto RIt = RHS.begin(), REnd = RHS.end();
   for (; LIt != LEnd && RIt != REnd; ++LIt, ++RIt) {
@@ -45,8 +45,8 @@ bool operator==(const llvm::simple_ilist<T> &LHS,
 }
 
 template <typename T>
-bool operator!=(const llvm::simple_ilist<T> &LHS,
-                const llvm::simple_ilist<T> &RHS) {
+static bool operator!=(const llvm::simple_ilist<T> &LHS,
+                       const llvm::simple_ilist<T> &RHS) {
   return !(LHS == RHS);
 }
 
@@ -185,7 +185,7 @@ template <> struct ScalarTraits<SymbolID> {
   static SymbolID stringToSymbol(llvm::StringRef Value) {
     SymbolID USR;
     std::string HexString = fromHex(Value);
-    std::copy(HexString.begin(), HexString.end(), USR.begin());
+    llvm::copy(HexString, USR.begin());
     return SymbolID(USR);
   }
 
@@ -196,8 +196,8 @@ template <> struct ScalarTraits<SymbolID> {
 struct QuotedString {
   StringRef Ref;
   QuotedString() = default;
-  QuotedString(StringRef R) : Ref(R) {}
-  operator StringRef() const { return Ref; }
+  explicit QuotedString(StringRef R) : Ref(R) {}
+  explicit operator StringRef() const { return Ref; }
   bool operator==(const QuotedString &Other) const { return Ref == Other.Ref; }
 };
 
@@ -520,9 +520,10 @@ class YAMLGenerator : public Generator {
 public:
   static const char *Format;
 
-  llvm::Error generateDocumentation(
-      StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
-      const ClangDocContext &CDCtx, std::string DirName) override;
+  llvm::Error generateDocumentation(StringRef RootDir,
+                                    llvm::StringMap<doc::Info *> Infos,
+                                    const ClangDocContext &CDCtx,
+                                    std::string DirName) override;
   llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                                  const ClangDocContext &CDCtx) override;
 };
@@ -530,10 +531,10 @@ public:
 const char *YAMLGenerator::Format = "yaml";
 
 llvm::Error YAMLGenerator::generateDocumentation(
-    StringRef RootDir, llvm::StringMap<doc::OwnedPtr<doc::Info>> Infos,
+    StringRef RootDir, llvm::StringMap<doc::Info *> Infos,
     const ClangDocContext &CDCtx, std::string DirName) {
   for (const auto &Group : Infos) {
-    doc::Info *Info = getPtr(Group.getValue());
+    doc::Info *Info = Group.getValue();
 
     // Output file names according to the USR except the global namesapce.
     // Anonymous namespaces are taken care of in serialization, so here we can
@@ -566,19 +567,19 @@ llvm::Error YAMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
   llvm::yaml::Output InfoYAML(OS);
   switch (I->IT) {
   case InfoType::IT_namespace:
-    InfoYAML << *static_cast<clang::doc::NamespaceInfo *>(I);
+    InfoYAML << *cast<NamespaceInfo>(I);
     break;
   case InfoType::IT_record:
-    InfoYAML << *static_cast<clang::doc::RecordInfo *>(I);
+    InfoYAML << *cast<RecordInfo>(I);
     break;
   case InfoType::IT_enum:
-    InfoYAML << *static_cast<clang::doc::EnumInfo *>(I);
+    InfoYAML << *cast<EnumInfo>(I);
     break;
   case InfoType::IT_function:
-    InfoYAML << *static_cast<clang::doc::FunctionInfo *>(I);
+    InfoYAML << *cast<FunctionInfo>(I);
     break;
   case InfoType::IT_typedef:
-    InfoYAML << *static_cast<clang::doc::TypedefInfo *>(I);
+    InfoYAML << *cast<TypedefInfo>(I);
     break;
   case InfoType::IT_concept:
   case InfoType::IT_variable:

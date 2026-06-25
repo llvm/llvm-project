@@ -6,7 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 #include "src/sys/time/setitimer.h"
+#include "hdr/errno_macros.h"
 #include "hdr/types/struct_itimerval.h"
+#include "src/__support/CPP/limits.h"
 #include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
@@ -21,14 +23,30 @@ LLVM_LIBC_FUNCTION(int, setitimer,
   if constexpr (sizeof(time_t) > sizeof(long)) {
     // There is no SYS_setitimer_time64 call, so we can't use time_t directly,
     // and need to convert it to long first.
-    long new_value32[4] = {static_cast<long>(new_value->it_interval.tv_sec),
-                           static_cast<long>(new_value->it_interval.tv_usec),
-                           static_cast<long>(new_value->it_value.tv_sec),
-                           static_cast<long>(new_value->it_value.tv_usec)};
     long old_value32[4];
+    long *old_value32_ptr = old_value ? old_value32 : nullptr;
 
-    ret = LIBC_NAMESPACE::syscall_impl<long>(SYS_setitimer, which, new_value32,
-                                             old_value32);
+    if (new_value) {
+      // Check for overflow before casting to 32-bit long.
+      if (new_value->it_interval.tv_sec > cpp::numeric_limits<long>::max() ||
+          new_value->it_interval.tv_sec < cpp::numeric_limits<long>::min() ||
+          new_value->it_value.tv_sec > cpp::numeric_limits<long>::max() ||
+          new_value->it_value.tv_sec < cpp::numeric_limits<long>::min()) {
+        libc_errno = EOVERFLOW;
+        return -1;
+      }
+
+      long new_value32[4] = {static_cast<long>(new_value->it_interval.tv_sec),
+                             static_cast<long>(new_value->it_interval.tv_usec),
+                             static_cast<long>(new_value->it_value.tv_sec),
+                             static_cast<long>(new_value->it_value.tv_usec)};
+
+      ret = LIBC_NAMESPACE::syscall_impl<long>(SYS_setitimer, which,
+                                               new_value32, old_value32_ptr);
+    } else {
+      ret = LIBC_NAMESPACE::syscall_impl<long>(SYS_setitimer, which, nullptr,
+                                               old_value32_ptr);
+    }
 
     if (!ret && old_value) {
       old_value->it_interval.tv_sec = old_value32[0];

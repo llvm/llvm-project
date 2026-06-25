@@ -95,14 +95,7 @@ static std::string GetStringFromStructuredData(lldb::SBStructuredData &data,
   if (!keyValue)
     return std::string();
 
-  const size_t length = keyValue.GetStringValue(nullptr, 0);
-
-  if (length == 0)
-    return std::string();
-
-  std::string str(length + 1, 0);
-  keyValue.GetStringValue(&str[0], length + 1);
-  return str;
+  return GetStringValue(keyValue);
 }
 
 static uint64_t GetUintFromStructuredData(lldb::SBStructuredData &data,
@@ -234,15 +227,21 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
 llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
   in = lldb::SBFile(std::fopen(DEV_NULL, "r"), /*transfer_ownership=*/true);
 
-  if (auto Error = out.RedirectTo(overrideOut, [this](llvm::StringRef output) {
-        SendOutput(OutputType::Console, output);
-      }))
-    return Error;
+  if (auto error = out.RedirectTo(
+          m_loop, overrideOut,
+          [this](llvm::StringRef output) {
+            SendOutput(OutputType::Console, output);
+          },
+          log))
+    return error;
 
-  if (auto Error = err.RedirectTo(overrideErr, [this](llvm::StringRef output) {
-        SendOutput(OutputType::Console, output);
-      }))
-    return Error;
+  if (auto error = err.RedirectTo(
+          m_loop, overrideErr,
+          [this](llvm::StringRef output) {
+            SendOutput(OutputType::Console, output);
+          },
+          log))
+    return error;
 
   return llvm::Error::success();
 }
@@ -787,24 +786,7 @@ lldb::SBTarget DAP::CreateTarget(lldb::SBError &error) {
   return target;
 }
 
-void DAP::SetTarget(const lldb::SBTarget target) {
-  this->target = target;
-
-  if (target.IsValid()) {
-    // Configure breakpoint event listeners for the target.
-    lldb::SBListener listener = this->debugger.GetListener();
-    listener.StartListeningForEvents(
-        this->target.GetBroadcaster(),
-        lldb::SBTarget::eBroadcastBitBreakpointChanged |
-            lldb::SBTarget::eBroadcastBitModulesLoaded |
-            lldb::SBTarget::eBroadcastBitModulesUnloaded |
-            lldb::SBTarget::eBroadcastBitSymbolsLoaded |
-            lldb::SBTarget::eBroadcastBitSymbolsChanged |
-            lldb::SBTarget::eBroadcastBitNewTargetCreated);
-    listener.StartListeningForEvents(this->broadcaster,
-                                     eBroadcastBitStopEventThread);
-  }
-}
+void DAP::SetTarget(const lldb::SBTarget target) { this->target = target; }
 
 bool DAP::HandleObject(const Message &M) {
   TelemetryDispatcher dispatcher(&debugger);
@@ -960,8 +942,10 @@ void DAP::Received(const protocol::Event &event) {
 }
 
 void DAP::Received(const protocol::Request &request) {
-  if (request.command == "disconnect")
+  if (request.command == "disconnect") {
+    std::lock_guard<std::mutex> guard(m_queue_mutex);
     m_disconnecting = true;
+  }
 
   const std::optional<CancelArguments> cancel_args =
       getArgumentsIfRequest<CancelArguments>(request, "cancel");
@@ -1051,9 +1035,6 @@ llvm::Error DAP::Loop() {
   auto thread = std::thread([this] { TransportHandler(); });
 
   llvm::scope_exit cleanup([this]() {
-    // FIXME: Merge these into the MainLoop handler.
-    out.Stop();
-    err.Stop();
     StopEventHandlers();
 
     // Destroy the debugger when the session ends. This will trigger the

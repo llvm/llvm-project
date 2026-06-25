@@ -407,9 +407,12 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
 endif ()
 
 # Determine HOST_LINK_VERSION on Darwin.
-set(HOST_LINK_VERSION)
-if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")
+set(HOST_LINK_VERSION "" CACHE STRING "Host linker version on Darwin")
+if (APPLE AND NOT HOST_LINK_VERSION AND NOT CMAKE_LINKER MATCHES ".*lld.*")
   get_darwin_linker_version(HOST_LINK_VERSION)
+  set(HOST_LINK_VERSION "${HOST_LINK_VERSION}" CACHE STRING "Host linker version on Darwin" FORCE)
+endif()
+if (HOST_LINK_VERSION)
   message(STATUS "Host linker version: ${HOST_LINK_VERSION}")
 endif()
 
@@ -488,6 +491,9 @@ option(CLANG_ENABLE_STATIC_ANALYZER
   "Include static analyzer in clang binary." ON)
 
 option(CLANG_ENABLE_PROTO_FUZZER "Build Clang protobuf fuzzer." OFF)
+
+option(CLANG_USE_EXPERIMENTAL_CONST_INTERP
+  "Use the new experimental constant interpreter for compile-time evaluation." OFF)
 
 if (DEFINED CLANG_ENABLE_ARCMT)
   set(CLANG_ENABLE_OBJC_REWRITER ${CLANG_ENABLE_ARCMT})
@@ -585,8 +591,9 @@ if( CLANG_INCLUDE_TESTS )
   if(CLANG_BUILT_STANDALONE)
     umbrella_lit_testsuite_end(check-all)
   endif()
-  add_subdirectory(utils/perf-training)
 endif()
+
+add_subdirectory(utils/perf-training)
 
 option(CLANG_INCLUDE_DOCS "Generate build targets for the Clang docs."
   ${LLVM_INCLUDE_DOCS})
@@ -806,11 +813,15 @@ if (CLANG_ENABLE_BOOTSTRAP)
   if(LLVM_BUILD_INSTRUMENTED)
     string(TOUPPER "${LLVM_BUILD_INSTRUMENTED}" LLVM_BUILD_INSTRUMENTED)
     if (LLVM_BUILD_INSTRUMENTED STREQUAL "CSSPGO")
-      add_dependencies(clang-bootstrap-deps generate-sprofdata)
-      set(PGO_OPT -DLLVM_SPROFDATA_FILE=${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.sprofdata)
+      set(PGO_OPT_SPROFDATA "${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.sprofdata" CACHE STRING "")
+      set(PGO_OPT_SPROFDATA_PROVIDER generate-sprofdata CACHE STRING "")
+      add_dependencies(clang-bootstrap-deps ${PGO_OPT_SPROFDATA_PROVIDER})
+      set(PGO_OPT -DLLVM_SPROFDATA_FILE=${PGO_OPT_SPROFDATA})
     else()
-      add_dependencies(clang-bootstrap-deps generate-profdata)
-      set(PGO_OPT -DLLVM_PROFDATA_FILE=${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.profdata)
+      set(PGO_OPT_PROFDATA "${CMAKE_CURRENT_BINARY_DIR}/utils/perf-training/clang.profdata" CACHE STRING "")
+      set(PGO_OPT_PROFDATA_PROVIDER generate-profdata CACHE STRING "")
+      add_dependencies(clang-bootstrap-deps ${PGO_OPT_PROFDATA_PROVIDER})
+      set(PGO_OPT -DLLVM_PROFDATA_FILE=${PGO_OPT_PROFDATA})
     endif()
     # Use the current tools for LTO instead of the instrumented ones
     list(APPEND _BOOTSTRAP_DEFAULT_PASSTHROUGH

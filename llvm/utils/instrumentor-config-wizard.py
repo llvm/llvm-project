@@ -132,7 +132,10 @@ define i32 @main() {
     def print_option(self, index: int, name: str, description: str, enabled: bool):
         """Print a formatted option."""
         status = "[X]" if enabled else "[ ]"
-        print(f"  {index:2d}. {status} {name:30s} - {description}")
+        if description:
+            print(f"  {index:2d}. {status} {name:30s} - {description}")
+        else:
+            print(f"  {index:2d}. {status} {name}")
 
     def get_user_choice(
         self, prompt: str, valid_choices: List[str] = None, allow_back: bool = True
@@ -167,34 +170,30 @@ define i32 @main() {
                 print("\n\nWizard interrupted by user.")
                 sys.exit(0)
 
+    def get_location_names(self) -> List[str]:
+        """Extract all location names from the config, excluding 'configuration'."""
+        locations = []
+        for key in self.config.keys():
+            if key != "configuration":
+                locations.append(key)
+        return locations
+
     def get_all_opportunity_types(self) -> List[Tuple[str, str]]:
         """Extract all unique opportunity types from the config."""
         opportunities = []
         seen = set()
 
-        for location in [
-            "function_pre",
-            "function_post",
-            "instruction_pre",
-            "instruction_post",
-        ]:
-            if location not in self.config:
-                continue
-
+        for location in self.get_location_names():
             for opp_name in self.config[location].keys():
                 if opp_name not in seen:
                     seen.add(opp_name)
                     # Get description from first occurrence
                     opp_config = self.config[location][opp_name]
-                    desc = "No description available"
+                    desc = ""
 
-                    # Try to find a description from any field
-                    for key, value in opp_config.items():
-                        if key == "enabled":
-                            continue
-                        if key.endswith(".description") and value:
-                            desc = value
-                            break
+                    # Look for a "description" property (without dot)
+                    if "description" in opp_config and opp_config["description"]:
+                        desc = opp_config["description"]
 
                     opportunities.append((opp_name, desc))
 
@@ -296,23 +295,22 @@ define i32 @main() {
 
             base_config = self.config["configuration"]
 
+            # Collect all configuration options (excluding descriptions and runtime_stubs_file)
+            config_options = []
+            for key in sorted(base_config.keys()):
+                if not key.endswith(".description") and key != "runtime_stubs_file":
+                    config_options.append(key)
+
             # Display current settings
             print("\nCurrent settings:")
-            print(
-                f"  1. Runtime prefix:         {base_config.get('runtime_prefix', '__instrumentor_')}"
-            )
-            print(
-                f"  2. Demangle function names: {base_config.get('demangle_function_names', True)}"
-            )
-            print(
-                f"  3. Target regex:           {base_config.get('target_regex', '(none)')}"
-            )
-            print(
-                f"  4. Host (CPU) enabled:     {base_config.get('host_enabled', True)}"
-            )
-            print(
-                f"  5. GPU enabled:            {base_config.get('gpu_enabled', True)}"
-            )
+            for idx, key in enumerate(config_options, 1):
+                value = base_config.get(key)
+                # Format value display
+                if value == "":
+                    display_value = "(none)"
+                else:
+                    display_value = value
+                print(f"  {idx}. {key:30s} {display_value}")
 
             print("\nEnter option number to modify, or press Enter to continue")
             choice = self.get_user_choice("Option")
@@ -321,31 +319,48 @@ define i32 @main() {
                 return False
             elif choice == "":
                 return True
-            elif choice == "1":
-                new_prefix = input("Enter runtime prefix: ").strip()
-                if new_prefix:
-                    base_config["runtime_prefix"] = new_prefix
-            elif choice == "2":
-                demangle = self.get_user_choice(
-                    "Demangle function names? (y/n)", ["y", "n"], allow_back=False
-                )
-                if demangle:
-                    base_config["demangle_function_names"] = demangle == "y"
-            elif choice == "3":
-                new_regex = input("Enter target regex (empty for none): ").strip()
-                base_config["target_regex"] = new_regex
-            elif choice == "4":
-                host = self.get_user_choice(
-                    "Enable host instrumentation? (y/n)", ["y", "n"], allow_back=False
-                )
-                if host:
-                    base_config["host_enabled"] = host == "y"
-            elif choice == "5":
-                gpu = self.get_user_choice(
-                    "Enable GPU instrumentation? (y/n)", ["y", "n"], allow_back=False
-                )
-                if gpu:
-                    base_config["gpu_enabled"] = gpu == "y"
+            else:
+                # Try to parse as a number
+                try:
+                    idx = int(choice)
+                    if 1 <= idx <= len(config_options):
+                        key = config_options[idx - 1]
+                        current_value = base_config[key]
+                        description = base_config.get(f"{key}.description", "")
+
+                        # Show description if available
+                        if description:
+                            print(f"\n{description}")
+
+                        # Handle different types
+                        if isinstance(current_value, bool):
+                            new_val = self.get_user_choice(
+                                f"Set {key}? (y/n)",
+                                ["y", "n"],
+                                allow_back=False,
+                            )
+                            if new_val:
+                                base_config[key] = new_val == "y"
+                        elif isinstance(current_value, str):
+                            # Special handling for filter properties
+                            if "filter" in key.lower():
+                                print(
+                                    f"Note: '{key}' requires a valid regular expression"
+                                )
+                            new_val = input(
+                                f"Enter new value for {key} (current: '{current_value}'): "
+                            ).strip()
+                            # Allow setting to empty string
+                            base_config[key] = new_val
+                        else:
+                            print(f"Unsupported type for {key}: {type(current_value)}")
+                            input("Press Enter to continue...")
+                    else:
+                        print(f"\n⚠ Invalid option number: {idx}")
+                        input("Press Enter to continue...")
+                except ValueError:
+                    print("\n⚠ Please enter a valid number")
+                    input("Press Enter to continue...")
 
     def configure_opportunity_args(
         self, opp_name: str, location: str, step_prefix: str = "Step 4"
@@ -466,33 +481,25 @@ define i32 @main() {
     def configure_locations(self) -> bool:
         """Configure all enabled opportunities for PRE and optionally POST."""
         # First, disable all opportunities that are not in enabled_opportunities
-        for location in [
-            "function_pre",
-            "function_post",
-            "instruction_pre",
-            "instruction_post",
-        ]:
-            if location not in self.config:
-                continue
+        for location in self.get_location_names():
             for opp_name, opp_config in self.config[location].items():
                 if opp_name not in self.enabled_opportunities:
                     opp_config["enabled"] = False
 
+        # Get all location names and separate into PRE and POST
+        all_locations = self.get_location_names()
+        pre_locations = [loc for loc in all_locations if loc.endswith("_pre")]
+        post_locations = [loc for loc in all_locations if loc.endswith("_post")]
+
         # Configure PRE locations
         step_num = 4
         for idx, opp_name in enumerate(sorted(self.enabled_opportunities), 1):
-            # Try function_pre first, then instruction_pre
+            # Try to find the opportunity in any PRE location
             location = None
-            if (
-                "function_pre" in self.config
-                and opp_name in self.config["function_pre"]
-            ):
-                location = "function_pre"
-            elif (
-                "instruction_pre" in self.config
-                and opp_name in self.config["instruction_pre"]
-            ):
-                location = "instruction_pre"
+            for loc in pre_locations:
+                if opp_name in self.config[loc]:
+                    location = loc
+                    break
 
             if location:
                 if not self.configure_opportunity_args(opp_name, location):
@@ -501,34 +508,19 @@ define i32 @main() {
         # If same config, copy PRE to POST
         if self.same_pre_post:
             for opp_name in self.enabled_opportunities:
-                # Copy from PRE to POST
-                if (
-                    "function_pre" in self.config
-                    and opp_name in self.config["function_pre"]
-                ):
-                    if (
-                        "function_post" in self.config
-                        and opp_name in self.config["function_post"]
-                    ):
-                        pre_config = self.config["function_pre"][opp_name]
-                        post_config = self.config["function_post"][opp_name]
-                        # Copy enabled and argument settings
-                        post_config["enabled"] = pre_config.get("enabled", False)
-                        for key in pre_config:
-                            if not key.endswith(".description") and key != "enabled":
-                                if key in post_config:
-                                    post_config[key] = pre_config[key]
+                # Copy from PRE to POST for each location pair
+                for pre_loc in pre_locations:
+                    if opp_name not in self.config[pre_loc]:
+                        continue
 
-                if (
-                    "instruction_pre" in self.config
-                    and opp_name in self.config["instruction_pre"]
-                ):
-                    if (
-                        "instruction_post" in self.config
-                        and opp_name in self.config["instruction_post"]
-                    ):
-                        pre_config = self.config["instruction_pre"][opp_name]
-                        post_config = self.config["instruction_post"][opp_name]
+                    # Find corresponding POST location (e.g., function_pre -> function_post)
+                    base_name = pre_loc[:-4]  # Remove "_pre"
+                    post_loc = base_name + "_post"
+
+                    if post_loc in self.config and opp_name in self.config[post_loc]:
+                        pre_config = self.config[pre_loc][opp_name]
+                        post_config = self.config[post_loc][opp_name]
+                        # Copy enabled and argument settings
                         post_config["enabled"] = pre_config.get("enabled", False)
                         for key in pre_config:
                             if not key.endswith(".description") and key != "enabled":
@@ -537,17 +529,12 @@ define i32 @main() {
         else:
             # Configure POST locations separately
             for opp_name in sorted(self.enabled_opportunities):
+                # Try to find the opportunity in any POST location
                 location = None
-                if (
-                    "function_post" in self.config
-                    and opp_name in self.config["function_post"]
-                ):
-                    location = "function_post"
-                elif (
-                    "instruction_post" in self.config
-                    and opp_name in self.config["instruction_post"]
-                ):
-                    location = "instruction_post"
+                for loc in post_locations:
+                    if opp_name in self.config[loc]:
+                        location = loc
+                        break
 
                 if location:
                     if not self.configure_opportunity_args(opp_name, location):
@@ -556,7 +543,7 @@ define i32 @main() {
         return True
 
     def generate_runtime_stubs(self, config_path: str, stub_path: str) -> bool:
-        """Generate runtime stub file using the configuration."""
+        """Generate runtime stub files (both .c/.cpp and .h) using the configuration."""
         print(f"\nGenerating runtime stubs using: {self.opt_path}")
 
         # Create a minimal LLVM IR module
@@ -568,6 +555,10 @@ define i32 @main() {
   ret i32 %2
 }
 """
+
+        # Calculate header path
+        stub_base = stub_path.rsplit(".", 1)[0] if "." in stub_path else stub_path
+        stub_header_path = stub_base + ".h"
 
         with tempfile.TemporaryDirectory() as tmpdir:
             ir_file = os.path.join(tmpdir, "input.ll")
@@ -591,7 +582,7 @@ define i32 @main() {
                 cmd = [
                     self.opt_path,
                     "-passes=instrumentor",
-                    f"-instrumentor-read-config-file={temp_config}",
+                    f"-instrumentor-read-config-files={temp_config}",
                     "-disable-output",
                     ir_file,
                 ]
@@ -605,12 +596,21 @@ define i32 @main() {
                     if result.stderr:
                         print(f"stderr: {result.stderr}")
 
-                # Check if stub file was generated
-                if os.path.exists(stub_path):
-                    print(f"✓ Runtime stubs generated: {stub_path}")
+                # Check if both stub files were generated
+                stub_exists = os.path.exists(stub_path)
+                header_exists = os.path.exists(stub_header_path)
+
+                if stub_exists and header_exists:
+                    print(f"✓ Runtime stub files generated:")
+                    print(f"  {stub_path}")
+                    print(f"  {stub_header_path}")
+                    return True
+                elif stub_exists:
+                    print(f"✓ Stub file generated: {stub_path}")
+                    print(f"⚠ Header file was not generated: {stub_header_path}")
                     return True
                 else:
-                    print(f"✗ Stub file was not generated")
+                    print(f"✗ Stub files were not generated")
                     return False
 
             except subprocess.TimeoutExpired:
@@ -638,24 +638,71 @@ define i32 @main() {
             print(
                 f"Runtime prefix: {self.config.get('configuration', {}).get('runtime_prefix', '__instrumentor_')}"
             )
-            print(f"\nConfiguration file: {output_path}")
+
+            # Extract directory and filenames
+            output_dir = os.path.dirname(os.path.abspath(output_path))
+            output_filename = os.path.basename(output_path)
+
             if stub_path:
-                print(f"Runtime stubs file: {stub_path}")
+                stub_dir = os.path.dirname(os.path.abspath(stub_path))
+                stub_filename = os.path.basename(stub_path)
+                # Generate header filename by replacing extension with .h
+                stub_base = (
+                    stub_path.rsplit(".", 1)[0] if "." in stub_path else stub_path
+                )
+                stub_header_path = stub_base + ".h"
+                stub_header_filename = os.path.basename(stub_header_path)
+            else:
+                default_stub = output_path.rsplit(".", 1)[0] + "_stubs.c"
+                stub_dir = os.path.dirname(os.path.abspath(default_stub))
+                stub_filename = os.path.basename(default_stub)
+                stub_base = default_stub.rsplit(".", 1)[0]
+                stub_header_path = stub_base + ".h"
+                stub_header_filename = os.path.basename(stub_header_path)
+
+            print("\n" + "-" * 70)
+            print("Output Location:")
+            print("-" * 70)
+            print(f"Directory:          {output_dir}")
+            print(f"Config filename:    {output_filename}")
+            print(
+                f"Stub filenames:     {stub_filename}{' (not generated yet)' if not stub_path else ''}"
+            )
+            print(
+                f"                    {stub_header_filename}{' (not generated yet)' if not stub_path else ''}"
+            )
+            print(f"\nFull paths:")
+            print(f"  Config: {output_path}")
+            if stub_path:
+                print(f"  Stubs:  {stub_path}")
+                print(f"          {stub_header_path}")
+            else:
+                default_stub = output_path.rsplit(".", 1)[0] + "_stubs.c"
+                print(f"  Stubs:  {default_stub} (when generated)")
+                print(f"          {stub_header_path} (when generated)")
 
             print("\nCommands:")
             print("  - 's' to save configuration and finish")
-            print("  - 'g' to generate runtime stub file (optional)")
-            print("  - 'p' to specify different output path")
+            print("  - 'g' to generate runtime stub file")
+            print("  - 'd' to change output directory")
+            print("  - 'c' to change configuration filename")
+            print("  - 't' to change stub filename")
             print("  - 'b' to go back and modify settings")
 
             choice = self.get_user_choice(
-                "\nYour choice", valid_choices=["s", "g", "p", "b", ""]
+                "\nYour choice", valid_choices=["s", "g", "d", "c", "t", "b", ""]
             )
 
             if choice == "BACK" or choice == "b":
                 return False
             elif choice == "s":
                 try:
+                    # Create output directory if it doesn't exist
+                    output_dir = os.path.dirname(os.path.abspath(output_path))
+                    if output_dir and not os.path.exists(output_dir):
+                        os.makedirs(output_dir)
+                        print(f"✓ Created directory: {output_dir}")
+
                     # Remove runtime_stubs_file from config before saving
                     config_to_save = json.loads(json.dumps(self.config))
                     if "configuration" in config_to_save:
@@ -668,32 +715,117 @@ define i32 @main() {
                         json.dump(config_to_save, f, indent=2)
                     print(f"\n✓ Configuration saved to: {output_path}")
 
-                    # Generate stubs if requested
-                    if stub_path:
-                        self.generate_runtime_stubs(output_path, stub_path)
-
                     return True
                 except Exception as e:
                     print(f"\n✗ Failed to save configuration: {e}")
                     input("Press Enter to continue...")
+            elif choice == "d":
+                # Change output directory
+                current_dir = os.path.dirname(os.path.abspath(output_path))
+                print(f"\nCurrent directory: {current_dir}")
+                new_dir = input("Enter new output directory: ").strip()
+                if new_dir:
+                    # Expand user home directory if needed
+                    new_dir = os.path.expanduser(new_dir)
+                    new_dir = os.path.abspath(new_dir)
+
+                    # Update output_path with new directory
+                    output_filename = os.path.basename(output_path)
+                    output_path = os.path.join(new_dir, output_filename)
+
+                    # Update stub_path with new directory if it was set
+                    if stub_path:
+                        stub_filename = os.path.basename(stub_path)
+                        stub_path = os.path.join(new_dir, stub_filename)
+
+                    print(f"✓ Output directory updated to: {new_dir}")
+                    print(f"  Config will be saved to: {output_path}")
+                    if stub_path:
+                        print(f"  Stubs will be saved to: {stub_path}")
+                else:
+                    print("Directory unchanged")
+                input("Press Enter to continue...")
+            elif choice == "c":
+                # Change configuration filename only
+                current_filename = os.path.basename(output_path)
+                current_dir = os.path.dirname(os.path.abspath(output_path))
+                print(f"\nCurrent filename: {current_filename}")
+                new_filename = input("Enter new configuration filename: ").strip()
+                if new_filename:
+                    output_path = os.path.join(current_dir, new_filename)
+                    print(f"✓ Configuration filename updated to: {new_filename}")
+                    print(f"  Full path: {output_path}")
+                else:
+                    print("Filename unchanged")
+                input("Press Enter to continue...")
+            elif choice == "t":
+                # Change stub filename only
+                current_dir = os.path.dirname(os.path.abspath(output_path))
+                if stub_path:
+                    current_stub_filename = os.path.basename(stub_path)
+                else:
+                    default_stub = output_path.rsplit(".", 1)[0] + "_stubs.c"
+                    current_stub_filename = os.path.basename(default_stub)
+
+                print(f"\nCurrent stub filename: {current_stub_filename}")
+                new_stub_filename = input("Enter new stub filename: ").strip()
+                if new_stub_filename:
+                    stub_path = os.path.join(current_dir, new_stub_filename)
+                    print(f"✓ Stub filename updated to: {new_stub_filename}")
+                    print(f"  Full path: {stub_path}")
+                else:
+                    print("Filename unchanged")
+                input("Press Enter to continue...")
             elif choice == "g":
-                print("\nGenerate runtime stub file")
-                print("This creates a C/C++ file with stub implementations of the")
+                print("\nGenerate runtime stub files")
+                print("This creates C/C++ files with stub implementations of the")
                 print(
                     "instrumentation runtime functions that you can use as a template."
                 )
+                print(
+                    "Note: Both a .c/.cpp file and a .h header file will be generated."
+                )
 
-                default_stub = output_path.rsplit(".", 1)[0] + "_stubs.c"
-                stub_input = input(
-                    f"\nStub file path (default: {default_stub}): "
-                ).strip()
-                stub_path = stub_input if stub_input else default_stub
-                print(f"Will generate stubs to: {stub_path}")
+                # Use current stub_path or ask for one
+                if not stub_path:
+                    default_stub = output_path.rsplit(".", 1)[0] + "_stubs.c"
+                    stub_input = input(
+                        f"\nStub file path (default: {default_stub}): "
+                    ).strip()
+                    stub_path = stub_input if stub_input else default_stub
+
+                # Calculate header path
+                stub_base = (
+                    stub_path.rsplit(".", 1)[0] if "." in stub_path else stub_path
+                )
+                stub_header_path = stub_base + ".h"
+
+                # Generate stubs immediately
+                print(f"\nGenerating stub files:")
+                print(f"  {stub_path}")
+                print(f"  {stub_header_path}")
+
+                # First save the config to a temporary location if not already saved
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    temp_config_path = os.path.join(tmpdir, "temp_config.json")
+                    config_to_save = json.loads(json.dumps(self.config))
+                    if "configuration" in config_to_save:
+                        config_to_save["configuration"].pop("runtime_stubs_file", None)
+                        config_to_save["configuration"].pop(
+                            "runtime_stubs_file.description", None
+                        )
+
+                    with open(temp_config_path, "w") as f:
+                        json.dump(config_to_save, f, indent=2)
+
+                    if self.generate_runtime_stubs(temp_config_path, stub_path):
+                        print(f"✓ Stub files generated successfully")
+                        print(f"  Created: {stub_path}")
+                        print(f"  Created: {stub_header_path}")
+                    else:
+                        print(f"✗ Failed to generate stub files")
+
                 input("Press Enter to continue...")
-            elif choice == "p":
-                new_path = input("Enter configuration output path: ").strip()
-                if new_path:
-                    output_path = new_path
             elif choice == "":
                 continue
 
@@ -793,16 +925,10 @@ Examples:
                 wizard.config = json.load(f)
             print("✓ Configuration loaded\n")
             # Extract enabled opportunities from loaded config
-            for location in [
-                "function_pre",
-                "function_post",
-                "instruction_pre",
-                "instruction_post",
-            ]:
-                if location in wizard.config:
-                    for opp_name, opp_config in wizard.config[location].items():
-                        if opp_config.get("enabled", False):
-                            wizard.enabled_opportunities.add(opp_name)
+            for location in wizard.get_location_names():
+                for opp_name, opp_config in wizard.config[location].items():
+                    if opp_config.get("enabled", False):
+                        wizard.enabled_opportunities.add(opp_name)
 
         success = wizard.run_interactive(args.output)
 
@@ -812,11 +938,11 @@ Examples:
             print("=" * 70)
             print(f"\nTo use this configuration with opt:")
             print(f"  opt -passes=instrumentor \\")
-            print(f"      -instrumentor-read-config-file={args.output} \\")
+            print(f"      -instrumentor-read-config-files={args.output} \\")
             print(f"      input.ll -S -o output.ll")
             print(f"\nTo use with clang:")
             print(f"  clang -mllvm -enable-instrumentor \\")
-            print(f"        -mllvm -instrumentor-read-config-file={args.output} \\")
+            print(f"        -mllvm -instrumentor-read-config-files={args.output} \\")
             print(f"        input.c -o output")
             return 0
         else:

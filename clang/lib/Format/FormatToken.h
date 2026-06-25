@@ -99,6 +99,7 @@ namespace format {
   TYPE(InheritanceComma)                                                       \
   TYPE(InlineASMBrace)                                                         \
   TYPE(InlineASMColon)                                                         \
+  TYPE(InlineASMParen)                                                         \
   TYPE(InlineASMSymbolicNameLSquare)                                           \
   TYPE(JavaAnnotation)                                                         \
   TYPE(JsAndAndEqual)                                                          \
@@ -1950,6 +1951,7 @@ struct AdditionalKeywords {
     case tok::kw_for:
     case tok::kw_if:
     case tok::kw_import:
+    case tok::kw_protected:
     case tok::kw_restrict:
     case tok::kw_signed:
     case tok::kw_static:

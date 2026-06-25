@@ -31,8 +31,8 @@ module attributes {omp.is_target_device = true} {
     %m2 = omp.map.info var_ptr(%2#1 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32>
     %m3 = omp.map.info var_ptr(%alloc : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32>
 
-    // CHECK-NEXT: omp.target has_device_addr(%[[MAP2]] -> {{.*}} : {{.*}}) map_entries(%[[MAP0]] -> {{.*}}, %[[MAP1]] -> {{.*}}, %[[MAP3]] -> {{.*}} : {{.*}})
-    omp.target has_device_addr(%m2 -> %arg0 : !fir.ref<i32>) map_entries(%m0 -> %arg1, %m1 -> %arg2, %m3 -> %arg3 : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>) {
+    // CHECK-NEXT: omp.target kernel_type(generic) has_device_addr(%[[MAP2]] -> {{.*}} : {{.*}}) map_entries(%[[MAP0]] -> {{.*}}, %[[MAP1]] -> {{.*}}, %[[MAP3]] -> {{.*}} : {{.*}})
+    omp.target kernel_type(generic) has_device_addr(%m2 -> %arg0 : !fir.ref<i32>) map_entries(%m0 -> %arg1, %m1 -> %arg2, %m3 -> %arg3 : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<i32>) {
       // CHECK-NEXT: func.call
       func.call @foo() : () -> ()
       omp.terminator
@@ -90,7 +90,7 @@ module attributes {omp.is_target_device = true} {
     // CHECK-NEXT: %[[VAR_PTR_PTR:.*]] = fir.box_offset %[[ALLOCATABLE_DECL]]#1 base_addr : ([[ALLOCATABLE_TYPE]]) -> [[VAR_PTR_PTR_TYPE:.*]]
     // CHECK-NEXT: %[[MAP_ALLOCATABLE:.*]] = omp.map.info var_ptr(%[[ALLOCATABLE_DECL]]#1 : [[ALLOCATABLE_TYPE]], !fir.box<!fir.heap<!fir.array<?xf32>>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%[[VAR_PTR_PTR]] : [[VAR_PTR_PTR_TYPE]], f32) -> [[VAR_PTR_PTR_TYPE]]
     // CHECK-NEXT: %[[MAP_ARRAY:.*]] = omp.map.info var_ptr(%[[ARRAY_DECL]]#1 : [[ARRAY_TYPE]], !fir.array<9xi32>) map_clauses(tofrom) capture(ByRef) -> [[ARRAY_TYPE]]
-    // CHECK-NEXT: omp.target map_entries(%[[MAP_ALLOCATABLE]] -> %{{.*}}, %[[MAP_ARRAY]] -> %{{.*}} : [[VAR_PTR_PTR_TYPE]], [[ARRAY_TYPE]])
+    // CHECK-NEXT: omp.target kernel_type(generic) map_entries(%[[MAP_ALLOCATABLE]] -> %{{.*}}, %[[MAP_ARRAY]] -> %{{.*}} : [[VAR_PTR_PTR_TYPE]], [[ARRAY_TYPE]])
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
     %c8 = arith.constant 8 : index
@@ -106,7 +106,7 @@ module attributes {omp.is_target_device = true} {
     %5 = omp.map.bounds lower_bound(%c0 : index) upper_bound(%c8 : index) extent(%c9 : index) stride(%c1 : index) start_idx(%c1 : index)
     %6 = omp.map.info var_ptr(%4#1 : !fir.ref<!fir.array<9xi32>>, !fir.array<9xi32>) map_clauses(tofrom) capture(ByRef) bounds(%5) -> !fir.ref<!fir.array<9xi32>>
 
-    omp.target map_entries(%m0 -> %arg0, %6 -> %arg1 : !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>, !fir.ref<!fir.array<9xi32>>) {
+    omp.target kernel_type(generic) map_entries(%m0 -> %arg0, %6 -> %arg1 : !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>, !fir.ref<!fir.array<9xi32>>) {
       omp.terminator
     }
     return
@@ -122,8 +122,8 @@ module attributes {omp.is_target_device = true} {
     %3:2 = hlfir.declare %x typeparams %c1 dummy_scope %0 {uniq_name = "x"} : (!fir.ref<!fir.char<1>>, index, !fir.dscope) -> (!fir.ref<!fir.char<1>>, !fir.ref<!fir.char<1>>)
     // CHECK-NEXT: %[[MAP:.*]] = omp.map.info var_ptr(%[[X_DECL]]#1 : [[X_TYPE]], !fir.char<1>) map_clauses(tofrom) capture(ByRef) -> [[X_TYPE]]
     %map = omp.map.info var_ptr(%3#1 : !fir.ref<!fir.char<1>>, !fir.char<1>) map_clauses(tofrom) capture(ByRef) -> !fir.ref<!fir.char<1>>
-    // CHECK-NEXT: omp.target map_entries(%[[MAP]] -> %{{.*}})
-    omp.target map_entries(%map -> %arg0 : !fir.ref<!fir.char<1>>) {
+    // CHECK-NEXT: omp.target kernel_type(generic) map_entries(%[[MAP]] -> %{{.*}})
+    omp.target kernel_type(generic) map_entries(%map -> %arg0 : !fir.ref<!fir.char<1>>) {
       omp.terminator
     }
     return
@@ -145,8 +145,8 @@ module attributes {omp.is_target_device = true} {
     %5 = omp.map.info var_ptr(%0 : !fir.ref<!fir.box<!fir.array<*:f32>>>, !fir.box<!fir.array<*:f32>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%4 : !fir.llvm_ptr<!fir.ref<!fir.array<*:f32>>>, !fir.array<*:f32>) -> !fir.llvm_ptr<!fir.ref<!fir.array<*:f32>>>
     // CHECK-NEXT: %[[MAP1:.*]] = omp.map.info var_ptr(%[[ALLOCA]] : !fir.ref<[[X_TYPE]]>, !fir.box<!fir.array<*:f32>>) {{.*}} members(%[[MAP0]] : [0] : [[VAR_PTR_PTR_TYPE]]) -> !fir.ref<!fir.array<*:f32>>
     %6 = omp.map.info var_ptr(%0 : !fir.ref<!fir.box<!fir.array<*:f32>>>, !fir.box<!fir.array<*:f32>>) map_clauses(to) capture(ByRef) members(%5 : [0] : !fir.llvm_ptr<!fir.ref<!fir.array<*:f32>>>) -> !fir.ref<!fir.array<*:f32>>
-    // CHECK-NEXT: omp.target map_entries(%[[MAP1]] -> %{{.*}}, %[[MAP0]] -> {{.*}})
-    omp.target map_entries(%6 -> %arg1, %5 -> %arg2 : !fir.ref<!fir.array<*:f32>>, !fir.llvm_ptr<!fir.ref<!fir.array<*:f32>>>) {
+    // CHECK-NEXT: omp.target kernel_type(generic) map_entries(%[[MAP1]] -> %{{.*}}, %[[MAP0]] -> {{.*}})
+    omp.target kernel_type(generic) map_entries(%6 -> %arg1, %5 -> %arg2 : !fir.ref<!fir.array<*:f32>>, !fir.llvm_ptr<!fir.ref<!fir.array<*:f32>>>) {
       omp.terminator
     }
     return
@@ -198,8 +198,8 @@ module attributes {omp.is_target_device = true} {
     %17 = omp.map.info var_ptr(%0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.box<!fir.ptr<!fir.array<?xi32>>>) map_clauses(implicit, to) capture(ByRef) var_ptr_ptr(%16 : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>, i32) bounds(%7) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
     %18 = omp.map.info var_ptr(%0 : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.box<!fir.ptr<!fir.array<?xi32>>>) map_clauses(implicit, to) capture(ByRef) members(%17 : [0] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
     
-    // CHECK-NEXT: omp.target map_entries(%[[MAP0]] -> %{{.*}}, %[[MAP2]] -> %{{.*}}, %[[MAP1]] -> {{.*}} : [[Y_TYPE]], [[X_TYPE]], [[VAR_PTR_PTR_TYPE]])
-    omp.target map_entries(%15 -> %arg1, %18 -> %arg2, %17 -> %arg3 : !fir.ptr<!fir.array<?xi32>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) {
+    // CHECK-NEXT: omp.target kernel_type(generic) map_entries(%[[MAP0]] -> %{{.*}}, %[[MAP2]] -> %{{.*}}, %[[MAP1]] -> {{.*}} : [[Y_TYPE]], [[X_TYPE]], [[VAR_PTR_PTR_TYPE]])
+    omp.target kernel_type(generic) map_entries(%15 -> %arg1, %18 -> %arg2, %17 -> %arg3 : !fir.ptr<!fir.array<?xi32>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) {
       omp.terminator
     }
     return
@@ -233,8 +233,8 @@ module attributes {omp.is_target_device = true} {
       // CHECK-NOT: func.call
       func.call @foo() : () -> ()
 
-      // CHECK-NEXT: omp.target map_entries(%[[MAPPED_MAP]] -> %{{.*}}, %[[USEDEVADDR_MAP]] -> %{{.*}}, %[[USEDEVPTR_MAP]] -> %{{.*}} : {{.*}})
-      omp.target map_entries(%m3 -> %arg2, %m4 -> %arg3, %m5 -> %arg4 : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) {
+      // CHECK-NEXT: omp.target kernel_type(generic) map_entries(%[[MAPPED_MAP]] -> %{{.*}}, %[[USEDEVADDR_MAP]] -> %{{.*}}, %[[USEDEVPTR_MAP]] -> %{{.*}} : {{.*}})
+      omp.target kernel_type(generic) map_entries(%m3 -> %arg2, %m4 -> %arg3, %m5 -> %arg4 : !fir.ref<i32>, !fir.ref<i32>, !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) {
         omp.terminator
       }
 
@@ -270,8 +270,8 @@ module attributes {omp.is_target_device = true} {
     %72 = omp.map.info var_ptr(%23#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.box<!fir.heap<!fir.array<?xf32>>>) map_clauses(tofrom) capture(ByRef) var_ptr_ptr(%71 : !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>, f32) bounds(%70) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>
     // CHECK-NEXT: %[[MAP1:.*]] = omp.map.info var_ptr(%[[X_DECL]]#1 : [[X_TYPE]], !fir.box<!fir.heap<!fir.array<?xf32>>>) {{.*}} members(%[[MAP0]] : [0] : [[VAR_PTR_PTR_TYPE]]) -> [[X_TYPE]]
     %73 = omp.map.info var_ptr(%23#1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.box<!fir.heap<!fir.array<?xf32>>>) map_clauses(to) capture(ByRef) members(%72 : [0] : !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-    // CHECK-NEXT: omp.target map_entries(%[[MAP1]] -> {{.*}}, %[[MAP0]] -> %{{.*}} : [[X_TYPE]], [[VAR_PTR_PTR_TYPE]])
-    omp.target map_entries(%73 -> %arg0, %72 -> %arg1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>) {
+    // CHECK-NEXT: omp.target kernel_type(generic) map_entries(%[[MAP1]] -> {{.*}}, %[[MAP0]] -> %{{.*}} : [[X_TYPE]], [[VAR_PTR_PTR_TYPE]])
+    omp.target kernel_type(generic) map_entries(%73 -> %arg0, %72 -> %arg1 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>, !fir.llvm_ptr<!fir.ref<!fir.array<?xf32>>>) {
       omp.terminator
     }
     return
@@ -291,8 +291,8 @@ module attributes {omp.is_target_device = true} {
   ^bb1:  // pred: ^bb0
     fir.call @foo() : () -> ()
     %m0 = omp.map.info var_ptr(%x_decl#1 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32>
-    // CHECK-NEXT: omp.target map_entries(%[[MAP0]] -> {{.*}} : [[X_TYPE]])
-    omp.target map_entries(%m0 -> %arg2 : !fir.ref<i32>) {
+    // CHECK-NEXT: omp.target kernel_type(generic) map_entries(%[[MAP0]] -> {{.*}} : [[X_TYPE]])
+    omp.target kernel_type(generic) map_entries(%m0 -> %arg2 : !fir.ref<i32>) {
       omp.terminator
     }
     fir.call @foo() : () -> ()
@@ -311,8 +311,8 @@ module attributes {omp.is_target_device = true} {
     ^bb1:  // pred: ^bb0
       fir.call @foo() : () -> ()
       %m2 = omp.map.info var_ptr(%x_decl#1 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32>
-      // CHECK: omp.target map_entries(%[[MAP1]] -> {{.*}} : [[X_TYPE]])
-      omp.target map_entries(%m2 -> %arg2 : !fir.ref<i32>) {
+      // CHECK: omp.target kernel_type(generic) map_entries(%[[MAP1]] -> {{.*}} : [[X_TYPE]])
+      omp.target kernel_type(generic) map_entries(%m2 -> %arg2 : !fir.ref<i32>) {
         omp.terminator
       }
       // CHECK-NOT: fir.call
@@ -344,8 +344,8 @@ module attributes {omp.is_target_device = true} {
     omp.parallel private(@privatizer %x_decl#0 -> %arg0 : !fir.ref<i32>) {
       %0:2 = hlfir.declare %arg0 {uniq_name = "x"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
       %m0 = omp.map.info var_ptr(%0#1 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32>
-      // CHECK-NEXT: omp.target map_entries(%[[MAP0]] -> {{.*}} : [[X_TYPE]])
-      omp.target map_entries(%m0 -> %arg2 : !fir.ref<i32>) {
+      // CHECK-NEXT: omp.target kernel_type(generic) map_entries(%[[MAP0]] -> {{.*}} : [[X_TYPE]])
+      omp.target kernel_type(generic) map_entries(%m0 -> %arg2 : !fir.ref<i32>) {
         omp.terminator
       }
       omp.terminator
@@ -362,8 +362,8 @@ module attributes {omp.is_target_device = true} {
         omp.parallel private(@privatizer %1#0 -> %arg1 : !fir.ref<i32>) {
           %2:2 = hlfir.declare %arg1 {uniq_name = "x"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
           %m2 = omp.map.info var_ptr(%2#1 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32>
-          // CHECK: omp.target map_entries(%[[MAP1]] -> {{.*}} : [[X_TYPE]])
-          omp.target map_entries(%m2 -> %arg2 : !fir.ref<i32>) {
+          // CHECK: omp.target kernel_type(generic) map_entries(%[[MAP1]] -> {{.*}} : [[X_TYPE]])
+          omp.target kernel_type(generic) map_entries(%m2 -> %arg2 : !fir.ref<i32>) {
             omp.terminator
           }
           omp.terminator
@@ -396,8 +396,8 @@ module attributes {omp.is_target_device = true} {
       %1:2 = hlfir.declare %global {uniq_name = "global_scalar"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
       %m1 = omp.map.info var_ptr(%0#1 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32>
       %m2 = omp.map.info var_ptr(%1#1 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32>
-      // CHECK-NEXT: omp.target map_entries(%[[MAP0]] -> %{{.*}}, %[[MAP1]] -> {{.*}} : !fir.ref<i32>, !fir.ref<i32>)
-      omp.target map_entries(%m1 -> %arg0, %m2 -> %arg1 : !fir.ref<i32>, !fir.ref<i32>) {
+      // CHECK-NEXT: omp.target kernel_type(generic) map_entries(%[[MAP0]] -> %{{.*}}, %[[MAP1]] -> {{.*}} : !fir.ref<i32>, !fir.ref<i32>)
+      omp.target kernel_type(generic) map_entries(%m1 -> %arg0, %m2 -> %arg1 : !fir.ref<i32>, !fir.ref<i32>) {
         omp.terminator
       }
       omp.terminator
@@ -408,17 +408,17 @@ module attributes {omp.is_target_device = true} {
     %2 = fir.load %global : !fir.ref<i32>
     %3:2 = hlfir.declare %global {uniq_name = "global_scalar"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
     %m3 = omp.map.info var_ptr(%3#1 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32>
-    // CHECK: omp.target thread_limit(%[[THREAD_LIMIT]] : i32) map_entries(%[[MAP2]] -> %{{.*}} : !fir.ref<i32>)
-    omp.target thread_limit(%2 : i32) map_entries(%m3 -> %arg0 : !fir.ref<i32>) {
+    // CHECK: omp.target kernel_type(generic) thread_limit(%[[THREAD_LIMIT]] : i32) map_entries(%[[MAP2]] -> %{{.*}} : !fir.ref<i32>)
+    omp.target kernel_type(generic) thread_limit(%2 : i32) map_entries(%m3 -> %arg0 : !fir.ref<i32>) {
       omp.terminator
     }
-    // CHECK: omp.target thread_limit(%[[CONST]] : i32)
+    // CHECK: omp.target kernel_type(generic) thread_limit(%[[CONST]] : i32)
     %c1 = arith.constant 1 : i32
-    omp.target thread_limit(%c1 : i32) {
+    omp.target kernel_type(generic) thread_limit(%c1 : i32) {
       omp.terminator
     }
-    // CHECK: omp.target thread_limit(%[[CONST]] : i32)
-    omp.target thread_limit(%c1 : i32) {
+    // CHECK: omp.target kernel_type(generic) thread_limit(%[[CONST]] : i32)
+    omp.target kernel_type(generic) thread_limit(%c1 : i32) {
       omp.terminator
     }
     return
@@ -432,8 +432,9 @@ module attributes {omp.is_target_device = true} {
     omp.target_data device(%int : i32) if(%bool) map_entries(%m0 : !fir.ref<i32>) {
       omp.terminator
     }
-    // CHECK-NEXT: omp.target allocate({{[^)]*}}) thread_limit({{[^)]*}}) in_reduction({{[^)]*}}) private({{[^)]*}}) {
-    omp.target allocate(%ref : !fir.ref<i32> -> %ref : !fir.ref<i32>)
+    // CHECK-NEXT: omp.target kernel_type(generic) allocate({{[^)]*}}) thread_limit({{[^)]*}}) in_reduction({{[^)]*}}) private({{[^)]*}}) {
+    omp.target kernel_type(generic)
+               allocate(%ref : !fir.ref<i32> -> %ref : !fir.ref<i32>)
                depend(taskdependin -> %ref : !fir.ref<i32>)
                device(%int : i32) if(%bool) thread_limit(%int : i32)
                in_reduction(@reduction %ref -> %arg0 : !fir.ref<i32>)
@@ -460,12 +461,12 @@ module attributes {omp.is_target_device = true} {
     // CHECK-NEXT: %[[PLACEHOLDER:.*]] = fir.alloca !fir.char<1>
     // CHECK-NEXT: %[[ONE:.*]] = arith.constant 1 : i32
     // CHECK-NEXT: %[[EMBOXCHAR:.*]] = fir.emboxchar %[[PLACEHOLDER]], %[[ONE]] : (!fir.ref<!fir.char<1>>, i32) -> !fir.boxchar<1>
-    // CHECK-NEXT: omp.target private(@boxchar_firstprivatizer %[[EMBOXCHAR]] -> %{{.*}} [map_idx=0] : !fir.boxchar<1>)
+    // CHECK-NEXT: omp.target kernel_type(generic) private(@boxchar_firstprivatizer %[[EMBOXCHAR]] -> %{{.*}} [map_idx=0] : !fir.boxchar<1>)
     %0 = fir.alloca !fir.boxchar<1>
     %1 = fir.dummy_scope : !fir.dscope
     %2:2 = fir.unboxchar %arg : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
     %3:2 = hlfir.declare %2#0 typeparams %2#1 dummy_scope %1 {uniq_name = "arg"} : (!fir.ref<!fir.char<1,?>>, index, !fir.dscope) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
-    omp.target private(@boxchar_firstprivatizer %3#0 -> %arg3 [map_idx=0] : !fir.boxchar<1>) {
+    omp.target kernel_type(generic) private(@boxchar_firstprivatizer %3#0 -> %arg3 [map_idx=0] : !fir.boxchar<1>) {
       omp.terminator
     }
     return
@@ -489,8 +490,8 @@ module attributes {omp.is_target_device = true} {
     %4:2 = hlfir.declare %3 storage (%0[0]) {uniq_name = "a"} : (!fir.ref<i32>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<i32>, !fir.ref<i32>)
     // CHECK-NEXT: %[[MAP:.*]] = omp.map.info var_ptr(%[[DECL]]#1 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32>
     %map = omp.map.info var_ptr(%4#1 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32>
-    // CHECK-NEXT: omp.target map_entries(%[[MAP]] -> %{{.*}} : !fir.ref<i32>)
-    omp.target map_entries(%map -> %arg0 : !fir.ref<i32>) {
+    // CHECK-NEXT: omp.target kernel_type(generic) map_entries(%[[MAP]] -> %{{.*}} : !fir.ref<i32>)
+    omp.target kernel_type(generic) map_entries(%map -> %arg0 : !fir.ref<i32>) {
       omp.terminator
     }
     return

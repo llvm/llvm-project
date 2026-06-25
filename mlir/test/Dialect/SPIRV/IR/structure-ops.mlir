@@ -198,7 +198,7 @@ func.func @coop_matrix_const_wrong_type() -> () {
 //===----------------------------------------------------------------------===//
 
 func.func @ccr_result_not_composite() -> () {
-  // expected-error @+1 {{op result #0 must be vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float or BFloat16 or Float8E4M3 or Float8E5M2 values of length 2/3/4/8/16 of ranks 1 or any SPIR-V array type or any SPIR-V runtime array type or any SPIR-V struct type or any SPIR-V cooperative matrix type or any SPIR-V matrix type or any SPIR-V tensorArm type, but got 'i32'}}
+  // expected-error @+1 {{op result #0 must be vector of bool or 8/16/32/64-bit integer or 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1 or vector of BFloat16 or Float8E4M3 or Float8E5M2 values of length 2/3/4/8/16 of ranks 1 or any SPIR-V array type or any SPIR-V runtime array type or any SPIR-V struct type or any SPIR-V cooperative matrix type or any SPIR-V matrix type or any SPIR-V tensorArm type, but got 'i32'}}
   %0 = spirv.EXT.ConstantCompositeReplicate [1 : i32] : i32
   return
 }
@@ -636,6 +636,56 @@ spirv.module Logical GLSL450 {
     spirv.GlobalVariable @var0 : !spirv.ptr<f32, Input>
     spirv.Return
   }
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @var0 {aliased_pointer} :
+    !spirv.ptr<!spirv.ptr<f32, PhysicalStorageBuffer>, Private>
+  spirv.GlobalVariable @var1 {restrict_pointer} :
+    !spirv.ptr<!spirv.ptr<f32, PhysicalStorageBuffer>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{must be decorated either 'AliasedPointer' or 'RestrictPointer'}}
+  spirv.GlobalVariable @var0 :
+    !spirv.ptr<!spirv.ptr<f32, PhysicalStorageBuffer>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{must have exactly one aliasing decoration}}
+  spirv.GlobalVariable @var0 {aliased_pointer, restrict_pointer} :
+    !spirv.ptr<!spirv.ptr<f32, PhysicalStorageBuffer>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  spirv.GlobalVariable @var0 {aliased_pointer} :
+    !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Private>
+  spirv.GlobalVariable @var1 {restrict_pointer} :
+    !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{must be decorated either 'AliasedPointer' or 'RestrictPointer'}}
+  spirv.GlobalVariable @var0 :
+    !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Private>
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+  // expected-error @+1 {{must have exactly one aliasing decoration}}
+  spirv.GlobalVariable @var0 {aliased_pointer, restrict_pointer} :
+    !spirv.ptr<!spirv.array<4x!spirv.ptr<f32, PhysicalStorageBuffer>>, Private>
 }
 
 // -----
