@@ -363,6 +363,3 @@
 // HTML-VEHICLES-NEXT:        </div>
 // HTML-VEHICLES-NEXT:      </div>
 // HTML-VEHICLES:         </div>
-
-
-

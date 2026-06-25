@@ -1,5 +1,5 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: clang-doc --format=html --output=%t --executor=standalone %S/../Inputs/mustache-separate-namespace.cpp 
+// RUN: clang-doc --format=html --output=%t --executor=standalone %S/../Inputs/mustache-separate-namespace.cpp
 // RUN: FileCheck %s < %t/html/MyNamespace/index.html
 // RUN: FileCheck %s < %t/html/GlobalNamespace/index.html --check-prefix=CHECK-GLOBAL
 

@@ -107,8 +107,8 @@ HTML-SHAPE-NEXT:                             </div>
 HTML-SHAPE-NEXT:                         <p>Defined at line {{[0-9]+}} of file {{.*}}include{{[/\\]}}Shape.h</p>
 HTML-SHAPE-NEXT:                         </div>
 HTML-SHAPE-NEXT:             </section>
-HTML-SHAPE-NEXT:         </div>   
-HTML-SHAPE-NEXT:    </div> 
+HTML-SHAPE-NEXT:         </div>
+HTML-SHAPE-NEXT:    </div>
 HTML-SHAPE-NEXT: </main>
 HTML-SHAPE-NEXT: </body>
 HTML-SHAPE-NEXT: </html>

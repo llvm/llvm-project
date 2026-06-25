@@ -66,7 +66,7 @@
 // HTML-NEXT:              <h3>Parameters</h3>
 // HTML-NEXT:              <div>
 // HTML-NEXT:                  <b>t</b>   The input to func_with_tuple_param
-// HTML-NEXT:              </div> 
+// HTML-NEXT:              </div>
 // HTML-NEXT:          </div>
 // HTML-NEXT:      </div>
 // HTML-NEXT:      <p>Defined at line 18 of file {{.*}}templates.cpp</p>

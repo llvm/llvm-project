@@ -3,4 +3,3 @@
 // RUN: FileCheck %s --check-prefix=HTML < %t/html/GlobalNamespace/index.html
 
 // HTML: <pre><code class="language-cpp code-clang-doc">void baz (void (Class::*)(int) fn)</code></pre>
-

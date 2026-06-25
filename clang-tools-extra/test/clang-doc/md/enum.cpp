@@ -117,4 +117,3 @@
 // MD-MUSTACHE-VEHICLES: | Pickup |
 // MD-MUSTACHE-VEHICLES: | Hatchback |
 // MD-MUSTACHE-VEHICLES: **brief** specify type of car
-

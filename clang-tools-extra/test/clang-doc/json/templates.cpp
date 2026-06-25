@@ -24,7 +24,7 @@
 // JSON-NEXT:      "Template": {
 // JSON-NEXT:        "Parameters": [
 // JSON-NEXT:          {
-// JSON-NEXT:            "End": true, 
+// JSON-NEXT:            "End": true,
 // JSON-NEXT:            "Param": "class... T"
 // JSON-NEXT:          }
 // JSON-NEXT:        ],
@@ -56,7 +56,7 @@
 // JSON-NEXT:            "Param": "typename T"
 // JSON-NEXT:          },
 // JSON-NEXT:          {
-// JSON-NEXT:            "End": true, 
+// JSON-NEXT:            "End": true,
 // JSON-NEXT:            "Param": "int U = 1"
 // JSON-NEXT:          }
 // JSON-NEXT:        ],

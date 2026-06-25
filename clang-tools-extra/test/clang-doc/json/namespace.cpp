@@ -2,7 +2,7 @@
 // RUN: clang-doc --pretty-json --output=%t --format=json --executor=standalone %S/../Inputs/namespace.cpp
 // RUN: FileCheck %s < %t/json/GlobalNamespace/index.json
 
-// CHECK:       { 
+// CHECK:       {
 // CHECK-NEXT:    "DocumentationFileName": "index",
 // CHECK-NEXT:    "Enums": [
 // CHECK-NEXT:      {

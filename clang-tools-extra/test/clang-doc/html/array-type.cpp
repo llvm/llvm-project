@@ -3,4 +3,3 @@
 // RUN: FileCheck %s --check-prefix=HTML < %t/html/GlobalNamespace/index.html
 
 // HTML: <pre><code class="language-cpp code-clang-doc">void qux (int (&amp;)[5] arr)</code></pre>
-

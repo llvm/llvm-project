@@ -4,4 +4,3 @@
 
 // HTML: <pre><code class="language-cpp code-clang-doc">template &lt;typename T&gt;</code></pre>
 // HTML: <h1 class="hero__title-large">struct MyClass</h1>
-

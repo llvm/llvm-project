@@ -20,8 +20,8 @@
 // CHECK-NEXT:          "QualName": "T",
 // CHECK-NEXT:          "USR": "0000000000000000000000000000000000000000"
 // CHECK-NEXT:        }
-// CHECK-NEXT:      } 
-// CHECK-NEXT:    ], 
+// CHECK-NEXT:      }
+// CHECK-NEXT:    ],
 // CHECK-NEXT:    "ReturnType": {
 // CHECK-NEXT:      "IsBuiltIn": false,
 // CHECK-NEXT:      "IsTemplate": true,
@@ -36,4 +36,4 @@
 // CHECK-NEXT:        }
 // CHECK-NEXT:      ],
 // CHECK-NEXT:      "VerticalDisplay": false
-// CHECK-NEXT:    } 
+// CHECK-NEXT:    }
