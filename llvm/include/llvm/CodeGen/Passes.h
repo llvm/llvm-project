@@ -279,6 +279,13 @@ LLVM_ABI extern char &PostRASchedulerID;
 /// branches.
 LLVM_ABI extern char &BranchFolderPassID;
 
+/// createBranchFolder - Create the BranchFolder pass, optionally disabling the
+/// common-code hoisting and/or basic-block reordering sub-phases. Default
+/// enables both (full BranchFolding behavior).
+LLVM_ABI FunctionPass *
+createBranchFolder(bool EnableCommonHoist = true,
+                   bool EnableBasicBlockReordering = true);
+
 /// BranchRelaxation - This pass replaces branches that need to jump further
 /// than is supported by a branch instruction.
 LLVM_ABI extern char &BranchRelaxationPassID;
