@@ -19,7 +19,7 @@ bool CSKYTargetInfo::isValidCPUName(StringRef Name) const {
   return llvm::CSKY::parseCPUArch(Name) != llvm::CSKY::ArchKind::INVALID;
 }
 
-bool CSKYTargetInfo::setCPU(const std::string &Name) {
+bool CSKYTargetInfo::setCPU(StringRef Name) {
   llvm::CSKY::ArchKind archKind = llvm::CSKY::parseCPUArch(Name);
   bool isValid = (archKind != llvm::CSKY::ArchKind::INVALID);
 

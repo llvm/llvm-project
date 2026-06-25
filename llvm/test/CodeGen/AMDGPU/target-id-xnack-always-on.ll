@@ -14,7 +14,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx12-5-generic -mattr=+xnack < %s | FileCheck %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx12-5-generic -mattr=-xnack < %s | FileCheck %s
 
-; CHECK: .amdgcn_target  "amdgcn-amd-amdhsa--gfx{{1250|1251|12-5-generic}}"
+; CHECK: .amdgcn_target "amdgcn-amd-amdhsa-unknown-gfx{{1250|1251|12-5-generic}}"
 
 define void @func0() {
 entry:
