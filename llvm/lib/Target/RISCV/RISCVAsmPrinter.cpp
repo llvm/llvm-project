@@ -537,7 +537,7 @@ bool RISCVAsmPrinter::emitTargetFeaturePush(const MCSubtargetInfo &STI) {
 
     auto Delta = STI.hasFeature(Feature.Value) ? RISCVOptionArchArgType::Plus
                                                : RISCVOptionArchArgType::Minus;
-    StringRef ExtName = Feature.Key;
+    StringRef ExtName = Feature.key();
     ExtName.consume_front("experimental-");
     NeedEmitStdOptionArgs.emplace_back(Delta, ExtName.str());
   }
