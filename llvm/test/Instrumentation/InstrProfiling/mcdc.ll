@@ -21,6 +21,7 @@ entry:
   ; RELOC: %[[PROFC_INTADDR:.+]] = add i64 ptrtoint (ptr @__profc_test to i64), %profc_bias
   ; RELOC: %[[PROFC_ADDR:.+]] = inttoptr i64 %[[PROFC_INTADDR]] to ptr
   ; RELOC: store i8 0, ptr %[[PROFC_ADDR]], align 1
+  ; ATOMIC: store atomic i8 0, ptr @__profc_test monotonic, align 1
 
   call void @llvm.instrprof.mcdc.parameters(ptr @__profn_test, i64 99278, i32 1)
   store i32 0, ptr %mcdc.addr, align 4
