@@ -4582,7 +4582,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
   std::string TentativeDataLayoutStr = TheModule->getDataLayoutStr();
 
   // Apply to the following module asm.
-  std::string ModuleAsmTargetFeatures, ModuleAsmTargetCPU;
+  Module::GlobalAsmProperties Props;
 
   auto ResolveDataLayout = [&]() -> Error {
     if (ResolvedDataLayout)
@@ -4792,24 +4792,23 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
         return error("Invalid data layout record");
       break;
     }
-    case bitc::MODULE_CODE_ASM_TARGET_FEATURES:
-      ModuleAsmTargetFeatures.clear();
-      if (convertToString(Record, 0, ModuleAsmTargetFeatures))
-        return error("Invalid asm target features record");
+    case bitc::MODULE_CODE_ASM_PROPERTY: {
+      std::string Str;
+      if (convertToString(Record, 0, Str))
+        return error("Invalid module asm record");
+      size_t SepPos = Str.find('\0');
+      if (SepPos == std::string::npos)
+        return error("Invalid module asm record");
+      if (!Props.set(StringRef(Str.data(), SepPos), Str.substr(SepPos + 1)))
+        return error("Unknown module asm property");
       break;
-    case bitc::MODULE_CODE_ASM_TARGET_CPU:
-      ModuleAsmTargetCPU.clear();
-      if (convertToString(Record, 0, ModuleAsmTargetCPU))
-        return error("Invalid asm target cpu record");
-      break;
+    }
     case bitc::MODULE_CODE_ASM: {  // ASM: [strchr x N]
       std::string S;
       if (convertToString(Record, 0, S))
         return error("Invalid asm record");
-      TheModule->appendModuleInlineAsm(Module::GlobalAsmFragment(
-          S, ModuleAsmTargetFeatures, ModuleAsmTargetCPU));
-      ModuleAsmTargetFeatures.clear();
-      ModuleAsmTargetCPU.clear();
+      TheModule->appendModuleInlineAsm(Module::GlobalAsmFragment(S, Props));
+      Props = {};
       break;
     }
     case bitc::MODULE_CODE_DEPLIB: {  // DEPLIB: [strchr x N]

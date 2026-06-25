@@ -8056,9 +8056,11 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     auto *AD = cast<FileScopeAsmDecl>(D);
 
     const TargetOptions &TargetOpts = getTarget().getTargetOpts();
-    std::string Features = llvm::join(TargetOpts.Features, ",");
-    getModule().appendModuleInlineAsm(llvm::Module::GlobalAsmFragment(
-        AD->getAsmString(), Features, TargetOpts.CPU));
+    llvm::Module::GlobalAsmProperties Props;
+    Props.TargetFeatures = llvm::join(TargetOpts.Features, ",");
+    Props.TargetCPU = TargetOpts.CPU;
+    getModule().appendModuleInlineAsm(
+        llvm::Module::GlobalAsmFragment(AD->getAsmString(), Props));
     break;
   }
 

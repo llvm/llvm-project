@@ -3130,19 +3130,15 @@ void AssemblyWriter::printModule(const Module *M) {
 
     for (const Module::GlobalAsmFragment &Frag : M->getModuleInlineAsm()) {
       Out << "module asm";
-      if (!Frag.TargetFeatures.empty() || !Frag.TargetCPU.empty()) {
+      SmallVector<std::pair<StringRef, StringRef>> Props =
+          Frag.Props.getAsStrings();
+      if (!Props.empty()) {
         ListSeparator LS;
         Out << "(";
-        if (!Frag.TargetFeatures.empty()) {
+        for (auto [Key, Value] : Props) {
           Out << LS;
-          Out << "target_features=\"";
-          printEscapedString(Frag.TargetFeatures, Out);
-          Out << "\"";
-        }
-        if (!Frag.TargetCPU.empty()) {
-          Out << LS;
-          Out << "target_cpu=\"";
-          printEscapedString(Frag.TargetCPU, Out);
+          Out << Key << ": \"";
+          printEscapedString(Value, Out);
           Out << "\"";
         }
         Out << ")";

@@ -614,10 +614,11 @@ bool AsmPrinter::doInitialization(Module &M) {
     OutStreamer->AddComment("Start of file scope inline assembly");
     OutStreamer->addBlankLine();
     for (const Module::GlobalAsmFragment &Frag : M.getModuleInlineAsm()) {
-      if (!Frag.TargetFeatures.empty() || !Frag.TargetCPU.empty()) {
+      if (!Frag.Props.TargetFeatures.empty() || !Frag.Props.TargetCPU.empty()) {
         std::unique_ptr<MCSubtargetInfo> AsmSTI(
-            TM.getTarget().createMCSubtargetInfo(
-                TM.getTargetTriple(), Frag.TargetCPU, Frag.TargetFeatures));
+            TM.getTarget().createMCSubtargetInfo(TM.getTargetTriple(),
+                                                 Frag.Props.TargetCPU,
+                                                 Frag.Props.TargetFeatures));
         bool DidPush = emitTargetFeaturePush(*AsmSTI);
         emitInlineAsm(
             Frag.Asm, *AsmSTI, TM.Options.MCOptions, nullptr,

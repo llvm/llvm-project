@@ -86,8 +86,6 @@ enum Kind {
   kw_musttail,
   kw_notail,
   kw_target,
-  kw_target_cpu,
-  kw_target_features,
   kw_triple,
   kw_source_filename,
   kw_unwind,

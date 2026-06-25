@@ -1550,12 +1550,15 @@ void ModuleBitcodeWriter::writeModuleInfo() {
     writeStringRecord(Stream, bitc::MODULE_CODE_DATALAYOUT, DL, 0 /*TODO*/);
 
   for (const Module::GlobalAsmFragment &Frag : M.getModuleInlineAsm()) {
-    if (!Frag.TargetFeatures.empty())
-      writeStringRecord(Stream, bitc::MODULE_CODE_ASM_TARGET_FEATURES,
-                        Frag.TargetFeatures, 0);
-    if (!Frag.TargetCPU.empty())
-      writeStringRecord(Stream, bitc::MODULE_CODE_ASM_TARGET_CPU,
-                        Frag.TargetCPU, 0);
+    SmallVector<std::pair<StringRef, StringRef>> Props =
+        Frag.Props.getAsStrings();
+    for (auto [Key, Value] : Props) {
+      SmallVector<unsigned, 64> Record;
+      Record.append(Key.begin(), Key.end());
+      Record.push_back(0);
+      Record.append(Value.begin(), Value.end());
+      Stream.EmitRecord(bitc::MODULE_CODE_ASM_PROPERTY, Record);
+    }
     writeStringRecord(Stream, bitc::MODULE_CODE_ASM, Frag.Asm, 0 /*TODO*/);
   }
 

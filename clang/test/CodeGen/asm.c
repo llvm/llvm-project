@@ -2,7 +2,7 @@
 
 // PR10415:
 //
-// CHECK: module asm(target_features="{{.*}}")
+// CHECK: module asm(target_features: "{{.*}}")
 // CHECK-NEXT: "foo1"
 // CHECK-NEXT: "foo2"
 // CHECK-NEXT: "foo3"

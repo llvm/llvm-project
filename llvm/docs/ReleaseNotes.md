@@ -102,6 +102,10 @@ Makes programs 10x faster by doing Special New Thing.
   outlining. Add the `noinline` and `nooutline` attributes as well in cases
   where inlining and outlining should additionally be disabled.
 
+* Module-level inline assembly now accepts optional `target_features` and
+  `target_cpu` properties. This resolves errors during LTO on some
+  architectures.
+
 ### Changes to LLVM infrastructure
 
 * Removed ``Constant::isZeroValue``. It was functionally identical to
