@@ -4102,11 +4102,16 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
             DynamicInit->getType()->isArrayType()) {
           QualType ElemType =
               DynamicInit->getType()->getAsArrayTypeUnsafe()->getElementType();
-          PrimType InitT = classifyPrim(ElemType);
-          if (!this->visitZeroInitializer(InitT, ElemType, E))
-            return false;
-          if (!this->emitStorePop(InitT, E))
-            return false;
+          if (OptPrimType InitT = classify(ElemType)) {
+            if (!this->visitZeroInitializer(*InitT, ElemType, E))
+              return false;
+            if (!this->emitStorePop(*InitT, E))
+              return false;
+          } else {
+            assert(ElemType->isArrayType());
+            if (!this->visitZeroArrayInitializer(ElemType, E))
+              return false;
+          }
         } else if (DynamicInit) {
           if (OptPrimType InitT = classify(DynamicInit)) {
             if (!this->visit(DynamicInit))
