@@ -305,10 +305,6 @@ public:
     return TotalMemory;
   }
 
-  /// BumpPtrAllocator no longer tracks the number of bytes requested; this
-  /// always returns 0. Use getTotalMemory() for the amount of memory held.
-  size_t getBytesAllocated() const { return 0; }
-
   void setRedZoneSize([[maybe_unused]] size_t NewSize) {
 #if LLVM_ADDRESS_SANITIZER_BUILD
     RedZoneSize = NewSize;
