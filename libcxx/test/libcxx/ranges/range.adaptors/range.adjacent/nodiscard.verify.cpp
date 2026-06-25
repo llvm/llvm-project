@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: std-at-least-c++20
+// REQUIRES: std-at-least-c++23
 
 // Test the libc++ extension that std::ranges::adjacent_view and std::views::adjacent are marked as [[nodiscard]].
 #include <ranges>
