@@ -1245,7 +1245,9 @@ void InstrLowerer::lowerCover(InstrProfCoverInst *CoverInstruction) {
     Instruction *SplitBefore = CoverInstruction->getNextNode();
     auto &Ctx = CoverInstruction->getParent()->getContext();
     auto *Int8Ty = llvm::Type::getInt8Ty(Ctx);
-    Value *Load = Builder.CreateLoad(Int8Ty, Addr, "pgocount");
+    LoadInst *Load = Builder.CreateLoad(Int8Ty, Addr, "pgocount");
+    if (Options.Atomic || AtomicCounterUpdateAll)
+      Load->setOrdering(llvm::AtomicOrdering::Monotonic);
     Value *Cmp = Builder.CreateIsNotNull(Load, "pgocount.ifnonzero");
     Instruction *ThenBranch =
         SplitBlockAndInsertIfThen(Cmp, SplitBefore, false);
