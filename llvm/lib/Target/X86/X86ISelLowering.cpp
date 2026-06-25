@@ -50663,7 +50663,7 @@ static SDValue combineMulToPMADDWD(SDNode *N, const SDLoc &DL,
     if (Op.getOpcode() == ISD::SIGN_EXTEND && N->isOnlyUserOf(Op.getNode())) {
       SDValue Src = Op.getOperand(0);
       // Convert sext(vXi16) to zext(vXi16).
-      if (Src.getScalarValueSizeInBits() == 16 && VT.getSizeInBits() <= 128)
+      if (Src.getScalarValueSizeInBits() == 16)
         return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, Src);
       // Convert sext(vXi8) to zext(vXi16 sext(vXi8)) on pre-SSE41 targets
       // which will expand the extension.

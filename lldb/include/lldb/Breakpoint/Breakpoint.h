@@ -27,6 +27,8 @@
 #include "lldb/Utility/StringList.h"
 #include "lldb/Utility/StructuredData.h"
 
+#include "llvm/ADT/StringSet.h"
+
 namespace lldb_private {
 
 /// \class Breakpoint Breakpoint.h "lldb/Breakpoint/Breakpoint.h" Class that
@@ -583,8 +585,8 @@ public:
 
   void GetNames(std::vector<std::string> &names) {
     names.clear();
-    for (auto name : m_name_list) {
-      names.push_back(name);
+    for (auto name : m_name_list.keys()) {
+      names.push_back(name.str());
     }
   }
 
@@ -687,10 +689,9 @@ private:
   bool
       m_hardware; // If this breakpoint is required to use a hardware breakpoint
   Target &m_target; // The target that holds this breakpoint.
-  std::unordered_set<std::string> m_name_list; // If not empty, this is the name
-                                               // of this breakpoint (many
-                                               // breakpoints can share the same
-                                               // name.)
+  /// If not empty, this is the name of this breakpoint (many breakpoints can
+  /// share the same name.)
+  llvm::StringSet<> m_name_list;
   lldb::SearchFilterSP
       m_filter_sp; // The filter that constrains the breakpoint's domain.
   lldb::BreakpointResolverSP

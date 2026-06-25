@@ -320,6 +320,15 @@ func.func @reduction_accumulate_block_thread(%partial: i32, %private: memref<i32
 
 // -----
 
+// CHECK-LABEL: func @reduction_accumulate_array
+func.func @reduction_accumulate_array(%private: memref<4xi32>, %bounds: !acc.data_bounds_ty) {
+  acc.reduction_accumulate_array %private bounds(%bounds) <add> : memref<4xi32> {par_dims = #acc<par_dims[block_x, thread_x]>}
+  return
+}
+// CHECK: acc.reduction_accumulate_array  %{{.*}} bounds(%{{.*}}) <add> : memref<4xi32> {par_dims = #acc<par_dims[block_x, thread_x]>}
+
+// -----
+
 // CHECK-LABEL: func @compute_region_with_results
 func.func @compute_region_with_results() -> i32 {
   %w0 = acc.par_width {par_dim = #acc.par_dim<thread_x>}

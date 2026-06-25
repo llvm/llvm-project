@@ -11,7 +11,6 @@ import os
 import tempfile
 
 from dex import __version__
-from dex.tools.Main import Context
 from dex.utils import ExtArgParse
 from dex.utils import PrettyOutput
 from dex.utils.ReturnCode import ReturnCode
@@ -19,7 +18,7 @@ from dex.utils.ReturnCode import ReturnCode
 
 class ToolBase(object, metaclass=abc.ABCMeta):
     def __init__(self, context):
-        self.context: Context = context
+        self.context = context
         self.parser = None
 
     @abc.abstractproperty

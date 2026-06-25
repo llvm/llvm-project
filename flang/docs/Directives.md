@@ -27,6 +27,12 @@ A list of non-standard directives supported by Flang
   When the dummy argument is not passed by descriptor (e.g., an assumed-size
   array in a BIND(C) interface), the base address is extracted from the actual
   argument's descriptor and passed as a raw pointer.
+  When the dummy argument is assumed-type (`TYPE(*)`) and passed by descriptor
+  to a `BIND(C)` procedure, (C) also disables the F2023 15.5.2.5 p2 checks
+  that would otherwise reject actual arguments whose derived type has type
+  parameters, type-bound procedures, or final procedures; this is intended for
+  `BIND(C)` interfaces where the implementation treats the argument as an opaque
+  CFI descriptor at the call site.
   The letter (P) ignores pointer and allocatable matching, so that one can pass
   an allocatable array to routine with pointer array argument and vice versa.
   The letter (M) disables matching of the actual argument's CUDA storage
