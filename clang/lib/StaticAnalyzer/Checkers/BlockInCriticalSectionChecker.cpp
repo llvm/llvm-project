@@ -157,9 +157,55 @@ public:
   }
 };
 
+class RAIIMemberMutexDescriptor {
+  mutable const IdentifierInfo *WrapperType{};
+  mutable bool IdentifierInitialized{};
+  mutable llvm::SmallString<32> WrapperTypeName{};
+
+  void initIdentifierInfo(const CallEvent &Call) const {
+    if (!IdentifierInitialized) {
+      const auto &ASTCtx = Call.getASTContext();
+      WrapperType = &ASTCtx.Idents.get(WrapperTypeName);
+      IdentifierInitialized = true;
+    }
+  }
+
+public:
+  RAIIMemberMutexDescriptor(StringRef WrapperTypeName)
+      : WrapperTypeName(WrapperTypeName) {}
+
+  [[nodiscard]] bool matches(const CallEvent &Call, bool IsLock) const {
+    initIdentifierInfo(Call);
+
+    const auto *MemCall = dyn_cast<CXXMemberCall>(&Call);
+    if (!MemCall)
+      return false;
+
+    const CXXMethodDecl *Method = cast<CXXMethodDecl>(MemCall->getDecl());
+    const CXXRecordDecl *ClassDecl = Method->getParent();
+    const IdentifierInfo *ClassName = ClassDecl->getIdentifier();
+
+    if (ClassName != WrapperType)
+      return false;
+
+    const IdentifierInfo *MethodName = Method->getIdentifier();
+    if (!MethodName)
+      return false;
+
+    if (IsLock)
+      return MethodName->isStr("lock");
+    else
+      return MethodName->isStr("unlock");
+  }
+
+  [[nodiscard]] const MemRegion *getRegion(const CallEvent &Call, bool) const {
+    return cast<CXXMemberCall>(Call).getCXXThisVal().getAsRegion();
+  }
+};
+
 using MutexDescriptor =
     std::variant<FirstArgMutexDescriptor, MemberMutexDescriptor,
-                 RAIIMutexDescriptor>;
+                 RAIIMutexDescriptor, RAIIMemberMutexDescriptor>;
 
 class SuppressNonBlockingStreams : public BugReporterVisitor {
 private:
@@ -214,7 +260,7 @@ public:
 
 class BlockInCriticalSectionChecker : public Checker<check::PostCall> {
 private:
-  const std::array<MutexDescriptor, 9> MutexDescriptors{
+  const std::array<MutexDescriptor, 11> MutexDescriptors{
       // NOTE: There are standard library implementations where some methods
       // of `std::mutex` are inherited from an implementation detail base
       // class, and those aren't matched by the name specification {"std",
@@ -239,7 +285,9 @@ private:
                               {CDM::CLibrary, {"mtx_unlock"}, 1}),
       RAIIMutexDescriptor("lock_guard"),
       RAIIMutexDescriptor("unique_lock"),
-      RAIIMutexDescriptor("scoped_lock")};
+      RAIIMemberMutexDescriptor("unique_lock"),
+      RAIIMutexDescriptor("scoped_lock"),
+      RAIIMemberMutexDescriptor("scoped_lock")};
 
   const CallDescriptionSet BlockingFunctions{{CDM::CLibrary, {"sleep"}},
                                              {CDM::CLibrary, {"getc"}},
