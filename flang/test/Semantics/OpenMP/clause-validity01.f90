@@ -121,7 +121,7 @@ use omp_lib
   do i = 1, N
      a = 3.14
   enddo
-  !ERROR: NUM_THREADS clause is not allowed on the END PARALLEL directive
+  !ERROR: NUM_THREADS clause is not allowed on an end-directive
   !$omp end parallel num_threads(4)
 
   !ERROR: LASTPRIVATE clause is not allowed on the PARALLEL directive
@@ -145,7 +145,7 @@ use omp_lib
   do i = 1, N
      a = 3.14
   enddo
-  !ERROR: NOWAIT clause is not allowed on the END PARALLEL directive
+  !ERROR: NOWAIT clause is not allowed on the PARALLEL directive
   !$omp end parallel nowait
 
   !$omp parallel num_threads(num-10)
@@ -285,7 +285,7 @@ use omp_lib
   !$omp section
   c = 1
   d = 2
-  !ERROR: NUM_THREADS clause is not allowed on the END SECTIONS directive
+  !ERROR: NUM_THREADS clause is not allowed on an end-directive
   !$omp end sections num_threads(4)
 
   !$omp parallel
@@ -294,11 +294,15 @@ use omp_lib
   !$omp section
     c = 1
     d = 2
-  !ERROR: At most one NOWAIT clause can appear on the END SECTIONS directive
+  !ERROR: At most one NOWAIT clause can appear on the SECTIONS directive
   !$omp end sections nowait nowait
   !$omp end parallel
 
   !$omp end parallel
+
+  !$omp sections nowait
+  !ERROR: At most one NOWAIT clause can appear on the SECTIONS directive
+  !$omp end sections nowait
 
 ! 2.11.2 parallel-sections-clause -> parallel-clause |
 !                                    sections-clause
@@ -319,7 +323,7 @@ use omp_lib
   !$omp end sections
 
   !$omp parallel sections
-  !ERROR: NOWAIT clause is not allowed on the END PARALLEL SECTIONS directive
+  !ERROR: NOWAIT clause is not allowed on the PARALLEL SECTIONS directive
   !$omp end parallel sections nowait
 
 ! 2.7.3 single-clause -> private-clause |
@@ -335,7 +339,6 @@ use omp_lib
   a = 3.14
   !ERROR: COPYPRIVATE variable 'a' may not appear on a PRIVATE or FIRSTPRIVATE clause on a SINGLE construct
   !ERROR: At most one NOWAIT clause can appear on the SINGLE directive
-  !ERROR: At most one NOWAIT clause can appear on the END SINGLE directive
   !$omp end single copyprivate(a) nowait nowait
   c = 2
   !$omp end parallel
@@ -349,7 +352,7 @@ use omp_lib
   !ERROR: NUM_THREADS clause is not allowed on the WORKSHARE directive
   !$omp workshare num_threads(4)
   a = 1.0
-  !ERROR: COPYPRIVATE clause is not allowed on the END WORKSHARE directive
+  !ERROR: COPYPRIVATE clause is not allowed on the WORKSHARE directive
   !$omp end workshare nowait copyprivate(a)
   !$omp workshare nowait
   !$omp end workshare
