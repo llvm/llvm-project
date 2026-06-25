@@ -77,11 +77,14 @@ EvaluationResult EvalEmitter::interpretDestructor(const VarDecl *VD,
                                                   const APValue &Value) {
   assert(VD);
   S.setEvalLocation(VD->getLocation());
+  S.EvaluatingDecl = VD;
+  S.EvalKind = EvaluationKind::Dtor;
   EvalResult.setSource(VD);
 
   if (!this->visitDtorCall(VD, Value))
     EvalResult.setInvalid();
 
+  S.EvaluatingDecl = nullptr;
   return std::move(this->EvalResult);
 }
 

@@ -5398,10 +5398,11 @@ bool Compiler<Emitter>::visitDtorCall(const VarDecl *VD, const APValue &Value) {
   DeclScope<Emitter> LocalScope(this, VD);
   // Create a local variable to use as the instance.
   QualType Ty = VD->getType();
-  Descriptor *D = P.createDescriptor(
-      VD, Ty.getTypePtr(), Descriptor::InlineDescMD, /*IsConst=*/false,
-      /*IsTemporary=*/false, /*IsMutable=*/false,
-      /*IsVolatile=*/Ty.isVolatileQualified(), nullptr);
+  Descriptor *D =
+      P.createDescriptor(VD, Ty.getTypePtr(), Descriptor::InlineDescMD,
+                         /*IsConst=*/Ty.isConstQualified(),
+                         /*IsTemporary=*/false, /*IsMutable=*/false,
+                         /*IsVolatile=*/Ty.isVolatileQualified(), nullptr);
   if (!D)
     return false;
 
