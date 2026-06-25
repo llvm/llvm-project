@@ -901,7 +901,7 @@ func.func @omp_target(%if_cond : i1, %device : si32,  %num_threads : i32, %devic
         omp.terminator
       }
       omp.terminator
-    }
+    } {omp.combined}
     // CHECK: omp.target kernel_type(spmd) host_eval({{.*}}) {
     // CHECK: omp.parallel {
     // CHECK: omp.wsloop {
@@ -914,9 +914,9 @@ func.func @omp_target(%if_cond : i1, %device : si32,  %num_threads : i32, %devic
           }
         }
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     // CHECK: omp.target kernel_type(spmd_no_loop) host_eval({{.*}}) {
     // CHECK: omp.parallel {
     // CHECK: omp.wsloop {
@@ -929,9 +929,9 @@ func.func @omp_target(%if_cond : i1, %device : si32,  %num_threads : i32, %devic
           }
         }
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
 
     return
 }
@@ -2525,7 +2525,7 @@ func.func @omp_taskloop_cancel_taskgroup(%lb : index, %ub : index, %step : index
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   return
 }
 
@@ -2770,7 +2770,7 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
 
   %testbool = "test.bool"() : () -> (i1)
 
@@ -2784,7 +2784,7 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
 
   // CHECK: omp.taskloop.context final(%{{[^)]+}}) {
   omp.taskloop.context final(%testbool) {
@@ -2796,7 +2796,7 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
 
   // CHECK: omp.taskloop.context untied {
   omp.taskloop.context untied {
@@ -2808,7 +2808,7 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
 
   // CHECK: omp.taskloop.context mergeable {
   omp.taskloop.context mergeable {
@@ -2820,7 +2820,7 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
 
   %testf32 = "test.f32"() : () -> (!llvm.ptr)
   %testf32_2 = "test.f32"() : () -> (!llvm.ptr)
@@ -2834,7 +2834,7 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
 
   // Checking byref attribute for in_reduction
   // CHECK: omp.taskloop.context in_reduction(byref @add_f32 %{{.+}} -> %{{.+}}, @add_f32 %{{.+}} -> %{{.+}} : !llvm.ptr, !llvm.ptr) {
@@ -2847,7 +2847,7 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
 
   // CHECK: omp.taskloop.context reduction(byref @add_f32 %{{.+}} -> %{{.+}}, @add_f32 %{{.+}} -> %{{.+}} : !llvm.ptr, !llvm.ptr) {
   omp.taskloop.context reduction(byref @add_f32 %testf32 -> %arg0, @add_f32 %testf32_2 -> %arg1 : !llvm.ptr, !llvm.ptr) {
@@ -2859,7 +2859,7 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
 
   // check byref attrbute for reduction
   // CHECK: omp.taskloop.context reduction(byref @add_f32 %{{.+}} -> %{{.+}}, byref @add_f32 %{{.+}} -> %{{.+}} : !llvm.ptr, !llvm.ptr) {
@@ -2872,7 +2872,7 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
 
   // CHECK: omp.taskloop.context in_reduction(@add_f32 %{{.+}} -> %{{.+}} : !llvm.ptr) reduction(@add_f32 %{{.+}} -> %{{.+}} : !llvm.ptr) {
   omp.taskloop.context in_reduction(@add_f32 %testf32 -> %arg0 : !llvm.ptr) reduction(@add_f32 %testf32_2 -> %arg1 : !llvm.ptr) {
@@ -2884,7 +2884,7 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
 
   %testi32 = "test.i32"() : () -> (i32)
   // CHECK: omp.taskloop.context priority(%{{[^:]+}}: i32) {
@@ -2897,7 +2897,7 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
 
   %testmemref = "test.memref"() : () -> (memref<i32>)
   // CHECK: omp.taskloop.context allocate(%{{.+}} : memref<i32> -> %{{.+}} : memref<i32>) {
@@ -2910,7 +2910,7 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
 
   %testi64 = "test.i64"() : () -> (i64)
   // CHECK: omp.taskloop.context grainsize(%{{[^:]+}}: i64) {
@@ -2923,7 +2923,7 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
 
   // CHECK: omp.taskloop.context num_tasks(%{{[^:]+}}: i64) {
   omp.taskloop.context num_tasks(%testi64: i64) {
@@ -2935,7 +2935,7 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
 
   // CHECK: omp.taskloop.context grainsize(strict, %{{[^:]+}}: i64) {
   omp.taskloop.context grainsize(strict, %testi64: i64) {
@@ -2947,7 +2947,7 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
 
   // CHECK: omp.taskloop.context num_tasks(strict, %{{[^:]+}}: i64) {
   omp.taskloop.context num_tasks(strict, %testi64: i64) {
@@ -2959,7 +2959,7 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
 
   // CHECK: omp.taskloop.context nogroup {
   omp.taskloop.context nogroup {
@@ -2971,7 +2971,7 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
 
   // CHECK: omp.taskloop.context {
   omp.taskloop.context {
@@ -2985,7 +2985,7 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
       } {omp.composite}
     } {omp.composite}
     omp.terminator
-  }
+  } {omp.combined}
 
   // CHECK: omp.taskloop.context {
   omp.taskloop.context {
@@ -3004,7 +3004,7 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
 
   // CHECK: return
   return
@@ -3425,9 +3425,9 @@ func.func @omp_target_host_eval(%x : i32) {
         omp.terminator
       } {omp.composite}
       omp.terminator
-    }
+    } {omp.combined}
     omp.terminator
-  }
+  } {omp.combined}
 
   // CHECK: omp.target kernel_type(spmd) host_eval(%{{.*}} -> %[[HOST_ARG:.*]] : i32) {
   // CHECK: omp.parallel num_threads(%[[HOST_ARG]] : i32) {
@@ -3441,9 +3441,9 @@ func.func @omp_target_host_eval(%x : i32) {
         }
       }
       omp.terminator
-    }
+    } {omp.combined}
     omp.terminator
-  }
+  } {omp.combined}
 
   // CHECK: omp.target kernel_type(generic) host_eval(%{{.*}} -> %[[HOST_ARG:.*]] : i32) {
   // CHECK: omp.parallel num_threads(%[[HOST_ARG]] : i32) {
@@ -3466,9 +3466,9 @@ func.func @omp_target_host_eval(%x : i32) {
         }
       }
       omp.terminator
-    }
+    } {omp.combined}
     omp.terminator
-  }
+  } {omp.combined}
 
   // CHECK: omp.target kernel_type(spmd) host_eval(%{{.*}} -> %[[HOST_ARG:.*]] : i32) {
   // CHECK: omp.teams {
@@ -3482,9 +3482,9 @@ func.func @omp_target_host_eval(%x : i32) {
         }
       }
       omp.terminator
-    }
+    } {omp.combined}
     omp.terminator
-  }
+  } {omp.combined}
   return
 }
 

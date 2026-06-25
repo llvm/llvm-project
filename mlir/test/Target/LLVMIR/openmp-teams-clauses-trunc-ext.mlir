@@ -31,9 +31,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
           }
         }
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
   // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPnum_teams_const_8_l{{.*}}(i32 %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
@@ -57,9 +57,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
           }
         }
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
   // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPnum_teams_arg_8_l{{.*}}(i32 %{{.*}}, i64 %[[ARG:.*]], ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
@@ -84,9 +84,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
           }
         }
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
   // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPnum_teams_const_2_l{{.*}}(i32 %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
@@ -110,9 +110,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
           }
         }
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
   // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPnum_teams_arg_2_l{{.*}}(i32 %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
@@ -137,9 +137,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
           }
         }
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
   // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPthread_limit_const_8_l{{.*}}(i32 %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
@@ -163,9 +163,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
           }
         }
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
   // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPthread_limit_arg_8_l{{.*}}(i32 %{{.*}}, ptr %[[ARG:[^,]+]], ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
@@ -190,9 +190,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
           }
         }
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
   // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPthread_limit_const_2_l{{.*}}(i32 %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
@@ -216,9 +216,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
           }
         }
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
   // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPthread_limit_arg_2_l{{.*}}(i32 %{{.*}}, ptr %[[ARG:[^,]+]], ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}})
@@ -248,9 +248,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
           omp.terminator
         } {omp.composite}
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
   // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPnum_threads_const_8_l{{.*}}..omp_par.{{.*}}
@@ -280,9 +280,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
           omp.terminator
         } {omp.composite}
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
   // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPnum_threads_arg_8_l{{.*}}..omp_par.{{.*}}
@@ -311,9 +311,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
           omp.terminator
         } {omp.composite}
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
   // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPnum_threads_const_2_l{{.*}}..omp_par.{{.*}}
@@ -342,9 +342,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
           omp.terminator
         } {omp.composite}
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
   // CHECK: @__omp_offloading_{{.*}}_{{.*}}__QPnum_threads_arg_2_l{{.*}}..omp_par.{{.*}}
