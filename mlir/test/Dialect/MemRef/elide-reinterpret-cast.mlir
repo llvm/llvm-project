@@ -92,7 +92,6 @@ func.func private @copy_to_strided_dynamic_stride(%stride0: index,
   // CHECK-NOT:  memref.copy
   // CHECK:      %[[C0:.*]] = arith.constant 0 : index
   // CHECK:      %[[VAL:.*]] = memref.load %[[SRC]][%[[C0]], %[[C0]]] : memref<1x1xf32>
-  /// Dynamic offset used in store
   // CHECK:      memref.store %[[VAL]], %[[DST]][%[[C0]], %[[C0]]] : memref<1x108xf32>
   memref.copy %src, %reinterpret_cast
     : memref<1x1xf32>
@@ -117,10 +116,10 @@ func.func private @copy_to_strided_rank0(%src : memref<f32>, %dst : memref<f32>)
   return
 }
 
-// CHECK-LABEL: func.func private @copy_to_strided_0d_2d_base(
+// CHECK-LABEL: func.func private @copy_to_strided_0d_base_2d(
 // CHECK-SAME:   %[[SRC:.*]]: memref<1x1x1xf32>
 // CHECK-SAME:   %[[DST:.*]]: memref<1x33x42xf32>
-func.func private @copy_to_strided_0d_2d_base(
+func.func private @copy_to_strided_0d_base_2d(
   %src : memref<1x1x1xf32>, %dst : memref<1x33x42xf32>) {
   // CHECK-NOT:  memref.reinterpret_cast
   %reinterpret_cast = memref.reinterpret_cast %dst
@@ -190,11 +189,11 @@ func.func private @copy_to_strided_1d_vector_nonzero_offset(
   return
 }
 
-// CHECK-LABEL: func.func private @copy_to_strided_1d_vector_dynamic_offset_in_loop_dim(
+// CHECK-LABEL: func.func private @copy_to_strided_1d_vector_1d_base_dynamic_offset(
 // CHECK-SAME:   %[[OFF:.*]]: index
 // CHECK-SAME:   %[[SRC:.*]]: memref<4xf32>
 // CHECK-SAME:   %[[DST:.*]]: memref<42xf32>
-func.func private @copy_to_strided_1d_vector_dynamic_offset_in_loop_dim(
+func.func private @copy_to_strided_1d_vector_1d_base_dynamic_offset(
   %offset : index, %src : memref<4xf32>, %dst : memref<42xf32>) {
   // CHECK-NOT:  memref.reinterpret_cast
   %reinterpret_cast = memref.reinterpret_cast %dst
@@ -212,34 +211,6 @@ func.func private @copy_to_strided_1d_vector_dynamic_offset_in_loop_dim(
   // CHECK:      }
   memref.copy %src, %reinterpret_cast
     : memref<4xf32> to memref<4xf32, strided<[1], offset: ?>>
-  // CHECK-NOT:  memref.copy
-  return
-}
-
-// CHECK-LABEL: func.func private @copy_to_strided_1d_vector_dynamic_offset_not_in_loop_dim(
-// CHECK-SAME:   %[[OFF:.*]]: index
-// CHECK-SAME:   %[[SRC:.*]]: memref<1x3x1xf32>
-// CHECK-SAME:   %[[DST:.*]]: memref<1x3x11xf32>
-func.func private @copy_to_strided_1d_vector_dynamic_offset_not_in_loop_dim(
-  %offset : index, %src : memref<1x3x1xf32>,
-  %dst : memref<1x3x11xf32>) {
-  // CHECK-NOT:  memref.reinterpret_cast
-  %reinterpret_cast = memref.reinterpret_cast %dst
-    to offset: [%offset], sizes: [1, 3, 1], strides: [33, 11, 1]
-    : memref<1x3x11xf32>
-      to memref<1x3x1xf32, strided<[33, 11, 1], offset: ?>>
-
-  // CHECK-NOT:  memref.copy
-  // CHECK-DAG:  %[[C0:.*]] = arith.constant 0 : index
-  // CHECK-DAG:  %[[C1:.*]] = arith.constant 1 : index
-  // CHECK-DAG:  %[[C3:.*]] = arith.constant 3 : index
-  // CHECK:      scf.for %[[IDX:.*]] = %[[C0]] to %[[C3]] step %[[C1]] {
-  // CHECK:        %[[VAL:.*]] = memref.load %[[SRC]][%[[C0]], %[[IDX]], %[[C0]]] : memref<1x3x1xf32>
-  // CHECK:        memref.store %[[VAL]], %[[DST]][%[[C0]], %[[IDX]], %[[OFF]]] : memref<1x3x11xf32>
-  // CHECK:      }
-  memref.copy %src, %reinterpret_cast
-    : memref<1x3x1xf32>
-      to memref<1x3x1xf32, strided<[33, 11, 1], offset: ?>>
   // CHECK-NOT:  memref.copy
   return
 }
@@ -361,8 +332,24 @@ func.func private @negative_copy_to_strided_dynamic_rc_shapes(%dim : index,
   return
 }
 
-// CHECK-LABEL: func.func private @negative_copy_to_strided_dynamic_offset_multi_dim_base(
-func.func private @negative_copy_to_strided_dynamic_offset_multi_dim_base(
+// CHECK-LABEL: func.func private @negative_copy_to_strided_unranked_rc_base(
+func.func private @negative_copy_to_strided_unranked_rc_base(
+  %src : memref<4xf32>, %dst : memref<*xf32>) {
+  // CHECK:      %reinterpret_cast = memref.reinterpret_cast %arg1
+  %reinterpret_cast = memref.reinterpret_cast %dst
+    to offset: [0], sizes: [4], strides: [1]
+    : memref<*xf32> to memref<4xf32>
+
+  // CHECK:      memref.copy %arg0, %reinterpret_cast
+  // CHECK-NOT:  memref.load
+  // CHECK-NOT:  memref.store
+  memref.copy %src, %reinterpret_cast
+    : memref<4xf32> to memref<4xf32>
+  return
+}
+
+// CHECK-LABEL: func.func private @negative_copy_to_strided_0d_base_2d_dynamic_offset(
+func.func private @negative_copy_to_strided_0d_base_2d_dynamic_offset(
   %offset : index, %src : memref<1x1xf32>, %dst : memref<4x8xf32>) {
   // CHECK:      %reinterpret_cast = memref.reinterpret_cast %arg2
   %reinterpret_cast = memref.reinterpret_cast %dst
@@ -375,6 +362,25 @@ func.func private @negative_copy_to_strided_dynamic_offset_multi_dim_base(
   memref.copy %src, %reinterpret_cast
     : memref<1x1xf32>
       to memref<1x1xf32, strided<[8, 1], offset: ?>>
+  return
+}
+
+// CHECK-LABEL: func.func private @negative_copy_to_strided_1d_base_2d_dynamic_offset(
+func.func private @negative_copy_to_strided_1d_base_2d_dynamic_offset(
+  %offset : index, %src : memref<1x3x1xf32>,
+  %dst : memref<1x3x11xf32>) {
+  // CHECK:      %reinterpret_cast = memref.reinterpret_cast %arg2
+  %reinterpret_cast = memref.reinterpret_cast %dst
+    to offset: [%offset], sizes: [1, 3, 1], strides: [33, 11, 1]
+    : memref<1x3x11xf32>
+      to memref<1x3x1xf32, strided<[33, 11, 1], offset: ?>>
+
+  // CHECK:      memref.copy %arg1, %reinterpret_cast
+  // CHECK-NOT:  memref.load
+  // CHECK-NOT:  memref.store
+  memref.copy %src, %reinterpret_cast
+    : memref<1x3x1xf32>
+      to memref<1x3x1xf32, strided<[33, 11, 1], offset: ?>>
   return
 }
 
