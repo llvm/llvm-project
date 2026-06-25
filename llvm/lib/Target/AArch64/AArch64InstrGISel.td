@@ -349,7 +349,6 @@ def : GINodeEquiv<G_SLI, AArch64vsli>;
 def : GINodeEquiv<G_SRI, AArch64vsri>;
 
 def : GINodeEquiv<G_EXTRACT_VECTOR_ELT, vector_extract>;
-def : GINodeEquiv<G_INSERT_SUBVECTOR, insert_subvector>;
 
 def : GINodeEquiv<G_AARCH64_PREFETCH, AArch64Prefetch>;
 def : GINodeEquiv<G_AARCH64_RANGE_PREFETCH, AArch64RangePrefetch>;
