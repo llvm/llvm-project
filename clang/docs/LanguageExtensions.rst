@@ -6879,8 +6879,7 @@ Preserving Identifying Variables with -mloadtime-comment-vars
 The ``-mloadtime-comment-vars=`` flag accepts a comma-separated list of
 global variable names that should be preserved in the final object file as
 loadtime identifying strings. This is an AIX-specific feature; on other
-targets the compiler emits a warning and the flag is not forwarded to
-``-cc1``.
+targets the compiler emits a warning.
 
 This flag complements ``#pragma comment(copyright, ...)`` for codebases that
 already use the traditional UNIX convention of embedding identifying strings
@@ -6894,14 +6893,10 @@ Syntax:
 
 Name matching:
 
-Names are matched against the variable's **mangled IR symbol name** — the
-name as it appears in the object file.
+Names are matched against the variable's mangled name.
 
 - In C, file-scope static variables are not mangled, so the mangled name is
   identical to the source identifier (for example, ``sccsid``).
-- In C++, variables are mangled using the Itanium ABI. To find the mangled
-  name, compile with ``clang -S -emit-llvm`` and look for the global in the
-  ``.ll`` output, or run ``nm`` on the object file.
 
 .. code-block:: console
 
@@ -6917,7 +6912,6 @@ name as it appears in the object file.
   -mloadtime-comment-vars=_ZN1N6sccsidE
 
 Mangled names are unique, so each entry in the list selects exactly one
-variable. Unrecognised names are silently ignored.
 
 Valid variable types:
 
