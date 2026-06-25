@@ -717,7 +717,7 @@ static bool interp__builtin_exp(InterpState &S, CodePtr OpPC,
   const Floating &Arg = S.Stk.pop<Floating>();
   FPOptions FPO = Call->getFPFeaturesInEffect(S.Ctx.getLangOpts());
   llvm::RoundingMode RM = getRoundingMode(FPO);
-  APFloat::opStatus Status;
+  APFloat::opStatus Status = APFloat::opStatus::opOK;
   std::optional<APFloat> Result = exp(Arg.getAPFloat(), RM, &Status);
   // Check for unsupported rounding modes.
   if (!Result.has_value())
