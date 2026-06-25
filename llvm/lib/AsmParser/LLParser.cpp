@@ -1700,6 +1700,8 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
   }
   case Attribute::Range:
     return parseRangeAttr(B);
+  case Attribute::RangeSet:
+    return parseRangeSetAttr(B);
   case Attribute::Initializes:
     return parseInitializesAttr(B);
   case Attribute::Captures:
@@ -1952,6 +1954,18 @@ bool LLParser::parseUInt64(uint64_t &Val) {
   if (Lex.getKind() != lltok::APSInt || Lex.getAPSIntVal().isSigned())
     return tokError("expected integer");
   Val = Lex.getAPSIntVal().getLimitedValue();
+  Lex.Lex();
+  return false;
+}
+
+/// parseAPInt
+///   ::= apint
+bool LLParser::parseAPInt(unsigned BitWidth, APInt &Val) {
+  if (Lex.getKind() != lltok::APSInt)
+    return tokError("expected integer");
+  if (Lex.getAPSIntVal().getBitWidth() > BitWidth)
+    return tokError("integer is too large for the bit width of specified type");
+  Val = Lex.getAPSIntVal().extend(BitWidth);
   Lex.Lex();
   return false;
 }
@@ -3363,17 +3377,6 @@ bool LLParser::parseRangeAttr(AttrBuilder &B) {
   Type *Ty = nullptr;
   LocTy TyLoc;
 
-  auto ParseAPSInt = [&](unsigned BitWidth, APInt &Val) {
-    if (Lex.getKind() != lltok::APSInt)
-      return tokError("expected integer");
-    if (Lex.getAPSIntVal().getBitWidth() > BitWidth)
-      return tokError(
-          "integer is too large for the bit width of specified type");
-    Val = Lex.getAPSIntVal().extend(BitWidth);
-    Lex.Lex();
-    return false;
-  };
-
   if (parseToken(lltok::lparen, "expected '('") || parseType(Ty, TyLoc))
     return true;
   if (!Ty->isIntegerTy())
@@ -3381,8 +3384,8 @@ bool LLParser::parseRangeAttr(AttrBuilder &B) {
 
   unsigned BitWidth = Ty->getPrimitiveSizeInBits();
 
-  if (ParseAPSInt(BitWidth, Lower) ||
-      parseToken(lltok::comma, "expected ','") || ParseAPSInt(BitWidth, Upper))
+  if (parseAPInt(BitWidth, Lower) || parseToken(lltok::comma, "expected ','") ||
+      parseAPInt(BitWidth, Upper))
     return true;
   if (Lower == Upper && !Lower.isZero())
     return tokError("the range represent the empty set but limits aren't 0!");
@@ -3391,6 +3394,62 @@ bool LLParser::parseRangeAttr(AttrBuilder &B) {
     return true;
 
   B.addRangeAttr(ConstantRange(Lower, Upper));
+  return false;
+}
+
+/// parseRangeSetAttr
+///   ::= rangeset(<ty> (<n>,<n>)[,(<n>,<n>)]*)
+bool LLParser::parseRangeSetAttr(AttrBuilder &B) {
+  Lex.Lex();
+
+  Type *Ty = nullptr;
+  LocTy TyLoc;
+
+  if (parseToken(lltok::lparen, "expected '('"))
+    return true;
+
+  TyLoc = Lex.getLoc();
+  if (Lex.getKind() != lltok::Type)
+    return tokError("expected type");
+  Ty = Lex.getTyVal();
+  Lex.Lex();
+
+  if (!Ty->isIntegerTy())
+    return error(TyLoc, "the rangeset must have integer type!");
+
+  unsigned BitWidth = Ty->getPrimitiveSizeInBits();
+
+  SmallVector<ConstantRange, 2> RangeList;
+  do {
+    APInt Lower, Upper;
+    if (parseToken(lltok::lparen, "expected '('") ||
+        parseAPInt(BitWidth, Lower) ||
+        parseToken(lltok::comma, "expected ','") ||
+        parseAPInt(BitWidth, Upper) ||
+        parseToken(lltok::rparen, "expected ')'"))
+      return true;
+
+    if (Upper.slt(Lower))
+      return tokError("rangeset requires lower <= upper");
+
+    ConstantRange Range = ConstantRange::getNonEmpty(Lower, Upper + 1);
+    if (!RangeList.empty() && !RangeList.back().isFullSet() &&
+        !RangeList.back().getUpper().isMinSignedValue() &&
+        Lower == RangeList.back().getUpper()) {
+      RangeList.back() = ConstantRange::getNonEmpty(RangeList.back().getLower(),
+                                                    Range.getUpper());
+      continue;
+    }
+    RangeList.push_back(Range);
+  } while (EatIfPresent(lltok::comma));
+
+  if (parseToken(lltok::rparen, "expected ')'"))
+    return true;
+
+  if (!AttributeFuncs::isOrderedRangeSet(RangeList))
+    return tokError("Invalid (unordered or overlapping) range set");
+
+  B.addRangeSetAttr(RangeList);
   return false;
 }
 

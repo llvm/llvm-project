@@ -70,10 +70,11 @@ bool TargetLowering::isInTailCallPosition(SelectionDAG &DAG, SDNode *Node,
   // the return. Ignore following attributes because they don't affect the
   // call sequence.
   AttrBuilder CallerAttrs(F.getContext(), F.getAttributes().getRetAttrs());
-  for (const auto &Attr : {Attribute::Alignment, Attribute::Dereferenceable,
-                           Attribute::DereferenceableOrNull, Attribute::NoAlias,
-                           Attribute::NonNull, Attribute::NoUndef,
-                           Attribute::Range, Attribute::NoFPClass})
+  for (const auto &Attr :
+       {Attribute::Alignment, Attribute::Dereferenceable,
+        Attribute::DereferenceableOrNull, Attribute::NoAlias,
+        Attribute::NonNull, Attribute::NoUndef, Attribute::Range,
+        Attribute::RangeSet, Attribute::NoFPClass})
     CallerAttrs.removeAttribute(Attr);
 
   if (CallerAttrs.hasAttributes())

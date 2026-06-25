@@ -133,19 +133,26 @@ struct CodeGenIntrinsic {
     Alignment,
     Dereferenceable,
     Range,
+    RangeSet,
   };
 
   struct ArgAttribute {
     ArgAttrKind Kind;
     uint64_t Value;
     uint64_t Value2;
+    SmallVector<std::pair<int64_t, int64_t>, 4> Ranges;
 
     ArgAttribute(ArgAttrKind K, uint64_t V, uint64_t V2)
         : Kind(K), Value(V), Value2(V2) {}
 
     bool operator<(const ArgAttribute &Other) const {
-      return std::tie(Kind, Value, Value2) <
-             std::tie(Other.Kind, Other.Value, Other.Value2);
+      if (std::tie(Kind, Value, Value2) !=
+          std::tie(Other.Kind, Other.Value, Other.Value2))
+        return std::tie(Kind, Value, Value2) <
+               std::tie(Other.Kind, Other.Value, Other.Value2);
+      return std::lexicographical_compare(Ranges.begin(), Ranges.end(),
+                                          Other.Ranges.begin(),
+                                          Other.Ranges.end());
     }
   };
 
@@ -154,6 +161,8 @@ struct CodeGenIntrinsic {
 
   void addArgAttribute(unsigned Idx, ArgAttrKind AK, uint64_t V = 0,
                        uint64_t V2 = 0);
+  void addRangeSetAttribute(unsigned Idx,
+                            SmallVector<std::pair<int64_t, int64_t>, 4> Ranges);
 
   /// Structure to store pretty print and argument information.
   struct PrettyPrintArgInfo {
