@@ -811,6 +811,7 @@ Bug Fixes to C++ Support
 - Fixed a crash in constant evaluation using placement new on an array which was later initialized. (#GH196450)
 - Fixed an issue where Clang incorrectly accepted invalid unqualified uses of local nested class names outside their declaring scope. (#GH184622)
 - Fixed a crash when parsing invalid friend declaration with storage-class specifier. (#GH186569)
+- Fixed a missing vtable for ``dynamic_cast<FinalClass *>(this)`` in a function template. (#GH198511)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -889,6 +890,8 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
+
+Added support for the Arm AGI CPU via the ``-mcpu=armagicpu`` command-line option.
 
 Android Support
 ^^^^^^^^^^^^^^^
@@ -977,6 +980,12 @@ WebAssembly Support
 
 - Fixed a crash when ``__funcref`` is applied to a non-function pointer type.
   (#GH118233)
+- WebAssembly reference types (``__externref_t`` and ``__funcref`` function
+  pointers) now lower to the opaque IR types ``target("wasm.externref")`` and
+  ``target("wasm.funcref")`` instead of ``ptr addrspace(10)`` /
+  ``ptr addrspace(20)``.
+- Fixed a compiler crash at ``-O2`` when reference-type values were passed
+  through control flow that the SLP vectorizer tried to vectorize.
 
 AVR Support
 ^^^^^^^^^^^
