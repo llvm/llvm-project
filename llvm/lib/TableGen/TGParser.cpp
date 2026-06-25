@@ -2750,9 +2750,10 @@ TGParser::resolveInitTypes(ArrayRef<const Init *> Inits, const Twine &ErrCtx) {
     if (isa<UnsetInit>(V))
       continue;
 
-    const RecTy *VTy = nullptr;
-    if (const auto *Vt = dyn_cast<TypedInit>(V))
-      VTy = Vt->getType();
+    const auto *Vt = dyn_cast<TypedInit>(V);
+    if (!Vt)
+      continue;
+    const RecTy *VTy = Vt->getType();
 
     if (!Type) {
       Type = VTy;
