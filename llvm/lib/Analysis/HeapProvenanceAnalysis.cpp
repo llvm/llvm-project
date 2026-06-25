@@ -162,7 +162,7 @@ public:
       if (OpSeedIt != Seeds.end()) MergeInto(Op, OpSeedIt->second);
 
       auto OpInfo = SS.getExistingValueState(Op);
-      if (!OpInfo.isValid() || !(OpInfo.Dir & HeapProvenanceLattice::Forward)) continue;
+      if (OpInfo.isUninit() || !(OpInfo.Dir & HeapProvenanceLattice::Forward)) continue;
 
       HeapProvenanceLattice NewI = OpInfo;
       if (NewI.State == HeapProvenanceLattice::StateKind::HeapChunkHead) {
@@ -172,10 +172,12 @@ public:
 
       if (auto *GEP = dyn_cast<GEPOperator>(&I)) {
         if (GEP->getPointerOperand() == Op)
-          MergeInto(&I, NewI);
+          ChangedValues[&I] = NewI;
       } else if (isa<BitCastInst>(&I) || isa<AddrSpaceCastInst>(&I) ||
                  isa<PtrToIntInst>(&I) || isa<IntToPtrInst>(&I) ||
-                 isa<BinaryOperator>(&I) || isa<PHINode>(&I) || isa<SelectInst>(&I)) {
+                 isa<BinaryOperator>(&I)) {
+        ChangedValues[&I] = NewI;
+      } else if (isa<PHINode>(&I) || isa<SelectInst>(&I)) {
         MergeInto(&I, NewI);
       } else if (auto *CB = dyn_cast<CallBase>(&I)) {
         Function *Callee = CB->getCalledFunction();
