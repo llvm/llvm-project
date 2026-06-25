@@ -1725,7 +1725,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &d) {
 
   // Try to emit the initializer.  Note that this can allow some things that
   // are not allowed by tryEmitPrivateForMemory alone.
-  if (APValue *value = d.evaluateValue())
+  if (const APValue *value = d.evaluateValue())
     return tryEmitPrivateForMemory(*value, destType);
 
   return {};

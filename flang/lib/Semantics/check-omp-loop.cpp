@@ -665,7 +665,7 @@ void OmpStructureChecker::CheckScanModifier(
               [&](const parser::Name &name) {
                 checkReductionSymbolInScan(name);
               },
-              [&](const parser::OmpObject::Invalid &invalid) {},
+              [&](const auto &) {},
           },
           ompObj.u);
     }

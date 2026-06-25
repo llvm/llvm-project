@@ -97,6 +97,11 @@ Makes programs 10x faster by doing Special New Thing.
 * The ``modular-format`` attribute now supports the ``fixed`` aspect for C
   ISO 18037 fixed-point ``printf`` specifiers.
 
+* Added `noipa` attribute which disables interprocedural analyses that inspect
+  the definition of the function. This attribute does *not* control inlining or
+  outlining. Add the `noinline` and `nooutline` attributes as well in cases
+  where inlining and outlining should additionally be disabled.
+
 * Added support for ``callgraph`` metadata. The `!callgraph` metadata
   associates a function definition with its type identifier and is used for call
   graph section generation. See the [callgraph Metadata](https://llvm.org/docs/LangRef.html#callgraph-metadata)
@@ -263,6 +268,15 @@ Makes programs 10x faster by doing Special New Thing.
 * The Xqcilo pseudos now emit sequences that can be relaxed.
 
 ### Changes to the WebAssembly Backend
+
+* WebAssembly reference types are now represented in LLVM IR as the target
+  extension types `target("wasm.externref")` and `target("wasm.funcref")`,
+  rather than as pointers in address spaces 10 and 20 (`ptr addrspace(10)` /
+  `ptr addrspace(20)`).
+* As a consequence of the representation change, reference types are no longer
+  treated as vectorizable pointers. This fixes a crash in the SLP vectorizer,
+  which previously would attempt to gather `externref`/`funcref` values into a
+  vector and then crash.
 
 ### Changes to the Windows Target
 

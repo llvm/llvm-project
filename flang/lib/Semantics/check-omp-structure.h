@@ -19,6 +19,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/semantics.h"
+#include "llvm/ADT/iterator_range.h"
 
 using OmpClauseSet =
     Fortran::common::EnumSet<llvm::omp::Clause, llvm::omp::Clause_enumSize>;
@@ -101,12 +102,8 @@ public:
   void Leave(const parser::OmpBlockConstruct &);
   void Enter(const parser::OmpBeginDirective &);
   void Leave(const parser::OmpBeginDirective &);
-  void Enter(const parser::OmpEndDirective &);
-  void Leave(const parser::OmpEndDirective &);
 
   void Enter(const parser::OpenMPSectionsConstruct &);
-  void Enter(const parser::OmpEndSectionsDirective &);
-  void Leave(const parser::OmpEndSectionsDirective &);
 
   void Enter(const parser::OmpDeclareVariantDirective &);
   void Enter(const parser::OmpDeclareSimdDirective &);
@@ -131,6 +128,8 @@ public:
   void Enter(const parser::OpenMPCriticalConstruct &);
   void Enter(const parser::OpenMPAtomicConstruct &);
 
+  void Enter(const parser::OmpLocator &x);
+  void Enter(const parser::OmpClauseList &);
   void Leave(const parser::OmpClauseList &);
   void Enter(const parser::OmpClause &);
 
@@ -249,13 +248,23 @@ private:
       const parser::OmpTraitSetSelector &, const parser::OmpTraitSelector &);
 
   // check-omp-structure.cpp
+  using ClauseIterator =
+      decltype(std::declval<const parser::OmpClauseList>().v.begin());
   bool IsAllowedClause(llvm::omp::Clause clauseId);
-  bool CheckAllowedClause(llvm::omp::Clause clause);
+  bool CheckAllowedClause(llvm::omp::Clause clauseId);
+  bool CheckAllowedClause(llvm::omp::Clause clauseId,
+      parser::CharBlock clauseSource, llvm::omp::Directive dirId);
   void CheckArgumentObjectKind(const parser::OmpClause &x);
   void CheckDirectiveSpelling(
       parser::CharBlock spelling, llvm::omp::Directive id);
   void CheckDirectiveDeprecation(const parser::OpenMPConstruct &x);
+  void CheckClauses(parser::OmpDirectiveName dirName,
+      llvm::iterator_range<ClauseIterator> beginClauses,
+      llvm::iterator_range<ClauseIterator> endClauses);
   void AnalyzeObject(const parser::OmpObject &object);
+  std::pair<const parser::OmpClause *, const parser::OmpClause *>
+  FindMutuallyExclusiveClauses(OmpClauseSet exclusive,
+      const std::vector<const parser::OmpClause *> &clauses);
 
   const parser::OpenMPConstruct *GetCurrentConstruct() const;
   void CheckSourceLabel(const parser::Label &);
@@ -366,6 +375,7 @@ private:
       const parser::OmpClause &initClause);
   void CheckAllowedRequiresClause(llvm::omp::Clause clause);
   void AddEndDirectiveClauses(const parser::OmpClauseList &clauses);
+  void CheckTempDescriptorMappings();
 
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
   void ExitDirectiveNest(const int index) { directiveNest_[index]--; }
@@ -387,6 +397,17 @@ private:
 
   int allocateDirectiveLevel_{0};
   parser::CharBlock visitedAtomicSource_;
+
+  // Mapping of directive-name-modifier constituents to the sources of the
+  // IF clauses that referenced them. If there was no modifier, the entire
+  // directive is assumed to be listed.
+  std::map<llvm::omp::Directive, parser::CharBlock> ifLeafs_;
+
+  // Track symbols with temporary stack descriptors mapped in TARGET ENTER DATA
+  // and symbols mapped in TARGET EXIT DATA within the current function scope.
+  // Used to warn about potential issues with mapping temporary descriptors.
+  std::multimap<const Symbol *, parser::CharBlock> tempDescriptorEnterMaps_;
+  std::set<const Symbol *> tempDescriptorExitMaps_;
 
   // Stack of nested DO loops and OpenMP constructs.
   // This is used to verify DO loop nest for DOACROSS, and branches into
@@ -454,6 +475,5 @@ std::optional<IterTy> OmpStructureChecker::FindDuplicate(RangeTy &&range) {
   }
   return std::nullopt;
 }
-
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_CHECK_OMP_STRUCTURE_H_

@@ -11,9 +11,13 @@ detail below.
 To register the function's entry points for supported OSes and architectures,
 together with its specifications:
 
-- Add entry points `libc.src.math.<func>` to the following files:
+- Add entry points `libc.src.math.<func>` to the following files (only add on platforms where its supported):
 ```
   libc/config/linux/<arch>/entrypoints.txt
+  libc/config/baremetal/<arch>/entrypoints.txt
+  libc/config/darwin/<arch>/entrypoints.txt
+  libc/config/freebsd/<arch>/entrypoints.txt
+  libc/config/gpu/<arch>/entrypoints.txt
   libc/config/windows/entrypoints.txt
 ```
 - Add function specs to the file:
