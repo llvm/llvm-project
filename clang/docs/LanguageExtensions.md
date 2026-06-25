@@ -24,6 +24,7 @@ to the language extensions listed here, Clang aims to support a broad range of
 GCC extensions. Please see the [GCC manual](https://gcc.gnu.org/onlinedocs/gcc/C-Extensions.html) for more information on
 these extensions.
 
+(langext-feature_check)=
 (langext-feature-check)=
 
 ## Feature Checking Macros
@@ -56,7 +57,7 @@ It can be used like this:
 ...
 ```
 
-:::{note}
+```{note}
 Prior to Clang 10, `__has_builtin` could not be used to detect most builtin
 pseudo-functions.
 
@@ -65,7 +66,7 @@ use `#ifdef` instead.
 
 When compiling with target offloading, `__has_builtin` only considers the
 currently active target.
-:::
+```
 
 ### `__has_constexpr_builtin`
 
@@ -95,6 +96,7 @@ the `<cmath>` header file to conditionally make a function constexpr whenever
 the constant evaluation of the corresponding builtin (for example,
 `std::fmax` calls `__builtin_fmax`) is supported in Clang.
 
+(langext-__has_feature-__has_extension)=
 (langext-has-feature-has-extension)=
 
 ### `__has_feature` and `__has_extension`
@@ -281,11 +283,12 @@ __wchar_t WideCharacter;
 ## Include File Checking Macros
 
 Not all developments systems have the same include files. The
-{ref}`langext-__has_include` and {ref}`langext-__has_include_next` macros allow
+{ref}`__has_include <langext-has-include>` and {ref}`__has_include_next <langext-has-include-next>` macros allow
 you to check for the existence of an include file before doing a possibly
 failing `#include` directive. Include file checking macros must be used
 as expressions in `#if` or `#elif` preprocessing directives.
 
+(langext-__has_include)=
 (langext-has-include)=
 
 ### `__has_include`
@@ -312,6 +315,7 @@ To test for this feature, use `#if defined(__has_include)`:
 #endif
 ```
 
+(langext-__has_include_next)=
 (langext-has-include-next)=
 
 ### `__has_include_next`
@@ -357,69 +361,57 @@ option for a warning and returns `true` if that is a valid warning option.
 ## Builtin Macros
 
 `__BASE_FILE__`
-
 : Defined to a string that contains the name of the main input file passed to
   Clang.
 
 `__FILE_NAME__`
-
 : Clang-specific extension that functions similar to `__FILE__` but only
   renders the last path component (the filename) instead of an
   invocation-dependent full path to that file.
 
 `__COUNTER__`
-
 : Defined to an integer value that starts at zero and is incremented each time
   the `__COUNTER__` macro is expanded. This is a standard feature in C2y but
   is an extension in earlier language modes and in C++. This macro can only be
   expanded 2147483647 times at most.
 
 `__INCLUDE_LEVEL__`
-
 : Defined to an integral value that is the include depth of the file currently
   being translated. For the main file, this value is zero.
 
 `__TIMESTAMP__`
-
 : Defined to the date and time of the last modification of the current source
   file.
 
 `__clang__`
-
 : Defined when compiling with Clang.
 
 `__clang_major__`
-
 : Defined to the major marketing version number of Clang (e.g., the 2 in
   2.0.1). Note that marketing version numbers should not be used to check for
   language features, as different vendors use different numbering schemes.
-  Instead, use the {ref}`langext-feature_check`.
+  Instead, use the {ref}`langext-feature-check`.
 
 `__clang_minor__`
-
 : Defined to the minor version number of Clang (e.g., the 0 in 2.0.1). Note
   that marketing version numbers should not be used to check for language
   features, as different vendors use different numbering schemes. Instead, use
-  the {ref}`langext-feature_check`.
+  the {ref}`langext-feature-check`.
 
 `__clang_patchlevel__`
-
 : Defined to the marketing patch level of Clang (e.g., the 1 in 2.0.1).
 
 `__clang_version__`
-
 : Defined to a string that captures the Clang marketing version, including the
   Subversion tag or revision number, e.g., "`1.5 (trunk 102332)`".
 
 `__clang_literal_encoding__`
-
 : Defined to a narrow string literal that represents the current encoding of
   narrow string literals, e.g., `"hello"`. This macro typically expands to
   "UTF-8" (but may change in the future if the
   `-fexec-charset="Encoding-Name"` option is implemented.)
 
 `__clang_wide_literal_encoding__`
-
 : Defined to a narrow string literal that represents the current encoding of
   wide string literals, e.g., `L"hello"`. This macro typically expands to
   "UTF-16" or "UTF-32" (but may change in the future if the
@@ -670,24 +662,24 @@ The table below shows the support for each operation by vector extension. A
 dash indicates that an operation is not accepted according to a corresponding
 specification.
 
-| Operator                   | OpenCL | AltiVec | GCC              | NEON | SVE        | RVV        |
-| -------------------------- | ------ | ------- | ---------------- | ---- | ---------- | ---------- |
-| []                         | yes    | yes     | yes              | yes  | yes        | yes        |
-| unary operators +, --      | yes    | yes     | yes              | yes  | yes        | yes        |
-| ++, -- --                  | yes    | yes     | yes              | no   | no         | no         |
-| +,--,\*,/,%                | yes    | yes     | yes              | yes  | yes        | yes        |
-| bitwise operators &,\|,^,~ | yes    | yes     | yes              | yes  | yes        | yes        |
-| >>,\<<                     | yes    | yes     | yes              | yes  | yes        | yes        |
-| !, &&, \|\|                | yes    | --      | yes              | yes  | yes        | yes        |
-| ==, !=, >, \<, >=, \<=     | yes    | yes     | yes              | yes  | yes        | yes        |
-| =                          | yes    | yes     | yes              | yes  | yes        | yes        |
-| ?: [^footnote-1]           | yes    | --      | yes              | yes  | yes        | yes        |
-| sizeof                     | yes    | yes     | yes              | yes  | yes [^vls] | yes [^vls] |
-| C-style cast               | yes    | yes     | yes              | no   | no         | yes        |
-| reinterpret_cast           | yes    | no      | yes              | no   | no         | yes        |
-| static_cast                | yes    | no      | yes              | no   | no         | yes        |
-| const_cast                 | no     | no      | no               | no   | no         | no         |
-| address &v[i]              | no     | no      | no [^footnote-2] | no   | no         | no         |
+| Operator | OpenCL | AltiVec | GCC | NEON | SVE | RVV |
+| --- | --- | --- | --- | --- | --- | --- |
+| [] | yes | yes | yes | yes | yes | yes |
+| unary operators +, -- | yes | yes | yes | yes | yes | yes |
+| ++, -- -- | yes | yes | yes | no | no | no |
+| +,--,*,/,% | yes | yes | yes | yes | yes | yes |
+| bitwise operators &,\|,^,~ | yes | yes | yes | yes | yes | yes |
+| >>,<< | yes | yes | yes | yes | yes | yes |
+| !, &&, \|\| | yes | -- | yes | yes | yes | yes |
+| ==, !=, >, <, >=, <= | yes | yes | yes | yes | yes | yes |
+| = | yes | yes | yes | yes | yes | yes |
+| ?: <span class="footnote-reference brackets">[1]</span> | yes | -- | yes | yes | yes | yes |
+| sizeof | yes | yes | yes | yes | yes <a class="footnote-reference brackets" href="#vls" role="doc-noteref">[2]</a> | yes <a class="footnote-reference brackets" href="#vls" role="doc-noteref">[2]</a> |
+| C-style cast | yes | yes | yes | no | no | yes |
+| reinterpret_cast | yes | no | yes | no | no | yes |
+| static_cast | yes | no | yes | no | no | yes |
+| const_cast | no | no | no | no | no | no |
+| address &v[i] | no | no | no <span class="footnote-reference brackets">[3]</span> | no | no | no |
 
 Both SVE and RVV define sizeless vector types which cannot be used in globals,
 structs, unions, or arrays. Both provide an attribute (`arm_sve_vector_bits`
@@ -698,20 +690,32 @@ these attributes requires the command line option `-msve-vector-bits=<N>` or
 supported on both sizeless and VLS types. For RVV, the operators are only
 supported on VLS types.
 
-See also {ref}`langext-__builtin_shufflevector`, {ref}`langext-__builtin_convertvector`.
+See also {ref}`langext-builtin-shufflevector`, {ref}`langext-builtin-convertvector`.
 
-[^footnote-1]: ternary operator(?:) has different behaviors depending on the condition
-    operand's vector type. If the condition is a GNU vector (i.e., `__vector_size__`),
-    a NEON vector, an SVE vector or an RVV vector, it's only available in C++
-    and uses normal bool conversions (that is, != 0).
-    If it's an extension (OpenCL) vector, it's only available in C and OpenCL C.
-    And it selects based on the signedness of the condition operands (OpenCL v1.1 s6.3.9).
-
-[^vls]: sizeof can only be used on vector length specific SVE and RVV types.
-
-[^footnote-2]: Clang does not allow the address of an element to be taken while GCC
-    allows this. This is intentional for vectors with a boolean element type and
-    not implemented otherwise.
+```{raw} html
+<aside class="footnote-list brackets">
+<aside class="footnote brackets" role="note">
+<span class="label"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></span>
+<p>ternary operator(?:) has different behaviors depending on the condition
+operand's vector type. If the condition is a GNU vector (i.e., <code class="docutils literal notranslate"><span class="pre">__vector_size__</span></code>),
+a NEON vector, an SVE vector or an RVV vector, it's only available in C++
+and uses normal bool conversions (that is, != 0).
+If it's an extension (OpenCL) vector, it's only available in C and OpenCL C.
+And it selects based on the signedness of the condition operands (OpenCL v1.1 s6.3.9).</p>
+</aside>
+<aside class="footnote brackets" id="vls" role="note">
+<span class="label"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></span>
+<span class="backrefs">(<a role="doc-backlink">1</a>,<a role="doc-backlink">2</a>)</span>
+<p>sizeof can only be used on vector length specific SVE and RVV types.</p>
+</aside>
+<aside class="footnote brackets" role="note">
+<span class="label"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></span>
+<p>Clang does not allow the address of an element to be taken while GCC
+allows this. This is intentional for vectors with a boolean element type and
+not implemented otherwise.</p>
+</aside>
+</aside>
+```
 
 ### Vector Builtins
 
@@ -1671,7 +1675,7 @@ if support for the `_Alignof` keyword is enabled.
 
 Use `__has_feature(c_atomic)` or `__has_extension(c_atomic)` to determine
 if support for atomic types using `_Atomic` is enabled. Clang also provides
-{ref}`a set of builtins <langext-__c11_atomic>` which can be used to implement
+{ref}`a set of builtins <langext-c11-atomic>` which can be used to implement
 the `<stdatomic.h>` operations on `_Atomic` types. Use
 `__has_include(<stdatomic.h>)` to determine if C11's `<stdatomic.h>` header
 is available.
@@ -1856,7 +1860,7 @@ template <template <class IntSeqT, IntSeqT... Ints> class IntSeq, class T, T N>
 using __make_integer_seq = ...;
 ```
 
-This alias returns `IntSeq` instantiated with ``` IntSeqT = T``and ``Ints ``` being the pack `0, ..., N - 1`.
+This alias returns `IntSeq` instantiated with `IntSeqT = T` and `Ints` being the pack `0, ..., N - 1`.
 
 ### \_\_builtin_dedup_pack
 
@@ -2048,9 +2052,10 @@ The following type trait primitives are supported by Clang. Those traits marked
 - `__reference_constructs_from_temporary(T, U)` (C++)
   Returns true if a reference `T` can be direct-initialized from a temporary of type
   a non-cv-qualified `U`.
-- `__reference_converts_from_temporary(T, U)` (C++)
-  : Returns true if a reference `T` can be copy-initialized from a temporary of type
-    a non-cv-qualified `U`.
+
+`__reference_converts_from_temporary(T, U)` (C++)
+: Returns true if a reference `T` can be copy-initialized from a temporary of type
+  a non-cv-qualified `U`.
 - `__underlying_type` (C++, GNU, Microsoft)
 - `__builtin_lt_synthesizes_from_spaceship`, `__builtin_gt_synthesizes_from_spaceship`,
   `__builtin_le_synthesizes_from_spaceship`, `__builtin_ge_synthesizes_from_spaceship` (Clang):
@@ -2116,6 +2121,7 @@ struct is_convertible_to {
 #endif
 ```
 
+(builtin_structured_binding_size-doc)=
 (builtin-structured-binding-size-doc)=
 
 ### \_\_builtin_structured_binding_size (C++)
@@ -2419,10 +2425,11 @@ of types containing such declarations are affected accordingly.
 
 This extension can be controlled independently of other Microsoft extensions:
 
-- `-fms-anonymous-structs`
-  : Enable named anonymous struct/union support
-- `-fno-ms-anonymous-structs`
-  : Disable anonymous struct/union support
+`-fms-anonymous-structs`
+: Enable named anonymous struct/union support
+
+`-fno-ms-anonymous-structs`
+: Disable anonymous struct/union support
 
 This extension is also **implicitly enabled** when either of the following options is used:
 
@@ -2555,7 +2562,7 @@ void foo(__attribute__((ns_consumed)) NSString *string);
 ```
 
 Further examples of these attributes are available in the static analyzer's
-[list of annotations for analysis](analyzer/user-docs/Annotations.html#cocoa-mem).
+{ref}`list of annotations for analysis <cocoa_mem>`.
 
 Query for these features with `__has_attribute(ns_consumed)`,
 `__has_attribute(ns_returns_retained)`, etc.
@@ -3111,6 +3118,7 @@ argument whose value is the alignment constraint, as a power of 2 in *bits*.
 
 Query for this feature with `__has_builtin(__builtin_alloca_with_align)`.
 
+(langext-__builtin_assume)=
 (langext-builtin-assume)=
 
 ### `__builtin_assume`
@@ -3146,6 +3154,7 @@ evaluated, so any side effects of the expression will be discarded.
 
 Query for this feature with `__has_builtin(__builtin_assume)`.
 
+(langext-__builtin_assume_separate_storage)=
 (langext-builtin-assume-separate-storage)=
 
 ### `__builtin_assume_separate_storage`
@@ -3500,6 +3509,7 @@ This builtin can be used in constant expressions.
 
 Query for this feature with `__has_builtin(__builtin_dump_struct)`
 
+(langext-__builtin_shufflevector)=
 (langext-builtin-shufflevector)=
 
 ### `__builtin_shufflevector`
@@ -3555,6 +3565,7 @@ indices specified.
 
 Query for this feature with `__has_builtin(__builtin_shufflevector)`.
 
+(langext-__builtin_convertvector)=
 (langext-builtin-convertvector)=
 
 ### `__builtin_convertvector`
@@ -4106,7 +4117,7 @@ __builtin_debugtrap()
 
 **Description**
 
-`__builtin_debugtrap` is lowered to the \` `llvm.debugtrap` \<<https://llvm.org/docs/LangRef.html#llvm-debugtrap-intrinsic>>\`\_ builtin. It should have the same effect as setting a breakpoint on the line where the builtin is called.
+`__builtin_debugtrap` is lowered to the [`llvm.debugtrap`](https://llvm.org/docs/LangRef.html#llvm-debugtrap-intrinsic) builtin. It should have the same effect as setting a breakpoint on the line where the builtin is called.
 
 Query for this feature with `__has_builtin(__builtin_debugtrap)`.
 
@@ -4122,7 +4133,7 @@ __builtin_trap()
 
 **Description**
 
-`__builtin_trap` is lowered to the \` `llvm.trap` \<<https://llvm.org/docs/LangRef.html#llvm-trap-intrinsic>>\`\_ builtin.
+`__builtin_trap` is lowered to the [`llvm.trap`](https://llvm.org/docs/LangRef.html#llvm-trap-intrinsic) builtin.
 
 Query for this feature with `__has_builtin(__builtin_trap)`.
 
@@ -4154,7 +4165,7 @@ __builtin_verbose_trap(const char *category, const char *reason)
 
 **Description**
 
-`__builtin_verbose_trap` is lowered to the \` `llvm.trap` \<<https://llvm.org/docs/LangRef.html#llvm-trap-intrinsic>>\`\_ builtin.
+`__builtin_verbose_trap` is lowered to the [`llvm.trap`](https://llvm.org/docs/LangRef.html#llvm-trap-intrinsic) builtin.
 Additionally, clang emits debugging information that represents an artificial
 inline frame whose name encodes the category and reason strings passed to the builtin,
 prefixed by a "magic" prefix.
@@ -4434,6 +4445,7 @@ implemented in a way where the counter assignment can happen automatically.
 to a variable, have its address taken, or passed into or returned from a
 function, because doing so violates bounds safety conventions.
 
+(builtin_stack_address-doc)=
 (builtin-stack-address-doc)=
 
 ### `__builtin_stack_address`
@@ -4617,7 +4629,7 @@ positive zero, positive subnormal and positive normal classes.
 `__builtin_isfpclass(x, 448)` would return true only if `x` if of any of
 these data classes. Using suitable mask value, the function can implement any of
 the standard classification functions, for example, `__builtin_isfpclass(x, 3)`
-is identical to `isnan`,\`\`\_\_builtin_isfpclass(x, 504)\`\` - to `isfinite`
+is identical to `isnan`, `__builtin_isfpclass(x, 504)` - to `isfinite`
 and so on.
 
 If the first argument is a vector, the function is equivalent to the set of
@@ -4885,6 +4897,7 @@ In terms of acquire-release ordering barriers these two operations are always
 considered as operations with *load-store* semantics, even when the original value
 is not actually modified after comparison.
 
+(langext-__c11_atomic)=
 (langext-c11-atomic)=
 
 ### \_\_c11_atomic builtins
@@ -4928,6 +4941,7 @@ builtin function, and are named with a `__opencl_` prefix. The macros
 and `__OPENCL_MEMORY_SCOPE_SUB_GROUP` are provided, with values
 corresponding to the enumerators of OpenCL's `memory_scope` enumeration.)
 
+(langext-__scoped_atomic)=
 (langext-scoped-atomic)=
 
 ### \_\_scoped_atomic builtins
@@ -5004,10 +5018,10 @@ will be used.
 
 ### C++ Coroutines support builtins
 
-:::{warning}
+```{warning}
 This is a work in progress. Compatibility across Clang/LLVM releases is not
 guaranteed.
-:::
+```
 
 Clang provides experimental builtins to support C++ Coroutines as defined by
 <https://wg21.link/P0057>. The following four are intended to be used by the
@@ -5236,9 +5250,10 @@ For example, this applies the GNU `unused` attribute to `a` and `f`, and
 also applies the GNU `noreturn` attribute to `f`.
 
 Examples:
-.. code-block:: c++
 
-> \[[gnu::unused]\] int a, f \[[gnu::noreturn]\] ();
+```c++
+[[gnu::unused]] int a, f [[gnu::noreturn]] ();
+```
 
 ## Target-Specific Extensions
 
@@ -5420,7 +5435,7 @@ void __builtin_amdgcn_av_store_b128(v4u *dst, v4u data, int scope);
 
 Load or store a vector of 4 unsigned integers from or to memory with cache
 behavior specified by `scope`, which is one of the `__MEMORY_SCOPE_*` macros
-defined for {ref}`scoped atomic builtins<langext-__c11_atomic>`.
+defined for {ref}`scoped atomic builtins <langext-c11-atomic>`.
 
 The pointer argument must point to the global or generic address space.
 
@@ -5531,7 +5546,7 @@ __builtin_dcbf (&a);
 Clang supports additional attributes that are useful for documenting program
 invariants and rules for static analysis tools, such as the [Clang Static
 Analyzer](https://clang-analyzer.llvm.org/). These attributes are documented
-in the analyzer's [list of annotations for analysis](analyzer/user-docs/Annotations.html).
+in the analyzer's {doc}`list of annotations for analysis <analyzer/user-docs/Annotations>`.
 
 ## Extensions for Dynamic Analysis
 
@@ -5654,17 +5669,17 @@ all optimizations, `s`, `g`, `t`, and `y`. An empty optimization and
 `on` parameter will reset the optimizations to the ones specified on the
 commandline.
 
-```{eval-rst}
-.. list-table:: Parameters (unsupported by Clang)
+```{list-table} Parameters (unsupported by Clang)
+:header-rows: 1
 
-   * - Parameter
-     - Type of optimization
-   * - g
-     - Deprecated
-   * - s or t
-     - Short or fast sequences of machine code
-   * - y
-     - Enable frame pointers
+* - Parameter
+  - Type of optimization
+* - g
+  - Deprecated
+* - s or t
+  - Short or fast sequences of machine code
+* - y
+  - Enable frame pointers
 ```
 
 ## Extensions for loop hint optimizations
@@ -6263,7 +6278,7 @@ required) to add a namespace to your push/pop directives. A pop directive with a
 namespace will pop the innermost push that has that same namespace. This will
 ensure that another macro's `pop` won't inadvertently pop your attribute. Note
 that an `pop` without a namespace will pop the innermost `push` without a
-namespace. ``` push``es with a namespace can only be popped by ``pop ``` with the
+namespace. `push`es with a namespace can only be popped by `pop` with the
 same namespace. For instance:
 
 ```c++
@@ -6826,9 +6841,9 @@ The `clang::offset` embed parameter may appear zero or one time in the
 embed parameter sequence. Its preprocessor argument clause shall be present and
 have the form:
 
-..code-block: text
-
-> ( constant-expression )
+```text
+( constant-expression )
+```
 
 and shall be an integer constant expression. The integer constant expression
 shall not evaluate to a value less than 0. The token `defined` shall not
@@ -6956,4 +6971,3 @@ constexpr int x = sizeof(x);
 // diagnostic.
 auto x = x;
 ```
-

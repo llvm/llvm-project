@@ -1,7 +1,7 @@
 # UndefinedBehaviorSanitizer
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -102,117 +102,118 @@ a `-fsanitize=` option. There is no unused command line option warning.
 
 Available checks are:
 
-> - `-fsanitize=alignment`: Use of a misaligned pointer or creation
->   of a misaligned reference. Also sanitizes assume_aligned-like attributes.
-> - `-fsanitize=bool`: Load of a `bool` value which is neither
->   `true` nor `false`.
-> - `-fsanitize=builtin`: Passing invalid values to compiler builtins.
-> - `-fsanitize=bounds`: Out of bounds array indexing, in cases
->   where the array bound can be statically determined. The check includes
->   `-fsanitize=array-bounds` and `-fsanitize=local-bounds`. Note that
->   `-fsanitize=local-bounds` is not included in `-fsanitize=undefined`.
-> - `-fsanitize=enum`: Load of a value of an enumerated type which
->   is not in the range of representable values for that enumerated
->   type.
-> - `-fsanitize=float-cast-overflow`: Conversion to, from, or
->   between floating-point types which would overflow the
->   destination. Because the range of representable values for all
->   floating-point types supported by Clang is [-inf, +inf], the only
->   cases detected are conversions from floating point to integer types.
-> - `-fsanitize=float-divide-by-zero`: Floating point division by
->   zero. This is undefined per the C and C++ standards, but is defined
->   by Clang (and by ISO/IEC/IEEE 60559 / IEEE 754) as producing either an
->   infinity or NaN value, so is not included in `-fsanitize=undefined`.
-> - `-fsanitize=function`: Indirect call of a function through a
->   function pointer of the wrong type.
-> - `-fsanitize=implicit-unsigned-integer-truncation`,
->   `-fsanitize=implicit-signed-integer-truncation`: Implicit conversion from
->   integer of larger bit width to smaller bit width, if that results in data
->   loss. That is, if the demoted value, after casting back to the original
->   width, is not equal to the original value before the downcast.
->   The `-fsanitize=implicit-unsigned-integer-truncation` handles conversions
->   between two `unsigned` types, while
->   `-fsanitize=implicit-signed-integer-truncation` handles the rest of the
->   conversions - when either one, or both of the types are signed.
->   Issues caught by these sanitizers are not undefined behavior,
->   but are often unintentional.
-> - `-fsanitize=implicit-integer-sign-change`: Implicit conversion between
->   integer types, if that changes the sign of the value. That is, if the
->   original value was negative and the new value is positive (or zero),
->   or the original value was positive, and the new value is negative.
->   Issues caught by this sanitizer are not undefined behavior,
->   but are often unintentional.
-> - `-fsanitize=integer-divide-by-zero`: Integer division by zero.
-> - `-fsanitize=implicit-bitfield-conversion`: Implicit conversion from
->   integer of larger bit width to smaller bitfield, if that results in data
->   loss. This includes unsigned/signed truncations and sign changes, similarly
->   to how the `-fsanitize=implicit-integer-conversion` group works, but
->   explicitly for bitfields.
-> - `-fsanitize=nonnull-attribute`: Passing null pointer as a function
->   parameter which is declared to never be null.
-> - `-fsanitize=null`: Use of a null pointer or creation of a null
->   reference.
-> - `-fsanitize=nullability-arg`: Passing null as a function parameter
->   which is annotated with `_Nonnull`.
-> - `-fsanitize=nullability-assign`: Assigning null to an lvalue which
->   is annotated with `_Nonnull`.
-> - `-fsanitize=nullability-return`: Returning null from a function with
->   a return type annotated with `_Nonnull`.
-> - `-fsanitize=objc-cast`: Invalid implicit cast of an ObjC object pointer
->   to an incompatible type. This is often unintentional, but is not undefined
->   behavior, therefore the check is not a part of the `undefined` group.
->   Currently only supported on Darwin.
-> - `-fsanitize=object-size`: An attempt to potentially use bytes which
->   the optimizer can determine are not part of the object being accessed.
->   This will also detect some types of undefined behavior that may not
->   directly access memory, but are provably incorrect given the size of
->   the objects involved, such as invalid downcasts and calling methods on
->   invalid pointers. These checks are made in terms of
->   `__builtin_object_size`, and consequently may be able to detect more
->   problems at higher optimization levels.
-> - `-fsanitize=pointer-overflow`: Performing pointer arithmetic which
->   overflows, or where either the old or new pointer value is a null pointer
->   (excluding the case where both are null pointers).
-> - `-fsanitize=return`: In C++, reaching the end of a
->   value-returning function without returning a value.
-> - `-fsanitize=returns-nonnull-attribute`: Returning null pointer
->   from a function which is declared to never return null.
-> - `-fsanitize=shift`: Shift operators where the amount shifted is
->   greater or equal to the promoted bit-width of the left hand side
->   or less than zero, or where the left hand side is negative. For a
->   signed left shift, also checks for signed overflow in C, and for
->   unsigned overflow in C++. You can use `-fsanitize=shift-base` or
->   `-fsanitize=shift-exponent` to check only left-hand side or
->   right-hand side of shift operation, respectively.
-> - `-fsanitize=unsigned-shift-base`: check that an unsigned left-hand side of
->   a left shift operation doesn't overflow. Issues caught by this sanitizer are
->   not undefined behavior, but are often unintentional.
-> - `-fsanitize=signed-integer-overflow`: Signed integer overflow, where the
->   result of a signed integer computation cannot be represented in its type.
->   This includes all the checks covered by `-ftrapv`, as well as checks for
->   signed division overflow (`INT_MIN/-1`). Note that checks are still
->   added even when `-fwrapv` is enabled. This sanitizer does not check for
->   lossy implicit conversions performed before the computation (see
->   `-fsanitize=implicit-integer-conversion`). Both of these two issues are handled
->   by `-fsanitize=implicit-integer-conversion` group of checks.
-> - `-fsanitize=unreachable`: If control flow reaches an unreachable
->   program point.
-> - `-fsanitize=unsigned-integer-overflow`: Unsigned integer overflow, where
->   the result of an unsigned integer computation cannot be represented in its
->   type. Unlike signed integer overflow, this is not undefined behavior, but
->   it is often unintentional. This sanitizer does not check for lossy implicit
->   conversions performed before such a computation
->   (see `-fsanitize=implicit-integer-conversion`).
-> - `-fsanitize=vla-bound`: A variable-length array whose bound
->   does not evaluate to a positive value.
-> - `-fsanitize=vptr`: Use of an object whose vptr indicates that it is of
->   the wrong dynamic type, or that its lifetime has not begun or has ended.
->   Incompatible with `-fno-rtti`. Link must be performed by `clang++`, not
->   `clang`, to make sure C++-specific parts of the runtime library and C++
->   standard libraries are present. The check is not a part of the `undefined`
->   group. Also it does not support `-fsanitize-trap=vptr`.
+- `-fsanitize=alignment`: Use of a misaligned pointer or creation
+  of a misaligned reference. Also sanitizes assume_aligned-like attributes.
+- `-fsanitize=bool`: Load of a `bool` value which is neither
+  `true` nor `false`.
+- `-fsanitize=builtin`: Passing invalid values to compiler builtins.
+- `-fsanitize=bounds`: Out of bounds array indexing, in cases
+  where the array bound can be statically determined. The check includes
+  `-fsanitize=array-bounds` and `-fsanitize=local-bounds`. Note that
+  `-fsanitize=local-bounds` is not included in `-fsanitize=undefined`.
+- `-fsanitize=enum`: Load of a value of an enumerated type which
+  is not in the range of representable values for that enumerated
+  type.
+- `-fsanitize=float-cast-overflow`: Conversion to, from, or
+  between floating-point types which would overflow the
+  destination. Because the range of representable values for all
+  floating-point types supported by Clang is [-inf, +inf], the only
+  cases detected are conversions from floating point to integer types.
+- `-fsanitize=float-divide-by-zero`: Floating point division by
+  zero. This is undefined per the C and C++ standards, but is defined
+  by Clang (and by ISO/IEC/IEEE 60559 / IEEE 754) as producing either an
+  infinity or NaN value, so is not included in `-fsanitize=undefined`.
+- `-fsanitize=function`: Indirect call of a function through a
+  function pointer of the wrong type.
+- `-fsanitize=implicit-unsigned-integer-truncation`,
+  `-fsanitize=implicit-signed-integer-truncation`: Implicit conversion from
+  integer of larger bit width to smaller bit width, if that results in data
+  loss. That is, if the demoted value, after casting back to the original
+  width, is not equal to the original value before the downcast.
+  The `-fsanitize=implicit-unsigned-integer-truncation` handles conversions
+  between two `unsigned` types, while
+  `-fsanitize=implicit-signed-integer-truncation` handles the rest of the
+  conversions - when either one, or both of the types are signed.
+  Issues caught by these sanitizers are not undefined behavior,
+  but are often unintentional.
+- `-fsanitize=implicit-integer-sign-change`: Implicit conversion between
+  integer types, if that changes the sign of the value. That is, if the
+  original value was negative and the new value is positive (or zero),
+  or the original value was positive, and the new value is negative.
+  Issues caught by this sanitizer are not undefined behavior,
+  but are often unintentional.
+- `-fsanitize=integer-divide-by-zero`: Integer division by zero.
+- `-fsanitize=implicit-bitfield-conversion`: Implicit conversion from
+  integer of larger bit width to smaller bitfield, if that results in data
+  loss. This includes unsigned/signed truncations and sign changes, similarly
+  to how the `-fsanitize=implicit-integer-conversion` group works, but
+  explicitly for bitfields.
+- `-fsanitize=nonnull-attribute`: Passing null pointer as a function
+  parameter which is declared to never be null.
+- `-fsanitize=null`: Use of a null pointer or creation of a null
+  reference.
+- `-fsanitize=nullability-arg`: Passing null as a function parameter
+  which is annotated with `_Nonnull`.
+- `-fsanitize=nullability-assign`: Assigning null to an lvalue which
+  is annotated with `_Nonnull`.
+- `-fsanitize=nullability-return`: Returning null from a function with
+  a return type annotated with `_Nonnull`.
+- `-fsanitize=objc-cast`: Invalid implicit cast of an ObjC object pointer
+  to an incompatible type. This is often unintentional, but is not undefined
+  behavior, therefore the check is not a part of the `undefined` group.
+  Currently only supported on Darwin.
+- `-fsanitize=object-size`: An attempt to potentially use bytes which
+  the optimizer can determine are not part of the object being accessed.
+  This will also detect some types of undefined behavior that may not
+  directly access memory, but are provably incorrect given the size of
+  the objects involved, such as invalid downcasts and calling methods on
+  invalid pointers. These checks are made in terms of
+  `__builtin_object_size`, and consequently may be able to detect more
+  problems at higher optimization levels.
+- `-fsanitize=pointer-overflow`: Performing pointer arithmetic which
+  overflows, or where either the old or new pointer value is a null pointer
+  (excluding the case where both are null pointers).
+- `-fsanitize=return`: In C++, reaching the end of a
+  value-returning function without returning a value.
+- `-fsanitize=returns-nonnull-attribute`: Returning null pointer
+  from a function which is declared to never return null.
+- `-fsanitize=shift`: Shift operators where the amount shifted is
+  greater or equal to the promoted bit-width of the left hand side
+  or less than zero, or where the left hand side is negative. For a
+  signed left shift, also checks for signed overflow in C, and for
+  unsigned overflow in C++. You can use `-fsanitize=shift-base` or
+  `-fsanitize=shift-exponent` to check only left-hand side or
+  right-hand side of shift operation, respectively.
+- `-fsanitize=unsigned-shift-base`: check that an unsigned left-hand side of
+  a left shift operation doesn't overflow. Issues caught by this sanitizer are
+  not undefined behavior, but are often unintentional.
+- `-fsanitize=signed-integer-overflow`: Signed integer overflow, where the
+  result of a signed integer computation cannot be represented in its type.
+  This includes all the checks covered by `-ftrapv`, as well as checks for
+  signed division overflow (`INT_MIN/-1`). Note that checks are still
+  added even when `-fwrapv` is enabled. This sanitizer does not check for
+  lossy implicit conversions performed before the computation (see
+  `-fsanitize=implicit-integer-conversion`). Both of these two issues are handled
+  by `-fsanitize=implicit-integer-conversion` group of checks.
+- `-fsanitize=unreachable`: If control flow reaches an unreachable
+  program point.
+- `-fsanitize=unsigned-integer-overflow`: Unsigned integer overflow, where
+  the result of an unsigned integer computation cannot be represented in its
+  type. Unlike signed integer overflow, this is not undefined behavior, but
+  it is often unintentional. This sanitizer does not check for lossy implicit
+  conversions performed before such a computation
+  (see `-fsanitize=implicit-integer-conversion`).
+- `-fsanitize=vla-bound`: A variable-length array whose bound
+  does not evaluate to a positive value.
+- `-fsanitize=vptr`: Use of an object whose vptr indicates that it is of
+  the wrong dynamic type, or that its lifetime has not begun or has ended.
+  Incompatible with `-fno-rtti`. Link must be performed by `clang++`, not
+  `clang`, to make sure C++-specific parts of the runtime library and C++
+  standard libraries are present. The check is not a part of the `undefined`
+  group. Also it does not support `-fsanitize-trap=vptr`.
 
 You can also use the following check groups:
+
 : - `-fsanitize=undefined`: All of the checks listed above other than
     `float-divide-by-zero`, `unsigned-integer-overflow`,
     `implicit-conversion`, `local-bounds`, `vptr` and the
@@ -324,23 +325,20 @@ if (base + offset < base) { /* ... */ } // The pattern of `a + b < a`, and other
                                         // won't be instrumented (signed or unsigned types)
 ```
 
-```{eval-rst}
-.. list-table:: Overflow Pattern Types
-   :widths: 30 50
-   :header-rows: 1
+```{list-table} Overflow Pattern Types
+:widths: 30 50
+:header-rows: 1
 
-   * - Pattern
-     - Sanitizer
-   * - negated-unsigned-const
-     - unsigned-integer-overflow
-   * - unsigned-post-decr-while
-     - unsigned-integer-overflow
-   * - add-unsigned-overflow-test
-     - unsigned-integer-overflow
-   * - add-signed-overflow-test
-     - signed-integer-overflow
-
-
+* - Pattern
+  - Sanitizer
+* - negated-unsigned-const
+  - unsigned-integer-overflow
+* - unsigned-post-decr-while
+  - unsigned-integer-overflow
+* - add-unsigned-overflow-test
+  - unsigned-integer-overflow
+* - add-signed-overflow-test
+  - signed-integer-overflow
 ```
 
 Note: `add-signed-overflow-test` suppresses only the check for Undefined
@@ -470,8 +468,8 @@ There are several limitations:
 UndefinedBehaviorSanitizer's runtime is meant for testing purposes and its usage
 in production environment should be carefully considered from security
 perspective as it may compromise the security of the resulting executable.
-For security-sensitive applications consider using {ref}`Minimal Runtime
-<minimal-runtime>` or trap mode for all checks.
+For security-sensitive applications consider using {ref}`Minimal Runtime <minimal-runtime>`
+or trap mode for all checks.
 
 ## Supported Platforms
 
@@ -522,4 +520,3 @@ For a file called `/code/library/file.cpp`, here is what would be emitted:
   [What Every C Programmer Should Know About Undefined Behavior](http://blog.llvm.org/2011/05/what-every-c-programmer-should-know.html)
 - From John Regehr's *Embedded in Academia* blog:
   [A Guide to Undefined Behavior in C and C++](https://blog.regehr.org/archives/213)
-

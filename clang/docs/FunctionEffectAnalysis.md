@@ -2,7 +2,7 @@
 
 ```{contents}
 :depth: 3
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -245,16 +245,16 @@ following rules. Such functions:
    `nonblocking` or `nonallocating` attribute (or stronger).
 4. May not make direct calls to any other function, with the following exceptions:
 
-> 1. The callee is also explicitly declared with the same `nonblocking` or `nonallocating`
->    attribute (or stronger).
-> 2. The callee is defined in the same translation unit as the caller, does not have the `false`
->    form of the required attribute, and can be verified to have the same attribute or stronger,
->    according to these same rules.
-> 3. The callee is a built-in function that is known not to block or allocate.
-> 4. The callee is declared `noreturn` and, if compiling C++, the callee is also declared
->    `noexcept`. This special case excludes functions such as `abort()` and `std::terminate()`
->    from the analysis. (The reason for requiring `noexcept` in C++ is that a function declared
->    `noreturn` could be a wrapper for `throw`.)
+   1. The callee is also explicitly declared with the same `nonblocking` or `nonallocating`
+      attribute (or stronger).
+   2. The callee is defined in the same translation unit as the caller, does not have the `false`
+      form of the required attribute, and can be verified to have the same attribute or stronger,
+      according to these same rules.
+   3. The callee is a built-in function that is known not to block or allocate.
+   4. The callee is declared `noreturn` and, if compiling C++, the callee is also declared
+      `noexcept`. This special case excludes functions such as `abort()` and `std::terminate()`
+      from the analysis. (The reason for requiring `noexcept` in C++ is that a function declared
+      `noreturn` could be a wrapper for `throw`.)
 
 5. May not invoke or access an Objective-C method or property, since `objc_msgSend()` calls into
    the Objective-C runtime, which may allocate memory or otherwise block.
@@ -460,7 +460,7 @@ nonblocking_fp( R(*)(ArgTypes...) ) -> nonblocking_fp<R(ArgTypes...)>;
 
 // --
 
-// Wrap the function pointer in a functor which preserves ``nonblocking``.
+// Wrap the function pointer in a functor which preserves nonblocking.
 std::sort(vec.begin(), vec.end(), nonblocking_fp{ compare_elems });
 ```
 
@@ -494,4 +494,3 @@ are treated as built-in functions by Clang, which the diagnosis understands to b
 
 Much of the C++ standard library consists of inline templated functions which work well with
 inference. A small number of primitives may need explicit `nonblocking/nonallocating` attributes.
-

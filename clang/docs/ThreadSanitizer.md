@@ -368,57 +368,56 @@ $ TSAN_OPTIONS=enable_adaptive_delay=1 ./myapp
 
 ### Configuration Options
 
-```{eval-rst}
-.. list-table:: Adaptive Delay Options
-   :name: adaptive-delay-options-table
-   :header-rows: 1
-   :widths: 35 10 15 40
+```{list-table} Adaptive Delay Options
+:name: adaptive-delay-options-table
+:header-rows: 1
+:widths: 35 10 15 40
 
-   * - Flag
-     - Type
-     - Default
-     - Description
-   * - ``enable_adaptive_delay``
-     - bool
-     - false
-     - Enable adaptive delay injection to expose data races.
-   * - ``adaptive_delay_aggressiveness``
-     - int
-     - 25
-     - Controls delay injection intensity for race detection. Higher values inject
-       more delays to expose races. Value must be greater than 0. Suggested values:
-       10 (minimal), 50 (moderate), 200 (aggressive). This is a tuning parameter;
-       actual overhead varies by workload and platform.
-   * - ``adaptive_delay_relaxed_sample_rate``
-     - int
-     - 10000
-     - Sample 1 in N relaxed atomic operations for delay injection. Relaxed atomics
-       have minimal synchronization, so sampling helps avoid excessive overhead.
-   * - ``adaptive_delay_sync_atomic_sample_rate``
-     - int
-     - 100
-     - Sample 1 in N acquire/release/seq_cst atomic operations for delay injection.
-       These synchronizing atomics are more likely to expose races, so are sampled
-       more often.
-   * - ``adaptive_delay_mutex_sample_rate``
-     - int
-     - 10
-     - Sample 1 in N mutex/condition variable operations for delay injection. Mutex
-       ops are high-value synchronization points and are sampled frequently.
-   * - ``adaptive_delay_max_atomic``
-     - string
-     - ``"sleep_us=50"``
-     - Maximum delay for atomic operations. Format: ``"spin=N"`` (N spin cycles,
-       1 <= N <= 10,000), ``"yield"`` (one yield to the OS), or ``"sleep_us=N"``
-       (up to N microseconds). The delay is randomly chosen up to the specified
-       maximum N.
-   * - ``adaptive_delay_max_sync``
-     - string
-     - ``"sleep_us=500"``
-     - Maximum delay for synchronization operations (mutex and thread lifecycle
-       operations). Format: same as ``adaptive_delay_max_atomic``. Typically set
-       longer than atomic delays since these operations involve waking blocked threads
-       and may be more likely to expose races.
+* - Flag
+  - Type
+  - Default
+  - Description
+* - `enable_adaptive_delay`
+  - bool
+  - false
+  - Enable adaptive delay injection to expose data races.
+* - `adaptive_delay_aggressiveness`
+  - int
+  - 25
+  - Controls delay injection intensity for race detection. Higher values inject
+    more delays to expose races. Value must be greater than 0. Suggested values:
+    10 (minimal), 50 (moderate), 200 (aggressive). This is a tuning parameter;
+    actual overhead varies by workload and platform.
+* - `adaptive_delay_relaxed_sample_rate`
+  - int
+  - 10000
+  - Sample 1 in N relaxed atomic operations for delay injection. Relaxed atomics
+    have minimal synchronization, so sampling helps avoid excessive overhead.
+* - `adaptive_delay_sync_atomic_sample_rate`
+  - int
+  - 100
+  - Sample 1 in N acquire/release/seq_cst atomic operations for delay injection.
+    These synchronizing atomics are more likely to expose races, so are sampled
+    more often.
+* - `adaptive_delay_mutex_sample_rate`
+  - int
+  - 10
+  - Sample 1 in N mutex/condition variable operations for delay injection. Mutex
+    ops are high-value synchronization points and are sampled frequently.
+* - `adaptive_delay_max_atomic`
+  - string
+  - `"sleep_us=50"`
+  - Maximum delay for atomic operations. Format: `"spin=N"` (N spin cycles,
+    1 <= N <= 10,000), `"yield"` (one yield to the OS), or `"sleep_us=N"`
+    (up to N microseconds). The delay is randomly chosen up to the specified
+    maximum N.
+* - `adaptive_delay_max_sync`
+  - string
+  - `"sleep_us=500"`
+  - Maximum delay for synchronization operations (mutex and thread lifecycle
+    operations). Format: same as `adaptive_delay_max_atomic`. Typically set
+    longer than atomic delays since these operations involve waking blocked threads
+    and may be more likely to expose races.
 ```
 
 ### Examples
@@ -440,4 +439,3 @@ Increase sampling frequency for mutex operations:
 ```console
 $ TSAN_OPTIONS=enable_adaptive_delay=1:adaptive_delay_mutex_sample_rate=5 ./myapp
 ```
-

@@ -1,28 +1,36 @@
-% If you want to modify sections/contents permanently, you should modify both
-% ReleaseNotes.rst and ReleaseNotesTemplate.txt.
+---
+myst:
+  enable_extensions:
+    - attrs_block
+    - substitution
+---
 
-# Clang {{ release }} {{ ReleaseNotesTitle }}
+% If you want to modify sections/contents permanently, you should modify both
+% ReleaseNotes.md and ReleaseNotesTemplate.txt.
+
+{#clang-release-releasenotestitle}
+# Clang {{ (('(In-Progress) ' if env.app.tags.has('PreRelease') else '') ~ 'Release Notes') if env.config.project == 'Clang' else '|ReleaseNotesTitle|' }}
 
 ```{contents}
 :depth: 2
-:local: true
+:local:
 ```
 
 Written by the [LLVM Team](https://llvm.org/)
 
-::::{only} PreRelease
+````{only} PreRelease
 
-:::{warning}
-These are in-progress notes for the upcoming Clang {{ version }} release.
+```{warning}
+These are in-progress notes for the upcoming Clang {{env.config.version}} release.
 Release notes for previous releases can be found on
 [the Releases Page](https://llvm.org/releases/).
-:::
-::::
+```
+````
 
 ## Introduction
 
 This document contains the release notes for the Clang C/C++/Objective-C
-frontend, part of the LLVM Compiler Infrastructure, release {{ release }}. Here we
+frontend, part of the LLVM Compiler Infrastructure, release {{env.config.release}}. Here we
 describe the status of Clang in some detail, including major
 improvements from the previous release and new feature work. For the
 general LLVM release notes, see [the LLVM
@@ -195,7 +203,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   section 6.11.d states that "Variable length arrays and structures with
   flexible (or unsized) arrays are not supported."
 
-## What's New in Clang {{ release }}?
+{#what-s-new-in-clang-release}
+## What's New in Clang {{env.config.release}}?
 
 ### C++ Language Changes
 
@@ -374,11 +383,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   a hostname when generates the hashes. Known issues -- does not remap the
   source file pathes within PCH/PCM files.
 - New `-cl` option `/experimental:deterministic` added to match CL's option.
-  This enables warning emission on usage of non-deterministic macros \_\_DATE\_\_,
-  \_\_TIME\_\_ and \_\_TIMESTAMP\_\_ and provides reproducable COFF's timestamp for
+  This enables warning emission on usage of non-deterministic macros `__DATE__`,
+  `__TIME__` and `__TIMESTAMP__` and provides reproducable COFF's timestamp for
   the output object files.
 - New `-cl` option `/d1nodatetime` added to match CL's option. This option
-  undefines the standard macros \_\_DATE\_\_, \_\_TIME\_\_ and \_\_TIMESTAMP\_\_ to allow
+  undefines the standard macros `__DATE__`, `__TIME__` and `__TIMESTAMP__` to allow
   reproducable builds. These macros can be redefined from the command line if
   necessary. `/d1nodatetime-` can be used to turn this feature off if
   necessary to override the common build settings.
@@ -398,9 +407,9 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   normalized in favor of the target system (same as the preprocessor does
   for the file macros) and allows the reproducable IDs on any build system.
 - `-fprofile-update=atomic` will now promote counter updates out of loops,
-  similar to the non-atomic case (\[#202487\](<https://github.com/llvm/llvm-project/pull/202487>)).
+  similar to the non-atomic case ([#202487](https://github.com/llvm/llvm-project/pull/202487)).
 - The `-cl` `/Brepro` option was modified to match the original CL's option
-  and now defines the standard macros \_\_DATE\_\_, \_\_TIME\_\_ and \_\_TIMESTAMP\_\_ to
+  and now defines the standard macros `__DATE__`, `__TIME__` and `__TIMESTAMP__` to
   "1". The previous functionality remains unchanged.
 
 ### Removed Compiler Flags
@@ -686,7 +695,7 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Clang now emits an error when returning an initializer list from a lambda
   with an explicit return type of void. The diagnostic now correctly refers
   to "lambda" instead of "block". (#GH188661)
-- Fixed a crash on \_BitInt(N) arrays where 129 ≤ N ≤ 192 due to incorrect array filler lowering. (#GH189643)
+- Fixed a crash on `_BitInt(N)` arrays where 129 ≤ N ≤ 192 due to incorrect array filler lowering. (#GH189643)
 - Fixed the behavior in C23 of `auto`, by emitting an error when an array type is specified for a `char *`. (#GH162694)
 - Fixed an issue where an assert was thrown instead of an error if no vulkan env was specified with `--triple spirv`. (#GH189964)
 - Fixed incorrect rejection of `auto` with reordered declaration specifiers in C23. (#GH164121)
@@ -864,8 +873,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 
 - Support has been added for the following processors (-mcpu identifiers in parenthesis):
 
-* Arm AGI CPU (armagicpu).
-* Hisilicon hip12 core (hip12).
+  - Arm AGI CPU (armagicpu).
+  - Hisilicon hip12 core (hip12).
 
 #### Android Support
 
@@ -882,19 +891,11 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
   `-fwinx64-eh-unwindv2=` flag is deprecated; it is still accepted and mapped
   onto the new flag as follows:
 
-  ```{eval-rst}
-  .. list-table::
-     :header-rows: 1
-
-     * - Legacy ``-fwinx64-eh-unwindv2=``
-       - New ``-fwinx64-eh-unwind=``
-     * - ``disabled``
-       - ``v1`` (default; no flag forwarded)
-     * - ``best-effort``
-       - ``v2-best-effort``
-     * - ``required``
-       - ``v2-required``
-  ```
+  | Legacy `-fwinx64-eh-unwindv2=` | New `-fwinx64-eh-unwind=` |
+  | --- | --- |
+  | `disabled` | `v1` (default; no flag forwarded) |
+  | `best-effort` | `v2-best-effort` |
+  | `required` | `v2-required` |
 
   The MSVC-compatible `/d2epilogunwind` and `/d2epilogunwindrequirev2`
   options map to `v2-best-effort` and `v2-required` respectively.
@@ -911,8 +912,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 #### RISC-V Support
 
 - Tenstorrent Ascalon D8 was renamed to Ascalon X. Use `tt-ascalon-x` with `-mcpu` or `-mtune`.
-- Intrinsics were added for the 'Zvabd\` (RISC-V Integer Vector Absolute Difference) extension.
-- Intrinsics were added for the 'Zvzip\` (Reordering Structured Data in Vector Registers) extension.
+- Intrinsics were added for the `Zvabd` (RISC-V Integer Vector Absolute Difference) extension.
+- Intrinsics were added for the `Zvzip` (Reordering Structured Data in Vector Registers) extension.
 - A new `-mtune` syntax was added to support processor-specific tuning feature string
   Currently this new syntax is gated by the `-mexperimental-mtune-syntax` flag.
 
@@ -1003,8 +1004,8 @@ latest release, please see the [Clang Web Site](https://clang.llvm.org) or the
 - Fix crash in clang_getBinaryOperatorKindSpelling and clang_getUnaryOperatorKindSpelling
 - The clang_Module_getASTFile API is deprecated and now always returns nullptr
 - The clang_Cursor_getCommentRange API will now return a comment range for macro definitions that have documentation comments.
-- Added CXType_PredefinedSugar for \_\_ptrdiff_t, \_\_size_t, and
-  \_\_signed_size_t types, which are no longer exposed as
+- Added CXType_PredefinedSugar for `__ptrdiff_t`, `__size_t`, and
+  `__signed_size_t` types, which are no longer exposed as
   CXType_Unexposed.
 
 ### Code Completion
@@ -1126,4 +1127,3 @@ tree.
 
 If you have any questions or comments about Clang, please feel free to
 contact us on the [Discourse forums (Clang Frontend category)](https://discourse.llvm.org/c/clang/6).
-

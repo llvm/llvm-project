@@ -444,7 +444,7 @@ helpers. Otherwise, best practice is to avoid explicitly acquiring a capability
 multiple times within the same function, and letting the analysis produce
 warnings on double-acquisition attempts.
 
-(scoped-capability)=
+(scoped_capability)=
 
 ### SCOPED_CAPABILITY
 
@@ -544,12 +544,14 @@ supported yet.
 
 ### Warning flags
 
-- `-Wthread-safety`: Umbrella flag which turns on the following:
+- `-Wthread-safety`:  Umbrella flag which turns on the following:
 
   - `-Wthread-safety-attributes`: Semantic checks for thread safety attributes.
   - `-Wthread-safety-analysis`: The core analysis.
-  - `-Wthread-safety-precise`: Requires that mutex expressions match precisely.
-    : This warning can be disabled for code which has a lot of aliases.
+
+  `-Wthread-safety-precise`: Requires that mutex expressions match precisely.
+  : This warning can be disabled for code which has a lot of aliases.
+
   - `-Wthread-safety-reference`: Checks when guarded members are passed or
     returned by reference.
 
@@ -652,16 +654,16 @@ by passing `-Wthread-safety-negative`.
 
 ## Frequently Asked Questions
 
-17. Should I put attributes in the header file, or in the .cc/.cpp/.cxx file?
+(Q) Should I put attributes in the header file, or in the .cc/.cpp/.cxx file?
 
 (A) Attributes are part of the formal interface of a function, and should
 always go in the header, where they are visible to anything that includes
 the header. Attributes in the `.cpp` file are not visible outside of the
 immediate translation unit, which leads to false negatives and false positives.
 
-17. "*Mutex is not locked on every path through here?*" What does that mean?
+(Q) "*Mutex is not locked on every path through here?*" What does that mean?
 
-1) See {ref}`conditional_locks`, below.
+(A) See {ref}`conditional_locks`, below.
 
 (limitations)=
 
@@ -730,7 +732,7 @@ annotations to an existing code base. The workaround is to define `getMu()`
 as a fake getter method, which is provided only for the benefit of thread
 safety analysis.
 
-(conditional-locks)=
+(conditional_locks)=
 
 ### No conditionally held locks.
 
@@ -1117,4 +1119,3 @@ public:
 
 #endif  // THREAD_SAFETY_ANALYSIS_MUTEX_H
 ```
-

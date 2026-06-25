@@ -18,12 +18,12 @@ This document describes the required and optional components in a
 complete toolchain, where to find them, and the supported versions
 and limitations of each option.
 
-:::{warning}
+```{warning}
 This document currently describes Clang configurations on POSIX-like
 operating systems with the GCC-compatible `clang` driver. When
 targeting Windows with the MSVC-compatible `clang-cl` driver, some
 of the details are different.
-:::
+```
 
 ## Tools
 
@@ -126,11 +126,11 @@ The set of implicitly-linked libraries depend on the language mode. As a
 consequence, you should use `clang++` when linking C++ programs in order
 to ensure the C++ runtimes are provided.
 
-:::{note}
+```{note}
 There may exist other implementations for these components not described
 below. Please let us know how well those other implementations work with
 Clang so they can be added to this list!
-:::
+```
 
 % FIXME: Describe Objective-C runtime libraries
 
@@ -193,12 +193,12 @@ libgcc_s does not provide an implementation of an atomics library. Instead,
 [GCC's libatomic library](https://gcc.gnu.org/wiki/Atomic/GCCMM) can be
 used to supply these when using libgcc_s.
 
-:::{note}
+```{note}
 Clang does not currently automatically link against libatomic when using
 libgcc_s. You may need to manually add `-latomic` to support this
 configuration when using non-native atomic operations (if you see link errors
 referring to `__atomic_*` functions).
-:::
+```
 
 ### Unwind library
 
@@ -281,11 +281,11 @@ libsupc++ is GCC's implementation of this specification. However, this
 library is only used when libstdc++ is linked statically. The dynamic
 library version of libstdc++ contains a copy of libsupc++.
 
-:::{note}
+```{note}
 Clang does not currently automatically link against libsupc++ when statically
 linking libstdc++. You may need to manually add `-lsupc++` to support this
 configuration when using `-static` or `-static-libstdc++`.
-:::
+```
 
 #### libcxxrt (PathScale)
 
@@ -319,4 +319,3 @@ You can instruct Clang to use libstdc++ with the `-stdlib=libstdc++` flag.
 
 Users can point to their GCC installation by using the `-gcc-toolchain` or by
 using `-gcc-install-dir` flag.
-

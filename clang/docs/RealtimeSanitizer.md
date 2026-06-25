@@ -149,51 +149,50 @@ You can see all sanitizer options (some of which are unsupported) by using the `
 
 A **partial** list of flags RealtimeSanitizer respects:
 
-```{eval-rst}
-.. list-table:: Run-time Flags
-   :widths: 20 10 10 70
-   :header-rows: 1
+```{list-table} Run-time Flags
+:widths: 20 10 10 70
+:header-rows: 1
 
-   * - Flag name
-     - Default value
-     - Type
-     - Short description
-   * - ``halt_on_error``
-     - ``true``
-     - boolean
-     - Exit after first reported error.
-   * - ``suppress_equal_stacks``
-     - ``true``
-     - boolean
-     - If true, suppress duplicate reports (i.e. only print each unique error once). Only particularly useful when ``halt_on_error=false``.
-   * - ``print_stats_on_exit``
-     - ``false``
-     - boolean
-     - Print stats on exit. Includes total and unique errors.
-   * - ``color``
-     - ``"auto"``
-     - string
-     - Colorize reports: (always|never|auto).
-   * - ``fast_unwind_on_fatal``
-     - ``false``
-     - boolean
-     - If available, use the fast frame-pointer-based unwinder on detected errors. If true, ensure the code under test has been compiled with frame pointers with ``-fno-omit-frame-pointers`` or similar.
-   * - ``abort_on_error``
-     - OS dependent
-     - boolean
-     - If true, the tool calls ``abort()`` instead of ``_exit()`` after printing the error report. On some OSes (macOS, for example) this is beneficial because a better stack trace is emitted on crash.
-   * - ``symbolize``
-     - ``true``
-     - boolean
-     - If set, use the symbolizer to turn virtual addresses to file/line locations. If false, can greatly speed up the error reporting.
-   * - ``suppressions``
-     - ``""``
-     - path
-     - If set to a valid suppressions file, will suppress issue reporting. See details in `Disabling and Suppressing`_.
-   * - ``verify_interceptors``
-     - ``true``
-     - boolean
-     - If true, verifies interceptors are working at initialization. The program will abort with error ``==ERROR: Interceptors are not working. This may be because RealtimeSanitizer is loaded too late (e.g. via dlopen)`` if an issue is detected.
+* - Flag name
+  - Default value
+  - Type
+  - Short description
+* - `halt_on_error`
+  - `true`
+  - boolean
+  - Exit after first reported error.
+* - `suppress_equal_stacks`
+  - `true`
+  - boolean
+  - If true, suppress duplicate reports (i.e. only print each unique error once). Only particularly useful when `halt_on_error=false`.
+* - `print_stats_on_exit`
+  - `false`
+  - boolean
+  - Print stats on exit. Includes total and unique errors.
+* - `color`
+  - `"auto"`
+  - string
+  - Colorize reports: (always|never|auto).
+* - `fast_unwind_on_fatal`
+  - `false`
+  - boolean
+  - If available, use the fast frame-pointer-based unwinder on detected errors. If true, ensure the code under test has been compiled with frame pointers with `-fno-omit-frame-pointers` or similar.
+* - `abort_on_error`
+  - OS dependent
+  - boolean
+  - If true, the tool calls `abort()` instead of `_exit()` after printing the error report. On some OSes (macOS, for example) this is beneficial because a better stack trace is emitted on crash.
+* - `symbolize`
+  - `true`
+  - boolean
+  - If set, use the symbolizer to turn virtual addresses to file/line locations. If false, can greatly speed up the error reporting.
+* - `suppressions`
+  - `""`
+  - path
+  - If set to a valid suppressions file, will suppress issue reporting. See details in [Disabling and Suppressing](#disabling-and-suppressing).
+* - `verify_interceptors`
+  - `true`
+  - boolean
+  - If true, verifies interceptors are working at initialization. The program will abort with error `==ERROR: Interceptors are not working. This may be because RealtimeSanitizer is loaded too late (e.g. via dlopen)` if an issue is detected.
 ```
 
 Some issues with flags can be debugged using the `verbosity=$NUM` flag:
@@ -249,31 +248,30 @@ There are multiple ways to disable error reporting when using RealtimeSanitizer.
 
 In general, `ScopedDisabler` should be preferred, as it is the most performant.
 
-```{eval-rst}
-.. list-table:: Suppression methods
-   :widths: 30 15 15 10 70
-   :header-rows: 1
+```{list-table} Suppression methods
+:widths: 30 15 15 10 70
+:header-rows: 1
 
-   * - Method
-     - Specified at?
-     - Scope
-     - Run-time cost
-     - Description
-   * - ``ScopedDisabler``
-     - Compile-time
-     - Stack
-     - Very low
-     - Violations are ignored for the lifetime of the ``ScopedDisabler`` object.
-   * - ``function-name-matches`` suppression
-     - Run-time
-     - Single function
-     - Medium
-     - Suppresses intercepted and ``[[clang::blocking]]`` function calls by name.
-   * - ``call-stack-contains`` suppression
-     - Run-time
-     - Stack
-     - High
-     - Suppresses any stack trace containing the specified pattern.
+* - Method
+  - Specified at?
+  - Scope
+  - Run-time cost
+  - Description
+* - `ScopedDisabler`
+  - Compile-time
+  - Stack
+  - Very low
+  - Violations are ignored for the lifetime of the `ScopedDisabler` object.
+* - `function-name-matches` suppression
+  - Run-time
+  - Single function
+  - Medium
+  - Suppresses intercepted and `[[clang::blocking]]` function calls by name.
+* - `call-stack-contains` suppression
+  - Run-time
+  - Stack
+  - High
+  - Suppresses any stack trace containing the specified pattern.
 
 ```
 
@@ -346,4 +344,3 @@ Clang provides the pre-processor macro `__has_feature` which may be used to dete
 ...
 #endif
 ```
-

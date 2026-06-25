@@ -1,7 +1,7 @@
 # SanitizerCoverage
 
 ```{contents}
-:local: true
+:local:
 ```
 
 ## Introduction
@@ -618,4 +618,3 @@ This can be changed with `ASAN_OPTIONS=coverage_dir=/path`:
 -rw-r----- 1 kcc eng 4 Nov 27 12:21 a.out.22673.sancov
 -rw-r----- 1 kcc eng 8 Nov 27 12:21 a.out.22679.sancov
 ```
-

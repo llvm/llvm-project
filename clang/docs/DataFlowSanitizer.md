@@ -22,7 +22,7 @@ detect application-specific issues within their own code.
 ## How to build libc++ with DFSan
 
 DFSan requires either all of your code to be instrumented or for uninstrumented
-functions to be listed as `uninstrumented` in the [ABI list].
+functions to be listed as `uninstrumented` in the {ref}`ABI list`.
 
 If you'd like to have instrumented libc++ functions, then you need to build it
 with DFSan instrumentation from source. Here is an example of how to build
@@ -57,6 +57,7 @@ For further information about each function, please refer to the header
 file.
 
 (abi-list)=
+(ABI list)=
 
 ### ABI List
 
@@ -376,4 +377,3 @@ x86_64 Linux.
 ## Design
 
 Please refer to the {doc}`design document<DataFlowSanitizerDesign>`.
-
