@@ -88,6 +88,9 @@ C++ Specific Potentially Breaking Changes
 - Clang now rejects nested local classes defined in a different
   block scope than their parent class. (#GH193472)
 
+- Clang now emits errors for coroutine `await_suspend` functions whose return type is not
+  one of `void`, `bool`, or `std::coroutine_handle`.
+
 ABI Changes in This Version
 ---------------------------
 
