@@ -96,8 +96,7 @@ SwiftArrayNativeBufferHandler::SwiftArrayNativeBufferHandler(
   if (opt_size)
     m_element_size = *opt_size;
   auto opt_stride = elem_type.GetByteStride(process_sp.get());
-  if (opt_stride)
-    m_element_stride = *opt_stride;
+  m_element_stride = opt_stride.value_or(m_element_size);
   size_t ptr_size = process_sp->GetAddressByteSize();
   Status error;
   lldb::addr_t next_read = native_ptr;
