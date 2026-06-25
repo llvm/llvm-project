@@ -817,6 +817,10 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
   if (!F->hasLocalLinkage())
     return nullptr;
 
+  // Ensure function definition is available for interprocedural analysis.
+  if (!F->isDefinitionExact())
+    return nullptr;
+
   // Don't promote arguments for variadic functions. Adding, removing, or
   // changing non-pack parameters can change the classification of pack
   // parameters. Frontends encode that classification at the call site in the
