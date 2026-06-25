@@ -342,6 +342,20 @@ void FactsGenerator::VisitCastExpr(const CastExpr *CE) {
     if (Src && Dest && Dest->getLength() == Src->getLength())
       flow(Dest, Src, /*Kill=*/true);
     return;
+  case CK_LValueToRValueBitCast:
+  case CK_NonAtomicToAtomic:
+  case CK_AtomicToNonAtomic: {
+    // `__builtin_bit_cast`/`std::bit_cast` of a pointer, and
+    // wrapping/unwrapping `_Atomic(T*)`, preserve the pointer value, so
+    // propagate the borrow. The operand may be a glvalue, so strip its outer
+    // lvalue level first. A bit-cast that materializes a pointer from a
+    // non-pointer representation has no matching source origin and is
+    // untracked.
+    OriginList *RVSrc = getRValueOrigins(SubExpr, Src);
+    if (RVSrc && Dest->getLength() == RVSrc->getLength())
+      flow(Dest, RVSrc, /*Kill=*/true);
+    return;
+  }
   default:
     return;
   }
@@ -370,6 +384,21 @@ void FactsGenerator::VisitUnaryOperator(const UnaryOperator *UO) {
   case UO_Deref: {
     const Expr *SubExpr = UO->getSubExpr();
     killAndFlowOrigin(*UO, *SubExpr);
+    return;
+  }
+  case UO_PreInc:
+  case UO_PostInc:
+  case UO_PreDec:
+  case UO_PostDec: {
+    // Inc/dec keeps a pointer in the same allocation, so the result carries the
+    // operand's loans. Peel the operand's storage origin when the *result* is a
+    // prvalue (post-inc/dec, or any form in C) -- the inverse of
+    // getRValueOrigins, which peels when its own argument is a glvalue.
+    if (!UO->getType()->isPointerType())
+      return;
+    OriginList *SubList = getOriginsList(*UO->getSubExpr());
+    flow(getOriginsList(*UO),
+         UO->isGLValue() ? SubList : SubList->peelOuterOrigin(), /*Kill=*/true);
     return;
   }
   default:
@@ -468,12 +497,42 @@ void FactsGenerator::handlePointerArithmetic(const BinaryOperator *BO) {
 }
 
 void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
+  if (BO->getOpcode() == BO_PtrMemD || BO->getOpcode() == BO_PtrMemI) {
+    // `obj.*pm` / `objptr->*pm` names a member of the object, so a borrow of it
+    // borrows the object; flow the object's origin into the result. For `.*`
+    // the object is the LHS; for `->*` it is the LHS pointer's pointee.
+    //
+    // Only the result's outer (storage) origin relates to the object: borrowing
+    // the member borrows the object's storage. Deeper levels of the result (a
+    // pointer/view member's own pointee) are the member's value, with no
+    // counterpart in the object's origin -- so the lists may differ in length
+    // and we flow just the top level, leaving the member's value untouched.
+    OriginList *Dst = getOriginsList(*BO);
+    OriginList *ObjSrc =
+        BO->getOpcode() == BO_PtrMemD
+            ? getOriginsList(*BO->getLHS())
+            : getRValueOrigins(BO->getLHS(), getOriginsList(*BO->getLHS()));
+    if (Dst && ObjSrc)
+      CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
+          Dst->getOuterOriginID(), ObjSrc->getOuterOriginID(), /*Kill=*/true));
+    handleUse(BO->getLHS());
+    return;
+  }
   if (BO->getOpcode() == BO_Comma) {
     killAndFlowOrigin(*BO, *BO->getRHS());
     return;
   }
-  if (BO->isCompoundAssignmentOp())
+  if (BO->isCompoundAssignmentOp()) {
+    // A pointer compound additive assignment (`p += n`) carries the LHS's loans
+    // like inc/dec above; in C the result is a prvalue, so peel its outer
+    // (storage) origin.
+    if (BO->getType()->isPointerType()) {
+      OriginList *LHSList = getOriginsList(*BO->getLHS());
+      flow(getOriginsList(*BO), IsCMode ? LHSList->peelOuterOrigin() : LHSList,
+           /*Kill=*/true);
+    }
     return;
+  }
   if (BO->getType()->isPointerType() && BO->isAdditiveOp())
     handlePointerArithmetic(BO);
   handleUse(BO->getRHS());
@@ -482,10 +541,13 @@ void FactsGenerator::VisitBinaryOperator(const BinaryOperator *BO) {
   // TODO: Handle assignments involving dereference like `*p = q`.
 }
 
-void FactsGenerator::VisitConditionalOperator(const ConditionalOperator *CO) {
+void FactsGenerator::VisitAbstractConditionalOperator(
+    const AbstractConditionalOperator *CO) {
   if (!hasOrigins(CO))
     return;
 
+  // For the GNU binary conditional `a ?: b`, getTrueExpr() is the
+  // OpaqueValueExpr wrapping the common subexpression.
   const Expr *TrueExpr = CO->getTrueExpr();
   const Expr *FalseExpr = CO->getFalseExpr();
 
@@ -500,13 +562,17 @@ void FactsGenerator::VisitConditionalOperator(const ConditionalOperator *CO) {
   case 0:
     return;
   case 1: {
-    TBHasEdge = llvm::any_of(**Preds.begin(),
-                             [ExpectedStmt = TrueExpr->IgnoreParenImpCasts()](
-                                 const CFGElement &Elt) {
-                               if (auto CS = Elt.getAs<CFGStmt>())
-                                 return CS->getStmt() == ExpectedStmt;
-                               return false;
-                             });
+    // For `a ?: b`, getTrueExpr() is the OpaqueValueExpr; the common
+    // subexpression it wraps is what appears in the predecessor block.
+    const Expr *TrueArm = TrueExpr->IgnoreParenImpCasts();
+    if (const auto *OVE = dyn_cast<OpaqueValueExpr>(TrueArm))
+      if (const Expr *Src = OVE->getSourceExpr())
+        TrueArm = Src->IgnoreParenImpCasts();
+    TBHasEdge = llvm::any_of(**Preds.begin(), [TrueArm](const CFGElement &Elt) {
+      if (auto CS = Elt.getAs<CFGStmt>())
+        return CS->getStmt() == TrueArm;
+      return false;
+    });
     FBHasEdge = !TBHasEdge;
     break;
   }

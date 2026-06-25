@@ -925,8 +925,8 @@ public:
       // OpenMP special variables
       OmpInVar, OmpOrigVar, OmpOutVar, OmpPrivVar,
       // OpenMP miscellaneous flags
-      OmpCommonBlock, OmpReduction, OmpInReduction, OmpAligned, OmpNontemporal,
-      OmpAllocate, OmpDeclarativeAllocateDirective,
+      OmpReserved, OmpCommonBlock, OmpReduction, OmpInReduction, OmpAligned,
+      OmpNontemporal, OmpAllocate, OmpDeclarativeAllocateDirective,
       OmpExecutableAllocateDirective, OmpDeclareSimd, OmpDeclareTarget,
       OmpThreadprivate, OmpDeclareReduction, OmpFlushed, OmpCriticalLock,
       OmpIfSpecified, OmpNone, OmpPreDetermined, OmpExplicit, OmpImplicit,

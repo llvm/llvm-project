@@ -1112,7 +1112,7 @@ llvm::SmallBitVector SubViewOp::getDroppedDims() {
 
 OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
   // All forms of folding require a known index.
-  auto index = llvm::dyn_cast_if_present<IntegerAttr>(adaptor.getIndex());
+  std::optional<int64_t> index = getConstantIndex();
   if (!index)
     return {};
 
@@ -1123,40 +1123,38 @@ OpFoldResult DimOp::fold(FoldAdaptor adaptor) {
 
   // Out of bound indices produce undefined behavior but are still valid IR.
   // Don't choke on them.
-  int64_t indexVal = index.getInt();
+  int64_t indexVal = index.value();
   if (indexVal < 0 || indexVal >= memrefType.getRank())
     return {};
 
   // Fold if the shape extent along the given index is known.
-  if (!memrefType.isDynamicDim(index.getInt())) {
+  if (!memrefType.isDynamicDim(indexVal)) {
     Builder builder(getContext());
-    return builder.getIndexAttr(memrefType.getShape()[index.getInt()]);
+    return builder.getIndexAttr(memrefType.getShape()[indexVal]);
   }
 
   // The size at the given index is now known to be a dynamic size.
-  unsigned unsignedIndex = index.getValue().getZExtValue();
-
   // Fold dim to the size argument for an `AllocOp`, `ViewOp`, or `SubViewOp`.
   Operation *definingOp = getSource().getDefiningOp();
 
   if (auto alloc = dyn_cast_or_null<AllocOp>(definingOp))
     return *(alloc.getDynamicSizes().begin() +
-             memrefType.getDynamicDimIndex(unsignedIndex));
+             memrefType.getDynamicDimIndex(indexVal));
 
   if (auto alloca = dyn_cast_or_null<AllocaOp>(definingOp))
     return *(alloca.getDynamicSizes().begin() +
-             memrefType.getDynamicDimIndex(unsignedIndex));
+             memrefType.getDynamicDimIndex(indexVal));
 
   if (auto view = dyn_cast_or_null<ViewOp>(definingOp))
     return *(view.getDynamicSizes().begin() +
-             memrefType.getDynamicDimIndex(unsignedIndex));
+             memrefType.getDynamicDimIndex(indexVal));
 
   if (auto subview = dyn_cast_or_null<SubViewOp>(definingOp)) {
     // The result dim is dynamic (the static case was handled above). Dropped
     // dims always have static size 1, so dynamic source sizes are never
     // dropped and map in order to the dynamic result dims. Find the k-th
     // dynamic source size, where k is the dynamic dim index of the result dim.
-    unsigned dynamicResultDimIdx = memrefType.getDynamicDimIndex(unsignedIndex);
+    unsigned dynamicResultDimIdx = memrefType.getDynamicDimIndex(indexVal);
     unsigned dynamicIdx = 0;
     for (OpFoldResult size : subview.getMixedSizes()) {
       if (llvm::isa<Attribute>(size))

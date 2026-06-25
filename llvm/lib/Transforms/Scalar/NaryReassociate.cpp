@@ -442,7 +442,7 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
   // sizeof(S) = 100 is indivisible by sizeof(int64) = 8.
   //
   // TODO: bail out on this case for now. We could emit uglygep.
-  if (IndexedSize % ElementSize != 0)
+  if (ElementSize == 0 || IndexedSize % ElementSize != 0)
     return nullptr;
 
   // NewGEP = &Candidate[RHS * (sizeof(IndexedType) / sizeof(Candidate[0])));
