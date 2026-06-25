@@ -2507,8 +2507,60 @@ static Instruction *foldFPtoI(Instruction &FI, InstCombiner &IC) {
   return nullptr;
 }
 
+/// fptoui (fdiv (uitofp X), C) --> udiv X, C
+///
+/// This is safe if C > 0 and the integer width N <= the FP mantissa width p.
+/// Then uitofp is exact and the rounded quotient never crosses an integer,
+/// i.e. floor(rne_p(X/C)) == floor(X/C).
+/// See #205305 for detailed reasoning.
+static Instruction *foldFPToUIOfFDiv(FPToUIInst &FI, InstCombinerImpl &IC) {
+  auto *FDiv = dyn_cast<BinaryOperator>(FI.getOperand(0));
+  if (!FDiv || FDiv->getOpcode() != Instruction::FDiv || !FDiv->hasOneUse())
+    return nullptr;
+
+  auto *UIToFP = dyn_cast<UIToFPInst>(FDiv->getOperand(0));
+  if (!UIToFP || !UIToFP->hasOneUse())
+    return nullptr;
+  Value *X = UIToFP->getOperand(0);
+  Type *IntTy = X->getType();
+  if (!IntTy->isIntOrIntVectorTy())
+    return nullptr;
+
+  if (FI.getType() != IntTy)
+    return nullptr;
+
+  Type *FPTy = FDiv->getType();
+  unsigned IntWidth = IntTy->getScalarSizeInBits();
+  int MantissaWidth = FPTy->getScalarType()->getFPMantissaWidth();
+  if (MantissaWidth < 0 || IntWidth > static_cast<unsigned>(MantissaWidth))
+    return nullptr;
+
+  auto *CFP = dyn_cast<ConstantFP>(FDiv->getOperand(1));
+  if (!CFP)
+    return nullptr;
+
+  APFloat APF = CFP->getValueAPF();
+  if (!APF.isInteger())
+    return nullptr;
+
+  APSInt Divisor(IntTy->getScalarSizeInBits());
+  bool IsExact = false;
+  APF.convertToInteger(Divisor, APFloat::rmTowardZero, &IsExact);
+  if (!IsExact)
+    return nullptr;
+
+  if (Divisor.isZero())
+    return nullptr;
+
+  Constant *C = ConstantInt::get(IntTy, Divisor);
+  return BinaryOperator::CreateUDiv(X, C);
+}
+
 Instruction *InstCombinerImpl::visitFPToUI(FPToUIInst &FI) {
   if (Instruction *I = foldItoFPtoI(FI))
+    return I;
+
+  if (Instruction *I = foldFPToUIOfFDiv(FI, *this))
     return I;
 
   if (Instruction *I = foldFPtoI(FI, *this))
