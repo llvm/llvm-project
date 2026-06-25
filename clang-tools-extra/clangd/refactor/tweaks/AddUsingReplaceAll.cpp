@@ -367,8 +367,11 @@ Expected<Tweak::Effect> AddUsingReplaceAll::apply(const Selection &Inputs) {
 
   auto InsertionPoint = findInsertionPoint(Inputs, QualifierToRemove,
                                            SpelledName, MustInsertAfterLoc);
-  if (!InsertionPoint)
-    return InsertionPoint.takeError();
+  if (!InsertionPoint) {
+    std::string Msg = llvm::toString(InsertionPoint.takeError());
+    elog("AddUsingReplaceAll: {0}", Msg);
+    return error(Msg);
+  }
 
   if (InsertionPoint->Loc.isValid()) {
     std::string UsingText;
@@ -386,10 +389,14 @@ Expected<Tweak::Effect> AddUsingReplaceAll::apply(const Selection &Inputs) {
       return std::move(Err);
   }
 
+  bool HasReplacementError = false;
+  std::string ReplacementError;
   for (const auto &D : Inputs.AST->getLocalTopLevelDecls()) {
     findExplicitReferences(
         D,
         [&](ReferenceLoc Ref) {
+          if (HasReplacementError)
+            return;
           if (!Ref.Qualifier || Ref.Targets.empty() || Ref.IsDecl)
             return;
           if (!getNamespaceFromQualifier(
@@ -428,12 +435,19 @@ Expected<Tweak::Effect> AddUsingReplaceAll::apply(const Selection &Inputs) {
           if (BeginOffset >= EndOffset)
             return;
 
-          if (Repls.add(tooling::Replacement(SM, QualifierLoc,
-                                             EndOffset - BeginOffset, "")))
+          if (auto Err = Repls.add(tooling::Replacement(
+                  SM, QualifierLoc, EndOffset - BeginOffset, ""))) {
+            ReplacementError = llvm::toString(std::move(Err));
+            elog("AddUsingReplaceAll: {0}", ReplacementError);
+            HasReplacementError = true;
             return;
+          }
         },
         Inputs.AST->getHeuristicResolver());
   }
+
+  if (HasReplacementError)
+    return error(ReplacementError);
 
   return Effect::mainFileEdit(SM, std::move(Repls));
 }
