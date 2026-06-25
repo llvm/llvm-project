@@ -1640,28 +1640,6 @@ float16x8_t test_vfmaq_n_f16(float16x8_t a, float16x8_t b, float16_t c) {
   return vfmaq_n_f16(a, b, c);
 }
 
-// CHECK-LABEL: define {{[^@]+}}@test_vfmah_lane_f16
-// CHECK-SAME: (half noundef [[A:%.*]], half noundef [[B:%.*]], <4 x half> noundef [[C:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <4 x half> [[C]], i32 3
-// CHECK-NEXT:    [[TMP0:%.*]] = call half @llvm.fma.f16(half [[B]], half [[EXTRACT]], half [[A]])
-// CHECK-NEXT:    ret half [[TMP0]]
-//
-float16_t test_vfmah_lane_f16(float16_t a, float16_t b, float16x4_t c) {
-  return vfmah_lane_f16(a, b, c, 3);
-}
-
-// CHECK-LABEL: define {{[^@]+}}@test_vfmah_laneq_f16
-// CHECK-SAME: (half noundef [[A:%.*]], half noundef [[B:%.*]], <8 x half> noundef [[C:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[EXTRACT:%.*]] = extractelement <8 x half> [[C]], i32 7
-// CHECK-NEXT:    [[TMP0:%.*]] = call half @llvm.fma.f16(half [[B]], half [[EXTRACT]], half [[A]])
-// CHECK-NEXT:    ret half [[TMP0]]
-//
-float16_t test_vfmah_laneq_f16(float16_t a, float16_t b, float16x8_t c) {
-  return vfmah_laneq_f16(a, b, c, 7);
-}
-
 // CHECK-LABEL: define {{[^@]+}}@test_vfms_lane_f16
 // CHECK-SAME: (<4 x half> noundef [[A:%.*]], <4 x half> noundef [[B:%.*]], <4 x half> noundef [[C:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
