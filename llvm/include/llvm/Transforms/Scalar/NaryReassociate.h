@@ -93,6 +93,7 @@ class DominatorTree;
 class Function;
 class GetElementPtrInst;
 class Instruction;
+class IntrinsicInst;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 class Type;
