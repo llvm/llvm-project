@@ -296,6 +296,10 @@ def FPTRUNC_ROUND_F32_F64_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
   (ins VReg_64:$src0, i32imm:$round)>;
 } // End Uses = [MODE, EXEC]
 
+let SubtargetPredicate = HasSALUFloatInsts, Uses = [MODE] in
+def FPTRUNC_ROUND_F16_F32_SALU_PSEUDO : SPseudoInstSI <(outs SReg_32:$sdst),
+  (ins SReg_32:$src0, i32imm:$round)>;
+
 let True16Predicate = NotHasTrue16BitInsts in
 def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 SupportedRoundMode:$round))),
      (FPTRUNC_ROUND_F16_F32_PSEUDO $src0, (as_hw_round_mode $round))>;
@@ -307,6 +311,10 @@ def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 SupportedRoundMode:$round))),
 let True16Predicate = UseRealTrue16Insts in
 def : GCNPat <(f16 (fptrunc_round (f32 (VOP3OpSelMods f32:$src0, i32:$src0_modifiers)), (i32 SupportedRoundMode:$round))),
      (FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64 $src0_modifiers, $src0, (as_hw_round_mode $round))>;
+
+let SubtargetPredicate = HasSALUFloatInsts, AddedComplexity = 9 in
+def : GCNPat <(f16 (UniformBinFrag<fptrunc_round> f32:$src0, (i32 SupportedRoundMode:$round))),
+     (FPTRUNC_ROUND_F16_F32_SALU_PSEUDO $src0, (as_hw_round_mode $round))>;
 
 let True16Predicate = NotUseRealTrue16Insts in
 def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 RtzRoundMode))),
@@ -327,6 +335,10 @@ def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 RtzRoundMode))),
 let True16Predicate = UseRealTrue16Insts in
 def : GCNPat <(f16 (fptrunc_round f32:$src0, (i32 RtzRoundMode))),
      (EXTRACT_SUBREG (V_CVT_PKRTZ_F16_F32_e32 $src0, (IMPLICIT_DEF)), lo16)>;
+
+let SubtargetPredicate = HasSALUFloatInsts, AddedComplexity = 9 in
+def : GCNPat <(f16 (UniformBinFrag<fptrunc_round> f32:$src0, (i32 RtzRoundMode))),
+     (f16 (COPY_TO_REGCLASS (S_CVT_PK_RTZ_F16_F32 $src0, $src0), SReg_32))>;
 
 def : GCNPat <(f32 (fptrunc_round f64:$src0, (i32 SupportedRoundMode:$round))),
      (FPTRUNC_ROUND_F32_F64_PSEUDO $src0, (as_hw_round_mode $round))>;
@@ -496,6 +508,24 @@ def S_AND_B32_term : WrapTerminatorInst<S_AND_B32>;
 def S_AND_SAVEEXEC_B32_term : WrapTerminatorInst<S_AND_SAVEEXEC_B32>;
 }
 
+class WrapTerminatorVOPC<VOPC_Pseudo base_inst> : VPseudoInstSI<
+      base_inst.OutOperandList,
+      base_inst.InOperandList> {
+  let Uses = base_inst.Uses;
+  let Defs = base_inst.Defs;
+  let SchedRW = base_inst.SchedRW;
+  let isTerminator = 1;
+  let isConvergent = 1;
+  let isCompare = 1;
+  let VOPC = 1;
+}
+
+let SubtargetPredicate = HasNoSdstCMPX in {
+def V_CMPX_EQ_U32_nosdst_e32_term
+  : WrapTerminatorVOPC<V_CMPX_EQ_U32_nosdst_e32>;
+def V_CMPX_EQ_U64_nosdst_e32_term
+  : WrapTerminatorVOPC<V_CMPX_EQ_U64_nosdst_e32>;
+}
 
 def WAVE_BARRIER : SPseudoInstSI<(outs), (ins),
   [(int_amdgcn_wave_barrier)]> {
@@ -3800,6 +3830,12 @@ multiclass SelectCanonicalizeAsMax<
     (V_PK_MAX_F16 $src_mods, $src, $src_mods, $src, DSTCLAMP.NONE)> {
     // FIXME: Should have VOP3P subtarget predicate
     let OtherPredicates = f16_preds;
+  }
+
+  def : GCNPat<
+    (fcanonicalize (v2f64 (VOP3PMods v2f64:$src, i32:$src_mods))),
+    (V_PK_MAX_NUM_F64 $src_mods, $src, $src_mods, $src)> {
+    let OtherPredicates = !listconcat(f64_preds, [HasPackedFP64Ops]);
   }
 }
 

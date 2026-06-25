@@ -300,8 +300,9 @@ getHostCPUNameForARMFromComponents(StringRef Implementer, StringRef Hardware,
     // values correspond to the "Part number" in the CP15/c0 register. The
     // contents are specified in the various processor manuals.
     return StringSwitch<const char *>(Part)
-      .Case("0xd01", "tsv110")
-      .Default("generic");
+        .Case("0xd01", "tsv110")
+        .Case("0xd06", "hip12")
+        .Default("generic");
 
   if (Implementer == "0x51") // Qualcomm Technologies, Inc.
     // The CPU part is a 3 digit hexadecimal number with a 0x prefix. The
@@ -2507,7 +2508,8 @@ StringMap<bool> sys::getHostCPUFeatures() {
 StringMap<bool> sys::getHostCPUFeatures() {
   RISCVHwProbe Query[]{{/*RISCV_HWPROBE_KEY_BASE_BEHAVIOR=*/3, 0},
                        {/*RISCV_HWPROBE_KEY_IMA_EXT_0=*/4, 0},
-                       {/*RISCV_HWPROBE_KEY_MISALIGNED_SCALAR_PERF=*/9, 0}};
+                       {/*RISCV_HWPROBE_KEY_MISALIGNED_SCALAR_PERF=*/9, 0},
+                       {/*RISCV_HWPROBE_KEY_IMA_EXT_1=*/16, 0}};
   int Ret = syscall(/*__NR_riscv_hwprobe=*/258, /*pairs=*/Query,
                     /*pair_count=*/std::size(Query), /*cpu_count=*/0,
                     /*cpus=*/0, /*flags=*/0);
@@ -2563,18 +2565,35 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["zicond"] = ExtMask & (1ULL << 35);  // RISCV_HWPROBE_EXT_ZICOND
   Features["zihintpause"] =
       ExtMask & (1ULL << 36); // RISCV_HWPROBE_EXT_ZIHINTPAUSE
-  Features["zve32x"] = ExtMask & (1ULL << 37); // RISCV_HWPROBE_EXT_ZVE32X
-  Features["zve32f"] = ExtMask & (1ULL << 38); // RISCV_HWPROBE_EXT_ZVE32F
-  Features["zve64x"] = ExtMask & (1ULL << 39); // RISCV_HWPROBE_EXT_ZVE64X
-  Features["zve64f"] = ExtMask & (1ULL << 40); // RISCV_HWPROBE_EXT_ZVE64F
-  Features["zve64d"] = ExtMask & (1ULL << 41); // RISCV_HWPROBE_EXT_ZVE64D
-  Features["zimop"] = ExtMask & (1ULL << 42);  // RISCV_HWPROBE_EXT_ZIMOP
-  Features["zca"] = ExtMask & (1ULL << 43);    // RISCV_HWPROBE_EXT_ZCA
-  Features["zcb"] = ExtMask & (1ULL << 44);    // RISCV_HWPROBE_EXT_ZCB
-  Features["zcd"] = ExtMask & (1ULL << 45);    // RISCV_HWPROBE_EXT_ZCD
-  Features["zcf"] = ExtMask & (1ULL << 46);    // RISCV_HWPROBE_EXT_ZCF
-  Features["zcmop"] = ExtMask & (1ULL << 47);  // RISCV_HWPROBE_EXT_ZCMOP
-  Features["zawrs"] = ExtMask & (1ULL << 48);  // RISCV_HWPROBE_EXT_ZAWRS
+  Features["zve32x"] = ExtMask & (1ULL << 37);   // RISCV_HWPROBE_EXT_ZVE32X
+  Features["zve32f"] = ExtMask & (1ULL << 38);   // RISCV_HWPROBE_EXT_ZVE32F
+  Features["zve64x"] = ExtMask & (1ULL << 39);   // RISCV_HWPROBE_EXT_ZVE64X
+  Features["zve64f"] = ExtMask & (1ULL << 40);   // RISCV_HWPROBE_EXT_ZVE64F
+  Features["zve64d"] = ExtMask & (1ULL << 41);   // RISCV_HWPROBE_EXT_ZVE64D
+  Features["zimop"] = ExtMask & (1ULL << 42);    // RISCV_HWPROBE_EXT_ZIMOP
+  Features["zca"] = ExtMask & (1ULL << 43);      // RISCV_HWPROBE_EXT_ZCA
+  Features["zcb"] = ExtMask & (1ULL << 44);      // RISCV_HWPROBE_EXT_ZCB
+  Features["zcd"] = ExtMask & (1ULL << 45);      // RISCV_HWPROBE_EXT_ZCD
+  Features["zcf"] = ExtMask & (1ULL << 46);      // RISCV_HWPROBE_EXT_ZCF
+  Features["zcmop"] = ExtMask & (1ULL << 47);    // RISCV_HWPROBE_EXT_ZCMOP
+  Features["zawrs"] = ExtMask & (1ULL << 48);    // RISCV_HWPROBE_EXT_ZAWRS
+  Features["supm"] = ExtMask & (1ULL << 49);     // RISCV_HWPROBE_EXT_SUPM
+  Features["zicntr"] = ExtMask & (1ULL << 50);   // RISCV_HWPROBE_EXT_ZICNTR
+  Features["zihpm"] = ExtMask & (1ULL << 51);    // RISCV_HWPROBE_EXT_ZIHPM
+  Features["zfbfmin"] = ExtMask & (1ULL << 52);  // RISCV_HWPROBE_EXT_ZFBFMIN
+  Features["zvfbfmin"] = ExtMask & (1ULL << 53); // RISCV_HWPROBE_EXT_ZVFBFMIN
+  Features["zvfbfwma"] = ExtMask & (1ULL << 54); // RISCV_HWPROBE_EXT_ZVFBFWMA
+  Features["zicbom"] = ExtMask & (1ULL << 55);   // RISCV_HWPROBE_EXT_ZICBOM
+  Features["zaamo"] = ExtMask & (1ULL << 56);    // RISCV_HWPROBE_EXT_ZAAMO
+  Features["zalrsc"] = ExtMask & (1ULL << 57);   // RISCV_HWPROBE_EXT_ZALRSC
+  Features["zabha"] = ExtMask & (1ULL << 58);    // RISCV_HWPROBE_EXT_ZABHA
+  Features["zalasr"] = ExtMask & (1ULL << 59);   // RISCV_HWPROBE_EXT_ZALASR
+  Features["zicbop"] = ExtMask & (1ULL << 60);   // RISCV_HWPROBE_EXT_ZICBOP
+  Features["zilsd"] = ExtMask & (1ULL << 61);    // RISCV_HWPROBE_EXT_ZILSD
+  Features["zclsd"] = ExtMask & (1ULL << 62);    // RISCV_HWPROBE_EXT_ZCLSD
+
+  uint64_t Ext1Mask = Query[3].Value;
+  Features["zicfiss"] = Ext1Mask & (1ULL << 0); // RISCV_HWPROBE_EXT_ZICFISS
 
   // Check whether the processor supports fast misaligned scalar memory access.
   // NOTE: RISCV_HWPROBE_KEY_MISALIGNED_SCALAR_PERF is only available on

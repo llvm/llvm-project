@@ -784,17 +784,21 @@ const Value *Value::stripAndAccumulateConstantOffsets(
         }
       }
       V = GEP->getPointerOperand();
-    } else if (Operator::getOpcode(V) == Instruction::BitCast ||
-               Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
+    } else if (Operator::getOpcode(V) == Instruction::BitCast) {
+      const Value *Src = cast<Operator>(V)->getOperand(0);
+      if (!Src->getType()->isPtrOrPtrVectorTy())
+        return V;
+      V = Src;
+    } else if (Operator::getOpcode(V) == Instruction::AddrSpaceCast) {
       V = cast<Operator>(V)->getOperand(0);
     } else if (auto *GA = dyn_cast<GlobalAlias>(V)) {
       if (!GA->isInterposable())
         V = GA->getAliasee();
     } else if (const auto *Call = dyn_cast<CallBase>(V)) {
-        if (const Value *RV = Call->getReturnedArgOperand())
-          V = RV;
-        if (AllowInvariantGroup && Call->isLaunderOrStripInvariantGroup())
-          V = Call->getArgOperand(0);
+      if (const Value *RV = Call->getReturnedArgOperand())
+        V = RV;
+      if (AllowInvariantGroup && Call->isLaunderOrStripInvariantGroup())
+        V = Call->getArgOperand(0);
     } else if (auto *Int2Ptr = dyn_cast<Operator>(V)) {
       // Try to accumulate across (inttoptr (add (ptrtoint p), off)).
       if (!AllowNonInbounds || !LookThroughIntToPtr || !Int2Ptr ||
@@ -904,7 +908,7 @@ bool Value::canBeFreed() const {
 
 uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
                                                bool &CanBeNull,
-                                               bool &CanBeFreed) const {
+                                               bool *CanBeFreed) const {
   assert(getType()->isPointerTy() && "must be pointer");
 
   uint64_t DerefBytes = 0;
@@ -974,12 +978,14 @@ uint64_t Value::getPointerDereferenceableBytes(const DataLayout &DL,
     }
   }
 
-  // Call canBeFreed() only if there are dereferenceable bytes and it's not
-  // one of the cases that can never be freed.
-  if (!CanNotBeFreed && DerefBytes != 0)
-    CanBeFreed = UseDerefAtPointSemantics && canBeFreed();
-  else
-    CanBeFreed = false;
+  if (CanBeFreed) {
+    // Call canBeFreed() only if there are dereferenceable bytes and it's not
+    // one of the cases that can never be freed.
+    if (!CanNotBeFreed && DerefBytes != 0)
+      *CanBeFreed = UseDerefAtPointSemantics && canBeFreed();
+    else
+      *CanBeFreed = false;
+  }
 
   return DerefBytes;
 }

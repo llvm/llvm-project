@@ -713,6 +713,44 @@ void NativeProcessWindows::OnUnloadDll(lldb::addr_t module_addr) {
   m_pending_library_events = true;
 }
 
+void NativeProcessWindows::OnDebugString(lldb::addr_t debug_string_addr,
+                                         bool is_unicode,
+                                         uint16_t length_lower_word) {
+  Log *log = GetLog(WindowsLog::Process);
+
+  llvm::SmallVector<char, 256> buffer;
+  if (llvm::Error err = ProcessDebugger::ReadDebugString(
+          debug_string_addr, is_unicode, length_lower_word, buffer)) {
+    std::string err_str = llvm::toString(std::move(err));
+    std::string msg =
+        llvm::formatv("Failed to read debug string at {0:x} "
+                      "(size & 0xffff={1}, unicode={2}): {3}\n",
+                      debug_string_addr, length_lower_word, is_unicode, err_str)
+            .str();
+    LLDB_LOG(log, "{0}", msg);
+    m_delegate.NewProcessOutput(this, llvm::StringRef(msg));
+    return;
+  }
+  if (buffer.empty())
+    return;
+
+  if (is_unicode) {
+    assert(buffer.size() % 2 == 0);
+    llvm::ArrayRef<unsigned short> utf16(
+        reinterpret_cast<const unsigned short *>(buffer.data()),
+        buffer.size() / 2);
+    std::string out;
+    if (!llvm::convertUTF16ToUTF8String(utf16, out)) {
+      LLDB_LOG(log, "Debug string is not valid Utf 16");
+      return;
+    }
+    m_delegate.NewProcessOutput(this, llvm::StringRef(out.data(), out.size()));
+  } else {
+    m_delegate.NewProcessOutput(this,
+                                llvm::StringRef(buffer.data(), buffer.size()));
+  }
+}
+
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
 NativeProcessWindows::Manager::Launch(
     ProcessLaunchInfo &launch_info,

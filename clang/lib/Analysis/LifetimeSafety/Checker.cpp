@@ -134,8 +134,10 @@ public:
       if (IsMoved)
         return;
       if (PVD->hasAttr<LifetimeBoundAttr>()) {
-        // Track that this lifetimebound parameter correctly escapes.
-        if (isa<ReturnEscapeFact>(OEF))
+        // Track that this lifetimebound parameter correctly escapes
+        // (via return or via field assignment in a constructor).
+        if (isa<ReturnEscapeFact>(OEF) ||
+            (isa<FieldEscapeFact>(OEF) && isa<CXXConstructorDecl>(FD)))
           VerifiedLiftimeboundEscapes.insert(PVD);
       } else {
         // Otherwise, suggest lifetimebound for parameter escaping through
@@ -266,8 +268,10 @@ public:
 
         } else
           // Scope-based expiry (use-after-scope).
-          SemaHelper->reportUseAfterScope(IssueExpr, UF->getUseExpr(),
-                                          MovedExpr, ExpiryLoc);
+          SemaHelper->reportUseAfterScope(
+              IssueExpr, UF->getUseExpr(), MovedExpr, ExpiryLoc,
+              getExprChain(LoanPropagation.buildOriginFlowChain(UF, LID)));
+
       } else if (const auto *OEF =
                      CausingFact.dyn_cast<const OriginEscapesFact *>()) {
         if (Warning.InvalidatedByExpr) {
@@ -508,6 +512,21 @@ public:
               LifetimeBoundAttr::CreateImplicit(AST, PVD->getLocation()));
       }
     }
+  }
+
+  /// Extract expressions from the origin flow chain for diagnostic purposes.
+  ///
+  /// Given a chain of origins that shows how a loan propagates, this function
+  /// extracts the corresponding expressions for each origin. Origins that refer
+  /// to declarations (rather than expressions) are skipped.
+  llvm::SmallVector<const Expr *>
+  getExprChain(llvm::ArrayRef<OriginID> OriginFlowChain) {
+    llvm::SmallVector<const Expr *> rs;
+    for (const OriginID CurrOID : OriginFlowChain)
+      if (const Expr *CurrExpr =
+              FactMgr.getOriginMgr().getOrigin(CurrOID).getExpr())
+        rs.push_back(CurrExpr);
+    return rs;
   }
 };
 } // namespace

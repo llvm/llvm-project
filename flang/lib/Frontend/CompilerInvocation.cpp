@@ -488,6 +488,11 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
   opts.SampleProfileFile =
       args.getLastArgValue(clang::options::OPT_fprofile_sample_use_EQ);
 
+  if (args.hasFlag(clang::options::OPT_fpseudo_probe_for_profiling,
+                   clang::options::OPT_fno_pseudo_probe_for_profiling, false)) {
+    opts.PseudoProbeForProfiling = 1;
+  }
+
   // -mcmodel option.
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::options::OPT_mcmodel_EQ)) {
@@ -1550,6 +1555,10 @@ static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
     else
       opts.PrepareForThinLTO = true;
   }
+
+  // -fsplit-lto-unit option
+  if (args.hasArg(clang::options::OPT_fsplit_lto_unit))
+    opts.EnableSplitLTOUnit = true;
 
   // -ffat-lto-objects
   if (const llvm::opt::Arg *arg =

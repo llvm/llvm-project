@@ -276,20 +276,23 @@ View return_view_field(const ViewProvider& v) {    // expected-warning {{paramet
 }
 
 void test_get_on_temporary_pointer() {
-  const ReturnsSelf* s_ref = &ReturnsSelf().get(); // expected-warning {{local temporary object does not live long enough}}.
-                                                   // expected-note@-1 {{destroyed here}}
+  const ReturnsSelf* s_ref = &ReturnsSelf().get(); // expected-warning {{temporary object does not live long enough}}.
+                                                   // expected-note@-1 {{temporary object is destroyed here}}
+                                                   // expected-note@-2 {{result of call to 'get' aliases the storage of temporary object}}
   (void)s_ref;                                     // expected-note {{later used here}}
 }
 
 void test_get_on_temporary_ref() {
-  const ReturnsSelf& s_ref = ReturnsSelf().get();  // expected-warning {{local temporary object does not live long enough}}.
-                                                   // expected-note@-1 {{destroyed here}}
+  const ReturnsSelf& s_ref = ReturnsSelf().get();  // expected-warning {{temporary object does not live long enough}}.
+                                                   // expected-note@-1 {{temporary object is destroyed here}}
+                                                   // expected-note@-2 {{result of call to 'get' aliases the storage of temporary object}}
   (void)s_ref;                                     // expected-note {{later used here}}
 }
 
 void test_getView_on_temporary() {
-  View sv = ViewProvider{1}.getView();      // expected-warning {{local temporary object does not live long enough}}.
-                                            // expected-note@-1 {{destroyed here}}
+  View sv = ViewProvider{1}.getView();      // expected-warning {{temporary object does not live long enough}}.
+                                            // expected-note@-1 {{temporary object is destroyed here}}
+                                            // expected-note@-2 {{result of call to 'getView' aliases the storage of temporary object}}
   (void)sv;                                 // expected-note {{later used here}}
 }
 
@@ -599,8 +602,9 @@ void uaf_via_inferred_lifetimebound() {
   std::function<void()> f = []() {};
   {
     int local;
-    f = return_lambda_capturing_param(local); // expected-warning {{local variable 'local' does not live long enough}}
-  } // expected-note {{destroyed here}}
+    f = return_lambda_capturing_param(local); // expected-warning {{local variable 'local' does not live long enough}} \
+                                              // expected-note {{result of call to 'return_lambda_capturing_param' aliases the storage of local variable 'local'}}
+  } // expected-note {{local variable 'local' is destroyed here}}
   (void)f; // expected-note {{later used here}}
 }
 
@@ -622,8 +626,9 @@ void test_inference() {
   std::unique_ptr<LifetimeBoundCtor> ptr;
   {
     MyObj obj;
-    ptr = create_target(obj); // expected-warning {{local variable 'obj' does not live long enough}}
-  } // expected-note {{destroyed here}}
+    ptr = create_target(obj); // expected-warning {{local variable 'obj' does not live long enough}} \
+                              // expected-note {{result of call to 'create_target' aliases the storage of local variable 'obj'}}
+  } // expected-note {{local variable 'obj' is destroyed here}}
   (void)ptr; // expected-note {{later used here}}
 }
 } // namespace make_unique_suggestion
@@ -631,12 +636,13 @@ void test_inference() {
 namespace new_allocation_suggestion {
 
 View* MakeView(const MyObj& in) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
-  return new View(in);            // expected-note {{param returned here}} {{destroyed here}}
+  return new View(in);            // expected-note {{param returned here}}
 }
 
 void test_new_allocation() {
-  View* v = MakeView(MyObj{}); // expected-warning {{local temporary object does not live long enough}} \
-                               // expected-note {{destroyed here}}
+  View* v = MakeView(MyObj{}); // expected-warning {{temporary object does not live long enough}} \
+                               // expected-note {{temporary object is destroyed here}} \
+                               // expected-note {{result of call to 'MakeView' aliases the storage of temporary object}}
   (void)v;                     // expected-note {{later used here}}
 }
 

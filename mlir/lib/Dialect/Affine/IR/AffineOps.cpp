@@ -2677,8 +2677,9 @@ LogicalResult AffineForOp::fold(FoldAdaptor adaptor,
 }
 
 OperandRange AffineForOp::getEntrySuccessorOperands(RegionSuccessor successor) {
-  assert((successor.isParent() || successor.getSuccessor() == &getRegion()) &&
-         "invalid region point");
+  assert(
+      (successor.isOperation() || successor.getSuccessor() == &getRegion()) &&
+      "invalid region point");
 
   // The initial operands map to the loop arguments after the induction
   // variable or are forwarded to the results when the trip count is zero.
@@ -2701,7 +2702,7 @@ void AffineForOp::getSuccessorRegions(
       // From the loop body, if the trip count is one, we can only branch back
       // to the parent.
       if (tripCount == 1) {
-        regions.push_back(RegionSuccessor::parent());
+        regions.push_back(RegionSuccessor(getOperation()));
         return;
       }
       if (tripCount == 0)
@@ -2712,7 +2713,7 @@ void AffineForOp::getSuccessorRegions(
         return;
       }
       if (tripCount.value() == 0) {
-        regions.push_back(RegionSuccessor::parent());
+        regions.push_back(RegionSuccessor(getOperation()));
         return;
       }
     }
@@ -2721,11 +2722,11 @@ void AffineForOp::getSuccessorRegions(
   // In all other cases, the loop may branch back to itself or the parent
   // operation.
   regions.push_back(RegionSuccessor(&getRegion()));
-  regions.push_back(RegionSuccessor::parent());
+  regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange AffineForOp::getSuccessorInputs(RegionSuccessor successor) {
-  if (successor.isParent())
+  if (successor.isOperation())
     return getResults();
   return getRegionIterArgs();
 }
@@ -2823,6 +2824,61 @@ std::optional<SmallVector<OpFoldResult>> AffineForOp::getLoopUpperBounds() {
   OpBuilder b(getContext());
   return SmallVector<OpFoldResult>{
       OpFoldResult(b.getI64IntegerAttr(getConstantUpperBound()))};
+}
+
+std::optional<APInt> AffineForOp::getStaticTripCount() {
+  MLIRContext *context = getContext();
+  int64_t step = getStepAsInt();
+  if (step <= 0)
+    return std::nullopt;
+
+  if (hasConstantBounds()) {
+    int64_t lb = getConstantLowerBound();
+    int64_t ub = getConstantUpperBound();
+    int64_t loopSpan = ub - lb;
+    if (loopSpan < 0)
+      loopSpan = 0;
+    return APInt(64, llvm::divideCeilSigned(loopSpan, step));
+  }
+
+  auto lbMap = getLowerBoundMap();
+  auto ubMap = getUpperBoundMap();
+  if (lbMap.getNumResults() != 1)
+    return std::nullopt;
+
+  // Difference of each upper bound expression from the single lower bound
+  // expression (divided by the step) provides the expressions for the trip
+  // count map.
+  AffineValueMap ubValueMap(ubMap, getUpperBoundOperands());
+
+  SmallVector<AffineExpr, 4> lbSplatExpr(ubValueMap.getNumResults(),
+                                         lbMap.getResult(0));
+  auto lbMapSplat = AffineMap::get(lbMap.getNumDims(), lbMap.getNumSymbols(),
+                                   lbSplatExpr, context);
+  AffineValueMap lbSplatValueMap(lbMapSplat, getLowerBoundOperands());
+
+  AffineValueMap tripCountValueMap;
+  AffineValueMap::difference(ubValueMap, lbSplatValueMap, &tripCountValueMap);
+
+  // Take the min if all trip counts are constant.
+  std::optional<uint64_t> tripCount;
+  for (unsigned i = 0, e = tripCountValueMap.getNumResults(); i < e; ++i) {
+    AffineExpr expr = tripCountValueMap.getResult(i).ceilDiv(step);
+    if (auto constExpr = llvm::dyn_cast<AffineConstantExpr>(expr)) {
+      uint64_t value = constExpr.getValue();
+      if (tripCount.has_value())
+        tripCount = std::min(*tripCount, value);
+      else
+        tripCount = value;
+    } else {
+      return std::nullopt;
+    }
+  }
+
+  if (tripCount.has_value())
+    return APInt(64, *tripCount);
+
+  return std::nullopt;
 }
 
 FailureOr<LoopLikeOpInterface> AffineForOp::replaceWithAdditionalYields(
@@ -3115,7 +3171,7 @@ void AffineIfOp::getSuccessorRegions(
     regions.push_back(RegionSuccessor(&getThenRegion()));
     // If the "else" region is empty, branch bach into parent.
     if (getElseRegion().empty()) {
-      regions.push_back(RegionSuccessor::parent());
+      regions.push_back(RegionSuccessor(getOperation()));
     } else {
       regions.push_back(RegionSuccessor(&getElseRegion()));
     }
@@ -3124,11 +3180,11 @@ void AffineIfOp::getSuccessorRegions(
 
   // If the predecessor is the `else`/`then` region, then branching into parent
   // op is valid.
-  regions.push_back(RegionSuccessor::parent());
+  regions.push_back(RegionSuccessor(getOperation()));
 }
 
 ValueRange AffineIfOp::getSuccessorInputs(RegionSuccessor successor) {
-  if (successor.isParent())
+  if (successor.isOperation())
     return getResults();
   if (successor == &getThenRegion())
     return getThenRegion().getArguments();
@@ -5171,6 +5227,13 @@ struct SplitDelinearizeSpanningLastLinearizeArg final
     if (!linearizeOp.getDisjoint())
       return rewriter.notifyMatchFailure(linearizeOp,
                                          "linearize isn't disjoint");
+
+    // A linearize with no inputs has an empty basis and folds to a constant
+    // zero; there is nothing to split, and reading its last basis element
+    // below would be out of bounds.
+    if (linearizeOp.getStaticBasis().empty())
+      return rewriter.notifyMatchFailure(
+          linearizeOp, "linearize has no basis elements (no inputs)");
 
     int64_t target = linearizeOp.getStaticBasis().back();
     if (ShapedType::isDynamic(target))

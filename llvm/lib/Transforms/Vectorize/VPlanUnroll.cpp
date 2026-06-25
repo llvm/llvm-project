@@ -718,7 +718,7 @@ static void convertRecipesInRegionBlocksToSingleScalar(VPlan &Plan, Type *IdxTy,
       } else if (auto *PredPhi = dyn_cast<VPPredInstPHIRecipe>(&OldR)) {
         VPValue *PredOp = PredPhi->getOperand(0);
         Type *PredTy = PredOp->getScalarType();
-        VPValue *Poison = Plan.getOrAddLiveIn(PoisonValue::get(PredTy));
+        VPValue *Poison = Plan.getPoison(PredTy);
         VPPhi *NewPhi = Builder.createScalarPhi({Poison, PredOp}, OldDL);
         PredPhi->replaceAllUsesWith(NewPhi);
         PredPhi->eraseFromParent();
@@ -824,7 +824,7 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
 
     Type *ScalarTy = Phi->getScalarType();
     bool IsStruct = isa<StructType>(ScalarTy);
-    VPValue *Poison = Plan.getOrAddLiveIn(PoisonValue::get(ScalarTy));
+    VPValue *Poison = Plan.getPoison(ScalarTy);
     SmallVector<VPValue *> BVOps(NumLanes, Poison);
     auto *BV = new VPInstruction(IsStruct ? VPInstruction::BuildStructVector
                                           : VPInstruction::BuildVector,
@@ -946,7 +946,7 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
 
       auto *DefR = cast<VPSingleDefRecipe>(&R);
       VPBuilder Builder(DefR);
-      if (DefR->getNumUsers() == 0) {
+      if (DefR->user_empty()) {
         // Create single-scalar version of DefR for all lanes.
         for (unsigned I = 0; I != VF.getKnownMinValue(); ++I)
           cloneForLane(Plan, Builder, IdxTy, DefR, VPLane(I), Def2LaneDefs);
@@ -963,7 +963,10 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
       /// Users that only demand the first lane can use the definition for lane
       /// 0.
       DefR->replaceUsesWithIf(LaneDefs[0], [DefR](VPUser &U, unsigned) {
-        return U.usesFirstLaneOnly(DefR);
+        if (U.usesFirstLaneOnly(DefR))
+          return true;
+        auto *VPI = dyn_cast<VPInstructionWithType>(&U);
+        return VPI && Instruction::isCast(VPI->getOpcode());
       });
 
       // Update each build vector user that currently has DefR as its only
