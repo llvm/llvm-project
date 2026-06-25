@@ -139,6 +139,24 @@ public:
   {
     return __size(*this);
   }
+
+#  if _LIBCPP_STD_VER >= 26
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint()
+    requires approximately_sized_range<_View>
+  {
+    const auto __s = static_cast<range_difference_t<_View>>(ranges::reserve_hint(__base_));
+    return __to_unsigned_like(__s < __count_ ? 0 : __s - __count_);
+  }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint() const
+    requires approximately_sized_range<const _View>
+  {
+    const auto __s = static_cast<range_difference_t<const _View>>(ranges::reserve_hint(__base_));
+    return __to_unsigned_like(__s < __count_ ? 0 : __s - __count_);
+  }
+
+#  endif //_LIBCPP_STD_VER >= 26
 };
 
 template <class _Range>
