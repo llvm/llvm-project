@@ -1882,8 +1882,7 @@ bool AMDGPUInstructionSelector::selectFrameAddress(MachineInstr &I) const {
 
   const TargetRegisterClass *RC =
       TRI.getConstrainedRegClassForOperand(Dst, *MRI);
-  if (!RC->hasSubClassEq(&AMDGPU::SGPR_32RegClass) ||
-      !RBI.constrainGenericRegister(DstReg, *RC, *MRI))
+  if (!RBI.constrainGenericRegister(DstReg, *RC, *MRI))
     return false;
 
   // Check for kernel and shader functions
