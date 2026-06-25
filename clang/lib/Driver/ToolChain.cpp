@@ -445,6 +445,18 @@ static void getRISCVMultilibFlags(const Driver &D, const llvm::Triple &Triple,
     Result.push_back("-fsanitize=shadow-call-stack");
   else
     Result.push_back("-fno-sanitize=shadow-call-stack");
+
+  const Arg *CFProtectionArg =
+      Args.getLastArgNoClaim(options::OPT_fcf_protection_EQ);
+  StringRef CFProtectionVal =
+      CFProtectionArg ? CFProtectionArg->getValue() : "none";
+  Result.push_back(("-fcf-protection=" + CFProtectionVal).str());
+
+  if (CFProtectionVal == "branch" || CFProtectionVal == "full") {
+    if (const Arg *SchemeArg =
+            Args.getLastArgNoClaim(options::OPT_mcf_branch_label_scheme_EQ))
+      Result.push_back(SchemeArg->getAsString(Args));
+  }
 }
 
 Multilib::flags_list
