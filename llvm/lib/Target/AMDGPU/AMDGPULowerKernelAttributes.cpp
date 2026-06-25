@@ -118,17 +118,10 @@ static bool annotateGroupSizeLoadWithRangeMD(LoadInst *Load, bool IsRemainder) {
   return true;
 }
 
-static bool annotateGridDimsLoadWithRangeMD(LoadInst *Load,
-                                            unsigned KnownNumGridDims) {
+static bool annotateGridDimsLoadWithRangeMD(LoadInst *Load) {
   IntegerType *Ty = dyn_cast<IntegerType>(Load->getType());
   if (!Ty || Ty->getBitWidth() < 3)
     return false;
-
-  if (KnownNumGridDims != 0) {
-    Load->replaceAllUsesWith(
-        ConstantInt::get(Load->getType(), KnownNumGridDims));
-    return true;
-  }
 
   // TODO: If there is existing range metadata, preserve it if it is stricter.
   if (Load->hasMetadata(LLVMContext::MD_range))
@@ -142,21 +135,6 @@ static bool annotateGridDimsLoadWithRangeMD(LoadInst *Load,
 }
 
 /// Compute the number of grid dimensions based on !reqd_work_group_size
-/// metadata
-static unsigned computeNumGridDims(const MDNode *ReqdWorkGroupSize) {
-  ConstantInt *KnownZ =
-      mdconst::extract<ConstantInt>(ReqdWorkGroupSize->getOperand(2));
-  if (KnownZ->getZExtValue() != 1)
-    return 3;
-
-  ConstantInt *KnownY =
-      mdconst::extract<ConstantInt>(ReqdWorkGroupSize->getOperand(1));
-  if (KnownY->getZExtValue() != 1)
-    return 2;
-
-  return 1;
-}
-
 static bool processUse(CallInst *CI, bool IsV5OrAbove) {
   Function *F = CI->getFunction();
 
@@ -177,8 +155,6 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
 
   const DataLayout &DL = F->getDataLayout();
   bool MadeChange = false;
-
-  unsigned KnownNumGridDims = HasReqdWorkGroupSize ? computeNumGridDims(MD) : 0;
 
   // We expect to see several GEP users, casted to the appropriate type and
   // loaded.
@@ -270,7 +246,7 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
 
       case GRID_DIMS:
         if (LoadSize <= 2)
-          MadeChange |= annotateGridDimsLoadWithRangeMD(Load, KnownNumGridDims);
+          MadeChange |= annotateGridDimsLoadWithRangeMD(Load);
         break;
       default:
         break;
