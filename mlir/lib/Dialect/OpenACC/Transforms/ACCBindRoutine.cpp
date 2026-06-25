@@ -13,10 +13,9 @@
 //
 // Overview:
 // ---------
-// For each function, walk operations that implement OffloadRegionOpInterface.
-// For each call inside the offload region, if the callee is a function with
-// an acc routine that has bind(name), replace the call to use the bound
-// symbol.
+// For the current function, walk call operations inside offload regions (or
+// inside gpu.func). If the callee is a function with an acc routine that has
+// bind(name), replace the call to use the bound symbol.
 //
 // Requirements:
 // -------------
@@ -35,6 +34,8 @@
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinOps.h"
+// #include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "llvm/Support/Debug.h"
@@ -81,23 +82,29 @@ public:
   using acc::impl::ACCBindRoutineBase<ACCBindRoutine>::ACCBindRoutineBase;
 
   void runOnOperation() override {
-    ModuleOp module = getOperation();
-    OpenACCSupport &accSupport = getAnalysis<OpenACCSupport>();
+    FunctionOpInterface func = getOperation();
+    ModuleOp module = func->getParentOfType<ModuleOp>();
+    if (!module)
+      return;
+
+    auto cachedAnalysis =
+        getCachedParentAnalysis<OpenACCSupport>(func->getParentOp());
+    OpenACCSupport &accSupport = cachedAnalysis ? cachedAnalysis->get()
+                                                : getAnalysis<OpenACCSupport>();
     SymbolTable symTab(module);
 
     bool failed = false;
 
-    module.walk([&](FunctionOpInterface func) {
-      func.walk([&](CallOpInterface callOp) {
-        if (!callOp.getCallableForCallee())
-          return;
-        if (!callOp->getParentOfType<OffloadRegionOpInterface>() &&
-            !callOp->getParentOfType<gpu::GPUFuncOp>())
-          return;
-        SymbolRefAttr calleeSymbolRef =
-            dyn_cast<SymbolRefAttr>(callOp.getCallableForCallee());
-        if (!calleeSymbolRef)
-          return;
+    func.walk([&](CallOpInterface callOp) {
+      if (!callOp.getCallableForCallee())
+        return;
+      if (!callOp->getParentOfType<OffloadRegionOpInterface>() &&
+          !callOp->getParentOfType<gpu::GPUFuncOp>())
+        return;
+      SymbolRefAttr calleeSymbolRef =
+          dyn_cast<SymbolRefAttr>(callOp.getCallableForCallee());
+      if (!calleeSymbolRef)
+        return;
 
         FunctionOpInterface callee = symTab.lookup<FunctionOpInterface>(
             calleeSymbolRef.getLeafReference());
@@ -148,7 +155,6 @@ public:
           calleeRef = FlatSymbolRefAttr::get(callOp.getContext(), bindName);
         }
         callOp.setCalleeFromCallable(calleeRef);
-      });
     });
 
     if (failed)
