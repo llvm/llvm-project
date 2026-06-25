@@ -6,95 +6,171 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Value.h"
 #include <string>
-#include <vector>
 
 namespace llvm {
 
-class HeapProvenanceAnalysisResult {
+struct HeapProvenanceLattice {
+  enum class StateKind {
+    Uninit = 0,
+    HeapChunkHead,
+    HeapChunkInterim,
+    Unknown
+  } State = StateKind::Uninit;
+
+  enum Direction {
+    None = 0,
+    Forward = 1,
+    Backward = 2,
+    Both = 3
+  } Dir = None;
+
+  struct Payload {
+    enum class Kind { None, Ref, Select, Phi } K = Kind::None;
+    const Value *Val = nullptr;
+
+    bool operator==(const Payload &RHS) const {
+      return K == RHS.K && Val == RHS.Val;
+    }
+    bool operator!=(const Payload &RHS) const { return !(*this == RHS); }
+  } HeadPayload;
+
+  bool isUninit() const { return State == StateKind::Uninit; }
+  bool isValid() const {
+    return State == StateKind::HeapChunkHead || State == StateKind::HeapChunkInterim;
+  }
+  bool operator==(const HeapProvenanceLattice &RHS) const {
+    return State == RHS.State && Dir == RHS.Dir && HeadPayload == RHS.HeadPayload;
+  }
+  bool operator!=(const HeapProvenanceLattice &RHS) const {
+    return !(*this == RHS);
+  }
+
+  const Value *getHead() const {
+    if (isValid())
+      return HeadPayload.Val;
+    return nullptr;
+  }
+
+  std::string getDirectionStr() const {
+    if (Dir == Forward)
+      return " [forward: from alloc]";
+    if (Dir == Backward)
+      return " [backward: into dealloc]";
+    if (Dir == Both)
+      return " [both: alloc & dealloc]";
+    return "";
+  }
+
+  std::string getExpr() const {
+    if (State == StateKind::Uninit)
+      return "Uninit";
+    if (State == StateKind::Unknown)
+      return "Unknown";
+    if (HeadPayload.K == Payload::Kind::Ref && HeadPayload.Val) {
+      std::string Name = HeadPayload.Val->getName().str();
+      return Name.empty() ? "Ref" : ("Ref(" + Name + ")");
+    }
+    if (HeadPayload.K == Payload::Kind::Select)
+      return "Select";
+    if (HeadPayload.K == Payload::Kind::Phi)
+      return "Phi";
+    return "Head";
+  }
+};
+
+class ForwardHeapProvenanceAnalysis;
+class BackwardHeapProvenanceAnalysis;
+class HeapProvenanceAnalysis;
+
+class ForwardHeapProvenanceAnalysisResult {
+  DenseMap<const Value *, HeapProvenanceLattice> ValueMap;
 public:
-  struct ProvenanceInfo {
-    enum Kind {
-      Uninit = 0,
-      HeapChunkPtr,
-      RecoverableHeapChunkPtr,
-      Unknown
-    } State = Uninit;
-
-    enum Direction {
-      None = 0,
-      Forward = 1,
-      Backward = 2,
-      Both = 3
-    } Dir = None;
-
-    int64_t ConstOffset = 0;
-    std::vector<std::string> SymOffsets;
-    std::string CustomExpr;
-
-    bool isUninit() const { return State == Uninit; }
-    bool isValid() const {
-      return State == HeapChunkPtr || State == RecoverableHeapChunkPtr;
-    }
-
-    std::string getDirectionStr() const {
-      if (Dir == Forward)
-        return " [forward: from alloc]";
-      if (Dir == Backward)
-        return " [backward: into dealloc]";
-      if (Dir == Both)
-        return " [both: alloc & dealloc]";
-      return "";
-    }
-
-    std::string getExpr() const {
-      if (State == Uninit)
-        return "Uninit";
-      if (State == Unknown)
-        return "Unknown";
-      if (!CustomExpr.empty())
-        return CustomExpr;
-      if (State == HeapChunkPtr && ConstOffset == 0 && SymOffsets.empty())
-        return "head";
-
-      std::string Res = "head";
-      if (ConstOffset > 0)
-        Res += " + " + std::to_string(ConstOffset);
-      else if (ConstOffset < 0)
-        Res += " - " + std::to_string(-ConstOffset);
-
-      for (const auto &S : SymOffsets) {
-        if (!S.empty() && S[0] == '-')
-          Res += " " + S;
-        else
-          Res += " + " + S;
-      }
-      return Res;
-    }
-  };
-
-private:
-  DenseMap<const Value *, ProvenanceInfo> ValueMap;
-
-public:
-  void setInfo(const Value *V, const ProvenanceInfo &Info) {
+  void setInfo(const Value *V, const HeapProvenanceLattice &Info) {
     ValueMap[V] = Info;
   }
-  const ProvenanceInfo &getInfo(const Value *V) const {
-    static ProvenanceInfo Empty;
+  const HeapProvenanceLattice &getInfo(const Value *V) const {
+    static HeapProvenanceLattice Empty;
     auto It = ValueMap.find(V);
     return It != ValueMap.end() ? It->second : Empty;
   }
-  DenseMap<const Value *, ProvenanceInfo> &getMap() { return ValueMap; }
-  const DenseMap<const Value *, ProvenanceInfo> &getMap() const {
+  DenseMap<const Value *, HeapProvenanceLattice> &getMap() { return ValueMap; }
+  const DenseMap<const Value *, HeapProvenanceLattice> &getMap() const {
     return ValueMap;
   }
+  bool invalidate(Module &, const PreservedAnalyses &PA,
+                  ModuleAnalysisManager::Invalidator &);
+};
+
+class ForwardHeapProvenanceAnalysis
+    : public AnalysisInfoMixin<ForwardHeapProvenanceAnalysis> {
+  friend AnalysisInfoMixin<ForwardHeapProvenanceAnalysis>;
+  static AnalysisKey Key;
+public:
+  using Result = ForwardHeapProvenanceAnalysisResult;
+  Result run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+class BackwardHeapProvenanceAnalysisResult {
+  DenseMap<const Value *, HeapProvenanceLattice> ValueMap;
+public:
+  void setInfo(const Value *V, const HeapProvenanceLattice &Info) {
+    ValueMap[V] = Info;
+  }
+  const HeapProvenanceLattice &getInfo(const Value *V) const {
+    static HeapProvenanceLattice Empty;
+    auto It = ValueMap.find(V);
+    return It != ValueMap.end() ? It->second : Empty;
+  }
+  DenseMap<const Value *, HeapProvenanceLattice> &getMap() { return ValueMap; }
+  const DenseMap<const Value *, HeapProvenanceLattice> &getMap() const {
+    return ValueMap;
+  }
+  bool invalidate(Module &, const PreservedAnalyses &PA,
+                  ModuleAnalysisManager::Invalidator &);
+};
+
+class BackwardHeapProvenanceAnalysis
+    : public AnalysisInfoMixin<BackwardHeapProvenanceAnalysis> {
+  friend AnalysisInfoMixin<BackwardHeapProvenanceAnalysis>;
+  static AnalysisKey Key;
+public:
+  using Result = BackwardHeapProvenanceAnalysisResult;
+  Result run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+// Combined wrapper for backward compatibility with ObjectSizeOffsetEvaluator
+class HeapProvenanceAnalysisResult {
+public:
+  using ProvenanceInfo = HeapProvenanceLattice;
+
+private:
+  ForwardHeapProvenanceAnalysisResult ForwardRes;
+  BackwardHeapProvenanceAnalysisResult BackwardRes;
+
+public:
+  HeapProvenanceAnalysisResult() = default;
+  HeapProvenanceAnalysisResult(ForwardHeapProvenanceAnalysisResult F,
+                               BackwardHeapProvenanceAnalysisResult B)
+      : ForwardRes(std::move(F)), BackwardRes(std::move(B)) {}
+
+  const ProvenanceInfo &getInfo(const Value *V) const {
+    const auto &F = ForwardRes.getInfo(V);
+    if (F.isValid())
+      return F;
+    return BackwardRes.getInfo(V);
+  }
+
+  const ForwardHeapProvenanceAnalysisResult &getForwardResult() const { return ForwardRes; }
+  const BackwardHeapProvenanceAnalysisResult &getBackwardResult() const { return BackwardRes; }
+
+  bool invalidate(Module &, const PreservedAnalyses &PA,
+                  ModuleAnalysisManager::Invalidator &);
 };
 
 class HeapProvenanceAnalysis
     : public AnalysisInfoMixin<HeapProvenanceAnalysis> {
   friend AnalysisInfoMixin<HeapProvenanceAnalysis>;
   static AnalysisKey Key;
-
 public:
   using Result = HeapProvenanceAnalysisResult;
   static Result analyzeModule(Module &M);
@@ -104,7 +180,6 @@ public:
 class HeapProvenancePrinterPass
     : public PassInfoMixin<HeapProvenancePrinterPass> {
   raw_ostream &OS;
-
 public:
   explicit HeapProvenancePrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);

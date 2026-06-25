@@ -1,14 +1,44 @@
 #include "llvm/Analysis/HeapProvenanceAnalysis.h"
+#include "llvm/Analysis/SparsePropagation.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DataLayout.h"
-#include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/Support/raw_ostream.h"
 
+namespace llvm {
+template <> struct LatticeKeyInfo<const Value *> {
+  static inline Value *getValueFromLatticeKey(const Value *Key) {
+    return const_cast<Value *>(Key);
+  }
+  static inline const Value *getLatticeKeyFromValue(Value *V) {
+    return V;
+  }
+};
+} // namespace llvm
+
 using namespace llvm;
 
+AnalysisKey ForwardHeapProvenanceAnalysis::Key;
+AnalysisKey BackwardHeapProvenanceAnalysis::Key;
 AnalysisKey HeapProvenanceAnalysis::Key;
+
+bool ForwardHeapProvenanceAnalysisResult::invalidate(Module &, const PreservedAnalyses &PA,
+                                                     ModuleAnalysisManager::Invalidator &) {
+  auto PAC = PA.getChecker<ForwardHeapProvenanceAnalysis>();
+  return !PAC.preservedWhenStateless();
+}
+
+bool BackwardHeapProvenanceAnalysisResult::invalidate(Module &, const PreservedAnalyses &PA,
+                                                      ModuleAnalysisManager::Invalidator &) {
+  auto PAC = PA.getChecker<BackwardHeapProvenanceAnalysis>();
+  return !PAC.preservedWhenStateless();
+}
+
+bool HeapProvenanceAnalysisResult::invalidate(Module &, const PreservedAnalyses &PA,
+                                              ModuleAnalysisManager::Invalidator &) {
+  auto PAC = PA.getChecker<HeapProvenanceAnalysis>();
+  return !PAC.preservedWhenStateless();
+}
 
 static bool isAllocFunc(StringRef Name) {
   return Name == "malloc" || Name == "calloc" || Name == "realloc" ||
@@ -22,138 +52,33 @@ static bool isFreeFunc(StringRef Name) {
          Name == "g_free" || Name.starts_with("_Zd");
 }
 
-static std::string getValueOperandName(const Value *V) {
-  std::string Str;
-  raw_string_ostream OS(Str);
-  V->printAsOperand(OS, false);
-  return Str;
-}
-
-static void addSymOffset(std::vector<std::string> &Syms, const std::string &S) {
-  StringRef SR(S);
-  std::string NegS = (SR.size() > 3 && SR.starts_with("-(") && SR.ends_with(")"))
-                         ? S.substr(2, S.size() - 3)
-                         : "-(" + S + ")";
-  for (auto It = Syms.begin(); It != Syms.end(); ++It) {
-    if (*It == NegS) {
-      Syms.erase(It);
-      return;
-    }
-  }
-  Syms.push_back(S);
-}
-
-static void extractGEPOffsets(const GEPOperator *GEP, const DataLayout &DL,
-                              int64_t &ConstOff,
-                              std::vector<std::string> &SymOffs) {
-  APInt APIntOffset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
-  if (GEP->accumulateConstantOffset(DL, APIntOffset)) {
-    ConstOff += APIntOffset.getSExtValue();
-    return;
-  }
-  for (gep_type_iterator GTI = gep_type_begin(GEP), GTE = gep_type_end(GEP);
-       GTI != GTE; ++GTI) {
-    Value *Op = GTI.getOperand();
-    if (StructType *STy = GTI.getStructTypeOrNull()) {
-      ConstantInt *OpC = cast<ConstantInt>(Op);
-      const StructLayout *SL = DL.getStructLayout(STy);
-      ConstOff += SL->getElementOffset(OpC->getZExtValue());
-    } else {
-      TypeSize Stride = GTI.getSequentialElementStride(DL);
-      int64_t StrideVal = Stride.getKnownMinValue();
-      if (ConstantInt *OpC = dyn_cast<ConstantInt>(Op)) {
-        ConstOff += OpC->getSExtValue() * StrideVal;
-      } else {
-        std::string OpName = getValueOperandName(Op);
-        if (StrideVal == 1)
-          addSymOffset(SymOffs, OpName);
-        else
-          addSymOffset(SymOffs, OpName + " * " + std::to_string(StrideVal));
-      }
-    }
-  }
-}
-
-static HeapProvenanceAnalysisResult::ProvenanceInfo
-addOffset(const HeapProvenanceAnalysisResult::ProvenanceInfo &BaseInfo,
-          int64_t C, const std::vector<std::string> &Syms) {
-  using ProvenanceInfo = HeapProvenanceAnalysisResult::ProvenanceInfo;
-  if (!BaseInfo.isValid())
-    return BaseInfo;
-  ProvenanceInfo Res = BaseInfo;
-  Res.State = ProvenanceInfo::RecoverableHeapChunkPtr;
-  if (!Res.CustomExpr.empty()) {
-    std::string OffStr;
-    if (C > 0)
-      OffStr += " + " + std::to_string(C);
-    else if (C < 0)
-      OffStr += " - " + std::to_string(-C);
-    for (const auto &S : Syms)
-      OffStr += " + " + S;
-    Res.CustomExpr = "(" + Res.CustomExpr + ")" + OffStr;
-    return Res;
-  }
-  Res.ConstOffset += C;
-  for (const auto &S : Syms)
-    addSymOffset(Res.SymOffsets, S);
-  if (Res.ConstOffset == 0 && Res.SymOffsets.empty())
-    Res.State = ProvenanceInfo::HeapChunkPtr;
-  return Res;
-}
-
-static HeapProvenanceAnalysisResult::ProvenanceInfo
-subOffset(const HeapProvenanceAnalysisResult::ProvenanceInfo &IInfo, int64_t C,
-          const std::vector<std::string> &Syms) {
-  using ProvenanceInfo = HeapProvenanceAnalysisResult::ProvenanceInfo;
-  if (!IInfo.isValid())
-    return IInfo;
-  ProvenanceInfo Res = IInfo;
-  Res.State = ProvenanceInfo::RecoverableHeapChunkPtr;
-  if (!Res.CustomExpr.empty()) {
-    std::string OffStr;
-    if (C > 0)
-      OffStr += " - " + std::to_string(C);
-    else if (C < 0)
-      OffStr += " + " + std::to_string(-C);
-    for (const auto &S : Syms)
-      OffStr += " - (" + S + ")";
-    Res.CustomExpr = "(" + Res.CustomExpr + ")" + OffStr;
-    return Res;
-  }
-  Res.ConstOffset -= C;
-  for (const auto &S : Syms)
-    addSymOffset(Res.SymOffsets, "-(" + S + ")");
-  if (Res.ConstOffset == 0 && Res.SymOffsets.empty())
-    Res.State = ProvenanceInfo::HeapChunkPtr;
-  return Res;
-}
-
-static bool mergeInfo(HeapProvenanceAnalysisResult::ProvenanceInfo &Dest,
-                      const HeapProvenanceAnalysisResult::ProvenanceInfo &Src) {
-  using ProvenanceInfo = HeapProvenanceAnalysisResult::ProvenanceInfo;
-  if (Src.State == ProvenanceInfo::Uninit)
+static bool mergeLattice(const Value *Target, HeapProvenanceLattice &Dest,
+                         const HeapProvenanceLattice &Src) {
+  using Lattice = HeapProvenanceLattice;
+  if (Src.State == Lattice::StateKind::Uninit)
     return false;
 
-  auto MergedDir = static_cast<ProvenanceInfo::Direction>(Dest.Dir | Src.Dir);
+  auto MergedDir = static_cast<Lattice::Direction>(Dest.Dir | Src.Dir);
 
-  if (Dest.State == ProvenanceInfo::Uninit) {
+  if (Dest.State == Lattice::StateKind::Uninit) {
     Dest = Src;
     Dest.Dir = MergedDir;
     return true;
   }
-  if (Dest.State == ProvenanceInfo::Unknown) {
+
+  if (Dest.State == Lattice::StateKind::Unknown) {
     if (Dest.Dir != MergedDir) {
       Dest.Dir = MergedDir;
       return true;
     }
     return false;
   }
-  if (Src.State == ProvenanceInfo::Unknown) {
-    if (Dest.Dir != MergedDir) {
-      Dest.Dir = MergedDir;
-      return true;
-    }
-    return false;
+
+  if (Src.State == Lattice::StateKind::Unknown) {
+    Dest.State = Lattice::StateKind::Unknown;
+    Dest.Dir = MergedDir;
+    Dest.HeadPayload = {Lattice::Payload::Kind::None, nullptr};
+    return true;
   }
 
   bool Changed = false;
@@ -162,378 +87,349 @@ static bool mergeInfo(HeapProvenanceAnalysisResult::ProvenanceInfo &Dest,
     Changed = true;
   }
 
-  if (Dest.getExpr() == Src.getExpr()) {
-    if (Src.State == ProvenanceInfo::RecoverableHeapChunkPtr &&
-        Dest.State != ProvenanceInfo::RecoverableHeapChunkPtr) {
-      Dest.State = ProvenanceInfo::RecoverableHeapChunkPtr;
+  if (Dest.State == Src.State && Dest.HeadPayload == Src.HeadPayload)
+    return Changed;
+
+  if (isa_and_nonnull<PHINode>(Target)) {
+    Lattice::Payload NewPayload{Lattice::Payload::Kind::Phi, Target};
+    if (Dest.State != Lattice::StateKind::HeapChunkInterim ||
+        Dest.HeadPayload != NewPayload) {
+      Dest.State = Lattice::StateKind::HeapChunkInterim;
+      Dest.HeadPayload = NewPayload;
       Changed = true;
     }
     return Changed;
   }
 
-  if (Dest.CustomExpr == "head + dynamic_offset")
+  if (isa_and_nonnull<SelectInst>(Target)) {
+    Lattice::Payload NewPayload{Lattice::Payload::Kind::Select, Target};
+    if (Dest.State != Lattice::StateKind::HeapChunkInterim ||
+        Dest.HeadPayload != NewPayload) {
+      Dest.State = Lattice::StateKind::HeapChunkInterim;
+      Dest.HeadPayload = NewPayload;
+      Changed = true;
+    }
     return Changed;
+  }
 
-  if (!Dest.CustomExpr.empty()) {
-    Dest.CustomExpr = "head + dynamic_offset";
-    Dest.State = ProvenanceInfo::RecoverableHeapChunkPtr;
+  if (Dest.HeadPayload.Val != Src.HeadPayload.Val) {
+    Dest.State = Lattice::StateKind::Unknown;
+    Dest.HeadPayload = {Lattice::Payload::Kind::None, nullptr};
     return true;
   }
 
-  Dest.CustomExpr = "PHI(" + Dest.getExpr() + ", " + Src.getExpr() + ")";
-  Dest.State = ProvenanceInfo::RecoverableHeapChunkPtr;
-  return true;
+  return Changed;
 }
 
-static bool updateInfo(HeapProvenanceAnalysisResult::ProvenanceInfo &Dest,
-                       const HeapProvenanceAnalysisResult::ProvenanceInfo &NewVal) {
-  if (Dest.State == NewVal.State && Dest.Dir == NewVal.Dir &&
-      Dest.ConstOffset == NewVal.ConstOffset &&
-      Dest.SymOffsets == NewVal.SymOffsets &&
-      Dest.CustomExpr == NewVal.CustomExpr)
-    return false;
+class ForwardLatticeFunc : public AbstractLatticeFunction<const Value *, HeapProvenanceLattice> {
+  DenseMap<const Value *, HeapProvenanceLattice> Seeds;
+public:
+  ForwardLatticeFunc()
+      : AbstractLatticeFunction(HeapProvenanceLattice(), HeapProvenanceLattice(), HeapProvenanceLattice()) {}
 
-  if (!Dest.CustomExpr.empty() && !NewVal.CustomExpr.empty() &&
-      Dest.CustomExpr != NewVal.CustomExpr) {
-    std::string Widened = "head + dynamic_offset";
-    if (Dest.CustomExpr != Widened) {
-      Dest = NewVal;
-      Dest.CustomExpr = Widened;
-      return true;
-    }
-    return false;
+  void addSeed(const Value *V, const HeapProvenanceLattice &Info) {
+    mergeLattice(V, Seeds[V], Info);
   }
+  bool IsSpecialCasedPHI(PHINode *PN) override { return true; }
+  HeapProvenanceLattice MergeValues(HeapProvenanceLattice X, HeapProvenanceLattice Y) override {
+    mergeLattice(nullptr, X, Y);
+    return X;
+  }
+  HeapProvenanceLattice ComputeLatticeVal(const Value *Key) override {
+    auto It = Seeds.find(Key);
+    if (It != Seeds.end()) return It->second;
+    return getUndefVal();
+  }
+  void ComputeInstructionState(Instruction &I,
+                               SmallDenseMap<const Value *, HeapProvenanceLattice, 16> &ChangedValues,
+                               SparseSolver<const Value *, HeapProvenanceLattice> &SS) override {
+    auto MergeInto = [&](const Value *Target, const HeapProvenanceLattice &NewI) {
+      if (!Target || isa<ConstantPointerNull>(Target) || isa<UndefValue>(Target)) return;
+      auto &Dest = ChangedValues[Target];
+      if (Dest.isUninit()) {
+        auto Existing = SS.getExistingValueState(Target);
+        if (Existing.isValid()) Dest = Existing;
+      }
+      mergeLattice(Target, Dest, NewI);
+    };
 
-  Dest = NewVal;
-  return true;
-}
+    auto SeedIt = Seeds.find(&I);
+    if (SeedIt != Seeds.end()) MergeInto(&I, SeedIt->second);
 
-HeapProvenanceAnalysis::Result
-HeapProvenanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
+    for (const Use &U : I.operands()) {
+      const Value *Op = U.get();
+      auto OpSeedIt = Seeds.find(Op);
+      if (OpSeedIt != Seeds.end()) MergeInto(Op, OpSeedIt->second);
+
+      auto OpInfo = SS.getExistingValueState(Op);
+      if (!OpInfo.isValid() || !(OpInfo.Dir & HeapProvenanceLattice::Forward)) continue;
+
+      HeapProvenanceLattice NewI = OpInfo;
+      if (NewI.State == HeapProvenanceLattice::StateKind::HeapChunkHead) {
+        NewI.State = HeapProvenanceLattice::StateKind::HeapChunkInterim;
+        NewI.HeadPayload = {HeapProvenanceLattice::Payload::Kind::Ref, Op};
+      }
+
+      if (isa<GEPOperator>(&I) || isa<BitCastInst>(&I) || isa<AddrSpaceCastInst>(&I) ||
+          isa<IntToPtrInst>(&I) || isa<PHINode>(&I) || isa<SelectInst>(&I)) {
+        MergeInto(&I, NewI);
+      } else if (auto *CB = dyn_cast<CallBase>(&I)) {
+        Function *Callee = CB->getCalledFunction();
+        if (!Callee) Callee = dyn_cast<Function>(CB->getCalledOperand()->stripPointerCasts());
+        if (Callee && !Callee->isDeclaration()) {
+          for (unsigned idx = 0, e = CB->arg_size(); idx != e; ++idx) {
+            if (CB->getArgOperand(idx) == Op && idx < Callee->arg_size()) {
+              Argument *Arg = Callee->getArg(idx);
+              HeapProvenanceLattice ArgI = NewI;
+              ArgI.State = HeapProvenanceLattice::StateKind::HeapChunkInterim;
+              ArgI.HeadPayload = {HeapProvenanceLattice::Payload::Kind::Ref, Arg};
+              MergeInto(Arg, ArgI);
+            }
+          }
+        }
+      }
+    }
+
+    if (auto *RI = dyn_cast<ReturnInst>(&I)) {
+      if (Value *RetVal = RI->getReturnValue()) {
+        auto RetInfo = SS.getExistingValueState(RetVal);
+        if (RetInfo.isValid() && (RetInfo.Dir & HeapProvenanceLattice::Forward)) {
+          HeapProvenanceLattice NewI = RetInfo;
+          if (NewI.State == HeapProvenanceLattice::StateKind::HeapChunkHead) {
+            NewI.State = HeapProvenanceLattice::StateKind::HeapChunkInterim;
+            NewI.HeadPayload = {HeapProvenanceLattice::Payload::Kind::Ref, RetVal};
+          }
+          const Function *F = RI->getFunction();
+          for (const User *U : F->users()) {
+            if (auto *CB = dyn_cast<CallBase>(U)) {
+              if (CB->getCalledFunction() == F || CB->getCalledOperand()->stripPointerCasts() == F) {
+                HeapProvenanceLattice CBI = NewI;
+                CBI.State = HeapProvenanceLattice::StateKind::HeapChunkInterim;
+                CBI.HeadPayload = {HeapProvenanceLattice::Payload::Kind::Ref, CB};
+                MergeInto(CB, CBI);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+};
+
+class BackwardLatticeFunc : public AbstractLatticeFunction<const Value *, HeapProvenanceLattice> {
+  DenseMap<const Value *, HeapProvenanceLattice> Seeds;
+public:
+  BackwardLatticeFunc()
+      : AbstractLatticeFunction(HeapProvenanceLattice(), HeapProvenanceLattice(), HeapProvenanceLattice()) {}
+
+  void addSeed(const Value *V, const HeapProvenanceLattice &Info) {
+    mergeLattice(V, Seeds[V], Info);
+  }
+  bool IsSpecialCasedPHI(PHINode *PN) override { return true; }
+  HeapProvenanceLattice MergeValues(HeapProvenanceLattice X, HeapProvenanceLattice Y) override {
+    mergeLattice(nullptr, X, Y);
+    return X;
+  }
+  HeapProvenanceLattice ComputeLatticeVal(const Value *Key) override {
+    auto It = Seeds.find(Key);
+    if (It != Seeds.end()) return It->second;
+    return getUndefVal();
+  }
+  void ComputeInstructionState(Instruction &I,
+                               SmallDenseMap<const Value *, HeapProvenanceLattice, 16> &ChangedValues,
+                               SparseSolver<const Value *, HeapProvenanceLattice> &SS) override {
+    auto MergeInto = [&](const Value *Target, const HeapProvenanceLattice &NewI) {
+      if (!Target || isa<ConstantPointerNull>(Target) || isa<UndefValue>(Target)) return;
+      auto &Dest = ChangedValues[Target];
+      if (Dest.isUninit()) {
+        auto Existing = SS.getExistingValueState(Target);
+        if (Existing.isValid()) Dest = Existing;
+      }
+      mergeLattice(Target, Dest, NewI);
+    };
+
+    auto SeedIt = Seeds.find(&I);
+    if (SeedIt != Seeds.end()) MergeInto(&I, SeedIt->second);
+
+    for (const Use &U : I.operands()) {
+      const Value *Op = U.get();
+      auto OpSeedIt = Seeds.find(Op);
+      if (OpSeedIt != Seeds.end()) MergeInto(Op, OpSeedIt->second);
+    }
+
+    auto Info = SS.getExistingValueState(&I);
+    if (Info.isValid() && (Info.Dir & HeapProvenanceLattice::Backward)) {
+      HeapProvenanceLattice BackInfo = Info;
+      BackInfo.Dir = HeapProvenanceLattice::Backward;
+      if (BackInfo.State == HeapProvenanceLattice::StateKind::HeapChunkHead) {
+        BackInfo.State = HeapProvenanceLattice::StateKind::HeapChunkInterim;
+        BackInfo.HeadPayload = {HeapProvenanceLattice::Payload::Kind::Ref, &I};
+      }
+
+      if (auto *GEP = dyn_cast<GEPOperator>(&I)) {
+        MergeInto(GEP->getPointerOperand(), BackInfo);
+      } else if (auto *BC = dyn_cast<BitCastInst>(&I)) {
+        MergeInto(BC->getOperand(0), BackInfo);
+      } else if (auto *ASC = dyn_cast<AddrSpaceCastInst>(&I)) {
+        MergeInto(ASC->getOperand(0), BackInfo);
+      } else if (auto *ITP = dyn_cast<IntToPtrInst>(&I)) {
+        if (auto *PTI = dyn_cast<PtrToIntOperator>(ITP->getOperand(0)))
+          MergeInto(PTI->getOperand(0), BackInfo);
+      } else if (auto *PHI = dyn_cast<PHINode>(&I)) {
+        for (Value *InV : PHI->incoming_values())
+          MergeInto(InV, BackInfo);
+      } else if (auto *Sel = dyn_cast<SelectInst>(&I)) {
+        MergeInto(Sel->getTrueValue(), BackInfo);
+        MergeInto(Sel->getFalseValue(), BackInfo);
+      } else if (auto *CB = dyn_cast<CallBase>(&I)) {
+        Function *Callee = CB->getCalledFunction();
+        if (!Callee) Callee = dyn_cast<Function>(CB->getCalledOperand()->stripPointerCasts());
+        if (Callee && !Callee->isDeclaration() && I.getType()->isPointerTy()) {
+          for (BasicBlock &CalleeBB : *Callee) {
+            if (auto *RI = dyn_cast<ReturnInst>(CalleeBB.getTerminator())) {
+              if (Value *RetVal = RI->getReturnValue()) {
+                HeapProvenanceLattice RetI = BackInfo;
+                RetI.State = HeapProvenanceLattice::StateKind::HeapChunkInterim;
+                RetI.HeadPayload = {HeapProvenanceLattice::Payload::Kind::Ref, RetVal};
+                MergeInto(RetVal, RetI);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    for (const Use &U : I.operands()) {
+      if (auto *Arg = dyn_cast<Argument>(U.get())) {
+        auto ArgInfo = SS.getExistingValueState(Arg);
+        if (ArgInfo.isValid() && (ArgInfo.Dir & HeapProvenanceLattice::Backward)) {
+          const Function *F = Arg->getParent();
+          for (const User *Usr : F->users()) {
+            if (auto *CB = dyn_cast<CallBase>(Usr)) {
+              if (CB->getCalledFunction() == F || CB->getCalledOperand()->stripPointerCasts() == F) {
+                unsigned ArgIdx = Arg->getArgNo();
+                if (ArgIdx < CB->arg_size()) {
+                  Value *CallerArg = CB->getArgOperand(ArgIdx);
+                  HeapProvenanceLattice CallerI = ArgInfo;
+                  CallerI.Dir = HeapProvenanceLattice::Backward;
+                  CallerI.State = HeapProvenanceLattice::StateKind::HeapChunkInterim;
+                  CallerI.HeadPayload = {HeapProvenanceLattice::Payload::Kind::Ref, CallerArg};
+                  MergeInto(CallerArg, CallerI);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+};
+
+ForwardHeapProvenanceAnalysis::Result
+ForwardHeapProvenanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
   Result Res;
-  const DataLayout &DL = M.getDataLayout();
+  ForwardLatticeFunc Lattice;
 
   for (Function &F : M) {
     for (BasicBlock &BB : F) {
       for (Instruction &I : BB) {
         if (auto *CB = dyn_cast<CallBase>(&I)) {
           Function *Callee = CB->getCalledFunction();
-          if (!Callee) {
-            Value *CalledVal = CB->getCalledOperand()->stripPointerCasts();
-            Callee = dyn_cast<Function>(CalledVal);
-          }
-          if (Callee) {
-            StringRef Name = Callee->getName();
-            if (isAllocFunc(Name)) {
-              Result::ProvenanceInfo Info;
-              Info.State = Result::ProvenanceInfo::HeapChunkPtr;
-              Info.Dir = Result::ProvenanceInfo::Forward;
-              mergeInfo(Res.getMap()[&I], Info);
-            }
-            if (isFreeFunc(Name)) {
-              if (CB->arg_size() > 0) {
-                Value *ArgVal = CB->getArgOperand(0);
-                Result::ProvenanceInfo Info;
-                Info.State = Result::ProvenanceInfo::HeapChunkPtr;
-                Info.Dir = Result::ProvenanceInfo::Backward;
-                mergeInfo(Res.getMap()[ArgVal], Info);
-              }
-            }
+          if (!Callee)
+            Callee = dyn_cast<Function>(CB->getCalledOperand()->stripPointerCasts());
+          if (Callee && isAllocFunc(Callee->getName())) {
+            HeapProvenanceLattice Info;
+            Info.State = HeapProvenanceLattice::StateKind::HeapChunkHead;
+            Info.Dir = HeapProvenanceLattice::Forward;
+            Info.HeadPayload = {HeapProvenanceLattice::Payload::Kind::Ref, &I};
+            Lattice.addSeed(&I, Info);
           }
         }
       }
     }
   }
 
-  bool Changed = true;
-  int MaxIters = 50;
-  while (Changed && MaxIters-- > 0) {
-    Changed = false;
+  SparseSolver<const Value *, HeapProvenanceLattice> Solver(&Lattice);
+  for (Function &F : M)
+    if (!F.isDeclaration())
+      Solver.MarkBlockExecutable(&F.front());
 
-    // Forward propagation
-    for (Function &F : M) {
-      for (BasicBlock &BB : F) {
-        for (Instruction &I : BB) {
-          if (auto *GEP = dyn_cast<GEPOperator>(&I)) {
-            Value *Base = GEP->getPointerOperand();
-            auto BaseInfo = Res.getInfo(Base);
-            if (BaseInfo.isValid()) {
-              auto NewInfo = BaseInfo;
-              NewInfo.State = Result::ProvenanceInfo::RecoverableHeapChunkPtr;
-              int64_t ConstOff = 0;
-              std::vector<std::string> SymOffs;
-              extractGEPOffsets(GEP, DL, ConstOff, SymOffs);
-              NewInfo = addOffset(NewInfo, ConstOff, SymOffs);
-              if (mergeInfo(Res.getMap()[&I], NewInfo))
-                Changed = true;
-            }
-          } else if (auto *BC = dyn_cast<BitCastOperator>(&I)) {
-            Value *Op = BC->getOperand(0);
-            auto OpInfo = Res.getInfo(Op);
-            if (OpInfo.isValid()) {
-              if (mergeInfo(Res.getMap()[&I], OpInfo))
-                Changed = true;
-            }
-          } else if (auto *ASC = dyn_cast<AddrSpaceCastOperator>(&I)) {
-            Value *Op = ASC->getOperand(0);
-            auto OpInfo = Res.getInfo(Op);
-            if (OpInfo.isValid()) {
-              if (mergeInfo(Res.getMap()[&I], OpInfo))
-                Changed = true;
-            }
-          } else if (auto *ITP = dyn_cast<IntToPtrInst>(&I)) {
-            Value *Op = ITP->getOperand(0);
-            if (auto *BO = dyn_cast<BinaryOperator>(Op)) {
-              if (BO->getOpcode() == Instruction::Add ||
-                  BO->getOpcode() == Instruction::Sub) {
-                Value *LHS = BO->getOperand(0);
-                Value *RHS = BO->getOperand(1);
-                auto *PTI = dyn_cast<PtrToIntOperator>(LHS);
-                if (!PTI) {
-                  PTI = dyn_cast<PtrToIntOperator>(RHS);
-                  if (PTI && BO->getOpcode() == Instruction::Add)
-                    std::swap(LHS, RHS);
-                  else
-                    PTI = nullptr;
-                }
-                if (PTI) {
-                  Value *BasePtr = PTI->getOperand(0);
-                  auto BaseInfo = Res.getInfo(BasePtr);
-                  if (BaseInfo.isValid()) {
-                    int64_t ConstOff = 0;
-                    std::vector<std::string> SymOffs;
-                    if (auto *CInt = dyn_cast<ConstantInt>(RHS)) {
-                      ConstOff = CInt->getSExtValue();
-                    } else {
-                      SymOffs.push_back(getValueOperandName(RHS));
-                    }
-                    if (BO->getOpcode() == Instruction::Sub) {
-                      ConstOff = -ConstOff;
-                      for (auto &S : SymOffs)
-                        S = "-(" + S + ")";
-                    }
-                    auto NewInfo = addOffset(BaseInfo, ConstOff, SymOffs);
-                    if (mergeInfo(Res.getMap()[&I], NewInfo))
-                      Changed = true;
-                  }
-                }
-              }
-            } else if (auto *PTI = dyn_cast<PtrToIntOperator>(Op)) {
-              auto BaseInfo = Res.getInfo(PTI->getOperand(0));
-              if (BaseInfo.isValid()) {
-                if (mergeInfo(Res.getMap()[&I], BaseInfo))
-                  Changed = true;
-              }
-            }
-          } else if (auto *PHI = dyn_cast<PHINode>(&I)) {
-            Result::ProvenanceInfo Temp;
-            for (Value *InV : PHI->incoming_values()) {
-              if (isa<ConstantPointerNull>(InV) || isa<UndefValue>(InV))
-                continue;
-              auto InInfo = Res.getInfo(InV);
-              if (InInfo.isValid())
-                mergeInfo(Temp, InInfo);
-            }
-            if (Temp.isValid() && updateInfo(Res.getMap()[&I], Temp))
-              Changed = true;
-          } else if (auto *Sel = dyn_cast<SelectInst>(&I)) {
-            Result::ProvenanceInfo Temp;
-            for (Value *Op : {Sel->getTrueValue(), Sel->getFalseValue()}) {
-              if (isa<ConstantPointerNull>(Op) || isa<UndefValue>(Op))
-                continue;
-              auto OpInfo = Res.getInfo(Op);
-              if (OpInfo.isValid())
-                mergeInfo(Temp, OpInfo);
-            }
-            if (Temp.isValid() && updateInfo(Res.getMap()[&I], Temp))
-              Changed = true;
-          } else if (auto *CB = dyn_cast<CallBase>(&I)) {
-            Function *Callee = CB->getCalledFunction();
-            if (!Callee) {
-              Value *CalledVal = CB->getCalledOperand()->stripPointerCasts();
-              Callee = dyn_cast<Function>(CalledVal);
-            }
-            if (Callee && !Callee->isDeclaration()) {
-              unsigned ArgIdx = 0;
-              for (Argument &Arg : Callee->args()) {
-                if (ArgIdx < CB->arg_size()) {
-                  Value *ArgVal = CB->getArgOperand(ArgIdx);
-                  auto ArgInfo = Res.getInfo(ArgVal);
-                  if (ArgInfo.isValid()) {
-                    if (mergeInfo(Res.getMap()[&Arg], ArgInfo))
-                      Changed = true;
-                  }
-                }
-                ArgIdx++;
-              }
-              if (I.getType()->isPointerTy()) {
-                for (BasicBlock &CalleeBB : *Callee) {
-                  if (auto *RI =
-                          dyn_cast<ReturnInst>(CalleeBB.getTerminator())) {
-                    Value *RetVal = RI->getReturnValue();
-                    if (RetVal) {
-                      auto RetInfo = Res.getInfo(RetVal);
-                      if (RetInfo.isValid()) {
-                        if (mergeInfo(Res.getMap()[&I], RetInfo))
-                          Changed = true;
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
+  Solver.Solve();
+
+  for (Function &F : M) {
+    for (Argument &Arg : F.args()) {
+      auto LV = Solver.getExistingValueState(&Arg);
+      if (LV.isValid()) Res.setInfo(&Arg, LV);
+    }
+    for (BasicBlock &BB : F) {
+      for (Instruction &I : BB) {
+        auto LV = Solver.getExistingValueState(&I);
+        if (LV.isValid()) Res.setInfo(&I, LV);
       }
     }
+  }
+  return Res;
+}
 
-    // Backward propagation
-    for (Function &F : M) {
-      for (BasicBlock &BB : F) {
-        for (Instruction &I : BB) {
-          auto Info = Res.getInfo(&I);
-          if (!Info.isValid() ||
-              (Info.Dir & Result::ProvenanceInfo::Backward) == 0)
-            continue;
+BackwardHeapProvenanceAnalysis::Result
+BackwardHeapProvenanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
+  Result Res;
+  BackwardLatticeFunc Lattice;
 
-          if (auto *GEP = dyn_cast<GEPOperator>(&I)) {
-            Value *Base = GEP->getPointerOperand();
-            int64_t ConstOff = 0;
-            std::vector<std::string> SymOffs;
-            extractGEPOffsets(GEP, DL, ConstOff, SymOffs);
-            auto BaseNew = subOffset(Info, ConstOff, SymOffs);
-            BaseNew.Dir = Result::ProvenanceInfo::Backward;
-            if (mergeInfo(Res.getMap()[Base], BaseNew))
-              Changed = true;
-          } else if (auto *BC = dyn_cast<BitCastOperator>(&I)) {
-            Value *Op = BC->getOperand(0);
-            auto OpNew = Info;
-            OpNew.Dir = Result::ProvenanceInfo::Backward;
-            if (mergeInfo(Res.getMap()[Op], OpNew))
-              Changed = true;
-          } else if (auto *ASC = dyn_cast<AddrSpaceCastOperator>(&I)) {
-            Value *Op = ASC->getOperand(0);
-            auto OpNew = Info;
-            OpNew.Dir = Result::ProvenanceInfo::Backward;
-            if (mergeInfo(Res.getMap()[Op], OpNew))
-              Changed = true;
-          } else if (auto *ITP = dyn_cast<IntToPtrInst>(&I)) {
-            Value *Op = ITP->getOperand(0);
-            if (auto *BO = dyn_cast<BinaryOperator>(Op)) {
-              if (BO->getOpcode() == Instruction::Add ||
-                  BO->getOpcode() == Instruction::Sub) {
-                Value *LHS = BO->getOperand(0);
-                Value *RHS = BO->getOperand(1);
-                auto *PTI = dyn_cast<PtrToIntOperator>(LHS);
-                if (!PTI) {
-                  PTI = dyn_cast<PtrToIntOperator>(RHS);
-                  if (PTI && BO->getOpcode() == Instruction::Add)
-                    std::swap(LHS, RHS);
-                  else
-                    PTI = nullptr;
-                }
-                if (PTI) {
-                  Value *BasePtr = PTI->getOperand(0);
-                  int64_t ConstOff = 0;
-                  std::vector<std::string> SymOffs;
-                  if (auto *CInt = dyn_cast<ConstantInt>(RHS)) {
-                    ConstOff = CInt->getSExtValue();
-                  } else {
-                    SymOffs.push_back(getValueOperandName(RHS));
-                  }
-                  if (BO->getOpcode() == Instruction::Sub) {
-                    ConstOff = -ConstOff;
-                    for (auto &S : SymOffs)
-                      S = "-(" + S + ")";
-                  }
-                  auto BaseNew = subOffset(Info, ConstOff, SymOffs);
-                  BaseNew.Dir = Result::ProvenanceInfo::Backward;
-                  if (mergeInfo(Res.getMap()[BasePtr], BaseNew))
-                    Changed = true;
-                }
-              }
-            } else if (auto *PTI = dyn_cast<PtrToIntOperator>(Op)) {
-              Value *BasePtr = PTI->getOperand(0);
-              auto BaseNew = Info;
-              BaseNew.Dir = Result::ProvenanceInfo::Backward;
-              if (mergeInfo(Res.getMap()[BasePtr], BaseNew))
-                Changed = true;
-            }
-          } else if (auto *PHI = dyn_cast<PHINode>(&I)) {
-            for (Value *InV : PHI->incoming_values()) {
-              if (isa<ConstantPointerNull>(InV) || isa<UndefValue>(InV))
-                continue;
-              auto InNew = Info;
-              InNew.Dir = Result::ProvenanceInfo::Backward;
-              if (mergeInfo(Res.getMap()[InV], InNew))
-                Changed = true;
-            }
-          } else if (auto *Sel = dyn_cast<SelectInst>(&I)) {
-            for (Value *Op : {Sel->getTrueValue(), Sel->getFalseValue()}) {
-              if (isa<ConstantPointerNull>(Op) || isa<UndefValue>(Op))
-                continue;
-              auto OpNew = Info;
-              OpNew.Dir = Result::ProvenanceInfo::Backward;
-              if (mergeInfo(Res.getMap()[Op], OpNew))
-                Changed = true;
-            }
-          } else if (auto *CB = dyn_cast<CallBase>(&I)) {
-            Function *Callee = CB->getCalledFunction();
-            if (!Callee) {
-              Value *CalledVal = CB->getCalledOperand()->stripPointerCasts();
-              Callee = dyn_cast<Function>(CalledVal);
-            }
-            if (Callee && !Callee->isDeclaration()) {
-              if (I.getType()->isPointerTy()) {
-                for (BasicBlock &CalleeBB : *Callee) {
-                  if (auto *RI =
-                          dyn_cast<ReturnInst>(CalleeBB.getTerminator())) {
-                    Value *RetVal = RI->getReturnValue();
-                    if (RetVal) {
-                      auto RetNew = Info;
-                      RetNew.Dir = Result::ProvenanceInfo::Backward;
-                      if (mergeInfo(Res.getMap()[RetVal], RetNew))
-                        Changed = true;
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-
-      for (Argument &Arg : F.args()) {
-        auto ArgInfo = Res.getInfo(&Arg);
-        if (!ArgInfo.isValid() ||
-            (ArgInfo.Dir & Result::ProvenanceInfo::Backward) == 0)
-          continue;
-        for (User *U : F.users()) {
-          if (auto *CB = dyn_cast<CallBase>(U)) {
-            if (CB->getCalledOperand()->stripPointerCasts() == &F ||
-                CB->getCalledFunction() == &F) {
-              unsigned ArgIdx = Arg.getArgNo();
-              if (ArgIdx < CB->arg_size()) {
-                Value *CallArg = CB->getArgOperand(ArgIdx);
-                auto CallArgNew = ArgInfo;
-                CallArgNew.Dir = Result::ProvenanceInfo::Backward;
-                if (mergeInfo(Res.getMap()[CallArg], CallArgNew))
-                  Changed = true;
-              }
-            }
+  for (Function &F : M) {
+    for (BasicBlock &BB : F) {
+      for (Instruction &I : BB) {
+        if (auto *CB = dyn_cast<CallBase>(&I)) {
+          Function *Callee = CB->getCalledFunction();
+          if (!Callee)
+            Callee = dyn_cast<Function>(CB->getCalledOperand()->stripPointerCasts());
+          if (Callee && isFreeFunc(Callee->getName()) && CB->arg_size() > 0) {
+            Value *ArgVal = CB->getArgOperand(0);
+            HeapProvenanceLattice Info;
+            Info.State = HeapProvenanceLattice::StateKind::HeapChunkHead;
+            Info.Dir = HeapProvenanceLattice::Backward;
+            Info.HeadPayload = {HeapProvenanceLattice::Payload::Kind::Ref, ArgVal};
+            Lattice.addSeed(ArgVal, Info);
           }
         }
       }
     }
   }
 
+  SparseSolver<const Value *, HeapProvenanceLattice> Solver(&Lattice);
+  for (Function &F : M)
+    if (!F.isDeclaration())
+      Solver.MarkBlockExecutable(&F.front());
+
+  Solver.Solve();
+
+  for (Function &F : M) {
+    for (Argument &Arg : F.args()) {
+      auto LV = Solver.getExistingValueState(&Arg);
+      if (LV.isValid()) Res.setInfo(&Arg, LV);
+    }
+    for (BasicBlock &BB : F) {
+      for (Instruction &I : BB) {
+        auto LV = Solver.getExistingValueState(&I);
+        if (LV.isValid()) Res.setInfo(&I, LV);
+      }
+    }
+  }
   return Res;
 }
 
 HeapProvenanceAnalysisResult HeapProvenanceAnalysis::analyzeModule(Module &M) {
-  HeapProvenanceAnalysis HPA;
   ModuleAnalysisManager DummyMAM;
-  return HPA.run(M, DummyMAM);
+  ForwardHeapProvenanceAnalysis ForwardHPA;
+  BackwardHeapProvenanceAnalysis BackwardHPA;
+  return Result(ForwardHPA.run(M, DummyMAM), BackwardHPA.run(M, DummyMAM));
+}
+
+HeapProvenanceAnalysis::Result
+HeapProvenanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
+  auto ForwardRes = MAM.getResult<ForwardHeapProvenanceAnalysis>(M);
+  auto BackwardRes = MAM.getResult<BackwardHeapProvenanceAnalysis>(M);
+  return Result(std::move(ForwardRes), std::move(BackwardRes));
 }
 
 PreservedAnalyses HeapProvenancePrinterPass::run(Module &M,
@@ -550,10 +446,9 @@ PreservedAnalyses HeapProvenancePrinterPass::run(Module &M,
         OS << "  argument ";
         Arg.printAsOperand(OS, false);
         OS << ": "
-           << (Info.State ==
-                       HeapProvenanceAnalysisResult::ProvenanceInfo::HeapChunkPtr
-                   ? "HeapChunkPtr"
-                   : "RecoverableHeapChunkPtr")
+           << (Info.State == HeapProvenanceLattice::StateKind::HeapChunkHead
+                   ? "HeapChunkHead"
+                   : "HeapChunkInterim")
            << " (" << Info.getExpr() << ")" << Info.getDirectionStr() << "\n";
       }
     }
@@ -564,10 +459,9 @@ PreservedAnalyses HeapProvenancePrinterPass::run(Module &M,
           OS << "  ";
           I.printAsOperand(OS, false);
           OS << ": "
-             << (Info.State ==
-                         HeapProvenanceAnalysisResult::ProvenanceInfo::HeapChunkPtr
-                     ? "HeapChunkPtr"
-                     : "RecoverableHeapChunkPtr")
+             << (Info.State == HeapProvenanceLattice::StateKind::HeapChunkHead
+                     ? "HeapChunkHead"
+                     : "HeapChunkInterim")
              << " (" << Info.getExpr() << ")" << Info.getDirectionStr() << "\n";
         }
       }

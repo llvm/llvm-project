@@ -185,18 +185,21 @@ LLVM_ABI std::optional<TypeSize> getBaseObjectSize(const Value *Ptr,
                                                    const TargetLibraryInfo *TLI,
                                                    ObjectSizeOpts Opts = {});
 
+class HeapProvenanceAnalysisResult;
+
 /// Try to turn a call to \@llvm.objectsize into an integer value of the given
 /// Type. Returns null on failure. If MustSucceed is true, this function will
 /// not return null, and may return conservative values governed by the second
 /// argument of the call to objectsize.
-LLVM_ABI Value *lowerObjectSizeCall(IntrinsicInst *ObjectSize,
-                                    const DataLayout &DL,
-                                    const TargetLibraryInfo *TLI,
-                                    bool MustSucceed);
+LLVM_ABI Value *lowerObjectSizeCall(
+    IntrinsicInst *ObjectSize, const DataLayout &DL,
+    const TargetLibraryInfo *TLI, bool MustSucceed,
+    const HeapProvenanceAnalysisResult *HPA = nullptr);
 LLVM_ABI Value *lowerObjectSizeCall(
     IntrinsicInst *ObjectSize, const DataLayout &DL,
     const TargetLibraryInfo *TLI, AAResults *AA, bool MustSucceed,
-    SmallVectorImpl<Instruction *> *InsertedInstructions = nullptr);
+    SmallVectorImpl<Instruction *> *InsertedInstructions = nullptr,
+    const HeapProvenanceAnalysisResult *HPA = nullptr);
 
 /// SizeOffsetType - A base template class for the object size visitors. Used
 /// here as a self-documenting way to handle the values rather than using a
@@ -355,15 +358,16 @@ class ObjectSizeOffsetEvaluator
   PtrSetTy SeenVals;
   ObjectSizeOpts EvalOpts;
   SmallPtrSet<Instruction *, 8> InsertedInstructions;
+  const HeapProvenanceAnalysisResult *HPA;
 
   SizeOffsetValue compute_(Value *V);
   bool computeFallbackHeapMetadata(Value *V, SizeOffsetValue &Result);
 
 public:
-  LLVM_ABI ObjectSizeOffsetEvaluator(const DataLayout &DL,
-                                     const TargetLibraryInfo *TLI,
-                                     LLVMContext &Context,
-                                     ObjectSizeOpts EvalOpts = {});
+  LLVM_ABI ObjectSizeOffsetEvaluator(
+      const DataLayout &DL, const TargetLibraryInfo *TLI, LLVMContext &Context,
+      ObjectSizeOpts EvalOpts = {},
+      const HeapProvenanceAnalysisResult *HPA = nullptr);
 
   static SizeOffsetValue unknown() { return SizeOffsetValue(); }
 

@@ -636,15 +636,17 @@ std::optional<TypeSize> llvm::getBaseObjectSize(const Value *Ptr,
 Value *llvm::lowerObjectSizeCall(IntrinsicInst *ObjectSize,
                                  const DataLayout &DL,
                                  const TargetLibraryInfo *TLI,
-                                 bool MustSucceed) {
+                                 bool MustSucceed,
+                                 const HeapProvenanceAnalysisResult *HPA) {
   return lowerObjectSizeCall(ObjectSize, DL, TLI, /*AAResults=*/nullptr,
-                             MustSucceed);
+                             MustSucceed, /*InsertedInstructions=*/nullptr, HPA);
 }
 
 Value *llvm::lowerObjectSizeCall(
     IntrinsicInst *ObjectSize, const DataLayout &DL,
     const TargetLibraryInfo *TLI, AAResults *AA, bool MustSucceed,
-    SmallVectorImpl<Instruction *> *InsertedInstructions) {
+    SmallVectorImpl<Instruction *> *InsertedInstructions,
+    const HeapProvenanceAnalysisResult *HPA) {
   assert(ObjectSize->getIntrinsicID() == Intrinsic::objectsize &&
          "ObjectSize must be a call to llvm.objectsize!");
 
@@ -675,7 +677,7 @@ Value *llvm::lowerObjectSizeCall(
       return ConstantInt::get(ResultType, Size);
   } else {
     LLVMContext &Ctx = ObjectSize->getFunction()->getContext();
-    ObjectSizeOffsetEvaluator Eval(DL, TLI, Ctx, EvalOptions);
+    ObjectSizeOffsetEvaluator Eval(DL, TLI, Ctx, EvalOptions, HPA);
     SizeOffsetValue SizeOffsetPair = Eval.compute(ObjectSize->getArgOperand(0));
 
     if (SizeOffsetPair != ObjectSizeOffsetEvaluator::unknown()) {
@@ -1231,12 +1233,12 @@ SizeOffsetValue::SizeOffsetValue(const SizeOffsetWeakTrackingVH &SOT)
 
 ObjectSizeOffsetEvaluator::ObjectSizeOffsetEvaluator(
     const DataLayout &DL, const TargetLibraryInfo *TLI, LLVMContext &Context,
-    ObjectSizeOpts EvalOpts)
+    ObjectSizeOpts EvalOpts, const HeapProvenanceAnalysisResult *HPA)
     : DL(DL), TLI(TLI), Context(Context),
       Builder(Context, TargetFolder(DL),
               IRBuilderCallbackInserter(
                   [&](Instruction *I) { InsertedInstructions.insert(I); })),
-      EvalOpts(EvalOpts) {
+      EvalOpts(EvalOpts), HPA(HPA) {
   // IntTy and Zero must be set for each compute() since the address space may
   // be different for later objects.
 }
@@ -1247,11 +1249,10 @@ bool ObjectSizeOffsetEvaluator::computeFallbackHeapMetadata(Value *V, SizeOffset
     M = I->getModule();
   else if (auto *A = dyn_cast<Argument>(V))
     M = A->getParent()->getParent();
-  if (!M)
+  if (!M || !HPA)
     return false;
 
-  auto HPAResult = HeapProvenanceAnalysis::analyzeModule(*M);
-  auto Info = HPAResult.getInfo(V);
+  auto Info = HPA->getInfo(V);
   if (!Info.isValid())
     return false;
 
@@ -1269,54 +1270,33 @@ bool ObjectSizeOffsetEvaluator::computeFallbackHeapMetadata(Value *V, SizeOffset
                            A->getParent()->getEntryBlock().getFirstInsertionPt());
   }
 
-  Value *HeadVal = nullptr;
-  Value *OffsetVal = nullptr;
+  Value *HeadVal = const_cast<Value *>(Info.getHead());
+  if (!HeadVal)
+    return false;
 
-  if (Info.State == HeapProvenanceAnalysisResult::ProvenanceInfo::HeapChunkPtr) {
-    HeadVal = V;
+  auto getFn = [](const Value *X) -> const Function * {
+    if (auto *I = dyn_cast<Instruction>(X))
+      return I->getFunction();
+    if (auto *A = dyn_cast<Argument>(X))
+      return A->getParent();
+    return nullptr;
+  };
+  const Function *VF = getFn(V);
+  const Function *HF = getFn(HeadVal);
+  if (VF && HF && VF != HF)
+    return false;
+
+  Value *OffsetVal = nullptr;
+  if (HeadVal == V) {
     OffsetVal = Zero;
   } else {
-    Value *Curr = V->stripPointerCasts();
-    while (Curr) {
-      auto CInfo = HPAResult.getInfo(Curr);
-      if (CInfo.State == HeapProvenanceAnalysisResult::ProvenanceInfo::HeapChunkPtr) {
-        HeadVal = Curr;
-        break;
-      }
-      if (auto *GEP = dyn_cast<GEPOperator>(Curr)) {
-        Curr = GEP->getPointerOperand()->stripPointerCasts();
-      } else if (auto *ITP = dyn_cast<IntToPtrInst>(Curr)) {
-        if (auto *BO = dyn_cast<BinaryOperator>(ITP->getOperand(0))) {
-          if (auto *PTI = dyn_cast<PtrToIntOperator>(BO->getOperand(0)))
-            Curr = PTI->getOperand(0)->stripPointerCasts();
-          else if (auto *PTI = dyn_cast<PtrToIntOperator>(BO->getOperand(1)))
-            Curr = PTI->getOperand(0)->stripPointerCasts();
-          else
-            break;
-        } else {
-          break;
-        }
-      } else {
-        break;
-      }
-    }
-
-    if (!HeadVal) {
-      if (Info.SymOffsets.empty()) {
-        HeadVal = Builder.CreateGEP(Builder.getInt8Ty(), V, ConstantInt::getSigned(IntTy, -Info.ConstOffset), "head.meta");
-        OffsetVal = ConstantInt::get(IntTy, Info.ConstOffset);
-      } else {
-        return false;
-      }
-    } else {
-      Value *VInt = Builder.CreatePtrToInt(V, IntTy, "v.int");
-      Value *HeadInt = Builder.CreatePtrToInt(HeadVal, IntTy, "head.int");
-      OffsetVal = Builder.CreateSub(VInt, HeadInt, "meta.offset");
-    }
+    Value *VInt = Builder.CreatePtrToInt(V, IntTy, "v.int");
+    Value *HeadInt = Builder.CreatePtrToInt(HeadVal, IntTy, "head.int");
+    OffsetVal = Builder.CreateSub(VInt, HeadInt, "meta.offset");
   }
 
   FunctionCallee GetSizeFC = M->getOrInsertFunction(
-      "__heap_provanence_sanitizer_get_size", IntTy, Builder.getPtrTy());
+      "malloc_usable_size", IntTy, Builder.getPtrTy());
   if (Function *Fn = dyn_cast<Function>(GetSizeFC.getCallee()->stripPointerCasts())) {
     Fn->setDoesNotThrow();
     Fn->setOnlyReadsMemory();
