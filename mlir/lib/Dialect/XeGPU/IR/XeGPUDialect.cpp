@@ -940,6 +940,11 @@ DistributeLayoutAttr LayoutAttr::transposeDims(ArrayRef<int64_t> permutation) {
   // sizes. A transpose relabels dimensions (source dim d becomes result dim
   // inversePerm[d]) so the dimension values are remapped through the inverse
   // permutation: newOrder[i] = inversePerm[origOrder[i]].
+  //
+  // The linearization order this describes is invariant under transpose: a
+  // transpose only renames dimensions, so the subgroup ID assigned to a given
+  // block of data must stay the same. Remapping the values through the inverse
+  // permutation is exactly what preserves that order.
   SmallVector<int64_t> inversePermutation =
       invertPermutationVector(permutation);
   for (int64_t dim : origOrder)
