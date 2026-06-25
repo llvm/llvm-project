@@ -22,17 +22,11 @@ define <2 x i1> @uaddo(ptr %ptr, ptr %ptr2) {
 ; CHECK-NEXT:    sbcs.w r2, r12, r2
 ; CHECK-NEXT:    mov.w r2, #0
 ; CHECK-NEXT:    it lo
-; CHECK-NEXT:    movlo r2, #1
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r2, #-1
+; CHECK-NEXT:    movlo.w r2, #-1
 ; CHECK-NEXT:    subs r3, r4, r6
 ; CHECK-NEXT:    sbcs.w r3, r5, r7
 ; CHECK-NEXT:    it lo
-; CHECK-NEXT:    movlo r1, #1
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r1, #-1
+; CHECK-NEXT:    movlo.w r1, #-1
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
@@ -61,17 +55,11 @@ define <2 x i1> @usubo(ptr %ptr, ptr %ptr2) {
 ; CHECK-NEXT:    sbcs.w r2, r12, r2
 ; CHECK-NEXT:    mov.w r2, #0
 ; CHECK-NEXT:    it lo
-; CHECK-NEXT:    movlo r2, #1
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r2, #-1
+; CHECK-NEXT:    movlo.w r2, #-1
 ; CHECK-NEXT:    subs r3, r4, r6
 ; CHECK-NEXT:    sbcs.w r3, r5, r7
 ; CHECK-NEXT:    it lo
-; CHECK-NEXT:    movlo r1, #1
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r1, #-1
+; CHECK-NEXT:    movlo.w r1, #-1
 ; CHECK-NEXT:    vst1.64 {d16, d17}, [r0]
 ; CHECK-NEXT:    mov r0, r2
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
