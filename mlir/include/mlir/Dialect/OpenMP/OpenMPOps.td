@@ -1585,12 +1585,11 @@ def TargetOp : OpenMP_Op<"target", traits = [
     OutlineableOpenMPOpInterface
   ], clauses = [
     // TODO: Complete clause list (defaultmap, uses_allocators).
-    OpenMP_AllocateClause, OpenMP_BareClause, OpenMP_DependClause,
-    OpenMP_DeviceClause, OpenMP_DynGroupprivateClause,
-    OpenMP_HasDeviceAddrClause, OpenMP_HostEvalClause,
-    OpenMP_IfClause, OpenMP_InReductionClause, OpenMP_IsDevicePtrClause,
-    OpenMP_MapClauseSkip<assemblyFormat = true>, OpenMP_NowaitClause,
-    OpenMP_PrivateClause, OpenMP_ThreadLimitClause
+    OpenMP_AllocateClause, OpenMP_DependClause, OpenMP_DeviceClause,
+    OpenMP_DynGroupprivateClause, OpenMP_HasDeviceAddrClause,
+    OpenMP_HostEvalClause, OpenMP_IfClause, OpenMP_InReductionClause,
+    OpenMP_IsDevicePtrClause, OpenMP_MapClauseSkip<assemblyFormat = true>,
+    OpenMP_NowaitClause, OpenMP_PrivateClause, OpenMP_ThreadLimitClause
   ], singleRegion = true> {
   let summary = "target construct";
   let description = [{
@@ -1607,13 +1606,22 @@ def TargetOp : OpenMP_Op<"target", traits = [
     (relative to other `map` operands not the whole operands of the operation). For
     `private` opernads that do not require a map, this value is -1 (which is omitted
     from the assembly foramt printing).
+
+    The `kernel_type` required attribute reflects how the target region must be
+    executed, according to the OpenMP construct that it represents. Most
+    commonly, `spmd` is used to represent `target teams distribute parallel
+    do/for` or semantically equivalent constructs and `generic` is used for
+    everything else. `spmd_no_loop` is an optimization of `spmd` mode use for
+    the same kinds of constructs, and `bare` is used to implement the
+    `ompx_bare` extension to `target teams` constructs.
   }] # clausesDescription;
 
   let arguments = !con(clausesArgs,
-                       (ins OptionalAttr<DenseI64ArrayAttr>:$private_maps));
+                       (ins OptionalAttr<DenseI64ArrayAttr>:$private_maps,
+                            TargetExecModeAttr:$kernel_type));
 
   let builders = [
-    OpBuilder<(ins CArg<"const TargetOperands &">:$clauses)>
+    OpBuilder<(ins CArg<"const TargetExtOperands &">:$clauses)>
   ];
 
   let extraClassDeclaration = [{
@@ -1643,28 +1651,21 @@ def TargetOp : OpenMP_Op<"target", traits = [
     /// operations, the top level one will be the one captured.
     Operation *getInnermostCapturedOmpOp();
 
-    /// Infers the kernel type (Bare, Generic or SPMD) based on the contents of
-    /// the target region.
-    ///
-    /// \param capturedOp result of a still valid (no modifications made to any
-    /// nested operations) previous call to `getInnermostCapturedOmpOp()`.
-    /// \param hostEvalTripCount output argument to store whether this kernel
-    /// wraps a loop whose bounds must be evaluated on the host prior to
-    /// launching it.
-    static ::mlir::omp::TargetExecMode
-    getKernelExecFlags(Operation *capturedOp,
-                       bool *hostEvalTripCount = nullptr);
+    /// Returns whether this kernel requires host evaluation of loop trip count.
+    bool hasHostEvalTripCount();
   }] # clausesExtraClassDeclaration;
 
-  let assemblyFormat = clausesAssemblyFormat # [{
-    ( `map_iterated` `(` $map_iterated^ `:` type($map_iterated) `)` )?
-    custom<TargetOpRegion>(
-        $region, $has_device_addr_vars, type($has_device_addr_vars),
-        $host_eval_vars, type($host_eval_vars), $in_reduction_vars,
-        type($in_reduction_vars), $in_reduction_byref, $in_reduction_syms,
-        $map_vars, type($map_vars), $private_vars, type($private_vars),
-        $private_syms, $private_needs_barrier, $private_maps) attr-dict
-  }];
+  let assemblyFormat = "`kernel_type` `` $kernel_type " #
+    clausesReqAssemblyFormat # " " #
+    "oilist(" # clausesOptAssemblyFormat #
+    " | `map_iterated` `(` $map_iterated `:` type($map_iterated) `)`)" # [{
+      custom<TargetOpRegion>(
+          $region, $has_device_addr_vars, type($has_device_addr_vars),
+          $host_eval_vars, type($host_eval_vars), $in_reduction_vars,
+          type($in_reduction_vars), $in_reduction_byref, $in_reduction_syms,
+          $map_vars, type($map_vars), $private_vars, type($private_vars),
+          $private_syms, $private_needs_barrier, $private_maps) attr-dict
+    }];
 
   let hasVerifier = 1;
   let hasRegionVerifier = 1;

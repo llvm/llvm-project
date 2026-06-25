@@ -10,7 +10,7 @@
 
 
 // CHECK-LABEL:   func.func @x(
-// CHECK:             omp.target {{.*}} {
+// CHECK:             omp.target kernel_type(spmd) {{.*}} {
 // CHECK:               omp.teams {
 // CHECK:                 omp.parallel {
 // CHECK:                   omp.distribute {
@@ -61,7 +61,7 @@ func.func @x(%arr : !fir.ref<!fir.array<?x?xf32>>) {
     %198 = omp.map.info var_ptr(%arr : !fir.ref<!fir.array<?x?xf32>>, f32) map_clauses(implicit, tofrom) capture(ByRef) bounds(%195, %197) -> !fir.ref<!fir.array<?x?xf32>> {name = "y"}
     %199 = omp.map.info var_ptr(%1 : !fir.ref<i32>, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !fir.ref<i32> {name = ""}
     %200 = omp.map.info var_ptr(%0 : !fir.ref<i32>, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !fir.ref<i32> {name = ""}
-    omp.target map_entries(%198 -> %arg5, %199 -> %arg6, %200 -> %arg7 : !fir.ref<!fir.array<?x?xf32>>, !fir.ref<i32>, !fir.ref<i32>) {
+    omp.target kernel_type(generic) map_entries(%198 -> %arg5, %199 -> %arg6, %200 -> %arg7 : !fir.ref<!fir.array<?x?xf32>>, !fir.ref<i32>, !fir.ref<i32>) {
       %c0_0 = arith.constant 0 : index
       %201 = fir.load %arg7 : !fir.ref<i32>
       %202 = fir.load %arg6 : !fir.ref<i32>

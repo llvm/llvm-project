@@ -2577,12 +2577,12 @@ LogicalResult TargetUpdateOp::verify() {
 //===----------------------------------------------------------------------===//
 
 void TargetOp::build(OpBuilder &builder, OperationState &state,
-                     const TargetOperands &clauses) {
+                     const TargetExtOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
   // TODO Store clauses in op: allocateVars, allocatorVars, inReductionVars,
   // inReductionByref, inReductionSyms.
   TargetOp::build(
-      builder, state, /*allocate_vars=*/{}, /*allocator_vars=*/{}, clauses.bare,
+      builder, state, /*allocate_vars=*/{}, /*allocator_vars=*/{},
       makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
       makeArrayAttr(ctx, clauses.dependIteratedKinds), clauses.dependIterated,
       clauses.device, clauses.dynGroupprivateAccessGroup,
@@ -2592,8 +2592,42 @@ void TargetOp::build(OpBuilder &builder, OperationState &state,
       /*in_reduction_syms=*/nullptr, clauses.isDevicePtrVars, clauses.mapVars,
       clauses.mapIterated, clauses.nowait, clauses.privateVars,
       makeArrayAttr(ctx, clauses.privateSyms), clauses.privateNeedsBarrier,
-      clauses.threadLimitVars,
-      /*private_maps=*/nullptr);
+      clauses.threadLimitVars, /*private_maps=*/nullptr, clauses.kernelType);
+}
+
+bool TargetOp::hasHostEvalTripCount() {
+  TargetExecMode mode = getKernelType();
+  if (mode == TargetExecMode::spmd || mode == TargetExecMode::spmd_no_loop)
+    return true;
+
+  if (mode == TargetExecMode::bare)
+    return false;
+
+  // If it represents a `target teams distribute` construct, also evaluate the
+  // `distribute` trip count on the host.
+  Operation *capturedOp = getInnermostCapturedOmpOp();
+  if (auto loopNestOp = dyn_cast_if_present<LoopNestOp>(capturedOp)) {
+    SmallVector<LoopWrapperInterface> loopWrappers;
+    loopNestOp.gatherWrappers(loopWrappers);
+
+    LoopWrapperInterface *innermostWrapper = loopWrappers.begin();
+    if (isa<SimdOp>(innermostWrapper))
+      innermostWrapper = std::next(innermostWrapper);
+
+    auto numWrappers = std::distance(innermostWrapper, loopWrappers.end());
+    if (numWrappers != 1)
+      return false;
+
+    if (!isa<DistributeOp>(innermostWrapper))
+      return false;
+
+    Operation *parentOp = innermostWrapper->getOperation()->getParentOp();
+    if (isa_and_present<TeamsOp>(parentOp) &&
+        parentOp->getParentOp() == getOperation())
+      return true;
+  }
+
+  return false;
 }
 
 LogicalResult TargetOp::verify() {
@@ -2622,15 +2656,40 @@ LogicalResult TargetOp::verify() {
 
 LogicalResult TargetOp::verifyRegions() {
   auto teamsOps = getOps<TeamsOp>();
-  if (std::distance(teamsOps.begin(), teamsOps.end()) > 1)
+  auto numNestedTeams = std::distance(teamsOps.begin(), teamsOps.end());
+  if (numNestedTeams > 1)
     return emitError("target containing multiple 'omp.teams' nested ops");
 
+  if (numNestedTeams == 0 && getKernelType() == TargetExecMode::bare)
+    return emitOpError()
+           << "bare kernel must contain a nested 'omp.teams' operation";
+
+  if (getKernelType() == TargetExecMode::spmd ||
+      getKernelType() == TargetExecMode::spmd_no_loop) {
+    bool containsLoop = getRegion()
+                            .walk<WalkOrder::PreOrder>([](LoopNestOp loopOp) {
+                              return WalkResult::interrupt();
+                            })
+                            .wasInterrupted();
+    if (!containsLoop)
+      return emitOpError()
+             << "SPMD kernel must contain a nested 'omp.loop_nest' operation";
+  }
+
+  bool isTargetDevice = false;
+  if (auto offloadMod = (*this)->getParentOfType<OffloadModuleInterface>())
+    if (offloadMod.getIsTargetDevice())
+      isTargetDevice = true;
+
   // Check that host_eval values are only used in legal ways.
-  bool hostEvalTripCount;
-  Operation *capturedOp = getInnermostCapturedOmpOp();
-  TargetExecMode execMode = getKernelExecFlags(capturedOp, &hostEvalTripCount);
-  for (Value hostEvalArg :
-       cast<BlockArgOpenMPOpInterface>(getOperation()).getHostEvalBlockArgs()) {
+  llvm::ArrayRef<BlockArgument> hostEvalBlockArgs =
+      cast<BlockArgOpenMPOpInterface>(getOperation()).getHostEvalBlockArgs();
+
+  if (!hostEvalBlockArgs.empty() && isTargetDevice)
+    emitOpError() << "'host_eval' is only supported during host compilation";
+
+  bool hostEvalTripCount = hasHostEvalTripCount();
+  for (Value hostEvalArg : hostEvalBlockArgs) {
     for (Operation *user : hostEvalArg.getUsers()) {
       if (auto teamsOp = dyn_cast<TeamsOp>(user)) {
         // Check if used in num_teams_lower or any of num_teams_upper_vars
@@ -2643,17 +2702,15 @@ LogicalResult TargetOp::verifyRegions() {
                                 "and 'thread_limit' in 'omp.teams'";
       }
       if (auto parallelOp = dyn_cast<ParallelOp>(user)) {
-        if (execMode == TargetExecMode::spmd &&
-            parallelOp->isAncestor(capturedOp) &&
-            llvm::is_contained(parallelOp.getNumThreadsVars(), hostEvalArg))
+        if (llvm::is_contained(parallelOp.getNumThreadsVars(), hostEvalArg))
           continue;
 
         return emitOpError()
                << "host_eval argument only legal as 'num_threads' in "
-                  "'omp.parallel' when representing target SPMD";
+                  "'omp.parallel'";
       }
       if (auto loopNestOp = dyn_cast<LoopNestOp>(user)) {
-        if (hostEvalTripCount && loopNestOp.getOperation() == capturedOp &&
+        if (hostEvalTripCount &&
             (llvm::is_contained(loopNestOp.getLoopLowerBounds(), hostEvalArg) ||
              llvm::is_contained(loopNestOp.getLoopUpperBounds(), hostEvalArg) ||
              llvm::is_contained(loopNestOp.getLoopSteps(), hostEvalArg)))
@@ -2668,6 +2725,19 @@ LogicalResult TargetOp::verifyRegions() {
                            << user->getName() << "' operation";
     }
   }
+
+  if (hostEvalTripCount && !isTargetDevice) {
+    if (auto loopOp = dyn_cast<LoopNestOp>(getInnermostCapturedOmpOp())) {
+      for (auto arg : llvm::concat<Value>(loopOp.getLoopLowerBounds(),
+                                          loopOp.getLoopUpperBounds(),
+                                          loopOp.getLoopSteps())) {
+        if (!llvm::is_contained(hostEvalBlockArgs, arg))
+          return emitOpError() << "nested 'omp.loop_nest' bounds expected to "
+                                  "be host-evaluated";
+      }
+    }
+  }
+
   return success();
 }
 
@@ -2731,10 +2801,24 @@ findCapturedOmpOp(Operation *rootOp, bool checkSingleMandatoryExec,
 }
 
 Operation *TargetOp::getInnermostCapturedOmpOp() {
+  // If this is an SPMD kernel, then just attempt to find the first available
+  // omp.loop_nest. If the kernel type has been properly set, that must be the
+  // captured loop.
+  if (getKernelType() == TargetExecMode::spmd ||
+      getKernelType() == TargetExecMode::spmd_no_loop) {
+    Operation *spmdLoop = nullptr;
+    getRegion().walk<WalkOrder::PreOrder>([&spmdLoop](LoopNestOp loopOp) {
+      spmdLoop = loopOp.getOperation();
+      return WalkResult::interrupt();
+    });
+    assert(spmdLoop && "SPMD target regions must contain a loop");
+    return spmdLoop;
+  }
+
   auto *ompDialect = getContext()->getLoadedDialect<omp::OpenMPDialect>();
 
-  // Only allow OpenMP terminators and non-OpenMP ops that have known memory
-  // effects, but don't include a memory write effect.
+  // Only allow OpenMP terminators and non-OpenMP ops that either have known
+  // memory effects excluding memory write effects, or are pure.
   return findCapturedOmpOp(
       *this, /*checkSingleMandatoryExec=*/true, [&](Operation *sibling) {
         if (!sibling)
@@ -2754,121 +2838,8 @@ Operation *TargetOp::getInnermostCapturedOmpOp() {
                            effect.getResource());
               });
         }
-        return true;
+        return isPure(sibling);
       });
-}
-
-/// Check if we can promote SPMD kernel to No-Loop kernel.
-static bool canPromoteToNoLoop(Operation *capturedOp, TeamsOp teamsOp,
-                               WsloopOp *wsLoopOp) {
-  // num_teams clause can break no-loop teams/threads assumption.
-  if (!teamsOp.getNumTeamsUpperVars().empty())
-    return false;
-
-  // Reduction kernels are slower in no-loop mode.
-  if (teamsOp.getNumReductionVars())
-    return false;
-  if (wsLoopOp->getNumReductionVars())
-    return false;
-
-  // Check if the user allows the promotion of kernels to no-loop mode.
-  OffloadModuleInterface offloadMod =
-      capturedOp->getParentOfType<omp::OffloadModuleInterface>();
-  if (!offloadMod)
-    return false;
-  auto ompFlags = offloadMod.getFlags();
-  if (!ompFlags)
-    return false;
-  return ompFlags.getAssumeTeamsOversubscription() &&
-         ompFlags.getAssumeThreadsOversubscription();
-}
-
-TargetExecMode TargetOp::getKernelExecFlags(Operation *capturedOp,
-                                            bool *hostEvalTripCount) {
-  // TODO: Support detection of bare kernel mode.
-  // A non-null captured op is only valid if it resides inside of a TargetOp
-  // and is the result of calling getInnermostCapturedOmpOp() on it.
-  TargetOp targetOp =
-      capturedOp ? capturedOp->getParentOfType<TargetOp>() : nullptr;
-  assert((!capturedOp ||
-          (targetOp && targetOp.getInnermostCapturedOmpOp() == capturedOp)) &&
-         "unexpected captured op");
-
-  if (hostEvalTripCount)
-    *hostEvalTripCount = false;
-
-  // If it's not capturing a loop, it's a default target region.
-  if (!isa_and_present<LoopNestOp>(capturedOp))
-    return TargetExecMode::generic;
-
-  // Get the innermost non-simd loop wrapper.
-  SmallVector<LoopWrapperInterface> loopWrappers;
-  cast<LoopNestOp>(capturedOp).gatherWrappers(loopWrappers);
-  assert(!loopWrappers.empty());
-
-  LoopWrapperInterface *innermostWrapper = loopWrappers.begin();
-  if (isa<SimdOp>(innermostWrapper))
-    innermostWrapper = std::next(innermostWrapper);
-
-  auto numWrappers = std::distance(innermostWrapper, loopWrappers.end());
-  if (numWrappers != 1 && numWrappers != 2)
-    return TargetExecMode::generic;
-
-  // Detect target-teams-distribute-parallel-wsloop[-simd].
-  if (numWrappers == 2) {
-    WsloopOp *wsloopOp = dyn_cast<WsloopOp>(innermostWrapper);
-    if (!wsloopOp)
-      return TargetExecMode::generic;
-
-    innermostWrapper = std::next(innermostWrapper);
-    if (!isa<DistributeOp>(innermostWrapper))
-      return TargetExecMode::generic;
-
-    Operation *parallelOp = (*innermostWrapper)->getParentOp();
-    if (!isa_and_present<ParallelOp>(parallelOp))
-      return TargetExecMode::generic;
-
-    TeamsOp teamsOp = dyn_cast<TeamsOp>(parallelOp->getParentOp());
-    if (!teamsOp)
-      return TargetExecMode::generic;
-
-    if (teamsOp->getParentOp() == targetOp.getOperation()) {
-      TargetExecMode result = TargetExecMode::spmd;
-      if (canPromoteToNoLoop(capturedOp, teamsOp, wsloopOp))
-        result = TargetExecMode::no_loop;
-      if (hostEvalTripCount)
-        *hostEvalTripCount = true;
-      return result;
-    }
-  }
-  // Detect target-teams-distribute[-simd] and target-teams-loop.
-  else if (isa<DistributeOp, LoopOp>(innermostWrapper)) {
-    Operation *teamsOp = (*innermostWrapper)->getParentOp();
-    if (!isa_and_present<TeamsOp>(teamsOp))
-      return TargetExecMode::generic;
-
-    if (teamsOp->getParentOp() != targetOp.getOperation())
-      return TargetExecMode::generic;
-
-    if (hostEvalTripCount)
-      *hostEvalTripCount = true;
-
-    if (isa<LoopOp>(innermostWrapper))
-      return TargetExecMode::spmd;
-
-    return TargetExecMode::generic;
-  }
-  // Detect target-parallel-wsloop[-simd].
-  else if (isa<WsloopOp>(innermostWrapper)) {
-    Operation *parallelOp = (*innermostWrapper)->getParentOp();
-    if (!isa_and_present<ParallelOp>(parallelOp))
-      return TargetExecMode::generic;
-
-    if (parallelOp->getParentOp() == targetOp.getOperation())
-      return TargetExecMode::spmd;
-  }
-
-  return TargetExecMode::generic;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3036,8 +3007,8 @@ LogicalResult TeamsOp::verify() {
   // omp.teams construct. The issue is how to support the initialization of
   // this operation's own arguments (allow SSA values across omp.target?).
   Operation *op = getOperation();
-  if (!isa<TargetOp>(op->getParentOp()) &&
-      !opInGlobalImplicitParallelRegion(op))
+  auto parentTarget = llvm::dyn_cast_if_present<TargetOp>(op->getParentOp());
+  if (!parentTarget && !opInGlobalImplicitParallelRegion(op))
     return emitError("expected to be nested inside of omp.target or not nested "
                      "in any OpenMP dialect operations");
 
@@ -3045,6 +3016,11 @@ LogicalResult TeamsOp::verify() {
   if (failed(verifyNumTeamsClause(op, this->getNumTeamsLower(),
                                   this->getNumTeamsUpperVars())))
     return failure();
+
+  if (parentTarget &&
+      parentTarget.getKernelType() == TargetExecMode::spmd_no_loop &&
+      (getNumTeamsLower() || !getNumTeamsUpperVars().empty()))
+    return emitOpError() << "'num_teams' not allowed in SPMD-no-loop kernels";
 
   // Check for allocate clause restrictions
   if (getAllocateVars().size() != getAllocatorVars().size())
@@ -4873,8 +4849,7 @@ LogicalResult PrivateClauseOp::verifyRegions() {
 
     if (region.getNumArguments() != expectedNumArgs)
       return mlir::emitError(region.getLoc())
-             << "`" << regionName << "`: "
-             << "expected " << expectedNumArgs
+             << "`" << regionName << "`: " << "expected " << expectedNumArgs
              << " region arguments, got: " << region.getNumArguments();
 
     for (Block &block : region) {
