@@ -24,20 +24,17 @@ AnalysisKey HeapProvenanceAnalysis::Key;
 
 bool ForwardHeapProvenanceAnalysisResult::invalidate(Module &, const PreservedAnalyses &PA,
                                                      ModuleAnalysisManager::Invalidator &) {
-  auto PAC = PA.getChecker<ForwardHeapProvenanceAnalysis>();
-  return !PAC.preservedWhenStateless();
+  return false;
 }
 
 bool BackwardHeapProvenanceAnalysisResult::invalidate(Module &, const PreservedAnalyses &PA,
                                                       ModuleAnalysisManager::Invalidator &) {
-  auto PAC = PA.getChecker<BackwardHeapProvenanceAnalysis>();
-  return !PAC.preservedWhenStateless();
+  return false;
 }
 
 bool HeapProvenanceAnalysisResult::invalidate(Module &, const PreservedAnalyses &PA,
                                               ModuleAnalysisManager::Invalidator &) {
-  auto PAC = PA.getChecker<HeapProvenanceAnalysis>();
-  return !PAC.preservedWhenStateless();
+  return false;
 }
 
 static bool isAllocFunc(StringRef Name) {
