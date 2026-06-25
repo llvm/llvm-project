@@ -833,6 +833,157 @@ entry:
   ret i32 %d
 }
 
+define i32 @extract_v4i32_vector_non_zero_insert_const(<4 x i32> %a, <2 x i32> %b, i32 %c) {
+; CHECK-SD-LABEL: extract_v4i32_vector_non_zero_insert_const:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov w0, v0.s[1]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v4i32_vector_non_zero_insert_const:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov s0, v0.s[1]
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
+entry:
+  %vector = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> %a, <2 x i32> %b, i64 2)
+  %d = extractelement <4 x i32> %vector, i32 1
+  ret i32 %d
+}
+
+define i32 @extract_v4i32_vector_non_zero_insert(<4 x i32> %a, <2 x i32> %b, i32 %c) {
+; CHECK-SD-LABEL: extract_v4i32_vector_non_zero_insert:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    sub sp, sp, #16
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-SD-NEXT:    mov x8, sp
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-SD-NEXT:    bfi x8, x0, #2, #2
+; CHECK-SD-NEXT:    str q0, [sp]
+; CHECK-SD-NEXT:    ldr w0, [x8]
+; CHECK-SD-NEXT:    add sp, sp, #16
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v4i32_vector_non_zero_insert:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    sub sp, sp, #16
+; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    mov w8, w0
+; CHECK-GI-NEXT:    mov x9, sp
+; CHECK-GI-NEXT:    and x8, x8, #0x3
+; CHECK-GI-NEXT:    str q0, [sp]
+; CHECK-GI-NEXT:    ldr w0, [x9, x8, lsl #2]
+; CHECK-GI-NEXT:    add sp, sp, #16
+; CHECK-GI-NEXT:    ret
+entry:
+  %vector = call <4 x i32> @llvm.vector.insert.v4i32.v2i32(<4 x i32> %a, <2 x i32> %b, i64 2)
+  %d = extractelement <4 x i32> %vector, i32 %c
+  ret i32 %d
+}
+
+define i32 @extract_v8i32_vector_non_half_insert_const(<8 x i32> %a, <2 x i32> %b, i32 %c) {
+; CHECK-SD-LABEL: extract_v8i32_vector_non_half_insert_const:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    mov w0, v2.s[1]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v8i32_vector_non_half_insert_const:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-GI-NEXT:    mov v0.s[1], v2.s[1]
+; CHECK-GI-NEXT:    mov s0, v0.s[1]
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
+entry:
+  %vector = call <8 x i32> @llvm.vector.insert.v4i32.v2i32(<8 x i32> %a, <2 x i32> %b, i64 0)
+  %d = extractelement <8 x i32> %vector, i32 1
+  ret i32 %d
+}
+
+define i32 @extract_v4i32_vector_non_half_insert(<8 x i32> %a, <2 x i32> %b, i32 %c) {
+; CHECK-SD-LABEL: extract_v4i32_vector_non_half_insert:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    mov w0, v2.s[1]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v4i32_vector_non_half_insert:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-GI-NEXT:    mov v0.s[1], v2.s[1]
+; CHECK-GI-NEXT:    mov s0, v0.s[1]
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
+entry:
+  %vector = call <8 x i32> @llvm.vector.insert.v4i32.v2i32(<8 x i32> %a, <2 x i32> %b, i64 0)
+  %d = extractelement <8 x i32> %vector, i32 1
+  ret i32 %d
+}
+
+define i32 @extract_v8i32_vector_non_half_non_zero_insert_const(<8 x i32> %a, <2 x i32> %b, i32 %c) {
+; CHECK-SD-LABEL: extract_v8i32_vector_non_half_non_zero_insert_const:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    mov w0, v0.s[1]
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v8i32_vector_non_half_non_zero_insert_const:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-GI-NEXT:    mov v0.s[3], v2.s[1]
+; CHECK-GI-NEXT:    mov s0, v0.s[1]
+; CHECK-GI-NEXT:    fmov w0, s0
+; CHECK-GI-NEXT:    ret
+entry:
+  %vector = call <8 x i32> @llvm.vector.insert.v4i32.v2i32(<8 x i32> %a, <2 x i32> %b, i64 2)
+  %d = extractelement <8 x i32> %vector, i32 1
+  ret i32 %d
+}
+
+define i32 @extract_v8i32_vector_non_half_non_zero_insert(<8 x i32> %a, <2 x i32> %b, i32 %c) {
+; CHECK-SD-LABEL: extract_v8i32_vector_non_half_non_zero_insert:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-SD-NEXT:    and x8, x0, #0x7
+; CHECK-SD-NEXT:    stp q0, q1, [sp, #-32]!
+; CHECK-SD-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-SD-NEXT:    mov x9, sp
+; CHECK-SD-NEXT:    ldr w0, [x9, x8, lsl #2]
+; CHECK-SD-NEXT:    add sp, sp, #32
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: extract_v8i32_vector_non_half_non_zero_insert:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; CHECK-GI-NEXT:    sub x9, sp, #48
+; CHECK-GI-NEXT:    mov x29, sp
+; CHECK-GI-NEXT:    and sp, x9, #0xffffffffffffffe0
+; CHECK-GI-NEXT:    .cfi_def_cfa w29, 16
+; CHECK-GI-NEXT:    .cfi_offset w30, -8
+; CHECK-GI-NEXT:    .cfi_offset w29, -16
+; CHECK-GI-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-GI-NEXT:    mov v0.s[3], v2.s[1]
+; CHECK-GI-NEXT:    mov w8, w0
+; CHECK-GI-NEXT:    mov x9, sp
+; CHECK-GI-NEXT:    and x8, x8, #0x7
+; CHECK-GI-NEXT:    stp q0, q1, [sp]
+; CHECK-GI-NEXT:    ldr w0, [x9, x8, lsl #2]
+; CHECK-GI-NEXT:    mov sp, x29
+; CHECK-GI-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; CHECK-GI-NEXT:    ret
+entry:
+  %vector = call <8 x i32> @llvm.vector.insert.v4i32.v2i32(<8 x i32> %a, <2 x i32> %b, i64 2)
+  %d = extractelement <8 x i32> %vector, i32 %c
+  ret i32 %d
+}
+
 define i32 @extract_v4i32_vector_extract_const(<4 x i32> %a, <2 x i32> %b, i32 %c) {
 ; CHECK-LABEL: extract_v4i32_vector_extract_const:
 ; CHECK:       // %bb.0: // %entry
@@ -935,10 +1086,10 @@ define i32 @extract_v4i32_shuffle(<4 x i32> %a, <4 x i32> %b, i32 %c) {
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    sub sp, sp, #16
 ; CHECK-GI-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-GI-NEXT:    adrp x8, .LCPI35_0
+; CHECK-GI-NEXT:    adrp x8, .LCPI41_0
 ; CHECK-GI-NEXT:    // kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    mov x9, sp
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI35_0]
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI41_0]
 ; CHECK-GI-NEXT:    // kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
 ; CHECK-GI-NEXT:    mov w8, w0
 ; CHECK-GI-NEXT:    and x8, x8, #0x3
@@ -1065,26 +1216,26 @@ define i32 @extract_v4i32_phi(i64 %val, i32  %limit, ptr %ptr) {
 ; CHECK-SD-NEXT:    movk x8, #2, lsl #32
 ; CHECK-SD-NEXT:    fmov d2, x8
 ; CHECK-SD-NEXT:    add v1.2s, v1.2s, v2.2s
-; CHECK-SD-NEXT:  .LBB41_1: // %loop
+; CHECK-SD-NEXT:  .LBB47_1: // %loop
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-SD-NEXT:    fmov w8, s1
 ; CHECK-SD-NEXT:    add v1.2s, v1.2s, v0.2s
 ; CHECK-SD-NEXT:    cmp w8, w1
 ; CHECK-SD-NEXT:    add w0, w8, #10
 ; CHECK-SD-NEXT:    str w0, [x2, w8, sxtw #2]
-; CHECK-SD-NEXT:    b.lo .LBB41_1
+; CHECK-SD-NEXT:    b.lo .LBB47_1
 ; CHECK-SD-NEXT:  // %bb.2: // %ret
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: extract_v4i32_phi:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI41_0
+; CHECK-GI-NEXT:    adrp x8, .LCPI47_0
 ; CHECK-GI-NEXT:    dup v0.2d, x0
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI41_0]
+; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI47_0]
 ; CHECK-GI-NEXT:    add v1.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    movi v0.2s, #16
 ; CHECK-GI-NEXT:    xtn v1.2s, v1.2d
-; CHECK-GI-NEXT:  .LBB41_1: // %loop
+; CHECK-GI-NEXT:  .LBB47_1: // %loop
 ; CHECK-GI-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-GI-NEXT:    fmov w8, s1
 ; CHECK-GI-NEXT:    fmov w9, s1
@@ -1092,7 +1243,7 @@ define i32 @extract_v4i32_phi(i64 %val, i32  %limit, ptr %ptr) {
 ; CHECK-GI-NEXT:    cmp w8, w1
 ; CHECK-GI-NEXT:    add w0, w9, #10
 ; CHECK-GI-NEXT:    str w0, [x2, w8, sxtw #2]
-; CHECK-GI-NEXT:    b.lo .LBB41_1
+; CHECK-GI-NEXT:    b.lo .LBB47_1
 ; CHECK-GI-NEXT:  // %bb.2: // %ret
 ; CHECK-GI-NEXT:    ret
 entry:
