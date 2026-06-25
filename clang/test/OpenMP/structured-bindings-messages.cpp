@@ -3,8 +3,14 @@
 
 namespace std {
   typedef unsigned long size_t;
+  
+  // move.
+  template<typename T>
+  constexpr T&& move(T& t) noexcept {
+    return static_cast<T&&>(t);
+  }
 
-  // pair
+  // pair.
   template <typename T1, typename T2>
   struct pair {
     T1 first;
@@ -16,7 +22,7 @@ namespace std {
     return {a, b};
   }
 
-  // tuple
+  // tuple.
   template <typename... Ts>
   struct tuple;
 
@@ -93,7 +99,7 @@ namespace std {
     else return get<I-1>(static_cast<tuple<Ts...>&&>(t.tail));
   }
 
-  // array
+  // array.
   template <typename T, size_t N>
   struct array {
     T data[N];
@@ -155,5 +161,76 @@ void test_array() {
     use(p + q);
     // expected-error@-1{{capturing tuple-like structured binding 'p' is not yet supported in OpenMP}}
     // expected-error@-2{{capturing tuple-like structured binding 'q' is not yet supported in OpenMP}}
+  }
+}
+
+struct Point {
+  int x, y;
+};
+
+Point make_point() { return {1, 2}; }
+
+void test_function_call() {
+  auto [a, b] = make_point();
+  // expected-error@+1{{mapping of structured binding initialized from function call is not supported}}
+#pragma omp target map(a)
+  {
+    a++;
+  }
+}
+
+void test_brace_init() {
+  auto [a, b] = Point{1, 2};
+  // expected-error@+1{{mapping of structured binding initialized from initializer list is not supported}}
+#pragma omp target map(a)
+  {
+    a++;
+  }
+}
+
+void test_move() {
+  Point p{1, 2};
+  auto [a, b] = std::move(p);
+  // expected-error@+1{{mapping of structured binding initialized from move expression is not supported}}
+#pragma omp target map(a)
+  { 
+    a++;
+  }
+}
+
+void test_conflicting_clauses() {
+  Point pt{1, 2};
+  auto [a, b] = pt;
+  // expected-error@+2{{bindings from the same structured binding declaration cannot have different data-sharing attributes}}
+  // expected-note@+1{{previous binding from the same declaration has 'firstprivate' attribute here}}
+#pragma omp parallel firstprivate(a) shared(b)
+  {
+    use(a);
+    use(b);
+  }
+}
+
+void test_conflicting_linear_private() {
+  Point p{1, 2};
+  auto [a, b] = p;
+  // expected-note@+1{{previous binding from the same declaration has 'linear' attribute here}}
+#pragma omp simd linear(a:2) private(b)
+  // expected-error@-1{{bindings from the same structured binding declaration cannot have different data-sharing attributes}}
+  for (int i = 0; i < 10; ++i) {
+    a += 2;
+    b = i;
+    use(a + b);
+  }
+}
+
+void test_conflicting_reduction_shared() {
+  Point p{0, 0};
+  auto [a, b] = p;
+  // expected-note@+1{{previous binding from the same declaration has 'reduction' attribute here}}
+#pragma omp parallel for reduction(+:a) shared(b)
+  // expected-error@-1{{bindings from the same structured binding declaration cannot have different data-sharing attributes}}
+  for (int i = 0; i < 10; ++i) {
+    a += i;
+    b = i;
   }
 }
