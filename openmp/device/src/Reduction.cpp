@@ -280,7 +280,7 @@ int32_t __kmpc_gpu_xteam_reduce_nowait(IdentTy *Loc, void *reduce_data,
     return 0;
 
   // The last team performs final reduction across all team values.
-  NumThreads = kmpc_min(NumThreads, round_down_to_warpsize(NumTeams));
+  NumThreads = round_down_to_warpsize(kmpc_min(NumThreads, NumTeams));
   if (ThreadId >= NumThreads)
     return 0;
 
