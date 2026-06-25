@@ -469,11 +469,12 @@ static void updateOperands(MachineInstr &MI, RegImmPair OldRegImm,
 }
 
 bool RISCVMakeCompressibleOpt::runOnMachineFunction(MachineFunction &Fn) {
-  // This is a size optimization.
-  if (skipFunction(Fn.getFunction()) || !Fn.getFunction().hasMinSize())
+  const RISCVSubtarget &STI = Fn.getSubtarget<RISCVSubtarget>();
+  // This is a size optimization unless the user explicitly overrides it.
+  if (skipFunction(Fn.getFunction()) ||
+      (!Fn.getFunction().hasMinSize() && !STI.enableMakeCompressibleOpt()))
     return false;
 
-  const RISCVSubtarget &STI = Fn.getSubtarget<RISCVSubtarget>();
   const RISCVInstrInfo &TII = *STI.getInstrInfo();
 
   // This optimization only makes sense if compressed instructions are emitted.
