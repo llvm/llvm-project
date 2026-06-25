@@ -22,7 +22,6 @@ class NVPTXInst<dag outs, dag ins, string asmstr, list<dag> pattern = []>
   dag InOperandList = ins;
   let AsmString = asmstr;
   let Pattern = pattern;
-  let UseNamedOperandTable = true;
 
   // TSFlagFields
   bit IsLoad = false;

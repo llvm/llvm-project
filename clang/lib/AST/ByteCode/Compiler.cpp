@@ -7672,16 +7672,21 @@ bool Compiler<Emitter>::VisitVectorUnaryOperator(const UnaryOperator *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
-  if (DiscardResult)
-    return true;
-
-  if (const auto *ECD = dyn_cast<EnumConstantDecl>(D))
+  if (const auto *ECD = dyn_cast<EnumConstantDecl>(D)) {
+    if (DiscardResult)
+      return true;
     return this->emitConst(ECD->getInitVal(), E);
+  }
   if (const auto *FuncDecl = dyn_cast<FunctionDecl>(D)) {
+    if (DiscardResult)
+      return true;
     const Function *F = getFunction(FuncDecl);
     return F && this->emitGetFnPtr(F, E);
   }
   if (const auto *TPOD = dyn_cast<TemplateParamObjectDecl>(D)) {
+    if (DiscardResult)
+      return true;
+
     if (UnsignedOrNone Index = P.getOrCreateGlobal(D)) {
       if (OptPrimType T = classify(D->getType())) {
         if (!this->visitAPValue(TPOD->getValue(), *T, E))
@@ -7705,10 +7710,19 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   QualType DeclType = D->getType();
   bool IsReference = DeclType->isReferenceType();
 
+  auto maybePopPtr = [&]() -> bool {
+    if (DiscardResult)
+      return this->emitPopPtr(E);
+    return true;
+  };
+
   // Function parameters.
   // Note that it's important to check them first since we might have a local
   // variable created for a ParmVarDecl as well.
   if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
+    if (DiscardResult)
+      return true;
+
     if (Ctx.getLangOpts().CPlusPlus && !Ctx.getLangOpts().CPlusPlus11 &&
         !DeclType->isIntegralOrEnumerationType()) {
       return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
@@ -7730,9 +7744,9 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
     const unsigned Offset = It->second.Offset;
     if (IsReference) {
       assert(classifyPrim(E) == PT_Ptr);
-      return this->emitGetRefLocal(Offset, E);
+      return this->emitGetRefLocal(Offset, E) && maybePopPtr();
     }
-    return this->emitGetPtrLocal(Offset, E);
+    return this->emitGetPtrLocal(Offset, E) && maybePopPtr();
   }
   // Global variables.
   if (auto GlobalIndex = P.getGlobal(D)) {
@@ -7741,10 +7755,11 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
         return this->emitGetGlobal(classifyPrim(E), *GlobalIndex, E);
       if (!Ctx.getLangOpts().CPlusPlus23)
         return this->emitGetGlobalUnchecked(classifyPrim(E), *GlobalIndex, E);
-      return this->emitGetRefGlobal(*GlobalIndex, E);
+
+      return this->emitGetRefGlobal(*GlobalIndex, E) && maybePopPtr();
     }
 
-    return this->emitGetPtrGlobal(*GlobalIndex, E);
+    return this->emitGetPtrGlobal(*GlobalIndex, E) && maybePopPtr();
   }
 
   // In case we need to re-visit a declaration.
@@ -7774,8 +7789,8 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
       auto [Offset, IsPtr] = It->second;
 
       if (IsPtr)
-        return this->emitGetThisFieldPtr(Offset, E);
-      return this->emitGetPtrThisField(Offset, E);
+        return this->emitGetThisFieldPtr(Offset, E) && maybePopPtr();
+      return this->emitGetPtrThisField(Offset, E) && maybePopPtr();
     }
   }
 
@@ -7786,11 +7801,14 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   }
 
   if (const auto *BD = dyn_cast<BindingDecl>(D))
-    return this->visit(BD->getBinding());
+    return this->delegate(BD->getBinding());
 
   // Avoid infinite recursion.
-  if (D == InitializingDecl)
+  if (D == InitializingDecl) {
+    if (DiscardResult)
+      return true;
     return this->emitDummyPtr(D, E);
+  }
 
   // Try to lazily visit (or emit dummy pointers for) declarations
   // we haven't seen yet.
@@ -7804,6 +7822,9 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
         DeclType.isConstant(Ctx.getASTContext()) && !VD->isWeak() &&
         VD->evaluateValue())
       return revisit(VD, /*IsConstexprUnknown=*/false);
+
+    if (DiscardResult)
+      return true;
     return this->emitDummyPtr(D, E);
   }
 
@@ -7849,6 +7870,8 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
                                       /*InitializerFailed=*/true, E);
   }
 
+  if (DiscardResult)
+    return true;
   return this->emitDummyPtr(
       D, E, Ctx.getLangOpts().CPlusPlus23 && DeclType->isReferenceType());
 }

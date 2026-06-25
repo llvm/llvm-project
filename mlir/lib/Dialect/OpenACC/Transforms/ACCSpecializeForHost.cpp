@@ -464,8 +464,8 @@ void mlir::acc::populateACCHostFallbackPatterns(RewritePatternSet &patterns,
   // Runtime operations - erase them
   patterns.insert<
       ACCOpEraseConversion<acc::InitOp>, ACCOpEraseConversion<acc::ShutdownOp>,
-      ACCOpEraseConversion<acc::SetOp>, ACCOpEraseConversion<acc::WaitOp>,
-      ACCOpEraseConversion<acc::TerminatorOp>>(context);
+      ACCOpEraseConversion<acc::SetOp>, ACCOpEraseConversion<acc::WaitOp>>(
+      context);
 
   // Compute constructs - unwrap their regions
   patterns.insert<ACCRegionUnwrapConversion<acc::ParallelOp>,
