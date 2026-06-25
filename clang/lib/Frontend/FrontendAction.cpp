@@ -39,6 +39,7 @@
 #include "clang/Serialization/ASTDeserializationListener.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
+#include "clang/Support/Compiler.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
@@ -52,7 +53,7 @@
 #include <system_error>
 using namespace clang;
 
-LLVM_INSTANTIATE_REGISTRY(FrontendPluginRegistry)
+LLVM_INSTANTIATE_REGISTRY_EX(CLANG_ABI_EXPORT, FrontendPluginRegistry)
 
 namespace {
 

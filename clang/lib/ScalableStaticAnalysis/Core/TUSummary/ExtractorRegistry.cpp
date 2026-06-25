@@ -13,7 +13,8 @@
 using namespace clang;
 using namespace ssaf;
 
-LLVM_DEFINE_REGISTRY(clang::ssaf::TUSummaryExtractorRegistry)
+LLVM_DEFINE_REGISTRY_EX(CLANG_ABI_EXPORT,
+                        clang::ssaf::TUSummaryExtractorRegistry)
 
 bool ssaf::isTUSummaryExtractorRegistered(llvm::StringRef SummaryName) {
   for (const auto &Entry : TUSummaryExtractorRegistry::entries())
