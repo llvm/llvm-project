@@ -75,8 +75,8 @@ public:
     U.Flags = 0;
     init(F);
   }
-  FPTransformChecker(const Instruction *I);
-  FPTransformChecker(const SimplifyQuery &Q);
+  LLVM_ABI FPTransformChecker(const Instruction *I);
+  LLVM_ABI FPTransformChecker(const SimplifyQuery &Q);
   FPTransformChecker(FastMathFlags FMF) {
     U.Flags = 0;
     U.F.FastMath = FMF.getAsOpaqueInt();
@@ -119,7 +119,7 @@ public:
 
 private:
   FPTransformChecker(unsigned Flags) { U.Flags = 0; }
-  void init(const Function *F);
+  LLVM_ABI void init(const Function *F);
   void with(const Instruction *I);
 };
 
