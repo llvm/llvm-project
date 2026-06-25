@@ -7,8 +7,9 @@
 // Also tests that negative indices and oversized __uint128_t indices are rejected.
 // https://github.com/llvm/llvm-project/issues/199319
 
-#include <stdint.h>
-#include <stddef.h>
+typedef unsigned char      uint8_t;
+typedef unsigned short     uint16_t;
+typedef unsigned long long uint64_t;
 
 struct MyStruct {
     void *ptrs[256];
