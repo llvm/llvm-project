@@ -211,16 +211,7 @@ public:
     cir::BlockAddressOp blockAddressOp = cir::BlockAddressOp::create(
         builder, cgf.getLoc(e->getSourceRange()), cgf.convertType(e->getType()),
         blockInfoAttr);
-    cir::LabelOp resolvedLabel = cgf.cgm.lookupBlockAddressInfo(blockInfoAttr);
-    if (!resolvedLabel) {
-      cgf.cgm.mapUnresolvedBlockAddress(blockAddressOp);
-      // Still add the op to maintain insertion order it will be resolved in
-      // resolveBlockAddresses
-      cgf.cgm.mapResolvedBlockAddress(blockAddressOp, nullptr);
-    } else {
-      cgf.cgm.mapResolvedBlockAddress(blockAddressOp, resolvedLabel);
-    }
-    cgf.instantiateIndirectGotoBlock();
+    cgf.indirectGotoTargets.push_back(blockInfoAttr);
     return blockAddressOp;
   }
 
