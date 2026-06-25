@@ -454,7 +454,8 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return true;
 }
 
-bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
+bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc,
+                   AccessKinds AK) {
   assert(Desc);
 
   const auto *D = Desc->asVarDecl();
@@ -472,7 +473,7 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   bool IsConstant = T.isConstant(S.getASTContext());
   if (T->isIntegralOrEnumerationType()) {
     if (!IsConstant) {
-      diagnoseNonConstVariable(S, OpPC, D);
+      diagnoseNonConstVariable(S, OpPC, D, AK);
       return false;
     }
     return true;
@@ -496,22 +497,23 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   if (T->isPointerOrReferenceType()) {
     if (!T->getPointeeType().isConstant(S.getASTContext()) ||
         !S.getLangOpts().CPlusPlus11) {
-      diagnoseNonConstVariable(S, OpPC, D);
+      diagnoseNonConstVariable(S, OpPC, D, AK);
       return false;
     }
     return true;
   }
 
-  diagnoseNonConstVariable(S, OpPC, D);
+  diagnoseNonConstVariable(S, OpPC, D, AK);
   return false;
 }
 
-static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                          AccessKinds AK = AK_Read) {
   if (!Ptr.isStatic() || !Ptr.isBlockPointer())
     return true;
   if (!Ptr.getDeclID())
     return true;
-  return CheckConstant(S, OpPC, Ptr.getDeclDesc());
+  return CheckConstant(S, OpPC, Ptr.getDeclDesc(), AK);
 }
 
 bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
@@ -641,7 +643,7 @@ bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   return false;
 }
 
-bool CheckMutable(InterpState &S, CodePtr OpPC, PtrView Ptr) {
+bool CheckMutable(InterpState &S, CodePtr OpPC, PtrView Ptr, AccessKinds AK) {
   assert(Ptr.isLive() && "Pointer is not live");
   if (!Ptr.isMutable())
     return true;
@@ -653,7 +655,7 @@ bool CheckMutable(InterpState &S, CodePtr OpPC, PtrView Ptr) {
 
   const SourceInfo &Loc = S.Current->getSource(OpPC);
   const FieldDecl *Field = Ptr.getField();
-  S.FFDiag(Loc, diag::note_constexpr_access_mutable, 1) << AK_Read << Field;
+  S.FFDiag(Loc, diag::note_constexpr_access_mutable, 1) << AK << Field;
   S.Note(Field->getLocation(), diag::note_declared_at);
   return false;
 }
@@ -874,7 +876,7 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return CheckWeak(S, OpPC, Ptr.block());
   }
 
-  if (!CheckConstant(S, OpPC, Ptr))
+  if (!CheckConstant(S, OpPC, Ptr, AK))
     return false;
   if (!CheckRange(S, OpPC, Ptr, AK))
     return false;
