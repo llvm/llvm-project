@@ -24420,6 +24420,15 @@ OMPClause *SemaOpenMP::ActOnOpenMPNumTeamsClause(
   // The lower-bound expression in num_teams must evaluate to a positive integer
   // value.
   if (ModifierExpr) {
+    assert(Modifier == OMPC_NUMTEAMS_lower_bound && "Unexpected modifier.");
+
+    if (getLangOpts().OpenMP < 51) {
+      Diag(ModifierLoc, diag::err_omp_modifier_requires_version)
+          << getOpenMPSimpleClauseTypeName(llvm::omp::OMPC_num_teams, Modifier)
+          << getOpenMPClauseName(llvm::omp::OMPC_num_teams) << "5.1";
+      return nullptr;
+    }
+
     if (!isNonNegativeIntegerValue(ModifierExpr, SemaRef, OMPC_num_teams,
                                    /*StrictlyPositive=*/true))
       return nullptr;

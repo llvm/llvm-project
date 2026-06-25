@@ -2,6 +2,9 @@
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -ferror-limit 100 -o - %s -Wuninitialized
 
+// RUN: %clang_cc1 -verify=omp50 -fopenmp -fopenmp-version=50 -DOMP50 -std=c++11 -ferror-limit 100 -o - %s -Wuninitialized
+
+#ifndef OMP50
 void foo() {
 }
 
@@ -241,15 +244,22 @@ void test_multi_level_non_matching_delimiters() {
   #pragma omp teams num_teams(arr[0][1:arr[2][3)
   { }
 }
+#endif
 
 template<int Lower, int Upper>
 void test_template_type_constants() {
-  // expected-error@+1 {{lower bound is greater than upper bound in 'num_teams' clause}}
+  // expected-error@+2 {{lower bound is greater than upper bound in 'num_teams' clause}}
+  // omp50-error@+1 {{'lower_bound' modifier in 'num_teams' clause requires OpenMP 5.1 or later}}
   #pragma omp teams num_teams(Lower:Upper)
+  {}
+
+  // omp50-error@+1 {{'lower_bound' modifier in 'num_teams' clause requires OpenMP 5.1 or later}}
+  #pragma omp teams num_teams(Upper:Lower)
   {}
 }
 
 void instantiate_template_invalid() {
   test_template_type_constants<10, 5>(); // expected-note {{in instantiation of function template specialization 'test_template_type_constants<10, 5>' requested here}}
 }
+
 
