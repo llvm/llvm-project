@@ -175,10 +175,10 @@ public:
 
     /// Set a property using a string name.
     /// Returns whether the property name was valid.
-    bool set(StringRef Name, std::string Value);
+    LLVM_ABI bool set(StringRef Name, std::string Value);
 
     /// Get a list of set properties as pairs of key and value.
-    SmallVector<std::pair<StringRef, StringRef>> getAsStrings() const;
+    LLVM_ABI SmallVector<std::pair<StringRef, StringRef>> getAsStrings() const;
 
     bool operator==(const GlobalAsmProperties &Other) const {
       return TargetFeatures == Other.TargetFeatures &&
