@@ -30,6 +30,7 @@
 
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
+#include "test_consteval_iterators.h"
 
 // SFINAE tests.
 
@@ -116,6 +117,8 @@ constexpr void test_iterators() {
   test_iterators_1<random_access_iterator<int*>>();
   test_iterators_1<contiguous_iterator<int*>>();
   test_iterators_1<int*>();
+  test_iterators_1<consteval_random_access_iterator<int*>>();
+  test_iterators_1<consteval_contiguous_iterator<int*>>();
 }
 
 constexpr bool test() {
