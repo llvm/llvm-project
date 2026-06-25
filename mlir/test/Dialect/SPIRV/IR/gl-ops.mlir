@@ -1263,9 +1263,7 @@ func.func @nclamp(%arg0 : f32, %min : f32, %max : f32) -> () {
   return
 }
 
-// -----
-
-func.func @nclamp(%arg0 : vector<3xf32>, %min : vector<3xf32>, %max : vector<3xf32>) -> () {
+func.func @nclampvec(%arg0 : vector<3xf32>, %min : vector<3xf32>, %max : vector<3xf32>) -> () {
   // CHECK: spirv.GL.NClamp {{%[^,]*}}, {{%[^,]*}}, {{%[^,]*}} : vector<3xf32>
   %2 = spirv.GL.NClamp %arg0, %min, %max : vector<3xf32>
   return
