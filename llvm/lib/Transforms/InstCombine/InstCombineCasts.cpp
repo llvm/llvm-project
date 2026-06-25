@@ -3412,7 +3412,7 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
     // bitcast <N x i8> (shuf X, undef, <N, N-1,...0>) -> bswap (bitcast X)
     // bitcast <N x i1> (shuf X, undef, <N, N-1,...0>) -> bitreverse (bitcast X)
     if (DestTy->isIntegerTy() && ShufElts.getKnownMinValue() % 2 == 0 &&
-        Shuf->hasOneUse() && Shuf->isReverse()) {
+        Shuf->hasOneUse() && Shuf->isReverse() && match(ShufOp1, m_Poison())) {
       unsigned IntrinsicNum = 0;
       if (DL.isLegalInteger(DestTy->getScalarSizeInBits()) &&
           SrcTy->getScalarSizeInBits() == 8) {
@@ -3422,7 +3422,6 @@ Instruction *InstCombinerImpl::visitBitCast(BitCastInst &CI) {
       }
       if (IntrinsicNum != 0) {
         assert(ShufOp0->getType() == SrcTy && "Unexpected shuffle mask");
-        assert(match(ShufOp1, m_Undef()) && "Unexpected shuffle op");
         Function *BswapOrBitreverse = Intrinsic::getOrInsertDeclaration(
             CI.getModule(), IntrinsicNum, DestTy);
         Value *ScalarX = Builder.CreateBitCast(ShufOp0, DestTy);

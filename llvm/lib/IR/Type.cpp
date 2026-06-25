@@ -335,13 +335,11 @@ Type *Type::getByteFromIntType(Type *Ty) {
 }
 
 Type *Type::getWasm_ExternrefTy(LLVMContext &C) {
-  // opaque pointer in addrspace(10)
-  return PointerType::get(C, 10);
+  return TargetExtType::get(C, "wasm.externref", {}, {});
 }
 
 Type *Type::getWasm_FuncrefTy(LLVMContext &C) {
-  // opaque pointer in addrspace(20)
-  return PointerType::get(C, 20);
+  return TargetExtType::get(C, "wasm.funcref", {}, {});
 }
 
 //===----------------------------------------------------------------------===//
@@ -1134,6 +1132,12 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
     return TargetTypeInfo(Type::getInt32Ty(C), TargetExtType::CanBeLocal,
                           TargetExtType::CanBeVectorElement);
   }
+
+  // Opaque types in the WebAssembly name space.
+  if (Name == "wasm.funcref" || Name == "wasm.externref")
+    return TargetTypeInfo(PointerType::getUnqual(C), TargetExtType::HasZeroInit,
+                          TargetExtType::CanBeGlobal,
+                          TargetExtType::CanBeLocal);
 
   return TargetTypeInfo(Type::getVoidTy(C));
 }

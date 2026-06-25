@@ -4,6 +4,7 @@ endif()
 
 add_subdirectory(${LIBC_TARGET_ARCHITECTURE})
 add_subdirectory(syscall_wrappers)
+add_subdirectory(stat)
 
 add_object_library(
   linux_util

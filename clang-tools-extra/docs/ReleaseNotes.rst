@@ -801,6 +801,9 @@ Changes in existing checks
   - Fixed a false positive where function templates could be diagnosed as generic
     identifiers when `DefaultCase` was enabled.
 
+  - Fixed a crash in dependent base lookup when
+    `AggressiveDependentMemberLookup` option is enabled.
+
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check:
 
