@@ -1757,18 +1757,17 @@ public:
                 << "Insufficient stack space for byval pointer argument.";
             return;
           }
+          if (auto [MO, Offset] = verifyMemAccess(
+                  ArgVal.asPointer(), Size,
+                  std::max(AllocAlign.value(),
+                           AttrsAtCallSite.getAlignment().valueOrOne()),
+                  /*IsStore=*/false);
+              MO)
+            copy(MO->getBytes().slice(Offset, Size), Obj->getBytes().begin());
+          else
+            return;
           CurrentFrame->CalleeByValArgs.push_back(Obj);
-
-          auto &SrcPtr = ArgVal.asPointer();
-          auto Val =
-              load(SrcPtr, AllocAlign.value(), ByValTy, /*NoUndef=*/false);
-          if (hasProgramExited())
-            return;
-          auto TgtPtr = Ctx.deriveFromMemoryObject(std::move(Obj));
-          store(TgtPtr, AllocAlign.value(), Val, ByValTy);
-          if (hasProgramExited())
-            return;
-          ArgVal = std::move(TgtPtr);
+          ArgVal = Ctx.deriveFromMemoryObject(std::move(Obj));
         }
       }
       handleAttributes(ArgTy, ArgVal, AttrsAtCallSite, AttrsAtCallee);

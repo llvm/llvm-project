@@ -32,21 +32,21 @@ define void @main() {
 ; CHECK-NEXT:   %var = alloca i32, align 4 => ptr 0x8 [var]
 ; CHECK-NEXT:   store i32 0, ptr %var, align 4
 ; CHECK-NEXT: Entering function: write
-; CHECK-NEXT:   ptr %p = ptr 0xC [p]
+; CHECK-NEXT:   ptr %p = ptr 0x10 [p]
 ; CHECK-NEXT:   store i32 1, ptr %p, align 4
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: write
 ; CHECK-NEXT:   call void @write(ptr byval(i32) %var)
 ; CHECK-NEXT:   %v1 = load i32, ptr %var, align 4 => i32 0
 ; CHECK-NEXT: Entering function: write_callsite_align
-; CHECK-NEXT:   ptr %p = ptr 0x10 [p]
+; CHECK-NEXT:   ptr %p = ptr 0x18 [p]
 ; CHECK-NEXT:   store i32 2, ptr %p, align 4
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: write_callsite_align
 ; CHECK-NEXT:   call void @write_callsite_align(ptr byval(i32) align 8 %var)
 ; CHECK-NEXT:   %v2 = load i32, ptr %var, align 4 => i32 0
 ; CHECK-NEXT: Entering function: write_underalign
-; CHECK-NEXT:   ptr %p = ptr 0x14 [p]
+; CHECK-NEXT:   ptr %p = ptr 0x1D [p]
 ; CHECK-NEXT:   store i32 3, ptr %p, align 1
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: write_underalign
