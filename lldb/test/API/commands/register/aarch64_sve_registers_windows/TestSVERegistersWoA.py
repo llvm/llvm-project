@@ -16,7 +16,6 @@ import lldbsuite.test.cpu_feature as cpu_feature
 
 
 class SVETestCase(TestBase):
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)

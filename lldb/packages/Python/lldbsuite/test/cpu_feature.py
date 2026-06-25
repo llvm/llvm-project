@@ -8,7 +8,12 @@ import re
 PF_ARM_SVE_INSTRUCTIONS_AVAILABLE = 46
 
 class CPUFeature:
-    def __init__(self, linux_cpu_info_flag: str = None, darwin_sysctl_key: str = None, windows_processor_feature: int = None):
+    def __init__(
+        self,
+        linux_cpu_info_flag: str = None,
+        darwin_sysctl_key: str = None,
+        windows_processor_feature: int = None,
+    ):
         self.cpu_info_flag = linux_cpu_info_flag
         self.sysctl_key = darwin_sysctl_key
         self.windows_processor_feature = windows_processor_feature
@@ -67,7 +72,7 @@ class CPUFeature:
     # requires the .NET CLR and the CSC compiler to be available. Neither is
     # guaranteed.
     # TODO: Replace the PowerShell chain with a probe that calls
-    # 'IsProcessorFeaturePresent' directly. 
+    # 'IsProcessorFeaturePresent' directly.
     def _is_supported_windows(self, cmd_runner):
         import base64
 
@@ -79,7 +84,7 @@ class CPUFeature:
             "Add-Type -TypeDefinition '"
             "using System; using System.Runtime.InteropServices; "
             "public class WinAPI { "
-            "[DllImport(\"kernel32.dll\")] "
+            '[DllImport("kernel32.dll")] '
             "public static extern bool IsProcessorFeaturePresent(uint f); }'; "
             f"[WinAPI]::IsProcessorFeaturePresent({self.windows_processor_feature})"
         )
@@ -89,8 +94,10 @@ class CPUFeature:
         cmd = f"powershell -EncodedCommand {encoded}"
         err, retcode, output = cmd_runner(cmd)
         if err.Fail() or retcode != 0:
-            return ("Windows SVE detection via PowerShell failed "
-            "(retcode={0}, output={1!r})".format(retcode, output)), False
+            return (
+                "Windows SVE detection via PowerShell failed "
+                "(retcode={0}, output={1!r})".format(retcode, output)
+            ), False
 
         return None, (output.strip().lower() == "true")
 
