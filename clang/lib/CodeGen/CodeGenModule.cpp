@@ -4364,54 +4364,27 @@ bool CodeGenModule::isValidLoadTimeCommentVariable(const VarDecl *D) const {
   return false; // Reject ints, structs, etc.
 }
 
-/// Return true if a variable name matches any entry in LoadTimeCommentVars.
+/// Return true if the mangled IR name of Global Variable matches any entry in
+/// LoadTimeCommentVars list. Users supply the mangled name as it appears in the
+/// object file.
 ///
-///  - A token containing "::" is treated as a source-qualified name.
-///  - A token without "::" is treated as an unqualified identifier and may
-///    match declarations in multiple scopes.
-///
-/// For qualified matching, leading "::" is ignored on both sides, so "::x"
-/// and "x" both select a file-scope variable.
+/// For plain C file-scope statics the mangled name is identical to the
+/// source identifier (e.g. ``sccsid``). For C++ variables the mangled name
+/// is the Itanium ABI symbol (e.g. ``_ZN1N6sccsidE``).
 bool CodeGenModule::matchesLoadTimeCommentVarName(
-    const VarDecl *VD,
-    const std::vector<std::string> &LoadTimeCommentVars) const {
+    const VarDecl *VD, const std::vector<std::string> &LoadTimeCommentVars) {
   if (!VD)
     return false;
-
-  StringRef Unqualified = VD->getName();
-  std::optional<std::string> Qualified;
-
-  for (const std::string &RequestedName : LoadTimeCommentVars) {
-    StringRef Requested(RequestedName);
-    if (Requested.empty())
-      continue;
-
-    if (Requested.contains("::")) {
-      if (!Qualified) {
-        Qualified = VD->getQualifiedNameAsString();
-        // Normalize file-scope names by dropping a leading "::".
-        if (StringRef(*Qualified).starts_with("::"))
-          Qualified->erase(0, 2);
-      }
-      Requested.consume_front("::");
-      if (Requested == *Qualified)
-        return true;
-      continue;
-    }
-
-    if (Requested == Unqualified)
-      return true;
-  }
-
-  return false;
+  StringRef MangledName = getMangledName(GlobalDecl(VD));
+  return llvm::is_contained(LoadTimeCommentVars, MangledName);
 }
 
 /// Check if a variable is eligible to be treated as a loadtime comment
-/// variable. This requires: (1) the variable name is in the requested list
-/// and (2) the variable type is valid (char pointer or array with initializer).
+/// variable. This requires: (1) the variable's mangled name is in the
+/// requested list and (2) the variable type is valid (char pointer or array
+/// with initializer).
 bool CodeGenModule::isLoadTimeCommentCandidateVariable(
-    const VarDecl *VD,
-    const std::vector<std::string> &LoadTimeCommentVars) const {
+    const VarDecl *VD, const std::vector<std::string> &LoadTimeCommentVars) {
   if (!isValidLoadTimeCommentVariable(VD))
     return false;
   return matchesLoadTimeCommentVarName(VD, LoadTimeCommentVars);

@@ -6894,15 +6894,30 @@ Syntax:
 
 Name matching:
 
-- In C, names are matched as plain identifiers (for example, ``sccsid``).
-- In C++, names containing ``::`` are treated as source-qualified names and
-  matched against the declaration's qualified source name (for example,
-  ``N::x`` or ``A::x``).
-- In C++, names without ``::`` are treated as unqualified names and matched by
-  plain identifier. This may match more than one declaration when names are
-  reused across scopes.
-- To target a single declaration in C++, prefer qualified names. Unqualified
-  matches can preserve additional globals and increase object size.
+Names are matched against the variable's **mangled IR symbol name** — the
+name as it appears in the object file.
+
+- In C, file-scope static variables are not mangled, so the mangled name is
+  identical to the source identifier (for example, ``sccsid``).
+- In C++, variables are mangled using the Itanium ABI. To find the mangled
+  name, compile with ``clang -S -emit-llvm`` and look for the global in the
+  ``.ll`` output, or run ``nm`` on the object file.
+
+.. code-block:: console
+
+  # Find the mangled name of a C++ variable
+  $ clang++ -S -emit-llvm -o - source.cpp | grep '@.*sccsid'
+  @_ZN1N6sccsidE = ...
+
+  # Or use nm on the object file
+  $ nm source.o | grep sccsid
+  0000000000000000 b _ZN1N6sccsidE
+
+  # Then pass the mangled name to the flag
+  -mloadtime-comment-vars=_ZN1N6sccsidE
+
+Mangled names are unique, so each entry in the list selects exactly one
+variable. Unrecognised names are silently ignored.
 
 Valid variable types:
 

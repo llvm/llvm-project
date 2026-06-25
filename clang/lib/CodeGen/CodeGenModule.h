@@ -2177,15 +2177,14 @@ private:
   bool isValidLoadTimeCommentVariable(const VarDecl *D) const;
 
   /// Check if a variable is eligible to be treated as a loadtime comment
-  /// variable (must be in the requested list and have a valid char type).
+  /// variable (must be in the requested list and have a valid type).
   bool isLoadTimeCommentCandidateVariable(
-      const VarDecl *VD,
-      const std::vector<std::string> &LoadTimeCommentVars) const;
+      const VarDecl *VD, const std::vector<std::string> &LoadTimeCommentVars);
 
-  /// Check if a variable name matches any entry in LoadTimeCommentVars.
+  /// Return true if the mangled IR name of a Global Variable matches any entry
+  /// in LoadTimeCommentVars list.
   bool matchesLoadTimeCommentVarName(
-      const VarDecl *VD,
-      const std::vector<std::string> &LoadTimeCommentVars) const;
+      const VarDecl *VD, const std::vector<std::string> &LoadTimeCommentVars);
 };
 
 }  // end namespace CodeGen
