@@ -25,7 +25,6 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Bitcode/BitcodeWriterPass.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
@@ -46,7 +45,6 @@
 #include "llvm/Plugins/PassPlugin.h"
 #include "llvm/ProfileData/InstrProfCorrelator.h"
 #include "llvm/Support/BuryPointer.h"
-#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/IOSandbox.h"
@@ -190,15 +188,6 @@ class EmitAssemblyHelper {
   void RunCodegenPipeline(BackendAction Action,
                           std::unique_ptr<raw_pwrite_stream> &OS,
                           std::unique_ptr<llvm::ToolOutputFile> &DwoOS);
-  void RunCodegenPipelineLegacy(BackendAction Action,
-                                std::unique_ptr<raw_pwrite_stream> &OS,
-                                std::unique_ptr<llvm::ToolOutputFile> &DwoOS,
-                                CodeGenFileType CGFT);
-  void RunCodegenPipelineNewPM(BackendAction Action,
-                               std::unique_ptr<raw_pwrite_stream> &OS,
-                               std::unique_ptr<llvm::ToolOutputFile> &DwoOS,
-                               CodeGenFileType CGFT);
-  void TimeCodegenPasses(llvm::function_ref<void()> RunPasses);
 
   /// Check whether we should emit a module summary for regular LTO.
   /// The module summary should be emitted by default for regular LTO
@@ -1241,22 +1230,6 @@ void EmitAssemblyHelper::RunCodegenPipeline(
       return;
   }
 
-  if (!CodeGenOpts.SplitDwarfOutput.empty()) {
-    DwoOS = openOutputFile(CodeGenOpts.SplitDwarfOutput);
-    if (!DwoOS)
-      return;
-  }
-
-  if (CodeGenOpts.EnableNewPMCodeGen) {
-    RunCodegenPipelineNewPM(Action, OS, DwoOS, CGFT);
-  } else {
-    RunCodegenPipelineLegacy(Action, OS, DwoOS, CGFT);
-  }
-}
-
-void EmitAssemblyHelper::RunCodegenPipelineLegacy(
-    BackendAction Action, std::unique_ptr<raw_pwrite_stream> &OS,
-    std::unique_ptr<llvm::ToolOutputFile> &DwoOS, CodeGenFileType CGFT) {
   // We still use the legacy PM to run the codegen pipeline since the new PM
   // does not work with the codegen pipeline.
   // FIXME: make the new PM work with the codegen pipeline.
@@ -1274,6 +1247,12 @@ void EmitAssemblyHelper::RunCodegenPipelineLegacy(
       TargetTriple, Options.ExceptionModel, Options.FloatABIType,
       Options.EABIVersion, Options.MCOptions.ABIName, Options.VecLib));
 
+  if (!CodeGenOpts.SplitDwarfOutput.empty()) {
+    DwoOS = openOutputFile(CodeGenOpts.SplitDwarfOutput);
+    if (!DwoOS)
+      return;
+  }
+
   if (TM->addPassesToEmitFile(CodeGenPasses, *OS,
                               DwoOS ? &DwoOS->os() : nullptr, CGFT,
                               /*DisableVerify=*/!CodeGenOpts.VerifyModule)) {
@@ -1288,57 +1267,18 @@ void EmitAssemblyHelper::RunCodegenPipelineLegacy(
     return;
   }
 
-  TimeCodegenPasses([&] { CodeGenPasses.run(*TheModule); });
-}
-
-void EmitAssemblyHelper::RunCodegenPipelineNewPM(
-    BackendAction Action, std::unique_ptr<raw_pwrite_stream> &OS,
-    std::unique_ptr<llvm::ToolOutputFile> &DwoOS, CodeGenFileType CGFT) {
-  ModulePassManager MPM;
-  MachineFunctionAnalysisManager MFAM;
-  LoopAnalysisManager LAM;
-  FunctionAnalysisManager FAM;
-  CGSCCAnalysisManager CGAM;
-  ModuleAnalysisManager MAM;
-  CGPassBuilderOption Opt = getCGPassBuilderOption();
-  MachineModuleInfo MMI(TM.get());
-  PassInstrumentationCallbacks PIC;
-  PipelineTuningOptions PTOptions;
-  TargetMachine *TMPointer = TM.get();
-  PassBuilder PB(TMPointer, PTOptions, std::nullopt, &PIC,
-                 CI.getVirtualFileSystemPtr());
-  PB.registerModuleAnalyses(MAM);
-  PB.registerCGSCCAnalyses(CGAM);
-  PB.registerFunctionAnalyses(FAM);
-  PB.registerLoopAnalyses(LAM);
-  PB.registerMachineFunctionAnalyses(MFAM);
-  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM, &MFAM);
-
-  MAM.registerPass([&] { return MachineModuleAnalysis(MMI); });
-
-  Error BuildPipelineError =
-      TM->buildCodeGenPipeline(MPM, MAM, *OS, DwoOS ? &DwoOS->os() : nullptr,
-                               CGFT, Opt, MMI.getContext(), &PIC);
-  if (BuildPipelineError) {
-    Diags.Report(diag::err_fe_unable_to_interface_with_target);
-    return;
+  {
+    PrettyStackTraceString CrashInfo("Code generation");
+    llvm::TimeTraceScope TimeScope("CodeGenPasses");
+    Timer timer;
+    if (CI.getCodeGenOpts().TimePasses) {
+      timer.init("codegen", "Machine code generation", CI.getTimerGroup());
+      CI.getFrontendTimer().yieldTo(timer);
+    }
+    CodeGenPasses.run(*TheModule);
+    if (CI.getCodeGenOpts().TimePasses)
+      timer.yieldTo(CI.getFrontendTimer());
   }
-
-  TimeCodegenPasses([&] { MPM.run(*TheModule, MAM); });
-}
-
-void EmitAssemblyHelper::TimeCodegenPasses(
-    llvm::function_ref<void()> RunPasses) {
-  PrettyStackTraceString CrashInfo("Code generation");
-  llvm::TimeTraceScope TimeScope("CodeGenPasses");
-  Timer timer;
-  if (CI.getCodeGenOpts().TimePasses) {
-    timer.init("codegen", "Machine code generation", CI.getTimerGroup());
-    CI.getFrontendTimer().yieldTo(timer);
-  }
-  RunPasses();
-  if (CI.getCodeGenOpts().TimePasses)
-    timer.yieldTo(CI.getFrontendTimer());
 }
 
 void EmitAssemblyHelper::emitAssembly(BackendAction Action,
