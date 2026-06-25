@@ -7781,8 +7781,9 @@ bool AArch64AsmParser::parseDirectiveCFILLVMSetRAState() {
   } else if (auto *CE = dyn_cast<MCConstantExpr>(Expr)) {
     getStreamer().emitCFILLVMSetRAState((unsigned)State, CE->getValue());
   } else {
-    return Error(ExprLoc,
-                 "expected an integer offset or a symbol for .cfi_llvm_set_ra_state");
+    return Error(
+        ExprLoc,
+        "expected an integer offset or a symbol for .cfi_llvm_set_ra_state");
   }
   return false;
 }
