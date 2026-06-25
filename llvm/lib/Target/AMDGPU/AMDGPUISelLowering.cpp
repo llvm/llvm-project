@@ -1041,6 +1041,7 @@ bool AMDGPUTargetLowering::isZExtFree(EVT Src, EVT Dest) const {
 bool AMDGPUTargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
                                                  EVT DestVT) const {
   switch (N->getOpcode()) {
+  case ISD::ABS:
   case ISD::ADD:
   case ISD::SUB:
   case ISD::SHL:
@@ -1056,6 +1057,7 @@ bool AMDGPUTargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
   case ISD::SMAX:
   case ISD::UMIN:
   case ISD::UMAX:
+  case ISD::USUBSAT:
     if (isTypeLegal(MVT::i16) &&
         (!DestVT.isVector() ||
          !isOperationLegal(ISD::ADD, MVT::v2i16))) { // Check if VOP3P

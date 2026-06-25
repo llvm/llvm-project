@@ -7010,14 +7010,10 @@ static bool isReverseOrder(ArrayRef<unsigned> Order) {
 /// %x + c_2 * stride
 /// ...
 /// ```
-/// where each `c_i` is constant. The `Coeffs` will contain `c_0, c_1, c_2, ..`
-/// and the SCEV of the `stride` will be returned.
+/// where each `c_i` is constant. The SCEV of the `stride` will be returned.
 static const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
                                      const DataLayout &DL, ScalarEvolution &SE,
-                                     SmallVectorImpl<unsigned> &SortedIndices,
-                                     SmallVectorImpl<int64_t> &Coeffs) {
-  assert(Coeffs.size() == PointerOps.size() &&
-         "Coeffs vector needs to be of correct size");
+                                     SmallVectorImpl<unsigned> &SortedIndices) {
   SmallVector<const SCEV *> SCEVs;
   const SCEV *PtrSCEVLowest = nullptr;
   const SCEV *PtrSCEVHighest = nullptr;
@@ -7080,7 +7076,6 @@ static const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
   using DistOrdPair = std::pair<int64_t, int>;
   auto Compare = llvm::less_first();
   std::set<DistOrdPair, decltype(Compare)> Offsets(Compare);
-  int Cnt = 0;
   bool IsConsecutive = true;
   for (const auto [Idx, PtrSCEV] : enumerate(SCEVs)) {
     unsigned Dist = 0;
@@ -7092,36 +7087,27 @@ static const SCEV *calculateRtStride(ArrayRef<Value *> PointerOps, Type *ElemTy,
       const auto *SC = dyn_cast<SCEVConstant>(Coeff);
       if (!SC || isa<SCEVCouldNotCompute>(SC))
         return nullptr;
-      Coeffs[Idx] = (int64_t)SC->getAPInt().getLimitedValue();
       if (!SE.getMinusSCEV(PtrSCEV, SE.getAddExpr(PtrSCEVLowest,
                                                   SE.getMulExpr(Stride, SC)))
                ->isZero())
         return nullptr;
       Dist = SC->getAPInt().getZExtValue();
-    } else {
-      Coeffs[Idx] = 0;
     }
     // If the strides are not the same or repeated, we can't vectorize.
     if ((Dist / Size) * Size != Dist || (Dist / Size) >= SCEVs.size())
       return nullptr;
-    auto Res = Offsets.emplace(Dist, Cnt);
+    auto Res = Offsets.emplace(Dist, Idx);
     if (!Res.second)
       return nullptr;
     // Consecutive order if the inserted element is the last one.
     IsConsecutive = IsConsecutive && std::next(Res.first) == Offsets.end();
-    ++Cnt;
   }
-  if (Offsets.size() != SCEVs.size())
-    return nullptr;
   SortedIndices.clear();
   if (!IsConsecutive) {
     // Fill SortedIndices array only if it is non-consecutive.
     SortedIndices.resize(PointerOps.size());
-    Cnt = 0;
-    for (const std::pair<int64_t, int> &Pair : Offsets) {
-      SortedIndices[Cnt] = Pair.second;
-      ++Cnt;
-    }
+    for (const auto [Idx, Pair] : enumerate(Offsets))
+      SortedIndices[Idx] = Pair.second;
   }
   return Stride;
 }
@@ -7619,6 +7605,11 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   // `PointerOps` and their indicies in `PointerOps`.
   SmallDenseMap<int64_t, std::pair<SmallVector<Value *>, SmallVector<unsigned>>>
       OffsetToPointerOpIdxMap;
+  // Track to make sure that only VecSz different stride multiples are consumed
+  // Prevents cases such as:
+  // 1, x + 0, x + 1, 2x + 0 from being recognized as legal RT strided as there
+  // are 2 "0" and 2 "1" offsets and a stride of "x" between both offsets
+  SmallDenseSet<const SCEV *> StrideMultiples;
   for (auto [Idx, Ptr] : enumerate(PointerOps)) {
     const SCEV *PtrSCEV = SE->getSCEV(Ptr);
     if (!PtrSCEV)
@@ -7626,6 +7617,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
 
     const auto *Add = dyn_cast<SCEVAddExpr>(PtrSCEV);
     int64_t Offset = 0;
+    const SCEV *StrideMultiple = PtrSCEV;
     if (Add) {
       // `Offset` is non-zero.
       for (int I : seq<int>(Add->getNumOperands())) {
@@ -7637,11 +7629,13 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
           Offset = 0;
           continue;
         }
+        StrideMultiple = SE->getMinusSCEV(StrideMultiple, SC);
         break;
       }
     }
     OffsetToPointerOpIdxMap[Offset].first.push_back(Ptr);
     OffsetToPointerOpIdxMap[Offset].second.push_back(Idx);
+    StrideMultiples.insert(StrideMultiple);
   }
   unsigned NumOffsets = OffsetToPointerOpIdxMap.size();
 
@@ -7655,6 +7649,10 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
       return false;
     VecSz = Sz / NumOffsets;
   }
+
+  if (StrideMultiples.size() != VecSz)
+    return false;
+
   if (NumOffsets > 1 || BaseTy->isVectorTy())
     NewScalarTy = Type::getIntNTy(
         SE->getContext(),
@@ -7734,13 +7732,9 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   // PointerOps_(NumOffsets - 1)[SortedIndices_(NumOffsets - 1)[VecSz - 1]] =
   // PointerOps[IndicesInAllPointerOps_(NumOffsets - 1)[VecSz - 1]],
   // ```
-  // In order to be able to generate a strided load, we need the following
-  // checks to pass:
-  //
-  //  (1) for each `PointerOps_j` check that the distance
-  // between adjacent pointers are all equal to the same value (stride).
-  //  (2) for each `PointerOps_j` check that coefficients calculated by
-  //  `calculateRtStride` are all the same.
+  // In order to be able to generate a strided load, for each `PointerOps_j`
+  // check that the distance between adjacent pointers are all equal to the same
+  // value (stride).
   //
   // As we do that, also calculate SortedIndices. Since we should not modify
   // `SortedIndices` unless we know that all the checks succeed, record the
@@ -7772,16 +7766,11 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   int64_t LowestOffset = SortedOffsetsV[0];
   ArrayRef<Value *> PointerOps0 = OffsetToPointerOpIdxMap[LowestOffset].first;
 
-  SmallVector<int64_t> Coeffs0(VecSz);
   SmallVector<unsigned> SortedIndicesForOffset0;
-  const SCEV *Stride0 = calculateRtStride(PointerOps0, BaseTy, *DL, *SE,
-                                          SortedIndicesForOffset0, Coeffs0);
+  const SCEV *Stride0 =
+      calculateRtStride(PointerOps0, BaseTy, *DL, *SE, SortedIndicesForOffset0);
   if (!Stride0)
     return false;
-  unsigned NumCoeffs0 = Coeffs0.size();
-  if (NumCoeffs0 * NumOffsets != Sz)
-    return false;
-  sort(Coeffs0);
 
   ArrayRef<unsigned> IndicesInAllPointerOps0 =
       OffsetToPointerOpIdxMap[LowestOffset].second;
@@ -7789,11 +7778,8 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
 
   // Now that we know what the common stride and coefficients has to be check
   // the remaining `PointerOps_j`.
-  SmallVector<int64_t> Coeffs;
   SmallVector<unsigned> SortedIndicesForOffset;
   for (int J : seq<int>(1, NumOffsets)) {
-    Coeffs.clear();
-    Coeffs.resize(VecSz);
     SortedIndicesForOffset.clear();
 
     int64_t Offset = SortedOffsetsV[J];
@@ -7802,14 +7788,9 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
     ArrayRef<unsigned> IndicesInAllPointerOps =
         OffsetToPointerOpIdxMap[Offset].second;
     const SCEV *StrideWithinGroup = calculateRtStride(
-        PointerOpsForOffset, BaseTy, *DL, *SE, SortedIndicesForOffset, Coeffs);
+        PointerOpsForOffset, BaseTy, *DL, *SE, SortedIndicesForOffset);
 
     if (!StrideWithinGroup || StrideWithinGroup != Stride0)
-      return false;
-    if (Coeffs.size() != NumCoeffs0)
-      return false;
-    sort(Coeffs);
-    if (Coeffs != Coeffs0)
       return false;
 
     UpdateSortedIndices(SortedIndicesForOffset, IndicesInAllPointerOps, J);
@@ -25549,6 +25530,27 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         return std::nullopt;
     }
   }
+  // A scalar that is a non-copyable (i.e. really vectorized) element in this
+  // PHI-operand node, but a copyable element in another PHI-operand node, is
+  // vectorized here and only gathered/reused there. Both nodes feed different
+  // incoming values of the same vectorized PHI and may be emitted in different
+  // predecessor blocks, so the gathered reuse can end up not dominated by the
+  // vectorized value, producing broken IR. Bail out of scheduling to avoid it.
+  if (EI && EI.UserTE->State == TreeEntry::Vectorize &&
+      EI.UserTE->getOpcode() == Instruction::PHI && any_of(VL, [&](Value *V) {
+        auto *I = dyn_cast<Instruction>(V);
+        if (!I || (HasCopyables && S.isCopyableElement(V)))
+          return false;
+        return any_of(
+            SLP->VectorizableTree, [&](const std::unique_ptr<TreeEntry> &TE) {
+              return TE->UserTreeIndex &&
+                     TE->UserTreeIndex.UserTE->State == TreeEntry::Vectorize &&
+                     TE->UserTreeIndex.UserTE->getOpcode() ==
+                         Instruction::PHI &&
+                     TE->hasCopyableElements() && TE->isCopyableElement(V);
+            });
+      }))
+    return std::nullopt;
   if (DoesNotRequireScheduling) {
     // If all operands were replaced by copyables, the operands of this node
     // might be not, so need to recalculate dependencies for schedule data,
@@ -25578,18 +25580,6 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
             ScheduleData *SD = getScheduleData(OpI);
             return SD && SD->hasValidDependencies();
           }))
-        return std::nullopt;
-      if (EI && EI.UserTE->State == TreeEntry::Vectorize &&
-          EI.UserTE->getOpcode() == Instruction::PHI &&
-          any_of(SLP->VectorizableTree,
-                 [&](const std::unique_ptr<TreeEntry> &TE) {
-                   return TE->UserTreeIndex &&
-                          TE->UserTreeIndex.UserTE->State ==
-                              TreeEntry::Vectorize &&
-                          TE->UserTreeIndex.UserTE->getOpcode() ==
-                              Instruction::PHI &&
-                          TE->hasCopyableElements() && TE->isCopyableElement(V);
-                 }))
         return std::nullopt;
       SmallDenseMap<std::pair<Instruction *, Value *>, unsigned> UserOpToNumOps;
       for (const Use &U : I->operands()) {

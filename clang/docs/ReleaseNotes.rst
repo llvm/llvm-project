@@ -113,6 +113,8 @@ ABI Changes in This Version
   compilers. On most targets this is not a breaking change because ``fastcc``
   and the platform C calling convention agree for ``void(ptr)``. It is an ABI
   break on i686, MIPS O32, PowerPC64 ELFv1, and Lanai.
+- Fixed incorrect struct return when single large vector (256/512-bit) used on
+  x86-64 targets. (#GH203760) The bug was introduced since Clang 21. (#GH120670)
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
@@ -729,12 +731,13 @@ Bug Fixes in This Version
   EOF handling from accidentally restoring CLK_CachingLexer while a tentative parse is still active, which could trigger a caching lexer re-entry assertion
   in clangd signature help. (#GH200677)
 - Fixed a crash when ``#embed`` is used with C++ modules (#GH195350)
+- Fixed an assertion in constant evaluation when using a defaulted comparison operator in a ``union``. (#GH147127)
 - Fixed a bug where ``-x cuda`` caused clang to immediately resolve templates that should not be. (#GH200545)
 - Fixed an issue where ``__typeof_unqual`` and ``__typeof_unqual__`` were rejected as a declaration specifier in block scope in C++.
 - Fixed crash when checking for overflow for unary operator that can't overflow (#GH170072)
 - Clang no longer handles a `" q-char-sequence "` header name as a string literal (#GH132643).
-- Fixed an assertion when ``__attribute__((alloc_size))`` is used with an argument type wider than the target's pointer width. (#GH190445)
 - Fixed an assertion where we improperly handled implicit conversions to integral types from an atomic-type with a conversion function. (#GH201770)
+- Fixed a regression where calling a function that takes a class-type parameter by value inside ``decltype`` of a concept could be incorrectly rejected when used as a non-type template argument. (#GH175831)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -853,6 +856,7 @@ Miscellaneous Clang Crashes Fixed
 - Fixed an assertion failure in ``isAtEndOfMacroExpansion`` on macro expansions crossing the boundary of two fileIDs. (#GH115007), (#GH21755)
 - Fixed an assertion failure when ``__builtin_dump_struct`` is used with an
   immediate-escalated callable. (#GH192846)
+- Fixed a crash when passing one sized implicitly casted vector to a ``abs`` function. (#GH204777)
 - Fixed a crash when diagnosing an invalid out-of-line definition of a member class template. (#GH201490)
 
 OpenACC Specific Changes
@@ -1078,11 +1082,6 @@ Sanitizers
   warning for deprecated matches. Version 5 drops backward compatibility and
   requires rules to match canonicalized paths (without leading ``./``).
 
-- Sanitizer Special Case Lists (``-fsanitize-ignorelist``) and warning
-  suppression mappings (``--warning-suppression-mappings``) now recognize version
-  4 of the Special Case List format (indicated by ``#!special-case-list-v4``).
-  On Windows hosts, path matching is slash-agnostic (both forward slashes (``/``)
-  and backslashes (``\``) match either path separator in both patterns and paths).
 
 Python Binding Changes
 ----------------------
