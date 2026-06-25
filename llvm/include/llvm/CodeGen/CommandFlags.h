@@ -219,6 +219,7 @@ LLVM_ABI Expected<std::unique_ptr<TargetMachine>> createTargetMachineForTriple(
     const Triple &TargetTriple,
     CodeGenOptLevel OptLevel = CodeGenOptLevel::Default);
 
+// TODO: Remove after llvm 23 branches
 LLVM_DEPRECATED("Use the Triple overload instead",
                 "createTargetMachineForTriple")
 LLVM_ABI Expected<std::unique_ptr<TargetMachine>> createTargetMachineForTriple(
