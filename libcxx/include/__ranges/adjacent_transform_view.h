@@ -105,22 +105,23 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit adjacent_transform_view(_View __base, _Fn __fun)
       : __inner_(std::move(__base)), __fun_(std::in_place, std::move(__fun)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
     requires copy_constructible<_View>
   {
     return __inner_.base();
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__inner_).base(); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() { return __iterator<false>(*this, __inner_.begin()); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__inner_).base(); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() { return __iterator<false>(*this, __inner_.begin()); }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
     requires range<const _InnerView> && regular_invocable<__apply_n<const _Fn&, _Np>, range_reference_t<const _View>>
   {
     return __iterator<true>(*this, __inner_.begin());
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
     if constexpr (common_range<_InnerView>) {
       return __iterator<false>(*this, __inner_.end());
     } else {
@@ -128,7 +129,7 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
     requires range<const _InnerView> && regular_invocable<__apply_n<const _Fn&, _Np>, range_reference_t<const _View>>
   {
     if constexpr (common_range<const _InnerView>) {
@@ -138,13 +139,13 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size()
     requires sized_range<_InnerView>
   {
     return __inner_.size();
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires sized_range<const _InnerView>
   {
     return __inner_.size();
