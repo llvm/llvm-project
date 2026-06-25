@@ -584,7 +584,7 @@ def llvm_anyvector_ty  : LLVMAnyType<vAny,
 
 // Note: CodeGenIntrinsics.cpp seems to check this class to check pointers.
 class LLVMAnyPointerType : LLVMAnyType<pAny,
-                                       AnyKindVectorConstraint.None,
+                                       AnyKindVectorConstraint.Scalar,
                                        AnyKindElementConstraint.Pointer>;
 
 def llvm_anyptr_ty     : LLVMAnyPointerType;      // ptr addrspace(N)
