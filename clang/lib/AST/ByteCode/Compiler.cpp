@@ -168,19 +168,6 @@ private:
   CaseMap OldCaseLabels;
 };
 
-template <class Emitter> class StmtExprScope final {
-public:
-  StmtExprScope(Compiler<Emitter> *Ctx) : Ctx(Ctx), OldFlag(Ctx->InStmtExpr) {
-    Ctx->InStmtExpr = true;
-  }
-
-  ~StmtExprScope() { Ctx->InStmtExpr = OldFlag; }
-
-private:
-  Compiler<Emitter> *Ctx;
-  bool OldFlag;
-};
-
 /// When generating code for e.g. implicit field initializers in constructors,
 /// we don't have anything to point to in case the initializer causes an error.
 /// In that case, we need to disable location tracking for the initializer so
@@ -4605,7 +4592,7 @@ bool Compiler<Emitter>::VisitCXXStdInitializerListExpr(
 template <class Emitter>
 bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
   LocalScope<Emitter> BS(this);
-  StmtExprScope<Emitter> SS(this);
+  llvm::SaveAndRestore StmtExprSAR(this->InStmtExpr, true);
 
   const CompoundStmt *CS = E->getSubStmt();
   const Stmt *Result = CS->body_back();
@@ -4619,6 +4606,8 @@ bool Compiler<Emitter>::VisitStmtExpr(const StmtExpr *E) {
     assert(S == Result);
     if (const Expr *ResultExpr = dyn_cast<Expr>(S))
       return this->delegate(ResultExpr);
+    if (!this->visitStmt(S))
+      return false;
     return this->emitUnsupported(E);
   }
 
@@ -4974,26 +4963,26 @@ bool Compiler<Emitter>::visitAssignment(const Expr *LHS, const Expr *RHS,
 
 template <class Emitter>
 template <typename T>
-bool Compiler<Emitter>::emitConst(T Value, PrimType Ty, const Expr *E) {
+bool Compiler<Emitter>::emitConst(T Value, PrimType Ty, SourceInfo Info) {
   switch (Ty) {
   case PT_Sint8:
-    return this->emitConstSint8(Value, E);
+    return this->emitConstSint8(Value, Info);
   case PT_Uint8:
-    return this->emitConstUint8(Value, E);
+    return this->emitConstUint8(Value, Info);
   case PT_Sint16:
-    return this->emitConstSint16(Value, E);
+    return this->emitConstSint16(Value, Info);
   case PT_Uint16:
-    return this->emitConstUint16(Value, E);
+    return this->emitConstUint16(Value, Info);
   case PT_Sint32:
-    return this->emitConstSint32(Value, E);
+    return this->emitConstSint32(Value, Info);
   case PT_Uint32:
-    return this->emitConstUint32(Value, E);
+    return this->emitConstUint32(Value, Info);
   case PT_Sint64:
-    return this->emitConstSint64(Value, E);
+    return this->emitConstSint64(Value, Info);
   case PT_Uint64:
-    return this->emitConstUint64(Value, E);
+    return this->emitConstUint64(Value, Info);
   case PT_Bool:
-    return this->emitConstBool(Value, E);
+    return this->emitConstBool(Value, Info);
   case PT_Ptr:
   case PT_MemberPtr:
   case PT_Float:
@@ -5014,28 +5003,28 @@ bool Compiler<Emitter>::emitConst(T Value, const Expr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::emitConst(const APSInt &Value, PrimType Ty,
-                                  const Expr *E) {
+                                  SourceInfo Info) {
   if (Ty == PT_IntAPS)
-    return this->emitConstIntAPS(Value, E);
+    return this->emitConstIntAPS(Value, Info);
   if (Ty == PT_IntAP)
-    return this->emitConstIntAP(Value, E);
+    return this->emitConstIntAP(Value, Info);
 
   if (Value.isSigned())
-    return this->emitConst(Value.getSExtValue(), Ty, E);
-  return this->emitConst(Value.getZExtValue(), Ty, E);
+    return this->emitConst(Value.getSExtValue(), Ty, Info);
+  return this->emitConst(Value.getZExtValue(), Ty, Info);
 }
 
 template <class Emitter>
 bool Compiler<Emitter>::emitConst(const APInt &Value, PrimType Ty,
-                                  const Expr *E) {
+                                  SourceInfo Info) {
   if (Ty == PT_IntAPS)
-    return this->emitConstIntAPS(Value, E);
+    return this->emitConstIntAPS(Value, Info);
   if (Ty == PT_IntAP)
-    return this->emitConstIntAP(Value, E);
+    return this->emitConstIntAP(Value, Info);
 
   if (isSignedType(Ty))
-    return this->emitConst(Value.getSExtValue(), Ty, E);
-  return this->emitConst(Value.getZExtValue(), Ty, E);
+    return this->emitConst(Value.getSExtValue(), Ty, Info);
+  return this->emitConst(Value.getZExtValue(), Ty, Info);
 }
 
 template <class Emitter>
@@ -5422,42 +5411,45 @@ bool Compiler<Emitter>::visitDtorCall(const VarDecl *VD, const APValue &Value) {
 
   if (!this->emitGetPtrLocal(Local.Offset, VD))
     return false;
-  if (!this->visitAPValueInitializer(Value, nullptr, Ty))
+
+  if (!this->visitAPValueInitializer(Value, VD, Ty))
     return false;
+
   return this->emitDestructionPop(D, VD);
 }
 
 template <class Emitter>
 bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
-                                     const Expr *E) {
+                                     SourceInfo Info) {
+  assert(!Val.isIndeterminate() && "Needs to be checked before");
   assert(!DiscardResult);
   if (Val.isInt())
-    return this->emitConst(Val.getInt(), ValType, E);
+    return this->emitConst(Val.getInt(), ValType, Info);
   if (Val.isFloat()) {
     APFloat F = Val.getFloat();
-    return this->emitFloat(F, E);
+    return this->emitFloat(F, Info);
   }
 
   if (Val.isMemberPointer()) {
     if (const ValueDecl *MemberDecl = Val.getMemberPointerDecl()) {
-      if (!this->emitGetMemberPtr(MemberDecl, E))
+      if (!this->emitGetMemberPtr(MemberDecl, Info))
         return false;
 
       bool IsDerived = Val.isMemberPointerToDerivedMember();
       // Apply the member pointer path.
       for (const CXXRecordDecl *PathEntry : Val.getMemberPointerPath()) {
-        if (!this->emitCopyMemberPtrPath(PathEntry, IsDerived, E))
+        if (!this->emitCopyMemberPtrPath(PathEntry, IsDerived, Info))
           return false;
       }
 
       return true;
     }
-    return this->emitNullMemberPtr(0, nullptr, E);
+    return this->emitNullMemberPtr(0, nullptr, Info);
   }
 
   if (Val.isLValue()) {
     if (Val.isNullPointer())
-      return this->emitNull(ValType, 0, nullptr, E);
+      return this->emitNull(ValType, 0, nullptr, Info);
 
     APValue::LValueBase Base = Val.getLValueBase();
     ArrayRef<APValue::LValuePathEntry> Path = Val.getLValuePath();
@@ -5465,7 +5457,7 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
     if (const Expr *BaseExpr = Base.dyn_cast<const Expr *>())
       return this->visit(BaseExpr);
     if (const auto *VD = Base.dyn_cast<const ValueDecl *>()) {
-      if (!this->visitDeclRef(VD, E))
+      if (!this->visitDeclRef(VD, Info.asExpr()))
         return false;
 
       QualType EntryType = VD->getType();
@@ -5474,9 +5466,9 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
           uint64_t Index = Entry.getAsArrayIndex();
           QualType ElemType =
               EntryType->getAsArrayTypeUnsafe()->getElementType();
-          if (!this->emitConst(Index, PT_Uint64, E))
+          if (!this->emitConst(Index, PT_Uint64, Info))
             return false;
-          if (!this->emitArrayElemPtrPop(PT_Uint64, E))
+          if (!this->emitArrayElemPtrPop(PT_Uint64, Info))
             return false;
           EntryType = ElemType;
         } else {
@@ -5491,13 +5483,13 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
           const Decl *BaseOrMember = Entry.getAsBaseOrMember().getPointer();
           if (const auto *FD = dyn_cast<FieldDecl>(BaseOrMember)) {
             unsigned EntryOffset = EntryRecord->getField(FD)->Offset;
-            if (!this->emitGetPtrFieldPop(EntryOffset, E))
+            if (!this->emitGetPtrFieldPop(EntryOffset, Info))
               return false;
             EntryType = FD->getType();
           } else {
             const auto *Base = cast<CXXRecordDecl>(BaseOrMember);
             unsigned BaseOffset = EntryRecord->getBase(Base)->Offset;
-            if (!this->emitGetPtrBasePop(BaseOffset, /*NullOK=*/false, E))
+            if (!this->emitGetPtrBasePop(BaseOffset, /*NullOK=*/false, Info))
               return false;
             EntryType = Ctx.getASTContext().getCanonicalTagType(Base);
           }
@@ -5513,42 +5505,51 @@ bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
 
 template <class Emitter>
 bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
-                                                const Expr *E, QualType T) {
+                                                SourceInfo Info, QualType T) {
   if (Val.isStruct()) {
     const Record *R = this->getRecord(T);
     assert(R);
     for (unsigned I = 0, N = Val.getStructNumFields(); I != N; ++I) {
       const APValue &F = Val.getStructField(I);
+      if (F.isIndeterminate())
+        continue;
       const Record::Field *RF = R->getField(I);
       QualType FieldType = RF->Decl->getType();
 
       // Fields.
       if (OptPrimType PT = classify(FieldType)) {
-        if (!this->visitAPValue(F, *PT, E))
+        if (!this->visitAPValue(F, *PT, Info))
           return false;
-        if (!this->emitInitField(*PT, RF->Offset, E))
+        if (!this->emitInitField(*PT, RF->Offset, Info))
           return false;
       } else {
-        if (!this->emitGetPtrField(RF->Offset, E))
+        if (!this->emitGetPtrField(RF->Offset, Info))
           return false;
-        if (!this->visitAPValueInitializer(F, E, FieldType))
+        if (!this->visitAPValueInitializer(F, Info, FieldType))
           return false;
-        if (!this->emitFinishInitPop(E))
+        if (!this->emitFinishInitPop(Info))
           return false;
       }
     }
 
     // Bases.
     for (unsigned I = 0, N = Val.getStructNumBases(); I != N; ++I) {
+      // FIXME: APValue doesn't know about virtual bases.
+      //   We simply assume that if the APValue has more bases than the Record,
+      //   those additional bases must be virtual.
+      if (I >= R->getNumBases())
+        break;
       const APValue &B = Val.getStructBase(I);
+      if (B.isIndeterminate())
+        continue;
       const Record::Base *RB = R->getBase(I);
       QualType BaseType = Ctx.getASTContext().getCanonicalTagType(RB->Decl);
 
-      if (!this->emitGetPtrBase(RB->Offset, E))
+      if (!this->emitGetPtrBase(RB->Offset, Info))
         return false;
-      if (!this->visitAPValueInitializer(B, E, BaseType))
+      if (!this->visitAPValueInitializer(B, Info, BaseType))
         return false;
-      if (!this->emitFinishInitPop(E))
+      if (!this->emitFinishInitPop(Info))
         return false;
     }
 
@@ -5561,25 +5562,27 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
     const Record *R = this->getRecord(T);
     assert(R);
     const APValue &F = Val.getUnionValue();
+    if (F.isIndeterminate())
+      return true;
     const Record::Field *RF = R->getField(UnionField);
     QualType FieldType = RF->Decl->getType();
 
     if (OptPrimType PT = classify(FieldType)) {
-      if (!this->visitAPValue(F, *PT, E))
+      if (!this->visitAPValue(F, *PT, Info))
         return false;
       if (RF->isBitField())
         return this->emitInitBitFieldActivate(*PT, RF->Offset, RF->bitWidth(),
-                                              E);
-      return this->emitInitFieldActivate(*PT, RF->Offset, E);
+                                              Info);
+      return this->emitInitFieldActivate(*PT, RF->Offset, Info);
     }
 
-    if (!this->emitGetPtrField(RF->Offset, E))
+    if (!this->emitGetPtrField(RF->Offset, Info))
       return false;
-    if (!this->emitActivate(E))
+    if (!this->emitActivate(Info))
       return false;
-    if (!this->visitAPValueInitializer(F, E, FieldType))
+    if (!this->visitAPValueInitializer(F, Info, FieldType))
       return false;
-    return this->emitPopPtr(E);
+    return this->emitPopPtr(Info);
   }
   if (Val.isArray()) {
     unsigned InitializedElems = Val.getArrayInitializedElts();
@@ -5591,20 +5594,22 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
       const APValue &Elem = A >= InitializedElems
                                 ? Val.getArrayFiller()
                                 : Val.getArrayInitializedElt(A);
+      if (Elem.isIndeterminate())
+        continue;
 
       if (ElemT) {
-        if (!this->visitAPValue(Elem, *ElemT, E))
+        if (!this->visitAPValue(Elem, *ElemT, Info))
           return false;
-        if (!this->emitInitElem(*ElemT, A, E))
+        if (!this->emitInitElem(*ElemT, A, Info))
           return false;
       } else {
-        if (!this->emitConstUint32(A, E))
+        if (!this->emitConstUint32(A, Info))
           return false;
-        if (!this->emitArrayElemPtrUint32(E))
+        if (!this->emitArrayElemPtrUint32(Info))
           return false;
-        if (!this->visitAPValueInitializer(Elem, E, ElemType))
+        if (!this->visitAPValueInitializer(Elem, Info, ElemType))
           return false;
-        if (!this->emitPopPtr(E))
+        if (!this->emitPopPtr(Info))
           return false;
       }
     }
@@ -6599,6 +6604,7 @@ bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
 
   PrimType CondT = this->classifyPrim(Cond->getType());
   LocalScope<Emitter> LS(this);
+  llvm::SaveAndRestore StmtExprSAR(this->SwitchInStmtExpr, this->InStmtExpr);
 
   LabelTy EndLabel = this->getLabel();
   UnsignedOrNone DefaultLabel = std::nullopt;
@@ -6705,6 +6711,12 @@ template <class Emitter>
 bool Compiler<Emitter>::visitCaseStmt(const CaseStmt *S) {
   this->fallthrough(CaseLabels[S]);
   this->emitLabel(CaseLabels[S]);
+
+  // We can't jump from an outer switch statement to a case label
+  // that's inside a StmtExpr.
+  if (this->InStmtExpr && !this->SwitchInStmtExpr)
+    return this->emitUnsupported(S);
+
   return this->visitStmt(S->getSubStmt());
 }
 
@@ -6965,9 +6977,6 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
         if (!this->emitGetPtrThisBase(B->Offset, InitExpr))
           return false;
       }
-
-      if (IsUnion && !this->emitActivate(InitExpr))
-        return false;
 
       if (!this->visitInitializerPop(InitExpr))
         return false;
@@ -7806,10 +7815,8 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
       // Whether or not the evaluation is successul doesn't really matter
       // here -- we will create a global variable in any case, and that
       // will have the state of initializer evaluation attached.
-      APValue V;
-      SmallVector<PartialDiagnosticAt> Notes;
-      (void)Init->EvaluateAsInitializer(V, Ctx.getASTContext(), VD, Notes,
-                                        true);
+      Expr::EvalResult Result;
+      (void)Init->EvaluateAsInitializer(Ctx.getASTContext(), VD, Result, true);
       return this->visitDeclRef(D, E);
     }
     return revisit(VD, !VD->isConstexpr() && DeclType->isReferenceType());
@@ -8172,15 +8179,15 @@ bool Compiler<Emitter>::emitDummyPtr(const DeclTy &D, const Expr *E, bool CU) {
 }
 
 template <class Emitter>
-bool Compiler<Emitter>::emitFloat(const APFloat &F, const Expr *E) {
+bool Compiler<Emitter>::emitFloat(const APFloat &F, SourceInfo Info) {
   if (Floating::singleWord(F.getSemantics()))
-    return this->emitConstFloat(Floating(F), E);
+    return this->emitConstFloat(Floating(F), Info);
 
   APInt I = F.bitcastToAPInt();
   return this->emitConstFloat(
       Floating(const_cast<uint64_t *>(I.getRawData()),
                llvm::APFloatBase::SemanticsToEnum(F.getSemantics())),
-      E);
+      Info);
 }
 
 //  This function is constexpr if and only if To, From, and the types of

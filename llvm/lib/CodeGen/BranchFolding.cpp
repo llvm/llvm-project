@@ -74,8 +74,9 @@ STATISTIC(NumTailMerge , "Number of block tails merged");
 STATISTIC(NumHoist     , "Number of times common instructions are hoisted");
 STATISTIC(NumTailCalls,  "Number of tail calls optimized");
 
-static cl::opt<cl::boolOrDefault> FlagEnableTailMerge("enable-tail-merge",
-                              cl::init(cl::BOU_UNSET), cl::Hidden);
+static cl::opt<cl::boolOrDefault>
+    FlagEnableTailMerge("enable-tail-merge",
+                        cl::init(cl::boolOrDefault::BOU_UNSET), cl::Hidden);
 
 // Throttle for huge numbers of predecessors (compile speed problems)
 static cl::opt<unsigned>
@@ -173,11 +174,15 @@ BranchFolder::BranchFolder(bool DefaultEnableTailMerge, bool CommonHoist,
     : EnableHoistCommonCode(CommonHoist), MinCommonTailLength(MinTailLength),
       MBBFreqInfo(FreqInfo), MBPI(ProbInfo), PSI(PSI) {
   switch (FlagEnableTailMerge) {
-  case cl::BOU_UNSET:
+  case cl::boolOrDefault::BOU_UNSET:
     EnableTailMerge = DefaultEnableTailMerge;
     break;
-  case cl::BOU_TRUE: EnableTailMerge = true; break;
-  case cl::BOU_FALSE: EnableTailMerge = false; break;
+  case cl::boolOrDefault::BOU_TRUE:
+    EnableTailMerge = true;
+    break;
+  case cl::boolOrDefault::BOU_FALSE:
+    EnableTailMerge = false;
+    break;
   }
 }
 
