@@ -2051,6 +2051,24 @@ private:
   friend struct DeclaratorChunk;
 
 public:
+  /// Parsed contract specifier from a function declarator (pre/post).
+  /// Temporary storage during parsing; converted to ContractAnnotation
+  /// nodes on FunctionDecl by Sema::ActOnFunctionContractSpecifiers.
+  struct ContractSpecInfo {
+    enum Kind { Pre, Post };
+    Kind CKind;
+    Expr *Predicate;
+    /// For post(name: expr), the identifier for the result name.
+    IdentifierInfo *ResultName = nullptr;
+    /// The implicit VarDecl created for the result name during parsing.
+    VarDecl *ResultVar = nullptr;
+    SourceLocation KwLoc, LParenLoc, RParenLoc, ResultNameLoc;
+  };
+
+private:
+  SmallVector<ContractSpecInfo, 2> ContractSpecifiers;
+
+public:
   /// `DS` and `DeclarationAttrs` must outlive the `Declarator`. In particular,
   /// take care not to pass temporary objects for these parameters.
   ///
@@ -2173,6 +2191,7 @@ public:
     CommaLoc = SourceLocation();
     EllipsisLoc = SourceLocation();
     PackIndexingExpr = nullptr;
+    ContractSpecifiers.clear();
   }
 
   /// mayOmitIdentifier - Return true if the identifier is either optional or
@@ -2687,6 +2706,14 @@ public:
   bool hasTrailingRequiresClause() const {
     return TrailingRequiresClause != nullptr;
   }
+
+  void addContractSpecifier(ContractSpecInfo &&Info) {
+    ContractSpecifiers.push_back(std::move(Info));
+  }
+  ArrayRef<ContractSpecInfo> getContractSpecifiers() const {
+    return ContractSpecifiers;
+  }
+  bool hasContractSpecifiers() const { return !ContractSpecifiers.empty(); }
 
   /// Sets the template parameter lists that preceded the declarator.
   void setTemplateParameterLists(ArrayRef<TemplateParameterList *> TPLs) {

@@ -2461,6 +2461,9 @@ void TextNodeDumper::VisitFunctionDecl(const FunctionDecl *D) {
   if (!isa<CXXDeductionGuideDecl>(D) && !D->getDescribedTemplate()) {
     dumpFormalLinkage(D);
   }
+
+  if (D->hasContracts())
+    OS << " contracts";
 }
 
 void TextNodeDumper::VisitCXXDeductionGuideDecl(

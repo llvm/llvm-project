@@ -137,6 +137,8 @@ static KeywordStatus getKeywordStatusHelper(const LangOptions &LangOpts,
     return LangOpts.ObjC ? KS_Enabled : KS_Unknown;
   case KEYZVECTOR:
     return LangOpts.ZVector ? KS_Enabled : KS_Unknown;
+  case KEYCONTRACTS:
+    return LangOpts.Contracts ? KS_Enabled : KS_Unknown;
   case KEYCOROUTINES:
     return LangOpts.Coroutines ? KS_Enabled : KS_Unknown;
   case KEYMODULES:

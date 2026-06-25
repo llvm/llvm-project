@@ -431,6 +431,12 @@ public:
     CX_None
   };
 
+  enum class ContractViolationModeKind {
+    Enforce,
+    Observe,
+    Ignore,
+  };
+
   /// Controls which variables have static destructors registered.
   enum class RegisterStaticDestructorsKind {
     /// Register static destructors for all variables.

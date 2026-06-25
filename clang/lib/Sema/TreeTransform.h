@@ -8641,6 +8641,19 @@ TreeTransform<Derived>::TransformBreakStmt(BreakStmt *S) {
 }
 
 template <typename Derived>
+StmtResult
+TreeTransform<Derived>::TransformContractAssertStmt(ContractAssertStmt *S) {
+  ExprResult Cond = getDerived().TransformExpr(S->getCondition());
+  if (Cond.isInvalid())
+    return StmtError();
+  if (!getDerived().AlwaysRebuild() && Cond.get() == S->getCondition())
+    return S;
+  return new (getSema().Context)
+      ContractAssertStmt(Cond.get(), S->getContractAssertLoc(),
+                         S->getLParenLoc(), S->getRParenLoc());
+}
+
+template <typename Derived>
 StmtResult TreeTransform<Derived>::TransformDeferStmt(DeferStmt *S) {
   StmtResult Result = getDerived().TransformStmt(S->getBody());
   if (!Result.isUsable())

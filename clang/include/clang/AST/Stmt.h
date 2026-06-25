@@ -4160,6 +4160,55 @@ public:
   const_child_range children() const;
 };
 
+/// Represents a C++26 contract_assert statement (P2900R14).
+///
+/// \code
+///   void f(int x) {
+///     contract_assert(x > 0);
+///   }
+/// \endcode
+class ContractAssertStmt : public Stmt {
+  Expr *Condition;
+  SourceLocation ContractAssertLoc;
+  SourceLocation LParenLoc, RParenLoc;
+
+public:
+  ContractAssertStmt(Expr *Condition, SourceLocation ContractAssertLoc,
+                     SourceLocation LParenLoc, SourceLocation RParenLoc)
+      : Stmt(ContractAssertStmtClass), Condition(Condition),
+        ContractAssertLoc(ContractAssertLoc), LParenLoc(LParenLoc),
+        RParenLoc(RParenLoc) {}
+
+  explicit ContractAssertStmt(EmptyShell Empty)
+      : Stmt(ContractAssertStmtClass, Empty) {}
+
+  Expr *getCondition() const { return Condition; }
+  void setCondition(Expr *E) { Condition = E; }
+
+  SourceLocation getContractAssertLoc() const { return ContractAssertLoc; }
+  void setContractAssertLoc(SourceLocation Loc) { ContractAssertLoc = Loc; }
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+  void setLParenLoc(SourceLocation Loc) { LParenLoc = Loc; }
+  SourceLocation getRParenLoc() const { return RParenLoc; }
+  void setRParenLoc(SourceLocation Loc) { RParenLoc = Loc; }
+
+  SourceLocation getBeginLoc() const { return ContractAssertLoc; }
+  SourceLocation getEndLoc() const { return RParenLoc; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == ContractAssertStmtClass;
+  }
+
+  child_range children() {
+    Stmt **Begin = reinterpret_cast<Stmt **>(&Condition);
+    return child_range(Begin, Begin + 1);
+  }
+  const_child_range children() const {
+    Stmt *const *Begin = reinterpret_cast<Stmt *const *>(&Condition);
+    return const_child_range(Begin, Begin + 1);
+  }
+};
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_STMT_H

@@ -2003,6 +2003,74 @@ enum class MultiVersionKind {
   TargetVersion
 };
 
+/// Represents a single C++26 contract annotation (P2900R14).
+///
+/// This is the primary template for pre-conditions (IsPostCondition=false).
+/// Nodes are ASTContext-allocated and form a singly-linked list on
+/// FunctionDecl.
+///
+/// \code
+///   int f(int x) pre(x > 0) pre(x < 100);
+///   //           ^~~~~~~~~~~ ^~~~~~~~~~~~
+///   //           two PreContractAnnotation nodes linked together
+/// \endcode
+template <bool IsPostCondition> class ContractAnnotationBase {
+  Expr *Predicate;
+  ContractAnnotationBase *Next = nullptr;
+  SourceLocation KwLoc;
+  SourceLocation LParenLoc, RParenLoc;
+
+public:
+  ContractAnnotationBase(Expr *Pred, SourceLocation KwLoc, SourceLocation LP,
+                         SourceLocation RP)
+      : Predicate(Pred), KwLoc(KwLoc), LParenLoc(LP), RParenLoc(RP) {}
+
+  Expr *getPredicate() const { return Predicate; }
+  void setPredicate(Expr *P) { Predicate = P; }
+  ContractAnnotationBase *getNext() const { return Next; }
+  void setNext(ContractAnnotationBase *N) { Next = N; }
+  SourceLocation getKeywordLoc() const { return KwLoc; }
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+  SourceLocation getRParenLoc() const { return RParenLoc; }
+};
+
+/// Specialization for post-conditions, which additionally store an optional
+/// result variable for the return value name in \c post(name: expr).
+///
+/// \code
+///   int f(int x) post(r: r >= 0);
+///   //           ^~~~~~~~~~~~~~~~
+///   //           PostContractAnnotation with ResultVar for 'r'
+/// \endcode
+template <> class ContractAnnotationBase<true> {
+  Expr *Predicate;
+  ContractAnnotationBase *Next = nullptr;
+  SourceLocation KwLoc;
+  SourceLocation LParenLoc, RParenLoc;
+  /// The implicit VarDecl for the return value name in post(name: expr).
+  /// nullptr when no result name is specified, e.g. post(expr).
+  VarDecl *ResultVar;
+
+public:
+  ContractAnnotationBase(Expr *Pred, SourceLocation KwLoc, SourceLocation LP,
+                         SourceLocation RP, VarDecl *RV = nullptr)
+      : Predicate(Pred), KwLoc(KwLoc), LParenLoc(LP), RParenLoc(RP),
+        ResultVar(RV) {}
+
+  Expr *getPredicate() const { return Predicate; }
+  void setPredicate(Expr *P) { Predicate = P; }
+  ContractAnnotationBase *getNext() const { return Next; }
+  void setNext(ContractAnnotationBase *N) { Next = N; }
+  VarDecl *getResultVar() const { return ResultVar; }
+  void setResultVar(VarDecl *RV) { ResultVar = RV; }
+  SourceLocation getKeywordLoc() const { return KwLoc; }
+  SourceLocation getLParenLoc() const { return LParenLoc; }
+  SourceLocation getRParenLoc() const { return RParenLoc; }
+};
+
+using PreContractAnnotation = ContractAnnotationBase<false>;
+using PostContractAnnotation = ContractAnnotationBase<true>;
+
 /// Represents a function declaration or definition.
 ///
 /// Since a given function can be declared several times in a program,
@@ -2121,6 +2189,11 @@ private:
   /// Provides source/type location info for the declaration name embedded in
   /// the DeclaratorDecl base class.
   DeclarationNameLoc DNLoc;
+
+  /// C++26 contract annotations (P2900R14). Each is a singly-linked list
+  /// of ASTContext-allocated nodes, nullptr when no contracts are present.
+  PreContractAnnotation *PreConditions = nullptr;
+  PostContractAnnotation *PostConditions = nullptr;
 
   /// Specify that this function declaration is actually a function
   /// template specialization.
@@ -2564,6 +2637,15 @@ public:
   }
 
   void setDeletedAsWritten(bool D = true, StringLiteral *Message = nullptr);
+
+  /// \name C++26 Contracts (P2900R14)
+  /// @{
+  bool hasContracts() const { return PreConditions || PostConditions; }
+  PreContractAnnotation *getPreConditions() const { return PreConditions; }
+  PostContractAnnotation *getPostConditions() const { return PostConditions; }
+  void setPreConditions(PreContractAnnotation *C) { PreConditions = C; }
+  void setPostConditions(PostContractAnnotation *C) { PostConditions = C; }
+  /// @}
 
   /// Determines whether this function is "main", which is the
   /// entry point into an executable program.

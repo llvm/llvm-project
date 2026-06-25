@@ -7456,6 +7456,11 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
     }
   }
 
+  // Parse C++26 contract specifiers (pre/post).
+  ParseContractSpecifiers(D, TrailingReturnType.isUsable()
+                                 ? TrailingReturnType.get()
+                                 : ParsedType());
+
   // Collect non-parameter declarations from the prototype if this is a function
   // declaration. They will be moved into the scope of the function. Only do
   // this in C and not C++, where the decls will continue to live in the

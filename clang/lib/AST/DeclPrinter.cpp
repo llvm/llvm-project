@@ -849,6 +849,20 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
           prettyPrintAttributes(D, AttrPosAsWritten::Right))
     Out << ' ' << *Attrs;
 
+  // C++26 Contracts: print pre/post-condition specifiers.
+  for (auto *C = D->getPreConditions(); C; C = C->getNext()) {
+    Out << " pre(";
+    C->getPredicate()->printPretty(Out, nullptr, Policy);
+    Out << ")";
+  }
+  for (auto *C = D->getPostConditions(); C; C = C->getNext()) {
+    Out << " post(";
+    if (auto *RV = C->getResultVar())
+      Out << RV->getName() << ": ";
+    C->getPredicate()->printPretty(Out, nullptr, Policy);
+    Out << ")";
+  }
+
   if (D->isPureVirtual())
     Out << " = 0";
   else if (D->isDeletedAsWritten()) {

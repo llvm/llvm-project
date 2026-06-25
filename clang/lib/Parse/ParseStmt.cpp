@@ -158,6 +158,12 @@ Retry:
         getCurScope(), SemaCodeCompletion::PCC_Statement);
     return StmtError();
 
+  // C++26 contract_assert statement (P2900R14).
+  case tok::kw_contract_assert:
+    Res = ParseContractAssertStatement();
+    SemiError = "contract_assert";
+    break;
+
   case tok::identifier:
   ParseIdentifier: {
     Token Next = NextToken();
@@ -2323,6 +2329,31 @@ StmtResult Parser::ParseContinueStatement() {
 
 StmtResult Parser::ParseBreakStatement() {
   return ParseBreakOrContinueStatement(/*IsContinue=*/false);
+}
+
+/// Parse a C++26 contract_assert statement (P2900R14).
+///
+///   contract_assert '(' conditional-expression ')' ';'
+///
+/// 'contract_assert' is a context-sensitive keyword (an identifier that is
+/// only special at statement level). The caller has already verified that
+/// the current token is the 'contract_assert' identifier followed by '('.
+StmtResult Parser::ParseContractAssertStatement() {
+  SourceLocation ContractAssertLoc =
+      ConsumeToken(); // consume 'contract_assert'
+
+  BalancedDelimiterTracker T(*this, tok::l_paren);
+  T.consumeOpen();
+
+  ExprResult Predicate = ParseConditionalExpression();
+
+  T.consumeClose();
+
+  if (Predicate.isInvalid())
+    return StmtError();
+
+  return Actions.ActOnContractAssert(ContractAssertLoc, Predicate.get(),
+                                     T.getOpenLocation(), T.getCloseLocation());
 }
 
 StmtResult Parser::ParseReturnStatement() {

@@ -6060,6 +6060,27 @@ public:
                         StringEvaluationContext EvalContext,
                         bool ErrorOnInvalidMessage);
 
+  /// \name C++26 Contracts (P2900R14)
+  /// @{
+
+  /// Build contract annotation nodes from parsed specifiers and attach them
+  /// to the FunctionDecl.
+  void ActOnFunctionContractSpecifiers(FunctionDecl *FD, const Declarator &D);
+
+  /// Create an implicit VarDecl for the result name in post(name: expr) and
+  /// push it into the current scope so the predicate expression can reference
+  /// it.
+  VarDecl *ActOnPostConditionResultName(Scope *S, Declarator &D,
+                                        IdentifierInfo *ResultName,
+                                        SourceLocation ResultNameLoc,
+                                        ParsedType TrailingReturnType);
+
+  /// Build a ContractAssertStmt from a parsed contract_assert(expr) statement.
+  StmtResult ActOnContractAssert(SourceLocation ContractAssertLoc,
+                                 Expr *Predicate, SourceLocation LParenLoc,
+                                 SourceLocation RParenLoc);
+  /// @}
+
   Decl *ActOnStaticAssertDeclaration(SourceLocation StaticAssertLoc,
                                      Expr *AssertExpr, Expr *AssertMessageExpr,
                                      SourceLocation RParenLoc);

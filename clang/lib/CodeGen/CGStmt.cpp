@@ -160,6 +160,12 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
   case Stmt::ForStmtClass:     EmitForStmt(cast<ForStmt>(*S), Attrs);     break;
 
   case Stmt::ReturnStmtClass:  EmitReturnStmt(cast<ReturnStmt>(*S));      break;
+  case Stmt::ContractAssertStmtClass:
+    // TODO: implement full contract checking in a following CodeGen patch.
+    // For now, emit the predicate expression for its side effects so that
+    // code like contract_assert(expensive_check()) still calls the function.
+    EmitIgnoredExpr(cast<ContractAssertStmt>(*S).getCondition());
+    break;
 
   case Stmt::SwitchStmtClass:  EmitSwitchStmt(cast<SwitchStmt>(*S));      break;
   case Stmt::GCCAsmStmtClass:  // Intentional fall-through.

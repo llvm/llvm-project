@@ -339,6 +339,14 @@ void ASTStmtReader::VisitContinueStmt(ContinueStmt *S) {
 
 void ASTStmtReader::VisitBreakStmt(BreakStmt *S) { VisitLoopControlStmt(S); }
 
+void ASTStmtReader::VisitContractAssertStmt(ContractAssertStmt *S) {
+  VisitStmt(S);
+  S->setCondition(Record.readSubExpr());
+  S->setContractAssertLoc(readSourceLocation());
+  S->setLParenLoc(readSourceLocation());
+  S->setRParenLoc(readSourceLocation());
+}
+
 void ASTStmtReader::VisitDeferStmt(DeferStmt *S) {
   VisitStmt(S);
   S->setDeferLoc(readSourceLocation());
@@ -3201,6 +3209,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case STMT_BREAK:
       S = new (Context) BreakStmt(Empty);
+      break;
+
+    case STMT_CONTRACT_ASSERT:
+      S = new (Context) ContractAssertStmt(Empty);
       break;
 
     case STMT_DEFER:

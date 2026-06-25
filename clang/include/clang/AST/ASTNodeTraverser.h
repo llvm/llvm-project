@@ -569,6 +569,17 @@ public:
 
     if (D->doesThisDeclarationHaveABody())
       Visit(D->getBody());
+
+    // C++26 Contracts: dump pre/post-condition annotations.
+    for (auto *C = D->getPreConditions(); C; C = C->getNext())
+      getNodeDelegate().AddChild("pre", [=] { Visit(C->getPredicate()); });
+    for (auto *C = D->getPostConditions(); C; C = C->getNext()) {
+      getNodeDelegate().AddChild("post", [=] {
+        if (auto *RV = C->getResultVar())
+          Visit(RV);
+        Visit(C->getPredicate());
+      });
+    }
   }
 
   void VisitFieldDecl(const FieldDecl *D) {

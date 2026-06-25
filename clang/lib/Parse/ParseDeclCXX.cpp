@@ -4188,6 +4188,109 @@ void Parser::ParseTrailingRequiresClause(Declarator &D) {
   }
 }
 
+/// Parse a sequence of C++26 contract specifiers (P2900R14).
+///
+/// Called from ParseFunctionDeclarator after the trailing return type,
+/// while still inside the function prototype scope (parameters are visible).
+///
+///   function-contract-specifier-seq:
+///     function-contract-specifier
+///     function-contract-specifier-seq function-contract-specifier
+///
+///   function-contract-specifier:
+///     'pre' '(' conditional-expression ')'
+///     'post' '(' result-name-introducer[opt] conditional-expression ')'
+///
+///   result-name-introducer:
+///     identifier ':'
+///
+/// 'pre' and 'post' are context-sensitive keywords (identifiers that are
+/// only special in this position). Parsed specifiers are stored in the
+/// Declarator and later converted to ContractAnnotation nodes on
+/// FunctionDecl by Sema::ActOnFunctionContractSpecifiers.
+///
+/// \param TrailingReturnType The trailing return type (if any), needed to
+///        determine the type of the result variable in post(name: expr).
+///        For non-trailing return types (e.g. `int f()`), pass ParsedType().
+void Parser::ParseContractSpecifiers(Declarator &D,
+                                     ParsedType TrailingReturnType) {
+  if (!getLangOpts().Contracts)
+    return;
+
+  // Lazily initialize context-sensitive keyword identifiers.
+  if (!Ident_pre) {
+    Ident_pre = &PP.getIdentifierTable().get("pre");
+    Ident_post = &PP.getIdentifierTable().get("post");
+  }
+
+  // Quick check: bail out early if the next token isn't 'pre' or 'post'
+  // followed by '(' to avoid unnecessary work for the common case.
+  if (!Tok.is(tok::identifier))
+    return;
+  IdentifierInfo *II = Tok.getIdentifierInfo();
+  if (II != Ident_pre && II != Ident_post)
+    return;
+  if (!NextToken().is(tok::l_paren))
+    return;
+
+  // Parse a sequence of contract specifiers.
+  while (Tok.is(tok::identifier)) {
+    II = Tok.getIdentifierInfo();
+    if (II != Ident_pre && II != Ident_post)
+      break;
+    if (!NextToken().is(tok::l_paren))
+      break;
+
+    bool IsPre = (II == Ident_pre);
+    SourceLocation KwLoc = ConsumeToken();
+
+    BalancedDelimiterTracker T(*this, tok::l_paren);
+    T.consumeOpen();
+
+    // For post-conditions, check for 'identifier :' result-name-introducer.
+    IdentifierInfo *ResultName = nullptr;
+    SourceLocation ResultNameLoc;
+    VarDecl *ResultVar = nullptr;
+
+    // Each post-condition's result name gets its own scope so that
+    // multiple post(r: ...) on the same function don't conflict.
+    std::optional<ParseScope> ResultNameScope;
+    if (!IsPre && Tok.is(tok::identifier) && NextToken().is(tok::colon)) {
+      ResultNameScope.emplace(this, Scope::DeclScope);
+      ResultName = Tok.getIdentifierInfo();
+      ResultNameLoc = ConsumeToken();
+      ConsumeToken(); // consume ':'
+      // Create an implicit VarDecl for the result name and push it into scope
+      // so the predicate expression can reference it.
+      ResultVar = Actions.ActOnPostConditionResultName(
+          getCurScope(), D, ResultName, ResultNameLoc, TrailingReturnType);
+    }
+
+    ExprResult Predicate = ParseConditionalExpression();
+
+    // Close the result name scope before consuming ')' so that the
+    // result name is not visible outside this contract specifier.
+    ResultNameScope.reset();
+    T.consumeClose();
+
+    if (Predicate.isInvalid())
+      continue;
+
+    // Store the parsed contract specifier in the Declarator.
+    Declarator::ContractSpecInfo Info;
+    Info.CKind = IsPre ? Declarator::ContractSpecInfo::Pre
+                       : Declarator::ContractSpecInfo::Post;
+    Info.Predicate = Predicate.get();
+    Info.ResultName = ResultName;
+    Info.ResultVar = ResultVar;
+    Info.KwLoc = KwLoc;
+    Info.LParenLoc = T.getOpenLocation();
+    Info.RParenLoc = T.getCloseLocation();
+    Info.ResultNameLoc = ResultNameLoc;
+    D.addContractSpecifier(std::move(Info));
+  }
+}
+
 Sema::ParsingClassState Parser::PushParsingClass(Decl *ClassDecl,
                                                  bool NonNestedClass,
                                                  bool IsInterface) {

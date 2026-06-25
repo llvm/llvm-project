@@ -1764,6 +1764,10 @@ def note_expr_evaluates_to : Note<
   "expression evaluates to '%0 %1 %2'">;
 
 
+// C++26 Contracts (P2900R14)
+def err_post_condition_result_name_void_return : Error<
+  "post-condition result name on function returning void">;
+
 def subst_user_defined_msg : TextSubstitution<
   "%select{the message|the expression}0 in "
   "%select{a static assertion|this asm operand}0">;

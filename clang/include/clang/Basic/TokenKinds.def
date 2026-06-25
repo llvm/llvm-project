@@ -34,6 +34,9 @@
 #ifndef C23_KEYWORD
 #define C23_KEYWORD(X,Y) KEYWORD(X,KEYC23|(Y))
 #endif
+#ifndef CONTRACTS_KEYWORD
+#define CONTRACTS_KEYWORD(X) KEYWORD(X,KEYCONTRACTS)
+#endif
 #ifndef COROUTINES_KEYWORD
 #define COROUTINES_KEYWORD(X) CXX20_KEYWORD(X,KEYCOROUTINES)
 #endif
@@ -293,6 +296,7 @@ PUNCTUATOR(greatergreatergreater, ">>>")
 //   KEYZVECTOR - This is a keyword for the System z vector extensions,
 //                which are heavily based on AltiVec
 //   KEYBORLAND - This is a keyword if Borland extensions are enabled
+//   KEYCONTRACTS - This is a keyword if support for C++ contracts is enabled
 //   KEYCOROUTINES - This is a keyword if support for C++ coroutines is enabled
 //   BOOLSUPPORT - This is a keyword if 'bool' is a built-in type
 //   HALFSUPPORT - This is a keyword if 'half' is a built-in type
@@ -427,6 +431,9 @@ CXX11_KEYWORD(noexcept              , 0)
 CXX11_KEYWORD(nullptr               , KEYC23)
 CXX11_KEYWORD(static_assert         , KEYMSCOMPAT|KEYC23)
 CXX11_KEYWORD(thread_local          , KEYC23)
+
+// C++26 / contracts keywords
+CONTRACTS_KEYWORD(contract_assert)
 
 // C++20 / coroutines keywords
 COROUTINES_KEYWORD(co_await)
@@ -1075,6 +1082,7 @@ ANNOTATION(embed)
 #undef TYPE_TRAIT_2
 #undef TYPE_TRAIT_1
 #undef TYPE_TRAIT
+#undef CONTRACTS_KEYWORD
 #undef MODULES_KEYWORD
 #undef CXX20_KEYWORD
 #undef CXX11_KEYWORD

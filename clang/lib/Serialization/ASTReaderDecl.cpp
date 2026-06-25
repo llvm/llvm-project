@@ -1143,6 +1143,43 @@ void ASTDeclReader::VisitFunctionDecl(FunctionDecl *FD) {
     Params.push_back(readDeclAs<ParmVarDecl>());
   FD->setParams(Reader.getContext(), Params);
 
+  // C++26 Contracts (P2900R14)
+  {
+    ASTContext &C = Reader.getContext();
+    PreContractAnnotation *PreHead = nullptr, *PreTail = nullptr;
+    unsigned NumPre = Record.readInt();
+    for (unsigned I = 0; I != NumPre; ++I) {
+      Expr *Pred = Record.readExpr();
+      SourceLocation KwLoc = readSourceLocation();
+      SourceLocation LP = readSourceLocation();
+      SourceLocation RP = readSourceLocation();
+      auto *Ann = new (C) PreContractAnnotation(Pred, KwLoc, LP, RP);
+      if (PreTail)
+        PreTail->setNext(Ann);
+      else
+        PreHead = Ann;
+      PreTail = Ann;
+    }
+    FD->setPreConditions(PreHead);
+
+    PostContractAnnotation *PostHead = nullptr, *PostTail = nullptr;
+    unsigned NumPost = Record.readInt();
+    for (unsigned I = 0; I != NumPost; ++I) {
+      Expr *Pred = Record.readExpr();
+      SourceLocation KwLoc = readSourceLocation();
+      SourceLocation LP = readSourceLocation();
+      SourceLocation RP = readSourceLocation();
+      VarDecl *RV = readDeclAs<VarDecl>();
+      auto *Ann = new (C) PostContractAnnotation(Pred, KwLoc, LP, RP, RV);
+      if (PostTail)
+        PostTail->setNext(Ann);
+      else
+        PostHead = Ann;
+      PostTail = Ann;
+    }
+    FD->setPostConditions(PostHead);
+  }
+
   // If the declaration is a SYCL kernel entry point function as indicated by
   // the presence of a sycl_kernel_entry_point attribute, register it so that
   // associated metadata is recreated.

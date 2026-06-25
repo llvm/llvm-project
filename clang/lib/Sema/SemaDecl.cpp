@@ -11291,6 +11291,9 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   if (getLangOpts().OpenACC)
     OpenACC().ActOnFunctionDeclarator(NewFD);
 
+  if (D.hasContractSpecifiers())
+    ActOnFunctionContractSpecifiers(NewFD, D);
+
   return NewFD;
 }
 
@@ -21329,4 +21332,89 @@ bool Sema::isRedefinitionAllowedFor(NamedDecl *D, NamedDecl **Suggested,
   // The redefinition of D in the **current** TU is allowed if D is invisible or
   // D is defined in the global module of other module units.
   return D->isInAnotherModuleUnit() || !Visible;
+}
+
+/// Create an implicit VarDecl for the result name in post(name: expr).
+///
+/// Called during parsing of a post-condition specifier, before the predicate
+/// expression is parsed. The VarDecl is pushed into the current scope so
+/// that the predicate can reference it (e.g., `r` in `post(r: r >= 0)`).
+///
+/// The result variable has the function's return type, const-qualified and
+/// with references stripped. This is called from within
+/// ParseFunctionDeclarator, before the function chunk is added to the
+/// Declarator, so we determine the return type from either the trailing return
+/// type or the DeclSpec base type.
+VarDecl *Sema::ActOnPostConditionResultName(Scope *S, Declarator &D,
+                                            IdentifierInfo *ResultName,
+                                            SourceLocation ResultNameLoc,
+                                            ParsedType TrailingReturnType) {
+  QualType RetTy;
+  if (!TrailingReturnType.get().isNull()) {
+    RetTy = GetTypeFromParser(TrailingReturnType);
+  } else {
+    // The function chunk hasn't been added to the Declarator yet, so
+    // GetTypeForDeclarator returns the DeclSpec base type (the return type).
+    TypeSourceInfo *TSI = GetTypeForDeclarator(D);
+    RetTy = TSI->getType();
+  }
+  assert(!RetTy.isNull() && "return type should never be null here");
+
+  if (RetTy->isVoidType()) {
+    Diag(ResultNameLoc, diag::err_post_condition_result_name_void_return);
+    return nullptr;
+  }
+
+  RetTy = RetTy.getNonReferenceType().withConst();
+
+  auto *ResultVar = VarDecl::Create(
+      Context, CurContext, ResultNameLoc, ResultNameLoc, ResultName, RetTy,
+      Context.getTrivialTypeSourceInfo(RetTy, ResultNameLoc), SC_None);
+  ResultVar->setImplicit();
+  // AddToContext=false: the VarDecl is only visible during parsing of the
+  // predicate expression, not added to any DeclContext permanently.
+  PushOnScopeChains(ResultVar, S, /*AddToContext=*/false);
+  return ResultVar;
+}
+
+/// Convert parsed contract specifiers from the Declarator into
+/// ContractAnnotation linked lists and attach them to the FunctionDecl.
+///
+/// Called from ActOnFunctionDeclarator after the FunctionDecl is created.
+/// Builds two singly-linked lists (pre-conditions and post-conditions)
+/// in declaration order.
+void Sema::ActOnFunctionContractSpecifiers(FunctionDecl *FD,
+                                           const Declarator &D) {
+  PreContractAnnotation *PreHead = nullptr, *PreTail = nullptr;
+  PostContractAnnotation *PostHead = nullptr, *PostTail = nullptr;
+
+  for (const auto &CS : D.getContractSpecifiers()) {
+    if (CS.CKind == Declarator::ContractSpecInfo::Pre) {
+      auto *Ann = new (Context) PreContractAnnotation(
+          CS.Predicate, CS.KwLoc, CS.LParenLoc, CS.RParenLoc);
+      if (PreTail)
+        PreTail->setNext(Ann);
+      else
+        PreHead = Ann;
+      PreTail = Ann;
+    } else {
+      auto *Ann = new (Context) PostContractAnnotation(
+          CS.Predicate, CS.KwLoc, CS.LParenLoc, CS.RParenLoc, CS.ResultVar);
+      if (PostTail)
+        PostTail->setNext(Ann);
+      else
+        PostHead = Ann;
+      PostTail = Ann;
+    }
+  }
+
+  FD->setPreConditions(PreHead);
+  FD->setPostConditions(PostHead);
+}
+
+StmtResult Sema::ActOnContractAssert(SourceLocation ContractAssertLoc,
+                                     Expr *Predicate, SourceLocation LParenLoc,
+                                     SourceLocation RParenLoc) {
+  return new (Context)
+      ContractAssertStmt(Predicate, ContractAssertLoc, LParenLoc, RParenLoc);
 }

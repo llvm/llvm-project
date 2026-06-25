@@ -319,6 +319,10 @@ void StmtProfiler::VisitBreakStmt(const BreakStmt *S) {
   VisitStmt(S);
 }
 
+void StmtProfiler::VisitContractAssertStmt(const ContractAssertStmt *S) {
+  VisitStmt(S);
+}
+
 void StmtProfiler::VisitReturnStmt(const ReturnStmt *S) {
   VisitStmt(S);
 }

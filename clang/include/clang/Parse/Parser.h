@@ -2895,6 +2895,11 @@ private:
   mutable IdentifierInfo *Ident_GNU_final;
   mutable IdentifierInfo *Ident_override;
 
+  /// C++26 Contracts contextual keywords (pre/post are context-sensitive;
+  /// contract_assert is a proper keyword via TokenKinds.def).
+  mutable IdentifierInfo *Ident_pre;
+  mutable IdentifierInfo *Ident_post;
+
   /// Representation of a class that has been parsed, including
   /// any member function declarations or definitions that need to be
   /// parsed after the corresponding top-level class is complete.
@@ -3002,6 +3007,11 @@ private:
   /// Parse a requires-clause as part of a function declaration.
   void ParseTrailingRequiresClauseWithScope(Declarator &D);
   void ParseTrailingRequiresClause(Declarator &D);
+
+  /// Parse C++26 contract specifiers: pre(expr) and post(name: expr).
+  /// \param TrailingReturnType The trailing return type if present, used to
+  ///        determine the type of the result variable in post(name: expr).
+  void ParseContractSpecifiers(Declarator &D, ParsedType TrailingReturnType);
 
   void ParseMicrosoftIfExistsClassDeclaration(DeclSpec::TST TagType,
                                               ParsedAttributes &AccessAttrs,
@@ -7589,6 +7599,8 @@ public:
   ///         'co_return' braced-init-list ';'
   /// \endverbatim
   StmtResult ParseReturnStatement();
+  /// Parse a C++26 contract_assert(expr) statement.
+  StmtResult ParseContractAssertStatement();
 
   StmtResult ParseBreakOrContinueStatement(bool IsContinue);
 
