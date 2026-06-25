@@ -253,11 +253,9 @@ endif ()
 #     generated but to be forgotten inside the build directory to not
 #     conflict with each other.
 #     Also, installs the module with the toolchain.
-#  FLANG_RT
-#     Indicate this is compiling flang-rt to avoid a dependency cycle.
 # )
 function (flang_module_target tgtname)
-  set(options PUBLIC FLANG_RT)
+  set(options PUBLIC)
   cmake_parse_arguments(ARG
     "${options}"
     ""
@@ -265,12 +263,7 @@ function (flang_module_target tgtname)
     ${ARGN}
   )
 
-  if (ARG_FLANG_RT)
-    # fortran-compile-options only applies compile options, not dependencies
-    target_link_libraries(${tgtname} PRIVATE fortran-compile-options)
-  else ()
     target_link_libraries(${tgtname} PRIVATE fortran-compile-depends)
-  endif ()
 
   if (ARG_PUBLIC)
     set_target_properties(${tgtname}
