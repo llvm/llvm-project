@@ -980,10 +980,9 @@ target via the runtimes build. A minimal CMake configuration is:
 ``COMPILER_RT_BUILD_PROFILE_ROCM`` controls building the host-side
 ROCm/HIP device profile collection runtime, ``clang_rt.profile_rocm``.
 It is on by default for normal Linux and Windows compiler-rt builds,
-and off for bare-metal profile builds and unsupported hosts; leave it
-enabled. ``RUNTIMES_USE_LIBC=llvm-libc`` is required so the amdgcn
-profile compile picks up LLVM-libc's ``-isystem`` / ``-nostdlibinc``
-headers.
+and off for bare-metal profile builds; leave it enabled.
+``RUNTIMES_USE_LIBC=llvm-libc`` is required so the amdgcn profile
+compile picks up LLVM-libc's ``-isystem`` / ``-nostdlibinc`` headers.
 
 Generate phase
 --------------
@@ -1044,6 +1043,30 @@ that applies the same profile to every offload architecture:
        -Xarch_host   -fprofile-use=host.profdata \
        -Xarch_device -fprofile-use=device.gfx1101.profdata \
        -o demo
+
+Block uniformity profiles
+-------------------------
+
+On AMDGPU targets, device PGO also records a per-block uniformity
+signal. For each instrumented block, the profile records whether the
+block is usually entered with all lanes in the wave active. During the
+use phase, Clang attaches this information to the corresponding IR
+terminators as ``!block.uniformity.profile`` metadata, which lets later
+AMDGPU code generation distinguish blocks that are usually uniform from
+blocks that are divergent.
+
+No extra driver option is needed; use the same generate, merge, and use
+commands shown above. ``llvm-profdata show --counts`` prints the
+uniformity information when it is present:
+
+.. code-block:: text
+
+   Block uniformity: [U, U, D, U]
+
+``U`` means the block was classified as uniform, and ``D`` means it was
+classified as divergent. Profiles produced by older toolchains or by
+targets that do not emit this data can still be used for ordinary PGO,
+but they do not provide block-uniformity guidance.
 
 Notes
 -----
