@@ -43,9 +43,9 @@ omp.task private(@_QFEc_firstprivate_i32 %3 -> %arg0 : !llvm.ptr) {
         }
       }
       omp.terminator
-    }
+    } {omp.combined}
     omp.terminator
-  }
+  } {omp.combined}
   omp.terminator
 }
 llvm.return

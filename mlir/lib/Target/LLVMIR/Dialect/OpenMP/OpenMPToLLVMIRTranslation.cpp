@@ -4493,7 +4493,8 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   omp::TargetOp targetOp = wsloopOp->getParentOfType<mlir::omp::TargetOp>();
   if (targetOp &&
       targetOp.getKernelType() == omp::TargetExecMode::spmd_no_loop) {
-    Operation *targetCapturedOp = targetOp.getInnermostCapturedOmpOp();
+    Operation *targetCapturedOp =
+        cast<omp::ComposableOpInterface>(*targetOp).findCapturedOp();
     // We need this check because, without it, noLoopMode would be set to true
     // for every omp.wsloop nested inside a no-loop SPMD target region, even if
     // that loop is not the top-level SPMD one.
@@ -8648,7 +8649,8 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::OpenMPIRBuilder::TargetKernelRuntimeAttrs runtimeAttrs;
   llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs defaultAttrs;
-  Operation *targetCapturedOp = targetOp.getInnermostCapturedOmpOp();
+  Operation *targetCapturedOp =
+      cast<omp::ComposableOpInterface>(*targetOp).findCapturedOp();
   initTargetDefaultAttrs(targetOp, targetCapturedOp, defaultAttrs,
                          isTargetDevice, isGPU);
 

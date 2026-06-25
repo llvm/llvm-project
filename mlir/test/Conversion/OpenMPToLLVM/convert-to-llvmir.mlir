@@ -601,9 +601,9 @@ func.func @omp_taskloop(%arg0: index, %arg1 : memref<i32>) {
         }
       }
     omp.terminator
-    }
+    } {omp.combined}
     omp.terminator
-  }
+  } {omp.combined}
   return
 }
 

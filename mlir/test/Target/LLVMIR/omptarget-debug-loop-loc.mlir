@@ -33,9 +33,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
           } loc(#loc9)
         } loc(#loc9)
         omp.terminator loc(#loc9)
-      } loc(#loc9)
+      } {omp.combined} loc(#loc9)
       omp.terminator loc(#loc9)
-    } loc(#loc15)
+    } {omp.combined} loc(#loc15)
     llvm.return loc(#loc9)
   } loc(#loc14)
   llvm.mlir.global internal @_QFEarray() {addr_space = 0 : i32} : !llvm.array<16384 x i32> {
