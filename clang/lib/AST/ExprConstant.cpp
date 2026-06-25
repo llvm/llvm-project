@@ -19405,10 +19405,10 @@ bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
       int64_t ElemSize = ElementSize.getQuantity();
       if (IdxVal != 0 &&
           ElemSize > std::numeric_limits<int64_t>::max() / IdxVal)
-        return Error(OOE);
+        return Error(OOE, diag::note_constexpr_offsetof_overflow);
       int64_t Offset = IdxVal * ElemSize;
       if (Result.getQuantity() > std::numeric_limits<int64_t>::max() - Offset)
-        return Error(OOE);
+        return Error(OOE, diag::note_constexpr_offsetof_overflow);
       Result += CharUnits::fromQuantity(Offset);
       break;
     }

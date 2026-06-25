@@ -52,4 +52,4 @@ _Static_assert(__builtin_offsetof(struct NegIdxStruct, x[((__uint128_t)1 << 64)]
 // A uint64_t index that causes index*sizeof(element) to overflow int64_t must
 // be rejected.  4611686018427387904 * sizeof(short)==2 == 2^63 > INT64_MAX.
 struct ShortArray { short data[2]; };
-_Static_assert(__builtin_offsetof(struct ShortArray, data[(uint64_t)4611686018427387904ULL]) == 0, ""); // expected-error {{not an integral constant expression}}
+_Static_assert(__builtin_offsetof(struct ShortArray, data[(uint64_t)4611686018427387904ULL]) == 0, ""); // expected-error {{not an integral constant expression}} expected-note {{overflow in offsetof}}
