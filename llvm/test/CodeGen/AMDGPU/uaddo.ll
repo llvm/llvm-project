@@ -1206,6 +1206,170 @@ define amdgpu_cs void @sv_uaddo_i128(ptr addrspace(1) %out, i128 inreg %a, i128 
   ret void
 }
 
+; Carry-out is USED: fold must be suppressed to preserve correct carry semantics.
+define amdgpu_kernel void @uaddo_carry_of_add_carryout_used(ptr addrspace(1) %out, i32 %x, i32 %y, i1 %cc) #0 {
+; SI-LABEL: uaddo_carry_of_add_carryout_used:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xb
+; SI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_add_i32 s0, s0, s1
+; SI-NEXT:    s_and_b32 s1, s2, 1
+; SI-NEXT:    v_mov_b32_e32 v0, s1
+; SI-NEXT:    v_add_i32_e32 v0, vcc, s0, v0
+; SI-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: uaddo_carry_of_add_carryout_used:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
+; VI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x24
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_add_i32 s0, s0, s1
+; VI-NEXT:    s_and_b32 s1, s2, 1
+; VI-NEXT:    v_mov_b32_e32 v0, s1
+; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
+; VI-NEXT:    v_mov_b32_e32 v2, s4
+; VI-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; VI-NEXT:    v_mov_b32_e32 v3, s5
+; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; VI-NEXT:    s_endpgm
+;
+; GFX9-LABEL: uaddo_carry_of_add_carryout_used:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
+; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_add_i32 s0, s0, s1
+; GFX9-NEXT:    s_and_b32 s1, s2, 1
+; GFX9-NEXT:    v_mov_b32_e32 v0, s1
+; GFX9-NEXT:    v_add_co_u32_e32 v0, vcc, s0, v0
+; GFX9-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; GFX9-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7]
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: uaddo_carry_of_add_carryout_used:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v2, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_add_i32 s0, s0, s1
+; GFX10-NEXT:    s_and_b32 s1, s2, 1
+; GFX10-NEXT:    v_add_co_u32 v0, s0, s0, s1
+; GFX10-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s0
+; GFX10-NEXT:    global_store_dwordx2 v2, v[0:1], s[6:7]
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: uaddo_carry_of_add_carryout_used:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24
+; GFX11-NEXT:    v_mov_b32_e32 v2, 0
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_add_i32 s0, s0, s1
+; GFX11-NEXT:    s_and_b32 s1, s2, 1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    v_add_co_u32 v0, s0, s0, s1
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s0
+; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
+; GFX11-NEXT:    s_endpgm
+  %xy     = add i32 %x, %y
+  %cc_i32 = zext i1 %cc to i32
+  %r      = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %xy, i32 %cc_i32)
+  %val    = extractvalue {i32, i1} %r, 0
+  %co     = extractvalue {i32, i1} %r, 1
+  %co_i32 = zext i1 %co to i32
+  store i32 %val, ptr addrspace(1) %out
+  %p1 = getelementptr i32, ptr addrspace(1) %out, i64 1
+  store i32 %co_i32, ptr addrspace(1) %p1
+  ret void
+}
+
+; Carry-out is NOT USED: fold is safe since the carry-out has no consumers.
+define amdgpu_kernel void @uaddo_carry_of_add_carryout_unused(ptr addrspace(1) %out, i32 %x, i32 %y, i1 %cc) #0 {
+; SI-LABEL: uaddo_carry_of_add_carryout_unused:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xb
+; SI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    s_add_i32 s0, s0, s1
+; SI-NEXT:    s_and_b32 s1, s2, 1
+; SI-NEXT:    s_add_i32 s0, s0, s1
+; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: uaddo_carry_of_add_carryout_unused:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
+; VI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x24
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_add_i32 s0, s0, s1
+; VI-NEXT:    s_and_b32 s1, s2, 1
+; VI-NEXT:    s_add_i32 s0, s0, s1
+; VI-NEXT:    v_mov_b32_e32 v0, s4
+; VI-NEXT:    v_mov_b32_e32 v1, s5
+; VI-NEXT:    v_mov_b32_e32 v2, s0
+; VI-NEXT:    flat_store_dword v[0:1], v2
+; VI-NEXT:    s_endpgm
+;
+; GFX9-LABEL: uaddo_carry_of_add_carryout_unused:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
+; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_add_i32 s0, s0, s1
+; GFX9-NEXT:    s_and_b32 s1, s2, 1
+; GFX9-NEXT:    s_add_i32 s0, s0, s1
+; GFX9-NEXT:    v_mov_b32_e32 v1, s0
+; GFX9-NEXT:    global_store_dword v0, v1, s[6:7]
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: uaddo_carry_of_add_carryout_unused:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
+; GFX10-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_add_i32 s0, s0, s1
+; GFX10-NEXT:    s_and_b32 s1, s2, 1
+; GFX10-NEXT:    s_add_i32 s0, s0, s1
+; GFX10-NEXT:    v_mov_b32_e32 v1, s0
+; GFX10-NEXT:    global_store_dword v0, v1, s[6:7]
+; GFX10-NEXT:    s_endpgm
+;
+; GFX11-LABEL: uaddo_carry_of_add_carryout_unused:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x2c
+; GFX11-NEXT:    s_load_b64 s[4:5], s[4:5], 0x24
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    s_add_i32 s0, s0, s1
+; GFX11-NEXT:    s_and_b32 s1, s2, 1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_add_i32 s0, s0, s1
+; GFX11-NEXT:    v_dual_mov_b32 v0, 0 :: v_dual_mov_b32 v1, s0
+; GFX11-NEXT:    global_store_b32 v0, v1, s[4:5]
+; GFX11-NEXT:    s_endpgm
+  %xy     = add i32 %x, %y
+  %cc_i32 = zext i1 %cc to i32
+  %r      = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %xy, i32 %cc_i32)
+  %val    = extractvalue {i32, i1} %r, 0
+  store i32 %val, ptr addrspace(1) %out
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 declare { i16, i1 } @llvm.uadd.with.overflow.i16(i16, i16) #1
 declare { i32, i1 } @llvm.uadd.with.overflow.i32(i32, i32) #1
