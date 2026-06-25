@@ -38,6 +38,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
@@ -142,7 +143,27 @@ void OmpStructureChecker::Enter(const parser::SubroutineStmt &x) {
   scopeStack_.push_back(sym->scope());
 }
 
+void OmpStructureChecker::CheckTempDescriptorMappings() {
+  unsigned version{context_.langOptions().OpenMPVersion};
+  for (const auto &[symbol, source] : tempDescriptorEnterMaps_) {
+    if (tempDescriptorExitMaps_.find(symbol) == tempDescriptorExitMaps_.end()) {
+      if (version >= 61) {
+        context_.Warn(common::UsageWarning::OpenMPUsage, source,
+            "The map of '%s' may include a descriptor that is created locally. Mapping this descriptor without an appropriate TARGET EXIT DATA in the same scope may result in the device retaining an invalid descriptor reference. To avoid mapping the descriptor utilize OpenMP's ref_ptee reference modifier to map just the data"_warn_en_US,
+            symbol->name());
+      } else {
+        context_.Warn(common::UsageWarning::OpenMPUsage, source,
+            "The map of '%s' may include a descriptor that is created locally. Mapping this descriptor without an appropriate TARGET EXIT DATA in the same scope may result in the device retaining an invalid descriptor reference"_warn_en_US,
+            symbol->name());
+      }
+    }
+  }
+  tempDescriptorEnterMaps_.clear();
+  tempDescriptorExitMaps_.clear();
+}
+
 void OmpStructureChecker::Enter(const parser::EndSubroutineStmt &x) {
+  CheckTempDescriptorMappings();
   scopeStack_.pop_back();
 }
 
@@ -152,6 +173,7 @@ void OmpStructureChecker::Enter(const parser::FunctionStmt &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::EndFunctionStmt &x) {
+  CheckTempDescriptorMappings();
   scopeStack_.pop_back();
 }
 
@@ -161,6 +183,7 @@ void OmpStructureChecker::Enter(const parser::MpSubprogramStmt &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::EndMpSubprogramStmt &x) {
+  CheckTempDescriptorMappings();
   scopeStack_.pop_back();
 }
 
@@ -414,12 +437,18 @@ void OmpStructureChecker::AnalyzeObject(const parser::OmpObject &object) {
       }
     }
   }
+
   evaluate::ExpressionAnalyzer ea{context_};
   auto restore{ea.AllowWholeAssumedSizeArray(true)};
   common::visit( //
       common::visitors{
           [&](auto &&s) { ea.Analyze(s); },
-          [&](const parser::OmpObject::Invalid &invalid) {},
+          [&](const parser::OmpLocator &x) {
+            if (auto *ref{std::get_if<parser::FunctionReference>(&x.u)}) {
+              ea.Analyze(*ref);
+            }
+          },
+          [&](const parser::OmpObject::Invalid &) {},
       },
       object.u);
 }
@@ -614,6 +643,16 @@ bool OmpStructureChecker::HasRequires(llvm::omp::Clause req) {
         return false;
       },
       DEREF(unit.symbol()).details());
+}
+
+void OmpStructureChecker::Enter(const parser::OmpLocator &x) {
+  if (auto *reserved{parser::Unwrap<parser::OmpReservedIdentifier>(x.u)}) {
+    std::string name{parser::ToLowerCaseLetters(reserved->v.source.ToString())};
+    if (!llvm::is_contained(llvm::omp::getReservedLocatorNames(), name)) {
+      context_.Say(reserved->v.source, "'%s' is not a valid locator"_err_en_US,
+          parser::ToUpperCaseLetters(name));
+    }
+  }
 }
 
 void OmpStructureChecker::CheckArgumentObjectKind(const parser::OmpClause &x) {
@@ -1671,7 +1710,8 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
   common::visit( //
       common::visitors{
           [&](auto &&s) { CheckThreadprivateOrDeclareTargetVar(s); },
-          [&](const parser::OmpObject::Invalid &invalid) {},
+          [&](const parser::OmpLocator &) {},
+          [&](const parser::OmpObject::Invalid &) {},
       },
       object.u);
 }
@@ -1685,10 +1725,10 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
 
 void OmpStructureChecker::Enter(const parser::OmpGroupprivateDirective &x) {
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
-    auto *locator{std::get_if<parser::OmpLocator>(&arg.u)};
+    auto *object{std::get_if<parser::OmpObject>(&arg.u)};
     const Symbol *sym{GetArgumentSymbol(arg, /*ultimate=*/true)};
 
-    if (!locator || !sym ||
+    if (!object || !sym ||
         (!IsVariableListItem(*sym) && !IsCommonBlock(*sym))) {
       context_.Say(arg.source,
           "GROUPPRIVATE argument should be a variable or a named common block"_err_en_US);
@@ -3359,6 +3399,10 @@ void OmpStructureChecker::Leave(const parser::OmpEndDirective &x) {
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OmpClauseList &) {
+  ifLeafs_.clear();
+}
+
 // Clauses
 // Mainly categorized as
 // 1. Checks on 'OmpClauseList' from 'parse-tree.h'.
@@ -3553,7 +3597,8 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &x) {
                       }
                     }
                   },
-                  [&](const parser::OmpObject::Invalid &invalid) {},
+                  [&](const parser::OmpLocator &) {},
+                  [&](const parser::OmpObject::Invalid &) {},
               },
               ompObject.u);
         }
@@ -3701,6 +3746,131 @@ void OmpStructureChecker::Enter(const parser::OmpClause::TaskReduction &x) {
   CheckReductionObjects(objects, llvm::omp::Clause::OMPC_task_reduction);
 }
 
+// Compute the mangled reduction name to look up in a reduction's source module.
+// If the operator was renamed on import (e.g. USE m, ONLY: operator(.local.) =>
+// operator(.remote.)), the local mangled name will not match in the source
+// module; re-derive the lookup name from the source operator's ultimate name.
+// Only defined operators can be renamed (intrinsic operators and named
+// reductions cannot), so a detected rename always has a ".op." source name.
+// For non-renamed lookups the original mangled name is returned unchanged.
+static std::string SourceReductionName(const parser::CharBlock &mangledName,
+    const parser::CharBlock &localName, const parser::CharBlock &sourceName) {
+  if (sourceName != localName && sourceName.size() >= 3 &&
+      sourceName.front() == '.' && sourceName.back() == '.') {
+    return MangleDefinedOperator(sourceName);
+  }
+  return mangledName.ToString();
+}
+
+// Return the reduction details of `symbol` if it is a user reduction that
+// supports `type` (any type when `type` is null).
+static const UserReductionDetails *AcceptReduction(
+    const Symbol &symbol, const DeclTypeSpec *type) {
+  const auto *details{symbol.GetUltimate().detailsIf<UserReductionDetails>()};
+  if (details && (!type || details->SupportsType(*type))) {
+    return details;
+  }
+  return nullptr;
+}
+
+// A reduction symbol is locally declared (authoritative) when it is not reached
+// through any USE association, even via host association. Such a reduction
+// shadows reductions imported or reachable through its operator.
+static bool IsLocalReduction(const Symbol &symbol) {
+  const Symbol *s{&symbol};
+  while (const auto *host{s->detailsIf<HostAssocDetails>()}) {
+    s = &host->symbol();
+  }
+  return !s->detailsIf<UseDetails>();
+}
+
+// Search for a user reduction supporting `type` by following the operator/
+// procedure symbol `opSym` through its USE associations and merged generic
+// sources. Each module the operator passes through is checked for a (possibly
+// renamed) reduction; `localName` is the operator name written at the use site,
+// used to detect renames. A locally declared reduction in a module is
+// authoritative: it is returned if it supports the type, otherwise it shadows
+// reductions reachable further along that branch.
+static const UserReductionDetails *SearchOperatorReduction(const Symbol &opSym,
+    const parser::CharBlock &mangledName, const parser::CharBlock &localName,
+    const DeclTypeSpec *type, llvm::SmallPtrSetImpl<const Symbol *> &visited) {
+  if (!visited.insert(&opSym).second) {
+    return nullptr;
+  }
+  const Scope &scope{opSym.owner()};
+  if (scope.kind() == Scope::Kind::Module) {
+    std::string lookupName{
+        SourceReductionName(mangledName, localName, opSym.name())};
+    auto it{scope.find(parser::CharBlock{lookupName})};
+    if (it != scope.end()) {
+      const Symbol &reductionSym{*it->second};
+      const Symbol &reductionUltimate{reductionSym.GetUltimate()};
+      if (!reductionUltimate.attrs().test(Attr::PRIVATE)) {
+        if (const auto *details{AcceptReduction(reductionUltimate, type)}) {
+          return details;
+        }
+        // A locally declared reduction here shadows reductions reachable
+        // further along this branch.
+        if (reductionUltimate.detailsIf<UserReductionDetails>() &&
+            IsLocalReduction(reductionSym)) {
+          return nullptr;
+        }
+      }
+    }
+  }
+  // Follow a USE-associated operator to the module it was imported from.
+  if (const auto *use{opSym.detailsIf<UseDetails>()}) {
+    return SearchOperatorReduction(
+        use->symbol(), mangledName, localName, type, visited);
+  }
+  // Search each module merged into a generic operator (recursing through
+  // re-exporting facade modules).
+  if (const auto *generic{opSym.detailsIf<GenericDetails>()}) {
+    for (const Symbol &useSym : generic->uses()) {
+      if (const auto *details{SearchOperatorReduction(
+              useSym, mangledName, localName, type, visited)}) {
+        return details;
+      }
+    }
+  }
+  return nullptr;
+}
+
+// Find user reduction details for a mangled name, following USE associations
+// when the reduction is not directly visible in the scope. A type may be
+// supplied to disambiguate an operator that carries reductions for several
+// types (e.g. a generic merged from multiple modules); a candidate is accepted
+// only if it supports that type. A locally declared reduction is authoritative
+// for its operator in its scope and shadows USE-associated reductions.
+static const UserReductionDetails *FindUserReduction(const Scope &scope,
+    const parser::CharBlock &mangledName, const DeclTypeSpec *type = nullptr) {
+  // Direct lookup: a reduction directly visible via bare USE or a local
+  // declaration.
+  const Symbol *directSymbol{scope.FindSymbol(mangledName)};
+  if (directSymbol) {
+    if (const auto *details{AcceptReduction(*directSymbol, type)}) {
+      return details;
+    }
+    // A locally declared reduction that does not support the requested type is
+    // authoritative: it shadows USE-associated reductions (ProcessReduction-
+    // Specifier erases the latter), so do not resurrect them via the operator.
+    if (directSymbol->GetUltimate().detailsIf<UserReductionDetails>() &&
+        IsLocalReduction(*directSymbol)) {
+      return nullptr;
+    }
+  }
+  // Trace the operator/procedure to the modules that declare its reduction.
+  std::string fortranName{GetReductionFortranId(mangledName)};
+  const Symbol *opSymbol{
+      fortranName.empty() ? nullptr : scope.FindSymbol(fortranName)};
+  if (!opSymbol) {
+    return nullptr;
+  }
+  llvm::SmallPtrSet<const Symbol *, 8> visited;
+  return SearchOperatorReduction(
+      *opSymbol, mangledName, opSymbol->name(), type, visited);
+}
+
 bool OmpStructureChecker::CheckReductionOperator(
     const parser::OmpReductionIdentifier &ident, parser::CharBlock source,
     llvm::omp::Clause clauseId) {
@@ -3731,10 +3901,8 @@ bool OmpStructureChecker::CheckReductionOperator(
     if (const auto *definedOp{std::get_if<parser::DefinedOpName>(&dOpr.u)}) {
       std::string mangled{MangleDefinedOperator(definedOp->v.symbol->name())};
       const Scope &scope{definedOp->v.symbol->owner()};
-      if (const Symbol *symbol{scope.FindSymbol(mangled)}) {
-        if (symbol->GetUltimate().detailsIf<UserReductionDetails>()) {
-          return true;
-        }
+      if (FindUserReduction(scope, mangled)) {
+        return true;
       }
     }
     context_.Say(source, "Invalid reduction operator in %s clause."_err_en_US,
@@ -3821,32 +3989,9 @@ void OmpStructureChecker::CheckReductionObjects(
 
 static bool CheckSymbolSupportsType(const Scope &scope,
     const parser::CharBlock &name, const DeclTypeSpec &type) {
-  if (const auto *symbol{scope.FindSymbol(name)}) {
-    const auto &ultimate{symbol->GetUltimate()};
-    if (const auto *reductionDetails{
-            ultimate.detailsIf<UserReductionDetails>()}) {
-      return reductionDetails->SupportsType(type);
-    }
-  }
-  // Look through module scopes in the global scope.
-  // This covers reductions declared in a module and used via USE association.
-  const SemanticsContext &semCtx{scope.context()};
-  Scope &global = const_cast<SemanticsContext &>(semCtx).globalScope();
-  for (const Scope &child : global.children()) {
-    if (child.kind() == Scope::Kind::Module) {
-      if (const auto *symbol{child.FindSymbol(name)}) {
-        // Skip PRIVATE reductions that aren't visible in the current scope.
-        if (symbol->attrs().test(Attr::PRIVATE)) {
-          continue;
-        }
-        if (const auto *reductionDetails{
-                symbol->detailsIf<UserReductionDetails>()}) {
-          return reductionDetails->SupportsType(type);
-        }
-      }
-    }
-  }
-  return false;
+  // FindUserReduction only returns a reduction that supports the requested
+  // type.
+  return FindUserReduction(scope, name, &type) != nullptr;
 }
 
 static bool IsReductionAllowedForType(
@@ -4317,6 +4462,13 @@ void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
     return false;
   }};
 
+  // The directive-name to which the clause applies. [Note: The directive-
+  // name-modifier is not necessarily a valid directive name, but that's how
+  // it's currently modeled.]
+  // This will be set only after other checks pass to avoid emitting irrelevant
+  // diagnostics.
+  llvm::omp::Directive appliesTo{llvm::omp::Directive::OMPD_unknown};
+
   if (!OmpVerifyModifiers(
           x.v, llvm::omp::OMPC_if, GetContext().clauseSource, context_)) {
     return;
@@ -4334,39 +4486,91 @@ void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
     std::string modName{desc.name.str()};
 
     if (!isConstituent(dir, sub)) {
-      context_
-          .Say(modifierSource,
-              "%s is not a constituent of the %s directive"_err_en_US, subName,
-              dirName)
-          .Attach(
-              GetContext().directiveSource, "Cannot apply to directive"_en_US);
+      context_.Say(modifierSource,
+          "%s is not a constituent of the %s directive"_err_en_US, subName,
+          dirName);
     } else {
-      static llvm::omp::Directive valid45[]{
-          llvm::omp::OMPD_cancel, //
-          llvm::omp::OMPD_parallel, //
-          /* OMP 5.0+ also allows OMPD_simd */
-          llvm::omp::OMPD_target, //
-          llvm::omp::OMPD_target_data, //
-          llvm::omp::OMPD_target_enter_data, //
-          llvm::omp::OMPD_target_exit_data, //
-          llvm::omp::OMPD_target_update, //
-          llvm::omp::OMPD_task, //
-          llvm::omp::OMPD_taskloop, //
-          /* OMP 5.2+ also allows OMPD_teams */
+      static OmpDirectiveSet valid45{
+          llvm::omp::Directive::OMPD_cancel, //
+          llvm::omp::Directive::OMPD_parallel, //
+          llvm::omp::Directive::OMPD_target, //
+          llvm::omp::Directive::OMPD_target_data, //
+          llvm::omp::Directive::OMPD_target_enter_data, //
+          llvm::omp::Directive::OMPD_target_exit_data, //
+          llvm::omp::Directive::OMPD_target_update, //
+          llvm::omp::Directive::OMPD_task, //
+          llvm::omp::Directive::OMPD_taskloop, //
       };
-      if (version < 50 && sub == llvm::omp::OMPD_simd) {
+      static OmpDirectiveSet valid50{
+          valid45 | OmpDirectiveSet{llvm::omp::Directive::OMPD_simd}};
+      // 5.1 is the same as 5.0.
+      static OmpDirectiveSet valid52{
+          valid50 | OmpDirectiveSet{llvm::omp::Directive::OMPD_teams}};
+      static OmpDirectiveSet valid60{valid52 |
+          OmpDirectiveSet{llvm::omp::Directive::OMPD_taskgraph,
+              /*TODO llvm::omp::Directive::OMPD_task_iteration*/}};
+
+      static auto minVersion{[&](llvm::omp::Directive d) {
+        if (valid45.test(d)) {
+          return 45;
+        }
+        if (valid50.test(d)) {
+          return 50;
+        }
+        if (valid52.test(d)) {
+          return 52;
+        }
+        if (valid60.test(d)) {
+          return 60;
+        }
+        return 0;
+      }};
+      static auto suggest{[&](unsigned v) -> std::string {
+        if (v != 0) {
+          return ", " + TryVersion(v);
+        } else {
+          return "";
+        }
+      }};
+
+      if (version <= 45 && !valid45.test(sub)) {
         context_.Say(modifierSource,
-            "%s is not allowed as '%s' in %s, %s"_warn_en_US, subName, modName,
-            ThisVersion(version), TryVersion(50));
-      } else if (version < 52 && sub == llvm::omp::OMPD_teams) {
+            "%s is not allowed as '%s' in %s%s"_err_en_US, subName, modName,
+            ThisVersion(version), suggest(minVersion(sub)));
+      } else if (version <= 51 && !valid50.test(sub)) {
         context_.Say(modifierSource,
-            "%s is not allowed as '%s' in %s, %s"_warn_en_US, subName, modName,
-            ThisVersion(version), TryVersion(52));
-      } else if (!llvm::is_contained(valid45, sub) &&
-          sub != llvm::omp::OMPD_simd && sub != llvm::omp::OMPD_teams) {
+            "%s is not allowed as '%s' in %s%s"_err_en_US, subName, modName,
+            ThisVersion(version), suggest(minVersion(sub)));
+      } else if (version <= 52 && !valid52.test(sub)) {
+        context_.Say(modifierSource,
+            "%s is not allowed as '%s' in %s%s"_err_en_US, subName, modName,
+            ThisVersion(version), suggest(minVersion(sub)));
+      } else if (!valid60.test(sub)) {
         context_.Say(modifierSource,
             "%s is not allowed as '%s' in %s"_err_en_US, subName, modName,
             ThisVersion(version));
+      } else {
+        appliesTo = sub;
+      }
+    }
+  } else {
+    appliesTo = GetContext().directive;
+  }
+
+  if (appliesTo != llvm::omp::Directive::OMPD_unknown) {
+    parser::CharBlock source{GetContext().clauseSource};
+    for (auto leaf : llvm::omp::getLeafConstructsOrSelf(appliesTo)) {
+      auto pair{ifLeafs_.try_emplace(leaf, source)};
+      if (!pair.second) {
+        std::string ifName{GetUpperName(llvm::omp::Clause::OMPC_if, version)};
+        context_
+            .Say(source,
+                "At most one %s clause can apply to each directive constituent"_err_en_US,
+                ifName)
+            .Attach(pair.first->second,
+                "Previous %s clause applying to the %s constituent"_en_US,
+                ifName, GetUpperName(leaf, version));
+        break;
       }
     }
   }
@@ -4562,6 +4766,38 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Map &x) {
         auto maybeSource{GetObjectSource(object)};
         context_.Say(maybeSource.value_or(GetContext().clauseSource),
             "Whole assumed-size arrays are not allowed on MAP clause"_err_en_US);
+      }
+    }
+  }
+
+  // If we are an enter or exit map, iterate over the maps and add them to
+  // containers that track if the symbol has been referenced in both an
+  // enter/exit map in the current scope, if it falls into the category of
+  // having a temporary stack descriptor. If we have reference modifiers, we
+  // ignore the warning and trust that the user knows what they are doing
+  // already, as they are aware the type comes with a descriptor and pointer
+  // combination.
+  //
+  // We will utilise this information to emit a warning later if the neccesary
+  // conditions are met, where we have an enter map without a corresponding exit
+  // in the current scope.
+  bool hasRefModifier{
+      OmpGetUniqueModifier<parser::OmpRefModifier>(modifiers) != nullptr};
+  if (!hasRefModifier &&
+      (llvm::is_contained(leafs, Directive::OMPD_target_enter_data) ||
+          llvm::is_contained(leafs, Directive::OMPD_target_exit_data))) {
+    for (const parser::OmpObject &object : objects.v) {
+      if (const Symbol *sym{GetObjectSymbol(object, /*ultimate=*/true)}) {
+        if (HasTemporaryStackDescriptor(*sym)) {
+          auto maybeSource{GetObjectSource(object)};
+          parser::CharBlock source{
+              maybeSource.value_or(GetContext().clauseSource)};
+          if (llvm::is_contained(leafs, Directive::OMPD_target_enter_data)) {
+            tempDescriptorEnterMaps_.emplace(sym, source);
+          } else {
+            tempDescriptorExitMaps_.insert(sym);
+          }
+        }
       }
     }
   }

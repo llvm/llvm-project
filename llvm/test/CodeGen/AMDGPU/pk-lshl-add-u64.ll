@@ -147,14 +147,12 @@ define i32 @pk_lshl_add_u64_maybe_oob(<2 x ptr> %p, <2 x i32> %i) {
 ; GFX1251-NEXT:    s_wait_kmcnt 0x0
 ; GFX1251-NEXT:    v_dual_mov_b32 v6, v5 :: v_dual_ashrrev_i32 v5, 31, v4
 ; GFX1251-NEXT:    s_mov_b32 s0, 2
-; GFX1251-NEXT:    v_mov_b64_e32 v[8:9], 12
-; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX1251-NEXT:    v_dual_mov_b32 v13, s0 :: v_dual_ashrrev_i32 v7, 31, v6
-; GFX1251-NEXT:    v_mov_b32_e32 v12, s0
-; GFX1251-NEXT:    v_mov_b64_e32 v[10:11], v[8:9]
-; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX1251-NEXT:    v_pk_lshl_add_u64 v[0:3], v[4:7], v[12:13], v[0:3]
-; GFX1251-NEXT:    v_pk_add_nc_u64 v[0:3], v[0:3], v[8:11]
+; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
+; GFX1251-NEXT:    v_dual_mov_b32 v9, s0 :: v_dual_ashrrev_i32 v7, 31, v6
+; GFX1251-NEXT:    v_mov_b32_e32 v8, s0
+; GFX1251-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1251-NEXT:    v_pk_lshl_add_u64 v[0:3], v[4:7], v[8:9], v[0:3]
+; GFX1251-NEXT:    v_pk_add_nc_u64 v[0:3], v[0:3], 12
 ; GFX1251-NEXT:    flat_load_b32 v4, v[0:1]
 ; GFX1251-NEXT:    flat_load_b32 v5, v[2:3]
 ; GFX1251-NEXT:    s_wait_loadcnt_dscnt 0x0

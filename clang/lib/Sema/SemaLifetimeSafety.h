@@ -76,6 +76,26 @@ inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
   return false;
 }
 
+inline bool ShouldSuggestLifetimeAnnotations(Sema &S, const Decl *D) {
+  DiagnosticsEngine &Diags = S.getDiagnostics();
+  constexpr unsigned DiagIDs[] = {
+      diag::warn_lifetime_safety_intra_tu_param_suggestion,
+      diag::warn_lifetime_safety_cross_tu_param_suggestion,
+      diag::warn_lifetime_safety_intra_tu_this_suggestion,
+      diag::warn_lifetime_safety_cross_tu_this_suggestion};
+  for (unsigned DiagID : DiagIDs)
+    if (!Diags.isIgnored(DiagID, D->getBeginLoc()))
+      return true;
+  return false;
+}
+
+inline LifetimeSafetyOpts GetLifetimeSafetyOpts(Sema &S, const Decl *D) {
+  LifetimeSafetyOpts LSOpts;
+  LSOpts.MaxCFGBlocks = S.getLangOpts().LifetimeSafetyMaxCFGBlocks;
+  LSOpts.SuggestAnnotations = ShouldSuggestLifetimeAnnotations(S, D);
+  return LSOpts;
+}
+
 class LifetimeSafetySemaHelperImpl : public LifetimeSafetySemaHelper {
 
 public:
@@ -87,13 +107,15 @@ public:
     unsigned DiagID = MovedExpr
                           ? diag::warn_lifetime_safety_use_after_scope_moved
                           : diag::warn_lifetime_safety_use_after_scope;
+    std::string DestroyedSubject = getDiagSubjectDescription(IssueExpr);
 
     S.Diag(IssueExpr->getExprLoc(), DiagID)
-        << getDiagSubjectDescription(IssueExpr) << IssueExpr->getSourceRange();
+        << DestroyedSubject << IssueExpr->getSourceRange();
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
           << MovedExpr->getSourceRange();
-    S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here);
+    S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here)
+        << DestroyedSubject;
 
     reportAliasingChain(ExprChain);
 
@@ -167,13 +189,10 @@ public:
     auto WarnDiag = isa<CXXDeleteExpr>(InvalidationExpr)
                         ? diag::warn_lifetime_safety_use_after_free
                         : diag::warn_lifetime_safety_invalidation;
-    auto UseDiag = isa<CXXDeleteExpr>(InvalidationExpr)
-                       ? diag::note_lifetime_safety_freed_here
-                       : diag::note_lifetime_safety_invalidated_here;
+    std::string InvalidatedSubject = getDiagSubjectDescription(IssueExpr);
     S.Diag(IssueExpr->getExprLoc(), WarnDiag)
-        << getDiagSubjectDescription(IssueExpr) << IssueExpr->getSourceRange();
-    S.Diag(InvalidationExpr->getExprLoc(), UseDiag)
-        << InvalidationExpr->getSourceRange();
+        << InvalidatedSubject << IssueExpr->getSourceRange();
+    reportInvalidationSite(InvalidationExpr, InvalidatedSubject);
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();
   }
@@ -183,14 +202,11 @@ public:
     auto WarnDiag = isa<CXXDeleteExpr>(InvalidationExpr)
                         ? diag::warn_lifetime_safety_use_after_free
                         : diag::warn_lifetime_safety_invalidation;
-    auto UseDiag = isa<CXXDeleteExpr>(InvalidationExpr)
-                       ? diag::note_lifetime_safety_freed_here
-                       : diag::note_lifetime_safety_invalidated_here;
+    std::string InvalidatedSubject = getDiagSubjectDescription(PVD);
 
     S.Diag(PVD->getSourceRange().getBegin(), WarnDiag)
-        << getDiagSubjectDescription(PVD) << PVD->getSourceRange();
-    S.Diag(InvalidationExpr->getExprLoc(), UseDiag)
-        << InvalidationExpr->getSourceRange();
+        << InvalidatedSubject << PVD->getSourceRange();
+    reportInvalidationSite(InvalidationExpr, InvalidatedSubject);
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();
   }
@@ -198,16 +214,12 @@ public:
   void reportInvalidatedField(const Expr *IssueExpr,
                               const FieldDecl *DanglingField,
                               const Expr *InvalidationExpr) override {
-    auto InvalidationDiag = isa<CXXDeleteExpr>(InvalidationExpr)
-                                ? diag::note_lifetime_safety_freed_here
-                                : diag::note_lifetime_safety_invalidated_here;
+    std::string InvalidatedSubject = getDiagSubjectDescription(IssueExpr);
     S.Diag(IssueExpr->getExprLoc(),
            diag::warn_lifetime_safety_invalidated_field)
-        << getDiagSubjectDescription(IssueExpr)
-        << getDiagSubjectDescription(DanglingField)
+        << InvalidatedSubject << getDiagSubjectDescription(DanglingField)
         << IssueExpr->getSourceRange();
-    S.Diag(InvalidationExpr->getExprLoc(), InvalidationDiag)
-        << InvalidationExpr->getSourceRange();
+    reportInvalidationSite(InvalidationExpr, InvalidatedSubject);
     S.Diag(DanglingField->getLocation(),
            diag::note_lifetime_safety_dangling_field_here)
         << DanglingField->getEndLoc();
@@ -216,15 +228,12 @@ public:
   void reportInvalidatedField(const ParmVarDecl *PVD,
                               const FieldDecl *DanglingField,
                               const Expr *InvalidationExpr) override {
-    auto InvalidationDiag = isa<CXXDeleteExpr>(InvalidationExpr)
-                                ? diag::note_lifetime_safety_freed_here
-                                : diag::note_lifetime_safety_invalidated_here;
+    std::string InvalidatedSubject = getDiagSubjectDescription(PVD);
     S.Diag(PVD->getSourceRange().getBegin(),
            diag::warn_lifetime_safety_invalidated_field)
-        << getDiagSubjectDescription(PVD)
-        << getDiagSubjectDescription(DanglingField) << PVD->getSourceRange();
-    S.Diag(InvalidationExpr->getExprLoc(), InvalidationDiag)
-        << InvalidationExpr->getSourceRange();
+        << InvalidatedSubject << getDiagSubjectDescription(DanglingField)
+        << PVD->getSourceRange();
+    reportInvalidationSite(InvalidationExpr, InvalidatedSubject);
     S.Diag(DanglingField->getLocation(),
            diag::note_lifetime_safety_dangling_field_here)
         << DanglingField->getEndLoc();
@@ -233,16 +242,12 @@ public:
   void reportInvalidatedGlobal(const Expr *IssueExpr,
                                const VarDecl *DanglingGlobal,
                                const Expr *InvalidationExpr) override {
-    auto InvalidationDiag = isa<CXXDeleteExpr>(InvalidationExpr)
-                                ? diag::note_lifetime_safety_freed_here
-                                : diag::note_lifetime_safety_invalidated_here;
+    std::string InvalidatedSubject = getDiagSubjectDescription(IssueExpr);
     S.Diag(IssueExpr->getExprLoc(),
            diag::warn_lifetime_safety_invalidated_global)
-        << getDiagSubjectDescription(IssueExpr)
-        << getDiagSubjectDescription(DanglingGlobal)
+        << InvalidatedSubject << getDiagSubjectDescription(DanglingGlobal)
         << IssueExpr->getSourceRange();
-    S.Diag(InvalidationExpr->getExprLoc(), InvalidationDiag)
-        << InvalidationExpr->getSourceRange();
+    reportInvalidationSite(InvalidationExpr, InvalidatedSubject);
     if (DanglingGlobal->isStaticLocal() || DanglingGlobal->isStaticDataMember())
       S.Diag(DanglingGlobal->getLocation(),
              diag::note_lifetime_safety_dangling_static_here)
@@ -256,15 +261,12 @@ public:
   void reportInvalidatedGlobal(const ParmVarDecl *PVD,
                                const VarDecl *DanglingGlobal,
                                const Expr *InvalidationExpr) override {
-    auto InvalidationDiag = isa<CXXDeleteExpr>(InvalidationExpr)
-                                ? diag::note_lifetime_safety_freed_here
-                                : diag::note_lifetime_safety_invalidated_here;
+    std::string InvalidatedSubject = getDiagSubjectDescription(PVD);
     S.Diag(PVD->getSourceRange().getBegin(),
            diag::warn_lifetime_safety_invalidated_global)
-        << getDiagSubjectDescription(PVD)
-        << getDiagSubjectDescription(DanglingGlobal) << PVD->getSourceRange();
-    S.Diag(InvalidationExpr->getExprLoc(), InvalidationDiag)
-        << InvalidationExpr->getSourceRange();
+        << InvalidatedSubject << getDiagSubjectDescription(DanglingGlobal)
+        << PVD->getSourceRange();
+    reportInvalidationSite(InvalidationExpr, InvalidatedSubject);
     if (DanglingGlobal->isStaticLocal() || DanglingGlobal->isStaticDataMember())
       S.Diag(DanglingGlobal->getLocation(),
              diag::note_lifetime_safety_dangling_static_here)
@@ -442,21 +444,103 @@ public:
   }
 
 private:
+  struct LifetimeBoundMacroCache {
+    bool IsBuilt = false;
+    SmallVector<const IdentifierInfo *> Candidates;
+  };
+
+  void buildLifetimeBoundMacroCache(LifetimeBoundMacroCache &Cache,
+                                    ArrayRef<TokenValue> Tokens) {
+    if (Cache.IsBuilt)
+      return;
+
+    const Preprocessor &PP = S.getPreprocessor();
+    // Collect macro names that were ever defined as a lifetimebound attribute.
+    for (const auto &M : PP.macros()) {
+      const IdentifierInfo *II = M.first;
+      const MacroDirective *MD = PP.getLocalMacroDirectiveHistory(II);
+      if (!MD)
+        continue;
+
+      // Include earlier matching definitions to handle redefinitions.
+      for (MacroDirective::DefInfo Def = MD->getDefinition(); Def;
+           Def = Def.getPreviousDefinition()) {
+        const MacroInfo *MI = Def.getMacroInfo();
+        if (MI->isObjectLike() && Tokens.size() == MI->getNumTokens() &&
+            std::equal(Tokens.begin(), Tokens.end(), MI->tokens_begin())) {
+          Cache.Candidates.push_back(II);
+          break;
+        }
+      }
+    }
+    Cache.IsBuilt = true;
+  }
+
+  StringRef getLastCachedMacroWithSpelling(SourceLocation Loc,
+                                           llvm::ArrayRef<TokenValue> Tokens,
+                                           LifetimeBoundMacroCache &Cache) {
+    if (Loc.isInvalid())
+      return {};
+
+    buildLifetimeBoundMacroCache(Cache, Tokens);
+
+    const Preprocessor &PP = S.getPreprocessor();
+    const SourceManager &SM = S.getSourceManager();
+    SourceLocation BestLocation;
+    StringRef BestSpelling;
+    for (const IdentifierInfo *II : Cache.Candidates) {
+      const MacroDirective *MD = PP.getLocalMacroDirectiveHistory(II);
+      const MacroDirective::DefInfo Def = MD->findDirectiveAtLoc(Loc, SM);
+      if (!Def || !Def.getMacroInfo())
+        continue;
+
+      // Ensure the macro definition active at Loc still has this spelling.
+      const MacroInfo *MI = Def.getMacroInfo();
+      if (!MI->isObjectLike() || Tokens.size() != MI->getNumTokens() ||
+          !std::equal(Tokens.begin(), Tokens.end(), MI->tokens_begin()))
+        continue;
+
+      // Choose the matching macro defined latest before Loc.
+      SourceLocation Location = Def.getLocation();
+      assert(Location.isInvalid() ||
+             SM.isBeforeInTranslationUnit(Location, Loc));
+      if (BestLocation.isInvalid() ||
+          (Location.isValid() &&
+           SM.isBeforeInTranslationUnit(BestLocation, Location))) {
+        BestLocation = Location;
+        BestSpelling = II->getName();
+      }
+    }
+    return BestSpelling;
+  }
+
+  void reportInvalidationSite(const Expr *InvalidationExpr,
+                              StringRef InvalidatedSubject) {
+    auto Diag = isa<CXXDeleteExpr>(InvalidationExpr)
+                    ? diag::note_lifetime_safety_freed_here
+                    : diag::note_lifetime_safety_invalidated_here;
+    S.Diag(InvalidationExpr->getExprLoc(), Diag)
+        << InvalidatedSubject << InvalidationExpr->getSourceRange();
+  }
+
   std::string getLifetimeBoundFixItText(SourceLocation Loc, bool LeadingSpace,
                                         bool AllowGNUAttrMacro = true) {
     StringRef Spelling = S.getLangOpts().LifetimeSafetyLifetimeBoundMacro;
     if (Spelling.empty() && Loc.isValid()) {
       const Preprocessor &PP = S.getPreprocessor();
-      Spelling = PP.getLastMacroWithSpelling(
-          Loc, {tok::l_square, tok::l_square, PP.getIdentifierInfo("clang"),
-                tok::coloncolon, PP.getIdentifierInfo("lifetimebound"),
-                tok::r_square, tok::r_square});
+      Spelling = getLastCachedMacroWithSpelling(
+          Loc,
+          {tok::l_square, tok::l_square, PP.getIdentifierInfo("clang"),
+           tok::coloncolon, PP.getIdentifierInfo("lifetimebound"),
+           tok::r_square, tok::r_square},
+          ClangLifetimeBoundMacroCache);
 
       if (Spelling.empty() && AllowGNUAttrMacro)
-        Spelling = PP.getLastMacroWithSpelling(
-            Loc, {tok::kw___attribute, tok::l_paren, tok::l_paren,
-                  PP.getIdentifierInfo("lifetimebound"), tok::r_paren,
-                  tok::r_paren});
+        Spelling = getLastCachedMacroWithSpelling(
+            Loc,
+            {tok::kw___attribute, tok::l_paren, tok::l_paren,
+             PP.getIdentifierInfo("lifetimebound"), tok::r_paren, tok::r_paren},
+            GNULifetimeBoundMacroCache);
     }
     const std::string Text =
         Spelling.empty() ? "[[clang::lifetimebound]]" : Spelling.str();
@@ -589,6 +673,8 @@ private:
     }
   }
 
+  LifetimeBoundMacroCache ClangLifetimeBoundMacroCache;
+  LifetimeBoundMacroCache GNULifetimeBoundMacroCache;
   Sema &S;
 };
 
