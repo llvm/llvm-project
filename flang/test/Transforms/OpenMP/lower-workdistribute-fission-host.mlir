@@ -41,7 +41,7 @@
 // CHECK:             fir.store %[[VAL_25]] to %[[VAL_14]] : !fir.ref<index>
 // CHECK:             fir.store %[[VAL_26]] to %[[VAL_17]] : !fir.ref<index>
 // CHECK:             fir.store %[[VAL_30]] to %[[VAL_20]] : !fir.ref<!fir.heap<index>>
-// CHECK:             omp.target host_eval(%[[VAL_24]] -> %[[VAL_31:.*]], %[[VAL_25]] -> %[[VAL_32:.*]], %[[VAL_26]] -> %[[VAL_33:.*]] : index, index, index) map_entries(%[[VAL_7]] -> %[[VAL_34:.*]], %[[VAL_8]] -> %[[VAL_35:.*]], %[[VAL_9]] -> %[[VAL_36:.*]], %[[VAL_10]] -> %[[VAL_37:.*]], %[[VAL_13]] -> %[[VAL_38:.*]], %[[VAL_16]] -> %[[VAL_39:.*]], %[[VAL_19]] -> %[[VAL_40:.*]], %[[VAL_22]] -> %[[VAL_41:.*]] : !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<!fir.heap<index>>) {
+// CHECK:             omp.target kernel_type(spmd) host_eval(%[[VAL_24]] -> %[[VAL_31:.*]], %[[VAL_25]] -> %[[VAL_32:.*]], %[[VAL_26]] -> %[[VAL_33:.*]] : index, index, index) map_entries(%[[VAL_7]] -> %[[VAL_34:.*]], %[[VAL_8]] -> %[[VAL_35:.*]], %[[VAL_9]] -> %[[VAL_36:.*]], %[[VAL_10]] -> %[[VAL_37:.*]], %[[VAL_13]] -> %[[VAL_38:.*]], %[[VAL_16]] -> %[[VAL_39:.*]], %[[VAL_19]] -> %[[VAL_40:.*]], %[[VAL_22]] -> %[[VAL_41:.*]] : !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<!fir.heap<index>>) {
 // CHECK:               %[[VAL_42:.*]] = fir.load %[[VAL_38]] : !fir.ref<index>
 // CHECK:               %[[VAL_43:.*]] = fir.load %[[VAL_39]] : !fir.ref<index>
 // CHECK:               %[[VAL_44:.*]] = fir.load %[[VAL_40]] : !fir.ref<index>
@@ -91,7 +91,7 @@ func.func @x(%lb : index, %ub : index, %step : index, %addr : !fir.ref<index>) {
   %step_map = omp.map.info var_ptr(%step_ref : !fir.ref<index>, index) map_clauses(to) capture(ByRef) -> !fir.ref<index> {name = "step"}
   %addr_map = omp.map.info var_ptr(%addr : !fir.ref<index>, index) map_clauses(tofrom) capture(ByRef) -> !fir.ref<index> {name = "addr"}
 
-  omp.target map_entries(%lb_map -> %ARG0, %ub_map -> %ARG1, %step_map -> %ARG2, %addr_map -> %ARG3 : !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>) {
+  omp.target kernel_type(generic) map_entries(%lb_map -> %ARG0, %ub_map -> %ARG1, %step_map -> %ARG2, %addr_map -> %ARG3 : !fir.ref<index>, !fir.ref<index>, !fir.ref<index>, !fir.ref<index>) {
     %lb_val = fir.load %ARG0 : !fir.ref<index>
     %ub_val = fir.load %ARG1 : !fir.ref<index>
     %step_val = fir.load %ARG2 : !fir.ref<index>

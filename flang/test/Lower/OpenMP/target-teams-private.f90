@@ -13,7 +13,7 @@ integer, dimension(3) :: i
 !$omp end target teams
 end subroutine
 
-! CHECK: omp.target {{.*}} {
+! CHECK: omp.target kernel_type(generic) {{.*}} {
 ! CHECK:   omp.teams {
 ! CHECK:     %{{.*}} = fir.alloca !fir.array<3xi32> {bindc_name = "i", {{.*}}}
 ! CHECK:   }
