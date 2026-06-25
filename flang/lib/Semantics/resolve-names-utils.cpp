@@ -20,6 +20,7 @@
 #include "flang/Semantics/tools.h"
 #include "flang/Support/Fortran-features.h"
 #include "flang/Support/Fortran.h"
+#include "llvm/ADT/StringRef.h"
 #include <initializer_list>
 #include <variant>
 
@@ -950,6 +951,40 @@ void MapSubprogramToNewSymbols(const Symbol &oldSymbol, Symbol &newSymbol,
     mapper.MapSymbolExprs(*ref);
   }
   newScope.InstantiateDerivedTypes();
+}
+
+std::string GetReductionFortranId(const parser::CharBlock &mangledName) {
+  llvm::StringRef name{mangledName.begin(), mangledName.size()};
+  if (!name.starts_with("op.")) {
+    return name.str();
+  }
+  llvm::StringRef suffix{name.drop_front(3)};
+  // Intrinsic arithmetic operators: op.+ -> operator(+)
+  if (suffix == "+" || suffix == "-" || suffix == "*") {
+    return ("operator(" + suffix + ")").str();
+  }
+  // Intrinsic logical operators (mangled uppercase, scope uses lowercase)
+  if (suffix == "AND") {
+    return "operator(.and.)";
+  }
+  if (suffix == "OR") {
+    return "operator(.or.)";
+  }
+  if (suffix == "EQV") {
+    return "operator(.eqv.)";
+  }
+  if (suffix == "NEQV") {
+    return "operator(.neqv.)";
+  }
+  // Defined operators: op.combine. -> .combine.
+  // MangleDefinedOperator prepends "op" to the operator name (e.g.,
+  // ".combine.") so after stripping "op.", the suffix ends with '.' for defined
+  // operators.
+  if (!suffix.empty() && suffix.back() == '.') {
+    return ("." + suffix).str();
+  }
+  // Named functions: op.max -> max
+  return suffix.str();
 }
 
 } // namespace Fortran::semantics

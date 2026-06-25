@@ -62761,11 +62761,47 @@ static SDValue combineNestedGF2P8AFFINEQB(SDNode *N, const SDLoc &DL,
                      DAG.getTargetConstant(FoldedImm, DL, MVT::i8));
 }
 
+// Fold: GF2P8AFFINEQB(X ^ Splat(C), Y, Imm)
+//    => GF2P8AFFINEQB(X, Y, (u8)GF2P8AFFINEQB(C, Y, Imm))
+// Reassociating a XOR (by permuting it in the same manner as the input) allows
+// it to be applied for free using the immediate.
+static SDValue combineXorOnGF2P8AFFINEQBOperand(SDNode *N, const SDLoc &DL,
+                                                SelectionDAG &DAG, EVT VT) {
+  using namespace SDPatternMatch;
+
+  unsigned MatrixWidth = 64;
+
+  SDValue X, Y, SplatOp;
+  APInt Imm, SplatVal, ConstUndef;
+  SmallVector<APInt> MatEltBits;
+
+  if (sd_match(N, m_TernaryOp(X86ISD::GF2P8AFFINEQB,
+                              m_Xor(m_Value(X), m_Value(SplatOp)), m_Value(Y),
+                              m_ConstInt(Imm))) &&
+      X86::isConstantSplat(SplatOp, SplatVal, /*AllowPartialUndefs=*/false) &&
+      getTargetConstantBitsFromNode(Y, MatrixWidth, ConstUndef, MatEltBits,
+                                    /*AllowWholeUndefs=*/false)) {
+    // Immediate is shared, so all matrices need to permute it in the same way
+    if (!llvm::all_equal(MatEltBits))
+      return SDValue();
+
+    APInt NewImm = getGFNIByteAffine(SplatVal, MatEltBits[0], Imm);
+
+    return DAG.getNode(X86ISD::GF2P8AFFINEQB, DL, VT, X, Y,
+                       DAG.getTargetConstant(NewImm, DL, MVT::i8));
+  }
+
+  return SDValue();
+}
+
 static SDValue combineGF2P8AFFINEQB(SDNode *N, SelectionDAG &DAG) {
   EVT VT = N->getValueType(0);
   SDLoc dl(N);
 
   if (SDValue R = combineAndOnGF2P8AFFINEQBOperand(N, dl, DAG, VT))
+    return R;
+
+  if (SDValue R = combineXorOnGF2P8AFFINEQBOperand(N, dl, DAG, VT))
     return R;
 
   if (SDValue R = combineNestedGF2P8AFFINEQB(N, dl, DAG, VT))
