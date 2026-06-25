@@ -1620,7 +1620,7 @@ void X86_64TargetCodeGenInfo::checkFunctionABI(CodeGenModule &CGM,
   if (!FD->isExternallyVisible())
     return;
 
-  // First check the return type and emit diagnostic if required
+  // First check the return type and emit diagnostic if required.
   Check(FD->getReturnType(), GetReturnTypeLoc(FD), true);
 
   // Go through the parameters and emit a warning for the first vector found
