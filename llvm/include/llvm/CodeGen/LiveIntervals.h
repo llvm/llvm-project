@@ -116,6 +116,9 @@ public:
   LLVM_ABI bool invalidate(MachineFunction &MF, const PreservedAnalyses &PA,
                            MachineFunctionAnalysisManager::Invalidator &Inv);
 
+  /// Recompute all live intervals from scratch after MRI changes.
+  LLVM_ABI void recompute(MachineFunction &MF);
+
   /// Calculate the spill weight to assign to a single instruction.
   /// If \p PSI is provided the calculation is altered for optsize functions.
   LLVM_ABI static float getSpillWeight(bool isDef, bool isUse,

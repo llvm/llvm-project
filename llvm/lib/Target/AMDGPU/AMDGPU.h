@@ -588,6 +588,10 @@ FunctionPass *createGCNMFMAAccumMacChainLegacyPass();
 void initializeGCNMFMAAccumMacChainLegacyPass(PassRegistry &);
 extern char &GCNMFMAAccumMacChainID;
 
+FunctionPass *createGCNRefreshLiveIntervalsLegacyPass();
+void initializeGCNRefreshLiveIntervalsLegacyPass(PassRegistry &);
+extern char &GCNRefreshLiveIntervalsID;
+
 FunctionPass *createAMDGPUSetWavePriorityPass();
 void initializeAMDGPUSetWavePriorityLegacyPass(PassRegistry &);
 

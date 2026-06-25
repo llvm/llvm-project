@@ -47,6 +47,7 @@
 #include "GCNNSAReassign.h"
 #include "GCNPreRALongBranchReg.h"
 #include "GCNPreRAOptimizations.h"
+#include "GCNRefreshLiveIntervals.h"
 #include "GCNRewritePartialRegUses.h"
 #include "GCNSchedStrategy.h"
 #include "GCNVOPDUtils.h"
@@ -742,6 +743,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeGCNPreRAOptimizationsLegacyPass(*PR);
   initializeGCNMFMAAccumTileReuseLegacyPass(*PR);
   initializeGCNMFMAAccumMacChainLegacyPass(*PR);
+  initializeGCNRefreshLiveIntervalsLegacyPass(*PR);
   initializeGCNPreRALongBranchRegLegacyPass(*PR);
   initializeGCNRewritePartialRegUsesLegacyPass(*PR);
   initializeGCNRegPressurePrinterPass(*PR);
@@ -1851,8 +1853,13 @@ void GCNPassConfig::addOptimizedRegAlloc() {
 
   // This is not an essential optimization and it has a noticeable impact on
   // compilation time, so we only enable it from O2.
-  if (TM->getOptLevel() > CodeGenOptLevel::Less)
+  if (TM->getOptLevel() > CodeGenOptLevel::Less) {
+    if (OptExecMaskPreRA)
+      insertPass(&SIOptimizeExecMaskingPreRAID, &GCNRefreshLiveIntervalsID);
+    else
+      insertPass(&SIWholeQuadModeID, &GCNRefreshLiveIntervalsID);
     insertPass(EndOfPreRA, &SIFormMemoryClausesID);
+  }
 
   TargetPassConfig::addOptimizedRegAlloc();
 }
@@ -2632,8 +2639,13 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(
 
   // This is not an essential optimization and it has a noticeable impact on
   // compilation time, so we only enable it from O2.
-  if (TM.getOptLevel() > CodeGenOptLevel::Less)
+  if (TM.getOptLevel() > CodeGenOptLevel::Less) {
+    if (OptExecMaskPreRA)
+      insertPass<SIOptimizeExecMaskingPreRAPass>(GCNRefreshLiveIntervalsPass());
+    else
+      insertPass<SIWholeQuadModePass>(GCNRefreshLiveIntervalsPass());
     insertPass<MachineSchedulerPass>(SIFormMemoryClausesPass());
+  }
 
   return Base::addOptimizedRegAlloc(PMW);
 }
