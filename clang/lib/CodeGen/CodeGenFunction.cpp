@@ -91,7 +91,7 @@ CodeGenFunction::CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext)
 }
 
 const FunctionDecl *CodeGenFunction::getCurrentFunctionDecl() const {
-  const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
+  const auto *FD = dyn_cast_or_null<FunctionDecl>(CurCodeDecl);
   if (!FD)
     FD = dyn_cast_or_null<FunctionDecl>(CurFuncDecl);
   return FD;
