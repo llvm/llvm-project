@@ -730,8 +730,9 @@ public:
   mlir::Block *indirectGotoBlock = nullptr;
 
   /// Labels whose address is taken in this function (via `&&label`, as either
-  /// an operation or a constant initializer).  They are resolved to their
-  /// LabelOps and wired as `cir.indirect_br` successors in
+  /// an operation or a constant initializer).  The indirect branch block is
+  /// created lazily on the first `goto *expr`; these targets are resolved to
+  /// their LabelOps and wired as `cir.indirect_br` successors in
   /// finishIndirectBranch.
   llvm::SmallVector<cir::BlockAddrInfoAttr> indirectGotoTargets;
 
@@ -1708,12 +1709,6 @@ public:
   int64_t getAccessedFieldNo(unsigned idx, mlir::ArrayAttr elts);
 
   void instantiateIndirectGotoBlock();
-
-  /// Record a label whose address is taken (via `&&label`) as an indirect-goto
-  /// target.  The branch block itself is created lazily when an indirect goto
-  /// statement is emitted, and the targets are wired as its successors in
-  /// finishIndirectBranch.
-  void takeAddressOfLabel(cir::BlockAddrInfoAttr info);
 
   /// Emit a simple LLVM intrinsic that takes N scalar arguments.  The intrinsic
   /// name is used verbatim; any overload mangling (e.g. `.f32`, `.p1`) must be

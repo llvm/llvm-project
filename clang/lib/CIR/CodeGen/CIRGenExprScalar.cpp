@@ -211,7 +211,7 @@ public:
     cir::BlockAddressOp blockAddressOp = cir::BlockAddressOp::create(
         builder, cgf.getLoc(e->getSourceRange()), cgf.convertType(e->getType()),
         blockInfoAttr);
-    cgf.takeAddressOfLabel(blockInfoAttr);
+    cgf.indirectGotoTargets.push_back(blockInfoAttr);
     return blockAddressOp;
   }
 

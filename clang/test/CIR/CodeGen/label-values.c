@@ -165,11 +165,9 @@ LABEL_A:
 // CIR:    cir.br ^bb1
 // CIR:  ^bb1([[PHI:%*.]]: !cir.ptr<!void> {{.*}}):  // pred: ^bb0
 // CIR:    cir.indirect_br [[PHI]] : !cir.ptr<!void>, [
-// CIR-DAG:    ^bb2,
-// CIR-DAG:    ^bb2,
-// CIR-DAG:    ^bb2
+// CIR-NEXT:    ^bb2
 // CIR:    ]
-// CIR:  ^bb2:  // 3 preds: ^bb1, ^bb1, ^bb1
+// CIR:  ^bb2:  // pred: ^bb1
 // CIR:    cir.label "LABEL_A"
 // CIR:    %[[BLK3:.*]] = cir.block_address <@D, "LABEL_A"> : !cir.ptr<!void>
 // CIR:    cir.store align(8) %[[BLK3]], %[[PTR3]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
@@ -185,7 +183,7 @@ LABEL_A:
 // LLVM:   br label %[[indirectgoto:.*]]
 // LLVM: [[indirectgoto]]:
 // LLVM:   [[PHI:%.*]] = phi ptr [ %[[BLOCKADD]], %[[ENTRY:.*]] ]
-// LLVM:   indirectbr ptr [[PHI]], [label %[[LABEL_A]], label %[[LABEL_A]], label %[[LABEL_A]]]
+// LLVM:   indirectbr ptr [[PHI]], [label %[[LABEL_A]]]
 // LLVM: [[LABEL_A]]:
 // LLVM:   store ptr blockaddress(@D, %[[LABEL_A]]), ptr %[[PTR3]], align 8
 // LLVM:   ret void

@@ -1531,7 +1531,7 @@ ConstantLValueEmitter::VisitAddrLabelExpr(const AddrLabelExpr *e) {
   auto func = cast<cir::FuncOp>(cgf.curFn);
   cir::BlockAddrInfoAttr info = cir::BlockAddrInfoAttr::get(
       &cgf.getMLIRContext(), func.getSymName(), e->getLabel()->getName());
-  cgf.takeAddressOfLabel(info);
+  cgf.indirectGotoTargets.push_back(info);
   return info;
 }
 

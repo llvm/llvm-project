@@ -612,16 +612,20 @@ void CIRGenFunction::finishIndirectBranch() {
     return;
 
   // Every label is emitted by now, so each address-taken label resolves to its
-  // LabelOp.  A label may appear more than once (a dispatch table can name it
-  // twice), and each occurrence is kept as a distinct successor to match
-  // classic codegen.
+  // LabelOp.  A label may be named more than once (a dispatch table can list it
+  // twice), but a block only needs to appear once in the successor list, so
+  // duplicates are dropped.
   llvm::SmallVector<mlir::Block *> successors;
   llvm::SmallVector<mlir::ValueRange> rangeOperands;
+  llvm::SmallPtrSet<mlir::Block *, 8> seen;
   for (cir::BlockAddrInfoAttr info : indirectGotoTargets) {
     cir::LabelOp labelOp = cgm.lookupBlockAddressInfo(info);
     assert(labelOp && "expected cir.label to be emitted for block address");
-    successors.push_back(labelOp->getBlock());
-    rangeOperands.push_back(labelOp->getBlock()->getArguments());
+    mlir::Block *dest = labelOp->getBlock();
+    if (!seen.insert(dest).second)
+      continue;
+    successors.push_back(dest);
+    rangeOperands.push_back(dest->getArguments());
   }
 
   mlir::OpBuilder::InsertionGuard guard(builder);
@@ -1552,10 +1556,6 @@ void CIRGenFunction::instantiateIndirectGotoBlock() {
   indirectGotoBlock =
       builder.createBlock(builder.getBlock()->getParent(), {}, {voidPtrTy},
                           {builder.getUnknownLoc()});
-}
-
-void CIRGenFunction::takeAddressOfLabel(cir::BlockAddrInfoAttr info) {
-  indirectGotoTargets.push_back(info);
 }
 
 mlir::Value CIRGenFunction::emitAlignmentAssumption(

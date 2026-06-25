@@ -38,8 +38,8 @@ L2:
 // LLVM-LABEL: define dso_local i32 @f(
 // LLVM:   indirectbr ptr %{{.*}}, [label %[[FL1]], label %[[FL2]]]
 
-// A appears twice in g's table; both occurrences are kept as indirect-branch
-// successors, matching classic codegen.
+// A appears twice in g's table, but a block only needs to be listed once as an
+// indirect-branch successor, so CIR drops the duplicate (classic keeps it).
 int g(int x) {
   static const void *tbl[] = {&&A, &&A, &&B};
   goto *tbl[x];
@@ -52,7 +52,6 @@ B:
 // CIR-LABEL: cir.func {{.*}} @g
 // CIR:   cir.indirect_br %{{.*}} : !cir.ptr<!void>, [
 // CIR-NEXT: ^[[ABB:.*]],
-// CIR-NEXT: ^[[ABB]],
 // CIR-NEXT: ^[[BBB:.*]]
 // CIR:   ]
 // CIR: ^[[ABB]]:
@@ -61,7 +60,8 @@ B:
 // CIR:   cir.label "B"
 
 // LLVM-LABEL: define dso_local i32 @g(
-// LLVM:   indirectbr ptr %{{.*}}, [label %[[GA]], label %[[GA]], label %[[GB]]]
+// LLVMCIR:   indirectbr ptr %{{.*}}, [label %[[GA]], label %[[GB]]]
+// OGCG:   indirectbr ptr %{{.*}}, [label %[[GA]], label %[[GA]], label %[[GB]]]
 
 // h takes a label address but never executes a `goto *`, so CIR emits no
 // indirect branch (classic still emits a dead poisoned indirectbr).
