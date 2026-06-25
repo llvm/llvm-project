@@ -40,19 +40,29 @@ void foo() {
   a = (f1 *)x;
   a = (f1 *)efunc; // strict-warning {{cast from 'int (*)(E)' to 'f1 *' (aka 'int (*)(long)') converts to incompatible function type}}
   a = (f1 *)e2func; // strict-warning {{cast from 'int (*)(E2)' to 'f1 *' (aka 'int (*)(long)') converts to incompatible function type}}
-  b = (f2 *)x; // expected-warning {{cast from 'int (*)(long)' to 'f2 *' (aka 'int (*)(void *)') converts to incompatible function type}}
-  b = reinterpret_cast<f2 *>(x); // expected-warning {{cast from 'int (*)(long)' to 'f2 *' (aka 'int (*)(void *)') converts to incompatible function type}}
+  b = (f2 *)x; // strict-warning {{cast from 'int (*)(long)' to 'f2 *' (aka 'int (*)(void *)') converts to incompatible function type}}
+  b = reinterpret_cast<f2 *>(x); // strict-warning {{cast from 'int (*)(long)' to 'f2 *' (aka 'int (*)(void *)') converts to incompatible function type}}
   c = (f3 *)x; // strict-warning {{cast from 'int (*)(long)' to 'f3 *' (aka 'int (*)(...)') converts to incompatible function type}}
   d = (f4 *)x; // expected-warning {{cast from 'int (*)(long)' to 'f4 *' (aka 'void (*)(...)') converts to incompatible function type}}
   e = (f5 *)x; // strict-warning {{cast from 'int (*)(long)' to 'f5 *' (aka 'void (*)()') converts to incompatible function type}}
   f = (f6 *)x; // expected-warning {{cast from 'int (*)(long)' to 'f6 *' (aka 'int (*)(long, int)') converts to incompatible function type}}
   g = (f7 *)x; // strict-warning {{cast from 'int (*)(long)' to 'f7 *' (aka 'int (*)(long, ...)') converts to incompatible function type}}
 
-  mf p1 = (mf)&S::foo; // expected-warning {{cast from 'void (S::*)(int *)' to 'mf' (aka 'void (S::*)(int)') converts to incompatible function type}}
+  mf p1 = (mf)&S::foo; // strict-warning {{cast from 'void (S::*)(int *)' to 'mf' (aka 'void (S::*)(int)') converts to incompatible function type}}
 
   f8 f2 = (f8)x; // expected-warning {{cast from 'int (long)' to 'f8' (aka 'int (&)(long, int)') converts to incompatible function type}}
   (void)f2;
 
   int (^y)(long);
   f = (f6 *)y; // expected-warning {{cast from 'int (^)(long)' to 'f6 *' (aka 'int (*)(long, int)') converts to incompatible function type}}
+}
+
+// Strict mode: pointer-vs-integral should still warn even when sizes match.
+typedef void *(*ptr_ret_fn)(void);
+typedef unsigned long (*ul_ret_fn)(void);
+ptr_ret_fn pr2;
+ul_ret_fn ur2;
+void test_ptr_int_return_strict() {
+  pr2 = (ptr_ret_fn)ur2; // strict-warning {{cast from 'ul_ret_fn' (aka 'unsigned long (*)()') to 'ptr_ret_fn' (aka 'void *(*)()') converts to incompatible function type}}
+  ur2 = reinterpret_cast<ul_ret_fn>(pr2); // strict-warning {{cast from 'ptr_ret_fn' (aka 'void *(*)()') to 'ul_ret_fn' (aka 'unsigned long (*)()') converts to incompatible function type}}
 }

@@ -39,19 +39,43 @@ void foo() {
   a = (f1 *)x;
   a = (f1 *)efunc; // enum is just type system sugar, still passed as a long.
   a = (f1 *)e2func; // enum is just type system sugar, still passed as a long.
-  b = (f2 *)x; // expected-warning {{cast from 'int (*)(long)' to 'f2 *' (aka 'int (*)(void *)') converts to incompatible function type}}
-  b = reinterpret_cast<f2 *>(x); // expected-warning {{cast from 'int (*)(long)' to 'f2 *' (aka 'int (*)(void *)') converts to incompatible function type}}
+  b = (f2 *)x; // ABI-compatible: long and void* same size on this target.
+  b = reinterpret_cast<f2 *>(x); // ABI-compatible: long and void* same size on this target.
   c = (f3 *)x;
   d = (f4 *)x; // expected-warning {{cast from 'int (*)(long)' to 'f4 *' (aka 'void (*)(...)') converts to incompatible function type}}
   e = (f5 *)x;
   f = (f6 *)x; // expected-warning {{cast from 'int (*)(long)' to 'f6 *' (aka 'int (*)(long, int)') converts to incompatible function type}}
   g = (f7 *)x;
 
-  mf p1 = (mf)&S::foo; // expected-warning {{cast from 'void (S::*)(int *)' to 'mf' (aka 'void (S::*)(int)') converts to incompatible function type}}
+  mf p1 = (mf)&S::foo; // ABI-compatible: int* and int same size on this target.
 
   f8 f2 = (f8)x; // expected-warning {{cast from 'int (long)' to 'f8' (aka 'int (&)(long, int)') converts to incompatible function type}}
   (void)f2;
 
   int (^y)(long);
   f = (f6 *)y; // expected-warning {{cast from 'int (^)(long)' to 'f6 *' (aka 'int (*)(long, int)') converts to incompatible function type}}
+}
+
+// Pointer-vs-integral return types: same size so ABI-compatible on this target.
+typedef void *(*ptr_ret_fn)(void);
+typedef unsigned long (*ul_ret_fn)(void);
+ptr_ret_fn pr;
+ul_ret_fn ur;
+void test_ptr_int_return() {
+  pr = (ptr_ret_fn)ur;
+  ur = (ul_ret_fn)pr;
+}
+
+// Pointer-vs-integral with reinterpret_cast.
+void test_ptr_int_reinterpret_cast() {
+  pr = reinterpret_cast<ptr_ret_fn>(ur);
+  ur = reinterpret_cast<ul_ret_fn>(pr);
+}
+
+// Different sizes should still warn.
+typedef short (*short_ret_fn)(void);
+short_ret_fn sr;
+void test_ptr_int_diff_size() {
+  void *(*pr3)(void);
+  pr3 = (void *(*)(void))sr; // expected-warning {{cast from 'short_ret_fn' (aka 'short (*)()') to 'void *(*)()' converts to incompatible function type}}
 }

@@ -56,6 +56,7 @@ public:
   BuiltinVaListKind getBuiltinVaListKind() const override;
   bool setCPU(StringRef Name) override;
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override;
+  bool arePointersAndIntegersABICompatible() const override { return false; }
 
   std::pair<unsigned, unsigned> hardwareInterferenceSizes() const override {
     return std::make_pair(32, 32);
