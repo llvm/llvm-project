@@ -653,7 +653,7 @@ class CGFunctionInfo final
   unsigned MaxVectorWidth : 4;
 
   /// X86 AVX Level, can be different from global / module level AVX level
-  /// because of target attributes
+  /// because of target attributes.
   unsigned X86ABIAVXLevel = 0;
 
   RequiredArgs Required;
