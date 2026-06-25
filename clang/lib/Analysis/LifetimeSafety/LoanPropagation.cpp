@@ -231,12 +231,12 @@ public:
 
     OriginID CurrOID = StartOID;
     llvm::SmallVector<OriginID> OriginFlowChain;
-    std::queue<const CFGBlock *> PendingState;
-    PendingState.push(EndBlock);
+    std::queue<const CFGBlock *> PendingBlocks;
+    PendingBlocks.push(EndBlock);
 
-    while (!PendingState.empty()) {
-      const CFGBlock *CurrBlock = PendingState.front();
-      PendingState.pop();
+    while (!PendingBlocks.empty()) {
+      const CFGBlock *CurrBlock = PendingBlocks.front();
+      PendingBlocks.pop();
 
       DEBUG_WITH_TYPE("LifetimeBuildOriginFlow",
                       llvm::dbgs() << "CurrBlockID: " << CurrBlock->getBlockID()
@@ -256,7 +256,7 @@ public:
                       llvm::dbgs() << "EndOriginID: " << CurrOID << "\n");
 
       for (const CFGBlock *Block : CurrBlock->preds())
-        PendingState.push(Block);
+        PendingBlocks.push(Block);
     }
 
     llvm_unreachable(
