@@ -189,23 +189,23 @@ TEST_CONSTEXPR_CXX26 void test_node_container(Converter conv) {
 }
 
 template <template <class> class Container>
-void test_invoke_set_like() {
+TEST_CONSTEXPR_CXX26 void test_invoke_set_like() {
   { // check that std::invoke is used
     struct T {
       mutable int i = 3;
 
-      void zero() const { i = 0; }
+      TEST_CONSTEXPR_CXX26 void zero() const { i = 0; }
     };
 
     class S {
       int val_;
 
     public:
-      S(int val) : val_(val) {}
+      TEST_CONSTEXPR_CXX26 S(int val) : val_(val) {}
 
       T j;
 
-      bool operator<(const S& rhs) const { return val_ < rhs.val_; }
+      TEST_CONSTEXPR_CXX26 bool operator<(const S& rhs) const { return val_ < rhs.val_; }
     };
 
     { // Iterator overload
