@@ -3157,6 +3157,11 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                                            Mask ? Mask : Plan->getTrue(), &EVL},
                                           IntrR->getScalarType(), {}, {}, DL);
 
+  // Transforms the VPReductionRecipe inside the VPExpressionRecipe.
+  if (auto *ExpressionR = dyn_cast<VPExpressionRecipe>(&CurRecipe))
+    if (match(ExpressionR->getOperand(ExpressionR->getNumOperands() - 1),
+              m_RemoveMask(HeaderMask, Mask)))
+      return ExpressionR->convertToEVL(EVL, Mask);
   return nullptr;
 }
 
