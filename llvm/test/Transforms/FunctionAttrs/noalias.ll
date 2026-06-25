@@ -246,7 +246,7 @@ define ptr @return_unknown_noalias_call(ptr %fn) {
 
 ; A null check does not capture the provenance of the result.
 define ptr @return_malloc_null_checked(i64 %size) {
-; CHECK-LABEL: define ptr @return_malloc_null_checked(
+; CHECK-LABEL: define noalias ptr @return_malloc_null_checked(
 ; CHECK-SAME: i64 [[SIZE:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = call ptr @malloc(i64 [[SIZE]])
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[A]], null
@@ -299,7 +299,7 @@ declare void @capture_read_provenance(ptr captures(read_provenance))
 
 ; Only whether the result is null is captured.
 define ptr @return_malloc_capture_address_is_null(i64 %size) {
-; CHECK-LABEL: define ptr @return_malloc_capture_address_is_null(
+; CHECK-LABEL: define noalias ptr @return_malloc_capture_address_is_null(
 ; CHECK-SAME: i64 [[SIZE:%.*]]) {
 ; CHECK-NEXT:    [[A:%.*]] = call ptr @malloc(i64 [[SIZE]])
 ; CHECK-NEXT:    call void @capture_address_is_null(ptr [[A]])

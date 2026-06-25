@@ -1485,7 +1485,11 @@ static bool isFunctionMallocLike(Function *F, const SCCNodeSet &SCCNodes) {
         return false; // Did not come from an allocation.
       }
 
-    if (PointerMayBeCaptured(RetVal, /*ReturnCaptures=*/false))
+    // Checking if result is null does not prevent it from being noalias.
+    if (capturesAnything(
+            PointerMayBeCaptured(RetVal, CaptureComponents::All &
+                                             ~CaptureComponents::AddressIsNull)
+                .WithoutRet))
       return false;
   }
 
