@@ -127,7 +127,13 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __find(_Tp* __first, _T
     return __last;
   }
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
-  else if constexpr (sizeof(_Tp) == sizeof(wchar_t) && _LIBCPP_ALIGNOF(_Tp) >= _LIBCPP_ALIGNOF(wchar_t)) {
+  // __builtin_wmemchr lowers to a libc call that walks native-sized wchar_t
+  // elements. Only take this path when wchar_t still has its platform-native
+  // size and alignment. Otherwise (e.g., under -fshort-wchar) fall through to the
+  // vectorized integral path, which honors the current wchar_t size.
+  else if constexpr (sizeof(_Tp) == sizeof(wchar_t) && _LIBCPP_ALIGNOF(_Tp) >= _LIBCPP_ALIGNOF(wchar_t) &&
+                     sizeof(wchar_t) == sizeof(__native_wchar_t) && _LIBCPP_ALIGNOF(wchar_t) ==
+                         _LIBCPP_ALIGNOF(__native_wchar_t)) {
     if (auto __ret = std::__constexpr_wmemchr(__first, __value, __last - __first))
       return __ret;
     return __last;

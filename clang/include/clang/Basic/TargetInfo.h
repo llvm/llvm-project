@@ -163,6 +163,11 @@ protected:
       Char16Type, Char32Type, Int64Type, Int16Type, SigAtomicType,
       ProcessIDType;
 
+  /// The platform's native type for wchar_t, i.e., the type wchar_t would have
+  /// without -fshort-wchar. This matches WCharType unless -fshort-wchar is in
+  /// effect.
+  IntType WideCharNativeType;
+
   /// Whether Objective-C's built-in boolean type should be signed char.
   ///
   /// Otherwise, when this flag is not set, the normal built-in boolean type is
@@ -417,6 +422,13 @@ public:
     return getCorrespondingUnsignedType(IntPtrType);
   }
   IntType getWCharType() const { return WCharType; }
+
+  /// Return the platform's native type for wchar_t, i.e., the type wchar_t
+  /// would have without -fshort-wchar.
+  IntType getWideCharNativeType() const {
+    return WideCharNativeType == NoInt ? WCharType : WideCharNativeType;
+  }
+
   IntType getWIntType() const { return WIntType; }
   IntType getChar16Type() const { return Char16Type; }
   IntType getChar32Type() const { return Char32Type; }

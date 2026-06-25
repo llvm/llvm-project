@@ -137,6 +137,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   IntMaxType = SignedLongLong;
   IntPtrType = SignedLong;
   WCharType = SignedInt;
+  WideCharNativeType = NoInt;
   WIntType = SignedInt;
   Char16Type = UnsignedShort;
   Char32Type = UnsignedInt;
@@ -422,6 +423,13 @@ void TargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,
                         const TargetInfo *Aux) {
   if (Opts.NoBitFieldTypeAlign)
     UseBitFieldTypeAlignment = false;
+
+  // Capture the platform-native wchar_t before -fshort-wchar can override
+  // WCharType below. adjust() may run more than once on the same target, so
+  // only record it the first time, while WCharType still holds the target
+  // default.
+  if (WideCharNativeType == NoInt)
+    WideCharNativeType = WCharType;
 
   switch (Opts.WCharSize) {
   default: llvm_unreachable("invalid wchar_t width");

@@ -197,6 +197,15 @@ using ::putwchar _LIBCPP_USING_IF_EXISTS;
 using ::vwprintf _LIBCPP_USING_IF_EXISTS;
 using ::wprintf _LIBCPP_USING_IF_EXISTS;
 
+// Names the platform-native wchar_t (the type wchar_t would have without
+// -fshort-wchar). Falls back to wchar_t on compilers that predate
+// __WCHAR_NATIVE_TYPE__ (Clang < 23), preserving prior behavior.
+#  ifdef __WCHAR_NATIVE_TYPE__
+using __native_wchar_t = __WCHAR_NATIVE_TYPE__;
+#  else
+using __native_wchar_t = wchar_t;
+#  endif
+
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 size_t __constexpr_wcslen(const wchar_t* __str) {
 #  if __has_builtin(__builtin_wcslen)
   return __builtin_wcslen(__str);

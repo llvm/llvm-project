@@ -393,6 +393,14 @@ Builtin Macros
   Defined to an integral value that is the include depth of the file currently
   being translated.  For the main file, this value is zero.
 
+``__WCHAR_NATIVE_TYPE__``
+  clang-specific extension defined to the platform's native type for
+  ``wchar_t``, i.e., the type ``wchar_t`` would have without ``-fshort-wchar``.
+  This matches ``__WCHAR_TYPE__`` unless ``-fshort-wchar`` is in effect. This
+  lets code detect when ``wchar_t`` is different from its native type,
+  e.g., to decide whether dispatching to a ``wchar_t``-based runtime function
+  such as ``wmemchr`` is safe.
+
 ``__TIMESTAMP__``
   Defined to the date and time of the last modification of the current source
   file.
