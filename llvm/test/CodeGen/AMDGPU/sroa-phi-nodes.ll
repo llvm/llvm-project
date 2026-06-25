@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgpu9.42 -mcpu=gfx942 -O2 -S %s -o - -stop-after=sroa | FileCheck %s
+; RUN: opt -mtriple=amdgpu9.42 -O2 -S %s -o - -stop-after=sroa | FileCheck %s
 
 ; This testcase is dervied from warp's reduce.cu.
 ;
