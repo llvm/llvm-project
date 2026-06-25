@@ -482,7 +482,7 @@ SPIRVNonSemanticDebugHandler::resolveDebugFunctionDeclarationParent(
   const DIScope *Scope = SP->getScope();
   if (Scope && !isa<DIFile>(Scope)) {
     // TODO: Complete with other lookups once other scopes are supported
-    // (subclases of DIScope).
+    // (subclasses of DIScope).
     const DIType *Ty = dyn_cast<DIType>(Scope);
     if (!Ty)
       return std::nullopt;
