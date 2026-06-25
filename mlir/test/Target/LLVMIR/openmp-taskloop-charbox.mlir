@@ -50,5 +50,6 @@ module {
 // CHECK:         call void @__kmpc_taskloop(
 
 // CHECK-LABEL: define internal void @omp_taskloop_dup(
-// CHECK:         load { ptr, i64 }, ptr
+// CHECK:         %[[MOLD:.*]] = load { ptr, i64 }, ptr
+// CHECK:         extractvalue { ptr, i64 } %[[MOLD]], 0
 // CHECK:         call void @touch(
