@@ -3143,21 +3143,24 @@ static SDValue lowerVECTOR_SHUFFLE_VSHF(SDValue Op, EVT ResTy,
       Using2ndVec = true;
   }
 
-  // Find the first non-undef index use as a default when there is a leading
-  // UNDEF/poison.
-  int LastValidIndex = 0;
+  // Find the first non-undef index. This index is used as a default when there
+  // is a leading UNDEF/poison.
+  int SplatIndex = 0;
   for (int Idx : Indices)
     if (Idx >= 0) {
-      LastValidIndex = Idx;
+      SplatIndex = Idx;
       break;
     }
 
-  for (int Idx : Indices) {
-    if (Idx < 0)
-      Idx = LastValidIndex;
-    else
+  int LastValidIndex = SplatIndex;
+  for (size_t i = 0; i < Indices.size(); i++) {
+    int Idx = Indices[i];
+    if (Idx < 0) {
       // Continue using splati index or use the last valid index.
-      LastValidIndex = isSPLATI ? LastValidIndex : Idx;
+      Idx = isSPLATI ? SplatIndex : LastValidIndex;
+    } else {
+      LastValidIndex = Idx;
+    }
     Ops.push_back(DAG.getTargetConstant(Idx, DL, MaskEltTy));
   }
 
