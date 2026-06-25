@@ -172,8 +172,7 @@ mgpuMemHostRegisterMemRef(int64_t rank, StridedMemRefType<char, 1> *descriptor,
   int64_t runningStride = 1;
   // Only densely packed tensors are currently supported.
   for (int64_t i = rank - 1; i >= 0; --i) {
-    assert(strides[i] == runningStride &&
-           "Mismatch in computed dense strides");
+    assert(strides[i] == runningStride && "Mismatch in computed dense strides");
     runningStride *= sizes[i];
   }
   uint64_t sizeBytes = runningStride * elementSizeBytes;
