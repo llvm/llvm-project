@@ -13,30 +13,19 @@ using namespace ento;
 REGISTER_SET_FACTORY_WITH_PROGRAMSTATE(LifetimeSourceSet, const MemRegion *)
 REGISTER_MAP_WITH_PROGRAMSTATE(LifetimeBoundMap, SVal, LifetimeSourceSet)
 
-REGISTER_SET_WITH_PROGRAMSTATE(DeallocatedSourceSet, const MemRegion *)
-
 namespace {
 class UseAfterLifetimeEnd
-    : public Checker<check::PostCall, check::EndFunction, check::Location,
-                     check::DeadSymbols> {
+    : public Checker<check::PostCall, check::EndFunction, check::DeadSymbols> {
 public:
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
   void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
                   const char *Sep) const override;
   void reportDanglingSource(const MemRegion *Region, ExplodedNode *N,
                             CheckerContext &C) const;
-  void reportUseAfterScope(const MemRegion *Region, ExplodedNode *N,
-                           CheckerContext &C) const;
-
   void checkReturnedBorrower(SVal Val, ProgramStateRef State,
                              CheckerContext &C) const;
-  void reportDanglingBorrower(const LifetimeSourceSet *Sources,
-                              CheckerContext &C) const;
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &C) const;
-  void checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
-                     CheckerContext &C) const;
   void checkDeadSymbols(SymbolReaper &SymReaper, CheckerContext &C) const;
-
   const BugType BugMsg{this, "UseAfterLifetimeEnd", "LifetimeBound"};
 };
 
@@ -106,10 +95,14 @@ static bool hasDanglingSource(const MemRegion *Source, ProgramStateRef State,
 void UseAfterLifetimeEnd::checkReturnedBorrower(SVal Val, ProgramStateRef State,
                                                 CheckerContext &C) const {
   if (auto *SourceSet = State->get<LifetimeBoundMap>(Val)) {
-    if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
-      for (const MemRegion *Region : *SourceSet) {
-        if (hasDanglingSource(Region, State, C))
-          reportDanglingSource(Region, N, C);
+    ExplodedNode *N = nullptr;
+    for (const MemRegion *Region : *SourceSet) {
+      if (hasDanglingSource(Region, State, C)) {
+        if (!N)
+          N = C.generateNonFatalErrorNode();
+        if (!N)
+          return;
+        reportDanglingSource(Region, N, C);
       }
     }
   }
@@ -135,38 +128,6 @@ void UseAfterLifetimeEnd::checkEndFunction(const ReturnStmt *RS,
   checkReturnedBorrower(RetVal, State, C);
 }
 
-void UseAfterLifetimeEnd::reportDanglingBorrower(
-    const LifetimeSourceSet *Sources, CheckerContext &C) const {
-  ProgramStateRef State = C.getState();
-
-  ExplodedNode *N = C.generateNonFatalErrorNode();
-  if (!N)
-    return;
-
-  for (const MemRegion *Source : *Sources) {
-    if (State->contains<DeallocatedSourceSet>(Source)) {
-      reportUseAfterScope(Source, N, C);
-    }
-  }
-}
-
-void UseAfterLifetimeEnd::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
-                                        CheckerContext &C) const {
-  ProgramStateRef State = C.getState();
-  auto LBMap = State->get<LifetimeBoundMap>();
-
-  if (LBMap.isEmpty())
-    return;
-
-  // FIXME: If a borrower has multiple bound sources the callback
-  // warns if any of the sources have died. PathDiagnosticVisitor
-  // should be used to trace and identify which annotated parameter
-  // recorded the binding. Attaching this information as path notes
-  // would make the diagnostics more useful to the user.
-  if (auto *SourceSet = State->get<LifetimeBoundMap>(Loc))
-    reportDanglingBorrower(SourceSet, C);
-}
-
 void UseAfterLifetimeEnd::reportDanglingSource(const MemRegion *Region,
                                                ExplodedNode *N,
                                                CheckerContext &C) const {
@@ -178,23 +139,10 @@ void UseAfterLifetimeEnd::reportDanglingSource(const MemRegion *Region,
   C.emitReport(std::move(BR));
 }
 
-void UseAfterLifetimeEnd::reportUseAfterScope(const MemRegion *Region,
-                                              ExplodedNode *N,
-                                              CheckerContext &C) const {
-  auto BR = std::make_unique<PathSensitiveBugReport>(
-      BugMsg,
-      (llvm::Twine("Use of '") + Region->getString() +
-       "' after its lifetime ended."),
-      N);
-  C.emitReport(std::move(BR));
-}
-
 void UseAfterLifetimeEnd::checkDeadSymbols(SymbolReaper &SymReaper,
                                            CheckerContext &C) const {
   ProgramStateRef State = C.getState();
   LifetimeBoundMapTy LBMap = State->get<LifetimeBoundMap>();
-
-  DeallocatedSourceSetTy Sources = State->get<DeallocatedSourceSet>();
 
   for (SVal Val : llvm::make_first_range(LBMap)) {
     if (const MemRegion *ValRegion = Val.getAsRegion()) {
@@ -205,11 +153,6 @@ void UseAfterLifetimeEnd::checkDeadSymbols(SymbolReaper &SymReaper,
       if (!SymReaper.isLive(ValRef))
         State = State->remove<LifetimeBoundMap>(Val);
     }
-  }
-
-  for (const MemRegion *Region : Sources) {
-    if (!SymReaper.isLiveRegion(Region))
-      State = State->remove<DeallocatedSourceSet>(Region);
   }
 
   C.addTransition(State);
@@ -281,12 +224,12 @@ void DebugUseAfterLifetimeEnd::analyzerDumpLifetimeOriginsOf(
   SVal ArgSVal = Call.getArgSVal(0);
   const LifetimeSourceSet *SourceSet = State->get<LifetimeBoundMap>(ArgSVal);
 
+  if (!SourceSet)
+    return;
+
   llvm::SmallString<128> Str;
   llvm::raw_svector_ostream OS(Str);
   OS << " Origin " << ArgSVal << " bound to ";
-
-  if (!SourceSet)
-    return;
 
   if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
     bool First = true;
