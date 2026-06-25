@@ -284,42 +284,36 @@ public:
     }
   }
 
-  // Rewrite all uses of the original variable, in the basic blocks whose names
-  // start with `prefix`, with the linear variable in-place.
+  // Rewrite all uses of the original variable, in the basic blocks in the
+  // [startBB, endBB] interval, with the linear variable in-place.
   void rewriteInPlace(llvm::IRBuilderBase &builder, llvm::BasicBlock *startBB,
-                      llvm::BasicBlock *endBB, llvm::StringRef prefix,
-                      size_t varIndex) {
+                      llvm::BasicBlock *endBB, size_t varIndex) {
     llvm::SmallVector<llvm::BasicBlock *, 32> worklist;
-    llvm::SmallPtrSet<llvm::BasicBlock *, 32> visited;
-    llvm::SmallPtrSet<llvm::BasicBlock *, 32> matchingBBs;
+    llvm::SmallPtrSet<llvm::BasicBlock *, 32> collectedBBs;
 
     assert(startBB && endBB && "Invalid startBB/endBB");
 
-    // Traverse basic blocks from startBB to endBB and save those
-    // whose names start with the specified prefix.
+    // Collect basic blocks from startBB to endBB.
     worklist.push_back(startBB);
-    visited.insert(startBB);
+    collectedBBs.insert(startBB);
 
     while (!worklist.empty()) {
       llvm::BasicBlock *bb = worklist.pop_back_val();
-
-      if (bb->hasName() && bb->getName().starts_with(prefix))
-        matchingBBs.insert(bb);
 
       if (bb == endBB)
         continue;
 
       for (llvm::BasicBlock *succ : llvm::successors(bb)) {
-        if (visited.insert(succ).second)
+        if (collectedBBs.insert(succ).second)
           worklist.push_back(succ);
       }
     }
 
-    // Rewrite all uses in the matching BBs.
+    // Rewrite all uses in the collected BBs.
     llvm::SmallVector<llvm::User *> users(linearOrigVal[varIndex]->users());
     for (auto *user : users) {
       if (auto *userInst = dyn_cast<llvm::Instruction>(user)) {
-        if (matchingBBs.contains(userInst->getParent()))
+        if (collectedBBs.contains(userInst->getParent()))
           user->replaceUsesOfWith(linearOrigVal[varIndex],
                                   linearLoopBodyTemps[varIndex]);
       }
@@ -4469,7 +4463,6 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
       linearClauseProcessor.initLinearStep(moduleTranslation, linearStep);
   }
 
-  llvm::BasicBlock *sourceBlock = builder.GetInsertBlock();
   llvm::Expected<llvm::BasicBlock *> regionBlock = convertOmpOpRegions(
       wsloopOp.getRegion(), "omp.wsloop.region", builder, moduleTranslation);
 
@@ -4510,6 +4503,10 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     }
   }
 
+  for (size_t index = 0; index < wsloopOp.getLinearVars().size(); index++)
+    linearClauseProcessor.rewriteInPlace(builder, loopInfo->getBody(),
+                                         loopInfo->getLatch(), index);
+
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy wsloopIP =
       ompBuilder->applyWorkshareLoop(
           ompLoc.DL, loopInfo, allocaIP, loopNeedsBarrier,
@@ -4531,10 +4528,6 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
                                                 loopInfo->getLastIter());
     if (failed(handleError(afterBarrierIP, *loopOp)))
       return failure();
-    for (size_t index = 0; index < wsloopOp.getLinearVars().size(); index++)
-      linearClauseProcessor.rewriteInPlace(
-          builder, sourceBlock->getSingleSuccessor(), *regionBlock,
-          "omp.loop_nest.region", index);
 
     builder.restoreIP(oldIP);
   }
@@ -4920,6 +4913,10 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
   }
   builder.SetInsertPoint(*regionBlock, (*regionBlock)->begin());
 
+  for (size_t index = 0; index < simdOp.getLinearVars().size(); index++)
+    linearClauseProcessor.rewriteInPlace(builder, loopInfo->getBody(),
+                                         loopInfo->getLatch(), index);
+
   ompBuilder->applySimd(loopInfo, alignedVars,
                         simdOp.getIfExpr()
                             ? moduleTranslation.lookupValue(simdOp.getIfExpr())
@@ -4927,29 +4924,6 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
                         order, simdlen, safelen);
 
   linearClauseProcessor.emitStoresForLinearVar(builder);
-
-  // Check if this SIMD loop contains ordered regions
-  bool hasOrderedRegions = false;
-  simdOp.getRegion().walk([&](omp::OrderedRegionOp orderedOp) {
-    hasOrderedRegions = true;
-    return WalkResult::interrupt();
-  });
-
-  for (size_t index = 0; index < simdOp.getLinearVars().size(); index++) {
-    llvm::BasicBlock *startBB = sourceBlock->getSingleSuccessor();
-    llvm::BasicBlock *endBB = *regionBlock;
-    linearClauseProcessor.rewriteInPlace(builder, startBB, endBB,
-                                         "omp.loop_nest.region", index);
-
-    if (hasOrderedRegions) {
-      // Also rewrite uses in ordered regions so they read the current value
-      linearClauseProcessor.rewriteInPlace(builder, startBB, endBB,
-                                           "omp.ordered.region", index);
-      // Also rewrite uses in finalize blocks (code after ordered regions)
-      linearClauseProcessor.rewriteInPlace(builder, startBB, endBB,
-                                           "omp_region.finalize", index);
-    }
-  }
 
   // We now need to reduce the per-simd-lane reduction variable into the
   // original variable. This works a bit differently to other reductions (e.g.

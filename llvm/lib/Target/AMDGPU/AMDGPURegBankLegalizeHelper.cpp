@@ -1353,8 +1353,10 @@ bool RegBankLegalizeHelper::lowerGetRounding(MachineInstr &MI) {
 
   uint32_t BothRoundHwReg =
       AMDGPU::Hwreg::HwregEncoding::encode(AMDGPU::Hwreg::ID_MODE, 0, 4);
-  auto GetReg = B.buildInstr(AMDGPU::S_GETREG_B32, {SgprRB_S32}, {})
-                    .addImm(BothRoundHwReg);
+  auto GetReg =
+      B.buildIntrinsic(Intrinsic::amdgcn_s_getreg, {SgprRB_S32},
+                       /*HasSideEffects=*/true, /*isConvergent=*/false)
+          .addImm(BothRoundHwReg);
 
   // There are two rounding modes, one for f32 and one for f64/f16. We only
   // report in the standard value range if both are the same.
