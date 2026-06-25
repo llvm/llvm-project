@@ -1293,16 +1293,21 @@ struct MIFImageIndexOpConversion
       std::string imageIndexName =
           op.getTeamNumber() ? getPRIFProcName("image_index_with_team_number")
                              : getPRIFProcName("image_index_with_team");
-      mlir::Type teamTy =
-          op.getTeamNumber() ? builder.getRefType(i64Ty) : boxTy;
+      mlir::Type teamTy = boxTy;
+      if (op.getTeamNumber()) {
+        teamTy = builder.getRefType(i64Ty);
+        mlir::Value t = builder.createConvert(loc, i64Ty, team);
+        team = builder.createTemporary(loc, i64Ty);
+        fir::StoreOp::create(builder, loc, t, team);
+      } else {
+        team = builder.createBox(loc, team);
+      }
       mlir::FunctionType ftype = mlir::FunctionType::get(
           builder.getContext(),
           /*inputs*/ {boxTy, genBoxedSequenceType(i64Ty), teamTy, resTy},
           /*results*/ {});
       funcOp = builder.createFunction(loc, imageIndexName, ftype);
 
-      if (fir::isa_ref_type(team.getType()))
-        team = builder.createBox(loc, team);
       args = fir::runtime::createArguments(builder, loc, ftype, coarrayHandle,
                                            op.getSub(), team, result);
     }

@@ -75,3 +75,4 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<!llvm.ptr<270> = dense<32> : vec
 // CHECK: fir.call @_QMprifPprif_image_index(
 // CHECK: fir.call @_QMprifPprif_image_index(
 // CHECK: fir.call @_QMprifPprif_image_index_with_team(
+// CHECK: fir.call @_QMprifPprif_image_index_with_team_number(
