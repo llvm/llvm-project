@@ -50,6 +50,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cassert>
 #include <climits>
 #include <cstdint>
@@ -1067,6 +1068,15 @@ void ARMTargetELFStreamer::finishAttributeSection() {
 
   if (Arch != ARM::ArchKind::INVALID)
     emitArchDefaultAttributes();
+
+  const Triple &TT = S.getContext().getTargetTriple();
+  if (TT.getEnvironment() == Triple::GNUEABIHF ||
+      TT.getEnvironment() == Triple::GNUEABIHFT64 ||
+      TT.getEnvironment() == Triple::MuslEABIHF ||
+      TT.getEnvironment() == Triple::EABIHF || TT.isOSWindows()) {
+    S.setAttributeItem(ARMBuildAttrs::ABI_VFP_args, ARMBuildAttrs::HardFPAAPCS,
+                       /* OverwriteExisting= */ false);
+  }
 
   if (S.Contents.empty())
     return;
