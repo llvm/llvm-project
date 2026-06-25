@@ -34,7 +34,7 @@ define void @reuse_lcssa_phi_for_add_rec1(ptr %head) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[IV_LCSSA]], [[INDEX]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub nsw i64 [[IV_LCSSA]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr ptr, ptr [[SRC_2]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr ptr, ptr [[TMP5]], i64 -1
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x ptr>, ptr [[TMP7]], align 8
@@ -234,7 +234,7 @@ define void @expand_diff_scev_unknown(ptr %dst, i1 %invar.c, i32 %step) mustprog
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[IV_1_LCSSA]], [[INDEX]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add nsw i32 [[IV_1_LCSSA]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[DST]], i32 [[OFFSET_IDX]]
 ; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2

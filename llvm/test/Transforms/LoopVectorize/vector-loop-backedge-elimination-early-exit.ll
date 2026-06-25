@@ -350,7 +350,7 @@ define i1 @test_early_exit_max_tc_less_than_16_non_canonical_iv(ptr dereferencea
 ; VF8UF1:       [[VECTOR_BODY]]:
 ; VF8UF1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
 ; VF8UF1-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8, i64 9>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY_INTERIM]] ]
-; VF8UF1-NEXT:    [[OFFSET_IDX:%.*]] = add i64 2, [[INDEX]]
+; VF8UF1-NEXT:    [[OFFSET_IDX:%.*]] = add nsw i64 2, [[INDEX]]
 ; VF8UF1-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[OFFSET_IDX]]
 ; VF8UF1-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i8>, ptr [[TMP0]], align 1
 ; VF8UF1-NEXT:    [[TMP3:%.*]] = icmp eq <8 x i8> [[WIDE_LOAD]], zeroinitializer

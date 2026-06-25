@@ -1556,7 +1556,7 @@ define i64 @select_icmp_min_valid_iv_start(ptr %a, ptr %b, i64 %rdx.start, i64 %
 ; CHECK-VF1IC4-NEXT:    [[VEC_PHI2:%.*]] = phi i64 [ -9223372036854775808, %[[VECTOR_PH]] ], [ [[TMP29:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF1IC4-NEXT:    [[VEC_PHI3:%.*]] = phi i64 [ -9223372036854775808, %[[VECTOR_PH]] ], [ [[TMP30:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF1IC4-NEXT:    [[VEC_PHI4:%.*]] = phi i64 [ -9223372036854775808, %[[VECTOR_PH]] ], [ [[TMP31:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-VF1IC4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 -9223372036854775807, [[INDEX]]
+; CHECK-VF1IC4-NEXT:    [[OFFSET_IDX:%.*]] = add nsw i64 -9223372036854775807, [[INDEX]]
 ; CHECK-VF1IC4-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], 3
@@ -1773,7 +1773,7 @@ define i64 @select_icmp_unsigned_iv_range(ptr %a, ptr %b, i64 %rdx.start) {
 ; CHECK-VF1IC4-NEXT:    [[VEC_PHI1:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[TMP27:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF1IC4-NEXT:    [[VEC_PHI2:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[TMP28:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF1IC4-NEXT:    [[VEC_PHI3:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[TMP29:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-VF1IC4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 -9223372036854775808, [[IV_I]]
+; CHECK-VF1IC4-NEXT:    [[OFFSET_IDX:%.*]] = add nsw i64 -9223372036854775808, [[IV_I]]
 ; CHECK-VF1IC4-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], 3
@@ -2233,7 +2233,7 @@ define i64 @not_vectorized_select_icmp_iv_out_of_bound(ptr %a, ptr %b, i64 %rdx.
 ; CHECK-VF1IC4-NEXT:    [[VEC_PHI5:%.*]] = phi i1 [ false, %[[VECTOR_PH]] ], [ [[TMP28:%.*]], %[[FOR_BODY]] ]
 ; CHECK-VF1IC4-NEXT:    [[VEC_PHI6:%.*]] = phi i1 [ false, %[[VECTOR_PH]] ], [ [[TMP29:%.*]], %[[FOR_BODY]] ]
 ; CHECK-VF1IC4-NEXT:    [[VEC_PHI7:%.*]] = phi i1 [ false, %[[VECTOR_PH]] ], [ [[TMP30:%.*]], %[[FOR_BODY]] ]
-; CHECK-VF1IC4-NEXT:    [[IV_J:%.*]] = add i64 -9223372036854775808, [[IV_I]]
+; CHECK-VF1IC4-NEXT:    [[IV_J:%.*]] = add nsw i64 -9223372036854775808, [[IV_I]]
 ; CHECK-VF1IC4-NEXT:    [[TMP11:%.*]] = add i64 [[IV_J]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP2:%.*]] = add i64 [[IV_J]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP3:%.*]] = add i64 [[IV_J]], 3
@@ -2347,7 +2347,7 @@ define i64 @not_vectorized_select_icmp_non_const_iv_start_value(ptr %a, ptr %b, 
 ; CHECK-VF4IC1-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4IC1-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ splat (i64 -9223372036854775808), %[[VECTOR_PH]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4IC1-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i1> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-VF4IC1-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[IVSTART]], [[INDEX]]
+; CHECK-VF4IC1-NEXT:    [[OFFSET_IDX:%.*]] = add nuw nsw i64 [[IVSTART]], [[INDEX]]
 ; CHECK-VF4IC1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-VF4IC1-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP2]], align 8
 ; CHECK-VF4IC1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[OFFSET_IDX]]
@@ -2414,7 +2414,7 @@ define i64 @not_vectorized_select_icmp_non_const_iv_start_value(ptr %a, ptr %b, 
 ; CHECK-VF4IC4-NEXT:    [[STEP_ADD:%.*]] = add nuw nsw <4 x i64> [[VEC_IND1]], splat (i64 4)
 ; CHECK-VF4IC4-NEXT:    [[STEP_ADD_2:%.*]] = add nuw nsw <4 x i64> [[STEP_ADD]], splat (i64 4)
 ; CHECK-VF4IC4-NEXT:    [[VEC_IND:%.*]] = add nuw nsw <4 x i64> [[STEP_ADD_2]], splat (i64 4)
-; CHECK-VF4IC4-NEXT:    [[OFFSET_IDX:%.*]] = add i64 [[IVSTART]], [[INDEX]]
+; CHECK-VF4IC4-NEXT:    [[OFFSET_IDX:%.*]] = add nuw nsw i64 [[IVSTART]], [[INDEX]]
 ; CHECK-VF4IC4-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-VF4IC4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i64 4
 ; CHECK-VF4IC4-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i64 8
@@ -2501,7 +2501,7 @@ define i64 @not_vectorized_select_icmp_non_const_iv_start_value(ptr %a, ptr %b, 
 ; CHECK-VF1IC4-NEXT:    [[VEC_PHI5:%.*]] = phi i1 [ false, %[[VECTOR_PH]] ], [ [[TMP26:%.*]], %[[FOR_BODY]] ]
 ; CHECK-VF1IC4-NEXT:    [[VEC_PHI6:%.*]] = phi i1 [ false, %[[VECTOR_PH]] ], [ [[TMP27:%.*]], %[[FOR_BODY]] ]
 ; CHECK-VF1IC4-NEXT:    [[VEC_PHI7:%.*]] = phi i1 [ false, %[[VECTOR_PH]] ], [ [[TMP28:%.*]], %[[FOR_BODY]] ]
-; CHECK-VF1IC4-NEXT:    [[IV:%.*]] = add i64 [[IVSTART]], [[INDEX]]
+; CHECK-VF1IC4-NEXT:    [[IV:%.*]] = add nuw nsw i64 [[IVSTART]], [[INDEX]]
 ; CHECK-VF1IC4-NEXT:    [[TMP2:%.*]] = add i64 [[IV]], 1
 ; CHECK-VF1IC4-NEXT:    [[TMP3:%.*]] = add i64 [[IV]], 2
 ; CHECK-VF1IC4-NEXT:    [[TMP4:%.*]] = add i64 [[IV]], 3

@@ -665,7 +665,7 @@ define i32 @sum_arrays_outside_use(ptr %B, ptr %A, ptr %C, i32 %N)  {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i32 [[B_PROMOTED]], [[INDEX]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add nsw i32 [[B_PROMOTED]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[OFFSET_IDX]] to i64
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP7]], align 4

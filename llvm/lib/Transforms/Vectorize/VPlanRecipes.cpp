@@ -3018,7 +3018,8 @@ void VPDerivedIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                     VPSlotTracker &SlotTracker) const {
   O << Indent;
   printAsOperand(O, SlotTracker);
-  O << " = DERIVED-IV ";
+  O << " = DERIVED-IV";
+  printFlags(O);
   getStartValue()->printAsOperand(O, SlotTracker);
   O << " + ";
   getOperand(1)->printAsOperand(O, SlotTracker);

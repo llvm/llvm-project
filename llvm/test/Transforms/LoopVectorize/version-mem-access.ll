@@ -134,7 +134,7 @@ define void @stride_poison(ptr %dst) mustprogress {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], poison
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = mul nuw nsw i64 [[INDEX]], poison
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], poison
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[DST]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP4]]

@@ -169,7 +169,7 @@ define void @bug18724(i1 %cond, ptr %ptr, i1 %cond.2, i64 %v.1, i32 %v.2) {
 ; UNROLL-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE3:.*]] ]
 ; UNROLL-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ [[V_2]], %[[VECTOR_PH]] ], [ [[PREDPHI:%.*]], %[[PRED_STORE_CONTINUE3]] ]
 ; UNROLL-NEXT:    [[VEC_PHI1:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[PREDPHI4:%.*]], %[[PRED_STORE_CONTINUE3]] ]
-; UNROLL-NEXT:    [[TMP5:%.*]] = add i64 [[V_1]], [[INDEX]]
+; UNROLL-NEXT:    [[TMP5:%.*]] = add nsw i64 [[V_1]], [[INDEX]]
 ; UNROLL-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 1
 ; UNROLL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [768 x i32], ptr [[PTR]], i64 0, i64 [[TMP5]]
 ; UNROLL-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [768 x i32], ptr [[PTR]], i64 0, i64 [[TMP6]]
@@ -246,7 +246,7 @@ define void @bug18724(i1 %cond, ptr %ptr, i1 %cond.2, i64 %v.1, i32 %v.2) {
 ; UNROLL-NOSIMPLIFY-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE3:.*]] ]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[VEC_PHI:%.*]] = phi i32 [ [[V_2]], %[[VECTOR_PH]] ], [ [[PREDPHI:%.*]], %[[PRED_STORE_CONTINUE3]] ]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[VEC_PHI1:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[PREDPHI4:%.*]], %[[PRED_STORE_CONTINUE3]] ]
-; UNROLL-NOSIMPLIFY-NEXT:    [[TMP5:%.*]] = add i64 [[V_1]], [[INDEX]]
+; UNROLL-NOSIMPLIFY-NEXT:    [[TMP5:%.*]] = add nsw i64 [[V_1]], [[INDEX]]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], 1
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [768 x i32], ptr [[PTR]], i64 0, i64 [[TMP5]]
 ; UNROLL-NOSIMPLIFY-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [768 x i32], ptr [[PTR]], i64 0, i64 [[TMP6]]
@@ -323,7 +323,7 @@ define void @bug18724(i1 %cond, ptr %ptr, i1 %cond.2, i64 %v.1, i32 %v.2) {
 ; VEC:       [[VECTOR_BODY]]:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE2:.*]] ]
 ; VEC-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ [[TMP5]], %[[VECTOR_PH]] ], [ [[PREDPHI:%.*]], %[[PRED_STORE_CONTINUE2]] ]
-; VEC-NEXT:    [[TMP6:%.*]] = add i64 [[V_1]], [[INDEX]]
+; VEC-NEXT:    [[TMP6:%.*]] = add nsw i64 [[V_1]], [[INDEX]]
 ; VEC-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [768 x i32], ptr [[PTR]], i64 0, i64 [[TMP6]]
 ; VEC-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP7]], align 4
 ; VEC-NEXT:    br i1 [[COND_2]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]

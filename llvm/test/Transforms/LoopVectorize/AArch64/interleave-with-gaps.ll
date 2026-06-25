@@ -1006,7 +1006,7 @@ define i32 @load_factor_4_with_gap_reverse(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[VEC_PHI1:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP25:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NOTF-NEXT:    [[VEC_PHI3:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP42:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NOTF-NEXT:    [[VEC_PHI4:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP43:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NOTF-NEXT:    [[TMP6:%.*]] = sub i64 [[N]], [[INDEX]]
+; CHECK-NOTF-NEXT:    [[TMP6:%.*]] = sub nsw i64 [[N]], [[INDEX]]
 ; CHECK-NOTF-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw [16 x i8], ptr [[A]], i64 [[TMP6]]
 ; CHECK-NOTF-NEXT:    [[TMP8:%.*]] = sub nuw nsw i64 [[TMP3]], 1
 ; CHECK-NOTF-NEXT:    [[TMP9:%.*]] = mul i64 [[TMP8]], -4
@@ -1088,7 +1088,7 @@ define i32 @load_factor_4_with_gap_reverse(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF:       [[LOOP]]:
 ; CHECK-NOTF-NEXT:    [[INDEX26:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[INDEX_NEXT35:%.*]], %[[LOOP]] ]
 ; CHECK-NOTF-NEXT:    [[VEC_PHI27:%.*]] = phi <2 x i32> [ [[TMP47]], %[[SCALAR_PH]] ], [ [[TMP53:%.*]], %[[LOOP]] ]
-; CHECK-NOTF-NEXT:    [[IV:%.*]] = sub i64 [[N]], [[INDEX26]]
+; CHECK-NOTF-NEXT:    [[IV:%.*]] = sub nsw i64 [[N]], [[INDEX26]]
 ; CHECK-NOTF-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw [16 x i8], ptr [[A]], i64 [[IV]]
 ; CHECK-NOTF-NEXT:    [[TMP50:%.*]] = getelementptr inbounds i32, ptr [[ARRAYIDX]], i64 -4
 ; CHECK-NOTF-NEXT:    [[WIDE_VEC28:%.*]] = load <8 x i32>, ptr [[TMP50]], align 4
@@ -1215,7 +1215,7 @@ define void @store_factor_4_with_gap_reverse(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-NOTF:       [[VECTOR_BODY]]:
 ; CHECK-NOTF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NOTF-NEXT:    [[TMP2:%.*]] = sub i64 [[N]], [[INDEX]]
+; CHECK-NOTF-NEXT:    [[TMP2:%.*]] = sub nsw i64 [[N]], [[INDEX]]
 ; CHECK-NOTF-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], -1
 ; CHECK-NOTF-NEXT:    [[TMP4:%.*]] = add i64 [[TMP2]], -2
 ; CHECK-NOTF-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], -3
@@ -1350,7 +1350,7 @@ define i32 @load_factor_4_with_tail_gap_reverse(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    [[VEC_PHI1:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[TMP39:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NOTF-NEXT:    [[VEC_PHI2:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[TMP40:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NOTF-NEXT:    [[VEC_PHI3:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[TMP41:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NOTF-NEXT:    [[TMP2:%.*]] = sub i64 [[N]], [[INDEX]]
+; CHECK-NOTF-NEXT:    [[TMP2:%.*]] = sub nsw i64 [[N]], [[INDEX]]
 ; CHECK-NOTF-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], -1
 ; CHECK-NOTF-NEXT:    [[TMP4:%.*]] = add i64 [[TMP2]], -2
 ; CHECK-NOTF-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], -3
@@ -1507,7 +1507,7 @@ define void @store_factor_4_with_tail_gap_reverse(i64 %n, ptr noalias %a) {
 ; CHECK-NOTF-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-NOTF:       [[VECTOR_BODY]]:
 ; CHECK-NOTF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NOTF-NEXT:    [[TMP2:%.*]] = sub i64 [[N]], [[INDEX]]
+; CHECK-NOTF-NEXT:    [[TMP2:%.*]] = sub nsw i64 [[N]], [[INDEX]]
 ; CHECK-NOTF-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], -1
 ; CHECK-NOTF-NEXT:    [[TMP4:%.*]] = add i64 [[TMP2]], -2
 ; CHECK-NOTF-NEXT:    [[TMP5:%.*]] = add i64 [[TMP2]], -3

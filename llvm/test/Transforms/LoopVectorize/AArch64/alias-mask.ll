@@ -277,7 +277,7 @@ define void @alias_mask_reverse_iterate(ptr noalias %ptrA, ptr %ptrB, ptr %ptrC,
 ; CHECK-TF:       [[VECTOR_BODY]]:
 ; CHECK-TF-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-TF-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TF-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[IV_START]], [[INDEX]]
+; CHECK-TF-NEXT:    [[OFFSET_IDX:%.*]] = sub nsw i64 [[IV_START]], [[INDEX]]
 ; CHECK-TF-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[PTRA]], i64 [[OFFSET_IDX]]
 ; CHECK-TF-NEXT:    [[TMP9:%.*]] = sub nuw nsw i64 [[TMP4]], 1
 ; CHECK-TF-NEXT:    [[TMP10:%.*]] = sub i64 0, [[TMP9]]

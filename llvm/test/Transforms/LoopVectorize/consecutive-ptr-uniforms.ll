@@ -128,7 +128,7 @@ define i32 @consecutive_ptr_reverse(ptr %a, i64 %n) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[N]], [[INDEX]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub nsw i64 [[N]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 -3
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP4]], align 8
@@ -174,7 +174,7 @@ define i32 @consecutive_ptr_reverse(ptr %a, i64 %n) {
 ; INTER:       [[VECTOR_BODY]]:
 ; INTER-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; INTER-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
-; INTER-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[N]], [[INDEX]]
+; INTER-NEXT:    [[OFFSET_IDX:%.*]] = sub nsw i64 [[N]], [[INDEX]]
 ; INTER-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[OFFSET_IDX]]
 ; INTER-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 -3
 ; INTER-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP4]], align 8
@@ -386,7 +386,7 @@ define i32 @interleaved_access_reverse(ptr %p, i64 %n) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP31:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[N]], [[INDEX]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub nsw i64 [[N]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[OFFSET_IDX]], -2
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[OFFSET_IDX]], -3
@@ -459,7 +459,7 @@ define i32 @interleaved_access_reverse(ptr %p, i64 %n) {
 ; INTER:       [[VECTOR_BODY]]:
 ; INTER-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; INTER-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
-; INTER-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 [[N]], [[INDEX]]
+; INTER-NEXT:    [[OFFSET_IDX:%.*]] = sub nsw i64 [[N]], [[INDEX]]
 ; INTER-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [[PAIR:%.*]], ptr [[P]], i64 [[OFFSET_IDX]], i32 0
 ; INTER-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[TMP3]], i64 -6
 ; INTER-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP4]], align 8

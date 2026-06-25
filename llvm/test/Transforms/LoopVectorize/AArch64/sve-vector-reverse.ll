@@ -27,7 +27,7 @@ define void @vector_reverse_f64(i64 %N, ptr noalias %a, ptr noalias %b) #0{
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP11:%.*]] = sub i64 [[N]], [[INDEX]]
+; CHECK-NEXT:    [[TMP11:%.*]] = sub nsw i64 [[N]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = add nsw i64 [[TMP11]], -1
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[B:%.*]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = sub nuw nsw i64 [[TMP5]], 1
@@ -104,7 +104,7 @@ define void @vector_reverse_i64(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[N]], [[INDEX]]
+; CHECK-NEXT:    [[TMP10:%.*]] = sub nsw i64 [[N]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = add nsw i64 [[TMP10]], -1
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = sub nuw nsw i64 [[TMP8]], 1

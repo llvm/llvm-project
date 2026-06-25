@@ -13,7 +13,7 @@ define void @nusw_preservation(ptr noalias %A, ptr %B) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 1023, i32 1022, i32 1021, i32 1020>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub nsw i64 1023, [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr nusw [[STRUCT_I32_PAIR:%.*]], ptr [[A]], i64 [[OFFSET_IDX]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr nusw i32, ptr [[TMP0]], i64 -6
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP2]], align 4
@@ -73,7 +73,7 @@ define void @inbounds_preservation(ptr noalias %A, ptr %B) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 1023, i32 1022, i32 1021, i32 1020>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub nsw i64 1023, [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[STRUCT_I32_PAIR:%.*]], ptr [[A]], i64 [[OFFSET_IDX]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[TMP0]], i64 -6
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP2]], align 4
@@ -133,7 +133,7 @@ define void @nuw_drop(ptr noalias %A, ptr %B) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i32> [ <i32 1023, i32 1022, i32 1021, i32 1020>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub nsw i64 1023, [[INDEX]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr nuw [[STRUCT_I32_PAIR:%.*]], ptr [[A]], i64 [[OFFSET_IDX]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[TMP0]], i64 -6
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i32>, ptr [[TMP2]], align 4

@@ -44,7 +44,7 @@ define void @vector_reverse_mask_nxv4i1(ptr %a, ptr %cond, i64 %N) #0 {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[N]], [[INDEX]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub nsw i64 [[N]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP5]], -1
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds double, ptr [[COND]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub nuw nsw i64 [[TMP3]], 1

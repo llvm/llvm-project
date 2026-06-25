@@ -30,7 +30,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:      CURRENT-ITERATION-PHI vp<[[VP5:%[0-9]+]]> = phi ir<0>, vp<%current.iteration.next>
 ; CHECK-NEXT:      EMIT-SCALAR vp<%avl> = phi [ vp<[[VP3]]>, vector.ph ], [ vp<%avl.next>, vector.body ]
 ; CHECK-NEXT:      EMIT-SCALAR vp<%evl> = EXPLICIT-VECTOR-LENGTH vp<%avl>
-; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = DERIVED-IV ir<%n> + vp<[[VP5]]> * ir<-1>
+; CHECK-NEXT:      vp<[[VP6:%[0-9]+]]> = DERIVED-IV nsw ir<%n> + vp<[[VP5]]> * ir<-1>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<-1>, vp<%evl>
 ; CHECK-NEXT:      CLONE ir<%i.0> = add nsw vp<[[VP7]]>, ir<-1>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%idxprom> = zext ir<%i.0> to i64
