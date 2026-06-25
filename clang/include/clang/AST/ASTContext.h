@@ -238,13 +238,12 @@ class ASTContext : public RefCountedBase<ASTContext> {
   mutable std::vector<VariableArrayType*> VariableArrayTypes;
   mutable llvm::ContextualFoldingSet<DependentSizedArrayType, ASTContext &>
       DependentSizedArrayTypes;
-  mutable llvm::ContextualFoldingSet<DependentSizedExtVectorType, ASTContext &>
+  mutable llvm::FoldingSet<DependentSizedExtVectorType>
       DependentSizedExtVectorTypes;
   mutable llvm::ContextualFoldingSet<DependentAddressSpaceType, ASTContext &>
       DependentAddressSpaceTypes;
   mutable llvm::FoldingSet<VectorType> VectorTypes;
-  mutable llvm::ContextualFoldingSet<DependentVectorType, ASTContext &>
-      DependentVectorTypes;
+  mutable llvm::FoldingSet<DependentVectorType> DependentVectorTypes;
   mutable llvm::FoldingSet<ConstantMatrixType> MatrixTypes;
   mutable llvm::ContextualFoldingSet<DependentSizedMatrixType, ASTContext &>
       DependentSizedMatrixTypes;
