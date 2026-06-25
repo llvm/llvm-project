@@ -55266,8 +55266,8 @@ static SDValue combineVEXTRACT_STORE(SDNode *N, SelectionDAG &DAG,
 /// A horizontal-op B, for some already available A and B, and if so then LHS is
 /// set to A, RHS to B, and the routine returns 'true'.
 static bool isHorizontalBinOp(unsigned HOpcode, SDValue &LHS, SDValue &RHS,
-                              SelectionDAG &DAG, const X86Subtarget &Subtarget,
-                              bool IsCommutative,
+                              const SelectionDAG &DAG,
+                              const X86Subtarget &Subtarget, bool IsCommutative,
                               SmallVectorImpl<int> &PostShuffleMask,
                               bool ForceHorizOp) {
   // If either operand is undef, bail out. The binop should be simplified.
@@ -55312,8 +55312,11 @@ static bool isHorizontalBinOp(unsigned HOpcode, SDValue &LHS, SDValue &RHS,
         ShuffleMask.assign(ScaledMask.begin(), ScaledMask.end());
       }
       if (UseSubVector && SrcOps.size() == 1 &&
-          scaleShuffleElements(SrcMask, 2 * NumElts, ScaledMask)) {
-        std::tie(N0, N1) = DAG.SplitVector(SrcOps[0], SDLoc(Op));
+          scaleShuffleElements(SrcMask, 2 * NumElts, ScaledMask) &&
+          SrcOps[0].getOpcode() == ISD::CONCAT_VECTORS &&
+          SrcOps[0].getNumOperands() == 2) {
+        N0 = SrcOps[0].getOperand(0);
+        N1 = SrcOps[0].getOperand(1);
         ArrayRef<int> Mask = ArrayRef<int>(ScaledMask).slice(0, NumElts);
         ShuffleMask.assign(Mask.begin(), Mask.end());
       }
@@ -55449,8 +55452,8 @@ static bool isHorizontalBinOp(unsigned HOpcode, SDValue &LHS, SDValue &RHS,
                              DAG, Subtarget))
     return false;
 
-  LHS = DAG.getBitcast(VT, NewLHS);
-  RHS = DAG.getBitcast(VT, NewRHS);
+  LHS = NewLHS;
+  RHS = NewRHS;
   return true;
 }
 
@@ -55481,7 +55484,9 @@ static SDValue combineToHorizontalAddSub(SDNode *N, SelectionDAG &DAG,
       auto HorizOpcode = IsAdd ? X86ISD::FHADD : X86ISD::FHSUB;
       if (isHorizontalBinOp(HorizOpcode, LHS, RHS, DAG, Subtarget, IsAdd,
                             PostShuffleMask, MergableHorizOp(HorizOpcode))) {
-        SDValue HorizBinOp = DAG.getNode(HorizOpcode, SDLoc(N), VT, LHS, RHS);
+        SDValue HorizBinOp =
+            DAG.getNode(HorizOpcode, SDLoc(N), VT, DAG.getBitcast(VT, LHS),
+                        DAG.getBitcast(VT, RHS));
         if (!PostShuffleMask.empty())
           HorizBinOp = DAG.getVectorShuffle(VT, SDLoc(HorizBinOp), HorizBinOp,
                                             DAG.getUNDEF(VT), PostShuffleMask);
@@ -55497,7 +55502,6 @@ static SDValue combineToHorizontalAddSub(SDNode *N, SelectionDAG &DAG,
       break;
     if (VT == MVT::v8i16 || VT == MVT::v16i16 ||
         (!IsSat && (VT == MVT::v4i32 || VT == MVT::v8i32))) {
-
       SDValue LHS = N->getOperand(0);
       SDValue RHS = N->getOperand(1);
       auto HorizOpcode = IsSat ? (IsAdd ? X86ISD::HADDS : X86ISD::HSUBS)
@@ -55508,8 +55512,9 @@ static SDValue combineToHorizontalAddSub(SDNode *N, SelectionDAG &DAG,
                                         ArrayRef<SDValue> Ops) {
           return DAG.getNode(HorizOpcode, DL, Ops[0].getValueType(), Ops);
         };
-        SDValue HorizBinOp = SplitOpsAndApply(DAG, Subtarget, SDLoc(N), VT,
-                                              {LHS, RHS}, HOpBuilder);
+        SDValue HorizBinOp = SplitOpsAndApply(
+            DAG, Subtarget, SDLoc(N), VT,
+            {DAG.getBitcast(VT, LHS), DAG.getBitcast(VT, RHS)}, HOpBuilder);
         if (!PostShuffleMask.empty())
           HorizBinOp = DAG.getVectorShuffle(VT, SDLoc(HorizBinOp), HorizBinOp,
                                             DAG.getUNDEF(VT), PostShuffleMask);
@@ -59617,12 +59622,12 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
       return SDValue();
     if (!Mul) {
       // First time an extract_elt's source vector is visited. Must be a MUL
-      // with 2X number of vector elements than the BUILD_VECTOR.
+      // with at least 2X number of vector elements than the BUILD_VECTOR.
       // Both extracts must be from same MUL.
       Mul = Vec0L;
       if ((Mul.getOpcode() != ISD::MUL && Mul.getOpcode() != ISD::SHL &&
            Mul.getOpcode() != ISD::SIGN_EXTEND) ||
-          Mul.getValueType().getVectorNumElements() != 2 * e)
+          Mul.getValueType().getVectorNumElements() < (2 * e))
         return SDValue();
     }
     // Check that the extract is from the same MUL previously seen.
@@ -59632,6 +59637,7 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
 
   EVT TruncVT = EVT::getVectorVT(*DAG.getContext(), MVT::i16,
                                  VT.getVectorNumElements() * 2);
+  EVT MulVT = TruncVT.changeVectorElementType(*DAG.getContext(), MVT::i32);
 
   SDValue N0, N1;
   if (Mul.getOpcode() == ISD::MUL) {
@@ -59641,15 +59647,17 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
         Mode == ShrinkMode::MULU16)
       return SDValue();
 
-    N0 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Mul.getOperand(0));
-    N1 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, Mul.getOperand(1));
+    N0 = DAG.getExtractSubvector(DL, MulVT, Mul.getOperand(0), 0);
+    N1 = DAG.getExtractSubvector(DL, MulVT, Mul.getOperand(1), 0);
+    N0 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, N0);
+    N1 = DAG.getNode(ISD::TRUNCATE, DL, TruncVT, N1);
   } else if (Mul.getOpcode() == ISD::SHL) {
     SDValue ShVal = Mul.getOperand(0);
     if (ShVal.getOpcode() != ISD::SIGN_EXTEND)
       return SDValue();
 
     N0 = ShVal.getOperand(0);
-    if (N0.getValueType() != TruncVT)
+    if (N0.getValueType().getScalarType() != MVT::i16)
       return SDValue();
 
     // A shift by more than 15 would overflow an i16.
@@ -59658,17 +59666,18 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
         }))
       return SDValue();
 
+    N0 = DAG.getExtractSubvector(DL, TruncVT, N0, 0);
+    N1 = DAG.getExtractSubvector(DL, MulVT, Mul.getOperand(1), 0);
     N1 = DAG.getNode(ISD::SHL, DL, TruncVT, DAG.getConstant(1, DL, TruncVT),
-                     DAG.getZExtOrTrunc(Mul.getOperand(1), DL, TruncVT));
+                     DAG.getZExtOrTrunc(N1, DL, TruncVT));
   } else {
     assert(Mul.getOpcode() == ISD::SIGN_EXTEND);
 
-    // Add a trivial multiplication with 1 so that we can make use of VPMADDWD.
-    N0 = Mul.getOperand(0);
-
-    if (N0.getValueType() != TruncVT)
+    if (Mul.getOperand(0).getValueType().getScalarType() != MVT::i16)
       return SDValue();
 
+    // Add a trivial multiplication with 1 so that we can make use of VPMADDWD.
+    N0 = DAG.getExtractSubvector(DL, TruncVT, Mul.getOperand(0), 0);
     N1 = DAG.getConstant(1, DL, TruncVT);
   }
 
@@ -59814,15 +59823,12 @@ static SDValue combineAddOfPMADDWD(SelectionDAG &DAG, SDValue N0, SDValue N1,
 
   unsigned NumElts = VT.getVectorNumElements();
   MVT OpVT = N0.getOperand(0).getSimpleValueType();
-  APInt DemandedBits = APInt::getAllOnes(OpVT.getScalarSizeInBits());
   APInt DemandedHiElts = APInt::getSplat(2 * NumElts, APInt(2, 2));
 
-  bool Op0HiZero =
-      DAG.MaskedValueIsZero(N0.getOperand(0), DemandedBits, DemandedHiElts) ||
-      DAG.MaskedValueIsZero(N0.getOperand(1), DemandedBits, DemandedHiElts);
-  bool Op1HiZero =
-      DAG.MaskedValueIsZero(N1.getOperand(0), DemandedBits, DemandedHiElts) ||
-      DAG.MaskedValueIsZero(N1.getOperand(1), DemandedBits, DemandedHiElts);
+  bool Op0HiZero = DAG.MaskedVectorIsZero(N0.getOperand(0), DemandedHiElts) ||
+                   DAG.MaskedVectorIsZero(N0.getOperand(1), DemandedHiElts);
+  bool Op1HiZero = DAG.MaskedVectorIsZero(N1.getOperand(0), DemandedHiElts) ||
+                   DAG.MaskedVectorIsZero(N1.getOperand(1), DemandedHiElts);
 
   // TODO: Check for zero lower elements once we have actual codegen that
   // creates them.

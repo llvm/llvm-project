@@ -1052,6 +1052,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::FMINIMUMNUM,
                        ISD::FMAXIMUMNUM,
                        ISD::FMA,
+                       ISD::ABS,
                        ISD::SMIN,
                        ISD::SMAX,
                        ISD::UMIN,
@@ -8795,6 +8796,7 @@ SDValue SITargetLowering::lowerFLDEXP(SDValue Op, SelectionDAG &DAG) const {
 
 static unsigned getExtOpcodeForPromotedOp(SDValue Op) {
   switch (Op->getOpcode()) {
+  case ISD::ABS:
   case ISD::SRA:
   case ISD::SMIN:
   case ISD::SMAX:
@@ -8821,6 +8823,26 @@ static unsigned getExtOpcodeForPromotedOp(SDValue Op) {
   default:
     llvm_unreachable("unexpected opcode!");
   }
+}
+
+SDValue
+SITargetLowering::promoteUniformUnaryOpToI32(SDValue Op,
+                                             DAGCombinerInfo &DCI) const {
+  EVT OpTy = Op.getValueType();
+  SelectionDAG &DAG = DCI.DAG;
+  EVT ExtTy = OpTy.changeElementType(*DAG.getContext(), MVT::i32);
+
+  if (isNarrowingProfitable(Op.getNode(), ExtTy, OpTy))
+    return SDValue();
+
+  SDLoc DL(Op);
+  SDValue Input = Op.getOperand(0);
+  const unsigned ExtOp = getExtOpcodeForPromotedOp(Op);
+  Input = DAG.getNode(ExtOp, DL, ExtTy, Input);
+
+  SDValue NewVal = DAG.getNode(Op.getOpcode(), DL, ExtTy, Input);
+
+  return DAG.getNode(ISD::TRUNCATE, DL, OpTy, NewVal);
 }
 
 SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
@@ -18543,6 +18565,10 @@ SDValue SITargetLowering::performSelectCombine(SDNode *N,
 SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
   switch (N->getOpcode()) {
+  case ISD::ABS:
+    if (SDValue Res = promoteUniformUnaryOpToI32(SDValue(N, 0), DCI))
+      return Res;
+    break;
   case ISD::ADD:
   case ISD::SUB:
   case ISD::SHL:
