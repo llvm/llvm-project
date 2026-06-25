@@ -4169,26 +4169,29 @@ static void recordWMMABankSiblings(Register VirtReg, const MachineInstr &MI,
   // hint to WMMAs whose matrix source operands are a multiple of 128 bits.
   Register Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0)->getReg();
   Register Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1)->getReg();
-  if (TRI->getRegSizeInBits(Src0, MRI) % 128 != 0 ||
-      TRI->getRegSizeInBits(Src1, MRI) % 128 != 0)
+  Register Vdst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst)->getReg();
+  if (!TRI->isVGPR(MRI, Src0) || !TRI->isVGPR(MRI, Src1))
     return;
 
-  Register Src2, Vdst;
-  const MachineOperand *MOSrc2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
-  if (MOSrc2 && MOSrc2->isReg() && MOSrc2->getReg().isVirtual())
-    Src2 = MOSrc2->getReg();
-  const MachineOperand *MODst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
-  if (MODst && MODst->isReg() && MODst->getReg().isVirtual())
-    Vdst = MODst->getReg();
+  auto saveSiblings = [&](SmallVector<Register, 3> Regs) {
+    if (!is_contained(Regs, VirtReg))
+      return;
+    for (Register Reg : Regs) {
+      if (Reg != VirtReg && !is_contained(Siblings, Reg))
+        Siblings.push_back(Reg);
+    }
+  };
 
-  // Record, for each matrix operand, the other matrix operands of this WMMA so
-  // SIRegisterInfo::getRegAllocationHints can steer them onto distinct VGPR
-  // banks. A register used by several WMMAs accumulates the union of its
-  // siblings. Src2 may be invalid (absent or non-virtual) and is skipped.
-  for (Register Reg : {Src0, Src1, Src2, Vdst}) {
-    if (Reg.isValid() && Reg != VirtReg && !is_contained(Siblings, Reg))
-      Siblings.push_back(Reg);
+  // Src2 == Dst :=> 2 cycle penalty for bank convlict between src0, src1, src2
+  // Src2 != Dst :=> 1 cycle penalty for bank convlict between src0, src1
+  const MachineOperand *MOSrc2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
+  if (MOSrc2 && MOSrc2->isReg() && MOSrc2->getReg().isVirtual() &&
+      MOSrc2->getReg() == Vdst) {
+    saveSiblings({Src0, Src1, Vdst});
+    return;
   }
+
+  saveSiblings({Src0, Src1});
 }
 
 // VGPR bank-conflict avoidance for v_wmma_* operands on gfx11/gfx12.
@@ -4257,6 +4260,18 @@ void SIRegisterInfo::addWMMABankConflictHints(Register VirtReg,
     MaxIdx = std::max(MaxIdx, Idx);
   }
 
+  // Precompute once per function:
+  BitVector CalleeSavedUnits(getNumRegUnits());
+  for (const MCPhysReg *CSR = MRI.getCalleeSavedRegs(); CSR && *CSR; ++CSR)
+    for (MCRegUnit U : regunits(*CSR))
+      CalleeSavedUnits.set(static_cast<unsigned>(U));
+  // Then for a candidate physreg P (the tuple at Start):
+  auto isCalleeSaved = [&](MCRegister P) {
+    return any_of(regunits(P), [&](MCRegUnit U) {
+      return CalleeSavedUnits.test(static_cast<unsigned>(U));
+    });
+  };
+
   // Anchor the candidate window to the function's actual VGPR footprint: peak
   // WMMA-region pressure, rounded up to the allocation granule and capped by
   // the VGPR budget. Without this the window is the top of the whole VGPR file
@@ -4279,11 +4294,11 @@ void SIRegisterInfo::addWMMABankConflictHints(Register VirtReg,
   unsigned BankSize = N * W;
   for (unsigned n = 0; n < N; n++) {
     for (unsigned Bank = 0; Bank < 4; Bank++) {
-      if (((UsedBankMask >> Bank) & 1) != 0)
+      unsigned Start = n * W + Bank * (BankSize + 1);
+      if (((UsedBankMask >> (Start % 4)) & 1) != 0)
         continue;
-      unsigned Start = Bank * BankSize + Bank + n * W;
       auto RIt = IdxToReg.find(Start);
-      if (RIt != IdxToReg.end())
+      if (RIt != IdxToReg.end() && !isCalleeSaved(RIt->second))
         Hints.push_back(RIt->second);
     }
   }
