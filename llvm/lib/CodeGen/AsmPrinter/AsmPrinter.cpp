@@ -822,10 +822,19 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
   if (GV->isTagged()) {
     Triple T = TM.getTargetTriple();
 
-    if (T.getArch() != Triple::aarch64)
+    auto arch = T.getArch();
+
+    bool supportMemtagGlobals = false;
+
+    if (T.isWasm() || arch == Triple::aarch64) {
+      supportMemtagGlobals = true;
+    }
+
+    if (!supportMemtagGlobals)
       OutContext.reportError(SMLoc(),
                              "tagged symbols (-fsanitize=memtag-globals) are "
-                             "only supported on AArch64");
+                             "only supported on AArch64 or WebAssembly");
+
     OutStreamer->emitSymbolAttribute(EmittedSym, MCSA_Memtag);
   }
 

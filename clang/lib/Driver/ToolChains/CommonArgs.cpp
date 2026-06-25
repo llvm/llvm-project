@@ -1823,22 +1823,24 @@ bool tools::addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
     CmdArgs.push_back("--export-dynamic-symbol=__cfi_check");
 
   if (SanArgs.hasMemTag()) {
-    CmdArgs.push_back("-z");
-    CmdArgs.push_back(
-        Args.MakeArgString("memtag-mode=" + SanArgs.getMemtagMode()));
-
-    if (SanArgs.hasMemtagHeap()) {
+    if (!TC.getTriple().isWasm()) {
       CmdArgs.push_back("-z");
-      CmdArgs.push_back("memtag-heap");
-    }
+      CmdArgs.push_back(
+          Args.MakeArgString("memtag-mode=" + SanArgs.getMemtagMode()));
 
-    if (SanArgs.hasMemtagStack()) {
-      CmdArgs.push_back("-z");
-      CmdArgs.push_back("memtag-stack");
-    }
+      if (SanArgs.hasMemtagHeap()) {
+        CmdArgs.push_back("-z");
+        CmdArgs.push_back("memtag-heap");
+      }
 
-    if (TC.getTriple().isAndroid())
-      CmdArgs.push_back("--android-memtag-note");
+      if (SanArgs.hasMemtagStack()) {
+        CmdArgs.push_back("-z");
+        CmdArgs.push_back("memtag-stack");
+      }
+
+      if (TC.getTriple().isAndroid())
+        CmdArgs.push_back("--android-memtag-note");
+    }
   }
 
   return !StaticRuntimes.empty() || !NonWholeStaticRuntimes.empty() ||

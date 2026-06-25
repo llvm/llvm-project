@@ -71,8 +71,10 @@ FunctionPass *createWebAssemblyLowerBrUnless();
 FunctionPass *createWebAssemblyRegNumbering();
 FunctionPass *createWebAssemblyVecReduce();
 FunctionPass *createWebAssemblyDebugFixup();
+FunctionPass *createWebAssemblyStackTaggingPass();
 FunctionPass *createWebAssemblyPeephole();
 ModulePass *createWebAssemblyMCLowerPrePass();
+ModulePass *createWebAssemblyGlobalsTaggingPass();
 
 // PassRegistry initialization declarations.
 void initializeFixFunctionBitcastsPass(PassRegistry &);
@@ -97,12 +99,14 @@ void initializeWebAssemblyMCLowerPrePassPass(PassRegistry &);
 void initializeWebAssemblyMemIntrinsicResultsPass(PassRegistry &);
 void initializeWebAssemblyNullifyDebugValueListsPass(PassRegistry &);
 void initializeWebAssemblyOptimizeLiveIntervalsPass(PassRegistry &);
+void initializeWebAssemblyStackTaggingPass(PassRegistry &);
 void initializeWebAssemblyPeepholePass(PassRegistry &);
 void initializeWebAssemblyRegColoringPass(PassRegistry &);
 void initializeWebAssemblyRegNumberingPass(PassRegistry &);
 void initializeWebAssemblyRegStackifyPass(PassRegistry &);
 void initializeWebAssemblyReplacePhysRegsPass(PassRegistry &);
 void initializeWebAssemblySetP2AlignOperandsPass(PassRegistry &);
+void initializeWebAssemblyGlobalsTaggingPass(PassRegistry &);
 
 namespace WebAssembly {
 enum TargetIndex {
