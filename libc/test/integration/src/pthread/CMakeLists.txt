@@ -291,3 +291,20 @@ add_integration_test(
     libc.src.__support.CPP.array
     libc.src.__support.CPP.new
 )
+
+add_integration_test(
+  pthread_setschedparam_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_setschedparam_test.cpp
+  DEPENDS
+    libc.hdr.sched_macros
+    libc.include.pthread
+    libc.src.errno.errno
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_join
+    libc.src.pthread.pthread_self
+    libc.src.pthread.pthread_setschedparam
+    libc.src.pthread.pthread_getschedparam
+)
