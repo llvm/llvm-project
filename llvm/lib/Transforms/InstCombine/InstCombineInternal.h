@@ -484,8 +484,7 @@ private:
   /// Return true if the all-lanes demanded-elements query can be skipped for
   /// this intermediate insertelement chain node because a bounded scan proves
   /// it cannot simplify the chain before reaching the depth limit.
-  bool canSkipDemandedEltsInInsertChain(InsertElementInst &IE,
-                                        unsigned VWidth);
+  bool canSkipDemandedEltsInInsertChain(InsertElementInst &IE, unsigned VWidth);
 
 public:
   /// Create and insert the idiom we use to indicate a block is unreachable
