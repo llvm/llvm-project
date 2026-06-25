@@ -2478,9 +2478,17 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(
                                decl_line, decl_column, call_file, call_line,
                                call_column, &frame_base)) {
     Mangled func_name;
-    if (mangled)
+    if (mangled && name &&
+        Mangled::GetManglingScheme(mangled) == Mangled::eManglingSchemeNone) {
+      // The linkage name is present but is not actually a mangled name (e.g.
+      // wasi-libc renames `main` to its `__main_argc_argv` argv-passing
+      // wrapper). Display the source name (DW_AT_name) and keep the linkage
+      // name as the symbol so lookups by either name still resolve.
+      func_name.SetDemangledName(ConstString(name));
+      func_name.SetMangledName(ConstString(mangled));
+    } else if (mangled) {
       func_name.SetValue(ConstString(mangled));
-    else if ((die.GetParent().Tag() == DW_TAG_compile_unit ||
+    } else if ((die.GetParent().Tag() == DW_TAG_compile_unit ||
               die.GetParent().Tag() == DW_TAG_partial_unit) &&
              Language::LanguageIsCPlusPlus(
                  SymbolFileDWARF::GetLanguage(*die.GetCU())) &&

@@ -99,7 +99,7 @@ struct GenELF64KernelTy : public GenericKernelTy {
                            "cooperative kernel launch not supported for host");
     // TODO: The data will need to be copied locally if we ever support
     //       asynchronous kernel launches in the host interface.
-    Func(LaunchParams.Data);
+    Func(LaunchParams.Ptrs);
     return Plugin::success();
   }
 
@@ -112,8 +112,9 @@ struct GenELF64KernelTy : public GenericKernelTy {
   }
 
 private:
-  /// Host kernel arguments are defined as a single, contiguous buffer.
-  using KernelTy = void(void *);
+  /// Host kernel arguments are defined as an array of pointers, one per
+  /// argument, each pointing to that argument's storage.
+  using KernelTy = void(void **);
   /// The kernel function to execute.
   KernelTy *Func;
 };

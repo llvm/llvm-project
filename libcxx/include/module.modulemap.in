@@ -2125,6 +2125,11 @@ module std [system] {
     export *
   }
 
+  module text_encoding {
+    header "text_encoding"
+    export *
+  }
+
   module thread {
     module formatter              { header "__thread/formatter.h" }
     module id                     { header "__thread/id.h" }
