@@ -194,9 +194,7 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
    The result will have the same type as the original value.
 
    This operation is guaranteed to not leave the intermediate value
-   available for attack before it is re-signed. The authentication is
-   performed using autia171615/autib171615 instructions which include the
-   PC value in the signature.
+   available for attack before it is re-signed.
 
    Do not pass a null pointer to this function. A null pointer
    will not successfully authenticate. */

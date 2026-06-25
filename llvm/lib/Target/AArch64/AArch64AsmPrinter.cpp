@@ -2260,7 +2260,7 @@ AArch64AsmPrinter::PtrAuthSchema AArch64AsmPrinter::PtrAuthSchema::CreateRegReg(
   Schema.Key = Key;
   Schema.IntDisc = 0;
   Schema.AddrDisc = AddrDisc;
-  Schema.AddrDiscIsKilled = true;
+  Schema.AddrDiscIsKilled = false;
   Schema.PCDisc = PCDisc;
   return Schema;
 }
@@ -2324,6 +2324,7 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
     Value *DS) {
   const bool IsResign = SignSchema.has_value();
   const bool WithPC = AuthSchema.PCDisc != AArch64::NoRegister;
+  assert(!SignSchema || SignSchema->PCDisc == AArch64::NoRegister);
 
   // We expand AUT/AUTPAC (and their PC-blending variants) into:
   //
