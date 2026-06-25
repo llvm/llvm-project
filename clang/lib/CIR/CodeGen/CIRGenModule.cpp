@@ -1449,7 +1449,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
 
   if (getLangOpts().CUDA &&
       (isCUDASharedVar || isCUDAShadowVar || isCUDADeviceShadowVar)) {
-    init = cir::PoisonAttr::get(convertType(vd->getType()));
+    init = cir::UndefAttr::get(convertType(vd->getType()));
   } else if (vd->hasAttr<LoaderUninitializedAttr>()) {
     errorNYI(vd->getSourceRange(),
              "emitGlobalVarDefinition: loader uninitialized attribute");
