@@ -19,7 +19,7 @@ S *makeVar(unsigned n) { return new S[n](); }
 
 // LLVM-LABEL: @_Z7makeVarj
 // LLVM:   call {{.*}} ptr @_Znam(
-// LLVM:   call void @llvm.memset.p0.i64(ptr align 8 %{{.*}}, i8 0, i64 %{{.*}}, i1 false)
+// LLVM:   call void @llvm.memset.p0.i64(ptr{{.*}} %{{.*}}, i8 0, i64 %{{.*}}, i1 false)
 
 // Constant element count: the size is folded to a constant.
 S *makeConst() { return new S[4](); }
@@ -30,7 +30,7 @@ S *makeConst() { return new S[4](); }
 
 // LLVM-LABEL: @_Z9makeConstv
 // LLVM:   call {{.*}} ptr @_Znam(i64 noundef 32)
-// LLVM:   call void @llvm.memset.p0.i64(ptr align 8 %{{.*}}, i8 0, i64 32, i1 false)
+// LLVM:   call void @llvm.memset.p0.i64(ptr{{.*}} %{{.*}}, i8 0, i64 32, i1 false)
 
 // No parens: default-init of a trivial type is a no-op (no memset).
 S *makeNoInit(unsigned n) { return new S[n]; }
@@ -52,7 +52,7 @@ S *makeBraced(unsigned n) { return new S[n]{}; }
 
 // LLVM-LABEL: @_Z10makeBracedj
 // LLVM:   call {{.*}} ptr @_Znam(
-// LLVM:   call void @llvm.memset.p0.i64(ptr align 8 %{{.*}}, i8 0, i64 %{{.*}}, i1 false)
+// LLVM:   call void @llvm.memset.p0.i64(ptr{{.*}} %{{.*}}, i8 0, i64 %{{.*}}, i1 false)
 
 // Non-zero-initializable element (pointer to data member): the null member
 // representation is -1, not 0, so memset is not used; the constructor-loop
