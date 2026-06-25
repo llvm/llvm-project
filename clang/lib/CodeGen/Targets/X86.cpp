@@ -1616,7 +1616,7 @@ void X86_64TargetCodeGenInfo::checkFunctionABI(CodeGenModule &CGM,
   };
 
   // psABI warnings & errors for function definitions that are only visible
-  // in this translation unit are handled at call site by checkFunctionCallABI
+  // in this translation unit are handled at call site by checkFunctionCallABI.
   if (!FD->isExternallyVisible())
     return;
 
