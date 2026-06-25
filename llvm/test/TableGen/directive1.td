@@ -126,6 +126,34 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  constexpr auto TDLC_clauseb = Clause::TDLC_clauseb;
 // CHECK-NEXT:  constexpr auto TDLC_clausec = Clause::TDLC_clausec;
 // CHECK-EMPTY:
+// CHECK-NEXT:  enum class LoopModifier {
+// CHECK-NEXT:    flattened,
+// CHECK-NEXT:    First_ = flattened,
+// CHECK-NEXT:    fused,
+// CHECK-NEXT:    grid,
+// CHECK-NEXT:    identity,
+// CHECK-NEXT:    interchanged,
+// CHECK-NEXT:    intratile,
+// CHECK-NEXT:    offsets,
+// CHECK-NEXT:    reversed,
+// CHECK-NEXT:    split,
+// CHECK-NEXT:    unrolled,
+// CHECK-NEXT:    Last_ = unrolled,
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
+// CHECK-NEXT:  static constexpr std::size_t LoopModifier_enumSize = 10;
+// CHECK-EMPTY:
+// CHECK-NEXT:  constexpr auto flattened = LoopModifier::flattened;
+// CHECK-NEXT:  constexpr auto fused = LoopModifier::fused;
+// CHECK-NEXT:  constexpr auto grid = LoopModifier::grid;
+// CHECK-NEXT:  constexpr auto identity = LoopModifier::identity;
+// CHECK-NEXT:  constexpr auto interchanged = LoopModifier::interchanged;
+// CHECK-NEXT:  constexpr auto intratile = LoopModifier::intratile;
+// CHECK-NEXT:  constexpr auto offsets = LoopModifier::offsets;
+// CHECK-NEXT:  constexpr auto reversed = LoopModifier::reversed;
+// CHECK-NEXT:  constexpr auto split = LoopModifier::split;
+// CHECK-NEXT:  constexpr auto unrolled = LoopModifier::unrolled;
+// CHECK-EMPTY:
 // CHECK-NEXT:  enum class AKind {
 // CHECK-NEXT:    TDLCV_vala=1,
 // CHECK-NEXT:    TDLCV_valb=2,
@@ -194,6 +222,8 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  LLVM_ABI bool isAllowedClauseForDirective(Directive D, Clause C, unsigned Version);
 // CHECK-EMPTY:
 // CHECK-NEXT:  constexpr std::size_t getMaxLeafCount() { return 0; }
+// CHECK-NEXT:  LLVM_ABI bool isAllowedLoopModifier(Directive D, LoopModifier LM);
+// CHECK-NEXT:  LLVM_ABI StringRef getLoopModifierName(LoopModifier LM, unsigned Ver = 0);
 // CHECK-NEXT:  LLVM_ABI AKind getAKind(StringRef Str);
 // CHECK-NEXT:  LLVM_ABI StringRef getTdlAKindName(AKind x);
 // CHECK-EMPTY:
@@ -212,6 +242,10 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
 // CHECK-NEXT:  template <> struct enum_iteration_traits<tdl::Clause> {
+// CHECK-NEXT:    static constexpr bool is_iterable = true;
+// CHECK-NEXT:  };
+// CHECK-EMPTY:
+// CHECK-NEXT:  template <> struct enum_iteration_traits<tdl::LoopModifier> {
 // CHECK-NEXT:    static constexpr bool is_iterable = true;
 // CHECK-NEXT:  };
 // CHECK-EMPTY:
@@ -465,6 +499,42 @@ def TDL_DirA : Directive<[Spelling<"dira">]> {
 // IMPL-NEXT:        break;
 // IMPL-NEXT:    }
 // IMPL-NEXT:    llvm_unreachable("Invalid Tdl Directive kind");
+// IMPL-NEXT:  }
+// IMPL-EMPTY:
+// IMPL-NEXT:  bool llvm::tdl::isAllowedLoopModifier(llvm::tdl::Directive D, llvm::tdl::LoopModifier LM) {
+// IMPL-NEXT:    assert(unsigned(D) <= Directive_enumSize);
+// IMPL-NEXT:    switch (D) {
+// IMPL-NEXT:      case TDLD_dira:
+// IMPL-NEXT:        return false;
+// IMPL-NEXT:        break;
+// IMPL-NEXT:    }
+// IMPL-NEXT:    llvm_unreachable("Invalid Tdl Directive kind");
+// IMPL-NEXT:  }
+// IMPL-EMPTY:
+// IMPL-NEXT:  llvm::StringRef llvm::tdl::getLoopModifierName(llvm::tdl::LoopModifier Kind, unsigned Version) {
+// IMPL-NEXT:    switch (Kind) {
+// IMPL-NEXT:      case flattened:
+// IMPL-NEXT:        return "flattened";
+// IMPL-NEXT:      case fused:
+// IMPL-NEXT:        return "fused";
+// IMPL-NEXT:      case grid:
+// IMPL-NEXT:        return "grid";
+// IMPL-NEXT:      case identity:
+// IMPL-NEXT:        return "identity";
+// IMPL-NEXT:      case interchanged:
+// IMPL-NEXT:        return "interchanged";
+// IMPL-NEXT:      case intratile:
+// IMPL-NEXT:        return "intratile";
+// IMPL-NEXT:      case offsets:
+// IMPL-NEXT:        return "offsets";
+// IMPL-NEXT:      case reversed:
+// IMPL-NEXT:        return "reversed";
+// IMPL-NEXT:      case split:
+// IMPL-NEXT:        return "split";
+// IMPL-NEXT:      case unrolled:
+// IMPL-NEXT:        return "unrolled";
+// IMPL-NEXT:    }
+// IMPL-NEXT:    llvm_unreachable("Invalid  LoopModifier kind");
 // IMPL-NEXT:  }
 // IMPL-EMPTY:
 // IMPL-NEXT:  static_assert(sizeof(llvm::tdl::Directive) == sizeof(int));

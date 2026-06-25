@@ -549,7 +549,7 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
   // METADIRECTIVE.
   // In other cases it's a part of other constructs that handle directive
   // context stack by themselves.
-  if (!GetDirectiveNest(MetadirectiveNest)) {
+  if (!GetDirectiveNest(MetadirectiveNest) && !GetDirectiveNest(ApplyNest)) {
     return;
   }
 
@@ -578,7 +578,7 @@ void OmpStructureChecker::Enter(const parser::OmpDirectiveSpecification &x) {
 }
 
 void OmpStructureChecker::Leave(const parser::OmpDirectiveSpecification &x) {
-  if (GetDirectiveNest(MetadirectiveNest)) {
+  if (GetDirectiveNest(MetadirectiveNest) || GetDirectiveNest(ApplyNest)) {
     dirContext_.pop_back();
   }
 }

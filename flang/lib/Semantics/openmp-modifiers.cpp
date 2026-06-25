@@ -457,6 +457,22 @@ const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpLinearModifier>() {
 }
 
 template <>
+const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpLoopModifier>() {
+  static const OmpModifierDescriptor desc{
+      /*name=*/"loop-modifier",
+      /*props=*/
+      {
+          {60, {}},
+      },
+      /*clauses=*/
+      {
+          {60, {Clause::OMPC_apply}},
+      },
+  };
+  return desc;
+}
+
+template <>
 const OmpModifierDescriptor &OmpGetDescriptor<parser::OmpLowerBound>() {
   static const OmpModifierDescriptor desc{
       /*name=*/"lower-bound",
