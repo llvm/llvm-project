@@ -400,7 +400,8 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator--(int) {
+  _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator--(int)
+    requires bidirectional_range<_Base> {
     auto __tmp = *this;
     --*this;
     return __tmp;
