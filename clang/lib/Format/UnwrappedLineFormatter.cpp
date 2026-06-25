@@ -268,7 +268,7 @@ private:
       const bool EmptyFunctionBody = NextLine.First->is(tok::r_brace);
       if ((EmptyFunctionBody && !Style.BraceWrapping.SplitEmptyFunction) ||
           (!EmptyFunctionBody &&
-           Style.AllowShortBlocksOnASingleLine == FormatStyle::SBS_Always)) {
+           Style.AllowShortFunctionsOnASingleLine.Wrapped)) {
         return tryMergeSimpleBlock(I, E, Limit);
       }
     }

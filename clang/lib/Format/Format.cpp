@@ -801,6 +801,7 @@ template <> struct MappingTraits<FormatStyle::ShortFunctionStyle> {
     IO.mapOptional("Empty", Value.Empty);
     IO.mapOptional("Inline", Value.Inline);
     IO.mapOptional("Other", Value.Other);
+    IO.mapOptional("Wrapped", Value.Wrapped);
   }
 };
 
