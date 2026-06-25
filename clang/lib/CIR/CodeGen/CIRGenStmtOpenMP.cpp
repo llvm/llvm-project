@@ -293,7 +293,7 @@ CIRGenFunction::emitOMPTargetDirective(const OMPTargetDirective &s) {
   mlir::Location begin = getLoc(s.getBeginLoc());
   mlir::Location end = getLoc(s.getEndLoc());
 
-  mlir::omp::TargetOperands clauseOps;
+  mlir::omp::TargetExtOperands clauseOps;
   llvm::SmallVector<const VarDecl *> mapSyms;
 
   OpenMPClauseEmitter ce(*this, getCIRGenModule(), builder, begin, s.clauses());
@@ -308,6 +308,10 @@ CIRGenFunction::emitOMPTargetDirective(const OMPTargetDirective &s) {
       llvm::omp::Directive::OMPD_target);
 
   emitOMPTargetImplicitCaptures(*this, s, mapSyms);
+
+  // Use generic for now.
+  clauseOps.kernelType = mlir::omp::TargetExecModeAttr::get(
+      &getMLIRContext(), mlir::omp::TargetExecMode::generic);
 
   auto targetOp = mlir::omp::TargetOp::create(builder, begin, clauseOps);
 
