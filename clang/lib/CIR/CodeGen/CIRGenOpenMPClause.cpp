@@ -66,6 +66,30 @@ public:
     }
   }
 
+  void VisitOMPNumThreadsClause(const OMPNumThreadsClause *clause) {
+    if constexpr (std::is_same_v<OpTy, mlir::omp::ParallelOp>) {
+      Expr *numThreadsExpr = clause->getNumThreads();
+      mlir::Value numThreadsValue = cgf.emitScalarExpr(numThreadsExpr);
+      mlir::Location numThreadsLoc =
+          cgf.cgm.getLoc(numThreadsExpr->getBeginLoc());
+
+      cir::IntType cirIntType =
+          mlir::cast<cir::IntType>(numThreadsValue.getType());
+      mlir::Type stdIntType = builder.getIntegerType(cirIntType.getWidth());
+
+      mlir::Value unrealizedCastNumThreads =
+          mlir::UnrealizedConversionCastOp::create(builder, numThreadsLoc,
+                                                   stdIntType, numThreadsValue)
+              .getResult(0);
+
+      operation.getNumThreadsVarsMutable().append(unrealizedCastNumThreads);
+    } else {
+      cgf.cgm.errorNYI(
+          clause->getBeginLoc(),
+          "OMPNumThreadsClause unimplemented on this directive kind");
+    }
+  }
+
   void emitClauses(ArrayRef<const OMPClause *> clauses) {
     for (const auto *c : clauses)
       this->Visit(c);
