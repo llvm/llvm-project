@@ -21,9 +21,11 @@
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
+#include <string>
 #include <type_traits>
 
 using namespace llvm;
@@ -1452,4 +1454,1219 @@ TEST_F(IRBuilderTest, CreateAggregateRet) {
 
   EXPECT_FALSE(verifyModule(*M));
 }
+
+// ============================================================
+// Tests for IRBuilderBase::CreateLayoutReinterpretCast
+// ============================================================
+
+struct DLConfig {
+  bool BigEndian;
+  unsigned AS0PtrBits; ///< pointer size for address space 0 (32 or 64)
+};
+
+void PrintTo(const DLConfig &C, std::ostream *OS) {
+  *OS << (C.BigEndian ? "BE" : "LE") << C.AS0PtrBits;
 }
+
+/// Fixture that sets a concrete DataLayout on the shared module so that
+/// aggregate-field offsets and pointer sizes are well-defined.
+///
+/// Parameterized over endianness and AS0 pointer width.  AS1 is always
+/// 32-bit and AS2 is always 64-bit so that the pointer-cast tests have
+/// a fixed reference for "diff-size" and "same-size" variants.
+class LayoutReinterpretCastTest
+    : public IRBuilderTest,
+      public ::testing::WithParamInterface<DLConfig> {
+protected:
+  bool isBigEndian() const { return GetParam().BigEndian; }
+  unsigned as0PtrBits() const { return GetParam().AS0PtrBits; }
+
+  void SetUp() override {
+    IRBuilderTest::SetUp();
+    unsigned PS = as0PtrBits();
+    std::string DL = isBigEndian() ? "E" : "e";
+    DL += "-p:" + std::to_string(PS) + ":" + std::to_string(PS);
+    DL += "-p1:32:32-p2:64:64"
+          "-i8:8:8-i16:16:16-i32:32:32-i64:64:64"
+          "-f32:32:32-f64:64:64-n8:16:32:64";
+    M->setDataLayout(DL);
+    IRBuilder<>(BB).CreateRetVoid();
+  }
+
+  /// Verify the module and check that the instructions printed before the
+  /// trailing "  ret void" end with \p Expected.  Pass an empty string to
+  /// skip the suffix check and only verify the module.
+  void nameBB() {
+    size_t Idx = 0;
+    for (auto &I : *BB) {
+      ++Idx;
+      if (!I.getType()->isVoidTy() && !I.hasName())
+        I.setName(BB->getName() + "." + Twine(Idx));
+    }
+  }
+
+  void checkBB(StringRef Expected) {
+    EXPECT_FALSE(verifyModule(*M, &errs()));
+    std::string S;
+    raw_string_ostream OS(S);
+    BB->print(OS);
+    // Strip the shared "  ret void\n" trailer so callers only supply the
+    // instructions of interest.
+    StringRef Actual(S);
+    const StringRef RetVoid = "  ret void\n";
+    if (Actual.ends_with(RetVoid))
+      Actual = Actual.drop_back(RetVoid.size());
+    if (Expected.empty())
+      EXPECT_TRUE(Actual.trim().empty())
+          << "Expected no instructions before ret:\n"
+          << Expected << "\nActual BB:\n"
+          << S;
+    else
+      EXPECT_TRUE(Actual.ends_with(Expected))
+          << "Expected BB suffix (before ret void):\n"
+          << Expected << "\nActual BB:\n"
+          << S;
+  }
+
+  /// Build a non-constant value of type Ty so that instructions emitted by
+  /// CreateLayoutReinterpretCast are visible (not folded away).
+  Value *makeVal(IRBuilderBase &B, Type *Ty) { return B.CreateLoad(Ty, GV); }
+};
+
+// ---------------------------------------------------------------------------
+// Fast path: leaf-to-leaf with matching bitwidth
+// ---------------------------------------------------------------------------
+
+/// i32 → float: single bitcast, no integer accumulation.
+TEST_P(LayoutReinterpretCastTest, I32ToFloat) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *I32Ty = B.getInt32Ty();
+  Type *F32Ty = B.getFloatTy();
+  Value *Src = makeVal(B, I32Ty);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, F32Ty);
+  EXPECT_EQ(Result->getType(), F32Ty);
+  EXPECT_TRUE(isa<BitCastInst>(Result));
+  checkBB("  %2 = bitcast i32 %1 to float\n");
+}
+
+/// float → i32: single bitcast.
+TEST_P(LayoutReinterpretCastTest, FloatToI32) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *F32Ty = B.getFloatTy();
+  Type *I32Ty = B.getInt32Ty();
+  Value *Src = makeVal(B, F32Ty);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, I32Ty);
+  EXPECT_EQ(Result->getType(), I32Ty);
+  EXPECT_TRUE(isa<BitCastInst>(Result));
+  checkBB("  %2 = bitcast float %1 to i32\n");
+}
+
+/// Same source and destination type
+TEST_P(LayoutReinterpretCastTest, SameType) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *I32Ty = B.getInt32Ty();
+  Value *Src = makeVal(B, I32Ty);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, I32Ty);
+  EXPECT_EQ(Result, Src);
+  checkBB("  %1 = load i32, ptr @0, align 4\n");
+}
+
+/// {ptr, i32} → {ptr, i32} → {{ptr, i32}} → {ptr, i32} → {{ptr, i32}, {ptr,
+/// i32}}
+TEST_P(LayoutReinterpretCastTest, PtrStruct_SameType) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *PtrTy = B.getPtrTy(0);
+  StructType *STy = StructType::get(PtrTy, B.getInt32Ty());
+  Value *Src = makeVal(B, STy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, STy);
+  EXPECT_EQ(Result->getType(), STy);
+  EXPECT_TRUE(isa<LoadInst>(Result));
+  if (as0PtrBits() == 64)
+    checkBB("  %1 = load { ptr, i32 }, ptr @0, align 8\n");
+  else
+    checkBB("  %1 = load { ptr, i32 }, ptr @0, align 4\n");
+
+  StructType *STyW = StructType::get(STy);
+  Result = B.CreateLayoutReinterpretCast(Result, STyW);
+  EXPECT_EQ(Result->getType(), STyW);
+  EXPECT_TRUE(isa<InsertValueInst>(Result));
+  Result = B.CreateLayoutReinterpretCast(Result, STy);
+  EXPECT_EQ(Result->getType(), STy);
+  EXPECT_TRUE(isa<ExtractValueInst>(Result));
+  StructType *STyW2 = StructType::get(STy, STy);
+  Result = B.CreateLayoutReinterpretCast(Result, STyW2);
+  EXPECT_EQ(Result->getType(), STyW2);
+  EXPECT_TRUE(isa<InsertValueInst>(Result));
+  checkBB("  %2 = insertvalue { { ptr, i32 } } poison, { ptr, i32 } %1, 0\n"
+          "  %3 = extractvalue { { ptr, i32 } } %2, 0\n"
+          "  %4 = insertvalue { { ptr, i32 }, { ptr, i32 } } poison, { ptr, "
+          "i32 } %3, 0\n");
+}
+
+// ---------------------------------------------------------------------------
+// Pointer casts
+// ---------------------------------------------------------------------------
+
+/// ptr (AS0) → i64: single ptrtoint when AS0=64, ptrtoint+zext when AS0=32.
+TEST_P(LayoutReinterpretCastTest, PtrToI64) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *PtrTy = B.getPtrTy(0);
+  Type *I64Ty = B.getInt64Ty();
+  Value *Src = makeVal(B, PtrTy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, I64Ty);
+  EXPECT_EQ(Result->getType(), I64Ty);
+  if (as0PtrBits() == 64) {
+    EXPECT_TRUE(isa<PtrToIntInst>(Result));
+    checkBB("  %2 = ptrtoint ptr %1 to i64\n");
+  } else if (!isBigEndian()) {
+    EXPECT_TRUE(isa<ZExtInst>(Result));
+    checkBB("  %2 = ptrtoint ptr %1 to i32\n"
+            "  %3 = zext i32 %2 to i64\n");
+  } else {
+    EXPECT_TRUE(isa<BinaryOperator>(Result));
+    checkBB("  %2 = ptrtoint ptr %1 to i32\n"
+            "  %3 = zext i32 %2 to i64\n"
+            "  %4 = shl i64 %3, 32\n");
+  }
+}
+
+/// i64 → ptr (AS0): single inttoptr when AS0=64, trunc+inttoptr when AS0=32.
+TEST_P(LayoutReinterpretCastTest, I64ToPtr) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *I64Ty = B.getInt64Ty();
+  Type *PtrTy = B.getPtrTy(0);
+  Value *Src = makeVal(B, I64Ty);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, PtrTy);
+  EXPECT_EQ(Result->getType(), PtrTy);
+  EXPECT_TRUE(isa<IntToPtrInst>(Result));
+  if (as0PtrBits() == 64) {
+    checkBB("  %2 = inttoptr i64 %1 to ptr\n");
+  } else if (!isBigEndian()) {
+    checkBB("  %2 = trunc i64 %1 to i32\n"
+            "  %3 = inttoptr i32 %2 to ptr\n");
+  } else {
+    checkBB("  %2 = lshr i64 %1, 32\n"
+            "  %3 = trunc i64 %2 to i32\n"
+            "  %4 = inttoptr i32 %3 to ptr\n");
+  }
+}
+
+/// ptr (AS0) → float: ptrtoint to integer, trunc if needed, bitcast to float.
+TEST_P(LayoutReinterpretCastTest, PtrToFloat) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *PtrTy = B.getPtrTy(0);
+  Type *F32Ty = B.getFloatTy();
+  Value *Src = makeVal(B, PtrTy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, F32Ty);
+  EXPECT_EQ(Result->getType(), F32Ty);
+  if (as0PtrBits() == 64) {
+    if (!isBigEndian()) {
+      checkBB("  %2 = ptrtoint ptr %1 to i64\n"
+              "  %3 = trunc i64 %2 to i32\n"
+              "  %4 = bitcast i32 %3 to float\n");
+    } else {
+      checkBB("  %2 = ptrtoint ptr %1 to i64\n"
+              "  %3 = lshr i64 %2, 32\n"
+              "  %4 = trunc i64 %3 to i32\n"
+              "  %5 = bitcast i32 %4 to float\n");
+    }
+  } else {
+    checkBB("  %2 = ptrtoint ptr %1 to i32\n"
+            "  %3 = bitcast i32 %2 to float\n");
+  }
+}
+
+/// ptr (AS0) → ptr (AS2, always 64-bit): always uses ptrtoint/inttoptr.
+TEST_P(LayoutReinterpretCastTest, PtrSameSize) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *PtrAS0 = B.getPtrTy(0);
+  Type *PtrAS2 = B.getPtrTy(2); // always 64-bit
+  Value *Src = makeVal(B, PtrAS0);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, PtrAS2);
+  EXPECT_EQ(Result->getType(), PtrAS2);
+  EXPECT_TRUE(isa<IntToPtrInst>(Result));
+  if (as0PtrBits() == 64) {
+    checkBB("  %2 = ptrtoint ptr %1 to i64\n"
+            "  %3 = inttoptr i64 %2 to ptr addrspace(2)\n");
+  } else if (!isBigEndian()) {
+    checkBB("  %2 = ptrtoint ptr %1 to i32\n"
+            "  %3 = zext i32 %2 to i64\n"
+            "  %4 = inttoptr i64 %3 to ptr addrspace(2)\n");
+  } else {
+    checkBB("  %2 = ptrtoint ptr %1 to i32\n"
+            "  %3 = zext i32 %2 to i64\n"
+            "  %4 = shl i64 %3, 32\n"
+            "  %5 = inttoptr i64 %4 to ptr addrspace(2)\n");
+  }
+}
+
+/// ptr (AS0) → ptr (AS1, always 32-bit): ptrtoint/trunc/inttoptr when AS0 >
+/// AS1; ptrtoint/inttoptr when both are 32-bit.
+TEST_P(LayoutReinterpretCastTest, PtrDiffSize) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *PtrAS0 = B.getPtrTy(0);
+  Type *PtrAS1 = B.getPtrTy(1); // always 32-bit
+  Value *Src = makeVal(B, PtrAS0);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, PtrAS1);
+  EXPECT_EQ(Result->getType(), PtrAS1);
+  if (as0PtrBits() == 64 && !isBigEndian()) {
+    EXPECT_TRUE(isa<IntToPtrInst>(Result));
+    checkBB("  %2 = ptrtoint ptr %1 to i64\n"
+            "  %3 = trunc i64 %2 to i32\n"
+            "  %4 = inttoptr i32 %3 to ptr addrspace(1)\n");
+  } else if (as0PtrBits() == 64) {
+    EXPECT_TRUE(isa<IntToPtrInst>(Result));
+    checkBB("  %2 = ptrtoint ptr %1 to i64\n"
+            "  %3 = lshr i64 %2, 32\n"
+            "  %4 = trunc i64 %3 to i32\n"
+            "  %5 = inttoptr i32 %4 to ptr addrspace(1)\n");
+  } else {
+    EXPECT_FALSE(isa<AddrSpaceCastInst>(Result));
+    EXPECT_TRUE(isa<IntToPtrInst>(Result));
+    checkBB("  %2 = ptrtoint ptr %1 to i32\n"
+            "  %3 = inttoptr i32 %2 to ptr addrspace(1)\n");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Struct ↔ integer
+// ---------------------------------------------------------------------------
+
+/// {i32, i32} → i64: two i32 halves are OR-assembled into an i64.
+TEST_P(LayoutReinterpretCastTest, StructI32x2_ToI64) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  StructType *STy = StructType::get(B.getInt32Ty(), B.getInt32Ty());
+  Type *I64Ty = B.getInt64Ty();
+  Value *Src = makeVal(B, STy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, I64Ty);
+  EXPECT_EQ(Result->getType(), I64Ty);
+  if (!isBigEndian()) {
+    checkBB("  %2 = extractvalue { i32, i32 } %1, 0\n"
+            "  %3 = zext i32 %2 to i64\n"
+            "  %4 = extractvalue { i32, i32 } %1, 1\n"
+            "  %5 = zext i32 %4 to i64\n"
+            "  %6 = shl i64 %5, 32\n"
+            "  %7 = or i64 %3, %6\n");
+  } else {
+    checkBB("  %2 = extractvalue { i32, i32 } %1, 0\n"
+            "  %3 = zext i32 %2 to i64\n"
+            "  %4 = shl i64 %3, 32\n"
+            "  %5 = extractvalue { i32, i32 } %1, 1\n"
+            "  %6 = zext i32 %5 to i64\n"
+            "  %7 = or i64 %4, %6\n");
+  }
+}
+
+/// i64 → {i32, i32}: i64 is split into two i32 fields.
+TEST_P(LayoutReinterpretCastTest, I64_ToStructI32x2) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *I64Ty = B.getInt64Ty();
+  StructType *STy = StructType::get(B.getInt32Ty(), B.getInt32Ty());
+  Value *Src = makeVal(B, I64Ty);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, STy);
+  EXPECT_EQ(Result->getType(), STy);
+  if (!isBigEndian()) {
+    checkBB("  %2 = trunc i64 %1 to i32\n"
+            "  %3 = insertvalue { i32, i32 } poison, i32 %2, 0\n"
+            "  %4 = lshr i64 %1, 32\n"
+            "  %5 = trunc i64 %4 to i32\n"
+            "  %6 = insertvalue { i32, i32 } %3, i32 %5, 1\n");
+  } else {
+    checkBB("  %2 = lshr i64 %1, 32\n"
+            "  %3 = trunc i64 %2 to i32\n"
+            "  %4 = insertvalue { i32, i32 } poison, i32 %3, 0\n"
+            "  %5 = trunc i64 %1 to i32\n"
+            "  %6 = insertvalue { i32, i32 } %4, i32 %5, 1\n");
+  }
+}
+
+/// {i16, i16} → i32: two 16-bit halves zext-shifted into a 32-bit integer.
+TEST_P(LayoutReinterpretCastTest, StructI16x2_ToI32) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  StructType *STy = StructType::get(B.getInt16Ty(), B.getInt16Ty());
+  Type *I32Ty = B.getInt32Ty();
+  Value *Src = makeVal(B, STy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, I32Ty);
+  EXPECT_EQ(Result->getType(), I32Ty);
+  if (!isBigEndian()) {
+    checkBB("  %2 = extractvalue { i16, i16 } %1, 0\n"
+            "  %3 = zext i16 %2 to i32\n"
+            "  %4 = extractvalue { i16, i16 } %1, 1\n"
+            "  %5 = zext i16 %4 to i32\n"
+            "  %6 = shl i32 %5, 16\n"
+            "  %7 = or i32 %3, %6\n");
+  } else {
+    checkBB("  %2 = extractvalue { i16, i16 } %1, 0\n"
+            "  %3 = zext i16 %2 to i32\n"
+            "  %4 = shl i32 %3, 16\n"
+            "  %5 = extractvalue { i16, i16 } %1, 1\n"
+            "  %6 = zext i16 %5 to i32\n"
+            "  %7 = or i32 %4, %6\n");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Vector ↔ scalar / struct
+// ---------------------------------------------------------------------------
+
+/// <4 x i8> → i32: four bytes OR-assembled into a 32-bit integer.
+TEST_P(LayoutReinterpretCastTest, Vec4xi8_ToI32) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *VTy = FixedVectorType::get(B.getInt8Ty(), 4);
+  Type *I32Ty = B.getInt32Ty();
+  Value *Src = makeVal(B, VTy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, I32Ty);
+  EXPECT_EQ(Result->getType(), I32Ty);
+  checkBB("  %2 = bitcast <4 x i8> %1 to i32\n");
+}
+
+/// i32 → <4 x i8>: i32 is split into four byte-wide vector elements.
+TEST_P(LayoutReinterpretCastTest, I32_ToVec4xi8) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *I32Ty = B.getInt32Ty();
+  Type *VTy = FixedVectorType::get(B.getInt8Ty(), 4);
+  Value *Src = makeVal(B, I32Ty);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, VTy);
+  EXPECT_EQ(Result->getType(), VTy);
+  checkBB("  %2 = bitcast i32 %1 to <4 x i8>\n");
+}
+
+// ---------------------------------------------------------------------------
+// Sub-byte element vector (<4 x i4>) casts
+// ---------------------------------------------------------------------------
+
+/// <4 x i4> → i16: same 16-bit reinterpretation via bitcast.
+TEST_P(LayoutReinterpretCastTest, Vec4xi4_ToI16) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *VTy = FixedVectorType::get(Type::getIntNTy(Ctx, 4), 4);
+  Type *I16Ty = B.getInt16Ty();
+  Value *Src = makeVal(B, VTy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, I16Ty);
+  EXPECT_EQ(Result->getType(), I16Ty);
+  EXPECT_TRUE(isa<BitCastInst>(Result));
+  checkBB("  %2 = bitcast <4 x i4> %1 to i16\n");
+}
+
+/// i16 → <4 x i4>: same 16-bit reinterpretation via bitcast.
+TEST_P(LayoutReinterpretCastTest, I16_ToVec4xi4) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *I16Ty = B.getInt16Ty();
+  Type *VTy = FixedVectorType::get(Type::getIntNTy(Ctx, 4), 4);
+  Value *Src = makeVal(B, I16Ty);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, VTy);
+  EXPECT_EQ(Result->getType(), VTy);
+  EXPECT_TRUE(isa<BitCastInst>(Result));
+  checkBB("  %2 = bitcast i16 %1 to <4 x i4>\n");
+}
+
+/// <4 x i4> → <2 x i8>: both 16-bit vectors, single bitcast.
+TEST_P(LayoutReinterpretCastTest, Vec4xi4_ToVec2xi8) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *Src4xi4 = FixedVectorType::get(Type::getIntNTy(Ctx, 4), 4);
+  Type *Dst2xi8 = FixedVectorType::get(B.getInt8Ty(), 2);
+  Value *Src = makeVal(B, Src4xi4);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, Dst2xi8);
+  EXPECT_EQ(Result->getType(), Dst2xi8);
+  EXPECT_TRUE(isa<BitCastInst>(Result));
+  checkBB("  %2 = bitcast <4 x i4> %1 to <2 x i8>\n");
+}
+
+/// <2 x i8> → <4 x i4>: both 16-bit vectors, single bitcast.
+TEST_P(LayoutReinterpretCastTest, Vec2xi8_ToVec4xi4) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *Src2xi8 = FixedVectorType::get(B.getInt8Ty(), 2);
+  Type *Dst4xi4 = FixedVectorType::get(Type::getIntNTy(Ctx, 4), 4);
+  Value *Src = makeVal(B, Src2xi8);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, Dst4xi4);
+  EXPECT_EQ(Result->getType(), Dst4xi4);
+  EXPECT_TRUE(isa<BitCastInst>(Result));
+  checkBB("  %2 = bitcast <2 x i8> %1 to <4 x i4>\n");
+}
+
+/// <4 x i4> → [2 x i8]
+TEST_P(LayoutReinterpretCastTest, Vec4xi4_ToArr2xi8) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *VTy = FixedVectorType::get(Type::getIntNTy(Ctx, 4), 4);
+  Type *ArrTy = ArrayType::get(B.getInt8Ty(), 2);
+  Value *Src = makeVal(B, VTy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, ArrTy);
+  EXPECT_EQ(Result->getType(), ArrTy);
+  checkBB("  %2 = bitcast <4 x i4> %1 to <2 x i8>\n"
+          "  %3 = extractelement <2 x i8> %2, i64 0\n"
+          "  %4 = insertvalue [2 x i8] poison, i8 %3, 0\n"
+          "  %5 = bitcast <4 x i4> %1 to <2 x i8>\n"
+          "  %6 = extractelement <2 x i8> %5, i64 1\n"
+          "  %7 = insertvalue [2 x i8] %4, i8 %6, 1\n");
+}
+
+/// [2 x i8] → <4 x i4>
+TEST_P(LayoutReinterpretCastTest, Arr2xi8_ToVec4xi4) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *ArrTy = ArrayType::get(B.getInt8Ty(), 2);
+  Type *VTy = FixedVectorType::get(Type::getIntNTy(Ctx, 4), 4);
+  Value *Src = makeVal(B, ArrTy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, VTy);
+  EXPECT_EQ(Result->getType(), VTy);
+  checkBB("  %2 = extractvalue [2 x i8] %1, 0\n"
+          "  %3 = insertelement <2 x i8> poison, i8 %2, i64 0\n"
+          "  %4 = extractvalue [2 x i8] %1, 1\n"
+          "  %5 = insertelement <2 x i8> %3, i8 %4, i64 1\n"
+          "  %6 = bitcast <2 x i8> %5 to <4 x i4>\n");
+}
+
+/// {float, float} → <2 x float>
+TEST_P(LayoutReinterpretCastTest, StructFloatx2_ToVec2xFloat) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  StructType *STy = StructType::get(B.getFloatTy(), B.getFloatTy());
+  Type *VTy = FixedVectorType::get(B.getFloatTy(), 2);
+  Value *Src = makeVal(B, STy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, VTy);
+  EXPECT_EQ(Result->getType(), VTy);
+  // Vector fast path: each float struct field aligns exactly with one vector
+  // element, so insertelement is used directly instead of integer accumulation.
+  checkBB("  %2 = extractvalue { float, float } %1, 0\n"
+          "  %3 = insertelement <2 x float> poison, float %2, i64 0\n"
+          "  %4 = extractvalue { float, float } %1, 1\n"
+          "  %5 = insertelement <2 x float> %3, float %4, i64 1\n");
+}
+
+/// [i16, i16, i32] → <2 x float>
+TEST_P(LayoutReinterpretCastTest, StructMixedAAB_ToVec2xFloat) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  StructType *STy =
+      StructType::get(B.getInt16Ty(), B.getInt16Ty(), B.getInt32Ty());
+  Type *VTy = FixedVectorType::get(B.getInt32Ty(), 2);
+  Value *Src = makeVal(B, STy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, VTy);
+  EXPECT_EQ(Result->getType(), VTy);
+  checkBB("  %2 = extractvalue { i16, i16, i32 } %1, 0\n"
+          "  %3 = insertelement <4 x i16> poison, i16 %2, i64 0\n"
+          "  %4 = extractvalue { i16, i16, i32 } %1, 1\n"
+          "  %5 = insertelement <4 x i16> %3, i16 %4, i64 1\n"
+          "  %6 = extractvalue { i16, i16, i32 } %1, 2\n"
+          "  %7 = bitcast <4 x i16> %5 to <2 x i32>\n"
+          "  %8 = insertelement <2 x i32> %7, i32 %6, i64 1\n");
+}
+
+/// [i32, i16, i16] → <2 x float>
+TEST_P(LayoutReinterpretCastTest, StructMixedBAA_ToVec2xFloat) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  StructType *STy =
+      StructType::get(B.getInt32Ty(), B.getInt16Ty(), B.getInt16Ty());
+  Type *VTy = FixedVectorType::get(B.getInt32Ty(), 2);
+  Value *Src = makeVal(B, STy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, VTy);
+  EXPECT_EQ(Result->getType(), VTy);
+  checkBB("  %2 = extractvalue { i32, i16, i16 } %1, 0\n"
+          "  %3 = insertelement <2 x i32> poison, i32 %2, i64 0\n"
+          "  %4 = extractvalue { i32, i16, i16 } %1, 1\n"
+          "  %5 = bitcast <2 x i32> %3 to <4 x i16>\n"
+          "  %6 = insertelement <4 x i16> %5, i16 %4, i64 2\n"
+          "  %7 = extractvalue { i32, i16, i16 } %1, 2\n"
+          "  %8 = insertelement <4 x i16> %6, i16 %7, i64 3\n"
+          "  %9 = bitcast <4 x i16> %8 to <2 x i32>\n");
+}
+
+/// <2 x float> → <3 x float>
+TEST_P(LayoutReinterpretCastTest, VecFloatCast_2_3) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *STy = FixedVectorType::get(B.getFloatTy(), 2);
+  Type *DTy = FixedVectorType::get(B.getFloatTy(), 3);
+  Value *Src = makeVal(B, STy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, DTy);
+  EXPECT_EQ(Result->getType(), DTy);
+  checkBB("  %2 = shufflevector <2 x float> %1, <2 x float> poison, <3 x i32> "
+          "<i32 0, i32 1, i32 poison>\n");
+}
+
+/// [<2 x float>, float] → <3 x float>
+TEST_P(LayoutReinterpretCastTest, VecFloatCast_21_3) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *DTy = FixedVectorType::get(B.getFloatTy(), 3);
+  StructType *STy =
+      StructType::get(FixedVectorType::get(B.getFloatTy(), 2), B.getFloatTy());
+  Value *Src = makeVal(B, STy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, DTy);
+  EXPECT_EQ(Result->getType(), DTy);
+  checkBB("  %2 = extractvalue { <2 x float>, float } %1, 0\n"
+          "  %3 = shufflevector <2 x float> %2, <2 x float> poison, <3 x i32> "
+          "<i32 0, i32 1, i32 poison>\n"
+          "  %4 = extractvalue { <2 x float>, float } %1, 1\n"
+          "  %5 = insertelement <3 x float> %3, float %4, i64 2\n");
+}
+
+/// <3 x float> → <2 x float>
+TEST_P(LayoutReinterpretCastTest, VecFloatCast_3_2) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *DTy = FixedVectorType::get(B.getFloatTy(), 2);
+  Type *STy = FixedVectorType::get(B.getFloatTy(), 3);
+  Value *Src = makeVal(B, STy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, DTy);
+  EXPECT_EQ(Result->getType(), DTy);
+  checkBB("  %2 = shufflevector <3 x float> %1, <3 x float> poison, <2 x i32> "
+          "<i32 0, i32 1>\n");
+}
+
+/// <3 x float> → [<2 x float>, float]
+TEST_P(LayoutReinterpretCastTest, VecFloatCast_3_21) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  StructType *DTy =
+      StructType::get(FixedVectorType::get(B.getFloatTy(), 2), B.getFloatTy());
+  Type *STy = FixedVectorType::get(B.getFloatTy(), 3);
+  Value *Src = makeVal(B, STy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, DTy);
+  EXPECT_EQ(Result->getType(), DTy);
+  checkBB(
+      "  %2 = shufflevector <3 x float> %1, <3 x float> poison, <2 x i32> <i32 "
+      "0, i32 1>\n"
+      "  %3 = insertvalue { <2 x float>, float } poison, <2 x float> %2, 0\n"
+      "  %4 = extractelement <3 x float> %1, i64 2\n"
+      "  %5 = insertvalue { <2 x float>, float } %3, float %4, 1\n");
+}
+
+/// {<2 x float>, <2 x float>} → {<2 x i32>, <2 x i32>}: element-type
+/// reinterpret within a same-shape struct; each field is an independent
+/// bitcast with no cross-field data movement.
+TEST_P(LayoutReinterpretCastTest, StructVec2Float_ToStructVec2I32) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *V2F = FixedVectorType::get(B.getFloatTy(), 2);
+  Type *V2I = FixedVectorType::get(B.getInt32Ty(), 2);
+  StructType *STy = StructType::get(V2F, V2F);
+  StructType *DTy = StructType::get(V2I, V2I);
+  Value *Src = makeVal(B, STy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, DTy);
+  EXPECT_EQ(Result->getType(), DTy);
+  checkBB(
+      "  %2 = extractvalue { <2 x float>, <2 x float> } %1, 0\n"
+      "  %3 = bitcast <2 x float> %2 to <2 x i32>\n"
+      "  %4 = insertvalue { <2 x i32>, <2 x i32> } poison, <2 x i32> %3, 0\n"
+      "  %5 = extractvalue { <2 x float>, <2 x float> } %1, 1\n"
+      "  %6 = bitcast <2 x float> %5 to <2 x i32>\n"
+      "  %7 = insertvalue { <2 x i32>, <2 x i32> } %4, <2 x i32> %6, 1\n");
+}
+
+/// {<4 x i32>, <2 x i32>} → {<2 x i32>, <2 x i32>, <2 x i32>}: split the
+/// 128-bit first field into two 64-bit fields; third dst field = second src
+/// field.  Field boundaries cross, requiring shuffles or extracts.
+TEST_P(LayoutReinterpretCastTest, StructVec4_SplitTo3Vec2) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *V2 = FixedVectorType::get(B.getInt32Ty(), 2);
+  Type *V4 = FixedVectorType::get(B.getInt32Ty(), 4);
+  StructType *STy = StructType::get(V4, V2);
+  StructType *DTy = StructType::get(V2, V2, V2);
+  Value *Src = makeVal(B, STy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, DTy);
+  EXPECT_EQ(Result->getType(), DTy);
+  checkBB("  %2 = extractvalue { <4 x i32>, <2 x i32> } %1, 0\n"
+          "  %3 = shufflevector <4 x i32> %2, <4 x i32> poison, <2 x i32> <i32 "
+          "0, i32 1>\n"
+          "  %4 = insertvalue { <2 x i32>, <2 x i32>, <2 x i32> } poison, <2 x "
+          "i32> %3, 0\n"
+          "  %5 = shufflevector <4 x i32> %2, <4 x i32> poison, <2 x i32> <i32 "
+          "2, i32 3>\n"
+          "  %6 = insertvalue { <2 x i32>, <2 x i32>, <2 x i32> } %4, <2 x "
+          "i32> %5, 1\n"
+          "  %7 = extractvalue { <4 x i32>, <2 x i32> } %1, 1\n"
+          "  %8 = insertvalue { <2 x i32>, <2 x i32>, <2 x i32> } %6, <2 x "
+          "i32> %7, 2\n");
+}
+
+/// {<2 x i32>, <2 x i32>, <2 x i32>} → {<4 x i32>, <2 x i32>}: merge the
+/// first two 64-bit fields into a single 128-bit field; second dst field =
+/// third src field.  Reverse of StructVec4_SplitTo3Vec2.
+TEST_P(LayoutReinterpretCastTest, Struct3Vec2_MergeToVec4) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *V2 = FixedVectorType::get(B.getInt32Ty(), 2);
+  Type *V4 = FixedVectorType::get(B.getInt32Ty(), 4);
+  StructType *STy = StructType::get(V2, V2, V2);
+  StructType *DTy = StructType::get(V4, V2);
+  Value *Src = makeVal(B, STy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, DTy);
+  EXPECT_EQ(Result->getType(), DTy);
+  checkBB(
+      "  %2 = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } %1, 0\n"
+      "  %3 = shufflevector <2 x i32> %2, <2 x i32> poison, <4 x i32> <i32 0, "
+      "i32 1, i32 poison, i32 poison>\n"
+      "  %4 = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } %1, 1\n"
+      "  %5 = shufflevector <2 x i32> %4, <2 x i32> poison, <4 x i32> <i32 "
+      "poison, i32 poison, i32 0, i32 1>\n"
+      "  %6 = shufflevector <4 x i32> %3, <4 x i32> %5, <4 x i32> <i32 0, i32 "
+      "1, i32 6, i32 7>\n"
+      "  %7 = insertvalue { <4 x i32>, <2 x i32> } poison, <4 x i32> %6, 0\n"
+      "  %8 = extractvalue { <2 x i32>, <2 x i32>, <2 x i32> } %1, 2\n"
+      "  %9 = insertvalue { <4 x i32>, <2 x i32> } %7, <2 x i32> %8, 1\n");
+}
+
+/// {<2 x float>, float, float} → {float, float, <2 x float>}: both structs
+/// are 128 bits but with different field positions.  The vector occupies bits
+/// 0-63 in the source and bits 64-127 in the destination, so every field
+/// crosses a source/destination boundary.
+TEST_P(LayoutReinterpretCastTest, StructVec2FF_ToStructFFVec2) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *F32 = B.getFloatTy();
+  Type *V2F = FixedVectorType::get(F32, 2);
+  StructType *STy = StructType::get(V2F, F32, F32);
+  StructType *DTy = StructType::get(F32, F32, V2F);
+  Value *Src = makeVal(B, STy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, DTy);
+  EXPECT_EQ(Result->getType(), DTy);
+  checkBB(
+      "  %2 = extractvalue { <2 x float>, float, float } %1, 0\n"
+      "  %3 = extractelement <2 x float> %2, i64 0\n"
+      "  %4 = insertvalue { float, float, <2 x float> } poison, float %3, 0\n"
+      "  %5 = extractelement <2 x float> %2, i64 1\n"
+      "  %6 = insertvalue { float, float, <2 x float> } %4, float %5, 1\n"
+      "  %7 = extractvalue { <2 x float>, float, float } %1, 1\n"
+      "  %8 = insertelement <2 x float> poison, float %7, i64 0\n"
+      "  %9 = extractvalue { <2 x float>, float, float } %1, 2\n"
+      "  %10 = insertelement <2 x float> %8, float %9, i64 1\n"
+      "  %11 = insertvalue { float, float, <2 x float> } %6, <2 x float> %10, "
+      "2\n");
+}
+
+/// [2 x <3 x i32>] → <3 x i64>: array-of-odd-vector to packed vector.
+/// The array element stride is 16 bytes (alloc size of <3 x i32> with 128-bit
+/// alignment), so element[1] starts at byte offset 16 even though it only
+/// holds 12 bytes of data.  The destination i64 elements cross those alloc
+/// boundaries, giving the implementation a non-trivial stitching problem.
+TEST_P(LayoutReinterpretCastTest, ArrOf3xi32_ToVec3xi64) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *V3I32 = FixedVectorType::get(B.getInt32Ty(), 3);
+  Type *ArrTy = ArrayType::get(V3I32, 2);
+  Type *DTy = FixedVectorType::get(B.getInt64Ty(), 3);
+  Value *Src = makeVal(B, ArrTy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, DTy);
+  EXPECT_EQ(Result->getType(), DTy);
+  if (!isBigEndian())
+    checkBB("  %2 = extractvalue [2 x <3 x i32>] %1, 0\n"
+            "  %3 = shufflevector <3 x i32> %2, <3 x i32> poison, <6 x i32> "
+            "<i32 0, i32 1, i32 2, i32 poison, i32 poison, i32 poison>\n"
+            "  %4 = extractvalue [2 x <3 x i32>] %1, 1\n"
+            "  %5 = bitcast <3 x i32> %4 to i96\n"
+            "  %6 = trunc i96 %5 to i64\n"
+            "  %7 = bitcast <6 x i32> %3 to <3 x i64>\n"
+            "  %8 = insertelement <3 x i64> %7, i64 %6, i64 2\n");
+  else
+    checkBB("  %2 = extractvalue [2 x <3 x i32>] %1, 0\n"
+            "  %3 = shufflevector <3 x i32> %2, <3 x i32> poison, <6 x i32> "
+            "<i32 0, i32 1, i32 2, i32 poison, i32 poison, i32 poison>\n"
+            "  %4 = extractvalue [2 x <3 x i32>] %1, 1\n"
+            "  %5 = bitcast <3 x i32> %4 to i96\n"
+            "  %6 = lshr i96 %5, 32\n"
+            "  %7 = trunc i96 %6 to i64\n"
+            "  %8 = bitcast <6 x i32> %3 to <3 x i64>\n"
+            "  %9 = insertelement <3 x i64> %8, i64 %7, i64 2\n");
+}
+
+/// <5 x i32> → <3 x i64>: 160 source bits into 192 destination bits.
+/// The first four i32 lanes fill the first two i64 slots completely; the fifth
+/// i32 fills only the low half of the third i64, leaving the high 32 bits as
+/// poison.
+TEST_P(LayoutReinterpretCastTest, Vec5xi32_ToVec3xi64) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *STy = FixedVectorType::get(B.getInt32Ty(), 5);
+  Type *DTy = FixedVectorType::get(B.getInt64Ty(), 3);
+  Value *Src = makeVal(B, STy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, DTy);
+  EXPECT_EQ(Result->getType(), DTy);
+  checkBB("  %2 = shufflevector <5 x i32> %1, <5 x i32> poison, <6 x i32> <i32 "
+          "0, i32 1, i32 2, i32 3, i32 4, i32 poison>\n"
+          "  %3 = bitcast <6 x i32> %2 to <3 x i64>\n");
+}
+
+/// <4 x i16> → <3 x i32>: src bitcast to i32 view, then scatter first 2 of 3.
+TEST_P(LayoutReinterpretCastTest, Vec4xi16_ToVec3xi32) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *STy = FixedVectorType::get(B.getInt16Ty(), 4);
+  Type *DTy = FixedVectorType::get(B.getInt32Ty(), 3);
+  Value *Src = makeVal(B, STy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, DTy);
+  EXPECT_EQ(Result->getType(), DTy);
+  checkBB("  %2 = bitcast <4 x i16> %1 to <2 x i32>\n"
+          "  %3 = shufflevector <2 x i32> %2, <2 x i32> poison, <3 x i32> <i32 "
+          "0, i32 1, i32 poison>\n");
+}
+
+/// <3 x i32> → <4 x i16>: src bitcast to i16 view, then extract first 4 of 6.
+TEST_P(LayoutReinterpretCastTest, Vec3xi32_ToVec4xi16) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *STy = FixedVectorType::get(B.getInt32Ty(), 3);
+  Type *DTy = FixedVectorType::get(B.getInt16Ty(), 4);
+  Value *Src = makeVal(B, STy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, DTy);
+  EXPECT_EQ(Result->getType(), DTy);
+  checkBB("  %2 = bitcast <3 x i32> %1 to <6 x i16>\n"
+          "  %3 = shufflevector <6 x i16> %2, <6 x i16> poison, <4 x i32> <i32 "
+          "0, i32 1, i32 2, i32 3>\n");
+}
+
+// ---------------------------------------------------------------------------
+// Mixed / nested aggregates
+// ---------------------------------------------------------------------------
+
+/// {i32, [2 x i16]} → i64: struct with a nested array.
+/// Three leaves (i32, i16, i16) are OR-assembled into i64.
+TEST_P(LayoutReinterpretCastTest, MixedStruct_ToI64) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *ArrayTy = ArrayType::get(B.getInt16Ty(), 2);
+  StructType *STy = StructType::get(B.getInt32Ty(), ArrayTy);
+  Type *I64Ty = B.getInt64Ty();
+  Value *Src = makeVal(B, STy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, I64Ty);
+  EXPECT_EQ(Result->getType(), I64Ty);
+  if (!isBigEndian()) {
+    checkBB("  %2 = extractvalue { i32, [2 x i16] } %1, 0\n"
+            "  %3 = zext i32 %2 to i64\n"
+            "  %4 = extractvalue { i32, [2 x i16] } %1, 1\n"
+            "  %5 = extractvalue [2 x i16] %4, 0\n"
+            "  %6 = zext i16 %5 to i64\n"
+            "  %7 = shl i64 %6, 32\n"
+            "  %8 = or i64 %3, %7\n"
+            "  %9 = extractvalue [2 x i16] %4, 1\n"
+            "  %10 = zext i16 %9 to i64\n"
+            "  %11 = shl i64 %10, 48\n"
+            "  %12 = or i64 %8, %11\n");
+  } else {
+    checkBB("  %2 = extractvalue { i32, [2 x i16] } %1, 0\n"
+            "  %3 = zext i32 %2 to i64\n"
+            "  %4 = shl i64 %3, 32\n"
+            "  %5 = extractvalue { i32, [2 x i16] } %1, 1\n"
+            "  %6 = extractvalue [2 x i16] %5, 0\n"
+            "  %7 = zext i16 %6 to i64\n"
+            "  %8 = shl i64 %7, 16\n"
+            "  %9 = or i64 %4, %8\n"
+            "  %10 = extractvalue [2 x i16] %5, 1\n"
+            "  %11 = zext i16 %10 to i64\n"
+            "  %12 = or i64 %9, %11\n");
+  }
+}
+
+/// {i32, i32} → {i16, i16, i16, i16}: cross-struct layout reinterpret.
+/// Destination has twice as many leaves, each half the width of a source leaf.
+TEST_P(LayoutReinterpretCastTest, CrossStructLayout) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *I16Ty = B.getInt16Ty();
+  Type *I32Ty = B.getInt32Ty();
+  StructType *SrcTy = StructType::get(I32Ty, I32Ty);
+  StructType *DstTy = StructType::get(I16Ty, I16Ty, I16Ty, I16Ty);
+  Value *Src = makeVal(B, SrcTy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, DstTy);
+  EXPECT_EQ(Result->getType(), DstTy);
+  if (!isBigEndian()) {
+    checkBB("  %2 = extractvalue { i32, i32 } %1, 0\n"
+            "  %3 = trunc i32 %2 to i16\n"
+            "  %4 = insertvalue { i16, i16, i16, i16 } poison, i16 %3, 0\n"
+            "  %5 = lshr i32 %2, 16\n"
+            "  %6 = trunc i32 %5 to i16\n"
+            "  %7 = insertvalue { i16, i16, i16, i16 } %4, i16 %6, 1\n"
+            "  %8 = extractvalue { i32, i32 } %1, 1\n"
+            "  %9 = trunc i32 %8 to i16\n"
+            "  %10 = insertvalue { i16, i16, i16, i16 } %7, i16 %9, 2\n"
+            "  %11 = lshr i32 %8, 16\n"
+            "  %12 = trunc i32 %11 to i16\n"
+            "  %13 = insertvalue { i16, i16, i16, i16 } %10, i16 %12, 3\n");
+  } else {
+    checkBB("  %2 = extractvalue { i32, i32 } %1, 0\n"
+            "  %3 = lshr i32 %2, 16\n"
+            "  %4 = trunc i32 %3 to i16\n"
+            "  %5 = insertvalue { i16, i16, i16, i16 } poison, i16 %4, 0\n"
+            "  %6 = trunc i32 %2 to i16\n"
+            "  %7 = insertvalue { i16, i16, i16, i16 } %5, i16 %6, 1\n"
+            "  %8 = extractvalue { i32, i32 } %1, 1\n"
+            "  %9 = lshr i32 %8, 16\n"
+            "  %10 = trunc i32 %9 to i16\n"
+            "  %11 = insertvalue { i16, i16, i16, i16 } %7, i16 %10, 2\n"
+            "  %12 = trunc i32 %8 to i16\n"
+            "  %13 = insertvalue { i16, i16, i16, i16 } %11, i16 %12, 3\n");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Struct padding
+// ---------------------------------------------------------------------------
+
+/// {i8, i32} (with 3-byte natural padding after i8) → i64.
+/// The two data leaves (i8, i32) must be placed at the correct bit offsets;
+/// padding bits are not touched and remain as the zero base of the accumulator.
+TEST_P(LayoutReinterpretCastTest, PaddedStruct_ToI64) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  // {i8, i32} natural layout: i8@bit0, padding bits 8-31, i32@bit32.
+  StructType *STy = StructType::get(B.getInt8Ty(), B.getInt32Ty());
+  Type *I64Ty = B.getInt64Ty();
+  Value *Src = makeVal(B, STy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, I64Ty);
+  EXPECT_EQ(Result->getType(), I64Ty);
+  if (!isBigEndian()) {
+    checkBB("  %2 = extractvalue { i8, i32 } %1, 0\n"
+            "  %3 = zext i8 %2 to i64\n"
+            "  %4 = extractvalue { i8, i32 } %1, 1\n"
+            "  %5 = zext i32 %4 to i64\n"
+            "  %6 = shl i64 %5, 32\n"
+            "  %7 = or i64 %3, %6\n");
+  } else {
+    checkBB("  %2 = extractvalue { i8, i32 } %1, 0\n"
+            "  %3 = zext i8 %2 to i64\n"
+            "  %4 = shl i64 %3, 56\n"
+            "  %5 = extractvalue { i8, i32 } %1, 1\n"
+            "  %6 = zext i32 %5 to i64\n"
+            "  %7 = or i64 %4, %6\n");
+  }
+}
+
+/// i64 → {i8, i32} (with 3-byte padding).
+TEST_P(LayoutReinterpretCastTest, I64_ToPaddedStruct) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  StructType *STy = StructType::get(B.getInt8Ty(), B.getInt32Ty());
+  Type *I64Ty = B.getInt64Ty();
+  Value *Src = makeVal(B, I64Ty);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, STy);
+  EXPECT_EQ(Result->getType(), STy);
+  if (!isBigEndian()) {
+    checkBB("  %2 = trunc i64 %1 to i8\n"
+            "  %3 = insertvalue { i8, i32 } poison, i8 %2, 0\n"
+            "  %4 = lshr i64 %1, 32\n"
+            "  %5 = trunc i64 %4 to i32\n"
+            "  %6 = insertvalue { i8, i32 } %3, i32 %5, 1\n");
+  } else {
+    checkBB("  %2 = lshr i64 %1, 56\n"
+            "  %3 = trunc i64 %2 to i8\n"
+            "  %4 = insertvalue { i8, i32 } poison, i8 %3, 0\n"
+            "  %5 = trunc i64 %1 to i32\n"
+            "  %6 = insertvalue { i8, i32 } %4, i32 %5, 1\n");
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Bit offsets
+// ---------------------------------------------------------------------------
+
+/// DstOffset=1: read bits [8..23] of an i32, produce an i16.
+TEST_P(LayoutReinterpretCastTest, SrcBitOffset) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *I32Ty = B.getInt32Ty();
+  Type *I16Ty = B.getInt16Ty();
+  Value *Src = makeVal(B, I32Ty);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, I16Ty, /*SrcOffset=*/0,
+                                                /*DstOffset=*/1);
+  EXPECT_EQ(Result->getType(), I16Ty);
+  EXPECT_TRUE(isa<TruncInst>(Result));
+
+  Result = B.CreateLayoutReinterpretCast(Src, I16Ty, /*SrcOffset=*/0,
+                                         /*DstOffset=*/64);
+  EXPECT_EQ(Result->getType(), I16Ty);
+  EXPECT_TRUE(isa<PoisonValue>(Result));
+
+  // Symmetric shift for either of BE or LE
+  checkBB("  %2 = lshr i32 %1, 8\n"
+          "  %3 = trunc i32 %2 to i16\n");
+}
+
+/// SrcOffset=2: place an i16 value into bits [16..31] of an i32.
+TEST_P(LayoutReinterpretCastTest, DstBitOffset) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *I16Ty = B.getInt16Ty();
+  Type *I32Ty = B.getInt32Ty();
+  Value *Src = makeVal(B, I16Ty);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, I32Ty, /*SrcOffset=*/2,
+                                                /*DstOffset=*/0);
+  EXPECT_EQ(Result->getType(), I32Ty);
+  if (!isBigEndian())
+    EXPECT_TRUE(isa<BinaryOperator>(Result));
+  else
+    EXPECT_TRUE(isa<ZExtInst>(Result));
+
+  Result = B.CreateLayoutReinterpretCast(Src, I32Ty, /*SrcOffset=*/64,
+                                         /*DstOffset=*/0);
+  EXPECT_EQ(Result->getType(), I32Ty);
+  EXPECT_TRUE(isa<PoisonValue>(Result));
+
+  if (!isBigEndian())
+    checkBB("  %2 = zext i16 %1 to i32\n"
+            "  %3 = shl i32 %2, 16\n");
+  else
+    checkBB("  %2 = zext i16 %1 to i32\n");
+}
+
+// ---------------------------------------------------------------------------
+// Size mismatch
+// ---------------------------------------------------------------------------
+
+/// Src (i64) larger than Dst (i16): extra source bits are dropped via trunc.
+TEST_P(LayoutReinterpretCastTest, SrcLargerThanDst) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Value *Src = makeVal(B, B.getInt64Ty());
+  Value *Result = B.CreateLayoutReinterpretCast(Src, B.getInt16Ty());
+  EXPECT_EQ(Result->getType(), B.getInt16Ty());
+  if (!isBigEndian())
+    checkBB("  %2 = trunc i64 %1 to i16\n");
+  else
+    checkBB("  %2 = lshr i64 %1, 48\n"
+            "  %3 = trunc i64 %2 to i16\n");
+}
+
+/// Dst (i32) larger than Src (i16): source is zero-extended to fill Dst.
+TEST_P(LayoutReinterpretCastTest, DstLargerThanSrc) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Value *Src = makeVal(B, B.getInt16Ty());
+  Value *Result = B.CreateLayoutReinterpretCast(Src, B.getInt32Ty());
+  EXPECT_EQ(Result->getType(), B.getInt32Ty());
+  if (!isBigEndian())
+    checkBB("  %2 = zext i16 %1 to i32\n");
+  else
+    checkBB("  %2 = zext i16 %1 to i32\n"
+            "  %3 = shl i32 %2, 16\n");
+}
+
+// ---------------------------------------------------------------------------
+// Empty aggregate
+// ---------------------------------------------------------------------------
+
+/// Empty struct {} → i32: no source leaves
+TEST_P(LayoutReinterpretCastTest, EmptyStruct_ToI32) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  StructType *EmptyTy = StructType::get(Ctx, {});
+  Value *Src = makeVal(B, EmptyTy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, B.getInt32Ty());
+  EXPECT_TRUE(isa<PoisonValue>(Result));
+  checkBB("  %1 = load {}, ptr @0, align 1\n");
+}
+
+/// i32 → empty struct {}: no destination leaves
+TEST_P(LayoutReinterpretCastTest, I32_ToEmptyStruct) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  StructType *EmptyTy = StructType::get(Ctx, {});
+  Value *Src = makeVal(B, B.getInt32Ty());
+  Value *Result = B.CreateLayoutReinterpretCast(Src, EmptyTy);
+  EXPECT_TRUE(isa<PoisonValue>(Result));
+  checkBB("  %1 = load i32, ptr @0, align 4\n");
+}
+
+// ---------------------------------------------------------------------------
+// Constant folding
+// ---------------------------------------------------------------------------
+
+/// A constant source produces a constant result with ConstantFolder.
+TEST_P(LayoutReinterpretCastTest, ConstantSource_I32ToFloat_Folds) {
+  IRBuilder<> B(BB->getTerminator());
+  // 0x3F800000 = IEEE 1.0f
+  Constant *Src = ConstantInt::get(B.getInt32Ty(), 0x3F800000u);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, B.getFloatTy());
+  EXPECT_TRUE(isa<ConstantFP>(Result));
+  checkBB("");
+}
+
+TEST_P(LayoutReinterpretCastTest, ConstantSource_StructJoin_Folds) {
+  IRBuilder<> B(BB->getTerminator());
+  Type *I32Ty = B.getInt32Ty();
+  StructType *STy = StructType::get(I32Ty, I32Ty);
+  Constant *Src = ConstantStruct::get(
+      STy, {ConstantInt::get(I32Ty, 1), ConstantInt::get(I32Ty, 2)});
+  Value *Result = B.CreateLayoutReinterpretCast(Src, B.getInt64Ty());
+  EXPECT_TRUE(isa<ConstantInt>(Result));
+  checkBB("");
+}
+
+// ---------------------------------------------------------------------------
+// Round-trip
+// ---------------------------------------------------------------------------
+
+/// Cast A→B then B→A on a constant input; the round-trip must reproduce the
+/// original value in all non-padding bits.  Verified by constant folding.
+TEST_P(LayoutReinterpretCastTest, RoundTrip_I32ToFloat_ToI32) {
+  IRBuilder<> B(BB->getTerminator());
+  Type *I32Ty = B.getInt32Ty();
+  Type *F32Ty = B.getFloatTy();
+  Constant *Orig = ConstantInt::get(I32Ty, 0xDEADBEEFu);
+  Value *Mid = B.CreateLayoutReinterpretCast(Orig, F32Ty);
+  Value *Back = B.CreateLayoutReinterpretCast(Mid, I32Ty);
+  EXPECT_EQ(Back, Orig) << "round-trip i32→float→i32 must be identity";
+  checkBB("");
+}
+
+TEST_P(LayoutReinterpretCastTest, RoundTrip_StructJoinSplit) {
+  IRBuilder<> B(BB->getTerminator());
+  Type *I32Ty = B.getInt32Ty();
+  StructType *STy = StructType::get(I32Ty, I32Ty);
+  Type *I64Ty = B.getInt64Ty();
+  Constant *Orig =
+      ConstantStruct::get(STy, {ConstantInt::get(I32Ty, 0xAAAAAAAAu),
+                                ConstantInt::get(I32Ty, 0x55555555u)});
+  Value *Mid = B.CreateLayoutReinterpretCast(Orig, I64Ty);
+  Value *Back = B.CreateLayoutReinterpretCast(Mid, STy);
+  EXPECT_EQ(Back->getType(), STy);
+  checkBB("");
+}
+
+// ---------------------------------------------------------------------------
+// Pointer struct with addrspacecast
+// ---------------------------------------------------------------------------
+
+/// {ptr addrspace(1), i32} → {ptr addrspace(2), i32}
+TEST_P(LayoutReinterpretCastTest, PtrStructSameSize) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *PtrAS0 = B.getPtrTy(0);
+  Type *PtrAS2 = B.getPtrTy(2); // always 64-bit
+  Type *I32Ty = B.getInt32Ty();
+  StructType *SrcTy = StructType::get(PtrAS0, I32Ty);
+  StructType *DstTy = StructType::get(PtrAS2, I32Ty);
+  Value *Src = makeVal(B, SrcTy);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, DstTy);
+  EXPECT_EQ(Result->getType(), DstTy);
+  if (as0PtrBits() == 64) {
+    checkBB("  %2 = extractvalue { ptr, i32 } %1, 0\n"
+            "  %3 = ptrtoint ptr %2 to i64\n"
+            "  %4 = inttoptr i64 %3 to ptr addrspace(2)\n"
+            "  %5 = insertvalue { ptr addrspace(2), i32 } poison, ptr "
+            "addrspace(2) %4, 0\n"
+            "  %6 = extractvalue { ptr, i32 } %1, 1\n"
+            "  %7 = insertvalue { ptr addrspace(2), i32 } %5, i32 %6, 1\n");
+  } else if (!isBigEndian()) {
+    checkBB("  %2 = extractvalue { ptr, i32 } %1, 0\n"
+            "  %3 = ptrtoint ptr %2 to i32\n"
+            "  %4 = zext i32 %3 to i64\n"
+            "  %5 = extractvalue { ptr, i32 } %1, 1\n"
+            "  %6 = zext i32 %5 to i64\n"
+            "  %7 = shl i64 %6, 32\n"
+            "  %8 = or i64 %4, %7\n"
+            "  %9 = inttoptr i64 %8 to ptr addrspace(2)\n"
+            "  %10 = insertvalue { ptr addrspace(2), i32 } poison, ptr "
+            "addrspace(2) %9, 0\n");
+  } else {
+    checkBB("  %2 = extractvalue { ptr, i32 } %1, 0\n"
+            "  %3 = ptrtoint ptr %2 to i32\n"
+            "  %4 = zext i32 %3 to i64\n"
+            "  %5 = shl i64 %4, 32\n"
+            "  %6 = extractvalue { ptr, i32 } %1, 1\n"
+            "  %7 = zext i32 %6 to i64\n"
+            "  %8 = or i64 %5, %7\n"
+            "  %9 = inttoptr i64 %8 to ptr addrspace(2)\n"
+            "  %10 = insertvalue { ptr addrspace(2), i32 } poison, ptr "
+            "addrspace(2) %9, 0\n");
+  }
+}
+
+TEST_P(LayoutReinterpretCastTest, Nested) {
+  IRBuilder<NoFolder> B(BB->getTerminator());
+  Type *I8Ty = B.getInt8Ty();
+  Type *I16Ty = ArrayType::get(I8Ty, 2);
+  StructType *STyL = StructType::get(
+      I16Ty, StructType::get(
+                 I16Ty, StructType::get(I16Ty, StructType::get(I16Ty, I8Ty))));
+  StructType *STyR = StructType::get(
+      StructType::get(StructType::get(StructType::get(I8Ty, I16Ty), I16Ty),
+                      I16Ty),
+      I16Ty);
+  Value *Src = makeVal(B, STyL);
+  Value *Result = B.CreateLayoutReinterpretCast(Src, STyR);
+  EXPECT_EQ(Result->getType(), STyR);
+  BB->setName("LtoR");
+  nameBB();
+  checkBB(
+      "  %LtoR.2 = extractvalue { [2 x i8], { [2 x i8], { [2 x i8], { [2 x "
+      "i8], i8 } } } } %LtoR.1, 0\n"
+      "  %LtoR.3 = extractvalue [2 x i8] %LtoR.2, 0\n"
+      "  %LtoR.4 = insertvalue { i8, [2 x i8] } poison, i8 %LtoR.3, 0\n"
+      "  %LtoR.5 = extractvalue [2 x i8] %LtoR.2, 1\n"
+      "  %LtoR.6 = insertvalue [2 x i8] poison, i8 %LtoR.5, 0\n"
+      "  %LtoR.7 = extractvalue { [2 x i8], { [2 x i8], { [2 x i8], { [2 x "
+      "i8], i8 } } } } %LtoR.1, 1\n"
+      "  %LtoR.8 = extractvalue { [2 x i8], { [2 x i8], { [2 x i8], i8 } } } "
+      "%LtoR.7, 0\n"
+      "  %LtoR.9 = extractvalue [2 x i8] %LtoR.8, 0\n"
+      "  %LtoR.10 = insertvalue [2 x i8] %LtoR.6, i8 %LtoR.9, 1\n"
+      "  %LtoR.11 = extractvalue [2 x i8] %LtoR.8, 1\n"
+      "  %LtoR.12 = insertvalue { i8, [2 x i8] } %LtoR.4, [2 x i8] %LtoR.10, "
+      "1\n"
+      "  %LtoR.13 = insertvalue { { i8, [2 x i8] }, [2 x i8] } poison, { i8, "
+      "[2 x i8] } %LtoR.12, 0\n"
+      "  %LtoR.14 = insertvalue [2 x i8] poison, i8 %LtoR.11, 0\n"
+      "  %LtoR.15 = extractvalue { [2 x i8], { [2 x i8], { [2 x i8], i8 } } } "
+      "%LtoR.7, 1\n"
+      "  %LtoR.16 = extractvalue { [2 x i8], { [2 x i8], i8 } } %LtoR.15, 0\n"
+      "  %LtoR.17 = extractvalue [2 x i8] %LtoR.16, 0\n"
+      "  %LtoR.18 = insertvalue [2 x i8] %LtoR.14, i8 %LtoR.17, 1\n"
+      "  %LtoR.19 = extractvalue [2 x i8] %LtoR.16, 1\n"
+      "  %LtoR.20 = insertvalue { { i8, [2 x i8] }, [2 x i8] } %LtoR.13, [2 x "
+      "i8] %LtoR.18, 1\n"
+      "  %LtoR.21 = insertvalue { { { i8, [2 x i8] }, [2 x i8] }, [2 x i8] } "
+      "poison, { { i8, [2 x i8] }, [2 x i8] } %LtoR.20, 0\n"
+      "  %LtoR.22 = insertvalue [2 x i8] poison, i8 %LtoR.19, 0\n"
+      "  %LtoR.23 = extractvalue { [2 x i8], { [2 x i8], i8 } } %LtoR.15, 1\n"
+      "  %LtoR.24 = extractvalue { [2 x i8], i8 } %LtoR.23, 0\n"
+      "  %LtoR.25 = extractvalue [2 x i8] %LtoR.24, 0\n"
+      "  %LtoR.26 = insertvalue [2 x i8] %LtoR.22, i8 %LtoR.25, 1\n"
+      "  %LtoR.27 = extractvalue [2 x i8] %LtoR.24, 1\n"
+      "  %LtoR.28 = insertvalue { { { i8, [2 x i8] }, [2 x i8] }, [2 x i8] } "
+      "%LtoR.21, [2 x i8] %LtoR.26, 1\n"
+      "  %LtoR.29 = insertvalue { { { { i8, [2 x i8] }, [2 x i8] }, [2 x i8] "
+      "}, [2 x i8] } poison, { { { i8, [2 x i8] }, [2 x i8] }, [2 x i8] } "
+      "%LtoR.28, 0\n"
+      "  %LtoR.30 = insertvalue [2 x i8] poison, i8 %LtoR.27, 0\n"
+      "  %LtoR.31 = extractvalue { [2 x i8], i8 } %LtoR.23, 1\n"
+      "  %LtoR.32 = insertvalue [2 x i8] %LtoR.30, i8 %LtoR.31, 1\n"
+      "  %LtoR.33 = insertvalue { { { { i8, [2 x i8] }, [2 x i8] }, [2 x i8] "
+      "}, [2 x i8] } %LtoR.29, [2 x i8] %LtoR.32, 1\n");
+
+  BB = BasicBlock::Create(Ctx, "RtoL", F);
+  B.SetInsertPoint(BB);
+  Src = makeVal(B, STyR);
+  Result = B.CreateLayoutReinterpretCast(Src, STyL);
+  EXPECT_EQ(Result->getType(), STyL);
+  B.CreateRetVoid();
+  nameBB();
+  checkBB(
+      "  %RtoL.2 = extractvalue { { { { i8, [2 x i8] }, [2 x i8] }, [2 x i8] "
+      "}, [2 x i8] } %RtoL.1, 0\n"
+      "  %RtoL.3 = extractvalue { { { i8, [2 x i8] }, [2 x i8] }, [2 x i8] } "
+      "%RtoL.2, 0\n"
+      "  %RtoL.4 = extractvalue { { i8, [2 x i8] }, [2 x i8] } %RtoL.3, 0\n"
+      "  %RtoL.5 = extractvalue { i8, [2 x i8] } %RtoL.4, 0\n"
+      "  %RtoL.6 = insertvalue [2 x i8] poison, i8 %RtoL.5, 0\n"
+      "  %RtoL.7 = extractvalue { i8, [2 x i8] } %RtoL.4, 1\n"
+      "  %RtoL.8 = extractvalue [2 x i8] %RtoL.7, 0\n"
+      "  %RtoL.9 = insertvalue [2 x i8] %RtoL.6, i8 %RtoL.8, 1\n"
+      "  %RtoL.10 = extractvalue [2 x i8] %RtoL.7, 1\n"
+      "  %RtoL.11 = insertvalue { [2 x i8], { [2 x i8], { [2 x i8], { [2 x "
+      "i8], i8 } } } } poison, [2 x i8] %RtoL.9, 0\n"
+      "  %RtoL.12 = insertvalue [2 x i8] poison, i8 %RtoL.10, 0\n"
+      "  %RtoL.13 = extractvalue { { i8, [2 x i8] }, [2 x i8] } %RtoL.3, 1\n"
+      "  %RtoL.14 = extractvalue [2 x i8] %RtoL.13, 0\n"
+      "  %RtoL.15 = insertvalue [2 x i8] %RtoL.12, i8 %RtoL.14, 1\n"
+      "  %RtoL.16 = extractvalue [2 x i8] %RtoL.13, 1\n"
+      "  %RtoL.17 = insertvalue { [2 x i8], { [2 x i8], { [2 x i8], i8 } } } "
+      "poison, [2 x i8] %RtoL.15, 0\n"
+      "  %RtoL.18 = insertvalue [2 x i8] poison, i8 %RtoL.16, 0\n"
+      "  %RtoL.19 = extractvalue { { { i8, [2 x i8] }, [2 x i8] }, [2 x i8] } "
+      "%RtoL.2, 1\n"
+      "  %RtoL.20 = extractvalue [2 x i8] %RtoL.19, 0\n"
+      "  %RtoL.21 = insertvalue [2 x i8] %RtoL.18, i8 %RtoL.20, 1\n"
+      "  %RtoL.22 = extractvalue [2 x i8] %RtoL.19, 1\n"
+      "  %RtoL.23 = insertvalue { [2 x i8], { [2 x i8], i8 } } poison, [2 x "
+      "i8] %RtoL.21, 0\n"
+      "  %RtoL.24 = insertvalue [2 x i8] poison, i8 %RtoL.22, 0\n"
+      "  %RtoL.25 = extractvalue { { { { i8, [2 x i8] }, [2 x i8] }, [2 x i8] "
+      "}, [2 x i8] } %RtoL.1, 1\n"
+      "  %RtoL.26 = extractvalue [2 x i8] %RtoL.25, 0\n"
+      "  %RtoL.27 = insertvalue [2 x i8] %RtoL.24, i8 %RtoL.26, 1\n"
+      "  %RtoL.28 = extractvalue [2 x i8] %RtoL.25, 1\n"
+      "  %RtoL.29 = insertvalue { [2 x i8], i8 } poison, [2 x i8] %RtoL.27, 0\n"
+      "  %RtoL.30 = insertvalue { [2 x i8], i8 } %RtoL.29, i8 %RtoL.28, 1\n"
+      "  %RtoL.31 = insertvalue { [2 x i8], { [2 x i8], i8 } } %RtoL.23, { [2 "
+      "x i8], i8 } %RtoL.30, 1\n"
+      "  %RtoL.32 = insertvalue { [2 x i8], { [2 x i8], { [2 x i8], i8 } } } "
+      "%RtoL.17, { [2 x i8], { [2 x i8], i8 } } %RtoL.31, 1\n"
+      "  %RtoL.33 = insertvalue { [2 x i8], { [2 x i8], { [2 x i8], { [2 x "
+      "i8], i8 } } } } %RtoL.11, { [2 x i8], { [2 x i8], { [2 x i8], i8 } } } "
+      "%RtoL.32, 1\n");
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    LayoutVariants, LayoutReinterpretCastTest,
+    ::testing::Values(DLConfig{false, 64}, DLConfig{false, 32},
+                      DLConfig{true, 64}, DLConfig{true, 32}),
+    [](const ::testing::TestParamInfo<DLConfig> &Info) {
+      return std::string(Info.param.BigEndian ? "BE" : "LE") +
+             std::to_string(Info.param.AS0PtrBits);
+    });
+
+} // namespace
