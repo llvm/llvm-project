@@ -83,6 +83,13 @@ static llvm::cl::opt<bool> enableSymbolRemapping(
     llvm::cl::desc("Whether to remap symbols that appears in data clauses."),
     llvm::cl::init(true));
 
+static llvm::cl::opt<bool> emitIndependentLoopsAsUnstructured(
+    "emit-independent-loops-as-unstructured",
+    llvm::cl::desc("Whether to allow lowering unstructured do loops inside "
+                   "independent OpenACC loop constructs instead of emitting "
+                   "a TODO."),
+    llvm::cl::init(true));
+
 // Special value for * passed in device_type or gang clauses.
 static constexpr std::int64_t starCst = -1;
 
@@ -1308,6 +1315,41 @@ static void gatherDeviceTypeAttrs(
         builder.getContext(), getDeviceType(deviceTypeExpr.v)));
 }
 
+// Tries to handle a clause that affects the loop's parallelism-mode tracking:
+//   - `seq` / `auto` / `independent`: append the current device_type set to
+//     the corresponding list.
+//   - `device_type`: replace the current device_type set.
+// Returns true if the clause was handled.
+static bool tryHandleLoopParModeClause(
+    fir::FirOpBuilder &builder, const Fortran::parser::AccClause &clause,
+    llvm::SmallVector<mlir::Attribute> &crtDeviceTypes,
+    llvm::SmallVector<mlir::Attribute> &seqDeviceTypes,
+    llvm::SmallVector<mlir::Attribute> &independentDeviceTypes,
+    llvm::SmallVector<mlir::Attribute> &autoDeviceTypes) {
+  if (std::get_if<Fortran::parser::AccClause::Seq>(&clause.u)) {
+    for (auto crtDeviceTypeAttr : crtDeviceTypes)
+      seqDeviceTypes.push_back(crtDeviceTypeAttr);
+    return true;
+  }
+  if (std::get_if<Fortran::parser::AccClause::Auto>(&clause.u)) {
+    for (auto crtDeviceTypeAttr : crtDeviceTypes)
+      autoDeviceTypes.push_back(crtDeviceTypeAttr);
+    return true;
+  }
+  if (std::get_if<Fortran::parser::AccClause::Independent>(&clause.u)) {
+    for (auto crtDeviceTypeAttr : crtDeviceTypes)
+      independentDeviceTypes.push_back(crtDeviceTypeAttr);
+    return true;
+  }
+  if (const auto *deviceTypeClause =
+          std::get_if<Fortran::parser::AccClause::DeviceType>(&clause.u)) {
+    crtDeviceTypes.clear();
+    gatherDeviceTypeAttrs(builder, deviceTypeClause, crtDeviceTypes);
+    return true;
+  }
+  return false;
+}
+
 static void genIfClause(Fortran::lower::AbstractConverter &converter,
                         mlir::Location clauseLocation,
                         const Fortran::parser::AccClause::If *ifClause,
@@ -1515,6 +1557,79 @@ static void determineDefaultLoopParMode(
            "Expected kernels construct");
     autoDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
         builder.getContext(), mlir::acc::DeviceType::None));
+  }
+}
+
+// Returns true when the acc loop being constructed will have `independent`
+// parallelism semantics for the default device_type (i.e., DeviceType::None).
+//
+// `directive` is the OpenACC directive that the loop is associated with.
+//
+// The NYI for unstructured loops nested in an acc loop / combined construct is
+// only meaningful when the user has promised parallelism. For `auto` and `seq`
+// the user has not made that promise, so falling back to unstructured CFG
+// inside the acc.loop is acceptable.
+static bool
+loopWillBeIndependent(Fortran::lower::AbstractConverter &converter,
+                      const Fortran::parser::AccClauseList &accClauseList,
+                      llvm::acc::Directive directive) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  // Walk the clauses and collect seq/auto/independent attributes per
+  // device_type. Other clauses are ignored.
+  llvm::SmallVector<mlir::Attribute> seqDeviceTypes, independentDeviceTypes,
+      autoDeviceTypes;
+  llvm::SmallVector<mlir::Attribute> crtDeviceTypes;
+  crtDeviceTypes.push_back(mlir::acc::DeviceTypeAttr::get(
+      builder.getContext(), mlir::acc::DeviceType::None));
+
+  for (const Fortran::parser::AccClause &clause : accClauseList.v)
+    tryHandleLoopParModeClause(builder, clause, crtDeviceTypes, seqDeviceTypes,
+                               independentDeviceTypes, autoDeviceTypes);
+
+  auto hasDeviceNone = [](mlir::Attribute attr) -> bool {
+    return mlir::dyn_cast<mlir::acc::DeviceTypeAttr>(attr).getValue() ==
+           mlir::acc::DeviceType::None;
+  };
+
+  if (llvm::any_of(independentDeviceTypes, hasDeviceNone))
+    return true;
+  if (llvm::any_of(seqDeviceTypes, hasDeviceNone) ||
+      llvm::any_of(autoDeviceTypes, hasDeviceNone))
+    return false;
+
+  // No explicit parallelism clause for the default device_type. Defer to the
+  // directive: combined constructs imply a parallelism mode for the loop;
+  // a standalone `acc loop` defers to its enclosing compute op (or the routine
+  // attribute for orphaned loops).
+  switch (directive) {
+  case llvm::acc::ACCD_parallel_loop:
+    return true;
+  case llvm::acc::ACCD_kernels_loop:
+  case llvm::acc::ACCD_serial_loop:
+    return false;
+  case llvm::acc::ACCD_loop: {
+    // The OpenACC spec treats any orphan loop as `independent` by default,
+    // but a parallelism promise only really exists when the enclosing
+    // function is declared `acc routine` or there an `acc parallel` parent.
+    // Orphan loops in plain (non-acc-routine) functions won't run as device
+    // code, so serializing their unstructured CFG should be harmless.
+    mlir::Region *currentRegion = builder.getBlock()->getParent();
+    mlir::Operation *parentOp =
+        mlir::acc::getEnclosingComputeOp(*currentRegion);
+
+    if (mlir::isa_and_present<mlir::acc::ParallelOp>(parentOp))
+      return true;
+
+    if (parentOp) // KernelsOp / SerialOp
+      return false;
+
+    // Orphan loop in an `acc routine`.
+    return mlir::acc::isAccRoutine(builder.getFunction().getOperation()) &&
+           !isInsideSeqOpenACCRoutine(builder);
+  }
+  default:
+    llvm_unreachable("unexpected directive for loopWillBeIndependent");
   }
 }
 
@@ -2240,21 +2355,11 @@ static mlir::acc::LoopOp createLoopOp(
                     reductionOperands, /*async=*/{},
                     /*asyncDeviceTypes=*/{}, /*asyncOnlyDeviceTypes=*/{},
                     &dataMap);
-    } else if (std::get_if<Fortran::parser::AccClause::Seq>(&clause.u)) {
-      for (auto crtDeviceTypeAttr : crtDeviceTypes)
-        seqDeviceTypes.push_back(crtDeviceTypeAttr);
-    } else if (std::get_if<Fortran::parser::AccClause::Independent>(
-                   &clause.u)) {
-      for (auto crtDeviceTypeAttr : crtDeviceTypes)
-        independentDeviceTypes.push_back(crtDeviceTypeAttr);
-    } else if (std::get_if<Fortran::parser::AccClause::Auto>(&clause.u)) {
-      for (auto crtDeviceTypeAttr : crtDeviceTypes)
-        autoDeviceTypes.push_back(crtDeviceTypeAttr);
-    } else if (const auto *deviceTypeClause =
-                   std::get_if<Fortran::parser::AccClause::DeviceType>(
-                       &clause.u)) {
-      crtDeviceTypes.clear();
-      gatherDeviceTypeAttrs(builder, deviceTypeClause, crtDeviceTypes);
+    } else if (tryHandleLoopParModeClause(
+                   builder, clause, crtDeviceTypes, seqDeviceTypes,
+                   independentDeviceTypes, autoDeviceTypes)) {
+      // Updates to the relevant variables is already handled in
+      // tryHandleLoopParModeClause.
     } else if (const auto *collapseClause =
                    std::get_if<Fortran::parser::AccClause::Collapse>(
                        &clause.u)) {
@@ -2287,9 +2392,32 @@ static mlir::acc::LoopOp createLoopOp(
   uint64_t loopsToProcess =
       Fortran::lower::getLoopCountForCollapseAndTile(accClauseList);
 
-  if (outerDoConstruct.IsDoConcurrent() &&
-      Fortran::lower::getCollapseSizeAndForce(accClauseList).first > 1)
-    TODO(currentLocation, "OpenACC LOOP COLLAPSE with DO CONCURRENT");
+  if (outerDoConstruct.IsDoConcurrent()) {
+    uint64_t collapseValue =
+        Fortran::lower::getCollapseSizeAndForce(accClauseList).first;
+    if (collapseValue > 1) {
+      // N>C reaches here only via mixed DO CONCURRENT + inner DO; semantics
+      // rejects the straight-line N>C case.
+      const Fortran::parser::LoopControl *loopControl =
+          &*outerDoConstruct.GetLoopControl();
+      const auto &concurrent =
+          std::get<Fortran::parser::LoopControl::Concurrent>(loopControl->u);
+      const auto &concurrentHeader =
+          std::get<Fortran::parser::ConcurrentHeader>(concurrent.t);
+      const auto &controls =
+          std::get<std::list<Fortran::parser::ConcurrentControl>>(
+              concurrentHeader.t);
+      uint64_t controlCount = controls.size();
+      if (collapseValue > controlCount)
+        TODO(currentLocation,
+             "OpenACC LOOP COLLAPSE greater than DO CONCURRENT control count");
+      if (collapseValue < controlCount)
+        TODO(currentLocation,
+             "OpenACC LOOP COLLAPSE less than DO CONCURRENT control count");
+      // N==C falls through; its body relies on Bridge.cpp not descending into
+      // the DO CONCURRENT.
+    }
+  }
 
   auto loopOp = buildACCLoopOp(
       converter, currentLocation, semanticsContext, stmtCtx, outerDoConstruct,
@@ -2373,12 +2501,18 @@ genACC(Fortran::lower::AbstractConverter &converter,
 
   assert(loopDirective.v == llvm::acc::ACCD_loop &&
          "Unsupported OpenACC loop construct");
-  (void)loopDirective;
 
   const auto &accClauseList =
       std::get<Fortran::parser::AccClauseList>(beginLoopDirective.t);
   const auto &outerDoConstruct =
       std::get<std::optional<Fortran::parser::DoConstruct>>(loopConstruct.t);
+
+  if (outerDoConstruct.has_value() && eval.lowerAsUnstructured() &&
+      loopWillBeIndependent(converter, accClauseList, loopDirective.v) &&
+      !emitIndependentLoopsAsUnstructured)
+    TODO(currentLocation,
+         "unstructured do loop in independent OpenACC loop construct");
+
   auto loopOp = createLoopOp(converter, currentLocation, semanticsContext,
                              stmtCtx, *outerDoConstruct, eval, accClauseList,
                              /*combinedConstructs=*/{});
@@ -3033,9 +3167,18 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
           const Fortran::semantics::Symbol *newSym =
               Fortran::parser::GetFirstName(accObject).symbol;
           if (newSym) {
-            const Fortran::semantics::Symbol *origSym =
-                localSymbols.lookupSymbolByName(newSym->name().ToString());
-            if (origSym)
+            // Resolve the host symbol this use_device copy shadows via the
+            // semantic enclosing scope, so USE-renamed (and same-name
+            // shadowed) references bind to the correct storage. Fall back to a
+            // name-based lookup if that symbol is not (yet) mapped.
+            const Fortran::semantics::Symbol *origSym = nullptr;
+            if (const Fortran::semantics::Symbol *hostSym =
+                    newSym->owner().parent().FindSymbol(newSym->name()))
+              origSym = &hostSym->GetUltimate();
+            if (!origSym || !localSymbols.lookupSymbol(*origSym))
+              origSym =
+                  localSymbols.lookupSymbolByName(newSym->name().ToString());
+            if (origSym && localSymbols.lookupSymbol(*origSym))
               localSymbols.copySymbolBinding(*origSym, *newSym);
           }
         }
@@ -3147,6 +3290,11 @@ genACC(Fortran::lower::AbstractConverter &converter,
   mlir::Location currentLocation =
       converter.genLocation(beginCombinedDirective.source);
   Fortran::lower::StatementContext stmtCtx;
+
+  if (outerDoConstruct.has_value() && eval.lowerAsUnstructured() &&
+      loopWillBeIndependent(converter, accClauseList, combinedDirective.v) &&
+      !emitIndependentLoopsAsUnstructured)
+    TODO(currentLocation, "unstructured do loop in combined acc construct");
 
   if (combinedDirective.v == llvm::acc::ACCD_kernels_loop) {
     createComputeOp<mlir::acc::KernelsOp>(
@@ -4533,6 +4681,45 @@ void Fortran::lower::genOpenACCRoutineConstruct(
       bindStrNames, bindIdNameDeviceTypes, bindStrNameDeviceTypes,
       gangDeviceTypes, gangDimValues, gangDimDeviceTypes, seqDeviceTypes,
       workerDeviceTypes, vectorDeviceTypes);
+}
+
+void Fortran::lower::materializeOpenACCRoutineBindTargets(
+    Fortran::lower::AbstractConverter &converter, mlir::ModuleOp module) {
+  // There is only one module today; recurse in case submodules are added.
+  for (mlir::ModuleOp nested : module.getOps<mlir::ModuleOp>())
+    materializeOpenACCRoutineBindTargets(converter, nested);
+
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  // The converter's symbol table tracks only the top module.
+  mlir::SymbolTable *symbolTable =
+      module.getOperation() == converter.getModuleOp().getOperation()
+          ? converter.getMLIRSymbolTable()
+          : nullptr;
+
+  for (mlir::acc::RoutineOp routineOp : module.getOps<mlir::acc::RoutineOp>()) {
+    // bind renames the same callable, so clone the decorated routine's type.
+    mlir::func::FuncOp decorated = fir::FirOpBuilder::getNamedFunction(
+        module, symbolTable, routineOp.getFuncName());
+    mlir::FunctionType type =
+        decorated ? decorated.getFunctionType()
+                  : mlir::FunctionType::get(builder.getContext(), {}, {});
+
+    auto declare = [&](llvm::StringRef name) {
+      if (!fir::FirOpBuilder::getNamedFunction(module, symbolTable, name))
+        fir::FirOpBuilder::createFunction(builder.getUnknownLoc(), module, name,
+                                          type, symbolTable);
+    };
+
+    // bind(identifier) is mangled; bind("string") is a verbatim asm name.
+    if (mlir::ArrayAttr binds = routineOp.getBindIdNameAttr())
+      for (mlir::Attribute bind : binds)
+        if (auto symRef = mlir::dyn_cast<mlir::SymbolRefAttr>(bind))
+          declare(symRef.getLeafReference());
+    if (mlir::ArrayAttr binds = routineOp.getBindStrNameAttr())
+      for (mlir::Attribute bind : binds)
+        if (auto strAttr = mlir::dyn_cast<mlir::StringAttr>(bind))
+          declare(strAttr.getValue());
+  }
 }
 
 static void

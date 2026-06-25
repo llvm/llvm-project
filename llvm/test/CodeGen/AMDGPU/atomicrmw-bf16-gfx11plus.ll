@@ -77,13 +77,12 @@ define amdgpu_kernel void @v_atomicrmw_fadd_bf16(ptr addrspace(1) %out, i1 %in, 
 ; GFX11-FAKE16-NEXT:    s_lshl_b32 s2, s2, 3
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-FAKE16-NEXT:    s_lshl_b32 s4, 0xffff, s2
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX11-FAKE16-NEXT:    s_not_b32 s3, s4
 ; GFX11-FAKE16-NEXT:    s_mov_b32 s4, 0
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v2, 16, v0
 ; GFX11-FAKE16-NEXT:    .p2align 6
 ; GFX11-FAKE16-NEXT:  .LBB0_1: ; %atomicrmw.start

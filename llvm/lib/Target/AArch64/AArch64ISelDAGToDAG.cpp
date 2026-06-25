@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64TargetMachine.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
@@ -415,8 +416,10 @@ public:
 
   void SelectMultiVectorLutiLane(SDNode *Node, unsigned NumOutVecs,
                                  unsigned Opc, uint32_t MaxImm);
+  void SelectMultiVectorLuti6LaneX4(SDNode *Node, unsigned NumIndexVecs);
 
-  void SelectMultiVectorLuti(SDNode *Node, unsigned NumOutVecs, unsigned Opc);
+  void SelectMultiVectorLuti(SDNode *Node, unsigned NumOutVecs, unsigned Opc,
+                             unsigned NumInVecs);
 
   template <unsigned MaxIdx, unsigned Scale>
   bool SelectSMETileSlice(SDValue N, SDValue &Vector, SDValue &Offset) {
@@ -556,6 +559,10 @@ public:
 char AArch64DAGToDAGISelLegacy::ID = 0;
 
 INITIALIZE_PASS(AArch64DAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
+
+AArch64DAGToDAGISelPass::AArch64DAGToDAGISelPass(AArch64TargetMachine &TM)
+    : SelectionDAGISelPass(
+          std::make_unique<AArch64DAGToDAGISel>(TM, TM.getOptLevel())) {}
 
 /// addBitcastHints - This method adds bitcast hints to the operands of a node
 /// to help instruction selector determine which operands are in Neon registers.
@@ -734,15 +741,12 @@ bool AArch64DAGToDAGISel::SelectArithImmed(SDValue N, SDValue &Val,
     return false;
 
   uint64_t Immed = N.getNode()->getAsZExtVal();
-  unsigned ShiftAmt;
 
-  if (Immed >> 12 == 0) {
-    ShiftAmt = 0;
-  } else if ((Immed & 0xfff) == 0 && Immed >> 24 == 0) {
-    ShiftAmt = 12;
-    Immed = Immed >> 12;
-  } else
+  if (!AArch64_AM::isLegalArithImmed(Immed))
     return false;
+
+  unsigned ShiftAmt = AArch64_AM::getArithImmedShift(Immed);
+  Immed >>= ShiftAmt;
 
   unsigned ShVal = AArch64_AM::getShifterImm(AArch64_AM::LSL, ShiftAmt);
   SDLoc dl(N);
@@ -2308,17 +2312,57 @@ void AArch64DAGToDAGISel::SelectMultiVectorLutiLane(SDNode *Node,
   CurDAG->RemoveDeadNode(Node);
 }
 
+void AArch64DAGToDAGISel::SelectMultiVectorLuti6LaneX4(SDNode *Node,
+                                                       unsigned NumIndexVecs) {
+  assert((NumIndexVecs == 2 || NumIndexVecs == 3) &&
+         "unexpected number of index vectors");
+
+  constexpr unsigned FirstIndexOp = 3;
+  unsigned ImmOp = FirstIndexOp + NumIndexVecs;
+  auto *Imm = dyn_cast<ConstantSDNode>(Node->getOperand(ImmOp));
+  if (!Imm || Imm->getZExtValue() > 1)
+    return;
+
+  // The luti6 instruction always takes a 2-register Zm index tuple. The x3
+  // ACLE form provides three index vectors, so the lane selects which adjacent
+  // pair to use before forming Zm (op 3/4 or op 4/5, with op6 as imm)
+  unsigned Lane = Imm->getZExtValue();
+  unsigned IndexOp = FirstIndexOp;
+  if (NumIndexVecs == 3)
+    IndexOp += Lane;
+
+  SDValue TableTuple = createZTuple({Node->getOperand(1), Node->getOperand(2)});
+  SDValue IndexTuple =
+      createZTuple({Node->getOperand(IndexOp), Node->getOperand(IndexOp + 1)});
+  SDValue Ops[] = {TableTuple, IndexTuple, Node->getOperand(ImmOp)};
+
+  SDLoc DL(Node);
+  EVT VT = Node->getValueType(0);
+  SDNode *Instruction =
+      CurDAG->getMachineNode(AArch64::LUTI6_4Z2Z2ZI, DL, MVT::Untyped, Ops);
+  SDValue SuperReg = SDValue(Instruction, 0);
+
+  for (unsigned I = 0; I < 4; ++I)
+    ReplaceUses(SDValue(Node, I), CurDAG->getTargetExtractSubreg(
+                                      AArch64::zsub0 + I, DL, VT, SuperReg));
+
+  CurDAG->RemoveDeadNode(Node);
+}
+
 void AArch64DAGToDAGISel::SelectMultiVectorLuti(SDNode *Node,
                                                 unsigned NumOutVecs,
-                                                unsigned Opc) {
+                                                unsigned Opc,
+                                                unsigned NumInVecs) {
+  assert((NumInVecs == 2 || NumInVecs == 3) &&
+         "unexpected number of input vectors");
+
   SDValue ZtValue;
   if (!ImmToReg<AArch64::ZT0, 0>(Node->getOperand(2), ZtValue))
     return;
 
-  SDValue Chain = Node->getOperand(0);
-  SDValue Ops[] = {ZtValue,
-                   createZMulTuple({Node->getOperand(3), Node->getOperand(4)}),
-                   Chain};
+  SmallVector<SDValue, 4> Regs(Node->ops().slice(3, NumInVecs));
+  SDValue ZTuple = NumInVecs == 3 ? createZTuple(Regs) : createZMulTuple(Regs);
+  SDValue Ops[] = {ZtValue, ZTuple, Node->getOperand(0)};
 
   SDLoc DL(Node);
   EVT VT = Node->getValueType(0);
@@ -2331,9 +2375,7 @@ void AArch64DAGToDAGISel::SelectMultiVectorLuti(SDNode *Node,
     ReplaceUses(SDValue(Node, I), CurDAG->getTargetExtractSubreg(
                                       AArch64::zsub0 + I, DL, VT, SuperReg));
 
-  // Copy chain
-  unsigned ChainIdx = NumOutVecs;
-  ReplaceUses(SDValue(Node, ChainIdx), SDValue(Instruction, 1));
+  ReplaceUses(SDValue(Node, NumOutVecs), SDValue(Instruction, 1));
   CurDAG->RemoveDeadNode(Node);
 }
 
@@ -5066,6 +5108,14 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
   return true;
 }
 
+/// Returns a copy from WZR or XZR. This can be used during instruction
+/// selection (it does not require any further selection/legalization).
+static SDValue getZeroRegister(SelectionDAG &DAG, SDLoc DL, EVT VT) {
+  assert(VT == MVT::i32 || VT == MVT::i64);
+  return DAG.getCopyFromReg(DAG.getEntryNode(), DL,
+                            VT == MVT::i32 ? AArch64::WZR : AArch64::XZR, VT);
+}
+
 void AArch64DAGToDAGISel::Select(SDNode *Node) {
   // If we have a custom node, we already have selected!
   if (Node->isMachineOpcode()) {
@@ -5149,18 +5199,9 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     // Materialize zero constants as copies from WZR/XZR.  This allows
     // the coalescer to propagate these into other instructions.
     ConstantSDNode *ConstNode = cast<ConstantSDNode>(Node);
-    if (ConstNode->isZero()) {
-      if (VT == MVT::i32) {
-        SDValue New = CurDAG->getCopyFromReg(
-            CurDAG->getEntryNode(), SDLoc(Node), AArch64::WZR, MVT::i32);
-        ReplaceNode(Node, New.getNode());
-        return;
-      } else if (VT == MVT::i64) {
-        SDValue New = CurDAG->getCopyFromReg(
-            CurDAG->getEntryNode(), SDLoc(Node), AArch64::XZR, MVT::i64);
-        ReplaceNode(Node, New.getNode());
-        return;
-      }
+    if (ConstNode->isZero() && (VT == MVT::i32 || VT == MVT::i64)) {
+      ReplaceNode(Node, getZeroRegister(*CurDAG, SDLoc(Node), VT).getNode());
+      return;
     }
     break;
   }
@@ -6024,7 +6065,11 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
       return;
     }
     case Intrinsic::aarch64_sme_luti4_zt_x4: {
-      SelectMultiVectorLuti(Node, 4, AArch64::LUTI4_4ZZT2Z);
+      SelectMultiVectorLuti(Node, 4, AArch64::LUTI4_4ZZT2Z, 2);
+      return;
+    }
+    case Intrinsic::aarch64_sme_luti6_zt_x4: {
+      SelectMultiVectorLuti(Node, 4, AArch64::LUTI6_4ZT3Z, 3);
       return;
     }
     case Intrinsic::aarch64_sve_fp8_cvtl1_x2:
@@ -6120,6 +6165,12 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
               {AArch64::SRSHL_VG4_4ZZ_B, AArch64::SRSHL_VG4_4ZZ_H,
                AArch64::SRSHL_VG4_4ZZ_S, AArch64::SRSHL_VG4_4ZZ_D}))
         SelectDestructiveMultiIntrinsic(Node, 4, false, Op);
+      return;
+    case Intrinsic::aarch64_sme_luti6_lane_x4_x2:
+      SelectMultiVectorLuti6LaneX4(Node, 2);
+      return;
+    case Intrinsic::aarch64_sme_luti6_lane_x4_x3:
+      SelectMultiVectorLuti6LaneX4(Node, 3);
       return;
     case Intrinsic::aarch64_sve_urshl_single_x2:
       if (auto Op = SelectOpcodeFromVT<SelectTypeKind::Int>(
@@ -8010,7 +8061,7 @@ bool AArch64DAGToDAGISel::SelectSMETileSlice(SDValue N, unsigned MaxSize,
   };
 
   if (SDValue C = MatchConstantOffset(N)) {
-    Base = CurDAG->getConstant(0, SDLoc(N), MVT::i32);
+    Base = getZeroRegister(*CurDAG, SDLoc(N), MVT::i32);
     Offset = C;
     return true;
   }
@@ -8158,15 +8209,11 @@ SDValue AArch64DAGToDAGISel::tryFoldCselToFMaxMin(SDNode &N) {
   if (CondCode == AArch64CC::GT || CondCode == AArch64CC::GE) {
     if (TVal == CmpLHS && FVal == CmpRHS)
       isMax = true;
-    else if (TVal == CmpRHS && FVal == CmpLHS)
-      isMax = false;
     else
       return SDValue();
   } else if (CondCode == AArch64CC::MI || CondCode == AArch64CC::LS) {
     if (TVal == CmpLHS && FVal == CmpRHS)
       isMax = false;
-    else if (TVal == CmpRHS && FVal == CmpLHS)
-      isMax = true;
     else
       return SDValue();
   } else {

@@ -12,7 +12,7 @@
 
       module omp_lib_kinds
 
-        use, intrinsic :: iso_c_binding
+        use :: iso_c_binding
 
         ! Set PRIVATE by default to explicitly only export what is meant
         ! to be exported by this MODULE.
@@ -640,20 +640,20 @@
           end subroutine omp_display_env
 
           function omp_target_alloc(size, device_num) bind(c)
-            use, intrinsic :: iso_c_binding, only: c_ptr, c_size_t, c_int
+            use :: iso_c_binding, only: c_ptr, c_size_t, c_int
             type(c_ptr) omp_target_alloc
             integer(c_size_t), value :: size
             integer(c_int), value :: device_num
           end function omp_target_alloc
 
           subroutine omp_target_free(device_ptr, device_num) bind(c)
-            use, intrinsic :: iso_c_binding, only: c_ptr, c_int
+            use :: iso_c_binding, only: c_ptr, c_int
             type(c_ptr), value :: device_ptr
             integer(c_int), value :: device_num
           end subroutine omp_target_free
 
           function omp_target_is_present(ptr, device_num) bind(c)
-            use, intrinsic :: iso_c_binding, only: c_ptr, c_int
+            use :: iso_c_binding, only: c_ptr, c_int
             integer(c_int) omp_target_is_present
             type(c_ptr), value :: ptr
             integer(c_int), value :: device_num
@@ -661,7 +661,7 @@
 
           function omp_target_memcpy(dst, src, length, dst_offset, src_offset, &
               dst_device_num, src_device_num) bind(c)
-            use, intrinsic :: iso_c_binding, only: c_ptr, c_size_t, c_int
+            use :: iso_c_binding, only: c_ptr, c_size_t, c_int
             integer(c_int) omp_target_memcpy
             type(c_ptr), value :: dst, src
             integer(c_size_t), value :: length, dst_offset, src_offset
@@ -671,7 +671,7 @@
           function omp_target_memcpy_rect(dst, src, element_size, num_dims,    &
               volume, dst_offsets, src_offsets, dst_dimensions,                &
               src_dimensions, dst_device_num, src_device_num) bind(c)
-            use, intrinsic :: iso_c_binding, only: c_ptr, c_size_t, c_int
+            use :: iso_c_binding, only: c_ptr, c_size_t, c_int
             integer(c_int) omp_target_memcpy_rect
             type(c_ptr), value :: dst, src
             integer(c_size_t), value :: element_size
@@ -684,7 +684,7 @@
               src_offset, dst_device_num, src_device_num, depobj_count,        &
               depobj_list) bind(c)
             use omp_lib_kinds
-            use, intrinsic :: iso_c_binding, only: c_ptr, c_size_t, c_int
+            use :: iso_c_binding, only: c_ptr, c_size_t, c_int
             integer(c_int) omp_target_memcpy_async
             type(c_ptr), value :: dst, src
             integer(c_size_t), value :: length, dst_offset, src_offset
@@ -698,7 +698,7 @@
               src_dimensions, dst_device_num, src_device_num, depobj_count,    &
               depobj_list) bind(c)
             use omp_lib_kinds
-            use, intrinsic :: iso_c_binding, only: c_ptr, c_size_t, c_int
+            use :: iso_c_binding, only: c_ptr, c_size_t, c_int
             integer(c_int) omp_target_memcpy_rect_async
             type(c_ptr), value :: dst, src
             integer(c_size_t), value :: element_size
@@ -710,7 +710,7 @@
           end function omp_target_memcpy_rect_async
 
           function omp_target_memset(ptr, val, count, device_num) bind(c)
-            use, intrinsic :: iso_c_binding, only : c_ptr, c_int, c_size_t
+            use :: iso_c_binding, only : c_ptr, c_int, c_size_t
             type(c_ptr) :: omp_target_memset
             type(c_ptr), value :: ptr
             integer(c_int), value :: val
@@ -721,7 +721,7 @@
           function omp_target_memset_async(ptr, val, count, device_num, &
                                            depobj_count, depobj_list) bind(c)
             use omp_lib_kinds
-            use, intrinsic :: iso_c_binding, only : c_ptr, c_int, c_size_t
+            use :: iso_c_binding, only : c_ptr, c_int, c_size_t
             type(c_ptr) :: omp_target_memset_async
             type(c_ptr), value :: ptr
             integer(c_int), value :: val
@@ -733,7 +733,7 @@
 
           function omp_target_associate_ptr(host_ptr, device_ptr, size,        &
               device_offset, device_num) bind(c)
-            use, intrinsic :: iso_c_binding, only: c_ptr, c_size_t, c_int
+            use :: iso_c_binding, only: c_ptr, c_size_t, c_int
             integer(c_int) omp_target_associate_ptr
             type(c_ptr), value :: host_ptr, device_ptr
             integer(c_size_t), value :: size, device_offset
@@ -741,21 +741,21 @@
           end function omp_target_associate_ptr
 
           function omp_get_mapped_ptr(ptr, device_num) bind(c)
-            use, intrinsic :: iso_c_binding, only: c_ptr, c_int
+            use :: iso_c_binding, only: c_ptr, c_int
             type(c_ptr) omp_get_mapped_ptr
             type(c_ptr), value :: ptr
             integer(c_int), value :: device_num
           end function omp_get_mapped_ptr
 
           function omp_target_disassociate_ptr(ptr, device_num) bind(c)
-            use, intrinsic :: iso_c_binding, only: c_ptr, c_int
+            use :: iso_c_binding, only: c_ptr, c_int
             integer(c_int) omp_target_disassociate_ptr
             type(c_ptr), value :: ptr
             integer(c_int), value :: device_num
           end function omp_target_disassociate_ptr
 
           function omp_target_is_accessible(ptr, size, device_num) bind(c)
-            use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t, c_int
+            use :: iso_c_binding, only : c_ptr, c_size_t, c_int
             integer(c_int) omp_target_is_accessible
             type(c_ptr), value :: ptr
             integer(c_size_t), value :: size
@@ -764,7 +764,7 @@
 
           function omp_alloc(size, allocator) bind(c)
             use omp_lib_kinds
-            use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t
+            use :: iso_c_binding, only : c_ptr, c_size_t
             type(c_ptr) omp_alloc
             integer(c_size_t), value :: size
             integer(omp_allocator_handle_kind), value :: allocator
@@ -772,7 +772,7 @@
 
           function omp_aligned_alloc(alignment, size, allocator) bind(c)
             use omp_lib_kinds
-            use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t
+            use :: iso_c_binding, only : c_ptr, c_size_t
             type(c_ptr) omp_aligned_alloc
             integer(c_size_t), value :: alignment, size
             integer(omp_allocator_handle_kind), value :: allocator
@@ -780,7 +780,7 @@
 
           function omp_calloc(nmemb, size, allocator) bind(c)
             use omp_lib_kinds
-            use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t
+            use :: iso_c_binding, only : c_ptr, c_size_t
             type(c_ptr) omp_calloc
             integer(c_size_t), value :: nmemb, size
             integer(omp_allocator_handle_kind), value :: allocator
@@ -788,7 +788,7 @@
 
           function omp_aligned_calloc(alignment, nmemb, size, allocator) bind(c)
             use omp_lib_kinds
-            use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t
+            use :: iso_c_binding, only : c_ptr, c_size_t
             type(c_ptr) omp_aligned_calloc
             integer(c_size_t), value :: alignment, nmemb, size
             integer(omp_allocator_handle_kind), value :: allocator
@@ -796,7 +796,7 @@
 
           function omp_realloc(ptr, size, allocator, free_allocator) bind(c)
             use omp_lib_kinds
-            use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t
+            use :: iso_c_binding, only : c_ptr, c_size_t
             type(c_ptr) omp_realloc
             type(c_ptr), value :: ptr
             integer(c_size_t), value :: size
@@ -806,7 +806,7 @@
 
           subroutine omp_free(ptr, allocator) bind(c)
             use omp_lib_kinds
-            use, intrinsic :: iso_c_binding, only : c_ptr
+            use :: iso_c_binding, only : c_ptr
             type(c_ptr), value :: ptr
             integer(omp_allocator_handle_kind), value :: allocator
           end subroutine omp_free

@@ -882,7 +882,7 @@ struct UnrollLoadMatrixOp : public UnrollPattern<xegpu::LoadMatrixOp> {
 
     Type elemTy = valueTy.getElementType();
     ArrayRef<int64_t> shape = valueTy.getShape();
-    auto layout = dyn_cast<xegpu::LayoutAttr>(op.getLayoutAttr());
+    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
 
     VectorType newValueTy = valueTy.cloneWith(*targetShape, elemTy);
 
@@ -897,7 +897,8 @@ struct UnrollLoadMatrixOp : public UnrollPattern<xegpu::LoadMatrixOp> {
     }
 
     SmallVector<Value> newOps;
-    layout = layout.dropInstData();
+    if (layout)
+      layout = layout.dropInstData();
     for (SmallVector<OpFoldResult> offsets : offsetsList) {
       auto newOp = xegpu::LoadMatrixOp::create(
           rewriter, op.getLoc(), newValueTy, op.getMemDesc(), offsets, layout);
@@ -921,7 +922,9 @@ struct UnrollStoreMatrixOp : public UnrollPattern<xegpu::StoreMatrixOp> {
     VectorType valueTy = llvm::dyn_cast<VectorType>(op.getData().getType());
     assert(valueTy && "the value type must be vector type!");
     ArrayRef<int64_t> shape = valueTy.getShape();
-    auto layout = dyn_cast<xegpu::LayoutAttr>(op.getLayoutAttr());
+    xegpu::DistributeLayoutAttr layout = op.getLayoutAttr();
+    if (layout)
+      layout = layout.dropInstData();
 
     SmallVector<Type> convertedValTypes =
         getUnrolledTypes(valueTy, *targetShape);
@@ -940,7 +943,7 @@ struct UnrollStoreMatrixOp : public UnrollPattern<xegpu::StoreMatrixOp> {
 
     for (auto [v, offsets] : llvm::zip_equal(convertedValues, offsetsList))
       xegpu::StoreMatrixOp::create(rewriter, loc, v, op.getMemDesc(), offsets,
-                                   layout.dropInstData());
+                                   layout);
 
     rewriter.eraseOp(op);
     return success();
@@ -966,8 +969,6 @@ struct UnrollConvertLayoutOp : public UnrollPattern<xegpu::ConvertLayoutOp> {
 
     if (valType.isIntOrFloat()) {
       rewriter.replaceOp(op, op.getSource());
-      assert(!inputLayout.dropInstData() && !targetLayout.dropInstData() &&
-             "unexpected layout attributes for scalar type");
       return success();
     }
 
@@ -987,7 +988,7 @@ struct UnrollConvertLayoutOp : public UnrollPattern<xegpu::ConvertLayoutOp> {
 
     Value newSource = op.getSource();
     SmallVector<Value> newOps;
-    if (inputLayout && targetLayout) {
+    if (inputLayout && targetLayout && !inputLayout.isEqualTo(targetLayout)) {
       SmallVector<Type> convertedValTypes =
           getUnrolledTypes(valueTy, *targetShape);
       SmallVector<Value> convertedValues =
