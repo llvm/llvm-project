@@ -2373,8 +2373,7 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
     assert(AuthSchema.PCDisc == AArch64::X15 &&
            "AUTPCPAC requires PC discriminator in X15");
 
-    assert(AuthSchema.IntDisc == 0 &&
-           "AUTPCPAC does not support IntDisc");
+    assert(AuthSchema.IntDisc == 0 && "AUTPCPAC does not support IntDisc");
 
     assert((AuthSchema.Key == AArch64PACKey::IB ||
             AuthSchema.Key == AArch64PACKey::IA) &&
