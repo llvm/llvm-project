@@ -251,6 +251,7 @@ const unsigned WASM_SYMBOL_VISIBILITY_MASK = 0xc;
 const unsigned WASM_SYMBOL_BINDING_GLOBAL = 0x0;
 const unsigned WASM_SYMBOL_BINDING_WEAK = 0x1;
 const unsigned WASM_SYMBOL_BINDING_LOCAL = 0x2;
+const unsigned WASM_SYMBOL_BINDING_COMMON = 0x3;
 const unsigned WASM_SYMBOL_VISIBILITY_DEFAULT = 0x0;
 const unsigned WASM_SYMBOL_VISIBILITY_HIDDEN = 0x4;
 const unsigned WASM_SYMBOL_UNDEFINED = 0x10;
@@ -456,6 +457,11 @@ struct WasmDataReference {
   uint64_t Size;
 };
 
+struct WasmCommonReference {
+  uint64_t Size;
+  uint32_t Alignment;
+};
+
 struct WasmRelocation {
   uint8_t Type;    // The type of the relocation.
   uint32_t Index;  // Index into either symbol or type index space.
@@ -486,6 +492,8 @@ struct WasmSymbolInfo {
     uint32_t ElementIndex;
     // For a data symbols, the address of the data relative to segment.
     WasmDataReference DataRef;
+    // For common symbols, the size and alignment.
+    WasmCommonReference CommonRef;
   };
 };
 

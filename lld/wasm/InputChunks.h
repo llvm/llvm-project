@@ -45,6 +45,7 @@ public:
     Function,
     SyntheticFunction,
     Section,
+    SyntheticDataSegment,
   };
 
   StringRef name;
@@ -339,6 +340,25 @@ public:
   }
 
   void setBody(ArrayRef<uint8_t> body) { rawData = body; }
+};
+
+class SyntheticInputSegment : public InputChunk {
+public:
+  SyntheticInputSegment(StringRef name, uint32_t alignment, uint32_t flags)
+      : InputChunk(nullptr, InputChunk::SyntheticDataSegment, name, alignment,
+                   flags) {}
+
+  static bool classof(const InputChunk *c) {
+    return c->kind() == SyntheticDataSegment;
+  }
+
+  void setSize(uint64_t s) { size = s; }
+  uint32_t getSize() const { return size; }
+
+  void writeTo(uint8_t *buf) const;
+
+private:
+  uint64_t size = 0;
 };
 
 // Represents a single Wasm Section within an input file.
