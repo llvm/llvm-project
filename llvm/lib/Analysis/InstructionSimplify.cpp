@@ -3812,7 +3812,8 @@ static Value *simplifyICmpWithDominatingAssume(CmpPredicate Predicate,
 }
 
 static Value *simplifyICmpWithIntrinsicOnLHS(CmpPredicate Pred, Value *LHS,
-                                             Value *RHS) {
+                                             Value *RHS,
+                                             const SimplifyQuery &Q) {
   auto *II = dyn_cast<IntrinsicInst>(LHS);
   if (!II)
     return nullptr;
@@ -3828,6 +3829,36 @@ static Value *simplifyICmpWithIntrinsicOnLHS(CmpPredicate Pred, Value *LHS,
         return ConstantInt::getFalse(getCompareTy(II));
     }
     return nullptr;
+  case Intrinsic::sadd_sat: {
+    Value *Other;
+    if (RHS == II->getArgOperand(0))
+      Other = II->getArgOperand(1);
+    else if (RHS == II->getArgOperand(1))
+      Other = II->getArgOperand(0);
+    else
+      return nullptr;
+
+    if (Pred != ICmpInst::ICMP_SGE && Pred != ICmpInst::ICMP_SLT &&
+        Pred != ICmpInst::ICMP_SLE && Pred != ICmpInst::ICMP_SGT)
+      return nullptr;
+
+    KnownBits Known = computeKnownBits(Other, Q);
+    // sadd.sat(X, Y) sge X if Y is non-negative.
+    if (Known.isNonNegative()) {
+      if (Pred == ICmpInst::ICMP_SGE)
+        return ConstantInt::getTrue(getCompareTy(II));
+      if (Pred == ICmpInst::ICMP_SLT)
+        return ConstantInt::getFalse(getCompareTy(II));
+    }
+    // sadd.sat(X, Y) sle X if Y is non-positive.
+    if (Known.isNonPositive()) {
+      if (Pred == ICmpInst::ICMP_SLE)
+        return ConstantInt::getTrue(getCompareTy(II));
+      if (Pred == ICmpInst::ICMP_SGT)
+        return ConstantInt::getFalse(getCompareTy(II));
+    }
+    return nullptr;
+  }
   case Intrinsic::usub_sat:
     // usub.sat(X, Y) ule X - Y
     if (match(RHS, m_Sub(m_Specific(II->getArgOperand(0)),
@@ -4128,10 +4159,10 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
   if (Value *V = simplifyICmpWithMinMax(Pred, LHS, RHS, Q, MaxRecurse))
     return V;
 
-  if (Value *V = simplifyICmpWithIntrinsicOnLHS(Pred, LHS, RHS))
+  if (Value *V = simplifyICmpWithIntrinsicOnLHS(Pred, LHS, RHS, Q))
     return V;
   if (Value *V = simplifyICmpWithIntrinsicOnLHS(
-          ICmpInst::getSwappedPredicate(Pred), RHS, LHS))
+          ICmpInst::getSwappedPredicate(Pred), RHS, LHS, Q))
     return V;
 
   if (Value *V = simplifyICmpUsingMonotonicValues(Pred, LHS, RHS, Q))
@@ -4832,7 +4863,8 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
   if (!match(CondVal, m_ICmp(Pred, m_Value(CmpLHS), m_Value(CmpRHS))))
     return nullptr;
 
-  if (Value *V = simplifyCmpSelOfMaxMin(CmpLHS, CmpRHS, Pred, TrueVal, FalseVal))
+  if (Value *V =
+          simplifyCmpSelOfMaxMin(CmpLHS, CmpRHS, Pred, TrueVal, FalseVal))
     return V;
 
   // Canonicalize ne to eq predicate.
