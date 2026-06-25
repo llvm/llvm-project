@@ -19649,6 +19649,9 @@ static bool hasOneUser(SDValue X) {
   return all_equal(Users);
 }
 
+// TODO: A vlse.v is not necessarily faster than a vrgather.vv on all uarchs.
+// Remove once a cost model driven transform is implemented in the loop
+// vectorizer.
 static SDValue performReverseEVLCombine(SDNode *N, SelectionDAG &DAG,
                                         const RISCVSubtarget &Subtarget) {
   // Fold:
@@ -19665,16 +19668,18 @@ static SDValue performReverseEVLCombine(SDNode *N, SelectionDAG &DAG,
   if (!sd_match(N, m_ReverseEVL(m_Value(Op), m_Value(EVL))))
     return SDValue();
 
+  VPLoadSDNode *VPLoad = nullptr;
   // Check that all leaves are splats or vp_loads, and collect the latter.
   SmallVector<SDValue> Worklist = {Op};
-  SmallVector<VPLoadSDNode *> VPLoads;
   while (!Worklist.empty()) {
     SDValue X = Worklist.pop_back_val();
     if (!hasOneUser(X))
       return SDValue();
-    if (auto *VPLoad = dyn_cast<VPLoadSDNode>(X))
-      VPLoads.push_back(VPLoad);
-    else if (DAG.isSplatValue(X))
+    if (auto *VPL = dyn_cast<VPLoadSDNode>(X)) {
+      if (VPLoad && VPLoad != VPL)
+        return SDValue();
+      VPLoad = VPL;
+    } else if (DAG.isSplatValue(X))
       continue;
     else if (DAG.getTargetLoweringInfo().isBinOp(X.getOpcode()) &&
              X->getNumValues() == 1)
@@ -19682,58 +19687,54 @@ static SDValue performReverseEVLCombine(SDNode *N, SelectionDAG &DAG,
     else
       return SDValue();
   }
+  if (!VPLoad)
+    return SDValue();
 
-  SmallVector<SDValue> LoadMasks;
-  for (auto *VPLoad : VPLoads) {
-    EVT LoadVT = VPLoad->getValueType(0);
-    // We do not have a strided_load version for masks, and the evl of
-    // vp.reverse and vp.load should always be the same.
-    if (!LoadVT.getVectorElementType().isByteSized() ||
-        EVL != VPLoad->getVectorLength())
+  EVT LoadVT = VPLoad->getValueType(0);
+  // We do not have a strided_load version for masks, and the evl of vp.reverse
+  // and vp.load should always be the same.
+  if (!LoadVT.getVectorElementType().isByteSized() ||
+      EVL != VPLoad->getVectorLength())
+    return SDValue();
+
+  SDValue LoadMask = VPLoad->getMask();
+  // If Mask is all ones, then load is unmasked and can be reversed.
+  if (!isOneOrOneSplat(LoadMask)) {
+    // If the mask is not all ones, we can reverse the load if the mask was also
+    // reversed by a vp.reverse with the same EVL.
+    SDValue OrigMask;
+    if (!sd_match(LoadMask, m_ReverseEVL(m_Value(OrigMask), m_Specific(EVL))))
       return SDValue();
-
-    SDValue LoadMask = VPLoad->getMask();
-    // If Mask is all ones, then load is unmasked and can be reversed.
-    if (isOneOrOneSplat(LoadMask)) {
-      LoadMasks.push_back(LoadMask);
-    } else {
-      // If the mask is not all ones, we can reverse the load if the mask was
-      // also reversed by a vp.reverse with the same EVL.
-      SDValue OrigMask;
-      if (!sd_match(LoadMask, m_ReverseEVL(m_Value(OrigMask), m_Specific(EVL))))
-        return SDValue();
-      LoadMasks.push_back(OrigMask);
-    }
+    LoadMask = OrigMask;
   }
 
-  // Reverse the vp_loads.
+  // Base = LoadAddr + (NumElem - 1) * ElemWidthByte
   SDLoc DL(N);
   MVT XLenVT = Subtarget.getXLenVT();
-  uint64_t ElemWidthByte = N->getValueType(0).getScalarSizeInBits() / 8;
-  SDValue Temp1 =
-      DAG.getNode(ISD::SUB, DL, XLenVT, EVL, DAG.getConstant(1, DL, XLenVT));
+  SDValue NumElem = VPLoad->getVectorLength();
+  uint64_t ElemWidthByte = VPLoad->getValueType(0).getScalarSizeInBits() / 8;
+
+  SDValue Temp1 = DAG.getNode(ISD::SUB, DL, XLenVT, NumElem,
+                              DAG.getConstant(1, DL, XLenVT));
   SDValue Temp2 = DAG.getNode(ISD::MUL, DL, XLenVT, Temp1,
                               DAG.getConstant(ElemWidthByte, DL, XLenVT));
+  SDValue Base = DAG.getNode(ISD::ADD, DL, XLenVT, VPLoad->getBasePtr(), Temp2);
   SDValue Stride = DAG.getSignedConstant(-ElemWidthByte, DL, XLenVT);
-  for (auto [VPLoad, LoadMask] : zip_equal(VPLoads, LoadMasks)) {
-    // Base = LoadAddr + (NumElem - 1) * ElemWidthByte
-    SDValue Base =
-        DAG.getNode(ISD::ADD, DL, XLenVT, VPLoad->getBasePtr(), Temp2);
 
-    MachineFunction &MF = DAG.getMachineFunction();
-    MachinePointerInfo PtrInfo(VPLoad->getAddressSpace());
-    MachineMemOperand *MMO = MF.getMachineMemOperand(
-        PtrInfo, VPLoad->getMemOperand()->getFlags(),
-        LocationSize::beforeOrAfterPointer(), VPLoad->getAlign());
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachinePointerInfo PtrInfo(VPLoad->getAddressSpace());
+  MachineMemOperand *MMO = MF.getMachineMemOperand(
+      PtrInfo, VPLoad->getMemOperand()->getFlags(),
+      LocationSize::beforeOrAfterPointer(), VPLoad->getAlign());
 
-    SDValue Ret = DAG.getStridedLoadVP(
-        VPLoad->getValueType(0), DL, VPLoad->getChain(), Base, Stride, LoadMask,
-        VPLoad->getVectorLength(), MMO, VPLoad->isExpandingLoad());
-    DAG.ReplaceAllUsesWith(VPLoad, Ret.getNode());
-  }
+  SDValue Ret = DAG.getStridedLoadVP(
+      LoadVT, DL, VPLoad->getChain(), Base, Stride, LoadMask,
+      VPLoad->getVectorLength(), MMO, VPLoad->isExpandingLoad());
+
+  DAG.ReplaceAllUsesWith(VPLoad, Ret.getNode());
 
   // Remove the top level reverse.
-  (void)sd_match(N, m_ReverseEVL(m_Value(Op), m_Specific(EVL)));
+  (void)sd_match(N, m_ReverseEVL(m_Value(Op), m_Value()));
   return Op;
 }
 
