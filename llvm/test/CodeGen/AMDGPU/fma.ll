@@ -1,5 +1,5 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=gfx906 < %s | FileCheck -check-prefix=GFX906 -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu9.06 < %s | FileCheck -check-prefix=GFX906 -check-prefix=FUNC %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=cypress < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 ; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=cedar < %s
 ; RUN:  not llc -amdgpu-scalarize-global-loads=false  -mtriple=r600 -mcpu=juniper < %s
