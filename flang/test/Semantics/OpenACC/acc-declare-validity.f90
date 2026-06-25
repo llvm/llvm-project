@@ -84,12 +84,3 @@ contains
   end subroutine
 
 end module openacc_declare_validity
-
-
-module m
-  integer :: x
-contains
-  !$acc declare copyin(x)
-  subroutine s()
-  end subroutine
-end module

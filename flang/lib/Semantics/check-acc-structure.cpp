@@ -819,8 +819,7 @@ void AccStructureChecker::CheckMultipleOccurrenceInDeclare(
             [&](const parser::Designator &designator) {
               if (const auto *name =
                       parser::GetDesignatorNameIfDataRef(designator)) {
-                if (name->symbol &&
-                    declareSymbols.contains(&name->symbol->GetUltimate())) {
+                if (declareSymbols.contains(&name->symbol->GetUltimate())) {
                   if (declareSymbols[&name->symbol->GetUltimate()] == clause) {
                     context_.Warn(common::UsageWarning::OpenAccUsage,
                         GetContext().clauseSource,
@@ -841,9 +840,7 @@ void AccStructureChecker::CheckMultipleOccurrenceInDeclare(
                                 .str()));
                   }
                 }
-                if (name->symbol) {
-                  declareSymbols.insert({&name->symbol->GetUltimate(), clause});
-                }
+                declareSymbols.insert({&name->symbol->GetUltimate(), clause});
               }
             },
             [&](const parser::Name &name) {
