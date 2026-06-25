@@ -2039,7 +2039,7 @@ int GDBRemoteCommunicationClient::SetSTDERR(const FileSpec &file_spec) {
 
 int GDBRemoteCommunicationClient::SetSTDIOWindowSize(uint16_t cols,
                                                      uint16_t rows) {
-  if (cols == 0 || rows == 0)
+  if ((cols == 0) != (rows == 0))
     return -1;
   StreamString packet;
   packet.Printf("QSetSTDIOWindowSize:cols=%u;rows=%u",
