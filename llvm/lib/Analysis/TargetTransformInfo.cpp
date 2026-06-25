@@ -292,14 +292,15 @@ bool TargetTransformInfo::hasBranchDivergence(const Function *F) const {
   return TTIImpl->hasBranchDivergence(F);
 }
 
-InstructionUniformity
-llvm::TargetTransformInfo::getInstructionUniformity(const Value *V) const {
-  // Calls with the NoDivergenceSource attribute are always uniform.
+ValueUniformity
+llvm::TargetTransformInfo::getValueUniformity(const Value *V) const {
+  ValueUniformity VU = TTIImpl->getValueUniformity(V);
   if (const auto *Call = dyn_cast<CallBase>(V)) {
-    if (Call->hasFnAttr(Attribute::NoDivergenceSource))
-      return InstructionUniformity::AlwaysUniform;
+    if (VU == ValueUniformity::NeverUniform &&
+        Call->hasFnAttr(Attribute::NoDivergenceSource))
+      return ValueUniformity::Default;
   }
-  return TTIImpl->getInstructionUniformity(V);
+  return VU;
 }
 
 bool llvm::TargetTransformInfo::isValidAddrSpaceCast(unsigned FromAS,
@@ -379,9 +380,9 @@ unsigned TargetTransformInfo::getEpilogueVectorizationMinVF() const {
   return TTIImpl->getEpilogueVectorizationMinVF();
 }
 
-bool TargetTransformInfo::preferPredicateOverEpilogue(
+bool TargetTransformInfo::preferTailFoldingOverEpilogue(
     TailFoldingInfo *TFI) const {
-  return TTIImpl->preferPredicateOverEpilogue(TFI);
+  return TTIImpl->preferTailFoldingOverEpilogue(TFI);
 }
 
 TailFoldingStyle TargetTransformInfo::getPreferredTailFoldingStyle() const {
@@ -616,6 +617,10 @@ bool TargetTransformInfo::shouldBuildLookupTablesForConstant(
   return TTIImpl->shouldBuildLookupTablesForConstant(C);
 }
 
+unsigned TargetTransformInfo::getMinimumLookupTableEntryBitWidth() const {
+  return TTIImpl->getMinimumLookupTableEntryBitWidth();
+}
+
 bool TargetTransformInfo::shouldBuildRelLookupTables() const {
   return TTIImpl->shouldBuildRelLookupTables();
 }
@@ -626,11 +631,6 @@ bool TargetTransformInfo::useColdCCForColdCall(Function &F) const {
 
 bool TargetTransformInfo::useFastCCForInternalCall(Function &F) const {
   return TTIImpl->useFastCCForInternalCall(F);
-}
-
-bool TargetTransformInfo::isTargetIntrinsicTriviallyScalarizable(
-    Intrinsic::ID ID) const {
-  return TTIImpl->isTargetIntrinsicTriviallyScalarizable(ID);
 }
 
 bool TargetTransformInfo::isTargetIntrinsicWithScalarOpAtArg(
@@ -860,8 +860,11 @@ unsigned TargetTransformInfo::getMaximumVF(unsigned ElemWidth,
 }
 
 unsigned TargetTransformInfo::getStoreMinimumVF(unsigned VF, Type *ScalarMemTy,
-                                                Type *ScalarValTy) const {
-  return TTIImpl->getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy);
+                                                Type *ScalarValTy,
+                                                Align Alignment,
+                                                unsigned AddrSpace) const {
+  return TTIImpl->getStoreMinimumVF(VF, ScalarMemTy, ScalarValTy, Alignment,
+                                    AddrSpace);
 }
 
 bool TargetTransformInfo::shouldConsiderAddressTypePromotion(
@@ -1055,6 +1058,22 @@ TargetTransformInfo::getPartialReductionExtendKind(Instruction *I) {
   if (auto *Cast = dyn_cast<CastInst>(I))
     return getPartialReductionExtendKind(Cast->getOpcode());
   return PR_None;
+}
+
+Instruction::CastOps
+TargetTransformInfo::getOpcodeForPartialReductionExtendKind(
+    TargetTransformInfo::PartialReductionExtendKind Kind) {
+  switch (Kind) {
+  case TargetTransformInfo::PR_ZeroExtend:
+    return Instruction::CastOps::ZExt;
+  case TargetTransformInfo::PR_SignExtend:
+    return Instruction::CastOps::SExt;
+  case TargetTransformInfo::PR_FPExtend:
+    return Instruction::CastOps::FPExt;
+  default:
+    break;
+  }
+  llvm_unreachable("Unhandled partial reduction extend kind");
 }
 
 TargetTransformInfo::PartialReductionExtendKind
@@ -1456,6 +1475,10 @@ bool TargetTransformInfo::preferInLoopReduction(RecurKind Kind,
 
 bool TargetTransformInfo::preferAlternateOpcodeVectorization() const {
   return TTIImpl->preferAlternateOpcodeVectorization();
+}
+
+bool TargetTransformInfo::preferSLPInstCountCheck() const {
+  return TTIImpl->preferSLPInstCountCheck();
 }
 
 bool TargetTransformInfo::preferPredicatedReductionSelect() const {

@@ -421,7 +421,7 @@ define void @multi_vector_add_za_vg1x2_f64_tuple(i64 %stride, ptr %ptr) sanitize
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld1.pn.x2.nxv2f64(target("aarch64.svcount") [[TMP2]], ptr [[PTR:%.*]])
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld1.pn.x2.nxv2f64.p0(target("aarch64.svcount") [[TMP2]], ptr [[PTR:%.*]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP5]], 1
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or i64 [[TMP0]], [[TMP1]]
@@ -432,7 +432,7 @@ define void @multi_vector_add_za_vg1x2_f64_tuple(i64 %stride, ptr %ptr) sanitize
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       9:
-; CHECK-NEXT:    [[TMP10:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld1.pn.x2.nxv2f64(target("aarch64.svcount") [[TMP2]], ptr [[ARRAYIDX2]])
+; CHECK-NEXT:    [[TMP10:%.*]] = tail call { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.aarch64.sve.ld1.pn.x2.nxv2f64.p0(target("aarch64.svcount") [[TMP2]], ptr [[ARRAYIDX2]])
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP10]], 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractvalue { <vscale x 2 x double>, <vscale x 2 x double> } [[TMP10]], 1
 ; CHECK-NEXT:    call void @llvm.aarch64.sme.add.za64.vg1x2.nxv2f64(i32 0, <vscale x 2 x double> [[TMP6]], <vscale x 2 x double> [[TMP11]])
@@ -563,7 +563,7 @@ define void @multi_vector_add_za_vg1x4_f32_tuple(i64 %stride, ptr %ptr) sanitize
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       4:
-; CHECK-NEXT:    [[TMP5:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld1.pn.x4.nxv4f32(target("aarch64.svcount") [[TMP2]], ptr [[PTR:%.*]])
+; CHECK-NEXT:    [[TMP5:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld1.pn.x4.nxv4f32.p0(target("aarch64.svcount") [[TMP2]], ptr [[PTR:%.*]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP5]], 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP5]], 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP5]], 2
@@ -576,7 +576,7 @@ define void @multi_vector_add_za_vg1x4_f32_tuple(i64 %stride, ptr %ptr) sanitize
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       11:
-; CHECK-NEXT:    [[TMP12:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld1.pn.x4.nxv4f32(target("aarch64.svcount") [[TMP2]], ptr [[ARRAYIDX2]])
+; CHECK-NEXT:    [[TMP12:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld1.pn.x4.nxv4f32.p0(target("aarch64.svcount") [[TMP2]], ptr [[ARRAYIDX2]])
 ; CHECK-NEXT:    [[TMP13:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP12]], 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP12]], 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP12]], 2
@@ -592,7 +592,7 @@ define void @multi_vector_add_za_vg1x4_f32_tuple(i64 %stride, ptr %ptr) sanitize
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       20:
-; CHECK-NEXT:    [[TMP21:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld1.pn.x4.nxv4f32(target("aarch64.svcount") [[TMP2]], ptr [[ARRAYIDX4]])
+; CHECK-NEXT:    [[TMP21:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld1.pn.x4.nxv4f32.p0(target("aarch64.svcount") [[TMP2]], ptr [[ARRAYIDX4]])
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP21]], 0
 ; CHECK-NEXT:    [[TMP23:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP21]], 1
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP21]], 2
@@ -607,7 +607,7 @@ define void @multi_vector_add_za_vg1x4_f32_tuple(i64 %stride, ptr %ptr) sanitize
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR7]]
 ; CHECK-NEXT:    unreachable
 ; CHECK:       27:
-; CHECK-NEXT:    [[TMP28:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld1.pn.x4.nxv4f32(target("aarch64.svcount") [[TMP2]], ptr [[ARRAYIDX6]])
+; CHECK-NEXT:    [[TMP28:%.*]] = tail call { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } @llvm.aarch64.sve.ld1.pn.x4.nxv4f32.p0(target("aarch64.svcount") [[TMP2]], ptr [[ARRAYIDX6]])
 ; CHECK-NEXT:    [[TMP29:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP28]], 0
 ; CHECK-NEXT:    [[TMP30:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP28]], 1
 ; CHECK-NEXT:    [[TMP31:%.*]] = extractvalue { <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float> } [[TMP28]], 2

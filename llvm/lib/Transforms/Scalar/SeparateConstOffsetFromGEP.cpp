@@ -161,6 +161,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -220,7 +221,7 @@ public:
 
 private:
   ConstantOffsetExtractor(BasicBlock::iterator InsertionPt)
-      : IP(InsertionPt), DL(InsertionPt->getDataLayout()) {}
+      : IP(InsertionPt), DL(InsertionPt->getDataLayout()), SQ(DL) {}
 
   /// Searches the expression that computes V for a non-zero constant C s.t.
   /// V can be reassociated into the form V' + C. If the searching is
@@ -297,6 +298,33 @@ private:
   bool canTraceInto(bool SignExtended, bool ZeroExtended, BinaryOperator *BO,
                     GetElementPtrInst *GEP, Value *Idx);
 
+  /// Analyze a xor expression, and identify the bits in the constant operand
+  /// that are disjoint from the base operand's known set bits. For these
+  /// disjoint bits, a xor is equivalent to an addition, which allows us to
+  /// extract them as constant offsets that can be folded into the immediate
+  /// field of addressing operations. The transformation is the following one:
+  ///
+  ///   Base ^ Const  becomes  (Base ^ NonDisjointBits) + DisjointBits
+  ///
+  /// where DisjointBits = Const & KnownZeros(Base) and
+  ///       NonDisjointBits = Const & ~DisjointBits.
+  ///
+  /// Example with ptr having known-zero low bit:
+  ///   Original: `xor %ptr, 3`    ; 3 = 0b11
+  ///   Analysis: DisjointBits = 3 & KnownZeros(%ptr) = 0b11 & 0b01 = 0b01
+  ///   Result:   `(xor %ptr, 2) + 1` where 1 can be folded into address mode
+  ///
+  /// \param XorInst The XOR binary operator to analyze
+  /// \return Returns the disjoint bits (the extractable offset), or zero if
+  /// none exist. On success, stores NonDisjointBits in
+  /// NonDisjointXorConstantBits.
+  APInt extractDisjointBitsFromXor(BinaryOperator *XorInst);
+
+  /// The non-disjoint bits remaining after xor decomposition in
+  /// `extractDisjointBitsFromXor`, which are later used while replacing the
+  /// original xor constant operand.
+  ConstantInt *NonDisjointXorConstantBits = nullptr;
+
   /// The path from the constant offset to the old GEP index. e.g., if the GEP
   /// index is "a * b + (c + 5)". After running function find, UserChain[0] will
   /// be the constant 5, UserChain[1] will be the subexpression "c + 5", and
@@ -313,6 +341,7 @@ private:
   BasicBlock::iterator IP;
 
   const DataLayout &DL;
+  const SimplifyQuery SQ;
 };
 
 /// A pass that tries to split every GEP in the function into a variadic
@@ -388,8 +417,10 @@ private:
   /// LowerGEP is true, it finds in indices of both sequential and structure
   /// types, otherwise it only finds in sequential indices. The output
   /// NeedsExtraction indicates whether we successfully find a non-zero constant
-  /// offset.
-  APInt accumulateByteOffset(GetElementPtrInst *GEP, bool &NeedsExtraction);
+  /// offset, and SignedOverflow indicates if there was signed overflow in
+  /// offset calculation.
+  APInt accumulateByteOffset(GetElementPtrInst *GEP, bool &NeedsExtraction,
+                             bool &SignedOverflow);
 
   /// Canonicalize array indices to pointer-size integers. This helps to
   /// simplify the logic of splitting a GEP. For example, if a + b is a
@@ -707,6 +738,8 @@ APInt ConstantOffsetExtractor::find(Value *V, GetElementPtrInst *GEP,
     // Trace into subexpressions for more hoisting opportunities.
     if (canTraceInto(SignExtended, ZeroExtended, BO, GEP, Idx))
       ConstantOffset = findInEitherOperand(BO, SignExtended, ZeroExtended);
+    else if (BO->getOpcode() == Instruction::Xor)
+      ConstantOffset = extractDisjointBitsFromXor(BO);
   } else if (isa<TruncInst>(V)) {
     ConstantOffset =
         find(U->getOperand(0), GEP, Idx, SignExtended, ZeroExtended)
@@ -825,6 +858,19 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   Value *NextInChain = removeConstOffset(ChainIndex - 1);
   Value *TheOther = BO->getOperand(1 - OpNo);
 
+  // When rewriting xor(TheOther, NextInChain) expressions, the original
+  // constant operand is replaced with the non-disjoints bits, which are the
+  // non-extractable bits, i.e., those that must remain in the xor (the other
+  // bits have already compounded the GEP offset).
+  if (BO->getOpcode() == Instruction::Xor) {
+    // The non-disjoint bits are cached in NonDisjointXorConstantBits, which is
+    // always up-to-date.
+    assert(NonDisjointXorConstantBits &&
+           "XOR in UserChain without recorded non-disjoint bits");
+    // Only casts can happen to be distributed among the xor operands.
+    NextInChain = applyCasts(NonDisjointXorConstantBits);
+  }
+
   // If NextInChain is 0 and not the LHS of a sub, we can simplify the
   // sub-expression to be just TheOther.
   if (ConstantInt *CI = dyn_cast<ConstantInt>(NextInChain)) {
@@ -858,6 +904,49 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   }
   NewBO->takeName(BO);
   return NewBO;
+}
+
+APInt ConstantOffsetExtractor::extractDisjointBitsFromXor(
+    BinaryOperator *XorInst) {
+  assert(XorInst && XorInst->getOpcode() == Instruction::Xor &&
+         "Expected XOR instruction");
+
+  unsigned BitWidth = XorInst->getType()->getScalarSizeInBits();
+  Value *BaseOp;
+  ConstantInt *XorConstantOp;
+
+  if (!match(XorInst, m_Xor(m_Value(BaseOp), m_ConstantInt(XorConstantOp))))
+    return APInt::getZero(BitWidth);
+
+  const KnownBits BaseKnownBits = computeKnownBits(BaseOp, SQ);
+  const APInt &ConstantValue = XorConstantOp->getValue();
+
+  // Compute the disjoint bits, i.e., those bits of the constant operand that
+  // are known-zero in the base. These disjoint bits will contribute to the
+  // final GEP offset. If there are no disjoint bits, there isn't any offset to
+  // extract from the xor.
+  const APInt DisjointBits = ConstantValue & BaseKnownBits.Zero;
+  if (DisjointBits.isZero())
+    return DisjointBits;
+
+  // Avoid a pessimizing rewrite if the disjoint bits include the sign bit.
+  if (DisjointBits.isSignBitSet())
+    return APInt::getZero(BitWidth);
+
+  // Compute the remaining bits, i.e., the non-disjoint ones, which are those
+  // that must be preserved in the xor.
+  const APInt NonDisjointBits = ConstantValue & ~DisjointBits;
+  NonDisjointXorConstantBits =
+      ConstantInt::get(XorInst->getContext(), NonDisjointBits);
+
+  // UserChain maintains a path from the constant up to the GEP index. Push the
+  // xor constant operand, which is the constant leaf of the chain (which is
+  // also what `distributeCastsAndCloneChain` expects). Such a chained operand
+  // is the one to be replaced with the non-disjoint bits, while rebuilding the
+  // xor afterwards. The xor instruction itself is pushed upon returning.
+  UserChain.push_back(XorConstantOp);
+
+  return DisjointBits;
 }
 
 /// A helper function to check if reassociating through an entry in the user
@@ -930,8 +1019,10 @@ bool SeparateConstOffsetFromGEP::canonicalizeArrayIndicesToIndexSize(
 }
 
 APInt SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
-                                                       bool &NeedsExtraction) {
+                                                       bool &NeedsExtraction,
+                                                       bool &SignedOverflow) {
   NeedsExtraction = false;
+  SignedOverflow = false;
   unsigned IdxWidth = DL->getIndexTypeSizeInBits(GEP->getType());
   APInt AccumulativeByteOffset(IdxWidth, 0);
   gep_type_iterator GTI = gep_type_begin(*GEP);
@@ -950,10 +1041,15 @@ APInt SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
         // A GEP may have multiple indices.  We accumulate the extracted
         // constant offset to a byte offset, and later offset the remainder of
         // the original GEP with this byte offset.
-        AccumulativeByteOffset +=
-            ConstantOffset * APInt(IdxWidth,
-                                   GTI.getSequentialElementStride(*DL),
-                                   /*IsSigned=*/true, /*ImplicitTrunc=*/true);
+        bool Overflow;
+        auto ByteOffset = ConstantOffset.smul_ov(
+            APInt(IdxWidth, GTI.getSequentialElementStride(*DL),
+                  /*IsSigned=*/true, /*ImplicitTrunc=*/true),
+            Overflow);
+        SignedOverflow |= Overflow;
+        AccumulativeByteOffset =
+            AccumulativeByteOffset.sadd_ov(ByteOffset, Overflow);
+        SignedOverflow |= Overflow;
       }
     } else if (LowerGEP) {
       StructType *StTy = GTI.getStructType();
@@ -1038,8 +1134,9 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
   if (!PtrGEP)
     return false;
 
-  bool NestedNeedsExtraction;
-  APInt NestedByteOffset = accumulateByteOffset(PtrGEP, NestedNeedsExtraction);
+  bool NestedNeedsExtraction, OffsetOverflow;
+  APInt NestedByteOffset =
+      accumulateByteOffset(PtrGEP, NestedNeedsExtraction, OffsetOverflow);
   if (!NestedNeedsExtraction)
     return false;
 
@@ -1099,9 +1196,13 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
 
   bool Changed = canonicalizeArrayIndicesToIndexSize(GEP);
 
-  bool NeedsExtraction;
-  APInt NonBaseByteOffset = accumulateByteOffset(GEP, NeedsExtraction);
-  APInt AccumulativeByteOffset = BaseByteOffset + NonBaseByteOffset;
+  bool NeedsExtraction, OffsetOverflow;
+  APInt NonBaseByteOffset =
+      accumulateByteOffset(GEP, NeedsExtraction, OffsetOverflow);
+  bool AddOverflow;
+  APInt AccumulativeByteOffset =
+      BaseByteOffset.sadd_ov(NonBaseByteOffset, AddOverflow);
+  OffsetOverflow |= AddOverflow;
 
   TargetTransformInfo &TTI = GetTTI(*GEP->getFunction());
 
@@ -1142,7 +1243,8 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   }
 
   // Track information for preserving GEP flags.
-  bool AllOffsetsNonNegative = AccumulativeByteOffset.isNonNegative();
+  bool AllOffsetsNonNegative =
+      AccumulativeByteOffset.isNonNegative() && !OffsetOverflow;
   bool AllNUWPreserved = GEP->hasNoUnsignedWrap();
   bool NewGEPInBounds = GEP->isInBounds();
   bool NewGEPNUSW = GEP->hasNoUnsignedSignedWrap();
@@ -1497,21 +1599,39 @@ void SeparateConstOffsetFromGEP::swapGEPOperand(GetElementPtrInst *First,
   First->setOperand(1, Offset2);
   Second->setOperand(1, Offset1);
 
-  // We changed p+o+c to p+c+o, p+c may not be inbound anymore.
+  // After changing (p+o)+c to (p+c)+o, the inner GEP may not be inbounds
+  // anymore.
   const DataLayout &DAL = First->getDataLayout();
-  APInt Offset(DAL.getIndexSizeInBits(
-                   cast<PointerType>(First->getType())->getAddressSpace()),
-               0);
-  Value *NewBase =
-      First->stripAndAccumulateInBoundsConstantOffsets(DAL, Offset);
-  uint64_t ObjectSize;
-  if (!getObjectSize(NewBase, ObjectSize, DAL, TLI) ||
-     Offset.ugt(ObjectSize)) {
+  unsigned IdxBits = DAL.getIndexSizeInBits(
+      cast<PointerType>(First->getType())->getAddressSpace());
+
+  auto ClearNoWrapFlags = [&] {
     // TODO(gep_nowrap): Make flag preservation more precise.
     First->setNoWrapFlags(GEPNoWrapFlags::none());
     Second->setNoWrapFlags(GEPNoWrapFlags::none());
-  } else
-    First->setIsInBounds(true);
+  };
+
+  APInt FirstOffset(IdxBits, 0);
+  if (!First->accumulateConstantOffset(DAL, FirstOffset)) {
+    ClearNoWrapFlags();
+    return;
+  }
+
+  APInt BaseOffset(IdxBits, 0);
+  Value *NewBase =
+      First->getOperand(0)->stripAndAccumulateInBoundsConstantOffsets(
+          DAL, BaseOffset);
+
+  bool Overflow = false;
+  APInt TotalOffset = BaseOffset.uadd_ov(FirstOffset, Overflow);
+  uint64_t ObjectSize;
+  if (Overflow || !getObjectSize(NewBase, ObjectSize, DAL, TLI) ||
+      TotalOffset.ugt(ObjectSize)) {
+    ClearNoWrapFlags();
+    return;
+  }
+
+  First->setIsInBounds(true);
 }
 
 void SeparateConstOffsetFromGEPPass::printPipeline(

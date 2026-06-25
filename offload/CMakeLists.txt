@@ -4,9 +4,20 @@
 cmake_minimum_required(VERSION 3.20.0)
 set(LLVM_SUBPROJECT_TITLE "liboffload")
 
+# The minimum versions required for dependencies.
+set(OFFLOAD_MIN_CUDA_VERSION 11.8.0)
+set(OFFLOAD_MIN_CUDA_VERSION_CODE 11080)
+
+# libomptarget is not supported on Windows.
+set(BUILD_LIBOMPTARGET ON)
+if(MSVC)
+  set(BUILD_LIBOMPTARGET OFF)
+  message(STATUS "libomptarget is not supported on Windows, skipping.")
+endif()
+
 # Check that the library can actually be built.
-if(APPLE OR WIN32 OR WASM)
-  message(WARNING "libomptarget cannot be built on Windows and MacOS X!")
+if(APPLE OR WASM)
+  message(WARNING "libomptarget cannot be built on MacOS X and WASM!")
   return()
 elseif("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^(amdgcn|nvptx|spirv)" OR
        "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^(amdgcn|nvptx|spirv)")
@@ -23,6 +34,7 @@ endif()
 set(OFFLOAD_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 # When building in tree we install the runtime according to the LLVM settings.
+# TODO: Use common runtimes infrastructure for output and install paths
 if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
   set(OFFLOAD_TARGET_SUBDIR "${LLVM_DEFAULT_TARGET_TRIPLE}")
   if(OFFLOAD_LIBDIR_SUBDIR)
@@ -38,6 +50,11 @@ endif()
 
 set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 
+if(WIN32)
+  # These are needed for RtlGetLastNtStatus and delay-load helpers
+  add_link_options(/DEFAULTLIB:ntdll.lib /DEFAULTLIB:delayimp.lib)
+endif()
+
 option(OFFLOAD_INCLUDE_TESTS "Generate and build offload tests." ${LLVM_INCLUDE_TESTS})
 
 # Add path for custom modules
@@ -48,10 +65,6 @@ list(INSERT CMAKE_MODULE_PATH 0
   "${LLVM_COMMON_CMAKE_UTILS}"
   "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
-
-set(OPENMP_ENABLE_WERROR ${LLVM_ENABLE_WERROR})
-# If building in tree, we honor the same install suffix LLVM uses.
-set(OPENMP_INSTALL_LIBDIR "lib${LLVM_LIBDIR_SUFFIX}")
 
 set(OPENMP_TEST_C_COMPILER_default "${LLVM_TOOLS_BINARY_DIR}/clang${CMAKE_EXECUTABLE_SUFFIX}")
 set(OPENMP_TEST_CXX_COMPILER_default "${LLVM_TOOLS_BINARY_DIR}/clang++${CMAKE_EXECUTABLE_SUFFIX}")
@@ -89,17 +102,19 @@ set(CMAKE_CXX_STANDARD_REQUIRED NO)
 set(CMAKE_CXX_EXTENSIONS NO)
 
 # Set the path of all resulting libraries to a unified location so that it can
-# be used for testing.
-set(LIBOMPTARGET_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+# be used for testing and found in the build tree.
+if(LLVM_LIBRARY_OUTPUT_INTDIR)
+  if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+    set(LIBOMPTARGET_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${OFFLOAD_TARGET_SUBDIR})
+  else()
+    set(LIBOMPTARGET_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
+  endif()
+else()
+  set(LIBOMPTARGET_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
+endif()
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${LIBOMPTARGET_LIBRARY_DIR})
-
-if(NOT LLVM_LIBRARY_OUTPUT_INTDIR)
-  set(LIBOMPTARGET_INTDIR ${LIBOMPTARGET_LIBRARY_DIR})
-else()
-  set(LIBOMPTARGET_INTDIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
-endif()
 
 # Get dependencies for the different components of the project.
 include(LibomptargetGetDependencies)
@@ -120,19 +135,33 @@ if(DEFINED LIBOMPTARGET_BUILD_CUDA_PLUGIN OR
   message(WARNING "Option removed, use 'LIBOMPTARGET_PLUGINS_TO_BUILD' instead")
 endif()
 
-set(LIBOMPTARGET_ALL_PLUGIN_TARGETS amdgpu cuda)
-set(LIBOMPTARGET_PLUGINS_TO_BUILD "all" CACHE STRING
-    "Semicolon-separated list of plugins to use: cuda, amdgpu, level_zero, or \"all\".")
+if(WIN32)
+  set(LIBOMPTARGET_ALL_PLUGIN_TARGETS "")
 
-if(LIBOMPTARGET_PLUGINS_TO_BUILD STREQUAL "all")
-  set(LIBOMPTARGET_PLUGINS_TO_BUILD ${LIBOMPTARGET_ALL_PLUGIN_TARGETS})
+  set(LIBOMPTARGET_PLUGINS_TO_BUILD "" CACHE STRING
+      "Semicolon-separated list of plugins to use: level_zero or \"all\".")
+  if(LIBOMPTARGET_PLUGINS_TO_BUILD STREQUAL "all")
+    set(LIBOMPTARGET_PLUGINS_TO_BUILD ${LIBOMPTARGET_ALL_PLUGIN_TARGETS})
+  endif()
+
+  # Validate that only supported plugins are requested on Windows.
+  foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)
+    if(NOT (plugin STREQUAL "level_zero" OR plugin STREQUAL "host"))
+      message(FATAL_ERROR "Plugin '${plugin}' is not supported on Windows.")
+    endif()
+  endforeach()
+else()
+  set(LIBOMPTARGET_ALL_PLUGIN_TARGETS amdgpu cuda)
+  set(LIBOMPTARGET_PLUGINS_TO_BUILD "all" CACHE STRING
+      "Semicolon-separated list of plugins to use: cuda, amdgpu or \"all\".")
+
+  if(LIBOMPTARGET_PLUGINS_TO_BUILD STREQUAL "all")
+    set(LIBOMPTARGET_PLUGINS_TO_BUILD ${LIBOMPTARGET_ALL_PLUGIN_TARGETS})
+  endif()
 endif()
 
-# Add host if not already in LIBOMPTARGET_PLUGINS_TO_BUILD
-list(FIND LIBOMPTARGET_PLUGINS_TO_BUILD "host" FOUND_HOST)
-if(FOUND_HOST EQUAL -1)
-  list(APPEND LIBOMPTARGET_PLUGINS_TO_BUILD "host")
-endif()
+list(APPEND LIBOMPTARGET_PLUGINS_TO_BUILD "host")
+list(REMOVE_DUPLICATES LIBOMPTARGET_PLUGINS_TO_BUILD)
 
 if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(ppc64le)|(aarch64)$"
         AND CMAKE_SYSTEM_NAME MATCHES "Linux"))
@@ -155,10 +184,6 @@ if(NOT (CMAKE_SYSTEM_PROCESSOR MATCHES "(x86_64)|(AMD64)$" AND
     list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "level_zero")
   endif()
 endif()
-if("level_zero" IN_LIST LIBOMPTARGET_PLUGINS_TO_BUILD AND
-   NOT LIBOMPTARGET_DEP_LEVEL_ZERO_FOUND)
-  list(REMOVE_ITEM LIBOMPTARGET_PLUGINS_TO_BUILD "level_zero")
-endif()
 message(STATUS "Building the offload library with support for "
                "the \"${LIBOMPTARGET_PLUGINS_TO_BUILD}\" plugins")
 
@@ -170,7 +195,7 @@ foreach(plugin IN LISTS LIBOMPTARGET_PLUGINS_TO_BUILD)
   set(LIBOMPTARGET_ENUM_PLUGIN_TARGETS
       "${LIBOMPTARGET_ENUM_PLUGIN_TARGETS}PLUGIN_TARGET(${plugin})\n")
 endforeach()
-string(STRIP ${LIBOMPTARGET_ENUM_PLUGIN_TARGETS} LIBOMPTARGET_ENUM_PLUGIN_TARGETS)
+string(STRIP "${LIBOMPTARGET_ENUM_PLUGIN_TARGETS}" LIBOMPTARGET_ENUM_PLUGIN_TARGETS)
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/include/Shared/Targets.def.in
   ${CMAKE_CURRENT_BINARY_DIR}/include/Shared/Targets.def
@@ -218,10 +243,20 @@ if(LIBOMPTARGET_ENABLE_DEBUG)
 endif()
 
 # No exceptions and no RTTI, except if requested.
-set(offload_compile_flags -fno-exceptions)
-if(NOT LLVM_ENABLE_RTTI)
-  set(offload_compile_flags ${offload_compile_flags} -fno-rtti)
+if(MSVC)
+  set(offload_compile_flags /EHs-c-)
+else()
+  set(offload_compile_flags -fno-exceptions)
 endif()
+
+if(NOT LLVM_ENABLE_RTTI)
+  if(MSVC)
+    list(APPEND offload_compile_flags /GR-)
+  else()
+    list(APPEND offload_compile_flags -fno-rtti)
+  endif()
+endif()
+
 if(OFFLOAD_HAVE_WERROR_CTOR)
   list(APPEND offload_compile_flags -Werror=global-constructors)
 endif()
@@ -288,9 +323,10 @@ if(LIBOMP_OMP_TOOLS_INCLUDE_DIR)
   include_directories(${LIBOMP_OMP_TOOLS_INCLUDE_DIR})
 endif()
 
+# TODO: Use RUNTIMES_OUTPUT_RESOURCE_LIB_DIR instead
 set(LIBOMPTARGET_LLVM_LIBRARY_DIR "${LLVM_LIBRARY_DIR}" CACHE STRING
   "Path to folder containing llvm library libomptarget.so")
-set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_INTDIR}" CACHE STRING
+set(LIBOMPTARGET_LLVM_LIBRARY_INTDIR "${LIBOMPTARGET_LIBRARY_DIR}" CACHE STRING
   "Path to folder where intermediate libraries will be output")
 
 add_subdirectory(tools/offload-tblgen)
@@ -300,8 +336,9 @@ add_subdirectory(plugins-nextgen)
 add_subdirectory(tools)
 add_subdirectory(docs)
 
-# Build target agnostic offloading library.
-add_subdirectory(libomptarget)
+if(BUILD_LIBOMPTARGET)
+  add_subdirectory(libomptarget)
+endif()
 
 add_subdirectory(liboffload)
 
@@ -322,4 +359,18 @@ if(TARGET omptarget)
 endif()
 if(TARGET LLVMOffload)
   add_dependencies(offload LLVMOffload)
+endif()
+
+add_custom_target(install-offload
+  COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component offload)
+add_custom_target(install-offload-stripped
+  COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component offload --strip)
+
+if(TARGET omptarget)
+  add_dependencies(install-offload omptarget)
+  add_dependencies(install-offload-stripped omptarget)
+endif()
+if(TARGET LLVMOffload)
+  add_dependencies(install-offload LLVMOffload)
+  add_dependencies(install-offload-stripped LLVMOffload)
 endif()

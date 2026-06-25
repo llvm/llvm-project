@@ -23,6 +23,7 @@
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
@@ -63,6 +64,7 @@ public:
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<GISelCSEAnalysisWrapperPass>();
     AU.addRequired<MachineUniformityAnalysisPass>();
+    AU.addRequired<GISelValueTrackingAnalysisLegacy>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -80,6 +82,7 @@ INITIALIZE_PASS_BEGIN(AMDGPURegBankLegalize, DEBUG_TYPE,
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineUniformityAnalysisPass)
+INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
 INITIALIZE_PASS_END(AMDGPURegBankLegalize, DEBUG_TYPE,
                     "AMDGPU Register Bank Legalize", false, false)
 
@@ -439,12 +442,14 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
   const RegisterBankInfo &RBI = *ST.getRegBankInfo();
   const MachineUniformityInfo &MUI =
       getAnalysis<MachineUniformityAnalysisPass>().getUniformityInfo();
+  GISelValueTracking &VT =
+      getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
 
   // RegBankLegalizeRules is initialized with assigning sets of IDs to opcodes.
   const RegBankLegalizeRules &RBLRules = getRules(ST, MRI);
 
   // Logic that does legalization based on IDs assigned to Opcode.
-  RegBankLegalizeHelper RBLHelper(B, MUI, RBI, RBLRules);
+  RegBankLegalizeHelper RBLHelper(B, MUI, &VT, RBI, RBLRules);
 
   SmallVector<MachineInstr *> AllInst;
 
@@ -457,28 +462,6 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
   for (MachineInstr *MI : AllInst) {
     if (!MI->isPreISelOpcode())
       continue;
-
-    unsigned Opc = MI->getOpcode();
-
-    // Opcodes that support pretty much all combinations of reg banks and LLTs
-    // (except S1). There is no point in writing rules for them.
-    if (Opc == AMDGPU::G_BUILD_VECTOR || Opc == AMDGPU::G_MERGE_VALUES ||
-        Opc == AMDGPU::G_CONCAT_VECTORS || Opc == AMDGPU::G_BITCAST) {
-      RBLHelper.applyMappingTrivial(*MI);
-      continue;
-    }
-
-    if ((Opc == AMDGPU::G_CONSTANT || Opc == AMDGPU::G_FCONSTANT ||
-         Opc == AMDGPU::G_IMPLICIT_DEF)) {
-      Register Dst = MI->getOperand(0).getReg();
-      // Non S1 types are trivially accepted.
-      if (MRI.getType(Dst) != LLT::scalar(1)) {
-        assert(MRI.getRegBank(Dst)->getID() == AMDGPU::SGPRRegBankID);
-        continue;
-      }
-
-      // S1 rules are in RegBankLegalizeRules.
-    }
 
     if (!RBLHelper.findRuleAndApplyMapping(*MI))
       return false;

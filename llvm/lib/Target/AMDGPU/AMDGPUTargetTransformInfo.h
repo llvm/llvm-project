@@ -95,6 +95,8 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
                                          : 4 * TargetTransformInfo::TCC_Basic;
   }
 
+  int getTransInstrCost(TTI::TargetCostKind CostKind) const;
+
   // On some parts, normal fp64 operations are half rate, and others
   // quarter. This also applies to some integer operations.
   int get64BitInstrCost(TTI::TargetCostKind CostKind) const;
@@ -131,6 +133,7 @@ public:
   getRegisterBitWidth(TargetTransformInfo::RegisterKind Vector) const override;
   unsigned getMinVectorRegisterBitWidth() const override;
   unsigned getMaximumVF(unsigned ElemWidth, unsigned Opcode) const override;
+  bool preferSLPInstCountCheck() const override;
   unsigned getLoadVectorFactor(unsigned VF, unsigned LoadSize,
                                unsigned ChainSizeInBytes,
                                VectorType *VecTy) const override;
@@ -269,6 +272,15 @@ public:
                              std::optional<FastMathFlags> FMF,
                              TTI::TargetCostKind CostKind) const override;
 
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    return InstructionCost::getInvalid();
+  }
+
   InstructionCost
   getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                         TTI::TargetCostKind CostKind) const override;
@@ -310,7 +322,7 @@ public:
   /// implementation.
   unsigned getNumberOfParts(Type *Tp) const override;
 
-  InstructionUniformity getInstructionUniformity(const Value *V) const override;
+  ValueUniformity getValueUniformity(const Value *V) const override;
 
   InstructionCost getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
                                        StackOffset BaseOffset, bool HasBaseReg,

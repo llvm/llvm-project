@@ -6,6 +6,10 @@ lldb_tablegen(CorePropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE CoreProperties.td
   TARGET LLDBCorePropertiesEnumGen)
 
+lldb_tablegen(CoreProperties.json -dump-json
+  SOURCE CoreProperties.td
+  TARGET LLDBCorePropertiesJsonGen)
+
 set(LLDB_CURSES_LIBS)
 set(LLDB_LIBEDIT_LIBS)
 

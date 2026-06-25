@@ -39,11 +39,6 @@ void hints(void) {
   __builtin_arm_sevl();   //CHECK: call {{.*}} @llvm.aarch64.hint(i32 5)
 }
 
-void stshh_atomic_store(int *p, int v) {
-  __builtin_arm_atomic_store_with_stshh(p, v, __ATOMIC_RELAXED, 0);
-  // CHECK: call void @llvm.aarch64.stshh.atomic.store.p0(ptr {{.*}}, i64 {{.*}}, i32 0, i32 0, i32 32)
-}
-
 void barriers(void) {
   __builtin_arm_dmb(1);  //CHECK: call {{.*}} @llvm.aarch64.dmb(i32 1)
   __builtin_arm_dsb(2);  //CHECK: call {{.*}} @llvm.aarch64.dsb(i32 2)

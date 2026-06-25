@@ -38,7 +38,7 @@ public:
   KnownBits() = default;
 
   /// Create a known bits object of BitWidth bits initialized to unknown.
-  KnownBits(unsigned BitWidth) : Zero(BitWidth, 0), One(BitWidth, 0) {}
+  explicit KnownBits(unsigned BitWidth) : Zero(BitWidth, 0), One(BitWidth, 0) {}
 
   /// Get the bit width of this value.
   unsigned getBitWidth() const {
@@ -51,9 +51,7 @@ public:
   bool hasConflict() const { return Zero.intersects(One); }
 
   /// Returns true if we know the value of all bits.
-  bool isConstant() const {
-    return Zero.popcount() + One.popcount() == getBitWidth();
-  }
+  bool isConstant() const { return Zero.isInverseOf(One); }
 
   /// Returns the value when all bits have a known value. This just returns One
   /// with a protective assertion.
@@ -470,8 +468,22 @@ public:
   LLVM_ABI static KnownBits ashr(const KnownBits &LHS, const KnownBits &RHS,
                                  bool ShAmtNonZero = false, bool Exact = false);
 
+  /// Compute known bits for fshl(LHS, RHS, Amt).
+  LLVM_ABI static KnownBits fshl(const KnownBits &LHS, const KnownBits &RHS,
+                                 const APInt &Amt);
+
+  /// Compute known bits for fshr(LHS, RHS, Amt).
+  LLVM_ABI static KnownBits fshr(const KnownBits &LHS, const KnownBits &RHS,
+                                 const APInt &Amt);
+
   /// Compute known bits for clmul(LHS, RHS).
   LLVM_ABI static KnownBits clmul(const KnownBits &LHS, const KnownBits &RHS);
+
+  /// Compute known bits for pext(LHS, RHS).
+  LLVM_ABI static KnownBits pext(const KnownBits &LHS, const KnownBits &RHS);
+
+  /// Compute known bits for pdep(LHS, RHS).
+  LLVM_ABI static KnownBits pdep(const KnownBits &LHS, const KnownBits &RHS);
 
   /// Determine if these known bits always give the same ICMP_EQ result.
   LLVM_ABI static std::optional<bool> eq(const KnownBits &LHS,

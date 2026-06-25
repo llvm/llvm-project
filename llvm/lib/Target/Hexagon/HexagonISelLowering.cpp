@@ -181,7 +181,7 @@ MVT HexagonTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
                                                          CallingConv::ID CC,
                                                          EVT VT) const {
 
-  if (VT.isVector() && VT.getVectorElementType() == MVT::i1) {
+  if (VT.isVectorOf(MVT::i1)) {
     auto [RegisterVT, NumRegisters] =
         handleMaskRegisterForCallingConv(Subtarget, VT);
     if (RegisterVT != MVT::INVALID_SIMPLE_VALUE_TYPE)
@@ -215,10 +215,11 @@ static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
                                          SDValue Chain, ISD::ArgFlagsTy Flags,
                                          SelectionDAG &DAG, const SDLoc &dl) {
   SDValue SizeNode = DAG.getConstant(Flags.getByValSize(), dl, MVT::i32);
-  return DAG.getMemcpy(
-      Chain, dl, Dst, Src, SizeNode, Flags.getNonZeroByValAlign(),
-      /*isVolatile=*/false, /*AlwaysInline=*/false,
-      /*CI=*/nullptr, std::nullopt, MachinePointerInfo(), MachinePointerInfo());
+  Align Alignment = Flags.getNonZeroByValAlign();
+  return DAG.getMemcpy(Chain, dl, Dst, Src, SizeNode, Alignment, Alignment,
+                       /*isVolatile=*/false, /*AlwaysInline=*/false,
+                       /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
+                       MachinePointerInfo());
 }
 
 bool
@@ -643,6 +644,8 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   unsigned OpCode = DoesNotReturn ? HexagonISD::CALLnr : HexagonISD::CALL;
   Chain = DAG.getNode(OpCode, dl, {MVT::Other, MVT::Glue}, Ops);
+  if (CLI.CFIType)
+    Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());
   Glue = Chain.getValue(1);
 
   // Create the CALLSEQ_END node.
@@ -1046,10 +1049,11 @@ HexagonTargetLowering::LowerVACOPY(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   // Size of the va_list is 12 bytes as it has 3 pointers. Therefore,
   // we need to memcopy 12 bytes from va_list to another similar list.
-  return DAG.getMemcpy(
-      Chain, DL, DestPtr, SrcPtr, DAG.getIntPtrConstant(12, DL), Align(4),
-      /*isVolatile*/ false, false, /*CI=*/nullptr, std::nullopt,
-      MachinePointerInfo(DestSV), MachinePointerInfo(SrcSV));
+  return DAG.getMemcpy(Chain, DL, DestPtr, SrcPtr,
+                       DAG.getIntPtrConstant(12, DL), Align(4), Align(4),
+                       /*isVolatile*/ false, false, /*CI=*/nullptr,
+                       std::nullopt, MachinePointerInfo(DestSV),
+                       MachinePointerInfo(SrcSV));
 }
 
 SDValue HexagonTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
@@ -3955,6 +3959,43 @@ TargetLowering::AtomicExpansionKind
 HexagonTargetLowering::shouldExpandAtomicCmpXchgInIR(
     const AtomicCmpXchgInst *AI) const {
   return AtomicExpansionKind::LLSC;
+}
+
+MachineBasicBlock *HexagonTargetLowering::EmitInstrWithCustomInserter(
+    MachineInstr &MI, MachineBasicBlock *BB) const {
+  switch (MI.getOpcode()) {
+  case TargetOpcode::PATCHABLE_EVENT_CALL:
+  case TargetOpcode::PATCHABLE_TYPED_EVENT_CALL:
+    // These are lowered in the AsmPrinter.
+    return BB;
+  default:
+    llvm_unreachable("Unexpected instruction with custom inserter");
+  }
+}
+
+MachineInstr *
+HexagonTargetLowering::EmitKCFICheck(MachineBasicBlock &MBB,
+                                     MachineBasicBlock::instr_iterator &MBBI,
+                                     const TargetInstrInfo *TII) const {
+  assert(MBBI->isCall() && MBBI->getCFIType() &&
+         "Invalid call instruction for a KCFI check");
+
+  switch (MBBI->getOpcode()) {
+  case Hexagon::J2_callr:
+  case Hexagon::PS_callr_nr:
+    break;
+  default:
+    llvm_unreachable("Unexpected CFI call opcode");
+  }
+
+  MachineOperand &Target = MBBI->getOperand(0);
+  assert(Target.isReg() && "Invalid target operand for an indirect call");
+  Target.setIsRenamable(false);
+
+  return BuildMI(MBB, MBBI, MBBI->getDebugLoc(), TII->get(Hexagon::KCFI_CHECK))
+      .addReg(Target.getReg())
+      .addImm(MBBI->getCFIType())
+      .getInstr();
 }
 
 bool HexagonTargetLowering::isMaskAndCmp0FoldingBeneficial(

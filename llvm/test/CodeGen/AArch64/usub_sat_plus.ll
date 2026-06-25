@@ -8,6 +8,24 @@ declare i16 @llvm.usub.sat.i16(i16, i16)
 declare i32 @llvm.usub.sat.i32(i32, i32)
 declare i64 @llvm.usub.sat.i64(i64, i64)
 
+define i32 @sat_dec_i32(i32 %x) nounwind {
+; CHECK-SD-LABEL: sat_dec_i32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    subs w8, w0, #1
+; CHECK-SD-NEXT:    csel w0, wzr, w8, lo
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: sat_dec_i32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    subs w8, w0, #1
+; CHECK-GI-NEXT:    cset w9, lo
+; CHECK-GI-NEXT:    tst w9, #0x1
+; CHECK-GI-NEXT:    csel w0, wzr, w8, ne
+; CHECK-GI-NEXT:    ret
+  %tmp = call i32 @llvm.usub.sat.i32(i32 %x, i32 1)
+  ret i32 %tmp
+}
+
 define i32 @func32(i32 %x, i32 %y, i32 %z) nounwind {
 ; CHECK-SD-LABEL: func32:
 ; CHECK-SD:       // %bb.0:

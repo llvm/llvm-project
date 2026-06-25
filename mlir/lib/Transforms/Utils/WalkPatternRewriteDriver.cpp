@@ -19,7 +19,6 @@
 #include "mlir/IR/Verifier.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Rewrite/PatternApplicator.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -62,38 +61,16 @@ struct WalkAndApplyPatternsAction final
 // ops/blocks. Because we use walk-based pattern application, erasing the
 // op/block from the *next* iteration (e.g., a user of the visited op) is not
 // valid. Note that this is only used with expensive pattern API checks.
-//
-// Ops and blocks that were *created* during the current pattern application are
-// exempt: they were not in the walk schedule before the pattern ran, so erasing
-// them cannot disrupt the walk.
 struct ErasedOpsListener final : RewriterBase::ForwardingListener {
   using RewriterBase::ForwardingListener::ForwardingListener;
 
-  void notifyOperationInserted(Operation *op,
-                               OpBuilder::InsertPoint previous) override {
-    if (visitedOp)
-      newlyCreatedOps.insert(op);
-    ForwardingListener::notifyOperationInserted(op, previous);
-  }
-
-  void notifyBlockInserted(Block *block, Region *previous,
-                           Region::iterator previousIt) override {
-    if (visitedOp)
-      newlyCreatedBlocks.insert(block);
-    ForwardingListener::notifyBlockInserted(block, previous, previousIt);
-  }
-
   void notifyOperationErased(Operation *op) override {
-    if (!newlyCreatedOps.contains(op))
-      checkErasure(op);
-    newlyCreatedOps.erase(op);
+    checkErasure(op);
     ForwardingListener::notifyOperationErased(op);
   }
 
   void notifyBlockErased(Block *block) override {
-    if (!newlyCreatedBlocks.contains(block))
-      checkErasure(block->getParentOp());
-    newlyCreatedBlocks.erase(block);
+    checkErasure(block->getParentOp());
     ForwardingListener::notifyBlockErased(block);
   }
 
@@ -109,9 +86,6 @@ struct ErasedOpsListener final : RewriterBase::ForwardingListener {
   }
 
   Operation *visitedOp = nullptr;
-  // Ops and blocks inserted since visitedOp was last set; may be freely erased.
-  DenseSet<Operation *> newlyCreatedOps;
-  DenseSet<Block *> newlyCreatedBlocks;
 };
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 } // namespace
@@ -230,8 +204,6 @@ void walkAndApplyPatterns(Operation *op,
                    << OpWithFlags(op, OpPrintingFlags().skipRegions());
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
             erasedListener.visitedOp = op;
-            erasedListener.newlyCreatedOps.clear();
-            erasedListener.newlyCreatedBlocks.clear();
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
             if (succeeded(applicator.matchAndRewrite(op, rewriter)))
               LDBG() << "\tOp matched and rewritten";

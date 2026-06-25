@@ -11,6 +11,8 @@
 #==============================================================================#
 # Temp files created by most text editors.
 *~
+# Emacs lock files
+.#*
 # Merge files created by git.
 *.orig
 # Reject files created by patch.
@@ -54,6 +56,7 @@ autoconf/autom4te.cache
 /.idea
 /cmake-build*
 # Coding assistants' stuff
+.agents/
 /CLAUDE.md
 /instructions.md
 .claude/

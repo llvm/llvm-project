@@ -481,10 +481,18 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
   Value *StoredVal = SI->getValueOperand();
   Value *StorePtr = SI->getPointerOperand();
 
-  // Don't convert stores of non-integral pointer types to memsets (which stores
-  // integers).
-  if (DL->isNonIntegralPointerType(StoredVal->getType()->getScalarType()))
+  if (DL->hasUnstableRepresentation(StoredVal->getType()))
     return LegalStoreKind::None;
+
+  // Transformations could invalidate the external-state pointers
+  //   memcpy - LangRef specifies that a valid memcpy must preserve external
+  //            state, so no transformations are blocked by it.
+  //   memset - We assume that a memset of 0 has an equivalent external state
+  //            effect as a null pointer store. This is currently not explicitly
+  //            specified, but is true of the one exemplar we have (CHERI
+  //            capabilities). All other memset formations are not safe.
+  bool MustPreserveExternalState = DL->hasExternalState(StoredVal->getType()) &&
+                                   !isa<ConstantPointerNull>(StoredVal);
 
   // Reject stores that are so large that they overflow an unsigned.
   // When storing out scalable vectors we bail out for now, since the code
@@ -516,14 +524,16 @@ LoopIdiomRecognize::isLegalStore(StoreInst *SI) {
 
   // If we're allowed to form a memset, and the stored value would be
   // acceptable for memset, use it.
-  if (!UnorderedAtomic && HasMemset && SplatValue && !DisableLIRP::Memset &&
+  if (!MustPreserveExternalState && !UnorderedAtomic && HasMemset &&
+      SplatValue && !DisableLIRP::Memset &&
       // Verify that the stored value is loop invariant.  If not, we can't
       // promote the memset.
       CurLoop->isLoopInvariant(SplatValue)) {
     // It looks like we can use SplatValue.
     return LegalStoreKind::Memset;
   }
-  if (!UnorderedAtomic && (HasMemsetPattern || ForceMemsetPatternIntrinsic) &&
+  if (!MustPreserveExternalState && !UnorderedAtomic &&
+      (HasMemsetPattern || ForceMemsetPatternIntrinsic) &&
       !DisableLIRP::Memset &&
       // Don't create memset_pattern16s with address spaces.
       StorePtr->getType()->getPointerAddressSpace() == 0 &&
@@ -1174,7 +1184,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
              isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16)) {
     assert(isa<SCEVConstant>(StoreSizeSCEV) && "Expected constant store size");
 
-    NewCall = Builder.CreateIntrinsic(
+    NewCall = Builder.CreateIntrinsicWithoutFolding(
         Intrinsic::experimental_memset_pattern,
         {DestInt8PtrTy, PatternValue->getType(), IntIdxTy},
         {BasePtr, PatternValue, MemsetArg,
@@ -2601,27 +2611,23 @@ bool LoopIdiomRecognize::recognizePopcount() {
   return true;
 }
 
-static CallInst *createPopcntIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
-                                       const DebugLoc &DL) {
+static Value *createPopcntIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
+                                    const DebugLoc &DL) {
   Value *Ops[] = {Val};
   Type *Tys[] = {Val->getType()};
 
-  CallInst *CI = IRBuilder.CreateIntrinsic(Intrinsic::ctpop, Tys, Ops);
-  CI->setDebugLoc(DL);
-
-  return CI;
+  IRBuilder.SetCurrentDebugLocation(DL);
+  return IRBuilder.CreateIntrinsic(Intrinsic::ctpop, Tys, Ops);
 }
 
-static CallInst *createFFSIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
-                                    const DebugLoc &DL, bool ZeroCheck,
-                                    Intrinsic::ID IID) {
+static Value *createFFSIntrinsic(IRBuilder<> &IRBuilder, Value *Val,
+                                 const DebugLoc &DL, bool ZeroCheck,
+                                 Intrinsic::ID IID) {
   Value *Ops[] = {Val, IRBuilder.getInt1(ZeroCheck)};
   Type *Tys[] = {Val->getType()};
 
-  CallInst *CI = IRBuilder.CreateIntrinsic(IID, Tys, Ops);
-  CI->setDebugLoc(DL);
-
-  return CI;
+  IRBuilder.SetCurrentDebugLocation(DL);
+  return IRBuilder.CreateIntrinsic(IID, Tys, Ops);
 }
 
 /// Transform the following loop (Using CTLZ, CTTZ is similar):
@@ -3127,7 +3133,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   Value *Mask =
       Builder.CreateOr(LowBitMask, BitMask, BitPos->getName() + ".mask");
   Value *XMasked = Builder.CreateAnd(X, Mask, X->getName() + ".masked");
-  CallInst *XMaskedNumLeadingZeros = Builder.CreateIntrinsic(
+  Value *XMaskedNumLeadingZeros = Builder.CreateIntrinsic(
       IntrID, Ty, {XMasked, /*is_zero_poison=*/Builder.getTrue()},
       /*FMFSource=*/nullptr, XMasked->getName() + ".numleadingzeros");
   Value *XMaskedNumActiveBits = Builder.CreateSub(
@@ -3487,7 +3493,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
 
   // Step 1: Compute the loop's final IV value / trip count.
 
-  CallInst *ValNumLeadingZeros = Builder.CreateIntrinsic(
+  Value *ValNumLeadingZeros = Builder.CreateIntrinsic(
       IntrID, Ty, {Val, /*is_zero_poison=*/Builder.getFalse()},
       /*FMFSource=*/nullptr, Val->getName() + ".numleadingzeros");
   Value *ValNumActiveBits = Builder.CreateSub(

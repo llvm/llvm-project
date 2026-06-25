@@ -348,5 +348,19 @@ spirv.module Logical Vulkan requires #spirv.vce<v1.3,
     spirv.ReturnValue %coop : !spirv.coopmatrix<16x16xi8, Subgroup, MatrixAcc>
   }
 
+  // CHECK-LABEL: @struct_const
+  spirv.func @struct_const() -> (!spirv.struct<(i32, f32)>) "None" {
+    // CHECK: spirv.Constant [1 : i32, 2.000000e+00 : f32] : !spirv.struct<(i32, f32)>
+    %0 = spirv.Constant [1 : i32, 2.0 : f32] : !spirv.struct<(i32, f32)>
+    spirv.ReturnValue %0 : !spirv.struct<(i32, f32)>
+  }
+
+  // CHECK-LABEL: @struct_const_nested
+  spirv.func @struct_const_nested() -> (!spirv.struct<(i32, !spirv.array<2 x i32>)>) "None" {
+    // CHECK: spirv.Constant [1 : i32, [2 : i32, 3 : i32]] : !spirv.struct<(i32, !spirv.array<2 x i32>)>
+    %0 = spirv.Constant [1 : i32, [2 : i32, 3 : i32]] : !spirv.struct<(i32, !spirv.array<2 x i32>)>
+    spirv.ReturnValue %0 : !spirv.struct<(i32, !spirv.array<2 x i32>)>
+  }
+
   spirv.EntryPoint "GLCompute" @bool_const
 }

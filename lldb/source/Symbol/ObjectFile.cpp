@@ -211,8 +211,7 @@ ModuleSpecList ObjectFile::GetModuleSpecifications(
       if (actual_file_size > file_offset)
         file_size = actual_file_size - file_offset;
     }
-    return ObjectFile::GetModuleSpecifications(file, extractor_sp,
-                                               /*data_offset=*/0, file_offset,
+    return ObjectFile::GetModuleSpecifications(file, extractor_sp, file_offset,
                                                file_size);
   }
   return {};
@@ -220,12 +219,11 @@ ModuleSpecList ObjectFile::GetModuleSpecifications(
 
 ModuleSpecList ObjectFile::GetModuleSpecifications(
     const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
-    lldb::offset_t data_offset, lldb::offset_t file_offset,
-    lldb::offset_t file_size) {
+    lldb::offset_t file_offset, lldb::offset_t file_size) {
   // Try the ObjectFile plug-ins
   for (auto &cbs : PluginManager::GetObjectFileCallbacks()) {
     ModuleSpecList specs = cbs.get_module_specifications(
-        file, extractor_sp, data_offset, file_offset, file_size);
+        file, extractor_sp, file_offset, file_size);
     if (specs.GetSize() > 0)
       return specs;
   }
@@ -233,7 +231,7 @@ ModuleSpecList ObjectFile::GetModuleSpecifications(
   // Try the ObjectContainer plug-ins
   for (auto &cbs : PluginManager::GetObjectContainerCallbacks()) {
     ModuleSpecList specs = cbs.get_module_specifications(
-        file, extractor_sp, data_offset, file_offset, file_size);
+        file, extractor_sp, file_offset, file_size);
     if (specs.GetSize() > 0)
       return specs;
   }
@@ -605,17 +603,17 @@ void ObjectFile::ClearSymtab() {
 }
 
 SectionList *ObjectFile::GetSectionList(bool update_module_section_list) {
-  if (m_sections_up == nullptr) {
-    if (update_module_section_list) {
-      ModuleSP module_sp(GetModule());
-      if (module_sp) {
-        std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-        CreateSections(*module_sp->GetUnifiedSectionList());
-      }
-    } else {
-      SectionList unified_section_list;
-      CreateSections(unified_section_list);
+  std::lock_guard<std::recursive_mutex> guard(m_sections_mutex);
+  if (m_sections_up)
+    return m_sections_up.get();
+  if (update_module_section_list) {
+    if (ModuleSP module_sp = GetModule()) {
+      std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+      CreateSections(*module_sp->GetUnifiedSectionList());
     }
+  } else {
+    SectionList unified_section_list;
+    CreateSections(unified_section_list);
   }
   return m_sections_up.get();
 }

@@ -77,6 +77,25 @@ LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::AvgPool2dOp op) {
   return success();
 }
 
+template <>
+LogicalResult
+ProfileInfoDepot::populateProfileInfo(tosa::AvgPool2dAdaptiveOp op) {
+  addValue(op.getInput());
+  addValue(op.getInputZp());
+  addValue(op.getOutputZp());
+  addType(op.getAccType());
+  addValue(op.getOutput());
+  return success();
+}
+
+template <>
+LogicalResult
+ProfileInfoDepot::populateProfileInfo(tosa::MaxPool2dAdaptiveOp op) {
+  addValue(op.getInput());
+  addValue(op.getOutput());
+  return success();
+}
+
 template <typename T>
 LogicalResult ProfileInfoDepot::populateProfileInfoConv(T op) {
   addValue(op.getInput());
@@ -167,6 +186,26 @@ LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::GatherOp op) {
 }
 
 template <>
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::RowGatherOp op) {
+  addValue(op.getValues());
+  addValue(op.getIndices());
+  addValue(op.getOutput());
+  return success();
+}
+
+template <>
+LogicalResult
+ProfileInfoDepot::populateProfileInfo(tosa::RowGatherBlockScaledOp op) {
+  for (Value value : op.getValues())
+    addValue(value);
+  addValue(op.getIndices());
+  addValue(op.getRowCount());
+  for (Value result : op.getOutput())
+    addValue(result);
+  return success();
+}
+
+template <>
 LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::ScatterOp op) {
   addValue(op.getValuesIn());
   addValue(op.getIndices());
@@ -218,6 +257,14 @@ LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::MatMulOp op) {
 }
 
 template <>
+LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::MatMulTOp op) {
+  addValue(op.getA());
+  addValue(op.getB());
+  addValue(op.getOutput());
+  return success();
+}
+
+template <>
 LogicalResult ProfileInfoDepot::populateProfileInfo(tosa::VariableOp op) {
   addType(op.getType());
   return success();
@@ -255,6 +302,7 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   // Skip irrelevant operands when they are independent and not tied to any
   // specific profile/extension.
   POPULATE_PROFILE_INFO_CUSTOM(AvgPool2d)
+  POPULATE_PROFILE_INFO_CUSTOM(AvgPool2dAdaptive)
   POPULATE_PROFILE_INFO_CUSTOM(TransposeConv2D)
   POPULATE_PROFILE_INFO_CUSTOM(Conv2D)
   POPULATE_PROFILE_INFO_CUSTOM(Conv2DBlockScaled)
@@ -268,14 +316,18 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   POPULATE_PROFILE_INFO_CUSTOM(Tile)
   POPULATE_PROFILE_INFO_CUSTOM(Transpose)
   POPULATE_PROFILE_INFO_CUSTOM(Gather)
+  POPULATE_PROFILE_INFO_CUSTOM(RowGather)
+  POPULATE_PROFILE_INFO_CUSTOM(RowGatherBlockScaled)
   POPULATE_PROFILE_INFO_CUSTOM(Scatter)
   POPULATE_PROFILE_INFO_CUSTOM(Resize)
   POPULATE_PROFILE_INFO_CUSTOM(Select)
   POPULATE_PROFILE_INFO_CUSTOM(Rescale)
   POPULATE_PROFILE_INFO_CUSTOM(MatMul)
+  POPULATE_PROFILE_INFO_CUSTOM(MatMulT)
   POPULATE_PROFILE_INFO_CUSTOM(Variable)
   POPULATE_PROFILE_INFO_CUSTOM(VariableWrite)
   POPULATE_PROFILE_INFO_CUSTOM(Dim)
+  POPULATE_PROFILE_INFO_CUSTOM(MaxPool2dAdaptive)
 
   // For the most of tosa operators, all operands are profile/extension related
   // and hence are all considered in this profile-based compilance check.
@@ -530,6 +582,8 @@ LogicalResult TosaProfileCompliance::checkInvalid(Operation *op) {
         for (const auto &versionedTypeInfos :
              complianceInfos.operandTypeInfoSet) {
           const SmallVector<TypeInfo> typeInfos = versionedTypeInfos.first;
+          if (current.size() != typeInfos.size())
+            continue;
           const int matches = llvm::count_if(
               llvm::zip_equal(current, typeInfos), [&](const auto zipType) {
                 return isSameTypeInfo(std::get<0>(zipType),
@@ -577,10 +631,11 @@ SmallVector<OpComplianceInfo<T>> TosaProfileCompliance::findMatchedEntries(
     SmallVector<VersionedTypeInfo> sets = compInfo[i].operandTypeInfoSet;
     for (const auto &set : sets) {
       SmallVector<TypeInfo> expected = set.first;
-      assert(present.size() == expected.size() &&
-             "the entries for profile-based compliance do not match between "
-             "the generated metadata and the type definition retrieved from "
-             " the operation");
+      // Tensor-list operators can legitimately have multiple valid signatures
+      // with different operand/result counts, e.g. data-only and data+scale
+      // forms. Treat those as non-matches instead of asserting.
+      if (present.size() != expected.size())
+        continue;
 
       bool isFound = true;
       // Compare the type signature between the given operation and the

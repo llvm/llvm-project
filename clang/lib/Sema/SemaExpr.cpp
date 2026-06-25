@@ -53,11 +53,13 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaFixItUtils.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaOpenCL.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaPseudoObject.h"
 #include "clang/Sema/Template.h"
@@ -663,8 +665,9 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
 
   // We don't want to throw lvalue-to-rvalue casts on top of
   // expressions of certain types in C++.
+  // In HLSL LvaluetoRvalue conversion is allowed on records.
   if (getLangOpts().CPlusPlus) {
-    if (T == Context.OverloadTy || T->isRecordType() ||
+    if (T == Context.OverloadTy || (T->isRecordType() && !getLangOpts().HLSL) ||
         (T->isDependentType() && !T->isAnyPointerType() &&
          !T->isMemberPointerType()))
       return E;
@@ -1751,6 +1754,10 @@ QualType Sema::UsualArithmeticConversions(ExprResult &LHS, ExprResult &RHS,
 
   // At this point, we have two different arithmetic types.
 
+  if ((LHSType->isFixedPointType() && RHSType->isBitIntType()) ||
+      (LHSType->isBitIntType() && RHSType->isFixedPointType()))
+    return QualType();
+
   // Diagnose attempts to convert between __ibm128, __float128 and long double
   // where such conversions currently can't be handled.
   if (unsupportedTypeConversion(*this, LHSType, RHSType))
@@ -2813,12 +2820,12 @@ recoverFromMSUnqualifiedLookup(Sema &S, ASTContext &Context,
       TemplateArgs);
 }
 
-ExprResult
-Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
-                        SourceLocation TemplateKWLoc, UnqualifiedId &Id,
-                        bool HasTrailingLParen, bool IsAddressOfOperand,
-                        CorrectionCandidateCallback *CCC,
-                        bool IsInlineAsmIdentifier, Token *KeywordReplacement) {
+ExprResult Sema::ActOnIdExpression(Scope *S, CXXScopeSpec &SS,
+                                   SourceLocation TemplateKWLoc,
+                                   UnqualifiedId &Id, bool HasTrailingLParen,
+                                   bool IsAddressOfOperand,
+                                   CorrectionCandidateCallback *CCC,
+                                   bool IsInlineAsmIdentifier) {
   assert(!(IsAddressOfOperand && HasTrailingLParen) &&
          "cannot be direct & operand and have a trailing lparen");
   if (SS.isInvalid())
@@ -3734,6 +3741,20 @@ ExprResult Sema::ActOnIntegerConstant(SourceLocation Loc, int64_t Val) {
   return IntegerLiteral::Create(Context,
                                 llvm::APInt(IntSize, Val, /*isSigned=*/true),
                                 Context.IntTy, Loc);
+}
+
+ExprResult Sema::BuildBoolLiteral(SourceLocation Loc, bool Value) {
+  ExprResult Inner;
+  if (getLangOpts().CPlusPlus) {
+    Inner = ActOnCXXBoolLiteral(Loc, Value ? tok::kw_true : tok::kw_false);
+  } else {
+    // C doesn't actually have a way to represent literal values of type
+    // _Bool. So, we'll use 0/1 and implicit cast to _Bool.
+    Inner = ActOnIntegerConstant(Loc, Value ? 1 : 0);
+    Inner =
+        ImpCastExprToType(Inner.get(), Context.BoolTy, CK_IntegralToBoolean);
+  }
+  return Inner;
 }
 
 static Expr *BuildFloatingLiteral(Sema &S, NumericLiteralParser &Literal,
@@ -5173,7 +5194,8 @@ ExprResult Sema::ActOnArraySubscriptExpr(Scope *S, Expr *base,
   // Issue a better diagnostic if we tried to pass multiple arguments to
   // a builtin subscript operator rather than diagnosing this as a generic
   // overload resolution failure.
-  if (ArgExprs.size() != 1 && !base->getType()->isRecordType() &&
+  if (ArgExprs.size() != 1 && !base->getType()->isDependentType() &&
+      !base->getType()->isRecordType() &&
       !base->getType()->isObjCObjectPointerType()) {
     Diag(base->getExprLoc(), diag::err_ovl_builtin_subscript_expects_single_arg)
         << base->getType() << base->getSourceRange();
@@ -6074,9 +6096,14 @@ Sema::ConvertArgumentsForCall(CallExpr *Call, Expr *Fn,
                               SourceLocation RParenLoc,
                               bool IsExecConfig) {
   // Bail out early if calling a builtin with custom typechecking.
+  // For HLSL builtin aliases, argument conversion is still needed because
+  // overload resolution may have selected a conversion sequence (e.g.,
+  // vector-to-scalar truncation) that must be applied before the custom
+  // type checker runs.
   if (FDecl)
     if (unsigned ID = FDecl->getBuiltinID())
-      if (Context.BuiltinInfo.hasCustomTypechecking(ID))
+      if (Context.BuiltinInfo.hasCustomTypechecking(ID) &&
+          !(Context.getLangOpts().HLSL && FDecl->hasAttr<BuiltinAliasAttr>()))
         return false;
 
   // C99 6.5.2.2p7 - the arguments are implicitly converted, as if by
@@ -6778,6 +6805,22 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
   if (Result.isInvalid()) return ExprError();
   Fn = Result.get();
 
+  // The __builtin_amdgcn_is_invocable builtin is special, and will be resolved
+  // later, when we check boolean conditions, for now we merely forward it
+  // without any additional checking.
+  if (Fn->getType() == Context.BuiltinFnTy && ArgExprs.size() == 1 &&
+      ArgExprs[0]->getType() == Context.BuiltinFnTy) {
+    const auto *FD = cast<FunctionDecl>(Fn->getReferencedDeclOfCallee());
+
+    if (FD->getName() == "__builtin_amdgcn_is_invocable") {
+      QualType FnPtrTy = Context.getPointerType(FD->getType());
+      Expr *R = ImpCastExprToType(Fn, FnPtrTy, CK_BuiltinFnToFnPtr).get();
+      return CallExpr::Create(
+          Context, R, ArgExprs, Context.AMDGPUFeaturePredicateTy,
+          ExprValueKind::VK_PRValue, RParenLoc, FPOptionsOverride());
+    }
+  }
+
   if (CheckArgsForPlaceholders(ArgExprs))
     return ExprError();
 
@@ -6896,6 +6939,15 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
 
     FunctionDecl *FDecl = dyn_cast<FunctionDecl>(NDecl);
     if (FDecl && FDecl->getBuiltinID()) {
+      const llvm::Triple &Triple = Context.getTargetInfo().getTriple();
+      if (Triple.isSPIRV() && Triple.getVendor() == llvm::Triple::AMD) {
+        if (Context.BuiltinInfo.isTSBuiltin(FDecl->getBuiltinID()) &&
+            !Context.BuiltinInfo.isAuxBuiltinID(FDecl->getBuiltinID())) {
+          AMDGPU().AddPotentiallyUnguardedBuiltinUser(cast<FunctionDecl>(
+              getFunctionLevelDeclContext(/*AllowLambda=*/true)));
+        }
+      }
+
       // Rewrite the function decl for this builtin by replacing parameters
       // with no explicit address space with the address space of the arguments
       // in ArgExprs.
@@ -7178,6 +7230,18 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
 
   // Bail out early if calling a builtin with custom type checking.
   if (BuiltinID && Context.BuiltinInfo.hasCustomTypechecking(BuiltinID)) {
+    // For HLSL builtin aliases, the call was resolved via overload resolution
+    // which may have selected a conversion sequence (e.g., vector-to-scalar
+    // truncation). Convert arguments to match the declared prototype before
+    // the custom type checker runs, otherwise the builtin will operate on
+    // the unconverted argument types.
+    if (getLangOpts().HLSL && FDecl && FDecl->hasAttr<BuiltinAliasAttr>()) {
+      if (const auto *P = FDecl->getType()->getAs<FunctionProtoType>()) {
+        if (ConvertArgumentsForCall(TheCall, Fn, FDecl, P, Args, RParenLoc,
+                                    IsExecConfig))
+          return ExprError();
+      }
+    }
     ExprResult E = CheckBuiltinFunctionCall(FDecl, BuiltinID, TheCall);
     if (!E.isInvalid() && Context.BuiltinInfo.isImmediate(BuiltinID))
       E = CheckForImmediateInvocation(E, FDecl);
@@ -7222,6 +7286,12 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
                               diag::err_wasm_table_as_function_parameter));
       }
     }
+  }
+
+  // Check read_image{i|ui} sampler argument before ConvertArgumentsForCall
+  // replaces sampler DeclRefExprs with their integer initializers.
+  if (getLangOpts().OpenCL && FDecl) {
+    OpenCL().checkBuiltinReadImage(FDecl, TheCall);
   }
 
   if (Proto) {
@@ -7448,7 +7518,7 @@ Sema::BuildCompoundLiteralExpr(SourceLocation LParenLoc, TypeSourceInfo *TInfo,
       for (unsigned i = 0, j = ILE->getNumInits(); i != j; i++) {
         Expr *Init = ILE->getInit(i);
         if (!Init->isTypeDependent() && !Init->isValueDependent() &&
-            !Init->isConstantInitializer(Context, /*IsForRef=*/false)) {
+            !Init->isConstantInitializer(Context)) {
           Diag(Init->getExprLoc(), diag::err_init_element_not_constant)
               << Init->getSourceBitField();
           return ExprError();
@@ -7567,12 +7637,12 @@ Sema::ActOnInitList(SourceLocation LBraceLoc, MultiExprArg InitArgList,
     }
   }
 
-  return BuildInitList(LBraceLoc, InitArgList, RBraceLoc);
+  return BuildInitList(LBraceLoc, InitArgList, RBraceLoc, /*IsExplicit=*/true);
 }
 
-ExprResult
-Sema::BuildInitList(SourceLocation LBraceLoc, MultiExprArg InitArgList,
-                    SourceLocation RBraceLoc) {
+ExprResult Sema::BuildInitList(SourceLocation LBraceLoc,
+                               MultiExprArg InitArgList,
+                               SourceLocation RBraceLoc, bool IsExplicit) {
   // Semantic analysis for initializers is done by ActOnDeclarator() and
   // CheckInitializer() - it requires knowledge of the object being initialized.
 
@@ -7590,8 +7660,8 @@ Sema::BuildInitList(SourceLocation LBraceLoc, MultiExprArg InitArgList,
     }
   }
 
-  InitListExpr *E =
-      new (Context) InitListExpr(Context, LBraceLoc, InitArgList, RBraceLoc);
+  InitListExpr *E = new (Context)
+      InitListExpr(Context, LBraceLoc, InitArgList, RBraceLoc, IsExplicit);
   E->setType(Context.VoidTy); // FIXME: just a place holder for now.
   return E;
 }
@@ -8260,8 +8330,9 @@ ExprResult Sema::BuildVectorLiteral(SourceLocation LParenLoc,
   }
   // FIXME: This means that pretty-printing the final AST will produce curly
   // braces instead of the original commas.
-  InitListExpr *initE = new (Context) InitListExpr(Context, LiteralLParenLoc,
-                                                   initExprs, LiteralRParenLoc);
+  InitListExpr *initE =
+      new (Context) InitListExpr(Context, LiteralLParenLoc, initExprs,
+                                 LiteralRParenLoc, /*isExplicit=*/false);
   initE->setType(Ty);
   return BuildCompoundLiteralExpr(LParenLoc, TInfo, RParenLoc, initE);
 }
@@ -9125,7 +9196,7 @@ static QualType computeConditionalNullability(QualType ResTy, bool IsBin,
     return ResTy;
 
   auto GetNullability = [](QualType Ty) {
-    std::optional<NullabilityKind> Kind = Ty->getNullability();
+    NullabilityKindOrNone Kind = Ty->getNullability();
     if (Kind) {
       // For our purposes, treat _Nullable_result as _Nullable.
       if (*Kind == NullabilityKind::NullableResult)
@@ -10018,8 +10089,8 @@ static void ConstructTransparentUnion(Sema &S, ASTContext &C,
   // Build an initializer list that designates the appropriate member
   // of the transparent union.
   Expr *E = EResult.get();
-  InitListExpr *Initializer = new (C) InitListExpr(C, SourceLocation(),
-                                                   E, SourceLocation());
+  InitListExpr *Initializer = new (C) InitListExpr(
+      C, SourceLocation(), E, SourceLocation(), /*isExplicit=*/false);
   Initializer->setType(UnionType);
   Initializer->setInitializedFieldInUnion(Field);
 
@@ -10163,6 +10234,20 @@ AssignConvertType Sema::CheckSingleAssignmentConstraints(QualType LHSType,
       RHS = FixOverloadedFunctionReference(RHS.get(), DAP, FD);
     else
       return AssignConvertType::Incompatible;
+  }
+
+  // For HLSL records, insert derived-to-base conversion if needed.
+  if (getLangOpts().HLSL && LHSType->isRecordType()) {
+    QualType RHSType = RHS.get()->getType();
+    if (!Context.hasSameUnqualifiedType(RHSType, LHSType)) {
+      CXXBasePaths Paths;
+      if (IsDerivedFrom(RHS.get()->getBeginLoc(), RHSType, LHSType, Paths)) {
+        CXXCastPath CastPath;
+        BuildBasePathArray(Paths, CastPath);
+        RHS = ImpCastExprToType(RHS.get(), LHSType, CK_DerivedToBase, VK_LValue,
+                                &CastPath);
+      }
+    }
   }
 
   // This check seems unnatural, however it is necessary to ensure the proper
@@ -13904,6 +13989,11 @@ inline QualType Sema::CheckLogicalOperands(ExprResult &LHS, ExprResult &RHS,
     if (RHS.isInvalid())
       return QualType();
 
+    if (LHS.get()->getType() == Context.AMDGPUFeaturePredicateTy)
+      LHS = AMDGPU().ExpandAMDGPUPredicateBuiltIn(LHS.get());
+    if (RHS.get()->getType() == Context.AMDGPUFeaturePredicateTy)
+      RHS = AMDGPU().ExpandAMDGPUPredicateBuiltIn(RHS.get());
+
     if (!LHS.get()->getType()->isScalarType() ||
         !RHS.get()->getType()->isScalarType())
       return InvalidOperands(Loc, LHS, RHS);
@@ -13962,10 +14052,10 @@ static NonConstCaptureKind isReferenceToNonConstCapture(Sema &S, Expr *E) {
   if (!DRE) return NCCK_None;
   if (!DRE->refersToEnclosingVariableOrCapture()) return NCCK_None;
 
-  ValueDecl *Value = dyn_cast<ValueDecl>(DRE->getDecl());
+  ValueDecl *Value = DRE->getDecl();
 
   // The declaration must be a value which is not declared 'const'.
-  if (!Value || Value->getType().isConstQualified())
+  if (Value->getType().isConstQualified())
     return NCCK_None;
 
   BindingDecl *Binding = dyn_cast<BindingDecl>(Value);
@@ -14586,15 +14676,7 @@ void Sema::DiagnoseCommaOperator(const Expr *LHS, SourceLocation Loc) {
   // The listed locations are the initialization and increment portions
   // of a for loop.  The additional checks are on the condition of
   // if statements, do/while loops, and for loops.
-  // Differences in scope flags for C89 mode requires the extra logic.
-  const unsigned ForIncrementFlags =
-      getLangOpts().C99 || getLangOpts().CPlusPlus
-          ? Scope::ControlScope | Scope::ContinueScope | Scope::BreakScope
-          : Scope::ContinueScope | Scope::BreakScope;
-  const unsigned ForInitFlags = Scope::ControlScope | Scope::DeclScope;
-  const unsigned ScopeFlags = getCurScope()->getFlags();
-  if ((ScopeFlags & ForIncrementFlags) == ForIncrementFlags ||
-      (ScopeFlags & ForInitFlags) == ForInitFlags)
+  if (getCurScope()->isControlScope())
     return;
 
   // If there are multiple comma operators used together, get the RHS of the
@@ -16060,11 +16142,15 @@ ExprResult Sema::BuildBinOp(Scope *S, SourceLocation OpLoc,
   }
 
   if (getLangOpts().CPlusPlus) {
-    // Otherwise, build an overloaded op if either expression is type-dependent
-    // or has an overloadable type.
-    if (LHSExpr->isTypeDependent() || RHSExpr->isTypeDependent() ||
-        LHSExpr->getType()->isOverloadableType() ||
-        RHSExpr->getType()->isOverloadableType())
+    bool CanOverloadBinOp =
+        !getLangOpts().HLSL ||
+        HLSL().canHaveOverloadedBinOp(LHSExpr->getType(), Opc) ||
+        HLSL().canHaveOverloadedBinOp(RHSExpr->getType(), Opc);
+    bool TypeDependent =
+        LHSExpr->isTypeDependent() || RHSExpr->isTypeDependent();
+    bool Overloadable = LHSExpr->getType()->isOverloadableType() ||
+                        RHSExpr->getType()->isOverloadableType();
+    if (CanOverloadBinOp && (TypeDependent || Overloadable))
       return BuildOverloadedBinOp(*this, S, OpLoc, Opc, LHSExpr, RHSExpr);
   }
 
@@ -16313,6 +16399,10 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
 
         // Vector logical not returns the signed variant of the operand type.
         resultType = GetSignedVectorType(resultType);
+        break;
+      } else if (resultType == Context.AMDGPUFeaturePredicateTy) {
+        resultType = Context.getLogicalOperationType();
+        Input = AMDGPU().ExpandAMDGPUPredicateBuiltIn(InputExpr);
         break;
       } else {
         return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
@@ -17555,8 +17645,9 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     }
     break;
   case AssignConvertType::IncompatiblePointerDiscardsQualifiers: {
-    // Perform array-to-pointer decay if necessary.
-    if (SrcType->isArrayType()) SrcType = Context.getArrayDecayedType(SrcType);
+    // Perform decay if necessary.
+    if (SrcType->canDecayToPointerType())
+      SrcType = Context.getDecayedType(SrcType);
 
     isInvalid = true;
 
@@ -17669,6 +17760,11 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
   case AssignConvertType::CompatibleOBTDiscards:
     return false;
   case AssignConvertType::IncompatibleOBTKinds: {
+    assert(!SrcType->isFunctionType() &&
+           "Unexpected function type found in IncompatibleOBTKinds assignment");
+    if (SrcType->canDecayToPointerType())
+      SrcType = Context.getDecayedType(SrcType);
+
     auto getOBTKindName = [](QualType Ty) -> StringRef {
       if (Ty->isPointerType())
         Ty = Ty->getPointeeType();
@@ -18255,12 +18351,10 @@ ExprResult Sema::CheckForImmediateInvocation(ExprResult E, FunctionDecl *Decl) {
   // immediate invocation.
   APValue Cached;
   auto CheckConstantExpressionAndKeepResult = [&]() {
-    llvm::SmallVector<PartialDiagnosticAt, 8> Notes;
     Expr::EvalResult Eval;
-    Eval.Diag = &Notes;
     bool Res = E.get()->EvaluateAsConstantExpr(
         Eval, getASTContext(), ConstantExprKind::ImmediateInvocation);
-    if (Res && Notes.empty()) {
+    if (Res && !Eval.DiagEmitted) {
       Cached = std::move(Eval.Val);
       return true;
     }
@@ -18427,6 +18521,11 @@ static void RemoveNestedImmediateInvocation(
       // Lambdas have already been processed inside their eval contexts.
       return E;
     }
+
+    // We do not have enough information to transform opaque expressions and
+    // assume they do not contain immediate subexpressions.
+    ExprResult TransformOpaqueValueExpr(OpaqueValueExpr *E) { return E; }
+
     bool AlwaysRebuild() { return false; }
     bool ReplacingOriginal() { return true; }
     bool AllowSkippingCXXConstructExpr() {
@@ -21175,6 +21274,9 @@ ExprResult Sema::CheckBooleanCondition(SourceLocation Loc, Expr *E,
   E = result.get();
 
   if (!E->isTypeDependent()) {
+    if (E->getType() == Context.AMDGPUFeaturePredicateTy)
+      return AMDGPU().ExpandAMDGPUPredicateBuiltIn(E);
+
     if (getLangOpts().CPlusPlus)
       return CheckCXXBooleanCondition(E, IsConstexpr); // C++ 6.4p4
 

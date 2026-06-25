@@ -42,7 +42,9 @@ static llvm::cl::opt<bool> inlineAllocatableExprAssignFlag(
 
 namespace {
 /// Expand hlfir.assign of array RHS to array LHS into a loop nest
-/// of element-by-element assignments:
+/// of element-by-element assignments. Also handles scalar RHS broadcast
+/// to an array LHS; scalar RHS values are evaluated before the loop.
+///
 ///   hlfir.assign %4 to %5 : !fir.ref<!fir.array<3x3xf32>>,
 ///                           !fir.ref<!fir.array<3x3xf32>>
 /// into:
@@ -57,14 +59,17 @@ namespace {
 ///     }
 ///   }
 ///
-/// The transformation is correct only when LHS and RHS do not alias.
-/// When RHS is an array expression, then there is no aliasing.
+/// For array RHS, the transformation is correct only when LHS and RHS
+/// do not alias. When RHS is an array expression, there is no aliasing.
 /// This transformation does not support runtime checking for
 /// non-conforming LHS/RHS arrays' shapes currently.
 class InlineHLFIRAssignConversion
     : public mlir::OpRewritePattern<hlfir::AssignOp> {
+  bool onlyScalarRHS;
+
 public:
-  using mlir::OpRewritePattern<hlfir::AssignOp>::OpRewritePattern;
+  InlineHLFIRAssignConversion(mlir::MLIRContext *context, bool onlyScalarRHS)
+      : OpRewritePattern(context), onlyScalarRHS(onlyScalarRHS) {}
 
   llvm::LogicalResult
   matchAndRewrite(hlfir::AssignOp assign,
@@ -74,20 +79,20 @@ public:
                                          "AssignOp may imply allocation");
 
     hlfir::Entity rhs{assign.getRhs()};
+    hlfir::Entity lhs{assign.getLhs()};
 
-    if (!rhs.isArray())
+    if (!lhs.isArray())
       return rewriter.notifyMatchFailure(assign,
-                                         "AssignOp's RHS is not an array");
+                                         "AssignOp's LHS is not an array");
+
+    if (onlyScalarRHS && rhs.isArray())
+      return rewriter.notifyMatchFailure(
+          assign, "onlyScalarRHS: skipping array-to-array assignment");
 
     mlir::Type rhsEleTy = rhs.getFortranElementType();
     if (!fir::isa_trivial(rhsEleTy))
       return rewriter.notifyMatchFailure(
           assign, "AssignOp's RHS data type is not trivial");
-
-    hlfir::Entity lhs{assign.getLhs()};
-    if (!lhs.isArray())
-      return rewriter.notifyMatchFailure(assign,
-                                         "AssignOp's LHS is not an array");
 
     mlir::Type lhsEleTy = lhs.getFortranElementType();
     if (!fir::isa_trivial(lhsEleTy))
@@ -98,11 +103,9 @@ public:
       return rewriter.notifyMatchFailure(assign,
                                          "RHS/LHS element types mismatch");
 
-    if (!mlir::isa<hlfir::ExprType>(rhs.getType())) {
-      // If RHS is not an hlfir.expr, then we should prove that
-      // LHS and RHS do not alias.
-      // TODO: if they may alias, we can insert hlfir.as_expr for RHS,
-      // and proceed with the inlining.
+    bool rhsNeedsTemporary = false;
+
+    if (rhs.isArray() && !mlir::isa<hlfir::ExprType>(rhs.getType())) {
       fir::AliasAnalysis aliasAnalysis;
       mlir::AliasResult aliasRes = aliasAnalysis.alias(lhs, rhs);
       if (!aliasRes.isNo()) {
@@ -116,7 +119,14 @@ public:
                                   << "\tLHS: " << lhs << "\n"
                                   << "\tRHS: " << rhs << "\n"
                                   << "\tALIAS: " << aliasRes << "\n");
-          return rewriter.notifyMatchFailure(assign, "RHS/LHS may alias");
+          // Overlap is Unknown: unsafe to read RHS while writing LHS
+          // without a temp. Call genIndexBasedDisjointnessCheck(..) or
+          // genAddressBasedDisjointnessCheck(..) to check if the slices are
+          // disjoint.
+          // 1. If disjoint -> direct element-wise copy (no temp).
+          // 2. If not disjoint -> allocate a temporary and copy RHS into it,
+          // then copy the temporary to LHS..
+          rhsNeedsTemporary = true;
         }
       }
     }
@@ -124,13 +134,53 @@ public:
     mlir::Location loc = assign->getLoc();
     fir::FirOpBuilder builder(rewriter, assign.getOperation());
     builder.setInsertionPoint(assign);
+
+    const bool useWorkshare = flangomp::shouldUseWorkshareLowering(assign);
     mlir::ArrayAttr accessGroups;
     if (auto attrs = assign.getOperation()->getAttrOfType<mlir::ArrayAttr>(
             fir::getAccessGroupsAttrName()))
       accessGroups = attrs;
-    hlfir::genNoAliasArrayAssignment(
-        loc, builder, rhs, lhs, flangomp::shouldUseWorkshareLowering(assign),
-        /*temporaryLHS=*/false, /*combiner=*/nullptr, accessGroups);
+
+    auto emitAssignFrom = [&](hlfir::Entity rhsEntity) {
+      hlfir::genNoAliasArrayAssignment(
+          loc, builder, rhsEntity, lhs, useWorkshare,
+          /*temporaryLHS=*/false, nullptr, accessGroups);
+    };
+
+    if (rhsNeedsTemporary) {
+      std::optional<mlir::Value> disjoint =
+          fir::factory::genIndexBasedDisjointnessCheck(loc, builder, lhs, rhs);
+      if (!disjoint) {
+        disjoint = fir::factory::genAddressBasedDisjointnessCheck(loc, builder,
+                                                                  lhs, rhs);
+      }
+      if (!disjoint)
+        return rewriter.notifyMatchFailure(
+            assign, "Failed to generate runtime disjointness check,"
+                    "deferring to runtime assignment implementation");
+
+      builder.genIfThenElse(loc, *disjoint)
+          .genThen([&]() { emitAssignFrom(rhs); })
+          .genElse([&]() {
+            mlir::Value tempExpr = hlfir::AsExprOp::create(builder, loc, rhs);
+            emitAssignFrom(hlfir::Entity{tempExpr});
+            hlfir::DestroyOp::create(builder, loc, tempExpr);
+          })
+          .end();
+      rewriter.eraseOp(assign);
+      return mlir::success();
+    }
+
+    // Materialize scalar RHS before the assignment loop. Fortran 10.2.1.3
+    // requires that the RHS expression is fully evaluated before any part
+    // of the LHS variable is defined. When the scalar RHS is a reference
+    // into the LHS array (e.g. a = a(1)), loading it inside the loop
+    // would read a potentially modified value.
+    if (!rhs.isArray())
+      rhs = hlfir::loadTrivialScalar(loc, builder, rhs);
+
+    emitAssignFrom(rhs);
+
     rewriter.eraseOp(assign);
     return mlir::success();
   }
@@ -297,7 +347,7 @@ public:
         mlir::GreedySimplifyRegionLevel::Disabled);
 
     mlir::RewritePatternSet patterns(context);
-    patterns.insert<InlineHLFIRAssignConversion>(context);
+    patterns.insert<InlineHLFIRAssignConversion>(context, onlyScalarRHS);
 
     // Optionally add the allocatable expr assignment pattern
     if (inlineAllocatableExprAssignFlag) {

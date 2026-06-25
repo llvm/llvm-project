@@ -1,0 +1,8 @@
+---
+Name: WhereParametersConvertDiag
+Tags:
+- Name: Widget
+  Methods:
+  - Name: reset
+    Where: {}
+    SwiftName: reset()

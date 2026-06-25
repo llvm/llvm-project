@@ -15,7 +15,6 @@ set(LIBCXX_SOURCES
   filesystem/path.cpp
   functional.cpp
   hash.cpp
-  include/apple_availability.h
   include/atomic_support.h
   include/config_elast.h
   include/refstring.h
@@ -92,6 +91,7 @@ if (LIBCXX_ENABLE_LOCALIZATION)
     ostream.cpp
     regex.cpp
     strstream.cpp
+    text_encoding.cpp
     )
 endif()
 

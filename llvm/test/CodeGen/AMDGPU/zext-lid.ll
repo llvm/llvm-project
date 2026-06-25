@@ -2,7 +2,7 @@
 ; RUN: llc -O0 -mtriple=amdgcn < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}zext_grp_size_128:
-; GCN-NOT: and_b32
+; O2-NOT: and_b32
 define amdgpu_kernel void @zext_grp_size_128(ptr addrspace(1) nocapture %arg) #0 {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -20,8 +20,8 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}zext_grp_size_32x4x1:
-; GCN-NOT: and_b32
-define amdgpu_kernel void @zext_grp_size_32x4x1(ptr addrspace(1) nocapture %arg) #0 !reqd_work_group_size !0 {
+; O2-NOT: and_b32
+define amdgpu_kernel void @zext_grp_size_32x4x1(ptr addrspace(1) nocapture %arg) #5 !reqd_work_group_size !0 {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = and i32 %tmp, 31
@@ -38,11 +38,11 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}zext_grp_size_1x1x1:
-; GCN-NOT: and_b32
+; O2-NOT: and_b32
 
 ; When EarlyCSE is not run this call produces a range max with 0 active bits,
 ; which is a special case as an AssertZext from width 0 is invalid.
-define amdgpu_kernel void @zext_grp_size_1x1x1(ptr addrspace(1) nocapture %arg) #0 !reqd_work_group_size !1 {
+define amdgpu_kernel void @zext_grp_size_1x1x1(ptr addrspace(1) nocapture %arg) #6 !reqd_work_group_size !1 {
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
   %tmp1 = and i32 %tmp, 1
   store i32 %tmp1, ptr addrspace(1) %arg, align 4
@@ -50,7 +50,7 @@ define amdgpu_kernel void @zext_grp_size_1x1x1(ptr addrspace(1) nocapture %arg) 
 }
 
 ; GCN-LABEL: {{^}}zext_grp_size_512:
-; GCN-NOT: and_b32
+; O2-NOT: and_b32
 define amdgpu_kernel void @zext_grp_size_512(ptr addrspace(1) nocapture %arg) #1 {
 bb:
   %tmp = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -102,6 +102,8 @@ attributes #1 = { nounwind "amdgpu-flat-work-group-size"="512,512" }
 attributes #2 = { nounwind readnone speculatable }
 attributes #3 = { nounwind readnone }
 attributes #4 = { nounwind }
+attributes #5 = { nounwind "amdgpu-flat-work-group-size"="128,128" }
+attributes #6 = { nounwind "amdgpu-flat-work-group-size"="1,1" }
 
 !0 = !{i32 32, i32 4, i32 1}
 !1 = !{i32 1, i32 1, i32 1}

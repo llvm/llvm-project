@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=51
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=52
 ! Check OpenMP clause validity for the following directives:
 !     2.10 Device constructs
 program main
@@ -151,13 +151,25 @@ program main
   enddo
   !$omp end target data
 
-  !ERROR: The device expression of the DEVICE clause must be a positive integer expression
+  ! -2 is the reserved value omp_invalid_device (OpenMP 5.2+), so it is valid.
   !$omp target enter data map(alloc:A) device(-2)
 
-  !ERROR: The device expression of the DEVICE clause must be a positive integer expression
+  ! -2 is the reserved value omp_invalid_device (OpenMP 5.2+), so it is valid.
   !$omp target exit data map(delete:A) device(-2)
 
-  !ERROR: At most one IF clause can appear on the TARGET ENTER DATA directive
+  ! -1 is the reserved value omp_initial_device (OpenMP 5.2+), so it is valid.
+  !$omp target enter data map(alloc:A) device(-1)
+
+  ! -1 is the reserved value omp_initial_device (OpenMP 5.2+), so it is valid.
+  !$omp target exit data map(delete:A) device(-1)
+
+  !ERROR: The device expression of the DEVICE clause must be a non-negative integer expression, 'omp_initial_device' (-1), or 'omp_invalid_device' (-2)
+  !$omp target enter data map(alloc:A) device(-3)
+
+  !ERROR: The device expression of the DEVICE clause must be a non-negative integer expression, 'omp_initial_device' (-1), or 'omp_invalid_device' (-2)
+  !$omp target exit data map(delete:A) device(-3)
+
+  !ERROR: At most one IF clause can apply to each directive constituent
   !$omp target enter data map(to:a) if(.true.) if(.false.)
 
   !ERROR: Only the ALLOC, TO, TOFROM map types are permitted for MAP clauses on the TARGET ENTER DATA directive
@@ -173,7 +185,7 @@ program main
 
   !$omp target update if(.true.) device(1) to(a) from(b) depend(inout:c) nowait
 
-  !ERROR: At most one IF clause can appear on the TARGET UPDATE directive
+  !ERROR: At most one IF clause can apply to each directive constituent
   !$omp target update to(a) if(.true.) if(.false.)
 
   !ERROR: At most one DEVICE clause can appear on the TARGET UPDATE directive

@@ -176,6 +176,9 @@ def NullConversion : DiagGroup<"null-conversion">;
 def ImplicitConversionFloatingPointToBool :
   DiagGroup<"implicit-conversion-floating-point-to-bool">;
 def ObjCLiteralConversion : DiagGroup<"objc-literal-conversion">;
+def NonportableIncludePathSeparator : DiagGroup<"nonportable-include-path-separator">;
+def NonportableIncludePath : DiagGroup<"nonportable-include-path",
+                                       [NonportableIncludePathSeparator]>;
 def MacroRedefined : DiagGroup<"macro-redefined">;
 def BuiltinMacroRedefined : DiagGroup<"builtin-macro-redefined">;
 def BuiltinRequiresHeader : DiagGroup<"builtin-requires-header">;
@@ -270,6 +273,7 @@ def UnguardedAvailability : DiagGroup<"unguarded-availability",
 def : DiagGroup<"partial-availability", [UnguardedAvailability]>;
 def DeprecatedDynamicExceptionSpec
     : DiagGroup<"deprecated-dynamic-exception-spec">;
+def HipDeprecatedBuiltins : DiagGroup<"hip-deprecated-builtins">;
 def DeprecatedBuiltins : DiagGroup<"deprecated-builtins">;
 def DeprecatedImplementations :DiagGroup<"deprecated-implementations">;
 def DeprecatedIncrementBool : DiagGroup<"deprecated-increment-bool">;
@@ -582,6 +586,12 @@ This may contain false-positives, e.g. when the borrowed storage is potentially 
   }];
 }
 
+def LifetimeSafetyUseAfterFree : DiagGroup<"lifetime-safety-use-after-free"> {
+    code Documentation = [{
+Warning to detect use-after-free, introduced by freeing an object and later using it.
+    }];
+}
+
 // Dangling-Field (aka Escape-To-Field)
 def LifetimeSafetyDanglingField : DiagGroup<"lifetime-safety-dangling-field"> {
   code Documentation = [{
@@ -614,17 +624,46 @@ Warning to detect invalidation of references.
   }];
 }
 
+def LifetimeSafetyLifetimeboundViolation : DiagGroup<"lifetime-safety-lifetimebound-violation"> {
+  code Documentation = [{
+Detects parameters marked as [[clang::lifetimebound]] for which the analysis could not verify that the return value can be lifetime bound to the parameter.
+This warning may produce false-positives diagnostics when it cannot fully model the code.
+  }];
+}
+
+def LifetimeSafetyInapplicableLifetimebound
+    : DiagGroup<"lifetime-safety-inapplicable-lifetimebound"> {
+  code Documentation = [{
+Detects uses of [[clang::lifetimebound]] that have no effect because the type of the annotated parameter cannot carry a lifetime.
+  }];
+}
+
+def LifetimeSafetyCrossTUMisplacedLifetimebound
+    : DiagGroup<"lifetime-safety-cross-tu-misplaced-lifetimebound">;
+def LifetimeSafetyIntraTUMisplacedLifetimebound
+    : DiagGroup<"lifetime-safety-intra-tu-misplaced-lifetimebound">;
+def LifetimeSafetyMisplacedLifetimebound
+    : DiagGroup<"lifetime-safety-misplaced-lifetimebound",
+                [LifetimeSafetyCrossTUMisplacedLifetimebound,
+                 LifetimeSafetyIntraTUMisplacedLifetimebound]> {
+    code Documentation = [{
+Detects function definitions whose parameters or implicit this argument are marked as [[clang::lifetimebound]] when the first declaration is not.
+}];
+}
+
 def LifetimeSafetyPermissive : DiagGroup<"lifetime-safety-permissive",
                                          [LifetimeSafetyUseAfterScope,
                                          LifetimeSafetyReturnStackAddr,
                                          LifetimeSafetyDanglingField,
-                                         LifetimeSafetyDanglingGlobal]>;
+                                         LifetimeSafetyDanglingGlobal,
+                                         LifetimeSafetyUseAfterFree]>;
 
 def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict",
-                                    [LifetimeSafetyUseAfterScopeMoved,
+                                    [LifetimeSafetyPermissive,
+                                    LifetimeSafetyUseAfterScopeMoved,
                                     LifetimeSafetyReturnStackAddrMoved,
                                     LifetimeSafetyDanglingFieldMoved,
-                                    LifetimeSafetyDanglingGlobal,
+                                    LifetimeSafetyDanglingGlobalMoved,
                                     LifetimeSafetyInvalidation]>;
 
 def LifetimeSafety : DiagGroup<"lifetime-safety",
@@ -654,11 +693,29 @@ Detects misuse of [[clang::noescape]] annotation where the parameter escapes (fo
   }];
 }
 
-def LifetimeSafetyValidations : DiagGroup<"lifetime-safety-validations",
-                                          [LifetimeSafetyNoescape]> {
+def LifetimeSafetyAnnotationPlacement
+    : DiagGroup<"lifetime-safety-annotation-placement",
+                [LifetimeSafetyInapplicableLifetimebound,
+                 LifetimeSafetyMisplacedLifetimebound]> {
   code Documentation = [{
-Verify function implementations adhere to the annotated lifetime contracts through lifetime safety
-like verifying [[clang::noescape]] and [[clang::lifetimebound]] (upcoming).
+Validates that lifetime annotations are placed on appropriate types and in appropriate locations.
+  }];
+}
+
+def LifetimeSafetyAnnotationVerification
+    : DiagGroup<"lifetime-safety-annotation-verification",
+                [LifetimeSafetyNoescape,
+                 LifetimeSafetyLifetimeboundViolation]> {
+  code Documentation = [{
+Verifies that function implementations adhere to their lifetime annotation contracts through dataflow analysis.
+  }];
+}
+
+def LifetimeSafetyValidations : DiagGroup<"lifetime-safety-validations",
+                                         [LifetimeSafetyAnnotationPlacement,
+                                          LifetimeSafetyAnnotationVerification]> {
+  code Documentation = [{
+Validates correct usage and adherence to lifetime safety annotations like [[clang::noescape]] and [[clang::lifetimebound]].
   }];
 }
 
@@ -944,6 +1001,7 @@ def MemsetTransposedArgs : DiagGroup<"memset-transposed-args">;
 def DynamicClassMemaccess : DiagGroup<"dynamic-class-memaccess">;
 def NonTrivialMemcall : DiagGroup<"nontrivial-memcall">;
 def NonTrivialMemaccess : DiagGroup<"nontrivial-memaccess", [NonTrivialMemcall]>;
+def NonportableSystemIncludePath : DiagGroup<"nonportable-system-include-path">;
 def SuspiciousBzero : DiagGroup<"suspicious-bzero">;
 def SuspiciousMemaccess : DiagGroup<"suspicious-memaccess",
   [SizeofPointerMemaccess, DynamicClassMemaccess,
@@ -1800,6 +1858,7 @@ def BoundsSafetyCountedByEltTyUnknownSize :
 
 // A group for cross translation unit static analysis related warnings.
 def CrossTU : DiagGroup<"ctu">;
+def CrossTURemarks : DiagGroup<"ctu-remarks">;
 
 def CTADMaybeUnsupported : DiagGroup<"ctad-maybe-unsupported">;
 
@@ -1877,6 +1936,9 @@ def HLSLExplicitBinding : DiagGroup<"hlsl-explicit-binding">;
 // Warnings for DXIL validation
 def DXILValidation : DiagGroup<"dxil-validation">;
 
+// Warnings for SPIRV validation
+def SPIRVValidation : DiagGroup<"spirv-validation">;
+
 // Warning for HLSL API availability
 def HLSLAvailability : DiagGroup<"hlsl-availability">;
 
@@ -1910,7 +1972,7 @@ def BitIntExtension : DiagGroup<"bit-int-extension">;
 def ExtractAPIMisuse : DiagGroup<"extractapi-misuse">;
 
 // Warnings related to the "Scalable Static Analysis Framework" - SSAF.
-def ScalableStaticAnalysisFramework : DiagGroup<"scalable-static-analysis-framework">;
+def ScalableStaticAnalysis : DiagGroup<"scalable-static-analysis-framework">;
 
 // Warnings about using the non-standard extension having an explicit specialization
 // with a storage class specifier.
@@ -1927,3 +1989,6 @@ def TrivialAutoVarInit : DiagGroup<"trivial-auto-var-init">;
 
 // A warning for options that enable a feature that is not yet complete
 def ExperimentalOption : DiagGroup<"experimental-option">;
+
+// Warnings about unguarded usages of AMDGPU target specific constructs
+def UnguardedBuiltinUsageAMDGPU : DiagGroup<"amdgpu-unguarded-builtin-usage">;

@@ -51,6 +51,7 @@
 #include <sys/timeb.h>
 #include <sys/times.h>
 #include <sys/types.h>
+#include <sys/ucontext.h>
 #include <sys/utsname.h>
 #include <termios.h>
 #include <time.h>

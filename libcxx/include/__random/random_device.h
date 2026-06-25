@@ -20,6 +20,7 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #if _LIBCPP_HAS_RANDOM_DEVICE
 
@@ -50,8 +51,8 @@ public:
   static _LIBCPP_CONSTEXPR const result_type _Min = 0;
   static _LIBCPP_CONSTEXPR const result_type _Max = 0xFFFFFFFFu;
 
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
-  _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
 
   // constructors
 #  ifndef _LIBCPP_CXX03_LANG
@@ -63,10 +64,10 @@ public:
   ~random_device();
 
   // generating functions
-  result_type operator()();
+  [[__nodiscard__]] result_type operator()();
 
   // property functions
-  double entropy() const _NOEXCEPT;
+  [[__nodiscard__]] double entropy() const _NOEXCEPT;
 
   random_device(const random_device&)  = delete;
   void operator=(const random_device&) = delete;
@@ -74,6 +75,7 @@ public:
 
 #endif // _LIBCPP_HAS_RANDOM_DEVICE
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

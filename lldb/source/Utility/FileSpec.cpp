@@ -387,10 +387,6 @@ std::string FileSpec::GetPath(bool denormalize) const {
   return static_cast<std::string>(result);
 }
 
-ConstString FileSpec::GetPathAsConstString(bool denormalize) const {
-  return ConstString{GetPath(denormalize)};
-}
-
 void FileSpec::GetPath(llvm::SmallVectorImpl<char> &path,
                        bool denormalize) const {
   path.append(m_directory.GetStringRef().begin(),
@@ -411,8 +407,8 @@ llvm::StringRef FileSpec::GetFileNameExtension() const {
   return llvm::sys::path::extension(m_filename.GetStringRef(), m_style);
 }
 
-ConstString FileSpec::GetFileNameStrippingExtension() const {
-  return ConstString(llvm::sys::path::stem(m_filename.GetStringRef(), m_style));
+llvm::StringRef FileSpec::GetFileNameStrippingExtension() const {
+  return llvm::sys::path::stem(m_filename.GetStringRef(), m_style);
 }
 
 // Return the size in bytes that this object takes in memory. This returns the

@@ -242,6 +242,11 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
             MIToken::kw_cfi_aarch64_negate_ra_sign_state)
       .Case("negate_ra_sign_state_with_pc",
             MIToken::kw_cfi_aarch64_negate_ra_sign_state_with_pc)
+      .Case("llvm_register_pair", MIToken::kw_cfi_llvm_register_pair)
+      .Case("llvm_vector_registers", MIToken::kw_cfi_llvm_vector_registers)
+      .Case("llvm_vector_offset", MIToken::kw_cfi_llvm_vector_offset)
+      .Case("llvm_vector_register_mask",
+            MIToken::kw_cfi_llvm_vector_register_mask)
       .Case("blockaddress", MIToken::kw_blockaddress)
       .Case("intrinsic", MIToken::kw_intrinsic)
       .Case("target-index", MIToken::kw_target_index)
@@ -599,6 +604,22 @@ static Cursor maybeLexHexadecimalLiteral(Cursor C, MIToken &Token) {
   return C;
 }
 
+static Cursor maybeLexFloatHexBits(Cursor C, MIToken &Token) {
+  if (C.peek() != 'f')
+    return std::nullopt;
+  if (C.peek(1) != '0' || (C.peek(2) != 'x' && C.peek(2) != 'X'))
+    return std::nullopt;
+  Cursor Range = C;
+  C.advance(3);
+  while (isxdigit(C.peek()))
+    C.advance();
+  StringRef StrVal = Range.upto(C);
+  if (StrVal.size() <= 3)
+    return std::nullopt;
+  Token.reset(MIToken::FloatingPointLiteral, Range.upto(C));
+  return C;
+}
+
 static Cursor maybeLexNumericalLiteral(Cursor C, MIToken &Token) {
   if (!isdigit(C.peek()) && (C.peek() != '-' || !isdigit(C.peek(1))))
     return std::nullopt;
@@ -735,6 +756,8 @@ StringRef llvm::lexMIToken(StringRef Source, MIToken &Token,
   C = skipWhitespace(skipMachineOperandComment(C));
 
   if (Cursor R = maybeLexMachineBasicBlock(C, Token, ErrorCallback))
+    return R.remaining();
+  if (Cursor R = maybeLexFloatHexBits(C, Token))
     return R.remaining();
   if (Cursor R = maybeLexIdentifier(C, Token))
     return R.remaining();
