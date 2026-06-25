@@ -2454,8 +2454,8 @@ let isTerminator=1 in {
 
   let isBranch=1 in {
     def CBranch : NVPTXInst<(outs),
-                              (ins B1:$a, brtarget:$target, BranchFlag:$not),
-                              "@${not}$a bra \t$target;",
+                              (ins B1:$a, brtarget:$target, BranchFlag:$negate),
+                              "@${negate}$a bra \t$target;",
                               [(brcond i1:$a, bb:$target)]>;
 
     let isBarrier=1 in
