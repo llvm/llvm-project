@@ -33080,7 +33080,8 @@ SDValue AArch64TargetLowering::LowerToScalableOp(SDValue Op,
     Ops.push_back(convertToScalableVector(DAG, ContainerVT, V));
   }
 
-  auto ScalableRes = DAG.getNode(Op.getOpcode(), SDLoc(Op), ContainerVT, Ops);
+  auto ScalableRes =
+      DAG.getNode(Op.getOpcode(), SDLoc(Op), ContainerVT, Ops, Op->getFlags());
   return convertFromScalableVector(DAG, VT, ScalableRes);
 }
 
