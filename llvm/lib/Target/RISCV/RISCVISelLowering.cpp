@@ -16460,7 +16460,13 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
   int64_t C0 = N0C->getSExtValue();
   int64_t C1 = N1C->getSExtValue();
   int64_t CA, CB;
-  if (C0 == -1 || C0 == 0 || C0 == 1 || isInt<12>(C1))
+  // If C1 already fits in an add immediate, there is nothing to split out: the
+  // (add (mul x, c0), c1) form is already canonical/cheap. Splitting it would
+  // fight the generic DAGCombiner fold add(mul(add(A, CA), CM), CB) ->
+  // add(mul(A, CM), CM*CA+CB) (which is gated on isLegalAddImmediate) and cause
+  // an infinite loop.
+  if (C0 == -1 || C0 == 0 || C0 == 1 ||
+      Subtarget.getTargetLowering()->isLegalAddImmediate(C1))
     return SDValue();
   // Search for proper CA (non-zero) and CB that both are simm12.
   if ((C1 / C0) != 0 && isInt<12>(C1 / C0) && isInt<12>(C1 % C0) &&
