@@ -2891,10 +2891,7 @@ bool CastNoOverflow(InterpState &S, CodePtr OpPC) {
   T Source = S.Stk.pop<T>();
   APSInt Val = Source.toAPSInt();
   if (Val.isNegative() || Val.getActiveBits() > 63) {
-    S.FFDiag(S.Current->getLocation(OpPC),
-             diag::note_invalid_subexpr_in_const_expr)
-        << S.Current->getRange(OpPC);
-    return false;
+return Invalid(S, OpPC);
   }
   S.Stk.push<Integral<64, true>>(
       Integral<64, true>::from((int64_t)Val.getZExtValue()));
