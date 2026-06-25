@@ -786,6 +786,8 @@ if (MSVC)
       # We only putting dll export on classes with out of line members so this 
       # warning gets triggered a lot for bases we haven't exported'
       -wd4275 # non dll-interface class used as base for dll-interface class
+      -wd4661 # no suitable definition provided for explicit template instantiation request
+      -wd4910 # '__declspec(dllexport)' and 'extern' are incompatible on an explicit instantiation
 
       # Promoted warnings.
       -w14062 # Promote 'enumerator in switch of enum is not handled' to level 1 warning.
