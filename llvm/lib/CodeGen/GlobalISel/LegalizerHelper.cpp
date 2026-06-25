@@ -4894,9 +4894,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
       bool InsertInLowHalf = InsertionPointImm == 0;
       auto Extract = MIRBuilder.buildExtractSubvector(
           SubvectorTy, Vector,
-          (uint64_t)(InsertInLowHalf
-                         ? VectorTy.getElementCount().getKnownMinValue() / 2
-                         : 0));
+          (uint64_t)(InsertInLowHalf ? VectorTy.getNumElements() / 2 : 0));
 
       auto LowHalf = InsertInLowHalf ? Subvector : Extract.getReg(0);
       auto HighHalf = InsertInLowHalf ? Extract.getReg(0) : Subvector;
@@ -4914,13 +4912,11 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
 
       // Calculate mask required for this shuffle
       SmallVector<int> Mask;
-      for (int i; i < VectorTy.getElementCount().getKnownMinValue(); i++) {
+      for (int i; i < VectorTy.getNumElements(); i++) {
         // If this index is within bounds, put subvector's index into mask
         if (i > InsertionPointImm &&
-            i < InsertionPointImm +
-                    SubvectorTy.getElementCount().getKnownMinValue())
-          Mask.push_back(VectorTy.getElementCount().getKnownMinValue() + i -
-                         InsertionPointImm);
+            i < InsertionPointImm + SubvectorTy.getNumElements())
+          Mask.push_back(VectorTy.getNumElements() + i - InsertionPointImm);
         else
           Mask.push_back(i);
       }
