@@ -703,10 +703,13 @@ def FeatureStrictAlign : SubtargetFeature<"strict-align",
                                           "Disallow all unaligned memory "
                                           "access">;
 
+// +execute-only callee can be inlined into caller without +execute-only,
+// but not vice versa.
 def FeatureExecuteOnly : SubtargetFeature<"execute-only",
                                           "GenExecuteOnly", "true",
                                           "Enable the generation of "
-                                          "execute only code.">;
+                                          "execute only code.",
+                                          [], InlineInverse>;
 
 foreach i = {1-7,9-15,18,20-28} in
     def FeatureReserveX#i : SubtargetFeature<"reserve-x"#i, "ReserveXRegister["#i#"]", "true",
