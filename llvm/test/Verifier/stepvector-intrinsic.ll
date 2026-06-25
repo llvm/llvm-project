@@ -1,4 +1,4 @@
-; RUN: not opt -S -passes=verify -disable-output -verify-intrinsic-decls < %s 2>&1 | FileCheck %s
+; RUN: not opt -S -passes=verify -disable-output < %s 2>&1 | FileCheck %s
 
 ; Reject stepvector intrinsics that return a scalar
 ; CHECK: intrinsic return type (overload type 0) expected any vector type, but got i32

@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=aarch64-linux-gnu -mattr=+sve -verify-intrinsic-decls < %s 2>%t
+; RUN: not llc -mtriple=aarch64-linux-gnu -mattr=+sve < %s 2>%t
 ; RUN: FileCheck --check-prefix=CHECK-ERROR %s <%t
 
 ; CHECK-ERROR: intrinsic argument 0 type expected vector with 4 elements, but got <vscale x 4 x i16>

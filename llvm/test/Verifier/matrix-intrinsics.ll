@@ -1,4 +1,4 @@
-; RUN: not opt -S -disable-output -verify-intrinsic-decls %s 2>&1 | FileCheck %s
+; RUN: not opt -S -disable-output %s 2>&1 | FileCheck %s
 
 define <4 x float> @transpose(<4 x float> %m, i32 %arg) {
 ; CHECK: Result of a matrix operation does not fit in the returned vector!

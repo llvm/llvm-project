@@ -1,4 +1,4 @@
-; RUN: not opt -S -passes=verify -disable-output -verify-intrinsic-decls < %s 2>&1 | FileCheck %s
+; RUN: not opt -S -passes=verify -disable-output < %s 2>&1 | FileCheck %s
 
 ; Reject a vector reduction with a non-vector argument.
 

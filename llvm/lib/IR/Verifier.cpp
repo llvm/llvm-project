@@ -142,10 +142,6 @@ static cl::opt<bool> VerifyNoAliasScopeDomination(
     cl::desc("Ensure that llvm.experimental.noalias.scope.decl for identical "
              "scopes are not dominating"));
 
-static cl::opt<bool> VerifyIntrinsicDecls(
-    "verify-intrinsic-decls", cl::Hidden, cl::init(false),
-    cl::desc("Verify intrinsic declarations with no uses"));
-
 namespace {
 
 class Verifier : public InstVisitor<Verifier>, VerifierSupport {
@@ -3235,7 +3231,8 @@ void Verifier::visitFunction(const Function &F) {
   // direct call/invokes, never having its "address taken".
   // Only do this if the module is materialized, otherwise we don't have all the
   // uses.
-  if (F.isIntrinsic() && F.getParent()->isMaterialized()) {
+  bool isMaterialized = F.getParent()->isMaterialized();
+  if (F.isIntrinsic() && isMaterialized) {
     const User *U;
     if (F.hasAddressTaken(&U, false, true, false,
                           /*IgnoreARCAttachedCall=*/true))
@@ -3243,10 +3240,10 @@ void Verifier::visitFunction(const Function &F) {
   }
 
   // Verify if the intrinsic's signature and name are valid. We do this if
-  // the intrinsic has atleast one materialized use, or if VerifyIntrinsicDecls
-  // is true (so even intrinsics declarations with no uses get verified).
+  // the intrinsic has atleast one materialized use, or if isMaterialized
+  // is true.
   Intrinsic::ID IID = F.getIntrinsicID();
-  if (IID && (VerifyIntrinsicDecls || !F.materialized_use_empty())) {
+  if (IID && (isMaterialized || !F.materialized_use_empty())) {
     // Verify that the intrinsic prototype lines up with what the .td files
     // describe.
     std::string ErrMsg;

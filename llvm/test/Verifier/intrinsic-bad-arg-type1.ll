@@ -1,7 +1,7 @@
 ; RUN: split-file %s %t
 
 ;--- test0.ll
-; RUN: not opt -S -passes=verify -disable-output -verify-intrinsic-decls 2>&1 < %t/test0.ll | FileCheck %t/test0.ll
+; RUN: not opt -S -passes=verify -disable-output 2>&1 < %t/test0.ll | FileCheck %t/test0.ll
 
 ; CHECK: intrinsic return type expected void, but got float
 ; CHECK-NEXT: declare float @llvm.set.rounding(i32)
@@ -164,7 +164,7 @@ declare <4 x float> @llvm.riscv.vrgather.vv.v4f32.i32(<4 x float>, <4 x float>, 
 
 
 ;--- test1.ll
-; RUN: not opt -S -passes=verify -disable-output -verify-intrinsic-decls 2>&1 < %t/test1.ll | FileCheck %t/test1.ll
+; RUN: not opt -S -passes=verify -disable-output 2>&1 < %t/test1.ll | FileCheck %t/test1.ll
 
 ; CHECK: intrinsic return vector element type expected i8, but got i32
 ; CHECK-NEXT: declare <16 x i32> @llvm.aarch64.neon.pmull64(i64, i64)
@@ -178,7 +178,7 @@ declare { i32, i2 } @llvm.nvvm.elect.sync(i32)
 
 
 ;--- test2.ll
-; RUN: not opt -S -passes=verify -disable-output -verify-intrinsic-decls 2>&1 < %t/test2.ll | FileCheck %t/test2.ll
+; RUN: not opt -S -passes=verify -disable-output 2>&1 < %t/test2.ll | FileCheck %t/test2.ll
 
 ; CHECK: intrinsic return type expected vector with 16 elements, but got <vscale x 16 x i32>
 ; CHECK-NEXT: declare <vscale x 16 x i32> @llvm.aarch64.neon.pmull64(i64, i64)

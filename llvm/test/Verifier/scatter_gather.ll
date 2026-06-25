@@ -1,4 +1,4 @@
-; RUN: not opt -passes=verify -disable-output -verify-intrinsic-decls < %s 2>&1 | FileCheck %s
+; RUN: not opt -passes=verify -disable-output < %s 2>&1 | FileCheck %s
 
 ; Mask is not a vector
 ; CHECK: intrinsic argument 1 type (same vector width of overload type 0) expected vector (overload type 0 is <16 x float>), but got ptr

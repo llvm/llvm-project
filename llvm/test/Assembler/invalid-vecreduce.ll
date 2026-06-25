@@ -1,4 +1,4 @@
-; RUN: not opt -S -verify-intrinsic-decls < %s 2>&1 | FileCheck %s
+; RUN: not opt -S < %s 2>&1 | FileCheck %s
 
 ; CHECK: intrinsic return type (vector element of overload type 0) expected double (overload type 0 is <2 x double>), but got float
 ; CHECK-NEXT: declare float @llvm.vector.reduce.fadd.f32.f64.v2f64(double, <2 x double>)

@@ -1,4 +1,4 @@
-; RUN: not llvm-as -verify-intrinsic-decls < %s 2>&1 | FileCheck %s
+; RUN: not llvm-as < %s 2>&1 | FileCheck %s
 
 ; CHECK: intrinsic has incorrect number of args. Expected 4, but got 3
 ; CHECK-NEXT: ; {{.*}}
