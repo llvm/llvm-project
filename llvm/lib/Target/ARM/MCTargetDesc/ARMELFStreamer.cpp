@@ -1069,6 +1069,12 @@ void ARMTargetELFStreamer::finishAttributeSection() {
   if (Arch != ARM::ArchKind::INVALID)
     emitArchDefaultAttributes();
 
+  // Set Tag_ABI_VFP_args based on the target triple environment.
+  // For hard-float environments (ending in 'hf') and Windows on ARM (which
+  // strictly mandates the AAPCS-VFP hard-float calling convention), we default
+  // Tag_ABI_VFP_args to HardFPAAPCS. We set OverwriteExisting to false to
+  // ensure that any explicit .eabi_attribute directives in the assembly source
+  // are respected and not overwritten.
   const Triple &TT = S.getContext().getTargetTriple();
   if (TT.getEnvironment() == Triple::GNUEABIHF ||
       TT.getEnvironment() == Triple::GNUEABIHFT64 ||
