@@ -307,6 +307,17 @@ public:
     gatherTemplatePseudoOverrides(D, Relations);
     TRY_DECL(D, IndexCtx.handleDecl(D, SymbolRoleSet(), Relations));
     handleDeclarator(D);
+    // handle destructor reference for local variables
+    if (D->hasLocalStorage() && D->needsDestruction(D->getASTContext())) {
+      if (const auto *RecordTy = D->getType()->getAsCXXRecordDecl()) {
+        const auto *Dtor = RecordTy->getDestructor();
+        const Expr *InitExpr = D->getInit();
+        if (Dtor && InitExpr) {
+          IndexCtx.handleReference(Dtor, InitExpr->getExprLoc(), D,
+                                   D->getLexicalDeclContext());
+        }
+      }
+    }
     IndexCtx.indexBody(D->getInit(), D);
     return true;
   }
