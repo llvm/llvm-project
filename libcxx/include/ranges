@@ -26,6 +26,7 @@ namespace std::ranges {
 
     inline constexpr unspecified size = unspecified;
     inline constexpr unspecified ssize = unspecified;
+    inline constexpr unspecified reserve_hint = unspecified; // Since C++26
   }
 
   // [range.range], ranges

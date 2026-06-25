@@ -131,6 +131,59 @@ inline constexpr auto ssize = __ssize::__fn{};
 } // namespace __cpo
 } // namespace ranges
 
+#  if _LIBCPP_STD_VER >= 26
+
+// [range.prim.size.hint]
+
+namespace ranges {
+namespace __reserve_hint {
+void reserve_hint() = delete;
+
+template <typename _Tp>
+concept __std_size = requires(_Tp&& __t) { ranges::size(__t); };
+
+template <typename _Tp>
+concept __member_reserve_hint = !__std_size<_Tp> && requires(_Tp&& __t) {
+  { auto(__t.reserve_hint()) } -> __integer_like;
+};
+
+template <typename _Tp>
+concept __freestanding_reserve_hint =
+    !__std_size<_Tp> && !__member_reserve_hint<_Tp> && __class_or_enum<remove_cvref_t<_Tp>> && requires(_Tp&& __t) {
+      { auto(reserve_hint(__t)) } -> __integer_like;
+    };
+
+struct __fn {
+  // `[range.prim.size.hint]`: `std::size(t)` is a valid expression
+  template <__std_size _Tp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __integer_like auto operator()(_Tp&& __t) const
+      noexcept(noexcept(ranges::size(__t))) {
+    return ranges::size(__t);
+  }
+
+  // `[range.prim.size.hint]`: `auto(t.reserve_hint())` is a valid expression
+  template <__member_reserve_hint _Tp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __integer_like auto operator()(_Tp&& __t) const
+      noexcept(noexcept(auto(__t.reserve_hint()))) {
+    return auto(__t.reserve_hint());
+  }
+
+  // `[range.prim.size.hint]`: `auto(reserve_hint(t))` is a valid expression
+  template <__freestanding_reserve_hint _Tp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __integer_like auto operator()(_Tp&& __t) const
+      noexcept(noexcept(auto(reserve_hint(__t)))) {
+    return auto(reserve_hint(__t));
+  }
+};
+} // namespace __reserve_hint
+
+inline namespace __cpo {
+inline constexpr auto reserve_hint = __reserve_hint::__fn{};
+} // namespace __cpo
+} // namespace ranges
+
+#  endif // _LIBCPP_STD_VER >= 26
+
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
