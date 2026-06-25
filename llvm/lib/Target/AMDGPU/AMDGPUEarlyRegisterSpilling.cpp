@@ -1052,7 +1052,7 @@ AMDGPUEarlyRegisterSpilling::getWhereToSpill(MachineInstr *CurMI,
     assert(LoopPreheader && "There is not loop preheader");
     WhereToSpill = LoopPreheader->getFirstTerminator();
     if (WhereToSpill == LoopPreheader->end())
-      WhereToSpill = LoopPreheader->back();
+      WhereToSpill = LoopPreheader->instr_end();
     SpillBlock = LoopPreheader;
   }
   // case 3:
