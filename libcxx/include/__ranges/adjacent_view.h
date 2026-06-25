@@ -179,7 +179,7 @@ class adjacent_view<_View, _Np>::__iterator {
   _LIBCPP_HIDE_FROM_ABI explicit constexpr __iterator(_Iter&& __i, index_sequence<_Is...>)
       : __current_{std::move(__i.__current_[_Is])...} {}
 
-   static consteval auto __get_iterator_concept() {
+  static consteval auto __get_iterator_concept() {
     if constexpr (random_access_range<_Base>)
       return random_access_iterator_tag{};
     else if constexpr (bidirectional_range<_Base>)
