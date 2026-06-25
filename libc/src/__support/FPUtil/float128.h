@@ -141,7 +141,12 @@ struct Float128 {
     return *this;
   }
 };
-
+static_assert(
+    LIBC_NAMESPACE::cpp::is_trivially_constructible<
+        LIBC_NAMESPACE::fputil::Float128>::value);
+static_assert(
+    LIBC_NAMESPACE::cpp::is_trivially_copyable<
+        LIBC_NAMESPACE::fputil::Float128>::value);
 } // namespace fputil
 } // namespace LIBC_NAMESPACE_DECL
 
