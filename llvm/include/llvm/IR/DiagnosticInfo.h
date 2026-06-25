@@ -240,14 +240,14 @@ public:
 class LLVM_ABI DiagnosticInfoIgnoringInvalidDebugMetadata
     : public DiagnosticInfo {
 private:
-  /// The module that is concerned by this debug metadata version diagnostic.
+  /// The module that is concerned by this invalid debug metadata diagnostic.
   const Module &M;
 
 public:
-  /// \p The module that is concerned by this debug metadata version diagnostic.
+  /// \p The module that is concerned by this invalid debug metadata diagnostic.
   DiagnosticInfoIgnoringInvalidDebugMetadata(
       const Module &M, DiagnosticSeverity Severity = DS_Warning)
-      : DiagnosticInfo(DK_DebugMetadataVersion, Severity), M(M) {}
+      : DiagnosticInfo(DK_DebugMetadataInvalid, Severity), M(M) {}
 
   const Module &getModule() const { return M; }
 
