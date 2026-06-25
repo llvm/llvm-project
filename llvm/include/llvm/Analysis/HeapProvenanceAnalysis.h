@@ -97,6 +97,7 @@ class HeapProvenanceAnalysis
 
 public:
   using Result = HeapProvenanceAnalysisResult;
+  static Result analyzeModule(Module &M);
   Result run(Module &M, ModuleAnalysisManager &MAM);
 };
 

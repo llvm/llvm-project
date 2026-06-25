@@ -187,7 +187,6 @@ static bool mergeInfo(HeapProvenanceAnalysisResult::ProvenanceInfo &Dest,
 
 static bool updateInfo(HeapProvenanceAnalysisResult::ProvenanceInfo &Dest,
                        const HeapProvenanceAnalysisResult::ProvenanceInfo &NewVal) {
-  using ProvenanceInfo = HeapProvenanceAnalysisResult::ProvenanceInfo;
   if (Dest.State == NewVal.State && Dest.Dir == NewVal.Dir &&
       Dest.ConstOffset == NewVal.ConstOffset &&
       Dest.SymOffsets == NewVal.SymOffsets &&
@@ -207,17 +206,6 @@ static bool updateInfo(HeapProvenanceAnalysisResult::ProvenanceInfo &Dest,
 
   Dest = NewVal;
   return true;
-}
-
-static HeapProvenanceAnalysisResult::ProvenanceInfo
-keepForwardOnly(const HeapProvenanceAnalysisResult::ProvenanceInfo &Info) {
-  using ProvenanceInfo = HeapProvenanceAnalysisResult::ProvenanceInfo;
-  auto Res = Info;
-  Res.Dir = static_cast<ProvenanceInfo::Direction>(Info.Dir &
-                                                     ProvenanceInfo::Forward);
-  if (Res.Dir == ProvenanceInfo::None)
-    Res.State = ProvenanceInfo::Uninit;
-  return Res;
 }
 
 HeapProvenanceAnalysis::Result
@@ -268,7 +256,7 @@ HeapProvenanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
         for (Instruction &I : BB) {
           if (auto *GEP = dyn_cast<GEPOperator>(&I)) {
             Value *Base = GEP->getPointerOperand();
-            auto BaseInfo = keepForwardOnly(Res.getInfo(Base));
+            auto BaseInfo = Res.getInfo(Base);
             if (BaseInfo.isValid()) {
               auto NewInfo = BaseInfo;
               NewInfo.State = Result::ProvenanceInfo::RecoverableHeapChunkPtr;
@@ -281,14 +269,14 @@ HeapProvenanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
             }
           } else if (auto *BC = dyn_cast<BitCastOperator>(&I)) {
             Value *Op = BC->getOperand(0);
-            auto OpInfo = keepForwardOnly(Res.getInfo(Op));
+            auto OpInfo = Res.getInfo(Op);
             if (OpInfo.isValid()) {
               if (mergeInfo(Res.getMap()[&I], OpInfo))
                 Changed = true;
             }
           } else if (auto *ASC = dyn_cast<AddrSpaceCastOperator>(&I)) {
             Value *Op = ASC->getOperand(0);
-            auto OpInfo = keepForwardOnly(Res.getInfo(Op));
+            auto OpInfo = Res.getInfo(Op);
             if (OpInfo.isValid()) {
               if (mergeInfo(Res.getMap()[&I], OpInfo))
                 Changed = true;
@@ -310,7 +298,7 @@ HeapProvenanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
                 }
                 if (PTI) {
                   Value *BasePtr = PTI->getOperand(0);
-                  auto BaseInfo = keepForwardOnly(Res.getInfo(BasePtr));
+                  auto BaseInfo = Res.getInfo(BasePtr);
                   if (BaseInfo.isValid()) {
                     int64_t ConstOff = 0;
                     std::vector<std::string> SymOffs;
@@ -331,7 +319,7 @@ HeapProvenanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
                 }
               }
             } else if (auto *PTI = dyn_cast<PtrToIntOperator>(Op)) {
-              auto BaseInfo = keepForwardOnly(Res.getInfo(PTI->getOperand(0)));
+              auto BaseInfo = Res.getInfo(PTI->getOperand(0));
               if (BaseInfo.isValid()) {
                 if (mergeInfo(Res.getMap()[&I], BaseInfo))
                   Changed = true;
@@ -342,7 +330,7 @@ HeapProvenanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
             for (Value *InV : PHI->incoming_values()) {
               if (isa<ConstantPointerNull>(InV) || isa<UndefValue>(InV))
                 continue;
-              auto InInfo = keepForwardOnly(Res.getInfo(InV));
+              auto InInfo = Res.getInfo(InV);
               if (InInfo.isValid())
                 mergeInfo(Temp, InInfo);
             }
@@ -353,7 +341,7 @@ HeapProvenanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
             for (Value *Op : {Sel->getTrueValue(), Sel->getFalseValue()}) {
               if (isa<ConstantPointerNull>(Op) || isa<UndefValue>(Op))
                 continue;
-              auto OpInfo = keepForwardOnly(Res.getInfo(Op));
+              auto OpInfo = Res.getInfo(Op);
               if (OpInfo.isValid())
                 mergeInfo(Temp, OpInfo);
             }
@@ -370,7 +358,7 @@ HeapProvenanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
               for (Argument &Arg : Callee->args()) {
                 if (ArgIdx < CB->arg_size()) {
                   Value *ArgVal = CB->getArgOperand(ArgIdx);
-                  auto ArgInfo = keepForwardOnly(Res.getInfo(ArgVal));
+                  auto ArgInfo = Res.getInfo(ArgVal);
                   if (ArgInfo.isValid()) {
                     if (mergeInfo(Res.getMap()[&Arg], ArgInfo))
                       Changed = true;
@@ -384,7 +372,7 @@ HeapProvenanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
                           dyn_cast<ReturnInst>(CalleeBB.getTerminator())) {
                     Value *RetVal = RI->getReturnValue();
                     if (RetVal) {
-                      auto RetInfo = keepForwardOnly(Res.getInfo(RetVal));
+                      auto RetInfo = Res.getInfo(RetVal);
                       if (RetInfo.isValid()) {
                         if (mergeInfo(Res.getMap()[&I], RetInfo))
                           Changed = true;
@@ -540,6 +528,12 @@ HeapProvenanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
   }
 
   return Res;
+}
+
+HeapProvenanceAnalysisResult HeapProvenanceAnalysis::analyzeModule(Module &M) {
+  HeapProvenanceAnalysis HPA;
+  ModuleAnalysisManager DummyMAM;
+  return HPA.run(M, DummyMAM);
 }
 
 PreservedAnalyses HeapProvenancePrinterPass::run(Module &M,

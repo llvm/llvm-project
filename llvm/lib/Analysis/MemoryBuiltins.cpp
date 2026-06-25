@@ -16,6 +16,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/HeapProvenanceAnalysis.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/Utils/Local.h"
@@ -1240,12 +1241,107 @@ ObjectSizeOffsetEvaluator::ObjectSizeOffsetEvaluator(
   // be different for later objects.
 }
 
+bool ObjectSizeOffsetEvaluator::computeFallbackHeapMetadata(Value *V, SizeOffsetValue &Result) {
+  Module *M = nullptr;
+  if (auto *I = dyn_cast<Instruction>(V))
+    M = I->getModule();
+  else if (auto *A = dyn_cast<Argument>(V))
+    M = A->getParent()->getParent();
+  if (!M)
+    return false;
+
+  auto HPAResult = HeapProvenanceAnalysis::analyzeModule(*M);
+  auto Info = HPAResult.getInfo(V);
+  if (!Info.isValid())
+    return false;
+
+  if (auto *I = dyn_cast<Instruction>(V)) {
+    if (auto *PHI = dyn_cast<PHINode>(I))
+      Builder.SetInsertPoint(PHI->getParent(), PHI->getParent()->getFirstInsertionPt());
+    else if (I->isTerminator())
+      Builder.SetInsertPoint(I);
+    else if (I->getNextNode())
+      Builder.SetInsertPoint(I->getNextNode());
+    else
+      Builder.SetInsertPoint(I->getParent());
+  } else if (auto *A = dyn_cast<Argument>(V)) {
+    Builder.SetInsertPoint(&A->getParent()->getEntryBlock(),
+                           A->getParent()->getEntryBlock().getFirstInsertionPt());
+  }
+
+  Value *HeadVal = nullptr;
+  Value *OffsetVal = nullptr;
+
+  if (Info.State == HeapProvenanceAnalysisResult::ProvenanceInfo::HeapChunkPtr) {
+    HeadVal = V;
+    OffsetVal = Zero;
+  } else {
+    Value *Curr = V->stripPointerCasts();
+    while (Curr) {
+      auto CInfo = HPAResult.getInfo(Curr);
+      if (CInfo.State == HeapProvenanceAnalysisResult::ProvenanceInfo::HeapChunkPtr) {
+        HeadVal = Curr;
+        break;
+      }
+      if (auto *GEP = dyn_cast<GEPOperator>(Curr)) {
+        Curr = GEP->getPointerOperand()->stripPointerCasts();
+      } else if (auto *ITP = dyn_cast<IntToPtrInst>(Curr)) {
+        if (auto *BO = dyn_cast<BinaryOperator>(ITP->getOperand(0))) {
+          if (auto *PTI = dyn_cast<PtrToIntOperator>(BO->getOperand(0)))
+            Curr = PTI->getOperand(0)->stripPointerCasts();
+          else if (auto *PTI = dyn_cast<PtrToIntOperator>(BO->getOperand(1)))
+            Curr = PTI->getOperand(0)->stripPointerCasts();
+          else
+            break;
+        } else {
+          break;
+        }
+      } else {
+        break;
+      }
+    }
+
+    if (!HeadVal) {
+      if (Info.SymOffsets.empty()) {
+        HeadVal = Builder.CreateGEP(Builder.getInt8Ty(), V, ConstantInt::getSigned(IntTy, -Info.ConstOffset), "head.meta");
+        OffsetVal = ConstantInt::get(IntTy, Info.ConstOffset);
+      } else {
+        return false;
+      }
+    } else {
+      Value *VInt = Builder.CreatePtrToInt(V, IntTy, "v.int");
+      Value *HeadInt = Builder.CreatePtrToInt(HeadVal, IntTy, "head.int");
+      OffsetVal = Builder.CreateSub(VInt, HeadInt, "meta.offset");
+    }
+  }
+
+  FunctionCallee GetSizeFC = M->getOrInsertFunction(
+      "__heap_provanence_sanitizer_get_size", IntTy, Builder.getPtrTy());
+  if (Function *Fn = dyn_cast<Function>(GetSizeFC.getCallee()->stripPointerCasts())) {
+    Fn->setDoesNotThrow();
+    Fn->setOnlyReadsMemory();
+    Fn->setWillReturn();
+    Fn->setDoesNotFreeMemory();
+    Fn->addFnAttr(Attribute::NoCallback);
+    Fn->addFnAttr(Attribute::NoSync);
+  }
+  Value *ChunkPayloadSize = Builder.CreateCall(GetSizeFC, {HeadVal}, "chunk.size");
+  if (OffsetVal->getType() != IntTy)
+    OffsetVal = Builder.CreateZExtOrTrunc(OffsetVal, IntTy);
+
+  Result = SizeOffsetValue(ChunkPayloadSize, OffsetVal);
+  return true;
+}
+
 SizeOffsetValue ObjectSizeOffsetEvaluator::compute(Value *V) {
   // XXX - Are vectors of pointers possible here?
   IntTy = cast<IntegerType>(DL.getIndexType(V->getType()));
   Zero = ConstantInt::get(IntTy, 0);
 
   SizeOffsetValue Result = compute_(V);
+
+  if (!Result.bothKnown())
+    computeFallbackHeapMetadata(V, Result);
 
   if (!Result.bothKnown()) {
     // Erase everything that was computed in this iteration from the cache, so

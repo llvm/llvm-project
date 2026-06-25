@@ -357,6 +357,7 @@ class ObjectSizeOffsetEvaluator
   SmallPtrSet<Instruction *, 8> InsertedInstructions;
 
   SizeOffsetValue compute_(Value *V);
+  bool computeFallbackHeapMetadata(Value *V, SizeOffsetValue &Result);
 
 public:
   LLVM_ABI ObjectSizeOffsetEvaluator(const DataLayout &DL,
