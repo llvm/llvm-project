@@ -182,7 +182,7 @@ public:
         }) {
   }
 
-  _LIBCPP_HIDE_FROM_ABI basic_format_arg<basic_format_context> arg(size_t __id) const noexcept {
+  _LIBCPP_HIDE_FROM_ABI basic_format_arg<basic_format_context> arg(size_t __id) const {
     return __arg_(__ctx_, __id);
   }
 #  if _LIBCPP_HAS_LOCALIZATION
