@@ -528,7 +528,7 @@ TEST(USRTest, NestedLambdaTagsInTemplateArgWithSameSpellingDistinctExpansion) {
 
   // Second, check that the two lambda types have distinct spellingLoc offsets
   // but identical expansionLoc offsets:
-  SourceManager &SM = AST->getASTContext().getSourceManager();
+  const SourceManager &SM = AST->getASTContext().getSourceManager();
 
   ASSERT_NE(SM.getDecomposedLoc(SM.getSpellingLoc(CRD1->getBeginLoc())),
             SM.getDecomposedLoc(SM.getSpellingLoc(CRD2->getBeginLoc())));
