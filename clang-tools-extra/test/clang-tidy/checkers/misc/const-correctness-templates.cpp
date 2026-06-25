@@ -33,6 +33,29 @@ void type_dependent_variables() {
   auto *ptr_concrete = &concrete;
   // CHECK-MESSAGES:[[@LINE-1]]:3: warning: pointee of variable 'ptr_concrete' of type 'int *' can be declared 'const'
   // CHECK-FIXES: auto  const*ptr_concrete = &concrete;
+
+  // A typedef to a template parameter keeps the substituted parameter visible
+  // in the type sugar, so it is excluded both as a reference and as a value:
+  // the constness of such a variable can differ between instantiations.
+  using TypedefToTemplate = T;
+  TypedefToTemplate &td_ref = value;
+  TypedefToTemplate td_val = value;
+  (void)td_val;
+
+  // Pointers are still analyzed even when the pointee derives from a template
+  // parameter: the suggestion concerns the pointer/pointee spelling, like the
+  // bare 'T *' case, not member constness.
+  TypedefToTemplate *td_ptr = &value;
+  // CHECK-MESSAGES:[[@LINE-1]]:3: warning: pointee of variable 'td_ptr' of type 'TypedefToTemplate *' (aka 'int *') can be declared 'const'
+  // CHECK-FIXES: TypedefToTemplate  const*td_ptr = &value;
+  (void)*td_ptr;
+
+  // A typedef to a concrete type is not template-derived, so such references
+  // are still analyzed.
+  using ConcreteAlias = int;
+  ConcreteAlias &concrete_alias_ref = concrete;
+  // CHECK-MESSAGES:[[@LINE-1]]:3: warning: variable 'concrete_alias_ref' of type 'ConcreteAlias &' (aka 'int &') can be declared 'const'
+  // CHECK-FIXES: ConcreteAlias  const&concrete_alias_ref = concrete;
 }
 void instantiate_template_cases() {
   type_dependent_variables<int>();

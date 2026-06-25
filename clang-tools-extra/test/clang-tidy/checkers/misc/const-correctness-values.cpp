@@ -284,11 +284,11 @@ void more_template_locals() {
   auto *np_local11 = &np_local10;
   const auto *const np_local12 = &np_local10;
 
-  // FIXME: False positive, the reference points to a template type and needs
-  // to be excluded from analysis. Unlike the 'auto &' cases above, the type is
-  // spelled through a typedef to a template parameter, so 'auto' deduction does
-  // not kick in and the dedicated exclusion does not apply.
-  // TypedefToTemplate &np_local13 = np_local7;
+  // A reference spelled through a typedef to a template parameter is also
+  // excluded inside the instantiation: even though 'auto' deduction does not
+  // apply here, the substituted template parameter is still visible in the
+  // type sugar and is detected.
+  TypedefToTemplate &np_local13 = np_local7;
   TypedefToTemplate *np_local14 = &np_local7;
 }
 

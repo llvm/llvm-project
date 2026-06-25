@@ -45,6 +45,25 @@ AST_MATCHER(TypeLoc, hasContainedAutoType) {
   return !Node.getContainedAutoTypeLoc().isNull();
 }
 
+// Matches a type whose sugar contains a substituted template parameter, such as
+// a typedef to a template parameter (`using U = T; U &r = ...;`). After
+// instantiation the canonical type is concrete, so the type-based matchers can
+// no longer tell that it derives from a template parameter; unlike 'auto', the
+// substitution is still visible in the type sugar and can be found here.
+AST_MATCHER(Type, hasSubstTemplateTypeParmInSugar) {
+  const ASTContext &Context = Finder->getASTContext();
+  QualType QT(&Node, 0);
+  while (!QT.isNull()) {
+    if (isa<SubstTemplateTypeParmType>(QT.getTypePtr()))
+      return true;
+    const QualType Desugared = QT.getSingleStepDesugaredType(Context);
+    if (Desugared == QT)
+      return false;
+    QT = Desugared;
+  }
+  return false;
+}
+
 AST_MATCHER(FunctionDecl, isTemplate) {
   return Node.getDescribedFunctionTemplate() != nullptr;
 }
@@ -151,8 +170,21 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   const auto LocalValDecl = varDecl(
       isLocal(), hasInitializer(unless(isInstantiationDependent())),
       unless(CommonExcludeTypes),
-      unless(
-          allOf(hasType(referenceType(pointee(autoType()))), isInstantiated())),
+      // 'TemplateType' above excludes variables whose type is a template
+      // parameter, as a value (`hasType(substTemplateTypeParmType())`) or a
+      // reference (`referenceType(pointee(substTemplateTypeParmType()))`),
+      // because their constness can differ between instantiations. That
+      // exclusion has gaps inside template instantiations that are closed here:
+      //  - a typedef to a template parameter hides the substituted parameter
+      //    behind typedef sugar, so `using U = T; U v;` / `U &r;` slip through;
+      //  - an 'auto &' reference erases the dependent type during deduction.
+      // Pointers stay analyzed (like the existing `T *p` case): the suggestion
+      // there concerns the pointer/pointee spelling, not member constness.
+      unless(allOf(hasType(qualType(anyOf(
+                       hasSubstTemplateTypeParmInSugar(),
+                       referenceType(pointee(anyOf(
+                           autoType(), hasSubstTemplateTypeParmInSugar())))))),
+                   isInstantiated())),
       AnalyzeLambdas
           ? Matcher<VarDecl>(anything())
           : Matcher<VarDecl>(unless(hasType(cxxRecordDecl(isLambda())))),
