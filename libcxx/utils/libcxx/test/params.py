@@ -55,9 +55,10 @@ _warningFlags = [
     "-Wunreachable-code",
     "-Wno-unused-local-typedef",
 
-    # Disable warnings for extensions used in C++03
+    # Disable warnings for extensions used in C++03–11
     "-Wno-local-type-template-args",
     "-Wno-c++11-extensions",
+    "-Wno-c++14-extensions",
 
     # TODO(philnik) This fails with the PSTL.
     "-Wno-unknown-pragmas",
