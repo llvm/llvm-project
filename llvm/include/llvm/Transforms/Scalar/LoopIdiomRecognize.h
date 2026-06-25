@@ -46,7 +46,6 @@ struct DisableLIRP {
 
   /// When true, Memcmp is disabled.
   LLVM_ABI static bool Memcmp;
-
 };
 
 /// Performs Loop Idiom Recognize Pass.
