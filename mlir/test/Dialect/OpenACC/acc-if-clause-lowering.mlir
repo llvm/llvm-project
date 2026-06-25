@@ -377,9 +377,9 @@ func.func @test_acc_private(%arg0: memref<i32>, %cond: i1) {
 
 // -----
 
-// Regression: acc.parallel with an if clause whose body holds an
-// acc.atomic.capture. Host fallback inlines the capture; lowering must not
-// assert when the capture region terminator is erased before the capture op.
+// Test that an acc.parallel with an if clause whose body holds an
+// acc.atomic.capture lowers cleanly: the device path keeps the capture and the
+// host fallback inlines it.
 // CHECK-LABEL: func.func @test_parallel_if_atomic_capture
 func.func @test_parallel_if_atomic_capture(%x: memref<i32>, %v: memref<i32>, %cond: i1) {
   %c1_i32 = arith.constant 1 : i32

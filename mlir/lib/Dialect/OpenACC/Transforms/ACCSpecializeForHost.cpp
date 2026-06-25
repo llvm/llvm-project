@@ -256,12 +256,28 @@ class ACCOrphanAtomicCaptureOpConversion
 
     assert(captureOp.getRegion().hasOneBlock() && "expected one block");
     Block *block = &captureOp.getRegion().front();
-    // The implicit acc.terminator may already be erased by the acc.terminator
-    // erase pattern during host fallback; only remove it if still present.
-    if (block->mightHaveTerminator())
-      rewriter.eraseOp(block->getTerminator());
+    // Remove the terminator before inlining
+    rewriter.eraseOp(block->getTerminator());
     rewriter.inlineBlockBefore(block, captureOp);
     rewriter.eraseOp(captureOp);
+    return success();
+  }
+};
+
+// Erase a stray acc.terminator only once it is no longer owned by a live ACC
+// region op; owning ops erase their own terminator when unwrapped.
+class ACCOrphanTerminatorEraseConversion
+    : public OpRewritePattern<acc::TerminatorOp> {
+  using OpRewritePattern<acc::TerminatorOp>::OpRewritePattern;
+
+public:
+  LogicalResult matchAndRewrite(acc::TerminatorOp op,
+                                PatternRewriter &rewriter) const override {
+    if (Operation *parent = op->getParentOp())
+      if (parent->getDialect() ==
+          op->getContext()->getLoadedDialect<acc::OpenACCDialect>())
+        return failure();
+    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -463,8 +479,12 @@ void mlir::acc::populateACCHostFallbackPatterns(RewritePatternSet &patterns,
   // Runtime operations - erase them
   patterns.insert<
       ACCOpEraseConversion<acc::InitOp>, ACCOpEraseConversion<acc::ShutdownOp>,
-      ACCOpEraseConversion<acc::SetOp>, ACCOpEraseConversion<acc::WaitOp>,
-      ACCOpEraseConversion<acc::TerminatorOp>>(context);
+      ACCOpEraseConversion<acc::SetOp>, ACCOpEraseConversion<acc::WaitOp>>(
+      context);
+
+  // acc.terminator - erase only stray terminators no longer owned by an ACC
+  // region op; region-bearing ops erase their own terminator when unwrapped.
+  patterns.insert<ACCOrphanTerminatorEraseConversion>(context);
 
   // Compute constructs - unwrap their regions
   patterns.insert<ACCRegionUnwrapConversion<acc::ParallelOp>,

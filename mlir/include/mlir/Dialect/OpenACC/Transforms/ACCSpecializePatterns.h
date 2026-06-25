@@ -97,10 +97,8 @@ public:
                                 PatternRewriter &rewriter) const override {
     assert(op.getRegion().hasOneBlock() && "expected one block");
     Block *block = &op.getRegion().front();
-    // The terminator may already be erased by the acc.terminator erase pattern
-    // during host fallback; only remove it if still present.
-    if (block->mightHaveTerminator())
-      rewriter.eraseOp(block->getTerminator());
+    // Erase the terminator (acc.yield or acc.terminator) before unwrapping
+    rewriter.eraseOp(block->getTerminator());
     rewriter.inlineBlockBefore(block, op);
     rewriter.eraseOp(op);
     return success();
