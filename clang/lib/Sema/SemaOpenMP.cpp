@@ -23224,9 +23224,9 @@ public:
                                 NameInfo, D->getType(), DRE->getValueKind(),
                                 DRE->getFoundDecl(),
                                 /*TemplateArgs=*/nullptr, DRE->isNonOdrUse());
-        } else {
-          return false;
-        }
+      } else {
+        return false;
+      }
     } else if (!isa<VarDecl>(D)) {
       emitErrorMsg();
       return false;
