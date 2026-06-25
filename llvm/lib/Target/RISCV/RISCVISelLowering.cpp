@@ -19643,9 +19643,8 @@ static auto m_ReverseEVL = [](auto X, auto EVL) {
 
 /// Returns true if there is one node that uses the SDValue \p X.
 static bool hasOneUser(SDValue X) {
-  auto Uses = make_filter_range(X->uses(), [&X](SDUse &U) {
-    return U.get() == X;
-  });
+  auto Uses =
+      make_filter_range(X->uses(), [&X](SDUse &U) { return U.get() == X; });
   auto Users = map_range(Uses, [](SDUse &U) { return U.getUser(); });
   return all_equal(Users);
 }
