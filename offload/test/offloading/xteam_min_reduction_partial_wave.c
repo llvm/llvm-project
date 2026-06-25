@@ -1,8 +1,9 @@
-// RUN: %libomptarget-compile-run-and-check-generic
-// RUN: %libomptarget-compileopt-run-and-check-generic
+// RUN: %libomptarget-compile-generic
+// RUN: env LIBOMPTARGET_INFO=16 %libomptarget-run-generic 2>&1 | %fcheck-generic
+// RUN: %libomptarget-compileopt-generic
+// RUN: env LIBOMPTARGET_INFO=16 %libomptarget-run-generic 2>&1 | %fcheck-generic
 
-// REQUIRES: gpu
-// UNSUPPORTED: intelgpu
+// REQUIRES: amdgpu
 
 // Regression test for a cross-team reduction bug where the final xteam
 // reduction used a full-wave reduction path even though the kernel was launched
@@ -14,13 +15,19 @@
 #include <limits.h>
 #include <stdio.h>
 
-static unsigned reduce_min(int teams, int seed) {
+#define THREAD_LIMIT 32
+#define TEAMS_BELOW_WAVE_SIZE_BOUNDARY 63
+#define TEAMS_AT_WAVE_SIZE_BOUNDARY 64
+#define NUM_ITERS (THREAD_LIMIT * TEAMS_BELOW_WAVE_SIZE_BOUNDARY + 1)
+#define EXPECTED_MIN UINT_MAX
+
+static unsigned reduce_min(int teams) {
   unsigned min_val = UINT_MAX;
 
 #pragma omp target teams distribute parallel for num_teams(teams)              \
-    thread_limit(32) map(to : seed) reduction(min : min_val)
-  for (int i = 0; i < 2017; ++i) {
-    unsigned val = 0xdeadbeefU + ((i + seed) & 1);
+    thread_limit(THREAD_LIMIT) reduction(min : min_val)
+  for (int i = 0; i < NUM_ITERS; ++i) {
+    unsigned val = EXPECTED_MIN;
     if (val < min_val)
       min_val = val;
   }
@@ -28,14 +35,16 @@ static unsigned reduce_min(int teams, int seed) {
   return min_val;
 }
 
-int main(int argc, char **argv) {
-  unsigned min63 = reduce_min(63, argc);
-  unsigned min64 = reduce_min(64, argc);
+int main(void) {
+  unsigned min63 = reduce_min(TEAMS_BELOW_WAVE_SIZE_BOUNDARY);
+  unsigned min64 = reduce_min(TEAMS_AT_WAVE_SIZE_BOUNDARY);
 
-  // CHECK: min63 = 0xdeadbeef
-  // CHECK: min64 = 0xdeadbeef
+  // CHECK: Launching kernel {{.*}} with [63,1,1] blocks and [32,1,1] threads in SPMD mode
+  // CHECK: Launching kernel {{.*}} with [64,1,1] blocks and [32,1,1] threads in SPMD mode
+  // CHECK: min63 = 0xffffffff
+  // CHECK: min64 = 0xffffffff
   printf("min63 = %#x\n", min63);
   printf("min64 = %#x\n", min64);
 
-  return min63 == 0xdeadbeefU && min64 == 0xdeadbeefU ? 0 : 1;
+  return min63 == EXPECTED_MIN && min64 == EXPECTED_MIN ? 0 : 1;
 }
