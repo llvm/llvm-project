@@ -20124,7 +20124,7 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
     if (!EvaluateFloat(E->getArg(0), Input, Info))
       return false;
     llvm::RoundingMode RM = getActiveRoundingMode(Info, E);
-    APFloat::opStatus Status;
+    APFloat::opStatus Status = APFloat::opStatus::opOK;
     std::optional<APFloat> r = exp(Input, RM, &Status);
     // Check for unsupported rounding modes.
     if (!r.has_value())
