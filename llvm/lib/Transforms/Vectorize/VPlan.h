@@ -4913,10 +4913,6 @@ public:
   /// the original scalar loop.
   ArrayRef<VPIRBasicBlock *> getExitBlocks() const { return ExitBlocks; }
 
-  /// Return the VPIRBasicBlock corresponding to \p IRBB. \p IRBB must be an
-  /// exit block.
-  VPIRBasicBlock *getExitBlock(BasicBlock *IRBB) const;
-
   /// Returns true if \p VPBB is an exit block.
   bool isExitBlock(VPBlockBase *VPBB);
 
