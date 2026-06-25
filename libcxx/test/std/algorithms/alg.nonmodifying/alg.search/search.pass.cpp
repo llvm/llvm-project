@@ -105,6 +105,17 @@ void adl_test() {
   assert(std::search(Iter(ua), Iter(ua), Iter(ua), Iter(ua)) == Iter(ua));
 }
 
+void test_str() {
+  const char* s = "abcde";
+  const char* f = "abc";
+  const char* l = "cde";
+  assert(std::search(s, s + 5, f, f + 3) == s);
+  assert(std::search(s, s + 5, l, l + 3) == s + 2);
+  assert(std::search(s, s + 5, s, s + 1) == s);
+  assert(std::search(s, s + 5, s, s + 5) == s);
+  assert(std::search(s, s + 5, s + 5, s + 5) == s);
+}
+
 int main(int, char**) {
   test<forward_iterator<const int*>, forward_iterator<const int*> >();
   test<forward_iterator<const int*>, bidirectional_iterator<const int*> >();
@@ -118,6 +129,7 @@ int main(int, char**) {
 
   adl_test<forward_iterator<User::S*> >();
   adl_test<random_access_iterator<User::S*> >();
+  test_str();
 
 #if TEST_STD_VER > 14
   {
