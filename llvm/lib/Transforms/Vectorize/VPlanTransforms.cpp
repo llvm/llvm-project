@@ -7234,7 +7234,7 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
 
           ReplaceWith(VPI,
                       new VPReplicateRecipe(
-                          I, {Ptr}, /*IsSingleScalar=*/IsSingleScalarLoad,
+                          I, Ptr, /*IsSingleScalar=*/IsSingleScalarLoad,
                           /*Mask=*/nullptr, *VPI, *VPI, VPI->getDebugLoc()));
           return true;
         });
