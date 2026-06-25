@@ -137,8 +137,8 @@ public:
     }
   };
 
-  BreakpointName(llvm::StringRef name, const char *help = nullptr)
-      : m_name(name), m_options(false) {
+  BreakpointName(std::string name, const char *help = nullptr)
+      : m_name(std::move(name)), m_options(false) {
     SetHelp(help);
   }
 

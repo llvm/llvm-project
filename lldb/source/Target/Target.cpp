@@ -900,7 +900,8 @@ BreakpointName *Target::FindBreakpointName(ConstString name, bool can_create,
   }
 
   return m_breakpoint_names
-      .insert(std::make_pair(name, std::make_unique<BreakpointName>(name)))
+      .insert(std::make_pair(
+          name, std::make_unique<BreakpointName>(name.GetStringRef().str())))
       .first->second.get();
 }
 
