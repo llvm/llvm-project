@@ -5421,6 +5421,7 @@ bool Compiler<Emitter>::visitDtorCall(const VarDecl *VD, const APValue &Value) {
 template <class Emitter>
 bool Compiler<Emitter>::visitAPValue(const APValue &Val, PrimType ValType,
                                      SourceInfo Info) {
+  assert(!Val.isIndeterminate() && "Needs to be checked before");
   assert(!DiscardResult);
   if (Val.isInt())
     return this->emitConst(Val.getInt(), ValType, Info);
@@ -5510,6 +5511,8 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
     assert(R);
     for (unsigned I = 0, N = Val.getStructNumFields(); I != N; ++I) {
       const APValue &F = Val.getStructField(I);
+      if (F.isIndeterminate())
+        continue;
       const Record::Field *RF = R->getField(I);
       QualType FieldType = RF->Decl->getType();
 
@@ -5537,6 +5540,8 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
       if (I >= R->getNumBases())
         break;
       const APValue &B = Val.getStructBase(I);
+      if (B.isIndeterminate())
+        continue;
       const Record::Base *RB = R->getBase(I);
       QualType BaseType = Ctx.getASTContext().getCanonicalTagType(RB->Decl);
 
@@ -5557,6 +5562,8 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
     const Record *R = this->getRecord(T);
     assert(R);
     const APValue &F = Val.getUnionValue();
+    if (F.isIndeterminate())
+      return true;
     const Record::Field *RF = R->getField(UnionField);
     QualType FieldType = RF->Decl->getType();
 
@@ -5587,6 +5594,8 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
       const APValue &Elem = A >= InitializedElems
                                 ? Val.getArrayFiller()
                                 : Val.getArrayInitializedElt(A);
+      if (Elem.isIndeterminate())
+        continue;
 
       if (ElemT) {
         if (!this->visitAPValue(Elem, *ElemT, Info))
