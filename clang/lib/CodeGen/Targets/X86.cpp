@@ -1766,7 +1766,7 @@ void X86_64ABIInfo::postMerge(unsigned AggregateSize, Class &Lo,
 static X86AVXABILevel getEffectiveX86AVXABILevel(CodeGenTypes &CGT,
                                                  X86AVXABILevel GlobalAVXLevel,
                                                  const FunctionDecl *FD) {
-  // Always return global AVX level on PlayStation
+  // Always return global AVX level on PlayStation.
   if (CGT.getTarget().getTriple().isPS() ||
       CGT.getContext().getLangOpts().getClangABICompat() <=
           LangOptions::ClangABI::Ver22) {
