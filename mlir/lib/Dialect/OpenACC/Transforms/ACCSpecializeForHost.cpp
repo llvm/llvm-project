@@ -256,8 +256,10 @@ class ACCOrphanAtomicCaptureOpConversion
 
     assert(captureOp.getRegion().hasOneBlock() && "expected one block");
     Block *block = &captureOp.getRegion().front();
-    // Remove the terminator before inlining
-    rewriter.eraseOp(block->getTerminator());
+    // The implicit acc.terminator may already be erased by the acc.terminator
+    // erase pattern during host fallback; only remove it if still present.
+    if (block->mightHaveTerminator())
+      rewriter.eraseOp(block->getTerminator());
     rewriter.inlineBlockBefore(block, captureOp);
     rewriter.eraseOp(captureOp);
     return success();
