@@ -710,6 +710,11 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "types_struct_stat",
+    hdrs = ["hdr/types/struct_stat.h"],
+)
+
+libc_support_library(
     name = "types_struct_timespec",
     hdrs = ["hdr/types/struct_timespec.h"],
 )
@@ -1880,6 +1885,21 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_osutil_linux_syscall_wrappers_statx",
+    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/statx.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_unlink",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/unlink.h"],
     target_compatible_with = select({
@@ -2819,6 +2839,37 @@ libc_support_library(
         ":__support_common",
         ":__support_macros_config",
         ":__support_osutil_syscall",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_stat_kernel_statx_types",
+    hdrs = ["src/__support/OSUtil/linux/stat/kernel_statx_types.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_macros_config",
+        ":hdr_stdint_proxy",
+    ],
+)
+
+libc_support_library(
+    name = "__support_osutil_linux_stat_stat_via_statx",
+    hdrs = ["src/__support/OSUtil/linux/stat/stat_via_statx.h"],
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        ":__support_common",
+        ":__support_error_or",
+        ":__support_macros_config",
+        ":__support_osutil_linux_stat_kernel_statx_types",
+        ":__support_osutil_linux_syscall_wrappers_statx",
+        ":hdr_stdint_proxy",
+        ":types_struct_stat",
     ],
 )
 
