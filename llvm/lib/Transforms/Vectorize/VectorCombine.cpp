@@ -5925,8 +5925,8 @@ bool VectorCombine::foldBitOrderReverseAndSwap(Instruction &I) {
                                              ElementSize.isScalable());
   Type *NewVecTy = VectorType::get(I8Ty, NewVecCnt);
 
-  auto II = cast<IntrinsicInst>(&I);
-  auto InnerII = cast<IntrinsicInst>(II->getArgOperand(0));
+  auto *II = cast<IntrinsicInst>(&I);
+  auto *InnerII = cast<IntrinsicInst>(II->getArgOperand(0));
   // OldCost = cost of bitreverse/bswap + cost of bswap/bitreverse
   InstructionCost OldCost = TTI.getInstructionCost(II, CostKind) +
                             TTI.getInstructionCost(InnerII, CostKind);
