@@ -113,13 +113,13 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size()
     requires sized_range<_View>
   {
-    return std::__to_unsigned_like(__div_ceil(ranges::distance(__base_), __stride_));
+    return std::__to_unsigned_like(std::__div_ceil(ranges::distance(__base_), __stride_));
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires sized_range<const _View>
   {
-    return std::__to_unsigned_like(__div_ceil(ranges::distance(__base_), __stride_));
+    return std::__to_unsigned_like(std::__div_ceil(ranges::distance(__base_), __stride_));
   }
 }; // class stride_view
 
@@ -332,16 +332,16 @@ public:
     }
     auto __n = __x.__current_ - __y.__current_;
     if (__n < 0) {
-      return -__div_ceil(-__n, __x.__stride_);
+      return -std::__div_ceil(-__n, __x.__stride_);
     }
-    return __div_ceil(__n, __x.__stride_);
+    return std::__div_ceil(__n, __x.__stride_);
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
   operator-(default_sentinel_t, __iterator const& __x)
     requires sized_sentinel_for<sentinel_t<_Base>, iterator_t<_Base>>
   {
-    return __div_ceil(__x.__end_ - __x.__current_, __x.__stride_);
+    return std::__div_ceil(__x.__end_ - __x.__current_, __x.__stride_);
   }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
   operator-(__iterator const& __x, default_sentinel_t __y)
