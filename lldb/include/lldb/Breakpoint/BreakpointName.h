@@ -137,11 +137,10 @@ public:
     }
   };
 
-  BreakpointName(llvm::StringRef name, const char *help = nullptr) :
-      m_name(name), m_options(false)
-   {
-     SetHelp(help);
-   }
+  BreakpointName(llvm::StringRef name, const char *help = nullptr)
+      : m_name(name), m_options(false) {
+    SetHelp(help);
+  }
 
   BreakpointName(const BreakpointName &rhs) :
       m_name(rhs.m_name), m_options(rhs.m_options),
@@ -186,10 +185,10 @@ public:
   void ConfigureBreakpoint(lldb::BreakpointSP bp_sp);
 
 private:
-  std::string        m_name;
-  BreakpointOptions  m_options;
-  Permissions        m_permissions;
-  std::string        m_help;
+  std::string m_name;
+  BreakpointOptions m_options;
+  Permissions m_permissions;
+  std::string m_help;
 };
 
 } // namespace lldb_private
