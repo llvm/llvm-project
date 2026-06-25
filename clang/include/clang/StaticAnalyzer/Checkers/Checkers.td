@@ -1582,8 +1582,8 @@ def CheckerDocumentationChecker : Checker<"CheckerDocumentation">,
   Documentation<NotDocumented>;
 
 def DebugUseAfterLifetimeEnd : Checker<"DebugUseAfterLifetimeEnd">,
-  HelpText<"Prints the bindings recorded by the LifetimeAnnotations checker. "
-           "Use with clang_analyzer_lifetime_bound().">,
+  HelpText<"Prints the bindings recorded by the UseAfterLifetimeEnd checker. "
+           "Use with clang_analyzer_dumpLifetimeOriginsOf().">,
   WeakDependencies<[UseAfterLifetimeEnd]>,
   Documentation<NotDocumented>;
 
