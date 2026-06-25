@@ -533,6 +533,10 @@ static bool shouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
             Name.starts_with("vpcom") || // Added in 3.2, Updated in 9.0
             Name.starts_with("vprot"));  // Added in 8.0
 
+  if (Name.consume_front("bmi."))
+    return (Name.starts_with("pdep.") || // Added in 23.0
+            Name.starts_with("pext."));  // Added in 23.0
+
   return (Name == "addcarry.u32" ||        // Added in 8.0
           Name == "addcarry.u64" ||        // Added in 8.0
           Name == "addcarryx.u32" ||       // Added in 8.0
@@ -1556,8 +1560,10 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                               ? Intrinsic::lifetime_start
                               : Intrinsic::lifetime_end;
       rename(F);
+      // Old 2 argument form of these intrinsics have [Size, Ptr] as arguments.
+      // Use the Ptr argument to create new declaration.
       NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
-                                                F->getArg(0)->getType());
+                                                F->getArg(1)->getType());
       return true;
     }
     break;
@@ -4616,6 +4622,10 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
   } else if (Name.starts_with("avx512.mask.") &&
              upgradeAVX512MaskToSelect(Name, Builder, *CI, Rep)) {
     // Rep will be updated by the call in the condition.
+  } else if (Name.starts_with("bmi.pdep.")) {
+    Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::pdep);
+  } else if (Name.starts_with("bmi.pext.")) {
+    Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::pext);
   } else
     reportFatalUsageErrorWithCI("Unexpected intrinsic", CI);
 

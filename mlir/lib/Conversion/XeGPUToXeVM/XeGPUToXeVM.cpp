@@ -796,16 +796,14 @@ class LoadStoreMatrixToXeVMPattern : public OpConversionPattern<OpType> {
     }
 
     if constexpr (std::is_same_v<OpType, xegpu::LoadMatrixOp>) {
-      // if the size of valOrResVecTy is 1, it lowers to a scalar load/store
-      // operation. LLVM load/store does not support vector of size 1, so we
-      // need to handle this case separately.
-      auto scalarTy = valOrResVecTy.getElementType();
-      LLVM::LoadOp loadOp;
-      if (valOrResVecTy.getNumElements() == 1)
-        loadOp = LLVM::LoadOp::create(rewriter, loc, scalarTy, basePtrLLVM);
-      else
-        loadOp =
-            LLVM::LoadOp::create(rewriter, loc, valOrResVecTy, basePtrLLVM);
+      // The load result type is taken from the type converter. This maps
+      // element types that are not directly representable in LLVM (e.g.
+      // f8E8M0FNU) to an integer storage type of the same bit width, and
+      // collapses single-element vectors to a scalar, since LLVM load/store
+      // does not support vectors of size 1.
+      Type loadTy =
+          this->getTypeConverter()->convertType(op.getResult().getType());
+      auto loadOp = LLVM::LoadOp::create(rewriter, loc, loadTy, basePtrLLVM);
       rewriter.replaceOp(op, loadOp);
     } else {
       LLVM::StoreOp::create(rewriter, loc, adaptor.getData(), basePtrLLVM);
