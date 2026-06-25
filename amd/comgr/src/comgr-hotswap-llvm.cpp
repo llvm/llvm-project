@@ -51,8 +51,7 @@ const Target *getAmdgcnTarget() {
   static const Target *const Tgt = []() -> const Target * {
     COMGR::ensureLLVMInitialized();
     std::string Err;
-    Triple T(AmdgcnLookupTriple);
-    return TargetRegistry::lookupTarget("amdgcn", T, Err);
+    return TargetRegistry::lookupTarget(AmdgcnLookupTriple, Err);
   }();
   return Tgt;
 }
