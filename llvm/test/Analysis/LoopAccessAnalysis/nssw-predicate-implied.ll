@@ -300,11 +300,11 @@ define void @wrap_check_iv.3_does_not_imply_iv.2_due_to_negative_step(i32 nounde
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:      SCEV assumptions:
 ; CHECK-NEXT:      {0,+,-1}<%loop> Added Flags: <nssw>
-; CHECK-NEXT:      {0,+,2}<%loop> Added Flags: <nssw>
+; CHECK-NEXT:      {0,+,2}<nuw><%loop> Added Flags: <nssw>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Expressions re-written:
 ; CHECK-NEXT:      [PSE] %gep.iv.2 = getelementptr inbounds i32, ptr %src, i64 %ext.iv.2:
-; CHECK-NEXT:        ((4 * (sext i32 {0,+,2}<%loop> to i64))<nsw> + %src)
+; CHECK-NEXT:        ((4 * (sext i32 {0,+,2}<nuw><%loop> to i64))<nsw> + %src)
 ; CHECK-NEXT:        --> {%src,+,8}<nw><%loop>
 ; CHECK-NEXT:      [PSE] %gep.iv.3 = getelementptr inbounds i32, ptr %dst, i64 %ext.iv.3:
 ; CHECK-NEXT:        ((4 * (sext i32 {0,+,-1}<%loop> to i64))<nsw> + %dst)
