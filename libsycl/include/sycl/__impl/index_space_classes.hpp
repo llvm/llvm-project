@@ -208,11 +208,11 @@ public:
     return rhs;                                                                \
   }                                                                            \
   friend Derived operator op(Derived &lhs, int) noexcept {                     \
-    Derived old_lhs(lhs);                                                      \
+    Derived oldLhs(lhs);                                                       \
     for (int i = 0; i < Dimensions; ++i) {                                     \
       op lhs.MArray[i];                                                        \
     }                                                                          \
-    return old_lhs;                                                            \
+    return oldLhs;                                                             \
   }
 
   _LIBSYCL_GEN_OPT(++)
