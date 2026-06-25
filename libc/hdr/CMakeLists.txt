@@ -402,5 +402,13 @@ add_proxy_header_library(
     libc.include.llvm-libc-macros.regex_macros
 )
 
+add_proxy_header_library(
+  sys_syscall_macros
+  HDRS
+    sys_syscall_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.sys_syscall
+)
+
 add_subdirectory(types)
 add_subdirectory(func)

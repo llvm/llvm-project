@@ -301,6 +301,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sleep
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sleep
+)
+
+add_entrypoint_object(
   symlink
   ALIAS
   DEPENDS
@@ -347,6 +354,13 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.unlinkat
+)
+
+add_entrypoint_object(
+  usleep
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.usleep
 )
 
 add_entrypoint_object(

@@ -7,27 +7,19 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// Linux implementation of nanosleep function.
+/// Implementation header for sleep.
 ///
 //===----------------------------------------------------------------------===//
 
-#include "src/time/nanosleep.h"
-#include "src/__support/OSUtil/linux/syscall_wrappers/nanosleep.h"
-#include "src/__support/common.h"
-#include "src/__support/libc_errno.h"
+#ifndef LLVM_LIBC_SRC_UNISTD_SLEEP_H
+#define LLVM_LIBC_SRC_UNISTD_SLEEP_H
+
 #include "src/__support/macros/config.h"
-#include "src/__support/macros/null_check.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, nanosleep, (const timespec *req, timespec *rem)) {
-  LIBC_CRASH_ON_NULLPTR(req);
-  auto result = linux_syscalls::nanosleep(req, rem);
-  if (!result) {
-    libc_errno = result.error();
-    return -1;
-  }
-  return result.value();
-}
+unsigned int sleep(unsigned int seconds);
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC_UNISTD_SLEEP_H

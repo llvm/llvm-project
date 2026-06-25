@@ -543,6 +543,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sleep
+  SRCS
+    sleep.cpp
+  HDRS
+    ../sleep.h
+  DEPENDS
+    libc.hdr.types.struct_timespec
+    libc.hdr.types.time_t
+    libc.src.__support.CPP.limits
+    libc.src.__support.OSUtil.linux.syscall_wrappers.nanosleep
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
   symlink
   SRCS
     symlink.cpp
@@ -636,6 +651,23 @@ add_entrypoint_object(
     ../unlinkat.h
   DEPENDS
     libc.src.__support.OSUtil.linux.syscall_wrappers.unlinkat
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  usleep
+  SRCS
+    usleep.cpp
+  HDRS
+    ../usleep.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.useconds_t
+    libc.hdr.types.struct_timespec
+    libc.src.__support.OSUtil.linux.syscall_wrappers.nanosleep
+    libc.src.__support.common
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.config
     libc.src.errno.errno
 )
 
