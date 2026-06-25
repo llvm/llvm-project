@@ -27,6 +27,7 @@ class TestCase(TestBase):
         self.assertEqual(
             valobj.child[0].GetValueAsUnsigned(lldb.LLDB_INVALID_ADDRESS), 0
         )
+        self.assertEqual(valobj.child[0].GetID(), valobj.member["pointer"].GetID())
 
         # Null shared_ptr should not output braces.
         self.expect("frame variable sp_empty", patterns=[" = nullptr$"])
