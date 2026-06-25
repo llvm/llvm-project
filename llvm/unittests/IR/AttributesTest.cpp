@@ -818,4 +818,16 @@ TEST(Attributes, ListIntersect) {
   ASSERT_TRUE(Res->hasParamAttr(3, Attribute::ByVal));
 }
 
+TEST(Attributes, GetValueAsParsedInteger) {
+  LLVMContext C;
+  Attribute A = Attribute::get(C, "test-attr", "42");
+  EXPECT_EQ(A.getValueAsParsedInteger(), 42u);
+
+  Attribute Hex = Attribute::get(C, "hex-attr", "0xFF");
+  EXPECT_EQ(Hex.getValueAsParsedInteger(), 255u);
+
+  Attribute Zero = Attribute::get(C, "zero-attr", "0");
+  EXPECT_EQ(Zero.getValueAsParsedInteger(), 0u);
+}
+
 } // end anonymous namespace
