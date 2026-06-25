@@ -1,0 +1,55 @@
+# REQUIRES: python, asserts, !system-windows
+#
+# Test that when load-script-from-symbol-file is set to 'warn', LLDB emits a
+# warning for each safe-path script without executing them. Verify that warnings
+# are emitted for all modules, not just the first.
+
+# RUN: split-file %s %t
+# RUN: %clang_host %t/main.c -o %t/TestModule.out
+# RUN: %clang_host %t/main.c -o %t/TestModule2.out
+# RUN: %clang_host %t/main.c -o %t/TestModule3.out
+# RUN: mkdir -p %t/safe-path/TestModule
+# RUN: mkdir -p %t/safe-path/TestModule2
+# RUN: mkdir -p %t/safe-path/TestModule3
+
+# RUN: cp %t/script.py %t/safe-path/TestModule/TestModule.py
+# RUN: cp %t/script2.py %t/safe-path/TestModule2/TestModule2.py
+# RUN: cp %t/script3.py %t/safe-path/TestModule3/TestModule3.py
+# RUN: %lldb -b \
+# RUN:   -o 'settings set target.load-script-from-symbol-file warn' \
+# RUN:   -o 'settings append testing.safe-auto-load-paths %t/safe-path' \
+# RUN:   -o 'target create %t/TestModule.out' \
+# RUN:   -o 'target modules add %t/TestModule2.out %t/TestModule3.out' 2>&1 \
+# RUN:   | FileCheck %s --strict-whitespace \
+# RUN:                  --implicit-check-not=SCRIPT_LOADED --implicit-check-not=SCRIPT2_LOADED --implicit-check-not=SCRIPT3_LOADED
+
+# CHECK: (lldb) target create
+# CHECK:      warning: {{.*}}The following debug scripts were detected but not loaded:
+# CHECK-EMPTY:
+# CHECK-NEXT:{{^}}    - {{.*}}/safe-path/TestModule/TestModule.py
+
+# CHECK: (lldb) target modules add
+# CHECK:      warning: {{.*}}The following debug scripts were detected but not loaded:
+# CHECK-EMPTY:
+# CHECK-NEXT:{{^}}    - {{.*}}/safe-path/TestModule2/TestModule2.py
+# CHECK:      warning: {{.*}}The following debug scripts were detected but not loaded:
+# CHECK-EMPTY:
+# CHECK-NEXT:{{^}}    - {{.*}}/safe-path/TestModule3/TestModule3.py
+
+#--- main.c
+int main() { return 0; }
+
+#--- script.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("SCRIPT_LOADED", file=sys.stderr)
+
+#--- script2.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("SCRIPT2_LOADED", file=sys.stderr)
+
+#--- script3.py
+import sys
+def __lldb_init_module(debugger, internal_dict):
+    print("SCRIPT3_LOADED", file=sys.stderr)

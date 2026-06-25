@@ -33,7 +33,7 @@
 
 ## Also confirm that the warning message about auto-loading scripts is printed afterwards.
 
-# CHECK-REMOVE: warning: 'Test-Module2' contains an untrusted debug script. To run this script in this
+# CHECK-REMOVE: warning: Found executable debug scripts. To run a script in this debug session
 
 #--- main.c
 int main() { return 0; }

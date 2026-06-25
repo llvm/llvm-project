@@ -75,7 +75,9 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorExtras.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ThreadPool.h"
 
 #include <memory>
@@ -1921,6 +1923,7 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
       LoadTypeSummariesForModule(module_sp);
       LoadFormattersForModule(module_sp);
     }
+
     m_breakpoint_list.UpdateBreakpoints(module_list, true, false);
     m_internal_breakpoint_list.UpdateBreakpoints(module_list, true, false);
     if (m_process_sp) {
