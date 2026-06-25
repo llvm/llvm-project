@@ -352,7 +352,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       result = todo("allocate");
   };
   auto checkBare = [&todo](auto op, LogicalResult &result) {
-    if (op.getBare())
+    if (op.getKernelType() == omp::TargetExecMode::bare)
       result = todo("ompx_bare");
   };
   auto checkDepend = [&todo](auto op, LogicalResult &result) {
@@ -4491,16 +4491,15 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   // Check if we can generate no-loop kernel
   bool noLoopMode = false;
   omp::TargetOp targetOp = wsloopOp->getParentOfType<mlir::omp::TargetOp>();
-  if (targetOp) {
-    Operation *targetCapturedOp = targetOp.getInnermostCapturedOmpOp();
+  if (targetOp &&
+      targetOp.getKernelType() == omp::TargetExecMode::spmd_no_loop) {
+    Operation *targetCapturedOp =
+        cast<omp::ComposableOpInterface>(*targetOp).findCapturedOp();
     // We need this check because, without it, noLoopMode would be set to true
     // for every omp.wsloop nested inside a no-loop SPMD target region, even if
     // that loop is not the top-level SPMD one.
-    if (loopOp == targetCapturedOp) {
-      if (targetOp.getKernelExecFlags(targetCapturedOp) ==
-          omp::TargetExecMode::no_loop)
-        noLoopMode = true;
-    }
+    if (loopOp == targetCapturedOp)
+      noLoopMode = true;
   }
 
   for (size_t index = 0; index < wsloopOp.getLinearVars().size(); index++)
@@ -8275,7 +8274,8 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
   }
 
   // Update kernel bounds structure for the `OpenMPIRBuilder` to use.
-  omp::TargetExecMode execMode = targetOp.getKernelExecFlags(capturedOp);
+  // Use the kernel_type attribute set by the frontend instead of analyzing IR.
+  omp::TargetExecMode execMode = targetOp.getKernelType();
   switch (execMode) {
   case omp::TargetExecMode::bare:
     attrs.ExecFlags = llvm::omp::OMP_TGT_EXEC_MODE_BARE;
@@ -8286,7 +8286,7 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
   case omp::TargetExecMode::spmd:
     attrs.ExecFlags = llvm::omp::OMP_TGT_EXEC_MODE_SPMD;
     break;
-  case omp::TargetExecMode::no_loop:
+  case omp::TargetExecMode::spmd_no_loop:
     attrs.ExecFlags = llvm::omp::OMP_TGT_EXEC_MODE_SPMD_NO_LOOP;
     break;
   }
@@ -8342,9 +8342,7 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
   if (numThreads)
     attrs.MaxThreads = moduleTranslation.lookupValue(numThreads);
 
-  bool hostEvalTripCount;
-  targetOp.getKernelExecFlags(capturedOp, &hostEvalTripCount);
-  if (hostEvalTripCount) {
+  if (targetOp.hasHostEvalTripCount()) {
     llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
     attrs.LoopTripCount = nullptr;
 
@@ -8651,7 +8649,8 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::OpenMPIRBuilder::TargetKernelRuntimeAttrs runtimeAttrs;
   llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs defaultAttrs;
-  Operation *targetCapturedOp = targetOp.getInnermostCapturedOmpOp();
+  Operation *targetCapturedOp =
+      cast<omp::ComposableOpInterface>(*targetOp).findCapturedOp();
   initTargetDefaultAttrs(targetOp, targetCapturedOp, defaultAttrs,
                          isTargetDevice, isGPU);
 

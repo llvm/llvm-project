@@ -3955,3 +3955,9 @@ struct [[gsl::Pointer()]] PtrWithInt { int x; };
 PtrWithInt f() {
   return PtrWithInt{10};
 }
+
+// This would normally trigger a suggestion warning if -Wlifetime-safety-suggestions was on.
+// Since it is off, we expect NO warnings or notes here.
+View suggestion_disabled_test(View a) {
+  return a;
+}

@@ -9,7 +9,7 @@ module attributes {omp.requires = #omp<clause_requires unified_shared_memory>} {
   func.func @test_usm_close_flag_cleanup(%arg0: !fir.ref<!fir.type<t{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) {
     %map = omp.map.info var_ptr(%arg0 : !fir.ref<!fir.type<t{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>, !fir.type<t{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>) map_clauses(to) capture(ByRef) -> !fir.ref<!fir.type<t{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>> {name = "parent"}
 
-    omp.target map_entries(%map -> %arg1 : !fir.ref<!fir.type<t{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) {
+    omp.target kernel_type(generic) map_entries(%map -> %arg1 : !fir.ref<!fir.type<t{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) {
       // Simulate usage to trigger implicit map addition
       %1 = hlfir.designate %arg1{"a"} : (!fir.ref<!fir.type<t{a:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
       omp.terminator

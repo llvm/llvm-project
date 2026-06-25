@@ -189,7 +189,7 @@ public:
 #endif
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr& operator=(unique_ptr&& __u) _NOEXCEPT {
-    reset(__u.release());
+    reset(__u.release()); // NOLINT(misc-uniqueptr-reset-release)
     __deleter_ = std::forward<deleter_type>(__u.get_deleter());
     return *this;
   }
@@ -478,7 +478,7 @@ public:
         __checker_(std::move(__u.__checker_)) {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 unique_ptr& operator=(unique_ptr&& __u) _NOEXCEPT {
-    reset(__u.release());
+    reset(__u.release()); // NOLINT(misc-uniqueptr-reset-release)
     __deleter_ = std::forward<deleter_type>(__u.get_deleter());
     __checker_ = std::move(__u.__checker_);
     return *this;

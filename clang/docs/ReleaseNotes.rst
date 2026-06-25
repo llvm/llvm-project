@@ -519,7 +519,11 @@ Attribute Changes in Clang
   about pointer lifetimes. It may be used to power optimizations in the future,
   however there are no concrete plans to do so at the moment.
 
-* The ``modular_format`` attribute now supports the ``fixed`` aspect for C
+- The attributes ``[[clang::opencl_global_device]]`` and ``[[clang::opencl_global_host]]``
+  are now deprecated. Clang emits a ``-Wdeprecated-attributes`` warning when
+  they are used.
+  
+- The ``modular_format`` attribute now supports the ``fixed`` aspect for C
   ISO 18037 fixed-point ``printf`` specifiers.
 
 Improvements to Clang's diagnostics
@@ -731,12 +735,13 @@ Bug Fixes in This Version
   EOF handling from accidentally restoring CLK_CachingLexer while a tentative parse is still active, which could trigger a caching lexer re-entry assertion
   in clangd signature help. (#GH200677)
 - Fixed a crash when ``#embed`` is used with C++ modules (#GH195350)
+- Fixed an assertion in constant evaluation when using a defaulted comparison operator in a ``union``. (#GH147127)
 - Fixed a bug where ``-x cuda`` caused clang to immediately resolve templates that should not be. (#GH200545)
 - Fixed an issue where ``__typeof_unqual`` and ``__typeof_unqual__`` were rejected as a declaration specifier in block scope in C++.
 - Fixed crash when checking for overflow for unary operator that can't overflow (#GH170072)
 - Clang no longer handles a `" q-char-sequence "` header name as a string literal (#GH132643).
-- Fixed an assertion when ``__attribute__((alloc_size))`` is used with an argument type wider than the target's pointer width. (#GH190445)
 - Fixed an assertion where we improperly handled implicit conversions to integral types from an atomic-type with a conversion function. (#GH201770)
+- Fixed a regression where calling a function that takes a class-type parameter by value inside ``decltype`` of a concept could be incorrectly rejected when used as a non-type template argument. (#GH175831)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -810,6 +815,7 @@ Bug Fixes to C++ Support
 - Fixed a crash in constant evaluation using placement new on an array which was later initialized. (#GH196450)
 - Fixed an issue where Clang incorrectly accepted invalid unqualified uses of local nested class names outside their declaring scope. (#GH184622)
 - Fixed a crash when parsing invalid friend declaration with storage-class specifier. (#GH186569)
+- Fixed a missing vtable for ``dynamic_cast<FinalClass *>(this)`` in a function template. (#GH198511)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -888,6 +894,8 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
+
+Added support for the Arm AGI CPU via the ``-mcpu=armagicpu`` command-line option.
 
 Android Support
 ^^^^^^^^^^^^^^^
@@ -976,6 +984,12 @@ WebAssembly Support
 
 - Fixed a crash when ``__funcref`` is applied to a non-function pointer type.
   (#GH118233)
+- WebAssembly reference types (``__externref_t`` and ``__funcref`` function
+  pointers) now lower to the opaque IR types ``target("wasm.externref")`` and
+  ``target("wasm.funcref")`` instead of ``ptr addrspace(10)`` /
+  ``ptr addrspace(20)``.
+- Fixed a compiler crash at ``-O2`` when reference-type values were passed
+  through control flow that the SLP vectorizer tried to vectorize.
 
 AVR Support
 ^^^^^^^^^^^
