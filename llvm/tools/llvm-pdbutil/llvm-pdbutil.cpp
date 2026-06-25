@@ -643,6 +643,8 @@ cl::opt<bool> DumpSectionMap("section-map", cl::desc("dump section map"),
 cl::opt<bool> DumpSectionHeaders("section-headers",
                                  cl::desc("Dump image section headers"),
                                  cl::cat(MiscOptions), cl::sub(DumpSubcommand));
+cl::opt<bool> DumpDXContainer("dxcontainer", cl::desc("dump DXContainer"),
+                              cl::cat(MiscOptions), cl::sub(DumpSubcommand));
 
 cl::opt<bool> RawAll("all", cl::desc("Implies most other options."),
                      cl::cat(MiscOptions), cl::sub(DumpSubcommand));
@@ -1169,9 +1171,10 @@ static void dumpPretty(StringRef Path) {
     Session->setLoadAddress(opts::pretty::LoadAddress);
 
   auto &Stream = outs();
-  const bool UseColor = opts::pretty::ColorOutput == cl::BOU_UNSET
-                            ? Stream.has_colors()
-                            : opts::pretty::ColorOutput == cl::BOU_TRUE;
+  const bool UseColor =
+      opts::pretty::ColorOutput == cl::boolOrDefault::BOU_UNSET
+          ? Stream.has_colors()
+          : opts::pretty::ColorOutput == cl::boolOrDefault::BOU_TRUE;
   LinePrinter Printer(2, UseColor, Stream, opts::Filters);
 
   auto GlobalScope(Session->getGlobalScope());
@@ -1579,6 +1582,7 @@ int main(int Argc, const char **Argv) {
 
   if (opts::DumpSubcommand) {
     if (opts::dump::RawAll) {
+      opts::dump::DumpDXContainer = true;
       opts::dump::DumpGlobals = true;
       opts::dump::DumpFpo = true;
       opts::dump::DumpInlineeLines = true;

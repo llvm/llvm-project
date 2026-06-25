@@ -56,7 +56,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI void generate(_RandomAccessIterator __first, _RandomAccessIterator __last);
 
   // property functions
-  _LIBCPP_HIDE_FROM_ABI size_t size() const _NOEXCEPT { return __v_.size(); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t size() const _NOEXCEPT { return __v_.size(); }
   template <class _OutputIterator>
   _LIBCPP_HIDE_FROM_ABI void param(_OutputIterator __dest) const {
     std::copy(__v_.begin(), __v_.end(), __dest);
@@ -65,7 +65,7 @@ public:
   seed_seq(const seed_seq&)       = delete;
   void operator=(const seed_seq&) = delete;
 
-  _LIBCPP_HIDE_FROM_ABI static result_type _Tp(result_type __x) { return __x ^ (__x >> 27); }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static result_type _Tp(result_type __x) { return __x ^ (__x >> 27); }
 
 private:
   template <class _InputIterator>

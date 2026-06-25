@@ -6553,8 +6553,9 @@ static Value *simplifyLdexp(Value *Op0, Value *Op1, const SimplifyQuery &Q,
   return nullptr;
 }
 
-Value *llvm::simplifyUnaryIntrinsic(Intrinsic::ID IID, Value *Op0,
-                                    FastMathFlags FMF, const SimplifyQuery &Q) {
+static Value *simplifyUnaryIntrinsic(Intrinsic::ID IID, Value *Op0,
+                                     FastMathFlags FMF,
+                                     const SimplifyQuery &Q) {
   // Idempotent functions return the same result when called repeatedly.
   if (isIdempotent(IID))
     if (auto *II = dyn_cast<IntrinsicInst>(Op0))
@@ -6879,9 +6880,9 @@ static Value *simplifySVEIntReduction(Intrinsic::ID IID, Type *ReturnType,
   return nullptr;
 }
 
-Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
-                                     Value *Op0, Value *Op1, FastMathFlags FMF,
-                                     const SimplifyQuery &Q) {
+static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
+                                      Value *Op0, Value *Op1, FastMathFlags FMF,
+                                      const SimplifyQuery &Q) {
   unsigned BitWidth = ReturnType->getScalarSizeInBits();
   switch (IID) {
   case Intrinsic::get_active_lane_mask: {
@@ -6928,6 +6929,24 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
       return X;
     if (match(Op0, m_AShr(m_Negative(), m_Value())))
       return Constant::getNullValue(ReturnType);
+    break;
+  }
+  case Intrinsic::pdep: {
+    if (match(Op0, m_Zero()))
+      return Constant::getNullValue(ReturnType);
+    if (match(Op1, m_Zero()))
+      return Constant::getNullValue(ReturnType);
+    if (match(Op1, m_AllOnes()))
+      return Op0;
+    break;
+  }
+  case Intrinsic::pext: {
+    if (match(Op0, m_Zero()))
+      return Constant::getNullValue(ReturnType);
+    if (match(Op1, m_Zero()))
+      return Constant::getNullValue(ReturnType);
+    if (match(Op1, m_AllOnes()))
+      return Op0;
     break;
   }
   case Intrinsic::ptrmask: {
