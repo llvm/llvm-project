@@ -4267,10 +4267,8 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                   Size);
     }
 
-    if (NumArgs) {
-      auto [Offset, Size] = ArgMDs[NumArgs - 1];
-      ExplicitEnd = Offset + Size;
-    }
+    auto [Offset, Size] = ArgMDs[NumArgs - 1];
+    ExplicitEnd = Offset + Size;
   }
 
   AMDGPUDeviceTy &AMDGPUDevice = static_cast<AMDGPUDeviceTy &>(GenericDevice);
