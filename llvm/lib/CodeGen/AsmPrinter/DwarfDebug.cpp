@@ -691,7 +691,7 @@ static void interpretValues(const MachineInstr *CurMI,
     for (auto FwdRegIt = ForwardedRegWorklist.begin();
          FwdRegIt != ForwardedRegWorklist.end();) {
       Register CalleeSavedReg = MCRegister::NoRegister;
-      if (FwdRegIt->first == CopySrcReg)
+      if (static_cast<Register>(FwdRegIt->first) == CopySrcReg)
         CalleeSavedReg = CopyDestReg;
       else if (unsigned SubRegIdx =
                    TRI.getSubRegIndex(CopySrcReg, FwdRegIt->first))
