@@ -19,6 +19,7 @@
 #include <mach/mach.h>
 #include <mach/task.h>
 #include <pthread.h>
+#include <setjmp.h>
 #include <signal.h>
 #include <spawn.h>
 #include <sys/fcntl.h>
@@ -2936,11 +2937,79 @@ void *MachProcess::ProfileThread(void *arg) {
   return NULL;
 }
 
+namespace {
+// The XNU kernel enforces ptrace(PT_DENY_ATTACH) by delivering a SIGSEGV to the
+// process that tries to attach, while it is still inside the ptrace() syscall.
+// That kills debugserver outright instead of failing the call with an error.
+// This leaves lldb unable to tell the user why the attach failed. The condition
+// can't be detected up front because the target's P_LNOATTACH flag isn't
+// exposed to userspace, so instead we install a temporary SIGSEGV handler
+// around the ptrace() call and jump back out of it if the signal fires, turning
+// the fatal signal into a clean error.
+
+sigjmp_buf g_deny_attach_jmpbuf;
+// Only act on the SIGSEGV if it arrives on the thread that armed the guard
+// while a PT_ATTACHEXC call is in flight; anything else is a genuine crash.
+volatile sig_atomic_t g_deny_attach_armed = 0;
+pthread_t g_deny_attach_thread;
+
+void DenyAttachSIGSEGVHandler(int signo) {
+  if (g_deny_attach_armed &&
+      pthread_equal(pthread_self(), g_deny_attach_thread)) {
+    g_deny_attach_armed = 0;
+    siglongjmp(g_deny_attach_jmpbuf, 1);
+  }
+  // Not the deny-attach case: restore the default disposition and re-raise so a
+  // real crash is still reported the usual way.
+  signal(signo, SIG_DFL);
+  raise(signo);
+}
+
+// Wrapper around ptrace(PT_ATTACHEXC, pid) that survives the SIGSEGV the kernel
+// sends when `pid` has called ptrace(PT_DENY_ATTACH). On a normal attach it
+// behaves exactly like ptrace() (returning its result with errno set). If the
+// attach is rejected via the deny-attach signal it sets `denied_attach` and
+// returns -1 with errno set to EPERM.
+int PTraceAttachExcDenyAttachSafe(pid_t pid, bool &denied_attach) {
+  denied_attach = false;
+
+  struct sigaction new_action = {};
+  struct sigaction old_action = {};
+  new_action.sa_handler = DenyAttachSIGSEGVHandler;
+  sigemptyset(&new_action.sa_mask);
+  // SA_NODEFER so a genuine fault inside the handler crashes normally instead
+  // of deadlocking with SIGSEGV blocked.
+  new_action.sa_flags = SA_NODEFER;
+
+  if (::sigaction(SIGSEGV, &new_action, &old_action) != 0) {
+    // Couldn't install the handler; fall back to the unguarded call.
+    return ::ptrace(PT_ATTACHEXC, pid, 0, 0);
+  }
+
+  g_deny_attach_thread = pthread_self();
+  int result;
+  int saved_errno;
+  if (sigsetjmp(g_deny_attach_jmpbuf, 1) == 0) {
+    g_deny_attach_armed = 1;
+    result = ::ptrace(PT_ATTACHEXC, pid, 0, 0);
+    saved_errno = errno;
+    g_deny_attach_armed = 0;
+  } else {
+    // The kernel delivered SIGSEGV: the target denied the attach.
+    denied_attach = true;
+    result = -1;
+    saved_errno = EPERM;
+  }
+
+  ::sigaction(SIGSEGV, &old_action, nullptr);
+  errno = saved_errno;
+  return result;
+}
+} // namespace
+
 pid_t MachProcess::AttachForDebug(
-    pid_t pid, 
-    const RNBContext::IgnoredExceptions &ignored_exceptions, 
-    char *err_str,
-    size_t err_len) {
+    pid_t pid, const RNBContext::IgnoredExceptions &ignored_exceptions,
+    char *err_str, size_t err_len) {
   // Clear out and clean up from any current state
   Clear();
   if (pid != 0) {
@@ -2973,7 +3042,8 @@ pid_t MachProcess::AttachForDebug(
     DNBLog("[LaunchAttach] (%d) About to ptrace(PT_ATTACHEXC, %d)...", getpid(),
            pid);
     errno = 0;
-    int ptrace_result = ::ptrace(PT_ATTACHEXC, pid, 0, 0);
+    bool denied_attach = false;
+    int ptrace_result = PTraceAttachExcDenyAttachSafe(pid, denied_attach);
     int ptrace_errno = errno;
     DNBLog("[LaunchAttach] (%d) Completed ptrace(PT_ATTACHEXC, %d) == %d",
            getpid(), pid, ptrace_result);
@@ -2990,6 +3060,18 @@ pid_t MachProcess::AttachForDebug(
       m_flags |= eMachProcessFlagsAttached;
       DNBLogThreadedIf(LOG_PROCESS, "successfully attached to pid %d", pid);
       return m_pid;
+    } else if (denied_attach) {
+      // The target denied being debugged via ptrace(PT_DENY_ATTACH). The kernel
+      // would normally kill debugserver for attempting this; we caught the
+      // signal instead, so report a useful error rather than crashing.
+      snprintf(err_str, err_len,
+               "cannot attach to process %d because it has disabled debugging "
+               "via ptrace(PT_DENY_ATTACH). Attach earlier, put a breakpoint "
+               "on ptrace and return 0.",
+               pid);
+      DNBLogError("[LaunchAttach] (%d) MachProcess::AttachForDebug pid %d "
+                  "denied attach via ptrace(PT_DENY_ATTACH)",
+                  getpid(), pid);
     } else {
       ::snprintf(err_str, err_len, "%s", err.AsString());
       DNBLogError(

@@ -134,6 +134,34 @@ llvm.func @scan_reduction(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 
 // -----
 
+omp.declare_reduction @add_f32 : f32
+init {
+^bb0(%arg: f32):
+  %0 = llvm.mlir.constant(0.0 : f32) : f32
+  omp.yield (%0 : f32)
+}
+combiner {
+^bb1(%arg0: f32, %arg1: f32):
+  %1 = llvm.fadd %arg0, %arg1 : f32
+  omp.yield (%1 : f32)
+}
+atomic {
+^bb2(%arg2: !llvm.ptr, %arg3: !llvm.ptr):
+  %2 = llvm.load %arg3 : !llvm.ptr -> f32
+  llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
+  omp.yield
+}
+llvm.func @parallel_task_reduction_modifier_byref(%x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: Unhandled clause task reduction modifier with by-ref reduction in omp.parallel operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.parallel}}
+  omp.parallel reduction(mod: task, byref @add_f32 %x -> %prv : !llvm.ptr) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
 llvm.func @single_allocate(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.single operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.single}}
@@ -165,7 +193,7 @@ llvm.func @single_private(%x : !llvm.ptr) {
 llvm.func @target_allocate(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.target operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target allocate(%x : !llvm.ptr -> %x : !llvm.ptr) {
+  omp.target kernel_type(generic) allocate(%x : !llvm.ptr -> %x : !llvm.ptr) {
     omp.terminator
   }
   llvm.return
@@ -193,7 +221,7 @@ atomic {
 llvm.func @target_in_reduction(%x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause in_reduction in omp.target operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target in_reduction(@add_f32 %x -> %prv : !llvm.ptr) {
+  omp.target kernel_type(generic) in_reduction(@add_f32 %x -> %prv : !llvm.ptr) {
     omp.terminator
   }
   llvm.return
@@ -262,10 +290,10 @@ atomic {
   llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
   omp.yield
 }
-llvm.func @task_in_reduction(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause in_reduction in omp.task operation}}
+llvm.func @task_in_reduction_byref(%x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: Unhandled clause in_reduction with byref modifier in omp.task operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.task}}
-  omp.task in_reduction(@add_f32 %x -> %prv : !llvm.ptr) {
+  omp.task in_reduction(byref @add_f32 %x -> %prv : !llvm.ptr) {
     omp.terminator
   }
   llvm.return
@@ -301,10 +329,62 @@ atomic {
   llvm.atomicrmw fadd %arg2, %2 monotonic : !llvm.ptr, f32
   omp.yield
 }
-llvm.func @taskgroup_task_reduction(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause task_reduction in omp.taskgroup operation}}
+llvm.func @taskgroup_task_reduction_byref(%x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: Unhandled clause task_reduction with byref modifier in omp.taskgroup operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.taskgroup}}
-  omp.taskgroup task_reduction(@add_f32 %x -> %prv : !llvm.ptr) {
+  omp.taskgroup task_reduction(byref @add_f32 %x -> %prv : !llvm.ptr) {
+    omp.terminator
+  }
+  llvm.return
+}
+// -----
+
+omp.declare_reduction @add_i32_cleanup : i32
+init {
+^bb0(%arg: i32):
+  %c0 = llvm.mlir.constant(0 : i32) : i32
+  omp.yield(%c0 : i32)
+}
+combiner {
+^bb0(%a: i32, %b: i32):
+  %s = llvm.add %a, %b : i32
+  omp.yield(%s : i32)
+}
+cleanup {
+^bb0(%a: i32):
+  omp.yield
+}
+llvm.func @taskgroup_task_reduction_cleanup(%x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: task_reduction with cleanup region in omp.taskgroup}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.taskgroup}}
+  omp.taskgroup task_reduction(@add_i32_cleanup %x -> %prv : !llvm.ptr) {
+    omp.terminator
+  }
+  llvm.return
+}
+// -----
+
+omp.declare_reduction @add_i32_2arg_init : !llvm.ptr
+alloc {
+^bb0(%mold: !llvm.ptr):
+  %c1 = llvm.mlir.constant(1 : i32) : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr
+  omp.yield(%0 : !llvm.ptr)
+}
+init {
+^bb0(%mold: !llvm.ptr, %alloc: !llvm.ptr):
+  %c0 = llvm.mlir.constant(0 : i32) : i32
+  llvm.store %c0, %alloc : i32, !llvm.ptr
+  omp.yield(%alloc : !llvm.ptr)
+}
+combiner {
+^bb0(%a: !llvm.ptr, %b: !llvm.ptr):
+  omp.yield(%a : !llvm.ptr)
+}
+llvm.func @taskgroup_task_reduction_two_arg_init(%x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: task_reduction with two-argument initializer in omp.taskgroup}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.taskgroup}}
+  omp.taskgroup task_reduction(@add_i32_2arg_init %x -> %prv : !llvm.ptr) {
     omp.terminator
   }
   llvm.return
@@ -321,57 +401,139 @@ llvm.func @taskloop_allocate(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) 
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 
 // -----
- omp.declare_reduction @add_reduction_i32 : i32 init {
+omp.declare_reduction @add_reduction_i32 : i32 init {
   ^bb0(%arg0: i32):
     %0 = llvm.mlir.constant(0 : i32) : i32
     omp.yield(%0 : i32)
-  }combiner {
+  } combiner {
   ^bb0(%arg0: i32, %arg1: i32):
     %0 = llvm.add %arg0, %arg1 : i32
     omp.yield(%0 : i32)
   }
 
-llvm.func @taskloop_inreduction(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
+llvm.func @taskloop_inreduction_byref(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: Unhandled clause in_reduction with byref modifier in omp.taskloop.context operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.taskloop.context}}
-  // expected-error@below {{not yet implemented: Unhandled clause in_reduction in omp.taskloop.context operation}}
-  omp.taskloop.context in_reduction(@add_reduction_i32 %x -> %arg0 : !llvm.ptr) {
+  omp.taskloop.context in_reduction(byref @add_reduction_i32 %x -> %arg0 : !llvm.ptr) {
     omp.taskloop.wrapper {
       omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
         omp.yield
       }
     }
     omp.terminator
-  }
+  } {omp.combined}
   llvm.return
 }
 
 // -----
- omp.declare_reduction @add_reduction_i32 : i32 init {
+omp.declare_reduction @add_reduction_i32 : i32 init {
   ^bb0(%arg0: i32):
     %0 = llvm.mlir.constant(0 : i32) : i32
     omp.yield(%0 : i32)
-  }combiner {
+  } combiner {
   ^bb0(%arg0: i32, %arg1: i32):
     %0 = llvm.add %arg0, %arg1 : i32
     omp.yield(%0 : i32)
   }
 
-llvm.func @taskloop_reduction(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
+llvm.func @taskloop_reduction_byref(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: Unhandled clause reduction with byref modifier in omp.taskloop.context operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.taskloop.context}}
-  // expected-error@below {{not yet implemented: Unhandled clause reduction in omp.taskloop.context operation}}
-  omp.taskloop.context reduction(@add_reduction_i32 %x -> %arg0 : !llvm.ptr) {
+  omp.taskloop.context reduction(byref @add_reduction_i32 %x -> %arg0 : !llvm.ptr) {
     omp.taskloop.wrapper {
       omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
         omp.yield
       }
     }
     omp.terminator
+  } {omp.combined}
+  llvm.return
+}
+
+// -----
+omp.declare_reduction @add_reduction_cleanup_i32 : i32 init {
+  ^bb0(%arg0: i32):
+    %0 = llvm.mlir.constant(0 : i32) : i32
+    omp.yield(%0 : i32)
+  } combiner {
+  ^bb0(%arg0: i32, %arg1: i32):
+    %0 = llvm.add %arg0, %arg1 : i32
+    omp.yield(%0 : i32)
+  } cleanup {
+  ^bb0(%arg0: i32):
+    omp.yield
   }
+
+llvm.func @taskloop_reduction_cleanup(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: reduction with cleanup region in omp.taskloop.context}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop.context}}
+  omp.taskloop.context reduction(@add_reduction_cleanup_i32 %x -> %arg0 : !llvm.ptr) {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
+    }
+    omp.terminator
+  } {omp.combined}
+  llvm.return
+}
+
+// -----
+
+omp.declare_reduction @add_reduction_modifier_i32 : i32 init {
+  ^bb0(%arg0: i32):
+    %0 = llvm.mlir.constant(0 : i32) : i32
+    omp.yield(%0 : i32)
+  } combiner {
+  ^bb0(%arg0: i32, %arg1: i32):
+    %0 = llvm.add %arg0, %arg1 : i32
+    omp.yield(%0 : i32)
+  }
+
+llvm.func @taskloop_reduction_modifier(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: Unhandled clause reduction with modifier in omp.taskloop.context operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop.context}}
+  omp.taskloop.context reduction(mod:inscan, @add_reduction_modifier_i32 %x -> %arg0 : !llvm.ptr) {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
+    }
+    omp.terminator
+  } {omp.combined}
+  llvm.return
+}
+
+// -----
+
+omp.declare_reduction @add_reduction_two_arg_init_i32 : !llvm.ptr alloc {
+  %0 = llvm.mlir.constant(1 : i64) : i64
+  %1 = llvm.alloca %0 x i32 : (i64) -> !llvm.ptr
+  omp.yield(%1 : !llvm.ptr)
+} init {
+  ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+    omp.yield(%arg1 : !llvm.ptr)
+} combiner {
+  ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
+    omp.yield(%arg0 : !llvm.ptr)
+}
+
+llvm.func @taskloop_reduction_two_arg_init(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
+  // expected-error@below {{not yet implemented: reduction with two-argument initializer in omp.taskloop.context}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.taskloop.context}}
+  omp.taskloop.context reduction(@add_reduction_two_arg_init_i32 %x -> %arg0 : !llvm.ptr) {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+        omp.yield
+      }
+    }
+    omp.terminator
+  } {omp.combined}
   llvm.return
 }
 
@@ -555,7 +717,7 @@ llvm.func @target_map_iterated_unsupported(%addr : !llvm.ptr) {
   } -> !omp.iterated<!llvm.ptr>
   // expected-error@below {{not yet implemented: Unhandled clause map/motion clause with iterator modifier in omp.target operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target map_iterated(%it : !omp.iterated<!llvm.ptr>) map_entries(%map -> %arg0 : !llvm.ptr) {
+  omp.target kernel_type(generic) map_iterated(%it : !omp.iterated<!llvm.ptr>) map_entries(%map -> %arg0 : !llvm.ptr) {
     omp.terminator
   }
   llvm.return

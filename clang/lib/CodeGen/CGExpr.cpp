@@ -45,6 +45,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/MatrixBuilder.h"
@@ -2378,8 +2379,7 @@ LValue CodeGenFunction::EmitMatrixElementExpr(const MatrixElementExpr *E) {
     RawAddress MatAddr = Base.getAddress();
     if (getLangOpts().HLSL &&
         E->getBase()->getType().getAddressSpace() == LangAS::hlsl_constant)
-      MatAddr = CGM.getHLSLRuntime().createBufferMatrixTempAddress(
-          Base, E->getExprLoc(), *this);
+      MatAddr = CGM.getHLSLRuntime().createBufferMatrixTempAddress(Base, *this);
 
     llvm::Constant *CV =
         llvm::ConstantDataVector::get(getLLVMContext(), Indices);
@@ -2492,8 +2492,7 @@ static RValue EmitLoadOfMatrixLValue(LValue LV, SourceLocation Loc,
   // non-padded local alloca before loading.
   if (CGF.getLangOpts().HLSL &&
       LV.getType().getAddressSpace() == LangAS::hlsl_constant)
-    DestAddr =
-        CGF.CGM.getHLSLRuntime().createBufferMatrixTempAddress(LV, Loc, CGF);
+    DestAddr = CGF.CGM.getHLSLRuntime().createBufferMatrixTempAddress(LV, CGF);
 
   Address Addr = MaybeConvertMatrixAddress(DestAddr, CGF);
   LV.setAddress(Addr);
@@ -3459,8 +3458,7 @@ static LValue EmitGlobalVarDeclLValue(CodeGenFunction &CGF,
   // the initialized global resource array.
   if (CGF.getLangOpts().HLSL && VD->getType()->isHLSLResourceRecordArray()) {
     std::optional<LValue> LV =
-        CGF.CGM.getHLSLRuntime().emitGlobalResourceArrayAsLValue(
-            CGF, VD, E->getExprLoc());
+        CGF.CGM.getHLSLRuntime().emitGlobalResourceArrayAsLValue(CGF, VD);
     if (LV.has_value())
       return LV.value();
   }
@@ -5206,8 +5204,7 @@ LValue CodeGenFunction::EmitMatrixSingleSubscriptExpr(
   RawAddress MatAddr = Base.getAddress();
   if (getLangOpts().HLSL &&
       E->getBase()->getType().getAddressSpace() == LangAS::hlsl_constant)
-    MatAddr = CGM.getHLSLRuntime().createBufferMatrixTempAddress(
-        Base, E->getExprLoc(), *this);
+    MatAddr = CGM.getHLSLRuntime().createBufferMatrixTempAddress(Base, *this);
 
   return LValue::MakeMatrixRow(MaybeConvertMatrixAddress(MatAddr, *this),
                                RowIdx, E->getBase()->getType(),
@@ -6364,6 +6361,11 @@ CodeGenFunction::EmitHLSLOutArgLValues(const HLSLOutArgExpr *E, QualType Ty) {
   Address OutTemp = CreateIRTempWithoutCast(ExprTy);
   LValue TempLV = MakeAddrLValue(OutTemp, ExprTy);
 
+  // Start the lifetime before the copy-in so that the temporary is live when
+  // the initial value is written. This ensures the store is within the
+  // lifetime and is not killed by a store undef inserted at lifetime.start.
+  EmitLifetimeStart(OutTemp.getBasePointer());
+
   if (E->isInOut())
     EmitInitializationToLValue(E->getCastedTemporary()->getSourceExpr(),
                                TempLV);
@@ -6379,8 +6381,6 @@ LValue CodeGenFunction::EmitHLSLOutArgExpr(const HLSLOutArgExpr *E,
 
   llvm::Value *Addr = TempLV.getAddress().getBasePointer();
   llvm::Type *ElTy = ConvertTypeForMem(TempLV.getType());
-
-  EmitLifetimeStart(Addr);
 
   Address TmpAddr(Addr, ElTy, TempLV.getAlignment());
   Args.addWriteback(BaseLV, TmpAddr, nullptr, E->getWritebackCast());
@@ -6579,6 +6579,21 @@ static GlobalDecl getGlobalDeclForDirectCall(const FunctionDecl *FD) {
 CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
   E = E->IgnoreParens();
 
+  // A WebAssembly funcref is an opaque reference type and llvm only accepts
+  // function pointers as the call target. To make an indirect call through a
+  // reference type, first use the llvm.wasm.funcref.to_ptr intrinsic to make a
+  // fake function pointer to it. The backend lowers the resulting indirect call
+  // to a table.set into a single element dummy table + call_indirect 0.
+  auto ConvertFuncrefToPtr = [&](llvm::Value *CalleePtr) -> llvm::Value * {
+    if (auto *TET = dyn_cast<llvm::TargetExtType>(CalleePtr->getType());
+        TET && TET->getName() == "wasm.funcref") {
+      llvm::Function *ToPtr =
+          CGM.getIntrinsic(llvm::Intrinsic::wasm_funcref_to_ptr);
+      return Builder.CreateCall(ToPtr, {CalleePtr});
+    }
+    return CalleePtr;
+  };
+
   // Look through function-to-pointer decay.
   if (auto ICE = dyn_cast<ImplicitCastExpr>(E)) {
     if (ICE->getCastKind() == CK_FunctionToPointerDecay ||
@@ -6603,7 +6618,8 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
           GD = GlobalDecl(VD);
         }
         CGCalleeInfo CalleeInfo(FunctionType->getAs<FunctionProtoType>(), GD);
-        CGCallee Callee(CalleeInfo, Result.first, Result.second);
+        CGCallee Callee(CalleeInfo, ConvertFuncrefToPtr(Result.first),
+                        Result.second);
         return Callee;
       }
     }
@@ -6647,7 +6663,7 @@ CGCallee CodeGenFunction::EmitCallee(const Expr *E) {
 
   CGCalleeInfo calleeInfo(functionType->getAs<FunctionProtoType>(), GD);
   CGPointerAuthInfo pointerAuth = CGM.getFunctionPointerAuthInfo(functionType);
-  CGCallee callee(calleeInfo, calleePtr, pointerAuth);
+  CGCallee callee(calleeInfo, ConvertFuncrefToPtr(calleePtr), pointerAuth);
   return callee;
 }
 

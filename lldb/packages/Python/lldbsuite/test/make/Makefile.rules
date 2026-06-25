@@ -44,7 +44,7 @@ ifeq "$(OS)" "Windows_NT"
 	CP_R = xcopy $(subst /,\,$(1)) $(subst /,\,$(2)) /s /e /y
 	RM = del $(subst /,\,$(1)) > nul 2>&1 || (exit 0)
 	RM_F = del /f /q $(subst /,\,$(1))
-	RM_RF = rd /s /q $(subst /,\,$(1))
+	RM_RF = $(if $(strip $(1)),rd /s /q $(subst /,\,$(1)) > nul 2>&1 || (exit 0))
 	LN_SF = mklink /D "$(subst /,\,$(2))" "$(subst /,\,$(1))"
 	ECHO = echo $(1);
 	ECHO_TO_FILE = echo $(subst ',,$(1))> "$(subst /,\,$(2))"
@@ -124,6 +124,10 @@ ifeq "$(OS)" "Android"
 	include $(THIS_FILE_DIR)/Android.rules
 endif
 
+ifeq "$(OS)" "WASI"
+	include $(THIS_FILE_DIR)/WASI.rules
+endif
+
 ifeq "$(TRIPLE)" ""
   ifeq "$(ARCH)" ""
     # No triple, no arch: query the compiler for its default triple.
@@ -178,7 +182,11 @@ ifeq "$(OS)" "Darwin"
 else
     ifneq "$(SDKROOT)" ""
         SYSROOT_FLAGS := --sysroot "$(SDKROOT)"
-        GCC_TOOLCHAIN_FLAGS := --gcc-toolchain="$(SDKROOT)/usr"
+        ifeq "$(OS)" "WASI"
+            GCC_TOOLCHAIN_FLAGS :=
+        else
+            GCC_TOOLCHAIN_FLAGS := --gcc-toolchain="$(SDKROOT)/usr"
+        endif
     else
         # Do not set up these options if SDKROOT was not specified.
         # This is a regular build in that case (or Android).

@@ -49,8 +49,6 @@ class AArch64TTIImpl final : public BasicTTIImplBase<AArch64TTIImpl> {
   const AArch64Subtarget *ST;
   const AArch64TargetLowering *TLI;
 
-  static const FeatureBitset InlineInverseFeatures;
-
   const AArch64Subtarget *getST() const { return ST; }
   const AArch64TargetLowering *getTLI() const { return TLI; }
 
@@ -315,10 +313,11 @@ public:
     if (!ST->isSVEorStreamingSVEAvailable())
       return false;
 
-    // For fixed vectors, avoid scalarization if using SVE for them.
-    if (isa<FixedVectorType>(DataType) && !ST->useSVEForFixedLengthVectors() &&
-        DataType->getPrimitiveSizeInBits() != 128)
-      return false; // Fall back to scalarization of masked operations.
+    if (isa<FixedVectorType>(DataType) && !ST->useSVEForFixedLengthVectors()) {
+      unsigned Bits = DataType->getPrimitiveSizeInBits();
+      if (Bits != 64 && Bits != 128)
+        return false; // Fall back to scalarization of masked operations.
+    }
 
     return isElementTypeLegalForScalableVector(DataType->getScalarType());
   }
@@ -455,6 +454,8 @@ public:
   }
 
   unsigned getGISelRematGlobalCost() const override { return 2; }
+
+  InstructionCost getBranchMispredictPenalty() const override;
 
   unsigned getMinTripCountTailFoldingThreshold() const override {
     return ST->hasSVE() ? 5 : 0;

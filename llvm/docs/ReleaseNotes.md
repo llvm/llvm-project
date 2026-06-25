@@ -94,6 +94,14 @@ Makes programs 10x faster by doing Special New Thing.
 
 * Fast math flags are now permitted on `uitofp` and `sitofp`.
 
+* The ``modular-format`` attribute now supports the ``fixed`` aspect for C
+  ISO 18037 fixed-point ``printf`` specifiers.
+
+* Added `noipa` attribute which disables interprocedural analyses that inspect
+  the definition of the function. This attribute does *not* control inlining or
+  outlining. Add the `noinline` and `nooutline` attributes as well in cases
+  where inlining and outlining should additionally be disabled.
+
 ### Changes to LLVM infrastructure
 
 * Removed ``Constant::isZeroValue``. It was functionally identical to
@@ -150,6 +158,9 @@ Makes programs 10x faster by doing Special New Thing.
 * ``TargetRegisterInfo::getMinimalPhysRegClass`` and related APIs have been
   refactored and no longer take a type. This API is also now precomputed in
   TableGen to improve compile-time.
+
+* ``APInt::sqrt`` (square root rounded to nearest integer) has been replaced
+  with ``APInt::sqrtFloor`` (floor of square root).
 
 ### Changes to building LLVM
 
@@ -249,8 +260,18 @@ Makes programs 10x faster by doing Special New Thing.
 * Adds experimental assembler support for batched dot-product extensions(Zvqwbdota8i, Zvqwbdota16i, Zvfwbdota16bf, Zvfqwbdota8f and Zvfbdota32f).
 * Adds experimental assembler support for dot-product extensions(Zvqwdota8i, Zvqwdota16i, Zvfwdota16bf and Zvfqwdota8f).
 * `-mtune=generic` now uses the scheduling model from SpacemiT X60 instead of an empty scheduling model.
+* The Xqcilo pseudos now emit sequences that can be relaxed.
 
 ### Changes to the WebAssembly Backend
+
+* WebAssembly reference types are now represented in LLVM IR as the target
+  extension types `target("wasm.externref")` and `target("wasm.funcref")`,
+  rather than as pointers in address spaces 10 and 20 (`ptr addrspace(10)` /
+  `ptr addrspace(20)`).
+* As a consequence of the representation change, reference types are no longer
+  treated as vectorizable pointers. This fixes a crash in the SLP vectorizer,
+  which previously would attempt to gather `externref`/`funcref` values into a
+  vector and then crash.
 
 ### Changes to the Windows Target
 
@@ -318,9 +339,30 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the LLVM tools
 
+* llvm-ml now supports the `/unwindv3` flag to enable V3 unwind information
+  format for x64 exception handling.
+* llvm-ml now supports the `@UnwindVersion` built-in symbol, which returns the
+  current unwind version (1 by default, 3 when `/unwindv3` is specified).
+* llvm-ml now supports the `.push2reg`, `.pop2reg`, `.beginepilog`, and
+  `.endepilog` MASM directives for V3 unwind information.
+* llvm-ml now supports the `.popreg`, `.freestack`, `.restorereg`,
+  `.restorexmm128`, and `.unsetframe` MASM epilog directives. These are the
+  epilog counterparts of `.pushreg`, `.allocstack`, `.savereg`,
+  `.savexmm128`, and `.setframe` respectively, and are valid only inside
+  `.beginepilog`/`.endepilog` blocks and only for V3 unwind information.
+* llvm-ml now supports `.pushframe code` syntax (without the `@` prefix)
+  for interrupt handlers with error codes.
+* llvm-ml now diagnoses:
+  - Prolog directives (including `.allocstack`) used outside of prologs (after `.endprolog`).
+  - Epilog directives used outside of epilogs (outside of `.beginepilog` + `.endepilog` blocks).
+  - Beginning an epilog (`.beginepilog`) inside another epilog.
+
 * `llvm-profgen` now supports ETM trace decoding using the OpenCSD library for Cortex-M targets. OpenCSD version 1.5.4 or higher is required.
 
 * `llvm-objcopy` no longer corrupts the symbol table when `--update-section` is called for ELF files.
+* `llvm-objcopy` now reports an error when `--compress-sections` requests unavailable zlib or zstd support.
+  The diagnostic is emitted while parsing the option, matching `--compress-debug-sections`.
+  Such commands may now fail even if the input file contains no sections that would be compressed.
 * `FileCheck` option `-check-prefix` now accepts a comma-separated list of
   prefixes, making it an alias of the existing `-check-prefixes` option.
 * Add `-mtune` option to `llc`.
