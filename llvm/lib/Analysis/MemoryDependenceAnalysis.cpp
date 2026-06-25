@@ -355,18 +355,48 @@ static bool canSkipClobberingStore(const StoreInst *SI,
       MemLoc.Size.getValue().getKnownMinValue())
     return false;
 
-  auto *LI = dyn_cast<LoadInst>(SI->getValueOperand());
-  if (!LI || LI->getParent() != SI->getParent())
-    return false;
-  if (BatchAA.alias(MemoryLocation::get(LI), MemLoc) != AliasResult::MustAlias)
-    return false;
-  unsigned NumVisitedInsts = 0;
-  for (const Instruction *I = LI; I != SI; I = I->getNextNode())
-    if (++NumVisitedInsts > ScanLimit ||
-        isModSet(BatchAA.getModRefInfo(I, MemLoc)))
-      return false;
+  if (auto *LI = dyn_cast<LoadInst>(SI->getValueOperand())) {
+    if (LI->getParent() == SI->getParent() &&
+        BatchAA.alias(MemoryLocation::get(LI), MemLoc) ==
+            AliasResult::MustAlias) {
+      unsigned NumVisitedInsts = 0;
+      bool Clean = true;
+      for (const Instruction *I = LI; I != SI; I = I->getNextNode()) {
+        if (++NumVisitedInsts > ScanLimit ||
+            isModSet(BatchAA.getModRefInfo(I, MemLoc))) {
+          Clean = false;
+          break;
+        }
+      }
+      if (Clean)
+        return true;
+    }
+  }
 
-  return true;
+  // Checking if the store is writing the same value that MemLoc contains now.
+  // Then we can skip this store as well, because it does not effect the value
+  // loaded from MemLoc.
+  auto *StoredVal = SI->getValueOperand();
+  unsigned NumVisitedInsts = 0;
+  for (auto It = std::next(SI->getReverseIterator()),
+            End = SI->getParent()->rend();
+       It != End; ++It) {
+    if (++NumVisitedInsts > ScanLimit)
+      break;
+    const Instruction *I = &*It;
+    if (!isModSet(BatchAA.getModRefInfo(I, MemLoc)))
+      continue;
+
+    if (const auto *PrevSI = dyn_cast<StoreInst>(I)) {
+      if (PrevSI->getValueOperand() == StoredVal &&
+          BatchAA.alias(MemoryLocation::get(PrevSI), MemLoc) ==
+              AliasResult::MustAlias)
+        return true;
+    }
+    break;
+  }
+
+  return false;
 }
 
 MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
