@@ -300,6 +300,10 @@ use omp_lib
 
   !$omp end parallel
 
+  !$omp sections nowait
+  !ERROR: At most one NOWAIT clause can appear on the SECTIONS directive
+  !$omp end sections nowait
+
 ! 2.11.2 parallel-sections-clause -> parallel-clause |
 !                                    sections-clause
 
