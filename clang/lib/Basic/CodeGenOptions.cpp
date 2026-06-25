@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Basic/CodeGenOptions.h"
+#include "llvm/Support/Path.h"
 
 namespace clang {
 
@@ -48,6 +49,15 @@ void CodeGenOptions::resetNonModularOptions(StringRef ModuleFormat) {
   }
 
   RelocationModel = llvm::Reloc::PIC_;
+}
+
+std::string CodeGenOptions::remapDebugPathPrefix(StringRef Path) const {
+  SmallString<0> P = Path;
+
+  for (auto &[From, To] : llvm::reverse(DebugPrefixMap))
+    if (llvm::sys::path::replace_path_prefix(P, From, To))
+      break;
+  return P.str().str();
 }
 
 }  // end namespace clang
