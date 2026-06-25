@@ -208,6 +208,9 @@ void resetBenignCodeGenOptions(frontend::ActionKind ProgramAction,
                                const LangOptions &LangOpts,
                                CodeGenOptions &CGOpts);
 
+bool isNormalizedPathInStableDir(const ArrayRef<StringRef> Directories,
+                                 const StringRef Input);
+
 /// Determine if \c Input can be resolved within a stable directory.
 ///
 /// \param Directories Paths known to be in a stable location. e.g. Sysroot.
