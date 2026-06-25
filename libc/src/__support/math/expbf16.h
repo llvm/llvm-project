@@ -85,6 +85,11 @@ LIBC_INLINE bfloat16 expbf16(bfloat16 x) {
       if (x_bits.is_inf())
         return x;
 
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+      fputil::set_errno_if_required(ERANGE);
+      fputil::raise_except_if_required(FE_OVERFLOW);
+      return FPBits::inf().get_val();
+#else
       switch (fputil::quick_get_round()) {
       case FE_TONEAREST:
       case FE_UPWARD:
@@ -94,6 +99,7 @@ LIBC_INLINE bfloat16 expbf16(bfloat16 x) {
       default:
         return FPBits::max_normal().get_val();
       }
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     }
 
     // x <= -92.5
@@ -105,6 +111,9 @@ LIBC_INLINE bfloat16 expbf16(bfloat16 x) {
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_UNDERFLOW | FE_INEXACT);
 
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+      return FPBits::zero().get_val();
+#else
       switch (fputil::quick_get_round()) {
       case FE_UPWARD:
       case FE_TONEAREST:
@@ -114,6 +123,7 @@ LIBC_INLINE bfloat16 expbf16(bfloat16 x) {
       default:
         return FPBits::zero().get_val();
       }
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
     }
 
     // exp(0) = 1
@@ -134,6 +144,7 @@ LIBC_INLINE bfloat16 expbf16(bfloat16 x) {
     }
   }
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   constexpr fputil::ExceptValues<bfloat16, 4> EXPBF16_EXCEPTS = {{
       // (input, RZ output, RU offset, RD offset, RN offset)
       // x = 0x40DB (6.84375)
@@ -151,6 +162,7 @@ LIBC_INLINE bfloat16 expbf16(bfloat16 x) {
 
   if (auto r = EXPBF16_EXCEPTS.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
     return r.value();
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   // For -93 < x < 89, we do the following range reduction:
   // x = hi + mid + lo
