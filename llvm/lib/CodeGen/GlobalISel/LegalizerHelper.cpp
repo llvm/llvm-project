@@ -4884,23 +4884,23 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     // Check that subvector is half size of main vector
     Register Vector = MI.getOperand(1).getReg();
     Register Subvector = MI.getOperand(2).getReg();
-    auto insertionPointImm = MI.getOperand(3).getImm();
+    auto InsertionPointImm = MI.getOperand(3).getImm();
 
     LLT VectorTy = MRI.getType(Vector);
     LLT SubvectorTy = MRI.getType(Subvector);
     // If so, -> concat(subvector, extract(half of vector))
     // (Operands can be either way round depending on insertion point
     if (VectorTy.getSizeInBits() == SubvectorTy.getSizeInBits() * 2) {
-      bool insertInLowHalf = insertionPointImm == 0;
-      auto extract = MIRBuilder.buildInstr(
+      bool InsertInLowHalf = InsertionPointImm == 0;
+      auto Extract = MIRBuilder.buildInstr(
           TargetOpcode::G_EXTRACT_SUBVECTOR, {SubvectorTy},
           {Vector,
-           (uint64_t)(insertInLowHalf
+           (uint64_t)(InsertInLowHalf
                           ? VectorTy.getElementCount().getKnownMinValue() / 2
                           : 0)});
 
-      auto LowHalf = insertInLowHalf ? Subvector : extract.getReg(0);
-      auto HighHalf = insertInLowHalf ? extract.getReg(0) : Subvector;
+      auto LowHalf = InsertInLowHalf ? Subvector : Extract.getReg(0);
+      auto HighHalf = InsertInLowHalf ? Extract.getReg(0) : Subvector;
 
       MIRBuilder.buildInstr(TargetOpcode::G_CONCAT_VECTORS, {MI.getOperand(0)},
                             {LowHalf, HighHalf});
@@ -4917,11 +4917,11 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
       SmallVector<int> Mask;
       for (int i; i < VectorTy.getElementCount().getKnownMinValue(); i++) {
         // If this index is within bounds, put subvector's index into mask
-        if (i > insertionPointImm &&
-            i < insertionPointImm +
+        if (i > InsertionPointImm &&
+            i < InsertionPointImm +
                     SubvectorTy.getElementCount().getKnownMinValue())
           Mask.push_back(VectorTy.getElementCount().getKnownMinValue() + i -
-                         insertionPointImm);
+                         InsertionPointImm);
         else
           Mask.push_back(i);
       }
