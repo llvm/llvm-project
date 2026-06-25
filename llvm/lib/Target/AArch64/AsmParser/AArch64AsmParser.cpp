@@ -7762,18 +7762,28 @@ bool AArch64AsmParser::parseDirectiveCFINegateRAStateWithPC() {
 
 /// parseDirectiveCFILLVMSetRAState
 /// ::= .cfi_llvm_set_ra_state ra_state, offset
+/// ::= .cfi_llvm_set_ra_state ra_state, pac_sym
 bool AArch64AsmParser::parseDirectiveCFILLVMSetRAState() {
   int64_t State;
   if (getParser().parseAbsoluteExpression(State))
     return true;
   if (parseToken(AsmToken::Comma, "expected ','"))
     return true;
-  int64_t Offset;
-  if (getParser().parseAbsoluteExpression(Offset))
+  const MCExpr *Expr;
+  SMLoc ExprLoc = getLoc();
+  if (getParser().parseExpression(Expr))
     return true;
   if (parseEOL())
     return true;
-  getStreamer().emitCFILLVMSetRAState((unsigned)State, Offset);
+  if (auto *SymRef = dyn_cast<MCSymbolRefExpr>(Expr)) {
+    getStreamer().emitCFILLVMSetRAState(
+        (unsigned)State, const_cast<MCSymbol *>(&SymRef->getSymbol()));
+  } else if (auto *CE = dyn_cast<MCConstantExpr>(Expr)) {
+    getStreamer().emitCFILLVMSetRAState((unsigned)State, CE->getValue());
+  } else {
+    return Error(ExprLoc,
+                 "expected an integer offset or a symbol for .cfi_llvm_set_ra_state");
+  }
   return false;
 }
 
