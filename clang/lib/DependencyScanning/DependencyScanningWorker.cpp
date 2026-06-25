@@ -9,6 +9,7 @@
 #include "clang/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
+#include "clang/DependencyScanning/CompilerInstanceWithContext.h"
 #include "clang/DependencyScanning/DependencyConsumer.h"
 #include "clang/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
@@ -69,6 +70,30 @@ DependencyScanningWorker::makeEffectiveVFS(
   }
   FS->setCurrentWorkingDirectory(WorkingDirectory);
   return FS;
+}
+
+bool DependencyScanningWorker::initializeCIWC(
+    StringRef CWD, ArrayRef<std::string> CC1CommandLine,
+    std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithDiagOpts,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS,
+    DependencyActionController &Controller) {
+  CIWC.reset();
+  auto Result = CompilerInstanceWithContext::initializeFromCC1Commandline(
+      *this, CWD, CC1CommandLine, std::move(DiagEngineWithDiagOpts),
+      std::move(OverlayFS), Controller);
+  if (!Result)
+    return false;
+  CIWC = std::make_unique<CompilerInstanceWithContext>(std::move(*Result));
+  return true;
+}
+
+void DependencyScanningWorker::resetCIWC() { CIWC.reset(); }
+
+bool DependencyScanningWorker::computeDependenciesByName(
+    StringRef ModuleName, DependencyConsumer &Consumer,
+    DependencyActionController &Controller) {
+  assert(CIWC && "initializeCIWC must succeed before calling this method");
+  return CIWC->computeDependencies(ModuleName, Consumer, Controller);
 }
 
 bool DependencyScanningWorker::computeDependencies(
