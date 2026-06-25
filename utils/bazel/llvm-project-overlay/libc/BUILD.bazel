@@ -1606,22 +1606,6 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "__support_osutil_linux_syscall_wrappers_ioctl",
-    hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/ioctl.h"],
-    target_compatible_with = select({
-        "@platforms//os:linux": [],
-        "//conditions:default": ["@platforms//:incompatible"],
-    }),
-    deps = [
-        ":__support_cpp_type_traits",
-        ":__support_error_or",
-        ":__support_macros_attributes",
-        ":__support_macros_config",
-        ":__support_osutil_syscall",
-    ],
-)
-
-libc_support_library(
     name = "__support_osutil_linux_syscall_wrappers_dup",
     hdrs = ["src/__support/OSUtil/linux/syscall_wrappers/dup.h"],
     target_compatible_with = select({
