@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/../test_errors.py %s %flang_fc1
 module m
   interface
     attributes(device) subroutine exts1
