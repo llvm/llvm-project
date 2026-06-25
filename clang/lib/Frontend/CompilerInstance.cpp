@@ -2793,8 +2793,11 @@ static bool addCachedModuleFileToInMemoryCacheFromKey(
   }
   auto Output =
       Result->getOutput(cas::CompileJobCacheResult::OutputKind::MainOutput);
-  if (!Output)
-    llvm::report_fatal_error("missing main output");
+  if (!Output) {
+    Diags.Report(diag::err_cas_unloadable_module)
+        << Path << 1 << CacheKey << "cached module missing main output";
+    return true;
+  }
 
   return addCachedModuleFileToInMemoryCache(Path, CAS, Output->Object, ModCache,
                                             Diags);
