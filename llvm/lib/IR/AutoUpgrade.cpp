@@ -533,6 +533,10 @@ static bool shouldUpgradeX86Intrinsic(Function *F, StringRef Name) {
             Name.starts_with("vpcom") || // Added in 3.2, Updated in 9.0
             Name.starts_with("vprot"));  // Added in 8.0
 
+  if (Name.consume_front("bmi."))
+    return (Name.starts_with("pdep.") || // Added in 23.0
+            Name.starts_with("pext."));  // Added in 23.0
+
   return (Name == "addcarry.u32" ||        // Added in 8.0
           Name == "addcarry.u64" ||        // Added in 8.0
           Name == "addcarryx.u32" ||       // Added in 8.0
@@ -1000,6 +1004,12 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
         return true;
       }
 
+      // vcvtfp2hf and vcvthf2fp -> fpext and fptrunc
+      if (Name == "vcvtfp2hf" || Name == "vcvthf2fp") {
+        NewFn = nullptr;
+        return true;
+      }
+
       return false; // No other 'aarch64.neon.*'.
     }
     if (Name.consume_front("sve.")) {
@@ -1110,6 +1120,25 @@ static bool upgradeArmOrAarch64IntrinsicFunction(bool IsArm, Function *F,
       }
 
       return false; // No other 'aarch64.sve.*'.
+    }
+    if (Name.consume_front("sme.")) {
+      // 'aarch64.sme.*'.
+      if (Name.consume_front("ftmopa.")) {
+        // The FP8 FTMOPA intrinsics were split out from the non-FP8 FTMOPA
+        // intrinsics to model their FPMR dependency.
+        Intrinsic::ID ID =
+            StringSwitch<Intrinsic::ID>(Name)
+                .Case("za16.nxv16i8", Intrinsic::aarch64_sme_fp8_ftmopa_za16)
+                .Case("za32.nxv16i8", Intrinsic::aarch64_sme_fp8_ftmopa_za32)
+                .Default(Intrinsic::not_intrinsic);
+        if (ID != Intrinsic::not_intrinsic) {
+          NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), ID);
+          return true;
+        }
+        return false; // No other 'aarch64.sme.ftmopa.*'.
+      }
+
+      return false; // No other 'aarch64.sme.*'.
     }
   }
   return false; // No other 'arm.*', 'aarch64.*'.
@@ -1531,8 +1560,10 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
                               ? Intrinsic::lifetime_start
                               : Intrinsic::lifetime_end;
       rename(F);
+      // Old 2 argument form of these intrinsics have [Size, Ptr] as arguments.
+      // Use the Ptr argument to create new declaration.
       NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
-                                                F->getArg(0)->getType());
+                                                F->getArg(1)->getType());
       return true;
     }
     break;
@@ -4591,6 +4622,10 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
   } else if (Name.starts_with("avx512.mask.") &&
              upgradeAVX512MaskToSelect(Name, Builder, *CI, Rep)) {
     // Rep will be updated by the call in the condition.
+  } else if (Name.starts_with("bmi.pdep.")) {
+    Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::pdep);
+  } else if (Name.starts_with("bmi.pext.")) {
+    Rep = upgradeX86BinaryIntrinsics(Builder, *CI, Intrinsic::pext);
   } else
     reportFatalUsageErrorWithCI("Unexpected intrinsic", CI);
 
@@ -4650,6 +4685,19 @@ static Value *upgradeAArch64IntrinsicCall(StringRef Name, CallBase *CI,
     return Builder.CreateIntrinsic(NewID, Args, /*FMFSource=*/nullptr,
                                    CI->getName());
   }
+
+  if (Name == "neon.vcvtfp2hf")
+    return Builder.CreateBitCast(
+        Builder.CreateFPTrunc(
+            CI->getOperand(0),
+            FixedVectorType::get(Type::getHalfTy(F->getContext()), 4)),
+        FixedVectorType::get(Type::getInt16Ty(F->getContext()), 4));
+  if (Name == "neon.vcvthf2fp")
+    return Builder.CreateFPExt(
+        Builder.CreateBitCast(
+            CI->getOperand(0),
+            FixedVectorType::get(Type::getHalfTy(F->getContext()), 4)),
+        FixedVectorType::get(Type::getFloatTy(F->getContext()), 4));
 
   llvm_unreachable("Unhandled Intrinsic!");
 }

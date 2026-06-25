@@ -278,14 +278,21 @@ public:
     bool StrippedAtomics = false;
     bool StrippedTLS = false;
 
+    // In cooperative threading mode, thread locals are meaningful even without
+    // atomics.
+    bool CooperativeThreading =
+        WasmTM->getSubtargetImpl()->hasCooperativeMultithreading();
+
     if (!Features[WebAssembly::FeatureAtomics]) {
       StrippedAtomics = stripAtomics(M);
+      if (!CooperativeThreading)
+        StrippedTLS = stripThreadLocals(M);
+    }
+    if (!Features[WebAssembly::FeatureBulkMemory] && !StrippedTLS) {
       StrippedTLS = stripThreadLocals(M);
-    } else if (!Features[WebAssembly::FeatureBulkMemory]) {
-      StrippedTLS |= stripThreadLocals(M);
     }
 
-    if (StrippedAtomics && !StrippedTLS)
+    if (StrippedAtomics && !StrippedTLS && !CooperativeThreading)
       stripThreadLocals(M);
     else if (StrippedTLS && !StrippedAtomics)
       stripAtomics(M);

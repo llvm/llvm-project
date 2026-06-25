@@ -266,7 +266,7 @@ endif ()
 
 # When a target depends on an object library, CMake seems to try to only build
 # the object files that the target actual needs. If we are only interested
-# in the module files, nothing get is built at all. To ensure that the module
+# in the module files, nothing gets built at all. To ensure that the module
 # files are built, insert a custom target that is opaque to CMake so it cannot
 # apply this optimization. Dependees on module files must depend on this
 # barrier instead. An actual COMMAND (that does nothing) seems to be necessary
@@ -291,18 +291,43 @@ if (FLANG_RT_FORTRAN_MODULES)
   # to disable this behavior, unfortunately it does not work with Ninja
   # (https://gitlab.kitware.com/cmake/cmake/-/issues/26803)
   # As a workaround, we build those intrinsic modules first such that the main
-  # runtime can depend on it.
-  add_flangrt_library(flang_rt.mod.intrinsics OBJECT
-    ${intrinsics_sources}
+  # runtime can depend on it. To ensure that modules files are also transitively
+  # updated if a USE'd .mod file changes (a .mod stores the checksums of all
+  # .mod files it depends on and therefore needs to be updated as well), inject
+  # an file-level dependency via OBJECT_DEPENDS.
+
+  add_flangrt_library(flang_rt.mod.fortran.builtins OBJECT
+    __fortran_builtins.f90
   )
-  flang_module_target(flang_rt.mod.intrinsics PUBLIC)
-  add_module_barrier(flang_rt.mod.intrinsics.barrier flang_rt.mod.intrinsics)
+  set_property(SOURCE __fortran_builtins.f90 PROPERTY OBJECT_OUTPUTS "${CMAKE_BINARY_DIR}/modules/${CMAKE_CFG_INTDIR}/__fortran_builtins${CMAKE_Fortran_OUTPUT_EXTENSION}")
+  flang_module_target(flang_rt.mod.fortran.builtins PUBLIC)
+  add_module_barrier(flang_rt.mod.fortran.builtins.barrier flang_rt.mod.fortran.builtins)
+
+  add_flangrt_library(flang_rt.mod.cuda.builtins OBJECT
+    __cuda_builtins.f90
+  )
+  set_property(SOURCE __cuda_builtins.f90 PROPERTY OBJECT_OUTPUTS "${CMAKE_BINARY_DIR}/modules/${CMAKE_CFG_INTDIR}/__cuda_builtins${CMAKE_Fortran_OUTPUT_EXTENSION}")
+  add_dependencies(flang_rt.mod.cuda.builtins flang_rt.mod.fortran.builtins.barrier)
+  set_property(SOURCE __cuda_builtins.f90
+    APPEND PROPERTY OBJECT_DEPENDS
+      "${CMAKE_BINARY_DIR}/modules/${CMAKE_CFG_INTDIR}/__fortran_builtins${CMAKE_Fortran_OUTPUT_EXTENSION}"
+  )
+  flang_module_target(flang_rt.mod.cuda.builtins PUBLIC)
+  add_module_barrier(flang_rt.mod.cuda.builtins.barrier flang_rt.mod.cuda.builtins)
 
   # The modules themselves
   add_flangrt_library(flang_rt.mod OBJECT
     ${module_sources}
   )
-  add_dependencies(flang_rt.mod flang_rt.mod.intrinsics.barrier)
+  add_dependencies(flang_rt.mod flang_rt.mod.fortran.builtins.barrier flang_rt.mod.cuda.builtins.barrier)
+  foreach(_srcfile IN LISTS module_sources)
+    set_property(SOURCE ${_srcfile}
+      APPEND PROPERTY OBJECT_DEPENDS
+        "${CMAKE_BINARY_DIR}/modules/${CMAKE_CFG_INTDIR}/__fortran_builtins${CMAKE_Fortran_OUTPUT_EXTENSION}"
+        "${CMAKE_BINARY_DIR}/modules/${CMAKE_CFG_INTDIR}/__cuda_builtins${CMAKE_Fortran_OUTPUT_EXTENSION}"
+    )
+  endforeach()
+
   flang_module_target(flang_rt.mod PUBLIC)
   add_module_barrier(flang-rt-mod flang_rt.mod)
 

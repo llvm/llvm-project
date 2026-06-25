@@ -84,8 +84,10 @@
       }
     }
   ],
+  "target_triple": "arm64-apple-macosx",
   "tu_namespace": {
     "kind": "CompilationUnit",
     "name": "Mock.cpp"
-  }
+  },
+  "type": "TUSummary"
 }
