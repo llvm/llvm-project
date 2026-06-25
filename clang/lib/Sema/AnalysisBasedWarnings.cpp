@@ -2931,7 +2931,8 @@ LifetimeSafetyTUAnalysis(Sema &S, TranslationUnitDecl *TU,
     if (AC.getCFG()) {
       lifetimes::LifetimeSafetyOpts LSOpts;
       LSOpts.MaxCFGBlocks = S.getLangOpts().LifetimeSafetyMaxCFGBlocks;
-      LSOpts.SuggestAnnotations = lifetimes::ShouldSuggestLifetimeAnnotations(S, FD);
+      LSOpts.SuggestAnnotations =
+          lifetimes::ShouldSuggestLifetimeAnnotations(S, FD);
       runLifetimeSafetyAnalysis(AC, &SemaHelper, LSOpts, LSStats, S.CollectStats);
     }
   }
@@ -3163,14 +3164,13 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     }
   }
 
-  // TODO: Enable lifetime safety analysis for other languages once it is
-  // stable.
   if (EnableLifetimeSafetyAnalysis) {
     if (AC.getCFG()) {
       lifetimes::LifetimeSafetySemaHelperImpl LifetimeSafetySemaHelper(S);
       lifetimes::LifetimeSafetyOpts LSOpts;
       LSOpts.MaxCFGBlocks = S.getLangOpts().LifetimeSafetyMaxCFGBlocks;
-      LSOpts.SuggestAnnotations = lifetimes::ShouldSuggestLifetimeAnnotations(S, D);
+      LSOpts.SuggestAnnotations =
+          lifetimes::ShouldSuggestLifetimeAnnotations(S, D);
       lifetimes::runLifetimeSafetyAnalysis(AC, &LifetimeSafetySemaHelper,
                                            LSOpts, LSStats, S.CollectStats);
     }
