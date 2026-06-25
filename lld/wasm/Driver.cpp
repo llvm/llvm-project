@@ -1023,8 +1023,10 @@ static void createOptionalSymbols() {
   }
 
   ctx.sym.firstPageEnd = symtab->addOptionalDataSymbol("__wasm_first_page_end");
-  if (ctx.sym.firstPageEnd)
+  if (ctx.sym.firstPageEnd) {
     ctx.sym.firstPageEnd->setVA(ctx.arg.pageSize);
+    ctx.sym.firstPageEnd->noReloc = true;
+  }
 
   // TLS object files may be linked into single-threaded programs, so
   // __tls_base must always be defined. In this case it is immutable and points
