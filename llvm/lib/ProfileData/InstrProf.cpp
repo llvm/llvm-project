@@ -575,15 +575,23 @@ Error readAndDecodeStrings(StringRef NameStrings,
   const uint8_t *P = NameStrings.bytes_begin();
   const uint8_t *EndP = NameStrings.bytes_end();
   while (P < EndP) {
-    uint32_t N;
-    uint64_t UncompressedSize = decodeULEB128(P, &N);
+    unsigned N;
+    const char *ULEBError = nullptr;
+    uint64_t UncompressedSize = decodeULEB128(P, &N, EndP, &ULEBError);
+    if (ULEBError)
+      return make_error<InstrProfError>(instrprof_error::truncated);
     P += N;
-    uint64_t CompressedSize = decodeULEB128(P, &N);
+    uint64_t CompressedSize = decodeULEB128(P, &N, EndP, &ULEBError);
+    if (ULEBError)
+      return make_error<InstrProfError>(instrprof_error::truncated);
     P += N;
     const bool IsCompressed = (CompressedSize != 0);
     SmallVector<uint8_t, 128> UncompressedNameStrings;
     StringRef NameStrings;
     if (IsCompressed) {
+      if (CompressedSize > (uint64_t)(EndP - P))
+        return make_error<InstrProfError>(instrprof_error::truncated);
+
       if (!llvm::compression::zlib::isAvailable())
         return make_error<InstrProfError>(instrprof_error::zlib_unavailable);
 
@@ -596,6 +604,8 @@ Error readAndDecodeStrings(StringRef NameStrings,
       P += CompressedSize;
       NameStrings = toStringRef(UncompressedNameStrings);
     } else {
+      if (UncompressedSize > (uint64_t)(EndP - P))
+        return make_error<InstrProfError>(instrprof_error::truncated);
       NameStrings =
           StringRef(reinterpret_cast<const char *>(P), UncompressedSize);
       P += UncompressedSize;

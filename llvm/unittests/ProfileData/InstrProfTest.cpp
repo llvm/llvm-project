@@ -1660,6 +1660,36 @@ TEST(SymtabTest, instr_prof_bogus_symtab_empty_func_name) {
   EXPECT_TRUE(ErrorEquals(instrprof_error::malformed, Symtab.addFuncName("")));
 }
 
+// A malformed name-strings buffer must produce an error rather than reading
+// past the end of the buffer.
+TEST(SymtabTest, instr_prof_malformed_name_strings) {
+  auto NoopCallback = [](StringRef) { return Error::success(); };
+
+  // Truncated ULEB128 length: a lone continuation byte with nothing after it.
+  {
+    const char Data[] = {'\x80'};
+    EXPECT_TRUE(ErrorEquals(
+        instrprof_error::truncated,
+        readAndDecodeStrings(StringRef(Data, sizeof(Data)), NoopCallback)));
+  }
+
+  // Uncompressed size (100) larger than the remaining buffer.
+  {
+    const char Data[] = {'\x64', '\x00'};
+    EXPECT_TRUE(ErrorEquals(
+        instrprof_error::truncated,
+        readAndDecodeStrings(StringRef(Data, sizeof(Data)), NoopCallback)));
+  }
+
+  // Compressed size (100) larger than the remaining buffer.
+  {
+    const char Data[] = {'\x0a', '\x64'};
+    EXPECT_TRUE(ErrorEquals(
+        instrprof_error::truncated,
+        readAndDecodeStrings(StringRef(Data, sizeof(Data)), NoopCallback)));
+  }
+}
+
 // Testing symtab creator interface used by value profile transformer.
 TEST(SymtabTest, instr_prof_symtab_module_test) {
   LLVMContext Ctx;
