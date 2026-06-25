@@ -812,6 +812,10 @@ Bug Fixes to C++ Support
 - Fixed an issue where Clang incorrectly accepted invalid unqualified uses of local nested class names outside their declaring scope. (#GH184622)
 - Fixed a crash when parsing invalid friend declaration with storage-class specifier. (#GH186569)
 - Fixed a missing vtable for ``dynamic_cast<FinalClass *>(this)`` in a function template. (#GH198511)
+- Fixed a crash when a dependent qualified type whose nested-name-specifier contains an
+  intermediate dependent member (e.g. ``A<T>::B::C``) was written without the ``typename``
+  keyword. The intermediate member was speculatively resolved against the template pattern and
+  the resulting type spuriously stayed dependent after instantiation. (#GH174301)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
