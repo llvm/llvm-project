@@ -2038,6 +2038,61 @@ static void CheckFree(evaluate::ActualArguments &arguments,
   }
 }
 
+static void CheckSystemClockIntArgsSameKind(
+    evaluate::ActualArguments &arguments,
+    evaluate::FoldingContext &foldingContext) {
+  std::optional<int> commonKind;
+  if (arguments.size() < 2) {
+    return;
+  }
+  for (const auto &arg : arguments) {
+    if (arg) {
+      auto dyType{arg->GetType()};
+      if (dyType && dyType->category() == TypeCategory::Integer) {
+        if (!commonKind) {
+          commonKind = dyType->kind();
+        } else if (*commonKind != dyType->kind()) {
+          foldingContext.Warn(common::LanguageFeature::SystemClockStrict,
+              arg->sourceLocation(),
+              "Integer arguments to SYSTEM_CLOCK should have the same kind. Given %d and %d."_warn_en_US,
+              *commonKind, dyType->kind());
+        }
+      }
+    }
+  }
+}
+
+static void CheckSystemClockMinSize(evaluate::ActualArguments &arguments,
+    evaluate::FoldingContext &foldingContext) {
+  int defaultInt{
+      foldingContext.defaults().GetDefaultKind(TypeCategory::Integer)};
+  for (const auto &arg : arguments) {
+    if (arg) {
+      auto dyType{arg->GetType()};
+      if (dyType && dyType->category() == TypeCategory::Integer &&
+          dyType->kind() < defaultInt) {
+        foldingContext.Warn(common::LanguageFeature::SystemClockStrict,
+            arg->sourceLocation(),
+            "Integer argument to SYSTEM_CLOCK should be an integer with kind >= %d. Given %d."_warn_en_US,
+            defaultInt, dyType->kind());
+      }
+    }
+  }
+}
+
+static void CheckSystemClock(
+    evaluate::ActualArguments &arguments, SemanticsContext &context) {
+  if (context.ShouldWarn(common::LanguageFeature::SystemClockStrict)) {
+    // Fortran 2023 limits integer arguments to SYSTEM_CLOCK to all having the
+    // same kind.
+    CheckSystemClockIntArgsSameKind(arguments, context.foldingContext());
+
+    // Fortran 2023 limits integer arguments to SYSTEM_CLOCK to having kind as
+    // least as large as the default integer.
+    CheckSystemClockMinSize(arguments, context.foldingContext());
+  }
+}
+
 // MOVE_ALLOC (F'2023 16.9.147)
 static void CheckMove_Alloc(evaluate::ActualArguments &arguments,
     parser::ContextualMessages &messages) {
@@ -2339,6 +2394,8 @@ static void CheckSpecificIntrinsic(const characteristics::Procedure &proc,
     CheckTransfer(arguments, context, scope);
   } else if (intrinsic.name == "free") {
     CheckFree(arguments, context.foldingContext().messages());
+  } else if (intrinsic.name == "system_clock") {
+    CheckSystemClock(arguments, context);
   }
 }
 

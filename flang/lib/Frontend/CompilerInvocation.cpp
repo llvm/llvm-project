@@ -1217,6 +1217,42 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
       diags.Report(diagID);
     }
   }
+
+  // -f{no-}system-clock-strict
+  {
+    // Fortran 2023 introduced restrictions to the arguements of SYSTEM_CLOCK.
+    // Since violations of these restrictions can cause unexpected or incorrect
+    // runtime results, violations should be reported to users at compile time
+    // by default. However, since these restrictions are not in Fortran 2018,
+    // these reports should be warnings and not errors. There are two ways to
+    // enable/disable these warnings:
+    //  -f{no-}system-clock-strict
+    //  -std=f20{18,23}
+    // Rules for enabling/disabling these warnings:
+    //  - If one or more of `-f{no-}system-clock-strict` appear, then the last
+    //    dictates whether or not the warnings are enabled.
+    //  - If no `-f{no-}system-clock-strict` flags appear and Fortran 2018 has
+    //    been set as the Fortran standard to follow, that is `-std=f2018` is
+    //    the last `std` flag, then the warnings are disabled.
+    //  - Otherwise, the warnings are enabled.
+    auto last = args.getLastArg(clang::options::OPT_fsystem_clock_strict,
+        clang::options::OPT_fno_system_clock_strict);
+    if (last) {
+      if (last->getOption().matches(clang::options::OPT_fno_system_clock_strict)) {
+        // If the last of these args is `-fno-system-clock-strict`, disable the
+        // warnings. Otherwise leave the warnings enabled.
+        res.getFrontendOpts().features.EnableWarning(
+            Fortran::common::LanguageFeature::SystemClockStrict, false);
+      }
+    } else if (res.getLangOpts().getFortranStandard() ==
+               Fortran::common::LangOptions::Fortran2018) {
+      // If the Fortran standard is set to `f2018`, disable the warnings.
+      // Otherwise, leave the warnings enabled.
+      res.getFrontendOpts().features.EnableWarning(
+          Fortran::common::LanguageFeature::SystemClockStrict, false);
+    }
+  }
+
   // -fcoarray
   if (args.hasArg(clang::options::OPT_fcoarray)) {
     res.getFrontendOpts().features.Enable(
