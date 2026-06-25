@@ -135,6 +135,7 @@ add_llvm_target(AMDGPUCodeGen
   GCNNSAReassign.cpp
   GCNPreRAOptimizations.cpp
   GCNMFMAAccumTileReuse.cpp
+  GCNMFMAAccumMacChain.cpp
   GCNPreRALongBranchReg.cpp
   GCNRegPressure.cpp
   GCNRewritePartialRegUses.cpp

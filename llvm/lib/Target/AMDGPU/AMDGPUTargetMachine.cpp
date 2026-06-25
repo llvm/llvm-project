@@ -42,10 +42,11 @@
 #include "AMDGPUWaitSGPRHazards.h"
 #include "GCNDPPCombine.h"
 #include "GCNIterativeScheduler.h"
+#include "GCNMFMAAccumMacChain.h"
+#include "GCNMFMAAccumTileReuse.h"
 #include "GCNNSAReassign.h"
 #include "GCNPreRALongBranchReg.h"
 #include "GCNPreRAOptimizations.h"
-#include "GCNMFMAAccumTileReuse.h"
 #include "GCNRewritePartialRegUses.h"
 #include "GCNSchedStrategy.h"
 #include "GCNVOPDUtils.h"
@@ -740,6 +741,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeGCNNSAReassignLegacyPass(*PR);
   initializeGCNPreRAOptimizationsLegacyPass(*PR);
   initializeGCNMFMAAccumTileReuseLegacyPass(*PR);
+  initializeGCNMFMAAccumMacChainLegacyPass(*PR);
   initializeGCNPreRALongBranchRegLegacyPass(*PR);
   initializeGCNRewritePartialRegUsesLegacyPass(*PR);
   initializeGCNRegPressurePrinterPass(*PR);
@@ -1828,7 +1830,10 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   if (EnableRewritePartialRegUses)
     insertPass(&RenameIndependentSubregsID, &GCNRewritePartialRegUsesID);
 
-  insertPass(&RegisterCoalescerID, &GCNMFMAAccumTileReuseID);
+  insertPass(EnableRewritePartialRegUses ? &GCNRewritePartialRegUsesID
+                                         : &RenameIndependentSubregsID,
+             &GCNMFMAAccumTileReuseID);
+  insertPass(&GCNMFMAAccumTileReuseID, &GCNMFMAAccumMacChainID);
 
   // Insertion point for passes depends on whether MachineScheduler is enabled.
   AnalysisID EndOfPreRA = UseSSAMachineScheduler ? &RenameIndependentSubregsID
@@ -2608,7 +2613,12 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(
   if (EnableRewritePartialRegUses)
     insertPass<RenameIndependentSubregsPass>(GCNRewritePartialRegUsesPass());
 
-  insertPass<RegisterCoalescerPass>(GCNMFMAAccumTileReusePass());
+  if (EnableRewritePartialRegUses)
+    insertPass<GCNRewritePartialRegUsesPass>(GCNMFMAAccumTileReusePass());
+  else
+    insertPass<RenameIndependentSubregsPass>(GCNMFMAAccumTileReusePass());
+
+  insertPass<GCNMFMAAccumTileReusePass>(GCNMFMAAccumMacChainPass());
 
   if (isPassEnabled(EnablePreRAOptimizations))
     insertPass<MachineSchedulerPass>(GCNPreRAOptimizationsPass());

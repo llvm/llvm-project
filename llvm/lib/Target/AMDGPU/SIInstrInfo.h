@@ -981,6 +981,11 @@ public:
            Opcode != AMDGPU::V_ACCVGPR_READ_B32_e64;
   }
 
+  /// True if mac MFMA \p OldDest can fold into accumulator \p Acc on \p MI.
+  /// Allows later MFMA src2 chain uses and read-only tile extracts (C-shuffle).
+  bool canFoldMFMAMacDestIntoAcc(MachineRegisterInfo &MRI, Register OldDest,
+                                 Register Acc, const MachineInstr &MI) const;
+
   static bool isDOT(const MachineInstr &MI) { return SIInstrFlags::isDOT(MI); }
 
   static bool isWMMA(const MachineInstr &MI) {
@@ -1889,6 +1894,10 @@ namespace AMDGPU {
   /// \returns earlyclobber version of a MAC MFMA is exists.
   LLVM_READONLY
   int32_t getMFMAEarlyClobberOp(uint32_t Opcode);
+
+  /// \returns mac tied-def version of a non-mac MFMA if it exists.
+  LLVM_READONLY
+  int32_t getMFMAMacOp(uint32_t Opcode);
 
   /// \returns Version of an MFMA instruction which uses AGPRs for srcC and
   /// vdst, given an \p Opcode of an MFMA which uses VGPRs for srcC/vdst.

@@ -584,6 +584,10 @@ FunctionPass *createGCNMFMAAccumTileReuseLegacyPass();
 void initializeGCNMFMAAccumTileReuseLegacyPass(PassRegistry &);
 extern char &GCNMFMAAccumTileReuseID;
 
+FunctionPass *createGCNMFMAAccumMacChainLegacyPass();
+void initializeGCNMFMAAccumMacChainLegacyPass(PassRegistry &);
+extern char &GCNMFMAAccumMacChainID;
+
 FunctionPass *createAMDGPUSetWavePriorityPass();
 void initializeAMDGPUSetWavePriorityLegacyPass(PassRegistry &);
 

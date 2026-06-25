@@ -4160,7 +4160,102 @@ struct SIInstrInfo::ThreeAddressUpdates {
   /// Other instruction whose def is no longer used by the converted
   /// instruction.
   MachineInstr *RemoveMIUse = nullptr;
+  /// When folding a ping-pong MFMA dest into its accumulator, the vreg that
+  /// was replaced and the surviving vreg (for LiveIntervals maintenance).
+  Register FoldFromReg;
+  Register FoldToReg;
 };
+
+static bool isMFMAAccumDestChainUse(const SIInstrInfo &TII,
+                                    const MachineOperand &MO,
+                                    Register OldDest) {
+  const MachineInstr *User = MO.getParent();
+  if (!TII.isMFMA(*User))
+    return false;
+
+  const MachineOperand *UserSrc2 =
+      TII.getNamedOperand(*User, AMDGPU::OpName::src2);
+  return UserSrc2 && UserSrc2->isReg() && UserSrc2->getReg() == OldDest;
+}
+
+bool SIInstrInfo::canFoldMFMAMacDestIntoAcc(MachineRegisterInfo &MRI,
+                                            Register OldDest, Register Acc,
+                                            const MachineInstr &MI) const {
+  if (!OldDest.isVirtual() || !Acc.isVirtual())
+    return false;
+
+  if (OldDest == Acc)
+    return true;
+
+  for (MachineOperand &MO : MRI.use_nodbg_operands(OldDest)) {
+    if (MO.getParent() == &MI)
+      continue;
+
+    const MachineInstr *User = MO.getParent();
+    if (isMFMA(*User)) {
+      if (isMFMAAccumDestChainUse(*this, MO, OldDest))
+        continue;
+      return false;
+    }
+
+    // C-shuffle / epilogue tile extracts (COPY, V_CVT on subregs, etc.).
+    if (MO.isUse() && MO.getReg() == OldDest)
+      continue;
+
+    return false;
+  }
+
+  return true;
+}
+
+static void foldMFMAMacDestIntoAcc(MachineInstr &MI, unsigned Opc, Register Acc,
+                                   Register OldDest, Register &FoldFromReg,
+                                   Register &FoldToReg) {
+  int Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
+  assert(Src2Idx != -1 && "mac MFMA must have src2 operand");
+  MI.getOperand(0).setReg(Acc);
+  MI.getOperand(0).setIsEarlyClobber(false);
+  MI.getOperand(Src2Idx).setReg(Acc);
+  if (!MI.getOperand(0).isTied())
+    MI.tieOperands(0, Src2Idx);
+
+  MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  for (MachineOperand &MO : MRI.use_nodbg_operands(OldDest)) {
+    if (MO.getParent() != &MI) {
+      FoldFromReg = OldDest;
+      FoldToReg = Acc;
+      break;
+    }
+  }
+}
+
+static void mergeLiveIntervalsForReplaceReg(LiveIntervals *LIS, Register RegA,
+                                            Register RegB) {
+  VNInfo::Allocator &A = LIS->getVNInfoAllocator();
+  LiveInterval &LI = LIS->getInterval(RegB);
+  LiveInterval &Other = LIS->getInterval(RegA);
+  SmallVector<VNInfo *> NewVNIs;
+  for (const VNInfo *VNI : Other.valnos) {
+    assert(VNI->id == NewVNIs.size() && "assumed");
+    NewVNIs.push_back(LI.createValueCopy(VNI, A));
+  }
+  for (auto &S : Other) {
+    VNInfo *VNI = NewVNIs[S.valno->id];
+    LiveRange::Segment NewSeg(S.start, S.end, VNI);
+    LI.addSegment(NewSeg);
+  }
+  LIS->removeInterval(RegA);
+}
+
+static void mergeLiveVariablesForReplaceReg(LiveVariables *LV, Register RegA,
+                                            Register RegB) {
+  LiveVariables::VarInfo &SrcInfo = LV->getVarInfo(RegB);
+  LiveVariables::VarInfo &DstInfo = LV->getVarInfo(RegA);
+  SrcInfo.AliveBlocks |= DstInfo.AliveBlocks;
+  DstInfo.AliveBlocks.clear();
+  for (auto *KillMI : DstInfo.Kills)
+    LV->addVirtualRegisterKilled(RegB, *KillMI, false);
+}
 
 MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
                                                  LiveVariables *LV,
@@ -4180,6 +4275,15 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineInstr &MI,
   MachineInstr *NewMI = convertToThreeAddressImpl(*CandidateMI, U);
   if (!NewMI)
     return nullptr;
+
+  if (U.FoldFromReg.isValid()) {
+    MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+    MRI.replaceRegWith(U.FoldFromReg, U.FoldToReg);
+    if (LIS)
+      mergeLiveIntervalsForReplaceReg(LIS, U.FoldFromReg, U.FoldToReg);
+    if (LV)
+      mergeLiveVariablesForReplaceReg(LV, U.FoldFromReg, U.FoldToReg);
+  }
 
   if (MI.isBundle()) {
     CandidateMI->eraseFromBundle();
@@ -4287,9 +4391,25 @@ SIInstrInfo::convertToThreeAddressImpl(MachineInstr &MI,
   MachineBasicBlock &MBB = *MI.getParent();
   unsigned Opc = MI.getOpcode();
 
-  // Handle MFMA.
+  // Handle MFMA mac form. The SSA machine scheduler can leave ping-pong mac
+  // MFMAs (dest != acc). Fold those in place instead of converting to non-mac
+  // early-clobber, which breaks accumulate chains and increases tile pressure.
+  // Chain tails (dead dest) fold the same way; replaceRegWith runs only when
+  // the discarded dest vreg is still referenced.
   int NewMFMAOpc = AMDGPU::getMFMAEarlyClobberOp(Opc);
   if (NewMFMAOpc != -1) {
+    const MachineOperand *Src2 = getNamedOperand(MI, AMDGPU::OpName::src2);
+    Register Dest = MI.getOperand(0).getReg();
+    if (Src2 && Src2->isReg() && Dest.isVirtual() &&
+        Src2->getReg().isVirtual() && Dest != Src2->getReg()) {
+      MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+      if (canFoldMFMAMacDestIntoAcc(MRI, Dest, Src2->getReg(), MI)) {
+        Register Acc = Src2->getReg();
+        foldMFMAMacDestIntoAcc(MI, Opc, Acc, Dest, U.FoldFromReg, U.FoldToReg);
+        return &MI;
+      }
+    }
+
     MachineInstrBuilder MIB =
         BuildMI(MBB, MI, MI.getDebugLoc(), get(NewMFMAOpc));
     for (unsigned I = 0, E = MI.getNumExplicitOperands(); I != E; ++I)
