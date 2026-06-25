@@ -4912,7 +4912,7 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
 
       // Calculate mask required for this shuffle
       SmallVector<int> Mask;
-      for (int i; i < VectorTy.getNumElements(); i++) {
+      for (int i = 0; i < VectorTy.getNumElements(); i++) {
         // If this index is within bounds, put subvector's index into mask
         if (i > InsertionPointImm &&
             i < InsertionPointImm + SubvectorTy.getNumElements())
