@@ -161,8 +161,8 @@ false:
 define i1 @ult_imm(i128 %x) {
 ; CHECK-LABEL: ult_imm:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x0, #5
-; CHECK-NEXT:    sbcs xzr, x1, xzr
+; CHECK-NEXT:    cmp x1, #0
+; CHECK-NEXT:    ccmp x0, #5, #2, eq
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %cmp = icmp ult i128 %x, 5
@@ -172,8 +172,8 @@ define i1 @ult_imm(i128 %x) {
 define i1 @ule_imm(i128 %x) {
 ; CHECK-LABEL: ule_imm:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x0, #6
-; CHECK-NEXT:    sbcs xzr, x1, xzr
+; CHECK-NEXT:    cmp x1, #0
+; CHECK-NEXT:    ccmp x0, #6, #2, eq
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %cmp = icmp ule i128 %x, 5
@@ -183,10 +183,9 @@ define i1 @ule_imm(i128 %x) {
 define i1 @ugt_imm(i128 %x) {
 ; CHECK-LABEL: ugt_imm:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #5 // =0x5
-; CHECK-NEXT:    cmp x8, x0
-; CHECK-NEXT:    ngcs xzr, x1
-; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    cmp x1, #0
+; CHECK-NEXT:    ccmp x0, #5, #2, eq
+; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
   %cmp = icmp ugt i128 %x, 5
   ret i1 %cmp
@@ -195,10 +194,9 @@ define i1 @ugt_imm(i128 %x) {
 define i1 @uge_imm(i128 %x) {
 ; CHECK-LABEL: uge_imm:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #4 // =0x4
-; CHECK-NEXT:    cmp x8, x0
-; CHECK-NEXT:    ngcs xzr, x1
-; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    cmp x1, #0
+; CHECK-NEXT:    ccmp x0, #4, #2, eq
+; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
   %cmp = icmp uge i128 %x, 5
   ret i1 %cmp
