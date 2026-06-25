@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 //
 // Global constant array entry type for bare-metal auto-registration.
-// PASS1/PASS2 generate an array of these entries (__ejit_registry[]) that
+// PASS1/PASS2 emit per-translation-unit arrays of these entries into the
+// ".ejit_bitcode" / ".ejit_period" sections; the linker concatenates them and
+// a linker script brackets the sections with __start_/__stop_ symbols that
 // ejit_init() walks when constructor-based registration is unavailable.
 //
 //===----------------------------------------------------------------------===//

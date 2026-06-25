@@ -164,6 +164,8 @@ ALL_TESTS=(
   ejit_nested_struct_test
   ejit_opt_level_test
   ejit_manual_register_test
+  ejit_multi_tu_test
+  ejit_baremetal_link_test
   ejit_perf_bench
   ejit_ptr_period_test
   ejit_trace_test
@@ -172,6 +174,24 @@ ALL_TESTS=(
 # Per-test compile flags (e.g. for disabling global constructors)
 declare -A COMPILE_FLAGS
 COMPILE_FLAGS[ejit_manual_register_test]="-mllvm -enable-ejit-global-ctors=false"
+# Bare-metal link test: no global ctors -> registration must use the static
+# registry tables walked via linker-script-provided __start_/__stop_ symbols.
+COMPILE_FLAGS[ejit_baremetal_link_test]="-mllvm -enable-ejit-global-ctors=false"
+
+# Override the primary source file for a test (default: <name>.c). Lets a test
+# reuse existing sources under a different build/link recipe without copying.
+declare -A PRIMARY_SRC
+PRIMARY_SRC[ejit_baremetal_link_test]="ejit_multi_tu_test.c"
+
+# Custom linker script (-Wl,-T) for a test, relative to this dir.
+declare -A LINKER_SCRIPT
+LINKER_SCRIPT[ejit_baremetal_link_test]="ejit_baremetal.ld"
+
+# Extra translation units linked alongside <test>.c (space-separated, with .c).
+# Used by multi-TU tests that exercise cross-TU linking.
+declare -A EXTRA_SRCS
+EXTRA_SRCS[ejit_multi_tu_test]="ejit_multi_tu_test_b.c"
+EXTRA_SRCS[ejit_baremetal_link_test]="ejit_multi_tu_test_b.c"
 
 declare -A TEST_ARGS
 TEST_ARGS[ejit_complex_test]="0 1 2 3"
@@ -190,6 +210,8 @@ TEST_ARGS[ejit_config_api_test]="0"
 TEST_ARGS[ejit_perf_bench]="0 1"
 TEST_ARGS[ejit_dump_test]="0 3"
 TEST_ARGS[ejit_ptr_period_test]="0 1 3"
+TEST_ARGS[ejit_multi_tu_test]="0 3"
+TEST_ARGS[ejit_baremetal_link_test]="0 3"
 
 if [[ ${#SELECTED[@]} -eq 0 ]]; then
   SELECTED=("${ALL_TESTS[@]}")
@@ -198,7 +220,7 @@ fi
 # --- Build ---
 build_one() {
   local name="$1"
-  local src="${SCRIPT_DIR}/${name}.c"
+  local src="${SCRIPT_DIR}/${PRIMARY_SRC[${name}]:-${name}.c}"
   local obj; obj=$(mktemp "${TMPDIR:-/tmp}/ejit_${name}_XXXXXX.o")
   local bin="${OUTDIR}/${name}"
   local map_file; map_file=$(mktemp "${TMPDIR:-/tmp}/ejit_${name}_XXXXXX.map")
@@ -208,25 +230,50 @@ build_one() {
     return 1
   fi
 
-  echo "  Compiling ${name}.c ..."
+  echo "  Compiling $(basename "${src}") ..."
   local extra_flags="${COMPILE_FLAGS[${name}]:-}"
   "${CLANG}" -O2 ${INCLUDES} ${extra_flags} -c "${src}" -o "${obj}"
+
+  # Compile any extra translation units (multi-TU tests) and link them all.
+  local objs=("${obj}")
+  for extra in ${EXTRA_SRCS[${name}]:-}; do
+    local esrc="${SCRIPT_DIR}/${extra}"
+    if [[ ! -f "${esrc}" ]]; then
+      echo -e "${RED}  SKIP: extra TU ${esrc} not found${NC}"
+      return 1
+    fi
+    echo "  Compiling ${extra} ..."
+    local eobj; eobj=$(mktemp "${TMPDIR:-/tmp}/ejit_${name}_tu_XXXXXX.o")
+    "${CLANG}" -O2 ${INCLUDES} ${extra_flags} -c "${esrc}" -o "${eobj}"
+    objs+=("${eobj}")
+  done
+
+  # Optional custom linker script (e.g. bare-metal __start_/__stop_ symbols).
+  local lds_flag=""
+  local lds="${LINKER_SCRIPT[${name}]:-}"
+  if [[ -n "${lds}" ]]; then
+    if [[ ! -f "${SCRIPT_DIR}/${lds}" ]]; then
+      echo -e "${RED}  SKIP: linker script ${SCRIPT_DIR}/${lds} not found${NC}"
+      return 1
+    fi
+    lds_flag="-Wl,-T,${SCRIPT_DIR}/${lds}"
+  fi
 
   echo "  Linking ${name} (${ARCH}) ..."
   if ${USE_LIPO}; then
     "${CXX}" -fuse-ld="${LD_LLD}" \
-      -Os -Wl,--gc-sections ${STRIP_FLAG} \
+      -Os -Wl,--gc-sections ${STRIP_FLAG} ${lds_flag} \
       "${LIPO_ABS}" \
       ${LINK_LIBS} \
-      "${obj}" -o "${bin}"
+      "${objs[@]}" -o "${bin}"
   else
     "${CXX}" -fuse-ld="${LD_LLD}" \
-      -Os -Wl,--gc-sections ${STRIP_FLAG} \
+      -Os -Wl,--gc-sections ${STRIP_FLAG} ${lds_flag} \
       -Wl,--whole-archive "${EJIT_RUNTIME}" -Wl,--no-whole-archive \
       ${OTHER_LIBS} \
       ${LINK_LIBS} \
       -Wl,-M \
-      "${obj}" -o "${bin}" > "${map_file}" 2>&1
+      "${objs[@]}" -o "${bin}" > "${map_file}" 2>&1
   fi
 
   echo -e "  ${GREEN}OK${NC}: ${bin}"

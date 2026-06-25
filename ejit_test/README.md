@@ -36,6 +36,8 @@ Integration tests for the EmbeddedJIT JIT compilation system.
 | `ejit_jit_verify_test` | JIT correctness: constant folding, dead branch elimination |
 | `ejit_lifecycle_test` | ejit_period_lc: deactivate/activate pairing |
 | `ejit_multidim_test` | 2D multi-dim array with external cellIdx |
+| `ejit_multi_tu_test` | Two TUs each with ejit_entry + period globals, linked together (registry no-duplicate-symbol regression) |
+| `ejit_baremetal_link_test` | Bare-metal path: global ctors disabled + custom linker script (`ejit_baremetal.ld`) defining `__start_/__stop_` so the static registry tables drive registration |
 | `ejit_multiversion_test` | Multi-version JIT specialization per cellIdx |
 | `ejit_nested_struct_test` | 2-level and 3-level nested struct may_const |
 | `ejit_opt_level_test` | L1/L2/L3 optimization level validation |

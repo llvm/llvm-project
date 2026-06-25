@@ -124,8 +124,11 @@ EJitRegisterPeriodPass::run(Module &M, ModuleAnalysisManager &AM) {
   return PreservedAnalyses::none();
 }
 
-/// Build a global constant array __ejit_registry_period[] that ejit_init()
-/// walks on bare-metal where global constructors are unavailable.
+/// Emit this translation unit's period/static registry entries as a private
+/// array in the ".ejit_period" section. The linker concatenates these across
+/// all TUs; a linker script brackets the section so ejit_init() can walk the
+/// [__start_ejit_period, __stop_ejit_period) range on bare-metal where global
+/// constructors are unavailable.
 static void
 generateRegistryTablePeriod(
     Module &M,
@@ -172,19 +175,27 @@ generateRegistryTablePeriod(
     }));
   }
 
-  // Sentinel
-  Entries.push_back(ConstantStruct::get(EntryTy, {
-      ConstantInt::get(I32Ty, 4),                    // EJIT_REG_NONE
-      ConstantPointerNull::get(PtrTy),
-      ConstantPointerNull::get(PtrTy),
-      ConstantPointerNull::get(PtrTy),
-      ConstantInt::get(I64Ty, 0),
-  }));
+  // No sentinel entry: the runtime iterates the linker-provided
+  // [__start_ejit_period, __stop_ejit_period) range over the dedicated
+  // section, so each translation unit contributes only its own entries.
+  if (Entries.empty())
+    return;
 
   ArrayType *ArrayTy = ArrayType::get(EntryTy, Entries.size());
   Constant *ArrayInit = ConstantArray::get(ArrayTy, Entries);
 
-  (void)new GlobalVariable(M, ArrayTy, /*isConstant=*/true,
-                           GlobalValue::ExternalLinkage, ArrayInit,
-                           "__ejit_registry_period");
+  // Private linkage + a dedicated section. Every TU emits its own *local*
+  // array into ".ejit_period"; the linker concatenates them across TUs. The
+  // leading-dot name is the conventional ELF spelling but is NOT a valid C
+  // identifier, so the linker does NOT auto-synthesize __start_/__stop_ — a
+  // linker script must bracket the section (see ejit_registry.ld). A fixed
+  // *external* symbol here would instead produce "duplicate symbol" link
+  // errors as soon as more than one TU declares period globals.
+  // llvm.used keeps the array alive under --gc-sections.
+  auto *GV = new GlobalVariable(M, ArrayTy, /*isConstant=*/true,
+                                GlobalValue::PrivateLinkage, ArrayInit,
+                                ".ejit.registry.period");
+  GV->setSection(".ejit_period");
+  GV->setAlignment(M.getDataLayout().getABITypeAlign(EntryTy));
+  appendToUsed(M, {GV});
 }

@@ -15,11 +15,22 @@
 using namespace llvm;
 using namespace llvm::ejit;
 
-// Registry tables: defined as weak in EJitRegistryTable.c (C file),
-// overridden by strong definitions from AOT pass output.
+// Registry entries: each translation unit's PASS1/PASS2 output places its
+// entries into the ".ejit_bitcode" / ".ejit_period" sections as private
+// symbols. The linker concatenates all such input sections across every TU.
+// The leading-dot section names are not valid C identifiers, so the linker
+// does NOT auto-synthesize the __start_/__stop_ bounds — a linker script must
+// define these four symbols and bracket the sections (see the example
+// llvm/lib/ExecutionEngine/EJIT/ejit_registry.ld). They are declared weak so a
+// program with no ejit_entry functions (or no script) resolves them to null
+// and walks an empty range. This replaces the old single external
+// __ejit_registry_*[] arrays, which produced duplicate-symbol link errors
+// across multiple TUs.
 extern "C" {
-extern const ejit_reg_entry_t __ejit_registry_bitcode[];
-extern const ejit_reg_entry_t __ejit_registry_period[];
+extern const ejit_reg_entry_t __start_ejit_bitcode[] __attribute__((weak));
+extern const ejit_reg_entry_t __stop_ejit_bitcode[] __attribute__((weak));
+extern const ejit_reg_entry_t __start_ejit_period[] __attribute__((weak));
+extern const ejit_reg_entry_t __stop_ejit_period[] __attribute__((weak));
 }
 
 namespace {
@@ -98,9 +109,11 @@ EJit::EJit(const Config &config) : config_(config) {
       data = StoredData(); // discard any constructor data
     SmallVector<SymbolEntry, 8> tableSymbols;
     PeriodArrayRegistry &reg = runtimeState_->getRegistry();
-    auto walkTable = [&](const ejit_reg_entry_t *table) {
-      for (const ejit_reg_entry_t *e = table;
-           e->type != EJIT_REG_NONE; ++e) {
+    // Walk the linker-provided [start, stop) ranges. Each section holds a
+    // concatenation of per-TU entry arrays; there is no sentinel.
+    auto walkRange = [&](const ejit_reg_entry_t *Begin,
+                         const ejit_reg_entry_t *End) {
+      for (const ejit_reg_entry_t *e = Begin; e < End; ++e) {
         switch (e->type) {
         case EJIT_REG_BITCODE:
           moduleLoader_->registerBitcode(e->name1,
@@ -122,8 +135,8 @@ EJit::EJit(const Config &config) : config_(config) {
         }
       }
     };
-    walkTable(__ejit_registry_bitcode);
-    walkTable(__ejit_registry_period);
+    walkRange(__start_ejit_bitcode, __stop_ejit_bitcode);
+    walkRange(__start_ejit_period, __stop_ejit_period);
     for (auto &sym : tableSymbols)
       data.userSymbols.push_back(sym);
   } else {
