@@ -4152,9 +4152,43 @@ bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
 
   // Append v_wmma_* bank-conflict avoidance candidates (gfx11/gfx12). This only
   // augments the candidate order for VirtReg and never changes BaseImplRetVal.
-  addWMMABankConflictHints(VirtReg, Order, Hints, MF, VRM);
+  if (ST.hasVGPRBankConflict())
+    addWMMABankConflictHints(VirtReg, Order, Hints, MF, VRM);
 
   return BaseImplRetVal;
+}
+
+static void recordWMMABankSiblings(Register VirtReg, const MachineInstr &MI,
+                                   SmallVector<Register, 3> &Siblings,
+                                   const SIInstrInfo *TII,
+                                   const SIRegisterInfo *TRI,
+                                   const MachineRegisterInfo &MRI) {
+  // The consecutive-allocation VGPR bank collision only happens when each
+  // matrix operand is a multiple of 4 VGPRs (128 bits) wide; with narrower
+  // operands the start registers already fall on different banks. Restrict the
+  // hint to WMMAs whose matrix source operands are a multiple of 128 bits.
+  Register Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0)->getReg();
+  Register Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1)->getReg();
+  if (TRI->getRegSizeInBits(Src0, MRI) % 128 != 0 ||
+      TRI->getRegSizeInBits(Src1, MRI) % 128 != 0)
+    return;
+
+  Register Src2, Vdst;
+  const MachineOperand *MOSrc2 = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
+  if (MOSrc2 && MOSrc2->isReg() && MOSrc2->getReg().isVirtual())
+    Src2 = MOSrc2->getReg();
+  const MachineOperand *MODst = TII->getNamedOperand(MI, AMDGPU::OpName::vdst);
+  if (MODst && MODst->isReg() && MODst->getReg().isVirtual())
+    Vdst = MODst->getReg();
+
+  // Record, for each matrix operand, the other matrix operands of this WMMA so
+  // SIRegisterInfo::getRegAllocationHints can steer them onto distinct VGPR
+  // banks. A register used by several WMMAs accumulates the union of its
+  // siblings. Src2 may be invalid (absent or non-virtual) and is skipped.
+  for (Register Reg : {Src0, Src1, Src2, Vdst}) {
+    if (Reg.isValid() && Reg != VirtReg && !is_contained(Siblings, Reg))
+      Siblings.push_back(Reg);
+  }
 }
 
 // VGPR bank-conflict avoidance for v_wmma_* operands on gfx11/gfx12.
@@ -4179,20 +4213,24 @@ void SIRegisterInfo::addWMMABankConflictHints(Register VirtReg,
                                               const MachineFunction &MF,
                                               const VirtRegMap *VRM) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const SIInstrInfo *TII = ST.getInstrInfo();
   if (!VRM || !isVGPR(MRI, VirtReg))
     return;
 
   const SIMachineFunctionInfo &FuncInfo = *MF.getInfo<SIMachineFunctionInfo>();
-  const DenseMap<Register, SmallVector<Register, 3>> &Siblings =
-      FuncInfo.getWMMABankSiblings();
+  SmallVector<Register, 3> Siblings;
+  for (MachineInstr &MI : MRI.reg_nodbg_instructions(VirtReg)) {
+    if (!SIInstrInfo::isWMMA(MI))
+      continue;
+    recordWMMABankSiblings(VirtReg, MI, Siblings, TII, this, MRI);
+  }
 
-  auto It = Siblings.find(VirtReg);
-  if (It == Siblings.end())
+  if (Siblings.empty())
     return;
 
   // Banks already taken by allocated siblings.
   unsigned UsedBankMask = 0;
-  for (Register Sibling : It->second) {
+  for (Register Sibling : Siblings) {
     Register Phys = Sibling;
     if (Phys.isVirtual()) {
       if (!VRM->hasPhys(Phys))
@@ -4226,7 +4264,7 @@ void SIRegisterInfo::addWMMABankConflictHints(Register VirtReg,
   // to very high registers, inflating the footprint and dropping occupancy on
   // low-pressure functions (and triggering MSG_DEALLOC_VGPRS).
   unsigned MaxVGPR = MaxIdx + W;
-  if (unsigned Peak = FuncInfo.getWMMAPeakVGPRPressure()) {
+  if (unsigned Peak = FuncInfo.getPeakVGPRPressure()) {
     unsigned Gran = AMDGPU::IsaInfo::getVGPRAllocGranule(
         ST, FuncInfo.getDynamicVGPRBlockSize());
     unsigned Want = alignTo(Peak, std::max(Gran, 1u));

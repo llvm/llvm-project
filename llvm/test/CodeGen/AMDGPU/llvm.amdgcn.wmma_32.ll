@@ -75,11 +75,11 @@ bb:
 define amdgpu_ps void @test_wmma_f16_16x16x16_f16_untied(<16 x half> %A.0, <16 x half> %B.0, <16 x half> %A.1, <16 x half> %B.1, <16 x half> %C, ptr addrspace(1) %out.0, ptr addrspace(1) %out.1) {
 ; W32-LABEL: test_wmma_f16_16x16x16_f16_untied:
 ; W32:       ; %bb.0: ; %bb
-; W32-NEXT:    v_wmma_f16_16x16x16_f16 v[44:51], v[0:7], v[8:15], v[32:39]
+; W32-NEXT:    v_wmma_f16_16x16x16_f16 v[51:58], v[0:7], v[8:15], v[32:39]
 ; W32-NEXT:    v_wmma_f16_16x16x16_f16 v[32:39], v[16:23], v[24:31], v[32:39]
 ; W32-NEXT:    s_clause 0x1
-; W32-NEXT:    global_store_b128 v[40:41], v[48:51], off offset:16
-; W32-NEXT:    global_store_b128 v[40:41], v[44:47], off
+; W32-NEXT:    global_store_b128 v[40:41], v[55:58], off offset:16
+; W32-NEXT:    global_store_b128 v[40:41], v[51:54], off
 ; W32-NEXT:    s_clause 0x1
 ; W32-NEXT:    global_store_b128 v[42:43], v[36:39], off offset:16
 ; W32-NEXT:    global_store_b128 v[42:43], v[32:35], off
@@ -150,11 +150,11 @@ bb:
 define amdgpu_ps void @test_wmma_bf16_16x16x16_bf16_untied(<16 x i16> %A.0, <16 x i16> %B.0, <16 x i16> %A.1, <16 x i16> %B.1, <16 x i16> %C, ptr addrspace(1) %out.0, ptr addrspace(1) %out.1) {
 ; W32-LABEL: test_wmma_bf16_16x16x16_bf16_untied:
 ; W32:       ; %bb.0: ; %bb
-; W32-NEXT:    v_wmma_bf16_16x16x16_bf16 v[44:51], v[0:7], v[8:15], v[32:39]
+; W32-NEXT:    v_wmma_bf16_16x16x16_bf16 v[51:58], v[0:7], v[8:15], v[32:39]
 ; W32-NEXT:    v_wmma_bf16_16x16x16_bf16 v[32:39], v[16:23], v[24:31], v[32:39]
 ; W32-NEXT:    s_clause 0x1
-; W32-NEXT:    global_store_b128 v[40:41], v[48:51], off offset:16
-; W32-NEXT:    global_store_b128 v[40:41], v[44:47], off
+; W32-NEXT:    global_store_b128 v[40:41], v[55:58], off offset:16
+; W32-NEXT:    global_store_b128 v[40:41], v[51:54], off
 ; W32-NEXT:    s_clause 0x1
 ; W32-NEXT:    global_store_b128 v[42:43], v[36:39], off offset:16
 ; W32-NEXT:    global_store_b128 v[42:43], v[32:35], off

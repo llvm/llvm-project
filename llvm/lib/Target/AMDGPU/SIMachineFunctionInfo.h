@@ -624,11 +624,12 @@ private:
   // the hint hook does not rescan the function for every virtual register.
   DenseMap<Register, SmallVector<Register, 3>> WMMABankSiblings;
 
-  // Peak ArchVGPR pressure of the function (the "actual demand"), computed once
-  // by GCNPreRAOptimizations. Used by the WMMA bank hint to anchor its reserved
-  // bank regions to the top of the real footprint instead of the top of the
-  // whole VGPR file, so it does not inflate the VGPR count of small kernels.
-  unsigned WMMAPeakVGPRPressure = 0;
+  // Peak ArchVGPR pressure of the function (the "actual demand"), recorded by
+  // the machine scheduler (GCNScheduleDAGMILive) from the per-region pressure
+  // it already computes. Used by the WMMA bank hint to anchor its reserved bank
+  // regions to the top of the real footprint instead of the top of the whole
+  // VGPR file, so it does not inflate the VGPR count of small kernels.
+  unsigned PeakVGPRPressure = 0;
 
 private:
   Register VGPRForAGPRCopy;
@@ -672,8 +673,8 @@ public:
     return WMMABankSiblings;
   }
 
-  unsigned getWMMAPeakVGPRPressure() const { return WMMAPeakVGPRPressure; }
-  void setWMMAPeakVGPRPressure(unsigned P) { WMMAPeakVGPRPressure = P; }
+  unsigned getPeakVGPRPressure() const { return PeakVGPRPressure; }
+  void setPeakVGPRPressure(unsigned P) { PeakVGPRPressure = P; }
 
 public:
   SIMachineFunctionInfo(const SIMachineFunctionInfo &MFI) = default;

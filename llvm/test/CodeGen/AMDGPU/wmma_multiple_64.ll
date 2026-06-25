@@ -23,9 +23,9 @@ declare <4 x i32> @llvm.amdgcn.wmma.i32.16x16x16.iu4.v4i32.v2i32(i1 immarg, <2 x
 define amdgpu_ps void @test_wmma_f32_16x16x16_f16(<16 x half> %A, <16 x half> %B, <4 x float> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W64-LABEL: test_wmma_f32_16x16x16_f16:
 ; W64:       ; %bb.0: ; %bb
-; W64-NEXT:    v_wmma_f32_16x16x16_f16 v[24:27], v[0:7], v[8:15], v[16:19]
+; W64-NEXT:    v_wmma_f32_16x16x16_f16 v[27:30], v[0:7], v[8:15], v[16:19]
 ; W64-NEXT:    v_wmma_f32_16x16x16_f16 v[16:19], v[8:15], v[8:15], v[16:19]
-; W64-NEXT:    global_store_b128 v[20:21], v[24:27], off
+; W64-NEXT:    global_store_b128 v[20:21], v[27:30], off
 ; W64-NEXT:    global_store_b128 v[22:23], v[16:19], off
 ; W64-NEXT:    s_endpgm
 bb:
@@ -41,9 +41,9 @@ bb:
 define amdgpu_ps void @test_wmma_f32_16x16x16_bf16(<16 x i16> %A, <16 x i16> %B, <4 x float> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W64-LABEL: test_wmma_f32_16x16x16_bf16:
 ; W64:       ; %bb.0: ; %bb
-; W64-NEXT:    v_wmma_f32_16x16x16_bf16 v[24:27], v[0:7], v[8:15], v[16:19]
+; W64-NEXT:    v_wmma_f32_16x16x16_bf16 v[27:30], v[0:7], v[8:15], v[16:19]
 ; W64-NEXT:    v_wmma_f32_16x16x16_bf16 v[16:19], v[8:15], v[8:15], v[16:19]
-; W64-NEXT:    global_store_b128 v[20:21], v[24:27], off
+; W64-NEXT:    global_store_b128 v[20:21], v[27:30], off
 ; W64-NEXT:    global_store_b128 v[22:23], v[16:19], off
 ; W64-NEXT:    s_endpgm
 bb:
@@ -59,9 +59,9 @@ bb:
 define amdgpu_ps void @test_wmma_f16_16x16x16_f16_lo(<16 x half> %A, <16 x half> %B, <8 x half> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W64-LABEL: test_wmma_f16_16x16x16_f16_lo:
 ; W64:       ; %bb.0: ; %bb
-; W64-NEXT:    v_wmma_f16_16x16x16_f16 v[24:27], v[0:7], v[8:15], v[16:19]
+; W64-NEXT:    v_wmma_f16_16x16x16_f16 v[27:30], v[0:7], v[8:15], v[16:19]
 ; W64-NEXT:    v_wmma_f16_16x16x16_f16 v[16:19], v[8:15], v[8:15], v[16:19]
-; W64-NEXT:    global_store_b128 v[20:21], v[24:27], off
+; W64-NEXT:    global_store_b128 v[20:21], v[27:30], off
 ; W64-NEXT:    global_store_b128 v[22:23], v[16:19], off
 ; W64-NEXT:    s_endpgm
 bb:
@@ -75,9 +75,9 @@ bb:
 define amdgpu_ps void @test_wmma_f16_16x16x16_f16_hi(<16 x half> %A, <16 x half> %B, <8 x half> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W64-LABEL: test_wmma_f16_16x16x16_f16_hi:
 ; W64:       ; %bb.0: ; %bb
-; W64-NEXT:    v_wmma_f16_16x16x16_f16 v[24:27], v[0:7], v[8:15], v[16:19] op_sel:[0,0,1]
+; W64-NEXT:    v_wmma_f16_16x16x16_f16 v[27:30], v[0:7], v[8:15], v[16:19] op_sel:[0,0,1]
 ; W64-NEXT:    v_wmma_f16_16x16x16_f16 v[16:19], v[8:15], v[8:15], v[16:19] op_sel:[0,0,1]
-; W64-NEXT:    global_store_b128 v[20:21], v[24:27], off
+; W64-NEXT:    global_store_b128 v[20:21], v[27:30], off
 ; W64-NEXT:    global_store_b128 v[22:23], v[16:19], off
 ; W64-NEXT:    s_endpgm
 bb:
@@ -93,9 +93,9 @@ bb:
 define amdgpu_ps void @test_wmma_bf16_16x16x16_bf16_lo(<16 x i16> %A, <16 x i16> %B, <8 x i16> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W64-LABEL: test_wmma_bf16_16x16x16_bf16_lo:
 ; W64:       ; %bb.0: ; %bb
-; W64-NEXT:    v_wmma_bf16_16x16x16_bf16 v[24:27], v[0:7], v[8:15], v[16:19]
+; W64-NEXT:    v_wmma_bf16_16x16x16_bf16 v[27:30], v[0:7], v[8:15], v[16:19]
 ; W64-NEXT:    v_wmma_bf16_16x16x16_bf16 v[16:19], v[8:15], v[8:15], v[16:19]
-; W64-NEXT:    global_store_b128 v[20:21], v[24:27], off
+; W64-NEXT:    global_store_b128 v[20:21], v[27:30], off
 ; W64-NEXT:    global_store_b128 v[22:23], v[16:19], off
 ; W64-NEXT:    s_endpgm
 bb:
@@ -109,9 +109,9 @@ bb:
 define amdgpu_ps void @test_wmma_bf16_16x16x16_bf16_hi(<16 x i16> %A, <16 x i16> %B, <8 x i16> %C, ptr addrspace(1) %out, ptr addrspace(1) %out2) {
 ; W64-LABEL: test_wmma_bf16_16x16x16_bf16_hi:
 ; W64:       ; %bb.0: ; %bb
-; W64-NEXT:    v_wmma_bf16_16x16x16_bf16 v[24:27], v[0:7], v[8:15], v[16:19] op_sel:[0,0,1]
+; W64-NEXT:    v_wmma_bf16_16x16x16_bf16 v[27:30], v[0:7], v[8:15], v[16:19] op_sel:[0,0,1]
 ; W64-NEXT:    v_wmma_bf16_16x16x16_bf16 v[16:19], v[8:15], v[8:15], v[16:19] op_sel:[0,0,1]
-; W64-NEXT:    global_store_b128 v[20:21], v[24:27], off
+; W64-NEXT:    global_store_b128 v[20:21], v[27:30], off
 ; W64-NEXT:    global_store_b128 v[22:23], v[16:19], off
 ; W64-NEXT:    s_endpgm
 bb:
