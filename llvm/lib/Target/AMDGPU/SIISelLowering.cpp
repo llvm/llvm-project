@@ -3728,15 +3728,7 @@ SDValue SITargetLowering::LowerFormalArguments(
 
     if (Arg.Flags.isSRet()) {
       // The return object should be reasonably addressable.
-
-      // FIXME: This helps when the return is a real sret. If it is a
-      // automatically inserted sret (i.e. CanLowerReturn returns false), an
-      // extra copy is inserted in SelectionDAGBuilder which obscures this.
-      unsigned NumBits =
-          32 - getSubtarget()->getKnownHighZeroBitsForFrameIndex();
-      Val = DAG.getNode(
-          ISD::AssertZext, DL, VT, Val,
-          DAG.getValueType(EVT::getIntegerVT(*DAG.getContext(), NumBits)));
+      Val = annotateStackObjectPointer(Val, DAG, DL);
     }
 
     Val = convertABITypeToValueType(DAG, Val, VA, DL);
@@ -19715,6 +19707,11 @@ void SITargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       Op, Known, DemandedElts, DAG, Depth);
 }
 
+void SITargetLowering::computeKnownBitsForStackObjectPointer(
+    KnownBits &Known, const MachineFunction &) const {
+  Known.Zero.setHighBits(getSubtarget()->getKnownHighZeroBitsForFrameIndex());
+}
+
 void SITargetLowering::computeKnownBitsForFrameIndex(
     const int FI, KnownBits &Known, const MachineFunction &MF) const {
   TargetLowering::computeKnownBitsForFrameIndex(FI, Known, MF);
@@ -19722,7 +19719,7 @@ void SITargetLowering::computeKnownBitsForFrameIndex(
   // Set the high bits to zero based on the maximum allowed scratch size per
   // wave. We can't use vaddr in MUBUF instructions if we don't know the address
   // calculation won't overflow, so assume the sign bit is never set.
-  Known.Zero.setHighBits(getSubtarget()->getKnownHighZeroBitsForFrameIndex());
+  computeKnownBitsForStackObjectPointer(Known, MF);
 }
 
 static void knownBitsForWorkitemID(const GCNSubtarget &ST,

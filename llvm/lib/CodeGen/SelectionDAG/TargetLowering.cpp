@@ -3987,6 +3987,29 @@ void TargetLowering::computeKnownBitsForFrameIndex(
   Known.Zero.setLowBits(Log2(MF.getFrameInfo().getObjectAlign(FrameIdx)));
 }
 
+void TargetLowering::computeKnownBitsForStackObjectPointer(
+    KnownBits &, const MachineFunction &) const {}
+
+SDValue TargetLowering::annotateStackObjectPointer(SDValue Ptr,
+                                                   SelectionDAG &DAG,
+                                                   const SDLoc &DL) const {
+  EVT PtrVT = Ptr.getValueType();
+
+  unsigned RegSize = PtrVT.getScalarSizeInBits();
+  KnownBits Known(RegSize);
+  computeKnownBitsForStackObjectPointer(Known, DAG.getMachineFunction());
+
+  unsigned NumZeroBits = Known.countMinLeadingZeros();
+  if (!NumZeroBits)
+    return Ptr;
+
+  // TODO: Stack object alignment also gives low zero bits. This helper only
+  // materializes leading zero bits for now; use ISD::AssertAlign if those
+  // low-bit facts need to be represented here.
+  EVT FromVT = EVT::getIntegerVT(*DAG.getContext(), RegSize - NumZeroBits);
+  return DAG.getNode(ISD::AssertZext, DL, PtrVT, Ptr, DAG.getValueType(FromVT));
+}
+
 Align TargetLowering::computeKnownAlignForTargetInstr(
     GISelValueTracking &Analysis, Register R, const MachineRegisterInfo &MRI,
     unsigned Depth) const {
