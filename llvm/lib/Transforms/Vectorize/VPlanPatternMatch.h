@@ -27,24 +27,19 @@ template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
   return P.match(V);
 }
 
-/// A match functor that can be used as a UnaryPredicate in functional
-/// algorithms like all_of.
-template <typename Val, typename Pattern> auto match_fn(const Pattern &P) {
-  return bind_back<match<Val, Pattern>>(P);
-}
-
 template <typename Pattern> bool match(VPUser *U, const Pattern &P) {
   auto *R = dyn_cast<VPRecipeBase>(U);
   return R && match(R, P);
 }
 
-/// Match functor for VPUser.
-template <typename Pattern> auto match_fn(const Pattern &P) {
-  return bind_back<match<Pattern>>(P);
-}
-
 template <typename Pattern> bool match(VPSingleDefRecipe *R, const Pattern &P) {
   return P.match(static_cast<const VPRecipeBase *>(R));
+}
+
+/// A match functor that can be used as a UnaryPredicate in functional
+/// algorithms like all_of.
+template <typename Pattern> auto match_fn(const Pattern &P) {
+  return [&P](auto *V) { return match(V, P); };
 }
 
 /// Match an arbitrary VPValue and ignore it.
