@@ -20,7 +20,6 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/DebugLog.h"
-#include <map>
 #include <string>
 
 using namespace mlir;
@@ -316,7 +315,7 @@ struct PVCuArch final : public Xe2 {
   static bool classof(const uArch *u) { return u->getKind() == Kind::PVC; }
   static const uArch *getInstance() {
     static const PVCuArch instance;
-    return reinterpret_cast<const uArch *>(&instance);
+    return &instance;
   }
 };
 
@@ -341,7 +340,7 @@ struct BMGuArch : public Xe2 {
   static bool classof(const uArch *u) { return u->getKind() == Kind::BMG; }
   static const uArch *getInstance() {
     static const BMGuArch instance;
-    return reinterpret_cast<const uArch *>(&instance);
+    return &instance;
   }
 };
 
@@ -381,8 +380,6 @@ SubgroupMatrixMultiplyAcc::getSupportedShapes(Type dataType,
     resultMatrix = combineVectors(K, N);
     break;
   case MMAOpndKind::MatrixC:
-    resultMatrix = combineVectors(M, N);
-    break;
   case MMAOpndKind::MatrixD:
     resultMatrix = combineVectors(M, N);
     break;
@@ -480,8 +477,6 @@ SubgroupMatrixMultiplyAcc::getSupportedK(Type type) const {
   uint32_t kSize = 0;
   switch (bitWidth) {
   case 2:
-    kSize = 64;
-    break;
   case 4:
     kSize = 64;
     break;

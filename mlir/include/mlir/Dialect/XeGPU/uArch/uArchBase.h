@@ -14,12 +14,6 @@
 #ifndef MLIR_DIALECT_XEGPU_UARCH_UARCHBASE_H
 #define MLIR_DIALECT_XEGPU_UARCH_UARCHBASE_H
 
-#include <any>
-#include <functional>
-#include <iostream>
-#include <map>
-#include <mutex>
-#include <optional>
 #include <shared_mutex>
 #include <tuple>
 
@@ -30,8 +24,6 @@
 namespace mlir {
 namespace xegpu {
 namespace uArch {
-
-constexpr unsigned generalPackedFormatBitSize{32};
 
 // An enum class to represent the scope of an instruction
 enum class InstructionScope { Lane, Subgroup, Workgroup, Cluster };
@@ -82,18 +74,10 @@ struct Instruction {
     llvm_unreachable("Unknown InstructionKind");
   }
 
-  static std::optional<InstructionKind>
-  parseInstructionKind(llvm::StringRef str) {
-    if (str.equals_insensitive("dpas"))
-      return InstructionKind::SubgroupMatrixMultiplyAcc;
-    return std::nullopt;
-  }
-
 protected:
   const InstructionKind instKind; // Specific InstructionKind (e.g., DPAS)
   const InstructionScope scope;   // scope of the instruction (e.g., lane,
                                   // subgroup, workgroup, cluster)
-  // @TODO: Add more fields as needed
 };
 
 enum class RegisterFileMode : uint8_t { Small, Large };
@@ -187,7 +171,6 @@ struct uArch {
     default:
       return "";
     }
-    llvm_unreachable("Unknown uArch::Kind");
   }
 
   static StringRef getUArchDescription(Kind k) {

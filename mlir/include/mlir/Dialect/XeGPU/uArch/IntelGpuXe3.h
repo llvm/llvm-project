@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // \file
-// Xe2 uArch definition. Xe3 is the second generation of Intel Xe GPUs.
+// Xe3 uArch definition. Xe3 is the second generation of Intel Xe GPUs.
 // This file defines the uArch details for Xe3 and its derived architectures.
 // This includes Crescent Island Architecture.
 //
@@ -20,7 +20,6 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/DebugLog.h"
-#include <map>
 #include <string>
 
 using namespace mlir;
@@ -166,7 +165,7 @@ struct CriSubgroup2DBlockPrefetchInstruction
       std::tuple<llvm::ArrayRef<int>, llvm::ArrayRef<int>, llvm::ArrayRef<int>>>
   getBlockWidthHeightCount(Type elemTy, bool /*hasTransform*/ = false,
                            bool /*hasTranspose*/ = false,
-                           bool /*upConv*/ = false) const {
+                           bool /*upConv*/ = false) const override {
     static const int kHeightAtLeast1[] = {1, 2, 4, 8, 16, 32};
 
     static const int kWidth32[] = {32};
@@ -319,7 +318,7 @@ struct CRIuArch : public Xe3 {
   static bool classof(const uArch *u) { return u->getKind() == Kind::CRI; }
   static const uArch *getInstance() {
     static const CRIuArch instance;
-    return reinterpret_cast<const uArch *>(&instance);
+    return &instance;
   }
 };
 
@@ -359,8 +358,6 @@ CriSubgroupMatrixMultiplyAcc::getSupportedShapes(Type dataType,
     resultMatrix = combineVectors(K, N);
     break;
   case MMAOpndKind::MatrixC:
-    resultMatrix = combineVectors(M, N);
-    break;
   case MMAOpndKind::MatrixD:
     resultMatrix = combineVectors(M, N);
     break;
