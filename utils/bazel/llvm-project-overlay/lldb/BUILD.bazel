@@ -70,6 +70,23 @@ selects.config_setting_group(
     ],
 )
 
+bool_flag(
+    name = "enable_lzma",
+    build_setting_default = False,
+)
+
+config_setting(
+    name = "lzma_enabled_setting",
+    flag_values = {":enable_lzma": "true"},
+)
+
+selects.config_setting_group(
+    name = "lzma_enabled",
+    match_any = [
+        ":lzma_enabled_setting",
+    ],
+)
+
 _VERSION_SUBSTITUTIONS = {
     "@LLDB_VERSION@": PACKAGE_VERSION,
     "@LLDB_VERSION_MAJOR@": LLVM_VERSION_MAJOR,
@@ -112,9 +129,6 @@ expand_template(
     substitutions = {
         "#cmakedefine01 HAVE_PTSNAME_R": "#define HAVE_PTSNAME_R 1",
         "#cmakedefine01 LLDB_ENABLE_TERMIOS": "#define LLDB_ENABLE_TERMIOS 1",
-
-        # TODO: Add LZMA support by including the library in bazel
-        "#cmakedefine01 LLDB_ENABLE_LZMA": "#define LLDB_ENABLE_LZMA 0",
 
         # TODO: lua support
         "#cmakedefine01 LLDB_ENABLE_LUA": "#define LLDB_ENABLE_LUA 0",
@@ -169,6 +183,23 @@ expand_template(
             "#cmakedefine01 LLDB_ENABLE_LIBXML2": "#define LLDB_ENABLE_LIBXML2 0",
             "#cmakedefine01 LLDB_HAVE_EL_RFUNC_T": "#define LLDB_HAVE_EL_RFUNC_T 1",
         },
+        "@platforms//os:windows": {
+            # Self-contained dist: liblldb resolves a relative LLDB_PYTHON_HOME
+            # against its own dir when LLDB_EMBED_PYTHON_HOME=1. Inert until
+            # Python is enabled, but kept so the Windows config matches the MSDK build.
+            "#cmakedefine LLDB_PYTHON_HOME R\"(${LLDB_PYTHON_HOME})\"": "#define LLDB_PYTHON_HOME \"../python\"",
+            "#cmakedefine01 HAVE_LIBCOMPRESSION": "#define HAVE_LIBCOMPRESSION 0",
+            "#cmakedefine01 HAVE_NR_PROCESS_VM_READV": "#define HAVE_NR_PROCESS_VM_READV 0",
+            "#cmakedefine01 HAVE_PPOLL": "#define HAVE_PPOLL 0",
+            "#cmakedefine01 HAVE_PROCESS_VM_READV": "#define HAVE_PROCESS_VM_READV 0",
+            "#cmakedefine01 HAVE_PTSNAME_R": "#define HAVE_PTSNAME_R 0",
+            "#cmakedefine01 HAVE_SYS_EVENT_H": "#define HAVE_SYS_EVENT_H 0",
+            "#cmakedefine01 LLDB_EMBED_PYTHON_HOME": "#define LLDB_EMBED_PYTHON_HOME 1",
+            "#cmakedefine01 LLDB_ENABLE_LIBXML2": "#define LLDB_ENABLE_LIBXML2 0",
+            "#cmakedefine01 LLDB_ENABLE_POSIX": "#define LLDB_ENABLE_POSIX 0",
+            "#cmakedefine01 LLDB_ENABLE_TERMIOS": "#define LLDB_ENABLE_TERMIOS 0",
+            "#cmakedefine01 LLDB_HAVE_EL_RFUNC_T": "#define LLDB_HAVE_EL_RFUNC_T 0",
+        },
     }) | select({
         ":curses_enabled": {
             "#cmakedefine01 LLDB_ENABLE_CURSES": "#define LLDB_ENABLE_CURSES 1",
@@ -184,6 +215,13 @@ expand_template(
         "//conditions:default": {
             "#cmakedefine01 LLDB_EDITLINE_USE_WCHAR": "#define LLDB_EDITLINE_USE_WCHAR 0",
             "#cmakedefine01 LLDB_ENABLE_LIBEDIT": "#define LLDB_ENABLE_LIBEDIT 0",
+        },
+    }) | select({
+        ":lzma_enabled": {
+            "#cmakedefine01 LLDB_ENABLE_LZMA": "#define LLDB_ENABLE_LZMA 1",
+        },
+        "//conditions:default": {
+            "#cmakedefine01 LLDB_ENABLE_LZMA": "#define LLDB_ENABLE_LZMA 0",
         },
     }),
     template = "include/lldb/Host/Config.h.cmake",
@@ -621,6 +659,11 @@ cc_library(
     }) + select({
         ":needs_libbsd": [
             "-lbsd",
+        ],
+        "//conditions:default": [],
+    }) + select({
+        ":lzma_enabled": [
+            "-llzma",
         ],
         "//conditions:default": [],
     }),
