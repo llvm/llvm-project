@@ -9,6 +9,8 @@ config.llvm_build_mode = lit_config.substitute("@LLVM_BUILD_MODE@")
 config.shlibdir = lit_config.substitute(path(r"@SHLIBDIR@"))
 config.gtest_run_under = lit_config.substitute(r"@LLVM_GTEST_RUN_UNDER@")
 
+config.llvm_windows_prefer_forward_slash = "@LLVM_WINDOWS_PREFER_FORWARD_SLASH_VAL@"
+
 # Let the main config do the real work.
 lit_config.load_config(
     config, os.path.join(config.llvm_src_root, "test/Unit/lit.cfg.py"))

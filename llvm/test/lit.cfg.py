@@ -15,7 +15,11 @@ from lit.llvm.subst import FindTool
 from lit.llvm.subst import ToolSubst
 
 # name: The name of this test suite.
-config.name = "LLVM"
+suffix = getattr(config, "llvm_windows_prefer_forward_slash", "")
+if suffix in ("1", "ON", "True"):
+    config.name = "LLVM-ForwardSlash"
+else:
+    config.name = "LLVM"
 
 # TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
 # See https://github.com/llvm/llvm-project/issues/106636 for more details.
@@ -102,8 +106,13 @@ config.test_exec_root = os.path.join(config.llvm_obj_root, "test")
 # Tweak the PATH to include the tools dir.
 llvm_config.with_environment("PATH", config.llvm_tools_dir, append_path=True)
 
-# Propagate some variables from the host environment.
-llvm_config.with_system_environment(["HOME", "INCLUDE", "LIB", "TMP", "TEMP"])
+llvm_config.with_system_environment(["HOME", "INCLUDE", "LIB", "TMP", "TEMP", "LLVM_WINDOWS_PREFER_FORWARD_SLASH"])
+
+prefer_forward_slash = getattr(config, "llvm_windows_prefer_forward_slash", "")
+if prefer_forward_slash in ("1", "ON", "True"):
+    config.environment["LLVM_WINDOWS_PREFER_FORWARD_SLASH"] = "1"
+elif prefer_forward_slash in ("0", "OFF", "False"):
+    config.environment["LLVM_WINDOWS_PREFER_FORWARD_SLASH"] = "0"
 
 
 # Set up OCAMLPATH to include newly built OCaml libraries.
