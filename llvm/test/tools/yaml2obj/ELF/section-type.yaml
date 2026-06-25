@@ -5,6 +5,8 @@
 # CHECK: Type: SHT_PROGBITS
 # CHECK: Name: machine-specific
 # CHECK: Type: SHT_X86_64_UNWIND
+# CHECK: Name: dwarf64
+# CHECK: Type: SHT_DWARF64
 # CHECK: Name: hex
 # CHECK: Type: Unknown (0xABCD)
 # CHECK: Name: decimal
@@ -21,6 +23,8 @@ Sections:
     Type:  SHT_PROGBITS
   - Name:  machine-specific
     Type:  SHT_X86_64_UNWIND
+  - Name:  dwarf64
+    Type:  SHT_DWARF64
   - Name:  hex
     Type:  0xabcd
   - Name:  decimal
@@ -40,4 +44,3 @@ FileHeader:
 Sections:
   - Name: .foo
     Type: [[SECTION_TYPE]]
-

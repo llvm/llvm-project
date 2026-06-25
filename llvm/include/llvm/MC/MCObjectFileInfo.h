@@ -253,6 +253,7 @@ protected:
 public:
   void initMCObjectFileInfo(MCContext &MCCtx, bool PIC,
                             bool LargeCodeModel = false);
+  void setELFDwarf64Sections();
   virtual ~MCObjectFileInfo();
   MCContext &getContext() const { return *Ctx; }
 
