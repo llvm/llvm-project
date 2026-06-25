@@ -432,29 +432,29 @@ CompressedOffloadBundle::compress(compression::Params P,
 LLVM_PACKED_START
 union RawCompressedBundleHeader {
   struct CommonFields {
-    uint32_t Magic;
-    uint16_t Version;
-    uint16_t Method;
+    support::ulittle32_t Magic;
+    support::ulittle16_t Version;
+    support::ulittle16_t Method;
   };
 
   struct V1Header {
     CommonFields Common;
-    uint32_t UncompressedFileSize;
-    uint64_t Hash;
+    support::ulittle32_t UncompressedFileSize;
+    support::ulittle64_t Hash;
   };
 
   struct V2Header {
     CommonFields Common;
-    uint32_t FileSize;
-    uint32_t UncompressedFileSize;
-    uint64_t Hash;
+    support::ulittle32_t FileSize;
+    support::ulittle32_t UncompressedFileSize;
+    support::ulittle64_t Hash;
   };
 
   struct V3Header {
     CommonFields Common;
-    uint64_t FileSize;
-    uint64_t UncompressedFileSize;
-    uint64_t Hash;
+    support::ulittle64_t FileSize;
+    support::ulittle64_t UncompressedFileSize;
+    support::ulittle64_t Hash;
   };
 
   CommonFields Common;
@@ -518,7 +518,7 @@ CompressedOffloadBundle::CompressedBundleHeader::tryParse(StringRef Blob) {
   case static_cast<uint16_t>(compression::Format::Zlib):
   case static_cast<uint16_t>(compression::Format::Zstd):
     Normalized.CompressionFormat =
-        static_cast<compression::Format>(Header.Common.Method);
+        static_cast<compression::Format>(Header.Common.Method.value());
     break;
   default:
     return createStringError("unknown compressing method");
