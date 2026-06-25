@@ -406,12 +406,12 @@ bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clauseId,
     // If it's not allowed at all, it will be reported by CheckAllowed.
     if (allowedInVersion != 0) {
       context_.Say(clauseSource,
-          "%s clause is not allowed on directive %s in %s, %s"_err_en_US,
+          "%s clause is not allowed on %s directive in %s, %s"_err_en_US,
           GetUpperName(clauseId, version), GetUpperName(dirId, version),
           ThisVersion(version), TryVersion(allowedInVersion));
     } else {
       context_.Say(clauseSource,
-          "%s clause is not allowed on the %s directive"_err_en_US,
+          "%s clause is not allowed on %s directive"_err_en_US,
           GetUpperName(clauseId, version), GetUpperName(dirId, version));
     }
     return false;
@@ -980,7 +980,7 @@ void OmpStructureChecker::CheckClauses(parser::OmpDirectiveName dirName,
         std::string clauseName{GetUpperName(clauseId, version)};
         context_
             .Say(clause->source,
-                "At most one %s clause can appear on the %s directive"_err_en_US,
+                "At most one %s clause can appear on %s directive"_err_en_US,
                 clauseName, GetUpperName(dirId, version))
             .Attach(range.begin()->second,
                 "%s clause was first specified here"_en_US, clauseName);
@@ -1007,7 +1007,7 @@ void OmpStructureChecker::CheckClauses(parser::OmpDirectiveName dirName,
 
   if (!requiredPresent && !requiredSet.empty()) {
     context_.Say(dirName.source,
-        "At least one of %s %s must appear on the %s directive"_err_en_US,
+        "At least one of %s %s must appear on %s directive"_err_en_US,
         ClauseSetToString(requiredSet),
         requiredSet.count() == 1 ? "clause" : "clauses",
         GetUpperName(dirName.v, version));
@@ -2787,7 +2787,7 @@ void OmpStructureChecker::ChecksOnOrderedAsStandalone() {
     if (!duplicateSourceShown && dependSourceCount > 1) {
       duplicateSourceShown = true;
       context_.Say(src,
-          "At most one SOURCE dependence type can appear on the ORDERED directive"_err_en_US);
+          "At most one SOURCE dependence type can appear on ORDERED directive"_err_en_US);
     }
   }};
 
@@ -3370,7 +3370,7 @@ std::optional<llvm::omp::Directive> OmpStructureChecker::GetCancelType(
     if (auto *cctype{std::get_if<CancellationConstructType>(&clause.u)}) {
       if (cancelee) {
         context_.Say(cancelSource,
-            "Multiple cancel-directive-name clauses are not allowed on the %s construct"_err_en_US,
+            "Multiple cancel-directive-name clauses are not allowed on %s construct"_err_en_US,
             cancelName);
         return std::nullopt;
       }
