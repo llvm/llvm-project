@@ -1370,7 +1370,8 @@ void InstrLowerer::lowerMCDCTestVectorBitmapUpdate(
     // If ((Bitmap & Val) != Val), then execute atomic (Bitmap |= Val).
     // Note, just-loaded Bitmap might not be up-to-date. Use it just for
     // early testing.
-    // Use an atomic load to avoid data races.
+    // Use an atomic load to pair with the later atomicrmw, preventing a data
+    // race.
     Bitmap->setOrdering(llvm::AtomicOrdering::Monotonic);
     auto *Masked = Builder.CreateAnd(Bitmap, ShiftedVal);
     auto *ShouldStore = Builder.CreateICmpNE(Masked, ShiftedVal);
