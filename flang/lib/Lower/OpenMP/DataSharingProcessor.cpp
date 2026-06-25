@@ -279,11 +279,17 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
 
       const ObjectList &objects = std::get<ObjectList>(lastPrivateClause->t);
       if (modifier) {
-        if (*modifier ==
-            omp::clause::Lastprivate::LastprivateModifier::Conditional) {
+        assert(*modifier ==
+                   omp::clause::Lastprivate::LastprivateModifier::Conditional &&
+               "unsupported lastprivate modifier");
+        // The conditional modifier was added in OpenMP 5.0.  In earlier
+        // versions semantics only warns and ignores it, so fall back to a
+        // regular lastprivate here to keep lowering consistent and avoid the
+        // conditional path for entities it cannot handle (e.g. characters).
+        if (semaCtx.langOptions().OpenMPVersion >= 50) {
           collectOmpObjectListSymbol(objects, conditionalLastPrivatizedSymbols);
         } else {
-          llvm_unreachable("unsupported lastprivate modifier");
+          collectOmpObjectListSymbol(objects, explicitlyPrivatizedSymbols);
         }
       } else {
         collectOmpObjectListSymbol(objects, explicitlyPrivatizedSymbols);

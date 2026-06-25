@@ -5521,10 +5521,18 @@ static fir::RecordType buildConditionalLpType(
   // pairs) can reduce padding holes when value types differ from i64.
   llvm::SmallVector<std::pair<std::string, mlir::Type>> fields;
 
-  // Value fields first.
+  // Value fields first.  Semantics has already restricted the list items to
+  // whole scalar variables of intrinsic numeric or logical type; assert that
+  // invariant here to catch any semantic regression in assertions builds.
   for (const auto *sym : condLpSyms) {
-    assert(sym->Rank() == 0 &&
-           "lastprivate(conditional:) requires scalar variables");
+    const semantics::Symbol &ultimate = sym->GetUltimate();
+    const semantics::DeclTypeSpec *type = ultimate.GetType();
+    assert(ultimate.Rank() == 0 && type &&
+           (type->category() == semantics::DeclTypeSpec::Category::Numeric ||
+            type->category() == semantics::DeclTypeSpec::Category::Logical) &&
+           !semantics::IsAllocatableOrPointer(ultimate) &&
+           "conditional lastprivate requires a scalar intrinsic "
+           "numeric/logical, non-pointer/allocatable variable");
     std::string symName = sym->name().ToString();
     mlir::Type symType = converter.genType(*sym);
     fields.push_back({symName, symType});
