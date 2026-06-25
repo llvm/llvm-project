@@ -53,9 +53,9 @@ uintptr_t get_stackheap_start() {
   if (reinterpret_cast<uintptr_t>(&_end))
     return reinterpret_cast<uintptr_t>(&_end);
 
-  // With no linker-provided heap start, choose the 1 GiB page after this startup
-  // code as the fallback stack/heap page. The page table maps memory in 1 GiB
-  // blocks, so the shifts below convert between addresses and 1 GiB page
+  // With no linker-provided heap start, choose the 1 GiB page after this
+  // startup code as the fallback stack/heap page. The page table maps memory in
+  // 1 GiB blocks, so the shifts below convert between addresses and 1 GiB page
   // numbers:
   //
   //   address >> PAGE_TABLE_BLOCK_SHIFT  gives the page number
