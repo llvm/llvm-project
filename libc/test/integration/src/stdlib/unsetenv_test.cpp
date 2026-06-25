@@ -1,4 +1,4 @@
-//===-- Integration tests for unsetenv -----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,6 +16,7 @@
 #include "src/stdlib/getenv.h"
 #include "src/stdlib/setenv.h"
 #include "src/stdlib/unsetenv.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 #include "src/string/strcmp.h"
 #include "src/unistd/environ.h"
 
@@ -135,14 +136,12 @@ TEST_MAIN([[maybe_unused]] int argc, [[maybe_unused]] char **argv,
     char *d1 = new (ac) char[14];
     ASSERT_TRUE(ac);
     const char *s1 = "DUP_VAR=first";
-    for (size_t i = 0; i < 14; ++i)
-      d1[i] = s1[i];
+    inline_memcpy(d1, s1, 14);
 
     char *d2 = new (ac) char[15];
     ASSERT_TRUE(ac);
     const char *s2 = "DUP_VAR=second";
-    for (size_t i = 0; i < 15; ++i)
-      d2[i] = s2[i];
+    inline_memcpy(d2, s2, 15);
 
     internal::EnvironmentManager &mgr =
         internal::EnvironmentManager::get_instance();
