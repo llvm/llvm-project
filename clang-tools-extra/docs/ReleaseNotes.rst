@@ -281,6 +281,12 @@ New checks
   Finds places where structured bindings could be used to decompose pairs and
   suggests replacing them.
 
+- New :doc:`performance-expensive-value-or
+  <clang-tidy/checks/performance/expensive-value-or>` check.
+
+  Finds calls to ``value_or`` on optional types where the underlying value
+  type is expensive to copy.
+
 - New :doc:`performance-string-view-conversions
   <clang-tidy/checks/performance/string-view-conversions>` check.
 
