@@ -677,7 +677,9 @@ Value *llvm::lowerObjectSizeCall(
       return ConstantInt::get(ResultType, Size);
   } else {
     LLVMContext &Ctx = ObjectSize->getFunction()->getContext();
-    ObjectSizeOffsetEvaluator Eval(DL, TLI, Ctx, EvalOptions, HPA);
+    ObjectSizeOffsetEvaluator Eval(DL, TLI, Ctx, EvalOptions,
+                                   HPA ? &HPA->getForwardResult() : nullptr,
+                                   HPA ? &HPA->getBackwardResult() : nullptr);
     SizeOffsetValue SizeOffsetPair = Eval.compute(ObjectSize->getArgOperand(0));
 
     if (SizeOffsetPair != ObjectSizeOffsetEvaluator::unknown()) {
@@ -1233,12 +1235,13 @@ SizeOffsetValue::SizeOffsetValue(const SizeOffsetWeakTrackingVH &SOT)
 
 ObjectSizeOffsetEvaluator::ObjectSizeOffsetEvaluator(
     const DataLayout &DL, const TargetLibraryInfo *TLI, LLVMContext &Context,
-    ObjectSizeOpts EvalOpts, const HeapProvenanceAnalysisResult *HPA)
+    ObjectSizeOpts EvalOpts, const ForwardHeapProvenanceAnalysisResult *FwdHPA,
+    const BackwardHeapProvenanceAnalysisResult *BwdHPA)
     : DL(DL), TLI(TLI), Context(Context),
       Builder(Context, TargetFolder(DL),
               IRBuilderCallbackInserter(
                   [&](Instruction *I) { InsertedInstructions.insert(I); })),
-      EvalOpts(EvalOpts), HPA(HPA) {
+      EvalOpts(EvalOpts), FwdHPA(FwdHPA), BwdHPA(BwdHPA) {
   // IntTy and Zero must be set for each compute() since the address space may
   // be different for later objects.
 }
@@ -1249,10 +1252,12 @@ bool ObjectSizeOffsetEvaluator::computeFallbackHeapMetadata(Value *V, SizeOffset
     M = I->getModule();
   else if (auto *A = dyn_cast<Argument>(V))
     M = A->getParent()->getParent();
-  if (!M || !HPA)
+  if (!M || (!FwdHPA && !BwdHPA))
     return false;
 
-  auto Info = HPA->getInfo(V);
+  HeapProvenanceLattice Info;
+  if (FwdHPA) Info = FwdHPA->getInfo(V);
+  if (!Info.isValid() && BwdHPA) Info = BwdHPA->getInfo(V);
   if (!Info.isValid())
     return false;
 
@@ -1287,7 +1292,9 @@ bool ObjectSizeOffsetEvaluator::computeFallbackHeapMetadata(Value *V, SizeOffset
     return false;
 
   if (auto *HeadInst = dyn_cast<Instruction>(HeadVal)) {
-    if (VF && HF && VF == HF) {
+    if (VF && HF && VF == HF &&
+        (isa<GetElementPtrInst>(HeadInst) || isa<CastInst>(HeadInst) || isa<BinaryOperator>(HeadInst)) &&
+        HeadInst->getParent() != &VF->getEntryBlock()) {
       bool CanMoveToEntry = true;
       for (Value *Op : HeadInst->operands()) {
         if (isa<Instruction>(Op)) {
@@ -1295,8 +1302,11 @@ bool ObjectSizeOffsetEvaluator::computeFallbackHeapMetadata(Value *V, SizeOffset
           break;
         }
       }
-      if (CanMoveToEntry)
-        HeadInst->moveBefore(const_cast<Function *>(VF)->getEntryBlock().getFirstInsertionPt());
+      if (CanMoveToEntry) {
+        Instruction *Cloned = HeadInst->clone();
+        Cloned->insertBefore(const_cast<Function *>(VF)->getEntryBlock().getFirstInsertionPt());
+        HeadVal = Cloned;
+      }
     }
   }
 

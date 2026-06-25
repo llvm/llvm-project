@@ -49,6 +49,8 @@ class SelectInst;
 class Type;
 class UndefValue;
 class Value;
+class ForwardHeapProvenanceAnalysisResult;
+class BackwardHeapProvenanceAnalysisResult;
 
 /// Tests if a value is a call or invoke to a library function that
 /// allocates or reallocates memory (either malloc, calloc, realloc, or strdup
@@ -358,7 +360,8 @@ class ObjectSizeOffsetEvaluator
   PtrSetTy SeenVals;
   ObjectSizeOpts EvalOpts;
   SmallPtrSet<Instruction *, 8> InsertedInstructions;
-  const HeapProvenanceAnalysisResult *HPA;
+  const ForwardHeapProvenanceAnalysisResult *FwdHPA;
+  const BackwardHeapProvenanceAnalysisResult *BwdHPA;
 
   SizeOffsetValue compute_(Value *V);
   bool computeFallbackHeapMetadata(Value *V, SizeOffsetValue &Result);
@@ -367,7 +370,8 @@ public:
   LLVM_ABI ObjectSizeOffsetEvaluator(
       const DataLayout &DL, const TargetLibraryInfo *TLI, LLVMContext &Context,
       ObjectSizeOpts EvalOpts = {},
-      const HeapProvenanceAnalysisResult *HPA = nullptr);
+      const ForwardHeapProvenanceAnalysisResult *FwdHPA = nullptr,
+      const BackwardHeapProvenanceAnalysisResult *BwdHPA = nullptr);
 
   static SizeOffsetValue unknown() { return SizeOffsetValue(); }
 

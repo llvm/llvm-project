@@ -200,7 +200,8 @@ getRuntimeCallName(const BoundsCheckingPass::Options::Runtime &Opts) {
 static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
                               ScalarEvolution &SE,
                               const BoundsCheckingPass::Options &Opts,
-                              const HeapProvenanceAnalysisResult *HPA) {
+                              const ForwardHeapProvenanceAnalysisResult *FwdHPA,
+                              const BackwardHeapProvenanceAnalysisResult *BwdHPA) {
   if (F.hasFnAttribute(Attribute::NoSanitizeBounds))
     return false;
 
@@ -208,7 +209,7 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
   ObjectSizeOpts EvalOpts;
   EvalOpts.RoundToAlign = true;
   EvalOpts.EvalMode = ObjectSizeOpts::Mode::ExactUnderlyingSizeAndOffset;
-  ObjectSizeOffsetEvaluator ObjSizeEval(DL, &TLI, F.getContext(), EvalOpts, HPA);
+  ObjectSizeOffsetEvaluator ObjSizeEval(DL, &TLI, F.getContext(), EvalOpts, FwdHPA, BwdHPA);
 
   // check HANDLE_MEMORY_INST in include/llvm/Instruction.def for memory
   // touching instructions
@@ -307,9 +308,10 @@ PreservedAnalyses BoundsCheckingPass::run(Function &F, FunctionAnalysisManager &
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
   auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-  auto *HPA = MAMProxy.getCachedResult<HeapProvenanceAnalysis>(*F.getParent());
+  auto *FwdHPA = MAMProxy.getCachedResult<ForwardHeapProvenanceAnalysis>(*F.getParent());
+  auto *BwdHPA = MAMProxy.getCachedResult<BackwardHeapProvenanceAnalysis>(*F.getParent());
 
-  if (!addBoundsChecking(F, TLI, SE, Opts, HPA))
+  if (!addBoundsChecking(F, TLI, SE, Opts, FwdHPA, BwdHPA))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();
