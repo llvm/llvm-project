@@ -540,7 +540,9 @@ bool RISCVAsmPrinter::emitDirectiveOptionArch() {
 
     auto Delta = STI->hasFeature(Feature.Value) ? RISCVOptionArchArgType::Plus
                                                 : RISCVOptionArchArgType::Minus;
-    NeedEmitStdOptionArgs.emplace_back(Delta, Feature.Key);
+    StringRef ExtName = Feature.Key;
+    ExtName.consume_front("experimental-");
+    NeedEmitStdOptionArgs.emplace_back(Delta, ExtName.str());
   }
   if (!NeedEmitStdOptionArgs.empty()) {
     RTS.emitDirectiveOptionPush();
