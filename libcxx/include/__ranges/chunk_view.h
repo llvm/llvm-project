@@ -91,13 +91,13 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size()
     requires sized_range<_View>
   {
-    return std::__to_unsigned_like(__div_ceil(ranges::distance(__base_), __n_));
+    return std::__to_unsigned_like(std::__div_ceil(ranges::distance(__base_), __n_));
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires sized_range<const _View>
   {
-    return std::__to_unsigned_like(__div_ceil(ranges::distance(__base_), __n_));
+    return std::__to_unsigned_like(std::__div_ceil(ranges::distance(__base_), __n_));
   }
 };
 
@@ -146,7 +146,7 @@ public:
     const auto __dist = ranges::end(__i.__parent_->__base_) - *__i.__parent_->__current_;
     if (__dist < __i.__parent_->__remainder_)
       return __dist == 0 ? 0 : 1;
-    return __div_ceil(__dist - __i.__parent_->__remainder_, __i.__parent_->__n_) + 1;
+    return std::__div_ceil(__dist - __i.__parent_->__remainder_, __i.__parent_->__n_) + 1;
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
@@ -314,13 +314,13 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size()
     requires sized_range<_View>
   {
-    return std::__to_unsigned_like(__div_ceil(ranges::distance(__base_), __n_));
+    return std::__to_unsigned_like(std::__div_ceil(ranges::distance(__base_), __n_));
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires sized_range<const _View>
   {
-    return std::__to_unsigned_like(__div_ceil(ranges::distance(__base_), __n_));
+    return std::__to_unsigned_like(std::__div_ceil(ranges::distance(__base_), __n_));
   }
 };
 
@@ -503,7 +503,7 @@ public:
   operator-(default_sentinel_t, const __iterator& __i)
     requires sized_sentinel_for<sentinel_t<_Base>, iterator_t<_Base>>
   {
-    return __div_ceil(__i.__end_ - __i.__current_, __i.__n_);
+    return std::__div_ceil(__i.__end_ - __i.__current_, __i.__n_);
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
