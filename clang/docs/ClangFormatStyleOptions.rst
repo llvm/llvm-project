@@ -2006,6 +2006,7 @@ the configuration (without a prefix: ``Auto``).
       Empty: false
       Inline: true
       Other: false
+      Wrapped: true
 
   * ``bool Empty`` Merge top-level empty functions.
 
@@ -2040,6 +2041,17 @@ the configuration (without a prefix: ``Auto``).
         void f() { foo(); }
       };
       void f() { bar(); }
+
+  * ``bool Wrapped`` Merge function bodies if the brace is wrapped.
+
+    .. code-block:: c++
+
+      void f()
+      {}
+      void f2()
+      { bar2(); }
+      void f3()
+      { /* comment */ }
 
 
 .. _AllowShortIfStatementsOnASingleLine:
