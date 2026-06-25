@@ -4,9 +4,10 @@
 
 ; This test shows a case where the IR‑transformation phase of loop interchange
 ; can fail partway. As a result, the final output becomes a partially
-; transformed IR. The IR‑transformation phase must not stop partway; in such
-; cases, the entire process should bail out early during the legality‑check
-; phase.
+; transformed IR.
+;
+; FIXME: The IR‑transformation phase must not stop partway; in such cases, the
+; entire process should bail out early during the legality‑check phase.
 
 ; CHECK: Inner loop header does not have a unique successor
 

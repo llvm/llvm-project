@@ -2487,6 +2487,8 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
   Instruction *OuterLoopPredecessorBI = OuterLoopPredecessor->getTerminator();
 
   BasicBlock *InnerLoopHeaderSuccessor = InnerLoopHeader->getUniqueSuccessor();
+
+  // FIXME: IR modification should not stop partway through.
   if (!InnerLoopHeaderSuccessor) {
     LLVM_DEBUG(
         dbgs() << "Inner loop header does not have a unique successor\n");
