@@ -166,7 +166,6 @@ public:
 
     eServerPacketType__M,
     eServerPacketType__m,
-    eServerPacketType_notify, // '%' notification
 
     eServerPacketType_jLLDBTraceSupported,
     eServerPacketType_jLLDBTraceStart,
