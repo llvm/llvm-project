@@ -99,7 +99,7 @@ struct GenELF64KernelTy : public GenericKernelTy {
                            "cooperative kernel launch not supported for host");
     // TODO: The data will need to be copied locally if we ever support
     //       asynchronous kernel launches in the host interface.
-    Func(LaunchParams.Ptrs);
+    Func(LaunchParams.Args);
     return Plugin::success();
   }
 
