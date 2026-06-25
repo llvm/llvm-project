@@ -116,7 +116,7 @@ public:
   // Auxilary entry point after analysis to generate constants for a GF(2)
   // Barrett Reduction.
   LLVM_ABI static CRCBarrettConstants
-  genBarrettConstants(const APInt &GenPoly, unsigned DataBW,
+  genBarrettConstants(const APInt &GenPoly, unsigned TripCount,
                       bool ByteOrderSwapped);
 
   LLVM_ABI void print(raw_ostream &OS) const;
