@@ -233,17 +233,17 @@ define void @main_vector_loop_fixed_single_vector_iteration_with_runtime_checks(
 ; CHECK-NOTF-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i64>, ptr [[TMP4]], align 8
 ; CHECK-NOTF-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i64> [[WIDE_VEC]], <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NOTF-NEXT:    [[TMP5:%.*]] = trunc <4 x i64> [[STRIDED_VEC]] to <4 x i16>
-; CHECK-NOTF-NEXT:    [[TMP6:%.*]] = extractelement <4 x i16> [[TMP5]], i64 0
-; CHECK-NOTF-NEXT:    [[TMP7:%.*]] = extractelement <4 x i16> [[TMP5]], i64 1
-; CHECK-NOTF-NEXT:    [[TMP8:%.*]] = extractelement <4 x i16> [[TMP5]], i64 2
-; CHECK-NOTF-NEXT:    [[TMP9:%.*]] = extractelement <4 x i16> [[TMP5]], i64 3
 ; CHECK-NOTF-NEXT:    [[TMP10:%.*]] = getelementptr i16, ptr [[K]], i64 [[TMP0]]
 ; CHECK-NOTF-NEXT:    [[TMP11:%.*]] = getelementptr i16, ptr [[K]], i64 [[TMP1]]
 ; CHECK-NOTF-NEXT:    [[TMP12:%.*]] = getelementptr i16, ptr [[K]], i64 [[TMP2]]
 ; CHECK-NOTF-NEXT:    [[TMP13:%.*]] = getelementptr i16, ptr [[K]], i64 [[TMP3]]
+; CHECK-NOTF-NEXT:    [[TMP6:%.*]] = extractelement <4 x i16> [[TMP5]], i64 0
 ; CHECK-NOTF-NEXT:    store i16 [[TMP6]], ptr [[TMP10]], align 2
+; CHECK-NOTF-NEXT:    [[TMP7:%.*]] = extractelement <4 x i16> [[TMP5]], i64 1
 ; CHECK-NOTF-NEXT:    store i16 [[TMP7]], ptr [[TMP11]], align 2
+; CHECK-NOTF-NEXT:    [[TMP8:%.*]] = extractelement <4 x i16> [[TMP5]], i64 2
 ; CHECK-NOTF-NEXT:    store i16 [[TMP8]], ptr [[TMP12]], align 2
+; CHECK-NOTF-NEXT:    [[TMP9:%.*]] = extractelement <4 x i16> [[TMP5]], i64 3
 ; CHECK-NOTF-NEXT:    store i16 [[TMP9]], ptr [[TMP13]], align 2
 ; CHECK-NOTF-NEXT:    store i64 0, ptr [[A]], align 8
 ; CHECK-NOTF-NEXT:    store i64 0, ptr [[B]], align 8

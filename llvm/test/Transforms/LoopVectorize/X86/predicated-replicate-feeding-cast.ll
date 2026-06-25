@@ -23,19 +23,14 @@ define i8 @predicated_replicate_feeding_cast(i16 %n, i1 %c1, i1 %c2, i16 %a, i8 
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[PRED_SDIV_IF:.*]], label %[[PRED_SDIV_CONTINUE:.*]]
 ; CHECK:       [[PRED_SDIV_IF]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = sdiv i16 1, [[A]]
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i16> poison, i16 [[TMP5]], i64 0
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE]]
 ; CHECK:       [[PRED_SDIV_CONTINUE]]:
-; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x i16> [ poison, %[[VECTOR_BODY]] ], [ [[TMP6]], %[[PRED_SDIV_IF]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi i16 [ poison, %[[VECTOR_BODY]] ], [ [[TMP5]], %[[PRED_SDIV_IF]] ]
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[PRED_SDIV_IF1:.*]], label %[[PRED_SDIV_CONTINUE2:.*]]
 ; CHECK:       [[PRED_SDIV_IF1]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = sdiv i16 1, [[A]]
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i16> [[TMP7]], i16 [[TMP8]], i64 1
 ; CHECK-NEXT:    br label %[[PRED_SDIV_CONTINUE2]]
 ; CHECK:       [[PRED_SDIV_CONTINUE2]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x i16> [ [[TMP7]], %[[PRED_SDIV_CONTINUE]] ], [ [[TMP9]], %[[PRED_SDIV_IF1]] ]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C1]], <2 x i16> zeroinitializer, <2 x i16> [[TMP10]]
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i16> [[PREDPHI]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[C1]], i16 0, i16 [[TMP6]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = trunc i16 [[TMP11]] to i8
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[PRED_SDIV_IF3:.*]], label %[[PRED_SDIV_CONTINUE4:.*]]
 ; CHECK:       [[PRED_SDIV_IF3]]:
