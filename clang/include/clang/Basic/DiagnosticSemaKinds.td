@@ -14267,7 +14267,7 @@ def warn_amdgcn_unguarded_asm_stmt
     InGroup<UnguardedBuiltinUsageAMDGPU>, DefaultIgnore;
 def note_amdgcn_unguarded_asm_silence
   : Note<"enclose the '%0' ASM sequence in a scope controlled by a "
-         "__builtin_amdgcn_is_processor check to silence this warning">;
+         "__builtin_amdgcn_processor_is check to silence this warning">;
 def err_amdgcn_incompatible_builtin
   : Error<"%0 cannot be invoked in the current context, as it requires the "
           "'%1' feature(s)%select{|, which '%3' does not provide}2">;
