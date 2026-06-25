@@ -1558,10 +1558,10 @@ bool LoopIdiomRecognize::optimizeCRCLoopToClmul(const PolynomialInfo &Info) {
   // The TripCount determines how many bits of data are processed, regardless of
   // whether the actual data bit width matches (if auxiliary data is even used
   // at all).
-  unsigned EffectiveDataBW = Info.TripCount;
-  // The width used for clmul operations should be a power of 2, and should be
-  // at least CRCBW + DataBW.
-  unsigned ClmulBW = 2 * std::max(CRCBW, EffectiveDataBW);
+  unsigned TC = Info.TripCount;
+  // The first clmul uses 2*TC bits, and the second clmul uses CRCBW+TC bits.
+  // For simplicity, have both operate on the same bit width.
+  unsigned ClmulBW = std::max(2 * TC, CRCBW + TC);
   Type *ClmulTy = IntegerType::get(Ctx, ClmulBW);
 
   // For big-endian CRC loops where the auxiliary data is XORed with the CRC
@@ -1570,85 +1570,82 @@ bool LoopIdiomRecognize::optimizeCRCLoopToClmul(const PolynomialInfo &Info) {
   // still detect the loop. Since this optimization always produces a correct
   // CRC computation, bail in this edge case.
   if (Info.IsBigEndian && Info.LHSAux &&
-      (EffectiveDataBW != CRCBW ||
-       Info.LHSAux->getType()->getIntegerBitWidth() != CRCBW))
+      (TC != CRCBW || Info.LHSAux->getType()->getIntegerBitWidth() != CRCBW))
     return false;
 
-  // This optimization should not be applied if there is no fast clmul operation
-  // for the required width on the target.
-  // TODO: If EffectiveDataBW > CRCBW, then the data could probably be split
-  // into multiple chunks and processed in a loop.
+  // This optimization should only be applied if clmul for the required width is
+  // a fast operation on the target.
+  // TODO: If TC > CRCBW, then the data could probably be split into multiple
+  // chunks and processed in a loop.
   if (!TTI->haveFastClmul(ClmulTy))
     return false;
 
   // First, generate the constants required for GF(2) Barrett reduction.
-  CRCBarrettConstants Constants = HashRecognize::genBarrettConstants(
-      Info.RHS, EffectiveDataBW, Info.IsBigEndian);
+  CRCBarrettConstants Constants =
+      HashRecognize::genBarrettConstants(Info.RHS, TC, Info.IsBigEndian);
   Value *Mu = ConstantInt::get(Ctx, Constants.Mu.zext(ClmulBW));
   Value *FullGenPoly =
       ConstantInt::get(Ctx, Constants.FullGenPoly.zext(ClmulBW));
+
+  // Mark all PHIs for removal since we're getting rid of the loop.
+  SmallVector<PHINode *, 2> Cleanup;
+  for (PHINode &PN : CurLoop->getHeader()->phis()) {
+    PN.replaceAllUsesWith(PoisonValue::get(PN.getType()));
+    Cleanup.push_back(&PN);
+  }
 
   IRBuilder<> Builder(CurLoop->getLoopPreheader()->getTerminator());
 
   Value *CRCExt = Builder.CreateZExt(Info.LHS, ClmulTy, "crc.ext");
 
   // For the big-endian case, align the leftmost bit of the CRC with the
-  // leftmost bit of the data. For the little-endian case, align the rightmost
-  // bits (nothing to do).
-  Value *CRCAlignData = CRCExt;
+  // leftmost bit of the data which is used. For the little-endian case, align
+  // the rightmost bits (nothing to do).
+  Value *CRCAlignTC = CRCExt;
   if (Info.IsBigEndian) {
-    if (CRCBW > EffectiveDataBW)
-      CRCAlignData = Builder.CreateLShr(CRCAlignData, CRCBW - EffectiveDataBW,
-                                        "crc.be.lshr");
-    else if (EffectiveDataBW > CRCBW)
-      CRCAlignData = Builder.CreateShl(CRCAlignData, EffectiveDataBW - CRCBW,
-                                       "crc.be.shl");
+    if (CRCBW > TC)
+      CRCAlignTC = Builder.CreateLShr(CRCAlignTC, CRCBW - TC, "crc.be.lshr");
+    else if (TC > CRCBW)
+      CRCAlignTC = Builder.CreateShl(CRCAlignTC, TC - CRCBW, "crc.be.shl");
   }
 
   // If auxiliary data is present, XOR it in with the CRC.
-  Value *ClmulMuInput = CRCAlignData;
+  Value *ClmulMuInput = CRCAlignTC;
   if (Value *Data = Info.LHSAux) {
-    unsigned ActualDataBW = Data->getType()->getIntegerBitWidth();
-    if (ActualDataBW > EffectiveDataBW)
+    unsigned DataBW = Data->getType()->getIntegerBitWidth();
+    if (DataBW > TC) {
       // Extract the useful bits of the data and discard the rest.
-      Data =
-          Info.IsBigEndian
-              ? Builder.CreateLShr(Data, ActualDataBW - EffectiveDataBW,
-                                   "data.be.lshr")
-              : Builder.CreateAnd(
-                    Data,
-                    ConstantInt::get(Ctx, APInt::getLowBitsSet(
-                                              ActualDataBW, EffectiveDataBW)),
-                    "data.le.mask");
-    // This isn't necessarily a zext-- ActualDataBW could be greater than
-    // ClmulBW.
-    Value *DataExt = Builder.CreateZExtOrTrunc(Data, ClmulTy, "data.ext");
-    // For the big-endian case, ensure the data is aligned properly.
-    if (Info.IsBigEndian && EffectiveDataBW > ActualDataBW)
-      DataExt = Builder.CreateShl(DataExt, EffectiveDataBW - ActualDataBW,
-                                  "data.be.shl");
+      if (Info.IsBigEndian) {
+        Data = Builder.CreateLShr(Data, DataBW - TC, "data.be.lshr");
+      } else {
+        ConstantInt *Mask =
+            ConstantInt::get(Ctx, APInt::getLowBitsSet(DataBW, TC));
+        Data = Builder.CreateAnd(Data, Mask, "data.le.mask");
+      }
+    }
+    // This is always a zext since TripCount <= DataBW < ClmulBW.
+    Value *DataExt = Builder.CreateZExt(Data, ClmulTy, "data.ext");
 
-    ClmulMuInput = Builder.CreateXor(CRCAlignData, DataExt, "xor.crc.data");
+    ClmulMuInput = Builder.CreateXor(CRCAlignTC, DataExt, "xor.crc.data");
   }
 
-  // Perform the first clmul operation with the mu/mu' constant. Input is DataBW
-  // bits and Mu is DataBW+1 bits, so the result will be 2*DataBW bits.
+  // Perform the first clmul operation with the mu/mu' constant. Input is TC
+  // bits and Mu is TC+1 bits, so the result will be 2*TC bits.
   Value *ClmulMu = Builder.CreateBinaryIntrinsic(Intrinsic::clmul, ClmulMuInput,
                                                  Mu, {}, "clmul.mu");
 
-  // Extract the relevant DataBW bits from the result.
-  Value *ClmulGPInput =
-      Info.IsBigEndian
-          ? Builder.CreateLShr(ClmulMu, EffectiveDataBW, "quot.be.lshr")
-          : Builder.CreateAnd(
-                ClmulMu,
-                ConstantInt::get(
-                    Ctx, APInt::getLowBitsSet(ClmulBW, EffectiveDataBW)),
-                "quot.le.mask");
+  // Extract the relevant bits from the result.
+  Value *ClmulGPInput;
+  if (Info.IsBigEndian) {
+    ClmulGPInput = Builder.CreateLShr(ClmulMu, TC, "quot.be.lshr");
+  } else {
+    ConstantInt *Mask =
+        ConstantInt::get(Ctx, APInt::getLowBitsSet(ClmulBW, TC));
+    ClmulGPInput = Builder.CreateAnd(ClmulMu, Mask, "quot.le.mask");
+  }
 
   // Perform the second clmul operation with the P(x)/P(x)' constant. Input is
-  // DataBW bits and GP is CRCBW+1 bits, so the result will be CRCBW+DataBW
-  // bits.
+  // TC bits and GP is CRCBW+1 bits, so the result will be CRCBW+TC bits.
   Value *ClmulGP = Builder.CreateBinaryIntrinsic(Intrinsic::clmul, ClmulGPInput,
                                                  FullGenPoly, {}, "clmul.gp");
 
@@ -1657,17 +1654,25 @@ bool LoopIdiomRecognize::optimizeCRCLoopToClmul(const PolynomialInfo &Info) {
   // rightmost bits (nothing to do).
   Value *CRCAlignClmul = CRCExt;
   if (Info.IsBigEndian)
-    CRCAlignClmul = Builder.CreateShl(CRCExt, EffectiveDataBW, "crc.be.shl");
+    CRCAlignClmul = Builder.CreateShl(CRCExt, TC, "crc.be.shl");
+
   // Get the remainder by subtracting (XORing) the calculated multiple of
   // GenPoly from the CRC.
   Value *CRCNext = Builder.CreateXor(CRCAlignClmul, ClmulGP, "xor.crc.mult");
+
   // For the little-endian case, the leftmost bits of the XOR are relevant.
   if (!Info.IsBigEndian)
-    CRCNext = Builder.CreateLShr(CRCNext, EffectiveDataBW, "crc.le.lshr");
+    CRCNext = Builder.CreateLShr(CRCNext, TC, "crc.le.lshr");
   CRCNext = Builder.CreateTrunc(CRCNext, CRCTy, "crc.next");
 
   // Replace the result of the loop with the new computed CRC value.
   Info.ComputedValue->replaceUsesOutsideBlock(CRCNext, CurLoop->getLoopLatch());
+
+  // Get rid of the loop completely.
+  for (PHINode *PN : Cleanup)
+    RecursivelyDeleteDeadPHINode(PN);
+  MemorySSA *MSSA = MSSAU ? MSSAU->getMemorySSA() : nullptr;
+  deleteDeadLoop(CurLoop, DT, SE, LI, MSSA);
 
   return true;
 }

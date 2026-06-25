@@ -26,7 +26,7 @@ define i16 @crc16.le.tc8(i8 %msg, i16 %checksum) {
 ; CHECK-NEXT:  34817 18624 18816 35137 19200 35777 35457 19008 19968 36545 36737 20288 36097 19904 19584 35905
 ; CHECK-NEXT:  17408 33985 34177 17728 34561 18368 18048 34369 33281 17088 17280 33601 16640 33217 32897 16448
 ; CHECK-NEXT:    Computed CRC Barrett constants:
-; CHECK-NEXT:  Reciprocal = 511, Generator = 81923
+; CHECK-NEXT:  Mu = 511, FullGenPoly = 81923
 ;
 entry:
   br label %loop
@@ -76,7 +76,7 @@ define i16 @crc16.le.tc8.udiv(i8 %msg, i16 %checksum) {
 ; CHECK-NEXT:  34817 18624 18816 35137 19200 35777 35457 19008 19968 36545 36737 20288 36097 19904 19584 35905
 ; CHECK-NEXT:  17408 33985 34177 17728 34561 18368 18048 34369 33281 17088 17280 33601 16640 33217 32897 16448
 ; CHECK-NEXT:    Computed CRC Barrett constants:
-; CHECK-NEXT:  Reciprocal = 511, Generator = 81923
+; CHECK-NEXT:  Mu = 511, FullGenPoly = 81923
 ;
 entry:
   br label %loop
@@ -126,7 +126,7 @@ define i16 @crc16.le.tc16(i16 %msg, i16 %checksum) {
 ; CHECK-NEXT:  34817 18624 18816 35137 19200 35777 35457 19008 19968 36545 36737 20288 36097 19904 19584 35905
 ; CHECK-NEXT:  17408 33985 34177 17728 34561 18368 18048 34369 33281 17088 17280 33601 16640 33217 32897 16448
 ; CHECK-NEXT:    Computed CRC Barrett constants:
-; CHECK-NEXT:  Reciprocal = 114687, Generator = 81923
+; CHECK-NEXT:  Mu = 114687, FullGenPoly = 81923
 ;
 entry:
   br label %loop
@@ -175,7 +175,7 @@ define i8 @crc8.le.tc16(i16 %msg, i8 %checksum) {
 ; CHECK-NEXT:  26 19 8 1 5 12 23 30 31 22 13 4 0 9 18 27
 ; CHECK-NEXT:  16 25 2 11 15 6 29 20 21 28 7 14 10 3 24 17
 ; CHECK-NEXT:    Computed CRC Barrett constants:
-; CHECK-NEXT:  Reciprocal = 24423, Generator = 59
+; CHECK-NEXT:  Mu = 24423, FullGenPoly = 59
 ;
 entry:
   br label %loop
@@ -224,7 +224,7 @@ define i16 @crc16.be.tc8.crc.init.li(i16 %checksum, i8 %msg) {
 ; CHECK-NEXT:  64814 60687 56684 52557 48554 44427 40424 36297 31782 27655 23652 19525 15522 11395 7392 3265
 ; CHECK-NEXT:  61215 65342 53085 57212 44955 49082 36825 40952 28183 32310 20053 24180 11923 16050 3793 7920
 ; CHECK-NEXT:    Computed CRC Barrett constants:
-; CHECK-NEXT:  Reciprocal = 273, Generator = 69665
+; CHECK-NEXT:  Mu = 273, FullGenPoly = 69665
 ;
 entry:
   %msg.ext = zext i8 %msg to i16
@@ -271,7 +271,7 @@ define i16 @crc16.be.tc8.crc.init.arg(i16 %crc.init) {
 ; CHECK-NEXT:  64814 60687 56684 52557 48554 44427 40424 36297 31782 27655 23652 19525 15522 11395 7392 3265
 ; CHECK-NEXT:  61215 65342 53085 57212 44955 49082 36825 40952 28183 32310 20053 24180 11923 16050 3793 7920
 ; CHECK-NEXT:    Computed CRC Barrett constants:
-; CHECK-NEXT:  Reciprocal = 273, Generator = 69665
+; CHECK-NEXT:  Mu = 273, FullGenPoly = 69665
 ;
 entry:
   br label %loop
@@ -315,7 +315,7 @@ define i16 @crc16.be.tc8.crc.init.arg.flipped.sb.check(i16 %crc.init) {
 ; CHECK-NEXT:  64814 60687 56684 52557 48554 44427 40424 36297 31782 27655 23652 19525 15522 11395 7392 3265
 ; CHECK-NEXT:  61215 65342 53085 57212 44955 49082 36825 40952 28183 32310 20053 24180 11923 16050 3793 7920
 ; CHECK-NEXT:    Computed CRC Barrett constants:
-; CHECK-NEXT:  Reciprocal = 273, Generator = 69665
+; CHECK-NEXT:  Mu = 273, FullGenPoly = 69665
 ;
 entry:
   br label %loop
@@ -359,7 +359,7 @@ define i8 @crc8.be.tc8.ptr.nested.loop(ptr %msg, i32 %loop.limit) {
 ; CHECK-NEXT:  178 175 136 149 198 219 252 225 90 71 96 125 46 51 20 9
 ; CHECK-NEXT:  127 98 69 88 11 22 49 44 151 138 173 176 227 254 217 196
 ; CHECK-NEXT:    Computed CRC Barrett constants:
-; CHECK-NEXT:  Reciprocal = 284, Generator = 285
+; CHECK-NEXT:  Mu = 284, FullGenPoly = 285
 ;
 entry:
   br label %outer.loop
@@ -421,7 +421,7 @@ define i32 @crc32.le.tc8.data32(i32 %checksum, i32 %msg) {
 ; CHECK-NEXT:  59150 63111 50204 54677 41258 45219 33336 37809 27462 31439 18516 23005 11618 15595 3696 8185
 ; CHECK-NEXT:  63375 58886 54429 50452 45483 40994 37561 33584 31687 27214 22741 18780 15843 11370 7921 3960
 ; CHECK-NEXT:    Computed CRC Barrett constants:
-; CHECK-NEXT:  Reciprocal = 273, Generator = 67601
+; CHECK-NEXT:  Mu = 273, FullGenPoly = 67601
 ;
 entry:
   br label %loop
@@ -470,7 +470,7 @@ define i16 @crc16.be.tc8.zext.data(i8 %msg, i16 %checksum) {
 ; CHECK-NEXT:  57792 57538 58308 58054 58824 58570 59340 59086 59856 59602 60372 60118 60888 60634 61404 61150
 ; CHECK-NEXT:  61920 61666 62436 62182 62952 62698 63468 63214 63984 63730 64500 64246 65016 64762 65532 65278
 ; CHECK-NEXT:    Computed CRC Barrett constants:
-; CHECK-NEXT:  Reciprocal = 257, Generator = 65794
+; CHECK-NEXT:  Mu = 257, FullGenPoly = 65794
 ;
 entry:
   br label %loop

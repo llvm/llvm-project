@@ -407,27 +407,28 @@ static APInt floorDivideGF2(APInt Dividend, APInt Divisor) {
 // Generate the constants for performing a Polynomial (GF(2)) Barrett Reduction
 // according to Intel's Fast CRC Computation white paper
 // (https://www.researchgate.net/publication/263424619_Fast_CRC_computation),
-// with some adjustments to account for the fact that CRCBW and DataBW can vary.
+// with some adjustments to account for the fact that bit width and trip count
+// can vary.
 CRCBarrettConstants HashRecognize::genBarrettConstants(const APInt &GenPoly,
-                                                       unsigned DataBW,
+                                                       unsigned TripCount,
                                                        bool IsBigEndian) {
-  unsigned CRCBW = GenPoly.getBitWidth();
+  unsigned BW = GenPoly.getBitWidth();
 
   // Recover the full generating polynomial in normal form by reflecting the LE
-  // case and adding the implied x^CRCBW term.
-  // deg(P(x)) = CRCBW due to the implied term, and thus P(x) must fit in
-  // exactly CRCBW+1 bits.
+  // case and adding the implied x^BW term.
+  // deg(P(x)) = BW due to the implied term, and thus P(x) must fit in exactly
+  // BW+1 bits.
   APInt FullGenPoly =
-      (IsBigEndian ? GenPoly : GenPoly.reverseBits()).zext(CRCBW + 1);
-  FullGenPoly.setBit(CRCBW);
+      (IsBigEndian ? GenPoly : GenPoly.reverseBits()).zext(BW + 1);
+  FullGenPoly.setBit(BW);
 
-  // Calculate mu = floor(x^(CRCBW+DataBW) / P(x)).
-  // deg(mu) <= deg(x^(CRCBW+DataBW)) - deg(P(x)) = CRCBW+DataBW - CRCBW =
-  // DataBW, and thus mu must fit in at most DataBW+1 bits.
-  unsigned DivBW = CRCBW + DataBW + 1;
+  // Calculate mu = floor(x^(BW+TC) / P(x)).
+  // deg(mu) <= deg(x^(BW+TC)) - deg(P(x)) = BW+TC - BW = TC, and thus mu must
+  // fit in at most TC+1 bits.
+  unsigned DivBW = BW + TripCount + 1;
   APInt Mu =
-      floorDivideGF2(APInt::getOneBitSet(DivBW, CRCBW + DataBW), FullGenPoly)
-          .trunc(DataBW + 1);
+      floorDivideGF2(APInt::getOneBitSet(DivBW, BW + TripCount), FullGenPoly)
+          .trunc(TripCount + 1);
 
   // In the bit-reflected case, mu and P(x) must be bit-reflected across their
   // respective widths for the corresponding Barrett reduction steps.
@@ -436,12 +437,9 @@ CRCBarrettConstants HashRecognize::genBarrettConstants(const APInt &GenPoly,
     FullGenPoly = FullGenPoly.reverseBits();
   }
 
-  // The width used for clmul operations should be a power of 2, and should be
-  // at least CRCBW + DataBW.
-  unsigned ClmulBW = 2 * std::max(CRCBW, DataBW);
-
-  // Finally, cast mu/mu' and P(x)/P(x)' to the width used for clmul operations.
-  return {Mu.zext(ClmulBW), FullGenPoly.zext(ClmulBW)};
+  // The final constants are mu/mu' and P(x)/P(x)', depending on
+  // IsBigEndian.
+  return {Mu, FullGenPoly};
 }
 
 /// Checks that \p P1 and \p P2 are used together in an XOR in the use-def chain
@@ -600,7 +598,11 @@ void CRCTable::dump() const { print(dbgs()); }
 #endif
 
 void CRCBarrettConstants::print(raw_ostream &OS) const {
-  OS << "Reciprocal = " << Mu << ", Generator = " << FullGenPoly << '\n';
+  OS << "Mu = ";
+  Mu.print(OS, false);
+  OS << ", FullGenPoly = ";
+  FullGenPoly.print(OS, false);
+  OS << '\n';
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
