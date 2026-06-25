@@ -23,6 +23,8 @@ TEST(LlvmLibcSharedBuiltinsTest, AllDouble) {
 TEST(LlvmLibcSharedBuiltinsTest, AllFloat128) {
   EXPECT_FP_EQ(float128(3.0),
                LIBC_NAMESPACE::shared::addtf3(float128(1.0), float128(2.0)));
+  EXPECT_FP_EQ(float128(3.0),
+               LIBC_NAMESPACE::shared::divtf3(float128(6.0), float128(2.0)));
   EXPECT_FP_EQ(float128(6.0),
                LIBC_NAMESPACE::shared::multf3(float128(2.0), float128(3.0)));
   EXPECT_FP_EQ(float128(2.0),
