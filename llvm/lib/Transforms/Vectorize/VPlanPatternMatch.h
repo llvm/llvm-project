@@ -32,14 +32,14 @@ template <typename Pattern> bool match(VPUser *U, const Pattern &P) {
   return R && match(R, P);
 }
 
+template <typename Pattern> bool match(VPSingleDefRecipe *R, const Pattern &P) {
+  return P.match(static_cast<const VPRecipeBase *>(R));
+}
+
 /// A match functor that can be used as a UnaryPredicate in functional
 /// algorithms like all_of.
 template <typename Pattern> auto match_fn(const Pattern &P) {
   return [&P](auto *V) { return match(V, P); };
-}
-
-template <typename Pattern> bool match(VPSingleDefRecipe *R, const Pattern &P) {
-  return P.match(static_cast<const VPRecipeBase *>(R));
 }
 
 /// Match an arbitrary VPValue and ignore it.
