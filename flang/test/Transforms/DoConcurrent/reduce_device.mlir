@@ -48,7 +48,7 @@ func.func @_QPfoo() {
 // CHECK:         %[[S_VAL:.*]] = fir.load %[[S_WS_DECL]]#0
 // CHECK:         %[[RED_RES:.*]] = arith.addf %[[S_VAL]], %{{.*}} fastmath<contract> : f32
 // CHECK:         hlfir.assign %[[RED_RES]] to %[[S_WS_DECL]]#0
-// CHECK:       }
-// CHECK:     }
-// CHECK:   }
-// CHECK: }
+// CHECK:       } {omp.composite}
+// CHECK:     } {omp.composite}
+// CHECK:   } {omp.composite}
+// CHECK: } {omp.combined}

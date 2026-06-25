@@ -42,8 +42,8 @@ func.func @_QPfoo() {
 // CHECK:             hlfir.assign %{{.*}} to %[[LOCAL_LOOP_DECL]]#0
 // CHECK:             omp.yield
 // CHECK:           }
-// CHECK:         }
-// CHECK:       }
-// CHECK:     }
-// CHECK:   }
-// CHECK: }
+// CHECK:         } {omp.composite}
+// CHECK:       } {omp.composite}
+// CHECK:     } {omp.composite}
+// CHECK:   } {omp.combined}
+// CHECK: } {omp.combined}

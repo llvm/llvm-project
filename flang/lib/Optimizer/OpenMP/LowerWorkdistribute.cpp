@@ -274,8 +274,10 @@ fissionWorkdistribute(omp::WorkdistributeOp workdistribute) {
     }
 
     if (parallelize && hoisted.empty() &&
-        parallelize->getNextNode() == terminator)
+        parallelize->getNextNode() == terminator) {
+      teams.setCombined(true);
       break;
+    }
     if (parallelize) {
       auto newTeams = rewriter.cloneWithoutRegions(teams);
       auto *newTeamsBlock = rewriter.createBlock(
@@ -290,6 +292,7 @@ fissionWorkdistribute(omp::WorkdistributeOp workdistribute) {
       parallelize->replaceAllUsesWith(cloned);
       parallelize->erase();
       omp::TerminatorOp::create(rewriter, loc);
+      newTeams.setCombined(true);
       changed = true;
     }
   }
@@ -1591,6 +1594,7 @@ genIsolatedTargetOp(omp::TargetOp targetOp, SmallVector<Value> &postMapOperands,
       targetOp.getThreadLimitVars(), targetOp.getPrivateMapsAttr(),
       omp::TargetExecModeAttr::get(targetOp->getContext(),
                                    omp::TargetExecMode::spmd));
+  isolatedTargetOp.setCombined(true);
   auto *isolatedTargetBlock =
       rewriter.createBlock(&isolatedTargetOp.getRegion(),
                            isolatedTargetOp.getRegion().begin(), {}, {});

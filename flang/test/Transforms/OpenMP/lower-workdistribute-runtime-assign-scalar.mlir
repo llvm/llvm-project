@@ -35,9 +35,9 @@
 // CHECK:                   omp.terminator
 // CHECK:                 } {omp.composite}
 // CHECK:                 omp.terminator
-// CHECK:               }
+// CHECK:               } {omp.combined}
 // CHECK:               omp.terminator
-// CHECK:             }
+// CHECK:             } {omp.combined}
 // CHECK:             omp.terminator
 // CHECK:           }
 // CHECK:           return
