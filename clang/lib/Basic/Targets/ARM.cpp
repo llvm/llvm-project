@@ -375,7 +375,7 @@ bool ARMTargetInfo::validateBranchProtection(StringRef Spec, StringRef Arch,
                                              const LangOptions &LO,
                                              StringRef &Err) const {
   llvm::ARM::ParsedBranchProtection PBP;
-  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err))
+  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err, getTriple()))
     return false;
 
   if (!isBranchProtectionSupportedArch(Arch))
