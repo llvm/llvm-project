@@ -18,6 +18,6 @@ int main(void) {                   // CHECK:      1: [[#@LINE]]:int main(void)
   __gcov_reset();                  // CHECK-NEXT: 1: [[#@LINE]]:
   i = 42;                          // CHECK-NEXT: 1: [[#@LINE]]:
   __builtin_trap();                // CHECK-NEXT: 1: [[#@LINE]]:
-  i = 84;                          // CHECK-NEXT: 1: [[#@LINE]]:
-  return 0;                        // CHECK-NEXT: 1: [[#@LINE]]:
+  i = 84;                          // CHECK-NEXT: -: [[#@LINE]]:
+  return 0;                        // CHECK-NEXT: -: [[#@LINE]]:
 }
