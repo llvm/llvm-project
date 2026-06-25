@@ -13,7 +13,6 @@
 #ifndef LLVM_LIB_TARGET_NVPTX_MCTARGETDESC_NVPTXMCTARGETDESC_H
 #define LLVM_LIB_TARGET_NVPTX_MCTARGETDESC_NVPTXMCTARGETDESC_H
 
-#include "llvm/Support/Compiler.h"
 #include <stdint.h>
 
 // Defines symbolic names for PTX registers.
@@ -23,7 +22,6 @@
 // Defines symbolic names for the PTX instructions.
 #define GET_INSTRINFO_ENUM
 #define GET_INSTRINFO_MC_HELPER_DECLS
-#define GET_INSTRINFO_OPERAND_ENUM
 #include "NVPTXGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM
