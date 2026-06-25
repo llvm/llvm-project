@@ -538,13 +538,15 @@ void ScheduleDAGInstrs::addVRegUseDeps(SUnit *SU, unsigned OperIdx) {
   }
 }
 
-void ScheduleDAGInstrs::addChainDependency(SUnit *SUa, SUnit *SUb,
+bool ScheduleDAGInstrs::addChainDependency(SUnit *SUa, SUnit *SUb,
                                            unsigned Latency) {
-  if (SUa->getInstr()->mayAlias(getAAForDep(), *SUb->getInstr(), UseTBAA)) {
-    SDep Dep(SUa, SDep::MayAliasMem);
-    Dep.setLatency(Latency);
-    SUb->addPred(Dep);
-  }
+  if (!SUa->getInstr()->mayAlias(getAAForDep(), *SUb->getInstr(), UseTBAA))
+    return false;
+
+  SDep Dep(SUa, SDep::MayAliasMem);
+  Dep.setLatency(Latency);
+  SUb->addPred(Dep);
+  return true;
 }
 
 /// Creates an SUnit for each real instruction, numbered in top-down
@@ -896,20 +898,25 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
           // Sequence against the previous sequencing store
           if (Frontier.SequencingStore)
             Frontier.SequencingStore->addPredBarrier(SU);
-          // Sequence against the entire frontier
-          for (auto &[V, SUs] : Frontier.Loads)
-            for (SUnit *S : SUs)
-              S->addPredBarrier(SU);
+          // Sequence against all stores
           for (auto &[V, SUs] : Frontier.Stores)
             for (SUnit *S : SUs)
               S->addPredBarrier(SU);
+          // Only drop loads who alias with the new sequencing store
+          for (auto &[V, SUs] : Frontier.Loads) {
+            for (auto It = SUs.begin(); It != SUs.end();) {
+              if (addChainDependency(SU, *It))
+                It = SUs.erase(It);
+              else
+                ++It;
+            }
+          }
           // Update the sequencing store
           Frontier.SequencingStore = SU;
           Frontier.BaseObjects = std::move(Objs);
           Frontier.SeenSequencingLoad = false;
           // Clear maps
           Frontier.Stores.clear();
-          Frontier.Loads.clear();
         } else {
           // Always sequence against the sequencing store if there is one
           Frontier.SequencingStore->addPredBarrier(SU);

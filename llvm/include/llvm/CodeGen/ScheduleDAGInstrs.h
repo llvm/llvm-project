@@ -211,8 +211,8 @@ namespace llvm {
 
     /// Adds a chain edge between SUa and SUb, but only if both
     /// AAResults and Target fail to deny the dependency.
-    void addChainDependency(SUnit *SUa, SUnit *SUb,
-                            unsigned Latency = 0);
+    /// Returns true if an edge was inserted and false otherwise.
+    bool addChainDependency(SUnit *SUa, SUnit *SUb, unsigned Latency = 0);
 
     /// Adds dependencies as needed from all SUs in list to SU.
     void addChainDependencies(SUnit *SU, SUList &SUs, unsigned Latency) {
