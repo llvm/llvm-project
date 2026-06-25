@@ -1286,6 +1286,20 @@ bool ObjectSizeOffsetEvaluator::computeFallbackHeapMetadata(Value *V, SizeOffset
   if (VF && HF && VF != HF)
     return false;
 
+  if (auto *HeadInst = dyn_cast<Instruction>(HeadVal)) {
+    if (VF && HF && VF == HF) {
+      bool CanMoveToEntry = true;
+      for (Value *Op : HeadInst->operands()) {
+        if (isa<Instruction>(Op)) {
+          CanMoveToEntry = false;
+          break;
+        }
+      }
+      if (CanMoveToEntry)
+        HeadInst->moveBefore(const_cast<Function *>(VF)->getEntryBlock().getFirstInsertionPt());
+    }
+  }
+
   Value *OffsetVal = nullptr;
   if (HeadVal == V) {
     OffsetVal = Zero;

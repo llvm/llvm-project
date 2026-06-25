@@ -259,11 +259,26 @@ public:
 
     for (const Use &U : I.operands()) {
       const Value *Op = U.get();
-      auto OpSeedIt = Seeds.find(Op);
-      if (OpSeedIt != Seeds.end()) MergeInto(Op, OpSeedIt->second);
+      auto OpInfo = ChangedValues[Op];
+      if (OpInfo.isUninit())
+        OpInfo = SS.getExistingValueState(Op);
+      if (OpInfo.isUninit()) {
+        auto OpSeedIt = Seeds.find(Op);
+        if (OpSeedIt != Seeds.end()) OpInfo = OpSeedIt->second;
+      }
+      if (OpInfo.isValid() && (OpInfo.Dir & HeapProvenanceLattice::Backward)) {
+        HeapProvenanceLattice FwdFromBack = OpInfo;
+        if (FwdFromBack.State == HeapProvenanceLattice::StateKind::HeapChunkHead) {
+          FwdFromBack.State = HeapProvenanceLattice::StateKind::HeapChunkInterim;
+          FwdFromBack.HeadPayload = {HeapProvenanceLattice::Payload::Kind::Ref, Op};
+        }
+        MergeInto(&I, FwdFromBack);
+      }
     }
 
-    auto Info = SS.getExistingValueState(&I);
+    auto Info = ChangedValues[&I];
+    if (Info.isUninit())
+      Info = SS.getExistingValueState(&I);
     if (Info.isValid() && (Info.Dir & HeapProvenanceLattice::Backward)) {
       HeapProvenanceLattice BackInfo = Info;
       BackInfo.Dir = HeapProvenanceLattice::Backward;
