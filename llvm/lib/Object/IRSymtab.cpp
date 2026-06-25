@@ -246,6 +246,8 @@ Error Builder::addSymbol(const ModuleSymbolTable &Msymtab,
     Sym.Flags |= 1 << storage::Symbol::FB_format_specific;
   if (Flags & object::BasicSymbolRef::SF_Executable)
     Sym.Flags |= 1 << storage::Symbol::FB_executable;
+  if (Flags & object::BasicSymbolRef::SF_Private)
+    Sym.Flags |= 1 << storage::Symbol::FB_private;
 
   Sym.ComdatIndex = -1;
   auto *GV = dyn_cast_if_present<GlobalValue *>(Msym);

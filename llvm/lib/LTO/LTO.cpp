@@ -621,13 +621,15 @@ void llvm::thinLTOInternalizeAndPromoteInIndex(
 // Requires a destructor for std::vector<InputModule>.
 InputFile::~InputFile() = default;
 
-Expected<std::unique_ptr<InputFile>> InputFile::create(MemoryBufferRef Object) {
+Expected<std::unique_ptr<InputFile>>
+InputFile::create(MemoryBufferRef Object, bool IncludeLocalSymbols) {
   std::unique_ptr<InputFile> File(new InputFile);
 
   Expected<IRSymtabFile> FOrErr = readIRSymtab(Object);
   if (!FOrErr)
     return FOrErr.takeError();
 
+  File->IncludeLocalSymbols = IncludeLocalSymbols;
   File->TargetTriple = FOrErr->TheReader.getTargetTriple();
   File->SourceFileName = FOrErr->TheReader.getSourceFileName();
   File->COFFLinkerOpts = FOrErr->TheReader.getCOFFLinkerOpts();
@@ -639,11 +641,17 @@ Expected<std::unique_ptr<InputFile>> InputFile::create(MemoryBufferRef Object) {
   for (unsigned I = 0; I != FOrErr->Mods.size(); ++I) {
     size_t Begin = File->Symbols.size();
     for (const irsymtab::Reader::SymbolRef &Sym :
-         FOrErr->TheReader.module_symbols(I))
+         FOrErr->TheReader.module_symbols(I)) {
       // Skip symbols that are irrelevant to LTO. Note that this condition needs
       // to match the one in Skip() in LTO::addRegularLTO().
-      if (Sym.isGlobal() && !Sym.isFormatSpecific())
-        File->Symbols.push_back(Sym);
+      if (IncludeLocalSymbols) {
+        if (!Sym.isFormatSpecific() || Sym.isPrivate())
+          File->Symbols.push_back(Sym);
+      } else {
+        if (Sym.isGlobal() && !Sym.isFormatSpecific())
+          File->Symbols.push_back(Sym);
+      }
+    }
     File->ModuleSymIndices.push_back({Begin, File->Symbols.size()});
   }
 
@@ -1025,9 +1033,15 @@ LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
   auto Skip = [&]() {
     while (MsymI != MsymE) {
       auto Flags = SymTab.getSymbolFlags(*MsymI);
-      if ((Flags & object::BasicSymbolRef::SF_Global) &&
-          !(Flags & object::BasicSymbolRef::SF_FormatSpecific))
-        return;
+      if (Input.IncludeLocalSymbols) {
+        if (!(Flags & object::BasicSymbolRef::SF_FormatSpecific) ||
+            (Flags & object::BasicSymbolRef::SF_Private))
+          return;
+      } else {
+        if ((Flags & object::BasicSymbolRef::SF_Global) &&
+            !(Flags & object::BasicSymbolRef::SF_FormatSpecific))
+          return;
+      }
       ++MsymI;
     }
   };
@@ -1080,6 +1094,31 @@ LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
         if (GV->hasDLLImportStorageClass())
           GV->setDLLStorageClass(GlobalValue::DLLStorageClassTypes::
                                  DefaultStorageClass);
+      }
+
+      // Set the output section based on the linker script.
+      if (!R.OutputSectionName.empty()) {
+        if (auto *GVar = dyn_cast<GlobalVariable>(GV)) {
+          // First, remove the old attribute if present
+          if (GVar->hasAttribute("linker_output_section")) {
+            AttrBuilder Attrs(GVar->getParent()->getContext(),
+                              GVar->getAttributes());
+            Attrs.removeAttribute("linker_output_section");
+            GVar->setAttributes(AttributeSet::get(GVar->getContext(), Attrs));
+          }
+          GVar->addAttribute("linker_output_section", R.OutputSectionName);
+          if (GVar->hasSection())
+            GVar->setSection(
+                (GVar->getSection() + "^^" + M.getModuleIdentifier()).str());
+        } else if (auto *F = dyn_cast<Function>(GV)) {
+          // First, remove the old attribute if present
+          if (F->hasFnAttribute("linker_output_section"))
+            F->removeFnAttr("linker_output_section");
+          F->addFnAttr("linker_output_section", R.OutputSectionName);
+          if (F->hasSection())
+            F->setSection(
+                (F->getSection() + "^^" + M.getModuleIdentifier()).str());
+        }
       }
     } else if (auto *AS =
                    dyn_cast_if_present<ModuleSymbolTable::AsmSymbol *>(Msym)) {

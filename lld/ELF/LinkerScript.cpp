@@ -461,6 +461,20 @@ bool LinkerScript::shouldKeep(InputSectionBase *s) {
   return false;
 }
 
+bool LinkerScript::shouldKeep(StringRef name, InputFile *file) {
+  for (InputSectionDescription *id : keptSections) {
+    if (id->matchesFile(*file)) {
+      for (SectionPattern &p : id->sectionPatterns) {
+        if (p.sectionPat.match(name)) {
+          // FIXME: Also check flags?  Need to synthesize.
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
 // A helper function for the SORT() command.
 static bool matchConstraints(ArrayRef<InputSectionBase *> sections,
                              ConstraintKind kind) {
@@ -528,6 +542,28 @@ static void sortInputSections(Ctx &ctx, MutableArrayRef<InputSectionBase *> vec,
   sortSections(vec, outer);
 }
 
+StringRef LinkerScript::mapLTOSectionName(StringRef inputSection,
+                                          InputFile *file) {
+  for (auto *cmd : sectionCommands) {
+    if (auto *os = dyn_cast<OutputDesc>(cmd)) {
+      for (auto *innercmd : os->osec.commands) {
+        if (auto *isd = dyn_cast<InputSectionDescription>(innercmd)) {
+          for (const SectionPattern &pat : isd->sectionPatterns) {
+            if (!pat.sectionPat.match(inputSection))
+              continue;
+
+            if (!isd->matchesFile(*file) || pat.excludesFile(*file))
+              continue;
+
+            return os->osec.name;
+          }
+        }
+      }
+    }
+  }
+  return "";
+}
+
 // Compute and remember which sections the InputSectionDescription matches.
 SmallVector<InputSectionBase *, 0>
 LinkerScript::computeInputSections(const InputSectionDescription *cmd,
@@ -580,11 +616,22 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
             cast<InputSection>(sec)->getRelocatedSection())
           continue;
 
+        StringRef sectionName = sec->name;
+        const InputFile *sectionFile = sec->file;
+        if (ctx.arg.ltoLinkerScripts) {
+          auto splitSectionName = sec->name.split("^^");
+          if (StringRef filename = splitSectionName.second; !filename.empty()) {
+            if (const InputFile *file = ltoInputFileMapping.lookup(filename)) {
+              sectionName = splitSectionName.first;
+              sectionFile = file;
+            }
+          }
+        }
         // Check the name early to improve performance in the common case.
-        if (!pat.sectionPat.match(sec->name))
+        if (!pat.sectionPat.match(sectionName))
           continue;
 
-        if (!cmd->matchesFile(*sec->file) || pat.excludesFile(*sec->file) ||
+        if (!cmd->matchesFile(*sectionFile) || pat.excludesFile(*sectionFile) ||
             !flagsMatch(sec))
           continue;
 

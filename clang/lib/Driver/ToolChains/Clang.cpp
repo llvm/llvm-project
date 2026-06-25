@@ -6463,6 +6463,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fconvergent_functions,
                   options::OPT_fno_convergent_functions);
 
+  Args.addOptInFlag(CmdArgs, options::OPT_flto_linker_scripts,
+                    options::OPT_fno_lto_linker_scripts);
+
   // NVPTX doesn't support PGO or coverage
   if (!Triple.isNVPTX())
     addPGOAndCoverageFlags(TC, C, JA, Output, Args, SanitizeArgs, CmdArgs);

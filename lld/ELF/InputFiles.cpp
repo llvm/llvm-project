@@ -1828,7 +1828,7 @@ BitcodeFile::BitcodeFile(Ctx &ctx, MemoryBufferRef mb, StringRef archiveName,
 
   MemoryBufferRef mbref(mb.getBuffer(), name);
 
-  obj = CHECK2(lto::InputFile::create(mbref), this);
+  obj = CHECK2(lto::InputFile::create(mbref, ctx.arg.ltoLinkerScripts), this);
   obj->setArchivePathAndName(archiveName, mb.getBufferIdentifier());
 
   Triple t(obj->getTargetTriple());
@@ -1852,7 +1852,13 @@ static uint8_t mapVisibility(GlobalValue::VisibilityTypes gvVisibility) {
 static void createBitcodeSymbol(Ctx &ctx, Symbol *&sym,
                                 const lto::InputFile::Symbol &objSym,
                                 BitcodeFile &f) {
-  uint8_t binding = objSym.isWeak() ? STB_WEAK : STB_GLOBAL;
+  uint8_t binding;
+  if (!objSym.isGlobal())
+    binding = STB_LOCAL;
+  else if (objSym.isWeak())
+    binding = STB_WEAK;
+  else
+    binding = STB_GLOBAL;
   uint8_t type = objSym.isTLS() ? STT_TLS : STT_NOTYPE;
   uint8_t visibility = mapVisibility(objSym.getVisibility());
 
@@ -1936,7 +1942,7 @@ void BitcodeFile::postParse() {
   for (auto [i, irSym] : llvm::enumerate(obj->symbols())) {
     const Symbol &sym = *symbols[i];
     if (sym.file == this || !sym.isDefined() || irSym.isUndefined() ||
-        irSym.isCommon() || irSym.isWeak())
+        !irSym.isGlobal() || irSym.isCommon() || irSym.isWeak())
       continue;
     int c = irSym.getComdatIndex();
     if (c != -1 && !keptComdats[c])
