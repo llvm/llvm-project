@@ -22680,8 +22680,11 @@ body: |
     ; GFX11-HSA-TRUE16-NEXT: {{  $}}
     ; GFX11-HSA-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX11-HSA-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p1) :: (load (s16), align 4, addrspace 1)
-    ; GFX11-HSA-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s16)
-    ; GFX11-HSA-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    ; GFX11-HSA-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX11-HSA-TRUE16-NEXT: [[MV:%[0-9]+]]:_(s32) = G_MERGE_VALUES [[LOAD]](s16), [[DEF]](s16)
+    ; GFX11-HSA-TRUE16-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX11-HSA-TRUE16-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MV]](s32), [[DEF1]](s32)
+    ; GFX11-HSA-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[MV1]](s64)
     ;
     ; GFX11-HSA-FAKE16-LABEL: name: test_ext_load_global_s64_from_2_align4
     ; GFX11-HSA-FAKE16: liveins: $vgpr0_vgpr1
@@ -22696,8 +22699,11 @@ body: |
     ; GFX11-MESA-TRUE16-NEXT: {{  $}}
     ; GFX11-MESA-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX11-MESA-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p1) :: (load (s16), align 4, addrspace 1)
-    ; GFX11-MESA-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s16)
-    ; GFX11-MESA-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    ; GFX11-MESA-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX11-MESA-TRUE16-NEXT: [[MV:%[0-9]+]]:_(s32) = G_MERGE_VALUES [[LOAD]](s16), [[DEF]](s16)
+    ; GFX11-MESA-TRUE16-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX11-MESA-TRUE16-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MV]](s32), [[DEF1]](s32)
+    ; GFX11-MESA-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[MV1]](s64)
     ;
     ; GFX11-MESA-FAKE16-LABEL: name: test_ext_load_global_s64_from_2_align4
     ; GFX11-MESA-FAKE16: liveins: $vgpr0_vgpr1
@@ -22712,8 +22718,11 @@ body: |
     ; GFX12-HSA-TRUE16-NEXT: {{  $}}
     ; GFX12-HSA-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX12-HSA-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p1) :: (load (s16), align 4, addrspace 1)
-    ; GFX12-HSA-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s16)
-    ; GFX12-HSA-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    ; GFX12-HSA-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX12-HSA-TRUE16-NEXT: [[MV:%[0-9]+]]:_(s32) = G_MERGE_VALUES [[LOAD]](s16), [[DEF]](s16)
+    ; GFX12-HSA-TRUE16-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX12-HSA-TRUE16-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MV]](s32), [[DEF1]](s32)
+    ; GFX12-HSA-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[MV1]](s64)
     ;
     ; GFX12-HSA-FAKE16-LABEL: name: test_ext_load_global_s64_from_2_align4
     ; GFX12-HSA-FAKE16: liveins: $vgpr0_vgpr1
@@ -22728,8 +22737,11 @@ body: |
     ; GFX12-MESA-TRUE16-NEXT: {{  $}}
     ; GFX12-MESA-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX12-MESA-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p1) :: (load (s16), align 4, addrspace 1)
-    ; GFX12-MESA-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s16)
-    ; GFX12-MESA-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    ; GFX12-MESA-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX12-MESA-TRUE16-NEXT: [[MV:%[0-9]+]]:_(s32) = G_MERGE_VALUES [[LOAD]](s16), [[DEF]](s16)
+    ; GFX12-MESA-TRUE16-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX12-MESA-TRUE16-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MV]](s32), [[DEF1]](s32)
+    ; GFX12-MESA-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[MV1]](s64)
     ;
     ; GFX12-MESA-FAKE16-LABEL: name: test_ext_load_global_s64_from_2_align4
     ; GFX12-MESA-FAKE16: liveins: $vgpr0_vgpr1
@@ -23012,8 +23024,11 @@ body: |
     ; GFX11-HSA-TRUE16-NEXT: {{  $}}
     ; GFX11-HSA-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX11-HSA-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p1) :: (load (s16), align 4, addrspace 1)
-    ; GFX11-HSA-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s16)
-    ; GFX11-HSA-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    ; GFX11-HSA-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX11-HSA-TRUE16-NEXT: [[MV:%[0-9]+]]:_(s32) = G_MERGE_VALUES [[LOAD]](s16), [[DEF]](s16)
+    ; GFX11-HSA-TRUE16-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX11-HSA-TRUE16-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MV]](s32), [[DEF1]](s32)
+    ; GFX11-HSA-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[MV1]](s64)
     ;
     ; GFX11-HSA-FAKE16-LABEL: name: test_ext_load_global_s64_from_2_align2
     ; GFX11-HSA-FAKE16: liveins: $vgpr0_vgpr1
@@ -23028,8 +23043,11 @@ body: |
     ; GFX11-MESA-TRUE16-NEXT: {{  $}}
     ; GFX11-MESA-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX11-MESA-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p1) :: (load (s16), align 4, addrspace 1)
-    ; GFX11-MESA-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s16)
-    ; GFX11-MESA-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    ; GFX11-MESA-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX11-MESA-TRUE16-NEXT: [[MV:%[0-9]+]]:_(s32) = G_MERGE_VALUES [[LOAD]](s16), [[DEF]](s16)
+    ; GFX11-MESA-TRUE16-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX11-MESA-TRUE16-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MV]](s32), [[DEF1]](s32)
+    ; GFX11-MESA-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[MV1]](s64)
     ;
     ; GFX11-MESA-FAKE16-LABEL: name: test_ext_load_global_s64_from_2_align2
     ; GFX11-MESA-FAKE16: liveins: $vgpr0_vgpr1
@@ -23044,8 +23062,11 @@ body: |
     ; GFX12-HSA-TRUE16-NEXT: {{  $}}
     ; GFX12-HSA-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX12-HSA-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p1) :: (load (s16), align 4, addrspace 1)
-    ; GFX12-HSA-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s16)
-    ; GFX12-HSA-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    ; GFX12-HSA-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX12-HSA-TRUE16-NEXT: [[MV:%[0-9]+]]:_(s32) = G_MERGE_VALUES [[LOAD]](s16), [[DEF]](s16)
+    ; GFX12-HSA-TRUE16-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX12-HSA-TRUE16-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MV]](s32), [[DEF1]](s32)
+    ; GFX12-HSA-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[MV1]](s64)
     ;
     ; GFX12-HSA-FAKE16-LABEL: name: test_ext_load_global_s64_from_2_align2
     ; GFX12-HSA-FAKE16: liveins: $vgpr0_vgpr1
@@ -23060,8 +23081,11 @@ body: |
     ; GFX12-MESA-TRUE16-NEXT: {{  $}}
     ; GFX12-MESA-TRUE16-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
     ; GFX12-MESA-TRUE16-NEXT: [[LOAD:%[0-9]+]]:_(s16) = G_LOAD [[COPY]](p1) :: (load (s16), align 4, addrspace 1)
-    ; GFX12-MESA-TRUE16-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[LOAD]](s16)
-    ; GFX12-MESA-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[ANYEXT]](s64)
+    ; GFX12-MESA-TRUE16-NEXT: [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
+    ; GFX12-MESA-TRUE16-NEXT: [[MV:%[0-9]+]]:_(s32) = G_MERGE_VALUES [[LOAD]](s16), [[DEF]](s16)
+    ; GFX12-MESA-TRUE16-NEXT: [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; GFX12-MESA-TRUE16-NEXT: [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[MV]](s32), [[DEF1]](s32)
+    ; GFX12-MESA-TRUE16-NEXT: $vgpr0_vgpr1 = COPY [[MV1]](s64)
     ;
     ; GFX12-MESA-FAKE16-LABEL: name: test_ext_load_global_s64_from_2_align2
     ; GFX12-MESA-FAKE16: liveins: $vgpr0_vgpr1
