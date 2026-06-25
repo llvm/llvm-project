@@ -15,6 +15,7 @@
 #include <__bit/countr.h>
 #include <__config>
 #include <__cstddef/size_t.h>
+#include <__type_traits/remove_cv.h>
 #include <__utility/integer_sequence.h>
 #include <cstdint>
 
@@ -88,7 +89,10 @@ inline constexpr size_t __native_vector_size = 1;
 #  endif
 
 template <class _ArithmeticT, size_t _Np>
-using __simd_vector __attribute__((__ext_vector_type__(_Np))) _LIBCPP_NODEBUG = _ArithmeticT;
+using __simd_vector_impl __attribute__((__ext_vector_type__(_Np))) _LIBCPP_NODEBUG = _ArithmeticT;
+
+template <class _ArithmeticT, size_t _Np>
+using __simd_vector _LIBCPP_NODEBUG = __simd_vector_impl<__remove_cv_t<_ArithmeticT>, _Np>;
 
 template <class _VecT>
 inline constexpr size_t __simd_vector_size_v = []<bool _False = false>() -> size_t {
@@ -96,10 +100,10 @@ inline constexpr size_t __simd_vector_size_v = []<bool _False = false>() -> size
 }();
 
 template <class _Tp, size_t _Np>
-inline constexpr size_t __simd_vector_size_v<__simd_vector<_Tp, _Np>> = _Np;
+inline constexpr size_t __simd_vector_size_v<__simd_vector_impl<_Tp, _Np>> = _Np;
 
 template <class _Tp, size_t _Np>
-_LIBCPP_HIDE_FROM_ABI _Tp __simd_vector_underlying_type_impl(__simd_vector<_Tp, _Np>) {
+_LIBCPP_HIDE_FROM_ABI _Tp __simd_vector_underlying_type_impl(__simd_vector_impl<_Tp, _Np>) {
   return _Tp{};
 }
 
@@ -127,22 +131,22 @@ template <class _VecT, size_t _Np, class _Iter>
 _LIBCPP_DIAGNOSTIC_POP
 
 template <class _Tp, size_t _Np>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __any_of(__simd_vector<_Tp, _Np> __vec) noexcept {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __any_of(__simd_vector_impl<_Tp, _Np> __vec) noexcept {
   return __builtin_reduce_or(__builtin_convertvector(__vec, __simd_vector<bool, _Np>));
 }
 
 template <class _Tp, size_t _Np>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __all_of(__simd_vector<_Tp, _Np> __vec) noexcept {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __all_of(__simd_vector_impl<_Tp, _Np> __vec) noexcept {
   return __builtin_reduce_and(__builtin_convertvector(__vec, __simd_vector<bool, _Np>));
 }
 
 template <class _Tp, size_t _Np>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __none_of(__simd_vector<_Tp, _Np> __vec) noexcept {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __none_of(__simd_vector_impl<_Tp, _Np> __vec) noexcept {
   return !__builtin_reduce_or(__builtin_convertvector(__vec, __simd_vector<bool, _Np>));
 }
 
 template <class _Tp, size_t _Np>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t __find_first_set(__simd_vector<_Tp, _Np> __vec) noexcept {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t __find_first_set(__simd_vector_impl<_Tp, _Np> __vec) noexcept {
   using __mask_vec = __simd_vector<bool, _Np>;
 
   // This has MSan disabled du to https://llvm.org/PR85876
@@ -171,7 +175,7 @@ template <class _Tp, size_t _Np>
 }
 
 template <class _Tp, size_t _Np>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t __find_first_not_set(__simd_vector<_Tp, _Np> __vec) noexcept {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI size_t __find_first_not_set(__simd_vector_impl<_Tp, _Np> __vec) noexcept {
   return std::__find_first_set(~__vec);
 }
 
