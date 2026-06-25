@@ -19708,20 +19708,18 @@ static SDValue performReverseEVLCombine(SDNode *N, SelectionDAG &DAG,
   }
 
   // Reverse the vp_loads.
+  SDLoc DL(N);
+  MVT XLenVT = Subtarget.getXLenVT();
+  uint64_t ElemWidthByte = N->getValueType(0).getScalarSizeInBits() / 8;
+  SDValue Temp1 =
+      DAG.getNode(ISD::SUB, DL, XLenVT, EVL, DAG.getConstant(1, DL, XLenVT));
+  SDValue Temp2 = DAG.getNode(ISD::MUL, DL, XLenVT, Temp1,
+                              DAG.getConstant(ElemWidthByte, DL, XLenVT));
+  SDValue Stride = DAG.getSignedConstant(-ElemWidthByte, DL, XLenVT);
   for (auto [VPLoad, LoadMask] : zip_equal(VPLoads, LoadMasks)) {
     // Base = LoadAddr + (NumElem - 1) * ElemWidthByte
-    SDLoc DL(N);
-    MVT XLenVT = Subtarget.getXLenVT();
-    SDValue NumElem = VPLoad->getVectorLength();
-    uint64_t ElemWidthByte = VPLoad->getValueType(0).getScalarSizeInBits() / 8;
-
-    SDValue Temp1 = DAG.getNode(ISD::SUB, DL, XLenVT, NumElem,
-                                DAG.getConstant(1, DL, XLenVT));
-    SDValue Temp2 = DAG.getNode(ISD::MUL, DL, XLenVT, Temp1,
-                                DAG.getConstant(ElemWidthByte, DL, XLenVT));
     SDValue Base =
         DAG.getNode(ISD::ADD, DL, XLenVT, VPLoad->getBasePtr(), Temp2);
-    SDValue Stride = DAG.getSignedConstant(-ElemWidthByte, DL, XLenVT);
 
     MachineFunction &MF = DAG.getMachineFunction();
     MachinePointerInfo PtrInfo(VPLoad->getAddressSpace());
