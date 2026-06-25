@@ -263,10 +263,8 @@ private:
       llvm::iterator_range<ClauseIterator> endClauses);
   void AnalyzeObject(const parser::OmpObject &object);
   std::pair<const parser::OmpClause *, const parser::OmpClause *>
-  FindMutuallyExclusiveClauses(
-      OmpClauseSet exclusive, const parser::OmpClauseList &clauses);
-  void CheckExclusiveClauses(
-      OmpClauseSet exclusive, const parser::OmpDirectiveSpecification &spec);
+  FindMutuallyExclusiveClauses(OmpClauseSet exclusive,
+      const std::vector<const parser::OmpClause *> &clauses);
 
   const parser::OpenMPConstruct *GetCurrentConstruct() const;
   void CheckSourceLabel(const parser::Label &);
@@ -377,6 +375,7 @@ private:
       const parser::OmpClause &initClause);
   void CheckAllowedRequiresClause(llvm::omp::Clause clause);
   void AddEndDirectiveClauses(const parser::OmpClauseList &clauses);
+  void CheckTempDescriptorMappings();
 
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
   void ExitDirectiveNest(const int index) { directiveNest_[index]--; }
@@ -403,6 +402,13 @@ private:
   // IF clauses that referenced them. If there was no modifier, the entire
   // directive is assumed to be listed.
   std::map<llvm::omp::Directive, parser::CharBlock> ifLeafs_;
+
+  // Track symbols with temporary stack descriptors mapped in TARGET ENTER DATA
+  // and symbols mapped in TARGET EXIT DATA within the current function scope.
+  // Used to warn about potential issues with mapping temporary descriptors.
+  std::multimap<const Symbol *, parser::CharBlock> tempDescriptorEnterMaps_;
+  std::set<const Symbol *> tempDescriptorExitMaps_;
+
   // Stack of nested DO loops and OpenMP constructs.
   // This is used to verify DO loop nest for DOACROSS, and branches into
   // and out of OpenMP constructs.
