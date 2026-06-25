@@ -7139,7 +7139,7 @@ static std::optional<int64_t> getConstantStride(VPValue *Addr, Type *AccessTy,
   const SCEV *AddrSCEV = vputils::getSCEVExprForVPValue(Addr, PSE, L);
   auto *AddRec = dyn_cast<SCEVAddRecExpr>(AddrSCEV);
   if (!AddRec)
-    return std::nullopt;
+    return {};
 
   return getStrideFromAddRec(AddRec, L, AccessTy, /*Ptr=*/nullptr, PSE);
 }
