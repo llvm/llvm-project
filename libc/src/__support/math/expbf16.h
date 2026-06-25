@@ -138,8 +138,8 @@ LIBC_INLINE bfloat16 expbf16(bfloat16 x) {
       //   > P = fpminimax(expm1(x)/x, 2, [|SG...|], [-2^-7, 2^-7]);
       //   > 1 + x * P;
       //   0x1p0 + x * (0x1p0 + x * (0x1.00004p-1 + x * 0x1.555578p-3))
-      return fputil::cast<bfloat16>(
-          fputil::polyeval(xf, 0x1p+0f, 0x1p+0f, 0x1.0004p-1f, 0x1.555778p-3f));
+      return fputil::cast<bfloat16>(fputil::polyeval(
+          xf, 0x1p+0f, 0x1p+0f, 0x1.00004p-1f, 0x1.555578p-3f));
     }
   }
 
