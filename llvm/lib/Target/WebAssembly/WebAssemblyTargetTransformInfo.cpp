@@ -411,6 +411,13 @@ InstructionCost WebAssemblyTTIImpl::getInterleavedMemoryOpCost(
 InstructionCost WebAssemblyTTIImpl::getVectorInstrCost(
     unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
     const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
+  // Treat insert at lane 0 into a poison vector as having zero cost. The
+  // insert + broadcast shuffle pair will be lowered to a single splat
+  // instruction, so the insert is free.
+  if (Opcode == Instruction::InsertElement && Index == 0 && Op0 &&
+      isa<PoisonValue>(Op0))
+    return 0;
+
   InstructionCost Cost = BasicTTIImplBase::getVectorInstrCost(
       Opcode, Val, CostKind, Index, Op0, Op1, VIC);
 

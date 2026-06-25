@@ -132,13 +132,9 @@ entry:
 define void @splat_i32x4(i32 %v, ptr noalias %p) {
 ; SIMD128-LABEL: @splat_i32x4(
 ; SIMD128-NEXT:  entry:
-; SIMD128-NEXT:    store i32 [[V:%.*]], ptr [[P:%.*]], align 1
-; SIMD128-NEXT:    [[IDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i32 4
-; SIMD128-NEXT:    store i32 [[V]], ptr [[IDX1]], align 1
-; SIMD128-NEXT:    [[IDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i32 8
-; SIMD128-NEXT:    store i32 [[V]], ptr [[IDX2]], align 1
-; SIMD128-NEXT:    [[IDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i32 12
-; SIMD128-NEXT:    store i32 [[V]], ptr [[IDX3]], align 1
+; SIMD128-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[V:%.*]], i32 0
+; SIMD128-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
+; SIMD128-NEXT:    store <4 x i32> [[TMP1]], ptr [[P:%.*]], align 1
 ; SIMD128-NEXT:    ret void
 ;
 ; NO-SIMD128-LABEL: @splat_i32x4(
@@ -189,13 +185,9 @@ entry:
 define void @splat_f32x4(float %v, ptr noalias %p) {
 ; SIMD128-LABEL: @splat_f32x4(
 ; SIMD128-NEXT:  entry:
-; SIMD128-NEXT:    store float [[V:%.*]], ptr [[P:%.*]], align 1
-; SIMD128-NEXT:    [[IDX1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i32 4
-; SIMD128-NEXT:    store float [[V]], ptr [[IDX1]], align 1
-; SIMD128-NEXT:    [[IDX2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i32 8
-; SIMD128-NEXT:    store float [[V]], ptr [[IDX2]], align 1
-; SIMD128-NEXT:    [[IDX3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i32 12
-; SIMD128-NEXT:    store float [[V]], ptr [[IDX3]], align 1
+; SIMD128-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> poison, float [[V:%.*]], i32 0
+; SIMD128-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> [[TMP0]], <4 x float> poison, <4 x i32> zeroinitializer
+; SIMD128-NEXT:    store <4 x float> [[TMP1]], ptr [[P:%.*]], align 1
 ; SIMD128-NEXT:    ret void
 ;
 ; NO-SIMD128-LABEL: @splat_f32x4(
@@ -245,9 +237,11 @@ entry:
 define void @splat_i32x8(i32 %v, ptr noalias %p) {
 ; SIMD128-LABEL: @splat_i32x8(
 ; SIMD128-NEXT:  entry:
-; SIMD128-NEXT:    [[TMP0:%.*]] = insertelement <8 x i32> poison, i32 [[V:%.*]], i32 0
-; SIMD128-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i32> [[TMP0]], <8 x i32> poison, <8 x i32> zeroinitializer
-; SIMD128-NEXT:    store <8 x i32> [[TMP1]], ptr [[P:%.*]], align 1
+; SIMD128-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[V:%.*]], i32 0
+; SIMD128-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <4 x i32> zeroinitializer
+; SIMD128-NEXT:    store <4 x i32> [[TMP1]], ptr [[P:%.*]], align 1
+; SIMD128-NEXT:    [[IDX4:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i32 16
+; SIMD128-NEXT:    store <4 x i32> [[TMP1]], ptr [[IDX4]], align 1
 ; SIMD128-NEXT:    ret void
 ;
 ; NO-SIMD128-LABEL: @splat_i32x8(
