@@ -9,11 +9,11 @@
 
 #ifndef __ZOS_WRAPPERS_GRP_H
 #define __ZOS_WRAPPERS_GRP_H
-#if defined(__MVS__)
+#if __has_include_next(<grp.h>)
 #include_next <grp.h>
 #ifdef __grp
 #undef __grp
 #define __grp __grp
 #endif
-#endif /* defined(__MVS__) */
+#endif /* __has_include_next(<grp.h>) */
 #endif /* __ZOS_WRAPPERS_GRP_H */

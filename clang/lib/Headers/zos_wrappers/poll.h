@@ -9,11 +9,11 @@
 
 #ifndef __ZOS_WRAPPERS_POLL_H
 #define __ZOS_WRAPPERS_POLL_H
-#if defined(__MVS__)
+#if __has_include_next(<poll.h>)
 #include_next <poll.h>
 #ifdef __poll
 #undef __poll
 #define __poll __poll
 #endif
-#endif /* defined(__MVS__) */
+#endif /* __has_include_next(<poll.h>) */
 #endif /* __ZOS_WRAPPERS_POLL_H */

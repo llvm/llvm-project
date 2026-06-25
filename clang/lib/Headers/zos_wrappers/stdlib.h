@@ -9,12 +9,12 @@
 
 #ifndef __ZOS_WRAPPERS_STDLIB_H
 #define __ZOS_WRAPPERS_STDLIB_H
-#if defined(__MVS__)
+#if __has_include_next(<stdlib.h>)
 #include_next <stdlib.h>
 #ifdef _EXT
 #ifndef __CS1
 #undef __cs
 #endif
 #endif /* _EXT */
-#endif /* defined(__MVS__) */
+#endif /* __has_include_next(<stdlib.h>) */
 #endif /* __ZOS_WRAPPERS_STDLIB_H */

@@ -9,11 +9,11 @@
 
 #ifndef __ZOS_WRAPPERS_TIME_H
 #define __ZOS_WRAPPERS_TIME_H
-#if defined(__MVS__)
+#if __has_include_next(<time.h>)
 #include_next <time.h>
 #ifdef __time
 #undef __time
 #define __time __time
 #endif
-#endif /* defined(__MVS__) */
+#endif /* __has_include_next(<time.h>) */
 #endif /* __ZOS_WRAPPERS_TIME_H */

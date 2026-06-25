@@ -9,11 +9,11 @@
 
 #ifndef __ZOS_WRAPPERS_LOCALE_H
 #define __ZOS_WRAPPERS_LOCALE_H
-#if defined(__MVS__)
+#if __has_include_next(<locale.h>)
 #include_next <locale.h>
 #ifdef __locale
 #undef __locale
 #define __locale __locale
 #endif
-#endif /* defined(__MVS__) */
+#endif /* __has_include_next(<locale.h>) */
 #endif /* __ZOS_WRAPPERS_LOCALE_H */

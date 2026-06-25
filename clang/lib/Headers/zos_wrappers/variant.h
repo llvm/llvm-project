@@ -9,11 +9,11 @@
 
 #ifndef __ZOS_WRAPPERS_VARIANT_H
 #define __ZOS_WRAPPERS_VARIANT_H
-#if defined(__MVS__)
+#if __has_include_next(<variant.h>)
 #include_next <variant.h>
 #ifdef __variant
 #undef __variant
 #define __variant __variant
 #endif
-#endif /* defined(__MVS__) */
+#endif /* __has_include_next(<variant.h>) */
 #endif /* __ZOS_WRAPPERS_VARIANT_H */

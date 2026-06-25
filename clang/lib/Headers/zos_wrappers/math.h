@@ -9,7 +9,7 @@
 
 #ifndef __ZOS_WRAPPERS_MATH_H
 #define __ZOS_WRAPPERS_MATH_H
-#if defined(__MVS__)
+#if __has_include_next(<math.h>)
 #include_next <math.h>
 #ifdef __math
 #undef __math
@@ -27,5 +27,5 @@ extern "C"
 #pragma map(tgamma, "\174\174TGMAH9")
 #endif
 #endif
-#endif /* defined(__MVS__) */
+#endif /* __has_include_next(<math.h>) */
 #endif /* __ZOS_WRAPPERS_MATH_H */

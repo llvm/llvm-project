@@ -9,11 +9,11 @@
 
 #ifndef __ZOS_WRAPPERS_STRING_H
 #define __ZOS_WRAPPERS_STRING_H
-#if defined(__MVS__)
+#if __has_include_next(<string.h>)
 #include_next <string.h>
 #ifdef __string
 #undef __string
 #define __string __string
 #endif
-#endif /* defined(__MVS__) */
+#endif /* __has_include_next(<string.h>) */
 #endif /* __ZOS_WRAPPERS_STRING_H */
