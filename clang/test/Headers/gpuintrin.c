@@ -1692,7 +1692,7 @@ __gpu_kernel void foo() {
 // SPIRV-SAME: ) #[[ATTR1:[0-9]+]] {
 // SPIRV-NEXT:  [[ENTRY:.*:]]
 // SPIRV-NEXT:    call void @llvm.trap()
-// SPIRV-NEXT:    ret void
+// SPIRV-NEXT:    unreachable
 //
 //.
 // AMDGPU: [[RNG2]] = !{i32 1, i32 0}

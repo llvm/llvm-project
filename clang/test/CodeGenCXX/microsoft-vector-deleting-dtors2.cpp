@@ -83,9 +83,9 @@ void TesttheTest() {
 // CHECK: dtor.scalar:
 // X64-NEXT: call void @"??1Test@@UEAA@XZ"(ptr noundef nonnull align 8 dead_on_return(8) dereferenceable(8) %this1)
 // X86-NEXT: call x86_thiscallcc void @"??1Test@@UAE@XZ"(ptr noundef nonnull align 4 dead_on_return(4) dereferenceable(4) %this1)
-// CHECK-NEXT: %6 = and i32 %should_call_delete2, 1
-// CHECK-NEXT: %7 = icmp eq i32 %6, 0
-// CHECK-NEXT: br i1 %7, label %dtor.continue, label %dtor.call_delete
+// CHECK-NEXT: %7 = and i32 %should_call_delete2, 1
+// CHECK-NEXT: %8 = icmp eq i32 %7, 0
+// CHECK-NEXT: br i1 %8, label %dtor.continue, label %dtor.call_delete
 // CHECK: dtor.call_delete:
 // X64-NEXT: call void @"??3Test@@SAXPEAX@Z"(ptr noundef %this1)
 // X86-NEXT: call void @"??3Test@@SAXPAX@Z"(ptr noundef %this1)

@@ -4597,10 +4597,9 @@ void CodeGenFunction::EmitTrapCheck(llvm::Value *Checked,
   EmitBlock(Cont);
 }
 
-llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID,
-                                              bool MayReturn, bool MayThrow) {
-  llvm::CallInst *TrapCall =
-      Builder.CreateCall(CGM.getIntrinsic(IntrID));
+llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID) {
+  llvm::Function *F = CGM.getIntrinsic(IntrID);
+  llvm::CallInst *TrapCall = Builder.CreateCall(F);
 
   if (!CGM.getCodeGenOpts().TrapFuncName.empty()) {
     auto A = llvm::Attribute::get(getLLVMContext(), "trap-func-name",
@@ -4610,9 +4609,9 @@ llvm::CallInst *CodeGenFunction::EmitTrapCall(llvm::Intrinsic::ID IntrID,
 
   if (InNoMergeAttributedStmt)
     TrapCall->addFnAttr(llvm::Attribute::NoMerge);
-  if (!MayThrow)
+  if (F->doesNotThrow())
     TrapCall->setDoesNotThrow();
-  if (!MayReturn) {
+  if (F->doesNotReturn()) {
     TrapCall->setDoesNotReturn();
     Builder.CreateUnreachable();
     EmitBlock(createBasicBlock());

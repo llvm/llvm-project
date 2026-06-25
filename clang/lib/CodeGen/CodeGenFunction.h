@@ -5393,8 +5393,7 @@ public:
 
   /// Emit a call to trap or debugtrap and attach function attribute
   /// "trap-func-name" if specified.
-  llvm::CallInst *EmitTrapCall(llvm::Intrinsic::ID IntrID,
-                               bool MayReturn = false, bool MayThrow = false);
+  llvm::CallInst *EmitTrapCall(llvm::Intrinsic::ID IntrID);
 
   /// Emit a stub for the cross-DSO CFI check function.
   void EmitCfiCheckStub();
