@@ -3773,14 +3773,8 @@ bool Compiler<Emitter>::VisitOffsetOfExpr(const OffsetOfExpr *E) {
       }
       if (!this->visit(ArrayIndexExpr))
         return false;
-      // Cast to Sint64. For unsigned types, cast to Uint64 first to avoid
-      // sign-extending values with the high bit set (e.g. uint8_t >= 128).
+      // Cast to Sint64.
       if (IndexT != PT_Sint64) {
-        if (!isSignedType(IndexT) && IndexT != PT_Uint64) {
-          if (!this->emitCast(IndexT, PT_Uint64, E))
-            return false;
-          IndexT = PT_Uint64;
-        }
         if (!this->emitCast(IndexT, PT_Sint64, E))
           return false;
       }
