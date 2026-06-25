@@ -145,7 +145,6 @@ following command:
 .. code-block:: console
 
   $ cmake -G Ninja -C <path to source>/flang/cmake/caches/PGO.cmake \
-      -DLLVM_ENABLE_RUNTIMES="compiler-rt;flang-rt;libunwind;openmp" \
       <path to source>/llvm
 
 There are several additional options that the cache file also accepts to modify
@@ -183,8 +182,7 @@ following command:
 
 .. code-block:: console
 
-  $ cmake -G Ninja -C <path to source>/clang/cmake/caches/PGO.cmake \
-       -DLLVM_ENABLE_RUNTIMES="compiler-rt;flang-rt;libunwind;openmp" \
+  $ cmake -G Ninja -C <path to source>/flang/cmake/caches/PGO.cmake \
        -DBOOTSTRAP_CLANG_PGO_TRAINING_DATA_SOURCE_DIR=<path to llvm-test-suite> \
        -DBOOTSTRAP_CLANG_PGO_TRAINING_DEPS=runtimes \
        -DBOOTSTRAP_FLANG_PGO_TRAINING_DATA_SOURCE_DIR=<path to llvm-test-suite> \

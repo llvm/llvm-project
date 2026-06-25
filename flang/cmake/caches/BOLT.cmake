@@ -7,6 +7,7 @@ set(CMAKE_EXE_LINKER_FLAGS "-Wl,--emit-relocs,-znow" CACHE STRING "")
 set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--emit-relocs,-znow" CACHE STRING "")
 
 set(LLVM_ENABLE_PROJECTS "bolt;clang;flang" CACHE STRING "")
+set(LLVM_ENABLE_RUNTIMES "compiler-rt;flang-rt;libunwind;openmp" CACHE STRING "")
 set(LLVM_TARGETS_TO_BUILD Native CACHE STRING "")
 
 # setup toolchain
