@@ -18,8 +18,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
-namespace {
-bool hasInitListConstructor(const CXXRecordDecl *RD) {
+static bool hasInitListConstructor(const CXXRecordDecl *RD) {
   if (RD == nullptr || !RD->hasDefinition())
     return false;
   auto IsInitListCtor = [](const CXXConstructorDecl *Ctor) {
@@ -37,7 +36,6 @@ bool hasInitListConstructor(const CXXRecordDecl *RD) {
     return false;
   });
 }
-} // namespace
 
 void ReturnBracedInitListCheck::registerMatchers(MatchFinder *Finder) {
   auto SemanticallyDifferentContainer = allOf(
