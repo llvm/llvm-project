@@ -951,6 +951,13 @@ Crash and bug fixes
 - Fixed ``security.VAList`` checker producing false positives when analyzing
   C23 code where ``va_start`` expands to ``__builtin_c23_va_start``.
 
+New checkers and features
+^^^^^^^^^^^^^^^^^^^^^^^^^
+- Added a new configuration option
+  ``unix.DynamicMemoryModeling:ModelAllocationFailure`` that is used to add
+  failure-only branches to calls of ``malloc``-like functions. The new
+  functionality is off by default.
+
 .. comment:
   This is for the Static Analyzer.
   Using the caret `^^^` underlining for subsections:
