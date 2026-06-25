@@ -391,7 +391,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     const MemoryLocation &MemLoc, bool isLoad, BasicBlock::iterator ScanIt,
     BasicBlock *BB, Instruction *QueryInst, unsigned *Limit,
     BatchAAResults &BatchAA) {
-  bool IsInvariantLoad = false;
+  bool isInvariantLoad = false;
   Align MemLocAlign =
       MemLoc.Ptr->getPointerAlignment(BB->getDataLayout());
 
@@ -432,7 +432,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
   // forwarding, but any mayalias write can be assumed to be noalias.
   // Arguably, this logic should be pushed inside AliasAnalysis itself.
   if (isLoad && QueryInst) {
-    IsInvariantLoad = isInvariantLoadLike(*QueryInst);
+    isInvariantLoad = isInvariantLoadLike(*QueryInst);
     if (LoadInst *LI = dyn_cast<LoadInst>(QueryInst))
       MemLocAlign = LI->getAlign();
   }
@@ -595,7 +595,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
         continue;
       if (R == AliasResult::MustAlias)
         return MemDepResult::getDef(Inst);
-      if (IsInvariantLoad)
+      if (isInvariantLoad)
         continue;
       if (canSkipClobberingStore(SI, MemLoc, MemLocAlign, BatchAA, *Limit))
         continue;
@@ -619,7 +619,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
     if (isa<SelectInst>(Inst) && MemLoc.Ptr == Inst)
       return MemDepResult::getDef(Inst);
 
-    if (IsInvariantLoad)
+    if (isInvariantLoad)
       continue;
 
     // A release fence requires that all stores complete before it, but does
@@ -923,10 +923,10 @@ MemDepResult MemoryDependenceResults::getNonLocalInfoForBlock(
     BasicBlock *BB, NonLocalDepInfo *Cache, unsigned NumSortedEntries,
     BatchAAResults &BatchAA) {
 
-  bool IsInvariantLoad = false;
+  bool isInvariantLoad = false;
 
   if (QueryInst)
-    IsInvariantLoad = isInvariantLoadLike(*QueryInst);
+    isInvariantLoad = isInvariantLoadLike(*QueryInst);
 
   // Do a binary search to see if we already have an entry for this block in
   // the cache set.  If so, find it.
@@ -942,7 +942,7 @@ MemDepResult MemoryDependenceResults::getNonLocalInfoForBlock(
   // Use cached result for invariant load only if there is no dependency for non
   // invariant load. In this case invariant load can not have any dependency as
   // well.
-  if (ExistingResult && IsInvariantLoad &&
+  if (ExistingResult && isInvariantLoad &&
       !ExistingResult->getResult().isNonFuncLocal())
     ExistingResult = nullptr;
 
@@ -975,7 +975,7 @@ MemDepResult MemoryDependenceResults::getNonLocalInfoForBlock(
                                               QueryInst, nullptr, BatchAA);
 
   // Don't cache results for invariant load.
-  if (IsInvariantLoad)
+  if (isInvariantLoad)
     return Dep;
 
   // If we had a dirty entry for the block, update it.  Otherwise, just add
@@ -1088,9 +1088,9 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
   InitialNLPI.Size = Loc.Size;
   InitialNLPI.AATags = Loc.AATags;
 
-  bool IsInvariantLoad = false;
+  bool isInvariantLoad = false;
   if (QueryInst)
-    IsInvariantLoad = isInvariantLoadLike(*QueryInst);
+    isInvariantLoad = isInvariantLoadLike(*QueryInst);
 
   // Get the NLPI for CacheKey, inserting one into the map if it doesn't
   // already have one.
@@ -1101,7 +1101,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
   // If we already have a cache entry for this CacheKey, we may need to do some
   // work to reconcile the cache entry and the current query.
   // Invariant loads don't participate in caching. Thus no need to reconcile.
-  if (!IsInvariantLoad && !Pair.second) {
+  if (!isInvariantLoad && !Pair.second) {
     if (CacheInfo->Size != Loc.Size) {
       // The query's Size is not equal to the cached one. Throw out the cached
       // data and proceed with the query with the new size.
@@ -1146,7 +1146,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
   // investigating, just return it with no recomputation.
   // Don't use cached information for invariant loads since it is valid for
   // non-invariant loads only.
-  if (!IsIncomplete && !IsInvariantLoad &&
+  if (!IsIncomplete && !isInvariantLoad &&
       CacheInfo->Pair == BBSkipFirstBlockPair(StartBB, SkipFirstBlock)) {
     // We have a fully cached result for this query then we can just return the
     // cached results and populate the visited set.  However, we have to verify
@@ -1193,7 +1193,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
   //
   // Invariant loads don't affect cache in any way thus no need to update
   // CacheInfo as well.
-  if (!IsInvariantLoad) {
+  if (!isInvariantLoad) {
     if (!IsIncomplete && Cache->empty())
       CacheInfo->Pair = BBSkipFirstBlockPair(StartBB, SkipFirstBlock);
     else
@@ -1442,7 +1442,7 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
 
     // Results of invariant loads are not cached thus no need to update cached
     // information.
-    if (!IsInvariantLoad) {
+    if (!isInvariantLoad) {
       for (NonLocalDepEntry &I : llvm::reverse(*Cache)) {
         if (I.getBB() != BB)
           continue;
