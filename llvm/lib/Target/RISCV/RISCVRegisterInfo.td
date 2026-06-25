@@ -319,7 +319,9 @@ def GPR : GPRRegisterClass<(add (sequence "X%u", 10, 17),
                                 (sequence "X%u", 28, 31),
                                 (sequence "X%u", 8, 9),
                                 (sequence "X%u", 18, 27),
-                                (sequence "X%u", 0, 4))>;
+                                (sequence "X%u", 0, 4))> {
+  let BaseClassOrder = 0;
+}
 
 def YGPR : RegisterClass<"RISCV", [YLenVT], 64,
                          (add (sequence "X%u_Y", 10, 17),
@@ -522,6 +524,7 @@ class FPRRegisterClass<list<ValueType> regTypes, int align, string regSuffix>
                               (sequence "F%u_" # regSuffix, 8, 9),   // fs0-fs1
                               (sequence "F%u_" # regSuffix, 18, 27)  // fs2-fs11
 )> {
+  let BaseClassOrder = 0;
   let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::F0_" # regSuffix # ", 32>";
 }
 
