@@ -43,6 +43,7 @@ public:
 
 private:
   bool tryMAddReplacement(Instruction *Op, bool ReduceInOneBB);
+  bool tryVPDPBUSDReplacement(Instruction *Op, Value *Root, bool ReduceInOneBB);
   bool trySADReplacement(Instruction *Op);
 };
 
@@ -70,6 +71,8 @@ char X86PartialReductionLegacy::ID = 0;
 
 INITIALIZE_PASS(X86PartialReductionLegacy, DEBUG_TYPE, "X86 Partial Reduction",
                 false, false)
+
+static bool isReachableFromPHI(PHINode *Phi, BinaryOperator *BO);
 
 // This function should be aligned with detectExtMul() in X86ISelLowering.cpp.
 static bool matchVPDPBUSDPattern(const X86Subtarget *ST, BinaryOperator *Mul,
@@ -104,6 +107,180 @@ static bool matchVPDPBUSDPattern(const X86Subtarget *ST, BinaryOperator *Mul,
     return true;
 
   return false;
+}
+
+static bool matchVPDPBUSDCasts(BinaryOperator *Mul, Value *&U8Op,
+                               Value *&S8Op) {
+  Value *LHS = Mul->getOperand(0);
+  Value *RHS = Mul->getOperand(1);
+
+  auto *LHSZExt = dyn_cast<ZExtInst>(LHS);
+  auto *RHSSExt = dyn_cast<SExtInst>(RHS);
+  if (!LHSZExt || !RHSSExt) {
+    std::swap(LHS, RHS);
+    LHSZExt = dyn_cast<ZExtInst>(LHS);
+    RHSSExt = dyn_cast<SExtInst>(RHS);
+  }
+
+  if (!LHSZExt || !RHSSExt)
+    return false;
+
+  auto *U8Ty = dyn_cast<FixedVectorType>(LHSZExt->getOperand(0)->getType());
+  auto *S8Ty = dyn_cast<FixedVectorType>(RHSSExt->getOperand(0)->getType());
+  if (!U8Ty || !S8Ty || U8Ty->getNumElements() != S8Ty->getNumElements() ||
+      !U8Ty->getElementType()->isIntegerTy(8))
+    return false;
+
+  U8Op = LHSZExt->getOperand(0);
+  S8Op = RHSSExt->getOperand(0);
+  return true;
+}
+
+// VPDPBUSD changes the vector lane grouping: four byte products are accumulated
+// into one i32 lane. This is only equivalent to the original vector add/mul
+// loop if the vector accumulator is only observed by the final horizontal add
+// reduction.
+static bool hasOnlyLoopReductionUses(Value *Root) {
+  auto *RootBO = dyn_cast<BinaryOperator>(Root);
+  if (!RootBO || RootBO->getOpcode() != Instruction::Add)
+    return false;
+
+  PHINode *LoopPhi = nullptr;
+  unsigned NumReductionUsers = 0;
+  for (User *U : Root->users()) {
+    if (auto *PN = dyn_cast<PHINode>(U)) {
+      if (LoopPhi)
+        return false;
+      LoopPhi = PN;
+      continue;
+    }
+
+    if (isa<ShuffleVectorInst>(U)) {
+      ++NumReductionUsers;
+      continue;
+    }
+
+    auto *BO = dyn_cast<BinaryOperator>(U);
+    if (BO && BO->getOpcode() == Instruction::Add) {
+      ++NumReductionUsers;
+      continue;
+    }
+
+    return false;
+  }
+
+  return LoopPhi && NumReductionUsers == 2 &&
+         isReachableFromPHI(LoopPhi, RootBO);
+}
+
+static Value *createVPDPBUSDForChunk(IRBuilder<> &Builder, Module *M,
+                                     const X86Subtarget *ST, Value *U8Op,
+                                     Value *S8Op, unsigned Start,
+                                     unsigned ChunkElts) {
+  Intrinsic::ID IID;
+  unsigned DstElts;
+  if (ChunkElts == 64 && ST->hasVNNI() && !ST->hasVLX()) {
+    IID = Intrinsic::x86_avx512_vpdpbusd_512;
+    DstElts = 16;
+  } else if (ChunkElts == 32) {
+    IID = Intrinsic::x86_avx512_vpdpbusd_256;
+    DstElts = 8;
+  } else {
+    assert(ChunkElts == 16 && "Unexpected VPDPBUSD chunk size");
+    IID = Intrinsic::x86_avx512_vpdpbusd_128;
+    DstElts = 4;
+  }
+
+  SmallVector<int, 64> Mask(ChunkElts);
+  std::iota(Mask.begin(), Mask.end(), Start);
+  Value *U8Chunk = Builder.CreateShuffleVector(U8Op, U8Op, Mask);
+  Value *S8Chunk = Builder.CreateShuffleVector(S8Op, S8Op, Mask);
+
+  auto *AccTy = FixedVectorType::get(Builder.getInt32Ty(), DstElts);
+  Value *Zero = Constant::getNullValue(AccTy);
+  Function *Fn = Intrinsic::getOrInsertDeclaration(M, IID);
+  return Builder.CreateCall(Fn, {Zero, U8Chunk, S8Chunk});
+}
+
+bool X86PartialReduction::tryVPDPBUSDReplacement(Instruction *Op, Value *Root,
+                                                 bool ReduceInOneBB) {
+  if (ReduceInOneBB || (!ST->hasVNNI() && !ST->hasAVXVNNI()))
+    return false;
+
+  auto *Mul = dyn_cast<BinaryOperator>(Op);
+  if (!Mul || Mul->getOpcode() != Instruction::Mul)
+    return false;
+
+  if (!matchVPDPBUSDPattern(ST, Mul, DL))
+    return false;
+
+  if (!hasOnlyLoopReductionUses(Root))
+    return false;
+
+  auto *MulTy = dyn_cast<FixedVectorType>(Mul->getType());
+  if (!MulTy || !MulTy->getElementType()->isIntegerTy(32))
+    return false;
+
+  unsigned NumElts = MulTy->getNumElements();
+  if (NumElts < 16 || NumElts % 16 != 0)
+    return false;
+
+  Value *U8Op, *S8Op;
+  if (!matchVPDPBUSDCasts(Mul, U8Op, S8Op))
+    return false;
+
+  IRBuilder<> Builder(Mul);
+  Module *M = Mul->getModule();
+  SmallVector<Value *, 4> Parts;
+
+  unsigned MaxChunkElts = 16;
+  if (ST->hasVNNI() && !ST->hasVLX())
+    MaxChunkElts = 64;
+  else if (ST->hasAVX2() || ST->hasAVXVNNI())
+    MaxChunkElts = 32;
+
+  for (unsigned Start = 0; Start != NumElts;) {
+    unsigned Remaining = NumElts - Start;
+    unsigned ChunkElts = std::min(MaxChunkElts, Remaining);
+    if (ChunkElts >= 64 && MaxChunkElts >= 64)
+      ChunkElts = 64;
+    else if (ChunkElts >= 32 && MaxChunkElts >= 32)
+      ChunkElts = 32;
+    else
+      ChunkElts = 16;
+
+    Parts.push_back(
+        createVPDPBUSDForChunk(Builder, M, ST, U8Op, S8Op, Start, ChunkElts));
+    Start += ChunkElts;
+  }
+
+  Value *PartialSums = Parts[0];
+  for (unsigned I = 1; I != Parts.size(); ++I) {
+    unsigned LElts =
+        cast<FixedVectorType>(PartialSums->getType())->getNumElements();
+    unsigned RElts =
+        cast<FixedVectorType>(Parts[I]->getType())->getNumElements();
+    SmallVector<int, 32> ConcatMask(LElts + RElts);
+    std::iota(ConcatMask.begin(), ConcatMask.end(), 0);
+    PartialSums =
+        Builder.CreateShuffleVector(PartialSums, Parts[I], ConcatMask);
+  }
+
+  unsigned PartialElts =
+      cast<FixedVectorType>(PartialSums->getType())->getNumElements();
+  Value *Zero = Constant::getNullValue(PartialSums->getType());
+  SmallVector<int, 64> ConcatMask(NumElts);
+  for (unsigned I = 0; I != PartialElts; ++I)
+    ConcatMask[I] = I;
+  for (unsigned I = PartialElts; I != NumElts; ++I)
+    ConcatMask[I] = PartialElts;
+
+  Value *Replacement =
+      Builder.CreateShuffleVector(PartialSums, Zero, ConcatMask);
+  Mul->replaceAllUsesWith(Replacement);
+  Mul->eraseFromParent();
+
+  return true;
 }
 
 bool X86PartialReduction::tryMAddReplacement(Instruction *Op,
@@ -518,11 +695,19 @@ bool X86PartialReduction::run(Function &F) {
       Value *Root = matchAddReduction(*EE, ReduceInOneBB);
       if (!Root)
         continue;
+      if (auto *RootI = dyn_cast<Instruction>(Root))
+        if (RootI->getParent() != EE->getParent())
+          ReduceInOneBB = false;
 
       SmallVector<Instruction *, 8> Leaves;
       collectLeaves(Root, Leaves);
 
       for (Instruction *I : Leaves) {
+        if (tryVPDPBUSDReplacement(I, Root, ReduceInOneBB)) {
+          MadeChange = true;
+          continue;
+        }
+
         if (tryMAddReplacement(I, ReduceInOneBB)) {
           MadeChange = true;
           continue;
