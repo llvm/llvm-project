@@ -33,9 +33,12 @@ enum TokenKind {
   eof,
   newline,
   text,
-  unknown_command,   // Command that does not have an ID.
-  backslash_command, // Command with an ID, that used backslash marker.
-  at_command,        // Command with an ID, that used 'at' marker.
+  unknown_backslash_command, // Command that does not have an ID, that used
+                             // backslash marker.
+  unknown_at_command,        // Command that does not have an ID, that used 'at'
+                             // marker.
+  backslash_command,         // Command with an ID, that used backslash marker.
+  at_command,                // Command with an ID, that used 'at' marker.
   verbatim_block_begin,
   verbatim_block_line,
   verbatim_block_end,
@@ -107,12 +110,12 @@ public:
   }
 
   StringRef getUnknownCommandName() const LLVM_READONLY {
-    assert(is(tok::unknown_command));
+    assert(is(tok::unknown_backslash_command) || is(tok::unknown_at_command));
     return StringRef(TextPtr, IntVal);
   }
 
   void setUnknownCommandName(StringRef Name) {
-    assert(is(tok::unknown_command));
+    assert(is(tok::unknown_backslash_command) || is(tok::unknown_at_command));
     TextPtr = Name.data();
     IntVal = Name.size();
   }
