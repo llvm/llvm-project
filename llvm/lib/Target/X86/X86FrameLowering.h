@@ -244,12 +244,6 @@ protected:
 private:
   bool isWin64Prologue(const MachineFunction &MF) const;
 
-  /// Returns true if MF emits Win64 unwind info using a version (v1/v2) whose
-  /// OS epilogue unwinder disassembles the epilogue, and therefore cannot
-  /// decode EVEX-encoded (APX) instructions placed in the epilogue. Unwind v3
-  /// encodes epilog operations declaratively, so it returns false there.
-  bool needsWin64NonV3EpilogueUnwind(const MachineFunction &MF) const;
-
   bool needsDwarfCFI(const MachineFunction &MF) const;
 
   uint64_t calculateMaxStackAlign(const MachineFunction &MF) const;

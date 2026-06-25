@@ -1493,14 +1493,6 @@ bool X86FrameLowering::isWin64Prologue(const MachineFunction &MF) const {
   return MF.getTarget().getMCAsmInfo().usesWindowsCFI();
 }
 
-bool X86FrameLowering::needsWin64NonV3EpilogueUnwind(
-    const MachineFunction &MF) const {
-  const Function &Fn = MF.getFunction();
-  if (!isWin64Prologue(MF) || !Fn.needsUnwindTableEntry())
-    return false;
-  return Fn.getParent()->getWinX64EHUnwindMode() != WinX64EHUnwindMode::V3;
-}
-
 bool X86FrameLowering::needsDwarfCFI(const MachineFunction &MF) const {
   return !isWin64Prologue(MF) && MF.needsFrameMoves();
 }
@@ -3094,12 +3086,7 @@ bool X86FrameLowering::assignCalleeSavedSpillSlots(
   // 3. When the number of CSR push is even, start to use push2 from the 1st
   //    push and make the stack 16B aligned before the push
   unsigned NumRegsForPush2 = 0;
-  // push2/pop2 are EVEX-encoded. The Windows v1/v2 epilogue unwinder
-  // disassembles the epilogue and can't decode EVEX, and only unwind v3 emits
-  // the declarative .seh_push2regs, so don't use push2/pop2 when the function
-  // needs v1/v2 Win64 unwind info.
-  if (STI.hasPush2Pop2() && getStackAlignment() >= 16 &&
-      !needsWin64NonV3EpilogueUnwind(MF)) {
+  if (STI.hasPush2Pop2() && getStackAlignment() >= 16) {
     unsigned NumCSGPR = llvm::count_if(CSI, [](const CalleeSavedInfo &I) {
       return X86::GR64RegClass.contains(I.getReg());
     });
