@@ -41,7 +41,6 @@ bool CompilerInstanceWithContext::initialize(
     LogLine.logArray("init_compiler_instance_with_context:", " ", CommandLine);
   }
   assert(DiagEngineWithDiagOpts && "Valid diagnostics engine required!");
-  assert(OverlayFS && "OverlayFS required!");
   auto FS = Worker.makeEffectiveVFS(CWD, std::move(OverlayFS));
 
   OriginalInvocation = createCompilerInvocation(
@@ -205,4 +204,32 @@ bool CompilerInstanceWithContext::computeDependencies(
   MDC->run(Consumer);
   return applyAndReport(*MDC, ModuleInvocation, Consumer, Controller,
                         CommandLine[0]);
+}
+
+std::shared_ptr<ModuleDepCollector>
+CompilerInstanceWithContext::scanTranslationUnit(
+    DependencyConsumer &Consumer, DependencyActionController &Controller) {
+  assert(CIPtr && "CIPtr must be initialized before calling this method");
+  auto &CI = *CIPtr;
+
+  auto MDC = initializeScanInstanceDependencyCollector(
+      CI, std::make_unique<DependencyOutputOptions>(*OutputOpts),
+      Worker.Service, *OriginalInvocation, Controller, PrebuiltModuleASTMap,
+      StableDirs);
+
+  if (CI.getDiagnostics().hasErrorOccurred())
+    return nullptr;
+
+  if (!Controller.initialize(CI, *OriginalInvocation))
+    return nullptr;
+
+  ReadPCHAndPreprocessAction Action;
+  if (!CI.ExecuteAction(Action))
+    return nullptr;
+
+  MDC->run(Consumer);
+  if (!applyAndReport(*MDC, *OriginalInvocation, Consumer, Controller,
+                      CommandLine[0]))
+    return nullptr;
+  return MDC;
 }
