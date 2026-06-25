@@ -6718,8 +6718,10 @@ bool AArch64InstructionSelector::selectIntrinsic(MachineInstr &I,
     MIB.buildCopy({AArch64::X16}, {AUTDisc});
     MIB.buildCopy({AArch64::X15}, {AUTPC});
 
-    MIB.buildInstr(AArch64::AUTx15x16x17PAC)
+    MIB.buildInstr(AArch64::AUTPCPAC)
         .addImm(AUTKey)
+        .addUse(AArch64::X16)
+        .addUse(AArch64::X15)
         .addImm(PACKey)
         .addImm(PACConstDiscC)
         .addUse(PACAddrDisc)

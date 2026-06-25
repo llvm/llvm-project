@@ -1788,11 +1788,14 @@ void AArch64DAGToDAGISel::SelectPtrauthResignWithPC(SDNode *N) {
   SDValue X15Copy = CurDAG->getCopyToReg(
       CurDAG->getEntryNode(), DL, AArch64::X15, AUTPC, X16Copy.getValue(1));
 
-  SDValue Ops[] = {AUTKey, PACKey, PACConstDisc, PACAddrDisc,
+  SDValue Ops[] = {AUTKey,
+                   CurDAG->getRegister(AArch64::X16, MVT::i64),
+                   CurDAG->getRegister(AArch64::X15, MVT::i64),
+                   PACKey, PACConstDisc, PACAddrDisc,
                    X15Copy.getValue(1)};
-  SDNode *AUTx15x16x17PAC =
-      CurDAG->getMachineNode(AArch64::AUTx15x16x17PAC, DL, MVT::i64, Ops);
-  ReplaceNode(N, AUTx15x16x17PAC);
+  SDNode *AUTPCPAC =
+      CurDAG->getMachineNode(AArch64::AUTPCPAC, DL, MVT::i64, Ops);
+  ReplaceNode(N, AUTPCPAC);
 }
 
 bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {

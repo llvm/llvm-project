@@ -2365,20 +2365,20 @@ void AArch64AsmPrinter::emitPtrauthAuthResign(
 
   if (WithPC) {
     assert(Pointer == AArch64::X17 && Scratch == AArch64::X16 &&
-           "AUTx15x16x17PAC must use x17/x16 as Pointer/Scratch");
+           "AUTPCPAC must use x17/x16 as Pointer/Scratch");
 
     assert(AuthSchema.AddrDisc == AArch64::X16 &&
-           "AUTx15x16x17PAC requires address discriminator in X16");
+           "AUTPCPAC requires address discriminator in X16");
 
     assert(AuthSchema.PCDisc == AArch64::X15 &&
-           "AUTx15x16x17PAC requires PC discriminator in X15");
+           "AUTPCPAC requires PC discriminator in X15");
 
     assert(AuthSchema.IntDisc == 0 &&
-           "AUTx15x16x17PAC does not support IntDisc");
+           "AUTPCPAC does not support IntDisc");
 
     assert((AuthSchema.Key == AArch64PACKey::IB ||
             AuthSchema.Key == AArch64PACKey::IA) &&
-           "AUTx15x16x17PAC only supports AUT-ing with IA/IB");
+           "AUTPCPAC only supports AUT-ing with IA/IB");
 
     if (!emitDeactivationSymbolRelocation(DS)) {
       unsigned AutOpc = (AuthSchema.Key == AArch64PACKey::IB)
@@ -3388,14 +3388,14 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   }
 
-  case AArch64::AUTx15x16x17PAC: {
+  case AArch64::AUTPCPAC: {
     auto AuthSchema = PtrAuthSchema::CreateRegReg(
-        (AArch64PACKey::ID)MI->getOperand(0).getImm(), AArch64::X16,
-        AArch64::X15);
+        (AArch64PACKey::ID)MI->getOperand(0).getImm(),
+        MI->getOperand(1).getReg(), MI->getOperand(2).getReg());
 
     auto SignSchema = PtrAuthSchema::CreateImmReg(
-        (AArch64PACKey::ID)MI->getOperand(1).getImm(),
-        MI->getOperand(2).getImm(), MI->getOperand(3));
+        (AArch64PACKey::ID)MI->getOperand(3).getImm(),
+        MI->getOperand(4).getImm(), MI->getOperand(5));
 
     emitPtrauthAuthResign(/*Pointer=*/AArch64::X17, /*Scratch=*/AArch64::X16,
                           AuthSchema, SignSchema, std::nullopt,
