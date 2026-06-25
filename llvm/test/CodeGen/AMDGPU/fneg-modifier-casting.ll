@@ -1656,11 +1656,11 @@ define amdgpu_kernel void @multiple_uses_fneg_select_f64(double %x, double %y, i
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX11-NEXT:    s_bitcmp1_b32 s6, 0
 ; GFX11-NEXT:    s_cselect_b32 vcc_lo, -1, 0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, s3, v0, vcc_lo
 ; GFX11-NEXT:    s_and_b32 s6, vcc_lo, exec_lo
-; GFX11-NEXT:    s_cselect_b32 s1, s1, s3
-; GFX11-NEXT:    s_cselect_b32 s0, s0, s2
+; GFX11-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, s1, -v0, vcc_lo
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[4:5]

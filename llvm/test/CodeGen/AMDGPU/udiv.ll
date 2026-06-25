@@ -542,8 +542,7 @@ define amdgpu_kernel void @udiv_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1030-NEXT:    s_add_i32 s6, s4, 1
 ; GFX1030-NEXT:    s_sub_i32 s7, s5, s2
 ; GFX1030-NEXT:    s_cmp_ge_u32 s5, s2
-; GFX1030-NEXT:    s_cselect_b32 s4, s6, s4
-; GFX1030-NEXT:    s_cselect_b32 s5, s7, s5
+; GFX1030-NEXT:    s_cselect_b64 s[4:5], s[6:7], s[4:5]
 ; GFX1030-NEXT:    s_add_i32 s6, s4, 1
 ; GFX1030-NEXT:    s_cmp_ge_u32 s5, s2
 ; GFX1030-NEXT:    v_readfirstlane_b32 s5, v1
@@ -559,8 +558,7 @@ define amdgpu_kernel void @udiv_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1030-NEXT:    s_add_i32 s6, s4, 1
 ; GFX1030-NEXT:    s_sub_i32 s7, s5, s3
 ; GFX1030-NEXT:    s_cmp_ge_u32 s5, s3
-; GFX1030-NEXT:    s_cselect_b32 s4, s6, s4
-; GFX1030-NEXT:    s_cselect_b32 s5, s7, s5
+; GFX1030-NEXT:    s_cselect_b64 s[4:5], s[6:7], s[4:5]
 ; GFX1030-NEXT:    s_add_i32 s6, s4, 1
 ; GFX1030-NEXT:    s_cmp_ge_u32 s5, s3
 ; GFX1030-NEXT:    s_cselect_b32 s3, s6, s4
@@ -970,8 +968,7 @@ define amdgpu_kernel void @udiv_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1030-NEXT:    s_add_i32 s8, s6, 1
 ; GFX1030-NEXT:    s_sub_i32 s9, s7, s3
 ; GFX1030-NEXT:    s_cmp_ge_u32 s7, s3
-; GFX1030-NEXT:    s_cselect_b32 s6, s8, s6
-; GFX1030-NEXT:    s_cselect_b32 s7, s9, s7
+; GFX1030-NEXT:    s_cselect_b64 s[6:7], s[8:9], s[6:7]
 ; GFX1030-NEXT:    s_add_i32 s8, s6, 1
 ; GFX1030-NEXT:    s_cmp_ge_u32 s7, s3
 ; GFX1030-NEXT:    v_readfirstlane_b32 s7, v6
@@ -990,8 +987,7 @@ define amdgpu_kernel void @udiv_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1030-NEXT:    s_sub_i32 s9, s7, s5
 ; GFX1030-NEXT:    s_cmp_ge_u32 s7, s5
 ; GFX1030-NEXT:    v_readfirstlane_b32 s10, v0
-; GFX1030-NEXT:    s_cselect_b32 s6, s8, s6
-; GFX1030-NEXT:    s_cselect_b32 s7, s9, s7
+; GFX1030-NEXT:    s_cselect_b64 s[6:7], s[8:9], s[6:7]
 ; GFX1030-NEXT:    s_add_i32 s8, s6, 1
 ; GFX1030-NEXT:    s_cmp_ge_u32 s7, s5
 ; GFX1030-NEXT:    v_readfirstlane_b32 s7, v7
@@ -1008,8 +1004,7 @@ define amdgpu_kernel void @udiv_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1030-NEXT:    s_add_i32 s8, s6, 1
 ; GFX1030-NEXT:    s_sub_i32 s9, s7, s2
 ; GFX1030-NEXT:    s_cmp_ge_u32 s7, s2
-; GFX1030-NEXT:    s_cselect_b32 s6, s8, s6
-; GFX1030-NEXT:    s_cselect_b32 s7, s9, s7
+; GFX1030-NEXT:    s_cselect_b64 s[6:7], s[8:9], s[6:7]
 ; GFX1030-NEXT:    s_add_i32 s8, s6, 1
 ; GFX1030-NEXT:    s_cmp_ge_u32 s7, s2
 ; GFX1030-NEXT:    s_cselect_b32 s2, s8, s6

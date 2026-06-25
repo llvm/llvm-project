@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-- < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn-- < %s | FileCheck -check-prefix=GCN,BASE %s
+; RUN: llc -mtriple=amdgcn-- -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GCN,FLAT %s
 
 ; How the replacement of i64 stores with v2i32 stores resulted in
 ; breaking other users of the bitcast if they already existed
@@ -32,8 +32,7 @@ define amdgpu_kernel void @extract_vector_elt_v2i64(ptr addrspace(1) %out, <2 x 
 ; GCN-LABEL: {{^}}dyn_extract_vector_elt_v2i64:
 ; GCN-NOT: buffer_load
 ; GCN-DAG: s_cmp_eq_u32 s{{[0-9]+}}, 1
-; GCN-DAG: s_cselect_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
-; GCN-DAG: s_cselect_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+; GCN-DAG: s_cselect_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s[{{[0-9:]+}}]
 ; GCN: store_dwordx2 v[{{[0-9:]+}}]
 define amdgpu_kernel void @dyn_extract_vector_elt_v2i64(ptr addrspace(1) %out, <2 x i64> %foo, i32 %elt) #0 {
   %dynelt = extractelement <2 x i64> %foo, i32 %elt
@@ -60,11 +59,13 @@ define amdgpu_kernel void @dyn_extract_vector_elt_v2i64_2(ptr addrspace(1) %out,
 ; GCN-LABEL: {{^}}dyn_extract_vector_elt_v3i64:
 ; GCN-NOT: buffer_load
 ; GCN-DAG: s_cmp_eq_u32 s{{[0-9]+}}, 1
-; GCN-DAG: s_cselect_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
-; GCN-DAG: s_cselect_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+; BASE-DAG: s_cselect_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s[{{[0-9:]+}}]
+; FLAT-DAG: s_cselect_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+; FLAT-DAG: s_cselect_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
 ; GCN-DAG: s_cmp_eq_u32 s{{[0-9]+}}, 2
-; GCN-DAG: s_cselect_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
-; GCN-DAG: s_cselect_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+; BASE-DAG: s_cselect_b64 s[{{[0-9:]+}}], s[{{[0-9:]+}}], s[{{[0-9:]+}}]
+; FLAT-DAG: s_cselect_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
+; FLAT-DAG: s_cselect_b32 s{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
 ; GCN: store_dwordx2 v[{{[0-9:]+}}]
 define amdgpu_kernel void @dyn_extract_vector_elt_v3i64(ptr addrspace(1) %out, <3 x i64> %foo, i32 %elt) #0 {
   %dynelt = extractelement <3 x i64> %foo, i32 %elt

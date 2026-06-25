@@ -1,12 +1,13 @@
-; RUN: llc < %s -mtriple=amdgcn -mcpu=tahiti | FileCheck -check-prefix=GCN %s
-; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga | FileCheck -check-prefix=GCN %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=tahiti | FileCheck -check-prefixes=GCN,TAHITI %s
+; RUN: llc < %s -mtriple=amdgcn -mcpu=tonga | FileCheck -check-prefix=GCN,TONGA %s
 
 ; GCN-LABEL: {{^}}select0:
 ; i64 select should be split into two i32 selects, and we shouldn't need
 ; to use a shfit to extract the hi dword of the input.
 ; GCN-NOT: s_lshr_b64
-; GCN: s_cselect_b32
-; GCN: s_cselect_b32
+; TAHITI: s_cselect_b32
+; TAHITI: s_cselect_b32
+; TONGA: s_cselect_b64
 define amdgpu_kernel void @select0(ptr addrspace(1) %out, i32 %cond, i64 %in) {
 entry:
   %0 = icmp ugt i32 %cond, 5
@@ -51,8 +52,9 @@ define amdgpu_kernel void @v_select_trunc_i64_2(ptr addrspace(1) %out, i32 %cond
 }
 
 ; GCN-LABEL: {{^}}v_select_i64_split_imm:
-; GCN-DAG: s_cselect_b32
-; GCN-DAG: s_cselect_b32
+; TAHITI-DAG: s_cselect_b32
+; TAHITI-DAG: s_cselect_b32
+; TONGA-DAG: s_cselect_b64
 ; GCN: s_endpgm
 define amdgpu_kernel void @v_select_i64_split_imm(ptr addrspace(1) %out, i32 %cond, ptr addrspace(1) %aptr, ptr addrspace(1) %bptr) nounwind {
   %cmp = icmp ugt i32 %cond, 5
