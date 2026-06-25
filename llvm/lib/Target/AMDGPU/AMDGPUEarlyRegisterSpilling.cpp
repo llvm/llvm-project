@@ -589,29 +589,8 @@ AMDGPUEarlyRegisterSpilling::getCandidates(MachineInstr *CurMI,
       continue;
 
     SmallVector<const MachineOperand *> UsesForNextUseDistCalculation;
-    for (const MachineOperand &UseMO : MRI->use_nodbg_operands(CandidateReg)) {
-      const MachineInstr *UseMI = UseMO.getParent();
-      const MachineBasicBlock *UseMBB = UseMI->getParent();
-
-      if (UseMI == CurMI) {
-        UsesForNextUseDistCalculation.clear();
-        break;
-      }
-
-      // Bail-out if a use is reachable from a backendge.
-      if (((CurMBB != UseMBB) && NUA->isReachable(UseMBB, CurMBB)) ||
-          ((CurMBB == UseMBB) && DT->dominates(UseMI, CurMI)))
-        continue;
-
-      if ((CurMBB == UseMBB) && !DT->dominates(CurMI, UseMI))
-        continue;
-
-      if ((CurMBB != UseMBB) && !NUA->isReachable(CurMBB, UseMBB))
-        continue;
-
-      UsesForNextUseDistCalculation.push_back(&UseMO);
-    }
-
+    NUA->getReachableUses(CandidateReg, Mask, *CurMI,
+                          UsesForNextUseDistCalculation);
     if (UsesForNextUseDistCalculation.empty())
       continue;
 
