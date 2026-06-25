@@ -166,22 +166,27 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
 
     std::error_code EC = Converter->convert(OriginalBuf, UTF8Buf);
     if (EC) {
+      // For tagged files, conversion failure is an error and we don't fall back
+      if (isFileTagged()) {
+        Diag.Report(Loc, diag::err_charset_conversion_failed)
+            << ContentsEntry->getName() << EC.message();
+        return std::nullopt;
+      }
+      
       // If conversion fails, emit a warning and fall back to interpreting the
-      // file as UTF-8 without conversion.
+      // file as the default charset.
       //
       // This allows the compiler to accept system or third-party headers that
-      // are encoded in UTF-8 even if conversion to the option-specified input
-      // charset failed.
-      //
-      // Diagnostics already exist when files are not well-formed UTF-8.
+      // are encoded in the default charset even if conversion to the
+      // option-specified input charset failed.
       //
       // TODO: Add input byte offset information.
       //
-      // TODO: Consider adjusting the message to omit the "interpreting as
-      // UTF-8" recovery description if the warning has been upgraded to an
-      // error.
+      // TODO: Consider adjusting the message to omit the recovery description
+      // if the warning has been upgraded to an error.
+      const char *FallbackEncoding = CLANG_DEFAULT_INPUT_ENCODING_IBM1047 ? "IBM-1047" : "UTF-8";
       Diag.Report(Loc, diag::warn_charset_conversion_failed)
-          << ContentsEntry->getName() << EC.message();
+          << ContentsEntry->getName() << EC.message() << FallbackEncoding;
     } else {
       // TODO: Reclaim memory if the buffer size exceeds the content.
       auto NewBuf = std::make_unique<llvm::SmallVectorMemoryBuffer>(
@@ -642,6 +647,7 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
    << (llvm::Twine("cannot create converter from encoding '") + *Ccsid + "'");
       return FileID();
     }
+    IR.setFileTagged(true);
   } else if (!InputEncodingName.empty()) {
     // No file tag but -finput-charset conversion is desired.
     // Get the converter from the cache using the input encoding name.
@@ -649,6 +655,15 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
     if (!Converter) {
       llvm::report_fatal_error(
           "Cannot create converter for file '" + SourceFile.getName() + "': " +
+          Converter.getError().message());
+    }
+  } else if (CLANG_DEFAULT_INPUT_ENCODING_IBM1047) {
+    // When IBM-1047 is the default and no file tag or explicit -finput-charset
+    // is provided, use IBM-1047 as the default source encoding
+    Converter = getOrCreateConverter("IBM-1047");
+    if (!Converter) {
+      llvm::report_fatal_error(
+          "Cannot create IBM-1047 converter for file '" + SourceFile.getName() + "': " +
           Converter.getError().message());
     }
   }

@@ -159,7 +159,9 @@ public:
 
   /// Information on whether this is associated with a FileID for a file (as
   /// opposed to a buffer) and, if so, what conversion (if any) was requested.
-  llvm::PointerIntPair<llvm::TextEncodingConverter *, 1u, bool>
+  /// The integer part uses 2 bits: bit 0 indicates if used by FileID,
+  /// bit 1 indicates if the file was tagged.
+  llvm::PointerIntPair<llvm::TextEncodingConverter *, 2u, unsigned>
       FileIDConverterInfo;
 
   /// A bump pointer allocated array of offsets for each source line.
@@ -277,6 +279,36 @@ public:
 
   // If BufStr has an invalid BOM, returns the BOM name; otherwise, returns
   // nullptr
+
+  /// Helper methods for FileIDConverterInfo bit manipulation.
+  /// Bit 0: Used by FileID flag
+  /// Bit 1: File tagged flag
+  
+  bool isUsedByFileID() const {
+    return FileIDConverterInfo.getInt() & 0x1;
+  }
+  
+  void setUsedByFileID(bool Used) {
+    unsigned Flags = FileIDConverterInfo.getInt();
+    if (Used)
+      Flags |= 0x1;
+    else
+      Flags &= ~0x1;
+    FileIDConverterInfo.setInt(Flags);
+  }
+  
+  bool isFileTagged() const {
+    return FileIDConverterInfo.getInt() & 0x2;
+  }
+  
+  void setFileTagged(bool Tagged) {
+    unsigned Flags = FileIDConverterInfo.getInt();
+    if (Tagged)
+      Flags |= 0x2;
+    else
+      Flags &= ~0x2;
+    FileIDConverterInfo.setInt(Flags);
+  }
   static const char *getInvalidBOM(StringRef BufStr);
 };
 
