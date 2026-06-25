@@ -45,6 +45,7 @@
 #include "GCNNSAReassign.h"
 #include "GCNPreRALongBranchReg.h"
 #include "GCNPreRAOptimizations.h"
+#include "GCNMFMAAccumTileReuse.h"
 #include "GCNRewritePartialRegUses.h"
 #include "GCNSchedStrategy.h"
 #include "GCNVOPDUtils.h"
@@ -738,6 +739,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUResourceUsageAnalysisWrapperPassPass(*PR);
   initializeGCNNSAReassignLegacyPass(*PR);
   initializeGCNPreRAOptimizationsLegacyPass(*PR);
+  initializeGCNMFMAAccumTileReuseLegacyPass(*PR);
   initializeGCNPreRALongBranchRegLegacyPass(*PR);
   initializeGCNRewritePartialRegUsesLegacyPass(*PR);
   initializeGCNRegPressurePrinterPass(*PR);
@@ -1471,6 +1473,10 @@ public:
 
 } // end anonymous namespace
 
+bool llvm::amdgpuUseSSAMachineScheduler() {
+  return UseSSAMachineScheduler;
+}
+
 AMDGPUPassConfig::AMDGPUPassConfig(TargetMachine &TM, PassManagerBase &PM)
     : TargetPassConfig(TM, PM) {
   // Exceptions and StackMaps are not supported, so these passes will never do
@@ -1821,6 +1827,8 @@ void GCNPassConfig::addOptimizedRegAlloc() {
 
   if (EnableRewritePartialRegUses)
     insertPass(&RenameIndependentSubregsID, &GCNRewritePartialRegUsesID);
+
+  insertPass(&RegisterCoalescerID, &GCNMFMAAccumTileReuseID);
 
   // Insertion point for passes depends on whether MachineScheduler is enabled.
   AnalysisID EndOfPreRA = UseSSAMachineScheduler ? &RenameIndependentSubregsID
@@ -2599,6 +2607,8 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(
 
   if (EnableRewritePartialRegUses)
     insertPass<RenameIndependentSubregsPass>(GCNRewritePartialRegUsesPass());
+
+  insertPass<RegisterCoalescerPass>(GCNMFMAAccumTileReusePass());
 
   if (isPassEnabled(EnablePreRAOptimizations))
     insertPass<MachineSchedulerPass>(GCNPreRAOptimizationsPass());

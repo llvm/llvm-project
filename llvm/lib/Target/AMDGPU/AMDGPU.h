@@ -580,6 +580,10 @@ extern char &GCNPreRALongBranchRegID;
 void initializeGCNPreRAOptimizationsLegacyPass(PassRegistry &);
 extern char &GCNPreRAOptimizationsID;
 
+FunctionPass *createGCNMFMAAccumTileReuseLegacyPass();
+void initializeGCNMFMAAccumTileReuseLegacyPass(PassRegistry &);
+extern char &GCNMFMAAccumTileReuseID;
+
 FunctionPass *createAMDGPUSetWavePriorityPass();
 void initializeAMDGPUSetWavePriorityLegacyPass(PassRegistry &);
 

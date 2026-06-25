@@ -31,6 +31,9 @@ namespace AMDGPU {
 StringRef getSchedStrategy(const Function &F);
 }
 
+/// True when the SSA machine scheduler is enabled (CLI or mcc-feature).
+bool amdgpuUseSSAMachineScheduler();
+
 class AMDGPUTargetMachine : public CodeGenTargetMachineImpl {
 protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
