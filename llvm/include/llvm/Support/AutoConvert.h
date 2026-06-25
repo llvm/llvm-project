@@ -18,6 +18,7 @@
 #include <_Ccsid.h>
 #endif
 #ifdef __cplusplus
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
 #include <system_error>
