@@ -155,10 +155,130 @@ static void evaluateDeinterleave(IntrinsicInst *I, DeinterleaveMap &Candidates,
   Candidates.try_emplace(I, Extends);
 }
 
+/// Evaluate a reverse intrinsic to see what uses it. We want to find a reverse
+/// that pairs with an extract from a deinterleave, so that we can move the
+/// reverse into the tbl as well as deinterleave and extend. We also need to
+/// confirm that it's only used by single-use instructions, or instructions
+/// used by a phi and a reduction intrinsic outside the loop, where the
+/// reduction permits reassociation. Something like the following:
+///
+///  %acc.b.f64 = phi <vscale x 2 x double> [ splat(double 0.000000e+00),
+///                                          %entry ], [ %fadd.b.f64, %loop ]
+///  ...
+///  %rev.load = load <vscale x 2 x double>, ptr %rev.ptr
+///  %reversed = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(
+///                                             <vscale x 2 x double> %rev.load)
+///  %bgra = call <vscale x 8 x i16> @llvm.masked.load(ptr %src.gep,
+///                 <vscale x 8 x i1> %mask, <vscale x 8 x i16> zeroinitializer)
+///  %deinterleave = tail call { <vscale x 2 x i16>, <vscale x 2 x i16>,
+///                               <vscale x 2 x i16>, <vscale x 2 x i16> }
+///                          @llvm.vector.deinterleave4(<vscale x 8 x i16>
+///                          %bgra)
+///  %b.i16 = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>,
+///                   <vscale x 2 x i16>, <vscale x 2 x i16> } %deinterleave, 0
+///  %b.f64 = uitofp <vscale x 2 x i16> %b.i16 to <vscale x 2 x double>
+///  %b.mul.f64 = fmul <vscale x 2 x double> %b.f64, %reversed
+///  %fadd.b.f64 = fadd <vscale x 2 x double> %acc.b.f64, %b.mul.f64
+///  %iv.next = add nuw i64 %iv, %stride
+///  %ec = icmp eq i64 %iv.next, 2048
+///  br i1 %ec, label %exit, label %loop
+///  ...
+///  %b.acc = call fast double @llvm.vector.reduce.fadd.nxv2f64(double
+///                             0.000000e+00, <vscale x 2 x double> %fadd.b.f64)
+static void evaluateReverse(IntrinsicInst *Reverse,
+                            SmallVectorImpl<IntrinsicInst *> &Reverses, Loop &L,
+                            const AArch64TargetLowering &TL,
+                            const DataLayout DL) {
+  assert(Reverse->getIntrinsicID() == Intrinsic::vector_reverse &&
+         "Invalid intrinsic used");
+
+  // We want to check that for each use of the reverse, we eventually end up
+  // in a reassociable reduction, so that the ordering of elements does not
+  // matter.
+  for (User *U : Reverse->users()) {
+    Instruction *I = cast<Instruction>(U);
+
+    // For now, only iterate through normal operations until we hit a
+    // CallInst. If that's not a reduction, abandon.
+    // TODO: Handle more generic input when we have a use for it.
+    while (!isa<CallInst>(I)) {
+      // If there's only one use, proceeed to the next in the chain.
+      if (I->hasOneUse()) {
+        I = I->user_back();
+        continue;
+      }
+
+      // Otherwise, look for 2 users -- a phi in the loop, and an outside
+      // reduction intrinsic.
+      SmallVector<User *, 2> Users(I->users());
+      if (Users.size() != 2)
+        return;
+
+      Instruction *Phi = cast<Instruction>(Users[0]);
+      Instruction *Reduce = cast<Instruction>(Users[1]);
+      if (!isa<PHINode>(Phi))
+        std::swap(Phi, Reduce);
+
+      if (!isa<PHINode>(Phi) || !isa<IntrinsicInst>(Reduce))
+        return;
+
+      // TODO: Do we have a nice utility to match all reduction intrinsics?
+      // We need to confirm reassociation is allowed, because the lanes within
+      // the vector will be in reversed order.
+      IntrinsicInst *II = cast<IntrinsicInst>(Reduce);
+      if (!isa<FPMathOperator>(II) || !II->hasAllowReassoc() ||
+          II->getIntrinsicID() != Intrinsic::vector_reduce_fadd)
+        return;
+
+      // The Phi must be for the current loop, and the reduction must be outside
+      // it.
+      if (!L.contains(Phi) || L.contains(Reduce))
+        return;
+
+      I = Reduce;
+    }
+  }
+
+  Reverses.push_back(Reverse);
+}
+
 /// Given a map of deinterleaves to zext or uitofp casts, remove the operations
 /// and replace them with tbl shuffles.
-static void optimizeSVEDeinterleavedExtends(DeinterleaveMap Deinterleaves) {
+static void
+optimizeSVEDeinterleavedExtends(DeinterleaveMap Deinterleaves,
+                                ArrayRef<IntrinsicInst *> Reverses) {
   for (auto &[Deinterleave, Extends] : Deinterleaves) {
+
+    // See if there's a matching reverse.
+    // TODO: Support missing extends.
+    IntrinsicInst *Reverse = nullptr;
+    if (Extends[0]) {
+      User *ExtUser = Extends[0]->user_back();
+      for (auto *R : Reverses) {
+        if (is_contained(R->users(), ExtUser))
+          Reverse = R;
+      }
+    }
+
+    SmallVector<Instruction *, 4> ReversingExtends;
+    // Make sure all uses of the reverse can be matched to the deinterleave.
+    // Not all deinterleaved lanes need to be matched to a reverse, but all
+    // uses of the reverse must match a use of the deinterleave.
+    if (Reverse) {
+      for (auto *Ext : Extends) {
+        if (Ext && is_contained(Reverse->users(), Ext->user_back())) {
+          ReversingExtends.push_back(Ext);
+        }
+      }
+
+      // Bail out and just transform the deinterleave + extend if there are
+      // extra uses of the reverse not covered by the extracts/extends.
+      if (ReversingExtends.size() != range_size(Reverse->users())) {
+        ReversingExtends.clear();
+        Reverse = nullptr;
+      }
+    }
+
     VectorType *DestTy = cast<VectorType>(Extends[0]->getDestTy());
     VectorType *SrcTy = cast<VectorType>(Extends[0]->getSrcTy());
     unsigned DstBits = DestTy->getScalarSizeInBits();
@@ -171,6 +291,7 @@ static void optimizeSVEDeinterleavedExtends(DeinterleaveMap Deinterleaves) {
     APInt Invalid = APInt::getAllOnes(DstBits);
     for (auto [Idx, Extend] : enumerate(Extends)) {
       // If not all lanes were extracted, we can have gaps. Skip over them.
+      bool ShouldReverse = is_contained(ReversingExtends, Extend);
       if (!Extend)
         continue;
       // Build the mask using stepvectors and casting.
@@ -184,13 +305,27 @@ static void optimizeSVEDeinterleavedExtends(DeinterleaveMap Deinterleaves) {
       // step of 4. We then cast that back to an element size of 16b, yielding
       // <0x0000 + Idx, 0xFFFF, 0xFFFF, 0xFFFF, 0x0004 + Idx, 0xFFFF...>.
       APInt StartIdx = Invalid << SrcBits;
-      StartIdx += Idx;
+      if (ShouldReverse) {
+        StartIdx = StartIdx - 4 + Idx;
+      } else {
+        StartIdx += Idx;
+      }
       IRBuilder<> Builder(Extend);
       Value *StepVector = Builder.CreateStepVector(StepVecTy);
+      uint64_t Step = ShouldReverse ? -4 : 4;
+      Value *Start = ConstantInt::get(StepVecTy, StartIdx);
+      if (ShouldReverse) {
+        Value *EltCnt = Builder.CreateVScale(Start->getType()->getScalarType());
+        EltCnt = Builder.CreateNUWMul(
+            EltCnt, ConstantInt::get(EltCnt->getType(), SrcBits / 8));
+        EltCnt =
+            Builder.CreateVectorSplat(StepVecTy->getElementCount(), EltCnt);
+        Start = Builder.CreateNUWAdd(Start, EltCnt);
+      }
+
       Value *ScaledSteps =
-          Builder.CreateNUWMul(StepVector, ConstantInt::get(StepVecTy, 4));
-      Value *ZextTbl = Builder.CreateNUWAdd(
-          ScaledSteps, ConstantInt::get(StepVecTy, StartIdx));
+          Builder.CreateNUWMul(StepVector, ConstantInt::get(StepVecTy, Step));
+      Value *ZextTbl = Builder.CreateNUWAdd(ScaledSteps, Start);
       Value *FinalMask = Builder.CreateBitCast(ZextTbl, InputTy);
 
       // Replace the deinterleave, extractvalue, and extension chain with
@@ -210,6 +345,11 @@ static void optimizeSVEDeinterleavedExtends(DeinterleaveMap Deinterleaves) {
     for (User *U : make_early_inc_range(Deinterleave->users()))
       cast<Instruction>(U)->eraseFromParent();
     Deinterleave->eraseFromParent();
+
+    if (Reverse) {
+      Reverse->replaceAllUsesWith(Reverse->getArgOperand(0));
+      Reverse->eraseFromParent();
+    }
   }
 }
 
@@ -227,15 +367,19 @@ static bool processLoop(Loop &L, const AArch64Subtarget &ST, DataLayout DL) {
   assert(DL.isLittleEndian() &&
          "Shuffle optimizations unsupported for big endian targets.");
   DeinterleaveMap Candidates;
+  SmallVector<IntrinsicInst *, 2> Reverses;
   for (auto *BB : L.blocks())
-    for (auto &I : *BB)
+    for (auto &I : *BB) {
       if (match(&I, m_Intrinsic<Intrinsic::vector_deinterleave4>(m_Value())))
         evaluateDeinterleave(cast<IntrinsicInst>(&I), Candidates, L, TL, DL);
+      if (match(&I, m_Intrinsic<Intrinsic::vector_reverse>(m_Value())))
+        evaluateReverse(cast<IntrinsicInst>(&I), Reverses, L, TL, DL);
+    }
 
   if (Candidates.empty())
     return false;
 
-  optimizeSVEDeinterleavedExtends(Candidates);
+  optimizeSVEDeinterleavedExtends(Candidates, Reverses);
   return true;
 }
 
