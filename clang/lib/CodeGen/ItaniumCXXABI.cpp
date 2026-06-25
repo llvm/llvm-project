@@ -218,6 +218,12 @@ public:
     if (!llvm::GlobalValue::isWeakForLinker(CGM.getVTableLinkage(RD)))
       return true;
 
+    // On targets that may duplicate a vtable, a weak vtable can be emitted with
+    // a distinct address in more than one image, so its address cannot be
+    // assumed to be unique.
+    if (CGM.getTarget().vtablesMayBeDuplicated())
+      return false;
+
     // Even if there are multiple definitions of the vtable, they are required
     // by the ABI to use the same symbol name, so should be merged at load
     // time. However, if the class has hidden visibility, there can be

@@ -62,6 +62,10 @@ public:
   /// similar to ELF's "protected";  Apple Mach-O requires a "weak" attribute on
   /// declarations that can be dynamically replaced.
   bool hasProtectedVisibility() const override { return false; }
+
+  /// Apple Mach-O can autohide a vtable so that each image gets its own copy,
+  /// so a class's vtable may have more than one address in a program.
+  bool vtablesMayBeDuplicated() const override { return true; }
 };
 
 template <typename Target>
