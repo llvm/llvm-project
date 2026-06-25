@@ -176,6 +176,28 @@ public:
         [](auto... __sizes) { return (make_unsigned_t<common_type_t<decltype(__sizes)...>>(__sizes) + ...); },
         std::__tuple_transform(ranges::size, __views_));
   }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint()
+    requires(approximately_sized_range<_Views> && ...)
+  {
+    return apply(
+        [](auto... __sizes) static {
+          using _CT = make_unsigned_t<common_type_t<decltype(__sizes)...>>;
+          return (_CT(__sizes) + ...);
+        },
+        std::__tuple_transform(ranges::reserve_hint, __views_));
+  }
+
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint() const
+    requires(approximately_sized_range<const _Views> && ...)
+  {
+    return apply(
+        [](auto... __sizes) static {
+          using _CT = make_unsigned_t<common_type_t<decltype(__sizes)...>>;
+          return (_CT(__sizes) + ...);
+        },
+        std::__tuple_transform(ranges::reserve_hint, __views_));
+  }
 };
 
 template <class... _Views>
