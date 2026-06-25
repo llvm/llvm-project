@@ -1996,6 +1996,8 @@ TEST_F(LifetimeAnalysisTest, BuildOriginFlowChain) {
 
       POINT(after_nested_merge);
       (void)*s;
+      int reset;
+      s = &reset;
     }
   )");
 
