@@ -966,10 +966,10 @@ define void @sink_multiple_store_groups_noalias_via_scev_urem(ptr %dst, ptr %src
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x double> poison, double [[TMP11]], i32 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> [[TMP13]], double [[TMP12]], i32 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = urem <2 x i64> [[VEC_IND]], splat (i64 128)
-; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i64> [[TMP15]], i64 0
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <2 x i64> [[TMP15]], i64 1
 ; CHECK-NEXT:    [[TMP20:%.*]] = fadd <2 x double> [[TMP14]], splat (double 8.000000e+00)
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i64> [[TMP15]], i64 0
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP17]]
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <2 x i64> [[TMP15]], i64 1
 ; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP23]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = select <2 x i1> [[TMP10]], <2 x double> [[TMP14]], <2 x double> [[TMP20]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x double> [[TMP18]], i64 0

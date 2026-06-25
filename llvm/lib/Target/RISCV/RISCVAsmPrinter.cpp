@@ -126,6 +126,8 @@ private:
 
   void emitNTLHint(const MachineInstr *MI);
 
+  void emitLpadAlignedCall(const MachineInstr &MI);
+
   // XRay Support
   void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr *MI);
   void LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr *MI);
@@ -134,7 +136,7 @@ private:
 
   void lowerToMCInst(const MachineInstr *MI, MCInst &OutMI);
 };
-}
+} // namespace
 
 void RISCVAsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
                                     const MachineInstr &MI) {
@@ -278,6 +280,73 @@ bool RISCVAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst,
 // instructions) auto-generated.
 #include "RISCVGenMCPseudoLowering.inc"
 
+// Emit a call to a returns_twice function with LPAD.
+// When Zca is enabled, emit .p2align 2 before the call to ensure the
+// following LPAD is 4-byte aligned. For assembly output, wrap with
+// .option push/exact/pop to prevent relaxation. For object output,
+// emit the pseudo directly so MCCodeEmitter handles it without R_RISCV_RELAX.
+void RISCVAsmPrinter::emitLpadAlignedCall(const MachineInstr &MI) {
+  const MCSubtargetInfo &MCSTI = getSubtargetInfo();
+  const bool IsIndirect = MI.getOpcode() == RISCV::PseudoCALLIndirectLpadAlign,
+             HasZca = MCSTI.hasFeature(RISCV::FeatureStdExtZca),
+             HasRelax = MCSTI.hasFeature(RISCV::FeatureRelax);
+
+  if (HasZca)
+    OutStreamer->emitCodeAlignment(Align(4), MCSTI);
+
+  if (OutStreamer->hasRawTextSupport()) {
+    // Assembly path: wrap call with .option push/exact/pop and emit LPAD
+    // separately so the output is human-readable.
+    RISCVTargetStreamer &RTS = getTargetStreamer();
+    if (HasZca && HasRelax) {
+      RTS.emitDirectiveOptionPush();
+      RTS.emitDirectiveOptionExact();
+    }
+
+    MCInst CallInst;
+    if (!IsIndirect) {
+      MCOperand MCOp;
+      lowerOperand(MI.getOperand(0), MCOp);
+      CallInst = MCInstBuilder(RISCV::PseudoCALL).addOperand(MCOp);
+    } else {
+      CallInst = MCInstBuilder(RISCV::JALR)
+                     .addReg(RISCV::X1)
+                     .addReg(MI.getOperand(0).getReg())
+                     .addImm(0);
+    }
+
+    if (HasZca && HasRelax) {
+      MCSubtargetInfo NoRelaxSTI(MCSTI);
+      NoRelaxSTI.ToggleFeature(RISCV::FeatureRelax);
+      EmitToStreamer(*OutStreamer, CallInst, NoRelaxSTI);
+      RTS.emitDirectiveOptionPop();
+    } else {
+      EmitToStreamer(*OutStreamer, CallInst, MCSTI);
+    }
+
+    // LPAD is encoded as AUIPC X0, label.
+    MCInst LpadInst = MCInstBuilder(RISCV::AUIPC)
+                          .addReg(RISCV::X0)
+                          .addImm(MI.getOperand(1).getImm());
+    EmitToStreamer(*OutStreamer, LpadInst, MCSTI);
+  } else {
+    // Object path: emit PseudoCALL(Indirect)LpadAlign directly.
+    // MCCodeEmitter::expandFunctionCallLpad expands to AUIPC+JALR+LPAD
+    // without emitting R_RISCV_RELAX on the call fixup.
+    MCInst TmpInst;
+    TmpInst.setOpcode(MI.getOpcode());
+    if (!IsIndirect) {
+      MCOperand MCOp;
+      lowerOperand(MI.getOperand(0), MCOp);
+      TmpInst.addOperand(MCOp);
+    } else {
+      TmpInst.addOperand(MCOperand::createReg(MI.getOperand(0).getReg()));
+    }
+    TmpInst.addOperand(MCOperand::createImm(MI.getOperand(1).getImm()));
+    EmitToStreamer(*OutStreamer, TmpInst, MCSTI);
+  }
+}
+
 // If the instruction has a nontemporal MachineMemOperand, emit an NTL hint
 // instruction before it. NTL hints are always safe to emit since they use
 // HINT encodings that are guaranteed not to trap
@@ -351,6 +420,10 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   case TargetOpcode::PATCHABLE_TAIL_CALL:
     LowerPATCHABLE_TAIL_CALL(MI);
+    return;
+  case RISCV::PseudoCALLLpadAlign:
+  case RISCV::PseudoCALLIndirectLpadAlign:
+    emitLpadAlignedCall(*MI);
     return;
   }
 
@@ -467,7 +540,9 @@ bool RISCVAsmPrinter::emitDirectiveOptionArch() {
 
     auto Delta = STI->hasFeature(Feature.Value) ? RISCVOptionArchArgType::Plus
                                                 : RISCVOptionArchArgType::Minus;
-    NeedEmitStdOptionArgs.emplace_back(Delta, Feature.Key);
+    StringRef ExtName = Feature.Key;
+    ExtName.consume_front("experimental-");
+    NeedEmitStdOptionArgs.emplace_back(Delta, ExtName.str());
   }
   if (!NeedEmitStdOptionArgs.empty()) {
     RTS.emitDirectiveOptionPush();
@@ -524,7 +599,7 @@ void RISCVAsmPrinter::emitSled(const MachineInstr *MI, SledKind Kind) {
   // is a chance that we'll use C.JAL instead, so an additional NOP is needed.
   const uint8_t NoopsInSledCount = STI->is64Bit() ? 33 : 21;
 
-  OutStreamer->emitCodeAlignment(Align(4), STI);
+  OutStreamer->emitCodeAlignment(Align(4), *STI);
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
   OutStreamer->emitLabel(CurSled);
   auto Target = OutContext.createTempSymbol();
@@ -947,11 +1022,40 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
 
 void RISCVAsmPrinter::emitNoteGnuProperty(const Module &M) {
   assert(TM.getTargetTriple().isOSBinFormatELF() && "invalid binary format");
+  uint32_t GnuProps = 0;
   if (const Metadata *const Flag = M.getModuleFlag("cf-protection-return");
+      Flag && !mdconst::extract<ConstantInt>(Flag)->isZero())
+    GnuProps |= ELF::GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS;
+
+  if (const Metadata *const Flag = M.getModuleFlag("cf-protection-branch");
       Flag && !mdconst::extract<ConstantInt>(Flag)->isZero()) {
-    auto &RTS = static_cast<RISCVTargetELFStreamer &>(getTargetStreamer());
-    RTS.emitNoteGnuPropertySection(ELF::GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS);
+    using namespace llvm::RISCVISAUtils;
+    const Metadata *const CFBranchLabelSchemeFlag =
+        M.getModuleFlag("cf-branch-label-scheme");
+    assert(CFBranchLabelSchemeFlag &&
+           "cf-protection=branch should come with cf-branch-label-scheme=... "
+           "on RISC-V targets");
+    const StringRef CFBranchLabelScheme =
+        cast<MDString>(CFBranchLabelSchemeFlag)->getString();
+    switch (llvm::RISCVCFI::getZicfilpLabelScheme(CFBranchLabelScheme)) {
+    case llvm::RISCVCFI::ZicfilpLabelSchemeKind::Invalid:
+      reportFatalInternalError("invalid RISC-V Zicfilp label scheme");
+    case llvm::RISCVCFI::ZicfilpLabelSchemeKind::Unlabeled:
+      GnuProps |= ELF::GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED;
+      break;
+    case llvm::RISCVCFI::ZicfilpLabelSchemeKind::FuncSig:
+      // TODO: Emit the func-sig bit after the feature is implemented
+      reportFatalUsageError("the complete func-sig label scheme feature is not "
+                            "implemented yet");
+      break;
+    }
   }
+
+  if (!GnuProps)
+    return;
+
+  auto &RTS = static_cast<RISCVTargetELFStreamer &>(getTargetStreamer());
+  RTS.emitNoteGnuPropertySection(GnuProps);
 }
 
 static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
@@ -1009,6 +1113,9 @@ static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
     break;
   case RISCVII::MO_TLSDESC_CALL:
     Kind = ELF::R_RISCV_TLSDESC_CALL;
+    break;
+  case RISCVII::MO_QC_ACCESS:
+    Kind = RISCV::S_QC_ACCESS;
     break;
   }
 

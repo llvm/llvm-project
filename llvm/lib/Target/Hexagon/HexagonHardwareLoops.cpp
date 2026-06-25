@@ -41,6 +41,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/DebugLoc.h"
@@ -97,6 +98,7 @@ namespace {
     MachineDominatorTree       *MDT;
     const HexagonInstrInfo     *TII;
     const HexagonRegisterInfo  *TRI;
+    MachineOptimizationRemarkEmitter *MORE;
 #ifndef NDEBUG
     static int Counter;
 #endif
@@ -113,6 +115,7 @@ namespace {
     void getAnalysisUsage(AnalysisUsage &AU) const override {
       AU.addRequired<MachineDominatorTreeWrapperPass>();
       AU.addRequired<MachineLoopInfoWrapperPass>();
+      AU.addRequired<MachineOptimizationRemarkEmitterPass>();
       MachineFunctionPass::getAnalysisUsage(AU);
     }
 
@@ -383,6 +386,8 @@ bool HexagonHardwareLoops::runOnMachineFunction(MachineFunction &MF) {
   const HexagonSubtarget &HST = MF.getSubtarget<HexagonSubtarget>();
   TII = HST.getInstrInfo();
   TRI = HST.getRegisterInfo();
+
+  MORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
 
   for (auto &L : *MLI)
     if (L->isOutermost()) {
@@ -1211,21 +1216,41 @@ bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
 #endif
 
   // Does the loop contain any invalid instructions?
-  if (containsInvalidInstruction(L, IsInnerHWLoop))
+  if (containsInvalidInstruction(L, IsInnerHWLoop)) {
+    MORE->emit([&]() {
+      return MachineOptimizationRemarkMissed(DEBUG_TYPE, "InvalidInstruction",
+                                             L->getStartLoc(), L->getHeader())
+             << "loop contains an instruction that prevents hardware loop "
+                "generation (e.g. a call or hardware loop register definition)";
+    });
     return false;
+  }
 
   MachineBasicBlock *LastMBB = L->findLoopControlBlock();
   // Don't generate hw loop if the loop has more than one exit.
-  if (!LastMBB)
+  if (!LastMBB) {
+    MORE->emit([&]() {
+      return MachineOptimizationRemarkMissed(DEBUG_TYPE, "MultipleExits",
+                                             L->getStartLoc(), L->getHeader())
+             << "loop has multiple exits and cannot be converted to a "
+                "hardware loop";
+    });
     return false;
+  }
 
   MachineBasicBlock::iterator LastI = LastMBB->getFirstTerminator();
   if (LastI == LastMBB->end())
     return false;
 
   // Is the induction variable bump feeding the latch condition?
-  if (!fixupInductionVariable(L))
+  if (!fixupInductionVariable(L)) {
+    MORE->emit([&]() {
+      return MachineOptimizationRemarkMissed(DEBUG_TYPE, "InductionVariable",
+                                             L->getStartLoc(), L->getHeader())
+             << "could not identify or fix up the induction variable";
+    });
     return false;
+  }
 
   // Ensure the loop has a preheader: the loop instruction will be
   // placed there.
@@ -1241,8 +1266,14 @@ bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
   SmallVector<MachineInstr*, 2> OldInsts;
   // Are we able to determine the trip count for the loop?
   CountValue *TripCount = getLoopTripCount(L, OldInsts);
-  if (!TripCount)
+  if (!TripCount) {
+    MORE->emit([&]() {
+      return MachineOptimizationRemarkMissed(DEBUG_TYPE, "TripCount",
+                                             L->getStartLoc(), L->getHeader())
+             << "trip count of the loop could not be computed";
+    });
     return false;
+  }
 
   // Is the trip count available in the preheader?
   if (TripCount->isReg()) {
@@ -1250,8 +1281,15 @@ bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
     // so make sure that the register is actually defined at that point.
     MachineInstr *TCDef = MRI->getVRegDef(TripCount->getReg());
     MachineBasicBlock *BBDef = TCDef->getParent();
-    if (!MDT->dominates(BBDef, Preheader))
+    if (!MDT->dominates(BBDef, Preheader)) {
+      MORE->emit([&]() {
+        return MachineOptimizationRemarkMissed(DEBUG_TYPE,
+                                               "TripCountNotDominating",
+                                               L->getStartLoc(), L->getHeader())
+               << "trip count register is not available in the loop preheader";
+      });
       return false;
+    }
   }
 
   // Determine the loop start.
@@ -1339,6 +1377,12 @@ bool HexagonHardwareLoops::convertToHardwareLoop(MachineLoop *L,
     removeIfDead(OldInsts[i]);
 
   ++NumHWLoops;
+
+  MORE->emit([&]() {
+    return MachineOptimizationRemark(DEBUG_TYPE, "HardwareLoop",
+                                     L->getStartLoc(), L->getHeader())
+           << "converted loop to hardware loop";
+  });
 
   // Set RecL1used and RecL0used only after hardware loop has been
   // successfully generated. Doing it earlier can cause wrong loop instruction

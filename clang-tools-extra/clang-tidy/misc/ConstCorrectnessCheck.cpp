@@ -171,9 +171,10 @@ void ConstCorrectnessCheck::registerMatchers(MatchFinder *Finder) {
   }
 }
 
-static void addConstFixits(DiagnosticBuilder &Diag, const VarDecl *Variable,
-                           const FunctionDecl *Function, ASTContext &Context,
-                           Qualifiers::TQ Qualifier,
+static void addConstFixits(const DiagnosticBuilder &Diag,
+                           const VarDecl *Variable,
+                           const FunctionDecl *Function,
+                           const ASTContext &Context, Qualifiers::TQ Qualifier,
                            utils::fixit::QualifierTarget Target,
                            utils::fixit::QualifierPolicy Policy) {
   // If this is a parameter, also add fixits for corresponding parameters in

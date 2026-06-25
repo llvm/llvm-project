@@ -107,24 +107,24 @@ define void @PR31671(float %x, ptr %d) #0 {
 ; FORCE-NEXT:    [[WIDE_VEC13:%.*]] = load <10 x float>, ptr [[TMP22]], align 4
 ; FORCE-NEXT:    [[STRIDED_VEC14:%.*]] = shufflevector <10 x float> [[WIDE_VEC13]], <10 x float> poison, <2 x i32> <i32 0, i32 5>
 ; FORCE-NEXT:    [[TMP24:%.*]] = fadd <2 x float> [[STRIDED_VEC8]], [[TMP12]]
-; FORCE-NEXT:    [[TMP28:%.*]] = extractelement <2 x float> [[TMP24]], i64 0
-; FORCE-NEXT:    [[TMP29:%.*]] = extractelement <2 x float> [[TMP24]], i64 1
 ; FORCE-NEXT:    [[TMP25:%.*]] = fadd <2 x float> [[STRIDED_VEC10]], [[TMP13]]
-; FORCE-NEXT:    [[TMP30:%.*]] = extractelement <2 x float> [[TMP25]], i64 0
-; FORCE-NEXT:    [[TMP31:%.*]] = extractelement <2 x float> [[TMP25]], i64 1
 ; FORCE-NEXT:    [[TMP26:%.*]] = fadd <2 x float> [[STRIDED_VEC12]], [[TMP14]]
-; FORCE-NEXT:    [[TMP32:%.*]] = extractelement <2 x float> [[TMP26]], i64 0
-; FORCE-NEXT:    [[TMP33:%.*]] = extractelement <2 x float> [[TMP26]], i64 1
 ; FORCE-NEXT:    [[TMP27:%.*]] = fadd <2 x float> [[STRIDED_VEC14]], [[TMP15]]
-; FORCE-NEXT:    [[TMP34:%.*]] = extractelement <2 x float> [[TMP27]], i64 0
-; FORCE-NEXT:    [[TMP35:%.*]] = extractelement <2 x float> [[TMP27]], i64 1
+; FORCE-NEXT:    [[TMP28:%.*]] = extractelement <2 x float> [[TMP24]], i64 0
 ; FORCE-NEXT:    store float [[TMP28]], ptr [[TMP16]], align 4
+; FORCE-NEXT:    [[TMP29:%.*]] = extractelement <2 x float> [[TMP24]], i64 1
 ; FORCE-NEXT:    store float [[TMP29]], ptr [[TMP17]], align 4
+; FORCE-NEXT:    [[TMP30:%.*]] = extractelement <2 x float> [[TMP25]], i64 0
 ; FORCE-NEXT:    store float [[TMP30]], ptr [[TMP18]], align 4
+; FORCE-NEXT:    [[TMP31:%.*]] = extractelement <2 x float> [[TMP25]], i64 1
 ; FORCE-NEXT:    store float [[TMP31]], ptr [[TMP19]], align 4
+; FORCE-NEXT:    [[TMP32:%.*]] = extractelement <2 x float> [[TMP26]], i64 0
 ; FORCE-NEXT:    store float [[TMP32]], ptr [[TMP20]], align 4
+; FORCE-NEXT:    [[TMP33:%.*]] = extractelement <2 x float> [[TMP26]], i64 1
 ; FORCE-NEXT:    store float [[TMP33]], ptr [[TMP21]], align 4
+; FORCE-NEXT:    [[TMP34:%.*]] = extractelement <2 x float> [[TMP27]], i64 0
 ; FORCE-NEXT:    store float [[TMP34]], ptr [[TMP22]], align 4
+; FORCE-NEXT:    [[TMP35:%.*]] = extractelement <2 x float> [[TMP27]], i64 1
 ; FORCE-NEXT:    store float [[TMP35]], ptr [[TMP23]], align 4
 ; FORCE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; FORCE-NEXT:    [[TMP36:%.*]] = icmp eq i64 [[INDEX_NEXT]], 6392
@@ -174,15 +174,15 @@ attributes #0 = { "target-cpu"="knl" }
 define void @PR40816() #1 {
 ; CHECK-LABEL: define void @PR40816(
 ; CHECK-SAME: ) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INC:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:  [[PRED_STORE_CONTINUE6:.*]]:
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi i32 [ 0, %[[PRED_STORE_CONTINUE6]] ], [ [[INC:%.*]], %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr @b, align 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[TMP0]], 2
 ; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[TMP0]], 1
-; CHECK-NEXT:    br i1 [[CMP2]], label %[[RETURN:.*]], label %[[FOR_BODY]]
-; CHECK:       [[RETURN]]:
+; CHECK-NEXT:    br i1 [[CMP2]], label %[[SCALAR_PH:.*]], label %[[MIDDLE_BLOCK]]
+; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    ret void
 ;
 ; FORCE-LABEL: define void @PR40816(

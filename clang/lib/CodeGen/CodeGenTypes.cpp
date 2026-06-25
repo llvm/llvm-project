@@ -22,6 +22,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/MatrixUtils.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "llvm/IR/DataLayout.h"
@@ -111,9 +112,7 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
 
       unsigned NumRows = MT->getNumRows();
       unsigned NumCols = MT->getNumColumns();
-      bool IsRowMajor =
-          CGM.getContext().getLangOpts().getDefaultMatrixMemoryLayout() ==
-          LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+      bool IsRowMajor = isMatrixRowMajor(Context.getLangOpts(), T);
       unsigned VecLen = IsRowMajor ? NumCols : NumRows;
       unsigned ArrayLen = IsRowMajor ? NumRows : NumCols;
       llvm::Type *VecTy = llvm::FixedVectorType::get(IRElemTy, VecLen);
@@ -646,6 +645,10 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case Type::Pointer: {
     const PointerType *PTy = cast<PointerType>(Ty);
     QualType ETy = PTy->getPointeeType();
+    if (ETy.getAddressSpace() == LangAS::wasm_funcref) {
+      ResultType = CGM.getTargetCodeGenInfo().getWasmFuncrefReferenceType();
+      break;
+    }
     unsigned AS = getTargetAddressSpace(ETy);
     ResultType = llvm::PointerType::get(getLLVMContext(), AS);
     break;
