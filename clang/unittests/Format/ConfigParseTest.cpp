@@ -1106,6 +1106,9 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               std::vector<std::string>({"QUNUSED", "QT_REQUIRE_VERSION"}));
 
   CHECK_PARSE_LIST(JavaImportGroups);
+  // Clear Macros populated as a side effect of the BasedOnStyle: Google test
+  // for AttributeMacros above.
+  Style.Macros.clear();
   CHECK_PARSE_LIST(Macros);
   CHECK_PARSE_LIST(MacrosSkippedByRemoveParentheses);
   CHECK_PARSE_LIST(NamespaceMacros);
