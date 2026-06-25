@@ -623,7 +623,6 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     write16(ctx, loc, val);
     break;
   case R_AARCH64_ABS32:
-  case R_AARCH64_PREL32:
     checkIntUInt(ctx, loc, val, 32, rel);
     write32(ctx, loc, val);
     break;
@@ -633,6 +632,7 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
       write32le(loc, val);
     }
     break;
+  case R_AARCH64_PREL32:
   case R_AARCH64_PLT32:
   case R_AARCH64_GOTPCREL32:
     checkInt(ctx, loc, val, 32, rel);
