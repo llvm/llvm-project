@@ -968,6 +968,41 @@ TEST(StringRefTest, consumeIntegerSigned) {
   }
 }
 
+TEST(StringRefTest, consumeIntegerAPIntBitWidth) {
+  // Decimal large number (12535824225335233)
+  // 17 digits, (17 * 3402 + 1023) >> 10 = 57 bits.
+  {
+    APInt U;
+    StringRef Str = "12535824225335233";
+    bool Success = Str.consumeInteger(10, U);
+    ASSERT_FALSE(Success);
+    EXPECT_EQ(U.getZExtValue(), 12535824225335233ULL);
+    EXPECT_EQ(U.getBitWidth(), 57U);
+  }
+
+  // Hex version of same number (2c894405eaf7c1)
+  // 14 digits, (14 * 4096 + 1023) >> 10 = 56 bits.
+  {
+    APInt U;
+    StringRef Str = "2c894405eaf7c1";
+    bool Success = Str.consumeInteger(16, U);
+    ASSERT_FALSE(Success);
+    EXPECT_EQ(U.getZExtValue(), 12535824225335233ULL);
+    EXPECT_EQ(U.getBitWidth(), 56U);
+  }
+
+  // A very large decimal number (100 digits)
+  // (100 * 3402 + 1023) >> 10 = 333 bits.
+  {
+    APInt U;
+    std::string LargeDec(100, '9');
+    StringRef Str = LargeDec;
+    bool Success = Str.consumeInteger(10, U);
+    ASSERT_FALSE(Success);
+    EXPECT_EQ(U.getBitWidth(), 333U);
+  }
+}
+
 struct GetDoubleStrings {
   const char *Str;
   bool AllowInexact;

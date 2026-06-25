@@ -522,12 +522,35 @@ bool StringRef::consumeInteger(unsigned Radix, APInt &Result) {
     return false;
   }
 
-  // (Over-)estimate the required number of bits.
+  // The string is too long to be reasonable
+  if (Str.size() > std::numeric_limits<unsigned>::max())
+    return true;
+
   unsigned Log2Radix = 0;
   while ((1U << Log2Radix) < Radix) Log2Radix++;
   bool IsPowerOf2Radix = ((1U << Log2Radix) == Radix);
 
-  unsigned BitWidth = Log2Radix * Str.size();
+  // Estimate the required number of bits using a Q10 fixed-point
+  // approximation of log2(Radix) to avoid over-allocation. For radices in
+  // the supported range, the table ensures the overstimation is at most 1
+  // bit.
+  //
+  // Radix is guaranteed by the above assertion to be in the range [2, 36].
+  uint64_t EstimatedWidth = 0;
+  static const uint16_t Log2RadixTable[] = {
+      0,    0,    1024, 1624, 2048, 2378, 2648, 2875, 3072, 3247, 3402, // 2..10
+      3543, 3672, 3790, 3899, 4001, 4096, 4186, 4271, 4350, // 11..19
+      4426, 4498, 4567, 4633, 4696, 4756, 4814, 4870, 4923, // 20..28
+      4975, 5025, 5074, 5120, 5166, 5210, 5253, 5295        // 29..36
+  };
+  EstimatedWidth =
+      (static_cast<uint64_t>(Str.size()) * Log2RadixTable[Radix] + 1023) >> 10;
+
+  // For a 32-bit system, this would err at ~1.29B digits, or about 1.2GiB
+  if (EstimatedWidth > std::numeric_limits<unsigned>::max())
+    return true;
+
+  unsigned BitWidth = static_cast<unsigned>(EstimatedWidth);
   if (BitWidth < Result.getBitWidth())
     BitWidth = Result.getBitWidth(); // don't shrink the result
   else if (BitWidth > Result.getBitWidth())
