@@ -39,12 +39,12 @@ class MemReverse8Template : Template<
     ["u8",      "u16",      "u32",      "u64"]>;
 
 class Load8UnsignedTemplate : Template<
-    ["uint8_t", "uint16_t", "uint32_t", "uint64_t"],
-    ["8",       "16",       "32",       "64"]>;
+    ["uint_least8_t", "uint_least16_t", "uint_least32_t", "uint_least64_t"],
+    ["8",             "16",             "32",             "64"]>;
 
 class Load8SignedTemplate : Template<
-    ["int8_t", "int16_t", "int32_t", "int64_t"],
-    ["8",      "16",      "32",      "64"]>;
+    ["int_least8_t", "int_least16_t", "int_least32_t", "int_least64_t"],
+    ["8",            "16",            "32",            "64"]>;
 
 class MSInt8_16_32Template : Template<["char", "short", "msint32_t"],
                                       ["8",    "16",    ""]>;
