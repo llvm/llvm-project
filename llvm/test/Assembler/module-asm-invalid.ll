@@ -5,21 +5,21 @@
 ; RUN: not llvm-as -disable-output < %t/missing_paren.ll 2>&1 | FileCheck %t/missing_paren.ll
 
 ;--- invalid_prop.ll
-; CHECK: expected one of 'target_features' or 'target_cpu'
-module asm(foo="bar")
+; CHECK: unknown property name
+module asm(foo: "bar")
     "asm"
 
 ;--- missing_value1.ll
-; CHECK: expected '='
+; CHECK: expected property name followed by ':'
 module asm(target_features)
     "asm"
 
 ;--- missing_value2.ll
 ; CHECK: expected string constant
-module asm(target_features=)
+module asm(target_features:)
     "asm"
 
 ;--- missing_paren.ll
 ; CHECK: expected ',' or ')'
-module asm(target_features="bar"
+module asm(target_features: "bar"
     "asm"

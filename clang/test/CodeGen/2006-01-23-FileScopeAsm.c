@@ -1,7 +1,7 @@
 // UNSUPPORTED: target={{.*}}-zos{{.*}}
 // RUN: %clang_cc1 %s -emit-llvm -o - | FileCheck %s
 
-// CHECK: module asm(target_features="{{.*}}")
+// CHECK: module asm(target_features: "{{.*}}")
 // CHECK-NEXT: "foo1"
 __asm__ ("foo1");
 // CHECK-NEXT: "foo2"

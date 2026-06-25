@@ -641,8 +641,8 @@ bool LLParser::parseTopLevelEntities() {
 
 /// toplevelentity
 ///   ::= 'module' 'asm' STRINGCONSTANT
-///   ::= 'module' 'asm' '(' 'target_features' '=' STRINGCONSTANT ','
-///                          'target_cpu' '=' STRINGCONSTANT ')'
+///   ::= 'module' 'asm' '(' 'property_name1:' STRINGCONSTANT ','
+///                          'property_name2:' STRINGCONSTANT ')'
 ///                      STRINGCONSTANT
 bool LLParser::parseModuleAsm() {
   assert(Lex.getKind() == lltok::kw_module);
@@ -652,21 +652,23 @@ bool LLParser::parseModuleAsm() {
   if (parseToken(lltok::kw_asm, "expected 'module asm'"))
     return true;
 
-  std::string TargetFeatures, TargetCPU;
+  Module::GlobalAsmProperties Props;
   if (EatIfPresent(lltok::lparen)) {
     while (true) {
-      if (EatIfPresent(lltok::kw_target_features)) {
-        if (parseToken(lltok::equal, "expected '='") ||
-            parseStringConstant(TargetFeatures))
-          return true;
-      } else if (EatIfPresent(lltok::kw_target_cpu)) {
-        if (parseToken(lltok::equal, "expected '='") ||
-            parseStringConstant(TargetCPU))
-          return true;
-      } else {
-        return error(Lex.getLoc(),
-                     "expected one of 'target_features' or 'target_cpu'");
-      }
+      std::string Key, Value;
+      SMLoc Loc = Lex.getLoc();
+      if (Lex.getKind() != lltok::LabelStr)
+        return error(Loc, "expected property name followed by ':'");
+
+      Key = Lex.getStrVal();
+      Lex.Lex();
+
+      if (parseStringConstant(Value))
+        return true;
+
+      if (!Props.set(Key, Value))
+        return error(Loc, "unknown property name");
+
       if (EatIfPresent(lltok::rparen))
         break;
       if (parseToken(lltok::comma, "expected ',' or ')'"))
@@ -681,7 +683,7 @@ bool LLParser::parseModuleAsm() {
     AsmStr += AsmStrPart + "\n";
   } while (Lex.getKind() == lltok::StringConstant);
 
-  M->appendModuleInlineAsm({AsmStr, TargetFeatures, TargetCPU});
+  M->appendModuleInlineAsm({AsmStr, Props});
   return false;
 }
 

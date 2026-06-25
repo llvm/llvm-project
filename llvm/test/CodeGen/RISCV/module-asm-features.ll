@@ -10,7 +10,7 @@
 ; CHECK: fld ft0, 0(sp)
 ; EXTRA-FEATURES: .option pop
 
-module asm(target_features="+d")
+module asm(target_features: "+d")
     ".globl func"
     "func:"
     "fld f0, 0(sp)"

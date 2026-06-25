@@ -169,16 +169,34 @@ public:
         : Behavior(B), Key(K), Val(V) {}
   };
 
-  struct GlobalAsmFragment {
-    std::string Asm;
+  struct GlobalAsmProperties {
     std::string TargetFeatures;
     std::string TargetCPU;
 
+    /// Set a property using a string name.
+    /// Returns whether the property name was valid.
+    bool set(StringRef Name, std::string Value);
+
+    /// Get a list of set properties as pairs of key and value.
+    SmallVector<std::pair<StringRef, StringRef>> getAsStrings() const;
+
+    bool operator==(const GlobalAsmProperties &Other) const {
+      return TargetFeatures == Other.TargetFeatures &&
+             TargetCPU == Other.TargetCPU;
+    }
+
+    bool operator!=(const GlobalAsmProperties &Other) const {
+      return !(*this == Other);
+    }
+  };
+
+  struct GlobalAsmFragment {
+    std::string Asm;
+    GlobalAsmProperties Props;
+
     GlobalAsmFragment(StringRef Asm) : GlobalAsmFragment(Asm.str()) {}
-    GlobalAsmFragment(std::string AsmArg, std::string TargetFeatures = "",
-                      std::string TargetCPU = "")
-        : Asm(std::move(AsmArg)), TargetFeatures(std::move(TargetFeatures)),
-          TargetCPU(std::move(TargetCPU)) {
+    GlobalAsmFragment(std::string AsmArg, GlobalAsmProperties Props = {})
+        : Asm(std::move(AsmArg)), Props(std::move(Props)) {
       if (!Asm.empty() && Asm.back() != '\n')
         Asm += '\n';
     }
@@ -186,8 +204,7 @@ public:
     bool empty() const { return Asm.empty(); }
 
     bool hasSameProperties(const GlobalAsmFragment &Other) const {
-      return TargetFeatures == Other.TargetFeatures &&
-             TargetCPU == Other.TargetCPU;
+      return Props == Other.Props;
     }
   };
 

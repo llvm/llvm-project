@@ -11,7 +11,7 @@
 target datalayout = "e-m:e-p:64:64-i64:64-i128:128-n32:64-S128"
 target triple = "riscv64-unknown-linux-gnu"
 
-module asm(target_features="+d")
+module asm(target_features: "+d")
     ".globl func"
     "func:"
     "fld f0, 0(sp)"

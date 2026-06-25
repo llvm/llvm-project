@@ -3375,7 +3375,7 @@ properties:
 
 .. code-block:: llvm
 
-    module asm(target_features="+foo", target_cpu="bar")
+    module asm(target_features: "+foo", target_cpu: "bar")
         "inline asm code goes here"
         "more can go here"
 
