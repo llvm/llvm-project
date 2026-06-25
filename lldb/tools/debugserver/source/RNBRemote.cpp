@@ -2733,6 +2733,76 @@ static void ReadStackMemory(nub_process_t pid, nub_thread_t tid,
   }
 }
 
+// The size of each per-side stack window we expedite.  512 is sized to cover
+// the common case (locals and params sit within a few hundred bytes) while
+// bounding the per-frame cost to 1K bytes regardless of frame size.
+static const nub_size_t k_expedite_stack_window = 512;
+
+// A single contiguous chunk of expedited memory.
+struct ExpeditedMemory {
+  nub_addr_t addr;
+  std::vector<uint8_t> bytes;
+};
+
+// Read the innermost frame's stack memory so that examining its local variables
+// at a public stop is served from the expedited cache instead of generating one
+// memory-read packet.
+//
+// We produce either:
+//
+//   - one chunk [$sp, $fp) for a small frame ($fp - $sp <=
+//   2*k_expedite_stack_window), which covers the whole frame with no gap, or
+//
+//   - two chunks [$sp, $sp + k_expedite_stack_window) and [$fp -
+//   k_expedite_stack_window, $fp) for a large frame, covering the params near
+//   $sp and the locals near $fp while leaving the (rarely-interesting) middle
+//   spill area out so the cost stays bounded.
+static void ReadFrameZeroStackMemory(nub_process_t pid, nub_thread_t tid,
+                                     std::vector<ExpeditedMemory> &chunks) {
+  chunks.clear();
+  std::unique_ptr<DNBRegisterValue> sp_value =
+      std::make_unique<DNBRegisterValue>();
+  std::unique_ptr<DNBRegisterValue> fp_value =
+      std::make_unique<DNBRegisterValue>();
+  if (!DNBThreadGetRegisterValueByID(pid, tid, REGISTER_SET_GENERIC,
+                                     GENERIC_REGNUM_SP, sp_value.get()) ||
+      !DNBThreadGetRegisterValueByID(pid, tid, REGISTER_SET_GENERIC,
+                                     GENERIC_REGNUM_FP, fp_value.get()))
+    return;
+
+  const nub_size_t ptr_size = sp_value->info.size;
+  uint64_t sp =
+      (ptr_size == 4) ? sp_value->value.uint32 : sp_value->value.uint64;
+  uint64_t fp =
+      (ptr_size == 4) ? fp_value->value.uint32 : fp_value->value.uint64;
+
+  // The stack grows down, so a normal frame has sp < fp.  Bail on a leaf/empty
+  // frame (sp == fp) or anything that doesn't look like a frame.
+  if (sp == 0 || fp <= sp)
+    return;
+
+  auto read_range = [&](uint64_t start, uint64_t length) {
+    std::vector<uint8_t> buf(length);
+    if (DNBProcessMemoryRead(pid, start, length, buf.data()) != length)
+      return;
+    chunks.push_back({start, std::move(buf)});
+  };
+
+  const uint64_t frame_size = fp - sp;
+  const nub_size_t window = k_expedite_stack_window;
+
+  if (frame_size <= 2 * window) {
+    // Small frame: cover the whole frame as a single contiguous chunk [sp, fp).
+    read_range(sp, frame_size);
+    return;
+  }
+
+  // Large frame: cover the params near $sp and the locals near $fp with two
+  // bounded windows, leaving the middle spill area out to keep the cost capped.
+  read_range(sp, window);          // [sp, sp + WINDOW)
+  read_range(fp - window, window); // [fp - WINDOW, fp)
+}
+
 rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
   const nub_process_t pid = m_ctx.ProcessID();
   if (pid == INVALID_NUB_PROCESS)
@@ -5866,9 +5936,10 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
         // frame pointer chain.
         StackMemoryMap stack_mmap;
         ReadStackMemory(pid, tid, stack_mmap);
-        if (!stack_mmap.empty()) {
-          JSONGenerator::ArraySP memory_array_sp(new JSONGenerator::Array());
 
+        JSONGenerator::ArraySP memory_array_sp(new JSONGenerator::Array());
+
+        if (!stack_mmap.empty()) {
           for (const auto &stack_memory : stack_mmap) {
             JSONGenerator::DictionarySP stack_memory_sp(
                 new JSONGenerator::Dictionary());
@@ -5877,8 +5948,26 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
                 "bytes", stack_memory.second.bytes, stack_memory.second.length);
             memory_array_sp->AddItem(stack_memory_sp);
           }
-          thread_dict_sp->AddItem("memory", memory_array_sp);
         }
+
+        // Also expedite the innermost frame's stack memory of the thread that
+        // stopped.
+        if (tid == DNBProcessGetCurrentThread(pid)) {
+          std::vector<ExpeditedMemory> frame_zero_chunks;
+          ReadFrameZeroStackMemory(pid, tid, frame_zero_chunks);
+
+          for (const auto &chunk : frame_zero_chunks) {
+            JSONGenerator::DictionarySP frame_zero_sp(
+                new JSONGenerator::Dictionary());
+            frame_zero_sp->AddIntegerItem("address", chunk.addr);
+            frame_zero_sp->AddBytesAsHexASCIIString("bytes", chunk.bytes.data(),
+                                                    chunk.bytes.size());
+            memory_array_sp->AddItem(frame_zero_sp);
+          }
+        }
+
+        if (!memory_array_sp->empty())
+          thread_dict_sp->AddItem("memory", memory_array_sp);
 
         std::vector<uint64_t> added_binaries;
         JSONGenerator::ObjectSP detailed_binary_infos;
