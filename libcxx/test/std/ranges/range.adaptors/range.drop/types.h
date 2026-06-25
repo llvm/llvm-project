@@ -141,4 +141,18 @@ private:
   int* end_;
 };
 
+#if TEST_STD_VER >= 26
+
+struct ApproximatelySizedNotConstView : std::ranges::view_base {
+  unsigned int hint_;
+  constexpr explicit ApproximatelySizedNotConstView(unsigned int hint) : hint_(hint) {}
+  constexpr forward_iterator<int*> begin() const { return forward_iterator<int*>(globalBuff); }
+  constexpr forward_iterator<int*> end() const { return forward_iterator<int*>(globalBuff + 8); }
+  constexpr unsigned int reserve_hint() { return hint_; }
+};
+static_assert(std::ranges::approximately_sized_range<ApproximatelySizedNotConstView>);
+static_assert(!std::ranges::approximately_sized_range<const ApproximatelySizedNotConstView>);
+
+#endif // TEST_STD_VER >= 26
+
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_DROP_TYPES_H

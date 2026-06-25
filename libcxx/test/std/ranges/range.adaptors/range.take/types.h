@@ -54,6 +54,20 @@ static_assert(std::ranges::view<SizedRandomAccessView>);
 static_assert(std::ranges::random_access_range<SizedRandomAccessView>);
 static_assert(std::ranges::sized_range<SizedRandomAccessView>);
 
+#if TEST_STD_VER >= 26
+using ForwardIter = forward_iterator<int*>;
+struct ApproximatelySizedForwardView : std::ranges::view_base {
+  int* ptr_;
+  constexpr explicit ApproximatelySizedForwardView(int* ptr) : ptr_(ptr) {}
+  constexpr auto begin() const { return ForwardIter(ptr_); }
+  constexpr auto end() const { return ForwardIter(ptr_ + 8); }
+  constexpr std::size_t reserve_hint() const { return 8; }
+};
+static_assert(std::ranges::view<ApproximatelySizedForwardView>);
+static_assert(!std::ranges::sized_range<ApproximatelySizedForwardView>);
+static_assert(std::ranges::approximately_sized_range<ApproximatelySizedForwardView>);
+#endif
+
 struct View : std::ranges::view_base {
   constexpr explicit View(int* b, int* e) : begin_(b), end_(e) { }
 
