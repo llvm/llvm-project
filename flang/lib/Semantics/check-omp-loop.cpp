@@ -414,12 +414,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
     HasInvalidWorksharingNesting(beginName, llvm::omp::nestedWorkshareErrSet);
   }
 
-  if (llvm::omp::allTaskloopSet.test(beginName.v)) {
-    OmpClauseSet exclusive{
-        llvm::omp::Clause::OMPC_grainsize, llvm::omp::Clause::OMPC_num_tasks};
-    CheckExclusiveClauses(exclusive, x.BeginDir());
-  }
-
   for (auto &construct : std::get<parser::Block>(x.t)) {
     if (const auto *doConstruct{parser::omp::GetDoConstruct(construct)}) {
       const auto &doBlock{std::get<parser::Block>(doConstruct->t)};

@@ -1942,10 +1942,6 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareSimdDirective &x) {
     }
   }
 
-  OmpClauseSet exclusive{
-      llvm::omp::Clause::OMPC_inbranch, llvm::omp::Clause::OMPC_notinbranch};
-  CheckExclusiveClauses(exclusive, x.v);
-
   for (const parser::OmpClause &clause : x.v.Clauses().v) {
     const auto *u = std::get_if<parser::OmpClause::Uniform>(&clause.u);
     if (!u) {
