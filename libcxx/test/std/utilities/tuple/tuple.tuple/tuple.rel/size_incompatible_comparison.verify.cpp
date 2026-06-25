@@ -32,10 +32,10 @@ void f(std::tuple<int> t1, std::tuple<int, long> t2) {
   // We test only the core comparison operators and trust that the others
   // fall back on the same implementations prior to C++20.
   static_cast<void>(t1 == t2); // expected-error@*:* {{}}
-  static_cast<void>(t1 < t2); // expected-error@*:* {{}}
+  static_cast<void>(t1 < t2);  // expected-error@*:* {{}}
 
 #if TEST_STD_VER >= 23
-  std::array<int, 2> a{}; // a tuple-like with a different size
+  std::array<int, 2> a{};     // a tuple-like with a different size
   static_cast<void>(t1 == a); // expected-error@*:* {{}}
 #endif
 }
