@@ -144,7 +144,7 @@ public:
 
 struct __adjacent_view_iter_access {
   template <class _Iter>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr static auto& __get_current(_Iter& __it) noexcept {
+  _LIBCPP_HIDE_FROM_ABI constexpr static auto& __get_current(_Iter& __it) noexcept {
     return __it.__current_;
   }
 };

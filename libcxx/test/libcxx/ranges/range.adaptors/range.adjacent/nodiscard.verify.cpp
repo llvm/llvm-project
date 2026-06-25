@@ -44,9 +44,6 @@ void test() {
   auto it = v.begin();
 
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
-  std::ranges::__adjacent_view_iter_access::__get_current(it);
-
-  // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   *it;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   it[0];
