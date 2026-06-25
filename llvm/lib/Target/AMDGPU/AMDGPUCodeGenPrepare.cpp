@@ -1094,18 +1094,6 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloatImpl(
 
   Type *F32Ty = Builder.getFloatTy();
   ConstantInt *One = Builder.getInt32(1);
-  Value *JQ = One;
-
-  if (IsSigned) {
-    // char|short jq = ia ^ ib;
-    JQ = Builder.CreateXor(Num, Den);
-
-    // jq = jq >> (bitsize - 2)
-    JQ = Builder.CreateAShr(JQ, Builder.getInt32(30));
-
-    // jq = jq | 0x1
-    JQ = Builder.CreateOr(JQ, One);
-  }
 
   // int ia = (int)LHS;
   Value *IA = Num;
@@ -1118,47 +1106,95 @@ Value *AMDGPUCodeGenPrepareImpl::expandDivRemToFloatImpl(
                        : Builder.CreateUIToFP(IA, F32Ty);
 
   // float fb = (float)ib;
-  Value *FB = IsSigned ? Builder.CreateSIToFP(IB,F32Ty)
-                       : Builder.CreateUIToFP(IB,F32Ty);
+  Value *FB = IsSigned ? Builder.CreateSIToFP(IB, F32Ty)
+                       : Builder.CreateUIToFP(IB, F32Ty);
 
   Value *RCP = Builder.CreateIntrinsic(Intrinsic::amdgcn_rcp,
                                        Builder.getFloatTy(), {FB});
+
+  // The calculation:
+  //   fq = fa*recip(fb)
+  // may be too small due to the 1ulp accuracy in the recip
+  // operation and rounding issues.  Since fq is truncated to produce
+  // an integer value it may be too small by one.  This
+  // can be dealt with in one of two ways.
+  //
+  // 1. If fabs(fa) <= 0x200000 increment fa by 1ulp:
+  //      fq = (fa+1ulp)*recip(fb)
+  //    This method is preferred since it only requires one
+  //    integer +1 operation on the floating-point encoding of fa.
+  //    This will increase fa's magnitude by at most 0.25
+  //    (i.e. when fabs(fa)==0x200000 the LSB of the mantissa represents 0.25).
+  //    Thus, this method is safe since fa must be incremented by at least 1.0
+  //    for quotient to increase by one.  Note that setting the boundary to
+  //    fabs(fa) <= 0x400000 and incrementing fa's magnitude by at most 0.5 is
+  //    unsafe because recip(fb) can have a 1 ulp error.
+  //
+  // 2. A. Calculate fr = fa - fq*fb
+  //    B. If fabs(fr) >= fabs(fb) increment the quotient by 1.
+
+  bool IncrementFA = (DivBits < (IsSigned ? 23 : 22));
+
+  if (IncrementFA) {
+    Value *FABits = Builder.CreateBitCast(FA, I32Ty);
+    Value *FABitsInc = Builder.CreateAdd(FABits, One);
+    FA = Builder.CreateBitCast(FABitsInc, F32Ty);
+  }
+
   Value *FQM = Builder.CreateFMul(FA, RCP);
 
   // fq = trunc(fqm);
   Value *FQ = Builder.CreateUnaryIntrinsic(Intrinsic::trunc, FQM);
-  auto *FQI = dyn_cast<Instruction>(FQ);
-  if (FQI)
-    FQI->copyFastMathFlags(Builder.getFastMathFlags());
-
-  // float fqneg = -fq;
-  Value *FQNeg = Builder.CreateFNeg(FQ);
-
-  // float fr = mad(fqneg, fb, fa);
-  auto FMAD = !ST.hasMadMacF32Insts()
-                  ? Intrinsic::fma
-                  : (Intrinsic::ID)Intrinsic::amdgcn_fmad_ftz;
-  Value *FR =
-      Builder.CreateIntrinsic(FMAD, {FQNeg->getType()}, {FQNeg, FB, FA}, FQI);
 
   // int iq = (int)fq;
   Value *IQ = IsSigned ? Builder.CreateFPToSI(FQ, I32Ty)
                        : Builder.CreateFPToUI(FQ, I32Ty);
 
-  // fr = fabs(fr);
-  FR = Builder.CreateFAbs(FR, FQI);
+  Value *Div;
+  if (IncrementFA) {
+    Div = IQ;
+  } else {
+    Value *JQ = One;
+    auto *FQI = dyn_cast<Instruction>(FQ);
+    if (FQI)
+      FQI->copyFastMathFlags(Builder.getFastMathFlags());
 
-  // fb = fabs(fb);
-  FB = Builder.CreateFAbs(FB, FQI);
+    if (IsSigned) {
+      // char|short jq = ia ^ ib;
+      JQ = Builder.CreateXor(Num, Den);
 
-  // int cv = fr >= fb;
-  Value *CV = Builder.CreateFCmpOGE(FR, FB);
+      // jq = jq >> (bitsize - 2)
+      JQ = Builder.CreateAShr(JQ, Builder.getInt32(30));
 
-  // jq = (cv ? jq : 0);
-  JQ = Builder.CreateSelect(CV, JQ, Builder.getInt32(0));
+      // jq = jq | 0x1
+      JQ = Builder.CreateOr(JQ, One);
+    }
 
-  // dst = iq + jq;
-  Value *Div = Builder.CreateAdd(IQ, JQ);
+    // float fqneg = -fq;
+    Value *FQNeg = Builder.CreateFNeg(FQ);
+
+    // float fr = mad(fqneg, fb, fa);
+    auto FMAD = !ST.hasMadMacF32Insts()
+                    ? Intrinsic::fma
+                    : (Intrinsic::ID)Intrinsic::amdgcn_fmad_ftz;
+    Value *FR =
+        Builder.CreateIntrinsic(FMAD, {FQNeg->getType()}, {FQNeg, FB, FA}, FQI);
+
+    // fr = fabs(fr);
+    FR = Builder.CreateFAbs(FR, FQI);
+
+    // fb = fabs(fb);
+    FB = Builder.CreateFAbs(FB, FQI);
+
+    // int cv = fr >= fb;
+    Value *CV = Builder.CreateFCmpOGE(FR, FB);
+
+    // jq = (cv ? jq : 0);
+    JQ = Builder.CreateSelect(CV, JQ, Builder.getInt32(0));
+
+    // dst = iq + jq;
+    Div = Builder.CreateAdd(IQ, JQ);
+  }
 
   Value *Res = Div;
   if (!IsDiv) {

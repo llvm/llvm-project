@@ -482,12 +482,12 @@ define amdgpu_kernel void @s_test_srem23_64(ptr addrspace(1) %out, i64 %x, i64 %
 ; GCN-NEXT:    s_mov_b32 s6, -1
 ; GCN-NEXT:    v_mul_f32_e32 v2, v1, v2
 ; GCN-NEXT:    v_trunc_f32_e32 v2, v2
+; GCN-NEXT:    v_cvt_i32_f32_e32 v3, v2
 ; GCN-NEXT:    v_mad_f32 v1, -v2, v0, v1
-; GCN-NEXT:    v_cvt_i32_f32_e32 v2, v2
 ; GCN-NEXT:    v_cmp_ge_f32_e64 s[2:3], |v1|, |v0|
 ; GCN-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN-NEXT:    s_cselect_b32 s2, s5, 0
-; GCN-NEXT:    v_add_i32_e32 v0, vcc, s2, v2
+; GCN-NEXT:    v_add_i32_e32 v0, vcc, s2, v3
 ; GCN-NEXT:    v_mul_lo_u32 v0, v0, s4
 ; GCN-NEXT:    s_mov_b32 s4, s0
 ; GCN-NEXT:    s_mov_b32 s5, s1
@@ -513,12 +513,12 @@ define amdgpu_kernel void @s_test_srem23_64(ptr addrspace(1) %out, i64 %x, i64 %
 ; GCN-IR-NEXT:    s_mov_b32 s6, -1
 ; GCN-IR-NEXT:    v_mul_f32_e32 v2, v1, v2
 ; GCN-IR-NEXT:    v_trunc_f32_e32 v2, v2
+; GCN-IR-NEXT:    v_cvt_i32_f32_e32 v3, v2
 ; GCN-IR-NEXT:    v_mad_f32 v1, -v2, v0, v1
-; GCN-IR-NEXT:    v_cvt_i32_f32_e32 v2, v2
 ; GCN-IR-NEXT:    v_cmp_ge_f32_e64 s[2:3], |v1|, |v0|
 ; GCN-IR-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GCN-IR-NEXT:    s_cselect_b32 s2, s5, 0
-; GCN-IR-NEXT:    v_add_i32_e32 v0, vcc, s2, v2
+; GCN-IR-NEXT:    v_add_i32_e32 v0, vcc, s2, v3
 ; GCN-IR-NEXT:    v_mul_lo_u32 v0, v0, s4
 ; GCN-IR-NEXT:    s_mov_b32 s4, s0
 ; GCN-IR-NEXT:    s_mov_b32 s5, s1
