@@ -238,7 +238,8 @@ def TerminatorOp : OpenMP_Op<"terminator", [Terminator, Pure]> {
 // 2.7 teams Construct
 //===----------------------------------------------------------------------===//
 def TeamsOp : OpenMP_Op<"teams", traits = [
-    AttrSizedOperandSegments, RecursiveMemoryEffects, OutlineableOpenMPOpInterface
+    AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>,
+    RecursiveMemoryEffects, OutlineableOpenMPOpInterface
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_DynGroupprivateClause, OpenMP_IfClause,
     OpenMP_NumTeamsClause, OpenMP_PrivateClause, OpenMP_ReductionClause,
@@ -294,7 +295,7 @@ def SectionOp : OpenMP_Op<"section", traits = [
 }
 
 def SectionsOp : OpenMP_Op<"sections", traits = [
-    AttrSizedOperandSegments
+    AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_NowaitClause, OpenMP_PrivateClause,
     OpenMP_ReductionClause
@@ -332,7 +333,7 @@ def SectionsOp : OpenMP_Op<"sections", traits = [
 //===----------------------------------------------------------------------===//
 
 def SingleOp : OpenMP_Op<"single", traits = [
-    AttrSizedOperandSegments
+    AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_CopyprivateClause, OpenMP_NowaitClause,
     OpenMP_PrivateClause
@@ -613,7 +614,7 @@ def FuseOp
 //===----------------------------------------------------------------------===//
 
 def WorkshareOp : OpenMP_Op<"workshare", traits = [
-    RecursiveMemoryEffects,
+    DeclareOpInterfaceMethods<ComposableOpInterface>, RecursiveMemoryEffects
   ], clauses = [
     OpenMP_NowaitClause,
   ], singleRegion = true> {
@@ -632,6 +633,7 @@ def WorkshareOp : OpenMP_Op<"workshare", traits = [
   let builders = [
     OpBuilder<(ins CArg<"const WorkshareOperands &">:$clauses)>
   ];
+  let hasVerifier = 1;
 }
 
 def WorkshareLoopWrapperOp : OpenMP_Op<"workshare.loop_wrapper", traits = [
@@ -958,18 +960,16 @@ def DistributeOp : OpenMP_Op<"distribute", traits = [
 // 2.10.1 task Construct
 //===----------------------------------------------------------------------===//
 
-def TaskOp
-    : OpenMP_Op<"task",
-                traits = [AttrSizedOperandSegments, AutomaticAllocationScope,
-                          OutlineableOpenMPOpInterface],
-                clauses = [
-                    // TODO: Complete clause list (detach).
-                    OpenMP_AffinityClause, OpenMP_AllocateClause,
-                    OpenMP_DependClause, OpenMP_FinalClause, OpenMP_IfClause,
-                    OpenMP_InReductionClause, OpenMP_MergeableClause,
-                    OpenMP_PriorityClause, OpenMP_PrivateClause,
-                    OpenMP_UntiedClause, OpenMP_DetachClause],
-                singleRegion = true> {
+def TaskOp : OpenMP_Op<"task", traits = [
+    AttrSizedOperandSegments, AutomaticAllocationScope,
+    DeclareOpInterfaceMethods<ComposableOpInterface>,
+    OutlineableOpenMPOpInterface
+  ], clauses = [
+    OpenMP_AffinityClause, OpenMP_AllocateClause, OpenMP_DependClause,
+    OpenMP_FinalClause, OpenMP_IfClause, OpenMP_InReductionClause,
+    OpenMP_MergeableClause, OpenMP_PriorityClause, OpenMP_PrivateClause,
+    OpenMP_UntiedClause, OpenMP_DetachClause
+  ], singleRegion = true> {
   let summary = "task construct";
   let description = [{
     The task construct defines an explicit task.
@@ -1008,6 +1008,7 @@ def TaskOp
 def TaskloopContextOp : OpenMP_Op<"taskloop.context", traits = [
     AttrSizedOperandSegments, AutomaticAllocationScope,
     RecursiveMemoryEffects, SingleBlock,
+    DeclareOpInterfaceMethods<ComposableOpInterface>,
     DeclareOpInterfaceMethods<OutlineableOpenMPOpInterface>
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_FinalClause, OpenMP_GrainsizeClause,
@@ -1419,7 +1420,7 @@ def MapInfoOp : OpenMP_Op<"map.info", [AttrSizedOperandSegments]> {
 //===---------------------------------------------------------------------===//
 
 def TargetDataOp: OpenMP_Op<"target_data", traits = [
-    AttrSizedOperandSegments
+    AttrSizedOperandSegments, DeclareOpInterfaceMethods<ComposableOpInterface>
   ], clauses = [
     OpenMP_DeviceClause, OpenMP_IfClause, OpenMP_MapClause,
     OpenMP_UseDeviceAddrClause, OpenMP_UseDevicePtrClause
@@ -1581,7 +1582,8 @@ def TargetUpdateOp: OpenMP_Op<"target_update", traits = [
 //===----------------------------------------------------------------------===//
 
 def TargetOp : OpenMP_Op<"target", traits = [
-    AttrSizedOperandSegments, BlockArgOpenMPOpInterface, IsolatedFromAbove,
+    AttrSizedOperandSegments, BlockArgOpenMPOpInterface,
+    DeclareOpInterfaceMethods<ComposableOpInterface>, IsolatedFromAbove,
     OutlineableOpenMPOpInterface
   ], clauses = [
     // TODO: Complete clause list (defaultmap, uses_allocators).
@@ -1639,18 +1641,6 @@ def TargetOp : OpenMP_Op<"target", traits = [
       return getMapVars()[mapInfoOpIdx];
     }
 
-    /// Returns the innermost OpenMP dialect operation captured by this target
-    /// construct. For an operation to be detected as captured, it must be
-    /// inside a (possibly multi-level) nest of OpenMP dialect operation's
-    /// regions where none of these levels contain other operations considered
-    /// not-allowed for these purposes (i.e. only terminator operations are
-    /// allowed from the OpenMP dialect, and other dialect's operations are
-    /// allowed as long as they don't have a memory write effect).
-    ///
-    /// If there are omp.loop_nest operations in the sequence of nested
-    /// operations, the top level one will be the one captured.
-    Operation *getInnermostCapturedOmpOp();
-
     /// Returns whether this kernel requires host evaluation of loop trip count.
     bool hasHostEvalTripCount();
   }] # clausesExtraClassDeclaration;
@@ -1675,7 +1665,9 @@ def TargetOp : OpenMP_Op<"target", traits = [
 //===----------------------------------------------------------------------===//
 // 2.16 master Construct
 //===----------------------------------------------------------------------===//
-def MasterOp : OpenMP_Op<"master", singleRegion = true> {
+def MasterOp : OpenMP_Op<"master", traits = [
+    DeclareOpInterfaceMethods<ComposableOpInterface>
+  ], singleRegion = true> {
   let summary = "master construct";
   let description = [{
     The master construct specifies a structured block that is executed by
@@ -2272,7 +2264,9 @@ def DeclareReductionOp : OpenMP_Op<"declare_reduction", [IsolatedFromAbove,
 //===----------------------------------------------------------------------===//
 // [Spec 5.2] 10.5 masked Construct
 //===----------------------------------------------------------------------===//
-def MaskedOp : OpenMP_Op<"masked", clauses = [
+def MaskedOp : OpenMP_Op<"masked", traits = [
+    DeclareOpInterfaceMethods<ComposableOpInterface>
+  ], clauses = [
     OpenMP_FilterClause
   ], singleRegion = 1> {
   let summary = "masked construct";
@@ -2483,7 +2477,9 @@ def FreeSharedMemOp : OpenMP_Op<"free_shared_mem", traits = [
 // workdistribute Construct
 //===----------------------------------------------------------------------===//
 
-def WorkdistributeOp : OpenMP_Op<"workdistribute"> {
+def WorkdistributeOp : OpenMP_Op<"workdistribute", traits = [
+    DeclareOpInterfaceMethods<ComposableOpInterface>
+  ]> {
   let summary = "workdistribute directive";
   let description = [{
     workdistribute divides execution of the enclosed structured block into

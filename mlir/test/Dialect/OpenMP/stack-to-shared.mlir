@@ -139,9 +139,9 @@ llvm.func @target_spmd() {
         omp.terminator
       } {omp.composite}
       omp.terminator
-    }
+    } {omp.combined}
     omp.terminator
-  }
+  } {omp.combined}
   // CHECK: return
   llvm.return
 }
