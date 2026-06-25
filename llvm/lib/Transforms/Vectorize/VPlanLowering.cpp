@@ -598,7 +598,7 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
       }
 
       if (auto *Expr = dyn_cast<VPExpressionRecipe>(&R)) {
-        Expr->decompose();
+        (void)Expr->decompose();
         Expr->eraseFromParent();
         continue;
       }
