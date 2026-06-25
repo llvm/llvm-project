@@ -2,8 +2,6 @@
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn < %s | FileCheck -check-prefix=SI %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=VI %s
 
-target triple = "nvptx64-nvidia-cuda"
-
 define i32 @test_simple_rotl(i32 %x) {
 ; SI-LABEL: test_simple_rotl:
 ; SI:       ; %bb.0:
