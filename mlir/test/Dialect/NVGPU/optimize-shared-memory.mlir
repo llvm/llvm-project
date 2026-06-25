@@ -274,8 +274,6 @@ func.func @test_vector_element_type() {
 
 // -----
 
-/// Ensure ui64 memory space attributes do not crash
-// nvgpu-optimize-shared-memory (issue #204580).
 
 // CHECK-LABEL: func @test_int_conversion
 module {
