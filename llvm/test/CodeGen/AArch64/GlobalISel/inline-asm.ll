@@ -28,11 +28,15 @@ define i16 @test_16bit_reg(i16 %x) {
 ; O0-LABEL: test_16bit_reg:
 ; O0:       // %bb.0:
 ; O0-NEXT:    fmov s0, w0
-; O0-NEXT:    // kill: def $h0 killed $h0 killed $s0
+; O0-NEXT:    // kill: def $q0 killed $s0
+; O0-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; O0-NEXT:    //APP
 ; O0-NEXT:    nop
 ; O0-NEXT:    //NO_APP
-; O0-NEXT:    // kill: def $s0 killed $h0
+; O0-NEXT:    fmov s1, s0
+; O0-NEXT:    // implicit-def: $w0
+; O0-NEXT:    fmov s0, w0
+; O0-NEXT:    fmov s0, s1
 ; O0-NEXT:    fmov w0, s0
 ; O0-NEXT:    ret
 ;

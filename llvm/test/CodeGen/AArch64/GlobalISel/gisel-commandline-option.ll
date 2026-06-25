@@ -10,6 +10,11 @@
 
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   --debugify-and-strip-all-safe=0 \
+; RUN:   -verify-machineinstrs=0 -O0 -aarch64-skip-regbankselect-at-O=-1 \
+; RUN:   | FileCheck %s --check-prefixes=ENABLED,FALLBACK,FORCE-RBS
+
+; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
+; RUN:   --debugify-and-strip-all-safe=0 \
 ; RUN:   -verify-machineinstrs=0 -O0 -aarch64-enable-global-isel-at-O=0 -global-isel-abort=1 \
 ; RUN:   | FileCheck %s --check-prefixes=ENABLED,NOFALLBACK
 
@@ -22,6 +27,11 @@
 ; RUN:   --debugify-and-strip-all-safe=0 \
 ; RUN:   -verify-machineinstrs=0 -global-isel \
 ; RUN:   | FileCheck %s --check-prefix ENABLED --check-prefix NOFALLBACK --check-prefix ENABLED-O1
+
+; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
+; RUN:   --debugify-and-strip-all-safe=0 \
+; RUN:   -verify-machineinstrs=0 -global-isel -O1 -aarch64-skip-regbankselect-at-O=1 \
+; RUN:   | FileCheck %s --check-prefix NOFALLBACK --check-prefix SKIP-RBS-O1
 
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   --debugify-and-strip-all-safe=0 \
@@ -69,15 +79,23 @@
 ; ENABLED-O1-NEXT:  Analysis containing CSE Info
 ; ENABLED:  Legalizer
 ; VERIFY-NEXT:   Verify generated machine code
-; ENABLED:  RegBankSelect
+; VERIFY-O0-NEXT:  AArch64PostLegalizerLowering
 ; VERIFY-NEXT:   Verify generated machine code
-; ENABLED-NEXT: Analysis for ComputingKnownBits
+; ENABLED-O1:  RegBankSelect
+; ENABLED-O1-NEXT: Analysis for ComputingKnownBits
+; VERIFY-O0-NEXT: Analysis for ComputingKnownBits
+; FORCE-RBS: RegBankSelect
+; FORCE-RBS-NEXT: Analysis for ComputingKnownBits
+; SKIP-RBS-O1: IRTranslator
+; SKIP-RBS-O1-NOT: RegBankSelect
+; SKIP-RBS-O1: InstructionSelect
+; SKIP-RBS-O1-NEXT: AArch64 Post Select Optimizer
 ; ENABLED-O1-NEXT: Lazy Branch Probability Analysis
 ; ENABLED-O1-NEXT: Lazy Block Frequency Analysis
-; ENABLED-NEXT:  InstructionSelect
+; ENABLED:  InstructionSelect
 ; ENABLED-O1-NEXT:  AArch64 Post Select Optimizer
-; VERIFY-NEXT:   Verify generated machine code
-; ENABLED-NEXT:  ResetMachineFunction
+; VERIFY-O0-NEXT: Verify generated machine code
+; ENABLED-O1-NEXT: ResetMachineFunction
 
 ; FALLBACK:       AArch64 Instruction Selection
 ; NOFALLBACK-NOT: AArch64 Instruction Selection

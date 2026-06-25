@@ -40,6 +40,10 @@ define float @cp_float() {
 ; CHECK-LABEL: cp_float
 ; CHECK:       adrp [[REG:x[0-9]+]], {{lCPI[0-9]+_0}}@PAGE
 ; CHECK-NEXT:  ldr s0, [[[REG]], {{lCPI[0-9]+_0}}@PAGEOFF]
+; GISEL-LABEL: cp_float
+; GISEL:       mov w8, #4059 ; =0xfdb
+; GISEL-NEXT:  movk w8, #16457, lsl #16
+; GISEL-NEXT:  fmov s0, w8
   ret float 0x400921FB60000000
 }
 
@@ -47,5 +51,8 @@ define double @cp_double() {
 ; CHECK-LABEL: cp_double
 ; CHECK:       adrp [[REG:x[0-9]+]], {{lCPI[0-9]+_0}}@PAGE
 ; CHECK-NEXT:  ldr d0, [[[REG]], {{lCPI[0-9]+_0}}@PAGEOFF]
+; GISEL-LABEL: cp_double
+; GISEL:       adrp [[GREG:x[0-9]+]], {{lCPI[0-9]+_0}}@PAGE
+; GISEL-NEXT:  ldr d0, [[[GREG]], {{lCPI[0-9]+_0}}@PAGEOFF]
   ret double 0x400921FB54442D18
 }
