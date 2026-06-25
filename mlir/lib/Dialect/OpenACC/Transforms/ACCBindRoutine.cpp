@@ -103,7 +103,6 @@ public:
           dyn_cast<SymbolRefAttr>(callOp.getCallableForCallee());
       if (!calleeSymbolRef)
         return;
-
       FunctionOpInterface callee = symTab.lookup<FunctionOpInterface>(
           calleeSymbolRef.getLeafReference());
       if (!callee)
