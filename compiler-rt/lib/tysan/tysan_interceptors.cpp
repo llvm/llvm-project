@@ -22,7 +22,7 @@
 #define TYSAN_INTERCEPT___STRDUP 0
 #endif
 
-#if SANITIZER_LINUX
+#if SANITIZER_GLIBC
 extern "C" int mallopt(int param, int value);
 #endif
 
@@ -211,7 +211,7 @@ void InitializeInterceptors() {
   CHECK_EQ(inited, 0);
 
   // Instruct libc malloc to consume less memory.
-#if SANITIZER_LINUX
+#if SANITIZER_GLIBC
   mallopt(1, 0);          // M_MXFAST
   mallopt(-3, 32 * 1024); // M_MMAP_THRESHOLD
 #endif

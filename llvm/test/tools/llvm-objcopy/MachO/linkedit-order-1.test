@@ -51,7 +51,8 @@
 # CHECK: --- !mach-o
 
 # CHECK: cmd:             LC_SYMTAB
-# CHECK: stroff:          [[#SYMTAB_STROFF: DYSYMTAB_INDIRECTSYMOFF + mul(DYSYMTAB_NINDIRECTSYMS, 4)]]
+## LINKEDIT entries are aligned to the target word size.
+# CHECK: stroff:          [[#SYMTAB_STROFF: DYSYMTAB_INDIRECTSYMOFF + mul(div(mul(DYSYMTAB_NINDIRECTSYMS, 4) + 4, 8), 8)]]
 # CHECK: strsize:         [[#SYMTAB_STRSIZE:]]
 
 # CHECK: cmd:             LC_CODE_SIGNATURE
