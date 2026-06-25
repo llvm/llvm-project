@@ -1238,19 +1238,7 @@ add_entrypoint_object(
   HDRS
     ../expbf16.h
   DEPENDS
-    libc.hdr.errno_macros
-    libc.hdr.fenv_macros
-    libc.src.__support.CPP.array
-    libc.src.__support.FPUtil.cast
-    libc.src.__support.FPUtil.except_value_utils
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.nearest_integer
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.FPUtil.rounding_mode
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.macros.optimization
+    libc.src.__support.math.expbf16
 )
 
 add_entrypoint_object(
