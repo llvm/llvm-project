@@ -1835,13 +1835,18 @@ Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
 
   if (auto VecTy = dyn_cast<FixedVectorType>(VecOp->getType())) {
     unsigned VWidth = VecTy->getNumElements();
-    APInt PoisonElts(VWidth, 0);
-    APInt AllOnesEltMask(APInt::getAllOnes(VWidth));
-    if (Value *V = SimplifyDemandedVectorElts(&IE, AllOnesEltMask,
-                                              PoisonElts)) {
-      if (V != &IE)
-        return replaceInstUsesWith(IE, V);
-      return &IE;
+    // Avoid re-running the all-lanes demanded-elements query on intermediate
+    // insert-chain nodes when a bounded scan proves it cannot change the IR.
+    bool SkipSDVE = canSkipDemandedEltsInInsertChain(IE, VWidth);
+    if (!SkipSDVE) {
+      APInt PoisonElts(VWidth, 0);
+      APInt AllOnesEltMask(APInt::getAllOnes(VWidth));
+      if (Value *V =
+              SimplifyDemandedVectorElts(&IE, AllOnesEltMask, PoisonElts)) {
+        if (V != &IE)
+          return replaceInstUsesWith(IE, V);
+        return &IE;
+      }
     }
   }
 

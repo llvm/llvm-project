@@ -37,6 +37,59 @@ static cl::opt<unsigned> SimplifyDemandedVectorEltsDepthLimit(
         "Depth limit when simplifying vector instructions and their operands"),
     cl::Hidden, cl::init(10));
 
+bool InstCombinerImpl::canSkipDemandedEltsInInsertChain(InsertElementInst &IE,
+                                                        unsigned VWidth) {
+  unsigned DepthLimit = SimplifyDemandedVectorEltsDepthLimit;
+
+  // For narrow vectors, SimplifyDemandedVectorElts may reach the point where
+  // only the inserted lane is demanded and fold extract/insert pairs.
+  if (VWidth <= DepthLimit)
+    return false;
+
+  // Only skip intermediate chain nodes; the root still runs the full query.
+  if (!IE.hasOneUse())
+    return false;
+  auto *UserIE = dyn_cast<InsertElementInst>(IE.user_back());
+  if (!UserIE || UserIE->getOperand(0) != &IE)
+    return false;
+
+  SmallVector<unsigned, 16> SeenIndices;
+  auto HasNewIndexInRange = [&](InsertElementInst &Insert) {
+    auto *Idx = dyn_cast<ConstantInt>(Insert.getOperand(2));
+    // Let the normal SDVE path handle variable or out-of-range indices. The
+    // latter may simplify the chain and must not be passed to getZExtValue().
+    if (!Idx || Idx->getValue().uge(VWidth))
+      return false;
+
+    unsigned Index = Idx->getZExtValue();
+    if (is_contained(SeenIndices, Index))
+      return false;
+
+    SeenIndices.push_back(Index);
+    return true;
+  };
+
+  auto *Cur = &IE;
+  for (unsigned Depth = 0; Depth != DepthLimit; ++Depth) {
+    // This loop scans the same base-chain window that the SDVE query would
+    // inspect before hitting its depth limit. With distinct insert indices in
+    // that window, the all-lanes query cannot remove a dead insert; with
+    // VWidth > DepthLimit, it also cannot narrow demand to a single lane.
+    if (!HasNewIndexInRange(*Cur))
+      return false;
+
+    Value *Base = Cur->getOperand(0);
+    if (match(Base, m_Poison()))
+      return true;
+
+    Cur = dyn_cast<InsertElementInst>(Base);
+    if (!Cur || Cur->getType() != IE.getType() || !Cur->hasOneUse())
+      return false;
+  }
+
+  return true;
+}
+
 /// Check to see if the specified operand of the specified instruction is a
 /// constant integer. If so, check to see if there are any bits set in the
 /// constant that are not demanded. If so, shrink the constant and return true.
