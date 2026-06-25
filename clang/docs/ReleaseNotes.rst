@@ -113,6 +113,8 @@ ABI Changes in This Version
   compilers. On most targets this is not a breaking change because ``fastcc``
   and the platform C calling convention agree for ``void(ptr)``. It is an ABI
   break on i686, MIPS O32, PowerPC64 ELFv1, and Lanai.
+- Fixed incorrect struct return when single large vector (256/512-bit) used on
+  x86-64 targets. (#GH203760) The bug was introduced since Clang 21. (#GH120670)
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
@@ -517,7 +519,11 @@ Attribute Changes in Clang
   about pointer lifetimes. It may be used to power optimizations in the future,
   however there are no concrete plans to do so at the moment.
 
-* The ``modular_format`` attribute now supports the ``fixed`` aspect for C
+- The attributes ``[[clang::opencl_global_device]]`` and ``[[clang::opencl_global_host]]``
+  are now deprecated. Clang emits a ``-Wdeprecated-attributes`` warning when
+  they are used.
+  
+- The ``modular_format`` attribute now supports the ``fixed`` aspect for C
   ISO 18037 fixed-point ``printf`` specifiers.
 
 Improvements to Clang's diagnostics
@@ -664,6 +670,9 @@ Improvements to Clang's diagnostics
 - Clang now rejects inline asm constraints and clobbers that contain an
   embedded null character, instead of silently truncating them. (#GH173900)
 
+- Added ``-Wstringop-overread`` to warn when ``memcpy``, ``memmove``, ``memcmp``,
+  and related builtins read more bytes than the source buffer size (#GH83728).
+  
 - Diagnostics for the C++11 range-based for statement now report the correct
   iterator type in notes for invalid iterator types.
 
@@ -682,6 +691,7 @@ Improvements to Coverage Mapping
 Bug Fixes in This Version
 -------------------------
 
+- Fixed an assertion when comparing a fixed point type with a ``_BitInt`` type. (#GH196948)
 - Fixed atomic boolean compound assignment; the conversion back to atomic bool would be miscompiled. (#GH33210)
 - Correctly handle default template argument when establishing subsumption. (#GH188640)
 - Fixed a failed assertion in the preprocessor when ``__has_embed`` parameters are missing parentheses. (#GH175088)
@@ -721,13 +731,17 @@ Bug Fixes in This Version
 - Fixed a potential stack-use-after-return issue in Clang when copy-initializing
   an array via an element-at-a-time copy loop (#GH192026)
 - Fixed an issue where certain designated initializers would be rejected for constexpr variables. (#GH193373)
+- Fixed ``clang::Preprocessor::recomputeCurLexerKind`` to avoid default fallback to ``CurLexerCallback = CLK_CachingLexer;``. This prevents code-completion
+  EOF handling from accidentally restoring CLK_CachingLexer while a tentative parse is still active, which could trigger a caching lexer re-entry assertion
+  in clangd signature help. (#GH200677)
 - Fixed a crash when ``#embed`` is used with C++ modules (#GH195350)
+- Fixed an assertion in constant evaluation when using a defaulted comparison operator in a ``union``. (#GH147127)
 - Fixed a bug where ``-x cuda`` caused clang to immediately resolve templates that should not be. (#GH200545)
 - Fixed an issue where ``__typeof_unqual`` and ``__typeof_unqual__`` were rejected as a declaration specifier in block scope in C++.
 - Fixed crash when checking for overflow for unary operator that can't overflow (#GH170072)
 - Clang no longer handles a `" q-char-sequence "` header name as a string literal (#GH132643).
-- Fixed an assertion when ``__attribute__((alloc_size))`` is used with an argument type wider than the target's pointer width. (#GH190445)
 - Fixed an assertion where we improperly handled implicit conversions to integral types from an atomic-type with a conversion function. (#GH201770)
+- Fixed a regression where calling a function that takes a class-type parameter by value inside ``decltype`` of a concept could be incorrectly rejected when used as a non-type template argument. (#GH175831)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -801,6 +815,7 @@ Bug Fixes to C++ Support
 - Fixed a crash in constant evaluation using placement new on an array which was later initialized. (#GH196450)
 - Fixed an issue where Clang incorrectly accepted invalid unqualified uses of local nested class names outside their declaring scope. (#GH184622)
 - Fixed a crash when parsing invalid friend declaration with storage-class specifier. (#GH186569)
+- Fixed a missing vtable for ``dynamic_cast<FinalClass *>(this)`` in a function template. (#GH198511)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -846,6 +861,8 @@ Miscellaneous Clang Crashes Fixed
 - Fixed an assertion failure in ``isAtEndOfMacroExpansion`` on macro expansions crossing the boundary of two fileIDs. (#GH115007), (#GH21755)
 - Fixed an assertion failure when ``__builtin_dump_struct`` is used with an
   immediate-escalated callable. (#GH192846)
+- Fixed a crash when passing one sized implicitly casted vector to a ``abs`` function. (#GH204777)
+- Fixed a crash when diagnosing an invalid out-of-line definition of a member class template. (#GH201490)
 
 OpenACC Specific Changes
 ------------------------
@@ -877,6 +894,8 @@ X86 Support
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
+
+Added support for the Arm AGI CPU via the ``-mcpu=armagicpu`` command-line option.
 
 Android Support
 ^^^^^^^^^^^^^^^
@@ -965,6 +984,12 @@ WebAssembly Support
 
 - Fixed a crash when ``__funcref`` is applied to a non-function pointer type.
   (#GH118233)
+- WebAssembly reference types (``__externref_t`` and ``__funcref`` function
+  pointers) now lower to the opaque IR types ``target("wasm.externref")`` and
+  ``target("wasm.funcref")`` instead of ``ptr addrspace(10)`` /
+  ``ptr addrspace(20)``.
+- Fixed a compiler crash at ``-O2`` when reference-type values were passed
+  through control flow that the SLP vectorizer tried to vectorize.
 
 AVR Support
 ^^^^^^^^^^^
@@ -1070,11 +1095,6 @@ Sanitizers
   warning for deprecated matches. Version 5 drops backward compatibility and
   requires rules to match canonicalized paths (without leading ``./``).
 
-- Sanitizer Special Case Lists (``-fsanitize-ignorelist``) and warning
-  suppression mappings (``--warning-suppression-mappings``) now recognize version
-  4 of the Special Case List format (indicated by ``#!special-case-list-v4``).
-  On Windows hosts, path matching is slash-agnostic (both forward slashes (``/``)
-  and backslashes (``\``) match either path separator in both patterns and paths).
 
 Python Binding Changes
 ----------------------

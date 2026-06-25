@@ -644,15 +644,17 @@ struct EpilogueLoopVectorizationInfo {
 /// them in succession from the loop vectorizer planner.
 class InnerLoopAndEpilogueVectorizer : public InnerLoopVectorizer {
 public:
-  InnerLoopAndEpilogueVectorizer(
-      Loop *OrigLoop, PredicatedScalarEvolution &PSE, LoopInfo *LI,
-      DominatorTree *DT, const TargetTransformInfo *TTI, AssumptionCache *AC,
-      EpilogueLoopVectorizationInfo &EPI, LoopVectorizationCostModel *CM,
-      GeneratedRTChecks &Checks, VPlan &Plan, ElementCount VecWidth,
-      ElementCount MinProfitableTripCount, unsigned UnrollFactor)
+  InnerLoopAndEpilogueVectorizer(Loop *OrigLoop, PredicatedScalarEvolution &PSE,
+                                 LoopInfo *LI, DominatorTree *DT,
+                                 const TargetTransformInfo *TTI,
+                                 AssumptionCache *AC,
+                                 EpilogueLoopVectorizationInfo &EPI,
+                                 LoopVectorizationCostModel *CM,
+                                 GeneratedRTChecks &Checks, VPlan &Plan,
+                                 ElementCount VecWidth, unsigned UnrollFactor)
       : InnerLoopVectorizer(OrigLoop, PSE, LI, DT, TTI, AC, VecWidth,
                             UnrollFactor, CM, Checks, Plan),
-        EPI(EPI), MinProfitableTripCount(MinProfitableTripCount) {}
+        EPI(EPI) {}
 
   /// Holds and updates state information required to vectorize the main loop
   /// and its epilogue in two separate passes. This setup helps us avoid
@@ -661,9 +663,6 @@ public:
   /// iteration count of the loop is so small that the main vector loop is
   /// completely skipped.
   EpilogueLoopVectorizationInfo &EPI;
-
-protected:
-  ElementCount MinProfitableTripCount;
 };
 
 /// A specialized derived class of inner loop vectorizer that performs
@@ -680,7 +679,7 @@ public:
                              GeneratedRTChecks &Check, VPlan &Plan)
       : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TTI, AC, EPI, CM,
                                        Check, Plan, EPI.MainLoopVF,
-                                       EPI.MainLoopVF, EPI.MainLoopUF) {}
+                                       EPI.MainLoopUF) {}
 
 protected:
   void printDebugTracesAtStart() override;
@@ -701,7 +700,7 @@ public:
                                  GeneratedRTChecks &Checks, VPlan &Plan)
       : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TTI, AC, EPI, CM,
                                        Checks, Plan, EPI.EpilogueVF,
-                                       EPI.EpilogueVF, EPI.EpilogueUF) {}
+                                       EPI.EpilogueUF) {}
   /// Implements the interface for creating a vectorized skeleton using the
   /// *epilogue loop* strategy (i.e., the second pass of VPlan execution).
   BasicBlock *createVectorizedLoopSkeleton() final;
@@ -2093,30 +2092,32 @@ static unsigned estimateElementCount(ElementCount VF,
   return EstimatedVF;
 }
 
-/// Returns true iff \p CI has a library vector variant usable at \p VF: a
-/// mapping with matching VF, masked if required, whose vector function is
-/// declared in the module. Such variants are priced by
-/// VPWidenCallRecipe::computeCost rather than by scalarization.
+/// Returns the vector library variant function of \p CI usable at \p VF,
+/// respecting \p MaskRequired, or nullptr if none is found: a mapping with
+/// matching VF, masked if required, whose vector function is declared in the
+/// module.
+static Function *getVectorLibraryVariantFor(const CallInst &CI, ElementCount VF,
+                                            bool MaskRequired,
+                                            const TargetLibraryInfo *TLI) {
+  if (!TLI || CI.isNoBuiltin())
+    return nullptr;
+  for (const VFInfo &Info : VFDatabase::getMappings(CI))
+    if (Info.Shape.VF == VF && (!MaskRequired || Info.isMasked()))
+      if (Function *F = CI.getModule()->getFunction(Info.VectorName))
+        return F;
+  return nullptr;
+}
+
+/// Returns true iff \p CI has a library vector variant usable at \p VF.
 static bool hasVectorLibraryVariantFor(const CallInst &CI, ElementCount VF,
                                        bool MaskRequired,
                                        const TargetLibraryInfo *TLI) {
-  if (!TLI || CI.isNoBuiltin())
-    return false;
-  return any_of(VFDatabase::getMappings(CI), [&](const VFInfo &Info) {
-    return Info.Shape.VF == VF && (!MaskRequired || Info.isMasked()) &&
-           CI.getModule()->getFunction(Info.VectorName);
-  });
+  return getVectorLibraryVariantFor(CI, VF, MaskRequired, TLI) != nullptr;
 }
 
 InstructionCost
 LoopVectorizationCostModel::getVectorCallCost(CallInst *CI,
                                               ElementCount VF) const {
-  // Vector library variants are priced by VPWidenCallRecipe::computeCost and
-  // should not reach this function.
-  assert((VF.isScalar() ||
-          !hasVectorLibraryVariantFor(*CI, VF, isMaskRequired(CI), TLI)) &&
-         "getVectorCallCost does not price vector library variants");
-
   Type *RetTy = CI->getType();
   SmallVector<Type *, 4> Tys;
   for (auto &ArgOp : CI->args())
@@ -2132,10 +2133,18 @@ LoopVectorizationCostModel::getVectorCallCost(CallInst *CI,
                              : ScalarCallCost * VF.getKnownMinValue() +
                                    getScalarizationOverhead(CI, VF);
 
-  if (getVectorIntrinsicIDForCall(CI, TLI)) {
-    InstructionCost IntrinsicCost = getVectorIntrinsicCost(CI, VF);
-    return std::min(Cost, IntrinsicCost);
-  }
+  // The call may be vectorized at this VF, via a vector intrinsic or a vector
+  // library variant.
+  if (getVectorIntrinsicIDForCall(CI, TLI))
+    Cost = std::min(Cost, getVectorIntrinsicCost(CI, VF));
+
+  if (Function *Variant =
+          getVectorLibraryVariantFor(*CI, VF, isMaskRequired(CI), TLI))
+    Cost = std::min(Cost,
+                    TTI.getCallInstrCost(
+                        /*F=*/nullptr, Variant->getReturnType(),
+                        Variant->getFunctionType()->params(), Config.CostKind));
+
   return Cost;
 }
 
@@ -6117,6 +6126,14 @@ void EpilogueVectorizerEpilogueLoop::printDebugTracesAtEnd() {
   });
 }
 
+bool VPRecipeBuilder::isPredicatedInst(Instruction *I) const {
+  return CM.isPredicatedInst(I);
+}
+
+bool VPRecipeBuilder::prefersVectorizedAddressing() const {
+  return CM.TTI.prefersVectorizedAddressing();
+}
+
 VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
                                                 VFRange &Range) {
   assert((VPI->getOpcode() == Instruction::Load ||
@@ -6711,7 +6728,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
                         OrigLoop);
 
   RUN_VPLAN_PASS(VPlanTransforms::makeMemOpWideningDecisions, *Plan, Range,
-                 RecipeBuilder);
+                 RecipeBuilder, CM.PSE, OrigLoop);
 
   RUN_VPLAN_PASS(VPlanTransforms::makeScalarizationDecisions, *Plan, Range);
 

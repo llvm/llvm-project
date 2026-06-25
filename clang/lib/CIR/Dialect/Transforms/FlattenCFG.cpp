@@ -971,16 +971,18 @@ public:
           rewriter.setInsertionPoint(exitOp);
           cir::StoreOp::create(rewriter, loc, operand, alloca,
                                /*isVolatile=*/false,
+                               /*isNontemporal=*/false,
                                /*alignment=*/mlir::IntegerAttr(),
                                cir::SyncScopeKindAttr(), cir::MemOrderAttr());
         }
 
         // Reload the value from the temporary alloca in the destination block.
         rewriter.setInsertionPointToEnd(destBlock);
-        auto loaded = cir::LoadOp::create(
-            rewriter, loc, alloca, /*isDeref=*/false,
-            /*isVolatile=*/false, /*alignment=*/mlir::IntegerAttr(),
-            cir::SyncScopeKindAttr(), cir::MemOrderAttr());
+        auto loaded =
+            cir::LoadOp::create(rewriter, loc, alloca, /*isDeref=*/false,
+                                /*isVolatile=*/false, /*isNontemporal=*/false,
+                                /*alignment=*/mlir::IntegerAttr(),
+                                cir::SyncScopeKindAttr(), cir::MemOrderAttr());
         returnValues.push_back(loaded);
       }
     }
@@ -1290,10 +1292,11 @@ public:
         rewriter.setInsertionPointToEnd(exitBlock);
 
         // Load the destination slot value.
-        auto slotValue = cir::LoadOp::create(
-            rewriter, loc, destSlot, /*isDeref=*/false,
-            /*isVolatile=*/false, /*alignment=*/mlir::IntegerAttr(),
-            cir::SyncScopeKindAttr(), cir::MemOrderAttr());
+        auto slotValue =
+            cir::LoadOp::create(rewriter, loc, destSlot, /*isDeref=*/false,
+                                /*isVolatile=*/false, /*isNontemporal=*/false,
+                                /*alignment=*/mlir::IntegerAttr(),
+                                cir::SyncScopeKindAttr(), cir::MemOrderAttr());
 
         // Create destination blocks for each exit and collect switch case info.
         llvm::SmallVector<mlir::APInt, 8> caseValues;
@@ -1322,6 +1325,7 @@ public:
               rewriter, loc, cir::IntAttr::get(s32Type, exit.destinationId));
           cir::StoreOp::create(rewriter, loc, destIdConst, destSlot,
                                /*isVolatile=*/false,
+                               /*isNontemporal=*/false,
                                /*alignment=*/mlir::IntegerAttr(),
                                cir::SyncScopeKindAttr(), cir::MemOrderAttr());
           rewriter.replaceOpWithNewOp<cir::BrOp>(exit.exitOp, cleanupEntry);
