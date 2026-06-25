@@ -199,6 +199,7 @@ LLVMInitializeHexagonTarget() {
   initializeHexagonGlobalSchedulerPass(PR);
   initializeHexagonLiveVariablesPass(PR);
   initializeHexagonHardwareLoopsPass(PR);
+  initializeHexagonHVXSaveRemarkPass(PR);
   initializeHexagonLoopIdiomRecognizeLegacyPassPass(PR);
   initializeHexagonNewValueJumpPass(PR);
   initializeHexagonOptAddrModePass(PR);
@@ -463,6 +464,7 @@ void HexagonPassConfig::addPreRegAlloc() {
   }
   if (TM->getOptLevel() >= CodeGenOptLevel::Default)
     addPass(&MachinePipelinerID);
+  addPass(createHexagonHVXSaveRemark());
 }
 
 void HexagonPassConfig::addPostRegAlloc() {
@@ -507,6 +509,10 @@ void HexagonPassConfig::addPreEmitPass() {
     if (!DisableHexagonLiveVars)
       addPass(&HexagonLiveVariablesID);
   }
+
+  // Emit KCFI checks for indirect calls. Must run before packetization so
+  // the check and call can be bundled together into a VLIW packet.
+  addPass(createKCFIPass());
 
   // Packetization is mandatory: it handles gather/scatter at all opt levels.
   addPass(createHexagonPacketizer(NoOpt));
