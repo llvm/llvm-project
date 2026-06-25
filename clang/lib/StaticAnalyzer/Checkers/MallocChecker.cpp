@@ -48,6 +48,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/STLExtras.h"
 #include "AllocationState.h"
 #include "InterCheckerAPI.h"
 #include "NoOwnershipChangeVisitor.h"
@@ -400,7 +401,8 @@ public:
   bool ShouldIncludeOwnershipAnnotatedFunctions = false;
 
   bool ShouldRegisterNoOwnershipChangeVisitor = false;
-
+  std::vector<std::string> SuppressLeakTypes;
+  
   // This checker family implements many bug types and frontends, and several
   // bug types are shared between multiple frontends, so most of the frontends
   // are declared with the helper class DynMemFrontend.
@@ -3026,6 +3028,10 @@ void MallocChecker::HandleLeak(SymbolRef Sym, ExplodedNode *N,
   if (Family.Kind == AF_Alloca)
     return;
 
+  if (Family.Kind == AF_Custom && Family.CustomName && llvm::is_contained(SuppressLeakTypes, *Family.CustomName) {
+      return;
+  }
+
   const Leak *Frontend = getRelevantFrontendAs<Leak>(Family);
   // Note that for leaks we don't add a sink when the relevant frontend is
   // disabled because the leak is reported with a non-fatal error node, while
@@ -4193,9 +4199,22 @@ void ento::registerInnerPointerCheckerAux(CheckerManager &Mgr) {
 
 void ento::registerDynamicMemoryModeling(CheckerManager &Mgr) {
   auto *Chk = Mgr.getChecker<MallocChecker>();
+
   // FIXME: This is a "hidden" undocumented frontend but there are public
   // checker options which are attached to it.
   CheckerNameRef DMMName = Mgr.getCurrentCheckerName();
+  StringRef SuppressList =
+    Mgr.getAnalyzerOptions().getCheckerStringOption(
+        DMMName, "SuppressLeakReportsFor");
+
+  SmallVector<StringRef, 8> Split;
+  SuppressList.split(Split, ',');
+
+  for (StringRef S : Split) {
+    S = S.trim();
+    if (!S.empty())
+      Chk->SuppressLeakTypes.push_back(S.str());
+  }
   Chk->ShouldIncludeOwnershipAnnotatedFunctions =
       Mgr.getAnalyzerOptions().getCheckerBooleanOption(DMMName, "Optimistic");
   Chk->ShouldRegisterNoOwnershipChangeVisitor =
