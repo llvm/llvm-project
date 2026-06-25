@@ -5443,8 +5443,13 @@ private:
       }
       auto transferKindAttr = cuf::DataTransferKindAttr::get(
           builder.getContext(), cuf::DataTransferKind::DeviceHost);
-      cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,
-                                  transferKindAttr, hasManagedOrUnifedSymbols);
+      if (fir::isa_trivial(rhsVal.getType())) {
+        fir::StoreOp::create(builder, loc, rhsVal, lhsVal);
+      } else {
+        cuf::DataTransferOp::create(builder, loc, rhsVal, lhsVal, shape,
+                                    transferKindAttr,
+                                    hasManagedOrUnifedSymbols);
+      }
       return;
     }
 
@@ -6618,7 +6623,9 @@ private:
             !Fortran::semantics::IsAllocatable(sym) &&
             Fortran::semantics::IsSaved(sym)) {
           mlir::Location loc = toLocation();
-          TODO(loc, "non-ALLOCATABLE SAVE Coarray outside the main program.");
+          TODO(
+              loc,
+              "coarray: non-ALLOCATABLE SAVE coarray outside the main program");
         }
       }
       Fortran::lower::defineModuleVariable(*this, var);

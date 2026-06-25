@@ -9,16 +9,14 @@ define i32 @and_eq_ne_ult(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5, 
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    cmp w2, w3
 ; CHECK-SD-NEXT:    ccmp w0, w1, #0, ne
-; CHECK-SD-NEXT:    b.eq .LBB0_3
-; CHECK-SD-NEXT:  // %bb.1: // %entry
-; CHECK-SD-NEXT:    cmp w4, w5
-; CHECK-SD-NEXT:    b.lo .LBB0_3
-; CHECK-SD-NEXT:  // %bb.2:
-; CHECK-SD-NEXT:    mov w0, wzr
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB0_3: // %if
+; CHECK-SD-NEXT:    ccmp w4, w5, #0, ne
+; CHECK-SD-NEXT:    b.hs .LBB0_2
+; CHECK-SD-NEXT:  // %bb.1: // %if
 ; CHECK-SD-NEXT:    mov w0, #1 // =0x1
 ; CHECK-SD-NEXT:    str w0, [x6]
+; CHECK-SD-NEXT:    ret
+; CHECK-SD-NEXT:  .LBB0_2:
+; CHECK-SD-NEXT:    mov w0, wzr
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: and_eq_ne_ult:
@@ -60,16 +58,14 @@ define i32 @and_ne_ult_ule(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5,
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    cmp w2, w3
 ; CHECK-SD-NEXT:    ccmp w0, w1, #4, lo
-; CHECK-SD-NEXT:    b.ne .LBB1_3
-; CHECK-SD-NEXT:  // %bb.1: // %entry
-; CHECK-SD-NEXT:    cmp w4, w5
-; CHECK-SD-NEXT:    b.ls .LBB1_3
-; CHECK-SD-NEXT:  // %bb.2:
-; CHECK-SD-NEXT:    mov w0, wzr
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB1_3: // %if
+; CHECK-SD-NEXT:    ccmp w4, w5, #0, eq
+; CHECK-SD-NEXT:    b.hi .LBB1_2
+; CHECK-SD-NEXT:  // %bb.1: // %if
 ; CHECK-SD-NEXT:    mov w0, #1 // =0x1
 ; CHECK-SD-NEXT:    str w0, [x6]
+; CHECK-SD-NEXT:    ret
+; CHECK-SD-NEXT:  .LBB1_2:
+; CHECK-SD-NEXT:    mov w0, wzr
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: and_ne_ult_ule:
@@ -111,16 +107,14 @@ define i32 @and_ult_ule_ugt(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    cmp w2, w3
 ; CHECK-SD-NEXT:    ccmp w0, w1, #2, ls
-; CHECK-SD-NEXT:    b.lo .LBB2_3
-; CHECK-SD-NEXT:  // %bb.1: // %entry
-; CHECK-SD-NEXT:    cmp w4, w5
-; CHECK-SD-NEXT:    b.hi .LBB2_3
-; CHECK-SD-NEXT:  // %bb.2:
-; CHECK-SD-NEXT:    mov w0, wzr
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB2_3: // %if
+; CHECK-SD-NEXT:    ccmp w4, w5, #2, hs
+; CHECK-SD-NEXT:    b.ls .LBB2_2
+; CHECK-SD-NEXT:  // %bb.1: // %if
 ; CHECK-SD-NEXT:    mov w0, #1 // =0x1
 ; CHECK-SD-NEXT:    str w0, [x6]
+; CHECK-SD-NEXT:    ret
+; CHECK-SD-NEXT:  .LBB2_2:
+; CHECK-SD-NEXT:    mov w0, wzr
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: and_ult_ule_ugt:
@@ -162,16 +156,14 @@ define i32 @and_ule_ugt_uge(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    cmp w2, w3
 ; CHECK-SD-NEXT:    ccmp w0, w1, #2, hi
-; CHECK-SD-NEXT:    b.ls .LBB3_3
-; CHECK-SD-NEXT:  // %bb.1: // %entry
-; CHECK-SD-NEXT:    cmp w4, w5
-; CHECK-SD-NEXT:    b.hs .LBB3_3
-; CHECK-SD-NEXT:  // %bb.2:
-; CHECK-SD-NEXT:    mov w0, wzr
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB3_3: // %if
+; CHECK-SD-NEXT:    ccmp w4, w5, #2, hi
+; CHECK-SD-NEXT:    b.lo .LBB3_2
+; CHECK-SD-NEXT:  // %bb.1: // %if
 ; CHECK-SD-NEXT:    mov w0, #1 // =0x1
 ; CHECK-SD-NEXT:    str w0, [x6]
+; CHECK-SD-NEXT:    ret
+; CHECK-SD-NEXT:  .LBB3_2:
+; CHECK-SD-NEXT:    mov w0, wzr
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: and_ule_ugt_uge:
@@ -213,16 +205,14 @@ define i32 @and_ugt_uge_slt(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    cmp w2, w3
 ; CHECK-SD-NEXT:    ccmp w0, w1, #0, hs
-; CHECK-SD-NEXT:    b.hi .LBB4_3
-; CHECK-SD-NEXT:  // %bb.1: // %entry
-; CHECK-SD-NEXT:    cmp w4, w5
-; CHECK-SD-NEXT:    b.lt .LBB4_3
-; CHECK-SD-NEXT:  // %bb.2:
-; CHECK-SD-NEXT:    mov w0, wzr
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB4_3: // %if
+; CHECK-SD-NEXT:    ccmp w4, w5, #8, ls
+; CHECK-SD-NEXT:    b.ge .LBB4_2
+; CHECK-SD-NEXT:  // %bb.1: // %if
 ; CHECK-SD-NEXT:    mov w0, #1 // =0x1
 ; CHECK-SD-NEXT:    str w0, [x6]
+; CHECK-SD-NEXT:    ret
+; CHECK-SD-NEXT:  .LBB4_2:
+; CHECK-SD-NEXT:    mov w0, wzr
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: and_ugt_uge_slt:
@@ -264,16 +254,14 @@ define i32 @and_uge_slt_sle(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    cmp w2, w3
 ; CHECK-SD-NEXT:    ccmp w0, w1, #0, lt
-; CHECK-SD-NEXT:    b.hs .LBB5_3
-; CHECK-SD-NEXT:  // %bb.1: // %entry
-; CHECK-SD-NEXT:    cmp w4, w5
-; CHECK-SD-NEXT:    b.le .LBB5_3
-; CHECK-SD-NEXT:  // %bb.2:
-; CHECK-SD-NEXT:    mov w0, wzr
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB5_3: // %if
+; CHECK-SD-NEXT:    ccmp w4, w5, #4, lo
+; CHECK-SD-NEXT:    b.gt .LBB5_2
+; CHECK-SD-NEXT:  // %bb.1: // %if
 ; CHECK-SD-NEXT:    mov w0, #1 // =0x1
 ; CHECK-SD-NEXT:    str w0, [x6]
+; CHECK-SD-NEXT:    ret
+; CHECK-SD-NEXT:  .LBB5_2:
+; CHECK-SD-NEXT:    mov w0, wzr
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: and_uge_slt_sle:
@@ -315,16 +303,14 @@ define i32 @and_slt_sle_sgt(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    cmp w2, w3
 ; CHECK-SD-NEXT:    ccmp w0, w1, #0, le
-; CHECK-SD-NEXT:    b.lt .LBB6_3
-; CHECK-SD-NEXT:  // %bb.1: // %entry
-; CHECK-SD-NEXT:    cmp w4, w5
-; CHECK-SD-NEXT:    b.gt .LBB6_3
-; CHECK-SD-NEXT:  // %bb.2:
-; CHECK-SD-NEXT:    mov w0, wzr
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB6_3: // %if
+; CHECK-SD-NEXT:    ccmp w4, w5, #0, ge
+; CHECK-SD-NEXT:    b.le .LBB6_2
+; CHECK-SD-NEXT:  // %bb.1: // %if
 ; CHECK-SD-NEXT:    mov w0, #1 // =0x1
 ; CHECK-SD-NEXT:    str w0, [x6]
+; CHECK-SD-NEXT:    ret
+; CHECK-SD-NEXT:  .LBB6_2:
+; CHECK-SD-NEXT:    mov w0, wzr
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: and_slt_sle_sgt:
@@ -366,16 +352,14 @@ define i32 @and_sle_sgt_sge(i32 %s0, i32 %s1, i32 %s2, i32 %s3, i32 %s4, i32 %s5
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    cmp w2, w3
 ; CHECK-SD-NEXT:    ccmp w0, w1, #0, gt
-; CHECK-SD-NEXT:    b.le .LBB7_3
-; CHECK-SD-NEXT:  // %bb.1: // %entry
-; CHECK-SD-NEXT:    cmp w4, w5
-; CHECK-SD-NEXT:    b.ge .LBB7_3
-; CHECK-SD-NEXT:  // %bb.2:
-; CHECK-SD-NEXT:    mov w0, wzr
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:  .LBB7_3: // %if
+; CHECK-SD-NEXT:    ccmp w4, w5, #0, gt
+; CHECK-SD-NEXT:    b.lt .LBB7_2
+; CHECK-SD-NEXT:  // %bb.1: // %if
 ; CHECK-SD-NEXT:    mov w0, #1 // =0x1
 ; CHECK-SD-NEXT:    str w0, [x6]
+; CHECK-SD-NEXT:    ret
+; CHECK-SD-NEXT:  .LBB7_2:
+; CHECK-SD-NEXT:    mov w0, wzr
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: and_sle_sgt_sge:
