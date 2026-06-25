@@ -34,7 +34,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
     %10 = llvm.alloca %c1 x !llvm.array<5 x f32> {bindc_name = "x"} : (i64) -> !llvm.ptr<5>
     %11 = llvm.addrspacecast %10 : !llvm.ptr<5> to !llvm.ptr
     %74 = omp.map.info var_ptr(%11 : !llvm.ptr, !llvm.array<5 x f32>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "x"}
-    omp.target map_entries(%74 -> %arg0 : !llvm.ptr) {
+    omp.target kernel_type(spmd) map_entries(%74 -> %arg0 : !llvm.ptr) {
       %c1_2 = llvm.mlir.constant(1 : i32) : i32
       %c10 = llvm.mlir.constant(10 : i32) : i32
       omp.teams reduction(byref @add_reduction_byref_box_5xf32 %arg0 -> %arg2 : !llvm.ptr) {

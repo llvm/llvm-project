@@ -14,7 +14,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     %7 = omp.map.info var_ptr(%2 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "j"} loc(#loc3)
     %8 = omp.map.info var_ptr(%5 : !llvm.ptr, !llvm.array<16384 x i32>) map_clauses(implicit, tofrom) capture(ByRef) -> !llvm.ptr {name = "array"} loc(#loc3)
     %9 = omp.map.info var_ptr(%4 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "i"} loc(#loc3)
-    omp.target map_entries(%6 -> %arg0, %7 -> %arg2, %8 -> %arg4, %9 -> %arg5 : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) {
+    omp.target kernel_type(spmd) map_entries(%6 -> %arg0, %7 -> %arg2, %8 -> %arg4, %9 -> %arg5 : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) {
       %10 = llvm.mlir.constant(1 : i32) : i32
       %11 = llvm.mlir.constant(16384 : i32) : i32
       omp.teams {

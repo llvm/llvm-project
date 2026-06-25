@@ -48,7 +48,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
     %8 = llvm.getelementptr %5[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
     %9 = omp.map.info var_ptr(%5 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(implicit, tofrom) capture(ByRef) var_ptr_ptr(%8 : !llvm.ptr, f32) -> !llvm.ptr {name = ""}
     %10 = omp.map.info var_ptr(%5 : !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>) map_clauses(always, implicit, descriptor, to) capture(ByRef) members(%9 : [0] : !llvm.ptr) -> !llvm.ptr {name = "scalar_alloc"}
-    omp.target map_entries(%10 -> %arg0 : !llvm.ptr) {
+    omp.target kernel_type(spmd) map_entries(%10 -> %arg0 : !llvm.ptr) {
       %13 = llvm.mlir.constant(1000 : i32) : i32
       %14 = llvm.mlir.constant(1 : i32) : i32
       omp.parallel {
