@@ -53,12 +53,20 @@ public:
   const uint32_t *getDarwinCallPreservedMask(const MachineFunction &MF,
                                              CallingConv::ID) const;
 
+#if 0
   unsigned getCSRCost() const override {
     // The cost will be compared against BlockFrequency where entry has the
     // value of 1 << 14. A value of 5 will choose to spill or split really
     // cold path instead of using a callee-saved register.
     return 5;
   }
+#endif
+
+#if 1
+  unsigned getCSRCostScale(const MachineFunction &MF) const override {
+    return 30;
+  };
+#endif
   unsigned getCSRFirstUseCost(const MachineFunction &MF) const override {
     // The cost of 2 means push and pop for each CSR.
     return 2;
