@@ -26,9 +26,9 @@ def C1UltraModel : SchedMachineModel {
   let CompleteModel         =   1;
 
   list<Predicate> UnsupportedFeatures = !listconcat(SVE2p1Unsupported.F, SME2p1Unsupported.F,
-                                                    [HasSVEB16B16,
-                                                     HasCPA, HasMTE, HasCSSC,
-                                                     HasMOPS, HasMOPS_GO]);
+                                                    [HasSVEB16B16, HasCPA, HasMTE,
+                                                     HasCSSC, HasMOPS, HasMOPS_GO,
+                                                     HasSVEBFSCALE, HasFAMINMAX]);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2964,12 +2964,6 @@ def : InstRW<[C1UWrite_4c_1CMEMML0_2rc],
                         "^FMOP(AL|SL)_MPPZZ$",
                         "^(BFMOPA|BFMOPS)_MPPZZ(_H)?(_PSEUDO)?$")>;
 
-
-// Multi vector floating point absolute maximum. These are missing from the CME
-// SWOG but are present in the C1-Ultra SWOG as being sent to CME
-def : InstRW<[C1UWrite_4c_1CMEVXALU],
-             (instregex "^FA(MAX|MIN)_(ZZZ|ZPmZ|ZPZZ)")>;
-
 // ZA accumulators updated through multi-vector add/subtract operations.
 def : InstRW<[C1UWrite_2c_1CMEMML0_1rc],
              (instregex "^(ADD|SUB)_VG2_M2(Z|ZZ|Z2Z)_[SD](_PSEUDO)?$")>;
@@ -3056,13 +3050,11 @@ def : InstRW<[C1UWrite_2c_1CMEMML0_2rc],
 def : InstRW<[C1UWrite_4c_1CMEMML0_1rc],
              (instregex "^(FDOT|BFDOT|FMLA|FMLS|BFMLA|BFMLS)_VG2_M2(ZZI|ZZ|Z2Z)(_BtoH|_BtoS|_HtoS|_[HSD])?(_PSEUDO)?$",
                         "^(FMLAL|FMLSL|BFMLAL|BFMLSL)_VG2_M2(ZZI|ZZ|Z2Z)(_BtoH|_HtoS)?(_PSEUDO)?$",
-                        "^BFMUL_2(ZZ|Z2Z)$",
                         "^FMLALL_VG2_M2(ZZI|ZZ|Z2Z)_BtoS(_PSEUDO)?$",
                         "^(FVDOT|BFVDOT)_VG2_M2ZZI_(HtoS|BtoH)(_PSEUDO)?$")>;
 def : InstRW<[C1UWrite_4c_1CMEMML0_2rc],
              (instregex "^(FDOT|BFDOT|FMLA|FMLS|BFMLA|BFMLS)_VG4_M4(ZZI|ZZ|Z4Z)(_BtoH|_BtoS|_HtoS|_[HSD])?(_PSEUDO)?$",
                         "^(FMLAL|FMLSL|BFMLAL|BFMLSL)_VG4_M4(ZZI|ZZ|Z4Z)(_BtoH|_HtoS)?(_PSEUDO)?$",
-                        "^BFMUL_4(ZZ|Z4Z)$",
                         "^FMLALL_VG4_M4(ZZI|ZZ|Z4Z)_BtoS(_PSEUDO)?$",
                         "^FVDOT[BT]_VG4_M2ZZI_(BtoS|BtoH)(_PSEUDO)?$")>;
 def : InstRW<[C1UWrite_4c_1CMEMML0_3rc],
