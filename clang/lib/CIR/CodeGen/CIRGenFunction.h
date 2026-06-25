@@ -725,18 +725,16 @@ public:
   };
 
   /// IndirectBranch - The first time an indirect goto is seen we create a block
-  /// reserved for the indirect branch. Unlike before,the actual 'indirectbr'
-  /// is emitted at the end of the function, once all block destinations have
-  /// been resolved.
+  /// reserved for the indirect branch.  The actual `cir.indirect_br` is emitted
+  /// at the end of the function, once every label destination is known.
   mlir::Block *indirectGotoBlock = nullptr;
 
-  /// Labels whose address is taken in a constant context (e.g. a static
-  /// computed-goto dispatch table).  These have no function-local
-  /// BlockAddressOp, so they are tracked here and added as indirect-goto
-  /// branch successors in finishIndirectBranch.
-  llvm::SmallVector<cir::BlockAddrInfoAttr> constBlockAddressLabels;
+  /// Labels whose address is taken in this function (via `&&label`, as either
+  /// an operation or a constant initializer).  They are resolved to their
+  /// LabelOps and wired as `cir.indirect_br` successors in
+  /// finishIndirectBranch.
+  llvm::SmallVector<cir::BlockAddrInfoAttr> indirectGotoTargets;
 
-  void resolveBlockAddresses();
   void finishIndirectBranch();
 
   /// Perform the usual unary conversions on the specified expression and
@@ -1711,9 +1709,11 @@ public:
 
   void instantiateIndirectGotoBlock();
 
-  /// Record a label whose address is taken from a constant initializer and
-  /// ensure the indirect-goto block exists.
-  void takeAddressOfConstantLabel(cir::BlockAddrInfoAttr info);
+  /// Record a label whose address is taken (via `&&label`) as an indirect-goto
+  /// target.  The branch block itself is created lazily when an indirect goto
+  /// statement is emitted, and the targets are wired as its successors in
+  /// finishIndirectBranch.
+  void takeAddressOfLabel(cir::BlockAddrInfoAttr info);
 
   /// Emit a simple LLVM intrinsic that takes N scalar arguments.  The intrinsic
   /// name is used verbatim; any overload mangling (e.g. `.f32`, `.p1`) must be

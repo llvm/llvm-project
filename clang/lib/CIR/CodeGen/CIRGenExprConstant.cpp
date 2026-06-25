@@ -1523,16 +1523,15 @@ ConstantLValue
 ConstantLValueEmitter::VisitAddrLabelExpr(const AddrLabelExpr *e) {
   // A label address taken in a constant context, e.g. a static computed-goto
   // dispatch table `static const void *tbl[] = {&&L1, &&L2}`.  Besides emitting
-  // the constant, register the label as address-taken so the enclosing function
-  // gets an indirect-goto block with this label among its successors; otherwise
-  // a following `goto *tbl[i]` has no goto block to branch to.  A label is
+  // the constant, register the label as address-taken so a following
+  // `goto *tbl[i]` lists it among the indirect branch's successors.  A label is
   // always function-local, so cgf is set here.
   assert(emitter.cgf && "label address in a constant requires a function");
   CIRGenFunction &cgf = *const_cast<CIRGenFunction *>(emitter.cgf);
   auto func = cast<cir::FuncOp>(cgf.curFn);
   cir::BlockAddrInfoAttr info = cir::BlockAddrInfoAttr::get(
       &cgf.getMLIRContext(), func.getSymName(), e->getLabel()->getName());
-  cgf.takeAddressOfConstantLabel(info);
+  cgf.takeAddressOfLabel(info);
   return info;
 }
 

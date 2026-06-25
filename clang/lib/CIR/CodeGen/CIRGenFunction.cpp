@@ -604,59 +604,37 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
   }
 }
 
-void CIRGenFunction::resolveBlockAddresses() {
-  for (cir::BlockAddressOp &blockAddress : cgm.unresolvedBlockAddressToLabel) {
-    cir::LabelOp labelOp =
-        cgm.lookupBlockAddressInfo(blockAddress.getBlockAddrInfo());
-    assert(labelOp && "expected cir.labelOp to already be emitted");
-    cgm.updateResolvedBlockAddress(blockAddress, labelOp);
-  }
-  cgm.unresolvedBlockAddressToLabel.clear();
-}
-
 void CIRGenFunction::finishIndirectBranch() {
+  // The block is created on the first `goto *expr`, so if it is absent the
+  // function has no indirect goto and nothing needs wiring -- a label whose
+  // address is merely taken still emits its address constant on its own.
   if (!indirectGotoBlock)
     return;
-  llvm::SmallVector<mlir::Block *> succesors;
+
+  // Every label is emitted by now, so each address-taken label resolves to its
+  // LabelOp.  A label may appear more than once (a dispatch table can name it
+  // twice), and each occurrence is kept as a distinct successor to match
+  // classic codegen.
+  llvm::SmallVector<mlir::Block *> successors;
   llvm::SmallVector<mlir::ValueRange> rangeOperands;
+  for (cir::BlockAddrInfoAttr info : indirectGotoTargets) {
+    cir::LabelOp labelOp = cgm.lookupBlockAddressInfo(info);
+    assert(labelOp && "expected cir.label to be emitted for block address");
+    successors.push_back(labelOp->getBlock());
+    rangeOperands.push_back(labelOp->getBlock()->getArguments());
+  }
+
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPointToEnd(indirectGotoBlock);
-  for (auto &[blockAdd, labelOp] : cgm.blockAddressToLabel) {
-    succesors.push_back(labelOp->getBlock());
-    rangeOperands.push_back(labelOp->getBlock()->getArguments());
-  }
-  // Labels whose address was taken only from a constant initializer have no
-  // function-local BlockAddressOp; add them as successors here.  All labels
-  // are emitted by now, so the lookup resolves.  A label may appear more than
-  // once (a dispatch table can name it twice), and each occurrence is kept as
-  // a distinct successor to match classic codegen.
-  for (cir::BlockAddrInfoAttr info : constBlockAddressLabels) {
-    cir::LabelOp labelOp = cgm.lookupBlockAddressInfo(info);
-    assert(labelOp && "expected cir.label to be emitted for const block addr");
-    succesors.push_back(labelOp->getBlock());
-    rangeOperands.push_back(labelOp->getBlock()->getArguments());
-  }
   cir::IndirectBrOp::create(builder, builder.getUnknownLoc(),
                             indirectGotoBlock->getArgument(0), false,
-                            rangeOperands, succesors);
-  cgm.blockAddressToLabel.clear();
-  constBlockAddressLabels.clear();
+                            rangeOperands, successors);
+  indirectGotoTargets.clear();
 }
 
 void CIRGenFunction::finishFunction(SourceLocation endLoc) {
-  // Resolve block address-to-label mappings, then emit the indirect branch
-  // with the corresponding targets.
-  resolveBlockAddresses();
+  // Emit the indirect branch with all resolved label destinations.
   finishIndirectBranch();
-
-  // If a label address was taken but no indirect goto was used, we can't remove
-  // the block argument here. Instead, we mark the 'indirectbr' op
-  // as poison so that the cleanup can be deferred to lowering, since the
-  // verifier doesn't allow the 'indirectbr' target address to be null.
-  if (indirectGotoBlock && indirectGotoBlock->hasNoPredecessors()) {
-    auto indrBr = cast<cir::IndirectBrOp>(indirectGotoBlock->front());
-    indrBr.setPoison(true);
-  }
 
   // Pop any cleanups that might have been associated with the
   // parameters.  Do this in whatever block we're currently in; it's
@@ -1576,9 +1554,8 @@ void CIRGenFunction::instantiateIndirectGotoBlock() {
                           {builder.getUnknownLoc()});
 }
 
-void CIRGenFunction::takeAddressOfConstantLabel(cir::BlockAddrInfoAttr info) {
-  constBlockAddressLabels.push_back(info);
-  instantiateIndirectGotoBlock();
+void CIRGenFunction::takeAddressOfLabel(cir::BlockAddrInfoAttr info) {
+  indirectGotoTargets.push_back(info);
 }
 
 mlir::Value CIRGenFunction::emitAlignmentAssumption(
