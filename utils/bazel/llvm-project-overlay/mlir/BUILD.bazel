@@ -2137,6 +2137,7 @@ cc_library(
         ":IR",
         ":Pass",
         ":TransformUtils",
+        ":Transforms",
         ":VectorDialect",
     ],
 )
@@ -2361,6 +2362,7 @@ cc_library(
         ":MemRefDialect",
         ":Pass",
         ":TransformUtils",
+        ":Transforms",
         ":VectorDialect",
         "//llvm:Support",
     ],
@@ -4422,6 +4424,7 @@ cc_library(
         ":OpenACCToSCF",
         ":OpenMPToLLVM",
         ":PDLToPDLInterp",
+        ":RaiseWasmToMLIR",
         ":ReconcileUnrealizedCasts",
         ":SCFToControlFlow",
         ":SCFToEmitC",
@@ -8678,6 +8681,7 @@ cc_library(
         ":MathTransforms",
         ":Pass",
         ":TransformUtils",
+        ":Transforms",
         ":VectorDialect",
     ],
 )
@@ -8797,6 +8801,7 @@ cc_library(
         ":NVVMDialect",
         ":Pass",
         ":TransformUtils",
+        ":Transforms",
         ":VectorDialect",
         ":VectorUtils",
         "//llvm:Support",
@@ -11904,6 +11909,32 @@ cc_library(
 )
 
 cc_library(
+    name = "RaiseWasmToMLIR",
+    srcs = glob([
+        "lib/Conversion/RaiseWasm/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/RaiseWasm/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":ControlFlowDialect",
+        ":ConversionPassIncGen",
+        ":FuncDialect",
+        ":IR",
+        ":MathDialect",
+        ":MemRefDialect",
+        ":Pass",
+        ":TransformUtils",
+        ":Transforms",
+        ":VectorDialect",
+        ":WasmSSADialect",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "VectorToLLVM",
     srcs = glob([
         "lib/Conversion/VectorToLLVM/*.cpp",
@@ -13332,6 +13363,7 @@ cc_library(
         ":MathDialect",
         ":Pass",
         ":TransformUtils",
+        ":Transforms",
         ":VectorDialect",
         "//llvm:Support",
     ],
