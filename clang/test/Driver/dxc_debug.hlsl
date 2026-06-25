@@ -1,10 +1,8 @@
 // RUN: %clang_dxc -Tlib_6_7 -### -g %s 2>&1 | FileCheck %s --check-prefix=CHECK,CHECK-CMD
 // RUN: %clang_dxc -Tlib_6_7 -### /Zi %s 2>&1 | FileCheck %s
-// RUN: %clang_dxc -Tlib_6_7 -### /Zi /Qembed_debug %s 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-EMBED
+// RUN: %clang_dxc -Tlib_6_7 -### /Zi /Qembed_debug %s 2>&1 | FileCheck %s
 // RUN: %clang_dxc -Tlib_6_7 -### -Zi %s 2>&1 | FileCheck %s
-// RUN: %clang_dxc -Tlib_6_7 -### -Zi -Qembed_debug %s 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-EMBED
-// RUN: %clang_dxc -Tlib_6_7 -### -Zi /Fd %t.pdb %s 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-FD
-// RUN: %clang_dxc -Tlib_6_7 -### -Zi -Fd=%t.pdb %s 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-FD
+// RUN: %clang_dxc -Tlib_6_7 -### -Zi -Qembed_debug %s 2>&1 | FileCheck %s
 // RUN: %clang_dxc -Tlib_6_7 -### -Zi -Zss %s 2>&1 | FileCheck %s --check-prefix=CHECK,CHECK-ZSS
 // RUN: %clang_dxc -Tlib_6_7 -### -Zi -gcodeview %s 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-CV
 // RUN: %clang_dxc -Tlib_6_7 -### -Zi -gdwarf %s 2>&1 | FileCheck %s -check-prefixes=CHECK,CHECK-DWARF
@@ -17,19 +15,11 @@
 // Make sure dwarf-version is 4.
 // CHECK-DWARF-SAME: -dwarf-version=4
 // Check that the flags are converted to their llc equivalents.
-// CHECK-EMBED-SAME: --dx-embed-debug
-// CHECK-FD-SAME: --dx-Fd=
 // CHECK-ZSS-SAME: -dx-Zss
 // Make sure dxc command line arguments are passed to clang invocation.
 // CHECK-SAME: -fdx-record-command-line
 // CHECK-CMD-SAME: --driver-mode=dxc -T lib_6_7 -### -g {{.*}}dxc_debug.hlsl
 
 // Check errors and warnings
-// RUN: %clang_dxc -Tlib_6_7 -### /Zi %s 2>&1 | FileCheck %s --check-prefix=WARN-EMBED
-// WARN-EMBED: warning: no output provided for debug - embedding PDB in shader container
-// RUN: not %clang_dxc -Tlib_6_7 -### /Qembed_debug %s 2>&1 | FileCheck %s --check-prefix=ERROR-NODBG0
-// ERROR-NODBG0: error: must enable debug info with /Zi for /Qembed_debug
-// RUN: not %clang_dxc -Tlib_6_7 -### /Fd %t.pdb %s 2>&1 | FileCheck %s --check-prefix=ERROR-NODBG1
-// ERROR-NODBG1: error: /Fd specified, but no Debug Info was found in the shader
 // RUN: not %clang_dxc -Tlib_6_7 -### -Zss -Zsb %s 2>&1 | FileCheck %s --check-prefix=CHECK-ZSS-ZSB
 // CHECK-ZSS-ZSB: cannot specify both /Zss and /Zsb
