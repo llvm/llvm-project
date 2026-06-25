@@ -8,7 +8,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
   llvm.func @main(%arg0 : !llvm.ptr) {
     %x = llvm.load %arg0 : !llvm.ptr -> i32
     %0 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(to) capture(ByCopy) -> !llvm.ptr
-    omp.target host_eval(%x -> %lb, %x -> %ub, %x -> %step : i32, i32, i32) map_entries(%0 -> %ptr : !llvm.ptr) {
+    omp.target kernel_type(spmd) host_eval(%x -> %lb, %x -> %ub, %x -> %step : i32, i32, i32) map_entries(%0 -> %ptr : !llvm.ptr) {
       %x.map = llvm.load %ptr : !llvm.ptr -> i32
       omp.teams {
         omp.distribute {
@@ -60,7 +60,7 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui32>>, llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_device = true, omp.is_gpu = true} {
   llvm.func @main(%arg0 : !llvm.ptr) {
     %0 = omp.map.info var_ptr(%arg0 : !llvm.ptr, i32) map_clauses(to) capture(ByCopy) -> !llvm.ptr
-    omp.target map_entries(%0 -> %ptr : !llvm.ptr) {
+    omp.target kernel_type(generic) map_entries(%0 -> %ptr : !llvm.ptr) {
       %x = llvm.load %ptr : !llvm.ptr -> i32
       omp.teams {
         omp.distribute {

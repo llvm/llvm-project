@@ -22,17 +22,17 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
     omp.target_data map_entries(%12 : !llvm.ptr) {
       %13 = omp.map.info var_ptr(%10 : !llvm.ptr, !llvm.array<100 x i32>) map_clauses(from) capture(ByRef) bounds(%11) -> !llvm.ptr {name = "int_array"}
       %14 = omp.map.info var_ptr(%9 : !llvm.ptr, i32) map_clauses(implicit, exit_release_or_enter_alloc) capture(ByCopy) -> !llvm.ptr {name = "index_"}
-      omp.target map_entries(%13 -> %arg0, %14 -> %arg1 : !llvm.ptr, !llvm.ptr) {
-        %15 = llvm.mlir.constant(100 : i32) : i32
-        %16 = llvm.mlir.constant(1 : i32) : i32
+      %15 = llvm.mlir.constant(100 : i32) : i32
+      %16 = llvm.mlir.constant(1 : i32) : i32
+      omp.target kernel_type(spmd) host_eval(%15 -> %arg0, %16 -> %arg1 : i32, i32) map_entries(%13 -> %arg2, %14 -> %arg3 : !llvm.ptr, !llvm.ptr) {
         %17 = llvm.mlir.constant(100 : index) : i64
         omp.parallel {
           %18 = llvm.mlir.constant(1 : i64) : i64
           %19 = llvm.alloca %18 x i32 {pinned} : (i64) -> !llvm.ptr<5>
           %20 = llvm.addrspacecast %19 : !llvm.ptr<5> to !llvm.ptr
           omp.wsloop {
-            omp.loop_nest (%arg2) : i32 = (%16) to (%15) inclusive step (%16) {
-              llvm.store %arg2, %20 : i32, !llvm.ptr
+            omp.loop_nest (%arg4) : i32 = (%arg1) to (%arg0) inclusive step (%arg1) {
+              llvm.store %arg4, %20 : i32, !llvm.ptr
               %21 = llvm.load %20 : !llvm.ptr -> i32
               %22 = llvm.sext %21 : i32 to i64
               %23 = llvm.mlir.constant(1 : i64) : i64
@@ -42,7 +42,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
               %27 = llvm.mul %26, %23 overflow<nsw>  : i64
               %28 = llvm.add %27, %24 overflow<nsw>  : i64
               %29 = llvm.mul %23, %17 overflow<nsw>  : i64
-              %30 = llvm.getelementptr %arg0[%28] : (!llvm.ptr, i64) -> !llvm.ptr, i32
+              %30 = llvm.getelementptr %arg2[%28] : (!llvm.ptr, i64) -> !llvm.ptr, i32
               llvm.store %21, %30 : i32, !llvm.ptr
               omp.yield
             }
