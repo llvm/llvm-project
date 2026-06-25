@@ -192,6 +192,7 @@ function setup-ohos-hdc-env() {
     require-env-var OHOS_SYSROOT
 
     OHOS_TARGET_TRIPLE="${OHOS_TARGET_TRIPLE:=aarch64-linux-ohos}"
+    OHOS_LIBCXX_ABI_NAMESPACE="${OHOS_LIBCXX_ABI_NAMESPACE:=__h}"
     OHOS_EXECUTOR="${MONOREPO_ROOT}/libcxx/utils/ci/vendor/ohos/hdc_run.py"
     OHOS_LIT_PARAMS="executor=${OHOS_EXECUTOR};target_triple=${OHOS_TARGET_TRIPLE}"
 }
@@ -209,6 +210,7 @@ function generate-cmake-ohos-hdc() {
           -DCMAKE_C_COMPILER_TARGET="${OHOS_TARGET_TRIPLE}" \
           -DCMAKE_CXX_COMPILER_TARGET="${OHOS_TARGET_TRIPLE}" \
           -DCMAKE_ASM_COMPILER_TARGET="${OHOS_TARGET_TRIPLE}" \
+          -DLIBCXX_ABI_NAMESPACE="${OHOS_LIBCXX_ABI_NAMESPACE}" \
           -DLIBCXX_INCLUDE_BENCHMARKS=OFF \
           -DLIBCXX_TEST_CONFIG="llvm-libc++-ohos.cfg.in" \
           -DLIBCXXABI_TEST_CONFIG="llvm-libc++abi-ohos.cfg.in" \
