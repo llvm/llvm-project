@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Config/config.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/FileManager.h"
