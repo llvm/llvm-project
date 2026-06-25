@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -acc-bind-routine -split-input-file | FileCheck %s
+// RUN: mlir-opt %s --pass-pipeline='builtin.module(gpu.module(any(acc-bind-routine)), any(acc-bind-routine))' -split-input-file | FileCheck %s
 
 // Call to routine with bind is rewritten to the bound symbol inside
 // offload region.
