@@ -182,6 +182,46 @@ define <vscale x 2 x float> @binop(ptr %ptr, i32 zeroext %evl) {
   ret <vscale x 2 x float> %rev
 }
 
+define <vscale x 2 x float> @binop_2uses_1user(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: binop_2uses_1user:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a2, a1, 2
+; CHECK-NEXT:    add a0, a2, a0
+; CHECK-NEXT:    addi a0, a0, -4
+; CHECK-NEXT:    li a2, -4
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vlse32.v v8, (a0), a2
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfadd.vv v8, v8, v8
+; CHECK-NEXT:    ret
+  %load = call <vscale x 2 x float> @llvm.vp.load(ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  %fadd = fadd <vscale x 2 x float> %load, %load
+  %rev = call <vscale x 2 x float> @llvm.experimental.vp.reverse(<vscale x 2 x float> %fadd, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  ret <vscale x 2 x float> %rev
+}
+
+define <vscale x 2 x float> @binop_chain(ptr %ptr, i32 zeroext %evl) {
+; CHECK-LABEL: binop_chain:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slli a2, a1, 2
+; CHECK-NEXT:    add a2, a2, a0
+; CHECK-NEXT:    addi a2, a2, -4
+; CHECK-NEXT:    li a3, -4
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
+; CHECK-NEXT:    vlse32.v v8, (a2), a3
+; CHECK-NEXT:    lui a1, 260096
+; CHECK-NEXT:    fmv.w.x fa5, a1
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vfadd.vf v8, v8, fa5
+; CHECK-NEXT:    vs1r.v v8, (a0)
+; CHECK-NEXT:    ret
+  %load = call <vscale x 2 x float> @llvm.vp.load(ptr %ptr, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  %fadd = fadd <vscale x 2 x float> %load, splat (float 1.0)
+  %rev = call <vscale x 2 x float> @llvm.experimental.vp.reverse(<vscale x 2 x float> %fadd, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  store <vscale x 2 x float> %rev, ptr %ptr
+  ret <vscale x 2 x float> %rev
+}
+
 define <vscale x 2 x float> @binop_nested(ptr %ptr, i32 zeroext %evl) {
 ; CHECK-LABEL: binop_nested:
 ; CHECK:       # %bb.0:

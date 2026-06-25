@@ -19641,6 +19641,15 @@ static auto m_ReverseEVL = [](auto X, auto EVL) {
                  m_Node(ISD::EXPERIMENTAL_VP_REVERSE, X, m_Value(), EVL));
 };
 
+/// Returns true if there is one node that uses the SDValue \p X.
+static bool hasOneUser(SDValue X) {
+  auto Uses = make_filter_range(X->uses(), [&X](SDUse &U) {
+    return U.get() == X;
+  });
+  auto Users = map_range(Uses, [](SDUse &U) { return U.getUser(); });
+  return all_equal(Users);
+}
+
 static SDValue performReverseEVLCombine(SDNode *N, SelectionDAG &DAG,
                                         const RISCVSubtarget &Subtarget) {
   // Fold:
@@ -19662,13 +19671,14 @@ static SDValue performReverseEVLCombine(SDNode *N, SelectionDAG &DAG,
   SmallVector<VPLoadSDNode *> VPLoads;
   while (!Worklist.empty()) {
     SDValue X = Worklist.pop_back_val();
-    if (!X->hasOneUse())
+    if (!hasOneUser(X))
       return SDValue();
     if (auto *VPLoad = dyn_cast<VPLoadSDNode>(X))
       VPLoads.push_back(VPLoad);
     else if (DAG.isSplatValue(X))
       continue;
-    else if (DAG.getTargetLoweringInfo().isBinOp(X.getOpcode()))
+    else if (DAG.getTargetLoweringInfo().isBinOp(X.getOpcode()) &&
+             X->getNumValues() == 1)
       append_range(Worklist, X->op_values());
     else
       return SDValue();
@@ -19685,9 +19695,9 @@ static SDValue performReverseEVLCombine(SDNode *N, SelectionDAG &DAG,
 
     SDValue LoadMask = VPLoad->getMask();
     // If Mask is all ones, then load is unmasked and can be reversed.
-    if (isOneOrOneSplat(LoadMask))
+    if (isOneOrOneSplat(LoadMask)) {
       LoadMasks.push_back(LoadMask);
-    else {
+    } else {
       // If the mask is not all ones, we can reverse the load if the mask was
       // also reversed by a vp.reverse with the same EVL.
       SDValue OrigMask;
