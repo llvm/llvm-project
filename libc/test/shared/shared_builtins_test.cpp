@@ -15,7 +15,7 @@ TEST(LlvmLibcSharedBuiltinsTest, AllFloat) {
 }
 
 TEST(LlvmLibcSharedBuiltinsTest, AllDouble) {
-  // TODO: assertions for shared::*df3 builtins.
+  EXPECT_FP_EQ(3.0, LIBC_NAMESPACE::shared::adddf3(1.0, 2.0));
 }
 
 #ifdef LIBC_TYPES_HAS_FLOAT128
