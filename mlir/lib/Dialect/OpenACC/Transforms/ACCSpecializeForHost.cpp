@@ -344,6 +344,9 @@ public:
         populateACCOrphanToHostPatterns(patterns, accSupport);
       GreedyRewriteConfig config;
       config.setUseTopDownTraversal(true);
+      // Deeply nested orphan acc.loops can need more than the default
+      // iteration cap to converge; lift it to avoid spurious pass failure.
+      config.setMaxIterations(GreedyRewriteConfig::kNoLimit);
       if (failed(applyPatternsGreedily(funcOp, std::move(patterns), config)))
         signalPassFailure();
     }
