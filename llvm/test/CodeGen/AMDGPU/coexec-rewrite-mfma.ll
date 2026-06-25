@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -amdgpu-sched-strategy=coexec --enable-post-misched=0 %s -o - 2>&1 | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -amdgpu-sched-strategy=coexec --enable-post-misched=0 %s -o - 2>&1 | FileCheck %s
 
 ; The coexec scheduler strategy pushes RewriteMFMAForm into its pipeline so MFMA
 ; chains can be rewritten to the AGPR form when ArchVGPR pressure is excessive.
