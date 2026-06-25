@@ -5,14 +5,21 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+
+// REQUIRES: std-at-least-c++20
 
 // <span>
 
-// constexpr reference back() const noexcept;
-//   Expects: empty() is false.
-//   Effects: Equivalent to: return *(data() + (size() - 1));
+// constexpr reference back() const;
 //
+// Hardened preconditions:
+//   - empty() is false.
+//
+// Returns:
+//   - *(data() + (size() - 1)).
+//
+// Throws:
+//   - Nothing.
 
 #include <span>
 #include <cassert>
@@ -38,20 +45,19 @@ void testEmptySpan(Span sp) {
     auto res = sp.back();
 }
 
-struct A {};
 constexpr int iArr1[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 int iArr2[]           = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19};
 
 int main(int, char**) {
-  static_assert(testConstexprSpan(std::span<const int>(iArr1, 1)), "");
-  static_assert(testConstexprSpan(std::span<const int>(iArr1, 2)), "");
-  static_assert(testConstexprSpan(std::span<const int>(iArr1, 3)), "");
-  static_assert(testConstexprSpan(std::span<const int>(iArr1, 4)), "");
+  static_assert(testConstexprSpan(std::span<const int>(iArr1, 1)));
+  static_assert(testConstexprSpan(std::span<const int>(iArr1, 2)));
+  static_assert(testConstexprSpan(std::span<const int>(iArr1, 3)));
+  static_assert(testConstexprSpan(std::span<const int>(iArr1, 4)));
 
-  static_assert(testConstexprSpan(std::span<const int, 1>(iArr1, 1)), "");
-  static_assert(testConstexprSpan(std::span<const int, 2>(iArr1, 2)), "");
-  static_assert(testConstexprSpan(std::span<const int, 3>(iArr1, 3)), "");
-  static_assert(testConstexprSpan(std::span<const int, 4>(iArr1, 4)), "");
+  static_assert(testConstexprSpan(std::span<const int, 1>(iArr1, 1)));
+  static_assert(testConstexprSpan(std::span<const int, 2>(iArr1, 2)));
+  static_assert(testConstexprSpan(std::span<const int, 3>(iArr1, 3)));
+  static_assert(testConstexprSpan(std::span<const int, 4>(iArr1, 4)));
 
   testRuntimeSpan(std::span<int>(iArr2, 1));
   testRuntimeSpan(std::span<int>(iArr2, 2));

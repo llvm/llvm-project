@@ -397,6 +397,20 @@ struct CUDADeviceTy : public GenericDeviceTy {
       return Err;
     MaxBlockSharedMemSize = MaxSharedMem;
 
+    CUmemAllocationProp Prop = {};
+    Prop.type = CU_MEM_ALLOCATION_TYPE_PINNED;
+    Prop.location.type = CU_MEM_LOCATION_TYPE_DEVICE;
+    Prop.location.id = DeviceId;
+
+    Res = cuMemGetAllocationGranularity(&Granularity, &Prop,
+                                        CU_MEM_ALLOC_GRANULARITY_MINIMUM);
+    if (auto Err = Plugin::check(
+            Res, "error in cuMemGetAllocationGranularity for the device: %s"))
+      return Err;
+    if (Granularity == 0)
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "wrong device page size");
+
     return Plugin::success();
   }
 
@@ -586,7 +600,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate memory on the device or related to the device.
-  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind) override {
+  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind,
+                            size_t Alignment = 0) override {
     if (Size == 0)
       return nullptr;
 
@@ -596,6 +611,13 @@ struct CUDADeviceTy : public GenericDeviceTy {
     void *MemAlloc = nullptr;
     CUdeviceptr DevicePtr;
     CUresult Res;
+
+    if (Alignment > 0 && Alignment > Granularity) {
+      return Plugin::error(ErrorCode::UNSUPPORTED,
+                           "requested alignment (%lu) larger than maximum "
+                           "supported alignment (%lu)",
+                           Alignment, Granularity);
+    }
 
     switch (Kind) {
     case TARGET_ALLOC_DEFAULT:
@@ -614,6 +636,19 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     if (auto Err = Plugin::check(Res, "error in cuMemAlloc[Host|Managed]: %s"))
       return std::move(Err);
+
+    if (Alignment > 0 && !isAddrAligned(Align(Alignment), MemAlloc)) {
+      if (auto FreeErr = free(MemAlloc, Kind)) {
+        return Plugin::error(ErrorCode::UNKNOWN,
+                             "Failure in deallcation of the incorrectly "
+                             "aligned pointer; requested alignemnt: %lu",
+                             Alignment);
+      }
+
+      return Plugin::error(ErrorCode::UNSUPPORTED,
+                           "unsupported alignment size");
+    }
+
     return MemAlloc;
   }
 
@@ -1459,6 +1494,9 @@ private:
   /// The maximum number of warps that can be resident on all the SMs
   /// simultaneously.
   uint32_t HardwareParallelism = 0;
+
+  /// Device page size.
+  size_t Granularity = 0;
 
   /// Tracker for virtual address reservations.
   VMemTrackerTy<CUmemGenericAllocationHandle> VMemTracker;

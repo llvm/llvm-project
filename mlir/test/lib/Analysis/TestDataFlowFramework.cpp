@@ -239,7 +239,9 @@ void FooAnalysis::visitOperation(Operation *op) {
 
   // Modify the state with the attribute, if specified.
   if (auto attr = op->getAttrOfType<IntegerAttr>(kFooAttrName)) {
-    uint64_t value = attr.getUInt();
+    uint64_t value = attr.getType().isUnsignedInteger()
+                         ? attr.getUInt()
+                         : static_cast<uint64_t>(attr.getInt());
     result |= state->join(value);
   }
   propagateIfChanged(state, result);

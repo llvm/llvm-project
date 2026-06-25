@@ -62,6 +62,11 @@ public:
     return &Bogus[0];
   }
 
+  const TargetRegisterClass *
+  getMinimalPhysRegClass(MCRegister Reg) const override {
+    return nullptr;
+  }
+
   Register getFrameRegister(const MachineFunction &MF) const override {
     return 0;
   }
@@ -95,6 +100,16 @@ public:
   const TargetInstrInfo *getInstrInfo() const override { return &TII; }
 
   const TargetRegisterInfo *getRegisterInfo() const override { return &TRI; }
+
+  const FeatureBitset &getInlineIgnoreFeatures() const override {
+    static constexpr FeatureBitset Features;
+    return Features;
+  }
+
+  const FeatureBitset &getInlineInverseFeatures() const override {
+    static constexpr FeatureBitset Features;
+    return Features;
+  }
 
 private:
   BogusFrameLowering FL;

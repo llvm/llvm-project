@@ -174,6 +174,8 @@ bool Context::evaluateDestruction(State &Parent, const VarDecl *VD,
     return false;
   }
 
+  assert(Stk.empty());
+
   return true;
 }
 

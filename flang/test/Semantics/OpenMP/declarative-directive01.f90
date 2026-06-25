@@ -6,6 +6,7 @@
 
 subroutine requires_1(a)
   real(8), intent(inout) :: a
+  !WARNING: REVERSE_OFFLOAD clause is not supported and will be ignored
   !$omp requires reverse_offload, unified_shared_memory, atomic_default_mem_order(relaxed)
   a = a + 0.01
 end subroutine requires_1
@@ -37,7 +38,7 @@ end module m1
 subroutine declare_simd_2
   use m1
   procedure (sub) sub1
-  !ERROR: NOTINBRANCH and INBRANCH clauses are mutually exclusive and may not appear on the same DECLARE SIMD directive
+  !ERROR: INBRANCH and NOTINBRANCH clauses are mutually exclusive and may not appear on the same DECLARE SIMD directive
   !$omp declare simd(sub1) inbranch notinbranch
   procedure (sub), pointer::p
   p=>sub1

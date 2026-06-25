@@ -8,6 +8,7 @@
 
 #include "DynamicLoaderWindowsDYLD.h"
 
+#include "MSVCRTCFrameRecognizer.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -137,6 +138,8 @@ void DynamicLoaderWindowsDYLD::DidAttach() {
   Log *log = GetLog(LLDBLog::DynamicLoader);
   LLDB_LOGF(log, "DynamicLoaderWindowsDYLD::%s()", __FUNCTION__);
 
+  RegisterMSVCRTCFrameRecognizer(m_process->GetTarget());
+
   ModuleSP executable = GetTargetExecutable();
 
   if (!executable)
@@ -166,6 +169,8 @@ void DynamicLoaderWindowsDYLD::DidAttach() {
 void DynamicLoaderWindowsDYLD::DidLaunch() {
   Log *log = GetLog(LLDBLog::DynamicLoader);
   LLDB_LOGF(log, "DynamicLoaderWindowsDYLD::%s()", __FUNCTION__);
+
+  RegisterMSVCRTCFrameRecognizer(m_process->GetTarget());
 
   ModuleSP executable = GetTargetExecutable();
   if (!executable)

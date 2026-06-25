@@ -15,6 +15,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.fenv
     libc.include.float
     libc.include.inttypes
+    libc.include.libgen
     libc.include.limits
     libc.include.link
     libc.include.locale
@@ -49,6 +50,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_random
     libc.include.sys_resource
     libc.include.sys_select
+    libc.include.sys_sendfile
     libc.include.sys_socket
     libc.include.sys_stat
     libc.include.sys_statvfs
@@ -71,5 +73,8 @@ set(TARGET_PUBLIC_HEADERS
 )
 
 if(LLVM_LIBC_FULL_BUILD AND LLVM_LIBC_ENABLE_EXPERIMENTAL_ENTRYPOINTS)
-  list(APPEND TARGET_PUBLIC_HEADERS libc.include.regex)
+  list(APPEND TARGET_PUBLIC_HEADERS
+    libc.include.regex
+    libc.include.sys_ptrace
+  )
 endif()

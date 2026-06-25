@@ -958,12 +958,6 @@ int Address::CompareModulePointerAndOffset(const Address &a, const Address &b) {
   return 0;
 }
 
-size_t Address::MemorySize() const {
-  // Noting special for the memory size of a single Address object, it is just
-  // the size of itself.
-  return sizeof(Address);
-}
-
 // NOTE: Be careful using this operator. It can correctly compare two
 // addresses from the same Module correctly. It can't compare two addresses
 // from different modules in any meaningful way, but it will compare the module
