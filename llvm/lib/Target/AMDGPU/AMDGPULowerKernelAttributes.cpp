@@ -134,7 +134,6 @@ static bool annotateGridDimsLoadWithRangeMD(LoadInst *Load) {
   return true;
 }
 
-/// Compute the number of grid dimensions based on !reqd_work_group_size
 static bool processUse(CallInst *CI, bool IsV5OrAbove) {
   Function *F = CI->getFunction();
 
