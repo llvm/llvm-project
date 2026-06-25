@@ -1579,14 +1579,14 @@ void DevirtModule::applyICallBranchFunnel(VTableSlotInfo &SlotInfo,
         auto &F = *CB.getCaller();
         auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
         auto EC = BFI.getBlockFreq(&F.getEntryBlock());
-        auto CC = F.getEntryCount(/*AllowSynthetic=*/true);
+        auto CC = F.getEntryCount();
         double CallCount = 0.0;
-        if (EC.getFrequency() != 0 && CC && CC->getCount() != 0) {
+        if (EC.getFrequency() != 0 && CC && *CC != 0) {
           double CallFreq =
               static_cast<double>(
                   BFI.getBlockFreq(CB.getParent()).getFrequency()) /
               EC.getFrequency();
-          CallCount = CallFreq * CC->getCount();
+          CallCount = CallFreq * *CC;
         }
         FunctionEntryCounts[&JT] += CallCount;
       }
@@ -1629,7 +1629,7 @@ void DevirtModule::applyICallBranchFunnel(VTableSlotInfo &SlotInfo,
   for (auto &P : SlotInfo.ConstCSInfo)
     Apply(P.second);
   for (auto &[F, C] : FunctionEntryCounts) {
-    assert(!F->getEntryCount(/*AllowSynthetic=*/true) &&
+    assert(!F->getEntryCount() &&
            "Unexpected entry count for funnel that was freshly synthesized");
     F->setEntryCount(static_cast<uint64_t>(std::round(C)));
   }

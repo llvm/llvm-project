@@ -197,24 +197,24 @@ TEST_F(VPInstructionTest, setOperand) {
   VPInstruction *I1 =
       new VPInstruction(Instruction::Add, {VPV1, VPV2},
                         VPIRFlags::getDefaultFlags(Instruction::Add));
-  EXPECT_EQ(1u, VPV1->getNumUsers());
+  EXPECT_TRUE(VPV1->hasOneUse());
   EXPECT_EQ(I1, *VPV1->user_begin());
-  EXPECT_EQ(1u, VPV2->getNumUsers());
+  EXPECT_TRUE(VPV2->hasOneUse());
   EXPECT_EQ(I1, *VPV2->user_begin());
 
   // Replace operand 0 (VPV1) with VPV3.
   VPValue *VPV3 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 3));
   I1->setOperand(0, VPV3);
-  EXPECT_EQ(0u, VPV1->getNumUsers());
-  EXPECT_EQ(1u, VPV2->getNumUsers());
+  EXPECT_TRUE(VPV1->user_empty());
+  EXPECT_TRUE(VPV2->hasOneUse());
   EXPECT_EQ(I1, *VPV2->user_begin());
-  EXPECT_EQ(1u, VPV3->getNumUsers());
+  EXPECT_TRUE(VPV3->hasOneUse());
   EXPECT_EQ(I1, *VPV3->user_begin());
 
   // Replace operand 1 (VPV2) with VPV3.
   I1->setOperand(1, VPV3);
-  EXPECT_EQ(0u, VPV1->getNumUsers());
-  EXPECT_EQ(0u, VPV2->getNumUsers());
+  EXPECT_TRUE(VPV1->user_empty());
+  EXPECT_TRUE(VPV2->user_empty());
   EXPECT_EQ(2u, VPV3->getNumUsers());
   EXPECT_EQ(I1, *VPV3->user_begin());
   EXPECT_EQ(I1, *std::next(VPV3->user_begin()));
@@ -222,13 +222,13 @@ TEST_F(VPInstructionTest, setOperand) {
   // Replace operand 0 (VPV3) with VPV4.
   VPValue *VPV4 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 4));
   I1->setOperand(0, VPV4);
-  EXPECT_EQ(1u, VPV3->getNumUsers());
+  EXPECT_TRUE(VPV3->hasOneUse());
   EXPECT_EQ(I1, *VPV3->user_begin());
   EXPECT_EQ(I1, *VPV4->user_begin());
 
   // Replace operand 1 (VPV3) with VPV4.
   I1->setOperand(1, VPV4);
-  EXPECT_EQ(0u, VPV3->getNumUsers());
+  EXPECT_TRUE(VPV3->user_empty());
   EXPECT_EQ(I1, *VPV4->user_begin());
   EXPECT_EQ(I1, *std::next(VPV4->user_begin()));
 
@@ -248,18 +248,18 @@ TEST_F(VPInstructionTest, replaceAllUsesWith) {
   VPV1->replaceAllUsesWith(VPV3);
   EXPECT_EQ(VPV3, I1->getOperand(0));
   EXPECT_EQ(VPV2, I1->getOperand(1));
-  EXPECT_EQ(0u, VPV1->getNumUsers());
-  EXPECT_EQ(1u, VPV2->getNumUsers());
+  EXPECT_TRUE(VPV1->user_empty());
+  EXPECT_TRUE(VPV2->hasOneUse());
   EXPECT_EQ(I1, *VPV2->user_begin());
-  EXPECT_EQ(1u, VPV3->getNumUsers());
+  EXPECT_TRUE(VPV3->hasOneUse());
   EXPECT_EQ(I1, *VPV3->user_begin());
 
   // Replace all uses of VPV2 with VPV3.
   VPV2->replaceAllUsesWith(VPV3);
   EXPECT_EQ(VPV3, I1->getOperand(0));
   EXPECT_EQ(VPV3, I1->getOperand(1));
-  EXPECT_EQ(0u, VPV1->getNumUsers());
-  EXPECT_EQ(0u, VPV2->getNumUsers());
+  EXPECT_TRUE(VPV1->user_empty());
+  EXPECT_TRUE(VPV2->user_empty());
   EXPECT_EQ(2u, VPV3->getNumUsers());
   EXPECT_EQ(I1, *VPV3->user_begin());
 
@@ -269,8 +269,8 @@ TEST_F(VPInstructionTest, replaceAllUsesWith) {
   EXPECT_EQ(VPV1, I1->getOperand(1));
   EXPECT_EQ(2u, VPV1->getNumUsers());
   EXPECT_EQ(I1, *VPV1->user_begin());
-  EXPECT_EQ(0u, VPV2->getNumUsers());
-  EXPECT_EQ(0u, VPV3->getNumUsers());
+  EXPECT_TRUE(VPV2->user_empty());
+  EXPECT_TRUE(VPV3->user_empty());
 
   VPInstruction *I2 =
       new VPInstruction(Instruction::Add, {VPV1, VPV2},
@@ -291,15 +291,15 @@ TEST_F(VPInstructionTest, releaseOperandsAtDeletion) {
       new VPInstruction(Instruction::Add, {VPV1, VPV2},
                         VPIRFlags::getDefaultFlags(Instruction::Add));
 
-  EXPECT_EQ(1u, VPV1->getNumUsers());
+  EXPECT_TRUE(VPV1->hasOneUse());
   EXPECT_EQ(I1, *VPV1->user_begin());
-  EXPECT_EQ(1u, VPV2->getNumUsers());
+  EXPECT_TRUE(VPV2->hasOneUse());
   EXPECT_EQ(I1, *VPV2->user_begin());
 
   delete I1;
 
-  EXPECT_EQ(0u, VPV1->getNumUsers());
-  EXPECT_EQ(0u, VPV2->getNumUsers());
+  EXPECT_TRUE(VPV1->user_empty());
+  EXPECT_TRUE(VPV2->user_empty());
 }
 
 using VPBasicBlockTest = VPlanTestBase;

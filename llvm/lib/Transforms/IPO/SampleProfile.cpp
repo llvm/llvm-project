@@ -93,7 +93,6 @@
 using namespace llvm;
 using namespace sampleprof;
 using namespace llvm::sampleprofutil;
-using ProfileCount = Function::ProfileCount;
 #define DEBUG_TYPE "sample-profile"
 #define CSINLINE_DEBUG DEBUG_TYPE "-inline"
 
@@ -2291,7 +2290,7 @@ bool SampleProfileLoader::runOnFunction(Function &F,
   // Initialize entry count when the function has no existing entry
   // count value.
   if (!F.getEntryCount())
-    F.setEntryCount(ProfileCount(initialEntryCount, Function::PCT_Real));
+    F.setEntryCount(initialEntryCount);
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(*F.getParent())
                   .getManager();
   ORE = &FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);

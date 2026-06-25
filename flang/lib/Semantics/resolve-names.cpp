@@ -1738,6 +1738,7 @@ public:
     return Pre(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
 
+  bool Pre(const parser::OmpReservedIdentifier &);
   void Post(const parser::OmpTypeName &);
   bool Pre(const parser::OmpStylizedDeclaration &);
   void Post(const parser::OmpStylizedDeclaration &);
@@ -1936,6 +1937,17 @@ void OmpVisitor::PushScopeWithSource(
     Scope::Kind kind, parser::CharBlock source, Symbol *symbol) {
   PushScope(kind, symbol);
   currScope().AddSourceRange(source);
+}
+
+bool OmpVisitor::Pre(const parser::OmpReservedIdentifier &x) {
+  // Create a unique symbol in the global scope.
+  if (auto *symbol{context().globalScope().FindSymbol(x.v.source)}) {
+    x.v.symbol = symbol;
+  } else {
+    MakePlaceholder(x.v, MiscDetails::Kind::None);
+  }
+  x.v.symbol->set(Symbol::Flag::OmpReserved);
+  return false;
 }
 
 void OmpVisitor::Post(const parser::OmpTypeName &x) {
@@ -2205,7 +2217,7 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
               Walk(std::get<0>(names.t));
               Walk(std::get<1>(names.t));
             },
-            [&](const parser::OmpLocator &locator) {
+            [&](const parser::OmpObject &object) {
               // Manually resolve names in CRITICAL directives. This is because
               // these names do not denote Fortran objects, and the CRITICAL
               // directive causes them to be "auto-declared", i.e. inserted into
@@ -2215,7 +2227,7 @@ bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
               if (x.DirId() == llvm::omp::Directive::OMPD_critical) {
                 ResolveCriticalName(arg);
               } else {
-                Walk(locator);
+                Walk(object);
               }
             },
         },
@@ -4531,38 +4543,6 @@ Scope *ModuleVisitor::FindModule(const parser::Name &name,
   return scope;
 }
 
-// Map a mangled declare reduction name (e.g., op.+, op.max, op..myop.) back
-// to the Fortran identifier that controls its accessibility in a module scope.
-// Intrinsic operators map to "operator(+)" etc., named functions to "max" etc.,
-// and defined operators to "operator(.myop.)" etc.
-static std::string GetReductionIdentifierName(const SourceName &mangledName) {
-  llvm::StringRef name{mangledName.begin(), mangledName.size()};
-  if (!name.starts_with("op.")) {
-    return {};
-  }
-  llvm::StringRef suffix{name.drop_front(3)};
-  // Intrinsic arithmetic operators: op.+ → operator(+)
-  if (suffix == "+" || suffix == "-" || suffix == "*") {
-    return ("operator(" + suffix + ")").str();
-  }
-  // Intrinsic logical operators (mangled uppercase, scope uses lowercase)
-  llvm::StringRef logicalOp{llvm::StringSwitch<llvm::StringRef>(suffix)
-          .Case("AND", ".and.")
-          .Case("OR", ".or.")
-          .Case("EQV", ".eqv.")
-          .Case("NEQV", ".neqv.")
-          .Default("")};
-  if (!logicalOp.empty()) {
-    return ("operator(" + logicalOp + ")").str();
-  }
-  // Defined operators: op..myop. → operator(.myop.)
-  if (suffix.size() > 2 && suffix.front() == '.' && suffix.back() == '.') {
-    return ("operator(" + suffix + ")").str();
-  }
-  // Named functions: op.max → max
-  return suffix.str();
-}
-
 void ModuleVisitor::ApplyDefaultAccess() {
   const auto *moduleDetails{
       DEREF(currScope().symbol()).detailsIf<ModuleDetails>()};
@@ -4589,7 +4569,7 @@ void ModuleVisitor::ApplyDefaultAccess() {
         // a module has accessibility as if it were declared as a module entity.
         // If the corresponding operator/procedure has explicit accessibility,
         // the reduction inherits it.
-        std::string opName{GetReductionIdentifierName(symbol.name())};
+        std::string opName{GetReductionFortranId(symbol.name())};
         if (!opName.empty()) {
           if (auto *opSym{FindInScope(currScope(), SourceName{opName})}) {
             if (opSym->attrs().test(Attr::PUBLIC)) {
@@ -10397,10 +10377,11 @@ void ResolveNamesVisitor::FinishSpecificationPart(
     }
 
     if (auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
-      if (IsAllocatable(symbol) && !object->cudaDataAttr()) {
-        // Implicitly treat allocatable arrays as managed when feature is
-        // enabled. This is done after all explicit CUDA attributes have been
-        // processed. Only applies when CUDA Fortran is enabled; otherwise
+      if ((IsAllocatable(symbol) || IsPointer(symbol)) &&
+          !object->cudaDataAttr()) {
+        // Implicitly treat allocatable/pointer arrays as managed when feature
+        // is enabled. This is done after all explicit CUDA attributes have
+        // been processed. Only applies when CUDA Fortran is enabled; otherwise
         // -gpu=mem:managed on a non-CUDA-Fortran translation unit (e.g. pure
         // OpenACC) would incorrectly route every allocatable through the CUDA
         // Fortran managed descriptor pipeline.
@@ -10411,8 +10392,9 @@ void ResolveNamesVisitor::FinishSpecificationPart(
           object->set_cudaDataAttr(common::CUDADataAttr::Managed);
         // Implicitly treat allocatable arrays as pinned when feature is
         // enabled.
-        else if (context().languageFeatures().IsEnabled(
-                     common::LanguageFeature::CudaPinned))
+        else if (IsAllocatable(symbol) &&
+            context().languageFeatures().IsEnabled(
+                common::LanguageFeature::CudaPinned))
           object->set_cudaDataAttr(common::CUDADataAttr::Pinned);
       }
     }
