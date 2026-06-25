@@ -114,19 +114,19 @@ getEncodingNameFromFileTag(const Twine &FileName, const int FD = -1) {
 
   __ccsid_t Tag = *TagOrErr;
   if (Tag == 0)
-    return {}; // Return empty string for no tag
+    return SmallString<32>(); // Return empty string for no tag
 
   if (Tag == 1208)
-    return {"utf-8"};
+    return SmallString<32>("utf-8");
 
   if (Tag == 1047)
-    return {"ibm-1047"};
+    return SmallString<32>("ibm-1047");
 
   SmallString<32> Result;
   raw_svector_ostream(Result) << Tag;
   return Result;
 #else
-  return {}; // Return empty string for non-MVS platforms
+  return SmallString<32>(); // Return empty string for non-MVS platforms
 #endif
 }
 
