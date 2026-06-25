@@ -20,6 +20,12 @@ struct IntType {
   constexpr operator signed char() const noexcept { return static_cast<signed char>(val); }
 };
 
+struct RValueInt {
+  int val;
+  constexpr RValueInt(int v) : val(v) {}
+  constexpr operator int() && noexcept { return val; }
+};
+
 // only non-const convertible
 struct IntTypeNC {
   int val;

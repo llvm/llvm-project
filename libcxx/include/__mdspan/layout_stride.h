@@ -31,6 +31,7 @@
 #include <__type_traits/is_same.h>
 #include <__utility/as_const.h>
 #include <__utility/integer_sequence.h>
+#include <__utility/move.h>
 #include <__utility/swap.h>
 #include <array>
 #include <limits>
@@ -283,16 +284,18 @@ public:
   template <class... _Indices>
     requires((sizeof...(_Indices) == __rank_) && (is_convertible_v<_Indices, index_type> && ...) &&
              (is_nothrow_constructible_v<index_type, _Indices> && ...))
-  _LIBCPP_HIDE_FROM_ABI constexpr index_type operator()(_Indices... __idx) const noexcept {
-    // Mappings are generally meant to be used for accessing allocations and are meant to guarantee to never
-    // return a value exceeding required_span_size(), which is used to know how large an allocation one needs
-    // Thus, this is a canonical point in multi-dimensional data structures to make invalid element access checks
-    // However, mdspan does check this on its own, so for now we avoid double checking in hardened mode
-    _LIBCPP_ASSERT_UNCATEGORIZED(__mdspan_detail::__is_multidimensional_index_in(__extents_, __idx...),
-                                 "layout_stride::mapping: out of bounds indexing");
-    return [&]<size_t... _Pos>(index_sequence<_Pos...>) {
-      return ((static_cast<index_type>(__idx) * __strides_[_Pos]) + ... + index_type(0));
-    }(make_index_sequence<sizeof...(_Indices)>());
+  _LIBCPP_HIDE_FROM_ABI constexpr index_type operator()(_Indices... __i) const noexcept {
+    return [&]<class... _IndexTypes>(_IndexTypes... __idxs) {
+      // Mappings are generally meant to be used for accessing allocations and are meant to guarantee to never
+      // return a value exceeding required_span_size(), which is used to know how large an allocation one needs
+      // Thus, this is a canonical point in multi-dimensional data structures to make invalid element access checks
+      // However, mdspan does check this on its own, so for now we avoid double checking in hardened mode
+      _LIBCPP_ASSERT_UNCATEGORIZED(__mdspan_detail::__is_multidimensional_index_in(__extents_, __idxs...),
+                                   "layout_stride::mapping: out of bounds indexing");
+      return [&]<size_t... _Pos>(index_sequence<_Pos...>) {
+        return ((static_cast<index_type>(__idxs) * __strides_[_Pos]) + ... + index_type(0));
+      }(make_index_sequence<sizeof...(_Indices)>());
+    }(extents_type::__index_cast(std::move(__i))...);
   }
 
   _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_unique() noexcept { return true; }
