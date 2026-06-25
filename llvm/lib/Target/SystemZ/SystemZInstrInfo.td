@@ -530,6 +530,9 @@ let hasNoSchedulingInfo = 1, hasSideEffects = 1, mayLoad = 1 in {
   // Load the address of a global variable holding the stack guard.
   def LOAD_GLOBAL_STACKGUARD_ADDR : Pseudo<(outs ADDR64:$grdaddr),
                                                (ins), []>;
+  // Load the address of Library Anchor Area (LAA) on z/OS
+  def LOAD_LIBRARY_ANCHOR_AREA_ADDR : Pseudo<(outs ADDR64:$grdaddr),
+                                             (ins), []>;
 
   let mayStore = 1 in {
     // Move the stack guard to the stack.
