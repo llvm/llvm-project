@@ -384,7 +384,7 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
 
     ExplodedNode *CEENode = Engine.makeNode(Loc, CEEState, N);
     if (!CEENode)
-      return;
+      continue;
 
     // Step 5: Perform the post-condition check of the CallExpr and enqueue the
     // result onto the work list.
