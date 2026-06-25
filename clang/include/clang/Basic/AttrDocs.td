@@ -9172,6 +9172,33 @@ point."
 }];
 }
 
+def AnnotateDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The `annotate` attribute is used to add annotations to declarations or statements,
+typically for use by static analysis tools that are not integrated into the
+core Clang compiler (e.g., Clang-Tidy checks or out-of-tree Clang-based tools).
+It is a counterpart to the `annotate_type` attribute, which serves the same
+purpose, but for types.
+
+The attribute takes a mandatory string literal argument specifying the
+annotation category and an arbitrary number of optional arguments that provide
+additional information specific to the annotation category. The optional
+arguments must be constant expressions of arbitrary type.
+
+For example:
+
+.. code-block:: c++
+
+  [[clang::annotate("category1", "foo", 1)]] void func(int val [[clang::annotate("category2")]]) {
+    [[clang::annotate("category3")]] if (val) {
+
+    }
+  }
+
+  }];
+}
+
 def AnnotateTypeDocs : Documentation {
   let Category = DocCatType;
   let Heading = "annotate_type";
@@ -10173,7 +10200,7 @@ call. The attribute accepts two optional arguments: the first argument is the
 position of the expected sentinel value, starting from the last parameter. The
 second argument describes whether the last fixed parameter is treated as a
 valid sentinel value when set to '1'.
-All arguments described above defaults to '0' when elided.
+All arguments described above default to '0' when elided.
 The attribute is also supported with blocks and in Objective-C.
 
 .. code-block:: c
@@ -10187,7 +10214,7 @@ The attribute is also supported with blocks and in Objective-C.
     foo("Another", "example", NULL);
     foo("Missing", "sentinel"); // Not OK
 
-    bar(1, 2, NULL, 3);         // OK: sentinel value at the 2nd to last positon
+    bar(1, 2, NULL, 3);         // OK: sentinel value at the 2nd to last position
     bar(1, 2, 3, nullptr, 4);   // OK: `nullptr` is valid in C23
     bar(1, 2, 3, 4, NULL);      // Not OK
 

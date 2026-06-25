@@ -255,8 +255,18 @@ Makes programs 10x faster by doing Special New Thing.
 * Adds experimental assembler support for batched dot-product extensions(Zvqwbdota8i, Zvqwbdota16i, Zvfwbdota16bf, Zvfqwbdota8f and Zvfbdota32f).
 * Adds experimental assembler support for dot-product extensions(Zvqwdota8i, Zvqwdota16i, Zvfwdota16bf and Zvfqwdota8f).
 * `-mtune=generic` now uses the scheduling model from SpacemiT X60 instead of an empty scheduling model.
+* The Xqcilo pseudos now emit sequences that can be relaxed.
 
 ### Changes to the WebAssembly Backend
+
+* WebAssembly reference types are now represented in LLVM IR as the target
+  extension types `target("wasm.externref")` and `target("wasm.funcref")`,
+  rather than as pointers in address spaces 10 and 20 (`ptr addrspace(10)` /
+  `ptr addrspace(20)`).
+* As a consequence of the representation change, reference types are no longer
+  treated as vectorizable pointers. This fixes a crash in the SLP vectorizer,
+  which previously would attempt to gather `externref`/`funcref` values into a
+  vector and then crash.
 
 ### Changes to the Windows Target
 
