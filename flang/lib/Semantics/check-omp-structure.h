@@ -264,9 +264,8 @@ private:
   void AnalyzeObject(const parser::OmpObject &object);
   std::pair<const parser::OmpClause *, const parser::OmpClause *>
   FindMutuallyExclusiveClauses(
-      OmpClauseSet exclusive, const parser::OmpClauseList &clauses);
-  void CheckExclusiveClauses(
-      OmpClauseSet exclusive, const parser::OmpDirectiveSpecification &spec);
+      OmpClauseSet exclusive,
+      const std::vector<const parser::OmpClause *> &clauses);
 
   const parser::OpenMPConstruct *GetCurrentConstruct() const;
   void CheckSourceLabel(const parser::Label &);

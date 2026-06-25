@@ -888,42 +888,26 @@ void OmpStructureChecker::CheckDirectiveDeprecation(
 
 std::pair<const parser::OmpClause *, const parser::OmpClause *>
 OmpStructureChecker::FindMutuallyExclusiveClauses(
-    OmpClauseSet exclusive, const parser::OmpClauseList &clauses) {
+    OmpClauseSet exclusive,
+    const std::vector<const parser::OmpClause *> &clauses) {
   const parser::OmpClause *first{nullptr};
-  for (const parser::OmpClause &clause : clauses.v) {
-    llvm::omp::Clause clauseId{clause.Id()};
+  for (const parser::OmpClause *clause : clauses) {
+    llvm::omp::Clause clauseId{clause->Id()};
     if (!exclusive.test(clauseId)) {
       continue;
     }
     if (first) {
       llvm::omp::Clause firstId{first->Id()};
       if (clauseId < firstId) {
-        return std::make_pair(&clause, first);
+        return std::make_pair(clause, first);
       } else if (clauseId > firstId) {
-        return std::make_pair(first, &clause);
+        return std::make_pair(first, clause);
       }
     } else {
-      first = &clause;
+      first = clause;
     }
   }
   return std::make_pair(nullptr, nullptr);
-}
-
-void OmpStructureChecker::CheckExclusiveClauses(
-    OmpClauseSet exclusive, const parser::OmpDirectiveSpecification &spec) {
-  unsigned version{context_.langOptions().OpenMPVersion};
-  auto pair{FindMutuallyExclusiveClauses(exclusive, spec.Clauses())};
-
-  if (pair.first && pair.second) {
-    std::string firstName{GetUpperName(pair.first->Id(), version)};
-    std::string secondName{GetUpperName(pair.second->Id(), version)};
-    context_
-        .Say(pair.second->source,
-            "%s and %s clauses are mutually exclusive and may not appear on the same %s directive"_err_en_US,
-            firstName, secondName, GetUpperName(spec.DirId(), version))
-        .Attach(pair.first->source, "%s clause was specified here"_en_US,
-            firstName);
-  }
 }
 
 void OmpStructureChecker::CheckClauses(parser::OmpDirectiveName dirName,
@@ -971,6 +955,10 @@ void OmpStructureChecker::CheckClauses(parser::OmpDirectiveName dirName,
       notAllowed.set(clauseId);
     }
   }
+  auto newEnd{llvm::remove_if(allClauses, [&](const parser::OmpClause *clause) {
+    return notAllowed.test(clause->Id());
+  })};
+  allClauses.erase(newEnd, allClauses.end());
 
   std::multimap<llvm::omp::Clause, parser::CharBlock> present;
   // Exclusive clauses aren't necessarily unique, but there is no way
@@ -982,9 +970,6 @@ void OmpStructureChecker::CheckClauses(parser::OmpDirectiveName dirName,
 
   for (const parser::OmpClause *clause : allClauses) {
     llvm::omp::Clause clauseId{clause->Id()};
-    if (notAllowed.test(clauseId)) {
-      continue;
-    }
     // Special case.
     if (clauseId == llvm::omp::Clause::OMPC_cancellation_construct_type) {
       continue;
@@ -1027,6 +1012,19 @@ void OmpStructureChecker::CheckClauses(parser::OmpDirectiveName dirName,
         ClauseSetToString(requiredSet),
         requiredSet.count() == 1 ? "clause" : "clauses",
         GetUpperName(dirName.v, version));
+  }
+
+  auto pair{FindMutuallyExclusiveClauses(
+      directiveClausesMap_[dirId].allowedExclusive, allClauses)};
+  if (pair.first && pair.second) {
+    std::string firstName{GetUpperName(pair.first->Id(), version)};
+    std::string secondName{GetUpperName(pair.second->Id(), version)};
+    context_
+        .Say(pair.second->source,
+            "%s and %s clauses are mutually exclusive and may not appear on the same %s directive"_err_en_US,
+            firstName, secondName, GetUpperName(dirId, version))
+        .Attach(pair.first->source, "%s clause was specified here"_en_US,
+            firstName);
   }
 }
 
@@ -1944,10 +1942,6 @@ void OmpStructureChecker::Enter(const parser::OmpDeclareSimdDirective &x) {
           "'DECLARE SIMD' directive in an interface body has no effect"_warn_en_US);
     }
   }
-
-  OmpClauseSet exclusive{
-      llvm::omp::Clause::OMPC_inbranch, llvm::omp::Clause::OMPC_notinbranch};
-  CheckExclusiveClauses(exclusive, x.v);
 
   for (const parser::OmpClause &clause : x.v.Clauses().v) {
     const auto *u = std::get_if<parser::OmpClause::Uniform>(&clause.u);
