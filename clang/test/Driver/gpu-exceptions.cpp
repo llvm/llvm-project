@@ -2,6 +2,8 @@
 // RUN:   | FileCheck %s --check-prefix=NOEXC
 // RUN: %clang -### --target=nvptx64-nvidia-cuda -march=sm_80 -nogpulib %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NOEXC
+// RUN: %clang -### --target=spirv64-- -nogpulib %s 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=NOEXC
 
 // Check that the default can still be overridden.
 // RUN: %clang -### --target=amdgcn-amd-amdhsa -mcpu=gfx90a -nogpulib -fexceptions %s 2>&1 \
