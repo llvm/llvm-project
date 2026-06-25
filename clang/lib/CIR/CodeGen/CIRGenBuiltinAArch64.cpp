@@ -318,6 +318,18 @@ deriveNeonSISDIntrinsicOperandTypes(CIRGenFunction &cgf, unsigned modifier,
   return {funcResTy, std::move(argTypes)};
 }
 
+// Source-operand vector type for a common NEON binary intrinsic: the
+// double-element-width form of `vTy` when `WidenArgs` is set (e.g. vraddhn),
+// otherwise `vTy`.
+static cir::VectorType deriveNeonBinaryArgType(CIRGenBuilderTy &builder,
+                                               unsigned modifier,
+                                               cir::VectorType vTy) {
+  if (modifier & WidenArgs)
+    return builder.getExtendedOrTruncatedElementVectorType(vTy,
+                                                           /*isExtended=*/true);
+  return vTy;
+}
+
 static mlir::Value emitCommonNeonSISDBuiltinExpr(
     CIRGenFunction &cgf, const ARMNeonVectorIntrinsicInfo &info,
     llvm::SmallVectorImpl<mlir::Value> &ops, const CallExpr *expr) {
@@ -1088,28 +1100,21 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   case NEON::BI__builtin_neon_vrhadd_v:
   case NEON::BI__builtin_neon_vrhaddq_v:
   case NEON::BI__builtin_neon_vshl_v:
-  case NEON::BI__builtin_neon_vshlq_v: {
-    llvm::StringRef llvmIntrName =
-        getLLVMIntrNameNoPrefix(static_cast<llvm::Intrinsic::ID>(
-            usgn ? llvmIntrinsic : altLLVMIntrinsic));
-
-    mlir::Value result =
-        emitNeonCall(cgf.getCIRGenModule(), cgf.getBuilder(),
-                     /*argTypes=*/{vTy, vTy}, ops, llvmIntrName,
-                     /*funcResTy=*/vTy, loc);
-    mlir::Type resultType = cgf.convertType(expr->getType());
-    return cgf.getBuilder().createBitcast(result, resultType);
-  }
+  case NEON::BI__builtin_neon_vshlq_v:
   case NEON::BI__builtin_neon_vraddhn_v: {
-    cir::VectorType srcTy =
-        cgf.getBuilder().getExtendedOrTruncatedElementVectorType(
-            vTy, /*isExtended=*/true);
+    // Pick the signed/unsigned intrinsic when the builtin has both
+    // (UnsignedAlts); otherwise there is a single intrinsic.
+    unsigned intrinsic =
+        ((modifier & UnsignedAlts) && !usgn) ? altLLVMIntrinsic : llvmIntrinsic;
+    llvm::StringRef llvmIntrName =
+        getLLVMIntrNameNoPrefix(static_cast<llvm::Intrinsic::ID>(intrinsic));
 
-    llvm::StringRef llvmIntrName = getLLVMIntrNameNoPrefix(
-        static_cast<llvm::Intrinsic::ID>(llvmIntrinsic));
+    cir::VectorType argTy =
+        deriveNeonBinaryArgType(cgf.getBuilder(), modifier, vTy);
+
     mlir::Value result =
         emitNeonCall(cgf.getCIRGenModule(), cgf.getBuilder(),
-                     /*argTypes=*/{srcTy, srcTy}, ops, llvmIntrName,
+                     /*argTypes=*/{argTy, argTy}, ops, llvmIntrName,
                      /*funcResTy=*/vTy, loc);
     mlir::Type resultType = cgf.convertType(expr->getType());
     return cgf.getBuilder().createBitcast(result, resultType);
