@@ -31742,7 +31742,7 @@ Value *AArch64TargetLowering::emitLoadLinked(IRBuilderBase &Builder,
 
     unsigned LoPos = Subtarget->isLittleEndian() ? 0 : 1;
     Value *Lo = Builder.CreateExtractValue(LoHi, LoPos, "lo");
-    Value *Hi = Builder.CreateExtractValue(LoHi, 1-LoPos, "hi");
+    Value *Hi = Builder.CreateExtractValue(LoHi, 1 - LoPos, "hi");
 
     auto *Int128Ty = Type::getInt128Ty(Builder.getContext());
     Lo = Builder.CreateZExt(Lo, Int128Ty, "lo64");
