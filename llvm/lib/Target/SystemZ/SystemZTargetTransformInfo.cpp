@@ -1068,8 +1068,8 @@ InstructionCost SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       }
 
       // These will use vector conversions followed by vector permutes.
-      if (Opcode == Instruction::FPToUI && SrcScalarBits <= 64 &&
-          DstScalarBits < SrcScalarBits &&
+      if ((Opcode == Instruction::FPToSI || Opcode == Instruction::FPToUI) &&
+          SrcScalarBits <= 64 && DstScalarBits < SrcScalarBits &&
           (SrcScalarBits == 64 || ST->hasVectorEnhancements2()))
         return NumSrcVectors * 2;
 

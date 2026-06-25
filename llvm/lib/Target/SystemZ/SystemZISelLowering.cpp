@@ -787,6 +787,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
                        ISD::FP_EXTEND,
                        ISD::SINT_TO_FP,
                        ISD::UINT_TO_FP,
+                       ISD::FP_TO_SINT,
                        ISD::FP_TO_UINT,
                        ISD::STRICT_FP_EXTEND,
                        ISD::FCOPYSIGN,
@@ -8587,12 +8588,13 @@ SDValue SystemZTargetLowering::combineINT_TO_FP(
   return SDValue();
 }
 
-SDValue SystemZTargetLowering::combineFP_TO_UINT(
+SDValue SystemZTargetLowering::combineFP_TO_INT(
     SDNode *N, DAGCombinerInfo &DCI) const {
   if (DCI.Level != BeforeLegalizeTypes)
     return SDValue();
   SelectionDAG &DAG = DCI.DAG;
   LLVMContext &Ctx = *DAG.getContext();
+  unsigned Opcode = N->getOpcode();
   SDLoc DL(N);
   EVT OutVT = N->getValueType(0);
   Type *OutLLVMTy = OutVT.getTypeForEVT(Ctx);
@@ -8608,7 +8610,7 @@ SDValue SystemZTargetLowering::combineFP_TO_UINT(
     unsigned NumElts = cast<FixedVectorType>(OutLLVMTy)->getNumElements();
     EVT ConvVT = EVT::getVectorVT(Ctx, EVT::getIntegerVT(Ctx, InScalarBits),
                                   NumElts);
-    SDValue ConvOp = DAG.getNode(ISD::FP_TO_UINT, DL, ConvVT, Op);
+    SDValue ConvOp = DAG.getNode(Opcode, DL, ConvVT, Op);
 
     // Bitcast to narrow elements vector type.
     unsigned NumTruncElts = ConvVT.getSizeInBits() / OutScalarBits;
@@ -9470,7 +9472,8 @@ SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FP_EXTEND:          return combineFP_EXTEND(N, DCI);
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:         return combineINT_TO_FP(N, DCI);
-  case ISD::FP_TO_UINT:         return combineFP_TO_UINT(N, DCI);
+  case ISD::FP_TO_SINT:
+  case ISD::FP_TO_UINT:         return combineFP_TO_INT(N, DCI);
   case ISD::FCOPYSIGN:          return combineFCOPYSIGN(N, DCI);
   case ISD::BSWAP:              return combineBSWAP(N, DCI);
   case ISD::SETCC:              return combineSETCC(N, DCI);
