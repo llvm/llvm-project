@@ -474,6 +474,7 @@
 #include "math/sqrtf16.h"
 #include "math/sqrtl.h"
 #include "math/tan.h"
+#include "math/tanbf16.h"
 #include "math/tanf.h"
 #include "math/tanf16.h"
 #include "math/tanhf.h"
