@@ -5129,9 +5129,7 @@ static FixedVectorType *tryCanonicalizeStructToVector(StructType *STy,
   // Ensure the struct is tightly packed so that the bit-layout is the same as
   // the corresponding vector. For example, this prevents a miscompile for
   // { i5, i5 }, which has padding after each i5 field, whereas <i5, i5> has
-  // tightly packed elements and trailing padding. So if you loaded an
-  // { i5, i5 } memory layout as <i5, i5> you wouldn't correctly load each
-  // element.
+  // tightly packed elements and trailing padding.
   if (DL.getTypeSizeInBits(EltTy) != DL.getTypeAllocSizeInBits(EltTy))
     return nullptr;
 
