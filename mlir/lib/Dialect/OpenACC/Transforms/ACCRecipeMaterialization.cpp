@@ -111,6 +111,21 @@ static void saveVarName(Value src, Value dst) {
   saveVarName(acc::getVariableName(src), dst);
 }
 
+static void resolveVarNamePlaceholders(Block *block, Block::iterator ip,
+                                       StringRef name) {
+  StringRef placeholder = acc::getVarNamePlaceholder();
+  for (auto it = block->begin(); it != std::next(ip); ++it) {
+    auto attr = it->getAttrOfType<acc::VarNameAttr>(acc::getVarNameAttrName());
+    if (attr && attr.getName() == placeholder) {
+      if (name.empty())
+        it->removeAttr(acc::getVarNameAttrName());
+      else
+        it->setAttr(acc::getVarNameAttrName(),
+                    acc::VarNameAttr::get(it->getContext(), name));
+    }
+  }
+}
+
 // Clone the destroy region of the recipe before the terminator of the provided
 // block. Values must be provided for the destroy region block arguments
 // according to the recipe specifications.
@@ -259,6 +274,7 @@ ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
         &initRegion, block, block->begin(), mapping, {accPtr});
     assert(results.size() == 1 && "expected single result from init region");
     saveVarName(op.getAccVar(), results[0]);
+    resolveVarNamePlaceholders(block, ip, acc::getVariableName(op.getAccVar()));
     // Clone the destroy region for a private, if it exists.
     if (!recipe.getDestroyRegion().empty()) {
       results.insert(results.begin(), origPtr);
@@ -272,6 +288,7 @@ ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
         &initRegion, block, block->begin(), mapping, {accPtr});
     assert(results.size() == 1 && "expected single result from init region");
     saveVarName(op.getAccVar(), results[0]);
+    resolveVarNamePlaceholders(block, ip, acc::getVariableName(op.getAccVar()));
     // We want the copy to store the origPtr to private
     results.insert(results.begin(), origPtr);
     results.append(triples);
@@ -313,6 +330,9 @@ ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
     saveVarName(op.getAccVar(), reductionOp.getResult());
     cloneRegionIntoAccRegion(&initRegion, &reductionOp.getRegion(),
                              /*hasResult=*/true);
+    Block *initBlock = &reductionOp.getRegion().front();
+    resolveVarNamePlaceholders(initBlock, std::prev(initBlock->end()),
+                               acc::getVariableName(op.getAccVar()));
 
     // Update the uses within the loop to use the reduction op result.
     replaceAllUsesInRegionWith(accPtr, reductionOp.getResult(), region);

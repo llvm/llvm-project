@@ -1315,13 +1315,6 @@ Twine VPlanPrinter::getUID(const VPBlockBase *Block) {
          Twine(getOrCreateBID(Block));
 }
 
-Twine VPlanPrinter::getOrCreateName(const VPBlockBase *Block) {
-  const std::string &Name = Block->getName();
-  if (!Name.empty())
-    return Name;
-  return "VPB" + Twine(getOrCreateBID(Block));
-}
-
 void VPlanPrinter::dump() {
   Depth = 1;
   bumpIndent(0);
