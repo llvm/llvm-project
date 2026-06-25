@@ -233,11 +233,6 @@ std::optional<ProgramTree> ProgramTree::Build(
 }
 
 std::optional<ProgramTree> ProgramTree::Build(
-    const parser::OpenACCDeclarativeConstruct &, SemanticsContext &) {
-  return std::nullopt;
-}
-
-std::optional<ProgramTree> ProgramTree::Build(
     const parser::OpenACCRoutineConstruct &, SemanticsContext &) {
   // OpenACC ROUTINE can appear in a module subprogram part but it does not
   // introduce a program unit node in the semantics program tree.
