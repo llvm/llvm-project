@@ -48,7 +48,7 @@ program main
 
    errors = errors + check_errors(array)
 
-   ! SPMD kernel
+   ! No-loop kernel
    array = 1
    !$omp target parallel do
    do i = 1, 1024
@@ -88,7 +88,7 @@ end program main
 ! CHECK:  info: #Args: 3 Teams x Thrds:   3x  16 {{.*}}
 ! CHECK:  PluginInterface device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-No-Loop mode
 ! CHECK:  info: #Args: 3 Teams x Thrds:   64x  16 {{.*}}
-! CHECK:  PluginInterface device {{[0-9]+}} info: Launching kernel {{.*}} SPMD mode
+! CHECK:  PluginInterface device {{[0-9]+}} info: Launching kernel {{.*}} SPMD-No-Loop mode
 ! CHECK:  info: #Args: 3 Teams x Thrds:   1x  16
 ! CHECK:  PluginInterface device {{[0-9]+}} info: Launching kernel {{.*}} Generic mode
 ! CHECK:  info: #Args: 3 Teams x Thrds:   16x  16 {{.*}}
