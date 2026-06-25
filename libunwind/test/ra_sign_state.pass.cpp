@@ -95,7 +95,8 @@ _Unwind_Reason_Code frame_handler(struct _Unwind_Context *ctx, void *arg) {
   return _URC_NO_REASON;
 }
 
-__attribute__((noinline)) extern "C" uintptr_t get_main_ra_sign_state(const char *note) {
+__attribute__((noinline)) extern "C" uint64_t
+get_main_ra_sign_state(const char *note) {
   printf("check: %s\n", note);
   uint64_t sign_state = -1;
   _Unwind_Backtrace(frame_handler, &sign_state);
@@ -108,7 +109,8 @@ __attribute__((noinline)) uint64_t check_vanilla(const char *note) {
   return get_main_ra_sign_state(note);
 }
 
-__attribute__((naked, target("pauth"))) uint64_t check_negate(const char *note) {
+__attribute__((naked, target("pauth"))) uint64_t
+check_negate(const char *note) {
   // clang-format off
   asm(".cfi_negate_ra_state\n"
       "pacibsp\n"
