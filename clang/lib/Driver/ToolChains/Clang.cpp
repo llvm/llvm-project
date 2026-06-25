@@ -53,6 +53,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/YAMLParser.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Host.h"
@@ -952,8 +953,13 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
   // before we -I or -include anything else, because we must pick up the
   // CUDA/HIP/SYCL headers from the particular CUDA/ROCm/SYCL installation,
   // rather than from e.g. /usr/local/include.
-  if (JA.isOffloading(Action::OFK_Cuda))
+  llvm::errs() << "Is Cuda: " << JA.isOffloading(Action::OFK_Cuda) << "\n";
+  llvm::errs() << "Offloading? " << JA.getOffloadingDeviceKind() << "\n";
+  if (JA.isOffloading(Action::OFK_Cuda)) {
+    llvm::errs() << "going into cuda include args\n";
+    getToolChain().printVerboseInfo(llvm::errs());
     getToolChain().AddCudaIncludeArgs(Args, CmdArgs);
+  }
   if (JA.isOffloading(Action::OFK_HIP))
     getToolChain().AddHIPIncludeArgs(Args, CmdArgs);
   if (JA.isOffloading(Action::OFK_SYCL))
@@ -991,7 +997,12 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     } else {
       CmdArgs.push_back("__llvm_offload_host.h");
     }
-    CmdArgs.push_back("-include");
+    SmallString<128> OffloadCudaInclude(D.Dir);
+    llvm::sys::path::append(OffloadCudaInclude, "..", "include", "offload",
+                            "cuda");
+    CmdArgs.append({"-internal-isystem", Args.MakeArgString(OffloadCudaInclude),
+                    "-include"});
+    // CmdArgs.push_back("-include");
     CmdArgs.push_back("cuda_runtime.h");
   }
 
