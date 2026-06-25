@@ -2,11 +2,12 @@
 # merges "merge main into amd-staging" sync PRs as a merge commit, once this job has confirmed
 # the mandatory gating checks passed AND the PR has at least one approving review.
 #
-# NOTE on "wait for only 3 tests": GitHub's `workflow_run` trigger only supports the fixed
+# NOTE on "wait for only the gating tests": GitHub's `workflow_run` trigger only supports the fixed
 # `types:` values (requested / in_progress / completed), so the TRIGGER must stay `completed`.
-# The "only 3 tests" requirement is enforced inside the job instead: rather than requiring the
-# whole upstream workflow to succeed, we only require the 3 gating checks below to have passed
-# (other test failures are ignored for the merge decision).
+# The "only the gating tests" requirement is enforced inside the job instead: rather than requiring
+# the whole upstream workflow to succeed, we only require the configured gating checks (see
+# REQUIRED_GATING_CHECKS below) to have passed (other test failures are ignored for the merge
+# decision).
 #
 # Upstream workflow name must match exactly (see `name:` in that file):
 #   .github/workflows/rockci_multi_arch_amd_staging.yml → "Multi-Arch CI amd-staging"
@@ -25,6 +26,17 @@
 #   Without this, the merge-commit merge below will be rejected by the ruleset.
 #
 # Requires: Variable ROCM_CCIAPP_APP_ID + Secret ROCM_CCIAPP_PRIVATE_KEY (same as other automerge).
+#
+# CONFIGURABLE GATING CHECKS:
+#   The mandatory gating checks are NOT hard-coded as the source of truth — they are read from the
+#   repository Variable REQUIRED_GATING_CHECKS (Settings → Secrets and variables → Actions →
+#   Variables). Put ONE check-run name per line, e.g.:
+#       gfx90a Test
+#       Linux::release / Build Multi-Arch Stages / math-libs (...) / Stage - Math Libs (gfx94X-dcgpu)
+#   Surrounding double or single quotes around a line are optional and are stripped, so
+#   "gfx90a Test" and gfx90a Test are treated the same. Blank lines are ignored.
+#   This lets the team change the required tests without editing this workflow. The Variable is
+#   mandatory: if it is empty/unset the job fails with an error (no merge is attempted).
 
 name: Auto-merge main-to-amd-staging after Multi-Arch CI (amd-staging)
 
@@ -46,8 +58,8 @@ jobs:
   merge-after-multi-arch-ci:
     name: Merge after gating checks pass and PR is approved
     runs-on: ubuntu-latest
-    # Do NOT gate on workflow_run.conclusion == 'success': we only require the 3 gating checks
-    # (enforced in the step below), not the full test matrix.
+    # Do NOT gate on workflow_run.conclusion == 'success': we only require the configured gating
+    # checks (enforced in the step below), not the full test matrix.
     if: >-
       github.event.workflow_run.event == 'pull_request' &&
       github.event.workflow_run.head_repository.full_name == github.repository &&
@@ -68,6 +80,10 @@ jobs:
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
           REPO: ${{ github.repository }}
           PULL_REQUESTS_JSON: ${{ toJSON(github.event.workflow_run.pull_requests) }}
+          # Repository Variable holding the mandatory gating checks (one check name per line),
+          # so the team can change the required tests without editing this workflow. It is
+          # required: the job fails below if it is empty/unset.
+          REQUIRED_CHECKS_VAR: ${{ vars.REQUIRED_GATING_CHECKS }}
         run: |
           set -euo pipefail
           if [ -z "${ROCM_CCIAPP_TOKEN:-}" ]; then
@@ -107,13 +123,31 @@ jobs:
 
           echo "PR #${PR} head SHA: ${HEAD_SHA}"
 
-          # Mandatory gating checks: require ONLY these (not the full test matrix). All must pass.
-          # Other (non-mandatory) failing tests are ignored for the merge decision.
-          REQUIRED_CHECKS=(
-            "gfx90a Test"
-            "Linux::release / Build Multi-Arch Stages / math-libs (gfx94X-dcgpu, gfx942, linux-gfx942-1gpu-core42-ossci-rocm, false) / Stage - Math Libs (gfx94X-dcgpu)"
-            "Windows::release / Build Multi-Arch Stages / math-libs (gfx1151, windows-gfx1151-gpu-rocm, windows-gfx1151-gpu-rocm) / Stage - Math Libs (gfx1151)"
-          )
+          # Build the mandatory gating-check list from REQUIRED_GATING_CHECKS (see header for details).
+          REQUIRED_CHECKS=()
+          if [ -n "${REQUIRED_CHECKS_VAR:-}" ]; then
+            # One check name per line. For each line: strip a trailing CR (CRLF), trim surrounding
+            # whitespace, then strip ONE layer of matching surrounding quotes (so values entered as
+            # "gfx90a Test" or 'gfx90a Test' match the real check-run name without the quotes).
+            while IFS= read -r line; do
+              line="${line%$'\r'}"
+              line="${line#"${line%%[![:space:]]*}"}"   # ltrim
+              line="${line%"${line##*[![:space:]]}"}"   # rtrim
+              case "${line}" in
+                '"'*'"') line="${line#\"}"; line="${line%\"}" ;;
+                "'"*"'") line="${line#\'}"; line="${line%\'}" ;;
+              esac
+              [ -z "${line}" ] && continue
+              REQUIRED_CHECKS+=("${line}")
+            done <<< "${REQUIRED_CHECKS_VAR}"
+          fi
+          if [ "${#REQUIRED_CHECKS[@]}" -eq 0 ]; then
+            echo "::error::Variable REQUIRED_GATING_CHECKS is not set (or empty). Define it with one check-run name per line (Settings → Secrets and variables → Actions → Variables)."
+            exit 1
+          fi
+
+          echo "Mandatory gating checks (${#REQUIRED_CHECKS[@]}):"
+          for name in "${REQUIRED_CHECKS[@]}"; do echo "  - ${name}"; done
 
           # The upstream workflow has completed, but a gating check may belong to a sibling
           # workflow still finishing, so allow a short wait.
