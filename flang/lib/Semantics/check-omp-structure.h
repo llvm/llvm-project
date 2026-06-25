@@ -263,8 +263,7 @@ private:
       llvm::iterator_range<ClauseIterator> endClauses);
   void AnalyzeObject(const parser::OmpObject &object);
   std::pair<const parser::OmpClause *, const parser::OmpClause *>
-  FindMutuallyExclusiveClauses(
-      OmpClauseSet exclusive,
+  FindMutuallyExclusiveClauses(OmpClauseSet exclusive,
       const std::vector<const parser::OmpClause *> &clauses);
 
   const parser::OpenMPConstruct *GetCurrentConstruct() const;

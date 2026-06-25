@@ -887,8 +887,7 @@ void OmpStructureChecker::CheckDirectiveDeprecation(
 }
 
 std::pair<const parser::OmpClause *, const parser::OmpClause *>
-OmpStructureChecker::FindMutuallyExclusiveClauses(
-    OmpClauseSet exclusive,
+OmpStructureChecker::FindMutuallyExclusiveClauses(OmpClauseSet exclusive,
     const std::vector<const parser::OmpClause *> &clauses) {
   const parser::OmpClause *first{nullptr};
   for (const parser::OmpClause *clause : clauses) {
