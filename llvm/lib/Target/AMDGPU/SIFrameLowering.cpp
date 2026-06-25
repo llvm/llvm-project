@@ -1948,6 +1948,16 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   const SIInstrInfo *TII = ST.getInstrInfo();
   bool NeedExecCopyReservedReg = false;
 
+  // The reserved "VGPR as memory" file registers are shared across the call
+  // graph and must persist a callee's writes to the caller. A large file can
+  // reach into the callee-saved VGPR range, where the modified-CSR scan above
+  // would mark such a register for callee-save spilling - which would undo the
+  // write when the epilogue restored it. They are reserved, so never spill
+  // them.
+  auto [VGPRMemBase, VGPRMemCount] = TRI->getVGPRMemoryFile(MF);
+  for (unsigned I = 0; I != VGPRMemCount; ++I)
+    SavedVGPRs.reset(AMDGPU::VGPR_32RegClass.getRegister(VGPRMemBase + I));
+
   MachineInstr *ReturnMI = nullptr;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {

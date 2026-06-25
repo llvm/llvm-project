@@ -59,6 +59,17 @@ def GFX10Gen         : GFXGen<isGFX10Only, "GFX10", "_gfx10", SIEncodingFamily.G
 // modifier behavior with dx10_enable.
 def AMDGPUclamp : SDNode<"AMDGPUISD::CLAMP", SDTFPUnaryOp>;
 
+// "VGPR as memory" (addrspace(13)) load/store carrying a dword index into the
+// reserved VGPR file; selected into the SI_VGPR_FRAME_* pseudos.
+def SDTRegIdxLoad : SDTypeProfile<1, 1,
+    [SDTCisVT<1, i32>]>; // dword_index
+def SDTRegIdxStore : SDTypeProfile<0, 2,
+    [SDTCisVT<1, i32>]>; // data, dword_index
+def SIreg_load : SDNode<"AMDGPUISD::REG_LOAD", SDTRegIdxLoad,
+                        [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def SIreg_store : SDNode<"AMDGPUISD::REG_STORE", SDTRegIdxStore,
+                         [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+
 def SDTSBufferLoad : SDTypeProfile<1, 3,
     [                    // vdata
      SDTCisVT<1, v4i32>, // rsrc

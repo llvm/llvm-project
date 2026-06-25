@@ -221,6 +221,10 @@ void verifyAMDGPUFunctionMetadata(VerifierSupport &VS, const Function &F);
 
 void verifyAMDGPUAlloca(VerifierSupport &VS, const AllocaInst &AI);
 
+void verifyAMDGPUGlobalVariable(VerifierSupport &VS, const GlobalVariable &GV);
+
+void verifyAMDGPUAtomicAccess(VerifierSupport &VS, unsigned AS, const Value *V);
+
 void verifyAMDGPUIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
                                CallBase &Call);
 

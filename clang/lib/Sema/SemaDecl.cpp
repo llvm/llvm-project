@@ -15348,6 +15348,8 @@ void Sema::FinalizeDeclaration(Decl *ThisDecl) {
   if (getLangOpts().CUDA)
     CUDA().checkAllowedInitializer(VD);
 
+  AMDGPU().checkAMDGPUVGPRVarDecl(VD);
+
   // Grab the dllimport or dllexport attribute off of the VarDecl.
   const InheritableAttr *DLLAttr = getDLLAttr(VD);
 

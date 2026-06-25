@@ -1243,24 +1243,65 @@ def SI_RESTORE_S32_FROM_VGPR : PseudoInstSI <(outs SReg_32:$sdst),
 }
 } // End Spill = 1, VALU = 1, isConvergent = 1
 
-// "VGPR as memory" pseudo accesses: a load/store of a single dword from/to an
-// alloca in the VGPR address space (AMDGPUAS::VGPR), at a constant byte offset
-// within the per-function VGPR file. They are produced during instruction
-// selection and rewritten into register copies by the AMDGPUPrivateObjectVGPRs
-// pass before register allocation.
+// "VGPR as memory" (addrspace(13)) accesses: load/store of a VGPR tuple at a
+// constant dword index in the reserved file. Selected from AMDGPUISD::REG_*
+// (constant index) and rewritten to copies by AMDGPUPrivateObjectVGPRs.
 let hasSideEffects = 0 in {
-def SI_VGPR_FRAME_LOAD : VPseudoInstSI <(outs VGPR_32:$vdst),
-                                        (ins i32imm:$offset)> {
-  let mayLoad = 1;
-  let mayStore = 0;
-}
-
-def SI_VGPR_FRAME_STORE : VPseudoInstSI <(outs),
-                                         (ins VGPR_32:$vdata, i32imm:$offset)> {
-  let mayLoad = 0;
-  let mayStore = 1;
+foreach rc = [VGPR_32, VReg_64, VReg_96, VReg_128, VReg_160, VReg_192,
+              VReg_224, VReg_256, VReg_288, VReg_320, VReg_352, VReg_384,
+              VReg_512, VReg_1024] in {
+  def SI_VGPR_FRAME_LOAD_B#rc.Size : VPseudoInstSI <
+      (outs rc:$vdst), (ins i32imm:$idx)> {
+    let mayLoad = 1;
+    let mayStore = 0;
+  }
+  def SI_VGPR_FRAME_STORE_B#rc.Size : VPseudoInstSI <
+      (outs), (ins rc:$vdata, i32imm:$idx)> {
+    let mayLoad = 0;
+    let mayStore = 1;
+  }
 }
 } // End hasSideEffects = 0
+
+// Same, at a *runtime* dword index ($idx, a VS_32). The custom inserter expands
+// these into an indirect read/write of the file (movrel / s_set_gpr_idx, with a
+// waterfall loop for a divergent index). Only 32-bit accesses for now.
+let usesCustomInserter = 1, hasSideEffects = 0, UseNamedOperandTable = 1 in {
+  def SI_VGPR_FRAME_DYN_LOAD_B32 : VPseudoInstSI <
+      (outs VGPR_32:$vdst), (ins VS_32:$idx)> {
+    let mayLoad = 1;
+    let mayStore = 0;
+  }
+  def SI_VGPR_FRAME_DYN_STORE_B32 : VPseudoInstSI <
+      (outs), (ins VGPR_32:$vdata, VS_32:$idx)> {
+    let mayLoad = 0;
+    let mayStore = 1;
+  }
+}
+
+// Constant dword index -> width-matched frame pseudo.
+multiclass VGPRFrameLoadStorePat<ValueType vt> {
+  defvar load_inst = !cast<Instruction>("SI_VGPR_FRAME_LOAD_B"#vt.Size);
+  defvar store_inst = !cast<Instruction>("SI_VGPR_FRAME_STORE_B"#vt.Size);
+  def : GCNPat<(vt (SIreg_load (i32 imm:$idx))), (load_inst imm:$idx)>;
+  def : GCNPat<(SIreg_store vt:$data, (i32 imm:$idx)),
+               (store_inst $data, imm:$idx)>;
+}
+
+// Non-constant dword index -> dynamic pseudo. Lower complexity than the
+// constant patterns, so a constant index still prefers them.
+foreach vt = Reg32Types.types in {
+  def : GCNPat<(vt (SIreg_load i32:$idx)), (SI_VGPR_FRAME_DYN_LOAD_B32 $idx)>;
+  def : GCNPat<(SIreg_store vt:$data, i32:$idx),
+               (SI_VGPR_FRAME_DYN_STORE_B32 $data, $idx)>;
+}
+
+foreach vt = !listconcat(
+    Reg32Types.types, Reg64Types.types, Reg96Types.types, Reg128Types.types,
+    Reg160Types.types, Reg192Types.types, Reg224Types.types, Reg256Types.types,
+    Reg288Types.types, Reg320Types.types, Reg352Types.types, Reg384Types.types,
+    Reg512Types.types, Reg1024Types.types) in
+defm : VGPRFrameLoadStorePat<vt>;
 
 // VGPR or AGPR spill instructions. In case of AGPR spilling a temp register
 // needs to be used and an extra instruction to move between VGPR and AGPR.

@@ -32,6 +32,7 @@
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPUPreloadKernArgProlog.h"
 #include "AMDGPUPrepareAGPRAlloc.h"
+#include "AMDGPUPrivateObjectVGPRs.h"
 #include "AMDGPURemoveIncompatibleFunctions.h"
 #include "AMDGPUReserveWWMRegs.h"
 #include "AMDGPUResourceUsageAnalysis.h"
@@ -669,7 +670,8 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSILowerSGPRSpillsLegacyPass(*PR);
   initializeSIFixSGPRCopiesLegacyPass(*PR);
   initializeSIFixVGPRCopiesLegacyPass(*PR);
-  initializeAMDGPUPrivateObjectVGPRsPass(*PR);
+  initializeAMDGPUPrivateObjectVGPRsLegacyPass(*PR);
+  initializeAMDGPULowerModuleVGPRsPass(*PR);
   initializeSIFoldOperandsLegacyPass(*PR);
   initializeSIPeepholeSDWALegacyPass(*PR);
   initializeSIShrinkInstructionsLegacyPass(*PR);
@@ -1503,6 +1505,10 @@ void AMDGPUPassConfig::addIRPasses() {
     addPass(createAMDGPULowerModuleLDSLegacyPass(&TM));
   }
 
+  // Lay out "VGPR as memory" (addrspace(13)) globals into a shared register
+  // file (see AMDGPUCodeGenPassBuilder::addIRPasses for details).
+  addPass(createAMDGPULowerModuleVGPRsPass());
+
   // Run atomic optimizer before Atomic Expand
   if ((TM.getTargetTriple().isAMDGCN()) &&
       (TM.getOptLevel() >= CodeGenOptLevel::Less) &&
@@ -1512,12 +1518,9 @@ void AMDGPUPassConfig::addIRPasses() {
 
   addPass(createAtomicExpandLegacyPass());
 
-  // With optimizations enabled, do the full promotion of allocas. Without
-  // optimizations, this only allocates pre-existing VGPR address space allocas,
-  // which is required for functionality.
-  addPass(createAMDGPUPromoteAlloca(TM.getOptLevel()));
-
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
+    addPass(createAMDGPUPromoteAlloca());
+
     if (isPassEnabled(EnableScalarIRPasses))
       addStraightLineScalarOptimizationPasses();
 
@@ -1732,11 +1735,6 @@ void GCNPassConfig::addFastRegAlloc() {
   // SI_ELSE will introduce a copy of the tied operand source after the else.
   insertPass(&PHIEliminationID, &SILowerControlFlowLegacyID);
 
-  // Lower "VGPR as memory" accesses to register copies once out of SSA form.
-  // At O0 there is no register coalescer; anchor on TwoAddress, where
-  // LiveIntervals is already available.
-  insertPass(&TwoAddressInstructionPassID, &AMDGPUPrivateObjectVGPRsID);
-
   insertPass(&TwoAddressInstructionPassID, &SIWholeQuadModeID);
 
   TargetPassConfig::addFastRegAlloc();
@@ -1762,12 +1760,6 @@ void GCNPassConfig::addOptimizedRegAlloc() {
   // TwoAddressInstructions, otherwise the processing of the tied operand of
   // SI_ELSE will introduce a copy of the tied operand source after the else.
   insertPass(&PHIEliminationID, &SILowerControlFlowLegacyID);
-
-  // Lower "VGPR as memory" accesses to register copies once out of SSA form.
-  // This runs after the coalescer so it does not perturb the kill flags that
-  // earlier passes (and -stop-after=twoaddr based tests) rely on, and updates
-  // the LiveIntervals the register allocator consumes next.
-  insertPass(&RegisterCoalescerID, &AMDGPUPrivateObjectVGPRsID);
 
   if (EnableRewritePartialRegUses)
     insertPass(&RenameIndependentSubregsID, &GCNRewritePartialRegUsesID);
@@ -1920,6 +1912,9 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
 }
 
 void GCNPassConfig::addPostRegAlloc() {
+  // Lower "VGPR as memory" accesses into copies to/from the reserved VGPR file
+  // (see AMDGPUCodeGenPassBuilder::addPostRegAlloc for details).
+  addPass(&AMDGPUPrivateObjectVGPRsID);
   addPass(&SIFixVGPRCopiesID);
   if (getOptLevel() > CodeGenOptLevel::None)
     addPass(&SIOptimizeExecMaskingLegacyID);
@@ -2301,6 +2296,11 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
   if (EnableLowerModuleLDS)
     addModulePass(AMDGPULowerModuleLDSPass(TM), PMW);
 
+  // Lay out "VGPR as memory" (addrspace(13)) globals into one shared register
+  // file and record its size/base on the participating functions, so it
+  // resolves to the same registers across a kernel's call graph.
+  addModulePass(AMDGPULowerModuleVGPRsPass(), PMW);
+
   // Run atomic optimizer before Atomic Expand
   if (TM.getOptLevel() >= CodeGenOptLevel::Less &&
       (AMDGPUAtomicOptimizerStrategy != ScanOptions::None))
@@ -2309,15 +2309,8 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
 
   addFunctionPass(AtomicExpandPass(TM), PMW);
 
-  // With optimizations enabled, do the full promotion of allocas. Without
-  // optimizations, only allocate pre-existing VGPR address space allocas, which
-  // is required for functionality.
-  if (TM.getOptLevel() > CodeGenOptLevel::None)
-    addFunctionPass(AMDGPUPromoteAllocaPass(TM), PMW);
-  else
-    addFunctionPass(AMDGPUVGPRAllocatePass(TM), PMW);
-
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
+    addFunctionPass(AMDGPUPromoteAllocaPass(TM), PMW);
     if (isPassEnabled(EnableScalarIRPasses))
       addStraightLineScalarOptimizationPasses(PMW);
 
@@ -2631,6 +2624,11 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
 }
 
 void AMDGPUCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) const {
+  // Lower "VGPR as memory" accesses into copies to/from the reserved VGPR file.
+  // Runs after register allocation (so the file's reserved registers are final)
+  // and before memory-aware post-RA passes (so the pseudos are no longer seen
+  // as memory operations).
+  addMachineFunctionPass(AMDGPUPrivateObjectVGPRsPass(), PMW);
   addMachineFunctionPass(SIFixVGPRCopiesPass(), PMW);
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addMachineFunctionPass(SIOptimizeExecMaskingPass(), PMW);

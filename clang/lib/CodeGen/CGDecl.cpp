@@ -1603,30 +1603,23 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       // building the instruction so that it's there even in no-asserts
       // builds.
       //
-      // "VGPR as memory" objects keep their backing registers only once the
-      // optimizing register allocator runs. At -O0 the backend cannot lower
-      // these accesses (e.g. when the address escapes a basic block), so the
-      // request is not honored: fall back to an ordinary (scratch) alloca and
-      // warn, matching the documented behavior.
-      // TODO: Lower addrspace(13) allocas at -O0 too (e.g. by spilling the
-      // backing tuple to scratch) so this fallback can be removed.
-      const auto *VGPRAttr = D.getAttr<AMDGPUVGPRAttr>();
+      // A "VGPR as memory" object (amdgpu_vgpr) is register-backed, not on the
+      // stack, so - like LDS/__shared__ - it is emitted as an internal global
+      // in AMDGPUAS::VGPR with a poison initializer (the registers have no
+      // defined initial value). Only in device compilation; on the host (e.g. a
+      // __host__ __device__ function compiled for the host) it falls back to an
+      // ordinary stack alloca.
       const bool UseVGPRMemory =
-          VGPRAttr && CGM.getCodeGenOpts().OptimizationLevel != 0;
-      if (VGPRAttr && !UseVGPRMemory)
-        CGM.getDiags().Report(D.getLocation(),
-                              diag::warn_amdgpu_vgpr_not_guaranteed_at_O0)
-            << VGPRAttr;
-
+          D.hasAttr<AMDGPUVGPRAttr>() && getLangOpts().CUDAIsDevice;
       if (UseVGPRMemory) {
-        // Allocate directly in AMDGPUAS::VGPR and keep the pointer in that
-        // address space so that statically indexed accesses lower to vector
-        // register copies instead of scratch memory.
-        auto *AI = new llvm::AllocaInst(allocaTy, llvm::AMDGPUAS::VGPR,
-                                        /*ArraySize=*/nullptr, D.getName(),
-                                        AllocaInsertPt->getIterator());
-        AI->setAlignment(allocaAlignment.getAsAlign());
-        AllocaAddr = RawAddress(AI, allocaTy, allocaAlignment, KnownNonNull);
+        auto *GV = new llvm::GlobalVariable(
+            CGM.getModule(), allocaTy, /*isConstant=*/false,
+            llvm::GlobalValue::InternalLinkage,
+            llvm::PoisonValue::get(allocaTy), getStaticDeclName(CGM, D),
+            /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
+            llvm::AMDGPUAS::VGPR);
+        GV->setAlignment(allocaAlignment.getAsAlign());
+        AllocaAddr = RawAddress(GV, allocaTy, allocaAlignment, KnownNonNull);
         address = AllocaAddr;
       } else {
         address = CreateTempAlloca(allocaTy, Ty.getAddressSpace(),
@@ -1641,9 +1634,9 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
           D.isExceptionVariable() && getTarget().getCXXABI().isMicrosoft();
 
       // Emit a lifetime intrinsic if meaningful. There's no point in doing this
-      // if we don't have a valid insertion point (?). "VGPR as memory" allocas
-      // live in a non-alloca address space, so the standard lifetime markers
-      // (which assume the alloca address space) are skipped for them.
+      // if we don't have a valid insertion point (?). "VGPR as memory" objects
+      // are globals, not allocas, so the stack-slot lifetime markers are
+      // skipped.
       if (HaveInsertPoint() && !IsMSCatchParam && !UseVGPRMemory) {
         // If there's a jump into the lifetime of this variable, its lifetime
         // gets broken up into several regions in IR, which requires more work

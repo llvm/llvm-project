@@ -176,12 +176,24 @@ AMDGPUResourceUsageAnalysisImpl::analyzeResourceUsage(
     Info.NumAGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::AGPR_32RegClass,
                                           /*IncludeCalls=*/false);
 
+  // Reserved "VGPR as memory" file registers aren't "used" but must still be
+  // allocated, so the VGPR count has to cover the highest one.
+  std::pair<unsigned, unsigned> VGPRMemFile = TRI.getVGPRMemoryFile(MF);
+  unsigned VGPRMemBase = VGPRMemFile.first;
+  unsigned VGPRMemCount = VGPRMemFile.second;
+  auto AccountForVGPRMemoryFile = [&](int32_t NumVGPR) -> int32_t {
+    if (VGPRMemCount)
+      NumVGPR = std::max<int32_t>(NumVGPR, VGPRMemBase + VGPRMemCount);
+    return NumVGPR;
+  };
+
   // If there are no calls, MachineRegisterInfo can tell us the used register
   // count easily.
   // A tail call isn't considered a call for MachineFrameInfo's purposes.
   if (!FrameInfo.hasCalls() && !FrameInfo.hasTailCall()) {
     Info.NumVGPR = TRI.getNumUsedPhysRegs(MRI, AMDGPU::VGPR_32RegClass,
                                           /*IncludeCalls=*/false);
+    Info.NumVGPR = AccountForVGPRMemoryFile(Info.NumVGPR);
     return Info;
   }
 
@@ -319,7 +331,7 @@ AMDGPUResourceUsageAnalysisImpl::analyzeResourceUsage(
     }
   }
 
-  Info.NumVGPR = MaxVGPR + 1;
+  Info.NumVGPR = AccountForVGPRMemoryFile(MaxVGPR + 1);
 
   return Info;
 }

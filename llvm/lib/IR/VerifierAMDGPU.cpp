@@ -23,6 +23,7 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
@@ -122,10 +123,37 @@ void llvm::verifyAMDGPUAlloca(VerifierSupport &VS, const AllocaInst &AI) {
   if (!VS.TT.isAMDGPU())
     return;
 
-  if (AI.getAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS &&
-      AI.getAddressSpace() != AMDGPUAS::VGPR)
-    VS.CheckFailed("alloca on amdgpu must be in addrspace(5) or addrspace(13)",
-                   &AI);
+  if (AI.getAddressSpace() != AMDGPUAS::PRIVATE_ADDRESS)
+    VS.CheckFailed("alloca on amdgpu must be in addrspace(5)", &AI);
+}
+
+void llvm::verifyAMDGPUGlobalVariable(VerifierSupport &VS,
+                                      const GlobalVariable &GV) {
+  if (!VS.TT.isAMDGPU())
+    return;
+
+  if (GV.getAddressSpace() != AMDGPUAS::VGPR)
+    return;
+
+  // "VGPR as memory" objects are backed by registers, which have no defined
+  // initial contents, so (like LDS) they cannot be statically initialized: the
+  // only permitted initializer is an undef/poison placeholder (isa<UndefValue>
+  // also matches poison).
+  Check(!GV.hasInitializer() || isa<UndefValue>(GV.getInitializer()),
+        "global variable in the VGPR address space (13) cannot have an "
+        "initializer",
+        &GV);
+}
+
+void llvm::verifyAMDGPUAtomicAccess(VerifierSupport &VS, unsigned AS,
+                                    const Value *V) {
+  if (!VS.TT.isAMDGPU())
+    return;
+
+  // "VGPR as memory" is per-lane register storage, so an atomic access to it is
+  // meaningless and unsupported.
+  Check(AS != AMDGPUAS::VGPR,
+        "atomic operations on the VGPR address space (13) are not allowed", V);
 }
 
 bool llvm::isAMDGPUCallBrIntrinsic(Intrinsic::ID ID) {
@@ -139,6 +167,41 @@ bool llvm::isAMDGPUCallBrIntrinsic(Intrinsic::ID ID) {
 
 void llvm::verifyAMDGPUIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
                                      CallBase &Call) {
+  // Most intrinsics don't model "VGPR as memory" (only plain load/store is
+  // supported), so an addrspace(13) pointer argument would be mishandled and is
+  // rejected. The masked memory intrinsics are the exception: AMDGPU never
+  // marks them legal, so ScalarizeMaskedMemIntrin (which runs unconditionally,
+  // even at -O0) rewrites them into plain element-wise loads/stores, which the
+  // addrspace(13) lowering handles.
+  //
+  // TODO: The bulk memory intrinsics (llvm.memcpy/memset/memmove) could
+  // similarly be expanded to element-wise loads/stores; supporting them on
+  // addrspace(13) is left to a follow-up, so they remain rejected here.
+  auto ScalarizesToPlainMemOps = [](Intrinsic::ID ID) {
+    switch (ID) {
+    case Intrinsic::masked_load:
+    case Intrinsic::masked_store:
+    case Intrinsic::masked_gather:
+    case Intrinsic::masked_scatter:
+    case Intrinsic::masked_expandload:
+    case Intrinsic::masked_compressstore:
+      return true;
+    default:
+      return false;
+    }
+  };
+  if (VS.TT.isAMDGPU() && !ScalarizesToPlainMemOps(ID))
+    for (const Value *Op : Call.args()) {
+      Type *T = Op->getType();
+      if (T->isPtrOrPtrVectorTy() &&
+          T->getPointerAddressSpace() == AMDGPUAS::VGPR) {
+        VS.CheckFailed("intrinsic with a VGPR address space (13) pointer "
+                       "argument is not allowed",
+                       &Call);
+        break;
+      }
+    }
+
   switch (ID) {
   default:
     return;

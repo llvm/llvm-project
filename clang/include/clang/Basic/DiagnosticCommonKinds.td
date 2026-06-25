@@ -319,11 +319,6 @@ def warn_stack_protection_ignore_attribute : Warning<
   "'stack_protector_ignore' attribute ignored due to "
   "'-fstack-protector-all' option">, InGroup<IgnoredAttributes>;
 
-def warn_amdgpu_vgpr_not_guaranteed_at_O0 : Warning<
-  "%0 is not guaranteed to keep the variable in vector registers at -O0; "
-  "it may fall back to scratch memory">,
-  InGroup<DiagGroup<"amdgpu-vgpr">>;
-
 def warn_slh_does_not_support_asm_goto : Warning<
   "speculative load hardening does not protect functions with asm goto">,
   InGroup<DiagGroup<"slh-asm-goto">>;

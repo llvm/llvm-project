@@ -21,10 +21,8 @@
 #include "R600RegisterInfo.h"
 #include "SIISelLowering.h"
 #include "SIMachineFunctionInfo.h"
-#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -343,159 +341,25 @@ bool AMDGPUDAGToDAGISel::matchLoadD16FromBuildVector(SDNode *N) const {
   return false;
 }
 
-// Resolve the constant byte offset within the per-function VGPR file for a
-// "VGPR as memory" access whose (legalized) address is \p Ptr. Returns
-// std::nullopt if \p Ptr is not a constant offset from a VGPR-as-memory frame
-// object.
-static std::optional<unsigned>
-getVGPRFrameByteOffset(SDValue Ptr, const MachineFunction &MF) {
-  unsigned ExtraOffset = 0;
-  if (Ptr.getOpcode() == ISD::ADD || Ptr.getOpcode() == ISD::PTRADD) {
-    if (auto *C = dyn_cast<ConstantSDNode>(Ptr.getOperand(1))) {
-      ExtraOffset = C->getZExtValue();
-      Ptr = Ptr.getOperand(0);
-    }
-  }
-  auto *FI = dyn_cast<FrameIndexSDNode>(Ptr);
-  if (!FI)
-    return std::nullopt;
-  const AllocaInst *AI = MF.getFrameInfo().getObjectAllocation(FI->getIndex());
-  if (!AI || AI->getAddressSpace() != AMDGPUAS::VGPR)
-    return std::nullopt;
-  return AMDGPU::AllocatedVGPRsMetadata::get(*AI).Address + ExtraOffset;
-}
-
-// Lower a load/store of a "VGPR as memory" object into one
-// SI_VGPR_FRAME_{LOAD,STORE} pseudo per dword, each carrying a constant byte
-// offset. The pseudos are later expanded into subregister copies by
-// AMDGPUPrivateObjectVGPRs. Accesses wider than a dword (e.g. i64, vectors) are
-// split into their dword lanes; sub-dword and non-dword-multiple accesses are
-// left alone (AMDGPUPromoteAlloca demotes such objects to scratch). Returns
-// true if \p N was rewritten.
-bool AMDGPUDAGToDAGISel::rewriteVGPRFrameAccess(SDNode *N) {
-  if (auto *Load = dyn_cast<LoadSDNode>(N)) {
-    if (Load->getAddressSpace() != AMDGPUAS::VGPR || !Load->isSimple() ||
-        Load->getExtensionType() != ISD::NON_EXTLOAD)
-      return false;
-    EVT VT = Load->getValueType(0);
-    unsigned Bits = VT.getFixedSizeInBits();
-    if (Bits == 0 || Bits % 32 != 0)
-      return false;
-    std::optional<unsigned> Offset =
-        getVGPRFrameByteOffset(Load->getBasePtr(), *MF);
-    if (!Offset || (*Offset % 4 != 0))
-      return false;
-
-    SDLoc DL(N);
-    unsigned NumDwords = Bits / 32;
-    SmallVector<SDValue, 4> Dwords;
-    SmallVector<SDValue, 4> Chains;
-    for (unsigned I = 0; I != NumDwords; ++I) {
-      SDValue Ops[] = {CurDAG->getTargetConstant(*Offset + I * 4, DL, MVT::i32),
-                       Load->getChain()};
-      MachineSDNode *Lane = CurDAG->getMachineNode(
-          AMDGPU::SI_VGPR_FRAME_LOAD, DL, MVT::i32, MVT::Other, Ops);
-      if (I == 0)
-        CurDAG->setNodeMemRefs(Lane, {Load->getMemOperand()});
-      Dwords.push_back(SDValue(Lane, 0));
-      Chains.push_back(SDValue(Lane, 1));
-    }
-
-    SDValue Val;
-    if (NumDwords == 1) {
-      Val = Dwords[0];
-      if (VT != MVT::i32)
-        Val = CurDAG->getNode(ISD::BITCAST, DL, VT, Val);
-    } else {
-      EVT VecVT = EVT::getVectorVT(*CurDAG->getContext(), MVT::i32, NumDwords);
-      SDValue Vec = CurDAG->getNode(ISD::BUILD_VECTOR, DL, VecVT, Dwords);
-      Val = CurDAG->getNode(ISD::BITCAST, DL, VT, Vec);
-    }
-    SDValue Chain = NumDwords == 1 ? Chains[0]
-                                   : CurDAG->getNode(ISD::TokenFactor, DL,
-                                                     MVT::Other, Chains);
-    CurDAG->ReplaceAllUsesOfValueWith(SDValue(Load, 0), Val);
-    CurDAG->ReplaceAllUsesOfValueWith(SDValue(Load, 1), Chain);
-    return true;
-  }
-
-  if (auto *Store = dyn_cast<StoreSDNode>(N)) {
-    if (Store->getAddressSpace() != AMDGPUAS::VGPR || !Store->isSimple() ||
-        Store->isTruncatingStore())
-      return false;
-    SDValue Val = Store->getValue();
-    EVT VT = Val.getValueType();
-    unsigned Bits = VT.getFixedSizeInBits();
-    if (Bits == 0 || Bits % 32 != 0)
-      return false;
-    std::optional<unsigned> Offset =
-        getVGPRFrameByteOffset(Store->getBasePtr(), *MF);
-    if (!Offset || (*Offset % 4 != 0))
-      return false;
-
-    SDLoc DL(N);
-    unsigned NumDwords = Bits / 32;
-    SmallVector<SDValue, 4> Dwords;
-    if (NumDwords == 1) {
-      if (VT != MVT::i32)
-        Val = CurDAG->getNode(ISD::BITCAST, DL, MVT::i32, Val);
-      Dwords.push_back(Val);
-    } else {
-      EVT VecVT = EVT::getVectorVT(*CurDAG->getContext(), MVT::i32, NumDwords);
-      SDValue Vec = CurDAG->getNode(ISD::BITCAST, DL, VecVT, Val);
-      for (unsigned I = 0; I != NumDwords; ++I)
-        Dwords.push_back(CurDAG->getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32,
-                                         Vec,
-                                         CurDAG->getConstant(I, DL, MVT::i32)));
-    }
-
-    SmallVector<SDValue, 4> Chains;
-    for (unsigned I = 0; I != NumDwords; ++I) {
-      SDValue Ops[] = {Dwords[I],
-                       CurDAG->getTargetConstant(*Offset + I * 4, DL, MVT::i32),
-                       Store->getChain()};
-      MachineSDNode *Lane = CurDAG->getMachineNode(AMDGPU::SI_VGPR_FRAME_STORE,
-                                                   DL, MVT::Other, Ops);
-      if (I == 0)
-        CurDAG->setNodeMemRefs(Lane, {Store->getMemOperand()});
-      Chains.push_back(SDValue(Lane, 0));
-    }
-    SDValue Chain = NumDwords == 1 ? Chains[0]
-                                   : CurDAG->getNode(ISD::TokenFactor, DL,
-                                                     MVT::Other, Chains);
-    CurDAG->ReplaceAllUsesOfValueWith(SDValue(Store, 0), Chain);
-    return true;
-  }
-
-  return false;
-}
-
 void AMDGPUDAGToDAGISel::PreprocessISelDAG() {
+  if (!Subtarget->d16PreservesUnusedBits())
+    return;
+
+  SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
+
   bool MadeChange = false;
+  while (Position != CurDAG->allnodes_begin()) {
+    SDNode *N = &*--Position;
+    if (N->use_empty())
+      continue;
 
-  // Lower "VGPR as memory" (AMDGPUAS::VGPR) accesses into frame pseudos. This
-  // is scoped to addrspace(13) nodes, so it never perturbs ordinary memory ops.
-  SelectionDAG::allnodes_iterator VGPRPos = CurDAG->allnodes_end();
-  while (VGPRPos != CurDAG->allnodes_begin()) {
-    SDNode *N = &*--VGPRPos;
-    MadeChange |= rewriteVGPRFrameAccess(N);
-  }
-
-  if (Subtarget->d16PreservesUnusedBits()) {
-    SelectionDAG::allnodes_iterator Position = CurDAG->allnodes_end();
-    while (Position != CurDAG->allnodes_begin()) {
-      SDNode *N = &*--Position;
-      if (N->use_empty())
-        continue;
-
-      switch (N->getOpcode()) {
-      case ISD::BUILD_VECTOR:
-        // TODO: Match load d16 from shl (extload:i16), 16
-        MadeChange |= matchLoadD16FromBuildVector(N);
-        break;
-      default:
-        break;
-      }
+    switch (N->getOpcode()) {
+    case ISD::BUILD_VECTOR:
+      // TODO: Match load d16 from shl (extload:i16), 16
+      MadeChange |= matchLoadD16FromBuildVector(N);
+      break;
+    default:
+      break;
     }
   }
 

@@ -96,6 +96,14 @@ public:
   bool isAsmClobberable(const MachineFunction &MF,
                         MCRegister PhysReg) const override;
 
+  /// The "VGPR as memory" (addrspace(13)) register file: a fixed block of
+  /// physical VGPRs reserved for the whole function, placed (like LDS) at a
+  /// location consistent across the call graph. Returns the VGPR_32 index of
+  /// the first file register and the dword register count, or {0, 0} if the
+  /// function has no such objects.
+  std::pair<unsigned, unsigned>
+  getVGPRMemoryFile(const MachineFunction &MF) const;
+
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
   const MCPhysReg *getCalleeSavedRegsViaCopy(const MachineFunction *MF) const;
   const uint32_t *getCallPreservedMask(const MachineFunction &MF,
