@@ -4418,7 +4418,7 @@ int main() {
 // CHECK9-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP24]], 1
 // CHECK9-NEXT:    [[TMP25:%.*]] = zext i32 [[ADD]] to i64
 // CHECK9-NEXT:    [[TMP26:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK9-NEXT:    store i32 4, ptr [[TMP26]], align 4
+// CHECK9-NEXT:    store i32 5, ptr [[TMP26]], align 4
 // CHECK9-NEXT:    [[TMP27:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK9-NEXT:    store i32 5, ptr [[TMP27]], align 4
 // CHECK9-NEXT:    [[TMP28:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -4499,7 +4499,7 @@ int main() {
 // CHECK9-NEXT:    [[ADD13:%.*]] = add nsw i32 [[TMP65]], 1
 // CHECK9-NEXT:    [[TMP66:%.*]] = zext i32 [[ADD13]] to i64
 // CHECK9-NEXT:    [[TMP67:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS14]], i32 0, i32 0
-// CHECK9-NEXT:    store i32 4, ptr [[TMP67]], align 4
+// CHECK9-NEXT:    store i32 5, ptr [[TMP67]], align 4
 // CHECK9-NEXT:    [[TMP68:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS14]], i32 0, i32 1
 // CHECK9-NEXT:    store i32 5, ptr [[TMP68]], align 4
 // CHECK9-NEXT:    [[TMP69:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS14]], i32 0, i32 2
@@ -4589,7 +4589,7 @@ int main() {
 // CHECK9-NEXT:    [[ADD27:%.*]] = add nsw i32 [[TMP111]], 1
 // CHECK9-NEXT:    [[TMP112:%.*]] = zext i32 [[ADD27]] to i64
 // CHECK9-NEXT:    [[TMP113:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS28]], i32 0, i32 0
-// CHECK9-NEXT:    store i32 4, ptr [[TMP113]], align 4
+// CHECK9-NEXT:    store i32 5, ptr [[TMP113]], align 4
 // CHECK9-NEXT:    [[TMP114:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS28]], i32 0, i32 1
 // CHECK9-NEXT:    store i32 6, ptr [[TMP114]], align 4
 // CHECK9-NEXT:    [[TMP115:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS28]], i32 0, i32 2
@@ -4670,7 +4670,7 @@ int main() {
 // CHECK9-NEXT:    [[ADD41:%.*]] = add nsw i32 [[TMP152]], 1
 // CHECK9-NEXT:    [[TMP153:%.*]] = zext i32 [[ADD41]] to i64
 // CHECK9-NEXT:    [[TMP154:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS42]], i32 0, i32 0
-// CHECK9-NEXT:    store i32 4, ptr [[TMP154]], align 4
+// CHECK9-NEXT:    store i32 5, ptr [[TMP154]], align 4
 // CHECK9-NEXT:    [[TMP155:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS42]], i32 0, i32 1
 // CHECK9-NEXT:    store i32 5, ptr [[TMP155]], align 4
 // CHECK9-NEXT:    [[TMP156:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS42]], i32 0, i32 2
@@ -4760,7 +4760,7 @@ int main() {
 // CHECK9-NEXT:    [[ADD56:%.*]] = add nsw i32 [[TMP198]], 1
 // CHECK9-NEXT:    [[TMP199:%.*]] = zext i32 [[ADD56]] to i64
 // CHECK9-NEXT:    [[TMP200:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS57]], i32 0, i32 0
-// CHECK9-NEXT:    store i32 4, ptr [[TMP200]], align 4
+// CHECK9-NEXT:    store i32 5, ptr [[TMP200]], align 4
 // CHECK9-NEXT:    [[TMP201:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS57]], i32 0, i32 1
 // CHECK9-NEXT:    store i32 6, ptr [[TMP201]], align 4
 // CHECK9-NEXT:    [[TMP202:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS57]], i32 0, i32 2
@@ -4841,7 +4841,7 @@ int main() {
 // CHECK9-NEXT:    [[ADD70:%.*]] = add nsw i32 [[TMP239]], 1
 // CHECK9-NEXT:    [[TMP240:%.*]] = zext i32 [[ADD70]] to i64
 // CHECK9-NEXT:    [[TMP241:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS71]], i32 0, i32 0
-// CHECK9-NEXT:    store i32 4, ptr [[TMP241]], align 4
+// CHECK9-NEXT:    store i32 5, ptr [[TMP241]], align 4
 // CHECK9-NEXT:    [[TMP242:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS71]], i32 0, i32 1
 // CHECK9-NEXT:    store i32 5, ptr [[TMP242]], align 4
 // CHECK9-NEXT:    [[TMP243:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS71]], i32 0, i32 2
@@ -4931,7 +4931,7 @@ int main() {
 // CHECK9-NEXT:    [[ADD85:%.*]] = add nsw i32 [[TMP285]], 1
 // CHECK9-NEXT:    [[TMP286:%.*]] = zext i32 [[ADD85]] to i64
 // CHECK9-NEXT:    [[TMP287:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS86]], i32 0, i32 0
-// CHECK9-NEXT:    store i32 4, ptr [[TMP287]], align 4
+// CHECK9-NEXT:    store i32 5, ptr [[TMP287]], align 4
 // CHECK9-NEXT:    [[TMP288:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS86]], i32 0, i32 1
 // CHECK9-NEXT:    store i32 6, ptr [[TMP288]], align 4
 // CHECK9-NEXT:    [[TMP289:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS86]], i32 0, i32 2
@@ -6779,7 +6779,7 @@ int main() {
 // CHECK9-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP24]], 1
 // CHECK9-NEXT:    [[TMP25:%.*]] = zext i32 [[ADD]] to i64
 // CHECK9-NEXT:    [[TMP26:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK9-NEXT:    store i32 4, ptr [[TMP26]], align 4
+// CHECK9-NEXT:    store i32 5, ptr [[TMP26]], align 4
 // CHECK9-NEXT:    [[TMP27:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK9-NEXT:    store i32 5, ptr [[TMP27]], align 4
 // CHECK9-NEXT:    [[TMP28:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -6860,7 +6860,7 @@ int main() {
 // CHECK9-NEXT:    [[ADD13:%.*]] = add nsw i32 [[TMP65]], 1
 // CHECK9-NEXT:    [[TMP66:%.*]] = zext i32 [[ADD13]] to i64
 // CHECK9-NEXT:    [[TMP67:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS14]], i32 0, i32 0
-// CHECK9-NEXT:    store i32 4, ptr [[TMP67]], align 4
+// CHECK9-NEXT:    store i32 5, ptr [[TMP67]], align 4
 // CHECK9-NEXT:    [[TMP68:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS14]], i32 0, i32 1
 // CHECK9-NEXT:    store i32 5, ptr [[TMP68]], align 4
 // CHECK9-NEXT:    [[TMP69:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS14]], i32 0, i32 2
@@ -6950,7 +6950,7 @@ int main() {
 // CHECK9-NEXT:    [[ADD27:%.*]] = add nsw i32 [[TMP111]], 1
 // CHECK9-NEXT:    [[TMP112:%.*]] = zext i32 [[ADD27]] to i64
 // CHECK9-NEXT:    [[TMP113:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS28]], i32 0, i32 0
-// CHECK9-NEXT:    store i32 4, ptr [[TMP113]], align 4
+// CHECK9-NEXT:    store i32 5, ptr [[TMP113]], align 4
 // CHECK9-NEXT:    [[TMP114:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS28]], i32 0, i32 1
 // CHECK9-NEXT:    store i32 6, ptr [[TMP114]], align 4
 // CHECK9-NEXT:    [[TMP115:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS28]], i32 0, i32 2
@@ -7031,7 +7031,7 @@ int main() {
 // CHECK9-NEXT:    [[ADD41:%.*]] = add nsw i32 [[TMP152]], 1
 // CHECK9-NEXT:    [[TMP153:%.*]] = zext i32 [[ADD41]] to i64
 // CHECK9-NEXT:    [[TMP154:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS42]], i32 0, i32 0
-// CHECK9-NEXT:    store i32 4, ptr [[TMP154]], align 4
+// CHECK9-NEXT:    store i32 5, ptr [[TMP154]], align 4
 // CHECK9-NEXT:    [[TMP155:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS42]], i32 0, i32 1
 // CHECK9-NEXT:    store i32 5, ptr [[TMP155]], align 4
 // CHECK9-NEXT:    [[TMP156:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS42]], i32 0, i32 2
@@ -7121,7 +7121,7 @@ int main() {
 // CHECK9-NEXT:    [[ADD56:%.*]] = add nsw i32 [[TMP198]], 1
 // CHECK9-NEXT:    [[TMP199:%.*]] = zext i32 [[ADD56]] to i64
 // CHECK9-NEXT:    [[TMP200:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS57]], i32 0, i32 0
-// CHECK9-NEXT:    store i32 4, ptr [[TMP200]], align 4
+// CHECK9-NEXT:    store i32 5, ptr [[TMP200]], align 4
 // CHECK9-NEXT:    [[TMP201:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS57]], i32 0, i32 1
 // CHECK9-NEXT:    store i32 6, ptr [[TMP201]], align 4
 // CHECK9-NEXT:    [[TMP202:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS57]], i32 0, i32 2
@@ -7202,7 +7202,7 @@ int main() {
 // CHECK9-NEXT:    [[ADD70:%.*]] = add nsw i32 [[TMP239]], 1
 // CHECK9-NEXT:    [[TMP240:%.*]] = zext i32 [[ADD70]] to i64
 // CHECK9-NEXT:    [[TMP241:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS71]], i32 0, i32 0
-// CHECK9-NEXT:    store i32 4, ptr [[TMP241]], align 4
+// CHECK9-NEXT:    store i32 5, ptr [[TMP241]], align 4
 // CHECK9-NEXT:    [[TMP242:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS71]], i32 0, i32 1
 // CHECK9-NEXT:    store i32 5, ptr [[TMP242]], align 4
 // CHECK9-NEXT:    [[TMP243:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS71]], i32 0, i32 2
@@ -7292,7 +7292,7 @@ int main() {
 // CHECK9-NEXT:    [[ADD85:%.*]] = add nsw i32 [[TMP285]], 1
 // CHECK9-NEXT:    [[TMP286:%.*]] = zext i32 [[ADD85]] to i64
 // CHECK9-NEXT:    [[TMP287:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS86]], i32 0, i32 0
-// CHECK9-NEXT:    store i32 4, ptr [[TMP287]], align 4
+// CHECK9-NEXT:    store i32 5, ptr [[TMP287]], align 4
 // CHECK9-NEXT:    [[TMP288:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS86]], i32 0, i32 1
 // CHECK9-NEXT:    store i32 6, ptr [[TMP288]], align 4
 // CHECK9-NEXT:    [[TMP289:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS86]], i32 0, i32 2
@@ -9156,7 +9156,7 @@ int main() {
 // CHECK11-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP24]], 1
 // CHECK11-NEXT:    [[TMP25:%.*]] = zext i32 [[ADD]] to i64
 // CHECK11-NEXT:    [[TMP26:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK11-NEXT:    store i32 4, ptr [[TMP26]], align 4
+// CHECK11-NEXT:    store i32 5, ptr [[TMP26]], align 4
 // CHECK11-NEXT:    [[TMP27:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK11-NEXT:    store i32 5, ptr [[TMP27]], align 4
 // CHECK11-NEXT:    [[TMP28:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -9237,7 +9237,7 @@ int main() {
 // CHECK11-NEXT:    [[ADD13:%.*]] = add nsw i32 [[TMP65]], 1
 // CHECK11-NEXT:    [[TMP66:%.*]] = zext i32 [[ADD13]] to i64
 // CHECK11-NEXT:    [[TMP67:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS14]], i32 0, i32 0
-// CHECK11-NEXT:    store i32 4, ptr [[TMP67]], align 4
+// CHECK11-NEXT:    store i32 5, ptr [[TMP67]], align 4
 // CHECK11-NEXT:    [[TMP68:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS14]], i32 0, i32 1
 // CHECK11-NEXT:    store i32 5, ptr [[TMP68]], align 4
 // CHECK11-NEXT:    [[TMP69:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS14]], i32 0, i32 2
@@ -9327,7 +9327,7 @@ int main() {
 // CHECK11-NEXT:    [[ADD27:%.*]] = add nsw i32 [[TMP111]], 1
 // CHECK11-NEXT:    [[TMP112:%.*]] = zext i32 [[ADD27]] to i64
 // CHECK11-NEXT:    [[TMP113:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS28]], i32 0, i32 0
-// CHECK11-NEXT:    store i32 4, ptr [[TMP113]], align 4
+// CHECK11-NEXT:    store i32 5, ptr [[TMP113]], align 4
 // CHECK11-NEXT:    [[TMP114:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS28]], i32 0, i32 1
 // CHECK11-NEXT:    store i32 6, ptr [[TMP114]], align 4
 // CHECK11-NEXT:    [[TMP115:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS28]], i32 0, i32 2
@@ -9408,7 +9408,7 @@ int main() {
 // CHECK11-NEXT:    [[ADD41:%.*]] = add nsw i32 [[TMP152]], 1
 // CHECK11-NEXT:    [[TMP153:%.*]] = zext i32 [[ADD41]] to i64
 // CHECK11-NEXT:    [[TMP154:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS42]], i32 0, i32 0
-// CHECK11-NEXT:    store i32 4, ptr [[TMP154]], align 4
+// CHECK11-NEXT:    store i32 5, ptr [[TMP154]], align 4
 // CHECK11-NEXT:    [[TMP155:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS42]], i32 0, i32 1
 // CHECK11-NEXT:    store i32 5, ptr [[TMP155]], align 4
 // CHECK11-NEXT:    [[TMP156:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS42]], i32 0, i32 2
@@ -9498,7 +9498,7 @@ int main() {
 // CHECK11-NEXT:    [[ADD56:%.*]] = add nsw i32 [[TMP198]], 1
 // CHECK11-NEXT:    [[TMP199:%.*]] = zext i32 [[ADD56]] to i64
 // CHECK11-NEXT:    [[TMP200:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS57]], i32 0, i32 0
-// CHECK11-NEXT:    store i32 4, ptr [[TMP200]], align 4
+// CHECK11-NEXT:    store i32 5, ptr [[TMP200]], align 4
 // CHECK11-NEXT:    [[TMP201:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS57]], i32 0, i32 1
 // CHECK11-NEXT:    store i32 6, ptr [[TMP201]], align 4
 // CHECK11-NEXT:    [[TMP202:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS57]], i32 0, i32 2
@@ -9579,7 +9579,7 @@ int main() {
 // CHECK11-NEXT:    [[ADD70:%.*]] = add nsw i32 [[TMP239]], 1
 // CHECK11-NEXT:    [[TMP240:%.*]] = zext i32 [[ADD70]] to i64
 // CHECK11-NEXT:    [[TMP241:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS71]], i32 0, i32 0
-// CHECK11-NEXT:    store i32 4, ptr [[TMP241]], align 4
+// CHECK11-NEXT:    store i32 5, ptr [[TMP241]], align 4
 // CHECK11-NEXT:    [[TMP242:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS71]], i32 0, i32 1
 // CHECK11-NEXT:    store i32 5, ptr [[TMP242]], align 4
 // CHECK11-NEXT:    [[TMP243:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS71]], i32 0, i32 2
@@ -9669,7 +9669,7 @@ int main() {
 // CHECK11-NEXT:    [[ADD85:%.*]] = add nsw i32 [[TMP285]], 1
 // CHECK11-NEXT:    [[TMP286:%.*]] = zext i32 [[ADD85]] to i64
 // CHECK11-NEXT:    [[TMP287:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS86]], i32 0, i32 0
-// CHECK11-NEXT:    store i32 4, ptr [[TMP287]], align 4
+// CHECK11-NEXT:    store i32 5, ptr [[TMP287]], align 4
 // CHECK11-NEXT:    [[TMP288:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS86]], i32 0, i32 1
 // CHECK11-NEXT:    store i32 6, ptr [[TMP288]], align 4
 // CHECK11-NEXT:    [[TMP289:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS86]], i32 0, i32 2
@@ -11466,7 +11466,7 @@ int main() {
 // CHECK11-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP24]], 1
 // CHECK11-NEXT:    [[TMP25:%.*]] = zext i32 [[ADD]] to i64
 // CHECK11-NEXT:    [[TMP26:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 0
-// CHECK11-NEXT:    store i32 4, ptr [[TMP26]], align 4
+// CHECK11-NEXT:    store i32 5, ptr [[TMP26]], align 4
 // CHECK11-NEXT:    [[TMP27:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 1
 // CHECK11-NEXT:    store i32 5, ptr [[TMP27]], align 4
 // CHECK11-NEXT:    [[TMP28:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS]], i32 0, i32 2
@@ -11547,7 +11547,7 @@ int main() {
 // CHECK11-NEXT:    [[ADD13:%.*]] = add nsw i32 [[TMP65]], 1
 // CHECK11-NEXT:    [[TMP66:%.*]] = zext i32 [[ADD13]] to i64
 // CHECK11-NEXT:    [[TMP67:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS14]], i32 0, i32 0
-// CHECK11-NEXT:    store i32 4, ptr [[TMP67]], align 4
+// CHECK11-NEXT:    store i32 5, ptr [[TMP67]], align 4
 // CHECK11-NEXT:    [[TMP68:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS14]], i32 0, i32 1
 // CHECK11-NEXT:    store i32 5, ptr [[TMP68]], align 4
 // CHECK11-NEXT:    [[TMP69:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS14]], i32 0, i32 2
@@ -11637,7 +11637,7 @@ int main() {
 // CHECK11-NEXT:    [[ADD27:%.*]] = add nsw i32 [[TMP111]], 1
 // CHECK11-NEXT:    [[TMP112:%.*]] = zext i32 [[ADD27]] to i64
 // CHECK11-NEXT:    [[TMP113:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS28]], i32 0, i32 0
-// CHECK11-NEXT:    store i32 4, ptr [[TMP113]], align 4
+// CHECK11-NEXT:    store i32 5, ptr [[TMP113]], align 4
 // CHECK11-NEXT:    [[TMP114:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS28]], i32 0, i32 1
 // CHECK11-NEXT:    store i32 6, ptr [[TMP114]], align 4
 // CHECK11-NEXT:    [[TMP115:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS28]], i32 0, i32 2
@@ -11718,7 +11718,7 @@ int main() {
 // CHECK11-NEXT:    [[ADD41:%.*]] = add nsw i32 [[TMP152]], 1
 // CHECK11-NEXT:    [[TMP153:%.*]] = zext i32 [[ADD41]] to i64
 // CHECK11-NEXT:    [[TMP154:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS42]], i32 0, i32 0
-// CHECK11-NEXT:    store i32 4, ptr [[TMP154]], align 4
+// CHECK11-NEXT:    store i32 5, ptr [[TMP154]], align 4
 // CHECK11-NEXT:    [[TMP155:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS42]], i32 0, i32 1
 // CHECK11-NEXT:    store i32 5, ptr [[TMP155]], align 4
 // CHECK11-NEXT:    [[TMP156:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS42]], i32 0, i32 2
@@ -11808,7 +11808,7 @@ int main() {
 // CHECK11-NEXT:    [[ADD56:%.*]] = add nsw i32 [[TMP198]], 1
 // CHECK11-NEXT:    [[TMP199:%.*]] = zext i32 [[ADD56]] to i64
 // CHECK11-NEXT:    [[TMP200:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS57]], i32 0, i32 0
-// CHECK11-NEXT:    store i32 4, ptr [[TMP200]], align 4
+// CHECK11-NEXT:    store i32 5, ptr [[TMP200]], align 4
 // CHECK11-NEXT:    [[TMP201:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS57]], i32 0, i32 1
 // CHECK11-NEXT:    store i32 6, ptr [[TMP201]], align 4
 // CHECK11-NEXT:    [[TMP202:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS57]], i32 0, i32 2
@@ -11889,7 +11889,7 @@ int main() {
 // CHECK11-NEXT:    [[ADD70:%.*]] = add nsw i32 [[TMP239]], 1
 // CHECK11-NEXT:    [[TMP240:%.*]] = zext i32 [[ADD70]] to i64
 // CHECK11-NEXT:    [[TMP241:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS71]], i32 0, i32 0
-// CHECK11-NEXT:    store i32 4, ptr [[TMP241]], align 4
+// CHECK11-NEXT:    store i32 5, ptr [[TMP241]], align 4
 // CHECK11-NEXT:    [[TMP242:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS71]], i32 0, i32 1
 // CHECK11-NEXT:    store i32 5, ptr [[TMP242]], align 4
 // CHECK11-NEXT:    [[TMP243:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS71]], i32 0, i32 2
@@ -11979,7 +11979,7 @@ int main() {
 // CHECK11-NEXT:    [[ADD85:%.*]] = add nsw i32 [[TMP285]], 1
 // CHECK11-NEXT:    [[TMP286:%.*]] = zext i32 [[ADD85]] to i64
 // CHECK11-NEXT:    [[TMP287:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS86]], i32 0, i32 0
-// CHECK11-NEXT:    store i32 4, ptr [[TMP287]], align 4
+// CHECK11-NEXT:    store i32 5, ptr [[TMP287]], align 4
 // CHECK11-NEXT:    [[TMP288:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS86]], i32 0, i32 1
 // CHECK11-NEXT:    store i32 6, ptr [[TMP288]], align 4
 // CHECK11-NEXT:    [[TMP289:%.*]] = getelementptr inbounds nuw [[STRUCT___TGT_KERNEL_ARGUMENTS]], ptr [[KERNEL_ARGS86]], i32 0, i32 2

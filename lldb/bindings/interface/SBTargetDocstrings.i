@@ -308,6 +308,40 @@ produces: ::
 ) lldb::SBTarget::ResolveFileAddress;
 
 %feature("docstring", "
+    Look up a persistent type defined using the expression parser.
+
+    @param[in] type_name
+         The base name of the persistent type you defined.
+
+    @param[in] language
+         A member of the enum lldb::LanguageType giving the
+         language of the Expression parser you used to define
+         the persistent type.
+
+    @param[out] error
+         If there are errors fetching the type, they will be 
+         returned here.
+
+    @return
+        An SBType representing the persistent type you defined."
+) lldb::SBTarget::FindExpressionTypeForLanguage;
+
+%feature("docstring", "
+    Look up a persistent variable defined using the expression parser.
+
+    @param[in] variable_name
+         The name of the persistent variable you defined.
+
+    @param[in] language
+	 A member of the enum lldb::LanguageType giving	the
+	 language of the Expression parser you used to define
+	 the persistent type.
+
+    @return
+        An SBValue representing the persistent variable you defined."
+) lldb::SBTarget::FindExpressionVariableForLanguage;
+
+%feature("docstring", "
     Read target memory. If a target process is running then memory
     is read from here. Otherwise the memory is read from the object
     files. For a target whose bytes are sized as a multiple of host
