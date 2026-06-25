@@ -1,4 +1,4 @@
 add_sycl_unittest(QueueTests
     queue.cpp
-    single_task.cpp
+    sycl_kernel_launch.cpp
 )

@@ -58,7 +58,7 @@ struct KernelData {
   double DoubleArr[8];
 };
 
-TEST(Queue, SingleTask) {
+TEST(Queue, KernelLaunch) {
   mock::MockWrapper Mock;
   ScopedKernelRegistration Registration{"TestKernel"};
   sycl::detail::MockQueue Q;
