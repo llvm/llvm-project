@@ -3167,9 +3167,18 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
           const Fortran::semantics::Symbol *newSym =
               Fortran::parser::GetFirstName(accObject).symbol;
           if (newSym) {
-            const Fortran::semantics::Symbol *origSym =
-                localSymbols.lookupSymbolByName(newSym->name().ToString());
-            if (origSym)
+            // Resolve the host symbol this use_device copy shadows via the
+            // semantic enclosing scope, so USE-renamed (and same-name
+            // shadowed) references bind to the correct storage. Fall back to a
+            // name-based lookup if that symbol is not (yet) mapped.
+            const Fortran::semantics::Symbol *origSym = nullptr;
+            if (const Fortran::semantics::Symbol *hostSym =
+                    newSym->owner().parent().FindSymbol(newSym->name()))
+              origSym = &hostSym->GetUltimate();
+            if (!origSym || !localSymbols.lookupSymbol(*origSym))
+              origSym =
+                  localSymbols.lookupSymbolByName(newSym->name().ToString());
+            if (origSym && localSymbols.lookupSymbol(*origSym))
               localSymbols.copySymbolBinding(*origSym, *newSym);
           }
         }
