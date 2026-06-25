@@ -181,7 +181,8 @@ bool ReplaceQualifiedWithAlias::prepare(const Selection &Inputs) {
     findExplicitReferences(
         D,
         [&](ReferenceLoc Ref) {
-          if (FoundSelectedQualifiedRef || !Ref.Qualifier || Ref.Targets.empty())
+          if (FoundSelectedQualifiedRef || !Ref.Qualifier ||
+              Ref.Targets.empty())
             return;
           if (!isNamespaceQualifier(Ref.Qualifier))
             return;
@@ -217,8 +218,8 @@ bool ReplaceQualifiedWithAlias::prepare(const Selection &Inputs) {
           // Record the referred-to name so we can prefer aliases with the same
           // identifier when several are visible.
           SelectedName =
-              Lexer::getSourceText(CharSourceRange::getTokenRange(NameLoc),
-                                   SM, LangOpts)
+              Lexer::getSourceText(CharSourceRange::getTokenRange(NameLoc), SM,
+                                   LangOpts)
                   .str();
           for (const auto *Target : Ref.Targets) {
             if (const auto *Canonical = canonicalDecl(Target))
