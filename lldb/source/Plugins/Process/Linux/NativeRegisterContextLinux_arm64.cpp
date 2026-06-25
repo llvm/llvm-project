@@ -31,9 +31,9 @@
 
 // System includes - They have to be included after framework includes because
 // they define some macros which collide with variable names in other modules
-#include <sys/uio.h>
 #include <mutex>
 #include <optional>
+#include <sys/uio.h>
 
 #ifndef HWCAP_PACA
 #define HWCAP_PACA (1 << 30)
