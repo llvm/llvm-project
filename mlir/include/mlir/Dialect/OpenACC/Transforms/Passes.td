@@ -193,6 +193,20 @@ def ACCEmitRemarksLoop : Pass<"acc-emit-remarks-loop", "mlir::func::FuncOp"> {
   ];
 }
 
+def ACCEmitRemarksPrivate
+    : Pass<"acc-emit-remarks-private", "mlir::func::FuncOp"> {
+  let summary = "Emit OpenACC private and firstprivate remarks";
+  let description = [{
+    This pass emits optimization remarks describing the private and firstprivate
+    variables associated with OpenACC compute and loop constructs.
+
+    The pass walks compute constructs and `acc.loop` operations and, for each,
+    reports the implicit and explicit `private` and `firstprivate` variables it
+    carries.
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect"];
+}
+
 def ACCLoopTiling : Pass<"acc-loop-tiling", "mlir::func::FuncOp"> {
   let summary = "Tile OpenACC loops with tile clauses";
   let description = [{
