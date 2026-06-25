@@ -106,7 +106,8 @@ public:
     FirstChild = false;
   }
 
-  NodeStreamer(raw_ostream &OS) : JOS(OS, 2) {}
+  NodeStreamer(raw_ostream &OS, unsigned IndentSize = 2)
+      : JOS(OS, IndentSize) {}
 };
 
 // Dumps AST nodes in JSON format. There is no implied stability for the
@@ -188,8 +189,8 @@ class JSONNodeDumper
 public:
   JSONNodeDumper(raw_ostream &OS, const SourceManager &SrcMgr, ASTContext &Ctx,
                  const PrintingPolicy &PrintPolicy,
-                 const comments::CommandTraits *Traits)
-      : NodeStreamer(OS), SM(SrcMgr), Ctx(Ctx), ASTNameGen(Ctx),
+                 const comments::CommandTraits *Traits, unsigned IndentSize = 2)
+      : NodeStreamer(OS, IndentSize), SM(SrcMgr), Ctx(Ctx), ASTNameGen(Ctx),
         PrintPolicy(PrintPolicy), Traits(Traits), LastLocLine(0),
         LastLocPresumedLine(0) {}
 
@@ -447,8 +448,8 @@ class JSONDumper : public ASTNodeTraverser<JSONDumper, JSONNodeDumper> {
 public:
   JSONDumper(raw_ostream &OS, const SourceManager &SrcMgr, ASTContext &Ctx,
              const PrintingPolicy &PrintPolicy,
-             const comments::CommandTraits *Traits)
-      : NodeDumper(OS, SrcMgr, Ctx, PrintPolicy, Traits) {}
+             const comments::CommandTraits *Traits, unsigned IndentSize = 2)
+      : NodeDumper(OS, SrcMgr, Ctx, PrintPolicy, Traits, IndentSize) {}
 
   JSONNodeDumper &doGetNodeDelegate() { return NodeDumper; }
 
