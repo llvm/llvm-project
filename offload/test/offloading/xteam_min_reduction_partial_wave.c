@@ -1,7 +1,9 @@
 // RUN: %libomptarget-compile-generic
-// RUN: env LIBOMPTARGET_INFO=16 %libomptarget-run-generic 2>&1 | %fcheck-generic
+// RUN: env LIBOMPTARGET_INFO=16 \
+// RUN:   %libomptarget-run-generic 2>&1 | %fcheck-generic
 // RUN: %libomptarget-compileopt-generic
-// RUN: env LIBOMPTARGET_INFO=16 %libomptarget-run-generic 2>&1 | %fcheck-generic
+// RUN: env LIBOMPTARGET_INFO=16 \
+// RUN:   %libomptarget-run-generic 2>&1 | %fcheck-generic
 
 // REQUIRES: amdgpu
 
@@ -39,8 +41,10 @@ int main(void) {
   unsigned min63 = reduce_min(TEAMS_BELOW_WAVE_SIZE_BOUNDARY);
   unsigned min64 = reduce_min(TEAMS_AT_WAVE_SIZE_BOUNDARY);
 
-  // CHECK: Launching kernel {{.*}} with [63,1,1] blocks and [32,1,1] threads in SPMD mode
-  // CHECK: Launching kernel {{.*}} with [64,1,1] blocks and [32,1,1] threads in SPMD mode
+  // CHECK: Launching kernel {{.*}} with [63,1,1] blocks and [32,1,1] threads
+  // CHECK-SAME: in SPMD mode
+  // CHECK: Launching kernel {{.*}} with [64,1,1] blocks and [32,1,1] threads
+  // CHECK-SAME: in SPMD mode
   // CHECK: min63 = 0xffffffff
   // CHECK: min64 = 0xffffffff
   printf("min63 = %#x\n", min63);
