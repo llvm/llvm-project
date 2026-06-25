@@ -60,7 +60,8 @@ void VPlanTransforms::replaceWideCanonicalIVWithWideIV(
     WideCanIV->replaceAllUsesWith(vputils::createScalarIVSteps(
         Plan, InductionDescriptor::IK_IntInduction, Instruction::Add, nullptr,
         nullptr, Plan.getZero(CanIVTy), Plan.getConstantInt(CanIVTy, 1),
-        WideCanIV->getDebugLoc(), Builder));
+        WideCanIV->getDebugLoc(), Builder,
+        {static_cast<bool>(WideCanIV->getNoWrapFlags().HasNUW), false}));
     WideCanIV->eraseFromParent();
     return;
   }
@@ -420,16 +421,21 @@ static void expandVPDerivedIV(VPDerivedIVRecipe *R) {
                     Index, StepTy, DebugLoc::getCompilerGenerated())
               : Builder.createScalarCast(Instruction::SIToFP, Index, StepTy,
                                          DebugLoc::getCompilerGenerated());
+  DebugLoc DL = R->getDebugLoc();
+  VPIRFlags::WrapFlagsTy Flags = R->getNoWrapFlags();
   switch (R->getInductionKind()) {
   case InductionDescriptor::IK_IntInduction: {
     assert(Index->getScalarType() == Start->getScalarType() &&
            "Index type does not match StartValue type");
     return R->replaceAllUsesWith(Builder.createAdd(
-        Start, Builder.createOverflowingOp(Instruction::Mul, {Index, Step})));
+        Start,
+        Builder.createOverflowingOp(Instruction::Mul, {Index, Step}, Flags, DL),
+        DL, "", Flags));
   }
   case InductionDescriptor::IK_PtrInduction:
     return R->replaceAllUsesWith(Builder.createPtrAdd(
-        Start, Builder.createOverflowingOp(Instruction::Mul, {Index, Step})));
+        Start, Builder.createOverflowingOp(Instruction::Mul, {Index, Step},
+                                           Flags, DL)));
   case InductionDescriptor::IK_FpInduction: {
     assert(StepTy->isFloatingPointTy() && "Expected FP Step value");
     const FPMathOperator *FPBinOp = R->getFPBinOp();
@@ -440,7 +446,7 @@ static void expandVPDerivedIV(VPDerivedIVRecipe *R) {
     FastMathFlags FMF = FPBinOp->getFastMathFlags();
     VPValue *FMul = Builder.createNaryOp(Instruction::FMul, {Step, Index}, FMF);
     return R->replaceAllUsesWith(
-        Builder.createNaryOp(FPBinOp->getOpcode(), {Start, FMul}, FMF));
+        Builder.createNaryOp(FPBinOp->getOpcode(), {Start, FMul}, FMF, DL));
   }
   case InductionDescriptor::IK_NoInduction:
     return;
