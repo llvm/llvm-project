@@ -102,9 +102,9 @@ ldr x22, [x11, #16]
 
 // Post-index pair writeback invalidates the guard.
 prepost_ldp:
-    ldp x0, x1, [x2]
-    ldp x3, x4, [x2], #16
-    ldp x5, x6, [x2]
+ldp x0, x1, [x2]
+ldp x3, x4, [x2], #16
+ldp x5, x6, [x2]
 // CHECK-LABEL: prepost_ldp:
 // CHECK-NEXT: add x28, x27, w2, uxtw
 // CHECK-NEXT: ldp x0, x1, [x28]
@@ -114,9 +114,9 @@ prepost_ldp:
 // CHECK-NEXT: ldp x5, x6, [x28]
 
 prepost_stp:
-    stp x0, x1, [x2]
-    stp x3, x4, [x2], #16
-    stp x5, x6, [x2]
+stp x0, x1, [x2]
+stp x3, x4, [x2], #16
+stp x5, x6, [x2]
 // CHECK-LABEL: prepost_stp:
 // CHECK-NEXT: add x28, x27, w2, uxtw
 // CHECK-NEXT: stp x0, x1, [x28]
@@ -127,9 +127,9 @@ prepost_stp:
 
 // Pre-index pair writeback invalidates the guard.
 prepost_ldp_pre:
-    ldp x0, x1, [x2]
-    ldp x3, x4, [x2, #16]!
-    ldp x5, x6, [x2]
+ldp x0, x1, [x2]
+ldp x3, x4, [x2, #16]!
+ldp x5, x6, [x2]
 // CHECK-LABEL: prepost_ldp_pre:
 // CHECK-NEXT: add x28, x27, w2, uxtw
 // CHECK-NEXT: ldp x0, x1, [x28]
