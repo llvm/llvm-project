@@ -3158,13 +3158,13 @@ llvm::Constant *ConstantEmitter::emitNullForMemory(CodeGenModule &CGM,
 }
 
 llvm::Constant *CodeGenModule::EmitNullConstant(QualType T) {
-  if (const auto *PT = T->getAs<PointerType>()) {
-    if (PT->hasRawPointerLayout())
-      return getNullPointer(
-          cast<llvm::PointerType>(getTypes().ConvertTypeForMem(T)), T);
-    /*TO_UPSTREAM(BoundsSafety) ON*/
-    return llvm::Constant::getNullValue(getTypes().ConvertTypeForMem(T));
-    /*TO_UPSTREAM(BoundsSafety) OFF*/
+  if (T->getAs<PointerType>()) {
+    llvm::Type *LT = getTypes().ConvertTypeForMem(T);
+    if (auto *PT = dyn_cast<llvm::PointerType>(LT))
+      return getNullPointer(PT, T);
+    // Some pointer types do not lower to an LLVM pointer (e.g. a WebAssembly
+    // funcref, which is an opaque reference type). Use the type's zero value.
+    return llvm::Constant::getNullValue(LT);
   }
 
   if (getTypes().isZeroInitializable(T))

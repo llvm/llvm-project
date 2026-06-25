@@ -259,6 +259,15 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the WebAssembly Backend
 
+* WebAssembly reference types are now represented in LLVM IR as the target
+  extension types `target("wasm.externref")` and `target("wasm.funcref")`,
+  rather than as pointers in address spaces 10 and 20 (`ptr addrspace(10)` /
+  `ptr addrspace(20)`).
+* As a consequence of the representation change, reference types are no longer
+  treated as vectorizable pointers. This fixes a crash in the SLP vectorizer,
+  which previously would attempt to gather `externref`/`funcref` values into a
+  vector and then crash.
+
 ### Changes to the Windows Target
 
 * The `.seh_startchained` and `.seh_endchained` assembly instructions have been removed and replaced
