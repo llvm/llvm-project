@@ -234,11 +234,37 @@ INTERCEPTOR(void *, bzero, void *block, usize size) {
 #endif  // SANITIZER_INTERCEPT_BZERO
 
 namespace __sanitizer {
+
 // This does not need to be called if InitializeCommonInterceptors() is called.
 void InitializeMemintrinsicInterceptors() {
   INIT_MEMSET;
+#if SANITIZER_WINDOWS64
+  INIT_MEMMOVE;
+  // On Windows x64, memcpy and memmove used to resolve to the same function in
+  // the CRT (e.g. vcruntime140.dll on older toolsets, ucrtbase.dll today), but
+  // newer CRTs (recent vcruntime140.dll) ship them as distinct functions. We
+  // can't know which shape the loaded CRT has at compile time, so check it at
+  // runtime. Use volatile to keep the compiler from assuming distinct
+  // declarations imply distinct addresses and folding the comparison to true.
+  volatile uptr memcpy_addr = (uptr)&memcpy;
+  volatile uptr memmove_addr = (uptr)&memmove;
+  if (memcpy_addr != memmove_addr)
+    COMMON_INTERCEPT_FUNCTION(memcpy);
+  // INTERCEPT_FUNCTION(memcpy) can also fail for some binaries (e.g. certain
+  // ASan unit tests linked against a CRT we can't trampoline), leaving
+  // REAL(memcpy) null while REAL(memmove) is valid. Using the real memmove for
+  // REAL(memcpy) is always safe (memmove is a semantic superset of memcpy).
+  // After this fallback, REAL(memcpy) == REAL(memmove) is the runtime signal
+  // that memcpy is *not* a distinct function we can call directly; consumers
+  // (e.g. asan_allocator's Reallocate) check that predicate to pick the right
+  // code path.
+  if (!REAL(memcpy))
+    ASSIGN_REAL(memcpy, memmove);
+  CHECK(REAL(memcpy));
+#else
   INIT_MEMMOVE;
   INIT_MEMCPY;
+#endif
   INIT_AEABI_MEM;
   INIT___BZERO;
   INIT_BZERO;
