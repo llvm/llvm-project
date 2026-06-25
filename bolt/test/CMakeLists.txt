@@ -54,6 +54,7 @@ list(APPEND BOLT_TEST_DEPS
   not
   split-file
   yaml2obj
+  obj2yaml
   )
 
 add_custom_target(bolt-test-depends DEPENDS ${BOLT_TEST_DEPS})
