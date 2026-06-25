@@ -154,10 +154,6 @@ private:
 /// Create an action cache in memory.
 LLVM_ABI std::unique_ptr<ActionCache> createInMemoryActionCache();
 
-/// Get a reasonable default on-disk path for a persistent ActionCache for the
-/// current user.
-std::string getDefaultOnDiskActionCachePath();
-
 /// Create an action cache on disk.
 LLVM_ABI Expected<std::unique_ptr<ActionCache>>
 createOnDiskActionCache(StringRef Path);

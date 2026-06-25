@@ -19,8 +19,6 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/Errc.h"
-#include "llvm/Support/Path.h"
 
 #define DEBUG_TYPE "cas-action-caches"
 
@@ -141,17 +139,7 @@ Error InMemoryActionCache::putImpl(ArrayRef<uint8_t> Key, const CASID &Result,
                                         Observed.getValue());
 }
 
-static constexpr StringLiteral DefaultName = "actioncache";
-
 namespace llvm::cas {
-
-std::string getDefaultOnDiskActionCachePath() {
-  SmallString<128> Path;
-  if (!llvm::sys::path::cache_directory(Path))
-    report_fatal_error("cannot get default cache directory");
-  llvm::sys::path::append(Path, builtin::DefaultDir, DefaultName);
-  return Path.str().str();
-}
 
 std::unique_ptr<ActionCache> createInMemoryActionCache() {
   return std::make_unique<InMemoryActionCache>();
