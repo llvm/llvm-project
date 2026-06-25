@@ -439,8 +439,7 @@ static bool IsLoopVectorizerDisabled(isl::ast_node_for Node) {
 // Returns true if the loop has a dist=1 dependence involving FP operations
 // (array-carried RAW/WAW or scalar FP reduction). In that case we omit the
 // vectorize.enable annotation and let the Loop Vectorizer decide.
-static bool hasLoopCarriedDependence(isl::ast_node_for For,
-                                     const Scop &S) {
+static bool hasLoopCarriedDependence(isl::ast_node_for For, const Scop &S) {
   isl::pw_aff PwaDist = IslAstInfo::getMinimalDependenceDistance(For);
   if (PwaDist.is_null())
     return false;
