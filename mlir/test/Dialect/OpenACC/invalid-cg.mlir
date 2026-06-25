@@ -75,6 +75,25 @@ func.func @reduction_accumulate_empty_par_dims() {
 
 // -----
 
+func.func @reduction_accumulate_array_invalid_operator(%private: memref<4xi32>, %bounds: !acc.data_bounds_ty) {
+  acc.reduction_accumulate_array %private bounds(%bounds) <addi>
+      : memref<4xi32> {par_dims = #acc<par_dims[thread_x]>}
+  // expected-error@-2 {{expected ::mlir::acc::ReductionOperator to be one of}}
+  // expected-error@-3 {{failed to parse OpenACC_ReductionOperatorAttr}}
+  return
+}
+
+// -----
+
+func.func @reduction_accumulate_array_empty_par_dims(%private: memref<4xi32>, %bounds: !acc.data_bounds_ty) {
+  // expected-error@+1 {{par_dims must specify at least one parallel dimension}}
+  acc.reduction_accumulate_array %private bounds(%bounds) <add>
+      : memref<4xi32> {par_dims = #acc<par_dims[]>}
+  return
+}
+
+// -----
+
 func.func @predicate_region_empty() {
   acc.compute_region {
     // expected-error@+1 {{region needs to have at least one block}}

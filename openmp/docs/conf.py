@@ -14,46 +14,21 @@
 import sys, os
 from datetime import date
 
-# If extensions (or modules to document with autodoc) are in another directory,
-# add these directories to sys.path here. If the directory is relative to the
-# documentation root, use os.path.abspath to make it absolute, like shown here.
-# sys.path.insert(0, os.path.abspath('.'))
+from llvm_sphinx import *  # see llvm-project/utils/docs/README.md
+
+globals().update(common_conf(tags))
 
 # -- General configuration -----------------------------------------------------
 
-# If your documentation needs a minimal Sphinx version, state it here.
-# needs_sphinx = '1.0'
-
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = [
+extensions += [
     "sphinx.ext.todo",
     "sphinx.ext.mathjax",
     "sphinx.ext.intersphinx",
-    "myst_parser",
 ]
 
-# Add path for llvm_slug module.
-sys.path.insert(0, os.path.abspath(os.path.join("..", "..", "llvm", "docs")))
-
-
-myst_enable_extensions = ["substitution", "colon_fence", "deflist"]
-
-# Automatic anchors for markdown titles
-myst_heading_anchors = 6
-myst_heading_slug_func = "llvm_slug.make_slug"
-
-# Add any paths that contain templates here, relative to this directory.
-templates_path = ["_templates"]
-
-# The suffix of source filenames.
-source_suffix = [".rst", ".md"]
-
-# The encoding of source files.
-# source_encoding = 'utf-8-sig'
-
-# The master toctree document.
-master_doc = "index"
+myst_enable_extensions += ["colon_fence", "deflist"]
 
 # General information about the project.
 project = "LLVM/OpenMP"

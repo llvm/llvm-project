@@ -315,49 +315,29 @@ public:
 
   /// \return a non-null unique pointer to a PointerFlowEntitySummary
   std::unique_ptr<PointerFlowEntitySummary>
-  extractEntitySummary(const NamedDecl *Contributor, ASTContext &Ctx,
-                       TUSummaryExtractor &Extractor) {
+  extractEntitySummary(const std::vector<const NamedDecl *> &ContributorDecls,
+                       ASTContext &Ctx, TUSummaryExtractor &Extractor) {
     PointerFlowMatcher Matcher(Ctx, Extractor);
-    auto MatchAction = [&Matcher, &Contributor](const DynTypedNode &Node) {
-      auto Err = Matcher.matches(Node, Contributor);
 
-      if (Err)
-        logWarningFromError(std::move(Err));
-    };
+    for (const auto *Contrib : ContributorDecls) {
+      auto MatchAction = [&Matcher, Contrib](const DynTypedNode &Node) {
+        if (auto Err = Matcher.matches(Node, Contrib))
+          logWarningFromError(std::move(Err));
+      };
 
-    findMatchesIn(Contributor, MatchAction);
+      findMatchesIn(Contrib, MatchAction);
+    }
     return std::make_unique<PointerFlowEntitySummary>(
         buildPointerFlowEntitySummary(std::move(Matcher.Results)));
   }
 
   void HandleTranslationUnit(ASTContext &Ctx) override {
-    std::vector<const NamedDecl *> Contributors;
-
-    findContributors(Ctx, Contributors);
-    for (auto *CD : Contributors) {
-      // Templates are skipped, but their instantiations are handled. The idea
-      // is that we can conclude facts about a template through all of its
-      // instantiations.
-      if (CD->isTemplated())
-        continue;
-
-      auto EntitySummary = extractEntitySummary(CD, Ctx, *this);
-
-      assert(EntitySummary);
-      if (EntitySummary->empty())
-        continue;
-
-      std::optional<EntityId> ContributorId = addEntity(CD);
-      if (!ContributorId) {
-        logWarningFromError(makeEntityNameErr(Ctx, CD));
-        continue;
-      }
-
-      [[maybe_unused]] auto [_, InsertionSucceeded] =
-          SummaryBuilder.addSummary(*ContributorId, std::move(EntitySummary));
-
-      assert(InsertionSucceeded && "duplicated contributor extraction");
-    }
+    extractAndAddSummaries(
+        *this, SummaryBuilder, Ctx,
+        [&](const std::vector<const NamedDecl *> &Decls) {
+          return extractEntitySummary(Decls, Ctx, *this);
+        },
+        "PointerFlow");
   }
 };
 } // namespace

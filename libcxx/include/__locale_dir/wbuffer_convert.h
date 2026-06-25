@@ -67,7 +67,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI ~wbuffer_convert();
 
-  _LIBCPP_HIDE_FROM_ABI streambuf* rdbuf() const { return __bufptr_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI streambuf* rdbuf() const { return __bufptr_; }
   _LIBCPP_HIDE_FROM_ABI streambuf* rdbuf(streambuf* __bytebuf) {
     streambuf* __r = __bufptr_;
     __bufptr_      = __bytebuf;
@@ -77,7 +77,7 @@ public:
   wbuffer_convert(const wbuffer_convert&)            = delete;
   wbuffer_convert& operator=(const wbuffer_convert&) = delete;
 
-  _LIBCPP_HIDE_FROM_ABI state_type state() const { return __st_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI state_type state() const { return __st_; }
 
 protected:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual int_type underflow();

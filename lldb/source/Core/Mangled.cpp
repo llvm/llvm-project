@@ -407,13 +407,6 @@ void Mangled::DumpDebug(Stream *s) const {
   m_demangled.DumpDebug(s);
 }
 
-// Return the size in byte that this object takes in memory. The size includes
-// the size of the objects it owns, and not the strings that it references
-// because they are shared strings.
-size_t Mangled::MemorySize() const {
-  return m_mangled.MemorySize() + m_demangled.MemorySize();
-}
-
 // We "guess" the language because we can't determine a symbol's language from
 // it's name.  For example, a Pascal symbol can be mangled using the C++
 // Itanium scheme, and defined in a compilation unit within the same module as

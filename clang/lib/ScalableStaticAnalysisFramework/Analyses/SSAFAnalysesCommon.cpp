@@ -124,12 +124,14 @@ public:
 };
 } // namespace
 
-void ssaf::findContributors(ASTContext &Ctx,
-                            std::vector<const NamedDecl *> &Contributors) {
+void ssaf::findContributors(
+    ASTContext &Ctx,
+    llvm::DenseMap<const NamedDecl *, std::vector<const NamedDecl *>>
+        &Contributors) {
   ContributorFinder Finder;
   Finder.TraverseAST(Ctx);
-  Contributors.insert(Contributors.end(), Finder.Contributors.begin(),
-                      Finder.Contributors.end());
+  for (const NamedDecl *C : Finder.Contributors)
+    Contributors[cast<NamedDecl>(C->getCanonicalDecl())].push_back(C);
 }
 
 void ssaf::findMatchesIn(

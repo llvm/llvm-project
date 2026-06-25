@@ -805,10 +805,13 @@ private:
     delete Group;
   }
 
-  /// Collect all the accesses with a constant stride in program order.
+  /// Collect all the accesses with a constant stride in program order. Any
+  /// SCEV predicates needed to compute the strides are added to \p
+  /// Predicates.
   void collectConstStrideAccesses(
       MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
-      const DenseMap<Value *, const SCEV *> &Strides);
+      const DenseMap<Value *, const SCEV *> &Strides,
+      SmallVectorImpl<const SCEVPredicate *> &Predicates);
 
   /// Returns true if \p Stride is allowed in an interleaved group.
   LLVM_ABI static bool isStrided(int Stride);

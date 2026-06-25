@@ -486,6 +486,16 @@ LogicalResult ReductionAccumulateOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ReductionAccumulateArrayOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult ReductionAccumulateArrayOp::verify() {
+  if (getParDims().getArray().empty())
+    return emitOpError("par_dims must specify at least one parallel dimension");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ReductionCombineOp
 //===----------------------------------------------------------------------===//
 
