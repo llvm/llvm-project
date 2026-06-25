@@ -3245,7 +3245,7 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
     return InlineResult::failure("optnone attribute");
 
   // Don't inline functions which can be interposed at link-time.
-  if (Callee->isInterposable())
+  if (Callee->isInterposable(/*CheckNoIPA=*/false))
     return InlineResult::failure("interposable");
 
   // Don't inline functions marked noinline.

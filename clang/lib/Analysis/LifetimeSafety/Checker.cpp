@@ -68,6 +68,7 @@ private:
   LifetimeSafetySemaHelper *SemaHelper;
   ASTContext &AST;
   const Decl *FD;
+  const LifetimeSafetyOpts &LSOpts;
 
   static SourceLocation
   GetFactLoc(llvm::PointerUnion<const UseFact *, const OriginEscapesFact *> F) {
@@ -87,10 +88,11 @@ public:
                   const MovedLoansAnalysis &MovedLoans,
                   const LiveOriginsAnalysis &LiveOrigins, FactManager &FM,
                   AnalysisDeclContext &ADC,
-                  LifetimeSafetySemaHelper *SemaHelper)
+                  LifetimeSafetySemaHelper *SemaHelper,
+                  const LifetimeSafetyOpts &LSOpts)
       : LoanPropagation(LoanPropagation), MovedLoans(MovedLoans),
         LiveOrigins(LiveOrigins), FactMgr(FM), SemaHelper(SemaHelper),
-        AST(ADC.getASTContext()), FD(ADC.getDecl()) {
+        AST(ADC.getASTContext()), FD(ADC.getDecl()), LSOpts(LSOpts) {
     for (const CFGBlock *B : *ADC.getAnalysis<PostOrderCFGView>())
       for (const Fact *F : FactMgr.getFacts(B))
         if (const auto *EF = F->getAs<ExpireFact>())
@@ -398,6 +400,9 @@ public:
   void suggestAnnotations() {
     if (!SemaHelper)
       return;
+    if (!LSOpts.SuggestAnnotations)
+      return;
+    llvm::TimeTraceScope TimeTrace("SuggestAnnotations");
     for (auto [Target, EscapeTarget] : AnnotationWarningsMap) {
       if (const auto *PVD = Target.dyn_cast<const ParmVarDecl *>())
         suggestWithScopeForParmVar(PVD, EscapeTarget);
@@ -535,9 +540,10 @@ void runLifetimeChecker(const LoanPropagationAnalysis &LP,
                         const MovedLoansAnalysis &MovedLoans,
                         const LiveOriginsAnalysis &LO, FactManager &FactMgr,
                         AnalysisDeclContext &ADC,
-                        LifetimeSafetySemaHelper *SemaHelper) {
+                        LifetimeSafetySemaHelper *SemaHelper,
+                        const LifetimeSafetyOpts &LSOpts) {
   llvm::TimeTraceScope TimeProfile("LifetimeChecker");
-  LifetimeChecker Checker(LP, MovedLoans, LO, FactMgr, ADC, SemaHelper);
+  LifetimeChecker Checker(LP, MovedLoans, LO, FactMgr, ADC, SemaHelper, LSOpts);
 }
 
 } // namespace clang::lifetimes::internal

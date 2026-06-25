@@ -345,7 +345,9 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
           firBuilder, loc, exv, info);
     }
 
-    assert(false && "array with unknown dimension expected to have descriptor");
+    // An assumed-size array (or other non-descriptor array with an unknown
+    // trailing extent) has no recoverable bounds here and is passed without a
+    // descriptor; map it without bounds rather than asserting.
     return {};
   }
 

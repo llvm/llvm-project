@@ -28904,10 +28904,7 @@ public:
       return RecurKind::FMaximum;
     if (match(I, m_FMinimum(m_Value(), m_Value())))
       return RecurKind::FMinimum;
-    // This matches either cmp+select or intrinsics. SLP is expected to handle
-    // either form.
-    // TODO: If we are canonicalizing to intrinsics, we can remove several
-    //       special-case paths that deal with selects.
+    // TODO: remove several special-case paths that deal with selects.
     if (match(I, m_SMax(m_Value(), m_Value())))
       return RecurKind::SMax;
     if (match(I, m_SMin(m_Value(), m_Value())))

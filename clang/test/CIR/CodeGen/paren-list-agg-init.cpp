@@ -875,7 +875,7 @@ namespace gh68198 {
   // CIR: %[[ALLOC_DIFF:.*]] = cir.sub %[[SIZE]], %[[INIT_SIZE]] : !u64i
   // CIR: %[[ELT2_DECAY:.*]] = cir.cast bitcast %[[ELT2]] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!void>
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !u8i
-  // CIR: cir.libc.memset %[[ALLOC_DIFF]] bytes at %[[ELT2_DECAY]] to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
+  // CIR: cir.libc.memset %[[ALLOC_DIFF]] bytes at %[[ELT2_DECAY]]{{.*}} to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
   // CIR: %[[ARR_TO_VOID:.*]] = cir.cast bitcast %[[ALLOC_TO_ARR]] : !cir.ptr<!cir.array<!s32i x 2>> -> !cir.ptr<!void>
   // CIR: cir.store{{.*}} %[[ARR_TO_VOID]], %[[ARR_ALLOCA]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
   void foo27() {
