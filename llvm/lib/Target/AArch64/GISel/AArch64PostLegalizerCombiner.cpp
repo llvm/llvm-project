@@ -591,6 +591,84 @@ static void applySubAddMulReassoc(MachineInstr &MI, MachineInstr &Sub,
   Observer.changedInstr(MI);
 }
 
+bool matchRemoveZextWhenLoweringShl(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                    Register &MatchInfo) {
+  // check Opcode is G_SHL
+  assert(MI.getOpcode() == TargetOpcode::G_SHL && "Opcode is not G_SHL");
+
+  // check the shape of operation is correct
+
+  // check destination register is 32 bit or 64 bit scalar type
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  if (DstTy.isVector()) {
+    return false;
+  }
+  unsigned BW = DstTy.getScalarSizeInBits();
+  if (BW != 32 && BW != 64) {
+    return false;
+  }
+
+  // check amount register originated from G_ZEXT
+  Register AmtReg = MI.getOperand(2).getReg();
+  MachineInstr *AmtDef = MRI.getVRegDef(AmtReg);
+  if (!AmtDef)
+    return false;
+
+  // check if the low 5 or 6 bits of the mask in G_AND %src, mask are all set
+  // AmtDef = G_AND %src, 0xFF
+  if (AmtDef->getOpcode() == TargetOpcode::G_AND) {
+    auto IsConstantMask =
+        getIConstantVRegValWithLookThrough(AmtDef->getOperand(2).getReg(), MRI);
+    if (!IsConstantMask)
+      return false;
+    APInt StandardMask =
+        APInt::getLowBitsSet(IsConstantMask->Value.getBitWidth(), Log2_32(BW));
+    if ((IsConstantMask->Value & StandardMask) != StandardMask)
+      return false;
+
+    MatchInfo = AmtDef->getOperand(1).getReg();
+    return true;
+  }
+
+  if (AmtDef->getOpcode() != TargetOpcode::G_ZEXT) {
+    return false;
+  }
+
+  // check G_ZEXT input register is 5bits or more and scalar type
+  Register Src = AmtDef->getOperand(1).getReg();
+  LLT SrcTy = MRI.getType(Src);
+  if (SrcTy.isVector()) {
+    return false;
+  }
+  if (SrcTy.getScalarSizeInBits() < Log2_32(BW)) {
+    return false;
+  }
+
+  // proceed if tests have passed
+  MatchInfo = Src;
+  return true;
+}
+
+void applyRemoveZextWhenLoweringShl(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                    MachineIRBuilder &B,
+                                    GISelChangeObserver &Observer,
+                                    Register &MatchInfo) {
+  Register OriginalShiftAmt = MI.getOperand(2).getReg();
+  LLT OriginalShiftTy = MRI.getType(OriginalShiftAmt);
+  LLT SrcTy = MRI.getType(MatchInfo);
+
+  Register NewShiftAmt = MatchInfo;
+  // if shift amount is zero extended, replace it with new shift amount
+  if (OriginalShiftTy != SrcTy) {
+    B.setInstrAndDebugLoc(MI);
+    NewShiftAmt = B.buildAnyExt(OriginalShiftTy, MatchInfo).getReg(0);
+  }
+
+  Observer.changingInstr(MI);
+  MI.getOperand(2).setReg(NewShiftAmt);
+  Observer.changedInstr(MI);
+}
+
 class AArch64PostLegalizerCombinerImpl : public Combiner {
 protected:
   const CombinerHelper Helper;

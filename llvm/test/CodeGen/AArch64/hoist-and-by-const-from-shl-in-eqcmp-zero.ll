@@ -25,8 +25,7 @@ define i1 @scalar_i8_signbit_eq(i8 %x, i8 %y) nounwind {
 ; CHECK-GI-LABEL: scalar_i8_signbit_eq:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #-128 // =0xffffff80
-; CHECK-GI-NEXT:    and w9, w1, #0xff
-; CHECK-GI-NEXT:    lsl w8, w8, w9
+; CHECK-GI-NEXT:    lsl w8, w8, w1
 ; CHECK-GI-NEXT:    and w8, w8, w0
 ; CHECK-GI-NEXT:    tst w8, #0xff
 ; CHECK-GI-NEXT:    cset w0, eq
@@ -49,8 +48,7 @@ define i1 @scalar_i8_lowestbit_eq(i8 %x, i8 %y) nounwind {
 ; CHECK-GI-LABEL: scalar_i8_lowestbit_eq:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
-; CHECK-GI-NEXT:    and w9, w1, #0xff
-; CHECK-GI-NEXT:    lsl w8, w8, w9
+; CHECK-GI-NEXT:    lsl w8, w8, w1
 ; CHECK-GI-NEXT:    and w8, w8, w0
 ; CHECK-GI-NEXT:    tst w8, #0xff
 ; CHECK-GI-NEXT:    cset w0, eq
@@ -73,8 +71,7 @@ define i1 @scalar_i8_bitsinmiddle_eq(i8 %x, i8 %y) nounwind {
 ; CHECK-GI-LABEL: scalar_i8_bitsinmiddle_eq:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #24 // =0x18
-; CHECK-GI-NEXT:    and w9, w1, #0xff
-; CHECK-GI-NEXT:    lsl w8, w8, w9
+; CHECK-GI-NEXT:    lsl w8, w8, w1
 ; CHECK-GI-NEXT:    and w8, w8, w0
 ; CHECK-GI-NEXT:    tst w8, #0xff
 ; CHECK-GI-NEXT:    cset w0, eq
@@ -99,8 +96,7 @@ define i1 @scalar_i16_signbit_eq(i16 %x, i16 %y) nounwind {
 ; CHECK-GI-LABEL: scalar_i16_signbit_eq:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #-32768 // =0xffff8000
-; CHECK-GI-NEXT:    and w9, w1, #0xffff
-; CHECK-GI-NEXT:    lsl w8, w8, w9
+; CHECK-GI-NEXT:    lsl w8, w8, w1
 ; CHECK-GI-NEXT:    and w8, w8, w0
 ; CHECK-GI-NEXT:    tst w8, #0xffff
 ; CHECK-GI-NEXT:    cset w0, eq
@@ -123,8 +119,7 @@ define i1 @scalar_i16_lowestbit_eq(i16 %x, i16 %y) nounwind {
 ; CHECK-GI-LABEL: scalar_i16_lowestbit_eq:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
-; CHECK-GI-NEXT:    and w9, w1, #0xffff
-; CHECK-GI-NEXT:    lsl w8, w8, w9
+; CHECK-GI-NEXT:    lsl w8, w8, w1
 ; CHECK-GI-NEXT:    and w8, w8, w0
 ; CHECK-GI-NEXT:    tst w8, #0xffff
 ; CHECK-GI-NEXT:    cset w0, eq
@@ -147,8 +142,7 @@ define i1 @scalar_i16_bitsinmiddle_eq(i16 %x, i16 %y) nounwind {
 ; CHECK-GI-LABEL: scalar_i16_bitsinmiddle_eq:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #4080 // =0xff0
-; CHECK-GI-NEXT:    and w9, w1, #0xffff
-; CHECK-GI-NEXT:    lsl w8, w8, w9
+; CHECK-GI-NEXT:    lsl w8, w8, w1
 ; CHECK-GI-NEXT:    and w8, w8, w0
 ; CHECK-GI-NEXT:    tst w8, #0xffff
 ; CHECK-GI-NEXT:    cset w0, eq
@@ -402,8 +396,7 @@ define i1 @scalar_i8_signbit_ne(i8 %x, i8 %y) nounwind {
 ; CHECK-GI-LABEL: scalar_i8_signbit_ne:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #-128 // =0xffffff80
-; CHECK-GI-NEXT:    and w9, w1, #0xff
-; CHECK-GI-NEXT:    lsl w8, w8, w9
+; CHECK-GI-NEXT:    lsl w8, w8, w1
 ; CHECK-GI-NEXT:    and w8, w8, w0
 ; CHECK-GI-NEXT:    tst w8, #0xff
 ; CHECK-GI-NEXT:    cset w0, ne
@@ -460,8 +453,7 @@ define i1 @scalar_i8_bitsinmiddle_slt(i8 %x, i8 %y) nounwind {
 ; CHECK-GI-LABEL: scalar_i8_bitsinmiddle_slt:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov w8, #24 // =0x18
-; CHECK-GI-NEXT:    and w9, w1, #0xff
-; CHECK-GI-NEXT:    lsl w8, w8, w9
+; CHECK-GI-NEXT:    lsl w8, w8, w1
 ; CHECK-GI-NEXT:    and w8, w8, w0
 ; CHECK-GI-NEXT:    sxtb w8, w8
 ; CHECK-GI-NEXT:    cmp w8, #0

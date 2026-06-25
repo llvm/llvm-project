@@ -19,31 +19,19 @@ define i1 @shl_i1(i1 %0, i1 %1){
 }
 
 define i8 @shl_i8(i8 %0, i8 %1){
-; CHECK-SD-LABEL: shl_i8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    lsl w0, w0, w1
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: shl_i8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and w8, w1, #0xff
-; CHECK-GI-NEXT:    lsl w0, w0, w8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: shl_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl w0, w0, w1
+; CHECK-NEXT:    ret
     %3 = shl i8 %0, %1
     ret i8 %3
 }
 
 define i16 @shl_i16(i16 %0, i16 %1){
-; CHECK-SD-LABEL: shl_i16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    lsl w0, w0, w1
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: shl_i16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    and w8, w1, #0xffff
-; CHECK-GI-NEXT:    lsl w0, w0, w8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: shl_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    lsl w0, w0, w1
+; CHECK-NEXT:    ret
     %3 = shl i16 %0, %1
     ret i16 %3
 }

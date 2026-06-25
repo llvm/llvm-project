@@ -672,7 +672,6 @@ define i8 @shl_constant_sel_constants(i1 %cond) {
 ; CHECK-GI-NEXT:    sbfx w9, w0, #0, #1
 ; CHECK-GI-NEXT:    mov w8, #1 // =0x1
 ; CHECK-GI-NEXT:    add w9, w9, #3
-; CHECK-GI-NEXT:    and w9, w9, #0xff
 ; CHECK-GI-NEXT:    lsl w0, w8, w9
 ; CHECK-GI-NEXT:    ret
   %sel = select i1 %cond, i8 2, i8 3
