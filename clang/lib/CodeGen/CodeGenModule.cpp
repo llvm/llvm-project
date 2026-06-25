@@ -1300,7 +1300,8 @@ void CodeGenModule::Release() {
   uint64_t WCharWidth =
       Context.getTypeSizeInChars(Context.getWideCharType()).getQuantity();
   if (WCharWidth != getTriple().getDefaultWCharSize())
-    getModule().addModuleFlag(llvm::Module::Error, "wchar_size", WCharWidth);
+    getModule().addModuleFlag(llvm::Module::Error, "wchar_size",
+                              static_cast<uint32_t>(WCharWidth));
 
   if (getTriple().isOSzOS()) {
     getModule().addModuleFlag(llvm::Module::Warning,
@@ -1335,7 +1336,7 @@ void CodeGenModule::Release() {
   llvm::Triple T = Context.getTargetInfo().getTriple();
   if (T.isARM() || T.isThumb()) {
     // The minimum width of an enum in bytes
-    uint64_t EnumWidth = Context.getLangOpts().ShortEnums ? 1 : 4;
+    uint32_t EnumWidth = Context.getLangOpts().ShortEnums ? 1 : 4;
     getModule().addModuleFlag(llvm::Module::Error, "min_enum_size", EnumWidth);
   }
 
@@ -1491,7 +1492,8 @@ void CodeGenModule::Release() {
                                   "ptrauth-sign-personality", 1);
       assert(getTriple().isOSBinFormatELF());
       using namespace llvm::ELF;
-      uint64_t PAuthABIVersion =
+      assert(AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_LAST < 32);
+      uint32_t PAuthABIVersion =
           (LangOpts.PointerAuthIntrinsics
            << AARCH64_PAUTH_PLATFORM_LLVM_LINUX_VERSION_INTRINSICS) |
           (LangOpts.PointerAuthCalls
