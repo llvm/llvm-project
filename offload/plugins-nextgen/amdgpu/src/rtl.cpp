@@ -5042,7 +5042,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       if (MemoryPool->isCoarseGrained()) {
         DevPtr = nullptr;
 
-        Error Err = MemoryPool->allocate(PreAllocSize, &DevPtr);
+        Error Err = MemoryPool->allocate(PreAllocSize, &DevPtr, /* alignemnt*/0);
         if (Err)
           return Plugin::error(ErrorCode::UNKNOWN, "Device memory pool preallocation failed");
 
