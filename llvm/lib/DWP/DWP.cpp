@@ -17,12 +17,14 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/DWP/DWPError.h"
 #include "llvm/DWP/ELFWriter.h"
+#include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/Object/Decompressor.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MathExtras.h"
 #include <limits>
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -37,20 +39,6 @@ static uint64_t debugStrOffsetsHeaderSize(DataExtractor StrOffsetsData,
   if (Length == llvm::dwarf::DW_LENGTH_DWARF64)
     return 16; // unit length: 12 bytes, version: 2 bytes, padding: 2 bytes.
   return 8;    // unit length: 4 bytes, version: 2 bytes, padding: 2 bytes.
-}
-
-// Read the next (attribute, form) pair into Name and Form, also consuming the
-// inline DW_FORM_implicit_const value when present. Returns false on the
-// terminating (0, 0) pair.
-static bool readAbbrevAttribute(const DataExtractor &AbbrevData,
-                                uint64_t *Offset, dwarf::Attribute &Name,
-                                dwarf::Form &Form, int64_t &ImplicitConst) {
-  Name = static_cast<dwarf::Attribute>(AbbrevData.getULEB128(Offset));
-  Form = static_cast<dwarf::Form>(AbbrevData.getULEB128(Offset));
-  ImplicitConst = 0;
-  if (Form == dwarf::DW_FORM_implicit_const)
-    ImplicitConst = AbbrevData.getSLEB128(Offset);
-  return Name != 0 || Form != 0;
 }
 
 static Expected<uint64_t> getCUAbbrev(StringRef Abbrev, uint64_t AbbrCode) {
@@ -70,7 +58,7 @@ static Expected<uint64_t> getCUAbbrev(StringRef Abbrev, uint64_t AbbrCode) {
     // Attribute specifications, terminated by a (0, 0) pair.
     dwarf::Attribute Name;
     dwarf::Form Form;
-    int64_t ImplicitConst;
+    std::optional<int64_t> ImplicitConst;
     while (readAbbrevAttribute(AbbrevData, &Offset, Name, Form, ImplicitConst))
       ;
   }
@@ -142,7 +130,7 @@ getCUIdentifiers(InfoSectionUnitHeader &Header, StringRef Abbrev,
   AbbrevData.getU8(&AbbrevOffset);
   dwarf::Attribute Name;
   dwarf::Form Form;
-  int64_t ImplicitConst;
+  std::optional<int64_t> ImplicitConst;
   while (readAbbrevAttribute(AbbrevData, &AbbrevOffset, Name, Form,
                              ImplicitConst)) {
     switch (Name) {
@@ -164,9 +152,8 @@ getCUIdentifiers(InfoSectionUnitHeader &Header, StringRef Abbrev,
       break;
     }
     case dwarf::DW_AT_GNU_dwo_id:
-      Header.Signature = Form == dwarf::DW_FORM_implicit_const
-                             ? static_cast<uint64_t>(ImplicitConst)
-                             : InfoData.getU64(&Offset);
+      Header.Signature = ImplicitConst ? static_cast<uint64_t>(*ImplicitConst)
+                                       : InfoData.getU64(&Offset);
       break;
     default:
       DWARFFormValue::skipValue(
