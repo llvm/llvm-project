@@ -3169,7 +3169,14 @@ genACCHostDataOp(Fortran::lower::AbstractConverter &converter,
           if (newSym) {
             const Fortran::semantics::Symbol *origSym =
                 localSymbols.lookupSymbolByName(newSym->name().ToString());
-            if (origSym)
+            if (!origSym) {
+              // For a USE-renamed variable the host symbol is mapped under its
+              // ultimate (module) name, so resolve it via the enclosing scope.
+              if (const Fortran::semantics::Symbol *hostSym =
+                      newSym->owner().parent().FindSymbol(newSym->name()))
+                origSym = &hostSym->GetUltimate();
+            }
+            if (origSym && localSymbols.lookupSymbol(*origSym))
               localSymbols.copySymbolBinding(*origSym, *newSym);
           }
         }
