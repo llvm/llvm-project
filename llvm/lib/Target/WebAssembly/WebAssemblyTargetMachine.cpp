@@ -119,7 +119,6 @@ LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyDebugFixupPass(PR);
   initializeWebAssemblyPeepholePass(PR);
   initializeWebAssemblyMCLowerPrePassPass(PR);
-  initializeWebAssemblyLowerRefTypesIntPtrConvPass(PR);
   initializeWebAssemblyFixBrTableDefaultsPass(PR);
   initializeWebAssemblyDAGToDAGISelLegacyPass(PR);
 }
@@ -677,7 +676,6 @@ void WebAssemblyPassConfig::addPreEmitPass() {
 
 bool WebAssemblyPassConfig::addPreISel() {
   TargetPassConfig::addPreISel();
-  addPass(createWebAssemblyLowerRefTypesIntPtrConv());
   return false;
 }
 
