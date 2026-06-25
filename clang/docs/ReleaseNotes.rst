@@ -890,6 +890,8 @@ X86 Support
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
+Added support for the Arm AGI CPU via the ``-mcpu=armagicpu`` command-line option.
+
 Android Support
 ^^^^^^^^^^^^^^^
 
