@@ -1,0 +1,28 @@
+test_func
+# Func Hash:
+241846114956444760
+# Num Counters:
+4
+# Counter Values:
+4
+1
+1
+3
+
+macro-vs-include.c:header_func
+# Func Hash:
+11211998296
+# Num Counters:
+2
+# Counter Values:
+4
+2
+
+main
+# Func Hash:
+24
+# Num Counters:
+1
+# Counter Values:
+1
+

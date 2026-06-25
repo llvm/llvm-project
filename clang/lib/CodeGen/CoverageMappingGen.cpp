@@ -604,7 +604,8 @@ public:
       assert(SR.isInSourceOrder() && "region start and end out of order");
       MappingRegions.push_back(CounterMappingRegion::makeExpansion(
           *ParentFileID, *ExpandedFileID, SR.LineStart, SR.ColumnStart,
-          SR.LineEnd, SR.ColumnEnd));
+          SR.LineEnd, SR.ColumnEnd,
+          /*IsMacro=*/ExpandedLoc.isMacroID()));
     }
     return Filter;
   }
@@ -2446,6 +2447,9 @@ static void dump(llvm::raw_ostream &OS, StringRef FunctionName,
     case CounterMappingRegion::ExpansionRegion:
       OS << "Expansion,";
       break;
+    case CounterMappingRegion::MacroExpansionRegion:
+      OS << "MacroExpansion,";
+      break;
     case CounterMappingRegion::SkippedRegion:
       OS << "Skipped,";
       break;
@@ -2484,7 +2488,7 @@ static void dump(llvm::raw_ostream &OS, StringRef FunctionName,
       OS << "," << BranchParams->Conds[false] + 1 << "] ";
     }
 
-    if (R.Kind == CounterMappingRegion::ExpansionRegion)
+    if (R.isExpansion())
       OS << " (Expanded file = " << R.ExpandedFileID << ")";
     OS << "\n";
   }

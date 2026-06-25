@@ -30,12 +30,12 @@ template <bool f> bool SysTmpl() { return f; }
 // CHECK-LABEL: doSomething
 void doSomething(int x) { // CHECK: File 0, [[@LINE]]:25 -> {{[0-9:]+}} = #0
   // WOSYS-NOT: Expansion,
-  // W_SYS: Expansion,File 0, [[@LINE+1]]:3 -> [[@LINE+1]]:7
+  // W_SYS: MacroExpansion,File 0, [[@LINE+1]]:3 -> [[@LINE+1]]:7
   Func(x);
   // CHECK: Gap,File 0, [[@LINE+1]]:10
   return;
   // WOSYS-NOT: Expansion,
-  // W_SYS: Expansion,File 0, [[@LINE+1]]:3 -> [[@LINE+1]]:11
+  // W_SYS: MacroExpansion,File 0, [[@LINE+1]]:3 -> [[@LINE+1]]:11
   SomeType *f; // CHECK: File 0, [[@LINE]]:11 -> {{[0-9:]+}} = 0
 }
 

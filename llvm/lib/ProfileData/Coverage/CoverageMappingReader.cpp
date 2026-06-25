@@ -275,9 +275,24 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
     } else {
       // Is it an expansion region?
       if (EncodedCounterAndRegion & EncodingExpansionRegionBit) {
-        Kind = CounterMappingRegion::ExpansionRegion;
-        ExpandedFileID = EncodedCounterAndRegion >>
-                         Counter::EncodingCounterTagAndExpansionRegionTagBits;
+        // Version8+: bit 2 marks expansion, bit 3 distinguishes macro, FileID
+        // at bit 4+ Version < 8: bit 2 marks expansion, FileID at bit 3+
+        if (Version >= CovMapVersion::Version8) {
+          // Check for macro expansion: bit 3 is set for MacroExpansionRegion
+          if (EncodedCounterAndRegion &
+              Counter::EncodingMacroExpansionRegionBit) {
+            Kind = CounterMappingRegion::MacroExpansionRegion;
+          } else {
+            Kind = CounterMappingRegion::ExpansionRegion;
+          }
+          ExpandedFileID =
+              EncodedCounterAndRegion >> Counter::EncodingTagBitsMacroExpansion;
+        } else {
+          // Pre-Version8: all expansions are ExpansionRegion, FileID at bit 3+
+          Kind = CounterMappingRegion::ExpansionRegion;
+          ExpandedFileID = EncodedCounterAndRegion >>
+                           Counter::EncodingCounterTagAndExpansionRegionTagBits;
+        }
         if (ExpandedFileID >= NumFileIDs)
           return make_error<CoverageMapError>(coveragemap_error::malformed,
                                               "ExpandedFileID is invalid");
@@ -375,8 +390,12 @@ Error RawCoverageMappingReader::readMappingRegionsSubArray(
       dbgs() << "Counter in file " << InferredFileID << " " << LineStart << ":"
              << ColumnStart << " -> " << (LineStart + NumLines) << ":"
              << ColumnEnd << ", ";
-      if (Kind == CounterMappingRegion::ExpansionRegion)
-        dbgs() << "Expands to file " << ExpandedFileID;
+      if (Kind == CounterMappingRegion::ExpansionRegion ||
+          Kind == CounterMappingRegion::MacroExpansionRegion)
+        dbgs() << "Expands to file " << ExpandedFileID
+               << (Kind == CounterMappingRegion::MacroExpansionRegion
+                       ? " (macro)"
+                       : "");
       else
         CounterMappingContext(Expressions).dump(C, dbgs());
       dbgs() << "\n";
@@ -446,7 +465,7 @@ Error RawCoverageMappingReader::read() {
   FileIDExpansionRegionMapping.resize(VirtualFileMapping.size(), nullptr);
   for (;;) {
     for (auto &R : MappingRegions) {
-      if (R.Kind != CounterMappingRegion::ExpansionRegion)
+      if (!R.isExpansion())
         continue;
       assert(!FileIDExpansionRegionMapping[R.ExpandedFileID]);
       FileIDExpansionRegionMapping[R.ExpandedFileID] = &R;
@@ -837,6 +856,7 @@ Expected<std::unique_ptr<CovMapFuncRecordReader>> CovMapFuncRecordReader::get(
   case CovMapVersion::Version5:
   case CovMapVersion::Version6:
   case CovMapVersion::Version7:
+  case CovMapVersion::Version8:
     // Decompress the name data.
     if (Error E = P.create(P.getNameData()))
       return std::move(E);
@@ -858,6 +878,9 @@ Expected<std::unique_ptr<CovMapFuncRecordReader>> CovMapFuncRecordReader::get(
     else if (Version == CovMapVersion::Version7)
       return std::make_unique<VersionedCovMapFuncRecordReader<
           CovMapVersion::Version7, IntPtrT, Endian>>(P, R, D, F);
+    else if (Version == CovMapVersion::Version8)
+      return std::make_unique<VersionedCovMapFuncRecordReader<
+          CovMapVersion::Version8, IntPtrT, Endian>>(P, R, D, F);
   }
   llvm_unreachable("Unsupported version");
 }
@@ -1375,7 +1398,7 @@ Error BinaryCoverageReader::readNextRecord(CoverageMappingRecord &Record) {
   auto &R = MappingRecords[CurrentRecord];
   auto F = ArrayRef(Filenames).slice(R.FilenamesBegin, R.FilenamesSize);
   RawCoverageMappingReader Reader(R.CoverageMapping, F, FunctionsFilenames,
-                                  Expressions, MappingRegions);
+                                  Expressions, MappingRegions, R.Version);
   if (auto Err = Reader.read())
     return Err;
 

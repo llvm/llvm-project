@@ -756,7 +756,7 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 /* Indexed profile format version (start from 1). */
 #define INSTR_PROF_INDEX_VERSION 13
 /* Coverage mapping format version (start from 0). */
-#define INSTR_PROF_COVMAP_VERSION 6
+#define INSTR_PROF_COVMAP_VERSION 7
 
 /* Profile version is always of type uint64_t. Reserve the upper 32 bits in the
  * version for other variants of profile. We set the 8th most significant bit
