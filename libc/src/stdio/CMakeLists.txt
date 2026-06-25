@@ -244,6 +244,21 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  tmpnam
+  SRCS
+    tmpnam.cpp
+  HDRS
+    tmpnam.h
+  DEPENDS
+    libc.hdr.stdio_macros
+    libc.hdr.errno_macros
+    libc.src.stdio.snprintf
+    libc.src.__support.CPP.atomic
+    libc.hdr.unistd_macros
+    libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
   rename
   ALIAS
   DEPENDS

@@ -396,6 +396,12 @@ functions:
       - type: const char *__restrict
       - type: const char *__restrict
       - type: '...'
+  - name: tmpnam
+    standards:
+      - stdc
+    return_type: char *
+    arguments:
+      - type: char *
   - name: ungetc
     standards:
       - stdc
