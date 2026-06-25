@@ -197,7 +197,7 @@ LIBC_INLINE bfloat16 expbf16(bfloat16 x) {
   //   > 1 + x * P;
   //   0x1p0 + x * (0x1p0 + x * (0x1.00004p-1 + x * 0x1.555578p-3))
   float exp_lo =
-      fputil::polyeval(lo, 0x1p+0f, 0x1p+0f, 0x1.0004p-1f, 0x1.555778p-3f);
+      fputil::polyeval(lo, 0x1p+0f, 0x1p+0f, 0x1.00004p-1f, 0x1.555578p-3f);
 
   return fputil::cast<bfloat16>(exp_hi * exp_mid * exp_lo);
 }

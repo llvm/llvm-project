@@ -1696,6 +1696,8 @@ math_test(name = "exp2m1f16")
 
 math_test(name = "expf16")
 
+math_test(name = "expbf16")
+
 math_test(name = "expm1f16")
 
 math_test(
