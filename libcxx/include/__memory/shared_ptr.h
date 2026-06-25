@@ -607,8 +607,8 @@ private:
 
   template <class _Vp>
   struct __get_shared_from_this<_Vp, __void_t<decltype(__get_shared_from_this_impl(static_cast<_Vp*>(nullptr)))> > {
-    using type = _LIBCPP_NODEBUG const
-        enable_shared_from_this<typename decltype(__get_shared_from_this_impl(static_cast<_Vp*>(nullptr)))::type>*;
+    using type _LIBCPP_NODEBUG = const enable_shared_from_this<typename decltype(__get_shared_from_this_impl(
+        static_cast<_Vp*>(nullptr)))::type>*;
   };
 
   template <
