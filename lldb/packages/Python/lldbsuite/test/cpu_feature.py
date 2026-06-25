@@ -7,6 +7,7 @@ import re
 
 PF_ARM_SVE_INSTRUCTIONS_AVAILABLE = 46
 
+
 class CPUFeature:
     def __init__(
         self,
