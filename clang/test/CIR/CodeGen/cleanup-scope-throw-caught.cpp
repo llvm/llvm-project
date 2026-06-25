@@ -1,9 +1,11 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
+// RUN: cir-opt -cir-hoist-allocas -cir-flatten-cfg -cir-eh-abi-lowering %t.cir -o %t.eh.cir
+// RUN: FileCheck --input-file=%t.eh.cir %s -check-prefix=CIR-EHABI
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-linux-gnu -fcxx-exceptions -fexceptions -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
+// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 
 struct C {
   C();
@@ -37,29 +39,25 @@ int testCaughtThrowSharedDispatch() {
 // CIR:     }
 // CIR:   } catch [type #cir.global_view<@_ZTIP1C> : !cir.ptr<!u8i>]
 
+// After EHABI lowering the throw's in-flight exception carries BOTH the
+// `cleanup` clause (to run `a`'s destructor) and the `catch @_ZTIP1C` clause
+// (to reach the handler).  The missing catch clause was the bug: the exception
+// would resume past the handler and terminate.
+
+// CIR-EHABI-LABEL: cir.func{{.*}} @_Z29testCaughtThrowSharedDispatchv()
+// CIR-EHABI:   cir.eh.inflight_exception cleanup [@_ZTIP1C]
+
 // The throw lowers to an `invoke @__cxa_throw` whose unwind landing pad has
-// BOTH a `cleanup` clause (to run `a`'s destructor) and the `catch ptr
-// @_ZTIP1C` clause (to reach the handler).  The missing catch clause was the
-// bug: the exception would resume past the handler and terminate.
+// BOTH a `cleanup` clause and the `catch ptr @_ZTIP1C` clause; OGCG produces
+// the equivalent landing pad.
 
 // LLVM: define {{.*}}@_Z29testCaughtThrowSharedDispatchv()
 // LLVM:   invoke void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIP1C, ptr null)
-// LLVM-NEXT: to label %{{.*}} unwind label %[[LPAD:[0-9]+]]
+// LLVM-NEXT: to label %{{.*}} unwind label %[[LPAD:.*]]
 // LLVM: [[LPAD]]:
 // LLVM:   landingpad { ptr, i32 }
 // LLVM-NEXT: cleanup
 // LLVM-NEXT: catch ptr @_ZTIP1C
-
-// OGCG produces the equivalent landing pad: the throw's unwind path is a
-// `cleanup` + `catch ptr @_ZTIP1C` landing pad.
-
-// OGCG: define {{.*}}@_Z29testCaughtThrowSharedDispatchv()
-// OGCG:   invoke void @__cxa_throw(ptr %{{.*}}, ptr @_ZTIP1C, ptr null)
-// OGCG-NEXT: to label %{{.*}} unwind label %[[LPAD:.*]]
-// OGCG: [[LPAD]]:
-// OGCG:   landingpad { ptr, i32 }
-// OGCG-NEXT: cleanup
-// OGCG-NEXT: catch ptr @_ZTIP1C
 
 struct S {
   S();
@@ -87,20 +85,18 @@ void testNestedTry() {
 // CIR:     } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>]
 // CIR:   } catch [type #cir.global_view<@_ZTId> : !cir.ptr<!u8i>]
 
+// The may_throw landing pad reaches both the inner (int) and outer (double)
+// dispatches plus the cleanup for `a`, so its in-flight exception lists both
+// catch clauses innermost first alongside the cleanup.
+
+// CIR-EHABI-LABEL: cir.func{{.*}} @_Z13testNestedTryv()
+// CIR-EHABI:   cir.eh.inflight_exception cleanup [@_ZTIi, @_ZTId]
+
 // LLVM: define {{.*}}@_Z13testNestedTryv()
 // LLVM:   invoke void @_Z9may_throwv()
-// LLVM-NEXT: to label %{{.*}} unwind label %[[LP:[0-9]+]]
+// LLVM-NEXT: to label %{{.*}} unwind label %[[LP:.*]]
 // LLVM: [[LP]]:
 // LLVM:   landingpad { ptr, i32 }
 // LLVM-NEXT: cleanup
 // LLVM-NEXT: catch ptr @_ZTIi
 // LLVM-NEXT: catch ptr @_ZTId
-
-// OGCG: define {{.*}}@_Z13testNestedTryv()
-// OGCG:   invoke void @_Z9may_throwv()
-// OGCG-NEXT: to label %{{.*}} unwind label %[[LP:.*]]
-// OGCG: [[LP]]:
-// OGCG:   landingpad { ptr, i32 }
-// OGCG-NEXT: cleanup
-// OGCG-NEXT: catch ptr @_ZTIi
-// OGCG-NEXT: catch ptr @_ZTId

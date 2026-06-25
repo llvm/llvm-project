@@ -37,6 +37,7 @@
 #include "clang/CIR/Dialect/Transforms/CIRTransformUtils.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -144,11 +145,9 @@ private:
   mlir::LogicalResult
   lowerEhInitiate(cir::EhInitiateOp initiateOp,
                   llvm::ArrayRef<cir::EhDispatchOp> reachedDispatches,
-                  bool reachesCleanup, EhTokenMap &ehTokenMap,
-                  SmallVectorImpl<mlir::Operation *> &deadOps);
+                  bool reachesCleanup, EhTokenMap &ehTokenMap);
   void lowerDispatch(cir::EhDispatchOp dispatch, mlir::Value exnPtr,
-                     mlir::Value typeId,
-                     SmallVectorImpl<mlir::Operation *> &deadOps);
+                     mlir::Value typeId);
   mlir::LogicalResult lowerConstructCatchParam(cir::ConstructCatchParamOp op,
                                                mlir::Value exnPtr);
   void lowerInitCatchParam(cir::InitCatchParamOp op);
@@ -316,10 +315,10 @@ mlir::Block *ItaniumEHLowering::buildTerminateBlock(cir::FuncOp funcOp,
 /// in which the destructive per-initiate traversal tears down shared
 /// token-graph edges.  \p dispatches is left empty for a cleanup-only initiate
 /// that reaches no dispatch (e.g. a path that only resumes).
-static void
-collectReachableDispatches(mlir::Value rootToken,
-                           llvm::SmallVectorImpl<cir::EhDispatchOp> &dispatches,
-                           bool &reachesCleanup) {
+static void collectReachableDispatches(
+    mlir::Value rootToken,
+    llvm::SmallSetVector<cir::EhDispatchOp, 4> &dispatches,
+    bool &reachesCleanup) {
   llvm::SmallVector<mlir::Value> worklist;
   llvm::SmallPtrSet<mlir::Value, 8> visited;
   worklist.push_back(rootToken);
@@ -339,8 +338,7 @@ collectReachableDispatches(mlir::Value rootToken,
       if (mlir::isa<cir::BeginCleanupOp>(user))
         reachesCleanup = true;
       if (auto dispatch = mlir::dyn_cast<cir::EhDispatchOp>(user))
-        if (!llvm::is_contained(dispatches, dispatch))
-          dispatches.push_back(dispatch);
+        dispatches.insert(dispatch);
       // Follow the token into eh_token block arguments of successor blocks.
       for (unsigned s = 0, e = user->getNumSuccessors(); s < e; ++s)
         for (mlir::BlockArgument arg : user->getSuccessor(s)->getArguments())
@@ -382,41 +380,43 @@ mlir::LogicalResult ItaniumEHLowering::lowerFunc(cir::FuncOp funcOp) {
   // token-graph edges.  Otherwise a sibling or outer dispatch could be missed,
   // leaving a landing pad without its catch clause (it would resume past the
   // handler to std::terminate) or an un-lowered leftover dispatch.
-  llvm::DenseMap<mlir::Operation *, SmallVector<cir::EhDispatchOp>>
-      reachedDispatches;
-  llvm::DenseMap<mlir::Operation *, bool> reachesCleanup;
-  SmallVector<cir::EhDispatchOp> dispatchesToLower;
+  // Per initiate: the dispatches its exception can reach (innermost first) and
+  // whether a cleanup lies on its unwind path.  Both are properties of the EH
+  // graph and are always consumed together for the same initiate, so they live
+  // in one map keyed by the initiate op.
+  struct InitiateEHInfo {
+    llvm::SmallSetVector<cir::EhDispatchOp, 4> reachedDispatches;
+    bool reachesCleanup = false;
+  };
+  llvm::DenseMap<mlir::Operation *, InitiateEHInfo> initiateInfo;
+  llvm::SmallSetVector<cir::EhDispatchOp, 4> dispatchesToLower;
   for (cir::EhInitiateOp initiateOp : initiateOps) {
-    SmallVector<cir::EhDispatchOp> reached;
-    bool cleanupOnPath = false;
-    collectReachableDispatches(initiateOp.getEhToken(), reached, cleanupOnPath);
-    for (cir::EhDispatchOp dispatch : reached)
-      if (!llvm::is_contained(dispatchesToLower, dispatch))
-        dispatchesToLower.push_back(dispatch);
-    reachedDispatches[initiateOp.getOperation()] = std::move(reached);
-    reachesCleanup[initiateOp.getOperation()] = cleanupOnPath;
+    InitiateEHInfo &info = initiateInfo[initiateOp.getOperation()];
+    collectReachableDispatches(initiateOp.getEhToken(), info.reachedDispatches,
+                               info.reachesCleanup);
+    dispatchesToLower.insert(info.reachedDispatches.begin(),
+                             info.reachedDispatches.end());
   }
 
   EhTokenMap ehTokenMap;
-  SmallVector<mlir::Operation *> deadOps;
-  for (cir::EhInitiateOp initiateOp : initiateOps)
-    if (mlir::failed(lowerEhInitiate(
-            initiateOp, reachedDispatches[initiateOp.getOperation()],
-            reachesCleanup[initiateOp.getOperation()], ehTokenMap, deadOps)))
+  for (cir::EhInitiateOp initiateOp : initiateOps) {
+    const InitiateEHInfo &info = initiateInfo[initiateOp.getOperation()];
+    if (mlir::failed(lowerEhInitiate(initiateOp,
+                                     info.reachedDispatches.getArrayRef(),
+                                     info.reachesCleanup, ehTokenMap)))
       return mlir::failure();
+  }
 
   // Lower each dispatch exactly once.  Every initiate's token block-argument
   // (ptr, u32) replacements are registered in ehTokenMap by now, so each
-  // dispatch's own (exnPtr, typeId) pair is available.
+  // dispatch's own (exnPtr, typeId) pair is available.  lowerDispatch erases
+  // the dispatch after building its comparison chain.
   for (cir::EhDispatchOp dispatch : dispatchesToLower) {
     auto [exnPtr, typeId] = ehTokenMap.lookup(dispatch.getEhToken());
-    lowerDispatch(dispatch, exnPtr, typeId, deadOps);
+    assert(exnPtr && typeId &&
+           "dispatch eh_token must be registered in ehTokenMap");
+    lowerDispatch(dispatch, exnPtr, typeId);
   }
-
-  // Erase operations that were deferred during per-initiate processing
-  // (the dispatch ops, lowered above).
-  for (mlir::Operation *op : deadOps)
-    op->erase();
 
   // Remove the !cir.eh_token block arguments that were replaced by (ptr, u32)
   // pairs. Iterate in reverse to preserve argument indices during removal.
@@ -466,17 +466,17 @@ mlir::LogicalResult ItaniumEHLowering::lowerFunc(cir::FuncOp funcOp) {
 /// a catch_type_list; when the dispatch is encountered during traversal,
 /// the catch types are read and set on the inflight op.
 ///
-/// Dispatch ops are not erased during per-initiate processing because they may
-/// be used by other initiate ops that haven't yet been lowered. Instead they
-/// are added to \p deadOps and erased by the caller after all initiates have
-/// been lowered.
+/// Dispatch ops are not lowered here; they are lowered once by the caller after
+/// every initiate has been processed (a dispatch can be shared by sibling
+/// initiates), so this traversal only registers the catch-handler block
+/// arguments reachable through them.
 ///
 /// \p ehTokenMap is shared across all initiates in the function so that block
 /// arguments reachable from multiple sibling initiates are registered once.
 mlir::LogicalResult ItaniumEHLowering::lowerEhInitiate(
     cir::EhInitiateOp initiateOp,
     llvm::ArrayRef<cir::EhDispatchOp> reachedDispatches, bool reachesCleanup,
-    EhTokenMap &ehTokenMap, SmallVectorImpl<mlir::Operation *> &deadOps) {
+    EhTokenMap &ehTokenMap) {
   mlir::Value rootToken = initiateOp.getEhToken();
 
   // The catch clauses for this landing pad come from the dispatches its
@@ -497,6 +497,11 @@ mlir::LogicalResult ItaniumEHLowering::lowerEhInitiate(
             mlir::cast<cir::GlobalViewAttr>(attr).getSymbol());
     if (dispatch.getDefaultIsCatchAll()) {
       catchAll = true;
+      // A catch-all handles every exception, so it stops the unwind: no
+      // enclosing dispatch is reachable past it, and the collector therefore
+      // never records one after it.  Drop the rest of the clauses here.
+      assert(dispatch == reachedDispatches.back() &&
+             "catch-all must be the last reachable dispatch");
       break;
     }
   }
@@ -648,10 +653,9 @@ mlir::LogicalResult ItaniumEHLowering::lowerEhInitiate(
 
 /// Lower a cir.eh.dispatch by creating a comparison chain in new blocks.
 /// The dispatch itself is replaced with a branch to the first comparison
-/// block and added to deadOps for deferred removal.
-void ItaniumEHLowering::lowerDispatch(
-    cir::EhDispatchOp dispatch, mlir::Value exnPtr, mlir::Value typeId,
-    SmallVectorImpl<mlir::Operation *> &deadOps) {
+/// block and then erased.
+void ItaniumEHLowering::lowerDispatch(cir::EhDispatchOp dispatch,
+                                      mlir::Value exnPtr, mlir::Value typeId) {
   mlir::Location dispLoc = dispatch.getLoc();
   mlir::Block *defaultDest = dispatch.getDefaultDestination();
   mlir::ArrayAttr catchTypes = dispatch.getCatchTypesAttr();
@@ -660,7 +664,7 @@ void ItaniumEHLowering::lowerDispatch(
 
   // Build the comparison chain in new blocks inserted after the dispatch's
   // block. The dispatch itself is replaced with a branch to the first
-  // comparison block and scheduled for deferred removal.
+  // comparison block and erased below.
   if (!catchTypes || catchTypes.empty()) {
     // No typed catches: replace dispatch with a direct branch.
     builder.setInsertionPoint(dispatch);
@@ -704,10 +708,9 @@ void ItaniumEHLowering::lowerDispatch(
                       mlir::ValueRange{exnPtr, typeId});
   }
 
-  // Schedule the dispatch for deferred removal. We cannot erase it now because
-  // a sibling initiate that shares this dispatch may still need to read its
-  // catch types.
-  deadOps.push_back(dispatch);
+  // The caller lowers each dispatch exactly once after every initiate has been
+  // processed, so no sibling still needs it; erase it now.
+  dispatch.erase();
 }
 
 mlir::FailureOr<cir::FuncOp>
