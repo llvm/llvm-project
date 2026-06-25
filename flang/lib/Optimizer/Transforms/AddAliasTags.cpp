@@ -702,20 +702,24 @@ void AddAliasTagsPass::runOnAliasInterface(fir::FirAliasTagOpInterface op,
              source.kind == fir::AliasAnalysis::SourceKind::Argument) {
     LLVM_DEBUG(llvm::dbgs().indent(2)
                << "Found reference to dummy argument at " << *op << "\n");
-    std::string name = getFuncArgName(llvm::cast<mlir::Value>(source.origin.u));
     // POINTERS can alias with any POINTER or TARGET. Assume that TARGET dummy
     // arguments might alias with each other (because of the "TARGET" hole for
     // dummy arguments). See flang/docs/Aliasing.md.
+    // If it is a TARGET or POINTER, use the target data tree tag which 
+    // represents potential aliases with other TARGET/POINTER variables.
     if (source.isTargetOrPointer()) {
       tag = state.getFuncTreeWithScope(func, scopeOp).targetDataTree.getTag();
-    } else if (!name.empty()) {
-      tag = state.getFuncTreeWithScope(func, scopeOp)
-                .dummyArgDataTree.getTag(name);
     } else {
-      LLVM_DEBUG(llvm::dbgs().indent(2)
-                 << "WARN: couldn't find a name for dummy argument " << *op
-                 << "\n");
-      tag = state.getFuncTreeWithScope(func, scopeOp).dummyArgDataTree.getTag();
+      std::string name = getFuncArgName(llvm::cast<mlir::Value>(source.origin.u));
+      if (!name.empty()) {
+        tag = state.getFuncTreeWithScope(func, scopeOp)
+                  .dummyArgDataTree.getTag(name);
+      } else {
+        LLVM_DEBUG(llvm::dbgs().indent(2)
+                   << "WARN: couldn't find a name for dummy argument " << *op
+                   << "\n");
+        tag = state.getFuncTreeWithScope(func, scopeOp).dummyArgDataTree.getTag();
+      }
     }
 
     // TBAA for global variables without descriptors
