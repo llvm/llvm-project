@@ -1,6 +1,8 @@
+// TODO: Does this need to be InlineMustMatch?
 class Architecture<string fname, string aname, list<SubtargetFeature> features>
   : SubtargetFeature<fname, "ARMArch", aname,
-                     !strconcat(aname, " architecture"), features>;
+                     !strconcat(aname, " architecture"), features,
+                     InlineMustMatch>;
 
 //===----------------------------------------------------------------------===//
 // ARM architectures

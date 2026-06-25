@@ -375,6 +375,8 @@ public:
   /// Target features where the callee may have an additional feature,
   /// instead of the caller.
   virtual const FeatureBitset &getInlineInverseFeatures() const = 0;
+  /// Target features where all mismatches prevent inlining.
+  virtual const FeatureBitset &getInlineMustMatchFeatures() const = 0;
 
 private:
   /// Lazy, incrementally-populated cache for isIntrinsicSupported().
