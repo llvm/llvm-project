@@ -410,6 +410,8 @@ New Compiler Flags
   necessary. ``/d1nodatetime-`` can be used to turn this feature off if
   necessary to override the common build settings.
 
+- New Option ``-Wpointer-bool-conversion-strict`` has been added to warn about all implicit pointer-to-bool conversions (#GH9500). This option is ignored by default.
+
 Deprecated Compiler Flags
 -------------------------
 
