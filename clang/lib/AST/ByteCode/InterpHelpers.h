@@ -58,11 +58,13 @@ bool CheckRange(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                 CheckSubobjectKind CSK);
 
 /// Checks if a pointer points to a mutable field.
-bool CheckMutable(InterpState &S, CodePtr OpPC, PtrView Ptr);
-inline bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+bool CheckMutable(InterpState &S, CodePtr OpPC, PtrView Ptr,
+                  AccessKinds AK = AK_Read);
+inline bool CheckMutable(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                         AccessKinds AK = AK_Read) {
   if (!Ptr.isBlockPointer())
     return true;
-  return CheckMutable(S, OpPC, Ptr.view());
+  return CheckMutable(S, OpPC, Ptr.view(), AK);
 }
 
 /// Checks if a value can be loaded from a block.

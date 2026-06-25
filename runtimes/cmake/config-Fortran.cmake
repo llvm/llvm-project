@@ -74,14 +74,8 @@ endfunction ()
 
 set(RUNTIMES_ENABLE_FORTRAN OFF)
 
-# Insert at least one element for
-#
-#    add_dependencies(target ${RUNTIMES_FORTRAN_BUILD_DEPS})
-#
-# to not fail
-add_custom_target(fortran-dummy-dep)
-set(RUNTIMES_FORTRAN_BUILD_DEPS fortran-dummy-dep)
 
+set(RUNTIMES_FORTRAN_BUILD_DEPS "")
 
 if (CMAKE_Fortran_COMPILER)
   # Workarounds for older versions of CMake not recognizing FLang. Hence, we
@@ -243,6 +237,22 @@ function (flang_module_target tgtname)
   target_compile_options(${tgtname} PRIVATE
     "$<$<COMPILE_LANGUAGE:Fortran>:-fintrinsic-modules-path=${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}>"
   )
+
+  # Make CMake not ignore "use, intrinsic ::"-dependencies. Unfortunately,
+  # it is not universally handled by CMake s.t. we currently must not use
+  # "use, intrinsic ::" in our sources.
+  #  * CMake 3.22: Added Fortran_BUILDING_INSTRINSIC_MODULES handling "Unix Makefiles" generator
+  #  * CMake 4.0: Renamed INSTRINSIC to INTRINSIC (typo fix); INSTRINSIC spelling kept but deprecated
+  #  * CMake 4.5: Added handling by Ninja generators as well
+  set_target_properties(${tgtname}
+    PROPERTIES
+      Fortran_BUILDING_INTRINSIC_MODULES ON
+      Fortran_BUILDING_INSTRINSIC_MODULES ON
+  )
+
+  if (RUNTIMES_FORTRAN_BUILD_DEPS AND NOT tgtname IN_LIST RUNTIMES_FORTRAN_BUILD_DEPS)
+    target_link_libraries(${tgtname} PRIVATE ${RUNTIMES_FORTRAN_BUILD_DEPS})
+  endif ()
 
   if (CMAKE_Fortran_COMPILER_ID MATCHES "LLVM")
     target_compile_options(${tgtname} PRIVATE
