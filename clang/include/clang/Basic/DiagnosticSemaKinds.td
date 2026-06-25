@@ -11878,6 +11878,9 @@ def err_opencl_type_not_found : Error<
   "%0 type %1 not found; include the base header with -finclude-default-header">;
 def warn_opencl_attr_deprecated_ignored : Warning <
   "%0 attribute is deprecated and ignored in %1">, InGroup<IgnoredAttributes>;
+def warn_deprecated_attribute : Warning<
+  "'%0' attribute is deprecated and may be removed in a future version of Clang">,
+  InGroup<DeprecatedAttributes>;
 def err_opencl_variadic_function : Error<
   "invalid prototype, variadic arguments are not allowed in OpenCL">;
 def err_opencl_requires_extension : Error<

@@ -823,6 +823,7 @@ enum AttributeKindCodes {
   ATTR_KIND_DENORMAL_FPENV = 106,
   ATTR_KIND_NOOUTLINE = 107,
   ATTR_KIND_FLATTEN = 108,
+  ATTR_KIND_NOIPA = 109,
 
   // TODO: Get rid of this.
   // There really shouldn't be incompatible bitcode changes specific to AMD

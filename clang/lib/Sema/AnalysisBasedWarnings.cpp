@@ -2929,7 +2929,9 @@ LifetimeSafetyTUAnalysis(Sema &S, TranslationUnitDecl *TU,
     AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
     AC.getCFGBuildOptions().setAllAlwaysAdd();
     if (AC.getCFG())
-      runLifetimeSafetyAnalysis(AC, &SemaHelper, LSStats, S.CollectStats);
+      runLifetimeSafetyAnalysis(AC, &SemaHelper,
+                                lifetimes::GetLifetimeSafetyOpts(S, FD),
+                                LSStats, S.CollectStats);
   }
 }
 
@@ -3159,13 +3161,12 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     }
   }
 
-  // TODO: Enable lifetime safety analysis for other languages once it is
-  // stable.
   if (EnableLifetimeSafetyAnalysis) {
     if (AC.getCFG()) {
       lifetimes::LifetimeSafetySemaHelperImpl LifetimeSafetySemaHelper(S);
-      lifetimes::runLifetimeSafetyAnalysis(AC, &LifetimeSafetySemaHelper,
-                                           LSStats, S.CollectStats);
+      lifetimes::runLifetimeSafetyAnalysis(
+          AC, &LifetimeSafetySemaHelper, lifetimes::GetLifetimeSafetyOpts(S, D),
+          LSStats, S.CollectStats);
     }
   }
   // Check for violations of "called once" parameter properties.

@@ -21550,6 +21550,15 @@ static SDValue combineMinMaxToSat(SDNode *N,
   return SDValue();
 }
 
+// Returns true if the i32 pair (Lo, Hi) is the 64-bit sign-extension of the
+// i32 value Lo, i.e. Hi == (sra Lo, 31). Used to fold ADDD/SUBD of a
+// sign-extended operand into the WADDA/WSUBA widening accumulate nodes.
+static bool isI32SignExtended(SDValue Lo, SDValue Hi) {
+  return Hi.getOpcode() == ISD::SRA && Hi.getOperand(0) == Lo &&
+         isa<ConstantSDNode>(Hi.getOperand(1)) &&
+         Hi.getConstantOperandVal(1) == 31;
+}
+
 SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -21736,6 +21745,21 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                       Op1Lo, Op1Hi, Op0Lo, DAG.getConstant(0, DL, MVT::i32));
       return DCI.CombineTo(N, Result.getValue(0), Result.getValue(1));
     }
+
+    // (ADDD lo, hi, x, sra(x, 31)) -> (WADDA lo, hi, x, 0)
+    if (isI32SignExtended(Op1Lo, Op1Hi)) {
+      SDValue Result =
+          DAG.getNode(RISCVISD::WADDA, DL, DAG.getVTList(MVT::i32, MVT::i32),
+                      Op0Lo, Op0Hi, Op1Lo, DAG.getConstant(0, DL, MVT::i32));
+      return DCI.CombineTo(N, Result.getValue(0), Result.getValue(1));
+    }
+    // (ADDD x, sra(x, 31), lo, hi) -> (WADDA lo, hi, x, 0)
+    if (isI32SignExtended(Op0Lo, Op0Hi)) {
+      SDValue Result =
+          DAG.getNode(RISCVISD::WADDA, DL, DAG.getVTList(MVT::i32, MVT::i32),
+                      Op1Lo, Op1Hi, Op0Lo, DAG.getConstant(0, DL, MVT::i32));
+      return DCI.CombineTo(N, Result.getValue(0), Result.getValue(1));
+    }
     break;
   }
   case RISCVISD::SUBD: {
@@ -21752,6 +21776,15 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (isNullConstant(Op1Hi)) {
       SDValue Result =
           DAG.getNode(RISCVISD::WSUBAU, DL, DAG.getVTList(MVT::i32, MVT::i32),
+                      Op0Lo, Op0Hi, DAG.getConstant(0, DL, MVT::i32), Op1Lo);
+      return DCI.CombineTo(N, Result.getValue(0), Result.getValue(1));
+    }
+
+    // (SUBD lo, hi, x, sra(x, 31)) -> (WSUBA lo, hi, 0, x)
+    // WSUBA semantics: rd = rd + sext(rs1) - sext(rs2)
+    if (isI32SignExtended(Op1Lo, Op1Hi)) {
+      SDValue Result =
+          DAG.getNode(RISCVISD::WSUBA, DL, DAG.getVTList(MVT::i32, MVT::i32),
                       Op0Lo, Op0Hi, DAG.getConstant(0, DL, MVT::i32), Op1Lo);
       return DCI.CombineTo(N, Result.getValue(0), Result.getValue(1));
     }
@@ -21831,6 +21864,57 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
         isNullConstant(Op0Lo.getOperand(3))) {
       SDValue Result = DAG.getNode(
           RISCVISD::WSUBAU, DL, DAG.getVTList(MVT::i32, MVT::i32),
+          Op0Lo.getOperand(0), Op0Lo.getOperand(1), Op0Lo.getOperand(2), Op2);
+      return DCI.CombineTo(N, Result.getValue(0), Result.getValue(1));
+    }
+    break;
+  }
+  case RISCVISD::WADDA: {
+    assert(!Subtarget.is64Bit() && Subtarget.hasStdExtP() &&
+           "WADDA is only for RV32 with P extension");
+    SDValue Op0Lo = N->getOperand(0);
+    SDValue Op0Hi = N->getOperand(1);
+    SDValue Op1 = N->getOperand(2);
+    SDValue Op2 = N->getOperand(3);
+
+    // Fold a chained accumulate into the free second source slot.
+    if (isNullConstant(Op2) && Op0Lo.getNode() == Op0Hi.getNode() &&
+        Op0Lo.getResNo() == 0 && Op0Hi.getResNo() == 1 && Op0Lo.hasOneUse() &&
+        Op0Hi.hasOneUse()) {
+      // (WADDA (WADDA lo, hi, x, 0), y, 0) -> (WADDA lo, hi, x, y)
+      if (Op0Lo.getOpcode() == RISCVISD::WADDA &&
+          isNullConstant(Op0Lo.getOperand(3))) {
+        SDValue Result = DAG.getNode(
+            RISCVISD::WADDA, DL, DAG.getVTList(MVT::i32, MVT::i32),
+            Op0Lo.getOperand(0), Op0Lo.getOperand(1), Op0Lo.getOperand(2), Op1);
+        return DCI.CombineTo(N, Result.getValue(0), Result.getValue(1));
+      }
+      // (WADDA (WSUBA lo, hi, 0, a), b, 0) -> (WSUBA lo, hi, b, a)
+      if (Op0Lo.getOpcode() == RISCVISD::WSUBA &&
+          isNullConstant(Op0Lo.getOperand(2))) {
+        SDValue Result = DAG.getNode(
+            RISCVISD::WSUBA, DL, DAG.getVTList(MVT::i32, MVT::i32),
+            Op0Lo.getOperand(0), Op0Lo.getOperand(1), Op1, Op0Lo.getOperand(3));
+        return DCI.CombineTo(N, Result.getValue(0), Result.getValue(1));
+      }
+    }
+    break;
+  }
+  case RISCVISD::WSUBA: {
+    assert(!Subtarget.is64Bit() && Subtarget.hasStdExtP() &&
+           "WSUBA is only for RV32 with P extension");
+    SDValue Op0Lo = N->getOperand(0);
+    SDValue Op0Hi = N->getOperand(1);
+    SDValue Op1 = N->getOperand(2);
+    SDValue Op2 = N->getOperand(3);
+
+    // (WSUBA (WADDA lo, hi, a, 0), 0, b) -> (WSUBA lo, hi, a, b)
+    if (isNullConstant(Op1) && Op0Lo.getOpcode() == RISCVISD::WADDA &&
+        Op0Lo.getNode() == Op0Hi.getNode() && Op0Lo.getResNo() == 0 &&
+        Op0Hi.getResNo() == 1 && Op0Lo.hasOneUse() && Op0Hi.hasOneUse() &&
+        isNullConstant(Op0Lo.getOperand(3))) {
+      SDValue Result = DAG.getNode(
+          RISCVISD::WSUBA, DL, DAG.getVTList(MVT::i32, MVT::i32),
           Op0Lo.getOperand(0), Op0Lo.getOperand(1), Op0Lo.getOperand(2), Op2);
       return DCI.CombineTo(N, Result.getValue(0), Result.getValue(1));
     }
