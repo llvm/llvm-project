@@ -13,9 +13,19 @@
 #include <ranges>
 #include <utility>
 
+struct View : std::ranges::view_interface<View> {
+  int* begin();
+  const int* begin() const;
+  volatile int* end();
+  const volatile int* end() const;
+};
+static_assert(!std::ranges::common_range<View>);
+static_assert(!std::same_as<std::ranges::iterator_t<View>, std::ranges::iterator_t<const View>>);
+static_assert(!std::same_as<std::ranges::sentinel_t<View>, std::ranges::sentinel_t<const View>>);
+
 void test() {
   int range[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-  auto v      = range | std::views::adjacent<2>;
+  auto v      = View{} | std::views::adjacent<2>;
 
   // [range.adjacent.view]
 
