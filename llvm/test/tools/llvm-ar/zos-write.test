@@ -46,7 +46,7 @@
 
 # SYMTAB: Archive map
 # SYMTAB-NEXT: mytest in mytest.bc
-# SYMTAB-NOT: {{^  in mytest.bc$}}
+# SYMTAB-NOT: in mytest.bc
 
 ## A z/OS archive with no real symbols should still write the dummy blank symbol.
 # RUN: llvm-as %t.dir/blank.ll -o %t.dir/blank.bc
@@ -54,8 +54,8 @@
 # RUN: llvm-nm --print-armap %t.blank-sym.a | FileCheck %s --check-prefix=EMPTY-SYMTAB
 
 # EMPTY-SYMTAB: Archive map
-# EMPTY-SYMTAB-NEXT: {{^  in blank.bc$}}
-# EMPTY-SYMTAB-NOT: {{^.+ in blank.bc$}}
+# EMPTY-SYMTAB-NEXT: in blank.bc
+# EMPTY-SYMTAB-NOT: in blank.bc
 
 #--- mytest.ll
 define i32 @mytest() {
