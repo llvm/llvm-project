@@ -2503,6 +2503,26 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
       return BinaryOperator::CreateOr(And, ConstantInt::get(Ty, Together));
     }
 
+    // ((X | C1) >> N) & C2 --> ((X >> N) & C2) | ((C1 >> N) & C2)
+    // This reassociates the and-mask through the shift to expose a constant
+    // that can be folded into GEP offsets.
+    // Only profitable when the or is disjoint, enabling the transformation.
+    const APInt *DisjointOrC, *ShAmtN;
+    if (match(Op0,
+              m_OneUse(m_LShr(m_DisjointOr(m_Value(X), m_APInt(DisjointOrC)),
+                              m_APInt(ShAmtN))))) {
+      unsigned ShAmt = ShAmtN->getZExtValue();
+      // Compute the constant result: (C1 >> N) & C2
+      APInt ConstResult = DisjointOrC->lshr(ShAmt) & *C;
+
+      // Create: (X >> N) & C2
+      Value *NewLShr = Builder.CreateLShr(X, ConstantInt::get(Ty, *ShAmtN));
+      Value *NewAnd = Builder.CreateAnd(NewLShr, ConstantInt::get(Ty, *C));
+      // Create: ((X & (C2 << N)) >> N) | ((C1 >> N) & C2)
+      return BinaryOperator::CreateDisjointOr(
+          NewAnd, ConstantInt::get(Ty, ConstResult));
+    }
+
     unsigned Width = Ty->getScalarSizeInBits();
     const APInt *ShiftC;
     if (match(Op0, m_OneUse(m_SExt(m_AShr(m_Value(X), m_APInt(ShiftC))))) &&
