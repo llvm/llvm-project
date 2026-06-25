@@ -41,6 +41,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
@@ -7399,6 +7400,13 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     if (CR.isSingleElement() && CR.getSingleElement()->isZero())
       return IID == Intrinsic::vector_splice_left ? Args[0] : Args[1];
 
+    if (IID == Intrinsic::vector_splice_right) {
+      Value *X;
+      if (match(Args[0], m_Intrinsic<Intrinsic::vector_splice_left>(
+                             m_Poison(), m_Value(X), m_Deferred(Offset))) &&
+          Q.isUndefValue(Args[1]))
+        return X;
+    }
     return nullptr;
   }
   case Intrinsic::experimental_constrained_fadd:
