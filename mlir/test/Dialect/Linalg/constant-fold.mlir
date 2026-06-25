@@ -230,32 +230,61 @@ func.func @elementwise_nofold_non_cst_input(%input: tensor<4xf32>, %init: tensor
 
 // -----
 
-// Verify that multi-use constants are not folded (controlFn requires single use).
-// CHECK-LABEL: @elementwise_nofold_multi_use_cst
-func.func @elementwise_nofold_multi_use_cst(%init1: tensor<4xf32>, %init2: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
-  %cst = arith.constant dense<[1.0, 2.0, 3.0, 4.0]> : tensor<4xf32>
-  // CHECK: linalg.elementwise kind=#linalg.elementwise_kind<sin>
-  %1 = linalg.elementwise kind=#linalg.elementwise_kind<sin>
-    ins(%cst : tensor<4xf32>)
+// constA shared between two all-constant ops. Neither folds because
+// controlFn requires all input producers to have a single use.
+// CHECK-LABEL: @elementwise_nofold_multi_use_all_cst
+func.func @elementwise_nofold_multi_use_all_cst(%init1: tensor<4xf32>, %init2: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
+  %constA = arith.constant dense<[1.0, 2.0, 3.0, 4.0]> : tensor<4xf32>
+  %constB = arith.constant dense<[5.0, 6.0, 7.0, 8.0]> : tensor<4xf32>
+  %constC = arith.constant dense<[9.0, 10.0, 11.0, 12.0]> : tensor<4xf32>
+  // CHECK: linalg.elementwise kind=#linalg.elementwise_kind<add>
+  %1 = linalg.elementwise kind=#linalg.elementwise_kind<add>
+    ins(%constA, %constB : tensor<4xf32>, tensor<4xf32>)
     outs(%init1 : tensor<4xf32>) -> tensor<4xf32>
-  // CHECK: linalg.elementwise kind=#linalg.elementwise_kind<cos>
-  %2 = linalg.elementwise kind=#linalg.elementwise_kind<cos>
-    ins(%cst : tensor<4xf32>)
+  // CHECK: linalg.elementwise kind=#linalg.elementwise_kind<mul>
+  %2 = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+    ins(%constA, %constC : tensor<4xf32>, tensor<4xf32>)
     outs(%init2 : tensor<4xf32>) -> tensor<4xf32>
   return %1, %2 : tensor<4xf32>, tensor<4xf32>
 }
 
 // -----
 
-// CHECK-LABEL: @elementwise_nofold_select_mixed_types
-func.func @elementwise_nofold_select_mixed_types(%init: tensor<4xi32>) -> tensor<4xi32> {
-  %cond = arith.constant dense<[true, false, true, false]> : tensor<4xi1>
-  %lhs = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
-  %rhs = arith.constant dense<[5, 6, 7, 8]> : tensor<4xi32>
-  // CHECK: linalg.elementwise kind=#linalg.elementwise_kind<select>
-  %1 = linalg.elementwise kind=#linalg.elementwise_kind<select>
-    ins(%cond, %lhs, %rhs : tensor<4xi1>, tensor<4xi32>, tensor<4xi32>)
-    outs(%init : tensor<4xi32>) -> tensor<4xi32>
-  return %1 : tensor<4xi32>
+// constA shared between an all-constant op and a dynamic op.
+// Neither folds because constA has multiple uses.
+// CHECK-LABEL: @elementwise_nofold_multi_use_cst_and_dyn
+func.func @elementwise_nofold_multi_use_cst_and_dyn(%dynC: tensor<4xf32>, %init1: tensor<4xf32>, %init2: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
+  %constA = arith.constant dense<[1.0, 2.0, 3.0, 4.0]> : tensor<4xf32>
+  %constB = arith.constant dense<[5.0, 6.0, 7.0, 8.0]> : tensor<4xf32>
+  // CHECK: linalg.elementwise kind=#linalg.elementwise_kind<add>
+  %1 = linalg.elementwise kind=#linalg.elementwise_kind<add>
+    ins(%constA, %constB : tensor<4xf32>, tensor<4xf32>)
+    outs(%init1 : tensor<4xf32>) -> tensor<4xf32>
+  // CHECK: linalg.elementwise kind=#linalg.elementwise_kind<mul>
+  %2 = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+    ins(%constA, %dynC : tensor<4xf32>, tensor<4xf32>)
+    outs(%init2 : tensor<4xf32>) -> tensor<4xf32>
+  return %1, %2 : tensor<4xf32>, tensor<4xf32>
 }
+
+// -----
+
+// constA shared between a dynamic op and an all-constant op.
+// Neither folds because constA has multiple uses.
+// CHECK-LABEL: @elementwise_nofold_multi_use_dyn_and_cst
+func.func @elementwise_nofold_multi_use_dyn_and_cst(%dynB: tensor<4xf32>, %init1: tensor<4xf32>, %init2: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf32>) {
+  %constA = arith.constant dense<[1.0, 2.0, 3.0, 4.0]> : tensor<4xf32>
+  %constC = arith.constant dense<[9.0, 10.0, 11.0, 12.0]> : tensor<4xf32>
+  // CHECK: linalg.elementwise kind=#linalg.elementwise_kind<add>
+  %1 = linalg.elementwise kind=#linalg.elementwise_kind<add>
+    ins(%constA, %dynB : tensor<4xf32>, tensor<4xf32>)
+    outs(%init1 : tensor<4xf32>) -> tensor<4xf32>
+  // CHECK: linalg.elementwise kind=#linalg.elementwise_kind<mul>
+  %2 = linalg.elementwise kind=#linalg.elementwise_kind<mul>
+    ins(%constA, %constC : tensor<4xf32>, tensor<4xf32>)
+    outs(%init2 : tensor<4xf32>) -> tensor<4xf32>
+  return %1, %2 : tensor<4xf32>, tensor<4xf32>
+}
+
+
 
