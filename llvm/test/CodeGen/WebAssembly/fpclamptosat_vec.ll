@@ -48,32 +48,31 @@ define <2 x i32> @utest_f64i32(<2 x double> %x) {
 ; CHECK:         .functype utest_f64i32 (v128) -> (v128)
 ; CHECK-NEXT:    .local i64, i64
 ; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    i64.const -1
+; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    f64x2.extract_lane 0
 ; CHECK-NEXT:    i64.trunc_sat_f64_u
 ; CHECK-NEXT:    local.tee 1
+; CHECK-NEXT:    i64.const 4294967294
+; CHECK-NEXT:    i64.gt_u
+; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64x2.splat
+; CHECK-NEXT:    i64.const -1
+; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    f64x2.extract_lane 1
 ; CHECK-NEXT:    i64.trunc_sat_f64_u
 ; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    i64.const 4294967294
+; CHECK-NEXT:    i64.gt_u
+; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64x2.replace_lane 1
-; CHECK-NEXT:    v128.const 4294967295, 4294967295
-; CHECK-NEXT:    i64.const -1
-; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.const 4294967295
-; CHECK-NEXT:    i64.lt_u
-; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64x2.splat
-; CHECK-NEXT:    i64.const -1
-; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i64.const 4294967295
-; CHECK-NEXT:    i64.lt_u
-; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64x2.replace_lane 1
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    v128.or
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK-NEXT:    # fallthrough-return
@@ -1434,32 +1433,32 @@ define <2 x i32> @utest_f64i32_mm(<2 x double> %x) {
 ; CHECK:         .functype utest_f64i32_mm (v128) -> (v128)
 ; CHECK-NEXT:    .local i64, i64
 ; CHECK-NEXT:  # %bb.0: # %entry
+; CHECK-NEXT:    i64.const -1
+; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    f64x2.extract_lane 0
 ; CHECK-NEXT:    i64.trunc_sat_f64_u
 ; CHECK-NEXT:    local.tee 1
+; CHECK-NEXT:    i64.const 4294967295
+; CHECK-NEXT:    i64.lt_u
+; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64x2.splat
+; CHECK-NEXT:    i64.const -1
+; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    f64x2.extract_lane 1
 ; CHECK-NEXT:    i64.trunc_sat_f64_u
 ; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    i64.const 4294967295
+; CHECK-NEXT:    i64.lt_u
+; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64x2.replace_lane 1
-; CHECK-NEXT:    v128.const 4294967295, 4294967295
-; CHECK-NEXT:    i64.const -1
-; CHECK-NEXT:    i64.const 0
+; CHECK-NEXT:    v128.not
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i64.const 4294967295
-; CHECK-NEXT:    i64.lt_u
-; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64x2.splat
-; CHECK-NEXT:    i64.const -1
-; CHECK-NEXT:    i64.const 0
 ; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    i64.const 4294967295
-; CHECK-NEXT:    i64.lt_u
-; CHECK-NEXT:    i64.select
 ; CHECK-NEXT:    i64x2.replace_lane 1
-; CHECK-NEXT:    v128.bitselect
+; CHECK-NEXT:    v128.or
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 0, 1, 2, 3, 0, 1, 2, 3
 ; CHECK-NEXT:    # fallthrough-return
