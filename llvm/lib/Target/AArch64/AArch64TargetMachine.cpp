@@ -846,7 +846,7 @@ void AArch64PassConfig::addPreRegAlloc() {
 
 void AArch64PassConfig::addPostRewrite() {
   if (EnableSRLTSubregToRegMitigation)
-    addPass(createAArch64SRLTDefineSuperRegsPass());
+    addPass(createAArch64SRLTDefineSuperRegsLegacyPass());
 }
 
 void AArch64PassConfig::addPostRegAlloc() {

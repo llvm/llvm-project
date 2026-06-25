@@ -253,7 +253,7 @@ bool AArch64SRLTDefineSuperRegsImpl::run(MachineFunction &MF) {
   return Changed;
 }
 
-FunctionPass *llvm::createAArch64SRLTDefineSuperRegsPass() {
+FunctionPass *llvm::createAArch64SRLTDefineSuperRegsLegacyPass() {
   return new AArch64SRLTDefineSuperRegsLegacy();
 }
 
@@ -265,7 +265,5 @@ AArch64SRLTDefineSuperRegsPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
   PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
-  PA.preserve<MachineLoopAnalysis>();
-  PA.preserve<MachineDominatorTreeAnalysis>();
   return PA;
 }
