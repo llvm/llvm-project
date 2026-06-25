@@ -205,14 +205,16 @@ static bool CheckTemporary(InterpState &S, CodePtr OpPC, const Block *B,
     // FIXME(perf): Since we do this check on every Load from a static
     // temporary, it might make sense to cache the value of the
     // isUsableInConstantExpressions call.
-    if (B->getEvalID() != S.EvalID &&
-        !MTE->isUsableInConstantExpressions(S.getASTContext())) {
+    if (S.checkingConstantDestruction() ||
+        (B->getEvalID() != S.EvalID &&
+         !MTE->isUsableInConstantExpressions(S.getASTContext()))) {
       const SourceInfo &E = S.Current->getSource(OpPC);
       S.FFDiag(E, diag::note_constexpr_access_static_temporary, 1) << AK;
       noteValueLocation(S, B);
       return false;
     }
   }
+
   return true;
 }
 
@@ -459,7 +461,12 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc,
   assert(Desc);
 
   const auto *D = Desc->asVarDecl();
-  if (!D || D == S.EvaluatingDecl || D->isConstexpr())
+  if (S.checkingConstantDestruction(D)) {
+    // If we're checking for a constant destructor for this variable, we can
+    // only read from it if it is constant.
+    if (D->getType().isConstQualified())
+      return true;
+  } else if (!D || D == S.EvaluatingDecl || D->isConstexpr())
     return true;
 
   // If we're evaluating the initializer for a constexpr variable in C23, we may
@@ -509,6 +516,9 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc,
 
 static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
                           AccessKinds AK = AK_Read) {
+  if (S.checkingConstantDestruction(Ptr))
+    return CheckConstant(S, OpPC, Ptr.getDeclDesc(), AK);
+
   if (!Ptr.isStatic() || !Ptr.isBlockPointer())
     return true;
   if (!Ptr.getDeclID())
@@ -648,10 +658,24 @@ bool CheckMutable(InterpState &S, CodePtr OpPC, PtrView Ptr, AccessKinds AK) {
   if (!Ptr.isMutable())
     return true;
 
-  // In C++14 onwards, it is permitted to read a mutable member whose
-  // lifetime began within the evaluation.
-  if (S.getLangOpts().CPlusPlus14 && Ptr.getEvalID() == S.EvalID)
+  if (S.checkingConstantDestruction()) {
+    // Never allowed when checking for constant destruction.
+    // Find the reason this pointer is mutable.
+    PtrView MutablePtr = Ptr;
+    while (!MutablePtr.isRoot() && MutablePtr.getBase().isMutable())
+      MutablePtr = MutablePtr.getBase();
+
+    const FieldDecl *Field = MutablePtr.getField();
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_mutable, 1)
+        << AK << Field;
+    S.Note(Field->getLocation(), diag::note_declared_at);
+    return false;
+  } else if (S.getLangOpts().CPlusPlus14 &&
+             S.lifetimeStartedInEvaluation(Ptr.block())) {
+    // In C++14 onwards, it is permitted to read a mutable member whose
+    // lifetime began within the evaluation.
     return true;
+  }
 
   const SourceInfo &Loc = S.Current->getSource(OpPC);
   const FieldDecl *Field = Ptr.getField();
@@ -985,21 +1009,23 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   if (!CheckVolatile(S, OpPC, Ptr, AK_Assign))
     return false;
+  if (!CheckMutable(S, OpPC, Ptr, AK_Assign))
+    return false;
   if (isConstexprUnknown(Ptr))
     return false;
   return true;
 }
 
 static bool CheckInvoke(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                        bool IsCtorDtor = false) {
+                        bool IsCtor, bool IsDtor) {
   if (!Ptr.isDummy() && !isConstexprUnknown(Ptr)) {
     if (!CheckLive(S, OpPC, Ptr, AK_MemberCall))
       return false;
     if (!CheckRange(S, OpPC, Ptr, AK_MemberCall))
       return false;
-    if (!IsCtorDtor && !CheckLifetime(S, OpPC, Ptr, AK_MemberCall))
+    if (!(IsCtor || IsDtor) && !CheckLifetime(S, OpPC, Ptr, AK_MemberCall))
       return false;
-    if (!CheckMutable(S, OpPC, Ptr))
+    if (!IsDtor && !CheckMutable(S, OpPC, Ptr))
       return false;
   }
   return true;
@@ -1708,6 +1734,11 @@ bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (Ptr.getLifetime() == Lifetime::Ended)
     return CheckLifetime(S, OpPC, Ptr, AK_Destroy);
 
+  // We _can_ call the destructor on the global variable we're checking constant
+  // destruction for.
+  if (S.checkingConstantDestruction(Ptr))
+    return true;
+
   // Can't call a dtor on a global variable.
   if (Ptr.block()->isStatic()) {
     const SourceInfo &E = S.Current->getSource(OpPC);
@@ -1803,8 +1834,8 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
     if (!(S.Current->getFunction() &&
           S.Current->getFunction()->isLambdaStaticInvoker() &&
           Func->isLambdaCallOperator())) {
-      if (!CheckInvoke(S, OpPC, ThisPtr,
-                       Func->isConstructor() || Func->isDestructor()))
+      if (!CheckInvoke(S, OpPC, ThisPtr, Func->isConstructor(),
+                       Func->isDestructor()))
         return false;
     }
 
@@ -1873,14 +1904,14 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
         Func->isLambdaCallOperator()) {
       assert(ThisPtr.isZero());
     } else {
-      if (!CheckInvoke(S, OpPC, ThisPtr,
-                       Func->isConstructor() || Func->isDestructor()))
+      if (!CheckInvoke(S, OpPC, ThisPtr, Func->isConstructor(),
+                       Func->isDestructor()))
         return cleanup();
 
       if (Func->isCopyOrMoveOperator() || Func->isCopyOrMoveConstructor()) {
         const Pointer &RVOPtr =
             S.Stk.peek<Pointer>(ThisOffset - align(sizeof(Pointer)));
-        if (!CheckInvoke(S, OpPC, RVOPtr, /*IsCtorDtor=*/true))
+        if (!CheckInvoke(S, OpPC, RVOPtr, /*IsCtor=*/true, /*IsDtor=*/false))
           return cleanup();
       }
 
