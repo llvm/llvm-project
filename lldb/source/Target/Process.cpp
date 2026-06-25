@@ -6381,8 +6381,8 @@ bool Process::GetProcessInfo(ProcessInstanceInfo &info) {
   return platform_sp->GetProcessInfo(GetID(), info);
 }
 
-lldb_private::UUID Process::FindModuleUUID(const llvm::StringRef path) {
-  return lldb_private::UUID();
+bool Process::FindModuleUUID(ModuleSpec &spec) {
+  return spec.GetUUID().IsValid();
 }
 
 ThreadCollectionSP Process::GetHistoryThreads(lldb::addr_t addr) {

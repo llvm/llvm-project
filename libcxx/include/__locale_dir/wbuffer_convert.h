@@ -27,6 +27,7 @@ _LIBCPP_PUSH_MACROS
 #    include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _Codecvt, class _Elem = wchar_t, class _Tr = char_traits<_Elem> >
 class _LIBCPP_DEPRECATED_IN_CXX17 wbuffer_convert : public basic_streambuf<_Elem, _Tr> {
@@ -419,6 +420,7 @@ wbuffer_convert<_Codecvt, _Elem, _Tr>* wbuffer_convert<_Codecvt, _Elem, _Tr>::__
 
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

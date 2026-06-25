@@ -20,22 +20,22 @@ define void @test_widen_ptr_induction(ptr %ptr.start.1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <4 x ptr> [[VECTOR_GEP]], i64 0
 ; CHECK-NEXT:    [[STEP_ADD:%.*]] = getelementptr i8, <4 x ptr> [[VECTOR_GEP]], <4 x i64> splat (i64 4)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x ptr> [[VECTOR_GEP]], splat (ptr null)
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP2]], i64 0
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP2]], i64 1
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP2]], i64 2
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP2]], i64 3
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne <4 x ptr> [[STEP_ADD]], splat (ptr null)
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP7]], i64 0
-; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP7]], i64 1
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP7]], i64 2
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> [[TMP7]], i64 3
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP2]], i64 0
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP11]])
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i1> [[TMP2]], i64 1
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP12]])
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP2]], i64 2
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP13]])
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i1> [[TMP2]], i64 3
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP14]])
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP7]], i64 0
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP8]])
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP7]], i64 1
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP9]])
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i1> [[TMP7]], i64 2
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP10]])
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i1> [[TMP7]], i64 3
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP15]])
 ; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[TMP1]], i64 4
 ; CHECK-NEXT:    store <4 x i8> zeroinitializer, ptr [[TMP1]], align 1
@@ -60,8 +60,8 @@ define void @test_widen_ptr_induction(ptr %ptr.start.1) {
 ; CHECK-NEXT:    [[NEXT_GEP7:%.*]] = extractelement <2 x ptr> [[TMP20]], i64 0
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp ne <2 x ptr> [[TMP20]], splat (ptr null)
 ; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x i1> [[TMP21]], i64 0
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <2 x i1> [[TMP21]], i64 1
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP22]])
+; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <2 x i1> [[TMP21]], i64 1
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[TMP23]])
 ; CHECK-NEXT:    store <2 x i8> zeroinitializer, ptr [[NEXT_GEP7]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT9]] = add nuw i64 [[INDEX6]], 2

@@ -276,10 +276,6 @@ bool AArch64TTIImpl::isMultiversionedFunction(const Function &F) const {
   return F.hasFnAttribute("fmv-features");
 }
 
-const FeatureBitset AArch64TTIImpl::InlineInverseFeatures = {
-    AArch64::FeatureExecuteOnly,
-};
-
 bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
                                          const Function *Callee) const {
   SMECallAttrs CallAttrs(*Caller, *Callee);
@@ -308,19 +304,7 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
       return false;
   }
 
-  const TargetMachine &TM = getTLI()->getTargetMachine();
-  const FeatureBitset &CallerBits =
-      TM.getSubtargetImpl(*Caller)->getFeatureBits();
-  const FeatureBitset &CalleeBits =
-      TM.getSubtargetImpl(*Callee)->getFeatureBits();
-  // Adjust the feature bitsets by inverting some of the bits. This is needed
-  // for target features that represent restrictions rather than capabilities,
-  // for example a "+execute-only" callee can be inlined into a caller without
-  // "+execute-only", but not vice versa.
-  FeatureBitset EffectiveCallerBits = CallerBits ^ InlineInverseFeatures;
-  FeatureBitset EffectiveCalleeBits = CalleeBits ^ InlineInverseFeatures;
-
-  return (EffectiveCallerBits & EffectiveCalleeBits) == EffectiveCalleeBits;
+  return BaseT::areInlineCompatible(Caller, Callee);
 }
 
 bool AArch64TTIImpl::areTypesABICompatible(const Function *Caller,
