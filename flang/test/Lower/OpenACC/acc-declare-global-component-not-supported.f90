@@ -1,17 +1,14 @@
-! Reject unsupported !$acc declare module structure component cases:
-! - `obj%vals` without the whole variable.
-! - Non-simple designators (array element base, chained `%`).
+! Reject unsupported !$acc declare module subcomponent cases.
 
 ! RUN: split-file %s %t
-! RUN: not bbc -fopenacc -emit-hlfir %t/declare_module_create_component_only.f90 -o - 2>&1 | FileCheck %s --check-prefixes=ERR-WHOLE
-! RUN: not bbc -fopenacc -emit-hlfir %t/declare_module_copyin_component_only.f90 -o - 2>&1 | FileCheck %s --check-prefixes=ERR-WHOLE
-! RUN: not bbc -fopenacc -emit-hlfir %t/declare_module_device_resident_component_only.f90 -o - 2>&1 | FileCheck %s --check-prefixes=ERR-WHOLE
-! RUN: not bbc -fopenacc -emit-hlfir %t/declare_module_link_component_only.f90 -o - 2>&1 | FileCheck %s --check-prefixes=ERR-WHOLE
-! RUN: not bbc -fopenacc -emit-hlfir %t/declare_array_element_component.f90 -o - 2>&1 | FileCheck %s --check-prefixes=ERR-TODO
-! RUN: not bbc -fopenacc -emit-hlfir %t/declare_nested_structure_components.f90 -o - 2>&1 | FileCheck %s --check-prefixes=ERR-TODO
+! RUN: not bbc -fopenacc -emit-hlfir %t/declare_module_create_component_only.f90 -o - 2>&1 | FileCheck %s --check-prefixes=ERR-SUBCOMPONENT
+! RUN: not bbc -fopenacc -emit-hlfir %t/declare_module_copyin_component_only.f90 -o - 2>&1 | FileCheck %s --check-prefixes=ERR-SUBCOMPONENT
+! RUN: not bbc -fopenacc -emit-hlfir %t/declare_module_device_resident_component_only.f90 -o - 2>&1 | FileCheck %s --check-prefixes=ERR-SUBCOMPONENT
+! RUN: not bbc -fopenacc -emit-hlfir %t/declare_module_link_component_only.f90 -o - 2>&1 | FileCheck %s --check-prefixes=ERR-SUBCOMPONENT
+! RUN: not bbc -fopenacc -emit-hlfir %t/declare_array_element_component.f90 -o - 2>&1 | FileCheck %s --check-prefixes=ERR-SUBCOMPONENT
+! RUN: not bbc -fopenacc -emit-hlfir %t/declare_nested_structure_components.f90 -o - 2>&1 | FileCheck %s --check-prefixes=ERR-SUBCOMPONENT
 
-! ERR-WHOLE: not yet implemented: OpenACC declare: whole variable must appear in ACC DECLARE before a component reference; list the whole variable in this or an earlier clause
-! ERR-TODO: not yet implemented: OpenACC declare does not support this component reference in a module; ACC DECLARE the whole variable instead
+! ERR-SUBCOMPONENT: not yet implemented: OpenACC subcomponent references are not yet supported in clauses
 
 //--- declare_module_create_component_only.f90
 

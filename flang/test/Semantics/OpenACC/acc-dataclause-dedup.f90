@@ -106,7 +106,9 @@ program test_dataclause_dedup
     do i = 1, 10
     end do
 
-    ! Distinct structure components -- not duplicates.
+    ! Distinct structure components are rejected before duplicate checking.
+    !ERROR: not yet implemented: OpenACC subcomponent references are not yet supported in clauses
+    !ERROR: not yet implemented: OpenACC subcomponent references are not yet supported in clauses
     !$acc parallel loop private(s%a, s%b)
     do i = 1, 10
     end do

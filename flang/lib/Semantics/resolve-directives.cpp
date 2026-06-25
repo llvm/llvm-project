@@ -1903,37 +1903,37 @@ void AccAttributeVisitor::ResolveAccObjectList(
   }
 }
 
-static bool IsBareNameOrComponentRef(const parser::DataRef &dataRef);
+static bool ContainsStructureComponent(const parser::DataRef &dataRef);
 
-static bool IsBareNameOrComponentRef(
-    const parser::StructureComponent &component) {
-  return IsBareNameOrComponentRef(component.Base());
-}
-
-static bool IsBareNameOrComponentRef(const parser::DataRef &dataRef) {
+static bool ContainsStructureComponent(const parser::DataRef &dataRef) {
   return common::visit(
       common::visitors{
-          [](const parser::Name &) { return true; },
-          [](const common::Indirection<parser::StructureComponent> &component) {
-            return IsBareNameOrComponentRef(component.value());
+          [](const parser::Name &) { return false; },
+          [](const common::Indirection<parser::StructureComponent> &) {
+            return true;
           },
-          [](const common::Indirection<parser::ArrayElement> &) {
-            return false;
+          [](const common::Indirection<parser::ArrayElement> &arrayElement) {
+            return ContainsStructureComponent(arrayElement.value().Base());
           },
-          [](const common::Indirection<parser::CoindexedNamedObject> &) {
-            return false;
+          [](const common::Indirection<parser::CoindexedNamedObject>
+                  &coindexed) {
+            return ContainsStructureComponent(
+                std::get<parser::DataRef>(coindexed.value().t));
           },
       },
       dataRef.u);
 }
 
-static bool IsBareNameOrComponentRef(const parser::Designator &designator) {
+static bool ContainsStructureComponent(const parser::Designator &designator) {
   return common::visit(
       common::visitors{
           [](const parser::DataRef &dataRef) {
-            return IsBareNameOrComponentRef(dataRef);
+            return ContainsStructureComponent(dataRef);
           },
-          [](const parser::Substring &) { return false; },
+          [](const parser::Substring &substring) {
+            return ContainsStructureComponent(
+                std::get<parser::DataRef>(substring.t));
+          },
       },
       designator.u);
 }
@@ -1943,9 +1943,9 @@ void AccAttributeVisitor::ResolveAccObject(
   common::visit(
       common::visitors{
           [&](const parser::Designator &designator) {
-            const bool isDataRef{
+            const bool preciseDesignator{
                 parser::GetDesignatorNameIfDataRef(designator) != nullptr};
-            if (!isDataRef) {
+            if (!preciseDesignator) {
               // Subscripted designator: evaluate subscripts and detect
               // the substring case that is disallowed in OpenACC clauses.
               if (AnalyzeExpr(context_, designator)) {
@@ -1957,6 +1957,11 @@ void AccAttributeVisitor::ResolveAccObject(
                 }
               }
             }
+            if (ContainsStructureComponent(designator)) {
+              context_.Say(designator.source,
+                  "OpenACC subcomponent references are not yet supported in clauses"_todo_en_US);
+              return;
+            }
             // GetFirstName extracts the base symbol from both bare data
             // references and array sections, unifying DSA registration so
             // that DEFAULT(NONE) checking does not spuriously flag variables
@@ -1966,10 +1971,9 @@ void AccAttributeVisitor::ResolveAccObject(
             const parser::Name &baseName{parser::GetFirstName(designator)};
             if (auto *symbol{ResolveAcc(baseName, accFlag, currScope())}) {
               AddToContextObjectWithDSA(*symbol, accFlag);
-              if (IsBareNameOrComponentRef(designator) &&
-                  dataSharingAttributeFlags.test(accFlag)) {
+              if (preciseDesignator && dataSharingAttributeFlags.test(accFlag)) {
                 CheckMultipleAppearances(
-                    baseName, *symbol, accFlag, &accObject, isDataRef);
+                    baseName, *symbol, accFlag, &accObject, preciseDesignator);
               }
             }
           },
