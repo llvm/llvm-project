@@ -61,7 +61,7 @@ define i32 @pred_reduction(ptr %src, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD:       [[VECTOR_BODY]]:
 ; CHECK-TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-TAILFOLD-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TAILFOLD-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 16 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-TAILFOLD-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-TAILFOLD-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[COND]], i64 [[INDEX]]
 ; CHECK-TAILFOLD-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP2]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
 ; CHECK-TAILFOLD-NEXT:    [[TMP3:%.*]] = icmp ne <vscale x 16 x i8> [[WIDE_MASKED_LOAD]], zeroinitializer
@@ -70,15 +70,14 @@ define i32 @pred_reduction(ptr %src, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP5]], <vscale x 16 x i1> [[TMP4]], <vscale x 16 x i8> poison)
 ; CHECK-TAILFOLD-NEXT:    [[TMP6:%.*]] = zext <vscale x 16 x i8> [[WIDE_MASKED_LOAD1]] to <vscale x 16 x i32>
 ; CHECK-TAILFOLD-NEXT:    [[TMP7:%.*]] = select <vscale x 16 x i1> [[TMP4]], <vscale x 16 x i32> [[TMP6]], <vscale x 16 x i32> zeroinitializer
-; CHECK-TAILFOLD-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <vscale x 16 x i32> @llvm.vector.partial.reduce.add.nxv16i32.nxv16i32(<vscale x 16 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP7]])
-; CHECK-TAILFOLD-NEXT:    [[TMP8]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i32> [[PARTIAL_REDUCE]], <vscale x 16 x i32> [[VEC_PHI]]
+; CHECK-TAILFOLD-NEXT:    [[PARTIAL_REDUCE]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP7]])
 ; CHECK-TAILFOLD-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-TAILFOLD-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX_NEXT]], i64 [[N]])
 ; CHECK-TAILFOLD-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-TAILFOLD-NEXT:    [[TMP10:%.*]] = xor i1 [[TMP9]], true
 ; CHECK-TAILFOLD-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-TAILFOLD:       [[MIDDLE_BLOCK]]:
-; CHECK-TAILFOLD-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.add.nxv16i32(<vscale x 16 x i32> [[TMP8]])
+; CHECK-TAILFOLD-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[PARTIAL_REDUCE]])
 ; CHECK-TAILFOLD-NEXT:    br label %[[EXIT:.*]]
 ; CHECK-TAILFOLD:       [[EXIT]]:
 ; CHECK-TAILFOLD-NEXT:    ret i32 [[TMP11]]
@@ -167,7 +166,7 @@ define i32 @pred_reduction_sext(ptr %src, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD:       [[VECTOR_BODY]]:
 ; CHECK-TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-TAILFOLD-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TAILFOLD-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 16 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-TAILFOLD-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-TAILFOLD-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[COND]], i64 [[INDEX]]
 ; CHECK-TAILFOLD-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP2]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
 ; CHECK-TAILFOLD-NEXT:    [[TMP3:%.*]] = icmp ne <vscale x 16 x i8> [[WIDE_MASKED_LOAD]], zeroinitializer
@@ -176,15 +175,14 @@ define i32 @pred_reduction_sext(ptr %src, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP5]], <vscale x 16 x i1> [[TMP4]], <vscale x 16 x i8> poison)
 ; CHECK-TAILFOLD-NEXT:    [[TMP6:%.*]] = sext <vscale x 16 x i8> [[WIDE_MASKED_LOAD1]] to <vscale x 16 x i32>
 ; CHECK-TAILFOLD-NEXT:    [[TMP7:%.*]] = select <vscale x 16 x i1> [[TMP4]], <vscale x 16 x i32> [[TMP6]], <vscale x 16 x i32> zeroinitializer
-; CHECK-TAILFOLD-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <vscale x 16 x i32> @llvm.vector.partial.reduce.add.nxv16i32.nxv16i32(<vscale x 16 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP7]])
-; CHECK-TAILFOLD-NEXT:    [[TMP8]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i32> [[PARTIAL_REDUCE]], <vscale x 16 x i32> [[VEC_PHI]]
+; CHECK-TAILFOLD-NEXT:    [[PARTIAL_REDUCE]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP7]])
 ; CHECK-TAILFOLD-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-TAILFOLD-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX_NEXT]], i64 [[N]])
 ; CHECK-TAILFOLD-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-TAILFOLD-NEXT:    [[TMP10:%.*]] = xor i1 [[TMP9]], true
 ; CHECK-TAILFOLD-NEXT:    br i1 [[TMP10]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK-TAILFOLD:       [[MIDDLE_BLOCK]]:
-; CHECK-TAILFOLD-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.add.nxv16i32(<vscale x 16 x i32> [[TMP8]])
+; CHECK-TAILFOLD-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[PARTIAL_REDUCE]])
 ; CHECK-TAILFOLD-NEXT:    br label %[[EXIT:.*]]
 ; CHECK-TAILFOLD:       [[EXIT]]:
 ; CHECK-TAILFOLD-NEXT:    ret i32 [[TMP11]]
@@ -281,7 +279,7 @@ define i32 @pred_reduction_dotprod(ptr %a, ptr %b, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD:       [[VECTOR_BODY]]:
 ; CHECK-TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-TAILFOLD-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TAILFOLD-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 16 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-TAILFOLD-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-TAILFOLD-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[COND]], i64 [[INDEX]]
 ; CHECK-TAILFOLD-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP2]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
 ; CHECK-TAILFOLD-NEXT:    [[TMP3:%.*]] = icmp ne <vscale x 16 x i8> [[WIDE_MASKED_LOAD]], zeroinitializer
@@ -294,15 +292,14 @@ define i32 @pred_reduction_dotprod(ptr %a, ptr %b, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD-NEXT:    [[TMP8:%.*]] = zext <vscale x 16 x i8> [[WIDE_MASKED_LOAD2]] to <vscale x 16 x i32>
 ; CHECK-TAILFOLD-NEXT:    [[TMP9:%.*]] = mul nuw nsw <vscale x 16 x i32> [[TMP7]], [[TMP8]]
 ; CHECK-TAILFOLD-NEXT:    [[TMP10:%.*]] = select <vscale x 16 x i1> [[TMP4]], <vscale x 16 x i32> [[TMP9]], <vscale x 16 x i32> zeroinitializer
-; CHECK-TAILFOLD-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <vscale x 16 x i32> @llvm.vector.partial.reduce.add.nxv16i32.nxv16i32(<vscale x 16 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP10]])
-; CHECK-TAILFOLD-NEXT:    [[TMP11]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i32> [[PARTIAL_REDUCE]], <vscale x 16 x i32> [[VEC_PHI]]
+; CHECK-TAILFOLD-NEXT:    [[PARTIAL_REDUCE]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP10]])
 ; CHECK-TAILFOLD-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-TAILFOLD-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX_NEXT]], i64 [[N]])
 ; CHECK-TAILFOLD-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-TAILFOLD-NEXT:    [[TMP13:%.*]] = xor i1 [[TMP12]], true
 ; CHECK-TAILFOLD-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK-TAILFOLD:       [[MIDDLE_BLOCK]]:
-; CHECK-TAILFOLD-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.add.nxv16i32(<vscale x 16 x i32> [[TMP11]])
+; CHECK-TAILFOLD-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[PARTIAL_REDUCE]])
 ; CHECK-TAILFOLD-NEXT:    br label %[[EXIT:.*]]
 ; CHECK-TAILFOLD:       [[EXIT]]:
 ; CHECK-TAILFOLD-NEXT:    ret i32 [[TMP14]]
@@ -404,7 +401,7 @@ define i32 @pred_sub_reduction(ptr %a, ptr %b, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD:       [[VECTOR_BODY]]:
 ; CHECK-TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-TAILFOLD-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TAILFOLD-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 16 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-TAILFOLD-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-TAILFOLD-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[COND]], i64 [[INDEX]]
 ; CHECK-TAILFOLD-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP2]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
 ; CHECK-TAILFOLD-NEXT:    [[TMP3:%.*]] = icmp ne <vscale x 16 x i8> [[WIDE_MASKED_LOAD]], zeroinitializer
@@ -417,15 +414,15 @@ define i32 @pred_sub_reduction(ptr %a, ptr %b, ptr %cond, i64 %N) #0 {
 ; CHECK-TAILFOLD-NEXT:    [[TMP8:%.*]] = zext <vscale x 16 x i8> [[WIDE_MASKED_LOAD2]] to <vscale x 16 x i32>
 ; CHECK-TAILFOLD-NEXT:    [[TMP9:%.*]] = mul nuw nsw <vscale x 16 x i32> [[TMP7]], [[TMP8]]
 ; CHECK-TAILFOLD-NEXT:    [[TMP10:%.*]] = select <vscale x 16 x i1> [[TMP4]], <vscale x 16 x i32> [[TMP9]], <vscale x 16 x i32> zeroinitializer
-; CHECK-TAILFOLD-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <vscale x 16 x i32> @llvm.vector.partial.reduce.add.nxv16i32.nxv16i32(<vscale x 16 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP10]])
-; CHECK-TAILFOLD-NEXT:    [[TMP11]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i32> [[PARTIAL_REDUCE]], <vscale x 16 x i32> [[VEC_PHI]]
+; CHECK-TAILFOLD-NEXT:    [[PARTIAL_REDUCE]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP10]])
 ; CHECK-TAILFOLD-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-TAILFOLD-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX_NEXT]], i64 [[N]])
 ; CHECK-TAILFOLD-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-TAILFOLD-NEXT:    [[TMP13:%.*]] = xor i1 [[TMP12]], true
 ; CHECK-TAILFOLD-NEXT:    br i1 [[TMP13]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK-TAILFOLD:       [[MIDDLE_BLOCK]]:
-; CHECK-TAILFOLD-NEXT:    [[TMP14:%.*]] = call i32 @llvm.vector.reduce.add.nxv16i32(<vscale x 16 x i32> [[TMP11]])
+; CHECK-TAILFOLD-NEXT:    [[TMP15:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[PARTIAL_REDUCE]])
+; CHECK-TAILFOLD-NEXT:    [[TMP14:%.*]] = sub i32 0, [[TMP15]]
 ; CHECK-TAILFOLD-NEXT:    br label %[[EXIT:.*]]
 ; CHECK-TAILFOLD:       [[EXIT]]:
 ; CHECK-TAILFOLD-NEXT:    ret i32 [[TMP14]]
@@ -648,11 +645,11 @@ define i32 @reduction_before_pred(ptr %src, ptr noalias %src_b, ptr %cond, i64 %
 ; CHECK-TAILFOLD:       [[VECTOR_BODY]]:
 ; CHECK-TAILFOLD-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-TAILFOLD-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 16 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-TAILFOLD-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 16 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP10:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-TAILFOLD-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[PARTIAL_REDUCE3:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-TAILFOLD-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, ptr [[SRC_B]], i64 [[INDEX]]
 ; CHECK-TAILFOLD-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP2]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
 ; CHECK-TAILFOLD-NEXT:    [[TMP3:%.*]] = zext <vscale x 16 x i8> [[WIDE_MASKED_LOAD]] to <vscale x 16 x i32>
-; CHECK-TAILFOLD-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <vscale x 16 x i32> @llvm.vector.partial.reduce.add.nxv16i32.nxv16i32(<vscale x 16 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP3]])
+; CHECK-TAILFOLD-NEXT:    [[PARTIAL_REDUCE:%.*]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP3]])
 ; CHECK-TAILFOLD-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw i8, ptr [[COND]], i64 [[INDEX]]
 ; CHECK-TAILFOLD-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP4]], <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i8> poison)
 ; CHECK-TAILFOLD-NEXT:    [[TMP5:%.*]] = icmp ne <vscale x 16 x i8> [[WIDE_MASKED_LOAD1]], zeroinitializer
@@ -661,15 +658,14 @@ define i32 @reduction_before_pred(ptr %src, ptr noalias %src_b, ptr %cond, i64 %
 ; CHECK-TAILFOLD-NEXT:    [[WIDE_MASKED_LOAD2:%.*]] = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(ptr align 1 [[TMP7]], <vscale x 16 x i1> [[TMP6]], <vscale x 16 x i8> poison)
 ; CHECK-TAILFOLD-NEXT:    [[TMP8:%.*]] = zext <vscale x 16 x i8> [[WIDE_MASKED_LOAD2]] to <vscale x 16 x i32>
 ; CHECK-TAILFOLD-NEXT:    [[TMP9:%.*]] = select <vscale x 16 x i1> [[TMP6]], <vscale x 16 x i32> [[TMP8]], <vscale x 16 x i32> zeroinitializer
-; CHECK-TAILFOLD-NEXT:    [[PARTIAL_REDUCE3:%.*]] = call <vscale x 16 x i32> @llvm.vector.partial.reduce.add.nxv16i32.nxv16i32(<vscale x 16 x i32> [[PARTIAL_REDUCE]], <vscale x 16 x i32> [[TMP9]])
-; CHECK-TAILFOLD-NEXT:    [[TMP10]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i32> [[PARTIAL_REDUCE3]], <vscale x 16 x i32> [[VEC_PHI]]
+; CHECK-TAILFOLD-NEXT:    [[PARTIAL_REDUCE3]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[PARTIAL_REDUCE]], <vscale x 16 x i32> [[TMP9]])
 ; CHECK-TAILFOLD-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP1]]
 ; CHECK-TAILFOLD-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX_NEXT]], i64 [[N]])
 ; CHECK-TAILFOLD-NEXT:    [[TMP11:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i64 0
 ; CHECK-TAILFOLD-NEXT:    [[TMP12:%.*]] = xor i1 [[TMP11]], true
 ; CHECK-TAILFOLD-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK-TAILFOLD:       [[MIDDLE_BLOCK]]:
-; CHECK-TAILFOLD-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.nxv16i32(<vscale x 16 x i32> [[TMP10]])
+; CHECK-TAILFOLD-NEXT:    [[TMP13:%.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[PARTIAL_REDUCE3]])
 ; CHECK-TAILFOLD-NEXT:    br label %[[EXIT:.*]]
 ; CHECK-TAILFOLD:       [[EXIT]]:
 ; CHECK-TAILFOLD-NEXT:    ret i32 [[TMP13]]
@@ -711,13 +707,9 @@ exit:
 ; Negative test - expect not to generate a partial reduction as phi
 ; has two update values
 define i32 @partial_reduce_if_else(ptr %a, ptr %b, ptr %cond, i64 %N) #0 {
-; CHECK-INTERLEAVE1-LABEL: define i32 @partial_reduce_if_else(
-; CHECK-INTERLEAVE1-NOT: llvm.vector.partial.reduce
-; CHECK-INTERLEAVE1: call i32 @llvm.vector.reduce.add
-;
-; CHECK-INTERLEAVED-LABEL: define i32 @partial_reduce_if_else(
-; CHECK-INTERLEAVED-NOT: llvm.vector.partial.reduce
-; CHECK-INTERLEAVED: call i32 @llvm.vector.reduce.add
+; CHECK-LABEL: define i32 @partial_reduce_if_else(
+; CHECK-NOT: llvm.vector.partial.reduce
+; CHECK: call i32 @llvm.vector.reduce.add
 ;
 ; CHECK-TAILFOLD-LABEL: define i32 @partial_reduce_if_else(
 ; CHECK-TAILFOLD-NOT: llvm.vector.partial.reduce
@@ -761,13 +753,9 @@ exit:
 ; Negative test - expect not to generate the partial reduction as
 ; there are more than two incomng values to the predicated phi.
 define i32 @partial_reduce_three_incoming(ptr %a, ptr %b, ptr %cond_a, ptr %cond_b, i64 %N) #0 {
-; CHECK-INTERLEAVE1-LABEL: define i32  @partial_reduce_three_incoming(
-; CHECK-INTERLEAVE1-NOT: llvm.vector.partial.reduce
-; CHECK-INTERLEAVE1: call i32 @llvm.vector.reduce.add
-;
-; CHECK-INTERLEAVED-LABEL: define i32  @partial_reduce_three_incoming(
-; CHECK-INTERLEAVED-NOT: llvm.vector.partial.reduce
-; CHECK-INTERLEAVED: call i32 @llvm.vector.reduce.add
+; CHECK-LABEL: define i32  @partial_reduce_three_incoming(
+; CHECK-NOT: llvm.vector.partial.reduce
+; CHECK: call i32 @llvm.vector.reduce.add
 ;
 ; CHECK-TAILFOLD-LABEL: define i32  @partial_reduce_three_incoming(
 ; CHECK-TAILFOLD-NOT: llvm.vector.partial.reduce
@@ -826,10 +814,6 @@ define i32 @partial_reduce_mixed_scale_factor(ptr %a8, ptr %b16,
 ; CHECK-INTERLEAVE1-NOT: llvm.vector.partial.reduce
 ; CHECK-INTERLEAVE1: call i32 @llvm.vector.reduce.add
 ;
-; CHECK-INTERLEAVED-LABEL: define i32  @partial_reduce_mixed_scale_factor(
-; CHECK-INTERLEAVED-NOT: llvm.vector.partial.reduce
-; CHECK-INTERLEAVED: call i32 @llvm.vector.reduce.add
-;
 ; CHECK-TAILFOLD-LABEL: define i32  @partial_reduce_mixed_scale_factor(
 ; CHECK-TAILFOLD-NOT: llvm.vector.partial.reduce
 ; CHECK-TAILFOLD: call i32 @llvm.vector.reduce.add
@@ -871,13 +855,9 @@ exit:
 ; the passthrough value is %sum, not the previous chain value %sum.1.
 define i32 @partial_reduce_bad_passthrough(ptr %src, ptr noalias %src_b,
                                            ptr %cond, i64 %N) #0 {
-; CHECK-INTERLEAVE1-LABEL: define i32  @partial_reduce_bad_passthrough(
-; CHECK-INTERLEAVE1-NOT: llvm.vector.partial.reduce
-; CHECK-INTERLEAVE1: call i32 @llvm.vector.reduce.add
-;
-; CHECK-INTERLEAVED-LABEL: define i32  @partial_reduce_bad_passthrough(
-; CHECK-INTERLEAVED-NOT: llvm.vector.partial.reduce
-; CHECK-INTERLEAVED: call i32 @llvm.vector.reduce.add
+; CHECK-LABEL: define i32  @partial_reduce_bad_passthrough(
+; CHECK-NOT: llvm.vector.partial.reduce
+; CHECK: call i32 @llvm.vector.reduce.add
 ;
 ; CHECK-TAILFOLD-LABEL: define i32  @partial_reduce_bad_passthrough(
 ; CHECK-TAILFOLD-NOT: llvm.vector.partial.reduce

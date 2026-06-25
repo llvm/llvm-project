@@ -6736,12 +6736,16 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   }
 
   // Check if WidenRecipe is the final result of the reduction. If so look
-  // through the select recipes introduced by tail-folding or predicated
-  // reductions for the BinOp's exit value.
+  // through the select recipes introduced by tail-folding. When a Blend
+  // guards the reduction, the tail-fold select wraps the Blend,
+  // otherwise it wraps the WidenRecipe directly.
+  VPValue *ExitSearch =
+      Chain.Blend ? cast<VPValue>(Chain.Blend) : cast<VPValue>(WidenRecipe);
+
   VPValue *TailFoldCond = nullptr;
   auto *ExitValue = cast_or_null<VPInstruction>(findUserOf(
-      WidenRecipe, m_Select(m_VPValue(TailFoldCond), m_Specific(WidenRecipe),
-                            m_Specific(RdxPhi))));
+      ExitSearch, m_Select(m_VPValue(TailFoldCond), m_Specific(ExitSearch),
+                           m_Specific(RdxPhi))));
 
   VPValue *BlendCond = Chain.Blend ? Chain.Blend->getMask(0) : nullptr;
   VPValue *Cond = TailFoldCond;
@@ -7134,7 +7138,6 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
       auto UseIsValid = [&, RedPhiR = RedPhiR](VPUser *U) {
         if (auto *PhiR = dyn_cast<VPReductionPHIRecipe>(U))
           return PhiR == RedPhiR;
-
         auto *R = cast<VPSingleDefRecipe>(U);
 
         if (auto *Blend = dyn_cast<VPBlendRecipe>(R))
