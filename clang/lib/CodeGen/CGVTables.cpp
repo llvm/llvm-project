@@ -988,8 +988,15 @@ llvm::GlobalVariable *CodeGenVTables::GenerateConstructionVTable(
       CGM.CreateOrReplaceCXXRuntimeVariable(Name, VTType, Linkage, Align);
 
   // dynamic_cast assumes the vtable address is unique; see
-  // https://github.com/llvm/llvm-project/pull/200108
-  if (!CGM.shouldEmitRTTI())
+  // https://github.com/llvm/llvm-project/pull/200108. The address is
+  // insignificant either when no RTTI is emitted or for a weak vtable on a
+  // target that may duplicate vtables. In those cases the vtable can be marked
+  // unnamed_addr.
+  bool VTableMayBeDuplicated =
+      CGM.getTarget().getVTableUniqueness() ==
+          VTableUniquenessKind::UniqueIfStrongLinkage &&
+      VTable->isWeakForLinker();
+  if (!CGM.shouldEmitRTTI() || VTableMayBeDuplicated)
     VTable->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
 
   llvm::Constant *RTTI = CGM.GetAddrOfRTTIDescriptor(

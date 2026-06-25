@@ -9,7 +9,7 @@ struct A {
 
 // A does not have a key function, so the first constructor we emit should
 // cause the vtable to be defined (without assertions.)
-// CHECK: @_ZTVN6PR56971AE = linkonce_odr constant
+// CHECK: @_ZTVN6PR56971AE = linkonce_odr unnamed_addr constant
 A::A() { }
 A::A(int) { }
 }
