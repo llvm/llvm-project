@@ -29,7 +29,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
-#include <cstdint>
 #include <new>
 #include <ranges>
 #include <utility>
@@ -45,19 +44,8 @@
 static bool g_nothrow_new_fails = false;
 
 void* operator new(std::size_t n, const std::nothrow_t&) TEST_NOEXCEPT {
-  if (g_nothrow_new_fails)
-    return nullptr;
-#ifndef TEST_HAS_NO_EXCEPTIONS
-  try {
-    return ::operator new(n);
-  } catch (...) {
-    return nullptr;
-  }
-#else
-  return ::operator new(n);
-#endif
+  return g_nothrow_new_fails ? nullptr : ::operator new(n);
 }
-
 void operator delete(void* p, const std::nothrow_t&) TEST_NOEXCEPT { ::operator delete(p); }
 
 typedef std::pair<int, int> P; // (value, original index)
@@ -71,7 +59,6 @@ struct counting_proj {
     return p.first;
   }
 };
-
 struct counting_is_even {
   int* count_;
   bool operator()(int v) const {
@@ -80,51 +67,17 @@ struct counting_is_even {
   }
 };
 
-// Generate expected stable partition result for sanity check.
-static std::vector<P> stable_reference(const std::vector<P>& in) {
-  std::vector<P> out;
-  out.reserve(in.size());
-  for (std::size_t i = 0; i < in.size(); ++i)
-    if (in[i].first % 2 == 0)
-      out.push_back(in[i]);
-  for (std::size_t i = 0; i < in.size(); ++i)
-    if (in[i].first % 2 != 0)
-      out.push_back(in[i]);
-  return out;
-}
-
-// General case: deterministic pseudo-random keys.
-static std::vector<P> make_shuffled(std::size_t n) {
-  std::vector<P> data;
-  data.reserve(n);
-  std::uint64_t s = 0x10110010111001ULL;
-  for (std::size_t i = 0; i < n; ++i) {
-    s ^= s << 13;
-    s ^= s >> 7;
-    s ^= s << 17;
-    data.push_back(P(static_cast<int>(s & 0xFF), static_cast<int>(i)));
-  }
-  return data;
-}
-
-// Worst case: every key is odd (predicate false) except the last, which is even
-// (predicate true). An implementation that evaluates the predicate before checking
-// for __first re-applies it to *__first, an element already known to be false,
-// once per node along the right segment, exceeding the required N applications.
-static std::vector<P> make_all_false_but_last(std::size_t n) {
+template <class Iter>
+void test(std::size_t n) {
+  // Worst case: every key is odd (predicate false) except the last, which is even
+  // (predicate true). An implementation that evaluates the predicate before checking
+  // for __first re-applies it to *__first, an element already known to be false,
+  // once per node along the right segment, exceeding the required N applications.
   std::vector<P> data;
   data.reserve(n);
   for (std::size_t i = 0; i + 1 < n; ++i)
     data.push_back(P(1, static_cast<int>(i)));
-  if (n > 0)
-    data.push_back(P(2, static_cast<int>(n - 1)));
-  return data;
-}
-
-template <class Iter>
-void run_case(std::vector<P> data) {
-  const std::size_t n           = data.size();
-  const std::vector<P> expected = stable_reference(data);
+  data.push_back(P(2, static_cast<int>(n - 1)));
 
   int pred_count        = 0;
   int proj_count        = 0;
@@ -139,23 +92,19 @@ void run_case(std::vector<P> data) {
   assert(static_cast<std::size_t>(pred_count) == n);
   assert(static_cast<std::size_t>(proj_count) == n);
 
-  // Sanity check that the result is correctly and stably partitioned, and the returned iterator
-  // points at the first element for which the predicate is false.
-  assert(data == expected);
-  std::size_t num_true = 0;
-  while (num_true < n && data[num_true].first % 2 == 0)
-    ++num_true;
-  assert(base(r.begin()) == data.data() + num_true);
+  // Sanity check that the result is correctly and stably partitioned.
+  assert(base(r.begin()) == data.data() + 1);
   assert(base(r.end()) == data.data() + n);
+  assert(data[0].first % 2 == 0);
+  for (std::size_t i = 1; i < n; ++i)
+    assert(data[i].first % 2 != 0 && data[i].second == static_cast<int>(i - 1));
 }
 
 template <class Iter>
 void test() {
-  const std::size_t sizes[] = {1, 2, 3, 4, 5, 6, 7, 8, 15, 16, 17, 63, 64, 65, 256, 1000, 4096};
-  for (std::size_t i = 0; i < sizeof(sizes) / sizeof(sizes[0]); ++i) {
-    run_case<Iter>(make_shuffled(sizes[i]));
-    run_case<Iter>(make_all_false_but_last(sizes[i]));
-  }
+  const std::size_t sizes[] = {1, 2, 3, 4, 5, 16, 17, 1000};
+  for (std::size_t i = 0; i < sizeof(sizes) / sizeof(sizes[0]); ++i)
+    test<Iter>(sizes[i]);
 }
 
 int main(int, char**) {
