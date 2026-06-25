@@ -60,9 +60,9 @@
 // CHECK:                   omp.terminator
 // CHECK:                 } {omp.composite}
 // CHECK:                 omp.terminator
-// CHECK:               }
+// CHECK:               } {omp.combined}
 // CHECK:               omp.terminator
-// CHECK:             }
+// CHECK:             } {omp.combined}
 // CHECK:             %[[VAL_48:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:             %[[VAL_49:.*]] = fir.load %[[VAL_11]] : !fir.ref<index>
 // CHECK:             %[[VAL_50:.*]] = fir.load %[[VAL_14]] : !fir.ref<index>

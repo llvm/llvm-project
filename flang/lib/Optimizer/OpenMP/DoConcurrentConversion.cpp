@@ -326,14 +326,18 @@ public:
       targetOp =
           genTargetOp(doLoop.getLoc(), rewriter, mapper, loopNestLiveIns,
                       targetClauseOps, loopNestClauseOps, liveInShapeInfoMap);
-      genTeamsOp(rewriter, loop, mapper);
+      auto teamsOp = genTeamsOp(rewriter, loop, mapper);
+      targetOp.setCombined(true);
+      teamsOp.setCombined(true);
     }
 
     mlir::omp::ParallelOp parallelOp =
         genParallelOp(rewriter, loop, ivInfos, mapper);
 
-    // Only set as composite when part of `distribute parallel do`.
+    // Only set as composite when part of `distribute parallel do`, and only set
+    // as combined when part of `parallel do`.
     parallelOp.setComposite(mapToDevice);
+    parallelOp.setCombined(!mapToDevice);
 
     if (!mapToDevice)
       genLoopNestClauseOps(doLoop.getLoc(), rewriter, loop, loopNestClauseOps);
