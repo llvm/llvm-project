@@ -4892,12 +4892,11 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     // (Operands can be either way round depending on insertion point
     if (VectorTy.getSizeInBits() == SubvectorTy.getSizeInBits() * 2) {
       bool InsertInLowHalf = InsertionPointImm == 0;
-      auto Extract = MIRBuilder.buildInstr(
-          TargetOpcode::G_EXTRACT_SUBVECTOR, {SubvectorTy},
-          {Vector,
-           (uint64_t)(InsertInLowHalf
-                          ? VectorTy.getElementCount().getKnownMinValue() / 2
-                          : 0)});
+      auto Extract = MIRBuilder.buildExtractSubvector(
+          SubvectorTy, Vector,
+          (uint64_t)(InsertInLowHalf
+                         ? VectorTy.getElementCount().getKnownMinValue() / 2
+                         : 0));
 
       auto LowHalf = InsertInLowHalf ? Subvector : Extract.getReg(0);
       auto HighHalf = InsertInLowHalf ? Extract.getReg(0) : Subvector;
