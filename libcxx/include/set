@@ -10,8 +10,6 @@
 #ifndef _LIBCPP_SET
 #define _LIBCPP_SET
 
-// TODO: add constexpr everywhere
-
 /*
 
     set synopsis
