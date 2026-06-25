@@ -13,8 +13,8 @@
 //
 // Overview:
 // ---------
-// For the current function, walk call operations inside offload regions (or
-// inside gpu.func). If the callee is a function with an acc routine that has
+// For the current function, walk call operations inside offload regions, or
+// gpu.func). If the callee is a function with an acc routine that has
 // bind(name), replace the call to use the bound symbol.
 //
 // Requirements:
@@ -35,7 +35,6 @@
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
-// #include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "llvm/Support/Debug.h"
