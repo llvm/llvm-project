@@ -492,9 +492,7 @@ emitAArch64CompareBuiltinExpr(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
   return builder.createCast(loc, cir::CastKind::integral, cmp, retTy);
 }
 
-// TODO(cir): Remove `loc` from the list of arguments once all NYIs are gone.
 static cir::VectorType getNeonType(CIRGenFunction *cgf, NeonTypeFlags typeFlags,
-                                   mlir::Location loc,
                                    bool hasLegalHalfType = true,
                                    bool v1Ty = false,
                                    bool allowBFloatArgsAndRet = true) {
@@ -535,8 +533,7 @@ static cir::VectorType getNeonType(CIRGenFunction *cgf, NeonTypeFlags typeFlags,
     // FIXME: i128 and f128 doesn't get fully support in Clang and llvm.
     // There is a lot of i128 and f128 API missing.
     // so we use v16i8 to represent poly128 and get pattern matched.
-    cgf->getCIRGenModule().errorNYI(loc, std::string("NEON type: Poly128"));
-    [[fallthrough]];
+    return cir::VectorType::get(cgf->uInt8Ty, 16);
   case NeonTypeFlags::Float32:
     return cir::VectorType::get(cgf->getCIRGenModule().floatTy,
                                 v1Ty ? 1 : (2 << isQuad));
@@ -648,8 +645,8 @@ static mlir::Value emitCommonNeonBuiltinExpr(
   // FIXME
   // getTargetHooks().getABIInfo().allowBFloatArgsAndRet();
 
-  cir::VectorType vTy = getNeonType(&cgf, neonType, loc, hasLegalHalfType,
-                                    false, allowBFloatArgsAndRet);
+  cir::VectorType vTy = getNeonType(&cgf, neonType, hasLegalHalfType, false,
+                                    allowBFloatArgsAndRet);
   cir::VectorType ty = vTy;
   if (!ty)
     return nullptr;
@@ -2655,7 +2652,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     return mlir::Value{};
   }
 
-  cir::VectorType ty = getNeonType(this, type, loc);
+  cir::VectorType ty = getNeonType(this, type);
   if (!ty)
     return nullptr;
 
@@ -2737,24 +2734,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     return emitCallMaybeConstrainedBuiltin(builder, loc, "fma", ty, fmaOps);
   }
   case NEON::BI__builtin_neon_vfmah_lane_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AArch64 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
-  case NEON::BI__builtin_neon_vfmas_lane_f32: {
-    // Scalar lane/laneq forms use one selected element from the lane source.
-    mlir::Value laneSource = builder.createExtractElement(
-        loc, ops[2], static_cast<uint64_t>(getIntValueFromConstOp(ops[3])));
-
-    llvm::SmallVector<mlir::Value> fmaOps = {ops[1], laneSource, ops[0]};
-    return emitCallMaybeConstrainedBuiltin(
-        builder, loc, "fma", convertType(expr->getType()), fmaOps);
-  }
+  case NEON::BI__builtin_neon_vfmas_lane_f32:
   case NEON::BI__builtin_neon_vfmah_laneq_f16:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AArch64 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
   case NEON::BI__builtin_neon_vfmas_laneq_f32: {
     // Scalar lane/laneq forms use one selected element from the lane source.
     mlir::Value laneSource = builder.createExtractElement(
@@ -2927,7 +2908,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vcvtq_f64_v:
     ops[0] = builder.createBitcast(ops[0], ty);
     ty = getNeonType(
-        this, NeonTypeFlags(NeonTypeFlags::Float64, false, type.isQuad()), loc);
+        this, NeonTypeFlags(NeonTypeFlags::Float64, false, type.isQuad()));
     return builder.createCast(loc, cir::CastKind::int_to_float, ops[0], ty);
   case NEON::BI__builtin_neon_vcvt_f64_f32:
   case NEON::BI__builtin_neon_vcvt_f32_f64:
