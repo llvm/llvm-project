@@ -24,6 +24,11 @@ _Static_assert(__builtin_offsetof(struct MyStruct, ptrs[(uint8_t)128]) == 128 * 
 _Static_assert(__builtin_offsetof(struct MyStruct, ptrs[(uint8_t)255]) == 255 * sizeof(void *),
                "offsetof with uint8_t index 255 should be correctly zero-extended, not sign-extended");
 
+// uint16_t index: values >= 32768 were also affected by sign-extension.
+struct BigStruct { char data[65536]; };
+_Static_assert(__builtin_offsetof(struct BigStruct, data[(uint16_t)32768]) == 32768,
+               "offsetof with uint16_t index 32768 should be correctly zero-extended");
+
 // Negative indices must be rejected.
 struct NegIdxStruct { int a; int x[1]; };
 _Static_assert(__builtin_offsetof(struct NegIdxStruct, x[-1]) == 0, ""); // expected-error {{not an integral constant expression}}
