@@ -63,7 +63,8 @@ public:
 
   virtual void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
                                    const Expr *MovedExpr,
-                                   SourceLocation FreeLoc) {}
+                                   SourceLocation FreeLoc,
+                                   llvm::ArrayRef<const Expr *> ExprChain) {}
 
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,

@@ -46,3 +46,21 @@ YMM2 bar() {
   ((YMM1<1>*)&result)->x = UInt64x4{5, 6, 7, 8};
   return result;
 }
+
+// Test that empty base classes do not prevent structs with a single wide
+// vector member from being passed/returned in registers (issue #203760).
+struct EmptyBase {};
+
+struct YMMWithEmptyBase : EmptyBase {
+    UInt64x4 x;
+};
+
+// A struct with a single 256-bit vector and an empty base should use registers,
+// matching the behavior with no base class.
+// CHECK: define{{.*}} <4 x i64> @_Z18ymm_empty_base_retv()
+// CLANG-20: define{{.*}} <4 x i64> @_Z18ymm_empty_base_retv()
+YMMWithEmptyBase ymm_empty_base_ret() { return {}; }
+
+// CHECK: define{{.*}} i64 @_Z19ymm_empty_base_pass16YMMWithEmptyBase(<4 x i64>
+// CLANG-20: define{{.*}} i64 @_Z19ymm_empty_base_pass16YMMWithEmptyBase(<4 x i64>
+unsigned long long ymm_empty_base_pass(YMMWithEmptyBase x) { return x.x[0]; }

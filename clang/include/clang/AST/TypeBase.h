@@ -2798,8 +2798,10 @@ public:
   bool isHLSLInlineSpirvType() const;
   bool isHLSLResourceRecord() const;
   bool isHLSLResourceRecordArray() const;
-  bool isHLSLIntangibleType()
-      const; // Any HLSL intangible type (builtin, array, class)
+  // Any HLSL intangible type (builtin, array, class)
+  bool isHLSLIntangibleType() const;
+  // User-defined HLSL records or arrays of such records in standard layout
+  bool isHLSLStandardLayoutRecordOrArrayOf() const;
 
   /// Determines if this type, which must satisfy
   /// isObjCLifetimeType(), is implicitly __unsafe_unretained rather
@@ -2948,7 +2950,7 @@ public:
   ///
   /// If this is not a pointer or reference, or the type being pointed to does
   /// not refer to a CXXRecordDecl, returns NULL.
-  const CXXRecordDecl *getPointeeCXXRecordDecl() const;
+  CXXRecordDecl *getPointeeCXXRecordDecl() const;
 
   /// Get the DeducedType whose type will be deduced for a variable with
   /// an initializer of this type. This looks through declarators like pointer

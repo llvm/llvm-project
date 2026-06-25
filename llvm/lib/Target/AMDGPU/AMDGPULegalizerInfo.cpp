@@ -760,7 +760,16 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   if (ST.hasVOP3PInsts() && ST.hasAddNoCarryInsts() && ST.hasIntClamp()) {
     // Full set of gfx9 features.
-    if (ST.hasScalarAddSub64()) {
+    if (ST.hasPackedU64Ops()) {
+      getActionDefinitionsBuilder({G_ADD, G_SUB})
+          .legalFor({S64, S32, S16, V2S16, V2S64})
+          .clampMaxNumElementsStrict(0, S16, 2)
+          .clampMaxNumElementsStrict(0, S64, 2)
+          .scalarize(0)
+          .minScalar(0, S16)
+          .widenScalarToNextMultipleOf(0, 32)
+          .maxScalar(0, S32);
+    } else if (ST.hasScalarAddSub64()) {
       getActionDefinitionsBuilder({G_ADD, G_SUB})
           .legalFor({S64, S32, S16, V2S16})
           .clampMaxNumElementsStrict(0, S16, 2)
@@ -954,6 +963,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .legalFor({PrivatePtr});
 
   getActionDefinitionsBuilder({G_GET_FPENV, G_SET_FPENV}).customFor({S64});
+
+  getActionDefinitionsBuilder({G_GET_ROUNDING, G_SET_ROUNDING}).legalFor({S32});
 
   getActionDefinitionsBuilder(G_GLOBAL_VALUE)
     .customIf(typeIsNot(0, PrivatePtr));
@@ -2258,7 +2269,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .lower();
   }
 
-  getActionDefinitionsBuilder({G_MEMCPY, G_MEMCPY_INLINE, G_MEMMOVE, G_MEMSET})
+  getActionDefinitionsBuilder(
+      {G_MEMCPY, G_MEMCPY_INLINE, G_MEMMOVE, G_MEMSET, G_MEMSET_INLINE})
       .lower();
 
   getActionDefinitionsBuilder({G_TRAP, G_DEBUGTRAP}).custom();
@@ -5504,7 +5516,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
     // v_rcp_f16 and v_rsq_f16 DO support denormals and 0.51ulp.
 
     // 1 / x -> RCP(x)
-    if (CLHS->isExactlyValue(1.0)) {
+    if (CLHS->isOne()) {
       B.buildIntrinsic(Intrinsic::amdgcn_rcp, Res)
           .addUse(RHS)
           .setMIFlags(Flags);
@@ -5514,7 +5526,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV(MachineInstr &MI,
     }
 
     // -1 / x -> RCP( FNEG(x) )
-    if (CLHS->isExactlyValue(-1.0)) {
+    if (CLHS->isMinusOne()) {
       auto FNeg = B.buildFNeg(ResTy, RHS, Flags);
       B.buildIntrinsic(Intrinsic::amdgcn_rcp, Res)
           .addUse(FNeg.getReg(0))
@@ -5556,7 +5568,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV64(MachineInstr &MI,
     return false;
 
   const ConstantFP *CLHS = getConstantFPVRegVal(X, MRI);
-  bool IsNegRcp = CLHS && CLHS->isExactlyValue(-1.0);
+  bool IsNegRcp = CLHS && CLHS->isMinusOne();
 
   // Pull out the negation so it folds for free into the source modifiers.
   if (IsNegRcp)
@@ -5578,7 +5590,7 @@ bool AMDGPULegalizerInfo::legalizeFastUnsafeFDIV64(MachineInstr &MI,
   R = B.buildFMA(ResTy, Tmp1, R, R);
 
   // Skip the last 2 correction terms for reciprocal.
-  if (IsNegRcp || (CLHS && CLHS->isExactlyValue(1.0))) {
+  if (IsNegRcp || (CLHS && CLHS->isOne())) {
     B.buildCopy(Res, R);
     MI.eraseFromParent();
     return true;

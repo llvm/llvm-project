@@ -761,8 +761,8 @@ bool BCECmpChain::isDereferenceable() {
 
     APInt Size(64, SizeInBits / 8);
     SimplifyQuery SQ(DL, CxtI);
-    if (!isDereferenceableAndAlignedPointer(Lhs, Align(1), Size, SQ) ||
-        !isDereferenceableAndAlignedPointer(Rhs, Align(1), Size, SQ))
+    if (!isDereferenceablePointer(Lhs, Size, SQ) ||
+        !isDereferenceablePointer(Rhs, Size, SQ))
       return false;
   }
   return true;

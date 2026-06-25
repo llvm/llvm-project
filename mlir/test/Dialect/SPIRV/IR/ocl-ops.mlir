@@ -881,6 +881,26 @@ func.func @copysign(%arg0 : vector<4xf16>, %arg1 : vector<4xf16>) -> () {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.CL.expm1
+//===----------------------------------------------------------------------===//
+
+func.func @expm1(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.expm1 {{%.*}} : f32
+  %2 = spirv.CL.expm1 %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @expm1(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.expm1 {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.expm1 %arg0 : vector<4xf16>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.CL.fdim
 //===----------------------------------------------------------------------===//
 
@@ -935,5 +955,25 @@ func.func @hypot(%arg0 : f32, %arg1 : f32) -> () {
 func.func @hypot(%arg0 : vector<4xf16>, %arg1 : vector<4xf16>) -> () {
   // CHECK: spirv.CL.hypot {{%.*}}, {{%.*}} : vector<4xf16>
   %2 = spirv.CL.hypot %arg0, %arg1 : vector<4xf16>
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.CL.log1p
+//===----------------------------------------------------------------------===//
+
+func.func @log1p(%arg0 : f32) -> () {
+  // CHECK: spirv.CL.log1p {{%.*}} : f32
+  %2 = spirv.CL.log1p %arg0 : f32
+  return
+}
+
+// -----
+
+func.func @log1p(%arg0 : vector<4xf16>) -> () {
+  // CHECK: spirv.CL.log1p {{%.*}} : vector<4xf16>
+  %2 = spirv.CL.log1p %arg0 : vector<4xf16>
   return
 }
