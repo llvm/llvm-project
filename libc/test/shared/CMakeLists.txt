@@ -829,6 +829,7 @@ add_fp_unittest(
   DEPENDS
     libc.src.__support.builtins.adddf3
     libc.src.__support.builtins.addtf3
+    libc.src.__support.builtins.divdf3
     libc.src.__support.builtins.divtf3
     libc.src.__support.builtins.muldf3
     libc.src.__support.builtins.multf3
