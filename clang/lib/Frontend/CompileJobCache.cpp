@@ -774,8 +774,10 @@ Expected<bool> ObjectStoreCachingOutputs::replayCachedResult(
     return false;
 
   std::optional<clang::cas::CompileJobCacheResult> Result;
-  clang::cas::CompileJobResultSchema Schema(*CAS);
-  if (Error E = Schema.load(ResultID).moveInto(Result))
+  auto Schema = clang::cas::CompileJobResultSchema::create(*CAS);
+  if (!Schema)
+    return Schema.takeError();
+  if (Error E = Schema->load(ResultID).moveInto(Result))
     return std::move(E);
 
   return replayCachedResult(ResultCacheKey, *Result, JustComputedResult);

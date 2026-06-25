@@ -154,12 +154,15 @@ Error CompileJobCacheResult::Builder::addOutput(StringRef Path,
 }
 
 Expected<ObjectRef> CompileJobCacheResult::Builder::build(ObjectStore &CAS) {
-  CompileJobResultSchema Schema(CAS);
+  auto Schema = CompileJobResultSchema::create(CAS);
+  if (!Schema)
+    return Schema.takeError();
+
   // The resulting Refs contents are:
   // Object 0...N, SchemaKind
   SmallVector<ObjectRef> Refs;
   std::swap(Impl.Objects, Refs);
-  Refs.push_back(Schema.getKindRef());
+  Refs.push_back(Schema->getKindRef());
   return CAS.store(Refs, {(char *)Impl.Kinds.begin(), Impl.Kinds.size()});
 }
 
@@ -168,10 +171,17 @@ static constexpr llvm::StringLiteral CompileJobResultSchemaName =
 
 char CompileJobResultSchema::ID = 0;
 
-CompileJobResultSchema::CompileJobResultSchema(ObjectStore &CAS)
+Expected<CompileJobResultSchema>
+CompileJobResultSchema::create(ObjectStore &CAS) {
+  auto Ref = CAS.storeFromString({}, CompileJobResultSchemaName);
+  if (!Ref)
+    return Ref.takeError();
+  return CompileJobResultSchema(CAS, *Ref);
+}
+
+CompileJobResultSchema::CompileJobResultSchema(ObjectStore &CAS, ObjectRef Ref)
     : CompileJobResultSchema::RTTIExtends(CAS),
-      KindRef(
-          llvm::cantFail(CAS.storeFromString({}, CompileJobResultSchemaName))) {
+      KindRef(Ref) {
 }
 
 Expected<CompileJobCacheResult>

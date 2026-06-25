@@ -104,7 +104,8 @@ class CompileJobResultSchema
 public:
   static char ID;
 
-  CompileJobResultSchema(ObjectStore &CAS);
+  /// Create a CompileJobResultSchema.
+  static Expected<CompileJobResultSchema> create(ObjectStore &CAS);
 
   /// Attempt to load \p Ref as a \c CompileJobCacheResult if it matches the
   /// schema.
@@ -115,6 +116,9 @@ public:
 
   /// Get this schema's marker node.
   ObjectRef getKindRef() const { return KindRef; }
+
+private:
+  CompileJobResultSchema(ObjectStore &CAS, ObjectRef KindRef);
 
 private:
   ObjectRef KindRef;
