@@ -211,15 +211,11 @@ public:
 
     DEBUG_WITH_TYPE("LifetimeBuildOriginFlow",
                     llvm::dbgs()
-                        << "==========================================\n");
-    DEBUG_WITH_TYPE("LifetimeBuildOriginFlow",
-                    llvm::dbgs() << "    Lifetime Analysis buildOriginFlow\n");
-    DEBUG_WITH_TYPE("LifetimeBuildOriginFlow",
-                    llvm::dbgs()
-                        << "==========================================\n");
-    DEBUG_WITH_TYPE("LifetimeBuildOriginFlow",
-                    llvm::dbgs() << "StartOriginID: " << StartOID
-                                 << ", TargetLoanID: " << TargetLoan << "\n\n");
+                        << "==========================================\n"
+                        << "    Lifetime Analysis buildOriginFlow\n"
+                        << "==========================================\n"
+                        << "StartOriginID: " << StartOID
+                        << ", TargetLoanID: " << TargetLoan << "\n\n");
 
     const CFGBlock *EndBlock = nullptr;
     size_t BlockID = FactMgr.getBlockID(StartPoint);
