@@ -34,16 +34,15 @@ LIBC_INLINE bfloat16 cosbf16(bfloat16 x) {
   float xf = x;
 
   if (x_abs < 0x7f80) {
-
     // cos(+/-0) = 1
-    if (LIBC_UNLIKELY(x_abs == 0U))
+    if (LIBC_UNLIKELY(x_abs == 0))
       return fputil::cast<bfloat16>(1.0f);
 
     double xd = static_cast<double>(xf);
-    uint32_t x_abs_d = fputil::FPBits<float>(xf).uintval() & 0x7fffffff;
+    uint32_t x_abs_f = fputil::FPBits<float>(xf).uintval() & 0x7fffffff;
     double sin_k, cos_k, sin_y, cosm1_y;
 
-    sincosf_eval(xd, x_abs_d, sin_k, cos_k, sin_y, cosm1_y);
+    sincosf_eval(xd, x_abs_f, sin_k, cos_k, sin_y, cosm1_y);
     // using cos(a + b) = cos(a)*cos(b) - sin(a)*sin(b)
     //  cos(x) = cos_k*cos_y - sin_k*sin_y
     //  but cosm1_y = cos_y - 1 --> cos_y = cosm1_y + 1
@@ -53,7 +52,7 @@ LIBC_INLINE bfloat16 cosbf16(bfloat16 x) {
         cosm1_y, cos_k, fputil::multiply_add(-sin_y, sin_k, cos_k)));
   }
 
-  // nan
+  // NaN
   if (xbits.is_nan()) {
     if (xbits.is_signaling_nan()) {
       fputil::raise_except_if_required(FE_INVALID);
