@@ -1085,7 +1085,6 @@ to True if the x parameter is +INF or -INF. Otherwise, False.
 }];
   let ReturnType = VaryingShape<BoolTy>;
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
 }
 
 // Determines if the specified value x is Not a Number.
@@ -1100,7 +1099,6 @@ to True if the x parameter is NaN or QNaN. Otherwise, False.
 }];
   let ReturnType = VaryingShape<BoolTy>;
   let VaryingTypes = [HalfTy, FloatTy];
-  let VaryingMatDims = [];
 }
 
 // Returns the result of multiplying the specified value by two raised

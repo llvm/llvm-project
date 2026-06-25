@@ -113,15 +113,21 @@ bool3x1 fn2(bool3 b) {
 // CHECK-NEXT:    [[TMP0:%.*]] = zext <3 x i1> [[B]] to <3 x i32>
 // CHECK-NEXT:    store <3 x i32> [[TMP0]], ptr [[B_ADDR]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr [[B_ADDR]], align 4
-// CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <3 x i32> [[TMP1]], i32 0
-// CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <3 x i32> poison, i32 [[MATRIXEXT]], i32 0
+// CHECK-NEXT:    [[TRUNC1:%.*]] = trunc <3 x i32> [[TMP1]] to <3 x i1>
+// CHECK-NEXT:    [[MATRIXEXT1:%.*]] = extractelement <3 x i1> [[TRUNC1]], i32 0
+// CHECK-NEXT:    [[CONV1:%.*]] = zext i1 [[MATRIXEXT1]] to i32
+// CHECK-NEXT:    [[VECINIT1:%.*]] = insertelement <3 x i32> poison, i32 [[CONV1]], i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load <3 x i32>, ptr [[B_ADDR]], align 4
-// CHECK-NEXT:    [[MATRIXEXT1:%.*]] = extractelement <3 x i32> [[TMP2]], i32 1
-// CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <3 x i32> [[VECINIT]], i32 [[MATRIXEXT1]], i32 1
+// CHECK-NEXT:    [[TRUNC2:%.*]] = trunc <3 x i32> [[TMP2]] to <3 x i1>
+// CHECK-NEXT:    [[MATRIXEXT2:%.*]] = extractelement <3 x i1> [[TRUNC2]], i32 1
+// CHECK-NEXT:    [[CONV2:%.*]] = zext i1 [[MATRIXEXT2]] to i32
+// CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <3 x i32> [[VECINIT1]], i32 [[CONV2]], i32 1
 // CHECK-NEXT:    [[TMP3:%.*]] = load <3 x i32>, ptr [[B_ADDR]], align 4
-// CHECK-NEXT:    [[MATRIXEXT3:%.*]] = extractelement <3 x i32> [[TMP3]], i32 2
-// CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <3 x i32> [[VECINIT2]], i32 [[MATRIXEXT3]], i32 2
-// CHECK-NEXT:    ret <3 x i32> [[VECINIT4]]
+// CHECK-NEXT:    [[TRUNC3:%.*]] = trunc <3 x i32> [[TMP3]] to <3 x i1>
+// CHECK-NEXT:    [[MATRIXEXT3:%.*]] = extractelement <3 x i1> [[TRUNC3]], i32 2
+// CHECK-NEXT:    [[CONV3:%.*]] = zext i1 [[MATRIXEXT3]] to i32
+// CHECK-NEXT:    [[VECINIT3:%.*]] = insertelement <3 x i32> [[VECINIT2]], i32 [[CONV3]], i32 2
+// CHECK-NEXT:    ret <3 x i32> [[VECINIT3]]
 //
 int3 fn3(bool1x3 b) {
     return b;
