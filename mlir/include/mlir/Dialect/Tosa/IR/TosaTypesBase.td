@@ -113,21 +113,25 @@ def Tosa_BlockScaled : Tosa_Type<"BlockScaled", "block_scaled"> {
   let summary = "Block scaled tensor element type.";
 
   let description = [{
-    This does not specify an implementation type. A tensor of this type is a 
+    This does not specify an implementation type. A tensor of this type is a
     tensor which has block-scaled quantization applied.
 
     This compound type is made up of 3 components:
-    `value_type` - The type of the data values in each block.
-    `scale_type` - The type of the scale value associated with each block.
     `block_shape` - The size and axis of each block. Currently only supports
       specifying the block size along the innermost dimension.
+    `scale_type` - The type of the scale value associated with each block.
+    `value_type` - The type of the data values in each block.
+
   }];
 
-  let parameters = (ins Tosa_MXFPValue:$value_type, Tosa_MXFPScale:$scale_type,
-      EnumParameter<Tosa_BlockShape>:$block_shape);
+  let parameters = (ins
+    EnumParameter<Tosa_BlockShape>:$block_shape,
+    Tosa_MXFPScale:$scale_type,
+    Tosa_MXFPValue:$value_type
+  );
 
   let assemblyFormat =
-      "`<` $value_type```:```$scale_type```:```$block_shape `>`";
+      "`<` $block_shape```:```$scale_type```:```$value_type `>`";
 }
 
 //===----------------------------------------------------------------------===//

@@ -353,28 +353,28 @@ func.func @test_cast_i64_bool(%arg0: tensor<13x21x3xi64>) -> tensor<13x21x3xi1> 
 // -----
 
 // CHECK-LABEL: test_cast_to_block_scaled_types
-func.func @test_cast_to_block_scaled_types(%fp16: tensor<4x32xf16>, %fp32: tensor<4x32xf32>, %bf16: tensor<4x32xbf16>, %fp8e4m3: tensor<4x32xf8E4M3FN>, %fp8e5m2: tensor<4x32xf8E5M2>) -> (tensor<4x32x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32>>, tensor<4x32x!tosa.block_scaled<f6E2M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>, tensor<4x32x!tosa.block_scaled<f6E3M2FN:f8E8M0FNU:BLOCK_SHAPE_32>>, tensor<4x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>, tensor<4x32x!tosa.block_scaled<f8E5M2:f8E8M0FNU:BLOCK_SHAPE_32>>, tensor<4x32x!tosa.block_scaled<!tosa.mxint8:f8E8M0FNU:BLOCK_SHAPE_32>>) {
-  %0 = tosa.cast %fp32 : (tensor<4x32xf32>) -> tensor<4x32x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32>>
-  %1 = tosa.cast %fp32 : (tensor<4x32xf32>) -> tensor<4x32x!tosa.block_scaled<f6E2M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>
-  %2 = tosa.cast %fp32 : (tensor<4x32xf32>) -> tensor<4x32x!tosa.block_scaled<f6E3M2FN:f8E8M0FNU:BLOCK_SHAPE_32>>
-  %3 = tosa.cast %fp16 : (tensor<4x32xf16>) -> tensor<4x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>
-  %4 = tosa.cast %bf16 : (tensor<4x32xbf16>) -> tensor<4x32x!tosa.block_scaled<f8E5M2:f8E8M0FNU:BLOCK_SHAPE_32>>
-  %5 = tosa.cast %fp8e4m3 : (tensor<4x32xf8E4M3FN>) -> tensor<4x32x!tosa.block_scaled<!tosa.mxint8:f8E8M0FNU:BLOCK_SHAPE_32>>
-  %6 = tosa.cast %fp8e5m2 : (tensor<4x32xf8E5M2>) -> tensor<4x32x!tosa.block_scaled<f6E2M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>
-  return %0, %1, %2, %3, %4, %5 : tensor<4x32x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32>>, tensor<4x32x!tosa.block_scaled<f6E2M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>, tensor<4x32x!tosa.block_scaled<f6E3M2FN:f8E8M0FNU:BLOCK_SHAPE_32>>, tensor<4x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>, tensor<4x32x!tosa.block_scaled<f8E5M2:f8E8M0FNU:BLOCK_SHAPE_32>>, tensor<4x32x!tosa.block_scaled<!tosa.mxint8:f8E8M0FNU:BLOCK_SHAPE_32>>
+func.func @test_cast_to_block_scaled_types(%fp16: tensor<4x32xf16>, %fp32: tensor<4x32xf32>, %bf16: tensor<4x32xbf16>, %fp8e4m3: tensor<4x32xf8E4M3FN>, %fp8e5m2: tensor<4x32xf8E5M2>) -> (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>, tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>, tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>, tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E5M2>>, tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>) {
+  %0 = tosa.cast %fp32 : (tensor<4x32xf32>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  %1 = tosa.cast %fp32 : (tensor<4x32xf32>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>
+  %2 = tosa.cast %fp32 : (tensor<4x32xf32>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>
+  %3 = tosa.cast %fp16 : (tensor<4x32xf16>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+  %4 = tosa.cast %bf16 : (tensor<4x32xbf16>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E5M2>>
+  %5 = tosa.cast %fp8e4m3 : (tensor<4x32xf8E4M3FN>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
+  %6 = tosa.cast %fp8e5m2 : (tensor<4x32xf8E5M2>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>
+  return %0, %1, %2, %3, %4, %5 : tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>, tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>, tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>, tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E5M2>>, tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>
 }
 
 // -----
 
 // CHECK-LABEL: test_cast_from_block_scaled_types
-func.func @test_cast_from_block_scaled_types(%fp4: tensor<4x32x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32>>, %fp6e2m3: tensor<4x32x!tosa.block_scaled<f6E2M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>, %fp6e3m2: tensor<4x32x!tosa.block_scaled<f6E3M2FN:f8E8M0FNU:BLOCK_SHAPE_32>>, %fp8e4m3: tensor<4x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>, %fp8e5m2: tensor<4x32x!tosa.block_scaled<f8E5M2:f8E8M0FNU:BLOCK_SHAPE_32>>, %mxint8: tensor<4x32x!tosa.block_scaled<!tosa.mxint8:f8E8M0FNU:BLOCK_SHAPE_32>>) -> (tensor<4x32xf32>, tensor<4x32xf16>, tensor<4x32xbf16>, tensor<4x32xf8E4M3FN>, tensor<4x32xf8E5M2>) {
-  %0 = tosa.cast %fp4 : (tensor<4x32x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<4x32xf32>
-  %1 = tosa.cast %fp6e2m3 : (tensor<4x32x!tosa.block_scaled<f6E2M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<4x32xf32>
-  %2 = tosa.cast %fp6e3m2 : (tensor<4x32x!tosa.block_scaled<f6E3M2FN:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<4x32xf32>
-  %3 = tosa.cast %fp8e4m3 : (tensor<4x32x!tosa.block_scaled<f8E4M3FN:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<4x32xf16>
-  %4 = tosa.cast %fp8e5m2 : (tensor<4x32x!tosa.block_scaled<f8E5M2:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<4x32xbf16>
-  %5 = tosa.cast %mxint8 : (tensor<4x32x!tosa.block_scaled<!tosa.mxint8:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<4x32xf8E4M3FN>
-  %6 = tosa.cast %fp4 : (tensor<4x32x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32>>) -> tensor<4x32xf8E5M2>
+func.func @test_cast_from_block_scaled_types(%fp4: tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>, %fp6e2m3: tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>, %fp6e3m2: tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>, %fp8e4m3: tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>, %fp8e5m2: tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E5M2>>, %mxint8: tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>) -> (tensor<4x32xf32>, tensor<4x32xf16>, tensor<4x32xbf16>, tensor<4x32xf8E4M3FN>, tensor<4x32xf8E5M2>) {
+  %0 = tosa.cast %fp4 : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> tensor<4x32xf32>
+  %1 = tosa.cast %fp6e2m3 : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>) -> tensor<4x32xf32>
+  %2 = tosa.cast %fp6e3m2 : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E3M2FN>>) -> tensor<4x32xf32>
+  %3 = tosa.cast %fp8e4m3 : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<4x32xf16>
+  %4 = tosa.cast %fp8e5m2 : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E5M2>>) -> tensor<4x32xbf16>
+  %5 = tosa.cast %mxint8 : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:!tosa.mxint8>>) -> tensor<4x32xf8E4M3FN>
+  %6 = tosa.cast %fp4 : (tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>) -> tensor<4x32xf8E5M2>
   return %0, %3, %4, %5, %6 : tensor<4x32xf32>, tensor<4x32xf16>, tensor<4x32xbf16>, tensor<4x32xf8E4M3FN>, tensor<4x32xf8E5M2>
 }
 

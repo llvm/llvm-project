@@ -135,10 +135,10 @@ func.func @test_cast_i64_bool(%arg0: tensor<13x21x3xi64>) -> tensor<13x21x3xi1> 
 
 // -----
 
-func.func @test_cast_fp32_block_scaled(%arg0: tensor<4x32xf32>) -> tensor<4x32x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32>> {
+func.func @test_cast_fp32_block_scaled(%arg0: tensor<4x32xf32>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
   // expected-error@+1 {{'tosa.cast' op illegal: requires specification version compatible with 1.1.draft (got 1.0)}}
-  %0 = tosa.cast %arg0 : (tensor<4x32xf32>) -> tensor<4x32x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32>>
-  return %0 : tensor<4x32x!tosa.block_scaled<f4E2M1FN:f8E8M0FNU:BLOCK_SHAPE_32>>
+  %0 = tosa.cast %arg0 : (tensor<4x32xf32>) -> tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %0 : tensor<4x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
 }
 
 // -----
