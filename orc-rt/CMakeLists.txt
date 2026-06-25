@@ -21,6 +21,10 @@ list(INSERT CMAKE_MODULE_PATH 0
   )
 
 include(GNUInstallDirs)
+include(LLVMRuntimeCompilerDependency)
+
+llvm_defer_compiler_dependency_tracking(
+  "${CMAKE_C_COMPILER}" "${CMAKE_CXX_COMPILER}" "${CMAKE_ASM_COMPILER}")
 
 #===============================================================================
 # Setup CMake Options

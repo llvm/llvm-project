@@ -57,6 +57,10 @@ if (CMAKE_VERSION VERSION_LESS "3.24")
 endif ()
 enable_language(Fortran)
 
+include(LLVMRuntimeCompilerDependency)
+llvm_defer_compiler_dependency_tracking(
+  "${CMAKE_C_COMPILER}" "${CMAKE_CXX_COMPILER}" "${CMAKE_Fortran_COMPILER}")
+
 # Try to include the RPC utilities from the `libc` project for GPU I/O support.
 include(FindLibcCommonUtils)
 

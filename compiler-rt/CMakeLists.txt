@@ -51,8 +51,12 @@ include(base-config-ix)
 include(CompilerRTUtils)
 include(CMakeDependentOption)
 include(GetDarwinLinkerVersion)
+include(LLVMRuntimeCompilerDependency)
 
 include(CheckCXXCompilerFlag)
+
+llvm_defer_compiler_dependency_tracking(
+  "${CMAKE_C_COMPILER}" "${CMAKE_CXX_COMPILER}" "${CMAKE_ASM_COMPILER}")
 
 # Check if we can compile with --no-default-config, or if that omits a config
 # file that is essential for the toolchain to work properly.

@@ -27,7 +27,10 @@ set(LIBCXX_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR})
 set(LIBCXX_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
 
 include(GNUInstallDirs)
+include(LLVMRuntimeCompilerDependency)
 include(WarningFlags)
+
+llvm_defer_compiler_dependency_tracking("${CMAKE_CXX_COMPILER}")
 
 # Require out of source build.
 include(MacroEnsureOutOfSourceBuild)
