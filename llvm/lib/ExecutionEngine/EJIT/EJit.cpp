@@ -531,23 +531,57 @@ bool EJit::setCompileMode(CompileMode mode) {
       EJIT_DIAG("compile mode switch rejected: async without engine");
       return false;
     }
+#ifndef EJIT_SRE_SHARED_TASKPOOL
+    // Private taskpool: the worker is local to this instance, so a runtime
+    // switch to Async must start it here. In a shared build the single worker
+    // is cross-core and owner-controlled (started by owner election during
+    // init), so a mode flip must NOT start a per-instance worker.
     if (!tp->isWorkerRunning() && !compileDriver_->startTaskPoolWorker()) {
       EJIT_DIAG("compile mode switch rejected: worker start failed");
       return false;
     }
+#endif
     tp->switchController().setMode(EJitCompileMode::Async);
     EJIT_DIAG("compile mode switched to async");
   } else {
     tp->switchController().setMode(EJitCompileMode::Off);
+#ifndef EJIT_SRE_SHARED_TASKPOOL
+    // Private taskpool: stop this instance's local worker. In a shared build
+    // the single worker is owner-controlled and shared across cores, so a mode
+    // flip is a control flag only and must NOT stop the shared worker.
     compileDriver_->stopTaskPoolWorker();
     EJIT_DIAG("compile mode switched to sync; taskpool worker stopped");
+#else
+    EJIT_DIAG("compile mode switched to sync");
+#endif
   }
+#ifdef EJIT_SRE_SHARED_TASKPOOL
+  // Compile mode is CROSS-CORE SHARED runtime state. Publish it to the shared
+  // blob with release semantics so every core's compileOrGet() observes the new
+  // mode; engine/worker ownership stays owner-controlled (a mode flip never
+  // starts/stops the shared worker or re-runs owner election).
+  if (EJitSharedTaskPool *sp = sharedTaskPool())
+    sp->setSharedMode(mode == CompileMode::Async ? EJitCompileMode::Async
+                                                 : EJitCompileMode::Off);
+#endif
 #endif
   config_.compileMode = mode;
   return true;
 }
 
-CompileMode EJit::getCompileMode() const { return config_.compileMode; }
+CompileMode EJit::getCompileMode() const {
+#ifdef EJIT_SRE_SHARED_TASKPOOL
+  // In a shared build the cross-core shared state is the source of truth for the
+  // runtime compile mode, so a peer/other core observes the owner's last switch
+  // rather than this instance's stale local config_.
+  if (compileDriver_) {
+    EJitSharedTaskPool *sp = compileDriver_->sharedTaskPool();
+    return sp->getSharedMode() == EJitCompileMode::Async ? CompileMode::Async
+                                                         : CompileMode::Sync;
+  }
+#endif
+  return config_.compileMode;
+}
 
 void EJit::setOptimizationLevel(OptimizationLevel level) {
   config_.optLevel = level;

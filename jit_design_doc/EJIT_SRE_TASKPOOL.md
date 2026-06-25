@@ -1295,6 +1295,16 @@ Core N ─┘
 
 **绝不共享（owner 核私有）：** `EJit`、`EJitCompileDriver`、`LLVMContext`、ORC/JITLink、`std::string/vector/map`、含虚函数/`unique_ptr` 的 C++ 对象、编译临时状态、compile/release/worker/idle 回调函数指针（指向 owner 私有对象）。`EJitFuncRegistry`/`EJitLifecycleRegistry` 仍为核私有 STL（不入共享区），仅其**指纹摘要**入共享状态。
 
+#### 11.2.1 compile mode 是跨核共享运行时状态（engine/worker 归属仍私有）
+
+`mode`（`EJitCompileMode` Off/Async）是 **SwitchController 共享字段**，因此 compile mode 是**跨核共享的运行时控制状态**，不是某个 `EJit` 实例的私有配置：
+
+- **唯一真值在共享 blob。** owner 在 `initSharedStorage` 用 `configuredMode_` 把初始 mode 写入 `state.mode`；此后 `compileOrGet` 总以 `state.mode.loadAcquire()` 判定 Off/Async（§5.2 step 2）。
+- **运行时切换必须发布到共享状态。** `EJitSharedTaskPool::setSharedMode()` 在 blob 已 `Ready` 时以 **release 语义** 写 `state.mode`，使**所有核**（包括非 owner 的 peer/其它核对象）经 acquire load 立即观察到新 mode；blob 未初始化时只暂存 `configuredMode_`，留给 owner 在 init 时发布。`getSharedMode()` 在 `Ready` 时返回共享 mode（acquire），否则返回 `configuredMode_`。
+- **C ABI 语义。** `ejit_set_compile_mode(EJIT_COMPILE_ASYNC/SYNC)` 经 `EJit::setCompileMode` 把 Async/Off 以 release 发布到共享 `state.mode`；`ejit_get_compile_mode()` 在共享构建下反映共享状态。
+- **mode 翻转是纯控制标志，不是重置。** 切换 mode **绝不** 清空/重建 queue、dedup、cache、owner election 或唯一 worker——已入队的异步工作在 mode 翻转后仍然存活。
+- **engine/worker 归属仍是 owner 私有/owner 控制。** mode 是共享标志，但编译引擎与唯一 worker 的创建/停止由 owner election 决定；peer 切换或观察 mode **绝不**会顺带启动/停止 worker（私有 taskpool 构建才在本实例内启停其本地 worker）。
+
 ABI 约束（`static_assert`）：`is_standard_layout` + `is_trivially_destructible` + **`is_trivially_default_constructible`** + `alignof==64` + `offsetof(magic)==0`。**关键（本轮）**：`EJitAtomic` 改为**平凡默认构造**（`EJitAtomic() = default`），使整个 blob 平凡默认构造。因此全局 `gEJitSharedTaskPoolState` 落在 **`.bss`**（加载器零填），**不产生** `_GLOBAL__sub_I_*` / `.init_array` / 启动 `memset`——多核分别跑 init_array 的平台上，后启动的核**绝不会重零已运行的共享 queue/cache/owner 状态**。只有赢得 `Uninitialized→Initializing` CAS 的 owner 核才经 `initSharedStorage()` 逐字段初始化。blob 成为 implicit-lifetime 类型，共享存储上存在真实对象生命期，无 UB。依然**不** assert `trivially_copyable`（`EJitAtomic` 删除拷贝，永不 memcpy）。回归测试 `SharedStateRequiresNoDynamicInitialization` + 对 `EJitCompileDriver.cpp.o` 的 llvm-nm/readelf 检查双重保障无动态构造。
 
 ### 11.3 共享内存是否要求同虚拟地址

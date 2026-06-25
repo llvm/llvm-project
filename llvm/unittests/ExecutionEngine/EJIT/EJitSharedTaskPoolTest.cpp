@@ -233,6 +233,91 @@ TEST_F(SharedTaskPoolTest, InitializingExposesNoHalfState) {
 }
 
 //===----------------------------------------------------------------------===//
+// 3b/ Compile mode is CROSS-CORE SHARED runtime state.
+//
+// Regression test for the shared compile-mode bug: setMode()/configuredMode_
+// only seeds the mode at init time; a runtime mode switch must be published to
+// the shared state_->mode (the field compileOrGet reads with an acquire load)
+// so EVERY core — including a peer/other-core object, not just the owner —
+// observes it. A mode flip is a pure control flag: it must NOT reset the queue,
+// dedup, cache, owner election, or the single worker.
+//===----------------------------------------------------------------------===//
+TEST_F(SharedTaskPoolTest, SharedCompileModeIsCrossCoreRuntimeState) {
+  const uint32_t kOff = static_cast<uint32_t>(EJitCompileMode::Off);
+  const uint32_t kAsync = static_cast<uint32_t>(EJitCompileMode::Async);
+
+  // Owner comes up with the configured mode = Off; the shared state must start
+  // in exactly that configured mode.
+  EJitSharedTaskPool owner;
+  EJitCoreId::setCurrentForTest(0);
+  owner.bind(state_.get());
+  owner.setCompiler(&mockCompile, nullptr);
+  owner.setMode(EJitCompileMode::Off);
+  ASSERT_EQ(owner.init(), EJitSharedTaskPool::InitResult::BecameOwner);
+  EXPECT_EQ(state_->mode.loadAcquire(), kOff);
+  EXPECT_EQ(owner.getSharedMode(), EJitCompileMode::Off);
+
+  // A second instance simulating another core attaches to the SAME blob.
+  EJitSharedTaskPool peer;
+  EJitCoreId::setCurrentForTest(1);
+  peer.bind(state_.get());
+  peer.setCompiler(&mockCompile, nullptr);
+  ASSERT_EQ(peer.init(), EJitSharedTaskPool::InitResult::AttachedReady);
+  EXPECT_EQ(peer.getSharedMode(), EJitCompileMode::Off);
+
+  // In Off mode compileOrGet falls back cleanly (OffMode) on a cache miss.
+  EJitCoreId::setCurrentForTest(0);
+  EXPECT_EQ(owner.compileOrGet(10, nullptr, 0, codeFor(10)).status,
+            EJitCompileOrGetStatus::OffMode);
+
+  // Runtime switch to Async: the shared state_->mode must become Async with
+  // release semantics (this is the field compileOrGet reads). Before the fix
+  // this stayed Off and the producer kept taking OffMode forever.
+  owner.setSharedMode(EJitCompileMode::Async);
+  EXPECT_EQ(state_->mode.loadAcquire(), kAsync);
+  EXPECT_EQ(owner.getSharedMode(), EJitCompileMode::Async);
+
+  // compileOrGet no longer takes OffMode solely due to a stale shared mode: a
+  // fresh request now enqueues async work.
+  EXPECT_EQ(owner.compileOrGet(11, nullptr, 0, codeFor(11)).status,
+            EJitCompileOrGetStatus::EnqueuedPending);
+
+  // The switch is visible from the OTHER core's object, not only the owner.
+  EJitCoreId::setCurrentForTest(1);
+  EXPECT_EQ(peer.getSharedMode(), EJitCompileMode::Async);
+  EXPECT_EQ(peer.compileOrGet(12, nullptr, 0, codeFor(12)).status,
+            EJitCompileOrGetStatus::EnqueuedPending);
+
+  // A mode flip is a pure control flag: the queued work is NOT reset. The two
+  // distinct funcIndexes (11, 12) are still pending and the owner can drain it.
+  EJitCoreId::setCurrentForTest(0);
+  EJitSharedDiagnostics d;
+  owner.getDiagnostics(d);
+  EXPECT_EQ(d.queueDepth, 2u);
+  EXPECT_EQ(d.pendingCount, 2u);
+
+  // Switch back to Sync/Off: shared state_->mode becomes Off and compileOrGet
+  // returns OffMode/fallback again — visible from both the owner and the peer.
+  owner.setSharedMode(EJitCompileMode::Off);
+  EXPECT_EQ(state_->mode.loadAcquire(), kOff);
+  EXPECT_EQ(owner.getSharedMode(), EJitCompileMode::Off);
+  auto offOwner = owner.compileOrGet(13, nullptr, 0, codeFor(13));
+  EXPECT_EQ(offOwner.status, EJitCompileOrGetStatus::OffMode);
+  EXPECT_EQ(offOwner.fnPtr, codeFor(13));
+
+  EJitCoreId::setCurrentForTest(1);
+  EXPECT_EQ(peer.getSharedMode(), EJitCompileMode::Off);
+  auto offPeer = peer.compileOrGet(14, nullptr, 0, codeFor(14));
+  EXPECT_EQ(offPeer.status, EJitCompileOrGetStatus::OffMode);
+  EXPECT_EQ(offPeer.fnPtr, codeFor(14));
+
+  // The earlier async work survived the mode flips (control flag, not reinit).
+  EJitCoreId::setCurrentForTest(0);
+  owner.getDiagnostics(d);
+  EXPECT_EQ(d.queueDepth, 2u);
+}
+
+//===----------------------------------------------------------------------===//
 // 4 & 18/ Owner worker-start failure → Failed, no fake JIT success.
 //===----------------------------------------------------------------------===//
 TEST_F(SharedTaskPoolTest, OwnerFailurePropagatesFailed) {

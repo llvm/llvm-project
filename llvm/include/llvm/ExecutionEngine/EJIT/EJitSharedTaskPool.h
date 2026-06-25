@@ -174,7 +174,39 @@ public:
   /// I/D-cache coherent for cross-core execution (spec §11 fnPtr
   /// prerequisites).
   void setCodeSharingEnabled(bool enabled) { codeSharingEnabled_ = enabled; }
+  /// Owner-only PRE-INIT configuration: the mode the owner publishes into the
+  /// shared state during init(). After the blob is Ready this only stages the
+  /// desired mode; use setSharedMode() to change the live cross-core mode.
   void setMode(EJitCompileMode mode) { configuredMode_ = mode; }
+
+  //--- compile mode: CROSS-CORE SHARED runtime state --------------------------
+  /// Publish the compile/taskpool mode as cross-core shared runtime state.
+  /// Compile mode is a shared control flag (engine/worker ownership stays
+  /// owner-private): once the blob is Ready any core may flip it and every
+  /// core's compileOrGet() observes it through an acquire load of state_->mode.
+  /// A mode flip is a pure control flag — it never touches the queue, dedup,
+  /// cache, owner election, or the single worker.
+  ///   * If the blob is Ready, write state_->mode with RELEASE semantics so the
+  ///     new mode is visible to every core (including peers/other cores), not
+  ///     only to the owner object.
+  ///   * If the blob is not yet initialized, only stage configuredMode_ so the
+  ///     owner publishes the desired mode during init().
+  void setSharedMode(EJitCompileMode mode) {
+    configuredMode_ = mode;
+    if (state_ &&
+        state_->initState.loadAcquire() ==
+            static_cast<uint32_t>(EJitSharedInitState::Ready))
+      state_->mode.storeRelease(static_cast<uint32_t>(mode));
+  }
+  /// The current cross-core compile mode: the shared state's mode (acquire
+  /// load) once the blob is Ready, otherwise the staged configuredMode_.
+  EJitCompileMode getSharedMode() const {
+    if (state_ &&
+        state_->initState.loadAcquire() ==
+            static_cast<uint32_t>(EJitSharedInitState::Ready))
+      return static_cast<EJitCompileMode>(state_->mode.loadAcquire());
+    return configuredMode_;
+  }
 
   /// Run owner election + bind. Idempotent: re-observes the same outcome.
   InitResult init();
