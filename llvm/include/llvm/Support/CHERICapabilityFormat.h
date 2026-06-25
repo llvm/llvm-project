@@ -23,18 +23,18 @@ struct CHERICapabilityFormatBase {
   /// Returns the "alignment mask" for an allocation of size \p Length. This
   /// mask is 0 where the capability format alignment requires the
   /// address to be 0, and 1 otherwise.
-  LLVM_ABI static AddressType getAlignmentMask(AddressType Length) {
+  static AddressType getAlignmentMask(AddressType Length) {
     return Derived::getAlignmentMaskImpl(Length);
   }
 
   /// Returns the required alignment for an allocation of size \p Length.
-  LLVM_ABI static Align getRequiredAlignment(AddressType Length) {
+  static Align getRequiredAlignment(AddressType Length) {
     return Align((~getAlignmentMask(Length) + 1) & AddressMask);
   }
 
   /// Returns \p Length rounded up to the nearest representable allocation
   /// length.
-  LLVM_ABI static AddressType getRepresentableLength(AddressType Length) {
+  static AddressType getRepresentableLength(AddressType Length) {
     AddressType Mask = getAlignmentMask(Length);
     return (Length + ~Mask) & Mask;
   }
