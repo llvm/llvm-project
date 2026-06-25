@@ -240,6 +240,8 @@ endif()
 
 set(TARGET_LIBM_ENTRYPOINTS
     # complex.h entrypoints
+    libc.src.complex.carg
+    libc.src.complex.cargf
     libc.src.complex.creal
     libc.src.complex.crealf
     libc.src.complex.creall

@@ -1,4 +1,31 @@
 add_entrypoint_object(
+  carg
+  SRCS
+    carg.cpp
+  HDRS
+    ../carg.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.common
+    libc.src.__support.complex_type
+    libc.src.__support.math.atan2
+)
+
+add_entrypoint_object(
+  cargf
+  SRCS
+    cargf.cpp
+  HDRS
+    ../cargf.h
+  DEPENDS
+    libc.src.__support.CPP.bit
+    libc.src.__support.common
+    libc.src.__support.complex_type
+    libc.src.__support.math.atan2f
+)
+
+
+add_entrypoint_object(
   cproj
   SRCS
     cproj.cpp

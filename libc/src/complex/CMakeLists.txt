@@ -36,3 +36,7 @@ add_complex_entrypoint_object(cprojf)
 add_complex_entrypoint_object(cprojl)
 add_complex_entrypoint_object(cprojf16)
 add_complex_entrypoint_object(cprojf128)
+
+add_complex_entrypoint_object(carg)
+add_complex_entrypoint_object(cargf)
+
