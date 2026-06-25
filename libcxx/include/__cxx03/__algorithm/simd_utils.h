@@ -15,6 +15,7 @@
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/is_arithmetic.h>
 #include <__cxx03/__type_traits/is_same.h>
+#include <__cxx03/__type_traits/remove_cv.h>
 #include <__cxx03/__utility/integer_sequence.h>
 #include <__cxx03/cstddef>
 #include <__cxx03/cstdint>
@@ -85,7 +86,10 @@ inline constexpr size_t __native_vector_size = 1;
 #  endif
 
 template <class _ArithmeticT, size_t _Np>
-using __simd_vector __attribute__((__ext_vector_type__(_Np))) = _ArithmeticT;
+using __simd_vector_impl __attribute__((__ext_vector_type__(_Np))) = _ArithmeticT;
+
+template <class _ArithmeticT, size_t _Np>
+using __simd_vector = __simd_vector_impl<__remove_cv_t<_ArithmeticT>, _Np>;
 
 template <class _VecT>
 inline constexpr size_t __simd_vector_size_v = []<bool _False = false>() -> size_t {
@@ -93,10 +97,10 @@ inline constexpr size_t __simd_vector_size_v = []<bool _False = false>() -> size
 }();
 
 template <class _Tp, size_t _Np>
-inline constexpr size_t __simd_vector_size_v<__simd_vector<_Tp, _Np>> = _Np;
+inline constexpr size_t __simd_vector_size_v<__simd_vector_impl<_Tp, _Np>> = _Np;
 
 template <class _Tp, size_t _Np>
-_LIBCPP_HIDE_FROM_ABI _Tp __simd_vector_underlying_type_impl(__simd_vector<_Tp, _Np>) {
+_LIBCPP_HIDE_FROM_ABI _Tp __simd_vector_underlying_type_impl(__simd_vector_impl<_Tp, _Np>) {
   return _Tp{};
 }
 
@@ -112,12 +116,12 @@ _LIBCPP_NODISCARD _LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI _VecT __load_vecto
 }
 
 template <class _Tp, size_t _Np>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI bool __all_of(__simd_vector<_Tp, _Np> __vec) noexcept {
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI bool __all_of(__simd_vector_impl<_Tp, _Np> __vec) noexcept {
   return __builtin_reduce_and(__builtin_convertvector(__vec, __simd_vector<bool, _Np>));
 }
 
 template <class _Tp, size_t _Np>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI size_t __find_first_set(__simd_vector<_Tp, _Np> __vec) noexcept {
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI size_t __find_first_set(__simd_vector_impl<_Tp, _Np> __vec) noexcept {
   using __mask_vec = __simd_vector<bool, _Np>;
 
   // This has MSan disabled du to https://github.com/llvm/llvm-project/issues/85876
@@ -146,7 +150,7 @@ _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI size_t __find_first_set(__simd_vector<_T
 }
 
 template <class _Tp, size_t _Np>
-_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI size_t __find_first_not_set(__simd_vector<_Tp, _Np> __vec) noexcept {
+_LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI size_t __find_first_not_set(__simd_vector_impl<_Tp, _Np> __vec) noexcept {
   return std::__find_first_set(~__vec);
 }
 
