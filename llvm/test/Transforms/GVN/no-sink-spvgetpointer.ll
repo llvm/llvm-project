@@ -4,6 +4,9 @@
 ; This test ensures that given spv.resource.getpointer is marked convergent,
 ; the GVN pass is prevented from sinking these intrinsics out of branches which
 ; would create phi nodes on the returned ptr.
+;
+; The CHECK lines below match the input IR exactly, so this test verifies that
+; the pass makes no changes to the IR.
 
 %"class.hlsl::RWBuffer" = type { target("spirv.Image", i32, 5, 2, 0, 0, 2, 1) }
 %"class.hlsl::RWStructuredBuffer" = type { target("spirv.VulkanBuffer", [0 x i32], 12, 1), target("spirv.VulkanBuffer", [0 x i32], 12, 1) }

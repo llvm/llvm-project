@@ -4,6 +4,9 @@
 ; This test ensures that given spv.resource.getpointer is marked convergent,
 ; the SimplifyCFG pass will be prevented from sinking these intrinsics out of
 ; branches which would create phi nodes on the returned ptr.
+;
+; The CHECK lines below match the input IR exactly, so this test verifies that
+; the pass makes no changes to the IR.
 
 %"class.hlsl::RWStructuredBuffer" = type { target("spirv.VulkanBuffer", [0 x i32], 12, 1), target("spirv.VulkanBuffer", [0 x i32], 12, 1) }
 %__cblayout_d = type <{ i32, i32, i32, i32 }>

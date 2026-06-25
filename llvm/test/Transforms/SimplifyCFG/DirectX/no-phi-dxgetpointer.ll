@@ -11,6 +11,9 @@
 ;   %ptr = phi ptr [ %bufA.ptr, %if.then ], [ %bufB.ptr, %if.else ]
 ; which is an illegal phi node on a resource pointer.
 ;
+; The CHECK lines below match the input IR exactly, so this test verifies that
+; the pass makes no changes to the IR.
+;
 ; NOTE: The following IR corresponds to the (post-inlining) lowering of:
 ;
 ;   RWStructuredBuffer<float> bufA : register(u0);

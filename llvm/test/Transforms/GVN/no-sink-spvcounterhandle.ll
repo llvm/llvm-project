@@ -5,6 +5,9 @@
 ; convergent, the GVN pass is prevented from sinking these intrinsics out of
 ; branches which would create phi nodes on the returned counter handle.
 ;
+; The CHECK lines below match the input IR exactly, so this test verifies that
+; the pass makes no changes to the IR.
+;
 ; It models the following HLSL:
 ;
 ;   RWStructuredBuffer<int> Out[4] : register(u0);
