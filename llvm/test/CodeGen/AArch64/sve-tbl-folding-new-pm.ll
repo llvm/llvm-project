@@ -207,4 +207,135 @@ exit:
   ret void
 }
 
+define void @uitofp_nxv8i16_to_nxv8f64_deinterleave_fma_with_reverse_double(ptr %src, ptr %src2, ptr %dst, <vscale x 8 x i1> %mask) #0 {
+; CHECK-LABEL: define void @uitofp_nxv8i16_to_nxv8f64_deinterleave_fma_with_reverse_double(
+; CHECK-SAME: ptr [[SRC:%.*]], ptr [[SRC2:%.*]], ptr [[DST:%.*]], <vscale x 8 x i1> [[MASK:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[VSCALE:%.*]] = tail call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[STRIDE:%.*]] = shl nuw nsw i64 [[VSCALE]], 2
+; CHECK-NEXT:    [[COMMON_BASE:%.*]] = getelementptr double, ptr [[SRC2]], i64 1
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[ACC_B_F64:%.*]] = phi <vscale x 2 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[FADD_B_F64:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[ACC_G_F64:%.*]] = phi <vscale x 2 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[FADD_G_F64:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[ACC_R_F64:%.*]] = phi <vscale x 2 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[FADD_R_F64:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[ACC_A_F64:%.*]] = phi <vscale x 2 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[FADD_A_F64:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[NEGATED:%.*]] = mul i64 [[IV]], -1
+; CHECK-NEXT:    [[COMMON_TERM_PTR:%.*]] = getelementptr inbounds nuw double, ptr [[COMMON_BASE]], i64 [[NEGATED]]
+; CHECK-NEXT:    [[COMMON_TERM:%.*]] = load <vscale x 2 x double>, ptr [[COMMON_TERM_PTR]], align 8
+; CHECK-NEXT:    [[REVERSED:%.*]] = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> [[COMMON_TERM]])
+; CHECK-NEXT:    [[SRC_GEP:%.*]] = getelementptr inbounds nuw [4 x i16], ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[BGRA:%.*]] = load <vscale x 8 x i16>, ptr [[SRC_GEP]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+; CHECK-NEXT:    [[TMP28:%.*]] = mul nuw <vscale x 2 x i64> [[TMP0]], splat (i64 4)
+; CHECK-NEXT:    [[TMP34:%.*]] = add nuw <vscale x 2 x i64> [[TMP28]], splat (i64 -65536)
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <vscale x 2 x i64> [[TMP34]] to <vscale x 8 x i16>
+; CHECK-NEXT:    [[TMP4:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.tbl.nxv8i16(<vscale x 8 x i16> [[BGRA]], <vscale x 8 x i16> [[TMP3]])
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <vscale x 8 x i16> [[TMP4]] to <vscale x 2 x i64>
+; CHECK-NEXT:    [[TMP6:%.*]] = uitofp <vscale x 2 x i64> [[TMP5]] to <vscale x 2 x double>
+; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+; CHECK-NEXT:    [[TMP15:%.*]] = mul nuw <vscale x 2 x i64> [[TMP7]], splat (i64 4)
+; CHECK-NEXT:    [[TMP41:%.*]] = add nuw <vscale x 2 x i64> [[TMP15]], splat (i64 -65535)
+; CHECK-NEXT:    [[TMP10:%.*]] = bitcast <vscale x 2 x i64> [[TMP41]] to <vscale x 8 x i16>
+; CHECK-NEXT:    [[TMP11:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.tbl.nxv8i16(<vscale x 8 x i16> [[BGRA]], <vscale x 8 x i16> [[TMP10]])
+; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <vscale x 8 x i16> [[TMP11]] to <vscale x 2 x i64>
+; CHECK-NEXT:    [[TMP13:%.*]] = uitofp <vscale x 2 x i64> [[TMP12]] to <vscale x 2 x double>
+; CHECK-NEXT:    [[TMP14:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+; CHECK-NEXT:    [[TMP52:%.*]] = mul nuw <vscale x 2 x i64> [[TMP14]], splat (i64 4)
+; CHECK-NEXT:    [[TMP53:%.*]] = add nuw <vscale x 2 x i64> [[TMP52]], splat (i64 -65534)
+; CHECK-NEXT:    [[TMP17:%.*]] = bitcast <vscale x 2 x i64> [[TMP53]] to <vscale x 8 x i16>
+; CHECK-NEXT:    [[TMP18:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.tbl.nxv8i16(<vscale x 8 x i16> [[BGRA]], <vscale x 8 x i16> [[TMP17]])
+; CHECK-NEXT:    [[TMP19:%.*]] = bitcast <vscale x 8 x i16> [[TMP18]] to <vscale x 2 x i64>
+; CHECK-NEXT:    [[TMP20:%.*]] = uitofp <vscale x 2 x i64> [[TMP19]] to <vscale x 2 x double>
+; CHECK-NEXT:    [[TMP21:%.*]] = call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+; CHECK-NEXT:    [[TMP43:%.*]] = mul nuw <vscale x 2 x i64> [[TMP21]], splat (i64 4)
+; CHECK-NEXT:    [[TMP44:%.*]] = add nuw <vscale x 2 x i64> [[TMP43]], splat (i64 -65533)
+; CHECK-NEXT:    [[TMP24:%.*]] = bitcast <vscale x 2 x i64> [[TMP44]] to <vscale x 8 x i16>
+; CHECK-NEXT:    [[TMP25:%.*]] = call <vscale x 8 x i16> @llvm.aarch64.sve.tbl.nxv8i16(<vscale x 8 x i16> [[BGRA]], <vscale x 8 x i16> [[TMP24]])
+; CHECK-NEXT:    [[TMP26:%.*]] = bitcast <vscale x 8 x i16> [[TMP25]] to <vscale x 2 x i64>
+; CHECK-NEXT:    [[TMP27:%.*]] = uitofp <vscale x 2 x i64> [[TMP26]] to <vscale x 2 x double>
+; CHECK-NEXT:    [[B_MUL_F64:%.*]] = fmul <vscale x 2 x double> [[TMP6]], [[REVERSED]]
+; CHECK-NEXT:    [[G_MUL_F64:%.*]] = fmul <vscale x 2 x double> [[TMP13]], [[REVERSED]]
+; CHECK-NEXT:    [[R_MUL_F64:%.*]] = fmul <vscale x 2 x double> [[TMP20]], [[REVERSED]]
+; CHECK-NEXT:    [[A_MUL_F64:%.*]] = fmul <vscale x 2 x double> [[TMP27]], [[REVERSED]]
+; CHECK-NEXT:    [[FADD_B_F64]] = fadd <vscale x 2 x double> [[ACC_B_F64]], [[B_MUL_F64]]
+; CHECK-NEXT:    [[FADD_G_F64]] = fadd <vscale x 2 x double> [[ACC_G_F64]], [[G_MUL_F64]]
+; CHECK-NEXT:    [[FADD_R_F64]] = fadd <vscale x 2 x double> [[ACC_R_F64]], [[R_MUL_F64]]
+; CHECK-NEXT:    [[FADD_A_F64]] = fadd <vscale x 2 x double> [[ACC_A_F64]], [[A_MUL_F64]]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw i64 [[IV]], [[STRIDE]]
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 2048
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[FADD_B_F64_LCSSA:%.*]] = phi <vscale x 2 x double> [ [[FADD_B_F64]], %[[LOOP]] ]
+; CHECK-NEXT:    [[FADD_G_F64_LCSSA:%.*]] = phi <vscale x 2 x double> [ [[FADD_G_F64]], %[[LOOP]] ]
+; CHECK-NEXT:    [[FADD_R_F64_LCSSA:%.*]] = phi <vscale x 2 x double> [ [[FADD_R_F64]], %[[LOOP]] ]
+; CHECK-NEXT:    [[FADD_A_F64_LCSSA:%.*]] = phi <vscale x 2 x double> [ [[FADD_A_F64]], %[[LOOP]] ]
+; CHECK-NEXT:    [[B_ACC:%.*]] = call fast double @llvm.vector.reduce.fadd.nxv2f64(double 0.000000e+00, <vscale x 2 x double> [[FADD_B_F64_LCSSA]])
+; CHECK-NEXT:    store double [[B_ACC]], ptr [[DST]], align 8
+; CHECK-NEXT:    [[G_ACC:%.*]] = call fast double @llvm.vector.reduce.fadd.nxv2f64(double 0.000000e+00, <vscale x 2 x double> [[FADD_G_F64_LCSSA]])
+; CHECK-NEXT:    [[G_F64_GEP:%.*]] = getelementptr double, ptr [[DST]], i64 1
+; CHECK-NEXT:    store double [[G_ACC]], ptr [[G_F64_GEP]], align 8
+; CHECK-NEXT:    [[R_ACC:%.*]] = call fast double @llvm.vector.reduce.fadd.nxv2f64(double 0.000000e+00, <vscale x 2 x double> [[FADD_R_F64_LCSSA]])
+; CHECK-NEXT:    [[R_F64_GEP:%.*]] = getelementptr double, ptr [[DST]], i64 2
+; CHECK-NEXT:    store double [[R_ACC]], ptr [[R_F64_GEP]], align 8
+; CHECK-NEXT:    [[A_ACC:%.*]] = call fast double @llvm.vector.reduce.fadd.nxv2f64(double 0.000000e+00, <vscale x 2 x double> [[FADD_A_F64_LCSSA]])
+; CHECK-NEXT:    [[A_F64_GEP:%.*]] = getelementptr double, ptr [[DST]], i64 3
+; CHECK-NEXT:    store double [[A_ACC]], ptr [[A_F64_GEP]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %vscale = tail call i64 @llvm.vscale.i64()
+  %stride = shl nuw nsw i64 %vscale, 2
+  %common.base = getelementptr double, ptr %src2, i64 1
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %acc.b.f64 = phi <vscale x 2 x double> [ splat(double 0.000000e+00), %entry ], [ %fadd.b.f64, %loop ]
+  %acc.g.f64 = phi <vscale x 2 x double> [ splat(double 0.000000e+00), %entry ], [ %fadd.g.f64, %loop ]
+  %acc.r.f64 = phi <vscale x 2 x double> [ splat(double 0.000000e+00), %entry ], [ %fadd.r.f64, %loop ]
+  %acc.a.f64 = phi <vscale x 2 x double> [ splat(double 0.000000e+00), %entry ], [ %fadd.a.f64, %loop ]
+  %negated = mul i64 %iv, -1
+  %common.term.ptr = getelementptr inbounds nuw double, ptr %common.base, i64 %negated
+  %common.term = load <vscale x 2 x double>, ptr %common.term.ptr, align 8
+  %reversed = call <vscale x 2 x double> @llvm.vector.reverse.nxv2f64(<vscale x 2 x double> %common.term)
+  %src.gep = getelementptr inbounds nuw [4 x i16], ptr %src, i64 %iv
+  %bgra = load <vscale x 8 x i16>, ptr %src.gep, align 16
+  %deinterleave = tail call { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } @llvm.vector.deinterleave4(<vscale x 8 x i16> %bgra)
+  %b.i16 = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } %deinterleave, 0
+  %g.i16 = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } %deinterleave, 1
+  %r.i16 = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } %deinterleave, 2
+  %a.i16 = extractvalue { <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16>, <vscale x 2 x i16> } %deinterleave, 3
+  %b.f64 = uitofp <vscale x 2 x i16> %b.i16 to <vscale x 2 x double>
+  %g.f64 = uitofp <vscale x 2 x i16> %g.i16 to <vscale x 2 x double>
+  %r.f64 = uitofp <vscale x 2 x i16> %r.i16 to <vscale x 2 x double>
+  %a.f64 = uitofp <vscale x 2 x i16> %a.i16 to <vscale x 2 x double>
+  %b.mul.f64 = fmul <vscale x 2 x double> %b.f64, %reversed
+  %g.mul.f64 = fmul <vscale x 2 x double> %g.f64, %reversed
+  %r.mul.f64 = fmul <vscale x 2 x double> %r.f64, %reversed
+  %a.mul.f64 = fmul <vscale x 2 x double> %a.f64, %reversed
+  %fadd.b.f64 = fadd <vscale x 2 x double> %acc.b.f64, %b.mul.f64
+  %fadd.g.f64 = fadd <vscale x 2 x double> %acc.g.f64, %g.mul.f64
+  %fadd.r.f64 = fadd <vscale x 2 x double> %acc.r.f64, %r.mul.f64
+  %fadd.a.f64 = fadd <vscale x 2 x double> %acc.a.f64, %a.mul.f64
+  %iv.next = add nuw i64 %iv, %stride
+  %ec = icmp eq i64 %iv.next, 2048
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %b.acc = call fast double @llvm.vector.reduce.fadd.nxv2f64(double 0.000000e+00, <vscale x 2 x double> %fadd.b.f64)
+  store double %b.acc, ptr %dst
+  %g.acc = call fast double @llvm.vector.reduce.fadd.nxv2f64(double 0.000000e+00, <vscale x 2 x double> %fadd.g.f64)
+  %g.f64.gep = getelementptr double, ptr %dst, i64 1
+  store double %g.acc, ptr %g.f64.gep
+  %r.acc = call fast double @llvm.vector.reduce.fadd.nxv2f64(double 0.000000e+00, <vscale x 2 x double> %fadd.r.f64)
+  %r.f64.gep = getelementptr double, ptr %dst, i64 2
+  store double %r.acc, ptr %r.f64.gep
+  %a.acc = call fast double @llvm.vector.reduce.fadd.nxv2f64(double 0.000000e+00, <vscale x 2 x double> %fadd.a.f64)
+  %a.f64.gep = getelementptr double, ptr %dst, i64 3
+  store double %a.acc, ptr %a.f64.gep
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve" }
