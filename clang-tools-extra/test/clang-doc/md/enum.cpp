@@ -9,8 +9,6 @@
 // RUN: FileCheck %s < %t/md/GlobalNamespace/_ZTV7Animals.md --check-prefix=MD-MUSTACHE-ANIMAL
 // RUN: FileCheck %s < %t/md/Vehicles/index.md --check-prefix=MD-MUSTACHE-VEHICLES
 
-
-
 // MD-INDEX: ## Enums
 // MD-INDEX: | enum Color |
 // MD-INDEX: | Name | Value | Comments |
@@ -28,7 +26,6 @@
 // MD-MUSTACHE-INDEX: | Blue |
 // MD-MUSTACHE-INDEX: **brief** For specifying RGB colors
 
-
 // MD-INDEX: | enum class Shapes |
 // MD-INDEX: | Name | Value | Comments |
 // MD-INDEX: |---|---|---|
@@ -36,7 +33,6 @@
 // MD-INDEX: | Rectangle | 1 | Comment 2 |
 // MD-INDEX: | Triangle | 2 | Comment 3 |
 // MD-INDEX: **brief** Shape Types
-
 
 // MD-INDEX: | enum Size : uint8_t |
 // MD-INDEX: | Name | Value | Comments |
@@ -46,13 +42,11 @@
 // MD-INDEX: | Large | 2 | A football. |
 // MD-INDEX: **brief** Specify the size
 
-
 // MD-INDEX: | enum (unnamed) : long long |
 // MD-INDEX: | Name | Value | Comments |
 // MD-INDEX: |---|---|---|
 // MD-INDEX: | BigVal | 999999999999 | A very large value |
 // MD-INDEX: **brief** Very long number
-
 
 // MD-INDEX: | enum ColorUserSpecified |
 // MD-INDEX: | Name | Value |
@@ -67,7 +61,6 @@
 // MD-MUSTACHE-INDEX: | GreenUserSpecified |
 // MD-MUSTACHE-INDEX: | BlueUserSpecified |
 
-
 // MD-PERM: | enum (unnamed) |
 // MD-PERM: | Name | Value | Comments |
 // MD-PERM: |---|---|---|
@@ -75,7 +68,6 @@
 // MD-PERM: | Write | 2 | Permission to WRITE w |
 // MD-PERM: | Execute | 4 | Permission to EXECUTE x |
 // MD-PERM: **brief** File permission flags
-
 
 // MD-ANIMAL: # class Animals
 // MD-ANIMAL: ## Enums
@@ -95,7 +87,6 @@
 // MD-MUSTACHE-ANIMAL: | Cat |
 // MD-MUSTACHE-ANIMAL: | Iguana |
 // MD-MUSTACHE-ANIMAL: **brief** specify what animal the class is
-
 
 // MD-VEHICLES: # namespace Vehicles
 // MD-VEHICLES: ## Enums

@@ -5,7 +5,6 @@
 // RUN: FileCheck %s < %t/html/GlobalNamespace/_ZTV15FilePermissions.html --check-prefix=HTML-PERM
 // RUN: FileCheck %s < %t/html/Vehicles/index.html --check-prefix=HTML-VEHICLES
 
-
 // HTML-INDEX-LABEL:  <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-INDEX-NEXT:     <div>
 // HTML-INDEX-NEXT:       <pre><code class="language-cpp code-clang-doc">enum Color</code></pre>
@@ -53,8 +52,6 @@
 // HTML-INDEX-NEXT:     </div>
 // HTML-INDEX:        </div>
 
-
-
 // HTML-INDEX-LABEL:  <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-INDEX-NEXT:     <div>
 // HTML-INDEX-NEXT:       <pre><code class="language-cpp code-clang-doc">enum class Shapes</code></pre>
@@ -101,7 +98,6 @@
 // HTML-INDEX-NEXT:       </div>
 // HTML-INDEX-NEXT:     </div>
 // HTML-INDEX:        </div>
-
 
 // HTML-INDEX-LABEL:   <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-INDEX-NEXT:     <div>
@@ -152,7 +148,6 @@
 // HTML-INDEX-NEXT:     </div>
 // HTML-INDEX:        </div>
 
-
 // HTML-INDEX-LABEL:  <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-INDEX-NEXT:     <div>
 // HTML-INDEX-NEXT:       <pre><code class="language-cpp code-clang-doc">enum (unnamed) : long long</code></pre>
@@ -182,7 +177,6 @@
 // HTML-INDEX-NEXT:     </div>
 // HTML-INDEX:        </div>
 
-
 // HTML-INDEX-LABEL:  <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-INDEX-NEXT:     <div>
 // HTML-INDEX-NEXT:       <pre><code class="language-cpp code-clang-doc">enum ColorUserSpecified</code></pre>
@@ -208,8 +202,6 @@
 // HTML-INDEX-NEXT:         </tbody>
 // HTML-INDEX-NEXT:     </table>
 // HTML-INDEX:        </div>
-
-
 
 // HTML-PERM-LABEL:  <section id="Enums" class="section-container">
 // HTML-PERM-NEXT:     <h2>Enumerations</h2>
@@ -258,7 +250,6 @@
 // HTML-PERM-NEXT:             <p>File permission flags</p>
 // HTML-PERM-NEXT:         </div>
 // HTML-PERM:        </section>
-
 
 // HTML-ANIMAL-LABEL:   <section id="Enums" class="section-container">
 // HTML-ANIMAL-NEXT:      <h2>Enumerations</h2>
@@ -309,8 +300,6 @@
 // HTML-ANIMAL-NEXT:         </div>
 // HTML-ANIMAL:           </div>
 // HTML-ANIMAL-NEXT:    </section>
-
-
 
 // HTML-VEHICLES-LABEL:   <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-VEHICLES-NEXT:      <div>

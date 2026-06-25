@@ -113,7 +113,6 @@ HTML-SHAPE-NEXT: </main>
 HTML-SHAPE-NEXT: </body>
 HTML-SHAPE-NEXT: </html>
 
-
 HTML-CALC-LABEL:<html lang="en-US">
 HTML-CALC-NEXT: <head>
 HTML-CALC:      </head>
@@ -319,7 +318,6 @@ HTML-CALC-NEXT: </main>
 HTML-CALC-NEXT: </body>
 HTML-CALC-NEXT: </html>
 
-
 HTML-RECTANGLE-LABEL:<html lang="en-US">
 HTML-RECTANGLE-NEXT: <head>
 HTML-RECTANGLE:      </head>
@@ -424,7 +422,6 @@ HTML-RECTANGLE-NEXT:    </div>
 HTML-RECTANGLE-NEXT: </main>
 HTML-RECTANGLE-NEXT: </body>
 HTML-RECTANGLE-NEXT: </html>
-
 
 HTML-CIRCLE-LABEL:<html lang="en-US">
 HTML-CIRCLE-NEXT: <head>
