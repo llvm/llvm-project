@@ -624,23 +624,24 @@ define <4 x float> @fp4_to_f32_vec(<4 x i4> %x) {
 ; CHECK-NEXT:    pcmpeqd %xmm0, %xmm2
 ; CHECK-NEXT:    psrld $1, %xmm1
 ; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; CHECK-NEXT:    pxor %xmm5, %xmm5
 ; CHECK-NEXT:    movdqa %xmm1, %xmm6
-; CHECK-NEXT:    pcmpeqd %xmm3, %xmm6
+; CHECK-NEXT:    pcmpeqd %xmm5, %xmm6
 ; CHECK-NEXT:    pand %xmm6, %xmm2
-; CHECK-NEXT:    pand %xmm2, %xmm4
+; CHECK-NEXT:    pand %xmm2, %xmm3
 ; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [126,126,126,126]
 ; CHECK-NEXT:    pslld $23, %xmm1
 ; CHECK-NEXT:    movdqa %xmm0, %xmm7
 ; CHECK-NEXT:    pslld $22, %xmm7
-; CHECK-NEXT:    por %xmm5, %xmm7
+; CHECK-NEXT:    por %xmm4, %xmm7
 ; CHECK-NEXT:    por %xmm1, %xmm7
 ; CHECK-NEXT:    pandn %xmm7, %xmm2
-; CHECK-NEXT:    por %xmm4, %xmm2
-; CHECK-NEXT:    pcmpeqd %xmm3, %xmm0
+; CHECK-NEXT:    por %xmm3, %xmm2
+; CHECK-NEXT:    pcmpeqd %xmm5, %xmm0
 ; CHECK-NEXT:    pand %xmm6, %xmm0
-; CHECK-NEXT:    pand %xmm0, %xmm5
+; CHECK-NEXT:    pand %xmm0, %xmm4
 ; CHECK-NEXT:    pandn %xmm2, %xmm0
-; CHECK-NEXT:    por %xmm5, %xmm0
+; CHECK-NEXT:    por %xmm4, %xmm0
 ; CHECK-NEXT:    retq
   %r = call <4 x float> @llvm.convert.from.arbitrary.fp.v4f32.v4i4(<4 x i4> %x, metadata !"Float4E2M1FN")
   ret <4 x float> %r
