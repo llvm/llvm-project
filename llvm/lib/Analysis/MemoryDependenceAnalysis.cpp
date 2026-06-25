@@ -219,9 +219,8 @@ MemDepResult MemoryDependenceResults::getCallDependencyFrom(
     }
 
     if (auto *CallB = dyn_cast<CallBase>(Inst)) {
-      bool IsIdenticalReadOnlyCall =
-          isReadOnlyCall && !isModSet(MR) &&
-          Call->isIdenticalToWhenDefined(CallB);
+      bool IsIdenticalReadOnlyCall = isReadOnlyCall && !isModSet(MR) &&
+                                     Call->isIdenticalToWhenDefined(CallB);
 
       // An identical earlier invariant load-like call is an available value
       // even if AA sees both calls as reading the same memory.
