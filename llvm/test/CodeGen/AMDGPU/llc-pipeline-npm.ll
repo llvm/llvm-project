@@ -27,9 +27,9 @@
 ; GCN-O0-NEXT: amdgpu-lower-exec-sync
 ; GCN-O0-NEXT: amdgpu-sw-lower-lds
 ; GCN-O0-NEXT: amdgpu-lower-module-lds
+; GCN-O0-NEXT: amdgpu-lower-module-vgprs
 ; GCN-O0-NEXT: function
 ; GCN-O0-NEXT:   atomic-expand
-; GCN-O0-NEXT:   amdgpu-vgpr-allocate
 ; GCN-O0-NEXT:   verify
 ; GCN-O0-NEXT:   unreachableblockelim
 ; GCN-O0-NEXT:   ee-instrument<post-inline>
@@ -81,6 +81,7 @@
 ; GCN-O0-NEXT:       si-lower-wwm-copies
 ; GCN-O0-NEXT:       amdgpu-reserve-wwm-regs
 ; GCN-O0-NEXT:       regallocfast<filter=vgpr>
+; GCN-O0-NEXT:       amdgpu-private-object-vgprs
 ; GCN-O0-NEXT:       si-fix-vgpr-copies
 ; GCN-O0-NEXT:       remove-redundant-debug-values
 ; GCN-O0-NEXT:       fixup-statepoint-caller-saved
@@ -129,6 +130,7 @@
 ; GCN-O2-NEXT: amdgpu-lower-exec-sync
 ; GCN-O2-NEXT: amdgpu-sw-lower-lds
 ; GCN-O2-NEXT: amdgpu-lower-module-lds
+; GCN-O2-NEXT: amdgpu-lower-module-vgprs
 ; GCN-O2-NEXT: function
 ; GCN-O2-NEXT:   amdgpu-atomic-optimizer
 ; GCN-O2-NEXT:   atomic-expand
@@ -253,6 +255,7 @@
 ; GCN-O2-NEXT:       stack-slot-coloring
 ; GCN-O2-NEXT:       machine-cp
 ; GCN-O2-NEXT:       machinelicm
+; GCN-O2-NEXT:       amdgpu-private-object-vgprs
 ; GCN-O2-NEXT:       si-fix-vgpr-copies
 ; GCN-O2-NEXT:       si-optimize-exec-masking
 ; GCN-O2-NEXT:       remove-redundant-debug-values
@@ -315,6 +318,7 @@
 ; GCN-O3-NEXT: amdgpu-lower-exec-sync
 ; GCN-O3-NEXT: amdgpu-sw-lower-lds
 ; GCN-O3-NEXT: amdgpu-lower-module-lds
+; GCN-O3-NEXT: amdgpu-lower-module-vgprs
 ; GCN-O3-NEXT: function
 ; GCN-O3-NEXT:   amdgpu-atomic-optimizer
 ; GCN-O3-NEXT:   atomic-expand
@@ -439,6 +443,7 @@
 ; GCN-O3-NEXT:       stack-slot-coloring
 ; GCN-O3-NEXT:       machine-cp
 ; GCN-O3-NEXT:       machinelicm
+; GCN-O3-NEXT:       amdgpu-private-object-vgprs
 ; GCN-O3-NEXT:       si-fix-vgpr-copies
 ; GCN-O3-NEXT:       si-optimize-exec-masking
 ; GCN-O3-NEXT:       remove-redundant-debug-values

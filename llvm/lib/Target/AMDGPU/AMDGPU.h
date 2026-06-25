@@ -263,7 +263,7 @@ void initializeAMDGPUPreloadKernelArgumentsLegacyPass(PassRegistry &);
 extern char &AMDGPUPreloadKernelArgumentsLegacyID;
 
 // Passes common to R600 and SI
-FunctionPass *createAMDGPUPromoteAlloca(CodeGenOptLevel OptLevel);
+FunctionPass *createAMDGPUPromoteAlloca();
 void initializeAMDGPUPromoteAllocaPass(PassRegistry&);
 extern char &AMDGPUPromoteAllocaID;
 
@@ -276,18 +276,15 @@ private:
   TargetMachine &TM;
 };
 
-void initializeAMDGPUPrivateObjectVGPRsPass(PassRegistry &);
+void initializeAMDGPUPrivateObjectVGPRsLegacyPass(PassRegistry &);
 extern char &AMDGPUPrivateObjectVGPRsID;
 
-// Allocates pre-existing VGPR address space allocas without performing any
-// optimization-oriented alloca promotion. Used at -O0 so that "VGPR as memory"
-// objects remain functional.
-struct AMDGPUVGPRAllocatePass : PassInfoMixin<AMDGPUVGPRAllocatePass> {
-  AMDGPUVGPRAllocatePass(TargetMachine &TM) : TM(TM) {}
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+ModulePass *createAMDGPULowerModuleVGPRsPass();
+void initializeAMDGPULowerModuleVGPRsPass(PassRegistry &);
+extern char &AMDGPULowerModuleVGPRsID;
 
-private:
-  TargetMachine &TM;
+struct AMDGPULowerModuleVGPRsPass : PassInfoMixin<AMDGPULowerModuleVGPRsPass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 struct AMDGPUPromoteAllocaToVectorPass

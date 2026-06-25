@@ -47,15 +47,14 @@
 ; GCN-O0-NEXT:    AMDGPU lowering of execution synchronization
 ; GCN-O0-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O0-NEXT:    Lower uses of LDS variables from non-kernel functions
+; GCN-O0-NEXT:    AMDGPU Lower Module VGPRs
 ; GCN-O0-NEXT:    FunctionPass Manager
 ; GCN-O0-NEXT:      Expand Atomic instructions
-; GCN-O0-NEXT:      Dominator Tree Construction
-; GCN-O0-NEXT:      Natural Loop Information
-; GCN-O0-NEXT:      AMDGPU VGPR Allocate
 ; GCN-O0-NEXT:      Remove unreachable blocks from the CFG
 ; GCN-O0-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; GCN-O0-NEXT:      Scalarize Masked Memory Intrinsics
 ; GCN-O0-NEXT:      Expand reduction intrinsics
+; GCN-O0-NEXT:      Dominator Tree Construction
 ; GCN-O0-NEXT:      AMDGPU Lower Kernel Arguments
 ; GCN-O0-NEXT:    Lower buffer fat pointer operations to buffer resources
 ; GCN-O0-NEXT:    AMDGPU lower intrinsics
@@ -117,7 +116,6 @@
 ; GCN-O0-NEXT:        MachineDominator Tree Construction
 ; GCN-O0-NEXT:        Slot index numbering
 ; GCN-O0-NEXT:        Live Interval Analysis
-; GCN-O0-NEXT:        AMDGPU Private Object VGPRs
 ; GCN-O0-NEXT:        SI Whole Quad Mode
 ; GCN-O0-NEXT:        AMDGPU Pre-RA Long Branch Reg
 ; GCN-O0-NEXT:        Fast Register Allocator
@@ -132,6 +130,7 @@
 ; GCN-O0-NEXT:        SI Lower WWM Copies
 ; GCN-O0-NEXT:        AMDGPU Reserve WWM Registers
 ; GCN-O0-NEXT:        Fast Register Allocator
+; GCN-O0-NEXT:        AMDGPU Private Object VGPRs
 ; GCN-O0-NEXT:        SI Fix VGPR copies
 ; GCN-O0-NEXT:        Remove Redundant DEBUG_VALUE analysis
 ; GCN-O0-NEXT:        Fixup Statepoint Caller Saved
@@ -210,6 +209,7 @@
 ; GCN-O1-NEXT:    AMDGPU lowering of execution synchronization
 ; GCN-O1-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O1-NEXT:    Lower uses of LDS variables from non-kernel functions
+; GCN-O1-NEXT:    AMDGPU Lower Module VGPRs
 ; GCN-O1-NEXT:    FunctionPass Manager
 ; GCN-O1-NEXT:      Dominator Tree Construction
 ; GCN-O1-NEXT:      Cycle Info Analysis
@@ -362,7 +362,6 @@
 ; GCN-O1-NEXT:        Live Interval Analysis
 ; GCN-O1-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-NEXT:        Register Coalescer
-; GCN-O1-NEXT:        AMDGPU Private Object VGPRs
 ; GCN-O1-NEXT:        Rename Disconnected Subregister Components
 ; GCN-O1-NEXT:        Rewrite Partial Register Uses
 ; GCN-O1-NEXT:        Machine Instruction Scheduler
@@ -402,6 +401,7 @@
 ; GCN-O1-NEXT:        Stack Slot Coloring
 ; GCN-O1-NEXT:        Machine Copy Propagation Pass
 ; GCN-O1-NEXT:        Machine Loop Invariant Code Motion
+; GCN-O1-NEXT:        AMDGPU Private Object VGPRs
 ; GCN-O1-NEXT:        SI Fix VGPR copies
 ; GCN-O1-NEXT:        SI optimize exec mask operations
 ; GCN-O1-NEXT:        Remove Redundant DEBUG_VALUE analysis
@@ -502,6 +502,7 @@
 ; GCN-O1-OPTS-NEXT:    AMDGPU lowering of execution synchronization
 ; GCN-O1-OPTS-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O1-OPTS-NEXT:    Lower uses of LDS variables from non-kernel functions
+; GCN-O1-OPTS-NEXT:    AMDGPU Lower Module VGPRs
 ; GCN-O1-OPTS-NEXT:    FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:      Dominator Tree Construction
 ; GCN-O1-OPTS-NEXT:      Cycle Info Analysis
@@ -680,7 +681,6 @@
 ; GCN-O1-OPTS-NEXT:        Live Interval Analysis
 ; GCN-O1-OPTS-NEXT:        Machine Natural Loop Construction
 ; GCN-O1-OPTS-NEXT:        Register Coalescer
-; GCN-O1-OPTS-NEXT:        AMDGPU Private Object VGPRs
 ; GCN-O1-OPTS-NEXT:        Rename Disconnected Subregister Components
 ; GCN-O1-OPTS-NEXT:        Rewrite Partial Register Uses
 ; GCN-O1-OPTS-NEXT:        Machine Instruction Scheduler
@@ -721,6 +721,7 @@
 ; GCN-O1-OPTS-NEXT:        Stack Slot Coloring
 ; GCN-O1-OPTS-NEXT:        Machine Copy Propagation Pass
 ; GCN-O1-OPTS-NEXT:        Machine Loop Invariant Code Motion
+; GCN-O1-OPTS-NEXT:        AMDGPU Private Object VGPRs
 ; GCN-O1-OPTS-NEXT:        SI Fix VGPR copies
 ; GCN-O1-OPTS-NEXT:        SI optimize exec mask operations
 ; GCN-O1-OPTS-NEXT:        Remove Redundant DEBUG_VALUE analysis
@@ -822,6 +823,7 @@
 ; GCN-O2-NEXT:    AMDGPU lowering of execution synchronization
 ; GCN-O2-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O2-NEXT:    Lower uses of LDS variables from non-kernel functions
+; GCN-O2-NEXT:    AMDGPU Lower Module VGPRs
 ; GCN-O2-NEXT:    FunctionPass Manager
 ; GCN-O2-NEXT:      Dominator Tree Construction
 ; GCN-O2-NEXT:      Cycle Info Analysis
@@ -1003,7 +1005,6 @@
 ; GCN-O2-NEXT:        Live Interval Analysis
 ; GCN-O2-NEXT:        Machine Natural Loop Construction
 ; GCN-O2-NEXT:        Register Coalescer
-; GCN-O2-NEXT:        AMDGPU Private Object VGPRs
 ; GCN-O2-NEXT:        Rename Disconnected Subregister Components
 ; GCN-O2-NEXT:        Rewrite Partial Register Uses
 ; GCN-O2-NEXT:        Machine Instruction Scheduler
@@ -1045,6 +1046,7 @@
 ; GCN-O2-NEXT:        Stack Slot Coloring
 ; GCN-O2-NEXT:        Machine Copy Propagation Pass
 ; GCN-O2-NEXT:        Machine Loop Invariant Code Motion
+; GCN-O2-NEXT:        AMDGPU Private Object VGPRs
 ; GCN-O2-NEXT:        SI Fix VGPR copies
 ; GCN-O2-NEXT:        SI optimize exec mask operations
 ; GCN-O2-NEXT:        Remove Redundant DEBUG_VALUE analysis
@@ -1146,6 +1148,7 @@
 ; GCN-O3-NEXT:    AMDGPU lowering of execution synchronization
 ; GCN-O3-NEXT:    AMDGPU Software lowering of LDS
 ; GCN-O3-NEXT:    Lower uses of LDS variables from non-kernel functions
+; GCN-O3-NEXT:    AMDGPU Lower Module VGPRs
 ; GCN-O3-NEXT:    FunctionPass Manager
 ; GCN-O3-NEXT:      Dominator Tree Construction
 ; GCN-O3-NEXT:      Cycle Info Analysis
@@ -1340,7 +1343,6 @@
 ; GCN-O3-NEXT:        Live Interval Analysis
 ; GCN-O3-NEXT:        Machine Natural Loop Construction
 ; GCN-O3-NEXT:        Register Coalescer
-; GCN-O3-NEXT:        AMDGPU Private Object VGPRs
 ; GCN-O3-NEXT:        Rename Disconnected Subregister Components
 ; GCN-O3-NEXT:        Rewrite Partial Register Uses
 ; GCN-O3-NEXT:        Machine Instruction Scheduler
@@ -1382,6 +1384,7 @@
 ; GCN-O3-NEXT:        Stack Slot Coloring
 ; GCN-O3-NEXT:        Machine Copy Propagation Pass
 ; GCN-O3-NEXT:        Machine Loop Invariant Code Motion
+; GCN-O3-NEXT:        AMDGPU Private Object VGPRs
 ; GCN-O3-NEXT:        SI Fix VGPR copies
 ; GCN-O3-NEXT:        SI optimize exec mask operations
 ; GCN-O3-NEXT:        Remove Redundant DEBUG_VALUE analysis

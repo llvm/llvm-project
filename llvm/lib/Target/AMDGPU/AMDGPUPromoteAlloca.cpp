@@ -35,7 +35,6 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -139,7 +138,6 @@ private:
   unsigned MaxVGPRs;
   unsigned VGPRBudgetRatio;
   unsigned MaxVectorRegs;
-  unsigned AllocVGPROffset = 0;
 
   bool IsAMDGCN = false;
   bool IsAMDHSA = false;
@@ -164,10 +162,6 @@ private:
   void analyzePromoteToVector(AllocaAnalysis &AA) const;
   void promoteAllocaToVector(AllocaAnalysis &AA);
   void analyzePromoteToLDS(AllocaAnalysis &AA) const;
-
-  /// Allocate an alloca that already lives in the VGPR address space to a range
-  /// of VGPRs, recording the allocation in !amdgpu.allocated.vgprs metadata.
-  void allocateVgprs(AllocaAnalysis &AA);
   bool tryPromoteAllocaToLDS(AllocaAnalysis &AA, bool SufficientLDS,
                              SetVector<IntrinsicInst *> &DeferredIntrs);
   void
@@ -185,11 +179,7 @@ public:
     IsAMDHSA = TT.getOS() == Triple::AMDHSA;
   }
 
-  /// IsLatePass is true when invoked as a codegen pass and false when invoked
-  /// from the optimization pipeline ("amdgpu-promote-alloca-to-vector"). NoOpt
-  /// requests only the work strictly required for functionality (i.e. VGPR
-  /// allocation), skipping the optimization-oriented promotions.
-  bool run(Function &F, bool IsLatePass, bool NoOpt);
+  bool run(Function &F, bool PromoteToLDS);
 };
 
 // FIXME: This can create globals so should be a module pass.
@@ -197,34 +187,26 @@ class AMDGPUPromoteAlloca : public FunctionPass {
 public:
   static char ID;
 
-  explicit AMDGPUPromoteAlloca(
-      CodeGenOptLevel OptLevel = CodeGenOptLevel::Default)
-      : FunctionPass(ID), NoOpt(OptLevel == CodeGenOptLevel::None) {}
+  AMDGPUPromoteAlloca() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override {
     if (skipFunction(F))
       return false;
-    if (auto *TPC = getAnalysisIfAvailable<TargetPassConfig>()) {
+    if (auto *TPC = getAnalysisIfAvailable<TargetPassConfig>())
       return AMDGPUPromoteAllocaImpl(
                  TPC->getTM<TargetMachine>(), *F.getParent(),
                  getAnalysis<LoopInfoWrapperPass>().getLoopInfo())
-          .run(F, /*IsLatePass=*/true, NoOpt);
-    }
+          .run(F, /*PromoteToLDS*/ true);
     return false;
   }
 
-  StringRef getPassName() const override {
-    return NoOpt ? "AMDGPU VGPR Allocate" : "AMDGPU Promote Alloca";
-  }
+  StringRef getPassName() const override { return "AMDGPU Promote Alloca"; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<LoopInfoWrapperPass>();
     FunctionPass::getAnalysisUsage(AU);
   }
-
-private:
-  bool NoOpt;
 };
 
 static unsigned getMaxVGPRs(unsigned LDSBytes, const TargetMachine &TM,
@@ -269,7 +251,7 @@ PreservedAnalyses AMDGPUPromoteAllocaPass::run(Function &F,
                                                FunctionAnalysisManager &AM) {
   auto &LI = AM.getResult<LoopAnalysis>(F);
   bool Changed = AMDGPUPromoteAllocaImpl(TM, *F.getParent(), LI)
-                     .run(F, /*IsLatePass=*/true, /*NoOpt=*/false);
+                     .run(F, /*PromoteToLDS=*/true);
   if (Changed) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
@@ -282,7 +264,7 @@ PreservedAnalyses
 AMDGPUPromoteAllocaToVectorPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &LI = AM.getResult<LoopAnalysis>(F);
   bool Changed = AMDGPUPromoteAllocaImpl(TM, *F.getParent(), LI)
-                     .run(F, /*IsLatePass=*/false, /*NoOpt=*/false);
+                     .run(F, /*PromoteToLDS=*/false);
   if (Changed) {
     PreservedAnalyses PA;
     PA.preserveSet<CFGAnalyses>();
@@ -291,21 +273,8 @@ AMDGPUPromoteAllocaToVectorPass::run(Function &F, FunctionAnalysisManager &AM) {
   return PreservedAnalyses::all();
 }
 
-PreservedAnalyses AMDGPUVGPRAllocatePass::run(Function &F,
-                                              FunctionAnalysisManager &AM) {
-  auto &LI = AM.getResult<LoopAnalysis>(F);
-  bool Changed = AMDGPUPromoteAllocaImpl(TM, *F.getParent(), LI)
-                     .run(F, /*IsLatePass=*/true, /*NoOpt=*/true);
-  if (Changed) {
-    PreservedAnalyses PA;
-    PA.preserveSet<CFGAnalyses>();
-    return PA;
-  }
-  return PreservedAnalyses::all();
-}
-
-FunctionPass *llvm::createAMDGPUPromoteAlloca(CodeGenOptLevel OptLevel) {
-  return new AMDGPUPromoteAlloca(OptLevel);
+FunctionPass *llvm::createAMDGPUPromoteAlloca() {
+  return new AMDGPUPromoteAlloca();
 }
 
 bool AMDGPUPromoteAllocaImpl::collectAllocaUses(AllocaAnalysis &AA) const {
@@ -398,120 +367,13 @@ void AMDGPUPromoteAllocaImpl::setFunctionLimits(const Function &F) {
     VGPRBudgetRatio = PromoteAllocaToVectorVGPRRatio;
 }
 
-// A "VGPR as memory" object can only be realized in registers today when every
-// access is a constant-offset, dword-aligned, whole-dword-multiple (32, 64, ...
-// bit) load/store and its address never escapes. Sub-dword accesses, dynamic
-// indexing and escaping addresses need gfx13 support, which is not yet
-// available; such objects fall back to scratch instead.
-//
-// TODO-GFX13: Lower dynamically-indexed / escaping VGPR objects with gfx13
-// support so this fallback is no longer needed.
-static bool isVGPRAllocaStaticallyLowerable(const AllocaInst &AI,
-                                            const DataLayout &DL) {
-  // An access is lowerable if it covers a whole number of dwords and starts at
-  // a dword-aligned constant offset from the alloca.
-  auto AccessOK = [&](const Value *Ptr, Type *Ty, bool Simple) {
-    if (!Simple)
-      return false;
-    uint64_t Bits = DL.getTypeStoreSizeInBits(Ty);
-    if (Bits == 0 || Bits % 32 != 0)
-      return false;
-    APInt Off(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
-    const Value *Base = Ptr->stripAndAccumulateConstantOffsets(
-        DL, Off, /*AllowNonInbounds=*/true);
-    return Base == &AI && Off.urem(4) == 0;
-  };
-
-  SmallVector<const Use *, 16> Worklist;
-  for (const Use &U : AI.uses())
-    Worklist.push_back(&U);
-
-  while (!Worklist.empty()) {
-    const Use *U = Worklist.pop_back_val();
-    const User *Usr = U->getUser();
-
-    if (const auto *GEP = dyn_cast<GetElementPtrInst>(Usr)) {
-      if (!GEP->hasAllConstantIndices())
-        return false;
-      for (const Use &GU : GEP->uses())
-        Worklist.push_back(&GU);
-      continue;
-    }
-    if (const auto *LI = dyn_cast<LoadInst>(Usr)) {
-      if (!AccessOK(LI->getPointerOperand(), LI->getType(), LI->isSimple()))
-        return false;
-      continue;
-    }
-    if (const auto *SI = dyn_cast<StoreInst>(Usr)) {
-      // The pointer must be the address operand, not a stored value (escape).
-      if (U->getOperandNo() != StoreInst::getPointerOperandIndex())
-        return false;
-      if (!AccessOK(SI->getPointerOperand(), SI->getValueOperand()->getType(),
-                    SI->isSimple()))
-        return false;
-      continue;
-    }
-    // Anything else (calls, ptrtoint, address-space casts, ...) escapes or is
-    // otherwise not statically lowerable.
+bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
+  if (DisablePromoteAllocaToLDS && DisablePromoteAllocaToVector)
     return false;
-  }
-  return true;
-}
-
-// Repoint every (transitive) pointer use of \p Old (an addrspace(13) value) at
-// \p New (an addrspace(5) value), so a non-lowerable "VGPR as memory" object
-// falls back to ordinary scratch.
-static void rewriteVGPRPointerToScratch(Value *Old, Value *New) {
-  SmallVector<Use *, 16> Uses(make_pointer_range(Old->uses()));
-  for (Use *U : Uses) {
-    User *Usr = U->getUser();
-    if (auto *GEP = dyn_cast<GetElementPtrInst>(Usr)) {
-      IRBuilder<> B(GEP);
-      SmallVector<Value *, 4> Indices(GEP->indices());
-      Value *NewGEP = B.CreateGEP(GEP->getSourceElementType(), New, Indices,
-                                  GEP->getName(), GEP->getNoWrapFlags());
-      rewriteVGPRPointerToScratch(GEP, NewGEP);
-      GEP->eraseFromParent();
-      continue;
-    }
-    if (auto *II = dyn_cast<IntrinsicInst>(Usr);
-        II && II->isLifetimeStartOrEnd()) {
-      II->eraseFromParent();
-      continue;
-    }
-    // Loads, stores, address-space casts and call arguments only need this
-    // operand repointed; their result types do not depend on the operand's
-    // address space.
-    U->set(New);
-  }
-}
-
-static void demoteVGPRAllocaToScratch(AllocaInst *AI) {
-  auto *NewAI = new AllocaInst(
-      AI->getAllocatedType(), AMDGPUAS::PRIVATE_ADDRESS, AI->getArraySize(),
-      AI->getAlign(), AI->getName(), AI->getIterator());
-  NewAI->setDebugLoc(AI->getDebugLoc());
-  rewriteVGPRPointerToScratch(AI, NewAI);
-  AI->eraseFromParent();
-}
-
-bool AMDGPUPromoteAllocaImpl::run(Function &F, bool IsLatePass, bool NoOpt) {
-  assert((!NoOpt || IsLatePass) && "NoOpt only makes sense for the late pass");
-  if (!IsLatePass && DisablePromoteAllocaToVector)
-    return false;
-
-  bool PromoteToLDS = IsLatePass && !DisablePromoteAllocaToLDS && !NoOpt;
-  bool PromoteToVector = !DisablePromoteAllocaToVector && !NoOpt;
 
   bool SufficientLDS = PromoteToLDS && hasSufficientLocalMem(F);
   MaxVGPRs = IsAMDGCN ? getMaxVGPRs(CurrentLocalMemUsage, TM, F) : 128;
   setFunctionLimits(F);
-
-  // "VGPR as memory" is only enabled on the gfx940/gfx950 (CDNA3+) parts and on
-  // gfx12xx / gfx13xx. On any other target the objects fall back to scratch.
-  const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(F);
-  const bool TargetSupportsVGPRAsMemory =
-      ST.hasGFX940Insts() || ST.getGeneration() >= AMDGPUSubtarget::GFX12;
 
   unsigned VectorizationBudget =
       (PromoteAllocaToVectorLimit ? PromoteAllocaToVectorLimit * 8
@@ -529,18 +391,8 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool IsLatePass, bool NoOpt) {
       LLVM_DEBUG(dbgs() << "Analyzing: " << *AI << '\n');
 
       AllocaAnalysis AA{AI};
-      if (AI->getAddressSpace() == AMDGPUAS::VGPR) {
-        // Allocas that already live in the VGPR address space only need to be
-        // assigned VGPRs, which is required for functionality.
-        if (IsLatePass)
-          Allocas.push_back(std::move(AA));
-        continue;
-      }
-      if (!PromoteToVector && !PromoteToLDS)
-        continue;
       if (collectAllocaUses(AA)) {
-        if (PromoteToVector)
-          analyzePromoteToVector(AA);
+        analyzePromoteToVector(AA);
         if (PromoteToLDS)
           analyzePromoteToLDS(AA);
         if (AA.Vector.Ty || AA.LDS.Enable) {
@@ -551,15 +403,8 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool IsLatePass, bool NoOpt) {
     }
   }
 
-  stable_sort(Allocas, [](const auto &A, const auto &B) {
-    // Prioritize pre-existing VGPR allocas, since their allocation must not
-    // fail.
-    bool AIsVGPR = A.Alloca->getAddressSpace() == AMDGPUAS::VGPR;
-    bool BIsVGPR = B.Alloca->getAddressSpace() == AMDGPUAS::VGPR;
-    if (AIsVGPR != BIsVGPR)
-      return AIsVGPR;
-    return A.Score > B.Score;
-  });
+  stable_sort(Allocas,
+              [](const auto &A, const auto &B) { return A.Score > B.Score; });
 
   // clang-format off
   LLVM_DEBUG(
@@ -572,39 +417,6 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool IsLatePass, bool NoOpt) {
   bool Changed = false;
   SetVector<IntrinsicInst *> DeferredIntrs;
   for (AllocaAnalysis &AA : Allocas) {
-    if (AA.Alloca->getAddressSpace() == AMDGPUAS::VGPR) {
-      // Fall back to scratch (and warn) when the object can't be kept in
-      // registers, so the program still compiles correctly: either the target
-      // does not support "VGPR as memory", or the access pattern (dynamic
-      // index, sub-dword, escaping address) is not yet supported.
-      const char *Unsupported = nullptr;
-      if (!TargetSupportsVGPRAsMemory)
-        Unsupported = "not supported on this target";
-      else if (!isVGPRAllocaStaticallyLowerable(*AA.Alloca, *DL))
-        Unsupported = "dynamic indexing, sub-dword access, or escaping address "
-                      "is not yet supported";
-      if (Unsupported) {
-        F.getContext().diagnose(DiagnosticInfoUnsupported(
-            F,
-            Twine("'amdgpu_vgpr' object could not be kept in vector registers "
-                  "(") +
-                Unsupported + "); using scratch memory instead",
-            AA.Alloca->getDebugLoc(), DS_Warning));
-        demoteVGPRAllocaToScratch(AA.Alloca);
-        Changed = true;
-        continue;
-      }
-      const unsigned AllocaCost =
-          AA.Alloca->getAllocationSize(*DL)->getFixedValue() * 8;
-      allocateVgprs(AA);
-      // Account for the consumed VGPRs in the vectorization budget.
-      if (VectorizationBudget > AllocaCost)
-        VectorizationBudget -= AllocaCost;
-      else
-        VectorizationBudget = 0;
-      Changed = true;
-      continue;
-    }
     if (AA.Vector.Ty) {
       std::optional<TypeSize> Size = AA.Alloca->getAllocationSize(DL);
       assert(Size); // Expected to succeed on non-array alloca.
@@ -637,21 +449,6 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool IsLatePass, bool NoOpt) {
   // would need to be updated to remove successfully promoted allocas.
 
   return Changed;
-}
-
-void AMDGPUPromoteAllocaImpl::allocateVgprs(AllocaAnalysis &AA) {
-  LLVMContext &Ctx = Mod->getContext();
-  const unsigned AllocaSize =
-      DL->getTypeSizeInBits(AA.Alloca->getAllocatedType()) / 8;
-
-  // Record where the object was allocated within the VGPR file.
-  Type *I32 = Type::getInt32Ty(Ctx);
-  AA.Alloca->setMetadata(
-      "amdgpu.allocated.vgprs",
-      MDNode::get(
-          Ctx, {ConstantAsMetadata::get(ConstantInt::get(I32, AllocVGPROffset)),
-                ConstantAsMetadata::get(ConstantInt::get(I32, AllocaSize))}));
-  AllocVGPROffset += alignTo(AllocaSize, 4);
 }
 
 // Checks if the instruction I is a memset user of the alloca AI that we can

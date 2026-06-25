@@ -125,6 +125,7 @@ private:
   SDValue LowerFDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFFREXP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerLoadStoreVGPR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerTrig(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFSQRTF16(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerFSQRTF32(SDValue Op, SelectionDAG &DAG) const;
@@ -452,6 +453,8 @@ public:
                           SDValue ThisVal) const;
 
   bool mayBeEmittedAsTailCall(const CallInst *) const override;
+
+  bool fallBackToDAGISel(const Instruction &Inst) const override;
 
   bool isEligibleForTailCallOptimization(
     SDValue Callee, CallingConv::ID CalleeCC, bool isVarArg,

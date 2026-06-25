@@ -183,6 +183,12 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
   MaxMemoryClusterDWords = F.getFnAttributeAsParsedInteger(
       "amdgpu-max-memory-cluster-dwords", DefaultMemoryClusterDWordsLimit);
 
+  // "VGPR as memory" file layout from AMDGPULowerModuleVGPRs (~0u base = none).
+  VGPRMemorySize =
+      F.getFnAttributeAsParsedInteger("amdgpu-vgpr-memory-size", 0);
+  VGPRMemoryBase =
+      F.getFnAttributeAsParsedInteger("amdgpu-vgpr-memory-base", ~0u);
+
   // On GFX908, in order to guarantee copying between AGPRs, we need a scratch
   // VGPR available at all times. For now, reserve highest available VGPR. After
   // RA, shift it to the lowest available unused VGPR if the one exist.

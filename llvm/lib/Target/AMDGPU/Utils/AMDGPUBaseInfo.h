@@ -31,7 +31,6 @@ struct amd_kernel_code_t;
 namespace llvm {
 
 struct Align;
-class AllocaInst;
 class Argument;
 class Function;
 class GlobalValue;
@@ -49,6 +48,14 @@ namespace AMDGPU {
 
 struct AMDGPUMCKernelCodeT;
 struct IsaVersion;
+
+/// Number of (even-aligned) dword registers a "VGPR as memory" (addrspace(13))
+/// file of \p Bytes bytes occupies. Single-sources the size shared by the
+/// module layout pass, register reservation, and instruction selection.
+inline unsigned getVGPRMemoryFileDwords(unsigned Bytes) {
+  unsigned Dwords = (Bytes + 3u) / 4u; // divideCeil(Bytes, 4)
+  return (Dwords + 1u) & ~1u;          // alignTo(Dwords, 2)
+}
 
 /// Generic target versions emitted by this version of LLVM.
 ///
@@ -1037,16 +1044,6 @@ getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size);
 
 /// Checks if \p Val is inside \p MD, a !range-like metadata.
 bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val);
-
-/// Decoded form of the \c !amdgpu.allocated.vgprs metadata attached to a
-/// "VGPR as memory" alloca: the byte offset (address) the object was allocated
-/// to within the VGPR file, and its size in bytes.
-struct AllocatedVGPRsMetadata {
-  unsigned Address;
-  unsigned Size;
-
-  static AllocatedVGPRsMetadata get(const AllocaInst &Alloca);
-};
 
 // The following methods are only meaningful on targets that support
 // S_WAITCNT.

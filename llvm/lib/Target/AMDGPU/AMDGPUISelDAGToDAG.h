@@ -67,7 +67,6 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   bool matchLoadD16FromBuildVector(SDNode *N) const;
-  bool rewriteVGPRFrameAccess(SDNode *N);
   void PreprocessISelDAG() override;
   void Select(SDNode *N) override;
   void PostprocessISelDAG() override;

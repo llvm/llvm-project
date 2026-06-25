@@ -18,7 +18,6 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
-#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/LLVMContext.h"
@@ -1778,17 +1777,6 @@ bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val) {
   }
 
   return false;
-}
-
-AllocatedVGPRsMetadata AllocatedVGPRsMetadata::get(const AllocaInst &Alloca) {
-  const MDNode *MD = Alloca.getMetadata("amdgpu.allocated.vgprs");
-  assert(MD && MD->getNumOperands() == 2 &&
-         "expected !amdgpu.allocated.vgprs metadata with 2 operands");
-  unsigned Address =
-      mdconst::extract<ConstantInt>(MD->getOperand(0))->getZExtValue();
-  unsigned Size =
-      mdconst::extract<ConstantInt>(MD->getOperand(1))->getZExtValue();
-  return {Address, Size};
 }
 
 unsigned getVmcntBitMask(const IsaVersion &Version) {

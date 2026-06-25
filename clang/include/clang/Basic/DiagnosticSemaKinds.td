@@ -3711,9 +3711,15 @@ def err_attribute_argument_invalid : Error<
 def err_attribute_amdgpu_flat_work_group_size_mismatch : Error<
   "'amdgpu_flat_work_group_size' attribute must match "
   "'reqd_work_group_size' product">;
-def err_amdgpu_vgpr_not_kernel_local : Error<
-  "%0 attribute can only be applied to local variables in "
-  "'__global__' (kernel) functions">;
+def err_amdgpu_vgpr_host : Error<
+  "'amdgpu_vgpr' variables are not allowed in "
+  "%select{__device__|__global__|__host__|__host__ __device__}0 functions">;
+def err_amdgpu_vgpr_initializer : Error<
+  "a variable with the 'amdgpu_vgpr' attribute cannot have an initializer; it "
+  "is backed by registers with undefined initial contents">;
+def err_amdgpu_vgpr_bad_storage : Error<
+  "the 'amdgpu_vgpr' attribute requires an automatic, fixed-size local "
+  "variable">;
 def err_attribute_argument_is_zero : Error<
   "%0 attribute must be greater than 0">;
 def warn_attribute_argument_n_negative : Warning<

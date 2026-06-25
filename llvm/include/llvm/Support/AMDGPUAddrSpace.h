@@ -96,17 +96,25 @@ namespace AMDGPU {
 enum class FlatAddrSpace : unsigned { FLAT, FlatGlobal, FlatScratch };
 
 inline bool isFlatGlobalAddrSpace(unsigned AS) {
+  // AMDGPUAS::VGPR is register-backed, not flat-addressable (see its enum
+  // note).
   return AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS ||
-         AS == AMDGPUAS::CONSTANT_ADDRESS || AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;
+         AS == AMDGPUAS::CONSTANT_ADDRESS ||
+         (AS > AMDGPUAS::MAX_AMDGPU_ADDRESS && AS != AMDGPUAS::VGPR);
 }
 
 inline bool isExtendedGlobalAddrSpace(unsigned AS) {
+  // AMDGPUAS::VGPR is register-backed, not global (see its enum note).
   return AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::CONSTANT_ADDRESS ||
          AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
-         AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;
+         (AS > AMDGPUAS::MAX_AMDGPU_ADDRESS && AS != AMDGPUAS::VGPR);
 }
 
 inline bool isConstantAddressSpace(unsigned AS) {
+  // AMDGPUAS::VGPR is register-backed read/write storage, not constant memory,
+  // despite aliasing CONSTANT_BUFFER_5 (see its enum note).
+  if (AS == AMDGPUAS::VGPR)
+    return false;
   switch (AS) {
     using namespace AMDGPUAS;
   case CONSTANT_ADDRESS:
@@ -185,6 +193,7 @@ constexpr int64_t getNullPointerValue(unsigned AS) {
   case PRIVATE_ADDRESS:
   case LOCAL_ADDRESS:
   case REGION_ADDRESS:
+  case VGPR:
     return -1;
   default:
     return 0;

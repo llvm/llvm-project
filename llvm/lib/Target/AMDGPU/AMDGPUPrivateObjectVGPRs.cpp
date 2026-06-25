@@ -7,30 +7,32 @@
 //===----------------------------------------------------------------------===//
 //
 /// \file
-/// Lowers the SI_VGPR_FRAME_{LOAD,STORE} pseudos produced for "VGPR as memory"
-/// objects (allocas in AMDGPUAS::VGPR) into register copies into/out of a
-/// virtual VGPR tuple that backs the per-function VGPR file. Each pseudo
-/// carries a constant byte offset, which selects the dword (subregister) to
-/// copy.
+/// Lowers the constant-index SI_VGPR_FRAME_{LOAD,STORE} pseudos for "VGPR as
+/// memory" objects (addrspace(13)) into register copies to/from the block of
+/// physical VGPRs backing the file: a load is a COPY from the file register, a
+/// store a COPY to it.
 ///
-/// This runs once the function is out of SSA form (so the single backing tuple
-/// can be defined by several subregister copies) and while LiveIntervals is
-/// available. The backing tuple has lane-divergent liveness (its subregisters
-/// are written and read independently), which the whole-register LiveVariables
-/// analysis cannot represent; the pass therefore updates the subregister-aware
-/// LiveIntervals directly.
+/// The file is a fixed block of VGPRs (SIRegisterInfo::getVGPRMemoryFile)
+/// reserved out of allocation (getReservedRegs) and counted in the VGPR usage
+/// (AMDGPUResourceUsageAnalysis). It sits just above the ABI inputs at a base
+/// AMDGPULowerModuleVGPRs shares across the call graph (so an address resolves
+/// to the same registers everywhere), low enough to cost only its own size
+/// rather than pinning occupancy. This pass runs after register allocation;
+/// until then the pseudos behave as opaque memory operations, so allocation is
+/// free to use any other register for the surrounding code.
 //
 //===----------------------------------------------------------------------===//
 
+#include "AMDGPUPrivateObjectVGPRs.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
-#include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/Function.h"
 
 using namespace llvm;
 
@@ -38,13 +40,66 @@ using namespace llvm;
 
 namespace {
 
-class AMDGPUPrivateObjectVGPRs : public MachineFunctionPass {
+// These two switches must list the same widths as the SI_VGPR_FRAME_{LOAD,
+// STORE}_B* `foreach` in SIInstructions.td.
+static bool isVGPRFrameLoad(unsigned Opc) {
+  switch (Opc) {
+  case AMDGPU::SI_VGPR_FRAME_LOAD_B32:
+  case AMDGPU::SI_VGPR_FRAME_LOAD_B64:
+  case AMDGPU::SI_VGPR_FRAME_LOAD_B96:
+  case AMDGPU::SI_VGPR_FRAME_LOAD_B128:
+  case AMDGPU::SI_VGPR_FRAME_LOAD_B160:
+  case AMDGPU::SI_VGPR_FRAME_LOAD_B192:
+  case AMDGPU::SI_VGPR_FRAME_LOAD_B224:
+  case AMDGPU::SI_VGPR_FRAME_LOAD_B256:
+  case AMDGPU::SI_VGPR_FRAME_LOAD_B288:
+  case AMDGPU::SI_VGPR_FRAME_LOAD_B320:
+  case AMDGPU::SI_VGPR_FRAME_LOAD_B352:
+  case AMDGPU::SI_VGPR_FRAME_LOAD_B384:
+  case AMDGPU::SI_VGPR_FRAME_LOAD_B512:
+  case AMDGPU::SI_VGPR_FRAME_LOAD_B1024:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool isVGPRFrameStore(unsigned Opc) {
+  switch (Opc) {
+  case AMDGPU::SI_VGPR_FRAME_STORE_B32:
+  case AMDGPU::SI_VGPR_FRAME_STORE_B64:
+  case AMDGPU::SI_VGPR_FRAME_STORE_B96:
+  case AMDGPU::SI_VGPR_FRAME_STORE_B128:
+  case AMDGPU::SI_VGPR_FRAME_STORE_B160:
+  case AMDGPU::SI_VGPR_FRAME_STORE_B192:
+  case AMDGPU::SI_VGPR_FRAME_STORE_B224:
+  case AMDGPU::SI_VGPR_FRAME_STORE_B256:
+  case AMDGPU::SI_VGPR_FRAME_STORE_B288:
+  case AMDGPU::SI_VGPR_FRAME_STORE_B320:
+  case AMDGPU::SI_VGPR_FRAME_STORE_B352:
+  case AMDGPU::SI_VGPR_FRAME_STORE_B384:
+  case AMDGPU::SI_VGPR_FRAME_STORE_B512:
+  case AMDGPU::SI_VGPR_FRAME_STORE_B1024:
+    return true;
+  default:
+    return false;
+  }
+}
+
+class AMDGPUPrivateObjectVGPRs {
+public:
+  bool run(MachineFunction &MF);
+};
+
+class AMDGPUPrivateObjectVGPRsLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  AMDGPUPrivateObjectVGPRs() : MachineFunctionPass(ID) {}
+  AMDGPUPrivateObjectVGPRsLegacy() : MachineFunctionPass(ID) {}
 
-  bool runOnMachineFunction(MachineFunction &MF) override;
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    return AMDGPUPrivateObjectVGPRs().run(MF);
+  }
 
   StringRef getPassName() const override {
     return "AMDGPU Private Object VGPRs";
@@ -52,94 +107,149 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<LiveIntervalsWrapperPass>();
-    AU.addPreserved<LiveIntervalsWrapperPass>();
-    AU.addPreserved<SlotIndexesWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
 
 } // end anonymous namespace
 
-INITIALIZE_PASS(AMDGPUPrivateObjectVGPRs, DEBUG_TYPE,
+INITIALIZE_PASS(AMDGPUPrivateObjectVGPRsLegacy, DEBUG_TYPE,
                 "AMDGPU Private Object VGPRs", false, false)
 
-char AMDGPUPrivateObjectVGPRs::ID = 0;
+char AMDGPUPrivateObjectVGPRsLegacy::ID = 0;
 
-char &llvm::AMDGPUPrivateObjectVGPRsID = AMDGPUPrivateObjectVGPRs::ID;
+char &llvm::AMDGPUPrivateObjectVGPRsID = AMDGPUPrivateObjectVGPRsLegacy::ID;
 
-bool AMDGPUPrivateObjectVGPRs::runOnMachineFunction(MachineFunction &MF) {
+PreservedAnalyses
+AMDGPUPrivateObjectVGPRsPass::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &MFAM) {
+  if (!AMDGPUPrivateObjectVGPRs().run(MF))
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
+}
+
+bool AMDGPUPrivateObjectVGPRs::run(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  // Collect the pseudos and determine how many dwords the backing tuple needs.
-  SmallVector<MachineInstr *, 8> Worklist;
-  unsigned NumDwords = 0;
-  for (MachineBasicBlock &MBB : MF) {
-    for (MachineInstr &MI : MBB) {
-      unsigned Opc = MI.getOpcode();
-      if (Opc != AMDGPU::SI_VGPR_FRAME_LOAD &&
-          Opc != AMDGPU::SI_VGPR_FRAME_STORE)
-        continue;
-      unsigned ByteOffset = MI.getOperand(1).getImm();
-      NumDwords = std::max(NumDwords, ByteOffset / 4 + 1);
-      Worklist.push_back(&MI);
-    }
-  }
-
-  if (Worklist.empty())
+  // The file is a fixed block of reserved physical VGPRs (getVGPRMemoryFile):
+  // exempt from liveness, needing no explicit def, and at the same (shared)
+  // registers across the call graph. (Plain locals rather than a structured
+  // binding, which cannot be captured by the lambdas below in C++17.)
+  std::pair<unsigned, unsigned> File = TRI->getVGPRMemoryFile(MF);
+  const unsigned BaseIdx = File.first;
+  const unsigned FileDwords = File.second;
+  if (FileDwords == 0)
     return false;
 
-  LiveIntervals *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  const TargetRegisterClass &VGPR32 = AMDGPU::VGPR_32RegClass;
 
-  const TargetRegisterClass *RC = TRI->getVGPRClassForBitWidth(NumDwords * 32);
-  assert(RC && "no VGPR register class for VGPR-as-memory object");
-  Register Storage = MRI.createVirtualRegister(RC);
-
-  // Define the whole tuple up front so partial (subregister) writes and reads
-  // of uninitialized lanes are well formed.
-  MachineBasicBlock &Entry = MF.front();
-  MachineInstr *ImpDef = BuildMI(Entry, Entry.begin(), DebugLoc(),
-                                 TII->get(TargetOpcode::IMPLICIT_DEF), Storage);
-  LIS->InsertMachineInstrInMaps(*ImpDef);
-
-  for (MachineInstr *MI : Worklist) {
-    MachineBasicBlock &MBB = *MI->getParent();
-    const DebugLoc &DL = MI->getDebugLoc();
-    unsigned Dword = MI->getOperand(1).getImm() / 4;
-    unsigned SubReg = NumDwords == 1
-                          ? AMDGPU::NoSubRegister
-                          : SIRegisterInfo::getSubRegFromChannel(Dword);
-
-    MachineInstr *Copy;
-    if (MI->getOpcode() == AMDGPU::SI_VGPR_FRAME_LOAD) {
-      Register Dst = MI->getOperand(0).getReg();
-      Copy = BuildMI(MBB, *MI, DL, TII->get(TargetOpcode::COPY), Dst)
-                 .addReg(Storage, {}, SubReg);
-    } else {
-      Register Src = MI->getOperand(0).getReg();
-      Copy = BuildMI(MBB, *MI, DL, TII->get(TargetOpcode::COPY))
-                 .addReg(Storage, RegState::Define, SubReg)
-                 .addReg(Src);
+  // The file lives in low, caller-saved VGPRs. AMDGPULowerModuleVGPRs diagnoses
+  // calls that escape the group at the IR level, but later passes (e.g.
+  // AtomicExpand, CodeGenPrepare) can introduce libcalls, and inline asm naming
+  // a file register is not seen there at all. Both would clobber the file, so
+  // catch them here, now that the reserved registers and machine calls are
+  // final.
+  LLVMContext &Ctx = MF.getFunction().getContext();
+  auto FileOverlaps = [&](Register Reg) {
+    for (unsigned I = 0; I != FileDwords; ++I)
+      if (TRI->regsOverlap(Reg, VGPR32.getRegister(BaseIdx + I)))
+        return true;
+    return false;
+  };
+  auto RegMaskClobbersFile = [&](const MachineOperand &MO) {
+    for (unsigned I = 0; I != FileDwords; ++I)
+      if (MO.clobbersPhysReg(VGPR32.getRegister(BaseIdx + I)))
+        return true;
+    return false;
+  };
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      if (MI.isInlineAsm()) {
+        // A clobber surfaces either as an explicit physical-register def or,
+        // for some forms, as a register-mask operand; check both.
+        for (const MachineOperand &MO : MI.operands())
+          if ((MO.isReg() && MO.getReg().isPhysical() && MO.isDef() &&
+               FileOverlaps(MO.getReg())) ||
+              (MO.isRegMask() && RegMaskClobbersFile(MO))) {
+            Ctx.diagnose(DiagnosticInfoUnsupported(
+                MF.getFunction(),
+                "inline asm clobbers a 'VGPR as memory' reserved register",
+                MI.getDebugLoc()));
+            break;
+          }
+        continue;
+      }
+      // A call clobbers caller-saved VGPRs, including the file, unless the
+      // callee reserves the same file: an in-group member (which carries the
+      // size attribute) or this function itself (self-recursion). Anything else
+      // - an out-of-group/external callee, or an indirect call with no
+      // resolvable callee - does not preserve it. AMDGPULowerModuleVGPRs
+      // catches IR-level escapes; this also covers calls introduced after it
+      // (e.g. expanded libcalls) and indirect machine calls it could not see.
+      if (MI.isCall()) {
+        const MachineOperand *CalleeOp =
+            TII->getNamedOperand(MI, AMDGPU::OpName::callee);
+        const auto *Callee =
+            CalleeOp && CalleeOp->isGlobal()
+                ? dyn_cast<Function>(
+                      CalleeOp->getGlobal()->stripPointerCastsAndAliases())
+                : nullptr;
+        if (Callee == &MF.getFunction() ||
+            (Callee && Callee->hasFnAttribute("amdgpu-vgpr-memory-size")))
+          continue;
+        Ctx.diagnose(DiagnosticInfoUnsupported(
+            MF.getFunction(),
+            "call to a function that clobbers the 'VGPR as memory' reserved "
+            "file",
+            MI.getDebugLoc()));
+      }
     }
-    // The copy takes the pseudo's slot, so the intervals of the copied
-    // load/store operand stay valid.
-    LIS->ReplaceMachineInstrInMaps(*MI, *Copy);
-    MI->eraseFromParent();
   }
 
-  // The backing tuple is brand new; compute its (subregister) live interval.
-  LiveInterval &LI = LIS->createAndComputeVirtRegInterval(Storage);
+  bool Changed = false;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
+      unsigned Opc = MI.getOpcode();
+      bool IsLoad = isVGPRFrameLoad(Opc);
+      if (!IsLoad && !isVGPRFrameStore(Opc))
+        continue;
 
-  // Independent dwords (and the entry IMPLICIT_DEF for never-written lanes)
-  // form disconnected value-number components within the single tuple, which an
-  // individual live interval must not contain. Split them into separate
-  // virtual registers, exactly as the register coalescer does for the intervals
-  // it leaves behind.
-  SmallVector<LiveInterval *, 4> SplitLIs;
-  LIS->splitSeparateComponents(LI, SplitLIs);
+      const DebugLoc &DL = MI.getDebugLoc();
+      unsigned Dword = MI.getOperand(1).getImm();
+      Register Data = MI.getOperand(0).getReg();
+      unsigned AccessDwords = TRI->getRegSizeInBits(Data, MRI) / 32;
 
-  return true;
+      // Bounds-checked at pseudo creation (LowerLoadStoreVGPR); never name a
+      // register outside the reserved file.
+      assert(Dword + AccessDwords <= FileDwords &&
+             "VGPR-as-memory access outside the reserved file");
+
+      // Copy the access dword-by-dword between the data (sub)registers and the
+      // file registers. Doing it per dword rather than as one tuple COPY avoids
+      // needing an aligned physical VGPR tuple for the file slice, which can
+      // start on an odd register on targets that require aligned tuples.
+      for (unsigned I = 0; I != AccessDwords; ++I) {
+        MCRegister FileReg = VGPR32.getRegister(BaseIdx + Dword + I);
+        Register DataReg =
+            AccessDwords == 1
+                ? Data
+                : Register(TRI->getSubReg(
+                      Data, SIRegisterInfo::getSubRegFromChannel(I)));
+        if (IsLoad)
+          BuildMI(MBB, MI, DL, TII->get(TargetOpcode::COPY), DataReg)
+              .addReg(FileReg);
+        else
+          BuildMI(MBB, MI, DL, TII->get(TargetOpcode::COPY), FileReg)
+              .addReg(DataReg);
+      }
+
+      MI.eraseFromParent();
+      Changed = true;
+    }
+  }
+
+  return Changed;
 }
