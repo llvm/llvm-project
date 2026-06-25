@@ -3037,29 +3037,6 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
 
   FPOptions FPO;
   switch (BuiltinID) {
-  case Builtin::BI__builtin_nan:
-  case Builtin::BI__builtin_nanf:
-  case Builtin::BI__builtin_nanl:
-  case Builtin::BI__builtin_nanf16:
-  case Builtin::BI__builtin_nanf128:
-  case Builtin::BI__builtin_nans:
-  case Builtin::BI__builtin_nansf:
-  case Builtin::BI__builtin_nansl:
-  case Builtin::BI__builtin_nansf16:
-  case Builtin::BI__builtin_nansf128: {
-    if (TheCall->getNumArgs() > 0) {
-      Expr *Arg = TheCall->getArg(0)->IgnoreParenCasts();
-      if (StringLiteral *S = dyn_cast<StringLiteral>(Arg)) {
-        if (!S->isOrdinary()) {
-          Diag(Arg->getBeginLoc(), diag::err_expected_ordinary_string_literal)
-              << Context.BuiltinInfo.getQuotedName(BuiltinID)
-              << Arg->getSourceRange();
-          return ExprError();
-        }
-      }
-    }
-    break;
-  }
   case Builtin::BI__builtin___get_unsafe_stack_start:
   case Builtin::BI__builtin___get_unsafe_stack_bottom:
     Diag(TheCall->getBeginLoc(), diag::warn_deprecated_builtin)

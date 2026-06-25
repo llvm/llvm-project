@@ -20007,7 +20007,7 @@ static bool TryEvaluateBuiltinNaN(const ASTContext &Context,
   const StringLiteral *S = dyn_cast<StringLiteral>(Arg->IgnoreParenCasts());
   if (!S) return false;
 
-  if (!S->isOrdinary()) return false;
+  if (!S->isOrdinary() && !S->isUTF8()) return false;
 
   const llvm::fltSemantics &Sem = Context.getFloatTypeSemantics(ResultTy);
 
