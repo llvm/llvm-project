@@ -10253,3 +10253,52 @@ The attribute is also supported with blocks and in Objective-C.
   }
   }];
 }
+
+def ConstDocs :  Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``const`` attribute can be applied to the declaration of a function to signal that repeated calls to the function with the same argument values may be safe to elide because the subsequent calls will always return the same value as the initial call.
+
+The attribute informs the optimizer that the function cannot read or write to memory, does not support unwinding, will return (has no infinite loops), and that any pointer or reference arguments to the call will not be read from or written to.
+
+The attribute generally should only be used on functions with a non-``void`` return type which do not accept a pointer or reference argument.
+The ``const`` attribute imposes greater restrictions than the related ``pure`` attribute; applying both attributes to a declaration will be diagnosed and ``pure`` will be ignored.
+
+The following trivial example demonstrates how the attribute can be used:
+
+.. code-block:: c++
+
+  __attribute__((const)) int add_one(int x) { return x + 1; }
+
+  int main(void) {
+    int x = add_one(1);
+    int y = add_one(1); // Call can be elided
+  }
+  }];
+}
+
+def PureDocs :  Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``pure`` attribute can be applied to the declaration of a function to signal that repeated calls to the function with the same argument values may be safe to elide because the subsequent calls will always return the same value as the initial call.
+
+The attribute informs the optimizer that the function cannot write to memory, does not support unwinding, will return (has no infinite loops), and that any pointer or reference arguments to the call will not be written to.
+
+Unlike the ``const`` attribute, the ``pure`` attribute allows memory to be read, even if it changes between subsequent calls.
+
+The attribute generally should only be used on functions with a non-``void`` return type.
+The ``pure`` attribute imposes weaker restrictions than the related ``const`` attribute; applying both attributes to a declaration will be diagnosed and ``pure`` will be ignored.
+
+The following trivial example demonstrates how the attribute can be used:
+
+.. code-block:: c++
+
+  __attribute__((pure)) int get_char(const char *buffer, int idx) { return buffer[idx]; }
+
+  int main(void) {
+    const char *str = "testing";
+    int x = get_char(str, 0);
+    int y = get_char(str, 0); // Call can be elided
+  }
+  }];
+}
