@@ -1297,6 +1297,11 @@ private:
         next();
         return true;
       }
+      // An unmatched `}` belongs to an enclosing parseBrace call, consuming it
+      // here would pop that call's Scopes frame and trigger its assertion.
+      // Return early instead.
+      if (CurrentToken->is(tok::r_brace))
+        return false;
       if (!consumeToken())
         return false;
     }
@@ -1686,7 +1691,8 @@ private:
         }
       }
       while (CurrentToken &&
-             CurrentToken->isNoneOf(tok::l_paren, tok::semi, tok::r_paren)) {
+             CurrentToken->isNoneOf(tok::l_paren, tok::semi, tok::r_paren,
+                                    tok::r_brace)) {
         if (CurrentToken->isOneOf(tok::star, tok::amp))
           CurrentToken->setType(TT_PointerOrReference);
         auto Next = CurrentToken->getNextNonComment();
@@ -3034,6 +3040,14 @@ private:
     if (Style.isCSharp() && Tok.is(tok::ampamp))
       return TT_BinaryOperator;
 
+    // The keyword `and` (tok::ampamp) is always binary, never a declarator.
+    // Not extended to `bitand` (tok::amp), which can be a reference.
+    if (Tok.is(tok::ampamp)) {
+      const auto *Info = Tok.Tok.getIdentifierInfo();
+      if (Info && Info->isCPlusPlusOperatorKeyword())
+        return TT_BinaryOperator;
+    }
+
     if (Style.isVerilog()) {
       // In Verilog, `*` can only be a binary operator.  `&` can be either unary
       // or binary.  `*` also includes `*>` in module path declarations in
@@ -3657,22 +3671,29 @@ void TokenAnnotator::setCommentLineLevels(
 
     // If the comment is currently aligned with the line immediately following
     // it, that's probably intentional and we should keep it.
-    if (NextNonCommentLine && NextNonCommentLine->First->NewlinesBefore < 2 &&
+    if (const auto Column = Line->First->OriginalColumn;
+        NextNonCommentLine && NextNonCommentLine->First->NewlinesBefore < 2 &&
         Line->isComment() && !isClangFormatOff(Line->First->TokenText) &&
-        NextNonCommentLine->First->OriginalColumn ==
-            Line->First->OriginalColumn) {
+        NextNonCommentLine->First->OriginalColumn == Column) {
       const bool PPDirectiveOrImportStmt =
           NextNonCommentLine->Type == LT_PreprocessorDirective ||
           NextNonCommentLine->Type == LT_ImportStatement;
       if (PPDirectiveOrImportStmt)
         Line->Type = LT_CommentAbovePPDirective;
-      // Align comments for preprocessor lines with the # in column 0 if
-      // preprocessor lines are not indented. Otherwise, align with the next
-      // line.
-      Line->Level = Style.IndentPPDirectives < FormatStyle::PPDIS_BeforeHash &&
-                            PPDirectiveOrImportStmt
-                        ? 0
-                        : NextNonCommentLine->Level;
+      if (const auto IndentWidth = Style.IndentWidth;
+          NextNonCommentLine->First->Finalized && IndentWidth > 0 &&
+          Column % IndentWidth == 0) {
+        Line->Level = Column / IndentWidth;
+      } else {
+        // Align comments for preprocessor lines with the # in column 0 if
+        // preprocessor lines are not indented. Otherwise, align with the next
+        // line.
+        Line->Level =
+            Style.IndentPPDirectives < FormatStyle::PPDIS_BeforeHash &&
+                    PPDirectiveOrImportStmt
+                ? 0
+                : NextNonCommentLine->Level;
+      }
     } else {
       NextNonCommentLine = Line->First->isNot(tok::r_brace) ? Line : nullptr;
     }

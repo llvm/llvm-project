@@ -577,6 +577,16 @@ public:
   /// false, the definition can be emitted lazily if it's used.
   bool mustBeEmitted(const clang::ValueDecl *d);
 
+  /// Check if `fd` ends up calling itself directly through asm label or
+  /// builtin-pointer-to-self trickery (e.g., glibc's `extern inline` libc
+  /// wrappers that call `__builtin_strrchr`, which the codegen lowers to a
+  /// call on the same asm-named symbol).  Emitting an
+  /// `available_externally` body for such a function feeds the LLVM
+  /// Decide whether to emit the body of `gd` to CIR.  Returns false for
+  /// available_externally functions that are trivially recursive (PR9614).
+  /// Mirrors classic CodeGen's `CodeGenModule::shouldEmitFunction`.
+  bool shouldEmitFunction(clang::GlobalDecl gd);
+
   /// Determine whether the definition can be emitted eagerly, or should be
   /// delayed until the end of the translation unit. This is relevant for
   /// definitions whose linkage can change, e.g. implicit function
@@ -722,6 +732,11 @@ public:
   /// member, depending on the type of mpt.
   mlir::TypedAttr emitNullMemberAttr(QualType t, const MemberPointerType *mpt);
 
+  /// Build a GEP-style field-index path from \p destClass to \p field.
+  /// Returns std::nullopt and emits errorNYI for virtual-base paths.
+  std::optional<llvm::SmallVector<int32_t>>
+  buildMemberPath(const CXXRecordDecl *destClass, const FieldDecl *field);
+
   llvm::StringRef getMangledName(clang::GlobalDecl gd);
   // This function is to support the OpenACC 'bind' clause, which names an
   // alternate name for the function to be called by. This function mangles
@@ -822,6 +837,9 @@ public:
     assert(openMPRuntime != nullptr);
     return *openMPRuntime;
   }
+
+  bool isPaddedAtomicType(QualType type);
+  bool isPaddedAtomicType(const AtomicType *type);
 
   mlir::IntegerAttr getSize(CharUnits size) {
     return builder.getSizeFromCharUnits(size);
@@ -927,6 +945,12 @@ public:
   void addGlobalAnnotations(const clang::ValueDecl *d, mlir::Operation *gv);
 
 private:
+  /// Search \p currentClass and its non-virtual base subobjects for \p field,
+  /// appending CIR field indices along the path from \p currentClass.
+  bool findFieldMemberPath(const CXXRecordDecl *currentClass,
+                           const FieldDecl *field,
+                           llvm::SmallVectorImpl<int32_t> &path);
+
   // An ordered map of canonical GlobalDecls to their mangled names.
   llvm::MapVector<clang::GlobalDecl, llvm::StringRef> mangledDeclNames;
   llvm::StringMap<clang::GlobalDecl, llvm::BumpPtrAllocator> manglings;

@@ -697,6 +697,12 @@ class BitcodeReader : public BitcodeReaderBase, public GVMaterializer {
 
   std::optional<ValueTypeCallbackTy> ValueTypeCallback;
 
+  /// Mirrors ParserCallbacks::SkipDebugIntrinsicUpgrade. When set, debug
+  /// intrinsic calls (llvm.dbg.*) are not auto-upgraded to non-instruction
+  /// debug records by globalCleanup(); the caller is expected to perform the
+  /// upgrade manually after any custom processing.
+  bool SkipDebugIntrinsicUpgrade = false;
+
 public:
   BitcodeReader(BitstreamCursor Stream, StringRef Strtab,
                 StringRef ProducerIdentification, LLVMContext &Context);
@@ -3370,7 +3376,8 @@ Error BitcodeReader::parseConstants() {
     case bitc::CST_CODE_BYTE: // BYTE: [byteval]
       if (!CurTy->isByteOrByteVectorTy() || Record.empty())
         return error("Invalid byte const record");
-      V = ConstantByte::get(CurTy, decodeSignRotatedValue(Record[0]));
+      V = ConstantByte::get(CurTy, decodeSignRotatedValue(Record[0]),
+                            /*isSigned=*/true);
       break;
     case bitc::CST_CODE_WIDE_BYTE: { // WIDE_BYTE: [n x byteval]
       if (!CurTy->isByteOrByteVectorTy() || Record.empty())
@@ -4022,7 +4029,9 @@ Error BitcodeReader::globalCleanup() {
   for (Function &F : *TheModule) {
     MDLoader->upgradeDebugIntrinsics(F);
     Function *NewFn;
-    if (UpgradeIntrinsicFunction(&F, NewFn))
+    if (UpgradeIntrinsicFunction(&F,
+                                 NewFn, /*CanUpgradeDebugIntrinsicsToRecords=*/
+                                 !SkipDebugIntrinsicUpgrade))
       UpgradedIntrinsics[&F] = NewFn;
     // Look for functions that rely on old function attribute behavior.
     UpgradeFunctionAttributes(F);
@@ -4866,6 +4875,7 @@ Error BitcodeReader::parseBitcodeInto(Module *M, bool ShouldLazyLoadMetadata,
   };
   MDCallbacks.MDType = Callbacks.MDType;
   MDLoader = MetadataLoader(Stream, *M, ValueList, IsImporting, MDCallbacks);
+  SkipDebugIntrinsicUpgrade = Callbacks.SkipDebugIntrinsicUpgrade;
   return parseModule(0, ShouldLazyLoadMetadata, Callbacks);
 }
 
@@ -7475,7 +7485,7 @@ Error ModuleSummaryIndexBitcodeReader::parseModule() {
         /// MODULE_CODE_HASH: [5*i32]
         case bitc::MODULE_CODE_HASH: {
           if (Record.size() != 5)
-            return error("Invalid hash length " + Twine(Record.size()).str());
+            return error("Invalid hash length " + Twine(Record.size()));
           auto &Hash = getThisModule()->second;
           int Pos = 0;
           for (auto &Val : Record) {
@@ -7746,10 +7756,9 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
   // corresponding function summary.
   const bool MemProfAfterFunctionSummary = Version >= 13;
   if (Version < 1 || Version > ModuleSummaryIndex::BitcodeSummaryVersion)
-    return error("Invalid summary version " + Twine(Version) +
-                 ". Version should be in the range [1-" +
-                 Twine(ModuleSummaryIndex::BitcodeSummaryVersion) +
-                 "].");
+    return error("Invalid summary version " + Twine(Version) + " in module '" +
+                 ModulePath + "'. Version should be in the range [1-" +
+                 Twine(ModuleSummaryIndex::BitcodeSummaryVersion) + "].");
   Record.clear();
 
   // Keep around the last seen summary to be used when we see an optional
@@ -8465,7 +8474,7 @@ Error ModuleSummaryIndexBitcodeReader::parseModuleStringTable() {
     /// MST_CODE_HASH: [5*i32]
     case bitc::MST_CODE_HASH: {
       if (Record.size() != 5)
-        return error("Invalid hash length " + Twine(Record.size()).str());
+        return error("Invalid hash length " + Twine(Record.size()));
       if (!LastSeenModule)
         return error("Invalid hash that does not follow a module path");
       int Pos = 0;

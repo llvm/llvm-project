@@ -476,6 +476,8 @@ public:
 
   const FileSpec &GetSymbolFileFileSpec() const { return m_symfile_spec; }
 
+  ModuleSpecList GetSeparateDebugInfoFiles();
+
   void PreloadSymbols();
 
   void SetSymbolFileFileSpec(const FileSpec &file);
@@ -1113,6 +1115,9 @@ protected:
   lldb::SectionListUP m_sections_up; ///< Unified section list for module that
                                      /// is used by the ObjectFile and
                                      /// ObjectFile instances for the debug info
+
+  /// Guards the lazy construction of m_sections_up.
+  mutable std::recursive_mutex m_sections_mutex;
 
   std::atomic<bool> m_did_load_objfile{false};
   std::atomic<bool> m_did_load_symfile{false};

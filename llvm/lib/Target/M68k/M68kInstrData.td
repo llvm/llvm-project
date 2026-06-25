@@ -104,7 +104,8 @@ multiclass MxMoveOperandEncodings<string opnd_name> {
 defm Src : MxMoveOperandEncodings<"src">;
 defm Dst : MxMoveOperandEncodings<"dst">;
 
-defvar MxMoveSupportedAMs = ["o", "e", "k", "q", "f", "p", "b", "j"];
+defvar MxMoveSrcAMs = ["o", "e", "k", "q", "f", "p", "b", "j"];
+defvar MxMoveDstAMs = ["o", "e", "f", "p", "b", "j"];
 
 let Defs = [CCR] in
 class MxMove<string size, dag outs, dag ins, list<dag> pattern, MxMoveEncoding enc>
@@ -150,7 +151,7 @@ class MxMove_MI<MxType TYPE, MxOpBundle DST, MxMoveEncoding ENC,
 } // let mayStore = 1
 
 foreach REG = ["r", "a", "d"] in
-foreach AM = MxMoveSupportedAMs in {
+foreach AM = MxMoveDstAMs in {
   foreach TYPE = !if(!eq(REG, "d"), [MxType8, MxType16, MxType32], [MxType16, MxType32]) in
   def MOV # TYPE.Size # AM # REG # TYPE.Postfix
       : MxMove_MR<TYPE, !cast<MxOpBundle>("MxOp"#TYPE.Size#"AddrMode_"#AM), REG,
@@ -159,7 +160,7 @@ foreach AM = MxMoveSupportedAMs in {
                                  !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#REG)>>;
 } // foreach AM
 
-foreach AM = MxMoveSupportedAMs in {
+foreach AM = MxMoveDstAMs in {
   foreach TYPE = [MxType8, MxType16, MxType32] in
   def MOV # TYPE.Size # AM # i # TYPE.Postfix
       : MxMove_MI<TYPE, !cast<MxOpBundle>("MxOp"#TYPE.Size#"AddrMode_"#AM),
@@ -196,7 +197,7 @@ class MxMove_RM<MxType TYPE, string DST_REG, MxOpBundle SRC, MxEncMemOp SRC_ENC,
              MxMoveEncoding<SIZE_ENC, DST_ENC, SRC_ENC>>;
 
 foreach REG = ["r", "a", "d"] in
-foreach AM = MxMoveSupportedAMs in {
+foreach AM = MxMoveSrcAMs in {
   foreach TYPE = !if(!eq(REG, "d"), [MxType8, MxType16, MxType32], [MxType16, MxType32]) in
   def MOV # TYPE.Size # REG # AM # TYPE.Postfix
       : MxMove_RM<TYPE, REG, !cast<MxOpBundle>("MxOp"#TYPE.Size#"AddrMode_"#AM),
@@ -206,7 +207,7 @@ foreach AM = MxMoveSupportedAMs in {
 // Tail call version
 let Pattern = [(null_frag)] in {
   foreach REG = ["r", "a"] in
-  foreach AM = MxMoveSupportedAMs in {
+  foreach AM = MxMoveSrcAMs in {
     foreach TYPE = [MxType16, MxType32] in
     def MOV # TYPE.Size # REG # AM # _TC
         : MxMove_RM<TYPE, REG, !cast<MxOpBundle>("MxOp"#TYPE.Size#"AddrMode_"#AM),
@@ -234,8 +235,8 @@ class MxMove_MM_Safe<MxType TYPE, PatFrag StoreLoad,
              MxMoveEncoding<!cast<MxMoveSize>("MxMoveSize"#TYPE.Size),
                             DST_ENC, SRC_ENC>>;
 
-foreach DST_AM = MxMoveSupportedAMs in
-foreach SRC_AM = MxMoveSupportedAMs in {
+foreach DST_AM = MxMoveDstAMs in
+foreach SRC_AM = MxMoveSrcAMs in {
   def MOV8 # DST_AM # SRC_AM # !cast<MxType>("MxType8").Postfix
       : MxMove_MM_Safe<MxType8, Mxstoreloadi8_safe,
                        !cast<MxOpBundle>("MxOp8AddrMode_"#DST_AM),
@@ -331,7 +332,7 @@ class MxMOVEM_MR<MxType TYPE, bit SIZE_ENC,
   let Inst = MxMOVEMEncoding<MEM_ENC, SIZE_ENC, MxMOVEM_MR, "mask">.Value;
 }
 
-foreach AM = MxMoveSupportedAMs in {
+foreach AM = MxMoveDstAMs in {
   foreach TYPE = [MxType16, MxType32] in
   def MOVM # TYPE.Size # AM # m # TYPE.Postfix
       : MxMOVEM_MR<TYPE, !if(!eq(TYPE, MxType16), MxMOVEM_W, MxMOVEM_L),
@@ -349,7 +350,7 @@ class MxMOVEM_RM<MxType TYPE, bit SIZE_ENC,
   let Inst = MxMOVEMEncoding<MEM_ENC, SIZE_ENC, MxMOVEM_RM, "mask">.Value;
 }
 
-foreach AM = MxMoveSupportedAMs in {
+foreach AM = MxMoveSrcAMs in {
   foreach TYPE = [MxType16, MxType32] in
   def MOVM # TYPE.Size # m # AM # TYPE.Postfix
       : MxMOVEM_RM<TYPE, !if(!eq(TYPE, MxType16), MxMOVEM_W, MxMOVEM_L),
@@ -408,7 +409,7 @@ class MxMoveToCCRPseudo<MxOperand MEMOp>
 } // let Defs = [CCR]
 
 let mayLoad = 1 in
-foreach AM = MxMoveSupportedAMs in {
+foreach AM = MxMoveSrcAMs in {
   def MOV16c # AM : MxMoveToCCR<!cast<MxOpBundle>("MxOp16AddrMode_"#AM).Op,
                                 !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#AM)>;
   def MOV8c # AM  : MxMoveToCCRPseudo<!cast<MxOpBundle>("MxOp8AddrMode_"#AM).Op>;
@@ -447,7 +448,7 @@ class MxMoveFromCCR_RPseudo<MxOperand MEMOp>
 } // let Uses = [CCR]
 
 let mayStore = 1 in
-foreach AM = MxMoveSupportedAMs in {
+foreach AM = MxMoveDstAMs in {
   def MOV16 # AM # c
     : MxMoveFromCCR_M<!cast<MxOpBundle>("MxOp16AddrMode_"#AM).Op,
                       !cast<MxEncMemOp>("MxMoveDstOpEnc_"#AM)>;
@@ -476,7 +477,7 @@ class MxMoveToSR<MxOperand MEMOp, MxEncMemOp SRC_ENC>
 } // let Defs = [SR]
 
 let mayLoad = 1 in
-foreach AM = MxMoveSupportedAMs in {
+foreach AM = MxMoveSrcAMs in {
   def MOV16s # AM : MxMoveToSR<!cast<MxOpBundle>("MxOp16AddrMode_"#AM).Op,
                                 !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#AM)>;
 } // foreach AM
@@ -506,7 +507,7 @@ class MxMoveFromSR_M<MxOperand MEMOp, MxEncMemOp DST_ENC>
 } // let Uses = [SR]
 
 let mayStore = 1 in
-foreach AM = MxMoveSupportedAMs in {
+foreach AM = MxMoveDstAMs in {
   def MOV16 # AM # s
     : MxMoveFromSR_M<!cast<MxOpBundle>("MxOp16AddrMode_"#AM).Op,
                       !cast<MxEncMemOp>("MxMoveDstOpEnc_"#AM)>;

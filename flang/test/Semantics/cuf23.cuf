@@ -35,6 +35,11 @@ subroutine host()
   do i = 1, 10
     print*, a(i) ! ok
   end do
+
+  !$cuf kernel do()
+  do i = 1, 10
+    print*, a(i) ! ok
+  end do
 end subroutine
 
 attributes(global) subroutine global1()

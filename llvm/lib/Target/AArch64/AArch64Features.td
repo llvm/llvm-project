@@ -703,10 +703,13 @@ def FeatureStrictAlign : SubtargetFeature<"strict-align",
                                           "Disallow all unaligned memory "
                                           "access">;
 
+// +execute-only callee can be inlined into caller without +execute-only,
+// but not vice versa.
 def FeatureExecuteOnly : SubtargetFeature<"execute-only",
                                           "GenExecuteOnly", "true",
                                           "Enable the generation of "
-                                          "execute only code.">;
+                                          "execute only code.",
+                                          [], InlineInverse>;
 
 foreach i = {1-7,9-15,18,20-28} in
     def FeatureReserveX#i : SubtargetFeature<"reserve-x"#i, "ReserveXRegister["#i#"]", "true",
@@ -1078,6 +1081,11 @@ def FeatureHardenSlsNoComdat : SubtargetFeature<"harden-sls-nocomdat",
   "HardenSlsNoComdat", "true",
   "Generate thunk code for SLS mitigation in the normal text section">;
 
+
+def FeatureNoLFILoads : SubtargetFeature<"no-lfi-loads", "NoLFILoads", "true",
+  "Disable LFI sandboxing for load instructions">;
+def FeatureNoLFIStores : SubtargetFeature<"no-lfi-stores", "NoLFIStores", "true",
+  "Disable LFI sandboxing for store instructions">;
 
 // Only intended to be used by disassemblers.
 def FeatureAll

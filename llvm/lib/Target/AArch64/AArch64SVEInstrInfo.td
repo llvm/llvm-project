@@ -1948,6 +1948,57 @@ let Predicates = [HasSVE] in {
   defm : adrShiftPat<nxv4i32, nxv4i1, i32, ADR_LSL_ZZZ_S_2, 2>;
   defm : adrShiftPat<nxv4i32, nxv4i1, i32, ADR_LSL_ZZZ_S_3, 3>;
 
+  // Avoid MUL/MLA for small constants where ADD/ADR forms are available.
+  multiclass sveMulMlaImmAddAdrPat<ValueType Ty, ValueType PredTy,
+                                   ValueType ScalarTy,
+                                   Instruction Add, Instruction Adr1,
+                                   Instruction Adr2, Instruction Adr3> {
+    // MUL
+    def : Pat<(Ty (AArch64mul_p (PredTy (SVEAnyPredicate)), Ty:$Op,
+                                (Ty (splat_vector (ScalarTy 2))))),
+              (Add $Op, $Op)>;
+    def : Pat<(Ty (AArch64mul_p (PredTy (SVEAnyPredicate)), Ty:$Op,
+                                (Ty (splat_vector (ScalarTy 3))))),
+              (Adr1 $Op, $Op)>;
+    def : Pat<(Ty (AArch64mul_p (PredTy (SVEAnyPredicate)), Ty:$Op,
+                                (Ty (splat_vector (ScalarTy 5))))),
+              (Adr2 $Op, $Op)>;
+    def : Pat<(Ty (AArch64mul_p (PredTy (SVEAnyPredicate)), Ty:$Op,
+                                (Ty (splat_vector (ScalarTy 9))))),
+              (Adr3 $Op, $Op)>;
+
+    // MLA
+    def : Pat<(Ty (AArch64mla_p (PredTy (SVEAnyPredicate)), Ty:$Acc, Ty:$Op,
+                                (Ty (splat_vector (ScalarTy 2))))),
+              (Adr1 $Acc, $Op)>;
+    def : Pat<(Ty (AArch64mla_p (PredTy (SVEAnyPredicate)), Ty:$Acc, Ty:$Op,
+                                (Ty (splat_vector (ScalarTy 4))))),
+              (Adr2 $Acc, $Op)>;
+    def : Pat<(Ty (AArch64mla_p (PredTy (SVEAnyPredicate)), Ty:$Acc, Ty:$Op,
+                                (Ty (splat_vector (ScalarTy 8))))),
+              (Adr3 $Acc, $Op)>;
+
+    // MLA commuted. These can be removed if the commuted forms are canonicalized.
+    def : Pat<(Ty (AArch64mla_p (PredTy (SVEAnyPredicate)), Ty:$Acc,
+                                (Ty (splat_vector (ScalarTy 2))), Ty:$Op)),
+              (Adr1 $Acc, $Op)>;
+    def : Pat<(Ty (AArch64mla_p (PredTy (SVEAnyPredicate)), Ty:$Acc,
+                                (Ty (splat_vector (ScalarTy 4))), Ty:$Op)),
+              (Adr2 $Acc, $Op)>;
+    def : Pat<(Ty (AArch64mla_p (PredTy (SVEAnyPredicate)), Ty:$Acc,
+                                (Ty (splat_vector (ScalarTy 8))), Ty:$Op)),
+              (Adr3 $Acc, $Op)>;
+  }
+
+  let AddedComplexity = 10 in {
+    defm : sveMulMlaImmAddAdrPat<nxv2i64, nxv2i1, i64,
+                              ADD_ZZZ_D, ADR_LSL_ZZZ_D_1,
+                              ADR_LSL_ZZZ_D_2, ADR_LSL_ZZZ_D_3>;
+    defm : sveMulMlaImmAddAdrPat<nxv4i32, nxv4i1, i32,
+                              ADD_ZZZ_S, ADR_LSL_ZZZ_S_1,
+                              ADR_LSL_ZZZ_S_2, ADR_LSL_ZZZ_S_3>;
+  }
+
   // adr z0.d, [z0.d, z0.d, uxtw #<shift>]
   // adr z0.d, [z0.d, z0.d, sxtw #<shift>]
   multiclass adrXtwShiftPat<ValueType Ty, ValueType PredTy, int ShiftAmt> {
@@ -4539,6 +4590,15 @@ defm STNT1D_4Z_IMM : sve2p1_mem_cst_si_4z<"stnt1d", 0b11, 0b1, ZZZZ_d_mul_r>;
 
 multiclass store_pn_x2<ValueType Ty, SDPatternOperator Store,
                         Instruction RegImmInst> {
+  let AddedComplexity = 1 in {
+    // scalar + immediate (mul vl)
+    def : Pat<(Store Ty:$vec0, Ty:$vec1, aarch64svcount:$PNg,
+                (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$offset)),
+              (RegImmInst (REG_SEQUENCE ZPR2Mul2, Ty:$vec0, zsub0, Ty:$vec1, zsub1),
+                          PNR:$PNg, GPR64:$base, simm4s1:$offset)>;
+  }
+
+  // base
   def : Pat<(Store Ty:$vec0, Ty:$vec1, aarch64svcount:$PNg, GPR64:$base),
             (RegImmInst (REG_SEQUENCE ZPR2Mul2, Ty:$vec0, zsub0, Ty:$vec1, zsub1),
                          PNR:$PNg, GPR64:$base, (i64 0))>;
@@ -4564,6 +4624,16 @@ defm : store_pn_x2<nxv2f64, int_aarch64_sve_stnt1_pn_x2, STNT1D_2Z_IMM>;
 
 multiclass store_pn_x4<ValueType Ty, SDPatternOperator Store,
                         Instruction RegImmInst> {
+  let AddedComplexity = 1 in {
+    // scalar + immediate (mul vl)
+    def : Pat<(Store Ty:$vec0, Ty:$vec1, Ty:$vec2, Ty:$vec3, aarch64svcount:$PNg,
+                (am_sve_indexed_s4 GPR64sp:$base, simm4s1:$offset)),
+              (RegImmInst (REG_SEQUENCE ZPR4Mul4, Ty:$vec0, zsub0, Ty:$vec1, zsub1,
+                                                  Ty:$vec2, zsub2, Ty:$vec3, zsub3),
+                          PNR:$PNg, GPR64:$base, simm4s1:$offset)>;
+  }
+
+  // base
   def : Pat<(Store Ty:$vec0, Ty:$vec1, Ty:$vec2, Ty:$vec3, aarch64svcount:$PNg, GPR64:$base),
             (RegImmInst (REG_SEQUENCE ZPR4Mul4, Ty:$vec0, zsub0, Ty:$vec1, zsub1,
                                                 Ty:$vec2, zsub2, Ty:$vec3, zsub3),
@@ -4878,14 +4948,14 @@ let Predicates = [HasSVE2p3_or_SME2p3] in {
   defm SQSHRN_Z2ZI_StoH   : sve_multi_vec_shift_narrow<"sqshrn",   0b000, int_aarch64_sve_sqshrn_x2>;
   defm UQSHRN_Z2ZI_StoH   : sve_multi_vec_shift_narrow<"uqshrn",   0b010, int_aarch64_sve_uqshrn_x2>;
 
-  defm LUTI6_Z2ZZI : sve2_luti6_vector_index<"luti6">;
+  defm LUTI6_Z2ZZI : sve2_luti6_vector_index<"luti6", int_aarch64_sve_luti6_lane_x2>;
 } // End HasSME2p3orSVE2p3
 
 //===----------------------------------------------------------------------===//
 // SVE2.3 instructions
 //===----------------------------------------------------------------------===//
 let Predicates = [HasSVE2p3] in {
-  def LUTI6_Z2ZZ : sve2_luti6_vector<"luti6">;
+  defm LUTI6_Z2ZZ : sve2_luti6_vector<"luti6", int_aarch64_sve_luti6>;
 }
 
 //===----------------------------------------------------------------------===//

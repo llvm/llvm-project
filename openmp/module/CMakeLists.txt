@@ -34,11 +34,27 @@ endif ()
 
 flang_module_target(libomp-mod PUBLIC)
 add_dependencies(libomp-mod ${RUNTIMES_FORTRAN_BUILD_DEPS})
+if ("flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+  set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/omp_lib.F90"
+    APPEND PROPERTY OBJECT_DEPENDS
+      "${CMAKE_BINARY_DIR}/modules/${CMAKE_CFG_INTDIR}/__fortran_builtins${CMAKE_Fortran_OUTPUT_EXTENSION}"
+  )
+endif ()
 
 install(FILES
   "${RUNTIMES_OUTPUT_RESOURCE_MOD_DIR}/omp_lib.h"
   DESTINATION "${RUNTIMES_INSTALL_RESOURCE_MOD_PATH}"
-    COMPONENT openmp
+  COMPONENT libomp-mod
+  EXCLUDE_FROM_ALL
 )
 
-openmp_register_meta_dep(libomp-mod)
+if (NOT CMAKE_CONFIGURATION_TYPES)
+  add_custom_target(install-libomp-mod
+    DEPENDS libomp-mod
+    COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}"
+            --component libomp-mod)
+  add_custom_target(install-libomp-mod-stripped
+    DEPENDS libomp-mod
+    COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}"
+            --component libomp-mod --strip)
+endif ()

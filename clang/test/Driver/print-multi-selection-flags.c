@@ -1,6 +1,9 @@
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=aarch64-linux -fc++-abi=itanium -fsanitize=address | FileCheck --check-prefix=CHECK-LINUX %s
 // CHECK-LINUX: --target=aarch64-unknown-linux
 
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=x86_64-pc-windows-msvc -fc++-abi=itanium -fsanitize=address | FileCheck --check-prefix=CHECK-WINDOWS %s
+// CHECK-WINDOWS: --target=x86_64-pc-windows-msvc
+
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=aarch64-fuchsia -fsanitize=hwaddress | FileCheck --check-prefix=CHECK-FUCHSIA %s
 // CHECK-FUCHSIA: --target=aarch64-unknown-fuchsia
 
@@ -151,3 +154,16 @@
 // CHECK-OPT-OS: -Os
 // CHECK-OPT-NOT: -Oz
 // CHECK-OPT-NOT: -Os
+
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf                                                         | FileCheck --check-prefix=CHECK-CF-PROTECTION-NONE --implicit-check-not="mcf-branch-label-scheme" %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -fcf-protection=none                                   | FileCheck --check-prefix=CHECK-CF-PROTECTION-NONE --implicit-check-not="mcf-branch-label-scheme" %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -fcf-protection=return                                 | FileCheck --check-prefix=CHECK-CF-PROTECTION-RETURN --implicit-check-not="mcf-branch-label-scheme" %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -fcf-protection=branch -mcf-branch-label-scheme=unlabeled | FileCheck --check-prefix=CHECK-CF-PROTECTION-BRANCH %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -fcf-protection=full   -mcf-branch-label-scheme=unlabeled | FileCheck --check-prefix=CHECK-CF-PROTECTION-FULL   %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -fcf-protection        -mcf-branch-label-scheme=unlabeled | FileCheck --check-prefix=CHECK-CF-PROTECTION-FULL   %s
+// CHECK-CF-PROTECTION-NONE: -fcf-protection=none
+// CHECK-CF-PROTECTION-RETURN: -fcf-protection=return
+// CHECK-CF-PROTECTION-BRANCH: -fcf-protection=branch
+// CHECK-CF-PROTECTION-BRANCH: -mcf-branch-label-scheme=unlabeled
+// CHECK-CF-PROTECTION-FULL: -fcf-protection=full
+// CHECK-CF-PROTECTION-FULL: -mcf-branch-label-scheme=unlabeled

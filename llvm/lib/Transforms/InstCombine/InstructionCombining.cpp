@@ -3612,10 +3612,12 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     APInt BasePtrOffset(IdxWidth, 0);
     Value *UnderlyingPtrOp =
         PtrOp->stripAndAccumulateInBoundsConstantOffsets(DL, BasePtrOffset);
-    bool CanBeNull, CanBeFreed;
+    bool CanBeNull;
     uint64_t DerefBytes = UnderlyingPtrOp->getPointerDereferenceableBytes(
-        DL, CanBeNull, CanBeFreed);
-    if (!CanBeNull && !CanBeFreed && DerefBytes != 0) {
+        DL, CanBeNull, /*CanBeFreed=*/nullptr);
+    // We can ignore CanBeFreed here, because inbounds is explicitly allowed to
+    // refer to a deallocated object.
+    if (!CanBeNull && DerefBytes != 0) {
       if (GEP.accumulateConstantOffset(DL, BasePtrOffset) &&
           BasePtrOffset.isNonNegative()) {
         APInt AllocSize(IdxWidth, DerefBytes);
@@ -5392,11 +5394,12 @@ bool InstCombinerImpl::freezeOtherUses(FreezeInst &FI) {
   });
 
   for (auto *U : Users) {
-    for (auto &AssumeVH : AC.assumptionsFor(U)) {
-      if (!AssumeVH)
-        continue;
-      AC.updateAffectedValues(cast<AssumeInst>(AssumeVH));
-    }
+    // Re-queue U and its users: freezing U's operand can expose a fold on a
+    // user of U (e.g. a freeze of U can now be pushed through it) that would
+    // otherwise only fire on a later iteration, tripping the fixpoint verifier.
+    auto *UI = cast<Instruction>(U);
+    Worklist.pushUsersToWorkList(*UI);
+    Worklist.push(UI);
   }
 
   return Changed;
@@ -5959,6 +5962,10 @@ bool InstCombinerImpl::run() {
         }
 
         Result->insertInto(InstParent, InsertPos);
+
+        // Register newly created assumptions.
+        if (auto *Assume = dyn_cast<AssumeInst>(Result))
+          AC.registerAssumption(Assume);
 
         // Push the new instruction and any users onto the worklist.
         Worklist.pushUsersToWorkList(*Result);
