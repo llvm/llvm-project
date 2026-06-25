@@ -709,14 +709,13 @@ define amdgpu_cs <2 x i8> @abs_sgpr_v2i8(<2 x i8> inreg %arg) {
 ;
 ; SDAG8-LABEL: abs_sgpr_v2i8:
 ; SDAG8:       ; %bb.0:
-; SDAG8-NEXT:    s_bfe_i32 s1, s1, 0x80000
-; SDAG8-NEXT:    s_bfe_i32 s0, s0, 0x80000
-; SDAG8-NEXT:    s_sext_i32_i16 s1, s1
-; SDAG8-NEXT:    s_sext_i32_i16 s0, s0
+; SDAG8-NEXT:    s_sext_i32_i8 s1, s1
 ; SDAG8-NEXT:    s_abs_i32 s1, s1
+; SDAG8-NEXT:    s_sext_i32_i8 s0, s0
+; SDAG8-NEXT:    s_lshl_b32 s1, s1, 8
 ; SDAG8-NEXT:    s_abs_i32 s0, s0
-; SDAG8-NEXT:    s_lshl_b32 s2, s1, 8
-; SDAG8-NEXT:    s_or_b32 s0, s0, s2
+; SDAG8-NEXT:    s_or_b32 s0, s0, s1
+; SDAG8-NEXT:    s_bfe_u32 s1, s0, 0x80008
 ; SDAG8-NEXT:    ; return to shader part epilog
 ;
 ; SDAG10-LABEL: abs_sgpr_v2i8:
@@ -908,21 +907,12 @@ define amdgpu_cs <3 x i8> @abs_sgpr_v3i8(<3 x i8> inreg %arg) {
 ;
 ; SDAG8-LABEL: abs_sgpr_v3i8:
 ; SDAG8:       ; %bb.0:
-; SDAG8-NEXT:    s_bfe_i32 s1, s1, 0x80000
-; SDAG8-NEXT:    s_bfe_i32 s0, s0, 0x80000
-; SDAG8-NEXT:    s_sext_i32_i16 s1, s1
-; SDAG8-NEXT:    s_sext_i32_i16 s0, s0
-; SDAG8-NEXT:    s_abs_i32 s1, s1
-; SDAG8-NEXT:    s_bfe_i32 s2, s2, 0x80000
-; SDAG8-NEXT:    s_abs_i32 s0, s0
-; SDAG8-NEXT:    s_sext_i32_i16 s2, s2
-; SDAG8-NEXT:    s_lshl_b32 s1, s1, 8
+; SDAG8-NEXT:    s_sext_i32_i8 s2, s2
+; SDAG8-NEXT:    s_sext_i32_i8 s1, s1
+; SDAG8-NEXT:    s_sext_i32_i8 s0, s0
 ; SDAG8-NEXT:    s_abs_i32 s2, s2
-; SDAG8-NEXT:    s_or_b32 s0, s0, s1
-; SDAG8-NEXT:    s_lshl_b32 s3, s2, 16
-; SDAG8-NEXT:    s_and_b32 s1, s0, 0xffff
-; SDAG8-NEXT:    s_or_b32 s1, s1, s3
-; SDAG8-NEXT:    s_lshr_b32 s1, s1, 8
+; SDAG8-NEXT:    s_abs_i32 s1, s1
+; SDAG8-NEXT:    s_abs_i32 s0, s0
 ; SDAG8-NEXT:    ; return to shader part epilog
 ;
 ; SDAG10-LABEL: abs_sgpr_v3i8:
