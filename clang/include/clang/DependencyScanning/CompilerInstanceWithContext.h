@@ -44,12 +44,6 @@ class CompilerInstanceWithContext {
       std::unique_ptr<DiagnosticsEngineWithDiagOpts> DiagEngineWithDiagOpts,
       IntrusiveRefCntPtr<llvm::vfs::FileSystem> OverlayFS);
 
-  bool applyAndReport(ModuleDepCollector &MDC,
-                      CompilerInvocation &ModuleInvocation,
-                      DependencyConsumer &Consumer,
-                      DependencyActionController &Controller,
-                      StringRef Executable);
-
 public:
   /// @brief Initialize the tool's compiler instance from the cc1 commandline.
   /// @param Worker The dependency scanning worker to initialize the compiler
@@ -80,6 +74,16 @@ public:
   // the 64k (20x bigger than our estimate) size is sufficient to hold the
   // unique source locations to report diagnostics per worker.
   static const int32_t MaxNumOfQueries = 1 << 16;
+
+  std::shared_ptr<ModuleDepCollector>
+  scanTranslationUnit(DependencyConsumer &Consumer,
+                      DependencyActionController &Controller);
+
+  bool applyAndReport(ModuleDepCollector &MDC,
+                      CompilerInvocation &ModuleInvocation,
+                      DependencyConsumer &Consumer,
+                      DependencyActionController &Controller,
+                      StringRef Executable);
 };
 } // namespace dependencies
 } // namespace clang
