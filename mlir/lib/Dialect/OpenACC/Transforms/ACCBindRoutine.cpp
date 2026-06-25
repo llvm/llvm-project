@@ -34,7 +34,6 @@
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/BuiltinAttributes.h"
-#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "llvm/Support/Debug.h"
@@ -88,8 +87,8 @@ public:
 
     auto cachedAnalysis =
         getCachedParentAnalysis<OpenACCSupport>(func->getParentOp());
-    OpenACCSupport &accSupport = cachedAnalysis ? cachedAnalysis->get()
-                                                : getAnalysis<OpenACCSupport>();
+    OpenACCSupport &accSupport =
+        cachedAnalysis ? cachedAnalysis->get() : getAnalysis<OpenACCSupport>();
     SymbolTable symTab(module);
 
     bool failed = false;
@@ -105,55 +104,54 @@ public:
       if (!calleeSymbolRef)
         return;
 
-        FunctionOpInterface callee = symTab.lookup<FunctionOpInterface>(
-            calleeSymbolRef.getLeafReference());
-        if (!callee)
-          return;
+      FunctionOpInterface callee = symTab.lookup<FunctionOpInterface>(
+          calleeSymbolRef.getLeafReference());
+      if (!callee)
+        return;
 
-        if (!(isAccRoutine(callee) || isSpecializedAccRoutine(callee)))
-          return;
+      if (!(isAccRoutine(callee) || isSpecializedAccRoutine(callee)))
+        return;
 
-        if (auto routineInfo = callee->getAttrOfType<RoutineInfoAttr>(
-                getRoutineInfoAttrName())) {
-          if (routineInfo.getAccRoutines().size() > 1) {
-            (void)accSupport.emitNYI(callOp.getLoc(),
-                                     "multiple `acc routine`s");
-            failed = true;
-            return;
-          }
+      if (auto routineInfo = callee->getAttrOfType<RoutineInfoAttr>(
+              getRoutineInfoAttrName())) {
+        if (routineInfo.getAccRoutines().size() > 1) {
+          (void)accSupport.emitNYI(callOp.getLoc(), "multiple `acc routine`s");
+          failed = true;
+          return;
         }
+      }
 
-        RoutineOp routine = getFirstAccRoutineOp(callee, symTab);
-        if (!isACCRoutineBindDefaultOrDeviceType(routine, this->deviceType))
-          return;
+      RoutineOp routine = getFirstAccRoutineOp(callee, symTab);
+      if (!isACCRoutineBindDefaultOrDeviceType(routine, this->deviceType))
+        return;
 
-        auto bindNameOpt = routine.getBindNameValue(this->deviceType);
-        if (!bindNameOpt)
-          bindNameOpt = routine.getBindNameValue();
-        if (!bindNameOpt)
-          return;
-        SymbolRefAttr calleeRef;
-        if (auto *symRef = std::get_if<SymbolRefAttr>(&*bindNameOpt)) {
-          calleeRef = *symRef;
-        } else {
-          StringRef bindName = std::get<StringAttr>(*bindNameOpt).getValue();
-          auto gpuMod = func->getParentOfType<gpu::GPUModuleOp>();
-          Operation *symbolTableOp =
-              gpuMod ? gpuMod.getOperation() : module.getOperation();
-          SymbolTable insertSymTab(symbolTableOp);
-          if (!insertSymTab.lookup(bindName)) {
-            OpBuilder builder(module.getContext());
-            Block *insertBlock = gpuMod ? gpuMod.getBody() : module.getBody();
-            builder.setInsertionPointToEnd(insertBlock);
-            auto funcType = cast<FunctionType>(callee.getFunctionType());
-            func::FuncOp bindFunc = func::FuncOp::create(
-                builder, callee.getLoc(), bindName, funcType);
-            bindFunc.setPrivate();
-            insertSymTab.insert(bindFunc);
-          }
-          calleeRef = FlatSymbolRefAttr::get(callOp.getContext(), bindName);
+      auto bindNameOpt = routine.getBindNameValue(this->deviceType);
+      if (!bindNameOpt)
+        bindNameOpt = routine.getBindNameValue();
+      if (!bindNameOpt)
+        return;
+      SymbolRefAttr calleeRef;
+      if (auto *symRef = std::get_if<SymbolRefAttr>(&*bindNameOpt)) {
+        calleeRef = *symRef;
+      } else {
+        StringRef bindName = std::get<StringAttr>(*bindNameOpt).getValue();
+        auto gpuMod = func->getParentOfType<gpu::GPUModuleOp>();
+        Operation *symbolTableOp =
+            gpuMod ? gpuMod.getOperation() : module.getOperation();
+        SymbolTable insertSymTab(symbolTableOp);
+        if (!insertSymTab.lookup(bindName)) {
+          OpBuilder builder(module.getContext());
+          Block *insertBlock = gpuMod ? gpuMod.getBody() : module.getBody();
+          builder.setInsertionPointToEnd(insertBlock);
+          auto funcType = cast<FunctionType>(callee.getFunctionType());
+          func::FuncOp bindFunc = func::FuncOp::create(builder, callee.getLoc(),
+                                                       bindName, funcType);
+          bindFunc.setPrivate();
+          insertSymTab.insert(bindFunc);
         }
-        callOp.setCalleeFromCallable(calleeRef);
+        calleeRef = FlatSymbolRefAttr::get(callOp.getContext(), bindName);
+      }
+      callOp.setCalleeFromCallable(calleeRef);
     });
 
     if (failed)
