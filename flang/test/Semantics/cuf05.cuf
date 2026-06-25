@@ -10,10 +10,10 @@ module m
   implicit none
  contains
   attributes(device) subroutine devsubr()
-  !CHECK: blockdim: Use from blockdim in __cuda_builtins
-  !CHECK: blockidx: Use from blockidx in __cuda_builtins
-  !CHECK: griddim: Use from griddim in __cuda_builtins
-  !CHECK: threadidx: Use from threadidx in __cuda_builtins
-  !CHECK: warpsize: Use from warpsize in __cuda_builtins
+  !CHECK: blockdim: Use from blockdim in cudadevice
+  !CHECK: blockidx: Use from blockidx in cudadevice
+  !CHECK: griddim: Use from griddim in cudadevice
+  !CHECK: threadidx: Use from threadidx in cudadevice
+  !CHECK: warpsize: Use from warpsize in cudadevice
   end subroutine
 end module
