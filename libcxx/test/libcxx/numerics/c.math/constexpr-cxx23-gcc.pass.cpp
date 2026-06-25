@@ -38,11 +38,11 @@ int main(int, char**) {
   long double DummyLongDouble;
 
   ASSERT_CONSTEXPR_CXX23(std::abs(-1) == 1);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::abs(-1L) == 1L);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::abs(-1LL) == 1LL);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::abs(-1.0f) == 1.0f);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::abs(-1.0) == 1.0);
-  ASSERT_NOT_CONSTEXPR_CXX23(std::abs(-1.0L) == 1.0L);
+  ASSERT_CONSTEXPR_CXX23(std::abs(-1L) == 1L);
+  ASSERT_CONSTEXPR_CXX23(std::abs(-1LL) == 1LL);
+  ASSERT_CONSTEXPR_CXX23(std::abs(-1.0f) == 1.0f);
+  ASSERT_CONSTEXPR_CXX23(std::abs(-1.0) == 1.0);
+  ASSERT_CONSTEXPR_CXX23(std::abs(-1.0L) == 1.0L);
 
   ASSERT_CONSTEXPR_CXX23(std::labs(-1L) == 1L);
   ASSERT_CONSTEXPR_CXX23(std::llabs(-1LL) == 1LL);
