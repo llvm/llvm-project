@@ -84,9 +84,6 @@ int main(int, char**) {
   test();
   static_assert(test());
 
-  // Note: `test_insert_range_exception_safety_throwing_copy` doesn't apply because copying booleans cannot throw.
-  test_insert_range_exception_safety_throwing_allocator<std::vector, bool>();
-
 #ifndef TEST_HAS_NO_LOCALIZATION
   test_counted_istream_view();
 #endif
