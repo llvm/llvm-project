@@ -4039,11 +4039,11 @@ void OpEmitter::genRegionVerifier(MethodBody &body) {
 void OpEmitter::genSuccessorVerifier(MethodBody &body) {
   // Code to verify a variadic successor.
   //
-  // {0}: The accessor for the successor range.
+  // {0}: The name of the successor range accessor.
   // {1}: The successor constraint.
   // {2}: The successor's name.
   const char *const verifyVariadicSuccessor = R"(
-    for (auto *successor : {0})
+    for (auto *successor : {0}())
       if (::mlir::failed({1}(*this, successor, "{2}", index++)))
         return ::mlir::failure();
 )";
@@ -4051,11 +4051,11 @@ void OpEmitter::genSuccessorVerifier(MethodBody &body) {
   // value, which can't be wrapped in a `MutableArrayRef`, so verify it
   // directly.
   //
-  // {0}: The accessor for the successor.
+  // {0}: The name of the successor accessor.
   // {1}: The successor constraint.
   // {2}: The successor's name.
   const char *const verifySingleSuccessor = R"(
-    if (::mlir::failed({1}(*this, {0}, "{2}", index++)))
+    if (::mlir::failed({1}(*this, {0}(), "{2}", index++)))
       return ::mlir::failure();
 )";
 
@@ -4074,13 +4074,12 @@ void OpEmitter::genSuccessorVerifier(MethodBody &body) {
     if (canSkip(successor))
       continue;
 
-    auto getSuccessor =
-        formatv("{0}()", op.getGetterName(successor.name)).str();
     auto constraintFn =
         staticVerifierEmitter.getSuccessorConstraintFn(successor.constraint);
     body << formatv(successor.isVariadic() ? verifyVariadicSuccessor
                                            : verifySingleSuccessor,
-                    getSuccessor, constraintFn, successor.name);
+                    op.getGetterName(successor.name), constraintFn,
+                    successor.name);
   }
   body << "  }\n";
 }
