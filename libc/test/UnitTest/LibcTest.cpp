@@ -71,14 +71,17 @@ cpp::string_view describeValue(const cpp::string &Value) { return Value; }
 cpp::string_view describeValue(cpp::string_view Value) { return Value; }
 
 cpp::string describeValue(cpp::wstring_view Value) {
+  // TODO: Print `Value` as UTF-8 once `StringConverter` supports `wchar_t`.
+  if (Value.empty())
+    return "{}";
+
   cpp::string S;
   S += '{';
   for (const wchar_t *Iter = Value.begin(); Iter + 1 != Value.end(); ++Iter) {
     S += cpp::to_string(*Iter);
     S += ',';
   }
-  if (!S.empty())
-    S += cpp::to_string(Value.back());
+  S += cpp::to_string(Value.back());
   S += '}';
   return S;
 }
