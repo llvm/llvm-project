@@ -295,17 +295,6 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool __tuple_compare_equal(c
     return std::__tuple_compare_equal<_Ip - 1>(__x, __y) && std::get<_Ip - 1>(__x) == std::get<_Ip - 1>(__y);
 }
 
-#    if _LIBCPP_STD_VER >= 26
-template <class _Tp, class _Up, class _IndexSeq = make_index_sequence<tuple_size_v<_Tp>>>
-inline constexpr bool __can_tuple_compare_equal = false;
-
-template <class _Tp, class _Up, size_t... _Is>
-inline constexpr bool __can_tuple_compare_equal<_Tp, _Up, index_sequence<_Is...>> =
-    __all<requires(const tuple_element_t<_Is, _Tp>& __t, const tuple_element_t<_Is, _Up>& __u) {
-      { __t == __u } -> __boolean_testable;
-    }...>::value;
-#    endif // _LIBCPP_STD_VER >= 26
-
 #    if _LIBCPP_STD_VER >= 20
 template <class _Ret, class _Tp, class _Up, size_t... _Is>
 _LIBCPP_HIDE_FROM_ABI constexpr _Ret __tuple_compare_three_way(const _Tp& __x, const _Up& __y, index_sequence<_Is...>) {
@@ -993,9 +982,17 @@ public:
     __base_.swap(__t.__base_);
   }
 
+  template <class _Tuple>
+  static constexpr bool __can_compare_equal = false;
+
+  template <class... _Up>
+  static constexpr bool __can_compare_equal<tuple<_Up...>> = __all<requires(const _Tp& __t, const _Up& __u) {
+    { __t == __u } -> __boolean_testable;
+  }...>::value;
+
   template <__tuple_like_no_tuple _UTuple>
 #      if _LIBCPP_STD_VER >= 26
-    requires __can_tuple_compare_equal<tuple, _UTuple> && (sizeof...(_Tp) == tuple_size_v<_UTuple>)
+    requires(sizeof...(_Tp) == tuple_size_v<_UTuple>) && __can_compare_equal<__to_tuple_t<_UTuple>>
 #      endif // _LIBCPP_STD_VER >= 26
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const tuple& __x, const _UTuple& __y) {
     static_assert(sizeof...(_Tp) == tuple_size_v<_UTuple>, "Can't compare tuple-like values of different sizes");
