@@ -1840,7 +1840,6 @@ def int_experimental_patchpoint : Intrinsic<[llvm_any_ty],
                                              ImmArg<ArgIndex<3>>]>;
 
 
-
 //===------------------------ Garbage Collection Intrinsics ---------------===//
 // These are documented in docs/Statepoint.rst
 
