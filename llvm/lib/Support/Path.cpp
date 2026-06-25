@@ -510,6 +510,12 @@ void replace_extension(SmallVectorImpl<char> &path, const Twine &extension,
 template <typename T> static T &asLValue(T &&RValue) { return RValue; }
 
 bool starts_with(StringRef Path, StringRef Prefix, Style style) {
+  SmallString<128> PathBuf{Path};
+  if (remove_dots(PathBuf, false, style))
+    errs() << "starts_with remove_dots(" << Path << ") -> " << PathBuf << "\n";
+  SmallString<128> PrefixBuf{Prefix};
+  if (remove_dots(PrefixBuf, false, style))
+    errs() << "starts_with remove_dots(" << Prefix << ") -> " << PrefixBuf << "\n";
   assert(!remove_dots(asLValue(SmallString<128>{Path}), false, style));
   assert(!remove_dots(asLValue(SmallString<128>{Prefix}), false, style));
 
