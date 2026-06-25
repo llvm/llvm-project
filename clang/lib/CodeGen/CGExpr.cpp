@@ -3623,7 +3623,7 @@ LValue CodeGenFunction::EmitOMPCapturedBindingLValue(const BindingDecl *BD) {
         TargetDecl = OrigVar;
     }
   }
-  Expr *BindingExpr = BD->getBinding()->IgnoreImplicit();
+
   // Use getNonReferenceType() because we need the actual object type, not the
   // reference type. DeclRefExpr with VK_LValue requires a non-reference type
   // (AST invariant). EmitDeclRefLValue will load any reference for us.
@@ -3632,35 +3632,36 @@ LValue CodeGenFunction::EmitOMPCapturedBindingLValue(const BindingDecl *BD) {
                   /*RefersToEnclosingVariableOrCapture=*/true, DREType,
                   VK_LValue, SourceLocation());
   LValue BaseLVal = EmitDeclRefLValue(&DRE);
-  QualType CanonType = DREType.getCanonicalType();
-  Address Addr = BaseLVal.getAddress();
-  llvm::Type *ExpectedTy = CGM.getTypes().ConvertTypeForMem(CanonType);
-  if (auto *ASE = dyn_cast<ArraySubscriptExpr>(BindingExpr)) {
-    if (Addr.getElementType() != ExpectedTy)
-      Addr = Addr.withElementType(ExpectedTy);
 
-    Expr::EvalResult Result;
-    [[maybe_unused]] bool Success =
-        ASE->getIdx()->EvaluateAsInt(Result, getContext());
-    assert(Success && "Expected constant integer index for array subscript");
-    uint64_t Idx = Result.Val.getInt().getZExtValue();
-    Address EltAddr = Builder.CreateConstArrayGEP(Addr, Idx);
-    return MakeAddrLValue(EltAddr, BD->getType(), BaseLVal.getBaseInfo(),
-                          CGM.getTBAAInfoForSubobject(BaseLVal, BD->getType()));
+  // Ensure the Address has the correct element type for DD's type.
+  // EmitDeclRefLValue might return an address with a different element type
+  // if TargetDecl != DD or if reference unwrapping occurred.
+  Address BaseAddr = BaseLVal.getAddress();
+  QualType DDType = DD->getType();
+  llvm::Type *ExpectedTy = CGM.getTypes().ConvertTypeForMem(DDType);
+  if (BaseAddr.getElementType() != ExpectedTy)
+    BaseAddr = BaseAddr.withElementType(ExpectedTy);
+
+  // Now emit the binding expression (array subscript, member access, etc.)
+  // by temporarily installing the decomposed storage address, then routing
+  // through EmitLValue for the binding expression.
+  Expr *BindingExpr = BD->getBinding();
+  auto DDIt = LocalDeclMap.find(DD);
+  bool DDWasMapped = DDIt != LocalDeclMap.end();
+  Address SavedAddr = DDWasMapped ? DDIt->second : Address::invalid();
+  if (DDWasMapped)
+    DDIt->second = BaseAddr;
+  else
+    LocalDeclMap.insert({DD, BaseAddr});
+  LValue Result = EmitLValue(BindingExpr);
+  if (DDWasMapped) {
+    auto RestoreIt = LocalDeclMap.find(DD);
+    assert(RestoreIt != LocalDeclMap.end() && "DD should still be in map");
+    RestoreIt->second = SavedAddr;
+  } else {
+    LocalDeclMap.erase(DD);
   }
-
-  if (auto *ME = dyn_cast<MemberExpr>(BindingExpr)) {
-    if (Addr.getElementType() != ExpectedTy) {
-      Addr = Addr.withElementType(ExpectedTy);
-      BaseLVal = MakeAddrLValue(Addr, CanonType, BaseLVal.getBaseInfo(),
-                                BaseLVal.getTBAAInfo());
-    }
-    return EmitLValueForField(BaseLVal, cast<FieldDecl>(ME->getMemberDecl()));
-  }
-
-  // Sema ensures tuple-like bindings are rejected earlier, so this path
-  // should never be reached.
-  llvm_unreachable("Unexpected structured binding type in OpenMP");
+  return Result;
 }
 
 LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {

@@ -12684,6 +12684,14 @@ def note_omp_flush_order_clause_here : Note<
   "memory order clause '%0' is specified here">;
 def err_omp_non_lvalue_in_map_or_motion_clauses: Error<
   "expected addressable lvalue in '%0' clause">;
+def err_omp_unsupported_structured_binding_init : Error<
+  "mapping of structured binding initialized from %select{function call|"
+  "initializer list|temporary object|move expression}0 is not supported">;
+def err_omp_bindings_from_same_decomposition_with_different_dsa : Error<
+  "bindings from the same structured binding declaration cannot have "
+  "different data-sharing attributes">;
+def note_omp_previous_dsa_for_binding : Note<
+  "previous binding from the same declaration has '%0' attribute here">;
 def err_omp_var_expected : Error<
   "expected variable of the '%0' type%select{|, not %2}1">;
 def err_omp_non_pointer_type_array_shaping_base : Error<

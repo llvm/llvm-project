@@ -177,6 +177,9 @@ private:
     UsedRefMapTy NontemporalMap;
     MappedExprComponentsTy MappedExprComponents;
     LoopControlVariablesMapTy LCVMap;
+    /// Track DecompositionDecls and their data-sharing attributes to detect
+    /// conflicting clauses on bindings from the same decomposition.
+    llvm::SmallDenseMap<const DecompositionDecl *, DSAInfo, 4> DecompositionDSA;
     DefaultDataSharingAttributes DefaultAttr = DSA_unspecified;
     SourceLocation DefaultAttrLoc;
     DefaultDataSharingVCAttributes DefaultVCAttr = DSA_VC_all;
@@ -566,6 +569,11 @@ public:
   void addDSA(const ValueDecl *D, const Expr *E, OpenMPClauseKind A,
               DeclRefExpr *PrivateCopy = nullptr, unsigned Modifier = 0,
               bool AppliedToPointee = false);
+
+  /// Check if bindings from the same DecompositionDecl have conflicting DSA.
+  /// Returns the conflicting DSAInfo if found, nullptr otherwise.
+  const DSAInfo *hasConflictingDecompositionDSA(const DecompositionDecl *DD,
+                                                OpenMPClauseKind A) const;
 
   /// Adds additional information for the reduction items with the reduction id
   /// represented as an operator.
@@ -1582,7 +1590,41 @@ void DSAStackTy::addDSA(const ValueDecl *D, const Expr *E, OpenMPClauseKind A,
       Data.PrivateCopy = nullptr;
       Data.AppliedToPointee = AppliedToPointee;
     }
+    // Track DecompositionDecls for binding conflict detection.
+    if (const auto *BD = dyn_cast<BindingDecl>(D)) {
+      if (const auto *DD =
+              dyn_cast<DecompositionDecl>(BD->getDecomposedDecl())) {
+        DSAInfo &DDData = getTopOfStack().DecompositionDSA[DD];
+        if (DDData.Attributes == OMPC_unknown) {
+          // First binding from this decomposition.
+          DDData.Attributes = A;
+          DDData.RefExpr.setPointerAndInt(E, IsLastprivate);
+          DDData.Modifier = Modifier;
+        }
+      }
+    }
   }
+}
+
+const DSAStackTy::DSAInfo *
+DSAStackTy::hasConflictingDecompositionDSA(const DecompositionDecl *DD,
+                                           OpenMPClauseKind A) const {
+  if (isStackEmpty())
+    return nullptr;
+
+  auto It = getTopOfStack().DecompositionDSA.find(DD);
+  if (It == getTopOfStack().DecompositionDSA.end())
+    return nullptr;
+
+  const DSAInfo &ExistingDSA = It->second;
+
+  // Check if the new attribute conflicts with the existing one.
+  // Allow firstprivate + lastprivate on the same decomposition.
+  if (ExistingDSA.Attributes != A &&
+      !(A == OMPC_firstprivate && ExistingDSA.Attributes == OMPC_lastprivate) &&
+      !(A == OMPC_lastprivate && ExistingDSA.Attributes == OMPC_firstprivate))
+    return &ExistingDSA;
+  return nullptr;
 }
 
 /// Build a variable declaration for OpenMP loop iteration variable.
@@ -3885,6 +3927,35 @@ static void reportOriginalDsa(Sema &SemaRef, const DSAStackTy *Stack,
     SemaRef.Diag(DVar.ImplicitDSALoc, diag::note_omp_implicit_dsa)
         << getOpenMPClauseNameForDiag(DVar.CKind);
   }
+}
+
+/// Check for conflicting data-sharing attributes on bindings from the same
+/// structured binding declaration. Returns true if a conflict was found and
+/// diagnosed.
+static bool checkDecompositionDSAConflict(Sema &SemaRef, DSAStackTy *Stack,
+                                          const ValueDecl *D,
+                                          SourceLocation ELoc,
+                                          OpenMPClauseKind NewDSA) {
+  const auto *BD = dyn_cast<BindingDecl>(D);
+  if (!BD)
+    return false;
+
+  const auto *DD = dyn_cast<DecompositionDecl>(BD->getDecomposedDecl());
+  if (!DD)
+    return false;
+
+  if (const auto *ConflictDSA =
+          Stack->hasConflictingDecompositionDSA(DD, NewDSA)) {
+    SemaRef.Diag(
+        ELoc,
+        diag::err_omp_bindings_from_same_decomposition_with_different_dsa);
+    if (ConflictDSA->RefExpr.getPointer())
+      SemaRef.Diag(ConflictDSA->RefExpr.getPointer()->getExprLoc(),
+                   diag::note_omp_previous_dsa_for_binding)
+          << getOpenMPClauseName(ConflictDSA->Attributes);
+    return true;
+  }
+  return false;
 }
 
 static OpenMPMapClauseKind
@@ -19533,8 +19604,12 @@ OMPClause *SemaOpenMP::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
       else
         Ref = buildCapture(SemaRef, D, SimpleRefExpr, /*WithInit=*/false);
     }
-    if (!IsImplicitClause)
+    if (!IsImplicitClause) {
+      if (checkDecompositionDSAConflict(SemaRef, DSAStack, D, ELoc,
+                                        OMPC_private))
+        continue;
       DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_private, Ref);
+    }
     Vars.push_back(
         (VD || IsBindingDecl || SemaRef.CurContext->isDependentContext())
             ? RefExpr->IgnoreParens()
@@ -20008,6 +20083,9 @@ OMPClause *SemaOpenMP::ActOnOpenMPLastprivateClause(
             SemaRef.IgnoredValueConversions(PostUpdateRes.get()).get());
       }
     }
+    if (checkDecompositionDSAConflict(SemaRef, DSAStack, D, ELoc,
+                                      OMPC_lastprivate))
+      continue;
     DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_lastprivate, Ref);
     bool IsBindingDecl = isa<BindingDecl>(D);
     Vars.push_back(
@@ -20070,6 +20148,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPSharedClause(ArrayRef<Expr *> VarList,
     if (!VD && isOpenMPCapturedDecl(D) &&
         !SemaRef.CurContext->isDependentContext())
       Ref = buildCapture(SemaRef, D, SimpleRefExpr, /*WithInit=*/true);
+    if (checkDecompositionDSAConflict(SemaRef, DSAStack, D, ELoc, OMPC_shared))
+      continue;
     DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_shared, Ref);
     Vars.push_back((VD || !Ref || SemaRef.CurContext->isDependentContext())
                        ? RefExpr->IgnoreParens()
@@ -21284,6 +21364,8 @@ static bool actOnOMPReductionKindClause(
     // correct analysis of in_reduction clauses.
     if (CurrDir == OMPD_taskgroup && ClauseKind == OMPC_task_reduction)
       Modifier = OMPC_REDUCTION_task;
+    if (checkDecompositionDSAConflict(S, Stack, D, ELoc, OMPC_reduction))
+      continue;
     Stack->addDSA(D, RefExpr->IgnoreParens(), OMPC_reduction, Ref, Modifier,
                   ASE || OASE);
     if (Modifier == OMPC_REDUCTION_task &&
@@ -21541,6 +21623,8 @@ OMPClause *SemaOpenMP::ActOnOpenMPLinearClause(
         /*DirectInit=*/false);
     DeclRefExpr *InitRef = buildDeclRefExpr(SemaRef, Init, Type, ELoc);
 
+    if (checkDecompositionDSAConflict(SemaRef, DSAStack, D, ELoc, OMPC_linear))
+      continue;
     DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_linear, Ref);
     Vars.push_back(
         (VD || IsBindingDecl || SemaRef.CurContext->isDependentContext())
@@ -22662,6 +22746,8 @@ public:
           // Now process this as a member expression, which will properly
           // handle the field-level mapping
           return Visit(E);
+        } else {
+          return false;
         }
       }
 
@@ -22687,8 +22773,9 @@ public:
                                 NameInfo, D->getType(), DRE->getValueKind(),
                                 DRE->getFoundDecl(),
                                 /*TemplateArgs=*/nullptr, DRE->isNonOdrUse());
-      }
-      // If we can't find the original, keep the DecompositionDecl as-is.
+        } else {
+          return false;
+        }
     } else if (!isa<VarDecl>(D)) {
       emitErrorMsg();
       return false;
@@ -23668,6 +23755,14 @@ static void checkMappableExpressionList(
 
     Expr *SimpleExpr = RE->IgnoreParenCasts();
 
+    // Skip entries with unnamed decls (can happen with transformed expressions)
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(SimpleExpr)) {
+      if (const auto *D = dyn_cast<NamedDecl>(DRE->getDecl())) {
+        if (!D->getDeclName())
+          continue;
+      }
+    }
+
     if (!RE->isLValue()) {
       if (SemaRef.getLangOpts().OpenMP < 50) {
         SemaRef.Diag(
@@ -23680,6 +23775,48 @@ static void checkMappableExpressionList(
       continue;
     }
 
+    // Check for unsupported structured bindings early.
+    if (!NoDiagnose) { 
+      if (const auto *DRE = dyn_cast<DeclRefExpr>(SimpleExpr)) {
+        const DecompositionDecl *DD = nullptr;
+        if (const auto *BD = dyn_cast<BindingDecl>(DRE->getDecl())) {
+          DD = cast<DecompositionDecl>(BD->getDecomposedDecl());
+        } else if (const auto *D =
+                       dyn_cast<DecompositionDecl>(DRE->getDecl())) {
+          DD = D;
+        }
+        if (DD && !DD->getOriginalVar()) {
+          const Expr *Init = DD->getInit();
+          unsigned DiagKind = 3;
+          if (Init) {
+            const Expr *Stripped = Init->IgnoreParenImpCasts();
+            if (isa<CallExpr>(Stripped)) {
+              DiagKind = 0;
+            } else if (const auto *CCE = dyn_cast<CXXConstructExpr>(Stripped)) {
+              if (CCE->getNumArgs() == 1) {
+                const Expr *Arg = CCE->getArg(0)->IgnoreParenImpCasts();
+                if (isa<CallExpr>(Arg))
+                  DiagKind = 3;
+                else
+                  DiagKind = 2;
+              }
+            } else if (isa<InitListExpr>(Stripped) ||
+                       isa<CXXStdInitializerListExpr>(Stripped)) {
+              DiagKind = 1;
+            } else if (const auto *FCE =
+                           dyn_cast<CXXFunctionalCastExpr>(Stripped)) {
+              if (isa<InitListExpr>(FCE->getSubExpr()->IgnoreParenImpCasts()))
+                DiagKind = 1;
+            } else if (isa<MaterializeTemporaryExpr>(Init) ||
+                       isa<CXXBindTemporaryExpr>(Init))
+              DiagKind = 2;
+          }
+          SemaRef.Diag(ELoc, diag::err_omp_unsupported_structured_binding_init)
+              << DiagKind;
+          continue;
+        }
+      }
+    }
     OMPClauseMappableExprCommon::MappableExprComponentList CurComponents;
     ValueDecl *CurDeclaration = nullptr;
 
