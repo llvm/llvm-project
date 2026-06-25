@@ -7016,13 +7016,20 @@ static bool HandleFunctionCall(SourceLocation CallLoc,
   // Skip this for non-union classes with no fields; in that case, the defaulted
   // copy/move does not actually read the object.
   const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(Callee);
-  if (MD && MD->isDefaulted() &&
-      (MD->getParent()->isUnion() ||
-       (MD->isTrivial() &&
-        isReadByLvalueToRvalueConversion(MD->getParent())))) {
+
+  auto IsTrivialMemoryOperation = [&](const CXXMethodDecl *MD) {
+    if (!MD || !MD->isDefaulted())
+      return false;
+    if (!MD->isCopyAssignmentOperator() && !MD->isMoveAssignmentOperator())
+      return false;
+    return MD->getParent()->isUnion() ||
+           (MD->isTrivial() &&
+            isReadByLvalueToRvalueConversion(MD->getParent()));
+  };
+
+  if (IsTrivialMemoryOperation(MD)) {
     unsigned ExplicitOffset = MD->isExplicitObjectMemberFunction() ? 1 : 0;
-    assert(ObjectArg &&
-           (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator()));
+    assert(ObjectArg);
     APValue RHSValue;
     if (!handleTrivialCopy(Info, MD->getParamDecl(0), Args[0], RHSValue,
                            MD->getParent()->isUnion()))
