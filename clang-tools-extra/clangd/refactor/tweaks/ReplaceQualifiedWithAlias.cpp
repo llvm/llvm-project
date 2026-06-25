@@ -62,6 +62,8 @@ void collectUsingDecls(const DeclContext *DC,
   }
 }
 
+// Returns the end of a qualified reference, extending past any template
+// argument list so rewrites replace the full spelled name.
 SourceLocation getReferenceEnd(SourceLocation NameLoc, const SourceManager &SM,
                                const LangOptions &LangOpts) {
   std::optional<Token> Tok = Lexer::findNextToken(NameLoc, SM, LangOpts);
@@ -104,6 +106,7 @@ std::string ReplaceQualifiedWithAlias::title() const {
 }
 
 bool ReplaceQualifiedWithAlias::prepare(const Selection &Inputs) {
+  // Reset all cached state before inspecting the new selection.
   AliasName.clear();
   AliasDeclToSkip = SourceRange();
   RewriteTargets.clear();
@@ -120,6 +123,8 @@ bool ReplaceQualifiedWithAlias::prepare(const Selection &Inputs) {
 
     ReferenceLoc QualifiedRef;
     bool FoundQualifiedRef = false;
+    // Prefer the alias's own qualified reference when it exists, because it
+    // gives us the exact namespace spelling that should be rewritten.
     findExplicitReferences(
         Alias,
         [&](ReferenceLoc Ref) {
@@ -147,12 +152,15 @@ bool ReplaceQualifiedWithAlias::prepare(const Selection &Inputs) {
     if (Targets.empty())
       return false;
 
+    // Cache the alias spelling and the canonical declarations it stands for.
     RewriteTargets = std::move(Targets);
     AliasName = Alias->getNameAsString();
     AliasDeclToSkip = Alias->getSourceRange();
     return true;
   };
 
+  // First look for an alias declaration in the current selection or one of
+  // its ancestors. This is the narrowest and most reliable source of truth.
   for (auto *N = Node; N; N = N->Parent) {
     if (const auto *TAD = N->ASTNode.get<TypeAliasDecl>(); TAD) {
       if (SetFromAlias(TAD))
@@ -166,6 +174,9 @@ bool ReplaceQualifiedWithAlias::prepare(const Selection &Inputs) {
   llvm::DenseSet<const NamedDecl *> SelectedTargets;
   std::string SelectedName;
   bool FoundSelectedQualifiedRef = false;
+  // If the selection is a qualified reference instead of an alias, derive the
+  // target set from that reference and then search for a matching alias in the
+  // file.
   for (const auto &D : Inputs.AST->getLocalTopLevelDecls()) {
     findExplicitReferences(
         D,
@@ -203,6 +214,8 @@ bool ReplaceQualifiedWithAlias::prepare(const Selection &Inputs) {
               Inputs.SelectionBegin > SM.getFileOffset(EndLoc))
             return;
 
+          // Record the referred-to name so we can prefer aliases with the same
+          // identifier when several are visible.
           SelectedName =
               Lexer::getSourceText(CharSourceRange::getTokenRange(NameLoc),
                                    SM, LangOpts)
@@ -225,6 +238,8 @@ bool ReplaceQualifiedWithAlias::prepare(const Selection &Inputs) {
   collectUsingDecls(Inputs.AST->getASTContext().getTranslationUnitDecl(),
                     VisibleUsingDecls);
   auto &SM = Inputs.AST->getSourceManager();
+  // Search visible using-declarations for one that shadows the same target
+  // set, then reuse its alias spelling.
   for (const auto *UD : VisibleUsingDecls) {
     if (!UD->getIdentifier())
       continue;
@@ -259,9 +274,12 @@ ReplaceQualifiedWithAlias::apply(const Selection &Inputs) {
   auto &SM = Inputs.AST->getSourceManager();
   const auto &LangOpts = Inputs.AST->getLangOpts();
 
+  // prepare() must have populated the alias name and target set.
   if (AliasName.empty() || RewriteTargets.empty())
     return error("Incomplete prepared state for ReplaceQualifiedWithAlias");
 
+  // Skip the selected alias declaration itself so we do not rewrite the alias
+  // name inside its own definition.
   SourceLocation SkipBegin = AliasDeclToSkip.getBegin();
   SourceLocation SkipEnd = AliasDeclToSkip.getEnd();
   if (SkipBegin.isValid())
@@ -270,6 +288,8 @@ ReplaceQualifiedWithAlias::apply(const Selection &Inputs) {
     SkipEnd = SM.getExpansionLoc(SkipEnd);
 
   tooling::Replacements Repls;
+  // Rewrite every explicit namespace-qualified reference that resolves to one
+  // of the canonical declarations represented by the alias.
   for (const auto &D : Inputs.AST->getLocalTopLevelDecls()) {
     findExplicitReferences(
         D,
@@ -306,6 +326,7 @@ ReplaceQualifiedWithAlias::apply(const Selection &Inputs) {
               SM.getFileID(NameLoc) != SM.getMainFileID())
             return;
 
+          // Leave the selected alias definition untouched.
           if (SkipBegin.isValid() && SkipEnd.isValid() &&
               SM.isPointWithin(NameLoc, SkipBegin, SkipEnd))
             return;
@@ -315,6 +336,7 @@ ReplaceQualifiedWithAlias::apply(const Selection &Inputs) {
           if (BeginOffset > SM.getFileOffset(EndLoc))
             return;
 
+          // Replace the qualified spelling with the alias name only.
           if (auto Err = Repls.add(tooling::Replacement(
                   SM, QualifierLoc, SM.getFileOffset(EndLoc) - BeginOffset,
                   AliasName)))

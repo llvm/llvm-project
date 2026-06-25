@@ -53,7 +53,10 @@ private:
   std::string QualifierToSpell;
   llvm::StringRef SpelledQualifier;
   llvm::StringRef SpelledName;
+  // The selected declaration must stay after the inserted using-declaration.
   SourceLocation MustInsertAfterLoc;
+  // Canonical declarations whose explicit qualified references will be
+  // rewritten in the main file.
   llvm::DenseSet<const NamedDecl *> RewriteTargets;
 };
 REGISTER_TWEAK(AddUsingReplaceAll)
@@ -214,6 +217,8 @@ bool AddUsingReplaceAll::prepare(const Selection &Inputs) {
   auto &SM = Inputs.AST->getSourceManager();
   const auto &TB = Inputs.AST->getTokens();
 
+  // Clear any state from a previous invocation before analyzing the new
+  // selection.
   QualifierToRemove = NestedNameSpecifierLoc();
   QualifierToSpell.clear();
   SpelledQualifier = llvm::StringRef();
@@ -225,6 +230,8 @@ bool AddUsingReplaceAll::prepare(const Selection &Inputs) {
                    Inputs.AST->getLangOpts()))
     return false;
 
+  // Normalize the selection to the outermost AST node that still represents
+  // the qualified spelling we want to rewrite.
   auto *Node = Inputs.ASTSelection.commonAncestor();
   if (!Node)
     return false;
@@ -247,6 +254,8 @@ bool AddUsingReplaceAll::prepare(const Selection &Inputs) {
     return false;
 
   SourceRange SpelledNameRange;
+  // Capture the qualified spelling, the namespace qualifier to remove, and
+  // the declaration that constrains where a new using-declaration may go.
   if (auto *D = Node->ASTNode.get<DeclRefExpr>()) {
     if (D->getDecl()->getIdentifier()) {
       QualifierToRemove = D->getQualifierLoc();
@@ -322,16 +331,22 @@ bool AddUsingReplaceAll::prepare(const Selection &Inputs) {
     default:
       break;
     }
+    // For type spellings, the qualifier is part of the type name range rather
+    // than a separate expression node.
     if (QualifierToRemove)
       SpelledNameRange.setBegin(QualifierToRemove.getBeginLoc());
   }
 
+  // Only handle fully namespace-qualified spellings that can be rewritten
+  // consistently across the file.
   if (!QualifierToRemove || RewriteTargets.empty() ||
       QualifierToRemove.getNestedNameSpecifier().getKind() !=
           NestedNameSpecifier::Kind::Namespace ||
       isNamespaceForbidden(Inputs, QualifierToRemove.getNestedNameSpecifier()))
     return false;
 
+  // Macro body expansions and cross-file spellings are too ambiguous for this
+  // refactoring.
   if (SM.isMacroBodyExpansion(QualifierToRemove.getBeginLoc()) ||
       !SM.isWrittenInSameFile(QualifierToRemove.getBeginLoc(),
                               QualifierToRemove.getEndLoc()))
@@ -345,6 +360,8 @@ bool AddUsingReplaceAll::prepare(const Selection &Inputs) {
       syntax::Token::range(SM, SpelledTokens->front(), SpelledTokens->back());
   std::tie(SpelledQualifier, SpelledName) =
       splitQualifiedName(SpelledRange.text(SM));
+  // Keep the exact source spelling for the qualifier so the inserted using
+  // matches the style of the original code.
   QualifierToSpell = getNNSLAsString(
       QualifierToRemove, Inputs.AST->getASTContext().getPrintingPolicy());
   if (!llvm::StringRef(QualifierToSpell).ends_with(SpelledQualifier) ||
@@ -356,6 +373,7 @@ bool AddUsingReplaceAll::prepare(const Selection &Inputs) {
 Expected<Tweak::Effect> AddUsingReplaceAll::apply(const Selection &Inputs) {
   auto &SM = Inputs.AST->getSourceManager();
 
+  // Fail loudly if apply() is reached without the state produced by prepare().
   const auto *TargetNamespace =
       getNamespaceFromQualifier(QualifierToRemove.getNestedNameSpecifier());
   if (!TargetNamespace)
@@ -365,6 +383,8 @@ Expected<Tweak::Effect> AddUsingReplaceAll::apply(const Selection &Inputs) {
 
   tooling::Replacements Repls;
 
+  // Find a legal insertion point based on nearby using-declarations, namespace
+  // scope, or the start of the file.
   auto InsertionPoint = findInsertionPoint(Inputs, QualifierToRemove,
                                            SpelledName, MustInsertAfterLoc);
   if (!InsertionPoint) {
@@ -374,6 +394,8 @@ Expected<Tweak::Effect> AddUsingReplaceAll::apply(const Selection &Inputs) {
   }
 
   if (InsertionPoint->Loc.isValid()) {
+    // Emit the new using-declaration with any extra qualification required by
+    // existing local style.
     std::string UsingText;
     llvm::raw_string_ostream UsingTextStream(UsingText);
     UsingTextStream << "using ";
@@ -391,6 +413,8 @@ Expected<Tweak::Effect> AddUsingReplaceAll::apply(const Selection &Inputs) {
 
   bool HasReplacementError = false;
   std::string ReplacementError;
+  // Walk every top-level declaration in the file and rewrite only the
+  // explicit references that resolve to one of the prepared targets.
   for (const auto &D : Inputs.AST->getLocalTopLevelDecls()) {
     findExplicitReferences(
         D,
@@ -435,6 +459,8 @@ Expected<Tweak::Effect> AddUsingReplaceAll::apply(const Selection &Inputs) {
           if (BeginOffset >= EndOffset)
             return;
 
+          // Drop the namespace qualifier, leaving the referenced name in
+          // place.
           if (auto Err = Repls.add(tooling::Replacement(
                   SM, QualifierLoc, EndOffset - BeginOffset, ""))) {
             ReplacementError = llvm::toString(std::move(Err));
