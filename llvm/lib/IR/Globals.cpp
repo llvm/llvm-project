@@ -113,7 +113,9 @@ GlobalObject::~GlobalObject() {
   setComdat(nullptr);
 }
 
-bool GlobalValue::isInterposable() const {
+bool GlobalValue::isInterposable(bool CheckNoIPA) const {
+  if (CheckNoIPA && isNoipaFnDef())
+    return true;
   // Be conservative with llvm.ptrauth wrappers.
   // FIXME: this is gross but necessary with our current representation.
   if (isa<GlobalVariable>(this) &&
@@ -346,6 +348,13 @@ bool GlobalValue::isNobuiltinFnDef() const {
   if (!F || F->empty())
     return false;
   return F->hasFnAttribute(Attribute::NoBuiltin);
+}
+
+bool GlobalValue::isNoipaFnDef() const {
+  const Function *F = dyn_cast<Function>(this);
+  if (!F || F->isDeclaration())
+    return false;
+  return F->hasFnAttribute(Attribute::NoIPA);
 }
 
 bool GlobalValue::isDeclaration() const {

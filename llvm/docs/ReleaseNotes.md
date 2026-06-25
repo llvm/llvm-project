@@ -97,6 +97,11 @@ Makes programs 10x faster by doing Special New Thing.
 * The ``modular-format`` attribute now supports the ``fixed`` aspect for C
   ISO 18037 fixed-point ``printf`` specifiers.
 
+* Added `noipa` attribute which disables interprocedural analyses that inspect
+  the definition of the function. This attribute does *not* control inlining or
+  outlining. Add the `noinline` and `nooutline` attributes as well in cases
+  where inlining and outlining should additionally be disabled.
+
 ### Changes to LLVM infrastructure
 
 * Removed ``Constant::isZeroValue``. It was functionally identical to
