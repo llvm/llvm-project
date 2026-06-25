@@ -271,8 +271,8 @@ bool DataScalarizerVisitor::replaceDynamicInsertElementInst(
   Builder.CreateStore(StoreVal, GEP);
   Value *NewIEI = PoisonValue::get(Vec->getType());
   for (unsigned I = 0; I < ArrTy->getArrayNumElements(); ++I) {
-    Value *EltLoad = Builder.CreateLoad(ArrElemTy, ArrGEPs[I],
-                                        IEI.getName() + ".load");
+    Value *EltLoad =
+        Builder.CreateLoad(ArrElemTy, ArrGEPs[I], IEI.getName() + ".load");
     if (WidenBool)
       EltLoad =
           Builder.CreateTrunc(EltLoad, VecElemTy, IEI.getName() + ".trunc");
@@ -313,8 +313,11 @@ bool DataScalarizerVisitor::replaceDynamicExtractElementInst(
   // The array element type may have been widened (e.g. i1 -> i32) so that the
   // indexable temp uses a legal DXIL memory type. Truncate back to the original
   // element type of the extractelement if necessary.
-  if (Load->getType() != EEI.getType())
+  if (Load->getType() != EEI.getType()) {
+    assert(Load->getType()->isIntegerTy(32) && EEI.getType()->isIntegerTy(1) &&
+           "Unexpected type mismatch: only i32 -> i1 widening is supported");
     Load = Builder.CreateTrunc(Load, EEI.getType(), EEI.getName() + ".trunc");
+  }
 
   EEI.replaceAllUsesWith(Load);
   EEI.eraseFromParent();
