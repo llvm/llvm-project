@@ -294,6 +294,8 @@ TYPE_CONTEXT_PARSER("module subprogram part"_en_US,
 TYPE_PARSER(construct<ModuleSubprogram>(indirect(functionSubprogram)) ||
     construct<ModuleSubprogram>(indirect(subroutineSubprogram)) ||
     construct<ModuleSubprogram>(indirect(Parser<SeparateModuleSubprogram>{})) ||
+    construct<ModuleSubprogram>(indirect(skipStuffBeforeStatement >>
+        "!$ACC "_sptok >> Parser<OpenACCRoutineConstruct>{} / endOfLine)) ||
     construct<ModuleSubprogram>(indirect(compilerDirective)))
 
 // R1410 module-nature -> INTRINSIC | NON_INTRINSIC

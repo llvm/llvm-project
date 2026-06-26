@@ -256,20 +256,13 @@ std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
     Fortran::lower::AbstractConverter &converter, const omp::Object &object,
     Fortran::lower::StatementContext &stmtCtx, mlir::Location loc);
 
-/// Non-constant user condition expression and source for runtime lowering.
-struct DynamicUserCondition {
-  const parser::ScalarExpr *expr;
-  parser::CharBlock source;
-};
-
-/// Populate \p vmi from a parsed OpenMP context selector. Constant user
-/// conditions are folded into user_condition_true/false traits. A non-constant
-/// user condition is recorded as user_condition_unknown and returned for later
-/// lowering as a runtime condition.
-std::optional<DynamicUserCondition>
-makeVariantMatchInfo(llvm::omp::VariantMatchInfo &vmi,
-                     const parser::modifier::OmpContextSelector &ctxSel,
-                     semantics::SemanticsContext &semaCtx, mlir::Location loc);
+/// Walk the already-emitted MLIR parent operations starting from \p op and
+/// collect the implied OpenMP construct traits in outermost-to-innermost
+/// order. Used by metadirective lowering and declare-variant call resolution
+/// to build the `ConstructTraits` of an `OMPContext`.
+void collectEnclosingConstructTraits(
+    mlir::Operation *op,
+    llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits);
 
 /// `OMPContext` flavour used by Flang's OpenMP variant matching. Adds an
 /// ISA-trait override based on the module's target-features attribute.

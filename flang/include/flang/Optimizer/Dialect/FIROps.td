@@ -2560,6 +2560,8 @@ def fir_IfOp
         "bool":$withElseRegion)>
   ];
 
+  let hasCanonicalizer = 1;
+
   let extraClassDeclaration = [{
     mlir::OpBuilder getThenBodyBuilder() {
       assert(!getThenRegion().empty() && "Unexpected empty 'where' region.");
@@ -4289,7 +4291,8 @@ def fir_ReduceSpecifier {
 def fir_DoConcurrentLoopOp : fir_Op<"do_concurrent.loop",
     [AttrSizedOperandSegments, DeclareOpInterfaceMethods<LoopLikeOpInterface,
                                                          ["getLoopInductionVars"]>,
-     Terminator, NoTerminator, SingleBlock, ParentOneOf<["DoConcurrentOp"]>]> {
+     Terminator, NoTerminator, SingleBlock, AutomaticAllocationScope,
+     ParentOneOf<["DoConcurrentOp"]>]> {
   let summary = "do concurrent loop";
 
   let description = [{

@@ -2872,9 +2872,13 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
   CHECK(!(isCudaUnified && isCudaManaged) && "expect only one enabled.");
 
   std::optional<common::CUDADataAttr> actualDataAttr, dummyDataAttr;
+  // True when an unattributed actual may use the implicit CUDA memory mode
+  // matching enabled by -gpu=mem:unified or -gpu=mem:managed.
+  bool actualCanUseImplicitCudaMemoryMode{false};
   if (actual) {
     if (auto *expr{actual->UnwrapExpr()}) {
       if (evaluate::IsVariable(*expr)) {
+        actualCanUseImplicitCudaMemoryMode = true;
         // Match check-call.cpp: walk the whole designator so e.g. b%a picks up
         // ATTRIBUTES(DEVICE) from the base b when the component a has no CUDA
         // attribute (OpenACC use_device(b) + doit(b%a)), not only from the
@@ -2888,6 +2892,7 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
           }
         }
       } else if (const auto *actualLastSymbol{evaluate::GetLastSymbol(*expr)}) {
+        actualCanUseImplicitCudaMemoryMode = true;
         const Symbol &resolved{
             semantics::ResolveAssociations(*actualLastSymbol)};
         if (const auto *actualObject{
@@ -2925,7 +2930,8 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
 
   if (!dummyDataAttr) {
     if (!actualDataAttr) {
-      if (isCudaUnified || isCudaManaged) {
+      if ((isCudaUnified || isCudaManaged) &&
+          actualCanUseImplicitCudaMemoryMode) {
         return 3;
       }
       return 0;
@@ -2937,7 +2943,8 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     }
   } else if (*dummyDataAttr == common::CUDADataAttr::Device) {
     if (!actualDataAttr) {
-      if (isCudaUnified || isCudaManaged) {
+      if ((isCudaUnified || isCudaManaged) &&
+          actualCanUseImplicitCudaMemoryMode) {
         return 2;
       }
       return cudaInfMatchingValue;
@@ -2949,6 +2956,9 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     }
   } else if (*dummyDataAttr == common::CUDADataAttr::Managed) {
     if (!actualDataAttr) {
+      if (!actualCanUseImplicitCudaMemoryMode) {
+        return cudaInfMatchingValue;
+      }
       return isCudaUnified ? 1 : isCudaManaged ? 0 : cudaInfMatchingValue;
     }
     if (actualIsDeviceMemory()) {
@@ -2960,6 +2970,9 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
     }
   } else if (*dummyDataAttr == common::CUDADataAttr::Unified) {
     if (!actualDataAttr) {
+      if (!actualCanUseImplicitCudaMemoryMode) {
+        return cudaInfMatchingValue;
+      }
       return isCudaUnified ? 0 : isCudaManaged ? 1 : cudaInfMatchingValue;
     }
     if (actualIsDeviceMemory()) {
@@ -3054,6 +3067,33 @@ const Symbol *ExpressionAnalyzer::ResolveForward(const Symbol &symbol) {
 
 // Resolve a call to a generic procedure with given actual arguments.
 // adjustActuals is called on procedure bindings to handle pass arg.
+static bool IsCUDADeviceCallable(const Symbol &symbol) {
+  const auto *subprogram{
+      symbol.GetUltimate().detailsIf<semantics::SubprogramDetails>()};
+  if (!subprogram) {
+    return false;
+  }
+  auto attrs{subprogram->cudaSubprogramAttrs()};
+  return attrs &&
+      (*attrs == common::CUDASubprogramAttrs::Device ||
+          *attrs == common::CUDASubprogramAttrs::HostDevice);
+}
+
+static bool IsCudaDeviceIntrinsicShadowedByHostProcedure(
+    const parser::CharBlock &callSite, semantics::SemanticsContext &context,
+    const Symbol *resolution, bool isSubroutine) {
+  if (isSubroutine ||
+      !context.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) ||
+      !resolution || !IsProcedure(*resolution) ||
+      resolution->attrs().test(semantics::Attr::INTRINSIC) ||
+      !semantics::FindCUDADeviceContext(&context.FindScope(callSite))) {
+    return false;
+  }
+  // Keep use-associated names visible in device code, but do not let a
+  // host-only procedure hide a valid intrinsic with the same generic name.
+  return !IsCUDADeviceCallable(*resolution);
+}
+
 auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
     const ActualArguments &actuals, const AdjustActuals &adjustActuals,
     bool isSubroutine, SymbolVector &&tried, bool mightBeStructureConstructor)
@@ -3307,6 +3347,18 @@ auto ExpressionAnalyzer::GetCalleeAndArguments(const parser::Name &name,
     resolution = result.specific;
     dueToAmbiguity = result.failedDueToAmbiguity;
     tried = std::move(result.tried);
+    if (IsCudaDeviceIntrinsicShadowedByHostProcedure(
+            name.source, context_, resolution, isSubroutine)) {
+      ActualArguments localArguments{arguments};
+      if (std::optional<SpecificCall> specificCall{context_.intrinsics().Probe(
+              CallCharacteristics{name.source.ToString(), isSubroutine},
+              localArguments, GetFoldingContext())}) {
+        CheckBadExplicitType(*specificCall, *symbol);
+        return CalleeAndArguments{
+            ProcedureDesignator{std::move(specificCall->specificIntrinsic)},
+            std::move(specificCall->arguments)};
+      }
+    }
     if (resolution) {
       if (context_.GetPPCBuiltinsScope() &&
           resolution->name().ToString().rfind("__ppc_", 0) == 0) {
@@ -3416,8 +3468,16 @@ void ExpressionAnalyzer::CheckForBadRecursion(
             "Assumed-length CHARACTER(*) function '%s' cannot call itself"_err_en_US,
             callSite);
       } else if (FindCUDADeviceContext(scope)) {
-        msg = Say(
-            "Device subprogram '%s' cannot call itself"_err_en_US, callSite);
+        const auto *subp{
+            proc.GetUltimate().detailsIf<semantics::SubprogramDetails>()};
+        bool isGlobalCUDA{subp && subp->cudaSubprogramAttrs() &&
+            *subp->cudaSubprogramAttrs() ==
+                common::CUDASubprogramAttrs::Global};
+        // CUDA global call diagnostics are handled by CUDA checks.
+        if (!isGlobalCUDA) {
+          msg = Say(
+              "Device subprogram '%s' cannot call itself"_err_en_US, callSite);
+        }
       }
       AttachDeclaration(msg, proc);
     }
@@ -3778,7 +3838,6 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
   bool treatExternalAsImplicit{
       IsExternalCalledImplicitly(callSite, proc.GetSymbol())};
   const Symbol *procSymbol{proc.GetSymbol()};
-  // Statement functions have implicit interfaces and require the same checks
   bool isStatementFunction{
       procSymbol && procSymbol->flags().test(Symbol::Flag::StmtFunction)};
   std::optional<characteristics::Procedure> chars;
@@ -3851,13 +3910,14 @@ std::optional<characteristics::Procedure> ExpressionAnalyzer::CheckCall(
       }
     }
     if (isStatementFunction) {
-      // Statement functions have implicit interfaces; check for
-      // keyword arguments and other implicit interface constraints
+      // Statement functions have implicit interfaces, so keyword actual
+      // arguments are not allowed. They are exempt from the explicit-interface
+      // requirements of F2023 15.4.2.2.
       parser::ContextualMessages &messages{
           context_.foldingContext().messages()};
       for (auto &arg : arguments) {
         if (arg) {
-          semantics::CheckImplicitInterfaceArg(*arg, messages, context_);
+          semantics::CheckImplicitInterfaceArgKeywords(*arg, messages);
         }
       }
     }
@@ -4341,38 +4401,12 @@ static void FixMisparsedFunctionReference(
   if (auto *func{
           std::get_if<common::Indirection<parser::FunctionReference>>(&u)}) {
     parser::FunctionReference &funcRef{func->value()};
-    // Ensure that there are no argument keywords
-    for (const auto &arg :
-        std::get<std::list<parser::ActualArgSpec>>(funcRef.v.t)) {
-      if (std::get<std::optional<parser::Keyword>>(arg.t)) {
-        return;
-      }
-    }
-    auto &proc{std::get<parser::ProcedureDesignator>(funcRef.v.t)};
-    if (Symbol *
-        origSymbol{common::visit(
-            common::visitors{
-                [&](parser::Name &name) { return name.symbol; },
-                [&](parser::ProcComponentRef &pcr) {
-                  return parser::UnwrapRef<parser::StructureComponent>(pcr)
-                      .Component()
-                      .symbol;
-                },
-            },
-            proc.u)}) {
-      Symbol &symbol{origSymbol->GetUltimate()};
-      if (symbol.has<semantics::ObjectEntityDetails>() ||
-          symbol.has<semantics::AssocEntityDetails>()) {
-        // Note that expression in AssocEntityDetails cannot be a procedure
-        // pointer as per C1105 so this cannot be a function reference.
-        if constexpr (common::HasMember<common::Indirection<parser::Designator>,
-                          uType>) {
-          if (CheckFuncRefToArrayElement(context, funcRef)) {
-            u = common::Indirection{funcRef.ConvertToArrayElementRef()};
-          }
-        } else {
-          DIE("can't fix misparsed function as array reference");
-        }
+    if (semantics::CheckMisparsedArrayElement(context, funcRef)) {
+      if constexpr (common::HasMember<common::Indirection<parser::Designator>,
+                        uType>) {
+        u = common::Indirection{funcRef.ConvertToArrayElementRef()};
+      } else {
+        DIE("can't fix misparsed function as array reference");
       }
     }
   }
@@ -5607,6 +5641,37 @@ void NoteUsedSymbols(
     SemanticsContext &context, const SomeExpr &expr, bool isDefinition) {
   context.NoteUsedSymbols(
       evaluate::CollectUsedSymbolValues(context, expr, isDefinition));
+}
+
+bool CheckMisparsedArrayElement(
+    SemanticsContext &context, const parser::FunctionReference &funcRef) {
+  // Ensure that there are no argument keywords
+  for (const auto &arg :
+      std::get<std::list<parser::ActualArgSpec>>(funcRef.v.t)) {
+    if (std::get<std::optional<parser::Keyword>>(arg.t)) {
+      return false;
+    }
+  }
+  auto &proc{std::get<parser::ProcedureDesignator>(funcRef.v.t)};
+  if (const Symbol *origSymbol{common::visit(
+          common::visitors{
+              [&](const parser::Name &name) { return name.symbol; },
+              [&](const parser::ProcComponentRef &pcr) {
+                return parser::UnwrapRef<parser::StructureComponent>(pcr)
+                    .Component()
+                    .symbol;
+              },
+          },
+          proc.u)}) {
+    const Symbol &symbol{origSymbol->GetUltimate()};
+    if (symbol.has<semantics::ObjectEntityDetails>() ||
+        symbol.has<semantics::AssocEntityDetails>()) {
+      // Note that expression in AssocEntityDetails cannot be a procedure
+      // pointer as per C1105 so this cannot be a function reference.
+      return evaluate::CheckFuncRefToArrayElement(context, funcRef);
+    }
+  }
+  return false;
 }
 
 ExprChecker::ExprChecker(SemanticsContext &context) : context_{context} {}
