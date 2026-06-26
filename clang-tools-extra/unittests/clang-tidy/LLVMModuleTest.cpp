@@ -316,6 +316,7 @@ TEST(LLVMHeaderGuardCheckTest, FixHeaderGuards) {
                 StringRef("header is missing header guard")));
 #endif
 
+#ifndef WIN32
   // Test path outside any git repo (real root detection should fail and not
   // hang).
   EXPECT_EQ("#ifndef NON_EXISTENT_DIRECTORY_123_X_H\n"
@@ -334,6 +335,7 @@ TEST(LLVMHeaderGuardCheckTest, FixHeaderGuards) {
             "#endif\n",
             runHeaderGuardCheck("", "/x.h",
                                 StringRef("header is missing header guard")));
+#endif
 }
 
 TEST(LLVMHeaderGuardCheckTest, MockedProjectRoot) {
