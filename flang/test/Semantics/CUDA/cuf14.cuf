@@ -62,8 +62,8 @@ program m
   allocate(actual_host(10))
 
   call host_and_device(actual_host)     ! Should resolve to sub_device
-  call all(actual_host)                 ! Should resolved to unified
-  call all_without_unified(actual_host) ! Should resolved to managed
+  call all(actual_host)                 ! Should resolve to unified
+  call all_without_unified(actual_host) ! Should resolve to managed
   call optional_extra_args(actual_host, i, i) ! Should resolve to sub_unified_5args
 end
 
