@@ -13,6 +13,8 @@ add_clang_library(MLIRCIRInterfaces
   MLIRCIRTypeInterfacesIncGen
   MLIRCIRLoopOpInterfaceIncGen
   MLIRCIROpInterfacesIncGen
+  MLIRBuiltinLocationAttributesIncGen
+  MLIRBytecodeOpInterfaceIncGen
 
   LINK_LIBS
   ${dialect_libs}
