@@ -535,13 +535,12 @@ TEST_F(SampleProfTest, FuncOffsetHashTable) {
 }
 
 TEST_F(SampleProfTest, SampleProfileFuncOffsetTableInMemory) {
-  SampleProfileFuncOffsetTable Table;
+  SampleProfileFuncOffsetTable Table(InMemoryMode, 2);
 
   // Test empty table
   EXPECT_EQ(Table.lookup(0x1111ULL), std::nullopt);
 
   // Test insert and lookup
-  Table.reserve(2);
   Table.insert(0x11112222ULL, 100);
   Table.insert(0x33334444ULL, 200);
 
@@ -580,8 +579,7 @@ TEST_F(SampleProfTest, SampleProfileFuncOffsetTableOnDisk) {
   const unsigned char *Buckets = Start + BucketTableOffset;
   const unsigned char *Payload = Start + 4;
 
-  SampleProfileFuncOffsetTable Table;
-  Table.setOnDiskTable(Buckets, Payload, Start);
+  SampleProfileFuncOffsetTable Table(OnDiskMode, Buckets, Payload, Start);
 
   // Test lookup
   for (const auto &[Name, Offset] : TestData) {
