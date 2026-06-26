@@ -22,7 +22,7 @@ struct Big P1(struct Big a) {
 }
 // COMMON-LABEL: define {{.*}} @P1(
 // COMMON-NOT: = alloca {{.*}}struct.Big
-// COMMON: musttail call {{.*}} @C1({{.*}}, ptr {{.*}} %a)
+// COMMON: musttail call {{.*}} @C1({{.*}}, ptr {{[^,]*}} %a)
 
 // P2: two distinct incoming sources.
 struct Big C2(struct Big a, struct Big b);
@@ -32,20 +32,20 @@ struct Big P2(struct Big a, struct Big b) {
 // COMMON-LABEL: define {{.*}} @P2(
 // COMMON-NOT: = alloca {{.*}}struct.Big
 // COMMON-NOT: llvm.memcpy
-// COMMON: musttail call {{.*}} @C2({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b)
+// COMMON: musttail call {{.*}} @C2({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b)
 
-// P3: swap. Slot 0's dst is %a (positional), so the value of %b is copied
-// into %a; symmetrically for slot 1. The scratch alloca catches the in-
-// place-write regression: v1 would emit memcpy(%a, %b); memcpy(%b, %a) and
-// both slots would end up with orig_b. v2 captures at least one source
-// into a scratch first; we assert the scratch is present.
+// P3: swap. Pin the data flow: %a is captured before %b overwrites it, and
+// the saved %a lands in %b. An in-place memmove(%a,%b);memmove(%b,%a) would
+// drop orig_a, so both slots would read orig_b.
 struct Big C3(struct Big x, struct Big y);
 struct Big P3(struct Big a, struct Big b) {
   __attribute__((musttail)) return C3(b, a);
 }
 // COMMON-LABEL: define {{.*}} @P3(
-// COMMON: %musttail.copy{{[0-9.a-z]*}} =
-// COMMON: musttail call {{.*}} @C3({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b)
+// COMMON: [[SAVED:%musttail.copy[0-9.a-z]*]] = load {{.*}}, ptr %a,
+// COMMON: @llvm.mem{{(cpy|move)}}{{.*}}(ptr {{[^,]*}} %a, ptr {{[^,]*}} %b,
+// COMMON: store {{.*}} [[SAVED]], ptr %b,
+// COMMON: musttail call {{.*}} @C3({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b)
 
 // P5: caller mutates the parameter before the musttail. The mutation lands
 // at the incoming pointer the callee receives.
@@ -55,7 +55,7 @@ struct Big P5(struct Big a) {
   __attribute__((musttail)) return C5(a);
 }
 // COMMON-LABEL: define {{.*}} @P5(
-// COMMON: musttail call {{.*}} @C5({{.*}}, ptr {{.*}} %a)
+// COMMON: musttail call {{.*}} @C5({{.*}}, ptr {{[^,]*}} %a)
 
 // P6: musttail in a non-entry block.
 struct Big C6(struct Big a, int cond);
@@ -65,7 +65,7 @@ struct Big P6(struct Big a, int cond) {
   return a;
 }
 // COMMON-LABEL: define {{.*}} @P6(
-// COMMON: musttail call {{.*}} @C6({{.*}}, ptr {{.*}} %a,
+// COMMON: musttail call {{.*}} @C6({{.*}}, ptr {{[^,]*}} %a,
 
 // P7: same arg to two slots. C ABI requires distinct storage per by-value
 // param, so slot 1 cannot share %a's pointer. Slot 0 forwards %a; slot 1
@@ -75,8 +75,8 @@ struct Big P7(struct Big a, struct Big b) {
   __attribute__((musttail)) return C7(a, a);
 }
 // COMMON-LABEL: define {{.*}} @P7(
-// COMMON: llvm.mem{{(cpy|move)}}{{.*}}(ptr {{.*}} %b, ptr {{.*}} %a,
-// COMMON: musttail call {{.*}} @C7({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b)
+// COMMON: llvm.mem{{(cpy|move)}}{{.*}}(ptr {{[^,]*}} %b, ptr {{[^,]*}} %a,
+// COMMON: musttail call {{.*}} @C7({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b)
 
 // P8: local source. The local lives in our frame; copy it into %a, forward %a.
 struct Big C8(struct Big a);
@@ -85,8 +85,8 @@ struct Big P8(struct Big a) {
   __attribute__((musttail)) return C8(local);
 }
 // COMMON-LABEL: define {{.*}} @P8(
-// COMMON: llvm.mem{{(cpy|move)}}{{.*}}(ptr {{.*}} %a, ptr {{.*}}
-// COMMON: musttail call {{.*}} @C8({{.*}}, ptr {{.*}} %a)
+// COMMON: llvm.mem{{(cpy|move)}}{{.*}}(ptr {{[^,]*}} %a, ptr {{.*}}
+// COMMON: musttail call {{.*}} @C8({{.*}}, ptr {{[^,]*}} %a)
 
 // P9: non-musttail tail call (existing path).
 struct Big C9(struct Big a);
@@ -103,7 +103,7 @@ struct Big P10(int x1, struct Big s1, int x2, struct Big s2) {
 }
 // COMMON-LABEL: define {{.*}} @P10(
 // COMMON-NOT: = alloca {{.*}}struct.Big
-// COMMON: musttail call {{.*}} @C10({{.*}}, i32 {{.*}} %x1, ptr {{.*}} %s1, i32 {{.*}} %x2, ptr {{.*}} %s2)
+// COMMON: musttail call {{.*}} @C10({{.*}}, i32 {{.*}} %x1, ptr {{[^,]*}} %s1, i32 {{.*}} %x2, ptr {{[^,]*}} %s2)
 
 // P11: many args, including stack-spilled ones on the target ABIs above.
 struct Big C11(struct Big s1, struct Big s2, struct Big s3, struct Big s4,
@@ -117,9 +117,9 @@ struct Big P11(struct Big a1, struct Big a2, struct Big a3, struct Big a4,
 // COMMON-LABEL: define {{.*}} @P11(
 // COMMON-NOT: = alloca {{.*}}struct.Big
 // COMMON: musttail call {{.*}} @C11(
-// COMMON-SAME: ptr {{.*}} %a1, ptr {{.*}} %a2, ptr {{.*}} %a3, ptr {{.*}} %a4
-// COMMON-SAME: ptr {{.*}} %a5, ptr {{.*}} %a6, ptr {{.*}} %a7, ptr {{.*}} %a8
-// COMMON-SAME: ptr {{.*}} %a9, ptr {{.*}} %a10
+// COMMON-SAME: ptr {{[^,]*}} %a1, ptr {{[^,]*}} %a2, ptr {{[^,]*}} %a3, ptr {{[^,]*}} %a4
+// COMMON-SAME: ptr {{[^,]*}} %a5, ptr {{[^,]*}} %a6, ptr {{[^,]*}} %a7, ptr {{[^,]*}} %a8
+// COMMON-SAME: ptr {{[^,]*}} %a9, ptr {{[^,]*}} %a10
 
 // P12: over-aligned struct.
 struct __attribute__((aligned(32))) AlignedBig {
@@ -130,7 +130,7 @@ struct AlignedBig P12(struct AlignedBig a) {
   __attribute__((musttail)) return C12(a);
 }
 // COMMON-LABEL: define {{.*}} @P12(
-// COMMON: musttail call {{.*}} @C12({{.*}}, ptr {{.*}} %a)
+// COMMON: musttail call {{.*}} @C12({{.*}}, ptr {{[^,]*}} %a)
 
 // P13: mixed source kinds within Indirect slots. Slot 0's source is a local;
 // slot 1's source is an incoming parameter. Both routes engage in the same
@@ -144,7 +144,7 @@ struct Big P13(struct Big a, struct Big b) {
 // COMMON-LABEL: define {{.*}} @P13(
 // COMMON-NOT: byval-temp
 // COMMON: %musttail.copy{{[0-9.a-z]*}} =
-// COMMON: musttail call {{.*}} @C13({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b)
+// COMMON: musttail call {{.*}} @C13({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b)
 
 // P17: same arg to three slots (generalization of P7).
 struct Big C17(struct Big x, struct Big y, struct Big z);
@@ -152,7 +152,9 @@ struct Big P17(struct Big a, struct Big b, struct Big c) {
   __attribute__((musttail)) return C17(a, a, a);
 }
 // COMMON-LABEL: define {{.*}} @P17(
-// The scratch presence catches the in-place-write regression: a one-pass
-// emit would memcpy(%b, %a); memcpy(%c, %a) directly with no scratch.
-// COMMON: %musttail.copy{{[0-9.a-z]*}} =
-// COMMON: musttail call {{.*}} @C17({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b, ptr {{.*}} %c)
+// Both copied slots take their value from %a: %b via the memmove, %c via the
+// captured load. Neither sources from the other copied slot.
+// COMMON: [[SAVED:%musttail.copy[0-9.a-z]*]] = load {{.*}}, ptr %a,
+// COMMON: @llvm.mem{{(cpy|move)}}{{.*}}(ptr {{[^,]*}} %b, ptr {{[^,]*}} %a,
+// COMMON: store {{.*}} [[SAVED]], ptr %c,
+// COMMON: musttail call {{.*}} @C17({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b, ptr {{[^,]*}} %c)

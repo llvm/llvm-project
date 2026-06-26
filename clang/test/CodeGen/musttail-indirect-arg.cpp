@@ -20,7 +20,7 @@ struct Big P1(struct Big a) {
 }
 // COMMON-LABEL: define {{.*}} @_Z2P13Big(
 // COMMON-NOT: = alloca {{.*}}struct.Big
-// COMMON: musttail call {{.*}} @_Z2C13Big({{.*}}, ptr {{.*}} %a)
+// COMMON: musttail call {{.*}} @_Z2C13Big({{.*}}, ptr {{[^,]*}} %a)
 
 // P2: two distinct args.
 struct Big C2(struct Big a, struct Big b);
@@ -29,17 +29,19 @@ struct Big P2(struct Big a, struct Big b) {
 }
 // COMMON-LABEL: define {{.*}} @_Z2P23BigS_(
 // COMMON-NOT: llvm.memcpy
-// COMMON: musttail call {{.*}} @_Z2C23BigS_({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b)
+// COMMON: musttail call {{.*}} @_Z2C23BigS_({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b)
 
-// P3: swap. Asserts the scratch alloca to catch the in-place-write
-// regression (see musttail-indirect-arg.c).
+// P3: swap. Pin the data flow (see musttail-indirect-arg.c): %a is captured
+// before %b overwrites it, and the saved %a lands in %b.
 struct Big C3(struct Big x, struct Big y);
 struct Big P3(struct Big a, struct Big b) {
   [[clang::musttail]] return C3(b, a);
 }
 // COMMON-LABEL: define {{.*}} @_Z2P33BigS_(
-// COMMON: %musttail.copy{{[0-9.a-z]*}} =
-// COMMON: musttail call {{.*}} @_Z2C33BigS_({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b)
+// COMMON: [[SAVED:%musttail.copy[0-9.a-z]*]] = load {{.*}}, ptr %a,
+// COMMON: @llvm.mem{{(cpy|move)}}{{.*}}(ptr {{[^,]*}} %a, ptr {{[^,]*}} %b,
+// COMMON: store {{.*}} [[SAVED]], ptr %b,
+// COMMON: musttail call {{.*}} @_Z2C33BigS_({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b)
 
 // P4: non-trivial copy constructor. The trivial-copy gate must NOT engage;
 // the user-defined copy ctor IS called. Dangling-stack bug in this corner
@@ -62,7 +64,7 @@ struct Big P5(struct Big a) {
   [[clang::musttail]] return C5(a);
 }
 // COMMON-LABEL: define {{.*}} @_Z2P53Big(
-// COMMON: musttail call {{.*}} @_Z2C53Big({{.*}}, ptr {{.*}} %a)
+// COMMON: musttail call {{.*}} @_Z2C53Big({{.*}}, ptr {{[^,]*}} %a)
 
 // P6: musttail behind a branch.
 struct Big C6(struct Big a, int cond);
@@ -72,7 +74,7 @@ struct Big P6(struct Big a, int cond) {
   return a;
 }
 // COMMON-LABEL: define {{.*}} @_Z2P63Bigi(
-// COMMON: musttail call {{.*}} @_Z2C63Bigi({{.*}}, ptr {{.*}} %a,
+// COMMON: musttail call {{.*}} @_Z2C63Bigi({{.*}}, ptr {{[^,]*}} %a,
 
 // P7: same arg to two slots. Slot 0 forwards %a; slot 1 memcpys *%a into the
 // i=1 incoming pointer %b and forwards %b.
@@ -81,8 +83,8 @@ struct Big P7(struct Big a, struct Big b) {
   [[clang::musttail]] return C7(a, a);
 }
 // COMMON-LABEL: define {{.*}} @_Z2P73BigS_(
-// COMMON: llvm.mem{{(cpy|move)}}{{.*}}(ptr {{.*}} %b, ptr {{.*}} %a,
-// COMMON: musttail call {{.*}} @_Z2C73BigS_({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b)
+// COMMON: llvm.mem{{(cpy|move)}}{{.*}}(ptr {{[^,]*}} %b, ptr {{[^,]*}} %a,
+// COMMON: musttail call {{.*}} @_Z2C73BigS_({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b)
 
 // P8: local source. Copied into the incoming %a, then %a forwarded.
 struct Big C8(struct Big a);
@@ -91,8 +93,8 @@ struct Big P8(struct Big a) {
   [[clang::musttail]] return C8(local);
 }
 // COMMON-LABEL: define {{.*}} @_Z2P83Big(
-// COMMON: llvm.mem{{(cpy|move)}}{{.*}}(ptr {{.*}} %a, ptr {{.*}}
-// COMMON: musttail call {{.*}} @_Z2C83Big({{.*}}, ptr {{.*}} %a)
+// COMMON: llvm.mem{{(cpy|move)}}{{.*}}(ptr {{[^,]*}} %a, ptr {{.*}}
+// COMMON: musttail call {{.*}} @_Z2C83Big({{.*}}, ptr {{[^,]*}} %a)
 
 // P9: non-musttail tail call (existing path).
 struct Big C9(struct Big a);
@@ -109,7 +111,7 @@ struct Big P10(int x1, struct Big s1, int x2, struct Big s2) {
 }
 // COMMON-LABEL: define {{.*}} @_Z3P10i3BigiS_(
 // COMMON-NOT: = alloca {{.*}}struct.Big
-// COMMON: musttail call {{.*}} @_Z3C10i3BigiS_({{.*}}, i32 {{.*}} %x1, ptr {{.*}} %s1, i32 {{.*}} %x2, ptr {{.*}} %s2)
+// COMMON: musttail call {{.*}} @_Z3C10i3BigiS_({{.*}}, i32 {{.*}} %x1, ptr {{[^,]*}} %s1, i32 {{.*}} %x2, ptr {{[^,]*}} %s2)
 
 // P11: many args (stack spill on the target ABIs above).
 struct Big C11(struct Big s1, struct Big s2, struct Big s3, struct Big s4,
@@ -135,7 +137,7 @@ struct Big S::P16(struct Big a) {
 }
 // COMMON-LABEL: define {{.*}} @_ZN1S3P16E3Big(
 // COMMON-NOT: = alloca {{.*}}struct.Big
-// COMMON: musttail call {{.*}} @_ZN1S1fE3Big({{.*}}, ptr {{.*}}, ptr {{.*}} %a)
+// COMMON: musttail call {{.*}} @_ZN1S1fE3Big({{.*}}, ptr {{.*}}, ptr {{[^,]*}} %a)
 
 // P13: mixed source kinds (local + incoming parameter).
 struct Big C13(struct Big x, struct Big y);
@@ -146,13 +148,16 @@ struct Big P13(struct Big a, struct Big b) {
 // COMMON-LABEL: define {{.*}} @_Z3P133BigS_(
 // COMMON-NOT: byval-temp
 // COMMON: %musttail.copy{{[0-9.a-z]*}} =
-// COMMON: musttail call {{.*}} @_Z3C133BigS_({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b)
+// COMMON: musttail call {{.*}} @_Z3C133BigS_({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b)
 
-// P17: same arg to three slots (generalization of P7).
+// P17: same arg to three slots (generalization of P7). Both copied slots
+// take their value from %a: %b via the memmove, %c via the captured load.
 struct Big C17(struct Big x, struct Big y, struct Big z);
 struct Big P17(struct Big a, struct Big b, struct Big c) {
   [[clang::musttail]] return C17(a, a, a);
 }
 // COMMON-LABEL: define {{.*}} @_Z3P173BigS_S_(
-// COMMON: %musttail.copy{{[0-9.a-z]*}} =
-// COMMON: musttail call {{.*}} @_Z3C173BigS_S_({{.*}}, ptr {{.*}} %a, ptr {{.*}} %b, ptr {{.*}} %c)
+// COMMON: [[SAVED:%musttail.copy[0-9.a-z]*]] = load {{.*}}, ptr %a,
+// COMMON: @llvm.mem{{(cpy|move)}}{{.*}}(ptr {{[^,]*}} %b, ptr {{[^,]*}} %a,
+// COMMON: store {{.*}} [[SAVED]], ptr %c,
+// COMMON: musttail call {{.*}} @_Z3C173BigS_S_({{.*}}, ptr {{[^,]*}} %a, ptr {{[^,]*}} %b, ptr {{[^,]*}} %c)
