@@ -439,6 +439,7 @@ struct Config {
   bool zKeepDataSectionPrefix;
   bool zKeepTextSectionPrefix;
   bool zLrodataAfterBss;
+  bool zMarkPlt;
   bool zNoBtCfi;
   bool zNodefaultlib;
   bool zNodelete;
