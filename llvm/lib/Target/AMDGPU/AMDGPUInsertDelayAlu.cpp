@@ -368,7 +368,7 @@ public:
     default:
       // All V_CMP* instructions excluding V_CMPX.
       return SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false) && MI.isCompare() &&
-             !SIInstrInfo::isCmpX(MI);
+             !AMDGPU::isVCMPX(MI.getOpcode());
     }
   }
 
