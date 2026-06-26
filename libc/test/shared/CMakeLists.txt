@@ -820,6 +820,19 @@ add_fp_unittest(
 endif() # LIBC_TEST_SKIP_SHARED_MATH_TESTS
 
 add_fp_unittest(
+  shared_builtins_test
+  SUITE
+    libc-shared-tests
+  SRCS
+    shared_builtins_test.cpp
+  DEPENDS
+    libc.src.__support.builtins.addtf3
+    libc.src.__support.builtins.divtf3
+    libc.src.__support.builtins.multf3
+    libc.src.__support.builtins.subtf3
+)
+
+add_fp_unittest(
   shared_str_to_num_test
   SUITE
     libc-shared-tests

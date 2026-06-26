@@ -981,6 +981,8 @@ AIX Support
 - Added support for ``#pragma comment(copyright, "token_sequence")`` on AIX.
   This directive embeds a copyright or identifying string into the compiled object file. 
   The string is included in the final executable and loaded into memory at program runtime.
+- The driver relaxes the restrictions on the ``OBJECT_MODE`` environment
+  variable and now silently accepts ``32_64`` and ``any``.
 
 NetBSD Support
 ^^^^^^^^^^^^^^
