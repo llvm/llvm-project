@@ -67,6 +67,9 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
                         "-plugin-opt=-amdgpu-internalize-symbols"};
   if (Args.hasArg(options::OPT_hipstdpar))
     LldArgs.push_back("-plugin-opt=-amdgpu-enable-hipstdpar");
+  if (Args.hasFlag(options::OPT_mamdgpu_fp32_recip_newton_raphson,
+                   options::OPT_mno_amdgpu_fp32_recip_newton_raphson, false))
+    LldArgs.push_back("-plugin-opt=-amdgpu-enable-fp32-recip-newton-raphson");
 
   auto &TC = getToolChain();
   auto &D = TC.getDriver();
@@ -246,6 +249,11 @@ void HIPAMDToolChain::addClangTargetOptions(
     if (DriverArgs.hasArgNoClaim(options::OPT_hipstdpar))
       CC1Args.append({"-mllvm", "-amdgpu-enable-hipstdpar"});
   }
+
+  if (DriverArgs.hasFlag(options::OPT_mamdgpu_fp32_recip_newton_raphson,
+                         options::OPT_mno_amdgpu_fp32_recip_newton_raphson,
+                         false))
+    CC1Args.append({"-mllvm", "-amdgpu-enable-fp32-recip-newton-raphson"});
 
   StringRef MaxThreadsPerBlock =
       DriverArgs.getLastArgValue(options::OPT_gpu_max_threads_per_block_EQ);
