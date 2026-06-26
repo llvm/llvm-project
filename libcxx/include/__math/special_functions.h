@@ -34,7 +34,7 @@ struct __sf_result {
   bool __domain_error;
   _Tp __ret;
 
-  operator _Tp() const {
+  _LIBCPP_HIDE_FROM_ABI operator _Tp() const {
 #  if math_errhandling & MATH_ERRNO
     if (__domain_error)
       errno = EDOM;
