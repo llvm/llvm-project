@@ -36,6 +36,8 @@ public:
 
 void LanaiCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
   addFunctionPass(AtomicExpandPass(TM), PMW);
+
+  Base::addIRPasses(PMW);
 }
 
 Error LanaiCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
