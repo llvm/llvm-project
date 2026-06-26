@@ -4271,6 +4271,7 @@ add_header_library(
     .exp10f_utils
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.include.llvm-libc-macros.float16_macros
     libc.src.__support.CPP.bit
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.fenv_impl
@@ -4279,7 +4280,9 @@ add_header_library(
     libc.src.__support.FPUtil.nearest_integer
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.config
     libc.src.__support.macros.optimization
+    libc.src.__support.macros.properties.types
 )
 
 add_header_library(

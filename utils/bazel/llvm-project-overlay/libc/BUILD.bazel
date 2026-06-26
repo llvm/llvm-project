@@ -8706,11 +8706,15 @@ libc_support_library(
         ":__support_fputil_multiply_add",
         ":__support_fputil_nearest_integer",
         ":__support_fputil_polyeval",
-        ":__support_fputil_rounding_mode",
         ":__support_fputil_sqrt",
+        ":__support_macros_config",
         ":__support_macros_optimization",
+        ":__support_macros_properties_types",
         ":__support_math_common_constants",
         ":__support_math_exp10f_utils",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+        ":llvm_libc_macros_float16_macros",
     ],
 )
 
@@ -12447,8 +12451,6 @@ libc_math_function(
         ":__support_math_remainder",
     ],
 )
-
-libc_math_function(name = "remainder")
 
 libc_math_function(
     name = "remainderbf16",

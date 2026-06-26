@@ -33,8 +33,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
 namespace powf16_impl {
-// TODO: mark as constexpr when nearest_integer issue is resolved
-LIBC_INLINE double exp2_range_reduced(double x) {
+LIBC_INLINE constexpr double exp2_range_reduced(double x) {
   // k = round(x * 32)  => (hi + mid) * 2^5
   double kf = fputil::nearest_integer(x * 32.0);
   int k = static_cast<int>(kf);
@@ -102,7 +101,9 @@ LIBC_INLINE constexpr bool is_integer(float16 x) {
 
 } // namespace powf16_impl
 
-// TODO : optimize by using float whenever possible
+// 0.5 ULP correctly rounding of float16 needs the ~2^-52 precision
+// to survive the final double->float16 rounding. Computing them in float was
+// measured to round x^+-2.5 1 ULP off via double rounding.
 LIBC_INLINE float16 powf16(float16 x, float16 y) {
   using namespace powf16_impl;
   using namespace common_constants_internal;
@@ -161,20 +162,20 @@ LIBC_INLINE float16 powf16(float16 x, float16 y) {
       return y;
     }
     switch (y_a) {
-    case 0x3400U: // y = ±0.25 (1/4)
-    case 0x3800U: // y = ±0.5 (1/2)
-    case 0x3A00U: // y = ±0.75 (3/4)
-    case 0x3D00U: // y = ±1.25 (5/4)
-    case 0x3E00U: // y = ±1.5 (3/2)
-    case 0x4100U: // y = ±2.5 (5/2)
-    case 0x4300U: // y = ±3.5 (7/2)
+    case 0x3400U: // y = +-0.25 (1/4)
+    case 0x3800U: // y = +-0.5 (1/2)
+    case 0x3A00U: // y = +-0.75 (3/4)
+    case 0x3D00U: // y = +-1.25 (5/4)
+    case 0x3E00U: // y = +-1.5 (3/2)
+    case 0x4100U: // y = +-2.5 (5/2)
+    case 0x4300U: // y = +-3.5 (7/2)
     {
       if (xbits.is_zero()) {
         if (y_sign) {
-          // pow(±0, negative) handled below
+          // pow(+-0, negative) handled below
           break;
         } else {
-          // pow(±0, positive_fractional) = +0
+          // pow(+-0, positive_fractional) = +0
           return FPBits::zero(Sign::POS).get_val();
         }
       }
@@ -213,18 +214,19 @@ LIBC_INLINE float16 powf16(float16 x, float16 y) {
         break;
       }
 
-      result_d = y_sign ? (1.0 / result_d) : result_d;
-      return fputil::cast<float16>(result_d);
+      return fputil::cast<float16>(y_sign ? (1.0 / result_d) : result_d);
     }
     case 0x3c00U: // y = +-1.0
-      return fputil::cast<float16>(y_sign ? (1.0 / x) : x);
+      return fputil::cast<float16>(y_sign ? (1.0 / static_cast<double>(x))
+                                          : static_cast<double>(x));
 
-    case 0x4000U: // y = +-2.0
-      double result_d = static_cast<double>(x) * static_cast<double>(x);
-      return fputil::cast<float16>(y_sign ? (1.0 / (result_d)) : (result_d));
+    case 0x4000U: { // y = +-2.0
+      double sq = static_cast<double>(x) * static_cast<double>(x);
+      return fputil::cast<float16>(y_sign ? (1.0 / sq) : sq);
+    }
     }
     // TODO: Speed things up with pow(2, y) = exp2(y) and pow(10, y) = exp10(y).
-    //
+
     // pow(-1, y) for integer y
     if (x_u == FPBits::one(Sign::NEG).uintval()) {
       if (is_integer(y)) {
@@ -240,7 +242,7 @@ LIBC_INLINE float16 powf16(float16 x, float16 y) {
       return FPBits::quiet_nan().get_val();
     }
 
-    // pow(±0, y) cases
+    // pow(+-0, y) cases
     if (xbits.is_zero()) {
       if (y_sign) {
         // pow(+-0, negative) = +-inf and raise FE_DIVBYZERO
@@ -287,39 +289,25 @@ LIBC_INLINE float16 powf16(float16 x, float16 y) {
       return FPBits::quiet_nan().get_val();
     }
 
-    bool result_sign = false;
-    if (x_sign && is_integer(y)) {
+    if (x_sign)
       result_sign = is_odd_integer(y);
-    }
 
-    if (is_integer(y)) {
-      double base = x_abs.get_val();
-      double res = 1.0;
-      int yi = static_cast<int>(y_abs.get_val());
-
-      // Fast exponentiation by squaring
-      while (yi > 0) {
-        if (yi & 1)
+    if (!y_sign && is_integer(y)) {
+      int n = static_cast<int>(y_abs.get_val());
+      if (n >= 2 && n <= 7) {
+        double base = x_abs.get_val();
+        double res = 1.0;
+        if (n & 4)
           res *= base;
-        base *= base;
-        yi = yi >> 1;
-      }
+        res *= res;
+        if (n & 2)
+          res *= base;
+        res *= res;
+        if (n & 1)
+          res *= base;
 
-      if (y_sign) {
-        res = 1.0 / res;
+        return fputil::cast<float16>(result_sign ? -res : res);
       }
-
-      if (result_sign) {
-        res = -res;
-      }
-
-      if (FPBits(fputil::cast<float16>(res)).is_inf()) {
-        fputil::raise_except_if_required(FE_OVERFLOW);
-        res = result_sign ? -0x1.0p20 : 0x1.0p20;
-      }
-
-      float16 final_res = fputil::cast<float16>(res);
-      return final_res;
     }
   }
 
@@ -329,7 +317,7 @@ LIBC_INLINE float16 powf16(float16 x, float16 y) {
   // We compute log2(x) = log(x) / log(2) using a polynomial approximation.
 
   // The exponent part (m) is added later to get the final log(x).
-  FPBits x_bits(x);
+  FPBits x_bits = x_abs;
   uint16_t x_u_log = x_bits.uintval();
 
   // Extract exponent field of x.
@@ -382,31 +370,13 @@ LIBC_INLINE float16 powf16(float16 x, float16 y) {
   double y_d = fputil::cast<double>(y);
   double z = fputil::multiply_add(y_d, log2_x, y_d * extra_factor);
 
-  // Check for underflow
-  // Float16 min normal is 2^-14, smallest subnormal is 2^-24
-  if (LIBC_UNLIKELY(z < -25.0)) {
-    fputil::raise_except_if_required(FE_UNDERFLOW);
-    return result_sign ? FPBits::zero(Sign::NEG).get_val()
-                       : FPBits::zero(Sign::POS).get_val();
-  }
+  if (LIBC_UNLIKELY(z > 16.0)) // |x^y| > 2^16 -> overflow
+    return fputil::cast<float16>(result_sign ? -0x1.0p20 : 0x1.0p20);
+  if (LIBC_UNLIKELY(z < -25.0)) // |x^y| < 2^-25 -> flush to zero
+    return fputil::cast<float16>(result_sign ? -0x1.0p-30 : 0x1.0p-30);
 
-  // Check for overflow
-  // Float16 max is ~2^16
-  double result_d = 0.0;
-  if (LIBC_UNLIKELY(z > 16.0)) {
-    fputil::raise_except_if_required(FE_OVERFLOW);
-    result_d = result_sign ? -0x1.0p20 : 0x1.0p20;
-  } else {
-    result_d = exp2_range_reduced(z);
-  }
-
-  if (result_sign) {
-
-    result_d = -result_d;
-  }
-
-  float16 result = fputil::cast<float16>((result_d));
-  return result;
+  double result_d = exp2_range_reduced(z);
+  return fputil::cast<float16>(result_sign ? -result_d : result_d);
 }
 
 } // namespace math
