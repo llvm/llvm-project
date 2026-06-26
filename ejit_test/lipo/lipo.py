@@ -329,7 +329,10 @@ def doit_gc_merge(args):
     # ── 2. ld -r --gc-sections ────────────────────────────────────────────
     print("[2/3] Running ld -r --gc-sections ...", flush=True)
 
-    # EJIT API entry points as gc roots
+    # EJIT API entry points as gc roots. gc-merge runs before the business
+    # object is linked, so generated wrapper references are not visible yet.
+    # Optional roots are retained only when the input runtime defines them, so
+    # taskpool-OFF archives do not acquire unresolved taskpool symbols.
     ejit_api = [
         "ejit_init", "ejit_shutdown", "ejit_activate", "ejit_deactivate",
         "ejit_activate_all", "ejit_deactivate_all", "ejit_is_active",
@@ -339,6 +342,26 @@ def doit_gc_merge(args):
         "ejit_clear_cache", "ejit_compile_or_get", "ejit_invalidate",
         "ejit_set_compile_mode", "ejit_get_compile_mode", "ejit_get_last_error",
     ]
+    optional_api = [
+        "ejit_register_lifecycle", "ejit_register_funcindex",
+        "ejit_taskpool_compile_or_get", "ejit_taskpool_release_read",
+        "ejit_taskpool_set_instance_enabled", "ejit_taskpool_pending_count",
+        "ejit_taskpool_get_stats",
+    ]
+
+    defined = set()
+    nm_result = sp.run(["nm", "-g", "--defined-only", input_a],
+                       capture_output=True, text=True)
+    if nm_result.returncode == 0:
+        for line in nm_result.stdout.splitlines():
+            fields = line.split()
+            if fields:
+                defined.add(fields[-1])
+    retained_optional = [s for s in optional_api if s in defined]
+    ejit_api.extend(retained_optional)
+    if retained_optional:
+        print("       optional GC roots: " + ", ".join(retained_optional))
+
     u_flags = []
     for s in ejit_api:
         u_flags.extend(["-u", s])

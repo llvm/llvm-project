@@ -1,8 +1,11 @@
 //===-- EJitModuleLoader.cpp - Bitcode Lookup -----------------------------===//
 
 #include "llvm/ExecutionEngine/EJIT/EJitModuleLoader.h"
-#include "llvm/ExecutionEngine/EJIT/EJitCommon.h"
 #include "llvm/Bitcode/BitcodeReader.h"
+#include "llvm/ExecutionEngine/EJIT/EJitCommon.h"
+#include "llvm/ExecutionEngine/EJIT/EJitDiag.h"
+#include "llvm/ExecutionEngine/EJIT/EJitFuncRegistry.h"
+#include "llvm/ExecutionEngine/EJIT/EJitLifecycleRegistry.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
@@ -13,37 +16,73 @@
 using namespace llvm;
 using namespace llvm::ejit;
 
-void EJitModuleLoader::registerBitcode(const std::string &funcName,
+bool EJitModuleLoader::registerBitcode(const std::string &funcName,
                                        const uint8_t *data, size_t size) {
-  // Hash collision detection: fatal error if two different names map to
-  // the same funcIdx. 32-bit FNV-1a makes this vanishingly unlikely.
-  uint32_t idx = hashFuncName(funcName);
-  auto &entry = entriesByFuncIdx_[idx];
-  if (entry.data && entry.funcName != funcName) {
-    errs() << "EJIT PANIC: funcIdx collision — '" << funcName
-           << "' and '" << entry.funcName
-           << "' both hash to " << idx << "\n";
-    report_fatal_error("EJIT: hash collision on funcIdx, rename functions");
+  // Reject malformed payloads up front; the caller propagates the failure to
+  // ejit_init (never builds a half-registered taskpool).
+  if (!data || size == 0) {
+    EJIT_DIAG("bitcode register reject name=%s data=%p size=%zu",
+              funcName.c_str(), data, size);
+    return false;
   }
-  entry = {funcName, data, size};
+  // Dense, order-independent funcIndex assigned ONCE by name in the process-
+  // global registry. The wrapper backfills the SAME value into its per-function
+  // global, so the index it requests always selects this bitcode. Distinct
+  // names get distinct dense indices (a monotonic counter), so two functions
+  // can never alias one slot; capacity exhaustion is a clean rejection.
+  uint32_t idx = EJitFuncRegistry::instance().resolveAssign(funcName);
+  if (idx == kEJitInvalidFuncIndex) {
+    EJIT_DIAG("bitcode register reject name=%s: func index exhausted",
+              funcName.c_str());
+    return false; // funcIndex capacity exhausted.
+  }
+  auto It = entriesByFuncIdx_.find(idx);
+  if (It != entriesByFuncIdx_.end()) {
+    // An occupied slot is always the same name re-registering (the counter
+    // registry never hands two names the same index).
+    if (It->second.funcName != funcName) {
+      EJIT_DIAG("bitcode register reject name=%s idx=%u: name collision",
+                funcName.c_str(), idx);
+      return false; // defensive: unreachable with the counter registry.
+    }
+    // Same name, same payload (data ptr + size): idempotent success. A
+    // different payload is rejected (the original bitcode, funcIndex and any
+    // live cache are kept) rather than silently swapped.
+    if (It->second.data == data && It->second.size == size) {
+      EJIT_DIAG("bitcode register idempotent name=%s idx=%u", funcName.c_str(),
+                idx);
+      return true;
+    }
+    EJIT_DIAG("bitcode register reject name=%s idx=%u: payload changed",
+              funcName.c_str(), idx);
+    return false;
+  }
+  Entry E;
+  E.funcName = funcName;
+  E.data = data;
+  E.size = size;
+  entriesByFuncIdx_.emplace(idx, std::move(E));
+  EJIT_DIAG("bitcode registered name=%s idx=%u data=%p size=%zu",
+            funcName.c_str(), idx, data, size);
+  return true;
 }
 
 Expected<StringRef>
 EJitModuleLoader::getBitcodeByFuncIdx(uint32_t funcIdx) const {
-  auto it = entriesByFuncIdx_.find(funcIdx);
-  if (it == entriesByFuncIdx_.end())
-    return make_error<StringError>(
-        "No bitcode registered for funcIdx: " + std::to_string(funcIdx),
-        inconvertibleErrorCode());
-  return StringRef(reinterpret_cast<const char *>(it->second.data),
-                   it->second.size);
+  auto It = entriesByFuncIdx_.find(funcIdx);
+  if (It == entriesByFuncIdx_.end())
+    return make_error<StringError>("No bitcode registered for funcIdx: " +
+                                       std::to_string(funcIdx),
+                                   inconvertibleErrorCode());
+  const Entry &E = It->second;
+  return StringRef(reinterpret_cast<const char *>(E.data), E.size);
 }
 
 const std::string &
 EJitModuleLoader::getFuncNameByFuncIdx(uint32_t funcIdx) const {
-  auto it = entriesByFuncIdx_.find(funcIdx);
-  if (it != entriesByFuncIdx_.end())
-    return it->second.funcName;
+  auto It = entriesByFuncIdx_.find(funcIdx);
+  if (It != entriesByFuncIdx_.end())
+    return It->second.funcName;
   static const std::string empty;
   return empty;
 }
@@ -55,6 +94,11 @@ EJitModuleLoader::getOrCacheFuncMeta(uint32_t funcIdx) {
     return it->second;
 
   FuncMeta &meta = funcMetaCache_[funcIdx];
+  auto Eit = entriesByFuncIdx_.find(funcIdx);
+  if (Eit == entriesByFuncIdx_.end())
+    return meta;
+  const std::string FuncName = Eit->second.funcName;
+
   auto bitcode = getBitcodeByFuncIdx(funcIdx);
   if (!bitcode) {
     consumeError(bitcode.takeError());
@@ -62,8 +106,8 @@ EJitModuleLoader::getOrCacheFuncMeta(uint32_t funcIdx) {
   }
 
   auto Ctx = std::make_unique<LLVMContext>();
-  auto Buf = MemoryBuffer::getMemBuffer(*bitcode,
-      "meta_" + std::to_string(funcIdx) + ".bc");
+  auto Buf = MemoryBuffer::getMemBuffer(
+      *bitcode, "meta_" + std::to_string(funcIdx) + ".bc");
   auto MOrErr = parseBitcodeFile(Buf->getMemBufferRef(), *Ctx);
   if (!MOrErr) {
     consumeError(MOrErr.takeError());
@@ -71,11 +115,7 @@ EJitModuleLoader::getOrCacheFuncMeta(uint32_t funcIdx) {
   }
 
   for (Function &F : (*MOrErr)->functions()) {
-    if (F.isDeclaration())
-      continue;
-    // Precondition: detectHashCollisions() passed at init, so
-    // hashFuncName uniquely identifies this function.
-    if (hashFuncName(F.getName()) != funcIdx)
+    if (F.isDeclaration() || F.getName() != FuncName)
       continue;
 
     MDNode *MD = F.getMetadata(MD_EJIT_METADATA);
@@ -90,8 +130,16 @@ EJitModuleLoader::getOrCacheFuncMeta(uint32_t funcIdx) {
       if (!Tag || Tag->getString() != TAG_EJIT_PERIOD_ARR_IND)
         continue;
       auto *PN = dyn_cast<MDString>(Sub->getOperand(1));
-      if (PN && meta.dimCount < 4)
-        meta.periodNames[meta.dimCount++] = PN->getString().str();
+      if (PN && meta.dimCount < 4) {
+        // Read the explicit dimType slot the wrapper used, BY NAME, from the
+        // process-global lifecycle registry — the loader never re-derives or
+        // re-sorts it. Unregistered lifecycle → kEJitInvalidDimType (the
+        // compile driver then rejects the request).
+        meta.periodNames[meta.dimCount] = PN->getString().str();
+        meta.dimTypes[meta.dimCount] =
+            EJitLifecycleRegistry::instance().lookup(PN->getString());
+        ++meta.dimCount;
+      }
     }
     break;
   }

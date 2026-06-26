@@ -24,19 +24,22 @@ extern "C" {
 #endif
 
 typedef enum {
-  EJIT_REG_BITCODE      = 0,
+  EJIT_REG_BITCODE = 0,
   EJIT_REG_PERIOD_ARRAY = 1,
-  EJIT_REG_STATIC_VAR   = 2,
-  EJIT_REG_SYMBOL       = 3,
-  EJIT_REG_NONE         = 4  // sentinel
+  EJIT_REG_STATIC_VAR = 2,
+  EJIT_REG_SYMBOL = 3,
+  EJIT_REG_NONE = 4,      // sentinel (kept at 4 for table ABI stability)
+  EJIT_REG_LIFECYCLE = 5, // lifecycle dimType-slot fixup (additive)
+  EJIT_REG_FUNCINDEX = 6  // function dense-funcIndex fixup (additive)
 } ejit_reg_type_t;
 
 typedef struct {
   ejit_reg_type_t type;
-  const char *name1;       // funcName / periodName / varName / symbolName
-  const char *name2;       // varName (period/static), NULL otherwise
-  const void *ptr;         // bitcode data / baseAddr / symbol addr
-  uint64_t     size;       // bitcode size / array size / 0
+  const char
+      *name1; // funcName / periodName / varName / symbolName / lifecycleName
+  const char *name2; // varName (period/static), NULL otherwise
+  const void *ptr;   // bitcode data / baseAddr / symbol addr / &i32 slot
+  uint64_t size;     // bitcode size / array size / 0
 } ejit_reg_entry_t;
 
 #ifdef __cplusplus

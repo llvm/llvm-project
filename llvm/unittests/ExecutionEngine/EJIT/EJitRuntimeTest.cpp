@@ -1,4 +1,5 @@
-//===-- EJitRuntimeTest.cpp - EmbeddedJIT Runtime Unit Tests ---------------===//
+//===-- EJitRuntimeTest.cpp - EmbeddedJIT Runtime Unit Tests
+//---------------===//
 //
 // NOTE: To call the C API functions, we need to include the C runtime header
 // which is in the non-canonical include path. We declare the symbols we need
@@ -13,13 +14,18 @@
 #include "llvm/ExecutionEngine/EJIT/EJit.h"
 #include "llvm/ExecutionEngine/EJIT/EJitCache.h"
 #include "llvm/ExecutionEngine/EJIT/EJitCommon.h"
+#include "llvm/ExecutionEngine/EJIT/EJitFuncRegistry.h"
+#include "llvm/ExecutionEngine/EJIT/EJitLifecycleRegistry.h"
 #include "llvm/ExecutionEngine/EJIT/EJitLogger.h"
 #include "llvm/ExecutionEngine/EJIT/EJitModuleLoader.h"
-#include "llvm/ExecutionEngine/EJIT/EJitOptions.h"
 #include "llvm/ExecutionEngine/EJIT/EJitOptimizer.h"
+#include "llvm/ExecutionEngine/EJIT/EJitOptions.h"
 #include "llvm/ExecutionEngine/EJIT/EJitRegistrationStore.h"
 #include "llvm/ExecutionEngine/EJIT/EJitRuntimeState.h"
 #include "llvm/ExecutionEngine/EJIT/EJitStructFieldPass.h"
+#ifdef EJIT_SRE_TASKPOOL
+#include "llvm/ExecutionEngine/EJIT/EJitTaskPool.h"
+#endif
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
@@ -46,8 +52,8 @@ struct EJitOptimizerTestAccess : EJitOptimizer {
   using EJitOptimizer::EJitOptimizer;
   using EJitOptimizer::preReplacePeriodIndices;
   using EJitOptimizer::runInstCombine;
-  using EJitOptimizer::runStructFieldPass;
   using EJitOptimizer::runOptimizationPipeline;
+  using EJitOptimizer::runStructFieldPass;
 };
 } // namespace ejit
 } // namespace llvm
@@ -163,12 +169,16 @@ TEST(EJitRegistrationStore, ThreadSafety) {
 TEST(EJitModuleLoader, RegisterAndGetBitcode) {
   EJitModuleLoader loader;
   const uint8_t data[] = {0xAA, 0xBB, 0xCC, 0xDD};
-  loader.registerBitcode("my_func", data, sizeof(data));
+  EXPECT_TRUE(loader.registerBitcode("my_func", data, sizeof(data)));
 
-  auto result = loader.getBitcodeByFuncIdx(hashFuncName("my_func"));
+  // funcIndex is the dense index EJitFuncRegistry assigned to the name.
+  uint32_t idx = ejit::EJitFuncRegistry::instance().lookup("my_func");
+  ASSERT_NE(idx, ejit::kEJitInvalidFuncIndex);
+  auto result = loader.getBitcodeByFuncIdx(idx);
   ASSERT_TRUE(static_cast<bool>(result));
   EXPECT_EQ(result->size(), 4u);
   EXPECT_EQ((uint8_t)(*result)[0], 0xAA);
+  EXPECT_EQ(loader.getFuncNameByFuncIdx(idx), "my_func");
 }
 
 TEST(EJitModuleLoader, GetBitcodeNotFound) {
@@ -184,16 +194,84 @@ TEST(EJitModuleLoader, MultipleFunctions) {
   EJitModuleLoader loader;
   const uint8_t d1[] = {0x11};
   const uint8_t d2[] = {0x22, 0x33};
-  loader.registerBitcode("f1", d1, sizeof(d1));
-  loader.registerBitcode("f2", d2, sizeof(d2));
+  EXPECT_TRUE(loader.registerBitcode("f1", d1, sizeof(d1)));
+  EXPECT_TRUE(loader.registerBitcode("f2", d2, sizeof(d2)));
 
-  auto r1 = loader.getBitcodeByFuncIdx(hashFuncName("f1"));
+  // Each name has its own distinct dense funcIndex.
+  uint32_t i1 = ejit::EJitFuncRegistry::instance().lookup("f1");
+  uint32_t i2 = ejit::EJitFuncRegistry::instance().lookup("f2");
+  ASSERT_NE(i1, ejit::kEJitInvalidFuncIndex);
+  ASSERT_NE(i2, ejit::kEJitInvalidFuncIndex);
+  ASSERT_NE(i1, i2);
+  auto r1 = loader.getBitcodeByFuncIdx(i1);
   ASSERT_TRUE(static_cast<bool>(r1));
   EXPECT_EQ(r1->size(), 1u);
+  EXPECT_EQ(loader.getFuncNameByFuncIdx(i1), "f1");
 
-  auto r2 = loader.getBitcodeByFuncIdx(hashFuncName("f2"));
+  auto r2 = loader.getBitcodeByFuncIdx(i2);
   ASSERT_TRUE(static_cast<bool>(r2));
   EXPECT_EQ(r2->size(), 2u);
+  EXPECT_EQ(loader.getFuncNameByFuncIdx(i2), "f2");
+}
+
+TEST(EJitModuleLoader, FuncIndexIsOrderIndependent) {
+  // Two loaders (modules) registering the same names in OPPOSITE order must map
+  // each name to the SAME dense funcIndex — the registry fixes a name's index
+  // on first sight and never shifts it.
+  auto &FR = ejit::EJitFuncRegistry::instance();
+  FR.reset();
+  const uint8_t da[] = {0xA1};
+  const uint8_t db[] = {0xB2};
+  EJitModuleLoader fwd;
+  EXPECT_TRUE(fwd.registerBitcode("alpha", da, sizeof(da)));
+  EXPECT_TRUE(fwd.registerBitcode("omega", db, sizeof(db)));
+  EJitModuleLoader rev;
+  EXPECT_TRUE(rev.registerBitcode("omega", db, sizeof(db)));
+  EXPECT_TRUE(rev.registerBitcode("alpha", da, sizeof(da)));
+
+  uint32_t ia = FR.lookup("alpha");
+  uint32_t io = FR.lookup("omega");
+  ASSERT_NE(ia, ejit::kEJitInvalidFuncIndex);
+  ASSERT_NE(io, ejit::kEJitInvalidFuncIndex);
+  ASSERT_NE(ia, io);
+  EXPECT_EQ(fwd.getFuncNameByFuncIdx(ia), "alpha");
+  EXPECT_EQ(rev.getFuncNameByFuncIdx(ia), "alpha");
+  EXPECT_EQ(fwd.getFuncNameByFuncIdx(io), "omega");
+  EXPECT_EQ(rev.getFuncNameByFuncIdx(io), "omega");
+  FR.reset();
+}
+
+TEST(EJitModuleLoader, NullOrZeroPayloadRejected) {
+  EJitModuleLoader loader;
+  const uint8_t d[] = {0x10};
+  EXPECT_FALSE(loader.registerBitcode("null_fn", nullptr, sizeof(d)));
+  EXPECT_FALSE(loader.registerBitcode("zero_fn", d, 0));
+}
+
+TEST(EJitModuleLoader, SameNameSamePayloadIdempotent) {
+  EJitModuleLoader loader;
+  const uint8_t d[] = {0x10, 0x11};
+  EXPECT_TRUE(loader.registerBitcode("idem", d, sizeof(d)));
+  // Same name + same (data ptr + size): idempotent success.
+  EXPECT_TRUE(loader.registerBitcode("idem", d, sizeof(d)));
+  auto r = loader.getBitcodeByFuncIdx(
+      ejit::EJitFuncRegistry::instance().lookup("idem"));
+  ASSERT_TRUE(static_cast<bool>(r));
+  EXPECT_EQ(r->size(), 2u);
+}
+
+TEST(EJitModuleLoader, SameNameDifferentPayloadRejectedKeepsOriginal) {
+  EJitModuleLoader loader;
+  const uint8_t d1[] = {0x10};
+  const uint8_t d2[] = {0x20, 0x21};
+  EXPECT_TRUE(loader.registerBitcode("conf", d1, sizeof(d1)));
+  // Same name, DIFFERENT payload: rejected, the original is kept unchanged.
+  EXPECT_FALSE(loader.registerBitcode("conf", d2, sizeof(d2)));
+  auto r = loader.getBitcodeByFuncIdx(
+      ejit::EJitFuncRegistry::instance().lookup("conf"));
+  ASSERT_TRUE(static_cast<bool>(r));
+  EXPECT_EQ(r->size(), 1u);
+  EXPECT_EQ((uint8_t)(*r)[0], 0x10);
 }
 
 //===----------------------------------------------------------------------===//
@@ -211,10 +289,10 @@ TEST(EJitCache, BasicPutAndGet) {
 TEST(EJitCache, StatsTracking) {
   EJitCache cache(10, 1024 * 1024);
   int dummy;
-  cache.put(100, &dummy, 64 );
-  cache.getOrNull(100);  // hit
-  cache.getOrNull(100);  // hit
-  cache.getOrNull(200);  // miss
+  cache.put(100, &dummy, 64);
+  cache.getOrNull(100); // hit
+  cache.getOrNull(100); // hit
+  cache.getOrNull(200); // miss
 
   auto stats = cache.getStats();
   EXPECT_EQ(stats.entryCount, 1u);
@@ -276,14 +354,14 @@ TEST(EJitCache, PeriodicInvalidation) {
   EXPECT_EQ(cache.getOrNull(30), &dummy);
 
   cache.invalidateByPeriod("cell", 0);
-  EXPECT_EQ(cache.getOrNull(10), nullptr);  // invalidated
-  EXPECT_EQ(cache.getOrNull(20), &dummy);   // still valid (cell=1)
-  EXPECT_EQ(cache.getOrNull(30), &dummy);   // still valid (trp=0)
+  EXPECT_EQ(cache.getOrNull(10), nullptr); // invalidated
+  EXPECT_EQ(cache.getOrNull(20), &dummy);  // still valid (cell=1)
+  EXPECT_EQ(cache.getOrNull(30), &dummy);  // still valid (trp=0)
 }
 
 TEST(EJitCache, BuildCacheKey) {
-  // uint64_t key = funcIdx(32b) | dim[0](8b) | dim[1](8b) | dim[2](8b) | dim[3](8b)
-  // No dimensions → key = funcIdx << 32
+  // uint64_t key = funcIdx(32b) | dim[0](8b) | dim[1](8b) | dim[2](8b) |
+  // dim[3](8b) No dimensions → key = funcIdx << 32
   uint64_t key0 = EJitCache::buildCacheKey(7, nullptr, 0);
   EXPECT_EQ(key0, 0x0000000700000000ULL);
 
@@ -301,8 +379,8 @@ TEST(EJitCache, BuildCacheKey) {
 TEST(EJitCache, Clear) {
   EJitCache cache(10, 1024 * 1024);
   int dummy;
-  cache.put(10, &dummy, 64 );
-  cache.put(20, &dummy, 64 );
+  cache.put(10, &dummy, 64);
+  cache.put(20, &dummy, 64);
   cache.clear();
 
   EXPECT_EQ(cache.getOrNull(10), nullptr);
@@ -540,11 +618,14 @@ TEST(EJit, ConstructionAndBasicOps) {
   config.maxCacheEntries = 64;
   config.maxCacheSize = 1024 * 1024;
 
-  EJit ejit(config);
-
-  // Per-array activation model: register an array for the period first.
+  // Register the period array BEFORE construction (staged) so this works in
+  // both builds — a taskpool build freezes registration after construction.
   int tp[8];
-  ejit.registerPeriodArray("test_period", "tp", tp, 8);
+  EJitRegistrationStore::instance().consume(); // clear leftover
+  EJitRegistrationStore::instance().registerPeriodArray("test_period", "tp", tp,
+                                                        8);
+
+  EJit ejit(config);
 
   // Basic lifecycle operations should not crash
   ejit.activate("test_period", 0);
@@ -563,8 +644,8 @@ TEST(EJit, ActivateAllAndDeactivateAll) {
   // activateAll/deactivateAll know the cell range.
   int dummy[4];
   EJitRegistrationStore::instance().consume(); // clear leftover
-  EJitRegistrationStore::instance().registerPeriodArray(
-      "p1", "dummy_arr", dummy, 4);
+  EJitRegistrationStore::instance().registerPeriodArray("p1", "dummy_arr",
+                                                        dummy, 4);
 
   EJit ejit(Config{});
 
@@ -592,8 +673,18 @@ TEST(EJit, CompileMode) {
   EJit ejit(Config{});
   EXPECT_EQ(ejit.getCompileMode(), CompileMode::Sync);
 
-  ejit.setCompileMode(CompileMode::Async);
+#ifdef EJIT_SRE_TASKPOOL
+  // This test build intentionally has no usable ORC engine. Switching to Async
+  // must fail without changing the mode or starting a worker; otherwise
+  // requests could be enqueued forever with no consumer.
+  EXPECT_FALSE(ejit.setCompileMode(CompileMode::Async));
+  EXPECT_EQ(ejit.getCompileMode(), CompileMode::Sync);
+  ASSERT_NE(ejit.taskPool(), nullptr);
+  EXPECT_FALSE(ejit.taskPool()->isWorkerRunning());
+#else
+  EXPECT_TRUE(ejit.setCompileMode(CompileMode::Async));
   EXPECT_EQ(ejit.getCompileMode(), CompileMode::Async);
+#endif
 }
 
 TEST(EJit, OptimizationLevel) {
@@ -604,22 +695,97 @@ TEST(EJit, OptimizationLevel) {
   EXPECT_EQ(ejit.getOptimizationLevel(), llvm::ejit::OptimizationLevel::L3);
 }
 
+#ifdef EJIT_SRE_TASKPOOL
+TEST(EJitTaskpoolInit, SyncWithoutEngineSucceedsWithoutWorker) {
+  EJit ejit(Config{});
+  EXPECT_FALSE(ejit.initFailed());
+  EXPECT_EQ(ejit.getCompileMode(), CompileMode::Sync);
+  ASSERT_NE(ejit.taskPool(), nullptr);
+  EXPECT_FALSE(ejit.taskPool()->isWorkerRunning());
+}
+
+TEST(EJitTaskpoolInit, AsyncWithoutEngineFails) {
+  Config config;
+  config.compileMode = CompileMode::Async;
+  EJit ejit(config);
+  EXPECT_TRUE(ejit.initFailed());
+  EXPECT_TRUE(ejit.registrationFrozen());
+  ASSERT_NE(ejit.taskPool(), nullptr);
+  EXPECT_FALSE(ejit.taskPool()->isWorkerRunning());
+}
+
+// Finding (二): a constructed taskpool EJit freezes registration once its
+// constructor completes, so every runtime registration entry point returns
+// false and leaves the registry unchanged (the worker reads it lock-free).
+TEST(EJit, TaskpoolRegistrationFrozenAfterConstruction) {
+  EJit ejit(Config{});
+  ASSERT_FALSE(ejit.initFailed());
+  EXPECT_TRUE(ejit.registrationFrozen());
+
+  const uint8_t bc[] = {1, 2, 3, 4};
+  EXPECT_FALSE(ejit.registerBitcode("frozen_fn", bc, sizeof(bc)));
+  int sv = 0;
+  EXPECT_FALSE(ejit.registerStaticVar("frozen_var", &sv));
+  int arr[8];
+  EXPECT_FALSE(ejit.registerPeriodArray("frozen_period", "arr", arr, 8));
+  // Nothing was registered: the registry is unchanged.
+  EXPECT_EQ(ejit.getRegistry().getArrays("frozen_period"), nullptr);
+}
+#endif // EJIT_SRE_TASKPOOL
+
+#ifndef EJIT_SRE_TASKPOOL
+// Finding (一) non-taskpool regression: a lifecycle that owns MULTIPLE arrays
+// keeps faithful per-array semantics — an array-level op affects only the named
+// array, never the other arrays of the same period.
+TEST(EJit, MultiArrayArrayLevelOnlyAffectsTarget) {
+  EJit ejit(Config{});
+  int cellsA[8], cellsB[8];
+  // Legacy build: runtime registration is open, so register two arrays under
+  // the same period directly on this instance.
+  EXPECT_TRUE(ejit.registerPeriodArray("cell", "cellsA", cellsA, 8));
+  EXPECT_TRUE(ejit.registerPeriodArray("cell", "cellsB", cellsB, 8));
+
+  // Activate only cellsB[3]; the period reports active because cellsB is.
+  EXPECT_TRUE(ejit.activateArray("cell", cellsB, 3));
+  EXPECT_TRUE(ejit.isActive("cell", 3));
+  // Deactivating cellsA[3] must NOT touch cellsB[3] (no period-wide widening).
+  EXPECT_TRUE(ejit.deactivateArray("cell", cellsA, 3));
+  EXPECT_TRUE(ejit.isActive("cell", 3)); // cellsB still active
+  // Now deactivate cellsB[3]: the period becomes inactive.
+  EXPECT_TRUE(ejit.deactivateArray("cell", cellsB, 3));
+  EXPECT_FALSE(ejit.isActive("cell", 3));
+}
+#endif // !EJIT_SRE_TASKPOOL
+
 //===----------------------------------------------------------------------===//
 // C API tests with runtime-dynamic cellIdx (T3-21)
 //===----------------------------------------------------------------------===//
 
 extern "C" {
-  typedef enum { EJIT_OK_C = 0 } ejit_status_test_t;
-  extern ejit_status_test_t ejit_init(const void *config);
-  extern void ejit_shutdown(void);
-  extern ejit_status_test_t ejit_activate(const char *, uint8_t);
-  extern ejit_status_test_t ejit_deactivate(const char *, uint8_t);
-  extern bool ejit_is_active(const char *, uint8_t);
-  extern void ejit_invalidate(const char *, uint8_t);
-  extern void ejit_clear_cache(void);
-  extern void ejit_register_period_array(const char *, const char *, void *,
-                                         uint64_t);
+typedef enum { EJIT_OK_C = 0 } ejit_status_test_t;
+extern ejit_status_test_t ejit_init(const void *config);
+extern void ejit_shutdown(void);
+extern ejit_status_test_t ejit_activate(const char *, uint8_t);
+extern ejit_status_test_t ejit_deactivate(const char *, uint8_t);
+extern ejit_status_test_t ejit_activate_array(const char *, void *, uint8_t);
+extern ejit_status_test_t ejit_deactivate_array(const char *, void *, uint8_t);
+extern bool ejit_is_active(const char *, uint8_t);
+extern void ejit_invalidate(const char *, uint8_t);
+extern void ejit_clear_cache(void);
+extern void ejit_register_period_array(const char *, const char *, void *,
+                                       uint64_t);
+extern void ejit_register_bitcode(const char *, const uint8_t *, uint64_t);
+extern void ejit_register_static_var(const char *, void *);
+extern void ejit_register_lifecycle(const char *, uint32_t *);
 }
+
+// The "runtime-dynamic cellIdx" C-API tests below exercise the LEGACY model:
+// dynamic period-array registration AFTER ejit_init, then period-name activate.
+// In a taskpool build that model is intentionally replaced — registration is
+// frozen after init and activate is keyed on registered lifecycles — so these
+// tests run only in the non-taskpool build. Taskpool-mode equivalents (freeze,
+// lifecycle activate, array sync) live in the EJitCApiTaskpool section.
+#ifndef EJIT_SRE_TASKPOOL
 
 TEST(EJitCApi, ActivateWithDynamicCellIdx) {
   ASSERT_EQ(ejit_init(nullptr), EJIT_OK_C);
@@ -689,17 +855,17 @@ TEST(EJitCApi, MultiPeriodDynamicIndices) {
   ejit_register_period_array("cell", "cellArr", cellArr, 256);
   ejit_register_period_array("trp", "trpArr", trpArr, 256);
   uint8_t indices[] = {3, 7, 15, 31, 63};
-  for (size_t i = 0; i < sizeof(indices)/sizeof(indices[0]); i++) {
+  for (size_t i = 0; i < sizeof(indices) / sizeof(indices[0]); i++) {
     EXPECT_EQ(ejit_activate("cell", indices[i]), EJIT_OK_C);
     EXPECT_EQ(ejit_activate("trp", indices[i]), EJIT_OK_C);
   }
-  for (size_t i = 0; i < sizeof(indices)/sizeof(indices[0]); i++) {
+  for (size_t i = 0; i < sizeof(indices) / sizeof(indices[0]); i++) {
     EXPECT_TRUE(ejit_is_active("cell", indices[i]));
     EXPECT_TRUE(ejit_is_active("trp", indices[i]));
   }
-  for (size_t i = 0; i < sizeof(indices)/sizeof(indices[0]); i++)
+  for (size_t i = 0; i < sizeof(indices) / sizeof(indices[0]); i++)
     ejit_deactivate("trp", indices[i]);
-  for (size_t i = 0; i < sizeof(indices)/sizeof(indices[0]); i++) {
+  for (size_t i = 0; i < sizeof(indices) / sizeof(indices[0]); i++) {
     EXPECT_TRUE(ejit_is_active("cell", indices[i]));
     EXPECT_FALSE(ejit_is_active("trp", indices[i]));
   }
@@ -727,17 +893,237 @@ TEST(EJitCApi, ActivationCycleWithRuntimeIndex) {
   ejit_register_period_array("cycle", "arr", arr, 256);
   uint8_t workload[] = {10, 20, 30, 40, 50};
   for (size_t cycle = 0; cycle < 3; cycle++) {
-    for (size_t i = 0; i < sizeof(workload)/sizeof(workload[0]); i++)
+    for (size_t i = 0; i < sizeof(workload) / sizeof(workload[0]); i++)
       EXPECT_EQ(ejit_activate("cycle", workload[i]), EJIT_OK_C);
-    for (size_t i = 0; i < sizeof(workload)/sizeof(workload[0]); i++)
+    for (size_t i = 0; i < sizeof(workload) / sizeof(workload[0]); i++)
       EXPECT_TRUE(ejit_is_active("cycle", workload[i]));
-    for (size_t i = 0; i < sizeof(workload)/sizeof(workload[0]); i++)
+    for (size_t i = 0; i < sizeof(workload) / sizeof(workload[0]); i++)
       EXPECT_EQ(ejit_deactivate("cycle", workload[i]), EJIT_OK_C);
-    for (size_t i = 0; i < sizeof(workload)/sizeof(workload[0]); i++)
+    for (size_t i = 0; i < sizeof(workload) / sizeof(workload[0]); i++)
       EXPECT_FALSE(ejit_is_active("cycle", workload[i]));
   }
   ejit_shutdown();
 }
+
+#endif // !EJIT_SRE_TASKPOOL
+
+#ifdef EJIT_SRE_TASKPOOL
+//===----------------------------------------------------------------------===//
+// Taskpool-mode C-API: registration freeze (finding 二) + name/array control
+// plane synced to the SwitchController (findings 一/五).
+//===----------------------------------------------------------------------===//
+
+namespace {
+// Reset process-global registration state so each taskpool test starts clean:
+// no live gEJIT, no staged data, no staged error, empty name registries. This
+// is essential because the C ABI / registries are process singletons that leak
+// across tests (e.g. a frozen post-init registration records an error that a
+// later ejit_init would otherwise consume and fail on).
+void resetTaskpoolRegState() {
+  ejit_shutdown(); // drop any live runtime singleton (no-op if already null)
+  llvm::ejit::EJitLifecycleRegistry::instance().reset();
+  llvm::ejit::EJitFuncRegistry::instance().reset();
+  llvm::ejit::EJitRegistrationStore::instance().consume();
+  llvm::ejit::EJitRegistrationStore::instance().consumeError();
+}
+} // namespace
+
+// Finding (二): in a taskpool build, all registration is frozen after
+// ejit_init; post-init register_* calls are rejected and mutate nothing.
+TEST(EJitCApiTaskpool, RegistrationFrozenAfterInit) {
+  resetTaskpoolRegState();
+  ASSERT_EQ(ejit_init(nullptr), EJIT_OK_C);
+  // A period registered AFTER init is rejected (frozen): the name is therefore
+  // not a registered period, so activate cannot find it.
+  int arr[8];
+  ejit_register_period_array("post_period", "arr", arr, 8); // frozen no-op
+  EXPECT_NE(ejit_activate("post_period", 0), EJIT_OK_C);
+  EXPECT_FALSE(ejit_is_active("post_period", 0));
+  // Bitcode / static-var registration after init is likewise frozen (no crash,
+  // no mutation). The void ABI cannot return a status; the key invariant is
+  // that nothing observable changes.
+  const uint8_t bc[] = {1, 2, 3, 4};
+  ejit_register_bitcode("post_fn", bc, sizeof(bc));
+  int sv = 0;
+  ejit_register_static_var("post_var", &sv);
+  ejit_shutdown();
+}
+
+// Finding (一/五): a lifecycle registered BEFORE init (constructor-phase path)
+// drives both the time-window state and the SwitchController via the public
+// C ABI; array-level control targets exactly one (dimType, instance).
+TEST(EJitCApiTaskpool, PreInitLifecycleActivateAndArraySync) {
+  // Start from a fully clean process state so "cell" gets a deterministic slot
+  // and no leaked error sink fails ejit_init, regardless of test order.
+  resetTaskpoolRegState();
+  // Register the lifecycle + its period array BEFORE init (constructor-phase),
+  // so init consumes them and registration is consistent before the freeze.
+  uint32_t cellSlot = 0xFFFFFFFFu;
+  ejit_register_lifecycle("cell", &cellSlot);
+  ASSERT_NE(cellSlot, 0xFFFFFFFFu);
+  static int cellArr[256];
+  ejit_register_period_array("cell", "cellArr", cellArr, 256);
+  ASSERT_EQ(ejit_init(nullptr), EJIT_OK_C);
+
+  // Name-based activate/deactivate of the registered lifecycle succeeds.
+  EXPECT_EQ(ejit_activate("cell", 7), EJIT_OK_C);
+  EXPECT_TRUE(ejit_is_active("cell", 7));
+  EXPECT_EQ(ejit_deactivate("cell", 7), EJIT_OK_C);
+  EXPECT_FALSE(ejit_is_active("cell", 7));
+
+  // Array-level control: registered array + matching period.
+  EXPECT_EQ(ejit_activate_array("cell", cellArr, 5), EJIT_OK_C);
+  EXPECT_TRUE(ejit_is_active("cell", 5));
+  EXPECT_EQ(ejit_deactivate_array("cell", cellArr, 5), EJIT_OK_C);
+  EXPECT_FALSE(ejit_is_active("cell", 5));
+
+  // Unregistered array pointer, period mismatch, and unknown period all fail.
+  int stray[4];
+  EXPECT_NE(ejit_activate_array("cell", stray, 0), EJIT_OK_C);
+  EXPECT_NE(ejit_activate_array("wrong", cellArr, 0), EJIT_OK_C);
+  EXPECT_NE(ejit_deactivate_array("cell", stray, 0), EJIT_OK_C);
+  ejit_shutdown();
+}
+
+// Finding (一): array-level control through the PUBLIC EJit API on a
+// SINGLE-array lifecycle syncs the time-window state AND the taskpool
+// SwitchController; the version bumps only on a real flip. This proves the EJit
+// wiring, not just the SwitchController in isolation.
+TEST(EJitTaskpoolArray, SingleArraySyncsSwitchController) {
+  resetTaskpoolRegState();
+  uint32_t slot = 0xFFFFFFFFu;
+  ejit_register_lifecycle("cell", &slot);
+  ASSERT_NE(slot, 0xFFFFFFFFu);
+  static int cellArr[16];
+  ejit_register_period_array("cell", "cellArr", cellArr, 16); // staged
+  EJit ejit(Config{});
+  ASSERT_FALSE(ejit.initFailed());
+  EJitTaskPool *tp = ejit.taskPool();
+  ASSERT_NE(tp, nullptr);
+  uint32_t dt = EJitLifecycleRegistry::instance().lookup("cell");
+  ASSERT_NE(dt, kEJitInvalidDimType);
+  EJitSwitchController &sw = tp->switchController();
+
+  uint32_t v0 = sw.getInstanceVersion(dt, 5);
+  EXPECT_TRUE(sw.isInstanceEnabled(dt, 5)); // default enabled
+  // deactivateArray: RuntimeState inactive + SwitchController disabled + v+1.
+  EXPECT_TRUE(ejit.deactivateArray("cell", cellArr, 5));
+  EXPECT_FALSE(ejit.isActive("cell", 5));
+  EXPECT_FALSE(sw.isInstanceEnabled(dt, 5));
+  EXPECT_EQ(sw.getInstanceVersion(dt, 5), v0 + 1);
+  // activateArray: RuntimeState active + SwitchController enabled + v+1.
+  EXPECT_TRUE(ejit.activateArray("cell", cellArr, 5));
+  EXPECT_TRUE(ejit.isActive("cell", 5));
+  EXPECT_TRUE(sw.isInstanceEnabled(dt, 5));
+  EXPECT_EQ(sw.getInstanceVersion(dt, 5), v0 + 2);
+  // Redundant activate: no flip, no version bump.
+  EXPECT_TRUE(ejit.activateArray("cell", cellArr, 5));
+  EXPECT_EQ(sw.getInstanceVersion(dt, 5), v0 + 2);
+  resetTaskpoolRegState();
+}
+
+// Finding (一): a MULTI-array lifecycle cannot be expressed by
+// (dimType, instanceId), so array-level control is CLEAN-REJECTED — neither the
+// RuntimeState nor the SwitchController (nor the version) changes.
+TEST(EJitTaskpoolArray, MultiArrayCleanReject) {
+  resetTaskpoolRegState();
+  uint32_t slot = 0xFFFFFFFFu;
+  ejit_register_lifecycle("cell", &slot);
+  ASSERT_NE(slot, 0xFFFFFFFFu);
+  static int cellsA[16], cellsB[16];
+  ejit_register_period_array("cell", "cellsA", cellsA, 16);
+  ejit_register_period_array("cell", "cellsB", cellsB, 16);
+  EJit ejit(Config{});
+  ASSERT_FALSE(ejit.initFailed());
+  EJitTaskPool *tp = ejit.taskPool();
+  ASSERT_NE(tp, nullptr);
+  uint32_t dt = EJitLifecycleRegistry::instance().lookup("cell");
+  EJitSwitchController &sw = tp->switchController();
+
+  uint32_t v0 = sw.getInstanceVersion(dt, 3);
+  EXPECT_FALSE(ejit.deactivateArray("cell", cellsA, 3)); // 2 arrays -> reject
+  EXPECT_FALSE(ejit.activateArray("cell", cellsB, 3));
+  // Nothing changed anywhere.
+  EXPECT_TRUE(sw.isInstanceEnabled(dt, 3));
+  EXPECT_EQ(sw.getInstanceVersion(dt, 3), v0);
+  EXPECT_FALSE(ejit.isActive("cell", 3));
+  resetTaskpoolRegState();
+}
+
+// Finding (一): mismatched period or unregistered array pointer are rejected
+// with no state change (single-array lifecycle isolates the reject reason).
+TEST(EJitTaskpoolArray, MismatchAndUnregisteredReject) {
+  resetTaskpoolRegState();
+  uint32_t slot = 0xFFFFFFFFu;
+  ejit_register_lifecycle("cell", &slot);
+  ASSERT_NE(slot, 0xFFFFFFFFu);
+  static int cellArr[16];
+  ejit_register_period_array("cell", "cellArr", cellArr, 16);
+  EJit ejit(Config{});
+  ASSERT_FALSE(ejit.initFailed());
+  EJitTaskPool *tp = ejit.taskPool();
+  ASSERT_NE(tp, nullptr);
+  uint32_t dt = EJitLifecycleRegistry::instance().lookup("cell");
+  EJitSwitchController &sw = tp->switchController();
+  uint32_t v0 = sw.getInstanceVersion(dt, 2);
+
+  int stray[4];
+  EXPECT_FALSE(ejit.activateArray("cell", stray, 2));    // unregistered ptr
+  EXPECT_FALSE(ejit.activateArray("wrong", cellArr, 2)); // period mismatch
+  EXPECT_FALSE(ejit.deactivateArray("cell", stray, 2));
+  EXPECT_TRUE(sw.isInstanceEnabled(dt, 2));
+  EXPECT_EQ(sw.getInstanceVersion(dt, 2), v0);
+  EXPECT_FALSE(ejit.isActive("cell", 2));
+  resetTaskpoolRegState();
+}
+
+// Finding (三): any init failure (here: lifecycle-capacity exhaustion, which
+// shares the recordInitError path with a worker-start failure) drives the
+// registration phase to Failed (registrationFrozen() true), leaves the worker
+// stopped, and rejects further registration.
+TEST(EJitTaskpoolInit, InitFailureSetsFailedAndStopsWorker) {
+  resetTaskpoolRegState();
+  // Fill the 8 lifecycle slots; the 9th records a capacity error that the next
+  // construction consumes as an init failure.
+  for (uint32_t i = 0; i < kEJitMaxDimTypes; ++i) {
+    uint32_t s = 0xFFFFFFFFu;
+    ejit_register_lifecycle(("k" + std::to_string(i)).c_str(), &s);
+    ASSERT_NE(s, 0xFFFFFFFFu);
+  }
+  uint32_t s9 = 0xFFFFFFFFu;
+  ejit_register_lifecycle("k_overflow", &s9);
+  EXPECT_EQ(s9, 0xFFFFFFFFu); // 9th rejected
+
+  EJit ejit(Config{});
+  EXPECT_TRUE(ejit.initFailed());
+  // Phase Failed: registrationFrozen() is true and a fresh registration fails.
+  EXPECT_TRUE(ejit.registrationFrozen());
+  const uint8_t bc[] = {1, 2, 3};
+  EXPECT_FALSE(ejit.registerBitcode("x", bc, sizeof(bc)));
+  // The worker was never started on a failed init.
+  if (EJitTaskPool *tp = ejit.taskPool())
+    EXPECT_FALSE(tp->isWorkerRunning());
+  resetTaskpoolRegState();
+}
+
+// Finding (三): ejit_init returns failure and destroys the instance on an init
+// error; a subsequent C ABI call sees "not initialized".
+TEST(EJitCApiTaskpool, InitFailsAndDestroysOnRegistrationError) {
+  resetTaskpoolRegState();
+  for (uint32_t i = 0; i < kEJitMaxDimTypes; ++i) {
+    uint32_t s = 0xFFFFFFFFu;
+    ejit_register_lifecycle(("m" + std::to_string(i)).c_str(), &s);
+  }
+  uint32_t s9 = 0xFFFFFFFFu;
+  ejit_register_lifecycle("m_overflow", &s9);
+  EXPECT_EQ(s9, 0xFFFFFFFFu);
+
+  EXPECT_NE(ejit_init(nullptr), EJIT_OK_C);     // init fails
+  EXPECT_NE(ejit_activate("m0", 0), EJIT_OK_C); // torn down: not initialized
+  ejit_shutdown();                              // safe no-op
+  resetTaskpoolRegState();
+}
+#endif // EJIT_SRE_TASKPOOL
 
 //===----------------------------------------------------------------------===//
 // PeriodArrayRegistry::getArrayByBaseAddr tests
@@ -917,9 +1303,8 @@ static Function *createStructFieldFunc(LLVMContext &Ctx, Module &M,
 
   // Create a global array: int32_t g_arr[4]
   auto *ArrTy = ArrayType::get(Int32Ty, 4);
-  auto *GVar = new GlobalVariable(M, ArrTy, false,
-                                   GlobalValue::InternalLinkage,
-                                   ConstantAggregateZero::get(ArrTy), "g_arr");
+  auto *GVar = new GlobalVariable(M, ArrTy, false, GlobalValue::InternalLinkage,
+                                  ConstantAggregateZero::get(ArrTy), "g_arr");
 
   // Add !ejit.metadata to GVar: !g_arr = !{!"ejit_period_arr", !"cell", i32 4}
   Metadata *ArrMDOps[] = {
@@ -943,7 +1328,8 @@ static Function *createStructFieldFunc(LLVMContext &Ctx, Module &M,
   auto *Load = B.CreateLoad(Int32Ty, GEP, "load");
 
   // Add !ejit.may_const metadata to the load
-  Load->setMetadata("ejit.may_const", MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
+  Load->setMetadata("ejit.may_const",
+                    MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
 
   B.CreateRet(Load);
   return F;
@@ -1048,7 +1434,7 @@ static Function *createMultiFieldFunc(LLVMContext &Ctx, Module &M) {
 
   auto *ArrTy = ArrayType::get(Int32Ty, 4);
   auto *GVar = new GlobalVariable(M, ArrTy, false, GlobalValue::InternalLinkage,
-                                   ConstantAggregateZero::get(ArrTy), "g_arr");
+                                  ConstantAggregateZero::get(ArrTy), "g_arr");
 
   // !ejit.metadata = !{!"ejit_period_arr", !"cell", i32 4}
   Metadata *ArrOps[] = {
@@ -1060,7 +1446,8 @@ static Function *createMultiFieldFunc(LLVMContext &Ctx, Module &M) {
                     MDNode::get(Ctx, {MDNode::get(Ctx, ArrOps)}));
 
   FunctionType *FT = FunctionType::get(Int32Ty, {}, false);
-  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "multi_field", &M);
+  auto *F =
+      Function::Create(FT, GlobalValue::ExternalLinkage, "multi_field", &M);
 
   BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
   B.SetInsertPoint(BB);
@@ -1069,13 +1456,15 @@ static Function *createMultiFieldFunc(LLVMContext &Ctx, Module &M) {
   Value *I1[] = {B.getInt32(0), B.getInt64(1)};
   auto *GEP1 = B.CreateInBoundsGEP(ArrTy, GVar, I1, "elem1");
   auto *Load1 = B.CreateLoad(Int32Ty, GEP1, "val1");
-  Load1->setMetadata("ejit.may_const", MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
+  Load1->setMetadata("ejit.may_const",
+                     MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
 
   // Load from g_arr[3] (offset 12)
   Value *I3[] = {B.getInt32(0), B.getInt64(3)};
   auto *GEP3 = B.CreateInBoundsGEP(ArrTy, GVar, I3, "elem3");
   auto *Load3 = B.CreateLoad(Int32Ty, GEP3, "val3");
-  Load3->setMetadata("ejit.may_const", MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
+  Load3->setMetadata("ejit.may_const",
+                     MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
 
   auto *Sum = B.CreateAdd(Load1, Load3, "sum");
   B.CreateRet(Sum);
@@ -1089,7 +1478,7 @@ TEST(EJitStructFieldPass, MayConstLoadSubstitutionMultipleFields) {
   Function *F = createMultiFieldFunc(Ctx, *M);
   ASSERT_NE(F, nullptr);
 
-  int32_t mockArr[4] = {10, 55, 20, 66};  // g_arr[1]=55, g_arr[3]=66
+  int32_t mockArr[4] = {10, 55, 20, 66}; // g_arr[1]=55, g_arr[3]=66
 
   PeriodArrayRegistry reg;
   GlobalVariable *GV = M->getGlobalVariable("g_arr", true);
@@ -1124,13 +1513,13 @@ TEST(EJitStructFieldPass, MayConstLoadSubstitutionMultipleFields) {
 
 /// Create a function with loads from different indices into a period array.
 static Function *createNestedStructFunc(LLVMContext &Ctx, Module &M,
-                                         uint64_t arrIdx = 1) {
+                                        uint64_t arrIdx = 1) {
   IRBuilder<> B(Ctx);
   Type *Int32Ty = B.getInt32Ty();
 
   auto *ArrTy = ArrayType::get(Int32Ty, 4);
   auto *GVar = new GlobalVariable(M, ArrTy, false, GlobalValue::InternalLinkage,
-                                   ConstantAggregateZero::get(ArrTy), "g_data");
+                                  ConstantAggregateZero::get(ArrTy), "g_data");
 
   Metadata *ArrOps[] = {
       MDString::get(Ctx, TAG_EJIT_PERIOD_ARR),
@@ -1141,7 +1530,8 @@ static Function *createNestedStructFunc(LLVMContext &Ctx, Module &M,
                     MDNode::get(Ctx, {MDNode::get(Ctx, ArrOps)}));
 
   FunctionType *FT = FunctionType::get(Int32Ty, {}, false);
-  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "indexed_load", &M);
+  auto *F =
+      Function::Create(FT, GlobalValue::ExternalLinkage, "indexed_load", &M);
 
   BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
   B.SetInsertPoint(BB);
@@ -1149,7 +1539,8 @@ static Function *createNestedStructFunc(LLVMContext &Ctx, Module &M,
   Value *Indices[] = {B.getInt32(0), B.getInt64(arrIdx)};
   auto *GEP = B.CreateInBoundsGEP(ArrTy, GVar, Indices, "gep");
   auto *Load = B.CreateLoad(Int32Ty, GEP, "val");
-  Load->setMetadata("ejit.may_const", MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
+  Load->setMetadata("ejit.may_const",
+                    MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
   B.CreateRet(Load);
   return F;
 }
@@ -1161,7 +1552,7 @@ TEST(EJitStructFieldPass, MayConstLoadSubstitutionNestedStruct) {
   Function *F = createNestedStructFunc(Ctx, *M, 2);
   ASSERT_NE(F, nullptr);
 
-  int32_t mockArr[4] = {10, 20, 40, 80};  // g_data[2] = 40
+  int32_t mockArr[4] = {10, 20, 40, 80}; // g_data[2] = 40
 
   PeriodArrayRegistry reg;
   GlobalVariable *GV = M->getGlobalVariable("g_data", true);
@@ -1197,23 +1588,29 @@ static Function *createMultiArrayFunc(LLVMContext &Ctx, Module &M) {
 
   auto *ArrTy = ArrayType::get(Int32Ty, 4);
 
-  auto *GVar1 = new GlobalVariable(M, ArrTy, false, GlobalValue::InternalLinkage,
-                                    ConstantAggregateZero::get(ArrTy), "g_cells");
-  auto *GVar2 = new GlobalVariable(M, ArrTy, false, GlobalValue::InternalLinkage,
-                                    ConstantAggregateZero::get(ArrTy), "g_trps");
+  auto *GVar1 =
+      new GlobalVariable(M, ArrTy, false, GlobalValue::InternalLinkage,
+                         ConstantAggregateZero::get(ArrTy), "g_cells");
+  auto *GVar2 =
+      new GlobalVariable(M, ArrTy, false, GlobalValue::InternalLinkage,
+                         ConstantAggregateZero::get(ArrTy), "g_trps");
 
   // g_cells metadata: ejit_period_arr "cell" size 4
   Metadata *CellOps[] = {
-      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR), MDString::get(Ctx, "cell"),
+      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR),
+      MDString::get(Ctx, "cell"),
       ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 4)),
   };
-  GVar1->setMetadata(MD_EJIT_METADATA, MDNode::get(Ctx, {MDNode::get(Ctx, CellOps)}));
+  GVar1->setMetadata(MD_EJIT_METADATA,
+                     MDNode::get(Ctx, {MDNode::get(Ctx, CellOps)}));
   // g_trps metadata: ejit_period_arr "trp" size 4
   Metadata *TrpOps[] = {
-      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR), MDString::get(Ctx, "trp"),
+      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR),
+      MDString::get(Ctx, "trp"),
       ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 4)),
   };
-  GVar2->setMetadata(MD_EJIT_METADATA, MDNode::get(Ctx, {MDNode::get(Ctx, TrpOps)}));
+  GVar2->setMetadata(MD_EJIT_METADATA,
+                     MDNode::get(Ctx, {MDNode::get(Ctx, TrpOps)}));
 
   FunctionType *FT = FunctionType::get(Int32Ty, {}, false);
   auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "multi_arr", &M);
@@ -1225,13 +1622,15 @@ static Function *createMultiArrayFunc(LLVMContext &Ctx, Module &M) {
   Value *CIdx[] = {B.getInt32(0), B.getInt64(2)};
   auto *GEP1 = B.CreateInBoundsGEP(ArrTy, GVar1, CIdx, "cell_gep");
   auto *Load1 = B.CreateLoad(Int32Ty, GEP1, "cell_val");
-  Load1->setMetadata("ejit.may_const", MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
+  Load1->setMetadata("ejit.may_const",
+                     MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
 
   // Load from g_trps[3] -> trp array, index 3
   Value *TIdx[] = {B.getInt32(0), B.getInt64(3)};
   auto *GEP2 = B.CreateInBoundsGEP(ArrTy, GVar2, TIdx, "trp_gep");
   auto *Load2 = B.CreateLoad(Int32Ty, GEP2, "trp_val");
-  Load2->setMetadata("ejit.may_const", MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
+  Load2->setMetadata("ejit.may_const",
+                     MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
 
   auto *Mul = B.CreateMul(Load1, Load2, "product");
   B.CreateRet(Mul);
@@ -1245,8 +1644,8 @@ TEST(EJitStructFieldPass, MayConstLoadSubstitutionMultipleArrays) {
   Function *F = createMultiArrayFunc(Ctx, *M);
   ASSERT_NE(F, nullptr);
 
-  int32_t cellData[4] = {1, 2, 7, 4};  // g_cells[2] = 7
-  int32_t trpData[4]  = {5, 6, 7, 8};  // g_trps[3] = 8
+  int32_t cellData[4] = {1, 2, 7, 4}; // g_cells[2] = 7
+  int32_t trpData[4] = {5, 6, 7, 8};  // g_trps[3] = 8
 
   PeriodArrayRegistry reg;
   reg.registerArray("cell", "g_cells", cellData, 4);
@@ -1273,7 +1672,7 @@ TEST(EJitStructFieldPass, MayConstLoadSubstitutionMultipleArrays) {
   ASSERT_NE(Ret, nullptr);
   auto *RetVal = dyn_cast<ConstantInt>(Ret->getReturnValue());
   ASSERT_NE(RetVal, nullptr);
-  EXPECT_EQ(RetVal->getSExtValue(), 56);  // 7 * 8 = 56
+  EXPECT_EQ(RetVal->getSExtValue(), 56); // 7 * 8 = 56
 }
 
 /// Create a function with may_const loads of different types (int + float)
@@ -1286,24 +1685,31 @@ static Function *createMixedTypeFunc(LLVMContext &Ctx, Module &M) {
   auto *IntArrTy = ArrayType::get(Int32Ty, 4);
   auto *FltArrTy = ArrayType::get(FloatTy, 4);
 
-  auto *GInt = new GlobalVariable(M, IntArrTy, false, GlobalValue::InternalLinkage,
-                                   ConstantAggregateZero::get(IntArrTy), "g_ints");
-  auto *GFlt = new GlobalVariable(M, FltArrTy, false, GlobalValue::InternalLinkage,
-                                   ConstantAggregateZero::get(FltArrTy), "g_floats");
+  auto *GInt =
+      new GlobalVariable(M, IntArrTy, false, GlobalValue::InternalLinkage,
+                         ConstantAggregateZero::get(IntArrTy), "g_ints");
+  auto *GFlt =
+      new GlobalVariable(M, FltArrTy, false, GlobalValue::InternalLinkage,
+                         ConstantAggregateZero::get(FltArrTy), "g_floats");
 
   Metadata *IntOps[] = {
-      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR), MDString::get(Ctx, "ints"),
+      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR),
+      MDString::get(Ctx, "ints"),
       ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 4)),
   };
-  GInt->setMetadata(MD_EJIT_METADATA, MDNode::get(Ctx, {MDNode::get(Ctx, IntOps)}));
+  GInt->setMetadata(MD_EJIT_METADATA,
+                    MDNode::get(Ctx, {MDNode::get(Ctx, IntOps)}));
   Metadata *FltOps[] = {
-      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR), MDString::get(Ctx, "floats"),
+      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR),
+      MDString::get(Ctx, "floats"),
       ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 4)),
   };
-  GFlt->setMetadata(MD_EJIT_METADATA, MDNode::get(Ctx, {MDNode::get(Ctx, FltOps)}));
+  GFlt->setMetadata(MD_EJIT_METADATA,
+                    MDNode::get(Ctx, {MDNode::get(Ctx, FltOps)}));
 
   FunctionType *FT = FunctionType::get(Int32Ty, {}, false);
-  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "mixed_type", &M);
+  auto *F =
+      Function::Create(FT, GlobalValue::ExternalLinkage, "mixed_type", &M);
 
   BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
   B.SetInsertPoint(BB);
@@ -1312,13 +1718,15 @@ static Function *createMixedTypeFunc(LLVMContext &Ctx, Module &M) {
   Value *II[] = {B.getInt32(0), B.getInt64(0)};
   auto *GEP_i = B.CreateInBoundsGEP(IntArrTy, GInt, II, "int_elem");
   auto *LoadI = B.CreateLoad(Int32Ty, GEP_i, "int_val");
-  LoadI->setMetadata("ejit.may_const", MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
+  LoadI->setMetadata("ejit.may_const",
+                     MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
 
   // Load float from g_floats[0]
   Value *FI[] = {B.getInt32(0), B.getInt64(0)};
   auto *GEP_f = B.CreateInBoundsGEP(FltArrTy, GFlt, FI, "flt_elem");
   auto *LoadF = B.CreateLoad(FloatTy, GEP_f, "flt_val");
-  LoadF->setMetadata("ejit.may_const", MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
+  LoadF->setMetadata("ejit.may_const",
+                     MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
 
   auto *FToI = B.CreateFPToSI(LoadF, Int32Ty, "ftoi");
   auto *Sum = B.CreateAdd(LoadI, FToI, "sum");
@@ -1374,14 +1782,16 @@ TEST(EJitStructFieldPass, MayConstLoadSubstitutionIntFloat) {
 static Function *createMultiDimArrayFunc(LLVMContext &Ctx, Module &M) {
   IRBuilder<> B(Ctx);
   Type *Int32Ty = B.getInt32Ty();
-  auto *InnerTy = ArrayType::get(Int32Ty, 8);   // [8 x i32]
-  auto *OuterTy = ArrayType::get(InnerTy, 4);    // [4 x [8 x i32]]
+  auto *InnerTy = ArrayType::get(Int32Ty, 8); // [8 x i32]
+  auto *OuterTy = ArrayType::get(InnerTy, 4); // [4 x [8 x i32]]
 
-  auto *GVar = new GlobalVariable(M, OuterTy, false, GlobalValue::InternalLinkage,
-                                   ConstantAggregateZero::get(OuterTy), "g_2d");
+  auto *GVar =
+      new GlobalVariable(M, OuterTy, false, GlobalValue::InternalLinkage,
+                         ConstantAggregateZero::get(OuterTy), "g_2d");
 
   Metadata *ArrOps[] = {
-      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR), MDString::get(Ctx, "cell"),
+      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR),
+      MDString::get(Ctx, "cell"),
       ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 4)),
   };
   GVar->setMetadata(MD_EJIT_METADATA,
@@ -1397,7 +1807,8 @@ static Function *createMultiDimArrayFunc(LLVMContext &Ctx, Module &M) {
   Value *Indices[] = {B.getInt32(0), B.getInt64(1), B.getInt64(2)};
   auto *GEP = B.CreateInBoundsGEP(OuterTy, GVar, Indices, "gep_2d");
   auto *Load = B.CreateLoad(Int32Ty, GEP, "val_2d");
-  Load->setMetadata("ejit.may_const", MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
+  Load->setMetadata("ejit.may_const",
+                    MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
   B.CreateRet(Load);
   return F;
 }
@@ -1412,10 +1823,10 @@ TEST(EJitStructFieldPass, MayConstLoadSubstitutionMultiDimArray) {
   // 2D mock: [4][8] int32
   // g_2d[1][2] = element at row 1, col 2 = offset 1*8*4 + 2*4 = 40 bytes
   int32_t mock2D[4][8] = {
-    { 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 99, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0 },
+      {0, 0, 0, 0, 0, 0, 0, 0},
+      {0, 0, 99, 0, 0, 0, 0, 0},
+      {0, 0, 0, 0, 0, 0, 0, 0},
+      {0, 0, 0, 0, 0, 0, 0, 0},
   };
 
   PeriodArrayRegistry reg;
@@ -1499,11 +1910,13 @@ TEST(EJitStructFieldPass, SpuriousMetadataOnNonPeriodGVNoReplace) {
   Type *Int32Ty = B.getInt32Ty();
   auto *ArrTy = ArrayType::get(Int32Ty, 4);
   // No !ejit.metadata on this global — it is not a period variable.
-  auto *GVar = new GlobalVariable(*M, ArrTy, false, GlobalValue::InternalLinkage,
-                                  ConstantAggregateZero::get(ArrTy), "g_plain");
+  auto *GVar =
+      new GlobalVariable(*M, ArrTy, false, GlobalValue::InternalLinkage,
+                         ConstantAggregateZero::get(ArrTy), "g_plain");
 
   FunctionType *FT = FunctionType::get(Int32Ty, {}, false);
-  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "spurious", M.get());
+  auto *F =
+      Function::Create(FT, GlobalValue::ExternalLinkage, "spurious", M.get());
   BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
   B.SetInsertPoint(BB);
   Value *Idx[] = {B.getInt32(0), B.getInt64(2)};
@@ -1539,22 +1952,24 @@ TEST(EJitStructFieldPass, MissingPerLoadMetadataGVOffsetFallback) {
   IRBuilder<> B(Ctx);
   Type *Int32Ty = B.getInt32Ty();
   auto *ArrTy = ArrayType::get(Int32Ty, 4);
-  auto *GVar = new GlobalVariable(*M, ArrTy, false, GlobalValue::InternalLinkage,
-                                  ConstantAggregateZero::get(ArrTy), "g_arr");
+  auto *GVar =
+      new GlobalVariable(*M, ArrTy, false, GlobalValue::InternalLinkage,
+                         ConstantAggregateZero::get(ArrTy), "g_arr");
   // GV metadata: ejit_period_arr "cell" size 4 + ejit_may_const_field offset 8
   // (offset 8 == element index 2 for i32[4]).
-  Metadata *ArrOps[] = {
-      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR), MDString::get(Ctx, "cell"),
-      ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 4))};
+  Metadata *ArrOps[] = {MDString::get(Ctx, TAG_EJIT_PERIOD_ARR),
+                        MDString::get(Ctx, "cell"),
+                        ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 4))};
   Metadata *FieldOps[] = {
       MDString::get(Ctx, TAG_EJIT_MAY_CONST_FIELD),
       ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 8))};
-  GVar->setMetadata(MD_EJIT_METADATA,
-                    MDNode::get(Ctx, {MDNode::get(Ctx, ArrOps),
-                                      MDNode::get(Ctx, FieldOps)}));
+  GVar->setMetadata(
+      MD_EJIT_METADATA,
+      MDNode::get(Ctx, {MDNode::get(Ctx, ArrOps), MDNode::get(Ctx, FieldOps)}));
 
   FunctionType *FT = FunctionType::get(Int32Ty, {}, false);
-  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "fallback", M.get());
+  auto *F =
+      Function::Create(FT, GlobalValue::ExternalLinkage, "fallback", M.get());
   BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
   B.SetInsertPoint(BB);
   Value *Idx[] = {B.getInt32(0), B.getInt64(2)};
@@ -1563,7 +1978,7 @@ TEST(EJitStructFieldPass, MissingPerLoadMetadataGVOffsetFallback) {
   auto *Load = B.CreateLoad(Int32Ty, GEP, "load");
   B.CreateRet(Load);
 
-  int32_t mockArr[4] = {10, 20, 30, 40};  // g_arr[2] = 30
+  int32_t mockArr[4] = {10, 20, 30, 40}; // g_arr[2] = 30
   PeriodArrayRegistry reg;
   reg.registerArray("cell", "g_arr", mockArr, 4);
 
@@ -1591,24 +2006,26 @@ TEST(EJitStructFieldPass, MissingPerLoadMetadataWrongOffsetNoReplace) {
   IRBuilder<> B(Ctx);
   Type *Int32Ty = B.getInt32Ty();
   auto *ArrTy = ArrayType::get(Int32Ty, 4);
-  auto *GVar = new GlobalVariable(*M, ArrTy, false, GlobalValue::InternalLinkage,
-                                  ConstantAggregateZero::get(ArrTy), "g_arr");
+  auto *GVar =
+      new GlobalVariable(*M, ArrTy, false, GlobalValue::InternalLinkage,
+                         ConstantAggregateZero::get(ArrTy), "g_arr");
   // may_const_field offset list contains only 0; the load below is at offset 8.
-  Metadata *ArrOps[] = {
-      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR), MDString::get(Ctx, "cell"),
-      ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 4))};
+  Metadata *ArrOps[] = {MDString::get(Ctx, TAG_EJIT_PERIOD_ARR),
+                        MDString::get(Ctx, "cell"),
+                        ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 4))};
   Metadata *FieldOps[] = {
       MDString::get(Ctx, TAG_EJIT_MAY_CONST_FIELD),
       ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 0))};
-  GVar->setMetadata(MD_EJIT_METADATA,
-                    MDNode::get(Ctx, {MDNode::get(Ctx, ArrOps),
-                                      MDNode::get(Ctx, FieldOps)}));
+  GVar->setMetadata(
+      MD_EJIT_METADATA,
+      MDNode::get(Ctx, {MDNode::get(Ctx, ArrOps), MDNode::get(Ctx, FieldOps)}));
 
   FunctionType *FT = FunctionType::get(Int32Ty, {}, false);
-  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "no_fallback", M.get());
+  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "no_fallback",
+                             M.get());
   BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
   B.SetInsertPoint(BB);
-  Value *Idx[] = {B.getInt32(0), B.getInt64(2)};  // offset 8, not in {0}
+  Value *Idx[] = {B.getInt32(0), B.getInt64(2)}; // offset 8, not in {0}
   auto *GEP = B.CreateInBoundsGEP(ArrTy, GVar, Idx, "gep");
   auto *Load = B.CreateLoad(Int32Ty, GEP, "load");
   B.CreateRet(Load);
@@ -1622,7 +2039,8 @@ TEST(EJitStructFieldPass, MissingPerLoadMetadataWrongOffsetNoReplace) {
   sp.initFromModule(*M);
   auto PA = sp.run(*F, H.FAM);
 
-  // Offset 8 is not a may_const field → load stays, AOT value is read at runtime.
+  // Offset 8 is not a may_const field → load stays, AOT value is read at
+  // runtime.
   EXPECT_EQ(countLoads(*F), 1u);
   EXPECT_TRUE(PA.areAllPreserved());
 }
@@ -1638,15 +2056,18 @@ TEST(EJitStructFieldPass, MultipleLoadsSameFieldAllReplaced) {
   IRBuilder<> B(Ctx);
   Type *Int32Ty = B.getInt32Ty();
   auto *ArrTy = ArrayType::get(Int32Ty, 4);
-  auto *GVar = new GlobalVariable(*M, ArrTy, false, GlobalValue::InternalLinkage,
-                                  ConstantAggregateZero::get(ArrTy), "g_arr");
-  Metadata *ArrOps[] = {
-      MDString::get(Ctx, TAG_EJIT_PERIOD_ARR), MDString::get(Ctx, "cell"),
-      ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 4))};
-  GVar->setMetadata(MD_EJIT_METADATA, MDNode::get(Ctx, {MDNode::get(Ctx, ArrOps)}));
+  auto *GVar =
+      new GlobalVariable(*M, ArrTy, false, GlobalValue::InternalLinkage,
+                         ConstantAggregateZero::get(ArrTy), "g_arr");
+  Metadata *ArrOps[] = {MDString::get(Ctx, TAG_EJIT_PERIOD_ARR),
+                        MDString::get(Ctx, "cell"),
+                        ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 4))};
+  GVar->setMetadata(MD_EJIT_METADATA,
+                    MDNode::get(Ctx, {MDNode::get(Ctx, ArrOps)}));
 
   FunctionType *FT = FunctionType::get(Int32Ty, {}, false);
-  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "dup_load", M.get());
+  auto *F =
+      Function::Create(FT, GlobalValue::ExternalLinkage, "dup_load", M.get());
   BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
   B.SetInsertPoint(BB);
 
@@ -1660,7 +2081,7 @@ TEST(EJitStructFieldPass, MultipleLoadsSameFieldAllReplaced) {
   L2->setMetadata(MD_EJIT_MAY_CONST, MDNode::get(Ctx, {}));
   B.CreateRet(B.CreateAdd(L1, L2, "sum"));
 
-  int32_t mockArr[4] = {10, 55, 30, 40};  // g_arr[1] = 55
+  int32_t mockArr[4] = {10, 55, 30, 40}; // g_arr[1] = 55
   PeriodArrayRegistry reg;
   reg.registerArray("cell", "g_arr", mockArr, 4);
 
@@ -1708,8 +2129,9 @@ static Function *createMultiDimFunc(LLVMContext &Ctx, Module &M) {
       MDString::get(Ctx, "trp"),
       ConstantAsMetadata::get(ConstantInt::get(Int32Ty, 1)),
   };
-  F->setMetadata(MD_EJIT_METADATA,
-                 MDNode::get(Ctx, {MDNode::get(Ctx, CellOps), MDNode::get(Ctx, TrpOps)}));
+  F->setMetadata(
+      MD_EJIT_METADATA,
+      MDNode::get(Ctx, {MDNode::get(Ctx, CellOps), MDNode::get(Ctx, TrpOps)}));
 
   BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
   B.SetInsertPoint(BB);
@@ -1758,7 +2180,8 @@ TEST(EJitOptimizer, PreReplacePeriodIndicesMultiDim) {
 static Function *createDeadCodeFunc(LLVMContext &Ctx, Module &M) {
   IRBuilder<> B(Ctx);
   FunctionType *FT = FunctionType::get(B.getInt32Ty(), {}, false);
-  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "dead_code_fn", &M);
+  auto *F =
+      Function::Create(FT, GlobalValue::ExternalLinkage, "dead_code_fn", &M);
 
   BasicBlock *BB = BasicBlock::Create(Ctx, "entry", F);
   B.SetInsertPoint(BB);
@@ -1800,7 +2223,8 @@ static Function *createInlineCandidate(LLVMContext &Ctx, Module &M) {
 
   // Callee: int callee(int x) { return x + 1; }
   FunctionType *CalleeFT = FunctionType::get(Int32Ty, {Int32Ty}, false);
-  auto *Callee = Function::Create(CalleeFT, GlobalValue::InternalLinkage, "callee", &M);
+  auto *Callee =
+      Function::Create(CalleeFT, GlobalValue::InternalLinkage, "callee", &M);
   Callee->addFnAttr(Attribute::AlwaysInline);
   {
     BasicBlock *BB = BasicBlock::Create(Ctx, "entry", Callee);
@@ -1811,7 +2235,8 @@ static Function *createInlineCandidate(LLVMContext &Ctx, Module &M) {
 
   // Caller: int caller() { return callee(41); }
   FunctionType *FT = FunctionType::get(Int32Ty, {}, false);
-  auto *Caller = Function::Create(FT, GlobalValue::ExternalLinkage, "caller", &M);
+  auto *Caller =
+      Function::Create(FT, GlobalValue::ExternalLinkage, "caller", &M);
   {
     BasicBlock *BB = BasicBlock::Create(Ctx, "entry", Caller);
     B.SetInsertPoint(BB);
@@ -1912,14 +2337,15 @@ static Function *createBranchOnMayConstFunc(LLVMContext &Ctx, Module &M) {
   auto *Int32Ty = B.getInt32Ty();
   auto *STy = StructType::create(Ctx, {Int32Ty}, "BranchCfg");
 
-  auto *GVar = new GlobalVariable(M, STy, false, GlobalValue::InternalLinkage,
-                                   ConstantStruct::get(STy, ConstantInt::get(Int32Ty, 0)),
-                                   "g_branch_cfg");
+  auto *GVar = new GlobalVariable(
+      M, STy, false, GlobalValue::InternalLinkage,
+      ConstantStruct::get(STy, ConstantInt::get(Int32Ty, 0)), "g_branch_cfg");
   Metadata *PeriodOps[] = {
       MDString::get(Ctx, TAG_EJIT_PERIOD),
       MDString::get(Ctx, "static"),
   };
-  GVar->setMetadata(MD_EJIT_METADATA, MDNode::get(Ctx, {MDNode::get(Ctx, PeriodOps)}));
+  GVar->setMetadata(MD_EJIT_METADATA,
+                    MDNode::get(Ctx, {MDNode::get(Ctx, PeriodOps)}));
 
   FunctionType *FT = FunctionType::get(Int32Ty, {}, false);
   auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "branch_fn", &M);
@@ -1933,7 +2359,8 @@ static Function *createBranchOnMayConstFunc(LLVMContext &Ctx, Module &M) {
   Value *I0[] = {B.getInt32(0), B.getInt32(0)};
   auto *GEP = B.CreateInBoundsGEP(STy, GVar, I0, "cfg_gep");
   auto *Load = B.CreateLoad(Int32Ty, GEP, "cfg_val");
-  Load->setMetadata("ejit.may_const", MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
+  Load->setMetadata("ejit.may_const",
+                    MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
   auto *Cmp = B.CreateICmpNE(Load, B.getInt32(0), "is_set");
   B.CreateCondBr(Cmp, ThenBB, ElseBB);
 
@@ -1958,7 +2385,9 @@ TEST(EJitEndToEnd, BranchFolding) {
   ASSERT_NE(F, nullptr);
 
   // Mock memory: field value = 1 (non-zero, so "then" branch taken)
-  struct MockCfg { int32_t val; };
+  struct MockCfg {
+    int32_t val;
+  };
   MockCfg mock = {1};
 
   PeriodArrayRegistry reg;
@@ -2007,7 +2436,7 @@ TEST(EJitEndToEnd, MultiPeriodSpecialization) {
   Function *F1 = createMultiArrayFunc(Ctx1, *M1);
 
   int32_t cellA[4] = {1, 10, 20, 30};
-  int32_t trpA[4]  = {100, 200, 300, 400};
+  int32_t trpA[4] = {100, 200, 300, 400};
 
   PeriodArrayRegistry reg;
   reg.registerArray("cell", "g_cells", cellA, 4);
@@ -2046,7 +2475,7 @@ TEST(EJitEndToEnd, MultiPeriodSpecialization) {
   Function *F2 = createMultiArrayFunc(Ctx2, *M2);
 
   int32_t cellB[4] = {5, 5, 5, 5}; // g_cells[2] = 5
-  int32_t trpB[4]  = {0, 0, 0, 6}; // g_trps[3] = 6
+  int32_t trpB[4] = {0, 0, 0, 6};  // g_trps[3] = 6
 
   PeriodArrayRegistry reg2;
   reg2.registerArray("cell", "g_cells", cellB, 4);
@@ -2095,8 +2524,8 @@ TEST(EJitEndToEnd, CacheInvalidation) {
   EXPECT_NE(cache.getOrNull(1002), nullptr);
   EXPECT_NE(cache.getOrNull(1003), nullptr);
 
-  // Invalidate cell=1: should remove key_a (cell=1,trp=2) and key_c (cell=1,carrier=5)
-  // but NOT key_b (cell=3,slice=0)
+  // Invalidate cell=1: should remove key_a (cell=1,trp=2) and key_c
+  // (cell=1,carrier=5) but NOT key_b (cell=3,slice=0)
   cache.invalidateByPeriod("cell", 1);
 
   EXPECT_EQ(cache.getOrNull(1001), nullptr);
@@ -2104,7 +2533,7 @@ TEST(EJitEndToEnd, CacheInvalidation) {
   EXPECT_EQ(cache.getOrNull(1003), nullptr);
 
   auto stats = cache.getStats();
-  EXPECT_EQ(stats.entryCount, 1u);  // only key_b remains
+  EXPECT_EQ(stats.entryCount, 1u); // only key_b remains
 }
 
 //===----------------------------------------------------------------------===//
@@ -2112,17 +2541,20 @@ TEST(EJitEndToEnd, CacheInvalidation) {
 //===----------------------------------------------------------------------===//
 
 /// Create IR matching the process_board trace test pattern:
-///   if (g_cfg.field0 == 1) { g_cfg.field1 = 100; } else { g_cfg.field1 = 200; }
-/// After StructField, the branch on field0 should fold, eliminating the dead path.
+///   if (g_cfg.field0 == 1) { g_cfg.field1 = 100; } else { g_cfg.field1 = 200;
+///   }
+/// After StructField, the branch on field0 should fold, eliminating the dead
+/// path.
 static Function *createBranchOnFieldFunc(LLVMContext &Ctx, Module &M) {
   IRBuilder<> B(Ctx);
   auto *Int32Ty = B.getInt32Ty();
   auto *STy = StructType::create(Ctx, {Int32Ty, Int32Ty}, "Cfg");
 
-  auto *GV = new GlobalVariable(M, STy, false, GlobalValue::InternalLinkage,
-                                 ConstantStruct::get(STy, ConstantInt::get(Int32Ty, 0),
-                                                     ConstantInt::get(Int32Ty, 0)),
-                                 "g_cfg");
+  auto *GV =
+      new GlobalVariable(M, STy, false, GlobalValue::InternalLinkage,
+                         ConstantStruct::get(STy, ConstantInt::get(Int32Ty, 0),
+                                             ConstantInt::get(Int32Ty, 0)),
+                         "g_cfg");
   Metadata *PeriodOps[] = {
       MDString::get(Ctx, "ejit_period"),
       MDString::get(Ctx, "static"),
@@ -2131,7 +2563,8 @@ static Function *createBranchOnFieldFunc(LLVMContext &Ctx, Module &M) {
                   MDNode::get(Ctx, {MDNode::get(Ctx, PeriodOps)}));
 
   FunctionType *FT = FunctionType::get(Type::getVoidTy(Ctx), {}, false);
-  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "process_data", &M);
+  auto *F =
+      Function::Create(FT, GlobalValue::ExternalLinkage, "process_data", &M);
 
   auto *Entry = BasicBlock::Create(Ctx, "entry", F);
   auto *ThenBB = BasicBlock::Create(Ctx, "then", F);
@@ -2142,7 +2575,8 @@ static Function *createBranchOnFieldFunc(LLVMContext &Ctx, Module &M) {
   Value *I0[] = {B.getInt32(0), B.getInt32(0)};
   auto *GEP_f0 = B.CreateInBoundsGEP(STy, GV, I0, "field0");
   auto *Load = B.CreateLoad(Int32Ty, GEP_f0, "load_field0");
-  Load->setMetadata("ejit.may_const", MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
+  Load->setMetadata("ejit.may_const",
+                    MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
   auto *Cmp = B.CreateICmpEQ(Load, B.getInt32(1), "cmp");
   B.CreateCondBr(Cmp, ThenBB, ElseBB);
 
@@ -2178,7 +2612,10 @@ TEST(EJitPipelineIR, BranchFoldingOnMayConst) {
   EXPECT_GE(brBefore, 1);
 
   // Mock: field0 = 1
-  struct MockCfg { int32_t f0; int32_t f1; };
+  struct MockCfg {
+    int32_t f0;
+    int32_t f1;
+  };
   MockCfg mock = {1, 0};
 
   PeriodArrayRegistry reg;
@@ -2233,7 +2670,7 @@ static Function *createCellProcessFunc(LLVMContext &Ctx, Module &M) {
   auto *ArrTy = ArrayType::get(STy, 4);
 
   auto *GV = new GlobalVariable(M, ArrTy, false, GlobalValue::InternalLinkage,
-                                 ConstantAggregateZero::get(ArrTy), "g_cells");
+                                ConstantAggregateZero::get(ArrTy), "g_cells");
   Metadata *ArrOps[] = {
       MDString::get(Ctx, TAG_EJIT_PERIOD_ARR),
       MDString::get(Ctx, "cell"),
@@ -2244,7 +2681,8 @@ static Function *createCellProcessFunc(LLVMContext &Ctx, Module &M) {
 
   // Function: void process_cell(i32 cell_idx) — ejit_period_arr_ind on arg 0
   FunctionType *FT = FunctionType::get(Type::getVoidTy(Ctx), {Int32Ty}, false);
-  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "process_cell", &M);
+  auto *F =
+      Function::Create(FT, GlobalValue::ExternalLinkage, "process_cell", &M);
   F->getArg(0)->setName("cell_idx");
 
   // Attach ejit_period_arr_ind metadata on arg 0
@@ -2259,14 +2697,16 @@ static Function *createCellProcessFunc(LLVMContext &Ctx, Module &M) {
   auto *Entry = BasicBlock::Create(Ctx, "entry", F);
   auto *ThenBB = BasicBlock::Create(Ctx, "then", F);
   auto *ElseBB = BasicBlock::Create(Ctx, "else", F);
-  auto *Merge  = BasicBlock::Create(Ctx, "merge", F);
+  auto *Merge = BasicBlock::Create(Ctx, "merge", F);
 
   B.SetInsertPoint(Entry);
-  // Load field 0 at cell_idx: gep %STy, %ArrTy* @g_cells, i32 0, i64 %cell_idx, i32 0
+  // Load field 0 at cell_idx: gep %STy, %ArrTy* @g_cells, i32 0, i64 %cell_idx,
+  // i32 0
   Value *Idx_f0[] = {B.getInt32(0), F->getArg(0), B.getInt32(0)};
   auto *GEP_f0 = B.CreateInBoundsGEP(ArrTy, GV, Idx_f0, "cell_f0");
   auto *Load = B.CreateLoad(Int32Ty, GEP_f0, "load_f0");
-  Load->setMetadata("ejit.may_const", MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
+  Load->setMetadata("ejit.may_const",
+                    MDNode::get(Ctx, MDString::get(Ctx, "ejit")));
   auto *Cmp = B.CreateICmpEQ(Load, B.getInt32(253), "cmp"); // 0xFD = 253
   B.CreateCondBr(Cmp, ThenBB, ElseBB);
 
@@ -2299,7 +2739,10 @@ TEST(EJitPipelineIR, CellProcessBranchFolding) {
   ASSERT_NE(F, nullptr);
 
   // Mock: g_cells[0].field0 = 0xFD (253), g_cells[0].field1 = 0
-  struct MockCell { int32_t f0; int32_t f1; };
+  struct MockCell {
+    int32_t f0;
+    int32_t f1;
+  };
   MockCell mockArr[4] = {{253, 0}, {0, 0}, {0, 0}, {0, 0}};
 
   PeriodArrayRegistry reg;
@@ -2351,7 +2794,8 @@ TEST(EJitPipelineIR, CellProcessBranchFolding) {
     if (BI && BI->isConditional())
       ++condBr;
   }
-  EXPECT_EQ(condBr, 0) << "Conditional branch on may_const field should be folded";
+  EXPECT_EQ(condBr, 0)
+      << "Conditional branch on may_const field should be folded";
 }
 
 /// Verify InstCombine runs correctly after period index replacement
@@ -2366,7 +2810,8 @@ TEST(EJitPipelineIR, PeriodIndexReplacementAndFold) {
   auto *Int32Ty = B.getInt32Ty();
 
   FunctionType *FT = FunctionType::get(Int32Ty, {Int32Ty}, false);
-  auto *F = Function::Create(FT, GlobalValue::ExternalLinkage, "test_fn", M.get());
+  auto *F =
+      Function::Create(FT, GlobalValue::ExternalLinkage, "test_fn", M.get());
   F->getArg(0)->setName("period_idx");
 
   Metadata *IndOps[] = {
@@ -2427,7 +2872,7 @@ TEST(EJitCacheLifecycle, MissAfterEviction) {
   int a, b, c;
   cache.put(10, &a, 1);
   cache.put(20, &b, 1);
-  cache.put(30, &c, 1);  // should evict 'a'
+  cache.put(30, &c, 1); // should evict 'a'
   EXPECT_EQ(cache.getOrNull(10), nullptr);
   EXPECT_NE(cache.getOrNull(30), nullptr);
 }
@@ -2453,5 +2898,3 @@ TEST(EJitCacheLifecycle, ReputAfterInvalidate) {
   cache.put(777, &newVal, 64, deps);
   EXPECT_EQ(cache.getOrNull(777), &newVal);
 }
-
-

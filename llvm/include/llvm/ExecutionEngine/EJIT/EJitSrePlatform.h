@@ -30,6 +30,16 @@ namespace ejit {
 /// link-safe no-op-seal / aligned-host-alloc manager (see EJitSrePlatform.cpp).
 std::unique_ptr<EJitCodePoolManager> makeSreCodePoolManager();
 
+/// Install execute permission for the legacy 2MiB code pool containing
+/// \p FnPtr in the calling core's translation context. This is intentionally a
+/// per-core operation: another core sealing the same VA does not imply that
+/// this core's stage-1 mapping is executable.
+///
+/// Returns false when execute permission is unavailable or when 4K page-seal
+/// mode is selected (a bare function pointer does not carry the full code
+/// extent needed to seal every covered 4K page).
+bool prepareSreCodeForCurrentCore(const void *FnPtr);
+
 } // namespace ejit
 } // namespace llvm
 

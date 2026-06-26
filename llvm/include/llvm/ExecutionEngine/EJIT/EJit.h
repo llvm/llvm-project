@@ -22,6 +22,8 @@ namespace ejit {
 
 class EJitCompileDriver;
 class EJitLogger;
+class EJitTaskPool;
+class EJitSharedTaskPool;
 
 /// Main user-facing class for EmbeddedJIT. Owns all runtime components.
 class EJit {
@@ -29,16 +31,23 @@ public:
   EJit(const Config &config = {});
   ~EJit();
 
-  // Lifecycle — period-level (fans out to all arrays under periodName)
-  void activate(const std::string &periodName, uint8_t cellIdx);
-  void deactivate(const std::string &periodName, uint8_t cellIdx);
+  // Lifecycle — period-level (fans out to all arrays under periodName).
+  // Returns false only in a taskpool build when periodName is not a registered
+  // lifecycle (no state is changed); always true in the legacy build.
+  bool activate(const std::string &periodName, uint8_t cellIdx);
+  bool deactivate(const std::string &periodName, uint8_t cellIdx);
 
-  // Lifecycle — array-level (single array only)
-  void activateArray(void *arrayPtr, uint8_t cellIdx);
-  void deactivateArray(void *arrayPtr, uint8_t cellIdx);
+  // Lifecycle — array-level (single array only). Validates that arrayPtr is a
+  // registered period array whose period matches periodName; in a taskpool
+  // build it also requires a registered lifecycle and syncs the taskpool
+  // SwitchController. Returns false (changing no state) on any mismatch.
+  bool activateArray(const std::string &periodName, void *arrayPtr,
+                     uint8_t cellIdx);
+  bool deactivateArray(const std::string &periodName, void *arrayPtr,
+                       uint8_t cellIdx);
 
-  void activateAll(const std::string &periodName);
-  void deactivateAll(const std::string &periodName);
+  bool activateAll(const std::string &periodName);
+  bool deactivateAll(const std::string &periodName);
   bool isActive(const std::string &periodName, uint8_t cellIdx) const;
 
   // Compilation
@@ -52,7 +61,10 @@ public:
   void invalidateAllByPeriod(const std::string &periodName);
 
   // Configuration
-  void setCompileMode(CompileMode mode);
+  /// Change compile mode. In a taskpool build, switching to Async requires a
+  /// ready ORC engine and a successfully started worker; on failure the current
+  /// mode is preserved and false is returned.
+  bool setCompileMode(CompileMode mode);
   CompileMode getCompileMode() const;
   void setOptimizationLevel(OptimizationLevel level);
   OptimizationLevel getOptimizationLevel() const;
@@ -64,21 +76,55 @@ public:
   /// Manual registration of bitcode / period arrays / static vars.
   /// These can be called after ejit_init() to register data at runtime
   /// (bare-metal friendly, avoiding global constructors).
-  void registerBitcode(const std::string &funcName,
-                       const uint8_t *data, size_t size);
-  void registerPeriodArray(const std::string &periodName,
-                           const std::string &varName,
-                           void *baseAddr, uint64_t arraySize);
-  void registerStaticVar(const std::string &varName, void *varAddr);
+  /// registerBitcode returns false on a null/zero payload, funcIndex capacity
+  /// exhaustion, or a same-name re-registration with a different payload. In a
+  /// taskpool build, all three reject once registration is frozen (after
+  /// ejit_init) so the running worker never races a registry write.
+  bool registerBitcode(const std::string &funcName, const uint8_t *data,
+                       size_t size);
+  bool registerPeriodArray(const std::string &periodName,
+                           const std::string &varName, void *baseAddr,
+                           uint64_t arraySize);
+  bool registerStaticVar(const std::string &varName, void *varAddr);
 
   // Registry access (for C API validation)
-  const PeriodArrayRegistry &getRegistry() const { return runtimeState_->getRegistry(); }
+  const PeriodArrayRegistry &getRegistry() const {
+    return runtimeState_->getRegistry();
+  }
 
   // Statistics
   EJitCache::Stats getStats() const;
 
   // Error
   const EJitError *getLastError() const;
+
+  /// True if registration during construction failed (funcIndex/lifecycle
+  /// capacity exhausted, a malformed or conflicting bitcode payload, or a null
+  /// fixup pointer). ejit_init() returns failure and tears down the instance
+  /// rather than exposing a half-registered taskpool.
+  bool initFailed() const { return initFailed_; }
+  const EJitError &initError() const { return initError_; }
+
+  /// True once registration is frozen (taskpool build: after ejit_init has
+  /// consumed all registration data, completed funcIndex/lifecycle fixup and
+  /// started the worker). While frozen, every runtime registration entry point
+  /// rejects so the single worker never races a lock-free registry write.
+  bool registrationFrozen() const {
+    return regPhase_ != RegistrationPhase::Open;
+  }
+
+#ifdef EJIT_SRE_TASKPOOL
+  /// Access the SRE taskpool scheduler (used by the taskpool C ABI). May be
+  /// null if the compile driver was not constructed.
+  EJitTaskPool *taskPool();
+#endif
+
+#ifdef EJIT_SRE_SHARED_TASKPOOL
+  /// Access the cross-core shared taskpool (the taskpool C ABI binds here in a
+  /// shared build). May be null if the compile driver was not constructed.
+  EJitSharedTaskPool *sharedTaskPool();
+  const EJitSharedTaskPool *sharedTaskPool() const;
+#endif
 
 private:
   Config config_;
@@ -89,6 +135,18 @@ private:
   std::unique_ptr<EJitLogger> logger_;
 #endif
   std::unique_ptr<EJitCompileDriver> compileDriver_;
+
+  /// Record the first construction-time registration failure (later ones are
+  /// ignored so the earliest root cause is reported).
+  void recordInitError(int code, const std::string &message,
+                       const std::string &funcName);
+  bool initFailed_ = false;
+  EJitError initError_;
+
+  /// Registration lifecycle: Open during construction (and forever in a legacy
+  /// build), Frozen once a taskpool init completes, Failed on init error.
+  enum class RegistrationPhase { Open, Frozen, Failed };
+  RegistrationPhase regPhase_ = RegistrationPhase::Open;
 };
 
 } // namespace ejit
