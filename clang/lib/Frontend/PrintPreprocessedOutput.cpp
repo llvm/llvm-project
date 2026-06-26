@@ -889,8 +889,8 @@ struct UnknownPragmaHandler : public PragmaHandler {
 };
 } // end anonymous namespace
 
-static void PrintPreprocessedComment(raw_ostream *OS, const char *TokStr,
-                                     unsigned Len) {
+static void WriteMultilineToken(raw_ostream *OS, const char *TokStr,
+                                unsigned Len) {
   for (; Len; --Len, ++TokStr) {
     if (*TokStr != '\n' && *TokStr != '\r') {
       *OS << *TokStr;
@@ -1040,8 +1040,8 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
     } else if (Tok.getLength() < std::size(Buffer)) {
       const char *TokPtr = Buffer;
       unsigned Len = PP.getSpelling(Tok, TokPtr);
-      if (Tok.is(tok::comment, tok::unknown))
-        PrintPreprocessedComment(Callbacks->OS, TokPtr, Len);
+      if (Tok.is(tok::comment) || Tok.is(tok::unknown))
+        WriteMultilineToken(Callbacks->OS, TokPtr, Len);
       else
         Callbacks->OS->write(TokPtr, Len);
 
@@ -1060,8 +1060,8 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       }
     } else {
       std::string S = PP.getSpelling(Tok);
-      if (Tok.is(tok::comment, tok::unknown))
-        PrintPreprocessedComment(Callbacks->OS, S.data(), S.size());
+      if (Tok.is(tok::comment) || Tok.is(tok::unknown))
+        WriteMultilineToken(Callbacks->OS, S.data(), S.size());
       else
         Callbacks->OS->write(S.data(), S.size());
 
