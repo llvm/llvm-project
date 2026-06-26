@@ -2808,30 +2808,13 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
     // Check if this relocation targets an address within a function. This
     // happens with indirect goto.
     const uint64_t ReferencedAddress = SymbolAddress + Addend;
-    BinaryFunction *Func =
-        BC->getBinaryFunctionContainingAddress(ReferencedAddress);
-
-    if (Relocation::isRelative(RType) && SymbolAddress == 0) {
-      if (Func) {
-        if (!Func->isInConstantIsland(ReferencedAddress)) {
-          if (const uint64_t ReferenceOffset =
-                  ReferencedAddress - Func->getAddress()) {
-            assert(!BC->getBinaryFunctionContainingAddress(Rel.getOffset()) &&
-                   "Relative relocation to code only from data");
-            Func->registerInternalRefDataRelocation(ReferenceOffset,
-                                                    Rel.getOffset());
-          }
-        } else {
-          BC->errs() << "BOLT-ERROR: referenced address at 0x"
-                     << Twine::utohexstr(ReferencedAddress)
-                     << " is in constant island of function " << *Func << "\n";
-          exit(1);
-        }
+    if (Relocation::isRelative(RType)) {
+      if (SymbolAddress != 0) {
+        BC->errs() << "BOLT-ERROR: symbol address non zero for RELATIVE "
+                      "relocation type\n";
+        exit(1);
       }
-    } else if (Relocation::isRelative(RType) && SymbolAddress != 0) {
-      BC->errs() << "BOLT-ERROR: symbol address non zero for RELATIVE "
-                    "relocation type\n";
-      exit(1);
+      handleRelativeDynamicRelocation(Rel.getOffset(), ReferencedAddress);
     }
 
     BC->addDynamicRelocation(Rel.getOffset(), Symbol, RType, Addend);
@@ -2864,6 +2847,7 @@ void RewriteInstance::readDynamicRelrRelocations(BinarySection &Section) {
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: R_*_RELATIVE relocation at 0x"
                       << Twine::utohexstr(Address) << " to 0x"
                       << Twine::utohexstr(Addend) << '\n';);
+    handleRelativeDynamicRelocation(Address, Addend);
     BC->addDynamicRelocation(Address, nullptr, RType, Addend, /*Value=*/0,
                              /*IsRELR=*/true);
   };
@@ -2888,6 +2872,27 @@ void RewriteInstance::readDynamicRelrRelocations(BinarySection &Section) {
 
       Address = StartAddress + MaxDelta;
     }
+  }
+}
+
+void RewriteInstance::handleRelativeDynamicRelocation(
+    uint64_t RelOffset, uint64_t ReferencedAddress) {
+  BinaryFunction *Func =
+      BC->getBinaryFunctionContainingAddress(ReferencedAddress);
+  if (!Func)
+    return;
+
+  if (Func->isInConstantIsland(ReferencedAddress)) {
+    BC->errs() << "BOLT-ERROR: referenced address at 0x"
+               << Twine::utohexstr(ReferencedAddress)
+               << " is in constant island of function " << *Func << "\n";
+    exit(1);
+  }
+
+  if (const uint64_t ReferenceOffset = ReferencedAddress - Func->getAddress()) {
+    assert(!BC->getBinaryFunctionContainingAddress(RelOffset) &&
+           "Relative relocation to code only from data");
+    Func->registerInternalRefDataRelocation(ReferenceOffset, RelOffset);
   }
 }
 
