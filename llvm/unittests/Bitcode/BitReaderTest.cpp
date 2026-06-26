@@ -13,9 +13,16 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugProgramInstruction.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
@@ -431,6 +438,251 @@ TEST(BitReaderTest, AccessMetadataTypeInfo) {
   EXPECT_EQ(mdToString(M->getNamedMetadata("md2")->getOperand(0)),
             "!{!{ptr, !{!'function', !{0, i8}, !{2, !{0, i32}}}}, !{ptr, !{0, "
             "!{0, i32}}}}");
+}
+
+// Counts calls to the given debug intrinsic in F.
+static unsigned countIntrinsicCalls(Function &F, Intrinsic::ID ID) {
+  unsigned Count = 0;
+  for (Instruction &I : instructions(F))
+    if (auto *II = dyn_cast<IntrinsicInst>(&I))
+      if (II->getIntrinsicID() == ID)
+        Count++;
+  return Count;
+}
+
+// Per-kind tally of the non-instruction debug records.
+struct DebugRecordCounts {
+  unsigned Values = 0;
+  unsigned Declares = 0;
+  unsigned Assigns = 0;
+  unsigned Labels = 0;
+  unsigned total() const { return Values + Declares + Assigns + Labels; }
+};
+
+static DebugRecordCounts countDebugRecords(Function &F) {
+  DebugRecordCounts Counts;
+  for (Instruction &I : instructions(F)) {
+    for (DbgRecord &DR : I.getDbgRecordRange()) {
+      if (auto *DVR = dyn_cast<DbgVariableRecord>(&DR)) {
+        if (DVR->isDbgAssign())
+          Counts.Assigns++;
+        else if (DVR->isDbgDeclare())
+          Counts.Declares++;
+        else if (DVR->isDbgValue())
+          Counts.Values++;
+      } else if (isa<DbgLabelRecord>(&DR)) {
+        Counts.Labels++;
+      }
+    }
+  }
+  return Counts;
+}
+
+// The custom metadata kind name and contents attached to the dbg.* calls
+// before serialization. The contents are checked back for integrity.
+static constexpr StringRef CustomMDKind = "custom.test";
+static constexpr StringRef CustomMDString = "preserved-by-skip";
+static constexpr uint64_t CustomMDInt = 42;
+
+static bool isLegacyDbgIntrinsic(const Instruction &I) {
+  const IntrinsicInst *II = dyn_cast<IntrinsicInst>(&I);
+  if (!II)
+    return false;
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::dbg_value:
+  case Intrinsic::dbg_declare:
+  case Intrinsic::dbg_assign:
+  case Intrinsic::dbg_label:
+    return true;
+  }
+  return false;
+}
+
+// Attaches CustomMD (an MDString + an integer) to every dbg.* call in F.
+static void attachCustomMetadataToDbgInsts(Function &F) {
+  LLVMContext &Ctx = F.getContext();
+  MDNode *Custom = MDNode::get(Ctx, {MDString::get(Ctx, CustomMDString),
+                                     ConstantAsMetadata::get(ConstantInt::get(
+                                         Type::getInt32Ty(Ctx), CustomMDInt))});
+  for (Instruction &I : instructions(F))
+    if (isLegacyDbgIntrinsic(I))
+      I.setMetadata(CustomMDKind, Custom);
+}
+
+// Verifies the custom metadata survived round-tripping and still holds the
+// exact MDString + integer it was created with.
+static void checkDbgInstCustomMetadata(Function &F) {
+  for (Instruction &I : instructions(F)) {
+    if (!isLegacyDbgIntrinsic(I))
+      continue;
+
+    MDNode *MD = I.getMetadata(CustomMDKind);
+    ASSERT_NE(MD, nullptr);
+    ASSERT_EQ(MD->getNumOperands(), 2u);
+
+    auto *Str = dyn_cast<MDString>(MD->getOperand(0));
+    ASSERT_NE(Str, nullptr);
+    EXPECT_EQ(Str->getString(), CustomMDString);
+
+    auto *Int = mdconst::dyn_extract<ConstantInt>(MD->getOperand(1));
+    ASSERT_NE(Int, nullptr);
+    EXPECT_EQ(Int->getZExtValue(), CustomMDInt);
+  }
+}
+
+// IR exercising every debug intrinsic kind: dbg.declare, dbg.value, dbg.assign
+// (linked to the alloca via DIAssignID) and dbg.label. parseAssembly leaves the
+// module in the new debug records format; the test below lowers it back to
+// intrinsic form before writing, so the resulting bitcode encodes the debug
+// info as @llvm.dbg.* intrinsic calls.
+static constexpr char DebugIntrinsicAssembly[] = R"(
+  define i32 @f(i32 %p) !dbg !6 {
+  entry:
+    %a = alloca i32, align 4, !DIAssignID !14
+    call void @llvm.dbg.declare(metadata ptr %a, metadata !9, metadata !DIExpression()), !dbg !13
+    call void @llvm.dbg.value(metadata i32 %p, metadata !10, metadata !DIExpression()), !dbg !13
+    call void @llvm.dbg.assign(metadata i32 %p, metadata !11, metadata !DIExpression(), metadata !14, metadata ptr %a, metadata !DIExpression()), !dbg !13
+    call void @llvm.dbg.label(metadata !15), !dbg !13
+    store i32 %p, ptr %a, align 4, !dbg !13
+    ret i32 %p, !dbg !13
+  }
+  declare void @llvm.dbg.declare(metadata, metadata, metadata)
+  declare void @llvm.dbg.value(metadata, metadata, metadata)
+  declare void @llvm.dbg.assign(metadata, metadata, metadata, metadata, metadata, metadata)
+  declare void @llvm.dbg.label(metadata)
+
+  !llvm.dbg.cu = !{!0}
+  !llvm.module.flags = !{!5}
+
+  !0 = distinct !DICompileUnit(language: DW_LANG_C, file: !1, producer: "test", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
+  !1 = !DIFile(filename: "t.ll", directory: "/")
+  !2 = !{}
+  !5 = !{i32 2, !"Debug Info Version", i32 3}
+  !6 = distinct !DISubprogram(name: "f", linkageName: "f", scope: null, file: !1, line: 1, type: !7, scopeLine: 1, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !8)
+  !7 = !DISubroutineType(types: !2)
+  !8 = !{!9, !10, !11}
+  !9 = !DILocalVariable(name: "a", scope: !6, file: !1, line: 1, type: !12)
+  !10 = !DILocalVariable(name: "p", scope: !6, file: !1, line: 1, type: !12)
+  !11 = !DILocalVariable(name: "i", scope: !6, file: !1, line: 1, type: !12)
+  !12 = !DIBasicType(name: "ty32", size: 32, encoding: DW_ATE_signed)
+  !13 = !DILocation(line: 1, column: 1, scope: !6)
+  !14 = distinct !DIAssignID()
+  !15 = !DILabel(scope: !6, name: "label", file: !1, line: 1)
+)";
+
+// Asserts F holds exactly the intrinsic-form debug info (one call of each
+// kind) and no debug records.
+static void expectIntrinsicForm(Function &F) {
+  EXPECT_EQ(countIntrinsicCalls(F, Intrinsic::dbg_declare), 1u);
+  EXPECT_EQ(countIntrinsicCalls(F, Intrinsic::dbg_value), 1u);
+  EXPECT_EQ(countIntrinsicCalls(F, Intrinsic::dbg_assign), 1u);
+  EXPECT_EQ(countIntrinsicCalls(F, Intrinsic::dbg_label), 1u);
+  EXPECT_EQ(countDebugRecords(F).total(), 0u);
+}
+
+// Asserts F holds exactly the record-form debug info (one record of each kind)
+// and no debug intrinsic calls.
+static void expectRecordForm(Function &F) {
+  EXPECT_EQ(countIntrinsicCalls(F, Intrinsic::dbg_declare), 0u);
+  EXPECT_EQ(countIntrinsicCalls(F, Intrinsic::dbg_value), 0u);
+  EXPECT_EQ(countIntrinsicCalls(F, Intrinsic::dbg_assign), 0u);
+  EXPECT_EQ(countIntrinsicCalls(F, Intrinsic::dbg_label), 0u);
+  DebugRecordCounts Counts = countDebugRecords(F);
+  EXPECT_EQ(Counts.Declares, 1u);
+  EXPECT_EQ(Counts.Values, 1u);
+  EXPECT_EQ(Counts.Assigns, 1u);
+  EXPECT_EQ(Counts.Labels, 1u);
+}
+
+// ParserCallbacks::SkipDebugIntrinsicUpgrade controls whether the bitcode
+// reader auto-upgrades debug intrinsic calls (llvm.dbg.*) to non-instruction
+// debug records. Read the same intrinsic-form bitcode both ways and check that
+// the flag toggles the upgrade for every debug intrinsic kind, and that custom
+// metadata attached to a preserved intrinsic survives intact.
+TEST(BitReaderTest, SkipDebugIntrinsicUpgrade) {
+  SmallString<1024> Mem;
+  {
+    LLVMContext Context;
+    std::unique_ptr<Module> M = parseAssembly(Context, DebugIntrinsicAssembly);
+    // Lower the debug records produced by the parser back to intrinsic calls so
+    // the bitcode we write out encodes llvm.dbg.* intrinsics.
+    M->convertFromNewDbgValues();
+    Function *F = M->getFunction("f");
+    ASSERT_NE(F, nullptr);
+    expectIntrinsicForm(*F);
+    // Attach a custom metadata node to the dbg.value call. Records carry no
+    // arbitrary attachments, so this only survives if the intrinsic does.
+    attachCustomMetadataToDbgInsts(*F);
+    writeModuleToBuffer(std::move(M), Mem);
+  }
+
+  // Default behavior: every debug intrinsic is upgraded to a debug record.
+  {
+    LLVMContext Context;
+    Expected<std::unique_ptr<Module>> ModuleOrErr =
+        parseBitcodeFile(MemoryBufferRef(Mem.str(), "test"), Context);
+    if (!ModuleOrErr)
+      report_fatal_error("Could not parse bitcode module");
+    std::unique_ptr<Module> M = std::move(ModuleOrErr.get());
+
+    Function *F = M->getFunction("f");
+    ASSERT_NE(F, nullptr);
+    expectRecordForm(*F);
+
+    bool BrokenDebugInfo = false;
+    EXPECT_FALSE(verifyModule(*M, &dbgs(), &BrokenDebugInfo));
+    EXPECT_FALSE(BrokenDebugInfo);
+  }
+
+  // When SkipDebugIntrinsicUpgrade is true, the intrinsic-form debug info is
+  // preserved for every kind and the caller is left responsible for upgrading
+  // it.
+  {
+    LLVMContext Context;
+    ParserCallbacks Callbacks;
+    Callbacks.SkipDebugIntrinsicUpgrade = true;
+    Expected<std::unique_ptr<Module>> ModuleOrErr = parseBitcodeFile(
+        MemoryBufferRef(Mem.str(), "test"), Context, Callbacks);
+    if (!ModuleOrErr)
+      report_fatal_error("Could not parse bitcode module");
+    std::unique_ptr<Module> M = std::move(ModuleOrErr.get());
+
+    Function *F = M->getFunction("f");
+    ASSERT_NE(F, nullptr);
+    expectIntrinsicForm(*F);
+    checkDbgInstCustomMetadata(*F);
+
+    bool BrokenDebugInfo = false;
+    EXPECT_FALSE(verifyModule(*M, &dbgs(), &BrokenDebugInfo));
+    EXPECT_FALSE(BrokenDebugInfo);
+
+    // Round-trip: writing the preserved intrinsic-form module back out and
+    // reading it again with the flag set must still yield intrinsic-form debug
+    // info, with the custom metadata intact. The reader must not silently
+    // change the format on the way through.
+    SmallString<1024> RoundTripMem;
+    writeModuleToBuffer(std::move(M), RoundTripMem);
+
+    LLVMContext RoundTripContext;
+    Expected<std::unique_ptr<Module>> RoundTripOrErr =
+        parseBitcodeFile(MemoryBufferRef(RoundTripMem.str(), "test"),
+                         RoundTripContext, Callbacks);
+    if (!RoundTripOrErr)
+      report_fatal_error("Could not parse bitcode module");
+    std::unique_ptr<Module> RoundTripM = std::move(RoundTripOrErr.get());
+
+    Function *RoundTripF = RoundTripM->getFunction("f");
+    ASSERT_NE(RoundTripF, nullptr);
+    expectIntrinsicForm(*RoundTripF);
+    checkDbgInstCustomMetadata(*RoundTripF);
+
+    EXPECT_FALSE(verifyModule(*RoundTripM, &dbgs(), &BrokenDebugInfo));
+    EXPECT_FALSE(BrokenDebugInfo);
+
+    // The caller can still upgrade manually, matching the default behavior.
+    RoundTripM->convertToNewDbgValues();
+    expectRecordForm(*RoundTripF);
+  }
 }
 
 } // end namespace

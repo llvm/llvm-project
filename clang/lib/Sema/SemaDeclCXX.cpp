@@ -19293,7 +19293,12 @@ bool Sema::DefineUsedVTables() {
     DefinedAnything = true;
     MarkVirtualMembersReferenced(Loc, Class);
     CXXRecordDecl *Canonical = Class->getCanonicalDecl();
-    if (VTablesUsed[Canonical] && !Class->shouldEmitInExternalSource())
+    // The vtable is assumed to be emitted in an external source only for
+    // classes attached to a named module, which is guaranteed to have an object
+    // file. This isn't true for -fmodules-debuginfo, which still has
+    // shouldEmitInExternalSource as true so that debug info gets supressed.
+    if (VTablesUsed[Canonical] &&
+        !(Class->isInNamedModule() && Class->shouldEmitInExternalSource()))
       Consumer.HandleVTable(Class);
 
     // Warn if we're emitting a weak vtable. The vtable will be weak if there is

@@ -116,6 +116,9 @@ void HexagonTargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
+
+  if (Opts.CPlusPlus && getTriple().getOS() == llvm::Triple::UnknownOS)
+    Builder.defineMacro("_GNU_SOURCE");
 }
 
 bool HexagonTargetInfo::initFeatureMap(

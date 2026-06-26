@@ -11,23 +11,9 @@
 
 namespace llvm {
 
-template <typename Derived, typename AddressType>
-Align CHERICapabilityFormatBase<Derived, AddressType>::getRequiredAlignment(
-    AddressType Length) {
-  return Align((~Derived::getAlignmentMask(Length) + 1) & AddressMask);
-}
-
-template <typename Derived, typename AddressType>
-AddressType
-CHERICapabilityFormatBase<Derived, AddressType>::getRepresentableLength(
-    AddressType Length) {
-  AddressType Mask = Derived::getAlignmentMask(Length);
-  return (Length + ~Mask) & Mask;
-}
-
 template <typename AddressType, unsigned MW, unsigned MAX_E>
-AddressType
-RVYCapabilityFormat<AddressType, MW, MAX_E>::getAlignmentMask(uint64_t Length) {
+AddressType RVYCapabilityFormat<AddressType, MW, MAX_E>::getAlignmentMaskImpl(
+    uint64_t Length) {
   static constexpr unsigned int IE_TAKE_BITS = 3;
 
   if (Length == 0)
@@ -52,12 +38,12 @@ RVYCapabilityFormat<AddressType, MW, MAX_E>::getAlignmentMask(uint64_t Length) {
 
 template struct CHERICapabilityFormatBase<RVYCapabilityFormat<uint32_t, 10, 24>,
                                           uint32_t>;
-template struct CHERICapabilityFormatBase<RVYCapabilityFormat<uint64_t, 14, 24>,
+template struct CHERICapabilityFormatBase<RVYCapabilityFormat<uint64_t, 14, 52>,
                                           uint64_t>;
 template struct RVYCapabilityFormat<uint32_t, 10, 24>;
-template struct RVYCapabilityFormat<uint64_t, 14, 24>;
+template struct RVYCapabilityFormat<uint64_t, 14, 52>;
 
-uint32_t CHERIoTCapabilityFormat::getAlignmentMask(uint32_t Length) {
+uint32_t CHERIoTCapabilityFormat::getAlignmentMaskImpl(uint32_t Length) {
   // Per section 7.13.4 and table 7.4 in the v1.0 CHERIoT specification.
   constexpr uint32_t NINE_SET_BITS = 511;
   uint32_t E;

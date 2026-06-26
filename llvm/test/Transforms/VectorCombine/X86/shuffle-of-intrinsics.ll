@@ -52,19 +52,19 @@ define <8 x i1> @test4(<4 x float> %0, <4 x float> %1) {
 ; SSE-LABEL: @test4(
 ; SSE-NEXT:  entry:
 ; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP0:%.*]], <4 x float> [[TMP1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; SSE-NEXT:    [[TMP3:%.*]] = call <8 x i1> @llvm.is.fpclass.v8f32(<8 x float> [[TMP2]], i32 0)
+; SSE-NEXT:    [[TMP3:%.*]] = call <8 x i1> @llvm.is.fpclass.v8f32(<8 x float> [[TMP2]], i32 4)
 ; SSE-NEXT:    ret <8 x i1> [[TMP3]]
 ;
 ; AVX-LABEL: @test4(
 ; AVX-NEXT:  entry:
-; AVX-NEXT:    [[TMP2:%.*]] = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> [[TMP0:%.*]], i32 0)
-; AVX-NEXT:    [[TMP3:%.*]] = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> [[TMP1:%.*]], i32 0)
+; AVX-NEXT:    [[TMP2:%.*]] = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> [[TMP0:%.*]], i32 4)
+; AVX-NEXT:    [[TMP3:%.*]] = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> [[TMP1:%.*]], i32 4)
 ; AVX-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i1> [[TMP2]], <4 x i1> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; AVX-NEXT:    ret <8 x i1> [[TMP4]]
 ;
 entry:
-  %2 = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %0, i32 0)
-  %3 = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %1, i32 0)
+  %2 = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %0, i32 4)
+  %3 = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %1, i32 4)
   %4 = shufflevector <4 x i1> %2, <4 x i1> %3, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i1> %4
 }
@@ -73,12 +73,12 @@ define <2 x i1> @test4b(<4 x float> %0, <4 x float> %1) {
 ; CHECK-LABEL: @test4b(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP0:%.*]], <4 x float> [[TMP1:%.*]], <2 x i32> <i32 0, i32 4>
-; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[TMP2]], i32 0)
+; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> [[TMP2]], i32 4)
 ; CHECK-NEXT:    ret <2 x i1> [[TMP3]]
 ;
 entry:
-  %2 = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %0, i32 0)
-  %3 = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %1, i32 0)
+  %2 = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %0, i32 4)
+  %3 = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %1, i32 4)
   %4 = shufflevector <4 x i1> %2, <4 x i1> %3, <2 x i32> <i32 0, i32 4>
   ret <2 x i1> %4
 }
@@ -224,8 +224,7 @@ define <8 x i32> @test_shared_operands(<4 x i32> %0, <4 x i32> %1) {
 ; CHECK-LABEL: @test_shared_operands(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP0:%.*]], <4 x i32> [[TMP1:%.*]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[R:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> [[TMP2]], <8 x i32> [[TMP2]])
-; CHECK-NEXT:    ret <8 x i32> [[R]]
+; CHECK-NEXT:    ret <8 x i32> [[TMP2]]
 ;
 entry:
   %a = call <4 x i32> @llvm.smax.v4i32(<4 x i32> %0, <4 x i32> %0)

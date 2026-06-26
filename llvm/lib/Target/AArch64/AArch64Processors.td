@@ -1213,7 +1213,9 @@ def ProcessorFeatures {
   list<SubtargetFeature> HIP12 = [HasV8_7aOps, FeatureSVE, FeatureSVE2,
                                   FeatureSVEBitPerm, FeatureSVEAES,
                                   FeatureSVESM4, FeatureSVESHA3,
-                                  FeatureFullFP16, FeaturePerfMon,
+                                  FeatureFullFP16, FeatureFP16FML, FeaturePerfMon,
+                                  FeatureFlagM, FeaturePredRes, FeatureSB, FeatureSSBS,
+                                  FeatureCCIDX, FeatureRandGen,
                                   FeatureETE, FeatureTRBE, FeatureSPE,
                                   FeatureSPE_EEF, FeatureNMI,
                                   FeatureHBC, FeatureRCPC3, FeatureBF16,
@@ -1381,6 +1383,7 @@ def : ProcessorModel<"neoverse-v3", NeoverseV3Model,
                      ProcessorFeatures.NeoverseV3, [TuneNeoverseV3]>;
 def : ProcessorModel<"neoverse-v3ae", NeoverseV3AEModel,
                      ProcessorFeatures.NeoverseV3AE, [TuneNeoverseV3AE]>;
+def : ProcessorAlias<"armagicpu", "neoverse-v3ae">;
 def : ProcessorModel<"exynos-m3", ExynosM3Model, ProcessorFeatures.ExynosM3,
                      [TuneExynosM3]>;
 def : ProcessorModel<"exynos-m4", ExynosM4Model, ProcessorFeatures.ExynosM4,
