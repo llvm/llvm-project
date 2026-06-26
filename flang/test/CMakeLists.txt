@@ -281,6 +281,14 @@ if(LLVM_BUILD_INSTRUMENTED)
     )
     add_custom_target(generate-flang-profdata DEPENDS "${PROFDATA}")
 
+    # The clang and flang profdata pipelines clean and regenerate the same
+    # shared profraw directories (profiles/ and clang/utils/perf-training).
+    # Order flang after clang so flang's clean/regenerate never races clang's
+    # merge while it has a profraw mmap'd.
+    if(TARGET generate-profdata)
+      add_dependencies(generate-flang-profdata generate-profdata)
+    endif()
+
     if(FLANG_PGO_TRAINING_CLANG_COUPLING)
       string(TOUPPER "${LLVM_BUILD_INSTRUMENTED}" LLVM_BUILD_UPPER_INSTRUMENTED)
       if (LLVM_BUILD_UPPER_INSTRUMENTED STREQUAL "CSSPGO")
