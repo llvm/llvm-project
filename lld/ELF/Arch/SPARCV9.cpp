@@ -63,6 +63,9 @@ RelExpr SPARCV9::getRelExpr(RelType type, const Symbol &s,
   case R_SPARC_PC10:
   case R_SPARC_PC22:
   case R_SPARC_DISP32:
+  case R_SPARC_WDISP16:
+  case R_SPARC_WDISP19:
+  case R_SPARC_WDISP22:
   case R_SPARC_WDISP30:
     return R_PC;
   case R_SPARC_GOT10:
@@ -103,6 +106,11 @@ void SPARCV9::relocate(uint8_t *loc, const Relocation &rel,
     checkInt(ctx, loc, val, 32, rel);
     write32be(loc, (read32be(loc) & ~0x3fffffff) | ((val >> 2) & 0x3fffffff));
     break;
+  case R_SPARC_WDISP22:
+    // V-disp22
+    checkInt(ctx, loc, val, 24, rel);
+    write32be(loc, (read32be(loc) & ~0x003fffff) | ((val >> 2) & 0x003fffff));
+    break;
   case R_SPARC_22:
     // V-imm22
     checkUInt(ctx, loc, val, 22, rel);
@@ -124,6 +132,15 @@ void SPARCV9::relocate(uint8_t *loc, const Relocation &rel,
     checkInt(ctx, loc, val, 21, rel);
     write32be(loc, (read32be(loc) & ~0x0007ffff) | ((val >> 2) & 0x0007ffff));
     break;
+  case R_SPARC_WDISP16: {
+    // V-disp16
+    checkInt(ctx, loc, val, 18, rel);
+    uint32_t insn = read32be(loc);
+    uint32_t d16hi = (val >> 16) & 0x3;
+    uint32_t d16lo = (val >> 2) & 0x3fff;
+    write32be(loc, (insn & ~0x00303fff) | (d16hi << 20) | d16lo);
+    break;
+  }
   case R_SPARC_GOT10:
   case R_SPARC_PC10:
     // T-simm10
