@@ -145,6 +145,8 @@ public:
   void Enter(const parser::OmpMetadirectiveDirective &);
   void Leave(const parser::OmpMetadirectiveDirective &);
 
+  void Enter(const parser::ExecutionPartConstruct &);
+
   void Enter(const parser::OmpContextSelector &);
   void Leave(const parser::OmpContextSelector &);
 
@@ -420,6 +422,10 @@ private:
     ExecutionPart,
   };
   std::vector<PartKind> partStack_;
+
+  // Loop variants pending COLLAPSE/ORDERED validation against their loop nest.
+  std::vector<const parser::OmpDirectiveSpecification *>
+      metadirectiveLoopVariants_;
 
   std::multimap<const parser::Label,
       std::pair<parser::CharBlock, const parser::OpenMPConstruct *>>

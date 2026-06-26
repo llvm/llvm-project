@@ -4802,6 +4802,200 @@ struct MetadirectiveCandidate {
 };
 } // namespace
 
+/// A loop-associated metadirective is lowered like a real loop construct, but
+/// the PFT leaves its associated loop nest as the following sibling instead of
+/// nesting it underneath. Splice that sibling into the metadirective's own
+/// nested evaluations so the shared loop-lowering path can find it. Return
+/// nullptr if no associated DO loop follows.
+static lower::pft::Evaluation *
+spliceAssociatedDoEval(lower::pft::Evaluation &eval) {
+  if (eval.hasNestedEvaluations()) {
+    auto nestedIt =
+        llvm::find_if(eval.getNestedEvaluations(), [](auto &nested) {
+          return !nested.isEndStmt() &&
+                 !nested.template getIf<parser::CompilerDirective>();
+        });
+    if (nestedIt != eval.getNestedEvaluations().end())
+      return nestedIt->getIf<parser::DoConstruct>() ? &*nestedIt : nullptr;
+    return nullptr;
+  }
+
+  // A metadirective in a specification part (e.g. at module scope) has no
+  // parent construct and no owning procedure, so there is no sibling list.
+  lower::pft::FunctionLikeUnit *owningProc = eval.getOwningProcedure();
+  if (!eval.parentConstruct && !owningProc)
+    return nullptr;
+  auto *parentList = eval.parentConstruct
+                         ? eval.parentConstruct->evaluationList.get()
+                         : &owningProc->evaluationList;
+  auto metaIt = llvm::find_if(
+      *parentList, [&](lower::pft::Evaluation &e) { return &e == &eval; });
+  assert(metaIt != parentList->end() &&
+         "metadirective eval not found in parent list");
+
+  auto loopIt = std::next(metaIt);
+  while (loopIt != parentList->end() &&
+         (loopIt->isEndStmt() || loopIt->getIf<parser::CompilerDirective>()))
+    ++loopIt;
+
+  if (loopIt == parentList->end() || !loopIt->getIf<parser::DoConstruct>())
+    return nullptr;
+
+  eval.evaluationList->splice(eval.evaluationList->end(), *parentList, loopIt);
+  return &eval.getNestedEvaluations().back();
+}
+
+static bool hasLoopAssociatedDirective(const ConstructQueue &queue) {
+  return llvm::any_of(queue, [](const auto &item) {
+    return llvm::omp::getDirectiveAssociation(item.id) ==
+           llvm::omp::Association::LoopNest;
+  });
+}
+
+static bool consumesAssociatedEvaluation(const ConstructQueue &queue) {
+  return llvm::any_of(queue, [](const auto &item) {
+    return llvm::omp::getDirectiveAssociation(item.id) !=
+           llvm::omp::Association::None;
+  });
+}
+
+/// Clear all existing DSA flags on \p sym, then set PreDetermined + \p dsa.
+static void applySymbolDSA(semantics::Symbol &sym,
+                           semantics::Symbol::Flag dsa) {
+  using Symbol = semantics::Symbol;
+  Symbol::Flags dataSharingAttributeFlags{
+      Symbol::Flag::OmpShared,       Symbol::Flag::OmpPrivate,
+      Symbol::Flag::OmpFirstPrivate, Symbol::Flag::OmpLastPrivate,
+      Symbol::Flag::OmpReduction,    Symbol::Flag::OmpLinear};
+  sym.flags() &=
+      ~(dataSharingAttributeFlags |
+        Symbol::Flags{Symbol::Flag::OmpExplicit, Symbol::Flag::OmpImplicit,
+                      Symbol::Flag::OmpPreDetermined});
+  sym.flags() |= Symbol::Flags{Symbol::Flag::OmpPreDetermined, dsa};
+}
+
+class SymbolDSAGuard {
+public:
+  ~SymbolDSAGuard() {
+    for (auto &[sym, flags] : llvm::reverse(savedFlags))
+      sym->flags() = flags;
+  }
+
+  void setSymbolDSA(semantics::Symbol &sym, semantics::Symbol::Flag dsa) {
+    if (!llvm::any_of(savedFlags,
+                      [&](const auto &entry) { return entry.first == &sym; }))
+      savedFlags.emplace_back(&sym, sym.flags());
+    applySymbolDSA(sym, dsa);
+  }
+
+private:
+  llvm::SmallVector<std::pair<semantics::Symbol *, semantics::Symbol::Flags>, 4>
+      savedFlags;
+};
+
+/// Mark the iteration variable of every sequential DO loop nested in a
+/// metadirective variant's generated region as private, mirroring
+/// `OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct`, which
+/// cannot run because the variant is only resolved during lowering.
+static void markSequentialLoopIVs(
+    lower::pft::Evaluation &eval, SymbolDSAGuard &dsaGuard,
+    const llvm::SmallPtrSetImpl<const semantics::Symbol *> &clauseSyms,
+    unsigned version) {
+  using Symbol = semantics::Symbol;
+  if (!eval.hasNestedEvaluations())
+    return;
+  for (lower::pft::Evaluation &nested : eval.getNestedEvaluations()) {
+    // A nested construct with its own data environment (parallel, task, teams,
+    // or target) owns the loops it contains, so do not descend into it. A
+    // nested unresolved metadirective is not special-cased: privatizing its
+    // sibling loop index here too is benign for a loop index.
+    if (const auto *ompConstruct = nested.getIf<parser::OpenMPConstruct>()) {
+      llvm::omp::Directive dir =
+          parser::omp::GetOmpDirectiveName(*ompConstruct).v;
+      if (llvm::omp::allParallelSet.test(dir) ||
+          llvm::omp::taskGeneratingSet.test(dir) ||
+          llvm::omp::allTargetSet.test(dir) ||
+          (version >= 52 && llvm::omp::allTeamsSet.test(dir)))
+        continue;
+    }
+    // Skip an index that already has a DSA: predetermined (the variant's own
+    // associated loops and nested loop-construct indices) or clause-named.
+    if (nested.getIf<parser::DoConstruct>())
+      if (Symbol *sym = getIterationVariableSymbol(nested))
+        if (!sym->test(Symbol::Flag::OmpPreDetermined) &&
+            !clauseSyms.contains(sym))
+          dsaGuard.setSymbolDSA(*sym, Symbol::Flag::OmpPrivate);
+    markSequentialLoopIVs(nested, dsaGuard, clauseSyms, version);
+  }
+}
+
+/// Mark loop induction variable data-sharing attributes for a
+/// metadirective-selected loop variant. Semantic analysis cannot mark these
+/// because the variant is resolved at lowering time. Return false if the
+/// associated loop nest is shallower than the variant's COLLAPSE/ORDERED
+/// requires, leaving the diagnostic to the caller.
+static bool
+markMetadirectiveLoopIVs(semantics::SemanticsContext &semaCtx,
+                         const parser::OmpDirectiveSpecification &spec,
+                         lower::pft::Evaluation &loopEval,
+                         SymbolDSAGuard &dsaGuard) {
+  using Symbol = semantics::Symbol;
+
+  auto [depth, _] = semantics::omp::GetAffectedNestDepthWithReason(
+      spec, semaCtx.langOptions().OpenMPVersion, &semaCtx);
+  if (!depth || !depth.value || *depth.value <= 0)
+    return true;
+
+  int64_t affectedDepth = *depth.value;
+  bool isSimdVariant =
+      llvm::is_contained(llvm::omp::getLeafConstructsOrSelf(spec.DirId()),
+                         llvm::omp::Directive::OMPD_simd);
+  Symbol::Flag ivDSA;
+  if (!isSimdVariant)
+    ivDSA = Symbol::Flag::OmpPrivate;
+  else if (affectedDepth == 1 && semaCtx.langOptions().OpenMPVersion < 60)
+    ivDSA = Symbol::Flag::OmpLinear;
+  else
+    ivDSA = Symbol::Flag::OmpLastPrivate;
+
+  lower::pft::Evaluation *doEval = &loopEval;
+  for (int64_t level = 0; level < affectedDepth; ++level) {
+    // A nest shallower than COLLAPSE/ORDERED requires is diagnosed during
+    // semantic analysis in check-omp-variant. Guard against it here too,
+    // returning false so the caller handles it instead of asserting in
+    // `getNestedDoConstruct`.
+    if (!doEval || !doEval->getIf<parser::DoConstruct>())
+      return false;
+    if (semantics::Symbol *sym = getIterationVariableSymbol(*doEval))
+      dsaGuard.setSymbolDSA(*sym, ivDSA);
+    if (level + 1 < affectedDepth)
+      doEval = tryGetNestedDoConstruct(*doEval);
+  }
+
+  // A variant that generates a parallel, task, or (>= 5.2) teams region also
+  // privatizes the index of every nested sequential loop. `doEval` is the
+  // innermost associated loop, so its body holds those loops.
+  bool variantGeneratesParallelRegion =
+      llvm::omp::allParallelSet.test(spec.DirId()) ||
+      llvm::omp::taskGeneratingSet.test(spec.DirId()) ||
+      (semaCtx.langOptions().OpenMPVersion >= 52 &&
+       llvm::omp::allTeamsSet.test(spec.DirId()));
+  if (variantGeneratesParallelRegion) {
+    // Indices named in the variant's own clauses already have an explicit DSA;
+    // exclude them so the marking below does not override it.
+    llvm::SmallPtrSet<const semantics::Symbol *, 4> clauseSyms;
+    for (const parser::OmpClause &clause : spec.Clauses().v)
+      if (const parser::OmpObjectList *objects =
+              parser::omp::GetOmpObjectList(clause))
+        for (const parser::OmpObject &object : objects->v)
+          if (const semantics::Symbol *sym = makeObject(object, semaCtx).sym())
+            clauseSyms.insert(sym);
+    markSequentialLoopIVs(*doEval, dsaGuard, clauseSyms,
+                          semaCtx.langOptions().OpenMPVersion);
+  }
+  return true;
+}
+
 static void genMetadirective(lower::AbstractConverter &converter,
                              lower::SymMap &symTable,
                              semantics::SemanticsContext &semaCtx,
@@ -4974,23 +5168,41 @@ static void genMetadirective(lower::AbstractConverter &converter,
     }
   }
 
+  auto makeVariantQueue = [&](const parser::OmpDirectiveSpecification &spec) {
+    List<Clause> variantClauses = makeClauses(spec.Clauses(), semaCtx);
+    return ConstructQueue{
+        buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
+                            eval, spec.source, spec.DirId(), variantClauses)};
+  };
+
+  bool hasLoopAssociatedCandidate = false;
+  for (const MetadirectiveCandidate &candidate : candidates) {
+    if (candidate.spec &&
+        hasLoopAssociatedDirective(makeVariantQueue(*candidate.spec))) {
+      hasLoopAssociatedCandidate = true;
+      break;
+    }
+  }
+  if (!hasLoopAssociatedCandidate && fallback)
+    hasLoopAssociatedCandidate =
+        hasLoopAssociatedDirective(makeVariantQueue(*fallback));
+  if (hasLoopAssociatedCandidate)
+    (void)spliceAssociatedDoEval(eval);
+
   // Lower a single resolved candidate.
   auto genVariant = [&](const parser::OmpDirectiveSpecification *spec) {
     if (!spec) {
       genNestedEvaluations(converter, eval);
       return;
     }
-    List<Clause> variantClauses = makeClauses(spec->Clauses(), semaCtx);
     mlir::Location variantLoc = converter.genLocation(spec->source);
-    ConstructQueue queue{
-        buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
-                            eval, spec->source, spec->DirId(), variantClauses)};
+    ConstructQueue queue = makeVariantQueue(*spec);
 
     if (llvm::any_of(queue, [](const auto &item) {
-          return llvm::omp::getDirectiveAssociation(item.id) ==
-                 llvm::omp::Association::LoopNest;
+          return llvm::omp::allTargetSet.test(item.id);
         })) {
-      TODO(variantLoc, "loop-associated METADIRECTIVE variant");
+      TODO(variantLoc,
+           "TARGET construct selected by METADIRECTIVE (host-eval)");
     }
 
     if (llvm::any_of(queue, [](const auto &item) {
@@ -5002,8 +5214,25 @@ static void genMetadirective(lower::AbstractConverter &converter,
       TODO(variantLoc, "declarative METADIRECTIVE variant");
     }
 
+    bool hasLoopAssociation = hasLoopAssociatedDirective(queue);
+    if (hasLoopAssociation) {
+      lower::pft::Evaluation *loopEval = spliceAssociatedDoEval(eval);
+      if (!loopEval)
+        TODO(variantLoc, "loop-associated METADIRECTIVE without associated DO");
+      SymbolDSAGuard dsaGuard;
+      if (!markMetadirectiveLoopIVs(semaCtx, *spec, *loopEval, dsaGuard))
+        TODO(variantLoc, "METADIRECTIVE variant with COLLAPSE or ORDERED "
+                         "requires a deeper perfectly-nested loop nest than "
+                         "is present");
+      genOMPDispatch(converter, symTable, semaCtx, eval, variantLoc, queue,
+                     queue.begin());
+      return;
+    }
+
     genOMPDispatch(converter, symTable, semaCtx, eval, variantLoc, queue,
                    queue.begin());
+    if (!consumesAssociatedEvaluation(queue) && eval.hasNestedEvaluations())
+      genNestedEvaluations(converter, eval);
   };
 
   auto selectBestCandidate =
@@ -5518,7 +5747,10 @@ void Fortran::lower::genOpenMPDeclarativeConstruct(
     semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
     const parser::OpenMPDeclarativeConstruct &omp) {
   genOMP(converter, symTable, semaCtx, eval, omp);
-  genNestedEvaluations(converter, eval);
+  // Metadirective lowering selects a variant and consumes its associated
+  // evaluations itself.
+  if (!isMetadirectiveEval(eval))
+    genNestedEvaluations(converter, eval);
 }
 
 void Fortran::lower::genOpenMPSymbolProperties(
