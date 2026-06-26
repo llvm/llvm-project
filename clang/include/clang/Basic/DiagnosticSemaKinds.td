@@ -11056,9 +11056,9 @@ def warn_lifetime_safety_inapplicable_lifetimebound
       DefaultIgnore;
 
 def note_lifetime_safety_used_here : Note<"later used here">;
-def note_lifetime_safety_invalidated_here : Note<"invalidated here">;
-def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
-def note_lifetime_safety_freed_here : Note<"freed here">;
+def note_lifetime_safety_invalidated_here : Note<"%0 is invalidated here">;
+def note_lifetime_safety_destroyed_here : Note<"%0 is destroyed here">;
+def note_lifetime_safety_freed_here : Note<"%0 is freed here">;
 def note_lifetime_safety_returned_here : Note<"returned here">;
 def note_lifetime_safety_moved_here : Note<"potentially moved here">;
 def note_lifetime_safety_dangling_field_here: Note<"this field dangles">;
@@ -11878,6 +11878,9 @@ def err_opencl_type_not_found : Error<
   "%0 type %1 not found; include the base header with -finclude-default-header">;
 def warn_opencl_attr_deprecated_ignored : Warning <
   "%0 attribute is deprecated and ignored in %1">, InGroup<IgnoredAttributes>;
+def warn_deprecated_attribute : Warning<
+  "'%0' attribute is deprecated and may be removed in a future version of Clang">,
+  InGroup<DeprecatedAttributes>;
 def err_opencl_variadic_function : Error<
   "invalid prototype, variadic arguments are not allowed in OpenCL">;
 def err_opencl_requires_extension : Error<
@@ -14267,7 +14270,7 @@ def warn_amdgcn_unguarded_asm_stmt
     InGroup<UnguardedBuiltinUsageAMDGPU>, DefaultIgnore;
 def note_amdgcn_unguarded_asm_silence
   : Note<"enclose the '%0' ASM sequence in a scope controlled by a "
-         "__builtin_amdgcn_is_processor check to silence this warning">;
+         "__builtin_amdgcn_processor_is check to silence this warning">;
 def err_amdgcn_incompatible_builtin
   : Error<"%0 cannot be invoked in the current context, as it requires the "
           "'%1' feature(s)%select{|, which '%3' does not provide}2">;

@@ -133,8 +133,7 @@ struct CUDAKernelTy : public GenericKernelTy {
     // Set the static block memory size required by the kernel.
     StaticBlockMemSize = SharedMemSize;
 
-    // Retrieve the size of the arguments.
-    return initArgsSize();
+    return Plugin::success();
   }
 
   /// Launch the CUDA kernel function.
@@ -164,32 +163,11 @@ struct CUDAKernelTy : public GenericKernelTy {
                               uint32_t DynBlockMemSize) const override;
 
 private:
-  /// Initialize the size of the arguments.
-  Error initArgsSize() {
-    CUresult Res;
-    size_t ArgOffset, ArgSize;
-    size_t Arg = 0;
-
-    ArgsSize = 0;
-
-    // Find the last argument to know the total size of the arguments.
-    while ((Res = cuFuncGetParamInfo(Func, Arg++, &ArgOffset, &ArgSize)) ==
-           CUDA_SUCCESS)
-      ArgsSize = ArgOffset + ArgSize;
-
-    if (Res != CUDA_ERROR_INVALID_VALUE)
-      return Plugin::check(Res, "error in cuFuncGetParamInfo: %s");
-    return Plugin::success();
-  }
-
   /// The CUDA kernel function to execute.
   CUfunction Func;
   /// The maximum amount of dynamic shared memory per thread group. By default,
   /// this is set to 48 KB.
   mutable uint32_t MaxDynBlockMemSize = 49152;
-
-  /// The size of the kernel arguments.
-  size_t ArgsSize;
 };
 
 /// Class wrapping a CUDA stream reference. These are the objects handled by the
@@ -397,6 +375,20 @@ struct CUDADeviceTy : public GenericDeviceTy {
       return Err;
     MaxBlockSharedMemSize = MaxSharedMem;
 
+    CUmemAllocationProp Prop = {};
+    Prop.type = CU_MEM_ALLOCATION_TYPE_PINNED;
+    Prop.location.type = CU_MEM_LOCATION_TYPE_DEVICE;
+    Prop.location.id = DeviceId;
+
+    Res = cuMemGetAllocationGranularity(&Granularity, &Prop,
+                                        CU_MEM_ALLOC_GRANULARITY_MINIMUM);
+    if (auto Err = Plugin::check(
+            Res, "error in cuMemGetAllocationGranularity for the device: %s"))
+      return Err;
+    if (Granularity == 0)
+      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                           "wrong device page size");
+
     return Plugin::success();
   }
 
@@ -586,7 +578,8 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate memory on the device or related to the device.
-  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind) override {
+  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind,
+                            size_t Alignment = 0) override {
     if (Size == 0)
       return nullptr;
 
@@ -596,6 +589,13 @@ struct CUDADeviceTy : public GenericDeviceTy {
     void *MemAlloc = nullptr;
     CUdeviceptr DevicePtr;
     CUresult Res;
+
+    if (Alignment > 0 && Alignment > Granularity) {
+      return Plugin::error(ErrorCode::UNSUPPORTED,
+                           "requested alignment (%lu) larger than maximum "
+                           "supported alignment (%lu)",
+                           Alignment, Granularity);
+    }
 
     switch (Kind) {
     case TARGET_ALLOC_DEFAULT:
@@ -614,6 +614,19 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
     if (auto Err = Plugin::check(Res, "error in cuMemAlloc[Host|Managed]: %s"))
       return std::move(Err);
+
+    if (Alignment > 0 && !isAddrAligned(Align(Alignment), MemAlloc)) {
+      if (auto FreeErr = free(MemAlloc, Kind)) {
+        return Plugin::error(ErrorCode::UNKNOWN,
+                             "Failure in deallcation of the incorrectly "
+                             "aligned pointer; requested alignemnt: %lu",
+                             Alignment);
+      }
+
+      return Plugin::error(ErrorCode::UNSUPPORTED,
+                           "unsupported alignment size");
+    }
+
     return MemAlloc;
   }
 
@@ -1460,6 +1473,9 @@ private:
   /// simultaneously.
   uint32_t HardwareParallelism = 0;
 
+  /// Device page size.
+  size_t Granularity = 0;
+
   /// Tracker for virtual address reservations.
   VMemTrackerTy<CUmemGenericAllocationHandle> VMemTracker;
 };
@@ -1472,27 +1488,9 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                AsyncInfoWrapperTy &AsyncInfoWrapper) const {
   CUDADeviceTy &CUDADevice = static_cast<CUDADeviceTy &>(GenericDevice);
 
-  void **KernelParams = nullptr;
-  if (KernelArgs.Flags.IsPtrArgs) {
-    KernelParams = KernelArgs.ArgPtrs;
-  } else {
-    // The args size passed in LaunchParams may have tail padding,
-    // which is not accepted by the CUDA driver.
-    if (ArgsSize > LaunchParams.Size)
-      return Plugin::error(ErrorCode::INVALID_ARGUMENT,
-                           "mismatch in kernel arguments");
-  }
-
   CUstream Stream;
   if (auto Err = CUDADevice.getStream(AsyncInfoWrapper, Stream))
     return Err;
-
-  size_t ConfigArgsSize = ArgsSize;
-  // Valid only for a contiguous buffer passed through LaunchParams.
-  void *Config[] = {CU_LAUNCH_PARAM_BUFFER_POINTER, LaunchParams.Data,
-                    CU_LAUNCH_PARAM_BUFFER_SIZE,
-                    reinterpret_cast<void *>(&ConfigArgsSize),
-                    CU_LAUNCH_PARAM_END};
 
   // If we are running an RPC server we want to wake up the server thread
   // whenever there is a kernel running and let it sleep otherwise.
@@ -1520,8 +1518,8 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                                  DynBlockMemSize, Stream,
                                  &CoopAttr,       1};
 
-  CUresult Res = cuLaunchKernelEx(&LaunchConfig, Func, KernelParams,
-                                  KernelParams ? nullptr : Config);
+  CUresult Res = cuLaunchKernelEx(&LaunchConfig, Func, LaunchParams.Args,
+                                  /*extra=*/nullptr);
 
   // Register a callback to indicate when the kernel is complete.
   if (GenericDevice.getRPCServer())
