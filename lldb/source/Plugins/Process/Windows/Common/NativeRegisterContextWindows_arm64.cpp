@@ -1124,12 +1124,6 @@ Status NativeRegisterContextWindows_arm64::CacheSVEZRegisters() {
   else
     m_sve_z_buffer = std::make_shared<DataBufferHeap>(vl * num_z_regs, 0);
 
-  if (!m_sve_z_buffer) {
-    error = Status::FromErrorString("failed to allocate SVE Z buffer");
-    LLDB_LOG(log, "{0}", error);
-    return error;
-  }
-
   // The lower 128 bits (16 bytes) are stored in the NEON V registers within the
   // standard CONTEXT structure (m_context->V[n].B). The upper bits
   // (VectorLength - 16 bytes) are stored contiguously in a packed array within
