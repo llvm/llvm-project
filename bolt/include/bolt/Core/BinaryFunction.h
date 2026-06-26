@@ -289,8 +289,8 @@ private:
   /// jump table relocations and computed goto tables.
   ///
   /// Since relocations can be removed/deallocated, we store relocation offsets
-  /// instead of pointers.
-  DenseSet<uint64_t> InternalRefDataRelocations;
+  /// instead of pointers. Each entry maps relocation address to target address.
+  DenseMap<uint64_t, uint64_t> InternalRefDataRelocations;
 
   /// Offsets of indirect branches with unknown destinations.
   std::set<uint64_t> UnknownIndirectBranchOffsets;
@@ -662,7 +662,7 @@ private:
                                          uint64_t RelOffset) {
     assert(FuncOffset != 0 && "Relocation should reference function internals");
     registerReferencedOffset(FuncOffset);
-    InternalRefDataRelocations.insert(RelOffset);
+    InternalRefDataRelocations.insert({RelOffset, getAddress() + FuncOffset});
     const MCSymbol *ReferencedSymbol =
         getOrCreateLocalLabel(getAddress() + FuncOffset);
 
@@ -1342,9 +1342,9 @@ public:
   void addRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t RelType,
                      uint64_t Addend, uint64_t Value);
 
-  /// Return locations (offsets) of data section relocations targeting internals
-  /// of this functions.
-  const DenseSet<uint64_t> &getInternalRefDataRelocations() const {
+  /// Return locations (offsets -> target address) of data section relocations
+  /// targeting internals of this functions.
+  const DenseMap<uint64_t, uint64_t> &getInternalRefDataRelocations() const {
     return InternalRefDataRelocations;
   }
 
