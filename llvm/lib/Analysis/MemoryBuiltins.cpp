@@ -1276,7 +1276,7 @@ bool ObjectSizeOffsetEvaluator::computeFallbackHeapMetadata(Value *V, SizeOffset
   }
 
   Value *HeadVal = const_cast<Value *>(Info.getHead());
-  if (!HeadVal)
+  if (!HeadVal || !HeadVal->getType()->isPointerTy() || !V->getType()->isPointerTy())
     return false;
 
   auto getFn = [](const Value *X) -> const Function * {
@@ -1291,41 +1291,53 @@ bool ObjectSizeOffsetEvaluator::computeFallbackHeapMetadata(Value *V, SizeOffset
   if (VF && HF && VF != HF)
     return false;
 
-  if (auto *HeadInst = dyn_cast<Instruction>(HeadVal)) {
-    if (VF && HF && VF == HF &&
-        (isa<GetElementPtrInst>(HeadInst) || isa<CastInst>(HeadInst) || isa<BinaryOperator>(HeadInst)) &&
-        HeadInst->getParent() != &VF->getEntryBlock()) {
-      bool CanMoveToEntry = true;
-      for (Value *Op : HeadInst->operands()) {
-        if (isa<Instruction>(Op)) {
-          CanMoveToEntry = false;
-          break;
-        }
+  BasicBlock *CallBlock = Builder.GetInsertBlock();
+  if (CallBlock) {
+    if (auto *HI = dyn_cast<Instruction>(HeadVal)) {
+      if (HI->getParent() == CallBlock) {
+        if (HI != &*Builder.GetInsertPoint() && !HI->comesBefore(&*Builder.GetInsertPoint()))
+          return false;
+      } else if (HI->getParent() != &VF->getEntryBlock()) {
+        return false;
       }
-      if (CanMoveToEntry) {
-        Instruction *Cloned = HeadInst->clone();
-        Cloned->insertBefore(const_cast<Function *>(VF)->getEntryBlock().getFirstInsertionPt());
-        HeadVal = Cloned;
+    }
+    if (auto *VI = dyn_cast<Instruction>(V)) {
+      if (VI->getParent() == CallBlock) {
+        if (VI != &*Builder.GetInsertPoint() && !VI->comesBefore(&*Builder.GetInsertPoint()))
+          return false;
+      } else if (VI->getParent() != &VF->getEntryBlock()) {
+        return false;
       }
     }
   }
 
-  if (auto *FinalHeadInst = dyn_cast<Instruction>(HeadVal)) {
-    if (auto *VI = dyn_cast<Instruction>(V)) {
-      if (FinalHeadInst->getParent() == VI->getParent() &&
-          !FinalHeadInst->comesBefore(VI))
+  Instruction *InsertAfter = nullptr;
+  if (auto *VI = dyn_cast<Instruction>(V)) {
+    if (auto *HI = dyn_cast<Instruction>(HeadVal)) {
+      if (VI->getParent() == HI->getParent()) {
+        InsertAfter = VI->comesBefore(HI) ? HI : VI;
+      } else if (HI->getParent() == &VF->getEntryBlock()) {
+        InsertAfter = VI;
+      } else if (VI->getParent() == &VF->getEntryBlock()) {
+        InsertAfter = HI;
+      } else {
         return false;
-    }
-    if (FinalHeadInst->getParent() == Builder.GetInsertBlock()) {
-      if (!FinalHeadInst->comesBefore(&*Builder.GetInsertPoint())) {
-        if (FinalHeadInst->getNextNode())
-          Builder.SetInsertPoint(FinalHeadInst->getNextNode());
-        else
-          Builder.SetInsertPoint(FinalHeadInst->getParent());
       }
-    } else if (FinalHeadInst->getParent() != &VF->getEntryBlock()) {
-      return false;
+    } else {
+      InsertAfter = VI;
     }
+  } else if (auto *HI = dyn_cast<Instruction>(HeadVal)) {
+    InsertAfter = HI;
+  }
+
+  IRBuilder<>::InsertPointGuard Guard(Builder);
+  if (InsertAfter) {
+    if (auto OptIP = InsertAfter->getInsertionPointAfterDef())
+      Builder.SetInsertPoint(*OptIP);
+    else
+      return false;
+  } else {
+    Builder.SetInsertPoint(const_cast<Function *>(VF)->getEntryBlock().getFirstInsertionPt());
   }
 
   Value *OffsetVal = nullptr;
@@ -1350,10 +1362,12 @@ bool ObjectSizeOffsetEvaluator::computeFallbackHeapMetadata(Value *V, SizeOffset
     Fn->addFnAttr(Attribute::NoSync);
   }
   Value *ChunkPayloadSize = Builder.CreateCall(GetSizeFC, {HeadVal}, "meta.size");
+  Value *IsHeap = Builder.CreateICmpNE(ChunkPayloadSize, Zero, "is.heap");
   if (HeadVal != V) {
     Value *Cond = Builder.CreateICmpUGE(VInt, HeadInt, "ptr.ge.head");
     ChunkPayloadSize = Builder.CreateSelect(Cond, ChunkPayloadSize, Zero, "chunk.size");
   }
+  ChunkPayloadSize = Builder.CreateSelect(IsHeap, ChunkPayloadSize, ConstantInt::getAllOnesValue(IntTy), "meta.size.checked");
   if (OffsetVal->getType() != IntTy)
     OffsetVal = Builder.CreateZExtOrTrunc(OffsetVal, IntTy);
 
