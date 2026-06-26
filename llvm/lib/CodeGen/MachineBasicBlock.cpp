@@ -936,9 +936,10 @@ void MachineBasicBlock::addPredecessor(MachineBasicBlock *Pred) {
 }
 
 void MachineBasicBlock::removePredecessor(MachineBasicBlock *Pred) {
-  pred_iterator I = find(Predecessors, Pred);
-  assert(I != Predecessors.end() && "Pred is not a predecessor of this block!");
-  Predecessors.erase(I);
+  auto RI = llvm::find(reverse(Predecessors), Pred);
+  assert(RI != Predecessors.rend() &&
+         "Pred is not a predecessor of this block!");
+  Predecessors.erase(std::prev(RI.base()));
 }
 
 void MachineBasicBlock::transferSuccessors(MachineBasicBlock *FromMBB) {
