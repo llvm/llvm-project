@@ -44,11 +44,19 @@ class ValueLatticeElement {
 
     /// This Value has a specific constant value.  The constant cannot be undef.
     /// (For constant integers, constantrange is used instead. Integer typed
-    /// constantexprs can appear as constant.) Note that the constant state
-    /// can be reached by merging undef & constant states.
+    /// constantexprs can appear as constant.)
     /// Transition allowed to the following states:
+    ///  constant_including_undef
     ///  overdefined
     constant,
+
+    /// This Value has a specific constant value, but may also be undef. Merging
+    /// it with a different constant value results in overdefined. (For constant
+    /// integers, constantrange_including_undef is used instead.) This state is
+    /// reached by merging undef & constant states.
+    /// Transition allowed to the following states:
+    ///  overdefined
+    constant_including_undef,
 
     /// This Value is known to not have the specified value. (For constant
     /// integers, constantrange is used instead.  As above, integer typed
@@ -95,6 +103,7 @@ class ValueLatticeElement {
     case unknown:
     case undef:
     case constant:
+    case constant_including_undef:
     case notconstant:
       break;
     case constantrange_including_undef:
@@ -156,6 +165,7 @@ public:
       NumRangeExtensions = Other.NumRangeExtensions;
       break;
     case constant:
+    case constant_including_undef:
     case notconstant:
       ConstVal = Other.ConstVal;
       break;
@@ -175,6 +185,7 @@ public:
       NumRangeExtensions = Other.NumRangeExtensions;
       break;
     case constant:
+    case constant_including_undef:
     case notconstant:
       ConstVal = Other.ConstVal;
       break;
@@ -235,7 +246,12 @@ public:
   bool isUndef() const { return Tag == undef; }
   bool isUnknown() const { return Tag == unknown; }
   bool isUnknownOrUndef() const { return Tag == unknown || Tag == undef; }
-  bool isConstant() const { return Tag == constant; }
+  bool isConstant(bool UndefAllowed = true) const {
+    return Tag == constant || (Tag == constant_including_undef && UndefAllowed);
+  }
+  bool isConstantIncludingUndef() const {
+    return Tag == constant_including_undef;
+  }
   bool isNotConstant() const { return Tag == notconstant; }
   bool isConstantRangeIncludingUndef() const {
     return Tag == constantrange_including_undef;
@@ -250,8 +266,9 @@ public:
   }
   bool isOverdefined() const { return Tag == overdefined; }
 
-  Constant *getConstant() const {
-    assert(isConstant() && "Cannot get the constant of a non-constant!");
+  Constant *getConstant(bool UndefAllowed = true) const {
+    assert(isConstant(UndefAllowed) &&
+           "Cannot get the constant of a non-constant!");
     return ConstVal;
   }
 
@@ -282,7 +299,7 @@ public:
   ConstantRange asConstantRange(unsigned BW, bool UndefAllowed = false) const {
     if (isConstantRange(UndefAllowed))
       return getConstantRange();
-    if (isConstant())
+    if (isConstant(UndefAllowed))
       return getConstant()->toConstantRange();
     if (isUnknown())
       return ConstantRange::getEmpty(BW);
@@ -315,18 +332,27 @@ public:
     if (isa<UndefValue>(V))
       return markUndef();
 
-    if (isConstant()) {
-      assert(getConstant() == V && "Marking constant with different value");
-      return false;
-    }
-
     if (ConstantInt *CI = dyn_cast<ConstantInt>(V))
       return markConstantRange(
           ConstantRange(CI->getValue()),
           MergeOptions().setMayIncludeUndef(MayIncludeUndef));
 
+    // Non-integer constant. Mirror constantrange /
+    // constantrange_including_undef by tracking whether the constant may also
+    // be undef.
+    ValueLatticeElementTy NewTag =
+        (isUndef() || isConstantIncludingUndef() || MayIncludeUndef)
+            ? constant_including_undef
+            : constant;
+    if (isConstant()) {
+      assert(getConstant() == V && "Marking constant with different value");
+      bool Changed = Tag != NewTag;
+      Tag = NewTag;
+      return Changed;
+    }
+
     assert(isUnknown() || isUndef());
-    Tag = constant;
+    Tag = NewTag;
     ConstVal = V;
     return true;
   }
@@ -425,10 +451,15 @@ public:
     }
 
     if (isConstant()) {
-      if (RHS.isConstant() && getConstant() == RHS.getConstant())
+      if (RHS.isConstant() && getConstant() == RHS.getConstant()) {
+        // Same constant value; the result may include undef if either input
+        // may.
+        if (RHS.isConstantIncludingUndef())
+          return markConstant(getConstant(), /*MayIncludeUndef=*/true);
         return false;
+      }
       if (RHS.isUndef())
-        return false;
+        return markConstant(getConstant(), /*MayIncludeUndef=*/true);
       // If the constant is a vector of integers, try to treat it as a range.
       if (getConstant()->getType()->isVectorTy() &&
           getConstant()->getType()->getScalarType()->isIntegerTy()) {
@@ -437,7 +468,8 @@ public:
             RHS.asConstantRange(L.getBitWidth(), /*UndefAllowed=*/true));
         return markConstantRange(
             std::move(NewR),
-            Opts.setMayIncludeUndef(RHS.isConstantRangeIncludingUndef()));
+            Opts.setMayIncludeUndef(RHS.isConstantRangeIncludingUndef() ||
+                                    isConstantIncludingUndef()));
       }
       markOverdefined();
       return true;
@@ -462,7 +494,8 @@ public:
         RHS.asConstantRange(L.getBitWidth(), /*UndefAllowed=*/true));
     return markConstantRange(
         std::move(NewR),
-        Opts.setMayIncludeUndef(RHS.isConstantRangeIncludingUndef()));
+        Opts.setMayIncludeUndef(RHS.isConstantRangeIncludingUndef() ||
+                                RHS.isConstantIncludingUndef()));
   }
 
   // Compares this symbolic value with Other using Pred and returns either

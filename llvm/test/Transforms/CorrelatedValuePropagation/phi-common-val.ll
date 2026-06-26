@@ -216,3 +216,48 @@ join2:
   %phi = phi i8 [ 0, %join1 ], [ %y, %else2 ]
   ret i8 %phi
 }
+
+; original: https://github.com/llvm/llvm-project/issues/198836
+define void @common_value_undef(i32 noundef %a) {
+; CHECK-LABEL: @common_value_undef(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[HEADER:%.*]]
+; CHECK:       header:
+; CHECK-NEXT:    [[U:%.*]] = phi i1 [ undef, [[ENTRY:%.*]] ], [ false, [[BB:%.*]] ]
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp eq i32 [[A:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP0]], label [[BB]], label [[EXIT:%.*]]
+; CHECK:       bb:
+; CHECK-NEXT:    call void @llvm.assume(i1 false)
+; CHECK-NEXT:    br label [[HEADER]]
+; CHECK:       dead:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi i1 [ [[U]], [[DEAD:%.*]] ], [ false, [[HEADER]] ]
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[P]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %header
+
+header:
+  %u = phi i1 [ undef, %entry ], [ %cmp1, %bb ]
+  %cmp0 = icmp eq i32 %a, 0
+  br i1 %cmp0, label %bb, label %exit
+
+bb:                                               ; reached only when %a == 0; UB via assume(false)
+  %cmp1 = icmp eq i32 %a, 1
+  call void @llvm.assume(i1 false)
+  br label %header
+
+dead:                                             ; unreachable; feeds %u into %p
+  br label %exit
+
+exit:
+  %p = phi i1 [ %u, %dead ], [ false, %header ]
+  %not = xor i1 %p, true
+  call void @llvm.assume(i1 %not)
+  ret void
+}
+
+declare void @llvm.assume(i1)
