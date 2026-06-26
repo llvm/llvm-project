@@ -70,7 +70,6 @@
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
-#include "llvm/Analysis/HeapProvenanceAnalysis.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
 #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
@@ -93,7 +92,6 @@
 #include "llvm/Transforms/Scalar/GVN.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
 #include "llvm/Transforms/Utils/Debugify.h"
-#include "llvm/Transforms/Utils/Mem2Reg.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <limits>
 #include <memory>
@@ -1053,16 +1051,9 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
 
     // Register callbacks to schedule sanitizer passes at the appropriate part
     // of the pipeline.
-    if (LangOpts.Sanitize.has(SanitizerKind::LocalBounds)) {
-      PB.registerOptimizerLastEPCallback([this](ModulePassManager &MPM,
-                                                OptimizationLevel Level,
-                                                ThinOrFullLTOPhase Phase) {
-        FunctionPassManager FPM;
-        FPM.addPass(PromotePass());
-        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
-        MPM.addPass(RequireAnalysisPass<ForwardHeapProvenanceAnalysis, llvm::Module>());
-        MPM.addPass(RequireAnalysisPass<BackwardHeapProvenanceAnalysis, llvm::Module>());
-
+    if (LangOpts.Sanitize.has(SanitizerKind::LocalBounds))
+      PB.registerScalarOptimizerLateEPCallback([this](FunctionPassManager &FPM,
+                                                      OptimizationLevel Level) {
         BoundsCheckingPass::Options Options;
         if (CodeGenOpts.SanitizeSkipHotCutoffs[SanitizerKind::SO_LocalBounds] ||
             ClSanitizeGuardChecks) {
@@ -1085,11 +1076,8 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
               static_cast<bool>(CodeGenOpts.SanitizeHandlerPreserveAllRegs),
           };
         }
-        FunctionPassManager BoundsFPM;
-        BoundsFPM.addPass(BoundsCheckingPass(Options));
-        MPM.addPass(createModuleToFunctionPassAdaptor(std::move(BoundsFPM)));
+        FPM.addPass(BoundsCheckingPass(Options));
       });
-    }
 
     if (!IsThinLTOPostLink) {
       // Most sanitizers only run during PreLink stage.

@@ -307,11 +307,10 @@ static bool addBoundsChecking(Function &F, TargetLibraryInfo &TLI,
 PreservedAnalyses BoundsCheckingPass::run(Function &F, FunctionAnalysisManager &AM) {
   auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
-  auto &MAMProxy = AM.getResult<ModuleAnalysisManagerFunctionProxy>(F);
-  auto *FwdHPA = MAMProxy.getCachedResult<ForwardHeapProvenanceAnalysis>(*F.getParent());
-  auto *BwdHPA = MAMProxy.getCachedResult<BackwardHeapProvenanceAnalysis>(*F.getParent());
+  auto &FwdHPA = AM.getResult<ForwardHeapProvenanceAnalysis>(F);
+  auto &BwdHPA = AM.getResult<BackwardHeapProvenanceAnalysis>(F);
 
-  if (!addBoundsChecking(F, TLI, SE, Opts, FwdHPA, BwdHPA))
+  if (!addBoundsChecking(F, TLI, SE, Opts, &FwdHPA, &BwdHPA))
     return PreservedAnalyses::all();
 
   return PreservedAnalyses::none();

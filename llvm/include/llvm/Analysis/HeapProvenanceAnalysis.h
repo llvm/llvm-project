@@ -97,8 +97,8 @@ public:
   const DenseMap<const Value *, HeapProvenanceLattice> &getMap() const {
     return ValueMap;
   }
-  bool invalidate(Module &, const PreservedAnalyses &PA,
-                  ModuleAnalysisManager::Invalidator &);
+  bool invalidate(Function &, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &);
 };
 
 class ForwardHeapProvenanceAnalysis
@@ -107,7 +107,7 @@ class ForwardHeapProvenanceAnalysis
   static AnalysisKey Key;
 public:
   using Result = ForwardHeapProvenanceAnalysisResult;
-  Result run(Module &M, ModuleAnalysisManager &MAM);
+  Result run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 class BackwardHeapProvenanceAnalysisResult {
@@ -125,8 +125,8 @@ public:
   const DenseMap<const Value *, HeapProvenanceLattice> &getMap() const {
     return ValueMap;
   }
-  bool invalidate(Module &, const PreservedAnalyses &PA,
-                  ModuleAnalysisManager::Invalidator &);
+  bool invalidate(Function &, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &);
 };
 
 class BackwardHeapProvenanceAnalysis
@@ -135,7 +135,7 @@ class BackwardHeapProvenanceAnalysis
   static AnalysisKey Key;
 public:
   using Result = BackwardHeapProvenanceAnalysisResult;
-  Result run(Module &M, ModuleAnalysisManager &MAM);
+  Result run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 // Combined wrapper for backward compatibility with ObjectSizeOffsetEvaluator
@@ -163,8 +163,8 @@ public:
   const ForwardHeapProvenanceAnalysisResult &getForwardResult() const { return ForwardRes; }
   const BackwardHeapProvenanceAnalysisResult &getBackwardResult() const { return BackwardRes; }
 
-  bool invalidate(Module &, const PreservedAnalyses &PA,
-                  ModuleAnalysisManager::Invalidator &);
+  bool invalidate(Function &, const PreservedAnalyses &PA,
+                  FunctionAnalysisManager::Invalidator &);
 };
 
 class HeapProvenanceAnalysis
@@ -173,8 +173,8 @@ class HeapProvenanceAnalysis
   static AnalysisKey Key;
 public:
   using Result = HeapProvenanceAnalysisResult;
-  static Result analyzeModule(Module &M);
-  Result run(Module &M, ModuleAnalysisManager &MAM);
+  static Result analyzeFunction(Function &F);
+  Result run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 class HeapProvenancePrinterPass
@@ -182,7 +182,7 @@ class HeapProvenancePrinterPass
   raw_ostream &OS;
 public:
   explicit HeapProvenancePrinterPass(raw_ostream &OS) : OS(OS) {}
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // namespace llvm
