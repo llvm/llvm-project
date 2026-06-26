@@ -1256,6 +1256,17 @@ Value *llvm::concatenateVectors(IRBuilderBase &Builder,
   return ResList[0];
 }
 
+bool llvm::maskContainsAllOneOrUndef(Value *Mask) {
+  assert(isa<VectorType>(Mask->getType()) &&
+         isa<IntegerType>(Mask->getType()->getScalarType()) &&
+         cast<IntegerType>(Mask->getType()->getScalarType())->getBitWidth() ==
+             1 &&
+         "Mask must be a vector of i1");
+
+  auto AllOneOrUndef = m_CombineOr(m_AllOnes(), m_UndefValue());
+  return match(Mask, m_CombineOr(AllOneOrUndef, m_ContainsMatchingVectorElement(AllOneOrUndef)));
+}
+
 /// TODO: This is a lot like known bits, but for
 /// vectors.  Is there something we can common this with?
 APInt llvm::possiblyDemandedEltsInMask(Value *Mask) {
