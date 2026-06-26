@@ -216,10 +216,10 @@ struct MappingAarch64_42 {
 
 /*
 C/C++ on linux/aarch64 (47-bit VMA)
-0000 0000 1000 - 0500 0000 0000: main binary                     (5120 GB)
-0500 0000 0000 - 0aaa 0000 0000: -
-0aaa 0000 0000 - 2a00 0000 0000: shadow memory                  (32088 GB)
-2a00 0000 0000 - 4000 0000 0000: -
+0000 0000 1000 - 0400 0000 0000: main binary                     (4096 GB)
+0400 0000 0000 - 0aaa 0000 0000: -
+0aaa 0000 0000 - 2800 0000 0000: shadow memory                  (30040 GB)
+2800 0000 0000 - 4000 0000 0000: -
 4000 0000 0000 - 5000 0000 0000: metainfo                       (16384 GB)
 5000 0000 0000 - 5555 0000 0000: -
 5555 0000 0000 - 5600 0000 0000: main binary (PIE)                (684 GB)
@@ -228,9 +228,9 @@ C/C++ on linux/aarch64 (47-bit VMA)
 */
 struct MappingAarch64_47 {
   static const uptr kLoAppMemBeg = 0x0000000001000ull;
-  static const uptr kLoAppMemEnd = 0x0050000000000ull;
+  static const uptr kLoAppMemEnd = 0x0040000000000ull;
   static const uptr kShadowBeg = 0x00aaa00000000ull;
-  static const uptr kShadowEnd = 0x02a0000000000ull;
+  static const uptr kShadowEnd = 0x0280000000000ull;
   static const uptr kMetaShadowBeg = 0x0400000000000ull;
   static const uptr kMetaShadowEnd = 0x0500000000000ull;
   static const uptr kMidAppMemBeg = 0x0555500000000ull;
