@@ -1617,7 +1617,6 @@ bool BinaryFunction::scanExternalRefs() {
 
   if (opts::NoScan) {
     clearList(Relocations);
-    clearList(ExternallyReferencedOffsets);
 
     return false;
   }
@@ -1914,7 +1913,6 @@ bool BinaryFunction::scanExternalRefs() {
   }
 
   clearList(Relocations);
-  clearList(ExternallyReferencedOffsets);
 
   if (Success && BC.HasRelocations)
     HasExternalRefRelocations = true;
@@ -2569,7 +2567,6 @@ Error BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
     setSimple(false);
   }
 
-  clearList(ExternallyReferencedOffsets);
   clearList(UnknownIndirectBranchOffsets);
 
   return Error::success();
