@@ -384,16 +384,6 @@ static MachineInstr *getBlockStructInstr(Register ParamReg,
   llvm_unreachable("getBlockStructInstr: unexpected instruction pattern");
 }
 
-// Return an integer constant corresponding to the given register and
-// defined in spv_track_constant.
-// TODO: maybe unify with prelegalizer pass.
-static unsigned getConstFromIntrinsic(Register Reg, MachineRegisterInfo *MRI) {
-  MachineInstr *DefMI = MRI->getUniqueVRegDef(Reg);
-  assert(DefMI->getOpcode() == TargetOpcode::G_CONSTANT &&
-         DefMI->getOperand(1).isCImm());
-  return DefMI->getOperand(1).getCImm()->getValue().getZExtValue();
-}
-
 // Return type of the instruction result from spv_assign_type intrinsic.
 // TODO: maybe unify with prelegalizer pass.
 static const Type *getMachineInstrType(MachineInstr *MI) {
@@ -1374,7 +1364,7 @@ static bool generateGroupInst(const SPIRV::IncomingCall *Call,
       if (GroupBuiltin->Opcode ==
               SPIRV::OpSubgroupMatrixMultiplyAccumulateINTEL &&
           Call->Arguments.size() > 4)
-        ImmArgs.push_back(getConstFromIntrinsic(Call->Arguments[4], MRI));
+        ImmArgs.push_back(getIConstVal(Call->Arguments[4], MRI));
       return buildOpFromWrapper(MIRBuilder, GroupBuiltin->Opcode, Call,
                                 GR->getSPIRVTypeID(Call->ReturnType), ImmArgs);
     }
@@ -2523,7 +2513,7 @@ static bool generateCoopMatrInst(const SPIRV::IncomingCall *Call,
   SmallVector<uint32_t, 1> ImmArgs;
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   if (Opcode == SPIRV::OpCooperativeMatrixPrefetchINTEL) {
-    const uint32_t CacheLevel = getConstFromIntrinsic(Call->Arguments[3], MRI);
+    const uint32_t CacheLevel = getIConstVal(Call->Arguments[3], MRI);
     auto MIB = MIRBuilder.buildInstr(SPIRV::OpCooperativeMatrixPrefetchINTEL)
                    .addUse(Call->Arguments[0])  // pointer
                    .addUse(Call->Arguments[1])  // rows
@@ -2533,13 +2523,13 @@ static bool generateCoopMatrInst(const SPIRV::IncomingCall *Call,
     if (ArgSz > 5)
       MIB.addUse(Call->Arguments[5]); // stride
     if (ArgSz > 6) {
-      const uint32_t MemOp = getConstFromIntrinsic(Call->Arguments[6], MRI);
+      const uint32_t MemOp = getIConstVal(Call->Arguments[6], MRI);
       MIB.addImm(MemOp); // memory operand
     }
     return true;
   }
   if (LiteralIdx > 0)
-    ImmArgs.push_back(getConstFromIntrinsic(Call->Arguments[LiteralIdx], MRI));
+    ImmArgs.push_back(getIConstVal(Call->Arguments[LiteralIdx], MRI));
   Register TypeReg = GR->getSPIRVTypeID(Call->ReturnType);
   if (Opcode == SPIRV::OpCooperativeMatrixLengthKHR) {
     SPIRVTypeInst CoopMatrType = GR->getSPIRVTypeForVReg(Call->Arguments[0]);
@@ -2672,7 +2662,7 @@ static bool buildAPFixedPointInst(const SPIRV::IncomingCall *Call,
     }
 
     for (unsigned index = 2; index < 7; index++) {
-      ImmArgs.push_back(getConstFromIntrinsic(Call->Arguments[index], MRI));
+      ImmArgs.push_back(getIConstVal(Call->Arguments[index], MRI));
     }
 
     // Emit the instruction
@@ -2695,7 +2685,7 @@ static bool buildAPFixedPointInst(const SPIRV::IncomingCall *Call,
     return true;
   } else {
     for (unsigned index = 1; index < 6; index++)
-      ImmArgs.push_back(getConstFromIntrinsic(Call->Arguments[index], MRI));
+      ImmArgs.push_back(getIConstVal(Call->Arguments[index], MRI));
 
     return buildOpFromWrapper(MIRBuilder, Opcode, Call,
                               GR->getSPIRVTypeID(Call->ReturnType), ImmArgs);
@@ -2772,8 +2762,7 @@ static bool generatePredicatedLoadStoreInst(const SPIRV::IncomingCall *Call,
   MachineRegisterInfo *MRI = MIRBuilder.getMRI();
   // Memory operand is optional and is literal.
   if (ArgSz > 3)
-    ImmArgs.push_back(
-        getConstFromIntrinsic(Call->Arguments[/*Literal index*/ 3], MRI));
+    ImmArgs.push_back(getIConstVal(Call->Arguments[/*Literal index*/ 3], MRI));
 
   Register TypeReg = GR->getSPIRVTypeID(Call->ReturnType);
   return buildOpFromWrapper(MIRBuilder, Opcode, Call,
@@ -3358,7 +3347,7 @@ static bool generateAFPInst(const SPIRV::IncomingCall *Call,
     MachineInstr *DefMI = MRI->getUniqueVRegDef(Arg);
     if (DefMI->getOpcode() == TargetOpcode::G_CONSTANT &&
         DefMI->getOperand(1).isCImm()) {
-      MIB.addImm(getConstFromIntrinsic(Arg, MRI));
+      MIB.addImm(getIConstVal(Arg, MRI));
     } else {
       MIB.addUse(Arg);
     }
@@ -3396,9 +3385,9 @@ static bool generateLoadStoreInst(const SPIRV::IncomingCall *Call,
   // Add optional memory attributes and an alignment.
   unsigned NumArgs = Call->Arguments.size();
   if ((IsLoad && NumArgs >= 2) || NumArgs >= 3)
-    MIB.addImm(getConstFromIntrinsic(Call->Arguments[IsLoad ? 1 : 2], MRI));
+    MIB.addImm(getIConstVal(Call->Arguments[IsLoad ? 1 : 2], MRI));
   if ((IsLoad && NumArgs >= 3) || NumArgs >= 4)
-    MIB.addImm(getConstFromIntrinsic(Call->Arguments[IsLoad ? 2 : 3], MRI));
+    MIB.addImm(getIConstVal(Call->Arguments[IsLoad ? 2 : 3], MRI));
   return true;
 }
 
