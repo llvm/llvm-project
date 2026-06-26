@@ -594,6 +594,14 @@ public:
   void VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
                                   ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
+  /// Implementation detail of VisitObjCForCollectionStmt, which contains the
+  /// logic that needs to be executed both in the "container is empty" case
+  /// (HasElements=false) and the "container is not empty" case
+  /// (HasElements=true).
+  void populateObjCForDestinationSet(const ObjCForCollectionStmt *S,
+                                     ExplodedNode *Pred, ExplodedNodeSet &Dst,
+                                     SVal ElementV, bool HasElements);
+
   void VisitObjCMessage(const ObjCMessageExpr *ME, ExplodedNode *Pred,
                         ExplodedNodeSet &Dst);
 
