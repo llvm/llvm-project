@@ -157,7 +157,6 @@ class _DAPSessionState:
             OutputCategory.TELEMETRY: io.StringIO(),
         }
         self._stopped_thread_id: Optional[int] = None
-        self._last_response: Optional[Response] = None
         self._stop_generation: int = 0
 
     @property
@@ -207,15 +206,6 @@ class _DAPSessionState:
             if value is not None
         }
         self._capabilities = dataclasses.replace(self._capabilities, **kwargs)
-
-    @property
-    @_synchronized
-    def last_response(self) -> Optional[Response]:
-        return self._last_response
-
-    @_synchronized
-    def set_last_response(self, response: Response):
-        self._last_response = response
 
 
 class Session:
@@ -277,15 +267,11 @@ class Session:
         # is created using `RunInTerminal`.
         self._reverse_process_io_threads: list[threading.Thread] = []
 
-    def last_response(self):
-        """Returns a copy of the response most recently consumed by a test.
-
-        This is the response a test last checked via (PendingResponse) not
-        the last response from the adapter. only useful when a helper function
-        does not expose the response such as `resolve_source_breakpoint`."""
-        response = self._state.last_response
-        assert response is not None, "expected at least previous response."
-        return dataclasses.replace(response)
+    def last_event(self):
+        """Returns a copy of the last received event or an anchor event with seq=0
+        if no events have been received yet."""
+        event = self._event_history.last_event()
+        return dataclasses.replace(event)
 
     @property
     def stopped_thread_id(self):
@@ -467,7 +453,6 @@ class Session:
             raw_future=raw_future,
             timeout=self._message_timeout,
             command=request_args.command_,
-            on_resolve=self._state.set_last_response,
         )
 
     def _send_response(self, response: ReverseResponse):

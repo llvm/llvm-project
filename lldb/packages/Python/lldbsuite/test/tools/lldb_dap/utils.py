@@ -444,6 +444,16 @@ class EventHistory:
         assert isinstance(event, event_types)
         return event
 
+    def last_event(self) -> Event:
+        with self._new_event_condition:
+            if self._events:
+                return self._events[-1]
+
+        # There is no event with the sequence 0.
+        # This exist in order provide the last event since the event list is empty.
+        anchor_event = Event(seq=0, type=MessageType.EVENT, event="anchor_first_event")
+        return anchor_event
+
     def __wait_until(
         self,
         matches_condition: Callable[[Event], bool],
@@ -578,7 +588,6 @@ class DAPConnection:
         self._is_ready.clear()
 
     def start(self, handler: MessageHandler):
-        self._is_ready.set()
         self._read_loop(handler)
 
     def stop(self):
@@ -613,6 +622,7 @@ class DAPConnection:
         return self._is_ready.wait(timeout)
 
     def _read_loop(self, handler: MessageHandler):
+        self._is_ready.set()
         error = None
         try:
             while self.is_alive():

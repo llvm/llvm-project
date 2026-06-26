@@ -785,7 +785,7 @@ class DAPTestSession(Session):
     def set_variable(
         self, name: str, value, *, variablesReference: int, is_hex: bool = False
     ) -> SetVariableResponse | ErrorResponse:
-        last_response = self.last_response()
+        last_event = self.last_event()
         handle = self.send_request(
             SetVariableArgs(
                 variablesReference=variablesReference,
@@ -796,11 +796,11 @@ class DAPTestSession(Session):
         )
         response = handle.result_or_error()
         if isinstance(response, SetVariableResponse):
-            invalidated_event = self.wait_for_invalidated_event(after=last_response)
+            invalidated_event = self.wait_for_invalidated_event(after=last_event)
             invalidated_areas = invalidated_event.body.areas
             self.test_case.assertEqual(["variables"], invalidated_areas)
 
-            memory_event = self.wait_for_memory_event(after=last_response)
+            memory_event = self.wait_for_memory_event(after=last_event)
             self.test_case.assertEqual(
                 memory_event.body.memoryReference, response.body.memoryReference
             )
@@ -817,13 +817,13 @@ class DAPTestSession(Session):
     def resolve_source_breakpoints(
         self, source_path: str, breakpoints: list[int] | list[SourceBreakpoint]
     ) -> list[int]:
-        last_response = self.last_response()
+        last_event = self.last_event()
         bp_response = self.set_source_breakpoints(source_path, breakpoints)
         r_breakpoints = bp_response.body.breakpoints
 
         all_verified = all(bp.verified for bp in r_breakpoints)
         if not all_verified:
-            self.wait_until_all_breakpoints_verified(r_breakpoints, after=last_response)
+            self.wait_until_all_breakpoints_verified(r_breakpoints, after=last_event)
 
         self.test_case.assertEqual(
             len(breakpoints),
@@ -842,13 +842,13 @@ class DAPTestSession(Session):
         and returns an array of strings containing the breakpoint IDs
         ("1", "2") for each breakpoint that was set.
         """
-        last_response = self.last_response()
+        last_event = self.last_event()
         response = self.set_function_breakpoints(breakpoints, condition, hitCondition)
         resp_bps = response.body.breakpoints
 
         all_verified = all(bp.verified for bp in resp_bps)
         if not all_verified:
-            self.wait_until_all_breakpoints_verified(resp_bps, after=last_response)
+            self.wait_until_all_breakpoints_verified(resp_bps, after=last_event)
 
         return self.breakpoints_to_ids(resp_bps)
 
@@ -1688,7 +1688,7 @@ class DAPTestSession(Session):
             val_bytes = value
         data = base64.b64encode(val_bytes).decode()
 
-        before_request = self.last_response()
+        before_request = self.last_event()
         write_args = WriteMemoryArgs(
             memoryReference=memoryReference,
             data=data,
