@@ -600,7 +600,7 @@ static std::optional<std::string> GetFileNameByLoadAddress(HANDLE process,
       break; // Not loaded as a module; fall back to the mapped-file query.
     if (len < module_filename.size()) {
       std::string path_utf8;
-      llvm::convertWideToUTF8(std::wstring(module_filename.data(), len),
+      llvm::convertWideToUTF8(std::wstring_view(module_filename.data(), len),
                               path_utf8);
       return path_utf8;
     }
