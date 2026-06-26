@@ -198,7 +198,7 @@ EnumStrings<DescriptorRangeFlags> dxbc::getDescriptorRangeFlags() {
 #define DESCRIPTOR_RANGE_FLAG(Val, Enum, Flag)                                 \
   {{#Enum}, DescriptorRangeFlags::Enum},
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-  };
+      };
   static constexpr auto DescriptorRangeFlagNames =
       BUILD_ENUM_STRINGS(DescriptorRangeFlagNameDefs);
   return EnumStrings(DescriptorRangeFlagNames);
@@ -300,7 +300,7 @@ EnumStrings<PSV::InterpolationMode> PSV::getInterpolationModes() {
       {
 #define INTERPOLATION_MODE(Val, Enum) {{#Enum}, PSV::InterpolationMode::Enum},
 #include "llvm/BinaryFormat/DXContainerConstants.def"
-  };
+      };
   static constexpr auto InterpolationModeNames =
       BUILD_ENUM_STRINGS(InterpolationModeNameDefs);
   return EnumStrings(InterpolationModeNames);
@@ -331,8 +331,7 @@ EnumStrings<SourceInfo::SectionType> SourceInfo::getSectionTypes() {
 #define SOURCE_INFO_TYPE(Num, Val) {{#Val}, SourceInfo::SectionType::Val},
 #include "llvm/BinaryFormat/DXContainerConstants.def"
   };
-  static constexpr auto SectionNames =
-      BUILD_ENUM_STRINGS(SectionNameDefs);
+  static constexpr auto SectionNames = BUILD_ENUM_STRINGS(SectionNameDefs);
   return EnumStrings(SectionNames);
 }
 
