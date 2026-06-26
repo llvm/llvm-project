@@ -5272,7 +5272,7 @@ private:
   }
 
   struct ParsedSemantic {
-    std::string Name = "";
+    IdentifierInfo *Name = nullptr;
     unsigned Index = 0;
     bool Explicit = false;
   };

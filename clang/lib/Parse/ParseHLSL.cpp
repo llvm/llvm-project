@@ -136,8 +136,11 @@ Parser::ParsedSemantic Parser::ParseHLSLSemantic() const {
   // ParseHLSLSemantic being called on an identifier, the first
   // character cannot be a digit. This error should be handled by
   // the caller. We can assert here.
-  std::string SemanticName = Identifier.take_front(IndexIndex).str();
-  assert(SemanticName.size() > 0);
+  // getIdentifierInfo copies the bytes into the identifier table,
+  // so Buffer can safely die when this function returns.
+  IdentifierInfo *Name =
+      PP.getIdentifierInfo(Identifier.take_front(IndexIndex));
+  assert(Name->getLength() > 0);
 
   unsigned Index = 0;
   bool Explicit = false;
@@ -149,7 +152,7 @@ Parser::ParsedSemantic Parser::ParseHLSLSemantic() const {
     assert(!Failure);
   }
 
-  return {SemanticName, Index, Explicit};
+  return {Name, Index, Explicit};
 }
 
 void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
@@ -327,7 +330,7 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
         SourceLocation()));
     ArgExprs.push_back(IntegerLiteral::Create(
         Ctx, llvm::APInt(1, Semantic.Explicit), Ctx.BoolTy, SourceLocation()));
-    II = PP.getIdentifierInfo(Semantic.Name);
+    II = Semantic.Name;
     break;
   }
   case ParsedAttr::UnknownAttribute: // FIXME: maybe this is obsolete?
