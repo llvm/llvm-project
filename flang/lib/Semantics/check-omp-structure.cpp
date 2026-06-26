@@ -3219,7 +3219,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPCriticalConstruct &x) {
     if (auto *object{GetArgumentObject(arg)}) {
       if (auto *designator{GetDesignatorFromObj(*object)}) {
         return parser::GetDesignatorNameIfDataRef(*designator);
-      } else if (auto *locator{GetLocatorFromObj(object)}) {
+      } else if (auto *locator{GetLocatorFromObj(*object)}) {
         if (auto *res{
                 std::get_if<parser::OmpReservedIdentifier>(&locator->u)}) {
           return &res->v;
