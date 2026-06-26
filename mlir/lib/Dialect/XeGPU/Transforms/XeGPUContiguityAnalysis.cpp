@@ -52,21 +52,35 @@ namespace mlir::xegpu::detail::axis_dataflow {
 // AxisInfo: per-axis contiguity / constancy / divisibility lattice.
 //===----------------------------------------------------------------------===//
 
-/// Sentinel "very large" value for unconstrained dimensions. Any real shape
-/// is far smaller, so component-wise `min` will collapse this to the truth.
+/// Sentinel "very large" value for unconstrained dimensions. Any real shape is
+/// far smaller, so component-wise `min` collapses this to the truth. It is not
+/// `numeric_limits<int64_t>::max()` because divisibility values are multiplied
+/// (e.g. in `visitMul`); `1 << 30` keeps those products well within `int64_t`.
 static constexpr int64_t kAxisInfoTop = 1LL << 30;
 
-/// Per-dimension axis information for an SSA value of integer / index type.
-/// All fields describe runs of consecutive elements along a dimension `d`:
+/// Per-dimension axis information for an SSA vector value of integer / index
+/// type. The fields describe, for each dimension `d`, the pattern of the values
+/// along `d` (examples use a 1-D vector, so `d` is the only / innermost dim):
 ///   - `contiguity[d]`: longest run that increases by exactly 1.
+///       `[0, 1, 2, 3]` -> 4;  `[0, 1, 0, 1]` -> 2.
 ///   - `constancy[d]`: longest run of equal values.
+///       `[5, 5, 5, 5]` -> 4;  `[5, 5, 6, 6]` -> 2.
 ///   - `divisibility[d]`: a power-of-two divisor of every element.
+///       `[8, 16, 24]` -> 8;  `[3, 6, 9]` -> 1.
 ///   - `knownConstant`: the value, if the whole vector is one constant.
-///   - `innerStride`: if set, each row along the innermost dim is an
-///     arithmetic progression with this step. `1` is the contiguous case,
-///     `0` the all-equal case; any other value is a strided progression that
-///     `contiguity`/`constancy` can't represent (both read 1). Per-row base
-///     may vary; per-row alignment lives in `divisibility[innerDim]`.
+///       `dense<7>` -> 7;  `[0, 1, 2]` -> nullopt.
+///   - `innerStride`: if set, consecutive values along the innermost dim differ
+///     by this constant step. `1` is the contiguous case (`[0,1,2,3]`), `0` the
+///     all-equal case (`[5,5,5,5]`); any other value is a strided progression
+///     (`[0,4,8,12]` -> 4) that `contiguity`/`constancy` can't represent (both
+///     read 1). For a multi-dim vector each inner-dim slice is its own
+///     progression; their bases may differ, with the shared inner alignment in
+///     `divisibility[innerDim]`.
+///
+/// Only `contiguity[innerDim]` is consumed when stamping, but all dimensions
+/// are tracked because `vector.transpose` / `vector.shape_cast` permute or move
+/// per-dim info between axes, so an intermediate value's outer dims can become
+/// the inner dim of a later value.
 ///
 /// Pessimistic / entry value: contiguity=1, constancy=1, divisibility=1,
 /// innerStride absent.
@@ -96,8 +110,13 @@ struct AxisInfo {
            knownConstant == rhs.knownConstant && innerStride == rhs.innerStride;
   }
 
-  /// Conservative join. Two values reaching the same SSA value via different
-  /// control-flow paths must agree on what holds.
+  /// Conservative join (lattice meet). When a value can arrive from several
+  /// paths (e.g. a block argument, or `arith.select`), only what holds on
+  /// *every* path is safe to assume. So we keep the weaker fact per field:
+  /// `min` of each run length (a run is only guaranteed as long as the shortest
+  /// incoming one), `gcd` of divisibility, and a value/stride only when both
+  /// sides agree. This is what makes the contiguity we later stamp sound rather
+  /// than "undecidable" — it is the largest run guaranteed on all paths.
   static AxisInfo join(const AxisInfo &lhs, const AxisInfo &rhs) {
     if (!lhs.isInitialized())
       return rhs;
