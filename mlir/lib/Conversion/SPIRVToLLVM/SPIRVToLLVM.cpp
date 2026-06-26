@@ -1564,6 +1564,50 @@ public:
   }
 };
 
+class RadiansPattern : public SPIRVToLLVMConversion<spirv::GLRadiansOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::GLRadiansOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::GLRadiansOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto srcType = op.getType();
+    auto dstType = getTypeConverter()->convertType(srcType);
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    // pi / 180
+    Value factor =
+        createFPConstant(loc, srcType, dstType, rewriter, 0.017453292519943295);
+    rewriter.replaceOpWithNewOp<LLVM::FMulOp>(op, dstType, adaptor.getOperand(),
+                                              factor);
+    return success();
+  }
+};
+
+class DegreesPattern : public SPIRVToLLVMConversion<spirv::GLDegreesOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::GLDegreesOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::GLDegreesOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto srcType = op.getType();
+    auto dstType = getTypeConverter()->convertType(srcType);
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    // 180 / pi
+    Value factor =
+        createFPConstant(loc, srcType, dstType, rewriter, 57.29577951308232);
+    rewriter.replaceOpWithNewOp<LLVM::FMulOp>(op, dstType, adaptor.getOperand(),
+                                              factor);
+    return success();
+  }
+};
+
 class VariablePattern : public SPIRVToLLVMConversion<spirv::VariableOp> {
 public:
   using SPIRVToLLVMConversion<spirv::VariableOp>::SPIRVToLLVMConversion;
@@ -1916,7 +1960,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::GLAsinOp, LLVM::ASinOp>,
       DirectConversionPattern<spirv::GLAcosOp, LLVM::ACosOp>,
       DirectConversionPattern<spirv::GLAtanOp, LLVM::ATanOp>,
-      InverseSqrtPattern, SAbsPattern, TanPattern, TanhPattern,
+      InverseSqrtPattern, SAbsPattern, TanPattern, TanhPattern, RadiansPattern,
+      DegreesPattern,
 
       // OpenCL extended instruction set ops
       DirectConversionPattern<spirv::CLCeilOp, LLVM::FCeilOp>,

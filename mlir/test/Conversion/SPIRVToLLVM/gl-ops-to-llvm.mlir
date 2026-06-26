@@ -335,6 +335,36 @@ spirv.func @inverse_sqrt(%arg0: f32) "None" {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.GL.Radians
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @radians
+spirv.func @radians(%arg0: f32, %arg1: vector<3xf32>) "None" {
+  // CHECK: %[[FACTOR:.*]] = llvm.mlir.constant(0.0174532924 : f32) : f32
+  // CHECK: llvm.fmul %{{.*}}, %[[FACTOR]] : f32
+  %0 = spirv.GL.Radians %arg0 : f32
+  // CHECK: %[[VFACTOR:.*]] = llvm.mlir.constant(dense<0.0174532924> : vector<3xf32>) : vector<3xf32>
+  // CHECK: llvm.fmul %{{.*}}, %[[VFACTOR]] : vector<3xf32>
+  %1 = spirv.GL.Radians %arg1 : vector<3xf32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.GL.Degrees
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @degrees
+spirv.func @degrees(%arg0: f32, %arg1: vector<3xf32>) "None" {
+  // CHECK: %[[FACTOR:.*]] = llvm.mlir.constant(57.2957802 : f32) : f32
+  // CHECK: llvm.fmul %{{.*}}, %[[FACTOR]] : f32
+  %0 = spirv.GL.Degrees %arg0 : f32
+  // CHECK: %[[VFACTOR:.*]] = llvm.mlir.constant(dense<57.2957802> : vector<3xf32>) : vector<3xf32>
+  // CHECK: llvm.fmul %{{.*}}, %[[VFACTOR]] : vector<3xf32>
+  %1 = spirv.GL.Degrees %arg1 : vector<3xf32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.GL.Trunc
 //===----------------------------------------------------------------------===//
 
