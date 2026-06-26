@@ -37,4 +37,5 @@ public:
     EXPECT_MATH_ERRNO(EDOM);
   }
 };
+
 TEST_F(LlvmLibcCosBf16Test, SpecialNumbers) { test_special_numbers(); }
