@@ -234,7 +234,7 @@ unsigned X86TTIImpl::getLoadStoreVecRegBitWidth(unsigned) const {
 }
 
 unsigned X86TTIImpl::getMaxInterleaveFactor(ElementCount VF,
-                                            bool HasReductions) const {
+                                            bool HasUnorderedReductions) const {
   // If the loop will not be vectorized, don't interleave the loop.
   // Let regular unroll to unroll the loop, which saves the overflow
   // check and memory check cost.

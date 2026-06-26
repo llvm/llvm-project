@@ -84,7 +84,7 @@ public:
 
   unsigned getNumberOfRegisters(unsigned ClassID) const override;
   unsigned getMaxInterleaveFactor(ElementCount VF,
-                                  bool HasReductions) const override;
+                                  bool HasUnorderedReductions) const override;
   TypeSize
   getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override;
   unsigned getMinVectorRegisterBitWidth() const override;

@@ -172,7 +172,7 @@ public:
   }
 
   unsigned getMaxInterleaveFactor(ElementCount VF,
-                                  bool HasReductions) const override;
+                                  bool HasUnorderedReductions) const override;
 
   bool prefersVectorizedAddressing() const override;
 

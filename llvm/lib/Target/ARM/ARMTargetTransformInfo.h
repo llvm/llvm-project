@@ -279,7 +279,7 @@ public:
   }
 
   unsigned getMaxInterleaveFactor(ElementCount VF,
-                                  bool HasReductions) const override {
+                                  bool HasUnorderedReductions) const override {
     return ST->getMaxInterleaveFactor();
   }
 

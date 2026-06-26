@@ -723,7 +723,7 @@ public:
   }
 
   virtual unsigned getMaxInterleaveFactor(ElementCount VF,
-                                          bool HasReductions) const {
+                                          bool HasUnorderedReductions) const {
     return 1;
   }
 

@@ -102,7 +102,7 @@ public:
   unsigned getCacheLineSize() const override;
   unsigned getPrefetchDistance() const override;
   unsigned getMaxInterleaveFactor(ElementCount VF,
-                                  bool HasReductions) const override;
+                                  bool HasUnorderedReductions) const override;
   InstructionCost vectorCostAdjustmentFactor(unsigned Opcode, Type *Ty1,
                                              Type *Ty2) const;
   InstructionCost getArithmeticInstrCost(

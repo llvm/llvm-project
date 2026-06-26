@@ -527,7 +527,7 @@ unsigned PPCTTIImpl::getPrefetchDistance() const {
 }
 
 unsigned PPCTTIImpl::getMaxInterleaveFactor(ElementCount VF,
-                                            bool HasReductions) const {
+                                            bool HasUnorderedReductions) const {
   unsigned Directive = ST->getCPUDirective();
   // The 440 has no SIMD support, but floating-point instructions
   // have a 5-cycle latency, so unroll by 5x for latency hiding.

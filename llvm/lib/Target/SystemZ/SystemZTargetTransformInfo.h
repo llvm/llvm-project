@@ -83,7 +83,7 @@ public:
   bool enableWritePrefetching() const override { return true; }
 
   unsigned getMaxInterleaveFactor(ElementCount VF,
-                                  bool HasReductions) const override;
+                                  bool HasUnorderedReductions) const override;
 
   bool hasDivRemOp(Type *DataType, bool IsSigned) const override;
   bool prefersVectorizedAddressing() const override { return false; }

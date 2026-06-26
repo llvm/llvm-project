@@ -58,7 +58,7 @@ public:
   bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes, Align Alignment,
                                     unsigned AddrSpace) const override;
   unsigned getMaxInterleaveFactor(ElementCount VF,
-                                  bool HasReductions) const override;
+                                  bool HasUnorderedReductions) const override;
   InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                                  const Instruction *I = nullptr) const override;
   using BaseT::getVectorInstrCost;

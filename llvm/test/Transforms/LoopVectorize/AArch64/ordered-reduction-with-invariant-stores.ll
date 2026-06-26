@@ -16,13 +16,11 @@ define void @ordered_reduction(ptr %dst, float %a, float %b) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.vector.reduce.fadd.v2f32(float [[VEC_PHI]], <2 x float> [[TMP0]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call float @llvm.vector.reduce.fadd.v2f32(float [[TMP1]], <2 x float> [[TMP0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = phi float [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP4:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = call float @llvm.vector.reduce.fadd.v2f32(float [[TMP2]], <2 x float> [[TMP0]])
 ; CHECK-NEXT:    [[TMP4]] = call float @llvm.vector.reduce.fadd.v2f32(float [[TMP3]], <2 x float> [[TMP0]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    store float [[TMP4]], ptr [[DST]], align 4
@@ -30,7 +28,7 @@ define void @ordered_reduction(ptr %dst, float %a, float %b) {
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 96, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 100, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi float [ [[TMP4]], %[[SCALAR_PH]] ], [ [[MULADD:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[MULADD]] = tail call float @llvm.fmuladd.f32(float [[A]], float [[B]], float [[SUM]])
 ; CHECK-NEXT:    store float [[MULADD]], ptr [[DST]], align 4
@@ -68,12 +66,10 @@ define void @ordered_reduction2(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_MEMCHECK]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi float [ 0.000000e+00, %[[VECTOR_MEMCHECK]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = call float @llvm.vector.reduce.fadd.v2f32(float [[VEC_PHI]], <2 x float> splat (float 6.000000e+00))
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.vector.reduce.fadd.v2f32(float [[TMP0]], <2 x float> splat (float 6.000000e+00))
+; CHECK-NEXT:    [[TMP1:%.*]] = phi float [ 0.000000e+00, %[[VECTOR_MEMCHECK]] ], [ [[TMP6:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call float @llvm.vector.reduce.fadd.v2f32(float [[TMP1]], <2 x float> splat (float 6.000000e+00))
 ; CHECK-NEXT:    [[TMP6]] = call float @llvm.vector.reduce.fadd.v2f32(float [[TMP7]], <2 x float> splat (float 6.000000e+00))
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:

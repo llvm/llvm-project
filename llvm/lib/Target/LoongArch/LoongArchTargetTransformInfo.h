@@ -46,7 +46,7 @@ public:
   unsigned getRegisterClassForType(bool Vector,
                                    Type *Ty = nullptr) const override;
   unsigned getMaxInterleaveFactor(ElementCount VF,
-                                  bool HasReductions) const override;
+                                  bool HasUnorderedReductions) const override;
   const char *getRegisterClassName(unsigned ClassID) const override;
   TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const override;
 

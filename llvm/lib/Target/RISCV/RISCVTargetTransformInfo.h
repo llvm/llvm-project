@@ -451,7 +451,7 @@ public:
   }
 
   unsigned getMaxInterleaveFactor(ElementCount VF,
-                                  bool HasReductions) const override {
+                                  bool HasUnorderedReductions) const override {
     // Don't interleave if the loop has been vectorized with scalable vectors.
     if (VF.isScalable())
       return 1;
