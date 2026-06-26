@@ -10884,13 +10884,13 @@ SDValue TargetLowering::expandCTLZWithFP(SDNode *Node,
   EVT VT = Node->getValueType(0);
   SDValue Op = Node->getOperand(0);
 
-  EVT EltVT = VT.getVectorElementType();
-  if (EltVT != MVT::i32)
+  EVT SVT = VT.getScalarType();
+  if (SVT != MVT::i32)
     return SDValue();
 
   EVT FloatVT = VT.changeVectorElementType(*DAG.getContext(), MVT::f32);
   const fltSemantics &Sem = FloatVT.getVectorElementType().getFltSemantics();
-  unsigned BitWidth = EltVT.getSizeInBits();
+  unsigned BitWidth = SVT.getSizeInBits();
   unsigned MantissaBits = APFloat::semanticsPrecision(Sem);
   unsigned ExponentBias = APFloat::semanticsMaxExponent(Sem);
 
@@ -10900,7 +10900,7 @@ SDValue TargetLowering::expandCTLZWithFP(SDNode *Node,
   SDValue Tmp = DAG.getNode(ISD::AND, dl, VT, Op, DAG.getNOT(dl, ShiftOp, VT));
 
   SDValue Float = DAG.getNode(ISD::SINT_TO_FP, dl, FloatVT, Tmp);
-  SDValue Int = DAG.getNode(ISD::BITCAST, dl, VT, Float);
+  SDValue Int = DAG.getBitcast(VT, Float);
 
   SDValue ShiftExp =
       DAG.getNode(ISD::SRL, dl, VT, Int,
