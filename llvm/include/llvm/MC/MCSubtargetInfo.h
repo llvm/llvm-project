@@ -34,19 +34,26 @@ class MCInst;
 
 /// Used to provide key value pairs for feature and CPU bit flags.
 struct SubtargetFeatureKV {
-  const char *Key;                      ///< K-V key string
-  const char *Desc;                     ///< Help descriptor
+  // Note: PrivKey/PrivDesc should not be accessed and will be removed. They are
+  // not private to keep this struct POD.
+  const char *PrivKey;                  ///< K-V key string
+  const char *PrivDesc;                 ///< Help descriptor
   unsigned Value;                       ///< K-V integer value
   FeatureBitArray Implies;              ///< K-V bit mask
 
+  // Because of relative string offsets, this type is not copyable.
+  SubtargetFeatureKV(const SubtargetFeatureKV &) = delete;
+  SubtargetFeatureKV &operator=(const SubtargetFeatureKV &) = delete;
+
+  const char *key() const { return PrivKey; }
+  const char *desc() const { return PrivDesc; }
+
   /// Compare routine for std::lower_bound
-  bool operator<(StringRef S) const {
-    return StringRef(Key) < S;
-  }
+  bool operator<(StringRef S) const { return StringRef(key()) < S; }
 
   /// Compare routine for std::is_sorted.
   bool operator<(const SubtargetFeatureKV &Other) const {
-    return StringRef(Key) < StringRef(Other.Key);
+    return StringRef(key()) < StringRef(Other.key());
   }
 };
 
@@ -54,19 +61,26 @@ struct SubtargetFeatureKV {
 
 /// Used to provide key value pairs for feature and CPU bit flags.
 struct SubtargetSubTypeKV {
-  const char *Key;                      ///< K-V key string
+  // Note: PrivKey/PrivSchedModel should not be accessed and will be removed.
+  // They are not private to keep this struct POD.
+  const char *PrivKey;                  ///< K-V key string
   FeatureBitArray Implies;              ///< K-V bit mask
   FeatureBitArray TuneImplies;          ///< K-V bit mask
-  const MCSchedModel *SchedModel;
+  const MCSchedModel *PrivSchedModel;
+
+  // Because of relative string offsets, this type is not copyable.
+  SubtargetSubTypeKV(const SubtargetSubTypeKV &) = delete;
+  SubtargetSubTypeKV &operator=(const SubtargetSubTypeKV &) = delete;
+
+  const char *key() const { return PrivKey; }
+  const MCSchedModel *schedModel() const { return PrivSchedModel; }
 
   /// Compare routine for std::lower_bound
-  bool operator<(StringRef S) const {
-    return StringRef(Key) < S;
-  }
+  bool operator<(StringRef S) const { return StringRef(key()) < S; }
 
   /// Compare routine for std::is_sorted.
   bool operator<(const SubtargetSubTypeKV &Other) const {
-    return StringRef(Key) < StringRef(Other.Key);
+    return StringRef(key()) < StringRef(Other.key());
   }
 };
 
@@ -230,7 +244,7 @@ public:
   /// Check whether the CPU string is valid.
   virtual bool isCPUStringValid(StringRef CPU) const {
     auto Found = llvm::lower_bound(ProcDesc, CPU);
-    return Found != ProcDesc.end() && StringRef(Found->Key) == CPU;
+    return Found != ProcDesc.end() && StringRef(Found->key()) == CPU;
   }
 
   /// Return processor descriptions.
@@ -244,7 +258,7 @@ public:
   }
 
   /// Return the list of processor features currently enabled.
-  std::vector<SubtargetFeatureKV> getEnabledProcessorFeatures() const;
+  std::vector<const SubtargetFeatureKV *> getEnabledProcessorFeatures() const;
 
   /// HwMode IDs are stored and accessed in a bit set format, enabling
   /// users to efficiently retrieve specific IDs, such as the RegInfo
