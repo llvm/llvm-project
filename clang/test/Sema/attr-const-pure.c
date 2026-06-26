@@ -128,8 +128,20 @@ __attribute__((const)) int noreturn_test7<int>() { // expected-note {{function d
 
 template <typename Ty>
 __attribute__((pure)) int noreturn_test8() { // expected-note {{function declared 'pure' here}}
-  // Diagnosed even though test7 is not instantiated
+  // Diagnosed even though noreturn_test8 is not instantiated
   direct_noreturn(); // expected-warning {{calling a 'noreturn' function from a function with the 'pure' attribute is undefined behavior}}
   return 12;
 }
+
+template <typename T>
+[[gnu::pure]] int noreturn_test9() {
+  // No diagnostic expected without an instantiation because the call cannot be
+  // resolved yet.
+  T::nrcall();
+  return 12;
+}
+
+struct S {
+  [[noreturn]] void nrcall();
+};
 #endif // __cplusplus
