@@ -929,16 +929,18 @@ def FeatureNoBTIAtReturnTwice : SubtargetFeature<"no-bti-at-return-twice",
                                                  "after a return-twice">;
 
 def FeatureDisableLdp : SubtargetFeature<"disable-ldp", "HasDisableLdp",
-    "true", "Do not emit ldp">;
+    "true", "Prefer not to emit ldp", [], InlineIgnore>;
 
 def FeatureDisableStp : SubtargetFeature<"disable-stp", "HasDisableStp",
-    "true", "Do not emit stp">;
+    "true", "Prefer not to emit stp", [], InlineIgnore>;
 
 def FeatureLdpAlignedOnly : SubtargetFeature<"ldp-aligned-only", "HasLdpAlignedOnly",
-    "true", "In order to emit ldp, first check if the load will be aligned to 2 * element_size">;
+    "true", "In order to emit ldp, first check if the load will be aligned to 2 * element_size",
+    [], InlineIgnore>;
 
 def FeatureStpAlignedOnly : SubtargetFeature<"stp-aligned-only", "HasStpAlignedOnly",
-    "true", "In order to emit stp, first check if the store will be aligned to 2 * element_size">;
+    "true", "In order to emit stp, first check if the store will be aligned to 2 * element_size",
+    [], InlineIgnore>;
 
 def FeatureUseFixedOverScalableIfEqualCost : SubtargetFeature<"use-fixed-over-scalable-if-equal-cost",
   "UseFixedOverScalableIfEqualCost", "true",
