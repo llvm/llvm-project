@@ -54,7 +54,8 @@ _LIBCPP_EXPORTED_FROM_ABI __sf_result<float> __assoc_laguerre(unsigned int, unsi
 
 } // namespace __math
 
-inline _LIBCPP_HIDE_FROM_ABI float assoc_laguerref(unsigned int __n, unsigned int __m, float __x) noexcept {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI float
+assoc_laguerref(unsigned int __n, unsigned int __m, float __x) noexcept {
   return __math::__assoc_laguerre(__n, __m, __x);
 }
 
