@@ -360,6 +360,6 @@ LanaiISelDAGToDAGPass::LanaiISelDAGToDAGPass(LanaiTargetMachine &TM)
 
 // createLanaiISelDag - This pass converts a legalized DAG into a
 // Lanai-specific DAG, ready for instruction scheduling.
-FunctionPass *llvm::createLanaiISelDag(LanaiTargetMachine &TM) {
+FunctionPass *llvm::createLanaiISelDagLegacyPass(LanaiTargetMachine &TM) {
   return new LanaiDAGToDAGISelLegacy(TM);
 }
