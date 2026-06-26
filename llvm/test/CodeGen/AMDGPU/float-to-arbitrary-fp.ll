@@ -825,13 +825,13 @@ define <4 x i8> @to_f8e4m3fn_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    v_cmp_o_f32_e32 vcc, v2, v2
 ; CHECK-NEXT:    v_lshlrev_b16_e32 v3, 8, v3
 ; CHECK-NEXT:    v_cndmask_b32_e32 v2, v5, v4, vcc
-; CHECK-NEXT:    v_or_b32_sdwa v2, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; CHECK-NEXT:    v_lshlrev_b16_e32 v1, 8, v1
-; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 16, v2
+; CHECK-NEXT:    v_or_b32_sdwa v2, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; CHECK-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; CHECK-NEXT:    v_or_b32_e32 v1, v1, v3
-; CHECK-NEXT:    v_lshrrev_b32_e32 v3, 24, v3
+; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 16, v2
+; CHECK-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
 ; CHECK-NEXT:    v_lshrrev_b32_e32 v1, 8, v1
+; CHECK-NEXT:    v_lshrrev_b32_e32 v3, 24, v3
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %r = call <4 x i8> @llvm.convert.to.arbitrary.fp.v4i8.v4f32(<4 x float> %x, metadata !"Float8E4M3FN", metadata !"round.tonearest", i1 false)
   ret <4 x i8> %r
@@ -1046,13 +1046,13 @@ define <4 x i8> @to_f8e5m2_v4f32(<4 x float> %x) {
 ; CHECK-NEXT:    v_cmp_o_f32_e32 vcc, v2, v2
 ; CHECK-NEXT:    v_lshlrev_b16_e32 v3, 8, v3
 ; CHECK-NEXT:    v_cndmask_b32_e32 v2, v4, v5, vcc
-; CHECK-NEXT:    v_or_b32_sdwa v2, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; CHECK-NEXT:    v_lshlrev_b16_e32 v1, 8, v1
-; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 16, v2
+; CHECK-NEXT:    v_or_b32_sdwa v2, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; CHECK-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
-; CHECK-NEXT:    v_or_b32_e32 v1, v1, v3
-; CHECK-NEXT:    v_lshrrev_b32_e32 v3, 24, v3
+; CHECK-NEXT:    v_lshlrev_b32_e32 v3, 16, v2
+; CHECK-NEXT:    v_lshl_or_b32 v1, v2, 16, v1
 ; CHECK-NEXT:    v_lshrrev_b32_e32 v1, 8, v1
+; CHECK-NEXT:    v_lshrrev_b32_e32 v3, 24, v3
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %r = call <4 x i8> @llvm.convert.to.arbitrary.fp.v4i8.v4f32(<4 x float> %x, metadata !"Float8E5M2", metadata !"round.tonearest", i1 false)
   ret <4 x i8> %r
