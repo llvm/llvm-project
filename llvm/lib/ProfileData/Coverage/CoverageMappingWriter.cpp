@@ -73,11 +73,17 @@ class CounterExpressionsMinimizer {
   SmallVector<CounterExpression, 16> UsedExpressions;
   std::vector<unsigned> AdjustedExpressionIDs;
 
+  // Expression id 0 is a valid remapped id, so keep the traversal state
+  // separate from assigned ids. Otherwise a shared expression can be gathered
+  // twice and make later expression ids too large to encode.
+  static constexpr unsigned Unused = std::numeric_limits<unsigned>::max();
+  static constexpr unsigned Marked = Unused - 1;
+
 public:
   CounterExpressionsMinimizer(ArrayRef<CounterExpression> Expressions,
                               ArrayRef<CounterMappingRegion> MappingRegions)
       : Expressions(Expressions) {
-    AdjustedExpressionIDs.resize(Expressions.size(), 0);
+    AdjustedExpressionIDs.resize(Expressions.size(), Unused);
     for (const auto &I : MappingRegions) {
       mark(I.Count);
       mark(I.FalseCount);
@@ -92,16 +98,21 @@ public:
     if (!C.isExpression())
       return;
     unsigned ID = C.getExpressionID();
-    AdjustedExpressionIDs[ID] = 1;
+    if (AdjustedExpressionIDs[ID] != Unused)
+      return;
+    AdjustedExpressionIDs[ID] = Marked;
     mark(Expressions[ID].LHS);
     mark(Expressions[ID].RHS);
   }
 
   void gatherUsed(Counter C) {
-    if (!C.isExpression() || !AdjustedExpressionIDs[C.getExpressionID()])
+    if (!C.isExpression())
       return;
-    AdjustedExpressionIDs[C.getExpressionID()] = UsedExpressions.size();
-    const auto &E = Expressions[C.getExpressionID()];
+    unsigned ID = C.getExpressionID();
+    if (AdjustedExpressionIDs[ID] != Marked)
+      return;
+    AdjustedExpressionIDs[ID] = UsedExpressions.size();
+    const auto &E = Expressions[ID];
     UsedExpressions.push_back(E);
     gatherUsed(E.LHS);
     gatherUsed(E.RHS);
@@ -112,8 +123,13 @@ public:
   /// Adjust the given counter to correctly transition from the old
   /// expression ids to the new expression ids.
   Counter adjust(Counter C) const {
-    if (C.isExpression())
-      C = Counter::getExpression(AdjustedExpressionIDs[C.getExpressionID()]);
+    if (C.isExpression()) {
+      unsigned ID = C.getExpressionID();
+      assert(AdjustedExpressionIDs[ID] != Unused &&
+             AdjustedExpressionIDs[ID] != Marked &&
+             "expression id was not gathered");
+      C = Counter::getExpression(AdjustedExpressionIDs[ID]);
+    }
     return C;
   }
 };

@@ -332,6 +332,34 @@ TEST(CoverageMappingTest, expression_subst) {
   ASSERT_TRUE(Builder.subst(Builder.subtract(LHS, RHS), MapToExpand).isZero());
 }
 
+TEST_P(CoverageMappingTest, shared_counter_expression_write_read) {
+  startFunction("func", 0x1234);
+  addExpression(CounterExpression(
+      CounterExpression::Add, Counter::getCounter(0), Counter::getCounter(1)));
+  addExpression(CounterExpression(CounterExpression::Add,
+                                  Counter::getExpression(0),
+                                  Counter::getCounter(2)));
+  addExpression(CounterExpression(CounterExpression::Subtract,
+                                  Counter::getExpression(0),
+                                  Counter::getCounter(3)));
+  addCMR(Counter::getExpression(1), "foo", 1, 1, 1, 2);
+  addCMR(Counter::getExpression(2), "foo", 2, 1, 2, 2);
+
+  OutputFunctionCoverageData Output;
+  readCoverageRegions(writeCoverageRegions(InputFunctions.back()), Output);
+
+  ASSERT_EQ(3u, Output.Expressions.size());
+  EXPECT_EQ(CounterExpression::Add, Output.Expressions[0].Kind);
+  EXPECT_EQ(Counter::getExpression(1), Output.Expressions[0].LHS);
+  EXPECT_EQ(Counter::getCounter(2), Output.Expressions[0].RHS);
+  EXPECT_EQ(CounterExpression::Add, Output.Expressions[1].Kind);
+  EXPECT_EQ(Counter::getCounter(0), Output.Expressions[1].LHS);
+  EXPECT_EQ(Counter::getCounter(1), Output.Expressions[1].RHS);
+  EXPECT_EQ(CounterExpression::Subtract, Output.Expressions[2].Kind);
+  EXPECT_EQ(Counter::getExpression(1), Output.Expressions[2].LHS);
+  EXPECT_EQ(Counter::getCounter(3), Output.Expressions[2].RHS);
+}
+
 TEST_P(CoverageMappingTest, basic_write_read) {
   startFunction("func", 0x1234);
   addCMR(Counter::getCounter(0), "foo", 1, 1, 1, 1);

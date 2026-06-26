@@ -28,6 +28,17 @@ int logical_and_call(void) {
   return 2;
 }
 
+int unevaluated_sizeof(void) {
+  int x = sizeof(g());
+  return x == sizeof(int) ? 0 : 1;
+}
+
+int for_increment_call(void) {
+  for (int i = 0; i < g(); f())
+    g();
+  return 0;
+}
+
 int musttail_call(int x) {
   __attribute__((musttail)) return tail_callee(x);
 }
@@ -43,6 +54,14 @@ int musttail_call(int x) {
 // MAP-LABEL: logical_and_call:
 // MAP: Branch,File 0, [[LAND_COND:[0-9]+]]:7 -> [[LAND_COND]]:22 = #2, (#4 - #2)
 // MAP: Branch,File 0, [[LAND_COND]]:26 -> [[LAND_COND]]:29 = #3, (#5 - #3)
+
+// MAP-LABEL: unevaluated_sizeof:
+// MAP: File 0, [[SIZEOF_START:[0-9]+]]:30 -> [[SIZEOF_END:[0-9]+]]:2 = #0
+// MAP: Branch,File 0, [[SIZEOF_RET:[0-9]+]]:10 -> [[SIZEOF_RET]]:26 = #1, (#0 - #1)
+
+// MAP-LABEL: for_increment_call:
+// MAP: File 0, [[FOR_COND:[0-9]+]]:19 -> [[FOR_COND]]:26 = (#0 + #{{[0-9]+}})
+// MAP: Branch,File 0, [[FOR_COND]]:19 -> [[FOR_COND]]:26 = #{{[0-9]+}}, (#{{[0-9]+}} - #{{[0-9]+}})
 
 // MAP-LABEL: musttail_call:
 // MAP-NEXT: File 0, {{[0-9]+}}:26 -> {{[0-9]+}}:2 = #0

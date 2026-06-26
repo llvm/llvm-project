@@ -15,6 +15,7 @@
 #include "CodeGenFunction.h"
 #include "CoverageMappingGen.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/EvaluatedExprVisitor.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/DiagnosticFrontend.h"
@@ -135,6 +136,8 @@ public:
     BinaryOperatorNE,
     // The preceding values are available since PGO_HASH_V2.
 
+    CallContinuationCounters,
+
     // Keep this last.  It's for the static assert that follows.
     LastHashType
   };
@@ -170,12 +173,14 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
   unsigned NextCounter;
   /// The function hash.
   PGOHash Hash;
+  ASTContext &Context;
   /// The map of statements to counters.
   llvm::DenseMap<const Stmt *, CounterPair> &CounterMap;
   /// The map of calls to counters reached only when the call returns.
   llvm::DenseMap<const Stmt *, unsigned> *CallContinuationCounterMap;
-  /// Calls that need continuation counters assigned after normal counters.
-  SmallVector<const CallExpr *, 8> CallContinuations;
+  /// Call-like expressions that need continuation counters assigned after
+  /// normal counters.
+  SmallVector<const Stmt *, 8> CallContinuations;
   /// The state of MC/DC Coverage in this function.
   MCDC::State &MCDCState;
   /// Maximum number of supported MC/DC conditions in a boolean expression.
@@ -194,8 +199,10 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
       llvm::DenseMap<const Stmt *, CounterPair> &CounterMap,
       llvm::DenseMap<const Stmt *, unsigned> *CallContinuationCounterMap,
       MCDC::State &MCDCState, unsigned MCDCMaxCond,
-      bool CoverageCallContinuations, DiagnosticsEngine &Diag)
-      : NextCounter(0), Hash(HashVersion), CounterMap(CounterMap),
+      bool CoverageCallContinuations, ASTContext &Context,
+      DiagnosticsEngine &Diag)
+      : NextCounter(0), Hash(HashVersion), Context(Context),
+        CounterMap(CounterMap),
         CallContinuationCounterMap(CallContinuationCounterMap),
         MCDCState(MCDCState), MCDCMaxCond(MCDCMaxCond),
         CoverageCallContinuations(CoverageCallContinuations),
@@ -386,21 +393,91 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     return getFunctionExtInfo(*CalleeType).getNoReturn();
   }
 
-  /// Calls optionally get a continuation counter which is reached only if the
-  /// call returns normally. This lets coverage mapping distinguish a call being
-  /// reached from later source being reached.
-  bool VisitCallExpr(CallExpr *S) {
+  bool shouldEmitCXXConstructContinuation(const CXXConstructExpr *E) const {
+    const CXXConstructorDecl *CD = E->getConstructor();
+    if (CD->isNoReturn())
+      return false;
+    if (CD->isTrivial() && CD->isDefaultConstructor())
+      return false;
+    if (Context.getLangOpts().ElideConstructors && E->isElidable())
+      return false;
+    return true;
+  }
+
+  void addCallContinuation(const CallExpr *S, const CallExpr *CurrentMustTail) {
     if (CoverageCallContinuations && CallContinuationCounterMap &&
-        !isNoReturnCall(S) && S != MustTailCall)
+        !isNoReturnCall(S) && S != CurrentMustTail)
       CallContinuations.push_back(S);
-    return Base::VisitCallExpr(S);
+  }
+
+  void addCallContinuation(const CXXConstructExpr *S) {
+    if (CoverageCallContinuations && CallContinuationCounterMap &&
+        shouldEmitCXXConstructContinuation(S))
+      CallContinuations.push_back(S);
+  }
+
+  // Continuation counters are emitted from codegen, so collection has to match
+  // codegen's notion of evaluated calls. The normal counter walk sees the full
+  // AST; this pass avoids reserving counters for calls in sizeof(f())-style
+  // unevaluated contexts that will never be emitted.
+  struct CollectCallContinuations
+      : public ConstEvaluatedExprVisitor<CollectCallContinuations> {
+    MapRegionCounters &Owner;
+    const CallExpr *MustTailCall = nullptr;
+
+    CollectCallContinuations(ASTContext &Context, MapRegionCounters &Owner)
+        : ConstEvaluatedExprVisitor(Context), Owner(Owner) {}
+
+    void VisitAttributedStmt(const AttributedStmt *S) {
+      const CallExpr *NewMustTailCall = getMustTailCall(S);
+      if (!NewMustTailCall)
+        return VisitStmt(S);
+
+      llvm::SaveAndRestore<const CallExpr *> SaveMustTail(MustTailCall,
+                                                          NewMustTailCall);
+      Visit(S->getSubStmt());
+    }
+
+    void VisitCallExpr(const CallExpr *S) {
+      if (S->isUnevaluatedBuiltinCall(this->Context))
+        return;
+
+      Owner.addCallContinuation(S, MustTailCall);
+      VisitExpr(S);
+    }
+
+    void VisitCXXConstructExpr(const CXXConstructExpr *S) {
+      Owner.addCallContinuation(S);
+      VisitStmt(S);
+    }
+  };
+
+  void collectCallContinuations(const Decl *D) {
+    if (!CoverageCallContinuations || !CallContinuationCounterMap)
+      return;
+
+    CollectCallContinuations Collector(Context, *this);
+    if (const auto *Ctor = dyn_cast_or_null<CXXConstructorDecl>(D)) {
+      for (const CXXCtorInitializer *Initializer : Ctor->inits()) {
+        if (Initializer->isWritten())
+          Collector.Visit(Initializer->getInit());
+      }
+      Collector.Visit(Ctor->getBody());
+    } else if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D))
+      Collector.Visit(FD->getBody());
+    else if (const auto *MD = dyn_cast_or_null<ObjCMethodDecl>(D))
+      Collector.Visit(MD->getBody());
+    else if (const auto *BD = dyn_cast_or_null<BlockDecl>(D))
+      Collector.Visit(BD->getBody());
+    else if (const auto *CD = dyn_cast_or_null<CapturedDecl>(D))
+      Collector.Visit(CD->getBody());
   }
 
   void assignCallContinuationCounters() {
     if (!CallContinuationCounterMap)
       return;
 
-    for (const CallExpr *S : CallContinuations)
+    for (const Stmt *S : CallContinuations)
       (*CallContinuationCounterMap)[S] = NextCounter++;
   }
 
@@ -1067,7 +1144,7 @@ void CodeGenPGO::mapRegionCounters(const Decl *D) {
   MapRegionCounters Walker(HashVersion, ProfileVersion, *RegionCounterMap,
                            CallContinuationCounterMap.get(), *RegionMCDCState,
                            MCDCMaxConditions, CoverageCallContinuations,
-                           CGM.getDiags());
+                           CGM.getContext(), CGM.getDiags());
   if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D))
     Walker.TraverseDecl(const_cast<FunctionDecl *>(FD));
   else if (const ObjCMethodDecl *MD = dyn_cast_or_null<ObjCMethodDecl>(D))
@@ -1076,9 +1153,12 @@ void CodeGenPGO::mapRegionCounters(const Decl *D) {
     Walker.TraverseDecl(const_cast<BlockDecl *>(BD));
   else if (const CapturedDecl *CD = dyn_cast_or_null<CapturedDecl>(D))
     Walker.TraverseDecl(const_cast<CapturedDecl *>(CD));
+  Walker.collectCallContinuations(D);
   Walker.assignCallContinuationCounters();
   assert(Walker.NextCounter > 0 && "no entry counter mapped for decl");
   NumRegionCounters = Walker.NextCounter;
+  if (CoverageCallContinuations)
+    Walker.Hash.combine(PGOHash::CallContinuationCounters);
   FunctionHash = Walker.Hash.finalize();
   if (HashVersion >= PGO_HASH_V4)
     FunctionHash &= llvm::NamedInstrProfRecord::FUNC_HASH_MASK;

@@ -679,6 +679,8 @@ void CodeGenFunction::EmitCXXConstructExpr(const CXXConstructExpr *E,
     // Call the constructor.
     EmitCXXConstructorCall(CD, Type, ForVirtualBase, Delegating, Dest, E);
   }
+
+  incrementCallContinuationProfileCounter(E);
 }
 
 void CodeGenFunction::EmitSynthesizedCXXCopyCtor(Address Dest, Address Src,

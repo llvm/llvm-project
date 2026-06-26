@@ -40,9 +40,23 @@ int logical_and_call(void) {
   return 2;
 }
 
+int unevaluated_sizeof(void) {
+  int x = sizeof(g());
+  return x == sizeof(int) ? 0 : 1;
+}
+
+int for_increment_call(void) {
+  for (int i = 0; i < g(); f())
+    g();
+  return 0;
+}
+
 int musttail_call(int x) {
   __attribute__((musttail)) return tail_callee(x);
 }
+
+// IR-DAG: @__profc_unevaluated_sizeof = private global [2 x i64]
+// SB-DAG: @__profc_unevaluated_sizeof = private global [3 x i8]
 
 // IR-LABEL: define{{.*}} i32 @after_call(
 // IR: call void @f()
@@ -68,6 +82,14 @@ int musttail_call(int x) {
 // IR-NEXT: load i64, ptr getelementptr inbounds ({{.*}}@__profc_logical_and_call
 // IR: call{{.*}} @g
 // IR-NEXT: load i64, ptr getelementptr inbounds ({{.*}}@__profc_logical_and_call
+
+// IR-LABEL: define{{.*}} i32 @unevaluated_sizeof(
+// IR-NOT: call{{.*}} @g
+// IR: ret i32
+
+// IR-LABEL: define{{.*}} i32 @for_increment_call(
+// IR: call{{.*}} @f
+// IR-NEXT: load i64, ptr getelementptr inbounds ({{.*}}@__profc_for_increment_call
 
 // IR-LABEL: define{{.*}} i32 @musttail_call(
 // IR: musttail call i32 @tail_callee
