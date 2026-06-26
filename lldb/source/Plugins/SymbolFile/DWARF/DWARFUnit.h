@@ -204,6 +204,8 @@ public:
 
   llvm::VersionTuple GetProducerVersion();
 
+  lldb::IdentifierCaseType GetIdentifierCase();
+
   uint64_t GetDWARFLanguageType();
 
   bool GetIsOptimized();
@@ -352,6 +354,7 @@ protected:
   DWARFProducer m_producer = eProducerInvalid;
   llvm::VersionTuple m_producer_version;
   std::optional<uint64_t> m_language_type;
+  lldb::IdentifierCaseType m_identifier_case = lldb::eCaseUnknown;
   LazyBool m_is_optimized = eLazyBoolCalculate;
   std::optional<FileSpec> m_comp_dir;
   std::optional<FileSpec> m_file_spec;

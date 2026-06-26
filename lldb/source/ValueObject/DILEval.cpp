@@ -289,14 +289,28 @@ lldb::ValueObjectSP LookupGlobalIdentifier(llvm::StringRef name_ref,
   SymbolContext symbol_context =
       stack_frame.GetSymbolContext(lldb::eSymbolContextCompUnit);
   lldb::VariableListSP variable_list;
-  if (symbol_context.comp_unit)
+  lldb::IdentifierCaseType identifier_case = lldb::eCaseSensitive;
+
+  if (symbol_context.comp_unit){
     variable_list = symbol_context.comp_unit->GetVariableList(true);
+    identifier_case = symbol_context.comp_unit->GetCasing();
+  }
+    
 
   name_ref.consume_front("::");
+
+  std::string search_string;
+  if(identifier_case == lldb::eLowerCase)
+    search_string = name_ref.lower();
+  else if(identifier_case == lldb::eUpperCase)
+    search_string = name_ref.upper();
+  else 
+    search_string = name_ref.str();
+
   lldb::ValueObjectSP value_sp;
   if (variable_list) {
     lldb::VariableSP var_sp =
-        DILFindVariable(ConstString(name_ref), *variable_list);
+        DILFindVariable(ConstString(search_string), *variable_list);
     if (var_sp)
       value_sp =
           stack_frame.GetValueObjectForFrameVariable(var_sp, use_dynamic);
@@ -308,12 +322,12 @@ lldb::ValueObjectSP LookupGlobalIdentifier(llvm::StringRef name_ref,
   // Check for match in modules global variables.
   VariableList modules_var_list;
   target_sp->GetImages().FindGlobalVariables(
-      ConstString(name_ref), std::numeric_limits<uint32_t>::max(),
+      ConstString(search_string), std::numeric_limits<uint32_t>::max(),
       modules_var_list);
 
   if (!modules_var_list.Empty()) {
     lldb::VariableSP var_sp =
-        DILFindVariable(ConstString(name_ref), modules_var_list);
+        DILFindVariable(ConstString(search_string), modules_var_list);
     if (var_sp)
       value_sp = ValueObjectVariable::Create(&stack_frame, var_sp);
 
@@ -345,10 +359,24 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
     lldb::VariableListSP variable_list(
         stack_frame.GetInScopeVariableList(false));
 
+    SymbolContext sc = stack_frame.GetSymbolContext(lldb::eSymbolContextCompUnit);
+
+    lldb::IdentifierCaseType identifier_case = lldb::eCaseSensitive;
+    if(sc.comp_unit)
+      identifier_case = sc.comp_unit->GetCasing();
+
+    std::string search_string;
+    if(identifier_case == lldb::eLowerCase)
+      search_string = name_ref.lower();
+    else if(identifier_case == lldb::eUpperCase)
+      search_string = name_ref.upper();
+    else 
+      search_string = name_ref.str();
+
     lldb::ValueObjectSP value_sp;
     if (variable_list) {
       lldb::VariableSP var_sp =
-          variable_list->FindVariable(ConstString(name_ref));
+          variable_list->FindVariable(ConstString(search_string));
       if (var_sp)
         value_sp =
             stack_frame.GetValueObjectForFrameVariable(var_sp, use_dynamic);
@@ -358,12 +386,12 @@ lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
       return value_sp;
 
     // Try looking for an instance variable (class member).
-    SymbolContext sc = stack_frame.GetSymbolContext(
+    sc = stack_frame.GetSymbolContext(
         lldb::eSymbolContextFunction | lldb::eSymbolContextBlock);
     llvm::StringRef instance_name = sc.GetInstanceName();
     value_sp = stack_frame.FindVariable(ConstString(instance_name));
     if (value_sp)
-      value_sp = value_sp->GetChildMemberWithName(name_ref);
+      value_sp = value_sp->GetChildMemberWithName(search_string);
 
     if (value_sp)
       return value_sp;

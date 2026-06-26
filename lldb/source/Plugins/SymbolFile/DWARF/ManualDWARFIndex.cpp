@@ -158,6 +158,11 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
 
   const LanguageType cu_language = SymbolFileDWARF::GetLanguage(unit);
 
+  lldb::IdentifierCaseType cu_identifier_case = unit.GetIdentifierCase();
+
+  if(cu_identifier_case != eCaseSensitive)
+    SetNameCaseInsensitive();
+
   // First check if the unit has a DWO ID. If it does then we only want to index
   // the .dwo file or nothing at all. If we have a compile unit where we can't
   // locate the .dwo/.dwp file we don't want to index anything from the skeleton

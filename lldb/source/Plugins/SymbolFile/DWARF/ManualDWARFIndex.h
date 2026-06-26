@@ -169,6 +169,17 @@ private:
   ///   True if this index is a partial index, false otherwise.
   bool IsPartial() const;
 
+	void SetNameCaseInsensitive() {
+		m_set.function_basenames.SetNameCaseInsensitive();
+		m_set.function_fullnames.SetNameCaseInsensitive();
+		m_set.function_methods.SetNameCaseInsensitive();
+		m_set.function_selectors.SetNameCaseInsensitive();
+		m_set.objc_class_selectors.SetNameCaseInsensitive();
+		m_set.globals.SetNameCaseInsensitive();
+		m_set.types.SetNameCaseInsensitive();
+		m_set.namespaces.SetNameCaseInsensitive();
+	}
+
   /// The DWARF file which we are indexing.
   SymbolFileDWARF *m_dwarf;
   /// Which dwarf units should we skip while building the index.

@@ -152,6 +152,14 @@ public:
     m_language = language;
   }
 
+  lldb::IdentifierCaseType GetCasing() {
+    return m_identifier_case;
+  }
+
+  void SetCasing(lldb::IdentifierCaseType identifier_case){
+    m_identifier_case = identifier_case;
+  }
+
   void GetDescription(Stream *s, lldb::DescriptionLevel level) const;
 
   /// Apply a lambda to each function in this compile unit.
@@ -422,6 +430,8 @@ protected:
   void *m_user_data;
   /// The programming language enumeration value.
   lldb::LanguageType m_language;
+  /// Used to determine if lookups should be case-insensitive
+  lldb::IdentifierCaseType m_identifier_case = lldb::eCaseSensitive;
   /// Compile unit flags that help with partial parsing.
   Flags m_flags;
   /// Maps UIDs to functions.
