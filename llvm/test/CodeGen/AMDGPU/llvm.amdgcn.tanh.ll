@@ -5,7 +5,7 @@
 ; xUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1250 -mattr=-real-true16 %s -o - | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL-FAKE16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1310 -mattr=+real-true16 %s -o - | FileCheck -check-prefixes=GFX13,GFX13-SDAG-REAL16 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1310 -mattr=-real-true16 %s -o - | FileCheck -check-prefixes=GFX13,GFX13-SDAG-FAKE16 %s
-; xUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1310 -mattr=+real-true16 %s -o - | FileCheck -check-prefixes=,GFX13,GFX13-GISEL-REAL16 %s
+; xUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1310 -mattr=+real-true16 %s -o - | FileCheck -check-prefixes=GFX13,GFX13-GISEL-REAL16 %s
 ; xUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx1310 -mattr=-real-true16 %s -o - | FileCheck -check-prefixes=GFX13,GFX13-GISEL-FAKE16 %s
 
 define float @tanh_f32(float %src) {
