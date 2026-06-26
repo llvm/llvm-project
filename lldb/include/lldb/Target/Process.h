@@ -1421,18 +1421,7 @@ public:
 
   virtual bool GetProcessInfo(ProcessInstanceInfo &info);
 
-  /// Given a module spec, try to find the UUID information.
-  ///
-  /// \param [in,out] spec
-  ///     A module specification with as much detail as possible about the
-  ///     module for which we are trying to find a UUID. The
-  ///     ModuleSpec.m_file should be filled in. If a dynamic loader is
-  ///     calling this, the load address of the module can be filled in as
-  ///     well. Sometimes the file path for a library can be a symlink and
-  ///     the load address can help resolve the module.
-  ///
-  /// \return True if the UUID was added, false otherwise.
-  virtual bool FindModuleUUID(ModuleSpec &spec);
+  virtual lldb_private::UUID FindModuleUUID(const llvm::StringRef path);
 
   /// Get the exit status for a process.
   ///
