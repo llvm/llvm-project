@@ -574,9 +574,9 @@ define i32 @arm_nn_mat_mul_core_4x_s8(i32 %row_elements, i32 %offset, ptr %row_b
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.preheader
 ; CHECK-NEXT:    add.w r5, r2, r1, lsl #1
 ; CHECK-NEXT:    mov.w r8, #0
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    mov.w r10, #0
-; CHECK-NEXT:    movs r6, #0
+; CHECK-NEXT:    mov r4, r8
+; CHECK-NEXT:    mov r6, r8
+; CHECK-NEXT:    mov r10, r8
 ; CHECK-NEXT:    adds r7, r2, r1
 ; CHECK-NEXT:    add.w r1, r1, r1, lsl #1
 ; CHECK-NEXT:    add r1, r2
@@ -596,9 +596,9 @@ define i32 @arm_nn_mat_mul_core_4x_s8(i32 %row_elements, i32 %offset, ptr %row_b
 ; CHECK-NEXT:    b .LBB4_4
 ; CHECK-NEXT:  .LBB4_3:
 ; CHECK-NEXT:    mov.w r10, #0
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    mov.w r8, #0
+; CHECK-NEXT:    mov r4, r10
+; CHECK-NEXT:    mov r6, r10
+; CHECK-NEXT:    mov r8, r10
 ; CHECK-NEXT:  .LBB4_4: @ %for.cond.cleanup
 ; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:    strd r8, r6, [r12]

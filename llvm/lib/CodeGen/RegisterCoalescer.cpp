@@ -1326,6 +1326,26 @@ bool RegisterCoalescer::reMaterializeDef(const CoalescerPair &CP,
   if (MCID.getNumDefs() != 1)
     return false;
 
+  // If DefMI is bigger than CopyMI and another use will keep ValNo alive,
+  // skip the remat: it would just duplicate the expansion with no upside.
+  unsigned DefSize = TII->getInstSizeInBytes(*DefMI);
+  unsigned CopySize = TII->getInstSizeInBytes(*CopyMI);
+  if (DefSize && CopySize && DefSize > CopySize) {
+    bool OtherUseReachesValNo = false;
+    for (MachineOperand &UseMO : MRI->use_nodbg_operands(SrcReg)) {
+      MachineInstr *UseMI = UseMO.getParent();
+      if (UseMI == CopyMI)
+        continue;
+      SlotIndex UseIdx = LIS->getInstructionIndex(*UseMI).getRegSlot(true);
+      if (SrcInt.Query(UseIdx).valueIn() == ValNo) {
+        OtherUseReachesValNo = true;
+        break;
+      }
+    }
+    if (OtherUseReachesValNo)
+      return false;
+  }
+
   // If both SrcIdx and DstIdx are set, correct rematerialization would widen
   // the register substantially (beyond both source and dest size). This is bad
   // for performance since it can cascade through a function, introducing many

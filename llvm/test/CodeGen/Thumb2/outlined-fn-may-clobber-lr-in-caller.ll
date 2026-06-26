@@ -21,23 +21,23 @@ define void @test(ptr nocapture noundef writeonly %arg, i32 noundef %arg1, i8 no
 ; CHECK-NEXT:    bne .LBB0_5
 ; CHECK-NEXT:  @ %bb.2: @ %bb4
 ; CHECK-NEXT:    movs r1, #1
+; CHECK-NEXT:    movs r3, #30
 ; CHECK-NEXT:    strb.w r1, [r0, #36]
-; CHECK-NEXT:    movs r1, #30
-; CHECK-NEXT:    strb.w r1, [r0, #34]
 ; CHECK-NEXT:    add.w r1, r2, r2, lsl #3
 ; CHECK-NEXT:    ldr r2, .LCPI0_1
+; CHECK-NEXT:    strb.w r3, [r0, #34]
 ; CHECK-NEXT:    b .LBB0_4
 ; CHECK-NEXT:  .LBB0_3: @ %bb14
 ; CHECK-NEXT:    movs r1, #1
+; CHECK-NEXT:    movs r3, #30
 ; CHECK-NEXT:    strb.w r1, [r0, #36]
-; CHECK-NEXT:    movs r1, #30
-; CHECK-NEXT:    strb.w r1, [r0, #34]
 ; CHECK-NEXT:    add.w r1, r2, r2, lsl #3
+; CHECK-NEXT:    strb.w r3, [r0, #34]
 ; CHECK-NEXT:    ldr r2, .LCPI0_0
 ; CHECK-NEXT:  .LBB0_4: @ %bb4
 ; CHECK-NEXT:    add.w r1, r2, r1, lsl #2
 ; CHECK-NEXT:    adds r0, #4
-; CHECK-NEXT:    movs r2, #30
+; CHECK-NEXT:    mov r2, r3
 ; CHECK-NEXT:    b __aeabi_memcpy
 ; CHECK-NEXT:  .LBB0_5: @ %bb24
 ; CHECK-NEXT:    .save {r7, lr}

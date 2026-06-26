@@ -1266,735 +1266,735 @@ define <4 x i32> @clmul_v4i32(<4 x i32> %x, <4 x i32> %y) {
 define <2 x i32> @clmul_v2i32(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: clmul_v2i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r9, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r9, lr}
 ; CHECK-NEXT:    adr.w r0, .LCPI13_0
-; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    mov.w lr, #0
 ; CHECK-NEXT:    vldrw.u32 q2, [r0]
-; CHECK-NEXT:    mov.w r12, #0
+; CHECK-NEXT:    mov r2, lr
+; CHECK-NEXT:    vmov r12, r9, d1
+; CHECK-NEXT:    mov r3, lr
 ; CHECK-NEXT:    vand q2, q1, q2
 ; CHECK-NEXT:    vmov r0, s8
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r5, r9
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r1, r0, #0, #8
-; CHECK-NEXT:    vmov r0, s10
-; CHECK-NEXT:    vmov.i32 q2, #0x0
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r1, r0, #8, #8
-; CHECK-NEXT:    vmov r0, r3, d0
-; CHECK-NEXT:    vmsr p0, r1
-; CHECK-NEXT:    vmov r2, r1, d1
-; CHECK-NEXT:    vpsel q2, q2, q0
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    lsll r4, r5, #1
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    mov r0, lr
+; CHECK-NEXT:    bfi r2, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s10
+; CHECK-NEXT:    vmov.i32 q2, #0x0
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r2, r1, #8, #8
+; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmov r2, r1, d0
+; CHECK-NEXT:    vpsel q2, q2, q0
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    mov r7, r1
 ; CHECK-NEXT:    lsll r6, r7, #1
 ; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    vmov q0[3], q0[1], r7, r5
 ; CHECK-NEXT:    adr.w r7, .LCPI13_1
 ; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r5, r9
 ; CHECK-NEXT:    veor q0, q2, q0
 ; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #2
 ; CHECK-NEXT:    vmov r7, s12
 ; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
+; CHECK-NEXT:    bfi r0, r7, #0, #8
 ; CHECK-NEXT:    vmov r7, s14
 ; CHECK-NEXT:    cmp r7, #0
 ; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #2
+; CHECK-NEXT:    bfi r0, r7, #8, #8
+; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    vmsr p0, r0
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    lsll r0, r5, #2
+; CHECK-NEXT:    lsll r4, r7, #2
 ; CHECK-NEXT:    vpsel q0, q2, q0
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI13_2
 ; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr.w r7, .LCPI13_2
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
 ; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    lsll r4, r5, #3
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #3
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr.w r7, .LCPI13_3
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #4
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #4
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr.w r7, .LCPI13_4
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #5
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #5
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr.w r7, .LCPI13_5
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #6
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #6
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr.w r7, .LCPI13_6
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #7
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #7
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr.w r7, .LCPI13_7
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #8
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #8
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr.w r7, .LCPI13_8
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #9
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #9
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr.w r7, .LCPI13_9
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #10
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #10
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr.w r7, .LCPI13_10
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #11
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #11
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr.w r7, .LCPI13_11
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #12
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #12
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr.w r7, .LCPI13_12
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #13
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #13
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr.w r7, .LCPI13_13
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #14
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #14
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr.w r7, .LCPI13_14
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #15
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #15
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr.w r7, .LCPI13_15
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #16
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #16
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr.w r7, .LCPI13_16
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #17
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #17
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr.w r7, .LCPI13_17
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #18
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #18
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr.w r7, .LCPI13_18
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #19
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #19
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr.w r7, .LCPI13_19
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #20
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #20
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr.w r7, .LCPI13_20
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #21
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #21
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr.w r7, .LCPI13_21
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #22
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #22
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr.w r7, .LCPI13_22
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #23
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #23
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr.w r7, .LCPI13_23
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #24
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #24
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr r7, .LCPI13_24
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #25
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #25
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr r7, .LCPI13_25
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #26
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #26
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr r7, .LCPI13_26
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #27
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #27
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr r7, .LCPI13_27
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #28
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #28
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr r7, .LCPI13_28
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #29
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #29
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr r7, .LCPI13_29
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    mov r4, r2
-; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    lsll r4, r5, #30
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    lsll r2, r1, #31
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    mov r7, r3
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    mov r6, r0
-; CHECK-NEXT:    lsll r6, r7, #30
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
-; CHECK-NEXT:    movs r6, #0
-; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    adr r7, .LCPI13_30
-; CHECK-NEXT:    vldrw.u32 q3, [r7]
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r0, r3, #31
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    vmov r7, s12
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #0, #8
-; CHECK-NEXT:    vmov r7, s14
-; CHECK-NEXT:    cmp r7, #0
-; CHECK-NEXT:    csetm r7, eq
-; CHECK-NEXT:    bfi r6, r7, #8, #8
-; CHECK-NEXT:    vmsr p0, r6
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r0, r2
-; CHECK-NEXT:    adr r0, .LCPI13_31
-; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
-; CHECK-NEXT:    vldrw.u32 q3, [r0]
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vand q1, q1, q3
-; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    vmov r0, s12
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r12, r0, #0, #8
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #3
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI13_3
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #4
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #4
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI13_4
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #5
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #5
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI13_5
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #6
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #6
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI13_6
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #7
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #7
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI13_7
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #8
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #8
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI13_8
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #9
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #9
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI13_9
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #10
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #10
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI13_10
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #11
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #11
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI13_11
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #12
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #12
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI13_12
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #13
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #13
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI13_13
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #14
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI13_14
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #15
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #15
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI13_15
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #16
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #16
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI13_16
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #17
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI13_17
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #18
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI13_18
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #19
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI13_19
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #20
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #20
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI13_20
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #21
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #21
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI13_21
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #22
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #22
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI13_22
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #23
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #23
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI13_23
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #24
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #24
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr r0, .LCPI13_24
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #25
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #25
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr r0, .LCPI13_25
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #26
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #26
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr r0, .LCPI13_26
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #27
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #27
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr r0, .LCPI13_27
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #28
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #28
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr r0, .LCPI13_28
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #29
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #29
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr r0, .LCPI13_29
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    lsll r4, r5, #30
+; CHECK-NEXT:    lsll r2, r1, #31
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #30
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r4, r0
+; CHECK-NEXT:    adr r0, .LCPI13_30
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    lsll r12, r9, #31
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    adr r0, .LCPI13_31
+; CHECK-NEXT:    vldrw.u32 q3, [r0]
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r2, r12
+; CHECK-NEXT:    vand q1, q1, q3
+; CHECK-NEXT:    vmov q2[3], q2[1], r1, r9
+; CHECK-NEXT:    vmov r0, s4
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi lr, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s6
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r12, r0, #8, #8
-; CHECK-NEXT:    vmsr p0, r12
+; CHECK-NEXT:    bfi lr, r0, #8, #8
+; CHECK-NEXT:    vmsr p0, lr
 ; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r9, pc}
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI13_0:
@@ -2164,1021 +2164,1021 @@ define <2 x i32> @clmul_v2i32(<2 x i32> %x, <2 x i32> %y) {
 define <2 x i64> @clmul_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-LABEL: clmul_v2i64:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r9, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r9, lr}
 ; CHECK-NEXT:    .vsave {d8, d9}
 ; CHECK-NEXT:    vpush {d8, d9}
 ; CHECK-NEXT:    adr.w r0, .LCPI14_65
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    vldrw.u32 q2, [r0]
-; CHECK-NEXT:    vmov r12, r3, d1
 ; CHECK-NEXT:    mov.w lr, #0
+; CHECK-NEXT:    vldrw.u32 q2, [r0]
+; CHECK-NEXT:    mov r2, lr
+; CHECK-NEXT:    vmov r12, r9, d1
+; CHECK-NEXT:    mov r3, lr
 ; CHECK-NEXT:    vand q2, q1, q2
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    mov r7, r3
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r5, r9
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
-; CHECK-NEXT:    vmov r0, s10
-; CHECK-NEXT:    vmov.i32 q2, #0x0
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
-; CHECK-NEXT:    vmov r0, r1, d0
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    lsll r2, r7, #1
-; CHECK-NEXT:    vpsel q2, q2, q0
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    mov r5, r1
 ; CHECK-NEXT:    lsll r4, r5, #1
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_66
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vmov q3[3], q3[1], r5, r7
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #2
-; CHECK-NEXT:    lsll r4, r7, #2
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_67
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #3
-; CHECK-NEXT:    lsll r4, r7, #3
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_68
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #4
-; CHECK-NEXT:    lsll r4, r7, #4
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_69
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #5
-; CHECK-NEXT:    lsll r4, r7, #5
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_70
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #6
-; CHECK-NEXT:    lsll r4, r7, #6
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_71
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #7
-; CHECK-NEXT:    lsll r4, r7, #7
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_72
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #8
-; CHECK-NEXT:    lsll r4, r7, #8
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_73
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #9
-; CHECK-NEXT:    lsll r4, r7, #9
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_74
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #10
-; CHECK-NEXT:    lsll r4, r7, #10
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_10
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #11
-; CHECK-NEXT:    lsll r4, r7, #11
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_11
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #12
-; CHECK-NEXT:    lsll r4, r7, #12
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_12
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #13
-; CHECK-NEXT:    lsll r4, r7, #13
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_13
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #14
-; CHECK-NEXT:    lsll r4, r7, #14
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_14
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #15
-; CHECK-NEXT:    lsll r4, r7, #15
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_15
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #16
-; CHECK-NEXT:    lsll r4, r7, #16
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_16
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #17
-; CHECK-NEXT:    lsll r4, r7, #17
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_17
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #18
-; CHECK-NEXT:    lsll r4, r7, #18
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_18
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #19
-; CHECK-NEXT:    lsll r4, r7, #19
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_19
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #20
-; CHECK-NEXT:    lsll r4, r7, #20
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_20
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #21
-; CHECK-NEXT:    lsll r4, r7, #21
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_21
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #22
-; CHECK-NEXT:    lsll r4, r7, #22
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_22
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #23
-; CHECK-NEXT:    lsll r4, r7, #23
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_23
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #24
-; CHECK-NEXT:    lsll r4, r7, #24
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_24
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #25
-; CHECK-NEXT:    lsll r4, r7, #25
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_25
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #26
-; CHECK-NEXT:    lsll r4, r7, #26
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_26
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #27
-; CHECK-NEXT:    lsll r4, r7, #27
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_27
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #28
-; CHECK-NEXT:    lsll r4, r7, #28
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_28
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #29
-; CHECK-NEXT:    lsll r4, r7, #29
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_29
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r5, #30
-; CHECK-NEXT:    lsll r4, r7, #30
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI14_30
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    vmov r2, s16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r4, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r2, r3, #31
-; CHECK-NEXT:    lsll r4, r1, #31
-; CHECK-NEXT:    vpsel q2, q2, q3
-; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    vmov q3[3], q3[1], r1, r3
-; CHECK-NEXT:    adr.w r1, .LCPI14_31
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    veor q3, q2, q3
-; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    vmov r1, s16
-; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    mov r0, lr
 ; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s18
+; CHECK-NEXT:    vmov r1, s10
+; CHECK-NEXT:    vmov.i32 q2, #0x0
 ; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    csetm r1, eq
 ; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    adr.w r1, .LCPI14_33
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
 ; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r2, r1, d0
+; CHECK-NEXT:    vpsel q2, q2, q0
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    lsll r6, r7, #1
+; CHECK-NEXT:    vmov q3[2], q3[0], r6, r4
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
+; CHECK-NEXT:    adr.w r7, .LCPI14_66
+; CHECK-NEXT:    vldrw.u32 q4, [r7]
+; CHECK-NEXT:    mov r5, r9
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    vmov r7, s16
+; CHECK-NEXT:    cmp r7, #0
+; CHECK-NEXT:    csetm r7, eq
+; CHECK-NEXT:    bfi r0, r7, #0, #8
+; CHECK-NEXT:    vmov r7, s18
+; CHECK-NEXT:    cmp r7, #0
+; CHECK-NEXT:    csetm r7, eq
+; CHECK-NEXT:    bfi r0, r7, #8, #8
+; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    vmsr p0, r0
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    lsll r0, r5, #2
+; CHECK-NEXT:    lsll r4, r7, #2
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_67
+; CHECK-NEXT:    vmov q3[3], q3[1], r7, r5
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    lsll r4, r5, #3
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #3
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_68
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #4
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #4
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_69
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #5
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #5
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_70
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #6
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #6
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_71
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #7
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #7
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_72
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #8
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #8
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_73
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #9
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #9
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_74
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #10
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #10
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_10
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #11
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #11
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_11
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #12
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #12
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_12
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #13
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #13
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_13
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #14
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #14
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_14
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #15
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #15
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_15
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #16
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #16
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_16
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #17
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_17
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #18
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_18
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #19
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_19
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #20
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #20
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_20
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #21
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #21
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_21
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #22
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #22
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_22
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #23
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #23
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_23
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #24
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #24
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_24
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #25
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #25
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_25
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #26
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #26
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_26
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #27
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #27
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_27
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #28
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #28
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_28
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #29
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #29
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_29
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    lsll r4, r5, #30
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    lsll r0, r3, #30
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_30
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmov q3[3], q3[1], r5, r3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r2
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    lsll r4, r1, #31
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r3, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    lsll r0, r9, #31
+; CHECK-NEXT:    vpsel q2, q2, q3
+; CHECK-NEXT:    vmov q3[2], q3[0], r4, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_31
+; CHECK-NEXT:    vmov q3[3], q3[1], r1, r9
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    mov r1, lr
+; CHECK-NEXT:    veor q3, q2, q3
+; CHECK-NEXT:    vand q4, q1, q4
+; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    adr.w r0, .LCPI14_33
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q3, q2, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    vldr s8, .LCPI14_75
-; CHECK-NEXT:    vmov r1, s17
+; CHECK-NEXT:    vmov r0, s17
 ; CHECK-NEXT:    vmov.f32 s9, s0
 ; CHECK-NEXT:    vmov.f32 s10, s8
 ; CHECK-NEXT:    vmov.f32 s11, s2
 ; CHECK-NEXT:    veor q0, q3, q2
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #1
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #1
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_34
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #1
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #1
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_34
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q3, q0
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #2
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #2
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_35
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #2
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #2
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_35
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #3
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #3
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_36
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #3
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #3
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_36
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #4
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #4
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_37
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #4
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #4
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_37
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #5
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #5
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_38
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #5
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #5
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_38
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #6
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #6
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_39
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #6
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #6
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_39
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #7
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #7
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_40
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #7
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #7
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_40
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #8
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #8
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_41
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #8
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #8
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_41
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #9
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #9
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_42
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #9
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #9
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_42
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #10
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #10
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_43
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #10
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #10
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_43
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #11
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #11
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_44
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #11
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #11
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_44
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #12
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #12
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_45
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #12
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #12
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_45
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #13
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #13
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_46
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #13
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #13
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_46
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #14
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #14
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_47
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #14
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #14
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_47
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
 ; CHECK-NEXT:    b.w .LBB14_2
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.1:
@@ -3186,164 +3186,164 @@ define <2 x i64> @clmul_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-NEXT:    .long 0x00000000 @ float 0
 ; CHECK-NEXT:    .p2align 1
 ; CHECK-NEXT:  .LBB14_2:
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #15
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #15
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_48
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #15
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #15
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_48
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #16
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #16
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_49
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #16
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #16
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_49
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #17
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #17
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_50
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #17
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #17
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_50
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #18
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #18
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_51
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #18
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #18
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_51
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #19
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #19
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_52
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #19
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #19
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_52
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #20
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #20
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_53
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #20
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #20
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_53
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #21
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #21
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_54
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #21
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #21
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_54
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #22
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #22
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_55
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #22
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #22
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_55
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #23
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #23
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_56
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #23
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #23
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_56
 ; CHECK-NEXT:    b.w .LBB14_13
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.3:
@@ -3417,159 +3417,159 @@ define <2 x i64> @clmul_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-NEXT:    .long 0 @ 0x0
 ; CHECK-NEXT:    .p2align 1
 ; CHECK-NEXT:  .LBB14_13:
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #24
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #24
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_57
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #24
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #24
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_57
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #25
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #25
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_58
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #25
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #25
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_58
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #26
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #26
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_59
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #26
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #26
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_59
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #27
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #27
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_60
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #27
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #27
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_60
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #28
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #28
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_61
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #28
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #28
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_61
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #29
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #29
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr.w r1, .LCPI14_62
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #29
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #29
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr.w r0, .LCPI14_62
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
 ; CHECK-NEXT:    veor q3, q0, q2
-; CHECK-NEXT:    vmov r1, s17
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #30
-; CHECK-NEXT:    vmov s11, r1
-; CHECK-NEXT:    lsls r1, r0, #30
-; CHECK-NEXT:    vmov s9, r1
-; CHECK-NEXT:    adr r1, .LCPI14_63
-; CHECK-NEXT:    vldrw.u32 q4, [r1]
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #30
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #30
+; CHECK-NEXT:    vmov s9, r0
+; CHECK-NEXT:    adr r0, .LCPI14_63
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vand q4, q1, q4
-; CHECK-NEXT:    lsls r0, r0, #31
-; CHECK-NEXT:    vmov r1, s17
 ; CHECK-NEXT:    veor q3, q0, q2
+; CHECK-NEXT:    vmov r0, s17
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #0, #8
+; CHECK-NEXT:    vmov r0, s19
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r1, r0, #8, #8
+; CHECK-NEXT:    lsl.w r0, r12, #31
+; CHECK-NEXT:    vmov s11, r0
+; CHECK-NEXT:    lsls r0, r2, #31
+; CHECK-NEXT:    vmsr p0, r1
 ; CHECK-NEXT:    vmov s9, r0
 ; CHECK-NEXT:    adr r0, .LCPI14_64
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #0, #8
-; CHECK-NEXT:    vmov r1, s19
-; CHECK-NEXT:    cmp r1, #0
-; CHECK-NEXT:    csetm r1, eq
-; CHECK-NEXT:    bfi r2, r1, #8, #8
-; CHECK-NEXT:    lsl.w r1, r12, #31
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    vmov s11, r1
 ; CHECK-NEXT:    vpsel q0, q0, q3
 ; CHECK-NEXT:    vldrw.u32 q3, [r0]
 ; CHECK-NEXT:    veor q2, q0, q2
@@ -3585,7 +3585,7 @@ define <2 x i64> @clmul_v2i64(<2 x i64> %x, <2 x i64> %y) {
 ; CHECK-NEXT:    vmsr p0, lr
 ; CHECK-NEXT:    vpsel q0, q0, q2
 ; CHECK-NEXT:    vpop {d8, d9}
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r9, pc}
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.14:
 ; CHECK-NEXT:  .LCPI14_10:
@@ -5334,739 +5334,739 @@ define <8 x i32> @clmul_v8i32_zext(<8 x i16> %x, <8 x i16> %y) {
 define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: clmul_v2i64_zext:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
+; CHECK-NEXT:    .save {r4, r6, r7, lr}
+; CHECK-NEXT:    push {r4, r6, r7, lr}
 ; CHECK-NEXT:    adr.w r0, .LCPI21_0
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    vldrw.u32 q2, [r0]
 ; CHECK-NEXT:    vmov r12, s2
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q2, q1, q2
+; CHECK-NEXT:    vldrw.u32 q2, [r0]
 ; CHECK-NEXT:    vmov.i32 q3, #0x0
+; CHECK-NEXT:    vand q2, q1, q2
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    mov r4, r12
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
-; CHECK-NEXT:    vmov r0, s10
+; CHECK-NEXT:    mov.w r0, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    mov r2, r0
+; CHECK-NEXT:    bfi r2, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s10
+; CHECK-NEXT:    mov r3, r0
 ; CHECK-NEXT:    vmov.i64 q2, #0xffffffff
 ; CHECK-NEXT:    vand q2, q0, q2
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
-; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r2, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
 ; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    lsll r2, r3, #1
+; CHECK-NEXT:    vmov r2, s0
+; CHECK-NEXT:    lsll r4, r1, #1
 ; CHECK-NEXT:    vpsel q2, q3, q2
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r4, r5, #1
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI21_1
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    lsll r6, r3, #1
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI21_1
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    veor q0, q2, q0
-; CHECK-NEXT:    lsll r4, r5, #2
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #2
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #2
+; CHECK-NEXT:    lsll r6, r3, #2
 ; CHECK-NEXT:    vpsel q0, q2, q0
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI21_2
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #3
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #3
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI21_3
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #4
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #4
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI21_4
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #5
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #5
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI21_5
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #6
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #6
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI21_6
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #7
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #7
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI21_7
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #8
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #8
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI21_8
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #9
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #9
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI21_9
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #10
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #10
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI21_10
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #11
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #11
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI21_11
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #12
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #12
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI21_12
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #13
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #13
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI21_13
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #14
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI21_14
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #15
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #15
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI21_15
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #16
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI21_16
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #17
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #17
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI21_17
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #18
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI21_18
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #19
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #19
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI21_19
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #20
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #20
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI21_20
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #21
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #21
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI21_21
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #22
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI21_22
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #23
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #23
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI21_23
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #24
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #24
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr r2, .LCPI21_24
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #25
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #25
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr r2, .LCPI21_25
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #26
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #26
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr r2, .LCPI21_26
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #27
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #27
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr r2, .LCPI21_27
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #28
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #28
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr r2, .LCPI21_28
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #29
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #29
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr r2, .LCPI21_29
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #30
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #30
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr r2, .LCPI21_30
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI21_2
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    lsll r0, r5, #31
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r12, r3, #31
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #3
+; CHECK-NEXT:    lsll r6, r3, #3
 ; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r0, r12
-; CHECK-NEXT:    adr r0, .LCPI21_31
-; CHECK-NEXT:    vldrw.u32 q3, [r0]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI21_3
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #4
+; CHECK-NEXT:    lsll r6, r3, #4
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI21_4
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #5
+; CHECK-NEXT:    lsll r6, r3, #5
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI21_5
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #6
+; CHECK-NEXT:    lsll r6, r3, #6
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI21_6
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #7
+; CHECK-NEXT:    lsll r6, r3, #7
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI21_7
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #8
+; CHECK-NEXT:    lsll r6, r3, #8
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI21_8
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #9
+; CHECK-NEXT:    lsll r6, r3, #9
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI21_9
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #10
+; CHECK-NEXT:    lsll r6, r3, #10
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI21_10
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #11
+; CHECK-NEXT:    lsll r6, r3, #11
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI21_11
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #12
+; CHECK-NEXT:    lsll r6, r3, #12
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI21_12
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #13
+; CHECK-NEXT:    lsll r6, r3, #13
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI21_13
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #14
+; CHECK-NEXT:    lsll r6, r3, #14
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI21_14
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #15
+; CHECK-NEXT:    lsll r6, r3, #15
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI21_15
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #16
+; CHECK-NEXT:    lsll r6, r3, #16
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI21_16
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #17
+; CHECK-NEXT:    lsll r6, r3, #17
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI21_17
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #18
+; CHECK-NEXT:    lsll r6, r3, #18
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI21_18
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #19
+; CHECK-NEXT:    lsll r6, r3, #19
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI21_19
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #20
+; CHECK-NEXT:    lsll r6, r3, #20
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI21_20
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #21
+; CHECK-NEXT:    lsll r6, r3, #21
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI21_21
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #22
+; CHECK-NEXT:    lsll r6, r3, #22
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI21_22
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #23
+; CHECK-NEXT:    lsll r6, r3, #23
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI21_23
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #24
+; CHECK-NEXT:    lsll r6, r3, #24
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr r1, .LCPI21_24
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #25
+; CHECK-NEXT:    lsll r6, r3, #25
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr r1, .LCPI21_25
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #26
+; CHECK-NEXT:    lsll r6, r3, #26
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr r1, .LCPI21_26
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #27
+; CHECK-NEXT:    lsll r6, r3, #27
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr r1, .LCPI21_27
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #28
+; CHECK-NEXT:    lsll r6, r3, #28
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr r1, .LCPI21_28
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #29
+; CHECK-NEXT:    lsll r6, r3, #29
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr r1, .LCPI21_29
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #30
+; CHECK-NEXT:    lsll r6, r3, #30
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr r1, .LCPI21_30
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r12, r1, #31
+; CHECK-NEXT:    lsll r2, r3, #31
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r2, r12
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr r1, .LCPI21_31
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    vand q1, q1, q3
-; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r1, r0, #0, #8
-; CHECK-NEXT:    vmov r0, s6
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r1, r0, #8, #8
-; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vmov r1, s4
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r0, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s6
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r0, r1, #8, #8
+; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    pop {r4, r6, r7, pc}
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI21_0:
@@ -6238,781 +6238,784 @@ define <2 x i64> @clmul_v2i64_zext(<2 x i32> %x, <2 x i32> %y) {
 define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: clmul_v4i64_zext:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, lr}
-; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, lr}
+; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, lr}
+; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, lr}
+; CHECK-NEXT:    .pad #4
+; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    .pad #496
 ; CHECK-NEXT:    sub sp, #496
 ; CHECK-NEXT:    vmov q2, q0
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    vmov.f32 s14, s9
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    vmov q6, q1
-; CHECK-NEXT:    vmov.f32 s16, s24
 ; CHECK-NEXT:    mov.w lr, #0
-; CHECK-NEXT:    vmov.f32 s18, s25
+; CHECK-NEXT:    vmov.f32 s14, s9
+; CHECK-NEXT:    mov r1, lr
+; CHECK-NEXT:    vmov r2, s8
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    vmov q6, q1
 ; CHECK-NEXT:    vmov.f32 s12, s8
+; CHECK-NEXT:    vmov.f32 s16, s24
+; CHECK-NEXT:    mov r0, lr
+; CHECK-NEXT:    vmov.f32 s18, s25
 ; CHECK-NEXT:    vmov r12, s14
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r4, r5, #1
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    lsll r2, r3, #1
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_32
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    lsll r6, r3, #1
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    lsll r4, r1, #1
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_32
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #480] @ 16-byte Spill
-; CHECK-NEXT:    vmov r2, s20
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    vmov.i64 q1, #0xffffffff
 ; CHECK-NEXT:    vand q3, q3, q1
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    lsll r4, r5, #2
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    adr.w r2, .LCPI22_33
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    adr.w r1, .LCPI22_33
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, lr
 ; CHECK-NEXT:    vpsel q3, q1, q3
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-NEXT:    veor q0, q3, q0
 ; CHECK-NEXT:    vand q5, q4, q1
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #464] @ 16-byte Spill
-; CHECK-NEXT:    vmov r2, s20
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    vmov r1, s20
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #2
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #2
+; CHECK-NEXT:    lsll r6, r3, #2
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_34
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_34
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #448] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #3
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #3
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #3
+; CHECK-NEXT:    lsll r6, r3, #3
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_35
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_35
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #432] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #4
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #4
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #4
+; CHECK-NEXT:    lsll r6, r3, #4
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_36
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_36
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #416] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #5
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #5
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #5
+; CHECK-NEXT:    lsll r6, r3, #5
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_37
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_37
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #400] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #6
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #6
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #6
+; CHECK-NEXT:    lsll r6, r3, #6
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_38
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_38
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #384] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #7
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #7
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #7
+; CHECK-NEXT:    lsll r6, r3, #7
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_39
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_39
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #368] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #8
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #8
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #8
+; CHECK-NEXT:    lsll r6, r3, #8
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_40
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_40
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #352] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #9
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #9
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #9
+; CHECK-NEXT:    lsll r6, r3, #9
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_41
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_41
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #336] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #10
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #10
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #10
+; CHECK-NEXT:    lsll r6, r3, #10
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_42
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_42
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #320] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #11
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #11
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #11
+; CHECK-NEXT:    lsll r6, r3, #11
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_43
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_43
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #304] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #12
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #12
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #12
+; CHECK-NEXT:    lsll r6, r3, #12
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_44
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_44
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #288] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #13
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #13
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #13
+; CHECK-NEXT:    lsll r6, r3, #13
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_45
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_45
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #272] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #14
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #14
+; CHECK-NEXT:    lsll r6, r3, #14
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_14
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_14
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #256] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #15
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #15
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #15
+; CHECK-NEXT:    lsll r6, r3, #15
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_15
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_15
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #240] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #16
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #16
+; CHECK-NEXT:    lsll r6, r3, #16
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_16
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_16
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #224] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #17
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #17
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #17
+; CHECK-NEXT:    lsll r6, r3, #17
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_17
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_17
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #208] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #18
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #18
+; CHECK-NEXT:    lsll r6, r3, #18
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_18
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_18
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #192] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #19
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #19
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #19
+; CHECK-NEXT:    lsll r6, r3, #19
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_19
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_19
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #176] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #20
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #20
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #20
+; CHECK-NEXT:    lsll r6, r3, #20
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_20
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_20
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #160] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #21
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #21
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #21
+; CHECK-NEXT:    lsll r6, r3, #21
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_21
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_21
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #144] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #22
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #22
+; CHECK-NEXT:    lsll r6, r3, #22
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_22
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_22
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #128] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #23
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #23
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #23
+; CHECK-NEXT:    lsll r6, r3, #23
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_23
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_23
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #112] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #24
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #24
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #24
+; CHECK-NEXT:    lsll r6, r3, #24
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_24
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_24
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #96] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #25
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #25
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #25
+; CHECK-NEXT:    lsll r6, r3, #25
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_25
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_25
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #80] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #26
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #26
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #26
+; CHECK-NEXT:    lsll r6, r3, #26
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_26
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_26
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #64] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #27
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #27
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #27
+; CHECK-NEXT:    lsll r6, r3, #27
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_27
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_27
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #48] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #28
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #28
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #28
+; CHECK-NEXT:    lsll r6, r3, #28
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_28
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_28
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #32] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #29
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #29
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #29
+; CHECK-NEXT:    lsll r6, r3, #29
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_29
-; CHECK-NEXT:    vldrw.u32 q1, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    mov r4, r0
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_29
+; CHECK-NEXT:    vldrw.u32 q1, [r1]
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q5, q4, q1
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s20
 ; CHECK-NEXT:    vstrw.32 q1, [sp, #16] @ 16-byte Spill
+; CHECK-NEXT:    vmov r1, s20
 ; CHECK-NEXT:    veor q0, q3, q0
-; CHECK-NEXT:    lsll r4, r5, #30
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s22
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #30
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r4, r1, #30
+; CHECK-NEXT:    lsll r6, r3, #30
 ; CHECK-NEXT:    vpsel q3, q3, q0
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI22_30
-; CHECK-NEXT:    vldrw.u32 q7, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_30
+; CHECK-NEXT:    vldrw.u32 q7, [r1]
 ; CHECK-NEXT:    veor q1, q3, q0
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, lr
 ; CHECK-NEXT:    vand q0, q4, q7
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vmov r2, s0
-; CHECK-NEXT:    lsll r0, r5, #31
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s2
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    vmov r1, s0
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s2
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, lr
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r12, r3, #31
+; CHECK-NEXT:    mov r3, lr
+; CHECK-NEXT:    lsll r12, r1, #31
+; CHECK-NEXT:    lsll r2, r3, #31
 ; CHECK-NEXT:    vpsel q0, q3, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r0, r12
-; CHECK-NEXT:    adr.w r0, .LCPI22_31
-; CHECK-NEXT:    vldrw.u32 q5, [r0]
-; CHECK-NEXT:    vmov q1[3], q1[1], r5, r3
+; CHECK-NEXT:    vmov q1[2], q1[0], r2, r12
+; CHECK-NEXT:    vmov q1[3], q1[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI22_31
+; CHECK-NEXT:    vldrw.u32 q5, [r1]
+; CHECK-NEXT:    mov r2, lr
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    vmov.i64 q3, #0xffffffff
 ; CHECK-NEXT:    vand q4, q4, q5
-; CHECK-NEXT:    vmov r0, s16
+; CHECK-NEXT:    vmov r1, s16
 ; CHECK-NEXT:    vmov.f32 s16, s26
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
-; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r2, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s18
 ; CHECK-NEXT:    vmov.f32 s18, s27
 ; CHECK-NEXT:    vand q4, q4, q3
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r2, r1, #8, #8
 ; CHECK-NEXT:    vmsr p0, r2
 ; CHECK-NEXT:    vldrw.u32 q6, [sp, #480] @ 16-byte Reload
 ; CHECK-NEXT:    vpsel q0, q0, q1
@@ -7021,40 +7024,39 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
 ; CHECK-NEXT:    vand q0, q1, q3
 ; CHECK-NEXT:    vand q6, q4, q6
-; CHECK-NEXT:    vmov r3, s3
-; CHECK-NEXT:    vmov r1, s1
-; CHECK-NEXT:    vmov r4, s4
+; CHECK-NEXT:    vmov r1, s3
+; CHECK-NEXT:    vmov r3, s1
+; CHECK-NEXT:    vmov r2, s4
 ; CHECK-NEXT:    vmov r12, s6
-; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    mov r5, r1
-; CHECK-NEXT:    mov r2, r4
-; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    lsll r2, r5, #2
-; CHECK-NEXT:    lsll r0, r7, #2
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
-; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmov q1[3], q1[1], r5, r7
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    mov r2, r4
-; CHECK-NEXT:    lsll r0, r5, #1
-; CHECK-NEXT:    lsll r2, r7, #1
-; CHECK-NEXT:    vmov q2[2], q2[0], r2, r0
-; CHECK-NEXT:    vmov r0, s24
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r7, r3
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    lsll r6, r7, #2
+; CHECK-NEXT:    lsll r4, r5, #2
+; CHECK-NEXT:    vmov q1[2], q1[0], r6, r4
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    lsll r4, r5, #1
+; CHECK-NEXT:    lsll r6, r7, #1
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov r4, s26
 ; CHECK-NEXT:    vmov q2[3], q2[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
-; CHECK-NEXT:    vmov r0, s26
+; CHECK-NEXT:    vmov r7, s24
 ; CHECK-NEXT:    vmov.i32 q6, #0x0
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    cmp r7, #0
+; CHECK-NEXT:    csetm r7, eq
+; CHECK-NEXT:    cmp r4, #0
+; CHECK-NEXT:    bfi r0, r7, #0, #8
+; CHECK-NEXT:    csetm r4, eq
+; CHECK-NEXT:    bfi r0, r4, #8, #8
+; CHECK-NEXT:    mov r4, lr
+; CHECK-NEXT:    vmsr p0, r0
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    vpsel q0, q6, q0
 ; CHECK-NEXT:    vldrw.u32 q6, [sp, #464] @ 16-byte Reload
 ; CHECK-NEXT:    veor q2, q0, q2
@@ -7062,13 +7064,13 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov r0, s24
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s26
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    bfi r4, r0, #8, #8
+; CHECK-NEXT:    vmsr p0, r4
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vpsel q0, q0, q2
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #448] @ 16-byte Reload
 ; CHECK-NEXT:    veor q1, q0, q1
@@ -7076,384 +7078,386 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vmov r0, s8
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #432] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #3
-; CHECK-NEXT:    lsll r2, r7, #3
+; CHECK-NEXT:    lsll r4, r7, #3
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #416] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #4
-; CHECK-NEXT:    lsll r2, r7, #4
+; CHECK-NEXT:    lsll r4, r7, #4
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #400] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #5
-; CHECK-NEXT:    lsll r2, r7, #5
+; CHECK-NEXT:    lsll r4, r7, #5
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #384] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #6
-; CHECK-NEXT:    lsll r2, r7, #6
+; CHECK-NEXT:    lsll r4, r7, #6
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #368] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #7
-; CHECK-NEXT:    lsll r2, r7, #7
+; CHECK-NEXT:    lsll r4, r7, #7
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #352] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #8
-; CHECK-NEXT:    lsll r2, r7, #8
+; CHECK-NEXT:    lsll r4, r7, #8
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #336] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #9
-; CHECK-NEXT:    lsll r2, r7, #9
+; CHECK-NEXT:    lsll r4, r7, #9
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #320] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #10
-; CHECK-NEXT:    lsll r2, r7, #10
+; CHECK-NEXT:    lsll r4, r7, #10
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #304] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #11
-; CHECK-NEXT:    lsll r2, r7, #11
+; CHECK-NEXT:    lsll r4, r7, #11
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #288] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #12
-; CHECK-NEXT:    lsll r2, r7, #12
+; CHECK-NEXT:    lsll r4, r7, #12
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #272] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #13
-; CHECK-NEXT:    lsll r2, r7, #13
+; CHECK-NEXT:    lsll r4, r7, #13
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #256] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #14
-; CHECK-NEXT:    lsll r2, r7, #14
+; CHECK-NEXT:    lsll r4, r7, #14
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #240] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #15
-; CHECK-NEXT:    lsll r2, r7, #15
+; CHECK-NEXT:    lsll r4, r7, #15
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #224] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #16
-; CHECK-NEXT:    lsll r2, r7, #16
+; CHECK-NEXT:    lsll r4, r7, #16
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #208] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #17
-; CHECK-NEXT:    lsll r2, r7, #17
+; CHECK-NEXT:    lsll r4, r7, #17
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #192] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #18
-; CHECK-NEXT:    lsll r2, r7, #18
+; CHECK-NEXT:    lsll r4, r7, #18
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #176] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #19
-; CHECK-NEXT:    lsll r2, r7, #19
+; CHECK-NEXT:    lsll r4, r7, #19
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
+; CHECK-NEXT:    bfi r4, r0, #8, #8
+; CHECK-NEXT:    mov r0, r12
 ; CHECK-NEXT:    b.w .LBB22_15
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.1:
@@ -7555,254 +7559,252 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    .long 0 @ 0x0
 ; CHECK-NEXT:    .p2align 1
 ; CHECK-NEXT:  .LBB22_15:
-; CHECK-NEXT:    bfi r2, r0, #8, #8
-; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #160] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #20
-; CHECK-NEXT:    lsll r2, r7, #20
+; CHECK-NEXT:    lsll r4, r7, #20
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #144] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #21
-; CHECK-NEXT:    lsll r2, r7, #21
+; CHECK-NEXT:    lsll r4, r7, #21
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #128] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #22
-; CHECK-NEXT:    lsll r2, r7, #22
+; CHECK-NEXT:    lsll r4, r7, #22
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #112] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #23
-; CHECK-NEXT:    lsll r2, r7, #23
+; CHECK-NEXT:    lsll r4, r7, #23
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #96] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #24
-; CHECK-NEXT:    lsll r2, r7, #24
+; CHECK-NEXT:    lsll r4, r7, #24
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #80] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #25
-; CHECK-NEXT:    lsll r2, r7, #25
+; CHECK-NEXT:    lsll r4, r7, #25
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #64] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #26
-; CHECK-NEXT:    lsll r2, r7, #26
+; CHECK-NEXT:    lsll r4, r7, #26
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #48] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #27
-; CHECK-NEXT:    lsll r2, r7, #27
+; CHECK-NEXT:    lsll r4, r7, #27
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #32] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #28
-; CHECK-NEXT:    lsll r2, r7, #28
+; CHECK-NEXT:    lsll r4, r7, #28
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #16] @ 16-byte Reload
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #29
-; CHECK-NEXT:    lsll r2, r7, #29
+; CHECK-NEXT:    lsll r4, r7, #29
 ; CHECK-NEXT:    vand q2, q4, q2
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    mov r5, r3
-; CHECK-NEXT:    mov r7, r1
+; CHECK-NEXT:    mov r5, r1
+; CHECK-NEXT:    mov r7, r3
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    vand q2, q4, q7
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    mov r0, r12
-; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    mov r2, r4
+; CHECK-NEXT:    vmsr p0, r4
+; CHECK-NEXT:    mov r4, r2
 ; CHECK-NEXT:    lsll r0, r5, #30
-; CHECK-NEXT:    lsll r2, r7, #30
+; CHECK-NEXT:    lsll r4, r7, #30
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r2, r0
+; CHECK-NEXT:    vmov q1[2], q1[0], r4, r0
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r2, #0
+; CHECK-NEXT:    mov r4, lr
 ; CHECK-NEXT:    vmov q1[3], q1[1], r7, r5
-; CHECK-NEXT:    lsll r12, r3, #31
+; CHECK-NEXT:    lsll r12, r1, #31
 ; CHECK-NEXT:    veor q1, q0, q1
-; CHECK-NEXT:    lsll r4, r1, #31
+; CHECK-NEXT:    lsll r2, r3, #31
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
+; CHECK-NEXT:    bfi r4, r0, #0, #8
 ; CHECK-NEXT:    vmov r0, s10
 ; CHECK-NEXT:    vand q2, q4, q5
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
+; CHECK-NEXT:    bfi r4, r0, #8, #8
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    vmsr p0, r2
+; CHECK-NEXT:    vmsr p0, r4
 ; CHECK-NEXT:    vpsel q0, q0, q1
-; CHECK-NEXT:    vmov q1[2], q1[0], r4, r12
-; CHECK-NEXT:    vmov q1[3], q1[1], r1, r3
+; CHECK-NEXT:    vmov q1[2], q1[0], r2, r12
+; CHECK-NEXT:    vmov q1[3], q1[1], r3, r1
 ; CHECK-NEXT:    veor q1, q0, q1
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    csetm r0, eq
@@ -7816,7 +7818,8 @@ define <4 x i64> @clmul_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    vldrw.u32 q0, [sp] @ 16-byte Reload
 ; CHECK-NEXT:    add sp, #496
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, pc}
+; CHECK-NEXT:    add sp, #4
+; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, pc}
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.16:
 ; CHECK-NEXT:  .LCPI22_14:
@@ -9522,737 +9525,737 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-LABEL: clmulr_v2i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
+; CHECK-NEXT:    .save {r4, r6, r7, lr}
+; CHECK-NEXT:    push {r4, r6, r7, lr}
 ; CHECK-NEXT:    adr.w r0, .LCPI30_0
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    vldrw.u32 q2, [r0]
 ; CHECK-NEXT:    vmov r12, s2
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q2, q1, q2
+; CHECK-NEXT:    vldrw.u32 q2, [r0]
 ; CHECK-NEXT:    vmov.i32 q3, #0x0
+; CHECK-NEXT:    vand q2, q1, q2
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    mov r4, r12
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
-; CHECK-NEXT:    vmov r0, s10
+; CHECK-NEXT:    mov.w r0, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    mov r2, r0
+; CHECK-NEXT:    bfi r2, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s10
+; CHECK-NEXT:    mov r3, r0
 ; CHECK-NEXT:    vmov.i64 q2, #0xffffffff
 ; CHECK-NEXT:    vand q2, q0, q2
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
-; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r2, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
 ; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    lsll r2, r3, #1
+; CHECK-NEXT:    vmov r2, s0
+; CHECK-NEXT:    lsll r4, r1, #1
 ; CHECK-NEXT:    vpsel q2, q3, q2
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r4, r5, #1
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI30_1
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    lsll r6, r3, #1
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI30_1
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    veor q0, q2, q0
-; CHECK-NEXT:    lsll r4, r5, #2
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #2
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #2
+; CHECK-NEXT:    lsll r6, r3, #2
 ; CHECK-NEXT:    vpsel q0, q2, q0
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI30_2
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #3
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #3
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI30_3
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #4
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #4
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI30_4
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #5
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #5
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI30_5
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #6
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #6
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI30_6
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #7
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #7
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI30_7
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #8
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #8
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI30_8
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #9
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #9
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI30_9
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #10
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #10
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI30_10
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #11
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #11
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI30_11
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #12
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #12
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI30_12
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #13
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #13
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI30_13
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #14
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI30_14
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #15
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #15
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI30_15
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #16
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI30_16
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #17
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #17
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI30_17
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #18
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI30_18
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #19
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #19
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI30_19
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #20
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #20
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI30_20
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #21
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #21
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI30_21
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #22
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI30_22
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #23
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #23
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI30_23
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #24
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #24
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr r2, .LCPI30_24
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #25
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #25
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr r2, .LCPI30_25
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #26
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #26
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr r2, .LCPI30_26
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #27
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #27
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr r2, .LCPI30_27
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #28
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #28
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr r2, .LCPI30_28
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #29
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #29
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr r2, .LCPI30_29
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #30
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #30
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr r2, .LCPI30_30
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI30_2
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    lsll r0, r5, #31
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r12, r3, #31
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #3
+; CHECK-NEXT:    lsll r6, r3, #3
 ; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r0, r12
-; CHECK-NEXT:    adr r0, .LCPI30_31
-; CHECK-NEXT:    vldrw.u32 q3, [r0]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI30_3
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #4
+; CHECK-NEXT:    lsll r6, r3, #4
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI30_4
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #5
+; CHECK-NEXT:    lsll r6, r3, #5
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI30_5
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #6
+; CHECK-NEXT:    lsll r6, r3, #6
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI30_6
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #7
+; CHECK-NEXT:    lsll r6, r3, #7
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI30_7
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #8
+; CHECK-NEXT:    lsll r6, r3, #8
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI30_8
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #9
+; CHECK-NEXT:    lsll r6, r3, #9
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI30_9
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #10
+; CHECK-NEXT:    lsll r6, r3, #10
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI30_10
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #11
+; CHECK-NEXT:    lsll r6, r3, #11
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI30_11
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #12
+; CHECK-NEXT:    lsll r6, r3, #12
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI30_12
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #13
+; CHECK-NEXT:    lsll r6, r3, #13
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI30_13
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #14
+; CHECK-NEXT:    lsll r6, r3, #14
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI30_14
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #15
+; CHECK-NEXT:    lsll r6, r3, #15
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI30_15
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #16
+; CHECK-NEXT:    lsll r6, r3, #16
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI30_16
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #17
+; CHECK-NEXT:    lsll r6, r3, #17
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI30_17
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #18
+; CHECK-NEXT:    lsll r6, r3, #18
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI30_18
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #19
+; CHECK-NEXT:    lsll r6, r3, #19
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI30_19
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #20
+; CHECK-NEXT:    lsll r6, r3, #20
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI30_20
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #21
+; CHECK-NEXT:    lsll r6, r3, #21
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI30_21
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #22
+; CHECK-NEXT:    lsll r6, r3, #22
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI30_22
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #23
+; CHECK-NEXT:    lsll r6, r3, #23
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI30_23
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #24
+; CHECK-NEXT:    lsll r6, r3, #24
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr r1, .LCPI30_24
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #25
+; CHECK-NEXT:    lsll r6, r3, #25
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr r1, .LCPI30_25
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #26
+; CHECK-NEXT:    lsll r6, r3, #26
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr r1, .LCPI30_26
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #27
+; CHECK-NEXT:    lsll r6, r3, #27
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr r1, .LCPI30_27
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #28
+; CHECK-NEXT:    lsll r6, r3, #28
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr r1, .LCPI30_28
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #29
+; CHECK-NEXT:    lsll r6, r3, #29
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr r1, .LCPI30_29
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #30
+; CHECK-NEXT:    lsll r6, r3, #30
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr r1, .LCPI30_30
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r12, r1, #31
+; CHECK-NEXT:    lsll r2, r3, #31
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r2, r12
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr r1, .LCPI30_31
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    vand q1, q1, q3
-; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r1, r0, #0, #8
-; CHECK-NEXT:    vmov r0, s6
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r1, r0, #8, #8
-; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vmov r1, s4
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r0, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s6
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r0, r1, #8, #8
+; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpsel q0, q0, q2
 ; CHECK-NEXT:    vmov r0, r1, d1
 ; CHECK-NEXT:    vmov r2, r3, d0
@@ -10260,7 +10263,7 @@ define <2 x i32> @clmulr_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-NEXT:    lsrl r2, r3, #31
 ; CHECK-NEXT:    vmov q0[2], q0[0], r2, r0
 ; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    pop {r4, r6, r7, pc}
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI30_0:
@@ -10452,17 +10455,17 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    lsll r2, r1, #1
 ; CHECK-NEXT:    lsll r4, r7, #1
 ; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    mov r3, r5
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r1
 ; CHECK-NEXT:    adr.w r1, .LCPI31_65
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-NEXT:    mov r7, r9
-; CHECK-NEXT:    mov r3, r5
 ; CHECK-NEXT:    vand q1, q0, q1
 ; CHECK-NEXT:    vmov r1, s4
 ; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    mov.w r1, #0
 ; CHECK-NEXT:    csetm r2, eq
+; CHECK-NEXT:    mov r4, r1
 ; CHECK-NEXT:    bfi r4, r2, #0, #8
 ; CHECK-NEXT:    vmov r2, s6
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
@@ -10472,7 +10475,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_66
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    mov r4, r1
 ; CHECK-NEXT:    vpsel q1, q1, q2
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q1, q3
@@ -10494,7 +10497,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_67
 ; CHECK-NEXT:    vmov q3[3], q3[1], r3, r7
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    mov r7, r5
 ; CHECK-NEXT:    vand q4, q0, q4
@@ -10517,7 +10520,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_68
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -10540,7 +10543,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_69
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -10563,7 +10566,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_70
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -10586,7 +10589,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_71
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -10609,7 +10612,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_72
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -10632,7 +10635,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_73
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -10655,7 +10658,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_74
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -10678,7 +10681,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_10
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -10701,7 +10704,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_11
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -10724,7 +10727,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_12
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -10747,7 +10750,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_13
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -10770,7 +10773,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_14
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -10793,7 +10796,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_15
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -10816,7 +10819,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_16
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -10839,7 +10842,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_17
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -10862,7 +10865,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_18
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -10885,7 +10888,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_19
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -10908,7 +10911,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_20
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -10931,7 +10934,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_21
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -10954,7 +10957,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_22
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -10977,7 +10980,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_23
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -11000,7 +11003,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_24
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -11023,7 +11026,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_25
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -11046,7 +11049,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_26
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -11069,7 +11072,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_27
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -11092,7 +11095,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_28
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -11115,7 +11118,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_29
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -11138,7 +11141,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_30
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q1, q3
@@ -11157,7 +11160,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    vpsel q1, q1, q3
 ; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
 ; CHECK-NEXT:    adr.w r2, .LCPI31_31
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r5, r9
 ; CHECK-NEXT:    veor q3, q1, q3
@@ -11173,7 +11176,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_33
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q3, q1, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    vldr s4, .LCPI31_75
@@ -11196,7 +11199,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_34
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q3, q2
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11215,7 +11218,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_35
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11234,7 +11237,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_36
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11253,7 +11256,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_37
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11272,7 +11275,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_38
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11291,7 +11294,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_39
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11310,7 +11313,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_40
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11329,7 +11332,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_41
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11348,7 +11351,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_42
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11367,7 +11370,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_43
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11386,7 +11389,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_44
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11405,7 +11408,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_45
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11424,7 +11427,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_46
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11443,7 +11446,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_47
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11469,7 +11472,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_48
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11488,7 +11491,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_49
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11507,7 +11510,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_50
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11526,7 +11529,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_51
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11545,7 +11548,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_52
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11564,7 +11567,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_53
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11583,7 +11586,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_54
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11602,7 +11605,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_55
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11621,7 +11624,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_56
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11713,7 +11716,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_57
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11732,7 +11735,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_58
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11751,7 +11754,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_59
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11770,7 +11773,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_60
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11789,7 +11792,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_61
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11808,7 +11811,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI31_62
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -11827,7 +11830,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr r2, .LCPI31_63
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    lsls r0, r0, #31
@@ -12721,743 +12724,743 @@ define <4 x i32> @clmulh_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 define <2 x i32> @clmulh_v2i32(<2 x i32> %a, <2 x i32> %b) nounwind {
 ; CHECK-LABEL: clmulh_v2i32:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
+; CHECK-NEXT:    .save {r4, r6, r7, lr}
+; CHECK-NEXT:    push {r4, r6, r7, lr}
 ; CHECK-NEXT:    adr.w r0, .LCPI38_0
-; CHECK-NEXT:    movs r2, #0
-; CHECK-NEXT:    vldrw.u32 q2, [r0]
 ; CHECK-NEXT:    vmov r12, s2
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q2, q1, q2
+; CHECK-NEXT:    vldrw.u32 q2, [r0]
 ; CHECK-NEXT:    vmov.i32 q3, #0x0
+; CHECK-NEXT:    vand q2, q1, q2
 ; CHECK-NEXT:    vmov r0, s8
-; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    mov r4, r12
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #0, #8
-; CHECK-NEXT:    vmov r0, s10
+; CHECK-NEXT:    mov.w r0, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    mov r2, r0
+; CHECK-NEXT:    bfi r2, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s10
+; CHECK-NEXT:    mov r3, r0
 ; CHECK-NEXT:    vmov.i64 q2, #0xffffffff
 ; CHECK-NEXT:    vand q2, q0, q2
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r2, r0, #8, #8
-; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r2, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
 ; CHECK-NEXT:    vmsr p0, r2
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    lsll r2, r3, #1
+; CHECK-NEXT:    vmov r2, s0
+; CHECK-NEXT:    lsll r4, r1, #1
 ; CHECK-NEXT:    vpsel q2, q3, q2
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    lsll r4, r5, #1
-; CHECK-NEXT:    vmov q0[2], q0[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI38_1
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q0[3], q0[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    lsll r6, r3, #1
+; CHECK-NEXT:    vmov q0[2], q0[0], r6, r4
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI38_1
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    veor q0, q2, q0
-; CHECK-NEXT:    lsll r4, r5, #2
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #2
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #2
+; CHECK-NEXT:    lsll r6, r3, #2
 ; CHECK-NEXT:    vpsel q0, q2, q0
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI38_2
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #3
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #3
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI38_3
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #4
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #4
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI38_4
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #5
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #5
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI38_5
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #6
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #6
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI38_6
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #7
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #7
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI38_7
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #8
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #8
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI38_8
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #9
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #9
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI38_9
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #10
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #10
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI38_10
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #11
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #11
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI38_11
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #12
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #12
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI38_12
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #13
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #13
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI38_13
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #14
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI38_14
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #15
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #15
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI38_15
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #16
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #16
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI38_16
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #17
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #17
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI38_17
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #18
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #18
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI38_18
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #19
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #19
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI38_19
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #20
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #20
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI38_20
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #21
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #21
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI38_21
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #22
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #22
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI38_22
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #23
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #23
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr.w r2, .LCPI38_23
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #24
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #24
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr r2, .LCPI38_24
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #25
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #25
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr r2, .LCPI38_25
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #26
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #26
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr r2, .LCPI38_26
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #27
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #27
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr r2, .LCPI38_27
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #28
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #28
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr r2, .LCPI38_28
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #29
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #29
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr r2, .LCPI38_29
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
-; CHECK-NEXT:    vand q3, q1, q3
-; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    lsll r4, r5, #30
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
-; CHECK-NEXT:    mov r2, r12
-; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r2, r3, #30
-; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r4, r2
-; CHECK-NEXT:    adr r2, .LCPI38_30
-; CHECK-NEXT:    vldrw.u32 q3, [r2]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    movs r5, #0
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI38_2
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
 ; CHECK-NEXT:    vand q3, q1, q3
 ; CHECK-NEXT:    veor q2, q0, q2
-; CHECK-NEXT:    vmov r2, s12
-; CHECK-NEXT:    lsll r0, r5, #31
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #0, #8
-; CHECK-NEXT:    vmov r2, s14
-; CHECK-NEXT:    cmp r2, #0
-; CHECK-NEXT:    csetm r2, eq
-; CHECK-NEXT:    bfi r3, r2, #8, #8
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    lsll r12, r3, #31
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #3
+; CHECK-NEXT:    lsll r6, r3, #3
 ; CHECK-NEXT:    vpsel q0, q0, q2
-; CHECK-NEXT:    vmov q2[2], q2[0], r0, r12
-; CHECK-NEXT:    adr r0, .LCPI38_31
-; CHECK-NEXT:    vldrw.u32 q3, [r0]
-; CHECK-NEXT:    vmov q2[3], q2[1], r5, r3
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI38_3
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #4
+; CHECK-NEXT:    lsll r6, r3, #4
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI38_4
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #5
+; CHECK-NEXT:    lsll r6, r3, #5
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI38_5
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #6
+; CHECK-NEXT:    lsll r6, r3, #6
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI38_6
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #7
+; CHECK-NEXT:    lsll r6, r3, #7
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI38_7
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #8
+; CHECK-NEXT:    lsll r6, r3, #8
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI38_8
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #9
+; CHECK-NEXT:    lsll r6, r3, #9
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI38_9
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #10
+; CHECK-NEXT:    lsll r6, r3, #10
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI38_10
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #11
+; CHECK-NEXT:    lsll r6, r3, #11
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI38_11
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #12
+; CHECK-NEXT:    lsll r6, r3, #12
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI38_12
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #13
+; CHECK-NEXT:    lsll r6, r3, #13
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI38_13
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #14
+; CHECK-NEXT:    lsll r6, r3, #14
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI38_14
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #15
+; CHECK-NEXT:    lsll r6, r3, #15
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI38_15
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #16
+; CHECK-NEXT:    lsll r6, r3, #16
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI38_16
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #17
+; CHECK-NEXT:    lsll r6, r3, #17
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI38_17
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #18
+; CHECK-NEXT:    lsll r6, r3, #18
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI38_18
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #19
+; CHECK-NEXT:    lsll r6, r3, #19
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI38_19
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #20
+; CHECK-NEXT:    lsll r6, r3, #20
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI38_20
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #21
+; CHECK-NEXT:    lsll r6, r3, #21
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI38_21
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #22
+; CHECK-NEXT:    lsll r6, r3, #22
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI38_22
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #23
+; CHECK-NEXT:    lsll r6, r3, #23
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr.w r1, .LCPI38_23
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #24
+; CHECK-NEXT:    lsll r6, r3, #24
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr r1, .LCPI38_24
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #25
+; CHECK-NEXT:    lsll r6, r3, #25
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr r1, .LCPI38_25
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #26
+; CHECK-NEXT:    lsll r6, r3, #26
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr r1, .LCPI38_26
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #27
+; CHECK-NEXT:    lsll r6, r3, #27
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr r1, .LCPI38_27
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #28
+; CHECK-NEXT:    lsll r6, r3, #28
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr r1, .LCPI38_28
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #29
+; CHECK-NEXT:    lsll r6, r3, #29
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr r1, .LCPI38_29
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    mov r4, r12
+; CHECK-NEXT:    mov r6, r2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r4, r1, #30
+; CHECK-NEXT:    lsll r6, r3, #30
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r6, r4
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr r1, .LCPI38_30
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    veor q2, q0, q2
+; CHECK-NEXT:    vand q3, q1, q3
+; CHECK-NEXT:    vmov r1, s12
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s14
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r3, r1, #8, #8
+; CHECK-NEXT:    mov r1, r0
+; CHECK-NEXT:    vmsr p0, r3
+; CHECK-NEXT:    mov r3, r0
+; CHECK-NEXT:    lsll r12, r1, #31
+; CHECK-NEXT:    lsll r2, r3, #31
+; CHECK-NEXT:    vpsel q0, q0, q2
+; CHECK-NEXT:    vmov q2[2], q2[0], r2, r12
+; CHECK-NEXT:    vmov q2[3], q2[1], r3, r1
+; CHECK-NEXT:    adr r1, .LCPI38_31
+; CHECK-NEXT:    vldrw.u32 q3, [r1]
 ; CHECK-NEXT:    veor q2, q0, q2
 ; CHECK-NEXT:    vand q1, q1, q3
-; CHECK-NEXT:    vmov r0, s4
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r1, r0, #0, #8
-; CHECK-NEXT:    vmov r0, s6
-; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csetm r0, eq
-; CHECK-NEXT:    bfi r1, r0, #8, #8
-; CHECK-NEXT:    vmsr p0, r1
+; CHECK-NEXT:    vmov r1, s4
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r0, r1, #0, #8
+; CHECK-NEXT:    vmov r1, s6
+; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    csetm r1, eq
+; CHECK-NEXT:    bfi r0, r1, #8, #8
+; CHECK-NEXT:    vmsr p0, r0
 ; CHECK-NEXT:    vpsel q1, q0, q2
 ; CHECK-NEXT:    vldr s1, .LCPI38_32
 ; CHECK-NEXT:    vmov.f32 s0, s5
 ; CHECK-NEXT:    vmov.f32 s2, s7
 ; CHECK-NEXT:    vmov.f32 s3, s1
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    pop {r4, r6, r7, pc}
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI38_0:
@@ -13651,17 +13654,17 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    lsll r2, r1, #1
 ; CHECK-NEXT:    lsll r4, r7, #1
 ; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
-; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    mov r3, r5
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r1
 ; CHECK-NEXT:    adr.w r1, .LCPI39_65
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-NEXT:    mov r7, r9
-; CHECK-NEXT:    mov r3, r5
 ; CHECK-NEXT:    vand q1, q0, q1
 ; CHECK-NEXT:    vmov r1, s4
 ; CHECK-NEXT:    cmp r1, #0
 ; CHECK-NEXT:    mov.w r1, #0
 ; CHECK-NEXT:    csetm r2, eq
+; CHECK-NEXT:    mov r4, r1
 ; CHECK-NEXT:    bfi r4, r2, #0, #8
 ; CHECK-NEXT:    vmov r2, s6
 ; CHECK-NEXT:    vmov.i32 q1, #0x0
@@ -13671,7 +13674,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_66
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r4
-; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    mov r4, r1
 ; CHECK-NEXT:    vpsel q1, q1, q2
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q1, q3
@@ -13693,7 +13696,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_67
 ; CHECK-NEXT:    vmov q3[3], q3[1], r3, r7
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    mov r7, r5
 ; CHECK-NEXT:    vand q4, q0, q4
@@ -13716,7 +13719,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_68
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -13739,7 +13742,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_69
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -13762,7 +13765,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_70
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -13785,7 +13788,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_71
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -13808,7 +13811,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_72
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -13831,7 +13834,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_73
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -13854,7 +13857,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_74
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -13877,7 +13880,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_75
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -13900,7 +13903,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_11
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -13923,7 +13926,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_12
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -13946,7 +13949,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_13
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -13969,7 +13972,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_14
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -13992,7 +13995,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_15
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -14015,7 +14018,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_16
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -14038,7 +14041,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_17
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -14061,7 +14064,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_18
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -14084,7 +14087,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_19
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -14107,7 +14110,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_20
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -14130,7 +14133,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_21
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -14153,7 +14156,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_22
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -14176,7 +14179,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_23
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -14199,7 +14202,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_24
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -14222,7 +14225,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_25
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -14245,7 +14248,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_26
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -14268,7 +14271,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_27
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -14291,7 +14294,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_28
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -14314,7 +14317,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_29
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    mov r7, r5
@@ -14337,7 +14340,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_30
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r7, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    mov r4, r0
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q1, q3
@@ -14356,7 +14359,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    vpsel q1, q1, q3
 ; CHECK-NEXT:    vmov q3[2], q3[0], r4, r2
 ; CHECK-NEXT:    adr.w r2, .LCPI39_31
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmov q3[3], q3[1], r5, r9
 ; CHECK-NEXT:    veor q3, q1, q3
@@ -14372,7 +14375,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_33
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q3, q1, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    vldr s4, .LCPI39_76
@@ -14395,7 +14398,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_34
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q3, q2
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14414,7 +14417,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_35
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14433,7 +14436,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_36
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14452,7 +14455,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_37
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14471,7 +14474,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_38
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14490,7 +14493,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_39
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14509,7 +14512,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_40
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14528,7 +14531,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_41
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14547,7 +14550,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_42
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14566,7 +14569,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_43
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14585,7 +14588,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_44
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14604,7 +14607,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_45
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14623,7 +14626,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_46
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14642,7 +14645,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_47
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14668,7 +14671,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_48
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14687,7 +14690,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_49
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14706,7 +14709,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_50
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14725,7 +14728,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_51
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14744,7 +14747,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_52
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14763,7 +14766,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_53
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14782,7 +14785,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_54
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14801,7 +14804,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_55
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14820,7 +14823,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_56
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14919,7 +14922,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_57
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14938,7 +14941,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_58
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14957,7 +14960,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_59
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14976,7 +14979,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_60
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -14995,7 +14998,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_61
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -15014,7 +15017,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr.w r2, .LCPI39_62
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    veor q3, q2, q1
@@ -15033,7 +15036,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-NEXT:    adr r2, .LCPI39_63
 ; CHECK-NEXT:    vldrw.u32 q4, [r2]
 ; CHECK-NEXT:    vmsr p0, r3
-; CHECK-NEXT:    movs r3, #0
+; CHECK-NEXT:    mov r3, r1
 ; CHECK-NEXT:    vpsel q2, q2, q3
 ; CHECK-NEXT:    vand q4, q0, q4
 ; CHECK-NEXT:    lsls r0, r0, #31

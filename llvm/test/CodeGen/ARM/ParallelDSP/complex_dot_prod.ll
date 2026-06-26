@@ -8,15 +8,15 @@ define dso_local arm_aapcscc void @complex_dot_prod(ptr nocapture readonly %pSrc
 ; CHECK-LLC:       @ %bb.0: @ %entry
 ; CHECK-LLC-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; CHECK-LLC-NEXT:    ldr r5, [r0]
-; CHECK-LLC-NEXT:    ldr r7, [r1]
 ; CHECK-LLC-NEXT:    ldr.w r10, [r0, #4]
 ; CHECK-LLC-NEXT:    ldr.w r8, [r0, #8]
 ; CHECK-LLC-NEXT:    ldr.w r12, [r0, #12]
+; CHECK-LLC-NEXT:    ldr r7, [r1]
+; CHECK-LLC-NEXT:    movs r0, #0
 ; CHECK-LLC-NEXT:    ldr r4, [r1, #4]
 ; CHECK-LLC-NEXT:    ldr.w r9, [r1, #8]
 ; CHECK-LLC-NEXT:    ldr.w lr, [r1, #12]
-; CHECK-LLC-NEXT:    movs r0, #0
-; CHECK-LLC-NEXT:    movs r1, #0
+; CHECK-LLC-NEXT:    mov r1, r0
 ; CHECK-LLC-NEXT:    smlaldx r0, r1, r5, r7
 ; CHECK-LLC-NEXT:    smulbb r6, r7, r5
 ; CHECK-LLC-NEXT:    smultt r5, r7, r5

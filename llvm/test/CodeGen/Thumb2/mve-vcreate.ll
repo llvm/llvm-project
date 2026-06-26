@@ -232,13 +232,13 @@ define hidden <8 x i16> @create_i16(i16 zeroext %a, i16 zeroext %b, i16 zeroext 
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    movs r7, #0
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    orr.w r0, r1, r0, lsl #16
-; CHECK-NEXT:    lsll r2, r7, #16
+; CHECK-NEXT:    mov r7, r5
 ; CHECK-NEXT:    ldr r4, [sp, #24]
+; CHECK-NEXT:    lsll r2, r7, #16
 ; CHECK-NEXT:    orr.w r1, r0, r7
 ; CHECK-NEXT:    ldrd r0, r7, [sp, #16]
-; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    lsll r4, r5, #16
 ; CHECK-NEXT:    orr.w r0, r7, r0, lsl #16
 ; CHECK-NEXT:    orr.w r12, r0, r5
@@ -307,31 +307,31 @@ define hidden <16 x i8> @create_i8(i8 zeroext %a1, i8 zeroext %b1, i8 zeroext %c
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, r11, lr}
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r10, r11, lr}
+; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    ldr r4, [sp, #40]
-; CHECK-NEXT:    mov.w r11, #0
 ; CHECK-NEXT:    ldr r6, [sp, #36]
-; CHECK-NEXT:    movs r7, #0
-; CHECK-NEXT:    lsll r4, r11, #16
-; CHECK-NEXT:    mov r10, r1
+; CHECK-NEXT:    mov r9, r5
+; CHECK-NEXT:    mov r7, r5
+; CHECK-NEXT:    lsll r4, r9, #16
 ; CHECK-NEXT:    lsll r6, r7, #24
-; CHECK-NEXT:    mov r8, r3
+; CHECK-NEXT:    mov r10, r1
 ; CHECK-NEXT:    orr.w r1, r6, r4
 ; CHECK-NEXT:    ldr r6, [sp, #44]
-; CHECK-NEXT:    movs r3, #0
-; CHECK-NEXT:    ldr r4, [sp, #72]
+; CHECK-NEXT:    mov r8, r3
+; CHECK-NEXT:    mov r3, r5
 ; CHECK-NEXT:    lsll r6, r3, #8
-; CHECK-NEXT:    movs r5, #0
+; CHECK-NEXT:    ldr r4, [sp, #72]
 ; CHECK-NEXT:    orrs r1, r6
 ; CHECK-NEXT:    ldr r6, [sp, #48]
-; CHECK-NEXT:    lsll r4, r5, #16
-; CHECK-NEXT:    mov.w r9, #0
+; CHECK-NEXT:    mov r11, r5
 ; CHECK-NEXT:    orr.w r12, r1, r6
 ; CHECK-NEXT:    ldr r6, [sp, #68]
-; CHECK-NEXT:    movs r1, #0
+; CHECK-NEXT:    mov r1, r5
+; CHECK-NEXT:    lsll r4, r11, #16
 ; CHECK-NEXT:    lsll r6, r1, #24
 ; CHECK-NEXT:    orrs r6, r4
 ; CHECK-NEXT:    ldr r4, [sp, #76]
-; CHECK-NEXT:    lsll r4, r9, #8
+; CHECK-NEXT:    lsll r4, r5, #8
 ; CHECK-NEXT:    orrs r6, r4
 ; CHECK-NEXT:    ldr r4, [sp, #80]
 ; CHECK-NEXT:    orr.w lr, r6, r4
@@ -340,7 +340,7 @@ define hidden <16 x i8> @create_i8(i8 zeroext %a1, i8 zeroext %b1, i8 zeroext %c
 ; CHECK-NEXT:    orr.w r0, r0, r2, lsl #8
 ; CHECK-NEXT:    add r0, r8
 ; CHECK-NEXT:    orrs r0, r7
-; CHECK-NEXT:    orr.w r0, r0, r11
+; CHECK-NEXT:    orr.w r0, r0, r9
 ; CHECK-NEXT:    orr.w r2, r0, r3
 ; CHECK-NEXT:    ldr r0, [sp, #56]
 ; CHECK-NEXT:    ldr r3, [sp, #52]
@@ -352,9 +352,9 @@ define hidden <16 x i8> @create_i8(i8 zeroext %a1, i8 zeroext %b1, i8 zeroext %c
 ; CHECK-NEXT:    add r0, r3
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    mov r1, r2
-; CHECK-NEXT:    orrs r0, r5
+; CHECK-NEXT:    orr.w r0, r0, r11
 ; CHECK-NEXT:    mov r2, lr
-; CHECK-NEXT:    orr.w r3, r0, r9
+; CHECK-NEXT:    orr.w r3, r0, r5
 ; CHECK-NEXT:    mov r0, r12
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
 entry:
