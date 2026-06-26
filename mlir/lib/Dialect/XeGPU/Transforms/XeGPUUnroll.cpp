@@ -765,7 +765,8 @@ struct UnrollLoadGatherOp : public UnrollPattern<xegpu::LoadGatherOp> {
       auto newOp = xegpu::LoadGatherOp::create(
           rewriter, loc, newValueTy, op.getSource(), o, m,
           rewriter.getI64IntegerAttr(chunkSize), op.getL1HintAttr(),
-          op.getL2HintAttr(), op.getL3HintAttr(), layout);
+          op.getL2HintAttr(), op.getL3HintAttr(), layout,
+          /*contiguity=*/nullptr);
       newOps.push_back(newOp);
     }
 
@@ -860,7 +861,8 @@ struct UnrollStoreScatterOp : public UnrollPattern<xegpu::StoreScatterOp> {
       xegpu::StoreScatterOp::create(rewriter, loc, v, op.getDest(), o, m,
                                     rewriter.getI64IntegerAttr(chunkSize),
                                     op.getL1HintAttr(), op.getL2HintAttr(),
-                                    op.getL3HintAttr(), layout);
+                                    op.getL3HintAttr(), layout,
+                                    /*contiguity=*/nullptr);
     }
 
     rewriter.eraseOp(op);
