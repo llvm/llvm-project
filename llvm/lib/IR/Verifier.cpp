@@ -2637,7 +2637,6 @@ void Verifier::verifyFunctionMetadata(
       if (MD->getNumOperands() != 3)
         continue;
 
-      uint64_t Product = 1;
       for (unsigned I = 0; I != 3; ++I) {
         ConstantInt *C = mdconst::dyn_extract<ConstantInt>(MD->getOperand(I));
         Check(C, "reqd_work_group_size operands must be integer constants", MD);
@@ -2649,13 +2648,6 @@ void Verifier::verifyFunctionMetadata(
               "reqd_work_group_size operands must fit in 64 bits", MD);
         if (Value.getActiveBits() > 64)
           break;
-
-        uint64_t Dim = Value.getZExtValue();
-        Check(Dim == 0 || Product <= std::numeric_limits<uint64_t>::max() / Dim,
-              "reqd_work_group_size product must fit in 64 bits", MD);
-        if (Dim != 0 && Product > std::numeric_limits<uint64_t>::max() / Dim)
-          break;
-        Product *= Dim;
       }
     }
   }
