@@ -162,7 +162,7 @@ public:
     size_t SizeToAllocate = Size;
 #if LLVM_ADDRESS_SANITIZER_BUILD && LLVM_ENABLE_ABI_BREAKING_CHECKS
     // Add trailing bytes as a "red zone" under ASan. RedZoneSize only exists
-    // when conditions are true.
+    // when both conditions are true.
     SizeToAllocate += RedZoneSize;
 #endif
     SizeToAllocate = alignToPowerOf2(SizeToAllocate, MinAlign);
