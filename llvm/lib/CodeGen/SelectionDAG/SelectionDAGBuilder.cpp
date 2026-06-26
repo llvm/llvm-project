@@ -1978,6 +1978,16 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
               DAG.getConstant(0, getCurSDLoc(), MVT::getIntegerVT(8))));
     }
 
+    if (VT == MVT::externref || VT == MVT::funcref) {
+      assert(C->isNullValue() && "Can only zero this target type!");
+      // The zero value of a WebAssembly reference type is the null reference,
+      // materialized with ref.null.
+      Intrinsic::ID IID = VT == MVT::externref ? Intrinsic::wasm_ref_null_extern
+                                               : Intrinsic::wasm_ref_null_func;
+      return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, getCurSDLoc(), VT,
+                         DAG.getTargetConstant(IID, getCurSDLoc(), MVT::i32));
+    }
+
     VectorType *VecTy = cast<VectorType>(V->getType());
 
     // Now that we know the number and type of the elements, get that number of
@@ -6735,13 +6745,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // @llvm.memcpy.inline defines 0 and 1 to both mean no alignment.
     Align DstAlign = MCI.getDestAlign().valueOrOne();
     Align SrcAlign = MCI.getSourceAlign().valueOrOne();
-    Align Alignment = std::min(DstAlign, SrcAlign);
     bool isVol = MCI.isVolatile();
-    // FIXME: Support passing different dest/src alignments to the memcpy DAG
-    // node.
     SDValue Root = isVol ? getRoot() : getMemoryRoot();
-    SDValue MC = DAG.getMemcpy(Root, sdl, Dst, Src, Size, Alignment, isVol,
-                               MCI.isForceInlined(), &I, std::nullopt,
+    SDValue MC = DAG.getMemcpy(Root, sdl, Dst, Src, Size, DstAlign, SrcAlign,
+                               isVol, MCI.isForceInlined(), &I, std::nullopt,
                                MachinePointerInfo(I.getArgOperand(0)),
                                MachinePointerInfo(I.getArgOperand(1)),
                                I.getAAMetadata(), BatchAA);
@@ -6774,16 +6781,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // @llvm.memmove defines 0 and 1 to both mean no alignment.
     Align DstAlign = MMI.getDestAlign().valueOrOne();
     Align SrcAlign = MMI.getSourceAlign().valueOrOne();
-    Align Alignment = std::min(DstAlign, SrcAlign);
     bool isVol = MMI.isVolatile();
-    // FIXME: Support passing different dest/src alignments to the memmove DAG
-    // node.
     SDValue Root = isVol ? getRoot() : getMemoryRoot();
-    SDValue MM = DAG.getMemmove(Root, sdl, Op1, Op2, Op3, Alignment, isVol, &I,
-                                /* OverrideTailCall */ std::nullopt,
-                                MachinePointerInfo(I.getArgOperand(0)),
-                                MachinePointerInfo(I.getArgOperand(1)),
-                                I.getAAMetadata(), BatchAA);
+    SDValue MM = DAG.getMemmove(
+        Root, sdl, Op1, Op2, Op3, DstAlign, SrcAlign, isVol, &I,
+        /* OverrideTailCall */ std::nullopt,
+        MachinePointerInfo(I.getArgOperand(0)),
+        MachinePointerInfo(I.getArgOperand(1)), I.getAAMetadata(), BatchAA);
     updateDAGForMaybeTailCall(MM);
     return;
   }
@@ -7227,6 +7231,43 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              SemConst));
     return;
   }
+  case Intrinsic::convert_to_arbitrary_fp: {
+    // Extract format metadata and convert to semantics enum.
+    EVT DstVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    Metadata *MD = cast<MetadataAsValue>(I.getArgOperand(1))->getMetadata();
+    StringRef FormatStr = cast<MDString>(MD)->getString();
+    const fltSemantics *DstSem =
+        APFloatBase::getArbitraryFPSemantics(FormatStr);
+    if (!DstSem) {
+      DAG.getContext()->emitError(
+          "convert_to_arbitrary_fp: not implemented format '" + FormatStr +
+          "'");
+      setValue(&I, DAG.getPOISON(DstVT));
+      return;
+    }
+    APFloatBase::Semantics SemEnum = APFloatBase::SemanticsToEnum(*DstSem);
+
+    Metadata *RoundMD =
+        cast<MetadataAsValue>(I.getArgOperand(2))->getMetadata();
+    StringRef RoundStr = cast<MDString>(RoundMD)->getString();
+    std::optional<RoundingMode> RoundMode = convertStrToRoundingMode(RoundStr);
+    assert(RoundMode && *RoundMode != RoundingMode::Dynamic &&
+           "Dynamic rounding mode should have been rejected by the verifier");
+
+    uint64_t Saturate =
+        cast<ConstantInt>(I.getArgOperand(3))->getZExtValue() ? 1 : 0;
+
+    SDValue FloatVal = getValue(I.getArgOperand(0));
+
+    SDValue SemConst =
+        DAG.getTargetConstant(static_cast<int>(SemEnum), sdl, MVT::i32);
+    SDValue RoundConst =
+        DAG.getTargetConstant(static_cast<int>(*RoundMode), sdl, MVT::i32);
+    SDValue SatConst = DAG.getTargetConstant(Saturate, sdl, MVT::i32);
+    setValue(&I, DAG.getNode(ISD::CONVERT_TO_ARBITRARY_FP, sdl, DstVT, FloatVal,
+                             SemConst, RoundConst, SatConst));
+    return;
+  }
   case Intrinsic::set_rounding:
     Res = DAG.getNode(ISD::SET_ROUNDING, sdl, MVT::Other,
                       {getRoot(), getValue(I.getArgOperand(0))});
@@ -7411,6 +7452,18 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     SDValue X = getValue(I.getArgOperand(0));
     SDValue Y = getValue(I.getArgOperand(1));
     setValue(&I, DAG.getNode(ISD::CLMUL, sdl, X.getValueType(), X, Y));
+    return;
+  }
+  case Intrinsic::pext: {
+    SDValue X = getValue(I.getArgOperand(0));
+    SDValue Y = getValue(I.getArgOperand(1));
+    setValue(&I, DAG.getNode(ISD::PEXT, sdl, X.getValueType(), X, Y));
+    return;
+  }
+  case Intrinsic::pdep: {
+    SDValue X = getValue(I.getArgOperand(0));
+    SDValue Y = getValue(I.getArgOperand(1));
+    setValue(&I, DAG.getNode(ISD::PDEP, sdl, X.getValueType(), X, Y));
     return;
   }
   case Intrinsic::sadd_sat: {
@@ -9509,8 +9562,6 @@ bool SelectionDAGBuilder::visitMemPCpyCall(const CallInst &I) {
 
   Align DstAlign = DAG.InferPtrAlign(Dst).valueOrOne();
   Align SrcAlign = DAG.InferPtrAlign(Src).valueOrOne();
-  // DAG::getMemcpy needs Alignment to be defined.
-  Align Alignment = std::min(DstAlign, SrcAlign);
 
   SDLoc sdl = getCurSDLoc();
 
@@ -9519,8 +9570,8 @@ bool SelectionDAGBuilder::visitMemPCpyCall(const CallInst &I) {
   // the copied memory.
   SDValue Root = getMemoryRoot();
   SDValue MC = DAG.getMemcpy(
-      Root, sdl, Dst, Src, Size, Alignment, false, false, /*CI=*/nullptr,
-      std::nullopt, MachinePointerInfo(I.getArgOperand(0)),
+      Root, sdl, Dst, Src, Size, DstAlign, SrcAlign, false, false,
+      /*CI=*/nullptr, std::nullopt, MachinePointerInfo(I.getArgOperand(0)),
       MachinePointerInfo(I.getArgOperand(1)), I.getAAMetadata());
   assert(MC.getNode() != nullptr &&
          "** memcpy should not be lowered as TailCall in mempcpy context **");

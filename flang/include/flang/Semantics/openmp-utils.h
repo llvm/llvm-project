@@ -97,16 +97,33 @@ bool IsCommonBlock(const Symbol &sym);
 bool IsExtendedListItem(const Symbol &sym);
 bool IsVariableListItem(const Symbol &sym);
 bool IsTypeParamInquiry(const Symbol &sym);
+bool IsComplexPart(const Symbol &sym);
 bool IsStructureComponent(const Symbol &sym);
 bool IsPrivatizable(const Symbol &sym);
 bool IsVarOrFunctionRef(const MaybeExpr &expr);
 
 bool IsWholeAssumedSizeArray(const parser::OmpObject &object);
 
+bool IsExtendedListItem(
+    const parser::OmpObject &object, SemanticsContext *semaCtx);
+bool IsLocatorListItem(
+    const parser::OmpObject &object, SemanticsContext *semaCtx);
+bool IsVariableListItem(
+    const parser::OmpObject &object, SemanticsContext *semaCtx);
+
+bool IsSubstring(const parser::OmpObject &object, SemanticsContext *semaCtx);
+bool IsArrayElement(const parser::OmpObject &object, SemanticsContext *semaCtx);
+
 const Symbol *GetHostSymbol(const Symbol &sym);
 
 bool IsMapEnteringType(parser::OmpMapType::Value type);
 bool IsMapExitingType(parser::OmpMapType::Value type);
+
+// Returns true if the symbol has a temporary stack-allocated descriptor.
+// This includes assumed-shape and assumed-rank dummy arguments that are
+// not allocatable or pointer. These descriptors are created on the caller's
+// stack and become invalid after the function returns.
+bool HasTemporaryStackDescriptor(const Symbol &symbol);
 
 MaybeExpr GetEvaluateExpr(const parser::Expr &parserExpr);
 template <typename T> MaybeExpr GetEvaluateExpr(const T &inp) {
@@ -152,6 +169,46 @@ std::optional<bool> GetLogicalArgument(
 std::optional<bool> IsContiguous(
     SemanticsContext &semaCtx, const parser::OmpObject &object);
 
+/// Non-constant user condition expression and source for runtime lowering.
+struct DynamicUserCondition {
+  const parser::ScalarExpr *expr;
+  parser::CharBlock source;
+};
+
+/// A context-selector feature that variant matching accepts syntactically but
+/// cannot yet honour during selection. Callers are expected to diagnose these
+/// (a lowering \c TODO or a semantic error) before calling
+/// \c MakeVariantMatchInfo, which asserts none are present.
+enum class UnsupportedSelectorFeature {
+  None,
+  /// A `target_device={...}` selector set.
+  TargetDevice,
+  /// A clause property (e.g. \c simdlen(8) in \c construct={simd(simdlen(8))})
+  /// or an extension property (e.g. \c foo(bar) in
+  /// \c implementation={my_trait(foo(bar))}).
+  ClauseOrExtensionProperty,
+};
+
+/// Scan a parsed context selector for the first feature that variant matching
+/// cannot yet honour (see \c UnsupportedSelectorFeature). Pure detection: emits
+/// no diagnostics and has no side effects on any match info.
+UnsupportedSelectorFeature FindUnsupportedSelectorFeature(
+    const parser::traits::OmpContextSelectorSpecification &ctxSel,
+    SemanticsContext &semaCtx);
+
+/// Populate \p vmi from a parsed context selector. Score modifiers are
+/// honoured (including on `condition(...)` selectors). Constant user
+/// conditions are folded into user_condition_true/false traits; a non-constant
+/// user condition is recorded as user_condition_unknown and the first such
+/// expression is returned for the caller to lower as a runtime condition.
+///
+/// The caller must first reject unsupported selector features (see
+/// \c FindUnsupportedSelectorFeature); this function asserts none are present.
+std::optional<DynamicUserCondition> MakeVariantMatchInfo(
+    llvm::omp::VariantMatchInfo &vmi,
+    const parser::traits::OmpContextSelectorSpecification &ctxSel,
+    SemanticsContext &semaCtx);
+
 std::vector<SomeExpr> GetTopLevelDesignators(const SomeExpr &expr);
 const SomeExpr *HasStorageOverlap(
     const SomeExpr &base, llvm::ArrayRef<SomeExpr> exprs);
@@ -160,6 +217,23 @@ bool IsAssignment(const parser::ActionStmt *x);
 bool IsPointerAssignment(const evaluate::Assignment &x);
 
 MaybeExpr MakeEvaluateExpr(const parser::OmpStylizedInstance &inp);
+
+enum struct ListItemKind : uint32_t {
+  Depend,
+  DirectiveName,
+  DirectiveSpecification,
+  Extended,
+  IntegerExpression,
+  Interop,
+  Locator,
+  Operation,
+  Parameter,
+  ProcedureArgument,
+  Variable,
+};
+
+std::optional<ListItemKind> GetArgumentListItemKind(
+    llvm::omp::Clause clause, unsigned version);
 
 bool IsLoopTransforming(llvm::omp::Directive dir);
 bool HasDataEnvironment(llvm::omp::Directive dir);

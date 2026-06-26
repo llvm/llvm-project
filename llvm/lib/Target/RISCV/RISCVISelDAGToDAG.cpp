@@ -2076,7 +2076,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   case RISCVISD::SUBD:
   case RISCVISD::PPAIRE_DB:
   case RISCVISD::WADDAU:
-  case RISCVISD::WSUBAU: {
+  case RISCVISD::WSUBAU:
+  case RISCVISD::WADDA:
+  case RISCVISD::WSUBA: {
     assert(!Subtarget->is64Bit() && "Unexpected opcode");
     assert(
         (Node->getOpcode() != RISCVISD::PPAIRE_DB || Subtarget->hasStdExtP()) &&
@@ -2096,10 +2098,27 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     SDValue Op1Hi = Node->getOperand(3);
 
     MachineSDNode *New;
-    if (Opcode == RISCVISD::WADDAU || Opcode == RISCVISD::WSUBAU) {
-      // WADDAU/WSUBAU: Op0 is the accumulator (GPRPair), Op1Lo and Op1Hi are
-      // the two 32-bit values.
-      unsigned Opc = Opcode == RISCVISD::WADDAU ? RISCV::WADDAU : RISCV::WSUBAU;
+    if (Opcode == RISCVISD::WADDAU || Opcode == RISCVISD::WSUBAU ||
+        Opcode == RISCVISD::WADDA || Opcode == RISCVISD::WSUBA) {
+      // Widening accumulate: Op0 is the accumulator (GPRPair), Op1Lo and Op1Hi
+      // are the two 32-bit values.
+      unsigned Opc;
+      switch (Opcode) {
+      default:
+        llvm_unreachable("Unexpected opcode");
+      case RISCVISD::WADDAU:
+        Opc = RISCV::WADDAU;
+        break;
+      case RISCVISD::WSUBAU:
+        Opc = RISCV::WSUBAU;
+        break;
+      case RISCVISD::WADDA:
+        Opc = RISCV::WADDA;
+        break;
+      case RISCVISD::WSUBA:
+        Opc = RISCV::WSUBA;
+        break;
+      }
       New = CurDAG->getMachineNode(Opc, DL, MVT::Untyped, Op0, Op1Lo, Op1Hi);
     } else {
       SDValue Op1 = buildGPRPair(CurDAG, DL, MVT::Untyped, Op1Lo, Op1Hi);

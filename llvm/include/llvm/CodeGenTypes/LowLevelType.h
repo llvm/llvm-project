@@ -708,7 +708,7 @@ public:
   static void setUseExtended(bool Enable) { ExtendedLLT = Enable; }
 
 private:
-  static bool ExtendedLLT;
+  LLVM_ABI static bool ExtendedLLT;
 };
 
 inline raw_ostream &operator<<(raw_ostream &OS, const LLT &Ty) {
