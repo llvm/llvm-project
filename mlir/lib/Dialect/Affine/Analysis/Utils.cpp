@@ -243,6 +243,10 @@ addNodeToMDG(Operation *nodeOp, MemRefDependenceGraph &mdg,
   return &node;
 }
 
+/// Returns whether `op` may read from or write to `memref`.
+/// Memory effects are used when available; recursively-effectful ops are
+/// handled through their nested operations. Otherwise, conservatively treat a
+/// memref operand as a possible access, which may add dependence edges.
 static bool mayAccessMemRef(Operation *op, Value memref) {
   if (auto affineRead = dyn_cast<AffineReadOpInterface>(op))
     return affineRead.getMemRef() == memref;
