@@ -4797,7 +4797,7 @@ static bool checkPTDynamic(const typename ELFT::Phdr &Phdr,
 template <class ELFT>
 void GNUELFDumper<ELFT>::printProgramHeaders(
     bool PrintProgramHeaders, cl::boolOrDefault PrintSectionMapping) {
-  const bool ShouldPrintSectionMapping =
+  bool ShouldPrintSectionMapping =
       (PrintSectionMapping != cl::boolOrDefault::BOU_FALSE);
   // Exit early if no program header or section mapping details were requested.
   if (!PrintProgramHeaders && !ShouldPrintSectionMapping)
