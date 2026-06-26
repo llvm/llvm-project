@@ -157,9 +157,11 @@ struct TriageCommand {
 static constexpr TriageCommand g_triage_commands[] = {
     {"target list", Requires::Always},
     {"image list", Requires::Target},
+    {"process status", Requires::Process},
     {"thread list", Requires::Process},
     {"thread backtrace all", Requires::Process},
     {"image lookup -va $pc", Requires::Frame},
+    {"register read", Requires::Frame},
     {"frame variable", Requires::Frame},
 };
 
