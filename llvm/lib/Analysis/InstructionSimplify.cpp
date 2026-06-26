@@ -7376,8 +7376,16 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
 
     return nullptr;
   }
-  case Intrinsic::vector_splice_left:
   case Intrinsic::vector_splice_right: {
+    // splice.right(splice.left(poison, x, offset), poison, offset) -> x
+    Value *X, *Offset = Args[2];
+    if (match(Args[0], m_Intrinsic<Intrinsic::vector_splice_left>(
+                           m_Poison(), m_Value(X), m_Specific(Offset))) &&
+        isa<PoisonValue>(Args[1]))
+      return X;
+    [[fallthrough]];
+  }
+  case Intrinsic::vector_splice_left: {
     Value *Offset = Args[2];
     auto *Ty = cast<VectorType>(ReturnType);
     if (Q.isUndefValue(Offset))
@@ -7399,13 +7407,6 @@ Value *llvm::simplifyIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     if (CR.isSingleElement() && CR.getSingleElement()->isZero())
       return IID == Intrinsic::vector_splice_left ? Args[0] : Args[1];
 
-    if (IID == Intrinsic::vector_splice_right) {
-      Value *X;
-      if (match(Args[0], m_Intrinsic<Intrinsic::vector_splice_left>(
-                             m_Poison(), m_Value(X), m_Deferred(Offset))) &&
-          Q.isUndefValue(Args[1]))
-        return X;
-    }
     return nullptr;
   }
   case Intrinsic::experimental_constrained_fadd:
