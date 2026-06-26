@@ -41,7 +41,6 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
