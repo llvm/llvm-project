@@ -11,7 +11,7 @@
 
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
-#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
+#include "mlir/Dialect/XeGPU/uArch/uArchCommon.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
@@ -256,7 +256,7 @@ DistributeLayoutAttr setupStoreMatrixAnchorLayout(LayoutKind layoutKind,
 std::optional<DistributeLayoutAttr> completeScatterLoadLaneLayoutFromInstData(
     DistributeLayoutAttr userSpecifiedLayout,
     DistributeLayoutAttr consumerLayout, Type elemTy,
-    const xegpu::uArch::LoadGatherInstructionInterface *uArchInstruction,
+    const xegpu::uArch::LoadGatherInstruction *uArchInstruction,
     const int subgroupSize);
 
 /// Like completeScatterLoadLaneLayoutFromInstData, but for scatter stores
@@ -265,7 +265,7 @@ std::optional<DistributeLayoutAttr> completeScatterLoadLaneLayoutFromInstData(
 /// with no consumer layout to reuse.
 std::optional<DistributeLayoutAttr> completeScatterStoreLaneLayoutFromInstData(
     DistributeLayoutAttr specifiedLayout, Type elemTy,
-    const xegpu::uArch::StoreScatterInstructionInterface *uArchInstruction,
+    const xegpu::uArch::StoreScatterInstruction *uArchInstruction,
     const int subgroupSize);
 
 /// Completes a user-provided 2D-block store_nd / prefetch_nd anchor that has

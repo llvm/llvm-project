@@ -567,6 +567,7 @@ void MappingTraits<DXContainerYAML::Part>::mapping(IO &IO,
   IO.mapOptional("DebugName", P.DebugName);
   IO.mapOptional("CompilerVersion", P.CompilerVersion);
   IO.mapOptional("SourceInfo", P.SourceInfo);
+  IO.mapOptional("PrivateData", P.PrivateData);
 }
 
 void MappingTraits<DXContainerYAML::Object>::mapping(
@@ -979,6 +980,14 @@ DXContainerYAML::fromDXContainer(object::DXContainer &Container) {
       NewPart.DebugName = DXContainerYAML::DebugName{
           DebugName->Parameters.Flags, DebugName->Parameters.NameLength,
           DebugName->Filename.str()};
+      break;
+    }
+    case dxbc::PartType::PRIV: {
+      std::optional<StringRef> PrivateData = Container.getPrivateData();
+      assert(PrivateData && "Since we are iterating and found a PRIV part, "
+                            "this should never not have a value");
+      NewPart.PrivateData.emplace(PrivateData->data(),
+                                  PrivateData->data() + PrivateData->size());
       break;
     }
     case dxbc::PartType::SFI0: {
