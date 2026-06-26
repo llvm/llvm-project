@@ -29,7 +29,7 @@ define void @BZ2_compressBlock() nounwind ssp {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB0_24
+; CHECK-NEXT:    jne .LBB0_22
 ; CHECK-NEXT:  # %bb.1: # %if.then68
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
@@ -54,7 +54,7 @@ define void @BZ2_compressBlock() nounwind ssp {
 ; CHECK-NEXT:    movb $1, %dl
 ; CHECK-NEXT:    testb %dl, %dl
 ; CHECK-NEXT:    movl $0, %esi
-; CHECK-NEXT:    jne .LBB0_14
+; CHECK-NEXT:    jne .LBB0_12
 ; CHECK-NEXT:  # %bb.7: # %while.body85.i.preheader
 ; CHECK-NEXT:    # in Loop: Header=BB0_6 Depth=1
 ; CHECK-NEXT:    xorl %ecx, %ecx
@@ -73,57 +73,51 @@ define void @BZ2_compressBlock() nounwind ssp {
 ; CHECK-NEXT:  .LBB0_10: # %while.end.i
 ; CHECK-NEXT:    # in Loop: Header=BB0_6 Depth=1
 ; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_14
-; CHECK-NEXT:  # %bb.11: # %land.lhs.true.i
-; CHECK-NEXT:    # in Loop: Header=BB0_6 Depth=1
-; CHECK-NEXT:    jne .LBB0_14
-; CHECK-NEXT:  # %bb.12: # %land.lhs.true103.i
-; CHECK-NEXT:    # in Loop: Header=BB0_6 Depth=1
-; CHECK-NEXT:    jne .LBB0_14
-; CHECK-NEXT:  # %bb.13: # %if.then108.i
+; CHECK-NEXT:    jne .LBB0_12
+; CHECK-NEXT:  # %bb.11: # %if.then108.i
 ; CHECK-NEXT:    # in Loop: Header=BB0_6 Depth=1
 ; CHECK-NEXT:    xorl %esi, %esi
 ; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:  .LBB0_14: # %if.end117.i
+; CHECK-NEXT:  .LBB0_12: # %if.end117.i
 ; CHECK-NEXT:    # in Loop: Header=BB0_6 Depth=1
 ; CHECK-NEXT:    testb %bl, %bl
-; CHECK-NEXT:    jne .LBB0_16
-; CHECK-NEXT:  # %bb.15: # %if.then122.i
+; CHECK-NEXT:    jne .LBB0_14
+; CHECK-NEXT:  # %bb.13: # %if.then122.i
 ; CHECK-NEXT:    # in Loop: Header=BB0_6 Depth=1
 ; CHECK-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %esi, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    calll fprintf@PLT
-; CHECK-NEXT:  .LBB0_16: # %for.cond138.preheader.i
+; CHECK-NEXT:  .LBB0_14: # %for.cond138.preheader.i
 ; CHECK-NEXT:    # in Loop: Header=BB0_6 Depth=1
 ; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:    incl %esi
 ; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    jne .LBB0_6
-; CHECK-NEXT:  # %bb.17: # %for.cond182.preheader.i
+; CHECK-NEXT:  # %bb.15: # %for.cond182.preheader.i
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    leal {{[0-9]+}}(%esp), %esp
 ; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    popl %ebx
-; CHECK-NEXT:    jne .LBB0_18
-; CHECK-NEXT:    jmp .LBB0_19
-; CHECK-NEXT:  .LBB0_18: # %for.inc220.us.i
-; CHECK-NEXT:  .LBB0_19: # %while.body300.preheader.i
+; CHECK-NEXT:    jne .LBB0_16
+; CHECK-NEXT:    jmp .LBB0_17
+; CHECK-NEXT:  .LBB0_16: # %for.inc220.us.i
+; CHECK-NEXT:  .LBB0_17: # %while.body300.preheader.i
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB0_19
+; CHECK-NEXT:  .LBB0_18: # %for.end335.i
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    jmp .LBB0_18
+; CHECK-NEXT:  .LBB0_19: # %while.end2742.i
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_21
-; CHECK-NEXT:  .LBB0_20: # %for.end335.i
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    jmp .LBB0_20
-; CHECK-NEXT:  .LBB0_21: # %while.end2742.i
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB0_23
-; CHECK-NEXT:  # %bb.22: # %if.then2748.i
-; CHECK-NEXT:  .LBB0_23: # %for.body2778.i
-; CHECK-NEXT:  .LBB0_24: # %if.end85
+; CHECK-NEXT:  # %bb.20: # %if.then2748.i
+; CHECK-NEXT:  .LBB0_21: # %for.body2778.i
+; CHECK-NEXT:  .LBB0_22: # %if.end85
 ; CHECK-NEXT:    retl
 entry:
   br i1 undef, label %if.then68, label %if.end85
