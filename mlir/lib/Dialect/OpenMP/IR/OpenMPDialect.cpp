@@ -3921,6 +3921,24 @@ mlir::omp ::decodeCli(Value cli) {
   return {create, gen, cons};
 }
 
+ClauseProcBindKind
+mlir::omp::convertProcBindKind(llvm::omp::ProcBindKind kind) {
+  switch (kind) {
+  case llvm::omp::ProcBindKind::OMP_PROC_BIND_close:
+    return ClauseProcBindKind::Close;
+  case llvm::omp::ProcBindKind::OMP_PROC_BIND_master:
+    return ClauseProcBindKind::Master;
+  case llvm::omp::ProcBindKind::OMP_PROC_BIND_primary:
+    return ClauseProcBindKind::Primary;
+  case llvm::omp::ProcBindKind::OMP_PROC_BIND_spread:
+    return ClauseProcBindKind::Spread;
+  case llvm::omp::ProcBindKind::OMP_PROC_BIND_default:
+  case llvm::omp::ProcBindKind::OMP_PROC_BIND_unknown:
+    break;
+  }
+  llvm_unreachable("unexpected proc-bind kind");
+}
+
 void NewCliOp::build(::mlir::OpBuilder &odsBuilder,
                      ::mlir::OperationState &odsState) {
   odsState.addTypes(CanonicalLoopInfoType::get(odsBuilder.getContext()));

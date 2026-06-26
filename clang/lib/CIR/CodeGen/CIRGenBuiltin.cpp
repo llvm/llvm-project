@@ -261,6 +261,30 @@ static void emitAtomicFenceOp(CIRGenFunction &cgf, const CallExpr *expr,
                                  emitAtomicOpCallBackFn);
 }
 
+// Emit a runtime call to bool __atomic_is_lock_free(size_t size, void *ptr).
+// For the __c11 builtin the pointer is null, since an _Atomic object is always
+// suitably aligned.
+static RValue emitAtomicIsLockFree(CIRGenFunction &cgf, const CallExpr *e,
+                                   unsigned builtinID) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(e->getExprLoc());
+
+  mlir::Type sizeTy = cgf.convertType(cgf.getContext().getSizeType());
+  mlir::Value size = cgf.emitScalarExpr(e->getArg(0));
+  mlir::Value ptr;
+  if (builtinID == Builtin::BI__atomic_is_lock_free)
+    ptr = builder.createBitcast(cgf.emitScalarExpr(e->getArg(1)),
+                                builder.getVoidPtrTy());
+  else
+    ptr = builder.getNullPtr(builder.getVoidPtrTy(), loc);
+
+  cir::FuncOp func = cgf.cgm.createRuntimeFunction(
+      cir::FuncType::get({sizeTy, builder.getVoidPtrTy()}, builder.getBoolTy()),
+      "__atomic_is_lock_free");
+  return RValue::get(
+      builder.createCallOp(loc, func, mlir::ValueRange{size, ptr}).getResult());
+}
+
 namespace {
 struct WidthAndSignedness {
   unsigned width;
@@ -2182,6 +2206,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   }
   case Builtin::BI__c11_atomic_is_lock_free:
   case Builtin::BI__atomic_is_lock_free:
+    return emitAtomicIsLockFree(*this, e, builtinID);
   case Builtin::BI__atomic_test_and_set:
   case Builtin::BI__atomic_clear:
     return errorBuiltinNYI(*this, e, builtinID);

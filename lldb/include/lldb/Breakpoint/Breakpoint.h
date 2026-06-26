@@ -579,7 +579,7 @@ private:
   bool HasFacadeLocations() { return m_facade_locations.GetSize() != 0; }
 
 public:
-  bool MatchesName(const char *name) {
+  bool MatchesName(llvm::StringRef name) {
     return m_name_list.find(name) != m_name_list.end();
   }
 
