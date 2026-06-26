@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/PHITransAddr.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PredIteratorCache.h"
 #include "llvm/IR/ValueHandle.h"
@@ -102,6 +103,10 @@ class MemDepResult {
     /// This marker indicates that the query has no dependency in the specified
     /// function.
     NonFuncLocal,
+    /// This marker indicates that the query depends on a select instruction,
+    /// i.e. the address loaded is a select whose two sides each reach a
+    /// non-clobbered value (see the \p Def documentation, item 4).
+    Select,
     /// This marker indicates that the query dependency is unknown.
     Unknown
   };
@@ -134,6 +139,9 @@ public:
   static MemDepResult getNonFuncLocal() {
     return MemDepResult(ValueTy::create<Other>(NonFuncLocal));
   }
+  static MemDepResult getSelect() {
+    return MemDepResult(ValueTy::create<Other>(Select));
+  }
   static MemDepResult getUnknown() {
     return MemDepResult(ValueTy::create<Other>(Unknown));
   }
@@ -159,6 +167,12 @@ public:
   /// start of the function.
   bool isNonFuncLocal() const {
     return Value.is<Other>() && Value.cast<Other>() == NonFuncLocal;
+  }
+
+  /// Tests if this MemDepResult represents a query that depends on a select
+  /// instruction whose two sides each reach a non-clobbered value.
+  bool isSelect() const {
+    return Value.is<Other>() && Value.cast<Other>() == Select;
   }
 
   /// Tests if this MemDepResult represents a query which cannot and/or will
@@ -229,16 +243,17 @@ public:
 /// (potentially phi translated) address that was live in the block.
 class NonLocalDepResult {
   NonLocalDepEntry Entry;
-  Value *Address;
+  SelectAddr Address;
 
 public:
-  NonLocalDepResult(BasicBlock *BB, MemDepResult Result, Value *Address)
+  NonLocalDepResult(BasicBlock *BB, MemDepResult Result,
+                    const SelectAddr &Address)
       : Entry(BB, Result), Address(Address) {}
 
   // BB is the sort key, it can't be changed.
   BasicBlock *getBB() const { return Entry.getBB(); }
 
-  void setResult(const MemDepResult &R, Value *Addr) {
+  void setResult(const MemDepResult &R, const SelectAddr &Addr) {
     Entry.setResult(R);
     Address = Addr;
   }
@@ -253,7 +268,11 @@ public:
   /// a cached result and that address was deleted.
   ///
   /// The address is always null for a non-local 'call' dependence.
-  Value *getAddress() const { return Address; }
+  ///
+  /// If the result is a select dependency (\see MemDepResult::isSelect), the
+  /// returned SelectAddr instead carries the select condition and the two
+  /// translated addresses (true/false side).
+  SelectAddr getAddress() const { return Address; }
 };
 
 /// Provides a lazy, caching interface for making common memory aliasing
