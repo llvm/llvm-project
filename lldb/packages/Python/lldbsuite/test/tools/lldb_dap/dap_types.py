@@ -493,7 +493,7 @@ def _dict_to_message_impl(
                     and f.default_factory is dataclasses.MISSING
                 ):
                     raise TypeError(
-                        f"expected field {data_key!r} in {data!r} at {full_path!r}."
+                        f"expected field {data_key!r} in {data!r} at {full_path!r} for {cls.__name__!r}."
                     )
                 continue
 
