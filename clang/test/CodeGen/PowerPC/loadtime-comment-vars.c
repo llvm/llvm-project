@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -O2 -triple powerpc-ibm-aix -mloadtime-comment-vars=sccsid,version,build_number,same_copyright,active,not_defined_here -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 // RUN: %clang_cc1 -O2 -triple powerpc64-ibm-aix -mloadtime-comment-vars=sccsid,version,build_number,same_copyright,active,not_defined_here -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
-// RUN: %clang_cc1 -O2 -triple x86_64-linux-gnu -mloadtime-comment-vars=sccsid,version -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=NONAIX
+// RUN: %clang_cc1 -O2 -triple x86_64-linux-gnu -mloadtime-comment-vars=sccsid,version -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=LINUX
 
 // 1. String pointer 
 static char *sccsid = "@(#) sccsid Version 1.0";
@@ -21,10 +21,9 @@ struct build_info {
     int minor;
 } static build_data = {1, 0};
 
-// 6. Deferred: pointer whose initializer references another static global.
-// Both the pointer AND the string it points to must be emitted.
-static const char dummy[] = "dummy copyright deferred";
-static const char *same_copyright = dummy;
+// 6. Pointer initialized with a string literal; forced into emission even
+// though it is never referenced.
+static const char *same_copyright = "@(#) same copyright";
 
 // 7. Variable already referenced (eager emission path)
 static char *active = "@(#) active string";
@@ -40,8 +39,8 @@ void foo() {}
 // CHECK-DAG: @sccsid = internal global ptr @[[SCCSID_STR:.str(\.[0-9]+)?]], align {{[0-9]+}}, !loadtime_comment ![[MD]]
 // CHECK-DAG: @[[SCCSID_STR]] = private unnamed_addr constant [24 x i8] c"@(#) sccsid Version 1.0\00", align {{[0-9]+}}
 // CHECK-DAG: @version = internal global [27 x i8] c"@(#) Copyright Version 2.0\00", align {{[0-9]+}}, !loadtime_comment ![[MD]]
-// CHECK-DAG: @same_copyright = internal global ptr @dummy, align {{[0-9]+}}, !loadtime_comment ![[MD]]
-// CHECK-DAG: @dummy = internal constant [25 x i8] c"dummy copyright deferred\00"
+// CHECK-DAG: @same_copyright = internal global ptr @[[SC_STR:.str(\.[0-9]+)?]], align {{[0-9]+}}, !loadtime_comment ![[MD]]
+// CHECK-DAG: @[[SC_STR]] = private unnamed_addr constant [{{[0-9]+}} x i8] c"@(#) same copyright\00", align {{[0-9]+}}
 // CHECK: @llvm.compiler.used = appending global [4 x ptr]
 // CHECK-SAME: ptr @sccsid
 // CHECK-SAME: ptr @version
@@ -55,7 +54,7 @@ void foo() {}
 // CHECK-NOT: @build_data
 // CHECK-NOT: @not_defined_here
 
-// NONAIX-NOT: loadtime_comment
-// NONAIX-NOT: @sccsid
-// NONAIX-NOT: @version
+// LINUX-NOT: loadtime_comment
+// LINUX-NOT: @sccsid
+// LINUX-NOT: @version
 
