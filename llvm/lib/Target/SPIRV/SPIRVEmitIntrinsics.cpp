@@ -260,8 +260,8 @@ class SPIRVEmitIntrinsics
                            bool IsPostprocessing = false);
 
   void preprocessCompositeConstants(IRBuilder<> &B);
-  void preprocessUndefs(IRBuilder<> &B);
-  void preprocessPoisons(IRBuilder<> &B);
+  Value *lowerUndefOrPoison(Value *Op, IRBuilder<> &B, bool HasPoisonExt);
+  void preprocessUndefsAndPoisons(IRBuilder<> &B);
   void simplifyNullAddrSpaceCasts();
 
   Type *reconstructType(Value *Op, bool UnknownElemTypeI8,
@@ -1623,76 +1623,71 @@ void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
   Old->eraseFromParent();
 }
 
-void SPIRVEmitIntrinsics::preprocessUndefs(IRBuilder<> &B) {
+// Lower a poison or undef Op to its placeholder intrinsic.
+Value *SPIRVEmitIntrinsics::lowerUndefOrPoison(Value *Op, IRBuilder<> &B,
+                                               bool HasPoisonExt) {
+  auto *UV = dyn_cast<UndefValue>(Op);
+  if (!UV)
+    return nullptr;
+
+  bool AsPoison = HasPoisonExt && isa<PoisonValue>(UV);
+  if (isa<PoisonValue>(UV) && !HasPoisonExt)
+    LLVM_DEBUG(dbgs() << "SPV_KHR_poison_freeze is not enabled. Poison is "
+                         "lowered as undef\n");
+
+  Intrinsic::ID IID = AsPoison ? Intrinsic::spv_poison : Intrinsic::spv_undef;
+  Type *Ty = UV->getType();
+
+  // Aggregates use an i32-result placeholder with the real type kept in
+  // AggrConstTypes and scalar poison uses a type-overloaded one.
+  if (Ty->isAggregateType()) {
+    auto *Call =
+        AsPoison ? B.CreateIntrinsicWithoutFolding(IID, {B.getInt32Ty()}, {})
+                 : B.CreateIntrinsicWithoutFolding(IID, {});
+    AggrConsts[Call] = UV;
+    AggrConstTypes[Call] = Ty;
+    return Call;
+  }
+
+  if (AsPoison)
+    return B.CreateIntrinsic(IID, {Ty}, {});
+  return nullptr;
+}
+
+// Replace aggregate undef or poison operands and extension-enabled scalar
+// poison operands with placeholder intrinsics. Scalar undef is left as is. See
+// lowerUndefOrPoison.
+void SPIRVEmitIntrinsics::preprocessUndefsAndPoisons(IRBuilder<> &B) {
   const SPIRVSubtarget *STI = TM.getSubtargetImpl(*CurrF);
   bool HasPoisonExt =
       STI->canUseExtension(SPIRV::Extension::SPV_KHR_poison_freeze);
+
   SmallVector<Instruction *, 16> Insts;
   for (auto &I : instructions(CurrF))
     Insts.push_back(&I);
 
   for (Instruction *I : Insts) {
     bool BPrepared = false;
-    for (auto &Op : I->operands()) {
-      auto *AggrUndef = dyn_cast<UndefValue>(Op);
-      if (!AggrUndef || !Op->getType()->isAggregateType())
+    auto *Phi = dyn_cast<PHINode>(I);
+    for (unsigned Idx = 0; Idx < I->getNumOperands(); ++Idx) {
+      Value *Op = I->getOperand(Idx);
+      if (!isa<UndefValue>(Op) || Op->getType()->isMetadataTy())
         continue;
-      if (HasPoisonExt && isa<PoisonValue>(AggrUndef))
+      bool IsScalar = !Op->getType()->isAggregateType();
+      bool AsPoison = HasPoisonExt && isa<PoisonValue>(Op);
+      // Scalar undef or extensionless scalar poison is directly translatable.
+      if (IsScalar && !AsPoison)
         continue;
-      if (isa<PoisonValue>(AggrUndef))
-        LLVM_DEBUG(dbgs() << "SPV_KHR_poison_freeze is not enabled. Poison is "
-                             "lowered as undef\n");
-
-      if (!BPrepared) {
+      // Scalar poison in a phi materializes in the incoming block. Everything
+      // else materializes right before I.
+      if (IsScalar && Phi)
+        B.SetInsertPoint(Phi->getIncomingBlock(Idx)->getTerminator());
+      else if (!BPrepared) {
         setInsertPointSkippingPhis(B, I);
         BPrepared = true;
       }
-      CallInst *IntrUndef =
-          B.CreateIntrinsicWithoutFolding(Intrinsic::spv_undef, {});
-      I->replaceUsesOfWith(Op, IntrUndef);
-      AggrConsts[IntrUndef] = AggrUndef;
-      AggrConstTypes[IntrUndef] = AggrUndef->getType();
-    }
-  }
-}
-
-void SPIRVEmitIntrinsics::preprocessPoisons(IRBuilder<> &B) {
-  const SPIRVSubtarget *STI = TM.getSubtargetImpl(*CurrF);
-  if (!STI->canUseExtension(SPIRV::Extension::SPV_KHR_poison_freeze))
-    return;
-
-  for (Instruction &I : instructions(CurrF)) {
-    bool BPrepared = false;
-    auto *Phi = dyn_cast<PHINode>(&I);
-
-    for (unsigned Idx = 0; Idx < I.getNumOperands(); ++Idx) {
-      Value *Op = I.getOperand(Idx);
-      auto *Poison = dyn_cast<PoisonValue>(Op);
-      if (!Poison || Op->getType()->isMetadataTy())
-        continue;
-
-      Type *OpTy = Op->getType();
-      Value *Replacement = nullptr;
-      if (OpTy->isAggregateType()) {
-        if (!BPrepared) {
-          setInsertPointSkippingPhis(B, &I);
-          BPrepared = true;
-        }
-        CallInst *Call = B.CreateIntrinsicWithoutFolding(Intrinsic::spv_poison,
-                                                         {B.getInt32Ty()}, {});
-        AggrConsts[Call] = Poison;
-        AggrConstTypes[Call] = OpTy;
-        Replacement = Call;
-      } else {
-        if (Phi)
-          B.SetInsertPoint(Phi->getIncomingBlock(Idx)->getTerminator());
-        else if (!BPrepared) {
-          setInsertPointSkippingPhis(B, &I);
-          BPrepared = true;
-        }
-        Replacement = B.CreateIntrinsic(Intrinsic::spv_poison, {OpTy}, {});
-      }
-      I.setOperand(Idx, Replacement);
+      if (Value *Repl = lowerUndefOrPoison(Op, B, HasPoisonExt))
+        I->setOperand(Idx, Repl);
     }
   }
 }
@@ -1763,18 +1758,14 @@ void SPIRVEmitIntrinsics::preprocessCompositeConstants(IRBuilder<> &B) {
                 CE && CE->getOpcode() == Instruction::AddrSpaceCast &&
                 isa<ConstantPointerNull>(CE->getOperand(0)))
               Op = ConstantPointerNull::get(cast<PointerType>(CE->getType()));
-            if (HasPoisonExt && isa<PoisonValue>(Op)) {
+            // Undef or poison nested in a constant aggregate is not a direct
+            // instruction operand, so preprocessUndefsAndPoisons() misses it.
+            // An unlowered aggregate one would reach IRTranslator as an
+            // untranslatable spv_const_composite operand.
+            if (isa<UndefValue>(Op)) {
               PrepareInsert();
-              Type *PoisonTy = Op->getType();
-              if (PoisonTy->isAggregateType()) {
-                CallInst *Call = B.CreateIntrinsicWithoutFolding(
-                    Intrinsic::spv_poison, {B.getInt32Ty()}, {});
-                AggrConsts[Call] = cast<PoisonValue>(Op);
-                AggrConstTypes[Call] = PoisonTy;
-                Op = Call;
-              } else {
-                Op = B.CreateIntrinsic(Intrinsic::spv_poison, {PoisonTy}, {});
-              }
+              if (Value *Repl = lowerUndefOrPoison(Op, B, HasPoisonExt))
+                Op = Repl;
             }
             Args.push_back(Op);
           }
@@ -2600,15 +2591,47 @@ Instruction *SPIRVEmitIntrinsics::visitUnreachableInst(UnreachableInst &I) {
   return &I;
 }
 
+// llvm.compiler.used and llvm.used hold use-list entries that protect their
+// referenced globals from DCE without participating in code generation.
+static bool isUseListGlobal(StringRef Name) {
+  return Name == "llvm.compiler.used" || Name == "llvm.used";
+}
+
+// Returns true for module-level globals that should not have SPIR-V intrinsics
+// emitted (use-list globals plus llvm.global.annotations).
+static bool isArtificialGlobal(StringRef Name) {
+  return isUseListGlobal(Name) || Name == "llvm.global.annotations";
+}
+
+// Returns true if every use of GV traces back to llvm.compiler.used or
+// llvm.used.
+static bool hasOnlyArtificialUses(const GlobalVariable &GV) {
+  SmallPtrSet<const Value *, 8> Visited;
+  SmallVector<const Value *> Stack(GV.users());
+  while (!Stack.empty()) {
+    const Value *V = Stack.pop_back_val();
+    if (!Visited.insert(V).second)
+      continue;
+    if (const auto *GVUser = dyn_cast<GlobalVariable>(V)) {
+      if (!isUseListGlobal(GVUser->getName()))
+        return false;
+      continue;
+    }
+    if (const auto *C = dyn_cast<Constant>(V)) {
+      Stack.append(C->user_begin(), C->user_end());
+      continue;
+    }
+    return false;
+  }
+  return true;
+}
+
 static bool
 shouldEmitIntrinsicsForGlobalValue(const GlobalVariableUsers &GVUsers,
                                    const GlobalVariable &GV,
                                    const Function *F) {
   // Skip special artificial variables.
-  static const StringSet<> ArtificialGlobals{"llvm.global.annotations",
-                                             "llvm.compiler.used", "llvm.used"};
-
-  if (ArtificialGlobals.contains(GV.getName()))
+  if (isArtificialGlobal(GV.getName()))
     return false;
 
   auto &UserFunctions = GVUsers.getTransitiveUserFunctions(GV);
@@ -2693,7 +2716,9 @@ void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
         Intrinsic::spv_init_global, {GV.getType(), Ty}, {&GV, Const});
     InitInst->setArgOperand(1, InitOp);
   }
-  if (!Init && GV.use_empty())
+  // Globals with only use-list references have no real function uses. Emit
+  // spv_unref_global so buildGlobalVariable is called for them.
+  if (!Init && hasOnlyArtificialUses(GV))
     B.CreateIntrinsic(Intrinsic::spv_unref_global, GV.getType(), &GV);
 }
 
@@ -3574,8 +3599,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   for (auto &GV : Func.getParent()->globals())
     processGlobalValue(GV, B);
 
-  preprocessUndefs(B);
-  preprocessPoisons(B);
+  preprocessUndefsAndPoisons(B);
   simplifyNullAddrSpaceCasts();
   preprocessCompositeConstants(B);
 
