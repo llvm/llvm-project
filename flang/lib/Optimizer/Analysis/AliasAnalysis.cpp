@@ -1004,9 +1004,231 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
   return ModRefResult::getNoModRef();
 }
 
+AliasAnalysis::AliasAnalysis(AliasAnalysisRecursiveEffectsCache &cacheRef)
+    : cache(&cacheRef) {
+  cacheRef.aa = this;
+}
+
+AliasAnalysis::AliasAnalysis(AliasAnalysis &&other) noexcept
+    : symTabMap(std::move(other.symTabMap)),
+      domInfoCache(std::move(other.domInfoCache)),
+      sortedScopeCache(std::move(other.sortedScopeCache)),
+      multiScopeCache(std::move(other.multiScopeCache)),
+      cache(other.cache) {
+  other.cache = nullptr;
+  if (cache)
+    cache->aa = this;
+}
+
+AliasAnalysis::~AliasAnalysis() {
+  if (cache)
+    cache->aa = nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// AliasAnalysisRecursiveEffectsCache
+//===----------------------------------------------------------------------===//
+
+void AliasAnalysisRecursiveEffectsCache::buildSummary(mlir::Region &region,
+                                                     Summary &out) {
+  for (mlir::Operation &op : region.getOps())
+    buildSummary(&op, out);
+}
+
+void AliasAnalysisRecursiveEffectsCache::buildSummary(mlir::Operation *op,
+                                                     Summary &out) {
+  // fir.call: defer the entire analysis to per-query getCallModRef. Recording
+  // its generic interface effects here on top would over-pessimize: the
+  // uncached path only falls through to interface analysis when
+  // getCallModRef itself returns ModAndRef.
+  if (llvm::isa<fir::CallOp>(op)) {
+    CallInfo ci;
+    ci.op = op;
+    ci.isFortranUserProcedure = aa->isCallToFortranUserProcedure(op);
+    out.calls.push_back(ci);
+    return;
+  }
+
+  bool isRecursive =
+      op->hasTrait<mlir::OpTrait::HasRecursiveMemoryEffects>();
+  if (isRecursive) {
+    for (mlir::Region &r : op->getRegions())
+      buildSummary(r, out);
+  }
+
+  auto iface = dyn_cast<MemoryEffectOpInterface>(op);
+
+  if (!iface) {
+    // No effect interface and not handled by the recursive branch: must
+    // conservatively assume both Mod and Ref (this mirrors the uncached
+    // AliasAnalysis::getModRef which returns ModAndRef in this case).
+    if (!isRecursive) {
+      out.hasUnknownWrite = true;
+      out.hasUnknownRead = true;
+    }
+    return;
+  }
+
+  SmallVector<MemoryEffects::EffectInstance> effects;
+  iface.getEffects(effects);
+
+  for (const MemoryEffects::EffectInstance &effect : effects) {
+    if (isa<MemoryEffects::Allocate, MemoryEffects::Free>(effect.getEffect()))
+      continue;
+
+    mlir::SideEffects::Resource *resource = effect.getResource();
+
+    if (!resource->isAddressable())
+      continue;
+
+    bool isRead = isa<MemoryEffects::Read>(effect.getEffect());
+    bool isWrite = isa<MemoryEffects::Write>(effect.getEffect());
+    mlir::Value v = effect.getValue();
+
+    if (!v) {
+      if (isRead)
+        out.hasUnknownRead = true;
+      if (isWrite)
+        out.hasUnknownWrite = true;
+      continue;
+    }
+
+    if (isRead)
+      out.readLocations.push_back(v);
+
+    if (isWrite)
+      out.writeLocations.push_back(v);
+  }
+}
+
+ModRefResult
+AliasAnalysisRecursiveEffectsCache::getModRefFromSummary(mlir::Operation *op,
+                                                        mlir::Value location) {
+  assert(aa &&
+         "cache used without a linked fir::AliasAnalysis; this should only "
+         "be invoked from AliasAnalysis::getModRef when the back-pointer is "
+         "set");
+  auto it = summaries.find(op);
+
+  if (it == summaries.end()) {
+    Summary s;
+    buildSummary(op, s);
+    it = summaries.try_emplace(op, std::move(s)).first;
+  }
+
+  const Summary &s = it->second;
+  bool mod = s.hasUnknownWrite;
+  bool ref = s.hasUnknownRead;
+
+  if (!mod) {
+    for (mlir::Value v : s.writeLocations) {
+      if (!aa->alias(v, location).isNo()) {
+        mod = true;
+        break;
+      }
+    }
+  }
+
+  if (!ref) {
+    for (mlir::Value v : s.readLocations) {
+      if (!aa->alias(v, location).isNo()) {
+        ref = true;
+        break;
+      }
+    }
+  }
+
+  if (mod && ref)
+    return ModRefResult::getModAndRef();
+
+  for (const CallInfo &ci : s.calls) {
+    mlir::Operation *call = ci.op;
+
+    if (ci.isFortranUserProcedure) {
+      ModRefResult cr = aa->getCallModRef(call, location);
+
+      if (cr != ModRefResult::getModAndRef()) {
+        if (cr.isMod())
+          mod = true;
+
+        if (cr.isRef())
+          ref = true;
+
+        if (mod && ref)
+          break;
+
+        continue;
+      }
+      // Fall through to interface analysis below.
+    }
+    // Either getCallModRef gave conservative ModAndRef, or the callee is
+    // not a Fortran user procedure (in which case getCallModRef would
+    // unconditionally return ModAndRef). Mirror the uncached fall-through
+    // to MemoryEffectOpInterface for additional precision.
+    auto iface = dyn_cast<MemoryEffectOpInterface>(call);
+
+    if (!iface) {
+      mod = true;
+      ref = true;
+      break;
+    }
+
+    SmallVector<MemoryEffects::EffectInstance> callEffects;
+    iface.getEffects(callEffects);
+
+    for (const MemoryEffects::EffectInstance &effect : callEffects) {
+      if (isa<MemoryEffects::Allocate, MemoryEffects::Free>(effect.getEffect()))
+        continue;
+
+      mlir::SideEffects::Resource *resource = effect.getResource();
+
+      if (!resource->isAddressable())
+        continue;
+
+      AliasResult ar = AliasResult::MayAlias;
+
+      if (mlir::Value v = effect.getValue())
+        ar = aa->alias(v, location);
+
+      if (ar.isNo())
+        continue;
+
+      if (isa<MemoryEffects::Read>(effect.getEffect()))
+        ref = true;
+      else
+        mod = true;
+
+      if (mod && ref)
+        break;
+    }
+
+    if (mod && ref)
+      break;
+  }
+
+  if (mod && ref)
+    return ModRefResult::getModAndRef();
+
+  if (mod)
+    return ModRefResult::getMod();
+
+  if (ref)
+    return ModRefResult::getRef();
+
+  return ModRefResult::getNoModRef();
+}
+
 /// This is mostly inspired by MLIR::LocalAliasAnalysis, except that
 /// fir.call's are handled in a special way.
 ModRefResult AliasAnalysis::getModRef(Operation *op, Value location) {
+  // If this AliasAnalysis is linked with a cache, route ops with
+  // HasRecursiveMemoryEffects through it. Non-recursive ops fall through to
+  // the inline path below; the cache eventually delegates back to
+  // alias()/getCallModRef() on this instance, which never re-enter this
+  // routing check, so there is no risk of infinite recursion.
+  if (cache && op->hasTrait<mlir::OpTrait::HasRecursiveMemoryEffects>())
+    return cache->getModRefFromSummary(op, location);
+
   if (auto call = llvm::dyn_cast<fir::CallOp>(op)) {
     ModRefResult result = getCallModRef(call, location);
     if (result != ModRefResult::getModAndRef())
