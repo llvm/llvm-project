@@ -536,8 +536,21 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
 
     ArrayRef<MCPhysReg> AllocOrder = RegClassInfo.getOrder(RC);
 
+    // The stack slot's LiveInterval may be discontiguous: a slot can be live
+    // in memory around a spill store and around a much later reload. Once
+    // we unspill the slot into a register, however, the value must reside in
+    // that register continuously from its first reference to its last. Checking
+    // interference against the slot's discontiguous interval could let us pick
+    // a PhysReg that is busy inside a gap, corrupting it. Instead, check
+    // interference over the range the replacement register will occupy.
+    LiveInterval HullLI(LI->reg(), LI->weight());
+    VNInfo *HullVNI =
+        HullLI.getNextValue(LI->beginIndex(), LIS.getVNInfoAllocator());
+    HullLI.addSegment(
+        LiveInterval::Segment(LI->beginIndex(), LI->endIndex(), HullVNI));
+
     for (MCPhysReg PhysReg : AllocOrder) {
-      if (LRM.checkInterference(*LI, PhysReg) != LiveRegMatrix::IK_Free)
+      if (LRM.checkInterference(HullLI, PhysReg) != LiveRegMatrix::IK_Free)
         continue;
 
       LLVM_DEBUG(dbgs() << "Reassigning " << *LI << " to "
