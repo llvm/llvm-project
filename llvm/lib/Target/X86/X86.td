@@ -1750,7 +1750,10 @@ def ProcessorFeatures {
   list<SubtargetFeature> C864GM7Features =
     !listconcat(C864GM4Features, C864GM7AdditionalFeatures);
 
-  list<SubtargetFeature> C864GM7AdditionalTuning = [TuningBranchFusion];
+  list<SubtargetFeature> C864GM7AdditionalTuning = [TuningBranchFusion,
+                                                    TuningPreferNoGather,
+                                                    TuningPreferNoScatter,
+                                                    TuningPrefer256Bit];
   list<SubtargetFeature> C864GM7Tuning =
     !listconcat(C864GM4Tuning, C864GM7AdditionalTuning);
 }
