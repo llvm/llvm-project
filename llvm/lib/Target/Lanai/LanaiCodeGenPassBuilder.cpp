@@ -19,11 +19,15 @@ using namespace llvm;
 
 namespace {
 
-class LanaiCodeGenPassBuilder : public CodeGenPassBuilder<LanaiCodeGenPassBuilder, LanaiTargetMachine> {
+class LanaiCodeGenPassBuilder
+    : public CodeGenPassBuilder<LanaiCodeGenPassBuilder, LanaiTargetMachine> {
   using Base = CodeGenPassBuilder<LanaiCodeGenPassBuilder, LanaiTargetMachine>;
 
 public:
-  explicit LanaiCodeGenPassBuilder(LanaiTargetMachine &TM, const CGPassBuilderOption &Opts, PassInstrumentationCallbacks *PIC) : CodeGenPassBuilder(TM, Opts, PIC) {}
+  explicit LanaiCodeGenPassBuilder(LanaiTargetMachine &TM,
+                                   const CGPassBuilderOption &Opts,
+                                   PassInstrumentationCallbacks *PIC)
+      : CodeGenPassBuilder(TM, Opts, PIC) {}
 
   void addIRPasses(PassManagerWrapper &PMW) const;
   Error addInstSelector(PassManagerWrapper &PMW) const;
@@ -50,7 +54,7 @@ void LanaiCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
 
 } // namespace
 
-void LanaiTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+void LanaiTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "LanaiPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
 }
