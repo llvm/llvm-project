@@ -53,6 +53,8 @@ call "C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Auxiliary
 
 "C:\\Program Files\\Python313\\python.exe" -m pip install packaging || exit /b 1
 
+set "PATH=%PATH%;C:\\Program Files\\Git\\usr\\bin"
+
 cmake -G Ninja ^
     -S llvm ^
     -B ..\\llvm-build\\ ^
