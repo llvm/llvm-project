@@ -526,6 +526,9 @@ Attribute Changes in Clang
 - The ``modular_format`` attribute now supports the ``fixed`` aspect for C
   ISO 18037 fixed-point ``printf`` specifiers.
 
+- The ``const`` and ``pure`` attributes only apply to functions; they are now
+  diagnosed and ignored when applied to anything else.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Fixed bug in ``-Wdocumentation`` so that it correctly handles explicit
