@@ -281,6 +281,19 @@ benchmarks. CMake can print a list of them:
   more information about expected versions or usage in the README files in the
   `External` directory (such as `External/SPEC/README`)
 
+- `TEST_SUITE_COLLECT_DEBUGIFY_LOC_COVERAGE`
+
+  If this is set to `ON` then LLVM will use DebugLoc coverage and origin
+  tracking to produce a report of unexpectedly missing debug locations,
+  accumulating bugs from all C/C++ compilations in the file
+  `<build-dir>/debugify-report.json`; this report can be prettified by using the
+  `llvm/utils/llvm-original-di-preservation.py` script (documented
+  [here](project:HowToUpdateDebugInfo.md#test-original-debug-info-preservation-in-optimizations)).
+  This requires the C and C++ compilers to be a version of Clang built with the
+  feature `LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING=COVERAGE_AND_ORIGIN` (see
+  [here](project:HowToUpdateDebugInfo.md#using-coverage-tracking-to-remove-false-positives)
+  for more info).
+
 ### Common CMake Flags
 
 - `-GNinja`
