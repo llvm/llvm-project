@@ -1,5 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -ffreestanding -verify=expected,one-bit -triple x86_64-apple-darwin %s
-// RUN: %clang_cc1 -fsyntax-only -ffreestanding -Wno-single-bit-bitfield-constant-conversion -verify -triple x86_64-apple-darwin %s
+// RUN: %clang_cc1 -fsyntax-only -ffreestanding -verify=expected,signed-plain-char,one-bit -triple x86_64-apple-darwin %s
+// RUN: %clang_cc1 -fsyntax-only -ffreestanding -Wno-single-bit-bitfield-constant-conversion -verify=expected,signed-plain-char -triple x86_64-apple-darwin %s
+// RUN: %clang_cc1 -fsyntax-only -ffreestanding -Wno-single-bit-bitfield-constant-conversion -verify=expected,unsigned-plain-char -triple x86_64-apple-darwin -fno-signed-char %s
 
 #include <stdbool.h>
 
@@ -103,7 +104,7 @@ void test9(void) {
   const int max_short_plus_one = (int)max_short + 1;
   const long max_int_plus_one = (long)max_int + 1;
 
-  char new_char = max_char_plus_one;  // expected-warning {{implicit conversion from 'const short' to 'char' changes value from 128 to -128}}
+  char new_char = max_char_plus_one;  // signed-plain-char-warning {{implicit conversion from 'const short' to 'char' changes value from 128 to -128}}
   short new_short = max_short_plus_one;  // expected-warning {{implicit conversion from 'const int' to 'short' changes value from 32768 to -32768}}
   int new_int = max_int_plus_one;  // expected-warning {{implicit conversion from 'const long' to 'int' changes value from 2147483648 to -2147483648}}
 
@@ -122,9 +123,15 @@ void test9(void) {
 #define CHAR_MACRO_HEX 0xff
   char macro_char_hex = CHAR_MACRO_HEX;
 #define CHAR_MACRO_DEC 255
-  char macro_char_dec = CHAR_MACRO_DEC;  // expected-warning {{implicit conversion from 'int' to 'char' changes value from 255 to -1}}
+  char macro_char_dec = CHAR_MACRO_DEC;  // signed-plain-char-warning {{implicit conversion from 'int' to 'char' changes value from 255 to -1}}
 
-  char array_init[] = { 255, 127, 128, 129, 0 };
+  char array_init[] = {
+    255, // signed-plain-char-warning {{implicit conversion from 'int' to 'char' changes value from 255 to -1}}
+    127,
+    128, // signed-plain-char-warning {{implicit conversion from 'int' to 'char' changes value from 128 to -128}}
+    129, // signed-plain-char-warning {{implicit conversion from 'int' to 'char' changes value from 129 to -127}}
+    0
+  };
   unsigned char unsigned_array_init[] = { 255 };
   unsigned char unsigned_array_init_multi[] = { 255, 127, 128, 129, 0 };
   signed char signed_array_init[] = { 255 }; // expected-warning {{implicit conversion from 'int' to 'signed char' changes value from 255 to -1}}
