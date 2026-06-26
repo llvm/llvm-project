@@ -200,6 +200,65 @@ foreach FPTy = ["F32", "F64", "F80", "F128", "PPCF128"] in {
   def TGAMMA_#FPTy : RuntimeLibcall;
 }
 
+// Floating-point libcall families. Each generates the backend selector
+// RTLIB::get<base>(EVT) and, for families with an intrinsic, the IR-level
+// getLibcallForIntrinsic() mapping. See RuntimeLibcallFamily.
+defvar Vec4F32_2F64 = ["V4F32", "V2F64", "NXV4F32", "NXV2F64"];
+
+class StrictFP<string base> {
+  list<string> ret = [base, "experimental_constrained_"#base];
+}
+
+def : RuntimeLibcallFamily<"POWI", StrictFP<"powi">.ret>;
+def : RuntimeLibcallFamily<"POW", StrictFP<"pow">.ret, Vec4F32_2F64>;
+def : RuntimeLibcallFamily<"CBRT", [], Vec4F32_2F64>;
+def : RuntimeLibcallFamily<"LDEXP", StrictFP<"ldexp">.ret>;
+def : RuntimeLibcallFamily<"FREXP", ["frexp"]>;
+def : RuntimeLibcallFamily<"SIN", StrictFP<"sin">.ret>;
+def : RuntimeLibcallFamily<"COS", StrictFP<"cos">.ret>;
+def : RuntimeLibcallFamily<"SINCOS", ["sincos"],
+    ["V4F32", "V8F32", "V16F32", "V2F64", "V4F64", "V8F64", "NXV4F32",
+     "NXV2F64"]>;
+def : RuntimeLibcallFamily<"SINCOSPI", ["sincospi"], Vec4F32_2F64>;
+def : RuntimeLibcallFamily<"SINCOS_STRET">;
+def : RuntimeLibcallFamily<"MODF", ["modf"], Vec4F32_2F64>;
+def : RuntimeLibcallFamily<"REM", [], Vec4F32_2F64>;
+def : RuntimeLibcallFamily<"LROUND", StrictFP<"lround">.ret>;
+def : RuntimeLibcallFamily<"LLROUND", StrictFP<"llround">.ret>;
+def : RuntimeLibcallFamily<"LRINT", StrictFP<"lrint">.ret>;
+def : RuntimeLibcallFamily<"LLRINT", StrictFP<"llrint">.ret>;
+
+def : RuntimeLibcallFamily<"SQRT", StrictFP<"sqrt">.ret>;
+def : RuntimeLibcallFamily<"FMA", StrictFP<"fma">.ret>;
+def : RuntimeLibcallFamily<"TAN", StrictFP<"tan">.ret>;
+def : RuntimeLibcallFamily<"ASIN", StrictFP<"asin">.ret>;
+def : RuntimeLibcallFamily<"ACOS", StrictFP<"acos">.ret>;
+def : RuntimeLibcallFamily<"ATAN", StrictFP<"atan">.ret>;
+def : RuntimeLibcallFamily<"ATAN2", StrictFP<"atan2">.ret>;
+def : RuntimeLibcallFamily<"SINH", StrictFP<"sinh">.ret>;
+def : RuntimeLibcallFamily<"COSH", StrictFP<"cosh">.ret>;
+def : RuntimeLibcallFamily<"TANH", StrictFP<"tanh">.ret>;
+def : RuntimeLibcallFamily<"LOG", StrictFP<"log">.ret>;
+def : RuntimeLibcallFamily<"LOG2", StrictFP<"log2">.ret>;
+def : RuntimeLibcallFamily<"LOG10", StrictFP<"log10">.ret>;
+def : RuntimeLibcallFamily<"EXP", StrictFP<"exp">.ret>;
+def : RuntimeLibcallFamily<"EXP2", StrictFP<"exp2">.ret>;
+def : RuntimeLibcallFamily<"EXP10", ["exp10"]>;
+def : RuntimeLibcallFamily<"TRUNC", StrictFP<"trunc">.ret>;
+def : RuntimeLibcallFamily<"FLOOR", StrictFP<"floor">.ret>;
+def : RuntimeLibcallFamily<"CEIL", StrictFP<"ceil">.ret>;
+def : RuntimeLibcallFamily<"RINT", StrictFP<"rint">.ret>;
+def : RuntimeLibcallFamily<"NEARBYINT", StrictFP<"nearbyint">.ret>;
+def : RuntimeLibcallFamily<"ROUND", StrictFP<"round">.ret>;
+def : RuntimeLibcallFamily<"ROUNDEVEN", StrictFP<"roundeven">.ret>;
+def : RuntimeLibcallFamily<"FMIN", StrictFP<"minnum">.ret>;
+def : RuntimeLibcallFamily<"FMAX", StrictFP<"maxnum">.ret>;
+def : RuntimeLibcallFamily<"FMINIMUM", StrictFP<"minimum">.ret>;
+def : RuntimeLibcallFamily<"FMAXIMUM", StrictFP<"maximum">.ret>;
+def : RuntimeLibcallFamily<"FMINIMUM_NUM", ["minimumnum"]>;
+def : RuntimeLibcallFamily<"FMAXIMUM_NUM", ["maximumnum"]>;
+def : RuntimeLibcallFamily<"COPYSIGN", ["copysign"]>;
+
 defvar F32VectorSuffixes = ["V2F32", "V4F32", "V8F32", "V16F32", "NXV4F32"];
 defvar F64VectorSuffixes = ["V2F64", "V4F64", "V8F64", "NXV2F64"];
 

@@ -8,6 +8,9 @@
 
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Type.h"
 #include "gtest/gtest.h"
 using namespace llvm;
 
@@ -58,6 +61,66 @@ TEST(RuntimeLibcallsTest, LibcallImplByName) {
     EXPECT_EQ(*I++, RTLIB::impl_truncl_f80);
     EXPECT_EQ(*I++, RTLIB::impl_truncl_ppcf128);
   }
+}
+
+TEST(RuntimeLibcallsTest, LibcallForIntrinsic) {
+  LLVMContext Ctx;
+  using Info = RTLIB::RuntimeLibcallsInfo;
+
+  // Per-type resolution.
+  EXPECT_EQ(Info::getLibcallForIntrinsic(Intrinsic::sin, Type::getFloatTy(Ctx)),
+            RTLIB::SIN_F32);
+  EXPECT_EQ(
+      Info::getLibcallForIntrinsic(Intrinsic::sin, Type::getDoubleTy(Ctx)),
+      RTLIB::SIN_F64);
+  EXPECT_EQ(Info::getLibcallForIntrinsic(Intrinsic::sin, Type::getFP128Ty(Ctx)),
+            RTLIB::SIN_F128);
+
+  EXPECT_EQ(
+      Info::getLibcallForIntrinsic(Intrinsic::cos, Type::getDoubleTy(Ctx)),
+      RTLIB::COS_F64);
+  EXPECT_EQ(Info::getLibcallForIntrinsic(Intrinsic::pow, Type::getFloatTy(Ctx)),
+            RTLIB::POW_F32);
+  EXPECT_EQ(
+      Info::getLibcallForIntrinsic(Intrinsic::ldexp, Type::getDoubleTy(Ctx)),
+      RTLIB::LDEXP_F64);
+  EXPECT_EQ(
+      Info::getLibcallForIntrinsic(Intrinsic::sqrt, Type::getFloatTy(Ctx)),
+      RTLIB::SQRT_F32);
+  EXPECT_EQ(
+      Info::getLibcallForIntrinsic(Intrinsic::exp, Type::getDoubleTy(Ctx)),
+      RTLIB::EXP_F64);
+  EXPECT_EQ(
+      Info::getLibcallForIntrinsic(Intrinsic::log, Type::getX86_FP80Ty(Ctx)),
+      RTLIB::LOG_F80);
+  EXPECT_EQ(
+      Info::getLibcallForIntrinsic(Intrinsic::copysign, Type::getDoubleTy(Ctx)),
+      RTLIB::COPYSIGN_F64);
+  EXPECT_EQ(
+      Info::getLibcallForIntrinsic(Intrinsic::maxnum, Type::getDoubleTy(Ctx)),
+      RTLIB::FMAX_F64);
+
+  // Constrained variants resolve to the same libcall as their plain twin.
+  EXPECT_EQ(Info::getLibcallForIntrinsic(
+                Intrinsic::experimental_constrained_sin, Type::getFloatTy(Ctx)),
+            RTLIB::SIN_F32);
+  EXPECT_EQ(
+      Info::getLibcallForIntrinsic(Intrinsic::experimental_constrained_fma,
+                                   Type::getDoubleTy(Ctx)),
+      RTLIB::FMA_F64);
+  EXPECT_EQ(
+      Info::getLibcallForIntrinsic(Intrinsic::experimental_constrained_pow,
+                                   Type::getDoubleTy(Ctx)),
+      RTLIB::POW_F64);
+
+  // Unmapped intrinsic.
+  EXPECT_EQ(
+      Info::getLibcallForIntrinsic(Intrinsic::fabs, Type::getDoubleTy(Ctx)),
+      RTLIB::UNKNOWN_LIBCALL);
+
+  // Mapped intrinsic, but a type with no matching libcall.
+  EXPECT_EQ(Info::getLibcallForIntrinsic(Intrinsic::sin, Type::getHalfTy(Ctx)),
+            RTLIB::UNKNOWN_LIBCALL);
 }
 
 } // namespace

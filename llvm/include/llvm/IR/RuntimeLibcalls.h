@@ -47,6 +47,11 @@ template <> struct enum_iteration_traits<RTLIB::LibcallImpl> {
 };
 
 class LibcallLoweringInfo;
+class Type;
+
+namespace Intrinsic {
+typedef unsigned ID;
+}
 
 namespace RTLIB {
 
@@ -116,6 +121,19 @@ public:
   static RTLIB::Libcall getLibcallFromImpl(RTLIB::LibcallImpl Impl) {
     return ImplToLibcall[Impl];
   }
+
+  /// Return the runtime libcall that the floating-point math intrinsic \p ID
+  /// operating on type \p Ty may be lowered to, or RTLIB::UNKNOWN_LIBCALL if
+  /// there is no such mapping.
+  ///
+  /// \p Ty must be the floating-point operand type, which is not always the
+  /// intrinsic's primary/overloaded type. E.g. lround/llround/lrint/llrint are
+  /// overloaded on the integer result, powi on the integer exponent, and
+  /// frexp/modf/sincos return an aggregate. For these, pass the floating-point
+  /// argument type (e.g. the type of operand 0), not the intrinsic's return
+  /// type.
+  LLVM_ABI static RTLIB::Libcall getLibcallForIntrinsic(Intrinsic::ID ID,
+                                                        Type *Ty);
 
   unsigned getNumAvailableLibcallImpls() const {
     return AvailableLibcallImpls.count();
