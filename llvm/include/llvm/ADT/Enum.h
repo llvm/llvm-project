@@ -106,6 +106,14 @@ struct EnumStringsStorage {
       }
     };
   }
+
+  constexpr size_t size() const { return N; }
+  const EnumString<T, NumStrs> &operator[](size_t Idx) const {
+    assert(Idx < N);
+    return Data[Idx];
+  }
+  const EnumString<T, NumStrs> *begin() const { return std::begin(Data); }
+  const EnumString<T, NumStrs> *end() const { return std::end(Data); }
 };
 
 #define BUILD_ENUM_STRINGS(Tab)                                                \
@@ -138,6 +146,8 @@ public:
     return utohexstr(Value, true);
   }
 
+  size_t size() const { return EnumValues.size(); }
+  const EnumString &operator[](size_t Idx) const { return EnumValues[Idx]; }
   const EnumString *begin() const { return EnumValues.begin(); }
   const EnumString *end() const { return EnumValues.end(); }
 
