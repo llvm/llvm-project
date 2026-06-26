@@ -125,8 +125,8 @@ private:
             // not overlap
     MemcpyStrSrc, // memcpy source is an in-register constant, so it does not
                   // need to be loaded
-    Memmove, // memmove: like memcpy for source and destination regions may
-             // overlap
+    Memmove,      // memmove: like memcpy for source and destination regions may
+                  // overlap
   };
 
   // Shared
@@ -137,8 +137,8 @@ private:
 
   bool IsVolatile;
   MemOpKind Kind;
-  Align SrcAlign;    // Inferred alignment of the source or default value if the
-                     // memory operation does not need to load the value.
+  Align SrcAlign; // Inferred alignment of the source or default value if the
+                  // memory operation does not need to load the value.
 public:
   static MemOp Copy(uint64_t Size, bool DstAlignCanChange, Align DstAlign,
                     Align SrcAlign, bool IsVolatile,
@@ -189,12 +189,8 @@ public:
   bool isMemcpy() const {
     return Kind == MemOpKind::Memcpy || Kind == MemOpKind::MemcpyStrSrc;
   }
-  bool isMemmove() const {
-    return Kind == MemOpKind::Memmove;
-  }
-  bool isMemcpyOrMemmove() const {
-    return isMemcpy() || isMemmove();
-  }
+  bool isMemmove() const { return Kind == MemOpKind::Memmove; }
+  bool isMemcpyOrMemmove() const { return isMemcpy() || isMemmove(); }
   bool isMemcpyOrMemmoveWithFixedDstAlign() const {
     return isMemcpyOrMemmove() && !DstAlignCanChange;
   }
