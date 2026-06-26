@@ -7,10 +7,11 @@ import os
 import shutil
 
 import lldbdap_testcase
+from lldbsuite.test.decorators import *
 
 MAX_PATH = 260
 
-
+@skipUnlessWindows
 class TestDAP_launch_longPath(lldbdap_testcase.DAPTestCaseBase):
     def _long_path(self, path):
         return "\\\\?\\" + os.path.abspath(path)
