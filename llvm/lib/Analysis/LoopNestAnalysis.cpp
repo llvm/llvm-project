@@ -317,8 +317,7 @@ static bool checkLoopsStructure(const Loop &OuterLoop, const Loop &InnerLoop,
   // Ensure the outer loop header flows directly into the inner loop preheader
   // through at most empty (unconditional) blocks. Loop-invariant guards that
   // previously branched from the outer header to the latch are removed by
-  // SimpleLoopUnswitch before loop nest analysis consumers (interchange,
-  // fusion) run, so no conditional branch is expected here.
+  // SimpleLoopUnswitch run, so no conditional branch is expected here.
   if (OuterLoopHeader != InnerLoopPreHeader) {
     const BasicBlock &SingleSucc =
         LoopNest::skipEmptyBlockUntil(OuterLoopHeader, InnerLoopPreHeader);
