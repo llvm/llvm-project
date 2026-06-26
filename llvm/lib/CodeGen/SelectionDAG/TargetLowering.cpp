@@ -224,7 +224,7 @@ bool TargetLowering::findOptimalMemOpLowering(
     // Use the largest integer type whose alignment constraints are satisfied.
     VT = MVT::LAST_INTEGER_VALUETYPE;
     if (Op.isFixedDstAlign()) {
-      bool LoadsFromSrc = Op.isMemcpy() && !Op.isMemcpyStrSrc();
+      bool LoadsFromSrc = Op.isMemcpyOrMemmove() && !Op.isMemcpyStrSrc();
       while (VT != MVT::i8) {
         unsigned VTSize = VT.getSizeInBits() / 8;
         bool DstOk =
