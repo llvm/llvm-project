@@ -5970,6 +5970,7 @@ void CowCompilerInvocation::visitMutPaths(
   (void)ensureOwned(FrontendOpts);
   (void)ensureOwned(DependencyOutputOpts);
   (void)ensureOwned(PreprocessorOutputOpts);
+  (void)ensureOwned(SSAFOpts);
   visitPathsImpl(Callback);
 }
 
