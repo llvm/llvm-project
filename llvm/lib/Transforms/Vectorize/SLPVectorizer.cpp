@@ -18044,21 +18044,9 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                        CommonAlignment,
                                        BaseSI->getPointerAddressSpace()),
             CostKind);
-        const TreeEntry *ValOpTE = getOperandEntry(E, 0);
-        if (auto ValBWIt = MinBWs.find(ValOpTE);
-            ValBWIt != MinBWs.end() && ValOpTE->hasState() &&
-            UnaryInstruction::isCast(ValOpTE->getOpcode())) {
-          auto *SrcVecTy = getWidenedType(
-              IntegerType::get(ScalarTy->getContext(), ValBWIt->second.first),
-              VL.size());
-          if (SrcVecTy != VecTy)
-            VecStCost += TTI->getCastInstrCost(
-                ValBWIt->second.second ? Instruction::SExt : Instruction::ZExt,
-                VecTy, SrcVecTy, getCastContextHint(*ValOpTE), CostKind);
-        }
       } else {
         assert(E->State == TreeEntry::Vectorize &&
-               "Expected either strided or consecutive stores.");
+               "Expected either strided, consecutive, or expanded stores.");
         if (unsigned Factor = E->getInterleaveFactor()) {
           assert(E->ReuseShuffleIndices.empty() && !E->ReorderIndices.empty() &&
                  "No reused shuffles expected");
