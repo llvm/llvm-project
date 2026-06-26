@@ -1,0 +1,86 @@
+# RUN: llc -mtriple=hexagon -run-pass handle-qfp-spills-refills -verify-machineinstrs %s -o - | FileCheck %s
+
+# CHECK: renamable $v{{[0-9]+}} = V6_vd0
+# CHECK-NEXT:    renamable $v{{[0-9]+}} = V6_vconv_qf32_sf killed renamable $v{{[0-9]+}}
+# CHECK-NEXT:    $v{{[0-9]+}} = V6_vconv_sf_qf32 killed renamable $v{{[0-9]+}}
+# CHECK-NEXT:    renamable $v{{[0-9]+}} = COPY renamable $v{{[0-9]+}}
+# CHECK-NEXT:    $v[[VREG0:[0-9]+]] = V6_vconv_qf32_sf killed renamable $v[[VREG0]]
+# CHECK-NEXT:    $v[[VREG1:[0-9]+]] = V6_vconv_qf32_sf killed renamable $v[[VREG1]]
+# CHECK-NEXT:    renamable $v[[VREG0]] = V6_vconv_hf_qf32 renamable $w[[VREG0]]
+# CHECK-NEXT:    $v[[VREG1]] = V6_vconv_sf_qf32 killed renamable $v[[VREG1]]
+
+--- |
+  declare void @llvm.hexagon.V6.vS32b.qpred.ai.128B(<128 x i1>, ptr, <32 x i32>)
+  declare <32 x i32> @llvm.hexagon.V6.vcvt.hf.sf.128B(<32 x i32>, <32 x i32>)
+
+  define i32 @foo(i1 %cmp14106.not, ptr %gep114.us.us) #1 {
+  entry:
+    br i1 %cmp14106.not, label %for.body10.lr.ph.split.us.us, label %for.body10.us6
+
+  for.body10.us6:                                   ; preds = %entry, %for.body10.us6
+    br label %for.body10.us6
+
+  for.cond.cleanup39.us:                            ; preds = %for.body10.us.us
+    %0 = tail call <32 x i32> @llvm.hexagon.V6.vcvt.hf.sf.128B(<32 x i32> zeroinitializer, <32 x i32> zeroinitializer)
+    tail call void @llvm.hexagon.V6.vS32b.qpred.ai.128B(<128 x i1> zeroinitializer, ptr null, <32 x i32> %0)
+    ret i32 0
+
+  for.body10.lr.ph.split.us.us:                     ; preds = %entry
+    %1 = tail call <32 x i32> @llvm.hexagon.V6.vcvt.hf.sf.128B(<32 x i32> zeroinitializer, <32 x i32> zeroinitializer)
+    br label %for.body10.us.us
+
+  for.body10.us.us:                                 ; preds = %for.body10.us.us, %for.body10.lr.ph.split.us.us
+    store <32 x i32> %1, ptr %gep114.us.us, align 1
+    br i1 %cmp14106.not, label %for.body10.us.us, label %for.cond.cleanup39.us
+  }
+
+  attributes #1 = { "target-cpu"="hexagonv81" "target-features"="+hvxv81,+hvx-length128b" }
+
+...
+---
+name:           foo
+body:             |
+  bb.0.entry:
+    successors: %bb.4(0x40000000), %bb.1(0x40000000)
+    liveins: $r0, $r1
+
+    renamable $p0 = S2_tstbit_i killed renamable $r0, 0
+    J2_jumpt renamable $p0, %bb.4, implicit-def $pc
+
+  bb.1:
+    successors: %bb.2(0x80000000)
+
+  bb.2.for.body10.us6:
+    successors: %bb.2(0x80000000)
+
+    J2_jump %bb.2, implicit-def dead $pc
+
+  bb.3.for.cond.cleanup39.us:
+    liveins: $w0:0x0000000000000010
+
+    renamable $v0 = COPY renamable $v1
+    $r0 = A2_tfrsi 0
+    renamable $q0 = PS_qfalse
+    renamable $r2 = A2_tfrsi 0
+    renamable $v1 = V6_vconv_hf_qf32 killed renamable $w0
+    V6_vS32b_qpred_ai killed renamable $q0, killed renamable $r2, 0, killed renamable $v1
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0
+
+  bb.4.for.body10.lr.ph.split.us.us:
+    successors: %bb.5(0x80000000)
+    liveins: $p0, $r1
+
+    renamable $v2 = V6_vd0
+    renamable $v1 = V6_vconv_qf32_sf killed renamable $v2
+    renamable $v0 = COPY renamable $v1
+    renamable $v0 = V6_vconv_hf_qf32 renamable $w0
+
+  bb.5.for.body10.us.us:
+    successors: %bb.5(0x7c000000), %bb.3(0x04000000)
+    liveins: $p0, $r1, $v0, $w0:0x0000000000000010
+
+    V6_vS32Ub_ai renamable $r1, 0, renamable $v0 :: (store (s1024) into %ir.gep114.us.us, align 1)
+    J2_jumpt renamable $p0, %bb.5, implicit-def dead $pc
+    J2_jump %bb.3, implicit-def dead $pc
+
+...
