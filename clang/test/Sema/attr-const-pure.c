@@ -33,7 +33,7 @@ __attribute__((const)) int temp_func1(Ty);
 // FIXME: this should be diagnosed because it ends up with both the const and pure attributes.
 template <>
 [[gnu::pure]] int temp_func1<int>(int) { return 12; }
-#endif
+#endif // __cplusplus
 
 // They do not apply to types, including function pointer types.
 int (*fp1)(void) [[gnu::const]]; // expected-warning {{attribute 'gnu::const' ignored, because it cannot be applied to a type}}
@@ -64,3 +64,72 @@ __attribute__((pure)) int func8(void);
   return 12;
 }
 
+[[noreturn]] void direct_noreturn(void);
+// FIXME: the cast should not be necessary.
+void (*indirect_noreturn)(void) __attribute__((noreturn)) = (__typeof__(indirect_noreturn)) direct_noreturn;
+void returns_okay();
+
+__attribute__((const)) int noreturn_test1(void) {
+  returns_okay();
+  return 12;
+}
+
+__attribute__((const)) int noreturn_test2(void) { // expected-note {{function declared 'const' here}}
+  direct_noreturn(); // expected-warning {{alling a 'noreturn' function from a function with the 'const' attribute is undefined behavior}}
+  return 12;
+}
+
+__attribute__((const)) int noreturn_test3(void) { // expected-note {{function declared 'const' here}}
+  indirect_noreturn(); // expected-warning {{alling a 'noreturn' function from a function with the 'const' attribute is undefined behavior}}
+  return 12;
+}
+
+__attribute__((const)) int noreturn_test4(void) {
+  // This should not be diagnosed.
+  (void)sizeof((direct_noreturn(), 1));
+
+#ifdef __cplusplus
+  if constexpr(false) {
+	// This should not be diagnosed.
+    direct_noreturn();
+  }
+#endif // __cplusplus
+
+  if (0) {
+	// This should not be diagnosed.
+    direct_noreturn();
+  }
+
+  return 12;
+}
+
+__attribute__((pure)) int noreturn_test5(int x) { // expected-note {{function declared 'pure' here}}
+  if (x)
+    direct_noreturn(); // expected-warning {{calling a 'noreturn' function from a function with the 'pure' attribute is undefined behavior}}
+  return 12;
+}
+
+// FIXME: should this be diagnosed because of the noreturn call?
+[[gnu::pure]] int noreturn_test6(int array[(direct_noreturn(), 1)]);
+
+#ifdef __cplusplus
+
+template <typename Ty>
+int noreturn_test7(void) {
+  direct_noreturn(); // okay
+  return 12;
+}
+
+template <>
+__attribute__((const)) int noreturn_test7<int>() { // expected-note {{function declared 'const' here}}
+  direct_noreturn(); // expected-warning {{calling a 'noreturn' function from a function with the 'const' attribute is undefined behavior}}
+  return 12;
+}
+
+template <typename Ty>
+__attribute__((pure)) int noreturn_test8() { // expected-note {{function declared 'pure' here}}
+  // Diagnosed even though test7 is not instantiated
+  direct_noreturn(); // expected-warning {{calling a 'noreturn' function from a function with the 'pure' attribute is undefined behavior}}
+  return 12;
+}
+#endif // __cplusplus
