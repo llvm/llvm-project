@@ -2137,6 +2137,7 @@ cc_library(
         ":IR",
         ":Pass",
         ":TransformUtils",
+        ":Transforms",
         ":VectorDialect",
     ],
 )
@@ -2361,6 +2362,7 @@ cc_library(
         ":MemRefDialect",
         ":Pass",
         ":TransformUtils",
+        ":Transforms",
         ":VectorDialect",
         "//llvm:Support",
     ],
@@ -4394,6 +4396,7 @@ cc_library(
         ":ConversionPassIncGen",
         ":ConvertToEmitC",
         ":ConvertToLLVM",
+        ":EmitCCommon",
         ":FuncToEmitC",
         ":FuncToLLVM",
         ":FuncToSPIRV",
@@ -4421,6 +4424,7 @@ cc_library(
         ":OpenACCToSCF",
         ":OpenMPToLLVM",
         ":PDLToPDLInterp",
+        ":RaiseWasmToMLIR",
         ":ReconcileUnrealizedCasts",
         ":SCFToControlFlow",
         ":SCFToEmitC",
@@ -5092,6 +5096,7 @@ cc_library(
         ":MaskingOpInterface",
         ":MemOpInterfaces",
         ":MemRefDialect",
+        ":MemRefUtils",
         ":SideEffectInterfaces",
         ":SubsetOpInterface",
         ":Support",
@@ -6940,6 +6945,7 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":PtrDialect",
+        "//llvm:Support",
     ],
 )
 
@@ -7349,9 +7355,11 @@ cc_library(
         "lib/Conversion/MathToXeVM",
     ],
     deps = [
+        ":Analysis",
         ":ArithAttrToLLVMConversion",
         ":ArithDialect",
         ":ConversionPassIncGen",
+        ":GPUCommonTransforms",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
@@ -7378,6 +7386,7 @@ cc_library(
     deps = [
         ":ConversionPassIncGen",
         ":ConvertToEmitCInterface",
+        ":EmitCCommon",
         ":EmitCDialect",
         ":FuncDialect",
         ":IR",
@@ -7760,6 +7769,7 @@ cc_library(
         ":BufferizationInterfaces",
         ":ControlFlowDialect",
         ":DialectUtils",
+        ":FuncDialect",
         ":IR",
         ":LinalgDialect",
         ":MemRefDialect",
@@ -8217,6 +8227,7 @@ cc_library(
         ":ArithDialect",
         ":ConversionPassIncGen",
         ":ConvertToEmitCInterface",
+        ":EmitCCommon",
         ":EmitCDialect",
         ":EmitCTransforms",
         ":IR",
@@ -8398,6 +8409,7 @@ cc_library(
     deps = [
         ":ConversionPassIncGen",
         ":ConvertToEmitCInterface",
+        ":EmitCCommon",
         ":EmitCDialect",
         ":IR",
         ":LLVMCommonConversion",
@@ -8521,6 +8533,24 @@ cc_library(
 )
 
 cc_library(
+    name = "EmitCCommon",
+    srcs = glob([
+        "lib/Conversion/EmitCCommon/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/EmitCCommon/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":EmitCDialect",
+        ":IR",
+        ":Pass",
+        ":TransformUtils",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "MemRefToEmitC",
     srcs = glob([
         "lib/Conversion/MemRefToEmitC/*.cpp",
@@ -8535,6 +8565,7 @@ cc_library(
     deps = [
         ":ConversionPassIncGen",
         ":ConvertToEmitCInterface",
+        ":EmitCCommon",
         ":EmitCDialect",
         ":IR",
         ":LoopLikeInterface",
@@ -8650,6 +8681,7 @@ cc_library(
         ":MathTransforms",
         ":Pass",
         ":TransformUtils",
+        ":Transforms",
         ":VectorDialect",
     ],
 )
@@ -8688,6 +8720,7 @@ cc_library(
         ":ArithDialect",
         ":ConversionPassIncGen",
         ":ConvertToEmitCInterface",
+        ":EmitCCommon",
         ":EmitCDialect",
         ":EmitCTransforms",
         ":IR",
@@ -8768,6 +8801,7 @@ cc_library(
         ":NVVMDialect",
         ":Pass",
         ":TransformUtils",
+        ":Transforms",
         ":VectorDialect",
         ":VectorUtils",
         "//llvm:Support",
@@ -8788,6 +8822,7 @@ cc_library(
     ],
     deps = [
         ":ConversionPassIncGen",
+        ":EmitCCommon",
         ":EmitCDialect",
         ":MathDialect",
         ":Pass",
@@ -9541,9 +9576,11 @@ cc_library(
     ],
     includes = ["include"],
     deps = [
-        ":AllToLLVMIRTranslations",
+        ":BuiltinToLLVMIRTranslation",
         ":IR",
         ":LLVMDialect",
+        ":LLVMToLLVMIRTranslation",
+        ":OpenMPToLLVMIRTranslation",
         ":Support",
         ":ToLLVMIRTranslation",
         "//llvm:AllTargetsAsmParsers",
@@ -11872,6 +11909,32 @@ cc_library(
 )
 
 cc_library(
+    name = "RaiseWasmToMLIR",
+    srcs = glob([
+        "lib/Conversion/RaiseWasm/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/RaiseWasm/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":ControlFlowDialect",
+        ":ConversionPassIncGen",
+        ":FuncDialect",
+        ":IR",
+        ":MathDialect",
+        ":MemRefDialect",
+        ":Pass",
+        ":TransformUtils",
+        ":Transforms",
+        ":VectorDialect",
+        ":WasmSSADialect",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "VectorToLLVM",
     srcs = glob([
         "lib/Conversion/VectorToLLVM/*.cpp",
@@ -11896,6 +11959,7 @@ cc_library(
         ":LLVMDialect",
         ":MaskableOpInterface",
         ":MemRefDialect",
+        ":MemRefUtils",
         ":Pass",
         ":TensorDialect",
         ":ToLLVMIRTranslation",
@@ -13272,6 +13336,7 @@ cc_library(
         ":MathPassIncGen",
         ":Pass",
         ":SCFDialect",
+        ":TensorDialect",
         ":TransformUtils",
         ":VectorDialect",
         ":VectorUtils",
@@ -13299,6 +13364,7 @@ cc_library(
         ":MathDialect",
         ":Pass",
         ":TransformUtils",
+        ":Transforms",
         ":VectorDialect",
         "//llvm:Support",
     ],
@@ -13466,7 +13532,6 @@ cc_library(
         ":AffineDialect",
         ":ArithUtils",
         ":MemRefDialect",
-        ":VectorDialect",
         ":ViewLikeInterface",
         "//llvm:Support",
     ],
@@ -13512,14 +13577,12 @@ cc_library(
         ":DestinationStyleOpInterface",
         ":DialectUtils",
         ":FuncDialect",
-        ":GPUDialect",
         ":IR",
         ":InferTypeOpInterface",
         ":LoopLikeInterface",
         ":MemRefDialect",
         ":MemRefPassIncGen",
         ":MemRefUtils",
-        ":NVGPUDialect",
         ":Pass",
         ":RuntimeVerifiableOpInterface",
         ":SCFDialect",

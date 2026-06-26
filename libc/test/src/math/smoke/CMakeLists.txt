@@ -111,6 +111,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  tanbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    tanbf16_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.math.tanbf16
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   tanf_test
   SUITE
     libc-math-smoke-tests
@@ -6179,6 +6192,16 @@ add_fp_unittest(
     cbrt_test.cpp
   DEPENDS
     libc.src.math.cbrt
+)
+
+add_fp_unittest(
+  cbrtf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    cbrtf16_test.cpp
+  DEPENDS
+    libc.src.math.cbrtf16
 )
 
 add_fp_unittest(

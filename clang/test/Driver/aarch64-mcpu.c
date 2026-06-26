@@ -72,6 +72,8 @@
 // NEOVERSE-V3: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-v3"
 // RUN: %clang --target=aarch64 -mcpu=neoverse-v3ae  -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-V3AE %s
 // NEOVERSE-V3AE: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-v3ae"
+// RUN: %clang --target=aarch64 -mcpu=armagicpu  -### -c %s 2>&1 | FileCheck -check-prefix=ARMAGICPU %s
+// ARMAGICPU: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-v3ae"
 // RUN: %clang --target=aarch64 -mcpu=neoverse-n1 -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-N1 %s
 // NEOVERSE-N1: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-n1"
 // RUN: %clang --target=aarch64 -mcpu=neoverse-n2 -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-N2 %s

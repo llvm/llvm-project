@@ -61,16 +61,19 @@ FunctionPass *llvm::createAArch64PointerAuthPass() {
 
 char AArch64PointerAuthLegacy::ID = 0;
 
-static void emitPACSymOffsetIntoReg(const TargetInstrInfo &TII,
-                                    MachineBasicBlock &MBB,
-                                    MachineBasicBlock::iterator I, DebugLoc DL,
-                                    MCSymbol *PACSym, Register Reg) {
+static void emitEpiloguePACSymOffsetIntoReg(const TargetInstrInfo &TII,
+                                            MachineBasicBlock &MBB,
+                                            MachineBasicBlock::iterator I,
+                                            DebugLoc DL, MCSymbol *PACSym,
+                                            Register Reg) {
   BuildMI(MBB, I, DL, TII.get(AArch64::ADRP), Reg)
-      .addSym(PACSym, AArch64II::MO_PAGE);
+      .addSym(PACSym, AArch64II::MO_PAGE)
+      .setMIFlag(MachineInstr::FrameDestroy);
   BuildMI(MBB, I, DL, TII.get(AArch64::ADDXri), Reg)
       .addReg(Reg)
       .addSym(PACSym, AArch64II::MO_PAGEOFF | AArch64II::MO_NC)
-      .addImm(0);
+      .addImm(0)
+      .setMIFlag(MachineInstr::FrameDestroy);
 }
 
 static void emitPACCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
@@ -80,6 +83,42 @@ static void emitPACCFI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
 
   auto &MF = *MBB.getParent();
   auto &MFnI = *MF.getInfo<AArch64FunctionInfo>();
+
+  // DW_CFA_AARCH64_negate_ra_state_with_pc is semantically broken for
+  // functions where shrinkwrapping places signing/authenticating pairs on
+  // distinct CFG paths.
+  //
+  // DWARF CFI is evaluated linearly over the byte stream, not along control
+  // flow edges. The toggle semantics of this directive therefore cannot
+  // faithfully represent the signed/unsigned RA state for all possible CFG
+  // paths. The added complexity versus DW_CFA_AARCH64_negate_ra_state is that
+  // an unwinder must also reconstruct the PC of the PACI[AB]SPPC in order to
+  // verify the signed LR, and that address is derived from the location of this
+  // directive in the linear CFI stream.
+  //
+  // The correct fix is to use DW_CFA_AARCH64_set_ra_state_with_pc, which sets
+  // the RA state and signing address absolutely rather than toggling them. An
+  // unwinder that supports this directive can reconstruct the correct state on
+  // any CFG path, regardless of how many signing/authenticating pairs exist in
+  // the function. However, not all unwinders support this directive, so we
+  // cannot rely on it exclusively.
+  //
+  // For unwinders that only support DW_CFA_AARCH64_negate_ra_state_with_pc,
+  // libunwind exploits a loophole: it records the address at the
+  // DW_CFA_AARCH64_negate_ra_state_with_pc site to authenticate the LR, but
+  // does not care that the CFI state remains "signed with pc" after
+  // authentication has occurred. This means we can safely omit the
+  // FrameDestroy emission of this directive, treating it solely as a marker
+  // for the signing site, as long as each function has at most one such
+  // signing location. That invariant holds today because shrinkwrapping
+  // does not yet hoist or sink PAuth_LR frame code across CFG join/split
+  // points; once it does, we must avoid those transformations on platforms that
+  // have this limitation.
+  //
+  // https://github.com/ARM-software/abi-aa/issues/327
+  // https://github.com/ARM-software/abi-aa/pull/346
+  if (Flags == MachineInstr::FrameDestroy && MFnI.branchProtectionPAuthLR())
+    return;
 
   CFIInstBuilder CFIBuilder(MBB, MBBI, Flags);
   if (MFnI.branchProtectionPAuthLR()) {
@@ -177,7 +216,8 @@ void AArch64PointerAuthImpl::authenticateLR(
           .setMIFlag(MachineInstr::FrameDestroy);
     } else {
       if (MFnI->branchProtectionPAuthLR()) {
-        emitPACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym, AArch64::X16);
+        emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym,
+                                        AArch64::X16);
         BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
             .setMIFlag(MachineInstr::FrameDestroy);
       }
@@ -210,7 +250,8 @@ void AArch64PointerAuthImpl::authenticateLR(
 
     if (MFnI->branchProtectionPAuthLR() && Subtarget->hasPAuthLR()) {
       assert(PACSym && "No PAC instruction to refer to");
-      emitPACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym, AArch64::X15);
+      emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym,
+                                      AArch64::X15);
 
       emitPACCFI(MBB, MBBI, MachineInstr::FrameDestroy, EmitAsyncCFI);
       unsigned AutOpc = UseBKey ? AArch64::AUTIB171615 : AArch64::AUTIA171615;
@@ -218,7 +259,8 @@ void AArch64PointerAuthImpl::authenticateLR(
           .setMIFlag(MachineInstr::FrameDestroy);
     } else if (MFnI->branchProtectionPAuthLR()) {
       assert(PACSym && "No PAC instruction to refer to");
-      emitPACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym, AArch64::X15);
+      emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym,
+                                      AArch64::X15);
 
       // The PACM hint-space instruction modifies the following AUTI[AB]1716
       // to optionally take x15 as an extra operand depending on the
@@ -279,7 +321,8 @@ void AArch64PointerAuthImpl::authenticateLR(
         .setMIFlag(MachineInstr::FrameDestroy);
   } else {
     if (MFnI->branchProtectionPAuthLR()) {
-      emitPACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym, AArch64::X16);
+      emitEpiloguePACSymOffsetIntoReg(*TII, MBB, MBBI, DL, PACSym,
+                                      AArch64::X16);
 
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::PACM))
           .setMIFlag(MachineInstr::FrameDestroy);
