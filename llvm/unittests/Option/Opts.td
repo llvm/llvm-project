@@ -40,6 +40,11 @@ def Doopf1 : Flag<["-"], "doopf1">, HelpText<"The doopf1 option">, Flags<[OptFla
 def Doopf2 : Flag<["-"], "doopf2">, HelpText<"The doopf2 option">, Flags<[OptFlag2]>;
 def Xyzzy1 : Flag<["-"], "xyzzy1">, HelpText<"The xyzzy1 option">, Visibility<[SubtoolVis]>;
 def Xyzzy2 : Flag<["-"], "xyzzy2">, HelpText<"The xyzzy2 option">, Visibility<[DefaultVis]>;
+def variant_help : Flag<["--"], "variant-help">,
+  HelpText<"The default variant-help text">,
+  HelpTextForVariants<[SubtoolVis, MultiLineVis],
+                      "The subtool variant-help text">,
+  Visibility<[DefaultVis, SubtoolVis]>;
 def Ermgh : Joined<["--"], "ermgh">, HelpText<"The ermgh option">, MetaVarName<"ERMGH">, Flags<[OptFlag1]>;
 def Fjormp : Flag<["--"], "fjormp">, HelpText<"The fjormp option">, Flags<[OptFlag1]>;
 
