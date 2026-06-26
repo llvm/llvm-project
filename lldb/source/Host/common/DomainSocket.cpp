@@ -20,9 +20,7 @@
 #include <memory>
 
 #ifdef _WIN32
-// clang-format off
 #include <afunix.h>
-// clang-format on
 #else
 #include <sys/socket.h>
 #include <sys/un.h>
