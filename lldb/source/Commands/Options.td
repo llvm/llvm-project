@@ -717,6 +717,17 @@ let Command = "diagnostics dump" in {
         Desc<"Dump the diagnostics to the given directory.">;
 }
 
+let Command = "diagnostics report" in {
+  def diagnostics_report_directory
+      : Option<"directory", "d">,
+        Group<1>,
+        Arg<"Path">,
+        Desc<"Write the bug report bundle to the given directory.">;
+  def diagnostics_report_no_open
+      : Option<"no-open", "n">,
+        Desc<"Write the bundle but do not open the bug tracker.">;
+}
+
 let Command = "expression" in {
   def expression_options_all_threads
       : Option<"all-threads", "a">,
