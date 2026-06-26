@@ -106,6 +106,10 @@ bool OriginManager::hasOrigins(QualType QT, bool IntrinsicOnly) const {
   if (!IntrinsicOnly &&
       LifetimeAnnotatedOriginTypes.contains(QT.getCanonicalType().getTypePtr()))
     return true;
+  // An `_Atomic(T)` wraps T transparently for lifetime purposes (the atomic
+  // holds the same value); see through it.
+  if (const auto *AT = QT->getAs<AtomicType>())
+    return hasOrigins(AT->getValueType(), IntrinsicOnly);
   const auto *RD = QT->getAsCXXRecordDecl();
   if (!RD)
     return false;
@@ -194,6 +198,9 @@ OriginList *OriginManager::createSingleOriginList(OriginID OID) {
 template <typename T>
 OriginList *OriginManager::buildListForType(QualType QT, const T *Node) {
   assert(hasOrigins(QT) && "buildListForType called for non-pointer type");
+  // `_Atomic(T)` is transparent for lifetime purposes: build the node for T.
+  if (const auto *AT = QT->getAs<AtomicType>())
+    return buildListForType(AT->getValueType(), Node);
   OriginList *Head = createNode(Node, QT);
 
   if (QT->isPointerOrReferenceType()) {
@@ -221,6 +228,13 @@ OriginList *OriginManager::getOrCreateList(const Expr *E) {
   // We do not see CFG stmts for ExprWithCleanups. Simply peel them.
   if (const ExprWithCleanups *EWC = dyn_cast<ExprWithCleanups>(E))
     return getOrCreateList(EWC->getSubExpr());
+
+  // An OpaqueValueExpr is a placeholder for an already-evaluated subexpression
+  // (e.g. the common operand of `a ?: b`) and is not itself a CFG statement, so
+  // reuse its source's origins rather than flowing into a fresh node.
+  if (const auto *OVE = dyn_cast<OpaqueValueExpr>(E))
+    if (const Expr *Src = OVE->getSourceExpr())
+      return getOrCreateList(Src);
 
   if (!hasOrigins(E))
     return nullptr;

@@ -1,7 +1,7 @@
 ; RUN: rm -rf %t 
 ; RUN: split-file %s %t
 ; RUN: mkdir -p %t/System/Library/Frameworks 
-; RUN: cp -r %S/Inputs/Simple/Simple.framework %t/System/Library/Frameworks/
+; RUN: cp -R %S/Inputs/Simple/Simple.framework %t/System/Library/Frameworks/
 ; RUN: yaml2obj %S/Inputs/Simple/Simple.yaml -o %t/Simple 
 
 ; RUN: not clang-installapi -target x86_64h-apple-macos10.12 \

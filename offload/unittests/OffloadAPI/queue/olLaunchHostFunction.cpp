@@ -12,18 +12,12 @@
 #include <thread>
 
 struct olLaunchHostFunctionTest : OffloadQueueTest {
-  void SetUp() override {
-    RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp());
-    SKIP_KNOWN_FAILURE(LevelZero{"unsupported feature"});
-  }
+  void SetUp() override { RETURN_ON_FATAL_FAILURE(OffloadQueueTest::SetUp()); }
 };
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olLaunchHostFunctionTest);
 
 struct olLaunchHostFunctionKernelTest : OffloadKernelTest {
-  void SetUp() override {
-    RETURN_ON_FATAL_FAILURE(OffloadKernelTest::SetUp());
-    SKIP_KNOWN_FAILURE(LevelZero{"unsupported feature"});
-  }
+  void SetUp() override { RETURN_ON_FATAL_FAILURE(OffloadKernelTest::SetUp()); }
 };
 OFFLOAD_TESTS_INSTANTIATE_DEVICE_FIXTURE(olLaunchHostFunctionKernelTest);
 
