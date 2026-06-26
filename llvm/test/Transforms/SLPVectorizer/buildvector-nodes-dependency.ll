@@ -30,9 +30,7 @@ define double @test() {
 ; X86-NEXT:    [[TMP22:%.*]] = fmul <2 x double> [[TMP17]], zeroinitializer
 ; X86-NEXT:    [[TMP23:%.*]] = fmul <2 x double> zeroinitializer, [[TMP22]]
 ; X86-NEXT:    [[TMP24:%.*]] = fadd <2 x double> [[TMP23]], [[TMP21]]
-; X86-NEXT:    [[ADD12:%.*]] = extractelement <2 x double> [[TMP24]], i32 0
-; X86-NEXT:    [[ADD27:%.*]] = extractelement <2 x double> [[TMP24]], i32 1
-; X86-NEXT:    [[ADD29:%.*]] = fadd double [[ADD12]], [[ADD27]]
+; X86-NEXT:    [[ADD29:%.*]] = call double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[TMP24]])
 ; X86-NEXT:    ret double [[ADD29]]
 ;
 ; AARCH64-LABEL: define double @test() {

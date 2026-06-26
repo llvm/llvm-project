@@ -8,7 +8,7 @@
 ; YAML-NEXT: Function:        test
 ; YAML-NEXT: Args:
 ; YAML-NEXT:   - String:          'Vectorized horizontal reduction with cost '
-; YAML-NEXT:   - Cost:            '-41'
+; YAML-NEXT:   - Cost:            '-43'
 ; YAML-NEXT:   - String:          ' and with tree size '
 ; YAML-NEXT:   - TreeSize:        '7'
 ; YAML-NEXT: ...
