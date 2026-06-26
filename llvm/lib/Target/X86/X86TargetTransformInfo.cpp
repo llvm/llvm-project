@@ -5671,6 +5671,18 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     { ISD::ADD,   MVT::v32i8,   4 },
   };
 
+  static const CostTblEntry AVX512FCostTbl[] = {
+    { ISD::FADD,  MVT::v8f64,   4 },
+    { ISD::FADD,  MVT::v16f32,  5 },
+    { ISD::ADD,   MVT::v8i64,   4 },
+    { ISD::ADD,   MVT::v16i32,  6 },
+  };
+
+  static const CostTblEntry AVX512BWCostTbl[] = {
+    { ISD::ADD,   MVT::v32i16,  7 },
+    { ISD::ADD,   MVT::v64i8,   4 },
+  };
+
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
@@ -5682,6 +5694,14 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     MVT MTy = VT.getSimpleVT();
     if (ST->useSLMArithCosts())
       if (const auto *Entry = CostTableLookup(SLMCostTbl, ISD, MTy))
+        return Entry->Cost;
+
+    if (ST->hasBWI())
+      if (const auto *Entry = CostTableLookup(AVX512BWCostTbl, ISD, MTy))
+        return Entry->Cost;
+
+    if (ST->hasAVX512())
+      if (const auto *Entry = CostTableLookup(AVX512FCostTbl, ISD, MTy))
         return Entry->Cost;
 
     if (ST->hasAVX())
