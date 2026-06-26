@@ -75,6 +75,7 @@ C/C++ Language Potentially Breaking Changes
   strings. This means that code containing strings with escape sequences such as
 
   .. code-block:: c++
+
     # 1 "original\x12source.c"
     #pragma clang module import "\x41"
     # 50 "a\012.c"
