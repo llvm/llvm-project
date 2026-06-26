@@ -258,6 +258,7 @@ foreach(target ${LLVM_RUNTIME_TARGETS})
   set(RUNTIMES_${target}_COMPILER_RT_BUILD_PROFILE                OFF CACHE BOOL "")
   set(RUNTIMES_${target}_COMPILER_RT_BUILD_MEMPROF                OFF CACHE BOOL "")
   set(RUNTIMES_${target}_COMPILER_RT_BUILD_ORC                    OFF CACHE BOOL "")
+  set(RUNTIMES_${target}_COMPILER_RT_BUILD_INSTRUMENTOR_TOOLS     OFF CACHE BOOL "")
 
   set(RUNTIMES_${target}_COMPILER_RT_INCLUDE_TESTS                ON CACHE BOOL "")
   set(RUNTIMES_${target}_COMPILER_RT_CAN_EXECUTE_TESTS            ON CACHE BOOL "")
