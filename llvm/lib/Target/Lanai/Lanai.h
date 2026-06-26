@@ -22,14 +22,14 @@ class FunctionPass;
 class LanaiTargetMachine;
 class PassRegistry;
 
-// createLanaiISelDag - This pass converts a legalized DAG into a
+// createLanaiISelDagPass - This pass converts a legalized DAG into a
 // Lanai-specific DAG, ready for instruction scheduling.
 class LanaiISelDAGToDAGPass : public SelectionDAGISelPass {
 public:
   LanaiISelDAGToDAGPass(LanaiTargetMachine &TM);
 };
 
-FunctionPass *createLanaiISelDag(LanaiTargetMachine &TM);
+FunctionPass *createLanaiISelDagLegacyPass(LanaiTargetMachine &TM);
 
 // createLanaiDelaySlotFillerPass - This pass fills delay slots
 // with useful instructions or nop's
