@@ -5363,8 +5363,8 @@ void CowCompilerInvocation::visitMutPaths(
     VisitMutResult Res = Cb(PATH, NewValue);                                   \
     if (Res.Replace) {                                                         \
       (void)ensureOwned(OPTS);                                                 \
-      PATH = "";                                                               \
-      std::swap(PATH, NewValue);                                               \
+      PATH = NewValue;                                                         \
+      NewValue.clear();                                                        \
     }                                                                          \
     if (Res.Terminate)                                                         \
       return;                                                                  \
