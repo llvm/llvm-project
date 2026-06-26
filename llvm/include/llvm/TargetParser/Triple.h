@@ -387,10 +387,10 @@ public:
   LLVM_ABI Triple(ArchType A, SubArchType SA, VendorType V, OSType OS,
                   EnvironmentType E, ObjectFormatType OF);
 
-  bool operator==(const Triple &Other) const;
+  LLVM_ABI bool operator==(const Triple &Other) const;
   bool operator!=(const Triple &Other) const { return !(*this == Other); }
 
-  bool operator<(const Triple &Other) const;
+  LLVM_ABI bool operator<(const Triple &Other) const;
 
   /// @}
   /// @name Normalization
