@@ -1332,8 +1332,9 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   // the trunc, zext and sext opcodes. However, isScalarCast also covers
   // int<>fp conversions, bitcasts, ptr<>int conversions, etc.
   if (Instruction::isCast(getOpcode()))
-    return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
-                                      Ctx);
+    return getCostForRecipeWithOpcode(
+        getOpcode(),
+        vputils::onlyFirstLaneUsed(this) ? ElementCount::getFixed(1) : VF, Ctx);
 
   if (Instruction::isBinaryOp(getOpcode())) {
     if (!getUnderlyingValue() && getOpcode() != Instruction::FMul) {
