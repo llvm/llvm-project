@@ -35,7 +35,7 @@ def common_conf(tags: Tags, markdown=Markdown.ALWAYS) -> Dict[str, Any]:
     # needs_sphinx = '1.0'
     # The encoding of source files.
     # source_encoding = 'utf-8-sig'
-    extensions = []
+    extensions = ["llvm_sphinx.ext.mlir_pygments"]
     source_suffix = {".rst": "restructuredtext"}
     if markdown != Markdown.NEVER:
         # When building man pages, we do not use the markdown pages,
