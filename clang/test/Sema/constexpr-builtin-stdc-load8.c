@@ -108,3 +108,6 @@ constexpr unsigned char scalar_byte = 0x42;
 constexpr __UINT_LEAST32_TYPE__ oob_scalar = stdc_load8_leu32(&scalar_byte); // expected-error{{must be initialized by a constant expression}} expected-note{{cannot refer to element 3 of non-array object in a constant expression}}
 
 constexpr __UINT_LEAST32_TYPE__ null_ce = stdc_load8_leu32((const unsigned char *)0); // expected-error{{must be initialized by a constant expression}} expected-note{{read of dereferenced null pointer is not allowed in a constant expression}}
+
+constexpr unsigned char one[] = {0x42};
+constexpr __UINT_LEAST8_TYPE__ oob_past_end = stdc_load8_leu8(one + 1); // expected-error{{must be initialized by a constant expression}} expected-note{{cannot refer to element 1 of array of 1 element in a constant expression}}
