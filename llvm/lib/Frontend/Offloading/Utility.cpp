@@ -104,7 +104,8 @@ getOffloadEntryBoundarySymbols(const Triple &T, StringRef SectionName) {
 
 GlobalVariable *offloading::emitOffloadingEntry(
     Module &M, object::OffloadKind Kind, Constant *Addr, StringRef Name,
-    uint64_t Size, uint32_t Flags, uint64_t Data, Constant *AuxAddr) {
+    uint64_t Size, uint32_t Flags, uint64_t Data, Constant *AuxAddr,
+    GlobalValue::LinkageTypes Linkage) {
   const llvm::Triple &Triple = M.getTargetTriple();
   StringRef SectionName = getOffloadEntrySection(M);
 
@@ -113,11 +114,11 @@ GlobalVariable *offloading::emitOffloadingEntry(
 
   StringRef Prefix =
       Triple.isNVPTX() ? "$offloading$entry$" : ".offloading.entry.";
-  auto *Entry = new GlobalVariable(
-      M, getEntryTy(M),
-      /*isConstant=*/true, GlobalValue::WeakAnyLinkage, EntryInitializer,
-      Prefix + Name, nullptr, GlobalValue::NotThreadLocal,
-      M.getDataLayout().getDefaultGlobalsAddressSpace());
+  auto *Entry =
+      new GlobalVariable(M, getEntryTy(M),
+                         /*isConstant=*/true, Linkage, EntryInitializer,
+                         Prefix + Name, nullptr, GlobalValue::NotThreadLocal,
+                         M.getDataLayout().getDefaultGlobalsAddressSpace());
 
   // The entry has to be created in the section the linker expects it to be.
   if (Triple.isOSBinFormatCOFF())

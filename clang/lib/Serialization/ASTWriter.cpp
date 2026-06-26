@@ -8119,6 +8119,11 @@ void OMPClauseWriter::VisitOMPAllocatorClause(OMPAllocatorClause *C) {
   Record.AddSourceLocation(C->getLParenLoc());
 }
 
+void OMPClauseWriter::VisitOMPXNameClause(OMPXNameClause *C) {
+  Record.AddStmt(C->getName());
+  Record.AddSourceLocation(C->getLParenLoc());
+}
+
 void OMPClauseWriter::VisitOMPCollapseClause(OMPCollapseClause *C) {
   Record.AddStmt(C->getNumForLoops());
   Record.AddSourceLocation(C->getLParenLoc());

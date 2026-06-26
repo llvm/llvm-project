@@ -1823,6 +1823,17 @@ public:
                                                          EndLoc);
   }
 
+  /// Build a new OpenMP 'ompx_name' clause.
+  ///
+  /// By default, performs semantic analysis to build the new OpenMP clause.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *RebuildOMPXNameClause(Expr *Name, SourceLocation StartLoc,
+                                   SourceLocation LParenLoc,
+                                   SourceLocation EndLoc) {
+    return getSema().OpenMP().ActOnOpenMPOmpxNameClause(Name, StartLoc,
+                                                        LParenLoc, EndLoc);
+  }
+
   /// Build a new OpenMP 'collapse' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
@@ -10610,6 +10621,15 @@ TreeTransform<Derived>::TransformOMPAllocatorClause(OMPAllocatorClause *C) {
     return nullptr;
   return getDerived().RebuildOMPAllocatorClause(
       E.get(), C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *TreeTransform<Derived>::TransformOMPXNameClause(OMPXNameClause *C) {
+  ExprResult E = getDerived().TransformExpr(C->getName());
+  if (E.isInvalid())
+    return nullptr;
+  return getDerived().RebuildOMPXNameClause(E.get(), C->getBeginLoc(),
+                                            C->getLParenLoc(), C->getEndLoc());
 }
 
 template <typename Derived>

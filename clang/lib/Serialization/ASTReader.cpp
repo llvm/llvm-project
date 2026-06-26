@@ -11501,6 +11501,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_allocator:
     C = new (Context) OMPAllocatorClause();
     break;
+  case llvm::omp::OMPC_ompx_name:
+    C = new (Context) OMPXNameClause();
+    break;
   case llvm::omp::OMPC_collapse:
     C = new (Context) OMPCollapseClause();
     break;
@@ -11934,6 +11937,11 @@ void OMPClauseReader::VisitOMPLoopRangeClause(OMPLoopRangeClause *C) {
 
 void OMPClauseReader::VisitOMPAllocatorClause(OMPAllocatorClause *C) {
   C->setAllocator(Record.readExpr());
+  C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPXNameClause(OMPXNameClause *C) {
+  C->setName(Record.readExpr());
   C->setLParenLoc(Record.readSourceLocation());
 }
 

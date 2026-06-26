@@ -4,7 +4,7 @@ module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu", omp.is_gpu =
   // CHECK-DAG: @_QMtest_0Ezii = global [11 x float] zeroinitializer
   // CHECK-DAG: @.offload_sizes = private unnamed_addr constant [2 x i64] [i64 48, i64 0]
   // CHECK-DAG: @.offload_maptypes = private unnamed_addr constant [2 x i64] [i64 3, i64 288]
-  // CHECK-DAG: @.offloading.entry._QMtest_0Ezii = weak constant %struct.__tgt_offload_entry {{.*}} ptr @_QMtest_0Ezii, {{.*}}, i64 44,{{.*}}
+  // CHECK-DAG: @.offloading.entry._QMtest_0Ezii = constant %struct.__tgt_offload_entry {{.*}} ptr @_QMtest_0Ezii, {{.*}}, i64 44,{{.*}}
   llvm.mlir.global external @_QMtest_0Ezii() {addr_space = 0 : i32, omp.declare_target = #omp.declaretarget<device_type = (any), capture_clause = (to)>} : !llvm.array<11 x f32> {
     %0 = llvm.mlir.zero : !llvm.array<11 x f32>
     llvm.return %0 : !llvm.array<11 x f32>

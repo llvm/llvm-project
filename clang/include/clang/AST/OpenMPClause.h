@@ -10475,6 +10475,39 @@ public:
   OMPXBareClause() = default;
 };
 
+/// This represents the 'ompx_name' clause in the '#pragma omp target'
+/// directive.
+///
+/// \code
+/// #pragma omp target ompx_name("foo")
+/// \endcode
+/// In this example directive '#pragma omp target' has simple 'ompx_name'
+/// clause with the name "foo".
+class OMPXNameClause final
+    : public OMPOneStmtClause<llvm::omp::OMPC_ompx_name, OMPClause> {
+  friend class OMPClauseReader;
+
+  /// Set name.
+  void setName(Expr *A) { setStmt(A); }
+
+public:
+  /// Build 'ompx_name' clause with the given name.
+  ///
+  /// \param A Name.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  OMPXNameClause(Expr *A, SourceLocation StartLoc, SourceLocation LParenLoc,
+                 SourceLocation EndLoc)
+      : OMPOneStmtClause(A, StartLoc, LParenLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPXNameClause() : OMPOneStmtClause() {}
+
+  /// Returns name.
+  Expr *getName() const { return getStmtAs<Expr>(); }
+};
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_OPENMPCLAUSE_H
