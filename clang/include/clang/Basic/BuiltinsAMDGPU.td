@@ -299,9 +299,9 @@ def __builtin_amdgcn_av_store_b128
 // Async mark builtins.
 //===----------------------------------------------------------------------===//
 
-// FIXME: Not supported on GFX12 yet. Will need a new feature when we do.
-def __builtin_amdgcn_asyncmark : AMDGPUBuiltin<"void()", [], "vmem-to-lds-load-insts">;
-def __builtin_amdgcn_wait_asyncmark : AMDGPUBuiltin<"void(_Constant unsigned short)", [], "vmem-to-lds-load-insts">;
+// Mirrors GCNSubtarget::hasAsyncMark()
+def __builtin_amdgcn_asyncmark : AMDGPUBuiltin<"void()", [], "vmem-to-lds-load-insts|asynccnt">;
+def __builtin_amdgcn_wait_asyncmark : AMDGPUBuiltin<"void(_Constant unsigned short)", [], "vmem-to-lds-load-insts|asynccnt">;
 
 //===----------------------------------------------------------------------===//
 // Ballot builtins.
