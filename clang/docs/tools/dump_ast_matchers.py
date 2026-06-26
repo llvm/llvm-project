@@ -5,7 +5,6 @@
 
 import collections
 import re
-import sys
 from pathlib import Path
 
 CURRENT_DIR = Path(__file__).resolve().parent
@@ -61,10 +60,10 @@ def esc(text):
         """
         name = m.group(1)
         if name not in CLANG_CLASSES:
-            print("Did not find %s in clang headers" % name)
+            print(f"Did not find {name} in clang headers")
             return m.group(0)
         url = f"{DOXYGEN_URL}/classclang_1_1{name}.html"
-        return r'Matcher&lt;<a href="%s">%s</a>&gt;' % (url, name)
+        return rf'Matcher&lt;<a href="{url}">{name}</a>&gt;'
 
     text = re.sub(r"Matcher&lt;([^\*&]+)&gt;", link_if_exists, text)
     return text
