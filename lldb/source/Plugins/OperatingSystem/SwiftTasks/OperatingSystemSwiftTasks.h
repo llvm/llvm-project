@@ -17,7 +17,9 @@
 namespace lldb_private {
 class OperatingSystemSwiftTasks : public OperatingSystem {
 public:
-  OperatingSystemSwiftTasks(Process &process);
+  OperatingSystemSwiftTasks(
+      Process &process,
+      std::optional<SwiftLanguageRuntime::CurrentTaskStorageKind>);
   ~OperatingSystemSwiftTasks() override;
 
   static OperatingSystem *CreateInstance(Process *process, bool force);
@@ -52,9 +54,7 @@ private:
   lldb::ThreadSP FindOrCreateSwiftThread(ThreadList &old_thread_list,
                                          uint64_t task_id);
 
-  /// A cache for task addr locations, which are expensive to compute but
-  /// immutable.
-  TaskInspector m_task_inspector;
+  std::unique_ptr<TaskFinder> m_task_finder;
 };
 } // namespace lldb_private
 

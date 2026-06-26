@@ -1018,31 +1018,33 @@ struct AsyncUnwindRegisterNumbers {
 std::optional<AsyncUnwindRegisterNumbers>
 GetAsyncUnwindRegisterNumbers(llvm::Triple::ArchType triple);
 
-/// A helper class to find and cache the location of Task pointer inside TLS.
-class TaskInspector {
-public:
-  /// Inspects thread local storage to find the address of the currently
-  /// executing task, if any.
-  std::optional<lldb::addr_t> GetTaskAddrFromThreadLocalStorage(Thread &thread);
+/// Abstract class to find tasks in the different concurrency runtime
+/// implementations.
+struct TaskFinder {
+  // For each input thread, returns the address of the Task this thread is
+  // executing, if any, otherwise returns std::nullopt. The returned vector must
+  // have as many entries as the number of input threads.
+  virtual llvm::SmallVector<std::optional<lldb::addr_t>>
+  GetTaskAddrForThread(llvm::ArrayRef<Thread *> threads) = 0;
 
-  /// Inspects thread local storage to find the address of the currently
-  /// executing task, if any.
-  llvm::SmallVector<std::optional<lldb::addr_t>>
-  GetTaskAddrFromThreadLocalStorage(llvm::ArrayRef<Thread *> threads);
+  // Equivalent to GetTaskAddrForThread(&thread);
+  std::optional<lldb::addr_t> GetTaskAddrForThread(Thread &thread) {
+    return GetTaskAddrForThread(&thread)[0];
+  }
 
-private:
-  /// For each thread in `threads`, return the location of its task
-  /// pointer, if it exists.
-  llvm::SmallVector<std::optional<lldb::addr_t>>
-  GetTaskAddrLocations(llvm::ArrayRef<Thread *> threads);
-
-  /// If reading from a cached task address location failed, invalidate the
-  /// cache and try again.
-  std::optional<lldb::addr_t> RetryRead(Thread &thread,
-                                        lldb::addr_t task_addr_location);
-
-  llvm::DenseMap<uint64_t, lldb::addr_t> m_tid_to_task_addr_location;
+  virtual ~TaskFinder() = default;
 };
+
+/// Returns a TaskFinder for the current storage_kind. The pointer is guaranteed
+/// to be non-null, but the returned object may be a NoTaskFinder, if the
+/// storage kind is not supported.
+std::unique_ptr<TaskFinder>
+    GetTaskFinder(std::optional<SwiftLanguageRuntime::CurrentTaskStorageKind>);
+
+/// Inspects the concurrency library in the process, if any, to construct a
+/// TaskFinder. The pointer is guaranteed to be non-null, but the returned
+/// object is a NoTaskFinder if the runtime is not supported or can't be found.
+std::unique_ptr<TaskFinder> GetTaskFinder(Process &Process);
 
 /// Represents `swift::JobFlags` as defined in
 /// `include/swift/ABI/MetadataValues.h`.
