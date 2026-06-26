@@ -2076,14 +2076,6 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
   bool IsArray = Desc->isArray();
   QualType ElemTy = IsArray ? Desc->getElemQualType() : Desc->getType();
 
-  if (!isOneByteCharacterType(ElemTy)) {
-    S.FFDiag(S.Current->getSource(OpPC),
-             diag::note_constexpr_memchr_unsupported)
-        << S.getASTContext().BuiltinInfo.getQuotedName(Call->getBuiltinCallee())
-        << ElemTy;
-    return false;
-  }
-
   if (IsArray)
     Ptr = Ptr.expand();
 
@@ -2091,6 +2083,8 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
   size_t ArraySize = Ptr.getNumElems();
   size_t RemainingElems = ArraySize - BaseIdx;
 
+  assert(S.getASTContext().getTargetInfo().getCharWidth() == 8 &&
+         "stdc_load8_* requires CHAR_BIT == 8");
   unsigned ByteWidth = S.getASTContext().getTypeSize(Call->getType()) / 8;
   if (ByteWidth > RemainingElems) {
     if (IsArray)
