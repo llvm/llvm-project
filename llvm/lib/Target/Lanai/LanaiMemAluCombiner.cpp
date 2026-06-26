@@ -26,13 +26,10 @@
 #include "LanaiAluCode.h"
 #include "LanaiTargetMachine.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/IR/Analysis.h"
 #include "llvm/Support/CommandLine.h"
 using namespace llvm;
 
@@ -52,9 +49,20 @@ namespace {
 typedef MachineBasicBlock::iterator MbbIterator;
 typedef MachineFunction::iterator MfIterator;
 
-class LanaiMemAluCombinerImpl {
+class LanaiMemAluCombiner : public MachineFunctionPass {
 public:
-  bool runOnMachineFunction(MachineFunction &MF);
+  static char ID;
+  explicit LanaiMemAluCombiner() : MachineFunctionPass(ID) {}
+
+  StringRef getPassName() const override {
+    return "Lanai load / store optimization pass";
+  }
+
+  bool runOnMachineFunction(MachineFunction &F) override;
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
 
 private:
   MbbIterator findClosestSuitableAluInstr(MachineBasicBlock *BB,
@@ -69,27 +77,11 @@ private:
   // layout, etc.
   const TargetInstrInfo *TII;
 };
-
-class LanaiMemAluCombinerLegacy : public MachineFunctionPass {
-public:
-  static char ID;
-  explicit LanaiMemAluCombinerLegacy() : MachineFunctionPass(ID) {}
-
-  StringRef getPassName() const override {
-    return "Lanai load / store optimization pass";
-  }
-
-  MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().setNoVRegs();
-  }
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-};
 } // namespace
 
-char LanaiMemAluCombinerLegacy::ID = 0;
+char LanaiMemAluCombiner::ID = 0;
 
-INITIALIZE_PASS(LanaiMemAluCombinerLegacy, DEBUG_TYPE,
+INITIALIZE_PASS(LanaiMemAluCombiner, DEBUG_TYPE,
                 "Lanai memory ALU combiner pass", false, false)
 
 namespace {
@@ -234,9 +226,10 @@ LPAC::AluCode mergedAluCode(unsigned AluOpcode) {
 //
 // This function builds a new machine instruction using the MachineInstrBuilder
 // class and inserts it before the memory instruction.
-void LanaiMemAluCombinerImpl::insertMergedInstruction(
-    MachineBasicBlock *BB, const MbbIterator &MemInstr,
-    const MbbIterator &AluInstr, bool Before) {
+void LanaiMemAluCombiner::insertMergedInstruction(MachineBasicBlock *BB,
+                                                  const MbbIterator &MemInstr,
+                                                  const MbbIterator &AluInstr,
+                                                  bool Before) {
   // Insert new combined load/store + alu operation
   MachineOperand Dest = MemInstr->getOperand(0);
   MachineOperand Base = MemInstr->getOperand(1);
@@ -326,7 +319,7 @@ bool isSuitableAluInstr(bool IsSpls, const MbbIterator &AluIter,
   return false;
 }
 
-MbbIterator LanaiMemAluCombinerImpl::findClosestSuitableAluInstr(
+MbbIterator LanaiMemAluCombiner::findClosestSuitableAluInstr(
     MachineBasicBlock *BB, const MbbIterator &MemInstr, const bool Decrement) {
   MachineOperand *Base = &MemInstr->getOperand(1);
   MachineOperand *Offset = &MemInstr->getOperand(2);
@@ -361,7 +354,7 @@ MbbIterator LanaiMemAluCombinerImpl::findClosestSuitableAluInstr(
   return MemInstr;
 }
 
-bool LanaiMemAluCombinerImpl::combineMemAluInBasicBlock(MachineBasicBlock *BB) {
+bool LanaiMemAluCombiner::combineMemAluInBasicBlock(MachineBasicBlock *BB) {
   bool Modified = false;
 
   MbbIterator MBBIter = BB->begin(), End = BB->end();
@@ -406,7 +399,7 @@ bool LanaiMemAluCombinerImpl::combineMemAluInBasicBlock(MachineBasicBlock *BB) {
 
 // Driver function that iterates over the machine basic building blocks of a
 // machine function
-bool LanaiMemAluCombinerImpl::runOnMachineFunction(MachineFunction &MF) {
+bool LanaiMemAluCombiner::runOnMachineFunction(MachineFunction &MF) {
   if (DisableMemAluCombiner)
     return false;
 
@@ -418,21 +411,6 @@ bool LanaiMemAluCombinerImpl::runOnMachineFunction(MachineFunction &MF) {
 }
 } // namespace
 
-FunctionPass *llvm::createLanaiMemAluCombinerLegacyPass() {
-  return new LanaiMemAluCombinerLegacy();
-}
-
-bool LanaiMemAluCombinerLegacy::runOnMachineFunction(MachineFunction &MF) {
-  LanaiMemAluCombinerImpl Impl;
-  return Impl.runOnMachineFunction(MF);
-}
-
-PreservedAnalyses
-LanaiMemAluCombinerPass::run(MachineFunction &MF,
-                             MachineFunctionAnalysisManager &MFAM) {
-  LanaiMemAluCombinerImpl Impl;
-  return Impl.runOnMachineFunction(MF)
-             ? getMachineFunctionPassPreservedAnalyses()
-                   .preserveSet<CFGAnalyses>()
-             : PreservedAnalyses::all();
+FunctionPass *llvm::createLanaiMemAluCombinerPass() {
+  return new LanaiMemAluCombiner();
 }

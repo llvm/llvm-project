@@ -14,12 +14,9 @@
 #include "LanaiTargetMachine.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/IR/Analysis.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
@@ -34,16 +31,21 @@ static cl::opt<bool>
                        cl::Hidden);
 
 namespace {
-struct FillerImpl {
+struct Filler : public MachineFunctionPass {
   // Target machine description which we query for reg. names, data
   // layout, etc.
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
   MachineBasicBlock::instr_iterator LastFiller;
 
+  static char ID;
+  explicit Filler() : MachineFunctionPass(ID) {}
+
+  StringRef getPassName() const override { return "Lanai Delay Slot Filler"; }
+
   bool runOnMachineBasicBlock(MachineBasicBlock &MBB);
 
-  bool runOnMachineFunction(MachineFunction &MF) {
+  bool runOnMachineFunction(MachineFunction &MF) override {
     const LanaiSubtarget &Subtarget = MF.getSubtarget<LanaiSubtarget>();
     TII = Subtarget.getInstrInfo();
     TRI = Subtarget.getRegisterInfo();
@@ -52,6 +54,10 @@ struct FillerImpl {
     for (MachineBasicBlock &MBB : MF)
       Changed |= runOnMachineBasicBlock(MBB);
     return Changed;
+  }
+
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
   }
 
   void insertDefsUses(MachineBasicBlock::instr_iterator MI,
@@ -68,34 +74,19 @@ struct FillerImpl {
                       MachineBasicBlock::instr_iterator Slot,
                       MachineBasicBlock::instr_iterator &Filler);
 };
-
-class LanaiDelaySlotFillerLegacy : public MachineFunctionPass {
-  static char ID;
-
-public:
-  explicit LanaiDelaySlotFillerLegacy() : MachineFunctionPass(ID) {}
-
-  StringRef getPassName() const override { return "Lanai Delay Slot Filler"; }
-
-  MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().setNoVRegs();
-  }
-
-  bool runOnMachineFunction(MachineFunction &MF) override;
-};
-char LanaiDelaySlotFillerLegacy::ID = 0;
+char Filler::ID = 0;
 } // end of anonymous namespace
 
 // createLanaiDelaySlotFillerPass - Returns a pass that fills in delay
 // slots in Lanai MachineFunctions
 FunctionPass *
-llvm::createLanaiDelaySlotFillerLegacyPass(const LanaiTargetMachine & /*tm*/) {
-  return new LanaiDelaySlotFillerLegacy();
+llvm::createLanaiDelaySlotFillerPass(const LanaiTargetMachine & /*tm*/) {
+  return new Filler();
 }
 
 // runOnMachineBasicBlock - Fill in delay slots for the given basic block.
 // There is one or two delay slot per delayed instruction.
-bool FillerImpl::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
+bool Filler::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
   bool Changed = false;
   LastFiller = MBB.instr_end();
 
@@ -148,9 +139,9 @@ bool FillerImpl::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
   return Changed;
 }
 
-bool FillerImpl::findDelayInstr(MachineBasicBlock &MBB,
-                                MachineBasicBlock::instr_iterator Slot,
-                                MachineBasicBlock::instr_iterator &Filler) {
+bool Filler::findDelayInstr(MachineBasicBlock &MBB,
+                            MachineBasicBlock::instr_iterator Slot,
+                            MachineBasicBlock::instr_iterator &Filler) {
   SmallSet<unsigned, 32> RegDefs;
   SmallSet<unsigned, 32> RegUses;
 
@@ -182,10 +173,9 @@ bool FillerImpl::findDelayInstr(MachineBasicBlock &MBB,
   return false;
 }
 
-bool FillerImpl::delayHasHazard(MachineBasicBlock::instr_iterator MI,
-                                bool &SawLoad, bool &SawStore,
-                                SmallSet<unsigned, 32> &RegDefs,
-                                SmallSet<unsigned, 32> &RegUses) {
+bool Filler::delayHasHazard(MachineBasicBlock::instr_iterator MI, bool &SawLoad,
+                            bool &SawStore, SmallSet<unsigned, 32> &RegDefs,
+                            SmallSet<unsigned, 32> &RegUses) {
   if (MI->isImplicitDef() || MI->isKill())
     return true;
 
@@ -229,9 +219,9 @@ bool FillerImpl::delayHasHazard(MachineBasicBlock::instr_iterator MI,
 }
 
 // Insert Defs and Uses of MI into the sets RegDefs and RegUses.
-void FillerImpl::insertDefsUses(MachineBasicBlock::instr_iterator MI,
-                                SmallSet<unsigned, 32> &RegDefs,
-                                SmallSet<unsigned, 32> &RegUses) {
+void Filler::insertDefsUses(MachineBasicBlock::instr_iterator MI,
+                            SmallSet<unsigned, 32> &RegDefs,
+                            SmallSet<unsigned, 32> &RegUses) {
   // If MI is a call or return, just examine the explicit non-variadic operands.
   const MCInstrDesc &MCID = MI->getDesc();
   unsigned E = MI->isCall() || MI->isReturn() ? MCID.getNumOperands()
@@ -259,25 +249,10 @@ void FillerImpl::insertDefsUses(MachineBasicBlock::instr_iterator MI,
 }
 
 // Returns true if the Reg or its alias is in the RegSet.
-bool FillerImpl::isRegInSet(SmallSet<unsigned, 32> &RegSet, unsigned Reg) {
+bool Filler::isRegInSet(SmallSet<unsigned, 32> &RegSet, unsigned Reg) {
   // Check Reg and all aliased Registers.
   for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
     if (RegSet.count(*AI))
       return true;
   return false;
-}
-
-bool LanaiDelaySlotFillerLegacy::runOnMachineFunction(MachineFunction &MF) {
-  FillerImpl Impl;
-  return Impl.runOnMachineFunction(MF);
-}
-
-PreservedAnalyses
-LanaiDelaySlotFillerPass::run(MachineFunction &MF,
-                              MachineFunctionAnalysisManager &MFAM) {
-  FillerImpl Impl;
-  return Impl.runOnMachineFunction(MF)
-             ? getMachineFunctionPassPreservedAnalyses()
-                   .preserveSet<CFGAnalyses>()
-             : PreservedAnalyses::all();
 }
