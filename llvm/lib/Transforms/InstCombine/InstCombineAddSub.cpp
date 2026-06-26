@@ -2427,6 +2427,18 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
     }
   }
 
+  {
+    const APInt *C, *OrC;
+    Value *X;
+    if (match(Op0, m_APInt(C)) &&
+        match(Op1, m_OneUse(m_Or(m_Value(X), m_APInt(OrC)))) && *OrC == *C) {
+      APInt NotC = ~*C;
+      if ((NotC << 1).isZero())
+        return BinaryOperator::CreateAnd(X,
+                                         ConstantInt::get(I.getType(), NotC));
+    }
+  }
+
   auto TryToNarrowDeduceFlags = [this, &I, &Op0, &Op1]() -> Instruction * {
     if (Instruction *Ext = narrowMathIfNoOverflow(I))
       return Ext;

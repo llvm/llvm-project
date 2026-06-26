@@ -50,6 +50,110 @@ define <4 x i32> @sub_constant_expression_vec(<4 x i32> %x) {
   ret <4 x i32> %r
 }
 
+define i32 @sub_smax_or_i32(i32 %x) {
+; CHECK-LABEL: @sub_smax_or_i32(
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[X:%.*]], -2147483648
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %or = or i32 %x, 2147483647
+  %r = sub i32 2147483647, %or
+  ret i32 %r
+}
+
+define i8 @sub_smax_or_i8(i8 %x) {
+; CHECK-LABEL: @sub_smax_or_i8(
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[X:%.*]], -128
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %or = or i8 %x, 127
+  %r = sub i8 127, %or
+  ret i8 %r
+}
+
+define <2 x i32> @sub_smax_or_vec(<2 x i32> %x) {
+; CHECK-LABEL: @sub_smax_or_vec(
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i32> [[X:%.*]], splat (i32 -2147483648)
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %or = or <2 x i32> %x, <i32 2147483647, i32 2147483647>
+  %r = sub <2 x i32> <i32 2147483647, i32 2147483647>, %or
+  ret <2 x i32> %r
+}
+
+define i32 @sub_smax_or_nsw(i32 %x) {
+; CHECK-LABEL: @sub_smax_or_nsw(
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[X:%.*]], -2147483648
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %or = or i32 %x, 2147483647
+  %r = sub nsw i32 2147483647, %or
+  ret i32 %r
+}
+
+define i32 @sub_smax_or_nuw(i32 %x) {
+; CHECK-LABEL: @sub_smax_or_nuw(
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[X:%.*]], -2147483648
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %or = or i32 %x, 2147483647
+  %r = sub nuw i32 2147483647, %or
+  ret i32 %r
+}
+
+define i32 @sub_allones_or_i32(i32 %x) {
+; CHECK-LABEL: @sub_allones_or_i32(
+; CHECK-NEXT:    ret i32 0
+;
+  %or = or i32 %x, -1
+  %r = sub i32 -1, %or
+  ret i32 %r
+}
+
+define i32 @sub_or_commuted(i32 %x) {
+; CHECK-LABEL: @sub_or_commuted(
+; CHECK-NEXT:    [[R:%.*]] = and i32 [[X:%.*]], -2147483648
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %or = or i32 2147483647, %x
+  %r = sub i32 2147483647, %or
+  ret i32 %r
+}
+
+define i32 @sub_or_no_fold_arbitrary_c(i32 %x) {
+; CHECK-LABEL: @sub_or_no_fold_arbitrary_c(
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], 1073741823
+; CHECK-NEXT:    [[R:%.*]] = sub i32 1073741823, [[OR]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %or = or i32 %x, 1073741823
+  %r = sub i32 1073741823, %or
+  ret i32 %r
+}
+
+define i32 @sub_or_no_fold_diff_c(i32 %x) {
+; CHECK-LABEL: @sub_or_no_fold_diff_c(
+; CHECK-NEXT:    [[OR:%.*]] = or i32 [[X:%.*]], 2147483646
+; CHECK-NEXT:    [[R:%.*]] = sub i32 2147483647, [[OR]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %or = or i32 %x, 2147483646
+  %r = sub i32 2147483647, %or
+  ret i32 %r
+}
+
+define i8 @sub_smax_or_multiuse(i8 %x) {
+; CHECK-LABEL: @sub_smax_or_multiuse(
+; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X:%.*]], 127
+; CHECK-NEXT:    call void @use8(i8 [[OR]])
+; CHECK-NEXT:    [[R:%.*]] = sub i8 127, [[OR]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %or = or i8 %x, 127
+  call void @use8(i8 %or)
+  %r = sub i8 127, %or
+  ret i8 %r
+}
+
 define i32 @neg_sub(i32 %x, i32 %y) {
 ; CHECK-LABEL: @neg_sub(
 ; CHECK-NEXT:    [[R:%.*]] = add i32 [[Y:%.*]], [[X:%.*]]
