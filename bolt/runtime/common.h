@@ -62,8 +62,6 @@ typedef int int32_t;
 #define MAP_ANONYMOUS 0x20
 #endif
 
-#define MAP_FAILED ((void *)-1)
-
 #define MADV_HUGEPAGE 14 /* Worth backing with hugepages */
 
 /* set the state of the "THP disable" flags for the calling thread */
@@ -366,6 +364,20 @@ public:
 
 inline uint64_t alignTo(uint64_t Value, uint64_t Align) {
   return (Value + Align - 1) / Align * Align;
+}
+
+constexpr intptr_t MaxErrno = 4095;
+// The function is used to detect errors from syscall wrappers that return
+// pointers instead of scalar values (for example, __mmap).
+// The return value of the __mmap wrapper is either a valid address or an error
+// (a negative value), not MAP_FAILED macro. The MAP_FAILED macro is a libc
+// return value of the mmap library function in case of an error where the
+// actual error is returned via errno variable. So, it is incorrect to compare
+// the __mmap syscall wrapper return value with MAP_FAILED, as only the EPERM
+// (-1) error is checked.
+inline bool isErrValue(const void *Val) {
+  const intptr_t PtrVal = reinterpret_cast<intptr_t>(Val);
+  return PtrVal >= -MaxErrno && PtrVal <= -1;
 }
 
 } // anonymous namespace
