@@ -1,5 +1,12 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
 #include "support/Markdown.h"
-#include "llvm/Support/Casting.h"
 #include "gtest/gtest.h"
 
 using namespace clang::doc::markdown;
@@ -10,21 +17,22 @@ namespace {
 TEST(MarkdownNodeTest, TextNode) {
   TextNode N("hello");
   EXPECT_EQ(N.Kind, NodeKind::NK_Text);
-  EXPECT_EQ(N.Text, "hello");
+  EXPECT_EQ(N.getText(), "hello");
 }
 
 TEST(MarkdownNodeTest, FencedCodeNode) {
-  StringRef Lines[] = {"int x = 0;"};
+  StringRef Lines[] = {"int x = 0;", "int y = 1;", "return x + y;"};
   FencedCodeNode N("cpp", ArrayRef(Lines));
   EXPECT_EQ(N.Kind, NodeKind::NK_FencedCode);
-  EXPECT_EQ(N.Lang, "cpp");
-  EXPECT_EQ(N.Lines.size(), 1u);
+  EXPECT_EQ(N.getLang(), "cpp");
+  EXPECT_EQ(N.getLines().size(), 3u);
+  EXPECT_EQ(N.getLines()[1], "int y = 1;");
 }
 
 TEST(MarkdownNodeTest, HeadingNode) {
   HeadingNode N(2, {});
   EXPECT_EQ(N.Kind, NodeKind::NK_Heading);
-  EXPECT_EQ(N.Level, 2u);
+  EXPECT_EQ(N.getLevel(), 2u);
 }
 
 TEST(MarkdownNodeTest, ThematicBreakNode) {
@@ -35,22 +43,25 @@ TEST(MarkdownNodeTest, ThematicBreakNode) {
 TEST(MarkdownNodeTest, InlineCodeNode) {
   InlineCodeNode N("foo()");
   EXPECT_EQ(N.Kind, NodeKind::NK_InlineCode);
-  EXPECT_EQ(N.Code, "foo()");
+  EXPECT_EQ(N.getCode(), "foo()");
 }
 
 TEST(MarkdownNodeTest, EmphasisNode) {
   EmphasisNode N({});
   EXPECT_EQ(N.Kind, NodeKind::NK_Emphasis);
+  EXPECT_TRUE(N.getChildren().empty());
 }
 
 TEST(MarkdownNodeTest, UnorderedListNode) {
-  UnorderedListNode N({});
+  UnorderedListNode N;
   EXPECT_EQ(N.Kind, NodeKind::NK_UnorderedList);
+  EXPECT_TRUE(N.getItems().empty());
 }
 
 TEST(MarkdownNodeTest, ParagraphNode) {
   ParagraphNode N({});
   EXPECT_EQ(N.Kind, NodeKind::NK_Paragraph);
+  EXPECT_TRUE(N.getChildren().empty());
 }
 
 } // namespace
