@@ -273,11 +273,12 @@ __cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, mem
 template <class _Tp, __enable_if_t<is_pointer<_Tp>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, memory_order __order) _NOEXCEPT {
-  _Tp __ret = __cxx_atomic_load(__a, memory_order_relaxed);
+  _Tp __ret = std::__cxx_atomic_load(__a, memory_order_relaxed);
   _Tp __value;
   do {
     __value = __ret > __val ? __ret : __val;
-  } while (!__cxx_atomic_compare_exchange_weak(__a, std::addressof(__ret), __value, __order, memory_order_relaxed));
+  } while (
+      !std::__cxx_atomic_compare_exchange_weak(__a, std::addressof(__ret), __value, __order, memory_order_relaxed));
   return __ret;
 }
 
@@ -290,11 +291,12 @@ __cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order
 template <class _Tp, __enable_if_t<is_pointer<_Tp>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) _NOEXCEPT {
-  _Tp __ret = __cxx_atomic_load(__a, memory_order_relaxed);
+  _Tp __ret = std::__cxx_atomic_load(__a, memory_order_relaxed);
   _Tp __value;
   do {
     __value = __ret > __val ? __ret : __val;
-  } while (!__cxx_atomic_compare_exchange_weak(__a, std::addressof(__ret), __value, __order, memory_order_relaxed));
+  } while (
+      !std::__cxx_atomic_compare_exchange_weak(__a, std::addressof(__ret), __value, __order, memory_order_relaxed));
   return __ret;
 }
 
@@ -307,11 +309,12 @@ __cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, mem
 template <class _Tp, __enable_if_t<is_pointer<_Tp>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, memory_order __order) _NOEXCEPT {
-  _Tp __ret = __cxx_atomic_load(__a, memory_order_relaxed);
+  _Tp __ret = std::__cxx_atomic_load(__a, memory_order_relaxed);
   _Tp __value;
   do {
     __value = __ret < __val ? __ret : __val;
-  } while (!__cxx_atomic_compare_exchange_weak(__a, std::addressof(__ret), __value, __order, memory_order_relaxed));
+  } while (
+      !std::__cxx_atomic_compare_exchange_weak(__a, std::addressof(__ret), __value, __order, memory_order_relaxed));
   return __ret;
 }
 
@@ -324,11 +327,12 @@ __cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order
 template <class _Tp, __enable_if_t<is_pointer<_Tp>::value, int> = 0>
 _LIBCPP_HIDE_FROM_ABI _Tp
 __cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) _NOEXCEPT {
-  _Tp __ret = __cxx_atomic_load(__a, memory_order_relaxed);
+  _Tp __ret = std::__cxx_atomic_load(__a, memory_order_relaxed);
   _Tp __value;
   do {
     __value = __ret < __val ? __ret : __val;
-  } while (!__cxx_atomic_compare_exchange_weak(__a, std::addressof(__ret), __value, __order, memory_order_relaxed));
+  } while (
+      !std::__cxx_atomic_compare_exchange_weak(__a, std::addressof(__ret), __value, __order, memory_order_relaxed));
   return __ret;
 }
 
