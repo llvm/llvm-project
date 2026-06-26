@@ -27,3 +27,16 @@ echo "****************************************"
 echo "Subsetting Boost.Math ${VERSION}"
 echo "****************************************"
 rm -rf ${SCRIPT_DIR}/boost-math/{.circleci,.drone,.github,build,config,doc,example,meta,reporting,src,test,tools}
+
+echo "****************************************"
+echo "Patching Boost.Math ${VERSION} for libc++"
+echo "****************************************"
+# Mark boost_math include dir as SYSTEM so libc++ consumers don't surface warnings from vendored boost-math code (e.g.
+# -Wdeprecated-redundant-constexpr-static-def). Upstream keeps these for pre-C++17 compat.
+sed -i 's|target_include_directories(boost_math INTERFACE include)|target_include_directories(boost_math SYSTEM INTERFACE include)|' \
+    ${SCRIPT_DIR}/boost-math/CMakeLists.txt
+
+# Verify the patch landed -- fail loudly if upstream renamed the target.
+grep -q 'target_include_directories(boost_math SYSTEM INTERFACE include)' \
+    ${SCRIPT_DIR}/boost-math/CMakeLists.txt \
+    || { echo "ERROR: SYSTEM include patch failed -- upstream CMakeLists.txt structure changed"; exit 1; }
