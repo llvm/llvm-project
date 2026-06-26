@@ -357,17 +357,6 @@ typedef __char32_t char32_t;
 #    endif // defined(_LIBCPP_ABI_MICROSOFT) && !defined(_LIBCPP_BUILDING_LIBRARY)
 #  endif   // _LIBCPP_NO_AUTO_LINK
 
-// Configures the fopen close-on-exec mode character, if any. This string will
-// be appended to any mode string used by fstream for fopen/fdopen.
-//
-// Not all platforms support this, but it helps avoid fd-leaks on platforms that
-// do.
-#  if defined(__BIONIC__)
-#    define _LIBCPP_FOPEN_CLOEXEC_MODE "e"
-#  else
-#    define _LIBCPP_FOPEN_CLOEXEC_MODE
-#  endif
-
 // c8rtomb() and mbrtoc8() were added in C++20 and C23. Support for these
 // functions is gradually being added to existing C libraries. The conditions
 // below check for known C library versions and conditions under which these
