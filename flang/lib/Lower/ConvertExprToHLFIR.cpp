@@ -983,7 +983,7 @@ hlfir::EntityWithAttributes HlfirDesignatorBuilder::genDesignatorExpr(
   // Expr<SomeType> plumbing to unwrap Designator<T> and call
   // gen(Designator<T>.u).
   if (const Fortran::lower::ExprToValueMap *map =
-            getConverter().getExprOverrides()) {
+          getConverter().getExprOverrides()) {
     if (mlir::Value value = findOverriddenExprValue(*map, designatorExpr))
       return hlfir::EntityWithAttributes{value};
   }
