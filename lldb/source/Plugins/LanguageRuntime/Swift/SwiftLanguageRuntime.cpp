@@ -1031,8 +1031,6 @@ static bool IsClass(ValueObjectSP valobj_sp) {
   return flags.Test(eTypeIsClass);
 }
 
-/// Check that the value object is an instance of class, and that its class is
-/// not private.
 static bool IsPrivate(ValueObjectSP valobj_sp) {
   if (!valobj_sp)
     return false;
