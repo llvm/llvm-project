@@ -162,7 +162,7 @@ void clang_experimental_DependencyScannerServiceOptions_setCacheNegativeStats(
 
 void clang_experimental_DependencyScannerServiceOptions_setAsyncScanModules(
     CXDependencyScannerServiceOptions Opts, bool AsyncScanModules) {
-  unwrap(Opts)->CacheNegativeStats = AsyncScanModules;
+  unwrap(Opts)->AsyncScanModules = AsyncScanModules;
 }
 
 CXDependencyScannerService
