@@ -371,6 +371,7 @@ private:
     Other = 0, // Unknown value.
     Def,       // Exactly overlapping locations.
     Clobber,   // Reaching value superset of needed bits.
+    Select,    // Reaching value is a select of two reaching addresses.
   };
 
   // Describe a memory location value, such that there exists a path to a point
@@ -381,6 +382,11 @@ private:
     const Value *Addr;
     Instruction *Inst;
     int32_t Offset;
+    // For DepKind::Select only: the condition and the two addresses referenced
+    // by the "true" and "false" side of the select-dependent load.
+    const Value *SelCond = nullptr;
+    const Value *SelTrueAddr = nullptr;
+    const Value *SelFalseAddr = nullptr;
 
     static ReachingMemVal getUnknown(BasicBlock *BB, const Value *Addr,
                                      Instruction *Inst = nullptr) {
@@ -394,6 +400,13 @@ private:
     static ReachingMemVal getClobber(const Value *Addr, Instruction *Inst,
                                      int32_t Offset = -1) {
       return {DepKind::Clobber, Inst->getParent(), Addr, Inst, Offset};
+    }
+
+    static ReachingMemVal getSelect(BasicBlock *BB, const Value *Cond,
+                                    const Value *TrueAddr,
+                                    const Value *FalseAddr) {
+      return {DepKind::Select, BB,       nullptr, nullptr, -1, Cond,
+              TrueAddr,        FalseAddr};
     }
   };
 
@@ -446,6 +459,14 @@ private:
   std::optional<gvn::AvailableValue>
   AnalyzeLoadAvailability(LoadInst *Load, const ReachingMemVal &Dep,
                           Value *Address);
+
+  /// Given a select-dependency for the load (the load address is a select of
+  /// \p TrueAddr and \p FalseAddr guarded by \p Cond), determine whether a
+  /// value is available by finding dominating values for both addresses.  If
+  /// so, the load can be rematerialized as a select of those two values.
+  std::optional<gvn::AvailableValue>
+  AnalyzeSelectAvailability(LoadInst *Load, Value *Cond, Value *TrueAddr,
+                            Value *FalseAddr, Instruction *From);
 
   /// Given a list of non-local dependencies, determine if a value is
   /// available for the load in each specified block.  If it is, add it to
@@ -610,9 +631,9 @@ struct llvm::gvn::AvailableValue {
     return Res;
   }
 
-  static AvailableValue getSelect(SelectInst *Sel, Value *V1, Value *V2) {
+  static AvailableValue getSelect(Value *Cond, Value *V1, Value *V2) {
     AvailableValue Res;
-    Res.Val = Sel;
+    Res.Val = Cond;
     Res.Kind = ValType::SelectVal;
     Res.Offset = 0;
     Res.V1 = V1;
@@ -641,9 +662,9 @@ struct llvm::gvn::AvailableValue {
     return cast<MemIntrinsic>(Val);
   }
 
-  SelectInst *getSelectValue() const {
+  Value *getSelectCondition() const {
     assert(isSelectValue() && "Wrong accessor");
-    return cast<SelectInst>(Val);
+    return Val;
   }
 
   /// Emit code at the specified insertion point to adjust the value defined
@@ -676,9 +697,9 @@ struct llvm::gvn::AvailableValueInBlock {
     return get(BB, AvailableValue::getUndef());
   }
 
-  static AvailableValueInBlock getSelect(BasicBlock *BB, SelectInst *Sel,
+  static AvailableValueInBlock getSelect(BasicBlock *BB, Value *Cond,
                                          Value *V1, Value *V2) {
-    return get(BB, AvailableValue::getSelect(Sel, V1, V2));
+    return get(BB, AvailableValue::getSelect(Cond, V1, V2));
   }
 
   /// Emit code at the end of this block to adjust the value defined here to
