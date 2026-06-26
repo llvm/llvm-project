@@ -802,8 +802,7 @@ LogicalResult GPUSharedMemoryOp::verify() {
   if (getStaticUpperBoundBytes() <= 0)
     return emitOpError("static_upper_bound_bytes must be positive");
 
-  bool hasScaling =
-      static_cast<bool>(getDynamicSharedMemoryScalingBytes());
+  bool hasScaling = static_cast<bool>(getDynamicSharedMemoryScalingBytes());
   bool hasFixed = static_cast<bool>(getDynamicSharedMemoryFixedBytes());
   if (hasScaling != hasFixed)
     return emitOpError(
@@ -812,8 +811,8 @@ LogicalResult GPUSharedMemoryOp::verify() {
         "absent");
 
   if (auto resultTy = dyn_cast<MemRefType>(getResult().getType())) {
-    auto addrSpace = dyn_cast_if_present<gpu::AddressSpaceAttr>(
-        resultTy.getMemorySpace());
+    auto addrSpace =
+        dyn_cast_if_present<gpu::AddressSpaceAttr>(resultTy.getMemorySpace());
     if (!addrSpace ||
         addrSpace.getValue() != gpu::GPUDialect::getWorkgroupAddressSpace())
       return emitOpError(
