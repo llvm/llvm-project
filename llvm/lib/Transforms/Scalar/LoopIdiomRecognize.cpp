@@ -1588,6 +1588,16 @@ bool LoopIdiomRecognize::optimizeCRCLoopToClmul(const PolynomialInfo &Info) {
 
   IRBuilder<> Builder(CurLoop->getLoopPreheader()->getTerminator());
 
+  auto GetMSBits = [&](Value *Op, unsigned BW, unsigned Count,
+                       const Twine &Name) {
+    unsigned OpBW = Op->getType()->getIntegerBitWidth();
+    assert(BW > Count && OpBW > Count);
+    if (Info.IsBigEndian)
+      return Builder.CreateLShr(Op, BW - Count, Name + ".be.lshr");
+    auto *Mask = ConstantInt::get(Ctx, APInt::getLowBitsSet(OpBW, Count));
+    return Builder.CreateAnd(Op, Mask, Name + ".le.mask");
+  };
+
   Value *CRCExt = Builder.CreateZExt(Info.LHS, ClmulTy, "crc.ext");
 
   // For the big-endian case, align the leftmost bit of the CRC with the
@@ -1622,13 +1632,7 @@ bool LoopIdiomRecognize::optimizeCRCLoopToClmul(const PolynomialInfo &Info) {
         Data = Builder.CreateShl(Data, DataBW - CRCBW, "data.be.shl");
       if (DataBW > TC) {
         // Extract the useful bits of the data and discard the rest.
-        if (Info.IsBigEndian) {
-          Data = Builder.CreateLShr(Data, DataBW - TC, "data.be.lshr");
-        } else {
-          ConstantInt *Mask =
-              ConstantInt::get(Ctx, APInt::getLowBitsSet(DataBW, TC));
-          Data = Builder.CreateAnd(Data, Mask, "data.le.mask");
-        }
+        Data = GetMSBits(Data, DataBW, TC, "data");
       }
       // This is always a zext since TripCount <= DataBW < ClmulBW.
       Value *DataExt = Builder.CreateZExt(Data, ClmulTy, "data.ext");
@@ -1643,14 +1647,7 @@ bool LoopIdiomRecognize::optimizeCRCLoopToClmul(const PolynomialInfo &Info) {
                                                  Mu, {}, "clmul.mu");
 
   // Extract the relevant bits from the result.
-  Value *ClmulGPInput;
-  if (Info.IsBigEndian) {
-    ClmulGPInput = Builder.CreateLShr(ClmulMu, TC, "quot.be.lshr");
-  } else {
-    ConstantInt *Mask =
-        ConstantInt::get(Ctx, APInt::getLowBitsSet(ClmulBW, TC));
-    ClmulGPInput = Builder.CreateAnd(ClmulMu, Mask, "quot.le.mask");
-  }
+  Value *ClmulGPInput = GetMSBits(ClmulMu, 2 * TC, TC, "quot");
 
   // Perform the second clmul operation with the P(x)/P(x)' constant. Input is
   // TC bits and GP is CRCBW+1 bits, so the result will be CRCBW+TC bits.
