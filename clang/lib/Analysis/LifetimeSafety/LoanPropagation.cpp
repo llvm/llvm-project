@@ -18,6 +18,7 @@
 #include "clang/Analysis/CFG.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
@@ -225,14 +226,16 @@ public:
         break;
       }
 
-    OriginID CurrOID = StartOID;
     llvm::SmallVector<OriginID> OriginFlowChain;
-    std::queue<const CFGBlock *> PendingBlocks;
-    PendingBlocks.push(EndBlock);
 
-    while (!PendingBlocks.empty()) {
-      const CFGBlock *CurrBlock = PendingBlocks.front();
-      PendingBlocks.pop();
+    using SearchState = std::pair<const CFGBlock *, OriginID>;
+    std::queue<SearchState> PendingStates;
+    llvm::SmallSet<SearchState, 16> VistedStates;
+    PendingStates.push({EndBlock, StartOID});
+
+    while (!PendingStates.empty()) {
+      auto [CurrBlock, CurrOID] = PendingStates.front();
+      PendingStates.pop();
 
       DEBUG_WITH_TYPE("LifetimeBuildOriginFlow",
                       llvm::dbgs() << "CurrBlockID: " << CurrBlock->getBlockID()
@@ -251,8 +254,11 @@ public:
       DEBUG_WITH_TYPE("LifetimeBuildOriginFlow",
                       llvm::dbgs() << "EndOriginID: " << CurrOID << "\n");
 
-      for (const CFGBlock *Block : CurrBlock->preds())
-        PendingBlocks.push(Block);
+      for (const CFGBlock *Block : CurrBlock->preds()) {
+        SearchState NextState = {Block, CurrOID};
+        if (VistedStates.insert(NextState).second)
+          PendingStates.push(NextState);
+      }
     }
 
     llvm_unreachable(
