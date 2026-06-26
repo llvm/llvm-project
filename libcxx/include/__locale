@@ -451,6 +451,19 @@ public:
   static const mask blank  = __ISBLANK;
 #    endif
   static const mask __regex_word = 0x8000;
+#  elif defined(__HAIKU__)
+  typedef unsigned short mask;
+  static const mask space        = _ISspace;
+  static const mask print        = _ISprint;
+  static const mask cntrl        = _IScntrl;
+  static const mask upper        = _ISupper;
+  static const mask lower        = _ISlower;
+  static const mask alpha        = _ISalpha;
+  static const mask digit        = _ISdigit;
+  static const mask punct        = _ISpunct;
+  static const mask xdigit       = _ISxdigit;
+  static const mask blank        = _ISblank;
+  static const mask __regex_word = 0x80;
 #  else
 #    error unknown rune table for this platform -- do you mean to define _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE?
 #  endif

@@ -1604,6 +1604,7 @@ module std [system] {
       textual header "__locale_dir/support/bsd_like.h"
       textual header "__locale_dir/support/freebsd.h"
       textual header "__locale_dir/support/fuchsia.h"
+      textual header "__locale_dir/support/haiku.h"
       textual header "__locale_dir/support/linux.h"
       textual header "__locale_dir/support/llvm_libc.h"
       textual header "__locale_dir/support/netbsd.h"

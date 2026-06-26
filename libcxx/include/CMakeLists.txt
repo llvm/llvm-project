@@ -544,6 +544,7 @@ set(files
   __locale_dir/support/bsd_like.h
   __locale_dir/support/freebsd.h
   __locale_dir/support/fuchsia.h
+  __locale_dir/support/haiku.h
   __locale_dir/support/linux.h
   __locale_dir/support/llvm_libc.h
   __locale_dir/support/netbsd.h
