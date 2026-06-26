@@ -14,6 +14,7 @@ set(COMPILER_RT_BUILTINS_ENABLE_PIC OFF CACHE BOOL "")
 set(COMPILER_RT_SUPPORTED_ARCH hexagon CACHE STRING "")
 # without this, build tries to use pthread which is not supported by hexagon-unknown-none-elf
 set(COMPILER_RT_BAREMETAL_BUILD ON CACHE BOOL "" FORCE)
+set(COMPILER_RT_BUILD_INSTRUMENTOR_TOOLS OFF CACHE BOOL "")
 
 set(CMAKE_C_FLAGS "-ffreestanding" CACHE STRING "")
 set(CMAKE_CXX_FLAGS "-ffreestanding" CACHE STRING "")
