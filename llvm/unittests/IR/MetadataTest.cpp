@@ -1627,6 +1627,21 @@ TEST_F(DILocationTest, getDistinct) {
   EXPECT_EQ(L1, DILocation::get(Context, 2, 7, N));
 }
 
+TEST_F(DILocationTest, WideColumn) {
+  MDNode *N = getSubprogram();
+  // Column numbers wider than 16 bits are preserved (up to 32 bits) rather
+  // than being clamped to zero.
+  DILocation *L = DILocation::get(Context, 2, 0x10000, N);
+  EXPECT_EQ(0x10000u, L->getColumn());
+
+  DILocation *Max = DILocation::get(Context, 2, UINT32_MAX, N);
+  EXPECT_EQ(UINT32_MAX, Max->getColumn());
+
+  // Distinct columns produce distinct (and uniqued) nodes.
+  EXPECT_EQ(L, DILocation::get(Context, 2, 0x10000, N));
+  EXPECT_NE(L, Max);
+}
+
 TEST_F(DILocationTest, getTemporary) {
   MDNode *N = MDNode::get(Context, {});
   auto L = DILocation::getTemporary(Context, 2, 7, N);

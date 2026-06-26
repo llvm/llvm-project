@@ -61,27 +61,19 @@ DebugVariableAggregate::DebugVariableAggregate(const DbgVariableRecord *DVR)
 DILocation::DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
                        unsigned Column, uint64_t AtomGroup, uint8_t AtomRank,
                        ArrayRef<Metadata *> MDs, bool ImplicitCode)
-    : MDNode(C, DILocationKind, Storage, MDs), AtomGroup(AtomGroup),
-      AtomRank(AtomRank) {
+    : MDNode(C, DILocationKind, Storage, MDs), Column(Column),
+      AtomGroup(AtomGroup), AtomRank(AtomRank) {
   assert(AtomRank <= 7 && "AtomRank number should fit in 3 bits");
+  assert(AtomGroup < (1ULL << 29) && "AtomGroup number should fit in 29 bits");
   if (AtomGroup)
     C.updateDILocationAtomGroupWaterline(AtomGroup + 1);
 
   assert((MDs.size() == 1 || MDs.size() == 2) &&
          "Expected a scope and optional inlined-at");
-  // Set line and column.
-  assert(Column < (1u << 16) && "Expected 16-bit column");
-
+  // Set line. The column is stored above.
   SubclassData32 = Line;
-  SubclassData16 = Column;
 
   setImplicitCode(ImplicitCode);
-}
-
-static void adjustColumn(unsigned &Column) {
-  // Set to unknown on overflow.  We only have 16 bits to play with here.
-  if (Column >= (1u << 16))
-    Column = 0;
 }
 
 DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
@@ -89,9 +81,6 @@ DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
                                 Metadata *InlinedAt, bool ImplicitCode,
                                 uint64_t AtomGroup, uint8_t AtomRank,
                                 StorageType Storage, bool ShouldCreate) {
-  // Fixup column.
-  adjustColumn(Column);
-
   if (Storage == Uniqued) {
     if (auto *N = getUniqued(Context.pImpl->DILocations,
                              DILocationInfo::KeyTy(Line, Column, Scope,
@@ -1521,9 +1510,6 @@ DILexicalBlock *DILexicalBlock::getImpl(LLVMContext &Context, Metadata *Scope,
                                         Metadata *File, unsigned Line,
                                         unsigned Column, StorageType Storage,
                                         bool ShouldCreate) {
-  // Fixup column.
-  adjustColumn(Column);
-
   assert(Scope && "Expected scope");
   DEFINE_GETIMPL_LOOKUP(DILexicalBlock, (Scope, File, Line, Column));
   Metadata *Ops[] = {File, Scope};

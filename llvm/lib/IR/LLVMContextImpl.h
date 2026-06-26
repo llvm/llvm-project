@@ -277,13 +277,13 @@ template <> struct MDNodeKeyImpl<MDTuple> : MDNodeOpsKey {
 template <> struct MDNodeKeyImpl<DILocation> {
   Metadata *Scope;
   Metadata *InlinedAt;
-  uint64_t AtomGroup : 61;
+  uint64_t AtomGroup : 29;
   uint64_t AtomRank : 3;
   unsigned Line;
-  uint16_t Column;
+  unsigned Column;
   bool ImplicitCode;
 
-  MDNodeKeyImpl(unsigned Line, uint16_t Column, Metadata *Scope,
+  MDNodeKeyImpl(unsigned Line, unsigned Column, Metadata *Scope,
                 Metadata *InlinedAt, bool ImplicitCode, uint64_t AtomGroup,
                 uint8_t AtomRank)
       : Scope(Scope), InlinedAt(InlinedAt), AtomGroup(AtomGroup),
@@ -304,8 +304,7 @@ template <> struct MDNodeKeyImpl<DILocation> {
   }
 
   unsigned getHashValue() const {
-    uint64_t LineColumnAndImplicitCode =
-        Line | (uint64_t(Column) << 32) | (uint64_t(ImplicitCode) << 48);
+    uint64_t LineAndColumn = uint64_t(Line) | (uint64_t(Column) << 32);
     // Hashing AtomGroup and AtomRank substantially impacts performance whether
     // Key Instructions is enabled or not. We can't detect whether it's enabled
     // here cheaply; avoiding hashing zero values is a good approximation. This
@@ -314,9 +313,9 @@ template <> struct MDNodeKeyImpl<DILocation> {
     // outweighed by the overall compile time savings by performing this check.
     // * (hash_combine(x) != hash_combine(x, 0))
     if (AtomGroup || AtomRank)
-      return hash_combine(LineColumnAndImplicitCode, Scope, InlinedAt,
-                          AtomGroup | (uint64_t(AtomRank) << 61));
-    return hash_combine(LineColumnAndImplicitCode, Scope, InlinedAt);
+      return hash_combine(LineAndColumn, ImplicitCode, Scope, InlinedAt,
+                          AtomGroup | (uint64_t(AtomRank) << 29));
+    return hash_combine(LineAndColumn, ImplicitCode, Scope, InlinedAt);
   }
 };
 

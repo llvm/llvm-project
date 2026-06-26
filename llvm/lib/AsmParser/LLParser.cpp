@@ -5001,7 +5001,7 @@ struct LineField : public MDUnsignedField {
 };
 
 struct ColumnField : public MDUnsignedField {
-  ColumnField() : MDUnsignedField(0, UINT16_MAX) {}
+  ColumnField() : MDUnsignedField(0, UINT32_MAX) {}
 };
 
 struct DwarfTagField : public MDUnsignedField {
