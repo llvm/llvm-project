@@ -170,7 +170,7 @@ private:
   // Populate gnu uuid for each NT_FILE entry
   void UpdateBuildIdForNTFileEntries();
 
-  bool FindModuleUUID(lldb_private::ModuleSpec &spec) override;
+  lldb_private::UUID FindModuleUUID(const llvm::StringRef path) override;
 
   // Extract the executable module spec for the executable in this core file.
   bool GetMainExecutableModuleSpec(lldb_private::ModuleSpec &exe_spec);
