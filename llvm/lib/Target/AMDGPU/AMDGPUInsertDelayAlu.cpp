@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
@@ -442,6 +443,7 @@ public:
         State = DelayState();
       } else if (Type != OTHER) {
         DelayInfo Delay;
+        Register VccReg = AMDGPU::LaneMaskConstants::get(*ST).VccReg;
         // TODO: Scan implicit uses too?
         for (const auto &Op : MI.explicit_uses()) {
           if (Op.isReg()) {
@@ -453,8 +455,7 @@ public:
             // Suppress the delay for VCC operands when both the
             // producer and consumer are in the hardware fast-forward set.
             Register Reg = Op.getReg();
-            if ((Reg == AMDGPU::VCC_LO || Reg == AMDGPU::VCC) &&
-                isFastForwardConsumer(MI) &&
+            if (Reg == VccReg && isFastForwardConsumer(MI) &&
                 llvm::all_of(TRI->regunits(Reg), [&](MCRegUnit Unit) {
                   auto It = State.find(Unit);
                   return It != State.end() && It->second.IsVCCFFProducer;
@@ -491,12 +492,13 @@ public:
       if (Type != OTHER) {
         // TODO: Scan implicit defs too?
         bool IsFFProd = isFastForwardProducer(MI);
+        Register VccReg = AMDGPU::LaneMaskConstants::get(*ST).VccReg;
         for (const auto &Op : MI.defs()) {
           unsigned Latency = SchedModel->computeOperandLatency(
               &MI, Op.getOperandNo(), nullptr, 0);
           DelayInfo Info(Type, Latency);
           Register Reg = Op.getReg();
-          if (IsFFProd && (Reg == AMDGPU::VCC_LO || Reg == AMDGPU::VCC))
+          if (IsFFProd && Reg == VccReg)
             Info.IsVCCFFProducer = true;
           for (MCRegUnit Unit : TRI->regunits(Reg))
             State[Unit] = Info;
