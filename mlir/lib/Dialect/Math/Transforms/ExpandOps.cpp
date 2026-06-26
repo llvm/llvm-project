@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -34,9 +35,18 @@ static bool isDynamicShaped(Type type) {
   return shapedTy && !shapedTy.hasStaticShape();
 }
 
-/// Create a float constant.
+/// Returns true if the type is an unranked shaped type (e.g., tensor<*xf32>).
+/// Unranked types can't be expanded because tensor.splat requires ranked types.
+static bool isUnrankedShaped(Type type) {
+  auto shapedTy = dyn_cast<ShapedType>(type);
+  return shapedTy && !shapedTy.hasRank();
+}
+
+/// Create a float constant. For dynamically-shaped tensors, creates a scalar
+/// constant and uses tensor.dim + tensor.splat to broadcast to the target shape.
+/// The optional `dynamicShapeRef` provides the runtime dimension sizes.
 static Value createFloatConst(Location loc, Type type, APFloat value,
-                              OpBuilder &b) {
+                              OpBuilder &b, Value dynamicShapeRef = Value()) {
   bool losesInfo = false;
   auto eltType = getElementTypeOrSelf(type);
   // Convert double to the given `FloatType` with round-to-nearest-ties-to-even.
@@ -44,16 +54,27 @@ static Value createFloatConst(Location loc, Type type, APFloat value,
                 APFloat::rmNearestTiesToEven, &losesInfo);
   auto attr = b.getFloatAttr(eltType, value);
   if (auto shapedTy = dyn_cast<ShapedType>(type)) {
-    return arith::ConstantOp::create(b, loc,
-                                     DenseElementsAttr::get(shapedTy, attr));
+    if (shapedTy.hasStaticShape())
+      return arith::ConstantOp::create(b, loc,
+                                       DenseElementsAttr::get(shapedTy, attr));
+
+    // Dynamic shape: create scalar constant and splat to the target shape.
+    Value scalar = arith::ConstantOp::create(b, loc, eltType, attr);
+    SmallVector<Value> dynamicSizes;
+    for (int64_t i = 0; i < shapedTy.getRank(); ++i) {
+      if (shapedTy.isDynamicDim(i))
+        dynamicSizes.push_back(
+            tensor::DimOp::create(b, loc, dynamicShapeRef, i));
+    }
+    return tensor::SplatOp::create(b, loc, type, scalar, dynamicSizes);
   }
 
   return arith::ConstantOp::create(b, loc, attr);
 }
 
 static Value createFloatConst(Location loc, Type type, double value,
-                              OpBuilder &b) {
-  return createFloatConst(loc, type, APFloat(value), b);
+                              OpBuilder &b, Value dynamicShapeRef = Value()) {
+  return createFloatConst(loc, type, APFloat(value), b, dynamicShapeRef);
 }
 
 /// Create an integer constant.
@@ -86,14 +107,14 @@ static LogicalResult convertSinhOp(math::SinhOp op, PatternRewriter &rewriter) {
   Value operand = op.getOperand();
   Type opType = operand.getType();
 
-  if (isDynamicShaped(opType))
+  if (isUnrankedShaped(opType))
     return failure();
 
   Value exp = math::ExpOp::create(b, operand);
   Value neg = arith::NegFOp::create(b, operand);
   Value nexp = math::ExpOp::create(b, neg);
   Value sub = arith::SubFOp::create(b, exp, nexp);
-  Value half = createFloatConst(op->getLoc(), opType, 0.5, rewriter);
+  Value half = createFloatConst(op->getLoc(), opType, 0.5, rewriter, operand);
   Value res = arith::MulFOp::create(b, sub, half);
   rewriter.replaceOp(op, res);
   return success();
@@ -105,14 +126,14 @@ static LogicalResult convertCoshOp(math::CoshOp op, PatternRewriter &rewriter) {
   Value operand = op.getOperand();
   Type opType = operand.getType();
 
-  if (isDynamicShaped(opType))
+  if (isUnrankedShaped(opType))
     return failure();
 
   Value exp = math::ExpOp::create(b, operand);
   Value neg = arith::NegFOp::create(b, operand);
   Value nexp = math::ExpOp::create(b, neg);
   Value add = arith::AddFOp::create(b, exp, nexp);
-  Value half = createFloatConst(op->getLoc(), opType, 0.5, rewriter);
+  Value half = createFloatConst(op->getLoc(), opType, 0.5, rewriter, operand);
   Value res = arith::MulFOp::create(b, add, half);
   rewriter.replaceOp(op, res);
   return success();
@@ -127,19 +148,20 @@ static LogicalResult convertCoshOp(math::CoshOp op, PatternRewriter &rewriter) {
 /// 1]. Expand the computation on the input `x * sign(x)`, then multiply the
 /// result by `sign(x)` to retain sign of the real result.
 static LogicalResult convertTanhOp(math::TanhOp op, PatternRewriter &rewriter) {
-  auto floatType = op.getOperand().getType();
+  Value operand = op.getOperand();
+  auto floatType = operand.getType();
 
-  if (isDynamicShaped(floatType))
+  if (isUnrankedShaped(floatType))
     return failure();
 
   Location loc = op.getLoc();
-  Value zero = createFloatConst(loc, floatType, 0.0, rewriter);
-  Value one = createFloatConst(loc, floatType, 1.0, rewriter);
-  Value negTwo = createFloatConst(loc, floatType, -2.0, rewriter);
+  Value zero = createFloatConst(loc, floatType, 0.0, rewriter, operand);
+  Value one = createFloatConst(loc, floatType, 1.0, rewriter, operand);
+  Value negTwo = createFloatConst(loc, floatType, -2.0, rewriter, operand);
 
   // Compute sign(x) = cast<float_type>(x < 0) * (-2) + 1
   Value isNegative = arith::CmpFOp::create(
-      rewriter, loc, arith::CmpFPredicate::OLT, op.getOperand(), zero);
+      rewriter, loc, arith::CmpFPredicate::OLT, operand, zero);
   Value isNegativeFloat =
       arith::UIToFPOp::create(rewriter, loc, floatType, isNegative);
   Value isNegativeTimesNegTwo =
@@ -147,7 +169,7 @@ static LogicalResult convertTanhOp(math::TanhOp op, PatternRewriter &rewriter) {
   Value sign = arith::AddFOp::create(rewriter, loc, isNegativeTimesNegTwo, one);
 
   // Normalize input to positive value: y = sign(x) * x
-  Value positiveX = arith::MulFOp::create(rewriter, loc, sign, op.getOperand());
+  Value positiveX = arith::MulFOp::create(rewriter, loc, sign, operand);
 
   // Decompose on normalized input
   Value negDoubledX = arith::MulFOp::create(rewriter, loc, negTwo, positiveX);
@@ -181,10 +203,10 @@ static LogicalResult convertAsinhOp(math::AsinhOp op,
   Value operand = op.getOperand();
   Type opType = operand.getType();
 
-  if (isDynamicShaped(opType))
+  if (isUnrankedShaped(opType))
     return failure();
 
-  Value one = createFloatConst(op->getLoc(), opType, 1.0, rewriter);
+  Value one = createFloatConst(op->getLoc(), opType, 1.0, rewriter, operand);
   Value fma = math::FmaOp::create(b, operand, operand, one);
   Value sqrt = math::SqrtOp::create(b, fma);
   Value add = arith::AddFOp::create(b, operand, sqrt);
@@ -200,10 +222,10 @@ static LogicalResult convertAcoshOp(math::AcoshOp op,
   Value operand = op.getOperand();
   Type opType = operand.getType();
 
-  if (isDynamicShaped(opType))
+  if (isUnrankedShaped(opType))
     return failure();
 
-  Value negOne = createFloatConst(op->getLoc(), opType, -1.0, rewriter);
+  Value negOne = createFloatConst(op->getLoc(), opType, -1.0, rewriter, operand);
   Value fma = math::FmaOp::create(b, operand, operand, negOne);
   Value sqrt = math::SqrtOp::create(b, fma);
   Value add = arith::AddFOp::create(b, operand, sqrt);
@@ -219,16 +241,16 @@ static LogicalResult convertAtanhOp(math::AtanhOp op,
   Value operand = op.getOperand();
   Type opType = operand.getType();
 
-  if (isDynamicShaped(opType))
+  if (isUnrankedShaped(opType))
     return failure();
 
-  Value one = createFloatConst(op->getLoc(), opType, 1.0, rewriter);
+  Value one = createFloatConst(op->getLoc(), opType, 1.0, rewriter, operand);
   Value add = arith::AddFOp::create(b, operand, one);
   Value neg = arith::NegFOp::create(b, operand);
   Value sub = arith::AddFOp::create(b, neg, one);
   Value div = arith::DivFOp::create(b, add, sub);
   Value log = math::LogOp::create(b, div);
-  Value half = createFloatConst(op->getLoc(), opType, 0.5, rewriter);
+  Value half = createFloatConst(op->getLoc(), opType, 0.5, rewriter, operand);
   Value res = arith::MulFOp::create(b, log, half);
   rewriter.replaceOp(op, res);
   return success();
@@ -477,10 +499,11 @@ static LogicalResult convertExp2fOp(math::Exp2Op op,
   Value operand = op.getOperand();
   Type opType = operand.getType();
 
-  if (isDynamicShaped(opType))
+  if (isUnrankedShaped(opType))
     return failure();
 
-  Value ln2 = createFloatConst(op->getLoc(), opType, llvm::numbers::ln2, b);
+  Value ln2 = createFloatConst(op->getLoc(), opType, llvm::numbers::ln2, b,
+                               operand);
   Value mult = arith::MulFOp::create(b, opType, operand, ln2);
   Value exp = math::ExpOp::create(b, op->getLoc(), mult);
   rewriter.replaceOp(op, exp);
@@ -741,7 +764,7 @@ static LogicalResult convertRsqrtOp(math::RsqrtOp op,
   auto operand = op.getOperand();
   auto operandTy = operand.getType();
 
-  if (isDynamicShaped(operandTy))
+  if (isUnrankedShaped(operandTy))
     return failure();
 
   auto eTy = getElementTypeOrSelf(operandTy);
@@ -749,7 +772,7 @@ static LogicalResult convertRsqrtOp(math::RsqrtOp op,
     return failure();
 
   Location loc = op->getLoc();
-  auto constOneFloat = createFloatConst(loc, operandTy, 1.0, rewriter);
+  auto constOneFloat = createFloatConst(loc, operandTy, 1.0, rewriter, operand);
   auto sqrtOp = math::SqrtOp::create(rewriter, loc, operand);
   rewriter.replaceOpWithNewOp<arith::DivFOp>(op, constOneFloat, sqrtOp);
   return success();
