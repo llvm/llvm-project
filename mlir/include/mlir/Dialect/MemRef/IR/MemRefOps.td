@@ -1760,15 +1760,7 @@ def MemRef_ReshapeOp: MemRef_Op<"reshape", [
                        "dynamically-sized shape", [MemRead]>:$shape);
   let results = (outs AnyRankedOrUnrankedMemRef:$result);
 
-  let builders = [OpBuilder<
-     (ins "MemRefType":$resultType, "Value":$operand, "Value":$shape), [{
-       $_state.addOperands(operand);
-       $_state.addOperands(shape);
-       $_state.addTypes(resultType);
-     }]>];
-
   let extraClassDeclaration = [{
-    MemRefType getType() { return ::llvm::cast<MemRefType>(getResult().getType()); }
     Value getViewSource() { return getSource(); }
   }];
 

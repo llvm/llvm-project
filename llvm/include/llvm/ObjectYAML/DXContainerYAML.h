@@ -401,6 +401,7 @@ struct Part {
   std::optional<DXContainerYAML::DebugName> DebugName;
   std::optional<DXContainerYAML::CompilerVersion> CompilerVersion;
   std::optional<DXContainerYAML::SourceInfo> SourceInfo;
+  std::optional<std::vector<llvm::yaml::Hex8>> PrivateData;
 };
 
 struct Object {
