@@ -539,7 +539,7 @@ ConvertNtDevicePathToDosPath(llvm::ArrayRef<wchar_t> nt_path) {
     dos_wide.append(nt_path.begin() + dev_len, nt_path.end());
 
     std::string result;
-    llvm::convertWideToUTF8(std::wstring(dos_wide.begin(), dos_wide.end()),
+    llvm::convertWideToUTF8(std::wstring_view(dos_wide.data(), dos_wide.size()),
                             result);
     return result;
   } while (::FindNextVolumeW(vol_iter, vol_name.data(), vol_name.size()));
@@ -649,7 +649,7 @@ static std::optional<std::string> ReadRemotePathStringW(HANDLE process,
       if (len == 0)        // empty string
         return std::nullopt;
       std::string result;
-      llvm::convertWideToUTF8(std::wstring(buf.data(), len), result);
+      llvm::convertWideToUTF8(std::wstring_view(buf.data(), len), result);
       return result;
     }
     if (to_read >= limit) // read everything available without a terminator
