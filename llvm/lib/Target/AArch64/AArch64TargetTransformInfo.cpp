@@ -5288,8 +5288,10 @@ bool AArch64TTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
          (ST->isSVEorStreamingSVEAvailable() && ST->hasSME2p2());
 }
 
-unsigned AArch64TTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
-  if (VF.isScalar())
+unsigned
+AArch64TTIImpl::getMaxInterleaveFactor(ElementCount VF,
+                                       bool HasUnorderedReductions) const {
+  if (VF.isScalar() || (HasUnorderedReductions && VF.getKnownMinValue() <= 4))
     return 4;
   return ST->getMaxInterleaveFactor();
 }
