@@ -84,5 +84,9 @@ MachO Improvements
 WebAssembly Improvements
 ------------------------
 
+* ``wasm-ld`` now defaults to ``-Bdynamic``, matching the behavior of other linkers.
+
+* The experimental warning for PIC/dynamic linking has been removed.
+
 Fixes
 #####

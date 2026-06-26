@@ -578,6 +578,8 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.optimize = args::getInteger(args, OPT_O, 1);
   ctx.arg.outputFile = args.getLastArgValue(OPT_o);
   ctx.arg.relocatable = args.hasArg(OPT_relocatable);
+  if (ctx.arg.relocatable)
+    ctx.arg.isStatic = true;
   ctx.arg.rpath = args::getStrings(args, OPT_rpath);
   ctx.arg.gcSections =
       args.hasFlag(OPT_gc_sections, OPT_no_gc_sections, !ctx.arg.relocatable);
@@ -642,10 +644,6 @@ static void readConfigs(opt::InputArgList &args) {
   ctx.arg.pageSize = args::getInteger(args, OPT_page_size, WasmDefaultPageSize);
   if (ctx.arg.pageSize != 1 && ctx.arg.pageSize != WasmDefaultPageSize)
     error("--page_size=N must be either 1 or 65536");
-
-  // -Bdynamic by default if -pie or -shared is specified.
-  if (ctx.arg.pie || ctx.arg.shared)
-    ctx.arg.isStatic = false;
 
   if (ctx.arg.maxMemory != 0 && ctx.arg.noGrowableMemory) {
     // Erroring out here is simpler than defining precedence rules.

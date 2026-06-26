@@ -43,8 +43,12 @@
 // DYNAMIC: Symbols [
 // DYNAMIC-NOT: Name: _static
 
-// Should prefer static to dynamic when linking regular executable.
+// Should prefer dynamic to static when linking regular executable (default).
 // RUN: wasm-ld --emit-relocs --no-gc-sections -o %t3 %t.o -L%t.dir -lls
+// RUN: llvm-readobj --symbols %t3 | FileCheck --check-prefix=DYNAMIC %s
+
+// Should prefer static to dynamic when linking regular executable with -Bstatic.
+// RUN: wasm-ld --emit-relocs --no-gc-sections -o %t3 %t.o -L%t.dir -Bstatic -lls
 // RUN: llvm-readobj --symbols %t3 | FileCheck --check-prefix=STATIC %s
 
 // Should prefer dynamic when linking PIE.
