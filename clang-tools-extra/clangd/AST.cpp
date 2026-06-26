@@ -1115,5 +1115,21 @@ searchConstructorsInForwardingFunction(const FunctionDecl *FD) {
   return Result;
 }
 
+ArrayRef<const CXXConstructorDecl *>
+getForwardedConstructors(const FunctionDecl *FD,
+                         ForwardingToConstructorCache &Cache) {
+  assert(FD && "FD must not be null");
+  if (!FD->isTemplateInstantiation())
+    return {};
+  if (auto It = Cache.find(FD); It != Cache.end())
+    return It->getSecond();
+  const auto *PT = FD->getPrimaryTemplate();
+  if (!PT || !isLikelyForwardingFunction(PT))
+    return {};
+  auto Inserted =
+      Cache.try_emplace(FD, searchConstructorsInForwardingFunction(FD));
+  return Inserted.first->getSecond();
+}
+
 } // namespace clangd
 } // namespace clang
