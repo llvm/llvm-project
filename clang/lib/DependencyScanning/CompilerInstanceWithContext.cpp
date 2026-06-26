@@ -12,8 +12,12 @@
 #include "clang/DependencyScanning/DependencyActionController.h"
 #include "clang/DependencyScanning/DependencyConsumer.h"
 #include "clang/DependencyScanning/DependencyScannerImpl.h"
+#include "clang/DependencyScanning/InProcessModuleCache.h"
+#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
+#include "clang/Frontend/FrontendOptions.h"
 #include "llvm/ADT/ScopeExit.h"
+#include <optional>
 
 using namespace clang;
 using namespace dependencies;
@@ -41,7 +45,7 @@ bool CompilerInstanceWithContext::initialize(
     LogLine.logArray("init_compiler_instance_with_context:", " ", CommandLine);
   }
   assert(DiagEngineWithDiagOpts && "Valid diagnostics engine required!");
-  auto FS = Worker.makeEffectiveVFS(CWD, std::move(OverlayFS));
+  ScanFS = Worker.makeEffectiveVFS(CWD, std::move(OverlayFS));
 
   OriginalInvocation = createCompilerInvocation(
       CommandLine, *DiagEngineWithDiagOpts->DiagEngine);
@@ -66,7 +70,7 @@ bool CompilerInstanceWithContext::initialize(
   auto &CI = *CIPtr;
 
   initializeScanCompilerInstance(
-      CI, std::move(FS), DiagEngineWithDiagOpts->DiagEngine->getClient(),
+      CI, ScanFS, DiagEngineWithDiagOpts->DiagEngine->getClient(),
       Worker.Service, Worker.DepFS);
 
   StableDirs = getInitialStableDirs(CI);
@@ -85,6 +89,30 @@ bool CompilerInstanceWithContext::initialize(
   // CompilerInstance::ExecuteAction to perform scanning.
   CI.createTarget();
 
+  return true;
+}
+
+bool CompilerInstanceWithContext::prescanModulesAsync(
+    AsyncModuleCompiles &Compiles, DependencyActionController &Controller) {
+  auto ModCache =
+      makeInProcessModuleCache(Worker.Service.getModuleCacheEntries());
+  CompilerInstance PrescanCI(
+      std::make_shared<CompilerInvocation>(CIPtr->getInvocation()),
+      Worker.PCHContainerOps, std::move(ModCache));
+
+  DiagnosticConsumer DiagConsumer;
+  initializeScanCompilerInstance(PrescanCI, ScanFS, &DiagConsumer,
+                                 Worker.Service, Worker.DepFS);
+
+  // FIXME: reuse the StableDirs/PrebuiltModuleASTMap computed in initialize().
+  SmallVector<StringRef> PrescanStableDirs = getInitialStableDirs(PrescanCI);
+  if (!computePrebuiltModulesASTMap(PrescanCI, PrescanStableDirs))
+    return false;
+
+  if (PrescanCI.getFrontendOpts().ProgramAction == frontend::GeneratePCH)
+    PrescanCI.getLangOpts().CompilingPCH = true;
+
+  runTUModulePrescan(PrescanCI, Worker.Service, Controller, Compiles);
   return true;
 }
 
@@ -211,6 +239,13 @@ CompilerInstanceWithContext::scanTranslationUnit(
     DependencyConsumer &Consumer, DependencyActionController &Controller) {
   assert(CIPtr && "CIPtr must be initialized before calling this method");
   auto &CI = *CIPtr;
+
+  std::optional<AsyncModuleCompiles> AsyncCompiles;
+  if (Worker.Service.getOpts().AsyncScanModules) {
+    AsyncCompiles.emplace();
+    if (!prescanModulesAsync(*AsyncCompiles, Controller))
+      return nullptr;
+  }
 
   auto MDC = initializeScanInstanceDependencyCollector(
       CI, std::make_unique<DependencyOutputOptions>(*OutputOpts),
