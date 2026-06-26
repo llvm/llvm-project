@@ -1655,3 +1655,34 @@ TEST(DXCFile, PSVv2EntryNameNotInStringTable) {
   EXPECT_EQ(StrTab.size(), 4u);
   EXPECT_TRUE(llvm::all_of(StrTab, [](char C) { return C == '\0'; }));
 }
+
+TEST(DXCFile, PSVSignatureElementEmptyIndices) {
+  mcdxbc::PSVRuntimeInfo PSV;
+  PSV.BaseData.ShaderStage =
+      static_cast<uint8_t>(Triple::EnvironmentType::Vertex - Triple::Pixel);
+  PSV.InputElements.push_back(
+      mcdxbc::PSVSignatureElement{"POSITION",
+                                  {},
+                                  0,
+                                  0,
+                                  0,
+                                  false,
+                                  dxbc::PSV::SemanticKind::Arbitrary,
+                                  dxbc::PSV::ComponentType::Float32,
+                                  dxbc::PSV::InterpolationMode::Linear,
+                                  0,
+                                  0});
+
+  PSV.finalize(Triple::EnvironmentType::Vertex, 1);
+
+  SmallVector<char> Buffer;
+  raw_svector_ostream OS(Buffer);
+  PSV.write(OS, 1);
+
+  DirectX::PSVRuntimeInfo ParsedPSV(StringRef(Buffer.data(), Buffer.size()));
+  ASSERT_THAT_ERROR(ParsedPSV.parse(static_cast<uint16_t>(
+                        Triple::EnvironmentType::Vertex - Triple::Pixel)),
+                    Succeeded());
+  ASSERT_EQ(ParsedPSV.getSigInputElements().size(), 1u);
+  EXPECT_EQ((*ParsedPSV.getSigInputElements().begin()).Rows, 0u);
+}
