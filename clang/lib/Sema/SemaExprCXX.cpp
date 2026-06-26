@@ -2796,7 +2796,10 @@ static void diagnoseNoViableFunctionForAllocationOverloadResolution(
   // If this is an allocation of the form 'new (p) X' for some object
   // pointer p (or an expression that will decay to such a pointer),
   // diagnose the reason for the error.
-  auto NonAlignArgs = FallbackArgs.empty() ? PrefArgs : FallbackArgs;
+  auto NonAlignArgs =
+      (FallbackArgs.empty() || PrefArgs.size() < FallbackArgs.size())
+          ? PrefArgs
+          : FallbackArgs;
   if (!R.isClassLookup() && NonAlignArgs.size() == 2 &&
       (NonAlignArgs[1]->getType()->isObjectPointerType() ||
        NonAlignArgs[1]->getType()->isArrayType())) {
@@ -2825,19 +2828,27 @@ static void diagnoseNoViableFunctionForAllocationOverloadResolution(
   SmallVector<OverloadCandidate *, 32> PrefCands;
   SmallVector<OverloadCandidate *, 32> FallbackCands;
   if (FallbackCandidates) {
-    assert(!FallbackArgs.empty() && PrefArgs.size() == FallbackArgs.size() + 1);
+    assert(!FallbackArgs.empty() &&
+           (PrefArgs.size() == FallbackArgs.size() + 1 ||
+            PrefArgs.size() + 1 == FallbackArgs.size()));
+    bool PrefHasAlignArg = PrefArgs.size() > FallbackArgs.size();
     auto IsAligned = [](OverloadCandidate &C) {
       const unsigned AlignArgOffset = 1;
       return C.Function->getNumParams() > AlignArgOffset &&
              C.Function->getParamDecl(AlignArgOffset)->getType()->isAlignValT();
     };
-    auto IsUnaligned = [&](OverloadCandidate &C) { return !IsAligned(C); };
+    auto IsPref = [&](OverloadCandidate &C) {
+      return PrefHasAlignArg ? IsAligned(C) : !IsAligned(C);
+    };
+    auto IsFallback = [&](OverloadCandidate &C) {
+      return PrefHasAlignArg ? !IsAligned(C) : IsAligned(C);
+    };
 
     PrefCands = PrefCandidates.CompleteCandidates(
-        S, OCD_AllCandidates, PrefArgs, R.getNameLoc(), IsAligned);
+        S, OCD_AllCandidates, PrefArgs, R.getNameLoc(), IsPref);
 
     FallbackCands = FallbackCandidates->CompleteCandidates(
-        S, OCD_AllCandidates, FallbackArgs, R.getNameLoc(), IsUnaligned);
+        S, OCD_AllCandidates, FallbackArgs, R.getNameLoc(), IsFallback);
   } else {
     PrefCands = PrefCandidates.CompleteCandidates(S, OCD_AllCandidates,
                                                   PrefArgs, R.getNameLoc());
@@ -2930,9 +2941,10 @@ bool Sema::FindAllocationFunctions(
 
   QualType AlignValT = Context.VoidTy;
   if (isTypeAwareAllocation(OriginalTypeAwareState) ||
-      isAlignedAllocation(IAP.PassAlignment)) {
+      getLangOpts().AlignedAllocation) {
     DeclareGlobalNewDelete();
-    AlignValT = Context.getCanonicalTagType(getStdAlignValT());
+    if (EnumDecl *StdAlignValT = getStdAlignValT())
+      AlignValT = Context.getCanonicalTagType(StdAlignValT);
   }
   CXXScalarValueInitExpr Align(AlignValT, nullptr, SourceLocation());
 
@@ -3046,24 +3058,30 @@ bool Sema::FindAllocationFunctions(
     if (OperatorNew)
       break;
 
-    // Step 3. For overaligned types, try allocation functions without the
-    // alignment parameter.
-    // C++17 [expr.new]p13:
-    //   If no matching function is found and the allocated object type has
-    //   new-extended alignment, the alignment argument is removed from the
-    //   argument list, and overload resolution is performed again.
+    // Step 3. Try removing or adding the alignment parameter depending on
+    // whether the type is overligned.
+    // C++20 [expr.new]p18:
+    //   If no matching function is found then
+    //     — if the allocated object type has new-extended alignment, the
+    //       alignment argument is removed from the argument list;
+    //     — otherwise, an argument that is the type’s alignment and has type
+    //       std::align_val_t is added into the argument list immediately after
+    //       the first argument;
+    //   and then overload resolution is performed again.
     ArgsVector FallbackArgs;
     std::unique_ptr<OverloadCandidateSet> FallbackCandidates;
-    if (isAlignedAllocation(IAP.PassAlignment)) {
-      FallbackArgs =
-          FillAllocArgs(TypeAwareAllocationMode::No, AlignedAllocationMode::No);
+    if (getLangOpts().AlignedAllocation && getStdAlignValT()) {
+      auto FallbackAlignedAllocationMode = alignedAllocationModeFromBool(
+          !isAlignedAllocation(IAP.PassAlignment));
+      FallbackArgs = FillAllocArgs(TypeAwareAllocationMode::No,
+                                   FallbackAlignedAllocationMode);
       FallbackCandidates = fillNewDeleteOverloadCandidateSet(
           *this, R, FallbackArgs, IsNonTypeAware);
       if (resolveAllocationOverload(*this, R, Range, *FallbackCandidates,
                                     FallbackArgs, OperatorNew, Diagnose))
         return true;
       if (OperatorNew) {
-        IAP.PassAlignment = AlignedAllocationMode::No;
+        IAP.PassAlignment = FallbackAlignedAllocationMode;
         break;
       }
     }

@@ -218,6 +218,9 @@ Resolutions to C++ Defect Reports
 - Implemented `CWG1780 Explicit instantiation/specialization of generic lambda
   operator() <https://cplusplus.github.io/CWG/issues/1780.html>`_
 
+- Clang now falls back to alignment-aware allocation functions for non-overaligned
+  types, implementing `CWG2282 <https://wg21.link/cwg2282>`_.
+
 - Clang now allows omitting ``typename`` before a template name in a
   conversion operator, implementing `CWG2413 <https://wg21.link/cwg2413>`_.
 

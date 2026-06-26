@@ -6,6 +6,12 @@
 // RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx17
 // RUN: %clang_cc1 -std=c++2c -triple x86_64-unknown-unknown %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11,since-cxx17
 
+__extension__ typedef __SIZE_TYPE__ size_t;
+#if __cplusplus >= 201703L
+namespace std {
+  enum class align_val_t : size_t {};
+} // namespace std
+#endif
 
 namespace cwg2211 { // cwg2211: 8
 #if __cplusplus >= 201103L
@@ -195,6 +201,24 @@ void g() {
 }
 #endif
 } // namespace cwg2277
+
+namespace cwg2282 { // cwg2282: 23
+#if __cplusplus >= 201703L
+struct A {
+  void *operator new(size_t, std::align_val_t) = delete; // #cwg2282-A-operator-new-aligned
+  void *operator new(size_t, std::align_val_t, double) = delete; // #cwg2282-A-operator-new-aligned-placement
+};
+
+void f() {
+  (void)new A; // since-cxx17-error {{call to deleted function 'operator new'}}
+  // since-cxx17-note@#cwg2282-A-operator-new-aligned {{candidate function has been explicitly deleted}}
+  // since-cxx17-note@#cwg2282-A-operator-new-aligned-placement {{candidate function not viable: requires 3 arguments, but 2 were provided}}
+  (void)new (1.5) A; // since-cxx17-error {{call to deleted function 'operator new'}}
+  // since-cxx17-note@#cwg2282-A-operator-new-aligned-placement {{candidate function has been explicitly deleted}}
+  // since-cxx17-note@#cwg2282-A-operator-new-aligned {{candidate function not viable: requires 2 arguments, but 3 were provided}}
+}
+#endif
+} // namespace cwg2282
 
 namespace cwg2285 { // cwg2285: 4
 // Note: Clang 4 implements this DR but it set a wrong value of `__cplusplus`
