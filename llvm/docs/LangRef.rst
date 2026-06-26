@@ -12046,13 +12046,13 @@ into one scalar atomic load per element, and the element loads are not ordered
 with respect to each other. Without ``elementwise``, vector atomic loads keep
 whole-value atomic semantics.
 
-``align`` must be explicitly specified on atomic loads. Note: if the alignment
-is not greater than or equal to the size of the ``<ty>`` type, or the element
-type for an ``elementwise`` load, the atomic operation is likely to require a
-lock and have poor performance. ``!nontemporal`` does not have any defined
-semantics for atomic loads.
+``align`` must be explicitly specified on atomic loads, and is otherwise
+optional on non-atomic loads. Note: if the alignment is not greater than or equal
+to the size of the ``<ty>`` type, or the element type for an ``elementwise`` load,
+the atomic operation is likely to require a lock and have poor performance.
+``!nontemporal`` does not have any defined semantics for atomic loads.
 
-The optional constant ``align`` argument specifies the alignment of the
+The constant ``align`` argument specifies the alignment of the
 operation (that is, the alignment of the memory address). It is the
 responsibility of the code emitter to ensure that the alignment information is
 correct. Overestimating the alignment results in undefined behavior.

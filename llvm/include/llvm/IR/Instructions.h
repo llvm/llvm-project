@@ -203,13 +203,10 @@ public:
   LLVM_ABI LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
                     Align Align, InsertPosition InsertBefore = nullptr);
   LLVM_ABI LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
-                    Align Align, AtomicOrdering Order, SyncScope::ID SSID,
-                    InsertPosition InsertBefore);
-  LLVM_ABI LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
                     Align Align, AtomicOrdering Order,
                     SyncScope::ID SSID = SyncScope::System,
-                    bool IsElementwise = false,
-                    InsertPosition InsertBefore = nullptr);
+                    InsertPosition InsertBefore = nullptr,
+                    bool IsElementwise = false);
 
   /// Return true if this is a load from a volatile memory location.
   bool isVolatile() const { return getSubclassData<VolatileField>(); }

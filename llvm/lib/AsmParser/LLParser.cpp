@@ -8971,6 +8971,10 @@ int LLParser::parseLoad(Instruction *&Inst, PerFunctionState &PFS) {
   if (IsElementwise && !isAtomic)
     return error(Loc, "elementwise load must be atomic");
 
+  if (IsElementwise && !isa<FixedVectorType>(Ty))
+    return error(ExplicitTypeLoc,
+                 "atomic elementwise load operand must have fixed vector type");
+
   if (isAtomic && !Alignment)
     return error(Loc, "atomic load must have explicit non-zero alignment");
 
@@ -8984,7 +8988,7 @@ int LLParser::parseLoad(Instruction *&Inst, PerFunctionState &PFS) {
   if (!Alignment)
     Alignment = M->getDataLayout().getABITypeAlign(Ty);
   Inst = new LoadInst(Ty, Val, "", isVolatile, *Alignment, Ordering, SSID,
-                      IsElementwise);
+                      /*InsertBefore=*/nullptr, IsElementwise);
   return AteExtraComma ? InstExtraComma : InstNormal;
 }
 
