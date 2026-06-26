@@ -87,22 +87,22 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit split_view(_Range&& __range, range_value_t<_Range> __elem)
       : __base_(views::all(std::forward<_Range>(__range))), __pattern_(views::single(std::move(__elem))) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
     requires copy_constructible<_View>
   {
     return __base_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() {
     if (!__cached_begin_.__has_value()) {
       __cached_begin_.__emplace(__find_next(ranges::begin(__base_)));
     }
     return {*this, ranges::begin(__base_), *__cached_begin_};
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() {
     if constexpr (common_range<_View>) {
       return __iterator{*this, ranges::end(__base_), {}};
     } else {
@@ -141,9 +141,9 @@ public:
       split_view<_View, _Pattern>& __parent, iterator_t<_View> __current, subrange<iterator_t<_View>> __next)
       : __parent_(std::addressof(__parent)), __cur_(std::move(__current)), __next_(std::move(__next)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_View> base() const { return __cur_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr iterator_t<_View> base() const { return __cur_; }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr value_type operator*() const { return {__cur_, __next_.begin()}; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr value_type operator*() const { return {__cur_, __next_.begin()}; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
     __cur_ = __next_.begin();

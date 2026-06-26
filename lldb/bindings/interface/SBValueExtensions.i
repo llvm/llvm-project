@@ -19,9 +19,10 @@ STRING_EXTENSION_OUTSIDE(SBValue)
 
             def __getitem__(self, key):
                 if isinstance(key, int):
-                    count = len(self)
-                    if -count <= key < count:
-                        key %= count
+                    if key < 0:
+                        # Support pythonic negative indexing.
+                        key += len(self)
+                    if key >= 0:
                         return self.sbvalue.GetChildAtIndex(key)
                 return None
 

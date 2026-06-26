@@ -789,10 +789,15 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
       continue;
 
     // Only traverse further through users that also define a value (and can
-    // thus have their own users walked).
-    for (VPUser *U : Cur->users())
+    // thus have their own users walked). Skip load VPInstructions: a loaded
+    // value does not depend on the load's operands, so reaching a load here
+    // (only possible via its mask operand) would be a false positive.
+    for (VPUser *U : Cur->users()) {
+      if (match(U, m_VPInstruction<Instruction::Load>()))
+        continue;
       if (auto *SDR = dyn_cast<VPSingleDefRecipe>(U))
         WorkList.push_back(SDR);
+    }
   }
   return false;
 }

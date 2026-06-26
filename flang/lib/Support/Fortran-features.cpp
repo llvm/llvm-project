@@ -151,6 +151,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   // Possibly an accidental "feature" of nvfortran.
   disable_.set(LanguageFeature::AssumedRankPassedToNonAssumedRank);
   disable_.set(LanguageFeature::Coarray);
+  disable_.set(LanguageFeature::OpenAccDefaultNoneScalarsStrict);
   // These warnings are enabled by default, but only because they used
   // to be unconditional.  TODO: prune this list
   warnLanguage_.set(LanguageFeature::ExponentMatchingKindParam);
@@ -218,6 +219,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::IgnoredNoReallocateLHS);
   warnUsage_.set(UsageWarning::IoImpliedDoIndexConflict);
   warnLanguage_.set(LanguageFeature::OpenMPThreadprivateEquivalence);
+  warnLanguage_.set(LanguageFeature::OpenAccDefaultNoneScalarsStrict);
   warnLanguage_.set(LanguageFeature::OpenACCMultipleNamesInRoutine);
 }
 

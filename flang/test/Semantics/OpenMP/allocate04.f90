@@ -14,7 +14,7 @@ use iso_c_binding
   type(c_ptr), pointer :: p
   integer :: x, y, z
 
-  !ERROR: PRIVATE clause is not allowed on the ALLOCATE directive
+  !ERROR: PRIVATE clause is not allowed on ALLOCATE directive
   !$omp allocate(y) private(y)
   !ERROR: A list item in a declarative ALLOCATE cannot have the ALLOCATABLE or POINTER attribute
   !$omp allocate(p)

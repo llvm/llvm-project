@@ -1,11 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: clang-doc --pretty-json --output=%t --format=json --executor=standalone %s
+// RUN: clang-doc --pretty-json --output=%t --format=json --executor=standalone %S/../Inputs/method-template.cpp
 // RUN: FileCheck %s < %t/json/GlobalNamespace/_ZTV7MyClass.json
-
-struct MyClass {
-  template<class T> T methodTemplate(T param) {
-  }
-};
 
 // CHECK:           "PublicMethods": [
 // CHECK-NEXT:        {
@@ -13,7 +8,7 @@ struct MyClass {
 // CHECK-NEXT:          "IsStatic": false,
 // CHECK-NEXT:          "Location": {
 // CHECK-NEXT:            "Filename": "{{.*}}method-template.cpp",
-// CHECK-NEXT:            "LineNumber": 6
+// CHECK-NEXT:            "LineNumber": 2
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "Name": "methodTemplate",
 // CHECK-NEXT:          "Namespace": [

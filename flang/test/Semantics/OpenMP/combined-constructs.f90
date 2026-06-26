@@ -20,7 +20,7 @@ program main
   enddo
   !$omp end target parallel
 
-  !ERROR: At most one DEVICE clause can appear on the TARGET PARALLEL directive
+  !ERROR: At most one DEVICE clause can appear on TARGET PARALLEL directive
   !$omp target parallel device(0) device(1)
   do i = 1, N
      a(i) = 3.14d0
@@ -39,7 +39,7 @@ program main
   enddo
   !$omp end target parallel
 
-  !ERROR: At most one DEFAULTMAP clause can appear on the TARGET PARALLEL directive
+  !ERROR: At most one DEFAULTMAP clause can appear on TARGET PARALLEL directive
   !$omp target parallel defaultmap(tofrom:scalar) defaultmap(tofrom:scalar)
   do i = 1, N
      a(i) = 3.14d0
@@ -52,7 +52,7 @@ program main
   enddo
   !$omp end target parallel
 
-  !ERROR: COPYIN clause is not allowed on the TARGET PARALLEL directive
+  !ERROR: COPYIN clause is not allowed on TARGET PARALLEL directive
   !ERROR: Non-THREADPRIVATE object 'a' in COPYIN clause
   !$omp target parallel copyin(a)
   do i = 1, N
@@ -66,7 +66,7 @@ program main
   enddo
   !$omp end target parallel do
 
-  !ERROR: At most one DEVICE clause can appear on the TARGET PARALLEL DO directive
+  !ERROR: At most one DEVICE clause can appear on TARGET PARALLEL DO directive
   !$omp target parallel do device(0) device(1)
   do i = 1, N
      a(i) = 3.14d0
@@ -85,7 +85,7 @@ program main
   enddo
   !$omp end target parallel do
 
-  !ERROR: At most one DEFAULTMAP clause can appear on the TARGET PARALLEL DO directive
+  !ERROR: At most one DEFAULTMAP clause can appear on TARGET PARALLEL DO directive
   !$omp target parallel do defaultmap(tofrom:scalar) defaultmap(tofrom:scalar)
   do i = 1, N
      a(i) = 3.14d0
@@ -98,7 +98,7 @@ program main
   enddo
   !$omp end target parallel do
 
-  !ERROR: COPYIN clause is not allowed on the TARGET PARALLEL DO directive
+  !ERROR: COPYIN clause is not allowed on TARGET PARALLEL DO directive
   !ERROR: Non-THREADPRIVATE object 'a' in COPYIN clause
   !$omp target parallel do copyin(a)
   do i = 1, N
@@ -118,14 +118,14 @@ program main
   enddo
   !$omp end target teams
 
-  !ERROR: At most one DEVICE clause can appear on the TARGET TEAMS directive
+  !ERROR: At most one DEVICE clause can appear on TARGET TEAMS directive
   !$omp target teams device(0) device(1)
   do i = 1, N
      a(i) = 3.14d0
   enddo
   !$omp end target teams
 
-  !ERROR: SCHEDULE clause is not allowed on the TARGET TEAMS directive
+  !ERROR: SCHEDULE clause is not allowed on TARGET TEAMS directive
   !$omp target teams schedule(static)
   do i = 1, N
      a(i) = 3.14d0
@@ -144,7 +144,7 @@ program main
   enddo
   !$omp end target teams
 
-  !ERROR: At most one DEFAULTMAP clause can appear on the TARGET TEAMS directive
+  !ERROR: At most one DEFAULTMAP clause can appear on TARGET TEAMS directive
   !$omp target teams defaultmap(tofrom:scalar) defaultmap(tofrom:scalar)
   do i = 1, N
      a(i) = 3.14d0
@@ -157,7 +157,7 @@ program main
   enddo
   !$omp end target teams
 
-  !ERROR: At most one NUM_TEAMS clause can appear on the TARGET TEAMS directive
+  !ERROR: At most one NUM_TEAMS clause can appear on TARGET TEAMS directive
   !$omp target teams num_teams(2) num_teams(3)
   do i = 1, N
      a(i) = 3.14d0
@@ -171,7 +171,7 @@ program main
   enddo
   !$omp end target teams
 
-  !ERROR: At most one THREAD_LIMIT clause can appear on the TARGET TEAMS directive
+  !ERROR: At most one THREAD_LIMIT clause can appear on TARGET TEAMS directive
   !$omp target teams thread_limit(2) thread_limit(3)
   do i = 1, N
      a(i) = 3.14d0
@@ -185,7 +185,7 @@ program main
   enddo
   !$omp end target teams
 
-  !ERROR: At most one DEFAULT clause can appear on the TARGET TEAMS directive
+  !ERROR: At most one DEFAULT clause can appear on TARGET TEAMS directive
   !$omp target teams default(shared) default(private)
   do i = 1, N
      a(i) = 3.14d0
@@ -224,7 +224,7 @@ program main
   enddo
   !$omp end target teams distribute
 
-  !ERROR: At most one DEVICE clause can appear on the TARGET TEAMS DISTRIBUTE directive
+  !ERROR: At most one DEVICE clause can appear on TARGET TEAMS DISTRIBUTE directive
   !$omp target teams distribute device(0) device(1)
   do i = 1, N
      a(i) = 3.14d0
@@ -243,7 +243,7 @@ program main
   enddo
   !$omp end target teams distribute
 
-  !ERROR: At most one DEFAULTMAP clause can appear on the TARGET TEAMS DISTRIBUTE directive
+  !ERROR: At most one DEFAULTMAP clause can appear on TARGET TEAMS DISTRIBUTE directive
   !$omp target teams distribute defaultmap(tofrom:scalar) defaultmap(tofrom:scalar)
   do i = 1, N
      a(i) = 3.14d0
@@ -256,7 +256,7 @@ program main
   enddo
   !$omp end target teams distribute
 
-  !ERROR: At most one NUM_TEAMS clause can appear on the TARGET TEAMS DISTRIBUTE directive
+  !ERROR: At most one NUM_TEAMS clause can appear on TARGET TEAMS DISTRIBUTE directive
   !$omp target teams distribute num_teams(2) num_teams(3)
   do i = 1, N
      a(i) = 3.14d0
@@ -270,7 +270,7 @@ program main
   enddo
   !$omp end target teams distribute
 
-  !ERROR: At most one THREAD_LIMIT clause can appear on the TARGET TEAMS DISTRIBUTE directive
+  !ERROR: At most one THREAD_LIMIT clause can appear on TARGET TEAMS DISTRIBUTE directive
   !$omp target teams distribute thread_limit(2) thread_limit(3)
   do i = 1, N
      a(i) = 3.14d0
@@ -284,7 +284,7 @@ program main
   enddo
   !$omp end target teams distribute
 
-  !ERROR: At most one DEFAULT clause can appear on the TARGET TEAMS DISTRIBUTE directive
+  !ERROR: At most one DEFAULT clause can appear on TARGET TEAMS DISTRIBUTE directive
   !$omp target teams distribute default(shared) default(private)
   do i = 1, N
      a(i) = 3.14d0
@@ -316,7 +316,7 @@ program main
   enddo
   !$omp end target teams distribute parallel do
 
-  !ERROR: At most one DEVICE clause can appear on the TARGET TEAMS DISTRIBUTE PARALLEL DO directive
+  !ERROR: At most one DEVICE clause can appear on TARGET TEAMS DISTRIBUTE PARALLEL DO directive
   !$omp target teams distribute parallel do device(0) device(1)
   do i = 1, N
      a(i) = 3.14d0
@@ -335,7 +335,7 @@ program main
   enddo
   !$omp end target teams distribute parallel do
 
-  !ERROR: At most one DEFAULTMAP clause can appear on the TARGET TEAMS DISTRIBUTE PARALLEL DO directive
+  !ERROR: At most one DEFAULTMAP clause can appear on TARGET TEAMS DISTRIBUTE PARALLEL DO directive
   !$omp target teams distribute parallel do defaultmap(tofrom:scalar) defaultmap(tofrom:scalar)
   do i = 1, N
      a(i) = 3.14d0
@@ -348,7 +348,7 @@ program main
   enddo
   !$omp end target teams distribute parallel do
 
-  !ERROR: At most one NUM_TEAMS clause can appear on the TARGET TEAMS DISTRIBUTE PARALLEL DO directive
+  !ERROR: At most one NUM_TEAMS clause can appear on TARGET TEAMS DISTRIBUTE PARALLEL DO directive
   !$omp target teams distribute parallel do num_teams(2) num_teams(3)
   do i = 1, N
      a(i) = 3.14d0
@@ -362,7 +362,7 @@ program main
   enddo
   !$omp end target teams distribute parallel do
 
-  !ERROR: At most one THREAD_LIMIT clause can appear on the TARGET TEAMS DISTRIBUTE PARALLEL DO directive
+  !ERROR: At most one THREAD_LIMIT clause can appear on TARGET TEAMS DISTRIBUTE PARALLEL DO directive
   !$omp target teams distribute parallel do thread_limit(2) thread_limit(3)
   do i = 1, N
      a(i) = 3.14d0
@@ -376,7 +376,7 @@ program main
   enddo
   !$omp end target teams distribute parallel do
 
-  !ERROR: At most one DEFAULT clause can appear on the TARGET TEAMS DISTRIBUTE PARALLEL DO directive
+  !ERROR: At most one DEFAULT clause can appear on TARGET TEAMS DISTRIBUTE PARALLEL DO directive
   !$omp target teams distribute parallel do default(shared) default(private)
   do i = 1, N
      a(i) = 3.14d0
@@ -415,7 +415,7 @@ program main
   enddo
   !$omp end target teams distribute parallel do simd
 
-  !ERROR: At most one DEVICE clause can appear on the TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD directive
+  !ERROR: At most one DEVICE clause can appear on TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD directive
   !$omp target teams distribute parallel do simd device(0) device(1)
   do i = 1, N
      a(i) = 3.14d0
@@ -434,7 +434,7 @@ program main
   enddo
   !$omp end target teams distribute parallel do simd
 
-  !ERROR: At most one DEFAULTMAP clause can appear on the TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD directive
+  !ERROR: At most one DEFAULTMAP clause can appear on TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD directive
   !$omp target teams distribute parallel do simd defaultmap(tofrom:scalar) defaultmap(tofrom:scalar)
   do i = 1, N
      a(i) = 3.14d0
@@ -447,7 +447,7 @@ program main
   enddo
   !$omp end target teams distribute parallel do simd
 
-  !ERROR: At most one NUM_TEAMS clause can appear on the TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD directive
+  !ERROR: At most one NUM_TEAMS clause can appear on TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD directive
   !$omp target teams distribute parallel do simd num_teams(2) num_teams(3)
   do i = 1, N
      a(i) = 3.14d0
@@ -461,7 +461,7 @@ program main
   enddo
   !$omp end target teams distribute parallel do simd
 
-  !ERROR: At most one THREAD_LIMIT clause can appear on the TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD directive
+  !ERROR: At most one THREAD_LIMIT clause can appear on TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD directive
   !$omp target teams distribute parallel do simd thread_limit(2) thread_limit(3)
   do i = 1, N
      a(i) = 3.14d0
@@ -475,7 +475,7 @@ program main
   enddo
   !$omp end target teams distribute parallel do simd
 
-  !ERROR: At most one DEFAULT clause can appear on the TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD directive
+  !ERROR: At most one DEFAULT clause can appear on TARGET TEAMS DISTRIBUTE PARALLEL DO SIMD directive
   !$omp target teams distribute parallel do simd default(shared) default(private)
   do i = 1, N
      a(i) = 3.14d0

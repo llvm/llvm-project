@@ -2489,20 +2489,21 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(
     } else if (mangled) {
       func_name.SetValue(ConstString(mangled));
     } else if ((die.GetParent().Tag() == DW_TAG_compile_unit ||
-              die.GetParent().Tag() == DW_TAG_partial_unit) &&
-             Language::LanguageIsCPlusPlus(
-                 SymbolFileDWARF::GetLanguage(*die.GetCU())) &&
-             !Language::LanguageIsObjC(
-                 SymbolFileDWARF::GetLanguage(*die.GetCU())) &&
-             name && strcmp(name, "main") != 0) {
+                die.GetParent().Tag() == DW_TAG_partial_unit) &&
+               Language::LanguageIsCPlusPlus(
+                   SymbolFileDWARF::GetLanguage(*die.GetCU())) &&
+               !Language::LanguageIsObjC(
+                   SymbolFileDWARF::GetLanguage(*die.GetCU())) &&
+               name && strcmp(name, "main") != 0) {
       // If the mangled name is not present in the DWARF, generate the
       // demangled name using the decl context. We skip if the function is
       // "main" as its name is never mangled.
       func_name.SetDemangledName(ConstructDemangledNameFromDWARF(die));
       // Ensure symbol is preserved (as the mangled name).
       func_name.SetMangledName(ConstString(name));
-    } else
+    } else {
       func_name.SetValue(ConstString(name));
+    }
 
     FunctionSP func_sp;
 
