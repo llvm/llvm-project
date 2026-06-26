@@ -11,12 +11,13 @@ define i32 @vec_to_int() {
 ; CHECK-NEXT:    movw r0, :lower16:vec6_p
 ; CHECK-NEXT:    movt r0, :upper16:vec6_p
 ; CHECK-NEXT:    vld1.8 {d16}, [r0]!
+; CHECK-NEXT:    vrev16.8 d18, d16
+; CHECK-NEXT:    @ implicit-def: $q8
+; CHECK-NEXT:    vmov.f64 d16, d18
 ; CHECK-NEXT:    ldr r0, [r0]
-; CHECK-NEXT:    @ implicit-def: $d17
-; CHECK-NEXT:    vmov.32 d17[0], r0
-; CHECK-NEXT:    vrev32.16 d18, d17
-; CHECK-NEXT:    vrev16.8 d16, d16
-; CHECK-NEXT:    @ kill: def $d16 killed $d16 def $q8
+; CHECK-NEXT:    @ implicit-def: $d18
+; CHECK-NEXT:    vmov.32 d18[0], r0
+; CHECK-NEXT:    vrev32.16 d18, d18
 ; CHECK-NEXT:    vmov.f64 d17, d18
 ; CHECK-NEXT:    vstmia sp, {d16, d17} @ 16-byte Spill
 ; CHECK-NEXT:    b .LBB0_1
