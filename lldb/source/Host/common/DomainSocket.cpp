@@ -1,4 +1,4 @@
-//===-- DomainSocket.cpp --------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/posix/DomainSocket.h"
+#include "lldb/Host/common/DomainSocket.h"
 #include "lldb/Utility/LLDBLog.h"
 #ifdef __linux__
 #include <lldb/Host/linux/AbstractSocket.h>
@@ -17,10 +17,14 @@
 #include "llvm/Support/FileSystem.h"
 
 #include <cstddef>
-#include <fcntl.h>
 #include <memory>
+
+#ifdef _WIN32
+#include <afunix.h>
+#else
 #include <sys/socket.h>
 #include <sys/un.h>
+#endif
 
 using namespace lldb;
 using namespace lldb_private;
@@ -38,14 +42,10 @@ static bool SetSockAddr(llvm::StringRef name, const size_t name_offset,
 
   memcpy(saddr_un->sun_path + name_offset, name.data(), name.size());
 
-  // For domain sockets we can use SUN_LEN in order to calculate size of
-  // sockaddr_un, but for abstract sockets we have to calculate size manually
-  // because of leading null symbol.
-  if (name_offset == 0)
-    saddr_un_len = SUN_LEN(saddr_un);
-  else
-    saddr_un_len =
-        offsetof(struct sockaddr_un, sun_path) + name_offset + name.size();
+  // Compute the address length explicitly rather than via SUN_LEN: that macro
+  // is not available on Windows.
+  saddr_un_len =
+      offsetof(struct sockaddr_un, sun_path) + name_offset + name.size();
 
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__NetBSD__) ||       \
     defined(__OpenBSD__)
@@ -76,41 +76,6 @@ DomainSocket::DomainSocket(SocketProtocol protocol, NativeSocket socket,
                            bool should_close)
     : Socket(protocol, should_close) {
   m_socket = socket;
-}
-
-llvm::Expected<DomainSocket::Pair> DomainSocket::CreatePair() {
-  int sockets[2];
-  int type = SOCK_STREAM;
-#ifdef SOCK_CLOEXEC
-  type |= SOCK_CLOEXEC;
-#endif
-  if (socketpair(AF_UNIX, type, 0, sockets) == -1)
-    return llvm::errorCodeToError(llvm::errnoAsErrorCode());
-
-#ifndef SOCK_CLOEXEC
-  for (int s : sockets) {
-    int r = fcntl(s, F_SETFD, FD_CLOEXEC | fcntl(s, F_GETFD));
-    assert(r == 0);
-    (void)r;
-  }
-#endif
-
-#if defined(SO_NOSIGPIPE)
-  Log *log = GetLog(LLDBLog::Host);
-  if (Socket::SetOption(sockets[0], SOL_SOCKET, SO_NOSIGPIPE, 1) == -1)
-    LLDB_LOG(log, "failed to set NO_SIGPIPE on fd {0}: {1}", sockets[0],
-             llvm::sys::StrError());
-  if (Socket::SetOption(sockets[1], SOL_SOCKET, SO_NOSIGPIPE, 1) == -1)
-    LLDB_LOG(log, "failed to set NO_SIGPIPE on fd {0}: {1}", sockets[1],
-             llvm::sys::StrError());
-#endif
-
-  return Pair(std::unique_ptr<DomainSocket>(
-                  new DomainSocket(ProtocolUnixDomain, sockets[0],
-                                   /*should_close=*/true)),
-              std::unique_ptr<DomainSocket>(
-                  new DomainSocket(ProtocolUnixDomain, sockets[1],
-                                   /*should_close=*/true)));
 }
 
 Status DomainSocket::Connect(llvm::StringRef name) {

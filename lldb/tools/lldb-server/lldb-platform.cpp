@@ -39,10 +39,8 @@
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Host/Socket.h"
+#include "lldb/Host/common/DomainSocket.h"
 #include "lldb/Host/common/TCPSocket.h"
-#if LLDB_ENABLE_POSIX
-#include "lldb/Host/posix/DomainSocket.h"
-#endif
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
