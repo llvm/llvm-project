@@ -4204,12 +4204,12 @@ void SelectionDAGBuilder::visitBitExtract(const User &I) {
 
   // Legalize rotate amount to the target's shift amount type
   EVT ShiftAmtTy = TLI.getShiftAmountTy(SrcVT, DAG.getDataLayout());
-  SDValue LegalRotateAmount = DAG.getZExtOrTrunc(LegalOffset, dl, ShiftAmtTy);
+  SDValue LegalShiftAmount = DAG.getZExtOrTrunc(LegalOffset, dl, ShiftAmtTy);
 
   // Rotate left by (Offset + ResultWidth) - brings target field to bit 0
-  SDValue Rotated = DAG.getNode(ISD::SRL, dl, SrcVT, Src, LegalRotateAmount);
+  SDValue Shifted = DAG.getNode(ISD::SRL, dl, SrcVT, Src, LegalShiftAmount);
 
-  setValue(&I, DAG.getZExtOrTrunc(Rotated, dl, ResultVT));
+  setValue(&I, DAG.getZExtOrTrunc(Shifted, dl, ResultVT));
 }
 
 void SelectionDAGBuilder::visitExtractElement(const User &I) {

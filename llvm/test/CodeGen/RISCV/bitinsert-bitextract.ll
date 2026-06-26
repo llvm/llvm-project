@@ -61,19 +61,19 @@ define i8 @test_bitextract_narrow(b64 %src) {
 
 define b32 @test_bitinsert_var(b32 %base, i16 %val, i32 %off) {
 ; RV32-LABEL: test_bitinsert_var:
-;RV32	        srl	a3, a0, a2
-;RV32	        neg	a4, a2
-;RV32	        sll	a0, a0, a4
-;RV32	        or	a0, a3, a0
-;RV32	        lui	a3, 1048560
-;RV32	        slli	a1, a1, 16
-;RV32	        srli	a1, a1, 16
-;RV32	        and	a0, a0, a3
-;RV32	        or	a0, a0, a1
-;RV32	        srl	a1, a0, a4
-;RV32	        sll	a0, a0, a2
-;RV32	        or	a0, a0, a1
-;RV32	        ret
+; RV32	        srl	a3, a0, a2
+; RV32	        neg	a4, a2
+; RV32	        sll	a0, a0, a4
+; RV32	        or	a0, a3, a0
+; RV32	        lui	a3, 1048560
+; RV32	        slli	a1, a1, 16
+; RV32	        srli	a1, a1, 16
+; RV32	        and	a0, a0, a3
+; RV32	        or	a0, a0, a1
+; RV32	        srl	a1, a0, a4
+; RV32	        sll	a0, a0, a2
+; RV32	        or	a0, a0, a1
+; RV32	        ret
 
 
 ; RV32ZBB-LABEL: test_bitinsert_var:

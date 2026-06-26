@@ -376,8 +376,6 @@ TEST_F(IR2VecTestFixture, GetInstVec_FlowAware) {
   EXPECT_EQ(AddEmb.size(), 2u);
   EXPECT_EQ(RetEmb.size(), 2u);
 
-  llvm::errs() << "Add[0]=" << AddEmb[0] << " Ret[0]=" << RetEmb[0] << "\n";
-
   EXPECT_TRUE(AddEmb.approximatelyEquals(Embedding(2, 26.7)));
   EXPECT_TRUE(RetEmb.approximatelyEquals(Embedding(2, 34.1)));
 }

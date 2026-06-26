@@ -2616,11 +2616,11 @@ BitInsertInst::BitInsertInst(Value *Base, Value *Val, Value *Offset,
 bool BitInsertInst::isValidOperands(const Value *Base, const Value *Val,
                                     const Value *Offset) {
   if (!Base->getType()->isByteTy())
-    return false; // First operand of bitinsert must be byte type.
+    return false;
   if (!Val->getType()->isSingleValueType())
-    return false; // Second operand of bitinsert must be a single-value type.
+    return false;
   if (!Offset->getType()->isIntegerTy(32))
-    return false; // Third operand of bitinsert must be i32.
+    return false;
   return true;
 }
 
@@ -2640,11 +2640,11 @@ BitExtractInst::BitExtractInst(Type *Ty, Value *Src, Value *Offset,
 bool BitExtractInst::isValidOperands(const Type *Ty, const Value *Src,
                                      const Value *Offset) {
   if (!Ty->isSingleValueType())
-    return false; // First operand of bitextract must be a single-value type.
+    return false;
   if (!Src->getType()->isByteTy())
-    return false; // Second operand of bitextract must be a byte type.
+    return false;
   if (!Offset->getType()->isIntegerTy(32))
-    return false; // Third operand of bitextract must be i32.
+    return false;
   return true;
 }
 

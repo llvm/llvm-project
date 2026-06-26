@@ -2,10 +2,10 @@
 
 define i16 @test_bitextract_var(b32 %src, i32 %off) {
 ; CHECK-LABEL: test_bitextract_var:
-; CKCHE:       movl	%esi, %ecx
-; CKCHE:       movl	%edi, %eax
-; CKCHE:       shrl	%cl, %eax
-; CKCHE:       retq
+; CHECK:       movl	%esi, %ecx
+; CHECK:       movl	%edi, %eax
+; CHECK:       shrl	%cl, %eax
+; CHECK:       retq
 
   %result = bitextract i16, b32 %src, i32 %off
   ret i16 %result
