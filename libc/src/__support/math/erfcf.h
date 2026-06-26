@@ -168,19 +168,6 @@ LIBC_INLINE float erfcf(float x) {
         fputil::FPBits<float>(out).get_val());
   }
 
-  // Special cases: NaN and Inf
-  if (LIBC_UNLIKELY(x_abs >= 0x7f800000U)) {
-    if (x_abs > 0x7f800000U) {
-      if (xbits.is_signaling_nan()) {
-        fputil::raise_except_if_required(FE_INVALID);
-        return FPBits::quiet_nan().get_val();
-      }
-      return x;
-    }
-    // erfc(+Inf) = 0, erfc(-Inf) = 2
-    return xbits.is_neg() ? fputil::cast<float>(2.0) : fputil::cast<float>(0.0);
-  }
-
   if (LIBC_UNLIKELY(x_abs < 0x33000000U)) { // |x| < 2^-25, includes x = 0
     constexpr double NEG_TWO_OVER_SQRT_PI = -0x1.20dd750429b6dp0;
     double xd = fputil::cast<double>(x);
@@ -189,7 +176,20 @@ LIBC_INLINE float erfcf(float x) {
   }
 
   // erfc(x) rounds to 0 or 2 for |x| >= 10.125.
-  if (LIBC_UNLIKELY(x_abs >= 0x41220000U)) { // |x| >= 10.125
+  if (LIBC_UNLIKELY(x_abs >= 0x41220000U)) {
+    // Special cases: NaN and Inf
+    if (LIBC_UNLIKELY(x_abs >= 0x7f800000U)) {
+
+      if (x_abs > 0x7f800000U) {
+        if (xbits.is_signaling_nan()) {
+          fputil::raise_except_if_required(FE_INVALID);
+          return FPBits::quiet_nan().get_val();
+        }
+        return x;
+      }
+      // erfc(+Inf) = 0, erfc(-Inf) = 2
+      return xbits.is_neg() ? 2.0f : 0.0f;
+    }
     if (xbits.is_neg()) {
       return fputil::round_result_slightly_down(2.0f);
     }
@@ -207,7 +207,7 @@ LIBC_INLINE float erfcf(float x) {
   // erfc(|x|) is evaluated using a degree-10 polynomial on each sub-interval.
 
   unsigned shift = 147 - (x_abs >> 23);
-  uint64_t mantissa = (x_abs & 0x007FFFFFU) | 0x00800000U;
+  uint32_t mantissa = (x_abs & 0x007FFFFFU) | 0x00800000U;
   int idx = static_cast<int>(mantissa >> shift);
 
   if (idx >= 32) {
