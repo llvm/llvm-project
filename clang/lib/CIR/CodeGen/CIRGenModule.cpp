@@ -1449,7 +1449,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
 
   if (getLangOpts().CUDA &&
       (isCUDASharedVar || isCUDAShadowVar || isCUDADeviceShadowVar)) {
-    init = cir::PoisonAttr::get(convertType(vd->getType()));
+    init = cir::UndefAttr::get(convertType(vd->getType()));
   } else if (vd->hasAttr<LoaderUninitializedAttr>()) {
     errorNYI(vd->getSourceRange(),
              "emitGlobalVarDefinition: loader uninitialized attribute");
@@ -3879,29 +3879,6 @@ void CIRGenModule::mapBlockAddress(cir::BlockAddrInfoAttr blockInfo,
       blockAddressInfoToLabel.try_emplace(blockInfo, label);
   assert(result.second &&
          "attempting to map a blockaddress info that is already mapped");
-}
-
-void CIRGenModule::mapUnresolvedBlockAddress(cir::BlockAddressOp op) {
-  [[maybe_unused]] auto result = unresolvedBlockAddressToLabel.insert(op);
-  assert(result.second &&
-         "attempting to map a blockaddress operation that is already mapped");
-}
-
-void CIRGenModule::mapResolvedBlockAddress(cir::BlockAddressOp op,
-                                           cir::LabelOp label) {
-  [[maybe_unused]] auto result = blockAddressToLabel.try_emplace(op, label);
-  assert(result.second &&
-         "attempting to map a blockaddress operation that is already mapped");
-}
-
-void CIRGenModule::updateResolvedBlockAddress(cir::BlockAddressOp op,
-                                              cir::LabelOp newLabel) {
-  auto *it = blockAddressToLabel.find(op);
-  assert(it != blockAddressToLabel.end() &&
-         "trying to update a blockaddress not previously mapped");
-  assert(!it->second && "blockaddress already has a resolved label");
-
-  it->second = newLabel;
 }
 
 cir::LabelOp
