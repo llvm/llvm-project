@@ -237,7 +237,7 @@ func.func @_QMbarPgfoo2(%arg0: !fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>,
 
 // -----
 
-func.func @surviving_predefined_vars(%arg0: i32, %arg1: i32, %arg2: i32) attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
+func.func @surviving_predefined_vars(%arg0: i32, %arg1: i32, %arg2: i32) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
@@ -279,7 +279,7 @@ func.func @surviving_predefined_vars(%arg0: i32, %arg1: i32, %arg2: i32) attribu
 
 // -----
 
-func.func @surviving_predefined_vars(%arg0: i32, %arg1: i32, %arg2: i32) attributes {cuf.proc_attr = #cuf.cuda_proc<global>} {
+func.func @surviving_predefined_vars(%arg0: i32, %arg1: i32, %arg2: i32) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %c4 = arith.constant 4 : index
@@ -317,3 +317,4 @@ func.func @surviving_predefined_vars(%arg0: i32, %arg1: i32, %arg2: i32) attribu
 // CHECK-NOT: _QM__fortran_builtinsE__builtin_blockidx
 // CHECK-NOT: _QM__fortran_builtinsE__builtin_griddim
 // CHECK-NOT: _QM__fortran_builtinsE__builtin_threadidx
+// CHECK: nvvm.read.ptx.sreg.tid.x
