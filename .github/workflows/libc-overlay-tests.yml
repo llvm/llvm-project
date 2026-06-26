@@ -9,8 +9,9 @@ on:
       - '.github/workflows/libc-overlay-tests.yml'
 
 jobs:
-  build:
+  native:
     if: github.repository_owner == 'llvm'
+    name: ${{ matrix.os }} - ${{ matrix.compiler.c_compiler }}
     timeout-minutes: 30
     runs-on: ${{ matrix.os }}
     container: ${{ matrix.container || null }}
@@ -21,7 +22,7 @@ jobs:
         include:
           # TODO: add linux gcc when it is fixed
           - os: ubuntu-24.04
-            container: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:a902fb53bdad5e4a4bb6c11b6584e717a7b3d6e886f1ea58e11f95e46226249c'
+            container: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:c6e2ee2a9bf5cebd51fd27dd8e85381c2f73d90e091c764082f8ad528ee18918'
             compiler:
               c_compiler: clang-23
               cpp_compiler: clang++-23
@@ -108,3 +109,69 @@ jobs:
         --build build 
         --parallel 
         --target check-libc
+
+  qemu:
+    if: github.repository_owner == 'llvm'
+    name: qemu - ${{ matrix.arch }} - ${{ matrix.c_compiler }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    container: 'ghcr.io/llvm/libc-ubuntu-24.04:latest@sha256:c6e2ee2a9bf5cebd51fd27dd8e85381c2f73d90e091c764082f8ad528ee18918'
+    strategy:
+      # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations.
+      fail-fast: false
+      matrix:
+        include:
+          - arch: armhf
+            target_triple: arm-linux-gnueabihf
+            c_compiler: clang-23
+            cxx_compiler: clang++-23
+          - arch: riscv64
+            target_triple: riscv64-linux-gnu
+            c_compiler: clang-23
+            cxx_compiler: clang++-23
+            mpfr_path: /usr/riscv64-linux-gnu
+            mpc_path: riscv64-linux-gnu
+    steps:
+      - name: Checkout LLVM
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@33522472633dbd32578e909b315f5ee43ba878ce # v1.2.22
+        with:
+          max-size: 1G
+          key: libc_qemu_overlay_${{ matrix.arch }}_${{ matrix.c_compiler }}
+          variant: sccache
+
+      - name: Create QEMU wrapper
+        run: |
+          mkdir build
+          cat << 'EOF' > /__w/llvm-project/llvm-project/build/qemu-wrapper.sh
+          #!/bin/bash
+          qemu-${{ matrix.arch }}-static -L /usr/${{ matrix.target_triple }} "$@"
+          EOF
+          chmod +x /__w/llvm-project/llvm-project/build/qemu-wrapper.sh
+
+      - name: Configure CMake
+        run: |
+          cmake -B build -S runtimes -G Ninja \
+            -DLLVM_ENABLE_RUNTIMES=libc \
+            -DCMAKE_C_COMPILER=${{ matrix.c_compiler }} \
+            -DCMAKE_CXX_COMPILER=${{ matrix.cxx_compiler }} \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DLLVM_USE_LINKER=lld-23 \
+            -DLIBC_TARGET_TRIPLE=${{ matrix.target_triple}} \
+            -DLLVM_LIBC_MPFR_INSTALL_PATH="${{ matrix.mpfr_path }}" \
+            -DLIBC_MPC_INSTALL_PATH="${{ matrix.mpc_path }}" \
+            -DCMAKE_CROSSCOMPILING_EMULATOR=/__w/llvm-project/llvm-project/build/qemu-wrapper.sh
+
+      - name: Build
+        run: |
+          cmake --build build --parallel --target libc
+      - name: Build Test
+        run: |
+          cmake --build build --parallel --target check-libc-build
+      - name: Run Test
+        run: |
+          cmake --build build --parallel --target check-libc
