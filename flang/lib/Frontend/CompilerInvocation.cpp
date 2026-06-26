@@ -891,7 +891,7 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       Fortran::common::LanguageFeature::OpenAccDefaultNoneScalarsStrict,
       args.hasFlag(clang::options::OPT_fopenacc_default_none_scalars_strict,
                    clang::options::OPT_fno_openacc_default_none_scalars_strict,
-                   true));
+                   false));
 
   // -f{no-}openacc-multiple-names-in-routine
   opts.features.Enable(
@@ -1966,7 +1966,12 @@ CompilerInvocation::getSemanticsCtx(
       .set_maxErrors(getMaxErrors())
       .set_warningsAreErrors(getWarnAsErr())
       .set_moduleFileSuffix(getModuleFileSuffix())
-      .set_underscoring(getCodeGenOpts().Underscoring);
+      .set_underscoring(getCodeGenOpts().Underscoring)
+      .set_openAccDefaultNoneScalarsStrictDisableOption(
+          clang::getDriverOptTable()
+              .getOptionPrefixedName(
+                  clang::options::OPT_fno_openacc_default_none_scalars_strict)
+              .str());
 
   std::string compilerVersion = Fortran::common::getFlangFullVersion();
   Fortran::tools::setUpTargetCharacteristics(
