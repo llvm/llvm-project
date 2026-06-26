@@ -11,6 +11,7 @@ from lldbsuite.test.decorators import *
 
 MAX_PATH = 260
 
+
 @skipUnlessWindows
 class TestDAP_launch_longPath(lldbdap_testcase.DAPTestCaseBase):
     def _long_path(self, path):
