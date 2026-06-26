@@ -1200,6 +1200,18 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
       break;
     }
 
+    // If this is a function type ref and a reference type info this is an objc
+    // block. Blocks have no children.
+    if (const auto *func_tr =
+            llvm::dyn_cast_or_null<swift::reflection::FunctionTypeRef>(tr)) {
+      assert(func_tr->getFlags().getConvention() ==
+                 swift::FunctionMetadataConvention::Block &&
+             "Unexpected convention for reference function typeref!");
+      if (count_only)
+        return 0;
+      return success;
+    }
+
     bool found_start = false;
     using namespace swift::Demangle;
     Demangler dem;
@@ -1571,13 +1583,21 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
     return success;
   }
   if (llvm::dyn_cast_or_null<swift::reflection::BuiltinTypeInfo>(ti)) {
+    Flags type_flags(m_type.GetTypeInfo());
+    // This might be an enum declared with @objc or @c. They cannot carry
+    // a payload so have no children.
+    if (type_flags.AnySet(eTypeIsEnumeration)) {
+      if (count_only)
+        return 0;
+      return success;
+    }
+
     // Clang enums have an artificial rawValue property. We could
     // consider handling them here, but
     // TypeSystemSwiftTypeRef::GetChildCompilerTypeAtIndex can also
     // handle them and without a Process.
     if (!TypeSystemSwiftTypeRef::IsBuiltinType(m_type) &&
-        !Flags(m_type.GetTypeInfo()).AnySet(eTypeIsMetatype) &&
-        !m_type.IsFunctionType()) {
+        !type_flags.AnySet(eTypeIsMetatype) && !m_type.IsFunctionType()) {
       LLDB_LOG(GetLog(LLDBLog::Types),
                "{0}: unrecognized builtin type info or this is a Clang type "
                "without DWARF debug info",

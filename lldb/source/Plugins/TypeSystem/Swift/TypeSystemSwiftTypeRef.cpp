@@ -3555,6 +3555,7 @@ bool TypeSystemSwiftTypeRef::IsFunctionType(opaque_compiler_type_t type) {
                     node->getKind() == Node::Kind::ThinFunctionType ||
                     node->getKind() == Node::Kind::NoEscapeFunctionType ||
                     node->getKind() == Node::Kind::CFunctionPointer ||
+                    node->getKind() == Node::Kind::ObjCBlock ||
                     node->getKind() == Node::Kind::ImplFunctionType);
   };
   VALIDATE_AND_RETURN(impl, IsFunctionType, type, g_no_exe_ctx,
@@ -5465,6 +5466,7 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
     case Node::Kind::FunctionType:
     case Node::Kind::NoEscapeFunctionType:
     case Node::Kind::CFunctionPointer:
+    case Node::Kind::ObjCBlock:
     case Node::Kind::ImplFunctionType: {
       // A few formats, we might need to modify our size and count for
       // depending on how we are trying to display the value.
