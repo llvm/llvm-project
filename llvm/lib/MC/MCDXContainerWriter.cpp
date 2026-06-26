@@ -19,7 +19,7 @@ using namespace llvm;
 
 cl::opt<bool> EmbedDebug("dx-embed-debug",
                          cl::desc("Embed PDB in shader container"));
-cl::opt<bool> SlimDebug("dx-Zs",
+cl::opt<bool> SlimDebug("dx-slim-debug",
                         cl::desc("Generate slim PDB without ILDB part"));
 
 MCDXContainerTargetWriter::~MCDXContainerTargetWriter() = default;
