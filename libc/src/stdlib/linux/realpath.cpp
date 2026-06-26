@@ -17,6 +17,7 @@
 #include "hdr/types/size_t.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
+#include "src/__support/OSUtil/path.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/libc_errno.h"
@@ -26,17 +27,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace {
 
-// Separator character for POSIX paths.
-constexpr char PATH_SEP = '/';
-
-// Separator for POSIX paths, as a `cpp::string_view`.
-constexpr cpp::string_view PATH_SEP_STRING = "/";
-
 // Dummy struct to represent success in `ErrorOr` when no value is needed.
 struct Ok {};
-
-// Whether a path is absolute.
-bool is_absolute(cpp::string_view path) { return path.starts_with(PATH_SEP); }
 
 // Container for a fully resolved, canonical path.
 //
@@ -49,15 +41,13 @@ class ResolvedPath {
 public:
   ResolvedPath() { set_to_root(); }
 
-  void set_to_root() { path_ = PATH_SEP_STRING; }
-
-  bool is_root() const { return path_ == PATH_SEP_STRING; }
+  void set_to_root() { path_ = path::SEPARATOR; }
 
   ErrorOr<Ok> set_to_cwd() { return Error(ENOSYS); }
 
   // Removes the trailing path component.
   void set_to_parent() {
-    size_t sep_index = cpp::string_view(path_).find_last_of(PATH_SEP);
+    size_t sep_index = cpp::string_view(path_).find_last_of(path::SEPARATOR);
 
     // Never move past the root separator. For example,
     // ensures that set_to_parent on "/hello" only resizes to "/".
@@ -66,8 +56,8 @@ public:
 
   // Adds a single component to the end of this path.
   ErrorOr<Ok> push_component(cpp::string_view component) {
-    if (!is_root()) {
-      if (ErrorOr<Ok> res = push_raw(PATH_SEP_STRING); !res)
+    if (!path::is_root(path_)) {
+      if (ErrorOr<Ok> res = push_raw(path::SEPARATOR); !res)
         return res;
     }
 
@@ -94,6 +84,9 @@ private:
     path_ += value;
     return Ok{};
   }
+
+  // Adds a single component to the end of this path.
+  ErrorOr<Ok> push_raw(char c) { return push_raw(cpp::string_view(&c, 1)); }
 
   cpp::string path_;
 };
@@ -123,14 +116,14 @@ public:
   cpp::string_view advance_component() {
     const cpp::string_view path = view_;
 
-    const size_t component_start = path.find_first_not_of(PATH_SEP);
+    const size_t component_start = path.find_first_not_of(path::SEPARATOR);
     if (component_start == cpp::string_view::npos) {
       view_ = "";
       return "";
     }
 
     const size_t component_end =
-        path.find_first_of(PATH_SEP, /* From = */ component_start);
+        path.find_first_of(path::SEPARATOR, /* From = */ component_start);
     if (component_end == cpp::string_view::npos) {
       view_ = "";
       return path.substr(component_start);
@@ -178,7 +171,7 @@ ErrorOr<char *> realpath_impl(const char *__restrict path_cstr,
   PendingPath pending_path(path);
 
   ResolvedPath resolved_path;
-  if (!is_absolute(path)) {
+  if (!path::is_absolute(path)) {
     if (ErrorOr<Ok> res = resolved_path.set_to_cwd(); !res)
       return Error(res.error());
   }

@@ -90,6 +90,11 @@ public:
     return (*this) += other;
   }
 
+  LIBC_INLINE string &operator=(char other) {
+    resize(0);
+    return (*this) += other;
+  }
+
   LIBC_INLINE string &operator=(string &&other) {
     buffer_ = other.buffer_;
     size_ = other.size_;
