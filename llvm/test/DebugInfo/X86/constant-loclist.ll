@@ -1,4 +1,6 @@
 ; RUN: llc -filetype=obj %s -o - -experimental-debug-variable-locations=true | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: llc -filetype=obj %s -o - -experimental-debug-variable-locations=true -mtriple=i386-unknown-linux-gnu -dwarf-version=4 | llvm-dwarfdump -v -debug-info - | FileCheck %s --check-prefix=I386
+; RUN: llc -filetype=obj %s -o - -experimental-debug-variable-locations=true -mtriple=i386-unknown-linux-gnu -dwarf-version=2 -debugger-tune=sce | llvm-dwarfdump -v -debug-info - | FileCheck %s --check-prefix=I386-COMPAT
 
 ; A hand-written testcase to check 64-bit constant handling in location lists.
 
@@ -17,6 +19,36 @@
 ; CHECK-NEXT: DW_AT_location [DW_FORM_data4]	(
 ; CHECK-NEXT:   {{.*}}: DW_OP_constu 0x4000000000000000)
 ; CHECK-NEXT: DW_AT_name {{.*}}"d"
+
+; On 32-bit targets, source integer constants that do not fit in the
+; address-sized DWARF generic type must use DW_OP_implicit_value to avoid
+; truncating the source value.
+; I386: .debug_info contents:
+; I386: DW_TAG_variable
+; I386-NEXT: DW_AT_location
+; I386-NEXT:   {{.*}}: DW_OP_lit0
+; I386-NEXT:   {{.*}}: DW_OP_implicit_value 0x8 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x40)
+; I386-NEXT: DW_AT_name {{.*}}"u"
+; I386: DW_TAG_variable
+; I386-NEXT: DW_AT_location
+; I386-NEXT:   {{.*}}: DW_OP_consts +0
+; I386-NEXT:   {{.*}}: DW_OP_implicit_value 0x8 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x40)
+; I386-NEXT: DW_AT_name {{.*}}"i"
+
+; DWARF v2 and SCE tuning keep using DW_OP_const* for compatibility.
+; I386-COMPAT: .debug_info contents:
+; I386-COMPAT: DW_TAG_variable
+; I386-COMPAT-NEXT: DW_AT_location
+; I386-COMPAT-NEXT:   {{.*}}: DW_OP_lit0
+; I386-COMPAT-NOT: DW_OP_implicit_value
+; I386-COMPAT-NEXT:   {{.*}}: DW_OP_constu 0x4000000000000000)
+; I386-COMPAT-NEXT: DW_AT_name {{.*}}"u"
+; I386-COMPAT: DW_TAG_variable
+; I386-COMPAT-NEXT: DW_AT_location
+; I386-COMPAT-NEXT:   {{.*}}: DW_OP_consts +0
+; I386-COMPAT-NOT: DW_OP_implicit_value
+; I386-COMPAT-NEXT:   {{.*}}: DW_OP_consts +4611686018427387904)
+; I386-COMPAT-NEXT: DW_AT_name {{.*}}"i"
 
 source_filename = "test.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

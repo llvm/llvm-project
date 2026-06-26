@@ -1,0 +1,116 @@
+# Test that we prefer types with unique names when resolving forward references
+# from records with unique names.
+
+# RUN: llvm-pdbutil yaml2pdb %s --pdb=%t.pdb
+# RUN: llvm-pdbutil dump --types %t.pdb | FileCheck %s
+
+# The forward reference from 0x1002 -> 0x100A is important here.
+# In contrast to `forward-cxx-to-c.test`, we should resolve the reference to
+# 0x100A here, because both have a unique name (even if 0x1008 is lower).
+# For 0x1004, we resolve 0x1008, because of the missing unique name.
+
+# CHECK:       0x1002 | LF_STRUCTURE [size = 48] `lua_State`
+# CHECK-NEXT:           unique name: `.?AUlua_State@@`
+# CHECK-NEXT:           vtable: <no type>, base list: <no type>, field list: <no type>
+# CHECK-NEXT:           options: forward ref (-> 0x100A) | has unique name, sizeof 0
+# CHECK:       0x1004 | LF_STRUCTURE [size = 32] `lua_State`
+# CHECK-NEXT:           vtable: <no type>, base list: <no type>, field list: <no type>
+# CHECK-NEXT:           options: forward ref (-> 0x1008), sizeof 0
+# CHECK:       0x1007 | LF_FIELDLIST [size = 20]
+# CHECK-NEXT:           - LF_MEMBER [name = `field`, Type = 0x0074 (int), offset = 0, attrs = public]
+# CHECK-NEXT:  0x1008 | LF_STRUCTURE [size = 32] `lua_State`
+# CHECK-NEXT:           vtable: <no type>, base list: <no type>, field list: 0x1007
+# CHECK-NEXT:           options: , sizeof 4
+# CHECK-NEXT:  0x1009 | LF_FIELDLIST [size = 32]
+# CHECK-NEXT:           - LF_MEMBER [name = `differentField`, Type = 0x0074 (int), offset = 0, attrs = public]
+# CHECK-NEXT:  0x100A | LF_STRUCTURE [size = 48] `lua_State`
+# CHECK-NEXT:           unique name: `.?AUlua_State@@`
+# CHECK-NEXT:           vtable: <no type>, base list: <no type>, field list: 0x1007
+# CHECK-NEXT:           options: has unique name, sizeof 4
+
+---
+TpiStream:
+  Version:         VC80
+  Records:
+    - Kind:            LF_ARGLIST
+      ArgList:
+        ArgIndices:      [  ]
+    - Kind:            LF_PROCEDURE
+      Procedure:
+        ReturnType:      116
+        CallConv:        NearC
+        Options:         [ None ]
+        ParameterCount:  0
+        ArgumentList:    4096
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     0
+        Options:         [ None, ForwardReference, HasUniqueName ]
+        FieldList:       0
+        Name:            lua_State
+        UniqueName:      '.?AUlua_State@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            0
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4098
+        Attrs:           65548
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     0
+        Options:         [ None, ForwardReference ]
+        FieldList:       0
+        Name:            lua_State
+        UniqueName:      ''
+        DerivationList:  0
+        VTableShape:     0
+        Size:            0
+    - Kind:            LF_POINTER
+      Pointer:
+        ReferentType:    4100
+        Attrs:           65548
+    - Kind:            LF_PROCEDURE
+      Procedure:
+        ReturnType:      4101
+        CallConv:        NearC
+        Options:         [ None ]
+        ParameterCount:  0
+        ArgumentList:    4096
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            116
+            FieldOffset:     0
+            Name:            field
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     1
+        Options:         [ None ]
+        FieldList:       4103
+        Name:            lua_State
+        UniqueName:      ''
+        DerivationList:  0
+        VTableShape:     0
+        Size:            4
+    - Kind:            LF_FIELDLIST
+      FieldList:
+        - Kind:            LF_MEMBER
+          DataMember:
+            Attrs:           3
+            Type:            116
+            FieldOffset:     0
+            Name:            differentField
+    - Kind:            LF_STRUCTURE
+      Class:
+        MemberCount:     1
+        Options:         [ None, HasUniqueName ]
+        FieldList:       4103
+        Name:            lua_State
+        UniqueName:      '.?AUlua_State@@'
+        DerivationList:  0
+        VTableShape:     0
+        Size:            4
+...

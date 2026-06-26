@@ -15,6 +15,7 @@
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 using namespace clang;
 
@@ -71,8 +72,21 @@ Builtin::Context::getShardAndInfo(unsigned ID) const {
   llvm_unreachable("Invalid target builtin shard structure!");
 }
 
+/// Return a non-owning StringRef of the builtin's name, reconstructed into Buf.
+static StringRef getBuiltinNameInto(const Builtin::InfosShard &Shard,
+                                    const Builtin::Info &BuiltinInfo,
+                                    SmallVectorImpl<char> &Buf) {
+  StringRef Name = (*Shard.Strings)[BuiltinInfo.Offsets.Name];
+  if (Shard.NamePrefix.empty())
+    return Name;
+  Buf.assign(Shard.NamePrefix.begin(), Shard.NamePrefix.end());
+  Buf.append(Name.begin(), Name.end());
+  return StringRef(Buf.data(), Buf.size());
+}
+
 std::string Builtin::Info::getName(const Builtin::InfosShard &Shard) const {
-  return (Twine(Shard.NamePrefix) + (*Shard.Strings)[Offsets.Name]).str();
+  SmallString<256> Buf;
+  return getBuiltinNameInto(Shard, *this, Buf).str();
 }
 
 /// Return the identifier name for the specified builtin,
@@ -297,12 +311,13 @@ void Builtin::Context::initializeBuiltins(IdentifierTable &Table,
                                           const LangOptions &LangOpts) {
   {
     unsigned ID = 0;
+    llvm::SmallString<256> NameBuf;
     // Step #1: mark all target-independent builtins with their ID's.
     for (const auto &Shard : BuiltinShards)
       for (const auto &I : Shard.Infos) {
         // If this is a real builtin (ID != 0) and is supported, add it.
         if (ID != 0 && builtinIsSupported(*Shard.Strings, I, LangOpts))
-          Table.get(I.getName(Shard)).setBuiltinID(ID);
+          Table.get(getBuiltinNameInto(Shard, I, NameBuf)).setBuiltinID(ID);
         ++ID;
       }
     assert(ID == FirstTSBuiltin && "Should have added all non-target IDs!");
@@ -311,14 +326,14 @@ void Builtin::Context::initializeBuiltins(IdentifierTable &Table,
     for (const auto &Shard : TargetShards)
       for (const auto &I : Shard.Infos) {
         if (builtinIsSupported(*Shard.Strings, I, LangOpts))
-          Table.get(I.getName(Shard)).setBuiltinID(ID);
+          Table.get(getBuiltinNameInto(Shard, I, NameBuf)).setBuiltinID(ID);
         ++ID;
       }
 
     // Step #3: Register target-specific builtins for AuxTarget.
     for (const auto &Shard : AuxTargetShards)
       for (const auto &I : Shard.Infos) {
-        Table.get(I.getName(Shard)).setBuiltinID(ID);
+        Table.get(getBuiltinNameInto(Shard, I, NameBuf)).setBuiltinID(ID);
         ++ID;
       }
   }

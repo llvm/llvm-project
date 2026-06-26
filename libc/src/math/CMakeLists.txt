@@ -98,6 +98,7 @@ add_math_entrypoint_object(iscanonicalbf16)
 
 add_math_entrypoint_object(cbrt)
 add_math_entrypoint_object(cbrtf)
+add_math_entrypoint_object(cbrtf16)
 add_math_entrypoint_object(cbrtbf16)
 
 add_math_entrypoint_object(ceil)
@@ -586,6 +587,7 @@ add_math_entrypoint_object(sqrtf128)
 add_math_entrypoint_object(sqrtbf16)
 
 add_math_entrypoint_object(tan)
+add_math_entrypoint_object(tanbf16)
 add_math_entrypoint_object(tanf)
 add_math_entrypoint_object(tanf16)
 
