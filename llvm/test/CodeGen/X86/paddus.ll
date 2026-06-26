@@ -1586,17 +1586,49 @@ define void @addus_v8i8(ptr %p1, ptr %p2) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
 ; SSE-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; SSE-NEXT:    paddusb %xmm0, %xmm1
-; SSE-NEXT:    movq %xmm1, (%rdi)
+; SSE-NEXT:    paddb %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    pminub %xmm1, %xmm2
+; SSE-NEXT:    pcmpeqb %xmm0, %xmm2
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE-NEXT:    pxor %xmm2, %xmm0
+; SSE-NEXT:    por %xmm1, %xmm0
+; SSE-NEXT:    movq %xmm0, (%rdi)
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: addus_v8i8:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vpaddusb %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovq %xmm0, (%rdi)
-; AVX-NEXT:    retq
+; AVX1-LABEL: addus_v8i8:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX1-NEXT:    vpaddb %xmm0, %xmm1, %xmm1
+; AVX1-NEXT:    vpminub %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, (%rdi)
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: addus_v8i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX2-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX2-NEXT:    vpaddb %xmm0, %xmm1, %xmm1
+; AVX2-NEXT:    vpminub %xmm1, %xmm0, %xmm2
+; AVX2-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovq %xmm0, (%rdi)
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: addus_v8i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX512-NEXT:    vpaddusb %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, (%rdi)
+; AVX512-NEXT:    retq
   %ld1 = load <8 x i8>, ptr %p1, align 8
   %ld2 = load <8 x i8>, ptr %p2, align 8
   %1 = add <8 x i8> %ld2, %ld1
@@ -1611,17 +1643,49 @@ define void @addus_v4i8(ptr %p1, ptr %p2) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE-NEXT:    paddusb %xmm0, %xmm1
-; SSE-NEXT:    movd %xmm1, (%rdi)
+; SSE-NEXT:    paddb %xmm0, %xmm1
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    pminub %xmm1, %xmm2
+; SSE-NEXT:    pcmpeqb %xmm0, %xmm2
+; SSE-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE-NEXT:    pxor %xmm2, %xmm0
+; SSE-NEXT:    por %xmm1, %xmm0
+; SSE-NEXT:    movd %xmm0, (%rdi)
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: addus_v4i8:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX-NEXT:    vpaddusb %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovd %xmm0, (%rdi)
-; AVX-NEXT:    retq
+; AVX1-LABEL: addus_v4i8:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vpaddb %xmm0, %xmm1, %xmm1
+; AVX1-NEXT:    vpminub %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, (%rdi)
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: addus_v4i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX2-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX2-NEXT:    vpaddb %xmm0, %xmm1, %xmm1
+; AVX2-NEXT:    vpminub %xmm1, %xmm0, %xmm2
+; AVX2-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovd %xmm0, (%rdi)
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: addus_v4i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX512-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX512-NEXT:    vpaddusb %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vmovd %xmm0, (%rdi)
+; AVX512-NEXT:    retq
   %ld1 = load <4 x i8>, ptr %p1, align 4
   %ld2 = load <4 x i8>, ptr %p2, align 4
   %1 = add <4 x i8> %ld2, %ld1
@@ -1638,8 +1702,14 @@ define void @addus_v2i8(ptr %p1, ptr %p2) {
 ; SSE2-NEXT:    movd %eax, %xmm0
 ; SSE2-NEXT:    movzwl (%rsi), %eax
 ; SSE2-NEXT:    movd %eax, %xmm1
-; SSE2-NEXT:    paddusb %xmm0, %xmm1
-; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    paddb %xmm0, %xmm1
+; SSE2-NEXT:    movdqa %xmm0, %xmm2
+; SSE2-NEXT:    pminub %xmm1, %xmm2
+; SSE2-NEXT:    pcmpeqb %xmm0, %xmm2
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    movw %ax, (%rdi)
 ; SSE2-NEXT:    retq
 ;
@@ -1649,8 +1719,14 @@ define void @addus_v2i8(ptr %p1, ptr %p2) {
 ; SSSE3-NEXT:    movd %eax, %xmm0
 ; SSSE3-NEXT:    movzwl (%rsi), %eax
 ; SSSE3-NEXT:    movd %eax, %xmm1
-; SSSE3-NEXT:    paddusb %xmm0, %xmm1
-; SSSE3-NEXT:    movd %xmm1, %eax
+; SSSE3-NEXT:    paddb %xmm0, %xmm1
+; SSSE3-NEXT:    movdqa %xmm0, %xmm2
+; SSSE3-NEXT:    pminub %xmm1, %xmm2
+; SSSE3-NEXT:    pcmpeqb %xmm0, %xmm2
+; SSSE3-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSSE3-NEXT:    pxor %xmm2, %xmm0
+; SSSE3-NEXT:    por %xmm1, %xmm0
+; SSSE3-NEXT:    movd %xmm0, %eax
 ; SSSE3-NEXT:    movw %ax, (%rdi)
 ; SSSE3-NEXT:    retq
 ;
@@ -1660,19 +1736,55 @@ define void @addus_v2i8(ptr %p1, ptr %p2) {
 ; SSE41-NEXT:    movd %eax, %xmm0
 ; SSE41-NEXT:    movzwl (%rsi), %eax
 ; SSE41-NEXT:    movd %eax, %xmm1
-; SSE41-NEXT:    paddusb %xmm0, %xmm1
-; SSE41-NEXT:    pextrw $0, %xmm1, (%rdi)
+; SSE41-NEXT:    paddb %xmm0, %xmm1
+; SSE41-NEXT:    movdqa %xmm0, %xmm2
+; SSE41-NEXT:    pminub %xmm1, %xmm2
+; SSE41-NEXT:    pcmpeqb %xmm0, %xmm2
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE41-NEXT:    pxor %xmm2, %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    pextrw $0, %xmm0, (%rdi)
 ; SSE41-NEXT:    retq
 ;
-; AVX-LABEL: addus_v2i8:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movzwl (%rdi), %eax
-; AVX-NEXT:    vmovd %eax, %xmm0
-; AVX-NEXT:    movzwl (%rsi), %eax
-; AVX-NEXT:    vmovd %eax, %xmm1
-; AVX-NEXT:    vpaddusb %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vpextrw $0, %xmm0, (%rdi)
-; AVX-NEXT:    retq
+; AVX1-LABEL: addus_v2i8:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    movzwl (%rdi), %eax
+; AVX1-NEXT:    vmovd %eax, %xmm0
+; AVX1-NEXT:    movzwl (%rsi), %eax
+; AVX1-NEXT:    vmovd %eax, %xmm1
+; AVX1-NEXT:    vpaddb %xmm0, %xmm1, %xmm1
+; AVX1-NEXT:    vpminub %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpextrw $0, %xmm0, (%rdi)
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: addus_v2i8:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    movzwl (%rdi), %eax
+; AVX2-NEXT:    vmovd %eax, %xmm0
+; AVX2-NEXT:    movzwl (%rsi), %eax
+; AVX2-NEXT:    vmovd %eax, %xmm1
+; AVX2-NEXT:    vpaddb %xmm0, %xmm1, %xmm1
+; AVX2-NEXT:    vpminub %xmm1, %xmm0, %xmm2
+; AVX2-NEXT:    vpcmpeqb %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpextrw $0, %xmm0, (%rdi)
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: addus_v2i8:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    movzwl (%rdi), %eax
+; AVX512-NEXT:    vmovd %eax, %xmm0
+; AVX512-NEXT:    movzwl (%rsi), %eax
+; AVX512-NEXT:    vmovd %eax, %xmm1
+; AVX512-NEXT:    vpaddusb %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vpextrw $0, %xmm0, (%rdi)
+; AVX512-NEXT:    retq
   %ld1 = load <2 x i8>, ptr %p1, align 2
   %ld2 = load <2 x i8>, ptr %p2, align 2
   %1 = add <2 x i8> %ld2, %ld1
@@ -1683,21 +1795,79 @@ define void @addus_v2i8(ptr %p1, ptr %p2) {
 }
 
 define void @addus_v4i16(ptr %p1, ptr %p2) {
-; SSE-LABEL: addus_v4i16:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
-; SSE-NEXT:    paddusw %xmm0, %xmm1
-; SSE-NEXT:    movq %xmm1, (%rdi)
-; SSE-NEXT:    retq
+; SSE2-LABEL: addus_v4i16:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE2-NEXT:    paddw %xmm0, %xmm1
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
+; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm2
+; SSE2-NEXT:    pcmpgtw %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    movq %xmm0, (%rdi)
+; SSE2-NEXT:    retq
 ;
-; AVX-LABEL: addus_v4i16:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vpaddusw %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovq %xmm0, (%rdi)
-; AVX-NEXT:    retq
+; SSSE3-LABEL: addus_v4i16:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSSE3-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSSE3-NEXT:    paddw %xmm0, %xmm1
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
+; SSSE3-NEXT:    pxor %xmm2, %xmm0
+; SSSE3-NEXT:    pxor %xmm1, %xmm2
+; SSSE3-NEXT:    pcmpgtw %xmm2, %xmm0
+; SSSE3-NEXT:    por %xmm1, %xmm0
+; SSSE3-NEXT:    movq %xmm0, (%rdi)
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: addus_v4i16:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE41-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
+; SSE41-NEXT:    paddw %xmm0, %xmm1
+; SSE41-NEXT:    movdqa %xmm0, %xmm2
+; SSE41-NEXT:    pminuw %xmm1, %xmm2
+; SSE41-NEXT:    pcmpeqw %xmm0, %xmm2
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE41-NEXT:    pxor %xmm2, %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    movq %xmm0, (%rdi)
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: addus_v4i16:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX1-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX1-NEXT:    vpaddw %xmm0, %xmm1, %xmm1
+; AVX1-NEXT:    vpminuw %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovq %xmm0, (%rdi)
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: addus_v4i16:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX2-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX2-NEXT:    vpaddw %xmm0, %xmm1, %xmm1
+; AVX2-NEXT:    vpminuw %xmm1, %xmm0, %xmm2
+; AVX2-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovq %xmm0, (%rdi)
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: addus_v4i16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = mem[0],zero
+; AVX512-NEXT:    vmovq {{.*#+}} xmm1 = mem[0],zero
+; AVX512-NEXT:    vpaddusw %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vmovq %xmm0, (%rdi)
+; AVX512-NEXT:    retq
   %ld1 = load <4 x i16>, ptr %p1, align 4
   %ld2 = load <4 x i16>, ptr %p2, align 4
   %1 = add <4 x i16> %ld2, %ld1
@@ -1708,21 +1878,79 @@ define void @addus_v4i16(ptr %p1, ptr %p2) {
 }
 
 define void @addus_v2i16(ptr %p1, ptr %p2) {
-; SSE-LABEL: addus_v2i16:
-; SSE:       # %bb.0:
-; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE-NEXT:    paddusw %xmm0, %xmm1
-; SSE-NEXT:    movd %xmm1, (%rdi)
-; SSE-NEXT:    retq
+; SSE2-LABEL: addus_v2i16:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE2-NEXT:    paddw %xmm0, %xmm1
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
+; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    pxor %xmm1, %xmm2
+; SSE2-NEXT:    pcmpgtw %xmm2, %xmm0
+; SSE2-NEXT:    por %xmm1, %xmm0
+; SSE2-NEXT:    movd %xmm0, (%rdi)
+; SSE2-NEXT:    retq
 ;
-; AVX-LABEL: addus_v2i16:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX-NEXT:    vpaddusw %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovd %xmm0, (%rdi)
-; AVX-NEXT:    retq
+; SSSE3-LABEL: addus_v2i16:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSSE3-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSSE3-NEXT:    paddw %xmm0, %xmm1
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [32768,32768,32768,32768,32768,32768,32768,32768]
+; SSSE3-NEXT:    pxor %xmm2, %xmm0
+; SSSE3-NEXT:    pxor %xmm1, %xmm2
+; SSSE3-NEXT:    pcmpgtw %xmm2, %xmm0
+; SSSE3-NEXT:    por %xmm1, %xmm0
+; SSSE3-NEXT:    movd %xmm0, (%rdi)
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: addus_v2i16:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE41-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE41-NEXT:    paddw %xmm0, %xmm1
+; SSE41-NEXT:    movdqa %xmm0, %xmm2
+; SSE41-NEXT:    pminuw %xmm1, %xmm2
+; SSE41-NEXT:    pcmpeqw %xmm0, %xmm2
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm0
+; SSE41-NEXT:    pxor %xmm2, %xmm0
+; SSE41-NEXT:    por %xmm1, %xmm0
+; SSE41-NEXT:    movd %xmm0, (%rdi)
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: addus_v2i16:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX1-NEXT:    vpaddw %xmm0, %xmm1, %xmm1
+; AVX1-NEXT:    vpminuw %xmm1, %xmm0, %xmm2
+; AVX1-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX1-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vmovd %xmm0, (%rdi)
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: addus_v2i16:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX2-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX2-NEXT:    vpaddw %xmm0, %xmm1, %xmm1
+; AVX2-NEXT:    vpminuw %xmm1, %xmm0, %xmm2
+; AVX2-NEXT:    vpcmpeqw %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
+; AVX2-NEXT:    vpxor %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vmovd %xmm0, (%rdi)
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: addus_v2i16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX512-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; AVX512-NEXT:    vpaddusw %xmm0, %xmm1, %xmm0
+; AVX512-NEXT:    vmovd %xmm0, (%rdi)
+; AVX512-NEXT:    retq
   %ld1 = load <2 x i16>, ptr %p1, align 2
   %ld2 = load <2 x i16>, ptr %p2, align 2
   %1 = add <2 x i16> %ld2, %ld1

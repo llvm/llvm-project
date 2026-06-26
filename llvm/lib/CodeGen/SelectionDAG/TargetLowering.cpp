@@ -1748,17 +1748,54 @@ bool TargetLowering::SimplifyDemandedBits(
     // Only known if known in both the LHS and RHS.
     Known = Known.intersectWith(Known2);
     break;
-  case ISD::VSELECT:
-    if (SimplifyDemandedBits(Op.getOperand(2), DemandedBits, DemandedElts,
-                             Known, TLO, Depth + 1))
+  case ISD::VSELECT: {
+    SDValue Cond = Op.getOperand(0);
+    SDValue T = Op.getOperand(1);
+    SDValue F = Op.getOperand(2);
+
+    if (SimplifyDemandedBits(F, DemandedBits, DemandedElts, Known, TLO,
+                             Depth + 1))
       return true;
-    if (SimplifyDemandedBits(Op.getOperand(1), DemandedBits, DemandedElts,
-                             Known2, TLO, Depth + 1))
+    if (SimplifyDemandedBits(T, DemandedBits, DemandedElts, Known2, TLO,
+                             Depth + 1))
       return true;
+
+    // If all demanded false bits are 1 or true bits are 0 then attempt to
+    // simplify to bit logic:
+    // select Cond, T, 0 --> and Cond, freeze(T)
+    // select Cond, T, 1 --> or (not Cond), freeze(T)
+    // select Cond, 1, F --> or Cond, freeze(F)
+    // select Cond, 0, F --> and (not Cond), freeze(F)
+    if (Cond.getValueType() == VT &&
+        TLO.DAG.ComputeNumSignBits(Cond, DemandedElts, Depth + 1) == BitWidth) {
+      if (DemandedBits.isSubsetOf(Known.Zero)) {
+        SDValue FreezeT = TLO.DAG.getFreeze(T);
+        SDValue NewOp = TLO.DAG.getNode(ISD::AND, dl, VT, Cond, FreezeT);
+        return TLO.CombineTo(Op, NewOp);
+      }
+      if (DemandedBits.isSubsetOf(Known.One)) {
+        SDValue NotCond = TLO.DAG.getNOT(dl, Cond, VT);
+        SDValue FreezeT = TLO.DAG.getFreeze(T);
+        SDValue NewOp = TLO.DAG.getNode(ISD::OR, dl, VT, NotCond, FreezeT);
+        return TLO.CombineTo(Op, NewOp);
+      }
+      if (DemandedBits.isSubsetOf(Known2.One)) {
+        SDValue FreezeF = TLO.DAG.getFreeze(F);
+        SDValue NewOp = TLO.DAG.getNode(ISD::OR, dl, VT, Cond, FreezeF);
+        return TLO.CombineTo(Op, NewOp);
+      }
+      if (DemandedBits.isSubsetOf(Known2.Zero)) {
+        SDValue NotCond = TLO.DAG.getNOT(dl, Cond, VT);
+        SDValue FreezeF = TLO.DAG.getFreeze(F);
+        SDValue NewOp = TLO.DAG.getNode(ISD::AND, dl, VT, NotCond, FreezeF);
+        return TLO.CombineTo(Op, NewOp);
+      }
+    }
 
     // Only known if known in both the LHS and RHS.
     Known = Known.intersectWith(Known2);
     break;
+  }
   case ISD::SELECT_CC:
     if (SimplifyDemandedBits(Op.getOperand(3), DemandedBits, DemandedElts,
                              Known, TLO, Depth + 1))
