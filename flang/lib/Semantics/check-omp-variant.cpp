@@ -40,7 +40,6 @@ namespace Fortran::semantics {
 using namespace Fortran::semantics::omp;
 
 void OmpStructureChecker::Enter(const parser::OmpClause::When &x) {
-  CheckAllowedClause(llvm::omp::Clause::OMPC_when);
   OmpVerifyModifiers(
       x.v, llvm::omp::OMPC_when, GetContext().clauseSource, context_);
 }
@@ -688,7 +687,7 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
             CheckProcedureSymbol(base, arg.source);
             CheckProcedureSymbol(variant, arg.source);
           },
-          [&](const parser::OmpLocator &y) {
+          [&](const parser::OmpObject &y) {
             variant = GetArgumentSymbol(arg);
             CheckProcedureSymbol(variant, arg.source);
             const Scope &containingScope{context_.FindScope(x.source)};

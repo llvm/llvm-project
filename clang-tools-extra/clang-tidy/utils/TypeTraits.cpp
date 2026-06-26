@@ -9,6 +9,7 @@
 #include "TypeTraits.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 #include <optional>
 
 namespace clang::tidy::utils::type_traits {
@@ -144,6 +145,24 @@ bool hasNonTrivialMoveAssignment(QualType Type) {
   auto *Record = Type->getAsCXXRecordDecl();
   return Record && Record->hasDefinition() &&
          Record->hasNonTrivialMoveAssignment();
+}
+
+static bool declIsStdInitializerList(const NamedDecl *D) {
+  return D->isInStdNamespace() && D->getName() == "initializer_list";
+}
+
+bool isStdInitializerList(QualType Type) {
+  Type = Type.getCanonicalType();
+  if (const auto *TS = Type->getAs<TemplateSpecializationType>()) {
+    if (const TemplateDecl *TD = TS->getTemplateName().getAsTemplateDecl())
+      return declIsStdInitializerList(TD);
+  }
+  if (const auto *RT = Type->getAs<RecordType>()) {
+    if (const auto *Specialization =
+            dyn_cast_if_present<ClassTemplateSpecializationDecl>(RT->getDecl()))
+      return declIsStdInitializerList(Specialization->getSpecializedTemplate());
+  }
+  return false;
 }
 
 } // namespace clang::tidy::utils::type_traits

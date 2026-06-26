@@ -605,6 +605,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     AddPromotedToType(ISD::FP_TO_FP16, MVT::i16, MVT::i32);
 
     setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, MVT::i16, Custom);
+    setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, MVT::i32, Custom);
     setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, MVT::i16, Custom);
     setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, MVT::i1, Custom);
 
@@ -634,13 +635,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     // BF16 - VOP1 Actions.
     if (Subtarget->hasBF16TransInsts())
       setOperationAction({ISD::FCOS, ISD::FSIN, ISD::FDIV}, MVT::bf16, Custom);
-
-    setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::FP_TO_SINT_SAT,
-                        ISD::FP_TO_UINT_SAT},
-                       MVT::f16, Promote);
-    setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT, ISD::FP_TO_SINT_SAT,
-                        ISD::FP_TO_UINT_SAT},
-                       MVT::bf16, Promote);
 
     // F16 - VOP2 Actions.
     setOperationAction({ISD::BR_CC, ISD::SELECT_CC}, {MVT::f16, MVT::bf16},
@@ -687,6 +681,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     // v_perm_b32 can handle either of these.
     setOperationAction(ISD::BSWAP, {MVT::i16, MVT::v2i16}, Legal);
     setOperationAction(ISD::BSWAP, MVT::v4i16, Custom);
+
+    // Legalize vector types for sat conversions to select v_cvt_pk_[iu]16_f32.
+    if (Subtarget->hasVCvtPkIU16F32())
+      setOperationAction(
+          {ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT},
+          {MVT::v2i16, MVT::v4i16, MVT::v8i16, MVT::v16i16, MVT::v32i16},
+          Custom);
 
     // XXX - Do these do anything? Vector constants turn into build_vector.
     setOperationAction(ISD::Constant, {MVT::v2i16, MVT::v2f16}, Legal);
@@ -1052,6 +1053,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::FMINIMUMNUM,
                        ISD::FMAXIMUMNUM,
                        ISD::FMA,
+                       ISD::ABS,
                        ISD::SMIN,
                        ISD::SMAX,
                        ISD::UMIN,
@@ -1062,6 +1064,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                        ISD::SMAX,
                        ISD::UMIN,
                        ISD::UMAX,
+                       ISD::USUBSAT,
                        ISD::AND,
                        ISD::OR,
                        ISD::XOR,
@@ -7469,10 +7472,19 @@ SDValue SITargetLowering::splitUnaryVectorOp(SDValue Op,
          VT == MVT::v16f64 || VT == MVT::v32f64);
 
   auto [Lo, Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
+  auto [LoVT, HiVT] = DAG.GetSplitDestVTs(VT);
 
   SDLoc SL(Op);
-  SDValue OpLo = DAG.getNode(Opc, SL, Lo.getValueType(), Lo, Op->getFlags());
-  SDValue OpHi = DAG.getNode(Opc, SL, Hi.getValueType(), Hi, Op->getFlags());
+
+  // Forward any trailing scalar operands unchanged to both halves.
+  SmallVector<SDValue, 2> LoOps = {Lo};
+  SmallVector<SDValue, 2> HiOps = {Hi};
+  auto TrailingOps = drop_begin(Op->ops());
+  LoOps.append(TrailingOps.begin(), TrailingOps.end());
+  HiOps.append(TrailingOps.begin(), TrailingOps.end());
+
+  SDValue OpLo = DAG.getNode(Opc, SL, LoVT, LoOps, Op->getFlags());
+  SDValue OpHi = DAG.getNode(Opc, SL, HiVT, HiOps, Op->getFlags());
 
   return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(Op), VT, OpLo, OpHi);
 }
@@ -7623,6 +7635,12 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FCANONICALIZE:
   case ISD::BSWAP:
     return splitUnaryVectorOp(Op, DAG);
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:
+    if (Op.getValueType().isVector() && Op.getValueType() != MVT::v2i16 &&
+        Op.getOperand(0).getValueType().getScalarType() == MVT::f32)
+      return splitUnaryVectorOp(Op, DAG);
+    return LowerFP_TO_INT_SAT(Op, DAG);
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
     return lowerFMINNUM_FMAXNUM(Op, DAG);
@@ -7639,8 +7657,7 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return splitTernaryVectorOp(Op, DAG);
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
-    if (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11 &&
-        Op.getValueType() == MVT::i16 &&
+    if (Subtarget->hasVCvtPkIU16F32() && Op.getValueType() == MVT::i16 &&
         Op.getOperand(0).getValueType() == MVT::f32) {
       // Make f32->i16 legal so we can select V_CVT_PK_[IU]16_F32.
       return Op;
@@ -8795,6 +8812,7 @@ SDValue SITargetLowering::lowerFLDEXP(SDValue Op, SelectionDAG &DAG) const {
 
 static unsigned getExtOpcodeForPromotedOp(SDValue Op) {
   switch (Op->getOpcode()) {
+  case ISD::ABS:
   case ISD::SRA:
   case ISD::SMIN:
   case ISD::SMAX:
@@ -8802,6 +8820,7 @@ static unsigned getExtOpcodeForPromotedOp(SDValue Op) {
   case ISD::SRL:
   case ISD::UMIN:
   case ISD::UMAX:
+  case ISD::USUBSAT:
     return ISD::ZERO_EXTEND;
   case ISD::ADD:
   case ISD::SUB:
@@ -8823,6 +8842,26 @@ static unsigned getExtOpcodeForPromotedOp(SDValue Op) {
   }
 }
 
+SDValue
+SITargetLowering::promoteUniformUnaryOpToI32(SDValue Op,
+                                             DAGCombinerInfo &DCI) const {
+  EVT OpTy = Op.getValueType();
+  SelectionDAG &DAG = DCI.DAG;
+  EVT ExtTy = OpTy.changeElementType(*DAG.getContext(), MVT::i32);
+
+  if (isNarrowingProfitable(Op.getNode(), ExtTy, OpTy))
+    return SDValue();
+
+  SDLoc DL(Op);
+  SDValue Input = Op.getOperand(0);
+  const unsigned ExtOp = getExtOpcodeForPromotedOp(Op);
+  Input = DAG.getNode(ExtOp, DL, ExtTy, Input);
+
+  SDValue NewVal = DAG.getNode(Op.getOpcode(), DL, ExtTy, Input);
+
+  return DAG.getNode(ISD::TRUNCATE, DL, OpTy, NewVal);
+}
+
 SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
                                                 DAGCombinerInfo &DCI) const {
   const unsigned Opc = Op.getOpcode();
@@ -8830,7 +8869,8 @@ SDValue SITargetLowering::promoteUniformOpToI32(SDValue Op,
          Opc == ISD::SRL || Opc == ISD::SRA || Opc == ISD::AND ||
          Opc == ISD::OR || Opc == ISD::XOR || Opc == ISD::MUL ||
          Opc == ISD::SETCC || Opc == ISD::SELECT || Opc == ISD::SMIN ||
-         Opc == ISD::SMAX || Opc == ISD::UMIN || Opc == ISD::UMAX);
+         Opc == ISD::SMAX || Opc == ISD::UMIN || Opc == ISD::UMAX ||
+         Opc == ISD::USUBSAT);
 
   EVT OpTy = (Opc != ISD::SETCC) ? Op.getValueType()
                                  : Op->getOperand(0).getValueType();
@@ -18543,6 +18583,10 @@ SDValue SITargetLowering::performSelectCombine(SDNode *N,
 SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
                                             DAGCombinerInfo &DCI) const {
   switch (N->getOpcode()) {
+  case ISD::ABS:
+    if (SDValue Res = promoteUniformUnaryOpToI32(SDValue(N, 0), DCI))
+      return Res;
+    break;
   case ISD::ADD:
   case ISD::SUB:
   case ISD::SHL:
@@ -18558,6 +18602,7 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SMAX:
   case ISD::UMIN:
   case ISD::UMAX:
+  case ISD::USUBSAT:
     if (auto Res = promoteUniformOpToI32(SDValue(N, 0), DCI))
       return Res;
     break;

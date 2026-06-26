@@ -18096,22 +18096,55 @@ static SDValue PerformMinMaxToSatCombine(SDValue Op, SelectionDAG &DAG,
   if (Min.getOpcode() == ISD::SMAX)
     std::swap(Min, Max);
 
+  if (Min.getOpcode() != ISD::SMIN || Max.getOpcode() != ISD::SMAX)
+    return SDValue();
+
   APInt MinC = Min.getConstantOperandAPInt(1);
   APInt MaxC = Max.getConstantOperandAPInt(1);
-
-  if (Min.getOpcode() != ISD::SMIN || Max.getOpcode() != ISD::SMAX ||
-      !(MinC + 1).isPowerOf2())
+  if (MaxC.sgt(MinC))
     return SDValue();
 
   SDLoc DL(Op);
-  if (MinC == ~MaxC)
-    return DAG.getNode(ARMISD::SSAT, DL, VT, Input,
-                       DAG.getConstant(MinC.countr_one(), DL, VT));
-  if (MaxC == 0)
-    return DAG.getNode(ARMISD::USAT, DL, VT, Input,
-                       DAG.getConstant(MinC.countr_one(), DL, VT));
 
-  return SDValue();
+  // A clamp whose bounds are already a saturation range maps to a single
+  // SSAT / USAT.
+  if ((MinC + 1).isPowerOf2()) {
+    if (MinC == ~MaxC)
+      return DAG.getNode(ARMISD::SSAT, DL, VT, Input,
+                         DAG.getConstant(MinC.countr_one(), DL, VT));
+    if (MaxC == 0)
+      return DAG.getNode(ARMISD::USAT, DL, VT, Input,
+                         DAG.getConstant(MinC.countr_one(), DL, VT));
+  }
+
+  // For power-of-two clamp widths, convert the range to be zero-centered,
+  // apply SSAT, and convert the result back.
+  //
+  //   Width  = Hi - Lo + 1
+  //   Center = Lo + Width / 2
+  //   Result = ssat(X - Center) + Center
+  //
+  // The idea is to shift the input so that the clamp range is centered
+  // around zero, apply ssat, and then shift the result back.
+  //
+  // For example clamp(X, -118, 137) -> Width = 256, Center = 10, so it becomes
+  // ssat(X - 10, 8) + 10
+
+  APInt Width = MinC - MaxC + 1;
+  if (!Width.isPowerOf2() || Width.isOne())
+    return SDValue();
+  unsigned SatBit = Width.logBase2() - 1; // ssat to SatBit + 1 signed bits
+  APInt Center = MaxC + Width.lshr(1);
+
+  // The rewrite is only valid when X - Center does not overflow;
+  SDValue NegC = DAG.getConstant(-Center, DL, VT);
+  if (DAG.computeOverflowForSignedAdd(Input, NegC) != SelectionDAG::OFK_Never)
+    return SDValue();
+
+  SDValue Shifted = DAG.getNode(ISD::ADD, DL, VT, Input, NegC);
+  SDValue Sat = DAG.getNode(ARMISD::SSAT, DL, VT, Shifted,
+                            DAG.getConstant(SatBit, DL, VT));
+  return DAG.getNode(ISD::ADD, DL, VT, Sat, DAG.getConstant(Center, DL, VT));
 }
 
 /// PerformMinMaxCombine - Target-specific DAG combining for creating truncating
