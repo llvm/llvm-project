@@ -26,10 +26,16 @@ namespace llvm {
 
 class FunctionPass;
 class InstructionSelector;
+class Module;
 class PassRegistry;
+class TargetVerify;
 class X86RegisterBankInfo;
 class X86Subtarget;
 class X86TargetMachine;
+
+/// Create the X86 implementation of the target-dependent IR verifier. Used by
+/// the TargetVerifierPass, which dispatches by triple.
+TargetVerify *createX86TargetVerify(Module &M);
 
 /// This pass converts a legalized DAG into a X86-specific DAG, ready for
 /// instruction scheduling.
