@@ -7777,6 +7777,26 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   SortedIndices = std::move(SortedIndicesDraft);
   SPtrInfo.StrideSCEV = Stride0;
   SPtrInfo.Ty = StridedLoadTy;
+
+  auto isReverseWidenedOrder = [&](ArrayRef<unsigned> Order,
+                                   unsigned NumOffsets) -> bool {
+    if (Order.empty())
+      return false;
+    unsigned Sz = Order.size();
+    return all_of(enumerate(Order), [&](const auto &Pair) {
+      return Pair.value() == Sz ||
+             (NumOffsets - (Pair.index() / NumOffsets) - 1 ==
+                  (Pair.value() / NumOffsets) &&
+              (Pair.index() % NumOffsets) == (Pair.value() % NumOffsets));
+    });
+  };
+
+  if (isIdentityOrder(SortedIndices)) {
+    SortedIndices.clear();
+  } else if (isReverseWidenedOrder(SortedIndices, NumOffsets)) {
+    SPtrInfo.StrideSCEV = SE->getNegativeSCEV(SPtrInfo.StrideSCEV);
+    SortedIndices.clear();
+  }
   return true;
 }
 
@@ -11107,12 +11127,6 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
       Align CommonAlignment = computeCommonAlignment<StoreInst>(VL);
       if (analyzeRtStrideCandidate(PointerOps, ScalarTy, CommonAlignment,
                                    CurrentOrder, SPtrInfo, /*isLoad=*/false)) {
-        if (isIdentityOrder(CurrentOrder)) {
-          CurrentOrder.clear();
-        } else if (isReverseOrder(CurrentOrder)) {
-          SPtrInfo.StrideSCEV = SE->getNegativeSCEV(SPtrInfo.StrideSCEV);
-          CurrentOrder.clear();
-        }
         return TreeEntry::StridedVectorize;
       }
     }
