@@ -6671,12 +6671,8 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
     }
     case OffsetOfNode::Array: {
       int64_t Index = ArrayIndices[ArrayIndex];
-      if (Index < 0) {
-        S.FFDiag(S.Current->getLocation(OpPC),
-                 diag::note_invalid_subexpr_in_const_expr)
-            << S.Current->getRange(OpPC);
-        return false;
-      }
+      if (Index < 0)
+        return Invalid(S, OpPC);
       const ArrayType *AT = S.getASTContext().getAsArrayType(CurrentType);
       if (!AT)
         return false;
