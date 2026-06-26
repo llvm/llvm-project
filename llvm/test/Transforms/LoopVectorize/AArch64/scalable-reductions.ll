@@ -313,17 +313,23 @@ for.end:
 
 ; ADD (with reduction stored in invariant address)
 
-; CHECK-REMARK: vectorized loop (vectorization width: vscale x 4, interleaved count: 2)
+; CHECK-REMARK: vectorized loop (vectorization width: vscale x 4, interleaved count: 4)
 define void @invariant_store(ptr %dst, ptr readonly %src) {
 ; CHECK-LABEL: @invariant_store
 ; CHECK: vector.body:
 ; CHECK: %[[LOAD1:.*]] = load <vscale x 4 x i32>
 ; CHECK: %[[LOAD2:.*]] = load <vscale x 4 x i32>
+; CHECK: %[[LOAD3:.*]] = load <vscale x 4 x i32>
+; CHECK: %[[LOAD4:.*]] = load <vscale x 4 x i32>
 ; CHECK: %[[ADD1:.*]] = add <vscale x 4 x i32> %{{.*}}, %[[LOAD1]]
 ; CHECK: %[[ADD2:.*]] = add <vscale x 4 x i32> %{{.*}}, %[[LOAD2]]
+; CHECK: %[[ADD3:.*]] = add <vscale x 4 x i32> %{{.*}}, %[[LOAD3]]
+; CHECK: %[[ADD4:.*]] = add <vscale x 4 x i32> %{{.*}}, %[[LOAD4]]
 ; CHECK: middle.block:
-; CHECK: %[[ADD:.*]] = add <vscale x 4 x i32> %[[ADD2]], %[[ADD1]]
-; CHECK-NEXT: %[[SUM:.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> %[[ADD]])
+; CHECK: %[[ADD5:.*]] = add <vscale x 4 x i32> %[[ADD2]], %[[ADD1]]
+; CHECK: %[[ADD6:.*]] = add <vscale x 4 x i32> %[[ADD3]], %[[ADD5]]
+; CHECK: %[[ADD7:.*]] = add <vscale x 4 x i32> %[[ADD4]], %[[ADD6]]
+; CHECK-NEXT: %[[SUM:.*]] = call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> %[[ADD7]])
 ; CHECK-NEXT: store i32 %[[SUM]], ptr %gep.dst, align 4
 entry:
   %gep.dst = getelementptr inbounds i32, ptr %dst, i64 42
