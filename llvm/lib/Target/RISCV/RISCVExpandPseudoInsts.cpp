@@ -627,7 +627,7 @@ bool RISCVExpandPseudo::expandPseudoReadVLENBViaVSETVLIX0(
 
 bool RISCVExpandPseudo::expandPseudoClearFPR64(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
-  DebugLoc DL = MBBI->getDebugLoc();
+  const DebugLoc &DL = MBBI->getDebugLoc();
   Register Dst = MBBI->getOperand(0).getReg();
 
   if (STI->is64Bit()) {
