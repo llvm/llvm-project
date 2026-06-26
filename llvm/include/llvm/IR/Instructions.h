@@ -182,11 +182,12 @@ struct LoadStoreInstProperties {
   Align Alignment;
   AtomicOrdering Ordering;
   SyncScope::ID SSID;
+  bool IsElementwise;
 };
 
 /// An instruction for reading from memory. This uses the SubclassData field in
 /// Value to store whether or not the load is volatile.
-class LoadInst : public UnaryInstruction {
+class  LoadInst : public UnaryInstruction {
   using VolatileField = BoolBitfieldElementT<0>;
   using AlignmentField = AlignmentBitfieldElementT<VolatileField::NextBit>;
   using OrderingField = AtomicOrderingBitfieldElementT<AlignmentField::NextBit>;
@@ -210,9 +211,6 @@ public:
                     InsertPosition InsertBefore);
   LLVM_ABI LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
                     Align Align, InsertPosition InsertBefore = nullptr);
-  LLVM_ABI LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
-                    Align Align, AtomicOrdering Order, SyncScope::ID SSID,
-                    InsertPosition InsertBefore);
   LLVM_ABI LoadInst(Type *Ty, Value *Ptr, const Twine &NameStr, bool isVolatile,
                     Align Align, AtomicOrdering Order,
                     SyncScope::ID SSID = SyncScope::System,
@@ -273,7 +271,7 @@ public:
 
   /// Returns the properties of this load instruction.
   LoadStoreInstProperties getProperties() const {
-    return {isVolatile(), getAlign(), getOrdering(), getSyncScopeID()};
+    return {isVolatile(), getAlign(), getOrdering(), getSyncScopeID(), isElementwise()};
   }
 
   /// Sets the properties of this load instruction.
@@ -282,6 +280,7 @@ public:
     setAlignment(Props.Alignment);
     setOrdering(Props.Ordering);
     setSyncScopeID(Props.SSID);
+    setElementwise(Props.IsElementwise);
   }
 
   bool isSimple() const { return !isAtomic() && !isVolatile(); }
