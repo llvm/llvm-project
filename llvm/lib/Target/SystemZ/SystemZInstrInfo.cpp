@@ -1815,7 +1815,8 @@ void SystemZInstrInfo::expandStackGuardPseudo(MachineInstr &MI,
   if (GuardType.empty() || (GuardType == "tls")) {
     if (STI.isTargetzOS()) {
       enum { OFFSET_CEELAA_STACK_GUARD = 0x98 };
-      BuildMI(MBB, MI, DL, get(SystemZ::LOAD_LIBRARY_ANCHOR_AREA_ADDR), AddrReg);
+      BuildMI(MBB, MI, DL, get(SystemZ::LOAD_LIBRARY_ANCHOR_AREA_ADDR),
+              AddrReg);
       Offset = OFFSET_CEELAA_STACK_GUARD;
     } else {
       // Emit a load of the TLS block's address
