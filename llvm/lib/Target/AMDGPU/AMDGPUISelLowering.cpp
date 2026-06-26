@@ -3465,6 +3465,16 @@ SDValue AMDGPUTargetLowering::LowerCTLS(SDValue Op, SelectionDAG &DAG) const {
                      DAG.getAllOnesConstant(SL, MVT::i32));
 }
 
+SDValue AMDGPUTargetLowering::LowerINT_TO_FP16(SDValue Op, SelectionDAG &DAG,
+                                               EVT FP16Ty) const {
+  assert(FP16Ty == MVT::f16 || FP16Ty == MVT::bf16);
+  SDLoc SL(Op);
+  SDValue Src = Op.getOperand(0);
+  SDValue ToF32 = DAG.getNode(Op.getOpcode(), SL, MVT::f32, Src);
+  SDValue FPRoundFlag = DAG.getIntPtrConstant(0, SL, /*isTarget=*/true);
+  return DAG.getNode(ISD::FP_ROUND, SL, FP16Ty, ToF32, FPRoundFlag);
+}
+
 SDValue AMDGPUTargetLowering::LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG,
                                                bool Signed) const {
   // The regular method converting a 64-bit integer to float roughly consists of
@@ -3630,27 +3640,11 @@ SDValue AMDGPUTargetLowering::LowerUINT_TO_FP(SDValue Op,
     return DAG.getNode(ISD::UINT_TO_FP, DL, DestVT, Ext);
   }
 
-  if (DestVT == MVT::bf16) {
-    SDLoc SL(Op);
-    SDValue ToF32 = DAG.getNode(ISD::UINT_TO_FP, SL, MVT::f32, Src);
-    SDValue FPRoundFlag = DAG.getIntPtrConstant(0, SL, /*isTarget=*/true);
-    return DAG.getNode(ISD::FP_ROUND, SL, MVT::bf16, ToF32, FPRoundFlag);
-  }
+  if (DestVT == MVT::bf16 || DestVT == MVT::f16)
+    return LowerINT_TO_FP16(Op, DAG, DestVT);
 
   if (SrcVT != MVT::i64)
     return Op;
-
-  if (DestVT == MVT::f16 && isTypeLegal(MVT::f16)) {
-    SDLoc DL(Op);
-
-    SDValue IntToFp32 = DAG.getNode(Op.getOpcode(), DL, MVT::f32, Src);
-    SDValue FPRoundFlag =
-        DAG.getIntPtrConstant(0, SDLoc(Op), /*isTarget=*/true);
-    SDValue FPRound =
-        DAG.getNode(ISD::FP_ROUND, DL, MVT::f16, IntToFp32, FPRoundFlag);
-
-    return FPRound;
-  }
 
   if (DestVT == MVT::f32)
     return LowerINT_TO_FP32(Op, DAG, false);
@@ -3676,30 +3670,13 @@ SDValue AMDGPUTargetLowering::LowerSINT_TO_FP(SDValue Op,
     return DAG.getNode(ISD::SINT_TO_FP, DL, DestVT, Ext);
   }
 
-  if (DestVT == MVT::bf16) {
-    SDLoc SL(Op);
-    SDValue ToF32 = DAG.getNode(ISD::SINT_TO_FP, SL, MVT::f32, Src);
-    SDValue FPRoundFlag = DAG.getIntPtrConstant(0, SL, /*isTarget=*/true);
-    return DAG.getNode(ISD::FP_ROUND, SL, MVT::bf16, ToF32, FPRoundFlag);
-  }
+  if (DestVT == MVT::bf16 || DestVT == MVT::f16)
+    return LowerINT_TO_FP16(Op, DAG, DestVT);
 
   if (SrcVT != MVT::i64)
     return Op;
 
   // TODO: Factor out code common with LowerUINT_TO_FP.
-
-  if (DestVT == MVT::f16 && isTypeLegal(MVT::f16)) {
-    SDLoc DL(Op);
-    SDValue Src = Op.getOperand(0);
-
-    SDValue IntToFp32 = DAG.getNode(Op.getOpcode(), DL, MVT::f32, Src);
-    SDValue FPRoundFlag =
-        DAG.getIntPtrConstant(0, SDLoc(Op), /*isTarget=*/true);
-    SDValue FPRound =
-        DAG.getNode(ISD::FP_ROUND, DL, MVT::f16, IntToFp32, FPRoundFlag);
-
-    return FPRound;
-  }
 
   if (DestVT == MVT::f32)
     return LowerINT_TO_FP32(Op, DAG, true);
@@ -3899,7 +3876,7 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT(const SDValue Op,
   if (SrcVT == MVT::f16 && DestVT == MVT::i16)
     return Op;
 
-  if (SrcVT == MVT::bf16) {
+  if (SrcVT == MVT::bf16 || (SrcVT == MVT::f16 && DestVT == MVT::i32)) {
     SDLoc DL(Op);
     SDValue PromotedSrc = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Src);
     return DAG.getNode(Op.getOpcode(), DL, DestVT, PromotedSrc);
@@ -3946,12 +3923,21 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
   uint64_t SatWidth = SatVT.getScalarSizeInBits();
   assert(SatWidth <= DstWidth && "Saturation width cannot exceed result width");
 
+  // Select v2f32 -> v2i16 natively to v_cvt_pk_[iu]16_f32.
+  if (DstVT.isVector()) {
+    if (DstVT == MVT::v2i16 && SatWidth == 16 && SrcVT == MVT::v2f32)
+      return Op;
+
+    return SDValue();
+  }
+
   // Will be selected natively
   if (DstVT == MVT::i32 && SatWidth == DstWidth &&
       (SrcVT == MVT::f32 || SrcVT == MVT::f64))
     return Op;
 
-  if (DstVT == MVT::i16 && SatWidth == DstWidth && SrcVT == MVT::f16)
+  if (DstVT == MVT::i16 && SatWidth == DstWidth &&
+      (SrcVT == MVT::f16 || SrcVT == MVT::f32))
     return Op;
 
   // Perform all saturation at selected width (i16 or i32) and truncate

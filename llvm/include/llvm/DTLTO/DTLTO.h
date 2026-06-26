@@ -16,6 +16,7 @@
 #ifndef LLVM_DTLTO_DTLTO_H
 #define LLVM_DTLTO_DTLTO_H
 
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -38,11 +39,11 @@ namespace lto {
 /// to DTLTO distributors.
 ///
 /// Input files are kept until the pipeline has determined per-module ThinLTO
-/// participation. addInput() performs: (1) register the input; (2) on Windows,
-/// normalize module ID for standalone bitcode; (3) for thin archive members,
-/// set module ID to the on-disk member path; (4) for other archives and FatLTO,
-/// set module ID to a unique path and serialize content in
-/// serializeLTOInputs().
+/// participation and cache status. addInput() performs: (1) register the
+/// input; (2) on Windows, normalize module ID for standalone bitcode; (3) for
+/// thin archive members, set module ID to the on-disk member path; (4) for
+/// other archives and FatLTO, set module ID to a unique path whose content is
+/// serialized later by serializeLTOInputs().
 class LLVM_ABI DTLTO : public LTO {
   using Base = LTO;
 
@@ -98,16 +99,17 @@ public:
   virtual Error run(AddStreamFn AddStream, FileCache Cache = {}) override;
 
 private:
-  /// DTLTO archives support.
+  /// DTLTO archive support.
   ///
   /// Save the contents of ThinLTO-enabled input files that must be serialized
   /// for distribution, such as archive members and FatLTO objects, to
   /// individual bitcode files named after the module ID.
   ///
-  /// Must be called after all input files are added but before optimization
-  /// begins. If a file with that name already exists, it is likely a leftover
-  /// from a previously terminated linker process and can be safely overwritten.
-  Error serializeLTOInputs();
+  /// Must be called after all input files are added and cache hits are known,
+  /// but before optimization begins. Existing files are overwritten because
+  /// they are likely leftovers from a previously terminated linker process and
+  /// can be safely replaced.
+  LLVM_ABI Error serializeLTOInputs();
 
   // Remove temporary files created to enable distribution.
   void cleanup() override;
@@ -163,6 +165,8 @@ public:
 private:
   // Backend compilation jobs, one per module.
   SmallVector<Job> Jobs;
+  // Input module IDs that must be serialized to individual files.
+  DenseSet<StringRef> InputModuleIDsToSerialize;
   // Task index offset for first ThinLTO job.
   unsigned ThinLTOTaskOffset;
   // Optional cache for native objects.
@@ -210,10 +214,13 @@ private:
   ///    distributor will skip this job. On a cache miss, J.CacheAddStream is
   ///    set for later use when storing the compiled object.
   ///
-  /// 4. Writes the per-module summary index to disk only on cache miss. The
+  /// 4. Records the module ID and imported module IDs that must be serialized
+  ///    to individual files.
+  ///
+  /// 5. Writes the per-module summary index to disk only on cache miss. The
   ///    remote compiler will read this via -fthinlto-index=.
   ///
-  /// 5. Registers the job's temporary files for removal on abnormal process
+  /// 6. Registers the job's temporary files for removal on abnormal process
   ///    exit when SaveTemps is false (only for files that will be created).
   ///
   /// \param ModulePath The module identifier (bitcode path) for the ThinLTO

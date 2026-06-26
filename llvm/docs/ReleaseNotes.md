@@ -384,6 +384,8 @@ Makes programs 10x faster by doing Special New Thing.
   * Highlights matching keywords in its output when color is enabled.
   * Searches the components of settings paths. For example `apropos qemu-user` will now
     show `platform.plugin.qemu-user` as one of the results.
+* Reading global and static variables on WebAssembly targets now works correctly. Previously their
+  values could not be read because data sections were mapped to the wrong address space.
 
 #### Deprecated APIs
 
