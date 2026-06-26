@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -std=hlsl202x -x hlsl -ast-dump -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -std=hlsl202x -x hlsl -ast-dump -o - %s | FileCheck %s
 
 typedef vector<float, 4> float4;
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -o - %s -verify
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -o - %s -verify
 
 // expected-error@+1{{'hlsl::dimension' attribute cannot be applied to a declaration}}
 [[hlsl::dimension("2D")]] __hlsl_resource_t e0;

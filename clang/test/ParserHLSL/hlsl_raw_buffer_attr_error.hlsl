@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -o - %s -verify
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -o - %s -verify
 
 // expected-error@+1{{'hlsl::raw_buffer' attribute cannot be applied to a declaration}}
 [[hlsl::raw_buffer]] __hlsl_resource_t res0;
