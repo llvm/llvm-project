@@ -810,16 +810,12 @@ LogicalResult GPUSharedMemoryOp::verify() {
         "dynamic_shared_memory_fixed_bytes must both be present or both be "
         "absent");
 
-  if (auto resultTy = dyn_cast<MemRefType>(getResult().getType())) {
-    auto addrSpace =
-        dyn_cast_if_present<gpu::AddressSpaceAttr>(resultTy.getMemorySpace());
-    if (!addrSpace ||
-        addrSpace.getValue() != gpu::GPUDialect::getWorkgroupAddressSpace())
-      return emitOpError(
-          "result memref must use #gpu.address_space<workgroup>");
-  } else {
-    return emitOpError("result must be a memref type");
-  }
+  auto resultTy = cast<MemRefType>(getResult().getType());
+  auto addrSpace =
+      dyn_cast_if_present<gpu::AddressSpaceAttr>(resultTy.getMemorySpace());
+  if (!addrSpace ||
+      addrSpace.getValue() != gpu::GPUDialect::getWorkgroupAddressSpace())
+    return emitOpError("result memref must use #gpu.address_space<workgroup>");
 
   return success();
 }

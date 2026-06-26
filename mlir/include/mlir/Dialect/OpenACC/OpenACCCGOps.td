@@ -479,8 +479,8 @@ def OpenACC_GPUSharedMemoryOp : OpenACC_Op<"gpu_shared_memory"> {
     OptionalAttr<I64Attr>:$dynamic_shared_memory_scaling_bytes,
     OptionalAttr<I64Attr>:$dynamic_shared_memory_fixed_bytes
   );
-  let results = (outs Res<AnyType, "", [MemAlloc<DefaultResource, 0,
-                                          FullEffect>]>:$result);
+  let results = (outs Res<AnyMemRef, "", [MemAlloc<DefaultResource, 0,
+                                           FullEffect>]>:$result);
   let assemblyFormat = [{
     (`(` $dynamic_sizes^ `)`)? attr-dict `:` functional-type(operands, results)
   }];
