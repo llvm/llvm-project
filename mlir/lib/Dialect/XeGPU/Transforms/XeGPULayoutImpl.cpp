@@ -471,10 +471,17 @@ xegpu::inferBroadcastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   if (!bcastDims.empty())
     bcastSourceLayout = bcastSourceLayout.setUnitDimData(bcastDims);
 
-  if (dimDiff > 0) {
+  if (dimDiff) {
     SmallVector<int64_t> sliceDims;
-    for (size_t i = 0; i < dimDiff; i++)
-      sliceDims.push_back(i);
+    bool isOuterDimDiffUnitDims =
+        llvm::all_of(llvm::seq<int64_t>(0, dimDiff),
+                     [&](int64_t i) { return resShape[i] == 1; });
+    if (dimDiff && bcastDims.size() == dimDiff && isOuterDimDiffUnitDims) {
+      sliceDims.assign(bcastDims.begin(), bcastDims.end());
+    } else {
+      for (int64_t i = 0; i < dimDiff; ++i) // original behavior
+        sliceDims.push_back(i);
+    }
     bcastSourceLayout = xegpu::SliceAttr::get(
         resLayout.getContext(), bcastSourceLayout,
         DenseI64ArrayAttr::get(resLayout.getContext(), sliceDims));
