@@ -55,9 +55,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CAS/ActionCache.h"
-#include "llvm/CAS/CASFileSystem.h"
 #include "llvm/CAS/ObjectStore.h"
-#include "llvm/CAS/TreeSchema.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -1532,40 +1530,42 @@ createBaseFS(const FileSystemOptions &FSOpts, const FrontendOptions &FEOpts,
   if (FEOpts.CASIncludeTreeID.empty())
     return BaseFS;
 
-  // Helper for creating a valid (but empty) CAS FS if an error is encountered.
-  auto makeEmptyCASFS = [&CAS]() {
-    // Try to use the configured CAS, if any.
-    std::optional<llvm::cas::CASID> EmptyRootID;
-    if (CAS) {
-      llvm::cas::TreeSchema Schema(*CAS);
-      // If we cannot create an empty tree, fall back to creating an empty
-      // in-memory CAS.
-      if (llvm::Error E = Schema.create({}).moveInto(EmptyRootID)) {
-        consumeError(std::move(E));
-        CAS = nullptr;
+  // Helper for creating a valid (but empty) FS if an error is encountered.
+  auto makeEmptyFS = [] {
+    class EmptyFS : public llvm::RTTIExtends<EmptyFS, llvm::vfs::FileSystem> {
+      llvm::ErrorOr<llvm::vfs::Status> status(const Twine &Path) final {
+        return llvm::errc::no_such_file_or_directory;
       }
-    }
-    // Create an empty in-memory CAS with an empty tree.
-    if (!CAS) {
-      CAS = llvm::cas::createInMemoryCAS();
-      llvm::cas::TreeSchema Schema(*CAS);
-      EmptyRootID = llvm::cantFail(Schema.create({}));
-    }
-    return llvm::cantFail(
-        llvm::cas::createCASFileSystem(std::move(CAS), *EmptyRootID));
+      llvm::ErrorOr<std::unique_ptr<llvm::vfs::File>>
+      openFileForRead(const Twine &Path) final {
+        return llvm::errc::no_such_file_or_directory;
+      }
+      llvm::vfs::directory_iterator dir_begin(const Twine &Dir,
+                                              std::error_code &EC) final {
+        EC = llvm::errc::no_such_file_or_directory;
+        return {};
+      }
+      std::error_code setCurrentWorkingDirectory(const Twine &Path) final {
+        return llvm::errc::no_such_file_or_directory;
+      }
+      llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const final {
+        return llvm::errc::no_such_file_or_directory;
+      }
+    };
+    return std::make_unique<EmptyFS>();
   };
 
   // CAS couldn't be created. The error was already reported to Diags.
   assert((CAS || Diags.hasErrorOccurred()) &&
          "CAS is missing but not diagnosed");
   if (!CAS)
-    return makeEmptyCASFS();
+    return makeEmptyFS();
 
   Expected<llvm::cas::CASID> RootID = CAS->parseID(FEOpts.CASIncludeTreeID);
   if (!RootID) {
     llvm::consumeError(RootID.takeError());
     Diags.Report(diag::err_cas_cannot_parse_root_id) << FEOpts.CASIncludeTreeID;
-    return makeEmptyCASFS();
+    return makeEmptyFS();
   }
 
   auto makeIncludeTreeFS = [&](std::shared_ptr<llvm::cas::ObjectStore> CAS,
@@ -1589,7 +1589,7 @@ createBaseFS(const FileSystemOptions &FSOpts, const FrontendOptions &FEOpts,
   if (!ExpectedFS) {
     Diags.Report(diag::err_cas_filesystem_cannot_be_initialized)
         << FEOpts.CASIncludeTreeID << llvm::toString(ExpectedFS.takeError());
-    return makeEmptyCASFS();
+    return makeEmptyFS();
   }
 
   return *ExpectedFS;
