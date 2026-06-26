@@ -128,7 +128,11 @@ public:
       : AbstractLatticeFunction(HeapProvenanceLattice(), HeapProvenanceLattice(), HeapProvenanceLattice()) {}
 
   void addSeed(const Value *V, const HeapProvenanceLattice &Info) {
-    mergeLattice(V, Seeds[V], Info);
+    if (V && V->hasUseList())
+      mergeLattice(V, Seeds[V], Info);
+  }
+  bool IsUntrackedValue(const Value *Key) override {
+    return !Key || !Key->hasUseList();
   }
   bool IsSpecialCasedPHI(PHINode *PN) override { return true; }
   HeapProvenanceLattice MergeValues(HeapProvenanceLattice X, HeapProvenanceLattice Y) override {
@@ -144,7 +148,7 @@ public:
                                SmallDenseMap<const Value *, HeapProvenanceLattice, 16> &ChangedValues,
                                SparseSolver<const Value *, HeapProvenanceLattice> &SS) override {
     auto MergeInto = [&](const Value *Target, const HeapProvenanceLattice &NewI) {
-      if (!Target || isa<ConstantPointerNull>(Target) || isa<UndefValue>(Target)) return;
+      if (!Target || !Target->hasUseList()) return;
       auto &Dest = ChangedValues[Target];
       if (Dest.isUninit()) {
         auto Existing = SS.getExistingValueState(Target);
@@ -229,7 +233,11 @@ public:
       : AbstractLatticeFunction(HeapProvenanceLattice(), HeapProvenanceLattice(), HeapProvenanceLattice()) {}
 
   void addSeed(const Value *V, const HeapProvenanceLattice &Info) {
-    mergeLattice(V, Seeds[V], Info);
+    if (V && V->hasUseList())
+      mergeLattice(V, Seeds[V], Info);
+  }
+  bool IsUntrackedValue(const Value *Key) override {
+    return !Key || !Key->hasUseList();
   }
   bool IsSpecialCasedPHI(PHINode *PN) override { return true; }
   HeapProvenanceLattice MergeValues(HeapProvenanceLattice X, HeapProvenanceLattice Y) override {
@@ -245,7 +253,7 @@ public:
                                SmallDenseMap<const Value *, HeapProvenanceLattice, 16> &ChangedValues,
                                SparseSolver<const Value *, HeapProvenanceLattice> &SS) override {
     auto MergeInto = [&](const Value *Target, const HeapProvenanceLattice &NewI) {
-      if (!Target || isa<ConstantPointerNull>(Target) || isa<UndefValue>(Target)) return;
+      if (!Target || !Target->hasUseList()) return;
       auto &Dest = ChangedValues[Target];
       if (Dest.isUninit()) {
         auto Existing = SS.getExistingValueState(Target);

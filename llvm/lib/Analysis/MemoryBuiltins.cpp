@@ -1310,12 +1310,32 @@ bool ObjectSizeOffsetEvaluator::computeFallbackHeapMetadata(Value *V, SizeOffset
     }
   }
 
+  if (auto *FinalHeadInst = dyn_cast<Instruction>(HeadVal)) {
+    if (auto *VI = dyn_cast<Instruction>(V)) {
+      if (FinalHeadInst->getParent() == VI->getParent() &&
+          !FinalHeadInst->comesBefore(VI))
+        return false;
+    }
+    if (FinalHeadInst->getParent() == Builder.GetInsertBlock()) {
+      if (!FinalHeadInst->comesBefore(&*Builder.GetInsertPoint())) {
+        if (FinalHeadInst->getNextNode())
+          Builder.SetInsertPoint(FinalHeadInst->getNextNode());
+        else
+          Builder.SetInsertPoint(FinalHeadInst->getParent());
+      }
+    } else if (FinalHeadInst->getParent() != &VF->getEntryBlock()) {
+      return false;
+    }
+  }
+
   Value *OffsetVal = nullptr;
+  Value *VInt = nullptr;
+  Value *HeadInt = nullptr;
   if (HeadVal == V) {
     OffsetVal = Zero;
   } else {
-    Value *VInt = Builder.CreatePtrToInt(V, IntTy, "v.int");
-    Value *HeadInt = Builder.CreatePtrToInt(HeadVal, IntTy, "head.int");
+    VInt = Builder.CreatePtrToInt(V, IntTy, "v.int");
+    HeadInt = Builder.CreatePtrToInt(HeadVal, IntTy, "head.int");
     OffsetVal = Builder.CreateSub(VInt, HeadInt, "meta.offset");
   }
 
@@ -1329,7 +1349,11 @@ bool ObjectSizeOffsetEvaluator::computeFallbackHeapMetadata(Value *V, SizeOffset
     Fn->addFnAttr(Attribute::NoCallback);
     Fn->addFnAttr(Attribute::NoSync);
   }
-  Value *ChunkPayloadSize = Builder.CreateCall(GetSizeFC, {HeadVal}, "chunk.size");
+  Value *ChunkPayloadSize = Builder.CreateCall(GetSizeFC, {HeadVal}, "meta.size");
+  if (HeadVal != V) {
+    Value *Cond = Builder.CreateICmpUGE(VInt, HeadInt, "ptr.ge.head");
+    ChunkPayloadSize = Builder.CreateSelect(Cond, ChunkPayloadSize, Zero, "chunk.size");
+  }
   if (OffsetVal->getType() != IntTy)
     OffsetVal = Builder.CreateZExtOrTrunc(OffsetVal, IntTy);
 
