@@ -126,15 +126,10 @@ define i16 @abd_ext_i16_i32(i16 %a, i32 %b) nounwind {
 ; PPC32-LABEL: abd_ext_i16_i32:
 ; PPC32:       # %bb.0:
 ; PPC32-NEXT:    clrlwi 3, 3, 16
-; PPC32-NEXT:    cmplw 3, 4
-; PPC32-NEXT:    bgt 0, .LBB4_2
-; PPC32-NEXT:  # %bb.1:
+; PPC32-NEXT:    subc 3, 3, 4
+; PPC32-NEXT:    subfe 4, 3, 3
+; PPC32-NEXT:    xor 3, 3, 4
 ; PPC32-NEXT:    sub 3, 4, 3
-; PPC32-NEXT:    neg 3, 3
-; PPC32-NEXT:    blr
-; PPC32-NEXT:  .LBB4_2:
-; PPC32-NEXT:    sub 3, 3, 4
-; PPC32-NEXT:    neg 3, 3
 ; PPC32-NEXT:    blr
 ;
 ; PPC64-LABEL: abd_ext_i16_i32:
@@ -187,15 +182,10 @@ define i16 @abd_ext_i16_undef(i16 %a, i16 %b) nounwind {
 define i32 @abd_ext_i32(i32 %a, i32 %b) nounwind {
 ; PPC32-LABEL: abd_ext_i32:
 ; PPC32:       # %bb.0:
-; PPC32-NEXT:    cmplw 3, 4
-; PPC32-NEXT:    bgt 0, .LBB6_2
-; PPC32-NEXT:  # %bb.1:
+; PPC32-NEXT:    subc 3, 3, 4
+; PPC32-NEXT:    subfe 4, 3, 3
+; PPC32-NEXT:    xor 3, 3, 4
 ; PPC32-NEXT:    sub 3, 4, 3
-; PPC32-NEXT:    neg 3, 3
-; PPC32-NEXT:    blr
-; PPC32-NEXT:  .LBB6_2:
-; PPC32-NEXT:    sub 3, 3, 4
-; PPC32-NEXT:    neg 3, 3
 ; PPC32-NEXT:    blr
 ;
 ; PPC64-LABEL: abd_ext_i32:
@@ -220,15 +210,10 @@ define i32 @abd_ext_i32_i16(i32 %a, i16 %b) nounwind {
 ; PPC32-LABEL: abd_ext_i32_i16:
 ; PPC32:       # %bb.0:
 ; PPC32-NEXT:    clrlwi 4, 4, 16
-; PPC32-NEXT:    cmplw 3, 4
-; PPC32-NEXT:    bgt 0, .LBB7_2
-; PPC32-NEXT:  # %bb.1:
+; PPC32-NEXT:    subc 3, 3, 4
+; PPC32-NEXT:    subfe 4, 3, 3
+; PPC32-NEXT:    xor 3, 3, 4
 ; PPC32-NEXT:    sub 3, 4, 3
-; PPC32-NEXT:    neg 3, 3
-; PPC32-NEXT:    blr
-; PPC32-NEXT:  .LBB7_2:
-; PPC32-NEXT:    sub 3, 3, 4
-; PPC32-NEXT:    neg 3, 3
 ; PPC32-NEXT:    blr
 ;
 ; PPC64-LABEL: abd_ext_i32_i16:
@@ -252,15 +237,10 @@ define i32 @abd_ext_i32_i16(i32 %a, i16 %b) nounwind {
 define i32 @abd_ext_i32_undef(i32 %a, i32 %b) nounwind {
 ; PPC32-LABEL: abd_ext_i32_undef:
 ; PPC32:       # %bb.0:
-; PPC32-NEXT:    cmplw 3, 4
-; PPC32-NEXT:    bgt 0, .LBB8_2
-; PPC32-NEXT:  # %bb.1:
+; PPC32-NEXT:    subc 3, 3, 4
+; PPC32-NEXT:    subfe 4, 3, 3
+; PPC32-NEXT:    xor 3, 3, 4
 ; PPC32-NEXT:    sub 3, 4, 3
-; PPC32-NEXT:    neg 3, 3
-; PPC32-NEXT:    blr
-; PPC32-NEXT:  .LBB8_2:
-; PPC32-NEXT:    sub 3, 3, 4
-; PPC32-NEXT:    neg 3, 3
 ; PPC32-NEXT:    blr
 ;
 ; PPC64-LABEL: abd_ext_i32_undef:
@@ -287,12 +267,8 @@ define i64 @abd_ext_i64(i64 %a, i64 %b) nounwind {
 ; PPC32-NEXT:    subc 4, 4, 6
 ; PPC32-NEXT:    li 7, 0
 ; PPC32-NEXT:    subfe 3, 5, 3
-; PPC32-NEXT:    addze. 5, 7
-; PPC32-NEXT:    li 5, -1
-; PPC32-NEXT:    bc 12, 2, .LBB9_2
-; PPC32-NEXT:  # %bb.1:
-; PPC32-NEXT:    li 5, 0
-; PPC32-NEXT:  .LBB9_2:
+; PPC32-NEXT:    addze 5, 7
+; PPC32-NEXT:    addic 5, 5, -1
 ; PPC32-NEXT:    xor 4, 4, 5
 ; PPC32-NEXT:    xor 3, 3, 5
 ; PPC32-NEXT:    subc 4, 4, 5
@@ -303,15 +279,10 @@ define i64 @abd_ext_i64(i64 %a, i64 %b) nounwind {
 ;
 ; PPC64-LABEL: abd_ext_i64:
 ; PPC64:       # %bb.0:
-; PPC64-NEXT:    cmpld 3, 4
-; PPC64-NEXT:    bgt 0, .LBB9_2
-; PPC64-NEXT:  # %bb.1:
+; PPC64-NEXT:    subc 3, 3, 4
+; PPC64-NEXT:    subfe 4, 3, 3
+; PPC64-NEXT:    xor 3, 3, 4
 ; PPC64-NEXT:    sub 3, 4, 3
-; PPC64-NEXT:    neg 3, 3
-; PPC64-NEXT:    blr
-; PPC64-NEXT:  .LBB9_2:
-; PPC64-NEXT:    sub 3, 3, 4
-; PPC64-NEXT:    neg 3, 3
 ; PPC64-NEXT:    blr
   %aext = zext i64 %a to i128
   %bext = zext i64 %b to i128
@@ -328,12 +299,8 @@ define i64 @abd_ext_i64_undef(i64 %a, i64 %b) nounwind {
 ; PPC32-NEXT:    subc 4, 4, 6
 ; PPC32-NEXT:    li 7, 0
 ; PPC32-NEXT:    subfe 3, 5, 3
-; PPC32-NEXT:    addze. 5, 7
-; PPC32-NEXT:    li 5, -1
-; PPC32-NEXT:    bc 12, 2, .LBB10_2
-; PPC32-NEXT:  # %bb.1:
-; PPC32-NEXT:    li 5, 0
-; PPC32-NEXT:  .LBB10_2:
+; PPC32-NEXT:    addze 5, 7
+; PPC32-NEXT:    addic 5, 5, -1
 ; PPC32-NEXT:    xor 4, 4, 5
 ; PPC32-NEXT:    xor 3, 3, 5
 ; PPC32-NEXT:    subc 4, 4, 5
@@ -344,15 +311,10 @@ define i64 @abd_ext_i64_undef(i64 %a, i64 %b) nounwind {
 ;
 ; PPC64-LABEL: abd_ext_i64_undef:
 ; PPC64:       # %bb.0:
-; PPC64-NEXT:    cmpld 3, 4
-; PPC64-NEXT:    bgt 0, .LBB10_2
-; PPC64-NEXT:  # %bb.1:
+; PPC64-NEXT:    subc 3, 3, 4
+; PPC64-NEXT:    subfe 4, 3, 3
+; PPC64-NEXT:    xor 3, 3, 4
 ; PPC64-NEXT:    sub 3, 4, 3
-; PPC64-NEXT:    neg 3, 3
-; PPC64-NEXT:    blr
-; PPC64-NEXT:  .LBB10_2:
-; PPC64-NEXT:    sub 3, 3, 4
-; PPC64-NEXT:    neg 3, 3
 ; PPC64-NEXT:    blr
   %aext = zext i64 %a to i128
   %bext = zext i64 %b to i128
@@ -371,12 +333,8 @@ define i128 @abd_ext_i128(i128 %a, i128 %b) nounwind {
 ; PPC32-NEXT:    subfe 4, 8, 4
 ; PPC32-NEXT:    li 11, 0
 ; PPC32-NEXT:    subfe 3, 7, 3
-; PPC32-NEXT:    addze. 7, 11
-; PPC32-NEXT:    li 7, -1
-; PPC32-NEXT:    bc 12, 2, .LBB11_2
-; PPC32-NEXT:  # %bb.1:
-; PPC32-NEXT:    li 7, 0
-; PPC32-NEXT:  .LBB11_2:
+; PPC32-NEXT:    addze 7, 11
+; PPC32-NEXT:    addic 7, 7, -1
 ; PPC32-NEXT:    xor 6, 6, 7
 ; PPC32-NEXT:    xor 5, 5, 7
 ; PPC32-NEXT:    subc 6, 6, 7
@@ -398,7 +356,6 @@ define i128 @abd_ext_i128(i128 %a, i128 %b) nounwind {
 ; PPC64-NEXT:    subfe 3, 5, 3
 ; PPC64-NEXT:    addze 5, 7
 ; PPC64-NEXT:    addic 5, 5, -1
-; PPC64-NEXT:    subfe 5, 5, 5
 ; PPC64-NEXT:    xor 4, 4, 5
 ; PPC64-NEXT:    xor 3, 3, 5
 ; PPC64-NEXT:    subc 4, 4, 5
@@ -423,12 +380,8 @@ define i128 @abd_ext_i128_undef(i128 %a, i128 %b) nounwind {
 ; PPC32-NEXT:    subfe 4, 8, 4
 ; PPC32-NEXT:    li 11, 0
 ; PPC32-NEXT:    subfe 3, 7, 3
-; PPC32-NEXT:    addze. 7, 11
-; PPC32-NEXT:    li 7, -1
-; PPC32-NEXT:    bc 12, 2, .LBB12_2
-; PPC32-NEXT:  # %bb.1:
-; PPC32-NEXT:    li 7, 0
-; PPC32-NEXT:  .LBB12_2:
+; PPC32-NEXT:    addze 7, 11
+; PPC32-NEXT:    addic 7, 7, -1
 ; PPC32-NEXT:    xor 6, 6, 7
 ; PPC32-NEXT:    xor 5, 5, 7
 ; PPC32-NEXT:    subc 6, 6, 7
@@ -450,7 +403,6 @@ define i128 @abd_ext_i128_undef(i128 %a, i128 %b) nounwind {
 ; PPC64-NEXT:    subfe 3, 5, 3
 ; PPC64-NEXT:    addze 5, 7
 ; PPC64-NEXT:    addic 5, 5, -1
-; PPC64-NEXT:    subfe 5, 5, 5
 ; PPC64-NEXT:    xor 4, 4, 5
 ; PPC64-NEXT:    xor 3, 3, 5
 ; PPC64-NEXT:    subc 4, 4, 5
@@ -531,22 +483,12 @@ define i16 @abd_ext_i16_to_i32(i16 %a, i16 %b) nounwind {
 define i8 @abd_minmax_i8(i8 %a, i8 %b) nounwind {
 ; CHECK-LABEL: abd_minmax_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    clrlwi 4, 4, 24
 ; CHECK-NEXT:    clrlwi 3, 3, 24
-; CHECK-NEXT:    cmplw 3, 4
-; CHECK-NEXT:    mr 5, 3
-; CHECK-NEXT:    bge 0, .LBB13_3
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    ble 0, .LBB13_4
-; CHECK-NEXT:  .LBB13_2:
-; CHECK-NEXT:    sub 3, 5, 3
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB13_3:
-; CHECK-NEXT:    mr 5, 4
-; CHECK-NEXT:    bgt 0, .LBB13_2
-; CHECK-NEXT:  .LBB13_4:
-; CHECK-NEXT:    mr 3, 4
-; CHECK-NEXT:    sub 3, 5, 3
+; CHECK-NEXT:    clrlwi 4, 4, 24
+; CHECK-NEXT:    sub 3, 3, 4
+; CHECK-NEXT:    srawi 4, 3, 31
+; CHECK-NEXT:    xor 3, 3, 4
+; CHECK-NEXT:    sub 3, 4, 3
 ; CHECK-NEXT:    blr
   %min = call i8 @llvm.umin.i8(i8 %a, i8 %b)
   %max = call i8 @llvm.umax.i8(i8 %a, i8 %b)
@@ -557,22 +499,12 @@ define i8 @abd_minmax_i8(i8 %a, i8 %b) nounwind {
 define i16 @abd_minmax_i16(i16 %a, i16 %b) nounwind {
 ; CHECK-LABEL: abd_minmax_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    clrlwi 4, 4, 16
 ; CHECK-NEXT:    clrlwi 3, 3, 16
-; CHECK-NEXT:    cmplw 3, 4
-; CHECK-NEXT:    mr 5, 3
-; CHECK-NEXT:    bge 0, .LBB14_3
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    ble 0, .LBB14_4
-; CHECK-NEXT:  .LBB14_2:
-; CHECK-NEXT:    sub 3, 5, 3
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB14_3:
-; CHECK-NEXT:    mr 5, 4
-; CHECK-NEXT:    bgt 0, .LBB14_2
-; CHECK-NEXT:  .LBB14_4:
-; CHECK-NEXT:    mr 3, 4
-; CHECK-NEXT:    sub 3, 5, 3
+; CHECK-NEXT:    clrlwi 4, 4, 16
+; CHECK-NEXT:    sub 3, 3, 4
+; CHECK-NEXT:    srawi 4, 3, 31
+; CHECK-NEXT:    xor 3, 3, 4
+; CHECK-NEXT:    sub 3, 4, 3
 ; CHECK-NEXT:    blr
   %min = call i16 @llvm.umin.i16(i16 %a, i16 %b)
   %max = call i16 @llvm.umax.i16(i16 %a, i16 %b)
@@ -581,23 +513,24 @@ define i16 @abd_minmax_i16(i16 %a, i16 %b) nounwind {
 }
 
 define i32 @abd_minmax_i32(i32 %a, i32 %b) nounwind {
-; CHECK-LABEL: abd_minmax_i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmplw 3, 4
-; CHECK-NEXT:    mr 5, 3
-; CHECK-NEXT:    bge 0, .LBB15_3
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    ble 0, .LBB15_4
-; CHECK-NEXT:  .LBB15_2:
-; CHECK-NEXT:    sub 3, 5, 3
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB15_3:
-; CHECK-NEXT:    mr 5, 4
-; CHECK-NEXT:    bgt 0, .LBB15_2
-; CHECK-NEXT:  .LBB15_4:
-; CHECK-NEXT:    mr 3, 4
-; CHECK-NEXT:    sub 3, 5, 3
-; CHECK-NEXT:    blr
+; PPC32-LABEL: abd_minmax_i32:
+; PPC32:       # %bb.0:
+; PPC32-NEXT:    subc 3, 3, 4
+; PPC32-NEXT:    subfe 4, 3, 3
+; PPC32-NEXT:    xor 3, 3, 4
+; PPC32-NEXT:    sub 3, 4, 3
+; PPC32-NEXT:    blr
+;
+; PPC64-LABEL: abd_minmax_i32:
+; PPC64:       # %bb.0:
+; PPC64-NEXT:    clrldi 3, 3, 32
+; PPC64-NEXT:    clrldi 4, 4, 32
+; PPC64-NEXT:    subc 3, 3, 4
+; PPC64-NEXT:    subfe 4, 3, 3
+; PPC64-NEXT:    xor 3, 3, 4
+; PPC64-NEXT:    sub 3, 3, 4
+; PPC64-NEXT:    neg 3, 3
+; PPC64-NEXT:    blr
   %min = call i32 @llvm.umin.i32(i32 %a, i32 %b)
   %max = call i32 @llvm.umax.i32(i32 %a, i32 %b)
   %sub = sub i32 %min, %max
@@ -613,46 +546,36 @@ define i64 @abd_minmax_i64(i64 %a, i64 %b) nounwind {
 ; PPC32-NEXT:    crand 21, 2, 4
 ; PPC32-NEXT:    cror 20, 21, 20
 ; PPC32-NEXT:    mr 7, 3
-; PPC32-NEXT:    bc 12, 20, .LBB16_2
+; PPC32-NEXT:    bc 12, 20, .LBB19_2
 ; PPC32-NEXT:  # %bb.1:
 ; PPC32-NEXT:    mr 7, 5
-; PPC32-NEXT:  .LBB16_2:
+; PPC32-NEXT:  .LBB19_2:
 ; PPC32-NEXT:    mr 8, 4
-; PPC32-NEXT:    bc 12, 20, .LBB16_4
+; PPC32-NEXT:    bc 12, 20, .LBB19_4
 ; PPC32-NEXT:  # %bb.3:
 ; PPC32-NEXT:    mr 8, 6
-; PPC32-NEXT:  .LBB16_4:
+; PPC32-NEXT:  .LBB19_4:
 ; PPC32-NEXT:    crandc 20, 1, 2
 ; PPC32-NEXT:    crand 21, 2, 5
 ; PPC32-NEXT:    cror 20, 21, 20
-; PPC32-NEXT:    bc 12, 20, .LBB16_6
+; PPC32-NEXT:    bc 12, 20, .LBB19_6
 ; PPC32-NEXT:  # %bb.5:
 ; PPC32-NEXT:    mr 3, 5
-; PPC32-NEXT:  .LBB16_6:
-; PPC32-NEXT:    bc 12, 20, .LBB16_8
+; PPC32-NEXT:  .LBB19_6:
+; PPC32-NEXT:    bc 12, 20, .LBB19_8
 ; PPC32-NEXT:  # %bb.7:
 ; PPC32-NEXT:    mr 4, 6
-; PPC32-NEXT:  .LBB16_8:
+; PPC32-NEXT:  .LBB19_8:
 ; PPC32-NEXT:    subc 4, 8, 4
 ; PPC32-NEXT:    subfe 3, 3, 7
 ; PPC32-NEXT:    blr
 ;
 ; PPC64-LABEL: abd_minmax_i64:
 ; PPC64:       # %bb.0:
-; PPC64-NEXT:    cmpld 3, 4
-; PPC64-NEXT:    mr 5, 3
-; PPC64-NEXT:    bge 0, .LBB16_3
-; PPC64-NEXT:  # %bb.1:
-; PPC64-NEXT:    ble 0, .LBB16_4
-; PPC64-NEXT:  .LBB16_2:
-; PPC64-NEXT:    sub 3, 5, 3
-; PPC64-NEXT:    blr
-; PPC64-NEXT:  .LBB16_3:
-; PPC64-NEXT:    mr 5, 4
-; PPC64-NEXT:    bgt 0, .LBB16_2
-; PPC64-NEXT:  .LBB16_4:
-; PPC64-NEXT:    mr 3, 4
-; PPC64-NEXT:    sub 3, 5, 3
+; PPC64-NEXT:    subc 3, 3, 4
+; PPC64-NEXT:    subfe 4, 3, 3
+; PPC64-NEXT:    xor 3, 3, 4
+; PPC64-NEXT:    sub 3, 4, 3
 ; PPC64-NEXT:    blr
   %min = call i64 @llvm.umin.i64(i64 %a, i64 %b)
   %max = call i64 @llvm.umax.i64(i64 %a, i64 %b)
@@ -683,19 +606,19 @@ define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 ; PPC32-NEXT:    cror 20, 20, 23
 ; PPC32-NEXT:    mr 11, 3
 ; PPC32-NEXT:    stw 30, 8(1) # 4-byte Folded Spill
-; PPC32-NEXT:    bc 4, 20, .LBB17_11
+; PPC32-NEXT:    bc 4, 20, .LBB20_11
 ; PPC32-NEXT:  # %bb.1:
 ; PPC32-NEXT:    mr 12, 4
-; PPC32-NEXT:    bc 4, 20, .LBB17_12
-; PPC32-NEXT:  .LBB17_2:
+; PPC32-NEXT:    bc 4, 20, .LBB20_12
+; PPC32-NEXT:  .LBB20_2:
 ; PPC32-NEXT:    mr 0, 5
-; PPC32-NEXT:    bc 4, 20, .LBB17_13
-; PPC32-NEXT:  .LBB17_3:
+; PPC32-NEXT:    bc 4, 20, .LBB20_13
+; PPC32-NEXT:  .LBB20_3:
 ; PPC32-NEXT:    mr 30, 6
-; PPC32-NEXT:    bc 12, 20, .LBB17_5
-; PPC32-NEXT:  .LBB17_4:
+; PPC32-NEXT:    bc 12, 20, .LBB20_5
+; PPC32-NEXT:  .LBB20_4:
 ; PPC32-NEXT:    mr 30, 10
-; PPC32-NEXT:  .LBB17_5:
+; PPC32-NEXT:  .LBB20_5:
 ; PPC32-NEXT:    crandc 20, 1, 2
 ; PPC32-NEXT:    crand 23, 2, 5
 ; PPC32-NEXT:    crandc 21, 21, 22
@@ -705,16 +628,16 @@ define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 ; PPC32-NEXT:    crandc 20, 20, 30
 ; PPC32-NEXT:    crand 21, 30, 21
 ; PPC32-NEXT:    cror 20, 21, 20
-; PPC32-NEXT:    bc 4, 20, .LBB17_14
+; PPC32-NEXT:    bc 4, 20, .LBB20_14
 ; PPC32-NEXT:  # %bb.6:
-; PPC32-NEXT:    bc 4, 20, .LBB17_15
-; PPC32-NEXT:  .LBB17_7:
-; PPC32-NEXT:    bc 4, 20, .LBB17_16
-; PPC32-NEXT:  .LBB17_8:
-; PPC32-NEXT:    bc 12, 20, .LBB17_10
-; PPC32-NEXT:  .LBB17_9:
+; PPC32-NEXT:    bc 4, 20, .LBB20_15
+; PPC32-NEXT:  .LBB20_7:
+; PPC32-NEXT:    bc 4, 20, .LBB20_16
+; PPC32-NEXT:  .LBB20_8:
+; PPC32-NEXT:    bc 12, 20, .LBB20_10
+; PPC32-NEXT:  .LBB20_9:
 ; PPC32-NEXT:    mr 6, 10
-; PPC32-NEXT:  .LBB17_10:
+; PPC32-NEXT:  .LBB20_10:
 ; PPC32-NEXT:    subc 6, 30, 6
 ; PPC32-NEXT:    subfe 5, 5, 0
 ; PPC32-NEXT:    subfe 4, 4, 12
@@ -722,29 +645,29 @@ define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 ; PPC32-NEXT:    lwz 30, 8(1) # 4-byte Folded Reload
 ; PPC32-NEXT:    addi 1, 1, 16
 ; PPC32-NEXT:    blr
-; PPC32-NEXT:  .LBB17_11:
+; PPC32-NEXT:  .LBB20_11:
 ; PPC32-NEXT:    mr 11, 7
 ; PPC32-NEXT:    mr 12, 4
-; PPC32-NEXT:    bc 12, 20, .LBB17_2
-; PPC32-NEXT:  .LBB17_12:
+; PPC32-NEXT:    bc 12, 20, .LBB20_2
+; PPC32-NEXT:  .LBB20_12:
 ; PPC32-NEXT:    mr 12, 8
 ; PPC32-NEXT:    mr 0, 5
-; PPC32-NEXT:    bc 12, 20, .LBB17_3
-; PPC32-NEXT:  .LBB17_13:
+; PPC32-NEXT:    bc 12, 20, .LBB20_3
+; PPC32-NEXT:  .LBB20_13:
 ; PPC32-NEXT:    mr 0, 9
 ; PPC32-NEXT:    mr 30, 6
-; PPC32-NEXT:    bc 4, 20, .LBB17_4
-; PPC32-NEXT:    b .LBB17_5
-; PPC32-NEXT:  .LBB17_14:
+; PPC32-NEXT:    bc 4, 20, .LBB20_4
+; PPC32-NEXT:    b .LBB20_5
+; PPC32-NEXT:  .LBB20_14:
 ; PPC32-NEXT:    mr 3, 7
-; PPC32-NEXT:    bc 12, 20, .LBB17_7
-; PPC32-NEXT:  .LBB17_15:
+; PPC32-NEXT:    bc 12, 20, .LBB20_7
+; PPC32-NEXT:  .LBB20_15:
 ; PPC32-NEXT:    mr 4, 8
-; PPC32-NEXT:    bc 12, 20, .LBB17_8
-; PPC32-NEXT:  .LBB17_16:
+; PPC32-NEXT:    bc 12, 20, .LBB20_8
+; PPC32-NEXT:  .LBB20_16:
 ; PPC32-NEXT:    mr 5, 9
-; PPC32-NEXT:    bc 4, 20, .LBB17_9
-; PPC32-NEXT:    b .LBB17_10
+; PPC32-NEXT:    bc 4, 20, .LBB20_9
+; PPC32-NEXT:    b .LBB20_10
 ;
 ; PPC64-LABEL: abd_minmax_i128:
 ; PPC64:       # %bb.0:
@@ -754,26 +677,26 @@ define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 ; PPC64-NEXT:    mr 7, 3
 ; PPC64-NEXT:    crand 21, 2, 4
 ; PPC64-NEXT:    cror 20, 21, 20
-; PPC64-NEXT:    bc 12, 20, .LBB17_2
+; PPC64-NEXT:    bc 12, 20, .LBB20_2
 ; PPC64-NEXT:  # %bb.1:
 ; PPC64-NEXT:    mr 7, 5
-; PPC64-NEXT:  .LBB17_2:
+; PPC64-NEXT:  .LBB20_2:
 ; PPC64-NEXT:    mr 8, 4
-; PPC64-NEXT:    bc 12, 20, .LBB17_4
+; PPC64-NEXT:    bc 12, 20, .LBB20_4
 ; PPC64-NEXT:  # %bb.3:
 ; PPC64-NEXT:    mr 8, 6
-; PPC64-NEXT:  .LBB17_4:
+; PPC64-NEXT:  .LBB20_4:
 ; PPC64-NEXT:    crandc 20, 1, 2
 ; PPC64-NEXT:    crand 21, 2, 5
 ; PPC64-NEXT:    cror 20, 21, 20
-; PPC64-NEXT:    bc 12, 20, .LBB17_6
+; PPC64-NEXT:    bc 12, 20, .LBB20_6
 ; PPC64-NEXT:  # %bb.5:
 ; PPC64-NEXT:    mr 3, 5
-; PPC64-NEXT:  .LBB17_6:
-; PPC64-NEXT:    bc 12, 20, .LBB17_8
+; PPC64-NEXT:  .LBB20_6:
+; PPC64-NEXT:    bc 12, 20, .LBB20_8
 ; PPC64-NEXT:  # %bb.7:
 ; PPC64-NEXT:    mr 4, 6
-; PPC64-NEXT:  .LBB17_8:
+; PPC64-NEXT:  .LBB20_8:
 ; PPC64-NEXT:    subc 4, 8, 4
 ; PPC64-NEXT:    subfe 3, 3, 7
 ; PPC64-NEXT:    blr
@@ -790,15 +713,12 @@ define i128 @abd_minmax_i128(i128 %a, i128 %b) nounwind {
 define i8 @abd_cmp_i8(i8 %a, i8 %b) nounwind {
 ; CHECK-LABEL: abd_cmp_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    clrlwi 5, 4, 24
-; CHECK-NEXT:    clrlwi 6, 3, 24
-; CHECK-NEXT:    cmplw 6, 5
-; CHECK-NEXT:    ble 0, .LBB18_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    sub 3, 4, 3
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB18_2:
+; CHECK-NEXT:    clrlwi 3, 3, 24
+; CHECK-NEXT:    clrlwi 4, 4, 24
 ; CHECK-NEXT:    sub 3, 3, 4
+; CHECK-NEXT:    srawi 4, 3, 31
+; CHECK-NEXT:    xor 3, 3, 4
+; CHECK-NEXT:    sub 3, 4, 3
 ; CHECK-NEXT:    blr
   %cmp = icmp ule i8 %a, %b
   %ab = sub i8 %a, %b
@@ -810,15 +730,12 @@ define i8 @abd_cmp_i8(i8 %a, i8 %b) nounwind {
 define i16 @abd_cmp_i16(i16 %a, i16 %b) nounwind {
 ; CHECK-LABEL: abd_cmp_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    clrlwi 5, 4, 16
-; CHECK-NEXT:    clrlwi 6, 3, 16
-; CHECK-NEXT:    cmplw 6, 5
-; CHECK-NEXT:    blt 0, .LBB19_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    sub 3, 4, 3
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB19_2:
+; CHECK-NEXT:    clrlwi 3, 3, 16
+; CHECK-NEXT:    clrlwi 4, 4, 16
 ; CHECK-NEXT:    sub 3, 3, 4
+; CHECK-NEXT:    srawi 4, 3, 31
+; CHECK-NEXT:    xor 3, 3, 4
+; CHECK-NEXT:    sub 3, 4, 3
 ; CHECK-NEXT:    blr
   %cmp = icmp ult i16 %a, %b
   %ab = sub i16 %a, %b
@@ -828,16 +745,24 @@ define i16 @abd_cmp_i16(i16 %a, i16 %b) nounwind {
 }
 
 define i32 @abd_cmp_i32(i32 %a, i32 %b) nounwind {
-; CHECK-LABEL: abd_cmp_i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmplw 3, 4
-; CHECK-NEXT:    bge 0, .LBB20_2
-; CHECK-NEXT:  # %bb.1:
-; CHECK-NEXT:    sub 3, 3, 4
-; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB20_2:
-; CHECK-NEXT:    sub 3, 4, 3
-; CHECK-NEXT:    blr
+; PPC32-LABEL: abd_cmp_i32:
+; PPC32:       # %bb.0:
+; PPC32-NEXT:    subc 3, 3, 4
+; PPC32-NEXT:    subfe 4, 3, 3
+; PPC32-NEXT:    xor 3, 3, 4
+; PPC32-NEXT:    sub 3, 4, 3
+; PPC32-NEXT:    blr
+;
+; PPC64-LABEL: abd_cmp_i32:
+; PPC64:       # %bb.0:
+; PPC64-NEXT:    clrldi 3, 3, 32
+; PPC64-NEXT:    clrldi 4, 4, 32
+; PPC64-NEXT:    subc 3, 3, 4
+; PPC64-NEXT:    subfe 4, 3, 3
+; PPC64-NEXT:    xor 3, 3, 4
+; PPC64-NEXT:    sub 3, 3, 4
+; PPC64-NEXT:    neg 3, 3
+; PPC64-NEXT:    blr
   %cmp = icmp uge i32 %a, %b
   %ab = sub i32 %a, %b
   %ba = sub i32 %b, %a
@@ -859,10 +784,10 @@ define i64 @abd_cmp_i64(i64 %a, i64 %b) nounwind {
 ; PPC32-NEXT:    subc 6, 6, 7
 ; PPC32-NEXT:    cror 20, 21, 20
 ; PPC32-NEXT:    subfe 5, 8, 5
-; PPC32-NEXT:    bc 12, 20, .LBB21_2
+; PPC32-NEXT:    bc 12, 20, .LBB24_2
 ; PPC32-NEXT:  # %bb.1:
 ; PPC32-NEXT:    mr 3, 5
-; PPC32-NEXT:  .LBB21_2:
+; PPC32-NEXT:  .LBB24_2:
 ; PPC32-NEXT:    bclr 12, 20, 0
 ; PPC32-NEXT:  # %bb.3:
 ; PPC32-NEXT:    mr 4, 6
@@ -870,13 +795,10 @@ define i64 @abd_cmp_i64(i64 %a, i64 %b) nounwind {
 ;
 ; PPC64-LABEL: abd_cmp_i64:
 ; PPC64:       # %bb.0:
-; PPC64-NEXT:    cmpld 3, 4
-; PPC64-NEXT:    blt 0, .LBB21_2
-; PPC64-NEXT:  # %bb.1:
+; PPC64-NEXT:    subc 3, 3, 4
+; PPC64-NEXT:    subfe 4, 3, 3
+; PPC64-NEXT:    xor 3, 3, 4
 ; PPC64-NEXT:    sub 3, 4, 3
-; PPC64-NEXT:    blr
-; PPC64-NEXT:  .LBB21_2:
-; PPC64-NEXT:    sub 3, 3, 4
 ; PPC64-NEXT:    blr
   %cmp = icmp ult i64 %a, %b
   %ab = sub i64 %a, %b
@@ -919,29 +841,29 @@ define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
 ; PPC32-NEXT:    subfe 8, 0, 8
 ; PPC32-NEXT:    cror 20, 20, 21
 ; PPC32-NEXT:    subfe 7, 30, 7
-; PPC32-NEXT:    bc 4, 20, .LBB22_6
+; PPC32-NEXT:    bc 4, 20, .LBB25_6
 ; PPC32-NEXT:  # %bb.1:
-; PPC32-NEXT:    bc 4, 20, .LBB22_7
-; PPC32-NEXT:  .LBB22_2:
-; PPC32-NEXT:    bc 4, 20, .LBB22_8
-; PPC32-NEXT:  .LBB22_3:
-; PPC32-NEXT:    bc 12, 20, .LBB22_5
-; PPC32-NEXT:  .LBB22_4:
+; PPC32-NEXT:    bc 4, 20, .LBB25_7
+; PPC32-NEXT:  .LBB25_2:
+; PPC32-NEXT:    bc 4, 20, .LBB25_8
+; PPC32-NEXT:  .LBB25_3:
+; PPC32-NEXT:    bc 12, 20, .LBB25_5
+; PPC32-NEXT:  .LBB25_4:
 ; PPC32-NEXT:    mr 6, 10
-; PPC32-NEXT:  .LBB22_5:
+; PPC32-NEXT:  .LBB25_5:
 ; PPC32-NEXT:    lwz 30, 8(1) # 4-byte Folded Reload
 ; PPC32-NEXT:    addi 1, 1, 16
 ; PPC32-NEXT:    blr
-; PPC32-NEXT:  .LBB22_6:
+; PPC32-NEXT:  .LBB25_6:
 ; PPC32-NEXT:    mr 3, 7
-; PPC32-NEXT:    bc 12, 20, .LBB22_2
-; PPC32-NEXT:  .LBB22_7:
+; PPC32-NEXT:    bc 12, 20, .LBB25_2
+; PPC32-NEXT:  .LBB25_7:
 ; PPC32-NEXT:    mr 4, 8
-; PPC32-NEXT:    bc 12, 20, .LBB22_3
-; PPC32-NEXT:  .LBB22_8:
+; PPC32-NEXT:    bc 12, 20, .LBB25_3
+; PPC32-NEXT:  .LBB25_8:
 ; PPC32-NEXT:    mr 5, 9
-; PPC32-NEXT:    bc 4, 20, .LBB22_4
-; PPC32-NEXT:    b .LBB22_5
+; PPC32-NEXT:    bc 4, 20, .LBB25_4
+; PPC32-NEXT:    b .LBB25_5
 ;
 ; PPC64-LABEL: abd_cmp_i128:
 ; PPC64:       # %bb.0:
@@ -956,10 +878,10 @@ define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
 ; PPC64-NEXT:    subfe 5, 8, 5
 ; PPC64-NEXT:    crand 21, 2, 4
 ; PPC64-NEXT:    cror 20, 21, 20
-; PPC64-NEXT:    bc 12, 20, .LBB22_2
+; PPC64-NEXT:    bc 12, 20, .LBB25_2
 ; PPC64-NEXT:  # %bb.1:
 ; PPC64-NEXT:    mr 3, 5
-; PPC64-NEXT:  .LBB22_2:
+; PPC64-NEXT:  .LBB25_2:
 ; PPC64-NEXT:    bclr 12, 20, 0
 ; PPC64-NEXT:  # %bb.3:
 ; PPC64-NEXT:    mr 4, 6
