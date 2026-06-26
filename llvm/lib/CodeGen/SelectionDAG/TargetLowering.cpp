@@ -8931,37 +8931,94 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
     // do occur, they wind up in a "hole" and are subsequently masked out of the
     // result.
     //
-    // A hole of 3 bits is optimal for 32-bit and 64-bit inputs. 128-bit
-    // integers need a larger hole, and for smaller integers the fallback below
-    // is more efficient.
+    // https://www.bearssl.org/constanttime.html#ghash-for-gcm describes this
+    // approach.
+
+    // Stride S handles operands up to S·2^S bits using S² multiplies.
     //
-    // Based on bmul64 in bearssl and bmul in the rust polyval crate.
-    if (BW >= 32 && BW <= 64 &&
+    // * BW <= 8 uses S = 2  (holes of 1 bit)
+    // * BW <= 24 uses S = 3 (holes of 2 bits)
+    // * BW <= 64 uses S = 4 (holes of 3 bits)
+    // * BW <= 160 uses S = 5 (holes of 4 bits)
+    // * BW <= 384 uses S = 6 (holes of 5 bits)
+    //
+    // We distribute the BW bits over S phases:
+    //
+    //   phase 0 keeps bits: 0, S, 2S, ...
+    //   phase 1 keeps bits: 1, S + 1, 2S + 1, ...
+    //   ...
+    //
+    // Each phase has up to n = ceil(BW / S) bits set, and the holes are S-1
+    // bits wide.
+    //
+    // Take BW = 4, S = 2, n = 2. The worst case is a fully populated phase (all
+    // non-hole bits are set to 1) multiplied by itself, 0b0101 * 0b0101. Each
+    // set bit of one operand shifts a copy of the other, and we add the copies:
+    //
+    //              col: 4 3 2 1 0
+    //     0b0101 << 0:  0 0 1 0 1
+    //     0b0101 << 2:  1 0 1 0 0
+    //            ----------------- +
+    //     count:        1 0 2 0 1
+    //
+    // Counting the number of one-bits in each column gives a triangle: the
+    // counts climb 1, 2, ..., n and back down (here 1, 2, 1 across the data
+    // columns). So a column holds at most n one-bits, and that maximum n is
+    // reached in only one column: the peak. Every other column holds at most n
+    // - 1 one-bits.
+    //
+    // A stack of one-bits in a column turns into carries: column 2 above really
+    // stores the value 1 + 1 = 2 = n. A column spans S bits, its kept bit
+    // plus S-1 hole bits, and the count is written from the kept bit upward,
+    // so any count <= 2^S - 1 stays within the column and never interferes with
+    // the next data bit S positions up. Every non-peak column holds at most n -
+    // 1, so they all fit as soon as n - 1 <= 2^S - 1.
+    //
+    // That leaves only the peak column. Because both operands set all data
+    // bits, the triangle peaks at the top of the word at the highest data bit
+    // still inside BW. Here the count reaches exactly n = 2^S and overflows.
+    // But its carry lands at bit n*S >= BW, off the top, where it (and the
+    // whole descending half of the triangle) is truncated.
+    //
+    // Hence the holes suffice exactly when n = ceil(BW / S) <= 2^S, i.e. BW <=
+    // S*2^S.
+    //
+    // Here we find the smallest S that satisfies this inequality.
+    unsigned S = 1;
+    while (S < 32 && divideCeil(BW, S) > (1u << S))
+      ++S;
+
+    // Continue to use the naive fallback below if it seems cheaper. We compare
+    // the number of multiplications here (S * S) versus the number of
+    // iterations there (BW). The naive fallback is still used for i1, i3, i4
+    // and i9, and when multiplication isn't available.
+    if (S * S < BW &&
         isOperationLegalOrCustom(ISD::MUL, getTypeToTransformTo(Ctx, VT))) {
 
-      // Set every fourth bit of each nibble, equivalent to 0b00010001...0001.
-      APInt MaskVal = APInt::getSplat(BW, APInt(4, 0b0001));
+      // Set a bit every S positions, e.g. for S = 4 this is equivalent to
+      // 0b...00010001...0001.
+      APInt MaskVal = APInt::getSplat(BW, APInt(S, 1));
 
-      // Create versions of X and Y that keep only the I-th bit of
-      // each nibble.
-      SDValue M[4], Xp[4], Yp[4];
-      for (unsigned I = 0; I < 4; ++I) {
+      // Create versions of X and Y that keep only the I-th bit of each S-bit
+      // slice.
+      SmallVector<SDValue, 4> M(S), Xp(S), Yp(S);
+      for (unsigned I = 0; I < S; ++I) {
         M[I] = DAG.getConstant(MaskVal.shl(I), DL, VT);
         Xp[I] = DAG.getNode(ISD::AND, DL, VT, X, M[I]);
         Yp[I] = DAG.getNode(ISD::AND, DL, VT, Y, M[I]);
       }
 
-      // Codegens these expressions (16 multiplications):
+      // Codegens these expressions (S*S multiplications), e.g. for S=4:
       //
       // z0 = (x0 * y0) ^ (x1 * y3) ^ (x2 * y2) ^ (x3 * y1);
       // z1 = (x0 * y1) ^ (x1 * y0) ^ (x2 * y3) ^ (x3 * y2);
       // z2 = (x0 * y2) ^ (x1 * y1) ^ (x2 * y0) ^ (x3 * y3);
       // z3 = (x0 * y3) ^ (x1 * y2) ^ (x2 * y1) ^ (x3 * y0);
       SDValue Res = DAG.getConstant(0, DL, VT);
-      for (unsigned I = 0; I < 4; ++I) {
+      for (unsigned I = 0; I < S; ++I) {
         SDValue Zi = DAG.getConstant(0, DL, VT);
-        for (unsigned J = 0; J < 4; ++J) {
-          unsigned K = (I + 4 - J) % 4;
+        for (unsigned J = 0; J < S; ++J) {
+          unsigned K = (I + S - J) % S;
           SDValue P = DAG.getNode(ISD::MUL, DL, VT, Xp[J], Yp[K]);
           Zi = DAG.getNode(ISD::XOR, DL, VT, Zi, P);
         }
