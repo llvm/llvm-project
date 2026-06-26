@@ -222,8 +222,8 @@ public:
                         const FoldableDef &OpToFold) const;
   bool isUseSafeToFold(const MachineInstr &MI,
                        const MachineOperand &UseMO) const;
-  bool isRegFoldSafeAcrossLoopExit(const FoldableDef &OpToFold,
-                                   const MachineInstr &UseMI) const;
+  bool isTemporallyDivergentUse(const FoldableDef &OpToFold,
+                                const MachineInstr &UseMI) const;
 
   const TargetRegisterClass *getRegSeqInit(
       MachineInstr &RegSeq,
@@ -985,17 +985,17 @@ bool SIFoldOperandsImpl::isUseSafeToFold(const MachineInstr &MI,
 // An SGPR->VGPR copy inside a divergent loop latches each lane value as it
 // exits. Folding its scalar source into a use after the loop would make every
 // lane read the same reconverged value, so do not fold across the loop exit.
-bool SIFoldOperandsImpl::isRegFoldSafeAcrossLoopExit(
+bool SIFoldOperandsImpl::isTemporallyDivergentUse(
     const FoldableDef &OpToFold, const MachineInstr &UseMI) const {
   if (!OpToFold.isReg())
-    return true;
+    return false;
   const MachineInstr *DefMI = OpToFold.DefMI;
   if (!DefMI || !DefMI->isCopy() ||
       TRI->isSGPRReg(*MRI, DefMI->getOperand(0).getReg()) ||
       !TRI->isSGPRReg(*MRI, OpToFold.getReg()))
-    return true;
+    return false;
   const MachineLoop *DefLoop = MLI->getLoopFor(DefMI->getParent());
-  return !DefLoop || DefLoop->contains(UseMI.getParent());
+  return DefLoop && !DefLoop->contains(UseMI.getParent());
 }
 
 static MachineOperand *lookUpCopyChain(const SIInstrInfo &TII,
@@ -1227,7 +1227,7 @@ void SIFoldOperandsImpl::foldOperand(
   if (!isUseSafeToFold(*UseMI, *UseOp))
     return;
 
-  if (!isRegFoldSafeAcrossLoopExit(OpToFold, *UseMI))
+  if (isTemporallyDivergentUse(OpToFold, *UseMI))
     return;
 
   // FIXME: Fold operands with subregs.
