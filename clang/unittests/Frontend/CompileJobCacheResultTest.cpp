@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Frontend/CompileJobCacheResult.h"
+#include "FaultingCAS.h"
 #include "llvm/Testing/Support/Error.h"
 
 #include "gmock/gmock.h"
@@ -35,8 +36,9 @@ TEST(CompileJobCacheResultTest, Empty) {
   ASSERT_THAT_ERROR(B.build(*CAS).moveInto(Result), Succeeded());
 
   std::optional<CompileJobCacheResult> Proxy;
-  CompileJobResultSchema Schema(*CAS);
-  ASSERT_THAT_ERROR(Schema.load(*Result).moveInto(Proxy), Succeeded());
+  auto Schema = CompileJobResultSchema::create(*CAS);
+  ASSERT_THAT_ERROR(Schema.takeError(), Succeeded());
+  ASSERT_THAT_ERROR(Schema->load(*Result).moveInto(Proxy), Succeeded());
 
   EXPECT_EQ(Proxy->getNumOutputs(), 0u);
 }
@@ -60,8 +62,9 @@ TEST(CompileJobCacheResultTest, AddOutputs) {
   ASSERT_THAT_ERROR(B.build(*CAS).moveInto(Result), Succeeded());
 
   std::optional<CompileJobCacheResult> Proxy;
-  CompileJobResultSchema Schema(*CAS);
-  ASSERT_THAT_ERROR(Schema.load(*Result).moveInto(Proxy), Succeeded());
+  auto Schema = CompileJobResultSchema::create(*CAS);
+  ASSERT_THAT_ERROR(Schema.takeError(), Succeeded());
+  ASSERT_THAT_ERROR(Schema->load(*Result).moveInto(Proxy), Succeeded());
 
   EXPECT_EQ(Proxy->getNumOutputs(), 2u);
   auto Actual = getAllOutputs(*Proxy);
@@ -93,11 +96,31 @@ TEST(CompileJobCacheResultTest, AddKindMap) {
   ASSERT_THAT_ERROR(B.build(*CAS).moveInto(Result), Succeeded());
 
   std::optional<CompileJobCacheResult> Proxy;
-  CompileJobResultSchema Schema(*CAS);
-  ASSERT_THAT_ERROR(Schema.load(*Result).moveInto(Proxy), Succeeded());
+  auto Schema = CompileJobResultSchema::create(*CAS);
+  ASSERT_THAT_ERROR(Schema.takeError(), Succeeded());
+  ASSERT_THAT_ERROR(Schema->load(*Result).moveInto(Proxy), Succeeded());
 
   EXPECT_EQ(Proxy->getNumOutputs(), 2u);
   auto Actual = getAllOutputs(*Proxy);
 
   EXPECT_EQ(Actual, Expected);
+}
+
+TEST(CompileJobCacheResultTest, SchemaCreateStoreFailure) {
+  FaultingCAS CAS(createInMemoryCAS(), /*FailStoreAtCall=*/0);
+
+  auto Schema = CompileJobResultSchema::create(CAS);
+  EXPECT_THAT_ERROR(Schema.takeError(),
+                    llvm::FailedWithMessage("injected store error"));
+}
+
+TEST(CompileJobCacheResultTest, BuilderBuildStoreFailure) {
+  // There are 2 stores
+  for (unsigned I = 0; I < 2; ++I) {
+    FaultingCAS CAS(createInMemoryCAS(), /*FailStoreAtCall=*/I);
+    CompileJobCacheResult::Builder B;
+    std::optional<ObjectRef> Result;
+    EXPECT_THAT_ERROR(B.build(CAS).moveInto(Result),
+                      llvm::FailedWithMessage("injected store error"));
+  }
 }

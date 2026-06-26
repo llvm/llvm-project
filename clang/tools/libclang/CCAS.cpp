@@ -90,8 +90,10 @@ CXCASCachedCompilation WrappedCachedCompilation::fromResultID(
   if (!OptResultRef)
     return nullptr;
 
-  clang::cas::CompileJobResultSchema Schema(*CAS);
-  auto CachedResult = Schema.load(*OptResultRef);
+  auto Schema = clang::cas::CompileJobResultSchema::create(*CAS);
+  if (!Schema)
+    return failure(Schema.takeError());
+  auto CachedResult = Schema->load(*OptResultRef);
   if (!CachedResult)
     return failure(CachedResult.takeError());
   return wrap(new WrappedCachedCompilation{std::move(CacheKey),

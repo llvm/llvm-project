@@ -1,5 +1,6 @@
 add_clang_unittest(FrontendTests
   ASTUnitTest.cpp
+  CompileJobCacheKeyTest.cpp
   CompileJobCacheResultTest.cpp
   CompilerInvocationTest.cpp
   CompilerInstanceTest.cpp

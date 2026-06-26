@@ -1089,8 +1089,10 @@ void CompilerInstance::initializeDelayedInputFileFromCAS() {
     if (!ValueRef)
       return reportError(llvm::cas::ObjectStore::createUnknownObjectError(*ID));
 
-    cas::CompileJobResultSchema Schema(CAS);
-    auto Result = Schema.load(*ValueRef);
+    auto Schema = cas::CompileJobResultSchema::create(CAS);
+    if (!Schema)
+      return reportError(Schema.takeError());
+    auto Result = Schema->load(*ValueRef);
     if (!Result)
       return reportError(Result.takeError());
     auto Output =
@@ -2778,16 +2780,24 @@ static bool addCachedModuleFileToInMemoryCacheFromKey(
   }
 
   std::optional<cas::CompileJobCacheResult> Result;
-  cas::CompileJobResultSchema Schema(CAS);
-  if (llvm::Error E = Schema.load(*ValueRef).moveInto(Result)) {
+  auto Schema = cas::CompileJobResultSchema::create(CAS);
+  if (!Schema) {
+    Diags.Report(diag::err_cas_unloadable_module)
+        << Path << 1 << CacheKey << Schema.takeError();
+    return true;
+  }
+  if (llvm::Error E = Schema->load(*ValueRef).moveInto(Result)) {
     Diags.Report(diag::err_cas_unloadable_module)
         << Path << 1 << CacheKey << std::move(E);
     return true;
   }
   auto Output =
       Result->getOutput(cas::CompileJobCacheResult::OutputKind::MainOutput);
-  if (!Output)
-    llvm::report_fatal_error("missing main output");
+  if (!Output) {
+    Diags.Report(diag::err_cas_unloadable_module)
+        << Path << 1 << CacheKey << "cached module missing main output";
+    return true;
+  }
 
   return addCachedModuleFileToInMemoryCache(Path, CAS, Output->Object, ModCache,
                                             Diags);
