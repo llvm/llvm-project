@@ -878,7 +878,7 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
   // return address in a temporary register instead of $ra).  The unwind
   // instructions in eh_frame/debug_frame are not correct today for an
   // OUTLINED_FUNCTION, even when a normal ABI call is made.
-  // Clang does not insert CFI directives in the OUTLINED_FUNCTION so it
+  // CFI may be absent or incorrect. So it
   // will look like a frameless function that does nothing beyond its initial
   // unwind state.
   //
