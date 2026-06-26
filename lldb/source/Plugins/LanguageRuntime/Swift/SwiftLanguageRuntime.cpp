@@ -1013,37 +1013,32 @@ static bool IsSwiftReferenceType(ValueObject &object) {
   return false;
 }
 
-static bool ContainsPrivateClass(swift::Demangle::NodePointer node) {
+static bool ContainsPrivateDeclName(swift::Demangle::NodePointer node) {
   if (!node)
     return false;
-
-  using Kind = swift::Demangle::Node::Kind;
-  if (node->getKind() == Kind::Class)
-    for (auto *child : *node)
-      if (child && child->getKind() == Kind::PrivateDeclName)
-        return true;
-
+  if (node->getKind() == swift::Demangle::Node::Kind::PrivateDeclName)
+    return true;
   for (auto *child : *node)
-    if (ContainsPrivateClass(child))
+    if (ContainsPrivateDeclName(child))
       return true;
-
   return false;
+}
+
+static bool IsClass(ValueObjectSP valobj_sp) {
+  if (!valobj_sp)
+    return false;
+  Flags flags = valobj_sp->GetTypeInfo();
+  return flags.Test(eTypeIsClass);
 }
 
 /// Check that the value object is an instance of class, and that its class is
 /// not private.
-static bool IsNonPrivateClass(ValueObjectSP valobj_sp) {
+static bool IsPrivate(ValueObjectSP valobj_sp) {
   if (!valobj_sp)
     return false;
-
-  Flags flags = valobj_sp->GetTypeInfo();
-  if (flags.IsClear(eTypeIsClass))
-    // Not a class.
-    return false;
-
   swift::Demangle::Context ctx;
   auto *node = ctx.demangleSymbolAsNode(valobj_sp->GetMangledTypeName());
-  return !ContainsPrivateClass(node);
+  return ContainsPrivateDeclName(node);
 }
 
 llvm::Error
@@ -1087,8 +1082,8 @@ SwiftLanguageRuntime::PrintObjectViaPointer(Stream &strm, ValueObject &object,
   // This discriminator (_8CC290D01A98D2866F487ABF00E545A7) is a hash based on
   // the path of the source file. This info is not present in the runtime, and
   // thus cannot be used to lookup a type.
-  if (flags.Test(eTypeIsClass) && !IsNonPrivateClass(object.GetSP())) {
-    if (IsNonPrivateClass(static_object_sp))
+  if (IsClass(object.GetSP()) && IsPrivate(object.GetSP())) {
+    if (IsClass(static_object_sp) && !IsPrivate(static_object_sp))
       // Although the dynamic class is private, the static class is not.
       mangled_type_name = static_object_sp->GetMangledTypeName();
     else
