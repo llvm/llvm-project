@@ -1820,12 +1820,15 @@ static void compileFunction(InterpState &S, const Function *Func,
     SP->instantiateFunctionDefinition(S.Current->getLocation(OpPC),
                                       const_cast<FunctionDecl *>(Fn));
   }
-  Fn = Fn->getDefinition();
-  if (!Fn)
+
+  const FunctionDecl *Definition;
+  if (!Fn->getBody(Definition))
+    return;
+  if (!Definition)
     return;
 
   Compiler<ByteCodeEmitter>(S.getContext(), S.P)
-      .compileFunc(Fn, const_cast<Function *>(Func));
+      .compileFunc(Definition, const_cast<Function *>(Func));
 }
 
 bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
