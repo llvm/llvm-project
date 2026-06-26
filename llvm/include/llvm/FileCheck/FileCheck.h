@@ -302,7 +302,7 @@ public:
 /// \c MatchResultDiag.
 class MatchNoteDiag : public FileCheckDiag {
 private:
-  MatchResultDiag *MRD;
+  const MatchResultDiag *MRD;
 
 public:
   MatchNoteDiag(FileCheckDiagKind Kind) : FileCheckDiag(Kind), MRD(nullptr) {}
@@ -316,7 +316,7 @@ public:
   /// Get the note's associated \c MatchResultDiag.
   const MatchResultDiag &getMatchResultDiag() const override { return *MRD; }
   /// Set the note's associated \c MatchResultDiag.
-  void setMatchResultDiag(MatchResultDiag *MRDNew) {
+  void setMatchResultDiag(const MatchResultDiag *MRDNew) {
     assert(!MRD && "expected setMatchResultDiag to be called only once");
     MRD = MRDNew;
   }
