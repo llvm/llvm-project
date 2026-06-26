@@ -423,6 +423,7 @@ define {<vscale x 2 x double>, <vscale x 2 x double>,<vscale x 2 x double>, <vsc
 }
 
 
+declare {<vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.aarch64.sme.readz.horiz.x2.nxv16i8(i32, i32)
 declare {<vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.aarch64.sme.readz.horiz.x2.nxv8i16(i32, i32)
 declare {<vscale x 4 x i32>, <vscale x 4 x i32>} @llvm.aarch64.sme.readz.horiz.x2.nxv4i32(i32, i32)
 declare {<vscale x 2 x i64>, <vscale x 2 x i64>} @llvm.aarch64.sme.readz.horiz.x2.nxv2i64(i32, i32)

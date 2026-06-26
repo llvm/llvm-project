@@ -1,4 +1,4 @@
-; RUN: not llvm-as -disable-output < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as -disable-output < %s 2>&1 | FileCheck %s
 
 declare <4 x i32> @llvm.get.active.lane.mask.v4i32.i32(i32, i32)
 

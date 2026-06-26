@@ -3240,8 +3240,8 @@ void Verifier::visitFunction(const Function &F) {
   }
 
   // Verify if the intrinsic's signature and name are valid. We do this if
-  // the intrinsic has atleast one materialized use, or if isMaterialized
-  // is true.
+  // the intrinsic has at least one materialized use, or if the module is fully
+  // materialized.
   Intrinsic::ID IID = F.getIntrinsicID();
   if (IID && (isMaterialized || !F.materialized_use_empty())) {
     // Verify that the intrinsic prototype lines up with what the .td files
