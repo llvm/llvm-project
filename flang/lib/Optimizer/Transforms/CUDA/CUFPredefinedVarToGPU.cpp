@@ -55,24 +55,23 @@ std::string mangleBuiltin(llvm::StringRef varName) {
          varName.str();
 }
 
-static void processCoordinateOp(mlir::OpBuilder &builder, mlir::Location loc,
-                                fir::CoordinateOp coordOp, unsigned fieldIdx,
-                                mlir::Value &gpuValue) {
+static void
+processCoordinateOp(mlir::OpBuilder &builder, mlir::Location loc,
+                    fir::CoordinateOp coordOp, unsigned fieldIdx,
+                    mlir::Value &gpuValue,
+                    llvm::SmallVectorImpl<mlir::Operation *> &opsToDelete) {
   std::optional<llvm::ArrayRef<int32_t>> fieldIndices =
       coordOp.getFieldIndices();
   assert(fieldIndices && fieldIndices->size() == 1 &&
          "expect only one coordinate");
   if (static_cast<unsigned>((*fieldIndices)[0]) == fieldIdx) {
-    llvm::SmallVector<fir::LoadOp> opToErase;
     for (mlir::OpOperand &coordUse : coordOp.getResult().getUses()) {
       assert(mlir::isa<fir::LoadOp>(coordUse.getOwner()) &&
              "only expect load op");
       auto loadOp = mlir::dyn_cast<fir::LoadOp>(coordUse.getOwner());
       loadOp.getResult().replaceAllUsesWith(gpuValue);
-      opToErase.push_back(loadOp);
+      opsToDelete.push_back(loadOp);
     }
-    for (auto op : opToErase)
-      op.erase();
   }
 }
 
@@ -85,9 +84,12 @@ processDeclareOp(mlir::OpBuilder &builder, mlir::Location loc,
     for (mlir::OpOperand &use : declareOp.getResult().getUses()) {
       fir::CoordinateOp coordOp =
           mlir::dyn_cast<fir::CoordinateOp>(use.getOwner());
-      processCoordinateOp(builder, loc, coordOp, field_x, gpuValues[0]);
-      processCoordinateOp(builder, loc, coordOp, field_y, gpuValues[1]);
-      processCoordinateOp(builder, loc, coordOp, field_z, gpuValues[2]);
+      processCoordinateOp(builder, loc, coordOp, field_x, gpuValues[0],
+                          opsToDelete);
+      processCoordinateOp(builder, loc, coordOp, field_y, gpuValues[1],
+                          opsToDelete);
+      processCoordinateOp(builder, loc, coordOp, field_z, gpuValues[2],
+                          opsToDelete);
       opsToDelete.push_back(coordOp);
     }
     opsToDelete.push_back(declareOp.getOperation());
@@ -143,7 +145,7 @@ struct CUFPredefinedVarToGPU
                            griddims, opsToDelete);
         });
 
-        for (auto op : opsToDelete)
+        for (auto *op : opsToDelete)
           op->erase();
       }
     }
