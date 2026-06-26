@@ -174,6 +174,17 @@ LLVM_ABI void replace_extension(SmallVectorImpl<char> &path,
                                 const Twine &extension,
                                 Style style = Style::native);
 
+/// Check whether \a Path starts with \a Prefix.
+///
+/// Unlike \c StringRef::starts_with, this takes care to check for exact match
+/// of the last component in order to correctly return false for path "/foo/bar"
+/// and prefix "/foo/b", which are likely different file system entities.
+///
+/// Both \a Path and \a Prefix must be normalized - without './' components and
+/// with consistent separators.
+LLVM_ABI bool starts_with(StringRef Path, StringRef Prefix,
+                          Style style = Style::native);
+
 /// Replace matching path prefix with another path.
 ///
 /// @code

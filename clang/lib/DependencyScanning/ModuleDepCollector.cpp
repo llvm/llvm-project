@@ -193,6 +193,18 @@ void dependencies::resetBenignCodeGenOptions(frontend::ActionKind ProgramAction,
   }
 }
 
+bool dependencies::isNormalizedPathInStableDir(
+    const ArrayRef<StringRef> Directories, const StringRef Input) {
+  using namespace llvm::sys;
+
+  if (!path::is_absolute(Input))
+    return false;
+
+  return any_of(Directories, [&](StringRef Dir) {
+    return !Dir.empty() && path::starts_with(Input, Dir);
+  });
+}
+
 bool dependencies::isPathInStableDir(const ArrayRef<StringRef> Directories,
                                      const StringRef Input) {
   using namespace llvm::sys;
@@ -206,7 +218,7 @@ bool dependencies::isPathInStableDir(const ArrayRef<StringRef> Directories,
          PrefixIt != PrefixEnd && PathIt != PathEnd; ++PrefixIt, ++PathIt) {
       if (*PrefixIt != *PathIt)
         return false;
-    }
+         }
     return PrefixIt == PrefixEnd;
   };
 
@@ -769,7 +781,7 @@ ModuleDepCollector::handleTopLevelModule(serialization::ModuleFile *MF) {
           auto FullFilePath = ASTReader::ResolveImportedPath(
               PathBuf, IFI.UnresolvedImportedFilename, MF->BaseDirectory);
           MD.IsInStableDirectories =
-              isPathInStableDir(MDC.StableDirs, *FullFilePath);
+              isNormalizedPathInStableDir(MDC.StableDirs, *FullFilePath);
         }
         if (!(IFI.TopLevel && IFI.ModuleMap))
           return;

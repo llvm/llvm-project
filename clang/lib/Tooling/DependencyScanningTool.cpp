@@ -474,7 +474,7 @@ bool CompilerInstanceWithContext::initialize(
       CI, std::move(FS), DiagEngineWithCmdAndOpts->DiagEngine->getClient(),
       Worker.Service, Worker.DepFS);
 
-  StableDirs = getInitialStableDirs(CI);
+  StableDirs = getInitialStableDirs(CI, StableDirsStrings);
   auto MaybePrebuiltModulesASTMap =
       computePrebuiltModulesASTMap(CI, StableDirs);
   if (!MaybePrebuiltModulesASTMap)

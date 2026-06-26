@@ -115,6 +115,8 @@ private:
   const PrebuiltModulesAttrsMap PrebuiltModulesASTMap;
   /// Directory paths known to be stable through an active development and build
   /// cycle.
+  llvm::BumpPtrAllocator Alloc;
+  llvm::StringSaver StableDirsStrings{Alloc};
   const ArrayRef<StringRef> StableDirs;
   /// Path to the main source file.
   std::string MainFile;
@@ -205,6 +207,9 @@ private:
 void resetBenignCodeGenOptions(frontend::ActionKind ProgramAction,
                                const LangOptions &LangOpts,
                                CodeGenOptions &CGOpts);
+
+bool isNormalizedPathInStableDir(const ArrayRef<StringRef> Directories,
+                                 const StringRef Input);
 
 /// Determine if \c Input can be resolved within a stable directory.
 ///
