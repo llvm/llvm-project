@@ -1243,13 +1243,17 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   // clang-format off
   auto &FPToISat = getActionDefinitionsBuilder({G_FPTOSI_SAT, G_FPTOUI_SAT})
-    .legalFor({{S32, S32}, {S32, S64}})
-    .legalFor(ST.has16BitInsts(),{{S16, S16}})
+    .legalFor({{S32, S32}, {S32, S64}, {S16, S32}})
+    .legalFor(ST.has16BitInsts(), {{S16, S16}})
+    .legalFor(ST.hasVCvtPkIU16F32(), {{V2S16, V2S32}})
     .narrowScalarFor({{S64, S16}}, changeTo(0, S32));
 
   // If available, widen width <16 to i16, intead of i32 so v_cvt_i16/u16_f16 can be used.
   if (ST.has16BitInsts())
     FPToISat.minScalarIf(typeIs(1, S16), 0, S16);
+
+  if (ST.hasVCvtPkIU16F32())
+    FPToISat.clampMaxNumElements(0, S16, 2);
 
   FPToISat.minScalar(1, S32);
   FPToISat.minScalar(0, S32)

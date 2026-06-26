@@ -3923,12 +3923,21 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
   uint64_t SatWidth = SatVT.getScalarSizeInBits();
   assert(SatWidth <= DstWidth && "Saturation width cannot exceed result width");
 
+  // Select v2f32 -> v2i16 natively to v_cvt_pk_[iu]16_f32.
+  if (DstVT.isVector()) {
+    if (DstVT == MVT::v2i16 && SatWidth == 16 && SrcVT == MVT::v2f32)
+      return Op;
+
+    return SDValue();
+  }
+
   // Will be selected natively
   if (DstVT == MVT::i32 && SatWidth == DstWidth &&
       (SrcVT == MVT::f32 || SrcVT == MVT::f64))
     return Op;
 
-  if (DstVT == MVT::i16 && SatWidth == DstWidth && SrcVT == MVT::f16)
+  if (DstVT == MVT::i16 && SatWidth == DstWidth &&
+      (SrcVT == MVT::f16 || SrcVT == MVT::f32))
     return Op;
 
   // Perform all saturation at selected width (i16 or i32) and truncate

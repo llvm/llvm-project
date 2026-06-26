@@ -682,6 +682,13 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::BSWAP, {MVT::i16, MVT::v2i16}, Legal);
     setOperationAction(ISD::BSWAP, MVT::v4i16, Custom);
 
+    // Legalize vector types for sat conversions to select v_cvt_pk_[iu]16_f32.
+    if (Subtarget->hasVCvtPkIU16F32())
+      setOperationAction(
+          {ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT},
+          {MVT::v2i16, MVT::v4i16, MVT::v8i16, MVT::v16i16, MVT::v32i16},
+          Custom);
+
     // XXX - Do these do anything? Vector constants turn into build_vector.
     setOperationAction(ISD::Constant, {MVT::v2i16, MVT::v2f16}, Legal);
 
@@ -7465,10 +7472,19 @@ SDValue SITargetLowering::splitUnaryVectorOp(SDValue Op,
          VT == MVT::v16f64 || VT == MVT::v32f64);
 
   auto [Lo, Hi] = DAG.SplitVectorOperand(Op.getNode(), 0);
+  auto [LoVT, HiVT] = DAG.GetSplitDestVTs(VT);
 
   SDLoc SL(Op);
-  SDValue OpLo = DAG.getNode(Opc, SL, Lo.getValueType(), Lo, Op->getFlags());
-  SDValue OpHi = DAG.getNode(Opc, SL, Hi.getValueType(), Hi, Op->getFlags());
+
+  // Forward any trailing scalar operands unchanged to both halves.
+  SmallVector<SDValue, 2> LoOps = {Lo};
+  SmallVector<SDValue, 2> HiOps = {Hi};
+  auto TrailingOps = drop_begin(Op->ops());
+  LoOps.append(TrailingOps.begin(), TrailingOps.end());
+  HiOps.append(TrailingOps.begin(), TrailingOps.end());
+
+  SDValue OpLo = DAG.getNode(Opc, SL, LoVT, LoOps, Op->getFlags());
+  SDValue OpHi = DAG.getNode(Opc, SL, HiVT, HiOps, Op->getFlags());
 
   return DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(Op), VT, OpLo, OpHi);
 }
@@ -7619,6 +7635,12 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FCANONICALIZE:
   case ISD::BSWAP:
     return splitUnaryVectorOp(Op, DAG);
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:
+    if (Op.getValueType().isVector() && Op.getValueType() != MVT::v2i16 &&
+        Op.getOperand(0).getValueType().getScalarType() == MVT::f32)
+      return splitUnaryVectorOp(Op, DAG);
+    return LowerFP_TO_INT_SAT(Op, DAG);
   case ISD::FMINNUM:
   case ISD::FMAXNUM:
     return lowerFMINNUM_FMAXNUM(Op, DAG);
