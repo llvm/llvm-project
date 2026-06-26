@@ -1313,8 +1313,7 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
       state.maskOperation(rewriter, transferReadOp, linalgOp, maskingMap);
 
   LDBG() << "Vectorised as contiguous load: " << extractOp;
-  return VectorizationHookResult{VectorizationHookStatus::NewOp,
-                                 maskedReadOp};
+  return VectorizationHookResult{VectorizationHookStatus::NewOp, maskedReadOp};
 }
 
 /// Emit reduction operations if the shapes of the value to reduce is different
