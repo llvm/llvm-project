@@ -49,9 +49,11 @@ struct __sf_result {
     return __ret;
   }
 };
+} // namespace __math
 
+// assoc_laguerre
+namespace __math {
 _LIBCPP_EXPORTED_FROM_ABI __sf_result<float> __assoc_laguerre(unsigned int, unsigned int, float) noexcept;
-
 } // namespace __math
 
 [[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI float
