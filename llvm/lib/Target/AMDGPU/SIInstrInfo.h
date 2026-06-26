@@ -219,10 +219,6 @@ private:
   MachineInstr *convertToThreeAddressImpl(MachineInstr &MI,
                                           ThreeAddressUpdates &Updates) const;
 
-  bool isHighCostLiveInterval(
-      LiveInterval &LI,
-      DenseMap<Register, unsigned long> &LIVistCounter) const override;
-
 protected:
   /// If the specific machine instruction is a instruction that moves/copies
   /// value from one register to another register return destination and source

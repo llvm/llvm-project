@@ -43,7 +43,6 @@ namespace llvm {
 
 class DFAPacketizer;
 class InstrItineraryData;
-class LiveInterval;
 class LiveIntervals;
 class LiveVariables;
 class MachineCycleInfo;
@@ -208,11 +207,6 @@ public:
   virtual bool shouldBreakCriticalEdgeToSink(MachineInstr &MI) const {
     return false;
   }
-
-  /// Given a LiveInterval, return true if the LI is considered
-  /// high cost for compile time
-  virtual bool isHighCostLiveInterval(
-      LiveInterval &LI, DenseMap<Register, unsigned long> &LIVistCounter) const;
 
 protected:
   /// For instructions with opcodes for which the M_REMATERIALIZABLE flag is

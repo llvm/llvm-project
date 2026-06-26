@@ -63,12 +63,6 @@ static cl::opt<bool> Fix16BitCopies(
   cl::init(true),
   cl::ReallyHidden);
 
-static cl::opt<unsigned> True16LargeIntervalSizeThreshold(
-    "true16-large-interval-size-threshold", cl::Hidden,
-    cl::desc("If the valnos size of an interval is larger than the threshold, "
-             "it is regarded as a large interval. "),
-    cl::init(100));
-
 SIInstrInfo::SIInstrInfo(const GCNSubtarget &ST)
     : AMDGPUGenInstrInfo(ST, RI, AMDGPU::ADJCALLSTACKUP,
                          AMDGPU::ADJCALLSTACKDOWN),
@@ -11543,12 +11537,4 @@ bool SIInstrInfo::isXDL(const MachineInstr &MI) const {
     return true;
 
   return AMDGPU::getMAIIsGFX940XDL(Opcode);
-}
-
-bool SIInstrInfo::isHighCostLiveInterval(
-    LiveInterval &LI, DenseMap<Register, unsigned long> &LIVisitCounter) const {
-  if (ST.useRealTrue16Insts())
-    return LI.valnos.size() >= True16LargeIntervalSizeThreshold;
-
-  return TargetInstrInfo::isHighCostLiveInterval(LI, LIVisitCounter);
 }

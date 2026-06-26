@@ -108,6 +108,19 @@ static cl::opt<unsigned> LateRematUpdateThreshold(
              "repeated work. "),
     cl::init(100));
 
+static cl::opt<unsigned> LargeIntervalSizeThreshold(
+    "large-interval-size-threshold", cl::Hidden,
+    cl::desc("If the valnos size of an interval is larger than the threshold, "
+             "it is regarded as a large interval. "),
+    cl::init(100));
+
+static cl::opt<unsigned> LargeIntervalFreqThreshold(
+    "large-interval-freq-threshold", cl::Hidden,
+    cl::desc("For a large interval, if it is coalesced with other live "
+             "intervals many times more than the threshold, stop its "
+             "coalescing to control the compile time. "),
+    cl::init(16));
+
 namespace {
 
 class JoinVals;
@@ -234,6 +247,11 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
 
   /// Attempt joining two virtual registers. Return true on success.
   bool joinVirtRegs(CoalescerPair &CP);
+
+  /// If a live interval has many valnos and is coalesced with other
+  /// live intervals many times, we regard such live interval as having
+  /// high compile time cost.
+  bool isHighCostLiveInterval(LiveInterval &LI);
 
   /// Attempt joining with a reserved physreg.
   bool joinReservedPhysReg(CoalescerPair &CP);
@@ -3663,6 +3681,17 @@ void RegisterCoalescer::mergeSubRangeInto(LiveInterval &LI,
       *LIS->getSlotIndexes(), *TRI, ComposeSubRegIdx);
 }
 
+bool RegisterCoalescer::isHighCostLiveInterval(LiveInterval &LI) {
+  if (LI.valnos.size() < LargeIntervalSizeThreshold)
+    return false;
+  auto &Counter = LargeLIVisitCounter[LI.reg()];
+  if (Counter < LargeIntervalFreqThreshold) {
+    Counter++;
+    return false;
+  }
+  return true;
+}
+
 bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
   SmallVector<VNInfo *, 16> NewVNInfo;
   LiveInterval &RHS = LIS->getInterval(CP.getSrcReg());
@@ -3675,8 +3704,7 @@ bool RegisterCoalescer::joinVirtRegs(CoalescerPair &CP) {
 
   LLVM_DEBUG(dbgs() << "\t\tRHS = " << RHS << "\n\t\tLHS = " << LHS << '\n');
 
-  if (TII->isHighCostLiveInterval(LHS, LargeLIVisitCounter) ||
-      TII->isHighCostLiveInterval(RHS, LargeLIVisitCounter))
+  if (isHighCostLiveInterval(LHS) || isHighCostLiveInterval(RHS))
     return false;
 
   // First compute NewVNInfo and the simple value mappings.
