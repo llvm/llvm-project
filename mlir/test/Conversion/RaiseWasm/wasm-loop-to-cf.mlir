@@ -183,24 +183,19 @@ module {
 // CHECK:         }
 
 // CHECK-CANONICAL-LABEL:   func.func @func_0() {
-// CHECK-CANONICAL:           %[[VAL_0:.*]] = arith.constant 10 : i32
-// CHECK-CANONICAL:           %[[VAL_1:.*]] = arith.constant 12 : i32
-// CHECK-CANONICAL:           %[[VAL_2:.*]] = arith.constant 1 : i32
-// CHECK-CANONICAL:           %[[VAL_3:.*]] = arith.constant 0 : i32
-// CHECK-CANONICAL:           %[[VAL_4:.*]] = memref.alloca() : memref<i32>
-// CHECK-CANONICAL:           memref.store %[[VAL_3]], %[[VAL_4]][] : memref<i32>
+// CHECK-CANONICAL:           %[[CONSTANT_0:.*]] = arith.constant 12 : i32
+// CHECK-CANONICAL:           %[[CONSTANT_1:.*]] = arith.constant 1 : i32
+// CHECK-CANONICAL:           %[[CONSTANT_2:.*]] = arith.constant 0 : i32
+// CHECK-CANONICAL:           %[[ALLOCA_0:.*]] = memref.alloca() : memref<i32>
+// CHECK-CANONICAL:           memref.store %[[CONSTANT_2]], %[[ALLOCA_0]][] : memref<i32>
+// CHECK-CANONICAL:           %[[LOAD_0:.*]] = memref.load %[[ALLOCA_0]][] : memref<i32>
+// CHECK-CANONICAL:           %[[ADDI_0:.*]] = arith.addi %[[LOAD_0]], %[[CONSTANT_1]] : i32
+// CHECK-CANONICAL:           memref.store %[[ADDI_0]], %[[ALLOCA_0]][] : memref<i32>
 // CHECK-CANONICAL:           cf.br ^bb1
 // CHECK-CANONICAL:         ^bb1:
-// CHECK-CANONICAL:           %[[VAL_5:.*]] = memref.load %[[VAL_4]][] : memref<i32>
-// CHECK-CANONICAL:           %[[VAL_6:.*]] = arith.addi %[[VAL_5]], %[[VAL_2]] : i32
-// CHECK-CANONICAL:           memref.store %[[VAL_6]], %[[VAL_4]][] : memref<i32>
-// CHECK-CANONICAL:           cf.br ^bb2
+// CHECK-CANONICAL:           %[[LOAD_1:.*]] = memref.load %[[ALLOCA_0]][] : memref<i32>
+// CHECK-CANONICAL:           %[[CMPI_0:.*]] = arith.cmpi slt, %[[LOAD_1]], %[[CONSTANT_0]] : i32
+// CHECK-CANONICAL:           cf.cond_br %[[CMPI_0]], ^bb1, ^bb2
 // CHECK-CANONICAL:         ^bb2:
-// CHECK-CANONICAL:           %[[VAL_7:.*]] = memref.load %[[VAL_4]][] : memref<i32>
-// CHECK-CANONICAL:           %[[VAL_8:.*]] = arith.cmpi slt, %[[VAL_7]], %[[VAL_1]] : i32
-// CHECK-CANONICAL:           cf.cond_br %[[VAL_8]], ^bb2, ^bb3(%[[VAL_1]] : i32)
-// CHECK-CANONICAL:         ^bb3(%[[VAL_9:.*]]: i32):
-// CHECK-CANONICAL:           %[[VAL_10:.*]] = arith.cmpi slt, %[[VAL_9]], %[[VAL_0]] : i32
-// CHECK-CANONICAL:           cf.cond_br %[[VAL_10]], ^bb1, ^bb4
-// CHECK-CANONICAL:         ^bb4:
 // CHECK-CANONICAL:           return
+// CHECK-CANONICAL:         }
