@@ -2530,6 +2530,8 @@ private:
   // Upstream doesn't have the `Declarator` parameter
   void DistributeCLateParsedAttrs(Declarator &D, Decl *Dcl,
                                   LateParsedAttrList *LateAttrs);
+  // Late-parse a function return type's bounds attrs (called from Sema).
+  void ParseLexedFunctionReturnTypeBoundsAttrs(Declarator &D, Decl *FD);
   /* TO_UPSTREAM(BoundsSafety) OFF */
 
   /// Bounds attributes (e.g., counted_by):

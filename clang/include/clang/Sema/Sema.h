@@ -1594,6 +1594,9 @@ public:
   std::function<void(StringRef, StringRef, Decl *, SourceLocation,
                      IncompleteBoundsAttributeInfo Info)>
       ParseBoundsAttributeArgFromStringCallback;
+  /// Callback to late-parse a function return type's bounds attributes.
+  std::function<void(Declarator &, Decl *)>
+      ParseLexedFunctionReturnTypeBoundsAttrsCallback;
   /* TO_UPSTREAM(BoundsSafety) OFF */
 
   /// VAListTagName - The declaration name corresponding to __va_list_tag.

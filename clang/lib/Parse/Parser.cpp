@@ -91,6 +91,10 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
         return this->ParseBoundsAttributeArgFromString(ExprStr, Context, Parent,
                                                        IncludeLoc, Payload);
       };
+  Actions.ParseLexedFunctionReturnTypeBoundsAttrsCallback =
+      [this](Declarator &D, Decl *FD) {
+        this->ParseLexedFunctionReturnTypeBoundsAttrs(D, FD);
+      };
   /* TO_UPSTREAM(BoundsSafety) OFF */
 }
 
@@ -483,6 +487,7 @@ Parser::~Parser() {
   // Clear out the parse-*-from-string callbacks.
   Actions.ParseTypeFromStringCallback = nullptr;
   Actions.ParseBoundsAttributeArgFromStringCallback = nullptr;
+  Actions.ParseLexedFunctionReturnTypeBoundsAttrsCallback = nullptr;
 
   // If we still have scopes active, delete the scope tree.
   delete getCurScope();

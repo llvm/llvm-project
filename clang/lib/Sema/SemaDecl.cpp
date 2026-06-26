@@ -11680,6 +11680,14 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   }
   /* TO_UPSTREAM(BoundsSafety) OFF*/
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  // Late-parse the return type's bounds attributes before we merge with a
+  // previous declaration, so the full type is built first.
+  if (getLangOpts().BoundsSafetyAttributes &&
+      ParseLexedFunctionReturnTypeBoundsAttrsCallback)
+    ParseLexedFunctionReturnTypeBoundsAttrsCallback(D, NewFD);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   // If this declarator is a declaration and not a definition, its parameters
   // will not be pushed onto a scope chain. That means we will not issue any
   // reserved identifier warnings for the declaration, but we will for the
