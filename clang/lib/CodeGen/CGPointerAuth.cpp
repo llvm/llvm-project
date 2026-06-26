@@ -122,13 +122,9 @@ CGPointerAuthInfo CodeGenFunction::EmitPointerAuthInfo(
   if (!Schema)
     return CGPointerAuthInfo();
 
-  llvm::ConstantInt *Discriminator =
-      Schema.getOtherDiscrimination() == PointerAuthSchema::Discrimination::None
-          ? nullptr
-          : CGM.getPointerAuthOtherDiscriminator(Schema, SchemaDecl,
-                                                 SchemaType);
-
-  return EmitPointerAuthInfo(Schema, StorageAddress, Discriminator);
+  return EmitPointerAuthInfo(
+      Schema, StorageAddress,
+      CGM.getPointerAuthOtherDiscriminator(Schema, SchemaDecl, SchemaType));
 }
 
 CGPointerAuthInfo
