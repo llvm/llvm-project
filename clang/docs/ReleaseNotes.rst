@@ -768,6 +768,12 @@ Bug Fixes to Attribute Support
   size of precompiled headers and modules (PCH/PCM), and the time spent loading
   them. (#GH200961)
 
+Bug Fixes to C Support
+^^^^^^^^^^^^^^^^^^^^^^
+
+- No longer applying Named Return Value Optimization (NRVO) in C as it is a
+  non-conforming optimization in C. (#GH100902)
+
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a preprocessor assertion failure triggered when parsing an invalid template-id starting with ``::template operator``. (#GH186582)
