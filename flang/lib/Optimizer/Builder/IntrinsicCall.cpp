@@ -5333,7 +5333,42 @@ mlir::Value IntrinsicLibrary::genIeeeIsNan(mlir::Type resultType,
                                            llvm::ArrayRef<mlir::Value> args) {
   // Check if arg X is a (signaling or quiet) NaN.
   assert(args.size() == 1);
-  return genIsFPClass(resultType, args, nanTest);
+  auto ft = mlir::cast<mlir::FloatType>(args[0].getType());
+  const llvm::fltSemantics &sem = ft.getFloatSemantics();
+  const unsigned w = llvm::APFloatBase::semanticsSizeInBits(sem);
+  const auto sk = llvm::APFloatBase::SemanticsToEnum(sem);
+  const unsigned t = sk == llvm::APFloatBase::S_x87DoubleExtended
+                         ? 64u
+                         : llvm::APFloatBase::semanticsPrecision(sem) - 1u;
+  const unsigned e = w - 1u - t;
+  mlir::Type iTy = builder.getIntegerType(w);
+  mlir::Value u = mlir::arith::BitcastOp::create(builder, loc, iTy, args[0]);
+  mlir::Value eM = mlir::arith::ConstantOp::create(
+      builder, loc, iTy,
+      builder.getIntegerAttr(iTy, llvm::APInt::getBitsSet(w, t, t + e)));
+  mlir::Value sM = mlir::arith::ConstantOp::create(
+      builder, loc, iTy,
+      builder.getIntegerAttr(iTy, llvm::APInt::getLowBitsSet(w, t)));
+  mlir::Value ex = mlir::arith::AndIOp::create(builder, loc, u, eM);
+  mlir::Value exAll1 = mlir::arith::CmpIOp::create(
+      builder, loc, mlir::arith::CmpIPredicate::eq, ex, eM);
+  mlir::Value sg = mlir::arith::AndIOp::create(builder, loc, u, sM);
+  mlir::Value isNan;
+  if (sk == llvm::APFloatBase::S_x87DoubleExtended) {
+    llvm::APInt x87InfSig(w, 0);
+    x87InfSig.setBit(63);
+    mlir::Value notInf = mlir::arith::CmpIOp::create(
+        builder, loc, mlir::arith::CmpIPredicate::ne, sg,
+        mlir::arith::ConstantOp::create(
+            builder, loc, iTy, builder.getIntegerAttr(iTy, x87InfSig)));
+    isNan = mlir::arith::AndIOp::create(builder, loc, exAll1, notInf);
+  } else {
+    mlir::Value notZero = mlir::arith::CmpIOp::create(
+        builder, loc, mlir::arith::CmpIPredicate::ne, sg,
+        builder.createIntegerConstant(loc, iTy, 0));
+    isNan = mlir::arith::AndIOp::create(builder, loc, exAll1, notZero);
+  }
+  return builder.createConvert(loc, resultType, isNan);
 }
 
 // IEEE_IS_NEGATIVE
