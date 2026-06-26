@@ -41,7 +41,7 @@
 #include <time.h>
 
 // since Linux 4.5 and FreeBSD 13, but the Linux libc wrapper is only provided by glibc >= 2.27 and musl
-#if _LIBCPP_GLIBC_PREREQ(2, 27) || _LIBCPP_HAS_MUSL_LIBC || defined(__FreeBSD__)
+#if (defined(__linux__) && (_LIBCPP_GLIBC_PREREQ(2, 27) || _LIBCPP_HAS_MUSL_LIBC)) || defined(__FreeBSD__)
 #  define _LIBCPP_FILESYSTEM_USE_COPY_FILE_RANGE
 #endif
 
