@@ -798,6 +798,15 @@ static bool replaceExtractElements(InsertElementInst *InsElt,
   else
     IC.InsertNewInstWith(WideVec, ExtElt->getParent()->getFirstInsertionPt());
 
+  // WideVec is an extension of ExtVecOp to produce a more useful value for
+  // ExtractElement instructions. If ExtVecOp is an instruction, adopt its
+  // DebugLoc; if it is not, then this is materializing a constant value, so set
+  // a CompilerGenerated location.
+  if (ExtVecOpInst)
+    WideVec->setDebugLoc(ExtVecOpInst->getDebugLoc());
+  else
+    WideVec->setDebugLoc(DebugLoc::getCompilerGenerated());
+
   // Replace extracts from the original narrow vector with extracts from the new
   // wide vector.
   for (User *U : ExtVecOp->users()) {
