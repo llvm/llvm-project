@@ -493,7 +493,6 @@ FUNCTION_PASS("mem2reg", PromotePass())
 FUNCTION_PASS("memcpyopt", MemCpyOptPass())
 FUNCTION_PASS("memprof", MemProfilerPass())
 FUNCTION_PASS("mergeicmps", MergeICmpsPass())
-FUNCTION_PASS("mergereturn", UnifyFunctionExitNodesPass())
 FUNCTION_PASS("move-auto-init", MoveAutoInitPass())
 FUNCTION_PASS("nary-reassociate", NaryReassociatePass())
 FUNCTION_PASS("newgvn", NewGVNPass())
@@ -526,6 +525,7 @@ FUNCTION_PASS("print<func-properties>", FunctionPropertiesPrinterPass(errs()))
 FUNCTION_PASS("print<inline-cost>", InlineCostAnnotationPrinterPass(errs()))
 FUNCTION_PASS("print<lazy-value-info>", LazyValueInfoPrinterPass(errs()))
 FUNCTION_PASS("print<loops>", LoopPrinterPass(errs()))
+FUNCTION_PASS("print<loop-cache-cost>", LoopCachePrinterPass(errs()))
 FUNCTION_PASS("print<memoryssa-walker>", MemorySSAWalkerPrinterPass(errs()))
 FUNCTION_PASS("print<phi-values>", PhiValuesPrinterPass(errs()))
 FUNCTION_PASS("print<postdomtree>", PostDominatorTreePrinterPass(errs()))
@@ -724,7 +724,7 @@ FUNCTION_PASS_WITH_PARAMS(
 FUNCTION_PASS_WITH_PARAMS(
     "sroa", "SROAPass",
     [](SROAOptions PreserveCFG) { return SROAPass(PreserveCFG); },
-    parseSROAOptions, "preserve-cfg;modify-cfg")
+    parseSROAOptions, "preserve-cfg;modify-cfg;aggregate-to-vector")
 FUNCTION_PASS_WITH_PARAMS(
     "structurizecfg", "StructurizeCFG",
     [](bool SkipUniformRegions) {
@@ -800,7 +800,6 @@ LOOP_PASS("print", PrintLoopPass(errs()))
 LOOP_PASS("print<ddg>", DDGAnalysisPrinterPass(errs()))
 LOOP_PASS("print<hash-recognize>", HashRecognizePrinterPass(errs()))
 LOOP_PASS("print<iv-users>", IVUsersPrinterPass(errs()))
-LOOP_PASS("print<loop-cache-cost>", LoopCachePrinterPass(errs()))
 LOOP_PASS("print<loopnest>", LoopNestPrinterPass(errs()))
 #undef LOOP_PASS
 

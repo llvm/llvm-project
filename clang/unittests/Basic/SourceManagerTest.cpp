@@ -22,6 +22,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cstddef>
@@ -42,14 +43,26 @@ namespace {
 class SourceManagerTest : public ::testing::Test {
 protected:
   SourceManagerTest()
-      : FileMgr(FileMgrOpts),
+      : FileMgr(FileMgrOpts, FS),
         Diags(DiagnosticIDs::create(), DiagOpts, new IgnoringDiagConsumer()),
         SourceMgr(Diags, FileMgr), TargetOpts(new TargetOptions) {
     TargetOpts->Triple = "x86_64-apple-darwin11.1.0";
     Target = TargetInfo::CreateTargetInfo(Diags, *TargetOpts);
   }
 
+  void AddFile(StringRef Path) {
+    ASSERT_TRUE(FS->addFile(Path, /*ModificationTime=*/0,
+                            llvm::MemoryBuffer::getMemBuffer("x\n")));
+  }
+
+  void AddHardLink(StringRef NewLink, StringRef Target) {
+    ASSERT_TRUE(FS->addHardLink(NewLink, Target));
+  }
+
   FileSystemOptions FileMgrOpts;
+  IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> FS =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>(
+          /*UseNormalizedPaths=*/false);
   FileManager FileMgr;
   DiagnosticOptions DiagOpts;
   DiagnosticsEngine Diags;
@@ -415,6 +428,118 @@ TEST_F(SourceManagerTest, getLineNumber) {
   SourceMgr.setMainFileID(mainFileID);
 
   ASSERT_NO_FATAL_FAILURE(SourceMgr.getLineNumber(mainFileID, 1, nullptr));
+}
+
+TEST_F(SourceManagerTest, aliasedFilesKeepRequestedNamesPerFileID) {
+#ifdef _WIN32
+  constexpr StringRef FooPath = "C:\\dir\\foo.h";
+  constexpr StringRef BarPath = "C:\\dir\\bar.h";
+#else
+  constexpr StringRef FooPath = "/dir/foo.h";
+  constexpr StringRef BarPath = "/dir/bar.h";
+#endif
+
+  AddFile(FooPath);
+  AddHardLink(BarPath, FooPath);
+
+  auto FooOrErr = FileMgr.getFileRef(FooPath);
+  auto BarOrErr = FileMgr.getFileRef(BarPath);
+  ASSERT_TRUE(static_cast<bool>(FooOrErr));
+  ASSERT_TRUE(static_cast<bool>(BarOrErr));
+
+  FileEntryRef Foo = *FooOrErr;
+  FileEntryRef Bar = *BarOrErr;
+  EXPECT_FALSE(Foo.isSameRef(Bar));
+  EXPECT_EQ(Foo, Bar);
+
+  SourceMgr.overrideFileContents(Foo, llvm::MemoryBuffer::getMemBuffer("x\n"));
+
+  FileID FooID = SourceMgr.createFileID(Foo, SourceLocation(), SrcMgr::C_User);
+  FileID BarID = SourceMgr.createFileID(Bar, SourceLocation(), SrcMgr::C_User);
+
+  SourceLocation FooLoc = SourceMgr.getLocForStartOfFile(FooID);
+  SourceLocation BarLoc = SourceMgr.getLocForStartOfFile(BarID);
+
+  EXPECT_EQ(FooPath, SourceMgr.getFilename(FooLoc));
+  EXPECT_EQ(BarPath, SourceMgr.getFilename(BarLoc));
+  EXPECT_STREQ(FooPath.data(), SourceMgr.getPresumedLoc(FooLoc).getFilename());
+  EXPECT_STREQ(BarPath.data(), SourceMgr.getPresumedLoc(BarLoc).getFilename());
+}
+
+TEST_F(SourceManagerTest, dotPathSpellingsKeepRequestedNamesPerFileID) {
+#ifdef _WIN32
+  constexpr StringRef FooPath = "C:\\dir\\foo.h";
+  constexpr StringRef DotFooPath = "C:\\.\\dir\\foo.h";
+#else
+  constexpr StringRef FooPath = "/dir/foo.h";
+  constexpr StringRef DotFooPath = "/./dir/foo.h";
+#endif
+
+  AddFile(FooPath);
+  AddHardLink(DotFooPath, FooPath);
+
+  auto FooOrErr = FileMgr.getFileRef(FooPath);
+  auto DotFooOrErr = FileMgr.getFileRef(DotFooPath);
+  ASSERT_TRUE(static_cast<bool>(FooOrErr));
+  ASSERT_TRUE(static_cast<bool>(DotFooOrErr));
+
+  FileEntryRef Foo = *FooOrErr;
+  FileEntryRef DotFoo = *DotFooOrErr;
+  EXPECT_FALSE(Foo.isSameRef(DotFoo));
+  EXPECT_EQ(Foo, DotFoo);
+
+  SourceMgr.overrideFileContents(Foo, llvm::MemoryBuffer::getMemBuffer("x\n"));
+
+  FileID FooID = SourceMgr.createFileID(Foo, SourceLocation(), SrcMgr::C_User);
+  FileID DotFooID =
+      SourceMgr.createFileID(DotFoo, SourceLocation(), SrcMgr::C_User);
+
+  SourceLocation FooLoc = SourceMgr.getLocForStartOfFile(FooID);
+  SourceLocation DotFooLoc = SourceMgr.getLocForStartOfFile(DotFooID);
+
+  EXPECT_EQ(FooPath, SourceMgr.getFilename(FooLoc));
+  EXPECT_EQ(DotFooPath, SourceMgr.getFilename(DotFooLoc));
+  EXPECT_STREQ(FooPath.data(), SourceMgr.getPresumedLoc(FooLoc).getFilename());
+  EXPECT_STREQ(DotFooPath.data(),
+               SourceMgr.getPresumedLoc(DotFooLoc).getFilename());
+  EXPECT_EQ(DotFooPath, *SourceMgr.getNonBuiltinFilenameForID(DotFooID));
+}
+
+TEST_F(SourceManagerTest, dotDotPathSpellingsKeepRequestedNamesPerFileID) {
+#ifdef _WIN32
+  constexpr StringRef BPath = "C:\\a\\b\\..\\c.h";
+  constexpr StringRef XPath = "C:\\a\\x\\..\\c.h";
+#else
+  constexpr StringRef BPath = "/a/b/../c.h";
+  constexpr StringRef XPath = "/a/x/../c.h";
+#endif
+
+  AddFile(BPath);
+  AddHardLink(XPath, BPath);
+
+  auto BOrErr = FileMgr.getFileRef(BPath);
+  auto XOrErr = FileMgr.getFileRef(XPath);
+  ASSERT_TRUE(static_cast<bool>(BOrErr));
+  ASSERT_TRUE(static_cast<bool>(XOrErr));
+
+  FileEntryRef B = *BOrErr;
+  FileEntryRef X = *XOrErr;
+  EXPECT_FALSE(B.isSameRef(X));
+  EXPECT_EQ(B, X);
+
+  SourceMgr.overrideFileContents(B, llvm::MemoryBuffer::getMemBuffer("x\n"));
+
+  FileID BID = SourceMgr.createFileID(B, SourceLocation(), SrcMgr::C_User);
+  FileID XID = SourceMgr.createFileID(X, SourceLocation(), SrcMgr::C_User);
+
+  SourceLocation BLoc = SourceMgr.getLocForStartOfFile(BID);
+  SourceLocation XLoc = SourceMgr.getLocForStartOfFile(XID);
+
+  EXPECT_EQ(BPath, SourceMgr.getFilename(BLoc));
+  EXPECT_EQ(XPath, SourceMgr.getFilename(XLoc));
+  EXPECT_STREQ(BPath.data(), SourceMgr.getPresumedLoc(BLoc).getFilename());
+  EXPECT_STREQ(XPath.data(), SourceMgr.getPresumedLoc(XLoc).getFilename());
+  EXPECT_EQ(XPath, *SourceMgr.getNonBuiltinFilenameForID(XID));
 }
 
 struct FakeExternalSLocEntrySource : ExternalSLocEntrySource {

@@ -407,6 +407,12 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
   definition in the warning message if the macro is defined on command line.
 
+- Improved :doc:`bugprone-misplaced-widening-cast
+  <clang-tidy/checks/bugprone/misplaced-widening-cast>` check by fixing a false
+  positive on bit field assignments when the `CheckImplicitCasts` option is
+  enabled. The check now uses the actual bit field width instead of the
+  declared type to determine if widening occurs.
+
 - Improved :doc:`bugprone-move-forwarding-reference
   <clang-tidy/checks/bugprone/move-forwarding-reference>` check by fixing some
   false positives in the context of moved lambda captures.
@@ -621,6 +627,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/return-braced-init-list>` check to apply fix-it
   when type qualifiers and/or reference modifiers are used with parameters.
 
+- Improved :doc:`modernize-type-traits
+  <clang-tidy/checks/modernize/type-traits>` check to suggest usage of
+  ``std::remove_cvref_t`` when applicable.
+
 - Improved :doc:`modernize-use-default-member-init
   <clang-tidy/checks/modernize/use-default-member-init>` check by fixing a
   false positive when a constructor initializer refers to a declaration that
@@ -791,6 +801,9 @@ Changes in existing checks
   - Fixed a false positive where function templates could be diagnosed as generic
     identifiers when `DefaultCase` was enabled.
 
+  - Fixed a crash in dependent base lookup when
+    `AggressiveDependentMemberLookup` option is enabled.
+
 - Improved :doc:`readability-implicit-bool-conversion
   <clang-tidy/checks/readability/implicit-bool-conversion>` check:
 
@@ -842,9 +855,13 @@ Changes in existing checks
   macros that may expand differently in other configurations.
 
 - Improved :doc:`readability-redundant-parentheses
-  <clang-tidy/checks/readability/redundant-parentheses>` check by fixing a
-  false positive for parentheses present around an overloaded operator in the
-  context of a binary operation.
+  <clang-tidy/checks/readability/redundant-parentheses>` check:
+
+  - Fixed a false positive for parentheses present around an overloaded operator
+    in the context of a binary operation.
+
+  - Fixed a bug where clients that apply fix-its without :program:`clang-tidy`'s
+    cleanup could produce invalid code by joining adjacent tokens.
 
 - Improved :doc:`readability-redundant-preprocessor
   <clang-tidy/checks/readability/redundant-preprocessor>` check by fixing a

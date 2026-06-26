@@ -802,9 +802,9 @@ void TargetPassConfig::addPrintPass(const std::string &Banner) {
 }
 
 void TargetPassConfig::addVerifyPass(const std::string &Banner) {
-  bool Verify = VerifyMachineCode == cl::BOU_TRUE;
+  bool Verify = VerifyMachineCode == cl::boolOrDefault::BOU_TRUE;
 #ifdef EXPENSIVE_CHECKS
-  if (VerifyMachineCode == cl::BOU_UNSET)
+  if (VerifyMachineCode == cl::boolOrDefault::BOU_UNSET)
     Verify = TM->isMachineVerifierClean();
 #endif
   if (Verify)
@@ -825,17 +825,17 @@ void TargetPassConfig::addCheckDebugPass() {
 
 void TargetPassConfig::addMachinePrePasses(bool AllowDebugify) {
   if (AllowDebugify && DebugifyIsSafe &&
-      (DebugifyAndStripAll == cl::BOU_TRUE ||
-       DebugifyCheckAndStripAll == cl::BOU_TRUE))
+      (DebugifyAndStripAll == cl::boolOrDefault::BOU_TRUE ||
+       DebugifyCheckAndStripAll == cl::boolOrDefault::BOU_TRUE))
     addDebugifyPass();
 }
 
 void TargetPassConfig::addMachinePostPasses(const std::string &Banner) {
   if (DebugifyIsSafe) {
-    if (DebugifyCheckAndStripAll == cl::BOU_TRUE) {
+    if (DebugifyCheckAndStripAll == cl::boolOrDefault::BOU_TRUE) {
       addCheckDebugPass();
       addStripDebugPass();
-    } else if (DebugifyAndStripAll == cl::BOU_TRUE)
+    } else if (DebugifyAndStripAll == cl::boolOrDefault::BOU_TRUE)
       addStripDebugPass();
   }
   addVerifyPass(Banner);
@@ -994,17 +994,17 @@ void TargetPassConfig::addISelPrepare() {
 
 bool TargetPassConfig::addCoreISelPasses() {
   // Enable FastISel with -fast-isel, but allow that to be overridden.
-  TM->setO0WantsFastISel(EnableFastISelOption != cl::BOU_FALSE);
+  TM->setO0WantsFastISel(EnableFastISelOption != cl::boolOrDefault::BOU_FALSE);
 
   // Determine an instruction selector.
   enum class SelectorType { SelectionDAG, FastISel, GlobalISel };
   SelectorType Selector;
 
-  if (EnableFastISelOption == cl::BOU_TRUE)
+  if (EnableFastISelOption == cl::boolOrDefault::BOU_TRUE)
     Selector = SelectorType::FastISel;
-  else if (EnableGlobalISelOption == cl::BOU_TRUE ||
+  else if (EnableGlobalISelOption == cl::boolOrDefault::BOU_TRUE ||
            (TM->Options.EnableGlobalISel &&
-            EnableGlobalISelOption != cl::BOU_FALSE))
+            EnableGlobalISelOption != cl::boolOrDefault::BOU_FALSE))
     Selector = SelectorType::GlobalISel;
   else if (TM->getOptLevel() == CodeGenOptLevel::None &&
            TM->getO0WantsFastISel())
@@ -1368,10 +1368,12 @@ void TargetPassConfig::addMachineSSAOptimization() {
 
 bool TargetPassConfig::getOptimizeRegAlloc() const {
   switch (OptimizeRegAlloc) {
-  case cl::BOU_UNSET:
+  case cl::boolOrDefault::BOU_UNSET:
     return getOptLevel() != CodeGenOptLevel::None;
-  case cl::BOU_TRUE:  return true;
-  case cl::BOU_FALSE: return false;
+  case cl::boolOrDefault::BOU_TRUE:
+    return true;
+  case cl::boolOrDefault::BOU_FALSE:
+    return false;
   }
   llvm_unreachable("Invalid optimize-regalloc state");
 }
