@@ -25,9 +25,11 @@ class TestCase(TestBase):
         )
         self.assertEqual(valobj.GetNumChildren(), 0)
         self.assertEqual(
-            valobj.child[0].GetValueAsUnsigned(lldb.LLDB_INVALID_ADDRESS), 0
+            valobj.GetChildAtIndex(0).GetValueAsUnsigned(lldb.LLDB_INVALID_ADDRESS), 0
         )
-        self.assertEqual(valobj.child[0].GetID(), valobj.member["pointer"].GetID())
+        self.assertEqual(
+            valobj.GetChildAtIndex(0).GetID(), valobj.member["pointer"].GetID()
+        )
 
         # Null unique_ptr should not output braces.
         self.expect("frame variable up_empty", patterns=[" = nullptr$"])
