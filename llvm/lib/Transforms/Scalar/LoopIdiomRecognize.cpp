@@ -83,6 +83,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/InstructionCost.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -1601,13 +1602,15 @@ bool LoopIdiomRecognize::optimizeCRCLoopToClmul(const PolynomialInfo &Info) {
   // For the big-endian case, align the leftmost bit of the CRC with the
   // leftmost bit of the data which is used. For the little-endian case, align
   // the rightmost bits (nothing to do).
-  Value *CRCAlignTC = CRCExt;
-  if (Info.IsBigEndian) {
-    if (CRCBW > TC)
-      CRCAlignTC = Builder.CreateLShr(CRCAlignTC, CRCBW - TC, "crc.be.lshr");
-    else if (TC > CRCBW)
-      CRCAlignTC = Builder.CreateShl(CRCAlignTC, TC - CRCBW, "crc.be.shl");
-  }
+  Value *CRCAlignTC;
+  if (!Info.IsBigEndian)
+    CRCAlignTC = CRCExt;
+  else if (CRCBW > TC)
+    CRCAlignTC = Builder.CreateLShr(CRCExt, CRCBW - TC, "crc.be.lshr");
+  else if (TC > CRCBW)
+    CRCAlignTC = Builder.CreateShl(CRCExt, TC - CRCBW, "crc.be.shl");
+  else
+    CRCAlignTC = CRCExt;
 
   // If auxiliary data is present, XOR it in with the CRC.
   Value *ClmulMuInput = CRCAlignTC;
@@ -1668,9 +1671,21 @@ bool LoopIdiomRecognize::optimizeCRCLoopToClmul(const PolynomialInfo &Info) {
   // Replace the result of the loop with the new computed CRC value.
   Info.ComputedValue->replaceUsesOutsideBlock(CRCNext, CurLoop->getLoopLatch());
 
-  // Get rid of the loop completely.
+  // Clean up the loop as much as possible so it can be trivially deleted.
   for (PHINode *PN : Cleanup)
     RecursivelyDeleteDeadPHINode(PN);
+  deleteDeadInstruction(CurLoop->getLatchCmpInst());
+  // Make the conditional branch always go to the exit block without changing
+  // the loop successors.
+  CondBrInst *BrInst =
+      cast<CondBrInst>(CurLoop->getLoopLatch()->getTerminator());
+  BasicBlock *ExitBlk = CurLoop->getExitBlock();
+  BasicBlock *OtherSucc = BrInst->getSuccessor(0);
+  if (OtherSucc == ExitBlk)
+    OtherSucc = BrInst->getSuccessor(1);
+  Builder.SetInsertPoint(BrInst);
+  Builder.CreateCondBr(ConstantInt::getBool(Ctx, true), ExitBlk, OtherSucc);
+  BrInst->eraseFromParent();
   SE->forgetLoop(CurLoop);
 
   return true;
