@@ -125,7 +125,7 @@ _Bool check_isfpclass_snan_neginf(double x) {
 // OGCG: call i1 @llvm.is.fpclass.f64(double {{.*}}, i32 5)
 
 _Bool check_isfpclass_multi(float x) {
-  return __builtin_isfpclass(x, 1022 /*all but fcSNan*/);
+  return __builtin_isfpclass(x, 1022 /*all but fcSNan (fcQNan still set)*/);
 }
 
 // CIR: cir.func {{.*}}@check_isfpclass_multi
