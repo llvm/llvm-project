@@ -996,8 +996,7 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
   }
   // 2. Check if the variable is passed via the arguments.
   for (auto arg : call.getArgs()) {
-    if (fir::conformsWithPassByRef(arg.getType()) &&
-        !alias(arg, var).isNo()) {
+    if (fir::conformsWithPassByRef(arg.getType()) && !alias(arg, var).isNo()) {
       // TODO: intent(in) would allow returning Ref here. This can be obtained
       // in the func.func attributes for direct calls, but the module lookup is
       // linear with the number of MLIR symbols, which would introduce a pseudo
