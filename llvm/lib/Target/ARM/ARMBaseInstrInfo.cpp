@@ -5675,7 +5675,6 @@ static bool isLRAvailable(const TargetRegisterInfo &TRI,
     const MachineInstr &MI = *I;
 
     // Check defs of LR.
-
     if (MI.modifiesRegister(ARM::LR, &TRI))
       Live = false;
 
