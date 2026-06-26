@@ -1173,6 +1173,7 @@ if(LIBC_COMPILER_HAS_FIXED_POINT)
     libc.src.stdfix.idivuk
     libc.src.stdfix.idivulk
     libc.src.stdfix.rdivi
+    libc.src.stdfix.divir
   )
 endif()
 

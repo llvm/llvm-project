@@ -23,6 +23,7 @@ add_header_library(
     libc.src.__support.CPP.bit
     libc.src.__support.CPP.limits
     libc.src.__support.math_extras
+    libc.src.__support.uint128
 )
 
 add_header_library(
