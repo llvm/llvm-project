@@ -13,8 +13,8 @@ following types of bugs:
 - Out-of-bounds accesses to heap, stack and globals
 - Use-after-free
 - Use-after-return (clang flag `-fsanitize-address-use-after-return=(never|runtime|always)` default: `runtime`)
-  : - Enable with: `ASAN_OPTIONS=detect_stack_use_after_return=1` (already enabled on Linux).
-    - Disable with: `ASAN_OPTIONS=detect_stack_use_after_return=0`.
+  :   - Enable with: `ASAN_OPTIONS=detect_stack_use_after_return=1` (already enabled on Linux).
+      - Disable with: `ASAN_OPTIONS=detect_stack_use_after_return=0`.
 - Use-after-scope (clang flag `-fsanitize-address-use-after-scope`)
 - Double-free, invalid free
 - Memory leaks (experimental)
@@ -150,11 +150,11 @@ reduce code size. The code size may be reduced further by completely
 eliminating this check (`-fsanitize-address-use-after-return=never`).
 
 To summarize: `-fsanitize-address-use-after-return=<mode>`
-: - `never`: Completely disables detection of UAR errors (reduces code size).
-  - `runtime`: Adds the code for detection, but it can be disabled via the
-    runtime environment (`ASAN_OPTIONS=detect_stack_use_after_return=0`).
-  - `always`: Enables detection of UAR errors in all cases. (reduces code
-    size, but not as much as `never`).
+:   - `never`: Completely disables detection of UAR errors (reduces code size).
+    - `runtime`: Adds the code for detection, but it can be disabled via the
+      runtime environment (`ASAN_OPTIONS=detect_stack_use_after_return=0`).
+    - `always`: Enables detection of UAR errors in all cases. (reduces code
+      size, but not as much as `never`).
 
 ### Container Overflow Detection
 
@@ -163,12 +163,12 @@ AddressSanitizer can detect overflows in containers with custom allocators
 AddressSanitizer runtime to indicate which memory is poisoned etc.
 
 Note that this feature is prone to false positives:
-: - Partially poisoning objects on stack, e.g. for small string optimization, can
-    cause both false positives and negatives.
-  - If the binary is partially AddressSanitizer instrumented, these
-    checks can cause false positives.
+:   - Partially poisoning objects on stack, e.g. for small string optimization, can
+      cause both false positives and negatives.
+    - If the binary is partially AddressSanitizer instrumented, these
+      checks can cause false positives.
 
-See [Disabling container overflow checks] for details on suppressing checks.
+See [Disabling container overflow checks](#disabling-container-overflow-checks) for details on suppressing checks.
 
 ### Memory leak detection
 
@@ -214,7 +214,7 @@ interceptor_via_lib:NameOfTheLibraryToSuppress
 
 In some cases one may need to execute different code depending on whether
 AddressSanitizer is enabled.
-{ref}`\_\_has\_feature <langext-__has_feature-__has_extension>` can be used for
+{ref}`__has_feature <langext-__has_feature-__has_extension>` can be used for
 this purpose.
 
 ```c
@@ -427,4 +427,3 @@ as well supported as the other ports.
 ## More Information
 
 [https://github.com/google/sanitizers/wiki/AddressSanitizer](https://github.com/google/sanitizers/wiki/AddressSanitizer)
-

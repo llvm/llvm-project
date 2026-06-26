@@ -73,7 +73,7 @@ WARNING: ThreadSanitizer: data race (pid=19219)
 
 In some cases one may need to execute different code depending on whether
 ThreadSanitizer is enabled.
-{ref}`\_\_has\_feature <langext-__has_feature-__has_extension>` can be used for
+{ref}`__has_feature <langext-__has_feature-__has_extension>` can be used for
 this purpose.
 
 ```c

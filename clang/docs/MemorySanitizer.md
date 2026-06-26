@@ -67,7 +67,7 @@ find the error report hard to understand, try enabling
 ### `__has_feature(memory_sanitizer)`
 
 In some cases one may need to execute different code depending on
-whether MemorySanitizer is enabled. {ref}`\_\_has\_feature
+whether MemorySanitizer is enabled. {ref}`__has_feature
 <langext-__has_feature-__has_extension>` can be used for this purpose.
 
 ```c
@@ -277,4 +277,3 @@ dependent libraries.
 ## More Information
 
 [https://github.com/google/sanitizers/wiki/MemorySanitizer](https://github.com/google/sanitizers/wiki/MemorySanitizer)
-

@@ -673,13 +673,13 @@ specification.
 | !, &&, \|\| | yes | -- | yes | yes | yes | yes |
 | ==, !=, >, <, >=, <= | yes | yes | yes | yes | yes | yes |
 | = | yes | yes | yes | yes | yes | yes |
-| ?: <span class="footnote-reference brackets">[1]</span> | yes | -- | yes | yes | yes | yes |
-| sizeof | yes | yes | yes | yes | yes <a class="footnote-reference brackets" href="#vls" role="doc-noteref">[2]</a> | yes <a class="footnote-reference brackets" href="#vls" role="doc-noteref">[2]</a> |
+| ?: <a class="footnote-reference brackets" href="#id5" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> | yes | -- | yes | yes | yes | yes |
+| sizeof | yes | yes | yes | yes | yes <a class="footnote-reference brackets" href="#vls" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a> | yes <a class="footnote-reference brackets" href="#vls" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a> |
 | C-style cast | yes | yes | yes | no | no | yes |
 | reinterpret_cast | yes | no | yes | no | no | yes |
 | static_cast | yes | no | yes | no | no | yes |
 | const_cast | no | no | no | no | no | no |
-| address &v[i] | no | no | no <span class="footnote-reference brackets">[3]</span> | no | no | no |
+| address &v[i] | no | no | no <a class="footnote-reference brackets" href="#id6" id="id4" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a> | no | no | no |
 
 Both SVE and RVV define sizeless vector types which cannot be used in globals,
 structs, unions, or arrays. Both provide an attribute (`arm_sve_vector_bits`
@@ -694,8 +694,8 @@ See also {ref}`langext-builtin-shufflevector`, {ref}`langext-builtin-convertvect
 
 ```{raw} html
 <aside class="footnote-list brackets">
-<aside class="footnote brackets" role="note">
-<span class="label"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></span>
+<aside class="footnote brackets" id="id5" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
 <p>ternary operator(?:) has different behaviors depending on the condition
 operand's vector type. If the condition is a GNU vector (i.e., <code class="docutils literal notranslate"><span class="pre">__vector_size__</span></code>),
 a NEON vector, an SVE vector or an RVV vector, it's only available in C++
@@ -703,13 +703,13 @@ and uses normal bool conversions (that is, != 0).
 If it's an extension (OpenCL) vector, it's only available in C and OpenCL C.
 And it selects based on the signedness of the condition operands (OpenCL v1.1 s6.3.9).</p>
 </aside>
-<aside class="footnote brackets" id="vls" role="note">
+<aside class="footnote brackets" id="vls" role="doc-footnote">
 <span class="label"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></span>
-<span class="backrefs">(<a role="doc-backlink">1</a>,<a role="doc-backlink">2</a>)</span>
+<span class="backrefs">(<a role="doc-backlink" href="#id2">1</a>,<a role="doc-backlink" href="#id3">2</a>)</span>
 <p>sizeof can only be used on vector length specific SVE and RVV types.</p>
 </aside>
-<aside class="footnote brackets" role="note">
-<span class="label"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></span>
+<aside class="footnote brackets" id="id6" role="doc-footnote">
+<span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id4">3</a><span class="fn-bracket">]</span></span>
 <p>Clang does not allow the address of an element to be taken while GCC
 allows this. This is intentional for vectors with a boolean element type and
 not implemented otherwise.</p>

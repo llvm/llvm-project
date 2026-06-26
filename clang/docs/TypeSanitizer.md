@@ -133,7 +133,7 @@ overhead, but may improve the runtime performance of the resulting code.
 
 In some cases one may need to execute different code depending on whether
 TypeSanitizer is enabled.
-{ref}`\_\_has\_feature <langext-__has_feature-__has_extension>` can be used for
+{ref}`__has_feature <langext-__has_feature-__has_extension>` can be used for
 this purpose.
 
 ```c
@@ -205,4 +205,3 @@ enough for TypeSanitizer's runtime.
 We are actively working on enhancing the tool --- stay tuned. Any help,
 issues, pull requests, ideas, is more than welcome. You can find the
 [issue tracker here.](https://github.com/llvm/llvm-project/issues?q=is%3Aissue%20state%3Aopen%20TySan%20label%3Acompiler-rt%3Atysan)
-
