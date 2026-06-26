@@ -101,31 +101,14 @@ define void @replicate_sext(i32 %N, ptr %dst, ptr %src) #0 {
 ; CHECK-SAME: i32 [[N:%.*]], ptr [[DST:%.*]], ptr [[SRC:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP0]], 40
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ule i32 [[TMP0]], 16
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[N]] to i64
-; CHECK-NEXT:    [[MUL:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 12, i64 [[TMP1]])
-; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i64, i1 } [[MUL]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW:%.*]] = extractvalue { i64, i1 } [[MUL]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[DST]], i64 [[MUL_RESULT]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult ptr [[TMP2]], [[DST]]
-; CHECK-NEXT:    [[TMP4:%.*]] = or i1 [[TMP3]], [[MUL_OVERFLOW]]
 ; CHECK-NEXT:    [[MUL1:%.*]] = call { i32, i1 } @llvm.umul.with.overflow.i32(i32 4, i32 [[N]])
 ; CHECK-NEXT:    [[MUL_RESULT2:%.*]] = extractvalue { i32, i1 } [[MUL1]], 0
 ; CHECK-NEXT:    [[MUL_OVERFLOW3:%.*]] = extractvalue { i32, i1 } [[MUL1]], 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp slt i32 [[MUL_RESULT2]], 0
-; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP5]], [[MUL_OVERFLOW3]]
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[SRC]], i64 4
-; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[N]] to i64
-; CHECK-NEXT:    [[MUL4:%.*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 16, i64 [[TMP7]])
-; CHECK-NEXT:    [[MUL_RESULT5:%.*]] = extractvalue { i64, i1 } [[MUL4]], 0
-; CHECK-NEXT:    [[MUL_OVERFLOW6:%.*]] = extractvalue { i64, i1 } [[MUL4]], 1
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[MUL_RESULT5]]
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp ult ptr [[TMP8]], [[SCEVGEP]]
-; CHECK-NEXT:    [[TMP10:%.*]] = or i1 [[TMP9]], [[MUL_OVERFLOW6]]
-; CHECK-NEXT:    [[TMP11:%.*]] = or i1 [[TMP4]], [[TMP6]]
-; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP11]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP5]], [[MUL_OVERFLOW3]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[SCALAR_PH]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP13:%.*]] = zext i32 [[N]] to i64
@@ -168,13 +151,13 @@ define void @replicate_sext(i32 %N, ptr %dst, ptr %src) #0 {
 ; CHECK-NEXT:    br label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL10:%.*]] = phi i32 [ [[TMP20]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL11:%.*]] = phi i32 [ [[TMP21]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi i32 [ [[TMP20]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL4:%.*]] = phi i32 [ [[TMP21]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV_1:%.*]] = phi i32 [ [[IV_1_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ [[IV_2_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL10]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[IV_3:%.*]] = phi i32 [ [[IV_3_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL11]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV_2:%.*]] = phi i32 [ [[IV_2_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV_3:%.*]] = phi i32 [ [[IV_3_NEXT:%.*]], %[[LOOP]] ], [ [[BC_RESUME_VAL4]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[IV_2_EXT:%.*]] = sext i32 [[IV_2]] to i64
 ; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr nusw i32, ptr [[SRC]], i64 [[IV_2_EXT]]
 ; CHECK-NEXT:    [[L_0:%.*]] = load i32, ptr [[GEP_SRC_1]], align 4

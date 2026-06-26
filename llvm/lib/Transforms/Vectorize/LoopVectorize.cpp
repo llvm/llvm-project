@@ -469,20 +469,20 @@ static unsigned getMaxTCFromNonZeroRange(PredicatedScalarEvolution &PSE,
 /// following procedure:
 ///   1) Returns exact trip count if it is known.
 ///   2) Returns expected trip count according to profile data if any.
-///   3) Returns upper bound estimate if known, and if \p CanUseConstantMax.
+///   3) Returns upper bound estimate if known, if \p CanUseConstantMax, and
+///      if \p ComputeUpperBoundOnly is false.
 ///   4) Returns the maximum trip count from the SCEV range excluding zero,
 ///      if \p CanUseConstantMax and \p CanExcludeZeroTrips.
 ///   5) Returns std::nullopt if all of the above failed.
-static std::optional<ElementCount>
-getSmallBestKnownTC(PredicatedScalarEvolution &PSE, Loop *L,
-                    bool CanUseConstantMax = true,
-                    bool CanExcludeZeroTrips = false) {
+static std::optional<ElementCount> getSmallBestKnownTC(
+    PredicatedScalarEvolution &PSE, Loop *L, bool CanUseConstantMax = true,
+    bool CanExcludeZeroTrips = false, bool ComputeUpperBoundOnly = false) {
   // Check if exact trip count is known.
   if (auto ExpectedTC = getSmallConstantTripCount(PSE.getSE(), L))
     return ExpectedTC;
 
   // Check if there is an expected trip count available from profile data.
-  if (LoopVectorizeWithBlockFrequency)
+  if (LoopVectorizeWithBlockFrequency && !ComputeUpperBoundOnly)
     if (auto EstimatedTC = getLoopEstimatedTripCount(L))
       return ElementCount::getFixed(*EstimatedTC);
 
@@ -644,15 +644,17 @@ struct EpilogueLoopVectorizationInfo {
 /// them in succession from the loop vectorizer planner.
 class InnerLoopAndEpilogueVectorizer : public InnerLoopVectorizer {
 public:
-  InnerLoopAndEpilogueVectorizer(
-      Loop *OrigLoop, PredicatedScalarEvolution &PSE, LoopInfo *LI,
-      DominatorTree *DT, const TargetTransformInfo *TTI, AssumptionCache *AC,
-      EpilogueLoopVectorizationInfo &EPI, LoopVectorizationCostModel *CM,
-      GeneratedRTChecks &Checks, VPlan &Plan, ElementCount VecWidth,
-      ElementCount MinProfitableTripCount, unsigned UnrollFactor)
+  InnerLoopAndEpilogueVectorizer(Loop *OrigLoop, PredicatedScalarEvolution &PSE,
+                                 LoopInfo *LI, DominatorTree *DT,
+                                 const TargetTransformInfo *TTI,
+                                 AssumptionCache *AC,
+                                 EpilogueLoopVectorizationInfo &EPI,
+                                 LoopVectorizationCostModel *CM,
+                                 GeneratedRTChecks &Checks, VPlan &Plan,
+                                 ElementCount VecWidth, unsigned UnrollFactor)
       : InnerLoopVectorizer(OrigLoop, PSE, LI, DT, TTI, AC, VecWidth,
                             UnrollFactor, CM, Checks, Plan),
-        EPI(EPI), MinProfitableTripCount(MinProfitableTripCount) {}
+        EPI(EPI) {}
 
   /// Holds and updates state information required to vectorize the main loop
   /// and its epilogue in two separate passes. This setup helps us avoid
@@ -661,9 +663,6 @@ public:
   /// iteration count of the loop is so small that the main vector loop is
   /// completely skipped.
   EpilogueLoopVectorizationInfo &EPI;
-
-protected:
-  ElementCount MinProfitableTripCount;
 };
 
 /// A specialized derived class of inner loop vectorizer that performs
@@ -680,7 +679,7 @@ public:
                              GeneratedRTChecks &Check, VPlan &Plan)
       : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TTI, AC, EPI, CM,
                                        Check, Plan, EPI.MainLoopVF,
-                                       EPI.MainLoopVF, EPI.MainLoopUF) {}
+                                       EPI.MainLoopUF) {}
 
 protected:
   void printDebugTracesAtStart() override;
@@ -701,7 +700,7 @@ public:
                                  GeneratedRTChecks &Checks, VPlan &Plan)
       : InnerLoopAndEpilogueVectorizer(OrigLoop, PSE, LI, DT, TTI, AC, EPI, CM,
                                        Checks, Plan, EPI.EpilogueVF,
-                                       EPI.EpilogueVF, EPI.EpilogueUF) {}
+                                       EPI.EpilogueUF) {}
   /// Implements the interface for creating a vectorized skeleton using the
   /// *epilogue loop* strategy (i.e., the second pass of VPlan execution).
   BasicBlock *createVectorizedLoopSkeleton() final;
@@ -1943,17 +1942,28 @@ static bool isIndvarOverflowCheckKnownFalse(
   // We know the runtime overflow check is known false iff the (max) trip-count
   // is known and (max) trip-count + (VF * UF) does not overflow in the type of
   // the vector loop induction variable.
-  if (unsigned TC = Cost->PSE.getSmallConstantMaxTripCount()) {
-    uint64_t MaxVF = VF.getKnownMinValue();
-    if (VF.isScalable()) {
+  if (std::optional<ElementCount> TC = getSmallBestKnownTC(
+          Cost->PSE, Cost->TheLoop,
+          /*CanUseConstantMax=*/true, /*CanExcludeZeroTrips=*/false,
+          /*ComputeUpperBoundOnly=*/true)) {
+    unsigned MaxVF = VF.getKnownMinValue();
+    unsigned MaxTC = TC->getKnownMinValue();
+    if (VF.isScalable() || TC->isScalable()) {
       std::optional<unsigned> MaxVScale =
           getMaxVScale(*Cost->TheFunction, Cost->TTI);
       if (!MaxVScale)
         return false;
-      MaxVF *= *MaxVScale;
+      if (VF.isScalable())
+        MaxVF *= *MaxVScale;
+      if (TC->isScalable()) {
+        bool Overflow;
+        MaxTC = SaturatingMultiply(MaxTC, *MaxVScale, &Overflow);
+        if (Overflow)
+          return false;
+      }
     }
 
-    return (MaxUIntTripCount - TC).ugt(MaxVF * MaxUF);
+    return (MaxUIntTripCount - MaxTC).ugt(MaxVF * MaxUF);
   }
 
   return false;
@@ -6127,6 +6137,14 @@ void EpilogueVectorizerEpilogueLoop::printDebugTracesAtEnd() {
   });
 }
 
+bool VPRecipeBuilder::isPredicatedInst(Instruction *I) const {
+  return CM.isPredicatedInst(I);
+}
+
+bool VPRecipeBuilder::prefersVectorizedAddressing() const {
+  return CM.TTI.prefersVectorizedAddressing();
+}
+
 VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
                                                 VFRange &Range) {
   assert((VPI->getOpcode() == Instruction::Load ||
@@ -6721,7 +6739,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
                         OrigLoop);
 
   RUN_VPLAN_PASS(VPlanTransforms::makeMemOpWideningDecisions, *Plan, Range,
-                 RecipeBuilder);
+                 RecipeBuilder, CM.PSE, OrigLoop);
 
   RUN_VPLAN_PASS(VPlanTransforms::makeScalarizationDecisions, *Plan, Range);
 

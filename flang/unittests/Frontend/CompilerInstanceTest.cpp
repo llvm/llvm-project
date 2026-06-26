@@ -7,9 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Frontend/CompilerInstance.h"
+#include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Options/Options.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include "gtest/gtest.h"
 
@@ -92,5 +97,28 @@ TEST(CompilerInstance, AllowDiagnosticLogWithUnownedDiagnosticConsumer) {
   // 6. Verify that the reported diagnostic wasn't lost and did end up in the
   // output stream
   ASSERT_EQ(diagnosticOutput, "error: expected no crash\n");
+}
+
+TEST(CompilerInstance,
+    OpenAccDefaultNoneScalarsStrictDisableOptionUsesDriverTable) {
+  CompilerInstance compInst;
+  compInst.createDiagnostics();
+
+  auto invocation = std::make_shared<CompilerInvocation>();
+  invocation->getTargetOpts().triple =
+      llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple());
+
+  llvm::InitializeAllTargets();
+  llvm::InitializeAllTargetMCs();
+
+  compInst.setInvocation(std::move(invocation));
+  ASSERT_TRUE(compInst.setUpTargetMachine());
+  auto &context = compInst.createNewSemanticsContext();
+
+  EXPECT_EQ(context.openAccDefaultNoneScalarsStrictDisableOption(),
+      clang::getDriverOptTable()
+          .getOptionPrefixedName(
+              clang::options::OPT_fno_openacc_default_none_scalars_strict)
+          .str());
 }
 } // namespace
