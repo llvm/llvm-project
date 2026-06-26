@@ -34,13 +34,12 @@ LIBC_INLINE bfloat16 sinbf16(bfloat16 x) {
   float xf = x;
 
   if (x_abs < 0x7f80) {
-
-    int rounding = fputil::quick_get_round();
     if (LIBC_UNLIKELY(x_abs <= 0x3e12)) {
       // sin(+/-0) = +/-0
-      if (LIBC_UNLIKELY(x_abs == 0U))
+      if (LIBC_UNLIKELY(x_abs == 0))
         return x;
 
+      int rounding = fputil::quick_get_round();
       // When x > 0, and rounding upward, sin(x) == x.
       // When x < 0, and rounding downward, sin(x) == x.
       if ((rounding == FE_UPWARD && xbits.is_pos()) ||
@@ -54,10 +53,10 @@ LIBC_INLINE bfloat16 sinbf16(bfloat16 x) {
       }
     }
     double xd = static_cast<double>(xf);
-    uint32_t x_abs_d = fputil::FPBits<float>(xf).uintval() & 0x7fffffff;
+    uint32_t x_abs_f = fputil::FPBits<float>(xf).uintval() & 0x7fffffff;
     double sin_k, cos_k, sin_y, cosm1_y;
 
-    sincosf_eval(xd, x_abs_d, sin_k, cos_k, sin_y, cosm1_y);
+    sincosf_eval(xd, x_abs_f, sin_k, cos_k, sin_y, cosm1_y);
     // using sin(a + b) = sin(a)*cos(b) + cos(a)*sin(b)
     //  sin(x) = sin_k*cos_y + cos_k*sin_y
     //  but cosm1_y = cos_y - 1 --> cos_y = cosm1_y + 1
@@ -69,7 +68,7 @@ LIBC_INLINE bfloat16 sinbf16(bfloat16 x) {
         sin_y, cos_k, fputil::multiply_add(cosm1_y, sin_k, sin_k)));
   }
 
-  // nan
+  // NaN
   if (xbits.is_nan()) {
     if (xbits.is_signaling_nan()) {
       fputil::raise_except_if_required(FE_INVALID);
