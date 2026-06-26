@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "LanaiISelDAGToDAG.h"
 #include "LanaiAluCode.h"
 #include "LanaiTargetMachine.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
