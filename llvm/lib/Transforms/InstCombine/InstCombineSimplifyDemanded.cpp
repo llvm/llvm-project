@@ -37,8 +37,8 @@ static cl::opt<unsigned> SimplifyDemandedVectorEltsDepthLimit(
         "Depth limit when simplifying vector instructions and their operands"),
     cl::Hidden, cl::init(10));
 
-bool InstCombinerImpl::canSkipDemandedEltsInInsertChain(InsertElementInst &IE,
-                                                        unsigned VWidth) {
+static bool canSkipDemandedEltsInInsertChain(InsertElementInst &IE,
+                                             unsigned VWidth) {
   unsigned DepthLimit = SimplifyDemandedVectorEltsDepthLimit;
 
   // For narrow vectors, SimplifyDemandedVectorElts may reach the point where
@@ -46,7 +46,8 @@ bool InstCombinerImpl::canSkipDemandedEltsInInsertChain(InsertElementInst &IE,
   if (VWidth <= DepthLimit)
     return false;
 
-  // Only skip intermediate chain nodes; the root still runs the full query.
+  // Only skip chain nodes that feed another insertelement; the final chain root
+  // still runs the full query.
   if (!IE.hasOneUse())
     return false;
   auto *UserIE = dyn_cast<InsertElementInst>(IE.user_back());
@@ -1660,6 +1661,11 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     break;
   }
   case Instruction::InsertElement: {
+    auto *IE = cast<InsertElementInst>(I);
+    if (Depth == 0 && DemandedElts.isAllOnes() &&
+        canSkipDemandedEltsInInsertChain(*IE, VWidth))
+      return nullptr;
+
     // If this is a variable index, we don't know which element it overwrites.
     // demand exactly the same input as we produce.
     ConstantInt *Idx = dyn_cast<ConstantInt>(I->getOperand(2));
