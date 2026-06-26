@@ -342,7 +342,7 @@ public:
   /// A list of linker options to embed in the object file.
   std::vector<std::string> LinkerOptions;
 
-  /// List of global variable names to preserve as loadtime comment variables.
+  /// List of mangled variable names to preserve as loadtime comment variables.
   std::vector<std::string> LoadTimeCommentVars;
 
   /// Name of the profile file to use as output for -fprofile-instr-generate,

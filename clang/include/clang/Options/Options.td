@@ -4796,8 +4796,8 @@ def mloadtime_comment_vars_EQ
     : CommaJoined<["-"], "mloadtime-comment-vars=">,
       Group<m_Group>,
       Visibility<[ClangOption, CC1Option]>,
-      HelpText<"Comma-separated list of global variable names to treat as "
-               "loadtime variables">,
+      HelpText<"Comma-separated list of mangled variable names to preserve as "
+               "loadtime identifying strings">,
       MarshallingInfoStringVector<CodeGenOpts<"LoadTimeCommentVars">>;
 def mdefault_visibility_export_mapping_EQ : Joined<["-"], "mdefault-visibility-export-mapping=">,
   Values<"none,explicit,all">,

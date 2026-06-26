@@ -6877,9 +6877,10 @@ Preserving Identifying Variables with -mloadtime-comment-vars
 --------------------------------------------------------------
 
 The ``-mloadtime-comment-vars=`` flag accepts a comma-separated list of
-global variable names that should be preserved in the final object file as
+mangled variable names that should be preserved in the final object file as
 loadtime identifying strings. This is an AIX-specific feature; on other
-targets the compiler emits a warning.
+targets the compiler emits a warning. Names are matched against each
+variable's mangled name, and unrecognised names are silently ignored.
 
 This flag complements ``#pragma comment(copyright, ...)`` for codebases that
 already use the traditional UNIX convention of embedding identifying strings
@@ -6891,40 +6892,45 @@ Syntax:
 
   -mloadtime-comment-vars=<var1>[,<var2>,...]
 
-Name matching:
+In C, variable names are not mangled, so the mangled name is identical to the source
+identifier (for example, ``sccsid``). In C++, the mangled name follows the
+Itanium C++ ABI, so a namespace-scoped or class-scoped variable must be named
+using its mangled form:
 
-Names are matched against the variable's mangled name.
+.. code-block:: c++
 
-- In C, file-scope static variables are not mangled, so the mangled name is
-  identical to the source identifier (for example, ``sccsid``).
+  namespace N { char sccsid[] = "@(#) MyApp Version 1.0"; }   // N::sccsid   -> _ZN1N6sccsidE
+  const char *App::version = "@(#) Built 2026-06-25";         // App::version -> _ZN3App7versionE
 
 .. code-block:: console
 
-  # Find the mangled name of a C++ variable
-  $ clang++ -S -emit-llvm -o - source.cpp | grep '@.*sccsid'
-  @_ZN1N6sccsidE = ...
-
-  # Or use nm on the object file
-  $ nm source.o | grep sccsid
-  0000000000000000 b _ZN1N6sccsidE
-
-  # Then pass the mangled name to the flag
-  -mloadtime-comment-vars=_ZN1N6sccsidE
-
-Mangled names are unique, so each entry in the list selects exactly one
+  -mloadtime-comment-vars=_ZN1N6sccsidE,_ZN3App7versionE
 
 Valid variable types:
 
-A variable named in the list must meet both of these conditions to be
+A variable named in the list must meet all of these conditions to be
 preserved:
 
+- It must be defined at file, namespace, or class scope (a function-local
+  ``static`` variable is not supported).
 - Its type must be a character pointer (``char *``, ``const char *``) or a
-  character array (``char[]``).
-- It must have an initializer.
+  character array (``char[]``, ``const char[]``).
+- It must have static storage duration and must not be ``volatile``-qualified.
+- It must be constant-initialized, so that the string is present in the object
+  at load time. A dynamically initialized variable (whose value is computed by
+  a start-up constructor) is not preserved.
+- A character *pointer* must be initialized directly with a string literal (for
+  example, ``char *p = "@(#) ...";``). A pointer bound to some other object
+  -- even a constant one, such as another character array -- does not itself
+  carry the identifying string and is not preserved.
 
-Variables that fail either check -- for example, an ``int`` or a ``struct`` --
-are silently skipped. Variables that appear in the list but are not defined in
-the translation unit are also ignored.
+A variable that is named in the list but is ``volatile``-qualified, does not
+have static storage duration (for example, a ``thread_local`` variable), is
+dynamically initialized, or is a pointer not bound to a string literal, is
+diagnosed with a warning and is not preserved. Variables of an unsupported type
+-- for example, an ``int`` or a ``struct`` -- or without an initializer are
+silently skipped, as are function-local ``static`` variables and names that are
+not defined in the translation unit.
 
 Example:
 
@@ -6943,8 +6949,7 @@ Compiled with:
     -mloadtime-comment-vars=sccsid,version \
     -c source.c -o source.o
 
-Both ``sccsid`` and ``version`` survive optimization and are retained in the
-object file.
+Both ``sccsid`` and ``version`` are retained in the object file.
 
 .. code-block:: console
 

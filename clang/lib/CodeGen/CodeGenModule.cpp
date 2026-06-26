@@ -4277,11 +4277,7 @@ bool CodeGenModule::MustBeEmitted(const ValueDecl *Global) {
          VD->getStorageDuration() == SD_Thread)) ||
        (CodeGenOpts.KeepStaticConsts && VD->getStorageDuration() == SD_Static &&
         VD->getType().isConstQualified()) ||
-       // Keep requested loadtime-comment variables in the normal
-       // emission path so EmitGlobalVarDefinition can annotate the definition.
-       (getTriple().isOSAIX() && !CodeGenOpts.LoadTimeCommentVars.empty() &&
-        isLoadTimeCommentCandidateVariable(VD,
-                                           CodeGenOpts.LoadTimeCommentVars))))
+       isForcedLoadTimeCommentVar(VD)))
     return true;
 
   return getContext().DeclMustBeEmitted(Global);
@@ -4343,25 +4339,51 @@ bool CodeGenModule::MayBeEmittedEagerly(const ValueDecl *Global) {
   return true;
 }
 
-/// Return true if a variable is a supported loadtime-comment declaration:
-/// character pointer/array with an initializer.
-bool CodeGenModule::isValidLoadTimeCommentVariable(const VarDecl *D) const {
-  if (!D || !D->hasInit())
-    return false;
+/// Classify a variable whose mangled name matched the -mloadtime-comment-vars=
+/// list, deciding whether it can be preserved, must be diagnosed, or should be
+/// silently ignored.
+CodeGenModule::LoadTimeCommentVarKind
+CodeGenModule::classifyLoadTimeCommentVariable(const VarDecl *D) const {
+  if (!D)
+    return LoadTimeCommentVarKind::Skip;
 
+  // Only character pointers/arrays with an initializer are supported; the
+  // underlying character type is taken from the pointee or element type.
   QualType Ty = D->getType();
+  const PointerType *PT = Ty->getAs<PointerType>();
+  const ArrayType *AT = PT ? nullptr : getContext().getAsArrayType(Ty);
+  QualType Pointee = PT   ? PT->getPointeeType()
+                     : AT ? AT->getElementType()
+                          : QualType();
 
-  if (const PointerType *PT = Ty->getAs<PointerType>()) {
-    if (PT->getPointeeType()->isAnyCharacterType())
-      return true;
-  }
+  // Unsupported type (int, struct, ...) or missing initializer: silently
+  // ignored, matching the documented behavior.
+  if (Pointee.isNull() || !Pointee->isAnyCharacterType() || !D->hasInit())
+    return LoadTimeCommentVarKind::Skip;
 
-  if (const ArrayType *AT = getContext().getAsArrayType(Ty)) {
-    if (AT->getElementType()->isAnyCharacterType())
-      return true;
-  }
+  // The string must have static storage duration; thread-local and automatic
+  // variables are diagnosed and not preserved.
+  if (D->getStorageDuration() != SD_Static)
+    return LoadTimeCommentVarKind::BadStorage;
 
-  return false; // Reject ints, structs, etc.
+  // A volatile string has no stable value to embed, whether the variable
+  // itself or the character it refers to is volatile-qualified.
+  if (Ty.isVolatileQualified() || Pointee.isVolatileQualified())
+    return LoadTimeCommentVarKind::Volatile;
+
+  // The string has to be present in the object at load time. A dynamically
+  // initialized variable only gets its value from a startup constructor, so
+  // the object would not contain the intended string.
+  if (!D->hasConstantInitialization())
+    return LoadTimeCommentVarKind::DynamicInit;
+
+  // For the pointer form, the variable must point directly at a string
+  // literal. A pointer initialized with some other (even constant) address
+  // does not carry the identifying string itself.
+  if (PT && !isa<StringLiteral>(D->getInit()->IgnoreParenImpCasts()))
+    return LoadTimeCommentVarKind::NotStringLiteral;
+
+  return LoadTimeCommentVarKind::Preserve;
 }
 
 /// Return true if the mangled IR name of Global Variable matches any entry in
@@ -4379,15 +4401,52 @@ bool CodeGenModule::matchesLoadTimeCommentVarName(
   return llvm::is_contained(LoadTimeCommentVars, MangledName);
 }
 
-/// Check if a variable is eligible to be treated as a loadtime comment
-/// variable. This requires: (1) the variable's mangled name is in the
-/// requested list and (2) the variable type is valid (char pointer or array
-/// with initializer).
-bool CodeGenModule::isLoadTimeCommentCandidateVariable(
-    const VarDecl *VD, const std::vector<std::string> &LoadTimeCommentVars) {
-  if (!isValidLoadTimeCommentVariable(VD))
-    return false;
-  return matchesLoadTimeCommentVarName(VD, LoadTimeCommentVars);
+/// Return true if a variable named in -mloadtime-comment-vars= should be forced
+/// through the normal emission path, so EmitGlobalVarDefinition can preserve or
+/// diagnose it. Unsupported forms (wrong type or no initializer) are left to
+/// the usual rules.
+bool CodeGenModule::isForcedLoadTimeCommentVar(const VarDecl *VD) {
+  return getTriple().isOSAIX() && !CodeGenOpts.LoadTimeCommentVars.empty() &&
+         matchesLoadTimeCommentVarName(VD, CodeGenOpts.LoadTimeCommentVars) &&
+         classifyLoadTimeCommentVariable(VD) != LoadTimeCommentVarKind::Skip;
+}
+
+/// Apply the -mloadtime-comment-vars= request to a global variable whose
+/// mangled name has already matched an entry in the list. Unsupported forms
+/// (wrong type or no initializer) are silently skipped; other variables the
+/// feature cannot honor are diagnosed; valid character pointer/array
+/// definitions are marked for LowerCommentStringPass and kept alive.
+void CodeGenModule::handleLoadTimeCommentVariable(const VarDecl *D,
+                                                  llvm::GlobalVariable *GV) {
+  if (!GV || !D)
+    return;
+  switch (classifyLoadTimeCommentVariable(D)) {
+  case LoadTimeCommentVarKind::Skip:
+    break;
+  case LoadTimeCommentVarKind::BadStorage:
+    Diags.Report(D->getLocation(), diag::warn_loadtime_comment_var_storage)
+        << D;
+    break;
+  case LoadTimeCommentVarKind::Volatile:
+    Diags.Report(D->getLocation(), diag::warn_loadtime_comment_var_volatile)
+        << D;
+    break;
+  case LoadTimeCommentVarKind::DynamicInit:
+    Diags.Report(D->getLocation(), diag::warn_loadtime_comment_var_dynamic_init)
+        << D;
+    break;
+  case LoadTimeCommentVarKind::NotStringLiteral:
+    Diags.Report(D->getLocation(),
+                 diag::warn_loadtime_comment_var_not_string_literal)
+        << D;
+    break;
+  case LoadTimeCommentVarKind::Preserve:
+    // Mark for LowerCommentStringPass and keep the symbol alive.
+    GV->setMetadata("loadtime_comment",
+                    llvm::MDNode::get(getLLVMContext(), {}));
+    llvm::appendToCompilerUsed(getModule(), {GV});
+    break;
+  }
 }
 
 ConstantAddress CodeGenModule::GetAddrOfMSGuidDecl(const MSGuidDecl *GD) {
@@ -6583,12 +6642,8 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   if (getTriple().isOSAIX()) {
     const auto &LoadTimeCommentVars = getCodeGenOpts().LoadTimeCommentVars;
     if (!LoadTimeCommentVars.empty() &&
-        isLoadTimeCommentCandidateVariable(D, LoadTimeCommentVars)) {
-      auto &C = getLLVMContext();
-      // Mark for LowerCommentStringPass and keep the symbol alive.
-      GV->setMetadata("loadtime_comment", llvm::MDNode::get(C, {}));
-      llvm::appendToCompilerUsed(getModule(), {GV});
-    }
+        matchesLoadTimeCommentVarName(D, LoadTimeCommentVars))
+      handleLoadTimeCommentVariable(D, GV);
   }
 
   // Set the llvm linkage type as appropriate.

@@ -2172,19 +2172,45 @@ private:
   /// offsetof.
   void emitPFPFieldsWithEvaluatedOffset();
 
-  /// Check if a variable declaration is suitable to be treated as a loadtime
-  /// comment variable (must be a character pointer or array with initializer).
-  bool isValidLoadTimeCommentVariable(const VarDecl *D) const;
+  /// Classification for variables named by -mloadtime-comment-vars=.
+  ///
+  /// This enum describes how code generation should handle a matched
+  /// variable after inspecting its type, storage duration, qualifiers, and
+  /// initializer.
+  enum class LoadTimeCommentVarKind {
+    Skip,        ///< Unsupported type or missing initializer: ignore silently.
+    Volatile,    ///< Volatile-qualified string data: diagnose, do not preserve.
+    BadStorage,  ///< Non-static storage duration: diagnose, do not preserve.
+    DynamicInit, ///< Not constant-initialized: diagnose, do not preserve.
+    NotStringLiteral, ///< Pointer not bound to a string literal: diagnose.
+    Preserve, ///< Supported character pointer/array: preserve in the object.
+  };
 
-  /// Check if a variable is eligible to be treated as a loadtime comment
-  /// variable (must be in the requested list and have a valid type).
-  bool isLoadTimeCommentCandidateVariable(
-      const VarDecl *VD, const std::vector<std::string> &LoadTimeCommentVars);
+  /// Classify a variable whose mangled name matched the
+  /// -mloadtime-comment-vars= list.
+  LoadTimeCommentVarKind
+  classifyLoadTimeCommentVariable(const VarDecl *D) const;
 
-  /// Return true if the mangled IR name of a Global Variable matches any entry
+  /// Return true if the mangled IR name of a Variable matches any entry
   /// in LoadTimeCommentVars list.
   bool matchesLoadTimeCommentVarName(
       const VarDecl *VD, const std::vector<std::string> &LoadTimeCommentVars);
+
+  /// Return true if \p VD is named in -mloadtime-comment-vars= and should be
+  /// forced through the normal emission path so it can be preserved or
+  /// diagnosed. Unsupported forms (wrong type or no initializer) are left to
+  /// the usual rules.
+  /// Not const: matching a name mangles \p VD, which mutates the mangling
+  /// caches.
+  bool isForcedLoadTimeCommentVar(const VarDecl *VD);
+
+  /// Apply the -mloadtime-comment-vars= request to \p GV, whose mangled name
+  /// has already matched an entry in the list. Diagnose variables that cannot
+  /// be honored (e.g. volatile, non-static storage duration, dynamic
+  /// initialization, or a pointer not bound to a string literal); mark valid
+  /// character pointer/array definitions for preservation in the object file.
+  void handleLoadTimeCommentVariable(const VarDecl *D,
+                                     llvm::GlobalVariable *GV);
 };
 
 }  // end namespace CodeGen

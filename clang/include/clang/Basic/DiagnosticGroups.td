@@ -1623,6 +1623,10 @@ def GccCompat : DiagGroup<"gcc-compat">;
 // A warning group for warnings about code that may be incompatible on AIX.
 def AIXCompat : DiagGroup<"aix-compat">;
 
+// A warning group for variables named in -mloadtime-comment-vars= that cannot
+// be preserved as loadtime identifying strings.
+def LoadtimeCommentVar : DiagGroup<"loadtime-comment-var">;
+
 // Warnings for Microsoft extensions.
 def MicrosoftCharize : DiagGroup<"microsoft-charize">;
 def MicrosoftDrectveSection : DiagGroup<"microsoft-drectve-section">;
