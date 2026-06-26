@@ -521,6 +521,7 @@ TEST(VerifierTest, AtomicRMWIntVector) {
   new AtomicRMWInst(AtomicRMWInst::Add, Ptr, CV, Align(8),
                     AtomicOrdering::SequentiallyConsistent, SyncScope::System,
                     /*Elementwise=*/false, Entry);
+
   ReturnInst::Create(C, Entry);
 
   std::string Error;
@@ -529,6 +530,79 @@ TEST(VerifierTest, AtomicRMWIntVector) {
   EXPECT_TRUE(
       StringRef(Error).starts_with("atomicrmw add operand must have integer or "
                                    "fixed vector of integer type!"))
+}
+
+TEST(VerifierTest, ElementwiseLoadNonAtomic) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  Value *Ptr = PoisonValue::get(PointerType::get(C, 0));
+
+  Type *I32Ty = Type::getInt32Ty(C);
+  Type *VecTy = FixedVectorType::get(I32Ty, 4);
+
+  new LoadInst(VecTy, Ptr, "",
+               LoadStoreInstProperties{/*IsVolatile=*/false, Align(4),
+                                       AtomicOrdering::NotAtomic,
+                                       SyncScope::System,
+                                       /*IsElementwise=*/true},
+               Entry);
+  ReturnInst::Create(C, Entry);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+  EXPECT_TRUE(
+      StringRef(Error).starts_with("non-atomic load cannot be elementwise"))
+      << Error;
+}
+
+TEST(VerifierTest, ElementwiseLoadScalar) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  Value *Ptr = PoisonValue::get(PointerType::get(C, 0));
+
+  Type *I32Ty = Type::getInt32Ty(C);
+
+  new LoadInst(I32Ty, Ptr, "", /*isVolatile=*/false, Align(4),
+               AtomicOrdering::Monotonic, SyncScope::System, Entry,
+               /*IsElementwise=*/true);
+  ReturnInst::Create(C, Entry);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+  EXPECT_TRUE(StringRef(Error).starts_with(
+      "atomic elementwise load operand must have fixed vector type!"))
+      << Error;
+}
+
+TEST(VerifierTest, ElementwiseLoadOddSizedVector) {
+  LLVMContext C;
+  Module M("M", C);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(C), /*isVarArg=*/false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(C, "entry", F);
+  Value *Ptr = PoisonValue::get(PointerType::get(C, 0));
+
+  Type *I32Ty = Type::getInt32Ty(C);
+  Type *VecTy = FixedVectorType::get(I32Ty, 5);
+
+  new LoadInst(VecTy, Ptr, "", /*isVolatile=*/false, Align(4),
+               AtomicOrdering::Monotonic, SyncScope::System, Entry,
+               /*IsElementwise=*/true);
+  ReturnInst::Create(C, Entry);
+
+  std::string Error;
+  raw_string_ostream ErrorOS(Error);
+  EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+  EXPECT_TRUE(StringRef(Error).starts_with(
+      "atomic memory access' operand must have a power-of-two size"))
       << Error;
 }
 
