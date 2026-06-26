@@ -1925,16 +1925,15 @@ static bool ContainsStructureComponent(const parser::DataRef &dataRef) {
 }
 
 static bool ContainsStructureComponent(const parser::Designator &designator) {
-  return common::visit(
-      common::visitors{
-          [](const parser::DataRef &dataRef) {
-            return ContainsStructureComponent(dataRef);
-          },
-          [](const parser::Substring &substring) {
-            return ContainsStructureComponent(
-                std::get<parser::DataRef>(substring.t));
-          },
-      },
+  return common::visit(common::visitors{
+                           [](const parser::DataRef &dataRef) {
+                             return ContainsStructureComponent(dataRef);
+                           },
+                           [](const parser::Substring &substring) {
+                             return ContainsStructureComponent(
+                                 std::get<parser::DataRef>(substring.t));
+                           },
+                       },
       designator.u);
 }
 
@@ -1971,7 +1970,8 @@ void AccAttributeVisitor::ResolveAccObject(
             const parser::Name &baseName{parser::GetFirstName(designator)};
             if (auto *symbol{ResolveAcc(baseName, accFlag, currScope())}) {
               AddToContextObjectWithDSA(*symbol, accFlag);
-              if (preciseDesignator && dataSharingAttributeFlags.test(accFlag)) {
+              if (preciseDesignator &&
+                  dataSharingAttributeFlags.test(accFlag)) {
                 CheckMultipleAppearances(
                     baseName, *symbol, accFlag, &accObject, preciseDesignator);
               }
@@ -2044,8 +2044,7 @@ void AccAttributeVisitor::CheckMultipleAppearances(const parser::Name &name,
     // real conflict that dedup would silently hide.
     auto firstFlag{GetContext().FindSymbolWithDSA(*target)};
     if (warnSameKindDuplicate && occurrence && firstFlag &&
-        *firstFlag == accFlag &&
-        accFlag != Symbol::Flag::AccReduction) {
+        *firstFlag == accFlag && accFlag != Symbol::Flag::AccReduction) {
       context_.Warn(common::UsageWarning::OpenAccUsage, name.source,
           "'%s' appears more than once in the same kind of data-sharing clause on an OpenACC directive; duplicate ignored"_warn_en_US,
           name.ToString());
