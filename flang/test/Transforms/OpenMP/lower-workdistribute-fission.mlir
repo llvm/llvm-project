@@ -22,7 +22,7 @@
 // CHECK:               omp.terminator
 // CHECK:             } {omp.composite}
 // CHECK:             omp.terminator
-// CHECK:           }
+// CHECK:           } {omp.combined}
 // CHECK:           fir.call @regular_side_effect_func(%[[ARG2:.*]]) : (!fir.ref<f32>) -> ()
 // CHECK:           fir.call @my_fir_parallel_runtime_func(%[[ARG3:.*]]) : (!fir.ref<f32>) -> ()
 // CHECK:           fir.do_loop %[[VAL_8:.*]] = %[[VAL_0]] to %[[VAL_2]] step %[[VAL_1]] {

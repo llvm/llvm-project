@@ -124,8 +124,8 @@ define void @arg1(%Ty1 %A) {
 ; VECTOR-NEXT:    lgrl %r1, Dst@GOT
 ; VECTOR-NEXT:    vrepib %v1, 8
 ; VECTOR-NEXT:    vsteb %v0, 8(%r1), 15
-; VECTOR-NEXT:    vsrlb %v0, %v0, %v1
-; VECTOR-NEXT:    vsteg %v0, 0(%r1), 1
+; VECTOR-NEXT:    vsrlb %v1, %v0, %v1
+; VECTOR-NEXT:    vsteg %v1, 0(%r1), 1
 ; VECTOR-NEXT:    br %r14
   store %Ty1 %A, ptr @Dst
   ret void
@@ -351,14 +351,14 @@ define void @arg3(%Ty3 %A) {
 ;
 ; VECTOR-LABEL: arg3:
 ; VECTOR:       # %bb.0:
-; VECTOR-NEXT:    vl %v0, 0(%r3), 3
+; VECTOR-NEXT:    vl %v0, 0(%r2), 3
+; VECTOR-NEXT:    vl %v1, 0(%r3), 3
 ; VECTOR-NEXT:    lgrl %r1, Dst@GOT
-; VECTOR-NEXT:    vl %v1, 0(%r2), 3
-; VECTOR-NEXT:    vsteb %v1, 8(%r1), 15
-; VECTOR-NEXT:    vst %v0, 16(%r1), 3
-; VECTOR-NEXT:    vrepib %v0, 8
-; VECTOR-NEXT:    vsrlb %v0, %v1, %v0
-; VECTOR-NEXT:    vsteg %v0, 0(%r1), 1
+; VECTOR-NEXT:    vsteb %v0, 8(%r1), 15
+; VECTOR-NEXT:    vrepib %v2, 8
+; VECTOR-NEXT:    vsrlb %v2, %v0, %v2
+; VECTOR-NEXT:    vst %v1, 16(%r1), 3
+; VECTOR-NEXT:    vsteg %v2, 0(%r1), 1
 ; VECTOR-NEXT:    br %r14
   store %Ty3 %A, ptr @Dst
   ret void
@@ -402,11 +402,11 @@ define void @call3() {
 ; VECTOR-NEXT:    vlrepg %v1, 0(%r1)
 ; VECTOR-NEXT:    vrepib %v2, 8
 ; VECTOR-NEXT:    vslb %v1, %v1, %v2
+; VECTOR-NEXT:    vl %v2, 16(%r1), 3
 ; VECTOR-NEXT:    vo %v0, %v0, %v1
-; VECTOR-NEXT:    vl %v1, 16(%r1), 3
 ; VECTOR-NEXT:    la %r2, 176(%r15)
 ; VECTOR-NEXT:    la %r3, 160(%r15)
-; VECTOR-NEXT:    vst %v1, 160(%r15), 3
+; VECTOR-NEXT:    vst %v2, 160(%r15), 3
 ; VECTOR-NEXT:    vst %v0, 176(%r15), 3
 ; VECTOR-NEXT:    brasl %r14, Fnptr@PLT
 ; VECTOR-NEXT:    lmg %r14, %r15, 304(%r15)
@@ -601,15 +601,15 @@ define %Ty4 @ret4() {
 ; VECTOR-NEXT:    brasl %r14, Fnptr@PLT
 ; VECTOR-NEXT:    lb %r0, 164(%r15)
 ; VECTOR-NEXT:    lh %r1, 166(%r15)
-; VECTOR-NEXT:    lb %r4, 200(%r15)
+; VECTOR-NEXT:    lb %r2, 200(%r15)
 ; VECTOR-NEXT:    lde %f0, 160(%r15)
-; VECTOR-NEXT:    l %r2, 168(%r15)
-; VECTOR-NEXT:    lg %r3, 176(%r15)
+; VECTOR-NEXT:    l %r3, 168(%r15)
+; VECTOR-NEXT:    lg %r4, 176(%r15)
 ; VECTOR-NEXT:    vl %v1, 184(%r15), 3
-; VECTOR-NEXT:    stc %r4, 40(%r13)
+; VECTOR-NEXT:    stc %r2, 40(%r13)
 ; VECTOR-NEXT:    vst %v1, 24(%r13), 3
-; VECTOR-NEXT:    stg %r3, 16(%r13)
-; VECTOR-NEXT:    st %r2, 8(%r13)
+; VECTOR-NEXT:    stg %r4, 16(%r13)
+; VECTOR-NEXT:    st %r3, 8(%r13)
 ; VECTOR-NEXT:    sth %r1, 6(%r13)
 ; VECTOR-NEXT:    stc %r0, 4(%r13)
 ; VECTOR-NEXT:    ste %f0, 0(%r13)
@@ -810,10 +810,10 @@ define void @arg6(%Ty6 %A) {
 ; VECTOR-NEXT:    vsteb %v1, 24(%r1), 15
 ; VECTOR-NEXT:    vrepib %v2, 8
 ; VECTOR-NEXT:    vsteb %v0, 8(%r1), 15
-; VECTOR-NEXT:    vsrlb %v1, %v1, %v2
-; VECTOR-NEXT:    vsrlb %v0, %v0, %v2
-; VECTOR-NEXT:    vsteg %v1, 16(%r1), 1
-; VECTOR-NEXT:    vsteg %v0, 0(%r1), 1
+; VECTOR-NEXT:    vsrlb %v3, %v1, %v2
+; VECTOR-NEXT:    vsrlb %v2, %v0, %v2
+; VECTOR-NEXT:    vsteg %v3, 16(%r1), 1
+; VECTOR-NEXT:    vsteg %v2, 0(%r1), 1
 ; VECTOR-NEXT:    br %r14
   store %Ty6 %A, ptr @Dst
   ret void
@@ -854,17 +854,17 @@ define void @call6() {
 ; VECTOR-NEXT:    aghi %r15, -192
 ; VECTOR-NEXT:    .cfi_def_cfa_offset 352
 ; VECTOR-NEXT:    lgrl %r1, Src@GOT
+; VECTOR-NEXT:    vgbm %v0, 0
 ; VECTOR-NEXT:    vgbm %v1, 0
 ; VECTOR-NEXT:    vleb %v1, 8(%r1), 15
 ; VECTOR-NEXT:    vlrepg %v2, 0(%r1)
-; VECTOR-NEXT:    vrepib %v3, 8
-; VECTOR-NEXT:    vslb %v2, %v2, %v3
-; VECTOR-NEXT:    vgbm %v0, 0
-; VECTOR-NEXT:    vo %v1, %v1, %v2
 ; VECTOR-NEXT:    vleb %v0, 24(%r1), 15
-; VECTOR-NEXT:    vlrepg %v2, 16(%r1)
-; VECTOR-NEXT:    vslb %v2, %v2, %v3
-; VECTOR-NEXT:    vo %v0, %v0, %v2
+; VECTOR-NEXT:    vlrepg %v3, 16(%r1)
+; VECTOR-NEXT:    vrepib %v4, 8
+; VECTOR-NEXT:    vslb %v2, %v2, %v4
+; VECTOR-NEXT:    vslb %v3, %v3, %v4
+; VECTOR-NEXT:    vo %v1, %v1, %v2
+; VECTOR-NEXT:    vo %v0, %v0, %v3
 ; VECTOR-NEXT:    la %r2, 176(%r15)
 ; VECTOR-NEXT:    la %r3, 160(%r15)
 ; VECTOR-NEXT:    vst %v0, 160(%r15), 3

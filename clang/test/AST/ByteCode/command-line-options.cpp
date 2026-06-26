@@ -6,11 +6,11 @@
 /// All this should be true if the driver is used or -cc1.
 
 
-// RUN: %clang -c   -fexperimental-new-constant-interpreter %s -Xclang -verify=bc
-// RUN: %clang -cc1 -fexperimental-new-constant-interpreter %s         -verify=bc
+// RUN: %clang -fsyntax-only -fexperimental-new-constant-interpreter %s -Xclang -verify=bc
+// RUN: %clang -cc1          -fexperimental-new-constant-interpreter %s         -verify=bc
 
-// RUN: %clang -c   -fno-experimental-new-constant-interpreter %s -Xclang -verify=nobc
-// RUN: %clang -cc1 -fno-experimental-new-constant-interpreter %s         -verify=nobc
+// RUN: %clang -fsyntax-only -fno-experimental-new-constant-interpreter %s -Xclang -verify=nobc
+// RUN: %clang -cc1          -fno-experimental-new-constant-interpreter %s         -verify=nobc
 
 
 /// Note that we're not testing the behavior without those command line options since that

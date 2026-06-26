@@ -683,12 +683,12 @@ void MCObjectStreamer::emitValueToAlignment(Align Alignment, int64_t Fill,
 }
 
 void MCObjectStreamer::emitCodeAlignment(Align Alignment,
-                                         const MCSubtargetInfo *STI,
+                                         const MCSubtargetInfo &STI,
                                          unsigned MaxBytesToEmit) {
   auto *F = getCurrentFragment();
   emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
   F->u.align.EmitNops = true;
-  F->STI = STI;
+  F->STI = &STI;
 }
 
 void MCObjectStreamer::emitPrefAlign(Align Alignment, const MCSymbol &End,
