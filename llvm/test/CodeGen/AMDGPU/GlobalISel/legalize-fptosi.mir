@@ -566,7 +566,8 @@ body: |
     ; SI-NEXT: {{  $}}
     ; SI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; SI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; SI-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[TRUNC]](s16)
+    ; SI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
+    ; SI-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[FPEXT]](s32)
     ; SI-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[FPTOSI]](s32)
     ; SI-NEXT: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
     ; VI-LABEL: name: test_fptosi_s16_to_s64
@@ -574,7 +575,8 @@ body: |
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; VI-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[TRUNC]](s16)
+    ; VI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
+    ; VI-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[FPEXT]](s32)
     ; VI-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[FPTOSI]](s32)
     ; VI-NEXT: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
     %0:_(s32) = COPY $vgpr0
@@ -598,9 +600,11 @@ body: |
     ; SI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; SI-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
     ; SI-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; SI-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[TRUNC]](s16)
+    ; SI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
+    ; SI-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[FPEXT]](s32)
     ; SI-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[FPTOSI]](s32)
-    ; SI-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[TRUNC1]](s16)
+    ; SI-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC1]](s16)
+    ; SI-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FPEXT1]](s32)
     ; SI-NEXT: [[SEXT1:%[0-9]+]]:_(s64) = G_SEXT [[FPTOSI1]](s32)
     ; SI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[SEXT]](s64), [[SEXT1]](s64)
     ; SI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
@@ -613,9 +617,11 @@ body: |
     ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; VI-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
     ; VI-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; VI-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[TRUNC]](s16)
+    ; VI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
+    ; VI-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[FPEXT]](s32)
     ; VI-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[FPTOSI]](s32)
-    ; VI-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[TRUNC1]](s16)
+    ; VI-NEXT: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC1]](s16)
+    ; VI-NEXT: [[FPTOSI1:%[0-9]+]]:_(s32) = G_FPTOSI [[FPEXT1]](s32)
     ; VI-NEXT: [[SEXT1:%[0-9]+]]:_(s64) = G_SEXT [[FPTOSI1]](s32)
     ; VI-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[SEXT]](s64), [[SEXT1]](s64)
     ; VI-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
@@ -643,7 +649,8 @@ body: |
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; VI-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[TRUNC]](s16)
+    ; VI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
+    ; VI-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[FPEXT]](s32)
     ; VI-NEXT: [[TRUNC1:%[0-9]+]]:_(s1) = G_TRUNC [[FPTOSI]](s32)
     ; VI-NEXT: S_ENDPGM 0, implicit [[TRUNC1]](s1)
     %0:_(s32) = COPY $vgpr0
@@ -671,7 +678,8 @@ body: |
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; VI-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[TRUNC]](s16)
+    ; VI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
+    ; VI-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[FPEXT]](s32)
     ; VI-NEXT: $vgpr0 = COPY [[FPTOSI]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_TRUNC %0
@@ -699,7 +707,8 @@ body: |
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; VI-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[TRUNC]](s16)
+    ; VI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
+    ; VI-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[FPEXT]](s32)
     ; VI-NEXT: $vgpr0 = COPY [[FPTOSI]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_TRUNC %0
@@ -785,7 +794,8 @@ body: |
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; VI-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[TRUNC]](s16)
+    ; VI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
+    ; VI-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[FPEXT]](s32)
     ; VI-NEXT: $vgpr0 = COPY [[FPTOSI]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_TRUNC %0
@@ -813,7 +823,8 @@ body: |
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; VI-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[TRUNC]](s16)
+    ; VI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
+    ; VI-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[FPEXT]](s32)
     ; VI-NEXT: $vgpr0 = COPY [[FPTOSI]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_TRUNC %0
@@ -841,7 +852,8 @@ body: |
     ; VI-NEXT: {{  $}}
     ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; VI-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
-    ; VI-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[TRUNC]](s16)
+    ; VI-NEXT: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
+    ; VI-NEXT: [[FPTOSI:%[0-9]+]]:_(s32) = G_FPTOSI [[FPEXT]](s32)
     ; VI-NEXT: $vgpr0 = COPY [[FPTOSI]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s16) = G_TRUNC %0
