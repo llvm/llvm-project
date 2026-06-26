@@ -1090,7 +1090,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         if (EnableLowerExecSync)
           PM.addPass(AMDGPULowerExecSyncPass());
         if (EnableSwLowerLDS)
-          PM.addPass(AMDGPUSwLowerLDSPass(*this));
+          PM.addPass(AMDGPUSwLowerLDSPass());
         if (EnableLowerModuleLDS)
           PM.addPass(AMDGPULowerModuleLDSPass(*this));
         if (Level != OptimizationLevel::O0) {
@@ -1484,7 +1484,7 @@ void AMDGPUPassConfig::addIRPasses() {
 
   // Lower LDS accesses to global memory pass if address sanitizer is enabled.
   if (EnableSwLowerLDS)
-    addPass(createAMDGPUSwLowerLDSLegacyPass(&TM));
+    addPass(createAMDGPUSwLowerLDSLegacyPass());
 
   // Runs before PromoteAlloca so the latter can account for function uses
   if (EnableLowerModuleLDS) {
@@ -2269,7 +2269,7 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
     addModulePass(AMDGPULowerExecSyncPass(), PMW);
 
   if (EnableSwLowerLDS)
-    addModulePass(AMDGPUSwLowerLDSPass(TM), PMW);
+    addModulePass(AMDGPUSwLowerLDSPass(), PMW);
 
   // Runs before PromoteAlloca so the latter can account for function uses
   if (EnableLowerModuleLDS)
