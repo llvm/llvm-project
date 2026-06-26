@@ -174,6 +174,14 @@ class Run:
             raise
         else:
             for ex in executors:
+                # For python <= 3.11 on macOS, Queue.join_thread() inside shutdown(wait=True)
+                # deadlocks: join_executor_internals() calls it before p.join(),
+                # but macOS requires the inverse order. cancel_join_thread() makes
+                # join_thread() a no-op. The feeder thread still delivers sentinels
+                # independently before the write end closes.
+                # TODO: Remove this workaround once Python > 3.11 is required.
+                if hasattr(ex, "_call_queue") and ex._call_queue is not None:
+                    ex._call_queue.cancel_join_thread()
                 ex.shutdown(wait=True)
 
     def _wait_for(self, future_to_test, deadline):
