@@ -5333,11 +5333,12 @@ ScalarEvolution::proveNoUnsignedWrapViaInduction(const SCEVAddRecExpr *AR) {
     return Result;
 
   // This function can be expensive, only try to prove NUW once per AddRec.
-  if (!UnsignedWrapViaInductionTried.insert(AR).second)
+  // The tried cache is populated either by proveNoUnsignedWrapFromBackedge-
+  // Guards (which performs the insert when it does the proof) or by the
+  // early exit path below.
+  if (UnsignedWrapViaInductionTried.contains(AR))
     return Result;
 
-  const SCEV *Step = AR->getStepRecurrence(*this);
-  unsigned BitWidth = getTypeSizeInBits(AR->getType());
   const Loop *L = AR->getLoop();
 
   // Check whether the backedge-taken count is SCEVCouldNotCompute.
@@ -5359,10 +5360,34 @@ ScalarEvolution::proveNoUnsignedWrapViaInduction(const SCEVAddRecExpr *AR) {
   // doing extra work that may not pay off.
 
   if (isa<SCEVCouldNotCompute>(MaxBECount) && !HasGuards &&
-      AC.assumptions().empty())
+      AC.assumptions().empty()) {
+    // Mark as tried to prevent re-running the BTC query.
+    UnsignedWrapViaInductionTried.insert(AR);
+    return Result;
+  }
+
+  return proveNoUnsignedWrapFromBackedgeGuards(AR);
+}
+
+SCEV::NoWrapFlags ScalarEvolution::proveNoUnsignedWrapFromBackedgeGuards(
+    const SCEVAddRecExpr *AR) {
+  SCEV::NoWrapFlags Result = AR->getNoWrapFlags();
+
+  if (AR->hasNoUnsignedWrap())
     return Result;
 
-  // If the backedge is guarded by a comparison with the pre-inc  value the
+  if (!AR->isAffine())
+    return Result;
+
+  // This function can be expensive, only try to prove NUW once per AddRec.
+  if (!UnsignedWrapViaInductionTried.insert(AR).second)
+    return Result;
+
+  const SCEV *Step = AR->getStepRecurrence(*this);
+  unsigned BitWidth = getTypeSizeInBits(AR->getType());
+  const Loop *L = AR->getLoop();
+
+  // If the backedge is guarded by a comparison with the pre-inc value the
   // addrec is safe. Also, if the entry is guarded by a comparison with the
   // start value and the backedge is guarded by a comparison with the post-inc
   // value, the addrec is safe.
@@ -5928,8 +5953,13 @@ const SCEV *ScalarEvolution::createSimpleAffineAddRec(PHINode *PN,
   const SCEV *PHISCEV = getAddRecExpr(StartVal, Accum, L, Flags);
   insertValueToMap(PN, PHISCEV);
 
-  if (auto *AR = dyn_cast<SCEVAddRecExpr>(PHISCEV))
+  if (auto *AR = dyn_cast<SCEVAddRecExpr>(PHISCEV)) {
     inferNoWrapViaConstantRanges(AR);
+    // Settle NUW at construction (before any BTI or consumer reads flags),
+    // bypassing proveNoUnsignedWrapViaInduction's BTC bail-out.
+    setNoWrapFlags(const_cast<SCEVAddRecExpr *>(AR),
+                   proveNoUnsignedWrapFromBackedgeGuards(AR));
+  }
 
   // We can add Flags to the post-inc expression only if we
   // know that it is *undefined behavior* for BEValueV to

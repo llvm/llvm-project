@@ -2398,6 +2398,12 @@ private:
   /// entry and backedge.
   SCEV::NoWrapFlags proveNoUnsignedWrapViaInduction(const SCEVAddRecExpr *AR);
 
+  /// Like proveNoUnsignedWrapViaInduction, but proceeds even when the loop's
+  /// backedge-taken count is unknown (the public function bails in that case
+  /// as a fast-path). Callable at AddRec construction.
+  SCEV::NoWrapFlags
+  proveNoUnsignedWrapFromBackedgeGuards(const SCEVAddRecExpr *AR);
+
   std::optional<MonotonicPredicateType>
   getMonotonicPredicateTypeImpl(const SCEVAddRecExpr *LHS,
                                 ICmpInst::Predicate Pred);
