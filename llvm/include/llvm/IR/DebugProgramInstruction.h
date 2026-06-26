@@ -190,6 +190,8 @@ public:
   LLVM_ABI const LLVMContext &getContext() const;
 
   LLVM_ABI const Instruction *getInstruction() const;
+  LLVM_ABI Instruction *getInstruction();
+
   LLVM_ABI const BasicBlock *getParent() const;
   LLVM_ABI BasicBlock *getParent();
 
@@ -370,8 +372,8 @@ public:
                         const DILocation *DI, DbgVariableRecord &InsertBefore);
 
   /// Iterator for ValueAsMetadata that internally uses direct pointer iteration
-  /// over either a ValueAsMetadata* or a ValueAsMetadata**, dereferencing to the
-  /// ValueAsMetadata .
+  /// over either a ValueAsMetadata* or a ValueAsMetadata**, dereferencing to
+  /// the ValueAsMetadata .
   class location_op_iterator
       : public iterator_facade_base<location_op_iterator,
                                     std::bidirectional_iterator_tag, Value *> {
