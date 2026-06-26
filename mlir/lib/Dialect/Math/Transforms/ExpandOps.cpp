@@ -34,8 +34,8 @@ static bool isUnrankedShaped(Type type) {
 }
 
 /// Create a float constant. For dynamically-shaped tensors, creates a scalar
-/// constant and uses tensor.dim + tensor.splat to broadcast to the target shape.
-/// The optional `dynamicShapeRef` provides the runtime dimension sizes.
+/// constant and uses tensor.dim + tensor.splat to broadcast to the target
+/// shape. The optional `dynamicShapeRef` provides the runtime dimension sizes.
 static Value createFloatConst(Location loc, Type type, APFloat value,
                               OpBuilder &b, Value dynamicShapeRef = Value()) {
   bool losesInfo = false;
@@ -69,8 +69,8 @@ static Value createFloatConst(Location loc, Type type, double value,
 }
 
 /// Create an integer constant. For dynamically-shaped tensors, creates a scalar
-/// constant and uses tensor.dim + tensor.splat to broadcast to the target shape.
-/// The optional `dynamicShapeRef` provides the runtime dimension sizes.
+/// constant and uses tensor.dim + tensor.splat to broadcast to the target
+/// shape. The optional `dynamicShapeRef` provides the runtime dimension sizes.
 static Value createIntConst(Location loc, Type type, int64_t value,
                             OpBuilder &b, Value dynamicShapeRef = Value()) {
   auto eltType = getElementTypeOrSelf(type);
@@ -230,7 +230,8 @@ static LogicalResult convertAcoshOp(math::AcoshOp op,
   if (isUnrankedShaped(opType))
     return failure();
 
-  Value negOne = createFloatConst(op->getLoc(), opType, -1.0, rewriter, operand);
+  Value negOne =
+      createFloatConst(op->getLoc(), opType, -1.0, rewriter, operand);
   Value fma = math::FmaOp::create(b, operand, operand, negOne);
   Value sqrt = math::SqrtOp::create(b, fma);
   Value add = arith::AddFOp::create(b, operand, sqrt);
@@ -509,8 +510,8 @@ static LogicalResult convertExp2fOp(math::Exp2Op op,
   if (isUnrankedShaped(opType))
     return failure();
 
-  Value ln2 = createFloatConst(op->getLoc(), opType, llvm::numbers::ln2, b,
-                               operand);
+  Value ln2 =
+      createFloatConst(op->getLoc(), opType, llvm::numbers::ln2, b, operand);
   Value mult = arith::MulFOp::create(b, opType, operand, ln2);
   Value exp = math::ExpOp::create(b, op->getLoc(), mult);
   rewriter.replaceOp(op, exp);
@@ -609,8 +610,8 @@ static LogicalResult convertCtlzOp(math::CountLeadingZerosOp op,
   for (int32_t bw = bitwidth; bw > 1; bw = bw / 2) {
     auto half = bw / 2;
     auto bits = createIntConst(loc, operandTy, half, rewriter, operand);
-    auto mask = createIntConst(loc, operandTy, allbits >> half, rewriter,
-                               operand);
+    auto mask =
+        createIntConst(loc, operandTy, allbits >> half, rewriter, operand);
 
     Value pred = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::ule,
                                        x, mask);
@@ -671,14 +672,14 @@ static LogicalResult convertRoundEvenOp(math::RoundEvenOp op,
   Value cNeg1 = createIntConst(loc, iTy, -1, b, operand);
   Value c23 = createIntConst(loc, iTy, mantissaWidth, b, operand);
   Value c31 = createIntConst(loc, iTy, bitWidth - 1, b, operand);
-  Value c127 = createIntConst(loc, iTy, (1ull << (exponentWidth - 1)) - 1, b,
-                              operand);
-  Value c2To22 = createIntConst(loc, iTy, 1ull << (mantissaWidth - 1), b,
-                                operand);
-  Value c23Mask = createIntConst(loc, iTy, (1ull << mantissaWidth) - 1, b,
-                                 operand);
-  Value expMask = createIntConst(loc, iTy, (1ull << exponentWidth) - 1, b,
-                                 operand);
+  Value c127 =
+      createIntConst(loc, iTy, (1ull << (exponentWidth - 1)) - 1, b, operand);
+  Value c2To22 =
+      createIntConst(loc, iTy, 1ull << (mantissaWidth - 1), b, operand);
+  Value c23Mask =
+      createIntConst(loc, iTy, (1ull << mantissaWidth) - 1, b, operand);
+  Value expMask =
+      createIntConst(loc, iTy, (1ull << exponentWidth) - 1, b, operand);
 
   Value operandBitcast = arith::BitcastOp::create(b, iTy, operand);
   Value round = math::RoundOp::create(b, operand);
