@@ -288,7 +288,7 @@ bool TargetLowering::findOptimalMemOpLowering(
       // If the new VT cannot cover all of the remaining bits, then consider
       // issuing a (or a pair of) unaligned and overlapping load / store.
       unsigned Fast;
-      if (NumMemOps && Op.allowOverlap() && NewVTSize < Size &&
+      if (NumMemOps && !Op.isVolatile() && NewVTSize < Size &&
           allowsMisalignedMemoryAccesses(
               VT, DstAS, Op.isFixedDstAlign() ? Op.getDstAlign() : Align(1),
               MachineMemOperand::MONone, &Fast) &&

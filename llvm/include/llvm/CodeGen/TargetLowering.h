@@ -182,7 +182,7 @@ public:
     return DstAlign;
   }
   bool isFixedDstAlign() const { return !DstAlignCanChange; }
-  bool allowOverlap() const { return !IsVolatile; }
+  bool isVolatile() const { return IsVolatile; }
   bool isMemset() const {
     return Kind == MemOpKind::Memset || Kind == MemOpKind::MemsetWithZero;
   }

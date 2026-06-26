@@ -2129,7 +2129,7 @@ static bool findGISelOptimalMemOpLowering(std::vector<LLT> &MemOps,
       unsigned Fast;
       // Need to get a VT equivalent for allowMisalignedMemoryAccesses().
       MVT VT = getMVTForLLT(Ty);
-      if (NumMemOps && Op.allowOverlap() && NewTySize < Size &&
+      if (NumMemOps && !Op.isVolatile() && NewTySize < Size &&
           TLI.allowsMisalignedMemoryAccesses(
               VT, DstAS, Op.isFixedDstAlign() ? Op.getDstAlign() : Align(1),
               MachineMemOperand::MONone, &Fast) &&
