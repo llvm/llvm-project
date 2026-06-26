@@ -13,7 +13,7 @@
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::replaceSymbolicStrides
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::finalizeSCEVPredicates
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::addMiddleCheck
-; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::handleEarlyExits
+; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::handleCountableEarlyExits
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::createLoopRegions
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::introduceMasksAndLinearize
 ; CHECK: VPlan for loop in 'foo' [[BEFORE_OR_AFTER]] VPlanTransforms::createInLoopReductionRecipes
