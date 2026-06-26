@@ -1,4 +1,4 @@
-// REQUIRES: default-pie-on-linux
+// REQUIRES: default-pie
 
 // -fPIC and -fPIE only affects host relocation model.
 // device compilation always uses PIC. 
