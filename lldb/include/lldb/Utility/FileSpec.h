@@ -237,7 +237,6 @@ public:
   ///
   /// \param[in] directory
   ///     The value to replace the directory with.
-  void SetDirectory(ConstString directory);
   void SetDirectory(llvm::StringRef directory);
 
   /// Clear the directory in this object.
@@ -253,7 +252,6 @@ public:
   ///
   /// \param[in] filename
   ///     The const string to replace the directory with.
-  void SetFilename(ConstString filename);
   void SetFilename(llvm::StringRef filename);
 
   /// Clear the filename in this object.
