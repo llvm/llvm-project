@@ -14,6 +14,9 @@
 #include "lldb/Host/windows/windows.h"
 #include <pathcch.h>
 #include <winsock2.h>
+#else
+#define MAX_PATH 260
+#define PATHCCH_MAX_CCH 0x8000
 #endif
 
 #include "Plugins/Platform/gdb-server/PlatformRemoteGDBServer.h"
