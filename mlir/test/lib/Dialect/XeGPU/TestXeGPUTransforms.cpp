@@ -23,8 +23,6 @@
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "llvm/ADT/bit.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -496,21 +494,6 @@ struct TestXeGPUCoalesceGatherScatter
   }
 
 private:
-  /// Largest power-of-two `<= bound` that divides `n`.
-  static int64_t largestPow2Divisor(int64_t n, int64_t bound) {
-    if (bound < 2 || n < 2)
-      return 1;
-    int64_t f = std::min<int64_t>(bound, n);
-    if (!llvm::isPowerOf2_64(f))
-      f = static_cast<int64_t>(llvm::bit_floor(static_cast<uint64_t>(f)));
-    while (f >= 2) {
-      if (n % f == 0)
-        return f;
-      f /= 2;
-    }
-    return 1;
-  }
-
   /// Build a `lane_layout`/`lane_data`/`inst_data` layout of rank `rank`, with
   /// the given lane_layout / lane_data on the innermost dim (1 elsewhere).
   /// `inst_data` is `lane_layout * lane_data` per dim.
@@ -529,8 +512,7 @@ private:
   /// Minimal driver: read the `contiguity` attribute the analysis stamped and
   /// turn it into a `lane_data` layout. This is only a stand-in for the real
   /// consumer (layout propagation) so the analysis output can be checked
-  /// end-to-end; it deliberately handles just the simple case and leaves the
-  /// access-pattern gating (mask, reduction ties, ...) to the real consumer.
+  /// end-to-end; it handles just the simple power-of-two case.
   template <typename OpTy>
   static void applyContiguity(OpTy op, unsigned maxChunkSize) {
     std::optional<uint64_t> contiguity = op.getContiguity();
@@ -542,25 +524,20 @@ private:
     auto valueTy = op.getValueType();
     if (!offsetsTy || !valueTy)
       return;
-    // Subgroup size comes from the target. Like layout propagation, do nothing
-    // when there is no target to size the lanes.
     const auto *uArch =
         xegpu::uArch::getUArch(xegpu::getChipStr(op).value_or(""));
     if (!uArch)
       return;
     int64_t subgroupSize = uArch->getSubgroupSize();
 
+    // Tile size and subgroup size are powers of two, so the smaller is already
+    // the largest power-of-two divisor; min() suffices throughout.
     int64_t inner = offsetsTy.getShape().back();
-    // lane_layout default: min(subgroupSize, inner) rounded to a divisor.
-    int64_t laneLayout =
-        largestPow2Divisor(inner, std::min<int64_t>(subgroupSize, inner));
+    int64_t laneLayout = std::min<int64_t>(subgroupSize, inner);
     int64_t perLane = inner / laneLayout;
-    // lane_data = min(contiguity, maxChunkSize, perLane), pow2 divisor of
-    // perLane.
-    int64_t bound =
+    int64_t laneData =
         std::min<int64_t>({static_cast<int64_t>(*contiguity),
                            static_cast<int64_t>(maxChunkSize), perLane});
-    int64_t laneData = largestPow2Divisor(perLane, bound);
     if (laneData < 2)
       return;
 
