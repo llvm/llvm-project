@@ -5125,15 +5125,24 @@ public:
   /// and deleted once the VPlan is destroyed.
   LLVM_ABI_FOR_TEST VPIRBasicBlock *createVPIRBasicBlock(BasicBlock *IRBB);
 
-  /// Returns true if the VPlan is based on a loop with an early exit. That is
-  /// the case if the VPlan has either more than one exit block or a single exit
-  /// block with multiple predecessors (one for the exit via the latch and one
-  /// via the other early exit).
+  /// Returns true if the VPlan is based on a loop with an early exit
   bool hasEarlyExit() const {
-    return count_if(ExitBlocks,
-                    [](VPIRBasicBlock *EB) { return EB->hasPredecessors(); }) >
-               1 ||
-           (ExitBlocks.size() == 1 && ExitBlocks[0]->getNumPredecessors() > 1);
+    unsigned NumExitPredecessors =
+        sum_of(map_range(ExitBlocks, [](VPIRBasicBlock *EB) {
+          return EB->getNumPredecessors();
+        }));
+
+    // If the scalar preheader executes unconditionally, there's no branch from
+    // middle block to any exit. If there is any edge to an exit block
+    // remaining, it must be an early exit.
+    VPBasicBlock *ScalarPH = getScalarPreheader();
+    if (ScalarPH && ScalarPH->hasPredecessors() &&
+        ScalarPH->getSinglePredecessor()->getNumSuccessors() == 1)
+      return NumExitPredecessors >= 1;
+
+    // Otherwise there must be at least 2 edges to exit blocks (from the middle
+    // block and the early exiting edge).
+    return NumExitPredecessors > 1;
   }
 
   /// Returns true if the scalar tail may execute after the vector loop, i.e.
