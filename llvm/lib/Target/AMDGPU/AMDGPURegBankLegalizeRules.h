@@ -79,6 +79,7 @@ enum UniformityLLTOpPredicateID {
   UniP3,
   UniP4,
   UniP5,
+  UniP6,
   UniP8,
   UniPtr32,
   UniPtr64,
@@ -100,17 +101,34 @@ enum UniformityLLTOpPredicateID {
   V2S64,
   V3S32,
   V4S32,
+  V32S32,
 
   UniV2S16,
   UniV2S32,
+  UniV4S32,
   UniV2S64,
+  UniV3S32,
+  UniV6S32,
+  UniV8S16,
+  UniV8S32,
+  UniV16S16,
+  UniV16S32,
+  UniV32S16,
+  UniV32S32,
 
   DivV2S16,
   DivV2S32,
+  DivV4S32,
   DivV2S64,
   DivV3S32,
   DivV4S16,
+  DivV8S16,
+  DivV8S32,
+  DivV16S16,
+  DivV16S32,
   DivV6S32,
+  DivV32S16,
+  DivV32S32,
 
   // B types
   B32,
@@ -155,6 +173,7 @@ enum RegBankLLTMappingApplyID {
   // any LLT, bank-only apply IDs
   VgprAnyTy,
   AgprAnyTy,
+  VgprOrAgprAnyTy,
 
   // sgpr scalars, pointers, vectors and B-types
   Sgpr16,
@@ -167,6 +186,7 @@ enum RegBankLLTMappingApplyID {
   SgprP3,
   SgprP4,
   SgprP5,
+  SgprP6,
   SgprP8,
   SgprPtr32,
   SgprPtr64,
@@ -208,6 +228,8 @@ enum RegBankLLTMappingApplyID {
   VgprB512,
   VgprBRC,
   VgprV4S16,
+  VgprV8S16,
+  VgprV16S16,
   VgprV4S32,
   VgprV8S32,
   VgprV2S64,
@@ -219,8 +241,16 @@ enum RegBankLLTMappingApplyID {
   UniInVgprS64,
   UniInVgprV2S16,
   UniInVgprV2S32,
+  UniInVgprV3S32,
   UniInVgprV4S32,
   UniInVgprV2S64,
+  UniInVgprV6S32,
+  UniInVgprV8S16,
+  UniInVgprV8S32,
+  UniInVgprV16S16,
+  UniInVgprV16S32,
+  UniInVgprV32S16,
+  UniInVgprV32S32,
   UniInVgprB32,
   UniInVgprB64,
   UniInVgprB96,
@@ -254,6 +284,7 @@ enum RegBankLLTMappingApplyID {
   SgprB32_ReadFirstLane,
   SgprB64_ReadFirstLane,
   SgprV4S32_ReadFirstLane,
+  SgprV8S32_ReadFirstLane,
 
   // Src only modifiers: extends
   Sgpr32AExt,
@@ -265,6 +296,7 @@ enum RegBankLLTMappingApplyID {
   Vgpr32ZExt,
 
   VgprV6S32,
+  VgprV16S32,
   VgprV32S16,
   VgprV32S32,
 };
@@ -291,6 +323,7 @@ enum LoweringMethodID {
   ScalarizeToS16,
   SplitTo32Select,
   SplitTo32SExtInReg,
+  S_BUF_to_BUF,
   Ext32To64,
   UniCstExt,
   CtPop64To32,
@@ -312,7 +345,11 @@ enum LoweringMethodID {
   InsVecEltToSel,
   InsVecEltTo32,
   AbsToNegMax,
-  AbsToS32
+  AbsToS32,
+  DynStackAlloc,
+  DeletePrefetch,
+  LowerSetRounding,
+  LowerGetRounding
 };
 
 enum FastRulesTypes {

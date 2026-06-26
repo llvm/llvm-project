@@ -11,4 +11,4 @@ subroutine f01
 end
 end module
 
-!CHECK: fred: Module OmpRequirements:(atomic_default_mem_order(relaxed),unified_address,unified_shared_memory)
+!CHECK: fred: Module OmpRequirements:(atomic_default_mem_order(relaxed) unified_address unified_shared_memory)

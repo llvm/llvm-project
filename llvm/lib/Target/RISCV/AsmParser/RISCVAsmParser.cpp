@@ -160,6 +160,12 @@ class RISCVAsmParser : public MCTargetAsmParser {
   void emitLoadStoreSymbol(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
                            MCStreamer &Out, bool HasTmpReg);
 
+  // Helper to emit Xqcilo pseudo load/store as qc.e.li + PseudoQCAccess pair.
+  // For loads: qc.e.li rd, sym; lx rd, 0(rd), %qc.access(sym)
+  // For stores: qc.e.li rt, sym; sx rs, 0(rt), %qc.access(sym)
+  void emitQCELILoadStoreSymbol(MCInst &Inst, unsigned Opcode, SMLoc IDLoc,
+                                MCStreamer &Out, bool HasTmpReg);
+
   // Helper to emit pseudo sign/zero extend instruction.
   void emitPseudoExtend(MCInst &Inst, bool SignExtend, int64_t Width,
                         SMLoc IDLoc, MCStreamer &Out);
@@ -207,6 +213,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   ParseStatus parseVTypeI(OperandVector &Operands);
   ParseStatus parseMaskReg(OperandVector &Operands);
   ParseStatus parseVScaleReg(OperandVector &Operands);
+  ParseStatus parseTileLambda(OperandVector &Operands);
   ParseStatus parseInsnDirectiveOpcode(OperandVector &Operands);
   ParseStatus parseInsnCDirectiveOpcode(OperandVector &Operands);
   ParseStatus parseGPRAsFPR(OperandVector &Operands);
@@ -625,6 +632,17 @@ public:
            VK == ELF::R_RISCV_TLSDESC_CALL;
   }
 
+  bool isQCAccessSymbol() const {
+    int64_t Imm;
+    // Must be of 'immediate' type but not a constant.
+    if (!isExpr() || evaluateConstantExpr(getExpr(), Imm))
+      return false;
+
+    RISCV::Specifier VK = RISCV::S_None;
+    return RISCVAsmParser::classifySymbolRef(getExpr(), VK) &&
+           VK == RISCV::S_QC_ACCESS;
+  }
+
   bool isCSRSystemRegister() const { return isSystemRegister(); }
 
   // If the last operand of the vsetvli/vsetvli instruction is a constant
@@ -642,6 +660,10 @@ public:
 
   bool isXSfmmVType() const {
     return Kind == KindTy::VType && RISCVVType::isValidXSfmmVType(VType.Val);
+  }
+
+  bool isTileLambda() const {
+    return isUImmPred([](int64_t Imm) { return Imm && isUInt<3>(Imm); });
   }
 
   /// Return true if the operand is a valid for the fence instruction e.g.
@@ -2445,21 +2467,9 @@ ParseStatus RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
 }
 
 bool RISCVAsmParser::generateVTypeError(SMLoc ErrorLoc) {
-  if (STI->hasFeature(RISCV::FeatureStdExtZvfbfa) ||
-      STI->hasFeature(RISCV::FeatureStdExtZvfofp8min) ||
-      STI->hasFeature(RISCV::FeatureVendorXSfvfbfexp16e) ||
-      STI->hasFeature(RISCV::FeatureStdExtZvqwbdota8i) ||
-      STI->hasFeature(RISCV::FeatureStdExtZvqwbdota16i) ||
-      STI->hasFeature(RISCV::FeatureStdExtZvfqwbdota8f) ||
-      STI->hasFeature(RISCV::FeatureStdExtZvfwbdota16bf))
-    return Error(
-        ErrorLoc,
-        "operand must be "
-        "e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]");
-  return Error(
-      ErrorLoc,
-      "operand must be "
-      "e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]");
+  return Error(ErrorLoc,
+               "operand must be "
+               "e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]");
 }
 
 ParseStatus RISCVAsmParser::parseXSfmmVType(OperandVector &Operands) {
@@ -2526,8 +2536,13 @@ ParseStatus RISCVAsmParser::parseMaskReg(OperandVector &Operands) {
     return ParseStatus::NoMatch;
 
   StringRef Name = getLexer().getTok().getIdentifier();
-  if (!Name.consume_back(".t"))
-    return Error(getLoc(), "expected '.t' suffix");
+  if (!Name.consume_back(".t")) {
+    // Non-register identifiers may belong to another optional operand in an
+    // overloaded mnemonic. Let the matcher try those alternatives.
+    if (matchRegisterNameHelper(Name))
+      return Error(getLoc(), "expected '.t' suffix");
+    return ParseStatus::NoMatch;
+  }
   MCRegister Reg = matchRegisterNameHelper(Name);
 
   if (!Reg)
@@ -2558,6 +2573,28 @@ ParseStatus RISCVAsmParser::parseVScaleReg(OperandVector &Operands) {
   SMLoc E = getTok().getEndLoc();
   getLexer().Lex();
   Operands.push_back(RISCVOperand::createReg(Reg, S, E));
+  return ParseStatus::Success;
+}
+
+ParseStatus RISCVAsmParser::parseTileLambda(OperandVector &Operands) {
+  if (getLexer().isNot(AsmToken::Identifier))
+    return ParseStatus::NoMatch;
+
+  SMLoc S = getLoc();
+  StringRef Name = getLexer().getTok().getIdentifier();
+  if (!Name.consume_front("L") && !Name.consume_front("l"))
+    return ParseStatus::NoMatch;
+
+  unsigned Lambda;
+  if (Name.getAsInteger(10, Lambda) || !isPowerOf2_32(Lambda) || Lambda >= 128)
+    return Error(S, "operand must be L1, L2, L4, L8, L16, L32, or L64");
+
+  unsigned EncodedLambda = Log2_32(Lambda) + 1;
+
+  SMLoc E = getTok().getEndLoc();
+  getLexer().Lex();
+  Operands.push_back(RISCVOperand::createExpr(
+      MCConstantExpr::create(EncodedLambda, getContext()), S, E, isRV64()));
   return ParseStatus::Success;
 }
 
@@ -3615,8 +3652,13 @@ void RISCVAsmParser::emitLoadLocalAddress(MCInst &Inst, SMLoc IDLoc,
   //             ADDI rdest, rdest, %pcrel_lo(TmpLabel)
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
-  emitAuipcInstPair(DestReg, DestReg, Symbol, RISCV::S_PCREL_HI, RISCV::ADDI,
-                    IDLoc, Out);
+  if (STI->hasFeature(RISCV::Feature32Bit) &&
+      STI->hasFeature(RISCV::FeatureVendorXqcili))
+    emitToStreamer(
+        Out, MCInstBuilder(RISCV::QC_E_LI).addReg(DestReg).addExpr(Symbol));
+  else
+    emitAuipcInstPair(DestReg, DestReg, Symbol, RISCV::S_PCREL_HI, RISCV::ADDI,
+                      IDLoc, Out);
 }
 
 void RISCVAsmParser::emitLoadGlobalAddress(MCInst &Inst, SMLoc IDLoc,
@@ -3702,6 +3744,91 @@ void RISCVAsmParser::emitLoadStoreSymbol(MCInst &Inst, unsigned Opcode,
   const MCExpr *Symbol = Inst.getOperand(SymbolOpIdx).getExpr();
   emitAuipcInstPair(DestReg, TmpReg, Symbol, RISCV::S_PCREL_HI, Opcode, IDLoc,
                     Out);
+}
+
+void RISCVAsmParser::emitQCELILoadStoreSymbol(MCInst &Inst, unsigned Opcode,
+                                              SMLoc IDLoc, MCStreamer &Out,
+                                              bool HasTmpReg) {
+  // For loads (HasTmpReg=false): operands are [rd, symbol]
+  //   qc.e.li rd, symbol
+  //   lx rd, 0(rd), %qc.access(symbol)   [possibly compressed]
+  //
+  // For stores (HasTmpReg=true): operands are [rt, rs, symbol]
+  //   qc.e.li rt, symbol
+  //   sx rs, 0(rt), %qc.access(symbol)   [possibly compressed]
+  MCRegister AddrReg = Inst.getOperand(0).getReg();
+  unsigned SymbolOpIdx = HasTmpReg ? 2 : 1;
+  const MCExpr *Symbol = Inst.getOperand(SymbolOpIdx).getExpr();
+
+  emitToStreamer(Out,
+                 MCInstBuilder(RISCV::QC_E_LI).addReg(AddrReg).addExpr(Symbol));
+
+  MCContext &Ctx = getContext();
+  const MCExpr *AccessExpr =
+      MCSpecifierExpr::create(Symbol, RISCV::S_QC_ACCESS, Ctx);
+
+  // We have to manually compress the QCAccess pseudos as the current
+  // CompressPat mechanism does not support them. Each entry pairs the
+  // compressed opcode with the subtarget feature it requires.
+  struct CompressedForm {
+    unsigned Opcode;
+    unsigned Feature;
+  };
+  std::optional<CompressedForm> Compressed;
+  switch (Opcode) {
+  default:
+    break;
+  case RISCV::PseudoQCAccessLBU:
+    Compressed = {RISCV::PseudoQCAccessC_LBU, RISCV::FeatureStdExtZcb};
+    break;
+  case RISCV::PseudoQCAccessLH:
+    Compressed = {RISCV::PseudoQCAccessC_LH, RISCV::FeatureStdExtZcb};
+    break;
+  case RISCV::PseudoQCAccessLHU:
+    Compressed = {RISCV::PseudoQCAccessC_LHU, RISCV::FeatureStdExtZcb};
+    break;
+  case RISCV::PseudoQCAccessLW:
+    Compressed = {RISCV::PseudoQCAccessC_LW, RISCV::FeatureStdExtZca};
+    break;
+  case RISCV::PseudoQCAccessSB:
+    Compressed = {RISCV::PseudoQCAccessC_SB, RISCV::FeatureStdExtZcb};
+    break;
+  case RISCV::PseudoQCAccessSH:
+    Compressed = {RISCV::PseudoQCAccessC_SH, RISCV::FeatureStdExtZcb};
+    break;
+  case RISCV::PseudoQCAccessSW:
+    Compressed = {RISCV::PseudoQCAccessC_SW, RISCV::FeatureStdExtZca};
+    break;
+  }
+
+  // For stores, both the data register and the address register must be in
+  // GPRC for the compressed form; for loads AddrReg serves as both.
+  bool CanUseGPRC =
+      RISCVMCRegisterClasses[RISCV::GPRCRegClassID].contains(AddrReg);
+  if (HasTmpReg && CanUseGPRC) {
+    MCRegister DataReg = Inst.getOperand(1).getReg();
+    CanUseGPRC =
+        RISCVMCRegisterClasses[RISCV::GPRCRegClassID].contains(DataReg);
+  }
+
+  bool UseCompressed =
+      Compressed && getSTI().hasFeature(Compressed->Feature) && CanUseGPRC;
+
+  unsigned ActualOpcode = UseCompressed ? Compressed->Opcode : Opcode;
+  if (HasTmpReg) {
+    MCRegister DataReg = Inst.getOperand(1).getReg();
+    emitToStreamer(Out, MCInstBuilder(ActualOpcode)
+                            .addReg(DataReg)
+                            .addReg(AddrReg)
+                            .addImm(0)
+                            .addExpr(AccessExpr));
+  } else {
+    emitToStreamer(Out, MCInstBuilder(ActualOpcode)
+                            .addReg(AddrReg)
+                            .addReg(AddrReg)
+                            .addImm(0)
+                            .addExpr(AccessExpr));
+  }
 }
 
 void RISCVAsmParser::emitPseudoExtend(MCInst &Inst, bool SignExtend,
@@ -4166,23 +4293,18 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     emitLoadTLSGDAddress(Inst, IDLoc, Out);
     return false;
   case RISCV::PseudoLB:
-  case RISCV::PseudoQC_E_LB:
     emitLoadStoreSymbol(Inst, RISCV::LB, IDLoc, Out, /*HasTmpReg=*/false);
     return false;
   case RISCV::PseudoLBU:
-  case RISCV::PseudoQC_E_LBU:
     emitLoadStoreSymbol(Inst, RISCV::LBU, IDLoc, Out, /*HasTmpReg=*/false);
     return false;
   case RISCV::PseudoLH:
-  case RISCV::PseudoQC_E_LH:
     emitLoadStoreSymbol(Inst, RISCV::LH, IDLoc, Out, /*HasTmpReg=*/false);
     return false;
   case RISCV::PseudoLHU:
-  case RISCV::PseudoQC_E_LHU:
     emitLoadStoreSymbol(Inst, RISCV::LHU, IDLoc, Out, /*HasTmpReg=*/false);
     return false;
   case RISCV::PseudoLW:
-  case RISCV::PseudoQC_E_LW:
     emitLoadStoreSymbol(Inst, RISCV::LW, IDLoc, Out, /*HasTmpReg=*/false);
     return false;
   case RISCV::PseudoLWU:
@@ -4207,15 +4329,12 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     emitLoadStoreSymbol(Inst, RISCV::FLQ, IDLoc, Out, /*HasTmpReg=*/true);
     return false;
   case RISCV::PseudoSB:
-  case RISCV::PseudoQC_E_SB:
     emitLoadStoreSymbol(Inst, RISCV::SB, IDLoc, Out, /*HasTmpReg=*/true);
     return false;
   case RISCV::PseudoSH:
-  case RISCV::PseudoQC_E_SH:
     emitLoadStoreSymbol(Inst, RISCV::SH, IDLoc, Out, /*HasTmpReg=*/true);
     return false;
   case RISCV::PseudoSW:
-  case RISCV::PseudoQC_E_SW:
     emitLoadStoreSymbol(Inst, RISCV::SW, IDLoc, Out, /*HasTmpReg=*/true);
     return false;
   case RISCV::PseudoSD:
@@ -4223,6 +4342,38 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
     return false;
   case RISCV::PseudoSD_RV32:
     emitLoadStoreSymbol(Inst, RISCV::SD_RV32, IDLoc, Out, /*HasTmpReg=*/true);
+    return false;
+  case RISCV::PseudoQC_E_LB:
+    emitQCELILoadStoreSymbol(Inst, RISCV::PseudoQCAccessLB, IDLoc, Out,
+                             /*HasTmpReg=*/false);
+    return false;
+  case RISCV::PseudoQC_E_LBU:
+    emitQCELILoadStoreSymbol(Inst, RISCV::PseudoQCAccessLBU, IDLoc, Out,
+                             /*HasTmpReg=*/false);
+    return false;
+  case RISCV::PseudoQC_E_LH:
+    emitQCELILoadStoreSymbol(Inst, RISCV::PseudoQCAccessLH, IDLoc, Out,
+                             /*HasTmpReg=*/false);
+    return false;
+  case RISCV::PseudoQC_E_LHU:
+    emitQCELILoadStoreSymbol(Inst, RISCV::PseudoQCAccessLHU, IDLoc, Out,
+                             /*HasTmpReg=*/false);
+    return false;
+  case RISCV::PseudoQC_E_LW:
+    emitQCELILoadStoreSymbol(Inst, RISCV::PseudoQCAccessLW, IDLoc, Out,
+                             /*HasTmpReg=*/false);
+    return false;
+  case RISCV::PseudoQC_E_SB:
+    emitQCELILoadStoreSymbol(Inst, RISCV::PseudoQCAccessSB, IDLoc, Out,
+                             /*HasTmpReg=*/true);
+    return false;
+  case RISCV::PseudoQC_E_SH:
+    emitQCELILoadStoreSymbol(Inst, RISCV::PseudoQCAccessSH, IDLoc, Out,
+                             /*HasTmpReg=*/true);
+    return false;
+  case RISCV::PseudoQC_E_SW:
+    emitQCELILoadStoreSymbol(Inst, RISCV::PseudoQCAccessSW, IDLoc, Out,
+                             /*HasTmpReg=*/true);
     return false;
   case RISCV::PseudoFSH:
     emitLoadStoreSymbol(Inst, RISCV::FSH, IDLoc, Out, /*HasTmpReg=*/true);

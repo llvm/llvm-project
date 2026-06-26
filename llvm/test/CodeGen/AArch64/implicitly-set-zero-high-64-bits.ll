@@ -10,9 +10,8 @@ define <8 x half> @test1(<4 x float> noundef %a) {
 ; CHECK-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-NEXT:    ret
 entry:
-  %vcvt_f16_f321.i = tail call <4 x i16> @llvm.aarch64.neon.vcvtfp2hf(<4 x float> %a)
-  %0 = bitcast <4 x i16> %vcvt_f16_f321.i to <4 x half>
-  %shuffle.i = shufflevector <4 x half> %0, <4 x half> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %b = fptrunc <4 x float> %a to <4 x half>
+  %shuffle.i = shufflevector <4 x half> %b, <4 x half> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x half> %shuffle.i
 }
 

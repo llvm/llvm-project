@@ -306,11 +306,6 @@ public:
   bool makeAbsolutePath(SmallVectorImpl<char> &Path,
                         bool Canonicalize = false) const;
 
-  /// Produce an array mapping from the unique IDs assigned to each
-  /// file to the corresponding FileEntryRef.
-  void
-  GetUniqueIDMapping(SmallVectorImpl<OptionalFileEntryRef> &UIDToFiles) const;
-
   /// Retrieve the canonical name for a given directory.
   ///
   /// This is a very expensive operation, despite its results being cached,

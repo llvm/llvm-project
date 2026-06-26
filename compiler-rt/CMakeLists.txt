@@ -322,13 +322,17 @@ option(COMPILER_RT_USE_ATOMIC_LIBRARY "Use compiler-rt atomic instead of libatom
 
 option(COMPILER_RT_PROFILE_BAREMETAL "Build minimal baremetal profile library" OFF)
 
-set(DEFAULT_COMPILER_RT_BUILD_PROFILE_ROCM ON)
-if(APPLE)
-  set(DEFAULT_COMPILER_RT_BUILD_PROFILE_ROCM OFF)
+set(COMPILER_RT_BUILD_PROFILE_ROCM_DEFAULT OFF)
+if("${CMAKE_SYSTEM_NAME}" MATCHES "^(Linux|Windows)$" AND
+   NOT COMPILER_RT_PROFILE_BAREMETAL)
+  set(COMPILER_RT_BUILD_PROFILE_ROCM_DEFAULT ON)
 endif()
+
+# clang_rt.profile_rocm is supported on Linux and Windows. It is built /MD on
+# Windows and depends on the sanitizer interception library.
 option(COMPILER_RT_BUILD_PROFILE_ROCM
-  "Build the host-side ROCm/HIP device profile collection runtime"
-  ${DEFAULT_COMPILER_RT_BUILD_PROFILE_ROCM})
+  "Build the host-side ROCm/HIP device profile collection runtime (clang_rt.profile_rocm)"
+  ${COMPILER_RT_BUILD_PROFILE_ROCM_DEFAULT})
 mark_as_advanced(COMPILER_RT_BUILD_PROFILE_ROCM)
 
 include(config-ix)
@@ -379,11 +383,11 @@ if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "hexagon")
   list(APPEND SANITIZER_COMMON_CFLAGS -fno-emulated-tls)
   string(APPEND COMPILER_RT_TEST_COMPILER_CFLAGS " -fno-emulated-tls")
 endif()
-if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx|spirv64")
+if(COMPILER_RT_GPU_BUILD)
   append_list_if(UBSAN_COMMON_SUPPORTED_ARCH -ffreestanding SANITIZER_COMMON_CFLAGS)
   append_list_if(COMPILER_RT_HAS_NOGPULIB_FLAG -nogpulib SANITIZER_COMMON_CFLAGS)
   append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto SANITIZER_COMMON_CFLAGS)
-  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn")
+  if(COMPILER_RT_TARGET_AMDGPU)
     append_list_if(COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG
                    "SHELL:-Xclang -mcode-object-version=none" SANITIZER_COMMON_CFLAGS)
   endif()
@@ -404,7 +408,7 @@ append_list_if(COMPILER_RT_HAS_FVISIBILITY_HIDDEN_FLAG -fvisibility=hidden SANIT
 if(NOT COMPILER_RT_HAS_FVISIBILITY_HIDDEN_FLAG)
   append_list_if(COMPILER_RT_HAS_FVISIBILITY_INLINES_HIDDEN_FLAG -fvisibility-inlines-hidden SANITIZER_COMMON_CFLAGS)
 endif()
-if(NOT "${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "amdgcn|nvptx|spirv64")
+if(NOT COMPILER_RT_GPU_BUILD)
   append_list_if(COMPILER_RT_HAS_FNO_LTO_FLAG -fno-lto SANITIZER_COMMON_CFLAGS)
 endif()
 
@@ -536,7 +540,7 @@ if(MSVC)
     string(REGEX REPLACE "(^| )/Z[i7I]($| )" " /Z7 "
            "${var_to_update}" "${${var_to_update}}")
   endforeach()
-elseif(APPLE)
+elseif("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" MATCHES "apple")
   # On Apple platforms use full debug info (i.e. not `-gline-tables-only`)
   # for all build types so that the runtime can be debugged.
   if(NOT COMPILER_RT_HAS_G_FLAG)

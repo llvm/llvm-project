@@ -410,7 +410,7 @@ define void @pr46786_c26_char(ptr %arg, ptr %arg1, ptr %arg2) {
 ; X32-NEXT:    %i10 = sub i64 %i9, %i4
 ; X32-NEXT:    --> {0,+,1}<nuw><%bb6> U: [0,4294967295) S: [0,4294967295) Exits: (zext i32 (-1 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32)) to i64) LoopDispositions: { %bb6: Computable }
 ; X32-NEXT:    %i11 = getelementptr inbounds i8, ptr %arg2, i64 %i10
-; X32-NEXT:    --> {%arg2,+,1}<%bb6> U: full-set S: full-set Exits: (-1 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32) + %arg2) LoopDispositions: { %bb6: Computable }
+; X32-NEXT:    --> {%arg2,+,1}<nw><%bb6> U: full-set S: full-set Exits: (-1 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32) + %arg2) LoopDispositions: { %bb6: Computable }
 ; X32-NEXT:    %i12 = load i8, ptr %i11, align 1
 ; X32-NEXT:    --> %i12 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X32-NEXT:    %i13 = add i8 %i12, %i8
@@ -487,7 +487,7 @@ define void @pr46786_c26_char_cmp_ops_swapped(ptr %arg, ptr %arg1, ptr %arg2) {
 ; X32-NEXT:    %i10 = sub i64 %i9, %i4
 ; X32-NEXT:    --> {0,+,1}<nuw><%bb6> U: [0,4294967295) S: [0,4294967295) Exits: (zext i32 (-1 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32)) to i64) LoopDispositions: { %bb6: Computable }
 ; X32-NEXT:    %i11 = getelementptr inbounds i8, ptr %arg2, i64 %i10
-; X32-NEXT:    --> {%arg2,+,1}<%bb6> U: full-set S: full-set Exits: (-1 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32) + %arg2) LoopDispositions: { %bb6: Computable }
+; X32-NEXT:    --> {%arg2,+,1}<nw><%bb6> U: full-set S: full-set Exits: (-1 + (-1 * (ptrtoint ptr %arg to i32)) + (ptrtoint ptr %arg1 to i32) + %arg2) LoopDispositions: { %bb6: Computable }
 ; X32-NEXT:    %i12 = load i8, ptr %i11, align 1
 ; X32-NEXT:    --> %i12 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %bb6: Variant }
 ; X32-NEXT:    %i13 = add i8 %i12, %i8

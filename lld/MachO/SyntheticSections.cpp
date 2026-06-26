@@ -1445,6 +1445,8 @@ template <class LP> void SymtabSectionImpl<LP>::writeTo(uint8_t *buf) const {
       nList->n_desc |= defined->isExternalWeakDef() ? N_WEAK_DEF : 0;
       nList->n_desc |=
           defined->referencedDynamically ? REFERENCED_DYNAMICALLY : 0;
+      if (config->outputType == MH_OBJECT)
+        nList->n_desc |= defined->isCold() ? N_COLD_FUNC : 0;
     } else if (auto *dysym = dyn_cast<DylibSymbol>(entry.sym)) {
       uint16_t n_desc = nList->n_desc;
       int16_t ordinal = ordinalForDylibSymbol(*dysym);
@@ -1870,7 +1872,7 @@ void WordLiteralSection::finalizeContents() {
         if (!isec->isLive(off))
           continue;
         uint32_t value = *reinterpret_cast<const uint32_t *>(buf + off);
-        literal4Map.emplace(value, literal4Map.size());
+        literal4Map.try_emplace(value, literal4Map.size());
       }
       break;
     }
@@ -1879,7 +1881,7 @@ void WordLiteralSection::finalizeContents() {
         if (!isec->isLive(off))
           continue;
         uint64_t value = *reinterpret_cast<const uint64_t *>(buf + off);
-        literal8Map.emplace(value, literal8Map.size());
+        literal8Map.try_emplace(value, literal8Map.size());
       }
       break;
     }
@@ -1888,7 +1890,7 @@ void WordLiteralSection::finalizeContents() {
         if (!isec->isLive(off))
           continue;
         UInt128 value = *reinterpret_cast<const UInt128 *>(buf + off);
-        literal16Map.emplace(value, literal16Map.size());
+        literal16Map.try_emplace(value, literal16Map.size());
       }
       break;
     }
