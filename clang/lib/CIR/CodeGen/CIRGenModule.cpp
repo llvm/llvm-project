@@ -1449,7 +1449,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
 
   if (getLangOpts().CUDA &&
       (isCUDASharedVar || isCUDAShadowVar || isCUDADeviceShadowVar)) {
-    init = cir::PoisonAttr::get(convertType(vd->getType()));
+    init = cir::UndefAttr::get(convertType(vd->getType()));
   } else if (vd->hasAttr<LoaderUninitializedAttr>()) {
     errorNYI(vd->getSourceRange(),
              "emitGlobalVarDefinition: loader uninitialized attribute");
@@ -1598,12 +1598,30 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     emitCXXGlobalVarDeclInitFunc(vd, gv, needsGlobalCtor);
 }
 
+bool CIRGenModule::shouldEmitFunction(GlobalDecl gd) {
+  if (getFunctionLinkage(gd) !=
+      cir::GlobalLinkageKind::AvailableExternallyLinkage)
+    return true;
+
+  const auto *fd = cast<FunctionDecl>(gd.getDecl());
+  // Inline builtins must be emitted; the body is redirected to a `.inline`
+  // symbol in CIRGenFunction::generateCode.
+  if (fd->isInlineBuiltinDeclaration())
+    return true;
+
+  // PR9614 / glibc btowc workaround: an available_externally function whose
+  // body just calls itself (via asm label or __builtin_* lowering on the
+  // same name) is not a valid stand-in for the real implementation.  Drop
+  // it from the IR so the optimizer doesn't reason about its body.
+  return !getCXXABI().getMangleContext().isTriviallyRecursive(fd);
+}
+
 void CIRGenModule::emitGlobalDefinition(clang::GlobalDecl gd,
                                         mlir::Operation *op) {
   const auto *decl = cast<ValueDecl>(gd.getDecl());
   if (const auto *fd = dyn_cast<FunctionDecl>(decl)) {
-    // TODO(CIR): Skip generation of CIR for functions with available_externally
-    // linkage at -O0.
+    if (!shouldEmitFunction(gd))
+      return;
 
     if (const auto *method = dyn_cast<CXXMethodDecl>(decl)) {
       // Make sure to emit the definition(s) before we emit the thunks. This is
@@ -2277,8 +2295,81 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
   // Otherwise, a member data pointer.
   auto ty = mlir::cast<cir::DataMemberType>(convertType(e->getType()));
   const auto *fieldDecl = cast<FieldDecl>(decl);
-  return cir::ConstantOp::create(
-      builder, loc, builder.getDataMemberAttr(ty, fieldDecl->getFieldIndex()));
+  const auto *mpt = e->getType()->castAs<MemberPointerType>();
+  const auto *destClass = mpt->getMostRecentCXXRecordDecl();
+  std::optional<llvm::SmallVector<int32_t>> path =
+      buildMemberPath(destClass, fieldDecl);
+  if (!path)
+    return {};
+  return cir::ConstantOp::create(builder, loc,
+                                 builder.getDataMemberAttr(ty, *path));
+}
+
+std::optional<llvm::SmallVector<int32_t>>
+CIRGenModule::buildMemberPath(const CXXRecordDecl *destClass,
+                              const FieldDecl *field) {
+  llvm::SmallVector<int32_t> path;
+  if (!findFieldMemberPath(destClass, field, path))
+    return std::nullopt;
+  return path;
+}
+
+bool CIRGenModule::findFieldMemberPath(const CXXRecordDecl *currentClass,
+                                       const FieldDecl *field,
+                                       llvm::SmallVectorImpl<int32_t> &path) {
+  const CIRGenRecordLayout &layout =
+      getTypes().getCIRGenRecordLayout(currentClass);
+
+  // The field is declared directly in this class.
+  if (field->getParent() == currentClass) {
+    int32_t fieldIdx;
+    if (currentClass->isUnion()) {
+      // For unions, getCIRFieldNo always returns 0 for every union member (all
+      // members share offset 0 in the CIR record).  Use the declaration-order
+      // index to distinguish members with the same type at the same offset.
+      if (!layout.isZeroInitializable()) {
+        errorNYI(field->getLocation(),
+                 "data member pointer for non-zero-initializable union");
+        return false;
+      }
+      fieldIdx = static_cast<int32_t>(field->getFieldIndex());
+    } else {
+      fieldIdx = static_cast<int32_t>(layout.getCIRFieldNo(field));
+    }
+    path.push_back(fieldIdx);
+    return true;
+  }
+
+  // Otherwise search the base subobjects.  A virtual base only blocks lowering
+  // when the field actually lives within it; a virtual base elsewhere in the
+  // hierarchy must not stop us from reaching a member through a non-virtual
+  // path.
+  for (const CXXBaseSpecifier &base : currentClass->bases()) {
+    const auto *baseDecl =
+        cast<CXXRecordDecl>(base.getType()->getAsRecordDecl());
+
+    if (base.isVirtual()) {
+      // A pointer to a data member that traverses a virtual base is ill-formed,
+      // so this guard only fires defensively if the member is reached through
+      // the virtual base.  An unrelated virtual base is skipped so it does not
+      // block members reached through a non-virtual path.
+      llvm::SmallVector<int32_t> discardedPath;
+      if (findFieldMemberPath(baseDecl, field, discardedPath)) {
+        errorNYI(field->getLocation(),
+                 "data member pointer through virtual base");
+        return false;
+      }
+      continue;
+    }
+
+    auto baseFieldIdx =
+        static_cast<int32_t>(layout.getNonVirtualBaseCIRFieldNo(baseDecl));
+    path.push_back(baseFieldIdx);
+    if (findFieldMemberPath(baseDecl, field, path))
+      return true;
+    path.pop_back();
+  }
+  return false;
 }
 
 void CIRGenModule::emitDeclContext(const DeclContext *dc) {
@@ -3788,29 +3879,6 @@ void CIRGenModule::mapBlockAddress(cir::BlockAddrInfoAttr blockInfo,
       blockAddressInfoToLabel.try_emplace(blockInfo, label);
   assert(result.second &&
          "attempting to map a blockaddress info that is already mapped");
-}
-
-void CIRGenModule::mapUnresolvedBlockAddress(cir::BlockAddressOp op) {
-  [[maybe_unused]] auto result = unresolvedBlockAddressToLabel.insert(op);
-  assert(result.second &&
-         "attempting to map a blockaddress operation that is already mapped");
-}
-
-void CIRGenModule::mapResolvedBlockAddress(cir::BlockAddressOp op,
-                                           cir::LabelOp label) {
-  [[maybe_unused]] auto result = blockAddressToLabel.try_emplace(op, label);
-  assert(result.second &&
-         "attempting to map a blockaddress operation that is already mapped");
-}
-
-void CIRGenModule::updateResolvedBlockAddress(cir::BlockAddressOp op,
-                                              cir::LabelOp newLabel) {
-  auto *it = blockAddressToLabel.find(op);
-  assert(it != blockAddressToLabel.end() &&
-         "trying to update a blockaddress not previously mapped");
-  assert(!it->second && "blockaddress already has a resolved label");
-
-  it->second = newLabel;
 }
 
 cir::LabelOp

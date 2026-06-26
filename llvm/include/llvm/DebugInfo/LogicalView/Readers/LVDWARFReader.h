@@ -14,6 +14,7 @@
 #ifndef LLVM_DEBUGINFO_LOGICALVIEW_READERS_LVDWARFREADER_H
 #define LLVM_DEBUGINFO_LOGICALVIEW_READERS_LVDWARFREADER_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFAbbreviationDeclaration.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
@@ -69,7 +70,7 @@ class LLVM_ABI LVDWARFReader final : public LVBinaryReader {
     LVElementSet Types;
     LVElementEntry(LVElement *Element = nullptr) : Element(Element) {}
   };
-  using LVElementReference = std::unordered_map<LVOffset, LVElementEntry>;
+  using LVElementReference = DenseMap<LVOffset, LVElementEntry>;
   LVElementReference ElementTable;
 
   Error loadTargetInfo(const object::ObjectFile &Obj);

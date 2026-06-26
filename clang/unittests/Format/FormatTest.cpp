@@ -14394,6 +14394,7 @@ TEST_F(FormatTest, IncorrectCodeUnbalancedBraces) {
   verifyNoCrash("struct Foo {\n"
                 "  operator foo(bar\n"
                 "};");
+  verifyNoCrash("{ operator } a");
   verifyNoCrash("decltype( {\n"
                 "  {");
 }
@@ -22556,6 +22557,8 @@ TEST_F(FormatTest, DoNotCrashOnInvalidInput) {
   verifyNoCrash("        tst     %o5     ! are we doing the gray case?\n"
                 "LY52:                   ! [internal]");
   verifyNoCrash("operator foo *;");
+  verifyNoCrash(
+      "  #xxxx??x<xxxxxxx||??x<xxxxxxx and xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 }
 
 TEST_F(FormatTest, FormatsTableGenCode) {
@@ -24905,6 +24908,15 @@ TEST_F(FormatTest, Cpp20ModulesSupport) {
   verifyFormat("export module Foo.Bar:Baz;", Style);
   verifyFormat("import <Foo/Bar> /* comment */;", Style);
   verifyFormat("import <Foo/Bar>; // Trailing comment", Style);
+
+  Style.BreakStringLiterals = true;
+  Style.ColumnLimit = 20;
+  verifyFormat("export module foobar;\n"
+               "char *s = \"s1\"\n"
+               "          \"s2\";",
+               "export module foobar;\n"
+               "char *s = \"s1\" \"s2\";",
+               Style);
 
   // Somewhat gracefully handle import in pre-C++20 code.
   verifyFormat("import /* not keyword */ = val ? 2 : 1;");

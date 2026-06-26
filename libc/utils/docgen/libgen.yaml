@@ -1,0 +1,5 @@
+functions:
+  basename:
+    in-latest-posix: ''
+  dirname:
+    in-latest-posix: ''
