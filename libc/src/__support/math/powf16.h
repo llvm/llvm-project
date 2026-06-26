@@ -8,10 +8,13 @@
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_POWF16_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_POWF16_H
+
 #include "include/llvm-libc-macros/float16-macros.h"
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
+#include "common_constants.h"
+#include "exp10f_utils.h"
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
 #include "src/__support/CPP/bit.h"
@@ -25,14 +28,13 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/types.h"
-#include "src/__support/math/common_constants.h"
-#include "src/__support/math/exp10f_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
 namespace powf16_impl {
+
 LIBC_INLINE constexpr double exp2_range_reduced(double x) {
   // k = round(x * 32)  => (hi + mid) * 2^5
   double kf = fputil::nearest_integer(x * 32.0);
