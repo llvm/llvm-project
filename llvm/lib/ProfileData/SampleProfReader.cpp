@@ -57,6 +57,11 @@ static cl::opt<bool> ProfileIsFSDisciminator(
     "profile-isfs", cl::Hidden, cl::init(false),
     cl::desc("Profile uses flow sensitive discriminators"));
 
+static cl::opt<bool>
+    LazyLoadNameTable("sample-profile-lazy-load-name-table", cl::init(true),
+                      cl::Hidden,
+                      cl::desc("Lazy load the name table from the profile."));
+
 /// Dump the function profile for \p FName.
 ///
 /// \param FContext Name + context of the function to print.
@@ -1241,8 +1246,8 @@ std::error_code SampleProfileReaderBinary::readNameTable() {
   // because optimization passes can only handle either type.
   bool UseMD5 = useMD5();
 
-  NameTable.clear();
-  NameTable.reserve(*Size);
+  auto &TableVec = NameTable.setToEager();
+  TableVec.reserve(*Size);
   if (!ProfileIsCS) {
     MD5SampleContextTable.clear();
     if (UseMD5)
@@ -1261,9 +1266,9 @@ std::error_code SampleProfileReaderBinary::readNameTable() {
       FunctionId FID(*Name);
       if (!ProfileIsCS)
         MD5SampleContextTable.emplace_back(FID.getHashCode());
-      NameTable.emplace_back(FID);
+      TableVec.emplace_back(FID);
     } else
-      NameTable.push_back(FunctionId(*Name));
+      TableVec.push_back(FunctionId(*Name));
   }
   if (!ProfileIsCS)
     MD5SampleContextStart = MD5SampleContextTable.data();
@@ -1286,13 +1291,17 @@ SampleProfileReaderExtBinaryBase::readNameTableSec(bool IsMD5,
     if (Data + (*Size) * sizeof(uint64_t) > End)
       return sampleprof_error::truncated;
 
-    NameTable.clear();
-    NameTable.reserve(*Size);
-    for (size_t I = 0; I < *Size; ++I) {
-      using namespace support;
-      uint64_t FID = endian::read<uint64_t, unaligned>(
-          Data + I * sizeof(uint64_t), endianness::little);
-      NameTable.emplace_back(FunctionId(FID));
+    if (LazyLoadNameTable) {
+      NameTable.setLazy(Data, *Size);
+    } else {
+      auto &TableVec = NameTable.setToEager();
+      TableVec.reserve(*Size);
+      for (size_t I = 0; I < *Size; ++I) {
+        using namespace support;
+        uint64_t FID = endian::read<uint64_t, unaligned>(
+            Data + I * sizeof(uint64_t), endianness::little);
+        TableVec.emplace_back(FunctionId(FID));
+      }
     }
     if (!ProfileIsCS)
       MD5SampleContextStart = reinterpret_cast<const uint64_t *>(Data);
@@ -1306,8 +1315,8 @@ SampleProfileReaderExtBinaryBase::readNameTableSec(bool IsMD5,
     if (std::error_code EC = Size.getError())
       return EC;
 
-    NameTable.clear();
-    NameTable.reserve(*Size);
+    auto &TableVec = NameTable.setToEager();
+    TableVec.reserve(*Size);
     if (!ProfileIsCS)
       MD5SampleContextTable.resize(*Size);
     for (size_t I = 0; I < *Size; ++I) {
@@ -1316,7 +1325,7 @@ SampleProfileReaderExtBinaryBase::readNameTableSec(bool IsMD5,
         return EC;
       if (!ProfileIsCS)
         support::endian::write64le(&MD5SampleContextTable[I], *FID);
-      NameTable.emplace_back(FunctionId(*FID));
+      TableVec.emplace_back(FunctionId(*FID));
     }
     if (!ProfileIsCS)
       MD5SampleContextStart = MD5SampleContextTable.data();

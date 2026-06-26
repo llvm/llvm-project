@@ -19,7 +19,7 @@ struct S1 {
 };
 
 // TRAP-LABEL: define hidden void @_Z3s1fP2S1(
-// TRAP-SAME: ptr noundef [[S1:%.*]]) #[[ATTR0:[0-9]+]]
+// TRAP-SAME: ptr noundef [[S1:%.*]]) #[[ATTR0:[0-9]+]] {
 // TRAP-NEXT:  [[ENTRY:.*:]]
 // TRAP-NEXT:    [[S1_ADDR:%.*]] = alloca ptr, align 8
 // TRAP-NEXT:    store ptr [[S1]], ptr [[S1_ADDR]], align 8
@@ -37,7 +37,7 @@ struct S1 {
 // TRAP-NEXT:    ret void
 //
 // ABORT-LABEL: define hidden void @_Z3s1fP2S1(
-// ABORT-SAME: ptr noundef [[S1:%.*]]) #[[ATTR0:[0-9]+]]
+// ABORT-SAME: ptr noundef [[S1:%.*]]) #[[ATTR0:[0-9]+]] {
 // ABORT-NEXT:  [[ENTRY:.*:]]
 // ABORT-NEXT:    [[S1_ADDR:%.*]] = alloca ptr, align 8
 // ABORT-NEXT:    store ptr [[S1]], ptr [[S1_ADDR]], align 8
@@ -58,7 +58,7 @@ struct S1 {
 // ABORT-NEXT:    ret void
 //
 // RECOVER-LABEL: define hidden void @_Z3s1fP2S1(
-// RECOVER-SAME: ptr noundef [[S1:%.*]]) #[[ATTR0:[0-9]+]]
+// RECOVER-SAME: ptr noundef [[S1:%.*]]) #[[ATTR0:[0-9]+]] {
 // RECOVER-NEXT:  [[ENTRY:.*:]]
 // RECOVER-NEXT:    [[S1_ADDR:%.*]] = alloca ptr, align 8
 // RECOVER-NEXT:    store ptr [[S1]], ptr [[S1_ADDR]], align 8
@@ -79,7 +79,7 @@ struct S1 {
 // RECOVER-NEXT:    ret void
 //
 // ABORT_MIN-LABEL: define hidden void @_Z3s1fP2S1(
-// ABORT_MIN-SAME: ptr noundef [[S1:%.*]]) #[[ATTR0:[0-9]+]]
+// ABORT_MIN-SAME: ptr noundef [[S1:%.*]]) #[[ATTR0:[0-9]+]] {
 // ABORT_MIN-NEXT:  [[ENTRY:.*:]]
 // ABORT_MIN-NEXT:    [[S1_ADDR:%.*]] = alloca ptr, align 8
 // ABORT_MIN-NEXT:    store ptr [[S1]], ptr [[S1_ADDR]], align 8
@@ -98,7 +98,7 @@ struct S1 {
 // ABORT_MIN-NEXT:    ret void
 //
 // RECOVER_MIN-LABEL: define hidden void @_Z3s1fP2S1(
-// RECOVER_MIN-SAME: ptr noundef [[S1:%.*]]) #[[ATTR0:[0-9]+]]
+// RECOVER_MIN-SAME: ptr noundef [[S1:%.*]]) #[[ATTR0:[0-9]+]] {
 // RECOVER_MIN-NEXT:  [[ENTRY:.*:]]
 // RECOVER_MIN-NEXT:    [[S1_ADDR:%.*]] = alloca ptr, align 8
 // RECOVER_MIN-NEXT:    store ptr [[S1]], ptr [[S1_ADDR]], align 8
@@ -117,7 +117,7 @@ struct S1 {
 // RECOVER_MIN-NEXT:    ret void
 //
 // PRESERVE_MIN-LABEL: define hidden void @_Z3s1fP2S1(
-// PRESERVE_MIN-SAME: ptr noundef [[S1:%.*]]) #[[ATTR0:[0-9]+]]
+// PRESERVE_MIN-SAME: ptr noundef [[S1:%.*]]) #[[ATTR0:[0-9]+]] {
 // PRESERVE_MIN-NEXT:  [[ENTRY:.*:]]
 // PRESERVE_MIN-NEXT:    [[S1_ADDR:%.*]] = alloca ptr, align 8
 // PRESERVE_MIN-NEXT:    store ptr [[S1]], ptr [[S1_ADDR]], align 8

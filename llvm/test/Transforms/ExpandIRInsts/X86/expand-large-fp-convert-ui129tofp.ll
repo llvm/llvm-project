@@ -79,9 +79,11 @@ define half @ui129tohalf(i129 %a) !prof !0 {
 ; CHECK-NEXT:    [[TMP50:%.*]] = or i32 [[TMP48]], [[TMP47]]
 ; CHECK-NEXT:    [[TMP51:%.*]] = bitcast i32 [[TMP50]] to float
 ; CHECK-NEXT:    [[TMP52:%.*]] = fptrunc float [[TMP51]] to half
+; CHECK-NEXT:    [[TMP54:%.*]] = icmp uge i32 [[TMP7]], 128
+; CHECK-NEXT:    [[TMP55:%.*]] = select i1 [[TMP54]], half +inf, half [[TMP52]]
 ; CHECK-NEXT:    br label [[ITOFP_RETURN]]
 ; CHECK:       itofp-return:
-; CHECK-NEXT:    [[TMP53:%.*]] = phi half [ [[TMP52]], [[ITOFP_IF_END26]] ], [ 0.000000e+00, [[ITOFP_ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP53:%.*]] = phi half [ [[TMP55]], [[ITOFP_IF_END26]] ], [ 0.000000e+00, [[ITOFP_ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret half [[TMP53]]
 ;
   %conv = uitofp i129 %a to half
@@ -164,9 +166,11 @@ define float @ui129tofloat(i129 %a) {
 ; CHECK-NEXT:    [[TMP49:%.*]] = or i32 [[TMP48]], [[TMP45]]
 ; CHECK-NEXT:    [[TMP50:%.*]] = or i32 [[TMP48]], [[TMP47]]
 ; CHECK-NEXT:    [[TMP51:%.*]] = bitcast i32 [[TMP50]] to float
+; CHECK-NEXT:    [[TMP53:%.*]] = icmp uge i32 [[TMP7]], 128
+; CHECK-NEXT:    [[TMP54:%.*]] = select i1 [[TMP53]], float +inf, float [[TMP51]]
 ; CHECK-NEXT:    br label [[ITOFP_RETURN]]
 ; CHECK:       itofp-return:
-; CHECK-NEXT:    [[TMP52:%.*]] = phi float [ [[TMP51]], [[ITOFP_IF_END26]] ], [ 0.000000e+00, [[ITOFP_ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP52:%.*]] = phi float [ [[TMP54]], [[ITOFP_IF_END26]] ], [ 0.000000e+00, [[ITOFP_ENTRY:%.*]] ]
 ; CHECK-NEXT:    ret float [[TMP52]]
 ;
   %conv = uitofp i129 %a to float
@@ -509,9 +513,11 @@ define <2 x float> @ui129tofloatv2(<2 x i129> %a) {
 ; CHECK-NEXT:    [[TMP50:%.*]] = or i32 [[TMP49]], [[TMP46]]
 ; CHECK-NEXT:    [[TMP51:%.*]] = or i32 [[TMP49]], [[TMP48]]
 ; CHECK-NEXT:    [[TMP52:%.*]] = bitcast i32 [[TMP51]] to float
+; CHECK-NEXT:    [[TMP114:%.*]] = icmp uge i32 [[TMP8]], 128
+; CHECK-NEXT:    [[TMP115:%.*]] = select i1 [[TMP114]], float +inf, float [[TMP52]]
 ; CHECK-NEXT:    br label [[ITOFP_RETURN1]]
 ; CHECK:       itofp-return1:
-; CHECK-NEXT:    [[TMP53:%.*]] = phi float [ [[TMP52]], [[ITOFP_IF_END269]] ], [ 0.000000e+00, [[ITOFP_ENTRYITOFP_ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP53:%.*]] = phi float [ [[TMP115]], [[ITOFP_IF_END269]] ], [ 0.000000e+00, [[ITOFP_ENTRYITOFP_ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP54:%.*]] = insertelement <2 x float> poison, float [[TMP53]], i64 0
 ; CHECK-NEXT:    [[TMP55:%.*]] = extractelement <2 x i129> [[A]], i64 1
 ; CHECK-NEXT:    [[TMP110:%.*]] = freeze i129 [[TMP55]]
@@ -587,9 +593,11 @@ define <2 x float> @ui129tofloatv2(<2 x i129> %a) {
 ; CHECK-NEXT:    [[TMP105:%.*]] = or i32 [[TMP104]], [[TMP101]]
 ; CHECK-NEXT:    [[TMP106:%.*]] = or i32 [[TMP104]], [[TMP103]]
 ; CHECK-NEXT:    [[TMP107:%.*]] = bitcast i32 [[TMP106]] to float
+; CHECK-NEXT:    [[TMP112:%.*]] = icmp uge i32 [[TMP63]], 128
+; CHECK-NEXT:    [[TMP113:%.*]] = select i1 [[TMP112]], float +inf, float [[TMP107]]
 ; CHECK-NEXT:    br label [[ITOFP_RETURN]]
 ; CHECK:       itofp-return:
-; CHECK-NEXT:    [[TMP108:%.*]] = phi float [ [[TMP107]], [[ITOFP_IF_END26]] ], [ 0.000000e+00, [[ITOFP_RETURN1]] ]
+; CHECK-NEXT:    [[TMP108:%.*]] = phi float [ [[TMP113]], [[ITOFP_IF_END26]] ], [ 0.000000e+00, [[ITOFP_RETURN1]] ]
 ; CHECK-NEXT:    [[TMP109:%.*]] = insertelement <2 x float> [[TMP54]], float [[TMP108]], i64 1
 ; CHECK-NEXT:    ret <2 x float> [[TMP109]]
 ;
