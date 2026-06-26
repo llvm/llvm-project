@@ -231,10 +231,6 @@ namespace llvm {
                                                unsigned ElemSizeInBits,
                                                unsigned &Index) const override;
 
-    bool isCtlzFast() const override {
-      return true;
-    }
-
     bool isEqualityCmpFoldedWithSignedCmp() const override {
       return false;
     }

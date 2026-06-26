@@ -3705,7 +3705,9 @@ bool SparcTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   return false;
 }
 
-bool SparcTargetLowering::isCtlzFast() const { return Subtarget->isVIS3(); }
+bool SparcTargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
+  return Subtarget->isVIS3();
+}
 
 bool SparcTargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
   // We lack native cttz, however,

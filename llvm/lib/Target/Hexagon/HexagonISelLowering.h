@@ -58,7 +58,6 @@ public:
 
   bool isCheapToSpeculateCttz(Type *) const override { return true; }
   bool isCheapToSpeculateCtlz(Type *) const override { return true; }
-  bool isCtlzFast() const override { return true; }
 
   bool hasBitTest(SDValue X, SDValue Y) const override;
 
