@@ -3,7 +3,6 @@ libclc_add_sources(${LIBCLC_CLC_TARGET} FILES
   math/clc_rsqrt.cl
   math/clc_sinpi.cl
   math/clc_sqrt.cl
-  relational/clc_isinf.cl
   synchronization/clc_work_group_barrier.cl
   workitem/clc_get_global_id.cl
   workitem/clc_get_global_size.cl

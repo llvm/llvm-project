@@ -115,7 +115,7 @@ WithCtorDtor withCtorDtor{};
 // CIR-AFTER-NEXT:   %[[VOID_FN_PTR:.*]] = cir.cast bitcast %[[GET_DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_WithCtorDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR-AFTER-NEXT:   %[[GLOB_TO_VOID:.*]] = cir.cast bitcast %[[GET_GLOB]] : !cir.ptr<!rec_WithCtorDtor> -> !cir.ptr<!void>
 // CIR-AFTER-NEXT:   %[[DSO_HANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR-AFTER-NEXT:   cir.call @__cxa_atexit(%[[VOID_FN_PTR]], %[[GLOB_TO_VOID]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>{{.*}}) -> ()
+// CIR-AFTER-NEXT:   cir.call @__cxa_atexit(%[[VOID_FN_PTR]], %[[GLOB_TO_VOID]], %[[DSO_HANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>{{.*}}) -> !s32i
 // CIR-AFTER-NEXT:   cir.return
 // CIR-AFTER-NEXT: }
 // LLVM: @withCtorDtor = global %struct.WithCtorDtor zeroinitializer, align 1

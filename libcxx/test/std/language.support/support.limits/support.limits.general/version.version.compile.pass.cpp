@@ -5133,8 +5133,8 @@
 #  ifndef __cpp_lib_expected
 #    error "__cpp_lib_expected should be defined in c++23"
 #  endif
-#  if __cpp_lib_expected != 202606L
-#    error "__cpp_lib_expected should have the value 202606L in c++23"
+#  if __cpp_lib_expected != 202211L
+#    error "__cpp_lib_expected should have the value 202211L in c++23"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_FILESYSTEM
@@ -6903,8 +6903,8 @@
 #  ifndef __cpp_lib_expected
 #    error "__cpp_lib_expected should be defined in c++26"
 #  endif
-#  if __cpp_lib_expected != 202606L
-#    error "__cpp_lib_expected should have the value 202606L in c++26"
+#  if __cpp_lib_expected != 202211L
+#    error "__cpp_lib_expected should have the value 202211L in c++26"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_FILESYSTEM
@@ -8146,17 +8146,11 @@
 #    endif
 #  endif
 
-#  if !defined(_LIBCPP_VERSION)
-#    ifndef __cpp_lib_text_encoding
-#      error "__cpp_lib_text_encoding should be defined in c++26"
-#    endif
-#    if __cpp_lib_text_encoding != 202306L
-#      error "__cpp_lib_text_encoding should have the value 202306L in c++26"
-#    endif
-#  else
-#    ifdef __cpp_lib_text_encoding
-#      error "__cpp_lib_text_encoding should not be defined because it is unimplemented in libc++!"
-#    endif
+#  ifndef __cpp_lib_text_encoding
+#    error "__cpp_lib_text_encoding should be defined in c++26"
+#  endif
+#  if __cpp_lib_text_encoding != 202306L
+#    error "__cpp_lib_text_encoding should have the value 202306L in c++26"
 #  endif
 
 #  ifndef __cpp_lib_three_way_comparison

@@ -322,6 +322,12 @@ std::optional<APInt> constantTripCount(
     // SSA values. That case cannot be detected here.
     return APInt(bitwidth, 0);
   }
+  if (isZeroInteger(lb) && ub == step) {
+    // Fast path: LB == 0 && UB == step. The loop has a single iteration.
+    // Note: LB and UB could match at runtime, even though they are different
+    // SSA values. That case cannot be detected here.
+    return APInt(bitwidth, 1);
+  }
 
   std::optional<std::pair<APInt, bool>> maybeStepCst =
       getConstantAPIntValue(step);
