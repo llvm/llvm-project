@@ -145,7 +145,7 @@ template <typename Config> static void testBasic() {
 
   // If the Secondary can't cache that pointer, it will be unmapped.
   if (!Info.Allocator->canCache(Size)) {
-    EXPECT_DEATH(
+    SCUDO_EXPECT_DEATH(
         {
           // Repeat few time to avoid missing crash if it's mmaped by unrelated
           // code.
