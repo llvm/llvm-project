@@ -47,7 +47,9 @@ struct StoredType {
 
   constexpr friend bool operator==(StoredType const& lhs, StoredType const& rhs) { return lhs.value_ == rhs.value_; }
 
-  constexpr friend bool operator==(StoredType const& lhs, SearchedType<T> const& rhs) { return lhs.value_ == rhs.get_value(); }
+  constexpr friend bool operator==(StoredType const& lhs, SearchedType<T> const& rhs) {
+    return lhs.value_ == rhs.get_value();
+  }
 
   constexpr T get_value() const { return value_; }
 
