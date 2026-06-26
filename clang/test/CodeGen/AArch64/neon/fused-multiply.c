@@ -16,7 +16,8 @@
 // This file currently covers the f32/f64 wrappers that lower through
 // BI__builtin_neon_vfmaq_v, BI__builtin_neon_vfmaq_lane_v,
 // BI__builtin_neon_vfma_laneq_v, BI__builtin_neon_vfmaq_laneq_v,
-// and BI__builtin_neon_vfmad_laneq_f64.
+// BI__builtin_neon_vfmad_lane_f64, and
+// BI__builtin_neon_vfmad_laneq_f64.
 //
 // ACLE section headings based on v2025Q2 of the ACLE specification:
 //  * https://arm-software.github.io/acle/neon_intrinsics/advsimd.html#fused-multiply-accumulate
@@ -370,6 +371,18 @@ float32_t test_vfmas_laneq_f32(float32_t a, float32_t b, float32x4_t c) {
 // LLVM:      [[FMA:%.*]] = call float @llvm.fma.f32(float [[B]], float [[LANE]], float [[A]])
 // LLVM:      ret float [[FMA]]
   return vfmas_laneq_f32(a, b, c, 3);
+}
+
+// ALL-LABEL: @test_vfmad_lane_f64(
+float64_t test_vfmad_lane_f64(float64_t a, float64_t b, float64x1_t c) {
+// CIR: [[LANE:%.*]] = cir.vec.extract %{{.*}}[%{{.*}} : !u64i] : !cir.vector<1 x !cir.double>
+// CIR: cir.call_llvm_intrinsic "fma" %{{.*}}, [[LANE]], %{{.*}} : (!cir.double, !cir.double, !cir.double) -> !cir.double
+
+// LLVM-SAME: double {{.*}} [[A:%.*]], double {{.*}} [[B:%.*]], <1 x double> {{.*}} [[C:%.*]]) {{.*}} {
+// LLVM:      [[LANE:%.*]] = extractelement <1 x double> [[C]], i{{32|64}} 0
+// LLVM:      [[FMA:%.*]] = call double @llvm.fma.f64(double [[B]], double [[LANE]], double [[A]])
+// LLVM:      ret double [[FMA]]
+  return vfmad_lane_f64(a, b, c, 0);
 }
 
 // ALL-LABEL: @test_vfmad_laneq_f64(

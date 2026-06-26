@@ -2746,13 +2746,9 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
         builder, loc, "fma", convertType(expr->getType()), fmaOps);
   }
   case NEON::BI__builtin_neon_vfmad_lane_f64:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AArch64 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
   case NEON::BI__builtin_neon_vfmad_laneq_f64: {
-    // The laneq source operand is float64x2_t, so the source vector has two
-    // double lanes.
+    // The lane source operand is float64x1_t for lane forms and float64x2_t
+    // for laneq forms.
     mlir::Value laneSource = builder.createExtractElement(
         loc, ops[2], static_cast<uint64_t>(getIntValueFromConstOp(ops[3])));
 
