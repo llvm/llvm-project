@@ -99,6 +99,17 @@ void test_null(void) {
   __UINT_LEAST8_TYPE__ x = stdc_load8_leu8(0); // expected-warning{{null passed to a callee that requires a non-null argument}}
 }
 
+// Wrong pointer types are rejected by the type system at the call site.
+void test_wrong_types(void) {
+  const int int_arr[] = {0};
+  const unsigned int uint_arr[] = {0};
+  const char char_arr[] = "A";
+
+  (void)stdc_load8_leu32(int_arr);  // expected-error{{incompatible pointer types}} expected-note@Inputs/stdbit.h:*{{passing argument to parameter here}}
+  (void)stdc_load8_leu32(uint_arr); // expected-error{{incompatible pointer types}} expected-note@Inputs/stdbit.h:*{{passing argument to parameter here}}
+  (void)stdc_load8_leu16(char_arr); // expected-warning{{converts between pointers to integer types}} expected-note@Inputs/stdbit.h:*{{passing argument to parameter here}}
+}
+
 // Negative: out-of-bounds, scalar, and null.
 constexpr unsigned char small[] = {0x01, 0x02};
 constexpr __UINT_LEAST32_TYPE__ oob_load = stdc_load8_leu32(small); // expected-error{{must be initialized by a constant expression}} expected-note{{cannot refer to element 3 of array of 2 elements in a constant expression}}
