@@ -87,7 +87,7 @@ static _Unwind_Reason_Code frame_handler(struct _Unwind_Context *ctx,
     return _URC_END_OF_STACK;
   }
 
-#if defined(__PTRAUTH__) || __has_feature(ptrauth_calls)
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
   assert(ra_sign_state == 1);
 #else
   assert(ra_sign_state == 0);
@@ -137,7 +137,7 @@ FUNC_ATTR(main_func) int main(int, char **) {
   uint64_t ret;
 
   ret = check_vanilla("check_vanilla");
-#if defined(__PTRAUTH__) || __has_feature(ptrauth_calls)
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
   assert(ret == 1 || ret == 2);
 #else
   assert(ret == 0);
