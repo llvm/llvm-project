@@ -196,6 +196,8 @@ bool SPIRVInstrInfo::canUseNUW(const MachineInstr &MI) const {
   case SPIRV::OpISubV:
   case SPIRV::OpIMulS:
   case SPIRV::OpIMulV:
+  case SPIRV::OpShiftLeftLogicalS:
+  case SPIRV::OpShiftLeftLogicalV:
     return true;
   default:
     return false;
