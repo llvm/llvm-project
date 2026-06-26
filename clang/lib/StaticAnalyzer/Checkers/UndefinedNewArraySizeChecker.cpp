@@ -55,13 +55,8 @@ void UndefinedNewArraySizeChecker::HandleUndefinedArrayElementCount(
     CheckerContext &C, SVal ArgVal, const Expr *Init, SourceRange Range) const {
 
   if (ExplodedNode *N = C.generateErrorNode()) {
-
-    SmallString<100> buf;
-    llvm::raw_svector_ostream os(buf);
-
-    os << "Element count in new[] is a garbage value";
-
-    auto R = std::make_unique<PathSensitiveBugReport>(BT, os.str(), N);
+    auto R = std::make_unique<PathSensitiveBugReport>(
+        BT, "Element count in new[] is a garbage value", N);
     R->markInteresting(ArgVal);
     R->addRange(Range);
     bugreporter::trackExpressionValue(N, Init, *R);
