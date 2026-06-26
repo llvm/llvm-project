@@ -33089,7 +33089,7 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
   // Returns true if any two stores in the group are at consecutive (stride-1)
   // addresses. Masked stores are disabled for the entire base-object group when
   // this is true - consecutive vectorization is always preferred.
-  auto HasConsecutiveStores = [&](ArrayRef<StoreInst *> SIs) {
+  auto HasConsecutiveStoresOrSameAddress = [&](ArrayRef<StoreInst *> SIs) {
     if (SIs.size() < 2)
       return false;
     Type *Ty = SIs.front()->getValueOperand()->getType();
@@ -33102,10 +33102,9 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
         Offsets.push_back(*Off);
     }
     sort(Offsets);
-    for (size_t I = 1, E = Offsets.size(); I < E; ++I)
-      if (Offsets[I] - Offsets[I - 1] == 1)
-        return true;
-    return false;
+    return any_of(seq<size_t>(1, Offsets.size()), [&](size_t I) {
+      return Offsets[I] - Offsets[I - 1] == 1 || Offsets[I] == Offsets[I - 1];
+    });
   };
 
   // Attempt to sort and vectorize each of the store-groups.
@@ -33123,7 +33122,7 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
     // Masked stores are only attempted when no consecutive pair exists in the
     // full base-object group.
     const bool AllowMaskedStores =
-        !EnableMaskedStores || !HasConsecutiveStores(Pair.second);
+        EnableMaskedStores && !HasConsecutiveStoresOrSameAddress(Pair.second);
 
     // Reverse stores to do bottom-to-top analysis. This is important if the
     // values are stores to the same addresses several times, in this case need
