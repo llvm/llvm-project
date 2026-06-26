@@ -724,20 +724,6 @@ public:
     }
   };
 
-  /// IndirectBranch - The first time an indirect goto is seen we create a block
-  /// reserved for the indirect branch.  The actual `cir.indirect_br` is emitted
-  /// at the end of the function, once every label destination is known.
-  mlir::Block *indirectGotoBlock = nullptr;
-
-  /// Labels whose address is taken in this function (via `&&label`, as either
-  /// an operation or a constant initializer).  The indirect branch block is
-  /// created lazily on the first `goto *expr`; these targets are resolved to
-  /// their LabelOps and wired as `cir.indirect_br` successors in
-  /// finishIndirectBranch.
-  llvm::SmallVector<cir::BlockAddrInfoAttr> indirectGotoTargets;
-
-  void finishIndirectBranch();
-
   /// Perform the usual unary conversions on the specified expression and
   /// compare the result against zero, returning an Int1Ty value.
   mlir::Value evaluateExprAsBool(const clang::Expr *e);
@@ -1707,8 +1693,6 @@ public:
                                               bool isDynamic);
 
   int64_t getAccessedFieldNo(unsigned idx, mlir::ArrayAttr elts);
-
-  void instantiateIndirectGotoBlock();
 
   /// Emit a simple LLVM intrinsic that takes N scalar arguments.  The intrinsic
   /// name is used verbatim; any overload mangling (e.g. `.f32`, `.p1`) must be
