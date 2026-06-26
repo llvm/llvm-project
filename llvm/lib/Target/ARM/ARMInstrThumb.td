@@ -652,7 +652,7 @@ let isBranch = 1, isTerminator = 1, hasSideEffects = 0 in
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1 in {
   // IOS versions.
   let Uses = [SP] in {
-    def tTAILJMPr : tPseudoExpand<(outs), (ins tcGPR:$dst),
+    def tTAILJMPr : tPseudoExpand<(outs), (ins GPR:$dst),
                      4, IIC_Br, [],
                      (tBX GPR:$dst, (ops 14, zero_reg))>,
                      Requires<[IsThumb]>, Sched<[WriteBr]>;
