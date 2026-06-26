@@ -1769,7 +1769,7 @@ static X86AVXABILevel getEffectiveX86AVXABILevel(CodeGenTypes &CGT,
   // Always return global AVX level on PlayStation.
   if (CGT.getTarget().getTriple().isPS() ||
       CGT.getContext().getLangOpts().getClangABICompat() <=
-          LangOptions::ClangABI::Ver22) {
+          LangOptions::ClangABI::Ver23) {
     return GlobalAVXLevel;
   }
 
