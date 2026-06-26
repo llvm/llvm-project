@@ -1993,17 +1993,6 @@ let Predicates = [HasSVE] in {
     def : Pat<(Ty (AArch64mla_p (PredTy (SVEAnyPredicate)), Ty:$Acc, Ty:$Op,
                                 (Ty (splat_vector (ScalarTy 8))))),
               (Adr3 $Acc, $Op)>;
-
-    // MLA commuted. These can be removed if the commuted forms are canonicalized.
-    def : Pat<(Ty (AArch64mla_p (PredTy (SVEAnyPredicate)), Ty:$Acc,
-                                (Ty (splat_vector (ScalarTy 2))), Ty:$Op)),
-              (Adr1 $Acc, $Op)>;
-    def : Pat<(Ty (AArch64mla_p (PredTy (SVEAnyPredicate)), Ty:$Acc,
-                                (Ty (splat_vector (ScalarTy 4))), Ty:$Op)),
-              (Adr2 $Acc, $Op)>;
-    def : Pat<(Ty (AArch64mla_p (PredTy (SVEAnyPredicate)), Ty:$Acc,
-                                (Ty (splat_vector (ScalarTy 8))), Ty:$Op)),
-              (Adr3 $Acc, $Op)>;
   }
 
   let AddedComplexity = 10 in {
