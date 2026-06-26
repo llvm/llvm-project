@@ -1925,8 +1925,8 @@ public:
 #endif
 #if __has_builtin(__builtin_ptrauth_auth_with_pc_and_resign)
     value = (uint64_t)ptrauth_auth_with_pc_and_resign(
-        (void *)value, ptrauth_key_return_address, (void *)getSP(),
-        (void *)signing_pc, ptrauth_key_return_address, &_registers.__pc);
+        (void *)value, ptrauth_key_return_address, getSP(),
+        signing_pc, ptrauth_key_return_address, &_registers.__pc);
 #else
     register uint64_t x17 __asm("x17") = value;
     register uint64_t x16 __asm("x16") = getSP();

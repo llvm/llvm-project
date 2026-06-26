@@ -1915,6 +1915,9 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
     // function start.
     funcStart = rangeStart;
     if (encoding & UNWIND_IS_NOT_FUNCTION_START) {
+      assert(low != 0 &&
+             "UNWIND_IS_NOT_FUNCTION_START comact unwind must be preceded by a "
+             "~UNWIND_IS_NOT_FUNCTION_START entry for the same function");
       uint32_t backIndex = low;
       do {
         --backIndex;
@@ -2003,6 +2006,9 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
     // function start.
     funcStart = rangeStart;
     if (encoding & UNWIND_IS_NOT_FUNCTION_START) {
+      assert(low != 0 &&
+             "UNWIND_IS_NOT_FUNCTION_START comact unwind must be preceded by a "
+             "~UNWIND_IS_NOT_FUNCTION_START entry for the same function.");
       uint32_t backIndex = low;
       do {
         --backIndex;
