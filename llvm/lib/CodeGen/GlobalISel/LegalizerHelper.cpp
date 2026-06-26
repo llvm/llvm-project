@@ -4309,8 +4309,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerLoad(GAnyLoad &LoadMI) {
     AnyExtTy = LLT::scalar(AnyExtSize);
     OffsetCstRes = LLT::scalar(PtrTy.getSizeInBits());
   } else {
-    AnyExtTy = EltTy.changeElementSize(AnyExtSize);
-    OffsetCstRes = EltTy.changeElementSize(PtrTy.getSizeInBits());
+    AnyExtTy = DstTy.changeElementSize(AnyExtSize);
+    OffsetCstRes = DstTy.changeElementSize(PtrTy.getSizeInBits());
   }
 
   auto LargeLoad = MIRBuilder.buildLoadInstr(TargetOpcode::G_ZEXTLOAD, AnyExtTy,
