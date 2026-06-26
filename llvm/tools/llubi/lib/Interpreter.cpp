@@ -909,6 +909,10 @@ public:
     }
     setResult(CB, std::move(RetVal));
 
+    for (auto &ByValArg : CurrentFrame->CalleeByValArgs)
+      Ctx.free(*ByValArg);
+    CurrentFrame->CalleeByValArgs.clear();
+
     if (auto *II = dyn_cast<InvokeInst>(&CB))
       jumpTo(*II, II->getNormalDest());
     else if (CurrentFrame->State == FrameState::Pending)
@@ -1781,7 +1785,7 @@ public:
 
   void enterCall(CallBase &CB) {
     Function *Callee = CB.getCalledFunction();
-    // TODO: handle byval/initializes
+    // TODO: handle initializes
     auto &CalleeArgs = CurrentFrame->CalleeArgs;
     assert(CalleeArgs.empty() &&
            "Forgot to call returnFromCallee before entering a new call.");
@@ -1832,10 +1836,61 @@ public:
     for (auto [I, Arg] : enumerate(CB.args())) {
       Type *ArgTy = Arg->getType();
       AnyValue &ArgVal = CalleeArgs[I];
+
       // CallBase::paramHasAttr also checks parameter attributes at known
       // callee. We do it explicitly to avoid duplication.
       AttributeSet AttrsAtCallSite = CB.getParamAttributes(I);
       AttributeSet AttrsAtCallee = Callee->getAttributes().getParamAttrs(I);
+
+      if (ArgTy->isPointerTy()) {
+        auto *ByValTy = AttrsAtCallSite.getByValType();
+        auto *ByValTyFromCallee = AttrsAtCallee.getByValType();
+        if (ByValTy != ByValTyFromCallee) {
+          reportImmediateUB()
+              << "Mismatched byval attribute between callee and callsite.";
+          return;
+        }
+        if (ByValTy) {
+          if (ArgVal.isPoison()) {
+            reportImmediateUB() << "Invalid poison byval pointer argument.";
+            return;
+          }
+
+          uint64_t Size = Ctx.getEffectiveTypeAllocSize(ByValTy);
+          MaybeAlign AllocAlign = AttrsAtCallSite.getAlignment();
+          // Ignore the alignment at the callsite when it is set on the callee.
+          if (MaybeAlign CalleeAlign = AttrsAtCallee.getAlignment())
+            AllocAlign = CalleeAlign;
+          if (!AllocAlign.has_value()) {
+            // If the alignment is not specified, we use the default ABI
+            // alignment. This is the default behavior of
+            // TargetLoweringBase::getByValTypeAlignment.
+            AllocAlign = DL.getABITypeAlign(ByValTy);
+          }
+          assert(I < Callee->arg_size() &&
+                 "Byval pointers cannot be passed via variadic arguments.");
+          auto Obj = Ctx.allocate(
+              Size, AllocAlign->value(), Callee->getArg(I)->getName(),
+              ArgTy->getPointerAddressSpace(), MemInitKind::Uninitialized,
+              MemAllocKind::Stack);
+          if (!Obj) {
+            reportError()
+                << "Insufficient stack space for byval pointer argument.";
+            return;
+          }
+          if (auto [MO, Offset] = verifyMemAccess(
+                  ArgVal.asPointer(), Size,
+                  std::max(AllocAlign.value(),
+                           AttrsAtCallSite.getAlignment().valueOrOne()),
+                  /*IsStore=*/false);
+              MO)
+            copy(MO->getBytes().slice(Offset, Size), Obj->getBytes().begin());
+          else
+            return;
+          CurrentFrame->CalleeByValArgs.push_back(Obj);
+          ArgVal = Ctx.deriveFromMemoryObject(std::move(Obj));
+        }
+      }
       handleAttributes(ArgTy, ArgVal, AttrsAtCallSite, AttrsAtCallee);
     }
 
