@@ -184,7 +184,7 @@ features cannot lower the translation-unit ABI level;
 ```
 - Implemented the C2y `<stdbit.h>` endian-aware 8-bit load functions
   (`stdc_load8_le`, `stdc_load8_be`, `stdc_load8_aligned_le`,
-  `stdc_load8_aligned_be`, and their signed counterparts) with constexpr
+  `stdc_load8_aligned_be`, and their unsigned counterparts) with constexpr
   evaluation support. These functions read N bytes from a
   `const unsigned char *` and assemble them into an integer using
   little-endian or big-endian byte order.
