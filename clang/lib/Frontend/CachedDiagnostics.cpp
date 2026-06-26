@@ -166,10 +166,30 @@ struct CachedDiagnosticSerializer {
   SmallVector<std::unique_ptr<MemoryBuffer>> FileBuffers;
   BumpPtrAllocator Alloc;
   StringSaver Saver{Alloc};
+  /// Error encountered and stored to be returned from the top-level
+  /// \c deserializeCachedDiagnostics or \c serializeEmittedDiagnostics call.
+  ///
+  /// Once set, conversion routines short-circuit.
+  std::optional<Error> SavedError;
 
   CachedDiagnosticSerializer(PrefixMapper &Mapper, FileManager &FileMgr)
       : Mapper(Mapper), DiagEngine(new DiagnosticIDs(), DiagOpts),
         SourceMgr(DiagEngine, FileMgr) {}
+
+  ~CachedDiagnosticSerializer() {
+    // Ensure we do not assert if we never call \c serializeEmittedDiagnostics.
+    if (SavedError)
+      consumeError(std::move(*SavedError));
+  }
+
+  /// Take any saved error, leaving the serializer in a clean state.
+  Error takeSavedError() {
+    if (!SavedError)
+      return Error::success();
+    Error E = std::move(*SavedError);
+    SavedError.reset();
+    return E;
+  }
 
   size_t getNumDiags() const { return CachedDiags.getNumDiags(); }
   bool empty() const { return getNumDiags() == 0; }
@@ -219,7 +239,7 @@ struct CachedDiagnosticSerializer {
   /// different compiler version will create different cache keys, which ensures
   /// that the diagnostics buffer will only be read by the same compiler that
   /// produced it.
-  std::optional<std::string> serializeEmittedDiagnostics();
+  Expected<std::optional<std::string>> serializeEmittedDiagnostics();
   Error deserializeCachedDiagnostics(StringRef Buffer);
 
   /// Capture any custom diagnostics registerd by \p Diags so that they can be
@@ -409,6 +429,8 @@ FileID CachedDiagnosticSerializer::convertCachedSLocEntry(unsigned Idx) {
     FileIDBySlocIdx.resize(Idx + 1);
   if (FileIDBySlocIdx[Idx].isValid())
     return FileIDBySlocIdx[Idx];
+  if (SavedError)
+    return FileID();
 
   const cached_diagnostics::SLocEntry &CachedSLocEntry =
       CachedDiags.SLocEntries[Idx];
@@ -423,9 +445,10 @@ FileID CachedDiagnosticSerializer::convertCachedSLocEntry(unsigned Idx) {
     } else {
       auto MemBufOrErr =
           SourceMgr.getFileManager().getBufferForFile(FI.Filename);
-      if (!MemBufOrErr)
-        report_fatal_error(
-            createFileError(FI.Filename, MemBufOrErr.getError()));
+      if (!MemBufOrErr) {
+        SavedError = createFileError(FI.Filename, MemBufOrErr.getError());
+        return FileID();
+      }
       SmallString<128> PathBuf;
       Mapper.map(FI.Filename, PathBuf);
       if (PathBuf.str() != FI.Filename) {
@@ -636,8 +659,11 @@ void CachedDiagnosticSerializer::captureCustomDiags(
   }
 }
 
-std::optional<std::string>
+Expected<std::optional<std::string>>
 CachedDiagnosticSerializer::serializeEmittedDiagnostics() {
+  if (SavedError)
+    return takeSavedError();
+
   if (empty())
     return std::nullopt;
 
@@ -767,6 +793,8 @@ struct CachingDiagnosticsProcessor::DiagnosticsConsumer
       // 2. If path prefixing is enabled, we'll pass locations with
       // de-canonicalized filenames during compilation (the original diagnostic
       // uses canonical paths).
+      // Note: if conversion hit an error, it  will be surfaced by
+      // serializeEmittedDiagnostics.
       assert(Serializer.DiagEngine.getClient() == OrigConsumer);
       // FIXME: This is not sound: giving the original consumer diagnostics with
       // different SourceManager may break them.
@@ -860,7 +888,10 @@ Error CachingDiagnosticsProcessor::replayCachedDiagnostics(
     return E;
   Serializer.DiagEngine.setClient(&Consumer, /*ShouldOwnClient*/ false);
   for (unsigned I = 0, E = Serializer.getNumDiags(); I != E; I++) {
-    Serializer.DiagEngine.Report(Serializer.getDiag(I));
+    StoredDiagnostic Diag = Serializer.getDiag(I);
+    if (Serializer.SavedError)
+      return Serializer.takeSavedError();
+    Serializer.DiagEngine.Report(Diag);
   }
   return Error::success();
 }
