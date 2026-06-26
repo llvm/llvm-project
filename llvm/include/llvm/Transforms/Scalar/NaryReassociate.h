@@ -93,6 +93,7 @@ class DominatorTree;
 class Function;
 class GetElementPtrInst;
 class Instruction;
+class IntrinsicInst;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 class Type;
@@ -156,17 +157,8 @@ private:
   Instruction *findClosestMatchingDominator(SCEVUse CandidateExpr,
                                             Instruction *Dominatee);
 
-  // Try to match \p I as signed/unsigned Min/Max and reassociate it. \p
-  // OrigSCEV is set if \I matches Min/Max regardless whether resassociation is
-  // done or not. If reassociation was successful newly generated instruction is
-  // returned, otherwise nullptr.
-  template <typename PredT>
-  Instruction *matchAndReassociateMinOrMax(Instruction *I, SCEVUse &OrigSCEV);
-
   // Reassociate Min/Max.
-  template <typename MaxMinT>
-  Value *tryReassociateMinOrMax(Instruction *I, MaxMinT MaxMinMatch, Value *LHS,
-                                Value *RHS);
+  Value *tryReassociateMinOrMax(IntrinsicInst *I);
 
   // GetElementPtrInst implicitly sign-extends an index if the index is shorter
   // than the pointer size. This function returns whether Index is shorter than

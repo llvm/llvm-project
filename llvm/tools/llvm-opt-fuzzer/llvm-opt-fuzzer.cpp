@@ -199,8 +199,9 @@ extern "C" LLVM_ATTRIBUTE_USED int LLVMFuzzerInitialize(int *argc,
     exit(1);
   }
   ExitOnError ExitOnErr(std::string(ExecName) + ": error:");
-  TM = ExitOnErr(codegen::createTargetMachineForTriple(
-      Triple::normalize(TargetTripleStr)));
+
+  Triple TT(Triple::normalize(TargetTripleStr));
+  TM = ExitOnErr(codegen::createTargetMachineForTriple(TT));
 
   // Check that pass pipeline is specified and correct
   //
