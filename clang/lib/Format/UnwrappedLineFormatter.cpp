@@ -314,14 +314,9 @@ private:
       }
     }
 
-    auto ShouldMergeShortFunctions = [&] {
+    auto ShouldMergeShortFunctions = [&](auto *LBrace, auto *NextLineFirst) {
       if (Style.AllowShortFunctionsOnASingleLine.isAll())
         return true;
-
-      if (Style.AllowShortFunctionsOnASingleLine.Empty &&
-          NextLine.First->is(tok::r_brace)) {
-        return true;
-      }
 
       if (Style.AllowShortFunctionsOnASingleLine.Inline &&
           !Style.AllowShortFunctionsOnASingleLine.Other) {
@@ -364,10 +359,14 @@ private:
         }
       }
 
-      return false;
-    };
+      assert(LBrace->is(TT_FunctionLBrace));
+      if ((NextLineFirst && NextLineFirst->is(tok::r_brace)) ||
+          (LBrace->Next && LBrace->Next->is(tok::r_brace))) {
+        return Style.AllowShortFunctionsOnASingleLine.Empty;
+      }
 
-    bool MergeShortFunctions = ShouldMergeShortFunctions();
+      return Style.AllowShortFunctionsOnASingleLine.Other;
+    };
 
     const auto *FirstNonComment = TheLine->getFirstNonComment();
     if (!FirstNonComment)
@@ -437,7 +436,9 @@ private:
     // Try to merge a function block with left brace unwrapped.
     if (LastNonComment->is(TT_FunctionLBrace) &&
         TheLine->First != LastNonComment) {
-      return MergeShortFunctions ? tryMergeSimpleBlock(I, E, Limit) : 0;
+      return ShouldMergeShortFunctions(LastNonComment, NextLine.First)
+                 ? tryMergeSimpleBlock(I, E, Limit)
+                 : 0;
     }
 
     // Try to merge a control statement block with left brace unwrapped.
@@ -545,7 +546,8 @@ private:
       Limit -= 2;
 
       unsigned MergedLines = 0;
-      if (MergeShortFunctions ||
+      if (ShouldMergeShortFunctions(NextLine.First,
+                                    I + 2 != E ? I[2]->First : nullptr) ||
           (Style.AllowShortFunctionsOnASingleLine.Empty &&
            NextLine.First == NextLine.Last && I + 2 != E &&
            I[2]->First->is(tok::r_brace))) {
