@@ -74,7 +74,7 @@ static std::string
 runMockHeaderGuardCheck(StringRef Code, const Twine &Filename,
                         std::optional<StringRef> ExpectedWarning,
                         std::string MockRoot) {
-  GlobalMockRoot = MockRoot;
+  GlobalMockRoot = MockRoot.empty() ? "" : tooling::getAbsolutePath(MockRoot);
   return runCheck<MockLLVMHeaderGuardCheck>(Code, Filename,
                                             std::move(ExpectedWarning));
 }
