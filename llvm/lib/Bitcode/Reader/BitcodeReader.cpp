@@ -2318,8 +2318,6 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::DeadOnUnwind;
   case bitc::ATTR_KIND_RANGE:
     return Attribute::Range;
-  case bitc::ATTR_KIND_RANGE_SET:
-    return Attribute::RangeSet;
   case bitc::ATTR_KIND_INITIALIZES:
     return Attribute::Initializes;
   case bitc::ATTR_KIND_CORO_ELIDE_SAFE:
@@ -2598,9 +2596,7 @@ Error BitcodeReader::parseAttributeGroupBlock() {
           }
           i--;
 
-          if (Kind == Attribute::RangeSet
-                  ? !AttributeFuncs::isOrderedRangeSet(Val)
-                  : !ConstantRangeList::isOrderedRanges(Val))
+          if (!ConstantRangeList::isOrderedRanges(Val))
             return error("Invalid (unordered or overlapping) range list");
           B.addConstantRangeListAttr(Kind, Val);
         } else {

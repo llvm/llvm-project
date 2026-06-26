@@ -73,6 +73,8 @@ public:
       function_ref<bool(const CodeGenIntrinsic &Int)> GetProperty);
   void EmitGenerator(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
   void EmitAttributes(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
+  void EmitImmArgRangeSetChecks(const CodeGenIntrinsicTable &Ints,
+                                raw_ostream &OS);
   void EmitPrettyPrintArguments(const CodeGenIntrinsicTable &Ints,
                                 raw_ostream &OS);
   void EmitDefaultArgValuesTable(const CodeGenIntrinsicTable &Ints,
@@ -129,6 +131,9 @@ void IntrinsicEmitter::run(raw_ostream &OS, bool Enums) {
 
     // Emit the intrinsic parameter attributes.
     EmitAttributes(Ints, OS);
+
+    // Emit immediate argument range-set checks.
+    EmitImmArgRangeSetChecks(Ints, OS);
 
     // Emit the intrinsic ID -> pretty print table.
     EmitIntrinsicToPrettyPrintTable(Ints, OS);
@@ -579,8 +584,6 @@ static StringRef getArgAttrEnumName(CodeGenIntrinsic::ArgAttrKind Kind) {
     return "Range";
   case CodeGenIntrinsic::NoFreeObj:
     return "NoFreeObj";
-  case CodeGenIntrinsic::RangeSet:
-    return "RangeSet";
   }
   llvm_unreachable("Unknown CodeGenIntrinsic::ArgAttrKind enum");
 }
@@ -636,19 +639,7 @@ static AttributeSet getIntrinsicArgAttributeSet(LLVMContext &C, unsigned ID,
                         "/*implicitTrunc=*/true), APInt(BitWidth, {}, "
                         "/*isSigned=*/true, /*implicitTrunc=*/true))),\n",
                         AttrName, (int64_t)Attr.Value, (int64_t)Attr.Value2);
-        else if (Attr.Kind == CodeGenIntrinsic::RangeSet) {
-          OS << formatv("      Attribute::get(C, Attribute::{}, "
-                        "ArrayRef<ConstantRange>{{",
-                        AttrName);
-          interleaveComma(Attr.Ranges, OS, [&](auto Range) {
-            OS << formatv("ConstantRange(APInt(BitWidth, {}, "
-                          "/*isSigned=*/true, /*implicitTrunc=*/true), "
-                          "APInt(BitWidth, {}, /*isSigned=*/true, "
-                          "/*implicitTrunc=*/true))",
-                          Range.first, Range.second);
-          });
-          OS << "}),\n";
-        } else
+        else
           OS << formatv("      Attribute::get(C, Attribute::{}),\n", AttrName);
       }
       OS << "    });";
@@ -900,6 +891,52 @@ AttributeSet Intrinsic::getFnAttributes(LLVMContext &C, ID id) {{
 )",
                 UniqAttributesBitSize, MaxNumAttrs, NoFunctionAttrsID,
                 NoFunctionAttrsID);
+}
+
+void IntrinsicEmitter::EmitImmArgRangeSetChecks(
+    const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
+  IfDefEmitter IfDef(OS, "GET_INTRINSIC_IMMARG_RANGE_SET_CHECKS");
+  OS << R"(
+bool Intrinsic::isImmArgValueInRangeSet(ID IID, unsigned ArgIdx,
+                                        const APInt &Value) {
+  using namespace Intrinsic;
+  switch (IID) {
+)";
+
+  for (const CodeGenIntrinsic &Int : Ints) {
+    if (Int.ImmArgRangeSets.empty())
+      continue;
+
+    OS << "  case " << Int.EnumName << ":\n";
+    OS << "    switch (ArgIdx) {\n";
+    for (const CodeGenIntrinsic::ImmArgRangeSet &RangeSet :
+         Int.ImmArgRangeSets) {
+      OS << "    case " << RangeSet.ArgNo << ":\n";
+      OS << "      return ";
+      interleave(
+          RangeSet.Ranges,
+          [&](const std::pair<int64_t, int64_t> &Range) {
+            OS << formatv("ConstantRange(APInt(Value.getBitWidth(), {}, "
+                          "/*isSigned=*/true, /*implicitTrunc=*/true), "
+                          "APInt(Value.getBitWidth(), {}, "
+                          "/*isSigned=*/true, "
+                          "/*implicitTrunc=*/true)).contains(Value)",
+                          Range.first, Range.second);
+          },
+          [&] { OS << " ||\n             "; });
+      OS << ";\n";
+    }
+    OS << R"(    default:
+      return true;
+    }
+)";
+  }
+
+  OS << R"(  default:
+    return true;
+  }
+}
+)";
 }
 
 void IntrinsicEmitter::EmitIntrinsicToPrettyPrintTable(

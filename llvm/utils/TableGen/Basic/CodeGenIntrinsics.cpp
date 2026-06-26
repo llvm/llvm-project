@@ -427,6 +427,11 @@ CodeGenIntrinsic::CodeGenIntrinsic(const Record *R,
   for (auto &Attrs : ArgumentAttributes)
     llvm::sort(Attrs);
 
+  for (const ImmArgRangeSet &RangeSet : ImmArgRangeSets)
+    if (!isParamImmArg(RangeSet.ArgNo))
+      PrintFatalError(TheDef->getLoc(),
+                      "RangeSet requires ImmArg for the same argument index");
+
   // Default values are not yet supported for overloaded intrinsics
   // (overloaded support will come in a follow-up).
   if (isOverloaded &&
@@ -610,20 +615,20 @@ void CodeGenIntrinsic::setProperty(const Record *R) {
     const ListInit *RangeList = R->getValueAsListInit("Ranges");
     SmallVector<std::pair<int64_t, int64_t>, 4> Ranges;
 
-    if (ArgNo < ArgumentAttributes.size()) {
-      for (const auto &Entry : ArgumentAttributes[ArgNo]) {
-        if (Entry.Kind != RangeSet)
-          continue;
+    if (ArgNo < 1)
+      PrintFatalError(R->getLoc(), "RangeSet should only apply to arguments");
+    unsigned ParamNo = ArgNo - 1;
+
+    for (const ImmArgRangeSet &RangeSet : ImmArgRangeSets)
+      if (RangeSet.ArgNo == ParamNo)
         PrintFatalError(R->getLoc(),
                         "duplicate RangeSet for the same argument index");
-      }
-    }
 
     for (const Init *Range : RangeList->getElements())
       appendHalfOpenRange(
           R, Ranges,
           getHalfOpenRange(R, dyn_cast<ListInit>(Range), "RangeSet"));
-    addRangeSetAttribute(ArgNo, std::move(Ranges));
+    addImmArgRangeSet(ParamNo, std::move(Ranges));
   } else if (R->isSubClassOf("NoFreeObj")) {
     unsigned ArgNo = R->getValueAsInt("ArgNo");
     addArgAttribute(ArgNo, NoFreeObj);
@@ -695,13 +700,9 @@ void CodeGenIntrinsic::addArgAttribute(unsigned Idx, ArgAttrKind AK, uint64_t V,
   ArgumentAttributes[Idx].emplace_back(AK, V, V2);
 }
 
-void CodeGenIntrinsic::addRangeSetAttribute(
-    unsigned Idx, SmallVector<std::pair<int64_t, int64_t>, 4> Ranges) {
-  if (Idx >= ArgumentAttributes.size())
-    ArgumentAttributes.resize(Idx + 1);
-  ArgAttribute Attr(RangeSet, 0, 0);
-  Attr.Ranges = std::move(Ranges);
-  ArgumentAttributes[Idx].push_back(std::move(Attr));
+void CodeGenIntrinsic::addImmArgRangeSet(
+    unsigned ArgNo, SmallVector<std::pair<int64_t, int64_t>, 4> Ranges) {
+  ImmArgRangeSets.push_back({ArgNo, std::move(Ranges)});
 }
 
 void CodeGenIntrinsic::addPrettyPrintFunction(unsigned ArgIdx,
