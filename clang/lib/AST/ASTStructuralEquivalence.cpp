@@ -253,6 +253,20 @@ class StmtComparer {
 
   bool IsStmtEquivalent(const GenericSelectionExpr *E1,
                         const GenericSelectionExpr *E2) {
+    if (!IsStructurallyEquivalent(Context,
+                                  const_cast<Expr *>(E1->getControllingExpr()),
+                                  const_cast<Expr *>(E2->getControllingExpr())))
+      return false;
+
+    for (auto Pair : zip_longest(E1->getAssocExprs(), E2->getAssocExprs())) {
+      std::optional<Expr *> Child1 = std::get<0>(Pair);
+      std::optional<Expr *> Child2 = std::get<1>(Pair);
+      if (!Child1 || !Child2)
+        return false;
+      if (!IsStructurallyEquivalent(Context, *Child1, *Child2))
+        return false;
+    }
+
     for (auto Pair : zip_longest(E1->getAssocTypeSourceInfos(),
                                  E2->getAssocTypeSourceInfos())) {
       std::optional<TypeSourceInfo *> Child1 = std::get<0>(Pair);
@@ -260,6 +274,12 @@ class StmtComparer {
       // Skip this case if there are a different number of associated types.
       if (!Child1 || !Child2)
         return false;
+
+      if (!(*Child1) != !(*Child2))
+        return false;
+
+      if (!(*Child1))
+        continue;
 
       if (!IsStructurallyEquivalent(Context, (*Child1)->getType(),
                                     (*Child2)->getType()))

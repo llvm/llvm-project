@@ -2255,6 +2255,28 @@ TEST_F(StructuralEquivalenceStmtTest, GenericSelectionExprOrderDiffers) {
   EXPECT_FALSE(testStructuralMatch(t));
 }
 
+TEST_F(StructuralEquivalenceStmtTest, GenericSelectionExprControlDiffers) {
+  auto t = makeWrappedStmts("_Generic(0u, unsigned int: 0, float: 1)",
+                            "_Generic(1u, unsigned int: 0, float: 1)", Lang_C99,
+                            genericSelectionExpr());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, GenericSelectionExprAssocExprDiffers) {
+  auto t = makeWrappedStmts("_Generic(0u, unsigned int: 0, float: 1)",
+                            "_Generic(0u, unsigned int: 1u, float: 1)",
+                            Lang_C99, genericSelectionExpr());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest,
+       GenericSelectionExprDefaultNoTypeSourceInfo) {
+  auto t = makeWrappedStmts("_Generic(0u, unsigned int: 0, default: 1)",
+                            "_Generic(0u, unsigned int: 0, default: 1)",
+                            Lang_C99, genericSelectionExpr());
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
 TEST_F(StructuralEquivalenceStmtTest, GenericSelectionExprDependentResultSame) {
   auto t = makeStmts(
       R"(
