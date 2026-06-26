@@ -358,10 +358,10 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     DecodeIITType(NextElt, Infos, OutputTable);
     return;
   case IIT_EXTERNREF:
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer, 10));
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::WasmExternref, 0));
     return;
   case IIT_FUNCREF:
-    OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer, 20));
+    OutputTable.push_back(IITDescriptor::get(IITDescriptor::WasmFuncref, 0));
     return;
   case IIT_PTR:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Pointer, 0));
@@ -371,9 +371,17 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
         IITDescriptor::get(IITDescriptor::Pointer, Infos[NextElt++]));
     return;
   case IIT_ANY: {
-    unsigned OverloadInfo = Infos[NextElt++];
+    unsigned OverloadIndex = Infos[NextElt++];
+    unsigned ArgKindEnums = Infos[NextElt++];
+    unsigned Packed = (ArgKindEnums << 8) | OverloadIndex;
     OutputTable.push_back(
-        IITDescriptor::get(IITDescriptor::Overloaded, OverloadInfo));
+        IITDescriptor::get(IITDescriptor::Overloaded, Packed));
+    return;
+  }
+  case IIT_MATCH: {
+    unsigned OverloadIndex = Infos[NextElt++];
+    OutputTable.push_back(
+        IITDescriptor::get(IITDescriptor::Match, OverloadIndex));
     return;
   }
   case IIT_EXTEND_ARG: {
@@ -550,7 +558,10 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return Type::getPPC_FP128Ty(Context);
   case IITDescriptor::AArch64Svcount:
     return TargetExtType::get(Context, "aarch64.svcount");
-
+  case IITDescriptor::WasmExternref:
+    return TargetExtType::get(Context, "wasm.externref");
+  case IITDescriptor::WasmFuncref:
+    return TargetExtType::get(Context, "wasm.funcref");
   case IITDescriptor::Integer:
     return IntegerType::get(Context, D.IntegerWidth);
   case IITDescriptor::Vector:
@@ -564,10 +575,12 @@ static Type *DecodeFixedType(ArrayRef<Intrinsic::IITDescriptor> &Infos,
       Elts.push_back(DecodeFixedType(Infos, OverloadTys, Context));
     return StructType::get(Context, Elts);
   }
-  // For any overload kind or partially dependent type, substitute it with the
-  // corresponding concrete type from OverloadTys.
+  // For any overload type or partially dependent type, substitute it with the
+  // corresponding concrete type from OverloadTys. Additionally, do the same
+  // for the fully dependent type that matches an overload type.
   case IITDescriptor::Overloaded:
   case IITDescriptor::VecOfAnyPtrsToElt:
+  case IITDescriptor::Match:
     return OverloadTys[D.getOverloadIndex()];
   case IITDescriptor::Extend:
     return OverloadTys[D.getOverloadIndex()]->getExtendedType();
@@ -1021,6 +1034,14 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
     return PrintMsg(isa<TargetExtType>(Ty) &&
                         cast<TargetExtType>(Ty)->getName() == "aarch64.svcount",
                     "aarch64.svcount");
+  case IITDescriptor::WasmExternref:
+    return PrintMsg(isa<TargetExtType>(Ty) &&
+                        cast<TargetExtType>(Ty)->getName() == "wasm.externref",
+                    "wasm.externref");
+  case IITDescriptor::WasmFuncref:
+    return PrintMsg(isa<TargetExtType>(Ty) &&
+                        cast<TargetExtType>(Ty)->getName() == "wasm.funcref",
+                    "wasm.funcref");
   case IITDescriptor::Vector: {
     VectorType *VT = dyn_cast<VectorType>(Ty);
     StringRef Scalable = D.VectorWidth.isScalable() ? "vscale " : "";
@@ -1064,35 +1085,82 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
 
   case IITDescriptor::Overloaded: {
     unsigned OIdx = D.getOverloadIndex();
-    if (D.getOverloadKind() == IITDescriptor::AK_MatchType) {
-      // This is a dependent type instance, check it similarly to other
-      // dependent types.
-      if (OIdx >= OverloadTys.size())
-        return IsDeferredCheck || DeferCheck(Ty);
-      return PrintMsgInvalidDepType(Ty == OverloadTys[OIdx], "matching",
-                                    formatv("{}", *OverloadTys[OIdx]), OIdx);
-    }
-
     assert(OIdx == OverloadTys.size() && !IsDeferredCheck &&
            "Table consistency error");
     OverloadTys.push_back(Ty);
 
-    switch (D.getOverloadKind()) {
-    case IITDescriptor::AK_Any:
-      return false; // Success
-    case IITDescriptor::AK_AnyInteger:
-      return PrintMsg(Ty->isIntOrIntVectorTy(), "any integer or integer vector",
-                      OIdx);
-    case IITDescriptor::AK_AnyFloat:
-      return PrintMsg(Ty->isFPOrFPVectorTy(), "any fp or fp vector", OIdx);
-    case IITDescriptor::AK_AnyVector:
-      return PrintMsg(isa<VectorType>(Ty), "any vector type", OIdx);
-    case IITDescriptor::AK_AnyPointer:
-      return PrintMsg(isa<PointerType>(Ty), "any pointer type", OIdx);
-    default:
-      break;
+    IITDescriptor::AnyKindVectorConstraint VC;
+    IITDescriptor::AnyKindElementConstraint EC;
+    std::tie(VC, EC) = D.getOverloadConstraints();
+
+    bool IsValid = [&]() {
+      switch (VC) {
+      case IITDescriptor::VC_None:
+        return true;
+      case IITDescriptor::VC_Vector:
+        return isa<VectorType>(Ty);
+      case IITDescriptor::VC_Scalar:
+        return !isa<VectorType>(Ty);
+      }
+      llvm_unreachable("invalid vector constraint");
+    }();
+
+    IsValid &= [&]() {
+      Type *ETy = Ty->getScalarType();
+      switch (EC) {
+      case IITDescriptor::EC_None:
+        return true;
+      case IITDescriptor::EC_Integer:
+        return ETy->isIntegerTy();
+      case IITDescriptor::EC_Float:
+        return ETy->isFloatingPointTy();
+      case IITDescriptor::EC_Pointer:
+        return ETy->isPointerTy();
+      }
+      llvm_unreachable("invalid element constraint");
+    }();
+
+    if (IsValid)
+      return false;
+
+    static constexpr StringLiteral VectorKinds[] = {
+        "",
+        "vector",
+        "scalar",
+    };
+    static constexpr StringLiteral ElementKinds[] = {
+        "",
+        "integer",
+        "fp",
+        "pointer",
+    };
+
+    if (EC == IITDescriptor::EC_None) {
+      // No constraint on element type.
+      // Expected = any {vector | scalar} type.
+      StringLiteral VK = ArrayRef(VectorKinds)[VC];
+      return PrintMsg(false, formatv("any {} type", VK), OIdx);
     }
-    llvm_unreachable("all argument kinds not covered");
+
+    StringLiteral EK = ArrayRef(ElementKinds)[EC];
+    switch (VC) {
+    case IITDescriptor::VC_None:
+      // Expected = any EK or EK vector.
+      return PrintMsg(false, formatv("any {0} or {0} vector", EK), OIdx);
+    case IITDescriptor::VC_Vector:
+      return PrintMsg(false, formatv("any {} vector", EK), OIdx);
+    case IITDescriptor::VC_Scalar:
+      return PrintMsg(false, formatv("any {} type", EK), OIdx);
+    }
+    llvm_unreachable("invalid vector constraint");
+  }
+
+  case IITDescriptor::Match: {
+    unsigned OIdx = D.getOverloadIndex();
+    if (OIdx >= OverloadTys.size())
+      return IsDeferredCheck || DeferCheck(Ty);
+    return PrintMsgInvalidDepType(Ty == OverloadTys[OIdx], "matching",
+                                  formatv("{}", *OverloadTys[OIdx]), OIdx);
   }
 
   case IITDescriptor::Extend:

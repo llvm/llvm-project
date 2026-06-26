@@ -264,8 +264,8 @@ public:
   // ---------------------------
 
   cir::DataMemberAttr getDataMemberAttr(cir::DataMemberType ty,
-                                        unsigned memberIndex) {
-    return cir::DataMemberAttr::get(ty, memberIndex);
+                                        llvm::ArrayRef<int32_t> path) {
+    return cir::DataMemberAttr::get(ty, path);
   }
 
   cir::DataMemberAttr getNullDataMemberAttr(cir::DataMemberType ty) {
@@ -577,12 +577,14 @@ public:
   }
 
   cir::LoadOp createLoad(mlir::Location loc, Address addr,
-                         bool isVolatile = false) {
+                         bool isVolatile = false, bool isNontemporal = false) {
     mlir::IntegerAttr align = getAlignmentAttr(addr.getAlignment());
     return cir::LoadOp::create(*this, loc, addr.getPointer(), /*isDeref=*/false,
-                               isVolatile, /*alignment=*/align,
+                               isVolatile, isNontemporal,
+                               /*alignment=*/align,
                                /*sync_scope=*/cir::SyncScopeKindAttr{},
-                               /*mem_order=*/cir::MemOrderAttr{});
+                               /*mem_order=*/cir::MemOrderAttr{},
+                               /*invariant=*/false);
   }
 
   cir::LoadOp createAlignedLoad(mlir::Location loc, mlir::Type ty,
@@ -592,9 +594,11 @@ public:
     uint64_t alignment = align ? align->value() : 0;
     mlir::IntegerAttr alignAttr = getAlignmentAttr(alignment);
     return cir::LoadOp::create(*this, loc, ptr, /*isDeref=*/false,
-                               /*isVolatile=*/false, alignAttr,
+                               /*isVolatile=*/false, /*isNontemporal=*/false,
+                               alignAttr,
                                /*sync_scope=*/cir::SyncScopeKindAttr{},
-                               /*mem_order=*/cir::MemOrderAttr{});
+                               /*mem_order=*/cir::MemOrderAttr{},
+                               /*invariant=*/false);
   }
 
   cir::LoadOp
@@ -604,14 +608,14 @@ public:
   }
 
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, Address dst,
-                           bool isVolatile = false,
+                           bool isVolatile = false, bool isNontemporal = false,
                            mlir::IntegerAttr align = {},
                            cir::SyncScopeKindAttr scope = {},
                            cir::MemOrderAttr order = {}) {
     if (!align)
       align = getAlignmentAttr(dst.getAlignment());
     return CIRBaseBuilderTy::createStore(loc, val, dst.getPointer(), isVolatile,
-                                         align, scope, order);
+                                         isNontemporal, align, scope, order);
   }
 
   /// Create a cir.complex.real_ptr operation that derives a pointer to the real
@@ -641,6 +645,29 @@ public:
   Address createComplexImagPtr(mlir::Location loc, Address addr) {
     return Address{createComplexImagPtr(loc, addr.getPointer()),
                    addr.getAlignment()};
+  }
+
+  using CIRBaseBuilderTy::createGetMember;
+  Address createGetMember(mlir::Location loc, Address base,
+                          llvm::StringRef name, unsigned index) {
+    auto recordTy = mlir::cast<cir::RecordType>(base.getElementType());
+
+    assert(index < recordTy.getMembers().size() &&
+           "member index out of bounds");
+    mlir::Type memberTy = recordTy.getMembers()[index];
+    mlir::Type memberPtrTy = getPointerTo(memberTy);
+
+    auto moduleOp =
+        getInsertionBlock()->getParentOp()->getParentOfType<mlir::ModuleOp>();
+    mlir::DataLayout layout(moduleOp);
+    auto memberOffset =
+        CharUnits::fromQuantity(recordTy.getElementOffset(layout, index));
+
+    mlir::Value memberPtr =
+        createGetMember(loc, memberPtrTy, base.getBasePointer(), name, index);
+    return Address(memberPtr, memberTy,
+                   base.getAlignment().alignmentAtOffset(memberOffset),
+                   base.isKnownNonNull());
   }
 
   cir::GetRuntimeMemberOp createGetIndirectMember(mlir::Location loc,

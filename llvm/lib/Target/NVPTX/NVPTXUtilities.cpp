@@ -14,6 +14,7 @@
 #include "NVPTX.h"
 #include "NVPTXTargetMachine.h"
 #include "NVVMProperties.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/Alignment.h"
@@ -32,8 +33,8 @@ Function *getMaybeBitcastedCallee(const CallBase *CB) {
   return dyn_cast<Function>(CB->getCalledOperand()->stripPointerCasts());
 }
 
-Align getFunctionParamOptimizedAlign(const Function *F, Type *ArgTy,
-                                     const DataLayout &DL) {
+Align getPTXPromotedParamTypeAlign(const Function *F, Type *ArgTy,
+                                   const DataLayout &DL) {
   // Capping the alignment to 128 bytes as that is the maximum alignment
   // supported by PTX.
   const Align ABITypeAlign = std::min(Align(128), DL.getABITypeAlign(ArgTy));
@@ -41,27 +42,21 @@ Align getFunctionParamOptimizedAlign(const Function *F, Type *ArgTy,
   // If a function has linkage different from internal or private, we
   // must use default ABI alignment as external users rely on it. Same
   // for a function that may be called from a function pointer.
-  if (!F || !F->hasLocalLinkage() ||
-      F->hasAddressTaken(/*Users=*/nullptr,
-                         /*IgnoreCallbackUses=*/false,
-                         /*IgnoreAssumeLikeCalls=*/true,
-                         /*IgnoreLLVMUsed=*/true))
-    return ABITypeAlign;
-
-  assert(!isKernelFunction(*F) && "Expect kernels to have non-local linkage");
-  return std::max(Align(16), ABITypeAlign);
+  const bool MayOptimizeAlign =
+      F && F->hasLocalLinkage() &&
+      !F->hasAddressTaken(/*Users=*/nullptr,
+                          /*IgnoreCallbackUses=*/false,
+                          /*IgnoreAssumeLikeCalls=*/true,
+                          /*IgnoreLLVMUsed=*/true);
+  assert(!(MayOptimizeAlign && isKernelFunction(*F)) &&
+         "Expect kernels to have non-local linkage");
+  const Align OptimizedAlign = MayOptimizeAlign ? Align(16) : Align(1);
+  return std::max(OptimizedAlign, ABITypeAlign);
 }
 
-Align getFunctionArgumentAlignment(const Function *F, Type *Ty, unsigned Idx,
-                                   const DataLayout &DL) {
-  return getAlign(*F, Idx).value_or(getFunctionParamOptimizedAlign(F, Ty, DL));
-}
-
-Align getFunctionByValParamAlign(const Function *F, Type *ArgTy,
-                                 Align InitialAlign, const DataLayout &DL) {
-  Align ArgAlign = InitialAlign;
-  if (F)
-    ArgAlign = std::max(ArgAlign, getFunctionParamOptimizedAlign(F, ArgTy, DL));
+Align getDeviceByValParamAlign(const Function *F, Type *ArgTy,
+                               Align InitialAlign, const DataLayout &DL) {
+  const Align OptimizedAlign = getPTXPromotedParamTypeAlign(F, ArgTy, DL);
 
   // Old ptx versions have a bug. When PTX code takes address of
   // byval parameter with alignment < 4, ptxas generates code to
@@ -72,10 +67,40 @@ Align getFunctionByValParamAlign(const Function *F, Type *ArgTy,
   // ptxas > 9.0.
   // TODO: remove this after verifying the bug is not reproduced
   // on non-deprecated ptxas versions.
-  if (ForceMinByValParamAlign)
-    ArgAlign = std::max(ArgAlign, Align(4));
+  const bool ShouldForceMinAlign =
+      ForceMinByValParamAlign && (!F || !isKernelFunction(*F));
+  const Align AlignFloor = ShouldForceMinAlign ? Align(4) : Align(1);
 
-  return ArgAlign;
+  return std::max({InitialAlign, OptimizedAlign, AlignFloor});
+}
+
+Align getPTXParamAlign(const Function *F, Type *Ty, unsigned AttrIdx,
+                       const DataLayout &DL) {
+  if (F)
+    if (MaybeAlign StackAlign = getStackAlign(*F, AttrIdx))
+      return StackAlign.value();
+
+  Align TypeAlign = getPTXPromotedParamTypeAlign(F, Ty, DL);
+  if (F && AttrIdx >= AttributeList::FirstArgIndex) {
+    unsigned ArgNo = AttrIdx - AttributeList::FirstArgIndex;
+    if (F->getAttributes().hasParamAttr(ArgNo, Attribute::ByVal))
+      return std::max(TypeAlign, F->getParamAlign(ArgNo).valueOrOne());
+  }
+  return TypeAlign;
+}
+
+Align getPTXParamAlign(const CallBase *CB, Type *Ty, unsigned Idx,
+                       const DataLayout &DL) {
+  const Function *DirectCallee = CB ? CB->getCalledFunction() : nullptr;
+
+  if (!DirectCallee && CB) {
+    if (MaybeAlign StackAlign = getStackAlign(*CB, Idx))
+      return StackAlign.value();
+
+    DirectCallee = getMaybeBitcastedCallee(CB);
+  }
+
+  return getPTXParamAlign(DirectCallee, Ty, Idx, DL);
 }
 
 bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM) {

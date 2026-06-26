@@ -202,16 +202,6 @@ public:
   ///     returned.
   const FileSpec &GetFileSpecAtIndex(size_t idx) const;
 
-  /// Get the memory cost of this object.
-  ///
-  /// Return the size in bytes that this object takes in memory. This returns
-  /// the size in bytes of this object, not any shared string values it may
-  /// refer to.
-  ///
-  /// \return
-  ///     The number of bytes that this object occupies in memory.
-  size_t MemorySize() const;
-
   bool IsEmpty() const { return m_files.empty(); }
 
   /// Get the number of files in the file list.

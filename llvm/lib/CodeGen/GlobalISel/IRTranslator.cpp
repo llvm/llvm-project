@@ -1661,6 +1661,9 @@ bool IRTranslator::translateGetElementPtr(const User &U,
     WantSplatVector = VectorWidth > 1;
   }
 
+  if (cast<GEPOperator>(U).hasAllZeroIndices())
+    return translateCopy(U, Op0, MIRBuilder);
+
   // We might need to splat the base pointer into a vector if the offsets
   // are vectors.
   if (WantSplatVector && !PtrTy.isVector()) {
@@ -1805,7 +1808,8 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
     DstAlign = MSI->getDestAlign().valueOrOne();
   }
 
-  if (Opcode != TargetOpcode::G_MEMCPY_INLINE) {
+  if (Opcode != TargetOpcode::G_MEMCPY_INLINE &&
+      Opcode != TargetOpcode::G_MEMSET_INLINE) {
     // We need to propagate the tail call flag from the IR inst as an argument.
     // Otherwise, we have to pessimize and assume later that we cannot tail call
     // any memory intrinsics.
@@ -1835,7 +1839,8 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
   ICall.addMemOperand(
       MF->getMachineMemOperand(MachinePointerInfo(CI.getArgOperand(0)),
                                StoreFlags, 1, DstAlign, AAInfo));
-  if (Opcode != TargetOpcode::G_MEMSET)
+  if (Opcode != TargetOpcode::G_MEMSET &&
+      Opcode != TargetOpcode::G_MEMSET_INLINE)
     ICall.addMemOperand(MF->getMachineMemOperand(
         MachinePointerInfo(SrcPtr), LoadFlags, 1, SrcAlign, AAInfo));
 
@@ -2445,6 +2450,8 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     return translateMemFunc(CI, MIRBuilder, TargetOpcode::G_MEMMOVE);
   case Intrinsic::memset:
     return translateMemFunc(CI, MIRBuilder, TargetOpcode::G_MEMSET);
+  case Intrinsic::memset_inline:
+    return translateMemFunc(CI, MIRBuilder, TargetOpcode::G_MEMSET_INLINE);
   case Intrinsic::eh_typeid_for: {
     GlobalValue *GV = ExtractTypeInfo(CI.getArgOperand(0));
     Register Reg = getOrCreateVReg(CI);
@@ -4254,7 +4261,6 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   MRI = &MF->getRegInfo();
   DL = &F.getDataLayout();
   const TargetMachine &TM = MF->getTarget();
-  TM.resetTargetOptions(F);
   EnableOpts = OptLevel != CodeGenOptLevel::None && !skipFunction(F);
   FuncInfo.MF = MF;
   if (EnableOpts) {

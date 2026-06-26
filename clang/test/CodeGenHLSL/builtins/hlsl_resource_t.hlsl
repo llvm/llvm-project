@@ -11,9 +11,9 @@ struct CustomResource {
 // CHECK: %"class.hlsl::StructuredBuffer" = type { target("dx.RawBuffer", %struct.MyStruct, 0, 0)
 // CHECK: %struct.MyStruct = type { <4 x float>, <2 x i32> }
 
-// CHECK: define hidden void @_Z2fa14CustomResource(ptr noundef byval(%struct.CustomResource) align 1 %a)
-// CHECK: call void @_Z4foo114CustomResource(ptr noundef byval(%struct.CustomResource) align 1 %agg.tmp)
-// CHECK: declare hidden void @_Z4foo114CustomResource(ptr noundef byval(%struct.CustomResource) align 1)
+// CHECK: define hidden void @_Z2fa14CustomResource(ptr noundef dead_on_return %a)
+// CHECK: call void @_Z4foo114CustomResource(ptr noundef dead_on_return %byval-temp)
+// CHECK: declare hidden void @_Z4foo114CustomResource(ptr noundef dead_on_return)
 
 void foo1(CustomResource res);
 
@@ -21,7 +21,7 @@ void fa(CustomResource a) {
     foo1(a);
 }
 
-// CHECK: define hidden void @_Z2fb14CustomResource(ptr noundef byval(%struct.CustomResource) align 1 %a)
+// CHECK: define hidden void @_Z2fb14CustomResource(ptr noundef  dead_on_return %a)
 void fb(CustomResource a) {
     CustomResource b = a;
 }

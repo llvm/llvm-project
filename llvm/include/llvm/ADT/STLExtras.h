@@ -1220,6 +1220,7 @@ public:
   class iterator : public indexed_accessor_iterator<iterator, BaseT, T,
                                                     PointerT, ReferenceT> {
   public:
+    iterator() : iterator::indexed_accessor_iterator(nullptr, 0) {}
     // Index into this iterator, invoking a static method on the derived type.
     ReferenceT operator*() const {
       return DerivedT::dereference_iterator(this->getBase(), this->getIndex());
