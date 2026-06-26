@@ -12,9 +12,9 @@ define amdgpu_hs void @wwm(i32 inreg %arg, ptr addrspace(8) inreg %buffer) {
 ; GCN-NEXT:    s_mov_b32 s6, s3
 ; GCN-NEXT:    s_mov_b32 s5, s2
 ; GCN-NEXT:    v_mov_b32_e32 v0, s1
-; GCN-NEXT:    s_cmp_lg_u32 s0, 0
+; GCN-NEXT:    s_cmp_eq_u32 s0, 0
 ; GCN-NEXT:    s_mov_b32 s0, 0
-; GCN-NEXT:    s_cbranch_scc1 .LBB0_2
+; GCN-NEXT:    s_cbranch_scc0 .LBB0_2
 ; GCN-NEXT:  ; %bb.1:
 ; GCN-NEXT:    s_mov_b32 s0, 1
 ; GCN-NEXT:  .LBB0_2: ; %bb602
@@ -64,9 +64,9 @@ define amdgpu_hs void @strict_wwm(i32 inreg %arg, ptr addrspace(8) inreg %buffer
 ; GCN-NEXT:    s_mov_b32 s6, s3
 ; GCN-NEXT:    s_mov_b32 s5, s2
 ; GCN-NEXT:    v_mov_b32_e32 v0, s1
-; GCN-NEXT:    s_cmp_lg_u32 s0, 0
+; GCN-NEXT:    s_cmp_eq_u32 s0, 0
 ; GCN-NEXT:    s_mov_b32 s0, 0
-; GCN-NEXT:    s_cbranch_scc1 .LBB1_2
+; GCN-NEXT:    s_cbranch_scc0 .LBB1_2
 ; GCN-NEXT:  ; %bb.1:
 ; GCN-NEXT:    s_mov_b32 s0, 1
 ; GCN-NEXT:  .LBB1_2: ; %bb602

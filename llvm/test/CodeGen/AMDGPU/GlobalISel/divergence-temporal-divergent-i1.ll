@@ -156,9 +156,8 @@ define amdgpu_cs void @loop_with_1break(ptr addrspace(1) %x, i32 %x.size, ptr ad
 ; GFX10-NEXT:    s_branch .LBB2_2
 ; GFX10-NEXT:  .LBB2_5: ; %loop.exit.guard
 ; GFX10-NEXT:    s_or_b32 exec_lo, exec_lo, s8
-; GFX10-NEXT:    s_and_saveexec_b32 s0, s9
-; GFX10-NEXT:    s_xor_b32 s0, exec_lo, s0
-; GFX10-NEXT:    s_cbranch_execz .LBB2_7
+; GFX10-NEXT:    s_and_b32 vcc_lo, exec_lo, s9
+; GFX10-NEXT:    s_cbranch_vccz .LBB2_7
 ; GFX10-NEXT:  ; %bb.6: ; %break.body
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 10
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0

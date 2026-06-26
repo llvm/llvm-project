@@ -5449,7 +5449,7 @@ define void @memmove_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[64:67]
 ; CHECK-NEXT:    v_add_co_u32 v0, vcc_lo, 0x100, v0
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; CHECK-NEXT:    s_cmp_lg_u64 s[4:5], 0
+; CHECK-NEXT:    s_cmp_eq_u64 s[4:5], 0
 ; CHECK-NEXT:    s_waitcnt vmcnt(3) lgkmcnt(15)
 ; CHECK-NEXT:    flat_store_dwordx4 v[100:101], v[68:71] offset:48
 ; CHECK-NEXT:    s_waitcnt vmcnt(2) lgkmcnt(15)
@@ -5458,8 +5458,8 @@ define void @memmove_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0
 ; CHECK-NEXT:    flat_store_dwordx4 v[100:101], v[84:87] offset:32
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(15)
 ; CHECK-NEXT:    flat_store_dwordx4 v[100:101], v[96:99]
-; CHECK-NEXT:    s_cbranch_scc1 .LBB5_2
-; CHECK-NEXT:  .LBB5_3: ; %Flow15
+; CHECK-NEXT:    s_cbranch_scc0 .LBB5_2
+; CHECK-NEXT:  .LBB5_3: ; %Flow
 ; CHECK-NEXT:    s_andn2_saveexec_b32 s6, s6
 ; CHECK-NEXT:    s_cbranch_execz .LBB5_6
 ; CHECK-NEXT:  ; %bb.4: ; %memmove_bwd_loop.preheader
@@ -5532,7 +5532,7 @@ define void @memmove_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(15)
 ; CHECK-NEXT:    flat_store_dwordx4 v[100:101], v[96:99]
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB5_5
-; CHECK-NEXT:  .LBB5_6: ; %Flow16
+; CHECK-NEXT:  .LBB5_6: ; %Flow14
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -5596,7 +5596,7 @@ define void @memmove_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0
 ; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v21, null, 0, v1, vcc_lo
 ; ALIGNED-NEXT:    v_add_co_u32 v2, vcc_lo, 0x100, v2
 ; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v3, null, 0, v3, vcc_lo
-; ALIGNED-NEXT:    s_cmp_lg_u64 s[4:5], 0
+; ALIGNED-NEXT:    s_cmp_eq_u64 s[4:5], 0
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(3)
 ; ALIGNED-NEXT:    flat_store_byte_d16_hi v[22:23], v112 offset:136
 ; ALIGNED-NEXT:    flat_store_byte v[20:21], v112 offset:137
@@ -6185,8 +6185,8 @@ define void @memmove_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0
 ; ALIGNED-NEXT:    flat_store_byte v[20:21], v5 offset:50
 ; ALIGNED-NEXT:    flat_store_byte v[20:21], v11 offset:48
 ; ALIGNED-NEXT:    flat_store_byte v[20:21], v4 offset:46
-; ALIGNED-NEXT:    s_cbranch_scc1 .LBB5_2
-; ALIGNED-NEXT:  .LBB5_3: ; %Flow15
+; ALIGNED-NEXT:    s_cbranch_scc0 .LBB5_2
+; ALIGNED-NEXT:  .LBB5_3: ; %Flow
 ; ALIGNED-NEXT:    s_andn2_saveexec_b32 s6, s6
 ; ALIGNED-NEXT:    s_cbranch_execz .LBB5_6
 ; ALIGNED-NEXT:  ; %bb.4: ; %memmove_bwd_loop.preheader
@@ -6825,7 +6825,7 @@ define void @memmove_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0
 ; ALIGNED-NEXT:    flat_store_byte v[20:21], v7 offset:48
 ; ALIGNED-NEXT:    flat_store_byte v[20:21], v0 offset:46
 ; ALIGNED-NEXT:    s_cbranch_scc0 .LBB5_5
-; ALIGNED-NEXT:  .LBB5_6: ; %Flow16
+; ALIGNED-NEXT:  .LBB5_6: ; %Flow14
 ; ALIGNED-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; ALIGNED-NEXT:    s_clause 0xa ; 44-byte Folded Reload
 ; ALIGNED-NEXT:    buffer_load_dword v58, off, s[0:3], s32
@@ -6885,7 +6885,7 @@ define void @memmove_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0
 ; UNROLL3-NEXT:    flat_store_dwordx4 v[0:1], v[2:5] offset:2032
 ; UNROLL3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; UNROLL3-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; UNROLL3-NEXT:  .LBB5_4: ; %Flow13
+; UNROLL3-NEXT:  .LBB5_4: ; %Flow
 ; UNROLL3-NEXT:    s_andn2_saveexec_b32 s6, s6
 ; UNROLL3-NEXT:    s_cbranch_execz .LBB5_7
 ; UNROLL3-NEXT:  ; %bb.5: ; %memmove_bwd_residual
@@ -6922,7 +6922,7 @@ define void @memmove_p0_p0_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(0
 ; UNROLL3-NEXT:    v_add_co_ci_u32_e64 v5, null, -1, v5, vcc_lo
 ; UNROLL3-NEXT:    s_cmp_eq_u64 s[4:5], 0
 ; UNROLL3-NEXT:    s_cbranch_scc0 .LBB5_6
-; UNROLL3-NEXT:  .LBB5_7: ; %Flow14
+; UNROLL3-NEXT:  .LBB5_7: ; %Flow13
 ; UNROLL3-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; UNROLL3-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNROLL3-NEXT:    s_setpc_b64 s[30:31]
@@ -6998,9 +6998,9 @@ define void @memmove_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1
 ; CHECK-NEXT:    global_store_dwordx4 v[0:1], v[96:99], off offset:16
 ; CHECK-NEXT:    v_add_co_u32 v0, vcc_lo, 0x100, v0
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; CHECK-NEXT:    s_cmp_lg_u64 s[4:5], 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB6_2
-; CHECK-NEXT:  .LBB6_3: ; %Flow17
+; CHECK-NEXT:    s_cmp_eq_u64 s[4:5], 0
+; CHECK-NEXT:    s_cbranch_scc0 .LBB6_2
+; CHECK-NEXT:  .LBB6_3: ; %Flow
 ; CHECK-NEXT:    s_andn2_saveexec_b32 s6, s6
 ; CHECK-NEXT:    s_cbranch_execz .LBB6_6
 ; CHECK-NEXT:  ; %bb.4: ; %memmove_bwd_loop.preheader
@@ -7069,7 +7069,7 @@ define void @memmove_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v1, null, -1, v1, vcc_lo
 ; CHECK-NEXT:    s_cmp_eq_u64 s[4:5], 0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB6_5
-; CHECK-NEXT:  .LBB6_6: ; %Flow18
+; CHECK-NEXT:  .LBB6_6: ; %Flow16
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -7125,7 +7125,7 @@ define void @memmove_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1
 ; ALIGNED-NEXT:    buffer_load_dword v18, off, s[0:3], s32 offset:88
 ; ALIGNED-NEXT:    buffer_load_dword v17, off, s[0:3], s32 offset:84
 ; ALIGNED-NEXT:    buffer_load_dword v16, off, s[0:3], s32 offset:80
-; ALIGNED-NEXT:    s_cmp_lg_u64 s[4:5], 0
+; ALIGNED-NEXT:    s_cmp_eq_u64 s[4:5], 0
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(3)
 ; ALIGNED-NEXT:    global_store_byte_d16_hi v[0:1], v19, off offset:254
 ; ALIGNED-NEXT:    global_store_byte v[0:1], v19, off offset:252
@@ -7711,8 +7711,8 @@ define void @memmove_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1
 ; ALIGNED-NEXT:    global_store_byte v[0:1], v4, off offset:1
 ; ALIGNED-NEXT:    v_add_co_u32 v0, vcc_lo, 0x100, v0
 ; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; ALIGNED-NEXT:    s_cbranch_scc1 .LBB6_2
-; ALIGNED-NEXT:  .LBB6_3: ; %Flow17
+; ALIGNED-NEXT:    s_cbranch_scc0 .LBB6_2
+; ALIGNED-NEXT:  .LBB6_3: ; %Flow
 ; ALIGNED-NEXT:    s_andn2_saveexec_b32 s6, s6
 ; ALIGNED-NEXT:    s_cbranch_execz .LBB6_6
 ; ALIGNED-NEXT:  ; %bb.4: ; %memmove_bwd_loop.preheader
@@ -8342,7 +8342,7 @@ define void @memmove_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1
 ; ALIGNED-NEXT:    v_add_co_u32 v12, vcc_lo, 0xffffff00, v12
 ; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v13, null, -1, v13, vcc_lo
 ; ALIGNED-NEXT:    s_cbranch_scc0 .LBB6_5
-; ALIGNED-NEXT:  .LBB6_6: ; %Flow18
+; ALIGNED-NEXT:  .LBB6_6: ; %Flow16
 ; ALIGNED-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; ALIGNED-NEXT:    s_clause 0x9 ; 40-byte Folded Reload
 ; ALIGNED-NEXT:    buffer_load_dword v57, off, s[0:3], s32
@@ -8401,7 +8401,7 @@ define void @memmove_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1
 ; UNROLL3-NEXT:    global_store_dwordx4 v[0:1], v[2:5], off offset:2032
 ; UNROLL3-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; UNROLL3-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; UNROLL3-NEXT:  .LBB6_4: ; %Flow15
+; UNROLL3-NEXT:  .LBB6_4: ; %Flow
 ; UNROLL3-NEXT:    s_andn2_saveexec_b32 s6, s6
 ; UNROLL3-NEXT:    s_cbranch_execz .LBB6_7
 ; UNROLL3-NEXT:  ; %bb.5: ; %memmove_bwd_residual
@@ -8438,7 +8438,7 @@ define void @memmove_p1_p1_sz2048(ptr addrspace(1) align 1 %dst, ptr addrspace(1
 ; UNROLL3-NEXT:    v_add_co_ci_u32_e64 v5, null, -1, v5, vcc_lo
 ; UNROLL3-NEXT:    s_cmp_eq_u64 s[4:5], 0
 ; UNROLL3-NEXT:    s_cbranch_scc0 .LBB6_6
-; UNROLL3-NEXT:  .LBB6_7: ; %Flow16
+; UNROLL3-NEXT:  .LBB6_7: ; %Flow15
 ; UNROLL3-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; UNROLL3-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -8507,7 +8507,7 @@ define void @memmove_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[64:67]
 ; CHECK-NEXT:    v_add_co_u32 v0, vcc_lo, 0x100, v0
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; CHECK-NEXT:    s_cmp_lg_u64 s[4:5], 0
+; CHECK-NEXT:    s_cmp_eq_u64 s[4:5], 0
 ; CHECK-NEXT:    s_waitcnt vmcnt(3)
 ; CHECK-NEXT:    flat_store_dwordx4 v[100:101], v[68:71] offset:64
 ; CHECK-NEXT:    s_waitcnt vmcnt(2)
@@ -8516,8 +8516,8 @@ define void @memmove_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4
 ; CHECK-NEXT:    flat_store_dwordx4 v[100:101], v[84:87] offset:32
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_dwordx4 v[100:101], v[96:99]
-; CHECK-NEXT:    s_cbranch_scc1 .LBB7_2
-; CHECK-NEXT:  .LBB7_3: ; %Flow16
+; CHECK-NEXT:    s_cbranch_scc0 .LBB7_2
+; CHECK-NEXT:  .LBB7_3: ; %Flow
 ; CHECK-NEXT:    s_andn2_saveexec_b32 s6, s6
 ; CHECK-NEXT:    s_cbranch_execz .LBB7_6
 ; CHECK-NEXT:  ; %bb.4: ; %memmove_bwd_loop.preheader
@@ -8586,7 +8586,7 @@ define void @memmove_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_dwordx4 v[100:101], v[96:99]
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB7_5
-; CHECK-NEXT:  .LBB7_6: ; %Flow17
+; CHECK-NEXT:  .LBB7_6: ; %Flow15
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -9087,14 +9087,14 @@ define void @memmove_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v80, 24, v5
 ; ALIGNED-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v81, 8, v5
-; ALIGNED-NEXT:    s_cmp_lg_u64 s[4:5], 0
+; ALIGNED-NEXT:    s_cmp_eq_u64 s[4:5], 0
 ; ALIGNED-NEXT:    v_lshrrev_b32_e32 v82, 24, v4
 ; ALIGNED-NEXT:    flat_store_byte v[98:99], v80 offset:4
 ; ALIGNED-NEXT:    flat_store_byte_d16_hi v[96:97], v5
 ; ALIGNED-NEXT:    flat_store_byte v[98:99], v81 offset:2
 ; ALIGNED-NEXT:    flat_store_byte v[98:99], v82
-; ALIGNED-NEXT:    s_cbranch_scc1 .LBB7_2
-; ALIGNED-NEXT:  .LBB7_3: ; %Flow16
+; ALIGNED-NEXT:    s_cbranch_scc0 .LBB7_2
+; ALIGNED-NEXT:  .LBB7_3: ; %Flow
 ; ALIGNED-NEXT:    s_andn2_saveexec_b32 s6, s6
 ; ALIGNED-NEXT:    s_cbranch_execz .LBB7_6
 ; ALIGNED-NEXT:  ; %bb.4: ; %memmove_bwd_loop.preheader
@@ -9595,7 +9595,7 @@ define void @memmove_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4
 ; ALIGNED-NEXT:    flat_store_byte v[98:99], v25 offset:2
 ; ALIGNED-NEXT:    flat_store_byte v[98:99], v26
 ; ALIGNED-NEXT:    s_cbranch_scc0 .LBB7_5
-; ALIGNED-NEXT:  .LBB7_6: ; %Flow17
+; ALIGNED-NEXT:  .LBB7_6: ; %Flow15
 ; ALIGNED-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; ALIGNED-NEXT:    s_waitcnt lgkmcnt(0)
 ; ALIGNED-NEXT:    s_setpc_b64 s[30:31]
@@ -9644,7 +9644,7 @@ define void @memmove_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(0)
 ; UNROLL3-NEXT:    flat_store_dwordx4 v[0:1], v[8:11] offset:2032
 ; UNROLL3-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; UNROLL3-NEXT:  .LBB7_4: ; %Flow14
+; UNROLL3-NEXT:  .LBB7_4: ; %Flow
 ; UNROLL3-NEXT:    s_andn2_saveexec_b32 s6, s6
 ; UNROLL3-NEXT:    s_cbranch_execz .LBB7_7
 ; UNROLL3-NEXT:  ; %bb.5: ; %memmove_bwd_residual
@@ -9680,7 +9680,7 @@ define void @memmove_p0_p4_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(4
 ; UNROLL3-NEXT:    v_add_co_ci_u32_e64 v5, null, -1, v5, vcc_lo
 ; UNROLL3-NEXT:    s_cmp_eq_u64 s[4:5], 0
 ; UNROLL3-NEXT:    s_cbranch_scc0 .LBB7_6
-; UNROLL3-NEXT:  .LBB7_7: ; %Flow15
+; UNROLL3-NEXT:  .LBB7_7: ; %Flow14
 ; UNROLL3-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; UNROLL3-NEXT:    s_waitcnt lgkmcnt(0)
 ; UNROLL3-NEXT:    s_setpc_b64 s[30:31]
@@ -9897,9 +9897,9 @@ define void @memmove_p5_p5_sz2048(ptr addrspace(5) align 1 %dst, ptr addrspace(5
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    buffer_store_dword v97, v0, s[0:3], 0 offen
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, 0x100, v0
-; CHECK-NEXT:    s_cmp_lg_u64 s[4:5], 0
-; CHECK-NEXT:    s_cbranch_scc1 .LBB8_2
-; CHECK-NEXT:  .LBB8_3: ; %Flow18
+; CHECK-NEXT:    s_cmp_eq_u64 s[4:5], 0
+; CHECK-NEXT:    s_cbranch_scc0 .LBB8_2
+; CHECK-NEXT:  .LBB8_3: ; %Flow
 ; CHECK-NEXT:    s_andn2_saveexec_b32 s6, s6
 ; CHECK-NEXT:    s_cbranch_execz .LBB8_6
 ; CHECK-NEXT:  ; %bb.4: ; %memmove_bwd_loop.preheader
@@ -10105,7 +10105,7 @@ define void @memmove_p5_p5_sz2048(ptr addrspace(5) align 1 %dst, ptr addrspace(5
 ; CHECK-NEXT:    v_add_nc_u32_e32 v0, 0xffffff00, v0
 ; CHECK-NEXT:    s_cmp_eq_u64 s[4:5], 0
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB8_5
-; CHECK-NEXT:  .LBB8_6: ; %Flow19
+; CHECK-NEXT:  .LBB8_6: ; %Flow17
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -10171,7 +10171,7 @@ define void @memmove_p5_p5_sz2048(ptr addrspace(5) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    buffer_load_ubyte v2, v1, s[0:3], 0 offen
 ; ALIGNED-NEXT:    s_add_u32 s4, s4, 0xffffff00
 ; ALIGNED-NEXT:    s_addc_u32 s5, s5, -1
-; ALIGNED-NEXT:    s_cmp_lg_u64 s[4:5], 0
+; ALIGNED-NEXT:    s_cmp_eq_u64 s[4:5], 0
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; ALIGNED-NEXT:    buffer_store_dword v2, off, s[0:3], s32 offset:192 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    buffer_load_ubyte v2, v1, s[0:3], 0 offen offset:1
@@ -11212,8 +11212,8 @@ define void @memmove_p5_p5_sz2048(ptr addrspace(5) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; ALIGNED-NEXT:    buffer_store_byte v2, v0, s[0:3], 0 offen
 ; ALIGNED-NEXT:    v_add_nc_u32_e32 v0, 0x100, v0
-; ALIGNED-NEXT:    s_cbranch_scc1 .LBB8_2
-; ALIGNED-NEXT:  .LBB8_3: ; %Flow18
+; ALIGNED-NEXT:    s_cbranch_scc0 .LBB8_2
+; ALIGNED-NEXT:  .LBB8_3: ; %Flow
 ; ALIGNED-NEXT:    s_andn2_saveexec_b32 s6, s6
 ; ALIGNED-NEXT:    s_cbranch_execz .LBB8_6
 ; ALIGNED-NEXT:  ; %bb.4: ; %memmove_bwd_loop.preheader
@@ -12266,7 +12266,7 @@ define void @memmove_p5_p5_sz2048(ptr addrspace(5) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    buffer_store_byte v2, v0, s[0:3], 0 offen offset:1792
 ; ALIGNED-NEXT:    v_add_nc_u32_e32 v0, 0xffffff00, v0
 ; ALIGNED-NEXT:    s_cbranch_scc0 .LBB8_5
-; ALIGNED-NEXT:  .LBB8_6: ; %Flow19
+; ALIGNED-NEXT:  .LBB8_6: ; %Flow17
 ; ALIGNED-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; ALIGNED-NEXT:    s_clause 0x2f ; 192-byte Folded Reload
 ; ALIGNED-NEXT:    buffer_load_dword v127, off, s[0:3], s32
@@ -12405,7 +12405,7 @@ define void @memmove_p5_p5_sz2048(ptr addrspace(5) align 1 %dst, ptr addrspace(5
 ; UNROLL3-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 offen offset:2032
 ; UNROLL3-NEXT:    ; implicit-def: $vgpr1
 ; UNROLL3-NEXT:    ; implicit-def: $vgpr0
-; UNROLL3-NEXT:  .LBB8_4: ; %Flow16
+; UNROLL3-NEXT:  .LBB8_4: ; %Flow
 ; UNROLL3-NEXT:    s_andn2_saveexec_b32 s6, s6
 ; UNROLL3-NEXT:    s_cbranch_execz .LBB8_7
 ; UNROLL3-NEXT:  ; %bb.5: ; %memmove_bwd_residual
@@ -12482,7 +12482,7 @@ define void @memmove_p5_p5_sz2048(ptr addrspace(5) align 1 %dst, ptr addrspace(5
 ; UNROLL3-NEXT:    v_subrev_nc_u32_e32 v0, 48, v0
 ; UNROLL3-NEXT:    s_cmp_eq_u64 s[4:5], 0
 ; UNROLL3-NEXT:    s_cbranch_scc0 .LBB8_6
-; UNROLL3-NEXT:  .LBB8_7: ; %Flow17
+; UNROLL3-NEXT:  .LBB8_7: ; %Flow16
 ; UNROLL3-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; UNROLL3-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -12592,7 +12592,7 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; CHECK-NEXT:    flat_store_dwordx4 v[0:1], v[3:6]
 ; CHECK-NEXT:    v_add_co_u32 v0, vcc_lo, 0x100, v0
 ; CHECK-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
-; CHECK-NEXT:    s_cmp_lg_u64 s[4:5], 0
+; CHECK-NEXT:    s_cmp_eq_u64 s[4:5], 0
 ; CHECK-NEXT:    s_waitcnt vmcnt(7)
 ; CHECK-NEXT:    flat_store_dwordx4 v[100:101], v[84:87] offset:64
 ; CHECK-NEXT:    s_waitcnt vmcnt(4)
@@ -12600,8 +12600,8 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; CHECK-NEXT:    flat_store_dwordx4 v[100:101], v[19:22] offset:32
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_dwordx4 v[100:101], v[96:99]
-; CHECK-NEXT:    s_cbranch_scc1 .LBB9_2
-; CHECK-NEXT:  .LBB9_3: ; %Flow16
+; CHECK-NEXT:    s_cbranch_scc0 .LBB9_2
+; CHECK-NEXT:  .LBB9_3: ; %Flow
 ; CHECK-NEXT:    s_andn2_saveexec_b32 s6, s6
 ; CHECK-NEXT:    s_cbranch_execz .LBB9_6
 ; CHECK-NEXT:  ; %bb.4: ; %memmove_bwd_loop.preheader
@@ -12712,7 +12712,7 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    flat_store_dwordx4 v[100:101], v[96:99]
 ; CHECK-NEXT:    s_cbranch_scc0 .LBB9_5
-; CHECK-NEXT:  .LBB9_6: ; %Flow17
+; CHECK-NEXT:  .LBB9_6: ; %Flow15
 ; CHECK-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
@@ -12842,7 +12842,7 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    buffer_load_ubyte v80, v2, s[0:3], 0 offen offset:78
 ; ALIGNED-NEXT:    s_add_u32 s4, s4, 0xffffff00
 ; ALIGNED-NEXT:    s_addc_u32 s5, s5, -1
-; ALIGNED-NEXT:    s_cmp_lg_u64 s[4:5], 0
+; ALIGNED-NEXT:    s_cmp_eq_u64 s[4:5], 0
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(58)
 ; ALIGNED-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:704 ; 4-byte Folded Spill
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(57)
@@ -14276,8 +14276,8 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:1376 ; 4-byte Folded Reload
 ; ALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v0 offset:3
-; ALIGNED-NEXT:    s_cbranch_scc1 .LBB9_2
-; ALIGNED-NEXT:  .LBB9_3: ; %Flow16
+; ALIGNED-NEXT:    s_cbranch_scc0 .LBB9_2
+; ALIGNED-NEXT:  .LBB9_3: ; %Flow
 ; ALIGNED-NEXT:    s_andn2_saveexec_b32 s6, s6
 ; ALIGNED-NEXT:    s_cbranch_execz .LBB9_6
 ; ALIGNED-NEXT:  ; %bb.4: ; %memmove_bwd_loop.preheader
@@ -15783,7 +15783,7 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v0 offset:2
 ; ALIGNED-NEXT:    flat_store_byte v[3:4], v127 offset:3
 ; ALIGNED-NEXT:    s_cbranch_scc0 .LBB9_5
-; ALIGNED-NEXT:  .LBB9_6: ; %Flow17
+; ALIGNED-NEXT:  .LBB9_6: ; %Flow15
 ; ALIGNED-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; ALIGNED-NEXT:    s_clause 0x2f ; 192-byte Folded Reload
 ; ALIGNED-NEXT:    buffer_load_dword v127, off, s[0:3], s32
@@ -15898,7 +15898,7 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; UNROLL3-NEXT:    s_waitcnt vmcnt(0)
 ; UNROLL3-NEXT:    flat_store_dwordx4 v[0:1], v[3:6] offset:2032
 ; UNROLL3-NEXT:    ; implicit-def: $vgpr0_vgpr1
-; UNROLL3-NEXT:  .LBB9_4: ; %Flow14
+; UNROLL3-NEXT:  .LBB9_4: ; %Flow
 ; UNROLL3-NEXT:    s_andn2_saveexec_b32 s6, s6
 ; UNROLL3-NEXT:    s_cbranch_execz .LBB9_7
 ; UNROLL3-NEXT:  ; %bb.5: ; %memmove_bwd_residual
@@ -15949,7 +15949,7 @@ define void @memmove_p0_p5_sz2048(ptr addrspace(0) align 1 %dst, ptr addrspace(5
 ; UNROLL3-NEXT:    v_add_co_ci_u32_e64 v4, null, -1, v4, vcc_lo
 ; UNROLL3-NEXT:    s_cmp_eq_u64 s[4:5], 0
 ; UNROLL3-NEXT:    s_cbranch_scc0 .LBB9_6
-; UNROLL3-NEXT:  .LBB9_7: ; %Flow15
+; UNROLL3-NEXT:  .LBB9_7: ; %Flow14
 ; UNROLL3-NEXT:    s_inst_prefetch 0x2
 ; UNROLL3-NEXT:    s_or_b32 exec_lo, exec_lo, s6
 ; UNROLL3-NEXT:    s_waitcnt lgkmcnt(0)

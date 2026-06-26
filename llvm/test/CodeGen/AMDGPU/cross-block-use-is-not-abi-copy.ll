@@ -186,8 +186,12 @@ define amdgpu_kernel void @v3i16_registers(i1 %cond) #0 {
 ; GCN-NEXT:    s_bitcmp1_b32 s12, 0
 ; GCN-NEXT:    s_cselect_b64 s[18:19], -1, 0
 ; GCN-NEXT:    s_and_b64 vcc, exec, s[18:19]
-; GCN-NEXT:    s_cbranch_vccnz .LBB4_2
-; GCN-NEXT:  ; %bb.1: ; %if.else
+; GCN-NEXT:    s_cbranch_vccz .LBB4_2
+; GCN-NEXT:  ; %bb.1:
+; GCN-NEXT:    v_mov_b32_e32 v1, 0
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_branch .LBB4_3
+; GCN-NEXT:  .LBB4_2: ; %if.else
 ; GCN-NEXT:    s_add_u32 s8, s8, 8
 ; GCN-NEXT:    s_addc_u32 s9, s9, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
@@ -201,10 +205,6 @@ define amdgpu_kernel void @v3i16_registers(i1 %cond) #0 {
 ; GCN-NEXT:    s_mov_b32 s14, s16
 ; GCN-NEXT:    ; implicit-def: $sgpr15
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[18:19]
-; GCN-NEXT:    s_branch .LBB4_3
-; GCN-NEXT:  .LBB4_2:
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:  .LBB4_3: ; %if.end
 ; GCN-NEXT:    global_store_short v[0:1], v1, off
 ; GCN-NEXT:    global_store_dword v[0:1], v0, off
@@ -238,8 +238,12 @@ define amdgpu_kernel void @v3f16_registers(i1 %cond) #0 {
 ; GCN-NEXT:    s_bitcmp1_b32 s12, 0
 ; GCN-NEXT:    s_cselect_b64 s[18:19], -1, 0
 ; GCN-NEXT:    s_and_b64 vcc, exec, s[18:19]
-; GCN-NEXT:    s_cbranch_vccnz .LBB5_2
-; GCN-NEXT:  ; %bb.1: ; %if.else
+; GCN-NEXT:    s_cbranch_vccz .LBB5_2
+; GCN-NEXT:  ; %bb.1:
+; GCN-NEXT:    v_mov_b32_e32 v1, 0
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    s_branch .LBB5_3
+; GCN-NEXT:  .LBB5_2: ; %if.else
 ; GCN-NEXT:    s_add_u32 s8, s8, 8
 ; GCN-NEXT:    s_addc_u32 s9, s9, 0
 ; GCN-NEXT:    v_lshlrev_b32_e32 v2, 20, v2
@@ -253,10 +257,6 @@ define amdgpu_kernel void @v3f16_registers(i1 %cond) #0 {
 ; GCN-NEXT:    s_mov_b32 s14, s16
 ; GCN-NEXT:    ; implicit-def: $sgpr15
 ; GCN-NEXT:    s_swappc_b64 s[30:31], s[18:19]
-; GCN-NEXT:    s_branch .LBB5_3
-; GCN-NEXT:  .LBB5_2:
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:  .LBB5_3: ; %if.end
 ; GCN-NEXT:    global_store_short v[0:1], v1, off
 ; GCN-NEXT:    global_store_dword v[0:1], v0, off
