@@ -7,6 +7,10 @@
  *===-----------------------------------------------------------------------===
  */
 
+#pragma once
+
+#include <cstdio>
+#include <cstdlib>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -20,6 +24,11 @@ struct DeviceProp_t {
   int multiProcessorCount;
   int major;
   int minor;
+  int ECCEnabled;
+  int pciBusID;
+  int pciDeviceID;
+  int pciDomainID;
+  int memoryBusWidth;
 };
 
 enum MemcpyKind {
@@ -29,6 +38,20 @@ enum MemcpyKind {
   MemcpyDeviceToDevice = 3,
   MemcpyDefault = 4
 };
+
+enum HostAllocFlags : unsigned int {
+  HostAllocDefault = 0x00,
+  HostAllocPortable = 0x01,
+  HostAllocMapped = 0x02,
+  HostAllocWriteCombined = 0x04,
+};
+
+enum StreamCreateWithFlagsFlags : unsigned int {
+  StreamDefault = 0x00,
+  StreamNonBlocking = 0x01,
+};
+
+typedef struct Stream_st *Stream_t;
 
 /// Malloc, with type template overlay.
 ///{
@@ -86,6 +109,24 @@ Error_t FreeHost(void *Ptr);
 Error_t DriverGetVersion(int *Version);
 
 Error_t GetDeviceProperties(DeviceProp_t *DeviceProp, int DeviceNo);
+
+template <typename UnaryFunction, class T>
+static inline Error_t OccupancyMaxPotentialBlockSizeVariableSMem(
+    int *minGridSize, int *blockSize, T func,
+    UnaryFunction blockSizeToDynamicSMemSize, int blockSizeLimit = 0) {
+  // TODO: [h15] implement
+  fprintf(stderr,
+          "OccupancyMaxPotentialBlockSizeVariableSMem is not implemented yet");
+  abort();
+}
+
+Error_t StreamCreate(Stream_t *stream);
+
+Error_t StreamCreateWithFlags(Stream_t *stream, unsigned int flags);
+
+Error_t StreamDestroy(Stream_t stream);
+
+Error_t StreamSynchronize(Stream_t stream);
 
 ///
 

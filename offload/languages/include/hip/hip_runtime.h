@@ -19,7 +19,13 @@
 
 #undef LANGUAGE
 
-enum hipHostMallocFlag_t { hipHostMallocNonCoherent = 0x80000000 };
+enum hipHostMallocFlag_t : unsigned int {
+  hipHostMallocDefault = hipHostAllocDefault,
+  hipHostMallocPortable = hipHostAllocPortable,
+  hipHostMallocMapped = hipHostAllocMapped,
+  hipHostMallocWriteCombined = hipHostAllocWriteCombined,
+  hipHostMallocNonCoherent = 0x80000000,
+};
 
 hipError_t hipHostMalloc(void **Ptr, size_t Size, unsigned int Flags) {
   return hipHostAlloc(Ptr, Size, Flags);

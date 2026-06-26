@@ -143,10 +143,35 @@ Error_t DriverGetVersion(int *Version) {
 }
 
 Error_t GetDeviceProperties(DeviceProp_t *DeviceProp, int DeviceNo) {
+  // TODO: [h15] add remaining pci/mem fields
   memcpy(&DeviceProp->name[0], "TESTGPU", sizeof("TESTGPU"));
   DeviceProp->totalGlobalMem = 1024l * 1024 * 1024 * 40;
   DeviceProp->multiProcessorCount = 110;
   DeviceProp->major = 47;
   DeviceProp->minor = 11;
   return Success;
+}
+
+Error_t StreamCreate(Stream_t *Stream) {
+  // TODO: [h15] implement
+  fprintf(stderr, LANGUAGE_STR "StreamCreate is not implemented yet");
+  abort();
+}
+
+Error_t StreamCreateWithFlags(Stream_t *Stream, unsigned int Flags) {
+  // TODO: [h15] implement
+  fprintf(stderr, LANGUAGE_STR "StreamCreateWithFlags is not implemented yet");
+  abort();
+}
+
+Error_t StreamDestroy(Stream_t Stream) {
+  // TODO: [h15] implement
+  fprintf(stderr, LANGUAGE_STR "StreamDestroy is not implemented yet");
+  abort();
+}
+
+Error_t StreamSynchronize(Stream_t Stream) {
+  // TODO: [h15] implement
+  fprintf(stderr, LANGUAGE_STR "StreamSynchronize is not implemented yet");
+  abort();
 }
