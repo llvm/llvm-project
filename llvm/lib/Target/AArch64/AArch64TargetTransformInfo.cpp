@@ -2585,6 +2585,12 @@ instCombineSVEVectorMlaU(InstCombiner &IC, IntrinsicInst &II) {
   if (match(MulOp1, m_AllOnes()))
     return IC.replaceInstUsesWith(II, IC.Builder.CreateSub(Acc, MulOp0));
 
+  if (isa<Constant>(MulOp0) && !isa<Constant>(MulOp1)) {
+    II.setArgOperand(2, MulOp1);
+    II.setArgOperand(3, MulOp0);
+    return &II;
+  }
+
   return std::nullopt;
 }
 

@@ -2939,6 +2939,79 @@ TEST(FindReferences, TemplatedConstructorForwarding) {
                           rangeIs(Main.range("ForwardedCaller2"))));
 }
 
+TEST(LocateSymbol, ConstructorForwarding) {
+  // Caret-on-paren of a forwarding wrapper navigates to the constructor it
+  // ultimately invokes; caret-on-identifier still navigates to the wrapper.
+  // This mirrors the existing direct-ctor behaviour (`Abc^()` -> ctor,
+  // `A^bc()` -> type).
+  Annotations Code(R"cpp(
+    namespace std {
+    template <class T> T &&forward(T &t);
+    template <class T, class... Args>
+    T *$MakeUnique[[make_unique]](Args &&...args) {
+      return new T(std::forward<Args>(args)...);
+    }
+    template <class T, class... Args> T *make_unique2(Args &&...args) {
+      return make_unique<T>(forward<Args>(args)...);
+    }
+    template <class T, class... Args> T *make_unique3(Args &&...args) {
+      return make_unique2<T>(forward<Args>(args)...);
+    }
+    template <class T> struct shared_ptr {
+      shared_ptr(T *) {}
+    };
+    template <class T, class... Args>
+    shared_ptr<T> make_shared(Args &&...args) {
+      return shared_ptr<T>(new T(std::forward<Args>(args)...));
+    }
+    }
+
+    // Non-forwarding template: a call to it should fall through to itself.
+    template <class T> T *$Make[[make]]() { return nullptr; }
+
+    struct Test {
+      $DefaultCtor[[Test]]() {}
+      $IntCtor[[Test]](int) {}
+      Test(const char *) {}
+    };
+
+    int main() {
+      // Caret on parens -> Test default ctor.
+      auto a = std::make_unique<Test>$ParenMU^();
+      // Caret on the wrapper identifier -> make_unique itself.
+      auto b = std::ma$IdentMU^ke_unique<Test>();
+      // make_shared works the same way; overload resolution picks Test(int).
+      auto c = std::make_shared<Test>$MakeShared^(1);
+      // Chained forwarding (three wrappers deep).
+      auto d = std::make_unique3<Test>$Chained^();
+      // Overload resolution inside the instantiated body picks Test(int).
+      auto e = std::make_unique<Test>$Overload^(42);
+      // Non-forwarding template call: no constructor target.
+      auto f = make<Test>$NonFwd^();
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Code.code());
+  auto AST = TU.build();
+
+  EXPECT_THAT(locateSymbolAt(AST, Code.point("ParenMU")),
+              ElementsAre(sym("Test", Code.range("DefaultCtor"),
+                              Code.range("DefaultCtor"))));
+  EXPECT_THAT(locateSymbolAt(AST, Code.point("IdentMU")),
+              ElementsAre(sym("make_unique", Code.range("MakeUnique"),
+                              Code.range("MakeUnique"))));
+  EXPECT_THAT(
+      locateSymbolAt(AST, Code.point("MakeShared")),
+      ElementsAre(sym("Test", Code.range("IntCtor"), Code.range("IntCtor"))));
+  EXPECT_THAT(locateSymbolAt(AST, Code.point("Chained")),
+              ElementsAre(sym("Test", Code.range("DefaultCtor"),
+                              Code.range("DefaultCtor"))));
+  EXPECT_THAT(
+      locateSymbolAt(AST, Code.point("Overload")),
+      ElementsAre(sym("Test", Code.range("IntCtor"), Code.range("IntCtor"))));
+  EXPECT_THAT(locateSymbolAt(AST, Code.point("NonFwd")),
+              ElementsAre(sym("make", Code.range("Make"), Code.range("Make"))));
+}
+
 TEST(GetNonLocalDeclRefs, All) {
   struct Case {
     llvm::StringRef AnnotatedCode;
