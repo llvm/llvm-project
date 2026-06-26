@@ -3,10 +3,11 @@
 #include <stdbit.h>
 
 // LE unsigned: bytes ordered LSB-first (index 0 = byte 0 of the value)
-static const unsigned char le8_u[]  = {0xAB};
-static const unsigned char le16_u[] = {0x34, 0x12};
-static const unsigned char le32_u[] = {0x78, 0x56, 0x34, 0x12};
-static const unsigned char le64_u[] = {0xF0, 0xDE, 0xBC, 0x9A, 0x78, 0x56, 0x34, 0x12};
+// alignas(8) so these buffers also satisfy the stdc_load8_aligned_* variants.
+alignas(8) static const unsigned char le8_u[]  = {0xAB};
+alignas(8) static const unsigned char le16_u[] = {0x34, 0x12};
+alignas(8) static const unsigned char le32_u[] = {0x78, 0x56, 0x34, 0x12};
+alignas(8) static const unsigned char le64_u[] = {0xF0, 0xDE, 0xBC, 0x9A, 0x78, 0x56, 0x34, 0x12};
 
 _Static_assert(stdc_load8_leu8(le8_u)   == (__UINT_LEAST8_TYPE__)0xAB,               "");
 _Static_assert(stdc_load8_leu16(le16_u) == (__UINT_LEAST16_TYPE__)0x1234,            "");
@@ -14,10 +15,10 @@ _Static_assert(stdc_load8_leu32(le32_u) == (__UINT_LEAST32_TYPE__)0x12345678U,  
 _Static_assert(stdc_load8_leu64(le64_u) == (__UINT_LEAST64_TYPE__)0x123456789ABCDEF0ULL, "");
 
 // BE unsigned: bytes ordered MSB-first (index 0 = highest byte)
-static const unsigned char be8_u[]  = {0xAB};
-static const unsigned char be16_u[] = {0x12, 0x34};
-static const unsigned char be32_u[] = {0x12, 0x34, 0x56, 0x78};
-static const unsigned char be64_u[] = {0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0};
+alignas(8) static const unsigned char be8_u[]  = {0xAB};
+alignas(8) static const unsigned char be16_u[] = {0x12, 0x34};
+alignas(8) static const unsigned char be32_u[] = {0x12, 0x34, 0x56, 0x78};
+alignas(8) static const unsigned char be64_u[] = {0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0};
 
 _Static_assert(stdc_load8_beu8(be8_u)   == (__UINT_LEAST8_TYPE__)0xAB,               "");
 _Static_assert(stdc_load8_beu16(be16_u) == (__UINT_LEAST16_TYPE__)0x1234,            "");
@@ -37,10 +38,10 @@ _Static_assert(stdc_load8_aligned_beu32(be32_u) == (__UINT_LEAST32_TYPE__)0x1234
 _Static_assert(stdc_load8_aligned_beu64(be64_u) == (__UINT_LEAST64_TYPE__)0x123456789ABCDEF0ULL, "");
 
 // LE signed: 0x80 in u8 = -128 as s8; {0x80, 0xFF} as u16 = -128 as s16
-static const unsigned char le8_s[]  = {0x80};
-static const unsigned char le16_s[] = {0x80, 0xFF};
-static const unsigned char le32_s[] = {0x80, 0xFF, 0xFF, 0xFF};
-static const unsigned char le64_s[] = {0x80, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+alignas(8) static const unsigned char le8_s[]  = {0x80};
+alignas(8) static const unsigned char le16_s[] = {0x80, 0xFF};
+alignas(8) static const unsigned char le32_s[] = {0x80, 0xFF, 0xFF, 0xFF};
+alignas(8) static const unsigned char le64_s[] = {0x80, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 _Static_assert(stdc_load8_les8(le8_s)   == (__INT_LEAST8_TYPE__)-128,  "");
 _Static_assert(stdc_load8_les16(le16_s) == (__INT_LEAST16_TYPE__)-128, "");
@@ -48,10 +49,10 @@ _Static_assert(stdc_load8_les32(le32_s) == (__INT_LEAST32_TYPE__)-128, "");
 _Static_assert(stdc_load8_les64(le64_s) == (__INT_LEAST64_TYPE__)-128, "");
 
 // BE signed
-static const unsigned char be8_s[]  = {0x80};
-static const unsigned char be16_s[] = {0xFF, 0x80};
-static const unsigned char be32_s[] = {0xFF, 0xFF, 0xFF, 0x80};
-static const unsigned char be64_s[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x80};
+alignas(8) static const unsigned char be8_s[]  = {0x80};
+alignas(8) static const unsigned char be16_s[] = {0xFF, 0x80};
+alignas(8) static const unsigned char be32_s[] = {0xFF, 0xFF, 0xFF, 0x80};
+alignas(8) static const unsigned char be64_s[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x80};
 
 _Static_assert(stdc_load8_bes8(be8_s)   == (__INT_LEAST8_TYPE__)-128,  "");
 _Static_assert(stdc_load8_bes16(be16_s) == (__INT_LEAST16_TYPE__)-128, "");
@@ -75,6 +76,13 @@ static const unsigned char le16_pos[] = {0x01, 0x00};
 static const unsigned char be16_pos[] = {0x00, 0x01};
 _Static_assert(stdc_load8_les16(le16_pos) == 1, "");
 _Static_assert(stdc_load8_bes16(be16_pos) == 1, "");
+
+// N=64 signed boundary: result == 2^63 is not < 2^63, so it wraps to
+// result - 2^64 == INT64_MIN, not a positive value.
+static const unsigned char le64_min[] = {0, 0, 0, 0, 0, 0, 0, 0x80};
+static const unsigned char be64_min[] = {0x80, 0, 0, 0, 0, 0, 0, 0};
+_Static_assert(stdc_load8_les64(le64_min) == (__INT_LEAST64_TYPE__)(-9223372036854775807LL - 1), "");
+_Static_assert(stdc_load8_bes64(be64_min) == (__INT_LEAST64_TYPE__)(-9223372036854775807LL - 1), "");
 
 // constexpr variable declarations require constexpr arrays as the source
 constexpr unsigned char cx_le32[] = {0x78, 0x56, 0x34, 0x12};
@@ -124,3 +132,19 @@ constexpr __UINT_LEAST32_TYPE__ null_ce_nullptr = stdc_load8_leu32(nullptr); // 
 
 constexpr unsigned char one[] = {0x42};
 constexpr __UINT_LEAST8_TYPE__ oob_past_end = stdc_load8_leu8(one + 1); // expected-error{{must be initialized by a constant expression}} expected-note{{cannot refer to element 1 of array of 1 element in a constant expression}}
+
+// aligned_* variants require the pointer to be aligned to the result type.
+alignas(8) constexpr unsigned char align_buf[9] = {0, 0x78, 0x56, 0x34, 0x12, 0, 0, 0, 0};
+
+constexpr __UINT_LEAST16_TYPE__ misaligned16 = stdc_load8_aligned_leu16(align_buf + 1); // expected-error{{must be initialized by a constant expression}} expected-note{{'stdc_load8_aligned_leu16' requires a pointer aligned to 2 bytes, but the given pointer is only aligned to 1 byte}}
+constexpr __UINT_LEAST32_TYPE__ misaligned32 = stdc_load8_aligned_leu32(align_buf + 1); // expected-error{{must be initialized by a constant expression}} expected-note{{'stdc_load8_aligned_leu32' requires a pointer aligned to 4 bytes, but the given pointer is only aligned to 1 byte}}
+constexpr __UINT_LEAST64_TYPE__ misaligned64 = stdc_load8_aligned_leu64(align_buf + 1); // expected-error{{must be initialized by a constant expression}} expected-note{{'stdc_load8_aligned_leu64' requires a pointer aligned to 8 bytes, but the given pointer is only aligned to 1 byte}}
+
+// Offset 2 from an 8-byte aligned base is only 2-byte aligned, enough for a
+// 16-bit load but not a 32-bit one.
+constexpr __UINT_LEAST32_TYPE__ misaligned32_half = stdc_load8_aligned_leu32(align_buf + 2); // expected-error{{must be initialized by a constant expression}} expected-note{{'stdc_load8_aligned_leu32' requires a pointer aligned to 4 bytes, but the given pointer is only aligned to 2 bytes}}
+
+// Offset 4 is still 4-byte aligned, enough for a 16-bit (2-byte) load.
+// align_buf[4..5] == {0x12, 0x00}, so LE u16 == 0x0012.
+constexpr __UINT_LEAST16_TYPE__ partially_aligned16 = stdc_load8_aligned_leu16(align_buf + 4);
+static_assert(partially_aligned16 == 0x0012, "");
