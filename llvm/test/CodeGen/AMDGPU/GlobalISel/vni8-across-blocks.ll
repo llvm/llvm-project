@@ -113,14 +113,9 @@ define amdgpu_kernel void @v5i8_liveout(ptr addrspace(1) %src1, ptr addrspace(1)
 ; GFX906-NEXT:    v_and_b32_e32 v2, 0xff, v2
 ; GFX906-NEXT:  .LBB2_2: ; %bb.2
 ; GFX906-NEXT:    s_or_b64 exec, exec, s[0:1]
-; GFX906-NEXT:    v_mov_b32_e32 v4, 0
-; GFX906-NEXT:    v_lshrrev_b32_e32 v0, 8, v1
-; GFX906-NEXT:    v_lshrrev_b32_e32 v3, 24, v1
-; GFX906-NEXT:    global_store_byte v4, v1, s[6:7]
-; GFX906-NEXT:    global_store_byte v4, v0, s[6:7] offset:1
-; GFX906-NEXT:    global_store_byte_d16_hi v4, v1, s[6:7] offset:2
-; GFX906-NEXT:    global_store_byte v4, v3, s[6:7] offset:3
-; GFX906-NEXT:    global_store_byte v4, v2, s[6:7] offset:4
+; GFX906-NEXT:    v_mov_b32_e32 v0, 0
+; GFX906-NEXT:    global_store_dword v0, v1, s[6:7]
+; GFX906-NEXT:    global_store_byte v0, v2, s[6:7] offset:4
 ; GFX906-NEXT:    s_endpgm
 entry:
   %idx = call i32 @llvm.amdgcn.workitem.id.x()
