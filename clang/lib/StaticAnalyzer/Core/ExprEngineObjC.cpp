@@ -256,36 +256,21 @@ void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,
 
   // Proceed with evaluate the message expression.
   ExplodedNodeSet dstEval;
-  NodeBuilder Bldr(dstGenericPrevisit, dstEval, *currBldrCtx);
 
-  for (ExplodedNodeSet::iterator DI = dstGenericPrevisit.begin(),
-       DE = dstGenericPrevisit.end(); DI != DE; ++DI) {
-    ExplodedNode *Pred = *DI;
+  for (ExplodedNode *Pred : dstGenericPrevisit) {
     ProgramStateRef State = Pred->getState();
     CallEventRef<ObjCMethodCall> UpdatedMsg = Msg.cloneWithState(State);
 
-    if (UpdatedMsg->isInstanceMessage()) {
-      SVal recVal = UpdatedMsg->getReceiverSVal();
-      if (!recVal.isUndef()) {
-        if (ObjCNoRet.isImplicitNoReturn(ME)) {
-          // If we raise an exception, for now treat it as a sink.
-          // Eventually we will want to handle exceptions properly.
-          Bldr.generateSink(ME, Pred, State);
-          continue;
-        }
-      }
-    } else {
-      // Check for special class methods that are known to not return
-      // and that we should treat as a sink.
-      if (ObjCNoRet.isImplicitNoReturn(ME)) {
-        // If we raise an exception, for now treat it as a sink.
-        // Eventually we will want to handle exceptions properly.
-        Bldr.generateSink(ME, Pred, Pred->getState());
-        continue;
-      }
+    if (ObjCNoRet.isImplicitNoReturn(ME) &&
+        !(UpdatedMsg->isInstanceMessage() &&
+          UpdatedMsg->getReceiverSVal().isUndef())) {
+      // If we raise an exception, for now treat it as a sink.
+      // Eventually we will want to handle exceptions properly.
+      Engine.makePostStmtNode(ME, State, Pred, /*MarkAsSink=*/true);
+      continue;
     }
 
-    defaultEvalCall(Bldr, Pred, *UpdatedMsg);
+    defaultEvalCall(dstEval, Pred, *UpdatedMsg);
   }
 
   // If there were constructors called for object-type arguments, clean them up.
