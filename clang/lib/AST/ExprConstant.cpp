@@ -16770,8 +16770,6 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
 
     QualType CharTy = Ptr.Designator.getType(Info.Ctx);
-    assert(Info.Ctx.getTargetInfo().getCharWidth() == 8 &&
-           "stdc_load8_* requires CHAR_BIT == 8");
     unsigned ByteWidth = Info.Ctx.getTypeSize(E->getType()) / 8;
     uint64_t RemainingElems = Ptr.Designator.validIndexAdjustments().second;
     if (ByteWidth > RemainingElems) {

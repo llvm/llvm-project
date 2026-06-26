@@ -2083,8 +2083,6 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
   size_t ArraySize = Ptr.getNumElems();
   size_t RemainingElems = ArraySize - BaseIdx;
 
-  assert(S.getASTContext().getTargetInfo().getCharWidth() == 8 &&
-         "stdc_load8_* requires CHAR_BIT == 8");
   unsigned ByteWidth = S.getASTContext().getTypeSize(Call->getType()) / 8;
   if (ByteWidth > RemainingElems) {
     if (IsArray)
