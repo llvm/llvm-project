@@ -2890,9 +2890,8 @@ template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool CastNoOverflow(InterpState &S, CodePtr OpPC) {
   T Source = S.Stk.pop<T>();
   APSInt Val = Source.toAPSInt();
-  if (Val.isNegative() || Val.getActiveBits() > 63) {
+  if (Val.isNegative() || Val.getActiveBits() > 63)
     return Invalid(S, OpPC);
-  }
   S.Stk.push<Integral<64, true>>(
       Integral<64, true>::from((int64_t)Val.getZExtValue()));
   return true;
