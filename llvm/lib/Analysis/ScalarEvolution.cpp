@@ -4714,7 +4714,7 @@ ArrayRef<Value *> ScalarEvolution::getSCEVValues(const SCEV *S) {
 /// cannot be used separately. eraseValueFromMap should be used to remove
 /// V from ValueExprMap and ExprValueMap at the same time.
 void ScalarEvolution::eraseValueFromMap(Value *V) {
-  ValueExprMapType::iterator I = ValueExprMap.find_as(V);
+  ValueExprMapType::iterator I = ValueExprMap.find(V);
   if (I != ValueExprMap.end()) {
     auto EVIt = ExprValueMap.find(I->second);
     bool Removed = EVIt->second.remove(V);
@@ -4728,9 +4728,9 @@ void ScalarEvolution::insertValueToMap(Value *V, const SCEV *S) {
   // A recursive query may have already computed the SCEV. It should be
   // equivalent, but may not necessarily be exactly the same, e.g. due to lazily
   // inferred nowrap flags.
-  auto It = ValueExprMap.find_as(V);
+  auto It = ValueExprMap.find(V);
   if (It == ValueExprMap.end()) {
-    ValueExprMap.insert({SCEVCallbackVH(V, this), S});
+    ValueExprMap.insert({V, S});
     ExprValueMap[S].insert(V);
   }
 }
@@ -4748,7 +4748,7 @@ const SCEV *ScalarEvolution::getSCEV(Value *V) {
 const SCEV *ScalarEvolution::getExistingSCEV(Value *V) {
   assert(isSCEVable(V->getType()) && "Value is not SCEVable!");
 
-  ValueExprMapType::iterator I = ValueExprMap.find_as(V);
+  ValueExprMapType::iterator I = ValueExprMap.find(V);
   if (I != ValueExprMap.end()) {
     const SCEV *S = I->second;
     assert(checkValidity(S) &&
@@ -5972,7 +5972,7 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
   if (!BEValueV || !StartValueV)
     return nullptr;
 
-  assert(ValueExprMap.find_as(PN) == ValueExprMap.end() &&
+  assert(ValueExprMap.find(PN) == ValueExprMap.end() &&
          "PHI node already processed?");
 
   // First, try to find AddRec expression without creating a fictituos symbolic
@@ -8774,8 +8774,7 @@ void ScalarEvolution::visitAndClearUsers(
     if (!isSCEVable(I->getType()) && !isa<WithOverflowInst>(I))
       continue;
 
-    ValueExprMapType::iterator It =
-        ValueExprMap.find_as(static_cast<Value *>(I));
+    ValueExprMapType::iterator It = ValueExprMap.find(static_cast<Value *>(I));
     if (It != ValueExprMap.end()) {
       ToForget.push_back(It->second);
       eraseValueFromMap(It->first);
@@ -13982,29 +13981,37 @@ const SCEV *ScalarEvolution::getElementSize(Instruction *Inst) {
 }
 
 //===----------------------------------------------------------------------===//
-//                   SCEVCallbackVH Class Implementation
+//                   SCEVInstructionListener Implementation
 //===----------------------------------------------------------------------===//
 
-void ScalarEvolution::SCEVCallbackVH::deleted() {
-  assert(SE && "SCEVCallbackVH called with a null ScalarEvolution!");
-  if (PHINode *PN = dyn_cast<PHINode>(getValPtr()))
+void ScalarEvolution::SCEVInstructionListener::onRemoved(
+    InstructionListener *Self, Instruction *I) {
+  ScalarEvolution *SE = static_cast<SCEVInstructionListener *>(Self)->SE;
+  if (PHINode *PN = dyn_cast<PHINode>(I))
     SE->ConstantEvolutionLoopExitValue.erase(PN);
-  SE->eraseValueFromMap(getValPtr());
-  // this now dangles!
+  // Mirror SCEVCallbackVH::deleted(): drop the V <-> SCEV mapping first, then
+  // recursively forget any cached SCEVs that transitively depend on
+  // SCEVUnknown(I). The order is preserved from the CallbackVH path so this
+  // commit is a pure mechanism swap with no behavioral change.
+  if (SE->isSCEVable(I->getType())) {
+    const SCEV *S = SE->getExistingSCEV(I);
+    SE->eraseValueFromMap(I);
+    if (S)
+      SE->forgetMemoizedResults({S});
+  } else {
+    SE->eraseValueFromMap(I);
+  }
 }
 
-void ScalarEvolution::SCEVCallbackVH::allUsesReplacedWith(Value *V) {
-  assert(SE && "SCEVCallbackVH called with a null ScalarEvolution!");
-
-  // Forget all the expressions associated with users of the old value,
-  // so that future queries will recompute the expressions using the new
-  // value.
-  SE->forgetValue(getValPtr());
-  // this now dangles!
+void ScalarEvolution::SCEVInstructionListener::onRAUW(InstructionListener *Self,
+                                                      Instruction *Old,
+                                                      Value *) {
+  ScalarEvolution *SE = static_cast<SCEVInstructionListener *>(Self)->SE;
+  if (!SE->isSCEVable(Old->getType()))
+    return;
+  if (SE->ValueExprMap.count(Old))
+    SE->forgetValue(Old);
 }
-
-ScalarEvolution::SCEVCallbackVH::SCEVCallbackVH(Value *V, ScalarEvolution *se)
-  : CallbackVH(V), SE(se) {}
 
 //===----------------------------------------------------------------------===//
 //                   ScalarEvolution Class Implementation
@@ -14014,8 +14021,8 @@ ScalarEvolution::ScalarEvolution(Function &F, TargetLibraryInfo &TLI,
                                  AssumptionCache &AC, DominatorTree &DT,
                                  LoopInfo &LI)
     : F(F), DL(F.getDataLayout()), TLI(TLI), AC(AC), DT(DT), LI(LI),
-      CouldNotCompute(new SCEVCouldNotCompute()), ValuesAtScopes(64),
-      LoopDispositions(64), BlockDispositions(64) {
+      CouldNotCompute(new SCEVCouldNotCompute()), InstListener(F, this),
+      ValuesAtScopes(64), LoopDispositions(64), BlockDispositions(64) {
   // To use guards for proving predicates, we need to scan every instruction in
   // relevant basic blocks, and not just terminators.  Doing this is a waste of
   // time if the IR does not actually contain any calls to
@@ -14034,7 +14041,7 @@ ScalarEvolution::ScalarEvolution(Function &F, TargetLibraryInfo &TLI,
 ScalarEvolution::ScalarEvolution(ScalarEvolution &&Arg)
     : F(Arg.F), DL(Arg.DL), HasGuards(Arg.HasGuards), TLI(Arg.TLI), AC(Arg.AC),
       DT(Arg.DT), LI(Arg.LI), CouldNotCompute(std::move(Arg.CouldNotCompute)),
-      ValueExprMap(std::move(Arg.ValueExprMap)),
+      ValueExprMap(std::move(Arg.ValueExprMap)), InstListener(F, this),
       PendingLoopPredicates(std::move(Arg.PendingLoopPredicates)),
       PendingMerges(std::move(Arg.PendingMerges)),
       ConstantMultipleCache(std::move(Arg.ConstantMultipleCache)),
@@ -14633,7 +14640,7 @@ void ScalarEvolution::forgetMemoizedResultsImpl(const SCEV *S) {
   auto ExprIt = ExprValueMap.find(S);
   if (ExprIt != ExprValueMap.end()) {
     for (Value *V : ExprIt->second) {
-      auto ValueIt = ValueExprMap.find_as(V);
+      auto ValueIt = ValueExprMap.find(V);
       if (ValueIt != ValueExprMap.end())
         ValueExprMap.erase(ValueIt);
     }

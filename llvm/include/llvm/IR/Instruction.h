@@ -1093,6 +1093,10 @@ private:
                                      ilist_parent<BasicBlock>>;
   friend class BasicBlock; // For renumbering.
 
+  /// Overrides ilist-provided setParent to notify per-function
+  /// InstructionListeners when this instruction is removed.
+  void setParent(BasicBlock *P);
+
   // Shadow Value::setValueSubclassData with a private forwarding method so that
   // subclasses cannot accidentally use it.
   void setValueSubclassData(unsigned short D) {

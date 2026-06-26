@@ -31,6 +31,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/InstructionListener.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
@@ -1639,19 +1640,19 @@ public:
   };
 
 private:
-  /// A CallbackVH to arrange for ScalarEvolution to be notified whenever a
-  /// Value is deleted.
-  class LLVM_ABI SCEVCallbackVH final : public CallbackVH {
+  /// A per-function listener that invalidates SCEV caches when an instruction
+  /// is removed or RAUW'd. Replaces per-value SCEVCallbackVH handles.
+  class SCEVInstructionListener : public InstructionListener {
     ScalarEvolution *SE;
 
-    void deleted() override;
-    void allUsesReplacedWith(Value *New) override;
+    static void onRemoved(InstructionListener *Self, Instruction *I);
+    static void onRAUW(InstructionListener *Self, Instruction *Old, Value *New);
 
   public:
-    SCEVCallbackVH(Value *V, ScalarEvolution *SE = nullptr);
+    SCEVInstructionListener(Function &F, ScalarEvolution *SE)
+        : InstructionListener(F, &onRemoved, &onRAUW), SE(SE) {}
   };
 
-  friend class SCEVCallbackVH;
   friend class SCEVExpander;
   friend class SCEVUnknown;
   friend class VPSCEVExpander;
@@ -1697,11 +1698,13 @@ private:
   ExprValueMapType ExprValueMap;
 
   /// The type for ValueExprMap.
-  using ValueExprMapType =
-      DenseMap<SCEVCallbackVH, const SCEV *, DenseMapInfo<Value *>>;
+  using ValueExprMapType = DenseMap<Value *, const SCEV *>;
 
   /// This is a cache of the values we have analyzed so far.
   ValueExprMapType ValueExprMap;
+
+  /// Listener that invalidates SCEV caches on instruction removal/RAUW.
+  SCEVInstructionListener InstListener;
 
   /// This is a cache for expressions that got folded to a different existing
   /// SCEV.
