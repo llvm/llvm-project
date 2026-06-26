@@ -19,7 +19,7 @@ class DiviFxTest : public LIBC_NAMESPACE::testing::Test {
   using FXRep = LIBC_NAMESPACE::fixed_point::FXRep<FXType>;
 
   static constexpr FXType zero = FXRep::ZERO();
-  static constexpr FXType min = FXRep::MIN();
+  static constexpr FXType max = FXRep::MAX();
   static constexpr FXType one_half = FXRep::ONE_HALF();
   static constexpr FXType one_fourth = FXRep::ONE_FOURTH();
 
@@ -28,6 +28,7 @@ public:
 
   void testBasicNumbers(DiviFxFunc func) {
     constexpr bool is_signed = (FXRep::SIGN_LEN > 0);
+    constexpr bool has_integral = (FXRep::INTEGRAL_LEN > 0);
 
     EXPECT_EQ(func(1, one_fourth), static_cast<IntType>(4));
     EXPECT_EQ(func(1, one_half), static_cast<IntType>(2));
@@ -53,14 +54,38 @@ public:
       EXPECT_EQ(func(-2, 3 * one_fourth), static_cast<IntType>(-2));
       EXPECT_EQ(func(2, -3 * one_fourth), static_cast<IntType>(-2));
     } else {
-      // min of unsigned type = 0
-      EXPECT_EQ(func(min, one_half), static_cast<IntType>(0));
-      EXPECT_EQ(func(min, one_fourth), static_cast<IntType>(0));
+      EXPECT_EQ(func(0, one_half), static_cast<IntType>(0));
+      EXPECT_EQ(func(0, one_fourth), static_cast<IntType>(0));
+    }
+
+    if constexpr (has_integral) {
+      // only run these tests for accum types that can represent the operands
+      // below
+      constexpr FXType largest_positive = static_cast<FXType>(4);
+
+      if constexpr (max >= largest_positive) {
+        EXPECT_EQ(func(3, 2.5), static_cast<IntType>(1));
+        EXPECT_EQ(func(2, 3.5), static_cast<IntType>(0));
+        EXPECT_EQ(func(3, 1.5), static_cast<IntType>(2));
+        EXPECT_EQ(func(4, 2.0), static_cast<IntType>(2));
+
+        if constexpr (is_signed) {
+          EXPECT_EQ(func(2, -3.5), static_cast<IntType>(0));
+          EXPECT_EQ(func(-3, 2.5), static_cast<IntType>(-1));
+          EXPECT_EQ(func(-3, 1.5), static_cast<IntType>(-2));
+          EXPECT_EQ(func(-3, -2.5), static_cast<IntType>(1));
+        }
+      }
     }
   }
 
   void testInvalidNumbers(DiviFxFunc func) {
+    constexpr bool has_integral = (FXRep::INTEGRAL_LEN > 0);
+
     EXPECT_DEATH([func] { func(1, zero); }, WITH_SIGNAL(-1));
+    if constexpr (has_integral) {
+      EXPECT_DEATH([func] { func(2, zero); }, WITH_SIGNAL(-1));
+    }
   }
 };
 

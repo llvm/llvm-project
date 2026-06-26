@@ -1,4 +1,4 @@
-//===-- Unittests for divir -----------------------------------------------===//
+//===-- Unittests for diviur ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,6 +9,6 @@
 #include "DiviFxTest.h"
 
 #include "llvm-libc-macros/stdfix-macros.h"
-#include "src/stdfix/divir.h"
+#include "src/stdfix/diviur.h"
 
-LIST_DIVIFX_TESTS(r, int, fract, LIBC_NAMESPACE::divir);
+LIST_DIVIFX_TESTS(ur, unsigned int, unsigned fract, LIBC_NAMESPACE::diviur);

@@ -102,7 +102,7 @@ foreach(suffix IN ITEMS r)
   )
 endforeach()
 
-foreach(suffix IN ITEMS r)
+foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
   add_entrypoint_object(
     divi${suffix}
     HDRS

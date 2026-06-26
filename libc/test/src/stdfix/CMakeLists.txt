@@ -147,7 +147,7 @@ foreach(suffix IN ITEMS r)
   )
 endforeach()
 
-foreach(suffix IN ITEMS r)
+foreach(suffix IN ITEMS r lr k lk ur ulr uk ulk)
   add_libc_test(
     divi${suffix}_test
     SUITE
