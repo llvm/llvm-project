@@ -38,6 +38,9 @@ static void getKernelVersion(uint32_t *Val) {
   // major, minor, release
   struct UtsNameTy UtsName;
   int Ret = __uname(&UtsName);
+  if (Ret < 0) {
+    // handle here
+  }
   const char *Buf = UtsName.release;
   const char *End = Buf + strLen(Buf);
   const char Delims[2][2] = {".", "."};
@@ -70,7 +73,7 @@ static bool hasPagecacheTHPSupport() {
     return false;
 
   memset(Buf, 0, sizeof(Buf));
-  const long Res = __read(FD, Buf, sizeof(Buf));
+  const ssize_t Res = __read(FD, Buf, sizeof(Buf));
   if (Res < 0)
     return false;
 
@@ -114,7 +117,7 @@ static void hugifyForOldKernel(uint8_t *From, uint8_t *To) {
 
   __prctl(PR_SET_THP_DISABLE, 0, 0, 0, 0);
   // Maps out the existing hot code.
-  const void *Addr = __mmap(reinterpret_cast<uint64_t>(From), Size, PROT_READ | PROT_WRITE,
+  const void *Addr = __mmap(From, Size, PROT_READ | PROT_WRITE,
                             MAP_FIXED | MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   if (isErrValue(Addr)) {
     char Msg[] =
