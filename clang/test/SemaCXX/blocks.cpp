@@ -171,5 +171,5 @@ namespace test8{
 }
 
 namespace gh189247 {
-  template<void (^)()> struct A; // expected-error {{a non-type template parameter cannot have type 'void (^)()'}}
+  template<void (^)()> struct A; 
 }

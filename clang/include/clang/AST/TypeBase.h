@@ -2661,6 +2661,8 @@ public:
   bool isFunctionProtoType() const { return getAs<FunctionProtoType>(); }
   bool isPointerType() const;
   bool isPointerOrReferenceType() const;
+  bool isPointerOrBlockPointerType() const;
+  bool isPointerOrBlockPointerOrReferenceType() const;
   bool isSignableType(const ASTContext &Ctx) const;
   bool isSignablePointerType() const;
   bool isSignableIntegerType(const ASTContext &Ctx) const;
@@ -8687,6 +8689,14 @@ inline bool Type::isPointerType() const {
 
 inline bool Type::isPointerOrReferenceType() const {
   return isPointerType() || isReferenceType();
+}
+
+inline bool Type::isPointerOrBlockPointerType() const {
+  return isPointerType() || isBlockPointerType();
+}
+
+inline bool Type::isPointerOrBlockPointerOrReferenceType() const {
+  return isPointerOrBlockPointerType() || isReferenceType();
 }
 
 inline bool Type::isAnyPointerType() const {

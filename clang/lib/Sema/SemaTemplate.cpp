@@ -1448,11 +1448,6 @@ QualType Sema::CheckNonTypeTemplateParameterType(QualType T,
     return QualType();
   }
 
-  if (T->isBlockPointerType()) {
-    Diag(Loc, diag::err_template_nontype_parm_bad_type) << T;
-    return QualType();
-  }
-
   // C++ [temp.param]p4:
   //
   // A non-type template-parameter shall have one of the following
@@ -1474,6 +1469,10 @@ QualType Sema::CheckNonTypeTemplateParameterType(QualType T,
     // are ignored when determining its type.
     return T.getUnqualifiedType();
   }
+
+  // Allow block pointer types as an extension.
+  if (T->isBlockPointerType())
+    return T.getUnqualifiedType();
 
   // C++ [temp.param]p8:
   //
@@ -6675,8 +6674,8 @@ CheckTemplateArgumentIsCompatibleWithParameter(Sema &S, NamedDecl *Param,
                                                QualType ParamType, Expr *ArgIn,
                                                Expr *Arg, QualType ArgType) {
   bool ObjCLifetimeConversion;
-  if (ParamType->isPointerType() &&
-      !ParamType->castAs<PointerType>()->getPointeeType()->isFunctionType() &&
+  if (ParamType->isPointerOrBlockPointerType() &&
+      !ParamType->getPointeeType()->isFunctionType() &&
       S.IsQualificationConversion(ArgType, ParamType, false,
                                   ObjCLifetimeConversion)) {
     // For pointer-to-object types, qualification conversions are
@@ -6830,7 +6829,7 @@ static bool CheckTemplateArgumentAddressOfObjectOrFunction(
     Entity = CUE->getGuidDecl();
 
   // If our parameter has pointer type, check for a null template value.
-  if (ParamType->isPointerType() || ParamType->isNullPtrType()) {
+  if (ParamType->isPointerOrBlockPointerType() || ParamType->isNullPtrType()) {
     switch (isNullPointerValueTemplateArgument(S, Param, ParamType, ArgIn,
                                                Entity)) {
     case NPV_NullPointer:
@@ -7364,9 +7363,10 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
     if (Value.isLValue()) {
       APValue::LValueBase Base = Value.getLValueBase();
       auto *VD = const_cast<ValueDecl *>(Base.dyn_cast<const ValueDecl *>());
+      auto *E = const_cast<Expr *>(Base.dyn_cast<const Expr *>());
       //   For a non-type template-parameter of pointer or reference type,
       //   the value of the constant expression shall not refer to
-      assert(ParamType->isPointerOrReferenceType() ||
+      assert(ParamType->isPointerOrBlockPointerOrReferenceType() ||
              ParamType->isNullPtrType());
       // -- a temporary object
       // -- a string literal
@@ -7374,7 +7374,8 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
       // -- a predefined __func__ variable
       if (Base &&
           (!VD ||
-           isa<LifetimeExtendedTemporaryDecl, UnnamedGlobalConstantDecl>(VD))) {
+           isa<LifetimeExtendedTemporaryDecl, UnnamedGlobalConstantDecl>(VD)) &&
+          (!E || !isa<BlockExpr>(E))) {
         Diag(Arg->getBeginLoc(), diag::err_template_arg_not_decl_ref)
             << Arg->getSourceRange();
         return ExprError();
@@ -7673,13 +7674,16 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
     return Arg;
   }
 
-  if (ParamType->isPointerType()) {
+  if (ParamType->isPointerOrBlockPointerType()) {
     //   -- for a non-type template-parameter of type pointer to
     //      object, qualification conversions (4.4) and the
     //      array-to-pointer conversion (4.2) are applied.
     // C++0x also allows a value of std::nullptr_t.
-    assert(ParamType->getPointeeType()->isIncompleteOrObjectType() &&
-           "Only object pointers allowed here");
+    if (ParamType->isPointerType())
+      assert(ParamType->getPointeeType()->isIncompleteOrObjectType() &&
+             "Only object pointers allowed here");
+    else
+      assert(ParamType->isBlockPointerType() && "Expected block pointer");
 
     if (CheckTemplateArgumentAddressOfObjectOrFunction(
             *this, Param, ParamType, Arg, IsSpecified, SugaredConverted,
@@ -7985,6 +7989,10 @@ ExprResult Sema::BuildExpressionFromDeclTemplateArgument(
       Context.hasSimilarType(ElemT, ParamType->getPointeeType())) {
     // Decay an array argument if we want a pointer to its first element.
     RefExpr = DefaultFunctionArrayConversion(RefExpr.get());
+    if (RefExpr.isInvalid())
+      return ExprError();
+  } else if (ParamType->isBlockPointerType()) {
+    RefExpr = DefaultLvalueConversion(RefExpr.get());
     if (RefExpr.isInvalid())
       return ExprError();
   } else if (ParamType->isPointerType() || ParamType->isMemberPointerType()) {

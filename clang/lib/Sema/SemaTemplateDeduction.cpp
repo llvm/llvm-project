@@ -4988,6 +4988,7 @@ TemplateDeductionResult Sema::DeduceTemplateArguments(
   // both P and A are pointers or member pointers. In this case, we
   // just ignore cv-qualifiers completely).
   if ((P->isPointerType() && A->isPointerType()) ||
+      (P->isBlockPointerType() && A->isBlockPointerType()) ||
       (P->isMemberPointerType() && A->isMemberPointerType()))
     TDF |= TDF_IgnoreQualifiers;
 
