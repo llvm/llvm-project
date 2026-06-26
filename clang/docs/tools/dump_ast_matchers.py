@@ -5,32 +5,29 @@
 
 import collections
 import re
-import os
+import sys
+from pathlib import Path
 
-CURRENT_DIR = os.path.dirname(__file__)
+CURRENT_DIR = Path(__file__).resolve().parent
+CLANG_AST_DIR = CURRENT_DIR / ".." / ".." / "include" / "clang" / "AST"
+MATCHERS_FILE = (
+    CURRENT_DIR / ".." / ".." / "include" / "clang" / "ASTMatchers" / "ASTMatchers.h"
+)
+HTML_FILE = CURRENT_DIR / ".." / "LibASTMatchersReference.html"
+
+DOXYGEN_URL = "https://clang.llvm.org/doxygen"
 
 
 def _build_local_class_set():
-    """Return the set of class names declared in clang/include/clang/AST/"""
+    """Return the set of class names declared in clang/include/clang/AST/."""
+    class_re = re.compile(r"\b(?:class|struct)\s+([A-Z][a-zA-Z0-9_]+)\b")
     classes = set()
-    ast_dir = os.path.join(CURRENT_DIR, "../../include/clang/AST")
-    for fname in os.listdir(ast_dir):
-        if not fname.endswith(".h"):
-            continue
-        try:
-            content = open(os.path.join(ast_dir, fname)).read()
-        except OSError:
-            continue
-        for m in re.finditer(r"\b(?:class|struct)\s+([A-Z][a-zA-Z0-9_]+)\b", content):
-            classes.add(m.group(1))
+    for header in sorted(CLANG_AST_DIR.glob("*.h")):
+        classes.update(class_re.findall(header.read_text(encoding="utf-8")))
     return classes
 
 
 CLANG_CLASSES = _build_local_class_set()
-MATCHERS_FILE = os.path.join(
-    CURRENT_DIR, "../../include/clang/ASTMatchers/ASTMatchers.h"
-)
-HTML_FILE = os.path.join(CURRENT_DIR, "../LibASTMatchersReference.html")
 
 # Each matcher is documented in one row of the form:
 #   result | name | argA
@@ -66,7 +63,7 @@ def esc(text):
         if name not in CLANG_CLASSES:
             print("Did not find %s in clang headers" % name)
             return m.group(0)
-        url = "https://clang.llvm.org/doxygen/classclang_1_1%s.html" % name
+        url = f"{DOXYGEN_URL}/classclang_1_1{name}.html"
         return r'Matcher&lt;<a href="%s">%s</a>&gt;' % (url, name)
 
     text = re.sub(r"Matcher&lt;([^\*&]+)&gt;", link_if_exists, text)
@@ -554,7 +551,7 @@ comment = ""
 declaration = ""
 allowed_types = []
 body = False
-for line in open(MATCHERS_FILE).read().splitlines():
+for line in MATCHERS_FILE.read_text().splitlines():
     if body:
         if line.strip() and line[0] == "}":
             if declaration:
@@ -589,7 +586,7 @@ node_matcher_table = sort_table("DECL", node_matchers)
 narrowing_matcher_table = sort_table("NARROWING", narrowing_matchers)
 traversal_matcher_table = sort_table("TRAVERSAL", traversal_matchers)
 
-reference = open(HTML_FILE).read()
+reference = HTML_FILE.read_text()
 reference = re.sub(
     r"<!-- START_DECL_MATCHERS.*END_DECL_MATCHERS -->",
     node_matcher_table,
