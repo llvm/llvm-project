@@ -1917,6 +1917,28 @@ public:
 #endif
     _registers.__pc = value;
   }
+  __attribute__((target("pauth-lr"))) void setIPPAuthLR(uint64_t value,
+                                                        uint64_t signing_pc) {
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+#if __has_builtin(__builtin_ptrauth_auth_with_pc_and_resign)
+    value = (uint64_t)ptrauth_auth_with_pc_and_resign(
+        (void *)value, ptrauth_key_process_dependent_code, (void *)getSP(),
+        (void *)signing_pc, ptrauth_key_return_address, &_registers.__pc);
+#else
+    register uint64_t x17 __asm("x17") = value;
+    register uint64_t x16 __asm("x16") = getSP();
+    register uint64_t x15 __asm("x15") = signing_pc;
+    uint64_t resignDisc = (uint64_t)&_registers.__pc;
+    asm("autib171615\n\t"
+        "pacib %0, %3"
+        : "+r"(x17)
+        : "r"(x16), "r"(x15), "r"(resignDisc));
+    value = x17;
+#endif
+#endif
+    _registers.__pc = value;
+  }
+
   uint64_t getFP() const { return _registers.__fp; }
   void setFP(uint64_t value) { _registers.__fp = value; }
 
