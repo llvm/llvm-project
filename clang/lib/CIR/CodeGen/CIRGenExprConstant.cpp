@@ -55,6 +55,10 @@ class RecordBuilderInitList {
     return std::holds_alternative<const InitListExpr *>(value);
   }
 
+  bool holdsAPValue() const {
+    return std::holds_alternative<APValue>(value);
+  }
+
   const Expr *getExpr() {
     assert(holdsExpr());
     return std::get<const InitListExpr *>(value)->getInit(initIdx);
@@ -66,7 +70,7 @@ class RecordBuilderInitList {
   }
 
   const APValue getAPVal() {
-    assert(!holdsExpr());
+    assert(holdsAPValue());
     if (isUnion)
       return std::get<APValue>(value).getUnionValue();
     return std::get<APValue>(value).getStructField(initIdx);
@@ -116,9 +120,8 @@ public:
   // represented in the AST.
   void advanceSkip(const FieldDecl *fd) {
     assert(!isUnion);
-    if (holdsExpr())
-      if (fd->isUnnamedBitField())
-        return;
+    if (holdsExpr() && fd->isUnnamedBitField())
+      return;
     ++initIdx;
   }
   // Advance the iterator on a 'normal' field, which always just increments the
@@ -133,7 +136,7 @@ public:
     // because classic codegen does. If we decide to, we'll probably have to do
     // something where we get through the init-list elements to make this work
     // right (sub-init-list?).
-    assert(!holdsExpr());
+    assert(holdsAPValue());
 
     return std::get<APValue>(value).getStructBase(idx);
   }
@@ -336,12 +339,13 @@ mlir::Attribute buildRecordHelper(ConstantEmitter &emitter,
   // probably leave the padding as undef if !CGM.ZeroInitPadding, but that ends
   // up being quite an additional bit of complexity (but could be implemented in
   // the field searching above).
-  for (unsigned i = 0; i < elements.size(); ++i)
+  for (unsigned i = 0; i < elements.size(); ++i) {
     if (!elements[i]) {
       elements[i] = builder.getZeroInitAttr(recordTy.getElementType(i));
       if (!elements[i])
         return {};
     }
+  }
 
   return builder.getConstRecordOrZeroAttr(builder.getArrayAttr(elements),
                                           /*packed=*/recordTy.getPacked(),
@@ -1367,7 +1371,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     if (elts.empty())
       return cir::ZeroAttr::get(desiredType);
 
-    if (desiredType.getSize() == 0 && elts.size() > 0) {
+    if (desiredType.getSize() == 0 && numElements > 0) {
       cgm.errorNYI("ConstExprEmitter::tryEmitPrivate array type as flexible "
                    "array member");
       return {};

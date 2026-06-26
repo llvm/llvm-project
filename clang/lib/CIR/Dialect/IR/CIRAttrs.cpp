@@ -215,7 +215,7 @@ ConstRecordAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     return emitError() << "expected !cir.struct or !cir.union type";
 
   // union record initializer is just a single element that has to match one of
-  // the fields in the union (the new ative member).
+  // the fields in the union (the new active member).
   if (sTy.isUnion()) {
     if (members.size() != 1)
       return emitError() << "union constant must have exactly one element, got "
