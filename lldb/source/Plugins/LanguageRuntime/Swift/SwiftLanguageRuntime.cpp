@@ -156,7 +156,7 @@ static bool IsStaticSwiftRuntime(Module &image) {
 }
 
 static bool IsStaticSwiftConcurrency(Module &image) {
-  static const ConstString task_switch_symbol("_swift_task_switch");
+  static const ConstString task_switch_symbol("swift_task_switch");
   return image.FindFirstSymbolWithNameAndType(task_switch_symbol);
 }
 
