@@ -1920,6 +1920,9 @@ public:
   __attribute__((target("pauth-lr"))) void setIPPAuthLR(uint64_t value,
                                                         uint64_t signing_pc) {
 #if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+#ifndef __has_builtin
+#define __has_buitlin(x) 0
+#endif
 #if __has_builtin(__builtin_ptrauth_auth_with_pc_and_resign)
     value = (uint64_t)ptrauth_auth_with_pc_and_resign(
         (void *)value, ptrauth_key_process_dependent_code, (void *)getSP(),
