@@ -1264,7 +1264,8 @@ bool llvm::maskContainsAllOneOrUndef(Value *Mask) {
          "Mask must be a vector of i1");
 
   auto AllOneOrUndef = m_CombineOr(m_AllOnes(), m_UndefValue());
-  return match(Mask, m_CombineOr(AllOneOrUndef, m_ContainsMatchingVectorElement(AllOneOrUndef)));
+  return match(Mask, m_CombineOr(AllOneOrUndef, m_ContainsMatchingVectorElement(
+                                                    AllOneOrUndef)));
 }
 
 /// TODO: This is a lot like known bits, but for
