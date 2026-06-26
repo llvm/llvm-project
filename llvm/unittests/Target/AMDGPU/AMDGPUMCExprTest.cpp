@@ -31,7 +31,7 @@ protected:
 
   AMDGPUMCExprTest() {
 
-    TM = createAMDGPUTargetMachine("amdgcn--amdpal", "gfx1010", "");
+    TM = createAMDGPUTargetMachine("amdgpu10.10--amdpal", "", "");
 
     LLVMCtx = std::make_unique<LLVMContext>();
     M = std::make_unique<Module>("Module", *LLVMCtx);

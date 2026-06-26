@@ -34,7 +34,7 @@ protected:
   AMDGPUPALMetadata MD;
 
   PALMetadata() {
-    TM = createAMDGPUTargetMachine("amdgcn--amdpal", "gfx1010", "");
+    TM = createAMDGPUTargetMachine("amdgpu10.10--amdpal", "", "");
 
     Ctx = std::make_unique<LLVMContext>();
     M = std::make_unique<Module>("Module", *Ctx);
