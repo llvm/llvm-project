@@ -145,7 +145,7 @@ public:
   SmallVector<StringRef>
   stringifyProfile(const SmallVector<ArrayRef<T>> &profileSet);
 
-  static llvm::SmallString<7> stringifyTypeInfo(const TypeInfo &typeInfo);
+  static llvm::SmallString<16> stringifyTypeInfo(const TypeInfo &typeInfo);
 
 private:
   template <typename T>
