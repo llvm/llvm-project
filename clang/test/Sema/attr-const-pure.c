@@ -24,6 +24,15 @@ struct CppTest {
 
 // Including out-of-line member functions.
 __attribute__((pure)) int CppTest::another() { return 12; }
+
+// They also work on function templates.
+template <typename Ty>
+__attribute__((const)) int temp_func1(Ty);
+
+// And specializations, too.
+// FIXME: this should be diagnosed because it ends up with both the const and pure attributes.
+template <>
+[[gnu::pure]] int temp_func1<int>(int) { return 12; }
 #endif
 
 // They do not apply to types, including function pointer types.
