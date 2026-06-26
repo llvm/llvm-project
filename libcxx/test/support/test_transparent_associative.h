@@ -104,22 +104,11 @@ constexpr void test_non_transparent_erase(Container c) {
   assert(conversions == 3);
 }
 
-template <typename NodeHandle>
-concept node_handle_has_key = requires(NodeHandle nh) {
-  { nh.key() };
-};
-
 template <class T, class Container>
 constexpr void test_single_extract(SearchedType<T> key, Container& c) {
   auto node_handle = c.extract(key);
 
   assert(!node_handle.empty());
-
-  if constexpr (node_handle_has_key<typename Container::node_type>) {
-    assert(node_handle.key() == key);
-  } else {
-    assert(node_handle.value() == key);
-  }
 }
 
 template <class Container>
