@@ -821,8 +821,12 @@ func.func @rsqrt_tns(%float: tensor<5x8xf32>) -> (tensor<5x8xf32>)  {
 // CHECK-LABEL:    func.func @non_static_shape_ceil_op
 // CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
 // CHECK-SAME:     -> tensor<?xf32>
-// CHECK:          %[[CEIL:.*]] = math.ceil %[[ARG]] : tensor<?xf32>
-// CHECK:          return %[[CEIL]] : tensor<?xf32>
+// CHECK-DAG:       arith.constant 0.000000e+00 : f32
+// CHECK-DAG:       arith.constant 1.000000e+00 : f32
+// CHECK-DAG:       tensor.dim %[[ARG]]
+// CHECK:           tensor.splat %{{.*}}[%{{.*}}] : tensor<?xf32>
+// CHECK-NOT:       math.ceil
+// CHECK:           return %{{.*}} : tensor<?xf32>
 
 func.func @non_static_shape_ceil_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
   %a = math.ceil %arg : tensor<?xf32>
@@ -1108,8 +1112,14 @@ func.func @unranked_exp2_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
 // CHECK-LABEL:    func.func @non_static_shape_round_op
 // CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
 // CHECK-SAME:     -> tensor<?xf32>
-// CHECK:          %[[OP:.*]] = math.round %[[ARG]] : tensor<?xf32>
-// CHECK:          return %[[OP]] : tensor<?xf32>
+// CHECK-DAG:       arith.constant 5.000000e-01 : f32
+// CHECK-DAG:       arith.constant 23 : i32
+// CHECK-DAG:       arith.constant 127 : i32
+// CHECK-DAG:       arith.constant 255 : i32
+// CHECK-DAG:       tensor.dim %[[ARG]]
+// CHECK:           tensor.splat %{{.*}}[%{{.*}}] : tensor<?xf32>
+// CHECK-NOT:       math.round
+// CHECK:           return %{{.*}} : tensor<?xf32>
 
 func.func @non_static_shape_round_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
   %a = math.round %arg : tensor<?xf32>
@@ -1134,8 +1144,12 @@ func.func @unranked_round_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
 // CHECK-LABEL:    func.func @non_static_shape_roundeven_op
 // CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
 // CHECK-SAME:     -> tensor<?xf32>
-// CHECK:          %[[OP:.*]] = math.roundeven %[[ARG]] : tensor<?xf32>
-// CHECK:          return %[[OP]] : tensor<?xf32>
+// CHECK-DAG:       arith.constant 1.000000e+00 : f32
+// CHECK-DAG:       arith.constant 0 : i32
+// CHECK-DAG:       tensor.dim %[[ARG]]
+// CHECK:           tensor.splat %{{.*}}[%{{.*}}] : tensor<?xf32>
+// CHECK-NOT:       math.roundeven
+// CHECK:           return %{{.*}} : tensor<?xf32>
 
 func.func @non_static_shape_roundeven_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
   %a = math.roundeven %arg : tensor<?xf32>
@@ -1160,8 +1174,12 @@ func.func @unranked_roundeven_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
 // CHECK-LABEL:    func.func @non_static_shape_ctlz_op
 // CHECK-SAME:     (%[[ARG:.*]]: tensor<?xi32>)
 // CHECK-SAME:     -> tensor<?xi32>
-// CHECK:          %[[OP:.*]] = math.ctlz %[[ARG]] : tensor<?xi32>
-// CHECK:          return %[[OP]] : tensor<?xi32>
+// CHECK-DAG:       arith.constant 0 : i32
+// CHECK-DAG:       arith.constant 16 : i32
+// CHECK-DAG:       tensor.dim %[[ARG]]
+// CHECK:           tensor.splat %{{.*}}[%{{.*}}] : tensor<?xi32>
+// CHECK-NOT:       math.ctlz
+// CHECK:           return %{{.*}} : tensor<?xi32>
 
 func.func @non_static_shape_ctlz_op(%arg: tensor<?xi32>) -> tensor<?xi32>{
   %a = math.ctlz %arg : tensor<?xi32>
