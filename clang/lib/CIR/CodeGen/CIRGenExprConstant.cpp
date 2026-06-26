@@ -1366,14 +1366,15 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     while (!elts.empty() && builder.isNullValue(elts.back()))
       elts.pop_back();
 
+    // For flexible array members, we need to adjust the size of our result to
+    // match this.
+    if (desiredType.getSize() == 0 && numElements > 0) {
+      desiredType =
+          cir::ArrayType::get(desiredType.getElementType(), numElements);
+    }
+
     if (elts.empty())
       return cir::ZeroAttr::get(desiredType);
-
-    if (desiredType.getSize() == 0 && numElements > 0) {
-      cgm.errorNYI("ConstExprEmitter::tryEmitPrivate array type as flexible "
-                   "array member");
-      return {};
-    }
 
     return cir::ConstArrayAttr::get(
         desiredType, mlir::ArrayAttr::get(builder.getContext(), elts));
