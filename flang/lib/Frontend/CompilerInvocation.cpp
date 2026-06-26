@@ -1236,9 +1236,10 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     //    the last `std` flag, then the warnings are disabled.
     //  - Otherwise, the warnings are enabled.
     auto last = args.getLastArg(clang::options::OPT_fsystem_clock_strict,
-        clang::options::OPT_fno_system_clock_strict);
+                                clang::options::OPT_fno_system_clock_strict);
     if (last) {
-      if (last->getOption().matches(clang::options::OPT_fno_system_clock_strict)) {
+      if (last->getOption().matches(
+              clang::options::OPT_fno_system_clock_strict)) {
         // If the last of these args is `-fno-system-clock-strict`, disable the
         // warnings. Otherwise leave the warnings enabled.
         res.getFrontendOpts().features.EnableWarning(
