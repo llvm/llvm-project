@@ -449,6 +449,9 @@ struct GenericKernelTy {
   /// Get the size of the static per-block memory consumed by the kernel.
   uint32_t getStaticBlockMemSize() const { return StaticBlockMemSize; };
 
+  /// Get the maximum number of threads per block that this kernel may use.
+  uint32_t getMaxThreads() const { return MaxNumThreads; }
+
   /// Get the kernel image.
   DeviceImageTy &getImage() const {
     assert(ImagePtr && "Kernel is not initialized!");
@@ -461,11 +464,13 @@ struct GenericKernelTy {
   }
 
   /// Return a device pointer to a new kernel launch environment.
-  Expected<KernelLaunchEnvironmentTy *>
-  getKernelLaunchEnvironment(GenericDeviceTy &GenericDevice,
-                             const KernelArgsTy &KernelArgs,
-                             const DynBlockMemConfTy &DynBlockMemConf,
-                             AsyncInfoWrapperTy &AsyncInfoWrapper) const;
+  ///
+  /// \p NumBlocks0 is the number of blocks for this launch and is used to size
+  /// the reduction buffer.
+  Expected<KernelLaunchEnvironmentTy *> getKernelLaunchEnvironment(
+      GenericDeviceTy &GenericDevice, const KernelArgsTy &KernelArgs,
+      const DynBlockMemConfTy &DynBlockMemConf,
+      AsyncInfoWrapperTy &AsyncInfoWrapper, uint32_t NumBlocks0) const;
 
   /// Indicate whether an execution mode is valid.
   static bool isValidExecutionMode(OMPTgtExecModeFlags ExecutionMode) {
@@ -949,7 +954,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual Error memoryVAUnMap(void *VAddr, size_t Size);
 
   /// Allocate data on the device or involving the device.
-  Expected<void *> dataAlloc(int64_t Size, void *HostPtr, TargetAllocTy Kind);
+  Expected<void *> dataAlloc(int64_t Size, void *HostPtr, TargetAllocTy Kind,
+                             size_t Alignment);
 
   /// Deallocate data from the device or involving the device.
   Error dataDelete(void *TgtPtr, TargetAllocTy Kind);

@@ -6,7 +6,7 @@ module attributes {omp.is_target_device = true, llvm.target_triple = "amdgcn-amd
 
     %ga = llvm.mlir.addressof @global_a : !llvm.ptr
     %map_a = omp.map.info var_ptr(%ga : !llvm.ptr, i32) map_clauses(tofrom) capture(ByCopy) -> !llvm.ptr {name = "i"}
-    omp.target map_entries(%map_a -> %arg1 : !llvm.ptr) {
+    omp.target kernel_type(generic) map_entries(%map_a -> %arg1 : !llvm.ptr) {
       %loaded = llvm.load %arg1 : !llvm.ptr -> i32
 
       %any_gp = omp.groupprivate @global_any device_type(any) : !llvm.ptr

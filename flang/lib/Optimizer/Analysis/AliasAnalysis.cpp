@@ -599,9 +599,17 @@ static mlir::Value getZeroOffsetViewRoot(mlir::Value val) {
 AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
   // A wrapper around alias(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
   // mlir::Value rhs) This allows a user to provide Source that may be obtained
-  // through other dialects
-  auto lhsSrc = getSource(lhs);
-  auto rhsSrc = getSource(rhs);
+  // through other dialects.
+  //
+  // Scope-aware refinement is only meaningful after inlining, when the
+  // function contains more than one fir.dummy_scope op. Skip
+  // collectScopedOrigins and the scope-pair loop for non-inlined functions
+  // to avoid the per-query getDeclarationScope/DominanceInfo overhead.
+  bool multiScopes = functionHasMultipleScopes(lhs);
+  auto lhsSrc =
+      getSource(lhs, /*getLastInstantiationPoint=*/false, multiScopes);
+  auto rhsSrc =
+      getSource(rhs, /*getLastInstantiationPoint=*/false, multiScopes);
   AliasResult result = alias(lhsSrc, rhsSrc, lhs, rhs);
 
   // Scope-aware refinement after inlining: if both walks crossed declares
@@ -615,7 +623,8 @@ AliasResult AliasAnalysis::alias(mlir::Value lhs, mlir::Value rhs) {
   // and pointer-dereferenced paths remain correctly reported as MayAlias.
   // Short-circuit on NoAlias since any pair that disambiguates is
   // decisive.
-  if (result == AliasResult::NoAlias || result == AliasResult::MustAlias)
+  if (!multiScopes || result == AliasResult::NoAlias ||
+      result == AliasResult::MustAlias)
     return result;
   for (const auto &lhsScopedOrigin : lhsSrc.scopedOrigins) {
     if (!lhsScopedOrigin.scope)
@@ -1295,6 +1304,18 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v,
                   type = SourceKind::Allocate;
                   v = def;
                   defOp = nullptr;
+                } else if (boxSrc.kind == SourceKind::HostAssoc) {
+                  // Box loaded from a host-associated descriptor: classify
+                  // the dereferenced target as HostAssoc (not Indirect) so
+                  // alias() can apply the host-assoc/pointer rules instead
+                  // of coarsening to MayAlias. The access path (PointerDeref/
+                  // AllocDeref step) and Pointer attribute were already set
+                  // above, so the resulting Source matches the one that
+                  // buildSourceAtDeclare() rebuilds during scope-aware
+                  // refinement.
+                  type = SourceKind::HostAssoc;
+                  v = def;
+                  defOp = nullptr;
                 } else if (isDummyArgument(def)) {
                   defOp = nullptr;
                   v = def;
@@ -1756,6 +1777,29 @@ fir::AliasAnalysis::Source fir::AliasAnalysis::buildSourceAtDeclare(
   source.approximateSource = scopedOrigin.approximateSource;
   source.origin.isData = scopedOrigin.isData;
   return source;
+}
+
+bool fir::AliasAnalysis::functionHasMultipleScopes(mlir::Value v) {
+  mlir::func::FuncOp funcOp;
+  if (mlir::Operation *defOp = v.getDefiningOp())
+    funcOp = defOp->getParentOfType<mlir::func::FuncOp>();
+  else if (auto bArg = mlir::dyn_cast<mlir::BlockArgument>(v))
+    if (mlir::Region *region = bArg.getOwner()->getParent())
+      funcOp = region->getParentOfType<mlir::func::FuncOp>();
+  if (!funcOp)
+    return true; // conservative
+  mlir::Operation *funcOpPtr = funcOp.getOperation();
+  auto it = multiScopeCache.find(funcOpPtr);
+  if (it != multiScopeCache.end())
+    return it->second;
+  // Walk counting DummyScopeOps, stop early at 2.
+  unsigned count = 0;
+  funcOp.walk([&](fir::DummyScopeOp) -> mlir::WalkResult {
+    return ++count >= 2 ? mlir::WalkResult::interrupt()
+                        : mlir::WalkResult::advance();
+  });
+  // Cache both true and false so subsequent queries are O(1).
+  return multiScopeCache.try_emplace(funcOpPtr, count >= 2).first->second;
 }
 
 } // namespace fir

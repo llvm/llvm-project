@@ -136,6 +136,7 @@ shouldUseExceptionTablesForObjCExceptions(const ObjCRuntime &runtime,
 /// disable C++ exceptions but enable Objective-C exceptions.
 static bool addExceptionArgs(const ArgList &Args, types::ID InputType,
                              const ToolChain &TC, bool KernelOrKext,
+                             bool IsDeviceOffloadAction,
                              const ObjCRuntime &objcRuntime,
                              ArgStringList &CmdArgs) {
   const llvm::Triple &Triple = TC.getTriple();
@@ -179,9 +180,10 @@ static bool addExceptionArgs(const ArgList &Args, types::ID InputType,
   }
 
   if (types::isCXX(InputType)) {
-    // Disable C++ EH by default on XCore and PS4/PS5.
+    // Disable C++ EH by default on XCore, PS4/PS5 and GPU targets.
     bool CXXExceptionsEnabled = Triple.getArch() != llvm::Triple::xcore &&
-                                !Triple.isPS() && !Triple.isDriverKit();
+                                !Triple.isPS() && !Triple.isDriverKit() &&
+                                !(Triple.isGPU() && !IsDeviceOffloadAction);
     Arg *ExceptionArg = Args.getLastArg(
         options::OPT_fcxx_exceptions, options::OPT_fno_cxx_exceptions,
         options::OPT_fexceptions, options::OPT_fno_exceptions);
@@ -1088,11 +1090,10 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     std::set<unsigned> ArchIDs;
     for (auto &I : llvm::make_range(C.getOffloadToolChains(Action::OFK_Cuda))) {
       const ToolChain *TC = I.second;
-      for (StringRef Arch :
+      for (BoundArch Arch :
            D.getOffloadArchs(C, C.getArgs(), Action::OFK_Cuda, *TC)) {
-        OffloadArch OA = StringToOffloadArch(Arch);
-        if (IsNVIDIAOffloadArch(OA))
-          ArchIDs.insert(CudaArchToID(OA));
+        if (IsNVIDIAOffloadArch(Arch.Arch))
+          ArchIDs.insert(CudaArchToID(Arch.Arch));
       }
     }
 
@@ -1314,7 +1315,7 @@ static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
         F += Action::GetOffloadingFileNamePrefix(JA.getOffloadingDeviceKind(),
                                                  Triple.str());
         F += "-";
-        F += JA.getOffloadingArch();
+        F += JA.getOffloadingArch().ArchName;
       }
     }
 
@@ -1943,7 +1944,7 @@ void Clang::AddPPCTargetArgs(const ArgList &Args,
   if (Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
     CmdArgs.push_back("-tune-cpu");
     StringRef CPU = llvm::PPC::getNormalizedPPCTuneCPU(T, A->getValue());
-    CmdArgs.push_back(Args.MakeArgString(CPU.str()));
+    CmdArgs.push_back(Args.MakeArgString(CPU));
   }
 
   // Select the ABI to use.
@@ -6194,9 +6195,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddLastArg(CmdArgs, options::OPT_fno_knr_functions);
 
-  const char *OffloadArch = JA.getOffloadingArch();
-  auto SanitizeArgs = TC.getSanitizerArgs(Args, OffloadArch ? OffloadArch : "",
-                                          JA.getOffloadingDeviceKind());
+  BoundArch OffloadArch = JA.getOffloadingArch();
+  auto SanitizeArgs =
+      TC.getSanitizerArgs(Args, OffloadArch, JA.getOffloadingDeviceKind());
   Args.AddLastArg(CmdArgs,
                   options::OPT_fallow_runtime_check_skip_hot_cutoff_EQ);
 
@@ -6235,7 +6236,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // `--gpu-use-aux-triple-only` is specified.
   if (AuxTriple && !Args.getLastArg(options::OPT_gpu_use_aux_triple_only)) {
     const ArgList &HostArgs =
-        C.getArgsForToolChain(nullptr, StringRef(), Action::OFK_None);
+        C.getArgsForToolChain(nullptr, BoundArch(), Action::OFK_None);
     std::string HostCPU = getCPUName(D, HostArgs, *AuxTriple, /*FromAs*/ false);
     if (!HostCPU.empty()) {
       CmdArgs.push_back("-aux-target-cpu");
@@ -6688,8 +6689,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.AddLastArg(CmdArgs, options::OPT_fexperimental_library);
 
-  if (Args.hasArg(options::OPT_fexperimental_new_constant_interpreter))
-    CmdArgs.push_back("-fexperimental-new-constant-interpreter");
+  if (CLANG_USE_EXPERIMENTAL_CONST_INTERP) {
+    Args.ClaimAllArgs(options::OPT_fexperimental_new_constant_interpreter);
+    Args.AddLastArg(CmdArgs,
+                    options::OPT_fno_experimental_new_constant_interpreter);
+  } else {
+    Args.ClaimAllArgs(options::OPT_fno_experimental_new_constant_interpreter);
+    Args.AddLastArg(CmdArgs,
+                    options::OPT_fexperimental_new_constant_interpreter);
+  }
 
   if (Arg *A = Args.getLastArg(options::OPT_fbracket_depth_EQ)) {
     CmdArgs.push_back("-fbracket-depth");
@@ -6945,8 +6953,17 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         CmdArgs.push_back("-fno-openmp-extensions");
       Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_cuda_number_of_sm_EQ);
       Args.AddAllArgs(CmdArgs, options::OPT_fopenmp_cuda_blocks_per_sm_EQ);
-      Args.AddAllArgs(CmdArgs,
-                      options::OPT_fopenmp_cuda_teams_reduction_recs_num_EQ);
+      // '-fopenmp-cuda-teams-reduction-recs-num=' is deprecated and has no
+      // effect: the teams reduction buffer is sized at kernel launch by the
+      // offload plugin to match the actual number of teams. Honoring a
+      // smaller user-supplied value would silently truncate the buffer for
+      // larger launches.
+      if (Arg *A = Args.getLastArg(
+              options::OPT_fopenmp_cuda_teams_reduction_recs_num_EQ))
+        D.Diag(diag::warn_drv_deprecated_custom)
+            << A->getAsString(Args)
+            << "the value is ignored; the teams reduction buffer is sized "
+               "automatically at kernel launch";
       if (Args.hasFlag(options::OPT_fopenmp_optimistic_collapse,
                        options::OPT_fno_openmp_optimistic_collapse,
                        /*Default=*/false))
@@ -7697,7 +7714,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Handle GCC-style exception args.
   bool EH = false;
   if (!C.getDriver().IsCLMode())
-    EH = addExceptionArgs(Args, InputType, TC, KernelOrKext, Runtime, CmdArgs);
+    EH = addExceptionArgs(Args, InputType, TC, KernelOrKext,
+                          IsDeviceOffloadAction, Runtime, CmdArgs);
 
   // Handle exception personalities
   Arg *A = Args.getLastArg(
@@ -9380,7 +9398,7 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
 
     if (const auto *OA = dyn_cast<OffloadAction>(CurDep)) {
       CurTC = nullptr;
-      OA->doOnEachDependence([&](Action *A, const ToolChain *TC, const char *) {
+      OA->doOnEachDependence([&](Action *A, const ToolChain *TC, BoundArch BA) {
         assert(CurTC == nullptr && "Expected one dependence!");
         CurKind = A->getOffloadingDeviceKind();
         CurTC = TC;
@@ -9388,12 +9406,13 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
     }
     Triples += Action::GetOffloadKindName(CurKind);
     Triples += '-';
-    Triples +=
-        CurTC->getTriple().normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
-    if (CurKind != Action::OFK_Host &&
-        !StringRef(CurDep->getOffloadingArch()).empty()) {
+    Triples += llvm::Triple(CurTC->ComputeEffectiveClangTriple(
+                                TCArgs, CurDep->getOffloadingArch()))
+                   .normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
+
+    if ((CurKind != Action::OFK_Host) && !CurDep->getOffloadingArch().empty()) {
       Triples += '-';
-      Triples += CurDep->getOffloadingArch();
+      Triples += CurDep->getOffloadingArch().ArchName;
     }
   }
   CmdArgs.push_back(TCArgs.MakeArgString(Triples));
@@ -9411,7 +9430,7 @@ void OffloadBundler::ConstructJob(Compilation &C, const JobAction &JA,
     const ToolChain *CurTC = &getToolChain();
     if (const auto *OA = dyn_cast<OffloadAction>(JA.getInputs()[I])) {
       CurTC = nullptr;
-      OA->doOnEachDependence([&](Action *, const ToolChain *TC, const char *) {
+      OA->doOnEachDependence([&](Action *, const ToolChain *TC, BoundArch) {
         assert(CurTC == nullptr && "Expected one dependence!");
         CurTC = TC;
       });
@@ -9466,12 +9485,15 @@ void OffloadBundler::ConstructJobMultipleOutputs(
     auto &Dep = DepInfo[I];
     Triples += Action::GetOffloadKindName(Dep.DependentOffloadKind);
     Triples += '-';
-    Triples += Dep.DependentToolChain->getTriple().normalize(
-        llvm::Triple::CanonicalForm::FOUR_IDENT);
-    if (Dep.DependentOffloadKind != Action::OFK_Host &&
+    Triples += llvm::Triple(Dep.DependentToolChain->ComputeEffectiveClangTriple(
+                                TCArgs, Dep.DependentBoundArch))
+                   .normalize(llvm::Triple::CanonicalForm::FOUR_IDENT);
+
+    if ((Dep.DependentOffloadKind == Action::OFK_HIP ||
+         Dep.DependentOffloadKind == Action::OFK_Cuda) &&
         !Dep.DependentBoundArch.empty()) {
       Triples += '-';
-      Triples += Dep.DependentBoundArch;
+      Triples += Dep.DependentBoundArch.ArchName;
     }
   }
 
@@ -9520,9 +9542,10 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
         C.getArgsForToolChain(TC, OffloadAction->getOffloadingArch(),
                               OffloadAction->getOffloadingDeviceKind());
     StringRef File = C.getArgs().MakeArgString(TC->getInputFilename(Input));
-    StringRef Arch = OffloadAction->getOffloadingArch()
-                         ? OffloadAction->getOffloadingArch()
-                         : TCArgs.getLastArgValue(options::OPT_march_EQ);
+    BoundArch Arch = OffloadAction->getOffloadingArch();
+    if (Arch.empty())
+      Arch = BoundArch(TCArgs.getLastArgValue(options::OPT_march_EQ));
+
     StringRef Kind =
       Action::GetOffloadKindName(OffloadAction->getOffloadingDeviceKind());
 
@@ -9537,8 +9560,8 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
     // linker wrapper.
     SmallVector<std::string> Parts{
         "file=" + File.str(),
-        "triple=" + TC->getTripleString().str(),
-        "arch=" + (Arch.empty() ? "generic" : Arch.str()),
+        "triple=" + TC->ComputeEffectiveClangTriple(TCArgs, Arch),
+        "arch=" + (Arch.empty() ? "generic" : Arch.ArchName.str()),
         "kind=" + Kind.str(),
     };
 
@@ -9692,7 +9715,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       ArgStringList CompilerArgs;
       ArgStringList LinkerArgs;
       const DerivedArgList &ToolChainArgs =
-          C.getArgsForToolChain(TC, /*BoundArch=*/"", Kind);
+          C.getArgsForToolChain(TC, /*BA=*/{}, Kind);
       for (Arg *A : ToolChainArgs) {
         if (A->getOption().matches(OPT_Zlinker_input))
           LinkerArgs.emplace_back(A->getValue());

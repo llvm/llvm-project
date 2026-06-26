@@ -252,14 +252,16 @@ define i64 @f20(i64 %foo) {
 }
 
 ; Now try an arithmetic right shift in which the sign bits aren't needed.
-; Introduce a second use of %shr so that the ashr doesn't decompose to
-; an lshr.
+; Introduce a second use of %shr so that the ashr doesn't decompose to an
+; lshr. TODO: Maybe better if pre-ra scheduler put the risblg below the the
+; other use of %r2.
 define i32 @f21(i32 %foo, ptr %dest) {
 ; CHECK-LABEL: f21:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srak %r0, %r2, 28
-; CHECK-NEXT:    risblg %r2, %r2, 28, 158, 36
-; CHECK-NEXT:    st %r0, 0(%r3)
+; CHECK-NEXT:    risblg %r0, %r2, 28, 158, 36
+; CHECK-NEXT:    sra %r2, 28
+; CHECK-NEXT:    st %r2, 0(%r3)
+; CHECK-NEXT:    lr %r2, %r0
 ; CHECK-NEXT:    br %r14
   %shr = ashr i32 %foo, 28
   store i32 %shr, ptr %dest
@@ -271,9 +273,10 @@ define i32 @f21(i32 %foo, ptr %dest) {
 define i64 @f22(i64 %foo, ptr %dest) {
 ; CHECK-LABEL: f22:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srag %r0, %r2, 60
-; CHECK-NEXT:    risbg %r2, %r2, 60, 190, 4
-; CHECK-NEXT:    stg %r0, 0(%r3)
+; CHECK-NEXT:    risbg %r0, %r2, 60, 190, 4
+; CHECK-NEXT:    srag %r1, %r2, 60
+; CHECK-NEXT:    lgr %r2, %r0
+; CHECK-NEXT:    stg %r1, 0(%r3)
 ; CHECK-NEXT:    br %r14
   %shr = ashr i64 %foo, 60
   store i64 %shr, ptr %dest
@@ -484,9 +487,10 @@ define i64 @f38(i64 %foo) {
 define i64 @f39(i64 %foo, ptr %dest) {
 ; CHECK-LABEL: f39:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srag %r0, %r2, 35
-; CHECK-NEXT:    risbg %r2, %r2, 33, 189, 31
-; CHECK-NEXT:    stg %r0, 0(%r3)
+; CHECK-NEXT:    risbg %r0, %r2, 33, 189, 31
+; CHECK-NEXT:    srag %r1, %r2, 35
+; CHECK-NEXT:    lgr %r2, %r0
+; CHECK-NEXT:    stg %r1, 0(%r3)
 ; CHECK-NEXT:    br %r14
   %ashr = ashr i64 %foo, 35
   store i64 %ashr, ptr %dest
