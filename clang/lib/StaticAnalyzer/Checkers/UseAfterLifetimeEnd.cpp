@@ -227,18 +227,16 @@ void DebugUseAfterLifetimeEnd::analyzerDumpLifetimeOriginsOf(
   if (!SourceSet)
     return;
 
-  llvm::SmallString<128> Str;
-  llvm::raw_svector_ostream OS(Str);
-  OS << " Origin " << ArgSVal << " bound to ";
-
   if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
-    bool First = true;
-    for (const MemRegion *Region : *SourceSet) {
-      if (!First)
-        OS << ", ";
-      OS << Region;
-      First = false;
-    }
+    llvm::SmallVector<std::string> RegionNames =
+        to_vector(map_range(llvm::make_pointee_range(*SourceSet),
+                            std::mem_fn(&MemRegion::getString)));
+    llvm::sort(RegionNames);
+
+    llvm::SmallString<128> Str;
+    llvm::raw_svector_ostream OS(Str);
+    OS << " Origin " << ArgSVal << " bound to ";
+    llvm::interleaveComma(RegionNames, OS);
     C.emitReport(std::make_unique<PathSensitiveBugReport>(BugMsg, OS.str(), N));
   }
 }
