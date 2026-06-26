@@ -290,10 +290,27 @@ static bool IsReservedName(const Name &name) {
 TYPE_PARSER( //
     construct<OmpReservedIdentifier>(predicated(name, IsReservedName)))
 
-// Parse x(...)(...) as a substring instead of a function reference.
-TYPE_PARSER( //
-    construct<OmpLocator>(functionReference / !lookAhead("("_tok)) ||
-    construct<OmpLocator>(Parser<OmpReservedIdentifier>{}))
+struct LocatorParser {
+  using resultType = OmpLocator;
+  using Token = TokenStringMatch<false, false>;
+
+  std::optional<resultType> Parse(ParseState &state) const {
+    // Parse x(...)(...) as a substring instead of a function reference.
+    auto funcRef{functionReference / !lookAhead("("_tok)};
+    if (auto &&result{attempt(funcRef).Parse(state)}) {
+      return std::move(*result);
+    }
+    for (llvm::StringRef n : llvm::omp::getReservedLocatorNames()) {
+      auto match{Token(n.data(), n.size())};
+      if (auto &&result{attempt(match >= name).Parse(state)}) {
+        return OmpReservedIdentifier(std::move(*result));
+      }
+    }
+    return std::nullopt;
+  }
+};
+
+TYPE_PARSER(construct<OmpLocator>(LocatorParser{}))
 
 TYPE_PARSER( //
     construct<OmpObject>(Parser<OmpLocator>{}) ||

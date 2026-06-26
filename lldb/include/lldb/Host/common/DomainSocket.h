@@ -1,4 +1,4 @@
-//===-- DomainSocket.h ------------------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,14 +6,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_HOST_POSIX_DOMAINSOCKET_H
-#define LLDB_HOST_POSIX_DOMAINSOCKET_H
+#ifndef LLDB_HOST_COMMON_DOMAINSOCKET_H
+#define LLDB_HOST_COMMON_DOMAINSOCKET_H
 
 #include "lldb/Host/Socket.h"
 #include <string>
 #include <vector>
 
 namespace lldb_private {
+
+/// Cross-platform AF_UNIX domain-socket logic.
+///
+/// Every operation on a domain socket (connect, listen, accept, name
+/// lookup) is identical on POSIX and Windows, so it all lives here. The only
+/// operation which differs between platforms is the CreatePair() factory: POSIX
+/// has socketpair(2) while Windows must emulate it. That factory therefore
+/// lives in the DomainSocketPosix / DomainSocketWindows implementation classes.
 class DomainSocket : public Socket {
 public:
   DomainSocket(NativeSocket socket, bool should_close);
@@ -21,7 +29,6 @@ public:
 
   using Pair =
       std::pair<std::unique_ptr<DomainSocket>, std::unique_ptr<DomainSocket>>;
-  static llvm::Expected<Pair> CreatePair();
 
   Status Connect(llvm::StringRef name) override;
   Status Listen(llvm::StringRef name, int backlog) override;
@@ -49,6 +56,6 @@ protected:
 private:
   DomainSocket(NativeSocket socket, const DomainSocket &listen_socket);
 };
-}
+} // namespace lldb_private
 
-#endif // LLDB_HOST_POSIX_DOMAINSOCKET_H
+#endif // LLDB_HOST_COMMON_DOMAINSOCKET_H

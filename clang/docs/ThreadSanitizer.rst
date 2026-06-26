@@ -173,6 +173,17 @@ in the specified source files or functions. Unlike functions marked with
 at all. This can lead to false positives due to missed synchronization via
 atomic operations and missed stack frames in reports.
 
+Example:
+
+.. code-block:: bash
+
+    # Ignore exactly this function (the names are mangled in C++)
+    fun:_Z8MyFooBarv
+    # Ignore all functions containing MyFooBar
+    fun:*MyFooBar*
+    # Ignore the whole file
+    src:file_with_tricky_code.cc
+
 Limitations
 -----------
 
@@ -187,6 +198,20 @@ Limitations
   ``fsanitize=thread`` flag will cause Clang to act as though the ``-fPIE``
   flag had been supplied if compiling without ``-fPIC``, and as though the
   ``-pie`` flag had been supplied if linking an executable.
+* ThreadSanitizer generally requires all code to be compiled with
+  ``-fsanitize=thread``. If some code (such as pre-compiled dynamic libraries)
+  is not compiled with the flag, TSan may fail to detect races or may report
+  false positives. Refer to the ``ignore_interceptors_accesses`` and
+  ``ignore_noninstrumented_modules`` run-time options to work around issues
+  arising from non-instrumented modules.
+* On Linux, disabling ASLR may cause ThreadSanitizer to fail to allocate shadow
+  memory, printing the error ``FATAL: ThreadSanitizer can not mmap the shadow memory (something is mapped at ...)``.
+  Note that GDB disables ASLR by default. To debug ThreadSanitizer binaries under
+  GDB, configure it to preserve ASLR by running:
+
+  .. code-block:: console
+
+      $ gdb -ex 'set disable-randomization off' --args ./a.out
 
 Security Considerations
 -----------------------
@@ -206,6 +231,109 @@ and can be run with ``make check-tsan`` command.
 
 We are actively working on enhancing the tool --- stay tuned.  Any help,
 especially in the form of minimized standalone tests is more than welcome.
+
+Run-time Flags
+--------------
+
+ThreadSanitizer supports a number of run-time flags, which can be specified
+in the ``TSAN_OPTIONS`` environment variable. Separate flags are separated
+with spaces.
+
+Example:
+
+.. code-block:: console
+
+    $ TSAN_OPTIONS="history_size=7 halt_on_error=1" ./myprogram
+
+The most common run-time flags are:
+
+* ``detect_deadlocks`` (default: ``true``): Controls whether deadlock detection is
+  enabled.
+* ``exitcode`` (default: ``66``): Override the exit status if an error is found. Note
+  that for ThreadSanitizer the default exitcode is 66, unlike other sanitizers.
+* ``force_seq_cst_atomics`` (default: ``false``): If set, all atomic operations are
+  treated as sequentially consistent (seq_cst). Useful for debugging relaxed atomic
+  ordering bugs.
+* ``halt_on_error`` (default: ``false``): Exit after the first reported error.
+* ``history_size`` (default: ``0``): Controls per-thread history size, which
+  determines how many previous memory accesses are remembered per thread. If
+  you see "failed to restore the stack" reports, try increasing this flag
+  (values from 0 to 7 are supported).
+* ``ignore_interceptors_accesses`` (default: ``false`` on Linux/Windows, ``true``
+  on Apple platforms): Ignore reads and writes from all interceptors.
+* ``ignore_noninstrumented_modules`` (default: ``false`` on Linux/Windows, ``true``
+  on Apple platforms): Ignore interceptors called from non-instrumented modules.
+* ``log_path`` (default: ``""``): If set, write logs to ``log_path.pid`` instead of
+  stderr. Special values are ``stdout`` and ``stderr``.
+* ``print_full_thread_history`` (default: ``false``): Print creation stack traces for
+  all threads involved in the report and their ancestor threads back to the main thread.
+* ``report_atomic_races`` (default: ``true``): Report races between atomic and
+  plain memory accesses.
+* ``suppressions`` (default: ``""``): Path to a suppressions file.
+
+To see the complete list of flags and their descriptions, run an instrumented
+binary with the ``help=1`` option:
+
+.. code-block:: console
+
+    $ TSAN_OPTIONS="help=1" ./myprogram
+
+You can also refer to the source declarations in the LLVM repository under
+``compiler-rt/lib/tsan/rtl/tsan_flags.inc`` (ThreadSanitizer-specific flags)
+and ``compiler-rt/lib/sanitizer_common/sanitizer_flags.inc`` (common sanitizer
+flags).
+
+Suppressions
+------------
+
+If you have a data race or thread leak that you are already aware of but cannot
+fix right away (e.g., in a third-party library), you can suppress the reports
+at run-time using a suppressions file.
+
+Specify the suppressions file path via the ``suppressions`` flag in the
+``TSAN_OPTIONS`` environment variable:
+
+.. code-block:: console
+
+    $ TSAN_OPTIONS="suppressions=/path/to/suppressions.supp" ./myprogram
+
+Each non-empty line of the suppressions file represents one suppression of the
+form:
+
+::
+
+    suppression_type:suppression_pattern
+
+The supported ``suppression_type`` values are:
+
+* ``race``: Suppresses data race reports. The pattern is matched against function
+  names, source file names, or global variable names in the stacks of the report.
+* ``thread``: Suppresses thread leak reports. The pattern is matched against the
+  name of the leaked thread.
+* ``called_from_lib``: Suppresses reports if the call originated from a specific
+  non-instrumented library.
+
+The pattern can contain the ``*`` wildcard, which matches any substring. By
+default, ``*`` is automatically prepended and appended to each pattern. You can
+use ``^`` and ``$`` to anchor patterns to the beginning and end of the string.
+Lines starting with ``#`` are treated as comments.
+
+Example of a suppressions file:
+
+.. code-block:: text
+
+    # Suppress data races in a third-party library 'foobar'
+    race:foobar
+    # Suppress data races in a specific function
+    race:NuclearRocket::Launch
+    # Suppress data races in a specific source file
+    race:src/surgery/laser_scalpel.cc
+    # Suppress data races on a specific global variable
+    race:global_var
+    # Suppress a leaked thread by name
+    thread:MonitoringThread
+    # Suppress warnings called from an uninstrumented library
+    called_from_lib:libzmq.so
 
 Adaptive Delay
 --------------
@@ -326,7 +454,3 @@ Increase sampling frequency for mutex operations:
 .. code-block:: console
 
   $ TSAN_OPTIONS=enable_adaptive_delay=1:adaptive_delay_mutex_sample_rate=5 ./myapp
-
-More Information
-----------------
-`<https://github.com/google/sanitizers/wiki/ThreadSanitizerCppManual>`_
