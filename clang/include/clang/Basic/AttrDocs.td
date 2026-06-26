@@ -10254,17 +10254,23 @@ The attribute is also supported with blocks and in Objective-C.
   }];
 }
 
-def ConstDocs :  Documentation {
+def ConstPureDocs :  Documentation {
   let Category = DocCatFunction;
   let Content = [{
-The ``const`` attribute can be applied to the declaration of a function to signal that calls to the function with the same argument values may be elided because all of the calls will always return the same value.
-
-The attribute informs the optimizer that the function cannot read or write to memory, does not support unwinding, will return (has no infinite loops, does not call a ``noreturn`` function, etc), and that any pointer or reference arguments to the call will not be read from or written to.
-
-The attribute generally should only be used on functions with a non-``void`` return type and which do not accept a pointer or reference argument.
+The ``const`` or ``pure`` attributes can be applied to the declaration of a function to signal that calls to the function with the same argument values may be elided under some circumstances.
 The ``const`` attribute imposes greater restrictions than the related ``pure`` attribute; applying both attributes to a declaration will be diagnosed and the ``const`` attribute takes precedence.
 
-The following example demonstrates how the attribute can be used:
+The ``pure`` attribute informs the optimizer that the function cannot write to memory, does not support unwinding, will return (has no infinite loops, does not call a ``noreturn`` function, etc), and that any pointer or reference parameters will not be written to.
+
+The ``const`` attribute is similar except that the function cannot read or write to memory and that any pointer or reference parameters will not be read from or written to.
+
+Neither attribute should be used on a function which has side effects or uses external data to compute the returned value.
+Therefore, both attributes are diagnosed when applied to a function with a non-``void`` return type.
+
+Because of the prohibition against reading memory, the ``const`` attribute generally should not be used on a function which accepts a pointer or reference argument.
+The ``pure`` attribute allows (non-volatile) memory to be read; calls will only be elided if the optimizer can prove the memory accessed cannot be changed between successive calls to the function.
+
+The following example demonstrates how the ``const`` attribute can be used:
 
 .. code-block:: c++
 
@@ -10274,22 +10280,8 @@ The following example demonstrates how the attribute can be used:
     int x = add_one(1);
     int y = add_one(1); // Call can be elided
   }
-  }];
-}
 
-def PureDocs :  Documentation {
-  let Category = DocCatFunction;
-  let Content = [{
-The ``pure`` attribute can be applied to the declaration of a function to signal that calls to the function with the same argument values may be elided if no global state has changed in the meantime because all of the calls will always return the same value.
-
-The attribute informs the optimizer that the function cannot write to memory, does not support unwinding, will return (has no infinite loops, does not call a ``noreturn`` function, etc), and that any pointer or reference arguments to the call will not be written to.
-
-Unlike the ``const`` attribute, the ``pure`` attribute allows memory to be read, even if it changes between subsequent calls.
-
-The attribute generally should only be used on functions with a non-``void`` return type.
-The ``pure`` attribute imposes weaker restrictions than the related ``const`` attribute; applying both attributes to a declaration will be diagnosed and the ``const`` attribute takes precedence.
-
-The following example demonstrates how the attribute can be used:
+The ``pure`` attribute can be used similarly:
 
 .. code-block:: c++
 
@@ -10300,5 +10292,6 @@ The following example demonstrates how the attribute can be used:
     int x = get_char(str, 0);
     int y = get_char(str, 0); // Call can be elided
   }
+
   }];
 }
