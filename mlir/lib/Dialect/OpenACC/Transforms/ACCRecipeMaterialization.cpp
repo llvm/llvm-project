@@ -323,8 +323,6 @@ ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
     auto cloneRegionIntoAccRegion = [&](Region *src, Region *dest,
                                         bool hasResult) {
       src->cloneInto(dest, mapping);
-      // TODO: update location of the cloned operations to the location of the
-      // op
       Block *block = &dest->front();
       Operation *terminator = block->getTerminator();
       b.setInsertionPoint(terminator);
