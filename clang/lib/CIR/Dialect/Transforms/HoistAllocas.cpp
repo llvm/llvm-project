@@ -54,6 +54,9 @@ static void process(mlir::ModuleOp mod, cir::FuncOp func) {
   if (func.getRegion().empty())
     return;
 
+  // Keep track of destination so that the order of allocas is preserved.
+  llvm::DenseMap<mlir::Block *, mlir::Operation *> insertPoints;
+
   // Post-order is the default, but the code below requires it, so
   // let's not depend on the default staying that way.
   func.getBody().walk<mlir::WalkOrder::PostOrder>([&](cir::AllocaOp alloca) {
@@ -76,7 +79,9 @@ static void process(mlir::ModuleOp mod, cir::FuncOp func) {
     if (alloca.getConstant())
       alloca.setConstant(false);
 
-    alloca->moveBefore(&*destBlock->begin());
+    mlir::Operation *&insertPoint =
+        insertPoints.try_emplace(destBlock, &*destBlock->begin()).first->second;
+    alloca->moveBefore(insertPoint);
   });
 }
 
