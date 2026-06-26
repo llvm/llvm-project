@@ -142,7 +142,7 @@ define amdgpu_kernel void @workitem_id_y_uniform_in_subgroup(ptr %o) #3 !reqd_wo
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }
 attributes #2 = { "amdgpu-flat-work-group-size"="1,1" "amdgpu-no-wwm" }
-attributes #3 = { "target-cpu"="gfx900" "amdgpu-flat-work-group-size"="256,256" }
+attributes #3 = { "amdgpu-flat-work-group-size"="256,256" }
 
 !0 = !{i32 1, i32 1, i32 1}
 !1 = !{i32 2, i32 1, i32 1}
