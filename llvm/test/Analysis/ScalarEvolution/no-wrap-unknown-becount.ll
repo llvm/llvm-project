@@ -183,9 +183,9 @@ define void @u_0(i32 %n, ptr %cond) {
 ; CHECK-LABEL: 'u_0'
 ; CHECK-NEXT:  Classifying expressions for: @u_0
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc = add i32 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.zext = zext i32 %iv to i64
 ; CHECK-NEXT:    --> {0,+,1}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %c = load volatile i1, ptr %cond, align 1
@@ -215,9 +215,9 @@ define void @u_1(ptr %cond) {
 ; CHECK-LABEL: 'u_1'
 ; CHECK-NEXT:  Classifying expressions for: @u_1
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
-; CHECK-NEXT:    --> {0,+,3}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {0,+,3}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc = add i32 %iv, 3
-; CHECK-NEXT:    --> {3,+,3}<%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {3,+,3}<nw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.zext = zext i32 %iv to i64
 ; CHECK-NEXT:    --> {0,+,3}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %c = load volatile i1, ptr %cond, align 1
@@ -279,7 +279,7 @@ define void @u_3(i32 %start, ptr %cond) {
 ; CHECK-LABEL: 'u_3'
 ; CHECK-NEXT:  Classifying expressions for: @u_3
 ; CHECK-NEXT:    %iv = phi i32 [ %start, %entry ], [ %iv.inc, %be ]
-; CHECK-NEXT:    --> {%start,+,3}<nw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {%start,+,3}<nuw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc = add i32 %iv, 3
 ; CHECK-NEXT:    --> {(3 + %start),+,3}<nw><%loop> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc.zext = zext i32 %iv.inc to i64

@@ -332,9 +332,9 @@ define void @test_03(i32 %a, i32 %b, i32 %c, ptr %p) {
 ; CHECK-LABEL: 'test_03'
 ; CHECK-NEXT:  Classifying expressions for: @test_03
 ; CHECK-NEXT:    %phi1 = phi i32 [ %a, %entry ], [ %phi1.inc, %loop1 ]
-; CHECK-NEXT:    --> {%a,+,1}<%loop1> U: full-set S: full-set Exits: (%a umax %c) LoopDispositions: { %loop1: Computable }
+; CHECK-NEXT:    --> {%a,+,1}<nuw><%loop1> U: full-set S: full-set Exits: (%a umax %c) LoopDispositions: { %loop1: Computable }
 ; CHECK-NEXT:    %phi1.inc = add i32 %phi1, 1
-; CHECK-NEXT:    --> {(1 + %a),+,1}<%loop1> U: full-set S: full-set Exits: (1 + (%a umax %c)) LoopDispositions: { %loop1: Computable }
+; CHECK-NEXT:    --> {(1 + %a),+,1}<nw><%loop1> U: full-set S: full-set Exits: (1 + (%a umax %c)) LoopDispositions: { %loop1: Computable }
 ; CHECK-NEXT:    %phi2 = phi i32 [ %a, %loop1 ], [ %phi2.inc, %loop2 ]
 ; CHECK-NEXT:    --> {%a,+,2}<%loop2> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2: Computable }
 ; CHECK-NEXT:    %phi2.inc = add i32 %phi2, 2
@@ -342,11 +342,11 @@ define void @test_03(i32 %a, i32 %b, i32 %c, ptr %p) {
 ; CHECK-NEXT:    %v1 = load i32, ptr %p, align 4
 ; CHECK-NEXT:    --> %v1 U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2: Variant }
 ; CHECK-NEXT:    %s1 = add i32 %phi1, %v1
-; CHECK-NEXT:    --> ({%a,+,1}<%loop1> + %v1) U: full-set S: full-set --> ((%a umax %c) + %v1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2: Variant }
+; CHECK-NEXT:    --> ({%a,+,1}<nuw><%loop1> + %v1) U: full-set S: full-set --> ((%a umax %c) + %v1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2: Variant }
 ; CHECK-NEXT:    %s2 = add i32 %s1, %b
-; CHECK-NEXT:    --> ({(%a + %b),+,1}<%loop1> + %v1) U: full-set S: full-set --> ((%a umax %c) + %b + %v1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2: Variant }
+; CHECK-NEXT:    --> ({(%a + %b),+,1}<nw><%loop1> + %v1) U: full-set S: full-set --> ((%a umax %c) + %b + %v1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2: Variant }
 ; CHECK-NEXT:    %s3 = add i32 %s2, %phi2
-; CHECK-NEXT:    --> ({{\{\{}}((2 * %a) + %b),+,1}<%loop1>,+,2}<%loop2> + %v1) U: full-set S: full-set --> ({((%a umax %c) + %a + %b),+,2}<%loop2> + %v1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2: Variant }
+; CHECK-NEXT:    --> ({{\{\{}}((2 * %a) + %b),+,1}<nw><%loop1>,+,2}<%loop2> + %v1) U: full-set S: full-set --> ({((%a umax %c) + %a + %b),+,2}<%loop2> + %v1) U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop2: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_03
 ; CHECK-NEXT:  Loop %loop2: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %loop2: Unpredictable constant max backedge-taken count.
