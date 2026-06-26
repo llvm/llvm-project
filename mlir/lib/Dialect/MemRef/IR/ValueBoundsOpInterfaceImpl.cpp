@@ -9,6 +9,7 @@
 #include "mlir/Dialect/MemRef/IR/ValueBoundsOpInterfaceImpl.h"
 
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
 using namespace mlir;
@@ -142,6 +143,43 @@ struct SubViewOpInterface
   }
 };
 
+struct ViewOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<ViewOpInterface, ViewOp> {
+  void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
+                                       ValueBoundsConstraintSet &cstr) const {
+    auto viewOp = cast<ViewOp>(op);
+    assert(value == viewOp.getResult() && "invalid value");
+
+    // Each result dimension equals the corresponding mixed size (static or
+    // dynamic operand).
+    cstr.bound(value)[dim] == viewOp.getMixedSizes()[dim];
+
+    // Out-of-bounds constraint in bytes.
+    // The total number of bytes in the result should be the product of all
+    // result dimensions according to the element type size. Therefore, the
+    // out-of-bounds constraint in bytes is: (src_bytes - byte_shift) / dim_size
+    // == total_result_bytes_without_dim meaning that:
+    //  dim_size == (src_bytes - byte_shift) / total_result_bytes_without_dim
+    AffineExpr sourceBytes = cstr.getExpr(viewOp.getSource(), 0);
+    AffineExpr byteShift = cstr.getExpr(viewOp.getByteShift());
+    AffineExpr availableBytes = sourceBytes - byteShift;
+    MemRefType memrefType = viewOp.getType();
+    if (!memrefType.getElementType().isIntOrFloat())
+      return;
+    int64_t elementSizeBytes = memrefType.getElementTypeBitWidth() / 8;
+    if (elementSizeBytes == 0)
+      return;
+    AffineExpr totalResultBytesWithoutDim = cstr.getExpr(elementSizeBytes);
+    for (unsigned i = 0; i < viewOp.getType().getRank(); ++i)
+      if (i != dim)
+        totalResultBytesWithoutDim =
+            totalResultBytesWithoutDim * cstr.getExpr(value, i);
+
+    cstr.bound(value)[dim] ==
+        availableBytes.floorDiv(totalResultBytesWithoutDim);
+  }
+};
+
 } // namespace
 } // namespace memref
 } // namespace mlir
@@ -162,5 +200,6 @@ void mlir::memref::registerValueBoundsOpInterfaceExternalModels(
     memref::GetGlobalOp::attachInterface<memref::GetGlobalOpInterface>(*ctx);
     memref::RankOp::attachInterface<memref::RankOpInterface>(*ctx);
     memref::SubViewOp::attachInterface<memref::SubViewOpInterface>(*ctx);
+    memref::ViewOp::attachInterface<memref::ViewOpInterface>(*ctx);
   });
 }
