@@ -38,6 +38,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMP.h"
@@ -370,7 +371,12 @@ bool OmpStructureChecker::IsAllowedClause(llvm::omp::Clause clauseId) {
       GetContext().directive, clauseId, context_.langOptions().OpenMPVersion);
 }
 
-bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clause) {
+bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clauseId) {
+  return true;
+}
+
+bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clauseId,
+    parser::CharBlock clauseSource, llvm::omp::Directive dirId) {
   // Do not do clause checks while processing METADIRECTIVE.
   // Context selectors can contain clauses that are not given as a part
   // of a construct, but as trait properties. Testing whether they are
@@ -382,16 +388,14 @@ bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clause) {
   }
 
   unsigned version{context_.langOptions().OpenMPVersion};
-  DirectiveContext &dirCtx = GetContext();
-  llvm::omp::Directive dir{dirCtx.directive};
 
-  if (!llvm::omp::isAllowedClauseForDirective(dir, clause, version)) {
+  if (!llvm::omp::isAllowedClauseForDirective(dirId, clauseId, version)) {
     unsigned allowedInVersion{[&] {
       for (unsigned v : llvm::omp::getOpenMPVersions()) {
         if (v <= version) {
           continue;
         }
-        if (llvm::omp::isAllowedClauseForDirective(dir, clause, v)) {
+        if (llvm::omp::isAllowedClauseForDirective(dirId, clauseId, v)) {
           return v;
         }
       }
@@ -401,14 +405,19 @@ bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clause) {
     // Only report it if there is a later version that allows it.
     // If it's not allowed at all, it will be reported by CheckAllowed.
     if (allowedInVersion != 0) {
-      context_.Say(dirCtx.clauseSource,
-          "%s clause is not allowed on directive %s in %s, %s"_err_en_US,
-          parser::omp::GetUpperName(clause, version),
-          parser::omp::GetUpperName(dir, version), ThisVersion(version),
-          TryVersion(allowedInVersion));
+      context_.Say(clauseSource,
+          "%s clause is not allowed on %s directive in %s, %s"_err_en_US,
+          GetUpperName(clauseId, version), GetUpperName(dirId, version),
+          ThisVersion(version), TryVersion(allowedInVersion));
+    } else {
+      context_.Say(clauseSource,
+          "%s clause is not allowed on %s directive"_err_en_US,
+          GetUpperName(clauseId, version), GetUpperName(dirId, version));
     }
+    return false;
   }
-  return CheckAllowed(clause);
+
+  return true;
 }
 
 void OmpStructureChecker::AnalyzeObject(const parser::OmpObject &object) {
@@ -877,6 +886,147 @@ void OmpStructureChecker::CheckDirectiveDeprecation(
   // one another, but only the top-level directive should cause a warning.
 }
 
+std::pair<const parser::OmpClause *, const parser::OmpClause *>
+OmpStructureChecker::FindMutuallyExclusiveClauses(OmpClauseSet exclusive,
+    const std::vector<const parser::OmpClause *> &clauses) {
+  const parser::OmpClause *first{nullptr};
+  for (const parser::OmpClause *clause : clauses) {
+    llvm::omp::Clause clauseId{clause->Id()};
+    if (!exclusive.test(clauseId)) {
+      continue;
+    }
+    if (first) {
+      llvm::omp::Clause firstId{first->Id()};
+      if (clauseId < firstId) {
+        return std::make_pair(clause, first);
+      } else if (clauseId > firstId) {
+        return std::make_pair(first, clause);
+      }
+    } else {
+      first = clause;
+    }
+  }
+  return std::make_pair(nullptr, nullptr);
+}
+
+void OmpStructureChecker::CheckClauses(parser::OmpDirectiveName dirName,
+    llvm::iterator_range<ClauseIterator> beginClauses,
+    llvm::iterator_range<ClauseIterator> endClauses) {
+  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Directive dirId{dirName.v};
+  std::vector<const parser::OmpClause *> allClauses;
+
+  auto addClause{[&](const parser::OmpClause &clause) {
+    llvm::omp::Clause clauseId{clause.Id()};
+    AddClauseToCrtContext(clauseId);
+    SetContextClause(clause);
+    SetContextClauseInfo(clauseId);
+    allClauses.push_back(&clause);
+  }};
+
+  for (const parser::OmpClause &clause : beginClauses) {
+    addClause(clause);
+  }
+  for (const parser::OmpClause &clause : endClauses) {
+    llvm::omp::Clause clauseId{clause.Id()};
+    if (llvm::omp::isEndClause(clauseId)) {
+      addClause(clause);
+    } else {
+      context_.Say(clause.source,
+          "%s clause is not allowed on an end-directive"_err_en_US,
+          GetUpperName(clauseId, version));
+    }
+  }
+
+  OmpClauseSet notAllowed;
+
+  for (const parser::OmpClause *clause : allClauses) {
+    llvm::omp::Clause clauseId{clause->Id()};
+    switch (clauseId) {
+    // Special cases.
+    case llvm::omp::Clause::OMPC_cancellation_construct_type:
+    case llvm::omp::Clause::OMPC_ompx_bare:
+      continue;
+    default:
+      break;
+    }
+    if (!CheckAllowedClause(clauseId, clause->source, dirId)) {
+      notAllowed.set(clauseId);
+    }
+  }
+  auto newEnd{llvm::remove_if(allClauses, [&](const parser::OmpClause *clause) {
+    return notAllowed.test(clause->Id());
+  })};
+  allClauses.erase(newEnd, allClauses.end());
+
+  std::multimap<llvm::omp::Clause, parser::CharBlock> present;
+  // Exclusive clauses aren't necessarily unique, but there is no way
+  // to specify a clause in both sets right now, and all clauses currently
+  // listed as exclusive also happen to be unique.
+  OmpClauseSet uniqueSet{//
+      directiveClausesMap_[dirId].allowedOnce |
+      directiveClausesMap_[dirId].allowedExclusive};
+
+  for (const parser::OmpClause *clause : allClauses) {
+    llvm::omp::Clause clauseId{clause->Id()};
+    // Special case.
+    if (clauseId == llvm::omp::Clause::OMPC_cancellation_construct_type) {
+      continue;
+    }
+    auto range{llvm::make_range(present.equal_range(clauseId))};
+    if (uniqueSet.test(clauseId)) {
+      // Only report any repeated clause once.
+      if (std::distance(range.begin(), range.end()) == 1) {
+        std::string clauseName{GetUpperName(clauseId, version)};
+        context_
+            .Say(clause->source,
+                "At most one %s clause can appear on %s directive"_err_en_US,
+                clauseName, GetUpperName(dirId, version))
+            .Attach(range.begin()->second,
+                "%s clause was first specified here"_en_US, clauseName);
+      }
+    }
+    present.insert(std::make_pair(clauseId, clause->source));
+  }
+
+  bool requiredPresent{false};
+  // Prepare the requiredSet relevant to the current OpenMP version.
+  OmpClauseSet requiredSet;
+  directiveClausesMap_[dirId].requiredOneOf.IterateOverMembers( //
+      [&](llvm::omp::Clause id) {
+        if (IsAllowedClause(id)) {
+          requiredSet.set(id);
+        }
+      });
+  requiredSet.IterateOverMembers( //
+      [&](llvm::omp::Clause id) {
+        if (!requiredPresent && present.count(id) != 0) {
+          requiredPresent = true;
+        }
+      });
+
+  if (!requiredPresent && !requiredSet.empty()) {
+    context_.Say(dirName.source,
+        "At least one of %s %s must appear on %s directive"_err_en_US,
+        ClauseSetToString(requiredSet),
+        requiredSet.count() == 1 ? "clause" : "clauses",
+        GetUpperName(dirName.v, version));
+  }
+
+  auto pair{FindMutuallyExclusiveClauses(
+      directiveClausesMap_[dirId].allowedExclusive, allClauses)};
+  if (pair.first && pair.second) {
+    std::string firstName{GetUpperName(pair.first->Id(), version)};
+    std::string secondName{GetUpperName(pair.second->Id(), version)};
+    context_
+        .Say(pair.second->source,
+            "%s and %s clauses are mutually exclusive and may not appear on the same %s directive"_err_en_US,
+            firstName, secondName, GetUpperName(dirId, version))
+        .Attach(pair.first->source, "%s clause was specified here"_en_US,
+            firstName);
+  }
+}
+
 void OmpStructureChecker::CheckMultipleOccurrence(
     semantics::UnorderedSymbolSet &listVars,
     const std::list<parser::Name> &nameList, const parser::CharBlock &item,
@@ -1088,6 +1238,26 @@ void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
   dirStack_.push_back(&GetOmpDirectiveSpecification(x));
   CheckDirectiveDeprecation(x);
 
+  // Verify clauses
+  common::visit(
+      [&](auto &&s) {
+        using TypeS = llvm::remove_cvref_t<decltype(s)>;
+        if constexpr ( //
+            std::is_base_of_v<parser::OmpBlockConstruct, TypeS> ||
+            std::is_same_v<parser::OpenMPSectionsConstruct, TypeS>) {
+          if (auto &endSpec{s.EndDir()}) {
+            CheckClauses(dirName,
+                llvm::iterator_range(s.BeginDir().Clauses().v),
+                llvm::iterator_range(endSpec->Clauses().v));
+            return;
+          }
+        }
+        CheckClauses(dirName,
+            llvm::iterator_range(dirStack_.back()->Clauses().v),
+            llvm::iterator_range(std::list<parser::OmpClause>{}));
+      },
+      x.u);
+
   // Simd Construct with Ordered Construct Nesting check.
   if (CurrentDirectiveIsNested()) {
     if (GetDirectiveNest(SIMDNest) > 0) {
@@ -1119,6 +1289,10 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeConstruct &x) {
   parser::OmpDirectiveName dirName{GetOmpDirectiveName(x)};
   PushContextAndClauseSets(dirName.source, dirName.v);
   dirStack_.push_back(&GetOmpDirectiveSpecification(x));
+
+  CheckClauses(dirName, llvm::iterator_range(dirStack_.back()->Clauses().v),
+      llvm::iterator_range(std::list<parser::OmpClause>{}));
+
   EnterDirectiveNest(DeclarativeNest);
 }
 
@@ -1422,15 +1596,6 @@ void OmpStructureChecker::CheckSingleConstruct(
     last = std::make_pair(symbol, source);
   }
 
-  if (!nowaitSource1.empty() && !nowaitSource2.empty()) {
-    context_
-        .Say(nowaitSource2,
-            // Match the message text with the one emitted by "CheckAllowed".
-            "At most one %s clause can appear on the %s directive"_err_en_US,
-            nowaitName, singleName)
-        .Attach(nowaitSource1, "Previous occurrence of %s"_en_US, nowaitName);
-  }
-
   if (version <= 52 && !copyPrivateSyms.empty() &&
       (!nowaitSource1.empty() || !nowaitSource2.empty())) {
     parser::CharBlock source{
@@ -1584,31 +1749,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPSectionsConstruct &x) {
   }
   HasInvalidWorksharingNesting(std::get<parser::OmpDirectiveName>(beginSpec.t),
       llvm::omp::nestedWorkshareErrSet);
-}
-
-void OmpStructureChecker::Enter(const parser::OmpEndSectionsDirective &x) {
-  const parser::OmpDirectiveName &dirName{x.DirName()};
-  ResetPartialContext(dirName.source);
-  switch (dirName.v) {
-    // 2.7.2 end-sections -> END SECTIONS [nowait-clause]
-  case llvm::omp::Directive::OMPD_sections:
-    PushContextAndClauseSets(
-        dirName.source, llvm::omp::Directive::OMPD_end_sections);
-    break;
-  default:
-    // no clauses are allowed
-    break;
-  }
-}
-
-// TODO: Verify the popping of dirContext requirement after nowait
-// implementation, as there is an implicit barrier at the end of the worksharing
-// constructs unless a nowait clause is specified. Only OMPD_end_sections is
-// popped becuase it is pushed while entering the EndSectionsDirective.
-void OmpStructureChecker::Leave(const parser::OmpEndSectionsDirective &x) {
-  if (GetContext().directive == llvm::omp::Directive::OMPD_end_sections) {
-    dirContext_.pop_back();
-  }
 }
 
 void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
@@ -2647,7 +2787,7 @@ void OmpStructureChecker::ChecksOnOrderedAsStandalone() {
     if (!duplicateSourceShown && dependSourceCount > 1) {
       duplicateSourceShown = true;
       context_.Say(src,
-          "At most one SOURCE dependence type can appear on the ORDERED directive"_err_en_US);
+          "At most one SOURCE dependence type can appear on ORDERED directive"_err_en_US);
     }
   }};
 
@@ -3230,7 +3370,7 @@ std::optional<llvm::omp::Directive> OmpStructureChecker::GetCancelType(
     if (auto *cctype{std::get_if<CancellationConstructType>(&clause.u)}) {
       if (cancelee) {
         context_.Say(cancelSource,
-            "Multiple cancel-directive-name clauses are not allowed on the %s construct"_err_en_US,
+            "Multiple cancel-directive-name clauses are not allowed on %s construct"_err_en_US,
             cancelName);
         return std::nullopt;
       }
@@ -3350,51 +3490,6 @@ void OmpStructureChecker::CheckCancellationNest(
       // This is diagnosed later.
       return;
     }
-  }
-}
-
-void OmpStructureChecker::Enter(const parser::OmpEndDirective &x) {
-  parser::CharBlock source{x.DirName().source};
-  ResetPartialContext(source);
-  switch (x.DirId()) {
-  case llvm::omp::Directive::OMPD_scope:
-    PushContextAndClauseSets(source, llvm::omp::Directive::OMPD_end_scope);
-    break;
-  // 2.7.3 end-single-clause -> copyprivate-clause |
-  //                            nowait-clause
-  case llvm::omp::Directive::OMPD_single:
-    PushContextAndClauseSets(source, llvm::omp::Directive::OMPD_end_single);
-    break;
-  // 2.7.4 end-workshare -> END WORKSHARE [nowait-clause]
-  case llvm::omp::Directive::OMPD_workshare:
-    PushContextAndClauseSets(source, llvm::omp::Directive::OMPD_end_workshare);
-    break;
-  // 2.7.1 end-do -> END DO [nowait-clause]
-  // 2.8.3 end-do-simd -> END DO SIMD [nowait-clause]
-  case llvm::omp::Directive::OMPD_do:
-    PushContextAndClauseSets(source, llvm::omp::Directive::OMPD_end_do);
-    break;
-  case llvm::omp::Directive::OMPD_do_simd:
-    PushContextAndClauseSets(source, llvm::omp::Directive::OMPD_end_do_simd);
-    break;
-  default:
-    // no clauses are allowed
-    break;
-  }
-}
-
-// TODO: Verify the popping of dirContext requirement after nowait
-// implementation, as there is an implicit barrier at the end of the worksharing
-// constructs unless a nowait clause is specified. Only OMPD_end_single and
-// end_workshareare popped as they are pushed while entering the
-// EndBlockDirective.
-void OmpStructureChecker::Leave(const parser::OmpEndDirective &x) {
-  if ((GetContext().directive == llvm::omp::Directive::OMPD_end_scope) ||
-      (GetContext().directive == llvm::omp::Directive::OMPD_end_single) ||
-      (GetContext().directive == llvm::omp::Directive::OMPD_end_workshare) ||
-      (GetContext().directive == llvm::omp::Directive::OMPD_end_do) ||
-      (GetContext().directive == llvm::omp::Directive::OMPD_end_do_simd)) {
-    dirContext_.pop_back();
   }
 }
 
@@ -3630,8 +3725,6 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &x) {
       firstClause = clause;
     }
   }
-
-  CheckRequireAtLeastOneOf();
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause &x) {
@@ -3745,6 +3838,131 @@ void OmpStructureChecker::Enter(const parser::OmpClause::TaskReduction &x) {
   CheckReductionObjects(objects, llvm::omp::Clause::OMPC_task_reduction);
 }
 
+// Compute the mangled reduction name to look up in a reduction's source module.
+// If the operator was renamed on import (e.g. USE m, ONLY: operator(.local.) =>
+// operator(.remote.)), the local mangled name will not match in the source
+// module; re-derive the lookup name from the source operator's ultimate name.
+// Only defined operators can be renamed (intrinsic operators and named
+// reductions cannot), so a detected rename always has a ".op." source name.
+// For non-renamed lookups the original mangled name is returned unchanged.
+static std::string SourceReductionName(const parser::CharBlock &mangledName,
+    const parser::CharBlock &localName, const parser::CharBlock &sourceName) {
+  if (sourceName != localName && sourceName.size() >= 3 &&
+      sourceName.front() == '.' && sourceName.back() == '.') {
+    return MangleDefinedOperator(sourceName);
+  }
+  return mangledName.ToString();
+}
+
+// Return the reduction details of `symbol` if it is a user reduction that
+// supports `type` (any type when `type` is null).
+static const UserReductionDetails *AcceptReduction(
+    const Symbol &symbol, const DeclTypeSpec *type) {
+  const auto *details{symbol.GetUltimate().detailsIf<UserReductionDetails>()};
+  if (details && (!type || details->SupportsType(*type))) {
+    return details;
+  }
+  return nullptr;
+}
+
+// A reduction symbol is locally declared (authoritative) when it is not reached
+// through any USE association, even via host association. Such a reduction
+// shadows reductions imported or reachable through its operator.
+static bool IsLocalReduction(const Symbol &symbol) {
+  const Symbol *s{&symbol};
+  while (const auto *host{s->detailsIf<HostAssocDetails>()}) {
+    s = &host->symbol();
+  }
+  return !s->detailsIf<UseDetails>();
+}
+
+// Search for a user reduction supporting `type` by following the operator/
+// procedure symbol `opSym` through its USE associations and merged generic
+// sources. Each module the operator passes through is checked for a (possibly
+// renamed) reduction; `localName` is the operator name written at the use site,
+// used to detect renames. A locally declared reduction in a module is
+// authoritative: it is returned if it supports the type, otherwise it shadows
+// reductions reachable further along that branch.
+static const UserReductionDetails *SearchOperatorReduction(const Symbol &opSym,
+    const parser::CharBlock &mangledName, const parser::CharBlock &localName,
+    const DeclTypeSpec *type, llvm::SmallPtrSetImpl<const Symbol *> &visited) {
+  if (!visited.insert(&opSym).second) {
+    return nullptr;
+  }
+  const Scope &scope{opSym.owner()};
+  if (scope.kind() == Scope::Kind::Module) {
+    std::string lookupName{
+        SourceReductionName(mangledName, localName, opSym.name())};
+    auto it{scope.find(parser::CharBlock{lookupName})};
+    if (it != scope.end()) {
+      const Symbol &reductionSym{*it->second};
+      const Symbol &reductionUltimate{reductionSym.GetUltimate()};
+      if (!reductionUltimate.attrs().test(Attr::PRIVATE)) {
+        if (const auto *details{AcceptReduction(reductionUltimate, type)}) {
+          return details;
+        }
+        // A locally declared reduction here shadows reductions reachable
+        // further along this branch.
+        if (reductionUltimate.detailsIf<UserReductionDetails>() &&
+            IsLocalReduction(reductionSym)) {
+          return nullptr;
+        }
+      }
+    }
+  }
+  // Follow a USE-associated operator to the module it was imported from.
+  if (const auto *use{opSym.detailsIf<UseDetails>()}) {
+    return SearchOperatorReduction(
+        use->symbol(), mangledName, localName, type, visited);
+  }
+  // Search each module merged into a generic operator (recursing through
+  // re-exporting facade modules).
+  if (const auto *generic{opSym.detailsIf<GenericDetails>()}) {
+    for (const Symbol &useSym : generic->uses()) {
+      if (const auto *details{SearchOperatorReduction(
+              useSym, mangledName, localName, type, visited)}) {
+        return details;
+      }
+    }
+  }
+  return nullptr;
+}
+
+// Find user reduction details for a mangled name, following USE associations
+// when the reduction is not directly visible in the scope. A type may be
+// supplied to disambiguate an operator that carries reductions for several
+// types (e.g. a generic merged from multiple modules); a candidate is accepted
+// only if it supports that type. A locally declared reduction is authoritative
+// for its operator in its scope and shadows USE-associated reductions.
+static const UserReductionDetails *FindUserReduction(const Scope &scope,
+    const parser::CharBlock &mangledName, const DeclTypeSpec *type = nullptr) {
+  // Direct lookup: a reduction directly visible via bare USE or a local
+  // declaration.
+  const Symbol *directSymbol{scope.FindSymbol(mangledName)};
+  if (directSymbol) {
+    if (const auto *details{AcceptReduction(*directSymbol, type)}) {
+      return details;
+    }
+    // A locally declared reduction that does not support the requested type is
+    // authoritative: it shadows USE-associated reductions (ProcessReduction-
+    // Specifier erases the latter), so do not resurrect them via the operator.
+    if (directSymbol->GetUltimate().detailsIf<UserReductionDetails>() &&
+        IsLocalReduction(*directSymbol)) {
+      return nullptr;
+    }
+  }
+  // Trace the operator/procedure to the modules that declare its reduction.
+  std::string fortranName{GetReductionFortranId(mangledName)};
+  const Symbol *opSymbol{
+      fortranName.empty() ? nullptr : scope.FindSymbol(fortranName)};
+  if (!opSymbol) {
+    return nullptr;
+  }
+  llvm::SmallPtrSet<const Symbol *, 8> visited;
+  return SearchOperatorReduction(
+      *opSymbol, mangledName, opSymbol->name(), type, visited);
+}
+
 bool OmpStructureChecker::CheckReductionOperator(
     const parser::OmpReductionIdentifier &ident, parser::CharBlock source,
     llvm::omp::Clause clauseId) {
@@ -3775,10 +3993,8 @@ bool OmpStructureChecker::CheckReductionOperator(
     if (const auto *definedOp{std::get_if<parser::DefinedOpName>(&dOpr.u)}) {
       std::string mangled{MangleDefinedOperator(definedOp->v.symbol->name())};
       const Scope &scope{definedOp->v.symbol->owner()};
-      if (const Symbol *symbol{scope.FindSymbol(mangled)}) {
-        if (symbol->GetUltimate().detailsIf<UserReductionDetails>()) {
-          return true;
-        }
+      if (FindUserReduction(scope, mangled)) {
+        return true;
       }
     }
     context_.Say(source, "Invalid reduction operator in %s clause."_err_en_US,
@@ -3865,32 +4081,9 @@ void OmpStructureChecker::CheckReductionObjects(
 
 static bool CheckSymbolSupportsType(const Scope &scope,
     const parser::CharBlock &name, const DeclTypeSpec &type) {
-  if (const auto *symbol{scope.FindSymbol(name)}) {
-    const auto &ultimate{symbol->GetUltimate()};
-    if (const auto *reductionDetails{
-            ultimate.detailsIf<UserReductionDetails>()}) {
-      return reductionDetails->SupportsType(type);
-    }
-  }
-  // Look through module scopes in the global scope.
-  // This covers reductions declared in a module and used via USE association.
-  const SemanticsContext &semCtx{scope.context()};
-  Scope &global = const_cast<SemanticsContext &>(semCtx).globalScope();
-  for (const Scope &child : global.children()) {
-    if (child.kind() == Scope::Kind::Module) {
-      if (const auto *symbol{child.FindSymbol(name)}) {
-        // Skip PRIVATE reductions that aren't visible in the current scope.
-        if (symbol->attrs().test(Attr::PRIVATE)) {
-          continue;
-        }
-        if (const auto *reductionDetails{
-                symbol->detailsIf<UserReductionDetails>()}) {
-          return reductionDetails->SupportsType(type);
-        }
-      }
-    }
-  }
-  return false;
+  // FindUserReduction only returns a reduction that supports the requested
+  // type.
+  return FindUserReduction(scope, name, &type) != nullptr;
 }
 
 static bool IsReductionAllowedForType(

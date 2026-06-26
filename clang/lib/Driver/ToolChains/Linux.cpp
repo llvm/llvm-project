@@ -1005,6 +1005,8 @@ Linux::getSupportedSanitizers(BoundArch BA,
   if (IsX86_64 || IsAArch64 || IsRISCV64) {
     Res |= SanitizerKind::HWAddress;
   }
+  if (IsHexagon)
+    Res |= SanitizerKind::ShadowCallStack;
   if (IsX86_64 || IsAArch64) {
     Res |= SanitizerKind::KernelHWAddress;
   }

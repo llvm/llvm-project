@@ -111,13 +111,13 @@ thread_local CtorDtor tls_cd = 5;
 // CIR:   %[[DTOR_DECAY:.*]] = cir.cast bitcast %[[GET_DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:   %[[GLOB_DECAY:.*]] = cir.cast bitcast %[[GET_GLOB]] : !cir.ptr<!rec_CtorDtor> -> !cir.ptr<!void>
 // CIR:   %[[DSOHANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR:   cir.call @__cxa_thread_atexit(%[[DTOR_DECAY]], %[[GLOB_DECAY]], %[[DSOHANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> ()
+// CIR:   cir.call @__cxa_thread_atexit(%[[DTOR_DECAY]], %[[GLOB_DECAY]], %[[DSOHANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> !s32i
 // CIR:   cir.return
 //
 // LLVM: define internal void @[[TLS_CD_INIT]]() {
 // OGCG: define internal void @[[TLS_CD_INIT:.*]]() {{.*}}{
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_cd)
-// LLVM:   call void @__cxa_thread_atexit(ptr @_ZN8CtorDtorD1Ev, ptr %[[GET_GLOB]], ptr @__dso_handle)
+// LLVM:   call i32 @__cxa_thread_atexit(ptr @_ZN8CtorDtorD1Ev, ptr %[[GET_GLOB]], ptr @__dso_handle)
 // OGCG:   call i32 @__cxa_thread_atexit(ptr @_ZN8CtorDtorD1Ev, ptr @tls_cd, ptr @__dso_handle)
 // LLVM-BOTH:   ret void
 
@@ -140,7 +140,7 @@ thread_local CtorDtor tls_cd_dyn = get_i();
 // CIR:   %[[DTOR_DECAY:.*]] = cir.cast bitcast %[[GET_DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:   %[[GLOB_DECAY:.*]] = cir.cast bitcast %[[GET_GLOB]] : !cir.ptr<!rec_CtorDtor> -> !cir.ptr<!void>
 // CIR:   %[[DSOHANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR:   cir.call @__cxa_thread_atexit(%[[DTOR_DECAY]], %[[GLOB_DECAY]], %[[DSOHANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> ()
+// CIR:   cir.call @__cxa_thread_atexit(%[[DTOR_DECAY]], %[[GLOB_DECAY]], %[[DSOHANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> !s32i 
 // CIR:   cir.return
 //
 // LLVM: define internal void @[[TLS_CD_DYN_INIT]]() {
@@ -150,7 +150,7 @@ thread_local CtorDtor tls_cd_dyn = get_i();
 // LLVM:   call void @_ZN8CtorDtorC1Ei(ptr {{.*}}%[[GET_GLOB]], i32 {{.*}}%[[CALL]])
 // OGCG:   call void @_ZN8CtorDtorC1Ei(ptr {{.*}}@tls_cd_dyn, i32 {{.*}}%[[CALL]])
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_cd_dyn)
-// LLVM:   call void @__cxa_thread_atexit(ptr @_ZN8CtorDtorD1Ev, ptr %[[GET_GLOB]], ptr @__dso_handle)
+// LLVM:   call i32 @__cxa_thread_atexit(ptr @_ZN8CtorDtorD1Ev, ptr %[[GET_GLOB]], ptr @__dso_handle)
 // OGCG:   call i32 @__cxa_thread_atexit(ptr @_ZN8CtorDtorD1Ev, ptr @tls_cd_dyn, ptr @__dso_handle)
 // LLVM-BOTH:   ret void
 
@@ -200,7 +200,7 @@ thread_local CtorDtor tls_cd_dyn_not_used = get_i();
 // CIR:   %[[DTOR_DECAY:.*]] = cir.cast bitcast %[[GET_DTOR]] : !cir.ptr<!cir.func<(!cir.ptr<!rec_CtorDtor>)>> -> !cir.ptr<!cir.func<(!cir.ptr<!void>)>>
 // CIR:   %[[GLOB_DECAY:.*]] = cir.cast bitcast %[[GET_GLOB]] : !cir.ptr<!rec_CtorDtor> -> !cir.ptr<!void>
 // CIR:   %[[DSOHANDLE:.*]] = cir.get_global @__dso_handle : !cir.ptr<i8>
-// CIR:   cir.call @__cxa_thread_atexit(%[[DTOR_DECAY]], %[[GLOB_DECAY]], %[[DSOHANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> ()
+// CIR:   cir.call @__cxa_thread_atexit(%[[DTOR_DECAY]], %[[GLOB_DECAY]], %[[DSOHANDLE]]) : (!cir.ptr<!cir.func<(!cir.ptr<!void>)>>, !cir.ptr<!void>, !cir.ptr<i8>) -> !s32i
 // CIR:   cir.return
 //
 // LLVM: define internal void @[[TLS_CD_DYN_NOT_USED_INIT]]() {
@@ -210,7 +210,7 @@ thread_local CtorDtor tls_cd_dyn_not_used = get_i();
 // LLVM:   call void @_ZN8CtorDtorC1Ei(ptr {{.*}}%[[GET_GLOB]], i32 {{.*}}%[[CALL]])
 // OGCG:   call void @_ZN8CtorDtorC1Ei(ptr {{.*}}@tls_cd_dyn_not_used, i32 {{.*}}%[[CALL]])
 // LLVM:   %[[GET_GLOB:.*]] = call ptr @llvm.threadlocal.address.p0(ptr @tls_cd_dyn_not_used)
-// LLVM:   call void @__cxa_thread_atexit(ptr @_ZN8CtorDtorD1Ev, ptr %[[GET_GLOB]], ptr @__dso_handle)
+// LLVM:   call i32 @__cxa_thread_atexit(ptr @_ZN8CtorDtorD1Ev, ptr %[[GET_GLOB]], ptr @__dso_handle)
 // OGCG:   call i32 @__cxa_thread_atexit(ptr @_ZN8CtorDtorD1Ev, ptr @tls_cd_dyn_not_used, ptr @__dso_handle)
 // LLVM-BOTH:   ret void
 

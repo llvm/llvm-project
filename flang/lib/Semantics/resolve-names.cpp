@@ -1635,22 +1635,40 @@ void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
 
 Symbol *AccVisitor::CopyUseDeviceSymbol(const Symbol &symbol) {
   const Symbol &ultimate{symbol.GetUltimate()};
-  Symbol *copy{currScope().CopySymbol(ultimate)};
+  // Key the device copy under the name as referenced here, which differs from
+  // the ultimate symbol's name for a USE-renamed variable, so that references
+  // inside the construct resolve to this copy rather than the host symbol.
+  const SourceName localName{symbol.name()};
+  Symbol *copy{nullptr};
+  // CopySymbol would key the copy under the ultimate's name; only use it when
+  // that matches the local name, otherwise reuse the host-associated symbol.
+  if (localName == ultimate.name()) {
+    copy = currScope().CopySymbol(ultimate);
+  }
   if (!copy) {
-    copy = FindInScope(currScope(), ultimate.name());
+    copy = FindInScope(currScope(), localName);
   }
   if (copy && copy->has<HostAssocDetails>()) {
     if (const auto *hostAssoc{copy->detailsIf<HostAssocDetails>()};
         hostAssoc && copy->owner().kind() == Scope::Kind::OpenACCConstruct) {
       Scope &hostScope{currScope().parent()};
-      if (!FindInScope(hostScope, ultimate.name())) {
+      if (!FindInScope(hostScope, localName)) {
         hostScope.CopySymbol(*copy);
       }
     }
     if (const auto *object{ultimate.detailsIf<ObjectEntityDetails>()}) {
       currScope().erase(copy->name());
       auto pair{currScope().try_emplace(
-          ultimate.name(), ultimate.attrs(), ObjectEntityDetails{*object})};
+          localName, ultimate.attrs(), ObjectEntityDetails{*object})};
+      copy = &*pair.first->second;
+      copy->flags() = ultimate.flags();
+    }
+  } else if (!copy) {
+    // USE-renamed object with no host-association symbol in this scope: key an
+    // object-entity copy under the local name (CopySymbol cannot rename).
+    if (const auto *object{ultimate.detailsIf<ObjectEntityDetails>()}) {
+      auto pair{currScope().try_emplace(
+          localName, ultimate.attrs(), ObjectEntityDetails{*object})};
       copy = &*pair.first->second;
       copy->flags() = ultimate.flags();
     }
@@ -4543,38 +4561,6 @@ Scope *ModuleVisitor::FindModule(const parser::Name &name,
   return scope;
 }
 
-// Map a mangled declare reduction name (e.g., op.+, op.max, op..myop.) back
-// to the Fortran identifier that controls its accessibility in a module scope.
-// Intrinsic operators map to "operator(+)" etc., named functions to "max" etc.,
-// and defined operators to "operator(.myop.)" etc.
-static std::string GetReductionIdentifierName(const SourceName &mangledName) {
-  llvm::StringRef name{mangledName.begin(), mangledName.size()};
-  if (!name.starts_with("op.")) {
-    return {};
-  }
-  llvm::StringRef suffix{name.drop_front(3)};
-  // Intrinsic arithmetic operators: op.+ → operator(+)
-  if (suffix == "+" || suffix == "-" || suffix == "*") {
-    return ("operator(" + suffix + ")").str();
-  }
-  // Intrinsic logical operators (mangled uppercase, scope uses lowercase)
-  llvm::StringRef logicalOp{llvm::StringSwitch<llvm::StringRef>(suffix)
-          .Case("AND", ".and.")
-          .Case("OR", ".or.")
-          .Case("EQV", ".eqv.")
-          .Case("NEQV", ".neqv.")
-          .Default("")};
-  if (!logicalOp.empty()) {
-    return ("operator(" + logicalOp + ")").str();
-  }
-  // Defined operators: op..myop. → operator(.myop.)
-  if (suffix.size() > 2 && suffix.front() == '.' && suffix.back() == '.') {
-    return ("operator(" + suffix + ")").str();
-  }
-  // Named functions: op.max → max
-  return suffix.str();
-}
-
 void ModuleVisitor::ApplyDefaultAccess() {
   const auto *moduleDetails{
       DEREF(currScope().symbol()).detailsIf<ModuleDetails>()};
@@ -4601,7 +4587,7 @@ void ModuleVisitor::ApplyDefaultAccess() {
         // a module has accessibility as if it were declared as a module entity.
         // If the corresponding operator/procedure has explicit accessibility,
         // the reduction inherits it.
-        std::string opName{GetReductionIdentifierName(symbol.name())};
+        std::string opName{GetReductionFortranId(symbol.name())};
         if (!opName.empty()) {
           if (auto *opSym{FindInScope(currScope(), SourceName{opName})}) {
             if (opSym->attrs().test(Attr::PUBLIC)) {

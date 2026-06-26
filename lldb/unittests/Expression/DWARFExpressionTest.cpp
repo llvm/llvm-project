@@ -1113,6 +1113,22 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_regx) {
       ExpectScalar(0xBEEF, Value::ContextType::RegisterInfo));
 }
 
+TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref_size_zero) {
+  // DW_OP_deref_size with size 0 must report an error instead of constructing
+  // a DataExtractor with addr_size 0 (caught by lldb-dwarf-expression-fuzzer:
+  // assertion failure in DataExtractor / DerefSizeExtractDataHelper).
+  TestContext ctx;
+  MockMemory::Map mem;
+  mem[{lldb::addr_t(0), size_t(0)}] = {};
+  ASSERT_TRUE(
+      CreateTestContext(&ctx, "i386-pc-linux", std::nullopt, MockMemory(mem)));
+  ExecutionContext exe_ctx(ctx.process_sp);
+  EXPECT_THAT_ERROR(Evaluate({DW_OP_lit0, DW_OP_deref_size, 0x00}, {}, {},
+                             &exe_ctx, ctx.reg_ctx_sp.get())
+                        .takeError(),
+                    llvm::Failed());
+}
+
 TEST_F(DWARFExpressionMockProcessTest, DW_OP_breg0) {
   TestContext ctx;
   ASSERT_TRUE(CreateTestContext(&ctx, "i386-pc-linux",
