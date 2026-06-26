@@ -30,6 +30,7 @@ struct AddressSanitizerOptions {
   int InstrumentationWithCallsThreshold = 7000;
   uint32_t MaxInlinePoisoningSize = 64;
   bool InsertVersionCheck = true;
+  std::vector<std::pair<std::string, std::string>> PrefixMap;
 };
 
 /// Public interface to the address sanitizer module pass for instrumenting code

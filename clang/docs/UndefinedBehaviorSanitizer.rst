@@ -522,6 +522,10 @@ information. If ``N`` is positive, file information emitted by
 UndefinedBehaviorSanitizer will drop the first ``N`` components from the file
 path. If ``N`` is negative, the last ``N`` components will be kept.
 
+Alternatively, ``-fsanitize-prefix-map=OLD=NEW`` can be used to remap file
+paths. If a source path starts with ``OLD``, it will be replaced with ``NEW``.
+Both options can be combined; the prefix map is applied first.
+
 Example
 -------
 
@@ -532,6 +536,7 @@ For a file called ``/code/library/file.cpp``, here is what would be emitted:
 * ``-fsanitize-undefined-strip-path-components=2``: ``library/file.cpp``
 * ``-fsanitize-undefined-strip-path-components=-1``: ``file.cpp``
 * ``-fsanitize-undefined-strip-path-components=-2``: ``library/file.cpp``
+* ``-fsanitize-prefix-map=/code/=``: ``library/file.cpp``
 
 More Information
 ================
