@@ -307,3 +307,76 @@ for.i.end:                                        ; preds = %for.i.end_crit_edge
   %sum.0.lcssa = phi i32 [ %split11, %for.i.end_crit_edge ], [ 0, %entry ]
   ret i32 %sum.0.lcssa
 }
+
+
+; Same as @h but without the loop-invariant guard branches inside the outer
+; loops (the "if (M > 0)" guard in for.i and "if (K > 0)" guard in for.j),
+; so the nest is perfectly nested at all levels.
+define i32 @h_perfect(i32 %N, i32 %M, i32 %K) #0 {
+; CHECK: IsPerfect=true, Depth=1, OutermostLoop: for.k, Loops: ( for.k )
+; CHECK: IsPerfect=true, Depth=2, OutermostLoop: for.j, Loops: ( for.j for.k )
+; CHECK: IsPerfect=true, Depth=3, OutermostLoop: for.i, Loops: ( for.i for.j for.k )
+entry:
+  %cmp8 = icmp slt i32 0, %N
+  br i1 %cmp8, label %for.i.ph, label %for.i.end
+
+for.i.ph:                                         ; preds = %entry
+  br label %for.i
+
+for.i:                                            ; preds = %for.i.ph, %for.i.inc
+  %i.010 = phi i32 [ 0, %for.i.ph ], [ %inc12, %for.i.inc ]
+  %sum.09 = phi i32 [ 0, %for.i.ph ], [ %sum.1.lcssa, %for.i.inc ]
+  br label %for.j.ph
+
+for.j.ph:                                         ; preds = %for.i
+  br label %for.j
+
+for.j:                                            ; preds = %for.j.ph, %for.j.inc
+  %j.06 = phi i32 [ 0, %for.j.ph ], [ %inc9, %for.j.inc ]
+  %sum.15 = phi i32 [ %sum.09, %for.j.ph ], [ %sum.2.lcssa, %for.j.inc ]
+  br label %for.k.ph
+
+for.k.ph:                                         ; preds = %for.j
+  br label %for.k
+
+for.k:                                            ; preds = %for.k.ph, %for.k.inc
+  %k.03 = phi i32 [ 0, %for.k.ph ], [ %inc, %for.k.inc ]
+  %sum.22 = phi i32 [ %sum.15, %for.k.ph ], [ %add, %for.k.inc ]
+  %mul = mul nsw i32 %i.010, %j.06
+  %mul7 = mul nsw i32 %mul, %k.03
+  %add = add nsw i32 %sum.22, %mul7
+  br label %for.k.inc
+
+for.k.inc:                                        ; preds = %for.k
+  %inc = add nsw i32 %k.03, 1
+  %cmp5 = icmp slt i32 %inc, %K
+  br i1 %cmp5, label %for.k, label %for.k.end
+
+for.k.end:                                        ; preds = %for.k.inc
+  %sum.2.lcssa = phi i32 [ %add, %for.k.inc ]
+  br label %for.j.inc
+
+for.j.inc:                                        ; preds = %for.k.end
+  %inc9 = add nsw i32 %j.06, 1
+  %cmp2 = icmp slt i32 %inc9, %M
+  br i1 %cmp2, label %for.j, label %for.j.end
+
+for.j.end:                                        ; preds = %for.j.inc
+  %sum.1.lcssa = phi i32 [ %sum.2.lcssa, %for.j.inc ]
+  br label %for.i.inc
+
+for.i.inc:                                        ; preds = %for.j.end
+  %inc12 = add nsw i32 %i.010, 1
+  %cmp = icmp slt i32 %inc12, %N
+  br i1 %cmp, label %for.i, label %for.i.end_crit_edge
+
+for.i.end_crit_edge:                              ; preds = %for.i.inc
+  %split11 = phi i32 [ %sum.1.lcssa, %for.i.inc ]
+  br label %for.i.end
+
+for.i.end:                                        ; preds = %for.i.end_crit_edge, %entry
+  %sum.0.lcssa = phi i32 [ %split11, %for.i.end_crit_edge ], [ 0, %entry ]
+  ret i32 %sum.0.lcssa
+}
+
+
