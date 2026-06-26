@@ -56,6 +56,32 @@ TEST_F(LlvmLibcAtan2f16Test, TrickyInputs) {
   }
 }
 
+TEST_F(LlvmLibcAtan2f16Test, SpuriousUnderflow) {
+  mpfr::ForceRoundingMode r(mpfr::RoundingMode::Nearest);
+  if (!r.success)
+    return;
+
+  constexpr int N = 1;
+  mpfr::BinaryInput<float16> INPUTS[N] = {
+      {0x1.0p-24f16, 0x1.0p-10f16},
+  };
+
+  for (int i = 0; i < N; ++i) {
+    float16 y = INPUTS[i].x;
+    float16 x = INPUTS[i].y;
+
+    LIBC_NAMESPACE::fputil::clear_except(FE_ALL_EXCEPT);
+    float16 result = LIBC_NAMESPACE::atan2f16(y, x);
+    int excepts = LIBC_NAMESPACE::fputil::test_except(FE_ALL_EXCEPT);
+
+    EXPECT_EQ(excepts & FE_UNDERFLOW, 0);
+    EXPECT_NE(excepts & FE_INEXACT, 0);
+
+    ASSERT_MPFR_MATCH(mpfr::Operation::Atan2, INPUTS[i], result, 0.5,
+                      mpfr::RoundingMode::Nearest);
+  }
+}
+
 TEST_F(LlvmLibcAtan2f16Test, InFloat16Range) {
   constexpr uint16_t X_START = FPBits(static_cast<float16>(0.25f)).uintval();
   constexpr uint16_t X_STOP = FPBits(static_cast<float16>(4.0f)).uintval();
