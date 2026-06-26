@@ -293,6 +293,14 @@ private:
     return LoanSetFactory.getEmptySet();
   }
 
+  /// Builds the chain of origins through which a loan has propagated.
+  ///
+  /// This procedure operates strictly within a single Block. Starting from the
+  /// last fact of the Block, it traces backwards through OriginFlowFacts to
+  /// identify the sequence of origins through which the loan flowed.
+  ///
+  /// Returns (chain, true) if the target loan origin is found during the
+  /// traversal, otherwise returns (chain, false).
   std::pair<llvm::SmallVector<OriginID>, bool>
   buildOriginFlowChain(const CFGBlock *Block, const OriginID StartOID,
                        const LoanID TargetLoan) const {

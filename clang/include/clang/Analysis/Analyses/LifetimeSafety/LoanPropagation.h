@@ -40,8 +40,11 @@ public:
 
   /// Builds the chain of origins through which a loan has propagated.
   ///
-  /// Starting from the last fact of the block containg StartPoint,
-  /// this function traces backwards through OriginFlowFacts to identify the
+  /// Starting from the last fact of the block containing StartPoint, this
+  /// function performs a BFS over CFG blocks to explore all reachable blocks.
+  /// Within each block, facts are processed in reverse order.
+  ///
+  /// The traversal follows OriginFlowFacts backwards to reconstruct the
   /// sequence of origins through which the loan flowed, ending at the origin
   /// where the loan was originally issued.
   llvm::SmallVector<OriginID> buildOriginFlowChain(ProgramPoint StartPoint,

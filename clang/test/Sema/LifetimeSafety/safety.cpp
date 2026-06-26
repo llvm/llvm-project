@@ -4092,6 +4092,7 @@ void discarded_body_local() {
 // Since it is off, we expect NO warnings or notes here.
 View suggestion_disabled_test(View a) {
   return a;
+}
 
 //===----------------------------------------------------------------------===//
 // buildOriginFlowChain
