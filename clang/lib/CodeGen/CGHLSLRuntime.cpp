@@ -2073,7 +2073,11 @@ bool CGHLSLRuntime::emitBufferCopy(CodeGenFunction &CGF, const Expr *E,
       initializeGlobalResourceArray(CGF, ResDecl, ResSlot);
   };
 
-  return HLSLBufferCopyEmitter(CGF, DstPtr, SrcPtr).emitCopy(Ty, EmitResFn);
+  auto Result =
+      HLSLBufferCopyEmitter(CGF, DstPtr, SrcPtr).emitCopy(Ty, EmitResFn);
+  assert(AssociatedResources.getNextResource() == nullptr &&
+         "expected all associated resources to be processed");
+  return Result;
 }
 
 LValue CGHLSLRuntime::emitBufferMemberExpr(CodeGenFunction &CGF,
