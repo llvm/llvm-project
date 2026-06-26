@@ -387,15 +387,16 @@ static APInt floorDivideGF2(APInt Dividend, APInt Divisor) {
   // Extend the divisor bit width to match the dividend.
   Divisor = Divisor.zext(Dividend.getBitWidth());
 
-  // The Poly argument should never be zero, or else this underflows.
-  auto Deg = [](const APInt &Poly) { return Poly.getActiveBits() - 1; };
+  // Note that getActiveBits(x) returns deg(x)+1, but the computation below
+  // still holds.
+  unsigned DivisorActiveBits = Divisor.getActiveBits();
 
   // Q = 0
   APInt Quotient = APInt::getZero(Dividend.getBitWidth());
   // S != 0 and deg(S) >= deg(P)
-  while (!Dividend.isZero() && Deg(Dividend) >= Deg(Divisor)) {
+  while (!Dividend.isZero() && Dividend.getActiveBits() >= DivisorActiveBits) {
     // T = S[deg(S)] / P[deg(P)]
-    unsigned Shift = Deg(Dividend) - Deg(Divisor);
+    unsigned Shift = Dividend.getActiveBits() - DivisorActiveBits;
     // Q = Q + T
     Quotient.setBit(Shift);
     // S = S - T * P

@@ -74,8 +74,7 @@ define i16 @crc16.le.tc8(i8 %msg, i16 %checksum) {
 ; ZBC32-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[CRC_LE_LSHR]] to i16
 ; ZBC32-NEXT:    br label %[[LOOP:.*]]
 ; ZBC32:       [[LOOP]]:
-; ZBC32-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 poison, 7
-; ZBC32-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; ZBC32-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
 ; ZBC32:       [[EXIT]]:
 ; ZBC32-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; ZBC32-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
@@ -187,8 +186,7 @@ define i16 @crc16.le.tc8.udiv(i8 %msg, i16 %checksum) {
 ; ZBC32-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[CRC_LE_LSHR]] to i16
 ; ZBC32-NEXT:    br label %[[LOOP:.*]]
 ; ZBC32:       [[LOOP]]:
-; ZBC32-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 poison, 7
-; ZBC32-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; ZBC32-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
 ; ZBC32:       [[EXIT]]:
 ; ZBC32-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; ZBC32-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
@@ -301,8 +299,7 @@ define i16 @crc16.le.tc16(i16 %msg, i16 %checksum) {
 ; ZBC32-NEXT:    [[CRC_NEXT2:%.*]] = trunc i32 [[CRC_LE_LSHR]] to i16
 ; ZBC32-NEXT:    br label %[[LOOP:.*]]
 ; ZBC32:       [[LOOP]]:
-; ZBC32-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 poison, 15
-; ZBC32-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; ZBC32-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
 ; ZBC32:       [[EXIT]]:
 ; ZBC32-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; ZBC32-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
@@ -415,8 +412,7 @@ define i8 @crc8.le.tc16(i16 %msg, i8 %checksum) {
 ; ZBC32-NEXT:    [[CRC_NEXT2:%.*]] = trunc i32 [[CRC_LE_LSHR]] to i8
 ; ZBC32-NEXT:    br label %[[LOOP:.*]]
 ; ZBC32:       [[LOOP]]:
-; ZBC32-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 poison, 15
-; ZBC32-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; ZBC32-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
 ; ZBC32:       [[EXIT]]:
 ; ZBC32-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; ZBC32-NEXT:    ret i8 [[CRC_NEXT_LCSSA]]
@@ -531,8 +527,7 @@ define i16 @crc16.be.tc8.crc.init.li(i16 %checksum, i8 %msg) {
 ; ZBC32-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[XOR_CRC_MULT]] to i16
 ; ZBC32-NEXT:    br label %[[LOOP:.*]]
 ; ZBC32:       [[LOOP]]:
-; ZBC32-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i32 poison, 7
-; ZBC32-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; ZBC32-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
 ; ZBC32:       [[EXIT]]:
 ; ZBC32-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; ZBC32-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
@@ -641,8 +636,7 @@ define i16 @crc16.be.tc8.crc.init.arg(i16 %crc.init) {
 ; ZBC32-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[XOR_CRC_MULT]] to i16
 ; ZBC32-NEXT:    br label %[[LOOP:.*]]
 ; ZBC32:       [[LOOP]]:
-; ZBC32-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i32 poison, 7
-; ZBC32-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; ZBC32-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
 ; ZBC32:       [[EXIT]]:
 ; ZBC32-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; ZBC32-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
@@ -742,8 +736,7 @@ define i16 @crc16.be.tc8.crc.init.arg.flipped.sb.check(i16 %crc.init) {
 ; ZBC32-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[XOR_CRC_MULT]] to i16
 ; ZBC32-NEXT:    br label %[[LOOP:.*]]
 ; ZBC32:       [[LOOP]]:
-; ZBC32-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i32 poison, 7
-; ZBC32-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; ZBC32-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
 ; ZBC32:       [[EXIT]]:
 ; ZBC32-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; ZBC32-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
@@ -864,8 +857,7 @@ define i8 @crc8.be.tc8.ptr.nested.loop(ptr %msg, i32 %loop.limit) {
 ; ZBC32-NEXT:    [[CRC_NEXT1:%.*]] = trunc i16 [[XOR_CRC_MULT]] to i8
 ; ZBC32-NEXT:    br label %[[INNER_LOOP:.*]]
 ; ZBC32:       [[INNER_LOOP]]:
-; ZBC32-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i32 poison, 7
-; ZBC32-NEXT:    br i1 [[EXIT_COND]], label %[[INNER_LOOP]], label %[[INNER_EXIT]]
+; ZBC32-NEXT:    br i1 true, label %[[INNER_EXIT]], label %[[INNER_LOOP]]
 ; ZBC32:       [[INNER_EXIT]]:
 ; ZBC32-NEXT:    [[CRC_NEXT_LCSSA]] = phi i8 [ [[CRC_NEXT1]], %[[INNER_LOOP]] ]
 ; ZBC32-NEXT:    [[OUTER_IV_NEXT]] = add i32 [[OUTER_IV]], 1
@@ -1061,8 +1053,7 @@ define i32 @crc32.le.tc8.data32(i32 %checksum, i32 %msg) {
 ; ZBC64-NEXT:    [[CRC_NEXT2:%.*]] = trunc i40 [[CRC_LE_LSHR]] to i32
 ; ZBC64-NEXT:    br label %[[LOOP:.*]]
 ; ZBC64:       [[LOOP]]:
-; ZBC64-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 poison, 7
-; ZBC64-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; ZBC64-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
 ; ZBC64:       [[EXIT]]:
 ; ZBC64-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; ZBC64-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
@@ -1149,8 +1140,7 @@ define i32 @crc.disabled.optsize(i32 %checksum, i32 %msg) optsize {
 ; ZBC64-NEXT:    [[CRC_NEXT2:%.*]] = trunc i40 [[CRC_LE_LSHR]] to i32
 ; ZBC64-NEXT:    br label %[[LOOP:.*]]
 ; ZBC64:       [[LOOP]]:
-; ZBC64-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 poison, 7
-; ZBC64-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; ZBC64-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
 ; ZBC64:       [[EXIT]]:
 ; ZBC64-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; ZBC64-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]

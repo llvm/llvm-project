@@ -51,8 +51,7 @@ define i16 @crc16.le.tc8(i8 %msg, i16 %checksum) {
 ; AES-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[CRC_LE_LSHR]] to i16
 ; AES-NEXT:    br label %[[LOOP:.*]]
 ; AES:       [[LOOP]]:
-; AES-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 poison, 7
-; AES-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; AES-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
 ; AES:       [[EXIT]]:
 ; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; AES-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
@@ -118,8 +117,7 @@ define i16 @crc16.le.tc8.udiv(i8 %msg, i16 %checksum) {
 ; AES-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[CRC_LE_LSHR]] to i16
 ; AES-NEXT:    br label %[[LOOP:.*]]
 ; AES:       [[LOOP]]:
-; AES-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 poison, 7
-; AES-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; AES-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
 ; AES:       [[EXIT]]:
 ; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; AES-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
@@ -186,8 +184,7 @@ define i16 @crc16.le.tc16(i16 %msg, i16 %checksum) {
 ; AES-NEXT:    [[CRC_NEXT2:%.*]] = trunc i32 [[CRC_LE_LSHR]] to i16
 ; AES-NEXT:    br label %[[LOOP:.*]]
 ; AES:       [[LOOP]]:
-; AES-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 poison, 15
-; AES-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; AES-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
 ; AES:       [[EXIT]]:
 ; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; AES-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
@@ -252,8 +249,7 @@ define i8 @crc8.le.tc16(i16 %msg, i8 %checksum) {
 ; AES-NEXT:    [[CRC_NEXT2:%.*]] = trunc i32 [[CRC_LE_LSHR]] to i8
 ; AES-NEXT:    br label %[[LOOP:.*]]
 ; AES:       [[LOOP]]:
-; AES-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 poison, 15
-; AES-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; AES-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
 ; AES:       [[EXIT]]:
 ; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; AES-NEXT:    ret i8 [[CRC_NEXT_LCSSA]]
@@ -322,8 +318,7 @@ define i16 @crc16.be.tc8.crc.init.li(i16 %checksum, i8 %msg) {
 ; AES-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[XOR_CRC_MULT]] to i16
 ; AES-NEXT:    br label %[[LOOP:.*]]
 ; AES:       [[LOOP]]:
-; AES-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i32 poison, 7
-; AES-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; AES-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
 ; AES:       [[EXIT]]:
 ; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; AES-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
@@ -384,8 +379,7 @@ define i16 @crc16.be.tc8.crc.init.arg(i16 %crc.init) {
 ; AES-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[XOR_CRC_MULT]] to i16
 ; AES-NEXT:    br label %[[LOOP:.*]]
 ; AES:       [[LOOP]]:
-; AES-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i32 poison, 7
-; AES-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; AES-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
 ; AES:       [[EXIT]]:
 ; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; AES-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
@@ -443,8 +437,7 @@ define i16 @crc16.be.tc8.crc.init.arg.flipped.sb.check(i16 %crc.init) {
 ; AES-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[XOR_CRC_MULT]] to i16
 ; AES-NEXT:    br label %[[LOOP:.*]]
 ; AES:       [[LOOP]]:
-; AES-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i32 poison, 7
-; AES-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; AES-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
 ; AES:       [[EXIT]]:
 ; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; AES-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
@@ -523,8 +516,7 @@ define i8 @crc8.be.tc8.ptr.nested.loop(ptr %msg, i32 %loop.limit) {
 ; AES-NEXT:    [[CRC_NEXT1:%.*]] = trunc i16 [[XOR_CRC_MULT]] to i8
 ; AES-NEXT:    br label %[[INNER_LOOP:.*]]
 ; AES:       [[INNER_LOOP]]:
-; AES-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i32 poison, 7
-; AES-NEXT:    br i1 [[EXIT_COND]], label %[[INNER_LOOP]], label %[[INNER_EXIT]]
+; AES-NEXT:    br i1 true, label %[[INNER_EXIT]], label %[[INNER_LOOP]]
 ; AES:       [[INNER_EXIT]]:
 ; AES-NEXT:    [[CRC_NEXT_LCSSA]] = phi i8 [ [[CRC_NEXT1]], %[[INNER_LOOP]] ]
 ; AES-NEXT:    [[OUTER_IV_NEXT]] = add i32 [[OUTER_IV]], 1
@@ -608,8 +600,7 @@ define i32 @crc32.le.tc8.data32(i32 %checksum, i32 %msg) {
 ; AES-NEXT:    [[CRC_NEXT2:%.*]] = trunc i40 [[CRC_LE_LSHR]] to i32
 ; AES-NEXT:    br label %[[LOOP:.*]]
 ; AES:       [[LOOP]]:
-; AES-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 poison, 7
-; AES-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; AES-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
 ; AES:       [[EXIT]]:
 ; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; AES-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
@@ -674,8 +665,7 @@ define i32 @crc.disabled.optsize(i32 %checksum, i32 %msg) optsize {
 ; AES-NEXT:    [[CRC_NEXT2:%.*]] = trunc i40 [[CRC_LE_LSHR]] to i32
 ; AES-NEXT:    br label %[[LOOP:.*]]
 ; AES:       [[LOOP]]:
-; AES-NEXT:    [[EXIT_COND:%.*]] = icmp samesign ult i8 poison, 7
-; AES-NEXT:    br i1 [[EXIT_COND]], label %[[LOOP]], label %[[EXIT:.*]]
+; AES-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
 ; AES:       [[EXIT]]:
 ; AES-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; AES-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
