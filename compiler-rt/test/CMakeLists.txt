@@ -60,7 +60,7 @@ umbrella_lit_testsuite_begin(check-compiler-rt)
 set(COMPILER_RT_KNOWN_TEST_SUITES
     builtins;ctx_profile;fuzzer;interception;lsan;memprof;metadata
     ;orc;profile;sanitizer_common;shadowcallstack
-    ;ubsan;xray;instrumentor-tools)
+    ;ubsan;xray)
 list(APPEND COMPILER_RT_KNOWN_TEST_SUITES ${ALL_SANITIZERS})
 list(REMOVE_DUPLICATES COMPILER_RT_KNOWN_TEST_SUITES)
 list(APPEND COMPILER_RT_KNOWN_TEST_SUITES bounds_safety) # TO_UPSTREAM(BoundsSafety)
@@ -172,10 +172,6 @@ if(COMPILER_RT_CAN_EXECUTE_TESTS)
   # include their own minimal runtime
   compiler_rt_test_runtime(shadowcallstack NO_COMPILER_RT_HAS_GUARD)
 
-  if(COMPILER_RT_BUILD_INSTRUMENTOR_TOOLS)
-    compiler_rt_test_runtime(instrumentor-tools NO_COMPILER_RT_HAS_GUARD)
-  endif()
-  
   # TO_UPSTREAM(BoundsSafety)
   # -fbounds-safety doesn't have a runtime in compiler-rt so there is no
   # `COMPILER_RT_HAS_BOUNDS_SAFETY` hence the use of `NO_COMPILER_RT_HAS_GUARD`
