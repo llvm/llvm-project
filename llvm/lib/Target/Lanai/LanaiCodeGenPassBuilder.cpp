@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "LanaiISelDAGToDAG.h"
 #include "LanaiTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/IR/PassInstrumentation.h"
