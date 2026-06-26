@@ -53,6 +53,7 @@ add_llvm_component_library(LLVMCore
   Mangler.cpp
   Metadata.cpp
   Module.cpp
+  ObjCClassHierarchy.cpp
   ModuleSummaryIndex.cpp
   Operator.cpp
   OptBisect.cpp
