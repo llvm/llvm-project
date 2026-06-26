@@ -32,13 +32,13 @@ void test_function_pointer_signature_varargs(FVarArgs func) {
 
 typedef __externref_t (*FExternRef)(__externref_t, __externref_t);
 void test_function_pointer_externref(FExternRef func) {
-  // WEBASSEMBLY:  %0 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, ptr addrspace(10) poison, token poison, ptr addrspace(10) poison, ptr addrspace(10) poison)
+  // WEBASSEMBLY:  %0 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, target("wasm.externref") poison, token poison, target("wasm.externref") poison, target("wasm.externref") poison)
   use(__builtin_wasm_test_function_pointer_signature(func));
 }
 
 typedef __funcref Fpointers (*FFuncRef)(__funcref Fvoid, __funcref Ffloats);
 void test_function_pointer_funcref(FFuncRef func) {
-  // WEBASSEMBLY:  %0 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, ptr addrspace(20) poison, token poison, ptr addrspace(20) poison, ptr addrspace(20) poison)
+  // WEBASSEMBLY:  %0 = tail call i32 (ptr, ...) @llvm.wasm.ref.test.func(ptr %func, target("wasm.funcref") poison, token poison, target("wasm.funcref") poison, target("wasm.funcref") poison)
   use(__builtin_wasm_test_function_pointer_signature(func));
 }
 

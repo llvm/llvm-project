@@ -548,8 +548,8 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       if (STI.hasStdExtP()) {
         // On RV32P, `padd.dw` is a GPR Pair Add
         BuildMI(MBB, MBBI, DL, get(RISCV::PADD_DW), DstReg)
-            .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc))
-            .addReg(RISCV::X0_Pair);
+            .addReg(RISCV::X0_Pair)
+            .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc));
         return;
       }
     }
@@ -3609,7 +3609,9 @@ RISCVInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_TLSDESC_HI, "riscv-tlsdesc-hi"},
       {MO_TLSDESC_LOAD_LO, "riscv-tlsdesc-load-lo"},
       {MO_TLSDESC_ADD_LO, "riscv-tlsdesc-add-lo"},
-      {MO_TLSDESC_CALL, "riscv-tlsdesc-call"}};
+      {MO_TLSDESC_CALL, "riscv-tlsdesc-call"},
+      {MO_QC_ACCESS, "riscv-qc-access"},
+  };
   return ArrayRef(TargetFlags);
 }
 bool RISCVInstrInfo::isFunctionSafeToOutlineFrom(
