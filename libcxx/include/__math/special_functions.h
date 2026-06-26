@@ -26,7 +26,6 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
-
 #if _LIBCPP_STD_VER >= 17
 
 namespace __math {
@@ -60,6 +59,14 @@ _LIBCPP_EXPORTED_FROM_ABI __sf_result<float> __assoc_laguerre(unsigned int, unsi
 assoc_laguerref(unsigned int __n, unsigned int __m, float __x) noexcept {
   return __math::__assoc_laguerre(__n, __m, __x);
 }
+
+#endif // _LIBCPP_STD_VER >= 17
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
+_LIBCPP_END_NAMESPACE_STD
+
+// hermite
+_LIBCPP_BEGIN_NAMESPACE_STD
+#if _LIBCPP_STD_VER >= 17
 
 template <class _Real>
 _LIBCPP_HIDE_FROM_ABI _Real __hermite(unsigned __n, _Real __x) {
@@ -114,8 +121,5 @@ _LIBCPP_HIDE_FROM_ABI double hermite(unsigned __n, _Integer __x) {
 }
 
 #endif // _LIBCPP_STD_VER >= 17
-
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
-
 #endif // _LIBCPP___MATH_SPECIAL_FUNCTIONS_H
