@@ -816,7 +816,7 @@ Bug Fixes to C++ Support
 - Fixed an issue where Clang incorrectly accepted invalid unqualified uses of local nested class names outside their declaring scope. (#GH184622)
 - Fixed a crash when parsing invalid friend declaration with storage-class specifier. (#GH186569)
 - Fixed a missing vtable for ``dynamic_cast<FinalClass *>(this)`` in a function template. (#GH198511)
-- Fixed an assertion failure during init-list checking of an array whose element type is an incomplete (forward-declared) class. (#GH140685)
+- Fixed an assertion failure during init-list checking of an array whose element type is an incomplete class. (#GH140685)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
