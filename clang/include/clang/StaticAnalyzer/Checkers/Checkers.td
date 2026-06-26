@@ -460,6 +460,11 @@ def CStringSyntaxChecker : Checker<"BadSizeArg">,
   Dependencies<[CStringModeling]>,
   Documentation<HasDocumentation>;
 
+def CStringUninitializedRead : Checker<"UninitializedRead">,
+  HelpText<"Checks if the string manipulation function would read uninitialized bytes">,
+  Dependencies<[CStringModeling]>,
+  Documentation<HasDocumentation>;
+
 } // end "unix.cstring"
 
 let ParentPackage = CStringAlpha in {
@@ -471,11 +476,6 @@ def CStringOutOfBounds : Checker<"OutOfBounds">,
 
 def CStringBufferOverlap : Checker<"BufferOverlap">,
   HelpText<"Checks for overlap in two buffer arguments">,
-  Dependencies<[CStringModeling]>,
-  Documentation<HasDocumentation>;
-
-def CStringUninitializedRead : Checker<"UninitializedRead">,
-  HelpText<"Checks if the string manipulation function would read uninitialized bytes">,
   Dependencies<[CStringModeling]>,
   Documentation<HasDocumentation>;
 

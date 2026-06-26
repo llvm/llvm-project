@@ -2929,7 +2929,9 @@ LifetimeSafetyTUAnalysis(Sema &S, TranslationUnitDecl *TU,
     AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
     AC.getCFGBuildOptions().setAllAlwaysAdd();
     if (AC.getCFG())
-      runLifetimeSafetyAnalysis(AC, &SemaHelper, LSStats, S.CollectStats);
+      runLifetimeSafetyAnalysis(AC, &SemaHelper,
+                                lifetimes::GetLifetimeSafetyOpts(S, FD),
+                                LSStats, S.CollectStats);
   }
 }
 
@@ -2999,8 +3001,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     }
   }
 
-  if (S.getLangOpts().CPlusPlus &&
-      S.getLangOpts().EnableLifetimeSafetyTUAnalysis)
+  if (lifetimes::IsLifetimeSafetyEnabled(S, TU))
     LifetimeSafetyTUAnalysis(S, TU, LSStats);
 }
 
@@ -3049,9 +3050,7 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   AC.getCFGBuildOptions().AddCXXNewAllocator = false;
   AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
 
-  bool EnableLifetimeSafetyAnalysis =
-      !S.getLangOpts().EnableLifetimeSafetyTUAnalysis &&
-      lifetimes::IsLifetimeSafetyEnabled(S, D);
+  bool EnableLifetimeSafetyAnalysis = lifetimes::IsLifetimeSafetyEnabled(S, D);
 
   // Force that certain expressions appear as CFGElements in the CFG.  This
   // is used to speed up various analyses.
@@ -3162,13 +3161,12 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
     }
   }
 
-  // TODO: Enable lifetime safety analysis for other languages once it is
-  // stable.
-  if (EnableLifetimeSafetyAnalysis && S.getLangOpts().CPlusPlus) {
+  if (EnableLifetimeSafetyAnalysis) {
     if (AC.getCFG()) {
       lifetimes::LifetimeSafetySemaHelperImpl LifetimeSafetySemaHelper(S);
-      lifetimes::runLifetimeSafetyAnalysis(AC, &LifetimeSafetySemaHelper,
-                                           LSStats, S.CollectStats);
+      lifetimes::runLifetimeSafetyAnalysis(
+          AC, &LifetimeSafetySemaHelper, lifetimes::GetLifetimeSafetyOpts(S, D),
+          LSStats, S.CollectStats);
     }
   }
   // Check for violations of "called once" parameter properties.

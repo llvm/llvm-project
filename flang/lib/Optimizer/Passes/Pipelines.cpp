@@ -113,7 +113,7 @@ void addDebugInfoPass(mlir::PassManager &pm,
   options.dwarfVersion = config.DwarfVersion;
   options.splitDwarfFile = config.SplitDwarfFile;
   options.dwarfDebugFlags = config.DwarfDebugFlags;
-  options.emitFakeUseForArguments =
+  options.emitFakeUseForDebugVars =
       (config.OptLevel == llvm::OptimizationLevel::O0) &&
       !disableArgumentFakeUse;
   addPassConditionally(pm, disableDebugInfo,
@@ -311,7 +311,7 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
 
     if (optLevel == llvm::OptimizationLevel::O3) {
       addNestedPassToAllTopLevelOperations<PassConstructor>(
-          pm, hlfir::createInlineHLFIRCopyIn);
+          pm, hlfir::createInlineHLFIRCopy);
     }
   } else if (config.EnableOpenMPIsTargetDevice) {
     // At O0, only inline scalar-to-array broadcasts when compiling for an
