@@ -164,10 +164,6 @@ add_clang_library(clangCodeGen
   TrapReasonBuilder.cpp
   VarBypassDetector.cpp
 
-  DISABLE_PCH_REUSE # PCH contains private headers
-  PRECOMPILE_HEADERS
-  [["pch.h"]]
-
   DEPENDS
   vt_gen
   intrinsics_gen
