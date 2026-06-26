@@ -2081,14 +2081,6 @@ static bool interp__builtin_stdc_memreverse8(InterpState &S, CodePtr OpPC,
   bool IsArray = Desc->isArray();
   QualType ElemTy = IsArray ? Desc->getElemQualType() : Desc->getType();
 
-  if (!isOneByteCharacterType(ElemTy)) {
-    S.FFDiag(S.Current->getSource(OpPC),
-             diag::note_constexpr_memchr_unsupported)
-        << S.getASTContext().BuiltinInfo.getQuotedName(Call->getBuiltinCallee())
-        << ElemTy;
-    return false;
-  }
-
   if (IsArray)
     Ptr = Ptr.expand();
 

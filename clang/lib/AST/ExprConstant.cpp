@@ -21118,13 +21118,6 @@ public:
         return false;
 
       QualType CharTy = Ptr.Designator.getType(Info.Ctx);
-      if (!isOneByteCharacterType(CharTy)) {
-        Info.FFDiag(E, diag::note_constexpr_memchr_unsupported)
-            << Info.Ctx.BuiltinInfo.getQuotedName(E->getBuiltinCallee())
-            << CharTy;
-        return false;
-      }
-
       uint64_t RemainingElems = Ptr.Designator.validIndexAdjustments().second;
       if (NElems > RemainingElems) {
         uint64_t ArrayIndex =
