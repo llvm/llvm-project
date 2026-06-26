@@ -691,6 +691,10 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         return LT.first * 3;
       case MVT::v2i32:
         return LT.first * 6;
+      case MVT::v4i32:
+        return LT.first * 11;
+      case MVT::v4i16:
+        return LT.first * 14;
       default:
         break;
       }
@@ -2584,6 +2588,12 @@ instCombineSVEVectorMlaU(InstCombiner &IC, IntrinsicInst &II) {
     return IC.replaceInstUsesWith(II, IC.Builder.CreateSub(Acc, MulOp1));
   if (match(MulOp1, m_AllOnes()))
     return IC.replaceInstUsesWith(II, IC.Builder.CreateSub(Acc, MulOp0));
+
+  if (isa<Constant>(MulOp0) && !isa<Constant>(MulOp1)) {
+    II.setArgOperand(2, MulOp1);
+    II.setArgOperand(3, MulOp0);
+    return &II;
+  }
 
   return std::nullopt;
 }
