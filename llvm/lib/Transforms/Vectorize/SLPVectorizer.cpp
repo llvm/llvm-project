@@ -28904,10 +28904,7 @@ public:
       return RecurKind::FMaximum;
     if (match(I, m_FMinimum(m_Value(), m_Value())))
       return RecurKind::FMinimum;
-    // This matches either cmp+select or intrinsics. SLP is expected to handle
-    // either form.
-    // TODO: If we are canonicalizing to intrinsics, we can remove several
-    //       special-case paths that deal with selects.
+    // TODO: remove several special-case paths that deal with selects.
     if (match(I, m_SMax(m_Value(), m_Value())))
       return RecurKind::SMax;
     if (match(I, m_SMin(m_Value(), m_Value())))
@@ -29632,6 +29629,13 @@ public:
       SmallVector<Value *> Candidates;
       Candidates.reserve(2 * OrigReducedVals.size());
       SmallVector<Value *> TrackedToOrig;
+      // Reduced values that were replaced by an extractelement (because they
+      // were vectorized in another reduction subset or operand cone) and are
+      // not compatible with this group. They are not vectorized again here, but
+      // they are still live and consumed by the final reduction, so they must
+      // be kept externally used to avoid erasing them while vectorizing this
+      // group, which may use them as operands.
+      SmallVector<Value *> ExcludedVectorizedReducedVals;
       for (Value *ReducedVal : OrigReducedVals) {
         Value *RdxVal = TrackedVals.at(ReducedVal);
         // Check if the reduction value was not overriden by the extractelement
@@ -29641,11 +29645,14 @@ public:
         auto *Inst = dyn_cast<Instruction>(RdxVal);
         if (Inst && V.isDeleted(Inst))
           continue;
-        if ((Inst && isVectorLikeInstWithConstOps(Inst) &&
-             (!S || (!S.getMatchingMainOpOrAltOp(Inst) &&
-                     !S.isCopyableElement(Inst)))) ||
-            (S && !Inst && !isa<PoisonValue>(RdxVal) &&
-             !S.isCopyableElement(RdxVal)))
+        if (Inst && isVectorLikeInstWithConstOps(Inst) &&
+            (!S || (!S.getMatchingMainOpOrAltOp(Inst) &&
+                    !S.isCopyableElement(Inst)))) {
+          ExcludedVectorizedReducedVals.push_back(RdxVal);
+          continue;
+        }
+        if (S && !Inst && !isa<UndefValue>(RdxVal) &&
+            !S.isCopyableElement(RdxVal))
           continue;
         Candidates.push_back(RdxVal);
         TrackedToOrig.push_back(ReducedVal);
@@ -29725,6 +29732,8 @@ public:
       bool OptReusedScalars = IsSupportedHorRdxIdentityOp &&
                               SameValuesCounter.size() != Candidates.size();
       BoUpSLP::ExtraValueToDebugLocsMap ExternallyUsedValues;
+      for (Value *RdxVal : ExcludedVectorizedReducedVals)
+        ExternallyUsedValues.insert(RdxVal);
       if (OptReusedScalars) {
         SameScaleFactor =
             (RdxKind == RecurKind::Add || RdxKind == RecurKind::FAdd ||

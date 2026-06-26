@@ -371,7 +371,12 @@ bool OmpStructureChecker::IsAllowedClause(llvm::omp::Clause clauseId) {
       GetContext().directive, clauseId, context_.langOptions().OpenMPVersion);
 }
 
-bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clause) {
+bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clauseId) {
+  return true;
+}
+
+bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clauseId,
+    parser::CharBlock clauseSource, llvm::omp::Directive dirId) {
   // Do not do clause checks while processing METADIRECTIVE.
   // Context selectors can contain clauses that are not given as a part
   // of a construct, but as trait properties. Testing whether they are
@@ -383,16 +388,14 @@ bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clause) {
   }
 
   unsigned version{context_.langOptions().OpenMPVersion};
-  DirectiveContext &dirCtx = GetContext();
-  llvm::omp::Directive dir{dirCtx.directive};
 
-  if (!llvm::omp::isAllowedClauseForDirective(dir, clause, version)) {
+  if (!llvm::omp::isAllowedClauseForDirective(dirId, clauseId, version)) {
     unsigned allowedInVersion{[&] {
       for (unsigned v : llvm::omp::getOpenMPVersions()) {
         if (v <= version) {
           continue;
         }
-        if (llvm::omp::isAllowedClauseForDirective(dir, clause, v)) {
+        if (llvm::omp::isAllowedClauseForDirective(dirId, clauseId, v)) {
           return v;
         }
       }
@@ -402,14 +405,19 @@ bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clause) {
     // Only report it if there is a later version that allows it.
     // If it's not allowed at all, it will be reported by CheckAllowed.
     if (allowedInVersion != 0) {
-      context_.Say(dirCtx.clauseSource,
-          "%s clause is not allowed on directive %s in %s, %s"_err_en_US,
-          parser::omp::GetUpperName(clause, version),
-          parser::omp::GetUpperName(dir, version), ThisVersion(version),
-          TryVersion(allowedInVersion));
+      context_.Say(clauseSource,
+          "%s clause is not allowed on %s directive in %s, %s"_err_en_US,
+          GetUpperName(clauseId, version), GetUpperName(dirId, version),
+          ThisVersion(version), TryVersion(allowedInVersion));
+    } else {
+      context_.Say(clauseSource,
+          "%s clause is not allowed on %s directive"_err_en_US,
+          GetUpperName(clauseId, version), GetUpperName(dirId, version));
     }
+    return false;
   }
-  return CheckAllowed(clause);
+
+  return true;
 }
 
 void OmpStructureChecker::AnalyzeObject(const parser::OmpObject &object) {
@@ -878,6 +886,147 @@ void OmpStructureChecker::CheckDirectiveDeprecation(
   // one another, but only the top-level directive should cause a warning.
 }
 
+std::pair<const parser::OmpClause *, const parser::OmpClause *>
+OmpStructureChecker::FindMutuallyExclusiveClauses(OmpClauseSet exclusive,
+    const std::vector<const parser::OmpClause *> &clauses) {
+  const parser::OmpClause *first{nullptr};
+  for (const parser::OmpClause *clause : clauses) {
+    llvm::omp::Clause clauseId{clause->Id()};
+    if (!exclusive.test(clauseId)) {
+      continue;
+    }
+    if (first) {
+      llvm::omp::Clause firstId{first->Id()};
+      if (clauseId < firstId) {
+        return std::make_pair(clause, first);
+      } else if (clauseId > firstId) {
+        return std::make_pair(first, clause);
+      }
+    } else {
+      first = clause;
+    }
+  }
+  return std::make_pair(nullptr, nullptr);
+}
+
+void OmpStructureChecker::CheckClauses(parser::OmpDirectiveName dirName,
+    llvm::iterator_range<ClauseIterator> beginClauses,
+    llvm::iterator_range<ClauseIterator> endClauses) {
+  unsigned version{context_.langOptions().OpenMPVersion};
+  llvm::omp::Directive dirId{dirName.v};
+  std::vector<const parser::OmpClause *> allClauses;
+
+  auto addClause{[&](const parser::OmpClause &clause) {
+    llvm::omp::Clause clauseId{clause.Id()};
+    AddClauseToCrtContext(clauseId);
+    SetContextClause(clause);
+    SetContextClauseInfo(clauseId);
+    allClauses.push_back(&clause);
+  }};
+
+  for (const parser::OmpClause &clause : beginClauses) {
+    addClause(clause);
+  }
+  for (const parser::OmpClause &clause : endClauses) {
+    llvm::omp::Clause clauseId{clause.Id()};
+    if (llvm::omp::isEndClause(clauseId)) {
+      addClause(clause);
+    } else {
+      context_.Say(clause.source,
+          "%s clause is not allowed on an end-directive"_err_en_US,
+          GetUpperName(clauseId, version));
+    }
+  }
+
+  OmpClauseSet notAllowed;
+
+  for (const parser::OmpClause *clause : allClauses) {
+    llvm::omp::Clause clauseId{clause->Id()};
+    switch (clauseId) {
+    // Special cases.
+    case llvm::omp::Clause::OMPC_cancellation_construct_type:
+    case llvm::omp::Clause::OMPC_ompx_bare:
+      continue;
+    default:
+      break;
+    }
+    if (!CheckAllowedClause(clauseId, clause->source, dirId)) {
+      notAllowed.set(clauseId);
+    }
+  }
+  auto newEnd{llvm::remove_if(allClauses, [&](const parser::OmpClause *clause) {
+    return notAllowed.test(clause->Id());
+  })};
+  allClauses.erase(newEnd, allClauses.end());
+
+  std::multimap<llvm::omp::Clause, parser::CharBlock> present;
+  // Exclusive clauses aren't necessarily unique, but there is no way
+  // to specify a clause in both sets right now, and all clauses currently
+  // listed as exclusive also happen to be unique.
+  OmpClauseSet uniqueSet{//
+      directiveClausesMap_[dirId].allowedOnce |
+      directiveClausesMap_[dirId].allowedExclusive};
+
+  for (const parser::OmpClause *clause : allClauses) {
+    llvm::omp::Clause clauseId{clause->Id()};
+    // Special case.
+    if (clauseId == llvm::omp::Clause::OMPC_cancellation_construct_type) {
+      continue;
+    }
+    auto range{llvm::make_range(present.equal_range(clauseId))};
+    if (uniqueSet.test(clauseId)) {
+      // Only report any repeated clause once.
+      if (std::distance(range.begin(), range.end()) == 1) {
+        std::string clauseName{GetUpperName(clauseId, version)};
+        context_
+            .Say(clause->source,
+                "At most one %s clause can appear on %s directive"_err_en_US,
+                clauseName, GetUpperName(dirId, version))
+            .Attach(range.begin()->second,
+                "%s clause was first specified here"_en_US, clauseName);
+      }
+    }
+    present.insert(std::make_pair(clauseId, clause->source));
+  }
+
+  bool requiredPresent{false};
+  // Prepare the requiredSet relevant to the current OpenMP version.
+  OmpClauseSet requiredSet;
+  directiveClausesMap_[dirId].requiredOneOf.IterateOverMembers( //
+      [&](llvm::omp::Clause id) {
+        if (IsAllowedClause(id)) {
+          requiredSet.set(id);
+        }
+      });
+  requiredSet.IterateOverMembers( //
+      [&](llvm::omp::Clause id) {
+        if (!requiredPresent && present.count(id) != 0) {
+          requiredPresent = true;
+        }
+      });
+
+  if (!requiredPresent && !requiredSet.empty()) {
+    context_.Say(dirName.source,
+        "At least one of %s %s must appear on %s directive"_err_en_US,
+        ClauseSetToString(requiredSet),
+        requiredSet.count() == 1 ? "clause" : "clauses",
+        GetUpperName(dirName.v, version));
+  }
+
+  auto pair{FindMutuallyExclusiveClauses(
+      directiveClausesMap_[dirId].allowedExclusive, allClauses)};
+  if (pair.first && pair.second) {
+    std::string firstName{GetUpperName(pair.first->Id(), version)};
+    std::string secondName{GetUpperName(pair.second->Id(), version)};
+    context_
+        .Say(pair.second->source,
+            "%s and %s clauses are mutually exclusive and may not appear on the same %s directive"_err_en_US,
+            firstName, secondName, GetUpperName(dirId, version))
+        .Attach(pair.first->source, "%s clause was specified here"_en_US,
+            firstName);
+  }
+}
+
 void OmpStructureChecker::CheckMultipleOccurrence(
     semantics::UnorderedSymbolSet &listVars,
     const std::list<parser::Name> &nameList, const parser::CharBlock &item,
@@ -1089,6 +1238,26 @@ void OmpStructureChecker::Enter(const parser::OpenMPConstruct &x) {
   dirStack_.push_back(&GetOmpDirectiveSpecification(x));
   CheckDirectiveDeprecation(x);
 
+  // Verify clauses
+  common::visit(
+      [&](auto &&s) {
+        using TypeS = llvm::remove_cvref_t<decltype(s)>;
+        if constexpr ( //
+            std::is_base_of_v<parser::OmpBlockConstruct, TypeS> ||
+            std::is_same_v<parser::OpenMPSectionsConstruct, TypeS>) {
+          if (auto &endSpec{s.EndDir()}) {
+            CheckClauses(dirName,
+                llvm::iterator_range(s.BeginDir().Clauses().v),
+                llvm::iterator_range(endSpec->Clauses().v));
+            return;
+          }
+        }
+        CheckClauses(dirName,
+            llvm::iterator_range(dirStack_.back()->Clauses().v),
+            llvm::iterator_range(std::list<parser::OmpClause>{}));
+      },
+      x.u);
+
   // Simd Construct with Ordered Construct Nesting check.
   if (CurrentDirectiveIsNested()) {
     if (GetDirectiveNest(SIMDNest) > 0) {
@@ -1120,6 +1289,10 @@ void OmpStructureChecker::Enter(const parser::OpenMPDeclarativeConstruct &x) {
   parser::OmpDirectiveName dirName{GetOmpDirectiveName(x)};
   PushContextAndClauseSets(dirName.source, dirName.v);
   dirStack_.push_back(&GetOmpDirectiveSpecification(x));
+
+  CheckClauses(dirName, llvm::iterator_range(dirStack_.back()->Clauses().v),
+      llvm::iterator_range(std::list<parser::OmpClause>{}));
+
   EnterDirectiveNest(DeclarativeNest);
 }
 
@@ -1423,15 +1596,6 @@ void OmpStructureChecker::CheckSingleConstruct(
     last = std::make_pair(symbol, source);
   }
 
-  if (!nowaitSource1.empty() && !nowaitSource2.empty()) {
-    context_
-        .Say(nowaitSource2,
-            // Match the message text with the one emitted by "CheckAllowed".
-            "At most one %s clause can appear on the %s directive"_err_en_US,
-            nowaitName, singleName)
-        .Attach(nowaitSource1, "Previous occurrence of %s"_en_US, nowaitName);
-  }
-
   if (version <= 52 && !copyPrivateSyms.empty() &&
       (!nowaitSource1.empty() || !nowaitSource2.empty())) {
     parser::CharBlock source{
@@ -1585,31 +1749,6 @@ void OmpStructureChecker::Enter(const parser::OpenMPSectionsConstruct &x) {
   }
   HasInvalidWorksharingNesting(std::get<parser::OmpDirectiveName>(beginSpec.t),
       llvm::omp::nestedWorkshareErrSet);
-}
-
-void OmpStructureChecker::Enter(const parser::OmpEndSectionsDirective &x) {
-  const parser::OmpDirectiveName &dirName{x.DirName()};
-  ResetPartialContext(dirName.source);
-  switch (dirName.v) {
-    // 2.7.2 end-sections -> END SECTIONS [nowait-clause]
-  case llvm::omp::Directive::OMPD_sections:
-    PushContextAndClauseSets(
-        dirName.source, llvm::omp::Directive::OMPD_end_sections);
-    break;
-  default:
-    // no clauses are allowed
-    break;
-  }
-}
-
-// TODO: Verify the popping of dirContext requirement after nowait
-// implementation, as there is an implicit barrier at the end of the worksharing
-// constructs unless a nowait clause is specified. Only OMPD_end_sections is
-// popped becuase it is pushed while entering the EndSectionsDirective.
-void OmpStructureChecker::Leave(const parser::OmpEndSectionsDirective &x) {
-  if (GetContext().directive == llvm::omp::Directive::OMPD_end_sections) {
-    dirContext_.pop_back();
-  }
 }
 
 void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
@@ -2648,7 +2787,7 @@ void OmpStructureChecker::ChecksOnOrderedAsStandalone() {
     if (!duplicateSourceShown && dependSourceCount > 1) {
       duplicateSourceShown = true;
       context_.Say(src,
-          "At most one SOURCE dependence type can appear on the ORDERED directive"_err_en_US);
+          "At most one SOURCE dependence type can appear on ORDERED directive"_err_en_US);
     }
   }};
 
@@ -3231,7 +3370,7 @@ std::optional<llvm::omp::Directive> OmpStructureChecker::GetCancelType(
     if (auto *cctype{std::get_if<CancellationConstructType>(&clause.u)}) {
       if (cancelee) {
         context_.Say(cancelSource,
-            "Multiple cancel-directive-name clauses are not allowed on the %s construct"_err_en_US,
+            "Multiple cancel-directive-name clauses are not allowed on %s construct"_err_en_US,
             cancelName);
         return std::nullopt;
       }
@@ -3351,51 +3490,6 @@ void OmpStructureChecker::CheckCancellationNest(
       // This is diagnosed later.
       return;
     }
-  }
-}
-
-void OmpStructureChecker::Enter(const parser::OmpEndDirective &x) {
-  parser::CharBlock source{x.DirName().source};
-  ResetPartialContext(source);
-  switch (x.DirId()) {
-  case llvm::omp::Directive::OMPD_scope:
-    PushContextAndClauseSets(source, llvm::omp::Directive::OMPD_end_scope);
-    break;
-  // 2.7.3 end-single-clause -> copyprivate-clause |
-  //                            nowait-clause
-  case llvm::omp::Directive::OMPD_single:
-    PushContextAndClauseSets(source, llvm::omp::Directive::OMPD_end_single);
-    break;
-  // 2.7.4 end-workshare -> END WORKSHARE [nowait-clause]
-  case llvm::omp::Directive::OMPD_workshare:
-    PushContextAndClauseSets(source, llvm::omp::Directive::OMPD_end_workshare);
-    break;
-  // 2.7.1 end-do -> END DO [nowait-clause]
-  // 2.8.3 end-do-simd -> END DO SIMD [nowait-clause]
-  case llvm::omp::Directive::OMPD_do:
-    PushContextAndClauseSets(source, llvm::omp::Directive::OMPD_end_do);
-    break;
-  case llvm::omp::Directive::OMPD_do_simd:
-    PushContextAndClauseSets(source, llvm::omp::Directive::OMPD_end_do_simd);
-    break;
-  default:
-    // no clauses are allowed
-    break;
-  }
-}
-
-// TODO: Verify the popping of dirContext requirement after nowait
-// implementation, as there is an implicit barrier at the end of the worksharing
-// constructs unless a nowait clause is specified. Only OMPD_end_single and
-// end_workshareare popped as they are pushed while entering the
-// EndBlockDirective.
-void OmpStructureChecker::Leave(const parser::OmpEndDirective &x) {
-  if ((GetContext().directive == llvm::omp::Directive::OMPD_end_scope) ||
-      (GetContext().directive == llvm::omp::Directive::OMPD_end_single) ||
-      (GetContext().directive == llvm::omp::Directive::OMPD_end_workshare) ||
-      (GetContext().directive == llvm::omp::Directive::OMPD_end_do) ||
-      (GetContext().directive == llvm::omp::Directive::OMPD_end_do_simd)) {
-    dirContext_.pop_back();
   }
 }
 
@@ -3631,8 +3725,6 @@ void OmpStructureChecker::Leave(const parser::OmpClauseList &x) {
       firstClause = clause;
     }
   }
-
-  CheckRequireAtLeastOneOf();
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause &x) {
