@@ -806,11 +806,19 @@
 //  CHECK-SVE-F16F32MM: __ARM_FEATURE_SVE 1
 //  CHECK-SVE-F16F32MM: __ARM_FEATURE_SVE_F16F32MM 1
 
-// RUN: %clang --target=aarch64 -march=armv9-a+f16f32dot -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-F16F32DOT %s
+// RUN: %clang --target=aarch64 -march=armv8-a+nosimd+f16f32dot -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-F16F32DOT %s
 // CHECK-F16F32DOT: __ARM_FEATURE_F16F32DOT 1
+// CHECK-F16F32DOT: __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
+// CHECK-F16F32DOT: __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
+// CHECK-F16F32DOT: __ARM_NEON 1
+// CHECK-F16F32DOT: __ARM_NEON_FP 0xE
 
-// RUN: %clang --target=aarch64 -march=armv9-a+f16f32mm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-F16F32MM %s
+// RUN: %clang --target=aarch64 -march=armv8-a+nosimd+f16f32mm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-F16F32MM %s
 // CHECK-F16F32MM: __ARM_FEATURE_F16F32MM 1
+// CHECK-F16F32MM: __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
+// CHECK-F16F32MM: __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
+// CHECK-F16F32MM: __ARM_NEON 1
+// CHECK-F16F32MM: __ARM_NEON_FP 0xE
 
 // RUN: %clang --target=aarch64 -march=armv9-a+f16mm -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-F16MM %s
 // CHECK-F16MM: __ARM_FEATURE_F16MM 1
