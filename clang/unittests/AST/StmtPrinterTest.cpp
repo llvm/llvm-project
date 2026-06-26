@@ -297,6 +297,42 @@ TEST(StmtPrinter, TerseOutputWithLambdas) {
       [](PrintingPolicy &PP) { PP.TerseOutput = true; }));
 }
 
+TEST(StmtPrinter, FullyQualifiedDeclRefExpr) {
+  auto FullyQualified = [](PrintingPolicy &Policy) {
+    Policy.FullyQualifiedName = true;
+  };
+
+  ASSERT_TRUE(PrintedStmtCXXMatches(
+      StdVer::CXX17,
+      R"cpp(
+        namespace ns { int value; }
+        using namespace ns;
+        void A() { (void)value; }
+      )cpp",
+      declRefExpr(to(varDecl(hasName("::ns::value")))).bind("id"), "ns::value",
+      FullyQualified));
+
+  ASSERT_TRUE(PrintedStmtCXXMatches(
+      StdVer::CXX17,
+      R"cpp(
+        namespace ns { template <class T> void func(); }
+        using namespace ns;
+        void A() { func<int>(); }
+      )cpp",
+      declRefExpr(to(functionDecl(hasName("::ns::func")))).bind("id"),
+      "ns::func<int>", FullyQualified));
+
+  ASSERT_TRUE(PrintedStmtCXXMatches(
+      StdVer::CXX17, "void A(int param) { (void)param; }",
+      declRefExpr(to(parmVarDecl(hasName("param")))).bind("id"), "param",
+      FullyQualified));
+
+  ASSERT_TRUE(PrintedStmtCXXMatches(
+      StdVer::CXX17, "void A() { int local = 0; (void)local; }",
+      declRefExpr(to(varDecl(hasName("local")))).bind("id"), "local",
+      FullyQualified));
+}
+
 TEST(StmtPrinter, ParamsUglified) {
   llvm::StringLiteral Code = R"cpp(
     template <typename _T, int _I, template <typename> class _C>
@@ -307,6 +343,10 @@ TEST(StmtPrinter, ParamsUglified) {
   auto Clean = [](PrintingPolicy &Policy) {
     Policy.CleanUglifiedParameters = true;
   };
+  auto CleanFullyQualified = [](PrintingPolicy &Policy) {
+    Policy.CleanUglifiedParameters = true;
+    Policy.FullyQualifiedName = true;
+  };
 
   ASSERT_TRUE(PrintedStmtCXXMatches(StdVer::CXX14, Code,
                                     returnStmt().bind("id"),
@@ -314,4 +354,7 @@ TEST(StmtPrinter, ParamsUglified) {
   ASSERT_TRUE(
       PrintedStmtCXXMatches(StdVer::CXX14, Code, returnStmt().bind("id"),
                             "return typename C<T>::_F(I, j);\n", Clean));
+  ASSERT_TRUE(PrintedStmtCXXMatches(
+      StdVer::CXX14, Code, returnStmt().bind("id"),
+      "return typename _C<T>::_F(I, j);\n", CleanFullyQualified));
 }
