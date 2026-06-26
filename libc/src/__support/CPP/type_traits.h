@@ -16,6 +16,7 @@
 #include "src/__support/CPP/type_traits/bool_constant.h"
 #include "src/__support/CPP/type_traits/conditional.h"
 #include "src/__support/CPP/type_traits/decay.h"
+#include "src/__support/CPP/type_traits/disjunction.h"
 #include "src/__support/CPP/type_traits/enable_if.h"
 #include "src/__support/CPP/type_traits/false_type.h"
 #include "src/__support/CPP/type_traits/has_unique_object_representations.h"
