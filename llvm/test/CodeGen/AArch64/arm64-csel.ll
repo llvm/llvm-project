@@ -399,9 +399,8 @@ entry:
 define i64 @foo18_overflow4(i1 %cmp) nounwind readnone optsize ssp {
 ; CHECK-SD-LABEL: foo18_overflow4:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000
-; CHECK-SD-NEXT:    tst w0, #0x1
-; CHECK-SD-NEXT:    csel x0, xzr, x8, ne
+; CHECK-SD-NEXT:    mvn w8, w0
+; CHECK-SD-NEXT:    lsl x0, x8, #63
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: foo18_overflow4:

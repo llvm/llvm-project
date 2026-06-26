@@ -413,9 +413,8 @@ define i8 @sel_constants_mul_constant(i1 %cond) {
 define i8 @sel_constants_sdiv_constant(i1 %cond) {
 ; CHECK-SD-LABEL: sel_constants_sdiv_constant:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    mov w8, #4 // =0x4
-; CHECK-SD-NEXT:    tst w0, #0x1
-; CHECK-SD-NEXT:    csel w0, wzr, w8, ne
+; CHECK-SD-NEXT:    mvn w8, w0
+; CHECK-SD-NEXT:    ubfiz w0, w8, #2, #1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sel_constants_sdiv_constant:
