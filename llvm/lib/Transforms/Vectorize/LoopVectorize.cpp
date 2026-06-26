@@ -6576,18 +6576,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan1() {
 
   // If we're vectorizing a loop with an uncountable exit, make sure that the
   // recipes are safe to handle.
-  // TODO: Remove this once we can properly check the VPlan itself for both
-  //       the presence of an uncountable exit and the presence of stores in
-  //       the loop inside handleEarlyExits itself.
+  // TODO: Remove this once we can properly check the VPlan itself for the
+  //       presence of an uncountable exit.
   if (Legal->hasUncountableEarlyExit()) {
-    // TODO: Check target preference for style.
-    UncountableExitStyle EEStyle =
-        Legal->hasUncountableExitWithSideEffects()
-            ? UncountableExitStyle::MaskedHandleExitInScalarLoop
-            : UncountableExitStyle::ReadOnly;
     if (!RUN_VPLAN_PASS(VPlanTransforms::handleUncountableEarlyExits, *VPlan0,
-                        OrigLoop, PSE, *DT, Legal->getAssumptionCache(),
-                        EEStyle))
+                        OrigLoop, PSE, *DT, Legal->getAssumptionCache()))
       return nullptr;
   } else {
     RUN_VPLAN_PASS(VPlanTransforms::handleCountableEarlyExits, *VPlan0);

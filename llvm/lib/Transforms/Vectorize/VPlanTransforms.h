@@ -373,8 +373,7 @@ struct VPlanTransforms {
   static bool handleUncountableEarlyExits(VPlan &Plan, Loop *TheLoop,
                                           PredicatedScalarEvolution &PSE,
                                           DominatorTree &DT,
-                                          AssumptionCache *AC,
-                                          UncountableExitStyle Style);
+                                          AssumptionCache *AC);
 
   /// Disconnect countable early exits from the loop.
   static void handleCountableEarlyExits(VPlan &Plan);
