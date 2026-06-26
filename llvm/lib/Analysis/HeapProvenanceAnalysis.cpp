@@ -34,7 +34,17 @@ static bool isAllocLibCall(const Value *V, const TargetLibraryInfo *TLI) {
 }
 
 static Value *getFreeLibCallOperand(const CallBase *CB, const TargetLibraryInfo *TLI) {
-  return getFreedOperand(CB, TLI);
+  if (!CB || !TLI)
+    return nullptr;
+  const Function *Callee = CB->getCalledFunction();
+  if (!Callee)
+    return nullptr;
+  LibFunc TLIFn;
+  if (TLI->getLibFunc(*Callee, TLIFn) && TLI->has(TLIFn) &&
+      isLibFreeFunction(Callee, TLIFn)) {
+    return CB->getArgOperand(0);
+  }
+  return nullptr;
 }
 
 static bool mergeLattice(const Value *Target, HeapProvenanceLattice &Dest,
@@ -59,11 +69,14 @@ static bool mergeLattice(const Value *Target, HeapProvenanceLattice &Dest,
     return false;
   }
 
-  if (Src.State == Lattice::StateKind::Unknown) {
+  if (Src.State == Lattice::StateKind::Unknown ||
+      Dest.State == Lattice::StateKind::Unknown) {
+    bool Changed =
+        (Dest.State != Lattice::StateKind::Unknown) || (Dest.Dir != MergedDir);
     Dest.State = Lattice::StateKind::Unknown;
     Dest.Dir = MergedDir;
     Dest.HeadPayload = {Lattice::Payload::Kind::None, nullptr};
-    return true;
+    return Changed;
   }
 
   bool Changed = false;
@@ -75,29 +88,15 @@ static bool mergeLattice(const Value *Target, HeapProvenanceLattice &Dest,
   if (Dest.State == Src.State && Dest.HeadPayload == Src.HeadPayload)
     return Changed;
 
-  if (isa_and_nonnull<PHINode>(Target)) {
-    Lattice::Payload NewPayload{Lattice::Payload::Kind::Phi, Target};
-    if (Dest.State != Lattice::StateKind::HeapChunkInterior ||
-        Dest.HeadPayload != NewPayload) {
+  if (Dest.isUninit()) {
+    Dest.State = Src.State;
+    if (isa_and_nonnull<PHINode>(Target) || isa_and_nonnull<SelectInst>(Target))
       Dest.State = Lattice::StateKind::HeapChunkInterior;
-      Dest.HeadPayload = NewPayload;
-      Changed = true;
-    }
-    return Changed;
+    Dest.HeadPayload = Src.HeadPayload;
+    return true;
   }
 
-  if (isa_and_nonnull<SelectInst>(Target)) {
-    Lattice::Payload NewPayload{Lattice::Payload::Kind::Select, Target};
-    if (Dest.State != Lattice::StateKind::HeapChunkInterior ||
-        Dest.HeadPayload != NewPayload) {
-      Dest.State = Lattice::StateKind::HeapChunkInterior;
-      Dest.HeadPayload = NewPayload;
-      Changed = true;
-    }
-    return Changed;
-  }
-
-  if (Dest.HeadPayload.Val != Src.HeadPayload.Val) {
+  if (Dest.HeadPayload != Src.HeadPayload) {
     Dest.State = Lattice::StateKind::Unknown;
     Dest.HeadPayload = {Lattice::Payload::Kind::None, nullptr};
     return true;
@@ -250,15 +249,10 @@ BackwardHeapProvenanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
       for (Value *Op : BO->operands())
         if (mergeIntoMap(Res.getMap(), Op, BackInfo))
           Worklist.push_back(Op);
-    } else if (auto *PHI = dyn_cast<PHINode>(const_cast<Value *>(V))) {
-      for (Value *InV : PHI->incoming_values())
-        if (mergeIntoMap(Res.getMap(), InV, BackInfo))
-          Worklist.push_back(InV);
-    } else if (auto *Sel = dyn_cast<SelectInst>(const_cast<Value *>(V))) {
-      if (mergeIntoMap(Res.getMap(), Sel->getTrueValue(), BackInfo))
-        Worklist.push_back(Sel->getTrueValue());
-      if (mergeIntoMap(Res.getMap(), Sel->getFalseValue(), BackInfo))
-        Worklist.push_back(Sel->getFalseValue());
+    } else if (isa<PHINode>(const_cast<Value *>(V)) || isa<SelectInst>(const_cast<Value *>(V))) {
+      // TODO: Propagating backward deallocation provenance across PHI nodes or
+      // Select instructions without path-sensitive join conditions is unsound.
+      // Stop backward propagation here to maintain lattice join soundness.
     } else if (auto *Arg = dyn_cast<Argument>(const_cast<Value *>(V))) {
       Function *Fn = Arg->getParent();
       for (const User *FnU : Fn->users()) {

@@ -365,6 +365,8 @@ class ObjectSizeOffsetEvaluator
 
   SizeOffsetValue compute_(Value *V);
   bool computeFallbackHeapMetadata(Value *V, SizeOffsetValue &Result);
+  bool computeFallbackHeapMetadata_(Value *V, SizeOffsetValue &Result,
+                                    CacheMapTy &FallbackCacheMap);
 
 public:
   LLVM_ABI ObjectSizeOffsetEvaluator(
