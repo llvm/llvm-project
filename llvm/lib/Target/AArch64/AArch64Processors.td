@@ -22,6 +22,7 @@ def TuneA320 : SubtargetFeature<"a320", "ARMProcFamily", "CortexA320",
                                    FeatureFuseAES,
                                    FeatureFuseAdrpAdd,
                                    FeaturePostRAScheduler,
+                                   FeatureUseMIPipeliner,
                                    FeatureUseWzrToVecMove,
                                    FeatureUseFixedOverScalableIfEqualCost,
                                    FeatureAggressiveInterleaving]>;

@@ -218,11 +218,6 @@ static cl::opt<bool>
                    cl::desc("Enable sinking and folding of instruction copies"),
                    cl::init(true), cl::Hidden);
 
-static cl::opt<bool>
-    EnableMachinePipeliner("aarch64-enable-pipeliner",
-                           cl::desc("Enable Machine Pipeliner for AArch64"),
-                           cl::init(false), cl::Hidden);
-
 static cl::opt<bool> EnableSRLTSubregToRegMitigation(
     "aarch64-srlt-mitigate-sr2r",
     cl::desc("Enable SUBREG_TO_REG mitigation by adding 'implicit-def' for "
