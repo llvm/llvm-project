@@ -58,3 +58,153 @@ module attributes { } {
 
 // EXECUTE-NOT: operator
 // EXECUTE: execute()
+
+// -----
+// Tests that GlobalOps are moved into the ClassOp wrapper correctly as fields
+
+module attributes { } {
+  emitc.global static const @global_arr : !emitc.array<1xi8> = dense<0>
+  emitc.func @foo() {
+    %0 = emitc.get_global @global_arr : !emitc.array<1xi8>
+    emitc.return
+  }
+}
+
+// CHECK:   emitc.class @fooClass {
+// CHECK:     emitc.field @global_arr : !emitc.array<1xi8> = dense<0>
+// CHECK:     emitc.func @"operator()"() {
+// CHECK:       %0 = get_field @global_arr : !emitc.array<1xi8>
+// CHECK:       return
+// CHECK:     }
+// CHECK:   }
+
+// EXECUTE-NOT: operator
+// EXECUTE: execute()
+
+// -----
+// Tests that only GlobalOps that are used within a function are moved into the
+// ClassOp wrapper as fields
+
+module attributes { } {
+  emitc.global static const @global_arr : !emitc.array<1xi8> = dense<0>
+  emitc.global static const @global_arr2 : !emitc.array<1xi8> = dense<0>
+  emitc.func @foo() {
+    %0 = emitc.get_global @global_arr : !emitc.array<1xi8>
+    emitc.return
+  }
+}
+
+// CHECK:   module {
+// CHECK-NEXT:     emitc.global static const @global_arr2 : !emitc.array<1xi8> = dense<0>
+// CHECK-NEXT:     emitc.class @fooClass {
+// CHECK-NEXT:       emitc.field @global_arr : !emitc.array<1xi8> = dense<0>
+// CHECK-NEXT:       emitc.func @"operator()"() {
+// CHECK-NEXT:         %0 = get_field @global_arr : !emitc.array<1xi8>
+// CHECK-NEXT:         return
+// CHECK-NEXT:       }
+// CHECK-NEXT:     }
+// CHECK-NEXT:   }
+
+// EXECUTE-NOT: operator
+// EXECUTE: execute()
+
+// -----
+// Tests that when multiple functions use different globals, only the used globals
+// are moved into their respective ClassOp wrappers as fields.
+
+module attributes { } {
+  emitc.global static const @global_arr1 : !emitc.array<1xi8> = dense<0>
+  emitc.global static const @global_arr2 : !emitc.array<1xi8> = dense<0>
+  emitc.global static const @global_arr3 : !emitc.array<1xi8> = dense<0>
+  emitc.func @foo() {
+    %0 = emitc.get_global @global_arr1 : !emitc.array<1xi8>
+    emitc.return
+  }
+  emitc.func @bar() {
+    %0 = emitc.get_global @global_arr2 : !emitc.array<1xi8>
+    emitc.return
+  }
+}
+
+// CHECK:   module {
+// CHECK-NEXT:     emitc.global static const @global_arr3 : !emitc.array<1xi8> = dense<0>
+// CHECK-NEXT:     emitc.class @fooClass {
+// CHECK-NEXT:       emitc.field @global_arr1 : !emitc.array<1xi8> = dense<0>
+// CHECK-NEXT:       emitc.func @"operator()"() {
+// CHECK-NEXT:         %0 = get_field @global_arr1 : !emitc.array<1xi8>
+// CHECK-NEXT:         return
+// CHECK-NEXT:       }
+// CHECK-NEXT:     }
+// CHECK-NEXT:     emitc.class @barClass {
+// CHECK-NEXT:       emitc.field @global_arr2 : !emitc.array<1xi8> = dense<0>
+// CHECK-NEXT:       emitc.func @"operator()"() {
+// CHECK-NEXT:         %0 = get_field @global_arr2 : !emitc.array<1xi8>
+// CHECK-NEXT:         return
+// CHECK-NEXT:       }
+// CHECK-NEXT:     }
+// CHECK-NEXT:   }
+
+// EXECUTE-NOT: operator
+// EXECUTE: execute()
+
+// -----
+// Tests that when multiple functions use the same global, the global is moved
+// into each ClassOp wrapper as a field and erased from the module.
+
+module attributes { } {
+  emitc.global static const @global_arr : !emitc.array<1xi8> = dense<0>
+  emitc.func @foo() {
+    %0 = emitc.get_global @global_arr : !emitc.array<1xi8>
+    emitc.return
+  }
+  emitc.func @bar() {
+    %0 = emitc.get_global @global_arr : !emitc.array<1xi8>
+    emitc.return
+  }
+}
+
+// CHECK:   module {
+// CHECK-NEXT:     emitc.class @fooClass {
+// CHECK-NEXT:       emitc.field @global_arr : !emitc.array<1xi8> = dense<0>
+// CHECK-NEXT:       emitc.func @"operator()"() {
+// CHECK-NEXT:         %0 = get_field @global_arr : !emitc.array<1xi8>
+// CHECK-NEXT:         return
+// CHECK-NEXT:       }
+// CHECK-NEXT:     }
+// CHECK-NEXT:     emitc.class @barClass {
+// CHECK-NEXT:       emitc.field @global_arr : !emitc.array<1xi8> = dense<0>
+// CHECK-NEXT:       emitc.func @"operator()"() {
+// CHECK-NEXT:         %0 = get_field @global_arr : !emitc.array<1xi8>
+// CHECK-NEXT:         return
+// CHECK-NEXT:       }
+// CHECK-NEXT:     }
+// CHECK-NEXT:   }
+
+// EXECUTE-NOT: operator
+// EXECUTE: execute()
+
+// -----
+// Tests that multiple uses of the same global in a function result in a single field.
+
+module attributes { } {
+  emitc.global static const @global_arr : !emitc.array<1xi8> = dense<0>
+  emitc.func @foo() {
+    %0 = emitc.get_global @global_arr : !emitc.array<1xi8>
+    %1 = emitc.get_global @global_arr : !emitc.array<1xi8>
+    emitc.return
+  }
+}
+
+// CHECK:   module {
+// CHECK-NEXT:     emitc.class @fooClass {
+// CHECK-NEXT:       emitc.field @global_arr : !emitc.array<1xi8> = dense<0>
+// CHECK-NEXT:       emitc.func @"operator()"() {
+// CHECK-NEXT:         %0 = get_field @global_arr : !emitc.array<1xi8>
+// CHECK-NEXT:         %1 = get_field @global_arr : !emitc.array<1xi8>
+// CHECK-NEXT:         return
+// CHECK-NEXT:       }
+// CHECK-NEXT:     }
+// CHECK-NEXT:   }
+
+// EXECUTE-NOT: operator
+// EXECUTE: execute()

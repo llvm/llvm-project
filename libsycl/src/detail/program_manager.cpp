@@ -152,6 +152,19 @@ ProgramAndKernelManager::getOrCreateKernel(DeviceKernelInfo &KernelInfo,
   return Kernel;
 }
 
+bool ProgramAndKernelManager::hasCompatibleImage(const DeviceImpl &Device) {
+  std::lock_guard<std::mutex> Guard(MDataCollectionMutex);
+
+  for (const auto &BinaryImagesPair : MDeviceImageManagers) {
+    for (const auto &Image : BinaryImagesPair.second) {
+      if (isImageCompatible(*Image, Device))
+        return true;
+    }
+  }
+
+  return false;
+}
+
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL
 

@@ -205,14 +205,16 @@ static bool CheckTemporary(InterpState &S, CodePtr OpPC, const Block *B,
     // FIXME(perf): Since we do this check on every Load from a static
     // temporary, it might make sense to cache the value of the
     // isUsableInConstantExpressions call.
-    if (B->getEvalID() != S.EvalID &&
-        !MTE->isUsableInConstantExpressions(S.getASTContext())) {
+    if (S.checkingConstantDestruction() ||
+        (B->getEvalID() != S.EvalID &&
+         !MTE->isUsableInConstantExpressions(S.getASTContext()))) {
       const SourceInfo &E = S.Current->getSource(OpPC);
       S.FFDiag(E, diag::note_constexpr_access_static_temporary, 1) << AK;
       noteValueLocation(S, B);
       return false;
     }
   }
+
   return true;
 }
 
@@ -454,11 +456,17 @@ bool CheckLive(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
   return true;
 }
 
-bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
+bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc,
+                   AccessKinds AK) {
   assert(Desc);
 
   const auto *D = Desc->asVarDecl();
-  if (!D || D == S.EvaluatingDecl || D->isConstexpr())
+  if (S.checkingConstantDestruction(D)) {
+    // If we're checking for a constant destructor for this variable, we can
+    // only read from it if it is constant.
+    if (D->getType().isConstQualified())
+      return true;
+  } else if (!D || D == S.EvaluatingDecl || D->isConstexpr())
     return true;
 
   // If we're evaluating the initializer for a constexpr variable in C23, we may
@@ -472,7 +480,7 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   bool IsConstant = T.isConstant(S.getASTContext());
   if (T->isIntegralOrEnumerationType()) {
     if (!IsConstant) {
-      diagnoseNonConstVariable(S, OpPC, D);
+      diagnoseNonConstVariable(S, OpPC, D, AK);
       return false;
     }
     return true;
@@ -496,22 +504,26 @@ bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
   if (T->isPointerOrReferenceType()) {
     if (!T->getPointeeType().isConstant(S.getASTContext()) ||
         !S.getLangOpts().CPlusPlus11) {
-      diagnoseNonConstVariable(S, OpPC, D);
+      diagnoseNonConstVariable(S, OpPC, D, AK);
       return false;
     }
     return true;
   }
 
-  diagnoseNonConstVariable(S, OpPC, D);
+  diagnoseNonConstVariable(S, OpPC, D, AK);
   return false;
 }
 
-static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+static bool CheckConstant(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                          AccessKinds AK = AK_Read) {
+  if (S.checkingConstantDestruction(Ptr))
+    return CheckConstant(S, OpPC, Ptr.getDeclDesc(), AK);
+
   if (!Ptr.isStatic() || !Ptr.isBlockPointer())
     return true;
   if (!Ptr.getDeclID())
     return true;
-  return CheckConstant(S, OpPC, Ptr.getDeclDesc());
+  return CheckConstant(S, OpPC, Ptr.getDeclDesc(), AK);
 }
 
 bool CheckNull(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
@@ -641,19 +653,29 @@ bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   return false;
 }
 
-bool CheckMutable(InterpState &S, CodePtr OpPC, PtrView Ptr) {
+bool CheckMutable(InterpState &S, CodePtr OpPC, PtrView Ptr, AccessKinds AK) {
   assert(Ptr.isLive() && "Pointer is not live");
   if (!Ptr.isMutable())
     return true;
 
-  // In C++14 onwards, it is permitted to read a mutable member whose
-  // lifetime began within the evaluation.
-  if (S.getLangOpts().CPlusPlus14 && Ptr.getEvalID() == S.EvalID)
+  if (S.checkingConstantDestruction()) {
+    // Never allowed when checking for constant destruction.
+    // Diagnose below.
+  } else if (S.getLangOpts().CPlusPlus14 &&
+             S.lifetimeStartedInEvaluation(Ptr.block())) {
+    // In C++14 onwards, it is permitted to read a mutable member whose
+    // lifetime began within the evaluation.
     return true;
+  }
+
+  // Find the reason this pointer is mutable.
+  PtrView MutablePtr = Ptr;
+  while (!MutablePtr.isRoot() && MutablePtr.getBase().isMutable())
+    MutablePtr = MutablePtr.getBase();
 
   const SourceInfo &Loc = S.Current->getSource(OpPC);
-  const FieldDecl *Field = Ptr.getField();
-  S.FFDiag(Loc, diag::note_constexpr_access_mutable, 1) << AK_Read << Field;
+  const FieldDecl *Field = MutablePtr.getField();
+  S.FFDiag(Loc, diag::note_constexpr_access_mutable, 1) << AK << Field;
   S.Note(Field->getLocation(), diag::note_declared_at);
   return false;
 }
@@ -874,7 +896,7 @@ bool CheckLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return CheckWeak(S, OpPC, Ptr.block());
   }
 
-  if (!CheckConstant(S, OpPC, Ptr))
+  if (!CheckConstant(S, OpPC, Ptr, AK))
     return false;
   if (!CheckRange(S, OpPC, Ptr, AK))
     return false;
@@ -983,21 +1005,21 @@ bool CheckStore(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
     return false;
   if (!CheckVolatile(S, OpPC, Ptr, AK_Assign))
     return false;
+  if (!CheckMutable(S, OpPC, Ptr, AK_Assign))
+    return false;
   if (isConstexprUnknown(Ptr))
     return false;
   return true;
 }
 
 static bool CheckInvoke(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
-                        bool IsCtorDtor = false) {
+                        bool IsCtor, bool IsDtor) {
   if (!Ptr.isDummy() && !isConstexprUnknown(Ptr)) {
     if (!CheckLive(S, OpPC, Ptr, AK_MemberCall))
       return false;
     if (!CheckRange(S, OpPC, Ptr, AK_MemberCall))
       return false;
-    if (!IsCtorDtor && !CheckLifetime(S, OpPC, Ptr, AK_MemberCall))
-      return false;
-    if (!CheckMutable(S, OpPC, Ptr))
+    if (!(IsCtor || IsDtor) && !CheckLifetime(S, OpPC, Ptr, AK_MemberCall))
       return false;
   }
   return true;
@@ -1390,6 +1412,9 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
     if (Ptr.isZero())
       return true;
 
+    if (!Ptr.isBlockPointer())
+      return false;
+
     // Remove base casts.
     QualType InitialType = Ptr.getType();
     Ptr = Ptr.expand().stripBaseCasts();
@@ -1703,6 +1728,11 @@ bool CheckDestructor(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (Ptr.getLifetime() == Lifetime::Ended)
     return CheckLifetime(S, OpPC, Ptr, AK_Destroy);
 
+  // We _can_ call the destructor on the global variable we're checking constant
+  // destruction for.
+  if (S.checkingConstantDestruction(Ptr))
+    return true;
+
   // Can't call a dtor on a global variable.
   if (Ptr.block()->isStatic()) {
     const SourceInfo &E = S.Current->getSource(OpPC);
@@ -1798,8 +1828,8 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
     if (!(S.Current->getFunction() &&
           S.Current->getFunction()->isLambdaStaticInvoker() &&
           Func->isLambdaCallOperator())) {
-      if (!CheckInvoke(S, OpPC, ThisPtr,
-                       Func->isConstructor() || Func->isDestructor()))
+      if (!CheckInvoke(S, OpPC, ThisPtr, Func->isConstructor(),
+                       Func->isDestructor()))
         return false;
     }
 
@@ -1868,14 +1898,14 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
         Func->isLambdaCallOperator()) {
       assert(ThisPtr.isZero());
     } else {
-      if (!CheckInvoke(S, OpPC, ThisPtr,
-                       Func->isConstructor() || Func->isDestructor()))
+      if (!CheckInvoke(S, OpPC, ThisPtr, Func->isConstructor(),
+                       Func->isDestructor()))
         return cleanup();
 
       if (Func->isCopyOrMoveOperator() || Func->isCopyOrMoveConstructor()) {
         const Pointer &RVOPtr =
             S.Stk.peek<Pointer>(ThisOffset - align(sizeof(Pointer)));
-        if (!CheckInvoke(S, OpPC, RVOPtr, /*IsCtorDtor=*/true))
+        if (!CheckInvoke(S, OpPC, RVOPtr, /*IsCtor=*/true, /*IsDtor=*/false))
           return cleanup();
       }
 
@@ -2019,9 +2049,11 @@ bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestTypePtr,
     return false;
   }
 
-  // TODO: Other checks?
-  if (!Ptr.isBlockPointer())
+  if (!Ptr.isBlockPointer() || !Ptr.getRecord())
     return false;
+
+  if (!Ptr.isInitialized())
+    return DiagnoseUninitialized(S, OpPC, Ptr, AK_Read);
 
   // Our given pointer, limited by the base that's currently being initialized,
   // if any.
