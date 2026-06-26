@@ -1,5 +1,6 @@
 #include "llvm/Analysis/HeapProvenanceAnalysis.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
+#include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstIterator.h"
@@ -202,9 +203,12 @@ BackwardHeapProvenanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
     if (F.isDeclaration())
       continue;
     auto &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
+    auto &PDT = FAM.getResult<PostDominatorTreeAnalysis>(F);
     for (Instruction &I : instructions(F)) {
       if (auto *CB = dyn_cast<CallBase>(&I)) {
         if (Value *ArgVal = getFreeLibCallOperand(CB, &TLI)) {
+          if (!PDT.dominates(CB->getParent(), &F.getEntryBlock()))
+            continue;
           HeapProvenanceLattice Info;
           Info.State = HeapProvenanceLattice::StateKind::HeapChunkHead;
           Info.Dir = HeapProvenanceLattice::Backward;
