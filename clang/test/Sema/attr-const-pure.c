@@ -80,11 +80,11 @@ __attribute__((const)) int noreturn_test2(void) { // expected-note {{function de
 }
 
 __attribute__((const)) int noreturn_test3(void) { // expected-note {{function declared 'const' here}}
-  indirect_noreturn(); // expected-warning {{alling a 'noreturn' function from a function with the 'const' attribute is undefined behavior}}
+  indirect_noreturn(); // expected-warning {{calling a 'noreturn' function from a function with the 'const' attribute is undefined behavior}}
   return 12;
 }
 
-__attribute__((const)) int noreturn_test4(void) {
+__attribute__((const)) int noreturn_test4(void) { // expected-note {{function declared 'const' here}}
   // This should not be diagnosed.
   (void)sizeof((direct_noreturn(), 1));
 
@@ -96,8 +96,9 @@ __attribute__((const)) int noreturn_test4(void) {
 #endif // __cplusplus
 
   if (0) {
-	// This should not be diagnosed.
-    direct_noreturn();
+	// FIXME: it would be better if this was not diagnosed because it is
+	// statically known to be unreachable.
+    direct_noreturn(); // expected-warning {{calling a 'noreturn' function from a function with the 'const' attribute is undefined behavior}}
   }
 
   return 12;
@@ -134,14 +135,34 @@ __attribute__((pure)) int noreturn_test8() { // expected-note {{function declare
 }
 
 template <typename T>
-[[gnu::pure]] int noreturn_test9() {
-  // No diagnostic expected without an instantiation because the call cannot be
-  // resolved yet.
-  T::nrcall();
+[[gnu::pure]] int noreturn_test9() { // expected-note {{function declared 'pure' here}}
+  T::nrcall(); // expected-warning {{calling a 'noreturn' function from a function with the 'pure' attribute is undefined behavior}}
   return 12;
 }
 
 struct S {
-  [[noreturn]] void nrcall();
+  [[noreturn]] static void nrcall();
+  [[noreturn]] void mem_nrcall();
 };
+
+void instantiate() {
+  (void)noreturn_test9<S>(); // expected-note {{in instantiation of function template specialization 'noreturn_test9<S>' requested here}}
+}
+
+[[gnu::const]] int memfn() { // expected-note {{function declared 'const' here}}
+  S{}.mem_nrcall(); // expected-warning {{calling a 'noreturn' function from a function with the 'const' attribute is undefined behavior}}
+}
+
+__attribute__((pure)) int noreturn_test10() {
+  (void)[] {
+	// This should not be diagnosed, it's not called within the pure function.
+    direct_noreturn();
+  };
+  
+  (void)[]() __attribute__((const)) { // expected-note {{function declared 'const' here}}
+	direct_noreturn(); // expected-warning {{calling a 'noreturn' function from a function with the 'const' attribute is undefined behavior}}
+  };
+  
+  return 12;
+}
 #endif // __cplusplus

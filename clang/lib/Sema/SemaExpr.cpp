@@ -7388,23 +7388,6 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
     }
   }
 
-  // Diagnose calls to noreturn functions from within a function declared as
-  // being const or pure; this is undefined behavior. But only if the expression
-  // is actually evaluated.
-  if ((FDecl && FDecl->isNoReturn()) || (FuncT && FuncT->getNoReturnAttr())) {
-    if (clang::Scope *Parent = CurScope->getFnParent()) {
-      if (const Decl *D = dyn_cast<Decl>(Parent->getEntity());
-          D && (D->hasAttr<ConstAttr>() || D->hasAttr<PureAttr>())) {
-        DiagRuntimeBehavior(Fn->getExprLoc(), Fn,
-                            PDiag(diag::warn_const_pure_noreturn_call)
-                                << D->hasAttr<ConstAttr>());
-        DiagRuntimeBehavior(D->getLocation(), Fn,
-                            PDiag(diag::note_const_pure_noreturn_call)
-                                << D->hasAttr<ConstAttr>());
-      }
-    }
-  }
-
   // Do special checking on direct calls to functions.
   if (FDecl) {
     if (CheckFunctionCall(FDecl, TheCall, Proto))
