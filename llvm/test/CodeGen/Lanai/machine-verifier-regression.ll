@@ -18,8 +18,8 @@ entry:
   ret i32 %mul
 }
 
-define i32 @h1(i32 inreg %a) #0 {
-; CHECK-LABEL: h1:
+define i32 @regression2(i32 inreg %a) #0 {
+; CHECK-LABEL: regression2:
 ; CHECK:       ! %bb.0: ! %entry
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
