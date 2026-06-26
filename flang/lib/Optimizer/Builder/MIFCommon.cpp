@@ -84,16 +84,3 @@ mlir::func::FuncOp mif::getOrCreateInitFunc(mlir::OpBuilder &builder,
 
   return func;
 }
-
-void mif::genMIFInit(fir::FirOpBuilder &builder, mlir::Location loc) {
-  mlir::ModuleOp mod = builder.getModule();
-  auto func = getOrCreateInitFunc(builder, mod, mifInitializationName);
-
-  mlir::Block &entry = func.getBody().front();
-  auto returnOp = entry.getTerminator();
-
-  mlir::OpBuilder::InsertionGuard guard(builder);
-  builder.setInsertionPoint(returnOp);
-
-  mif::InitOp::create(builder, loc);
-}

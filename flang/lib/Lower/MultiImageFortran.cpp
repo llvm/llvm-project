@@ -460,12 +460,18 @@ void Fortran::lower::genAllocateNonAllocatableSaveCoarray(
   mlir::IRMapping mapping;
 
   auto func = mif::getOrCreateInitFunc(builder, mod, mifSaveCoarraysAllocName);
+  bool funcIsEmpty = func.empty();
 
   mlir::Block &entry = func.getBody().front();
   auto returnOp = entry.getTerminator();
 
   mlir::OpBuilder::InsertionGuard guard(builder);
   builder.setInsertionPoint(returnOp);
+
+  // If the function is empty, then we add the MIF initialization operation
+  // at the beginning.
+  if (funcIsEmpty)
+    mif::InitOp::create(builder, loc);
 
   mlir::Operation &op = *addr.getDefiningOp();
   mlir::Operation *localAddrOp = builder.clone(op, mapping);

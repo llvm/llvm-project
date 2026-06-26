@@ -32,7 +32,12 @@ class region_Op<string mnemonic, list<Trait> traits = []>
 
 def mif_InitOp : mif_Op<"init", []> {
   let summary = "Initialize the parallel environment";
-  let description = [{This operation will initialize the parallel environment}];
+  let description = [{
+    This operation will initialize the parallel environment and shall be called
+    prior to any other MIF operations.
+    Any second or subsequent call to mif.init is guaranteed to return 
+    immediately with no effect.
+  }];
 
   let results = (outs I32:$stat);
   let assemblyFormat = "`->` type($stat) attr-dict";

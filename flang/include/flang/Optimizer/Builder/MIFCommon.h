@@ -14,7 +14,6 @@
 #include "mlir/IR/BuiltinOps.h"
 
 static constexpr llvm::StringRef coarrayHandleSuffix = "_coarray_handle";
-static constexpr llvm::StringRef mifInitializationName = "__mif_initialization";
 static constexpr llvm::StringRef mifSaveCoarraysAllocName =
     "__mif_save_coarrays_allocate";
 
@@ -25,8 +24,6 @@ std::string getFullUniqName(mlir::Value addr);
 mlir::func::FuncOp getOrCreateInitFunc(mlir::OpBuilder &builder,
                                        mlir::ModuleOp mod,
                                        llvm::StringRef name);
-
-void genMIFInit(fir::FirOpBuilder &, mlir::Location loc);
 
 } // namespace mif
 

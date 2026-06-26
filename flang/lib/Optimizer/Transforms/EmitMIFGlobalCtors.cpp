@@ -42,19 +42,10 @@ public:
     mlir::Attribute zeroAttr = mlir::LLVM::ZeroAttr::get(builder.getContext());
 
     // Setting priority 0 for the initialization of mif.
-    if (mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>(mifInitializationName)) {
-      funcs.push_back(mlir::FlatSymbolRefAttr::get(ctx, mifInitializationName));
-      priorities.push_back(mlir::IntegerAttr::get(i32Ty, 0));
-      data.push_back(zeroAttr);
-    }
-
-    // We set priority 1 because 0 is used for the function that call
-    // `mif.init`, to ensure that it is called after the parallel environment
-    // initialization.
     if (mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>(mifSaveCoarraysAllocName)) {
       funcs.push_back(
           mlir::FlatSymbolRefAttr::get(ctx, mifSaveCoarraysAllocName));
-      priorities.push_back(mlir::IntegerAttr::get(i32Ty, 1));
+      priorities.push_back(mlir::IntegerAttr::get(i32Ty, 0));
       data.push_back(zeroAttr);
     }
 
