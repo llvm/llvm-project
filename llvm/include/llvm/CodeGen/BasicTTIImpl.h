@@ -676,13 +676,11 @@ public:
            TLI->isOperationLegalOrCustom(ISD::FSQRT, VT);
   }
 
-  bool haveFastClmul(Type *Ty) const override {
+  bool haveFastClmul(IntegerType *Ty) const override {
     // FIXME: clmul should really be Promote for any bitwidth under the largest
     // legal bitwidth for clmul. This is a hack to get around that shortcoming.
-    auto *IntTy = dyn_cast<IntegerType>(Ty);
-    assert(IntTy && "Non-integer type");
-    if (Type *PromoteTy =
-            DL.getSmallestLegalIntType(Ty->getContext(), IntTy->getBitWidth()))
+    if (auto *PromoteTy = dyn_cast_if_present<IntegerType>(
+            DL.getSmallestLegalIntType(Ty->getContext(), Ty->getBitWidth())))
       Ty = PromoteTy;
 
     const TargetLoweringBase *TLI = getTLI();

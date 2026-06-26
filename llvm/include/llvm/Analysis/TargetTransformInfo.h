@@ -1187,7 +1187,7 @@ public:
 
   /// Return true if the hardware has a fast carryless-multiplication
   /// instruction.
-  LLVM_ABI bool haveFastClmul(Type *Ty) const;
+  LLVM_ABI bool haveFastClmul(IntegerType *Ty) const;
 
   /// Return true if the cost of the instruction is too high to speculatively
   /// execute and should be kept behind a branch.

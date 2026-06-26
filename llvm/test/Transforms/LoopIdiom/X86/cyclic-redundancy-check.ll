@@ -55,7 +55,7 @@ define i16 @crc16.le.tc8(i8 %msg, i16 %checksum) {
 ; PCLMUL-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[CRC_LE_LSHR]] to i16
 ; PCLMUL-NEXT:    br label %[[LOOP:.*]]
 ; PCLMUL:       [[LOOP]]:
-; PCLMUL-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
+; PCLMUL-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; PCLMUL:       [[EXIT]]:
 ; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; PCLMUL-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
@@ -121,7 +121,7 @@ define i16 @crc16.le.tc8.udiv(i8 %msg, i16 %checksum) {
 ; PCLMUL-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[CRC_LE_LSHR]] to i16
 ; PCLMUL-NEXT:    br label %[[LOOP:.*]]
 ; PCLMUL:       [[LOOP]]:
-; PCLMUL-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
+; PCLMUL-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; PCLMUL:       [[EXIT]]:
 ; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; PCLMUL-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
@@ -188,7 +188,7 @@ define i16 @crc16.le.tc16(i16 %msg, i16 %checksum) {
 ; PCLMUL-NEXT:    [[CRC_NEXT2:%.*]] = trunc i32 [[CRC_LE_LSHR]] to i16
 ; PCLMUL-NEXT:    br label %[[LOOP:.*]]
 ; PCLMUL:       [[LOOP]]:
-; PCLMUL-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
+; PCLMUL-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; PCLMUL:       [[EXIT]]:
 ; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; PCLMUL-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
@@ -253,7 +253,7 @@ define i8 @crc8.le.tc16(i16 %msg, i8 %checksum) {
 ; PCLMUL-NEXT:    [[CRC_NEXT2:%.*]] = trunc i32 [[CRC_LE_LSHR]] to i8
 ; PCLMUL-NEXT:    br label %[[LOOP:.*]]
 ; PCLMUL:       [[LOOP]]:
-; PCLMUL-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
+; PCLMUL-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; PCLMUL:       [[EXIT]]:
 ; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; PCLMUL-NEXT:    ret i8 [[CRC_NEXT_LCSSA]]
@@ -322,7 +322,7 @@ define i16 @crc16.be.tc8.crc.init.li(i16 %checksum, i8 %msg) {
 ; PCLMUL-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[XOR_CRC_MULT]] to i16
 ; PCLMUL-NEXT:    br label %[[LOOP:.*]]
 ; PCLMUL:       [[LOOP]]:
-; PCLMUL-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
+; PCLMUL-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; PCLMUL:       [[EXIT]]:
 ; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; PCLMUL-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
@@ -383,7 +383,7 @@ define i16 @crc16.be.tc8.crc.init.arg(i16 %crc.init) {
 ; PCLMUL-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[XOR_CRC_MULT]] to i16
 ; PCLMUL-NEXT:    br label %[[LOOP:.*]]
 ; PCLMUL:       [[LOOP]]:
-; PCLMUL-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
+; PCLMUL-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; PCLMUL:       [[EXIT]]:
 ; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; PCLMUL-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
@@ -441,7 +441,7 @@ define i16 @crc16.be.tc8.crc.init.arg.flipped.sb.check(i16 %crc.init) {
 ; PCLMUL-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[XOR_CRC_MULT]] to i16
 ; PCLMUL-NEXT:    br label %[[LOOP:.*]]
 ; PCLMUL:       [[LOOP]]:
-; PCLMUL-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
+; PCLMUL-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; PCLMUL:       [[EXIT]]:
 ; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; PCLMUL-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
@@ -520,7 +520,7 @@ define i8 @crc8.be.tc8.ptr.nested.loop(ptr %msg, i32 %loop.limit) {
 ; PCLMUL-NEXT:    [[CRC_NEXT1:%.*]] = trunc i16 [[XOR_CRC_MULT]] to i8
 ; PCLMUL-NEXT:    br label %[[INNER_LOOP:.*]]
 ; PCLMUL:       [[INNER_LOOP]]:
-; PCLMUL-NEXT:    br i1 true, label %[[INNER_EXIT]], label %[[INNER_LOOP]]
+; PCLMUL-NEXT:    br i1 false, label %[[INNER_LOOP]], label %[[INNER_EXIT]]
 ; PCLMUL:       [[INNER_EXIT]]:
 ; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA]] = phi i8 [ [[CRC_NEXT1]], %[[INNER_LOOP]] ]
 ; PCLMUL-NEXT:    [[OUTER_IV_NEXT]] = add i32 [[OUTER_IV]], 1
@@ -604,7 +604,7 @@ define i16 @crc16.be.tc16(i16 %msg, i16 %checksum) {
 ; PCLMUL-NEXT:    [[CRC_NEXT2:%.*]] = trunc i32 [[XOR_CRC_MULT]] to i16
 ; PCLMUL-NEXT:    br label %[[LOOP:.*]]
 ; PCLMUL:       [[LOOP]]:
-; PCLMUL-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
+; PCLMUL-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; PCLMUL:       [[EXIT]]:
 ; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; PCLMUL-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
@@ -668,7 +668,7 @@ define i16 @crc16.be.tc8.misalign(i8 %msg, i16 %checksum) {
 ; PCLMUL-NEXT:    [[CRC_NEXT1:%.*]] = trunc i24 [[XOR_CRC_MULT]] to i16
 ; PCLMUL-NEXT:    br label %[[LOOP:.*]]
 ; PCLMUL:       [[LOOP]]:
-; PCLMUL-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
+; PCLMUL-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; PCLMUL:       [[EXIT]]:
 ; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i16 [ [[CRC_NEXT1]], %[[LOOP]] ]
 ; PCLMUL-NEXT:    ret i16 [[CRC_NEXT_LCSSA]]
@@ -735,7 +735,7 @@ define i8 @crc8.be.tc16.misalign(i16 %msg, i8 %checksum) {
 ; PCLMUL-NEXT:    [[CRC_NEXT3:%.*]] = trunc i32 [[XOR_CRC_MULT]] to i8
 ; PCLMUL-NEXT:    br label %[[LOOP:.*]]
 ; PCLMUL:       [[LOOP]]:
-; PCLMUL-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
+; PCLMUL-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; PCLMUL:       [[EXIT]]:
 ; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[CRC_NEXT3]], %[[LOOP]] ]
 ; PCLMUL-NEXT:    ret i8 [[CRC_NEXT_LCSSA]]
@@ -801,7 +801,7 @@ define i8 @crc8.be.tc8.data16.misalign(i16 %msg, i8 %checksum) {
 ; PCLMUL-NEXT:    [[CRC_NEXT2:%.*]] = trunc i16 [[XOR_CRC_MULT]] to i8
 ; PCLMUL-NEXT:    br label %[[LOOP:.*]]
 ; PCLMUL:       [[LOOP]]:
-; PCLMUL-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
+; PCLMUL-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; PCLMUL:       [[EXIT]]:
 ; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i8 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; PCLMUL-NEXT:    ret i8 [[CRC_NEXT_LCSSA]]
@@ -868,7 +868,7 @@ define i32 @crc32.le.tc8.data32(i32 %checksum, i32 %msg) {
 ; PCLMUL-NEXT:    [[CRC_NEXT2:%.*]] = trunc i40 [[CRC_LE_LSHR]] to i32
 ; PCLMUL-NEXT:    br label %[[LOOP:.*]]
 ; PCLMUL:       [[LOOP]]:
-; PCLMUL-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
+; PCLMUL-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; PCLMUL:       [[EXIT]]:
 ; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; PCLMUL-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]
@@ -933,7 +933,7 @@ define i32 @crc.disabled.optsize(i32 %checksum, i32 %msg) optsize {
 ; PCLMUL-NEXT:    [[CRC_NEXT2:%.*]] = trunc i40 [[CRC_LE_LSHR]] to i32
 ; PCLMUL-NEXT:    br label %[[LOOP:.*]]
 ; PCLMUL:       [[LOOP]]:
-; PCLMUL-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[LOOP]]
+; PCLMUL-NEXT:    br i1 false, label %[[LOOP]], label %[[EXIT:.*]]
 ; PCLMUL:       [[EXIT]]:
 ; PCLMUL-NEXT:    [[CRC_NEXT_LCSSA:%.*]] = phi i32 [ [[CRC_NEXT2]], %[[LOOP]] ]
 ; PCLMUL-NEXT:    ret i32 [[CRC_NEXT_LCSSA]]

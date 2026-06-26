@@ -259,8 +259,8 @@ private:
                                   const SCEV *BECount);
   bool avoidLIRForMultiBlockLoop(bool IsMemset = false,
                                  bool IsLoopMemset = false);
-  bool optimizeCRCLoopToClmul(const PolynomialInfo &Info);
-  bool optimizeCRCLoopToLookup(const PolynomialInfo &Info);
+  bool optimizeCRCLoopUsingClmul(const PolynomialInfo &Info);
+  bool optimizeCRCLoopUsingTableLookup(const PolynomialInfo &Info);
 
   /// @}
   /// \name Noncountable Loop Idiom Handling
@@ -403,8 +403,9 @@ bool LoopIdiomRecognize::runOnCountableLoop() {
   // table if we're optimizing for size.
   if (!DisableLIRP::HashRecognize)
     if (auto Res = HashRecognize(*CurLoop, *SE).getResult())
-      MadeChange |= optimizeCRCLoopToClmul(*Res) ||
-                    (!ApplyCodeSizeHeuristics && optimizeCRCLoopToLookup(*Res));
+      MadeChange |=
+          optimizeCRCLoopUsingClmul(*Res) ||
+          (!ApplyCodeSizeHeuristics && optimizeCRCLoopUsingTableLookup(*Res));
 
   return MadeChange;
 }
@@ -1552,7 +1553,7 @@ bool LoopIdiomRecognize::avoidLIRForMultiBlockLoop(bool IsMemset,
   return false;
 }
 
-bool LoopIdiomRecognize::optimizeCRCLoopToClmul(const PolynomialInfo &Info) {
+bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
   Type *CRCTy = Info.LHS->getType();
   LLVMContext &Ctx = CRCTy->getContext();
   unsigned CRCBW = CRCTy->getIntegerBitWidth();
@@ -1563,7 +1564,7 @@ bool LoopIdiomRecognize::optimizeCRCLoopToClmul(const PolynomialInfo &Info) {
   // The first clmul uses 2*TC bits, and the second clmul uses CRCBW+TC bits.
   // For simplicity, have both operate on the same bit width.
   unsigned ClmulBW = std::max(2 * TC, CRCBW + TC);
-  Type *ClmulTy = IntegerType::get(Ctx, ClmulBW);
+  auto *ClmulTy = IntegerType::get(Ctx, ClmulBW);
 
   // This optimization should only be applied if clmul for the required width is
   // a fast operation on the target.
@@ -1573,45 +1574,35 @@ bool LoopIdiomRecognize::optimizeCRCLoopToClmul(const PolynomialInfo &Info) {
     return false;
 
   // First, generate the constants required for GF(2) Barrett reduction.
-  CRCBarrettConstants Constants =
+  auto [Mu, FullGenPoly] =
       HashRecognize::genBarrettConstants(Info.RHS, TC, Info.IsBigEndian);
-  Value *Mu = ConstantInt::get(Ctx, Constants.Mu.zext(ClmulBW));
-  Value *FullGenPoly =
-      ConstantInt::get(Ctx, Constants.FullGenPoly.zext(ClmulBW));
-
-  // Mark all PHIs for removal since we're getting rid of the loop.
-  SmallVector<PHINode *, 2> Cleanup;
-  for (PHINode &PN : CurLoop->getHeader()->phis()) {
-    PN.replaceAllUsesWith(PoisonValue::get(PN.getType()));
-    Cleanup.push_back(&PN);
-  }
+  Value *MuExt = ConstantInt::get(Ctx, Mu.zext(ClmulBW));
+  Value *FullGenPolyExt = ConstantInt::get(Ctx, FullGenPoly.zext(ClmulBW));
 
   IRBuilder<> Builder(CurLoop->getLoopPreheader()->getTerminator());
 
-  auto GetMSBits = [&](Value *Op, unsigned BW, unsigned Count,
-                       const Twine &Name) {
+  auto GetMostSignificantTCBits = [&, TC](Value *Op, unsigned BW,
+                                          const Twine &Name) {
     unsigned OpBW = Op->getType()->getIntegerBitWidth();
-    assert(BW > Count && OpBW > Count);
+    assert(BW > TC && OpBW > TC);
     if (Info.IsBigEndian)
-      return Builder.CreateLShr(Op, BW - Count, Name + ".be.lshr");
-    auto *Mask = ConstantInt::get(Ctx, APInt::getLowBitsSet(OpBW, Count));
+      return Builder.CreateLShr(Op, BW - TC, Name + ".be.lshr");
+    auto *Mask = ConstantInt::get(Ctx, APInt::getLowBitsSet(OpBW, TC));
     return Builder.CreateAnd(Op, Mask, Name + ".le.mask");
   };
 
-  Value *CRCExt = Builder.CreateZExt(Info.LHS, ClmulTy, "crc.ext");
+  Value *LHS = Builder.CreateZExt(Info.LHS, ClmulTy, "crc.ext");
 
   // For the big-endian case, align the leftmost bit of the CRC with the
   // leftmost bit of the data which is used. For the little-endian case, align
   // the rightmost bits (nothing to do).
   Value *CRCAlignTC;
-  if (!Info.IsBigEndian)
-    CRCAlignTC = CRCExt;
+  if (!Info.IsBigEndian || CRCBW == TC)
+    CRCAlignTC = LHS;
   else if (CRCBW > TC)
-    CRCAlignTC = Builder.CreateLShr(CRCExt, CRCBW - TC, "crc.be.lshr");
-  else if (TC > CRCBW)
-    CRCAlignTC = Builder.CreateShl(CRCExt, TC - CRCBW, "crc.be.shl");
+    CRCAlignTC = Builder.CreateLShr(LHS, CRCBW - TC, "crc.be.lshr");
   else
-    CRCAlignTC = CRCExt;
+    CRCAlignTC = Builder.CreateShl(LHS, TC - CRCBW, "crc.be.shl");
 
   // If auxiliary data is present, XOR it in with the CRC.
   Value *ClmulMuInput = CRCAlignTC;
@@ -1623,7 +1614,7 @@ bool LoopIdiomRecognize::optimizeCRCLoopToClmul(const PolynomialInfo &Info) {
     // will still detect the loop. To handle the case where the data is zexted
     // before XORing with the CRC, just ignore the auxiliary data entirely,
     // because the extracted bit will always be zero.
-    if (!(Info.IsBigEndian && DataBW < CRCBW)) {
+    if (!Info.IsBigEndian || DataBW >= CRCBW) {
       // For the aforementioned HashRecognize quirk, to handle the case where
       // the data is truncated before XORing with the CRC, shift the data so the
       // CRCBW-1 bit becomes the leftmost bit, and then the remaining logic
@@ -1632,34 +1623,34 @@ bool LoopIdiomRecognize::optimizeCRCLoopToClmul(const PolynomialInfo &Info) {
         Data = Builder.CreateShl(Data, DataBW - CRCBW, "data.be.shl");
       if (DataBW > TC) {
         // Extract the useful bits of the data and discard the rest.
-        Data = GetMSBits(Data, DataBW, TC, "data");
+        Data = GetMostSignificantTCBits(Data, DataBW, "data");
       }
       // This is always a zext since TripCount <= DataBW < ClmulBW.
-      Value *DataExt = Builder.CreateZExt(Data, ClmulTy, "data.ext");
+      Data = Builder.CreateZExt(Data, ClmulTy, "data.ext");
 
-      ClmulMuInput = Builder.CreateXor(CRCAlignTC, DataExt, "xor.crc.data");
+      ClmulMuInput = Builder.CreateXor(CRCAlignTC, Data, "xor.crc.data");
     }
   }
 
   // Perform the first clmul operation with the mu/mu' constant. Input is TC
   // bits and Mu is TC+1 bits, so the result will be 2*TC bits.
-  Value *ClmulMu = Builder.CreateBinaryIntrinsic(Intrinsic::clmul, ClmulMuInput,
-                                                 Mu, {}, "clmul.mu");
+  Value *ClmulMu = Builder.CreateBinaryIntrinsic(
+      Intrinsic::clmul, ClmulMuInput, MuExt, /*FMFSource=*/{}, "clmul.mu");
 
   // Extract the relevant bits from the result.
-  Value *ClmulGPInput = GetMSBits(ClmulMu, 2 * TC, TC, "quot");
+  Value *ClmulGPInput = GetMostSignificantTCBits(ClmulMu, 2 * TC, "quot");
 
   // Perform the second clmul operation with the P(x)/P(x)' constant. Input is
   // TC bits and GP is CRCBW+1 bits, so the result will be CRCBW+TC bits.
   Value *ClmulGP = Builder.CreateBinaryIntrinsic(Intrinsic::clmul, ClmulGPInput,
-                                                 FullGenPoly, {}, "clmul.gp");
+                                                 FullGenPolyExt,
+                                                 /*FMFSource=*/{}, "clmul.gp");
 
   // For the big-endian case, align the leftmost bit of the CRC with the
   // leftmost bit of the clmul result. For the little-endian case, align the
   // rightmost bits (nothing to do).
-  Value *CRCAlignClmul = CRCExt;
-  if (Info.IsBigEndian)
-    CRCAlignClmul = Builder.CreateShl(CRCExt, TC, "crc.be.shl");
+  Value *CRCAlignClmul =
+      Info.IsBigEndian ? Builder.CreateShl(LHS, TC, "crc.be.shl") : LHS;
 
   // Get the remainder by subtracting (XORing) the calculated multiple of
   // GenPoly from the CRC.
@@ -1673,27 +1664,34 @@ bool LoopIdiomRecognize::optimizeCRCLoopToClmul(const PolynomialInfo &Info) {
   // Replace the result of the loop with the new computed CRC value.
   Info.ComputedValue->replaceUsesOutsideBlock(CRCNext, CurLoop->getLoopLatch());
 
-  // Clean up the loop as much as possible so it can be trivially deleted.
-  for (PHINode *PN : Cleanup)
-    RecursivelyDeleteDeadPHINode(PN);
-  deleteDeadInstruction(CurLoop->getLatchCmpInst());
-  // Make the conditional branch always go to the exit block without changing
-  // the loop successors.
-  CondBrInst *BrInst =
-      cast<CondBrInst>(CurLoop->getLoopLatch()->getTerminator());
-  BasicBlock *ExitBlk = CurLoop->getExitBlock();
-  BasicBlock *OtherSucc = BrInst->getSuccessor(0);
-  if (OtherSucc == ExitBlk)
-    OtherSucc = BrInst->getSuccessor(1);
-  Builder.SetInsertPoint(BrInst);
-  Builder.CreateCondBr(ConstantInt::getBool(Ctx, true), ExitBlk, OtherSucc);
-  BrInst->eraseFromParent();
-  SE->forgetLoop(CurLoop);
+  // Finally, clean up the loop as much as possible so it can be trivially
+  // deleted.
+  {
+    // Add the loop PHI nodes to a worklist since deleting a PHI invalidates the
+    // iterator.
+    SmallVector<PHINode *, 3> LoopPHIs;
+    for (PHINode &PN : CurLoop->getHeader()->phis()) {
+      PN.replaceAllUsesWith(PoisonValue::get(PN.getType()));
+      LoopPHIs.push_back(&PN);
+    }
+    for (PHINode *PN : LoopPHIs) {
+      RecursivelyDeleteDeadPHINode(PN);
+    }
+    // Replace the exit condition with constant true/false to always cause a
+    // branch to the exit block.
+    deleteDeadInstruction(CurLoop->getLatchCmpInst());
+    CondBrInst *BrInst =
+        cast<CondBrInst>(CurLoop->getLoopLatch()->getTerminator());
+    bool BrToExitCond = BrInst->getSuccessor(0) == CurLoop->getExitBlock();
+    BrInst->setCondition(ConstantInt::getBool(Ctx, BrToExitCond));
+    SE->forgetLoop(CurLoop);
+  }
 
   return true;
 }
 
-bool LoopIdiomRecognize::optimizeCRCLoopToLookup(const PolynomialInfo &Info) {
+bool LoopIdiomRecognize::optimizeCRCLoopUsingTableLookup(
+    const PolynomialInfo &Info) {
   // FIXME: Hexagon has a special HexagonLoopIdiom that optimizes CRC using
   // carry-less multiplication instructions, which is more efficient than our
   // Sarwate table-lookup optimization. Hence, until we're able to emit

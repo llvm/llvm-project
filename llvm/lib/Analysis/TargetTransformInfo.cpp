@@ -743,7 +743,7 @@ bool TargetTransformInfo::haveFastSqrt(Type *Ty) const {
   return TTIImpl->haveFastSqrt(Ty);
 }
 
-bool TargetTransformInfo::haveFastClmul(Type *Ty) const {
+bool TargetTransformInfo::haveFastClmul(IntegerType *Ty) const {
   return TTIImpl->haveFastClmul(Ty);
 }
 

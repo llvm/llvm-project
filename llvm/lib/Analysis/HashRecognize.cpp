@@ -379,8 +379,9 @@ CRCTable HashRecognize::genSarwateTable(const APInt &GenPoly,
 // Perform polynomial (GF(2)) floor division. This is based on the
 // floor_division(S, P) algorithm in
 // https://www.corsix.org/content/barrett-reduction-polynomials. Note that the
-// maximum degree of the returned polynomial is max(0, deg(Dividend) -
-// deg(Divisor)), but the bit width will be the same as that of Dividend.
+// maximum degree of the returned polynomial is
+// max(0, deg(Dividend) - deg(Divisor)), but the bit width will be the same as
+// that of Dividend.
 static APInt floorDivideGF2(APInt Dividend, APInt Divisor) {
   assert(!Divisor.isZero() && "Cannot divide by zero");
 
@@ -407,12 +408,12 @@ static APInt floorDivideGF2(APInt Dividend, APInt Divisor) {
 
 // Generate the constants for performing a Polynomial (GF(2)) Barrett Reduction
 // according to Intel's Fast CRC Computation white paper
-// (https://www.researchgate.net/publication/263424619_Fast_CRC_computation),
+// (https://web.archive.org/web/20131224125630/https://www.intel.com/content/dam/www/public/us/en/documents/white-papers/fast-crc-computation-generic-polynomials-pclmulqdq-paper.pdf),
 // with some adjustments to account for the fact that bit width and trip count
 // can vary.
-CRCBarrettConstants HashRecognize::genBarrettConstants(const APInt &GenPoly,
-                                                       unsigned TripCount,
-                                                       bool IsBigEndian) {
+std::pair<APInt, APInt>
+HashRecognize::genBarrettConstants(const APInt &GenPoly, unsigned TripCount,
+                                   bool IsBigEndian) {
   unsigned BW = GenPoly.getBitWidth();
 
   // Recover the full generating polynomial in normal form by reflecting the LE
@@ -598,18 +599,6 @@ void CRCTable::print(raw_ostream &OS) const {
 void CRCTable::dump() const { print(dbgs()); }
 #endif
 
-void CRCBarrettConstants::print(raw_ostream &OS) const {
-  OS << "Mu = ";
-  Mu.print(OS, false);
-  OS << ", FullGenPoly = ";
-  FullGenPoly.print(OS, false);
-  OS << '\n';
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void CRCBarrettConstants::dump() const { print(dbgs()); }
-#endif
-
 void HashRecognize::print(raw_ostream &OS) const {
   if (!L.isInnermost())
     return;
@@ -645,8 +634,13 @@ void HashRecognize::print(raw_ostream &OS) const {
   OS.indent(2) << "Computed CRC lookup table:\n";
   genSarwateTable(Info.RHS, Info.IsBigEndian).print(OS);
   OS.indent(2) << "Computed CRC Barrett constants:\n";
-  genBarrettConstants(Info.RHS, Info.TripCount, Info.IsBigEndian)
-      .print(OS);
+  auto [Mu, FullGenPoly] =
+      genBarrettConstants(Info.RHS, Info.TripCount, Info.IsBigEndian);
+  OS << "Mu = ";
+  Mu.print(OS, false);
+  OS << ", FullGenPoly = ";
+  FullGenPoly.print(OS, false);
+  OS << '\n';
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

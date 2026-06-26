@@ -396,6 +396,201 @@ exit:                                              ; preds = %outer.loop
   ret i8 %crc.outer
 }
 
+define i16 @crc16.be.tc16(i16 %msg, i16 %checksum) {
+; CHECK-LABEL: 'crc16.be.tc16'
+; CHECK-NEXT:  Found big-endian CRC-16 loop with trip count 16
+; CHECK-NEXT:    Initial CRC: i16 %checksum
+; CHECK-NEXT:    Generating polynomial: 4129
+; CHECK-NEXT:    Computed CRC: %crc.next = select i1 %check.sb, i16 %crc.shl, i16 %crc.xor
+; CHECK-NEXT:    Auxiliary data: i16 %msg
+; CHECK-NEXT:    Computed CRC lookup table:
+; CHECK-NEXT:  0 4129 8258 12387 16516 20645 24774 28903 33032 37161 41290 45419 49548 53677 57806 61935
+; CHECK-NEXT:  4657 528 12915 8786 21173 17044 29431 25302 37689 33560 45947 41818 54205 50076 62463 58334
+; CHECK-NEXT:  9314 13379 1056 5121 25830 29895 17572 21637 42346 46411 34088 38153 58862 62927 50604 54669
+; CHECK-NEXT:  13907 9842 5649 1584 30423 26358 22165 18100 46939 42874 38681 34616 63455 59390 55197 51132
+; CHECK-NEXT:  18628 22757 26758 30887 2112 6241 10242 14371 51660 55789 59790 63919 35144 39273 43274 47403
+; CHECK-NEXT:  23285 19156 31415 27286 6769 2640 14899 10770 56317 52188 64447 60318 39801 35672 47931 43802
+; CHECK-NEXT:  27814 31879 19684 23749 11298 15363 3168 7233 60846 64911 52716 56781 44330 48395 36200 40265
+; CHECK-NEXT:  32407 28342 24277 20212 15891 11826 7761 3696 65439 61374 57309 53244 48923 44858 40793 36728
+; CHECK-NEXT:  37256 33193 45514 41451 53516 49453 61774 57711 4224 161 12482 8419 20484 16421 28742 24679
+; CHECK-NEXT:  33721 37784 41979 46042 49981 54044 58239 62302 689 4752 8947 13010 16949 21012 25207 29270
+; CHECK-NEXT:  46570 42443 38312 34185 62830 58703 54572 50445 13538 9411 5280 1153 29798 25671 21540 17413
+; CHECK-NEXT:  42971 47098 34713 38840 59231 63358 50973 55100 9939 14066 1681 5808 26199 30326 17941 22068
+; CHECK-NEXT:  55628 51565 63758 59695 39368 35305 47498 43435 22596 18533 30726 26663 6336 2273 14466 10403
+; CHECK-NEXT:  52093 56156 60223 64286 35833 39896 43963 48026 19061 23124 27191 31254 2801 6864 10931 14994
+; CHECK-NEXT:  64814 60687 56684 52557 48554 44427 40424 36297 31782 27655 23652 19525 15522 11395 7392 3265
+; CHECK-NEXT:  61215 65342 53085 57212 44955 49082 36825 40952 28183 32310 20053 24180 11923 16050 3793 7920
+; CHECK-NEXT:    Computed CRC Barrett constants:
+; CHECK-NEXT:  Mu = 69936, FullGenPoly = 69665
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i16 [ %msg, %entry ], [ %data.next, %loop ]
+  %xor.crc.data = xor i16 %crc, %data
+  %data.next = shl i16 %data, 1
+  %check.sb = icmp sge i16 %xor.crc.data, 0
+  %crc.shl = shl i16 %crc, 1
+  %crc.xor = xor i16 %crc.shl, 4129
+  %crc.next = select i1 %check.sb, i16 %crc.shl, i16 %crc.xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %exit.cond = icmp samesign ult i8 %iv, 15
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
+define i16 @crc16.be.tc8.misalign(i8 %msg, i16 %checksum) {
+; CHECK-LABEL: 'crc16.be.tc8.misalign'
+; CHECK-NEXT:  Found big-endian CRC-16 loop with trip count 8
+; CHECK-NEXT:    Initial CRC: i16 %checksum
+; CHECK-NEXT:    Generating polynomial: 4129
+; CHECK-NEXT:    Computed CRC: %crc.next = select i1 %check.sb, i16 %crc.shl, i16 %xor
+; CHECK-NEXT:    Auxiliary data: i8 %msg
+; CHECK-NEXT:    Computed CRC lookup table:
+; CHECK-NEXT:  0 4129 8258 12387 16516 20645 24774 28903 33032 37161 41290 45419 49548 53677 57806 61935
+; CHECK-NEXT:  4657 528 12915 8786 21173 17044 29431 25302 37689 33560 45947 41818 54205 50076 62463 58334
+; CHECK-NEXT:  9314 13379 1056 5121 25830 29895 17572 21637 42346 46411 34088 38153 58862 62927 50604 54669
+; CHECK-NEXT:  13907 9842 5649 1584 30423 26358 22165 18100 46939 42874 38681 34616 63455 59390 55197 51132
+; CHECK-NEXT:  18628 22757 26758 30887 2112 6241 10242 14371 51660 55789 59790 63919 35144 39273 43274 47403
+; CHECK-NEXT:  23285 19156 31415 27286 6769 2640 14899 10770 56317 52188 64447 60318 39801 35672 47931 43802
+; CHECK-NEXT:  27814 31879 19684 23749 11298 15363 3168 7233 60846 64911 52716 56781 44330 48395 36200 40265
+; CHECK-NEXT:  32407 28342 24277 20212 15891 11826 7761 3696 65439 61374 57309 53244 48923 44858 40793 36728
+; CHECK-NEXT:  37256 33193 45514 41451 53516 49453 61774 57711 4224 161 12482 8419 20484 16421 28742 24679
+; CHECK-NEXT:  33721 37784 41979 46042 49981 54044 58239 62302 689 4752 8947 13010 16949 21012 25207 29270
+; CHECK-NEXT:  46570 42443 38312 34185 62830 58703 54572 50445 13538 9411 5280 1153 29798 25671 21540 17413
+; CHECK-NEXT:  42971 47098 34713 38840 59231 63358 50973 55100 9939 14066 1681 5808 26199 30326 17941 22068
+; CHECK-NEXT:  55628 51565 63758 59695 39368 35305 47498 43435 22596 18533 30726 26663 6336 2273 14466 10403
+; CHECK-NEXT:  52093 56156 60223 64286 35833 39896 43963 48026 19061 23124 27191 31254 2801 6864 10931 14994
+; CHECK-NEXT:  64814 60687 56684 52557 48554 44427 40424 36297 31782 27655 23652 19525 15522 11395 7392 3265
+; CHECK-NEXT:  61215 65342 53085 57212 44955 49082 36825 40952 28183 32310 20053 24180 11923 16050 3793 7920
+; CHECK-NEXT:    Computed CRC Barrett constants:
+; CHECK-NEXT:  Mu = 273, FullGenPoly = 69665
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i16 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i8 [ %msg, %entry ], [ %data.next, %loop ]
+  %crc.trunc = trunc i16 %crc to i8
+  %xor.data.crc = xor i8 %data, %crc.trunc
+  %data.next = shl i8 %data, 1
+  %check.sb = icmp sge i8 %xor.data.crc, 0
+  %crc.shl = shl i16 %crc, 1
+  %xor = xor i16 %crc.shl, 4129
+  %crc.next = select i1 %check.sb, i16 %crc.shl, i16 %xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %exit.cond = icmp samesign ult i8 %iv, 7
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i16 %crc.next
+}
+
+define i8 @crc8.be.tc16.misalign(i16 %msg, i8 %checksum) {
+; CHECK-LABEL: 'crc8.be.tc16.misalign'
+; CHECK-NEXT:  Found big-endian CRC-8 loop with trip count 16
+; CHECK-NEXT:    Initial CRC: i8 %checksum
+; CHECK-NEXT:    Generating polynomial: 29
+; CHECK-NEXT:    Computed CRC: %crc.next = select i1 %check.sb, i8 %crc.shl, i8 %crc.xor
+; CHECK-NEXT:    Auxiliary data: i16 %msg
+; CHECK-NEXT:    Computed CRC lookup table:
+; CHECK-NEXT:  0 29 58 39 116 105 78 83 232 245 210 207 156 129 166 187
+; CHECK-NEXT:  205 208 247 234 185 164 131 158 37 56 31 2 81 76 107 118
+; CHECK-NEXT:  135 154 189 160 243 238 201 212 111 114 85 72 27 6 33 60
+; CHECK-NEXT:  74 87 112 109 62 35 4 25 162 191 152 133 214 203 236 241
+; CHECK-NEXT:  19 14 41 52 103 122 93 64 251 230 193 220 143 146 181 168
+; CHECK-NEXT:  222 195 228 249 170 183 144 141 54 43 12 17 66 95 120 101
+; CHECK-NEXT:  148 137 174 179 224 253 218 199 124 97 70 91 8 21 50 47
+; CHECK-NEXT:  89 68 99 126 45 48 23 10 177 172 139 150 197 216 255 226
+; CHECK-NEXT:  38 59 28 1 82 79 104 117 206 211 244 233 186 167 128 157
+; CHECK-NEXT:  235 246 209 204 159 130 165 184 3 30 57 36 119 106 77 80
+; CHECK-NEXT:  161 188 155 134 213 200 239 242 73 84 115 110 61 32 7 26
+; CHECK-NEXT:  108 113 86 75 24 5 34 63 132 153 190 163 240 237 202 215
+; CHECK-NEXT:  53 40 15 18 65 92 123 102 221 192 231 250 169 180 147 142
+; CHECK-NEXT:  248 229 194 223 140 145 182 171 16 13 42 55 100 121 94 67
+; CHECK-NEXT:  178 175 136 149 198 219 252 225 90 71 96 125 46 51 20 9
+; CHECK-NEXT:  127 98 69 88 11 22 49 44 151 138 173 176 227 254 217 196
+; CHECK-NEXT:    Computed CRC Barrett constants:
+; CHECK-NEXT:  Mu = 72779, FullGenPoly = 285
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i8 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i16 [ %msg, %entry ], [ %data.next, %loop ]
+  %data.trunc = trunc i16 %data to i8
+  %xor.crc.data = xor i8 %crc, %data.trunc
+  %data.next = shl i16 %data, 1
+  %check.sb = icmp sge i8 %xor.crc.data, 0
+  %crc.shl = shl i8 %crc, 1
+  %crc.xor = xor i8 %crc.shl, 29
+  %crc.next = select i1 %check.sb, i8 %crc.shl, i8 %crc.xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %exit.cond = icmp samesign ult i8 %iv, 15
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i8 %crc.next
+}
+
+define i8 @crc8.be.tc8.data16.misalign(i16 %msg, i8 %checksum) {
+; CHECK-LABEL: 'crc8.be.tc8.data16.misalign'
+; CHECK-NEXT:  Found big-endian CRC-8 loop with trip count 8
+; CHECK-NEXT:    Initial CRC: i8 %checksum
+; CHECK-NEXT:    Generating polynomial: 29
+; CHECK-NEXT:    Computed CRC: %crc.next = select i1 %check.sb, i8 %crc.shl, i8 %crc.xor
+; CHECK-NEXT:    Auxiliary data: i16 %msg
+; CHECK-NEXT:    Computed CRC lookup table:
+; CHECK-NEXT:  0 29 58 39 116 105 78 83 232 245 210 207 156 129 166 187
+; CHECK-NEXT:  205 208 247 234 185 164 131 158 37 56 31 2 81 76 107 118
+; CHECK-NEXT:  135 154 189 160 243 238 201 212 111 114 85 72 27 6 33 60
+; CHECK-NEXT:  74 87 112 109 62 35 4 25 162 191 152 133 214 203 236 241
+; CHECK-NEXT:  19 14 41 52 103 122 93 64 251 230 193 220 143 146 181 168
+; CHECK-NEXT:  222 195 228 249 170 183 144 141 54 43 12 17 66 95 120 101
+; CHECK-NEXT:  148 137 174 179 224 253 218 199 124 97 70 91 8 21 50 47
+; CHECK-NEXT:  89 68 99 126 45 48 23 10 177 172 139 150 197 216 255 226
+; CHECK-NEXT:  38 59 28 1 82 79 104 117 206 211 244 233 186 167 128 157
+; CHECK-NEXT:  235 246 209 204 159 130 165 184 3 30 57 36 119 106 77 80
+; CHECK-NEXT:  161 188 155 134 213 200 239 242 73 84 115 110 61 32 7 26
+; CHECK-NEXT:  108 113 86 75 24 5 34 63 132 153 190 163 240 237 202 215
+; CHECK-NEXT:  53 40 15 18 65 92 123 102 221 192 231 250 169 180 147 142
+; CHECK-NEXT:  248 229 194 223 140 145 182 171 16 13 42 55 100 121 94 67
+; CHECK-NEXT:  178 175 136 149 198 219 252 225 90 71 96 125 46 51 20 9
+; CHECK-NEXT:  127 98 69 88 11 22 49 44 151 138 173 176 227 254 217 196
+; CHECK-NEXT:    Computed CRC Barrett constants:
+; CHECK-NEXT:  Mu = 284, FullGenPoly = 285
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %crc = phi i8 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i16 [ %msg, %entry ], [ %data.next, %loop ]
+  %data.trunc = trunc i16 %data to i8
+  %xor.crc.data = xor i8 %crc, %data.trunc
+  %data.next = shl i16 %data, 1
+  %check.sb = icmp sge i8 %xor.crc.data, 0
+  %crc.shl = shl i8 %crc, 1
+  %crc.xor = xor i8 %crc.shl, 29
+  %crc.next = select i1 %check.sb, i8 %crc.shl, i8 %crc.xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %exit.cond = icmp samesign ult i8 %iv, 7
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i8 %crc.next
+}
+
 define i32 @crc32.le.tc8.data32(i32 %checksum, i32 %msg) {
 ; CHECK-LABEL: 'crc32.le.tc8.data32'
 ; CHECK-NEXT:  Found little-endian CRC-32 loop with trip count 8

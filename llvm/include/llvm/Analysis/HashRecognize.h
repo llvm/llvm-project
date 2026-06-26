@@ -35,31 +35,6 @@ struct CRCTable : public std::array<APInt, 256> {
 #endif
 };
 
-/// The constants used to perform a Polynomial (GF(2)) Barrett Reduction as
-/// roughly specified in Intel's Fast CRC Computation white paper
-/// (https://www.researchgate.net/publication/263424619_Fast_CRC_computation).
-/// Both constants are bit-reflected across their respective widths for
-/// bit-reflected CRCs.
-struct CRCBarrettConstants {
-  // The constant used in the first clmul operation, which is mu =
-  // floor(x^(CRCBW+DataBW) / P(x)). Bit width is DataBW+1.
-  APInt Mu;
-
-  // The constant used in the second clmul operation, which is the generating
-  // polynomial P(x) with the implied x^CRCBW term included. Bit width is
-  // CRCBW+1.
-  APInt FullGenPoly;
-
-  CRCBarrettConstants(const APInt &Mu, const APInt &FullGenPoly)
-      : Mu(Mu), FullGenPoly(FullGenPoly) {}
-
-  LLVM_ABI void print(raw_ostream &OS) const;
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  LLVM_ABI LLVM_DUMP_METHOD void dump() const;
-#endif
-};
-
 /// The structure that is returned when a polynomial algorithm was recognized by
 /// the analysis. Currently, only the CRC algorithm is recognized.
 struct PolynomialInfo {
@@ -115,7 +90,14 @@ public:
 
   // Auxilary entry point after analysis to generate constants for a GF(2)
   // Barrett Reduction.
-  LLVM_ABI static CRCBarrettConstants
+  // The first APInt is the constant used in the first clmul operation, which is
+  // mu = floor(x^(BW+TC) / P(x)); bit width is TC+1.
+  // The second APInt is the constant used in the second clmul operation, which
+  // is the generating polynomial P(x) with the implied x^BW term included; bit
+  // width is BW+1.
+  // Both constants are bit-reflected across their respective
+  // widths for bit-reflected CRCs.
+  LLVM_ABI static std::pair<APInt, APInt>
   genBarrettConstants(const APInt &GenPoly, unsigned TripCount,
                       bool ByteOrderSwapped);
 
