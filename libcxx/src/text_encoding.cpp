@@ -11,6 +11,12 @@
 #include <__utility/scope_guard.h>
 #include <text_encoding>
 
+// FIXME: Including <langinfo.h> in the locale base API in Clang modules on Apple introduces a circular dependency and
+// breaks certain builds.
+#if defined(__APPLE__)
+#  include <langinfo.h>
+#endif
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
@@ -31,7 +37,11 @@ static text_encoding __make_text_encoding(const char* __name) {
 
 std::text_encoding __get_locale_encoding(const char* __name) {
   if (__name == nullptr)
+#  if defined(__APPLE__)
+    return __make_text_encoding(::nl_langinfo_l(CODESET, static_cast<::__locale::__locale_t>(0)));
+#  else
     return __make_text_encoding(__locale::__get_locale_encoding(static_cast<__locale::__locale_t>(0)));
+#  endif
 
   __locale::__locale_t __l = __locale::__newlocale(_LIBCPP_CTYPE_MASK, __name, static_cast<__locale::__locale_t>(0));
 
@@ -45,7 +55,11 @@ std::text_encoding __get_locale_encoding(const char* __name) {
     return text_encoding{};
   }
 
+#  if defined(__APPLE__)
+  return __make_text_encoding(::nl_langinfo_l(CODESET, __l));
+#  else
   return __make_text_encoding(__locale::__get_locale_encoding(__l));
+#  endif
 }
 
 #endif // __ANDROID__

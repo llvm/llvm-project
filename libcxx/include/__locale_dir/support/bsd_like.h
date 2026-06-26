@@ -15,7 +15,9 @@
 #include <__utility/forward.h>
 #include <clocale> // std::lconv
 #include <ctype.h>
-#include <langinfo.h>
+#ifndef __APPLE__
+#  include <langinfo.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -182,9 +184,11 @@ __mbsrtowcs(wchar_t* __dest, const char** __src, size_t __len, mbstate_t* __ps, 
 }
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
+#  ifndef __APPLE__
 inline _LIBCPP_HIDE_FROM_ABI const char* __get_locale_encoding(__locale_t __loc) {
   return ::nl_langinfo_l(CODESET, __loc);
 }
+#  endif
 #endif // _LIBCPP_BUILDING_LIBRARY
 
 _LIBCPP_DIAGNOSTIC_PUSH
