@@ -96,7 +96,8 @@ _Static_assert(s16_be == -128, "");
 
 // Null pointer is rejected (NonNull attribute)
 void test_null(void) {
-  __UINT_LEAST8_TYPE__ x = stdc_load8_leu8(0); // expected-warning{{null passed to a callee that requires a non-null argument}}
+  __UINT_LEAST8_TYPE__ x = stdc_load8_leu8(0);       // expected-warning{{null passed to a callee that requires a non-null argument}}
+  __UINT_LEAST8_TYPE__ y = stdc_load8_leu8(nullptr);  // expected-warning{{null passed to a callee that requires a non-null argument}}
 }
 
 // Wrong pointer types are rejected by the type system at the call site.
@@ -119,6 +120,7 @@ constexpr unsigned char scalar_byte = 0x42;
 constexpr __UINT_LEAST32_TYPE__ oob_scalar = stdc_load8_leu32(&scalar_byte); // expected-error{{must be initialized by a constant expression}} expected-note{{cannot refer to element 3 of non-array object in a constant expression}}
 
 constexpr __UINT_LEAST32_TYPE__ null_ce = stdc_load8_leu32((const unsigned char *)0); // expected-error{{must be initialized by a constant expression}} expected-note{{read of dereferenced null pointer is not allowed in a constant expression}}
+constexpr __UINT_LEAST32_TYPE__ null_ce_nullptr = stdc_load8_leu32(nullptr); // expected-error{{must be initialized by a constant expression}} expected-note{{read of dereferenced null pointer is not allowed in a constant expression}}
 
 constexpr unsigned char one[] = {0x42};
 constexpr __UINT_LEAST8_TYPE__ oob_past_end = stdc_load8_leu8(one + 1); // expected-error{{must be initialized by a constant expression}} expected-note{{cannot refer to element 1 of array of 1 element in a constant expression}}
