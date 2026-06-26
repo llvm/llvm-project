@@ -1152,3 +1152,11 @@ func.func @convertf_int_output(%arg0 : f32) {
   %0 = arith.convertf %arg0 : f32 to i32
   return
 }
+
+// -----
+
+func.func @fenv_with_rounding_mode(%arg0 : f32, %arg1 : f32) {
+  // expected-error @+1 {{'arith.addf' op The `roundingmode` attribute is deprecated. Represent the rounding mode through the `fenv` attribute instead.}}
+  %0 = arith.addf %arg0, %arg1 to_nearest_even fenv<except_mode = unmasked> : f32
+  return
+}

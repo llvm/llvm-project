@@ -486,17 +486,21 @@ def TruncIShrSIToTrunciShrUI :
 // TruncFOp
 //===----------------------------------------------------------------------===//
 
-// truncf(sitofp(x)) -> sitofp(x) if default rounding mode.
+// truncf(sitofp(x)) -> sitofp(x) if default rounding mode and no fenv
+// constraints.
 def TruncFSIToFPToSIToFP :
-    Pat<(Arith_TruncFOp:$tr (Arith_SIToFPOp:$fp $x), $rmf, $fmf),
+    Pat<(Arith_TruncFOp:$tr (Arith_SIToFPOp:$fp $x), $rmf, $fmf, $fenv),
         (Arith_SIToFPOp $x),
-        [(Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rmf)]>;
+        [(Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rmf),
+         (Constraint<CPred<"$0 == nullptr">, "no fenv constraints"> $fenv)]>;
 
-// truncf(uitofp(x)) -> uitofp(x) if default rounding mode.
+// truncf(uitofp(x)) -> uitofp(x) if default rounding mode and no fenv
+// constraints.
 def TruncFUIToFPToUIToFP :
-    Pat<(Arith_TruncFOp:$tr (Arith_UIToFPOp:$fp $x, $nneg), $rmf, $fmf),
+    Pat<(Arith_TruncFOp:$tr (Arith_UIToFPOp:$fp $x, $nneg), $rmf, $fmf, $fenv),
         (Arith_UIToFPOp $x, $nneg),
-        [(Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rmf)]>;
+        [(Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rmf),
+         (Constraint<CPred<"$0 == nullptr">, "no fenv constraints"> $fenv)]>;
 
 //===----------------------------------------------------------------------===//
 // SIToFPOp
@@ -534,10 +538,12 @@ def IsNegZeroFloat :
 // TODO: Verify if this canonicalization is safe when a rounding mode is
 // specified. For the moment, bail on custom rounding modes.
 def SubFOfNegZero :
-    Pat<(Arith_SubFOp (ConstantLikeMatcher AnyAttr:$c), $x, $fmf, $rm),
+    Pat<(Arith_SubFOp (ConstantLikeMatcher AnyAttr:$c), $x, $fmf, $rm, $fenv),
         (Arith_NegFOp $x, $fmf),
         [(IsNegZeroFloat $c),
-         (Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rm)]>;
+         (Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rm),
+         (Constraint<CPred<"$0 == nullptr">,
+                     "default floating-point environment"> $fenv)]>;
 
 //===----------------------------------------------------------------------===//
 // MulFOp
@@ -547,10 +553,13 @@ def SubFOfNegZero :
 // TODO: Verify if this canonicalization is safe when a rounding mode is
 // specified. For the moment, bail on custom rounding modes.
 def MulFOfNegF :
-    Pat<(Arith_MulFOp (Arith_NegFOp $x, $_), (Arith_NegFOp $y, $_), $fmf, $rm),
-        (Arith_MulFOp $x, $y, $fmf, $rm),
+    Pat<(Arith_MulFOp (Arith_NegFOp $x, $_), (Arith_NegFOp $y, $_), $fmf, $rm,
+                      $fenv),
+        (Arith_MulFOp $x, $y, $fmf, $rm, $fenv),
         [(TypesMatch $x, $y),
-         (Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rm)]>;
+         (Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rm),
+         (Constraint<CPred<"$0 == nullptr">,
+                     "default floating-point environment"> $fenv)]>;
 
 //===----------------------------------------------------------------------===//
 // DivFOp
@@ -560,9 +569,12 @@ def MulFOfNegF :
 // TODO: Verify if this canonicalization is safe when a rounding mode is
 // specified. For the moment, bail on custom rounding modes.
 def DivFOfNegF :
-    Pat<(Arith_DivFOp (Arith_NegFOp $x, $_), (Arith_NegFOp $y, $_), $fmf, $rm),
-        (Arith_DivFOp $x, $y, $fmf, $rm),
+    Pat<(Arith_DivFOp (Arith_NegFOp $x, $_), (Arith_NegFOp $y, $_), $fmf, $rm,
+                      $fenv),
+        (Arith_DivFOp $x, $y, $fmf, $rm, $fenv),
         [(TypesMatch $x, $y),
-         (Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rm)]>;
+         (Constraint<CPred<"$0 == nullptr">, "default rounding mode"> $rm),
+         (Constraint<CPred<"$0 == nullptr">,
+                     "default floating-point environment"> $fenv)]>;
 
 #endif // ARITH_PATTERNS

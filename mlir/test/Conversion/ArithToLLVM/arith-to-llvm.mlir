@@ -396,6 +396,8 @@ func.func @experimental_constrained_fptrunc(%arg0 : f64) {
   %3 = arith.truncf %arg0 toward_zero : f64 to f32
 // CHECK-NEXT: = llvm.intr.experimental.constrained.fptrunc {{.*}} tonearestaway ignore : f64 to f32
   %4 = arith.truncf %arg0 to_nearest_away : f64 to f32
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fptrunc {{.*}} dynamic ignore : f64 to f32
+  %5 = arith.truncf %arg0 unknown : f64 to f32
   return
 }
 

@@ -62,6 +62,8 @@ mlir::arith::convertArithRoundingModeToLLVM(arith::RoundingMode roundingMode) {
     return LLVM::RoundingMode::TowardZero;
   case arith::RoundingMode::upward:
     return LLVM::RoundingMode::TowardPositive;
+  case arith::RoundingMode::unknown:
+    return LLVM::RoundingMode::Dynamic;
   }
   llvm_unreachable("Unhandled rounding mode");
 }

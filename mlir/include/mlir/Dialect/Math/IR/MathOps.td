@@ -112,6 +112,11 @@ class Math_FloatTernaryOp<string mnemonic, list<Trait> traits = []> :
 
 // Base class for floating point ternary operations with an optional rounding
 // mode.
+//
+// Deprecated: use `Math_FloatTernaryOpWithFenv` instead. This class is retained
+// temporarily while floating-point operations migrate to the `#arith.fenv`
+// floating-point environment attribute, and will be removed once the migration
+// is complete.
 class Math_FloatTernaryOpWithRoundingMode<string mnemonic,
                                           list<Trait> traits = []> :
     Math_FloatTernaryOp<mnemonic,
@@ -144,6 +149,52 @@ class Math_FloatTernaryOpWithRoundingMode<string mnemonic,
   ];
   let assemblyFormat = [{ $a `,` $b `,` $c ($roundingmode^)?
                           (`fastmath` `` $fastmath^)?
+                          attr-dict `:` type($result) }];
+}
+
+// Base class for floating point ternary operations that can carry an optional
+// floating-point environment (`#arith.fenv`) attribute. It extends
+// `Math_FloatTernaryOpWithRoundingMode` with the `fenv` attribute and the
+// `FPEnvConstrainedOpInterface`, which provides a uniform API for querying the
+// floating-point environment constraints.
+class Math_FloatTernaryOpWithFenv<string mnemonic, list<Trait> traits = []> :
+    Math_FloatTernaryOpWithRoundingMode<mnemonic,
+      !listconcat([DeclareOpInterfaceMethods<FPEnvConstrainedOpInterface>],
+                  traits)> {
+  let arguments = (ins FloatLike:$a, FloatLike:$b, FloatLike:$c,
+      DefaultValuedAttr<Arith_FastMathAttr,
+                        "::mlir::arith::FastMathFlags::none">:$fastmath,
+      // Deprecated: represent the rounding mode through the `fenv` attribute
+      // instead.
+      OptionalAttr<Arith_RoundingModeAttr>:$roundingmode,
+      OptionalAttr<Arith_FenvAttr>:$fenv);
+  // With two trailing optional attributes (`roundingmode` and `fenv`), the
+  // generated builders no longer provide C++ default arguments for them, so the
+  // convenience builders must pass both explicitly.
+  let builders = [
+    OpBuilder<(ins "Value":$a, "Value":$b, "Value":$c,
+      CArg<"::mlir::arith::FastMathFlags",
+           "::mlir::arith::FastMathFlags::none">:$fastmath), [{
+      build($_builder, $_state, a, b, c, fastmath,
+            ::mlir::arith::RoundingModeAttr{}, ::mlir::arith::FenvAttr{});
+    }]>,
+    OpBuilder<(ins "Value":$a, "Value":$b, "Value":$c,
+      "::mlir::arith::FastMathFlagsAttr":$fastmath), [{
+      build($_builder, $_state, a, b, c, fastmath,
+            ::mlir::arith::RoundingModeAttr{}, ::mlir::arith::FenvAttr{});
+    }]>,
+    OpBuilder<(ins "Type":$type, "Value":$a, "Value":$b, "Value":$c,
+      CArg<"::mlir::arith::FastMathFlags",
+           "::mlir::arith::FastMathFlags::none">:$fastmath), [{
+      build($_builder, $_state, type, a, b, c,
+            ::mlir::arith::FastMathFlagsAttr::get(
+                $_builder.getContext(), fastmath),
+            ::mlir::arith::RoundingModeAttr{}, ::mlir::arith::FenvAttr{});
+    }]>,
+  ];
+  let assemblyFormat = [{ $a `,` $b `,` $c ($roundingmode^)?
+                          (`fastmath` `` $fastmath^)?
+                          (`fenv` `` $fenv^)?
                           attr-dict `:` type($result) }];
 }
 
@@ -787,7 +838,7 @@ def Math_FloorOp : Math_FloatUnaryOp<"floor"> {
 // FmaOp
 //===----------------------------------------------------------------------===//
 
-def Math_FmaOp : Math_FloatTernaryOpWithRoundingMode<"fma"> {
+def Math_FmaOp : Math_FloatTernaryOpWithFenv<"fma"> {
   let summary = "floating point fused multipy-add operation";
   let description = [{
     The `fma` operation takes three operands and returns one result, each of
