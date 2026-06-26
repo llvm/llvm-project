@@ -543,16 +543,6 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   if (!Triple.isNVPTX() && !Triple.isSPIRV())
     CmdArgs.push_back("-Wl,--no-undefined");
 
-  // The device inputs are bitcode stored in files with an object extension.
-  // Force the IR input language so Clang runs the compile and backend phases
-  // instead of treating them as linker inputs, which would defer codegen to
-  // the LTO link and defeat the non-LTO pipeline.
-  // FIXME: This is a stop-gap for non-RDC. Longer term, RDC and non-RDC should
-  //        share a unified interface.
-  // SPIR-V has no non-LTO pipeline so a --no-lto leaked from a concrete arch in
-  // a multi-target compile is ignored. Which is a workaround to remove.
-  if (Args.hasArg(OPT_no_lto) && !Triple.isSPIRV())
-    CmdArgs.append({"-x", "ir"});
   for (StringRef InputFile : InputFiles)
     CmdArgs.push_back(InputFile);
 
@@ -658,7 +648,8 @@ Error containerizeRawImage(std::unique_ptr<MemoryBuffer> &Img, OffloadKind Kind,
   return Error::success();
 }
 
-Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
+Expected<StringRef> writeOffloadFile(const OffloadFile &File,
+                                     bool PreserveBitcodeExtension) {
   const OffloadBinary &Binary = *File.getBinary();
 
   StringRef Prefix =
@@ -666,7 +657,12 @@ Expected<StringRef> writeOffloadFile(const OffloadFile &File) {
   SmallString<128> Filename;
   (Prefix + "-" + Binary.getTriple() + "-" + Binary.getArch())
       .toVector(Filename);
-  auto TempFileOrErr = createOutputFile(Filename, "o");
+  StringRef Extension =
+      PreserveBitcodeExtension &&
+              identify_magic(Binary.getImage()) == file_magic::bitcode
+          ? "bc"
+          : "o";
+  auto TempFileOrErr = createOutputFile(Filename, Extension);
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
@@ -1003,6 +999,9 @@ linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
           reportError(createStringError(Err));
         });
     auto LinkerArgs = getLinkerArgs(Input, BaseArgs);
+    bool PreserveBitcodeExtension =
+        LinkerArgs.hasArg(OPT_no_lto) &&
+        !llvm::Triple(LinkerArgs.getLastArgValue(OPT_triple_EQ)).isSPIRV();
 
     uint16_t ActiveOffloadKindMask = 0u;
     for (const auto &File : Input)
@@ -1019,7 +1018,7 @@ linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
     // Write any remaining device inputs to an output file.
     SmallVector<StringRef> InputFiles;
     for (const OffloadFile &File : Input) {
-      auto FileNameOrErr = writeOffloadFile(File);
+      auto FileNameOrErr = writeOffloadFile(File, PreserveBitcodeExtension);
       if (!FileNameOrErr)
         return FileNameOrErr.takeError();
       InputFiles.emplace_back(*FileNameOrErr);

@@ -15,7 +15,7 @@
 // RUN: | FileCheck %s
 
 // The concrete arch honors --no-lto
-// CHECK: clang{{.*}} --target=amdgcn-amd-amdhsa -mcpu=gfx1200 {{.*}}-x ir {{.*}}-flto=none
+// CHECK: clang{{.*}} --target=amdgcn-amd-amdhsa -mcpu=gfx1200 {{.*}}.bc{{.*}}-flto=none
 
 // SPIR-V ignores the leaked --no-lto
 // CHECK: clang{{.*}} --target=spirv64-amd-amdhsa -march=amdgcnspirv

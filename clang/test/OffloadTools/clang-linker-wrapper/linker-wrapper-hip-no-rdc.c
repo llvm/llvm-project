@@ -62,8 +62,9 @@ __attribute__((visibility("protected"), used)) int x;
 // LTO: clang{{.*}} -mcpu=gfx1200
 
 // With --no-lto the AMDGPU device compilation uses the conventional non-LTO
-// pipeline: -flto must not be passed, and '-x ir' must be passed so Clang
-// compiles the bitcode (stored in an object-extension file) instead of
-// handing it to the LTO link.
+// pipeline. Extracted bitcode keeps a bitcode extension so Clang compiles it
+// without forcing the input language.
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --wrapper-verbose --dry-run --no-lto --emit-fatbin-only --linker-path=/usr/bin/ld %t.out -o %t.nolto.hipfb 2>&1 | FileCheck %s --check-prefix=NO-LTO
-// NO-LTO: clang{{.*}} -mcpu=gfx1200{{.*}} -x ir {{.*}}-flto=none
+// NO-LTO: clang{{.*}} -mcpu=gfx1200
+// NO-LTO-NOT: -x
+// NO-LTO-SAME: {{.*}}.bc{{.*}}-flto=none

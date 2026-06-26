@@ -5428,6 +5428,28 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
           CmdArgs.push_back("-flto-unit");
       }
     }
+
+    // Default non-RDC HIP uses the linker wrapper's non-LTO compile path for
+    // device bitcode. Skip the early cc1 optimizer so the overall flow has one
+    // classic optimization pipeline. Keep optimized bitcode when the wrapper
+    // uses an LTO-dependent path, such as RDC, explicit offload LTO, or profile
+    // generation. Also keep it for final -emit-llvm output.
+    bool HIPUsesDefaultNonRDCNonLTO =
+        IsHIPDevice && !IsRDCMode &&
+        !Args.hasArg(options::OPT_foffload_lto_EQ,
+                     options::OPT_fno_offload_lto) &&
+        !Args.hasArg(options::OPT_fprofile_generate,
+                     options::OPT_fprofile_generate_EQ,
+                     options::OPT_fprofile_instr_generate,
+                     options::OPT_fprofile_instr_generate_EQ) &&
+        !Triple.isSPIRV();
+    if ((JA.getType() == types::TY_LLVM_BC ||
+         JA.getType() == types::TY_LTO_BC) &&
+        HIPUsesDefaultNonRDCNonLTO && !Args.hasArg(options::OPT_emit_llvm) &&
+        Args.hasFlag(options::OPT_offload_new_driver,
+                     options::OPT_no_offload_new_driver,
+                     C.getActiveOffloadKinds() != Action::OFK_None))
+      CmdArgs.push_back("-disable-llvm-passes");
   }
 
   Args.AddLastArg(CmdArgs, options::OPT_dumpdir);
@@ -9789,7 +9811,8 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
 
       if (JA.getType() == types::TY_HIP_FATBIN && Kind == Action::OFK_HIP) {
         // Non-RDC HIP uses the conventional non-LTO pipeline unless the user
-        // opts into offload LTO.
+        // opts into offload LTO or requests profile generation, which depends
+        // on LTO.
         bool UsesProfileGenerate = Args.hasArg(
             options::OPT_fprofile_generate, options::OPT_fprofile_generate_EQ,
             options::OPT_fprofile_instr_generate,
