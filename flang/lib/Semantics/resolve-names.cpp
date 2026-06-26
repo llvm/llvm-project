@@ -6038,6 +6038,18 @@ void DeclarationVisitor::Post(const parser::EnumerationTypeStmt &x) {
           "Access specifier on ENUMERATION TYPE may only appear in the specification part of a module"_err_en_US);
     }
   }
+  // F2023 C7116: the enumeration-type-name in an enumeration-type-spec shall be
+  // the name of a previously defined enumeration type.  Enumeration Types are
+  // based on derived types, but unlike derived types, an enumeration type may
+  // not be forward referenced.
+  if (Symbol * prev{FindInScope(name.source)}) {
+    if (const auto *prevDetails{prev->detailsIf<DerivedTypeDetails>()};
+        prevDetails && prevDetails->isForwardReferenced()) {
+      Say(prev->name(),
+          "Enumeration type '%s' must be defined before it is referenced"_err_en_US,
+          name.source);
+    }
+  }
   DerivedTypeDetails details;
   details.set_isEnumerationType(true);
   auto &symbol{MakeSymbol(name, attrs, std::move(details))};
@@ -6046,7 +6058,8 @@ void DeclarationVisitor::Post(const parser::EnumerationTypeStmt &x) {
   // Add a hidden __ordinal component to hold the 1-based enumerator position.
   // This is a compiler-created INTEGER(4) component that preserves ordinal
   // identity through constant folding and enables enumerator comparison.
-  SourceName ordinalName{context().SaveTempName(std::string{"__ordinal"})};
+  SourceName ordinalName{context().SaveTempName(
+      std::string{DerivedTypeDetails::ordinalComponentName})};
   Symbol &ordinalSym{MakeSymbol(currScope(), ordinalName, Attrs{})};
   ordinalSym.set_details(ObjectEntityDetails{});
   ordinalSym.SetType(
@@ -6082,7 +6095,9 @@ bool DeclarationVisitor::Pre(const parser::EnumerationEnumeratorStmt &x) {
     // enumerator a distinct Constant<SomeDerived> value.
     evaluate::StructureConstructor enumCtor{declType.derivedTypeSpec()};
     // Look up the __ordinal component symbol in the type's scope.
-    auto ordinalIter{currScope().find(SourceName{"__ordinal", 9})};
+    auto ordinalIter{
+        currScope().find(SourceName{DerivedTypeDetails::ordinalComponentName,
+            sizeof(DerivedTypeDetails::ordinalComponentName) - 1})};
     CHECK(ordinalIter != currScope().end());
     const Symbol &ordinalSym{*ordinalIter->second};
     enumCtor.Add(ordinalSym,

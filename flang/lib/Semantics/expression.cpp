@@ -2527,7 +2527,9 @@ MaybeExpr ExpressionAnalyzer::AnalyzeEnumerationConstructor(
   // converted to the component's declared integer kind.
   StructureConstructor result{spec};
   if (const auto *scope{spec.GetScope()}) {
-    auto ordinalIter{scope->find(semantics::SourceName{"__ordinal", 9})};
+    auto ordinalIter{scope->find(semantics::SourceName{
+        semantics::DerivedTypeDetails::ordinalComponentName,
+        sizeof(semantics::DerivedTypeDetails::ordinalComponentName) - 1})};
     if (ordinalIter != scope->end()) {
       const Symbol &ordinalSymbol{*ordinalIter->second};
       if (auto converted{ConvertToType(ordinalSymbol, std::move(folded))}) {

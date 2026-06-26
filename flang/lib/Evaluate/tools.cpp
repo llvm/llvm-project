@@ -689,6 +689,32 @@ Expr<LogicalResult> PromoteAndRelate(
       AsSameKindExprs(std::move(x), std::move(y)));
 }
 
+std::optional<Expr<SomeType>> GetEnumerationOrdinal(Expr<SomeDerived> &expr) {
+  if (auto type{expr.GetType()}) {
+    if (const auto *derived{GetDerivedTypeSpec(*type)}) {
+      if (derived->IsEnumerationType()) {
+        if (const auto *scope{derived->GetScope()}) {
+          auto iter{scope->find(semantics::SourceName{
+              semantics::DerivedTypeDetails::ordinalComponentName,
+              sizeof(semantics::DerivedTypeDetails::ordinalComponentName) -
+                  1})};
+          if (iter != scope->end()) {
+            const semantics::Symbol &ordSym{*iter->second};
+            if (auto *constant{UnwrapConstantValue<SomeDerived>(expr)}) {
+              if (auto sc{constant->GetScalarValue()}) {
+                return sc->Find(ordSym);
+              }
+            } else if (auto *sc{UnwrapExpr<StructureConstructor>(expr)}) {
+              return sc->Find(ordSym);
+            }
+          }
+        }
+      }
+    }
+  }
+  return std::nullopt;
+}
+
 std::optional<Expr<LogicalResult>> Relate(parser::ContextualMessages &messages,
     RelationalOperator opr, Expr<SomeType> &&x, Expr<SomeType> &&y) {
   return common::visit(
@@ -767,62 +793,41 @@ std::optional<Expr<LogicalResult>> Relate(parser::ContextualMessages &messages,
               if (xDerived && yDerived && xDerived->IsEnumerationType() &&
                   yDerived->IsEnumerationType() &&
                   &xDerived->typeSymbol() == &yDerived->typeSymbol()) {
-                if (const auto *scope{xDerived->GetScope()}) {
-                  auto ordIter{
-                      scope->find(semantics::SourceName{"__ordinal", 9})};
-                  if (ordIter != scope->end()) {
-                    const semantics::Symbol &ordSym{*ordIter->second};
-                    // Try to extract from Constant<SomeDerived>
-                    auto extractOrdinal = [&](Expr<SomeDerived> &expr)
-                        -> std::optional<Expr<SomeType>> {
-                      if (auto *constant{
-                              UnwrapConstantValue<SomeDerived>(expr)}) {
-                        if (auto sc{constant->GetScalarValue()}) {
-                          return sc->Find(ordSym);
-                        }
-                      } else if (auto *sc{
-                                     UnwrapExpr<StructureConstructor>(expr)}) {
-                        return sc->Find(ordSym);
-                      }
-                      return std::nullopt;
-                    };
-                    auto xOrd{extractOrdinal(dx)};
-                    auto yOrd{extractOrdinal(dy)};
-                    if (xOrd && yOrd) {
-                      return Relate(
-                          messages, opr, std::move(*xOrd), std::move(*yOrd));
-                    }
-                    // Non-constant operands: wrap in INT() to convert to
-                    // integer comparison. Build FunctionRef<Int4> for each
-                    // operand representing INT(enumExpr).
-                    auto makeIntCall =
-                        [&](Expr<SomeDerived> &&operand) -> Expr<SomeType> {
-                      using IntType = Type<TypeCategory::Integer, 4>;
-                      DynamicType enumType{*xDerived};
-                      DynamicType intResultType{TypeCategory::Integer, 4};
-                      characteristics::DummyDataObject ddo{
-                          characteristics::TypeAndShape{enumType}};
-                      ddo.intent = common::Intent::In;
-                      characteristics::Procedure::Attrs attrs;
-                      attrs.set(characteristics::Procedure::Attr::Pure);
-                      attrs.set(characteristics::Procedure::Attr::Elemental);
-                      characteristics::DummyArguments dummies;
-                      dummies.emplace_back("a"s, std::move(ddo));
-                      SpecificIntrinsic intSpec{"int"s,
-                          characteristics::Procedure{
-                              characteristics::FunctionResult{intResultType},
-                              std::move(dummies), attrs}};
-                      ActualArguments intArgs;
-                      intArgs.emplace_back(AsGenericExpr(std::move(operand)));
-                      return AsGenericExpr(
-                          Expr<SomeInteger>(Expr<IntType>(FunctionRef<IntType>{
-                              ProcedureDesignator{std::move(intSpec)},
-                              std::move(intArgs)})));
-                    };
-                    return Relate(messages, opr, makeIntCall(std::move(dx)),
-                        makeIntCall(std::move(dy)));
-                  }
+                auto xOrd{GetEnumerationOrdinal(dx)};
+                auto yOrd{GetEnumerationOrdinal(dy)};
+                if (xOrd && yOrd) {
+                  return Relate(
+                      messages, opr, std::move(*xOrd), std::move(*yOrd));
                 }
+                // Non-constant operands: wrap in INT() to convert to
+                // integer comparison. Build FunctionRef<Int4> for each
+                // operand representing INT(enumExpr).
+                auto makeIntCall =
+                    [&](Expr<SomeDerived> &&operand) -> Expr<SomeType> {
+                  using IntType = Type<TypeCategory::Integer, 4>;
+                  DynamicType enumType{*xDerived};
+                  DynamicType intResultType{TypeCategory::Integer, 4};
+                  characteristics::DummyDataObject ddo{
+                      characteristics::TypeAndShape{enumType}};
+                  ddo.intent = common::Intent::In;
+                  characteristics::Procedure::Attrs attrs{
+                      characteristics::Procedure::Attr::Pure,
+                      characteristics::Procedure::Attr::Elemental};
+                  characteristics::DummyArguments dummies;
+                  dummies.emplace_back("a"s, std::move(ddo));
+                  SpecificIntrinsic intSpec{"int"s,
+                      characteristics::Procedure{
+                          characteristics::FunctionResult{intResultType},
+                          std::move(dummies), attrs}};
+                  ActualArguments intArgs;
+                  intArgs.emplace_back(AsGenericExpr(std::move(operand)));
+                  return AsGenericExpr(
+                      Expr<SomeInteger>(Expr<IntType>(FunctionRef<IntType>{
+                          ProcedureDesignator{std::move(intSpec)},
+                          std::move(intArgs)})));
+                };
+                return Relate(messages, opr, makeIntCall(std::move(dx)),
+                    makeIntCall(std::move(dy)));
               }
             }
             DIE("invalid types for relational operator");

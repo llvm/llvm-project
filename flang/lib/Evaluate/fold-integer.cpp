@@ -766,21 +766,9 @@ std::optional<Expr<T>> FoldIntrinsicFunctionCommon(
         if (auto type{derivedExpr->GetType()}) {
           if (const auto *derived{GetDerivedTypeSpec(*type)}) {
             if (derived->IsEnumerationType()) {
-              if (const auto *scope{derived->GetScope()}) {
-                auto ordIter{
-                    scope->find(semantics::SourceName{"__ordinal", 9})};
-                if (ordIter != scope->end()) {
-                  const semantics::Symbol &ordSym{*ordIter->second};
-                  if (auto *constant{
-                          UnwrapConstantValue<SomeDerived>(*derivedExpr)}) {
-                    if (auto sc{constant->GetScalarValue()}) {
-                      if (auto ordExpr{sc->Find(ordSym)}) {
-                        if (auto ordVal{ToInt64(*ordExpr)}) {
-                          return Expr<T>{Constant<T>{Scalar<T>{*ordVal}}};
-                        }
-                      }
-                    }
-                  }
+              if (auto ordExpr{GetEnumerationOrdinal(*derivedExpr)}) {
+                if (auto ordVal{ToInt64(*ordExpr)}) {
+                  return Expr<T>{Constant<T>{Scalar<T>{*ordVal}}};
                 }
               }
               // Non-constant enumeration argument — leave unfolded

@@ -13,6 +13,7 @@
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
+#include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/semantics.h"
 #include "flang/Semantics/tools.h"
@@ -281,6 +282,24 @@ static bool ConvertEnumCaseValue(SemanticsContext &context,
   return false;
 }
 
+// A parse-tree visitor that converts every enumeration CASE value it
+// encounters to its ordinal integer value, recording whether all
+// conversions succeeded.
+struct EnumCaseValueConverter {
+  template <typename A> bool Pre(const A &) { return true; }
+  template <typename A> void Post(const A &) {}
+  bool Pre(const parser::CaseValue &val) {
+    if (!ConvertEnumCaseValue(context, val, enumType, ordSym)) {
+      ok = false;
+    }
+    return false;
+  }
+  SemanticsContext &context;
+  const semantics::DerivedTypeSpec &enumType;
+  const semantics::Symbol &ordSym;
+  bool ok{true};
+};
+
 // Walk all CASE values in an enumeration SELECT CASE, check type
 // compatibility, and convert each to its ordinal integer value.
 static bool ConvertEnumCaseValues(SemanticsContext &context,
@@ -290,48 +309,16 @@ static bool ConvertEnumCaseValues(SemanticsContext &context,
   if (!scope) {
     return false;
   }
-  auto ordIter{scope->find(semantics::SourceName{"__ordinal", 9})};
+  auto ordIter{scope->find(
+      semantics::SourceName{semantics::DerivedTypeDetails::ordinalComponentName,
+          sizeof(semantics::DerivedTypeDetails::ordinalComponentName) - 1})};
   if (ordIter == scope->end()) {
     return false;
   }
   const semantics::Symbol &ordSym{*ordIter->second};
-  bool ok{true};
-  for (const auto &c : cases) {
-    const auto &stmt{std::get<parser::Statement<parser::CaseStmt>>(c.t)};
-    const auto &selector{std::get<parser::CaseSelector>(stmt.statement.t)};
-    common::visit(common::visitors{
-                      [&](const std::list<parser::CaseValueRange> &ranges) {
-                        for (const auto &range : ranges) {
-                          common::visit(
-                              common::visitors{
-                                  [&](const parser::CaseValue &val) {
-                                    if (!ConvertEnumCaseValue(
-                                            context, val, enumType, ordSym)) {
-                                      ok = false;
-                                    }
-                                  },
-                                  [&](const parser::CaseValueRange::Range &r) {
-                                    const auto &[lower, upper]{r.t};
-                                    if (lower &&
-                                        !ConvertEnumCaseValue(context, *lower,
-                                            enumType, ordSym)) {
-                                      ok = false;
-                                    }
-                                    if (upper &&
-                                        !ConvertEnumCaseValue(context, *upper,
-                                            enumType, ordSym)) {
-                                      ok = false;
-                                    }
-                                  },
-                              },
-                              range.u);
-                        }
-                      },
-                      [](const parser::Default &) {},
-                  },
-        selector.u);
-  }
-  return ok;
+  EnumCaseValueConverter visitor{context, enumType, ordSym};
+  parser::Walk(cases, visitor);
+  return visitor.ok;
 }
 
 void CaseChecker::Enter(const parser::CaseConstruct &construct) {
