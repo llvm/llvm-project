@@ -1295,6 +1295,18 @@ ParseResult spirv::GLNClampOp::parse(OpAsmParser &parser,
 void spirv::GLNClampOp::print(OpAsmPrinter &p) { printOneResultOp(*this, p); }
 
 //===----------------------------------------------------------------------===//
+// spirv.GLSmoothStepOp
+//===----------------------------------------------------------------------===//
+
+ParseResult spirv::GLSmoothStepOp::parse(OpAsmParser &parser,
+                                         OperationState &result) {
+  return parseOneResultSameOperandTypeOp(parser, result);
+}
+void spirv::GLSmoothStepOp::print(OpAsmPrinter &p) {
+  printOneResultOp(*this, p);
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.GLFmaOp
 //===----------------------------------------------------------------------===//
 
