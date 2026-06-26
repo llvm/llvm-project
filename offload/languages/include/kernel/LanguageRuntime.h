@@ -81,7 +81,7 @@ Error_t GetDeviceCount(int *Count);
 
 Error_t SetDevice(int DeviceNo);
 
-Error_t HostFree(void *Ptr);
+Error_t FreeHost(void *Ptr);
 
 Error_t DriverGetVersion(int *Version);
 

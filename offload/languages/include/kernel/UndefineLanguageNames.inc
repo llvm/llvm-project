@@ -29,6 +29,6 @@
 #undef SetDevice
 #undef HostAlloc
 #undef MallocHost
-#undef HostFree
+#undef FreeHost
 #undef DriverGetVersion
 #undef GetDeviceProperties

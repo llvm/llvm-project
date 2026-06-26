@@ -32,6 +32,6 @@
 #define SetDevice COMBINE(LANGUAGE, SetDevice)
 #define HostAlloc COMBINE(LANGUAGE, HostAlloc)
 #define MallocHost COMBINE(LANGUAGE, MallocHost)
-#define HostFree COMBINE(LANGUAGE, HostFree)
+#define FreeHost COMBINE(LANGUAGE, FreeHost)
 #define DriverGetVersion COMBINE(LANGUAGE, DriverGetVersion)
 #define GetDeviceProperties COMBINE(LANGUAGE, GetDeviceProperties)

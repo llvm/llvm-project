@@ -131,7 +131,7 @@ Error_t MallocHost(void **Ptr, size_t Size) {
   return HostAlloc(Ptr, Size, /* HostAllocDefault */ 0);
 }
 
-Error_t HostFree(void *Ptr) {
+Error_t FreeHost(void *Ptr) {
   ol_result_t Result = olMemFree(Ptr);
   return olKConvertResult(Result);
 }
