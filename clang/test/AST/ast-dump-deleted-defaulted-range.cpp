@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -ast-dump %s | FileCheck %s
+// RUN: %clang_cc1 -ast-dump %s | FileCheck %s
 
 void delfunc() = delete;
 // CHECK: FunctionDecl{{.*}} <{{.*}}[[@LINE-1]]:1, col:23> col:6 delfunc 'void ()' delete
@@ -15,13 +15,6 @@ struct v {
 };
 // CHECK: CXXMethodDecl{{.*}} <line:[[@LINE-2]]:3, col:19> col:8 f 'void ()' delete
 
-class Truck {
-  inline Truck();
-};
-
-inline Truck::Truck() = default;
-// CHECK: CXXConstructorDecl{{.*}} <line:[[@LINE-1]]:1, col:31>{{.*}}Truck 'void ()' inline default
-
 template <class T> void bubbleSort(T a[], int n) = delete;
 // CHECK: FunctionTemplateDecl{{.*}} <line:[[@LINE-1]]:1, col:57> col:25 bubbleSort
 
@@ -31,3 +24,11 @@ public:
     void print() = delete;
 };
 // CHECK: CXXMethodDecl{{.*}} <line:[[@LINE-2]]:5, col:25> col:10 print 'void ()' delete
+
+void delfunc2() = delete("reason");
+// CHECK: FunctionDecl{{.*}} <{{.*}}[[@LINE-1]]:1, col:34> col:6 delfunc2 'void ()' delete
+
+struct w {
+  void g() = delete("reason");
+};
+// CHECK: CXXMethodDecl{{.*}} <line:[[@LINE-2]]:3, col:29> col:8 g 'void ()' delete

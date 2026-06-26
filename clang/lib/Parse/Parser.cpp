@@ -1308,7 +1308,7 @@ Decl *Parser::ParseFunctionDefinition(ParsingDeclarator &D,
           << 1 /* deleted */;
       BodyKind = Sema::FnBodyKind::Delete;
       DeletedMessage = ParseCXXDeletedFunctionMessage();
-      D.SetRangeEnd(PP.getLocForEndOfToken(KWLoc).getLocWithOffset(-1));
+      D.SetRangeEnd(DeletedMessage? PrevTokLocation: PP.getLocForEndOfToken(KWLoc).getLocWithOffset(-1));
     } else if (TryConsumeToken(tok::kw_default, KWLoc)) {
       Diag(KWLoc, getLangOpts().CPlusPlus11
                       ? diag::warn_cxx98_compat_defaulted_deleted_function
