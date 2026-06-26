@@ -422,6 +422,21 @@ func.func @illegal_fill_tensor_with_memref_return
 
 // -----
 
+func.func @illegal_contract_memref_with_memref_return
+  (%arg0: memref<4x8xf32>, %arg1: memref<8x6xf32>, %arg2: memref<4x6xf32>) -> memref<4x6xf32>
+{
+  // expected-error @+1 {{result #0 must be variadic of ranked tensor of any non-token type values, but got 'memref<4x6xf32>'}}
+  %0 = linalg.contract
+      indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>,
+                       affine_map<(d0, d1, d2) -> (d2, d1)>,
+                       affine_map<(d0, d1, d2) -> (d0, d1)>]
+      ins(%arg0, %arg1 : memref<4x8xf32>, memref<8x6xf32>)
+      outs(%arg2 : memref<4x6xf32>) -> memref<4x6xf32>
+  return %0 : memref<4x6xf32>
+}
+
+// -----
+
 func.func @illegal_fill_element_type_truncation(%arg0 : tensor<2xf32>, %arg1 : f64) -> tensor<2xf32>
 {
   // expected-error @+1 {{'linalg.fill' op expected fill value type ('f64') to match output element type ('f32')}}
