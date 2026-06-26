@@ -525,18 +525,28 @@ AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
         return success();
       }
 
-      // Otherwise, propagate information from the entry point of the function
-      // back to operands whenever possible.
-      Block &block = region->front();
-      for (auto [blockArg, argOpOperand] :
-           llvm::zip(block.getArguments(), argOpOperands)) {
-        meet(getLatticeElement(argOpOperand.get()),
-             *getLatticeElementFor(getProgramPointAfter(op), blockArg));
-        unaccounted.reset(argOpOperand.getOperandNumber());
+      // When not all callers are known, the entry-block argument lattices
+      // under-approximate how the forwarded operands are used and the callee's
+      // signature cannot be changed, so propagation from them is unsound. This
+      // mirrors `visitCallableOperation`, which sets the callee's return
+      // operands to the exit state when `!allPredecessorsKnown()`.
+      const PredecessorState *callsites = getOrCreateFor<PredecessorState>(
+          getProgramPointAfter(op), getProgramPointAfter(callable));
+      if (callsites->allPredecessorsKnown()) {
+        // Propagate information from the entry point of the function back to
+        // operands whenever possible.
+        Block &block = region->front();
+        for (auto [blockArg, argOpOperand] :
+             llvm::zip(block.getArguments(), argOpOperands)) {
+          meet(getLatticeElement(argOpOperand.get()),
+               *getLatticeElementFor(getProgramPointAfter(op), blockArg));
+          unaccounted.reset(argOpOperand.getOperandNumber());
+        }
       }
 
       // Handle the operands of the call op that aren't forwarded to any
-      // arguments.
+      // arguments. When not all callers are known, this conservatively covers
+      // all forwarded operands as well (none were accounted for above).
       for (int index : unaccounted.set_bits()) {
         OpOperand &opOperand = op->getOpOperand(index);
         visitCallOperand(opOperand);

@@ -868,3 +868,25 @@ module @func_with_non_call_users {
   }
   spirv.EntryPoint "GLCompute" @callee
 }
+
+// -----
+
+// The argument of a public function cannot be removed because its signature is
+// externally visible. Liveness analysis must therefore treat the forwarded
+// operands of a call to such a function conservatively (as live), so that the
+// call is not left with a dangling operand when the callee has a non-live
+// argument. Previously this produced an invalid `func.call` with a null operand.
+
+// CHECK-LABEL: func.func public @caller
+// CHECK-SAME:    (%[[X:.*]]: i32)
+// CHECK:         %[[R:.*]] = call @public_callee(%[[X]]) : (i32) -> i32
+// CHECK:         return %[[R]]
+// CHECK:       func.func public @public_callee(%{{.*}}: i32) -> i32
+func.func public @caller(%x: i32) -> i32 {
+  %0 = call @public_callee(%x) : (i32) -> i32
+  return %0 : i32
+}
+func.func public @public_callee(%arg0: i32) -> i32 {
+  %c0_i32 = arith.constant 0 : i32
+  return %c0_i32 : i32
+}

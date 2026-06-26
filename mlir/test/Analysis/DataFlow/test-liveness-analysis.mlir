@@ -108,6 +108,24 @@ func.func @test_4_type_1.d(%arg0: i32, %arg1: i32, %device: i32, %m0: memref<i32
 
 // -----
 
+func.func public @public(%arg0 : i32) -> i32 {
+  %0 = arith.constant 0 : i32
+  func.return %0 : i32
+}
+
+// Positive test: a forwarded operand of a call to a callee with unknown callers
+// (here a public function) is live. The callee's signature cannot be changed,
+// so the operand cannot be derived from its entry-block arguments and must be
+// treated conservatively as live, even though %arg0 is unused in the body.
+// CHECK-LABEL: test_tag: call_public:
+// CHECK-NEXT:  operand #0: live
+func.func @test_4_call_to_public_callee(%arg0: i32) -> i32 {
+  %0 = func.call @public(%arg0) {tag = "call_public"} : (i32) -> i32
+  return %0 : i32
+}
+
+// -----
+
 // Positive test: Type (2) "is returned by a public function"
 // zero is live because it is returned by a public function.
 // CHECK-LABEL: test_tag: zero:
