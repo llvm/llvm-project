@@ -1635,22 +1635,40 @@ void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
 
 Symbol *AccVisitor::CopyUseDeviceSymbol(const Symbol &symbol) {
   const Symbol &ultimate{symbol.GetUltimate()};
-  Symbol *copy{currScope().CopySymbol(ultimate)};
+  // Key the device copy under the name as referenced here, which differs from
+  // the ultimate symbol's name for a USE-renamed variable, so that references
+  // inside the construct resolve to this copy rather than the host symbol.
+  const SourceName localName{symbol.name()};
+  Symbol *copy{nullptr};
+  // CopySymbol would key the copy under the ultimate's name; only use it when
+  // that matches the local name, otherwise reuse the host-associated symbol.
+  if (localName == ultimate.name()) {
+    copy = currScope().CopySymbol(ultimate);
+  }
   if (!copy) {
-    copy = FindInScope(currScope(), ultimate.name());
+    copy = FindInScope(currScope(), localName);
   }
   if (copy && copy->has<HostAssocDetails>()) {
     if (const auto *hostAssoc{copy->detailsIf<HostAssocDetails>()};
         hostAssoc && copy->owner().kind() == Scope::Kind::OpenACCConstruct) {
       Scope &hostScope{currScope().parent()};
-      if (!FindInScope(hostScope, ultimate.name())) {
+      if (!FindInScope(hostScope, localName)) {
         hostScope.CopySymbol(*copy);
       }
     }
     if (const auto *object{ultimate.detailsIf<ObjectEntityDetails>()}) {
       currScope().erase(copy->name());
       auto pair{currScope().try_emplace(
-          ultimate.name(), ultimate.attrs(), ObjectEntityDetails{*object})};
+          localName, ultimate.attrs(), ObjectEntityDetails{*object})};
+      copy = &*pair.first->second;
+      copy->flags() = ultimate.flags();
+    }
+  } else if (!copy) {
+    // USE-renamed object with no host-association symbol in this scope: key an
+    // object-entity copy under the local name (CopySymbol cannot rename).
+    if (const auto *object{ultimate.detailsIf<ObjectEntityDetails>()}) {
+      auto pair{currScope().try_emplace(
+          localName, ultimate.attrs(), ObjectEntityDetails{*object})};
       copy = &*pair.first->second;
       copy->flags() = ultimate.flags();
     }

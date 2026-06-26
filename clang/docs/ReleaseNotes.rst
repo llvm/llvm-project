@@ -895,7 +895,10 @@ X86 Support
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-Added support for the Arm AGI CPU via the ``-mcpu=armagicpu`` command-line option.
+- Support has been added for the following processors (-mcpu identifiers in parenthesis):
+
+* Arm AGI CPU (armagicpu).
+* Hisilicon hip12 core (hip12).
 
 Android Support
 ^^^^^^^^^^^^^^^
