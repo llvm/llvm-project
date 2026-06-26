@@ -45,7 +45,7 @@ template <typename T> class SmallVectorImpl;
 
 namespace object {
 
-EnumStrings<uint8_t, 2> getElfSymbolTypes();
+LLVM_ABI EnumStrings<uint8_t, 2> getElfSymbolTypes();
 
 class elf_symbol_iterator;
 
