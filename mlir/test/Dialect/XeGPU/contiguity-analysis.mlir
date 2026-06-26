@@ -141,16 +141,16 @@ func.func @load_2d_non_ap(%ptr: i64) -> vector<2x16xf32> {
 
 // -----
 // `divui` by a constant equal to the inner stride recovers stride-1
-// contiguity: [0,2,..,62] / 2 = [0,1,..,31] -> contiguity 32.
+// contiguity: (step * 2) / 2 = [0,1,..,31] -> contiguity 32. The dividend is
+// derived from vector.step (not a constant) so the divui is genuinely
+// exercised even if the solver later folds all-constant arith ops.
 // CHECK-LABEL: func.func @load_divui_recovers(
 // CHECK: xegpu.load
 // CHECK-SAME: <{contiguity = 32 : i64}>
 func.func @load_divui_recovers(%ptr: i64) -> vector<32xf32> {
-  %even = arith.constant dense<[
-     0,  2,  4,  6,  8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30,
-    32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62]>
-      : vector<32xindex>
+  %step = vector.step : vector<32xindex>
   %c2 = arith.constant dense<2> : vector<32xindex>
+  %even = arith.muli %step, %c2 : vector<32xindex>
   %offsets = arith.divui %even, %c2 : vector<32xindex>
   %mask = arith.constant dense<true> : vector<32xi1>
   %v = xegpu.load %ptr[%offsets], %mask
@@ -164,9 +164,9 @@ func.func @load_divui_recovers(%ptr: i64) -> vector<32xf32> {
 // CHECK: xegpu.load
 // CHECK-NOT: contiguity
 func.func @load_divui_non_divisor(%ptr: i64) -> vector<16xf32> {
-  %even = arith.constant dense<[
-    0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]>
-      : vector<16xindex>
+  %step = vector.step : vector<16xindex>
+  %c2 = arith.constant dense<2> : vector<16xindex>
+  %even = arith.muli %step, %c2 : vector<16xindex>
   %c3 = arith.constant dense<3> : vector<16xindex>
   %offsets = arith.divui %even, %c3 : vector<16xindex>
   %mask = arith.constant dense<true> : vector<16xi1>
@@ -182,10 +182,9 @@ func.func @load_divui_non_divisor(%ptr: i64) -> vector<16xf32> {
 // CHECK: xegpu.load
 // CHECK-NOT: contiguity
 func.func @load_remui_inner_uniform(%ptr: i64) -> vector<16xf32> {
-  %even = arith.constant dense<[
-    0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30]>
-      : vector<16xindex>
+  %step = vector.step : vector<16xindex>
   %c2 = arith.constant dense<2> : vector<16xindex>
+  %even = arith.muli %step, %c2 : vector<16xindex>
   %offsets = arith.remui %even, %c2 : vector<16xindex>
   %mask = arith.constant dense<true> : vector<16xi1>
   %v = xegpu.load %ptr[%offsets], %mask

@@ -127,10 +127,11 @@ isValidContiguity(std::optional<uint64_t> contiguity, Type offsetsTy,
   int64_t size = static_cast<int64_t>(*contiguity);
   int64_t inner = offsetsVecTy.getShape().back();
   if (size < 2)
-    return emitError() << "contiguity " << size << " must be >= 2";
+    return emitError() << "contiguity = " << size << " (must be >= 2)";
   if (inner % size != 0)
-    return emitError() << "contiguity " << size
-                       << " must divide the innermost offsets dim " << inner;
+    return emitError() << "contiguity = " << size
+                       << " (must divide the innermost offsets dim " << inner
+                       << ")";
   return success();
 }
 
