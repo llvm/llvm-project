@@ -10,6 +10,7 @@
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/BaseSubobject.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/TargetInfo.h"
@@ -21,6 +22,7 @@
 #include "clang/Sema/Sema.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/TargetParser/Host.h"
@@ -163,7 +165,12 @@ bool MyASTConsumer::shouldSkipFunctionBody(Decl *D) {
 
 const char TestProgram[] =
     "struct mytest_struct { char x; short y; char p; long z; };\n"
-    "int mytest_fn(int x) { return x; }\n";
+    "int mytest_fn(int x) { return x; }\n"
+    "struct mytest_dynamic_struct {\n"
+    "  mytest_dynamic_struct();\n"
+    "  virtual void f1();\n"
+    "};\n"
+    "mytest_dynamic_struct::mytest_dynamic_struct() { }\n";
 
 // This function has the real test code here
 static void test_codegen_fns(MyASTConsumer *my) {
@@ -176,17 +183,19 @@ static void test_codegen_fns(MyASTConsumer *my) {
 
   for (auto decl : my->toplevel_decls ) {
     if (FunctionDecl *fd = dyn_cast<FunctionDecl>(decl)) {
-      if (fd->getName() == "mytest_fn") {
-        Constant *c = my->Builder->GetAddrOfGlobal(GlobalDecl(fd), false);
-        // Verify that we got a function.
-        ASSERT_TRUE(c != NULL);
-        if (DebugThisTest) {
-          c->print(dbgs(), true);
-          dbgs() << "\n";
+      if (fd->getDeclName().isIdentifier()) {
+        if (fd->getName() == "mytest_fn") {
+          Constant *c = my->Builder->GetAddrOfGlobal(GlobalDecl(fd), false);
+          // Verify that we got a function.
+          ASSERT_TRUE(c != NULL);
+          if (DebugThisTest) {
+            c->print(dbgs(), true);
+            dbgs() << "\n";
+          }
+          mytest_fn_ok = true;
         }
-        mytest_fn_ok = true;
       }
-    } else if(clang::RecordDecl *rd = dyn_cast<RecordDecl>(decl)) {
+    } else if (CXXRecordDecl *rd = dyn_cast<CXXRecordDecl>(decl)) {
       if (rd->getName() == "mytest_struct") {
         RecordDecl *def = rd->getDefinition();
         ASSERT_TRUE(def != NULL);
@@ -247,6 +256,24 @@ static void test_codegen_fns(MyASTConsumer *my) {
         ASSERT_GE(zTy->getPrimitiveSizeInBits(), 32u); // long is at least 32b
 
         mytest_struct_ok = true;
+      } else if (rd->getName() == "mytest_dynamic_struct") {
+        Constant *c = my->Builder->GetAddrOfVTable(
+            BaseSubobject(rd, CharUnits::fromQuantity(0)), rd);
+        ASSERT_NE(c, nullptr);
+        Value *vtableGlobal = c->getOperand(0);
+        ASSERT_NE(vtableGlobal, nullptr);
+        ASSERT_EQ(vtableGlobal->getName(), "_ZTV21mytest_dynamic_struct");
+        const DataLayout &dataLayout =
+            my->Builder->GetModule()->getDataLayout();
+        unsigned pointerSizeInBits =
+            dataLayout.getPointerTypeSizeInBits(c->getType());
+        APInt offset(pointerSizeInBits, 0);
+        GEPOperator *gepOperator = dyn_cast<GEPOperator>(c);
+        ASSERT_NE(gepOperator, nullptr);
+        gepOperator->accumulateConstantOffset(dataLayout, offset);
+        // Itanium ABI has a couple of pointers (offset to top, type info)
+        // before the array of function pointers.
+        ASSERT_EQ(offset, (pointerSizeInBits / 8) * 2);
       }
     }
   }
