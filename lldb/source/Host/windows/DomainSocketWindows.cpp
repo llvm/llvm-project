@@ -8,6 +8,7 @@
 
 #include "lldb/Host/windows/DomainSocketWindows.h"
 
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -29,6 +30,8 @@ llvm::Expected<DomainSocket::Pair> DomainSocketWindows::CreatePair() {
   llvm::sys::path::append(model, "lldb-domain-socketpair-%%%%%%%%.sock");
   llvm::SmallString<128> path;
   llvm::sys::fs::createUniquePath(model, path, /*MakeAbsolute=*/false);
+  auto remove_file =
+      llvm::make_scope_exit([&] { llvm::sys::fs::remove(path); });
 
   auto listen_socket =
       std::make_unique<DomainSocketWindows>(/*should_close=*/true);
@@ -42,10 +45,9 @@ llvm::Expected<DomainSocket::Pair> DomainSocketWindows::CreatePair() {
 
   // The connection is already queued, so a short timeout is sufficient.
   Socket *accept_socket = nullptr;
-  Status error = listen_socket->Accept(std::chrono::seconds(1), accept_socket);
-  // Once both ends are connected the bound socket file is no longer needed.
-  llvm::sys::fs::remove(path);
-  if (error.Fail())
+  if (Status error =
+          listen_socket->Accept(std::chrono::seconds(1), accept_socket);
+      error.Fail())
     return error.takeError();
 
   return Pair(std::move(connect_socket),
