@@ -14,6 +14,8 @@
 #include "BPF.h"
 #include "BPFCORE.h"
 #include "MCTargetDesc/BPFMCTargetDesc.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -519,9 +521,11 @@ void BTFTypeArray::emitType(MCStreamer &OS) {
 }
 
 /// Represent either a struct or a union.
-BTFTypeStruct::BTFTypeStruct(const DICompositeType *STy, bool IsStruct,
+BTFTypeStruct::BTFTypeStruct(const DICompositeType *STy,
+                             ArrayRef<const DINode *> Elements, bool IsStruct,
                              bool HasBitField, uint32_t Vlen)
-    : STy(STy), HasBitField(HasBitField) {
+    : STy(STy), Elements(Elements.begin(), Elements.end()),
+      HasBitField(HasBitField) {
   Kind = IsStruct ? BTF::BTF_KIND_STRUCT : BTF::BTF_KIND_UNION;
   BTFType.Size = roundupToBytes(STy->getSizeInBits());
   BTFType.Info = (HasBitField << 31) | (Kind << 24) | Vlen;
@@ -557,7 +561,6 @@ void BTFTypeStruct::completeType(BTFDebug &BDebug) {
   }
 
   // Add struct/union members.
-  const DINodeArray Elements = STy->getElements();
   for (const auto *Element : Elements) {
     struct BTF::BTFMember BTFMember;
 
@@ -972,7 +975,14 @@ int BTFDebug::genBTFTypeTags(const DIDerivedType *DTy, int BaseTypeId) {
 /// Handle structure/union types.
 void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
                                uint32_t &TypeId) {
-  const DINodeArray Elements = CTy->getElements();
+  DINodeArray DIElements = CTy->getElements();
+  SmallVector<const DINode *, 8> Elements(DIElements.begin(), DIElements.end());
+  // Structure elements must have nondecreasing offsets in BTF. Preserve DI
+  // order for union and variant-part records.
+  if (CTy->getTag() == dwarf::DW_TAG_structure_type)
+    llvm::stable_sort(Elements, [](const DINode *LHS, const DINode *RHS) {
+      return getBTFRecordElementOffset(LHS) < getBTFRecordElementOffset(RHS);
+    });
   uint32_t VLen = Elements.size();
   // Variant parts might have a discriminator. LLVM DI doesn't consider it as
   // an element and instead keeps it as a separate reference. But we represent
@@ -999,8 +1009,8 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
     }
   }
 
-  auto TypeEntry =
-      std::make_unique<BTFTypeStruct>(CTy, IsStruct, HasBitField, VLen);
+  auto TypeEntry = std::make_unique<BTFTypeStruct>(CTy, Elements, IsStruct,
+                                                   HasBitField, VLen);
   StructTypes.push_back(TypeEntry.get());
   TypeId = addType(std::move(TypeEntry), CTy);
 

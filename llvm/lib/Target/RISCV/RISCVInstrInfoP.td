@@ -1635,16 +1635,15 @@ let append Predicates = [IsRV64] in {
   def : InstAlias<"pmsgt.w $rd, $rs, $rt", (PMSLT_W GPR:$rd, GPR:$rt, GPR:$rs), 0>;
   def : InstAlias<"pmsgtu.w $rd, $rs, $rt", (PMSLTU_W GPR:$rd, GPR:$rt, GPR:$rs), 0>;
 
-  // No pwcvt.b/h for RV64.
-  def : InstAlias<"pwcvtu.b $rd, $rs", (ZIP8P GPR:$rd, GPR:$rs, X0)>;
-  def : InstAlias<"pwcvtu.h $rd, $rs", (ZIP16P GPR:$rd, GPR:$rs, X0)>;
-  def : InstAlias<"pwcvth.b $rd, $rs", (ZIP8P GPR:$rd, X0, GPR:$rs)>;
-  def : InstAlias<"pwcvth.h $rd, $rs", (ZIP16P GPR:$rd, X0, GPR:$rs)>;
+  def : InstAlias<"pwcvtu.wb $rd, $rs", (ZIP8P GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pwcvtu.wh $rd, $rs", (ZIP16P GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pwcvth.wb $rd, $rs", (ZIP8P GPR:$rd, X0, GPR:$rs)>;
+  def : InstAlias<"pwcvth.wh $rd, $rs", (ZIP16P GPR:$rd, X0, GPR:$rs)>;
 
-  def : InstAlias<"pncvt.b $rd, $rs", (UNZIP8P GPR:$rd, GPR:$rs, X0)>;
-  def : InstAlias<"pncvt.h $rd, $rs", (UNZIP16P GPR:$rd, GPR:$rs, X0)>;
-  def : InstAlias<"pncvth.b $rd, $rs", (UNZIP8HP GPR:$rd, GPR:$rs, X0)>;
-  def : InstAlias<"pncvth.h $rd, $rs", (UNZIP16HP GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pncvt.wb $rd, $rs", (UNZIP8P GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pncvt.wh $rd, $rs", (UNZIP16P GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pncvth.wb $rd, $rs", (UNZIP8HP GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pncvth.wh $rd, $rs", (UNZIP16HP GPR:$rd, GPR:$rs, X0)>;
 } // append Predicates = [IsRV64]
 
 let append Predicates = [IsRV32] in {
@@ -1730,6 +1729,8 @@ let append Predicates = [IsRV32] in {
   def : InstAlias<"pncvt.h $rd, $rs", (PNSRLI_H GPR:$rd, GPRPairRV32:$rs, 0)>;
   def : InstAlias<"pncvth.b $rd, $rs", (PNSRLI_B GPR:$rd, GPRPairRV32:$rs, 8)>;
   def : InstAlias<"pncvth.h $rd, $rs", (PNSRLI_H GPR:$rd, GPRPairRV32:$rs, 16)>;
+
+  def : InstAlias<"mvd $rd, $rs", (PADD_DW GPRPairRV32:$rd, X0_Pair, GPRPairRV32:$rs)>;
 } // append Predicates = [IsRV32]
 } // Predicates = [HasStdExtP]
 
@@ -1798,6 +1799,10 @@ def SDT_RISCVWideningAddSubAccumulate : SDTypeProfile<2, 4, [SDTCisVT<0, i32>,
 def riscv_waddau : RVSDNode<"WADDAU", SDT_RISCVWideningAddSubAccumulate>;
 // Widening sub accumulate unsigned: rd = rd + zext(rs1) - zext(rs2)
 def riscv_wsubau : RVSDNode<"WSUBAU", SDT_RISCVWideningAddSubAccumulate>;
+// Widening add accumulate signed: rd = rd + sext(rs1) + sext(rs2)
+def riscv_wadda : RVSDNode<"WADDA", SDT_RISCVWideningAddSubAccumulate>;
+// Widening sub accumulate signed: rd = rd + sext(rs1) - sext(rs2)
+def riscv_wsuba : RVSDNode<"WSUBA", SDT_RISCVWideningAddSubAccumulate>;
 
 def riscv_waddu : RVSDNode<"WADDU", SDTIntBinHiLoOp, [SDNPCommutative]>;
 def riscv_wsubu : RVSDNode<"WSUBU", SDTIntBinHiLoOp>;
@@ -1991,6 +1996,14 @@ let Predicates = [HasStdExtP] in {
   // 16-bit shift-add patterns
   def : PatPSh1Add<PSH1ADD_H, XLenVecI16VT>;
   def : PatPSSh1SAdd<PSSH1SADD_H, XLenVecI16VT>;
+
+  // 16-bit exchanged add/sub patterns
+  def : PatGprGpr<int_riscv_pas,  PAS_HX,  XLenVecI16VT>;
+  def : PatGprGpr<int_riscv_psa,  PSA_HX,  XLenVecI16VT>;
+  def : PatGprGpr<int_riscv_psas, PSAS_HX, XLenVecI16VT>;
+  def : PatGprGpr<int_riscv_pssa, PSSA_HX, XLenVecI16VT>;
+  def : PatGprGpr<int_riscv_paas, PAAS_HX, XLenVecI16VT>;
+  def : PatGprGpr<int_riscv_pasa, PASA_HX, XLenVecI16VT>;
 
   // 8-bit averaging patterns
   def : PatGprGpr<avgfloors, PAADD_B, XLenVecI8VT>;
@@ -2279,6 +2292,14 @@ let append Predicates = [IsRV32] in {
   def : PatPSh1AddPair<PSH1ADD_DW, v2i32>;
   def : PatPSSh1SAddPair<PSSH1SADD_DW, v2i32>;
 
+  // 16-bit exchanged add/sub patterns
+  def : PatGprPairGprPair<int_riscv_pas,  PAS_DHX,  v4i16>;
+  def : PatGprPairGprPair<int_riscv_psa,  PSA_DHX,  v4i16>;
+  def : PatGprPairGprPair<int_riscv_psas, PSAS_DHX, v4i16>;
+  def : PatGprPairGprPair<int_riscv_pssa, PSSA_DHX, v4i16>;
+  def : PatGprPairGprPair<int_riscv_paas, PAAS_DHX, v4i16>;
+  def : PatGprPairGprPair<int_riscv_pasa, PASA_DHX, v4i16>;
+
   // 8-bit averaging patterns
   def : PatGprPairGprPair<avgfloors, PAADD_DB, v8i8>;
   def : PatGprPairGprPair<avgflooru, PAADDU_DB, v8i8>;
@@ -2501,6 +2522,14 @@ let append Predicates = [IsRV64] in {
   // 32-bit shift-add patterns
   def : PatPSh1Add<PSH1ADD_W, v2i32>;
   def : PatPSSh1SAdd<PSSH1SADD_W, v2i32>;
+
+  // 32-bit exchanged add/sub patterns
+  def : PatGprGpr<int_riscv_pas,  PAS_WX,  v2i32>;
+  def : PatGprGpr<int_riscv_psa,  PSA_WX,  v2i32>;
+  def : PatGprGpr<int_riscv_psas, PSAS_WX, v2i32>;
+  def : PatGprGpr<int_riscv_pssa, PSSA_WX, v2i32>;
+  def : PatGprGpr<int_riscv_paas, PAAS_WX, v2i32>;
+  def : PatGprGpr<int_riscv_pasa, PASA_WX, v2i32>;
 
   // 32-bit averaging patterns
   def : PatGprGpr<avgfloors, PAADD_W, v2i32>;

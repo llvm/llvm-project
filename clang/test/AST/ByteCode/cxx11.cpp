@@ -343,6 +343,7 @@ namespace ReadMutableInCopyCtor {
   constexpr G g1 = {};
   constexpr G g2 = g1; // both-error {{must be initialized by a constant expression}} \
                        // both-note {{read of mutable member 'u'}} \
+                       // expected-note {{in call to 'U(g1.u)'}} \
                        // both-note {{in call to 'G(g1)'}}
 }
 
