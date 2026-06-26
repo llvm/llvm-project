@@ -236,30 +236,27 @@ def FeatureRAS            : SubtargetFeature<"ras", "HasRAS", "true",
 def FeatureFPAO           : SubtargetFeature<"fpao", "HasFPAO", "true",
                                              "Enable fast computation of "
                                              "positive address offsets",
-                                             [], InlineDefault>;
+                                             [], InlineIgnore>;
 
 // Fast execution of AES crypto operations.
 // True if processor executes back to back AES instruction pairs faster.
 def FeatureFuseAES        : SubtargetFeature<"fuse-aes", "HasFuseAES", "true",
                                              "CPU fuses AES crypto operations",
-                                             [], InlineDefault>;
+                                             [], InlineIgnore>;
 
 // Fast execution of bottom and top halves of literal generation.
 // True if processor executes back to back bottom and top halves of literal generation faster.
 def FeatureFuseLiterals   : SubtargetFeature<"fuse-literals", "HasFuseLiterals", "true",
                                              "CPU fuses literal generation operations",
-                                             [], InlineDefault>;
+                                             [], InlineIgnore>;
 
 // Choice of hardware register to use as the thread pointer, if any.
-// TODO: Does this need to be InlineMustMatch?
 def FeatureReadTpTPIDRURW :  SubtargetFeature<"read-tp-tpidrurw", "IsReadTPTPIDRURW", "true",
                                       "Reading thread pointer from TPIDRURW register",
                                       [], InlineMustMatch>;
-// TODO: Does this need to be InlineMustMatch?
 def FeatureReadTpTPIDRURO :  SubtargetFeature<"read-tp-tpidruro", "IsReadTPTPIDRURO", "true",
                                       "Reading thread pointer from TPIDRURO register",
                                       [], InlineMustMatch>;
-// TODO: Does this need to be InlineMustMatch?
 def FeatureReadTpTPIDRPRW :  SubtargetFeature<"read-tp-tpidrprw", "IsReadTPTPIDRPRW", "true",
                                       "Reading thread pointer from TPIDRPRW register",
                                       [], InlineMustMatch>;
@@ -269,49 +266,49 @@ def FeatureReadTpTPIDRPRW :  SubtargetFeature<"read-tp-tpidrprw", "IsReadTPTPIDR
 // particularly effective at zeroing a VFP register.
 def FeatureZCZeroing      : SubtargetFeature<"zcz", "HasZeroCycleZeroing", "true",
                                              "Has zero-cycle zeroing instructions",
-                                             [], InlineDefault>;
+                                             [], InlineIgnore>;
 
 // Whether it is profitable to unpredicate certain instructions during if-conversion.
 // True if if conversion may decide to leave some instructions unpredicated.
 def FeatureProfUnpredicate : SubtargetFeature<"prof-unpr",
                                               "IsProfitableToUnpredicate", "true",
                                               "Is profitable to unpredicate",
-                                              [], InlineDefault>;
+                                              [], InlineIgnore>;
 
 // Some targets (e.g. Swift) have microcoded VGETLNi32.
 // True if VMOV will be favored over VGETLNi32.
 def FeatureSlowVGETLNi32  : SubtargetFeature<"slow-vgetlni32",
                                              "HasSlowVGETLNi32", "true",
                                              "Has slow VGETLNi32 - prefer VMOV",
-                                             [], InlineDefault>;
+                                             [], InlineIgnore>;
 
 // Some targets (e.g. Swift) have microcoded VDUP32.
 // True if VMOV will be favored over VDUP.
 def FeatureSlowVDUP32     : SubtargetFeature<"slow-vdup32", "HasSlowVDUP32",
                                              "true",
                                              "Has slow VDUP32 - prefer VMOV",
-                                             [], InlineDefault>;
+                                             [], InlineIgnore>;
 
 // Some targets (e.g. Cortex-A9) prefer VMOVSR to VMOVDRR even when using NEON
 // for scalar FP, as this allows more effective execution domain optimization.
 // True if VMOVSR will be favored over VMOVDRR.
 def FeaturePreferVMOVSR   : SubtargetFeature<"prefer-vmovsr", "PreferVMOVSR",
                                              "true", "Prefer VMOVSR",
-                                             [], InlineDefault>;
+                                             [], InlineIgnore>;
 
 // Swift has ISHST barriers compatible with Atomic Release semantics but weaker
 // than ISH.
 // True if ISHST barriers will be used for Release semantics.
 def FeaturePrefISHSTBarrier : SubtargetFeature<"prefer-ishst", "PreferISHSTBarriers",
                                                "true", "Prefer ISHST barriers",
-                                               [], InlineDefault>;
+                                               [], InlineIgnore>;
 
 // Some targets (e.g. Cortex-A9) have muxed AGU and NEON/FPU.
 // True if the AGU and NEON/FPU units are multiplexed.
 def FeatureMuxedUnits     : SubtargetFeature<"muxed-units", "HasMuxedUnits",
                                              "true",
                                              "Has muxed AGU and NEON/FPU",
-                                             [], InlineDefault>;
+                                             [], InlineIgnore>;
 
 // Whether VLDM/VSTM starting with odd register number need more microops
 // than single VLDRS.
@@ -320,27 +317,27 @@ def FeatureMuxedUnits     : SubtargetFeature<"muxed-units", "HasMuxedUnits",
 def FeatureSlowOddRegister : SubtargetFeature<"slow-odd-reg", "HasSlowOddRegister",
                                               "true", "VLDM/VSTM starting "
                                               "with an odd register is slow",
-                                              [], InlineDefault>;
+                                              [], InlineIgnore>;
 
 // Some targets have a renaming dependency when loading into D subregisters.
 // True if loading into a D subregister will be penalized.
 def FeatureSlowLoadDSubreg : SubtargetFeature<"slow-load-D-subreg",
                                               "HasSlowLoadDSubregister", "true",
                                               "Loading into D subregs is slow",
-                                              [], InlineDefault>;
+                                              [], InlineIgnore>;
 
 // True if use a wider stride when allocating VFP registers.
 def FeatureUseWideStrideVFP : SubtargetFeature<"wide-stride-vfp",
                                                "UseWideStrideVFP", "true",
                                                "Use a wide stride when allocating VFP registers",
-                                               [], InlineDefault>;
+                                               [], InlineIgnore>;
 
 // Some targets (e.g. Cortex-A15) never want VMOVS to be widened to VMOVD.
 // True if VMOVS will never be widened to VMOVD.
 def FeatureDontWidenVMOVS : SubtargetFeature<"dont-widen-vmovs",
                                              "DontWidenVMOVS", "true",
                                              "Don't widen VMOVS to VMOVD",
-                                             [], InlineDefault>;
+                                             [], InlineIgnore>;
 
 // Some targets (e.g. Cortex-A15) prefer to avoid mixing operations on different
 // VFP register widths.
@@ -349,20 +346,20 @@ def FeatureSplatVFPToNeon : SubtargetFeature<"splat-vfp-neon",
                                              "UseSplatVFPToNeon", "true",
                                              "Splat register from VFP to NEON",
                                              [FeatureDontWidenVMOVS],
-                                             InlineDefault>;
+                                             InlineIgnore>;
 
 // Whether or not it is profitable to expand VFP/NEON MLA/MLS instructions.
 // True if run the MLx expansion pass.
 def FeatureExpandMLx      : SubtargetFeature<"expand-fp-mlx",
                                              "ExpandMLx", "true",
                                              "Expand VFP/NEON MLA/MLS instructions",
-                                             [], InlineDefault>;
+                                             [], InlineIgnore>;
 
 // Some targets have special RAW hazards for VFP/NEON VMLA/VMLS.
 // True if VFP/NEON VMLA/VMLS have special RAW hazards.
 def FeatureHasVMLxHazards : SubtargetFeature<"vmlx-hazards", "HasVMLxHazards",
                                              "true", "Has VMLx hazards",
-                                             [], InlineDefault>;
+                                             [], InlineIgnore>;
 
 // Some targets (e.g. Cortex-A9) want to convert VMOVRS, VMOVSR and VMOVS from
 // VFP to NEON, as an execution domain optimization.
@@ -371,12 +368,13 @@ def FeatureNEONForFPMovs  : SubtargetFeature<"neon-fpmovs",
                                              "UseNEONForFPMovs", "true",
                                              "Convert VMOVSR, VMOVRS, "
                                              "VMOVS to NEON",
-                                             [], InlineDefault>;
+                                             [], InlineIgnore>;
 
 // Some processors benefit from using NEON instructions for scalar
 // single-precision FP operations. This affects instruction selection and should
 // only be enabled if the handling of denormals is not important.
 // Use the method useNEONForSinglePrecisionFP() to determine if NEON should actually be used.
+// TODO: Should this be InlineMustMatch instead?
 def FeatureNEONForFP      : SubtargetFeature<"neonfp",
                                              "HasNEONForFP",
                                              "true",
@@ -389,15 +387,14 @@ def FeatureNEONForFP      : SubtargetFeature<"neonfp",
 def FeatureCheckVLDnAlign : SubtargetFeature<"vldn-align", "CheckVLDnAccessAlignment",
                                              "true",
                                              "Check for VLDn unaligned access",
-                                             [], InlineDefault>;
+                                             [], InlineIgnore>;
 
 // Some processors have a nonpipelined VFP coprocessor.
 // True if VFP instructions are not pipelined.
-// TODO: Does this need to be InlineMustMatch?
 def FeatureNonpipelinedVFP : SubtargetFeature<"nonpipelined-vfp",
                                               "NonpipelinedVFP", "true",
                                               "VFP instructions are not pipelined",
-                                              [], InlineMustMatch>;
+                                              [], InlineIgnore>;
 
 // Some processors have FP multiply-accumulate instructions that don't
 // play nicely with other VFP / NEON instructions, and it's generally better
@@ -406,14 +403,14 @@ def FeatureNonpipelinedVFP : SubtargetFeature<"nonpipelined-vfp",
 // whether the FP VML[AS] instructions are slow (if so, don't use them).
 def FeatureHasSlowFPVMLx  : SubtargetFeature<"slowfpvmlx", "SlowFPVMLx", "true",
                                              "Disable VFP / NEON MAC instructions",
-                                             [], InlineDefault>;
+                                             [], InlineIgnore>;
 
 // VFPv4 added VFMA instructions that can similarly be fast or slow.
 // If the VFP4 / NEON instructions are available, indicates
 // whether the FP VFM[AS] instructions are slow (if so, don't use them).
 def FeatureHasSlowFPVFMx  : SubtargetFeature<"slowfpvfmx", "SlowFPVFMx", "true",
                                              "Disable VFP / NEON FMA instructions",
-                                             [], InlineDefault>;
+                                             [], InlineIgnore>;
 
 // Cortex-A8 / A9 Advanced SIMD has multiplier accumulator forwarding.
 /// True if NEON has special multiplier accumulator
@@ -421,33 +418,33 @@ def FeatureHasSlowFPVFMx  : SubtargetFeature<"slowfpvfmx", "SlowFPVFMx", "true",
 def FeatureVMLxForwarding : SubtargetFeature<"vmlx-forwarding",
                                              "HasVMLxForwarding", "true",
                                              "Has multiplier accumulator forwarding",
-                                             [], InlineDefault>;
+                                             [], InlineIgnore>;
 
 // Disable 32-bit to 16-bit narrowing for experimentation.
 // True if codegen would prefer 32-bit Thumb instructions over 16-bit ones.
 def FeaturePref32BitThumb : SubtargetFeature<"32bit", "Prefers32BitThumb", "true",
                                              "Prefer 32-bit Thumb instrs",
-                                             [], InlineDefault>;
+                                             [], InlineIgnore>;
 
 def FeaturePreferBranchAlign32 : SubtargetFeature<"loop-align", "PreferBranchLogAlignment","2",
                                               "Prefer 32-bit alignment for branch targets",
-                                              [], InlineDefault>;
+                                              [], InlineIgnore>;
 
 def FeaturePreferBranchAlign64 : SubtargetFeature<"branch-align-64", "PreferBranchLogAlignment","3",
                                               "Prefer 64-bit alignment for branch targets",
-                                              [], InlineDefault>;
+                                              [], InlineIgnore>;
 
 def FeatureMVEVectorCostFactor1 : SubtargetFeature<"mve1beat", "MVEVectorCostFactor", "4",
                         "Model MVE instructions as a 1 beat per tick architecture",
-                        [], InlineDefault>;
+                        [], InlineIgnore>;
 
 def FeatureMVEVectorCostFactor2 : SubtargetFeature<"mve2beat", "MVEVectorCostFactor", "2",
                         "Model MVE instructions as a 2 beats per tick architecture",
-                        [], InlineDefault>;
+                        [], InlineIgnore>;
 
 def FeatureMVEVectorCostFactor4 : SubtargetFeature<"mve4beat", "MVEVectorCostFactor", "1",
                         "Model MVE instructions as a 4 beats per tick architecture",
-                        [], InlineDefault>;
+                        [], InlineIgnore>;
 
 /// Some instructions update CPSR partially, which can add false dependency for
 /// out-of-order implementation, e.g. Cortex-A9, unless each individual bit is
@@ -459,14 +456,14 @@ def FeatureMVEVectorCostFactor4 : SubtargetFeature<"mve4beat", "MVEVectorCostFac
 def FeatureAvoidPartialCPSR : SubtargetFeature<"avoid-partial-cpsr",
                                                "AvoidCPSRPartialUpdate", "true",
                                  "Avoid CPSR partial update for OOO execution",
-                                 [], InlineDefault>;
+                                 [], InlineIgnore>;
 
 /// FeatureAvoidMULS - If true, codegen would avoid using the MULS instruction,
 /// prefering the thumb2 MUL which doesn't set flags.
 def FeatureAvoidMULS : SubtargetFeature<"avoid-muls",
                                         "AvoidMULS", "true",
                                  "Avoid MULS instructions for M class cores",
-                                 [], InlineDefault>;
+                                 [], InlineIgnore>;
 
 
 /// Disable +1 predication cost for instructions updating CPSR.
@@ -476,21 +473,21 @@ def FeatureCheapPredicableCPSR : SubtargetFeature<"cheap-predicable-cpsr",
                                                   "CheapPredicableCPSRDef",
                                                   "true",
                   "Disable +1 predication cost for instructions updating CPSR",
-                  [], InlineDefault>;
+                  [], InlineIgnore>;
 
 // True if codegen should avoid using flag setting movs with shifter operand (i.e. asr, lsl, lsr).
 def FeatureAvoidMOVsShOp  : SubtargetFeature<"avoid-movs-shop",
                                              "AvoidMOVsShifterOperand", "true",
                                              "Avoid movs instructions with "
                                              "shifter operand",
-                                             [], InlineDefault>;
+                                             [], InlineIgnore>;
 
 // Some processors perform return stack prediction. CodeGen should avoid issue
 // "normal" call instructions to callees which do not return.
 def FeatureHasRetAddrStack : SubtargetFeature<"ret-addr-stack",
                                               "HasRetAddrStack", "true",
                                               "Has return address stack",
-                                              [], InlineDefault>;
+                                              [], InlineIgnore>;
 
 // Some processors have no branch predictor, which changes the expected cost of
 // taking a branch which affects the choice of whether to use predicated
@@ -501,7 +498,7 @@ def FeatureHasRetAddrStack : SubtargetFeature<"ret-addr-stack",
 def FeatureHasNoBranchPredictor : SubtargetFeature<"no-branch-predictor",
                                                    "HasBranchPredictor", "false",
                                                    "Has no branch predictor",
-                                                   [], InlineDefault>;
+                                                   [], InlineIgnore>;
 
 /// DSP extension.
 /// True if the subtarget supports the DSP (saturating arith and such) instructions.
@@ -542,7 +539,7 @@ def FeatureExecuteOnly    : SubtargetFeature<"execute-only",
                                              "GenExecuteOnly", "true",
                                              "Enable the generation of "
                                              "execute only code.",
-                                             [], InlineDefault>;
+                                             [], InlineInverse>;
 
 // True if R9 is not available as a general purpose register.
 def FeatureReserveR9      : SubtargetFeature<"reserve-r9", "ReserveR9", "true",
@@ -555,7 +552,7 @@ def FeatureReserveR9      : SubtargetFeature<"reserve-r9", "ReserveR9", "true",
 def FeatureNoMovt         : SubtargetFeature<"no-movt", "NoMovt", "true",
                                              "Don't use movt/movw pairs for "
                                              "32-bit imms",
-                                             [], InlineDefault>;
+                                             [], InlineIgnore>;
 
 /// Implicitly convert an instruction to a different one if its immediates
 /// cannot be encoded. For example, ADD r0, r1, #FFFFFFFF -> SUB r0, r1, #1.
@@ -566,23 +563,23 @@ def FeatureNoNegativeImmediates
                                              "to their negated or complemented "
                                              "equivalent when the immediate does "
                                              "not fit in the encoding.",
-                                             [], InlineDefault>;
+                                             [], InlineIgnore>;
 
 // Use the MachineScheduler for instruction scheduling for the subtarget.
 def FeatureUseMISched: SubtargetFeature<"use-misched", "UseMISched", "true",
                                         "Use the MachineScheduler",
-                                        [], InlineDefault>;
+                                        [], InlineIgnore>;
 
 // Use the MachinePipeliner for instruction scheduling for the subtarget.
 def FeatureUseMIPipeliner: SubtargetFeature<"use-mipipeliner", "UseMIPipeliner", "true",
                                             "Use the MachinePipeliner",
-                                            [], InlineDefault>;
+                                            [], InlineIgnore>;
 
 // False if scheduling should happen again after register allocation.
 def FeatureNoPostRASched : SubtargetFeature<"disable-postra-scheduler",
     "DisablePostRAScheduler", "true",
     "Don't schedule again after register allocation",
-    [], InlineDefault>;
+    [], InlineIgnore>;
 
 // Armv8.5-A extensions
 
@@ -634,10 +631,9 @@ def FeatureNoBTIAtReturnTwice : SubtargetFeature<"no-bti-at-return-twice",
                                                  [], InlineMustMatch>;
 
 // Armv8.9-A/Armv9.4-A 2022 Architecture Extensions
-// TODO: Does this need to be InlineMustMatch?
 def FeatureCLRBHB : SubtargetFeature<"clrbhb", "HasCLRBHB", "true",
                                      "Enable Clear BHB instruction",
-                                     [], InlineMustMatch>;
+                                     [], InlineDefault>;
 
 
 // TODO: Does this need to be InlineMustMatch?
@@ -651,7 +647,6 @@ def FeatureFixCortexA57AES1742098 : SubtargetFeature<"fix-cortex-a57-aes-1742098
 // the frame pointer for Thumb1-only code, which is more efficient, but less
 // compatible. Note that this feature does not control whether frame pointers
 // are emitted, that is controlled by the "frame-pointer" function attribute.
-// TODO: Does this need to be InlineMustMatch?
 def FeatureAAPCSFrameChain : SubtargetFeature<"aapcs-frame-chain",
                                               "CreateAAPCSFrameChain", "true",
                                               "Create an AAPCS compliant frame chain",
@@ -662,7 +657,6 @@ def FeatureAAPCSFrameChain : SubtargetFeature<"aapcs-frame-chain",
 // is responsible for providing any necessary __sync implementations. Code
 // built with this feature is not ABI-compatible with code built without this
 // feature, if atomic variables are exposed across the ABI boundary.
-// TODO: Does this need to be InlineMustMatch?
 def FeatureAtomics32 : SubtargetFeature<
     "atomics-32", "HasForced32BitAtomics", "true",
     "Assume that lock-free 32-bit atomics are available",
@@ -702,10 +696,9 @@ def FeatureNoARM  : SubtargetFeature<"noarm", "NoARM", "true",
 //
 // Specify whether target support specific ARM ISA variants.
 
-// TODO: Does this need to be InlineMustMatch?
 def HasV4TOps   : SubtargetFeature<"v4t", "HasV4TOps", "true",
                                    "Support ARM v4T instructions",
-                                   [], InlineMustMatch>;
+                                   [], InlineDefault>;
 
 def HasV5TOps   : SubtargetFeature<"v5t", "HasV5TOps", "true",
                                    "Support ARM v5T instructions",
@@ -848,12 +841,10 @@ def HasMVEFloatOps : SubtargetFeature<
                [HasMVEIntegerOps, FeatureFPARMv8_D16_SP, FeatureFullFP16],
                InlineDefault>;
 
-// TODO: Does this need to be InlineMustMatch?
 def HasCDEOps : SubtargetFeature<"cde", "HasCDEOps", "true",
                                  "Support CDE instructions",
                                  [HasV8MMainlineOps], InlineMustMatch>;
 
-// TODO: Does this need to be InlineMustMatch?
 foreach i = {0-7} in
     def FeatureCoprocCDE#i : SubtargetFeature<"cdecp"#i,
                                               "CoprocCDE["#i#"]", "true",
@@ -865,24 +856,18 @@ foreach i = {0-7} in
 //===----------------------------------------------------------------------===//
 
 /// Harden against Straight Line Speculation for Returns and Indirect Branches.
-// TODO: Does this need to be InlineMustMatch?
 def FeatureHardenSlsRetBr : SubtargetFeature<"harden-sls-retbr",
   "HardenSlsRetBr", "true",
   "Harden against straight line speculation across RETurn and BranchRegister "
-  "instructions",
-  [], InlineMustMatch>;
+  "instructions">;
 /// Harden against Straight Line Speculation for indirect calls.
-// TODO: Does this need to be InlineMustMatch?
 def FeatureHardenSlsBlr : SubtargetFeature<"harden-sls-blr",
   "HardenSlsBlr", "true",
-  "Harden against straight line speculation across indirect calls",
-  [], InlineMustMatch>;
+  "Harden against straight line speculation across indirect calls">;
 /// Generate thunk code for SLS mitigation in the normal text section.
-// TODO: Does this need to be InlineMustMatch?
 def FeatureHardenSlsNoComdat : SubtargetFeature<"harden-sls-nocomdat",
   "HardenSlsNoComdat", "true",
-  "Generate thunk code for SLS mitigation in the normal text section",
-  [], InlineMustMatch>;
+  "Generate thunk code for SLS mitigation in the normal text section">;
 
 //===----------------------------------------------------------------------===//
 // Endianness of instruction encodings in memory.
@@ -898,7 +883,6 @@ def FeatureHardenSlsNoComdat : SubtargetFeature<"harden-sls-nocomdat",
 //
 // So we have a feature here to indicate that instructions are stored big-
 // endian, which you can set when instantiating an MCDisassembler.
-// TODO: Does this need to be InlineMustMatch?
 def ModeBigEndianInstructions : SubtargetFeature<"big-endian-instructions",
     "BigEndianInstructions", "true",
      "Expect instructions to be stored big-endian.",

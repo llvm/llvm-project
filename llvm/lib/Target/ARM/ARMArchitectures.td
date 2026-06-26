@@ -1,8 +1,10 @@
-// TODO: Does this need to be InlineMustMatch?
+// Ignore these during inlining, as they are just aliases for specific sets
+// of features. The inlining compatibility check will be performed on the
+// implied features.
 class Architecture<string fname, string aname, list<SubtargetFeature> features>
   : SubtargetFeature<fname, "ARMArch", aname,
                      !strconcat(aname, " architecture"), features,
-                     InlineMustMatch>;
+                     InlineIgnore>;
 
 //===----------------------------------------------------------------------===//
 // ARM architectures
