@@ -10414,7 +10414,7 @@ QualType Sema::BuildAtomicType(QualType T, SourceLocation Loc) {
       DisallowedKind = 7;
     else if (getLangOpts().C23 && T->isUndeducedAutoType())
       // _Atomic auto is prohibited in C23
-      DisallowedKind = 9;
+      DisallowedKind = 8;
 
     if (DisallowedKind != -1) {
       Diag(Loc, diag::err_atomic_specifier_bad_type) << DisallowedKind << T;

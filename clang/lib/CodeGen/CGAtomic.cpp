@@ -683,7 +683,7 @@ static llvm::AtomicOrdering atomicOrderOrSeqCst(llvm::Value *Order) {
   auto *C = dyn_cast<llvm::ConstantInt>(Order);
   if (!C || !llvm::isValidAtomicOrderingCABI(C->getZExtValue()))
     return llvm::AtomicOrdering::SequentiallyConsistent;
-  switch ((llvm::AtomicOrderingCABI)C->getZExtValue()) {
+  switch (static_cast<llvm::AtomicOrderingCABI>(C->getZExtValue())) {
   case llvm::AtomicOrderingCABI::relaxed:
     return llvm::AtomicOrdering::Monotonic;
   case llvm::AtomicOrderingCABI::consume:
