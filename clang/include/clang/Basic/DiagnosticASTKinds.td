@@ -272,6 +272,9 @@ def note_constexpr_alignment_compute : Note<
   "cannot constant evaluate whether run-time alignment is at least %0">;
 def note_constexpr_alignment_adjust : Note<
   "cannot constant evaluate the result of adjusting alignment to %0">;
+def note_constexpr_load8_unaligned : Note<
+  "%0 requires a pointer aligned to %1 %plural{1:byte|:bytes}1, but the "
+  "given pointer is only aligned to %2 %plural{1:byte|:bytes}2">;
 def note_constexpr_destroy_out_of_lifetime : Note<
   "destroying object '%0' whose lifetime has already ended">;
 def note_constexpr_unsupported_destruction : Note<

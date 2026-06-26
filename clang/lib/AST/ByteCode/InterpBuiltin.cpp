@@ -2060,7 +2060,8 @@ static bool isOneByteCharacterType(QualType T) {
 
 static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
                                   const InterpFrame *Frame,
-                                  const CallExpr *Call, bool IsBigEndian) {
+                                  const CallExpr *Call, bool IsBigEndian,
+                                  bool IsAligned) {
   Pointer Ptr = S.Stk.pop<Pointer>();
 
   if (Ptr.isZero()) {
@@ -2071,6 +2072,33 @@ static bool interp__builtin_load8(InterpState &S, CodePtr OpPC,
 
   if (!isReadable(Ptr) && !Ptr.isOnePastEnd())
     return false;
+
+  if (IsAligned) {
+    CharUnits RequiredAlign =
+        S.getASTContext().getTypeAlignInChars(Call->getType());
+    CharUnits BaseAlignment;
+    if (const auto *VD = Ptr.getDeclDesc()->asValueDecl())
+      BaseAlignment = S.getASTContext().getDeclAlign(VD);
+    else if (const auto *E = Ptr.getDeclDesc()->asExpr())
+      BaseAlignment = GetAlignOfExpr(S.getASTContext(), E, UETT_AlignOf);
+    else {
+      S.FFDiag(S.Current->getSource(OpPC),
+               diag::note_constexpr_alignment_compute)
+          << RequiredAlign.getQuantity();
+      return false;
+    }
+    unsigned PtrOffset =
+        Ptr.isElementPastEnd() ? Ptr.getNumElems() : Ptr.getIndex();
+    CharUnits PtrAlign =
+        BaseAlignment.alignmentAtOffset(CharUnits::fromQuantity(PtrOffset));
+    if (PtrAlign < RequiredAlign) {
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_load8_unaligned)
+          << S.getASTContext().BuiltinInfo.getQuotedName(
+                 Call->getBuiltinCallee())
+          << RequiredAlign.getQuantity() << PtrAlign.getQuantity();
+      return false;
+    }
+  }
 
   const Descriptor *Desc = Ptr.getFieldDesc();
   bool IsArray = Desc->isArray();
@@ -5152,6 +5180,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_load8_les16:
   case Builtin::BIstdc_load8_les32:
   case Builtin::BIstdc_load8_les64:
+    return interp__builtin_load8(S, OpPC, Frame, Call, /*IsBigEndian=*/false,
+                                 /*IsAligned=*/false);
+
   case Builtin::BIstdc_load8_aligned_leu8:
   case Builtin::BIstdc_load8_aligned_leu16:
   case Builtin::BIstdc_load8_aligned_leu32:
@@ -5160,7 +5191,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_load8_aligned_les16:
   case Builtin::BIstdc_load8_aligned_les32:
   case Builtin::BIstdc_load8_aligned_les64:
-    return interp__builtin_load8(S, OpPC, Frame, Call, /*IsBigEndian=*/false);
+    return interp__builtin_load8(S, OpPC, Frame, Call, /*IsBigEndian=*/false,
+                                 /*IsAligned=*/true);
 
   case Builtin::BIstdc_load8_beu8:
   case Builtin::BIstdc_load8_beu16:
@@ -5170,6 +5202,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_load8_bes16:
   case Builtin::BIstdc_load8_bes32:
   case Builtin::BIstdc_load8_bes64:
+    return interp__builtin_load8(S, OpPC, Frame, Call, /*IsBigEndian=*/true,
+                                 /*IsAligned=*/false);
+
   case Builtin::BIstdc_load8_aligned_beu8:
   case Builtin::BIstdc_load8_aligned_beu16:
   case Builtin::BIstdc_load8_aligned_beu32:
@@ -5178,7 +5213,8 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_load8_aligned_bes16:
   case Builtin::BIstdc_load8_aligned_bes32:
   case Builtin::BIstdc_load8_aligned_bes64:
-    return interp__builtin_load8(S, OpPC, Frame, Call, /*IsBigEndian=*/true);
+    return interp__builtin_load8(S, OpPC, Frame, Call, /*IsBigEndian=*/true,
+                                 /*IsAligned=*/true);
 
   case Builtin::BI__atomic_always_lock_free:
   case Builtin::BI__atomic_is_lock_free:
