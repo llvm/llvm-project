@@ -373,6 +373,10 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
       LLVM_DEBUG(dbgs() << "Target does not support VOPDPairingMutation\n");
       return;
     }
+    if (DAG->MF.getFunction().hasFnAttribute("amdgpu-no-vopd")) {
+      LLVM_DEBUG(dbgs() << "VOPD formation has been disabled\n");
+      return;
+    }
 
     BitVector VOPDCapable(DAG->SUnits.size());
     unsigned IIdx = 0;
