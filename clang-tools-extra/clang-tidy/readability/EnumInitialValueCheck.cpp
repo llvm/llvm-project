@@ -23,35 +23,33 @@ namespace clang::tidy::readability {
 /// Check if \p ECD is initialized by referencing another enumerator in the
 /// same enum (e.g., `last = first`).
 static bool isSelfReference(const EnumConstantDecl *ECD) {
-  const Expr *Init = ECD->getInitExpr();
-  if (!Init)
-    return false;
-  const auto *CE = dyn_cast<ConstantExpr>(Init);
-  if (!CE)
-    return false;
-  const auto *DRE = dyn_cast<DeclRefExpr>(CE->getSubExpr());
-  if (!DRE)
-    return false;
-  const auto *RefECD = dyn_cast<EnumConstantDecl>(DRE->getDecl());
+  const auto *CE = dyn_cast_if_present<ConstantExpr>(ECD->getInitExpr());
+  const auto *DRE =
+      dyn_cast_if_present<DeclRefExpr>(CE ? CE->getSubExpr() : nullptr);
+  const auto *RefECD =
+      dyn_cast_if_present<EnumConstantDecl>(DRE ? DRE->getDecl() : nullptr);
   return RefECD && RefECD->getDeclContext() == ECD->getDeclContext();
 }
 
-static bool isAllowedReference(const EnumConstantDecl *ECD, bool AllowRefs) {
-  return AllowRefs && isSelfReference(ECD);
+static bool isAllowedSelfReference(const EnumConstantDecl *ECD,
+                                   bool AllowSelfRefs) {
+  return AllowSelfRefs && isSelfReference(ECD);
 }
 
-static bool isNoneEnumeratorsInitialized(const EnumDecl &Node, bool AllowRefs) {
-  return llvm::all_of(Node.enumerators(), [AllowRefs](
-                                              const EnumConstantDecl *ECD) {
-    return isAllowedReference(ECD, AllowRefs) || ECD->getInitExpr() == nullptr;
-  });
+static bool isNoneEnumeratorsInitialized(const EnumDecl &Node,
+                                         bool AllowSelfRefs) {
+  return llvm::all_of(Node.enumerators(),
+                      [AllowSelfRefs](const EnumConstantDecl *ECD) {
+                        return isAllowedSelfReference(ECD, AllowSelfRefs) ||
+                               ECD->getInitExpr() == nullptr;
+                      });
 }
 
 static bool isOnlyFirstEnumeratorInitialized(const EnumDecl &Node,
-                                             bool AllowRefs) {
+                                             bool AllowSelfRefs) {
   bool IsFirst = true;
   for (const EnumConstantDecl *ECD : Node.enumerators()) {
-    if (isAllowedReference(ECD, AllowRefs))
+    if (isAllowedSelfReference(ECD, AllowSelfRefs))
       continue;
     if ((IsFirst && ECD->getInitExpr() == nullptr) ||
         (!IsFirst && ECD->getInitExpr() != nullptr))
@@ -61,11 +59,13 @@ static bool isOnlyFirstEnumeratorInitialized(const EnumDecl &Node,
   return !IsFirst;
 }
 
-static bool areAllEnumeratorsInitialized(const EnumDecl &Node, bool AllowRefs) {
-  return llvm::all_of(Node.enumerators(), [AllowRefs](
-                                              const EnumConstantDecl *ECD) {
-    return isAllowedReference(ECD, AllowRefs) || ECD->getInitExpr() != nullptr;
-  });
+static bool areAllEnumeratorsInitialized(const EnumDecl &Node,
+                                         bool AllowSelfRefs) {
+  return llvm::all_of(Node.enumerators(),
+                      [AllowSelfRefs](const EnumConstantDecl *ECD) {
+                        return isAllowedSelfReference(ECD, AllowSelfRefs) ||
+                               ECD->getInitExpr() != nullptr;
+                      });
 }
 
 /// Check if \p Enumerator is initialized with a (potentially negated) \c
@@ -104,19 +104,19 @@ AST_MATCHER(EnumDecl, isMacro) {
   return Loc.isMacroID();
 }
 
-AST_MATCHER_P(EnumDecl, hasConsistentInitialValues, bool, AllowRefs) {
-  return isNoneEnumeratorsInitialized(Node, AllowRefs) ||
-         isOnlyFirstEnumeratorInitialized(Node, AllowRefs) ||
-         areAllEnumeratorsInitialized(Node, AllowRefs);
+AST_MATCHER_P(EnumDecl, hasConsistentInitialValues, bool, AllowSelfRefs) {
+  return isNoneEnumeratorsInitialized(Node, AllowSelfRefs) ||
+         isOnlyFirstEnumeratorInitialized(Node, AllowSelfRefs) ||
+         areAllEnumeratorsInitialized(Node, AllowSelfRefs);
 }
 
 AST_MATCHER_P(EnumDecl, hasZeroInitialValueForFirstEnumerator, bool,
-              AllowRefs) {
+              AllowSelfRefs) {
   const EnumDecl::enumerator_range Enumerators = Node.enumerators();
   if (Enumerators.empty())
     return false;
   const EnumConstantDecl *ECD = *Enumerators.begin();
-  return isOnlyFirstEnumeratorInitialized(Node, AllowRefs) &&
+  return isOnlyFirstEnumeratorInitialized(Node, AllowSelfRefs) &&
          isInitializedByLiteral(ECD) && ECD->getInitVal().isZero();
 }
 
@@ -127,7 +127,7 @@ AST_MATCHER_P(EnumDecl, hasZeroInitialValueForFirstEnumerator, bool,
 /// bitmask, evident when enumerators are only initialized with (potentially
 /// negative) integer literals, are ignored. This is also the case when all
 /// enumerators are powers of two (e.g., 0, 1, 2).
-AST_MATCHER_P(EnumDecl, hasSequentialInitialValues, bool, AllowRefs) {
+AST_MATCHER_P(EnumDecl, hasSequentialInitialValues, bool, AllowSelfRefs) {
   const EnumDecl::enumerator_range Enumerators = Node.enumerators();
   if (Enumerators.empty())
     return false;
@@ -137,7 +137,7 @@ AST_MATCHER_P(EnumDecl, hasSequentialInitialValues, bool, AllowRefs) {
     return false;
   bool AllEnumeratorsArePowersOfTwo = true;
   for (const EnumConstantDecl *Enumerator : llvm::drop_begin(Enumerators)) {
-    if (isAllowedReference(Enumerator, AllowRefs))
+    if (isAllowedSelfReference(Enumerator, AllowSelfRefs))
       continue;
     const llvm::APSInt NewValue = Enumerator->getInitVal();
     if (NewValue != ++PrevValue)
@@ -179,20 +179,20 @@ void EnumInitialValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void EnumInitialValueCheck::registerMatchers(MatchFinder *Finder) {
-  const bool AllowRefs = AllowExplicitReferencedInitialValues;
+  const bool AllowSelfRefs = AllowExplicitReferencedInitialValues;
   Finder->addMatcher(enumDecl(isDefinition(), unless(isMacro()),
-                              unless(hasConsistentInitialValues(AllowRefs)))
+                              unless(hasConsistentInitialValues(AllowSelfRefs)))
                          .bind("inconsistent"),
                      this);
   if (!AllowExplicitZeroFirstInitialValue)
     Finder->addMatcher(
         enumDecl(isDefinition(),
-                 hasZeroInitialValueForFirstEnumerator(AllowRefs))
+                 hasZeroInitialValueForFirstEnumerator(AllowSelfRefs))
             .bind("zero_first"),
         this);
   if (!AllowExplicitSequentialInitialValues)
     Finder->addMatcher(enumDecl(isDefinition(), unless(isMacro()),
-                                hasSequentialInitialValues(AllowRefs))
+                                hasSequentialInitialValues(AllowSelfRefs))
                            .bind("sequential"),
                        this);
 }
@@ -249,7 +249,7 @@ void EnumInitialValueCheck::check(const MatchFinder::MatchResult &Result) {
              "sequential initial value in '%0' can be ignored")
         << getName(Enum);
     for (const EnumConstantDecl *ECD : llvm::drop_begin(Enum->enumerators()))
-      if (!isAllowedReference(ECD, AllowExplicitReferencedInitialValues))
+      if (!isAllowedSelfReference(ECD, AllowExplicitReferencedInitialValues))
         cleanInitialValue(Diag, ECD, *Result.SourceManager, getLangOpts());
     return;
   }
