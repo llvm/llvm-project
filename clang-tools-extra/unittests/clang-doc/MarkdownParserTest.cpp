@@ -21,16 +21,14 @@ TEST(MarkdownNodeTest, TextNode) {
 }
 
 TEST(MarkdownNodeTest, FencedCodeNode) {
-  StringRef Lines[] = {"int x = 0;", "int y = 1;", "return x + y;"};
-  FencedCodeNode N("cpp", ArrayRef(Lines));
+  FencedCodeNode N("cpp", "int x = 0;\nint y = 1;\nreturn x + y;");
   EXPECT_EQ(N.Kind, NodeKind::NK_FencedCode);
   EXPECT_EQ(N.getLang(), "cpp");
-  EXPECT_EQ(N.getLines().size(), 3u);
-  EXPECT_EQ(N.getLines()[1], "int y = 1;");
+  EXPECT_EQ(N.getCode(), "int x = 0;\nint y = 1;\nreturn x + y;");
 }
 
 TEST(MarkdownNodeTest, HeadingNode) {
-  HeadingNode N(2, {});
+  HeadingNode N(2);
   EXPECT_EQ(N.Kind, NodeKind::NK_Heading);
   EXPECT_EQ(N.getLevel(), 2u);
 }
@@ -47,21 +45,21 @@ TEST(MarkdownNodeTest, InlineCodeNode) {
 }
 
 TEST(MarkdownNodeTest, EmphasisNode) {
-  EmphasisNode N({});
+  EmphasisNode N;
   EXPECT_EQ(N.Kind, NodeKind::NK_Emphasis);
-  EXPECT_TRUE(N.getChildren().empty());
+  EXPECT_TRUE(N.Children.empty());
 }
 
 TEST(MarkdownNodeTest, UnorderedListNode) {
   UnorderedListNode N;
   EXPECT_EQ(N.Kind, NodeKind::NK_UnorderedList);
-  EXPECT_TRUE(N.getItems().empty());
+  EXPECT_TRUE(N.Items.empty());
 }
 
 TEST(MarkdownNodeTest, ParagraphNode) {
-  ParagraphNode N({});
+  ParagraphNode N;
   EXPECT_EQ(N.Kind, NodeKind::NK_Paragraph);
-  EXPECT_TRUE(N.getChildren().empty());
+  EXPECT_TRUE(N.Children.empty());
 }
 
 } // namespace

@@ -9,19 +9,23 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_SUPPORT_MARKDOWN_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_DOC_SUPPORT_MARKDOWN_H
 
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/simple_ilist.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
 #include <type_traits>
 
 namespace clang::doc::markdown {
 
 enum class NodeKind {
+  // Inline nodes
   NK_Text,
   NK_InlineCode,
   NK_Emphasis,
   NK_Strong,
+  // Block nodes
   NK_Paragraph,
   NK_Heading,
   NK_FencedCode,
@@ -31,227 +35,234 @@ enum class NodeKind {
   NK_ListItem,
   NK_BlockQuote,
   NK_ThematicBreak,
+  NK_Document,
 };
 
-class Node {
-public:
+// Forward declarations
+struct InlineNode;
+struct BlockNode;
+
+//===----------------------------------------------------------------------===//
+// Inline nodes
+//===----------------------------------------------------------------------===//
+
+struct InlineNode
+    : llvm::ilist_node<InlineNode, llvm::ilist_sentinel_tracking<true>> {
   NodeKind Kind;
-  explicit Node(NodeKind K) : Kind(K) {}
-  void dump() const { llvm::errs() << "Node\n"; }
-  static bool classof(const Node *) { return true; }
+  explicit InlineNode(NodeKind K) : Kind(K) {}
+  void dump(llvm::raw_ostream &OS = llvm::errs()) const;
 };
 
-class TextNode : public Node {
+struct TextNode : InlineNode {
+private:
   llvm::StringRef Text;
 
 public:
-  explicit TextNode(llvm::StringRef T) : Node(NodeKind::NK_Text), Text(T) {}
+  explicit TextNode(llvm::StringRef T)
+      : InlineNode(NodeKind::NK_Text), Text(T) {}
   llvm::StringRef getText() const { return Text; }
-  void dump() const { llvm::errs() << "TextNode: " << Text << "\n"; }
-  static bool classof(const Node *N) { return N->Kind == NodeKind::NK_Text; }
+  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
+    OS << "TextNode: " << Text << "\n";
+  }
+  static bool classof(const InlineNode *N) {
+    return N->Kind == NodeKind::NK_Text;
+  }
 };
 static_assert(std::is_trivially_destructible_v<TextNode>);
 
-class InlineCodeNode : public Node {
+struct InlineCodeNode : InlineNode {
+private:
   llvm::StringRef Code;
 
 public:
   explicit InlineCodeNode(llvm::StringRef C)
-      : Node(NodeKind::NK_InlineCode), Code(C) {}
+      : InlineNode(NodeKind::NK_InlineCode), Code(C) {}
   llvm::StringRef getCode() const { return Code; }
-  void dump() const { llvm::errs() << "InlineCodeNode: " << Code << "\n"; }
-  static bool classof(const Node *N) {
+  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
+    OS << "InlineCodeNode: " << Code << "\n";
+  }
+  static bool classof(const InlineNode *N) {
     return N->Kind == NodeKind::NK_InlineCode;
   }
 };
 static_assert(std::is_trivially_destructible_v<InlineCodeNode>);
 
-class EmphasisNode : public Node {
-  llvm::ArrayRef<Node *> Children;
-
-public:
-  explicit EmphasisNode(llvm::ArrayRef<Node *> C)
-      : Node(NodeKind::NK_Emphasis), Children(C) {}
-  llvm::ArrayRef<Node *> getChildren() const { return Children; }
-  void dump() const {
-    llvm::errs() << "EmphasisNode (" << Children.size() << " children)\n";
+struct EmphasisNode : InlineNode {
+  llvm::simple_ilist<InlineNode, llvm::ilist_sentinel_tracking<true>> Children;
+  EmphasisNode() : InlineNode(NodeKind::NK_Emphasis) {}
+  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
+    OS << "EmphasisNode\n";
   }
-  static bool classof(const Node *N) {
+  static bool classof(const InlineNode *N) {
     return N->Kind == NodeKind::NK_Emphasis;
   }
 };
-static_assert(std::is_trivially_destructible_v<EmphasisNode>);
 
-class StrongNode : public Node {
-  llvm::ArrayRef<Node *> Children;
-
-public:
-  explicit StrongNode(llvm::ArrayRef<Node *> C)
-      : Node(NodeKind::NK_Strong), Children(C) {}
-  llvm::ArrayRef<Node *> getChildren() const { return Children; }
-  void dump() const {
-    llvm::errs() << "StrongNode (" << Children.size() << " children)\n";
+struct StrongNode : InlineNode {
+  llvm::simple_ilist<InlineNode, llvm::ilist_sentinel_tracking<true>> Children;
+  StrongNode() : InlineNode(NodeKind::NK_Strong) {}
+  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
+    OS << "StrongNode\n";
   }
-  static bool classof(const Node *N) { return N->Kind == NodeKind::NK_Strong; }
+  static bool classof(const InlineNode *N) {
+    return N->Kind == NodeKind::NK_Strong;
+  }
 };
-static_assert(std::is_trivially_destructible_v<StrongNode>);
 
-class ParagraphNode : public Node {
-  llvm::ArrayRef<Node *> Children;
+//===----------------------------------------------------------------------===//
+// Block nodes
+//===----------------------------------------------------------------------===//
 
-public:
-  explicit ParagraphNode(llvm::ArrayRef<Node *> C)
-      : Node(NodeKind::NK_Paragraph), Children(C) {}
-  llvm::ArrayRef<Node *> getChildren() const { return Children; }
-  void dump() const {
-    llvm::errs() << "ParagraphNode (" << Children.size() << " children)\n";
+struct BlockNode
+    : llvm::ilist_node<BlockNode, llvm::ilist_sentinel_tracking<true>> {
+  NodeKind Kind;
+  explicit BlockNode(NodeKind K) : Kind(K) {}
+  void dump(llvm::raw_ostream &OS = llvm::errs()) const;
+};
+
+using InlineList =
+    llvm::simple_ilist<InlineNode, llvm::ilist_sentinel_tracking<true>>;
+using BlockList =
+    llvm::simple_ilist<BlockNode, llvm::ilist_sentinel_tracking<true>>;
+
+struct ParagraphNode : BlockNode {
+  InlineList Children;
+  ParagraphNode() : BlockNode(NodeKind::NK_Paragraph) {}
+  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
+    OS << "ParagraphNode\n";
   }
-  static bool classof(const Node *N) {
+  static bool classof(const BlockNode *N) {
     return N->Kind == NodeKind::NK_Paragraph;
   }
 };
-static_assert(std::is_trivially_destructible_v<ParagraphNode>);
 
-class HeadingNode : public Node {
+struct HeadingNode : BlockNode {
+private:
   unsigned Level;
-  llvm::ArrayRef<Node *> Children;
 
 public:
-  HeadingNode(unsigned L, llvm::ArrayRef<Node *> C)
-      : Node(NodeKind::NK_Heading), Level(L), Children(C) {}
+  InlineList Children;
+  explicit HeadingNode(unsigned L)
+      : BlockNode(NodeKind::NK_Heading), Level(L) {}
   unsigned getLevel() const { return Level; }
-  llvm::ArrayRef<Node *> getChildren() const { return Children; }
-  void dump() const {
-    llvm::errs() << "HeadingNode: level=" << Level << " (" << Children.size()
-                 << " children)\n";
+  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
+    OS << "HeadingNode: level=" << Level << "\n";
   }
-  static bool classof(const Node *N) { return N->Kind == NodeKind::NK_Heading; }
+  static bool classof(const BlockNode *N) {
+    return N->Kind == NodeKind::NK_Heading;
+  }
 };
-static_assert(std::is_trivially_destructible_v<HeadingNode>);
 
-class FencedCodeNode : public Node {
+struct FencedCodeNode : BlockNode {
+private:
   llvm::StringRef Lang;
-  llvm::ArrayRef<llvm::StringRef> Lines;
+  llvm::StringRef Code;
 
 public:
-  FencedCodeNode(llvm::StringRef L, llvm::ArrayRef<llvm::StringRef> Ls)
-      : Node(NodeKind::NK_FencedCode), Lang(L), Lines(Ls) {}
+  FencedCodeNode(llvm::StringRef L, llvm::StringRef C)
+      : BlockNode(NodeKind::NK_FencedCode), Lang(L), Code(C) {}
   llvm::StringRef getLang() const { return Lang; }
-  llvm::ArrayRef<llvm::StringRef> getLines() const { return Lines; }
-  void dump() const {
-    llvm::errs() << "FencedCodeNode: lang=" << Lang << " (" << Lines.size()
-                 << " lines)\n";
+  llvm::StringRef getCode() const { return Code; }
+  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
+    OS << "FencedCodeNode: lang=" << Lang << "\n";
   }
-  static bool classof(const Node *N) {
+  static bool classof(const BlockNode *N) {
     return N->Kind == NodeKind::NK_FencedCode;
   }
 };
 static_assert(std::is_trivially_destructible_v<FencedCodeNode>);
 
-struct TableCell {
-  llvm::ArrayRef<Node *> Children;
-};
-static_assert(std::is_trivially_destructible_v<TableCell>);
-
-struct TableRow {
-  llvm::ArrayRef<TableCell> Cells;
-};
-static_assert(std::is_trivially_destructible_v<TableRow>);
-
-class TableNode : public Node {
-  TableRow Header;
-  llvm::ArrayRef<TableRow> Body;
-
-public:
-  TableNode(TableRow H, llvm::ArrayRef<TableRow> B)
-      : Node(NodeKind::NK_Table), Header(H), Body(B) {}
-  const TableRow &getHeader() const { return Header; }
-  llvm::ArrayRef<TableRow> getBody() const { return Body; }
-  void dump() const {
-    llvm::errs() << "TableNode: " << Header.Cells.size() << " header cells, "
-                 << Body.size() << " rows\n";
+struct ListItemNode : BlockNode {
+  InlineList Children;
+  ListItemNode() : BlockNode(NodeKind::NK_ListItem) {}
+  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
+    OS << "ListItemNode\n";
   }
-  static bool classof(const Node *N) { return N->Kind == NodeKind::NK_Table; }
-};
-static_assert(std::is_trivially_destructible_v<TableNode>);
-
-class ListItemNode : public Node {
-  llvm::ArrayRef<Node *> Children;
-
-public:
-  explicit ListItemNode(llvm::ArrayRef<Node *> C)
-      : Node(NodeKind::NK_ListItem), Children(C) {}
-  llvm::ArrayRef<Node *> getChildren() const { return Children; }
-  void dump() const {
-    llvm::errs() << "ListItemNode (" << Children.size() << " children)\n";
-  }
-  static bool classof(const Node *N) {
+  static bool classof(const BlockNode *N) {
     return N->Kind == NodeKind::NK_ListItem;
   }
 };
-static_assert(std::is_trivially_destructible_v<ListItemNode>);
 
-class UnorderedListNode : public Node {
-  llvm::ArrayRef<ListItemNode *> Items;
-
-public:
-  UnorderedListNode() : Node(NodeKind::NK_UnorderedList), Items({}) {}
-  explicit UnorderedListNode(llvm::ArrayRef<ListItemNode *> I)
-      : Node(NodeKind::NK_UnorderedList), Items(I) {}
-  llvm::ArrayRef<ListItemNode *> getItems() const { return Items; }
-  void dump() const {
-    llvm::errs() << "UnorderedListNode (" << Items.size() << " items)\n";
+struct UnorderedListNode : BlockNode {
+  llvm::simple_ilist<ListItemNode, llvm::ilist_sentinel_tracking<true>> Items;
+  UnorderedListNode() : BlockNode(NodeKind::NK_UnorderedList) {}
+  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
+    OS << "UnorderedListNode\n";
   }
-  static bool classof(const Node *N) {
+  static bool classof(const BlockNode *N) {
     return N->Kind == NodeKind::NK_UnorderedList;
   }
 };
-static_assert(std::is_trivially_destructible_v<UnorderedListNode>);
 
-class OrderedListNode : public Node {
+struct OrderedListNode : BlockNode {
+private:
   unsigned Start;
-  llvm::ArrayRef<ListItemNode *> Items;
 
 public:
-  OrderedListNode(unsigned S, llvm::ArrayRef<ListItemNode *> I)
-      : Node(NodeKind::NK_OrderedList), Start(S), Items(I) {}
+  llvm::simple_ilist<ListItemNode, llvm::ilist_sentinel_tracking<true>> Items;
+  explicit OrderedListNode(unsigned S = 1)
+      : BlockNode(NodeKind::NK_OrderedList), Start(S) {}
   unsigned getStart() const { return Start; }
-  llvm::ArrayRef<ListItemNode *> getItems() const { return Items; }
-  void dump() const {
-    llvm::errs() << "OrderedListNode: start=" << Start << " (" << Items.size()
-                 << " items)\n";
+  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
+    OS << "OrderedListNode: start=" << Start << "\n";
   }
-  static bool classof(const Node *N) {
+  static bool classof(const BlockNode *N) {
     return N->Kind == NodeKind::NK_OrderedList;
   }
 };
-static_assert(std::is_trivially_destructible_v<OrderedListNode>);
 
-class BlockQuoteNode : public Node {
-  llvm::ArrayRef<Node *> Children;
-
-public:
-  explicit BlockQuoteNode(llvm::ArrayRef<Node *> C)
-      : Node(NodeKind::NK_BlockQuote), Children(C) {}
-  llvm::ArrayRef<Node *> getChildren() const { return Children; }
-  void dump() const {
-    llvm::errs() << "BlockQuoteNode (" << Children.size() << " children)\n";
+struct BlockQuoteNode : BlockNode {
+  BlockList Children;
+  BlockQuoteNode() : BlockNode(NodeKind::NK_BlockQuote) {}
+  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
+    OS << "BlockQuoteNode\n";
   }
-  static bool classof(const Node *N) {
+  static bool classof(const BlockNode *N) {
     return N->Kind == NodeKind::NK_BlockQuote;
   }
 };
-static_assert(std::is_trivially_destructible_v<BlockQuoteNode>);
 
-class ThematicBreakNode : public Node {
-public:
-  ThematicBreakNode() : Node(NodeKind::NK_ThematicBreak) {}
-  void dump() const { llvm::errs() << "ThematicBreakNode\n"; }
-  static bool classof(const Node *N) {
+struct ThematicBreakNode : BlockNode {
+  ThematicBreakNode() : BlockNode(NodeKind::NK_ThematicBreak) {}
+  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
+    OS << "ThematicBreakNode\n";
+  }
+  static bool classof(const BlockNode *N) {
     return N->Kind == NodeKind::NK_ThematicBreak;
   }
 };
-static_assert(std::is_trivially_destructible_v<ThematicBreakNode>);
+
+struct DocumentNode : BlockNode {
+  BlockList Children;
+  DocumentNode() : BlockNode(NodeKind::NK_Document) {}
+  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
+    OS << "DocumentNode\n";
+  }
+  static bool classof(const BlockNode *N) {
+    return N->Kind == NodeKind::NK_Document;
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// ASTContext - owns the arena and string pool
+//===----------------------------------------------------------------------===//
+
+class ASTContext {
+  llvm::BumpPtrAllocator Arena;
+  llvm::StringSaver SSaver;
+  DocumentNode *Root = nullptr;
+
+public:
+  ASTContext() : SSaver(Arena) {}
+
+  template <typename T, typename... Args> T *allocate(Args &&...args) {
+    return new (Arena.Allocate<T>()) T(std::forward<Args>(args)...);
+  }
+
+  llvm::StringRef intern(llvm::StringRef S) { return SSaver.save(S); }
+  DocumentNode *getRoot() { return Root; }
+  void setRoot(DocumentNode *R) { Root = R; }
+};
 
 } // namespace clang::doc::markdown
 
