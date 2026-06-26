@@ -60,6 +60,20 @@ static bool CallFrameAddressIsValid(ABISP abi_sp, lldb::addr_t cfa) {
   return cfa != 0 && cfa != 1;
 }
 
+/// Identify a clang outlined function by symbol name.
+///
+/// The unwind information in outlined functions from clang can be
+/// incorrect, and because of when the outlining happens in the compilation,
+/// it may not be possible to fix.  We will need to ignore any
+/// instruction-emulation or compiler-sourced unwind plans for these
+/// functions, and fall back to an ABI default unwindplan.
+static bool IsClangOutlinedFunction(const SymbolContext &sym_ctx) {
+  llvm::StringRef name = GetSymbolOrFunctionName(sym_ctx).StringRef();
+  if (name.starts_with("OUTLINED_FUNCTION_"))
+    return true;
+  return false;
+}
+
 #define UNWIND_LOG_IMPL(LOG_FN, log, ...)                                      \
   LOG_FN(log, "{0}th{1}/fr{2} {3}",                                            \
          llvm::indent(std::min(m_frame_number, 100U)), m_thread.GetIndexID(),  \
@@ -878,23 +892,10 @@ RegisterContextUnwind::GetFullUnwindPlanForFrame() {
   // return address in a temporary register instead of $ra).  The unwind
   // instructions in eh_frame/debug_frame are not correct today for an
   // OUTLINED_FUNCTION, even when a normal ABI call is made.
-  // CFI may be absent or incorrect. So it
-  // will look like a frameless function that does nothing beyond its initial
-  // unwind state.
-  //
-  // A function may outline its prologue, mid-function block of instructions,
-  // or its epilogue.  If a function's prologue is outlined, the unwind
-  // instructions (eh_frame/debug_frame/lldb's instruction analysis) for the
-  // original function are incorrect and cannot be trusted.
-  //
-  // If we are in an OUTLINED_FUNCTION in a backtrace, distrust all sources
-  // of unwind information and use the architectural default unwind plan
-  // instead.  We may miss the caller stack frame in the backtrace, but it
-  // will work more reliably than any other method.
+  // CFI may be absent or incorrect; instruction emulation may be incorrect
+  // because it assumes a normal ABI call was made.
   if (m_sym_ctx_valid && arch_default_unwind_plan_sp) {
-    const char *name = GetSymbolOrFunctionName(m_sym_ctx).AsCString("");
-    if (!strncmp(name, "OUTLINED_FUNCTION_",
-                 sizeof("OUTLINED_FUNCTION_") - 1)) {
+    if (IsClangOutlinedFunction(m_sym_ctx) {
       UNWIND_LOG(log,
                  "Overriding full unwind plan, using architectural default for "
                  "function {0}",
