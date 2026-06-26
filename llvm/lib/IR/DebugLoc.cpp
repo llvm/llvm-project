@@ -15,14 +15,6 @@ using namespace llvm;
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
 #include "llvm/Support/Signals.h"
 namespace llvm {
-cl::list<std::string> EnableOriginStacktraces(
-    "enable-origin-stacktraces",
-    cl::desc("Collect DebugLoc origin stacktraces; a comma-separated list of "
-             "passes may be given, in which case stacktraces will be collected "
-             "in those passes only"),
-    cl::value_desc("Pass1,Pass2,Pass3,..."), cl::CommaSeparated,
-    cl::ValueOptional);
-
 bool DebugLocOriginCollectionEnabled = false;
 } // namespace llvm
 
@@ -42,24 +34,6 @@ void DbgLocOrigin::addTrace() {
   auto &[Depth, StackTrace] = StackTraces.emplace_back();
   Depth = sys::getStackTrace(StackTrace);
 }
-#else
-#include "llvm/Support/WithColor.h"
-
-namespace llvm {
-cl::list<std::string> EnableOriginStacktraces(
-    "enable-origin-stacktraces",
-    cl::desc("Collect DebugLoc origin stacktraces; requires "
-             "LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING=COVERAGE_AND_ORIGIN"),
-    cl::CommaSeparated, cl::ValueOptional, cl::Hidden,
-    cl::cb<void, bool>([](bool IsEnabled) {
-      if (IsEnabled) {
-        WithColor::warning()
-            << "--enable-origin-stacktraces has no effect "
-               "without LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING="
-               "COVERAGE_AND_ORIGIN\n";
-      }
-    }));
-} // namespace llvm
 #endif // LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
 
 //===----------------------------------------------------------------------===//

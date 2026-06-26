@@ -34,15 +34,13 @@
 // We need the Signals header to operate on stacktraces if we're using DebugLoc
 // origin-tracking.
 #include "llvm/Support/Signals.h"
+#else
+#include "llvm/Support/WithColor.h"
 #endif
 
 #define DEBUG_TYPE "debugify"
 
 using namespace llvm;
-
-namespace llvm {
-extern cl::list<std::string> EnableOriginStacktraces;
-} // namespace llvm
 
 namespace {
 
@@ -71,6 +69,33 @@ cl::opt<Level> DebugifyLevel(
 raw_ostream &dbg() { return Quiet ? nulls() : errs(); }
 
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+cl::list<std::string> EnableOriginStacktraces(
+    "enable-origin-stacktraces",
+    cl::desc("Collect DebugLoc origin stacktraces; a comma-separated list of "
+             "passes may be given, in which case stacktraces will be collected "
+             "in those passes only"),
+    cl::value_desc("Pass1,Pass2,Pass3,..."), cl::CommaSeparated,
+    cl::ValueOptional);
+
+// For a given pass, sets whether the collection of DebugLoc origin stacktraces
+// is enabled or not.
+static void setDebugLocOriginCollectionForPass(StringRef PassName) {
+  if (!llvm::EnableOriginStacktraces.getNumOccurrences()) {
+    llvm::DebugLocOriginCollectionEnabled = false;
+    return;
+  }
+  if (llvm::EnableOriginStacktraces.size() == 1 &&
+      llvm::EnableOriginStacktraces[0].empty()) {
+    llvm::DebugLocOriginCollectionEnabled = true;
+    return;
+  }
+  llvm::DebugLocOriginCollectionEnabled =
+      llvm::is_contained(llvm::EnableOriginStacktraces, PassName);
+}
+static void unsetDebugLocOriginCollection() {
+  llvm::DebugLocOriginCollectionEnabled = false;
+}
+
 // These maps refer to addresses in the current LLVM process, so we can reuse
 // them everywhere - therefore, we store them at file scope.
 static SymbolizedAddressMap SymbolizedAddrs;
@@ -115,6 +140,22 @@ void collectStackAddresses(Instruction &I) {
   }
 }
 #else
+// These functions are only used in origin-tracking builds; they are no-ops in
+// normal builds.
+static void setDebugLocOriginCollectionForPass(StringRef PassName) {}
+static void unsetDebugLocOriginCollection() {}
+
+cl::list<std::string> EnableOriginStacktraces(
+    "enable-origin-stacktraces",
+    cl::desc("Collect DebugLoc origin stacktraces; requires "
+             "LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING=COVERAGE_AND_ORIGIN"),
+    cl::CommaSeparated, cl::ValueOptional, cl::Hidden,
+    cl::cb<void, std::string>([](std::string Pass) {
+      WithColor::warning() << "--enable-origin-stacktraces has no effect "
+                              "without LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING="
+                              "COVERAGE_AND_ORIGIN\n";
+    }));
+
 void collectStackAddresses(Instruction &I) {}
 #endif // LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
 
@@ -280,32 +321,6 @@ bool llvm::applyDebugifyMetadata(
 
   return true;
 }
-
-// For a given pass, sets whether the collection of DebugLoc origin stacktraces
-// is enabled or not.
-#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
-static void setDebugLocOriginCollectionForPass(StringRef PassName) {
-  if (!llvm::EnableOriginStacktraces.getNumOccurrences()) {
-    llvm::DebugLocOriginCollectionEnabled = false;
-    return;
-  }
-  if (llvm::EnableOriginStacktraces.size() == 1 &&
-      llvm::EnableOriginStacktraces[0].empty()) {
-    llvm::DebugLocOriginCollectionEnabled = true;
-    return;
-  }
-  llvm::DebugLocOriginCollectionEnabled =
-      llvm::is_contained(llvm::EnableOriginStacktraces, PassName);
-}
-static void unsetDebugLocOriginCollection() {
-  llvm::DebugLocOriginCollectionEnabled = false;
-}
-#else
-// These functions are only used in origin-tracking builds; they are no-ops in
-// normal builds.
-static void setDebugLocOriginCollectionForPass(StringRef PassName) {}
-static void unsetDebugLocOriginCollection() {}
-#endif
 
 static bool applyDebugify(Function &F, enum DebugifyMode Mode,
                           DebugInfoPerPass *DebugInfoBeforePass,
