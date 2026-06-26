@@ -24,6 +24,14 @@
 // RUN: cd %t.relpath && %clang_cl --target=i686-windows-msvc /c /Z7 /Fo:hello.obj -- hello.cpp
 // RUN: llvm-pdbutil dump --types %t.relpath/hello.obj | FileCheck %s --check-prefix RELPATH
 
+// The S_OBJNAME path must be get remapped if a proper prefix map was specified via `/pathmap`.
+// RUN: rm -rf %t.pathmap && mkdir -p %t.pathmap
+// RUN: cp %s %t.pathmap/%{s:basename}
+// RUN: cd %t.pathmap && %clang_cl --target=i686-windows-msvc /c /Z7 \
+// RUN:   /pathmap:%t.pathmap=x:/path-to /experimental:deterministic \
+// RUN:   /Fo:%{s:basename}.obj -- %{s:basename}
+// RUN: llvm-pdbutil dump --all %{s:basename}.obj | FileCheck %s --check-prefix OBJNAME-PATHMAP
+
 int main(void) { return 42; }
 
 // CHECK:                       Types (.debug$T)
@@ -78,3 +86,5 @@ int main(void) { return 42; }
 // RELPATH-NEXT:           0x{{.*}}: `
 // RELPATH-NOT:   {{hello\.cpp}}
 // RELPATH-SAME:  `
+
+// OBJNAME-PATHMAP: {{^.+}} | S_OBJNAME [size = {{.+}}] sig=0, `x:/path-to{{[\\/]}}codeview-buildinfo.c.obj`
