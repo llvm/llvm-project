@@ -32,38 +32,6 @@ if lit_shell_env:
 # the test runner updated.
 config.test_format = lit.formats.ShTest(execute_external=not use_lit_shell)
 
-# suffixes: A list of file extensions to treat as test files.
-config.suffixes = [
-    ".c",
-    ".cpp",
-    ".f",
-    ".F",
-    ".ff",
-    ".FOR",
-    ".for",
-    ".f77",
-    ".f90",
-    ".F90",
-    ".ff90",
-    ".f95",
-    ".F95",
-    ".ff95",
-    ".fpp",
-    ".FPP",
-    ".cuf",
-    ".CUF",
-    ".f18",
-    ".F18",
-    ".f03",
-    ".F03",
-    ".f08",
-    ".F08",
-    ".ll",
-    ".fir",
-    ".mlir",
-    ".s",
-]
-
 config.substitutions.append(("%PATH%", config.environment["PATH"]))
 config.substitutions.append(("%llvmshlibdir", config.llvm_shlib_dir))
 config.substitutions.append(("%pluginext", config.llvm_plugin_ext))
