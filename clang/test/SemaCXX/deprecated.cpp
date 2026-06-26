@@ -261,7 +261,7 @@ namespace ArrayComp {
   bool b3 = arr1 == arr3; // not-cxx20-warning {{comparison between two arrays compare their addresses}} cxx20-warning {{comparison between two arrays is deprecated}}
   bool b4 = arr1 < arr3; // not-cxx20-warning {{comparison between two arrays compare their addresses}} cxx20-warning {{comparison between two arrays is deprecated}}
 #if __cplusplus > 201703L
-  bool b5 = arr1 <=> arr2; // cxx20-error {{invalid operands}}
+  bool b5 = arr1 <=> arr2; // cxx20-error {{invalid operands}} cxx20-warning {{comparison between two arrays is deprecated}}
 #endif
 
   int (&f())[3];
