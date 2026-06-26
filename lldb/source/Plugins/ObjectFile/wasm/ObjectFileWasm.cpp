@@ -803,10 +803,22 @@ bool ObjectFileWasm::SetLoadAddress(Target &target, lldb::addr_t load_address,
   const size_t num_sections = section_list->GetSize();
   for (size_t sect_idx = 0; sect_idx < num_sections; ++sect_idx) {
     SectionSP section_sp(section_list->GetSectionAtIndex(sect_idx));
-    if (target.SetSectionLoadAddress(
-            section_sp, load_address | section_sp->GetFileOffset())) {
-      ++num_loaded_sections;
+    lldb::addr_t section_load_addr;
+    if (section_sp->GetType() == eSectionTypeData) {
+      // Active data segments are mapped into the module's linear memory at
+      // their virtual address. Linear memory is a separate address space from
+      // code (the top two bits of the 64-bit address encode the space: 0 for
+      // Memory, 1 for Object/code), so place the segment at its linear VM
+      // address in the Memory space while preserving the module id.
+      section_load_addr = (load_address & ~(uint64_t(0b11) << 62)) |
+                          section_sp->GetFileAddress();
+    } else {
+      // Code (and other) sections are addressed by their offset within the
+      // module in the Object address space.
+      section_load_addr = load_address | section_sp->GetFileOffset();
     }
+    if (target.SetSectionLoadAddress(section_sp, section_load_addr))
+      ++num_loaded_sections;
   }
 
   return num_loaded_sections > 0;
