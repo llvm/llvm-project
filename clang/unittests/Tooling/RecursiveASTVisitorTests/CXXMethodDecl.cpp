@@ -34,9 +34,9 @@ TEST(RecursiveASTVisitor, CXXMethodDeclNoDefaultBodyVisited) {
   for (bool VisitImplCode : {false, true}) {
     CXXMethodDeclVisitor Visitor(VisitImplCode);
     if (VisitImplCode)
-      Visitor.ExpectMatch("declref", 8, 28);
+      Visitor.ExpectMatch("declref", 8, 38);
     else
-      Visitor.DisallowMatch("declref", 8, 28);
+      Visitor.DisallowMatch("declref", 8, 38);
 
     Visitor.ExpectMatch("parm", 8, 27);
     llvm::StringRef Code = R"cpp(
