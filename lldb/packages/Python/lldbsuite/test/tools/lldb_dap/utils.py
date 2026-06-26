@@ -630,6 +630,7 @@ class DAPConnection:
             # full timeout when the adapter exits or gets killed.
             with self._in_flight_lock:
                 pending_futures = [f for _, f in self._in_flight_requests.values()]
+                self._in_flight_requests = {}
 
             resp_error = error or DAPError("DAP connection closed before response.")
             for future in pending_futures:

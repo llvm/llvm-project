@@ -488,6 +488,13 @@ def _dict_to_message_impl(
         for key, f in fields.items():
             data_key = f.metadata.get("alias", key)
             if data_key not in data:
+                if (
+                    f.default is dataclasses.MISSING
+                    and f.default_factory is dataclasses.MISSING
+                ):
+                    raise TypeError(
+                        f"expected field {data_key!r} in {data!r} at {full_path!r}."
+                    )
                 continue
 
             required_value = f.metadata.get("required", dataclasses.MISSING)
