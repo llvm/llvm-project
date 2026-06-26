@@ -279,4 +279,23 @@ TEST(AllocatorTest, TestBigAlignment) {
   EXPECT_GT(MockSlabAllocator::GetLastSlabSize(), 4096u);
 }
 
+// Over-aligned element type: Allocate() honors alignof(T) > MinAlign and
+// DestroyAll() runs every destructor.
+TEST(AllocatorTest, TestOverAlignedSpecific) {
+  unsigned NumDtorCalls = 0;
+  struct alignas(32) S {
+    unsigned *Calls;
+    ~S() { ++*Calls; }
+  };
+  {
+    SpecificBumpPtrAllocator<S> Alloc;
+    for (int I = 0; I != 4; ++I) {
+      S *P = Alloc.Allocate();
+      EXPECT_EQ(0u, reinterpret_cast<uintptr_t>(P) & 31u);
+      P->Calls = &NumDtorCalls;
+    }
+  }
+  EXPECT_EQ(4u, NumDtorCalls);
+}
+
 }  // anonymous namespace

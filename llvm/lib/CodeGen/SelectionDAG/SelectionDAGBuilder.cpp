@@ -1978,6 +1978,16 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
               DAG.getConstant(0, getCurSDLoc(), MVT::getIntegerVT(8))));
     }
 
+    if (VT == MVT::externref || VT == MVT::funcref) {
+      assert(C->isNullValue() && "Can only zero this target type!");
+      // The zero value of a WebAssembly reference type is the null reference,
+      // materialized with ref.null.
+      Intrinsic::ID IID = VT == MVT::externref ? Intrinsic::wasm_ref_null_extern
+                                               : Intrinsic::wasm_ref_null_func;
+      return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, getCurSDLoc(), VT,
+                         DAG.getTargetConstant(IID, getCurSDLoc(), MVT::i32));
+    }
+
     VectorType *VecTy = cast<VectorType>(V->getType());
 
     // Now that we know the number and type of the elements, get that number of
@@ -7219,6 +7229,43 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
         DAG.getTargetConstant(static_cast<int>(SemEnum), sdl, MVT::i32);
     setValue(&I, DAG.getNode(ISD::CONVERT_FROM_ARBITRARY_FP, sdl, DstVT, IntVal,
                              SemConst));
+    return;
+  }
+  case Intrinsic::convert_to_arbitrary_fp: {
+    // Extract format metadata and convert to semantics enum.
+    EVT DstVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    Metadata *MD = cast<MetadataAsValue>(I.getArgOperand(1))->getMetadata();
+    StringRef FormatStr = cast<MDString>(MD)->getString();
+    const fltSemantics *DstSem =
+        APFloatBase::getArbitraryFPSemantics(FormatStr);
+    if (!DstSem) {
+      DAG.getContext()->emitError(
+          "convert_to_arbitrary_fp: not implemented format '" + FormatStr +
+          "'");
+      setValue(&I, DAG.getPOISON(DstVT));
+      return;
+    }
+    APFloatBase::Semantics SemEnum = APFloatBase::SemanticsToEnum(*DstSem);
+
+    Metadata *RoundMD =
+        cast<MetadataAsValue>(I.getArgOperand(2))->getMetadata();
+    StringRef RoundStr = cast<MDString>(RoundMD)->getString();
+    std::optional<RoundingMode> RoundMode = convertStrToRoundingMode(RoundStr);
+    assert(RoundMode && *RoundMode != RoundingMode::Dynamic &&
+           "Dynamic rounding mode should have been rejected by the verifier");
+
+    uint64_t Saturate =
+        cast<ConstantInt>(I.getArgOperand(3))->getZExtValue() ? 1 : 0;
+
+    SDValue FloatVal = getValue(I.getArgOperand(0));
+
+    SDValue SemConst =
+        DAG.getTargetConstant(static_cast<int>(SemEnum), sdl, MVT::i32);
+    SDValue RoundConst =
+        DAG.getTargetConstant(static_cast<int>(*RoundMode), sdl, MVT::i32);
+    SDValue SatConst = DAG.getTargetConstant(Saturate, sdl, MVT::i32);
+    setValue(&I, DAG.getNode(ISD::CONVERT_TO_ARBITRARY_FP, sdl, DstVT, FloatVal,
+                             SemConst, RoundConst, SatConst));
     return;
   }
   case Intrinsic::set_rounding:

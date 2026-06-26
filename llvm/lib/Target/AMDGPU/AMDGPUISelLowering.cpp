@@ -492,8 +492,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
     setOperationAction({ISD::BSWAP, ISD::CTTZ, ISD::CTLZ}, VT, Expand);
 
-    // AMDGPU uses ADDC/SUBC/ADDE/SUBE
-    setOperationAction({ISD::ADDC, ISD::SUBC, ISD::ADDE, ISD::SUBE}, VT, Legal);
+    setOperationAction({ISD::ADDC, ISD::SUBC, ISD::ADDE, ISD::SUBE}, VT,
+                       Expand);
   }
 
   // The hardware supports 32-bit FSHR, but not FSHL.
@@ -1041,6 +1041,7 @@ bool AMDGPUTargetLowering::isZExtFree(EVT Src, EVT Dest) const {
 bool AMDGPUTargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
                                                  EVT DestVT) const {
   switch (N->getOpcode()) {
+  case ISD::ABS:
   case ISD::ADD:
   case ISD::SUB:
   case ISD::SHL:
@@ -1056,6 +1057,7 @@ bool AMDGPUTargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
   case ISD::SMAX:
   case ISD::UMIN:
   case ISD::UMAX:
+  case ISD::USUBSAT:
     if (isTypeLegal(MVT::i16) &&
         (!DestVT.isVector() ||
          !isOperationLegal(ISD::ADD, MVT::v2i16))) { // Check if VOP3P
@@ -2423,8 +2425,11 @@ SDValue AMDGPUTargetLowering::LowerSDIVREM(SDValue Op,
       return Res;
   }
 
-  if (VT == MVT::i64 &&
-      DAG.ComputeNumSignBits(LHS) > 32 &&
+  // LHS must have > 33 sign-bits to ensure that LHS != -2147483648
+  // Otherwise 32-bit division cannot be used safely.
+  // -2147483648/1 and -2147483648/-1 are not equal,
+  // but they produce the same lower 32-bit result.
+  if (VT == MVT::i64 && DAG.ComputeNumSignBits(LHS) > 33 &&
       DAG.ComputeNumSignBits(RHS) > 32) {
     EVT HalfVT = VT.getHalfSizedIntegerVT(*DAG.getContext());
 

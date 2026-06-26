@@ -25,6 +25,8 @@
 
 #define CPU_SETSIZE __CPU_SETSIZE
 #define NCPUBITS __NCPUBITS
+#define CPU_CLR_S(cpu, setsize, set) __sched_clrcpuset(cpu, setsize, set)
+#define CPU_CLR(cpu, set) CPU_CLR_S(cpu, sizeof(cpu_set_t), set)
 #define CPU_COUNT_S(setsize, set) __sched_getcpucount(setsize, set)
 #define CPU_COUNT(set) CPU_COUNT_S(sizeof(cpu_set_t), set)
 #define CPU_ZERO_S(setsize, set) __sched_setcpuzero(setsize, set)

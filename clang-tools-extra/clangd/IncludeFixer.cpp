@@ -613,13 +613,6 @@ IncludeFixer::lookupCached(const SymbolID &ID) const {
   Index.lookup(Req, [&](const Symbol &Sym) { Matches.insert(Sym); });
   auto Syms = std::move(Matches).build();
 
-  std::vector<Fix> Fixes;
-  if (!Syms.empty()) {
-    auto &Matched = *Syms.begin();
-    if (!Matched.IncludeHeaders.empty() && Matched.Definition &&
-        Matched.CanonicalDeclaration.FileURI == Matched.Definition.FileURI)
-      Fixes = fixesForSymbols(Syms);
-  }
   auto E = LookupCache.try_emplace(ID, std::move(Syms));
   return &E.first->second;
 }
