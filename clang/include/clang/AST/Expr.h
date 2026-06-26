@@ -28,6 +28,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SyncScope.h"
 #include "clang/Basic/TypeTraits.h"
+#include "clang/Lex/TextEncoding.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
@@ -2068,6 +2069,11 @@ public:
   StringRef getIdentKindName() const {
     return getIdentKindName(getIdentKind());
   }
+
+  static std::string
+  ComputeNameAndTranslate(PredefinedIdentKind IK, const Decl *CurrentDecl,
+                          TextEncoding &TE,
+                          bool ForceElaboratedPrinting = false);
 
   static std::string ComputeName(PredefinedIdentKind IK,
                                  const Decl *CurrentDecl,
