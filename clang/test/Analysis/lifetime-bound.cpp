@@ -14,68 +14,68 @@ void clang_analyzer_dumpLifetimeOriginsOf(A&);
 
 // Ref type parameter annotated case.
 struct X {
-  int& choose(int& a [[clang::lifetimebound]]) { return a; }
+  int &choose(int &a [[clang::lifetimebound]]) { return a; }
 };
 
 void caller() {
   int v = 0;
   X obj;
-  int& r = obj.choose(v);
+  int &r = obj.choose(v);
   clang_analyzer_dumpLifetimeOriginsOf(r); // expected-warning {{Origin &v bound to v}}
 }
 
 // Obj ref type function return annotated case.
 struct Y {
   A a;
-  A& getA() [[clang::lifetimebound]] { return a; }
+  A &getA() [[clang::lifetimebound]] { return a; }
 };
 
 void caller_two() {
   // Return statement is annotated case.
   Y y;
-  A& f = y.getA();
+  A &f = y.getA();
   clang_analyzer_dumpLifetimeOriginsOf(f); // expected-warning {{Origin &y.a bound to y}}
 }
 
 // Obj ptr type function return annotated case.
 struct Z {
   A a;
-  A* getA() [[clang::lifetimebound]] { return &a; }
+  A *getA() [[clang::lifetimebound]] { return &a; }
 };
 
 void caller_three() {
   Z z;
-  A* func = z.getA();
+  A *func = z.getA();
   clang_analyzer_dumpLifetimeOriginsOf(func); // expected-warning {{Origin &z.a bound to z}}
 }
 
 // Free function with annotated param and ref return.
-int& foo(int& num [[clang::lifetimebound]]) { return num; }
+int &foo(int &num [[clang::lifetimebound]]) { return num; }
 
 void caller_four() {
   int num = 5;
-  int& s = foo(num);
+  int &s = foo(num);
   clang_analyzer_dumpLifetimeOriginsOf(s); // expected-warning {{Origin &num bound to num}}
 }
 
 // Free function with annotated param and ptr return.
-int* boo(int* num [[clang::lifetimebound]]) { return num; }
+int *boo(int *num [[clang::lifetimebound]]) { return num; }
 
 void caller_five() {
   int n = 55;
-  int* n_ptr = &n;
-  int* s = boo(n_ptr);
+  int *n_ptr = &n;
+  int *s = boo(n_ptr);
 
   clang_analyzer_dumpLifetimeOriginsOf(s); // expected-warning {{Origin &n bound to n}}
 }
 
 // Free function with both annotated and non-annotated parameters.
-int& fn(int& f, int& s [[clang::lifetimebound]]) { return s; }
+int &fn(int &f, int &s [[clang::lifetimebound]]) { return s; }
 
 void caller_six() {
   int even = 50;
   int odd = 55;
-  int& s = fn(even, odd);
+  int &s = fn(even, odd);
 
   clang_analyzer_dumpLifetimeOriginsOf(s); // expected-warning {{Origin &odd bound to odd}}
 }
@@ -85,41 +85,41 @@ void caller_six() {
 // These are the cases when the result of function calls are SymbolRefs.
 
 // Function returns ptr and has an annotated parameter.
-int* foo(int* n [[clang::lifetimebound]]);
+int *foo(int *n [[clang::lifetimebound]]);
 
 void caller_seven() {
   int y = 15;
-  int* y_ptr = &y;
-  auto* bind = foo(y_ptr);
+  int *y_ptr = &y;
+  auto *bind = foo(y_ptr);
 
   clang_analyzer_dumpLifetimeOriginsOf(bind); // expected-warning-re {{Origin &SymRegion{{.*}} bound to y}}
 }
 
 // Function returns a reference and has an annotated parameter.
-int& func(int& some_number [[clang::lifetimebound]]);
+int &func(int &some_number [[clang::lifetimebound]]);
 
 void caller_eight() {
   int f = 15;
-  auto& bind = func(f);
+  auto &bind = func(f);
 
   clang_analyzer_dumpLifetimeOriginsOf(bind); // expected-warning-re {{Origin &SymRegion{{.*}} bound to f}}
 }
 
 // Function returns a reference and has two annotated parameters.
-int& f(int& a [[clang::lifetimebound]], int& b [[clang::lifetimebound]]);
+int &f(int &a [[clang::lifetimebound]], int &b [[clang::lifetimebound]]);
 
 void caller_nine() {
   int first_num = 1;
   int second_num = 2;
-  int& numbers = f(first_num, second_num);
+  int &numbers = f(first_num, second_num);
 
   clang_analyzer_dumpLifetimeOriginsOf(numbers); // expected-warning-re {{Origin &SymRegion{{.*}} bound to first_num, second_num}}
 }
 
 struct View {
-  int* p;
+  int *p;
 };
-View makeView(int& x [[clang::lifetimebound]]);
+View makeView(int &x [[clang::lifetimebound]]);
 
 void clang_analyzer_dumpLifetimeOriginsOf(View);
 
@@ -161,10 +161,59 @@ void no_return() {
   (void)p; // no-warning
 }
 
-int* g() {
+int *g() {
   int i = 5;
-  int* p = test_func(&i);
+  int *p = test_func(&i);
   (void)p;
   return nullptr; // no-warning
+}
+
+int &multi_param_test_ref(int &a [[clang::lifetimebound]], int &b [[clang::lifetimebound]]);
+
+// Return value bound to annotated parameters (two dangling sources).
+int &dangling_sources_ref() {
+  int x = 1, y = 2;
+  return multi_param_test_ref(x, y);
+  // expected-warning@-1 {{Returning value bound to 'x' that will go out of scope}}
+  // expected-warning@-2 {{Returning value bound to 'y' that will go out of scope}}
+  // expected-warning@-3 {{reference to stack memory associated with local variable 'x' returned}}
+  // expected-warning@-4 {{reference to stack memory associated with local variable 'y' returned}}
+}
+
+// Return value bound to annotated parameters (no dangling sources).
+int &no_dangling_sources_ref(int &a [[clang::lifetimebound]], int &b [[clang::lifetimebound]]) {
+  return multi_param_test_ref(a, b); // no-warning
+}
+
+// Return value bound to annotated parameters (one dangling source).
+int &one_dangling_source_ref(int &a [[clang::lifetimebound]]) {
+  int x = 1;
+  return multi_param_test_ref(a, x);
+  // expected-warning@-1 {{Returning value bound to 'x' that will go out of scope}}
+  // expected-warning@-2 {{reference to stack memory associated with local variable 'x' returned}}
+}
+
+int *multi_param_test_ptr(int *a [[clang::lifetimebound]], int *b [[clang::lifetimebound]]);
+
+// Return value bound to annotated parameters (two dangling sources).
+int *dangling_sources_ptr() {
+  int x = 1, y = 2;
+  int *x_ptr = &x;
+  int *y_ptr = &y;
+  return multi_param_test_ptr(x_ptr, y_ptr);
+  // expected-warning@-1 {{Returning value bound to 'x' that will go out of scope}}
+  // expected-warning@-2 {{Returning value bound to 'y' that will go out of scope}}
+}
+
+// Return value bound to annotated parameters (no dangling sources).
+int *no_dangling_sources_ptr(int *a [[clang::lifetimebound]], int *b [[clang::lifetimebound]]) {
+  return multi_param_test_ptr(a, b); // no-warning
+}
+
+// Return value bound to annotated parameters (one dangling source).
+int *one_dangling_source_ptr(int *a [[clang::lifetimebound]]) {
+  int x = 1;
+  int *x_ptr = &x;
+  return multi_param_test_ptr(a, x_ptr); // expected-warning {{Returning value bound to 'x' that will go out of scope}}
 }
 
