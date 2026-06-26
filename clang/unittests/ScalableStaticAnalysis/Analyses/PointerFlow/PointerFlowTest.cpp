@@ -1477,8 +1477,7 @@ TEST_F(PointerFlowTest, RefBindCallArgDefaulted) {
   auto *Sum = getEntitySummary("f");
 
   ASSERT_NE(Sum, nullptr);
-  EXPECT_EQ(*Sum,
-            makeEdges(__LINE__, {{{"x", 1U}, {"global_default", 1U}}}));
+  EXPECT_EQ(*Sum, makeEdges(__LINE__, {{{"x", 1U}, {"global_default", 1U}}}));
 }
 
 TEST_F(PointerFlowTest, RefBindMemberInit) {
