@@ -1856,8 +1856,9 @@ void AccAttributeVisitor::Post(const parser::Name &name) {
             context_.Warn(
                 common::LanguageFeature::OpenAccDefaultNoneScalarsStrict,
                 name.source,
-                "Implicit attribute inferred for DEFAULT(NONE) scalar '%s'"_warn_en_US,
-                symbol.name());
+                "OpenACC DEFAULT(NONE) ignored for scalar '%s' (%s)"_warn_en_US,
+                symbol.name(),
+                context_.openAccDefaultNoneScalarsStrictDisableOption());
           } else {
             context_.Say(name.source,
                 "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-mapping clause"_err_en_US,

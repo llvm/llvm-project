@@ -57,7 +57,7 @@ def MathExpandOpsPass : Pass<"math-expand-ops"> {
     `math.acosh` operations. If the list is empty, then all expansions are
     applied.
   }];
-  let dependentDialects = ["arith::ArithDialect"];
+  let dependentDialects = ["arith::ArithDialect", "mlir::tensor::TensorDialect"];
   let options = [
     ListOption<"opMnemonics", "ops", "std::string",
                "Operations to expand.">

@@ -61,6 +61,8 @@ add_libc_test(
     stringview_test.cpp
   DEPENDS
     libc.src.__support.CPP.string_view
+    libc.src.__support.CPP.type_traits
+    libc.src.string.memory_utils.inline_memcpy
 )
 
 add_libc_test(

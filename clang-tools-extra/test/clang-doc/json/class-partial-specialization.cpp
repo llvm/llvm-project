@@ -14,7 +14,7 @@
 // CHECK-NEXT:   "Specialization": {
 // CHECK-NEXT:     "Parameters": [
 // CHECK-NEXT:       {
-// CHECK-NEXT:         "Param": "T*",
+// CHECK-NEXT:         "Param": "T *",
 // CHECK-NEXT:         "SpecParamEnd": true
 // CHECK-NEXT:       }
 // CHECK-NEXT:     ],

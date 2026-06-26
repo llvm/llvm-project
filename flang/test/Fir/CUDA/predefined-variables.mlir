@@ -234,3 +234,87 @@ func.func @_QMbarPgfoo2(%arg0: !fir.ref<i32> {cuf.data_attr = #cuf.cuda<device>,
 // CHECK: fir.store %[[ADD]] to %{{.*}} : !fir.ref<i32>
 // CHECK: fir.if
 // CHECK: fir.store %[[ADD]] to %{{.*}} : !fir.ref<i32>
+
+// -----
+
+func.func @surviving_predefined_vars(%arg0: i32, %arg1: i32, %arg2: i32) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %cst = arith.constant 0.000000e+00 : f64
+  %i0 = arith.constant 0 : i32
+  %i1 = arith.constant 1 : i32
+
+  %v0 = fir.alloca i32 {uniq_name = "_QFminiEi"}
+  %v1 = fir.alloca i32 {uniq_name = "_QFminiEj"}
+  %sum = fir.alloca f64 {uniq_name = "_QFminiEsum"}
+  %sum_d = fir.declare %sum {uniq_name = "_QFminiEsum"} : (!fir.ref<f64>) -> !fir.ref<f64>
+
+  cuf.kernel<<<*, *>>> (%iv0 : index, %iv1 : index, %iv2 : index) = (%c0, %c0, %c0 : index, index, index) to (%c1, %c1, %c1 : index, index, index) step (%c1, %c1, %c1 : index, index, index) {
+    %dim = fir.address_of(@_QM__fortran_builtinsE__builtin_blockdim) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+    %bid = fir.address_of(@_QM__fortran_builtinsE__builtin_blockidx) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+    %gdim = fir.address_of(@_QM__fortran_builtinsE__builtin_griddim) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+    %tid = fir.address_of(@_QM__fortran_builtinsE__builtin_threadidx) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+
+    %d_dim = fir.declare %dim {uniq_name = "_QM__fortran_builtinsE__builtin_blockdim"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+    %d_bid = fir.declare %bid {uniq_name = "_QM__fortran_builtinsE__builtin_blockidx"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+    %d_gdim = fir.declare %gdim {uniq_name = "_QM__fortran_builtinsE__builtin_griddim"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+    %d_tid = fir.declare %tid {uniq_name = "_QM__fortran_builtinsE__builtin_threadidx"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+
+    fir.store %i0 to %v0 : !fir.ref<i32>
+    fir.store %i1 to %v1 : !fir.ref<i32>
+    fir.store %cst to %sum_d : !fir.ref<f64>
+    "fir.end"() : () -> ()
+  } {n = 3 : i64}
+
+  return
+}
+
+// CHECK-LABEL: surviving_predefined_vars
+// CHECK-NOT: _QM__fortran_builtinsE__builtin_blockdim
+// CHECK-NOT: _QM__fortran_builtinsE__builtin_blockidx
+// CHECK-NOT: _QM__fortran_builtinsE__builtin_griddim
+// CHECK-NOT: _QM__fortran_builtinsE__builtin_threadidx
+
+
+// -----
+
+func.func @surviving_predefined_vars(%arg0: i32, %arg1: i32, %arg2: i32) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %cst = arith.constant 0.000000e+00 : f64
+  %i0 = arith.constant 0 : i32
+  %i1 = arith.constant 1 : i32
+
+  %v0 = fir.alloca i32 {uniq_name = "_QFminiEi"}
+  %v1 = fir.alloca i32 {uniq_name = "_QFminiEj"}
+  %sum = fir.alloca f64 {uniq_name = "_QFminiEsum"}
+  %sum_d = fir.declare %sum {uniq_name = "_QFminiEsum"} : (!fir.ref<f64>) -> !fir.ref<f64>
+
+  cuf.kernel<<<*, *>>> (%iv0 : index, %iv1 : index, %iv2 : index) = (%c0, %c0, %c0 : index, index, index) to (%c1, %c1, %c1 : index, index, index) step (%c1, %c1, %c1 : index, index, index) {
+    %dim = fir.address_of(@_QM__fortran_builtinsE__builtin_blockdim) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+    %bid = fir.address_of(@_QM__fortran_builtinsE__builtin_blockidx) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+    %gdim = fir.address_of(@_QM__fortran_builtinsE__builtin_griddim) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+    %tid = fir.address_of(@_QM__fortran_builtinsE__builtin_threadidx) : !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+
+    %d_dim = fir.declare %dim {uniq_name = "_QM__fortran_builtinsE__builtin_blockdim"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+    %d_bid = fir.declare %bid {uniq_name = "_QM__fortran_builtinsE__builtin_blockidx"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+    %d_gdim = fir.declare %gdim {uniq_name = "_QM__fortran_builtinsE__builtin_griddim"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+    %d_tid = fir.declare %tid {uniq_name = "_QM__fortran_builtinsE__builtin_threadidx"} : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>
+
+    %0 = fir.coordinate_of %d_tid, x : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_dim3{x:i32,y:i32,z:i32}>>) -> !fir.ref<i32>
+    %1 = fir.load %0 : !fir.ref<i32>
+    fir.store %1 to %v0 : !fir.ref<i32>
+    "fir.end"() : () -> ()
+  } {n = 3 : i64}
+
+  return
+}
+
+// CHECK-LABEL: surviving_predefined_vars
+// CHECK-NOT: _QM__fortran_builtinsE__builtin_blockdim
+// CHECK-NOT: _QM__fortran_builtinsE__builtin_blockidx
+// CHECK-NOT: _QM__fortran_builtinsE__builtin_griddim
+// CHECK-NOT: _QM__fortran_builtinsE__builtin_threadidx
+// CHECK: nvvm.read.ptx.sreg.tid.x

@@ -2463,9 +2463,15 @@ bool RISCVTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   if (Subtarget.hasVInstructions() && isa<VectorType>(Ty))
     return AM.HasBaseReg && AM.Scale == 0 && !AM.BaseOffs;
 
-  // Require a 12-bit signed offset.
-  if (!isInt<12>(AM.BaseOffs))
+  // The Xqcilo extension provides load/store instructions with a 26-bit signed
+  // offset.
+  if (Subtarget.hasVendorXqcilo()) {
+    if (!isInt<26>(AM.BaseOffs))
+      return false;
+  } else if (!isInt<12>(AM.BaseOffs)) {
+    // Otherwise require a 12-bit signed offset.
     return false;
+  }
 
   switch (AM.Scale) {
   case 0: // "r+i" or just "i", depending on HasBaseReg.
@@ -2486,6 +2492,10 @@ bool RISCVTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
 }
 
 bool RISCVTargetLowering::isLegalAddImmediate(int64_t Imm) const {
+  // The Xqcilia extension provides add-immediate instructions with a 26-bit
+  // signed immediate.
+  if (Subtarget.hasVendorXqcilia())
+    return isInt<26>(Imm);
   return isInt<12>(Imm);
 }
 
@@ -16450,7 +16460,13 @@ static SDValue transformAddImmMulImm(SDNode *N, SelectionDAG &DAG,
   int64_t C0 = N0C->getSExtValue();
   int64_t C1 = N1C->getSExtValue();
   int64_t CA, CB;
-  if (C0 == -1 || C0 == 0 || C0 == 1 || isInt<12>(C1))
+  // If C1 already fits in an add immediate, there is nothing to split out: the
+  // (add (mul x, c0), c1) form is already canonical/cheap. Splitting it would
+  // fight the generic DAGCombiner fold add(mul(add(A, CA), CM), CB) ->
+  // add(mul(A, CM), CM*CA+CB) (which is gated on isLegalAddImmediate) and cause
+  // an infinite loop.
+  if (C0 == -1 || C0 == 0 || C0 == 1 ||
+      Subtarget.getTargetLowering()->isLegalAddImmediate(C1))
     return SDValue();
   // Search for proper CA (non-zero) and CB that both are simm12.
   if ((C1 / C0) != 0 && isInt<12>(C1 / C0) && isInt<12>(C1 % C0) &&

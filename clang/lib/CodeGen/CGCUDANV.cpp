@@ -342,44 +342,41 @@ void CGNVCUDARuntime::emitDeviceStub(CodeGenFunction &CGF,
     emitDeviceStubBodyLegacy(CGF, Args);
 }
 
-/// CUDA passes the arguments with a level of indirection. For example, a
-/// (void*, short, void*) is passed as {void **, short *, void **} to the launch
-/// function. For the LLVM/offload launch we flatten the arguments into the
-/// struct directly. In addition, we include the size of the arguments, thus
-/// pass {sizeof({void *, short, void *}), ptr to {void *, short, void *},
-/// nullptr}. The last nullptr needs to be initialized to an array of pointers
-/// pointing to the arguments if we want to offload to the host.
+/// Build the input as a sized array of pointers so that it can be launched by
+/// the offloading runtime.
 Address CGNVCUDARuntime::prepareKernelArgsLLVMOffload(CodeGenFunction &CGF,
                                                       FunctionArgList &Args) {
   SmallVector<llvm::Type *> ArgTypes, KernelLaunchParamsTypes;
   for (auto &Arg : Args)
     ArgTypes.push_back(CGF.ConvertTypeForMem(Arg->getType()));
   llvm::StructType *KernelArgsTy = llvm::StructType::create(ArgTypes);
+  llvm::Type *KernelArgsPtrsTy = llvm::ArrayType::get(PtrTy, Args.size());
 
-  auto *Int64Ty = CGF.Builder.getInt64Ty();
-  KernelLaunchParamsTypes.push_back(Int64Ty);
-  KernelLaunchParamsTypes.push_back(PtrTy);
+  auto *Int32Ty = CGF.Builder.getInt32Ty();
+  KernelLaunchParamsTypes.push_back(Int32Ty);
   KernelLaunchParamsTypes.push_back(PtrTy);
 
   llvm::StructType *KernelLaunchParamsTy =
       llvm::StructType::create(KernelLaunchParamsTypes);
   Address KernelArgs = CGF.CreateTempAllocaWithoutCast(
       KernelArgsTy, CharUnits::fromQuantity(16), "kernel_args");
+  Address KernelArgsPtrs = CGF.CreateTempAllocaWithoutCast(
+      KernelArgsPtrsTy, CharUnits::fromQuantity(16), "kernel_args_ptrs");
   Address KernelLaunchParams = CGF.CreateTempAllocaWithoutCast(
       KernelLaunchParamsTy, CharUnits::fromQuantity(16),
       "kernel_launch_params");
 
-  auto KernelArgsSize = CGM.getDataLayout().getTypeAllocSize(KernelArgsTy);
-  CGF.Builder.CreateStore(llvm::ConstantInt::get(Int64Ty, KernelArgsSize),
+  CGF.Builder.CreateStore(llvm::ConstantInt::get(Int32Ty, Args.size()),
                           CGF.Builder.CreateStructGEP(KernelLaunchParams, 0));
-  CGF.Builder.CreateStore(KernelArgs.emitRawPointer(CGF),
+  CGF.Builder.CreateStore(KernelArgsPtrs.emitRawPointer(CGF),
                           CGF.Builder.CreateStructGEP(KernelLaunchParams, 1));
-  CGF.Builder.CreateStore(llvm::Constant::getNullValue(PtrTy),
-                          CGF.Builder.CreateStructGEP(KernelLaunchParams, 2));
 
   for (unsigned i = 0; i < Args.size(); ++i) {
     auto *ArgVal = CGF.Builder.CreateLoad(CGF.GetAddrOfLocalVar(Args[i]));
-    CGF.Builder.CreateStore(ArgVal, CGF.Builder.CreateStructGEP(KernelArgs, i));
+    Address ArgAddr = CGF.Builder.CreateStructGEP(KernelArgs, i);
+    CGF.Builder.CreateStore(ArgVal, ArgAddr);
+    CGF.Builder.CreateStore(ArgAddr.emitRawPointer(CGF),
+                            CGF.Builder.CreateConstArrayGEP(KernelArgsPtrs, i));
   }
 
   return KernelLaunchParams;

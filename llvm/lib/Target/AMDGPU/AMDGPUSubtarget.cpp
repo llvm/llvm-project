@@ -52,7 +52,10 @@ AMDGPUSubtarget::getMaxLocalMemSizeWithWaveCount(unsigned NWaves,
 std::pair<unsigned, unsigned> AMDGPUSubtarget::getOccupancyWithWorkGroupSizes(
     uint32_t LDSBytes, std::pair<unsigned, unsigned> FlatWorkGroupSizes) const {
 
-  // FIXME: We should take into account the LDS allocation granularity.
+  // LDS granularity accounted for by aligning the queried LDS size to the
+  // allocation block size.
+  const unsigned Granularity = std::max(LDSAllocationGranularity, 1u);
+  LDSBytes = alignTo(LDSBytes, Granularity);
   const unsigned MaxWGsLDS = getLocalMemorySize() / std::max(LDSBytes, 1u);
 
   // Queried LDS size may be larger than available on a CU, in which case we

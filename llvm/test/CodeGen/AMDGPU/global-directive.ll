@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -check-prefix=SI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI %s
 
 ; Make sure the GlobalDirective isn't merged with the function name

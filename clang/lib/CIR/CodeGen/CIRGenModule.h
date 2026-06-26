@@ -195,19 +195,8 @@ public:
   /// LabelOp. This provides the main lookup table used to resolve block
   /// addresses into their label operations.
   llvm::DenseMap<cir::BlockAddrInfoAttr, cir::LabelOp> blockAddressInfoToLabel;
-  /// Map CIR BlockAddressOps directly to their resolved LabelOps.
-  /// Used once a block address has been successfully lowered to a label.
-  llvm::MapVector<cir::BlockAddressOp, cir::LabelOp> blockAddressToLabel;
-  /// Track CIR BlockAddressOps that cannot be resolved immediately
-  /// because their LabelOp has not yet been emitted. These entries
-  /// are solved later once the corresponding label is available.
-  llvm::DenseSet<cir::BlockAddressOp> unresolvedBlockAddressToLabel;
   cir::LabelOp lookupBlockAddressInfo(cir::BlockAddrInfoAttr blockInfo);
   void mapBlockAddress(cir::BlockAddrInfoAttr blockInfo, cir::LabelOp label);
-  void mapUnresolvedBlockAddress(cir::BlockAddressOp op);
-  void mapResolvedBlockAddress(cir::BlockAddressOp op, cir::LabelOp);
-  void updateResolvedBlockAddress(cir::BlockAddressOp op,
-                                  cir::LabelOp newLabel);
 
   /// Add a global value to the llvmUsed list.
   void addUsedGlobal(cir::CIRGlobalValueInterface gv);

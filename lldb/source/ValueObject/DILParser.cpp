@@ -548,8 +548,10 @@ std::optional<CompilerType> DILParser::ParseBuiltinType() {
   bool first_word = true;
   while (CurToken().GetKind() == Token::identifier) {
     if (CurToken().GetSpelling() == "const" ||
-        CurToken().GetSpelling() == "volatile")
+        CurToken().GetSpelling() == "volatile") {
+      m_dil_lexer.Advance();
       continue;
+    }
     if (!first_word)
       type_name.push_back(' ');
     else

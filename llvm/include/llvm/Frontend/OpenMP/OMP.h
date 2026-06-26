@@ -96,6 +96,16 @@ static constexpr inline bool isDataSharingAttributeClause(Clause C,
   }
 }
 
+static constexpr inline bool isEndClause(Clause C) {
+  switch (C) {
+  case OMPC_copyprivate:
+  case OMPC_nowait:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static constexpr unsigned FallbackVersion = 52;
 LLVM_ABI ArrayRef<unsigned> getOpenMPVersions();
 

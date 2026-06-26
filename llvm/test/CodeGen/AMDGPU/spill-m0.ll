@@ -1,4 +1,4 @@
-; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=1 -mtriple=amdgcn < %s | FileCheck -enable-var-scope -check-prefix=TOVGPR -check-prefix=GCN %s
+; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=1 -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -enable-var-scope -check-prefix=TOVGPR -check-prefix=GCN %s
 ; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=1 -mtriple=amdgcn -mcpu=tonga  < %s | FileCheck -enable-var-scope -check-prefix=TOVGPR -check-prefix=GCN %s
 ; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=0 -mtriple=amdgcn -mcpu=tahiti < %s | FileCheck -enable-var-scope -check-prefix=TOVMEM -check-prefix=GCN %s
 ; RUN: llc -O0 -amdgpu-spill-sgpr-to-vgpr=0 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -enable-var-scope -check-prefix=TOVMEM -check-prefix=GCN %s

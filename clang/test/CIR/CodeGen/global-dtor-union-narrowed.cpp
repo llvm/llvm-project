@@ -34,7 +34,7 @@ S g;
 // LLVM: define internal void @__cxx_global_array_dtor(ptr noundef %[[A0:.*]])
 // LLVM:   call void @_ZN1SD2Ev(ptr %[[A0]])
 // LLVM: define internal void @__cxx_global_var_init()
-// LLVM:   call void @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr @g, ptr @__dso_handle)
+// LLVM:   call i32 @__cxa_atexit(ptr @__cxx_global_array_dtor, ptr @g, ptr @__dso_handle)
 
 // OGCG: @g = global { { { [16 x i8] } } } zeroinitializer
 // OGCG: define internal void @__cxx_global_var_init()

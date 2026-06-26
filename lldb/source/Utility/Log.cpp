@@ -378,12 +378,8 @@ void StreamLogHandler::Flush() {
 }
 
 void StreamLogHandler::Emit(llvm::StringRef message) {
-  if (m_stream.GetBufferSize() > 0) {
-    std::lock_guard<std::mutex> guard(m_mutex);
-    m_stream << message;
-  } else {
-    m_stream << message;
-  }
+  std::lock_guard<std::mutex> guard(m_mutex);
+  m_stream << message;
 }
 
 CallbackLogHandler::CallbackLogHandler(lldb::LogOutputCallback callback,

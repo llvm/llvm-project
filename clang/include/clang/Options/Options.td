@@ -4694,6 +4694,14 @@ def floop_interchange : Flag<["-"], "floop-interchange">, Group<f_Group>,
   HelpText<"Enable the loop interchange pass">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def fno_loop_interchange: Flag<["-"], "fno-loop-interchange">, Group<f_Group>,
   HelpText<"Disable the loop interchange pass">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
+defm enable_new_pm_codegen
+    : BoolFOption<"enable-new-pm-codegen", CodeGenOpts<"EnableNewPMCodeGen">, DefaultFalse,
+                  NegFlag<SetFalse, [], [CC1Option],
+                          "Do not use the NewPM for the Codegen Pipeline">,
+                  PosFlag<SetTrue, [], [CC1Option],
+                          "Use the NewPM for the Codegen Pipeline">>,
+      DocBrief<
+          [{When enabled, use the NewPM to drive the Codegen pipeline.}]>;
 defm experimental_loop_fusion
     : OptInCC1FFlag<"experimental-loop-fusion", "Enable", "Disable",
                     "Enable the loop fusion pass",

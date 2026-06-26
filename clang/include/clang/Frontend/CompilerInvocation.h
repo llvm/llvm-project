@@ -21,8 +21,10 @@
 #include "clang/Frontend/MigratorOptions.h"
 #include "clang/Frontend/PreprocessorOutputOptions.h"
 #include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/ScopeExit.h"
+
 #include <memory>
 #include <string>
 
@@ -126,6 +128,9 @@ protected:
   /// Dummy tag type whose instance can be passed into the constructor to
   /// prevent creation of the reference-counted option objects.
   struct EmptyConstructor {};
+
+  /// Tag for the shallow-copy constructor below.
+  struct ShallowConstructor {};
 
   CompilerInvocationBase();
   CompilerInvocationBase(EmptyConstructor) {}
@@ -251,6 +256,15 @@ public:
   explicit CompilerInvocation(const CowCompilerInvocation &X);
   CompilerInvocation &operator=(const CowCompilerInvocation &X);
 
+  /// Move-construct/move-assign from a \c CowCompilerInvocation. Steals the
+  /// (potentially copy-on-written) option group pointers without deep-copying;
+  /// \p X is left empty. Useful to receive results of mutating a temporary
+  /// Cow alias back into a \c CompilerInvocation.
+  /// @{
+  explicit CompilerInvocation(CowCompilerInvocation &&X);
+  CompilerInvocation &operator=(CowCompilerInvocation &&X);
+  /// @}
+
   /// Const getters.
   /// @{
   // Note: These need to be pulled in manually. Otherwise, they get hidden by
@@ -291,6 +305,22 @@ public:
     return *PreprocessorOutputOpts;
   }
   ssaf::SSAFOptions &getSSAFOpts() { return *SSAFOpts; }
+  /// @}
+
+  /// Invokes the \a Fn with CowCompilerInvocation representing \c this.
+  /// The \a Fn must not directly modify \c this.
+  /// The provided \c CowCompilerInvocation must not escape \a Fn.
+  template <class R>
+  R withCowRef(llvm::function_ref<R(CowCompilerInvocation &)> Fn);
+  template <class R>
+  R withCowRef(llvm::function_ref<R(const CowCompilerInvocation &)> Fn) const;
+
+  /// Visitation.
+  /// @{
+  /// Visits paths stored in the invocation. The callback may return true to
+  /// short-circuit the visitation, or return false to continue visiting. This
+  /// is allowed to mutate the visited paths.
+  void visitPaths(llvm::function_ref<bool(std::string &)> Callback);
   /// @}
 
   /// Create a compiler invocation from a list of input options.
@@ -385,6 +415,16 @@ public:
   CowCompilerInvocation(CompilerInvocation &&X)
       : CompilerInvocationBase(std::move(X)) {}
 
+  /// Construct a CowCompilerInvocation that aliases the option storage of \p
+  /// X without deep-copying. Subsequent mutations through getMut*Opts() will
+  /// copy-on-write per group as usual, leaving \p X unaffected. The caller
+  /// must guarantee that \p X is not mutated for the lifetime of the
+  /// constructed invocation.
+  CowCompilerInvocation(ShallowConstructor, const CompilerInvocation &X)
+      : CompilerInvocationBase(EmptyConstructor{}) {
+    shallow_copy_assign(X);
+  }
+
   // Const getters are inherited from the base class.
 
   /// Mutable getters.
@@ -404,7 +444,45 @@ public:
   PreprocessorOutputOptions &getMutPreprocessorOutputOpts();
   ssaf::SSAFOptions &getMutSSAFOpts();
   /// @}
+
+  /// Visits paths stored in the invocation, allowing the callback to mutate
+  /// them. To preserve the copy-on-write invariant for groups whose paths the
+  /// caller might modify, this ensures unique ownership of every option group
+  /// up front; if the callback only inspects (and does not mutate) the paths,
+  /// the const \c visitPaths overload should be used instead to avoid those
+  /// per-group copies.
+  void visitMutPaths(llvm::function_ref<bool(std::string &)> Callback);
 };
+
+template <class R>
+R CompilerInvocation::withCowRef(
+    llvm::function_ref<R(CowCompilerInvocation &)> Fn) {
+  // We use moves to avoid bumping the ref-count of the shared_ptr that holds
+  // individual options. Since we expect \a Fn to actually modify \c CowRef,
+  // this prevents temporary copies.
+  CowCompilerInvocation CowRef = std::move(*this);
+  llvm::scope_exit Mutate([&]() { *this = std::move(CowRef); });
+  return Fn(CowRef);
+}
+
+template <class R>
+R CompilerInvocation::withCowRef(
+    llvm::function_ref<R(const CowCompilerInvocation &)> Fn) const {
+  // We use the shallow constructor. Since \a Fn cannot modify \c CowRef, no
+  // copies will be created, despite the bump to the ref-count of the shared_ptr
+  // that holds individual options.
+  CowCompilerInvocation CowRef(ShallowConstructor{}, *this);
+  return Fn(CowRef);
+}
+
+inline CompilerInvocation::CompilerInvocation(CowCompilerInvocation &&X)
+    : CompilerInvocationBase(std::move(X)) {}
+
+inline CompilerInvocation &
+CompilerInvocation::operator=(CowCompilerInvocation &&X) {
+  CompilerInvocationBase::operator=(std::move(X));
+  return *this;
+}
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>
 createVFSFromCompilerInvocation(const CompilerInvocation &CI,

@@ -39,7 +39,7 @@ subroutine omp_single
 
         !$omp single nowait
             print *, "omp single", j
-        !ERROR: At most one NOWAIT clause can appear on the SINGLE directive
+        !ERROR: At most one NOWAIT clause can appear on SINGLE directive
         !$omp end single nowait
     !$omp end parallel
 

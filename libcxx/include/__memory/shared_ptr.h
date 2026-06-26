@@ -657,7 +657,7 @@ _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> __allocate_shared_impl(const _Alloc& __all
 template <class _Tp, class _Alloc, class... _Args, __enable_if_t<!is_array<_Tp>::value, int> = 0>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> allocate_shared(const _Alloc& __a, _Args&&... __args) {
   using _ControlBlock = __shared_ptr_emplace<_Tp, __allocator_traits_rebind_t<_Alloc, __remove_cv_t<_Tp> > >;
-  return std::__allocate_shared_impl<_ControlBlock, _Tp>(__a, __args...);
+  return std::__allocate_shared_impl<_ControlBlock, _Tp>(__a, std::forward<_Args>(__args)...);
 }
 
 template <class _Tp, class... _Args, __enable_if_t<!is_array<_Tp>::value, int> = 0>

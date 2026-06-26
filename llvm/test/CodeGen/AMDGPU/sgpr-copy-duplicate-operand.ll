@@ -1,4 +1,4 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn < %s | FileCheck -check-prefix=SI %s
+; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -check-prefix=SI %s
 ; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI %s
 
 ; Copy VGPR -> SGPR used twice as an instruction operand, which is then

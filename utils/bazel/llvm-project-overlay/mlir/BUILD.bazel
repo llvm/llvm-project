@@ -13336,6 +13336,7 @@ cc_library(
         ":MathPassIncGen",
         ":Pass",
         ":SCFDialect",
+        ":TensorDialect",
         ":TransformUtils",
         ":VectorDialect",
         ":VectorUtils",

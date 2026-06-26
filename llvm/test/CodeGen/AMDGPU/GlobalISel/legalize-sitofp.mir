@@ -205,8 +205,9 @@ body: |
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX6-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 16
-    ; GFX6-NEXT: [[SITOFP:%[0-9]+]]:_(s16) = G_SITOFP [[SEXT_INREG]](s32)
-    ; GFX6-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SITOFP]](s16)
+    ; GFX6-NEXT: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[SEXT_INREG]](s32)
+    ; GFX6-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[SITOFP]](s32)
+    ; GFX6-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
     ; GFX6-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX8-LABEL: name: test_sitofp_s16_to_s16
     ; GFX8: liveins: $vgpr0
@@ -286,16 +287,18 @@ body: |
     ; GFX6-NEXT: {{  $}}
     ; GFX6-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX6-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 8
-    ; GFX6-NEXT: [[SITOFP:%[0-9]+]]:_(s16) = G_SITOFP [[SEXT_INREG]](s32)
-    ; GFX6-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SITOFP]](s16)
+    ; GFX6-NEXT: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[SEXT_INREG]](s32)
+    ; GFX6-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[SITOFP]](s32)
+    ; GFX6-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
     ; GFX6-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; GFX8-LABEL: name: test_sitofp_s8_to_s16
     ; GFX8: liveins: $vgpr0
     ; GFX8-NEXT: {{  $}}
     ; GFX8-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; GFX8-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 8
-    ; GFX8-NEXT: [[SITOFP:%[0-9]+]]:_(s16) = G_SITOFP [[SEXT_INREG]](s32)
-    ; GFX8-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SITOFP]](s16)
+    ; GFX8-NEXT: [[SITOFP:%[0-9]+]]:_(s32) = G_SITOFP [[SEXT_INREG]](s32)
+    ; GFX8-NEXT: [[FPTRUNC:%[0-9]+]]:_(s16) = G_FPTRUNC [[SITOFP]](s32)
+    ; GFX8-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[FPTRUNC]](s16)
     ; GFX8-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s8) = G_TRUNC %0

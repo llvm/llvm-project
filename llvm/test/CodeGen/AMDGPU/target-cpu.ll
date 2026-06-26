@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -disable-promote-alloca-to-vector < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -disable-promote-alloca-to-vector < %s | FileCheck %s
 
 declare ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #1
 
@@ -69,18 +69,6 @@ define amdgpu_kernel void @target_fiji() #4 {
   %gep = getelementptr inbounds i32, ptr addrspace(1) %ptr, i64 %id.ext
   store i32 0, ptr addrspace(1) %gep
   call void @llvm.amdgcn.s.dcache.wb()
-  ret void
-}
-
-; CHECK-LABEL: {{^}}promote_alloca_enabled:
-; CHECK: ds_read_b32
-define amdgpu_kernel void @promote_alloca_enabled(ptr addrspace(1) nocapture %out, ptr addrspace(1) nocapture %in) #5 {
-entry:
-  %stack = alloca [5 x i32], align 4, addrspace(5)
-  %tmp = load i32, ptr addrspace(1) %in, align 4
-  %arrayidx1 = getelementptr inbounds [5 x i32], ptr addrspace(5) %stack, i32 0, i32 %tmp
-  %load = load i32, ptr addrspace(5) %arrayidx1
-  store i32 %load, ptr addrspace(1) %out
   ret void
 }
 

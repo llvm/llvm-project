@@ -1278,6 +1278,17 @@ namespace NonPrimitiveImplicitValueInitExpr {
   static_assert(m() == 0);
 }
 
+namespace ZeroSizeElems {
+  typedef int U[0];
+
+  constexpr bool foo() {
+    auto p = new U[3.14]; // both-warning {{implicit conversion}}
+    delete[] p;
+    return true;
+  }
+  static_assert(foo());
+}
+
 #else
 /// Make sure we reject this prior to C++20
 constexpr int a() { // both-error {{never produces a constant expression}}

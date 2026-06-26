@@ -339,18 +339,8 @@ llvm::json::Value FileSpec::ToJSON() const {
 
 FileSpec::Style FileSpec::GetPathStyle() const { return m_style; }
 
-void FileSpec::SetDirectory(ConstString directory) {
-  m_directory = directory;
-  PathWasModified();
-}
-
 void FileSpec::SetDirectory(llvm::StringRef directory) {
   m_directory = ConstString(directory);
-  PathWasModified();
-}
-
-void FileSpec::SetFilename(ConstString filename) {
-  m_filename = filename;
   PathWasModified();
 }
 

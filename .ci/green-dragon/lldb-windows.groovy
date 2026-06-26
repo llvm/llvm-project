@@ -51,6 +51,8 @@ pipeline {
                         writeFile file: 'build.bat', text: '''@echo off
 call "C:\\Program Files (x86)\\Microsoft Visual Studio\\2022\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat" || exit /b 1
 
+set "PATH=%PATH%;C:\\Program Files\\Git\\usr\\bin"
+
 cmake -G Ninja ^
     -S llvm ^
     -B ..\\llvm-build\\ ^

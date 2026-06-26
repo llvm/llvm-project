@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn -stop-after=amdgpu-isel < %s | FileCheck -check-prefixes=GCN,SI %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -stop-after=amdgpu-isel < %s | FileCheck -check-prefixes=GCN,SI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -stop-after=amdgpu-isel < %s | FileCheck -check-prefixes=GCN,FP16 %s
-; RUN: llc -mtriple=amdgcn -enable-new-pm -stop-after=amdgpu-isel < %s | FileCheck -check-prefixes=GCN,SI %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -enable-new-pm -stop-after=amdgpu-isel < %s | FileCheck -check-prefixes=GCN,SI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -enable-new-pm -stop-after=amdgpu-isel < %s | FileCheck -check-prefixes=GCN,FP16 %s
 
 

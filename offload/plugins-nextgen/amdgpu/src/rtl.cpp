@@ -4250,36 +4250,25 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
   // Copy explicit arguments.
   size_t ExplicitEnd = 0;
-  if (KernelArgs.Flags.IsPtrArgs) {
-    if (KernelArgs.ArgPtrs) {
-      const auto &ArgMDs = KernelInfo.ArgMDs;
+  if (LaunchParams.Args) {
+    const auto &ArgMDs = KernelInfo.ArgMDs;
+    uint32_t NumArgs = LaunchParams.NumArgs;
 
-      // ArgMDs might also contain hidden implicit arguments, so we can't check
-      // if user-provided NumArgs matches exactly.
-      if (KernelArgs.NumArgs > ArgMDs.size())
-        return Plugin::error(
-            ErrorCode::INVALID_ARGUMENT,
-            "number of arguments (%u) exceeds the number of arguments "
-            "expected by the kernel (%zu)",
-            KernelArgs.NumArgs, ArgMDs.size());
+    if (NumArgs > ArgMDs.size())
+      return Plugin::error(
+          ErrorCode::INVALID_ARGUMENT,
+          "number of arguments (%u) exceeds the number of arguments "
+          "expected by the kernel (%zu)",
+          NumArgs, ArgMDs.size());
 
-      for (size_t I = 0; I < KernelArgs.NumArgs; I++) {
-        auto [Offset, Size] = ArgMDs[I];
-        std::memcpy(utils::advancePtr(AllArgs, Offset), KernelArgs.ArgPtrs[I],
-                    Size);
-      }
-
-      if (KernelArgs.NumArgs) {
-        auto [Offset, Size] = ArgMDs[KernelArgs.NumArgs - 1];
-        ExplicitEnd = Offset + Size;
-      }
+    for (size_t I = 0; I < NumArgs; I++) {
+      auto [Offset, Size] = ArgMDs[I];
+      std::memcpy(utils::advancePtr(AllArgs, Offset), LaunchParams.Args[I],
+                  Size);
     }
-  } else {
-    // TODO: We should expose the args memory manager alloc to the common part
-    // as alternative to copying them twice.
-    if (LaunchParams.Size)
-      std::memcpy(AllArgs, LaunchParams.Data, LaunchParams.Size);
-    ExplicitEnd = LaunchParams.Size;
+
+    auto [Offset, Size] = ArgMDs[NumArgs - 1];
+    ExplicitEnd = Offset + Size;
   }
 
   AMDGPUDeviceTy &AMDGPUDevice = static_cast<AMDGPUDeviceTy &>(GenericDevice);

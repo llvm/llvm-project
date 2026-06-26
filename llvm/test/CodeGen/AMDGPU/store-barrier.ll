@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mattr=+load-store-opt -enable-misched < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -mattr=+load-store-opt -enable-misched < %s | FileCheck %s
 ; RUN: llc -mtriple=amdgcn -mcpu=bonaire -mattr=+load-store-opt -enable-misched < %s | FileCheck %s
 
 ; This test is for a bug in the machine scheduler where stores without

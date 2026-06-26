@@ -3652,8 +3652,13 @@ void RISCVAsmParser::emitLoadLocalAddress(MCInst &Inst, SMLoc IDLoc,
   //             ADDI rdest, rdest, %pcrel_lo(TmpLabel)
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
-  emitAuipcInstPair(DestReg, DestReg, Symbol, RISCV::S_PCREL_HI, RISCV::ADDI,
-                    IDLoc, Out);
+  if (STI->hasFeature(RISCV::Feature32Bit) &&
+      STI->hasFeature(RISCV::FeatureVendorXqcili))
+    emitToStreamer(
+        Out, MCInstBuilder(RISCV::QC_E_LI).addReg(DestReg).addExpr(Symbol));
+  else
+    emitAuipcInstPair(DestReg, DestReg, Symbol, RISCV::S_PCREL_HI, RISCV::ADDI,
+                      IDLoc, Out);
 }
 
 void RISCVAsmParser::emitLoadGlobalAddress(MCInst &Inst, SMLoc IDLoc,

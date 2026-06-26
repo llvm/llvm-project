@@ -173,9 +173,8 @@ struct FunctionsAndLDSAccess {
 
 class AMDGPUSwLowerLDS {
 public:
-  AMDGPUSwLowerLDS(Module &Mod, const AMDGPUTargetMachine &TM,
-                   DomTreeCallback Callback)
-      : M(Mod), AMDGPUTM(TM), IRB(M.getContext()), DTCallback(Callback) {}
+  AMDGPUSwLowerLDS(Module &Mod, DomTreeCallback Callback)
+      : M(Mod), IRB(M.getContext()), DTCallback(Callback) {}
   bool run();
   void getUsesOfLDSByNonKernels();
   void getNonKernelsWithLDSArguments(const CallGraph &CG);
@@ -213,7 +212,6 @@ public:
 
 private:
   Module &M;
-  const AMDGPUTargetMachine &AMDGPUTM;
   IRBuilder<> IRB;
   DomTreeCallback DTCallback;
   FunctionsAndLDSAccess FuncLDSAccessInfo;
@@ -1186,8 +1184,8 @@ void AMDGPUSwLowerLDS::initAsanInfo() {
   uint64_t Offset;
   int Scale;
   bool OrShadowOffset;
-  llvm::getAddressSanitizerParams(AMDGPUTM.getTargetTriple(), LongSize, false,
-                                  &Offset, &Scale, &OrShadowOffset);
+  llvm::getAddressSanitizerParams(M.getTargetTriple(), LongSize, false, &Offset,
+                                  &Scale, &OrShadowOffset);
   AsanInfo.Scale = Scale;
   AsanInfo.Offset = Offset;
 }
@@ -1358,10 +1356,8 @@ bool AMDGPUSwLowerLDS::run() {
 
 class AMDGPUSwLowerLDSLegacy : public ModulePass {
 public:
-  const AMDGPUTargetMachine *AMDGPUTM;
   static char ID;
-  AMDGPUSwLowerLDSLegacy(const AMDGPUTargetMachine *TM)
-      : ModulePass(ID), AMDGPUTM(TM) {}
+  AMDGPUSwLowerLDSLegacy() : ModulePass(ID) {}
   bool runOnModule(Module &M) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addPreserved<DominatorTreeWrapperPass>();
@@ -1388,18 +1384,14 @@ bool AMDGPUSwLowerLDSLegacy::runOnModule(Module &M) {
   auto DTCallback = [&DTW](Function &F) -> DominatorTree * {
     return DTW ? &DTW->getDomTree() : nullptr;
   };
-  if (!AMDGPUTM) {
-    auto &TPC = getAnalysis<TargetPassConfig>();
-    AMDGPUTM = &TPC.getTM<AMDGPUTargetMachine>();
-  }
-  AMDGPUSwLowerLDS SwLowerLDSImpl(M, *AMDGPUTM, DTCallback);
+
+  AMDGPUSwLowerLDS SwLowerLDSImpl(M, DTCallback);
   bool IsChanged = SwLowerLDSImpl.run();
   return IsChanged;
 }
 
-ModulePass *
-llvm::createAMDGPUSwLowerLDSLegacyPass(const AMDGPUTargetMachine *TM) {
-  return new AMDGPUSwLowerLDSLegacy(TM);
+ModulePass *llvm::createAMDGPUSwLowerLDSLegacyPass() {
+  return new AMDGPUSwLowerLDSLegacy();
 }
 
 PreservedAnalyses AMDGPUSwLowerLDSPass::run(Module &M,
@@ -1412,7 +1404,7 @@ PreservedAnalyses AMDGPUSwLowerLDSPass::run(Module &M,
   auto DTCallback = [&FAM](Function &F) -> DominatorTree * {
     return &FAM.getResult<DominatorTreeAnalysis>(F);
   };
-  AMDGPUSwLowerLDS SwLowerLDSImpl(M, TM, DTCallback);
+  AMDGPUSwLowerLDS SwLowerLDSImpl(M, DTCallback);
   bool IsChanged = SwLowerLDSImpl.run();
   if (!IsChanged)
     return PreservedAnalyses::all();

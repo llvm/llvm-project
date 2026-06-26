@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI,SICIVI %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SI,SICIVI %s
 ; RUN: llc -mtriple=amdgcn -mcpu=bonaire < %s | FileCheck -enable-var-scope -check-prefixes=GCN,CI,SICIVI,CIPLUS %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,SICIVI,CIPLUS %s
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,CIPLUS %s

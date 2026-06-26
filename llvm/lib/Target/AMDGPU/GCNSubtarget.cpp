@@ -144,6 +144,9 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
     FlatOffsetBitWidth = 13;
 
   LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(*this);
+  // LDS Allocation Granularity calculated in bytes from dwords
+  LDSAllocationGranularity =
+      AMDGPU::getLdsDwGranularity(*this) * sizeof(uint32_t);
 
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
   HasSMulHi = getGeneration() >= AMDGPUSubtarget::GFX9;

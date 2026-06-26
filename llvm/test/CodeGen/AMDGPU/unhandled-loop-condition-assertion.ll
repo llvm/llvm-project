@@ -1,4 +1,4 @@
-; RUN: llc -O0 -asm-verbose=0 -mtriple=amdgcn < %s | FileCheck -check-prefix=SI -check-prefix=COMMON %s
+; RUN: llc -O0 -asm-verbose=0 -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -check-prefix=SI -check-prefix=COMMON %s
 ; RUN: llc -O0 -asm-verbose=0 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -check-prefix=SI -check-prefix=COMMON %s
 ; XUN: llc -O0 -asm-verbose=0 -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=COMMON %s
 
