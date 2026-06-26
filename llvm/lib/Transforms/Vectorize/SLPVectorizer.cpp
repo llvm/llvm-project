@@ -6256,6 +6256,50 @@ private:
       }
     }
 
+    /// Handle may-alias stores within the same bundle, have to be scheduled one
+    /// at a time since later nodes are not ready until earlier stores are
+    /// scheduled. Must ensure that the ordering of scheduling matches order in
+    /// bundle
+    void
+    scheduleInternalStores(ScheduleBundle &Bundle,
+                           function_ref<void(ScheduleEntity *)> ScheduleCall) {
+      if (Bundle.isReady())
+        return;
+      // Make sure all bundle members are:
+      // (1) Only dependent on other members of the bundle
+      // (2) Only dependent on members after them in the bundle
+      // (3) Store instructions
+      // If all of these are satisfied, then can schedule them
+      // one at a time
+      SmallDenseMap<ScheduleEntity *, unsigned> BundleMembers;
+      for (auto [Idx, BM] : enumerate(Bundle.getBundle()))
+        BundleMembers[BM] = Idx;
+      for (ScheduleEntity *BundleMember : Bundle.getBundle()) {
+        auto *SD = dyn_cast<ScheduleData>(BundleMember);
+        if (!SD || !isa<StoreInst>(SD->getInst()))
+          return;
+        if (BundleMember->isScheduled())
+          continue;
+        for (ScheduleData *MemDep : SD->getMemoryDependencies()) {
+          if (!BundleMembers.contains(MemDep))
+            return;
+          if (BundleMembers[MemDep] >= BundleMembers[SD])
+            return;
+        }
+      }
+
+      while (!Bundle.isReady()) {
+        for (ScheduleEntity *BundleMember : Bundle.getBundle()) {
+          if (BundleMember->isScheduled() || !BundleMember->isReady())
+            continue;
+          LLVM_DEBUG(dbgs() << "SLP: schedule ready bundle member "
+                            << *BundleMember << "\n");
+          ScheduleCall(BundleMember);
+        }
+      }
+      return;
+    }
+
     /// Build a bundle from the ScheduleData nodes corresponding to the
     /// scalar instruction for each lane.
     /// \param VL The list of scalar instructions.
@@ -25387,50 +25431,16 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
       initialFillReadyList(ReadyInsts);
     }
 
-    auto ScheduleInternalMembers = [&]() -> void {
-      if (Bundle.isReady())
-        return;
-      SmallDenseMap<ScheduleEntity *, std::pair<unsigned, int>> BundleDeps;
-      for (auto [Idx, BM] : enumerate(Bundle.getBundle()))
-        BundleDeps[BM] = {Idx, BM->getUnscheduledDeps()};
-      for (ScheduleEntity *BundleMember : Bundle.getBundle()) {
-        if (BundleMember->isScheduled())
-          continue;
-        auto *SD = dyn_cast<ScheduleData>(BundleMember);
-        if (!SD || !isa<StoreInst>(SD->getInst()))
-          return;
-        for (ScheduleData *MemDep : SD->getMemoryDependencies())
-          if (BundleDeps.contains(MemDep))
-            if (BundleDeps[MemDep].first < BundleDeps[SD].first)
-              --BundleDeps[MemDep].second;
-      }
-      for (auto [_, Cnt] : BundleDeps)
-        if (Cnt.second)
-          return;
-
-      bool LocalProgress = false;
-      do {
-        LocalProgress = false;
-        for (ScheduleEntity *BundleMember : Bundle.getBundle()) {
-          if (BundleMember->isScheduled() || !BundleMember->isReady())
-            continue;
-          LLVM_DEBUG(dbgs() << "SLP: schedule ready bundle member "
-                            << *BundleMember << "\n");
-          ReadyInsts.remove(BundleMember);
-          schedule(*SLP, S, EI, BundleMember, ReadyInsts);
-          LocalProgress = true;
-        }
-      } while (!Bundle.isReady() && LocalProgress);
-      assert(Bundle.isReady() &&
-             "Bundle must be ready after internal scheduling");
-    };
-
     // Now try to schedule the new bundle or (if no bundle) just calculate
     // dependencies. As soon as the bundle is "ready" it means that there are no
     // cyclic dependencies and we can schedule it. Note that's important that we
     // don't "schedule" the bundle yet.
     if (Bundle && !Bundle.isReady()) {
-      ScheduleInternalMembers();
+      auto ScheduleCall = [&](ScheduleEntity *SE) -> void {
+        ReadyInsts.remove(SE);
+        schedule(*SLP, S, EI, SE, ReadyInsts);
+      };
+      scheduleInternalStores(Bundle, ScheduleCall);
     }
     while (((!Bundle && ReSchedule) || (Bundle && !Bundle.isReady())) &&
            !ReadyInsts.empty()) {
@@ -26184,53 +26194,6 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
 
   Instruction *LastScheduledInst = BS->ScheduleEnd;
   SmallPtrSet<Instruction *, 16> Scheduled;
-
-  auto ScheduleInternalMembers = [&](ScheduleBundle &Bundle) -> void {
-    if (Bundle.isReady())
-      return;
-    SmallDenseMap<ScheduleEntity *, std::pair<unsigned, int>> BundleDeps;
-    for (auto [Idx, BM] : enumerate(Bundle.getBundle()))
-      BundleDeps[BM] = {Idx, BM->getUnscheduledDeps()};
-    for (ScheduleEntity *BundleMember : Bundle.getBundle()) {
-      if (BundleMember->isScheduled())
-        continue;
-      auto *SD = dyn_cast<ScheduleData>(BundleMember);
-      if (!SD || !isa<StoreInst>(SD->getInst()))
-        return;
-      for (ScheduleData *MemDep : SD->getMemoryDependencies())
-        if (BundleDeps.contains(MemDep))
-          if (BundleDeps[MemDep].first < BundleDeps[SD].first)
-            --BundleDeps[MemDep].second;
-    }
-    for (auto [_, Cnt] : BundleDeps)
-      if (Cnt.second)
-        return;
-
-    bool LocalProgress = false;
-    do {
-      LocalProgress = false;
-      for (ScheduleEntity *BundleMember : Bundle.getBundle()) {
-        if (BundleMember->isScheduled() || !BundleMember->isReady())
-          continue;
-        LLVM_DEBUG(dbgs() << "SLP: schedule ready bundle member "
-                          << *BundleMember << "\n");
-        ReadyInsts.erase(BundleMember);
-        auto *SD = cast<ScheduleData>(BundleMember);
-        Instruction *PickedInst = SD->getInst();
-        if (PickedInst->getNextNode() != LastScheduledInst)
-          PickedInst->moveAfter(LastScheduledInst->getPrevNode());
-        LastScheduledInst = PickedInst;
-        auto Invalid = InstructionsState::invalid();
-        BS->schedule(R, Invalid, EdgeInfo(), BundleMember, ReadyInsts);
-        Scheduled.insert(PickedInst);
-
-        LocalProgress = true;
-      }
-    } while (!Bundle.isReady() && LocalProgress);
-    assert(Bundle.isReady() &&
-           "Bundle must be ready after internal scheduling");
-  };
-
   for (std::unique_ptr<ScheduleBundle> &Bundle : BS->ScheduledBundlesList) {
     if (!Bundle->hasValidDependencies() || Bundle->isReady())
       continue;
@@ -26242,7 +26205,18 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
           return SD && isa<StoreInst>(SD->getInst());
         }))
       continue;
-    ScheduleInternalMembers(*Bundle);
+    auto ScheduleCall = [&](ScheduleEntity *SE) -> void {
+      ReadyInsts.erase(SE);
+      auto *SD = cast<ScheduleData>(SE);
+      Instruction *PickedInst = SD->getInst();
+      if (PickedInst->getNextNode() != LastScheduledInst)
+        PickedInst->moveAfter(LastScheduledInst->getPrevNode());
+      LastScheduledInst = PickedInst;
+      auto Invalid = InstructionsState::invalid();
+      BS->schedule(R, Invalid, EdgeInfo(), SE, ReadyInsts);
+      Scheduled.insert(PickedInst);
+    };
+    BS->scheduleInternalStores(*Bundle, ScheduleCall);
   }
 
   // Do the "real" scheduling.
