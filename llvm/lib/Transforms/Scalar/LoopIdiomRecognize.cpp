@@ -1565,15 +1565,6 @@ bool LoopIdiomRecognize::optimizeCRCLoopToClmul(const PolynomialInfo &Info) {
   unsigned ClmulBW = std::max(2 * TC, CRCBW + TC);
   Type *ClmulTy = IntegerType::get(Ctx, ClmulBW);
 
-  // For big-endian CRC loops where the auxiliary data is XORed with the CRC
-  // inside the loop, the bits won't be aligned properly if the bit widths don't
-  // match, and thus the CRC computation is incorrect, but HashRecognize will
-  // still detect the loop. Since this optimization always produces a correct
-  // CRC computation, bail in this edge case.
-  if (Info.IsBigEndian && Info.LHSAux &&
-      (TC != CRCBW || Info.LHSAux->getType()->getIntegerBitWidth() != CRCBW))
-    return false;
-
   // This optimization should only be applied if clmul for the required width is
   // a fast operation on the target.
   // TODO: If TC > CRCBW, then the data could probably be split into multiple
@@ -1616,20 +1607,34 @@ bool LoopIdiomRecognize::optimizeCRCLoopToClmul(const PolynomialInfo &Info) {
   Value *ClmulMuInput = CRCAlignTC;
   if (Value *Data = Info.LHSAux) {
     unsigned DataBW = Data->getType()->getIntegerBitWidth();
-    if (DataBW > TC) {
-      // Extract the useful bits of the data and discard the rest.
-      if (Info.IsBigEndian) {
-        Data = Builder.CreateLShr(Data, DataBW - TC, "data.be.lshr");
-      } else {
-        ConstantInt *Mask =
-            ConstantInt::get(Ctx, APInt::getLowBitsSet(DataBW, TC));
-        Data = Builder.CreateAnd(Data, Mask, "data.le.mask");
+    // For big-endian CRC loops where auxiliary data is XORed with the CRC
+    // inside the loop, the bits won't be aligned properly if the bit widths
+    // don't match, and thus the CRC computation is incorrect, but HashRecognize
+    // will still detect the loop. To handle the case where the data is zexted
+    // before XORing with the CRC, just ignore the auxiliary data entirely,
+    // because the extracted bit will always be zero.
+    if (!(Info.IsBigEndian && DataBW < CRCBW)) {
+      // For the aforementioned HashRecognize quirk, to handle the case where
+      // the data is truncated before XORing with the CRC, shift the data so the
+      // CRCBW-1 bit becomes the leftmost bit, and then the remaining logic
+      // treats the DataBW-1 bit as the first bit to be processed.
+      if (Info.IsBigEndian && DataBW > CRCBW)
+        Data = Builder.CreateShl(Data, DataBW - CRCBW, "data.be.shl");
+      if (DataBW > TC) {
+        // Extract the useful bits of the data and discard the rest.
+        if (Info.IsBigEndian) {
+          Data = Builder.CreateLShr(Data, DataBW - TC, "data.be.lshr");
+        } else {
+          ConstantInt *Mask =
+              ConstantInt::get(Ctx, APInt::getLowBitsSet(DataBW, TC));
+          Data = Builder.CreateAnd(Data, Mask, "data.le.mask");
+        }
       }
-    }
-    // This is always a zext since TripCount <= DataBW < ClmulBW.
-    Value *DataExt = Builder.CreateZExt(Data, ClmulTy, "data.ext");
+      // This is always a zext since TripCount <= DataBW < ClmulBW.
+      Value *DataExt = Builder.CreateZExt(Data, ClmulTy, "data.ext");
 
-    ClmulMuInput = Builder.CreateXor(CRCAlignTC, DataExt, "xor.crc.data");
+      ClmulMuInput = Builder.CreateXor(CRCAlignTC, DataExt, "xor.crc.data");
+    }
   }
 
   // Perform the first clmul operation with the mu/mu' constant. Input is TC
