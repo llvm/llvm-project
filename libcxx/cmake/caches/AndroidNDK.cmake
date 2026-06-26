@@ -35,3 +35,4 @@ set(CMAKE_CXX_COMPILER_WORKS ON CACHE BOOL "")
 # them.
 set(LIBCXX_TEST_CONFIG "llvm-libc++-android.cfg.in" CACHE STRING "")
 set(LIBCXXABI_TEST_CONFIG "llvm-libc++abi-android.cfg.in" CACHE STRING "")
+set(LIBCXX_ASSERTION_HANDLER_FILE "vendor/android/android_assertion_handler.in" CACHE STRING "")
