@@ -5435,6 +5435,29 @@ void CompilerInvocationBase::visitPaths(
       [&Callback](std::string &Path) { return Callback(StringRef(Path)); });
 }
 
+void CowCompilerInvocation::visitMutPaths(
+    llvm::function_ref<bool(std::string &)> Callback) {
+  // Ensure exclusive ownership of every option group, so that visitPathsImpl()
+  // doesn't affect any other invocations.
+  // FIXME: Do this only if \c Callback does decide to modify any strings in an
+  // option group.
+  (void)ensureOwned(LangOpts);
+  (void)ensureOwned(TargetOpts);
+  (void)ensureOwned(DiagnosticOpts);
+  (void)ensureOwned(HSOpts);
+  (void)ensureOwned(PPOpts);
+  (void)ensureOwned(AnalyzerOpts);
+  (void)ensureOwned(MigratorOpts);
+  (void)ensureOwned(APINotesOpts);
+  (void)ensureOwned(CodeGenOpts);
+  (void)ensureOwned(FSOpts);
+  (void)ensureOwned(FrontendOpts);
+  (void)ensureOwned(DependencyOutputOpts);
+  (void)ensureOwned(PreprocessorOutputOpts);
+  (void)ensureOwned(SSAFOpts);
+  visitPathsImpl(Callback);
+}
+
 void CompilerInvocationBase::generateCC1CommandLine(
     ArgumentConsumer Consumer) const {
   llvm::Triple T(getTargetOpts().Triple);
