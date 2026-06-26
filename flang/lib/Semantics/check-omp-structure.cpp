@@ -417,7 +417,7 @@ bool OmpStructureChecker::CheckAllowedClause(llvm::omp::Clause clauseId,
 }
 
 void OmpStructureChecker::AnalyzeObject(const parser::OmpObject &object) {
-  if (std::holds_alternative<parser::Name>(object.u) ||
+  if (GetCommonBlockFromObj(object) ||
       std::holds_alternative<parser::OmpObject::Invalid>(object.u)) {
     // Do not analyze common block names. The analyzer will flag an error
     // on those.
@@ -1858,7 +1858,7 @@ void OmpStructureChecker::CheckThreadprivateOrDeclareTargetVar(
 
 void OmpStructureChecker::Enter(const parser::OmpGroupprivateDirective &x) {
   for (const parser::OmpArgument &arg : x.v.Arguments().v) {
-    auto *object{std::get_if<parser::OmpObject>(&arg.u)};
+    auto *object{GetArgumentObject(arg)};
     const Symbol *sym{GetArgumentSymbol(arg, /*ultimate=*/true)};
 
     if (!object || !sym ||
@@ -3226,7 +3226,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPCriticalConstruct &x) {
       block, llvm::omp::Directive::OMPD_critical, beginSpec.DirName().source);
 
   auto getNameFromArg{[](const parser::OmpArgument &arg) {
-    if (auto *object{parser::Unwrap<parser::OmpObject>(arg.u)}) {
+    if (auto *object{GetArgumentObject(arg)}) {
       if (auto *designator{GetDesignatorFromObj(*object)}) {
         return parser::GetDesignatorNameIfDataRef(*designator);
       }
@@ -4269,8 +4269,7 @@ void OmpStructureChecker::CheckReductionArraySection(
     const parser::OmpObjectList &ompObjectList, llvm::omp::Clause clauseId) {
   for (const auto &ompObject : ompObjectList.v) {
     if (const auto *dataRef{parser::Unwrap<parser::DataRef>(ompObject)}) {
-      if (const auto *arrayElement{
-              parser::Unwrap<parser::ArrayElement>(ompObject)}) {
+      if (const auto *arrayElement{GetArrayElementFromObj(ompObject)}) {
         CheckArraySection(*arrayElement, GetLastName(*dataRef), clauseId);
       }
     }
@@ -5004,20 +5003,16 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Depend &x) {
       }
     }
     for (const auto &object : objList.v) {
-      if (const auto *name{std::get_if<parser::Name>(&object.u)}) {
+      if (const auto *name{GetCommonBlockFromObj(object)}) {
         context_.Say(GetContext().clauseSource,
             "Common block name ('%s') cannot appear in a DEPEND "
             "clause"_err_en_US,
             name->ToString());
-      } else if (auto *designator{std::get_if<parser::Designator>(&object.u)}) {
-        if (auto *dataRef{std::get_if<parser::DataRef>(&designator->u)}) {
-          CheckDependList(*dataRef);
-          if (const auto *arr{
-                  std::get_if<common::Indirection<parser::ArrayElement>>(
-                      &dataRef->u)}) {
-            CheckArraySection(arr->value(), GetLastName(*dataRef),
-                llvm::omp::Clause::OMPC_depend);
-          }
+      } else if (auto *dataRef{GetDataRefFromObj(object)}) {
+        CheckDependList(*dataRef);
+        if (const auto *arr{GetArrayElementFromObj(object)}) {
+          CheckArraySection(
+              *arr, GetLastName(*dataRef), llvm::omp::Clause::OMPC_depend);
         }
       }
     }
@@ -5194,7 +5189,7 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Copyin &x) {
 void OmpStructureChecker::CheckStructureComponent(
     const parser::OmpObject &object, llvm::omp::Clause clauseId) {
   unsigned version{context_.langOptions().OpenMPVersion};
-  if (auto *desg{parser::Unwrap<parser::Designator>(object)}) {
+  if (auto *desg{GetDesignatorFromObj(object)}) {
     if (auto *symbol{GetLastName(*desg).symbol}) {
       if (!IsTypeParamInquiry(*symbol) &&
           std::holds_alternative<parser::DataRef>(desg->u)) {

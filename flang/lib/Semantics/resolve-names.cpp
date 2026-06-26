@@ -1770,7 +1770,7 @@ public:
     // Iterate over elements of x, and resolve any common blocks that
     // are still unresolved.
     for (const parser::OmpObject &obj : x.v) {
-      auto *name{std::get_if<parser::Name>(&obj.u)};
+      auto *name{parser::omp::GetCommonBlockFromObj(obj)};
       if (name && !name->symbol) {
         Resolve(*name, currScope().MakeCommonBlock(name->source, name->source));
       }
@@ -2195,7 +2195,7 @@ void OmpVisitor::ResolveCriticalName(const parser::OmpArgument &arg) {
     llvm_unreachable("Cannot find global scope");
   }()};
 
-  if (auto *object{parser::Unwrap<parser::OmpObject>(arg.u)}) {
+  if (auto *object{parser::omp::GetArgumentObject(arg)}) {
     if (auto *desg{parser::omp::GetDesignatorFromObj(*object)}) {
       if (auto *name{parser::GetDesignatorNameIfDataRef(*desg)}) {
         if (auto *symbol{FindInScope(globalScope, *name)}) {
