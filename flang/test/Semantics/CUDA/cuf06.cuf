@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/../test_errors.py %s %flang_fc1
 module m
   use, intrinsic :: __fortran_builtins, only: __builtin_dim3
  contains

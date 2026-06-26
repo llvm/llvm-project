@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -fopenacc
+! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenacc
 
 ! Test that OpenACC host_data use_device variables (UseDevice attribute)
 ! are compatible with both host and device dummy arguments in generic

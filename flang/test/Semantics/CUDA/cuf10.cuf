@@ -1,4 +1,4 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1 -fopenacc
+! RUN: %python %S/../test_errors.py %s %flang_fc1 -fopenacc
 module m
   real, device :: a(4,8)
   real, managed, allocatable :: b(:,:)
