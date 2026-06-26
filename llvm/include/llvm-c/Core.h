@@ -58,6 +58,7 @@ LLVM_C_EXTERN_C_BEGIN
 
 /// External users depend on the following values being stable. It is not safe
 /// to reorder them.
+// clang-format off
 typedef enum {
   /* Terminator Instructions */
   LLVMRet = 1,
@@ -150,6 +151,7 @@ typedef enum {
   LLVMCleanupPad = 64,
   LLVMCatchSwitch = 65
 } LLVMOpcode;
+// clang-format on
 
 typedef enum {
   LLVMVoidTypeKind = 0,     /**< type with no size */
