@@ -28,8 +28,11 @@
 
 ; BF16_OPERAND-DAG: [[INT:%.*]] = OpTypeInt 32 0
 ; BF16_OPERAND-DAG: [[INTV:%.*]] = OpTypeVector [[INT]] 4
-; BF16_OPERAND: OpExtInst [[INT]] [[EXTSET]] ilogb
-; BF16_OPERAND: OpExtInst [[INTV]] [[EXTSET]] ilogb
+; BF16_OPERAND-DAG: [[BFLOATV:%.*]] = OpTypeVector [[BFLOAT]] 4
+; BF16_OPERAND: [[OP:%.*]] = OpFunctionParameter [[BFLOAT]]
+; BF16_OPERAND: OpExtInst [[INT]] [[EXTSET]] ilogb [[OP]]
+; BF16_OPERAND: [[OPV:%.*]] = OpFunctionParameter [[BFLOATV]]
+; BF16_OPERAND: OpExtInst [[INTV]] [[EXTSET]] ilogb [[OPV]]
 
 ;--- bf16_result.ll
 define spir_func bfloat @test_fabs(bfloat %x) {
