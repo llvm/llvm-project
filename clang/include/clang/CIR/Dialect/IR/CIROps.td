@@ -6464,13 +6464,12 @@ def FPClass_All      : I32BitEnumAttrCaseGroup<"All",
     [FPClass_Nan, FPClass_Inf, FPClass_Fin], "fcAllFlags">;
 
 def FPClassTestEnum
-    : I32BitEnumAttr<"FPClassTest", "floating-point class test flags", [
+    : CIR_I32BitEnumAttr<"FPClassTest", "floating-point class test flags", [
   FPClass_None, FPClass_SNan, FPClass_QNan, FPClass_NegInf, FPClass_NegNorm,
   FPClass_NegSub, FPClass_NegZero, FPClass_PosZero, FPClass_PosSub,
   FPClass_PosNorm, FPClass_PosInf, FPClass_Nan, FPClass_Inf, FPClass_Norm,
   FPClass_Sub, FPClass_Zero, FPClass_PosFin, FPClass_NegFin, FPClass_Fin,
   FPClass_Pos, FPClass_Neg, FPClass_All]> {
-  let cppNamespace = "::cir";
   let printBitEnumPrimaryGroups = 1;
 }
 
