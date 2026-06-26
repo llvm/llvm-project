@@ -10270,6 +10270,9 @@ Therefore, both attributes are diagnosed when applied to a function with a non-`
 Because of the prohibition against reading memory, the ``const`` attribute generally should not be used on a function which accepts a pointer or reference argument.
 The ``pure`` attribute allows (non-volatile) memory to be read; calls will only be elided if the optimizer can prove the memory accessed cannot be changed between successive calls to the function.
 
+An important difference between the Clang and GCC implementations of these attributes is that Clang does not allow unwinding while GCC does.
+In Clang, a function marked with ``const`` or ``pure`` is implicitly ``noexcept`` in C++.
+
 The following example demonstrates how the ``const`` attribute can be used:
 
 .. code-block:: c++
