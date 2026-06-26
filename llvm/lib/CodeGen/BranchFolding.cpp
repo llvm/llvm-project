@@ -1284,9 +1284,8 @@ static bool IsBranchOnlyBlock(MachineBasicBlock *MBB) {
 }
 
 static bool HasPseudoProbe(const MachineBasicBlock &MBB) {
-  return llvm::any_of(MBB, [](const MachineInstr &MI) {
-    return MI.isPseudoProbe();
-  });
+  return llvm::any_of(
+      MBB, [](const MachineInstr &MI) { return MI.isPseudoProbe(); });
 }
 
 /// IsBetterFallthrough - Return true if it would be clearly better to
