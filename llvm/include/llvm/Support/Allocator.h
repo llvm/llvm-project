@@ -18,6 +18,7 @@
 #define LLVM_SUPPORT_ALLOCATOR_H
 
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/AllocatorBase.h"
 #include "llvm/Support/Compiler.h"
@@ -97,7 +98,7 @@ public:
       : AllocTy(std::move(Old.getAllocator())), CurPtr(Old.CurPtr),
         EndSentinel(Old.EndSentinel), Slabs(std::move(Old.Slabs)),
         CustomSizedSlabs(std::move(Old.CustomSizedSlabs)) {
-#if LLVM_ADDRESS_SANITIZER_BUILD
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     RedZoneSize = Old.RedZoneSize;
 #endif
     Old.CurPtr = nullptr;
@@ -117,7 +118,7 @@ public:
 
     CurPtr = RHS.CurPtr;
     EndSentinel = RHS.EndSentinel;
-#if LLVM_ADDRESS_SANITIZER_BUILD
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     RedZoneSize = RHS.RedZoneSize;
 #endif
     Slabs = std::move(RHS.Slabs);
@@ -159,8 +160,9 @@ public:
   // be dereferenced).
   LLVM_ATTRIBUTE_RETURNS_NONNULL void *Allocate(size_t Size, Align Alignment) {
     size_t SizeToAllocate = Size;
-#if LLVM_ADDRESS_SANITIZER_BUILD
-    // Add trailing bytes as a "red zone" under ASan.
+#if LLVM_ADDRESS_SANITIZER_BUILD && LLVM_ENABLE_ABI_BREAKING_CHECKS
+    // Add trailing bytes as a "red zone" under ASan. RedZoneSize only exists
+    // when conditions are true.
     SizeToAllocate += RedZoneSize;
 #endif
     SizeToAllocate = alignToPowerOf2(SizeToAllocate, MinAlign);
@@ -306,7 +308,7 @@ public:
   }
 
   void setRedZoneSize([[maybe_unused]] size_t NewSize) {
-#if LLVM_ADDRESS_SANITIZER_BUILD
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
     RedZoneSize = NewSize;
 #endif
   }
@@ -331,9 +333,9 @@ private:
   /// Custom-sized slabs allocated for too-large allocation requests.
   SmallVector<std::pair<void *, size_t>, 0> CustomSizedSlabs;
 
-#if LLVM_ADDRESS_SANITIZER_BUILD
-  /// The number of bytes to put between allocations when running under
-  /// a sanitizer.
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  /// The number of bytes to put between allocations when running under a
+  /// sanitizer.
   size_t RedZoneSize = 1;
 #endif
 
