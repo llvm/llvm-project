@@ -107,6 +107,10 @@ Makes programs 10x faster by doing Special New Thing.
   graph section generation. See the [callgraph Metadata](https://llvm.org/docs/LangRef.html#callgraph-metadata)
   section of the LangRef for details.
 
+* The `dereferenceable` and `dereferenceable_or_null` attributes (and
+  corresponding metadata) now apply only at the point of definition, instead of
+  for the execution of the function (for arguments) or forever (for returns).
+
 ### Changes to LLVM infrastructure
 
 * Removed ``Constant::isZeroValue``. It was functionally identical to
