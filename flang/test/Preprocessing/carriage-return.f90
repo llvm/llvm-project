@@ -15,8 +15,11 @@
 ! RUN: %flang_fc1 -fsyntax-only -ffixed-form %t-fixed.f
 
 ! A CR inside a character literal must be preserved: the literal stays three
-! characters long and its middle byte remains 0x0d (decimal 13).
-! RUN: printf 'module m\n  character(*), parameter :: s = '\''a\rb'\''\n  integer, parameter :: slen = len(s)\n  integer, parameter :: midval = iachar(s(2:2))\nend module\n' > %t-literal.f90
+! characters long and its middle byte remains 0x0d (decimal 13). The quote
+! characters around the literal are emitted with printf's octal escape \047 so
+! the whole format string stays single-quoted and portable to lit's internal
+! shell on all platforms.
+! RUN: printf 'module m\n  character(*), parameter :: s = \047a\rb\047\n  integer, parameter :: slen = len(s)\n  integer, parameter :: midval = iachar(s(2:2))\nend module\n' > %t-literal.f90
 ! RUN: %flang_fc1 -fdebug-unparse %t-literal.f90 | FileCheck %s
 ! CHECK: slen = 3_4
 ! CHECK: midval = 13_4
