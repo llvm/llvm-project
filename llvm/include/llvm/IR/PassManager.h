@@ -68,6 +68,14 @@ template <typename DerivedT> struct InfoMixin {
     return Name;
   }
 };
+
+LLVM_ABI void
+printPassPipelineName(raw_ostream &OS,
+                      function_ref<StringRef(StringRef)> MapClassName2PassName,
+                      StringRef ClassName);
+LLVM_ABI void printAnalysisPassPipelineName(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName,
+    StringRef ClassName, bool IsInvalidate);
 } // namespace detail
 
 class Function;
@@ -89,9 +97,7 @@ template <typename DerivedT>
 struct PassInfoMixin : detail::InfoMixin<DerivedT> {
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
-    StringRef ClassName = DerivedT::name();
-    auto PassName = MapClassName2PassName(ClassName);
-    OS << PassName;
+    detail::printPassPipelineName(OS, MapClassName2PassName, DerivedT::name());
   }
 
   // TODO: remove once out of tree users are updated.
@@ -936,9 +942,8 @@ struct RequireAnalysisPass
   }
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
-    auto ClassName = AnalysisT::name();
-    auto PassName = MapClassName2PassName(ClassName);
-    OS << "require<" << PassName << '>';
+    detail::printAnalysisPassPipelineName(OS, MapClassName2PassName,
+                                          AnalysisT::name(), false);
   }
 };
 
@@ -961,9 +966,8 @@ struct InvalidateAnalysisPass
   }
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
-    auto ClassName = AnalysisT::name();
-    auto PassName = MapClassName2PassName(ClassName);
-    OS << "invalidate<" << PassName << '>';
+    detail::printAnalysisPassPipelineName(OS, MapClassName2PassName,
+                                          AnalysisT::name(), true);
   }
 };
 

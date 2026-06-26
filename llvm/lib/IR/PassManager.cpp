@@ -15,6 +15,21 @@
 using namespace llvm;
 
 namespace llvm {
+namespace detail {
+void printPassPipelineName(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName,
+    StringRef ClassName) {
+  OS << MapClassName2PassName(ClassName);
+}
+
+void printAnalysisPassPipelineName(
+    raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName,
+    StringRef ClassName, bool IsInvalidate) {
+  OS << (IsInvalidate ? "invalidate<" : "require<")
+     << MapClassName2PassName(ClassName) << '>';
+}
+} // namespace detail
+
 // Explicit template instantiations and specialization defininitions for core
 // template typedefs.
 template class LLVM_EXPORT_TEMPLATE AllAnalysesOn<Module>;
