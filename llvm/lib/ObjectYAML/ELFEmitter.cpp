@@ -18,6 +18,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELFTypes.h"
+#include "llvm/ObjectYAML/BBAddrMapYAMLEmitter.h"
 #include "llvm/ObjectYAML/DWARFEmitter.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/ObjectYAML/ELFYAML.h"
@@ -135,6 +136,21 @@ public:
     assert(Pos >= InitialOffset && Pos + Size <= getOffset());
     memcpy(&Buf[Pos - InitialOffset], Data, Size);
   }
+};
+
+// BBAddrMap writer backed by CBA, keeping its size-limit checks.
+class ELFWriter : public BBAddrMapYAML::Writer<ELFWriter> {
+  ContiguousBlobAccumulator &CBA;
+
+public:
+  ELFWriter(ContiguousBlobAccumulator &CBA, llvm::endianness Endian,
+            unsigned AddressSize)
+      : Writer(Endian, AddressSize), CBA(CBA) {}
+
+  template <typename T> void emitInt(T Val, llvm::endianness Endian) {
+    CBA.write<T>(Val, Endian);
+  }
+  void emitULEB128(uint64_t Val) { CBA.writeULEB128(Val); }
 };
 
 // Used to keep track of section and symbol names, so that in the YAML file
@@ -1462,6 +1478,7 @@ void ELFState<ELFT>::writeSectionContent(
       PGOAnalyses = &Section.PGOAnalyses.value();
   }
 
+  ELFWriter W(CBA, ELFT::Endianness, sizeof(uintX_t));
   uint64_t CurrentOffset = CBA.getOffset();
   for (const auto &[Idx, E] : llvm::enumerate(*Section.Entries)) {
     // Write version and feature values.
@@ -1469,11 +1486,11 @@ void ELFState<ELFT>::writeSectionContent(
       WithColor::warning() << "unsupported BB address map version: "
                            << static_cast<int>(E.Version)
                            << "; encoding using the most recent version";
-    CBA.write(E.Version);
+    W.writeInt<uint8_t>(E.Version);
     if (E.Version < 5)
-      CBA.write(static_cast<uint8_t>(E.Feature));
+      W.writeInt<uint8_t>(static_cast<uint8_t>(E.Feature));
     else
-      CBA.write<uint16_t>(E.Feature, ELFT::Endianness);
+      W.writeInt<uint16_t>(E.Feature);
     auto FeatureOrErr = llvm::object::BBAddrMap::Features::decode(E.Feature);
     if (!FeatureOrErr) {
       // Invalid feature: warn and skip the entry.
@@ -1493,7 +1510,7 @@ void ELFState<ELFT>::writeSectionContent(
       // 'NumBBRanges' field when specified.
       uint64_t NumBBRanges =
           E.NumBBRanges.value_or(E.BBRanges ? E.BBRanges->size() : 0);
-      CBA.writeULEB128(NumBBRanges);
+      W.writeULEB128(NumBBRanges);
     }
     if (!E.BBRanges)
       continue;
@@ -1502,36 +1519,36 @@ void ELFState<ELFT>::writeSectionContent(
         FeatureOrErr->CallsiteEndOffsets || E.hasAnyCallsiteEndOffsets();
     for (const BBAddrMapYAML::BBAddrMapEntry::BBRangeEntry &BBR : *E.BBRanges) {
       // Write the base address of the range.
-      CBA.write<uintX_t>(BBR.BaseAddress, ELFT::Endianness);
+      W.writeAddress(BBR.BaseAddress);
       // Write number of BBEntries (number of basic blocks in this basic block
       // range). This is overridden by the 'NumBlocks' YAML field when
       // specified.
       uint64_t NumBlocks =
           BBR.NumBlocks.value_or(BBR.BBEntries ? BBR.BBEntries->size() : 0);
-      CBA.writeULEB128(NumBlocks);
+      W.writeULEB128(NumBlocks);
       // Write all BBEntries in this BBRange.
       if (!BBR.BBEntries || FeatureOrErr->OmitBBEntries)
         continue;
       for (const BBAddrMapYAML::BBAddrMapEntry::BBEntry &BBE : *BBR.BBEntries) {
         ++TotalNumBlocks;
         if (E.Version > 1)
-          CBA.writeULEB128(BBE.ID);
-        CBA.writeULEB128(BBE.AddressOffset);
+          W.writeULEB128(BBE.ID);
+        W.writeULEB128(BBE.AddressOffset);
         if (EmitCallsiteEndOffsets) {
           size_t NumCallsiteEndOffsets =
               BBE.CallsiteEndOffsets ? BBE.CallsiteEndOffsets->size() : 0;
-          CBA.writeULEB128(NumCallsiteEndOffsets);
+          W.writeULEB128(NumCallsiteEndOffsets);
           if (BBE.CallsiteEndOffsets) {
             for (uint32_t Offset : *BBE.CallsiteEndOffsets)
-              CBA.writeULEB128(Offset);
+              W.writeULEB128(Offset);
           }
         }
-        CBA.writeULEB128(BBE.Size);
-        CBA.writeULEB128(BBE.Metadata);
+        W.writeULEB128(BBE.Size);
+        W.writeULEB128(BBE.Metadata);
         if (FeatureOrErr->BBHash || BBE.Hash.has_value()) {
           uint64_t Hash =
               BBE.Hash.has_value() ? BBE.Hash.value() : llvm::yaml::Hex64(0);
-          CBA.write<uint64_t>(Hash, ELFT::Endianness);
+          W.writeInt<uint64_t>(Hash);
         }
       }
     }
@@ -1540,7 +1557,7 @@ void ELFState<ELFT>::writeSectionContent(
     const BBAddrMapYAML::PGOAnalysisMapEntry &PGOEntry = PGOAnalyses->at(Idx);
 
     if (PGOEntry.FuncEntryCount)
-      CBA.writeULEB128(*PGOEntry.FuncEntryCount);
+      W.writeULEB128(*PGOEntry.FuncEntryCount);
 
     if (!PGOEntry.PGOBBEntries)
       continue;
@@ -1556,16 +1573,16 @@ void ELFState<ELFT>::writeSectionContent(
 
     for (const auto &PGOBBE : PGOBBEntries) {
       if (PGOBBE.BBFreq)
-        CBA.writeULEB128(*PGOBBE.BBFreq);
+        W.writeULEB128(*PGOBBE.BBFreq);
       if (FeatureOrErr->PostLinkCfg || PGOBBE.PostLinkBBFreq.has_value())
-        CBA.writeULEB128(PGOBBE.PostLinkBBFreq.value_or(0));
+        W.writeULEB128(PGOBBE.PostLinkBBFreq.value_or(0));
       if (PGOBBE.Successors) {
-        CBA.writeULEB128(PGOBBE.Successors->size());
+        W.writeULEB128(PGOBBE.Successors->size());
         for (const auto &[ID, BrProb, PostLinkBrFreq] : *PGOBBE.Successors) {
-          CBA.writeULEB128(ID);
-          CBA.writeULEB128(BrProb);
+          W.writeULEB128(ID);
+          W.writeULEB128(BrProb);
           if (FeatureOrErr->PostLinkCfg || PostLinkBrFreq.has_value())
-            CBA.writeULEB128(PostLinkBrFreq.value_or(0));
+            W.writeULEB128(PostLinkBrFreq.value_or(0));
         }
       }
     }
