@@ -3800,6 +3800,24 @@ std::string static getDynamicTagAsString(uint16_t Arch, uint64_t Type) {
 #undef RISCV_DYNAMIC_TAG
     }
     break;
+
+  case llvm::ELF::EM_SPARC:
+  case llvm::ELF::EM_SPARC32PLUS:
+  case llvm::ELF::EM_SPARCV9:
+    switch (Type) {
+#define SPARC_DYNAMIC_TAG(name, value) DYNAMIC_STRINGIFY_ENUM(name, value)
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef SPARC_DYNAMIC_TAG
+    }
+    break;
+
+  case llvm::ELF::EM_X86_64:
+    switch (Type) {
+#define X86_64_DYNAMIC_TAG(name, value) DYNAMIC_STRINGIFY_ENUM(name, value)
+#include "llvm/BinaryFormat/DynamicTags.def"
+#undef X86_64_DYNAMIC_TAG
+    }
+    break;
   }
 #undef DYNAMIC_TAG
   switch (Type) {
@@ -3810,6 +3828,8 @@ std::string static getDynamicTagAsString(uint16_t Arch, uint64_t Type) {
 #define PPC_DYNAMIC_TAG(name, value)
 #define PPC64_DYNAMIC_TAG(name, value)
 #define RISCV_DYNAMIC_TAG(name, value)
+#define SPARC_DYNAMIC_TAG(name, value)
+#define X86_64_DYNAMIC_TAG(name, value)
 // Also ignore marker tags such as DT_HIOS (maps to DT_VERNEEDNUM), etc.
 #define DYNAMIC_TAG_MARKER(name, value)
 #define DYNAMIC_TAG(name, value)                                               \
@@ -3823,6 +3843,8 @@ std::string static getDynamicTagAsString(uint16_t Arch, uint64_t Type) {
 #undef PPC_DYNAMIC_TAG
 #undef PPC64_DYNAMIC_TAG
 #undef RISCV_DYNAMIC_TAG
+#undef SPARC_DYNAMIC_TAG
+#undef X86_64_DYNAMIC_TAG
 #undef DYNAMIC_TAG_MARKER
 #undef DYNAMIC_STRINGIFY_ENUM
   default:
