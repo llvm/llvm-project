@@ -113,26 +113,24 @@ isValidGatherScatterBufferParams(Type offsetsTy, Type maskTy,
   return success();
 }
 
-// Validates the `contiguous_chunk` attribute against the op's offsets type:
-// the inner offsets dimension is contiguous in runs of `size`, so `size` must
-// be in [2, innermost offsets dim].
+// Validates the `contiguity` attribute against the op's offsets type: the
+// innermost offsets dimension is contiguous in runs of `size`, so `size` must
+// be >= 2 and must divide that dimension.
 static LogicalResult
-isValidContiguousChunk(std::optional<uint64_t> chunk, Type offsetsTy,
-                       function_ref<InFlightDiagnostic()> emitError) {
-  if (!chunk)
+isValidContiguity(std::optional<uint64_t> contiguity, Type offsetsTy,
+                  function_ref<InFlightDiagnostic()> emitError) {
+  if (!contiguity)
     return success();
   auto offsetsVecTy = dyn_cast<VectorType>(offsetsTy);
   if (!offsetsVecTy)
-    return emitError()
-           << "contiguous_chunk requires vector offsets (one per lane).";
-  int64_t size = static_cast<int64_t>(*chunk);
+    return emitError() << "contiguity requires vector offsets (one per lane).";
+  int64_t size = static_cast<int64_t>(*contiguity);
   int64_t inner = offsetsVecTy.getShape().back();
   if (size < 2)
-    return emitError() << "contiguous_chunk " << size << " must be >= 2";
-  if (size > inner)
-    return emitError() << "contiguous_chunk " << size
-                       << " must not exceed the innermost offsets dim "
-                       << inner;
+    return emitError() << "contiguity " << size << " must be >= 2";
+  if (inner % size != 0)
+    return emitError() << "contiguity " << size
+                       << " must divide the innermost offsets dim " << inner;
   return success();
 }
 
@@ -605,8 +603,8 @@ LogicalResult LoadGatherOp::verify() {
   }
 
   auto offsetsTy = getOffsets().getType();
-  if (failed(isValidContiguousChunk(getContiguousChunk(), offsetsTy,
-                                    [&]() { return emitOpError(); })))
+  if (failed(isValidContiguity(getContiguity(), offsetsTy,
+                               [&]() { return emitOpError(); })))
     return failure();
   return isValidGatherScatterBufferParams(offsetsTy, maskTy, valueTy, chunkSize,
                                           [&]() { return emitOpError(); });
@@ -626,7 +624,7 @@ void LoadGatherOp::build(OpBuilder &builder, OperationState &state,
 
   build(builder, state, valueType, source, offset, mask, chunk_size, l1_hint,
         l2_hint, l3_hint, /*anchor_layout=*/nullptr,
-        /*contiguous_chunk=*/nullptr);
+        /*contiguity=*/nullptr);
 }
 
 void LoadGatherOp::build(OpBuilder &builder, OperationState &state,
@@ -643,7 +641,7 @@ void LoadGatherOp::build(OpBuilder &builder, OperationState &state,
   auto offset = vector::FromElementsOp::create(builder, loc, type, values);
 
   build(builder, state, valueType, source, offset, mask, chunk_size, l1_hint,
-        l2_hint, l3_hint, layout, /*contiguous_chunk=*/nullptr);
+        l2_hint, l3_hint, layout, /*contiguity=*/nullptr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -675,8 +673,8 @@ LogicalResult StoreScatterOp::verify() {
   }
 
   auto offsetsTy = getOffsets().getType();
-  if (failed(isValidContiguousChunk(getContiguousChunk(), offsetsTy,
-                                    [&]() { return emitOpError(); })))
+  if (failed(isValidContiguity(getContiguity(), offsetsTy,
+                               [&]() { return emitOpError(); })))
     return failure();
   return isValidGatherScatterBufferParams(offsetsTy, maskTy, valueTy, chunkSize,
                                           [&]() { return emitOpError(); });
@@ -697,7 +695,7 @@ void StoreScatterOp::build(OpBuilder &builder, OperationState &state,
 
   // Call the correct builder overload that does not expect result types.
   build(builder, state, value, dest, offset, mask, chunk_size, l1_hint, l2_hint,
-        l3_hint, /*anchor_layout=*/nullptr, /*contiguous_chunk=*/nullptr);
+        l3_hint, /*anchor_layout=*/nullptr, /*contiguity=*/nullptr);
 }
 
 void StoreScatterOp::build(
@@ -713,7 +711,7 @@ void StoreScatterOp::build(
 
   // Call the correct builder overload that does not expect result types.
   build(builder, state, value, dest, offset, mask, chunk_size, l1_hint, l2_hint,
-        l3_hint, layout, /*contiguous_chunk=*/nullptr);
+        l3_hint, layout, /*contiguity=*/nullptr);
 }
 
 //===----------------------------------------------------------------------===//

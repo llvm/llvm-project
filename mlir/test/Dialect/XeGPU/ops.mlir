@@ -452,19 +452,19 @@ gpu.func @subgroup_store_offset_1(%dest: memref<?xf16>) {
   gpu.return
 }
 
-// CHECK: gpu.func @load_contiguous_chunk(%[[arg0:.*]]: i64, %[[arg1:.*]]: vector<16xindex>, %[[arg2:.*]]: vector<16xi1>) {
-gpu.func @load_contiguous_chunk(%src: i64, %offset: vector<16xindex>, %mask: vector<16xi1>) {
-  // A user-provided `contiguous_chunk` round-trips through the optional op attribute.
-  // CHECK: xegpu.load %[[arg0]][%[[arg1]]], %[[arg2]] <{contiguous_chunk = 4 : i64}> : i64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
-  %val = xegpu.load %src[%offset], %mask <{contiguous_chunk = 4 : i64}>
+// CHECK: gpu.func @load_contiguity(%[[arg0:.*]]: i64, %[[arg1:.*]]: vector<16xindex>, %[[arg2:.*]]: vector<16xi1>) {
+gpu.func @load_contiguity(%src: i64, %offset: vector<16xindex>, %mask: vector<16xi1>) {
+  // A user-provided `contiguity` round-trips through the optional op attribute.
+  // CHECK: xegpu.load %[[arg0]][%[[arg1]]], %[[arg2]] <{contiguity = 4 : i64}> : i64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
+  %val = xegpu.load %src[%offset], %mask <{contiguity = 4 : i64}>
       : i64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
   gpu.return
 }
 
-// CHECK: gpu.func @store_contiguous_chunk(%[[arg0:.*]]: vector<16xf32>, %[[arg1:.*]]: i64, %[[arg2:.*]]: vector<16xindex>, %[[arg3:.*]]: vector<16xi1>) {
-gpu.func @store_contiguous_chunk(%val: vector<16xf32>, %dest: i64, %offset: vector<16xindex>, %mask: vector<16xi1>) {
-  // CHECK: xegpu.store %[[arg0]], %[[arg1]][%[[arg2]]], %[[arg3]] <{contiguous_chunk = 4 : i64}> : vector<16xf32>, i64, vector<16xindex>, vector<16xi1>
-  xegpu.store %val, %dest[%offset], %mask <{contiguous_chunk = 4 : i64}>
+// CHECK: gpu.func @store_contiguity(%[[arg0:.*]]: vector<16xf32>, %[[arg1:.*]]: i64, %[[arg2:.*]]: vector<16xindex>, %[[arg3:.*]]: vector<16xi1>) {
+gpu.func @store_contiguity(%val: vector<16xf32>, %dest: i64, %offset: vector<16xindex>, %mask: vector<16xi1>) {
+  // CHECK: xegpu.store %[[arg0]], %[[arg1]][%[[arg2]]], %[[arg3]] <{contiguity = 4 : i64}> : vector<16xf32>, i64, vector<16xindex>, vector<16xi1>
+  xegpu.store %val, %dest[%offset], %mask <{contiguity = 4 : i64}>
       : vector<16xf32>, i64, vector<16xindex>, vector<16xi1>
   gpu.return
 }

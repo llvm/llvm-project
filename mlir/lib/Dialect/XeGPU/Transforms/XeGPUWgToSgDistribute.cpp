@@ -833,7 +833,7 @@ struct WgToSgLoadGatherOp : public OpConversionPattern<xegpu::LoadGatherOp> {
       auto newLoadOp = xegpu::LoadGatherOp::create(
           rewriter, loc, newTy, op.getSource(), offsets, mask, chunkSizeAttr,
           op.getL1HintAttr(), op.getL2HintAttr(), op.getL3HintAttr(), newLayout,
-          /*contiguous_chunk=*/nullptr);
+          /*contiguity=*/nullptr);
       newLoadOps.push_back(newLoadOp);
     }
     rewriter.replaceOpWithMultiple(op, {newLoadOps});
@@ -880,7 +880,7 @@ struct WgToSgStoreScatterOp
                                     mask, chunkSizeAttr, op.getL1HintAttr(),
                                     op.getL2HintAttr(), op.getL3HintAttr(),
                                     layout.dropSgLayoutAndData(),
-                                    /*contiguous_chunk=*/nullptr);
+                                    /*contiguity=*/nullptr);
     }
     rewriter.eraseOp(op);
     return success();

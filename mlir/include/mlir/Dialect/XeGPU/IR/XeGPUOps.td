@@ -774,7 +774,7 @@ def XeGPU_LoadGatherOp : XeGPU_Op<"load", [MemoryEffects<[MemRead]>, AnchorLayou
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
       OptionalAttr<DistributeLayoutAttr>:$layout,
-      OptionalAttr<I64Attr>:$contiguous_chunk);
+      OptionalAttr<I64Attr>:$contiguity);
   let results = (outs XeGPU_ValueOrScalarType:$value);
 
   let extraClassDeclaration = extraBaseClassDeclaration # [{
@@ -905,7 +905,7 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
       OptionalAttr<XeGPU_CacheHintAttr>:$l2_hint,
       OptionalAttr<XeGPU_CacheHintAttr>:$l3_hint,
       OptionalAttr<DistributeLayoutAttr>:$layout,
-      OptionalAttr<I64Attr>:$contiguous_chunk);
+      OptionalAttr<I64Attr>:$contiguity);
 
   let extraClassDeclaration = extraBaseClassDeclaration#[{
     Type getDestType() {

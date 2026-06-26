@@ -791,17 +791,17 @@ func.func @dpas_mx_scale_b_layout_not_distributable(%a : vector<8x16xf8E5M2>, %b
 }
 
 // -----
-func.func @contiguous_chunk_too_small(%src: i64, %offset: vector<16xindex>, %mask: vector<16xi1>) {
-  // expected-error@+1 {{contiguous_chunk 1 must be >= 2}}
-  %val = xegpu.load %src[%offset], %mask <{contiguous_chunk = 1 : i64}>
+func.func @contiguity_too_small(%src: i64, %offset: vector<16xindex>, %mask: vector<16xi1>) {
+  // expected-error@+1 {{contiguity 1 must be >= 2}}
+  %val = xegpu.load %src[%offset], %mask <{contiguity = 1 : i64}>
       : i64, vector<16xindex>, vector<16xi1> -> vector<16xf32>
   return
 }
 
 // -----
-func.func @contiguous_chunk_exceeds_inner(%src: i64, %offset: vector<6xindex>, %mask: vector<6xi1>) {
-  // expected-error@+1 {{contiguous_chunk 8 must not exceed the innermost offsets dim 6}}
-  %val = xegpu.load %src[%offset], %mask <{contiguous_chunk = 8 : i64}>
+func.func @contiguity_does_not_divide(%src: i64, %offset: vector<6xindex>, %mask: vector<6xi1>) {
+  // expected-error@+1 {{contiguity 4 must divide the innermost offsets dim 6}}
+  %val = xegpu.load %src[%offset], %mask <{contiguity = 4 : i64}>
       : i64, vector<6xindex>, vector<6xi1> -> vector<6xf32>
   return
 }

@@ -38,7 +38,7 @@
 #include <numeric>
 #include <optional>
 
-#define DEBUG_TYPE "xegpu-coalesce-gather-scatter"
+#define DEBUG_TYPE "xegpu-contiguity-analysis"
 
 using namespace mlir;
 
@@ -249,10 +249,17 @@ private:
     return success();
   }
 
+  // arith.constant. The four cases below, by example:
+  //   - scalar int      `arith.constant 8 : index`
+  //   - non-int scalar  `arith.constant 1.0 : f32` (pessimistic)
+  //   - splat vector    `arith.constant dense<5> : vector<16xindex>`
+  //   - dense vector    `arith.constant dense<[0,1,2,3]> : vector<4xindex>`
   LogicalResult visitConstant(arith::ConstantOp op,
                               ArrayRef<AxisInfoLattice *> results) {
     auto vt = dyn_cast<VectorType>(op.getType());
     if (!vt) {
+      // Scalar integer, e.g. `arith.constant 8 : index`: a single known value,
+      // contiguity/constancy 1, divisibility from the value (8 -> 8).
       if (auto intAttr = dyn_cast<IntegerAttr>(op.getValue())) {
         int64_t c = intAttr.getValue().getSExtValue();
         AxisInfo v;
@@ -263,6 +270,7 @@ private:
         propagateIfChanged(results[0], results[0]->join(v));
         return success();
       }
+      // Non-integer scalar, e.g. `arith.constant 1.0 : f32`: nothing to track.
       setAllPessimistic(op, results);
       return success();
     }
@@ -272,6 +280,8 @@ private:
       return success();
     }
     auto shape = vt.getShape();
+    // Splat, e.g. `arith.constant dense<5> : vector<16xindex>`: every element
+    // equal, so constancy = full extent, innerStride 0.
     if (dense.isSplat()) {
       int64_t c = dense.getSplatValue<APInt>().getSExtValue();
       AxisInfo v = splatAxisInfo(shape, c);
@@ -279,9 +289,11 @@ private:
       return success();
     }
 
-    // Compute innermost-dim contiguity / constancy / base-divisibility by
-    // iterating the dense values along the inner stride. Outer dims report
-    // pessimistic (1) unless they collapse trivially below.
+    // General dense vector, e.g. `arith.constant dense<[0,1,2,3]> :
+    // vector<4xindex>`. Compute innermost-dim contiguity / constancy /
+    // base-divisibility by iterating the dense values along the inner stride
+    // (here stride 1 -> contiguity 4). Outer dims report pessimistic (1)
+    // unless they collapse trivially below.
     unsigned r = shape.size();
     int64_t inner = shape.back();
     int64_t outer = vt.getNumElements() / inner;
@@ -841,17 +853,17 @@ using ::mlir::xegpu::detail::axis_dataflow::AxisInfoLattice;
 // Analysis driver.
 //===----------------------------------------------------------------------===//
 
-/// Stamp a `contiguous_chunk` attribute on `op` recording the inner-dim
-/// contiguity computed by the analysis. The contiguity is a target-independent
-/// property of the offsets.
+/// Stamp a `contiguity` attribute on `op` recording the inner-dim contiguity
+/// computed by the analysis. The contiguity is a target-independent property
+/// of the offsets.
 template <typename OpTy>
 static void analyzeAndStampContiguity(OpTy op, DataFlowSolver &solver) {
   auto offsetsTy = dyn_cast<VectorType>(op.getOffsets().getType());
   if (!offsetsTy || offsetsTy.getNumElements() <= 1)
     return;
-  // A pre-existing `contiguous_chunk` (user-authored, or stamped by an earlier
-  // run) takes precedence; leave it untouched so the analysis is idempotent.
-  if (op.getContiguousChunk())
+  // A pre-existing `contiguity` (user-authored, or stamped by an earlier run)
+  // takes precedence; leave it untouched so the analysis is idempotent.
+  if (op.getContiguity())
     return;
   const auto *lat = solver.lookupState<AxisInfoLattice>(op.getOffsets());
   if (!lat || !lat->getValue().isInitialized())
@@ -859,10 +871,15 @@ static void analyzeAndStampContiguity(OpTy op, DataFlowSolver &solver) {
   const AxisInfo &info = lat->getValue();
   unsigned innerDim = offsetsTy.getRank() - 1;
   int64_t inner = offsetsTy.getShape()[innerDim];
-  int64_t chunk = std::min<int64_t>(info.contiguity[innerDim], inner);
-  if (chunk < 2)
+  // The attribute records a contiguity that tiles the inner dim, so it must
+  // divide it (verified on the op). Round the measured run length down to the
+  // largest divisor of `inner` that does not exceed it.
+  int64_t contiguity = std::min<int64_t>(info.contiguity[innerDim], inner);
+  while (contiguity >= 2 && inner % contiguity != 0)
+    --contiguity;
+  if (contiguity < 2)
     return;
-  op.setContiguousChunk(chunk);
+  op.setContiguity(contiguity);
 }
 
 } // namespace
@@ -871,7 +888,7 @@ static void analyzeAndStampContiguity(OpTy op, DataFlowSolver &solver) {
 // Public API.
 //===----------------------------------------------------------------------===//
 
-void mlir::xegpu::runCoalesceGatherScatterAnalysis(Operation *root) {
+void mlir::xegpu::runContiguityAnalysis(Operation *root) {
   DataFlowSolver solver;
   solver.load<dataflow::DeadCodeAnalysis>();
   solver.load<mlir::xegpu::detail::axis_dataflow::AxisInfoAnalysis>();
