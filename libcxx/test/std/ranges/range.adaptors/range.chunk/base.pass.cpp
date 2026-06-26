@@ -26,13 +26,23 @@ constexpr bool test() {
   std::ranges::chunk_view<std::ranges::ref_view<const std::array<int, 8>>> const_chunked =
       std::as_const(array) | std::views::chunk(4);
 
-  // Test `chunk_view.base()`
+  // Test `chunk_view.base() const&`
   {
     std::same_as<std::array<int, 8>&> decltype(auto) base = chunked.base().base();
     assert(std::addressof(base) == std::addressof(array));
 
     std::same_as<const std::array<int, 8>&> decltype(auto) const_base = const_chunked.base().base();
     assert(std::addressof(const_base) == std::addressof(array));
+  }
+
+  // Test `chunk_view.base() &&`
+  {
+    std::same_as<std::ranges::ref_view<std::array<int, 8>>> decltype(auto) moved = std::move(chunked).base();
+    assert(std::addressof(moved.base()) == std::addressof(array));
+
+    std::same_as<std::ranges::ref_view<const std::array<int, 8>>> decltype(auto) const_moved =
+        std::move(const_chunked).base();
+    assert(std::addressof(const_moved.base()) == std::addressof(array));
   }
 
   return true;
