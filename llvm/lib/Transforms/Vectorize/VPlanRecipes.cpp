@@ -1942,22 +1942,28 @@ void VPInstructionWithType::printRecipe(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
+/// Shared execute logic for VPPhi and VPWidenPHIRecipe. Creates a PHI node,
+/// adds incoming values, and stores the result in State. For header phis, only
+/// the preheader incoming value is added; the backedge is fixed up later by
+/// VPlan::execute().
+static void executePhiRecipe(VPSingleDefRecipe *R, VPPhiAccessors &Phi,
+                             VPTransformState &State, bool IsScalar,
+                             const Twine &Name) {
+  unsigned NumIncoming = VPBlockUtils::isHeader(R->getParent(), State.VPDT)
+                             ? 1
+                             : Phi.getNumIncoming();
+  Value *FirstInc = State.get(Phi.getIncomingValue(0), IsScalar);
+  PHINode *NewPhi = State.Builder.CreatePHI(FirstInc->getType(), 2, Name);
+  NewPhi->addIncoming(FirstInc,
+                      State.CFG.VPBB2IRBB.at(Phi.getIncomingBlock(0)));
+  for (unsigned Idx = 1; Idx != NumIncoming; ++Idx)
+    NewPhi->addIncoming(State.get(Phi.getIncomingValue(Idx), IsScalar),
+                        State.CFG.VPBB2IRBB.at(Phi.getIncomingBlock(Idx)));
+  State.set(R, NewPhi, IsScalar);
+}
+
 void VPPhi::execute(VPTransformState &State) {
-  PHINode *NewPhi = State.Builder.CreatePHI(getScalarType(), 2, getName());
-  unsigned NumIncoming = getNumIncoming();
-  // Detect header phis: the parent block dominates its second incoming block
-  // (the latch). Those IR incoming values have not been generated yet and need
-  // to be added after they have been executed.
-  if (NumIncoming == 2 &&
-      State.VPDT.dominates(getParent(), getIncomingBlock(1))) {
-    NumIncoming = 1;
-  }
-  for (unsigned Idx = 0; Idx != NumIncoming; ++Idx) {
-    Value *IncV = State.get(getIncomingValue(Idx), VPLane(0));
-    BasicBlock *PredBB = State.CFG.VPBB2IRBB.at(getIncomingBlock(Idx));
-    NewPhi->addIncoming(IncV, PredBB);
-  }
-  State.set(this, NewPhi, VPLane(0));
+  executePhiRecipe(this, *this, State, /*IsScalar=*/true, getName());
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2391,7 +2397,7 @@ void VPHistogramRecipe::execute(VPTransformState &State) {
   else
     assert(Opcode == Instruction::Add && "only add or sub supported for now");
 
-  auto *HistogramInst = State.Builder.CreateIntrinsic(
+  Instruction *HistogramInst = State.Builder.CreateIntrinsicWithoutFolding(
       Intrinsic::experimental_vector_histogram_add, {VTy, IncAmt->getType()},
       {Address, IncAmt, Mask});
   applyMetadata(*HistogramInst);
@@ -3020,6 +3026,46 @@ void VPDerivedIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   getStepValue()->printAsOperand(O, SlotTracker);
 }
 #endif
+
+InstructionCost VPScalarIVStepsRecipe::computeCost(ElementCount VF,
+                                                   VPCostContext &Ctx) const {
+  // TODO: Add costs for floating point.
+  Type *BaseIVTy = getOperand(0)->getScalarType();
+  if (!BaseIVTy->isIntegerTy())
+    return 0;
+
+  // TODO: Add support for predicated regions. Requires scaling the cost by the
+  // probability of entering the block.
+  if (getRegion() && getRegion()->isReplicator())
+    return 0;
+
+  // If only the first lane is used, then there won't be any code that remains
+  // in the loop for the first unrolled part.
+  if (vputils::onlyFirstLaneUsed(this))
+    return 0;
+
+  // Typically the operations are:
+  //   1. Add the start index to each lane value.
+  //   2. Multiply the start index by the step.
+  //   3. Add the scaled start index to base IV.
+  // Any code generated for 1 and 2 should be loop invariant and therefore
+  // hoisted out of the loop. We only need to add on the cost of 3.
+
+  // Given the users of VPScalarIVStepsRecipe tend to be scalarized GEPs, i.e.
+  //  %add1 = add i32 %iv, 0
+  //  %add2 = add i32 %iv, 1
+  //  %gep1 = getelementptr i8, ptr %p, i32 %add1
+  //  %gep2 = getelementptr i8, ptr %p, i32 %add2
+  // it's very likely that these GEPs will all be rewritten to have a common
+  // base such that what's left is just
+  //  %base_gep = getelementptr i8, ptr %p, i32 %iv
+  //  %gep1 = getelementptr i8, ptr %base_gep, i32 0
+  //  %gep2 = getelementptr i8, ptr %base_gep, i32 1
+  // Therefore, in reality the cost is somewhere betwen 1*AddCost and
+  // (NumLanes - 1) * AddCost. For now, assume the cost of a single add.
+  return Ctx.TTI.getArithmeticInstrCost(Instruction::Add, BaseIVTy,
+                                        Ctx.CostKind);
+}
 
 void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
   // Fast-math-flags propagate from the original induction instruction.
@@ -4144,18 +4190,17 @@ void VPWidenLoadEVLRecipe::execute(VPTransformState &State) {
     Mask = Builder.CreateVectorSplat(State.VF, Builder.getTrue());
 
   if (CreateGather) {
-    NewLI =
-        Builder.CreateIntrinsic(DataTy, Intrinsic::vp_gather, {Addr, Mask, EVL},
-                                nullptr, "wide.masked.gather");
+    NewLI = Builder.CreateIntrinsicWithoutFolding(DataTy, Intrinsic::vp_gather,
+                                                  {Addr, Mask, EVL}, nullptr,
+                                                  "wide.masked.gather");
   } else {
-    NewLI = Builder.CreateIntrinsic(DataTy, Intrinsic::vp_load,
-                                    {Addr, Mask, EVL}, nullptr, "vp.op.load");
+    NewLI = Builder.CreateIntrinsicWithoutFolding(
+        DataTy, Intrinsic::vp_load, {Addr, Mask, EVL}, nullptr, "vp.op.load");
   }
   NewLI->addParamAttr(
       0, Attribute::getWithAlignment(NewLI->getContext(), Alignment));
   applyMetadata(*NewLI);
-  Instruction *Res = NewLI;
-  State.set(this, Res);
+  State.set(this, NewLI);
 }
 
 InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
@@ -4233,13 +4278,13 @@ void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
 
   Value *Addr = State.get(getAddr(), !CreateScatter);
   if (CreateScatter) {
-    NewSI = Builder.CreateIntrinsic(Type::getVoidTy(EVL->getContext()),
-                                    Intrinsic::vp_scatter,
-                                    {StoredVal, Addr, Mask, EVL});
+    NewSI = Builder.CreateIntrinsicWithoutFolding(
+        Type::getVoidTy(EVL->getContext()), Intrinsic::vp_scatter,
+        {StoredVal, Addr, Mask, EVL});
   } else {
-    NewSI = Builder.CreateIntrinsic(Type::getVoidTy(EVL->getContext()),
-                                    Intrinsic::vp_store,
-                                    {StoredVal, Addr, Mask, EVL});
+    NewSI = Builder.CreateIntrinsicWithoutFolding(
+        Type::getVoidTy(EVL->getContext()), Intrinsic::vp_store,
+        {StoredVal, Addr, Mask, EVL});
   }
   NewSI->addParamAttr(
       1, Attribute::getWithAlignment(NewSI->getContext(), Alignment));
@@ -4428,7 +4473,7 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
       // so must use intrinsics to deinterleave.
       assert(InterleaveFactor <= 8 &&
              "Unsupported deinterleave factor for scalable vectors");
-      NewLoad = State.Builder.CreateIntrinsic(
+      NewLoad = State.Builder.CreateIntrinsicWithoutFolding(
           Intrinsic::getDeinterleaveIntrinsicID(InterleaveFactor),
           NewLoad->getType(), NewLoad,
           /*FMFSource=*/nullptr, "strided.vec");
@@ -4592,7 +4637,7 @@ void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
 
   // Vectorize the interleaved load group.
   if (isa<LoadInst>(Instr)) {
-    CallInst *NewLoad = State.Builder.CreateIntrinsic(
+    CallInst *NewLoad = State.Builder.CreateIntrinsicWithoutFolding(
         VecTy, Intrinsic::vp_load, {ResAddr, GroupMask, InterleaveEVL}, nullptr,
         "wide.vp.load");
     NewLoad->addParamAttr(0,
@@ -4604,7 +4649,7 @@ void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
 
     // Scalable vectors cannot use arbitrary shufflevectors (only splats),
     // so must use intrinsics to deinterleave.
-    NewLoad = State.Builder.CreateIntrinsic(
+    NewLoad = State.Builder.CreateIntrinsicWithoutFolding(
         Intrinsic::getDeinterleaveIntrinsicID(InterleaveFactor),
         NewLoad->getType(), NewLoad,
         /*FMFSource=*/nullptr, "strided.vec");
@@ -4656,9 +4701,10 @@ void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
 
   // Interleave all the smaller vectors into one wider vector.
   Value *IVec = interleaveVectors(State.Builder, StoredVecs, "interleaved.vec");
-  CallInst *NewStore =
-      State.Builder.CreateIntrinsic(Type::getVoidTy(Ctx), Intrinsic::vp_store,
-                                    {IVec, ResAddr, GroupMask, InterleaveEVL});
+  CallInst *NewStore = State.Builder.CreateIntrinsicWithoutFolding(
+      Type::getVoidTy(Ctx), Intrinsic::vp_store,
+      {IVec, ResAddr, GroupMask, InterleaveEVL});
+
   NewStore->addParamAttr(1,
                          Attribute::getWithAlignment(Ctx, Group->getAlign()));
 
@@ -4880,10 +4926,7 @@ bool VPBlendRecipe::usesFirstLaneOnly(const VPValue *Op) const {
 }
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
-  Value *Op0 = State.get(getOperand(0));
-  Type *VecTy = Op0->getType();
-  Instruction *VecPhi = State.Builder.CreatePHI(VecTy, 2, Name);
-  State.set(this, VecPhi);
+  executePhiRecipe(this, *this, State, /*IsScalar=*/false, Name);
 }
 
 InstructionCost VPWidenPHIRecipe::computeCost(ElementCount VF,

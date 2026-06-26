@@ -22,9 +22,12 @@ ${PROGNAME} [options] <BUILDER> [-- commit ...]
 --llvm-root <DIR>   Path to the root of the LLVM monorepo. By default, we try
                     to figure it out based on the current working directory.
 
---build-dir <DIR>   The directory to use for storing benchmark results. By default,
-                    this is '<llvm-root>/build/<builder>'. Note that intermediate
-                    build results are never kept around.
+--results-dir <DIR> The directory to use for storing benchmark results (LNT JSON files).
+                    By default, this is '<llvm-root>/build/<builder>'.
+
+--build-dir <DIR>   Optional directory in which to keep build artifacts. Artifacts for each
+                    run are stored under '<build-dir>/<builder>/<commit>'. By default, build
+                    artifacts are stored in a temporary directory and discarded after each run.
 
 [--lnt-url <URL>]   The optional URL of the LNT instance to submit results to. By
                     default, results are not submitted to any LNT instance.
@@ -56,6 +59,10 @@ while [[ $# -gt 0 ]]; do
             MONOREPO_ROOT="${2}"
             shift; shift
             ;;
+        --results-dir)
+            RESULTS_DIR="${2}"
+            shift; shift
+            ;;
         --build-dir)
             BUILD_DIR="${2}"
             shift; shift
@@ -81,7 +88,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 MONOREPO_ROOT="${MONOREPO_ROOT:="$(git rev-parse --show-toplevel)"}"
-BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build/${BUILDER}}"
+RESULTS_DIR="${RESULTS_DIR:=${MONOREPO_ROOT}/build/${BUILDER}}"
 
 case "${BUILDER}" in
 apple-m5-clang21)
@@ -109,19 +116,21 @@ echo "***********************************************"
 
 LNT_TEST_SUITE=libcxx2
 
-mkdir -p "${BUILD_DIR}"
+mkdir -p "${RESULTS_DIR}"
 
-# Given path/to/abcdef.json, figures out the next available path,
-# considering path/to/abcdef.{1,2,3,etc}.json.
-next_available_path() {
-    local path="${1}"
-    local base="${path%.json}"
+# Find the smallest suffix such that both the artifacts and the results directory names are available.
+# This ensures that we can always match artifact directories with their results.
+# The first candidate is unsuffixed ('foo.json' / 'foo'), then '.1', '.2', and so on.
+select_run_suffix() {
+    local results_base="${1}"   # e.g. <results-dir>/<commit>
+    local artifacts_base="${2}" # e.g. <build-dir>/<builder>/<commit>, or empty when not keeping artifacts
+    local suffix=""
     local i=1
-    while [ -f "${path}" ]; do
-        path="${base}.${i}.json"
+    while [ -f "${results_base}${suffix}.json" ] || { [ -n "${artifacts_base}" ] && [ -e "${artifacts_base}${suffix}" ]; }; do
+        suffix=".${i}"
         i=$((i + 1))
     done
-    echo "${path}"
+    echo "${suffix}"
 }
 
 run_benchmarks() {
@@ -135,7 +144,20 @@ run_benchmarks() {
         filter_arg="--filter ${FILTER}"
     fi
 
-    local output=$(next_available_path "${BUILD_DIR}/${1}.json")
+    # Pick a suffix that is free for both the result report and (when keeping build artifacts) the
+    # artifacts directory, so 'foo.N.json' and its build artifacts in 'foo.N' always correspond.
+    local artifacts_base=""
+    if [ -n "${BUILD_DIR}" ]; then
+        artifacts_base="${BUILD_DIR}/${BUILDER}/${1}"
+    fi
+    local suffix=$(select_run_suffix "${RESULTS_DIR}/${1}" "${artifacts_base}")
+
+    local build_dir_arg=""
+    if [ -n "${BUILD_DIR}" ]; then
+        build_dir_arg="--build-dir ${artifacts_base}${suffix}"
+    fi
+
+    local output="${RESULTS_DIR}/${1}${suffix}.json"
     ${MONOREPO_ROOT}/libcxx/utils/ci/lnt/run-benchmarks                                                         \
         --test-suite-commit ${BENCHMARK_SUITE_VERSION}                                                          \
         --git-repo ${MONOREPO_ROOT}                                                                             \
@@ -144,6 +166,7 @@ run_benchmarks() {
         --benchmark-commit ${1}                                                                                 \
         ${spec_arg}                                                                                             \
         ${filter_arg}                                                                                           \
+        ${build_dir_arg}                                                                                        \
         --output ${output}
 
     if [ -n "${LNT_URL}" ]; then

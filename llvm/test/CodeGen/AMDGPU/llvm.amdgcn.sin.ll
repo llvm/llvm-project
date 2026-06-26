@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN %s
 
 declare float @llvm.amdgcn.sin.f32(float) #0

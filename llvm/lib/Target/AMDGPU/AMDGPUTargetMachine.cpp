@@ -631,12 +631,6 @@ static cl::opt<bool>
                            cl::desc("Enable AMDGPUAttributorPass"),
                            cl::init(true), cl::Hidden);
 
-static cl::opt<bool> NewRegBankSelect(
-    "new-reg-bank-select",
-    cl::desc("Run amdgpu-regbankselect and amdgpu-regbanklegalize instead of "
-             "regbankselect"),
-    cl::init(false), cl::Hidden);
-
 static cl::opt<bool> HasClosedWorldAssumption(
     "amdgpu-link-time-closed-world",
     cl::desc("Whether has closed-world assumption at link time"),
@@ -1096,7 +1090,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
         if (EnableLowerExecSync)
           PM.addPass(AMDGPULowerExecSyncPass());
         if (EnableSwLowerLDS)
-          PM.addPass(AMDGPUSwLowerLDSPass(*this));
+          PM.addPass(AMDGPUSwLowerLDSPass());
         if (EnableLowerModuleLDS)
           PM.addPass(AMDGPULowerModuleLDSPass(*this));
         if (Level != OptimizationLevel::O0) {
@@ -1490,7 +1484,7 @@ void AMDGPUPassConfig::addIRPasses() {
 
   // Lower LDS accesses to global memory pass if address sanitizer is enabled.
   if (EnableSwLowerLDS)
-    addPass(createAMDGPUSwLowerLDSLegacyPass(&TM));
+    addPass(createAMDGPUSwLowerLDSLegacyPass());
 
   // Runs before PromoteAlloca so the latter can account for function uses
   if (EnableLowerModuleLDS) {
@@ -1625,9 +1619,10 @@ bool GCNPassConfig::addPreISel() {
   addPass(createAMDGPURewriteUndefForPHILegacyPass());
 
   // SDAG requires LCSSA, GlobalISel does not. Disable LCSSA for -global-isel
-  // with -new-reg-bank-select and without any of the fallback options.
-  if (!getCGPassBuilderOption().EnableGlobalISelOption ||
-      !isGlobalISelAbortEnabled() || !NewRegBankSelect)
+  // without any of the fallback options.
+  if (getCGPassBuilderOption().EnableGlobalISelOption !=
+          cl::boolOrDefault::BOU_TRUE ||
+      !isGlobalISelAbortEnabled())
     addPass(createLCSSAPass());
 
   if (TM->getOptLevel() > CodeGenOptLevel::Less)
@@ -1698,12 +1693,8 @@ void GCNPassConfig::addPreRegBankSelect() {
 }
 
 bool GCNPassConfig::addRegBankSelect() {
-  if (NewRegBankSelect) {
-    addPass(createAMDGPURegBankSelectPass());
-    addPass(createAMDGPURegBankLegalizePass());
-  } else {
-    addPass(new RegBankSelect());
-  }
+  addPass(createAMDGPURegBankSelectPass());
+  addPass(createAMDGPURegBankLegalizePass());
   return false;
 }
 
@@ -2278,7 +2269,7 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
     addModulePass(AMDGPULowerExecSyncPass(), PMW);
 
   if (EnableSwLowerLDS)
-    addModulePass(AMDGPUSwLowerLDSPass(TM), PMW);
+    addModulePass(AMDGPUSwLowerLDSPass(), PMW);
 
   // Runs before PromoteAlloca so the latter can account for function uses
   if (EnableLowerModuleLDS)
@@ -2390,8 +2381,9 @@ void AMDGPUCodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) const {
   // control flow modifications.
   addFunctionPass(AMDGPURewriteUndefForPHIPass(), PMW);
 
-  if (!getCGPassBuilderOption().EnableGlobalISelOption ||
-      !isGlobalISelAbortEnabled() || !NewRegBankSelect)
+  if (getCGPassBuilderOption().EnableGlobalISelOption !=
+          cl::boolOrDefault::BOU_TRUE ||
+      !isGlobalISelAbortEnabled())
     addFunctionPass(LCSSAPass(), PMW);
 
   if (TM.getOptLevel() > CodeGenOptLevel::Less) {

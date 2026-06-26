@@ -276,10 +276,6 @@ bool AArch64TTIImpl::isMultiversionedFunction(const Function &F) const {
   return F.hasFnAttribute("fmv-features");
 }
 
-const FeatureBitset AArch64TTIImpl::InlineInverseFeatures = {
-    AArch64::FeatureExecuteOnly,
-};
-
 bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
                                          const Function *Callee) const {
   SMECallAttrs CallAttrs(*Caller, *Callee);
@@ -308,19 +304,7 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
       return false;
   }
 
-  const TargetMachine &TM = getTLI()->getTargetMachine();
-  const FeatureBitset &CallerBits =
-      TM.getSubtargetImpl(*Caller)->getFeatureBits();
-  const FeatureBitset &CalleeBits =
-      TM.getSubtargetImpl(*Callee)->getFeatureBits();
-  // Adjust the feature bitsets by inverting some of the bits. This is needed
-  // for target features that represent restrictions rather than capabilities,
-  // for example a "+execute-only" callee can be inlined into a caller without
-  // "+execute-only", but not vice versa.
-  FeatureBitset EffectiveCallerBits = CallerBits ^ InlineInverseFeatures;
-  FeatureBitset EffectiveCalleeBits = CalleeBits ^ InlineInverseFeatures;
-
-  return (EffectiveCallerBits & EffectiveCalleeBits) == EffectiveCalleeBits;
+  return BaseT::areInlineCompatible(Caller, Callee);
 }
 
 bool AArch64TTIImpl::areTypesABICompatible(const Function *Caller,
@@ -568,6 +552,12 @@ AArch64TTIImpl::getPopcntSupport(unsigned TyWidth) const {
   return TTI::PSK_Software;
 }
 
+InstructionCost AArch64TTIImpl::getBranchMispredictPenalty() const {
+  // MispredictPenalty is defined per-CPU in AArch64Sched*.td (e.g.,
+  // AArch64SchedNeoverseV2.td).
+  return ST->getSchedModel().MispredictPenalty;
+}
+
 static bool isUnpackedVectorVT(EVT VecVT) {
   return VecVT.isScalableVector() &&
          VecVT.getSizeInBits().getKnownMinValue() < AArch64::SVEBitsPerBlock;
@@ -633,6 +623,82 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     // If the cost isn't valid, we may still be able to scalarize
     if (HistCost.isValid())
       return HistCost;
+    break;
+  }
+  case Intrinsic::clmul: {
+    auto LT = getTypeLegalizationCost(RetTy);
+
+    // PMUL v8i8/v16i8 is always available on AArch64
+    if (ST->hasNEON()) {
+      if (LT.second == MVT::v8i8 || LT.second == MVT::v16i8)
+        return LT.first;
+
+      // Scalar i8 lowers through scalar/vector moves around PMUL.
+      if (TLI->getValueType(DL, RetTy, true) == MVT::i8) {
+        auto *VecTy =
+            FixedVectorType::get(Type::getInt8Ty(RetTy->getContext()), 8);
+        return 1 +
+               getVectorInstrCost(Instruction::ExtractElement, VecTy, CostKind,
+                                  -1, nullptr, nullptr) *
+                   2 +
+               getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind,
+                                  -1, nullptr, nullptr);
+      }
+    }
+
+    if (LT.second.SimpleTy == MVT::nxv2i64)
+      if (ST->hasSVEAES() && (ST->isSVEAvailable() || ST->hasSSVE_AES()))
+        return LT.first * 3;
+
+    if (ST->hasSVE2() || ST->hasSME()) {
+      switch (LT.second.SimpleTy) {
+      case MVT::nxv16i8:
+        return LT.first;
+      case MVT::nxv8i16:
+        return LT.first * 6;
+      case MVT::nxv4i32:
+        return LT.first * 3;
+      case MVT::nxv2i64:
+        return LT.first * 8;
+      default:
+        break;
+      }
+    }
+
+    // Avoid +sve giving this cost 2 due to custom lowering: It's very slow
+    if (LT.second.SimpleTy == MVT::nxv2i64)
+      return 192;
+
+    if (ST->hasAES()) {
+      switch (LT.second.SimpleTy) {
+      case MVT::i16:
+      case MVT::i32:
+      case MVT::i64:
+      case MVT::i128: {
+        auto *VecTy =
+            FixedVectorType::get(Type::getInt64Ty(RetTy->getContext()), 1);
+        return LT.first *
+               (1 +
+                getVectorInstrCost(Instruction::ExtractElement, VecTy, CostKind,
+                                   -1, nullptr, nullptr) *
+                    2 +
+                getVectorInstrCost(Instruction::InsertElement, VecTy, CostKind,
+                                   -1, nullptr, nullptr));
+      }
+      case MVT::v1i64:
+        return LT.first;
+      case MVT::v2i64:
+        return LT.first * 3;
+      case MVT::v2i32:
+        return LT.first * 6;
+      case MVT::v4i32:
+        return LT.first * 11;
+      case MVT::v4i16:
+        return LT.first * 14;
+      default:
+        break;
+      }
+    }
     break;
   }
   case Intrinsic::umin:
@@ -2426,7 +2492,7 @@ instCombineSVEVectorFuseMulAddSub(InstCombiner &IC, IntrinsicInst &II,
     FMFSource = &II;
   }
 
-  CallInst *Res;
+  Value *Res;
   if (MergeIntoAddendOp)
     Res = IC.Builder.CreateIntrinsic(FuseOpc, {II.getType()},
                                      {P, AddendOp, MulOp0, MulOp1}, FMFSource);
@@ -2522,6 +2588,12 @@ instCombineSVEVectorMlaU(InstCombiner &IC, IntrinsicInst &II) {
     return IC.replaceInstUsesWith(II, IC.Builder.CreateSub(Acc, MulOp1));
   if (match(MulOp1, m_AllOnes()))
     return IC.replaceInstUsesWith(II, IC.Builder.CreateSub(Acc, MulOp0));
+
+  if (isa<Constant>(MulOp0) && !isa<Constant>(MulOp1)) {
+    II.setArgOperand(2, MulOp1);
+    II.setArgOperand(3, MulOp0);
+    return &II;
+  }
 
   return std::nullopt;
 }
@@ -5216,8 +5288,10 @@ bool AArch64TTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
          (ST->isSVEorStreamingSVEAvailable() && ST->hasSME2p2());
 }
 
-unsigned AArch64TTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
-  if (VF.isScalar())
+unsigned
+AArch64TTIImpl::getMaxInterleaveFactor(ElementCount VF,
+                                       bool HasUnorderedReductions) const {
+  if (VF.isScalar() || (HasUnorderedReductions && VF.getKnownMinValue() <= 4))
     return 4;
   return ST->getMaxInterleaveFactor();
 }

@@ -594,6 +594,13 @@ let Predicates = [HasVendorXCVbi, IsRV32] in {
   def CV_BNEIMM : CVInstImmBranch<0b111, (outs),
         (ins GPR:$rs1, simm5:$imm5, bare_simm13_lsb0:$imm12),
         "cv.bneimm", "$rs1, $imm5, $imm12">, Sched<[]>;
+  // Long-branch relaxation pseudos for cv.beqimm / cv.bneimm. These are emitted
+  // by the RISCVAsmBackend when the target of a CV_BEQIMM / CV_BNEIMM is
+  // further than +/-4 KiB away. Each expands to an inverted short cv.b{ne,eq}imm
+  // (4 bytes) plus an unconditional JAL trampoline (4 bytes). Reuses the
+  // LongBcciPseudo class from RISCVInstrInfo.td (size = 8 bytes, simm5 imm).
+  def PseudoLongCV_BEQIMM : LongBcciPseudo<simm5, 8>;
+  def PseudoLongCV_BNEIMM : LongBcciPseudo<simm5, 8>;
 }
 
 let Predicates = [HasVendorXCVmem, IsRV32] in {
@@ -734,7 +741,10 @@ let Predicates = [HasVendorXCVbitmanip, IsRV32] in {
                                           (CV_LO5 cv_uimm10:$imm))>;
 
   def : PatGpr<cttz, CV_FF1, i32>;
-  def : PatGpr<ctlz, CV_FL1, i32>;
+
+  // ctlz(x) = 31 - fl1(x), for x != 0. Not intercepting the x == 0 case.
+  def : Pat<(i32 (ctlz_zero_poison GPR:$rs1)), (XORI (CV_FL1 GPR:$rs1), 31)>;
+
   def : PatGpr<int_riscv_cv_bitmanip_clb, CV_CLB>;
   def : PatGpr<ctpop, CV_CNT, i32>;
 
@@ -825,7 +835,7 @@ class PatCoreVMacGprGprUimm5 <string intr, string asm>
   : Pat<(!cast<Intrinsic>("int_riscv_cv_mac_" # intr) GPR:$rs1, GPR:$rs2, cv_tuimm5:$imm5),
         (!cast<RVInst>("CV_" # asm) GPR:$rs1, GPR:$rs2, cv_tuimm5:$imm5)>;
 
-let Predicates = [HasVendorXCVmac] in {
+let Predicates = [HasVendorXCVmac, IsRV32] in {
   def : PatCoreVMacGprGprGpr<"mac", "MAC">;
   def : PatCoreVMacGprGprGpr<"msu", "MSU">;
 
