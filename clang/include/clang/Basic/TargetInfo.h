@@ -1799,10 +1799,11 @@ public:
   /// Clang backwards compatibility rather than GCC/Itanium ABI compatibility.
   virtual bool areDefaultedSMFStillPOD(const LangOptions&) const;
 
-  /// Returns true if the target's ABI allows a class's vtable to be
-  /// duplicated, so the same vtable may be emitted with more than one address
-  /// in a program.
-  virtual bool vtablesMayBeDuplicated() const { return false; }
+  /// Returns the target's default policy for whether a class's vtable can be
+  /// assumed to have a unique address program-wide.
+  virtual VTableUniquenessKind getDefaultVTableUniqueness() const {
+    return VTableUniquenessKind::AlwaysUnique;
+  }
 
   /// Controls whether global operator delete is called by the deleting
   /// destructor or at the point where ::delete was called. Historically Clang

@@ -63,9 +63,12 @@ public:
   /// declarations that can be dynamically replaced.
   bool hasProtectedVisibility() const override { return false; }
 
-  /// Apple Mach-O can autohide a vtable so that each image gets its own copy,
-  /// so a class's vtable may have more than one address in a program.
-  bool vtablesMayBeDuplicated() const override { return true; }
+  /// Apple Mach-O can autohide a vague-linkage vtable so that each image gets
+  /// its own copy, so such a vtable may have more than one address in a
+  /// program. A strong (key-function) vtable still has a unique address.
+  VTableUniquenessKind getDefaultVTableUniqueness() const override {
+    return VTableUniquenessKind::UniqueIfStrongLinkage;
+  }
 };
 
 template <typename Target>

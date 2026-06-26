@@ -1662,12 +1662,13 @@ def : Flag<["-"], "shared-libasan">, Alias<shared_libsan>;
 def : Flag<["-"], "static-libasan">, Alias<static_libsan>;
 def fasm : Flag<["-"], "fasm">, Group<f_Group>;
 
-defm assume_unique_vtables : BoolFOption<"assume-unique-vtables",
-  CodeGenOpts<"AssumeUniqueVTables">, DefaultTrue,
-  PosFlag<SetTrue>,
-  NegFlag<SetFalse, [], [ClangOption, CC1Option],
-          "Disable optimizations based on vtable pointer identity">,
-  BothFlags<[], [ClangOption, CLOption]>>;
+def fassume_unique_vtables : Flag<["-"], "fassume-unique-vtables">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option, CLOption]>,
+  HelpText<"Assume each polymorphic class has a single vtable with a unique "
+           "address, enabling optimizations based on vtable pointer identity">;
+def fno_assume_unique_vtables : Flag<["-"], "fno-assume-unique-vtables">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option, CLOption]>,
+  HelpText<"Disable optimizations based on vtable pointer identity">;
 
 def fassume_sane_operator_new : Flag<["-"], "fassume-sane-operator-new">, Group<f_Group>;
 def fastcp : Flag<["-"], "fastcp">, Group<f_Group>;

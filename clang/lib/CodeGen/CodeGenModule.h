@@ -902,6 +902,12 @@ public:
   }
   const TargetInfo &getTarget() const { return Target; }
   const llvm::Triple &getTriple() const { return Target.getTriple(); }
+
+  /// Returns the vtable-uniqueness policy in effect: the explicit
+  /// -f[no-]assume-unique-vtables request when one was given, otherwise the
+  /// target's default.
+  VTableUniquenessKind getVTableUniqueness() const;
+
   bool supportsCOMDAT() const;
   void maybeSetTrivialComdat(const Decl &D, llvm::GlobalObject &GO);
 

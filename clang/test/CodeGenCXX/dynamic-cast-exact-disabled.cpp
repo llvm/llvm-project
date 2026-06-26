@@ -18,6 +18,9 @@
 // Disabled for a weak vtable on a target that may duplicate vtables (Apple
 // Mach-O), but kept for the key-function class:
 // RUN: %clang_cc1 -I%S %s -triple x86_64-apple-darwin10 -O1 -emit-llvm -std=c++11 -o - | FileCheck %s --check-prefixes=CHECK,DISABLED,KEY-ENABLED
+// Forced back on by -fassume-unique-vtables, even on a target that may
+// duplicate vtables:
+// RUN: %clang_cc1 -I%S %s -triple x86_64-apple-darwin10 -O1 -fassume-unique-vtables -emit-llvm -std=c++11 -o - | FileCheck %s --check-prefixes=CHECK,ENABLED,KEY-ENABLED
 
 struct A { virtual ~A(); };
 struct B final : A { };

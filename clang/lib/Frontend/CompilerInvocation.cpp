@@ -1760,6 +1760,17 @@ void CompilerInvocationBase::GenerateCodeGenArgs(const CodeGenOptions &Opts,
     GenerateArg(Consumer, Opt);
   }
 
+  switch (Opts.getRequestedVTableUniqueness()) {
+  case VTableUniquenessRequest::AlwaysUnique:
+    GenerateArg(Consumer, OPT_fassume_unique_vtables);
+    break;
+  case VTableUniquenessRequest::NeverUnique:
+    GenerateArg(Consumer, OPT_fno_assume_unique_vtables);
+    break;
+  case VTableUniquenessRequest::TargetDefault:
+    break;
+  }
+
   if (Opts.EnableAIXExtendedAltivecABI)
     GenerateArg(Consumer, OPT_mabi_EQ_vec_extabi);
 
@@ -2166,6 +2177,14 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
              O.matches(OPT_msvr4_struct_return));
       Opts.setStructReturnConvention(CodeGenOptions::SRCK_InRegs);
     }
+  }
+
+  if (const Arg *A = Args.getLastArg(OPT_fassume_unique_vtables,
+                                     OPT_fno_assume_unique_vtables)) {
+    Opts.setRequestedVTableUniqueness(
+        A->getOption().matches(OPT_fassume_unique_vtables)
+            ? VTableUniquenessRequest::AlwaysUnique
+            : VTableUniquenessRequest::NeverUnique);
   }
 
   if (Arg *A = Args.getLastArg(OPT_mxcoff_roptr)) {
