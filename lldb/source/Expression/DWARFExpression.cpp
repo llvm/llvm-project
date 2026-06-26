@@ -931,7 +931,7 @@ static llvm::Error Evaluate_DW_OP_deref(EvalContext &eval_ctx,
   if (eval_ctx.stack.empty())
     return llvm::createStringError("expression stack empty for %s", op_name);
 
-  if (size > 8)
+  if (size == 0 || size > 8)
     return llvm::createStringError("Invalid address size for %s: %u", op_name,
                                    size);
 
@@ -1411,13 +1411,11 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
     case DW_OP_const8s:
       stack.push_back(to_generic(static_cast<int64_t>(op->getRawOperand(0))));
       break;
-    // These should also use to_generic, but we can't do that due to a
-    // producer-side bug in llvm. See llvm.org/pr48087.
     case DW_OP_constu:
-      stack.push_back(Scalar(op->getRawOperand(0)));
+      stack.push_back(to_generic(op->getRawOperand(0)));
       break;
     case DW_OP_consts:
-      stack.push_back(Scalar(static_cast<int64_t>(op->getRawOperand(0))));
+      stack.push_back(to_generic(static_cast<int64_t>(op->getRawOperand(0))));
       break;
 
     case DW_OP_dup:

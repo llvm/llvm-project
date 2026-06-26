@@ -21,6 +21,8 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/CodeGen/CFIInstBuilder.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -147,6 +149,89 @@
 //   A  - required alignment
 
 using namespace llvm;
+
+static void emitSCSPrologue(MachineFunction &MF, MachineBasicBlock &MBB,
+                            MachineBasicBlock::iterator MI,
+                            const DebugLoc &DL) {
+  if (!MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack))
+    return;
+
+  const auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  // Hexagon saves LR (R31) via allocframe. If there is no frame, LR is
+  // not on the regular stack and does not need shadow-stack protection.
+  if (!HST.getFrameLowering()->hasFP(MF))
+    return;
+
+  Register SCSPReg = Hexagon::R19;
+  if (!MF.getSubtarget().isRegisterReservedByUser(SCSPReg))
+    report_fatal_error("Must reserve r19 to use shadow call stack on Hexagon");
+
+  const auto &HII = *HST.getInstrInfo();
+
+  // r19 = add(r19, #4)
+  BuildMI(MBB, MI, DL, HII.get(Hexagon::A2_addi), SCSPReg)
+      .addReg(SCSPReg)
+      .addImm(4)
+      .setMIFlag(MachineInstr::FrameSetup);
+  // memw(r19 + #-4) = r31
+  BuildMI(MBB, MI, DL, HII.get(Hexagon::S2_storeri_io))
+      .addReg(SCSPReg)
+      .addImm(-4)
+      .addReg(Hexagon::R31)
+      .setMIFlag(MachineInstr::FrameSetup);
+
+  MBB.addLiveIn(SCSPReg);
+
+  if (!MF.needsFrameMoves())
+    return;
+
+  // CFI: DW_CFA_val_expression for the SCS register, DW_OP_bregN -4
+  // Tells the unwinder that the SCS register at entry = current value - 4.
+  const auto &TRI = *MF.getSubtarget().getRegisterInfo();
+  unsigned DwarfSCSReg = TRI.getDwarfRegNum(SCSPReg, /*IsEH=*/true);
+  // DW_OP_breg0..DW_OP_breg31 (0x70..0x8f) are 32 opcodes indexed by
+  // register number, so the register number must fit in [0, 31].
+  assert(DwarfSCSReg < 32 && "SCS register should be < 32");
+  const char CFIInst[] = {
+      (char)dwarf::DW_CFA_val_expression,
+      (char)DwarfSCSReg,
+      2, // expression length
+      (char)(unsigned)(dwarf::DW_OP_breg0 + DwarfSCSReg),
+      (char)(-4 & 0x7f), // SLEB128 -4
+  };
+  CFIInstBuilder(MBB, MI, MachineInstr::FrameSetup)
+      .buildEscape(StringRef(CFIInst, sizeof(CFIInst)));
+}
+
+static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
+                            MachineBasicBlock::iterator MI,
+                            const DebugLoc &DL) {
+  if (!MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack))
+    return;
+
+  // hasFP() is true at both call sites: the non-vararg path in
+  // insertEpilogueInBlock returns early when !hasFP(), and the vararg+musl
+  // path is inside the hasFP() branch.  Check defensively.
+  if (!MF.getSubtarget<HexagonSubtarget>().getFrameLowering()->hasFP(MF))
+    report_fatal_error("SCS epilogue requires a frame");
+
+  Register SCSPReg = Hexagon::R19;
+  const auto &HII = *MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
+
+  // r31 = memw(r19 + #-4)
+  BuildMI(MBB, MI, DL, HII.get(Hexagon::L2_loadri_io), Hexagon::R31)
+      .addReg(SCSPReg)
+      .addImm(-4)
+      .setMIFlag(MachineInstr::FrameDestroy);
+  // r19 = add(r19, #-4)
+  BuildMI(MBB, MI, DL, HII.get(Hexagon::A2_addi), SCSPReg)
+      .addReg(SCSPReg)
+      .addImm(-4)
+      .setMIFlag(MachineInstr::FrameDestroy);
+
+  if (MF.needsFrameMoves())
+    CFIInstBuilder(MBB, MI, MachineInstr::FrameDestroy).buildRestore(SCSPReg);
+}
 
 static cl::opt<bool> DisableDeallocRet("disable-hexagon-dealloc-ret",
     cl::Hidden, cl::desc("Disable Dealloc Return for Hexagon target"));
@@ -511,6 +596,19 @@ void HexagonFrameLowering::emitPrologue(MachineFunction &MF,
   bool PrologueStubs = false;
   insertCSRSpillsInBlock(*PrologB, CSI, HRI, PrologueStubs);
   insertPrologueInBlock(*PrologB, PrologueStubs);
+  // Insert the SCS prologue after all FrameSetup instructions so that it
+  // follows allocframe and any CSR spills in the instruction stream.  The
+  // packetizer may still fuse the SCS store with the first call in the
+  // function, but because Hexagon packets use old-value reads the original
+  // R31 is always what is stored.
+  {
+    MachineBasicBlock::iterator AfterProlog = PrologB->begin();
+    while (AfterProlog != PrologB->end() &&
+           AfterProlog->getFlag(MachineInstr::FrameSetup))
+      ++AfterProlog;
+    DebugLoc PrologDL = PrologB->findDebugLoc(AfterProlog);
+    emitSCSPrologue(MF, *PrologB, AfterProlog, PrologDL);
+  }
   updateEntryPaths(MF, *PrologB);
 
   if (EpilogB) {
@@ -786,6 +884,8 @@ void HexagonFrameLowering::insertEpilogueInBlock(MachineBasicBlock &MBB) const {
 
   // Handle EH_RETURN.
   if (RetOpc == Hexagon::EH_RETURN_JMPR) {
+    // EH paths overwrite R31 with a handler address; the shadow stack is
+    // not read on this path, so no SCS epilogue is needed.
     BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::L2_deallocframe))
         .addDef(Hexagon::D15)
         .addReg(Hexagon::R30);
@@ -797,6 +897,10 @@ void HexagonFrameLowering::insertEpilogueInBlock(MachineBasicBlock &MBB) const {
 
   // Check for RESTORE_DEALLOC_RET* tail call. Don't emit an extra dealloc-
   // frame instruction if we encounter it.
+  // These spill-stub tail calls include r19 in their save range, but SCS
+  // requires -ffixed-r19, which prevents the allocator from selecting stubs
+  // that cover r19. The two features are therefore mutually exclusive and no
+  // SCS epilogue is needed here.
   if (RetOpc == Hexagon::RESTORE_DEALLOC_RET_JMP_V4 ||
       RetOpc == Hexagon::RESTORE_DEALLOC_RET_JMP_V4_PIC ||
       RetOpc == Hexagon::RESTORE_DEALLOC_RET_JMP_V4_EXT ||
@@ -816,29 +920,45 @@ void HexagonFrameLowering::insertEpilogueInBlock(MachineBasicBlock &MBB) const {
   // It is possible that the restoring code is a call to a library function.
   // All of the restore* functions include "deallocframe", so we need to make
   // sure that we don't add an extra one.
+  bool NeedsSCS = MF.getFunction().hasFnAttribute(Attribute::ShadowCallStack);
   bool NeedsDeallocframe = true;
+  unsigned PrevOpc = 0;
   if (!MBB.empty() && InsertPt != MBB.begin()) {
     MachineBasicBlock::iterator PrevIt = std::prev(InsertPt);
-    unsigned COpc = PrevIt->getOpcode();
-    if (COpc == Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4 ||
-        COpc == Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4_PIC ||
-        COpc == Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4_EXT ||
-        COpc == Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4_EXT_PIC ||
-        COpc == Hexagon::PS_call_nr || COpc == Hexagon::PS_callr_nr)
+    PrevOpc = PrevIt->getOpcode();
+    if (PrevOpc == Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4 ||
+        PrevOpc == Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4_PIC ||
+        PrevOpc == Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4_EXT ||
+        PrevOpc == Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4_EXT_PIC ||
+        PrevOpc == Hexagon::PS_call_nr || PrevOpc == Hexagon::PS_callr_nr)
       NeedsDeallocframe = false;
   }
 
   if (!MF.getSubtarget<HexagonSubtarget>().isEnvironmentMusl() ||
       !MF.getFunction().isVarArg()) {
-    if (!NeedsDeallocframe)
+    if (!NeedsDeallocframe) {
+      // RESTORE_DEALLOC_BEFORE_TAILCALL stubs include r19 in their save range,
+      // but SCS requires -ffixed-r19 which prevents the allocator from
+      // selecting stubs that cover r19, so SCS and stubs are mutually
+      // exclusive.  PS_call_nr/PS_callr_nr are noreturn calls so the shadow
+      // stack entry is never read - no SCS epilogue is needed on either path.
+      if (NeedsSCS && PrevOpc != Hexagon::PS_call_nr &&
+          PrevOpc != Hexagon::PS_callr_nr)
+        report_fatal_error("SCS with RESTORE_DEALLOC stub: "
+                           "-ffixed-r19 should have prevented this");
       return;
+    }
     // If the returning instruction is PS_jmpret, replace it with
     // dealloc_return, otherwise just add deallocframe. The function
     // could be returning via a tail call.
-    if (RetOpc != Hexagon::PS_jmpret || DisableDeallocRet) {
+    if (RetOpc != Hexagon::PS_jmpret || DisableDeallocRet || NeedsSCS) {
       BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::L2_deallocframe))
       .addDef(Hexagon::D15)
       .addReg(Hexagon::R30);
+      // When shadow call stack is active, overwrite R31 restored by
+      // deallocframe with the shadow-stack copy, then retract the pointer.
+      if (NeedsSCS)
+        emitSCSEpilogue(MF, MBB, InsertPt, dl);
       return;
     }
     unsigned NewOpc = Hexagon::L4_return;
@@ -858,11 +978,14 @@ void HexagonFrameLowering::insertEpilogueInBlock(MachineBasicBlock &MBB) const {
     MachineBasicBlock::iterator Term = MBB.getFirstTerminator();
     MachineBasicBlock::iterator I = (Term == MBB.begin()) ? MBB.end()
                                                           : std::prev(Term);
-    if (I == MBB.end() ||
-       (I->getOpcode() != Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4_EXT &&
-        I->getOpcode() != Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4_EXT_PIC &&
-        I->getOpcode() != Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4 &&
-        I->getOpcode() != Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4_PIC))
+    bool HasRestoreStub =
+        I != MBB.end() &&
+        (I->getOpcode() == Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4_EXT ||
+         I->getOpcode() ==
+             Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4_EXT_PIC ||
+         I->getOpcode() == Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4 ||
+         I->getOpcode() == Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4_PIC);
+    if (!HasRestoreStub)
       BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::L2_deallocframe))
         .addDef(Hexagon::D15)
         .addReg(Hexagon::R30);
@@ -870,6 +993,11 @@ void HexagonFrameLowering::insertEpilogueInBlock(MachineBasicBlock &MBB) const {
       BuildMI(MBB, InsertPt, dl, HII.get(Hexagon::A2_addi), SP)
         .addReg(SP)
         .addImm(RegisterSavedAreaSizePlusPadding);
+    // RESTORE_DEALLOC stubs are mutually exclusive with SCS (-ffixed-r19
+    // prevents stubs that cover r19), so only emit SCS epilogue when we
+    // emitted our own deallocframe above.
+    if (NeedsSCS && !HasRestoreStub)
+      emitSCSEpilogue(MF, MBB, InsertPt, dl);
   }
 }
 

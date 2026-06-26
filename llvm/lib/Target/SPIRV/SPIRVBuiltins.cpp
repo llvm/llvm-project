@@ -3702,10 +3702,14 @@ static Type *parseTypeString(const StringRef Name, LLVMContext &Context) {
     return Type::getVoidTy(Context);
   else if (Name.starts_with("int") || Name.starts_with("uint"))
     return Type::getInt32Ty(Context);
+  else if (Name.starts_with("bfloat"))
+    return Type::getBFloatTy(Context);
   else if (Name.starts_with("float"))
     return Type::getFloatTy(Context);
   else if (Name.starts_with("half"))
     return Type::getHalfTy(Context);
+  else if (Name.starts_with("double"))
+    return Type::getDoubleTy(Context);
   report_fatal_error("Unable to recognize type!");
 }
 

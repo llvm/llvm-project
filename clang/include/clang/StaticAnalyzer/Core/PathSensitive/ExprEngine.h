@@ -594,6 +594,14 @@ public:
   void VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
                                   ExplodedNode *Pred, ExplodedNodeSet &Dst);
 
+  /// Implementation detail of VisitObjCForCollectionStmt, which contains the
+  /// logic that needs to be executed both in the "container is empty" case
+  /// (HasElements=false) and the "container is not empty" case
+  /// (HasElements=true).
+  void populateObjCForDestinationSet(const ObjCForCollectionStmt *S,
+                                     ExplodedNode *Pred, ExplodedNodeSet &Dst,
+                                     SVal ElementV, bool HasElements);
+
   void VisitObjCMessage(const ObjCMessageExpr *ME, ExplodedNode *Pred,
                         ExplodedNodeSet &Dst);
 
@@ -772,7 +780,7 @@ public:
                 const CallEvent &Call);
 
   /// Default implementation of call evaluation.
-  void defaultEvalCall(NodeBuilder &B, ExplodedNode *Pred,
+  void defaultEvalCall(ExplodedNodeSet &Dst, ExplodedNode *Pred,
                        const CallEvent &Call,
                        const EvalCallOptions &CallOpts = {});
 
@@ -908,9 +916,9 @@ private:
                             const StackFrame *SF);
 
   void inlineCall(WorkList *WList, const CallEvent &Call, const Decl *D,
-                  NodeBuilder &Bldr, ExplodedNode *Pred, ProgramStateRef State);
+                  ExplodedNode *Pred, ProgramStateRef State);
 
-  void ctuBifurcate(const CallEvent &Call, const Decl *D, NodeBuilder &Bldr,
+  void ctuBifurcate(const CallEvent &Call, const Decl *D, ExplodedNodeSet &Dst,
                     ExplodedNode *Pred, ProgramStateRef State);
 
   /// Returns true if the CTU analysis is running its second phase.
@@ -918,20 +926,20 @@ private:
 
   /// Conservatively evaluate call by invalidating regions and binding
   /// a conjured return value.
-  void conservativeEvalCall(const CallEvent &Call, NodeBuilder &Bldr,
-                            ExplodedNode *Pred, ProgramStateRef State);
+  ExplodedNode *conservativeEvalCall(const CallEvent &Call, ExplodedNode *Pred,
+                                     ProgramStateRef State);
 
   /// Either inline or process the call conservatively (or both), based
   /// on DynamicDispatchBifurcation data.
-  void BifurcateCall(const MemRegion *BifurReg,
-                     const CallEvent &Call, const Decl *D, NodeBuilder &Bldr,
-                     ExplodedNode *Pred);
+  void dynDispatchBifurcate(const MemRegion *BifurReg, const CallEvent &Call,
+                            const Decl *D, ExplodedNodeSet &Dst,
+                            ExplodedNode *Pred);
 
   bool replayWithoutInlining(ExplodedNode *P, const StackFrame *CalleeSF);
 
   /// Models a trivial copy or move constructor or trivial assignment operator
   /// call with a simple bind.
-  void performTrivialCopy(NodeBuilder &Bldr, ExplodedNode *Pred,
+  void performTrivialCopy(ExplodedNodeSet &Dst, ExplodedNode *Pred,
                           const CallEvent &Call);
 
   /// If the value of the given expression \p InitWithAdjustments is a NonLoc,

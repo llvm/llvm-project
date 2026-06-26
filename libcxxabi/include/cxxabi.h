@@ -31,7 +31,7 @@ class _LIBCXXABI_TYPE_VIS type_info; // forward declaration
 #else
 class type_info; // forward declaration
 #endif
-}
+} // namespace std
 
 
 // runtime routines use C calling conventions, but are in __cxxabiv1 namespace
