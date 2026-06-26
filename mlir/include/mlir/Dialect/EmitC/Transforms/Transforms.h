@@ -42,9 +42,9 @@ void populateWrapFuncInClass(
 // The AddReflectionMap pass.
 //===----------------------------------------------------------------------===//
 
-void populateAddReflectionMapPatterns(RewritePatternSet &patterns,
-                                      StringRef fieldAttrName,
-                                      ArrayRef<std::string> excludedFieldAttrs);
+void populateMLGOAddReflectionMapPatterns(
+    RewritePatternSet &patterns, StringRef fieldAttrName,
+    ArrayRef<std::string> excludedFieldAttrs);
 
 } // namespace emitc
 } // namespace mlir

@@ -60,7 +60,7 @@ def WrapFuncInClassPass : Pass<"wrap-emitc-func-in-class", "ModuleOp"> {
   ];
 }
 
-def AddReflectionMapPass : Pass<"add-reflection-map", "ModuleOp"> {
+def MLGOAddReflectionMapPass : Pass<"mlgo-add-reflection-map", "ModuleOp"> {
   let summary = "Add a reflection map and a helper method to EmitC classes for runtime field lookup.";
   let description = [{
     This pass adds a `reflectionMap` field and an accompanying `getBufferForName` method to 
@@ -68,9 +68,11 @@ def AddReflectionMapPass : Pass<"add-reflection-map", "ModuleOp"> {
     This requires that the class has fields with attributes.
     Each `emitc.field` is expected to have an attribute (configured by the
     `field-attr-name` option) that is an array containing a single string
-    attribute.
-
-
+    attribute. If a field possesses both the attribute specified by
+    `field-attr-name` and an attribute specified in `excluded-field-attrs`,
+    the `field-attr-name` attribute takes precedence and the field will be
+    included in the reflection map.
+    
     Example:
 
     ```mlir
