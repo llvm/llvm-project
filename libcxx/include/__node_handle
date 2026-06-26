@@ -178,11 +178,11 @@ struct __map_node_handle_specifics {
   using mapped_type = typename _NodeType::__node_value_type::second_type;
 
   // This method is not constexpr as per the standard.
-  _LIBCPP_HIDE_FROM_ABI key_type& key() const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 key_type& key() const {
     return const_cast<key_type&>(static_cast<_Derived const*>(this)->__ptr_->__get_value().first);
   }
 
-  _LIBCPP_HIDE_FROM_ABI mapped_type& mapped() const {
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 mapped_type& mapped() const {
     return static_cast<_Derived const*>(this)->__ptr_->__get_value().second;
   }
 };

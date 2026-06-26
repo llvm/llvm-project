@@ -1049,8 +1049,8 @@ public:
 
 #  if _LIBCPP_STD_VER >= 14
   template <class _InputIterator>
-  _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 map(_InputIterator __f, _InputIterator __l, const allocator_type& __a)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  map(_InputIterator __f, _InputIterator __l, const allocator_type& __a)
       : map(__f, __l, key_compare(), __a) {}
 #  endif
 
@@ -1855,15 +1855,15 @@ public:
 
 #  if _LIBCPP_STD_VER >= 14
   template <class _InputIterator>
-  _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 multimap(_InputIterator __f, _InputIterator __l, const allocator_type& __a)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  multimap(_InputIterator __f, _InputIterator __l, const allocator_type& __a)
       : multimap(__f, __l, key_compare(), __a) {}
 #  endif
 
 #  if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<value_type> _Range>
-  _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 multimap(from_range_t, _Range&& __range, const allocator_type& __a)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  multimap(from_range_t, _Range&& __range, const allocator_type& __a)
       : multimap(from_range, std::forward<_Range>(__range), key_compare(), __a) {}
 #  endif
 
@@ -1893,8 +1893,8 @@ public:
   }
 
 #    if _LIBCPP_STD_VER >= 14
-  _LIBCPP_HIDE_FROM_ABI
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 multimap(initializer_list<value_type> __il, const allocator_type& __a)
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26
+  multimap(initializer_list<value_type> __il, const allocator_type& __a)
       : multimap(__il, key_compare(), __a) {}
 #    endif
 
@@ -2069,7 +2069,7 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 node_type extract(key_type const& __key) {
     return __tree_.template __node_handle_extract<node_type>(__key);
   }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI node_type extract(const_iterator __it) {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 node_type extract(const_iterator __it) {
     return __tree_.template __node_handle_extract_from_iterator<node_type>(__it.__i_);
   }
 

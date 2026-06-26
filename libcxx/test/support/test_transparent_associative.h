@@ -23,16 +23,16 @@ struct StoredType;
 
 template <typename T>
 struct SearchedType {
-  explicit SearchedType(T value, int* counter) : value_(value), conversions_(counter) {}
+  constexpr explicit SearchedType(T value, int* counter) : value_(value), conversions_(counter) {}
 
-  operator StoredType<T>() const {
+  constexpr operator StoredType<T>() const {
     ++*conversions_;
     return StoredType<T>{value_};
   }
 
-  T get_value() const { return value_; }
+  constexpr T get_value() const { return value_; }
 
-  auto operator<=>(const SearchedType<T>&) const = default;
+  constexpr auto operator<=>(const SearchedType<T>&) const = default;
 
 private:
   T value_;
@@ -42,15 +42,16 @@ private:
 template <typename T>
 struct StoredType {
   StoredType() = default;
-  StoredType(T value) : value_(value) {}
 
-  friend bool operator==(StoredType const& lhs, StoredType const& rhs) { return lhs.value_ == rhs.value_; }
+  constexpr StoredType(T value) : value_(value) {}
 
-  friend bool operator==(StoredType const& lhs, SearchedType<T> const& rhs) { return lhs.value_ == rhs.get_value(); }
+  constexpr friend bool operator==(StoredType const& lhs, StoredType const& rhs) { return lhs.value_ == rhs.value_; }
 
-  T get_value() const { return value_; }
+  constexpr friend bool operator==(StoredType const& lhs, SearchedType<T> const& rhs) { return lhs.value_ == rhs.get_value(); }
 
-  auto operator<=>(const StoredType<T>&) const = default;
+  constexpr T get_value() const { return value_; }
+
+  constexpr auto operator<=>(const StoredType<T>&) const = default;
 
 private:
   T value_;
@@ -60,17 +61,17 @@ struct transparent_comparator_base {
   using is_transparent = void;
 
   template <typename T>
-  bool operator()(const SearchedType<T>& lhs, const StoredType<T>& rhs) const {
+  constexpr bool operator()(const SearchedType<T>& lhs, const StoredType<T>& rhs) const {
     return lhs.get_value() < rhs.get_value();
   }
 
   template <typename T>
-  bool operator()(const StoredType<T>& lhs, const SearchedType<T>& rhs) const {
+  constexpr bool operator()(const StoredType<T>& lhs, const SearchedType<T>& rhs) const {
     return lhs.get_value() < rhs.get_value();
   }
 
   template <typename T>
-  bool operator()(const StoredType<T>& lhs, const StoredType<T>& rhs) const {
+  constexpr bool operator()(const StoredType<T>& lhs, const StoredType<T>& rhs) const {
     return lhs < rhs;
   }
 };
@@ -78,7 +79,7 @@ struct transparent_comparator_base {
 struct transparent_comparator_final final : public transparent_comparator_base {};
 
 template <class Container>
-void test_transparent_erase(Container c) {
+constexpr void test_transparent_erase(Container c) {
   static_assert(
       std::same_as<
           typename Container::size_type,
@@ -93,7 +94,7 @@ void test_transparent_erase(Container c) {
 }
 
 template <class Container>
-void test_non_transparent_erase(Container c) {
+constexpr void test_non_transparent_erase(Container c) {
   int conversions = 0;
   assert(c.erase(SearchedType<int>(1, &conversions)) != 0);
   assert(conversions == 1);
@@ -109,7 +110,7 @@ concept node_handle_has_key = requires(NodeHandle nh) {
 };
 
 template <class T, class Container>
-void test_single_extract(SearchedType<T> key, Container& c) {
+constexpr void test_single_extract(SearchedType<T> key, Container& c) {
   auto node_handle = c.extract(key);
 
   assert(!node_handle.empty());
@@ -122,7 +123,7 @@ void test_single_extract(SearchedType<T> key, Container& c) {
 }
 
 template <class Container>
-void test_transparent_extract(Container c) {
+constexpr void test_transparent_extract(Container c) {
   static_assert(std::same_as< typename Container::node_type,
                               std::invoke_result_t<decltype(&Container::template extract<SearchedType<int>>),
                                                    Container,
@@ -138,7 +139,7 @@ void test_transparent_extract(Container c) {
 }
 
 template <class Container>
-void test_non_transparent_extract(Container c) {
+constexpr void test_non_transparent_extract(Container c) {
   int conversions = 0;
 
   test_single_extract(SearchedType<int>(1, &conversions), c);
