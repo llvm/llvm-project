@@ -80,17 +80,17 @@ cl::list<std::string> EnableOriginStacktraces(
 // For a given pass, sets whether the collection of DebugLoc origin stacktraces
 // is enabled or not.
 static void setDebugLocOriginCollectionForPass(StringRef PassName) {
-  if (!llvm::EnableOriginStacktraces.getNumOccurrences()) {
+  if (!EnableOriginStacktraces.getNumOccurrences()) {
     llvm::DebugLocOriginCollectionEnabled = false;
     return;
   }
-  if (llvm::EnableOriginStacktraces.size() == 1 &&
-      llvm::EnableOriginStacktraces[0].empty()) {
+  if (EnableOriginStacktraces.size() == 1 &&
+      EnableOriginStacktraces[0].empty()) {
     llvm::DebugLocOriginCollectionEnabled = true;
     return;
   }
   llvm::DebugLocOriginCollectionEnabled =
-      llvm::is_contained(llvm::EnableOriginStacktraces, PassName);
+      llvm::is_contained(EnableOriginStacktraces, PassName);
 }
 static void unsetDebugLocOriginCollection() {
   llvm::DebugLocOriginCollectionEnabled = false;
