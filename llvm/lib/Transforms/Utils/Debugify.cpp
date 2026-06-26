@@ -40,6 +40,10 @@
 
 using namespace llvm;
 
+namespace llvm {
+extern cl::list<std::string> EnableOriginStacktraces;
+} // namespace llvm
+
 namespace {
 
 cl::opt<bool> ApplyAtomGroups("debugify-atoms", cl::init(false));
@@ -277,9 +281,36 @@ bool llvm::applyDebugifyMetadata(
   return true;
 }
 
+// For a given pass, sets whether the collection of DebugLoc origin stacktraces
+// is enabled or not.
+#if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
+static void setDebugLocOriginCollectionForPass(StringRef PassName) {
+  if (!llvm::EnableOriginStacktraces.getNumOccurrences()) {
+    llvm::DebugLocOriginCollectionEnabled = false;
+    return;
+  }
+  if (llvm::EnableOriginStacktraces.size() == 1 &&
+      llvm::EnableOriginStacktraces[0].empty()) {
+    llvm::DebugLocOriginCollectionEnabled = true;
+    return;
+  }
+  llvm::DebugLocOriginCollectionEnabled =
+      llvm::is_contained(llvm::EnableOriginStacktraces, PassName);
+}
+static void unsetDebugLocOriginCollection() {
+  llvm::DebugLocOriginCollectionEnabled = false;
+}
+#else
+// These functions are only used in origin-tracking builds; they are no-ops in
+// normal builds.
+static void setDebugLocOriginCollectionForPass(StringRef PassName) {}
+static void unsetDebugLocOriginCollection() {}
+#endif
+
 static bool applyDebugify(Function &F, enum DebugifyMode Mode,
                           DebugInfoPerPass *DebugInfoBeforePass,
                           StringRef NameOfWrappedPass = "") {
+  setDebugLocOriginCollectionForPass(NameOfWrappedPass);
   Module &M = *F.getParent();
   auto FuncIt = F.getIterator();
   if (Mode == DebugifyMode::SyntheticDebugInfo)
@@ -294,6 +325,7 @@ static bool applyDebugify(Function &F, enum DebugifyMode Mode,
 static bool applyDebugify(Module &M, enum DebugifyMode Mode,
                           DebugInfoPerPass *DebugInfoBeforePass,
                           StringRef NameOfWrappedPass = "") {
+  setDebugLocOriginCollectionForPass(NameOfWrappedPass);
   if (Mode == DebugifyMode::SyntheticDebugInfo)
     return applyDebugifyMetadata(M, M.functions(),
                                  "ModuleDebugify: ", /*ApplyToMF*/ nullptr);
@@ -507,16 +539,18 @@ static bool checkInstructions(const DebugInstMap &DILocsBefore,
     auto InstName = Instruction::getOpcodeName(Instr->getOpcode());
 
     auto CreateJSONBugEntry = [&](const char *Action) {
-      Bugs.push_back(llvm::json::Object({
+      auto BugEntry = llvm::json::Object({
           {"metadata", "DILocation"},
           {"fn-name", FnName.str()},
           {"bb-name", BBName.str()},
           {"instr", InstName},
           {"action", Action},
+      });
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
-          {"origin", symbolizeStackTrace(Instr)},
+      if (!Instr->getDebugLoc().getOriginStackTraces().empty())
+        BugEntry.insert({"origin", symbolizeStackTrace(Instr)});
 #endif
-      }));
+      Bugs.push_back(std::move(BugEntry));
     };
 
     auto InstrIt = DILocsBefore.find(Instr);
@@ -614,6 +648,7 @@ bool llvm::checkDebugInfoMetadata(Module &M,
                                   StringRef Banner, StringRef NameOfWrappedPass,
                                   StringRef OrigDIVerifyBugsReportFilePath) {
   LLVM_DEBUG(dbgs() << Banner << ": (after) " << NameOfWrappedPass << '\n');
+  unsetDebugLocOriginCollection();
 
   if (!M.getNamedMetadata("llvm.dbg.cu")) {
     dbg() << Banner << ": Skipping module without debug info\n";
@@ -788,6 +823,7 @@ bool checkDebugifyMetadata(Module &M,
                            bool Strip, DebugifyStatsMap *StatsMap) {
   // Skip modules without debugify metadata.
   NamedMDNode *NMD = M.getNamedMetadata("llvm.debugify");
+  unsetDebugLocOriginCollection();
   if (!NMD) {
     dbg() << Banner << ": Skipping module without debugify metadata\n";
     return false;
