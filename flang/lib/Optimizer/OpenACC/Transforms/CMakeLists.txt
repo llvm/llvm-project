@@ -1,5 +1,6 @@
 add_flang_library(FIROpenACCTransforms
   ACCDeclareActionConversion.cpp
+  ACCHoistAllocatableRealloc.cpp
   ACCInitializeFIRAnalyses.cpp
   ACCOptimizeFirstprivateMap.cpp
   ACCRecipeBufferization.cpp
