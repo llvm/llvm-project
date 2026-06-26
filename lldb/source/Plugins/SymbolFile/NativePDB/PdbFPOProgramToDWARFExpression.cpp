@@ -36,7 +36,7 @@ static uint32_t ResolveLLDBRegisterNum(llvm::StringRef reg_name, llvm::Triple::A
       break;
   }
 
-  EnumStrings<uint16_t> register_names =
+  llvm::EnumStrings<uint16_t> register_names =
       llvm::codeview::getRegisterNames(cpu_type);
   auto it =
       llvm::find_if(register_names, [&reg_name](const auto &register_entry) {
