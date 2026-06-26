@@ -2532,8 +2532,6 @@ Decl *TemplateDeclInstantiator::VisitVarTemplatePartialSpecializationDecl(
          "Only static data member templates are allowed.");
 
   VarTemplateDecl *VarTemplate = D->getSpecializedTemplate();
-  if (VarTemplate->isInvalidDecl())
-    return nullptr;
 
   // Lookup the already-instantiated declaration and return that.
   DeclContext::lookup_result Found = Owner->lookup(VarTemplate->getDeclName());
