@@ -258,11 +258,10 @@ public:
 
   void ClearIOHandlers();
 
-  bool EnableLog(llvm::StringRef channel,
-                 llvm::ArrayRef<const char *> categories,
-                 llvm::StringRef log_file, uint32_t log_options,
-                 size_t buffer_size, LogHandlerKind log_handler_kind,
-                 llvm::raw_ostream &error_stream);
+  llvm::Error EnableLog(llvm::StringRef channel,
+                        llvm::ArrayRef<const char *> categories,
+                        llvm::StringRef log_file, uint32_t log_options,
+                        size_t buffer_size, LogHandlerKind log_handler_kind);
 
   void SetLoggingCallback(lldb::LogOutputCallback log_callback, void *baton);
 
