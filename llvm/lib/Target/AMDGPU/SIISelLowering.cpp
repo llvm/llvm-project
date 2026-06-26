@@ -7657,8 +7657,7 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return splitTernaryVectorOp(Op, DAG);
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
-    if (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11 &&
-        Op.getValueType() == MVT::i16 &&
+    if (Subtarget->hasVCvtPkIU16F32() && Op.getValueType() == MVT::i16 &&
         Op.getOperand(0).getValueType() == MVT::f32) {
       // Make f32->i16 legal so we can select V_CVT_PK_[IU]16_F32.
       return Op;
