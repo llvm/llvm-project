@@ -690,14 +690,10 @@ void OmpStructureChecker::Leave(const parser::OpenMPLoopConstruct &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Depth &x) {
-  CheckAllowedClause(llvm::omp::Clause::OMPC_depth);
-
   RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_depth, x.v);
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Ordered &x) {
-  CheckAllowedClause(llvm::omp::Clause::OMPC_ordered);
-
   // the parameter of ordered clause is optional
   if (const auto &expr{x.v}) {
     RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_ordered, *expr);
@@ -712,7 +708,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Ordered &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
-  CheckAllowedClause(llvm::omp::Clause::OMPC_linear);
   unsigned version{context_.langOptions().OpenMPVersion};
   llvm::omp::Directive dir{GetContext().directive};
   parser::CharBlock clauseSource{GetContext().clauseSource};
@@ -825,7 +820,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Sizes &c) {
-  CheckAllowedClause(llvm::omp::Clause::OMPC_sizes);
   for (const parser::Cosubscript &v : c.v)
     RequiresPositiveParameter(llvm::omp::Clause::OMPC_sizes, v,
         /*paramName=*/"parameter", /*allowZero=*/false);
@@ -834,7 +828,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Sizes &c) {
 void OmpStructureChecker::Enter(const parser::OmpClause::Permutation &c) {
   unsigned version{context_.langOptions().OpenMPVersion};
   llvm::omp::Clause clause = llvm::omp::Clause::OMPC_permutation;
-  CheckAllowedClause(clause);
   if (c.v.size() < 2)
     context_.Say(GetContext().clauseSource,
         "The %s clause must have a length of at least two"_err_en_US,
@@ -866,7 +859,6 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Permutation &c) {
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Looprange &x) {
-  CheckAllowedClause(llvm::omp::Clause::OMPC_looprange);
   auto &[first, count]{x.v.t};
   RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_looprange, first);
   RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_looprange, count);
