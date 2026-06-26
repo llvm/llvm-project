@@ -1,5 +1,4 @@
 # RUN: llc -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
-# CHECK-NOT: tTAILJMPr {{.*}}$r4
 
 --- |
   target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
@@ -7,6 +6,8 @@
 
   define void @test1() #0 { ret void }
   define void @test2() #0 { ret void }
+  define void @test3() #0 { ret void }
+  define void @test4() #0 { ret void }
 
   attributes #0 = { minsize }
 ...
@@ -14,13 +15,23 @@
 name:            test1
 tracksRegLiveness: true
 body:             |
+  ; CHECK-LABEL: name: test1
+  ; CHECK:       tBL 14 /* CC::al */, $noreg, @[[R4_OUTLINED:OUTLINED_FUNCTION_[0-9]+]]
+  ; CHECK-NEXT:  tBLXr 14 /* CC::al */, $noreg, $r4
+  ; CHECK:       tBL 14 /* CC::al */, $noreg, @[[R4_OUTLINED]]
+  ; CHECK-NEXT:  tBLXr 14 /* CC::al */, $noreg, $r4
   bb.0:
-    liveins: $r4, $lr
+    liveins: $r4, $r9, $r10, $lr
+
     $r0, dead $cpsr = tMOVi8 0, 14, $noreg
-    $r1, dead $cpsr = tMOVi8 0, 14, $noreg
+    $r2 = t2MVNi 99, 14, $noreg, $noreg
+    $r3 = t2MOVi -1, 14, $noreg, $noreg
+    t2STRDi8 $r10, $r9, $sp, 8, 14, $noreg
     tBLXr 14, $noreg, $r4, implicit-def dead $lr, implicit $sp
     $r0, dead $cpsr = tMOVi8 0, 14, $noreg
-    $r1, dead $cpsr = tMOVi8 0, 14, $noreg
+    $r2 = t2MVNi 99, 14, $noreg, $noreg
+    $r3 = t2MOVi -1, 14, $noreg, $noreg
+    t2STRDi8 $r10, $r9, $sp, 8, 14, $noreg
     tBLXr 14, $noreg, $r4, implicit-def dead $lr, implicit $sp
     tBX_RET 14, $noreg
 ...
@@ -28,13 +39,81 @@ body:             |
 name:            test2
 tracksRegLiveness: true
 body:             |
+  ; CHECK-LABEL: name: test2
+  ; CHECK:       tBL 14 /* CC::al */, $noreg, @[[R4_OUTLINED]]
+  ; CHECK-NEXT:  tBLXr 14 /* CC::al */, $noreg, $r4
+  ; CHECK:       tBL 14 /* CC::al */, $noreg, @[[R4_OUTLINED]]
+  ; CHECK-NEXT:  tBLXr 14 /* CC::al */, $noreg, $r4
   bb.0:
-    liveins: $r4, $lr
+    liveins: $r4, $r9, $r10, $lr
+
     $r0, dead $cpsr = tMOVi8 0, 14, $noreg
-    $r1, dead $cpsr = tMOVi8 0, 14, $noreg
+    $r2 = t2MVNi 99, 14, $noreg, $noreg
+    $r3 = t2MOVi -1, 14, $noreg, $noreg
+    t2STRDi8 $r10, $r9, $sp, 8, 14, $noreg
     tBLXr 14, $noreg, $r4, implicit-def dead $lr, implicit $sp
     $r0, dead $cpsr = tMOVi8 0, 14, $noreg
-    $r1, dead $cpsr = tMOVi8 0, 14, $noreg
+    $r2 = t2MVNi 99, 14, $noreg, $noreg
+    $r3 = t2MOVi -1, 14, $noreg, $noreg
+    t2STRDi8 $r10, $r9, $sp, 8, 14, $noreg
     tBLXr 14, $noreg, $r4, implicit-def dead $lr, implicit $sp
     tBX_RET 14, $noreg
 ...
+---
+name:            test3
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: test3
+  ; CHECK:       tBL 14 /* CC::al */, $noreg, @[[R0_OUTLINED:OUTLINED_FUNCTION_[0-9]+]]
+  ; CHECK-NEXT:  tBL 14 /* CC::al */, $noreg, @[[R0_OUTLINED]]
+  bb.0:
+    liveins: $r0, $r8, $r11, $lr
+
+    $r1, dead $cpsr = tMOVi8 13, 14, $noreg
+    $r2 = t2MVNi 88, 14, $noreg, $noreg
+    $r3 = t2MOVi -2, 14, $noreg, $noreg
+    t2STRDi8 $r11, $r8, $sp, 12, 14, $noreg
+    tBLXr 14, $noreg, $r0, implicit-def dead $lr, implicit $sp
+    $r1, dead $cpsr = tMOVi8 13, 14, $noreg
+    $r2 = t2MVNi 88, 14, $noreg, $noreg
+    $r3 = t2MOVi -2, 14, $noreg, $noreg
+    t2STRDi8 $r11, $r8, $sp, 12, 14, $noreg
+    tBLXr 14, $noreg, $r0, implicit-def dead $lr, implicit $sp
+    tBX_RET 14, $noreg
+...
+---
+name:            test4
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: test4
+  ; CHECK:       tBL 14 /* CC::al */, $noreg, @[[R0_OUTLINED]]
+  ; CHECK-NEXT:  tBL 14 /* CC::al */, $noreg, @[[R0_OUTLINED]]
+  bb.0:
+    liveins: $r0, $r8, $r11, $lr
+
+    $r1, dead $cpsr = tMOVi8 13, 14, $noreg
+    $r2 = t2MVNi 88, 14, $noreg, $noreg
+    $r3 = t2MOVi -2, 14, $noreg, $noreg
+    t2STRDi8 $r11, $r8, $sp, 12, 14, $noreg
+    tBLXr 14, $noreg, $r0, implicit-def dead $lr, implicit $sp
+    $r1, dead $cpsr = tMOVi8 13, 14, $noreg
+    $r2 = t2MVNi 88, 14, $noreg, $noreg
+    $r3 = t2MOVi -2, 14, $noreg, $noreg
+    t2STRDi8 $r11, $r8, $sp, 12, 14, $noreg
+    tBLXr 14, $noreg, $r0, implicit-def dead $lr, implicit $sp
+    tBX_RET 14, $noreg
+...
+
+# CHECK-LABEL: name: OUTLINED_FUNCTION_0
+# CHECK:       $r1, dead $cpsr = tMOVi8 13
+# CHECK-NEXT:  $r2 = t2MVNi 88
+# CHECK-NEXT:  $r3 = t2MOVi -2
+# CHECK-NEXT:  t2STRDi8 $r11, $r8, $sp, 12
+# CHECK-NEXT:  tTAILJMPr $r0
+
+# CHECK-LABEL: name: OUTLINED_FUNCTION_1
+# CHECK:       $r2 = t2MVNi 99
+# CHECK-NEXT:  $r3 = t2MOVi -1
+# CHECK-NEXT:  t2STRDi8 $r10, $r9, $sp, 8
+# CHECK-NOT:   tBLXr
+# CHECK:       tBX_RET

@@ -5675,6 +5675,7 @@ static bool isLRAvailable(const TargetRegisterInfo &TRI,
     const MachineInstr &MI = *I;
 
     // Check defs of LR.
+
     if (MI.modifiesRegister(ARM::LR, &TRI))
       Live = false;
 
@@ -5692,6 +5693,19 @@ static bool isLRAvailable(const TargetRegisterInfo &TRI,
       Live = true;
   }
   return !Live;
+}
+
+/// Return true if \p MI is a call instruction that the outliner can rewrite as
+/// a tail call.
+///
+/// Register-indirect Thumb BLX instructions are only eligible when their target
+/// register is in the tail-call GPR register class.
+static bool CanTransformInstrIntoTailCall(const MachineInstr &MI) {
+  auto Opcode = MI.getOpcode();
+  return (Opcode == ARM::BL || Opcode == ARM::BLX || Opcode == ARM::BLX_noip ||
+          Opcode == ARM::tBL || Opcode == ARM::tBLXi ||
+          ((Opcode == ARM::tBLXr || Opcode == ARM::tBLXr_noip) &&
+           ARM::tcGPRRegClass.contains(MI.getOperand(2).getReg())));
 }
 
 std::optional<std::unique_ptr<outliner::OutlinedFunction>>
@@ -5788,8 +5802,6 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
   // At this point, we have only "safe" candidates to outline. Figure out
   // frame + call instruction information.
 
-  unsigned LastInstrOpcode = RepeatedSequenceLocs[0].back().getOpcode();
-
   // Helper lambda which sets call information for every candidate.
   auto SetCandidateCallInfo =
       [&RepeatedSequenceLocs](unsigned CallID, unsigned NumBytesForCall) {
@@ -5825,13 +5837,7 @@ ARMBaseInstrInfo::getOutliningCandidateInfo(
     FrameID = MachineOutlinerTailCall;
     NumBytesToCreateFrame = Costs.FrameTailCall;
     SetCandidateCallInfo(MachineOutlinerTailCall, Costs.CallTailCall);
-  } else if (LastInstrOpcode == ARM::BL || LastInstrOpcode == ARM::BLX ||
-             LastInstrOpcode == ARM::BLX_noip || LastInstrOpcode == ARM::tBL ||
-             LastInstrOpcode == ARM::tBLXi ||
-             ((LastInstrOpcode == ARM::tBLXr ||
-               LastInstrOpcode == ARM::tBLXr_noip) &&
-              ARM::tcGPRRegClass.contains(
-                  RepeatedSequenceLocs[0].back().getOperand(2).getReg()))) {
+  } else if (CanTransformInstrIntoTailCall(RepeatedSequenceLocs[0].back())) {
     FrameID = MachineOutlinerThunk;
     NumBytesToCreateFrame = Costs.FrameThunk;
     SetCandidateCallInfo(MachineOutlinerThunk, Costs.CallThunk);
@@ -6171,9 +6177,7 @@ ARMBaseInstrInfo::getOutliningTypeImpl(const MachineModuleInfo &MMI,
     // as a tail-call. Explicitly list the call instructions we know about so
     // we don't get unexpected results with call pseudo-instructions.
     auto UnknownCallOutlineType = outliner::InstrType::Illegal;
-    if (Opc == ARM::BL || Opc == ARM::tBL || Opc == ARM::BLX ||
-        Opc == ARM::BLX_noip || Opc == ARM::tBLXr || Opc == ARM::tBLXr_noip ||
-        Opc == ARM::tBLXi)
+    if (CanTransformInstrIntoTailCall(MI))
       UnknownCallOutlineType = outliner::InstrType::LegalTerminator;
 
     if (!Callee)
