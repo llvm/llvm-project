@@ -1,15 +1,15 @@
-//===-- Shared __addtf3 function -------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This header exposes LLVM-libc's __addtf3 implementation as shared::addtf3
-// so that it can be reused by other LLVM projects, such as compiler-rt's
-// builtins library.
-//
+///
+/// \file
+/// This header exposes LLVM-libc's __addtf3 implementation as shared::addtf3
+/// so that it can be reused by compiler-rt's builtins.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SHARED_BUILTINS_ADDTF3_H

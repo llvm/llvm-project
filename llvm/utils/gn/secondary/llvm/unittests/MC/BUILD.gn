@@ -17,5 +17,6 @@ unittest("MCTests") {
     "MCInstPrinter.cpp",
     "StringTableBuilderTest.cpp",
     "TargetRegistry.cpp",
+    "WODRoundTripTest.cpp",
   ]
 }

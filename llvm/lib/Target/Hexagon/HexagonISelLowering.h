@@ -291,6 +291,12 @@ public:
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *BB) const override;
 
+  bool supportKCFIBundles() const override { return true; }
+
+  MachineInstr *EmitKCFICheck(MachineBasicBlock &MBB,
+                              MachineBasicBlock::instr_iterator &MBBI,
+                              const TargetInstrInfo *TII) const override;
+
 private:
   void initializeHVXLowering();
   unsigned getPreferredHvxVectorAction(MVT VecTy) const;
@@ -358,7 +364,7 @@ private:
     return MVT::getIntegerVT(Ty.getSizeInBits());
   }
   MVT tyVector(MVT Ty, MVT ElemTy) const {
-    if (Ty.isVector() && Ty.getVectorElementType() == ElemTy)
+    if (Ty.isVectorOf(ElemTy))
       return Ty;
     unsigned TyWidth = Ty.getSizeInBits();
     unsigned ElemWidth = ElemTy.getSizeInBits();

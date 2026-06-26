@@ -22,17 +22,15 @@ void ExprEngine::VisitLvalObjCIvarRefExpr(const ObjCIvarRefExpr *Ex,
                                           ExplodedNode *Pred,
                                           ExplodedNodeSet &Dst) {
   ProgramStateRef state = Pred->getState();
-  const LocationContext *LCtx = Pred->getLocationContext();
-  SVal baseVal = state->getSVal(Ex->getBase(), LCtx);
+  const StackFrame *SF = Pred->getStackFrame();
+  SVal baseVal = state->getSVal(Ex->getBase(), SF);
   SVal location = state->getLValue(Ex->getDecl(), baseVal);
 
-  ExplodedNodeSet dstIvar;
-  NodeBuilder Bldr(Pred, dstIvar, *currBldrCtx);
-  Bldr.generateNode(Ex, Pred, state->BindExpr(Ex, LCtx, location));
+  ExplodedNode *N = Engine.makeNodeWithBinding(Pred, Ex, location);
 
   // Perform the post-condition check of the ObjCIvarRefExpr and store
   // the created nodes in 'Dst'.
-  getCheckerManager().runCheckersForPostStmt(Dst, dstIvar, Ex, *this);
+  getCheckerManager().runCheckersForPostStmt(Dst, N, Ex, *this);
 }
 
 void ExprEngine::VisitObjCAtSynchronizedStmt(const ObjCAtSynchronizedStmt *S,
@@ -41,45 +39,37 @@ void ExprEngine::VisitObjCAtSynchronizedStmt(const ObjCAtSynchronizedStmt *S,
   getCheckerManager().runCheckersForPreStmt(Dst, Pred, S, *this);
 }
 
-/// Generate a node in \p Bldr for an iteration statement using ObjC
-/// for-loop iterator.
-static void populateObjCForDestinationSet(ExplodedNodeSet &dstLocation,
-                                          SValBuilder &svalBuilder,
-                                          const ObjCForCollectionStmt *S,
-                                          ConstCFGElementRef elem,
-                                          SVal elementV, SymbolManager &SymMgr,
-                                          unsigned NumVisitedCurrent,
-                                          NodeBuilder &Bldr, bool hasElements) {
+void ExprEngine::populateObjCForDestinationSet(const ObjCForCollectionStmt *S,
+                                               ExplodedNode *Pred,
+                                               ExplodedNodeSet &Dst,
+                                               SVal ElementV,
+                                               bool HasElements) {
+  ProgramStateRef State = Pred->getState();
+  const StackFrame *SF = Pred->getStackFrame();
 
-  for (ExplodedNode *Pred : dstLocation) {
-    ProgramStateRef state = Pred->getState();
-    const LocationContext *LCtx = Pred->getLocationContext();
+  State = ExprEngine::setWhetherHasMoreIteration(State, S, SF, HasElements);
 
-    ProgramStateRef nextState =
-        ExprEngine::setWhetherHasMoreIteration(state, S, LCtx, hasElements);
+  if (auto MV = ElementV.getAs<loc::MemRegionVal>())
+    if (const auto *R = dyn_cast<TypedValueRegion>(MV->getRegion())) {
+      // FIXME: The proper thing to do is to really iterate over the
+      //  container.  We will do this with dispatch logic to the store.
+      //  For now, just 'conjure' up a symbolic value.
+      QualType T = R->getValueType();
+      assert(Loc::isLocType(T));
 
-    if (auto MV = elementV.getAs<loc::MemRegionVal>())
-      if (const auto *R = dyn_cast<TypedValueRegion>(MV->getRegion())) {
-        // FIXME: The proper thing to do is to really iterate over the
-        //  container.  We will do this with dispatch logic to the store.
-        //  For now, just 'conjure' up a symbolic value.
-        QualType T = R->getValueType();
-        assert(Loc::isLocType(T));
-
-        SVal V;
-        if (hasElements) {
-          SymbolRef Sym =
-              SymMgr.conjureSymbol(elem, LCtx, T, NumVisitedCurrent);
-          V = svalBuilder.makeLoc(Sym);
-        } else {
-          V = svalBuilder.makeIntVal(0, T);
-        }
-
-        nextState = nextState->bindLoc(elementV, V, LCtx);
+      SVal V;
+      if (HasElements) {
+        SymbolRef Sym = SymMgr.conjureSymbol(getCFGElementRef(), SF, T,
+                                             getNumVisitedCurrent());
+        V = svalBuilder.makeLoc(Sym);
+      } else {
+        V = svalBuilder.makeIntVal(0, T);
       }
 
-    Bldr.generateNode(S, Pred, nextState);
-  }
+      State = State->bindLoc(ElementV, V, SF);
+    }
+
+  Dst.insert(Engine.makePostStmtNode(S, State, Pred));
 }
 
 void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
@@ -112,18 +102,17 @@ void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
 
   const Stmt *elem = S->getElement();
   const Expr *collection = S->getCollection();
-  const ConstCFGElementRef &elemRef = getCFGElementRef();
   ProgramStateRef state = Pred->getState();
 
-  SVal collectionV = state->getSVal(collection, Pred->getLocationContext());
+  SVal collectionV = state->getSVal(collection, Pred->getStackFrame());
 
   SVal elementV = UnknownVal();
   if (const auto *DS = dyn_cast<DeclStmt>(elem)) {
     const VarDecl *elemD = cast<VarDecl>(DS->getSingleDecl());
     assert(elemD->getInit() == nullptr);
-    elementV = state->getLValue(elemD, Pred->getLocationContext());
+    elementV = state->getLValue(elemD, Pred->getStackFrame());
   } else if (const auto *Ex = dyn_cast<Expr>(elem)) {
-    elementV = state->getSVal(Ex, Pred->getLocationContext());
+    elementV = state->getSVal(Ex, Pred->getStackFrame());
   }
 
   bool isContainerNull = state->isNull(collectionV).isConstrainedTrue();
@@ -131,20 +120,13 @@ void ExprEngine::VisitObjCForCollectionStmt(const ObjCForCollectionStmt *S,
   ExplodedNodeSet DstLocation; // states in `DstLocation` may differ from `Pred`
   evalLocation(DstLocation, S, elem, Pred, state, elementV, false);
 
-  for (ExplodedNode *dstLocation : DstLocation) {
-    ExplodedNodeSet DstLocationSingleton{dstLocation}, Tmp;
-    NodeBuilder Bldr(dstLocation, Tmp, *currBldrCtx);
+  for (ExplodedNode *N : DstLocation) {
+    ExplodedNodeSet Tmp;
 
     if (!isContainerNull)
-      populateObjCForDestinationSet(DstLocationSingleton, svalBuilder, S,
-                                    elemRef, elementV, SymMgr,
-                                    getNumVisitedCurrent(), Bldr,
-                                    /*hasElements=*/true);
+      populateObjCForDestinationSet(S, N, Tmp, elementV, /*hasElements=*/true);
 
-    populateObjCForDestinationSet(DstLocationSingleton, svalBuilder, S, elemRef,
-                                  elementV, SymMgr, getNumVisitedCurrent(),
-                                  Bldr,
-                                  /*hasElements=*/false);
+    populateObjCForDestinationSet(S, N, Tmp, elementV, /*hasElements=*/false);
 
     // Finally, run any custom checkers.
     // FIXME: Eventually all pre- and post-checks should live in VisitStmt.
@@ -157,7 +139,7 @@ void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,
                                   ExplodedNodeSet &Dst) {
   CallEventManager &CEMgr = getStateManager().getCallEventManager();
   CallEventRef<ObjCMethodCall> Msg = CEMgr.getObjCMethodCall(
-      ME, Pred->getState(), Pred->getLocationContext(), getCFGElementRef());
+      ME, Pred->getState(), Pred->getStackFrame(), getCFGElementRef());
 
   // There are three cases for the receiver:
   //   (1) it is definitely nil,
@@ -214,13 +196,8 @@ void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,
 
       // Receiver is definitely nil, so run ObjCMessageNil callbacks and return.
       if (nilState && !notNilState) {
-        ExplodedNodeSet dstNil;
-        NodeBuilder Bldr(Pred, dstNil, *currBldrCtx);
-        bool HasTag = Pred->getLocation().getTag();
-        Pred = Bldr.generateNode(ME, Pred, nilState, nullptr,
-                                 ProgramPoint::PreStmtKind);
-        assert((Pred || HasTag) && "Should have cached out already!");
-        (void)HasTag;
+        PreStmt PS(ME, Pred->getStackFrame(), nullptr);
+        Pred = Engine.makeNode(PS, nilState, Pred);
         if (!Pred)
           return;
 
@@ -232,15 +209,10 @@ void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,
         return;
       }
 
-      ExplodedNodeSet dstNonNil;
-      NodeBuilder Bldr(Pred, dstNonNil, *currBldrCtx);
       // Generate a transition to the non-nil state, dropping any potential
       // nil flow.
       if (notNilState != State) {
-        bool HasTag = Pred->getLocation().getTag();
-        Pred = Bldr.generateNode(ME, Pred, notNilState);
-        assert((Pred || HasTag) && "Should have cached out already!");
-        (void)HasTag;
+        Pred = Engine.makePostStmtNode(ME, notNilState, Pred);
         if (!Pred)
           return;
       }
@@ -257,36 +229,21 @@ void ExprEngine::VisitObjCMessage(const ObjCMessageExpr *ME,
 
   // Proceed with evaluate the message expression.
   ExplodedNodeSet dstEval;
-  NodeBuilder Bldr(dstGenericPrevisit, dstEval, *currBldrCtx);
 
-  for (ExplodedNodeSet::iterator DI = dstGenericPrevisit.begin(),
-       DE = dstGenericPrevisit.end(); DI != DE; ++DI) {
-    ExplodedNode *Pred = *DI;
+  for (ExplodedNode *Pred : dstGenericPrevisit) {
     ProgramStateRef State = Pred->getState();
     CallEventRef<ObjCMethodCall> UpdatedMsg = Msg.cloneWithState(State);
 
-    if (UpdatedMsg->isInstanceMessage()) {
-      SVal recVal = UpdatedMsg->getReceiverSVal();
-      if (!recVal.isUndef()) {
-        if (ObjCNoRet.isImplicitNoReturn(ME)) {
-          // If we raise an exception, for now treat it as a sink.
-          // Eventually we will want to handle exceptions properly.
-          Bldr.generateSink(ME, Pred, State);
-          continue;
-        }
-      }
-    } else {
-      // Check for special class methods that are known to not return
-      // and that we should treat as a sink.
-      if (ObjCNoRet.isImplicitNoReturn(ME)) {
-        // If we raise an exception, for now treat it as a sink.
-        // Eventually we will want to handle exceptions properly.
-        Bldr.generateSink(ME, Pred, Pred->getState());
-        continue;
-      }
+    if (ObjCNoRet.isImplicitNoReturn(ME) &&
+        !(UpdatedMsg->isInstanceMessage() &&
+          UpdatedMsg->getReceiverSVal().isUndef())) {
+      // If we raise an exception, for now treat it as a sink.
+      // Eventually we will want to handle exceptions properly.
+      Engine.makePostStmtNode(ME, State, Pred, /*MarkAsSink=*/true);
+      continue;
     }
 
-    defaultEvalCall(Bldr, Pred, *UpdatedMsg);
+    defaultEvalCall(dstEval, Pred, *UpdatedMsg);
   }
 
   // If there were constructors called for object-type arguments, clean them up.

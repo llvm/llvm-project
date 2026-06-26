@@ -156,19 +156,17 @@ void CXXArrayDeleteChecker::checkTypedDeleteExpr(
   if (!N)
     return;
 
-  SmallString<256> Buf;
-  llvm::raw_svector_ostream OS(Buf);
-
   QualType SourceType = BaseClassRegion->getValueType();
   QualType TargetType =
       DerivedClassRegion->getSymbol()->getType()->getPointeeType();
 
-  OS << "Deleting an array of '" << TargetType.getAsString()
-     << "' objects as their base class '"
-     << SourceType.getAsString(C.getASTContext().getPrintingPolicy())
-     << "' is undefined";
-
-  auto R = std::make_unique<PathSensitiveBugReport>(BT, OS.str(), N);
+  auto R = std::make_unique<PathSensitiveBugReport>(
+      BT,
+      "Deleting an array of '" + Twine(TargetType.getAsString()) +
+          "' objects as their base class '" +
+          SourceType.getAsString(C.getASTContext().getPrintingPolicy()) +
+          "' is undefined",
+      N);
 
   // Mark region of problematic base class for later use in the BugVisitor.
   R->markInteresting(BaseClassRegion);
@@ -210,8 +208,7 @@ CXXDeleteChecker::PtrCastVisitor::VisitNode(const ExplodedNode *N,
   OS << "Casting from '" << SourceType.getAsString() << "' to '"
      << TargetType.getAsString() << "' here";
 
-  PathDiagnosticLocation Pos(S, BRC.getSourceManager(),
-                             N->getLocationContext());
+  PathDiagnosticLocation Pos(S, BRC.getSourceManager(), N->getStackFrame());
   return std::make_shared<PathDiagnosticEventPiece>(Pos, OS.str(),
                                                     /*addPosRange=*/true);
 }

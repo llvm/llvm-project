@@ -21,10 +21,10 @@ define i8 @iv_used_in_exit_with_math(i8 noundef %g) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = and i8 [[TMP2]], [[G]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i8 [[TMP3]], 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i8 [[TMP4]], 0
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = freeze i1 [[TMP7]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = freeze i1 [[TMP8]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP12]], [[TMP13]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], 4
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
 ; CHECK:       [[VECTOR_BODY_INTERIM]]:
@@ -88,10 +88,10 @@ define i32 @iv_used_in_exit_with_loads(ptr align 4 dereferenceable(128) %src) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i32 [[TMP3]], 0
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i32 [[TMP4]], 0
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = freeze i1 [[TMP7]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = freeze i1 [[TMP8]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = or i1 [[TMP12]], [[TMP13]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], 32
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
 ; CHECK:       [[VECTOR_BODY_INTERIM]]:

@@ -10,6 +10,8 @@
 #define LLVM_TOOLS_LLVM_PROFGEN_PERFREADER_H
 #include "ErrorHandling.h"
 #include "ProfiledBinary.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
@@ -124,26 +126,27 @@ public:
   std::shared_ptr<T> Data;
   Hashable(const std::shared_ptr<T> &D) : Data(D) {}
 
-  // Hash code generation
-  struct Hash {
-    uint64_t operator()(const Hashable<T> &Key) const {
-      // Don't make it virtual for getHashCode
-      uint64_t Hash = Key.Data->getHashCode();
-      assert(Hash && "Should generate HashCode for it!");
-      return Hash;
-    }
-  };
-
-  // Hash equal
-  struct Equal {
-    bool operator()(const Hashable<T> &LHS, const Hashable<T> &RHS) const {
-      // Precisely compare the data, vtable will have overhead.
-      return LHS.Data->isEqual(RHS.Data.get());
-    }
-  };
-
   T *getPtr() const { return Data.get(); }
 };
+
+} // end namespace sampleprof
+
+template <typename T> struct DenseMapInfo<sampleprof::Hashable<T>> {
+  static unsigned getHashValue(const sampleprof::Hashable<T> &Key) {
+    // Don't make it virtual for getHashCode
+    uint64_t Hash = Key.Data->getHashCode();
+    assert(Hash && "Should generate HashCode for it!");
+    return DenseMapInfo<uint64_t>::getHashValue(Hash);
+  }
+
+  static bool isEqual(const sampleprof::Hashable<T> &LHS,
+                      const sampleprof::Hashable<T> &RHS) {
+    // Precisely compare the data, vtable will have overhead.
+    return LHS.Data->isEqual(RHS.Data.get());
+  }
+};
+
+namespace sampleprof {
 
 struct PerfSample {
   // LBR stack recorded in FIFO order.
@@ -203,9 +206,7 @@ struct PerfSample {
 // After parsing the sample, we record the samples by aggregating them
 // into this counter. The key stores the sample data and the value is
 // the sample repeat times.
-using AggregatedCounter =
-    std::unordered_map<Hashable<PerfSample>, uint64_t,
-                       Hashable<PerfSample>::Hash, Hashable<PerfSample>::Equal>;
+using AggregatedCounter = DenseMap<Hashable<PerfSample>, uint64_t>;
 
 using SampleVector = SmallVector<std::tuple<uint64_t, uint64_t, uint64_t>, 16>;
 
@@ -232,15 +233,16 @@ struct UnwindState {
     ProfiledFrame *Parent;
     SampleVector RangeSamples;
     SampleVector BranchSamples;
-    std::unordered_map<uint64_t, std::unique_ptr<ProfiledFrame>> Children;
+    DenseMap<uint64_t, std::unique_ptr<ProfiledFrame>> Children;
 
     ProfiledFrame(uint64_t Addr = 0, ProfiledFrame *P = nullptr)
         : Address(Addr), Parent(P) {}
     ProfiledFrame *getOrCreateChildFrame(uint64_t Address) {
       assert(Address && "Address can't be zero!");
-      auto Ret = Children.emplace(
-          Address, std::make_unique<ProfiledFrame>(Address, this));
-      return Ret.first->second.get();
+      auto [It, Inserted] = Children.try_emplace(Address);
+      if (Inserted)
+        It->second = std::make_unique<ProfiledFrame>(Address, this);
+      return It->second.get();
     }
     void recordRangeCount(uint64_t Start, uint64_t End, uint64_t Count) {
       RangeSamples.emplace_back(std::make_tuple(Start, End, Count));
@@ -416,9 +418,7 @@ struct SampleCounter {
 };
 
 // Sample counter with context to support context-sensitive profile
-using ContextSampleCounterMap =
-    std::unordered_map<Hashable<ContextKey>, SampleCounter,
-                       Hashable<ContextKey>::Hash, Hashable<ContextKey>::Equal>;
+using ContextSampleCounterMap = DenseMap<Hashable<ContextKey>, SampleCounter>;
 
 struct FrameStack {
   SmallVector<uint64_t, 16> Stack;
@@ -747,7 +747,7 @@ private:
   void readSampleCounters(TraceStream &TraceIt, SampleCounter &SCounters);
   void readUnsymbolizedProfile(StringRef Filename);
 
-  std::unordered_set<std::string> ContextStrSet;
+  StringSet<> ContextStrSet;
 };
 
 class ETMReader {

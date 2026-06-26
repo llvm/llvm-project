@@ -360,6 +360,14 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                     clang::options::OPT_fno_integrated_as, true))
     opts.DisableIntegratedAS = 1;
 
+  opts.FunctionSections =
+      args.hasFlag(clang::options::OPT_ffunction_sections,
+                   clang::options::OPT_fno_function_sections,
+                   /*Default=*/false);
+  opts.DataSections = args.hasFlag(clang::options::OPT_fdata_sections,
+                                   clang::options::OPT_fno_data_sections,
+                                   /*Default=*/false);
+
   if (const llvm::opt::Arg *a =
           args.getLastArg(clang::options::OPT_mcode_object_version_EQ)) {
     llvm::StringRef s = a->getValue();
@@ -479,6 +487,11 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
 
   opts.SampleProfileFile =
       args.getLastArgValue(clang::options::OPT_fprofile_sample_use_EQ);
+
+  if (args.hasFlag(clang::options::OPT_fpseudo_probe_for_profiling,
+                   clang::options::OPT_fno_pseudo_probe_for_profiling, false)) {
+    opts.PseudoProbeForProfiling = 1;
+  }
 
   // -mcmodel option.
   if (const llvm::opt::Arg *a =
@@ -870,15 +883,22 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
 
   // -frelaxed-c-loc-checks
   if (args.hasArg(clang::options::OPT_relaxed_c_loc)) {
-    opts.features.Enable(Fortran::common::LanguageFeature::RelaxedCLoc);
+    opts.features.Enable(Fortran::common::LanguageFeature::RelaxedCLocChecks);
   }
 
-  // -f{no-}acc-allow-default-none-scalars
+  // -f{no-}openacc-default-none-scalars-strict
   opts.features.Enable(
-      Fortran::common::LanguageFeature::AccDefaultNoneScalars,
-      args.hasFlag(clang::options::OPT_facc_allow_default_none_scalars,
-                   clang::options::OPT_fno_acc_allow_default_none_scalars,
+      Fortran::common::LanguageFeature::OpenAccDefaultNoneScalarsStrict,
+      args.hasFlag(clang::options::OPT_fopenacc_default_none_scalars_strict,
+                   clang::options::OPT_fno_openacc_default_none_scalars_strict,
                    false));
+
+  // -f{no-}openacc-multiple-names-in-routine
+  opts.features.Enable(
+      Fortran::common::LanguageFeature::OpenACCMultipleNamesInRoutine,
+      args.hasFlag(clang::options::OPT_fopenacc_multiple_names_in_routine,
+                   clang::options::OPT_fno_openacc_multiple_names_in_routine,
+                   true));
 
   // -f{no-}xor-operator
   opts.features.Enable(Fortran::common::LanguageFeature::XOROperator,
@@ -927,15 +947,6 @@ static std::string getIntrinsicDir(const char *argv) {
   llvm::sys::path::remove_filename(driverPath);
   driverPath.append("/../include/flang/");
   return std::string(driverPath);
-}
-
-// Generate the path to look for OpenMP headers
-static std::string getOpenMPHeadersDir(const char *argv) {
-  llvm::SmallString<128> includePath;
-  includePath.assign(llvm::sys::fs::getMainExecutable(argv, nullptr));
-  llvm::sys::path::remove_filename(includePath);
-  includePath.append("/../include/flang/OpenMP/");
-  return std::string(includePath);
 }
 
 /// Parses all preprocessor input arguments and populates the preprocessor
@@ -1545,6 +1556,10 @@ static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
       opts.PrepareForThinLTO = true;
   }
 
+  // -fsplit-lto-unit option
+  if (args.hasArg(clang::options::OPT_fsplit_lto_unit))
+    opts.EnableSplitLTOUnit = true;
+
   // -ffat-lto-objects
   if (const llvm::opt::Arg *arg =
           args.getLastArg(clang::options::OPT_ffat_lto_objects,
@@ -1728,6 +1743,9 @@ bool CompilerInvocation::createFromArgs(
   invoc.frontendOpts.llvmArgs = args.getAllArgValues(clang::options::OPT_mllvm);
   invoc.frontendOpts.mlirArgs = args.getAllArgValues(clang::options::OPT_mmlir);
 
+  if (args.hasArg(clang::options::OPT_foffload_device))
+    invoc.getLangOpts().OffloadDevice = 1;
+
   success &= parseLangOptionsArgs(invoc, args, diags);
 
   success &= parseLinkerOptionsArgs(invoc, args, diags);
@@ -1794,11 +1812,6 @@ void CompilerInvocation::setDefaultFortranOpts() {
 
   std::vector<std::string> searchDirectories{"."s};
   fortranOptions.searchDirectories = searchDirectories;
-
-  // Add the location of omp_lib.h to the search directories. Currently this is
-  // identical to the modules' directory.
-  fortranOptions.searchDirectories.emplace_back(
-      getOpenMPHeadersDir(getArgv0()));
 
   fortranOptions.isFixedForm = false;
 }
@@ -1910,6 +1923,12 @@ void CompilerInvocation::setFortranOpts() {
       preprocessorOptions.searchDirectoriesFromIntrModPath.begin(),
       preprocessorOptions.searchDirectoriesFromIntrModPath.end());
 
+  // Add the ordered list of -fintrinsic-modules-path
+  fortranOptions.intrinsicModuleDirectories.insert(
+      fortranOptions.intrinsicModuleDirectories.end(),
+      preprocessorOptions.searchDirectoriesFromIntrModPath.begin(),
+      preprocessorOptions.searchDirectoriesFromIntrModPath.end());
+
   //  Add the default intrinsic module directory
   fortranOptions.intrinsicModuleDirectories.emplace_back(
       getIntrinsicDir(getArgv0()));
@@ -1947,7 +1966,12 @@ CompilerInvocation::getSemanticsCtx(
       .set_maxErrors(getMaxErrors())
       .set_warningsAreErrors(getWarnAsErr())
       .set_moduleFileSuffix(getModuleFileSuffix())
-      .set_underscoring(getCodeGenOpts().Underscoring);
+      .set_underscoring(getCodeGenOpts().Underscoring)
+      .set_openAccDefaultNoneScalarsStrictDisableOption(
+          clang::getDriverOptTable()
+              .getOptionPrefixedName(
+                  clang::options::OPT_fno_openacc_default_none_scalars_strict)
+              .str());
 
   std::string compilerVersion = Fortran::common::getFlangFullVersion();
   Fortran::tools::setUpTargetCharacteristics(

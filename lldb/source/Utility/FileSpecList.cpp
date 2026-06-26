@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/FileSpecList.h"
-#include "lldb/Target/Statistics.h"
-#include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -217,20 +215,6 @@ SupportFileNSP SupportFileList::GetSupportFileAtIndex(size_t idx) const {
   if (idx < m_files.size())
     return m_files[idx];
   return std::make_shared<SupportFile>();
-}
-
-// Return the size in bytes that this object takes in memory. This returns the
-// size in bytes of this object's member variables and any FileSpec objects its
-// member variables contain, the result doesn't not include the string values
-// for the directories any filenames as those are in shared string pools.
-size_t FileSpecList::MemorySize() const {
-  size_t mem_size = sizeof(FileSpecList);
-  collection::const_iterator pos, end = m_files.end();
-  for (pos = m_files.begin(); pos != end; ++pos) {
-    mem_size += pos->MemorySize();
-  }
-
-  return mem_size;
 }
 
 // Return the number of files in the file spec list.

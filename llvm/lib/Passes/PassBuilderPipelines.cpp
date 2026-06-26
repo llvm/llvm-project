@@ -145,11 +145,13 @@
 #include "llvm/Transforms/Utils/ExtraPassManager.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
 #include "llvm/Transforms/Utils/LibCallsShrinkWrap.h"
+#include "llvm/Transforms/Utils/LowerCommentStringPass.h"
 #include "llvm/Transforms/Utils/Mem2Reg.h"
 #include "llvm/Transforms/Utils/MoveAutoInit.h"
 #include "llvm/Transforms/Utils/NameAnonGlobals.h"
 #include "llvm/Transforms/Utils/RelLookupTableConverter.h"
 #include "llvm/Transforms/Utils/SimplifyCFGOptions.h"
+#include "llvm/Transforms/Utils/TriggerCrashPass.h"
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
@@ -195,6 +197,10 @@ static cl::opt<bool> EnablePostPGOLoopRotation(
     "enable-post-pgo-loop-rotation", cl::init(true), cl::Hidden,
     cl::desc("Run the loop rotation transformation after PGO instrumentation"));
 
+static cl::opt<bool>
+    TriggerCrash("opt-pipeline-trigger-crash", cl::init(false), cl::Hidden,
+                 cl::desc("Trigger crash in optimization pipeline"));
+
 static cl::opt<bool> EnableGlobalAnalyses(
     "enable-global-analyses", cl::init(true), cl::Hidden,
     cl::desc("Enable inter-procedural analyses"));
@@ -211,7 +217,7 @@ static cl::opt<bool> RunNewGVN("enable-newgvn", cl::init(false), cl::Hidden,
                                cl::desc("Run the NewGVN pass"));
 
 static cl::opt<bool>
-    EnableLoopInterchange("enable-loopinterchange", cl::init(false), cl::Hidden,
+    EnableLoopInterchange("enable-loopinterchange", cl::init(true), cl::Hidden,
                           cl::desc("Enable the LoopInterchange Pass"));
 
 static cl::opt<bool> EnableUnrollAndJam("enable-unroll-and-jam",
@@ -229,7 +235,7 @@ static cl::opt<bool>
 static cl::opt<bool>
     EnableDFAJumpThreading("enable-dfa-jump-thread",
                            cl::desc("Enable DFA jump threading"),
-                           cl::init(false), cl::Hidden);
+                           cl::init(true), cl::Hidden);
 
 static cl::opt<bool>
     EnableHotColdSplit("hot-cold-split",
@@ -418,15 +424,20 @@ void PassBuilder::invokePipelineEarlySimplificationEPCallbacks(
     C(MPM, Level, Phase);
 }
 
+// Get IR stats with InstCount before/after the optimization pipeline
+static void instructionCountersPass(ModulePassManager &MPM,
+                                    bool IsPreOptimization) {
+  if (AreStatisticsEnabled()) {
+    MPM.addPass(
+        createModuleToFunctionPassAdaptor(InstCountPass(IsPreOptimization)));
+    MPM.addPass(createModuleToFunctionPassAdaptor(
+        FunctionPropertiesStatisticsPass(IsPreOptimization)));
+  }
+}
+
 // Helper to add AnnotationRemarksPass.
 static void addAnnotationRemarksPass(ModulePassManager &MPM) {
   MPM.addPass(createModuleToFunctionPassAdaptor(AnnotationRemarksPass()));
-  // Count the stats for InstCount and FunctionPropertiesAnalysis
-  if (AreStatisticsEnabled()) {
-    MPM.addPass(createModuleToFunctionPassAdaptor(InstCountPass()));
-    MPM.addPass(
-        createModuleToFunctionPassAdaptor(FunctionPropertiesStatisticsPass()));
-  }
 }
 
 // Helper to check if the current compilation phase is preparing for LTO
@@ -1365,7 +1376,16 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     // NOTE: we are very late in the pipeline, and we don't have any LICM
     // or SimplifyCFG passes scheduled after us, that would cleanup
     // the CFG mess this may created if allowed to modify CFG, so forbid that.
-    FPM.addPass(SROAPass(SROAOptions::PreserveCFG));
+
+    // We also turn on struct to vector canonicalization here, which allows
+    // converting allocas of homogeneous structs into vector allocas when the
+    // allocas' users are all memory intrinsics. This allows promotion in some
+    // cases because structs cannot promote to SSA values, but vectors can. We
+    // only turn this on after memcpyopt runs because this might hinder
+    // memcpyopt's optimizations if done before. Look at the documentation for
+    // `tryCanonicalizeStructToVector` in SROA.cpp to see why.
+    FPM.addPass(SROAPass(SROAOptions(SROAOptions::PreserveCFG,
+                                     /*AggregateToVector=*/true)));
   }
 
   if (!isFullLTOPostLink(LTOPhase)) {
@@ -1457,7 +1477,16 @@ void PassBuilder::addVectorPasses(OptimizationLevel Level,
     // NOTE: we are very late in the pipeline, and we don't have any LICM
     // or SimplifyCFG passes scheduled after us, that would cleanup
     // the CFG mess this may created if allowed to modify CFG, so forbid that.
-    FPM.addPass(SROAPass(SROAOptions::PreserveCFG));
+
+    // We also turn on struct to vector canonicalization here, which allows
+    // converting allocas of homogeneous structs into vector allocas when the
+    // allocas' users are all memory intrinsics. This allows promotion in some
+    // cases because structs cannot promote to SSA values, but vectors can. We
+    // only turn this on after memcpyopt runs because this might hinder
+    // memcpyopt's optimizations if done before. Look at the documentation for
+    // `tryCanonicalizeStructToVector` in SROA.cpp to see why.
+    FPM.addPass(SROAPass(SROAOptions(SROAOptions::PreserveCFG,
+                                     /*AggregateToVector=*/true)));
   }
 
   FPM.addPass(InferAlignmentPass());
@@ -1722,6 +1751,10 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
           InlineContext{ThinOrFullLTOPhase::None, InlinePass::CGSCCInliner}));
     }
   }
+
+  // Attach !implicit.ref metadata from all functions to copyright strings.
+  MPM.addPass(LowerCommentStringPass());
+
   return MPM;
 }
 
@@ -1732,7 +1765,7 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
     return buildO0DefaultPipeline(Level, Phase);
 
   ModulePassManager MPM;
-
+  instructionCountersPass(MPM, /* IsPreOptimization */ true);
   // Currently this pipeline is only invoked in an LTO pre link pass or when we
   // are not running LTO. If that changes the below checks may need updating.
   assert(isLTOPreLink(Phase) || Phase == ThinOrFullLTOPhase::None);
@@ -1748,6 +1781,9 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
 
   // Force any function attributes we want the rest of the pipeline to observe.
   MPM.addPass(ForceFunctionAttrsPass());
+
+  if (TriggerCrash)
+    MPM.addPass(createModuleToFunctionPassAdaptor(TriggerCrashFunctionPass()));
 
   if (PGOOpt && PGOOpt->DebugInfoForProfiling)
     MPM.addPass(createModuleToFunctionPassAdaptor(AddDiscriminatorsPass()));
@@ -1770,6 +1806,8 @@ PassBuilder::buildPerModuleDefaultPipeline(OptimizationLevel Level,
 
   if (isLTOPreLink(Phase))
     addRequiredLTOPreLinkPasses(MPM);
+
+  instructionCountersPass(MPM, /* IsPreOptimization */ false);
   return MPM;
 }
 
@@ -1777,6 +1815,9 @@ ModulePassManager
 PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
                                         bool EmitSummary) {
   ModulePassManager MPM;
+
+  instructionCountersPass(MPM, /* IsPreOptimization */ true);
+
   if (ThinLTO)
     MPM.addPass(buildThinLTOPreLinkDefaultPipeline(Level));
   else
@@ -1818,6 +1859,9 @@ PassBuilder::buildFatLTODefaultPipeline(OptimizationLevel Level, bool ThinLTO,
     // Emit annotation remarks.
     addAnnotationRemarksPass(MPM);
   }
+
+  instructionCountersPass(MPM, /* IsPreOptimization */ false);
+
   return MPM;
 }
 
@@ -1827,6 +1871,8 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
     return buildO0DefaultPipeline(Level, ThinOrFullLTOPhase::ThinLTOPreLink);
 
   ModulePassManager MPM;
+
+  instructionCountersPass(MPM, /* IsPreOptimization */ true);
 
   // Convert @llvm.global.annotations to !annotation metadata.
   MPM.addPass(Annotation2MetadataPass());
@@ -1878,7 +1924,12 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
 
+  // Attach !implicit.ref metadata from all functions to copyright strings.
+  MPM.addPass(LowerCommentStringPass());
+
   addRequiredLTOPreLinkPasses(MPM);
+
+  instructionCountersPass(MPM, /* IsPreOptimization */ false);
 
   return MPM;
 }
@@ -1886,6 +1937,8 @@ PassBuilder::buildThinLTOPreLinkDefaultPipeline(OptimizationLevel Level) {
 ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
     OptimizationLevel Level, const ModuleSummaryIndex *ImportSummary) {
   ModulePassManager MPM;
+
+  instructionCountersPass(MPM, /* IsPreOptimization */ true);
 
   // If we are invoking this without a summary index noting that we are linking
   // with a library containing the necessary APIs, remove any MemProf related
@@ -1951,6 +2004,8 @@ ModulePassManager PassBuilder::buildThinLTODefaultPipeline(
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
 
+  instructionCountersPass(MPM, /* IsPreOptimization */ false);
+
   return MPM;
 }
 
@@ -1965,6 +2020,8 @@ ModulePassManager
 PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
                                      ModuleSummaryIndex *ExportSummary) {
   ModulePassManager MPM;
+
+  instructionCountersPass(MPM, /* IsPreOptimization */ true);
 
   invokeFullLinkTimeOptimizationEarlyEPCallbacks(MPM, Level);
 
@@ -2086,6 +2143,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
     // Emit annotation remarks.
     addAnnotationRemarksPass(MPM);
 
+    instructionCountersPass(MPM, /* IsPreOptimization */ false);
+
     return MPM;
   }
 
@@ -2161,6 +2220,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   CGPM.addPass(ArgumentPromotionPass());
   CGPM.addPass(CoroSplitPass(Level != OptimizationLevel::O0));
   CGPM.addPass(CoroAnnotationElidePass());
+  invokeCGSCCOptimizerLateEPCallbacks(CGPM, Level);
   MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
 
   FunctionPassManager FPM;
@@ -2323,6 +2383,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
 
+  instructionCountersPass(MPM, /* IsPreOptimization */ false);
+
   return MPM;
 }
 
@@ -2333,6 +2395,8 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
          "buildO0DefaultPipeline should only be used with O0");
 
   ModulePassManager MPM;
+
+  instructionCountersPass(MPM, /* IsPreOptimization */ true);
 
   // Perform pseudo probe instrumentation in O0 mode. This is for the
   // consistency between different build modes. For example, a LTO build can be
@@ -2444,11 +2508,16 @@ PassBuilder::buildO0DefaultPipeline(OptimizationLevel Level,
   if (EnableInstrumentor)
     MPM.addPass(InstrumentorPass(FS));
 
+  // Attach !implicit.ref metadata from all functions to copyright strings.
+  MPM.addPass(LowerCommentStringPass());
+
   if (isLTOPreLink(Phase))
     addRequiredLTOPreLinkPasses(MPM);
 
   // Emit annotation remarks.
   addAnnotationRemarksPass(MPM);
+
+  instructionCountersPass(MPM, /* IsPreOptimization */ false);
 
   return MPM;
 }
