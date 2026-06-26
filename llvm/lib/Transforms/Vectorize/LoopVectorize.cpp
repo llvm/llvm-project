@@ -7942,7 +7942,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     }
   }
 
-  InterleavedAccessInfo IAI(PSE, L, DT, LI, LVL.getLAI());
+  InterleavedAccessInfo IAI(PSE, L, DT, LI, LVL.getLAI(), OptForSize);
   bool UseInterleaved =
       IsInnerLoop && TTI->enableInterleavedAccessVectorization();
 

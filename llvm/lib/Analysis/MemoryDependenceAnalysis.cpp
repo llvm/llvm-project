@@ -1354,8 +1354,26 @@ bool MemoryDependenceResults::getNonLocalPointerDepFromBB(
       // predecessor, then we have to assume that the pointer is clobbered in
       // that predecessor.  We can still do PRE of the load, which would insert
       // a computation of the pointer in this predecessor.
-      if (!PredPtrVal)
+      if (!PredPtrVal) {
+        // If translation failed but the (partially) translated address
+        // expression depends on a select instruction, try to translate both
+        // sides of that select.  The select condition is recovered from the
+        // failed `PredPointer` (the phi has already been resolved to the
+        // select there), but the two sides must be translated from the
+        // original, untranslated `Pointer`.
+        if (Value *Cond = PredPointer.getSelectCondition()) {
+          SelectAddr::SelectAddrs SelAddrs =
+              PHITransAddr(Pointer).translateValue(BB, Pred, &DT, Cond);
+          if (SelAddrs.first && SelAddrs.second) {
+            Result.push_back(NonLocalDepResult(Pred, MemDepResult::getSelect(),
+                                               SelectAddr(Cond, SelAddrs)));
+            NonLocalPointerInfo &NLPI = NonLocalPointerDeps[CacheKey];
+            NLPI.Pair = BBSkipFirstBlockPair();
+            continue;
+          }
+        }
         CanTranslate = false;
+      }
 
       // FIXME: it is entirely possible that PHI translating will end up with
       // the same value.  Consider PHI translating something like:

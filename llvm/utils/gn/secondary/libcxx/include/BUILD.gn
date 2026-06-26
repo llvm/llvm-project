@@ -1743,6 +1743,7 @@ if (current_toolchain == default_toolchain) {
       "strstream",
       "syncstream",
       "system_error",
+      "text_encoding",
       "tgmath.h",
       "thread",
       "tuple",

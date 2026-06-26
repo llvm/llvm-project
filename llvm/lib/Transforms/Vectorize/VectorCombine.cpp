@@ -150,6 +150,7 @@ private:
   bool foldShuffleChainsToReduce(Instruction &I);
   bool foldCastFromReductions(Instruction &I);
   bool foldSignBitReductionCmp(Instruction &I);
+  bool foldReductionZeroTest(Instruction &I);
   bool foldICmpEqZeroVectorReduce(Instruction &I);
   bool foldEquivalentReductionCmp(Instruction &I);
   bool foldReduceAddCmpZero(Instruction &I);
@@ -4592,6 +4593,85 @@ bool VectorCombine::foldSignBitReductionCmp(Instruction &I) {
   return true;
 }
 
+/// Fold a zero test of reduce.or or reduce.umax into a boolean reduction.
+///
+/// Vectorization may produce IR that compares the result of a scalar reduction
+/// with zero. Depending on the target, lowering a reduction and a scalar
+/// comparison separately can cost more than reducing lane-wise comparison
+/// results. This fold creates the latter form only when it is not costlier.
+///
+/// Before:
+///   %r = call iT @llvm.vector.reduce.or.vNiT(<N x iT> %x)
+///   %cmp = icmp ne iT %r, 0
+///
+/// After:
+///   %lane.cmp = icmp ne <N x iT> %x, zeroinitializer
+///   %cmp = call i1 @llvm.vector.reduce.or.vNi1(<N x i1> %lane.cmp)
+///
+/// `reduce.or` and `reduce.umax` are non-zero when at least one lane is
+/// non-zero. Therefore, `icmp ne` uses the existential `reduce.or` test.
+/// Conversely, `icmp eq` must check that every lane is zero, so it uses the
+/// universal `reduce.and` test.
+///
+/// Before:
+///   %r = call iT @llvm.vector.reduce.umax.vNiT(<N x iT> %x)
+///   %cmp = icmp eq iT %r, 0
+///
+/// After:
+///   %lane.cmp = icmp eq <N x iT> %x, zeroinitializer
+///   %cmp = call i1 @llvm.vector.reduce.and.vNi1(<N x i1> %lane.cmp)
+bool VectorCombine::foldReductionZeroTest(Instruction &I) {
+  CmpPredicate Pred;
+  Value *Op;
+
+  if (!match(&I, m_c_ICmp(Pred, m_Value(Op), m_Zero())) ||
+      !ICmpInst::isEquality(Pred))
+    return false;
+
+  auto *II = dyn_cast<IntrinsicInst>(Op);
+  if (!II || !II->hasOneUse())
+    return false;
+
+  auto ReduceID = II->getIntrinsicID();
+  if (ReduceID != Intrinsic::vector_reduce_or &&
+      ReduceID != Intrinsic::vector_reduce_umax)
+    return false;
+
+  Value *Vec = II->getArgOperand(0);
+  auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
+  if (!VecTy || !VecTy->getElementType()->isIntegerTy())
+    return false;
+
+  // Map the scalar zero test to an any-lane or all-lane boolean reduction.
+  Intrinsic::ID NewIID = (Pred == ICmpInst::ICMP_NE)
+                             ? Intrinsic::vector_reduce_or
+                             : Intrinsic::vector_reduce_and;
+
+  // This is not an unconditional canonicalization: compare the cost of the
+  // original scalar reduction and compare with the vector compare and i1
+  // reduction replacement for both reduce.or and reduce.umax.
+  InstructionCost OldCost = TTI.getInstructionCost(II, CostKind) +
+                            TTI.getInstructionCost(&I, CostKind);
+
+  auto *CmpTy = cast<VectorType>(CmpInst::makeCmpResultType(VecTy));
+  InstructionCost NewCost =
+      TTI.getCmpSelInstrCost(Instruction::ICmp, VecTy, CmpTy, Pred, CostKind);
+  NewCost += TTI.getArithmeticReductionCost(
+      getArithmeticReductionInstruction(NewIID), CmpTy, std::nullopt, CostKind);
+
+  LLVM_DEBUG(dbgs() << "Found a reduction zero test: " << I << "\n  OldCost: "
+                    << OldCost << " vs NewCost: " << NewCost << "\n");
+
+  if (!OldCost.isValid() || !NewCost.isValid() || NewCost > OldCost)
+    return false;
+
+  Builder.SetInsertPoint(&I);
+  Value *NewCmp = Builder.CreateICmp(Pred, Vec, Constant::getNullValue(VecTy));
+  Value *NewReduce = Builder.CreateIntrinsic(NewIID, {CmpTy}, {NewCmp});
+  replaceValue(I, *NewReduce);
+  return true;
+}
+
 /// vector.reduce.OP f(X_i) == 0 -> vector.reduce.OP X_i == 0
 ///
 /// We can prove it for cases when:
@@ -6266,6 +6346,8 @@ bool VectorCombine::run() {
         if (foldSignBitReductionCmp(I))
           return true;
         if (foldICmpEqZeroVectorReduce(I))
+          return true;
+        if (foldReductionZeroTest(I))
           return true;
         if (foldEquivalentReductionCmp(I))
           return true;

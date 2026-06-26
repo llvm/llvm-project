@@ -583,7 +583,8 @@ public:
                                isVolatile, isNontemporal,
                                /*alignment=*/align,
                                /*sync_scope=*/cir::SyncScopeKindAttr{},
-                               /*mem_order=*/cir::MemOrderAttr{});
+                               /*mem_order=*/cir::MemOrderAttr{},
+                               /*invariant=*/false);
   }
 
   cir::LoadOp createAlignedLoad(mlir::Location loc, mlir::Type ty,
@@ -596,7 +597,8 @@ public:
                                /*isVolatile=*/false, /*isNontemporal=*/false,
                                alignAttr,
                                /*sync_scope=*/cir::SyncScopeKindAttr{},
-                               /*mem_order=*/cir::MemOrderAttr{});
+                               /*mem_order=*/cir::MemOrderAttr{},
+                               /*invariant=*/false);
   }
 
   cir::LoadOp
