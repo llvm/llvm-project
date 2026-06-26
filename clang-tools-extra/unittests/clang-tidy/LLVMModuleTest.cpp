@@ -316,7 +316,7 @@ TEST(LLVMHeaderGuardCheckTest, FixHeaderGuards) {
                 StringRef("header is missing header guard")));
 #endif
 
-#ifndef WIN32
+#ifndef _WIN32
   // Test path outside any git repo (real root detection should fail and not
   // hang).
   EXPECT_EQ("#ifndef NON_EXISTENT_DIRECTORY_123_X_H\n"
@@ -377,7 +377,7 @@ TEST(LLVMHeaderGuardCheckTest, MockedProjectRoot) {
                 "", "/my/mock/root/libc/src/string/strlen.h",
                 StringRef("header is missing header guard"), "/my/mock/root/"));
 
-#ifdef WIN32
+#ifdef _WIN32
   // Test Windows-style paths through the new code path (mocked root).
   EXPECT_EQ("#ifndef LLVM_LIBC_SRC_STRING_STRLEN_H\n"
             "#define LLVM_LIBC_SRC_STRING_STRLEN_H\n"
