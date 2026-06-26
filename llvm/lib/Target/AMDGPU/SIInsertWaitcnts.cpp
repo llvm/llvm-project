@@ -2668,11 +2668,6 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
       // pointers so that both VM and LGKM counters are flushed.
       ScoreBrackets->setPendingFlat();
     }
-    if (SIInstrInfo::usesASYNC_CNT(Inst)) {
-      ScoreBrackets->updateByEvent(HWEvents::ASYNC_ACCESS, Inst);
-    }
-  } else if (SIInstrInfo::usesTENSOR_CNT(Inst)) {
-    ScoreBrackets->updateByEvent(HWEvents::TENSOR_ACCESS, Inst);
   } else if (Inst.isCall()) {
     // Act as a wait on everything, but AsyncCnt and TensorCnt are never
     // included in such blanket waits.

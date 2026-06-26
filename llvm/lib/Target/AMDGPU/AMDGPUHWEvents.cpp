@@ -127,8 +127,15 @@ static HWEvents getEventsForImpl(const MachineInstr &Inst,
 
     if (TII.mayAccessLDSThroughFlat(Inst))
       E |= HWEvents::LDS_ACCESS;
+
+    if (SIInstrInfo::usesASYNC_CNT(Inst))
+      E |= HWEvents::ASYNC_ACCESS;
+
     return E;
   }
+
+  if (SIInstrInfo::usesTENSOR_CNT(Inst))
+    return HWEvents::TENSOR_ACCESS;
 
   if (SIInstrInfo::isVMEM(Inst) &&
       (!AMDGPU::getMUBUFIsBufferInv(Inst.getOpcode()) ||
