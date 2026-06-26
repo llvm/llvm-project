@@ -151,12 +151,14 @@ DynamicLoader::GetSectionListFromModule(const ModuleSP module) const {
   return sections;
 }
 
-ModuleSP DynamicLoader::FindModuleViaTarget(const ModuleSpec &spec) {
-  ModuleSpec module_spec(spec);
+ModuleSP DynamicLoader::FindModuleViaTarget(const FileSpec &file) {
   Target &target = m_process->GetTarget();
-  // The process may be able to augment the module_spec with a UUID.
-  if (!module_spec.GetUUID().IsValid())
-    m_process->FindModuleUUID(module_spec);
+  ModuleSpec module_spec(file, target.GetArchitecture());
+  if (UUID uuid = m_process->FindModuleUUID(file.GetPath())) {
+    // Process may be able to augment the module_spec with UUID, e.g. ELF core.
+    module_spec.GetUUID() = uuid;
+  }
+
   if (ModuleSP module_sp = target.GetImages().FindFirstModule(module_spec))
     return module_sp;
 
@@ -171,10 +173,7 @@ ModuleSP DynamicLoader::LoadModuleAtAddress(const FileSpec &file,
                                             addr_t link_map_addr,
                                             addr_t base_addr,
                                             bool base_addr_is_offset) {
-  Target &target = m_process->GetTarget();
-  ModuleSpec module_spec(file, target.GetArchitecture());
-  module_spec.SetLoadAddress(base_addr);
-  ModuleSP module_sp = FindModuleViaTarget(module_spec);
+  ModuleSP module_sp = FindModuleViaTarget(file);
   // We have a core file, try to load the image from memory if we didn't find
   // the module.
   if (!module_sp && !m_process->IsLiveDebugSession()) {
