@@ -1866,8 +1866,9 @@ bool StrNCmpInliner::optimizeStrNCmp() {
 
   // Cases where StrP has two or more dereferenceable bytes might be better
   // optimized elsewhere.
-  bool CanBeNull = false, CanBeFreed = false;
-  if (StrP->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed) > 1)
+  bool CanBeNull = false;
+  if (StrP->getPointerDereferenceableBytes(DL, CanBeNull,
+                                           /*CanBeFreed=*/nullptr) > 1)
     return false;
   inlineCompare(StrP, Str, N, HasStr1);
   return true;
@@ -1952,8 +1953,8 @@ void StrNCmpInliner::inlineCompare(Value *LHS, StringRef RHS, uint64_t N,
 
       Function *F = CI->getFunction();
       assert(F && "Instruction does not belong to a function!");
-      std::optional<Function::ProfileCount> EC = F->getEntryCount();
-      if (EC && EC->getCount() > 0)
+      std::optional<uint64_t> EC = F->getEntryCount();
+      if (EC && *EC > 0)
         setExplicitlyUnknownBranchWeights(*CondBrInst, DEBUG_TYPE);
     } else {
       B.CreateBr(BBNE);

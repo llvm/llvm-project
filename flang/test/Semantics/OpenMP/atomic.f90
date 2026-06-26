@@ -13,13 +13,13 @@ use omp_lib
   a = b
   !$omp end atomic
 
-  !ERROR: ACQUIRE clause is not allowed on directive ATOMIC in OpenMP v3.1, try -fopenmp-version=50
-  !ERROR: HINT clause is not allowed on directive ATOMIC in OpenMP v3.1, try -fopenmp-version=50
+  !ERROR: ACQUIRE clause is not allowed on ATOMIC directive in OpenMP v3.1, try -fopenmp-version=50
+  !ERROR: HINT clause is not allowed on ATOMIC directive in OpenMP v3.1, try -fopenmp-version=50
   !$omp atomic read acquire hint(OMP_LOCK_HINT_CONTENDED)
   a = b
 
-  !ERROR: RELEASE clause is not allowed on directive ATOMIC in OpenMP v3.1, try -fopenmp-version=50
-  !ERROR: HINT clause is not allowed on directive ATOMIC in OpenMP v3.1, try -fopenmp-version=50
+  !ERROR: RELEASE clause is not allowed on ATOMIC directive in OpenMP v3.1, try -fopenmp-version=50
+  !ERROR: HINT clause is not allowed on ATOMIC directive in OpenMP v3.1, try -fopenmp-version=50
   !$omp atomic release hint(OMP_LOCK_HINT_UNCONTENDED) write
   a = b
 
@@ -28,8 +28,8 @@ use omp_lib
   a = a + 1
   !$omp end atomic
 
-  !ERROR: HINT clause is not allowed on directive ATOMIC in OpenMP v3.1, try -fopenmp-version=50
-  !ERROR: ACQ_REL clause is not allowed on directive ATOMIC in OpenMP v3.1, try -fopenmp-version=50
+  !ERROR: HINT clause is not allowed on ATOMIC directive in OpenMP v3.1, try -fopenmp-version=50
+  !ERROR: ACQ_REL clause is not allowed on ATOMIC directive in OpenMP v3.1, try -fopenmp-version=50
   !$omp atomic hint(1) acq_rel capture
   b = a
   a = a + 1
@@ -42,16 +42,16 @@ use omp_lib
 
   !$omp atomic
   a = a + 1
-  !ERROR: NUM_THREADS clause is not allowed on the ATOMIC directive
+  !ERROR: NUM_THREADS clause is not allowed on ATOMIC directive
   !$omp atomic num_threads(4)
   a = a + 1
 
   !ERROR: ATOMIC UPDATE operation with CAPTURE should contain two statements
-  !ERROR: NUM_THREADS clause is not allowed on the ATOMIC directive
+  !ERROR: NUM_THREADS clause is not allowed on ATOMIC directive
   !$omp atomic capture num_threads(4)
   a = a + 1
 
-  !ERROR: RELAXED clause is not allowed on directive ATOMIC in OpenMP v3.1, try -fopenmp-version=50
+  !ERROR: RELAXED clause is not allowed on ATOMIC directive in OpenMP v3.1, try -fopenmp-version=50
   !$omp atomic relaxed
   a = a + 1
 

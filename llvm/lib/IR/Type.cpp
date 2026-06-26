@@ -58,10 +58,6 @@ bool Type::isByteTy(unsigned BitWidth) const {
   return isByteTy() && cast<ByteType>(this)->getBitWidth() == BitWidth;
 }
 
-bool Type::isIntegerTy(unsigned Bitwidth) const {
-  return isIntegerTy() && cast<IntegerType>(this)->getBitWidth() == Bitwidth;
-}
-
 bool Type::isScalableTy(SmallPtrSetImpl<const Type *> &Visited) const {
   if (const auto *ATy = dyn_cast<ArrayType>(this))
     return ATy->getElementType()->isScalableTy(Visited);
@@ -338,13 +334,11 @@ Type *Type::getByteFromIntType(Type *Ty) {
 }
 
 Type *Type::getWasm_ExternrefTy(LLVMContext &C) {
-  // opaque pointer in addrspace(10)
-  return PointerType::get(C, 10);
+  return TargetExtType::get(C, "wasm.externref", {}, {});
 }
 
 Type *Type::getWasm_FuncrefTy(LLVMContext &C) {
-  // opaque pointer in addrspace(20)
-  return PointerType::get(C, 20);
+  return TargetExtType::get(C, "wasm.funcref", {}, {});
 }
 
 //===----------------------------------------------------------------------===//
@@ -1137,6 +1131,12 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
     return TargetTypeInfo(Type::getInt32Ty(C), TargetExtType::CanBeLocal,
                           TargetExtType::CanBeVectorElement);
   }
+
+  // Opaque types in the WebAssembly name space.
+  if (Name == "wasm.funcref" || Name == "wasm.externref")
+    return TargetTypeInfo(PointerType::getUnqual(C), TargetExtType::HasZeroInit,
+                          TargetExtType::CanBeGlobal,
+                          TargetExtType::CanBeLocal);
 
   return TargetTypeInfo(Type::getVoidTy(C));
 }

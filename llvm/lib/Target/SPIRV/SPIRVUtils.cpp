@@ -66,13 +66,18 @@ static FunctionType *extractFunctionTypeFromMetadata(NamedMDNode *NMD,
     if (auto *Const = getConstInt(MD, 0)) {
       auto *CMeta = dyn_cast<ConstantAsMetadata>(MD->getOperand(1));
       assert(CMeta && "ConstantAsMetadata operand is expected");
-      assert(Const->getSExtValue() >= -1);
+      int64_t Idx = Const->getSExtValue();
       // Currently -1 indicates return value, greater values mean
       // argument numbers.
-      if (Const->getSExtValue() == -1)
+      if (Idx == -1) {
         RetTy = CMeta->getType();
-      else
-        PTys[Const->getSExtValue()] = CMeta->getType();
+        continue;
+      }
+      if (Idx >= 0 && static_cast<uint64_t>(Idx) < PTys.size()) {
+        PTys[Idx] = CMeta->getType();
+        continue;
+      }
+      report_fatal_error("invalid argument index in function type metadata");
     }
   }
 
@@ -111,17 +116,33 @@ FunctionType *getOriginalFunctionType(const Function &F) {
       F.getName());
 }
 
+// Keyed via instruction metadata, not a name.
+static std::optional<StringRef> getMutatedCallsiteKey(const CallBase &CB) {
+  if (MDNode *MD = CB.getMetadata("spv.mutated_callsite"))
+    if (MD->getNumOperands() > 0)
+      if (auto *MDS = dyn_cast<MDString>(MD->getOperand(0)))
+        return MDS->getString();
+  return std::nullopt;
+}
+
 FunctionType *getOriginalFunctionType(const CallBase &CB) {
+  std::optional<StringRef> Key = getMutatedCallsiteKey(CB);
+  if (!Key)
+    return CB.getFunctionType();
   return extractFunctionTypeFromMetadata(
       CB.getModule()->getNamedMetadata("spv.mutated_callsites"),
-      CB.getFunctionType(), CB.getName());
+      CB.getFunctionType(), *Key);
 }
 
 StringRef getOriginalAsmConstraints(const CallBase &CB) {
+  StringRef Constraints =
+      cast<InlineAsm>(CB.getCalledOperand())->getConstraintString();
+  std::optional<StringRef> Key = getMutatedCallsiteKey(CB);
+  if (!Key)
+    return Constraints;
   return extractAsmConstraintsFromMetadata(
-      CB.getModule()->getNamedMetadata("spv.mutated_callsites"),
-      cast<InlineAsm>(CB.getCalledOperand())->getConstraintString(),
-      CB.getName());
+      CB.getModule()->getNamedMetadata("spv.mutated_callsites"), Constraints,
+      *Key);
 }
 } // Namespace SPIRV
 
@@ -236,7 +257,7 @@ void buildOpName(Register Target, const StringRef &Name, MachineInstr &I,
 }
 
 static void finishBuildOpDecorate(MachineInstrBuilder &MIB,
-                                  const std::vector<uint32_t> &DecArgs,
+                                  ArrayRef<uint32_t> DecArgs,
                                   StringRef StrImm) {
   if (!StrImm.empty())
     addStringImm(StrImm, MIB);
@@ -246,7 +267,7 @@ static void finishBuildOpDecorate(MachineInstrBuilder &MIB,
 
 void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
                      SPIRV::Decoration::Decoration Dec,
-                     const std::vector<uint32_t> &DecArgs, StringRef StrImm) {
+                     ArrayRef<uint32_t> DecArgs, StringRef StrImm) {
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpDecorate)
                  .addUse(Reg)
                  .addImm(static_cast<uint32_t>(Dec));
@@ -255,7 +276,7 @@ void buildOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
 
 void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
                      SPIRV::Decoration::Decoration Dec,
-                     const std::vector<uint32_t> &DecArgs, StringRef StrImm) {
+                     ArrayRef<uint32_t> DecArgs, StringRef StrImm) {
   MachineBasicBlock &MBB = *I.getParent();
   auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(SPIRV::OpDecorate))
                  .addUse(Reg)
@@ -265,8 +286,7 @@ void buildOpDecorate(Register Reg, MachineInstr &I, const SPIRVInstrInfo &TII,
 
 void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
                            SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           const std::vector<uint32_t> &DecArgs,
-                           StringRef StrImm) {
+                           ArrayRef<uint32_t> DecArgs, StringRef StrImm) {
   auto MIB = MIRBuilder.buildInstr(SPIRV::OpMemberDecorate)
                  .addUse(Reg)
                  .addImm(Member)
@@ -277,8 +297,7 @@ void buildOpMemberDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
 void buildOpMemberDecorate(Register Reg, MachineInstr &I,
                            const SPIRVInstrInfo &TII,
                            SPIRV::Decoration::Decoration Dec, uint32_t Member,
-                           const std::vector<uint32_t> &DecArgs,
-                           StringRef StrImm) {
+                           ArrayRef<uint32_t> DecArgs, StringRef StrImm) {
   MachineBasicBlock &MBB = *I.getParent();
   auto MIB = BuildMI(MBB, I, I.getDebugLoc(), TII.get(SPIRV::OpMemberDecorate))
                  .addUse(Reg)
@@ -673,12 +692,12 @@ Type *parseBasicTypeName(StringRef &TypeName, LLVMContext &Ctx) {
   return nullptr;
 }
 
-std::unordered_set<BasicBlock *>
+SmallPtrSet<BasicBlock *, 0>
 PartialOrderingVisitor::getReachableFrom(BasicBlock *Start) {
   std::queue<BasicBlock *> ToVisit;
   ToVisit.push(Start);
 
-  std::unordered_set<BasicBlock *> Output;
+  SmallPtrSet<BasicBlock *, 0> Output;
   while (ToVisit.size() != 0) {
     BasicBlock *BB = ToVisit.front();
     ToVisit.pop();
@@ -787,7 +806,7 @@ size_t PartialOrderingVisitor::visit(BasicBlock *BB, size_t Unused) {
     QueueIndex = 0;
     size_t Rank = GetNodeRank(BB);
     OrderInfo Info = {Rank, BlockToOrder.size()};
-    BlockToOrder.emplace(BB, Info);
+    BlockToOrder.try_emplace(BB, Info);
 
     for (BasicBlock *S : successors(BB)) {
       if (Queued.count(S) != 0)
@@ -826,7 +845,7 @@ bool PartialOrderingVisitor::compare(const BasicBlock *LHS,
 
 void PartialOrderingVisitor::partialOrderVisit(
     BasicBlock &Start, std::function<bool(BasicBlock *)> Op) {
-  std::unordered_set<BasicBlock *> Reachable = getReachableFrom(&Start);
+  SmallPtrSet<BasicBlock *, 0> Reachable = getReachableFrom(&Start);
   assert(BlockToOrder.count(&Start) != 0);
 
   // Skipping blocks with a rank inferior to |Start|'s rank.
@@ -876,6 +895,37 @@ bool sortBlocks(Function &F) {
   }
 
   return Modified;
+}
+
+AllocaInst *createVariable(Function &F, Type *Type) {
+  const DataLayout &DL = F.getDataLayout();
+  return new AllocaInst(Type, DL.getAllocaAddrSpace(), nullptr, "reg",
+                        F.begin()->getFirstInsertionPt());
+}
+
+Value *
+createExitVariable(BasicBlock *BB,
+                   const DenseMap<BasicBlock *, ConstantInt *> &TargetToValue) {
+  auto *T = BB->getTerminator();
+  if (isa<ReturnInst>(T))
+    return nullptr;
+  if (auto *BI = dyn_cast<UncondBrInst>(T))
+    return TargetToValue.lookup(BI->getSuccessor());
+
+  IRBuilder<> Builder(BB);
+  Builder.SetInsertPoint(T);
+
+  if (auto *BI = dyn_cast<CondBrInst>(T)) {
+    Value *LHS = TargetToValue.lookup(BI->getSuccessor(0));
+    Value *RHS = TargetToValue.lookup(BI->getSuccessor(1));
+
+    if (LHS == nullptr || RHS == nullptr)
+      return LHS == nullptr ? RHS : LHS;
+    return Builder.CreateSelect(BI->getCondition(), LHS, RHS);
+  }
+
+  // TODO: add support for switch cases.
+  llvm_unreachable("Unhandled terminator type.");
 }
 
 MachineInstr *getVRegDef(MachineRegisterInfo &MRI, Register Reg) {
@@ -961,7 +1011,7 @@ CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
   Args.push_back(Arg2);
   Args.push_back(buildMD(Arg));
   llvm::append_range(Args, Imms);
-  return B.CreateIntrinsic(IntrID, {Types}, Args);
+  return B.CreateIntrinsicWithoutFolding(IntrID, {Types}, Args);
 }
 
 // Return true if there is an opaque pointer type nested in the argument.

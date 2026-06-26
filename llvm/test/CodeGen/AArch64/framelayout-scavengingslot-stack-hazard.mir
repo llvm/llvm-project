@@ -77,8 +77,8 @@ name: stack_hazard_streaming_compat_emergency_spill_slot
 # CHECK-LABEL: name: stack_hazard_streaming_compat_emergency_spill_slot
 # CHECK: bb.0:
 # CHECK:      STRXui killed $[[SCRATCH:x[0-9]+]], $x19, 0
-# CHECK-NEXT: $[[SCRATCH]] = ADDXri $x19, 1056, 0
-# CHECK-NEXT: STRDui $d0, killed $[[SCRATCH]], 4095
+# CHECK-NEXT: $[[SCRATCH]] = ADDXri $x19, 8, 12
+# CHECK-NEXT: STRDui $d0, killed $[[SCRATCH]], 131
 # CHECK-NEXT: $[[SCRATCH]] = LDRXui $x19, 0
 # CHECK: bb.1:
 tracksRegLiveness: true

@@ -111,11 +111,27 @@ static void saveVarName(Value src, Value dst) {
   saveVarName(acc::getVariableName(src), dst);
 }
 
+static void resolveVarNamePlaceholders(Block *block, Block::iterator ip,
+                                       StringRef name) {
+  StringRef placeholder = acc::getVarNamePlaceholder();
+  for (auto it = block->begin(); it != std::next(ip); ++it) {
+    auto attr = it->getAttrOfType<acc::VarNameAttr>(acc::getVarNameAttrName());
+    if (attr && attr.getName() == placeholder) {
+      if (name.empty())
+        it->removeAttr(acc::getVarNameAttrName());
+      else
+        it->setAttr(acc::getVarNameAttrName(),
+                    acc::VarNameAttr::get(it->getContext(), name));
+    }
+  }
+}
+
 // Clone the destroy region of the recipe before the terminator of the provided
 // block. Values must be provided for the destroy region block arguments
 // according to the recipe specifications.
 template <typename RecipeOpTy>
 static void cloneDestroy(RecipeOpTy recipe, mlir::Block *block,
+                         Block::iterator ip,
                          const llvm::SmallVector<mlir::Value> &arguments) {
   IRMapping mapping{};
   Region &destroyRegion = recipe.getDestroyRegion();
@@ -123,8 +139,7 @@ static void cloneDestroy(RecipeOpTy recipe, mlir::Block *block,
              arguments.size() &&
          "unexpected acc recipe destroy block arguments");
   mapping.map(destroyRegion.getBlocks().front().getArguments(), arguments);
-  acc::cloneACCRegionInto(&destroyRegion, block, std::prev(block->end()),
-                          mapping,
+  acc::cloneACCRegionInto(&destroyRegion, block, ip, mapping,
                           /*resultsToReplace=*/{});
 }
 
@@ -259,11 +274,12 @@ ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
         &initRegion, block, block->begin(), mapping, {accPtr});
     assert(results.size() == 1 && "expected single result from init region");
     saveVarName(op.getAccVar(), results[0]);
+    resolveVarNamePlaceholders(block, ip, acc::getVariableName(op.getAccVar()));
     // Clone the destroy region for a private, if it exists.
     if (!recipe.getDestroyRegion().empty()) {
       results.insert(results.begin(), origPtr);
       results.append(triples);
-      cloneDestroy(recipe, block, results);
+      cloneDestroy(recipe, block, std::prev(block->end()), results);
     }
   } else if constexpr (std::is_same_v<OpTy, acc::FirstprivateOp>) {
     // Clone the init region for a firstprivate.
@@ -272,6 +288,7 @@ ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
         &initRegion, block, block->begin(), mapping, {accPtr});
     assert(results.size() == 1 && "expected single result from init region");
     saveVarName(op.getAccVar(), results[0]);
+    resolveVarNamePlaceholders(block, ip, acc::getVariableName(op.getAccVar()));
     // We want the copy to store the origPtr to private
     results.insert(results.begin(), origPtr);
     results.append(triples);
@@ -284,7 +301,7 @@ ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
                             mapping, {});
     if (!recipe.getDestroyRegion().empty()) {
       // origPtr was already pushed.
-      cloneDestroy(recipe, block, results);
+      cloneDestroy(recipe, block, std::prev(block->end()), results);
     }
   } else if constexpr (std::is_same_v<OpTy, acc::ReductionOp>) {
     auto cloneRegionIntoAccRegion = [&](Region *src, Region *dest,
@@ -313,6 +330,9 @@ ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
     saveVarName(op.getAccVar(), reductionOp.getResult());
     cloneRegionIntoAccRegion(&initRegion, &reductionOp.getRegion(),
                              /*hasResult=*/true);
+    Block *initBlock = &reductionOp.getRegion().front();
+    resolveVarNamePlaceholders(initBlock, std::prev(initBlock->end()),
+                               acc::getVariableName(op.getAccVar()));
 
     // Update the uses within the loop to use the reduction op result.
     replaceAllUsesInRegionWith(accPtr, reductionOp.getResult(), region);
@@ -353,10 +373,9 @@ ACCRecipeMaterialization::materialize(OpTy op, RecipeOpTy recipe, AccOpTy accOp,
     setSeqParDimsForRecipeLoops(&combineRegionOp.getRegion());
 
     if (!recipe.getDestroyRegion().empty()) {
-      (void)accSupport.emitNYI(
-          recipe.getLoc(),
-          "OpenACC reduction variable that requires destruction code");
-      return failure();
+      SmallVector<Value> results{origPtr, reductionOp.getResult()};
+      Block::iterator ip = std::next(Block::iterator(combineRegionOp));
+      cloneDestroy(recipe, combineRegionOp->getBlock(), ip, results);
     }
   } else {
     llvm_unreachable("unexpected op type");

@@ -75,7 +75,6 @@ CGOPT_EXP(uint64_t, LargeDataThreshold)
 CGOPT(ExceptionHandling, ExceptionModel)
 CGOPT_EXP(CodeGenFileType, FileType)
 CGOPT(FramePointerKind, FramePointerUsage)
-CGOPT(bool, EnableNoSignedZerosFPMath)
 CGOPT(bool, EnableNoTrappingFPMath)
 CGOPT(bool, EnableAIXExtendedAltivecABI)
 CGOPT(DenormalMode::DenormalModeKind, DenormalFPMath)
@@ -231,13 +230,6 @@ codegen::RegisterCodeGenFlags::RegisterCodeGenFlags() {
           clEnumValN(FramePointerKind::None, "none",
                      "Enable frame pointer elimination")));
   CGBINDOPT(FramePointerUsage);
-
-  static cl::opt<bool> EnableNoSignedZerosFPMath(
-      "enable-no-signed-zeros-fp-math",
-      cl::desc("Enable FP math optimizations that assume "
-               "the sign of 0 is insignificant"),
-      cl::init(false));
-  CGBINDOPT(EnableNoSignedZerosFPMath);
 
   static cl::opt<bool> EnableNoTrappingFPMath(
       "enable-no-trapping-fp-math",
@@ -592,7 +584,6 @@ TargetOptions
 codegen::InitTargetOptionsFromCodeGenFlags(const Triple &TheTriple) {
   TargetOptions Options;
   Options.AllowFPOpFusion = getFuseFPOps();
-  Options.NoSignedZerosFPMath = getEnableNoSignedZerosFPMath();
   Options.NoTrappingFPMath = getEnableNoTrappingFPMath();
 
   Options.HonorSignDependentRoundingFPMathOption =
@@ -755,8 +746,6 @@ void codegen::setFunctionAttributes(Function &F, StringRef CPU,
   if (getStackRealign())
     NewAttrs.addAttribute("stackrealign");
 
-  HANDLE_BOOL_ATTR(EnableNoSignedZerosFPMathView, "no-signed-zeros-fp-math");
-
   if ((DenormalFPMathView->getNumOccurrences() > 0 ||
        DenormalFP32MathView->getNumOccurrences() > 0) &&
       !F.hasFnAttribute(Attribute::DenormalFPEnv)) {
@@ -790,8 +779,9 @@ void codegen::setFunctionAttributes(Module &M, StringRef CPU,
 }
 
 Expected<std::unique_ptr<TargetMachine>>
-codegen::createTargetMachineForTriple(StringRef TargetTriple,
+codegen::createTargetMachineForTriple(const Triple &TargetTriple,
                                       CodeGenOptLevel OptLevel) {
+  // lookupTarget may mutate the triple, so we need a copy.
   Triple TheTriple(TargetTriple);
   std::string Error;
   const auto *TheTarget =
@@ -806,8 +796,14 @@ codegen::createTargetMachineForTriple(StringRef TargetTriple,
   if (!Target)
     return createStringError(inconvertibleErrorCode(),
                              Twine("could not allocate target machine for ") +
-                                 TargetTriple);
+                                 TheTriple.str());
   return std::unique_ptr<TargetMachine>(Target);
+}
+
+Expected<std::unique_ptr<TargetMachine>>
+codegen::createTargetMachineForTriple(StringRef TargetTriple,
+                                      CodeGenOptLevel OptLevel) {
+  return createTargetMachineForTriple(Triple(TargetTriple), OptLevel);
 }
 
 void codegen::MaybeEnableStatistics() {
