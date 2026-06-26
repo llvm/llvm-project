@@ -34,29 +34,27 @@ class Extension<
 // FP loads/stores/moves, shared between VFP and MVE (even in the integer-only
 // version).
 def FeatureFPRegs         : SubtargetFeature<"fpregs", "HasFPRegs", "true",
-                                             "Enable FP registers",
-                                             [], InlineDefault>;
+                                             "Enable FP registers">;
 
 // 16-bit FP loads/stores/moves, shared between VFP (with the v8.2A FP16
 // extension) and MVE (even in the integer-only version).
 def FeatureFPRegs16       : SubtargetFeature<"fpregs16", "HasFPRegs16", "true",
                                              "Enable 16-bit FP registers",
-                                             [FeatureFPRegs], InlineDefault>;
+                                             [FeatureFPRegs]>;
 
 def FeatureFPRegs64       : SubtargetFeature<"fpregs64", "HasFPRegs64", "true",
                                              "Enable 64-bit FP registers",
-                                             [FeatureFPRegs], InlineDefault>;
+                                             [FeatureFPRegs]>;
 
 // True if the floating point unit supports double precision.
 def FeatureFP64           : SubtargetFeature<"fp64", "HasFP64", "true",
                                              "Floating point unit supports "
                                              "double precision",
-                                             [FeatureFPRegs64], InlineDefault>;
+                                             [FeatureFPRegs64]>;
 
 // True if subtarget has the full 32 double precision FP registers for VFPv3.
 def FeatureD32            : SubtargetFeature<"d32", "HasD32", "true",
-                                             "Extend FP to 32 double registers",
-                                             [], InlineDefault>;
+                                             "Extend FP to 32 double registers">;
 
 /// Versions of the VFP flags restricted to single precision, or to
 /// 16 d-registers, or both.
@@ -69,50 +67,45 @@ multiclass VFPver<string name, string query, string description,
     description#" with only 16 d-registers and no double precision",
     !foreach(v, prev, !cast<SubtargetFeature>(v # "_D16_SP")) #
       !foreach(v, vfp2prev, !cast<SubtargetFeature>(v # "_SP")) #
-      otherimplies, InlineDefault>;
+      otherimplies>;
   def _SP: SubtargetFeature<
     name#"sp", query#"SP", "true",
     description#" with no double precision",
     !foreach(v, prev, !cast<SubtargetFeature>(v # "_SP")) #
-      otherimplies # [FeatureD32, !cast<SubtargetFeature>(NAME # "_D16_SP")],
-    InlineDefault>;
+      otherimplies # [FeatureD32, !cast<SubtargetFeature>(NAME # "_D16_SP")]>;
   def _D16: SubtargetFeature<
     name#"d16", query#"D16", "true",
     description#" with only 16 d-registers",
     !foreach(v, prev, !cast<SubtargetFeature>(v # "_D16")) #
       vfp2prev #
-      otherimplies # [FeatureFP64, !cast<SubtargetFeature>(NAME # "_D16_SP")],
-    InlineDefault>;
+      otherimplies # [FeatureFP64, !cast<SubtargetFeature>(NAME # "_D16_SP")]>;
   def "": SubtargetFeature<
     name, query, "true", description,
     prev # otherimplies # [
         !cast<SubtargetFeature>(NAME # "_D16"),
-        !cast<SubtargetFeature>(NAME # "_SP")],
-    InlineDefault>;
+        !cast<SubtargetFeature>(NAME # "_SP")]>;
 }
 
 def FeatureVFP2_SP        : SubtargetFeature<"vfp2sp", "HasVFPv2SP", "true",
                                              "Enable VFP2 instructions with "
                                              "no double precision",
-                                             [FeatureFPRegs], InlineDefault>;
+                                             [FeatureFPRegs]>;
 
 def FeatureVFP2           : SubtargetFeature<"vfp2", "HasVFPv2", "true",
                                              "Enable VFP2 instructions",
-                                             [FeatureFP64, FeatureVFP2_SP],
-                                             InlineDefault>;
+                                             [FeatureFP64, FeatureVFP2_SP]>;
 
 defm FeatureVFP3: VFPver<"vfp3", "HasVFPv3", "Enable VFP3 instructions",
                          [], [], [FeatureVFP2]>;
 
 def FeatureNEON           : SubtargetFeature<"neon", "HasNEON", "true",
                                              "Enable NEON instructions",
-                                             [FeatureVFP3], InlineDefault>;
+                                             [FeatureVFP3]>;
 
 // True if subtarget supports half-precision FP conversions.
 def FeatureFP16           : SubtargetFeature<"fp16", "HasFP16", "true",
                                              "Enable half-precision "
-                                             "floating point",
-                                             [], InlineDefault>;
+                                             "floating point">;
 
 defm FeatureVFP4: VFPver<"vfp4", "HasVFPv4", "Enable VFP4 instructions",
                          [FeatureVFP3], [FeatureFP16]>;
@@ -124,64 +117,55 @@ defm FeatureFPARMv8: VFPver<"fp-armv8", "HasFPARMv8", "Enable ARMv8 FP",
 def FeatureFullFP16       : SubtargetFeature<"fullfp16", "HasFullFP16", "true",
                                              "Enable full half-precision "
                                              "floating point",
-                                             [FeatureFPARMv8_D16_SP, FeatureFPRegs16],
-                                             InlineDefault>;
+                                             [FeatureFPARMv8_D16_SP, FeatureFPRegs16]>;
 
 // True if subtarget supports half-precision FP fml operations.
 def FeatureFP16FML        : SubtargetFeature<"fp16fml", "HasFP16FML", "true",
                                              "Enable full half-precision "
                                              "floating point fml instructions",
-                                             [FeatureFullFP16], InlineDefault>;
+                                             [FeatureFullFP16]>;
 
 // True if subtarget supports [su]div in Thumb mode.
 def FeatureHWDivThumb     : SubtargetFeature<"hwdiv",
                                              "HasDivideInThumbMode", "true",
-                                             "Enable divide instructions in Thumb",
-                                             [], InlineDefault>;
+                                             "Enable divide instructions in Thumb">;
 
 // True if subtarget supports [su]div in ARM mode.
 def FeatureHWDivARM       : SubtargetFeature<"hwdiv-arm",
                                              "HasDivideInARMMode", "true",
-                                             "Enable divide instructions in ARM mode",
-                                             [], InlineDefault>;
+                                             "Enable divide instructions in ARM mode">;
 
 // Atomic Support
 
 // True if the subtarget supports DMB / DSB data barrier instructions.
 def FeatureDB             : SubtargetFeature<"db", "HasDataBarrier", "true",
-                                             "Has data barrier (dmb/dsb) instructions",
-                                             [], InlineDefault>;
+                                             "Has data barrier (dmb/dsb) instructions">;
 
 // True if the subtarget supports CLREX instructions.
 def FeatureV7Clrex        : SubtargetFeature<"v7clrex", "HasV7Clrex", "true",
-                                             "Has v7 clrex instruction",
-                                             [], InlineDefault>;
+                                             "Has v7 clrex instruction">;
 
 // True if the subtarget supports DFB data barrier instruction.
 def FeatureDFB  : SubtargetFeature<"dfb", "HasFullDataBarrier", "true",
-                                   "Has full data barrier (dfb) instruction",
-                                   [], InlineDefault>;
+                                   "Has full data barrier (dfb) instruction">;
 
 // True if the subtarget supports v8 atomics (LDA/LDAEX etc) instructions.
 def FeatureAcquireRelease : SubtargetFeature<"acquire-release",
                                              "HasAcquireRelease", "true",
                                              "Has v8 acquire/release (lda/ldaex "
-                                             " etc) instructions",
-                                             [], InlineDefault>;
+                                             " etc) instructions">;
 
 
 // True if floating point compare + branch is slow.
 def FeatureSlowFPBrcc     : SubtargetFeature<"slow-fp-brcc", "IsFPBrccSlow", "true",
-                                             "FP compare + branch is slow",
-                                             [], InlineDefault>;
+                                             "FP compare + branch is slow">;
 
 // True if the processor supports the Performance Monitor Extensions. These
 // include a generic cycle-counter as well as more fine-grained (often
 // implementation-specific) events.
 def FeaturePerfMon        : SubtargetFeature<"perfmon", "HasPerfMon", "true",
                                              "Enable support for Performance "
-                                             "Monitor extensions",
-                                             [], InlineDefault>;
+                                             "Monitor extensions">;
 
 
 // TrustZone Security Extensions
@@ -189,47 +173,40 @@ def FeaturePerfMon        : SubtargetFeature<"perfmon", "HasPerfMon", "true",
 // True if processor supports TrustZone security extensions.
 def FeatureTrustZone      : SubtargetFeature<"trustzone", "HasTrustZone", "true",
                                              "Enable support for TrustZone "
-                                             "security extensions",
-                                             [], InlineDefault>;
+                                             "security extensions">;
 
 // True if processor supports ARMv8-M Security Extensions.
 def Feature8MSecExt       : SubtargetFeature<"8msecext", "Has8MSecExt", "true",
                                              "Enable support for ARMv8-M "
-                                             "Security Extensions",
-                                             [], InlineDefault>;
+                                             "Security Extensions">;
 
 // True if processor supports SHA1 and SHA256.
 def FeatureSHA2           : SubtargetFeature<"sha2", "HasSHA2", "true",
-                                             "Enable SHA1 and SHA256 support",
-                                             [FeatureNEON], InlineDefault>;
+                                             "Enable SHA1 and SHA256 support", [FeatureNEON]>;
 
 def FeatureAES            : SubtargetFeature<"aes", "HasAES", "true",
-                                             "Enable AES support",
-                                             [FeatureNEON], InlineDefault>;
+                                             "Enable AES support", [FeatureNEON]>;
 
 // True if processor supports Cryptography extensions.
 def FeatureCrypto         : SubtargetFeature<"crypto", "HasCrypto", "true",
                                              "Enable support for "
                                              "Cryptography extensions",
-                                             [FeatureNEON, FeatureSHA2, FeatureAES],
-                                             InlineDefault>;
+                                             [FeatureNEON, FeatureSHA2, FeatureAES]>;
 
 // True if processor supports CRC instructions.
 def FeatureCRC            : SubtargetFeature<"crc", "HasCRC", "true",
-                                             "Enable support for CRC instructions",
-                                             [], InlineDefault>;
+                                             "Enable support for CRC instructions">;
 
 // True if the ARMv8.2A dot product instructions are supported.
 def FeatureDotProd        : SubtargetFeature<"dotprod", "HasDotProd", "true",
                                              "Enable support for dot product instructions",
-                                             [FeatureNEON], InlineDefault>;
+                                             [FeatureNEON]>;
 
 // True if the processor supports RAS extensions.
 // Not to be confused with FeatureHasRetAddrStack (return address stack).
 def FeatureRAS            : SubtargetFeature<"ras", "HasRAS", "true",
                                              "Enable Reliability, Availability "
-                                             "and Serviceability extensions",
-                                             [], InlineDefault>;
+                                             "and Serviceability extensions">;
 
 // Fast computation of non-negative address offsets.
 // True if processor does positive address offset computation faster.
@@ -378,8 +355,7 @@ def FeatureNEONForFPMovs  : SubtargetFeature<"neon-fpmovs",
 def FeatureNEONForFP      : SubtargetFeature<"neonfp",
                                              "HasNEONForFP",
                                              "true",
-                                             "Use NEON for single precision FP",
-                                             [], InlineDefault>;
+                                             "Use NEON for single precision FP">;
 
 // On some processors, VLDn instructions that access unaligned data take one
 // extra cycle. Take that into account when computing operand latencies.
@@ -504,20 +480,17 @@ def FeatureHasNoBranchPredictor : SubtargetFeature<"no-branch-predictor",
 /// True if the subtarget supports the DSP (saturating arith and such) instructions.
 def FeatureDSP            : SubtargetFeature<"dsp", "HasDSP", "true",
                                              "Supports DSP instructions in "
-                                             "ARM and/or Thumb2",
-                                             [], InlineDefault>;
+                                             "ARM and/or Thumb2">;
 
 // True if the subtarget supports Multiprocessing extension (ARMv7 only).
 def FeatureMP             : SubtargetFeature<"mp", "HasMPExtension", "true",
-                                        "Supports Multiprocessing extension",
-                                        [], InlineDefault>;
+                                        "Supports Multiprocessing extension">;
 
 // Virtualization extension - requires HW divide (ARMv7-AR ARMARM - 4.4.8).
 def FeatureVirtualization : SubtargetFeature<"virtualization",
                                              "HasVirtualization", "true",
                                              "Supports Virtualization extension",
-                                             [FeatureHWDivThumb, FeatureHWDivARM],
-                                             InlineDefault>;
+                                             [FeatureHWDivThumb, FeatureHWDivARM]>;
 
 // True if the subtarget disallows unaligned memory
 // accesses for some types.  For details, see
@@ -525,14 +498,12 @@ def FeatureVirtualization : SubtargetFeature<"virtualization",
 def FeatureStrictAlign    : SubtargetFeature<"strict-align",
                                              "StrictAlign", "true",
                                              "Disallow all unaligned memory "
-                                             "access",
-                                             [], InlineDefault>;
+                                             "access">;
 
 // Generate calls via indirect call instructions.
 def FeatureLongCalls      : SubtargetFeature<"long-calls", "GenLongCalls", "true",
                                              "Generate calls via indirect call "
-                                             "instructions",
-                                             [], InlineDefault>;
+                                             "instructions">;
 
 // Generate code that does not contain data access to code sections.
 def FeatureExecuteOnly    : SubtargetFeature<"execute-only",
@@ -544,8 +515,7 @@ def FeatureExecuteOnly    : SubtargetFeature<"execute-only",
 // True if R9 is not available as a general purpose register.
 def FeatureReserveR9      : SubtargetFeature<"reserve-r9", "ReserveR9", "true",
                                              "Reserve R9, making it unavailable"
-                                             " as GPR",
-                                             [], InlineDefault>;
+                                             " as GPR">;
 
 // True if MOVT / MOVW pairs are not used for materialization of
 // 32-bit imms (including global addresses).
@@ -585,28 +555,24 @@ def FeatureNoPostRASched : SubtargetFeature<"disable-postra-scheduler",
 
 // Has speculation barrier.
 def FeatureSB       : SubtargetFeature<"sb", "HasSB", "true",
-  "Enable v8.5a Speculation Barrier",
-  [], InlineDefault>;
+  "Enable v8.5a Speculation Barrier" >;
 
 // Armv8.6-A extensions
 
 // True if subtarget supports BFloat16 floating point operations.
 def FeatureBF16     : SubtargetFeature<"bf16", "HasBF16", "true",
-  "Enable support for BFloat16 instructions",
-  [FeatureNEON], InlineDefault>;
+  "Enable support for BFloat16 instructions", [FeatureNEON]>;
 
 // True if subtarget supports 8-bit integer matrix multiply.
 def FeatureMatMulInt8 : SubtargetFeature<"i8mm", "HasMatMulInt8",
-    "true", "Enable Matrix Multiply Int8 Extension",
-    [FeatureNEON], InlineDefault>;
+    "true", "Enable Matrix Multiply Int8 Extension", [FeatureNEON]>;
 
 // Armv8.1-M extensions
 
 // True if the processor supports the Low Overhead Branch extension.
 def FeatureLOB            : SubtargetFeature<"lob", "HasLOB", "true",
                                              "Enable Low Overhead Branch "
-                                             "extensions",
-                                             [], InlineDefault>;
+                                             "extensions">;
 
 // Mitigate against the cve-2021-35465 security vulnurability.
 // TODO: Does this need to be InlineMustMatch?
@@ -632,8 +598,7 @@ def FeatureNoBTIAtReturnTwice : SubtargetFeature<"no-bti-at-return-twice",
 
 // Armv8.9-A/Armv9.4-A 2022 Architecture Extensions
 def FeatureCLRBHB : SubtargetFeature<"clrbhb", "HasCLRBHB", "true",
-                                     "Enable Clear BHB instruction",
-                                     [], InlineDefault>;
+                                     "Enable Clear BHB instruction">;
 
 
 // TODO: Does this need to be InlineMustMatch?
@@ -668,23 +633,19 @@ def FeatureAtomics32 : SubtargetFeature<
 
 // A-series ISA
 def FeatureAClass : SubtargetFeature<"aclass", "ARMProcClass", "AClass",
-                                     "Is application profile ('A' series)",
-                                     [], InlineDefault>;
+                                     "Is application profile ('A' series)">;
 
 // R-series ISA
 def FeatureRClass : SubtargetFeature<"rclass", "ARMProcClass", "RClass",
-                                     "Is realtime profile ('R' series)",
-                                     [], InlineDefault>;
+                                     "Is realtime profile ('R' series)">;
 
 // M-series ISA
 def FeatureMClass : SubtargetFeature<"mclass", "ARMProcClass", "MClass",
-                                     "Is microcontroller profile ('M' series)",
-                                     [], InlineDefault>;
+                                     "Is microcontroller profile ('M' series)">;
 
 // True if Thumb2 instructions are supported.
 def FeatureThumb2 : SubtargetFeature<"thumb2", "HasThumb2", "true",
-                                     "Enable Thumb2 instructions",
-                                     [], InlineDefault>;
+                                     "Enable Thumb2 instructions">;
 
 // True if subtarget does not support ARM mode execution.
 def FeatureNoARM  : SubtargetFeature<"noarm", "NoARM", "true",
@@ -697,149 +658,135 @@ def FeatureNoARM  : SubtargetFeature<"noarm", "NoARM", "true",
 // Specify whether target support specific ARM ISA variants.
 
 def HasV4TOps   : SubtargetFeature<"v4t", "HasV4TOps", "true",
-                                   "Support ARM v4T instructions",
-                                   [], InlineDefault>;
+                                   "Support ARM v4T instructions">;
 
 def HasV5TOps   : SubtargetFeature<"v5t", "HasV5TOps", "true",
                                    "Support ARM v5T instructions",
-                                   [HasV4TOps], InlineDefault>;
+                                   [HasV4TOps]>;
 
 def HasV5TEOps  : SubtargetFeature<"v5te", "HasV5TEOps", "true",
                                    "Support ARM v5TE, v5TEj, and "
                                    "v5TExp instructions",
-                                   [HasV5TOps], InlineDefault>;
+                                   [HasV5TOps]>;
 
 def HasV6Ops    : SubtargetFeature<"v6", "HasV6Ops", "true",
                                    "Support ARM v6 instructions",
-                                   [HasV5TEOps], InlineDefault>;
+                                   [HasV5TEOps]>;
 
 def HasV6MOps   : SubtargetFeature<"v6m", "HasV6MOps", "true",
                                    "Support ARM v6M instructions",
-                                   [HasV6Ops], InlineDefault>;
+                                   [HasV6Ops]>;
 
 def HasV8MBaselineOps : SubtargetFeature<"v8m", "HasV8MBaselineOps", "true",
                                          "Support ARM v8M Baseline instructions",
-                                         [HasV6MOps], InlineDefault>;
+                                         [HasV6MOps]>;
 
 def HasV6KOps   : SubtargetFeature<"v6k", "HasV6KOps", "true",
                                    "Support ARM v6k instructions",
-                                   [HasV6Ops], InlineDefault>;
+                                   [HasV6Ops]>;
 
 def HasV6T2Ops  : SubtargetFeature<"v6t2", "HasV6T2Ops", "true",
                                    "Support ARM v6t2 instructions",
-                                   [HasV8MBaselineOps, HasV6KOps, FeatureThumb2],
-                                   InlineDefault>;
+                                   [HasV8MBaselineOps, HasV6KOps, FeatureThumb2]>;
 
 def HasV7Ops    : SubtargetFeature<"v7", "HasV7Ops", "true",
                                    "Support ARM v7 instructions",
-                                   [HasV6T2Ops, FeatureV7Clrex],
-                                   InlineDefault>;
+                                   [HasV6T2Ops, FeatureV7Clrex]>;
 
 def HasV8MMainlineOps :
                   SubtargetFeature<"v8m.main", "HasV8MMainlineOps", "true",
                                    "Support ARM v8M Mainline instructions",
-                                   [HasV7Ops], InlineDefault>;
+                                   [HasV7Ops]>;
 
 def HasV8Ops    : SubtargetFeature<"v8", "HasV8Ops", "true",
                                    "Support ARM v8 instructions",
-                                   [HasV7Ops, FeaturePerfMon, FeatureAcquireRelease],
-                                   InlineDefault>;
+                                   [HasV7Ops, FeaturePerfMon, FeatureAcquireRelease]>;
 
 def HasV8_1aOps : SubtargetFeature<"v8.1a", "HasV8_1aOps", "true",
                                    "Support ARM v8.1a instructions",
-                                   [HasV8Ops], InlineDefault>;
+                                   [HasV8Ops]>;
 
 def HasV8_2aOps : SubtargetFeature<"v8.2a", "HasV8_2aOps", "true",
                                    "Support ARM v8.2a instructions",
-                                   [HasV8_1aOps], InlineDefault>;
+                                   [HasV8_1aOps]>;
 
 def HasV8_3aOps   : SubtargetFeature<"v8.3a", "HasV8_3aOps", "true",
                                    "Support ARM v8.3a instructions",
-                                   [HasV8_2aOps], InlineDefault>;
+                                   [HasV8_2aOps]>;
 
 def HasV8_4aOps   : SubtargetFeature<"v8.4a", "HasV8_4aOps", "true",
                                    "Support ARM v8.4a instructions",
-                                   [HasV8_3aOps, FeatureDotProd],
-                                   InlineDefault>;
+                                   [HasV8_3aOps, FeatureDotProd]>;
 
 def HasV8_5aOps   : SubtargetFeature<"v8.5a", "HasV8_5aOps", "true",
                                    "Support ARM v8.5a instructions",
-                                   [HasV8_4aOps, FeatureSB],
-                                   InlineDefault>;
+                                   [HasV8_4aOps, FeatureSB]>;
 
 def HasV8_6aOps   : SubtargetFeature<"v8.6a", "HasV8_6aOps", "true",
                                    "Support ARM v8.6a instructions",
                                    [HasV8_5aOps, FeatureBF16,
-                                    FeatureMatMulInt8],
-                                   InlineDefault>;
+                                    FeatureMatMulInt8]>;
 
 def HasV8_7aOps   : SubtargetFeature<"v8.7a", "HasV8_7aOps", "true",
                                    "Support ARM v8.7a instructions",
-                                   [HasV8_6aOps], InlineDefault>;
+                                   [HasV8_6aOps]>;
 
 def HasV8_8aOps   : SubtargetFeature<"v8.8a", "HasV8_8aOps", "true",
                                    "Support ARM v8.8a instructions",
-                                   [HasV8_7aOps], InlineDefault>;
+                                   [HasV8_7aOps]>;
 
 def HasV8_9aOps   : SubtargetFeature<"v8.9a", "HasV8_9aOps", "true",
                                    "Support ARM v8.9a instructions",
-                                   [HasV8_8aOps, FeatureCLRBHB],
-                                   InlineDefault>;
+                                   [HasV8_8aOps, FeatureCLRBHB]>;
 
 def HasV9_0aOps   : SubtargetFeature<"v9a", "HasV9_0aOps", "true",
                                    "Support ARM v9a instructions",
-                                   [HasV8_5aOps], InlineDefault>;
+                                   [HasV8_5aOps]>;
 
 def HasV9_1aOps   : SubtargetFeature<"v9.1a", "HasV9_1aOps", "true",
                                    "Support ARM v9.1a instructions",
-                                   [HasV8_6aOps, HasV9_0aOps],
-                                   InlineDefault>;
+                                   [HasV8_6aOps, HasV9_0aOps]>;
 
 def HasV9_2aOps   : SubtargetFeature<"v9.2a", "HasV9_2aOps", "true",
                                    "Support ARM v9.2a instructions",
-                                   [HasV8_7aOps, HasV9_1aOps],
-                                   InlineDefault>;
+                                   [HasV8_7aOps, HasV9_1aOps]>;
 
 def HasV9_3aOps   : SubtargetFeature<"v9.3a", "HasV9_3aOps", "true",
                                    "Support ARM v9.3a instructions",
-                                   [HasV8_8aOps, HasV9_2aOps],
-                                   InlineDefault>;
+                                   [HasV8_8aOps, HasV9_2aOps]>;
 
 def HasV9_4aOps   : SubtargetFeature<"v9.4a", "HasV9_4aOps", "true",
                                    "Support ARM v9.4a instructions",
-                                   [HasV8_9aOps, HasV9_3aOps],
-                                   InlineDefault>;
+                                   [HasV8_9aOps, HasV9_3aOps]>;
 
 // Armv9.5-A is a v9-only architecture. From v9.5-A onwards there's no mapping
 // to an equivalent v8.x version.
 def HasV9_5aOps   : SubtargetFeature<"v9.5a", "HasV9_5aOps", "true",
                                    "Support ARM v9.5a instructions",
-                                   [HasV9_4aOps], InlineDefault>;
+                                   [HasV9_4aOps]>;
 
 // Armv9.6-A is a v9-only architecture.
 def HasV9_6aOps   : SubtargetFeature<"v9.6a", "HasV9_6aOps", "true",
                                    "Support ARM v9.6a instructions",
-                                   [HasV9_5aOps], InlineDefault>;
+                                   [HasV9_5aOps]>;
 
 // Armv9.7-A is a v9-only architecture.
 def HasV9_7aOps   : SubtargetFeature<"v9.7a", "HasV9_7aOps", "true",
                                    "Support ARM v9.7a instructions",
-                                   [HasV9_6aOps], InlineDefault>;
+                                   [HasV9_6aOps]>;
 
 def HasV8_1MMainlineOps : SubtargetFeature<
                "v8.1m.main", "HasV8_1MMainlineOps", "true",
                "Support ARM v8-1M Mainline instructions",
-               [HasV8MMainlineOps], InlineDefault>;
+               [HasV8MMainlineOps]>;
 def HasMVEIntegerOps : SubtargetFeature<
                "mve", "HasMVEIntegerOps", "true",
                "Support M-Class Vector Extension with integer ops",
-               [HasV8_1MMainlineOps, FeatureDSP, FeatureFPRegs16, FeatureFPRegs64],
-               InlineDefault>;
+               [HasV8_1MMainlineOps, FeatureDSP, FeatureFPRegs16, FeatureFPRegs64]>;
 def HasMVEFloatOps : SubtargetFeature<
                "mve.fp", "HasMVEFloatOps", "true",
                "Support M-Class Vector Extension with integer and floating ops",
-               [HasMVEIntegerOps, FeatureFPARMv8_D16_SP, FeatureFullFP16],
-               InlineDefault>;
+               [HasMVEIntegerOps, FeatureFPARMv8_D16_SP, FeatureFullFP16]>;
 
 def HasCDEOps : SubtargetFeature<"cde", "HasCDEOps", "true",
                                  "Support CDE instructions",
