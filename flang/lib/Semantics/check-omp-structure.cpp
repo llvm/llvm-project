@@ -2626,11 +2626,61 @@ void OmpStructureChecker::Enter(const parser::OpenMPDispatchConstruct &x) {
   }
 }
 
+void OmpStructureChecker::Enter(const parser::OmpErrorDirective &x) {
+  // Defaults per spec: AT(compilation), SEVERITY(fatal)
+  auto atKind{parser::OmpAtClause::ActionTime::Compilation};
+  auto sevKind{parser::OmpSeverityClause::SevLevel::Fatal};
+  std::optional<std::string> message;
+
+  for (const parser::OmpClause &clause : x.v.Clauses().v) {
+    if (const auto *at{std::get_if<parser::OmpClause::At>(&clause.u)}) {
+      atKind = at->v.v;
+    } else if (const auto *sev{
+                   std::get_if<parser::OmpClause::Severity>(&clause.u)}) {
+      sevKind = sev->v.v;
+    } else if (const auto *msg{
+                   std::get_if<parser::OmpClause::Message>(&clause.u)}) {
+      if (auto expr{GetEvaluateExpr(msg->v.v)}) {
+        if (auto val{
+                evaluate::GetScalarConstantValue<evaluate::Ascii>(*expr)}) {
+          message = *val;
+        }
+      }
+    }
+  }
+
+  if (atKind == parser::OmpAtClause::ActionTime::Compilation) {
+    if (sevKind == parser::OmpSeverityClause::SevLevel::Warning) {
+      context_.Say(x.v.source, "%s"_warn_en_US, message.value_or("WARNING"));
+    } else {
+      context_.Say(x.v.source, "%s"_err_en_US, message.value_or("ERROR"));
+    }
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OmpClause::At &x) {
   if (GetDirectiveNest(DeclarativeNest) > 0) {
     if (x.v.v == parser::OmpAtClause::ActionTime::Execution) {
       context_.Say(GetContext().clauseSource,
           "The ERROR directive with AT(EXECUTION) cannot appear in the specification part"_err_en_US);
+    }
+  }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::Message &x) {
+  if (const auto expr{GetEvaluateExpr(x.v.v)}) {
+    const std::optional<evaluate::DynamicType> type{expr->GetType()};
+    if (!type || type->category() != evaluate::TypeCategory::Character) {
+      context_.Say(GetContext().clauseSource,
+          "The MESSAGE clause expression must be of type CHARACTER"_err_en_US);
+    } else if (expr->Rank() != 0) {
+      context_.Say(GetContext().clauseSource,
+          "The MESSAGE clause expression must be scalar"_err_en_US);
+    } else if (type->kind() !=
+        context_.defaultKinds().GetDefaultKind(
+            evaluate::TypeCategory::Character)) {
+      context_.Say(GetContext().clauseSource,
+          "The MESSAGE clause expression must be of default character kind"_err_en_US);
     }
   }
 }
