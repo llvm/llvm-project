@@ -344,6 +344,7 @@ public:
 
       if (getTriple().getEnvironment() == llvm::Triple::LLVM) {
         Opts["cl_khr_subgroup_extended_types"] = true;
+        Opts["cl_khr_subgroup_non_uniform_arithmetic"] = true;
       }
     }
   }
