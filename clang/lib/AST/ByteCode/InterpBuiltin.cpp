@@ -6670,6 +6670,8 @@ bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
       break;
     }
     case OffsetOfNode::Array: {
+      // When generating bytecode, we put all the index expressions as Sint64 on
+      // the stack.
       int64_t Index = ArrayIndices[ArrayIndex];
       if (Index < 0)
         return Invalid(S, OpPC);
