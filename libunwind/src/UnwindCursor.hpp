@@ -451,13 +451,13 @@ private:
 };
 #endif // defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
 
-class _LIBUNWIND_HIDDEN AbstractUnwindCursor {
+class _LIBUNWIND_HIDDEN AbstractBasicUnwindCursorType__ {
 public:
   // NOTE: provide a class specific placement deallocation function (S5.3.4 p20)
   // This avoids an unnecessary dependency to libc++abi.
   void operator delete(void *, size_t) {}
 
-  virtual ~AbstractUnwindCursor() {}
+  virtual ~AbstractBasicUnwindCursorType__() {}
   virtual bool validReg(int) { _LIBUNWIND_ABORT("validReg not implemented"); }
   virtual unw_word_t getReg(int) { _LIBUNWIND_ABORT("getReg not implemented"); }
   virtual void setReg(int, unw_word_t) {
@@ -516,16 +516,16 @@ public:
 
 #if defined(_LIBUNWIND_SUPPORT_SEH_UNWIND) && defined(_WIN32)
 
-/// \c UnwindCursor contains all state (including all register values) during
+/// \c BasicUnwindCursorType__ contains all state (including all register values) during
 /// an unwind.  This is normally stack-allocated inside a unw_cursor_t.
 template <typename A, typename R>
-class UnwindCursor : public AbstractUnwindCursor {
+class BasicUnwindCursorType__ : public AbstractBasicUnwindCursorType__ {
   typedef typename A::pint_t pint_t;
 public:
-                      UnwindCursor(unw_context_t *context, A &as);
-                      UnwindCursor(CONTEXT *context, A &as);
-                      UnwindCursor(A &as, void *threadArg);
-  virtual             ~UnwindCursor() {}
+                      BasicUnwindCursorType__(unw_context_t *context, A &as);
+                      BasicUnwindCursorType__(CONTEXT *context, A &as);
+                      BasicUnwindCursorType__(A &as, void *threadArg);
+  virtual             ~BasicUnwindCursorType__() {}
   virtual bool        validReg(int);
   virtual unw_word_t  getReg(int);
   virtual void        setReg(int, unw_word_t);
@@ -555,7 +555,7 @@ public:
 
   // libunwind does not and should not depend on C++ library which means that we
   // need our own definition of inline placement new.
-  static void *operator new(size_t, UnwindCursor<A, R> *p) { return p; }
+  static void *operator new(size_t, BasicUnwindCursorType__<A, R> *p) { return p; }
 
 private:
 
@@ -605,12 +605,12 @@ private:
 
 
 template <typename A, typename R>
-UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
+BasicUnwindCursorType__<A, R>::BasicUnwindCursorType__(unw_context_t *context, A &as)
     : _addressSpace(as), _unwindInfoMissing(false) {
-  static_assert((check_fit<UnwindCursor<A, R>, unw_cursor_t>::does_fit),
-                "UnwindCursor<> does not fit in unw_cursor_t");
-  static_assert((alignof(UnwindCursor<A, R>) <= alignof(unw_cursor_t)),
-                "UnwindCursor<> requires more alignment than unw_cursor_t");
+  static_assert((check_fit<BasicUnwindCursorType__<A, R>, unw_cursor_t>::does_fit),
+                "BasicUnwindCursorType__<> does not fit in unw_cursor_t");
+  static_assert((alignof(BasicUnwindCursorType__<A, R>) <= alignof(unw_cursor_t)),
+                "BasicUnwindCursorType__<> requires more alignment than unw_cursor_t");
   memset(&_info, 0, sizeof(_info));
   memset(&_histTable, 0, sizeof(_histTable));
   memset(&_dispContext, 0, sizeof(_dispContext));
@@ -710,10 +710,10 @@ UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
 }
 
 template <typename A, typename R>
-UnwindCursor<A, R>::UnwindCursor(CONTEXT *context, A &as)
+BasicUnwindCursorType__<A, R>::BasicUnwindCursorType__(CONTEXT *context, A &as)
     : _addressSpace(as), _unwindInfoMissing(false) {
-  static_assert((check_fit<UnwindCursor<A, R>, unw_cursor_t>::does_fit),
-                "UnwindCursor<> does not fit in unw_cursor_t");
+  static_assert((check_fit<BasicUnwindCursorType__<A, R>, unw_cursor_t>::does_fit),
+                "BasicUnwindCursorType__<> does not fit in unw_cursor_t");
   memset(&_info, 0, sizeof(_info));
   memset(&_histTable, 0, sizeof(_histTable));
   memset(&_dispContext, 0, sizeof(_dispContext));
@@ -724,7 +724,7 @@ UnwindCursor<A, R>::UnwindCursor(CONTEXT *context, A &as)
 
 
 template <typename A, typename R>
-bool UnwindCursor<A, R>::validReg(int regNum) {
+bool BasicUnwindCursorType__<A, R>::validReg(int regNum) {
   if (regNum == UNW_REG_IP || regNum == UNW_REG_SP) return true;
 #if defined(_LIBUNWIND_TARGET_X86_64)
   if (regNum >= UNW_X86_64_RAX && regNum <= UNW_X86_64_RIP) return true;
@@ -739,7 +739,7 @@ bool UnwindCursor<A, R>::validReg(int regNum) {
 }
 
 template <typename A, typename R>
-unw_word_t UnwindCursor<A, R>::getReg(int regNum) {
+unw_word_t BasicUnwindCursorType__<A, R>::getReg(int regNum) {
   switch (regNum) {
 #if defined(_LIBUNWIND_TARGET_X86_64)
   case UNW_X86_64_RIP:
@@ -790,7 +790,7 @@ unw_word_t UnwindCursor<A, R>::getReg(int regNum) {
 }
 
 template <typename A, typename R>
-void UnwindCursor<A, R>::setReg(int regNum, unw_word_t value) {
+void BasicUnwindCursorType__<A, R>::setReg(int regNum, unw_word_t value) {
   switch (regNum) {
 #if defined(_LIBUNWIND_TARGET_X86_64)
   case UNW_X86_64_RIP:
@@ -872,7 +872,7 @@ void UnwindCursor<A, R>::setReg(int regNum, unw_word_t value) {
 }
 
 template <typename A, typename R>
-bool UnwindCursor<A, R>::validFloatReg(int regNum) {
+bool BasicUnwindCursorType__<A, R>::validFloatReg(int regNum) {
 #if defined(_LIBUNWIND_TARGET_ARM)
   if (regNum >= UNW_ARM_S0 && regNum <= UNW_ARM_S31) return true;
   if (regNum >= UNW_ARM_D0 && regNum <= UNW_ARM_D31) return true;
@@ -885,7 +885,7 @@ bool UnwindCursor<A, R>::validFloatReg(int regNum) {
 }
 
 template <typename A, typename R>
-unw_fpreg_t UnwindCursor<A, R>::getFloatReg(int regNum) {
+unw_fpreg_t BasicUnwindCursorType__<A, R>::getFloatReg(int regNum) {
 #if defined(_LIBUNWIND_TARGET_ARM)
   if (regNum >= UNW_ARM_S0 && regNum <= UNW_ARM_S31) {
     union {
@@ -913,7 +913,7 @@ unw_fpreg_t UnwindCursor<A, R>::getFloatReg(int regNum) {
 }
 
 template <typename A, typename R>
-void UnwindCursor<A, R>::setFloatReg(int regNum, unw_fpreg_t value) {
+void BasicUnwindCursorType__<A, R>::setFloatReg(int regNum, unw_fpreg_t value) {
 #if defined(_LIBUNWIND_TARGET_ARM)
   if (regNum >= UNW_ARM_S0 && regNum <= UNW_ARM_S31) {
     union {
@@ -941,34 +941,34 @@ void UnwindCursor<A, R>::setFloatReg(int regNum, unw_fpreg_t value) {
 #endif
 }
 
-template <typename A, typename R> void UnwindCursor<A, R>::jumpto() {
+template <typename A, typename R> void BasicUnwindCursorType__<A, R>::jumpto() {
   RtlRestoreContext(&_msContext, nullptr);
 }
 
 #ifdef __arm__
-template <typename A, typename R> void UnwindCursor<A, R>::saveVFPAsX() {}
+template <typename A, typename R> void BasicUnwindCursorType__<A, R>::saveVFPAsX() {}
 #endif
 
 template <typename A, typename R>
-const char *UnwindCursor<A, R>::getRegisterName(int regNum) {
+const char *BasicUnwindCursorType__<A, R>::getRegisterName(int regNum) {
   return R::getRegisterName(regNum);
 }
 
-template <typename A, typename R> bool UnwindCursor<A, R>::isSignalFrame() {
+template <typename A, typename R> bool BasicUnwindCursorType__<A, R>::isSignalFrame() {
   return false;
 }
 
 #else  // !defined(_LIBUNWIND_SUPPORT_SEH_UNWIND) || !defined(_WIN32)
 
-/// UnwindCursor contains all state (including all register values) during
+/// BasicUnwindCursorType__ contains all state (including all register values) during
 /// an unwind.  This is normally stack allocated inside a unw_cursor_t.
 template <typename A, typename R>
-class UnwindCursor : public AbstractUnwindCursor {
+class BasicUnwindCursorType__ : public AbstractBasicUnwindCursorType__ {
   typedef typename A::pint_t pint_t;
 public:
-                      UnwindCursor(unw_context_t *context, A &as);
-                      UnwindCursor(A &as, void *threadArg);
-  virtual             ~UnwindCursor() {}
+                      BasicUnwindCursorType__(unw_context_t *context, A &as);
+                      BasicUnwindCursorType__(A &as, void *threadArg);
+  virtual             ~BasicUnwindCursorType__() {}
   virtual bool        validReg(int);
   virtual unw_word_t  getReg(int);
   virtual void        setReg(int, unw_word_t);
@@ -1001,7 +1001,7 @@ public:
 
   // libunwind does not and should not depend on C++ library which means that we
   // need our own definition of inline placement new.
-  static void *operator new(size_t, UnwindCursor<A, R> *p) { return p; }
+  static void *operator new(size_t, BasicUnwindCursorType__<A, R> *p) { return p; }
 
 private:
 
@@ -1381,18 +1381,18 @@ private:
 
 
 template <typename A, typename R>
-UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
+BasicUnwindCursorType__<A, R>::BasicUnwindCursorType__(unw_context_t *context, A &as)
     : _addressSpace(as), _registers(context), _unwindInfoMissing(false),
       _isSignalFrame(false) {
-  static_assert((check_fit<UnwindCursor<A, R>, unw_cursor_t>::does_fit),
-                "UnwindCursor<> does not fit in unw_cursor_t");
-  static_assert((alignof(UnwindCursor<A, R>) <= alignof(unw_cursor_t)),
-                "UnwindCursor<> requires more alignment than unw_cursor_t");
+  static_assert((check_fit<BasicUnwindCursorType__<A, R>, unw_cursor_t>::does_fit),
+                "BasicUnwindCursorType__<> does not fit in unw_cursor_t");
+  static_assert((alignof(BasicUnwindCursorType__<A, R>) <= alignof(unw_cursor_t)),
+                "BasicUnwindCursorType__<> requires more alignment than unw_cursor_t");
   memset(static_cast<void *>(&_info), 0, sizeof(_info));
 }
 
 template <typename A, typename R>
-UnwindCursor<A, R>::UnwindCursor(A &as, void *)
+BasicUnwindCursorType__<A, R>::BasicUnwindCursorType__(A &as, void *)
     : _addressSpace(as), _unwindInfoMissing(false), _isSignalFrame(false) {
   memset(static_cast<void *>(&_info), 0, sizeof(_info));
   // FIXME
@@ -1401,36 +1401,36 @@ UnwindCursor<A, R>::UnwindCursor(A &as, void *)
 
 
 template <typename A, typename R>
-bool UnwindCursor<A, R>::validReg(int regNum) {
+bool BasicUnwindCursorType__<A, R>::validReg(int regNum) {
   return _registers.validRegister(regNum);
 }
 
 template <typename A, typename R>
-unw_word_t UnwindCursor<A, R>::getReg(int regNum) {
+unw_word_t BasicUnwindCursorType__<A, R>::getReg(int regNum) {
   return _registers.getRegister(regNum);
 }
 
 template <typename A, typename R>
-void UnwindCursor<A, R>::setReg(int regNum, unw_word_t value) {
+void BasicUnwindCursorType__<A, R>::setReg(int regNum, unw_word_t value) {
   _registers.setRegister(regNum, (typename A::pint_t)value);
 }
 
 template <typename A, typename R>
-bool UnwindCursor<A, R>::validFloatReg(int regNum) {
+bool BasicUnwindCursorType__<A, R>::validFloatReg(int regNum) {
   return _registers.validFloatRegister(regNum);
 }
 
 template <typename A, typename R>
-unw_fpreg_t UnwindCursor<A, R>::getFloatReg(int regNum) {
+unw_fpreg_t BasicUnwindCursorType__<A, R>::getFloatReg(int regNum) {
   return _registers.getFloatRegister(regNum);
 }
 
 template <typename A, typename R>
-void UnwindCursor<A, R>::setFloatReg(int regNum, unw_fpreg_t value) {
+void BasicUnwindCursorType__<A, R>::setFloatReg(int regNum, unw_fpreg_t value) {
   _registers.setFloatRegister(regNum, value);
 }
 
-template <typename A, typename R> void UnwindCursor<A, R>::jumpto() {
+template <typename A, typename R> void BasicUnwindCursorType__<A, R>::jumpto() {
 #ifdef _LIBUNWIND_TRACE_RET_INJECT
   /*
 
@@ -1450,7 +1450,7 @@ template <typename A, typename R> void UnwindCursor<A, R>::jumpto() {
   ```
       frame #0: libunwind.1.dylib`__libunwind_Registers_arm64_jumpto at UnwindRegistersRestore.S:646
       frame #1: libunwind.1.dylib`libunwind::Registers_arm64::returnto at Registers.hpp:2291:3
-      frame #2: libunwind.1.dylib`libunwind::UnwindCursor<libunwind::LocalAddressSpace, libunwind::Registers_arm64>::jumpto at UnwindCursor.hpp:1474:14
+      frame #2: libunwind.1.dylib`libunwind::BasicUnwindCursorType__<libunwind::LocalAddressSpace, libunwind::Registers_arm64>::jumpto at BasicUnwindCursorType__.hpp:1474:14
       frame #3: libunwind.1.dylib`__unw_resume at libunwind.cpp:375:7
       frame #4: libunwind.1.dylib`__unw_resume_with_frames_walked at libunwind.cpp:363:10
       frame #5: libunwind.1.dylib`unwind_phase2 at UnwindLevel1.c:328:9
@@ -1474,31 +1474,31 @@ template <typename A, typename R> void UnwindCursor<A, R>::jumpto() {
 }
 
 #ifdef __arm__
-template <typename A, typename R> void UnwindCursor<A, R>::saveVFPAsX() {
+template <typename A, typename R> void BasicUnwindCursorType__<A, R>::saveVFPAsX() {
   _registers.saveVFPAsX();
 }
 #endif
 
 #ifdef _LIBUNWIND_TRACE_RET_INJECT
 template <typename A, typename R>
-void UnwindCursor<A, R>::setWalkedFrames(unsigned walkedFrames) {
+void BasicUnwindCursorType__<A, R>::setWalkedFrames(unsigned walkedFrames) {
   _walkedFrames = walkedFrames;
 }
 #endif
 
 #ifdef _AIX
 template <typename A, typename R>
-uintptr_t UnwindCursor<A, R>::getDataRelBase() {
+uintptr_t BasicUnwindCursorType__<A, R>::getDataRelBase() {
   return reinterpret_cast<uintptr_t>(_info.extra);
 }
 #endif
 
 template <typename A, typename R>
-const char *UnwindCursor<A, R>::getRegisterName(int regNum) {
+const char *BasicUnwindCursorType__<A, R>::getRegisterName(int regNum) {
   return _registers.getRegisterName(regNum);
 }
 
-template <typename A, typename R> bool UnwindCursor<A, R>::isSignalFrame() {
+template <typename A, typename R> bool BasicUnwindCursorType__<A, R>::isSignalFrame() {
   return _isSignalFrame;
 }
 
@@ -1592,7 +1592,7 @@ EHABISectionIterator<A> EHABISectionUpperBound(
 }
 
 template <typename A, typename R>
-bool UnwindCursor<A, R>::getInfoFromEHABISection(
+bool BasicUnwindCursorType__<A, R>::getInfoFromEHABISection(
     pint_t pc,
     const UnwindInfoSections &sects) {
   EHABISectionIterator<A> begin =
@@ -1732,7 +1732,7 @@ bool UnwindCursor<A, R>::getInfoFromEHABISection(
 
 #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
 template <typename A, typename R>
-bool UnwindCursor<A, R>::getInfoFromFdeCie(
+bool BasicUnwindCursorType__<A, R>::getInfoFromFdeCie(
     const typename CFI_Parser<A>::FDE_Info &fdeInfo,
     const typename CFI_Parser<A>::CIE_Info &cieInfo,
     typename R::link_hardened_reg_arg_t pc, uintptr_t dso_base) {
@@ -1758,7 +1758,7 @@ bool UnwindCursor<A, R>::getInfoFromFdeCie(
 }
 
 template <typename A, typename R>
-bool UnwindCursor<A, R>::getInfoFromDwarfSection(
+bool BasicUnwindCursorType__<A, R>::getInfoFromDwarfSection(
     typename R::link_hardened_reg_arg_t pc, const UnwindInfoSections &sects,
     uint32_t fdeSectionOffsetHint) {
   typename CFI_Parser<A>::FDE_Info fdeInfo;
@@ -1817,7 +1817,7 @@ bool UnwindCursor<A, R>::getInfoFromDwarfSection(
 
 #if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
 template <typename A, typename R>
-bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
+bool BasicUnwindCursorType__<A, R>::getInfoFromCompactEncodingSection(
     typename R::link_hardened_reg_arg_t pc, const UnwindInfoSections &sects) {
   const bool log = false;
   if (log)
@@ -2090,7 +2090,7 @@ bool UnwindCursor<A, R>::getInfoFromCompactEncodingSection(
 
 #if defined(_LIBUNWIND_SUPPORT_SEH_UNWIND)
 template <typename A, typename R>
-bool UnwindCursor<A, R>::getInfoFromSEH(pint_t pc) {
+bool BasicUnwindCursorType__<A, R>::getInfoFromSEH(pint_t pc) {
   pint_t base;
   RUNTIME_FUNCTION *unwindEntry = lookUpSEHUnwindInfo(pc, &base);
   if (!unwindEntry) {
@@ -2114,13 +2114,24 @@ bool UnwindCursor<A, R>::getInfoFromSEH(pint_t pc) {
       // follows the UNWIND_INFO. (This follows how both Clang and MSVC emit
       // these structures.)
       // N.B. UNWIND_INFO structs are DWORD-aligned.
-      uint32_t lastcode = (xdata->CountOfCodes + 1) & ~1;
-      const uint32_t *handler = reinterpret_cast<uint32_t *>(&xdata->UnwindCodes[lastcode]);
-      _info.lsda = reinterpret_cast<unw_word_t>(handler+1);
+
+      // uint32_t lastcode = (xdata->CountOfCodes + 1) & ~1;
+      // NOTE: lastcode can be equal to or greater than 2, then accessing UnwindCodes[lastcode] is
+      // out of bound (i.e. undefined behavior). The external memory outside the class object 
+      // cannot be reached from a pointer to a subobject. The only valid case is when CountOfCodes
+      // is 0, and then lastcode will be equal 0.
+      // However, `reinterpret_cast` from a pointer to uint16[2] to a pointer to uint32 is not 
+      // allowed in any case (https://eel.is/c++draft/basic.compound#5, 
+      // https://eel.is/c++draft/basic.lval#11). (https://godbolt.org/z/vY1zKEvo6)
+      uint32_t handler;
+      memcpy(&handler, xdata->UnwindCodes, sizeof(uint32_t));
+      // FIXME: Does `xdata` actually point to an array of UNWIND_INFO?
+      // https://github.com/cplusplus/CWG/issues/874
+      _info.lsda = reinterpret_cast<unw_word_t>(xdata+1);
       _dispContext.HandlerData = reinterpret_cast<void *>(_info.lsda);
       _dispContext.LanguageHandler =
-          reinterpret_cast<EXCEPTION_ROUTINE *>(base + *handler);
-      if (*handler) {
+          reinterpret_cast<EXCEPTION_ROUTINE *>(base + handler);
+      if (handler) {
         _info.handler = reinterpret_cast<unw_word_t>(__libunwind_seh_personality);
       } else
         _info.handler = 0;
@@ -2214,7 +2225,7 @@ static __xlcxx_personality_v0_t *xlcPersonalityV0;
 static RWMutex xlcPersonalityV0InitLock;
 
 template <typename A, typename R>
-bool UnwindCursor<A, R>::getInfoFromTBTable(pint_t pc, R &registers) {
+bool BasicUnwindCursorType__<A, R>::getInfoFromTBTable(pint_t pc, R &registers) {
   uint32_t *p = reinterpret_cast<uint32_t *>(pc);
 
   // Keep looking forward until a word of 0 is found. The traceback
@@ -2461,7 +2472,7 @@ bool UnwindCursor<A, R>::getInfoFromTBTable(pint_t pc, R &registers) {
 
 // Step back up the stack following the frame back link.
 template <typename A, typename R>
-int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
+int BasicUnwindCursorType__<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
                                         R &registers, bool &isSignalFrame) {
   if (_LIBUNWIND_TRACING_UNWINDING) {
     char functionBuf[512];
@@ -2723,7 +2734,7 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
 #endif // defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
 
 template <typename A, typename R>
-void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
+void BasicUnwindCursorType__<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) ||                               \
     defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
   _isSigReturn = false;
@@ -2885,7 +2896,7 @@ void UnwindCursor<A, R>::setInfoBasedOnIPRegister(bool isReturnAddress) {
 #endif
 
 template <typename A, typename R>
-bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_arm64 &) {
+bool BasicUnwindCursorType__<A, R>::setInfoForSigReturn(Registers_arm64 &) {
   // Look for the sigreturn trampoline. The trampoline's body is two
   // specific instructions (see below). Typically the trampoline comes from the
   // vDSO[1] (i.e. the __kernel_rt_sigreturn function). A libc might provide its
@@ -2919,7 +2930,7 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_arm64 &) {
 }
 
 template <typename A, typename R>
-int UnwindCursor<A, R>::stepThroughSigReturn(Registers_arm64 &) {
+int BasicUnwindCursorType__<A, R>::stepThroughSigReturn(Registers_arm64 &) {
   // In the signal trampoline frame, sp points to an rt_sigframe[1], which is:
   //  - 128-byte siginfo struct
   //  - ucontext struct:
@@ -2955,7 +2966,7 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_arm64 &) {
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&                               \
     defined(_LIBUNWIND_TARGET_LOONGARCH)
 template <typename A, typename R>
-bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_loongarch &) {
+bool BasicUnwindCursorType__<A, R>::setInfoForSigReturn(Registers_loongarch &) {
   const pint_t pc = static_cast<pint_t>(getReg(UNW_REG_IP));
   // The PC might contain an invalid address if the unwind info is bad, so
   // directly accessing it could cause a SIGSEGV.
@@ -2978,7 +2989,7 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_loongarch &) {
 }
 
 template <typename A, typename R>
-int UnwindCursor<A, R>::stepThroughSigReturn(Registers_loongarch &) {
+int BasicUnwindCursorType__<A, R>::stepThroughSigReturn(Registers_loongarch &) {
   // In the signal trampoline frame, sp points to an rt_sigframe[1], which is:
   //  - 128-byte siginfo struct
   //  - ucontext_t struct:
@@ -3010,7 +3021,7 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_loongarch &) {
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&                               \
     defined(_LIBUNWIND_TARGET_RISCV)
 template <typename A, typename R>
-bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_riscv &) {
+bool BasicUnwindCursorType__<A, R>::setInfoForSigReturn(Registers_riscv &) {
   const pint_t pc = static_cast<pint_t>(getReg(UNW_REG_IP));
   // The PC might contain an invalid address if the unwind info is bad, so
   // directly accessing it could cause a SIGSEGV.
@@ -3033,7 +3044,7 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_riscv &) {
 }
 
 template <typename A, typename R>
-int UnwindCursor<A, R>::stepThroughSigReturn(Registers_riscv &) {
+int BasicUnwindCursorType__<A, R>::stepThroughSigReturn(Registers_riscv &) {
   // In the signal trampoline frame, sp points to an rt_sigframe[1], which is:
   //  - 128-byte siginfo struct
   //  - ucontext_t struct:
@@ -3063,7 +3074,7 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_riscv &) {
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&                               \
     defined(_LIBUNWIND_TARGET_S390X)
 template <typename A, typename R>
-bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_s390x &) {
+bool BasicUnwindCursorType__<A, R>::setInfoForSigReturn(Registers_s390x &) {
   // Look for the sigreturn trampoline. The trampoline's body is a
   // specific instruction (see below). Typically the trampoline comes from the
   // vDSO (i.e. the __kernel_[rt_]sigreturn function). A libc might provide its
@@ -3086,7 +3097,7 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_s390x &) {
 }
 
 template <typename A, typename R>
-int UnwindCursor<A, R>::stepThroughSigReturn(Registers_s390x &) {
+int BasicUnwindCursorType__<A, R>::stepThroughSigReturn(Registers_s390x &) {
   // Determine current SP.
   const pint_t sp = static_cast<pint_t>(this->getReg(UNW_REG_SP));
   // According to the s390x ABI, the CFA is at (incoming) SP + 160.
@@ -3166,7 +3177,7 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_s390x &) {
 
 #if defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
 template <typename A, typename R>
-bool UnwindCursor<A, R>::setInfoForSigReturn() {
+bool BasicUnwindCursorType__<A, R>::setInfoForSigReturn() {
   Dl_info dlinfo;
   const auto isSignalHandler = [&](pint_t addr) {
     if (!dladdr(reinterpret_cast<void *>(addr), &dlinfo))
@@ -3215,7 +3226,7 @@ bool UnwindCursor<A, R>::setInfoForSigReturn() {
 }
 
 template <typename A, typename R>
-int UnwindCursor<A, R>::stepThroughSigReturn() {
+int BasicUnwindCursorType__<A, R>::stepThroughSigReturn() {
   _isSignalFrame = true;
 
 #if defined(_LIBUNWIND_TARGET_X86_64)
@@ -3254,7 +3265,7 @@ int UnwindCursor<A, R>::stepThroughSigReturn() {
 }
 #endif // defined(_LIBUNWIND_CHECK_HAIKU_SIGRETURN)
 
-template <typename A, typename R> int UnwindCursor<A, R>::step(bool stage2) {
+template <typename A, typename R> int BasicUnwindCursorType__<A, R>::step(bool stage2) {
   (void)stage2;
   // Bottom of stack is defined when unwind info cannot be found.
   if (_unwindInfoMissing)
@@ -3298,7 +3309,7 @@ template <typename A, typename R> int UnwindCursor<A, R>::step(bool stage2) {
 }
 
 template <typename A, typename R>
-void UnwindCursor<A, R>::getInfo(unw_proc_info_t *info) {
+void BasicUnwindCursorType__<A, R>::getInfo(unw_proc_info_t *info) {
   if (_unwindInfoMissing)
     memset(static_cast<void *>(info), 0, sizeof(*info));
   else
@@ -3306,7 +3317,7 @@ void UnwindCursor<A, R>::getInfo(unw_proc_info_t *info) {
 }
 
 template <typename A, typename R>
-bool UnwindCursor<A, R>::getFunctionName(char *buf, size_t bufLen,
+bool BasicUnwindCursorType__<A, R>::getFunctionName(char *buf, size_t bufLen,
                                          unw_word_t *offset) {
 #if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
   typename R::reg_t rawPC = this->getReg(UNW_REG_IP);
@@ -3320,7 +3331,7 @@ bool UnwindCursor<A, R>::getFunctionName(char *buf, size_t bufLen,
 
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN)
 template <typename A, typename R>
-bool UnwindCursor<A, R>::isReadableAddr(const pint_t addr) const {
+bool BasicUnwindCursorType__<A, R>::isReadableAddr(const pint_t addr) const {
   // We use SYS_rt_sigprocmask, inspired by Abseil's AddressIsReadable.
 
   const auto sigsetAddr = reinterpret_cast<sigset_t *>(addr);
@@ -3349,12 +3360,55 @@ bool UnwindCursor<A, R>::isReadableAddr(const pint_t addr) const {
 }
 #endif
 
+#if defined(__i386__)
+# define REGISTER_KIND Registers_x86
+#elif defined(__x86_64__)
+# define REGISTER_KIND Registers_x86_64
+#elif defined(__powerpc64__)
+# define REGISTER_KIND Registers_ppc64
+#elif defined(__powerpc__)
+# define REGISTER_KIND Registers_ppc
+#elif defined(__aarch64__)
+# define REGISTER_KIND Registers_arm64
+#elif defined(__arm__)
+# define REGISTER_KIND Registers_arm
+#elif defined(__or1k__)
+# define REGISTER_KIND Registers_or1k
+#elif defined(__hexagon__)
+# define REGISTER_KIND Registers_hexagon
+#elif defined(__mips__) && defined(_ABIO32) && _MIPS_SIM == _ABIO32
+# define REGISTER_KIND Registers_mips_o32
+#elif defined(__mips64)
+# define REGISTER_KIND Registers_mips_newabi
+#elif defined(__mips__)
+# warning The MIPS architecture is not supported with this ABI and environment!
+#elif defined(__sparc__) && defined(__arch64__)
+#define REGISTER_KIND Registers_sparc64
+#elif defined(__sparc__)
+# define REGISTER_KIND Registers_sparc
+#elif defined(__riscv)
+# define REGISTER_KIND Registers_riscv
+#elif defined(__ve__)
+# define REGISTER_KIND Registers_ve
+#elif defined(__s390x__)
+# define REGISTER_KIND Registers_s390x
+#elif defined(__loongarch__) && __loongarch_grlen == 64
+#define REGISTER_KIND Registers_loongarch
+#else
+# error Architecture not supported
+#endif
+
+using UnwindCursor = BasicUnwindCursorType__<LocalAddressSpace, REGISTER_KIND>;
+
+#undef REGISTER_KIND
+
 #if defined(_LIBUNWIND_USE_CET) || defined(_LIBUNWIND_USE_GCS)
 extern "C" void *__libunwind_shstk_get_registers(unw_cursor_t *cursor) {
-  AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
+  auto *co = reinterpret_cast<UnwindCursor *>(cursor->u.data);
   return co->get_registers();
 }
 #endif
+
 } // namespace libunwind
 
 #endif // __UNWINDCURSOR_HPP__

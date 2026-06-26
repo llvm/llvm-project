@@ -176,7 +176,13 @@ struct unw_context_t {
 typedef struct unw_context_t unw_context_t;
 
 struct unw_cursor_t {
-  uint64_t data[_LIBUNWIND_CURSOR_SIZE];
+    /* Only the “array of N unsigned char” or of type “array of N std::byte” types can used as
+    storage (https://eel.is/c++draft/intro.object#3) */
+  union {
+    unsigned char data[_LIBUNWIND_CURSOR_SIZE * sizeof(uint64_t)];
+    /* `aligner` exists only for alignment */
+    uint64_t aligner__[_LIBUNWIND_CURSOR_SIZE];
+  } u;
 } LIBUNWIND_CURSOR_ALIGNMENT_ATTR;
 typedef struct unw_cursor_t unw_cursor_t;
 
