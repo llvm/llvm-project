@@ -884,11 +884,11 @@ Compiler Flags
 
 .. _compiler_flags:
 
-When compiling HLSL with :program:`clang-dxc`, several flags control whether
+When compiling HLSL with :program:`dxc`, several flags control whether
 debug information is embedded in the main DXContainer output, written to a
 companion PDB file, or both. Use ``/Zi`` for full debug output or ``/Zs`` for
-slim debug output without an `ILDB`_ part. Most dxc-style flags are forwarded
-to :program:`llc` as ``-mllvm`` options.
+slim debug output without an `ILDB`_ part. In :program:`clang-dxc`, most
+dxc-style flags are forwarded to :program:`llc` as ``-mllvm`` options.
 
 Debug Output Locations
 ----------------------
@@ -928,7 +928,7 @@ write full debug information to more than one location.
 
 **Slim debug with ``/Zs``**
 
-When ``/Zs`` is enabled, LLVM emits slim debug information. The `ILDB`_ part is
+When ``/Zs`` is enabled, slim debug information is emitted. The `ILDB`_ part is
 omitted from the main DXContainer output and from any companion PDB or `PRIV`_
 embedding, but other debug-related parts such as `HASH`_, `ILDN`_, `SRCI`_, and
 `VERS`_ are still emitted. A companion PDB from ``/Fd`` or a `PRIV`_ embedding
@@ -936,18 +936,20 @@ from ``/Qpdb_in_private`` therefore contains slim debug data only.
 
 ``/Zs`` cannot be combined with ``/Qembed_debug`` or ``/Qsource_in_debug_module``.
 
-The table below summarizes the dxc-compatible flags that affect this behavior.
+The table below summarizes the :program:`dxc` flags that affect this behavior.
 The **llc flag** column lists the ``-mllvm`` option the driver forwards when
 invoking the backend.
 
 .. list-table::
    :header-rows: 1
-   :widths: 20 20 60
+   :widths: 20 20 20 40
 
-   * - clang-dxc flag
+   * - dxc flag
+     - clang-dxc alternative
      - llc flag
      - Effect
-   * - ``/Zi``, ``-g``
+   * - ``/Zi``
+     - ``/Zi``, ``-g``
      -
      - Enable full debug information. Mutually exclusive with ``/Zs``. Required
        for ``/Qembed_debug`` and ``/Qstrip_debug``. The main `DXIL`_ part is
@@ -955,23 +957,27 @@ invoking the backend.
        ``/Qembed_debug``, and ``/Qstrip_debug``, the driver warns and enables
        ``/Qembed_debug`` by default.
    * - ``/Zs``
-     - ``--dx-Zs``
+     - Not implemented yet
+     - ``--dx-slim-debug``
      - Enable slim debug information. Mutually exclusive with ``/Zi``. Omits
        the `ILDB`_ part from all outputs while still emitting parts such as
        `ILDN`_, `SRCI`_, and `VERS`_. Incompatible with ``/Qembed_debug`` and
        ``/Qsource_in_debug_module``.
    * - ``/Fd``\ *path*
+     - Not implemented yet
      - ``--dx-Fd=``\ *path*
      - Write a companion PDB file. Requires ``/Zi`` or ``/Zs``. The path is
        recorded in the `ILDN`_ part. If *path* ends with a directory separator,
        the file name defaults to ``<MD5 hash>.pdb`` from the `HASH`_ part in that
        directory; otherwise *path* is used as the PDB file name.
    * - ``/Qembed_debug``
+     - Not implemented yet
      - ``--dx-embed-debug``
      - Embed the `ILDB`_ part and other debug parts in the main DXContainer
        output. Requires ``/Zi``. Takes precedence over ``/Qstrip_debug`` when
        both are specified.
    * - ``/Qstrip_debug``
+     - ``/Qstrip_debug``
      - ``--dx-strip-debug``
      - Omit the `ILDB`_ part from the main DXContainer output. Requires ``/Zi``.
        The `ILDB`_ part is still written to a companion PDB
@@ -979,6 +985,7 @@ invoking the backend.
        when ``/Zi`` is used without ``/Fd``. Otherwise, ignored when
        ``/Qembed_debug`` is also specified.
    * - ``/Qpdb_in_private``
+     - ``/Qpdb_in_private``
      - ``--dx-pdb-in-private``
      - Embed a copy of the companion PDB in the `PRIV`_ part of the main
        DXContainer output. Requires ``/Zi`` or ``/Zs``. When ``/Fd`` is also
@@ -987,18 +994,22 @@ invoking the backend.
        on disk. With ``/Zs``, the embedded PDB contains slim debug data without
        an `ILDB`_ part.
    * - ``/Zss``
+     - ``/Zss``
      - ``--dx-Zss``
      - Compute the `HASH`_ digest from the `ILDB`_ bitcode and set the
        ``IncludesSource`` hash flag. Requires ``/Zi`` or ``/Zs``.
    * - ``/Zsb``
+     - ``/Zsb``
      -
      - Default behavior. Compute the `HASH`_ digest from the stripped `DXIL`_
        bitcode.
    * - ``/Qsource_in_debug_module``
+     - ``/Qsource_in_debug_module``
      - ``--dx-source-in-debug-module``
      - Embed HLSL source in the `ILDB`_ module via ``dx.source`` metadata
        instead of emitting a separate `SRCI`_ part.
-   * - ``-fdx-no-source-metadata``
+   * -
+     - ``-fdx-no-source-metadata``
      -
      - Do not embed ``dx.source`` metadata in the LLVM module, which prevents
        `SRCI`_ generation.
