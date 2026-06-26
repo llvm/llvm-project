@@ -226,8 +226,8 @@ When multiple benchmarks measure the same function under different circumstances
 after the function signature. For example, ``std::vector<bool>::ctor(Self&&, const allocator_type&) (equal allocators)``
 would be the allocator-aware move constructor for ``std::vector<bool>`` in the case of equal allocators.
 
-Mark strengthened ``noexcept`` specifiers with ``// strengthened``
-==================================================================
+Mark strengthened ``noexcept`` specifiers with ``// strengthened(reason)``
+==========================================================================
 
 The C++ standard explicitly permits implementations to add ``noexcept`` to non-virtual library
 functions whose specification does not require it (`[res.on.exception.handling]/5
@@ -237,10 +237,12 @@ functions whose specification does not require it (`[res.on.exception.handling]/
   adding a non-throwing exception specification.
 
 Every libc++ ``noexcept`` clause that goes beyond what the standard mandates is annotated with an
-end-of-line ``// strengthened`` comment:
+end-of-line ``// strengthened(reason)`` comment:
 
 .. code-block:: cpp
 
-  _LIBCPP_HIDE_FROM_ABI constexpr expected() noexcept(is_nothrow_default_constructible_v<_Tp>) // strengthened
-    requires is_default_constructible_v<_Tp>
-      : __base(in_place) {}
+  constexpr reference span<T>::operator[](size_type __idx) const noexcept { // strengthened(throws nothing)
+    return __data_[__idx];
+  }
+
+Keep the reason concise but helpful.
