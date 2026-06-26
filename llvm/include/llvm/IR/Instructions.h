@@ -5393,7 +5393,7 @@ class BitInsertInst : public Instruction {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
-  /// Clone an identical FreezeInst
+  /// Clone an identical BitInsertInst
   LLVM_ABI BitInsertInst *cloneImpl() const;
 
 public:
@@ -5434,7 +5434,7 @@ class BitExtractInst : public Instruction {
 protected:
   // Note: Instruction needs to be a friend here to call cloneImpl.
   friend class Instruction;
-  /// Clone an identical FreezeInst
+  /// Clone an identical BitExtractInst
   LLVM_ABI BitExtractInst *cloneImpl() const;
 
 public:
