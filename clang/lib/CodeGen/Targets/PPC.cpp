@@ -387,7 +387,10 @@ public:
   PPC32TargetCodeGenInfo(CodeGenTypes &CGT, bool SoftFloatABI,
                          bool RetSmallStructInRegABI)
       : TargetCodeGenInfo(std::make_unique<PPC32_SVR4_ABIInfo>(
-            CGT, SoftFloatABI, RetSmallStructInRegABI)) {}
+            CGT, SoftFloatABI, RetSmallStructInRegABI)) {
+    SwiftInfo =
+        std::make_unique<SwiftABIInfo>(CGT, /*SwiftErrorInRegister=*/false);
+  }
 
   static bool isStructReturnInRegABI(const llvm::Triple &Triple,
                                      const CodeGenOptions &Opts);

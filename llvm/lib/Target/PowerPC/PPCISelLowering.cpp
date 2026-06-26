@@ -5978,9 +5978,10 @@ SDValue PPCTargetLowering::LowerCall_32SVR4(
   const bool IsVarArg = CFlags.IsVarArg;
   const bool IsTailCall = CFlags.IsTailCall;
 
-  assert((CallConv == CallingConv::C ||
-          CallConv == CallingConv::Cold ||
-          CallConv == CallingConv::Fast) && "Unknown calling convention!");
+  assert((CallConv == CallingConv::C || CallConv == CallingConv::Cold ||
+          CallConv == CallingConv::Fast || CallConv == CallingConv::Swift ||
+          CallConv == CallingConv::SwiftTail) &&
+         "Unknown calling convention!");
 
   const Align PtrAlign(4);
 
