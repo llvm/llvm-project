@@ -213,7 +213,6 @@ Available checks are:
   group. Also it does not support `-fsanitize-trap=vptr`.
 
 You can also use the following check groups:
-
 : - `-fsanitize=undefined`: All of the checks listed above other than
     `float-divide-by-zero`, `unsigned-integer-overflow`,
     `implicit-conversion`, `local-bounds`, `vptr` and the

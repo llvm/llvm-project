@@ -673,13 +673,13 @@ specification.
 | !, &&, \|\| | yes | -- | yes | yes | yes | yes |
 | ==, !=, >, <, >=, <= | yes | yes | yes | yes | yes | yes |
 | = | yes | yes | yes | yes | yes | yes |
-| ?: <a class="footnote-reference brackets" href="#id5" id="id1" role="doc-noteref"><span class="fn-bracket">[</span>1<span class="fn-bracket">]</span></a> | yes | -- | yes | yes | yes | yes |
-| sizeof | yes | yes | yes | yes | yes <a class="footnote-reference brackets" href="#vls" id="id2" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a> | yes <a class="footnote-reference brackets" href="#vls" id="id3" role="doc-noteref"><span class="fn-bracket">[</span>2<span class="fn-bracket">]</span></a> |
+| ?: <a class="footnote-reference brackets" href="#id5" id="id1" role="doc-noteref">[1]</a> | yes | -- | yes | yes | yes | yes |
+| sizeof | yes | yes | yes | yes | yes <a class="footnote-reference brackets" href="#vls" id="id2" role="doc-noteref">[2]</a> | yes <a class="footnote-reference brackets" href="#vls" id="id3" role="doc-noteref">[2]</a> |
 | C-style cast | yes | yes | yes | no | no | yes |
 | reinterpret_cast | yes | no | yes | no | no | yes |
 | static_cast | yes | no | yes | no | no | yes |
 | const_cast | no | no | no | no | no | no |
-| address &v[i] | no | no | no <a class="footnote-reference brackets" href="#id6" id="id4" role="doc-noteref"><span class="fn-bracket">[</span>3<span class="fn-bracket">]</span></a> | no | no | no |
+| address &v[i] | no | no | no <a class="footnote-reference brackets" href="#id6" id="id4" role="doc-noteref">[3]</a> | no | no | no |
 
 Both SVE and RVV define sizeless vector types which cannot be used in globals,
 structs, unions, or arrays. Both provide an attribute (`arm_sve_vector_bits`
@@ -692,14 +692,13 @@ supported on VLS types.
 
 See also {ref}`langext-builtin-shufflevector`, {ref}`langext-builtin-convertvector`.
 
-```{raw} html
 <aside class="footnote-list brackets">
 <aside class="footnote brackets" id="id5" role="doc-footnote">
 <span class="label"><span class="fn-bracket">[</span><a role="doc-backlink" href="#id1">1</a><span class="fn-bracket">]</span></span>
 <p>ternary operator(?:) has different behaviors depending on the condition
-operand's vector type. If the condition is a GNU vector (i.e., <code class="docutils literal notranslate"><span class="pre">__vector_size__</span></code>),
-a NEON vector, an SVE vector or an RVV vector, it's only available in C++
-and uses normal bool conversions (that is, != 0).
+operand's vector type. If the condition is a GNU vector (i.e.,
+<code>__vector_size__</code>), a NEON vector, an SVE vector or an RVV vector,
+it's only available in C++ and uses normal bool conversions (that is, != 0).
 If it's an extension (OpenCL) vector, it's only available in C and OpenCL C.
 And it selects based on the signedness of the condition operands (OpenCL v1.1 s6.3.9).</p>
 </aside>
@@ -715,7 +714,6 @@ allows this. This is intentional for vectors with a boolean element type and
 not implemented otherwise.</p>
 </aside>
 </aside>
-```
 
 ### Vector Builtins
 
@@ -2052,10 +2050,9 @@ The following type trait primitives are supported by Clang. Those traits marked
 - `__reference_constructs_from_temporary(T, U)` (C++)
   Returns true if a reference `T` can be direct-initialized from a temporary of type
   a non-cv-qualified `U`.
-
-`__reference_converts_from_temporary(T, U)` (C++)
-: Returns true if a reference `T` can be copy-initialized from a temporary of type
-  a non-cv-qualified `U`.
+- `__reference_converts_from_temporary(T, U)` (C++)
+  : Returns true if a reference `T` can be copy-initialized from a temporary of type
+    a non-cv-qualified `U`.
 - `__underlying_type` (C++, GNU, Microsoft)
 - `__builtin_lt_synthesizes_from_spaceship`, `__builtin_gt_synthesizes_from_spaceship`,
   `__builtin_le_synthesizes_from_spaceship`, `__builtin_ge_synthesizes_from_spaceship` (Clang):
