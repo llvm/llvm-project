@@ -30,6 +30,7 @@
 #include "llvm/IR/LLVMRemarkStreamer.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/ObjCClassHierarchy.h"
 #include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
@@ -1078,6 +1079,9 @@ void ThinLTOCodeGenerator::run() {
   std::set<GlobalValue::GUID> ExportedGUIDs;
   runWholeProgramDevirtOnIndex(*Index, ExportedGUIDs, LocalWPDTargetsMap);
   GUIDPreservedSymbols.insert_range(ExportedGUIDs);
+
+  // Resolve ObjC class hierarchy from the combined index.
+  ObjCClassHierarchy::resolveHierarchy(Index->getObjCClasses());
 
   // Compute prevailing symbols
   DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;

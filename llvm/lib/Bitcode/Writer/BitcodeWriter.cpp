@@ -4973,6 +4973,17 @@ void ModuleBitcodeWriterBase::writePerModuleGlobalValueSummary() {
     NameVals.clear();
   }
 
+  // Write ObjC class hierarchy info.
+  for (const auto &[ClassGUID, Info] : Index->getObjCClasses()) {
+    NameVals.push_back(ClassGUID);
+    NameVals.push_back(Info.SuperclassGUID);
+    NameVals.push_back(Info.InstanceStart);
+    NameVals.push_back(Info.InstanceSize);
+    NameVals.push_back(Info.MaxIvarAlignment);
+    Stream.EmitRecord(bitc::FS_OBJC_CLASS_INFO, NameVals);
+    NameVals.clear();
+  }
+
   if (Index->getBlockCount())
     Stream.EmitRecord(bitc::FS_BLOCK_COUNT,
                       ArrayRef<uint64_t>{Index->getBlockCount()});
@@ -5361,6 +5372,17 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
       Stream.EmitRecord(bitc::FS_TYPE_ID, NameVals);
       NameVals.clear();
     }
+  }
+
+  // Write ObjC class hierarchy info.
+  for (const auto &[ClassGUID, Info] : Index.getObjCClasses()) {
+    NameVals.push_back(ClassGUID);
+    NameVals.push_back(Info.SuperclassGUID);
+    NameVals.push_back(Info.InstanceStart);
+    NameVals.push_back(Info.InstanceSize);
+    NameVals.push_back(Info.MaxIvarAlignment);
+    Stream.EmitRecord(bitc::FS_OBJC_CLASS_INFO, NameVals);
+    NameVals.clear();
   }
 
   if (Index.getBlockCount())

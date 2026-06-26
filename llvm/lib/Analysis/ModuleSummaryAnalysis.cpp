@@ -44,6 +44,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/IR/ObjCClassHierarchy.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/InitializePasses.h"
@@ -1093,6 +1094,9 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
                            !LocalsUsed.empty() || HasLocalInlineAsmSymbol,
                            CantBePromoted, IsThinLTO, GetSSICallback);
   }
+
+  // Compute ObjC class hierarchy info for ivar offset constification.
+  ObjCClassHierarchy::exportToSummary(M, Index);
 
   // Compute summaries for all variables defined in module, and save in the
   // index.
