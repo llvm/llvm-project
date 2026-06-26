@@ -524,35 +524,6 @@ dependencies::initializeScanInstanceDependencyCollector(
   return MDC;
 }
 
-/// Manages (and terminates) the asynchronous compilation of modules.
-class AsyncModuleCompiles {
-  std::mutex Mutex;
-  bool Stop = false;
-  // FIXME: Have the service own a thread pool and use that instead.
-  std::vector<std::thread> Compiles;
-
-public:
-  /// Registers the module compilation, unless this instance is about to be
-  /// destroyed.
-  void add(llvm::unique_function<void()> Compile) {
-    std::lock_guard<std::mutex> Lock(Mutex);
-    if (!Stop)
-      Compiles.emplace_back(std::move(Compile));
-  }
-
-  ~AsyncModuleCompiles() {
-    {
-      // Prevent registration of further module compiles.
-      std::lock_guard<std::mutex> Lock(Mutex);
-      Stop = true;
-    }
-
-    // Wait for outstanding module compiles to finish.
-    for (std::thread &Compile : Compiles)
-      Compile.join();
-  }
-};
-
 struct SingleModuleWithAsyncModuleCompiles : PreprocessOnlyAction {
   DependencyScanningService &Service;
   DependencyActionController &Controller;
@@ -690,6 +661,14 @@ bool SingleModuleWithAsyncModuleCompiles::BeginSourceFileAction(
   CI.getPreprocessor().addPPCallbacks(
       std::make_unique<AsyncModuleCompile>(CI, Service, Controller, Compiles));
   return true;
+}
+
+void dependencies::runTUModulePrescan(CompilerInstance &PrescanCI,
+                                      DependencyScanningService &Service,
+                                      DependencyActionController &Controller,
+                                      AsyncModuleCompiles &Compiles) {
+  SingleTUWithAsyncModuleCompiles Action(Service, Controller, Compiles);
+  (void)PrescanCI.ExecuteAction(Action);
 }
 
 bool DependencyScanningAction::runInvocation(

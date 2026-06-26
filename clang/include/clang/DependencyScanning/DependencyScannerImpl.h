@@ -16,6 +16,9 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
+#include <mutex>
+#include <thread>
+
 namespace clang {
 class DiagnosticConsumer;
 
@@ -82,6 +85,40 @@ struct TextDiagnosticsPrinterWithOutput {
         DiagOpts(createDiagOptions(CommandLine)),
         DiagPrinter(DiagnosticsOS, *DiagOpts) {}
 };
+
+/// Manages (and terminates) the asynchronous compilation of modules.
+class AsyncModuleCompiles {
+  std::mutex Mutex;
+  bool Stop = false;
+  // FIXME: Have the service own a thread pool and use that instead.
+  std::vector<std::thread> Compiles;
+
+public:
+  /// Registers the module compilation, unless this instance is about to be
+  /// destroyed.
+  void add(llvm::unique_function<void()> Compile) {
+    std::lock_guard<std::mutex> Lock(Mutex);
+    if (!Stop)
+      Compiles.emplace_back(std::move(Compile));
+  }
+
+  ~AsyncModuleCompiles() {
+    {
+      // Prevent registration of further module compiles.
+      std::lock_guard<std::mutex> Lock(Mutex);
+      Stop = true;
+    }
+
+    // Wait for outstanding module compiles to finish.
+    for (std::thread &Compile : Compiles)
+      Compile.join();
+  }
+};
+
+void runTUModulePrescan(CompilerInstance &PrescanCI,
+                        DependencyScanningService &Service,
+                        DependencyActionController &Controller,
+                        AsyncModuleCompiles &Compiles);
 
 std::unique_ptr<CompilerInvocation>
 createCompilerInvocation(ArrayRef<std::string> CommandLine,
