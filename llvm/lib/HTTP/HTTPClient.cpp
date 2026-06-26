@@ -310,8 +310,15 @@ Error HTTPClient::perform(const HTTPRequest &Request,
   DWORD SecureProtocols =
       WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2 | WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_3;
   if (!WinHttpSetOption(Session->SessionHandle, WINHTTP_OPTION_SECURE_PROTOCOLS,
-                        &SecureProtocols, sizeof(SecureProtocols)))
-    return createStringError(errc::io_error, "Failed to set secure protocols");
+                        &SecureProtocols, sizeof(SecureProtocols))) {
+    // Fallback to TLS 1.2 if Windows does not support 1.3.
+    SecureProtocols = WINHTTP_FLAG_SECURE_PROTOCOL_TLS1_2;
+    if (!WinHttpSetOption(Session->SessionHandle,
+                          WINHTTP_OPTION_SECURE_PROTOCOLS, &SecureProtocols,
+                          sizeof(SecureProtocols)))
+      return createStringError(errc::io_error,
+                               "Failed to set secure protocols");
+  }
 
   // Disallow redirects in general or HTTPS to HTTP only.
   DWORD RedirectPolicy = WINHTTP_OPTION_REDIRECT_POLICY_DISALLOW_HTTPS_TO_HTTP;
