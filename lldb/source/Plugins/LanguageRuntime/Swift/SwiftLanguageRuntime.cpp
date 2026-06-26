@@ -62,7 +62,6 @@
 #include "swift/Demangling/Demangle.h"
 #include "swift/RemoteAST/RemoteAST.h"
 #include "swift/RemoteInspection/ReflectionContext.h"
-#include "swift/Threading/ThreadLocalStorage.h"
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
@@ -221,8 +220,14 @@ ModuleSP SwiftLanguageRuntime::FindConcurrencyModule(Process &process) {
   return concurrency_module;
 }
 
+// _swift_concurrency_debug_internal_layout_version packs the current-task
+// storage kind in its top 8 bits; the low 24 bits are the layout version. See
+// swift/stdlib/public/Concurrency/Debug.h.
+static constexpr uint32_t g_concurrency_version_mask = 0x00FFFFFF;
+static constexpr uint32_t g_concurrency_storage_kind_shift = 24;
+
 static std::optional<uint32_t>
-FindConcurrencyDebugVersion(Process &process, Module &concurrency_module) {
+FindConcurrencyVersionWord(Process &process, Module &concurrency_module) {
   const Symbol *version_symbol =
       concurrency_module.FindFirstSymbolWithNameAndType(
           ConstString("_swift_concurrency_debug_internal_layout_version"));
@@ -233,11 +238,11 @@ FindConcurrencyDebugVersion(Process &process, Module &concurrency_module) {
   if (symbol_addr == LLDB_INVALID_ADDRESS)
     return {};
   Status error;
-  uint64_t version = process.ReadUnsignedIntegerFromMemory(
+  uint64_t version_word = process.ReadUnsignedIntegerFromMemory(
       symbol_addr, /*width*/ 4, /*fail_value=*/0, error);
   if (error.Fail())
     return {};
-  return version;
+  return version_word;
 }
 
 llvm::Expected<lldb::offset_t>
@@ -276,7 +281,11 @@ SwiftLanguageRuntime::FindConcurrencyDebugVersion(Process &process) {
   ModuleSP concurrency_module = FindConcurrencyModule(process);
   if (!concurrency_module)
     return {};
-  return ::FindConcurrencyDebugVersion(process, *concurrency_module);
+  std::optional<uint32_t> version_word =
+      ::FindConcurrencyVersionWord(process, *concurrency_module);
+  if (!version_word)
+    return {};
+  return *version_word & g_concurrency_version_mask;
 }
 
 static std::optional<lldb::addr_t>
@@ -316,6 +325,35 @@ FindSymbolForSwiftObject(Process &process, RuntimeKind runtime_kind,
     return addr;
 
   return {};
+}
+
+using CurrentTaskStorageKind = SwiftLanguageRuntime::CurrentTaskStorageKind;
+
+static std::optional<CurrentTaskStorageKind>
+DeriveStorageKind(uint32_t concurrency_version, uint8_t storage_kind_raw) {
+  // Prior to version 3, pthread_reserved_key is assumed.
+  if (concurrency_version <= 2)
+    return CurrentTaskStorageKind::pthread_reserved_key;
+  if (storage_kind_raw == 0 ||
+      storage_kind_raw >= static_cast<uint32_t>(CurrentTaskStorageKind::last))
+    return std::nullopt;
+  return CurrentTaskStorageKind{storage_kind_raw};
+}
+
+SwiftLanguageRuntime::ConcurrencyInfo
+SwiftLanguageRuntime::FindConcurrencyInfo(Process &process) {
+  ModuleSP concurrency_module = FindConcurrencyModule(process);
+  if (!concurrency_module)
+    return {};
+
+  std::optional<uint32_t> version_word =
+      ::FindConcurrencyVersionWord(process, *concurrency_module);
+  if (!version_word)
+    return {};
+
+  uint32_t version = *version_word & g_concurrency_version_mask;
+  uint8_t storage_kind = *version_word >> g_concurrency_storage_kind_shift;
+  return {version, DeriveStorageKind(version, storage_kind)};
 }
 
 static lldb::BreakpointResolverSP
