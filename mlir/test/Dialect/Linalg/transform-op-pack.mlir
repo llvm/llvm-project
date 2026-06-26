@@ -444,8 +444,9 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
-func.func @memref_matmul(%A: memref<?x?xf32>, %B: memref<?x?xf32>,
-                         %C: memref<?x?xf32>) {
+func.func @matmul_unsupported_memref_pack(%A: memref<?x?xf32>,
+                                          %B: memref<?x?xf32>,
+                                          %C: memref<?x?xf32>) {
   linalg.matmul ins(%A, %B : memref<?x?xf32>, memref<?x?xf32>)
                 outs(%C : memref<?x?xf32>)
   return
