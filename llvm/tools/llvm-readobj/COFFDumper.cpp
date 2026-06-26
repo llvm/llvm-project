@@ -17,6 +17,7 @@
 #include "Win64EHDumper.h"
 #include "llvm-readobj.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/COFF.h"
@@ -42,6 +43,7 @@
 #include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
 #include "llvm/DebugInfo/CodeView/TypeTableCollection.h"
 #include "llvm/Object/COFF.h"
+#include "llvm/Object/COFFCxxModuleMetadata.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/WindowsResource.h"
 #include "llvm/Support/BinaryStreamReader.h"
@@ -100,6 +102,7 @@ public:
   void printCOFFTLSDirectory() override;
   void printCOFFResources() override;
   void printCOFFLoadConfig() override;
+  void printCOFFCxxModuleMetadata() override;
   void printCodeViewDebugInfo() override;
   void mergeCodeViewTypes(llvm::codeview::MergingTypeTableBuilder &CVIDs,
                           llvm::codeview::MergingTypeTableBuilder &CVTypes,
@@ -113,6 +116,7 @@ public:
 
 private:
   StringRef getSymbolName(uint32_t Index);
+  Expected<StringRef> tryGetSymbolName(uint32_t Index);
   void printSymbols(bool ExtraSymInfo) override;
   void printDynamicSymbols() override;
   void printSymbol(const SymbolRef &Sym);
@@ -2499,15 +2503,19 @@ void COFFDumper::printStringTable() {
 }
 
 StringRef COFFDumper::getSymbolName(uint32_t Index) {
-  Expected<COFFSymbolRef> Sym = Obj->getSymbol(Index);
-  if (!Sym)
-    reportError(Sym.takeError(), Obj->getFileName());
-
-  Expected<StringRef> SymName = Obj->getSymbolName(*Sym);
+  Expected<StringRef> SymName = tryGetSymbolName(Index);
   if (!SymName)
     reportError(SymName.takeError(), Obj->getFileName());
 
   return *SymName;
+}
+
+Expected<StringRef> COFFDumper::tryGetSymbolName(uint32_t Index) {
+  Expected<COFFSymbolRef> Sym = Obj->getSymbol(Index);
+  if (!Sym)
+    return Sym.takeError();
+
+  return Obj->getSymbolName(*Sym);
 }
 
 void llvm::dumpCodeViewMergedTypes(ScopedPrinter &Writer,
@@ -2557,4 +2565,110 @@ void COFFDumper::printCOFFTLSDirectory(
   W.printFlags("Characteristics", TlsTable->Characteristics,
                ArrayRef(ImageSectionCharacteristics),
                COFF::SectionCharacteristics(COFF::IMAGE_SCN_ALIGN_MASK));
+}
+
+void COFFDumper::printCOFFCxxModuleMetadata() {
+  SectionRef Sect;
+  for (SectionRef S : Obj->sections()) {
+    Expected<StringRef> SectionName = S.getName();
+    if (!SectionName) {
+      reportUniqueWarning(SectionName.takeError());
+      continue;
+    }
+    if (*SectionName == ".modmeta") {
+      Sect = S;
+      break;
+    }
+  }
+  if (Sect == SectionRef())
+    return;
+
+  Expected<StringRef> Contents = Sect.getContents();
+  if (!Contents) {
+    reportWarning(Contents.takeError(), Obj->getFileName());
+    return;
+  }
+  Expected<COFFCxxModuleMetadata> ModMap =
+      parseCOFFCxxModuleMetadata(*Contents);
+  if (!ModMap) {
+    reportWarning(ModMap.takeError(), Obj->getFileName());
+    return;
+  }
+
+  DictScope D(W, "CxxModuleMetadata");
+  W.printNumber("Version", ModMap->Version);
+  W.printNumber("Reserved", ModMap->Reserved);
+  W.printNumber("ModuleIndexWidth", ModMap->ModuleIndexWidth);
+  W.printNumber("SymbolIndexWidth", ModMap->SymbolIndexWidth);
+
+  COFFCxxModuleMetadataReader Reader(*ModMap);
+
+  SmallSet<uint32_t, 8> HeaderUnits;
+  Error Err = Reader.readModuleList(makeVisitor([&](auto A) {
+    for (auto V : A)
+      HeaderUnits.insert(V);
+  }));
+  if (Err) {
+    reportWarning(std::move(Err), Obj->getFileName());
+    return;
+  }
+
+  const auto PrintSymbol = [&](raw_ostream &OS, uint32_t Index) {
+    Expected<StringRef> SymName = tryGetSymbolName(Index);
+    if (SymName) {
+      OS << *SymName;
+    } else {
+      reportUniqueWarning(SymName.takeError());
+      OS << "<error>";
+    }
+    OS << " (" << to_string<uint32_t>(Index) << ')';
+  };
+
+  ListScope L(W, "Modules");
+  while (Reader.hasModuleData()) {
+    Expected<uint32_t> ModuleID = Reader.readModuleID();
+    if (!ModuleID) {
+      reportWarning(ModuleID.takeError(), Obj->getFileName());
+      return;
+    }
+
+    if (*ModuleID == std::numeric_limits<uint32_t>::max())
+      break;
+
+    DictScope D(W, "CxxModule");
+    StringRef Name;
+    if (*ModuleID != 0) {
+      Expected<StringRef> ExpName = Reader.readModuleName();
+      if (!ExpName) {
+        reportWarning(ExpName.takeError(), Obj->getFileName());
+        return;
+      }
+      Name = *ExpName;
+    }
+    W.printHex("ID", *ModuleID);
+    W.printString("Name", Name);
+    W.printBoolean("IsHeaderUnit", HeaderUnits.contains(*ModuleID));
+
+    Err = Reader.readModuleList([&](auto A) {
+      W.printList("Dependents", A, [&](auto &OS, auto V) { OS << W.hex(V); });
+    });
+    if (Err) {
+      reportWarning(std::move(Err), Obj->getFileName());
+      return;
+    }
+
+    Err = Reader.readSymbolList(
+        [&](auto A) { W.printList("Symbols", A, PrintSymbol); });
+    if (Err) {
+      reportWarning(std::move(Err), Obj->getFileName());
+      return;
+    }
+
+    Err = Reader.readSymbolList(
+        [&](auto A) { W.printList("Exports", A, PrintSymbol); });
+    if (Err) {
+      reportWarning(std::move(Err), Obj->getFileName());
+      return;
+    }
+  }
 }

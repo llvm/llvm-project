@@ -152,6 +152,7 @@ public:
   virtual void printCOFFTLSDirectory() {}
   virtual void printCOFFResources() {}
   virtual void printCOFFLoadConfig() { }
+  virtual void printCOFFCxxModuleMetadata() {}
   virtual void printCodeViewDebugInfo() { }
   virtual void
   mergeCodeViewTypes(llvm::codeview::MergingTypeTableBuilder &CVIDs,
