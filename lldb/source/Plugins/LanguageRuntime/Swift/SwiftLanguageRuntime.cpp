@@ -221,14 +221,10 @@ ModuleSP SwiftLanguageRuntime::FindConcurrencyModule(Process &process) {
   return concurrency_module;
 }
 
-std::optional<uint32_t>
-SwiftLanguageRuntime::FindConcurrencyDebugVersion(Process &process) {
-  ModuleSP concurrency_module = FindConcurrencyModule(process);
-  if (!concurrency_module)
-    return {};
-
+static std::optional<uint32_t>
+FindConcurrencyDebugVersion(Process &process, Module &concurrency_module) {
   const Symbol *version_symbol =
-      concurrency_module->FindFirstSymbolWithNameAndType(
+      concurrency_module.FindFirstSymbolWithNameAndType(
           ConstString("_swift_concurrency_debug_internal_layout_version"));
   if (!version_symbol)
     return 0;
@@ -273,6 +269,14 @@ SwiftLanguageRuntime::FindAsyncTaskNameOffset(Process &process) {
     return llvm::createStringError(
         "_swift_concurrency_debug_asyncTaskNameOffset is 0");
   return name_fragment_offset;
+}
+
+std::optional<uint32_t>
+SwiftLanguageRuntime::FindConcurrencyDebugVersion(Process &process) {
+  ModuleSP concurrency_module = FindConcurrencyModule(process);
+  if (!concurrency_module)
+    return {};
+  return ::FindConcurrencyDebugVersion(process, *concurrency_module);
 }
 
 static std::optional<lldb::addr_t>
