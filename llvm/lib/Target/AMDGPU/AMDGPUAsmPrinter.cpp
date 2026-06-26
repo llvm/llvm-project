@@ -1421,17 +1421,17 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   // Make clamp modifier on NaN input returns 0.
   ProgInfo.DX10Clamp = Mode.DX10Clamp;
 
-  unsigned LDSAlignShift = 8;
+  unsigned LDSGranularityBytes;
   switch (getLdsDwGranularity(STM)) {
   case 512:
   case 320:
-    LDSAlignShift = 11;
+    LDSGranularityBytes = 2048;
     break;
   case 128:
-    LDSAlignShift = 9;
+    LDSGranularityBytes = 512;
     break;
   case 64:
-    LDSAlignShift = 8;
+    LDSGranularityBytes = 256;
     break;
   default:
     llvm_unreachable("invald LDS block size");
@@ -1442,7 +1442,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   ProgInfo.LDSSize = MFI->getLDSSize();
   ProgInfo.LDSBlocks =
-      alignTo(ProgInfo.LDSSize, 1ULL << LDSAlignShift) >> LDSAlignShift;
+      alignTo(ProgInfo.LDSSize, LDSGranularityBytes) / LDSGranularityBytes;
 
   // The MCExpr equivalent of divideCeil.
   auto DivideCeil = [&Ctx](const MCExpr *Numerator, const MCExpr *Denominator) {
