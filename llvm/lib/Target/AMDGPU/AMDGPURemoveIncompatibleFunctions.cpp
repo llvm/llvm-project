@@ -25,11 +25,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-extern const SubtargetFeatureKV
-    AMDGPUFeatureKV[AMDGPU::NumSubtargetFeatures - 1];
-} // namespace llvm
-
 namespace {
 
 using Generation = AMDGPUSubtarget::Generation;
@@ -85,8 +80,8 @@ private:
   const TargetMachine *TM = nullptr;
 };
 
-StringRef getFeatureName(unsigned Feature) {
-  for (const SubtargetFeatureKV &KV : AMDGPUFeatureKV)
+StringRef getFeatureName(const GCNSubtarget &ST, unsigned Feature) {
+  for (const SubtargetFeatureKV &KV : ST.getAllProcessorFeatures())
     if (Feature == KV.Value)
       return KV.key();
 
@@ -123,16 +118,18 @@ constexpr unsigned FeaturesToCheck[] = {AMDGPU::FeatureGFX11Insts,
                                         AMDGPU::FeatureSMemTimeInst,
                                         AMDGPU::FeatureGWS};
 
-FeatureBitset expandImpliedFeatures(const FeatureBitset &Features) {
+FeatureBitset expandImpliedFeatures(const GCNSubtarget &ST,
+                                    const FeatureBitset &Features) {
   FeatureBitset Result = Features;
-  for (const SubtargetFeatureKV &FE : AMDGPUFeatureKV) {
+  for (const SubtargetFeatureKV &FE : ST.getAllProcessorFeatures()) {
     if (Features.test(FE.Value) && FE.Implies.any())
-      Result |= expandImpliedFeatures(FE.Implies.getAsBitset());
+      Result |= expandImpliedFeatures(ST, FE.Implies.getAsBitset());
   }
   return Result;
 }
 
-void reportFunctionRemoved(Function &F, unsigned Feature) {
+void reportFunctionRemoved(Function &F, const GCNSubtarget &ST,
+                           unsigned Feature) {
   OptimizationRemarkEmitter ORE(&F);
   ORE.emit([&]() {
     // Note: we print the function name as part of the diagnostic because if
@@ -141,7 +138,7 @@ void reportFunctionRemoved(Function &F, unsigned Feature) {
     // tell which function got removed.
     return OptimizationRemark(DEBUG_TYPE, "AMDGPUIncompatibleFnRemoved", &F)
            << "removing function '" << F.getName() << "': +"
-           << getFeatureName(Feature)
+           << getFeatureName(ST, Feature)
            << " is not supported on the current target";
   });
 }
@@ -181,7 +178,7 @@ bool AMDGPURemoveIncompatibleFunctions::checkFunction(Function &F) {
   // e.g. GFX90A implies FeatureGFX9, and FeatureGFX9 implies a whole set of
   // other features.
   const FeatureBitset GPUFeatureBits =
-      expandImpliedFeatures(GPUInfo->Implies.getAsBitset());
+      expandImpliedFeatures(*ST, GPUInfo->Implies.getAsBitset());
 
   // Now that the have a FeatureBitset containing all possible features for
   // the chosen GPU, check our list of "suspicious" features.
@@ -190,7 +187,7 @@ bool AMDGPURemoveIncompatibleFunctions::checkFunction(Function &F) {
   // GPU's feature set. We only check a predetermined set of features.
   for (unsigned Feature : FeaturesToCheck) {
     if (ST->hasFeature(Feature) && !GPUFeatureBits.test(Feature)) {
-      reportFunctionRemoved(F, Feature);
+      reportFunctionRemoved(F, *ST, Feature);
       return true;
     }
   }
@@ -200,12 +197,12 @@ bool AMDGPURemoveIncompatibleFunctions::checkFunction(Function &F) {
   // gfx10, gfx11, gfx12 are implied to support both wave32 and 64 features.
   // They are not in the feature set. So, we need a separate check
   if (!ST->supportsWave32() && ST->hasFeature(AMDGPU::FeatureWavefrontSize32)) {
-    reportFunctionRemoved(F, AMDGPU::FeatureWavefrontSize32);
+    reportFunctionRemoved(F, *ST, AMDGPU::FeatureWavefrontSize32);
     return true;
   }
   // gfx125x only support FeatureWavefrontSize32.
   if (!ST->supportsWave64() && ST->hasFeature(AMDGPU::FeatureWavefrontSize64)) {
-    reportFunctionRemoved(F, AMDGPU::FeatureWavefrontSize64);
+    reportFunctionRemoved(F, *ST, AMDGPU::FeatureWavefrontSize64);
     return true;
   }
   return false;
