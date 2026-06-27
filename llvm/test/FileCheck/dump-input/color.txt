@@ -50,7 +50,7 @@
 
 ; With -v, all of the above is true but:
 ; - Successes are green.
-; - Unmatched input test now has a cyan background.
+; - Unmatched input text now has a cyan background.
 ;
 ;      CHECK-V: Input was:
 ; CHECK-V-NEXT: <<<<<<
