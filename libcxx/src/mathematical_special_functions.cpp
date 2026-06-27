@@ -36,12 +36,12 @@ std::optional<_Ret> __check_nan(_Arg __arg, _Args... __args) {
 template <class _Func, class... _Args, class _Ret = std::invoke_result_t<_Func, _Args...>>
 __sf_result<_Ret> __invoke_boost_math(_Func __f, _Args... __args) {
   if (auto __maybe_nan = __check_nan<_Ret>(__args...); __maybe_nan.has_value())
-    return {.__domain_error = false, .__ret = *__maybe_nan};
+    return {false, *__maybe_nan};
 
   try {
-    return {.__domain_error = false, .__ret = __f(__args...)};
+    return {false, __f(__args...)};
   } catch (...) {
-    return {.__domain_error = true, .__ret = std::numeric_limits<_Ret>::quiet_NaN()};
+    return {true, std::numeric_limits<_Ret>::quiet_NaN()};
   }
 }
 } // namespace
