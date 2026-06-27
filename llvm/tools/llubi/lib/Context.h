@@ -202,6 +202,17 @@ public:
 using ConstBytesView = BytesView<ArrayRef<Byte>>;
 using MutableBytesView = BytesView<MutableArrayRef<Byte>>;
 
+class MaterializedConstant : public AnyValue {
+  bool Cacheable;
+
+public:
+  MaterializedConstant(std::nullopt_t) : Cacheable(false) {}
+  MaterializedConstant(AnyValue V, bool Cacheable)
+      : AnyValue(std::move(V)), Cacheable(Cacheable) {}
+
+  bool isCacheable() const { return Cacheable; }
+};
+
 /// The global context for the interpreter.
 /// It tracks global state such as heap memory objects and floating point
 /// environment.
@@ -291,7 +302,10 @@ class Context {
 
   // Constants
   // Use std::map to avoid iterator/reference invalidation.
-  std::map<Constant *, AnyValue> ConstCache;
+  std::map<Constant *, MaterializedConstant> ConstCache;
+  // Temporary buffer for non-cacheable constants (e.g.,
+  // undef/ptrtoint/inttoptr).
+  SpecificBumpPtrAllocator<MaterializedConstant> NoncacheableConstBuffer;
   DenseMap<Function *, Pointer> FuncAddrMap;
   DenseMap<BasicBlock *, Pointer> BlockAddrMap;
   DenseMap<uint64_t, std::pair<Function *, IntrusiveRefCntPtr<MemoryObject>>>
@@ -299,8 +313,8 @@ class Context {
   DenseMap<uint64_t, std::pair<BasicBlock *, IntrusiveRefCntPtr<MemoryObject>>>
       ValidBlockTargets;
   DenseMap<GlobalVariable *, Pointer> GlobalAddrMap;
-  std::optional<AnyValue> getConstantValueImpl(Constant *C);
-  std::optional<AnyValue> evaluateConstantExpression(ConstantExpr *CE);
+  MaterializedConstant getConstantValueImpl(Constant *C);
+  MaterializedConstant evaluateConstantExpression(ConstantExpr *CE);
 
   // Floating-point environment
   RoundingMode CurrentRoundingMode = RoundingMode::NearestTiesToEven;
@@ -362,7 +376,12 @@ public:
   uint64_t getEffectiveTypeAllocSize(Type *Ty);
   uint64_t getEffectiveTypeStoreSize(Type *Ty);
 
-  const AnyValue *getConstantValue(Constant *C);
+  /// Returns a pointer to an evaluated constant \p C. If it cannot be
+  /// evaluated, returns nullptr. Note that it returns a pointer to a temporary
+  /// buffer when \p C is not context-free. The caller is responsible for
+  /// calling resetNoncacheableConstantBuffer after all references are dropped.
+  const MaterializedConstant *getConstantValue(Constant *C);
+  void resetNoncacheableConstantBuffer();
   IntrusiveRefCntPtr<MemoryObject> allocate(uint64_t Size, uint64_t Align,
                                             StringRef Name, unsigned AS,
                                             MemInitKind InitKind,
