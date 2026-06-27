@@ -13,7 +13,6 @@
 #include <cfenv>
 #include <cmath>
 #include <limits>
-#include <math.h>
 #include <optional>
 #include <type_traits>
 
@@ -47,7 +46,7 @@ _Ret __invoke_boost_math(_Func __f, _Args... __args) {
     errno = EDOM;
 #  endif
 #  if math_errhandling & MATH_ERREXCEPT
-    feraiseexcept(FE_INVALID);
+    std::feraiseexcept(FE_INVALID);
 #  endif
     return std::numeric_limits<_Ret>::quiet_NaN();
   }
