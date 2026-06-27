@@ -9,7 +9,7 @@ define void @scev_ptradd_strided(ptr noalias %a, ptr noalias %dst, i64 %n) {
 ; CHECK-NEXT:  Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    IR   %scevgep = getelementptr nuw i8, ptr %a, i64 4
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = ptradd nuw ir<%a>, ir<4>
 ; CHECK-NEXT:  Successor(s): vector.ph
 ;
 entry:
@@ -35,9 +35,9 @@ define void @scev_ptradd_strided_var_offset(ptr noalias %a, ptr noalias %dst, i6
 ; CHECK-NEXT:  Live-in ir<%n> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; CHECK-NEXT:    IR   %0 = shl i64 %m, 4
-; CHECK-NEXT:    IR   %1 = add nuw nsw i64 %0, 4
-; CHECK-NEXT:    IR   %scevgep = getelementptr i8, ptr %a, i64 %1
+; CHECK-NEXT:    EMIT vp<[[VP2:%[0-9]+]]> = shl ir<%m>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = add nuw nsw vp<[[VP2]]>, ir<4>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = ptradd ir<%a>, vp<[[VP3]]>
 ; CHECK-NEXT:  Successor(s): vector.ph
 ;
 entry:
