@@ -55,8 +55,6 @@ static_library("Host") {
     "common/UDPSocket.cpp",
     "common/XML.cpp",
     "common/ZipFileResolver.cpp",
-    "posix/DomainSocketPosix.cpp",
-    "windows/DomainSocketWindows.cpp",
   ]
 
   if (lldb_enable_libedit) {
@@ -73,6 +71,7 @@ static_library("Host") {
     sources += [
       "windows/ConnectionConPTYWindows.cpp",
       "windows/ConnectionGenericFileWindows.cpp",
+      "windows/DomainSocketWindows.cpp",
       "windows/FileSystem.cpp",
       "windows/FileWindows.cpp",
       "windows/Host.cpp",
@@ -90,6 +89,7 @@ static_library("Host") {
     ]
   } else {
     sources += [
+      "posix/DomainSocketPosix.cpp",
       "posix/FilePosix.cpp",
       "posix/FileSystemPosix.cpp",
       "posix/HostInfoPosix.cpp",
