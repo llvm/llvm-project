@@ -21,7 +21,7 @@ class ExecutionContext;
 class DWARFASTParserFortran
     : public lldb_private::plugin::dwarf::DWARFASTParser {
 public:
-  DWARFASTParserFortran(lldb_private::TypeSystemFortran m_ast);
+  DWARFASTParserFortran(lldb_private::TypeSystemFortran &m_ast);
 
   ~DWARFASTParserFortran() override;
 

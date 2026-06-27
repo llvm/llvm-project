@@ -13,13 +13,29 @@
 namespace lldb_private {
 
 class TypeSystemFortran : public TypeSystem {
+  // LLVM RTTI support
+  static char ID;
 
+public:
   // llvm casting support
   bool isA(const void *ClassID) const override { return ClassID == &ID; }
   static bool classof(const TypeSystem *ts) { return ts->isA(&ID); }
 
   TypeSystemFortran();
   ~TypeSystemFortran();
+
+  static void Initialize();
+
+  static void Terminate();
+
+  plugin::dwarf::DWARFASTParser *GetDWARFParser() override;
+
+  static lldb::TypeSystemSP CreateInstance(lldb::LanguageType language,
+                                           Module *module, Target *target);
+
+  static LanguageSet GetSupportedLanguagesForTypes();
+
+  static LanguageSet GetSupportedLanguagesForExpressions();
 
   // CompilerDecl functions
   ConstString DeclGetName(void *opaque_decl) override { return ConstString(); }
@@ -55,7 +71,7 @@ class TypeSystemFortran : public TypeSystem {
 #ifndef NDEBUG
   /// Verify the integrity of the type to catch CompilerTypes that mix
   /// and match invalid TypeSystem/Opaque type pairs.
-  bool Verify(lldb::opaque_compiler_type_t type) { return false; };
+  bool Verify(lldb::opaque_compiler_type_t type) override { return false; };
 #endif
 
   bool IsArrayType(lldb::opaque_compiler_type_t type,
@@ -140,17 +156,7 @@ class TypeSystemFortran : public TypeSystem {
   bool CanPassInRegisters(const CompilerType &type) override { return false; }
 
   // TypeSystems can support more than one language
-  bool SupportsLanguage(lldb::LanguageType language) override {
-    if (language == lldb::LanguageType::eLanguageTypeFortran77 ||
-        language == lldb::LanguageType::eLanguageTypeFortran90 ||
-        language == lldb::LanguageType::eLanguageTypeFortran95 ||
-        language == lldb::LanguageType::eLanguageTypeFortran03 ||
-        language == lldb::LanguageType::eLanguageTypeFortran08 ||
-        language == lldb::LanguageType::eLanguageTypeFortran18) {
-      return true;
-    }
-    return false;
-  }
+  bool SupportsLanguage(lldb::LanguageType language) override;
 
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
@@ -201,7 +207,7 @@ class TypeSystemFortran : public TypeSystem {
 
   lldb::LanguageType
   GetMinimumLanguage(lldb::opaque_compiler_type_t type) override {
-    return lldb::LanguageType::eLanguageTypeUnknown;
+    return lldb::LanguageType::eLanguageTypeFortran90;
   }
 
   lldb::TypeClass GetTypeClass(lldb::opaque_compiler_type_t type) override {
@@ -473,8 +479,10 @@ class TypeSystemFortran : public TypeSystem {
   }
 
 private:
-  // LLVM RTTI support
-  static char ID;
+  std::unique_ptr<plugin::dwarf::DWARFASTParser> m_dwarf_ast_parser_up;
+
+  TypeSystemFortran(const TypeSystemFortran &) = delete;
+  const TypeSystemFortran &operator=(const TypeSystemFortran &) = delete;
 };
 } // namespace lldb_private
 #endif // LLDB_SOURCE_PLUGINS_TYPESYSTEM_FORTRAN_TYPESYSTEMFORTRAN_H
