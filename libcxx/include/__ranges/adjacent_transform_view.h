@@ -309,7 +309,8 @@ public:
     return __iterator(*__i.__parent_, __i.__inner_ - __n);
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type operator-(const __iterator& __x, const __iterator& __y)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type
+  operator-(const __iterator& __x, const __iterator& __y)
     requires sized_sentinel_for<__inner_iterator<_Const>, __inner_iterator<_Const>>
   {
     return __x.__inner_ - __y.__inner_;
