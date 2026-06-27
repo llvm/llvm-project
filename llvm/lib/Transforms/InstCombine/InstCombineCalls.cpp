@@ -398,7 +398,6 @@ Instruction *InstCombinerImpl::simplifyMaskedScatter(IntrinsicInst &II) {
   if (auto *SplatPtr = getSplatValue(II.getArgOperand(1))) {
     // scatter(splat(value), splat(ptr), non-zero-mask) -> store value, ptr
     if (auto *SplatValue = getSplatValue(II.getArgOperand(0))) {
-      // non-zero-mask if at least one lane of the mask can be assumed active
       if (maskContainsAllOneOrUndef(ConstMask)) {
         Align Alignment = II.getParamAlign(1).valueOrOne();
         StoreInst *S = new StoreInst(SplatValue, SplatPtr, /*IsVolatile=*/false,

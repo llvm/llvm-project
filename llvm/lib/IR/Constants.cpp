@@ -349,13 +349,15 @@ bool Constant::containsConstantExpression() const {
 
 bool Constant::containsMatchingVectorElement(
     function_ref<bool(Constant *)> PredFn) const {
-  if (auto *FVTy = dyn_cast<FixedVectorType>(getType())) {
-    unsigned NumElts = FVTy->getNumElements();
-    for (unsigned I = 0; I != NumElts; ++I) {
-      if (Constant *Elem = getAggregateElement(I))
-        if (PredFn(Elem))
-          return true;
-    }
+  auto *FVTy = dyn_cast<FixedVectorType>(getType());
+  if (!FVTy)
+    return false;
+
+  unsigned NumElts = FVTy->getNumElements();
+  for (unsigned I = 0; I != NumElts; ++I) {
+    Constant *Elem = getAggregateElement(I);
+    if (Elem && PredFn(Elem))
+      return true;
   }
 
   return false;
