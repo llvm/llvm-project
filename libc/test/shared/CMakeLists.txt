@@ -826,7 +826,11 @@ add_fp_unittest(
   SRCS
     shared_builtins_test.cpp
   DEPENDS
+    libc.src.__support.builtins.adddf3
     libc.src.__support.builtins.addtf3
+    libc.src.__support.builtins.divtf3
+    libc.src.__support.builtins.multf3
+    libc.src.__support.builtins.subtf3
 )
 
 add_fp_unittest(

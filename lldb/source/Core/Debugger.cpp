@@ -1103,22 +1103,6 @@ Debugger::Debugger(lldb::LogOutputCallback log_callback, void *baton)
   if (!GetOutputFileSP()->GetIsTerminalWithColors())
     disable_color();
 
-  if (Diagnostics::Enabled()) {
-    m_diagnostics_callback_id = Diagnostics::Instance().AddCallback(
-        [this](const FileSpec &dir) -> llvm::Error {
-          for (auto &entry : m_stream_handlers) {
-            llvm::StringRef log_path = entry.first();
-            llvm::StringRef file_name = llvm::sys::path::filename(log_path);
-            FileSpec destination = dir.CopyByAppendingPathComponent(file_name);
-            std::error_code ec =
-                llvm::sys::fs::copy_file(log_path, destination.GetPath());
-            if (ec)
-              return llvm::errorCodeToError(ec);
-          }
-          return llvm::Error::success();
-        });
-  }
-
 #if defined(_WIN32) && defined(ENABLE_VIRTUAL_TERMINAL_PROCESSING)
   // Enabling use of ANSI color codes because LLDB is using them to highlight
   // text.
@@ -1164,9 +1148,6 @@ void Debugger::Clear() {
     GetInputFile().Close();
 
     m_command_interpreter_up->Clear();
-
-    if (Diagnostics::Enabled())
-      Diagnostics::Instance().RemoveCallback(m_diagnostics_callback_id);
   });
 }
 
@@ -1690,6 +1671,16 @@ void Debugger::SetLoggingCallback(lldb::LogOutputCallback log_callback,
   // callback.
   m_callback_handler_sp =
       std::make_shared<CallbackLogHandler>(log_callback, baton);
+}
+
+void Debugger::CopyLogFilesToDirectory(const FileSpec &dir) {
+  for (auto &entry : m_stream_handlers) {
+    llvm::StringRef log_path = entry.first();
+    llvm::StringRef file_name = llvm::sys::path::filename(log_path);
+    FileSpec destination = dir.CopyByAppendingPathComponent(file_name);
+    // Best-effort: skip logs that can't be copied rather than aborting.
+    llvm::sys::fs::copy_file(log_path, destination.GetPath());
+  }
 }
 
 void Debugger::SetDestroyCallback(

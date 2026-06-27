@@ -5,8 +5,8 @@ target datalayout = "e-m:o-i64:64-p1:128:128-f80:128-n8:16:32:64-S128"
 
 ; for (i = 0; i < 1024; i++)
 ;   A[i % 16] = A[i % 16] + 1;
-define void @load_store_same_clamped_i32(ptr %a) {
-; CHECK-LABEL: 'load_store_same_clamped_i32'
+define void @load_store_same_bounded_i32(ptr %a) {
+; CHECK-LABEL: 'load_store_same_bounded_i32'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
@@ -46,8 +46,8 @@ exit:
 
 ; for (i = 0; i < 1024; i++)
 ;   A[i % 8] = B[i];
-define void @store_clamped_load_linear(ptr %a, ptr %b) {
-; CHECK-LABEL: 'store_clamped_load_linear'
+define void @store_bounded_load_linear(ptr %a, ptr %b) {
+; CHECK-LABEL: 'store_bounded_load_linear'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
@@ -94,8 +94,8 @@ exit:
 
 ; for (i = 0; i < 1024; i++)
 ;   A[i % 4] = i;
-define void @only_store_clamped(ptr %a) {
-; CHECK-LABEL: 'only_store_clamped'
+define void @only_store_bounded(ptr %a) {
+; CHECK-LABEL: 'only_store_bounded'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
@@ -126,8 +126,8 @@ exit:
 
 ; for (i = 0; i < 1024; i++)
 ;   A[i % 8] = A[i % 8] + 1;
-define void @clamped_power_of_2(ptr %a) {
-; CHECK-LABEL: 'clamped_power_of_2'
+define void @bounded_power_of_2(ptr %a) {
+; CHECK-LABEL: 'bounded_power_of_2'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
@@ -167,8 +167,8 @@ exit:
 
 ; for (i = 0; i < 1024; i++)
 ;   A[i % 7] = A[i % 7] + 1;
-define void @clamped_non_power_of_2(ptr %a) {
-; CHECK-LABEL: 'clamped_non_power_of_2'
+define void @bounded_non_power_of_2(ptr %a) {
+; CHECK-LABEL: 'bounded_non_power_of_2'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ; CHECK-NEXT:  Unsafe indirect dependence.
@@ -207,8 +207,8 @@ exit:
 ;   A[i % 8] = x;
 ;   A[i % 8] = y;
 ; }
-define void @two_stores_same_clamped(ptr %a, i32 %x, i32 %y) {
-; CHECK-LABEL: 'two_stores_same_clamped'
+define void @two_stores_same_bounded(ptr %a, i32 %x, i32 %y) {
+; CHECK-LABEL: 'two_stores_same_bounded'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
@@ -239,8 +239,8 @@ exit:
 
 ; for (i = 0; i < 1024; i++)
 ;   A[i % 8] = A[(i + 1) % 8];
-define void @clamped_offset_load(ptr %a) {
-; CHECK-LABEL: 'clamped_offset_load'
+define void @bounded_offset_load(ptr %a) {
+; CHECK-LABEL: 'bounded_offset_load'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
@@ -289,8 +289,8 @@ exit:
 
 ; for (i = 0; i < 1024; i++)
 ;   A[i % 2] += 1;
-define void @clamped_small_bound(ptr %a) {
-; CHECK-LABEL: 'clamped_small_bound'
+define void @bounded_small_bound(ptr %a) {
+; CHECK-LABEL: 'bounded_small_bound'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
@@ -330,8 +330,8 @@ exit:
 
 ; for (i = 0; i < 1024; i++)
 ;   sum += A[i % 8];
-define i32 @clamped_read_only(ptr noalias %a) {
-; CHECK-LABEL: 'clamped_read_only'
+define i32 @bounded_read_only(ptr noalias %a) {
+; CHECK-LABEL: 'bounded_read_only'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
@@ -363,8 +363,8 @@ exit:
 
 ; for (i = 0; i < 1024; i++)
 ;   A[i % 8] = A[i] + 1;
-define void @clamped_and_linear_same_array(ptr %a) {
-; CHECK-LABEL: 'clamped_and_linear_same_array'
+define void @bounded_and_linear_same_array(ptr %a) {
+; CHECK-LABEL: 'bounded_and_linear_same_array'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
@@ -409,8 +409,8 @@ exit:
 
 ; for (i = 0; i < 1024; i++)
 ;   A[i % 1] = i;
-define void @clamped_one(ptr %a) {
-; CHECK-LABEL: 'clamped_one'
+define void @bounded_one(ptr %a) {
+; CHECK-LABEL: 'bounded_one'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
@@ -441,8 +441,8 @@ exit:
 
 ; for (i = 0; i < 1024; i++)
 ;   A[i % 4] = A[i % 8] + 1;
-define void @different_clamped_bounds_same_array(ptr %a) {
-; CHECK-LABEL: 'different_clamped_bounds_same_array'
+define void @different_bounded_bounds_same_array(ptr %a) {
+; CHECK-LABEL: 'different_bounded_bounds_same_array'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
@@ -491,8 +491,8 @@ exit:
 
 ; for (i = 0; i < 1024; i++)
 ;   A[(2*i) % 8] = i;
-define void @clamped_non_unit_step(ptr %a) {
-; CHECK-LABEL: 'clamped_non_unit_step'
+define void @bounded_non_unit_step(ptr %a) {
+; CHECK-LABEL: 'bounded_non_unit_step'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
@@ -524,8 +524,8 @@ exit:
 
 ; for (i = 0; i < 1024; i++)
 ;   A[i % 8] = i;   // i8 type (1 byte)
-define void @clamped_i8_type(ptr %a) {
-; CHECK-LABEL: 'clamped_i8_type'
+define void @bounded_i8_type(ptr %a) {
+; CHECK-LABEL: 'bounded_i8_type'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
@@ -556,8 +556,8 @@ exit:
 
 ; for (i = 0; i < 1024; i++)
 ;   A[i % 4] += 1;   // i64 type (8 bytes)
-define void @clamped_i64_type(ptr %a) {
-; CHECK-LABEL: 'clamped_i64_type'
+define void @bounded_i64_type(ptr %a) {
+; CHECK-LABEL: 'bounded_i64_type'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
@@ -597,8 +597,8 @@ exit:
 
 ; for (i = 0; i < N; i++)
 ;   A[i % C] = B[i];
-define void @clamped_non_constant(ptr %a, ptr %b, i64 %c) {
-; CHECK-LABEL: 'clamped_non_constant'
+define void @bounded_non_constant(ptr %a, ptr %b, i64 %c) {
+; CHECK-LABEL: 'bounded_non_constant'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Report: cannot identify array bounds
 ; CHECK-NEXT:      Dependences:
@@ -630,8 +630,8 @@ exit:
 
 ; for (i = 0; i < 1024; i++)
 ;   A[i % 16] = B[i % 16] + 1;
-define void @clamped_different_arrays_same_bound(ptr %a, ptr %b) {
-; CHECK-LABEL: 'clamped_different_arrays_same_bound'
+define void @bounded_different_arrays_same_bound(ptr %a, ptr %b) {
+; CHECK-LABEL: 'bounded_different_arrays_same_bound'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
@@ -685,8 +685,8 @@ exit:
 ;   A[i % 4] = x;
 ;   A[i % 8] = y;
 ; }
-define void @two_stores_different_clamped(ptr %a, i32 %x, i32 %y) {
-; CHECK-LABEL: 'two_stores_different_clamped'
+define void @two_stores_different_bounded(ptr %a, i32 %x, i32 %y) {
+; CHECK-LABEL: 'two_stores_different_bounded'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
@@ -732,8 +732,8 @@ exit:
   ret void
 }
 
-define void @srem_not_matched_as_clamped(ptr %a) {
-; CHECK-LABEL: 'srem_not_matched_as_clamped'
+define void @srem_not_matched_as_bounded(ptr %a) {
+; CHECK-LABEL: 'srem_not_matched_as_bounded'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
@@ -762,8 +762,8 @@ exit:
   ret void
 }
 
-define void @clamped_multi_index_gep(ptr %a) {
-; CHECK-LABEL: 'clamped_multi_index_gep'
+define void @bounded_multi_index_gep(ptr %a) {
+; CHECK-LABEL: 'bounded_multi_index_gep'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
@@ -792,8 +792,8 @@ exit:
   ret void
 }
 
-define void @clamped_mod_256_narrow_cutoff(ptr %a) {
-; CHECK-LABEL: 'clamped_mod_256_narrow_cutoff'
+define void @bounded_mod_256_narrow_cutoff(ptr %a) {
+; CHECK-LABEL: 'bounded_mod_256_narrow_cutoff'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
@@ -831,8 +831,8 @@ exit:
   ret void
 }
 
-define void @clamped_with_const_offset(ptr %a) {
-; CHECK-LABEL: 'clamped_with_const_offset'
+define void @bounded_with_const_offset(ptr %a) {
+; CHECK-LABEL: 'bounded_with_const_offset'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
@@ -871,8 +871,8 @@ exit:
   ret void
 }
 
-define void @clamped_load_clamped_store_same(ptr %a) {
-; CHECK-LABEL: 'clamped_load_clamped_store_same'
+define void @bounded_load_bounded_store_same(ptr %a) {
+; CHECK-LABEL: 'bounded_load_bounded_store_same'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ; CHECK-NEXT:  Backward loop carried data dependence.
@@ -921,8 +921,8 @@ exit:
   ret void
 }
 
-define void @clamped_i24_store_size(ptr %a, ptr %b) {
-; CHECK-LABEL: 'clamped_i24_store_size'
+define void @bounded_i24_store_size(ptr %a, ptr %b) {
+; CHECK-LABEL: 'bounded_i24_store_size'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe with run-time checks
 ; CHECK-NEXT:      Dependences:
@@ -975,8 +975,8 @@ exit:
   ret void
 }
 
-define void @clamped_scalable_with_dep(ptr %a, ptr %b) {
-; CHECK-LABEL: 'clamped_scalable_with_dep'
+define void @bounded_scalable_with_dep(ptr %a, ptr %b) {
+; CHECK-LABEL: 'bounded_scalable_with_dep'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ; CHECK-NEXT:  Unsafe indirect dependence.
@@ -1036,8 +1036,8 @@ exit:
   ret void
 }
 
-define void @clamped_mul_huge_scale_as1(ptr addrspace(1) %a) {
-; CHECK-LABEL: 'clamped_mul_huge_scale_as1'
+define void @bounded_mul_huge_scale_as1(ptr addrspace(1) %a) {
+; CHECK-LABEL: 'bounded_mul_huge_scale_as1'
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
 ; CHECK-NEXT:  Unsafe indirect dependence.

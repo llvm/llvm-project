@@ -3,8 +3,8 @@
 
 target triple = "arm64-apple-macosx"
 
-define i32 @clamped_load_reduction_bound2(ptr %A, i32 %N) {
-; CHECK-LABEL: define i32 @clamped_load_reduction_bound2(
+define i32 @bounded_load_reduction_bound2(ptr %A, i32 %N) {
+; CHECK-LABEL: define i32 @bounded_load_reduction_bound2(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[N]], 4
@@ -67,15 +67,15 @@ define i32 @clamped_load_reduction_bound2(ptr %A, i32 %N) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT19:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[INDEX15:%.*]] = phi i32 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT19:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[VEC_PHI16:%.*]] = phi <4 x i32> [ [[TMP16]], %[[VEC_EPILOG_PH]] ], [ [[TMP20:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[CLAMPED:%.*]] = urem i32 [[IV]], 2
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[CLAMPED]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[GEP]], i64 -3
+; CHECK-NEXT:    [[TMP23:%.*]] = urem i32 [[INDEX15]], 2
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP23]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[TMP18]], i64 -3
 ; CHECK-NEXT:    [[WIDE_LOAD17:%.*]] = load <4 x i32>, ptr [[TMP19]], align 4
 ; CHECK-NEXT:    [[REVERSE18:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD17]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP20]] = add <4 x i32> [[VEC_PHI16]], [[REVERSE18]]
-; CHECK-NEXT:    [[INDEX_NEXT19]] = add nuw i32 [[IV]], 4
+; CHECK-NEXT:    [[INDEX_NEXT19]] = add nuw i32 [[INDEX15]], 4
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i32 [[INDEX_NEXT19]], [[N_VEC14]]
 ; CHECK-NEXT:    br i1 [[TMP21]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
@@ -89,9 +89,9 @@ define i32 @clamped_load_reduction_bound2(ptr %A, i32 %N) {
 ; CHECK:       [[LOOP1]]:
 ; CHECK-NEXT:    [[IV1:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ [[BC_MERGE_RDX21]], %[[SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], %[[LOOP1]] ]
-; CHECK-NEXT:    [[CLAMPED1:%.*]] = urem i32 [[IV1]], 2
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[CLAMPED1]]
-; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[GEP1]], align 4
+; CHECK-NEXT:    [[BOUNDED:%.*]] = urem i32 [[IV1]], 2
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[BOUNDED]]
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[LV]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV1]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
@@ -106,8 +106,8 @@ entry:
 loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %sum = phi i32 [ 0, %entry ], [ %sum.next, %loop ]
-  %clamped = urem i32 %iv, 2
-  %gep = getelementptr inbounds i32, ptr %A, i32 %clamped
+  %bounded = urem i32 %iv, 2
+  %gep = getelementptr inbounds i32, ptr %A, i32 %bounded
   %lv = load i32, ptr %gep
   %sum.next = add i32 %sum, %lv
   %iv.next = add nuw nsw i32 %iv, 1
@@ -119,8 +119,8 @@ exit:
   ret i32 %r
 }
 
-define i32 @clamped_load_reduction_bound4(ptr %A, i32 %N) {
-; CHECK-LABEL: define i32 @clamped_load_reduction_bound4(
+define i32 @bounded_load_reduction_bound4(ptr %A, i32 %N) {
+; CHECK-LABEL: define i32 @bounded_load_reduction_bound4(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp ult i32 [[N]], 4
@@ -176,13 +176,13 @@ define i32 @clamped_load_reduction_bound4(ptr %A, i32 %N) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[BC_MERGE_RDX]], i32 0
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT15:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[INDEX12:%.*]] = phi i32 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT15:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[VEC_PHI13:%.*]] = phi <4 x i32> [ [[TMP13]], %[[VEC_EPILOG_PH]] ], [ [[TMP16:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[CLAMPED:%.*]] = urem i32 [[IV]], 4
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[CLAMPED]]
-; CHECK-NEXT:    [[WIDE_LOAD14:%.*]] = load <4 x i32>, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[TMP19:%.*]] = urem i32 [[INDEX12]], 4
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP19]]
+; CHECK-NEXT:    [[WIDE_LOAD14:%.*]] = load <4 x i32>, ptr [[TMP15]], align 4
 ; CHECK-NEXT:    [[TMP16]] = add <4 x i32> [[VEC_PHI13]], [[WIDE_LOAD14]]
-; CHECK-NEXT:    [[INDEX_NEXT15]] = add nuw i32 [[IV]], 4
+; CHECK-NEXT:    [[INDEX_NEXT15]] = add nuw i32 [[INDEX12]], 4
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[INDEX_NEXT15]], [[N_VEC11]]
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
@@ -196,9 +196,9 @@ define i32 @clamped_load_reduction_bound4(ptr %A, i32 %N) {
 ; CHECK:       [[LOOP1]]:
 ; CHECK-NEXT:    [[IV1:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ [[BC_MERGE_RDX17]], %[[SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], %[[LOOP1]] ]
-; CHECK-NEXT:    [[CLAMPED1:%.*]] = urem i32 [[IV1]], 4
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[CLAMPED1]]
-; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[GEP1]], align 4
+; CHECK-NEXT:    [[BOUNDED:%.*]] = urem i32 [[IV1]], 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[BOUNDED]]
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[LV]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV1]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
@@ -213,8 +213,8 @@ entry:
 loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %sum = phi i32 [ 0, %entry ], [ %sum.next, %loop ]
-  %clamped = urem i32 %iv, 4
-  %gep = getelementptr inbounds i32, ptr %A, i32 %clamped
+  %bounded = urem i32 %iv, 4
+  %gep = getelementptr inbounds i32, ptr %A, i32 %bounded
   %lv = load i32, ptr %gep
   %sum.next = add i32 %sum, %lv
   %iv.next = add nuw nsw i32 %iv, 1
@@ -226,8 +226,8 @@ exit:
   ret i32 %r
 }
 
-define i16 @clamped_load_reduction_bound4_i16(ptr %A, i32 %N) {
-; CHECK-LABEL: define i16 @clamped_load_reduction_bound4_i16(
+define i16 @bounded_load_reduction_bound4_i16(ptr %A, i32 %N) {
+; CHECK-LABEL: define i16 @bounded_load_reduction_bound4_i16(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ITER_CHECK:.*]]:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 4
@@ -293,8 +293,8 @@ define i16 @clamped_load_reduction_bound4_i16(ptr %A, i32 %N) {
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i16 [ [[BC_MERGE_RDX11]], %[[VEC_EPILOG_SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[CLAMPED:%.*]] = urem i32 [[IV]], 4
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i16, ptr [[A]], i32 [[CLAMPED]]
+; CHECK-NEXT:    [[BOUNDED:%.*]] = urem i32 [[IV]], 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i16, ptr [[A]], i32 [[BOUNDED]]
 ; CHECK-NEXT:    [[LV:%.*]] = load i16, ptr [[GEP]], align 2
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i16 [[SUM]], [[LV]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
@@ -310,8 +310,8 @@ entry:
 loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %sum = phi i16 [ 0, %entry ], [ %sum.next, %loop ]
-  %clamped = urem i32 %iv, 4
-  %gep = getelementptr inbounds i16, ptr %A, i32 %clamped
+  %bounded = urem i32 %iv, 4
+  %gep = getelementptr inbounds i16, ptr %A, i32 %bounded
   %lv = load i16, ptr %gep
   %sum.next = add i16 %sum, %lv
   %iv.next = add nuw nsw i32 %iv, 1
@@ -323,8 +323,8 @@ exit:
   ret i16 %r
 }
 
-define i32 @clamped_user_ic_capped(ptr %A, i32 %N) {
-; CHECK-LABEL: define i32 @clamped_user_ic_capped(
+define i32 @bounded_user_ic_capped(ptr %A, i32 %N) {
+; CHECK-LABEL: define i32 @bounded_user_ic_capped(
 ; CHECK-SAME: ptr [[A:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 32
@@ -478,8 +478,8 @@ define i32 @scalable_vf_rejected(ptr %A, i64 %N) #0 {
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[CLAMPED:%.*]] = urem i64 [[IV]], 4
-; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[CLAMPED]]
+; CHECK-NEXT:    [[BOUNDED:%.*]] = urem i64 [[IV]], 4
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[BOUNDED]]
 ; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[GEP_A]], align 4
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[LV]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
@@ -495,8 +495,8 @@ entry:
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %sum = phi i32 [ 0, %entry ], [ %sum.next, %loop ]
-  %clamped = urem i64 %iv, 4
-  %gep.A = getelementptr inbounds i32, ptr %A, i64 %clamped
+  %bounded = urem i64 %iv, 4
+  %gep.A = getelementptr inbounds i32, ptr %A, i64 %bounded
   %lv = load i32, ptr %gep.A, align 4
   %sum.next = add i32 %sum, %lv
   %iv.next = add nuw nsw i64 %iv, 1
