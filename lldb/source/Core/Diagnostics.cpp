@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Utility/Diagnostics.h"
+#include "lldb/Core/Diagnostics.h"
 #include "lldb/Utility/LLDBAssert.h"
 
 #include "llvm/Support/Error.h"
@@ -43,19 +43,6 @@ Diagnostics::Diagnostics() : m_log_handler(g_num_log_messages) {}
 
 Diagnostics::~Diagnostics() {}
 
-Diagnostics::CallbackID Diagnostics::AddCallback(Callback callback) {
-  std::lock_guard<std::mutex> guard(m_callbacks_mutex);
-  CallbackID id = m_callback_id++;
-  m_callbacks.emplace_back(id, callback);
-  return id;
-}
-
-void Diagnostics::RemoveCallback(CallbackID id) {
-  std::lock_guard<std::mutex> guard(m_callbacks_mutex);
-  llvm::erase_if(m_callbacks,
-                 [id](const CallbackEntry &e) { return e.id == id; });
-}
-
 bool Diagnostics::Dump(raw_ostream &stream) {
   Expected<FileSpec> diagnostics_dir = CreateUniqueDirectory();
   if (!diagnostics_dir) {
@@ -91,11 +78,6 @@ llvm::Expected<FileSpec> Diagnostics::CreateUniqueDirectory() {
 Error Diagnostics::Create(const FileSpec &dir) {
   if (Error err = DumpDiangosticsLog(dir))
     return err;
-
-  for (CallbackEntry e : m_callbacks) {
-    if (Error err = e.callback(dir))
-      return err;
-  }
 
   return Error::success();
 }

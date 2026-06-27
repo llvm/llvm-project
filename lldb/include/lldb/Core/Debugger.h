@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "lldb/Core/DebuggerEvents.h"
+#include "lldb/Core/Diagnostics.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/IOHandler.h"
 #include "lldb/Core/SourceManager.h"
@@ -31,7 +32,6 @@
 #include "lldb/Target/TargetList.h"
 #include "lldb/Utility/Broadcaster.h"
 #include "lldb/Utility/ConstString.h"
-#include "lldb/Utility/Diagnostics.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
@@ -265,6 +265,10 @@ public:
                  llvm::raw_ostream &error_stream);
 
   void SetLoggingCallback(lldb::LogOutputCallback log_callback, void *baton);
+
+  /// Copy this debugger's file-backed log files into the given directory, for
+  /// inclusion in a diagnostics bundle. Best-effort; failures are skipped.
+  void CopyLogFilesToDirectory(const FileSpec &dir);
 
   Status SetPropertyValue(const ExecutionContext *exe_ctx,
                           VarSetOperationType op, llvm::StringRef property_path,
@@ -805,7 +809,6 @@ protected:
   lldb::ListenerSP m_forward_listener_sp;
   llvm::once_flag m_clear_once;
   lldb::TargetSP m_dummy_target_sp;
-  Diagnostics::CallbackID m_diagnostics_callback_id;
 
   /// Bookkeeping for command line progress events.
   /// @{
