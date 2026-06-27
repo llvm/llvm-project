@@ -690,7 +690,19 @@ bool X86TargetLowering::CanLowerReturn(
   // published, this can be revisited.
   //
   // Return false, which will perform sret demotion.
-  if (Subtarget.isCallingConvWin64(CallConv) &&
+  auto IsWin64F128StackCC = [this](CallingConv::ID CC) -> bool {
+    switch (CC) {
+    case CallingConv::Win64:
+      return true;
+    case CallingConv::C:
+    case CallingConv::X86_VectorCall:
+      return Subtarget.isTargetWin64() || Subtarget.isTargetUEFI64();
+    default:
+      return false;
+    }
+  };
+
+  if (IsWin64F128StackCC(CallConv) &&
       llvm::any_of(
           Outs, [](const ISD::OutputArg &Out) { return Out.VT == MVT::f128; }))
     return false;
