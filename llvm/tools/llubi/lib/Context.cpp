@@ -83,6 +83,7 @@ bool Context::initGlobalValues() {
       return false;
 
     store(*Obj, 0, *InitVal, GV.getValueType());
+    resetNoncacheableConstantBuffer();
   }
   return true;
 }
@@ -173,7 +174,7 @@ MaterializedConstant Context::evaluateConstantExpression(ConstantExpr *CE) {
   unsigned Opc = CE->getOpcode();
   switch (Opc) {
   case Instruction::Trunc: {
-    const MaterializedConstant *Src = getConstantValue(CE->getOperand(0));
+    const auto *Src = getConstantValue(CE->getOperand(0));
     if (!Src)
       return std::nullopt;
     if (Src->isPoison())
@@ -191,7 +192,7 @@ MaterializedConstant Context::evaluateConstantExpression(ConstantExpr *CE) {
   }
   case Instruction::BitCast: {
     Constant *SrcOp = CE->getOperand(0);
-    auto Src = getConstantValue(SrcOp);
+    const auto *Src = getConstantValue(SrcOp);
     if (!Src)
       return std::nullopt;
     SmallVector<Byte> Bytes;
@@ -201,13 +202,13 @@ MaterializedConstant Context::evaluateConstantExpression(ConstantExpr *CE) {
                                 Src->isCacheable());
   }
   case Instruction::InsertElement: {
-    auto Src = getConstantValue(CE->getOperand(0));
+    const auto *Src = getConstantValue(CE->getOperand(0));
     if (!Src)
       return std::nullopt;
-    auto Val = getConstantValue(CE->getOperand(1));
+    const auto *Val = getConstantValue(CE->getOperand(1));
     if (!Val)
       return std::nullopt;
-    auto Idx = getConstantValue(CE->getOperand(2));
+    const auto *Idx = getConstantValue(CE->getOperand(2));
     if (!Idx)
       return std::nullopt;
     auto &SrcVec = Src->asAggregate();
@@ -221,10 +222,10 @@ MaterializedConstant Context::evaluateConstantExpression(ConstantExpr *CE) {
     return MaterializedConstant(std::move(ResVec), Cacheable);
   }
   case Instruction::ExtractElement: {
-    auto Src = getConstantValue(CE->getOperand(0));
+    const auto *Src = getConstantValue(CE->getOperand(0));
     if (!Src)
       return std::nullopt;
-    auto Idx = getConstantValue(CE->getOperand(1));
+    const auto *Idx = getConstantValue(CE->getOperand(1));
     if (!Idx)
       return std::nullopt;
     auto &SrcVec = Src->asAggregate();
@@ -236,10 +237,10 @@ MaterializedConstant Context::evaluateConstantExpression(ConstantExpr *CE) {
                                 Cacheable);
   }
   case Instruction::ShuffleVector: {
-    auto LHS = getConstantValue(CE->getOperand(0));
+    const auto *LHS = getConstantValue(CE->getOperand(0));
     if (!LHS)
       return std::nullopt;
-    auto RHS = getConstantValue(CE->getOperand(1));
+    const auto *RHS = getConstantValue(CE->getOperand(1));
     if (!RHS)
       return std::nullopt;
     auto &LHSVec = LHS->asAggregate();
@@ -275,7 +276,7 @@ MaterializedConstant Context::evaluateConstantExpression(ConstantExpr *CE) {
     bool Cacheable = true;
     AnyValue Res =
         computeGEP(*cast<GEPOperator>(CE), [&](Value *V) -> const AnyValue & {
-          auto Val = getConstantValue(cast<Constant>(V));
+          const auto *Val = getConstantValue(cast<Constant>(V));
           if (Val) {
             Cacheable &= Val->isCacheable();
             return *Val;
@@ -288,7 +289,7 @@ MaterializedConstant Context::evaluateConstantExpression(ConstantExpr *CE) {
     return MaterializedConstant(std::move(Res), Cacheable);
   }
   case Instruction::PtrToAddr: {
-    auto Src = getConstantValue(CE->getOperand(0));
+    const auto *Src = getConstantValue(CE->getOperand(0));
     if (!Src)
       return std::nullopt;
     if (Src->isPoison())
@@ -310,10 +311,10 @@ MaterializedConstant Context::evaluateConstantExpression(ConstantExpr *CE) {
     return std::nullopt;
   default:
     assert(Instruction::isBinaryOp(Opc) && "Must be binary operator?");
-    auto *LHS = getConstantValue(CE->getOperand(0));
+    const auto *LHS = getConstantValue(CE->getOperand(0));
     if (!LHS)
       return std::nullopt;
-    auto *RHS = getConstantValue(CE->getOperand(1));
+    const auto *RHS = getConstantValue(CE->getOperand(1));
     if (!RHS)
       return std::nullopt;
 
@@ -369,7 +370,7 @@ const MaterializedConstant *Context::getConstantValue(Constant *C) {
   if (!Val.isCacheable()) {
     assert(NoncacheableConstBuffer.getBytesAllocated() <=
                1024 * sizeof(MaterializedConstant) &&
-           "");
+           "Unbounded temporary buffer.");
     return new (NoncacheableConstBuffer.Allocate())
         MaterializedConstant(std::move(Val));
   }
