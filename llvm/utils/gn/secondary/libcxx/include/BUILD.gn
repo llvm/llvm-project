@@ -77,7 +77,7 @@ if (current_toolchain == default_toolchain) {
 
   action("copy_headers") {
     script = "//llvm/utils/gn/build/sync_dir.py"
-    inputs = [
+    sources = [
       "__algorithm/adjacent_find.h",
       "__algorithm/all_of.h",
       "__algorithm/any_of.h",
@@ -1761,7 +1761,7 @@ if (current_toolchain == default_toolchain) {
       "wchar.h",
       "wctype.h",
     ]
-    response_file_contents = inputs
+    response_file_contents = sources
     outputs = [ "$target_gen_dir/copy_headers.stamp" ]
     args = [
       "--stamp",
