@@ -1,0 +1,4 @@
+set(LLVM_ENABLE_PROJECTS "clang" CACHE STRING "")
+set(LLVM_TARGETS_TO_BUILD "AMDGPU" CACHE STRING "")
+set(LLVM_RUNTIME_TARGETS "amdgcn-amd-amdhsa-llvm" CACHE STRING "")
+set(RUNTIMES_amdgcn-amd-amdhsa-llvm_LLVM_ENABLE_RUNTIMES "libclc" CACHE STRING "")
