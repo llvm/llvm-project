@@ -85,8 +85,6 @@ STATISTIC(NumLogicOpsOnComparison,
           "Number of logical ops on i1 values calculated in GPR.");
 STATISTIC(OmittedForNonExtendUses,
           "Number of compares not eliminated as they have non-extending uses.");
-STATISTIC(NumP9Setb,
-          "Number of compares lowered to setb.");
 
 // FIXME: Remove this once the bug has been fixed!
 cl::opt<bool> ANDIGlueBug("expose-ppc-andi-glue-bug",
@@ -4827,9 +4825,6 @@ static bool mayUseP9Setb(SDNode *N, const ISD::CondCode &CC, SelectionDAG *DAG,
     return false;
   }
 
-  LLVM_DEBUG(dbgs() << "Found a node that can be lowered to a SETB: ");
-  LLVM_DEBUG(N->dump());
-
   return true;
 }
 
@@ -5275,6 +5270,17 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
 
   switch (N->getOpcode()) {
   default: break;
+
+  case ISD::UCMP:
+  case ISD::SCMP: {
+    bool IsUnsigned = N->getOpcode() == ISD::UCMP;
+    ISD::CondCode CC = IsUnsigned ? ISD::SETUGT : ISD::SETGT;
+    SDValue CRVal = SelectCC(N->getOperand(0), N->getOperand(1), CC, dl);
+    unsigned SetBOpc =
+        N->getSimpleValueType(0) == MVT::i64 ? PPC::SETB8 : PPC::SETB;
+    CurDAG->SelectNodeTo(N, SetBOpc, N->getValueType(0), CRVal);
+    return;
+  }
 
   case ISD::Constant:
     if (N->getValueType(0) == MVT::i64) {
@@ -5886,7 +5892,6 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
         CurDAG->SelectNodeTo(
             N, N->getSimpleValueType(0) == MVT::i64 ? PPC::SETB8 : PPC::SETB,
             N->getValueType(0), GenCC);
-        NumP9Setb++;
         return;
       }
     }
