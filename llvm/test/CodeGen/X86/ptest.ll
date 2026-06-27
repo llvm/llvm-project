@@ -433,34 +433,15 @@ define i1 @vecmp_load64x4(ptr %p0) {
 }
 
 define i1 @vecmp_load128x2(ptr %p0) {
-; SSE2-LABEL: vecmp_load128x2:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqu (%rdi), %xmm0
-; SSE2-NEXT:    movdqu 16(%rdi), %xmm1
-; SSE2-NEXT:    por %xmm0, %xmm1
-; SSE2-NEXT:    pxor %xmm0, %xmm0
-; SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
-; SSE2-NEXT:    movmskps %xmm0, %eax
-; SSE2-NEXT:    xorl $15, %eax
-; SSE2-NEXT:    sete %al
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: vecmp_load128x2:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    movdqu (%rdi), %xmm0
-; SSE41-NEXT:    movdqu 16(%rdi), %xmm1
-; SSE41-NEXT:    por %xmm0, %xmm1
-; SSE41-NEXT:    ptest %xmm1, %xmm1
-; SSE41-NEXT:    sete %al
-; SSE41-NEXT:    retq
-;
-; AVX-LABEL: vecmp_load128x2:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vmovdqu (%rdi), %xmm0
-; AVX-NEXT:    vpor 16(%rdi), %xmm0, %xmm0
-; AVX-NEXT:    vptest %xmm0, %xmm0
-; AVX-NEXT:    sete %al
-; AVX-NEXT:    retq
+; CHECK-LABEL: vecmp_load128x2:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq (%rdi), %rax
+; CHECK-NEXT:    movq 8(%rdi), %rcx
+; CHECK-NEXT:    orq 24(%rdi), %rcx
+; CHECK-NEXT:    orq 16(%rdi), %rax
+; CHECK-NEXT:    orq %rcx, %rax
+; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    retq
   %p1 = getelementptr i8, ptr %p0, i64 16
   %i0 = load i128, ptr %p0, align 1
   %i1 = load i128, ptr %p1, align 1

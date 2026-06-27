@@ -75,8 +75,8 @@ define i64 @pnot_v4i16(i64 %a) {
 define i64 @pnot_v2i32(i64 %a) {
 ; CHECK-RV32-LABEL: pnot_v2i32:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    not a1, a1
 ; CHECK-RV32-NEXT:    not a0, a0
+; CHECK-RV32-NEXT:    not a1, a1
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: pnot_v2i32:

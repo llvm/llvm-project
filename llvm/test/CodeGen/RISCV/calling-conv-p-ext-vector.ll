@@ -130,20 +130,22 @@ define <8 x i16> @test_cc_v8i16(<8 x i16> %a, <8 x i16> %b) {
 define <4 x i32> @test_cc_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; RV32-LABEL: test_cc_v4i32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    lw a5, 4(a2)
-; RV32-NEXT:    lw a3, 12(a2)
-; RV32-NEXT:    lw a4, 0(a2)
-; RV32-NEXT:    lw a2, 8(a2)
-; RV32-NEXT:    lw a7, 4(a1)
-; RV32-NEXT:    lw t2, 12(a1)
-; RV32-NEXT:    lw a6, 0(a1)
-; RV32-NEXT:    lw t1, 8(a1)
-; RV32-NEXT:    padd.dw a4, a6, a4
-; RV32-NEXT:    padd.dw a2, t1, a2
-; RV32-NEXT:    sw a4, 0(a0)
-; RV32-NEXT:    sw a5, 4(a0)
-; RV32-NEXT:    sw a2, 8(a0)
-; RV32-NEXT:    sw a3, 12(a0)
+; RV32-NEXT:    lw a3, 0(a2)
+; RV32-NEXT:    lw a4, 4(a2)
+; RV32-NEXT:    lw a5, 8(a2)
+; RV32-NEXT:    lw a2, 12(a2)
+; RV32-NEXT:    lw a6, 12(a1)
+; RV32-NEXT:    lw a7, 8(a1)
+; RV32-NEXT:    lw t0, 4(a1)
+; RV32-NEXT:    lw a1, 0(a1)
+; RV32-NEXT:    add a2, a6, a2
+; RV32-NEXT:    add a5, a7, a5
+; RV32-NEXT:    add a4, t0, a4
+; RV32-NEXT:    add a1, a1, a3
+; RV32-NEXT:    sw a1, 0(a0)
+; RV32-NEXT:    sw a4, 4(a0)
+; RV32-NEXT:    sw a5, 8(a0)
+; RV32-NEXT:    sw a2, 12(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: test_cc_v4i32:

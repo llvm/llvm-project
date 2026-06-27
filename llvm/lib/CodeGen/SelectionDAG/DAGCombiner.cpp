@@ -25112,9 +25112,20 @@ static SDValue scalarizeExtractedBinOp(SDNode *ExtElt, SelectionDAG &DAG,
   SDValue Index = ExtElt->getOperand(1);
   auto *IndexC = dyn_cast<ConstantSDNode>(Index);
   unsigned Opc = Vec.getOpcode();
-  if (!IndexC || !Vec.hasOneUse() || (!TLI.isBinOp(Opc) && Opc != ISD::SETCC) ||
+  if (!IndexC || (!TLI.isBinOp(Opc) && Opc != ISD::SETCC) ||
       Vec->getNumValues() != 1)
     return SDValue();
+
+  // Don't allow multiuse extract until after type legalisation and ensure all
+  // users of the source vector are vextracts.
+  if (!Vec.hasOneUse() &&
+      !(LegalTypes || llvm::all_of(Vec->users(), [&Vec](SDNode *Use) {
+          return Use->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+                 Use->getOperand(0) == Vec &&
+                 isa<ConstantSDNode>(Use->getOperand(1));
+        }))) {
+    return SDValue();
+  }
 
   // Targets may want to avoid this to prevent an expensive register transfer.
   if (!TLI.shouldScalarizeBinop(Vec))
@@ -25127,7 +25138,7 @@ static SDValue scalarizeExtractedBinOp(SDNode *ExtElt, SelectionDAG &DAG,
 
   // Extracting an element of a vector constant is constant-folded, so this
   // transform is just replacing a vector op with a scalar op while moving the
-  // extract.
+  // extract. If the vector binop has multiple uses, BOTH extracts must be free.
   auto IsExtractFree = [](SDValue Op) {
     APInt SplatVal;
     return isAnyConstantBuildVector(Op, true) ||
@@ -25136,7 +25147,8 @@ static SDValue scalarizeExtractedBinOp(SDNode *ExtElt, SelectionDAG &DAG,
   };
   SDValue Op0 = Vec.getOperand(0);
   SDValue Op1 = Vec.getOperand(1);
-  if (!IsExtractFree(Op0) && !IsExtractFree(Op1))
+  if (Vec.hasOneUse() ? !(IsExtractFree(Op0) || IsExtractFree(Op1))
+                      : !(IsExtractFree(Op0) && IsExtractFree(Op1)))
     return SDValue();
 
   // extractelt (op X, C), IndexC --> op (extractelt X, IndexC), C'

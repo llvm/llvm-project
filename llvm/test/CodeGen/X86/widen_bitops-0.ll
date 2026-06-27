@@ -131,36 +131,25 @@ define i24 @or_i24_as_v8i3(i24 %a, i24 %b) nounwind {
 define <3 x i8> @and_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 ; X86-LABEL: and_v3i8_as_i24:
 ; X86:       # %bb.0:
-; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    pinsrb $1, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    pinsrb $2, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    pinsrb $1, {{[0-9]+}}(%esp), %xmm1
-; X86-NEXT:    pinsrb $2, {{[0-9]+}}(%esp), %xmm1
-; X86-NEXT:    pand %xmm0, %xmm1
-; X86-NEXT:    movd %xmm1, %eax
-; X86-NEXT:    pextrb $1, %xmm1, %edx
-; X86-NEXT:    pextrb $2, %xmm1, %ecx
-; X86-NEXT:    # kill: def $al killed $al killed $eax
-; X86-NEXT:    # kill: def $dl killed $dl killed $edx
-; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    andb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    andb {{[0-9]+}}(%esp), %dl
+; X86-NEXT:    andb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: and_v3i8_as_i24:
 ; X64:       # %bb.0:
-; X64-NEXT:    movd %ecx, %xmm0
-; X64-NEXT:    pinsrb $1, %r8d, %xmm0
-; X64-NEXT:    pinsrb $2, %r9d, %xmm0
-; X64-NEXT:    movd %edi, %xmm1
-; X64-NEXT:    pinsrb $1, %esi, %xmm1
-; X64-NEXT:    pinsrb $2, %edx, %xmm1
-; X64-NEXT:    pand %xmm0, %xmm1
-; X64-NEXT:    movd %xmm1, %eax
-; X64-NEXT:    pextrb $1, %xmm1, %edx
-; X64-NEXT:    pextrb $2, %xmm1, %ecx
+; X64-NEXT:    movl %edx, %r10d
+; X64-NEXT:    movl %esi, %edx
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    andl %ecx, %eax
+; X64-NEXT:    andl %r8d, %edx
+; X64-NEXT:    andl %r9d, %r10d
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    # kill: def $dl killed $dl killed $edx
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    movl %r10d, %ecx
 ; X64-NEXT:    retq
   %1 = bitcast <3 x i8> %a to i24
   %2 = bitcast <3 x i8> %b to i24
@@ -172,36 +161,25 @@ define <3 x i8> @and_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 define <3 x i8> @xor_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 ; X86-LABEL: xor_v3i8_as_i24:
 ; X86:       # %bb.0:
-; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    pinsrb $1, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    pinsrb $2, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    pinsrb $1, {{[0-9]+}}(%esp), %xmm1
-; X86-NEXT:    pinsrb $2, {{[0-9]+}}(%esp), %xmm1
-; X86-NEXT:    pxor %xmm0, %xmm1
-; X86-NEXT:    movd %xmm1, %eax
-; X86-NEXT:    pextrb $1, %xmm1, %edx
-; X86-NEXT:    pextrb $2, %xmm1, %ecx
-; X86-NEXT:    # kill: def $al killed $al killed $eax
-; X86-NEXT:    # kill: def $dl killed $dl killed $edx
-; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    xorb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    xorb {{[0-9]+}}(%esp), %dl
+; X86-NEXT:    xorb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: xor_v3i8_as_i24:
 ; X64:       # %bb.0:
-; X64-NEXT:    movd %ecx, %xmm0
-; X64-NEXT:    pinsrb $1, %r8d, %xmm0
-; X64-NEXT:    pinsrb $2, %r9d, %xmm0
-; X64-NEXT:    movd %edi, %xmm1
-; X64-NEXT:    pinsrb $1, %esi, %xmm1
-; X64-NEXT:    pinsrb $2, %edx, %xmm1
-; X64-NEXT:    pxor %xmm0, %xmm1
-; X64-NEXT:    movd %xmm1, %eax
-; X64-NEXT:    pextrb $1, %xmm1, %edx
-; X64-NEXT:    pextrb $2, %xmm1, %ecx
+; X64-NEXT:    movl %edx, %r10d
+; X64-NEXT:    movl %esi, %edx
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    xorl %ecx, %eax
+; X64-NEXT:    xorl %r8d, %edx
+; X64-NEXT:    xorl %r9d, %r10d
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    # kill: def $dl killed $dl killed $edx
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    movl %r10d, %ecx
 ; X64-NEXT:    retq
   %1 = bitcast <3 x i8> %a to i24
   %2 = bitcast <3 x i8> %b to i24
@@ -213,36 +191,25 @@ define <3 x i8> @xor_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 define <3 x i8> @or_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 ; X86-LABEL: or_v3i8_as_i24:
 ; X86:       # %bb.0:
-; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    pinsrb $1, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    pinsrb $2, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    pinsrb $1, {{[0-9]+}}(%esp), %xmm1
-; X86-NEXT:    pinsrb $2, {{[0-9]+}}(%esp), %xmm1
-; X86-NEXT:    por %xmm0, %xmm1
-; X86-NEXT:    movd %xmm1, %eax
-; X86-NEXT:    pextrb $1, %xmm1, %edx
-; X86-NEXT:    pextrb $2, %xmm1, %ecx
-; X86-NEXT:    # kill: def $al killed $al killed $eax
-; X86-NEXT:    # kill: def $dl killed $dl killed $edx
-; X86-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    orb {{[0-9]+}}(%esp), %dl
+; X86-NEXT:    orb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: or_v3i8_as_i24:
 ; X64:       # %bb.0:
-; X64-NEXT:    movd %ecx, %xmm0
-; X64-NEXT:    pinsrb $1, %r8d, %xmm0
-; X64-NEXT:    pinsrb $2, %r9d, %xmm0
-; X64-NEXT:    movd %edi, %xmm1
-; X64-NEXT:    pinsrb $1, %esi, %xmm1
-; X64-NEXT:    pinsrb $2, %edx, %xmm1
-; X64-NEXT:    por %xmm0, %xmm1
-; X64-NEXT:    movd %xmm1, %eax
-; X64-NEXT:    pextrb $1, %xmm1, %edx
-; X64-NEXT:    pextrb $2, %xmm1, %ecx
+; X64-NEXT:    movl %edx, %r10d
+; X64-NEXT:    movl %esi, %edx
+; X64-NEXT:    movl %edi, %eax
+; X64-NEXT:    orl %ecx, %eax
+; X64-NEXT:    orl %r8d, %edx
+; X64-NEXT:    orl %r9d, %r10d
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    # kill: def $dl killed $dl killed $edx
-; X64-NEXT:    # kill: def $cl killed $cl killed $ecx
+; X64-NEXT:    movl %r10d, %ecx
 ; X64-NEXT:    retq
   %1 = bitcast <3 x i8> %a to i24
   %2 = bitcast <3 x i8> %b to i24

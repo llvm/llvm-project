@@ -5705,27 +5705,37 @@ define void @vec512_v2i128(ptr %in.subvec.ptr, ptr %out.subvec.ptr, ptr %out.vec
 ;
 ; SSE2-LABEL: vec512_v2i128:
 ; SSE2:       # %bb.0:
+; SSE2-NEXT:    movq (%rdi), %rax
+; SSE2-NEXT:    movq 8(%rdi), %rcx
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm0
 ; SSE2-NEXT:    movdqa (%rdi), %xmm1
 ; SSE2-NEXT:    pxor %xmm0, %xmm1
 ; SSE2-NEXT:    pxor 16(%rdi), %xmm0
+; SSE2-NEXT:    notq %rcx
+; SSE2-NEXT:    notq %rax
 ; SSE2-NEXT:    movdqa %xmm0, 16(%rsi)
 ; SSE2-NEXT:    movdqa %xmm1, (%rsi)
 ; SSE2-NEXT:    movdqa %xmm0, 16(%rdx)
-; SSE2-NEXT:    movdqa %xmm1, (%rdx)
+; SSE2-NEXT:    movq %rax, (%rdx)
+; SSE2-NEXT:    movq %rcx, 8(%rdx)
 ; SSE2-NEXT:    movdqa %xmm0, 48(%rdx)
 ; SSE2-NEXT:    movdqa %xmm1, 32(%rdx)
 ; SSE2-NEXT:    retq
 ;
 ; AVX-LABEL: vec512_v2i128:
 ; AVX:       # %bb.0:
+; AVX-NEXT:    movq (%rdi), %rax
+; AVX-NEXT:    movq 8(%rdi), %rcx
 ; AVX-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vpxor (%rdi), %xmm0, %xmm1
 ; AVX-NEXT:    vpxor 16(%rdi), %xmm0, %xmm0
+; AVX-NEXT:    notq %rcx
+; AVX-NEXT:    notq %rax
 ; AVX-NEXT:    vmovdqa %xmm0, 16(%rsi)
 ; AVX-NEXT:    vmovdqa %xmm1, (%rsi)
 ; AVX-NEXT:    vmovdqa %xmm0, 16(%rdx)
-; AVX-NEXT:    vmovdqa %xmm1, (%rdx)
+; AVX-NEXT:    movq %rax, (%rdx)
+; AVX-NEXT:    movq %rcx, 8(%rdx)
 ; AVX-NEXT:    vmovdqa %xmm0, 48(%rdx)
 ; AVX-NEXT:    vmovdqa %xmm1, 32(%rdx)
 ; AVX-NEXT:    retq

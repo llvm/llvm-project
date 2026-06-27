@@ -85,7 +85,8 @@ define i64 @add_v4i16_via_bitcast(i64 %a, i64 %b) {
 define i64 @add_v2i32_via_bitcast(i64 %a, i64 %b) {
 ; CHECK-RV32-LABEL: add_v2i32_via_bitcast:
 ; CHECK-RV32:       # %bb.0:
-; CHECK-RV32-NEXT:    padd.dw a0, a0, a2
+; CHECK-RV32-NEXT:    add a0, a0, a2
+; CHECK-RV32-NEXT:    add a1, a1, a3
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: add_v2i32_via_bitcast:

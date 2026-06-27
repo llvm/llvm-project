@@ -8,22 +8,19 @@ define void @xor_zext_masks_v4i64(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32-NEXT:    xvld $xr0, $a1, 0
 ; LA32-NEXT:    xvld $xr1, $a2, 0
 ; LA32-NEXT:    xvfcmp.clt.d $xr0, $xr0, $xr1
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 0
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 0
 ; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 2
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 1
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 4
+; LA32-NEXT:    xvpickve2gr.w $a2, $xr0, 0
+; LA32-NEXT:    xvpickve2gr.w $a3, $xr0, 6
+; LA32-NEXT:    xvpickve2gr.w $a4, $xr0, 4
+; LA32-NEXT:    nor $a4, $a4, $zero
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a4, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a3, 2
+; LA32-NEXT:    nor $a2, $a2, $zero
+; LA32-NEXT:    vinsgr2vr.w $vr1, $a2, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 2
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 6
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 3
-; LA32-NEXT:    vldi $vr0, -1777
-; LA32-NEXT:    vxor.v $vr0, $vr1, $vr0
-; LA32-NEXT:    vextrins.w $vr1, $vr0, 2
-; LA32-NEXT:    vextrins.w $vr1, $vr0, 35
-; LA32-NEXT:    vextrins.w $vr0, $vr0, 33
-; LA32-NEXT:    xvpermi.q $xr0, $xr1, 2
-; LA32-NEXT:    xvrepli.d $xr1, 1
-; LA32-NEXT:    xvand.v $xr0, $xr0, $xr1
+; LA32-NEXT:    xvpermi.q $xr1, $xr0, 2
+; LA32-NEXT:    xvrepli.d $xr0, 1
+; LA32-NEXT:    xvand.v $xr0, $xr1, $xr0
 ; LA32-NEXT:    xvst $xr0, $a0, 0
 ; LA32-NEXT:    ret
 ;
@@ -181,17 +178,10 @@ define void @or_zext_masks_v4i64(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32-NEXT:    xvld $xr0, $a1, 0
 ; LA32-NEXT:    xvld $xr1, $a2, 0
 ; LA32-NEXT:    xvfcmp.clt.d $xr0, $xr0, $xr1
-; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 6
-; LA32-NEXT:    xvpickve2gr.w $a2, $xr0, 2
-; LA32-NEXT:    vrepli.b $vr0, -1
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a1, 3
-; LA32-NEXT:    vextrins.w $vr1, $vr0, 2
-; LA32-NEXT:    vextrins.w $vr0, $vr0, 33
-; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 2
-; LA32-NEXT:    xvpermi.q $xr0, $xr1, 2
-; LA32-NEXT:    xvrepli.d $xr1, 1
-; LA32-NEXT:    xvand.v $xr0, $xr0, $xr1
+; LA32-NEXT:    xvrepli.b $xr1, -1
+; LA32-NEXT:    xvextrins.w $xr1, $xr0, 34
+; LA32-NEXT:    xvrepli.d $xr0, 1
+; LA32-NEXT:    xvand.v $xr0, $xr1, $xr0
 ; LA32-NEXT:    xvst $xr0, $a0, 0
 ; LA32-NEXT:    ret
 ;

@@ -2428,63 +2428,76 @@ define <4 x i32> @zext_4i17_to_4i32(ptr %ptr) {
 define <8 x i64> @zext_8i6_to_8i64(i32 %x) nounwind uwtable readnone ssp {
 ; SSE2-LABEL: zext_8i6_to_8i64:
 ; SSE2:       # %bb.0: # %entry
+; SSE2-NEXT:    # kill: def $edi killed $edi def $rdi
+; SSE2-NEXT:    leal 1(%rdi), %eax
 ; SSE2-NEXT:    movd %edi, %xmm0
-; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[0,1,0,1]
-; SSE2-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3 # [0,1,2,3,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[0,0,0,0]
-; SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,5,5,5]
+; SSE2-NEXT:    pinsrw $4, %eax, %xmm0
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [63,63]
 ; SSE2-NEXT:    pand %xmm4, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,1,1,1]
-; SSE2-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,5,5,5]
+; SSE2-NEXT:    leal 3(%rdi), %eax
+; SSE2-NEXT:    leal 2(%rdi), %ecx
+; SSE2-NEXT:    movd %ecx, %xmm1
+; SSE2-NEXT:    pinsrw $4, %eax, %xmm1
 ; SSE2-NEXT:    pand %xmm4, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[2,2,2,2]
-; SSE2-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,5,5,5,5]
+; SSE2-NEXT:    leal 5(%rdi), %eax
+; SSE2-NEXT:    leal 4(%rdi), %ecx
+; SSE2-NEXT:    movd %ecx, %xmm2
+; SSE2-NEXT:    pinsrw $4, %eax, %xmm2
 ; SSE2-NEXT:    pand %xmm4, %xmm2
-; SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[3,3,3,3]
-; SSE2-NEXT:    pshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,5,5,5,5]
+; SSE2-NEXT:    leal 7(%rdi), %eax
+; SSE2-NEXT:    addl $6, %edi
+; SSE2-NEXT:    movd %edi, %xmm3
+; SSE2-NEXT:    pinsrw $4, %eax, %xmm3
 ; SSE2-NEXT:    pand %xmm4, %xmm3
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: zext_8i6_to_8i64:
 ; SSSE3:       # %bb.0: # %entry
+; SSSE3-NEXT:    # kill: def $edi killed $edi def $rdi
+; SSSE3-NEXT:    leal 1(%rdi), %eax
 ; SSSE3-NEXT:    movd %edi, %xmm0
-; SSSE3-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[0,1,0,1]
-; SSSE3-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3 # [0,1,2,3,4,5,6,7]
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[0,0,0,0]
-; SSSE3-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,5,5,5]
+; SSSE3-NEXT:    pinsrw $4, %eax, %xmm0
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm4 = [63,63]
 ; SSSE3-NEXT:    pand %xmm4, %xmm0
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,1,1,1]
-; SSSE3-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,5,5,5,5]
+; SSSE3-NEXT:    leal 3(%rdi), %eax
+; SSSE3-NEXT:    leal 2(%rdi), %ecx
+; SSSE3-NEXT:    movd %ecx, %xmm1
+; SSSE3-NEXT:    pinsrw $4, %eax, %xmm1
 ; SSSE3-NEXT:    pand %xmm4, %xmm1
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[2,2,2,2]
-; SSSE3-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,5,5,5,5]
+; SSSE3-NEXT:    leal 5(%rdi), %eax
+; SSSE3-NEXT:    leal 4(%rdi), %ecx
+; SSSE3-NEXT:    movd %ecx, %xmm2
+; SSSE3-NEXT:    pinsrw $4, %eax, %xmm2
 ; SSSE3-NEXT:    pand %xmm4, %xmm2
-; SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[3,3,3,3]
-; SSSE3-NEXT:    pshufhw {{.*#+}} xmm3 = xmm3[0,1,2,3,5,5,5,5]
+; SSSE3-NEXT:    leal 7(%rdi), %eax
+; SSSE3-NEXT:    addl $6, %edi
+; SSSE3-NEXT:    movd %edi, %xmm3
+; SSSE3-NEXT:    pinsrw $4, %eax, %xmm3
 ; SSSE3-NEXT:    pand %xmm4, %xmm3
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: zext_8i6_to_8i64:
 ; SSE41:       # %bb.0: # %entry
+; SSE41-NEXT:    # kill: def $edi killed $edi def $rdi
+; SSE41-NEXT:    leal 1(%rdi), %eax
 ; SSE41-NEXT:    movd %edi, %xmm0
-; SSE41-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[0,1,0,1]
-; SSE41-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3 # [0,1,2,3,4,5,6,7]
-; SSE41-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero
+; SSE41-NEXT:    pinsrw $4, %eax, %xmm0
 ; SSE41-NEXT:    pmovsxbq {{.*#+}} xmm4 = [63,63]
 ; SSE41-NEXT:    pand %xmm4, %xmm0
-; SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,1,1,1]
-; SSE41-NEXT:    pmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
+; SSE41-NEXT:    leal 3(%rdi), %eax
+; SSE41-NEXT:    leal 2(%rdi), %ecx
+; SSE41-NEXT:    movd %ecx, %xmm1
+; SSE41-NEXT:    pinsrw $4, %eax, %xmm1
 ; SSE41-NEXT:    pand %xmm4, %xmm1
-; SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[2,3,2,3]
-; SSE41-NEXT:    pmovzxwq {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero
+; SSE41-NEXT:    leal 5(%rdi), %eax
+; SSE41-NEXT:    leal 4(%rdi), %ecx
+; SSE41-NEXT:    movd %ecx, %xmm2
+; SSE41-NEXT:    pinsrw $4, %eax, %xmm2
 ; SSE41-NEXT:    pand %xmm4, %xmm2
-; SSE41-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[3,3,3,3]
-; SSE41-NEXT:    pmovzxwq {{.*#+}} xmm3 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero
+; SSE41-NEXT:    leal 7(%rdi), %eax
+; SSE41-NEXT:    addl $6, %edi
+; SSE41-NEXT:    movd %edi, %xmm3
+; SSE41-NEXT:    pinsrw $4, %eax, %xmm3
 ; SSE41-NEXT:    pand %xmm4, %xmm3
 ; SSE41-NEXT:    retq
 ;
