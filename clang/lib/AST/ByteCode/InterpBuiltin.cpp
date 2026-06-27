@@ -2058,6 +2058,74 @@ static bool isOneByteCharacterType(QualType T) {
   return T->isCharType() || T->isChar8Type();
 }
 
+// stdc_memreverse8(size_t N, unsigned char *P)
+static bool interp__builtin_stdc_memreverse8(InterpState &S, CodePtr OpPC,
+                                             const InterpFrame *Frame,
+                                             const CallExpr *Call) {
+  Pointer Ptr = S.Stk.pop<Pointer>();
+
+  uint64_t NElems;
+  if (!popToUInt64(S, Call->getArg(0), NElems))
+    return false;
+
+  if (Ptr.isZero()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_null)
+        << AK_Assign;
+    return false;
+  }
+
+  if (!isReadable(Ptr) && !Ptr.isOnePastEnd())
+    return false;
+
+  const Descriptor *Desc = Ptr.getFieldDesc();
+  bool IsArray = Desc->isArray();
+  QualType ElemTy = IsArray ? Desc->getElemQualType() : Desc->getType();
+
+  if (IsArray)
+    Ptr = Ptr.expand();
+
+  size_t BaseIdx = Ptr.getIndex();
+  size_t ArraySize = Ptr.getNumElems();
+  size_t RemainingElems = ArraySize - BaseIdx;
+  if (NElems > RemainingElems) {
+    if (IsArray)
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
+          << (uint64_t)(BaseIdx + NElems - 1) << /*array*/ 0
+          << (uint64_t)ArraySize;
+    else
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_array_index)
+          << (uint64_t)(BaseIdx + NElems - 1) << /*non-array*/ 1;
+    return false;
+  }
+
+  if (NElems <= 1)
+    return true;
+
+  Pointer FirstPtr = Ptr.atIndex(BaseIdx);
+  if (FirstPtr.isConst()) {
+    S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_modify_const_type)
+        << FirstPtr.getType();
+    return false;
+  }
+
+  PrimType ElemT = *S.getContext().classify(ElemTy);
+
+  for (uint64_t I = 0, Half = NElems / 2; I < Half; ++I) {
+    Pointer LoPtr = Ptr.atIndex(BaseIdx + I);
+    Pointer HiPtr = Ptr.atIndex(BaseIdx + NElems - 1 - I);
+
+    if (!CheckLoad(S, OpPC, LoPtr, AK_Read) ||
+        !CheckLoad(S, OpPC, HiPtr, AK_Read))
+      return false;
+
+    INT_TYPE_SWITCH_NO_BOOL(ElemT,
+                            { std::swap(LoPtr.deref<T>(), HiPtr.deref<T>()); });
+    LoPtr.initialize();
+    HiPtr.initialize();
+  }
+  return true;
+}
+
 static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame,
                                    const CallExpr *Call, unsigned ID) {
@@ -5084,6 +5152,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BIstdc_memreverse8u32:
   case Builtin::BIstdc_memreverse8u64:
     return interp__builtin_bswap(S, OpPC, Frame, Call);
+
+  case Builtin::BIstdc_memreverse8:
+  case Builtin::BI__builtin_stdc_memreverse8:
+    return interp__builtin_stdc_memreverse8(S, OpPC, Frame, Call);
 
   case Builtin::BI__atomic_always_lock_free:
   case Builtin::BI__atomic_is_lock_free:
