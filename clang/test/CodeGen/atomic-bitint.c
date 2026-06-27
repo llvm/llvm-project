@@ -178,6 +178,7 @@ S37 and37(_Atomic(S37) *p, S37 v) {
 // CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[V_ADDR:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    store i64 [[V_COERCE]], ptr [[V]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[V]], align 8
 // CHECK-NEXT:    [[V1:%.*]] = trunc i64 [[TMP0]] to i37
@@ -191,23 +192,23 @@ S37 and37(_Atomic(S37) *p, S37 v) {
 // CHECK-NEXT:    store i64 [[STOREDV2]], ptr [[DOTATOMICTMP]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[DOTATOMICTMP]], align 8
 // CHECK-NEXT:    [[LOADEDV3:%.*]] = trunc i64 [[TMP3]] to i37
-// CHECK-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i64, ptr [[TMP1]] monotonic, align 8
-// CHECK-NEXT:    [[LOADEDV4:%.*]] = trunc i64 [[ATOMIC_LOAD]] to i37
-// CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
-// CHECK:       [[ATOMICRMW_START]]:
-// CHECK-NEXT:    [[TMP4:%.*]] = phi i37 [ [[LOADEDV4]], %[[ENTRY]] ], [ [[LOADEDV7:%.*]], %[[ATOMICRMW_START]] ]
-// CHECK-NEXT:    [[NEW:%.*]] = add i37 [[TMP4]], [[LOADEDV3]]
-// CHECK-NEXT:    [[STOREDV5:%.*]] = sext i37 [[TMP4]] to i64
-// CHECK-NEXT:    [[STOREDV6:%.*]] = sext i37 [[NEW]] to i64
-// CHECK-NEXT:    [[TMP5:%.*]] = cmpxchg weak ptr [[TMP1]], i64 [[STOREDV5]], i64 [[STOREDV6]] seq_cst seq_cst, align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = extractvalue { i64, i1 } [[TMP5]], 0
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { i64, i1 } [[TMP5]], 1
-// CHECK-NEXT:    [[LOADEDV7]] = trunc i64 [[TMP6]] to i37
-// CHECK-NEXT:    br i1 [[TMP7]], label %[[ATOMICRMW_END:.*]], label %[[ATOMICRMW_START]]
-// CHECK:       [[ATOMICRMW_END]]:
-// CHECK-NEXT:    store i37 [[TMP4]], ptr [[RETVAL]], align 8
-// CHECK-NEXT:    [[TMP8:%.*]] = load i37, ptr [[RETVAL]], align 8
-// CHECK-NEXT:    [[COERCE_VAL_II:%.*]] = zext i37 [[TMP8]] to i64
+// CHECK-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i64, ptr [[TMP1]] seq_cst, align 8
+// CHECK-NEXT:    br label %[[ATOMIC_CONT:.*]]
+// CHECK:       [[ATOMIC_CONT]]:
+// CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ [[ATOMIC_LOAD]], %[[ENTRY]] ], [ [[TMP7:%.*]], %[[ATOMIC_CONT]] ]
+// CHECK-NEXT:    [[LOADEDV4:%.*]] = trunc i64 [[TMP4]] to i37
+// CHECK-NEXT:    [[NEW:%.*]] = add i37 [[LOADEDV4]], [[LOADEDV3]]
+// CHECK-NEXT:    [[STOREDV5:%.*]] = sext i37 [[NEW]] to i64
+// CHECK-NEXT:    store atomic i64 [[STOREDV5]], ptr [[ATOMIC_TEMP]] seq_cst, align 8
+// CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[ATOMIC_TEMP]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = cmpxchg ptr [[TMP1]], i64 [[TMP4]], i64 [[TMP5]] seq_cst seq_cst, align 8
+// CHECK-NEXT:    [[TMP7]] = extractvalue { i64, i1 } [[TMP6]], 0
+// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { i64, i1 } [[TMP6]], 1
+// CHECK-NEXT:    br i1 [[TMP8]], label %[[ATOMIC_EXIT:.*]], label %[[ATOMIC_CONT]]
+// CHECK:       [[ATOMIC_EXIT]]:
+// CHECK-NEXT:    store i37 [[LOADEDV4]], ptr [[RETVAL]], align 8
+// CHECK-NEXT:    [[TMP9:%.*]] = load i37, ptr [[RETVAL]], align 8
+// CHECK-NEXT:    [[COERCE_VAL_II:%.*]] = zext i37 [[TMP9]] to i64
 // CHECK-NEXT:    ret i64 [[COERCE_VAL_II]]
 //
 S37 add37(_Atomic(S37) *p, S37 v) {
@@ -223,6 +224,7 @@ S37 add37(_Atomic(S37) *p, S37 v) {
 // CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[V_ADDR:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i64, align 8
 // CHECK-NEXT:    store i64 [[V_COERCE]], ptr [[V]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[V]], align 8
 // CHECK-NEXT:    [[V1:%.*]] = trunc i64 [[TMP0]] to i37
@@ -236,24 +238,24 @@ S37 add37(_Atomic(S37) *p, S37 v) {
 // CHECK-NEXT:    store i64 [[STOREDV2]], ptr [[DOTATOMICTMP]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[DOTATOMICTMP]], align 8
 // CHECK-NEXT:    [[LOADEDV3:%.*]] = trunc i64 [[TMP3]] to i37
-// CHECK-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i64, ptr [[TMP1]] monotonic, align 8
-// CHECK-NEXT:    [[LOADEDV4:%.*]] = trunc i64 [[ATOMIC_LOAD]] to i37
-// CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
-// CHECK:       [[ATOMICRMW_START]]:
-// CHECK-NEXT:    [[TMP4:%.*]] = phi i37 [ [[LOADEDV4]], %[[ENTRY]] ], [ [[LOADEDV7:%.*]], %[[ATOMICRMW_START]] ]
-// CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i37 [[TMP4]], [[LOADEDV3]]
-// CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP5]], i37 [[TMP4]], i37 [[LOADEDV3]]
-// CHECK-NEXT:    [[STOREDV5:%.*]] = sext i37 [[TMP4]] to i64
-// CHECK-NEXT:    [[STOREDV6:%.*]] = sext i37 [[NEW]] to i64
-// CHECK-NEXT:    [[TMP6:%.*]] = cmpxchg weak ptr [[TMP1]], i64 [[STOREDV5]], i64 [[STOREDV6]] seq_cst seq_cst, align 8
-// CHECK-NEXT:    [[TMP7:%.*]] = extractvalue { i64, i1 } [[TMP6]], 0
-// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { i64, i1 } [[TMP6]], 1
-// CHECK-NEXT:    [[LOADEDV7]] = trunc i64 [[TMP7]] to i37
-// CHECK-NEXT:    br i1 [[TMP8]], label %[[ATOMICRMW_END:.*]], label %[[ATOMICRMW_START]]
-// CHECK:       [[ATOMICRMW_END]]:
-// CHECK-NEXT:    store i37 [[TMP4]], ptr [[RETVAL]], align 8
-// CHECK-NEXT:    [[TMP9:%.*]] = load i37, ptr [[RETVAL]], align 8
-// CHECK-NEXT:    [[COERCE_VAL_II:%.*]] = zext i37 [[TMP9]] to i64
+// CHECK-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i64, ptr [[TMP1]] seq_cst, align 8
+// CHECK-NEXT:    br label %[[ATOMIC_CONT:.*]]
+// CHECK:       [[ATOMIC_CONT]]:
+// CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ [[ATOMIC_LOAD]], %[[ENTRY]] ], [ [[TMP8:%.*]], %[[ATOMIC_CONT]] ]
+// CHECK-NEXT:    [[LOADEDV4:%.*]] = trunc i64 [[TMP4]] to i37
+// CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i37 [[LOADEDV4]], [[LOADEDV3]]
+// CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP5]], i37 [[LOADEDV4]], i37 [[LOADEDV3]]
+// CHECK-NEXT:    [[STOREDV5:%.*]] = sext i37 [[NEW]] to i64
+// CHECK-NEXT:    store atomic i64 [[STOREDV5]], ptr [[ATOMIC_TEMP]] seq_cst, align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[ATOMIC_TEMP]], align 8
+// CHECK-NEXT:    [[TMP7:%.*]] = cmpxchg ptr [[TMP1]], i64 [[TMP4]], i64 [[TMP6]] seq_cst seq_cst, align 8
+// CHECK-NEXT:    [[TMP8]] = extractvalue { i64, i1 } [[TMP7]], 0
+// CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { i64, i1 } [[TMP7]], 1
+// CHECK-NEXT:    br i1 [[TMP9]], label %[[ATOMIC_EXIT:.*]], label %[[ATOMIC_CONT]]
+// CHECK:       [[ATOMIC_EXIT]]:
+// CHECK-NEXT:    store i37 [[LOADEDV4]], ptr [[RETVAL]], align 8
+// CHECK-NEXT:    [[TMP10:%.*]] = load i37, ptr [[RETVAL]], align 8
+// CHECK-NEXT:    [[COERCE_VAL_II:%.*]] = zext i37 [[TMP10]] to i64
 // CHECK-NEXT:    ret i64 [[COERCE_VAL_II]]
 //
 U37 min37(_Atomic(S37) *p, S37 v) {
@@ -309,7 +311,7 @@ S128 add128(_Atomic(S128) *p, S128 v) {
 // so the loop calls __atomic_compare_exchange.
 // CHECK-LABEL: define dso_local void @add256(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret(i256) align 8 [[AGG_RESULT:%.*]], ptr noundef [[P:%.*]], ptr noundef byval(i256) align 8 [[TMP0:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*]]:
+// CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[V_ADDR:%.*]] = alloca i256, align 8
 // CHECK-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i256, align 8
@@ -323,21 +325,19 @@ S128 add128(_Atomic(S128) *p, S128 v) {
 // CHECK-NEXT:    [[TMP2:%.*]] = load i256, ptr [[V_ADDR]], align 8
 // CHECK-NEXT:    store i256 [[TMP2]], ptr [[DOTATOMICTMP]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load i256, ptr [[DOTATOMICTMP]], align 8
-// CHECK-NEXT:    call void @__atomic_load(i64 noundef 32, ptr noundef [[TMP1]], ptr noundef [[ATOMIC_TEMP]], i32 noundef 0)
+// CHECK-NEXT:    call void @__atomic_load(i64 noundef 32, ptr noundef [[TMP1]], ptr noundef [[ATOMIC_TEMP]], i32 noundef 5)
+// CHECK-NEXT:    br label %[[ATOMIC_CONT:.*]]
+// CHECK:       [[ATOMIC_CONT]]:
 // CHECK-NEXT:    [[TMP4:%.*]] = load i256, ptr [[ATOMIC_TEMP]], align 8
-// CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
-// CHECK:       [[ATOMICRMW_START]]:
-// CHECK-NEXT:    [[TMP5:%.*]] = phi i256 [ [[TMP4]], %[[ENTRY]] ], [ [[TMP6:%.*]], %[[ATOMICRMW_START]] ]
-// CHECK-NEXT:    [[NEW:%.*]] = add i256 [[TMP5]], [[TMP3]]
-// CHECK-NEXT:    store i256 [[TMP5]], ptr [[ATOMIC_TEMP1]], align 8
+// CHECK-NEXT:    [[NEW:%.*]] = add i256 [[TMP4]], [[TMP3]]
 // CHECK-NEXT:    store i256 [[NEW]], ptr [[ATOMIC_TEMP2]], align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 noundef 32, ptr noundef [[TMP1]], ptr noundef [[ATOMIC_TEMP1]], ptr noundef [[ATOMIC_TEMP2]], i32 noundef 5, i32 noundef 5)
-// CHECK-NEXT:    [[TMP6]] = load i256, ptr [[ATOMIC_TEMP1]], align 8
-// CHECK-NEXT:    br i1 [[CALL]], label %[[ATOMICRMW_END:.*]], label %[[ATOMICRMW_START]]
-// CHECK:       [[ATOMICRMW_END]]:
+// CHECK-NEXT:    call void @__atomic_store(i64 noundef 32, ptr noundef [[ATOMIC_TEMP1]], ptr noundef [[ATOMIC_TEMP2]], i32 noundef 5)
+// CHECK-NEXT:    [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 noundef 32, ptr noundef [[TMP1]], ptr noundef [[ATOMIC_TEMP]], ptr noundef [[ATOMIC_TEMP1]], i32 noundef 5, i32 noundef 5)
+// CHECK-NEXT:    br i1 [[CALL]], label %[[ATOMIC_EXIT:.*]], label %[[ATOMIC_CONT]]
+// CHECK:       [[ATOMIC_EXIT]]:
+// CHECK-NEXT:    store i256 [[TMP4]], ptr [[AGG_RESULT]], align 8
+// CHECK-NEXT:    [[TMP5:%.*]] = load i256, ptr [[AGG_RESULT]], align 8
 // CHECK-NEXT:    store i256 [[TMP5]], ptr [[AGG_RESULT]], align 8
-// CHECK-NEXT:    [[TMP7:%.*]] = load i256, ptr [[AGG_RESULT]], align 8
-// CHECK-NEXT:    store i256 [[TMP7]], ptr [[AGG_RESULT]], align 8
 // CHECK-NEXT:    ret void
 //
 S256 add256(_Atomic(S256) *p, S256 v) {
@@ -347,7 +347,7 @@ S256 add256(_Atomic(S256) *p, S256 v) {
 // Wide bitwise also needs the loop: the wide path has no inline atomicrmw.
 // CHECK-LABEL: define dso_local void @or256(
 // CHECK-SAME: ptr dead_on_unwind noalias writable sret(i256) align 8 [[AGG_RESULT:%.*]], ptr noundef [[P:%.*]], ptr noundef byval(i256) align 8 [[TMP0:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*]]:
+// CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[V_ADDR:%.*]] = alloca i256, align 8
 // CHECK-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i256, align 8
@@ -361,21 +361,19 @@ S256 add256(_Atomic(S256) *p, S256 v) {
 // CHECK-NEXT:    [[TMP2:%.*]] = load i256, ptr [[V_ADDR]], align 8
 // CHECK-NEXT:    store i256 [[TMP2]], ptr [[DOTATOMICTMP]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = load i256, ptr [[DOTATOMICTMP]], align 8
-// CHECK-NEXT:    call void @__atomic_load(i64 noundef 32, ptr noundef [[TMP1]], ptr noundef [[ATOMIC_TEMP]], i32 noundef 0)
+// CHECK-NEXT:    call void @__atomic_load(i64 noundef 32, ptr noundef [[TMP1]], ptr noundef [[ATOMIC_TEMP]], i32 noundef 5)
+// CHECK-NEXT:    br label %[[ATOMIC_CONT:.*]]
+// CHECK:       [[ATOMIC_CONT]]:
 // CHECK-NEXT:    [[TMP4:%.*]] = load i256, ptr [[ATOMIC_TEMP]], align 8
-// CHECK-NEXT:    br label %[[ATOMICRMW_START:.*]]
-// CHECK:       [[ATOMICRMW_START]]:
-// CHECK-NEXT:    [[TMP5:%.*]] = phi i256 [ [[TMP4]], %[[ENTRY]] ], [ [[TMP6:%.*]], %[[ATOMICRMW_START]] ]
-// CHECK-NEXT:    [[NEW:%.*]] = or i256 [[TMP5]], [[TMP3]]
-// CHECK-NEXT:    store i256 [[TMP5]], ptr [[ATOMIC_TEMP1]], align 8
+// CHECK-NEXT:    [[NEW:%.*]] = or i256 [[TMP4]], [[TMP3]]
 // CHECK-NEXT:    store i256 [[NEW]], ptr [[ATOMIC_TEMP2]], align 8
-// CHECK-NEXT:    [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 noundef 32, ptr noundef [[TMP1]], ptr noundef [[ATOMIC_TEMP1]], ptr noundef [[ATOMIC_TEMP2]], i32 noundef 5, i32 noundef 5)
-// CHECK-NEXT:    [[TMP6]] = load i256, ptr [[ATOMIC_TEMP1]], align 8
-// CHECK-NEXT:    br i1 [[CALL]], label %[[ATOMICRMW_END:.*]], label %[[ATOMICRMW_START]]
-// CHECK:       [[ATOMICRMW_END]]:
+// CHECK-NEXT:    call void @__atomic_store(i64 noundef 32, ptr noundef [[ATOMIC_TEMP1]], ptr noundef [[ATOMIC_TEMP2]], i32 noundef 5)
+// CHECK-NEXT:    [[CALL:%.*]] = call zeroext i1 @__atomic_compare_exchange(i64 noundef 32, ptr noundef [[TMP1]], ptr noundef [[ATOMIC_TEMP]], ptr noundef [[ATOMIC_TEMP1]], i32 noundef 5, i32 noundef 5)
+// CHECK-NEXT:    br i1 [[CALL]], label %[[ATOMIC_EXIT:.*]], label %[[ATOMIC_CONT]]
+// CHECK:       [[ATOMIC_EXIT]]:
+// CHECK-NEXT:    store i256 [[TMP4]], ptr [[AGG_RESULT]], align 8
+// CHECK-NEXT:    [[TMP5:%.*]] = load i256, ptr [[AGG_RESULT]], align 8
 // CHECK-NEXT:    store i256 [[TMP5]], ptr [[AGG_RESULT]], align 8
-// CHECK-NEXT:    [[TMP7:%.*]] = load i256, ptr [[AGG_RESULT]], align 8
-// CHECK-NEXT:    store i256 [[TMP7]], ptr [[AGG_RESULT]], align 8
 // CHECK-NEXT:    ret void
 //
 S256 or256(_Atomic(S256) *p, S256 v) {

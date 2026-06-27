@@ -702,9 +702,13 @@ static llvm::AtomicOrdering atomicOrderOrSeqCst(llvm::Value *Order) {
 /// Emit a `_BitInt(N)` atomic read-modify-write as a compare-exchange loop. A
 /// single `atomicrmw` on the padded memory integer would carry into / compare
 /// the padding bits, and no arbitrary-width `__atomic_fetch_*` libcall exists
-/// for wide widths. The loop computes the new value at width N and writes back
-/// a canonical (extended) representation via the existing cmpxchg helper, which
-/// also picks the inline-vs-libcall form by size.
+/// for wide widths.
+///
+/// The update computes at value width N (so the result wraps mod 2^N and is
+/// independent of padding). EmitAtomicUpdate carries the raw loaded
+/// representation as the cmpxchg expected, so an object with non-canonical
+/// padding (e.g. written through a union) still converges instead of spinning
+/// forever; the desired it writes back is canonical. See P0528.
 static RValue emitBitIntAtomicRMWLoop(CodeGenFunction &CGF, AtomicExpr *E,
                                       Address Ptr, Address Val1,
                                       QualType AtomicTy,
@@ -712,8 +716,6 @@ static RValue emitBitIntAtomicRMWLoop(CodeGenFunction &CGF, AtomicExpr *E,
                                       bool ReturnsNew, llvm::Value *Order) {
   QualType ValTy = E->getValueType();
   llvm::AtomicOrdering AO = atomicOrderOrSeqCst(Order);
-  llvm::AtomicOrdering Failure =
-      llvm::AtomicCmpXchgInst::getStrongestFailureOrdering(AO);
 
   LValue AtomicLVal = CGF.MakeAddrLValue(Ptr, AtomicTy);
   AtomicInfo Atomics(CGF, AtomicLVal);
@@ -721,31 +723,17 @@ static RValue emitBitIntAtomicRMWLoop(CodeGenFunction &CGF, AtomicExpr *E,
   llvm::Value *RHS =
       CGF.EmitLoadOfScalar(CGF.MakeAddrLValue(Val1, ValTy), E->getExprLoc());
 
-  RValue OldRV = Atomics.EmitAtomicLoad(
-      AggValueSlot::ignored(), E->getExprLoc(),
-      /*AsValue=*/true, llvm::AtomicOrdering::Monotonic, E->isVolatile());
-  llvm::Value *Init = OldRV.getScalarVal();
+  llvm::Value *Old = nullptr, *New = nullptr;
+  Atomics.EmitAtomicUpdate(
+      AO,
+      [&](RValue OldRV) {
+        Old = OldRV.getScalarVal();
+        New = llvm::buildAtomicRMWValue(BinOp, CGF.Builder, Old, RHS);
+        return RValue::get(New);
+      },
+      E->isVolatile());
 
-  llvm::BasicBlock *StartBB = CGF.Builder.GetInsertBlock();
-  llvm::BasicBlock *LoopBB = CGF.createBasicBlock("atomicrmw.start", CGF.CurFn);
-  llvm::BasicBlock *EndBB = CGF.createBasicBlock("atomicrmw.end", CGF.CurFn);
-  CGF.Builder.CreateBr(LoopBB);
-  CGF.Builder.SetInsertPoint(LoopBB);
-
-  llvm::PHINode *Old = CGF.Builder.CreatePHI(Init->getType(), 2);
-  Old->addIncoming(Init, StartBB);
-
-  // Compute at the value width via the canonical RMW lowering, so the result
-  // wraps mod 2^N and never touches the padding bits.
-  llvm::Value *New = llvm::buildAtomicRMWValue(BinOp, CGF.Builder, Old, RHS);
-
-  auto Res = Atomics.EmitAtomicCompareExchange(
-      RValue::get(Old), RValue::get(New), AO, Failure, /*IsWeak=*/true);
-  Old->addIncoming(Res.first.getScalarVal(), CGF.Builder.GetInsertBlock());
-  CGF.Builder.CreateCondBr(Res.second, EndBB, LoopBB);
-
-  CGF.Builder.SetInsertPoint(EndBB);
-  return RValue::get(ReturnsNew ? New : static_cast<llvm::Value *>(Old));
+  return RValue::get(ReturnsNew ? New : Old);
 }
 
 static void EmitAtomicOp(CodeGenFunction &CGF, AtomicExpr *E, Address Dest,
