@@ -1,16 +1,14 @@
 // RUN: mlir-opt %s -generate-runtime-verification \
-// RUN:     -lower-affine \
+// RUN:     -expand-strided-metadata \
 // RUN:     -test-cf-assert \
-// RUN:     -convert-scf-to-cf \
 // RUN:     -convert-to-llvm | \
 // RUN: mlir-runner -e main -entry-point-result=void \
 // RUN:     -shared-libs=%mlir_runner_utils 2>&1 | \
 // RUN: FileCheck %s
 
 // RUN: mlir-opt %s -generate-runtime-verification \
-// RUN:     -lower-affine \
+// RUN:     -expand-strided-metadata \
 // RUN:     -test-cf-assert \
-// RUN:     -convert-scf-to-cf \
 // RUN:     -convert-to-llvm="allow-pattern-rollback=0" \
 // RUN:     -reconcile-unrealized-casts | \
 // RUN: mlir-runner -e main -entry-point-result=void \
@@ -58,11 +56,6 @@ func.func @main() {
   func.call @expand_shape_dynamic(%alloca_10_dyn, %3, %5)
       : (memref<?xf32>, index, index) -> ()
 
-  // Product 2*5=10 equals input dim 10. No error.
-  // CHECK-NOT: ERROR: Runtime op verification failed
-  func.call @expand_shape_dynamic(%alloca_10_dyn, %2, %5)
-      : (memref<?xf32>, index, index) -> ()
-
   // Product 4*5=20 does not equal input dim 10.
   //      CHECK: ERROR: Runtime op verification failed
   // CHECK-NEXT: memref.expand_shape %{{.*}} {{\[}}[0, 1]{{\]}} output_shape [%{{.*}}, 5] : memref<?xf32> into memref<?x5xf32>
@@ -70,6 +63,11 @@ func.func @main() {
   // CHECK-NEXT: Location: loc({{.*}})
   func.call @expand_shape_mixed(%alloca_10_dyn, %4)
       : (memref<?xf32>, index) -> ()
+
+  // Product 2*5=10 equals input dim 10. No error.
+  // CHECK-NOT: ERROR: Runtime op verification failed
+  func.call @expand_shape_dynamic(%alloca_10_dyn, %2, %5)
+      : (memref<?xf32>, index, index) -> ()
 
   // Product 2*5=10 equals input dim 10. No error.
   // CHECK-NOT: ERROR: Runtime op verification failed
