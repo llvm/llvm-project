@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AppleObjCRuntime.h"
-#include "AppleObjCRuntimeV1.h"
 #include "AppleObjCRuntimeV2.h"
 #include "AppleObjCTrampolineHandler.h"
 #include "Plugins/Language/ObjC/NSString.h"
@@ -58,15 +57,9 @@ AppleObjCRuntime::AppleObjCRuntime(Process *process)
   ReadObjCLibraryIfNeeded(process->GetTarget().GetImages());
 }
 
-void AppleObjCRuntime::Initialize() {
-  AppleObjCRuntimeV2::Initialize();
-  AppleObjCRuntimeV1::Initialize();
-}
+void AppleObjCRuntime::Initialize() { AppleObjCRuntimeV2::Initialize(); }
 
-void AppleObjCRuntime::Terminate() {
-  AppleObjCRuntimeV2::Terminate();
-  AppleObjCRuntimeV1::Terminate();
-}
+void AppleObjCRuntime::Terminate() { AppleObjCRuntimeV2::Terminate(); }
 
 llvm::Error AppleObjCRuntime::GetObjectDescription(Stream &str,
                                                    ValueObject &valobj) {
@@ -405,7 +398,8 @@ AppleObjCRuntime::GetObjCVersion(Process *process, ModuleSP &objc_module_sp) {
       SectionSP v1_telltale_section_sp =
           sections->FindSectionByName(ConstString("__OBJC"));
       if (v1_telltale_section_sp) {
-        return ObjCRuntimeVersions::eAppleObjC_V1;
+        // The V1 runtime is no longer supported.
+        return ObjCRuntimeVersions::eObjC_VersionUnknown;
       }
       return ObjCRuntimeVersions::eAppleObjC_V2;
     }
