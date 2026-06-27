@@ -691,7 +691,8 @@ void rewriteIndirectReturnCall(cir::CallOp call,
                                     /*is_nontemporal=*/mlir::UnitAttr(),
                                     /*alignment=*/mlir::IntegerAttr(),
                                     /*sync_scope=*/cir::SyncScopeKindAttr(),
-                                    /*mem_order=*/cir::MemOrderAttr());
+                                    /*mem_order=*/cir::MemOrderAttr(),
+                                    /*invariant=*/mlir::UnitAttr());
     call.getResult().replaceAllUsesWith(load);
   }
   call->erase();
