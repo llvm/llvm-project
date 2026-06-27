@@ -9,8 +9,11 @@
 #include <__config>
 #include <__math/special_functions.h>
 #include <boost/math/special_functions.hpp>
+#include <cerrno>
+#include <cfenv>
 #include <cmath>
 #include <limits>
+#include <math.h>
 #include <optional>
 #include <type_traits>
 
@@ -18,7 +21,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 #if _LIBCPP_STD_VER >= 17
 
-namespace __math {
 namespace {
 template <class _Ret>
 std::optional<_Ret> __check_nan() {
@@ -34,22 +36,27 @@ std::optional<_Ret> __check_nan(_Arg __arg, _Args... __args) {
 }
 
 template <class _Func, class... _Args, class _Ret = std::invoke_result_t<_Func, _Args...>>
-__sf_result<_Ret> __invoke_boost_math(_Func __f, _Args... __args) {
+_Ret __invoke_boost_math(_Func __f, _Args... __args) {
   if (auto __maybe_nan = __check_nan<_Ret>(__args...); __maybe_nan.has_value())
-    return {false, *__maybe_nan};
+    return *__maybe_nan;
 
   try {
-    return {false, __f(__args...)};
+    return __f(__args...);
   } catch (...) {
-    return {true, std::numeric_limits<_Ret>::quiet_NaN()};
+#  if math_errhandling & MATH_ERRNO
+    errno = EDOM;
+#  endif
+#  if math_errhandling & MATH_ERREXCEPT
+    feraiseexcept(FE_INVALID);
+#  endif
+    return std::numeric_limits<_Ret>::quiet_NaN();
   }
 }
 } // namespace
 
-__sf_result<float> __assoc_laguerre(unsigned int __n, unsigned int __m, float __x) noexcept {
+float assoc_laguerref(unsigned int __n, unsigned int __m, float __x) noexcept {
   return __invoke_boost_math([](auto... __args) { return boost::math::laguerre(__args...); }, __n, __m, __x);
 }
-} // namespace __math
 
 #endif
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
