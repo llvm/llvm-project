@@ -43,6 +43,14 @@ void test3(void) {
   int x;
   asm(L"foo" : "=r"(x)); // expected-error {{wide string}}
   asm("foo" : L"=r"(x)); // expected-error {{wide string}}
+
+  // GH177056
+  asm(u8"nop"); // expected-error {{cannot use unicode string literal in 'asm'}}
+  asm(u"nop");  // expected-error {{cannot use unicode string literal in 'asm'}}
+  asm(U"nop");  // expected-error {{cannot use unicode string literal in 'asm'}}
+  asm(L"nop");  // expected-error {{cannot use wide string literal in 'asm'}}
+  asm(R"(nop)");
+  
 }
 
 void test4(const volatile void *addr)

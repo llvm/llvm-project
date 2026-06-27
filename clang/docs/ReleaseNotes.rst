@@ -693,6 +693,7 @@ Improvements to Coverage Mapping
 
 Bug Fixes in This Version
 -------------------------
+- Fixed a crash when using non-ordinary string literals (``u8""``, ``L""``, ``u""``, ``U""``) in inline assembly. Clang now properly diagnoses these as errors. (#GH177056)
 
 - Fixed an assertion when comparing a fixed point type with a ``_BitInt`` type. (#GH196948)
 - Fixed atomic boolean compound assignment; the conversion back to atomic bool would be miscompiled. (#GH33210)
