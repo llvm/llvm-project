@@ -278,6 +278,11 @@ public:
   // Emit expansion of Compare-and-branch pseudo instructions
   void emitCBPseudoExpansion(const MachineInstr *MI);
 
+  // Emit expansion of atomic store with hint pseudo instructions
+  void emitAtomicHintPseudoExpansion(const MachineInstr *MI);
+  void emitAtomicHintPseudoExpansionRO(const MachineInstr *MI);
+  void emitAtomicHintPseudoExpansionImm(const MachineInstr *MI);
+
   void EmitToStreamer(MCStreamer &S, const MCInst &Inst);
   void EmitToStreamer(const MCInst &Inst) {
     EmitToStreamer(*OutStreamer, Inst);
@@ -3126,6 +3131,139 @@ void AArch64AsmPrinter::emitCBPseudoExpansion(const MachineInstr *MI) {
   EmitToStreamer(*OutStreamer, Inst);
 }
 
+void AArch64AsmPrinter::emitAtomicHintPseudoExpansion(const MachineInstr *MI) {
+
+  unsigned StOpc;
+  unsigned Order = MI->getOperand(2).getImm();
+  bool Relaxed = Order == 2;
+  switch (MI->getOpcode()) {
+  case AArch64::ATOMIC_STORE_HINT_B:
+    StOpc = Relaxed ? AArch64::STRBBui : AArch64::STLRB;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_H:
+    StOpc = Relaxed ? AArch64::STRHHui : AArch64::STLRH;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_S:
+    StOpc = Relaxed ? AArch64::STRWui : AArch64::STLRW;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_D:
+    StOpc = Relaxed ? AArch64::STRXui : AArch64::STLRX;
+    break;
+  default:
+    llvm_unreachable("Unexpected atomic hint size.");
+  }
+
+  EmitToStreamer(
+      MCInstBuilder(AArch64::STSHH).addImm(MI->getOperand(3).getImm()));
+
+  MCInst Store;
+  Store.setOpcode(StOpc);
+  Store.addOperand(MCOperand::createReg(MI->getOperand(1).getReg()));
+  Store.addOperand(MCOperand::createReg(MI->getOperand(0).getReg()));
+  Store.setFlags(MI->getFlags());
+  if (Relaxed)
+    Store.addOperand(MCOperand::createImm(0));
+  EmitToStreamer(*OutStreamer, Store);
+}
+
+void AArch64AsmPrinter::emitAtomicHintPseudoExpansionRO(
+    const MachineInstr *MI) {
+  unsigned StOpc;
+  unsigned Order = MI->getOperand(5).getImm();
+  assert(Order == 2 &&
+         "Atomic store addressing mode only supports relaxed stores");
+
+  switch (MI->getOpcode()) {
+  case AArch64::ATOMIC_STORE_HINT_BroW:
+    StOpc = AArch64::STRBBroW;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_HroW:
+    StOpc = AArch64::STRHHroW;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_SroW:
+    StOpc = AArch64::STRWroW;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_DroW:
+    StOpc = AArch64::STRXroW;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_BroX:
+    StOpc = AArch64::STRBBroX;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_HroX:
+    StOpc = AArch64::STRHHroX;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_SroX:
+    StOpc = AArch64::STRWroX;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_DroX:
+    StOpc = AArch64::STRXroX;
+    break;
+  default:
+    llvm_unreachable("Unexpected atomic hint opcode.");
+  }
+
+  EmitToStreamer(
+      MCInstBuilder(AArch64::STSHH).addImm(MI->getOperand(6).getImm()));
+
+  MCInst Store;
+  Store.setOpcode(StOpc);
+  Store.addOperand(MCOperand::createReg(MI->getOperand(2).getReg())); // Data
+  Store.addOperand(MCOperand::createReg(MI->getOperand(0).getReg())); // Rn
+  Store.addOperand(MCOperand::createReg(MI->getOperand(1).getReg())); // Rm
+  Store.addOperand(MCOperand::createImm(MI->getOperand(3).getImm())); // Signed
+  Store.addOperand(MCOperand::createImm(MI->getOperand(4).getImm())); // Shift
+  Store.setFlags(MI->getFlags());
+  EmitToStreamer(*OutStreamer, Store);
+}
+
+void AArch64AsmPrinter::emitAtomicHintPseudoExpansionImm(
+    const MachineInstr *MI) {
+  unsigned StOpc;
+  unsigned Order = MI->getOperand(3).getImm();
+  assert(Order == 2 &&
+         "Atomic store addressing mode only supports relaxed stores");
+
+  switch (MI->getOpcode()) {
+  case AArch64::ATOMIC_STORE_HINT_Bui:
+    StOpc = AArch64::STRBBui;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_Hui:
+    StOpc = AArch64::STRHHui;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_Sui:
+    StOpc = AArch64::STRWui;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_Dui:
+    StOpc = AArch64::STRXui;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_Bi:
+    StOpc = AArch64::STURBBi;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_Hi:
+    StOpc = AArch64::STURHHi;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_Si:
+    StOpc = AArch64::STURWi;
+    break;
+  case AArch64::ATOMIC_STORE_HINT_Di:
+    StOpc = AArch64::STURXi;
+    break;
+  default:
+    llvm_unreachable("Unexpected atomic hint opcode.");
+  }
+
+  EmitToStreamer(
+      MCInstBuilder(AArch64::STSHH).addImm(MI->getOperand(4).getImm()));
+
+  MCInst Store;
+  Store.setOpcode(StOpc);
+  Store.addOperand(MCOperand::createReg(MI->getOperand(1).getReg())); // Data
+  Store.addOperand(MCOperand::createReg(MI->getOperand(0).getReg())); // Rn
+  Store.addOperand(MCOperand::createImm(MI->getOperand(2).getImm())); // Imm
+  Store.setFlags(MI->getFlags());
+  EmitToStreamer(*OutStreamer, Store);
+}
+
 // Simple pseudo-instructions have their lowering (with expansion to real
 // instructions) auto-generated.
 #include "AArch64GenMCPseudoLowering.inc"
@@ -3812,6 +3950,32 @@ void AArch64AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case AArch64::CBWPrr:
   case AArch64::CBXPrr:
     emitCBPseudoExpansion(MI);
+    return;
+  case AArch64::ATOMIC_STORE_HINT_B:
+  case AArch64::ATOMIC_STORE_HINT_H:
+  case AArch64::ATOMIC_STORE_HINT_S:
+  case AArch64::ATOMIC_STORE_HINT_D:
+    emitAtomicHintPseudoExpansion(MI);
+    return;
+  case AArch64::ATOMIC_STORE_HINT_BroW:
+  case AArch64::ATOMIC_STORE_HINT_HroW:
+  case AArch64::ATOMIC_STORE_HINT_SroW:
+  case AArch64::ATOMIC_STORE_HINT_DroW:
+  case AArch64::ATOMIC_STORE_HINT_BroX:
+  case AArch64::ATOMIC_STORE_HINT_HroX:
+  case AArch64::ATOMIC_STORE_HINT_SroX:
+  case AArch64::ATOMIC_STORE_HINT_DroX:
+    emitAtomicHintPseudoExpansionRO(MI);
+    return;
+  case AArch64::ATOMIC_STORE_HINT_Bui:
+  case AArch64::ATOMIC_STORE_HINT_Hui:
+  case AArch64::ATOMIC_STORE_HINT_Sui:
+  case AArch64::ATOMIC_STORE_HINT_Dui:
+  case AArch64::ATOMIC_STORE_HINT_Bi:
+  case AArch64::ATOMIC_STORE_HINT_Hi:
+  case AArch64::ATOMIC_STORE_HINT_Si:
+  case AArch64::ATOMIC_STORE_HINT_Di:
+    emitAtomicHintPseudoExpansionImm(MI);
     return;
   }
 

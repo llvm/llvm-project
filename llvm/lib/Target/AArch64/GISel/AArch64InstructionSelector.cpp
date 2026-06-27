@@ -45,6 +45,7 @@
 #include "llvm/IR/IntrinsicsAArch64.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/AArch64AtomicHints.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
@@ -520,6 +521,11 @@ private:
   MachineInstr *tryFoldIntegerCompare(MachineOperand &LHS, MachineOperand &RHS,
                                       MachineOperand &Predicate,
                                       MachineIRBuilder &MIRBuilder) const;
+
+  bool isAtomicHintInst(const MachineInstr &MI,
+                        AArch64AtomicStoreHint Hint) const;
+  bool isAtomicSTSHH_KEEP(const MachineInstr &MI) const;
+  bool isAtomicSTSHH_STRM(const MachineInstr &MI) const;
 
   /// Return true if \p MI is a load or store of \p NumBytes bytes.
   bool isLoadStoreOfNumBytes(const MachineInstr &MI, unsigned NumBytes) const;
@@ -2552,6 +2558,107 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
       BuildMI(MBB, I, MIMetadata(I), TII.get(AArch64::DMB))
           .addImm(I.getOperand(0).getImm() == 4 ? 0x9 : 0xb);
     I.eraseFromParent();
+    return true;
+  }
+  case TargetOpcode::G_STORE: {
+    GStore &St = cast<GStore>(I);
+    auto MMO = St.getMMO();
+    LLT PtrTy = MRI.getType(St.getPointerReg());
+    AArch64AtomicStoreHint Hint = TII.decodeAtomicHintFlags(MMO.getFlags());
+
+    // Only for handling atomic store with hint.
+    // Can only handle AddressSpace 0, 64-bit pointers.
+    if (!St.isAtomic() || PtrTy != LLT::pointer(0, 64) ||
+        Hint == AArch64AtomicStoreHint::HINT_NONE) {
+      return false;
+    }
+
+    // AtomicExpandPass converts FP stores to integer stores of the equivalent
+    // bitwidth. Widen the register here if the original type was f16.
+    unsigned StoreSize = St.getMemSize().getValue();
+    Register ValueReg = St.getValueReg();
+    if (StoreSize == 2) {
+      Register CastReg;
+      if (mi_match(ValueReg, MRI, m_GBitcast(m_Reg(CastReg)))) {
+        auto Undef = MIB.buildInstr(TargetOpcode::IMPLICIT_DEF,
+                                    {&AArch64::FPR32RegClass}, {});
+        auto Ins = MIB.buildInstr(TargetOpcode::INSERT_SUBREG,
+                                  {&AArch64::FPR32RegClass}, {Undef, ValueReg})
+                       .addImm(AArch64::hsub);
+        constrainSelectedInstRegOperands(*Undef, TII, TRI, RBI);
+        constrainSelectedInstRegOperands(*Ins, TII, TRI, RBI);
+        ValueReg = Ins.getReg(0);
+      }
+    }
+
+    static constexpr unsigned BaseOpcodes[] = {
+        AArch64::ATOMIC_STORE_HINT_B, AArch64::ATOMIC_STORE_HINT_H,
+        AArch64::ATOMIC_STORE_HINT_S, AArch64::ATOMIC_STORE_HINT_D};
+    static constexpr unsigned RegWOpcodes[] = {
+        AArch64::ATOMIC_STORE_HINT_BroW, AArch64::ATOMIC_STORE_HINT_HroW,
+        AArch64::ATOMIC_STORE_HINT_SroW, AArch64::ATOMIC_STORE_HINT_DroW};
+    static constexpr unsigned RegXOpcodes[] = {
+        AArch64::ATOMIC_STORE_HINT_BroX, AArch64::ATOMIC_STORE_HINT_HroX,
+        AArch64::ATOMIC_STORE_HINT_SroX, AArch64::ATOMIC_STORE_HINT_DroX};
+    static constexpr unsigned UImmOpcodes[] = {
+        AArch64::ATOMIC_STORE_HINT_Bui, AArch64::ATOMIC_STORE_HINT_Hui,
+        AArch64::ATOMIC_STORE_HINT_Sui, AArch64::ATOMIC_STORE_HINT_Dui};
+    static constexpr unsigned ImmOpcodes[] = {
+        AArch64::ATOMIC_STORE_HINT_Bi, AArch64::ATOMIC_STORE_HINT_Hi,
+        AArch64::ATOMIC_STORE_HINT_Si, AArch64::ATOMIC_STORE_HINT_Di};
+
+    AtomicOrdering Ordering = MMO.getSuccessOrdering();
+    MachineInstrBuilder StrPseudo;
+    unsigned HintOpc = 0;
+
+    // Other addressing modes can be used when the ordering is monotonic.
+    // Try to match these first, before falling back on the basic operands.
+    auto AddModeWRO = selectAddrModeWRO(St.getOperand(1), StoreSize);
+    auto AddModeXRO = selectAddrModeXRO(St.getOperand(1), StoreSize);
+    auto AddModeUImm = selectAddrModeIndexed(St.getOperand(1), StoreSize);
+    auto AddModeImm = selectAddrModeUnscaled(St.getOperand(1), StoreSize);
+
+    if (AddModeWRO && Ordering == AtomicOrdering::Monotonic) {
+      HintOpc = RegWOpcodes[Log2_32(StoreSize)];
+      StrPseudo = BuildMI(MBB, I, MIMetadata(I), TII.get(HintOpc));
+      (*AddModeWRO)[0](StrPseudo);
+      (*AddModeWRO)[1](StrPseudo);
+      StrPseudo.addReg(ValueReg);
+      (*AddModeWRO)[2](StrPseudo);
+    } else if (AddModeXRO && Ordering == AtomicOrdering::Monotonic) {
+      HintOpc = RegXOpcodes[Log2_32(StoreSize)];
+      StrPseudo = BuildMI(MBB, I, MIMetadata(I), TII.get(HintOpc));
+      (*AddModeXRO)[0](StrPseudo);
+      (*AddModeXRO)[1](StrPseudo);
+      StrPseudo.addReg(ValueReg);
+      (*AddModeXRO)[2](StrPseudo);
+    } else if (AddModeUImm && Ordering == AtomicOrdering::Monotonic) {
+      HintOpc = UImmOpcodes[Log2_32(StoreSize)];
+      StrPseudo = BuildMI(MBB, I, MIMetadata(I), TII.get(HintOpc));
+      (*AddModeUImm)[0](StrPseudo);
+      StrPseudo.addReg(ValueReg);
+      (*AddModeUImm)[1](StrPseudo);
+    } else if (AddModeImm && Ordering == AtomicOrdering::Monotonic) {
+      HintOpc = ImmOpcodes[Log2_32(StoreSize)];
+      StrPseudo = BuildMI(MBB, I, MIMetadata(I), TII.get(HintOpc));
+      (*AddModeImm)[0](StrPseudo);
+      StrPseudo.addReg(ValueReg);
+      (*AddModeImm)[1](StrPseudo);
+    } else {
+      HintOpc = BaseOpcodes[Log2_32(StoreSize)];
+      StrPseudo = BuildMI(MBB, I, MIMetadata(I), TII.get(HintOpc))
+                      .addReg(St.getPointerReg())
+                      .addReg(ValueReg);
+    }
+
+    // Add the ordering and hint operands, before erasing the store.
+    unsigned HintImm = Hint == AArch64AtomicStoreHint::HINT_STSHH_KEEP ? 0 : 1;
+    StrPseudo.addImm((int)Ordering);
+    StrPseudo.addImm(HintImm);
+
+    StrPseudo.cloneMemRefs(I);
+    I.eraseFromParent();
+    constrainSelectedInstRegOperands(*StrPseudo, TII, TRI, RBI);
     return true;
   }
   default:
@@ -8039,6 +8146,22 @@ void AArch64InstructionSelector::renderFPImm32SIMDModImmType4(
                                                       ->getValueAPF()
                                                       .bitcastToAPInt()
                                                       .getZExtValue()));
+}
+
+bool AArch64InstructionSelector::isAtomicHintInst(
+    const MachineInstr &MI, AArch64AtomicStoreHint Hint) const {
+  auto MMO = cast<GStore>(MI).getMMO();
+  return AArch64InstrInfo::decodeAtomicHintFlags(MMO.getFlags()) == Hint;
+}
+
+bool AArch64InstructionSelector::isAtomicSTSHH_KEEP(
+    const MachineInstr &MI) const {
+  return isAtomicHintInst(MI, AArch64AtomicStoreHint::HINT_STSHH_KEEP);
+}
+
+bool AArch64InstructionSelector::isAtomicSTSHH_STRM(
+    const MachineInstr &MI) const {
+  return isAtomicHintInst(MI, AArch64AtomicStoreHint::HINT_STSHH_STRM);
 }
 
 bool AArch64InstructionSelector::isLoadStoreOfNumBytes(

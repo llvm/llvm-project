@@ -9609,6 +9609,11 @@ def err_atomic_builtin_must_be_pointer : Error<
 def err_atomic_builtin_must_be_pointer_intptr : Error<
   "address argument to atomic builtin must be a pointer to integer or pointer"
   " (%0 invalid)">;
+
+def err_atomic_hint_builtin_must_be_pointer : Error<
+  "address argument to atomic hint builtin must be a pointer to a scalar "
+  "integral or floating-point type of 8, 16, 32, or 64 bits (%0 invalid)">;
+
 def err_atomic_builtin_cannot_be_const : Error<
   "address argument to atomic builtin cannot be const-qualified (%0 invalid)">;
 def err_atomic_builtin_must_be_pointer_intfltptr : Error<
@@ -9671,6 +9676,13 @@ def err_atomic_op_needs_atomic_int_or_fp : Error<
 def err_atomic_op_needs_atomic_int : Error<
   "address argument to atomic operation must be a pointer to "
   "%select{|atomic }0integer (%1 invalid)">;
+def err_atomic_op_hint_data_size : Error<
+  "address argument to atomic store with hint must be of size 8, 16, 32 or 64 bits">;
+def err_atomic_hint_has_invalid_memory_order : Error<
+   "invalid memory order argument to atomic hint operation (%0 invalid)">;
+def warn_atomic_hint_has_invalid_hint_type : Warning<
+   "unrecognised hint type argument to atomic hint operation (%0)">,
+  InGroup<DiagGroup<"atomic-hint-type">>;
 def warn_atomic_op_has_invalid_memory_order : Warning<
   "%select{|success |failure }0memory order argument to atomic operation is invalid">,
   InGroup<DiagGroup<"atomic-memory-ordering">>;

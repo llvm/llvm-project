@@ -741,6 +741,12 @@ __arm_st64bv0(void *__addr, data512_t __value) {
 }
 #endif
 
+/* Atomic store with hints */
+#if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE
+#define __arm_atomic_store_with_hint(ptr, data, memory_order, hint)            \
+  __builtin_arm_atomic_store_with_hint(ptr, data, memory_order, hint)
+#endif
+
 /* 11.1 Special register intrinsics */
 #define __arm_rsr(sysreg) __builtin_arm_rsr(sysreg)
 #define __arm_rsr64(sysreg) __builtin_arm_rsr64(sysreg)
