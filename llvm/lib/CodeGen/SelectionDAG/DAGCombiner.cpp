@@ -6307,20 +6307,37 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   if (SDValue RMINMAX = reassociateOps(Opcode, DL, N0, N1, N->getFlags()))
     return RMINMAX;
 
-  // smax(X, -1) -> or(X, ashr(X, BW-1))
-  // The arithmetic right shift sign-extends: 0 for X >= 0, -1 for X < 0.
-  // OR-ing X with this mask yields X when non-negative and -1 when negative,
-  // which matches smax(X, -1) using two instructions instead of compare+cmov.
-  // Beneficial for code size on x86-64 and for instruction count on
-  // AArch64/APX.
-  if (Opcode == ISD::SMAX) {
-    if (auto *N1C = isConstOrConstSplat(N1)) {
-      if (N1C->isAllOnes() &&
-          !TLI.shouldAvoidTransformToShift(VT, VT.getScalarSizeInBits() - 1)) {
-        SDValue Shift = DAG.getNode(
-            ISD::SRA, DL, VT, N0,
-            DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, DL));
-        return DAG.getNode(ISD::OR, DL, VT, N0, Shift);
+  // Fold sign-extension masks using arithmetic shift:
+  //   smax(X, -1) -> or(X,  ashr(X, BW-1))
+  //   smin(X,  0) -> and(X, ashr(X, BW-1))
+  // ashr(X, BW-1) sign-extends the sign bit: 0 for X>=0, -1 for X<0.
+  // OR with X yields X (non-negative) or -1 (negative) = smax(X,-1).
+  // AND with X yields 0 (non-negative) or X (negative)  = smin(X, 0).
+  // Both reduce to two instructions vs. a compare+cmov on x86-64.
+  // Only fold when the target has no native SMAX/SMIN instruction for this
+  // type (isOperationExpand), the type is legal (not needing splitting), and
+  // the operand is not a min/max chain (preserving saturation patterns such as
+  // RISCV-P sati which combine smin+smax into a single instruction).
+  if (TLI.isTypeLegal(VT) &&
+      !TLI.shouldAvoidTransformToShift(VT, VT.getScalarSizeInBits() - 1)) {
+    SDValue ShiftAmt =
+        DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, DL);
+    if (Opcode == ISD::SMAX && TLI.isOperationExpand(ISD::SMAX, VT) &&
+        N0.getOpcode() != ISD::SMIN) {
+      if (auto *N1C = isConstOrConstSplat(N1)) {
+        if (N1C->isAllOnes()) {
+          SDValue Shift = DAG.getNode(ISD::SRA, DL, VT, N0, ShiftAmt);
+          return DAG.getNode(ISD::OR, DL, VT, N0, Shift);
+        }
+      }
+    }
+    if (Opcode == ISD::SMIN && TLI.isOperationExpand(ISD::SMIN, VT) &&
+        N0.getOpcode() != ISD::SMAX) {
+      if (auto *N1C = isConstOrConstSplat(N1)) {
+        if (N1C->isZero()) {
+          SDValue Shift = DAG.getNode(ISD::SRA, DL, VT, N0, ShiftAmt);
+          return DAG.getNode(ISD::AND, DL, VT, N0, Shift);
+        }
       }
     }
   }
