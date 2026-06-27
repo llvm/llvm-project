@@ -70,7 +70,8 @@ static bool checkHasPAuth() {
 
 FUNC_BOUNDS_DECL(main_func);
 
-_Unwind_Reason_Code frame_handler(struct _Unwind_Context *ctx, void *arg) {
+static _Unwind_Reason_Code frame_handler(struct _Unwind_Context *ctx,
+                                         void *arg) {
   uint64_t ra_sign_state =
       (uint64_t)_Unwind_GetGR(ctx, UNW_AARCH64_RA_SIGN_STATE);
 
@@ -86,8 +87,8 @@ _Unwind_Reason_Code frame_handler(struct _Unwind_Context *ctx, void *arg) {
     return _URC_END_OF_STACK;
   }
 
-#if defined(__PTRAUTH__) || __has_feature(ptrauth_calls)
-  assert(ra_sign_state == 1);
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
+  assert(ra_sign_state == 1 || ra_sign_state == 2);
 #else
   assert(ra_sign_state == 0);
 #endif
@@ -105,11 +106,11 @@ get_main_ra_sign_state(const char *note) {
   return sign_state;
 }
 
-__attribute__((noinline)) uint64_t check_vanilla(const char *note) {
+__attribute__((noinline)) static uint64_t check_vanilla(const char *note) {
   return get_main_ra_sign_state(note);
 }
 
-__attribute__((naked, target("pauth"))) uint64_t
+__attribute__((naked, target("pauth"))) static uint64_t
 check_negate(const char *note) {
   // clang-format off
   asm(".cfi_negate_ra_state\n"
@@ -160,7 +161,7 @@ FUNC_ATTR(main_func) int main(int, char **) {
   uint64_t ret;
 
   ret = check_vanilla("check_vanilla");
-#if defined(__PTRAUTH__) || __has_feature(ptrauth_calls)
+#if defined(_LIBUNWIND_TARGET_AARCH64_AUTHENTICATED_UNWINDING)
   assert(ret == 1 || ret == 2);
 #else
   assert(ret == 0);
