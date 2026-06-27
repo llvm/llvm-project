@@ -12,5 +12,5 @@ void avg_pixels8_mmx2(uint8_t *block, const uint8_t *pixels, int line_size, int 
      :"+g"(h), "+S"(pixels), "+D"(block)
      :"r" ((x86_reg)line_size)         
      :"%""rax", "memory");
-// CHECK: # %ecx %rsi %rdi %rdx
+// CHECK: # %ecx %rsi %rdi %rax
  }

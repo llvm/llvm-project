@@ -581,9 +581,13 @@ bool InlineAsmLowering::lowerInlineAsm(
         unsigned Flag = InlineAsm::Flag(InlineAsm::Kind::Clobber, NumRegs);
         Inst.addImm(Flag);
 
+        // Clobber-list registers (~{reg}) are modified during the asm, not
+        // before inputs are read. Mark as regular (non-early-clobber) defs so
+        // the register allocator can use them as input operand registers,
+        // matching GCC's behaviour.
         for (Register Reg : OpInfo.Regs) {
-          Inst.addReg(Reg, RegState::Define | RegState::EarlyClobber |
-                               getImplRegState(Reg.isPhysical()));
+          Inst.addReg(Reg,
+                      RegState::Define | getImplRegState(Reg.isPhysical()));
         }
       }
       break;

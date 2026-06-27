@@ -98,7 +98,7 @@ define i64 @leaf_clobbers_lr(i64 %x) "branch-protection-pauth-lr" "sign-return-a
   ; COMPAT-MIR-NEXT:   early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store (s64) into %stack.0)
   ; COMPAT-MIR-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 16
   ; COMPAT-MIR-NEXT:   frame-setup CFI_INSTRUCTION offset $w30, -16
-  ; COMPAT-MIR-NEXT:   INLINEASM &"mov x30, $0", sideeffect attdialect, reguse:GPR64common, renamable $x0, clobber, implicit-def dead early-clobber $lr
+  ; COMPAT-MIR-NEXT:   INLINEASM &"mov x30, $0", sideeffect attdialect, reguse:GPR64common, renamable $x0, clobber, implicit-def dead $lr
   ; COMPAT-MIR-NEXT:   early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.0)
   ; COMPAT-MIR-NEXT:   $x16 = frame-destroy ADRP target-flags(aarch64-page) <mcsymbol >
   ; COMPAT-MIR-NEXT:   $x16 = frame-destroy ADDXri $x16, target-flags(aarch64-pageoff, aarch64-nc) <mcsymbol >, 0
@@ -116,7 +116,7 @@ define i64 @leaf_clobbers_lr(i64 %x) "branch-protection-pauth-lr" "sign-return-a
   ; V83A-MIR-NEXT:   early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store (s64) into %stack.0)
   ; V83A-MIR-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 16
   ; V83A-MIR-NEXT:   frame-setup CFI_INSTRUCTION offset $w30, -16
-  ; V83A-MIR-NEXT:   INLINEASM &"mov x30, $0", sideeffect attdialect, reguse:GPR64common, renamable $x0, clobber, implicit-def dead early-clobber $lr
+  ; V83A-MIR-NEXT:   INLINEASM &"mov x30, $0", sideeffect attdialect, reguse:GPR64common, renamable $x0, clobber, implicit-def dead $lr
   ; V83A-MIR-NEXT:   early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.0)
   ; V83A-MIR-NEXT:   $x16 = frame-destroy ADRP target-flags(aarch64-page) <mcsymbol >
   ; V83A-MIR-NEXT:   $x16 = frame-destroy ADDXri $x16, target-flags(aarch64-pageoff, aarch64-nc) <mcsymbol >, 0
@@ -132,7 +132,7 @@ define i64 @leaf_clobbers_lr(i64 %x) "branch-protection-pauth-lr" "sign-return-a
   ; PAUTHLR-MIR-NEXT:   early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store (s64) into %stack.0)
   ; PAUTHLR-MIR-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 16
   ; PAUTHLR-MIR-NEXT:   frame-setup CFI_INSTRUCTION offset $w30, -16
-  ; PAUTHLR-MIR-NEXT:   INLINEASM &"mov x30, $0", sideeffect attdialect, reguse:GPR64common, renamable $x0, clobber, implicit-def dead early-clobber $lr
+  ; PAUTHLR-MIR-NEXT:   INLINEASM &"mov x30, $0", sideeffect attdialect, reguse:GPR64common, renamable $x0, clobber, implicit-def dead $lr
   ; PAUTHLR-MIR-NEXT:   early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.0)
   ; PAUTHLR-MIR-NEXT:   frame-destroy RETAASPPCi <mcsymbol >, implicit $lr, implicit $sp, implicit-def $lr, implicit killed $lr, implicit $sp
   call void asm sideeffect "mov x30, $0", "r,~{lr}"(i64 %x) #1
@@ -323,7 +323,7 @@ define fastcc void @spill_lr_and_tail_call(i64 %x) "branch-protection-pauth-lr" 
   ; CHECK-MIR-NEXT:   early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store (s64) into %stack.0)
   ; CHECK-MIR-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 16
   ; CHECK-MIR-NEXT:   frame-setup CFI_INSTRUCTION offset $w30, -16
-  ; CHECK-MIR-NEXT:   INLINEASM &"mov x30, $0", sideeffect attdialect, reguse:GPR64common, renamable $x0, clobber, implicit-def dead early-clobber $lr
+  ; CHECK-MIR-NEXT:   INLINEASM &"mov x30, $0", sideeffect attdialect, reguse:GPR64common, renamable $x0, clobber, implicit-def dead $lr
   ; CHECK-MIR-NEXT:   early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.0)
   ; CHECK-MIR-NEXT:   $x16 = frame-destroy ADRP target-flags(aarch64-page) <mcsymbol >
   ; CHECK-MIR-NEXT:   $x16 = frame-destroy ADDXri $x16, target-flags(aarch64-pageoff, aarch64-nc) <mcsymbol >, 0
@@ -340,7 +340,7 @@ define fastcc void @spill_lr_and_tail_call(i64 %x) "branch-protection-pauth-lr" 
   ; PAUTHLR-MIR-NEXT:   early-clobber $sp = frame-setup STRXpre killed $lr, $sp, -16 :: (store (s64) into %stack.0)
   ; PAUTHLR-MIR-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 16
   ; PAUTHLR-MIR-NEXT:   frame-setup CFI_INSTRUCTION offset $w30, -16
-  ; PAUTHLR-MIR-NEXT:   INLINEASM &"mov x30, $0", sideeffect attdialect, reguse:GPR64common, renamable $x0, clobber, implicit-def dead early-clobber $lr
+  ; PAUTHLR-MIR-NEXT:   INLINEASM &"mov x30, $0", sideeffect attdialect, reguse:GPR64common, renamable $x0, clobber, implicit-def dead $lr
   ; PAUTHLR-MIR-NEXT:   early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16 :: (load (s64) from %stack.0)
   ; PAUTHLR-MIR-NEXT:   frame-destroy AUTIASPPCi <mcsymbol >, implicit-def $lr, implicit $lr, implicit $sp
   ; PAUTHLR-MIR-NEXT:   TCRETURNdi @bar, 0, csr_aarch64_aapcs, implicit $sp, implicit killed $x0

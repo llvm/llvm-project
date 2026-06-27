@@ -1390,12 +1390,21 @@ EmitSpecialNode(SDNode *Node, bool IsClone, bool IsCloned,
         }
         break;
       case InlineAsm::Kind::RegDefEarlyClobber:
-      case InlineAsm::Kind::Clobber:
         for (unsigned j = 0; j != NumVals; ++j, ++i) {
           Register Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
           MIB.addReg(Reg, RegState::Define | RegState::EarlyClobber |
                               getImplRegState(Reg.isPhysical()));
           ECRegs.push_back(Reg);
+        }
+        break;
+      case InlineAsm::Kind::Clobber:
+        // Clobber-list registers (~{reg}) are modified during the asm, not
+        // before inputs are read. Mark as regular (non-early-clobber) defs so
+        // the register allocator can use them as input operand registers,
+        // matching GCC's behaviour.
+        for (unsigned j = 0; j != NumVals; ++j, ++i) {
+          Register Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
+          MIB.addReg(Reg, RegState::Define | getImplRegState(Reg.isPhysical()));
         }
         break;
       case InlineAsm::Kind::RegUse: // Use of register.

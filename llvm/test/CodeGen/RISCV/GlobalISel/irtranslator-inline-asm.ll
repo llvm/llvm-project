@@ -15,7 +15,7 @@ define void @test_simple_memory_clobber() {
 define void @test_simple_register_clobber() {
   ; CHECK-LABEL: name: test_simple_register_clobber
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect, clobber, implicit-def early-clobber $x10
+  ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect, clobber, implicit-def $x10
   ; CHECK-NEXT:   PseudoRET
   call void asm sideeffect "", "~{x10}"()
   ret void

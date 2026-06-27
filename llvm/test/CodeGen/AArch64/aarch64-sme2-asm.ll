@@ -47,38 +47,38 @@ define <2 x float> @sme_nosve_nonstreaming(ptr %in) "target-features"="+sme,-sve
 entry:
 ; CHECK-LABEL: name: sme_nosve_nonstreaming
 ; CHECK:  INLINEASM &"smstart sm; smstop sm;"
-; CHECK-SAME: implicit-def early-clobber $q0
-; CHECK-SAME: implicit-def early-clobber $q1
-; CHECK-SAME: implicit-def early-clobber $q2
-; CHECK-SAME: implicit-def early-clobber $q3
-; CHECK-SAME: implicit-def early-clobber $q4
-; CHECK-SAME: implicit-def early-clobber $q5
-; CHECK-SAME: implicit-def early-clobber $q6
-; CHECK-SAME: implicit-def early-clobber $q7
-; CHECK-SAME: implicit-def early-clobber $q8
-; CHECK-SAME: implicit-def early-clobber $q9
-; CHECK-SAME: implicit-def early-clobber $q10
-; CHECK-SAME: implicit-def early-clobber $q11
-; CHECK-SAME: implicit-def early-clobber $q12
-; CHECK-SAME: implicit-def early-clobber $q13
-; CHECK-SAME: implicit-def early-clobber $q14
-; CHECK-SAME: implicit-def early-clobber $q15
-; CHECK-SAME: implicit-def early-clobber $q16
-; CHECK-SAME: implicit-def early-clobber $q17
-; CHECK-SAME: implicit-def early-clobber $q18
-; CHECK-SAME: implicit-def early-clobber $q19
-; CHECK-SAME: implicit-def early-clobber $q20
-; CHECK-SAME: implicit-def early-clobber $q21
-; CHECK-SAME: implicit-def early-clobber $q22
-; CHECK-SAME: implicit-def early-clobber $q23
-; CHECK-SAME: implicit-def early-clobber $q24
-; CHECK-SAME: implicit-def early-clobber $q25
-; CHECK-SAME: implicit-def early-clobber $q26
-; CHECK-SAME: implicit-def early-clobber $q27
-; CHECK-SAME: implicit-def early-clobber $q28
-; CHECK-SAME: implicit-def early-clobber $q29
-; CHECK-SAME: implicit-def early-clobber $q30
-; CHECK-SAME: implicit-def early-clobber $q31
+; CHECK-SAME: implicit-def $q0
+; CHECK-SAME: implicit-def $q1
+; CHECK-SAME: implicit-def $q2
+; CHECK-SAME: implicit-def $q3
+; CHECK-SAME: implicit-def $q4
+; CHECK-SAME: implicit-def $q5
+; CHECK-SAME: implicit-def $q6
+; CHECK-SAME: implicit-def $q7
+; CHECK-SAME: implicit-def $q8
+; CHECK-SAME: implicit-def $q9
+; CHECK-SAME: implicit-def $q10
+; CHECK-SAME: implicit-def $q11
+; CHECK-SAME: implicit-def $q12
+; CHECK-SAME: implicit-def $q13
+; CHECK-SAME: implicit-def $q14
+; CHECK-SAME: implicit-def $q15
+; CHECK-SAME: implicit-def $q16
+; CHECK-SAME: implicit-def $q17
+; CHECK-SAME: implicit-def $q18
+; CHECK-SAME: implicit-def $q19
+; CHECK-SAME: implicit-def $q20
+; CHECK-SAME: implicit-def $q21
+; CHECK-SAME: implicit-def $q22
+; CHECK-SAME: implicit-def $q23
+; CHECK-SAME: implicit-def $q24
+; CHECK-SAME: implicit-def $q25
+; CHECK-SAME: implicit-def $q26
+; CHECK-SAME: implicit-def $q27
+; CHECK-SAME: implicit-def $q28
+; CHECK-SAME: implicit-def $q29
+; CHECK-SAME: implicit-def $q30
+; CHECK-SAME: implicit-def $q31
   %0 = load <2 x float>, ptr %in, align 8
   call void asm sideeffect "smstart sm; smstop sm;", "~{z0},~{z1},~{z2},~{z3},~{z4},~{z5},~{z6},~{z7},~{z8},~{z9},~{z10},~{z11},~{z12},~{z13},~{z14},~{z15},~{z16},~{z17},~{z18},~{z19},~{z20},~{z21},~{z22},~{z23},~{z24},~{z25},~{z26},~{z27},~{z28},~{z29},~{z30},~{z31}"()
   ret <2 x float> %0
@@ -88,38 +88,38 @@ define <2 x float> @sme_nosve_streaming(ptr %in) "target-features"="+sme,-sve" "
 entry:
 ; CHECK-LABEL: name: sme_nosve_streaming
 ; CHECK:  INLINEASM &"smstart sm; smstop sm;"
-; CHECK-SAME: implicit-def early-clobber $z0
-; CHECK-SAME: implicit-def early-clobber $z1
-; CHECK-SAME: implicit-def early-clobber $z2
-; CHECK-SAME: implicit-def early-clobber $z3
-; CHECK-SAME: implicit-def early-clobber $z4
-; CHECK-SAME: implicit-def early-clobber $z5
-; CHECK-SAME: implicit-def early-clobber $z6
-; CHECK-SAME: implicit-def early-clobber $z7
-; CHECK-SAME: implicit-def early-clobber $z8
-; CHECK-SAME: implicit-def early-clobber $z9
-; CHECK-SAME: implicit-def early-clobber $z10
-; CHECK-SAME: implicit-def early-clobber $z11
-; CHECK-SAME: implicit-def early-clobber $z12
-; CHECK-SAME: implicit-def early-clobber $z13
-; CHECK-SAME: implicit-def early-clobber $z14
-; CHECK-SAME: implicit-def early-clobber $z15
-; CHECK-SAME: implicit-def early-clobber $z16
-; CHECK-SAME: implicit-def early-clobber $z17
-; CHECK-SAME: implicit-def early-clobber $z18
-; CHECK-SAME: implicit-def early-clobber $z19
-; CHECK-SAME: implicit-def early-clobber $z20
-; CHECK-SAME: implicit-def early-clobber $z21
-; CHECK-SAME: implicit-def early-clobber $z22
-; CHECK-SAME: implicit-def early-clobber $z23
-; CHECK-SAME: implicit-def early-clobber $z24
-; CHECK-SAME: implicit-def early-clobber $z25
-; CHECK-SAME: implicit-def early-clobber $z26
-; CHECK-SAME: implicit-def early-clobber $z27
-; CHECK-SAME: implicit-def early-clobber $z28
-; CHECK-SAME: implicit-def early-clobber $z29
-; CHECK-SAME: implicit-def early-clobber $z30
-; CHECK-SAME: implicit-def early-clobber $z31
+; CHECK-SAME: implicit-def $z0
+; CHECK-SAME: implicit-def $z1
+; CHECK-SAME: implicit-def $z2
+; CHECK-SAME: implicit-def $z3
+; CHECK-SAME: implicit-def $z4
+; CHECK-SAME: implicit-def $z5
+; CHECK-SAME: implicit-def $z6
+; CHECK-SAME: implicit-def $z7
+; CHECK-SAME: implicit-def $z8
+; CHECK-SAME: implicit-def $z9
+; CHECK-SAME: implicit-def $z10
+; CHECK-SAME: implicit-def $z11
+; CHECK-SAME: implicit-def $z12
+; CHECK-SAME: implicit-def $z13
+; CHECK-SAME: implicit-def $z14
+; CHECK-SAME: implicit-def $z15
+; CHECK-SAME: implicit-def $z16
+; CHECK-SAME: implicit-def $z17
+; CHECK-SAME: implicit-def $z18
+; CHECK-SAME: implicit-def $z19
+; CHECK-SAME: implicit-def $z20
+; CHECK-SAME: implicit-def $z21
+; CHECK-SAME: implicit-def $z22
+; CHECK-SAME: implicit-def $z23
+; CHECK-SAME: implicit-def $z24
+; CHECK-SAME: implicit-def $z25
+; CHECK-SAME: implicit-def $z26
+; CHECK-SAME: implicit-def $z27
+; CHECK-SAME: implicit-def $z28
+; CHECK-SAME: implicit-def $z29
+; CHECK-SAME: implicit-def $z30
+; CHECK-SAME: implicit-def $z31
   %0 = load <2 x float>, ptr %in, align 8
   call void asm sideeffect "smstart sm; smstop sm;", "~{z0},~{z1},~{z2},~{z3},~{z4},~{z5},~{z6},~{z7},~{z8},~{z9},~{z10},~{z11},~{z12},~{z13},~{z14},~{z15},~{z16},~{z17},~{z18},~{z19},~{z20},~{z21},~{z22},~{z23},~{z24},~{z25},~{z26},~{z27},~{z28},~{z29},~{z30},~{z31}"()
   ret <2 x float> %0

@@ -44,9 +44,8 @@ entry:
 define void @t4(i64 %op) nounwind {
 ; CHECK-LABEL: t4:
 ; CHECK:       ; %bb.0: ; %entry
-; CHECK-NEXT:    mov x8, x0
 ; CHECK-NEXT:    ; InlineAsm Start
-; CHECK-NEXT:    mov x0, x8; svc #0;
+; CHECK-NEXT:    mov x0, x0; svc #0;
 ; CHECK-NEXT:    ; InlineAsm End
 ; CHECK-NEXT:    ret
 entry:

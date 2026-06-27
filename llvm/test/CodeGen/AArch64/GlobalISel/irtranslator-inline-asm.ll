@@ -17,7 +17,7 @@ define void @asm_simple_memory_clobber() {
 define void @asm_simple_register_clobber() {
   ; CHECK-LABEL: name: asm_simple_register_clobber
   ; CHECK: bb.1 (%ir-block.0):
-  ; CHECK-NEXT:   INLINEASM &"mov x0, 7", sideeffect attdialect, clobber, implicit-def early-clobber $x0, !0
+  ; CHECK-NEXT:   INLINEASM &"mov x0, 7", sideeffect attdialect, clobber, implicit-def $x0, !0
   ; CHECK-NEXT:   RET_ReallyLR
   call void asm sideeffect "mov x0, 7", "~{x0}"(), !srcloc !0
   ret void

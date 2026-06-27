@@ -86,20 +86,20 @@ void test_function(void) {
   // CHECK: call void asm sideeffect "", "~{r13}"()
   // CHECK: call void asm sideeffect "", "~{r14}"()
   // CHECK: call void asm sideeffect "", "~{r15}"()
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $pc
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $sp
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $sr
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $cg
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $r4
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $r5
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $r6
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $r7
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $r8
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $r9
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $r10
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $r11
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $r12
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $r13
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $r14
-  // CHECK: INLINEASM &"", {{.*}} implicit-def early-clobber $r15
+  // CHECK: INLINEASM &"", {{.*}} implicit-def $pc
+  // CHECK: INLINEASM &"", {{.*}} implicit-def $sp
+  // CHECK: INLINEASM &"", {{.*}} implicit-def $sr
+  // CHECK: INLINEASM &"", {{.*}} implicit-def $cg
+  // CHECK: INLINEASM &"", {{.*}} implicit-def $r4
+  // CHECK: INLINEASM &"", {{.*}} implicit-def $r5
+  // CHECK: INLINEASM &"", {{.*}} implicit-def $r6
+  // CHECK: INLINEASM &"", {{.*}} implicit-def $r7
+  // CHECK: INLINEASM &"", {{.*}} implicit-def $r8
+  // CHECK: INLINEASM &"", {{.*}} implicit-def $r9
+  // CHECK: INLINEASM &"", {{.*}} implicit-def $r10
+  // CHECK: INLINEASM &"", {{.*}} implicit-def $r11
+  // CHECK: INLINEASM &"", {{.*}} implicit-def $r12
+  // CHECK: INLINEASM &"", {{.*}} implicit-def $r13
+  // CHECK: INLINEASM &"", {{.*}} implicit-def $r14
+  // CHECK: INLINEASM &"", {{.*}} implicit-def $r15
 }
