@@ -43,12 +43,14 @@ foreach(CURRENT_TARGET IN LISTS SYSTEM_TARGETS)
   configure_file(lit.site.cfg.in ${CURRENT_TARGET}/lit.site.cfg @ONLY)
 endforeach()
 
+# The tools that are needed or used by tests.
+set(OFFLOAD_TOOLS llvm-offload-device-info llvm-omp-kernel-replay)
 
 add_offload_testsuite(check-libomptarget
   "Running libomptarget tests"
   ${LIBOMPTARGET_LIT_TESTSUITES}
   EXCLUDE_FROM_CHECK_ALL
-  DEPENDS llvm-offload-device-info omptarget ${OMP_DEPEND} ${LIBOMPTARGET_TESTED_PLUGINS}
+  DEPENDS ${OFFLOAD_TOOLS} omptarget ${OMP_DEPEND} ${LIBOMPTARGET_TESTED_PLUGINS}
   ARGS ${LIBOMPTARGET_LIT_ARG_LIST})
 
 # Add liboffload unit tests - the test binary will run on all available devices
@@ -64,7 +66,7 @@ add_offload_testsuite(check-offload
   ${LIBOMPTARGET_LIT_TESTSUITES}
   ${CMAKE_CURRENT_BINARY_DIR}/unit
   EXCLUDE_FROM_CHECK_ALL
-  DEPENDS llvm-offload-device-info omptarget ${OMP_DEPEND} ${LIBOMPTARGET_TESTED_PLUGINS}
+  DEPENDS ${OFFLOAD_TOOLS} omptarget ${OMP_DEPEND} ${LIBOMPTARGET_TESTED_PLUGINS}
           LLVMOffload OffloadUnitTests
   ARGS ${LIBOMPTARGET_LIT_ARG_LIST})
 
