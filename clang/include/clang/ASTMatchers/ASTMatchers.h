@@ -728,7 +728,7 @@ AST_MATCHER_P(FieldDecl, hasBitWidth, unsigned, Width) {
          Node.getBitWidthValue() == Width;
 }
 
-/// Matches non-static data members that have an in-class initializer.
+/// Matches non-static data memberss that have an in-class initializer.
 ///
 /// Given
 /// \code
