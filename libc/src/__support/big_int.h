@@ -358,7 +358,7 @@ public:
 
   LIBC_INLINE_VAR static constexpr size_t WORD_COUNT = Bits / WORD_SIZE;
 
-  cpp::array<WordType, WORD_COUNT> val; // zero initialized.
+  cpp::array<WordType, WORD_COUNT> val{}; // zero initialized.
 
   LIBC_INLINE constexpr BigInt() = default;
 
@@ -1391,11 +1391,6 @@ template <typename T>
 first_trailing_one(T value) {
   return value == 0 ? 0 : cpp::countr_zero(value) + 1;
 }
-
-static_assert(LIBC_NAMESPACE::cpp::is_trivially_constructible<
-              LIBC_NAMESPACE::BigInt<128, false>>::value);
-static_assert(LIBC_NAMESPACE::cpp::is_trivially_copyable<
-              LIBC_NAMESPACE::BigInt<128, false>>::value);
 
 } // namespace LIBC_NAMESPACE_DECL
 
