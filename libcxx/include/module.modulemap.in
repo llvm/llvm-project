@@ -895,6 +895,7 @@ module std [system] {
     module support {
       header "__atomic/support.h"
       textual header "__atomic/support/c11.h"
+      textual header "__atomic/support/common.h"
       textual header "__atomic/support/gcc.h"
     }
 
