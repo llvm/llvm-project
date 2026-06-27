@@ -18,4 +18,5 @@ LLVM_LIBC_FUNCTION(unsigned long int, diviulr,
                    (unsigned long int n, unsigned long fract d)) {
   return fixed_point::divifx<unsigned long int, unsigned long fract>(n, d);
 }
+
 } // namespace LIBC_NAMESPACE_DECL

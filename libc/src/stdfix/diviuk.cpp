@@ -17,4 +17,5 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(unsigned int, diviuk, (unsigned int n, unsigned accum d)) {
   return fixed_point::divifx<unsigned int, unsigned accum>(n, d);
 }
+
 } // namespace LIBC_NAMESPACE_DECL
