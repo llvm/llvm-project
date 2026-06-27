@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include <__config>
+#include <__math/special_functions.h>
 #include <boost/math/special_functions.hpp>
 #include <cmath>
+#include <limits>
 #include <optional>
 #include <type_traits>
 
