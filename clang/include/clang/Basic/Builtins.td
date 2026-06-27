@@ -142,7 +142,7 @@ def CbrtF128 : Builtin {
 
 def CeilF16F128 : Builtin, F16F128MathTemplate {
   let Spellings = ["__builtin_ceil"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const, Constexpr];
   let Prototype = "T(T)";
 }
 
@@ -196,19 +196,19 @@ def Expm1F128 : Builtin {
 
 def FdimF128 : Builtin {
   let Spellings = ["__builtin_fdimf128"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions, Constexpr];
   let Prototype = "__float128(__float128, __float128)";
 }
 
 def FloorF16F128 : Builtin, F16F128MathTemplate {
   let Spellings = ["__builtin_floor"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const, Constexpr];
   let Prototype = "T(T)";
 }
 
 def FmaF16F128 : Builtin, F16F128MathTemplate {
   let Spellings = ["__builtin_fma"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions, Constexpr];
   let Prototype = "T(T, T, T)";
 }
 
@@ -268,13 +268,13 @@ def FabsF128 : Builtin {
 
 def FmodF16F128 : F16F128MathTemplate, Builtin {
   let Spellings = ["__builtin_fmod"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions, Constexpr];
   let Prototype = "T(T, T)";
 }
 
 def FrexpF16F128 : F16F128MathTemplate, Builtin {
   let Spellings = ["__builtin_frexp"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions, Constexpr];
   let Prototype = "T(T, int*)";
 }
 
@@ -304,13 +304,13 @@ def InfF16 : Builtin {
 
 def LdexpF16F128 : F16F128MathTemplate, Builtin {
   let Spellings = ["__builtin_ldexp"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions, Constexpr];
   let Prototype = "T(T, int)";
 }
 
 def ModfF128 : Builtin {
   let Spellings = ["__builtin_modff128"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Constexpr];
   let Prototype = "__float128(__float128, __float128*)";
 }
 
@@ -356,7 +356,7 @@ def HypotF128 : Builtin {
 
 def ILogbF128 : Builtin {
   let Spellings = ["__builtin_ilogbf128"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions, Constexpr];
   let Prototype = "int(__float128)";
 }
 
@@ -374,7 +374,7 @@ def LLrintF128 : Builtin {
 
 def LLroundF128 : Builtin {
   let Spellings = ["__builtin_llroundf128"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions, Constexpr];
   let Prototype = "long long int(__float128)";
 }
 
@@ -416,7 +416,7 @@ def LrintF128 : Builtin {
 
 def LroundF128 : Builtin {
   let Spellings = ["__builtin_lroundf128"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions, Constexpr];
   let Prototype = "long int(__float128)";
 }
 
@@ -428,25 +428,25 @@ def NearbyintF128 : Builtin {
 
 def NextafterF128 : Builtin {
   let Spellings = ["__builtin_nextafterf128"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions, Constexpr];
   let Prototype = "__float128(__float128, __float128)";
 }
 
 def NexttowardF128 : Builtin {
   let Spellings = ["__builtin_nexttowardf128"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions, Constexpr];
   let Prototype = "__float128(__float128, __float128)";
 }
 
 def RemainderF128 : Builtin {
   let Spellings = ["__builtin_remainderf128"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, ConstIgnoringErrnoAndExceptions, Constexpr];
   let Prototype = "__float128(__float128, __float128)";
 }
 
 def RemquoF128 : Builtin {
   let Spellings = ["__builtin_remquof128"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Constexpr];
   let Prototype = "__float128(__float128, __float128, int*)";
 }
 
@@ -458,27 +458,27 @@ def RintF16F128 : Builtin, F16F128MathTemplate {
 
 def RoundF16F128 : Builtin, F16F128MathTemplate {
   let Spellings = ["__builtin_round"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const, Constexpr];
   let Prototype = "T(T)";
 }
 
 def RoundevenF16F128 : Builtin, F16F128MathTemplate {
   let Spellings = ["__builtin_roundeven"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const, Constexpr];
   let Prototype = "T(T)";
 }
 
 def ScanlblnF128 : Builtin {
   let Spellings = ["__builtin_scalblnf128"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow,
-                    ConstIgnoringErrnoAndExceptions];
+                    ConstIgnoringErrnoAndExceptions, Constexpr];
   let Prototype = "__float128(__float128, long int)";
 }
 
 def ScanlbnF128 : Builtin {
   let Spellings = ["__builtin_scalbnf128"];
   let Attributes = [FunctionWithBuiltinPrefix, NoThrow,
-                    ConstIgnoringErrnoAndExceptions];
+                    ConstIgnoringErrnoAndExceptions, Constexpr];
   let Prototype = "__float128(__float128, int)";
 }
 
@@ -526,7 +526,7 @@ def TgammaF128 : Builtin {
 
 def TruncF16F128 : Builtin, F16F128MathTemplate {
   let Spellings = ["__builtin_trunc"];
-  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const, Constexpr];
   let Prototype = "T(T)";
 }
 
@@ -4027,6 +4027,7 @@ def Fmod : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow, ConstIgnoringErrnoAndExceptions];
   let Prototype = "T(T, T)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Frexp : FPMathTemplate, LibBuiltin<"math.h"> {
@@ -4034,6 +4035,7 @@ def Frexp : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow];
   let Prototype = "T(T, int*)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Sincos : FPMathTemplate, GNULibBuiltin<"math.h"> {
@@ -4054,6 +4056,7 @@ def Ldexp : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow, ConstIgnoringErrnoAndExceptions];
   let Prototype = "T(T, int)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Modf : FPMathTemplate, LibBuiltin<"math.h"> {
@@ -4061,6 +4064,7 @@ def Modf : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow];
   let Prototype = "T(T, T*)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Nan : FPMathTemplate, LibBuiltin<"math.h"> {
@@ -4132,6 +4136,7 @@ def Ceil : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow, Const];
   let Prototype = "T(T)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Cos : FPMathTemplate, LibBuiltin<"math.h"> {
@@ -4196,6 +4201,7 @@ def Fdim : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow, ConstIgnoringErrnoAndExceptions];
   let Prototype = "T(T, T)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Floor : FPMathTemplate, LibBuiltin<"math.h"> {
@@ -4203,6 +4209,7 @@ def Floor : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow, Const];
   let Prototype = "T(T)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Fma : FPMathTemplate, LibBuiltin<"math.h"> {
@@ -4210,6 +4217,7 @@ def Fma : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow, ConstIgnoringErrnoAndExceptions];
   let Prototype = "T(T, T, T)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Fmax : FPMathTemplate, LibBuiltin<"math.h"> {
@@ -4256,6 +4264,7 @@ def Ilogb : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow, ConstIgnoringErrnoAndExceptions];
   let Prototype = "int(T)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Lgamma : FPMathTemplate, LibBuiltin<"math.h"> {
@@ -4277,6 +4286,7 @@ def Llround : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow, ConstIgnoringErrnoAndExceptions];
   let Prototype = "long long int(T)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Log : FPMathTemplate, LibBuiltin<"math.h"> {
@@ -4326,6 +4336,7 @@ def Lround : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow, ConstIgnoringErrnoAndExceptions];
   let Prototype = "long int(T)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Nearbyint : FPMathTemplate, LibBuiltin<"math.h"> {
@@ -4340,6 +4351,7 @@ def Nextafter : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow, ConstIgnoringErrnoAndExceptions];
   let Prototype = "T(T, T)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Nexttoward : FPMathTemplate, LibBuiltin<"math.h"> {
@@ -4347,6 +4359,7 @@ def Nexttoward : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow, ConstIgnoringErrnoAndExceptions];
   let Prototype = "T(T, long double)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Remainder : FPMathTemplate, LibBuiltin<"math.h"> {
@@ -4354,6 +4367,7 @@ def Remainder : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow, ConstIgnoringErrnoAndExceptions];
   let Prototype = "T(T, T)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Remquo : FPMathTemplate, LibBuiltin<"math.h"> {
@@ -4361,6 +4375,7 @@ def Remquo : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow];
   let Prototype = "T(T, T, int*)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Rint : FPMathTemplate, LibBuiltin<"math.h"> {
@@ -4375,6 +4390,7 @@ def Round : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow, Const];
   let Prototype = "T(T)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def RoundEven : FPMathTemplate, LibBuiltin<"math.h"> {
@@ -4382,6 +4398,7 @@ def RoundEven : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow, Const];
   let Prototype = "T(T)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Scalbln : FPMathTemplate, LibBuiltin<"math.h"> {
@@ -4389,6 +4406,7 @@ def Scalbln : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow, ConstIgnoringErrnoAndExceptions];
   let Prototype = "T(T, long int)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Scalbn : FPMathTemplate, LibBuiltin<"math.h"> {
@@ -4396,6 +4414,7 @@ def Scalbn : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow, ConstIgnoringErrnoAndExceptions];
   let Prototype = "T(T, int)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Sin : FPMathTemplate, LibBuiltin<"math.h"> {
@@ -4445,6 +4464,7 @@ def Trunc : FPMathTemplate, LibBuiltin<"math.h"> {
   let Attributes = [NoThrow, Const];
   let Prototype = "T(T)";
   let AddBuiltinPrefixedAlias = 1;
+  let OnlyBuiltinPrefixedAliasIsConstexpr = 1;
 }
 
 def Cabs : FPMathTemplate, LibBuiltin<"complex.h"> {
