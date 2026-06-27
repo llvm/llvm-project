@@ -607,7 +607,7 @@ public:
   template <size_t OtherBits>
   LIBC_INLINE constexpr auto
   ful_mul(const BigInt<OtherBits, Signed, WordType> &other) const {
-    BigInt<Bits + OtherBits, Signed, WordType> result;
+    BigInt<Bits + OtherBits, Signed, WordType> result{};
     multiword::multiply_with_carry(result.val, val, other.val);
     return result;
   }
