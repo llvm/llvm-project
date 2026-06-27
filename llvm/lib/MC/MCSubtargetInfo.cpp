@@ -28,21 +28,30 @@ static const T *Find(StringRef S, ArrayRef<T> A) {
   // Binary search the array
   auto F = llvm::lower_bound(A, S);
   // If not found then return NULL
-  if (F == A.end() || StringRef(F->Key) != S) return nullptr;
+  if (F == A.end() || StringRef(F->key()) != S)
+    return nullptr;
   // Return the found array item
   return F;
 }
 
 /// For each feature that is (transitively) implied by this feature, set it.
-static
-void SetImpliedBits(FeatureBitset &Bits, const FeatureBitset &Implies,
-                    ArrayRef<SubtargetFeatureKV> FeatureTable) {
-  // OR the Implies bits in outside the loop. This allows the Implies for CPUs
-  // which might imply features not in FeatureTable to use this.
-  Bits |= Implies;
-  for (const SubtargetFeatureKV &FE : FeatureTable)
-    if (Implies.test(FE.Value))
-      SetImpliedBits(Bits, FE.Implies.getAsBitset(), FeatureTable);
+static void SetImpliedBits(FeatureBitset &Bits, FeatureBitset Implies,
+                           ArrayRef<SubtargetFeatureKV> FeatureTable) {
+  // Transitively set all features implied. We don't assume that the features in
+  // Bits have already had their implied features set.
+  FeatureBitset NewBits = Implies;
+  while (Implies.any()) {
+    FeatureBitset Implied;
+    for (const SubtargetFeatureKV &FE : FeatureTable) {
+      if (Implies.test(FE.Value))
+        Implied |= FE.Implies.getAsBitset();
+    }
+
+    // Only continue for bits that haven't been set yet.
+    Implies = Implied & ~NewBits;
+    NewBits |= Implies;
+  }
+  Bits |= NewBits;
 }
 
 /// For each feature that (transitively) implies this feature, clear it.
@@ -89,7 +98,7 @@ static void ApplyFeatureFlag(FeatureBitset &Bits, StringRef Feature,
 static size_t getLongestEntryLength(ArrayRef<SubtargetFeatureKV> Table) {
   size_t MaxLen = 0;
   for (auto &I : Table)
-    MaxLen = std::max(MaxLen, std::strlen(I.Key));
+    MaxLen = std::max(MaxLen, std::strlen(I.key()));
   return MaxLen;
 }
 
@@ -130,7 +139,8 @@ static void Help(ArrayRef<StringRef> CPUNames,
   // Print the Feature table.
   errs() << "Available features for this target:\n\n";
   for (auto &Feature : FeatTable)
-    errs() << format("  %-*s - %s.\n", MaxFeatLen, Feature.Key, Feature.Desc);
+    errs() << format("  %-*s - %s.\n", MaxFeatLen, Feature.key(),
+                     Feature.desc());
   errs() << '\n';
 
   errs() << "Use +feature to enable a feature, or -feature to disable it.\n"
@@ -259,24 +269,24 @@ MCSubtargetInfo::MCSubtargetInfo(
   InitMCProcessorInfo(CPU, TuneCPU, FS);
 }
 
-FeatureBitset MCSubtargetInfo::ToggleFeature(uint64_t FB) {
+const FeatureBitset &MCSubtargetInfo::ToggleFeature(uint64_t FB) {
   FeatureBits.flip(FB);
   return FeatureBits;
 }
 
-FeatureBitset MCSubtargetInfo::ToggleFeature(const FeatureBitset &FB) {
+const FeatureBitset &MCSubtargetInfo::ToggleFeature(const FeatureBitset &FB) {
   FeatureBits ^= FB;
   return FeatureBits;
 }
 
-FeatureBitset MCSubtargetInfo::SetFeatureBitsTransitively(
-  const FeatureBitset &FB) {
+const FeatureBitset &
+MCSubtargetInfo::SetFeatureBitsTransitively(const FeatureBitset &FB) {
   SetImpliedBits(FeatureBits, FB, ProcFeatures);
   return FeatureBits;
 }
 
-FeatureBitset MCSubtargetInfo::ClearFeatureBitsTransitively(
-  const FeatureBitset &FB) {
+const FeatureBitset &
+MCSubtargetInfo::ClearFeatureBitsTransitively(const FeatureBitset &FB) {
   for (unsigned I = 0, E = FB.size(); I < E; I++) {
     if (FB[I]) {
       FeatureBits.reset(I);
@@ -286,7 +296,7 @@ FeatureBitset MCSubtargetInfo::ClearFeatureBitsTransitively(
   return FeatureBits;
 }
 
-FeatureBitset MCSubtargetInfo::ToggleFeature(StringRef Feature) {
+const FeatureBitset &MCSubtargetInfo::ToggleFeature(StringRef Feature) {
   // Find feature in table.
   const SubtargetFeatureKV *FeatureEntry =
       Find(SubtargetFeatures::StripFlag(Feature), ProcFeatures);
@@ -311,7 +321,7 @@ FeatureBitset MCSubtargetInfo::ToggleFeature(StringRef Feature) {
   return FeatureBits;
 }
 
-FeatureBitset MCSubtargetInfo::ApplyFeatureFlag(StringRef FS) {
+const FeatureBitset &MCSubtargetInfo::ApplyFeatureFlag(StringRef FS) {
   ::ApplyFeatureFlag(FeatureBits, FS, ProcFeatures);
   return FeatureBits;
 }
@@ -346,8 +356,8 @@ const MCSchedModel &MCSubtargetInfo::getSchedModelForCPU(StringRef CPU) const {
              << " (ignoring processor)\n";
     return MCSchedModel::Default;
   }
-  assert(CPUEntry->SchedModel && "Missing processor SchedModel value");
-  return *CPUEntry->SchedModel;
+  assert(CPUEntry->schedModel() && "Missing processor SchedModel value");
+  return *CPUEntry->schedModel();
 }
 
 InstrItineraryData
@@ -361,13 +371,12 @@ void MCSubtargetInfo::initInstrItins(InstrItineraryData &InstrItins) const {
                                   ForwardingPaths);
 }
 
-std::vector<SubtargetFeatureKV>
+std::vector<const SubtargetFeatureKV *>
 MCSubtargetInfo::getEnabledProcessorFeatures() const {
-  std::vector<SubtargetFeatureKV> EnabledFeatures;
-  auto IsEnabled = [&](const SubtargetFeatureKV &FeatureKV) {
-    return FeatureBits.test(FeatureKV.Value);
-  };
-  llvm::copy_if(ProcFeatures, std::back_inserter(EnabledFeatures), IsEnabled);
+  std::vector<const SubtargetFeatureKV *> EnabledFeatures;
+  for (const SubtargetFeatureKV &FeatureKV : ProcFeatures)
+    if (FeatureBits.test(FeatureKV.Value))
+      EnabledFeatures.push_back(&FeatureKV);
   return EnabledFeatures;
 }
 

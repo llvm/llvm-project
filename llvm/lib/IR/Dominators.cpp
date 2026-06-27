@@ -49,18 +49,6 @@ static constexpr bool ExpensiveChecksEnabled = true;
 static constexpr bool ExpensiveChecksEnabled = false;
 #endif
 
-bool BasicBlockEdge::isSingleEdge() const {
-  unsigned NumEdgesToEnd = 0;
-  for (const BasicBlock *Succ : successors(Start)) {
-    if (Succ == End)
-      ++NumEdgesToEnd;
-    if (NumEdgesToEnd >= 2)
-      return false;
-  }
-  assert(NumEdgesToEnd == 1);
-  return true;
-}
-
 //===----------------------------------------------------------------------===//
 //  DominatorTree Implementation
 //===----------------------------------------------------------------------===//
@@ -419,9 +407,7 @@ PreservedAnalyses DominatorTreeVerifierPass::run(Function &F,
 
 char DominatorTreeWrapperPass::ID = 0;
 
-DominatorTreeWrapperPass::DominatorTreeWrapperPass() : FunctionPass(ID) {
-  initializeDominatorTreeWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+DominatorTreeWrapperPass::DominatorTreeWrapperPass() : FunctionPass(ID) {}
 
 INITIALIZE_PASS(DominatorTreeWrapperPass, "domtree",
                 "Dominator Tree Construction", true, true)

@@ -46,13 +46,17 @@ program test
   call c_f_pointer(scalarC, multiDimIntF, shape=[1_8])
   !ERROR: SHAPE= argument to C_F_POINTER() must be a rank-one array.
   call c_f_pointer(scalarC, multiDimIntF, shape=rankTwoArray)
-  !WARNING: FPTR= argument to C_F_POINTER() should not be unlimited polymorphic [-Winteroperability]
+
+  !These warnings have been disabled because the C_F_POINTER's restrictions
+  !are dependent on the source of the CPTR= argument.  Each warning here
+  !might be a false positive for a valid program.
+  !!WARNING: FPTR= argument to C_F_POINTER() should not be unlimited polymorphic [-Winteroperability]
   call c_f_pointer(scalarC, unlimited)
-  !PORTABILITY: FPTR= argument to C_F_POINTER() should not have a derived type that is not BIND(C) [-Wportability]
+  !!PORTABILITY: FPTR= argument to C_F_POINTER() should not have a derived type that is not BIND(C) [-Wportability]
   call c_f_pointer(scalarC, notBindC)
-  !WARNING: FPTR= argument to C_F_POINTER() should not have the non-interoperable character length CHARACTER(KIND=1,LEN=2_8) [-Wcharacter-interoperability]
+  !!WARNING: FPTR= argument to C_F_POINTER() should not have the non-interoperable character length CHARACTER(KIND=1,LEN=2_8) [-Wcharacter-interoperability]
   call c_f_pointer(scalarC, c2ptr)
-  !WARNING: FPTR= argument to C_F_POINTER() should not have the non-interoperable intrinsic type or kind CHARACTER(KIND=4,LEN=1_8) [-Winteroperability]
+  !!WARNING: FPTR= argument to C_F_POINTER() should not have the non-interoperable intrinsic type or kind CHARACTER(KIND=4,LEN=1_8) [-Winteroperability]
   call c_f_pointer(scalarC, unicodePtr)
 
   !ERROR: SHAPE= argument to C_F_POINTER() may not appear when FPTR= is scalar

@@ -9,11 +9,11 @@
 #include "lldb/Initialization/SystemInitializerCommon.h"
 
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
+#include "lldb/Core/Diagnostics.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Target/Statistics.h"
-#include "lldb/Utility/Diagnostics.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/Version/Version.h"
@@ -35,9 +35,7 @@
 
 using namespace lldb_private;
 
-SystemInitializerCommon::SystemInitializerCommon(
-    HostInfo::SharedLibraryDirectoryHelper *helper)
-    : m_shlib_dir_helper(helper) {}
+SystemInitializerCommon::SystemInitializerCommon() = default;
 
 SystemInitializerCommon::~SystemInitializerCommon() = default;
 
@@ -64,11 +62,10 @@ llvm::Error SystemInitializerCommon::Initialize() {
   }
 #endif
 
-  InitializeLldbChannel();
-
+  LLDBLogChannel::Initialize();
   Diagnostics::Initialize();
   FileSystem::Initialize();
-  HostInfo::Initialize(m_shlib_dir_helper);
+  HostInfo::Initialize();
 
   llvm::Error error = Socket::Initialize();
   if (error)
@@ -92,13 +89,20 @@ llvm::Error SystemInitializerCommon::Initialize() {
 void SystemInitializerCommon::Terminate() {
   LLDB_SCOPED_TIMER();
 
+#if defined(__linux__) || defined(__FreeBSD__) || defined(__NetBSD__) ||       \
+    defined(__OpenBSD__)
+  ProcessPOSIXLog::Terminate();
+#endif
 #if defined(_WIN32)
   ProcessWindowsLog::Terminate();
 #endif
+
+  process_gdb_remote::ProcessGDBRemoteLog::Terminate();
 
   Socket::Terminate();
   HostInfo::Terminate();
   Log::DisableAllLogChannels();
   FileSystem::Terminate();
   Diagnostics::Terminate();
+  LLDBLogChannel::Terminate();
 }

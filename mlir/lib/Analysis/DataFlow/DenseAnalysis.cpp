@@ -266,9 +266,10 @@ void AbstractDenseForwardDataFlowAnalysis::visitBlock(Block *block) {
     }
 
     LDBG() << "    Joining state from predecessor " << predecessor;
+    const AbstractDenseLattice &before = *getLatticeFor(
+        point, getProgramPointAfter(predecessor->getTerminator()));
     // Merge in the state from the predecessor's terminator.
-    join(after, *getLatticeFor(
-                    point, getProgramPointAfter(predecessor->getTerminator())));
+    visitBlockTransfer(block, point, predecessor, before, after);
   }
 }
 
@@ -614,7 +615,9 @@ void AbstractDenseBackwardDataFlowAnalysis::visitBlock(Block *block) {
     LDBG() << "    Meeting state from successor " << successor;
     // Merge in the state from the successor: either the first operation, or the
     // block itself when empty.
-    meet(before, *getLatticeFor(point, getProgramPointBefore(successor)));
+    visitBlockTransfer(block, point, successor,
+                       *getLatticeFor(point, getProgramPointBefore(successor)),
+                       before);
   }
 }
 
@@ -634,8 +637,12 @@ void AbstractDenseBackwardDataFlowAnalysis::visitRegionBranchOperation(
   LDBG() << "  Processing " << successors.size() << " successor regions";
   for (const RegionSuccessor &successor : successors) {
     const AbstractDenseLattice *after;
-    if (successor.isParent() || successor.getSuccessor()->empty()) {
-      LDBG() << "    Successor is parent or empty region";
+    if (successor.isOperation()) {
+      LDBG() << "    Successor is operation";
+      after = getLatticeFor(point,
+                            getProgramPointAfter(successor.getSuccessorOp()));
+    } else if (successor.getSuccessor()->empty()) {
+      LDBG() << "    Successor is empty region";
       after = getLatticeFor(point, getProgramPointAfter(branch));
     } else {
       Region *successorRegion = successor.getSuccessor();

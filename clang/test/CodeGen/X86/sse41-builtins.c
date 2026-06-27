@@ -75,13 +75,13 @@ TEST_CONSTEXPR(match_m128(_mm_blendv_ps((__m128)(__v4sf){0.0f, 1.0f, 2.0f, 3.0f}
 
 __m128d test_mm_ceil_pd(__m128d x) {
   // CHECK-LABEL: test_mm_ceil_pd
-  // CHECK: call {{.*}}<2 x double> @llvm.x86.sse41.round.pd(<2 x double> %{{.*}}, i32 2)
+  // CHECK  %{{.*}} = call <2 x double> @llvm.ceil.v2f64(<2 x double> %{{.*}})
   return _mm_ceil_pd(x);
 }
 
 __m128 test_mm_ceil_ps(__m128 x) {
   // CHECK-LABEL: test_mm_ceil_ps
-  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse41.round.ps(<4 x float> %{{.*}}, i32 2)
+  // CHECK: %{{.*}} = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %{{.*}}, i32 2)
   return _mm_ceil_ps(x);
 }
 
@@ -402,6 +402,17 @@ __m128i test_mm_mpsadbw_epu8(__m128i x, __m128i y) {
   // CHECK: call <8 x i16> @llvm.x86.sse41.mpsadbw(<16 x i8> %{{.*}}, <16 x i8> %{{.*}}, i8 1)
   return _mm_mpsadbw_epu8(x, y, 1);
 }
+TEST_CONSTEXPR(match_v8hu(_mm_mpsadbw_epu8(((__m128i)(__v16qu){11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71}), ((__m128i)(__v16qu){167,173,179,181,191,193,197,199,211,223,227,229,233,239,241,251}), 0), 640,628,612,598,580,562,548,532));
+TEST_CONSTEXPR(match_v8hu(_mm_mpsadbw_epu8(((__m128i)(__v16qu){11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71}), ((__m128i)(__v16qu){167,173,179,181,191,193,197,199,211,223,227,229,233,239,241,251}), 1), 720,708,692,678,660,642,628,612));
+TEST_CONSTEXPR(match_v8hu(_mm_mpsadbw_epu8(((__m128i)(__v16qu){11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71}), ((__m128i)(__v16qu){167,173,179,181,191,193,197,199,211,223,227,229,233,239,241,251}), 2), 830,818,802,788,770,752,738,722));
+TEST_CONSTEXPR(match_v8hu(_mm_mpsadbw_epu8(((__m128i)(__v16qu){11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71}), ((__m128i)(__v16qu){167,173,179,181,191,193,197,199,211,223,227,229,233,239,241,251}), 3), 904,892,876,862,844,826,812,796));
+TEST_CONSTEXPR(match_v8hu(_mm_mpsadbw_epu8(((__m128i)(__v16qu){11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71}), ((__m128i)(__v16qu){167,173,179,181,191,193,197,199,211,223,227,229,233,239,241,251}), 4), 580,562,548,532,516,498,480,460));
+TEST_CONSTEXPR(match_v8hu(_mm_mpsadbw_epu8(((__m128i)(__v16qu){11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71}), ((__m128i)(__v16qu){167,173,179,181,191,193,197,199,211,223,227,229,233,239,241,251}), 5), 660,642,628,612,596,578,560,540));
+TEST_CONSTEXPR(match_v8hu(_mm_mpsadbw_epu8(((__m128i)(__v16qu){11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71}), ((__m128i)(__v16qu){167,173,179,181,191,193,197,199,211,223,227,229,233,239,241,251}), 6), 770,752,738,722,706,688,670,650));
+TEST_CONSTEXPR(match_v8hu(_mm_mpsadbw_epu8(((__m128i)(__v16qu){11,13,17,19,23,29,31,37,41,43,47,53,59,61,67,71}), ((__m128i)(__v16qu){167,173,179,181,191,193,197,199,211,223,227,229,233,239,241,251}), 7), 844,826,812,796,780,762,744,724));
+TEST_CONSTEXPR(match_v8hu(_mm_mpsadbw_epu8(((__m128i)(__v16qu){255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255}), ((__m128i)(__v16qu){255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255}), 7), 0,0,0,0,0,0,0,0));
+TEST_CONSTEXPR(match_v8hu(_mm_mpsadbw_epu8(((__m128i)(__v16qu){255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255}), ((__m128i)(__v16qu){0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}), 7), 1020,1020,1020,1020,1020,1020,1020,1020));
+TEST_CONSTEXPR(match_v8hu(_mm_mpsadbw_epu8(((__m128i)(__v16qu){0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}), ((__m128i)(__v16qu){255,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255}), 7), 1020,1020,1020,1020,1020,1020,1020,1020));
 
 __m128i test_mm_mul_epi32(__m128i x, __m128i y) {
   // CHECK-LABEL: test_mm_mul_epi32
@@ -430,26 +441,78 @@ TEST_CONSTEXPR(match_v8hi(_mm_packus_epi32((__m128i)(__v4si){40000, -50000, 3276
 
 __m128d test_mm_round_pd(__m128d x) {
   // CHECK-LABEL: test_mm_round_pd
-  // CHECK: call {{.*}}<2 x double> @llvm.x86.sse41.round.pd(<2 x double> %{{.*}}, i32 4)
-  return _mm_round_pd(x, 4);
+  // CHECK: %{{.*}} = call <2 x double> @llvm.roundeven.v2f64(<2 x double> %{{.*}})
+  return _mm_round_pd(x, 0b1000);
+}
+
+__m128d test_mm_round_pd_mxcsr(__m128d x) {
+  // CHECK-LABEL: test_mm_round_pd_mxcsr
+  // CHECK: %{{.*}} = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %{{.*}}, i32 12)
+  return _mm_round_pd(x, 0b1100);
+}
+
+__m128d test_mm_round_pd_fround_no_exc(__m128d x) {
+  // CHECK-LABEL: test_mm_round_pd_fround_no_exc
+  // CHECK: %{{.*}} = call <2 x double> @llvm.x86.sse41.round.pd(<2 x double> %{{.*}}, i32 0)
+  return _mm_round_pd(x, 0b0000);
 }
 
 __m128 test_mm_round_ps(__m128 x) {
   // CHECK-LABEL: test_mm_round_ps
-  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse41.round.ps(<4 x float> %{{.*}}, i32 4)
-  return _mm_round_ps(x, 4);
+  // CHECK:  %{{.*}} = call <4 x float> @llvm.floor.v4f32(<4 x float> %{{.*}})
+  return _mm_round_ps(x, 0b1001);
+}
+
+__m128 test_mm_round_ps_mxcsr(__m128 x) {
+  // CHECK-LABEL: test_mm_round_ps_mxcsr
+  // CHECK: %{{.*}} = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %{{.*}}, i32 12)
+  return _mm_round_ps(x, 0b1100);
+}
+
+__m128 test_mm_round_ps_fround_no_exc(__m128 x) {
+  // CHECK-LABEL: test_mm_round_ps_fround_no_exc
+  // CHECK: %{{.*}} = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %{{.*}}, i32 0)
+  return _mm_round_ps(x, 0b0000);
 }
 
 __m128d test_mm_round_sd(__m128d x, __m128d y) {
   // CHECK-LABEL: test_mm_round_sd
-  // CHECK: call {{.*}}<2 x double> @llvm.x86.sse41.round.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i32 4)
-  return _mm_round_sd(x, y, 4);
+  // CHECK: %[[A:.*]] = extractelement <2 x double> %{{.*}}, i32 0
+  // CHECK: %[[B:.*]] = call double @llvm.roundeven.f64(double %[[A:.*]])
+  // CHECK: %{{.*}} = insertelement <2 x double> %0, double %[[B:.*]], i32 0
+  return _mm_round_sd(x, y, 0b1000);
+}
+
+__m128d test_mm_round_sd_mxcsr(__m128d x, __m128d y) {
+  // CHECK-LABEL: test_mm_round_sd_mxcsr
+  // CHECK: %{{.*}} = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %0, <2 x double> %{{.*}}, i32 12)
+  return _mm_round_sd(x, y, 0b1100);
+}
+
+__m128d test_mm_round_sd_fround_no_exc(__m128d x, __m128d y) {
+  // CHECK-LABEL: test_mm_round_sd_fround_no_exc
+  // CHECK: %{{.*}} = call <2 x double> @llvm.x86.sse41.round.sd(<2 x double> %0, <2 x double> %{{.*}}, i32 0)
+  return _mm_round_sd(x, y, 0b0000);
 }
 
 __m128 test_mm_round_ss(__m128 x, __m128 y) {
   // CHECK-LABEL: test_mm_round_ss
-  // CHECK: call {{.*}}<4 x float> @llvm.x86.sse41.round.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 4)
-  return _mm_round_ss(x, y, 4);
+  // CHECK: %[[A:.*]] = extractelement <4 x float> %{{.*}}, i32 0
+  // CHECK: %[[B:.*]] = call float @llvm.trunc.f32(float %[[A:.*]]) 
+  // CHECK: %{{.*}} = insertelement <4 x float> %0, float %[[B:.*]], i32 0
+  return _mm_round_ss(x, y, 0b1011);
+}
+
+__m128 test_mm_round_ss_mxcsr(__m128 x, __m128 y) {
+  // CHECK-LABEL: test_mm_round_ss_mxcsr
+  // CHECK: %{{.*}} = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %0, <4 x float> %{{.*}}, i32 12)
+  return _mm_round_ss(x, y, 0b1100);
+}
+
+__m128 test_mm_round_ss_fround_no_exc(__m128 x, __m128 y) {
+  // CHECK-LABEL: test_mm_round_ss_fround_no_exc
+  // CHECK: %{{.*}} = call <4 x float> @llvm.x86.sse41.round.ss(<4 x float> %0, <4 x float> %{{.*}}, i32 0)
+  return _mm_round_ss(x, y, 0b0000);
 }
 
 __m128i test_mm_stream_load_si128(__m128i const *a) {

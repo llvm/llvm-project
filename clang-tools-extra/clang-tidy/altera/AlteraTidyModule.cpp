@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "IdDependentBackwardBranchCheck.h"
 #include "KernelNameRestrictionCheck.h"
 #include "SingleWorkItemBarrierCheck.h"
@@ -19,6 +18,7 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy {
 namespace altera {
+namespace {
 
 class AlteraModule : public ClangTidyModule {
 public:
@@ -35,6 +35,7 @@ public:
   }
 };
 
+} // namespace
 } // namespace altera
 
 // Register the AlteraTidyModule using this statically initialized variable.

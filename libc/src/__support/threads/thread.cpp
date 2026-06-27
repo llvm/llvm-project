@@ -53,8 +53,8 @@ class TSSKeyMgr {
 
 public:
   constexpr TSSKeyMgr()
-      : mtx(/*timed=*/false, /*recursive=*/false, /*robust=*/false,
-            /*pshared=*/false) {}
+      : mtx(/*is_priority_inherit=*/false, /*is_recursive=*/false,
+            /*is_robust=*/false, /*is_pshared=*/false) {}
 
   cpp::optional<unsigned int> new_key(TSSDtor *dtor) {
     cpp::lock_guard lock(mtx);
@@ -112,8 +112,8 @@ class ThreadAtExitCallbackMgr {
 
 public:
   constexpr ThreadAtExitCallbackMgr()
-      : mtx(/*timed=*/false, /*recursive=*/false, /*robust=*/false,
-            /*pshared=*/false) {}
+      : mtx(/*is_priority_inherit=*/false, /*is_recursive=*/false,
+            /*is_robust=*/false, /*is_pshared=*/false) {}
 
   int add_callback(AtExitCallback *callback, void *obj) {
     cpp::lock_guard lock(mtx);

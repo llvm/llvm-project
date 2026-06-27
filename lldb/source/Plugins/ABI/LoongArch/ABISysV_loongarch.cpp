@@ -509,16 +509,12 @@ ValueObjectSP ABISysV_loongarch::GetReturnValueObjectSimple(
     return ValueObjectConstResult::Create(thread.GetStackFrameAtIndex(0).get(),
                                           value, ConstString(""));
   }
-  if (type_flags & eTypeIsFloat) {
-    bool is_complex = false;
-
-    if (compiler_type.IsFloatingPointType(is_complex) &&
-        !(type_flags & eTypeIsVector) && !is_complex) {
-      return_valobj_sp =
-          GetValObjFromFPRegs(thread, reg_ctx, machine, type_flags, byte_size);
-      return return_valobj_sp;
-    }
+  if (compiler_type.IsRealFloatingPointType()) {
+    return_valobj_sp =
+        GetValObjFromFPRegs(thread, reg_ctx, machine, type_flags, byte_size);
+    return return_valobj_sp;
   }
+
   return return_valobj_sp;
 }
 
@@ -570,6 +566,7 @@ UnwindPlanSP ABISysV_loongarch::CreateDefaultUnwindPlan() {
   // have been spilled to stack already.
   row.SetRegisterLocationToAtCFAPlusOffset(fp_reg_num, reg_size * -2, true);
   row.SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, reg_size * -1, true);
+  row.SetUnspecifiedRegistersAreUndefined(true);
 
   auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindGeneric);
   plan_sp->AppendRow(std::move(row));
@@ -622,17 +619,17 @@ void ABISysV_loongarch::Terminate() {
 static uint32_t GetGenericNum(llvm::StringRef name) {
   return llvm::StringSwitch<uint32_t>(name)
       .Case("pc", LLDB_REGNUM_GENERIC_PC)
-      .Cases("ra", "r1", LLDB_REGNUM_GENERIC_RA)
-      .Cases("sp", "r3", LLDB_REGNUM_GENERIC_SP)
-      .Cases("fp", "r22", LLDB_REGNUM_GENERIC_FP)
-      .Cases("a0", "r4", LLDB_REGNUM_GENERIC_ARG1)
-      .Cases("a1", "r5", LLDB_REGNUM_GENERIC_ARG2)
-      .Cases("a2", "r6", LLDB_REGNUM_GENERIC_ARG3)
-      .Cases("a3", "r7", LLDB_REGNUM_GENERIC_ARG4)
-      .Cases("a4", "r8", LLDB_REGNUM_GENERIC_ARG5)
-      .Cases("a5", "r9", LLDB_REGNUM_GENERIC_ARG6)
-      .Cases("a6", "r10", LLDB_REGNUM_GENERIC_ARG7)
-      .Cases("a7", "r11", LLDB_REGNUM_GENERIC_ARG8)
+      .Cases({"ra", "r1"}, LLDB_REGNUM_GENERIC_RA)
+      .Cases({"sp", "r3"}, LLDB_REGNUM_GENERIC_SP)
+      .Cases({"fp", "r22"}, LLDB_REGNUM_GENERIC_FP)
+      .Cases({"a0", "r4"}, LLDB_REGNUM_GENERIC_ARG1)
+      .Cases({"a1", "r5"}, LLDB_REGNUM_GENERIC_ARG2)
+      .Cases({"a2", "r6"}, LLDB_REGNUM_GENERIC_ARG3)
+      .Cases({"a3", "r7"}, LLDB_REGNUM_GENERIC_ARG4)
+      .Cases({"a4", "r8"}, LLDB_REGNUM_GENERIC_ARG5)
+      .Cases({"a5", "r9"}, LLDB_REGNUM_GENERIC_ARG6)
+      .Cases({"a6", "r10"}, LLDB_REGNUM_GENERIC_ARG7)
+      .Cases({"a7", "r11"}, LLDB_REGNUM_GENERIC_ARG8)
       .Default(LLDB_INVALID_REGNUM);
 }
 

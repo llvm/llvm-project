@@ -6239,3 +6239,13 @@ define void @legalization_crash() {
   fptoui <192 x float> undef to <192 x i1>
   ret void
 }
+
+; Test that types that need to be split go through BasicTTIImpl.
+define void @BitInt_crash() {
+; ZVE64X-LABEL: 'BitInt_crash'
+; ZVE64X-NEXT:  Cost Model: Found an estimated cost of 2043 for instruction: %1 = bitcast <16 x i64> poison to <512 x i2>
+; ZVE64X-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
+;
+  bitcast <16 x i64> poison to <512 x i2>
+  ret void
+}

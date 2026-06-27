@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji < %s | FileCheck -check-prefix=CHECK-SDAG -enable-var-scope %s
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefix=CHECK-GISEL -enable-var-scope %s
 
-define void @test_readfirstlane_i1(ptr addrspace(1) %out, i1 %src) {
+define void @test_readfirstlane_i1(ptr addrspace(1) %out, i1 %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_i1:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -27,7 +27,7 @@ define void @test_readfirstlane_i1(ptr addrspace(1) %out, i1 %src) {
   ret void
 }
 
-define void @test_readfirstlane_i1_inreg(ptr addrspace(1) %out, i1 inreg %src) {
+define void @test_readfirstlane_i1_inreg(ptr addrspace(1) %out, i1 inreg %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_i1_inreg:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -50,7 +50,7 @@ define void @test_readfirstlane_i1_inreg(ptr addrspace(1) %out, i1 inreg %src) {
   ret void
 }
 
-define void @test_readfirstlane_i1_select(ptr addrspace(1) %out, i32 %src, i32 %src1) {
+define void @test_readfirstlane_i1_select(ptr addrspace(1) %out, i32 %src, i32 %src1) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_i1_select:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -70,8 +70,8 @@ define void @test_readfirstlane_i1_select(ptr addrspace(1) %out, i32 %src, i32 %
 ; CHECK-GISEL-NEXT:    v_cmp_lt_u32_e32 vcc, 42, v2
 ; CHECK-GISEL-NEXT:    v_cndmask_b32_e64 v4, 0, 1, vcc
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s4, v4
-; CHECK-GISEL-NEXT:    s_and_b32 s4, 1, s4
-; CHECK-GISEL-NEXT:    v_cmp_ne_u32_e64 vcc, 0, s4
+; CHECK-GISEL-NEXT:    s_cmp_lg_u32 s4, 0
+; CHECK-GISEL-NEXT:    s_cselect_b64 vcc, exec, 0
 ; CHECK-GISEL-NEXT:    v_cndmask_b32_e32 v2, v3, v2, vcc
 ; CHECK-GISEL-NEXT:    flat_store_dword v[0:1], v2
 ; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -83,7 +83,7 @@ define void @test_readfirstlane_i1_select(ptr addrspace(1) %out, i32 %src, i32 %
   ret void
 }
 
-define void @test_readfirstlane_i1_load(ptr addrspace(1) %out, ptr addrspace(1) %in) {
+define void @test_readfirstlane_i1_load(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_i1_load:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -113,7 +113,7 @@ define void @test_readfirstlane_i1_load(ptr addrspace(1) %out, ptr addrspace(1) 
   ret void
 }
 
-define void @test_readfirstlane_i32(ptr addrspace(1) %out, i32 %src) {
+define void @test_readfirstlane_i32(ptr addrspace(1) %out, i32 %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_i32:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -136,7 +136,7 @@ define void @test_readfirstlane_i32(ptr addrspace(1) %out, i32 %src) {
   ret void
 }
 
-define void @test_readfirstlane_i64(ptr addrspace(1) %out, i64 %src) {
+define void @test_readfirstlane_i64(ptr addrspace(1) %out, i64 %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_i64:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -163,7 +163,7 @@ define void @test_readfirstlane_i64(ptr addrspace(1) %out, i64 %src) {
   ret void
 }
 
-define void @test_readfirstlane_v2i64(ptr addrspace(1) %out, <2 x i64> %src) {
+define void @test_readfirstlane_v2i64(ptr addrspace(1) %out, <2 x i64> %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_v2i64:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -192,7 +192,7 @@ define void @test_readfirstlane_v2i64(ptr addrspace(1) %out, <2 x i64> %src) {
   ret void
 }
 
-define void @test_readfirstlane_v3i64(ptr addrspace(1) %out, <3 x i64> %src) {
+define void @test_readfirstlane_v3i64(ptr addrspace(1) %out, <3 x i64> %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_v3i64:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -225,7 +225,7 @@ define void @test_readfirstlane_v3i64(ptr addrspace(1) %out, <3 x i64> %src) {
   ret void
 }
 
-define void @test_readfirstlane_v4i64(ptr addrspace(1) %out, <4 x i64> %src) {
+define void @test_readfirstlane_v4i64(ptr addrspace(1) %out, <4 x i64> %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_v4i64:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -262,7 +262,7 @@ define void @test_readfirstlane_v4i64(ptr addrspace(1) %out, <4 x i64> %src) {
   ret void
 }
 
-define void @test_readfirstlane_v8i64(ptr addrspace(1) %out, <8 x i64> %src) {
+define void @test_readfirstlane_v8i64(ptr addrspace(1) %out, <8 x i64> %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_v8i64:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -315,7 +315,7 @@ define void @test_readfirstlane_v8i64(ptr addrspace(1) %out, <8 x i64> %src) {
   ret void
 }
 
-define void @test_readfirstlane_f64(ptr addrspace(1) %out, double %src) {
+define void @test_readfirstlane_f64(ptr addrspace(1) %out, double %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_f64:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -342,7 +342,7 @@ define void @test_readfirstlane_f64(ptr addrspace(1) %out, double %src) {
   ret void
 }
 
-define amdgpu_kernel void @test_readfirstlane_imm_i32(ptr addrspace(1) %out) {
+define amdgpu_kernel void @test_readfirstlane_imm_i32(ptr addrspace(1) %out) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_imm_i32:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_mov_b32 s0, 32
@@ -363,7 +363,7 @@ define amdgpu_kernel void @test_readfirstlane_imm_i32(ptr addrspace(1) %out) {
   ret void
 }
 
-define amdgpu_kernel void @test_readfirstlane_imm_i64(ptr addrspace(1) %out) {
+define amdgpu_kernel void @test_readfirstlane_imm_i64(ptr addrspace(1) %out) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_imm_i64:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_mov_b64 s[0:1], 32
@@ -384,7 +384,7 @@ define amdgpu_kernel void @test_readfirstlane_imm_i64(ptr addrspace(1) %out) {
   ret void
 }
 
-define amdgpu_kernel void @test_readfirstlane_imm_f64(ptr addrspace(1) %out) {
+define amdgpu_kernel void @test_readfirstlane_imm_f64(ptr addrspace(1) %out) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_imm_f64:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_mov_b32 s0, 0
@@ -396,7 +396,8 @@ define amdgpu_kernel void @test_readfirstlane_imm_f64(ptr addrspace(1) %out) {
 ;
 ; CHECK-GISEL-LABEL: test_readfirstlane_imm_f64:
 ; CHECK-GISEL:       ; %bb.0:
-; CHECK-GISEL-NEXT:    s_mov_b64 s[0:1], 0x4040000000000000
+; CHECK-GISEL-NEXT:    s_mov_b32 s0, 0
+; CHECK-GISEL-NEXT:    s_mov_b32 s1, 0x40400000
 ; CHECK-GISEL-NEXT:    ;;#ASMSTART
 ; CHECK-GISEL-NEXT:    ; use s[0:1]
 ; CHECK-GISEL-NEXT:    ;;#ASMEND
@@ -406,7 +407,7 @@ define amdgpu_kernel void @test_readfirstlane_imm_f64(ptr addrspace(1) %out) {
   ret void
 }
 
-define amdgpu_kernel void @test_readfirstlane_imm_fold_i32(ptr addrspace(1) %out) {
+define amdgpu_kernel void @test_readfirstlane_imm_fold_i32(ptr addrspace(1) %out) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_imm_fold_i32:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
@@ -437,7 +438,7 @@ define amdgpu_kernel void @test_readfirstlane_imm_fold_i32(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_readfirstlane_imm_fold_i64(ptr addrspace(1) %out) {
+define amdgpu_kernel void @test_readfirstlane_imm_fold_i64(ptr addrspace(1) %out) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_imm_fold_i64:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
@@ -455,13 +456,14 @@ define amdgpu_kernel void @test_readfirstlane_imm_fold_i64(ptr addrspace(1) %out
 ; CHECK-GISEL-LABEL: test_readfirstlane_imm_fold_i64:
 ; CHECK-GISEL:       ; %bb.0:
 ; CHECK-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; CHECK-GISEL-NEXT:    s_mov_b64 s[2:3], 32
 ; CHECK-GISEL-NEXT:    s_add_i32 s12, s12, s17
-; CHECK-GISEL-NEXT:    v_mov_b32_e32 v0, 32
+; CHECK-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; CHECK-GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; CHECK-GISEL-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CHECK-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-GISEL-NEXT:    v_mov_b32_e32 v3, s1
-; CHECK-GISEL-NEXT:    v_mov_b32_e32 v1, 0
+; CHECK-GISEL-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; CHECK-GISEL-NEXT:    v_mov_b32_e32 v1, s3
 ; CHECK-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; CHECK-GISEL-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; CHECK-GISEL-NEXT:    s_endpgm
@@ -470,7 +472,7 @@ define amdgpu_kernel void @test_readfirstlane_imm_fold_i64(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_readfirstlane_imm_fold_f64(ptr addrspace(1) %out) {
+define amdgpu_kernel void @test_readfirstlane_imm_fold_f64(ptr addrspace(1) %out) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_imm_fold_f64:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
@@ -488,13 +490,15 @@ define amdgpu_kernel void @test_readfirstlane_imm_fold_f64(ptr addrspace(1) %out
 ; CHECK-GISEL-LABEL: test_readfirstlane_imm_fold_f64:
 ; CHECK-GISEL:       ; %bb.0:
 ; CHECK-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; CHECK-GISEL-NEXT:    s_mov_b32 s2, 0
 ; CHECK-GISEL-NEXT:    s_add_i32 s12, s12, s17
-; CHECK-GISEL-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; CHECK-GISEL-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; CHECK-GISEL-NEXT:    s_mov_b32 s3, 0x40400000
+; CHECK-GISEL-NEXT:    v_mov_b32_e32 v0, s2
 ; CHECK-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-GISEL-NEXT:    v_mov_b32_e32 v3, s1
-; CHECK-GISEL-NEXT:    v_mov_b32_e32 v1, 0x40400000
+; CHECK-GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; CHECK-GISEL-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; CHECK-GISEL-NEXT:    v_mov_b32_e32 v1, s3
 ; CHECK-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; CHECK-GISEL-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; CHECK-GISEL-NEXT:    s_endpgm
@@ -503,7 +507,7 @@ define amdgpu_kernel void @test_readfirstlane_imm_fold_f64(ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @test_readfirstlane_m0(ptr addrspace(1) %out) {
+define amdgpu_kernel void @test_readfirstlane_m0(ptr addrspace(1) %out) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_m0:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
@@ -541,7 +545,7 @@ define amdgpu_kernel void @test_readfirstlane_m0(ptr addrspace(1) %out) {
   ret void
 }
 
-define amdgpu_kernel void @test_readfirstlane_copy_from_sgpr_i32(ptr addrspace(1) %out) {
+define amdgpu_kernel void @test_readfirstlane_copy_from_sgpr_i32(ptr addrspace(1) %out) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_copy_from_sgpr_i32:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
@@ -579,22 +583,22 @@ define amdgpu_kernel void @test_readfirstlane_copy_from_sgpr_i32(ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @test_readfirstlane_copy_from_sgpr_i64(ptr addrspace(1) %out) {
+define amdgpu_kernel void @test_readfirstlane_copy_from_sgpr_i64(ptr addrspace(1) %out) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_copy_from_sgpr_i64:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CHECK-SDAG-NEXT:    s_add_i32 s12, s12, s17
+; CHECK-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; CHECK-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CHECK-SDAG-NEXT:    ;;#ASMSTART
 ; CHECK-SDAG-NEXT:    s_mov_b64 s[2:3], 0
 ; CHECK-SDAG-NEXT:    ;;#ASMEND
-; CHECK-SDAG-NEXT:    v_mov_b32_e32 v2, s2
-; CHECK-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CHECK-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; CHECK-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; CHECK-SDAG-NEXT:    v_mov_b32_e32 v1, s1
-; CHECK-SDAG-NEXT:    v_mov_b32_e32 v3, s3
-; CHECK-SDAG-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
+; CHECK-SDAG-NEXT:    v_mov_b32_e32 v3, s1
+; CHECK-SDAG-NEXT:    v_mov_b32_e32 v0, s2
+; CHECK-SDAG-NEXT:    v_mov_b32_e32 v1, s3
+; CHECK-SDAG-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-SDAG-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; CHECK-SDAG-NEXT:    s_endpgm
 ;
 ; CHECK-GISEL-LABEL: test_readfirstlane_copy_from_sgpr_i64:
@@ -619,22 +623,22 @@ define amdgpu_kernel void @test_readfirstlane_copy_from_sgpr_i64(ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @test_readfirstlane_copy_from_sgpr_f64(ptr addrspace(1) %out) {
+define amdgpu_kernel void @test_readfirstlane_copy_from_sgpr_f64(ptr addrspace(1) %out) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_copy_from_sgpr_f64:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CHECK-SDAG-NEXT:    s_add_i32 s12, s12, s17
+; CHECK-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; CHECK-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CHECK-SDAG-NEXT:    ;;#ASMSTART
 ; CHECK-SDAG-NEXT:    s_mov_b64 s[2:3], 0
 ; CHECK-SDAG-NEXT:    ;;#ASMEND
-; CHECK-SDAG-NEXT:    v_mov_b32_e32 v2, s2
-; CHECK-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CHECK-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; CHECK-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; CHECK-SDAG-NEXT:    v_mov_b32_e32 v1, s1
-; CHECK-SDAG-NEXT:    v_mov_b32_e32 v3, s3
-; CHECK-SDAG-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
+; CHECK-SDAG-NEXT:    v_mov_b32_e32 v3, s1
+; CHECK-SDAG-NEXT:    v_mov_b32_e32 v0, s2
+; CHECK-SDAG-NEXT:    v_mov_b32_e32 v1, s3
+; CHECK-SDAG-NEXT:    v_mov_b32_e32 v2, s0
+; CHECK-SDAG-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; CHECK-SDAG-NEXT:    s_endpgm
 ;
 ; CHECK-GISEL-LABEL: test_readfirstlane_copy_from_sgpr_f64:
@@ -659,7 +663,7 @@ define amdgpu_kernel void @test_readfirstlane_copy_from_sgpr_f64(ptr addrspace(1
   ret void
 }
 
-define amdgpu_kernel void @test_readfirstlane_fi(ptr addrspace(1) %out) {
+define amdgpu_kernel void @test_readfirstlane_fi(ptr addrspace(1) %out) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_fi:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_add_u32 s0, s0, s17
@@ -686,7 +690,7 @@ define amdgpu_kernel void @test_readfirstlane_fi(ptr addrspace(1) %out) {
   ret void
 }
 
-define void @test_readfirstlane_half(ptr addrspace(1) %out, half %src) {
+define void @test_readfirstlane_half(ptr addrspace(1) %out, half %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_half:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -709,7 +713,7 @@ define void @test_readfirstlane_half(ptr addrspace(1) %out, half %src) {
   ret void
 }
 
-define void @test_readfirstlane_float(ptr addrspace(1) %out, float %src) {
+define void @test_readfirstlane_float(ptr addrspace(1) %out, float %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_float:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -732,7 +736,7 @@ define void @test_readfirstlane_float(ptr addrspace(1) %out, float %src) {
   ret void
 }
 
-define void @test_readfirstlane_bfloat(ptr addrspace(1) %out, bfloat %src) {
+define void @test_readfirstlane_bfloat(ptr addrspace(1) %out, bfloat %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_bfloat:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -755,7 +759,7 @@ define void @test_readfirstlane_bfloat(ptr addrspace(1) %out, bfloat %src) {
   ret void
 }
 
-define void @test_readfirstlane_i16(ptr addrspace(1) %out, i16 %src) {
+define void @test_readfirstlane_i16(ptr addrspace(1) %out, i16 %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_i16:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -779,7 +783,7 @@ define void @test_readfirstlane_i16(ptr addrspace(1) %out, i16 %src) {
   ret void
 }
 
-define void @test_readfirstlane_v2f16(ptr addrspace(1) %out, <2 x half> %src) {
+define void @test_readfirstlane_v2f16(ptr addrspace(1) %out, <2 x half> %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_v2f16:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -802,7 +806,7 @@ define void @test_readfirstlane_v2f16(ptr addrspace(1) %out, <2 x half> %src) {
   ret void
 }
 
-define void @test_readfirstlane_v2f32(ptr addrspace(1) %out, <2 x float> %src) {
+define void @test_readfirstlane_v2f32(ptr addrspace(1) %out, <2 x float> %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_v2f32:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -827,7 +831,7 @@ define void @test_readfirstlane_v2f32(ptr addrspace(1) %out, <2 x float> %src) {
   ret void
 }
 
-define void @test_readfirstlane_v3f32(ptr addrspace(1) %out, <3 x float> %src) {
+define void @test_readfirstlane_v3f32(ptr addrspace(1) %out, <3 x float> %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_v3f32:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -854,7 +858,7 @@ define void @test_readfirstlane_v3f32(ptr addrspace(1) %out, <3 x float> %src) {
   ret void
 }
 
-define void @test_readfirstlane_v4f32(ptr addrspace(1) %out, <4 x float> %src) {
+define void @test_readfirstlane_v4f32(ptr addrspace(1) %out, <4 x float> %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_v4f32:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -883,7 +887,7 @@ define void @test_readfirstlane_v4f32(ptr addrspace(1) %out, <4 x float> %src) {
   ret void
 }
 
-define void @test_readfirstlane_v8f32(ptr addrspace(1) %out, <8 x float> %src) {
+define void @test_readfirstlane_v8f32(ptr addrspace(1) %out, <8 x float> %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_v8f32:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -920,7 +924,7 @@ define void @test_readfirstlane_v8f32(ptr addrspace(1) %out, <8 x float> %src) {
   ret void
 }
 
-define void @test_readfirstlane_v16f32(ptr addrspace(1) %out, <16 x float> %src) {
+define void @test_readfirstlane_v16f32(ptr addrspace(1) %out, <16 x float> %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_v16f32:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -973,17 +977,13 @@ define void @test_readfirstlane_v16f32(ptr addrspace(1) %out, <16 x float> %src)
   ret void
 }
 
-define void @test_readfirstlane_v32f32(ptr addrspace(1) %out, <32 x float> %src) {
+define void @test_readfirstlane_v32f32(ptr addrspace(1) %out, <32 x float> %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_v32f32:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-SDAG-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-SDAG-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
 ; CHECK-SDAG-NEXT:    s_mov_b64 exec, s[4:5]
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s61, v27
-; CHECK-SDAG-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:8
-; CHECK-SDAG-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4
-; CHECK-SDAG-NEXT:    buffer_load_dword v27, off, s[0:3], s32
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s36, 0
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s37, 1
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s38, 2
@@ -1000,6 +1000,10 @@ define void @test_readfirstlane_v32f32(ptr addrspace(1) %out, <32 x float> %src)
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s65, 13
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s66, 14
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s67, 15
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s61, v27
+; CHECK-SDAG-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:8
+; CHECK-SDAG-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4
+; CHECK-SDAG-NEXT:    buffer_load_dword v27, off, s[0:3], s32
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s64, v30
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s55, v21
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s54, v20
@@ -1066,10 +1070,6 @@ define void @test_readfirstlane_v32f32(ptr addrspace(1) %out, <32 x float> %src)
 ; CHECK-GISEL-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
 ; CHECK-GISEL-NEXT:    s_mov_b64 exec, s[4:5]
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s36, 0
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s36, v2
-; CHECK-GISEL-NEXT:    buffer_load_dword v0, off, s[0:3], s32
-; CHECK-GISEL-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4
-; CHECK-GISEL-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:8
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s37, 1
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s38, 2
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s39, 3
@@ -1085,6 +1085,10 @@ define void @test_readfirstlane_v32f32(ptr addrspace(1) %out, <32 x float> %src)
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s65, 13
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s66, 14
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s67, 15
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s36, v2
+; CHECK-GISEL-NEXT:    buffer_load_dword v0, off, s[0:3], s32
+; CHECK-GISEL-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4
+; CHECK-GISEL-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:8
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s37, v3
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s38, v4
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s39, v5
@@ -1148,7 +1152,7 @@ define void @test_readfirstlane_v32f32(ptr addrspace(1) %out, <32 x float> %src)
   ret void
 }
 
-define void @test_readfirstlane_v2i32(ptr addrspace(1) %out, <2 x i32> %src) {
+define void @test_readfirstlane_v2i32(ptr addrspace(1) %out, <2 x i32> %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_v2i32:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1173,7 +1177,7 @@ define void @test_readfirstlane_v2i32(ptr addrspace(1) %out, <2 x i32> %src) {
   ret void
 }
 
-define void @test_readfirstlane_v3i32(ptr addrspace(1) %out, <3 x i32> %src) {
+define void @test_readfirstlane_v3i32(ptr addrspace(1) %out, <3 x i32> %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_v3i32:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1200,7 +1204,7 @@ define void @test_readfirstlane_v3i32(ptr addrspace(1) %out, <3 x i32> %src) {
   ret void
 }
 
-define void @test_readfirstlane_v4i32(ptr addrspace(1) %out, <4 x i32> %src) {
+define void @test_readfirstlane_v4i32(ptr addrspace(1) %out, <4 x i32> %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_v4i32:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1229,7 +1233,7 @@ define void @test_readfirstlane_v4i32(ptr addrspace(1) %out, <4 x i32> %src) {
   ret void
 }
 
-define void @test_readfirstlane_v5i32(ptr addrspace(1) %out, <5 x i32> %src) {
+define void @test_readfirstlane_v5i32(ptr addrspace(1) %out, <5 x i32> %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_v5i32:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1260,7 +1264,7 @@ define void @test_readfirstlane_v5i32(ptr addrspace(1) %out, <5 x i32> %src) {
   ret void
 }
 
-define void @test_readfirstlane_v6i32(ptr addrspace(1) %out, <6 x i32> %src) {
+define void @test_readfirstlane_v6i32(ptr addrspace(1) %out, <6 x i32> %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_v6i32:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1293,7 +1297,7 @@ define void @test_readfirstlane_v6i32(ptr addrspace(1) %out, <6 x i32> %src) {
   ret void
 }
 
-define void @test_readfirstlane_v7i32(ptr addrspace(1) %out, <7 x i32> %src) {
+define void @test_readfirstlane_v7i32(ptr addrspace(1) %out, <7 x i32> %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_v7i32:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1328,7 +1332,7 @@ define void @test_readfirstlane_v7i32(ptr addrspace(1) %out, <7 x i32> %src) {
   ret void
 }
 
-define void @test_readfirstlane_v8i32(ptr addrspace(1) %out, <8 x i32> %src) {
+define void @test_readfirstlane_v8i32(ptr addrspace(1) %out, <8 x i32> %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_v8i32:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1365,7 +1369,7 @@ define void @test_readfirstlane_v8i32(ptr addrspace(1) %out, <8 x i32> %src) {
   ret void
 }
 
-define void @test_readfirstlane_v16i32(ptr addrspace(1) %out, <16 x i32> %src) {
+define void @test_readfirstlane_v16i32(ptr addrspace(1) %out, <16 x i32> %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_v16i32:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1418,17 +1422,13 @@ define void @test_readfirstlane_v16i32(ptr addrspace(1) %out, <16 x i32> %src) {
   ret void
 }
 
-define void @test_readfirstlane_v32i32(ptr addrspace(1) %out, <32 x i32> %src) {
+define void @test_readfirstlane_v32i32(ptr addrspace(1) %out, <32 x i32> %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_v32i32:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-SDAG-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; CHECK-SDAG-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
 ; CHECK-SDAG-NEXT:    s_mov_b64 exec, s[4:5]
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s61, v27
-; CHECK-SDAG-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:8
-; CHECK-SDAG-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4
-; CHECK-SDAG-NEXT:    buffer_load_dword v27, off, s[0:3], s32
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s36, 0
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s37, 1
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s38, 2
@@ -1445,6 +1445,10 @@ define void @test_readfirstlane_v32i32(ptr addrspace(1) %out, <32 x i32> %src) {
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s65, 13
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s66, 14
 ; CHECK-SDAG-NEXT:    v_writelane_b32 v31, s67, 15
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s61, v27
+; CHECK-SDAG-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:8
+; CHECK-SDAG-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4
+; CHECK-SDAG-NEXT:    buffer_load_dword v27, off, s[0:3], s32
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s64, v30
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s55, v21
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s54, v20
@@ -1511,10 +1515,6 @@ define void @test_readfirstlane_v32i32(ptr addrspace(1) %out, <32 x i32> %src) {
 ; CHECK-GISEL-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:12 ; 4-byte Folded Spill
 ; CHECK-GISEL-NEXT:    s_mov_b64 exec, s[4:5]
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s36, 0
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s36, v2
-; CHECK-GISEL-NEXT:    buffer_load_dword v0, off, s[0:3], s32
-; CHECK-GISEL-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4
-; CHECK-GISEL-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:8
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s37, 1
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s38, 2
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s39, 3
@@ -1530,6 +1530,10 @@ define void @test_readfirstlane_v32i32(ptr addrspace(1) %out, <32 x i32> %src) {
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s65, 13
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s66, 14
 ; CHECK-GISEL-NEXT:    v_writelane_b32 v31, s67, 15
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s36, v2
+; CHECK-GISEL-NEXT:    buffer_load_dword v0, off, s[0:3], s32
+; CHECK-GISEL-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4
+; CHECK-GISEL-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:8
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s37, v3
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s38, v4
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s39, v5
@@ -1593,7 +1597,7 @@ define void @test_readfirstlane_v32i32(ptr addrspace(1) %out, <32 x i32> %src) {
   ret void
 }
 
-define void @test_readfirstlane_v8i16(ptr addrspace(1) %out, <8 x i16> %src) {
+define void @test_readfirstlane_v8i16(ptr addrspace(1) %out, <8 x i16> %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_v8i16:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1622,7 +1626,7 @@ define void @test_readfirstlane_v8i16(ptr addrspace(1) %out, <8 x i16> %src) {
   ret void
 }
 
-define void @test_readfirstlane_v16i16(ptr addrspace(1) %out, <16 x i16> %src) {
+define void @test_readfirstlane_v16i16(ptr addrspace(1) %out, <16 x i16> %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_v16i16:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1659,7 +1663,7 @@ define void @test_readfirstlane_v16i16(ptr addrspace(1) %out, <16 x i16> %src) {
   ret void
 }
 
-define void @test_readfirstlane_v32i16(ptr addrspace(1) %out, <32 x i16> %src) {
+define void @test_readfirstlane_v32i16(ptr addrspace(1) %out, <32 x i16> %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_v32i16:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1713,7 +1717,7 @@ define void @test_readfirstlane_v32i16(ptr addrspace(1) %out, <32 x i16> %src) {
 }
 
 
-define void @test_readfirstlane_v32f16(ptr addrspace(1) %out, <32 x half> %src) {
+define void @test_readfirstlane_v32f16(ptr addrspace(1) %out, <32 x half> %src) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_v32f16:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1766,3 +1770,4 @@ define void @test_readfirstlane_v32f16(ptr addrspace(1) %out, <32 x half> %src) 
   ret void
 }
 
+attributes #0 = { nounwind }

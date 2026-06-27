@@ -23,13 +23,13 @@ namespace impl {
 /// Lookup a device-side function using a host pointer /p HstPtr using the table
 /// provided by the device plugin. The table is an ordered pair of host and
 /// device pointers sorted on the value of the host pointer.
-static void *indirectCallLookup(void *HstPtr) {
+static FnPtrTy indirectCallLookup(FnPtrTy HstPtr) {
   if (!HstPtr)
     return nullptr;
 
   struct IndirectCallTable {
-    void *HstPtr;
-    void *DevPtr;
+    FnPtrTy HstPtr;
+    FnPtrTy DevPtr;
   };
   IndirectCallTable *Table =
       reinterpret_cast<IndirectCallTable *>(config::getIndirectCallTablePtr());
@@ -89,7 +89,7 @@ double omp_get_wtime(void) {
   return static_cast<double>(__builtin_readsteadycounter()) * omp_get_wtick();
 }
 
-void *__llvm_omp_indirect_call_lookup(void *HstPtr) {
+FnPtrTy __llvm_omp_indirect_call_lookup(FnPtrTy HstPtr) {
   return ompx::impl::indirectCallLookup(HstPtr);
 }
 
@@ -100,7 +100,7 @@ void *omp_alloc(size_t size, omp_allocator_handle_t allocator) {
   case omp_const_mem_alloc:
   case omp_high_bw_mem_alloc:
   case omp_low_lat_mem_alloc:
-    return malloc(size);
+    return ompx::allocator::alloc(size);
   default:
     return nullptr;
   }
@@ -113,7 +113,7 @@ void omp_free(void *ptr, omp_allocator_handle_t allocator) {
   case omp_const_mem_alloc:
   case omp_high_bw_mem_alloc:
   case omp_low_lat_mem_alloc:
-    free(ptr);
+    ompx::allocator::free(ptr);
     return;
   case omp_null_allocator:
   default:
@@ -131,9 +131,14 @@ unsigned long long __llvm_omp_host_call(void *fn, void *data, size_t size) {
   Port.recv([&](rpc::Buffer *Buffer, uint32_t) {
     Ret = static_cast<unsigned long long>(Buffer->data[0]);
   });
-  Port.close();
   return Ret;
 }
+}
+
+// C++ ABI helpers.
+extern "C" {
+[[gnu::weak]] void __cxa_pure_virtual(void) { __builtin_trap(); }
+[[gnu::weak]] void __cxa_deleted_virtual(void) { __builtin_trap(); }
 }
 
 ///}

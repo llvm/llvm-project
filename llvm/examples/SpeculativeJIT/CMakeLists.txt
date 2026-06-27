@@ -10,6 +10,8 @@ set(LLVM_LINK_COMPONENTS
   Passes
   )
 
-add_llvm_example(SpeculativeJIT
-  SpeculativeJIT.cpp
+if(LLVM_ENABLE_THREADS)
+  add_llvm_example(SpeculativeJIT
+    SpeculativeJIT.cpp
   )
+endif()

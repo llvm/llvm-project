@@ -29,20 +29,6 @@ static const int MaxVecSize = 4;
 
 using namespace llvm;
 
-// Recursively creates an array-like version of a given vector type.
-static Type *equivalentArrayTypeFromVector(Type *T) {
-  if (auto *VecTy = dyn_cast<VectorType>(T))
-    return ArrayType::get(VecTy->getElementType(),
-                          dyn_cast<FixedVectorType>(VecTy)->getNumElements());
-  if (auto *ArrayTy = dyn_cast<ArrayType>(T)) {
-    Type *NewElementType =
-        equivalentArrayTypeFromVector(ArrayTy->getElementType());
-    return ArrayType::get(NewElementType, ArrayTy->getNumElements());
-  }
-  // If it's not a vector or array, return the original type.
-  return T;
-}
-
 class DXILDataScalarizationLegacy : public ModulePass {
 
 public:
@@ -81,7 +67,8 @@ public:
   friend bool findAndReplaceVectors(llvm::Module &M);
 
 private:
-  typedef std::pair<AllocaInst *, SmallVector<Value *, 4>> AllocaAndGEPs;
+  typedef std::tuple<AllocaInst *, Type *, SmallVector<Value *, 4>>
+      AllocaAndGEPs;
   typedef SmallDenseMap<Value *, AllocaAndGEPs>
       VectorToArrayMap; // A map from a vector-typed Value to its corresponding
                         // AllocaInst and GEPs to each element of an array
@@ -121,10 +108,23 @@ DataScalarizerVisitor::lookupReplacementGlobal(Value *CurrOperand) {
 static bool isVectorOrArrayOfVectors(Type *T) {
   if (isa<VectorType>(T))
     return true;
-  if (ArrayType *ArrType = dyn_cast<ArrayType>(T))
-    return isa<VectorType>(ArrType->getElementType()) ||
-           isVectorOrArrayOfVectors(ArrType->getElementType());
+  if (ArrayType *ArrayTy = dyn_cast<ArrayType>(T))
+    return isVectorOrArrayOfVectors(ArrayTy->getElementType());
   return false;
+}
+
+// Recursively creates an array-like version of a given vector type.
+static Type *equivalentArrayTypeFromVector(Type *T) {
+  if (auto *VecTy = dyn_cast<VectorType>(T))
+    return ArrayType::get(VecTy->getElementType(),
+                          dyn_cast<FixedVectorType>(VecTy)->getNumElements());
+  if (auto *ArrayTy = dyn_cast<ArrayType>(T)) {
+    Type *NewElementType =
+        equivalentArrayTypeFromVector(ArrayTy->getElementType());
+    return ArrayType::get(NewElementType, ArrayTy->getNumElements());
+  }
+  // If it's not a vector or array, return the original type.
+  return T;
 }
 
 bool DataScalarizerVisitor::visitAllocaInst(AllocaInst &AI) {
@@ -135,7 +135,7 @@ bool DataScalarizerVisitor::visitAllocaInst(AllocaInst &AI) {
   IRBuilder<> Builder(&AI);
   Type *NewType = equivalentArrayTypeFromVector(AllocatedType);
   AllocaInst *ArrAlloca =
-      Builder.CreateAlloca(NewType, nullptr, AI.getName() + ".scalarize");
+      Builder.CreateAlloca(NewType, nullptr, AI.getName() + ".scalarized");
   ArrAlloca->setAlignment(AI.getAlign());
   AI.replaceAllUsesWith(ArrAlloca);
   AI.eraseFromParent();
@@ -194,6 +194,14 @@ DataScalarizerVisitor::createArrayFromVector(IRBuilder<> &Builder, Value *Vec,
   // Allocate the array to hold the vector elements
   Builder.SetInsertPointPastAllocas(Builder.GetInsertBlock()->getParent());
   Type *ArrTy = equivalentArrayTypeFromVector(Vec->getType());
+  // DXIL indexable temps cannot hold i1 elements; booleans occupy 32 bits in
+  // memory. Widen i1 element arrays to i32.
+  Type *ArrElemTy = ArrTy->getArrayElementType();
+  bool WidenBool = ArrElemTy->isIntegerTy(1);
+  if (WidenBool) {
+    ArrElemTy = Builder.getInt32Ty();
+    ArrTy = ArrayType::get(ArrElemTy, ArrTy->getArrayNumElements());
+  }
   AllocaInst *ArrAlloca =
       Builder.CreateAlloca(ArrTy, nullptr, Name + ".alloca");
   const uint64_t ArrNumElems = ArrTy->getArrayNumElements();
@@ -206,23 +214,24 @@ DataScalarizerVisitor::createArrayFromVector(IRBuilder<> &Builder, Value *Vec,
   SmallVector<Value *, 4> GEPs(ArrNumElems);
   for (unsigned I = 0; I < ArrNumElems; ++I) {
     Value *EE = Builder.CreateExtractElement(Vec, I, Name + ".extract");
+    if (WidenBool)
+      EE = Builder.CreateZExt(EE, ArrElemTy, Name + ".zext");
     GEPs[I] = Builder.CreateInBoundsGEP(
         ArrTy, ArrAlloca, {Builder.getInt32(0), Builder.getInt32(I)},
         Name + ".index");
     Builder.CreateStore(EE, GEPs[I]);
   }
 
-  VectorAllocaMap.insert({Vec, {ArrAlloca, GEPs}});
+  VectorAllocaMap.insert({Vec, {ArrAlloca, ArrTy, GEPs}});
   Builder.SetInsertPoint(InsertPoint);
-  return {ArrAlloca, GEPs};
+  return {ArrAlloca, ArrTy, GEPs};
 }
 
 /// Returns a pair of Value* with the first being a GEP into ArrAlloca using
 /// indices {0, Index}, and the second Value* being a Load of the GEP
 static std::pair<Value *, Value *>
-dynamicallyLoadArray(IRBuilder<> &Builder, AllocaInst *ArrAlloca, Value *Index,
-                     const Twine &Name = "") {
-  Type *ArrTy = ArrAlloca->getAllocatedType();
+dynamicallyLoadArray(IRBuilder<> &Builder, AllocaInst *ArrAlloca, Type *ArrTy,
+                     Value *Index, const Twine &Name = "") {
   Value *GEP = Builder.CreateInBoundsGEP(
       ArrTy, ArrAlloca, {Builder.getInt32(0), Index}, Name + ".index");
   Value *Load =
@@ -240,21 +249,34 @@ bool DataScalarizerVisitor::replaceDynamicInsertElementInst(
 
   AllocaAndGEPs ArrAllocaAndGEPs =
       createArrayFromVector(Builder, Vec, IEI.getName());
-  AllocaInst *ArrAlloca = ArrAllocaAndGEPs.first;
-  Type *ArrTy = ArrAlloca->getAllocatedType();
-  SmallVector<Value *, 4> &ArrGEPs = ArrAllocaAndGEPs.second;
+  AllocaInst *ArrAlloca = std::get<0>(ArrAllocaAndGEPs);
+  Type *ArrTy = std::get<1>(ArrAllocaAndGEPs);
+  SmallVector<Value *, 4> &ArrGEPs = std::get<2>(ArrAllocaAndGEPs);
+
+  // The array element type may have been widened (e.g. i1 -> i32) so that the
+  // indexable temp uses a legal DXIL memory type. Convert between the vector
+  // element type and the (possibly wider) array element type as needed.
+  Type *ArrElemTy = ArrTy->getArrayElementType();
+  Type *VecElemTy = cast<VectorType>(Vec->getType())->getElementType();
+  bool WidenBool = ArrElemTy != VecElemTy && VecElemTy->isIntegerTy(1);
 
   auto GEPAndLoad =
-      dynamicallyLoadArray(Builder, ArrAlloca, Index, IEI.getName());
+      dynamicallyLoadArray(Builder, ArrAlloca, ArrTy, Index, IEI.getName());
   Value *GEP = GEPAndLoad.first;
   Value *Load = GEPAndLoad.second;
 
-  Builder.CreateStore(Val, GEP);
+  Value *StoreVal = Val;
+  if (WidenBool)
+    StoreVal = Builder.CreateZExt(Val, ArrElemTy, IEI.getName() + ".zext");
+  Builder.CreateStore(StoreVal, GEP);
   Value *NewIEI = PoisonValue::get(Vec->getType());
   for (unsigned I = 0; I < ArrTy->getArrayNumElements(); ++I) {
-    Value *Load = Builder.CreateLoad(ArrTy->getArrayElementType(), ArrGEPs[I],
-                                     IEI.getName() + ".load");
-    NewIEI = Builder.CreateInsertElement(NewIEI, Load, Builder.getInt32(I),
+    Value *EltLoad =
+        Builder.CreateLoad(ArrElemTy, ArrGEPs[I], IEI.getName() + ".load");
+    if (WidenBool)
+      EltLoad =
+          Builder.CreateTrunc(EltLoad, VecElemTy, IEI.getName() + ".trunc");
+    NewIEI = Builder.CreateInsertElement(NewIEI, EltLoad, Builder.getInt32(I),
                                          IEI.getName() + ".insert");
   }
 
@@ -281,11 +303,21 @@ bool DataScalarizerVisitor::replaceDynamicExtractElementInst(
 
   AllocaAndGEPs ArrAllocaAndGEPs =
       createArrayFromVector(Builder, EEI.getVectorOperand(), EEI.getName());
-  AllocaInst *ArrAlloca = ArrAllocaAndGEPs.first;
+  AllocaInst *ArrAlloca = std::get<0>(ArrAllocaAndGEPs);
+  Type *ArrTy = std::get<1>(ArrAllocaAndGEPs);
 
-  auto GEPAndLoad = dynamicallyLoadArray(Builder, ArrAlloca,
+  auto GEPAndLoad = dynamicallyLoadArray(Builder, ArrAlloca, ArrTy,
                                          EEI.getIndexOperand(), EEI.getName());
   Value *Load = GEPAndLoad.second;
+
+  // The array element type may have been widened (e.g. i1 -> i32) so that the
+  // indexable temp uses a legal DXIL memory type. Truncate back to the original
+  // element type of the extractelement if necessary.
+  if (Load->getType() != EEI.getType()) {
+    assert(Load->getType()->isIntegerTy(32) && EEI.getType()->isIntegerTy(1) &&
+           "Unexpected type mismatch: only i32 -> i1 widening is supported");
+    Load = Builder.CreateTrunc(Load, EEI.getType(), EEI.getName() + ".trunc");
+  }
 
   EEI.replaceAllUsesWith(Load);
   EEI.eraseFromParent();
@@ -303,42 +335,44 @@ bool DataScalarizerVisitor::visitExtractElementInst(ExtractElementInst &EEI) {
 bool DataScalarizerVisitor::visitGetElementPtrInst(GetElementPtrInst &GEPI) {
   GEPOperator *GOp = cast<GEPOperator>(&GEPI);
   Value *PtrOperand = GOp->getPointerOperand();
-  Type *NewGEPType = GOp->getSourceElementType();
-  bool NeedsTransform = false;
+  Type *GEPType = GOp->getSourceElementType();
 
-  // Unwrap GEP ConstantExprs to find the base operand and element type
-  while (auto *CE = dyn_cast<ConstantExpr>(PtrOperand)) {
-    if (auto *GEPCE = dyn_cast<GEPOperator>(CE)) {
-      GOp = GEPCE;
-      PtrOperand = GEPCE->getPointerOperand();
-      NewGEPType = GEPCE->getSourceElementType();
-    } else
-      break;
+  // Replace a GEP ConstantExpr pointer operand with a GEP instruction so that
+  // it can be visited
+  if (auto *PtrOpGEPCE = dyn_cast<ConstantExpr>(PtrOperand);
+      PtrOpGEPCE && PtrOpGEPCE->getOpcode() == Instruction::GetElementPtr) {
+    GetElementPtrInst *OldGEPI =
+        cast<GetElementPtrInst>(PtrOpGEPCE->getAsInstruction());
+    OldGEPI->insertBefore(GEPI.getIterator());
+
+    IRBuilder<> Builder(&GEPI);
+    SmallVector<Value *> Indices(GEPI.indices());
+    Value *NewGEP =
+        Builder.CreateGEP(GEPI.getSourceElementType(), OldGEPI, Indices,
+                          GEPI.getName(), GEPI.getNoWrapFlags());
+    assert(isa<GetElementPtrInst>(NewGEP) &&
+           "Expected newly-created GEP to be an instruction");
+    GetElementPtrInst *NewGEPI = cast<GetElementPtrInst>(NewGEP);
+
+    GEPI.replaceAllUsesWith(NewGEPI);
+    GEPI.eraseFromParent();
+    visitGetElementPtrInst(*OldGEPI);
+    visitGetElementPtrInst(*NewGEPI);
+    return true;
   }
 
-  if (GlobalVariable *NewGlobal = lookupReplacementGlobal(PtrOperand)) {
-    NewGEPType = NewGlobal->getValueType();
-    PtrOperand = NewGlobal;
-    NeedsTransform = true;
-  } else if (AllocaInst *Alloca = dyn_cast<AllocaInst>(PtrOperand)) {
-    Type *AllocatedType = Alloca->getAllocatedType();
-    if (isa<ArrayType>(AllocatedType) &&
-        AllocatedType != GOp->getResultElementType()) {
-      NewGEPType = AllocatedType;
-      NeedsTransform = true;
-    }
-  }
+  Type *NewGEPType = equivalentArrayTypeFromVector(GEPType);
+  Value *NewPtrOperand = PtrOperand;
+  if (GlobalVariable *NewGlobal = lookupReplacementGlobal(PtrOperand))
+    NewPtrOperand = NewGlobal;
 
+  bool NeedsTransform = NewPtrOperand != PtrOperand || NewGEPType != GEPType;
   if (!NeedsTransform)
     return false;
 
-  // Keep scalar GEPs scalar; dxil-flatten-arrays will do flattening later
-  if (!isa<ArrayType>(GOp->getSourceElementType()))
-    NewGEPType = GOp->getSourceElementType();
-
   IRBuilder<> Builder(&GEPI);
-  SmallVector<Value *, MaxVecSize> Indices(GOp->indices());
-  Value *NewGEP = Builder.CreateGEP(NewGEPType, PtrOperand, Indices,
+  SmallVector<Value *, MaxVecSize> Indices(GOp->idx_begin(), GOp->idx_end());
+  Value *NewGEP = Builder.CreateGEP(NewGEPType, NewPtrOperand, Indices,
                                     GOp->getName(), GOp->getNoWrapFlags());
 
   GOp->replaceAllUsesWith(NewGEP);
@@ -365,18 +399,14 @@ static Constant *transformInitializer(Constant *Init, Type *OrigType,
   if (isa<VectorType>(OrigType) && isa<ArrayType>(NewType)) {
     // Convert vector initializer to array initializer
     SmallVector<Constant *, MaxVecSize> ArrayElements;
-    if (ConstantVector *ConstVecInit = dyn_cast<ConstantVector>(Init)) {
-      for (unsigned I = 0; I < ConstVecInit->getNumOperands(); ++I)
-        ArrayElements.push_back(ConstVecInit->getOperand(I));
-    } else if (ConstantDataVector *ConstDataVecInit =
-                   llvm::dyn_cast<llvm::ConstantDataVector>(Init)) {
-      for (unsigned I = 0; I < ConstDataVecInit->getNumElements(); ++I)
-        ArrayElements.push_back(ConstDataVecInit->getElementAsConstant(I));
-    } else {
-      assert(false && "Expected a ConstantVector or ConstantDataVector for "
-                      "vector initializer!");
-    }
 
+    unsigned E = cast<FixedVectorType>(OrigType)->getNumElements();
+    for (unsigned I = 0; I != E; ++I)
+      if (Constant *Elt = Init->getAggregateElement(I))
+        ArrayElements.push_back(Elt);
+
+    assert(ArrayElements.size() == E &&
+           "Expected fixed length constant aggregate for vector initializer!");
     return ConstantArray::get(cast<ArrayType>(NewType), ArrayElements);
   }
 

@@ -55,6 +55,29 @@ func.func @arith_muli(%a: index) -> index {
 
 // -----
 
+// CHECK: #[[$map_muli_i32:.*]] = affine_map<()[s0] -> (s0 * 7)>
+// CHECK-LABEL: func @arith_muli_integer(
+//  CHECK-SAME:     %[[a:.*]]: i32
+//       CHECK:   %[[cast:.*]] = arith.index_cast %[[a]] : i32 to index
+//       CHECK:   %[[apply:.*]] = affine.apply #[[$map_muli_i32]]()[%[[cast]]]
+//       CHECK:   return %[[apply]]
+// CHECK-ARITH-LABEL: func @arith_muli_integer(
+//  CHECK-ARITH-SAME:     %[[a:.*]]: i32
+//       CHECK-ARITH:   %[[c7:.*]] = arith.constant 7 : i32
+//       CHECK-ARITH:   arith.muli %[[a]], %[[c7]] : i32
+//   CHECK-ARITH-DAG:   %[[cast:.*]] = arith.index_cast %[[a]] : i32 to index
+//   CHECK-ARITH-DAG:   %[[c7_reified:.*]] = arith.constant 7 : index
+//       CHECK-ARITH:   %[[mul:.*]] = arith.muli %[[cast]], %[[c7_reified]] : index
+//       CHECK-ARITH:   return %[[mul]]
+func.func @arith_muli_integer(%a: i32) -> index {
+  %c7 = arith.constant 7 : i32
+  %product = arith.muli %a, %c7 : i32
+  %0 = "test.reify_bound"(%product) {allow_integer_type} : (i32) -> (index)
+  return %0 : index
+}
+
+// -----
+
 func.func @arith_muli_non_pure(%a: index, %b: index) -> index {
   %0 = arith.muli %a, %b : index
   // Semi-affine expressions (such as "symbol * symbol") are not supported.
@@ -101,6 +124,22 @@ func.func @arith_const() -> index {
 
 // -----
 
+// CHECK-LABEL: func @arith_addi_integer_constant()
+//       CHECK:   %[[c12:.*]] = arith.constant 12 : index
+//       CHECK:   return %[[c12]]
+// CHECK-ARITH-LABEL: func @arith_addi_integer_constant()
+//       CHECK-ARITH:   %[[c12:.*]] = arith.constant 12 : index
+//       CHECK-ARITH:   return %[[c12]]
+func.func @arith_addi_integer_constant() -> index {
+  %c5 = arith.constant 5 : i32
+  %c7 = arith.constant 7 : i32
+  %sum = arith.addi %c5, %c7 : i32
+  %0 = "test.reify_bound"(%sum) {allow_integer_type, constant} : (i32) -> (index)
+  return %0 : index
+}
+
+// -----
+
 // CHECK-LABEL: func @arith_select(
 func.func @arith_select(%c: i1) -> (index, index) {
   // CHECK: arith.constant 5 : index
@@ -128,4 +167,53 @@ func.func @arith_select_elementwise(%a: tensor<?xf32>, %b: tensor<?xf32>, %c: te
       : (tensor<?xf32>) -> (index)
   // CHECK: return %[[dim]]
   return %0 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @arith_minsi(
+//  CHECK-SAME:     %[[a:.*]]: index
+//       CHECK:   %[[ub:.*]] = arith.constant 5 : index
+//       CHECK:   return %[[ub]]
+func.func @arith_minsi(%a: index) -> index {
+  %c4 = arith.constant 4 : index
+  %0 = arith.minsi %a, %c4 : index
+  %1 = "test.reify_bound"(%0) {type = "UB"} : (index) -> (index)
+  return %1 : index
+}
+
+// -----
+
+func.func @arith_minsi_lb(%a: index) -> index {
+  %c4 = arith.constant 4 : index
+  %0 = arith.minsi %a, %c4 : index
+  // Signed min has no lower bound.
+  // expected-error @below{{could not reify bound}}
+  %1 = "test.reify_bound"(%0) {type = "LB"} : (index) -> (index)
+  return %1 : index
+}
+
+// -----
+
+// CHECK-LABEL: func @arith_maxsi(
+//  CHECK-SAME:     %[[a:.*]]: index
+//       CHECK:   arith.constant 4 : index
+//       CHECK:   %[[lb:.*]] = arith.constant 4 : index
+//       CHECK:   return %[[lb]]
+func.func @arith_maxsi(%a: index) -> index {
+  %c4 = arith.constant 4 : index
+  %0 = arith.maxsi %a, %c4 : index
+  %1 = "test.reify_bound"(%0) {type = "LB"} : (index) -> (index)
+  return %1 : index
+}
+
+// -----
+
+func.func @arith_maxsi_ub(%a: index) -> index {
+  %c4 = arith.constant 4 : index
+  %0 = arith.maxsi %a, %c4 : index
+  // Signed max has no upper bound.
+  // expected-error @below{{could not reify bound}}
+  %1 = "test.reify_bound"(%0) {type = "UB"} : (index) -> (index)
+  return %1 : index
 }

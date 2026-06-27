@@ -35,6 +35,11 @@ enum Fixups {
   // 12-bit fixup corresponding to %abs_hi12(foo) for instruction lu52i.d.
   fixup_loongarch_abs64_hi12,
 
+  // .dtprelword
+  fixup_loongarch_dtprel32,
+  // .dtpreldword
+  fixup_loongarch_dtprel64,
+
   // Used as a sentinel, must be the last of the fixup which can be handled by
   // LoongArchAsmBackend::applyFixup.
   fixup_loongarch_invalid,

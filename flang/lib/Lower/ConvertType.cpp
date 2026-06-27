@@ -371,6 +371,9 @@ struct TypeBuilderImpl {
                                   mlir::IntegerType::get(context, 1));
     case (Fortran::semantics::DerivedTypeSpec::Category::DerivedType):
       Fortran::common::die("Vector element type not implemented");
+    case (Fortran::semantics::DerivedTypeSpec::Category::EnumerationType):
+      Fortran::common::die(
+          "Vector element type not implemented for enumeration");
     }
   }
 
@@ -387,6 +390,12 @@ struct TypeBuilderImpl {
       return ty;
 
     auto rec = fir::RecordType::get(context, converter.mangleName(tySpec));
+    // Mark SEQUENCE derived types.
+    if (const auto *details =
+            typeSymbol.detailsIf<Fortran::semantics::DerivedTypeDetails>())
+      if (details->sequence())
+        rec.setSequence(true);
+
     // Maintain the stack of types for recursive references and to speed-up
     // the derived type constructions that can be expensive for derived type
     // with dozens of components/parents (modern Fortran).
@@ -403,7 +412,7 @@ struct TypeBuilderImpl {
 
     // Gather the record type fields.
     // (1) The data components.
-    if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
+    {
       size_t prev_offset{0};
       unsigned padCounter{0};
       // In HLFIR the parent component is the first fir.type component.
@@ -447,34 +456,6 @@ struct TypeBuilderImpl {
             }
           }
         }
-      }
-    } else {
-      for (const auto &component :
-           Fortran::semantics::OrderedComponentIterator(tySpec)) {
-        // In the lowering to FIR the parent component does not appear in the
-        // fir.type and its components are inlined at the beginning of the
-        // fir.type<>.
-        // FIXME: this strategy leads to bugs because padding should be inserted
-        // after the component of the parents so that the next components do not
-        // end-up in the parent storage if the sum of the parent's component
-        // storage size is not a multiple of the parent type storage alignment.
-
-        // Lowering is assuming non deferred component lower bounds are
-        // always 1. Catch any situations where this is not true for now.
-        if (componentHasNonDefaultLowerBounds(component))
-          TODO(converter.genLocation(component.name()),
-               "derived type components with non default lower bounds");
-        if (IsProcedure(component))
-          TODO(converter.genLocation(component.name()), "procedure components");
-        mlir::Type ty = genSymbolType(component);
-        // Do not add the parent component (component of the parents are
-        // added and should be sufficient, the parent component would
-        // duplicate the fields). Note that genSymbolType must be called above
-        // on it so that the dispatch table for the parent type still gets
-        // emitted as needed.
-        if (component.test(Fortran::semantics::Symbol::Flag::ParentComp))
-          continue;
-        cs.emplace_back(converter.getRecordTypeFieldName(component), ty);
       }
     }
 
@@ -693,3 +674,69 @@ void Fortran::lower::ComponentReverseIterator::setCurrentType(
 using namespace Fortran::evaluate;
 using namespace Fortran::common;
 FOR_EACH_SPECIFIC_TYPE(template class Fortran::lower::TypeBuilder, )
+
+/// Convert parser's INTEGER relational operators to MLIR.
+mlir::arith::CmpIPredicate
+Fortran::lower::translateSignedRelational(RelationalOperator rop) {
+  switch (rop) {
+  case RelationalOperator::LT:
+    return mlir::arith::CmpIPredicate::slt;
+  case RelationalOperator::LE:
+    return mlir::arith::CmpIPredicate::sle;
+  case RelationalOperator::EQ:
+    return mlir::arith::CmpIPredicate::eq;
+  case RelationalOperator::NE:
+    return mlir::arith::CmpIPredicate::ne;
+  case RelationalOperator::GT:
+    return mlir::arith::CmpIPredicate::sgt;
+  case RelationalOperator::GE:
+    return mlir::arith::CmpIPredicate::sge;
+  }
+  llvm_unreachable("unhandled INTEGER relational operator");
+}
+
+mlir::arith::CmpIPredicate
+Fortran::lower::translateUnsignedRelational(RelationalOperator rop) {
+  switch (rop) {
+  case RelationalOperator::LT:
+    return mlir::arith::CmpIPredicate::ult;
+  case RelationalOperator::LE:
+    return mlir::arith::CmpIPredicate::ule;
+  case RelationalOperator::EQ:
+    return mlir::arith::CmpIPredicate::eq;
+  case RelationalOperator::NE:
+    return mlir::arith::CmpIPredicate::ne;
+  case RelationalOperator::GT:
+    return mlir::arith::CmpIPredicate::ugt;
+  case RelationalOperator::GE:
+    return mlir::arith::CmpIPredicate::uge;
+  }
+  llvm_unreachable("unhandled UNSIGNED relational operator");
+}
+
+/// Convert parser's REAL relational operators to MLIR.
+/// The choice of order (O prefix) vs unorder (U prefix) follows Fortran 2018
+/// requirements in the IEEE context (table 17.1 of F2018). This choice is
+/// also applied in other contexts because it is easier and in line with
+/// other Fortran compilers.
+/// FIXME: The signaling/quiet aspect of the table 17.1 requirement is not
+/// fully enforced. FIR and LLVM `fcmp` instructions do not give any guarantee
+/// whether the comparison will signal or not in case of quiet NaN argument.
+mlir::arith::CmpFPredicate
+Fortran::lower::translateFloatRelational(RelationalOperator rop) {
+  switch (rop) {
+  case RelationalOperator::LT:
+    return mlir::arith::CmpFPredicate::OLT;
+  case RelationalOperator::LE:
+    return mlir::arith::CmpFPredicate::OLE;
+  case RelationalOperator::EQ:
+    return mlir::arith::CmpFPredicate::OEQ;
+  case RelationalOperator::NE:
+    return mlir::arith::CmpFPredicate::UNE;
+  case RelationalOperator::GT:
+    return mlir::arith::CmpFPredicate::OGT;
+  case RelationalOperator::GE:
+    return mlir::arith::CmpFPredicate::OGE;
+  }
+  llvm_unreachable("unhandled REAL relational operator");
+}

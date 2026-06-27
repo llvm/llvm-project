@@ -157,6 +157,8 @@ set(files
   __algorithm/ranges_set_intersection.h
   __algorithm/ranges_set_symmetric_difference.h
   __algorithm/ranges_set_union.h
+  __algorithm/ranges_shift_left.h
+  __algorithm/ranges_shift_right.h
   __algorithm/ranges_shuffle.h
   __algorithm/ranges_sort.h
   __algorithm/ranges_sort_heap.h
@@ -194,6 +196,7 @@ set(files
   __algorithm/simd_utils.h
   __algorithm/sort.h
   __algorithm/sort_heap.h
+  __algorithm/specialized_algorithms.h
   __algorithm/stable_partition.h
   __algorithm/stable_sort.h
   __algorithm/swap_ranges.h
@@ -213,6 +216,8 @@ set(files
   __atomic/atomic_lock_free.h
   __atomic/atomic_ref.h
   __atomic/atomic_sync.h
+  __atomic/atomic_sync_timed.h
+  __atomic/atomic_waitable_traits.h
   __atomic/check_memory_order.h
   __atomic/contention_t.h
   __atomic/fence.h
@@ -262,6 +267,7 @@ set(files
   __chrono/gps_clock.h
   __chrono/hh_mm_ss.h
   __chrono/high_resolution_clock.h
+  __chrono/is_clock.h
   __chrono/leap_second.h
   __chrono/literals.h
   __chrono/local_info.h
@@ -306,6 +312,7 @@ set(files
   __concepts/class_or_enum.h
   __concepts/common_reference_with.h
   __concepts/common_with.h
+  __concepts/comparison_common_type.h
   __concepts/constructible.h
   __concepts/convertible_to.h
   __concepts/copyable.h
@@ -316,6 +323,8 @@ set(files
   __concepts/invocable.h
   __concepts/movable.h
   __concepts/predicate.h
+  __concepts/primary_template.h
+  __concepts/referenceable.h
   __concepts/regular.h
   __concepts/relation.h
   __concepts/same_as.h
@@ -325,10 +334,17 @@ set(files
   __condition_variable/condition_variable.h
   __config
   __configuration/abi.h
+  __configuration/attributes.h
   __configuration/availability.h
   __configuration/compiler.h
+  __configuration/diagnostic_suppression.h
+  __configuration/experimental.h
+  __configuration/hardening.h
   __configuration/language.h
+  __configuration/namespace.h
   __configuration/platform.h
+  __configuration/pstl.h
+  __configuration/utility.h
   __coroutine/coroutine_handle.h
   __coroutine/coroutine_traits.h
   __coroutine/noop_coroutine_handle.h
@@ -394,6 +410,7 @@ set(files
   __format/format_to_n_result.h
   __format/formatter.h
   __format/formatter_bool.h
+  __format/formatter_bool_impl.h
   __format/formatter_char.h
   __format/formatter_floating_point.h
   __format/formatter_integer.h
@@ -471,6 +488,7 @@ set(files
   __iterator/aliasing_iterator.h
   __iterator/back_insert_iterator.h
   __iterator/bounded_iter.h
+  __iterator/capacity_aware_iterator.h
   __iterator/common_iterator.h
   __iterator/concepts.h
   __iterator/counted_iterator.h
@@ -517,21 +535,25 @@ set(files
   __locale_dir/locale_base_api.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
   __locale_dir/locale_base_api/ibm.h
-  __locale_dir/locale_base_api/musl.h
-  __locale_dir/locale_base_api/openbsd.h
   __locale_dir/messages.h
   __locale_dir/money.h
   __locale_dir/num.h
   __locale_dir/pad_and_output.h
   __locale_dir/scan_keyword.h
+  __locale_dir/support/aix.h
   __locale_dir/support/apple.h
   __locale_dir/support/bsd_like.h
   __locale_dir/support/freebsd.h
   __locale_dir/support/fuchsia.h
   __locale_dir/support/linux.h
+  __locale_dir/support/llvm_libc.h
   __locale_dir/support/netbsd.h
+  __locale_dir/support/newlib.h
   __locale_dir/support/no_locale/characters.h
+  __locale_dir/support/no_locale/conversions.h
+  __locale_dir/support/no_locale/formatting.h
   __locale_dir/support/no_locale/strtonum.h
+  __locale_dir/support/openbsd.h
   __locale_dir/support/windows.h
   __locale_dir/time.h
   __locale_dir/wbuffer_convert.h
@@ -567,7 +589,6 @@ set(files
   __mdspan/mdspan.h
   __memory/addressof.h
   __memory/align.h
-  __memory/aligned_alloc.h
   __memory/allocate_at_least.h
   __memory/allocation_guard.h
   __memory/allocator.h
@@ -601,6 +622,7 @@ set(files
   __memory/unique_temporary_buffer.h
   __memory/uses_allocator.h
   __memory/uses_allocator_construction.h
+  __memory/valid_range.h
   __memory_resource/memory_resource.h
   __memory_resource/monotonic_buffer_resource.h
   __memory_resource/polymorphic_allocator.h
@@ -697,10 +719,13 @@ set(files
   __random/uniform_real_distribution.h
   __random/weibull_distribution.h
   __ranges/access.h
+  __ranges/adjacent_transform_view.h
+  __ranges/adjacent_view.h
   __ranges/all.h
   __ranges/as_rvalue_view.h
   __ranges/chunk_by_view.h
   __ranges/common_view.h
+  __ranges/concat_view.h
   __ranges/concepts.h
   __ranges/container_compatible_range.h
   __ranges/counted.h
@@ -708,11 +733,13 @@ set(files
   __ranges/data.h
   __ranges/drop_view.h
   __ranges/drop_while_view.h
+  __ranges/elements_of.h
   __ranges/elements_view.h
   __ranges/empty.h
   __ranges/empty_view.h
   __ranges/enable_borrowed_range.h
   __ranges/enable_view.h
+  __ranges/enumerate_view.h
   __ranges/filter_view.h
   __ranges/from_range.h
   __ranges/iota_view.h
@@ -732,6 +759,7 @@ set(files
   __ranges/single_view.h
   __ranges/size.h
   __ranges/split_view.h
+  __ranges/stride_view.h
   __ranges/subrange.h
   __ranges/take_view.h
   __ranges/take_while_view.h
@@ -756,9 +784,7 @@ set(files
   __support/ibm/gettod_zos.h
   __support/ibm/locale_mgmt_zos.h
   __support/ibm/nanosleep.h
-  __support/xlocale/__nop_locale_mgmt.h
   __support/xlocale/__posix_l_fallback.h
-  __support/xlocale/__strtonum_fallback.h
   __system_error/errc.h
   __system_error/error_category.h
   __system_error/error_code.h
@@ -785,7 +811,7 @@ set(files
   __tuple/tuple_like.h
   __tuple/tuple_like_no_subrange.h
   __tuple/tuple_size.h
-  __tuple/tuple_types.h
+  __tuple/tuple_transform.h
   __type_traits/add_cv_quals.h
   __type_traits/add_pointer.h
   __type_traits/add_reference.h
@@ -801,7 +827,6 @@ set(files
   __type_traits/copy_cvref.h
   __type_traits/datasizeof.h
   __type_traits/decay.h
-  __type_traits/dependent_type.h
   __type_traits/desugars_to.h
   __type_traits/detected_or.h
   __type_traits/disjunction.h
@@ -820,7 +845,6 @@ set(files
   __type_traits/is_array.h
   __type_traits/is_assignable.h
   __type_traits/is_base_of.h
-  __type_traits/is_bounded_array.h
   __type_traits/is_callable.h
   __type_traits/is_char_like_type.h
   __type_traits/is_class.h
@@ -853,11 +877,8 @@ set(files
   __type_traits/is_pod.h
   __type_traits/is_pointer.h
   __type_traits/is_polymorphic.h
-  __type_traits/is_primary_template.h
   __type_traits/is_reference.h
   __type_traits/is_reference_wrapper.h
-  __type_traits/is_referenceable.h
-  __type_traits/is_replaceable.h
   __type_traits/is_same.h
   __type_traits/is_scalar.h
   __type_traits/is_signed.h
@@ -871,14 +892,12 @@ set(files
   __type_traits/is_trivially_destructible.h
   __type_traits/is_trivially_lexicographically_comparable.h
   __type_traits/is_trivially_relocatable.h
-  __type_traits/is_unbounded_array.h
   __type_traits/is_union.h
   __type_traits/is_unqualified.h
   __type_traits/is_unsigned.h
-  __type_traits/is_valid_expansion.h
   __type_traits/is_void.h
   __type_traits/is_volatile.h
-  __type_traits/lazy.h
+  __type_traits/is_within_lifetime.h
   __type_traits/make_32_64_or_128_bit.h
   __type_traits/make_const_lvalue_ref.h
   __type_traits/make_signed.h
@@ -912,6 +931,7 @@ set(files
   __utility/as_lvalue.h
   __utility/auto_cast.h
   __utility/cmp.h
+  __utility/constant_wrapper.h
   __utility/convert_to_integral.h
   __utility/declval.h
   __utility/default_three_way_comparator.h
@@ -924,7 +944,6 @@ set(files
   __utility/in_place.h
   __utility/integer_sequence.h
   __utility/is_pointer_in_range.h
-  __utility/is_valid_range.h
   __utility/lazy_synth_three_way_comparator.h
   __utility/move.h
   __utility/no_destroy.h
@@ -989,7 +1008,6 @@ set(files
   cstring
   ctgmath
   ctime
-  ctype.h
   cuchar
   cwchar
   cwctype
@@ -1016,18 +1034,15 @@ set(files
   ext/__hash
   ext/hash_map
   ext/hash_set
-  fenv.h
   filesystem
   flat_map
   flat_set
-  float.h
   format
   forward_list
   fstream
   functional
   future
   initializer_list
-  inttypes.h
   iomanip
   ios
   iosfwd
@@ -1064,7 +1079,6 @@ set(files
   sstream
   stack
   stdatomic.h
-  stdbool.h
   stddef.h
   stdexcept
   stdio.h
@@ -1077,6 +1091,7 @@ set(files
   strstream
   syncstream
   system_error
+  text_encoding
   tgmath.h
   thread
   tuple
@@ -1752,10 +1767,8 @@ if (LIBCXX_INSTALL_HEADERS)
 
   if (NOT CMAKE_CONFIGURATION_TYPES)
     add_custom_target(install-cxx-headers
-                      DEPENDS cxx-headers
-                      COMMAND "${CMAKE_COMMAND}"
-                              -DCMAKE_INSTALL_COMPONENT=cxx-headers
-                              -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+      DEPENDS cxx-headers
+      COMMAND "${CMAKE_COMMAND}" --install "${CMAKE_BINARY_DIR}" --component cxx-headers)
     # Stripping is a no-op for headers
     add_custom_target(install-cxx-headers-stripped DEPENDS install-cxx-headers)
   endif()

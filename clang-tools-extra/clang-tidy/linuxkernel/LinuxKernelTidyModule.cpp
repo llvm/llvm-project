@@ -8,11 +8,11 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "MustCheckErrsCheck.h"
 
 namespace clang::tidy {
 namespace linuxkernel {
+namespace {
 
 /// This module is for checks specific to the Linux kernel.
 class LinuxKernelModule : public ClangTidyModule {
@@ -22,6 +22,9 @@ public:
         "linuxkernel-must-check-errs");
   }
 };
+
+} // namespace
+
 // Register the LinuxKernelTidyModule using this statically initialized
 // variable.
 static ClangTidyModuleRegistry::Add<LinuxKernelModule>

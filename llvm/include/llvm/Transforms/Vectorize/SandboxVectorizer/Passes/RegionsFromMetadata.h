@@ -20,12 +20,12 @@
 
 namespace llvm::sandboxir {
 
-class RegionsFromMetadata final : public FunctionPass {
+class LLVM_ABI RegionsFromMetadata final : public FunctionPass {
   // The PM containing the pipeline of region passes.
   RegionPassManager RPM;
 
 public:
-  RegionsFromMetadata(StringRef Pipeline);
+  RegionsFromMetadata(StringRef Pipeline, StringRef AuxArg);
   bool runOnFunction(Function &F, const Analyses &A) final;
   void printPipeline(raw_ostream &OS) const final {
     OS << getName() << "\n";

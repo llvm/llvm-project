@@ -98,7 +98,7 @@ def main(argv):
 
     # Gather CMake options
     cmake_options = []
-    if args.cmake_options is not None:
+    if args.cmake_options:
         if args.cmake_options[0] != '--':
             raise ArgumentError('For clarity, CMake options must be separated from other options by --')
         cmake_options = args.cmake_options[1:]

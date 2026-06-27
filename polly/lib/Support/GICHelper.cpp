@@ -59,7 +59,7 @@ APInt polly::APIntFromVal(__isl_take isl_val *Val) {
   Data = (uint64_t *)malloc(NumChunks * ChunkSize);
   isl_val_get_abs_num_chunks(Val, ChunkSize, Data);
   int NumBits = CHAR_BIT * ChunkSize * NumChunks;
-  APInt A(NumBits, NumChunks, Data);
+  APInt A(NumBits, ArrayRef(Data, NumChunks));
 
   // As isl provides only an interface to obtain data that describes the
   // absolute value of an isl_val, A at this point always contains a positive

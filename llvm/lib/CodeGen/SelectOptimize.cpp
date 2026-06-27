@@ -60,6 +60,10 @@ STATISTIC(NumSelectConvertedLoop,
           "Number of select groups converted due to loop-level analysis");
 STATISTIC(NumSelectsConverted, "Number of selects converted");
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
+
 static cl::opt<unsigned> ColdOperandThreshold(
     "cold-operand-threshold",
     cl::desc("Maximum frequency of path for an operand to be considered cold."),
@@ -308,11 +312,12 @@ class SelectOptimize : public FunctionPass {
 public:
   static char ID;
 
-  SelectOptimize() : FunctionPass(ID) {
-    initializeSelectOptimizePass(*PassRegistry::getPassRegistry());
-  }
+  SelectOptimize() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
+      return false;
+
     return Impl.runOnFunction(F, *this);
   }
 
@@ -368,7 +373,9 @@ PreservedAnalyses SelectOptimizeImpl::run(Function &F,
 
   PSI = FAM.getResult<ModuleAnalysisManagerFunctionProxy>(F)
             .getCachedResult<ProfileSummaryAnalysis>(*F.getParent());
-  assert(PSI && "This pass requires module analysis pass `profile-summary`!");
+  if (!PSI)
+    reportFatalUsageError("this pass requires the profile-summary module "
+                          "analysis to be available");
   BFI = &FAM.getResult<BlockFrequencyAnalysis>(F);
 
   // When optimizing for size, selects are preferable over branches.
@@ -502,7 +509,7 @@ static Value *getTrueOrFalseValue(
   } else {
     assert((isa<AShrOperator>(AuxI) || isa<SExtInst>(AuxI)) &&
            "Unexpected opcode");
-    CBO->setOperand(CondIdx, ConstantInt::get(CBO->getType(), -1));
+    CBO->setOperand(CondIdx, ConstantInt::getAllOnesValue(CBO->getType()));
   }
 
   unsigned OtherIdx = 1 - CondIdx;
@@ -557,6 +564,8 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     SmallVector<std::stack<Instruction *>, 2> TrueSlices, FalseSlices;
     typedef std::stack<Instruction *>::size_type StackSizeType;
     StackSizeType maxTrueSliceLen = 0, maxFalseSliceLen = 0;
+    Instruction *SelectWithProfile = nullptr;
+    bool SelectWithProfileIsInverted = false;
     for (SelectLike &SI : ASI.Selects) {
       if (!isa<SelectInst>(SI.getI()))
         continue;
@@ -575,6 +584,16 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
           maxFalseSliceLen = std::max(maxFalseSliceLen, FalseSlice.size());
           FalseSlices.push_back(FalseSlice);
         }
+      }
+      // Also see if the select has profile data that we can propagate later
+      // to the conditional branch.
+      Value *SelectCondition = cast<SelectInst>(SI.getI())->getCondition();
+      if (hasProfMD(*SI.getI()) && ASI.Condition == SelectCondition) {
+        SelectWithProfile = SI.getI();
+      } else if (hasProfMD(*SI.getI()) &&
+                 match(SelectCondition, m_Not(m_Value(ASI.Condition)))) {
+        SelectWithProfile = SI.getI();
+        SelectWithProfileIsInverted = true;
       }
     }
     // In the case of multiple select instructions in the same group, the order
@@ -658,7 +677,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     // These are the new basic blocks for the conditional branch.
     // At least one will become an actual new basic block.
     BasicBlock *TrueBlock = nullptr, *FalseBlock = nullptr;
-    BranchInst *TrueBranch = nullptr, *FalseBranch = nullptr;
+    UncondBrInst *TrueBranch = nullptr, *FalseBranch = nullptr;
     // Checks if select-like instruction would materialise on the given branch
     auto HasSelectLike = [](SelectGroup &SG, bool IsTrue) {
       for (auto &SL : SG.Selects) {
@@ -670,7 +689,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
     if (!TrueSlicesInterleaved.empty() || HasSelectLike(ASI, true)) {
       TrueBlock = BasicBlock::Create(EndBlock->getContext(), "select.true.sink",
                                      EndBlock->getParent(), EndBlock);
-      TrueBranch = BranchInst::Create(EndBlock, TrueBlock);
+      TrueBranch = UncondBrInst::Create(EndBlock, TrueBlock);
       TrueBranch->setDebugLoc(LastSI.getI()->getDebugLoc());
       for (Instruction *TrueInst : TrueSlicesInterleaved)
         TrueInst->moveBefore(TrueBranch->getIterator());
@@ -679,7 +698,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
       FalseBlock =
           BasicBlock::Create(EndBlock->getContext(), "select.false.sink",
                              EndBlock->getParent(), EndBlock);
-      FalseBranch = BranchInst::Create(EndBlock, FalseBlock);
+      FalseBranch = UncondBrInst::Create(EndBlock, FalseBlock);
       FalseBranch->setDebugLoc(LastSI.getI()->getDebugLoc());
       for (Instruction *FalseInst : FalseSlicesInterleaved)
         FalseInst->moveBefore(FalseBranch->getIterator());
@@ -692,7 +711,7 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
 
       FalseBlock = BasicBlock::Create(StartBlock->getContext(), "select.false",
                                       EndBlock->getParent(), EndBlock);
-      auto *FalseBranch = BranchInst::Create(EndBlock, FalseBlock);
+      auto *FalseBranch = UncondBrInst::Create(EndBlock, FalseBlock);
       FalseBranch->setDebugLoc(SI.getI()->getDebugLoc());
     }
 
@@ -746,7 +765,14 @@ void SelectOptimizeImpl::convertProfitableSIGroups(SelectGroups &ProfSIGroups) {
       PN->setDebugLoc(SI.getI()->getDebugLoc());
       ++NumSelectsConverted;
     }
-    IB.CreateCondBr(CondFr, TT, FT, SI.getI());
+    Instruction *CondBr = IB.CreateCondBr(CondFr, TT, FT, SI.getI());
+    if (!ProfcheckDisableMetadataFixes && SelectWithProfile) {
+      CondBr->copyMetadata(*SelectWithProfile, {llvm::LLVMContext::MD_prof});
+      if (SelectWithProfileIsInverted)
+        CondBr->swapProfMetadata();
+    } else {
+      setExplicitlyUnknownBranchWeightsIfProfiled(*CondBr, DEBUG_TYPE);
+    }
 
     // Remove the old select instructions, now that they are not longer used.
     for (SelectLike &SI : ASI.Selects)

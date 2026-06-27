@@ -58,7 +58,7 @@ program OMP_DO
   end do
   !$omp end target teams distribute parallel do simd
 
-  !$omp target teams distribute 
+  !$omp target teams distribute
   !DEF: /OMP_DO/OtherConstruct6/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,100
     !REF: /OMP_DO/OtherConstruct6/i

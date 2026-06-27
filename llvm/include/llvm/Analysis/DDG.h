@@ -60,11 +60,7 @@ public:
   DDGNode(DDGNode &&N) : DDGNodeBase(std::move(N)), Kind(N.Kind) {}
   virtual ~DDGNode() = 0;
 
-  DDGNode &operator=(const DDGNode &N) {
-    DGNode::operator=(N);
-    Kind = N.Kind;
-    return *this;
-  }
+  DDGNode &operator=(const DDGNode &N) = default;
 
   DDGNode &operator=(DDGNode &&N) {
     DGNode::operator=(std::move(N));
@@ -425,13 +421,13 @@ private:
 };
 
 /// Textual printer pass for the DDG of a loop.
-class DDGAnalysisPrinterPass : public PassInfoMixin<DDGAnalysisPrinterPass> {
+class DDGAnalysisPrinterPass
+    : public RequiredPassInfoMixin<DDGAnalysisPrinterPass> {
 public:
   explicit DDGAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
   LLVM_ABI PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                                  LoopStandardAnalysisResults &AR,
                                  LPMUpdater &U);
-  static bool isRequired() { return true; }
 
 private:
   raw_ostream &OS;

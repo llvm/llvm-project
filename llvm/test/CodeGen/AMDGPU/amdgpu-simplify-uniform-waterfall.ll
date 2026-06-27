@@ -6,7 +6,7 @@
 
 define protected amdgpu_kernel void @trivial_waterfall_eq_zero(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_eq_zero(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CURRENT-CHECK-NEXT:  [[ENTRY:.*:]]
 ; CURRENT-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.ballot.i32(i1 true)
 ; CURRENT-CHECK-NEXT:    [[IS_DONE_PEEL:%.*]] = icmp eq i32 [[TMP0]], 0
@@ -35,7 +35,7 @@ define protected amdgpu_kernel void @trivial_waterfall_eq_zero(ptr addrspace(1) 
 ; PASS-CHECK-NEXT:    ret void
 ;
 ; O3-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_eq_zero(
-; O3-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; O3-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; O3-CHECK-NEXT:  [[ENTRY:.*:]]
 ; O3-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
 ; O3-CHECK-NEXT:    ret void
@@ -60,7 +60,7 @@ exit:
 
 define protected amdgpu_kernel void @trivial_waterfall_eq_zero_swap_op(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_eq_zero_swap_op(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CURRENT-CHECK-NEXT:  [[ENTRY:.*:]]
 ; CURRENT-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.ballot.i32(i1 true)
 ; CURRENT-CHECK-NEXT:    [[IS_DONE_PEEL:%.*]] = icmp eq i32 [[TMP0]], 0
@@ -89,7 +89,7 @@ define protected amdgpu_kernel void @trivial_waterfall_eq_zero_swap_op(ptr addrs
 ; PASS-CHECK-NEXT:    ret void
 ;
 ; O3-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_eq_zero_swap_op(
-; O3-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; O3-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; O3-CHECK-NEXT:  [[ENTRY:.*:]]
 ; O3-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
 ; O3-CHECK-NEXT:    ret void
@@ -114,7 +114,7 @@ exit:
 
 define protected amdgpu_kernel void @trivial_waterfall_ne_zero(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_ne_zero(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CURRENT-CHECK-NEXT:  [[ENTRY:.*:]]
 ; CURRENT-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
 ; CURRENT-CHECK-NEXT:    br label %[[WHILE:.*]]
@@ -141,7 +141,7 @@ define protected amdgpu_kernel void @trivial_waterfall_ne_zero(ptr addrspace(1) 
 ; PASS-CHECK-NEXT:    ret void
 ;
 ; O3-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_ne_zero(
-; O3-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; O3-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; O3-CHECK-NEXT:  [[ENTRY:.*:]]
 ; O3-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
 ; O3-CHECK-NEXT:    ret void
@@ -165,7 +165,7 @@ exit:
 
 define protected amdgpu_kernel void @trivial_waterfall_ne_zero_swap(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_ne_zero_swap(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
 ; CURRENT-CHECK-NEXT:  [[ENTRY:.*:]]
 ; CURRENT-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
 ; CURRENT-CHECK-NEXT:    br label %[[WHILE:.*]]
@@ -192,7 +192,7 @@ define protected amdgpu_kernel void @trivial_waterfall_ne_zero_swap(ptr addrspac
 ; PASS-CHECK-NEXT:    ret void
 ;
 ; O3-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_ne_zero_swap(
-; O3-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; O3-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; O3-CHECK-NEXT:  [[ENTRY:.*:]]
 ; O3-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
 ; O3-CHECK-NEXT:    ret void
@@ -216,7 +216,7 @@ exit:
 
 define protected amdgpu_kernel void @trivial_uniform_waterfall(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define protected amdgpu_kernel void @trivial_uniform_waterfall(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CURRENT-CHECK-NEXT:  [[ENTRY:.*:]]
 ; CURRENT-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.ballot.i32(i1 true)
 ; CURRENT-CHECK-NEXT:    [[IS_DONE_PEEL:%.*]] = icmp eq i32 [[TMP0]], 0
@@ -239,7 +239,8 @@ define protected amdgpu_kernel void @trivial_uniform_waterfall(ptr addrspace(1) 
 ; PASS-CHECK-NEXT:    [[IS_DONE:%.*]] = icmp eq i64 [[BALLOT]], 0
 ; PASS-CHECK-NEXT:    br i1 [[TMP0]], label %[[EXIT:.*]], label %[[IF:.*]]
 ; PASS-CHECK:       [[IF]]:
-; PASS-CHECK-NEXT:    [[IS_FIRST_ACTIVE_ID:%.*]] = icmp eq i32 0, 0
+; PASS-CHECK-NEXT:    [[FIRST_ACTIVE_ID:%.*]] = tail call noundef i32 @llvm.amdgcn.readfirstlane.i32(i32 0)
+; PASS-CHECK-NEXT:    [[IS_FIRST_ACTIVE_ID:%.*]] = icmp eq i32 0, [[FIRST_ACTIVE_ID]]
 ; PASS-CHECK-NEXT:    br i1 [[IS_FIRST_ACTIVE_ID]], label %[[WORK:.*]], label %[[TAIL]]
 ; PASS-CHECK:       [[WORK]]:
 ; PASS-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
@@ -251,7 +252,7 @@ define protected amdgpu_kernel void @trivial_uniform_waterfall(ptr addrspace(1) 
 ; PASS-CHECK-NEXT:    ret void
 ;
 ; O3-CHECK-LABEL: define protected amdgpu_kernel void @trivial_uniform_waterfall(
-; O3-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; O3-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; O3-CHECK-NEXT:  [[ENTRY:.*:]]
 ; O3-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
 ; O3-CHECK-NEXT:    ret void
@@ -285,7 +286,7 @@ exit:
 
 define protected amdgpu_kernel void @uniform_waterfall(ptr addrspace(1) %out, i32 %mymask) {
 ; CURRENT-CHECK-LABEL: define protected amdgpu_kernel void @uniform_waterfall(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) [[OUT:%.*]], i32 [[MYMASK:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) [[OUT:%.*]], i32 [[MYMASK:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CURRENT-CHECK-NEXT:  [[ENTRY:.*:]]
 ; CURRENT-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.ballot.i32(i1 true)
 ; CURRENT-CHECK-NEXT:    [[IS_DONE_PEEL:%.*]] = icmp eq i32 [[TMP0]], 0
@@ -308,7 +309,8 @@ define protected amdgpu_kernel void @uniform_waterfall(ptr addrspace(1) %out, i3
 ; PASS-CHECK-NEXT:    [[IS_DONE:%.*]] = icmp eq i64 [[BALLOT]], 0
 ; PASS-CHECK-NEXT:    br i1 [[TMP0]], label %[[EXIT:.*]], label %[[IF:.*]]
 ; PASS-CHECK:       [[IF]]:
-; PASS-CHECK-NEXT:    [[IS_FIRST_ACTIVE_ID:%.*]] = icmp eq i32 [[MYMASK]], [[MYMASK]]
+; PASS-CHECK-NEXT:    [[FIRST_ACTIVE_ID:%.*]] = tail call noundef i32 @llvm.amdgcn.readfirstlane.i32(i32 [[MYMASK]])
+; PASS-CHECK-NEXT:    [[IS_FIRST_ACTIVE_ID:%.*]] = icmp eq i32 [[MYMASK]], [[FIRST_ACTIVE_ID]]
 ; PASS-CHECK-NEXT:    br i1 [[IS_FIRST_ACTIVE_ID]], label %[[WORK:.*]], label %[[TAIL]]
 ; PASS-CHECK:       [[WORK]]:
 ; PASS-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
@@ -320,7 +322,7 @@ define protected amdgpu_kernel void @uniform_waterfall(ptr addrspace(1) %out, i3
 ; PASS-CHECK-NEXT:    ret void
 ;
 ; O3-CHECK-LABEL: define protected amdgpu_kernel void @uniform_waterfall(
-; O3-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]], i32 [[MYMASK:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; O3-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]], i32 [[MYMASK:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; O3-CHECK-NEXT:  [[ENTRY:.*:]]
 ; O3-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
 ; O3-CHECK-NEXT:    ret void
@@ -354,7 +356,7 @@ exit:
 
 define protected amdgpu_kernel void @trivial_waterfall_eq_zero_i32(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_eq_zero_i32(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; CURRENT-CHECK-NEXT:  [[ENTRY:.*:]]
 ; CURRENT-CHECK-NEXT:    [[BALLOT_PEEL:%.*]] = tail call i32 @llvm.amdgcn.ballot.i32(i1 true)
 ; CURRENT-CHECK-NEXT:    [[IS_DONE_PEEL:%.*]] = icmp eq i32 [[BALLOT_PEEL]], 0
@@ -383,7 +385,7 @@ define protected amdgpu_kernel void @trivial_waterfall_eq_zero_i32(ptr addrspace
 ; PASS-CHECK-NEXT:    ret void
 ;
 ; O3-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_eq_zero_i32(
-; O3-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; O3-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; O3-CHECK-NEXT:  [[ENTRY:.*:]]
 ; O3-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
 ; O3-CHECK-NEXT:    ret void
@@ -408,7 +410,7 @@ exit:
 
 define protected amdgpu_kernel void @trivial_waterfall_ne_zero_i32(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_ne_zero_i32(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
+; CURRENT-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
 ; CURRENT-CHECK-NEXT:  [[ENTRY:.*:]]
 ; CURRENT-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
 ; CURRENT-CHECK-NEXT:    br label %[[WHILE:.*]]
@@ -435,7 +437,7 @@ define protected amdgpu_kernel void @trivial_waterfall_ne_zero_i32(ptr addrspace
 ; PASS-CHECK-NEXT:    ret void
 ;
 ; O3-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_ne_zero_i32(
-; O3-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; O3-CHECK-SAME: ptr addrspace(1) nofree writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; O3-CHECK-NEXT:  [[ENTRY:.*:]]
 ; O3-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
 ; O3-CHECK-NEXT:    ret void

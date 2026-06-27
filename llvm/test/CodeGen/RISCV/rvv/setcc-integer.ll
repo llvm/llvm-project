@@ -405,8 +405,6 @@ define <vscale x 8 x i1> @icmp_ult_vi_nxv8i8_4(<vscale x 8 x i8> %va) {
   ret <vscale x 8 x i1> %vc
 }
 
-declare <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8.iXLen(<vscale x 8 x i8>, i8, iXLen);
-
 ; Test that we don't optimize ult x, 0 -> ule x, -1
 define <vscale x 8 x i1> @icmp_ult_vi_nxv8i8_5(<vscale x 8 x i8> %va, iXLen %vl) {
 ; CHECK-LABEL: icmp_ult_vi_nxv8i8_5:
@@ -2997,11 +2995,11 @@ define <vscale x 8 x i1> @icmp_eq_ii_nxv8i8() {
 define <vscale x 16 x i1> @icmp_eq_vi_nx16i64(<vscale x 16 x i64> %va) {
 ; CHECK-LABEL: icmp_eq_vi_nx16i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    csrr a0, vlenb
-; CHECK-NEXT:    vsetvli a1, zero, e64, m8, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vmseq.vi v24, v16, 0
-; CHECK-NEXT:    srli a0, a0, 3
 ; CHECK-NEXT:    vmseq.vi v0, v8, 0
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    srli a0, a0, 3
 ; CHECK-NEXT:    vsetvli a1, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslideup.vx v0, v24, a0
 ; CHECK-NEXT:    ret

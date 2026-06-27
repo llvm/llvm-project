@@ -7,8 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Utility/FileSpecList.h"
-#include "lldb/Target/Statistics.h"
-#include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -45,10 +43,9 @@ bool FileSpecList::AppendIfUnique(const FileSpec &file_spec) {
 // FIXME: Replace this with a DenseSet at the call site. It is inefficient.
 bool SupportFileList::AppendIfUnique(const FileSpec &file_spec) {
   collection::iterator end = m_files.end();
-  if (find_if(m_files.begin(), end,
-              [&](const std::shared_ptr<SupportFile> &support_file) {
-                return support_file->GetSpecOnly() == file_spec;
-              }) == end) {
+  if (find_if(m_files.begin(), end, [&](const SupportFileNSP &support_file) {
+        return support_file->GetSpecOnly() == file_spec;
+      }) == end) {
     Append(file_spec);
     return true;
   }
@@ -214,25 +211,10 @@ const FileSpec &SupportFileList::GetFileSpecAtIndex(size_t idx) const {
   return g_empty_file_spec;
 }
 
-std::shared_ptr<SupportFile>
-SupportFileList::GetSupportFileAtIndex(size_t idx) const {
+SupportFileNSP SupportFileList::GetSupportFileAtIndex(size_t idx) const {
   if (idx < m_files.size())
     return m_files[idx];
-  return {};
-}
-
-// Return the size in bytes that this object takes in memory. This returns the
-// size in bytes of this object's member variables and any FileSpec objects its
-// member variables contain, the result doesn't not include the string values
-// for the directories any filenames as those are in shared string pools.
-size_t FileSpecList::MemorySize() const {
-  size_t mem_size = sizeof(FileSpecList);
-  collection::const_iterator pos, end = m_files.end();
-  for (pos = m_files.begin(); pos != end; ++pos) {
-    mem_size += pos->MemorySize();
-  }
-
-  return mem_size;
+  return std::make_shared<SupportFile>();
 }
 
 // Return the number of files in the file spec list.

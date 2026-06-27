@@ -114,6 +114,18 @@ template <class _VecT, class _Iter>
   }(make_index_sequence<__simd_vector_size_v<_VecT>>{});
 }
 
+// Load the first _Np elements, zero the rest
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wpsabi")
+template <class _VecT, size_t _Np, class _Iter>
+[[__nodiscard__]] _LIBCPP_ALWAYS_INLINE _LIBCPP_HIDE_FROM_ABI _VecT __partial_load(_Iter __iter) noexcept {
+  return [=]<size_t... _LoadIndices, size_t... _ZeroIndices>(
+             index_sequence<_LoadIndices...>, index_sequence<_ZeroIndices...>) _LIBCPP_ALWAYS_INLINE noexcept {
+    return _VecT{__iter[_LoadIndices]..., ((void)_ZeroIndices, 0)...};
+  }(make_index_sequence<_Np>{}, make_index_sequence<__simd_vector_size_v<_VecT> - _Np>{});
+}
+_LIBCPP_DIAGNOSTIC_POP
+
 template <class _Tp, size_t _Np>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __any_of(__simd_vector<_Tp, _Np> __vec) noexcept {
   return __builtin_reduce_or(__builtin_convertvector(__vec, __simd_vector<bool, _Np>));
@@ -122,6 +134,11 @@ template <class _Tp, size_t _Np>
 template <class _Tp, size_t _Np>
 [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __all_of(__simd_vector<_Tp, _Np> __vec) noexcept {
   return __builtin_reduce_and(__builtin_convertvector(__vec, __simd_vector<bool, _Np>));
+}
+
+template <class _Tp, size_t _Np>
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __none_of(__simd_vector<_Tp, _Np> __vec) noexcept {
+  return !__builtin_reduce_or(__builtin_convertvector(__vec, __simd_vector<bool, _Np>));
 }
 
 template <class _Tp, size_t _Np>

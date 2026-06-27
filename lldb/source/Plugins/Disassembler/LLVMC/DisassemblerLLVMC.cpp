@@ -30,6 +30,7 @@
 #include "llvm/TargetParser/AArch64TargetParser.h"
 
 #include "lldb/Core/Address.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -70,12 +71,14 @@ public:
   bool HasDelaySlot(llvm::MCInst &mc_inst) const;
   bool IsCall(llvm::MCInst &mc_inst) const;
   bool IsLoad(llvm::MCInst &mc_inst) const;
+  bool IsBarrier(llvm::MCInst &mc_inst) const;
   bool IsAuthenticated(llvm::MCInst &mc_inst) const;
 
 private:
   MCDisasmInstance(std::unique_ptr<llvm::MCInstrInfo> &&instr_info_up,
                    std::unique_ptr<llvm::MCRegisterInfo> &&reg_info_up,
                    std::unique_ptr<llvm::MCSubtargetInfo> &&subtarget_info_up,
+                   llvm::MCTargetOptions mc_options,
                    std::unique_ptr<llvm::MCAsmInfo> &&asm_info_up,
                    std::unique_ptr<llvm::MCContext> &&context_up,
                    std::unique_ptr<llvm::MCDisassembler> &&disasm_up,
@@ -85,6 +88,7 @@ private:
   std::unique_ptr<llvm::MCInstrInfo> m_instr_info_up;
   std::unique_ptr<llvm::MCRegisterInfo> m_reg_info_up;
   std::unique_ptr<llvm::MCSubtargetInfo> m_subtarget_info_up;
+  llvm::MCTargetOptions m_mc_options;
   std::unique_ptr<llvm::MCAsmInfo> m_asm_info_up;
   std::unique_ptr<llvm::MCContext> m_context_up;
   std::unique_ptr<llvm::MCDisassembler> m_disasm_up;
@@ -436,6 +440,11 @@ public:
     return m_is_load;
   }
 
+  bool IsBarrier() override {
+    VisitInstruction();
+    return m_is_barrier;
+  }
+
   bool IsAuthenticated() override {
     VisitInstruction();
     return m_is_authenticated;
@@ -451,7 +460,6 @@ public:
                 lldb::offset_t data_offset) override {
     // All we have to do is read the opcode which can be easy for some
     // architectures
-    bool got_op = false;
     DisassemblerScope disasm(*this);
     if (disasm) {
       const ArchSpec &arch = disasm->GetArchitecture();
@@ -462,42 +470,31 @@ public:
       if (min_op_byte_size == max_op_byte_size) {
         // Fixed size instructions, just read that amount of data.
         if (!data.ValidOffsetForDataOfSize(data_offset, min_op_byte_size))
-          return false;
+          return 0;
 
         switch (min_op_byte_size) {
         case 1:
           m_opcode.SetOpcode8(data.GetU8(&data_offset), byte_order);
-          got_op = true;
           break;
 
         case 2:
           m_opcode.SetOpcode16(data.GetU16(&data_offset), byte_order);
-          got_op = true;
           break;
 
         case 4:
           m_opcode.SetOpcode32(data.GetU32(&data_offset), byte_order);
-          got_op = true;
           break;
 
         case 8:
           m_opcode.SetOpcode64(data.GetU64(&data_offset), byte_order);
-          got_op = true;
           break;
 
         default:
-          if (arch.GetTriple().isRISCV())
-            m_opcode.SetOpcode16_32TupleBytes(
-                data.PeekData(data_offset, min_op_byte_size), min_op_byte_size,
-                byte_order);
-          else
-            m_opcode.SetOpcodeBytes(
-                data.PeekData(data_offset, min_op_byte_size), min_op_byte_size);
-          got_op = true;
+          m_opcode.SetOpcodeBytes(data.PeekData(data_offset, min_op_byte_size),
+                                  min_op_byte_size);
           break;
         }
-      }
-      if (!got_op) {
+      } else {
         bool is_alternate_isa = false;
         DisassemblerLLVMC::MCDisasmInstance *mc_disasm_ptr =
             GetDisasmToUse(is_alternate_isa, disasm);
@@ -1195,6 +1192,7 @@ protected:
   bool m_is_call = false;
   bool m_is_load = false;
   bool m_is_authenticated = false;
+  bool m_is_barrier = false;
 
   void VisitInstruction() {
     if (m_has_visited_instruction)
@@ -1227,6 +1225,7 @@ protected:
     m_is_call = mc_disasm_ptr->IsCall(inst);
     m_is_load = mc_disasm_ptr->IsLoad(inst);
     m_is_authenticated = mc_disasm_ptr->IsAuthenticated(inst);
+    m_is_barrier = mc_disasm_ptr->IsBarrier(inst);
   }
 
 private:
@@ -1285,9 +1284,8 @@ DisassemblerLLVMC::MCDisasmInstance::Create(const char *triple_name,
   if (!asm_info_up)
     return Instance();
 
-  std::unique_ptr<llvm::MCContext> context_up(
-      new llvm::MCContext(llvm::Triple(triple), asm_info_up.get(),
-                          reg_info_up.get(), subtarget_info_up.get()));
+  std::unique_ptr<llvm::MCContext> context_up(new llvm::MCContext(
+      llvm::Triple(triple), *asm_info_up, *reg_info_up, *subtarget_info_up));
   if (!context_up)
     return Instance();
 
@@ -1325,7 +1323,7 @@ DisassemblerLLVMC::MCDisasmInstance::Create(const char *triple_name,
 
   return Instance(new MCDisasmInstance(
       std::move(instr_info_up), std::move(reg_info_up),
-      std::move(subtarget_info_up), std::move(asm_info_up),
+      std::move(subtarget_info_up), MCOptions, std::move(asm_info_up),
       std::move(context_up), std::move(disasm_up), std::move(instr_printer_up),
       std::move(instr_analysis_up)));
 }
@@ -1334,6 +1332,7 @@ DisassemblerLLVMC::MCDisasmInstance::MCDisasmInstance(
     std::unique_ptr<llvm::MCInstrInfo> &&instr_info_up,
     std::unique_ptr<llvm::MCRegisterInfo> &&reg_info_up,
     std::unique_ptr<llvm::MCSubtargetInfo> &&subtarget_info_up,
+    llvm::MCTargetOptions mc_options,
     std::unique_ptr<llvm::MCAsmInfo> &&asm_info_up,
     std::unique_ptr<llvm::MCContext> &&context_up,
     std::unique_ptr<llvm::MCDisassembler> &&disasm_up,
@@ -1342,7 +1341,7 @@ DisassemblerLLVMC::MCDisasmInstance::MCDisasmInstance(
     : m_instr_info_up(std::move(instr_info_up)),
       m_reg_info_up(std::move(reg_info_up)),
       m_subtarget_info_up(std::move(subtarget_info_up)),
-      m_asm_info_up(std::move(asm_info_up)),
+      m_mc_options(mc_options), m_asm_info_up(std::move(asm_info_up)),
       m_context_up(std::move(context_up)), m_disasm_up(std::move(disasm_up)),
       m_instr_printer_up(std::move(instr_printer_up)),
       m_instr_analysis_up(std::move(instr_analysis_up)) {
@@ -1432,6 +1431,11 @@ bool DisassemblerLLVMC::MCDisasmInstance::IsLoad(llvm::MCInst &mc_inst) const {
   return m_instr_info_up->get(mc_inst.getOpcode()).mayLoad();
 }
 
+bool DisassemblerLLVMC::MCDisasmInstance::IsBarrier(
+    llvm::MCInst &mc_inst) const {
+  return m_instr_info_up->get(mc_inst.getOpcode()).isBarrier();
+}
+
 bool DisassemblerLLVMC::MCDisasmInstance::IsAuthenticated(
     llvm::MCInst &mc_inst) const {
   const auto &InstrDesc = m_instr_info_up->get(mc_inst.getOpcode());
@@ -1447,6 +1451,83 @@ bool DisassemblerLLVMC::MCDisasmInstance::IsAuthenticated(
   }
 
   return InstrDesc.isAuthenticated() || IsBrkC47x;
+}
+
+void DisassemblerLLVMC::UpdateSubtargetFeatures(
+    llvm::StringRef subtarget_features, std::string &user_feature_overrides) {
+
+  llvm::SmallVector<std::string, 0> valid_user_flags;
+  llvm::StringSet<> user_disabled_features;
+
+  for (llvm::StringRef flag : llvm::split(user_feature_overrides, ",")) {
+    bool is_valid = true;
+    flag = flag.trim();
+
+    if (flag.empty())
+      continue;
+
+    std::string warning_reason;
+    llvm::raw_string_ostream ostream(warning_reason);
+
+    // 1. Must be at least 2 chars (e.g., "+a").
+    // 2. Name cannot start with a digit (e.g. "+123" is invalid).
+    // 3. Must start with '+' or '-'.
+    // 4. All characters after the sign must be alphanumeric or '_' or '-'.
+    if (flag.size() < 2) {
+      is_valid = false;
+      ostream << "must have a name";
+    } else if (std::isdigit(static_cast<unsigned char>(flag[1]))) {
+      is_valid = false;
+      ostream << "name cannot start with a digit";
+    } else if (flag.front() != '+' && flag.front() != '-') {
+      is_valid = false;
+      ostream << "must start with '+' or '-'";
+    } else if (!std::all_of(flag.begin() + 1, flag.end(), [](unsigned char c) {
+                 return std::isalnum(c) || c == '_' || c == '-';
+               })) {
+      is_valid = false;
+      ostream << "contains invalid characters";
+    }
+    if (!is_valid) {
+      std::string message =
+          ("feature flag '" + flag + "': " + warning_reason).str();
+      lldb_private::Debugger::ReportWarning(message, std::nullopt);
+      continue;
+    }
+    valid_user_flags.push_back(flag.str());
+
+    if (flag.starts_with('-'))
+      user_disabled_features.insert(flag.substr(1));
+  }
+
+  // User feature string with only valid flags.
+  llvm::SmallVector<std::string, 0> final_features;
+
+  // Allow users to override default additional features.
+  if (!subtarget_features.empty()) {
+    for (llvm::StringRef flag : llvm::split(subtarget_features, ",")) {
+      flag = flag.trim();
+      if (flag.empty())
+        continue;
+      // By default, if both +flag and -flag are present in the feature string,
+      // disassembler keeps the feature enabled (+flag).
+      // To respect user intent, we make -flag(user) take priority over the
+      // default +flag coming from ELF.
+      bool add_flag = true;
+      if (flag.size() >= 2 && flag.starts_with('+')) {
+        llvm::StringRef feature_name = flag.substr(1);
+        if (user_disabled_features.count(feature_name))
+          add_flag = false;
+      }
+      if (add_flag)
+        final_features.push_back(flag.str());
+    }
+  }
+
+  // Append user flags.
+  final_features.insert(final_features.end(), valid_user_flags.begin(),
+                        valid_user_flags.end());
+  user_feature_overrides = llvm::join(final_features, ",");
 }
 
 DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
@@ -1576,24 +1657,34 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
       cpu = "apple-latest";
   }
 
-  if (triple.isRISCV() && !cpu_or_features_overriden) {
-    uint32_t arch_flags = arch.GetFlags();
-    if (arch_flags & ArchSpec::eRISCV_rvc)
-      features_str += "+c,";
-    if (arch_flags & ArchSpec::eRISCV_rve)
-      features_str += "+e,";
-    if ((arch_flags & ArchSpec::eRISCV_float_abi_single) ==
-        ArchSpec::eRISCV_float_abi_single)
-      features_str += "+f,";
-    if ((arch_flags & ArchSpec::eRISCV_float_abi_double) ==
-        ArchSpec::eRISCV_float_abi_double)
-      features_str += "+f,+d,";
-    if ((arch_flags & ArchSpec::eRISCV_float_abi_quad) ==
-        ArchSpec::eRISCV_float_abi_quad)
-      features_str += "+f,+d,+q,";
-    // FIXME: how do we detect features such as `+a`, `+m`?
-    // Turn them on by default now, since everyone seems to use them
-    features_str += "+a,+m,";
+  if (triple.isRISCV()) {
+    auto subtarget_features = arch.GetSubtargetFeatures().getString();
+    if (!cpu_or_features_overriden) {
+      if (!subtarget_features.empty()) {
+        features_str += subtarget_features;
+      } else {
+        uint32_t arch_flags = arch.GetFlags();
+        if (arch_flags & ArchSpec::eRISCV_rvc)
+          features_str += "+c,";
+        if (arch_flags & ArchSpec::eRISCV_rve)
+          features_str += "+e,";
+        if ((arch_flags & ArchSpec::eRISCV_float_abi_single) ==
+            ArchSpec::eRISCV_float_abi_single)
+          features_str += "+f,";
+        if ((arch_flags & ArchSpec::eRISCV_float_abi_double) ==
+            ArchSpec::eRISCV_float_abi_double)
+          features_str += "+f,+d,";
+        if ((arch_flags & ArchSpec::eRISCV_float_abi_quad) ==
+            ArchSpec::eRISCV_float_abi_quad)
+          features_str += "+f,+d,+q,";
+        // FIXME: how do we detect features such as `+a`, `+m`?
+        // Turn them on by default now, since everyone seems to use them
+        features_str += "+a,+m,";
+      }
+    } else {
+      // Merges default subtarget features with user overrides.
+      UpdateSubtargetFeatures(subtarget_features, features_str);
+    }
   }
 
   // We use m_disasm_up.get() to tell whether we are valid or not, so if this

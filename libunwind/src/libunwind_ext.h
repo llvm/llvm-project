@@ -26,11 +26,16 @@ extern "C" {
 extern int __unw_getcontext(unw_context_t *);
 extern int __unw_init_local(unw_cursor_t *, unw_context_t *);
 extern int __unw_step(unw_cursor_t *);
+extern int __unw_step_stage2(unw_cursor_t *);
 extern int __unw_get_reg(unw_cursor_t *, unw_regnum_t, unw_word_t *);
 extern int __unw_get_fpreg(unw_cursor_t *, unw_regnum_t, unw_fpreg_t *);
 extern int __unw_set_reg(unw_cursor_t *, unw_regnum_t, unw_word_t);
 extern int __unw_set_fpreg(unw_cursor_t *, unw_regnum_t, unw_fpreg_t);
-extern int __unw_resume(unw_cursor_t *);
+_LIBUNWIND_TRACE_NO_INLINE
+  extern int __unw_resume_with_frames_walked(unw_cursor_t *, unsigned);
+// `__unw_resume` is a legacy function. Use `__unw_resume_with_frames_walked` instead.
+_LIBUNWIND_TRACE_NO_INLINE
+  extern int __unw_resume(unw_cursor_t *);
 
 #ifdef __arm__
 /* Save VFP registers in FSTMX format (instead of FSTMD). */
@@ -42,6 +47,7 @@ extern int __unw_get_proc_info(unw_cursor_t *, unw_proc_info_t *);
 extern int __unw_is_fpreg(unw_cursor_t *, unw_regnum_t);
 extern int __unw_is_signal_frame(unw_cursor_t *);
 extern int __unw_get_proc_name(unw_cursor_t *, char *, size_t, unw_word_t *);
+extern const char *__unw_strerror(int);
 
 #if defined(_AIX)
 extern uintptr_t __unw_get_data_rel_base(unw_cursor_t *);
@@ -114,10 +120,10 @@ typedef int (*unw_find_dynamic_unwind_sections)(
 extern int __unw_add_find_dynamic_unwind_sections(
     unw_find_dynamic_unwind_sections find_dynamic_unwind_sections);
 
-// Deregister a dynacim unwind-info lookup callback.
+// Deregister a dynamic unwind-info lookup callback.
 //
 // Returns UNW_ESUCCESS for successful deregistrations. If the given callback
-// has already been registered then UNW_EINVAL will be returned.
+// is not present then UNW_EINVAL will be returned.
 extern int __unw_remove_find_dynamic_unwind_sections(
     unw_find_dynamic_unwind_sections find_dynamic_unwind_sections);
 

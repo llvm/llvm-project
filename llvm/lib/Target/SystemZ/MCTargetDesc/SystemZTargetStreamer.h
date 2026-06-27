@@ -13,13 +13,16 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/Support/FormattedStream.h"
 #include <map>
 #include <utility>
 
 namespace llvm {
+class MCGOFFStreamer;
 class SystemZHLASMAsmStreamer;
 
 class SystemZTargetStreamer : public MCTargetStreamer {
@@ -57,13 +60,15 @@ public:
 
   virtual void emitMachine(StringRef CPUOrCommand) {};
 
-  virtual void emitExtern(StringRef Str) {};
-  virtual void emitEnd() {};
+  virtual void emitExternalName(MCSymbol *Sym, StringRef Name) {}
+  virtual void emitExternalName(MCSection *Sec, StringRef Name) {}
 
   virtual const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
                                            const MCSymbol *Lo) {
     return nullptr;
   }
+
+  virtual void emitADA(MCSymbol *Sym, MCSection *Section) {}
 };
 
 class SystemZTargetGOFFStreamer : public SystemZTargetStreamer {
@@ -71,6 +76,16 @@ public:
   SystemZTargetGOFFStreamer(MCStreamer &S) : SystemZTargetStreamer(S) {}
   const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
                                    const MCSymbol *Lo) override;
+  virtual void emitExternalName(MCSymbol *Sym, StringRef Name) override {
+    static_cast<MCSymbolGOFF *>(Sym)->setExternalName(Name);
+  }
+  virtual void emitExternalName(MCSection *Sec, StringRef Name) override {
+    static_cast<MCSectionGOFF *>(Sec)->setExternalName(Name);
+  }
+  void emitADA(MCSymbol *Sym, MCSection *Section) override {
+    static_cast<MCSymbolGOFF *>(Sym)->setADA(
+        static_cast<MCSectionGOFF *>(Section));
+  }
 };
 
 class SystemZTargetHLASMStreamer : public SystemZTargetStreamer {
@@ -80,10 +95,18 @@ public:
   SystemZTargetHLASMStreamer(MCStreamer &S, formatted_raw_ostream &OS)
       : SystemZTargetStreamer(S), OS(OS) {}
   SystemZHLASMAsmStreamer &getHLASMStreamer();
-  void emitExtern(StringRef Sym) override;
-  void emitEnd() override;
   const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
                                    const MCSymbol *Lo) override;
+  virtual void emitExternalName(MCSymbol *Sym, StringRef Name) override {
+    static_cast<MCSymbolGOFF *>(Sym)->setExternalName(Name);
+  }
+  virtual void emitExternalName(MCSection *Sec, StringRef Name) override {
+    static_cast<MCSectionGOFF *>(Sec)->setExternalName(Name);
+  }
+  void emitADA(MCSymbol *Sym, MCSection *Section) override {
+    static_cast<MCSymbolGOFF *>(Sym)->setADA(
+        static_cast<MCSectionGOFF *>(Section));
+  }
 };
 
 class SystemZTargetELFStreamer : public SystemZTargetStreamer {

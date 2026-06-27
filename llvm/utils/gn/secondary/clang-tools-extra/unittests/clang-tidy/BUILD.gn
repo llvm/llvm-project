@@ -40,13 +40,14 @@ unittest("ClangTidyTests") {
     "IncludeCleanerTest.cpp",
     "IncludeInserterTest.cpp",
     "LLVMModuleTest.cpp",
+    "LexerUtilsTest.cpp",
     "ModernizeModuleTest.cpp",
     "NamespaceAliaserTest.cpp",
-    "ObjCModuleTest.cpp",
     "OptionsProviderTest.cpp",
     "OverlappingReplacementsTest.cpp",
     "ReadabilityModuleTest.cpp",
     "TransformerClangTidyCheckTest.cpp",
+    "TypeTraitsTest.cpp",
     "UsingInserterTest.cpp",
   ]
 }

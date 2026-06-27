@@ -81,6 +81,17 @@ End-user Options
 
    llvm-as < /dev/null | llc -march=xyz -mcpu=help
 
+.. option:: -mtune=<cpuname>
+
+ Specify a specific chip microarchitecture in the current architecture
+ to tune code for. By default this is inferred from the target triple and
+ autodetected to the current architecture.  For a list of available tuning
+ CPUs, use:
+
+ .. code-block:: none
+
+   llvm-as < /dev/null | llc -march=xyz -mtune=help
+
 .. option:: -filetype=<output file type>
 
  Specify what kind of output ``llc`` should generated.  Options are: ``asm``
@@ -128,6 +139,12 @@ End-user Options
 .. option:: --stats
 
  Print statistics recorded by code-generation passes.
+
+.. option:: --save-stats, --save-stats=cwd, --save-stats=obj
+
+ Save LLVM statistics to a file in the current directory
+ (:option:`--save-stats`/"--save-stats=cwd") or the directory
+ of the output file ("--save-stats=obj") in JSON format.
 
 .. option:: --time-passes
 

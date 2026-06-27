@@ -16,6 +16,9 @@ using namespace clang;
 
 char MultiplexExternalSemaSource::ID;
 
+/// Constructs an empty multiplexing external sema source.
+MultiplexExternalSemaSource::MultiplexExternalSemaSource() {}
+
 /// Constructs a new multiplexing external sema source and appends the
 /// given element to it.
 ///
@@ -315,6 +318,12 @@ void MultiplexExternalSemaSource::ReadWeakUndeclaredIdentifiers(
                    SmallVectorImpl<std::pair<IdentifierInfo*, WeakInfo> > &WI) {
   for(size_t i = 0; i < Sources.size(); ++i)
     Sources[i]->ReadWeakUndeclaredIdentifiers(WI);
+}
+
+void MultiplexExternalSemaSource::ReadExtnameUndeclaredIdentifiers(
+    SmallVectorImpl<std::pair<IdentifierInfo *, AsmLabelAttr *>> &EI) {
+  for (size_t i = 0; i < Sources.size(); ++i)
+    Sources[i]->ReadExtnameUndeclaredIdentifiers(EI);
 }
 
 void MultiplexExternalSemaSource::ReadUsedVTables(

@@ -18,6 +18,7 @@ module lldb_Host {
   module Debug { header "lldb/Host/Debug.h" export * }
   module Editline { header "lldb/Host/Editline.h" export * }
   module FileCache { header "lldb/Host/FileCache.h" export * }
+  module FileBase { header "lldb/Host/FileBase.h" export * }
   module File { header "lldb/Host/File.h" export * }
   module FileAction { header "lldb/Host/FileAction.h" export * }
   module FileSystem { header "lldb/Host/FileSystem.h" export * }
@@ -46,6 +47,7 @@ module lldb_Host {
   module ProcessRunLock { header "lldb/Host/ProcessRunLock.h" export * }
   module PseudoTerminal { header "lldb/Host/PseudoTerminal.h" export * }
   module SafeMachO { header "lldb/Host/SafeMachO.h" export * }
+  module ScriptInterpreterRuntimeLoader { header "lldb/Host/ScriptInterpreterRuntimeLoader.h" export * }
   module SocketAddress { header "lldb/Host/SocketAddress.h" export * }
   module Socket { header "lldb/Host/Socket.h" export * }
   module Terminal { header "lldb/Host/Terminal.h" export * }

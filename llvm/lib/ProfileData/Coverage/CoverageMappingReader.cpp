@@ -440,23 +440,30 @@ Error RawCoverageMappingReader::read() {
   // Set the counters for the expansion regions.
   // i.e. Counter of expansion region = counter of the first region
   // from the expanded file.
-  // Perform multiple passes to correctly propagate the counters through
-  // all the nested expansion regions.
+  // Perform multiple passes to correctly propagate the counters through all the
+  // nested expansion regions. Iterate until no count changes.
   SmallVector<CounterMappingRegion *, 8> FileIDExpansionRegionMapping;
   FileIDExpansionRegionMapping.resize(VirtualFileMapping.size(), nullptr);
-  for (unsigned Pass = 1, S = VirtualFileMapping.size(); Pass < S; ++Pass) {
+  for (;;) {
     for (auto &R : MappingRegions) {
       if (R.Kind != CounterMappingRegion::ExpansionRegion)
         continue;
       assert(!FileIDExpansionRegionMapping[R.ExpandedFileID]);
       FileIDExpansionRegionMapping[R.ExpandedFileID] = &R;
     }
+    bool Changed = false;
     for (auto &R : MappingRegions) {
-      if (FileIDExpansionRegionMapping[R.FileID]) {
-        FileIDExpansionRegionMapping[R.FileID]->Count = R.Count;
-        FileIDExpansionRegionMapping[R.FileID] = nullptr;
+      auto *&Slot = FileIDExpansionRegionMapping[R.FileID];
+      if (Slot) {
+        if (Slot->Count != R.Count) {
+          Slot->Count = R.Count;
+          Changed = true;
+        }
+        Slot = nullptr;
       }
     }
+    if (!Changed)
+      break;
   }
 
   return Error::success();
@@ -1232,8 +1239,7 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
       if (!CoverageRecordsOrErr)
         return CoverageRecordsOrErr.takeError();
       const auto &CoverageRecords = CoverageRecordsOrErr.get();
-      FuncRecordsBuffer = std::copy(CoverageRecords.begin(),
-                                    CoverageRecords.end(), FuncRecordsBuffer);
+      FuncRecordsBuffer = llvm::copy(CoverageRecords, FuncRecordsBuffer);
       FuncRecordsBuffer =
           std::fill_n(FuncRecordsBuffer,
                       alignAddr(FuncRecordsBuffer, RecordAlignment) -

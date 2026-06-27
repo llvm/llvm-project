@@ -256,6 +256,17 @@ func.func private @sparse_coo(tensor<?x?xf32, #COO_SoA>)
 
 // -----
 
+// expected-error@+1{{dense level cannot follow a non-unique level}}
+#COO_Dense = #sparse_tensor.encoding<{
+  map = (i, j) -> (
+    i : compressed(nonunique),
+    j : dense
+  )
+}>
+func.func private @dense_after_nonunique(tensor<?x?xf32, #COO_Dense>)
+
+// -----
+
 // expected-error@+2 {{use of undeclared identifier 'l1'}}
 #TooFewLvlDecl = #sparse_tensor.encoding<{
   map = {l0} (d0, d1) -> (l0 = d0 : dense, l1 = d1 : compressed)

@@ -46,6 +46,8 @@
 // RUN:   -fuse-ld=lld -flto -### 2>&1 | FileCheck --check-prefix=NO-LLVMGOLD %s
 // RUN: %clang --target=x86_64-unknown-linux-gnu --sysroot=%S/Inputs/basic_cross_linux_tree %s \
 // RUN:   -fuse-ld=gold -flto -fno-lto -### 2>&1 | FileCheck --check-prefix=NO-LLVMGOLD %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu --sysroot=%S/Inputs/basic_cross_linux_tree %s \
+// RUN:   -fuse-ld=gold -flto -flto=none -### 2>&1 | FileCheck --check-prefix=NO-LLVMGOLD %s
 // NO-LLVMGOLD-NOT: "-plugin" "{{.*}}{{[/\\]}}LLVMgold.{{dll|dylib|so}}"
 
 // RUN: %clang --target=x86_64-unknown-linux-gnu --sysroot=%S/Inputs/basic_cross_linux_tree %s \
@@ -114,6 +116,14 @@
 //
 // CHECK-GISEL:         "-plugin-opt=-global-isel=1"
 // CHECK-DISABLE-GISEL: "-plugin-opt=-global-isel=0"
+
+// RUN: %clang --target=x86_64-unknown-linux-gnu -### %s -flto -fno-slp-vectorize 2> %t
+// RUN: FileCheck --check-prefix=CHECK-NO-SLP < %t %s
+// RUN: %clang --target=x86_64-unknown-linux-gnu -### %s -flto -fslp-vectorize 2> %t
+// RUN: FileCheck --check-prefix=CHECK-SLP < %t %s
+
+// CHECK-NO-SLP: "-plugin-opt=-vectorize-slp=0"
+// CHECK-SLP:    "-plugin-opt=-vectorize-slp=1"
 
 // -flto passes -time-passes when -ftime-report is passed
 // RUN: %clang --target=x86_64-unknown-linux-gnu -### %s -flto -ftime-report 2> %t

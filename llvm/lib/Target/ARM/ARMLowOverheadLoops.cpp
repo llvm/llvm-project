@@ -1051,7 +1051,6 @@ bool LowOverheadLoop::ValidateLiveOuts() {
       // check where it gets its false lanes from, if any.
       int InactiveIdx = findVPTInactiveOperandIdx(*MI);
       if (InactiveIdx != -1) {
-        SmallPtrSet<MachineInstr *, 2> Defs;
         MachineInstr *FalseSrc = RDI.getUniqueReachingMIDef(
             MI, MI->getOperand(InactiveIdx).getReg());
         if (FalseSrc) {

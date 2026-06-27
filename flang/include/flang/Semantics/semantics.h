@@ -33,6 +33,7 @@ class IntrinsicTypeDefaultKinds;
 }
 
 namespace Fortran::parser {
+struct AccObject;
 struct Name;
 struct Program;
 class AllCookedSources;
@@ -68,7 +69,8 @@ class SemanticsContext {
 public:
   SemanticsContext(const common::IntrinsicTypeDefaultKinds &,
       const common::LanguageFeatureControl &, const common::LangOptions &,
-      parser::AllCookedSources &);
+      parser::AllCookedSources &,
+      common::FPMaxminBehavior = common::FPMaxminBehavior::Legacy);
   ~SemanticsContext();
 
   const common::IntrinsicTypeDefaultKinds &defaultKinds() const {
@@ -78,6 +80,9 @@ public:
     return languageFeatures_;
   }
   const common::LangOptions &langOptions() const { return langOpts_; }
+  const std::string &openAccDefaultNoneScalarsStrictDisableOption() const {
+    return openAccDefaultNoneScalarsStrictDisableOption_;
+  }
   int GetDefaultKind(TypeCategory) const;
   int doublePrecisionKind() const {
     return defaultKinds_.doublePrecisionKind();
@@ -164,6 +169,11 @@ public:
   }
   SemanticsContext &set_debugModuleWriter(bool x) {
     debugModuleWriter_ = x;
+    return *this;
+  }
+  SemanticsContext &set_openAccDefaultNoneScalarsStrictDisableOption(
+      std::string x) {
+    openAccDefaultNoneScalarsStrictDisableOption_ = std::move(x);
     return *this;
   }
 
@@ -293,8 +303,10 @@ public:
   void UseFortranBuiltinsModule();
   const Scope *GetBuiltinsScope() const { return builtinsScope_; }
 
-  const Scope &GetCUDABuiltinsScope();
-  const Scope &GetCUDADeviceScope();
+  // Locate CUDA intrinsic modules on demand. These return null after emitting a
+  // diagnostic when the required module file cannot be read.
+  const Scope *GetCUDABuiltinsScope();
+  const Scope *GetCUDADeviceScope();
 
   void UsePPCBuiltinTypesModule();
   void UsePPCBuiltinsModule();
@@ -331,6 +343,18 @@ public:
 
   void NoteDefinedSymbol(const Symbol &);
   bool IsSymbolDefined(const Symbol &) const;
+  void NoteUsedSymbol(const Symbol &);
+  void NoteUsedSymbols(const UnorderedSymbolSet &);
+  bool IsSymbolUsed(const Symbol &) const;
+
+  // Track same-kind duplicate AccObjects between resolve-directives and
+  // rewrite-parse-tree (e.g. the second `x` in `private(x, x)`).
+  void MarkAccObjectDuplicate(const parser::AccObject *o) {
+    accObjectDuplicates_.insert(o);
+  }
+  bool IsAccObjectDuplicate(const parser::AccObject *o) const {
+    return accObjectDuplicates_.count(o) != 0;
+  }
 
   void DumpSymbols(llvm::raw_ostream &);
 
@@ -353,6 +377,7 @@ private:
   const common::LanguageFeatureControl &languageFeatures_;
   const common::LangOptions &langOpts_;
   parser::AllCookedSources &allCookedSources_;
+  std::string openAccDefaultNoneScalarsStrictDisableOption_;
   std::optional<parser::CharBlock> location_;
   std::vector<std::string> searchDirectories_;
   std::vector<std::string> intrinsicModuleDirectories_;
@@ -390,6 +415,8 @@ private:
   ModuleDependences moduleDependences_;
   std::map<const Symbol *, SourceName> moduleFileOutputRenamings_;
   UnorderedSymbolSet isDefined_;
+  UnorderedSymbolSet isUsed_;
+  std::set<const parser::AccObject *> accObjectDuplicates_;
   std::list<ProgramTree> programTrees_;
 };
 

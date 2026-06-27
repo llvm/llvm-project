@@ -18,6 +18,7 @@
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Interfaces/MaskableOpInterface.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
@@ -229,10 +230,11 @@ template <class LoadOrStoreOp>
 class VectorLoadStoreConversion : public ConvertOpToLLVMPattern<LoadOrStoreOp> {
 public:
   explicit VectorLoadStoreConversion(const LLVMTypeConverter &typeConv,
-                                     bool useVectorAlign)
+                                     bool useVectorAlign,
+                                     bool enableGEPInboundsNuw)
       : ConvertOpToLLVMPattern<LoadOrStoreOp>(typeConv),
-        useVectorAlignment(useVectorAlign) {}
-  using ConvertOpToLLVMPattern<LoadOrStoreOp>::ConvertOpToLLVMPattern;
+        useVectorAlignment(useVectorAlign),
+        enableGEPInboundsNuw(enableGEPInboundsNuw) {}
 
   LogicalResult
   matchAndRewrite(LoadOrStoreOp loadOrStoreOp,
@@ -256,10 +258,35 @@ public:
                                          "could not resolve alignment");
 
     // Resolve address.
+    // When --enable-gep-inbounds-nuw is set, emit inbounds|nuw on the GEP so
+    // LLVM can apply no-wrap optimizations on the index arithmetic. This
+    // assumes 0 <= idx < dim_size and non-negative strides; the caller is
+    // responsible for ensuring those conditions hold. Masked variants are
+    // designed for near-boundary access and never receive these flags.
+    LLVM::GEPNoWrapFlags noWrapFlags = LLVM::GEPNoWrapFlags::none;
+    if constexpr (std::is_same_v<LoadOrStoreOp, vector::LoadOp> ||
+                  std::is_same_v<LoadOrStoreOp, vector::StoreOp>) {
+      // The verifier (verifyLoadStoreMemRefLayout) guarantees that the
+      // trailing (most minor) stride of the memref is 1. Assert to make
+      // the invariant explicit in the lowering code.
+      auto [strides, offset] = memRefTy.getStridesAndOffset();
+      assert((strides.empty() || strides.back() == 1) &&
+             "vector.load/store requires unit trailing memref stride");
+      if (enableGEPInboundsNuw) {
+        noWrapFlags = noWrapFlags | LLVM::GEPNoWrapFlags::inbounds;
+
+        // `nuw` additionally requires non-negative strides.
+        assert(
+            !(memref::hasNegativeStaticStride(memRefTy)) &&
+            "Invalid MemRef type - should have been rejected by Op verifier.");
+        noWrapFlags = noWrapFlags | LLVM::GEPNoWrapFlags::nuw;
+      }
+    }
     auto vtype = cast<VectorType>(
         this->typeConverter->convertType(loadOrStoreOp.getVectorType()));
-    Value dataPtr = this->getStridedElementPtr(
-        rewriter, loc, memRefTy, adaptor.getBase(), adaptor.getIndices());
+    Value dataPtr =
+        this->getStridedElementPtr(rewriter, loc, memRefTy, adaptor.getBase(),
+                                   adaptor.getIndices(), noWrapFlags);
     replaceLoadOrStoreOp(loadOrStoreOp, adaptor, vtype, dataPtr, align,
                          rewriter);
     return success();
@@ -271,6 +298,7 @@ private:
   // of the memref. This flag is intended for use with hardware
   // backends that require alignment of vector operations.
   const bool useVectorAlignment;
+  const bool enableGEPInboundsNuw;
 };
 
 /// Conversion pattern for a vector.gather.
@@ -290,6 +318,7 @@ public:
     MemRefType memRefType = dyn_cast<MemRefType>(gather.getBaseType());
     assert(memRefType && "The base should be bufferized");
 
+    // TODO: Add support for strided MemRef.
     if (failed(isMemRefTypeSupported(memRefType, *this->getTypeConverter())))
       return rewriter.notifyMatchFailure(gather, "memref type not supported");
 
@@ -345,8 +374,10 @@ public:
   matchAndRewrite(vector::ScatterOp scatter, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     auto loc = scatter->getLoc();
-    MemRefType memRefType = scatter.getMemRefType();
+    auto memRefType = dyn_cast<MemRefType>(scatter.getBaseType());
+    assert(memRefType && "The base should be bufferized");
 
+    // TODO: Add support for strided MemRef.
     if (failed(isMemRefTypeSupported(memRefType, *this->getTypeConverter())))
       return rewriter.notifyMatchFailure(scatter, "memref type not supported");
 
@@ -1278,6 +1309,11 @@ public:
 
     Value result = sourceAggregate;
     if (isNestedAggregate) {
+      if (!llvm::all_of(positionOf1DVectorWithinAggregate,
+                        llvm::IsaPred<Attribute>)) {
+        // llvm.insertvalue does not support dynamic dimensions.
+        return failure();
+      }
       result = LLVM::InsertValueOp::create(
           rewriter, loc, adaptor.getDest(), sourceAggregate,
           getAsIntegers(positionOf1DVectorWithinAggregate));
@@ -1502,8 +1538,20 @@ public:
         rewriter, loc,
         LLVM::getVectorType(idxType, dstType.getShape()[0],
                             /*isScalable=*/true));
-    auto bound = getValueOrCreateCastToIndexLike(rewriter, loc, idxType,
-                                                 adaptor.getOperands()[0]);
+    Value maskBound = adaptor.getOperands()[0];
+    // When using 32-bit indices, cap the bound at INT32_MAX in index type
+    // before casting. For scalable vectors the runtime size (vscale * dim) is
+    // unknown at compile time, so we can't clamp to `dim` as in the fixed-size
+    // path. Clamping to INT32_MAX is safe because any realistic scalable vector
+    // size fits well below this limit, so a bound >= vscale*dim still produces
+    // an all-true mask after the comparison.
+    if (force32BitVectorIndices) {
+      Value maxBound =
+          arith::ConstantIndexOp::create(rewriter, loc, (1LL << 31) - 1);
+      maskBound = arith::MinSIOp::create(rewriter, loc, maskBound, maxBound);
+    }
+    auto bound =
+        getValueOrCreateCastToIndexLike(rewriter, loc, idxType, maskBound);
     Value bounds = BroadcastOp::create(rewriter, loc, indices.getType(), bound);
     Value comp = arith::CmpIOp::create(rewriter, loc, arith::CmpIPredicate::slt,
                                        indices, bounds);
@@ -1654,6 +1702,20 @@ private:
           return failure();
         }
       }
+    } else if (auto floatTy = dyn_cast<FloatType>(printType)) {
+      // Print other floating-point types using the APFloat runtime library.
+      int32_t sem =
+          llvm::APFloatBase::SemanticsToEnum(floatTy.getFloatSemantics());
+      Value semValue = LLVM::ConstantOp::create(
+          rewriter, loc, rewriter.getI32Type(),
+          rewriter.getIntegerAttr(rewriter.getI32Type(), sem));
+      Value floatBits =
+          LLVM::ZExtOp::create(rewriter, loc, rewriter.getI64Type(), value);
+      printer =
+          LLVM::lookupOrCreateApFloatPrintFn(rewriter, parent, symbolTables);
+      emitCall(rewriter, loc, printer.value(),
+               ValueRange({semValue, floatBits}));
+      return success();
     } else {
       return failure();
     }
@@ -2184,7 +2246,7 @@ void mlir::vector::populateVectorTransposeToFlatTranspose(
 void mlir::populateVectorToLLVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns,
     bool reassociateFPReductions, bool force32BitVectorIndices,
-    bool useVectorAlignment) {
+    bool useVectorAlignment, bool enableGEPInboundsNuw) {
   // This function populates only ConversionPatterns, not RewritePatterns.
   MLIRContext *ctx = converter.getDialect()->getContext();
   patterns.add<VectorReductionOpConversion>(converter, reassociateFPReductions);
@@ -2192,8 +2254,9 @@ void mlir::populateVectorToLLVMConversionPatterns(
   patterns.add<VectorLoadStoreConversion<vector::LoadOp>,
                VectorLoadStoreConversion<vector::MaskedLoadOp>,
                VectorLoadStoreConversion<vector::StoreOp>,
-               VectorLoadStoreConversion<vector::MaskedStoreOp>,
-               VectorGatherOpConversion, VectorScatterOpConversion>(
+               VectorLoadStoreConversion<vector::MaskedStoreOp>>(
+      converter, useVectorAlignment, enableGEPInboundsNuw);
+  patterns.add<VectorGatherOpConversion, VectorScatterOpConversion>(
       converter, useVectorAlignment);
   patterns.add<VectorBitCastOpConversion, VectorShuffleOpConversion,
                VectorExtractOpConversion, VectorFMAOp1DConversion,
@@ -2211,6 +2274,9 @@ void mlir::populateVectorToLLVMConversionPatterns(
 
 namespace {
 struct VectorToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
+  VectorToLLVMDialectInterface(Dialect *dialect)
+      : ConvertToLLVMPatternInterface(dialect) {}
+
   using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
   void loadDependentDialects(MLIRContext *context) const final {
     context->loadDialect<LLVM::LLVMDialect>();

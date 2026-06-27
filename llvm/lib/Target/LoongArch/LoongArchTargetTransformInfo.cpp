@@ -67,7 +67,9 @@ unsigned LoongArchTTIImpl::getRegisterClassForType(bool Vector,
   return LoongArchRegisterClass::GPRRC;
 }
 
-unsigned LoongArchTTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
+unsigned
+LoongArchTTIImpl::getMaxInterleaveFactor(ElementCount VF,
+                                         bool HasUnorderedReductions) const {
   return ST->getMaxInterleaveFactor();
 }
 
@@ -111,4 +113,25 @@ bool LoongArchTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   }
 }
 
-// TODO: Implement more hooks to provide TTI machinery for LoongArch.
+LoongArchTTIImpl::TTI::MemCmpExpansionOptions
+LoongArchTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
+  TTI::MemCmpExpansionOptions Options;
+
+  if (!ST->hasUAL())
+    return Options;
+
+  Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
+  Options.NumLoadsPerBlock = Options.MaxNumLoads;
+  Options.AllowOverlappingLoads = true;
+
+  // TODO: Support for vectors.
+  if (ST->is64Bit()) {
+    Options.LoadSizes = {8, 4, 2, 1};
+    Options.AllowedTailExpansions = {3, 5, 6};
+  } else {
+    Options.LoadSizes = {4, 2, 1};
+    Options.AllowedTailExpansions = {3};
+  }
+
+  return Options;
+}

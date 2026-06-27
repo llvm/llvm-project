@@ -35,10 +35,10 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -142,7 +142,7 @@ public:
     for (unsigned I = 0, E = PN->getNumIncomingValues(); I != E; ++I)
       Ops.push_back({PN->getIncomingBlock(I), PN->getIncomingValue(I)});
 
-    auto ComesBefore = [BlockOrder](OpsType O1, OpsType O2) {
+    auto ComesBefore = [&](OpsType O1, OpsType O2) {
       return BlockOrder.lookup(O1.first) < BlockOrder.lookup(O2.first);
     };
     // Sort in a deterministic order.
@@ -167,8 +167,8 @@ public:
   verifyModelledPHI(const DenseMap<const BasicBlock *, unsigned> &BlockOrder) {
     assert(Values.size() > 1 && Blocks.size() > 1 &&
            "Modelling PHI with less than 2 values");
-    auto ComesBefore = [BlockOrder](const BasicBlock *BB1,
-                                    const BasicBlock *BB2) {
+    [[maybe_unused]] auto ComesBefore = [&](const BasicBlock *BB1,
+                                            const BasicBlock *BB2) {
       return BlockOrder.lookup(BB1) < BlockOrder.lookup(BB2);
     };
     assert(llvm::is_sorted(Blocks, ComesBefore));
@@ -255,16 +255,6 @@ static raw_ostream &operator<<(raw_ostream &OS,
 #endif
 
 template <> struct llvm::DenseMapInfo<ModelledPHI> {
-  static inline ModelledPHI &getEmptyKey() {
-    static ModelledPHI Dummy = ModelledPHI::createDummy(0);
-    return Dummy;
-  }
-
-  static inline ModelledPHI &getTombstoneKey() {
-    static ModelledPHI Dummy = ModelledPHI::createDummy(1);
-    return Dummy;
-  }
-
   static unsigned getHashValue(const ModelledPHI &V) { return V.hash(); }
 
   static bool isEqual(const ModelledPHI &LHS, const ModelledPHI &RHS) {
@@ -272,7 +262,7 @@ template <> struct llvm::DenseMapInfo<ModelledPHI> {
   }
 };
 
-using ModelledPHISet = DenseSet<ModelledPHI>;
+using ModelledPHISet = SetVector<ModelledPHI>;
 
 namespace {
 
@@ -514,7 +504,7 @@ public:
 
 class GVNSink {
 public:
-  GVNSink() {}
+  GVNSink() = default;
 
   bool run(Function &F) {
     LLVM_DEBUG(dbgs() << "GVNSink: running on function @" << F.getName()
@@ -655,7 +645,7 @@ GVNSink::analyzeInstructionForSinking(LockstepReverseIterator<false> &LRI,
   ModelledPHI NewPHI(NewInsts, ActivePreds, RPOTOrder);
 
   // Does sinking this instruction render previous PHIs redundant?
-  if (NeededPHIs.erase(NewPHI))
+  if (NeededPHIs.remove(NewPHI))
     RecomputePHIContents = true;
 
   if (RecomputePHIContents) {
@@ -703,7 +693,6 @@ GVNSink::analyzeInstructionForSinking(LockstepReverseIterator<false> &LRI,
         PHI.areAnyIncomingValuesConstant())
       return std::nullopt;
 
-    NeededPHIs.reserve(NeededPHIs.size());
     NeededPHIs.insert(PHI);
     PHIContents.insert_range(PHI.getValues());
   }
@@ -730,7 +719,7 @@ unsigned GVNSink::sinkBB(BasicBlock *BBEnd) {
     if (!RPOTOrder.count(B))
       return 0;
     auto *T = B->getTerminator();
-    if (isa<BranchInst>(T) || isa<SwitchInst>(T))
+    if (isa<UncondBrInst, CondBrInst, SwitchInst>(T))
       Preds.push_back(B);
     else
       return 0;

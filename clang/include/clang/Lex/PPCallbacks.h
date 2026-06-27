@@ -212,6 +212,13 @@ public:
                             const Module *Imported) {
   }
 
+  /// Callback invoked whenever a module load was skipped due to enabled
+  /// single-module-parse-mode.
+  ///
+  /// \param Skipped The module that was not loaded.
+  ///
+  virtual void moduleLoadSkipped(Module *Skipped) {}
+
   /// Callback invoked when the end of the main file is reached.
   ///
   /// No subsequent callbacks will be made.
@@ -465,6 +472,28 @@ public:
   /// \param IfLoc the source location of the \#if/\#ifdef/\#ifndef directive.
   virtual void Endif(SourceLocation Loc, SourceLocation IfLoc) {
   }
+
+  /// Walk owned descendants. For each descendant whose raw pointer satisfies
+  /// `Pred`, release ownership from its owning unique_ptr and append the raw
+  /// pointer to `Released`. Default: leaf — no descendants to walk.
+  virtual void
+  releasePreservedDescendants(llvm::function_ref<bool(PPCallbacks *)> Pred,
+                              SmallVectorImpl<PPCallbacks *> &Released) {}
+
+  /// Walk the subtree rooted at `CB` (recursing into descendants first), then
+  /// check `CB` itself. Any `CB` whose contents satisfy `Pred` has its
+  /// ownership released and the raw pointer appended to `Released`. After this
+  /// returns, `CB` may be safely reset/destroyed without freeing the released
+  /// pointers.
+  static void releaseIfPreserved(std::unique_ptr<PPCallbacks> &CB,
+                                 llvm::function_ref<bool(PPCallbacks *)> Pred,
+                                 SmallVectorImpl<PPCallbacks *> &Released) {
+    if (!CB)
+      return;
+    CB->releasePreservedDescendants(Pred, Released);
+    if (Pred(CB.get()))
+      Released.push_back(CB.release());
+  }
 };
 
 /// Simple wrapper class for chaining callbacks.
@@ -499,10 +528,10 @@ public:
   }
 
   bool EmbedFileNotFound(StringRef FileName) override {
-    bool Skip = First->FileNotFound(FileName);
+    bool Skip = First->EmbedFileNotFound(FileName);
     // Make sure to invoke the second callback, no matter if the first already
     // returned true to skip the file.
-    Skip |= Second->FileNotFound(FileName);
+    Skip |= Second->EmbedFileNotFound(FileName);
     return Skip;
   }
 
@@ -552,6 +581,11 @@ public:
                     const Module *Imported) override {
     First->moduleImport(ImportLoc, Path, Imported);
     Second->moduleImport(ImportLoc, Path, Imported);
+  }
+
+  void moduleLoadSkipped(Module *Skipped) override {
+    First->moduleLoadSkipped(Skipped);
+    Second->moduleLoadSkipped(Skipped);
   }
 
   void EndOfMainFile() override {
@@ -760,6 +794,13 @@ public:
   void Endif(SourceLocation Loc, SourceLocation IfLoc) override {
     First->Endif(Loc, IfLoc);
     Second->Endif(Loc, IfLoc);
+  }
+
+  void releasePreservedDescendants(
+      llvm::function_ref<bool(PPCallbacks *)> Pred,
+      SmallVectorImpl<PPCallbacks *> &Released) override {
+    releaseIfPreserved(First, Pred, Released);
+    releaseIfPreserved(Second, Pred, Released);
   }
 };
 

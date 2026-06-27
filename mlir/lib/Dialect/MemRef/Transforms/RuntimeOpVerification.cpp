@@ -268,61 +268,82 @@ struct SubViewOpInterface
     MemRefType sourceType = subView.getSource().getType();
 
     // For each dimension, assert that:
-    // 0 <= offset < dim_size
-    // 0 <= offset + (size - 1) * stride < dim_size
+    // For empty slices (size == 0)   : 0 <= offset <= dim_size
+    // For non-empty slices (size > 0): 0 <= offset < dim_size
+    //                                  0 <= offset + (size - 1) * stride
+    //                                  dim_size
     Value zero = arith::ConstantIndexOp::create(builder, loc, 0);
     Value one = arith::ConstantIndexOp::create(builder, loc, 1);
+
     auto metadataOp =
         ExtractStridedMetadataOp::create(builder, loc, subView.getSource());
+
     for (int64_t i : llvm::seq<int64_t>(0, sourceType.getRank())) {
-      // Reset insertion point to before the operation for each dimension
+      // Reset insertion point to before the operation for each dimension.
       builder.setInsertionPoint(subView);
+
       Value offset = getValueOrCreateConstantIndexOp(
           builder, loc, subView.getMixedOffsets()[i]);
       Value size = getValueOrCreateConstantIndexOp(builder, loc,
                                                    subView.getMixedSizes()[i]);
       Value stride = getValueOrCreateConstantIndexOp(
           builder, loc, subView.getMixedStrides()[i]);
-
-      // Verify that offset is in-bounds.
       Value dimSize = metadataOp.getSizes()[i];
-      Value offsetInBounds =
-          generateInBoundsCheck(builder, loc, offset, zero, dimSize);
-      cf::AssertOp::create(builder, loc, offsetInBounds,
+
+      // Verify that offset is in-bounds (conditional on slice size).
+      Value sizeIsZero = arith::CmpIOp::create(
+          builder, loc, arith::CmpIPredicate::eq, size, zero);
+      auto offsetCheckIf = scf::IfOp::create(
+          builder, loc, sizeIsZero,
+          [&](OpBuilder &b, Location loc) {
+            // For empty slices, offset can be at the boundary: 0 <= offset <=
+            // dimSize.
+            Value offsetGEZero = arith::CmpIOp::create(
+                b, loc, arith::CmpIPredicate::sge, offset, zero);
+            Value offsetLEDimSize = arith::CmpIOp::create(
+                b, loc, arith::CmpIPredicate::sle, offset, dimSize);
+            Value emptyOffsetValid =
+                arith::AndIOp::create(b, loc, offsetGEZero, offsetLEDimSize);
+            scf::YieldOp::create(b, loc, emptyOffsetValid);
+          },
+          [&](OpBuilder &b, Location loc) {
+            // For non-empty slices, offset must be a valid index: 0 <= offset
+            // dimSize.
+            Value offsetInBounds =
+                generateInBoundsCheck(b, loc, offset, zero, dimSize);
+            scf::YieldOp::create(b, loc, offsetInBounds);
+          });
+
+      Value offsetCondition = offsetCheckIf.getResult(0);
+      cf::AssertOp::create(builder, loc, offsetCondition,
                            generateErrorMessage(op, "offset " +
                                                         std::to_string(i) +
                                                         " is out-of-bounds"));
 
-      // Only verify if size > 0
+      // Verify that the slice endpoint is in-bounds (only for non-empty
+      // slices).
       Value sizeIsNonZero = arith::CmpIOp::create(
           builder, loc, arith::CmpIPredicate::sgt, size, zero);
+      auto ifOp = scf::IfOp::create(
+          builder, loc, sizeIsNonZero,
+          [&](OpBuilder &b, Location loc) {
+            // Verify that slice does not run out-of-bounds.
+            Value sizeMinusOne = arith::SubIOp::create(b, loc, size, one);
+            Value sizeMinusOneTimesStride =
+                arith::MulIOp::create(b, loc, sizeMinusOne, stride);
+            Value lastPos =
+                arith::AddIOp::create(b, loc, offset, sizeMinusOneTimesStride);
+            Value lastPosInBounds =
+                generateInBoundsCheck(b, loc, lastPos, zero, dimSize);
+            scf::YieldOp::create(b, loc, lastPosInBounds);
+          },
+          [&](OpBuilder &b, Location loc) {
+            Value trueVal =
+                arith::ConstantOp::create(b, loc, b.getBoolAttr(true));
+            scf::YieldOp::create(b, loc, trueVal);
+          });
 
-      auto ifOp = scf::IfOp::create(builder, loc, builder.getI1Type(),
-                                    sizeIsNonZero, /*withElseRegion=*/true);
-
-      // Populate the "then" region (for size > 0).
-      builder.setInsertionPointToStart(&ifOp.getThenRegion().front());
-
-      // Verify that slice does not run out-of-bounds.
-      Value sizeMinusOne = arith::SubIOp::create(builder, loc, size, one);
-      Value sizeMinusOneTimesStride =
-          arith::MulIOp::create(builder, loc, sizeMinusOne, stride);
-      Value lastPos =
-          arith::AddIOp::create(builder, loc, offset, sizeMinusOneTimesStride);
-      Value lastPosInBounds =
-          generateInBoundsCheck(builder, loc, lastPos, zero, dimSize);
-
-      scf::YieldOp::create(builder, loc, lastPosInBounds);
-
-      // Populate the "else" region (for size == 0).
-      builder.setInsertionPointToStart(&ifOp.getElseRegion().front());
-      Value trueVal =
-          arith::ConstantOp::create(builder, loc, builder.getBoolAttr(true));
-      scf::YieldOp::create(builder, loc, trueVal);
-
-      builder.setInsertionPointAfter(ifOp);
       Value finalCondition = ifOp.getResult(0);
-
       cf::AssertOp::create(
           builder, loc, finalCondition,
           generateErrorMessage(op,
@@ -341,37 +362,27 @@ struct ExpandShapeOpInterface
                                   generateErrorMessage) const {
     auto expandShapeOp = cast<ExpandShapeOp>(op);
 
-    // Verify that the expanded dim sizes are a product of the collapsed dim
-    // size.
+    SmallVector<OpFoldResult> outputShape = expandShapeOp.getMixedOutputShape();
+
+    // Verify that the product of output dim sizes in each reassociation group
+    // equals the corresponding input dim size.
     for (const auto &it :
          llvm::enumerate(expandShapeOp.getReassociationIndices())) {
       Value srcDimSz =
           DimOp::create(builder, loc, expandShapeOp.getSrc(), it.index());
-      int64_t groupSz = 1;
-      bool foundDynamicDim = false;
-      for (int64_t resultDim : it.value()) {
-        if (expandShapeOp.getResultType().isDynamicDim(resultDim)) {
-          // Keep this assert here in case the op is extended in the future.
-          assert(!foundDynamicDim &&
-                 "more than one dynamic dim found in reassoc group");
-          (void)foundDynamicDim;
-          foundDynamicDim = true;
-          continue;
-        }
-        groupSz *= expandShapeOp.getResultType().getDimSize(resultDim);
+      Value groupProduct = getValueOrCreateConstantIndexOp(
+          builder, loc, outputShape[it.value().front()]);
+      for (int64_t resultDim : llvm::drop_begin(it.value())) {
+        Value dimSz = getValueOrCreateConstantIndexOp(builder, loc,
+                                                      outputShape[resultDim]);
+        groupProduct = arith::MulIOp::create(builder, loc, groupProduct, dimSz);
       }
-      Value staticResultDimSz =
-          arith::ConstantIndexOp::create(builder, loc, groupSz);
-      // staticResultDimSz must divide srcDimSz evenly.
-      Value mod =
-          arith::RemSIOp::create(builder, loc, srcDimSz, staticResultDimSz);
-      Value isModZero = arith::CmpIOp::create(
-          builder, loc, arith::CmpIPredicate::eq, mod,
-          arith::ConstantIndexOp::create(builder, loc, 0));
+      Value isEqual = arith::CmpIOp::create(
+          builder, loc, arith::CmpIPredicate::eq, groupProduct, srcDimSz);
       cf::AssertOp::create(
-          builder, loc, isModZero,
-          generateErrorMessage(op, "static result dims in reassoc group do not "
-                                   "divide src dim evenly"));
+          builder, loc, isEqual,
+          generateErrorMessage(op, "product of output dims in reassoc group "
+                                   "does not equal input dim"));
     }
   }
 };
@@ -397,6 +408,6 @@ void mlir::memref::registerRuntimeVerifiableOpInterfaceExternalModels(
 
     // Load additional dialects of which ops may get created.
     ctx->loadDialect<affine::AffineDialect, arith::ArithDialect,
-                     cf::ControlFlowDialect>();
+                     cf::ControlFlowDialect, scf::SCFDialect>();
   });
 }

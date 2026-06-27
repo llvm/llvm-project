@@ -49,8 +49,9 @@ constexpr auto executableConstruct{first(
     construct<ExecutableConstruct>(indirect(Parser<SelectTypeConstruct>{})),
     construct<ExecutableConstruct>(indirect(whereConstruct)),
     construct<ExecutableConstruct>(indirect(forallConstruct)),
-    construct<ExecutableConstruct>(indirect(ompEndLoopDirective)),
     construct<ExecutableConstruct>(indirect(openmpConstruct)),
+    construct<ExecutableConstruct>(indirect(openmpMisplacedEndDirective)),
+    construct<ExecutableConstruct>(indirect(openmpInvalidDirective)),
     construct<ExecutableConstruct>(indirect(Parser<OpenACCConstruct>{})),
     construct<ExecutableConstruct>(indirect(compilerDirective)),
     construct<ExecutableConstruct>(indirect(Parser<CUFKernelDoConstruct>{})))};
@@ -582,7 +583,9 @@ TYPE_PARSER("<<<" >>
 
 TYPE_PARSER(sourced(beginDirective >> "$CUF KERNEL DO"_tok >>
     construct<CUFKernelDoConstruct::Directive>(
-        maybe(parenthesized(scalarIntConstantExpr)),
+        // Accept !$CUF KERNEL DO, !$CUF KERNEL DO(), and
+        // !$CUF KERNEL DO(<scalar-int-constant-expr>).
+        defaulted(parenthesized(maybe(scalarIntConstantExpr))),
         maybe(Parser<CUFKernelDoConstruct::LaunchConfiguration>{}),
         many(Parser<CUFReduction>{}) / endDirective)))
 TYPE_CONTEXT_PARSER("!$CUF KERNEL DO construct"_en_US,

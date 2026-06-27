@@ -369,19 +369,19 @@ define void @transpose_s16_8x8_simpler2(ptr nocapture noundef %a) {
 ; CHECK:       .Lfunc_begin8:
 ; CHECK-NEXT:    .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %entry
-; CHECK-NEXT:    ldp q0, q2, [x0]
-; CHECK-NEXT:    ldp q3, q4, [x0, #64]
-; CHECK-NEXT:    ldp q5, q6, [x0, #32]
-; CHECK-NEXT:    ldp q7, q16, [x0, #96]
-; CHECK-NEXT:    mov v0.h[5], v2.h[4]
-; CHECK-NEXT:    zip1 v2.8h, v3.8h, v4.8h
-; CHECK-NEXT:    zip1 v3.8h, v5.8h, v6.8h
-; CHECK-NEXT:    mov v7.h[5], v16.h[4]
-; CHECK-NEXT:    mov v0.s[1], v2.s[0]
-; CHECK-NEXT:    uzp1 v1.4s, v3.4s, v7.4s
-; CHECK-NEXT:    zip2 v2.4s, v0.4s, v1.4s
-; CHECK-NEXT:    st2 { v0.2s, v1.2s }, [x0]
-; CHECK-NEXT:    str q2, [x0, #64]
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldp q2, q3, [x0, #64]
+; CHECK-NEXT:    ldp q4, q5, [x0, #96]
+; CHECK-NEXT:    trn1 v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    zip1 v1.8h, v2.8h, v3.8h
+; CHECK-NEXT:    ldp q2, q3, [x0, #32]
+; CHECK-NEXT:    trn1 v4.8h, v4.8h, v5.8h
+; CHECK-NEXT:    zip1 v3.8h, v2.8h, v3.8h
+; CHECK-NEXT:    trn1 v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    dup v0.4s, v4.s[2]
+; CHECK-NEXT:    zip2 v0.4s, v2.4s, v0.4s
+; CHECK-NEXT:    st2 { v2.2s, v3.2s }, [x0]
+; CHECK-NEXT:    str q0, [x0, #64]
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <8 x i16>, ptr %a, align 16

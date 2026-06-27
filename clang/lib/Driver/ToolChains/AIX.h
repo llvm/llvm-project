@@ -77,12 +77,15 @@ public:
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;
 
+  void AddFilePathLibArgs(const llvm::opt::ArgList &Args,
+                          llvm::opt::ArgStringList &CmdArgs) const override;
+
   void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const override;
 
   void addClangTargetOptions(
       const llvm::opt::ArgList &Args, llvm::opt::ArgStringList &CC1Args,
-      Action::OffloadKind DeviceOffloadingKind) const override;
+      BoundArch BA, Action::OffloadKind DeviceOffloadingKind) const override;
 
   void addProfileRTLibs(const llvm::opt::ArgList &Args,
                         llvm::opt::ArgStringList &CmdArgs) const override;

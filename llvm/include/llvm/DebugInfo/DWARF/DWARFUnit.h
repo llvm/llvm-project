@@ -28,7 +28,6 @@
 #include <cstdint>
 #include <map>
 #include <memory>
-#include <set>
 #include <utility>
 #include <vector>
 
@@ -136,8 +135,8 @@ class DWARFUnitVector final : public SmallVector<std::unique_ptr<DWARFUnit>, 1> 
 
 public:
   using UnitVector = SmallVectorImpl<std::unique_ptr<DWARFUnit>>;
-  using iterator = typename UnitVector::iterator;
-  using iterator_range = llvm::iterator_range<typename UnitVector::iterator>;
+  using iterator = UnitVector::iterator;
+  using iterator_range = llvm::iterator_range<UnitVector::iterator>;
 
   using compile_unit_range =
       decltype(make_filter_range(std::declval<iterator_range>(), isCompileUnit));
@@ -396,7 +395,7 @@ public:
   DWARFDataExtractor getDebugInfoExtractor() const;
 
   DataExtractor getStringExtractor() const {
-    return DataExtractor(StringSection, false, 0);
+    return DataExtractor(StringSection, false);
   }
 
   const DWARFLocationTable &getLocationTable() { return *LocTable; }

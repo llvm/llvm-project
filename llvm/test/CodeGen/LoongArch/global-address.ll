@@ -12,20 +12,24 @@
 define void @foo() nounwind {
 ; LA32NOPIC-LABEL: foo:
 ; LA32NOPIC:       # %bb.0:
-; LA32NOPIC-NEXT:    pcalau12i $a0, %got_pc_hi20(G)
-; LA32NOPIC-NEXT:    ld.w $a0, $a0, %got_pc_lo12(G)
+; LA32NOPIC-NEXT:  .Lpcadd_hi0:
+; LA32NOPIC-NEXT:    pcaddu12i $a0, %got_pcadd_hi20(G)
+; LA32NOPIC-NEXT:    ld.w $a0, $a0, %got_pcadd_lo12(.Lpcadd_hi0)
 ; LA32NOPIC-NEXT:    ld.w $zero, $a0, 0
-; LA32NOPIC-NEXT:    pcalau12i $a0, %pc_hi20(g)
-; LA32NOPIC-NEXT:    ld.w $zero, $a0, %pc_lo12(g)
+; LA32NOPIC-NEXT:  .Lpcadd_hi1:
+; LA32NOPIC-NEXT:    pcaddu12i $a0, %pcadd_hi20(g)
+; LA32NOPIC-NEXT:    ld.w $zero, $a0, %pcadd_lo12(.Lpcadd_hi1)
 ; LA32NOPIC-NEXT:    ret
 ;
 ; LA32PIC-LABEL: foo:
 ; LA32PIC:       # %bb.0:
-; LA32PIC-NEXT:    pcalau12i $a0, %got_pc_hi20(G)
-; LA32PIC-NEXT:    ld.w $a0, $a0, %got_pc_lo12(G)
+; LA32PIC-NEXT:  .Lpcadd_hi0:
+; LA32PIC-NEXT:    pcaddu12i $a0, %got_pcadd_hi20(G)
+; LA32PIC-NEXT:    ld.w $a0, $a0, %got_pcadd_lo12(.Lpcadd_hi0)
 ; LA32PIC-NEXT:    ld.w $zero, $a0, 0
-; LA32PIC-NEXT:    pcalau12i $a0, %pc_hi20(.Lg$local)
-; LA32PIC-NEXT:    ld.w $zero, $a0, %pc_lo12(.Lg$local)
+; LA32PIC-NEXT:  .Lpcadd_hi1:
+; LA32PIC-NEXT:    pcaddu12i $a0, %pcadd_hi20(.Lg$local)
+; LA32PIC-NEXT:    ld.w $zero, $a0, %pcadd_lo12(.Lpcadd_hi1)
 ; LA32PIC-NEXT:    ret
 ;
 ; LA64NOPIC-LABEL: foo:

@@ -13,11 +13,11 @@
 define <1 x half> @round_v1f16(<1 x half> %x) {
 ; ZVFH-LABEL: round_v1f16:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
-; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    li a0, 25
 ; ZVFH-NEXT:    slli a0, a0, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a0
+; ZVFH-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
+; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; ZVFH-NEXT:    fsrmi a0, 4
 ; ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -29,12 +29,12 @@ define <1 x half> @round_v1f16(<1 x half> %x) {
 ;
 ; ZVFHMIN-LABEL: round_v1f16:
 ; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 307200
+; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vsetivli zero, 1, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v8, v9
-; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5
 ; ZVFHMIN-NEXT:    fsrmi a0, 4
 ; ZVFHMIN-NEXT:    vfcvt.x.f.v v8, v9, v0.t
@@ -48,16 +48,15 @@ define <1 x half> @round_v1f16(<1 x half> %x) {
   %a = call <1 x half> @llvm.round.v1f16(<1 x half> %x)
   ret <1 x half> %a
 }
-declare <1 x half> @llvm.round.v1f16(<1 x half>)
 
 define <2 x half> @round_v2f16(<2 x half> %x) {
 ; ZVFH-LABEL: round_v2f16:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    li a0, 25
 ; ZVFH-NEXT:    slli a0, a0, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a0
+; ZVFH-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; ZVFH-NEXT:    fsrmi a0, 4
 ; ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -69,12 +68,12 @@ define <2 x half> @round_v2f16(<2 x half> %x) {
 ;
 ; ZVFHMIN-LABEL: round_v2f16:
 ; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 307200
+; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v8, v9
-; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5
 ; ZVFHMIN-NEXT:    fsrmi a0, 4
 ; ZVFHMIN-NEXT:    vfcvt.x.f.v v8, v9, v0.t
@@ -88,16 +87,15 @@ define <2 x half> @round_v2f16(<2 x half> %x) {
   %a = call <2 x half> @llvm.round.v2f16(<2 x half> %x)
   ret <2 x half> %a
 }
-declare <2 x half> @llvm.round.v2f16(<2 x half>)
 
 define <4 x half> @round_v4f16(<4 x half> %x) {
 ; ZVFH-LABEL: round_v4f16:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    li a0, 25
 ; ZVFH-NEXT:    slli a0, a0, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a0
+; ZVFH-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; ZVFH-NEXT:    fsrmi a0, 4
 ; ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -109,12 +107,12 @@ define <4 x half> @round_v4f16(<4 x half> %x) {
 ;
 ; ZVFHMIN-LABEL: round_v4f16:
 ; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 307200
+; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v9, v8
-; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v8, v9
-; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5
 ; ZVFHMIN-NEXT:    fsrmi a0, 4
 ; ZVFHMIN-NEXT:    vfcvt.x.f.v v8, v9, v0.t
@@ -128,16 +126,15 @@ define <4 x half> @round_v4f16(<4 x half> %x) {
   %a = call <4 x half> @llvm.round.v4f16(<4 x half> %x)
   ret <4 x half> %a
 }
-declare <4 x half> @llvm.round.v4f16(<4 x half>)
 
 define <8 x half> @round_v8f16(<8 x half> %x) {
 ; ZVFH-LABEL: round_v8f16:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    li a0, 25
 ; ZVFH-NEXT:    slli a0, a0, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a0
+; ZVFH-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVFH-NEXT:    vfabs.v v9, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; ZVFH-NEXT:    fsrmi a0, 4
 ; ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -149,12 +146,12 @@ define <8 x half> @round_v8f16(<8 x half> %x) {
 ;
 ; ZVFHMIN-LABEL: round_v8f16:
 ; ZVFHMIN:       # %bb.0:
+; ZVFHMIN-NEXT:    lui a0, 307200
+; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v10, v8
-; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v8, v10
-; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5
 ; ZVFHMIN-NEXT:    fsrmi a0, 4
 ; ZVFHMIN-NEXT:    vfcvt.x.f.v v8, v10, v0.t
@@ -168,16 +165,15 @@ define <8 x half> @round_v8f16(<8 x half> %x) {
   %a = call <8 x half> @llvm.round.v8f16(<8 x half> %x)
   ret <8 x half> %a
 }
-declare <8 x half> @llvm.round.v8f16(<8 x half>)
 
 define <16 x half> @round_v16f16(<16 x half> %x) {
 ; ZVFH-LABEL: round_v16f16:
 ; ZVFH:       # %bb.0:
-; ZVFH-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; ZVFH-NEXT:    vfabs.v v10, v8
 ; ZVFH-NEXT:    li a0, 25
 ; ZVFH-NEXT:    slli a0, a0, 10
 ; ZVFH-NEXT:    fmv.h.x fa5, a0
+; ZVFH-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVFH-NEXT:    vfabs.v v10, v8
 ; ZVFH-NEXT:    vmflt.vf v0, v10, fa5
 ; ZVFH-NEXT:    fsrmi a0, 4
 ; ZVFH-NEXT:    vfcvt.x.f.v v10, v8, v0.t
@@ -191,9 +187,9 @@ define <16 x half> @round_v16f16(<16 x half> %x) {
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v12, v8
-; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v8, v12
+; ZVFHMIN-NEXT:    lui a0, 307200
 ; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5
 ; ZVFHMIN-NEXT:    fsrmi a0, 4
@@ -208,17 +204,16 @@ define <16 x half> @round_v16f16(<16 x half> %x) {
   %a = call <16 x half> @llvm.round.v16f16(<16 x half> %x)
   ret <16 x half> %a
 }
-declare <16 x half> @llvm.round.v16f16(<16 x half>)
 
 define <32 x half> @round_v32f16(<32 x half> %x) {
 ; ZVFH-LABEL: round_v32f16:
 ; ZVFH:       # %bb.0:
 ; ZVFH-NEXT:    li a0, 32
-; ZVFH-NEXT:    li a1, 25
 ; ZVFH-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; ZVFH-NEXT:    vfabs.v v12, v8
-; ZVFH-NEXT:    slli a1, a1, 10
-; ZVFH-NEXT:    fmv.h.x fa5, a1
+; ZVFH-NEXT:    li a0, 25
+; ZVFH-NEXT:    slli a0, a0, 10
+; ZVFH-NEXT:    fmv.h.x fa5, a0
 ; ZVFH-NEXT:    vmflt.vf v0, v12, fa5
 ; ZVFH-NEXT:    fsrmi a0, 4
 ; ZVFH-NEXT:    vfcvt.x.f.v v12, v8, v0.t
@@ -231,12 +226,12 @@ define <32 x half> @round_v32f16(<32 x half> %x) {
 ; ZVFHMIN-LABEL: round_v32f16:
 ; ZVFHMIN:       # %bb.0:
 ; ZVFHMIN-NEXT:    li a0, 32
-; ZVFHMIN-NEXT:    lui a1, 307200
 ; ZVFHMIN-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v16, v8
-; ZVFHMIN-NEXT:    fmv.w.x fa5, a1
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; ZVFHMIN-NEXT:    vfabs.v v8, v16
+; ZVFHMIN-NEXT:    lui a0, 307200
+; ZVFHMIN-NEXT:    fmv.w.x fa5, a0
 ; ZVFHMIN-NEXT:    vmflt.vf v0, v8, fa5
 ; ZVFHMIN-NEXT:    fsrmi a0, 4
 ; ZVFHMIN-NEXT:    vfcvt.x.f.v v8, v16, v0.t
@@ -250,15 +245,14 @@ define <32 x half> @round_v32f16(<32 x half> %x) {
   %a = call <32 x half> @llvm.round.v32f16(<32 x half> %x)
   ret <32 x half> %a
 }
-declare <32 x half> @llvm.round.v32f16(<32 x half>)
 
 define <1 x float> @round_v1f32(<1 x float> %x) {
 ; CHECK-LABEL: round_v1f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
-; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
+; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    fsrmi a0, 4
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -270,15 +264,14 @@ define <1 x float> @round_v1f32(<1 x float> %x) {
   %a = call <1 x float> @llvm.round.v1f32(<1 x float> %x)
   ret <1 x float> %a
 }
-declare <1 x float> @llvm.round.v1f32(<1 x float>)
 
 define <2 x float> @round_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: round_v2f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    fsrmi a0, 4
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -290,15 +283,14 @@ define <2 x float> @round_v2f32(<2 x float> %x) {
   %a = call <2 x float> @llvm.round.v2f32(<2 x float> %x)
   ret <2 x float> %a
 }
-declare <2 x float> @llvm.round.v2f32(<2 x float>)
 
 define <4 x float> @round_v4f32(<4 x float> %x) {
 ; CHECK-LABEL: round_v4f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfabs.v v9, v8
 ; CHECK-NEXT:    vmflt.vf v0, v9, fa5
 ; CHECK-NEXT:    fsrmi a0, 4
 ; CHECK-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -310,15 +302,14 @@ define <4 x float> @round_v4f32(<4 x float> %x) {
   %a = call <4 x float> @llvm.round.v4f32(<4 x float> %x)
   ret <4 x float> %a
 }
-declare <4 x float> @llvm.round.v4f32(<4 x float>)
 
 define <8 x float> @round_v8f32(<8 x float> %x) {
 ; CHECK-LABEL: round_v8f32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; CHECK-NEXT:    vfabs.v v10, v8
 ; CHECK-NEXT:    lui a0, 307200
 ; CHECK-NEXT:    fmv.w.x fa5, a0
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; CHECK-NEXT:    vfabs.v v10, v8
 ; CHECK-NEXT:    vmflt.vf v0, v10, fa5
 ; CHECK-NEXT:    fsrmi a0, 4
 ; CHECK-NEXT:    vfcvt.x.f.v v10, v8, v0.t
@@ -330,7 +321,6 @@ define <8 x float> @round_v8f32(<8 x float> %x) {
   %a = call <8 x float> @llvm.round.v8f32(<8 x float> %x)
   ret <8 x float> %a
 }
-declare <8 x float> @llvm.round.v8f32(<8 x float>)
 
 define <16 x float> @round_v16f32(<16 x float> %x) {
 ; CHECK-LABEL: round_v16f32:
@@ -350,7 +340,6 @@ define <16 x float> @round_v16f32(<16 x float> %x) {
   %a = call <16 x float> @llvm.round.v16f32(<16 x float> %x)
   ret <16 x float> %a
 }
-declare <16 x float> @llvm.round.v16f32(<16 x float>)
 
 define <1 x double> @round_v1f64(<1 x double> %x) {
 ; RV32ZVFH-LABEL: round_v1f64:
@@ -370,11 +359,11 @@ define <1 x double> @round_v1f64(<1 x double> %x) {
 ;
 ; RV64ZVFH-LABEL: round_v1f64:
 ; RV64ZVFH:       # %bb.0:
-; RV64ZVFH-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64ZVFH-NEXT:    vfabs.v v9, v8
 ; RV64ZVFH-NEXT:    li a0, 1075
 ; RV64ZVFH-NEXT:    slli a0, a0, 52
 ; RV64ZVFH-NEXT:    fmv.d.x fa5, a0
+; RV64ZVFH-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64ZVFH-NEXT:    vfabs.v v9, v8
 ; RV64ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64ZVFH-NEXT:    fsrmi a0, 4
 ; RV64ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -401,11 +390,11 @@ define <1 x double> @round_v1f64(<1 x double> %x) {
 ;
 ; RV64ZVFHMIN-LABEL: round_v1f64:
 ; RV64ZVFHMIN:       # %bb.0:
-; RV64ZVFHMIN-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV64ZVFHMIN-NEXT:    vfabs.v v9, v8
 ; RV64ZVFHMIN-NEXT:    li a0, 1075
 ; RV64ZVFHMIN-NEXT:    slli a0, a0, 52
 ; RV64ZVFHMIN-NEXT:    fmv.d.x fa5, a0
+; RV64ZVFHMIN-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV64ZVFHMIN-NEXT:    vfabs.v v9, v8
 ; RV64ZVFHMIN-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64ZVFHMIN-NEXT:    fsrmi a0, 4
 ; RV64ZVFHMIN-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -417,7 +406,6 @@ define <1 x double> @round_v1f64(<1 x double> %x) {
   %a = call <1 x double> @llvm.round.v1f64(<1 x double> %x)
   ret <1 x double> %a
 }
-declare <1 x double> @llvm.round.v1f64(<1 x double>)
 
 define <2 x double> @round_v2f64(<2 x double> %x) {
 ; RV32ZVFH-LABEL: round_v2f64:
@@ -437,11 +425,11 @@ define <2 x double> @round_v2f64(<2 x double> %x) {
 ;
 ; RV64ZVFH-LABEL: round_v2f64:
 ; RV64ZVFH:       # %bb.0:
-; RV64ZVFH-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64ZVFH-NEXT:    vfabs.v v9, v8
 ; RV64ZVFH-NEXT:    li a0, 1075
 ; RV64ZVFH-NEXT:    slli a0, a0, 52
 ; RV64ZVFH-NEXT:    fmv.d.x fa5, a0
+; RV64ZVFH-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64ZVFH-NEXT:    vfabs.v v9, v8
 ; RV64ZVFH-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64ZVFH-NEXT:    fsrmi a0, 4
 ; RV64ZVFH-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -468,11 +456,11 @@ define <2 x double> @round_v2f64(<2 x double> %x) {
 ;
 ; RV64ZVFHMIN-LABEL: round_v2f64:
 ; RV64ZVFHMIN:       # %bb.0:
-; RV64ZVFHMIN-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64ZVFHMIN-NEXT:    vfabs.v v9, v8
 ; RV64ZVFHMIN-NEXT:    li a0, 1075
 ; RV64ZVFHMIN-NEXT:    slli a0, a0, 52
 ; RV64ZVFHMIN-NEXT:    fmv.d.x fa5, a0
+; RV64ZVFHMIN-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64ZVFHMIN-NEXT:    vfabs.v v9, v8
 ; RV64ZVFHMIN-NEXT:    vmflt.vf v0, v9, fa5
 ; RV64ZVFHMIN-NEXT:    fsrmi a0, 4
 ; RV64ZVFHMIN-NEXT:    vfcvt.x.f.v v9, v8, v0.t
@@ -484,7 +472,6 @@ define <2 x double> @round_v2f64(<2 x double> %x) {
   %a = call <2 x double> @llvm.round.v2f64(<2 x double> %x)
   ret <2 x double> %a
 }
-declare <2 x double> @llvm.round.v2f64(<2 x double>)
 
 define <4 x double> @round_v4f64(<4 x double> %x) {
 ; RV32ZVFH-LABEL: round_v4f64:
@@ -504,11 +491,11 @@ define <4 x double> @round_v4f64(<4 x double> %x) {
 ;
 ; RV64ZVFH-LABEL: round_v4f64:
 ; RV64ZVFH:       # %bb.0:
-; RV64ZVFH-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64ZVFH-NEXT:    vfabs.v v10, v8
 ; RV64ZVFH-NEXT:    li a0, 1075
 ; RV64ZVFH-NEXT:    slli a0, a0, 52
 ; RV64ZVFH-NEXT:    fmv.d.x fa5, a0
+; RV64ZVFH-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64ZVFH-NEXT:    vfabs.v v10, v8
 ; RV64ZVFH-NEXT:    vmflt.vf v0, v10, fa5
 ; RV64ZVFH-NEXT:    fsrmi a0, 4
 ; RV64ZVFH-NEXT:    vfcvt.x.f.v v10, v8, v0.t
@@ -535,11 +522,11 @@ define <4 x double> @round_v4f64(<4 x double> %x) {
 ;
 ; RV64ZVFHMIN-LABEL: round_v4f64:
 ; RV64ZVFHMIN:       # %bb.0:
-; RV64ZVFHMIN-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64ZVFHMIN-NEXT:    vfabs.v v10, v8
 ; RV64ZVFHMIN-NEXT:    li a0, 1075
 ; RV64ZVFHMIN-NEXT:    slli a0, a0, 52
 ; RV64ZVFHMIN-NEXT:    fmv.d.x fa5, a0
+; RV64ZVFHMIN-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64ZVFHMIN-NEXT:    vfabs.v v10, v8
 ; RV64ZVFHMIN-NEXT:    vmflt.vf v0, v10, fa5
 ; RV64ZVFHMIN-NEXT:    fsrmi a0, 4
 ; RV64ZVFHMIN-NEXT:    vfcvt.x.f.v v10, v8, v0.t
@@ -551,15 +538,14 @@ define <4 x double> @round_v4f64(<4 x double> %x) {
   %a = call <4 x double> @llvm.round.v4f64(<4 x double> %x)
   ret <4 x double> %a
 }
-declare <4 x double> @llvm.round.v4f64(<4 x double>)
 
 define <8 x double> @round_v8f64(<8 x double> %x) {
 ; RV32ZVFH-LABEL: round_v8f64:
 ; RV32ZVFH:       # %bb.0:
-; RV32ZVFH-NEXT:    lui a0, %hi(.LCPI14_0)
-; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI14_0)(a0)
 ; RV32ZVFH-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32ZVFH-NEXT:    vfabs.v v12, v8
+; RV32ZVFH-NEXT:    lui a0, %hi(.LCPI14_0)
+; RV32ZVFH-NEXT:    fld fa5, %lo(.LCPI14_0)(a0)
 ; RV32ZVFH-NEXT:    vmflt.vf v0, v12, fa5
 ; RV32ZVFH-NEXT:    fsrmi a0, 4
 ; RV32ZVFH-NEXT:    vfcvt.x.f.v v12, v8, v0.t
@@ -587,10 +573,10 @@ define <8 x double> @round_v8f64(<8 x double> %x) {
 ;
 ; RV32ZVFHMIN-LABEL: round_v8f64:
 ; RV32ZVFHMIN:       # %bb.0:
-; RV32ZVFHMIN-NEXT:    lui a0, %hi(.LCPI14_0)
-; RV32ZVFHMIN-NEXT:    fld fa5, %lo(.LCPI14_0)(a0)
 ; RV32ZVFHMIN-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32ZVFHMIN-NEXT:    vfabs.v v12, v8
+; RV32ZVFHMIN-NEXT:    lui a0, %hi(.LCPI14_0)
+; RV32ZVFHMIN-NEXT:    fld fa5, %lo(.LCPI14_0)(a0)
 ; RV32ZVFHMIN-NEXT:    vmflt.vf v0, v12, fa5
 ; RV32ZVFHMIN-NEXT:    fsrmi a0, 4
 ; RV32ZVFHMIN-NEXT:    vfcvt.x.f.v v12, v8, v0.t
@@ -618,4 +604,3 @@ define <8 x double> @round_v8f64(<8 x double> %x) {
   %a = call <8 x double> @llvm.round.v8f64(<8 x double> %x)
   ret <8 x double> %a
 }
-declare <8 x double> @llvm.round.v8f64(<8 x double>)

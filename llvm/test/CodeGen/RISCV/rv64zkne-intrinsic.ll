@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+zkne -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV64ZKNE
 
-declare i64 @llvm.riscv.aes64es(i64, i64);
-
 define i64 @aes64es(i64 %a, i64 %b) nounwind {
 ; RV64ZKNE-LABEL: aes64es:
 ; RV64ZKNE:       # %bb.0:
@@ -12,8 +10,6 @@ define i64 @aes64es(i64 %a, i64 %b) nounwind {
     %val = call i64 @llvm.riscv.aes64es(i64 %a, i64 %b)
     ret i64 %val
 }
-
-declare i64 @llvm.riscv.aes64esm(i64, i64);
 
 define i64 @aes64esm(i64 %a, i64 %b) nounwind {
 ; RV64ZKNE-LABEL: aes64esm:

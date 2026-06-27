@@ -108,7 +108,7 @@ inline void enableSystemMemoryTaggingTestOnly() {
 
 #else // !SCUDO_CAN_USE_MTE
 
-inline bool systemSupportsMemoryTagging() { return false; }
+inline constexpr bool systemSupportsMemoryTagging() { return false; }
 
 inline NORETURN bool systemDetectsMemoryTagFaultsTestOnly() {
   UNREACHABLE("memory tagging not supported");
@@ -259,11 +259,14 @@ inline uptr loadTag(uptr Ptr) {
   return TaggedPtr;
 }
 
+inline uptr loadTagUnaligned(uptr Ptr) {
+  uptr AlignedPtr = Ptr & ~static_cast<uptr>(0xF);
+  return loadTag(AlignedPtr) | (Ptr & 0xF);
+}
+
 #else
 
-inline NORETURN bool systemSupportsMemoryTagging() {
-  UNREACHABLE("memory tagging not supported");
-}
+inline constexpr bool systemSupportsMemoryTagging() { return false; }
 
 inline NORETURN bool systemDetectsMemoryTagFaultsTestOnly() {
   UNREACHABLE("memory tagging not supported");
@@ -301,6 +304,11 @@ inline NORETURN void storeTag(uptr Ptr) {
 }
 
 inline NORETURN uptr loadTag(uptr Ptr) {
+  (void)Ptr;
+  UNREACHABLE("memory tagging not supported");
+}
+
+inline uptr loadTagUnaligned(uptr Ptr) {
   (void)Ptr;
   UNREACHABLE("memory tagging not supported");
 }

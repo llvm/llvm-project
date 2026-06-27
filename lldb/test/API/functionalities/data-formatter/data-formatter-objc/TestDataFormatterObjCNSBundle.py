@@ -13,6 +13,8 @@ from ObjCDataFormatterTestCase import ObjCDataFormatterTestCase
 
 
 class ObjCDataFormatterNSBundle(ObjCDataFormatterTestCase):
+    SHARED_BUILD_TESTCASE = False
+
     def test_nsbundle_with_run_command(self):
         """Test formatters for NSBundle."""
         self.appkit_tester_impl(self.nsbundle_data_formatter_commands, True)
@@ -29,7 +31,7 @@ class ObjCDataFormatterNSBundle(ObjCDataFormatterTestCase):
                 "(NSBundle *) bundle_string = ",
                 ' @"/System/Library/Frameworks/Accelerate.framework"',
                 "(NSBundle *) bundle_url = ",
-                ' @"/System/Library/Frameworks/Foundation.framework"',
+                '"/System/Library/Frameworks/Foundation.framework"',
                 "(NSBundle *) main_bundle = ",
                 "data-formatter-objc",
             ],

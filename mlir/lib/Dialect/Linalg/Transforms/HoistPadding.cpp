@@ -26,6 +26,7 @@
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 #include "mlir/Transforms/RegionUtils.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/Debug.h"
 
 using llvm::dbgs;
@@ -482,7 +483,7 @@ HoistPaddingAnalysis::getHoistedPackedTensorSizes(RewriterBase &rewriter,
           return !isa<affine::AffineMinOp, affine::AffineMaxOp,
                       affine::AffineApplyOp>(op);
         },
-        /*closedUB=*/true);
+        ValueBoundsOptions{/*closedUB=*/true});
     assert(succeeded(loopUb) && "could not get upper bound");
     Value ubVal = getValueOrCreateConstantIndexOp(rewriter, loc, *loopUb);
 
@@ -904,17 +905,16 @@ static Value replaceByPackingResult(RewriterBase &rewriter,
                                     rewriter.getIndexAttr(0));
   if (nPackedLoops > 0) {
     loopIterationCounts =
-        llvm::to_vector<4>(llvm::map_range(packingLoops, [&](Operation *loop) {
+        llvm::map_to_vector<4>(packingLoops, [&](Operation *loop) {
           return buildLoopIterationCount(rewriter, outerLoop,
                                          cast<scf::ForOp>(loop));
-        }));
+        });
     // Assert all loop iteration counts can be computed.
     if (llvm ::any_of(loopIterationCounts, [](Value v) { return !v; }))
       llvm_unreachable("loop independence prerequisite not met");
 
     // offsets = [maybe_leading_ivs = originalLoopIvs, 0 .. 0].
-    std::copy(loopIterationCounts.begin(), loopIterationCounts.end(),
-              offsets.begin());
+    llvm::copy(loopIterationCounts, offsets.begin());
     hoistedPackedTensor =
         scf::getForInductionVarOwner(packingResult.clonedLoopIvs.front())
             ->getResult(0);

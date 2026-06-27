@@ -236,6 +236,33 @@ define <4 x float> @test_ldexp_v4f32_v4i32(ptr addrspace(1) %out, <4 x float> %a
   ret <4 x float> %result
 }
 
+define amdgpu_ps float @s_test_ldexp_f32_i32(float inreg %a, i32 inreg %b) #0 {
+; GFX6-LABEL: s_test_ldexp_f32_i32:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    v_mov_b32_e32 v0, s1
+; GFX6-NEXT:    v_ldexp_f32_e32 v0, s0, v0
+; GFX6-NEXT:    ; return to shader part epilog
+;
+; GFX8-LABEL: s_test_ldexp_f32_i32:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    v_mov_b32_e32 v0, s1
+; GFX8-NEXT:    v_ldexp_f32 v0, s0, v0
+; GFX8-NEXT:    ; return to shader part epilog
+;
+; GFX9-LABEL: s_test_ldexp_f32_i32:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_mov_b32_e32 v0, s1
+; GFX9-NEXT:    v_ldexp_f32 v0, s0, v0
+; GFX9-NEXT:    ; return to shader part epilog
+;
+; GFX11-LABEL: s_test_ldexp_f32_i32:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    v_ldexp_f32 v0, s0, s1
+; GFX11-NEXT:    ; return to shader part epilog
+  %result = call float @llvm.experimental.constrained.ldexp.f32.i32(float %a, i32 %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
+  ret float %result
+}
+
 declare float @llvm.experimental.constrained.ldexp.f32.i16(float, i16, metadata, metadata) #1
 declare float @llvm.experimental.constrained.ldexp.f32.i32(float, i32, metadata, metadata) #1
 declare <2 x float> @llvm.experimental.constrained.ldexp.v2f32.v2i16(<2 x float>, <2 x i16>, metadata, metadata) #1

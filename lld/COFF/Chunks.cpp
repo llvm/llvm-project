@@ -300,13 +300,16 @@ static void applySecRelHigh12A(const SectionChunk *sec, uint8_t *off,
                                OutputSection *os, uint64_t s) {
   if (!checkSecRel(sec, os))
     return;
-  uint64_t secRel = (s - os->getRVA()) >> 12;
-  if (0xfff < secRel) {
+  uint32_t orig = read32le(off);
+  uint64_t imm = (orig >> 10) & 0xFFF;
+  orig &= ~(0xFFF << 10);
+  imm = (s + imm - os->getRVA()) >> 12;
+  if (0xfff < imm) {
     error("overflow in SECREL_HIGH12A relocation in section: " +
           sec->getSectionName());
     return;
   }
-  applyArm64Imm(off, secRel & 0xfff, 0);
+  write32le(off, orig | (imm << 10));
 }
 
 static void applySecRelLdr(const SectionChunk *sec, uint8_t *off,
@@ -946,7 +949,7 @@ void ECCodeMapChunk::writeTo(uint8_t *buf) const {
   auto table = reinterpret_cast<chpe_range_entry *>(buf);
   for (uint32_t i = 0; i < map.size(); i++) {
     const ECCodeMapEntry &entry = map[i];
-    uint32_t start = entry.first->getRVA();
+    uint32_t start = entry.first->getRVA() & ~0xfff;
     table[i].StartOffset = start | entry.type;
     table[i].Length = entry.last->getRVA() + entry.last->getSize() - start;
   }

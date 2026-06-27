@@ -128,6 +128,17 @@ func.func @ctlz_vector(%arg: vector<4xi32>) -> vector<4xi32> {
 
 // -----
 
+// Index type has no fixed bitwidth; expand pass must not expand ctlz on index
+// (would assert in getIntOrFloatBitWidth). Op is left unchanged.
+// CHECK-LABEL: func @ctlz_index
+func.func @ctlz_index(%arg: index) -> index {
+  // CHECK: math.ctlz %{{.*}} : index
+  %res = math.ctlz %arg : index
+  return %res : index
+}
+
+// -----
+
 // CHECK-LABEL:    func @fmaf_func
 // CHECK-SAME:     ([[ARG0:%.+]]: f64, [[ARG1:%.+]]: f64, [[ARG2:%.+]]: f64) -> f64
 func.func @fmaf_func(%a: f64, %b: f64, %c: f64) -> f64 {
@@ -143,18 +154,52 @@ func.func @fmaf_func(%a: f64, %b: f64, %c: f64) -> f64 {
 // CHECK-LABEL:     func @ceilf_func
 // CHECK-SAME:      ([[ARG0:%.+]]: f64) -> f64
 func.func @ceilf_func(%a: f64) -> f64 {
-  // CHECK-DAG:   [[CST:%.+]] = arith.constant 0.000
-  // CHECK-DAG:   [[CST_0:%.+]] = arith.constant 1.000
+  // CHECK-DAG:   [[C_0:%.+]] = arith.constant 0.000
+  // CHECK-DAG:   [[C_1:%.+]] = arith.constant 1.000
+  // CHECK-DAG:   [[C_4841369599423283200:%.*]] = arith.constant 4841369599423283200
+  // CHECK-DAG:   [[C_9223372036854775807:%.*]] = arith.constant 9223372036854775807
+  // CHECK-NEXT:   [[ARG_BITCAST:%.*]] = arith.bitcast [[ARG0]] : f64 to i64
+  // CHECK-NEXT:   [[ANDI:%.*]] = arith.andi [[ARG_BITCAST]], [[C_9223372036854775807]]
+  // CHECK-NEXT:   [[IS_SPECIAL_VAL:%.*]] = arith.cmpi uge, [[ANDI]], [[C_4841369599423283200]]
   // CHECK-NEXT:   [[CVTI:%.+]] = arith.fptosi [[ARG0]]
   // CHECK-NEXT:   [[CVTF:%.+]] = arith.sitofp [[CVTI]]
   // CHECK-NEXT:   [[COPYSIGN:%.+]] = math.copysign [[CVTF]], [[ARG0]]
   // CHECK-NEXT:   [[COMP:%.+]] = arith.cmpf ogt, [[ARG0]], [[COPYSIGN]]
-  // CHECK-NEXT:   [[INCR:%.+]] = arith.select [[COMP]], [[CST_0]], [[CST]]
+  // CHECK-NEXT:   [[INCR:%.+]] = arith.select [[COMP]], [[C_1]], [[C_0]]
   // CHECK-NEXT:   [[ADDF:%.+]] = arith.addf [[COPYSIGN]], [[INCR]]
-  // CHECK-NEXT:   return [[ADDF]]
+  // CHECK-NEXT:   [[RESULT:%.*]] = arith.select [[IS_SPECIAL_VAL]], [[ARG0]], [[ADDF]]
+  // CHECK-NEXT:   return [[RESULT]]
   // CHECK-FILTER: math.ceil
   %ret = math.ceil %a : f64
   return %ret : f64
+}
+
+// -----
+
+// CHECK-LABEL:     func @ceilf_fnuz_func
+// CHECK-SAME:      ([[ARG0:%.+]]: f8E5M2FNUZ) -> f8E5M2FNUZ
+func.func @ceilf_fnuz_func(%a: f8E5M2FNUZ) -> f8E5M2FNUZ {
+  // CHECK-DAG:   [[C_0:%.+]] = arith.constant 0.000
+  // CHECK-DAG:   [[C_1:%.+]] = arith.constant 1.000
+  // CHECK-DAG:   [[C_NEG_128:%.*]] = arith.constant -128
+  // CHECK-DAG:   [[C_72:%.*]] = arith.constant 72
+  // CHECK-DAG:   [[C_127:%.*]] = arith.constant 127
+  // CHECK-NEXT:   [[ARG_BITCAST:%.*]] = arith.bitcast [[ARG0]] : f8E5M2FNUZ to i8
+  // CHECK-NEXT:   [[ANDI:%.*]] = arith.andi [[ARG_BITCAST]], [[C_127]]
+  // CHECK-NEXT:   [[IS_LARGE:%.+]] = arith.cmpi uge, [[ANDI]], [[C_72]]
+  // CHECK-NEXT:   [[IS_NAN:%.+]] = arith.cmpi eq, [[ARG_BITCAST]], [[C_NEG_128]]
+  // CHECK-NEXT:   [[IS_SPECIAL_VAL:%.+]] = arith.ori [[IS_LARGE]], [[IS_NAN]]
+  // CHECK-NEXT:   [[CVTI:%.+]] = arith.fptosi [[ARG0]]
+  // CHECK-NEXT:   [[CVTF:%.+]] = arith.sitofp [[CVTI]]
+  // CHECK-NEXT:   [[COPYSIGN:%.+]] = math.copysign [[CVTF]], [[ARG0]]
+  // CHECK-NEXT:   [[COMP:%.+]] = arith.cmpf ogt, [[ARG0]], [[COPYSIGN]]
+  // CHECK-NEXT:   [[INCR:%.+]] = arith.select [[COMP]], [[C_1]], [[C_0]]
+  // CHECK-NEXT:   [[ADDF:%.+]] = arith.addf [[COPYSIGN]], [[INCR]]
+  // CHECK-NEXT:   [[RESULT:%.*]] = arith.select [[IS_SPECIAL_VAL]], [[ARG0]], [[ADDF]]
+  // CHECK-NEXT:   return [[RESULT]]
+  // CHECK-FILTER: math.ceil
+  %ret = math.ceil %a : f8E5M2FNUZ
+  return %ret : f8E5M2FNUZ
 }
 
 // -----
@@ -776,8 +821,12 @@ func.func @rsqrt_tns(%float: tensor<5x8xf32>) -> (tensor<5x8xf32>)  {
 // CHECK-LABEL:    func.func @non_static_shape_ceil_op
 // CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
 // CHECK-SAME:     -> tensor<?xf32>
-// CHECK:          %[[CEIL:.*]] = math.ceil %[[ARG]] : tensor<?xf32>
-// CHECK:          return %[[CEIL]] : tensor<?xf32>
+// CHECK-DAG:       arith.constant 0.000000e+00 : f32
+// CHECK-DAG:       arith.constant 1.000000e+00 : f32
+// CHECK-DAG:       tensor.dim %[[ARG]]
+// CHECK:           tensor.splat %{{.*}}[%{{.*}}] : tensor<?xf32>
+// CHECK-NOT:       math.ceil
+// CHECK:           return %{{.*}} : tensor<?xf32>
 
 func.func @non_static_shape_ceil_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
   %a = math.ceil %arg : tensor<?xf32>
@@ -802,8 +851,12 @@ func.func @unranked_ceil_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
 // CHECK-LABEL:    func.func @non_static_shape_rsqrt_op
 // CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
 // CHECK-SAME:     -> tensor<?xf32>
-// CHECK:          %[[RSQRT:.*]] = math.rsqrt %[[ARG]] : tensor<?xf32>
-// CHECK:          return %[[RSQRT]] : tensor<?xf32>
+// CHECK-DAG:       arith.constant 1.000000e+00 : f32
+// CHECK-DAG:       tensor.dim %[[ARG]]
+// CHECK-DAG:       tensor.splat %{{.*}}[%{{.*}}] : tensor<?xf32>
+// CHECK-DAG:       math.sqrt %[[ARG]] : tensor<?xf32>
+// CHECK:           arith.divf %{{.*}}, %{{.*}} : tensor<?xf32>
+// CHECK:           return %{{.*}} : tensor<?xf32>
 
 func.func @non_static_shape_rsqrt_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
   %a = math.rsqrt %arg : tensor<?xf32>
@@ -827,8 +880,8 @@ func.func @unranked_rsqrt_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
 
 // CHECK-LABEL:    func.func @clampf_scalar_op
 // CHECK-SAME:     (%[[ARG:.*]]: f16, %[[MIN:.*]]: f16, %[[MAX:.*]]: f16)
-// CHECK:          %[[V0:.*]] = arith.minimumf %[[ARG]], %[[MIN]] : f16
-// CHECK:          %[[V1:.*]] = arith.maximumf %[[V0]], %[[MAX]] : f16
+// CHECK:          %[[V0:.*]] = arith.minimumf %[[ARG]], %[[MAX]] : f16
+// CHECK:          %[[V1:.*]] = arith.maximumf %[[V0]], %[[MIN]] : f16
 // CHECK:          return %[[V1]] : f16
 
 func.func @clampf_scalar_op(%arg: f16, %min: f16, %max: f16) -> f16 {
@@ -838,11 +891,310 @@ func.func @clampf_scalar_op(%arg: f16, %min: f16, %max: f16) -> f16 {
 
 // CHECK-LABEL:    func.func @clampf_vector_op
 // CHECK-SAME:     (%[[ARG:.*]]: vector<3x4xf32>, %[[MIN:.*]]: vector<3x4xf32>, %[[MAX:.*]]: vector<3x4xf32>)
-// CHECK:          %[[V0:.*]] = arith.minimumf %[[ARG]], %[[MIN]] fastmath<fast> : vector<3x4xf32>
-// CHECK:          %[[V1:.*]] = arith.maximumf %[[V0]], %[[MAX]] fastmath<fast> : vector<3x4xf32>
+// CHECK:          %[[V0:.*]] = arith.minimumf %[[ARG]], %[[MAX]] fastmath<fast> : vector<3x4xf32>
+// CHECK:          %[[V1:.*]] = arith.maximumf %[[V0]], %[[MIN]] fastmath<fast> : vector<3x4xf32>
 // CHECK:          return %[[V1]] : vector<3x4xf32>
 
 func.func @clampf_vector_op(%arg: vector<3x4xf32>, %min: vector<3x4xf32>, %max: vector<3x4xf32>) -> vector<3x4xf32>{
   %a = math.clampf %arg to [%min, %max] fastmath<fast> : vector<3x4xf32>
   return %a: vector<3x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @non_static_shape_sinh_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
+// CHECK-SAME:     -> tensor<?xf32>
+// CHECK-DAG:       math.exp %[[ARG]] : tensor<?xf32>
+// CHECK-DAG:       arith.negf %[[ARG]] : tensor<?xf32>
+// CHECK-DAG:       arith.constant 5.000000e-01 : f32
+// CHECK-DAG:       tensor.dim %[[ARG]]
+// CHECK:           tensor.splat %{{.*}}[%{{.*}}] : tensor<?xf32>
+// CHECK:           return %{{.*}} : tensor<?xf32>
+
+func.func @non_static_shape_sinh_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
+  %a = math.sinh %arg : tensor<?xf32>
+  return %a: tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @unranked_sinh_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<*xf32>)
+// CHECK-SAME:     -> tensor<*xf32>
+// CHECK:          %[[OP:.*]] = math.sinh %[[ARG]] : tensor<*xf32>
+// CHECK:          return %[[OP]] : tensor<*xf32>
+
+func.func @unranked_sinh_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
+  %a = math.sinh %arg : tensor<*xf32>
+  return %a: tensor<*xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @non_static_shape_cosh_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
+// CHECK-SAME:     -> tensor<?xf32>
+// CHECK-DAG:       math.exp %[[ARG]] : tensor<?xf32>
+// CHECK-DAG:       arith.negf %[[ARG]] : tensor<?xf32>
+// CHECK-DAG:       arith.constant 5.000000e-01 : f32
+// CHECK-DAG:       tensor.dim %[[ARG]]
+// CHECK:           tensor.splat %{{.*}}[%{{.*}}] : tensor<?xf32>
+// CHECK:           return %{{.*}} : tensor<?xf32>
+
+func.func @non_static_shape_cosh_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
+  %a = math.cosh %arg : tensor<?xf32>
+  return %a: tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @unranked_cosh_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<*xf32>)
+// CHECK-SAME:     -> tensor<*xf32>
+// CHECK:          %[[OP:.*]] = math.cosh %[[ARG]] : tensor<*xf32>
+// CHECK:          return %[[OP]] : tensor<*xf32>
+
+func.func @unranked_cosh_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
+  %a = math.cosh %arg : tensor<*xf32>
+  return %a: tensor<*xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @non_static_shape_tanh_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
+// CHECK-SAME:     -> tensor<?xf32>
+// CHECK-DAG:       arith.constant 0.000000e+00 : f32
+// CHECK-DAG:       arith.constant 1.000000e+00 : f32
+// CHECK-DAG:       arith.constant -2.000000e+00 : f32
+// CHECK-DAG:       tensor.dim %[[ARG]]
+// CHECK:           tensor.splat %{{.*}}[%{{.*}}] : tensor<?xf32>
+// CHECK:           return %{{.*}} : tensor<?xf32>
+
+func.func @non_static_shape_tanh_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
+  %a = math.tanh %arg : tensor<?xf32>
+  return %a: tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @unranked_tanh_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<*xf32>)
+// CHECK-SAME:     -> tensor<*xf32>
+// CHECK:          %[[OP:.*]] = math.tanh %[[ARG]] : tensor<*xf32>
+// CHECK:          return %[[OP]] : tensor<*xf32>
+
+func.func @unranked_tanh_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
+  %a = math.tanh %arg : tensor<*xf32>
+  return %a: tensor<*xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @non_static_shape_asinh_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
+// CHECK-SAME:     -> tensor<?xf32>
+// CHECK-DAG:       arith.constant 1.000000e+00 : f32
+// CHECK-DAG:       tensor.dim %[[ARG]]
+// CHECK:           tensor.splat %{{.*}}[%{{.*}}] : tensor<?xf32>
+// CHECK:           math.log %{{.*}} : tensor<?xf32>
+// CHECK:           return %{{.*}} : tensor<?xf32>
+
+func.func @non_static_shape_asinh_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
+  %a = math.asinh %arg : tensor<?xf32>
+  return %a: tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @unranked_asinh_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<*xf32>)
+// CHECK-SAME:     -> tensor<*xf32>
+// CHECK:          %[[OP:.*]] = math.asinh %[[ARG]] : tensor<*xf32>
+// CHECK:          return %[[OP]] : tensor<*xf32>
+
+func.func @unranked_asinh_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
+  %a = math.asinh %arg : tensor<*xf32>
+  return %a: tensor<*xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @non_static_shape_acosh_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
+// CHECK-SAME:     -> tensor<?xf32>
+// CHECK-DAG:       arith.constant -1.000000e+00 : f32
+// CHECK-DAG:       tensor.dim %[[ARG]]
+// CHECK:           tensor.splat %{{.*}}[%{{.*}}] : tensor<?xf32>
+// CHECK:           math.log %{{.*}} : tensor<?xf32>
+// CHECK:           return %{{.*}} : tensor<?xf32>
+
+func.func @non_static_shape_acosh_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
+  %a = math.acosh %arg : tensor<?xf32>
+  return %a: tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @unranked_acosh_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<*xf32>)
+// CHECK-SAME:     -> tensor<*xf32>
+// CHECK:          %[[OP:.*]] = math.acosh %[[ARG]] : tensor<*xf32>
+// CHECK:          return %[[OP]] : tensor<*xf32>
+
+func.func @unranked_acosh_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
+  %a = math.acosh %arg : tensor<*xf32>
+  return %a: tensor<*xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @non_static_shape_atanh_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
+// CHECK-SAME:     -> tensor<?xf32>
+// CHECK-DAG:       arith.constant 1.000000e+00 : f32
+// CHECK-DAG:       arith.constant 5.000000e-01 : f32
+// CHECK-DAG:       tensor.dim %[[ARG]]
+// CHECK:           tensor.splat %{{.*}}[%{{.*}}] : tensor<?xf32>
+// CHECK:           math.log %{{.*}} : tensor<?xf32>
+// CHECK:           return %{{.*}} : tensor<?xf32>
+
+func.func @non_static_shape_atanh_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
+  %a = math.atanh %arg : tensor<?xf32>
+  return %a: tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @unranked_atanh_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<*xf32>)
+// CHECK-SAME:     -> tensor<*xf32>
+// CHECK:          %[[OP:.*]] = math.atanh %[[ARG]] : tensor<*xf32>
+// CHECK:          return %[[OP]] : tensor<*xf32>
+
+func.func @unranked_atanh_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
+  %a = math.atanh %arg : tensor<*xf32>
+  return %a: tensor<*xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @non_static_shape_exp2_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
+// CHECK-SAME:     -> tensor<?xf32>
+// CHECK-DAG:       arith.constant 0.6931471{{.*}} : f32
+// CHECK-DAG:       tensor.dim %[[ARG]]
+// CHECK:           tensor.splat %{{.*}}[%{{.*}}] : tensor<?xf32>
+// CHECK:           math.exp %{{.*}} : tensor<?xf32>
+// CHECK:           return %{{.*}} : tensor<?xf32>
+
+func.func @non_static_shape_exp2_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
+  %a = math.exp2 %arg : tensor<?xf32>
+  return %a: tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @unranked_exp2_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<*xf32>)
+// CHECK-SAME:     -> tensor<*xf32>
+// CHECK:          %[[OP:.*]] = math.exp2 %[[ARG]] : tensor<*xf32>
+// CHECK:          return %[[OP]] : tensor<*xf32>
+
+func.func @unranked_exp2_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
+  %a = math.exp2 %arg : tensor<*xf32>
+  return %a: tensor<*xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @non_static_shape_round_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
+// CHECK-SAME:     -> tensor<?xf32>
+// CHECK-DAG:       arith.constant 5.000000e-01 : f32
+// CHECK-DAG:       arith.constant 23 : i32
+// CHECK-DAG:       arith.constant 127 : i32
+// CHECK-DAG:       arith.constant 255 : i32
+// CHECK-DAG:       tensor.dim %[[ARG]]
+// CHECK:           tensor.splat %{{.*}}[%{{.*}}] : tensor<?xf32>
+// CHECK-NOT:       math.round
+// CHECK:           return %{{.*}} : tensor<?xf32>
+
+func.func @non_static_shape_round_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
+  %a = math.round %arg : tensor<?xf32>
+  return %a: tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @unranked_round_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<*xf32>)
+// CHECK-SAME:     -> tensor<*xf32>
+// CHECK:          %[[OP:.*]] = math.round %[[ARG]] : tensor<*xf32>
+// CHECK:          return %[[OP]] : tensor<*xf32>
+
+func.func @unranked_round_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
+  %a = math.round %arg : tensor<*xf32>
+  return %a: tensor<*xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @non_static_shape_roundeven_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<?xf32>)
+// CHECK-SAME:     -> tensor<?xf32>
+// CHECK-DAG:       arith.constant 1.000000e+00 : f32
+// CHECK-DAG:       arith.constant 0 : i32
+// CHECK-DAG:       tensor.dim %[[ARG]]
+// CHECK:           tensor.splat %{{.*}}[%{{.*}}] : tensor<?xf32>
+// CHECK-NOT:       math.roundeven
+// CHECK:           return %{{.*}} : tensor<?xf32>
+
+func.func @non_static_shape_roundeven_op(%arg: tensor<?xf32>) -> tensor<?xf32>{
+  %a = math.roundeven %arg : tensor<?xf32>
+  return %a: tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @unranked_roundeven_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<*xf32>)
+// CHECK-SAME:     -> tensor<*xf32>
+// CHECK:          %[[OP:.*]] = math.roundeven %[[ARG]] : tensor<*xf32>
+// CHECK:          return %[[OP]] : tensor<*xf32>
+
+func.func @unranked_roundeven_op(%arg: tensor<*xf32>) -> tensor<*xf32>{
+  %a = math.roundeven %arg : tensor<*xf32>
+  return %a: tensor<*xf32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @non_static_shape_ctlz_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<?xi32>)
+// CHECK-SAME:     -> tensor<?xi32>
+// CHECK-DAG:       arith.constant 0 : i32
+// CHECK-DAG:       arith.constant 16 : i32
+// CHECK-DAG:       tensor.dim %[[ARG]]
+// CHECK:           tensor.splat %{{.*}}[%{{.*}}] : tensor<?xi32>
+// CHECK-NOT:       math.ctlz
+// CHECK:           return %{{.*}} : tensor<?xi32>
+
+func.func @non_static_shape_ctlz_op(%arg: tensor<?xi32>) -> tensor<?xi32>{
+  %a = math.ctlz %arg : tensor<?xi32>
+  return %a: tensor<?xi32>
+}
+
+// -----
+
+// CHECK-LABEL:    func.func @unranked_ctlz_op
+// CHECK-SAME:     (%[[ARG:.*]]: tensor<*xi32>)
+// CHECK-SAME:     -> tensor<*xi32>
+// CHECK:          %[[OP:.*]] = math.ctlz %[[ARG]] : tensor<*xi32>
+// CHECK:          return %[[OP]] : tensor<*xi32>
+
+func.func @unranked_ctlz_op(%arg: tensor<*xi32>) -> tensor<*xi32>{
+  %a = math.ctlz %arg : tensor<*xi32>
+  return %a: tensor<*xi32>
 }

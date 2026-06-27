@@ -64,8 +64,6 @@ backported to the release branch the oldest compiler is not removed yet.
 The section ``Upcoming Deprecations and Removals`` is cleared by the release
 managers. Copy back the items that were in this section.
 
-The items that need changing are marked with ``LLVM POST-BRANCH``.
-
 Post release
 ============
 
