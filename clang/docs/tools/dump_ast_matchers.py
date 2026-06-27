@@ -19,7 +19,11 @@ DOXYGEN_URL = "https://clang.llvm.org/doxygen"
 
 def _build_local_class_set():
     """Return the set of class names declared in clang/include/clang/AST/."""
-    class_re = re.compile(r"\b(?:class|struct)\s+([A-Z][a-zA-Z0-9_]+)\b")
+    class_re = re.compile(
+        r"\b(?:class|struct)\s+"
+        r"(?:alignas\s*\([^)]*\)\s+)?"
+        r"([A-Z][a-zA-Z0-9_]+)\b"
+    )
     classes = set()
     for header in sorted(CLANG_AST_DIR.glob("*.h")):
         classes.update(class_re.findall(header.read_text(encoding="utf-8")))
