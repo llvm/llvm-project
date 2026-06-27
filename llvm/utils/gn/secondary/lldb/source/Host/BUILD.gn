@@ -18,6 +18,7 @@ static_library("Host") {
   sources = [
     "common/ConPTYUtils.cpp",
     "common/DiagnosticsRendering.cpp",
+    "common/DomainSocket.cpp",
     "common/File.cpp",
     "common/FileAction.cpp",
     "common/FileCache.cpp",
@@ -54,6 +55,8 @@ static_library("Host") {
     "common/UDPSocket.cpp",
     "common/XML.cpp",
     "common/ZipFileResolver.cpp",
+    "posix/DomainSocketPosix.cpp",
+    "windows/DomainSocketWindows.cpp",
   ]
 
   if (lldb_enable_libedit) {
@@ -87,7 +90,6 @@ static_library("Host") {
     ]
   } else {
     sources += [
-      "posix/DomainSocket.cpp",
       "posix/FilePosix.cpp",
       "posix/FileSystemPosix.cpp",
       "posix/HostInfoPosix.cpp",
