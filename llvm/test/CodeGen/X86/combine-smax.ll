@@ -199,5 +199,42 @@ define <16 x i8> @test_v16i8_demandedbits(<16 x i8> %x, <16 x i8> %y, <16 x i8> 
   ret <16 x i8> %res
 }
 
+; smax(X, -1) -> or(X, ashr(X, BW-1)): saves a byte vs compare+cmov on x86-64.
+define i32 @smax_allones_i32(i32 %x) {
+; CHECK-LABEL: smax_allones_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    sarl $31, %eax
+; CHECK-NEXT:    orl %edi, %eax
+; CHECK-NEXT:    retq
+  %r = call i32 @llvm.smax.i32(i32 %x, i32 -1)
+  ret i32 %r
+}
+
+define i64 @smax_allones_i64(i64 %x) {
+; CHECK-LABEL: smax_allones_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    sarq $63, %rax
+; CHECK-NEXT:    orq %rdi, %rax
+; CHECK-NEXT:    retq
+  %r = call i64 @llvm.smax.i64(i64 %x, i64 -1)
+  ret i64 %r
+}
+
+; smax(X, 0) should NOT transform -- no 2-instruction bitwise form exists.
+define i32 @smax_zero_i32(i32 %x) {
+; CHECK-LABEL: smax_zero_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    cmovgl %edi, %eax
+; CHECK-NEXT:    retq
+  %r = call i32 @llvm.smax.i32(i32 %x, i32 0)
+  ret i32 %r
+}
+
 declare i8 @llvm.smax.i8(i8, i8)
+declare i32 @llvm.smax.i32(i32, i32)
+declare i64 @llvm.smax.i64(i64, i64)
 declare <16 x i8> @llvm.smax.v16i8(<16 x i8>, <16 x i8>)

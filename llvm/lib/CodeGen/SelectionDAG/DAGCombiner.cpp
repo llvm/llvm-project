@@ -6320,25 +6320,19 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   // RISCV-P sati which combine smin+smax into a single instruction).
   if (TLI.isTypeLegal(VT) &&
       !TLI.shouldAvoidTransformToShift(VT, VT.getScalarSizeInBits() - 1)) {
-    SDValue ShiftAmt =
-        DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, DL);
     if (Opcode == ISD::SMAX && TLI.isOperationExpand(ISD::SMAX, VT) &&
-        N0.getOpcode() != ISD::SMIN) {
-      if (auto *N1C = isConstOrConstSplat(N1)) {
-        if (N1C->isAllOnes()) {
-          SDValue Shift = DAG.getNode(ISD::SRA, DL, VT, N0, ShiftAmt);
-          return DAG.getNode(ISD::OR, DL, VT, N0, Shift);
-        }
-      }
+        N0.getOpcode() != ISD::SMIN && isAllOnesConstant(N1)) {
+      SDValue ShiftAmt =
+          DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, DL);
+      SDValue Shift = DAG.getNode(ISD::SRA, DL, VT, N0, ShiftAmt);
+      return DAG.getNode(ISD::OR, DL, VT, N0, Shift);
     }
     if (Opcode == ISD::SMIN && TLI.isOperationExpand(ISD::SMIN, VT) &&
-        N0.getOpcode() != ISD::SMAX) {
-      if (auto *N1C = isConstOrConstSplat(N1)) {
-        if (N1C->isZero()) {
-          SDValue Shift = DAG.getNode(ISD::SRA, DL, VT, N0, ShiftAmt);
-          return DAG.getNode(ISD::AND, DL, VT, N0, Shift);
-        }
-      }
+        N0.getOpcode() != ISD::SMAX && isNullConstant(N1)) {
+      SDValue ShiftAmt =
+          DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, DL);
+      SDValue Shift = DAG.getNode(ISD::SRA, DL, VT, N0, ShiftAmt);
+      return DAG.getNode(ISD::AND, DL, VT, N0, Shift);
     }
   }
 
