@@ -29444,6 +29444,10 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
   unsigned MaxVF = std::max<unsigned>(
       getFloorFullVectorNumberOfElements(*TTI, ScalarTy, VL.size()), MinVF);
   MaxVF = std::min(R.getMaximumVF(Sz, S.getOpcode()), MaxVF);
+  if (isAllowedNonPowerOf2VF(VL.size()))
+    MaxVF = std::max<unsigned>(
+        MaxVF,
+        std::min<unsigned>(VL.size(), R.getMaximumVF(Sz, S.getOpcode())));
   // Standalone seeds only need one register worth of lanes.
   if (StandaloneSeeds && Sz != 0)
     MaxVF = std::min(MaxVF, std::max(MinVF, R.getMaxVecRegSize() / Sz));
@@ -29472,7 +29476,8 @@ bool SLPVectorizerPass::tryToVectorizeList(ArrayRef<Value *> VL, BoUpSLP &R,
     for (unsigned I = NextInst; I < MaxInst; ++I) {
       unsigned ActualVF = std::min(MaxInst - I, VF);
 
-      if (!hasFullVectorsOrPowerOf2(*TTI, ScalarTy, ActualVF))
+      if (!hasFullVectorsOrPowerOf2(*TTI, ScalarTy, ActualVF) &&
+          !isAllowedNonPowerOf2VF(ActualVF))
         continue;
 
       if (MaxVFOnly && ActualVF < MaxVF)
