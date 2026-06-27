@@ -671,7 +671,8 @@ bool X86TargetLowering::CanLowerReturn(
     const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
     const Type *RetTy) const {
   // Mingw64 GCC returns f128 via sret, and LLVM matches it for compatibility.
-  //
+  // This logic exists for libcalls, a frontend should explicitly use sret
+  // rather than rely on the sret demotion here.
   //
   // Using sret is a reasonable implementation of the Windows x64 calling
   // convention:

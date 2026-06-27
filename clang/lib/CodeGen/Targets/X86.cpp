@@ -3452,8 +3452,11 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
         return ABIArgInfo::getDirect(llvm::FixedVectorType::get(
             llvm::Type::getInt64Ty(getVMContext()), 2));
 
-      // Mingw64 GCC returns f128 via sret. Clang matches that for
+      // Mingw64 GCC returns f128 via sret, and Clang matches that for
       // compatibility.
+      if (BT->getKind() == BuiltinType::Float128)
+        return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
+                                       /*ByVal=*/false);
       break;
 
     default:
