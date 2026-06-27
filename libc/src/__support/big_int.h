@@ -457,20 +457,22 @@ public:
   }
 
   // Construct a BigInt from a C array.
-  template <size_t N> LIBC_INLINE constexpr BigInt(const WordType (&nums)[N]) {
+  template <size_t N>
+  LIBC_INLINE constexpr BigInt(const WordType (&nums)[N]) : val{} {
     static_assert(N == WORD_COUNT);
     for (size_t i = 0; i < WORD_COUNT; ++i)
       val[i] = nums[i];
   }
 
   LIBC_INLINE constexpr explicit BigInt(
-      const cpp::array<WordType, WORD_COUNT> &words) {
+      const cpp::array<WordType, WORD_COUNT> &words)
+      : val{} {
     val = words;
   }
 
   // Initialize the first word to |v| and the rest to 0.
   template <typename T, typename = cpp::enable_if_t<cpp::is_integral_v<T>>>
-  LIBC_INLINE constexpr BigInt(T v) {
+  LIBC_INLINE constexpr BigInt(T v) : val{} {
     constexpr size_t T_SIZE = sizeof(T) * CHAR_BIT;
     const bool is_neg = v < 0;
     for (size_t i = 0; i < WORD_COUNT; ++i) {
