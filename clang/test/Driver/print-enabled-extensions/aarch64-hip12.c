@@ -11,6 +11,7 @@
 // CHECK-NEXT:     FEAT_BF16                                              Enable BFloat16 Extension
 // CHECK-NEXT:     FEAT_BRBE                                              Enable Branch Record Buffer Extension
 // CHECK-NEXT:     FEAT_BTI                                               Enable Branch Target Identification
+// CHECK-NEXT:     FEAT_CCIDX                                             Enable Armv8.3-A Extend of the CCSIDR number of sets
 // CHECK-NEXT:     FEAT_CRC32                                             Enable Armv8.0-A CRC-32 checksum instructions
 // CHECK-NEXT:     FEAT_CSV2_2                                            Enable architectural speculation restriction
 // CHECK-NEXT:     FEAT_DIT                                               Enable Armv8.4-A Data Independent Timing instructions
@@ -49,6 +50,7 @@
 // CHECK-NEXT:     FEAT_RAS, FEAT_RASv1p1                                 Enable Armv8.0-A Reliability, Availability and Serviceability Extensions
 // CHECK-NEXT:     FEAT_RDM                                               Enable Armv8.1-A Rounding Double Multiply Add/Subtract instructions
 // CHECK-NEXT:     FEAT_RME                                               Enable Realm Management Extension
+// CHECK-NEXT:     FEAT_RNG                                               Enable Random Number generation instructions
 // CHECK-NEXT:     FEAT_SB                                                Enable Armv8.5-A Speculation Barrier
 // CHECK-NEXT:     FEAT_SEL2                                              Enable Armv8.4-A Secure Exception Level 2 extension
 // CHECK-NEXT:     FEAT_SHA1, FEAT_SHA256                                 Enable SHA1 and SHA256 support
@@ -57,6 +59,7 @@
 // CHECK-NEXT:     FEAT_SPE                                               Enable Statistical Profiling extension
 // CHECK-NEXT:     FEAT_SPECRES                                           Enable Armv8.5-A execution and data prediction invalidation instructions
 // CHECK-NEXT:     FEAT_SPEv1p2                                           Enable extra register in the Statistical Profiling Extension
+// CHECK-NEXT:     FEAT_SSBS, FEAT_SSBS2                                  Enable Speculative Store Bypass Safe bit
 // CHECK-NEXT:     FEAT_SVE                                               Enable Scalable Vector Extension (SVE) instructions
 // CHECK-NEXT:     FEAT_SVE2                                              Enable Scalable Vector Extension 2 (SVE2) instructions
 // CHECK-NEXT:     FEAT_SVE_AES, FEAT_SVE_PMULL128                        Enable SVE AES and quadword SVE polynomial multiply instructions

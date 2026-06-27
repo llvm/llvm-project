@@ -211,16 +211,7 @@ public:
     cir::BlockAddressOp blockAddressOp = cir::BlockAddressOp::create(
         builder, cgf.getLoc(e->getSourceRange()), cgf.convertType(e->getType()),
         blockInfoAttr);
-    cir::LabelOp resolvedLabel = cgf.cgm.lookupBlockAddressInfo(blockInfoAttr);
-    if (!resolvedLabel) {
-      cgf.cgm.mapUnresolvedBlockAddress(blockAddressOp);
-      // Still add the op to maintain insertion order it will be resolved in
-      // resolveBlockAddresses
-      cgf.cgm.mapResolvedBlockAddress(blockAddressOp, nullptr);
-    } else {
-      cgf.cgm.mapResolvedBlockAddress(blockAddressOp, resolvedLabel);
-    }
-    cgf.instantiateIndirectGotoBlock();
+    cgf.indirectGotoTargets.push_back(blockInfoAttr);
     return blockAddressOp;
   }
 
@@ -2773,16 +2764,18 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
           e->getSourceRange(),
           "VisitUnaryExprOrTypeTraitExpr: sizeOf scalable vector");
       return builder.getConstant(
-          loc, cir::IntAttr::get(cgf.cgm.uInt64Ty,
+          loc, cir::IntAttr::get(cgf.cgm.sizeTy,
                                  e->EvaluateKnownConstInt(cgf.getContext())));
     }
 
     return builder.getConstant(
-        loc, cir::IntAttr::get(cgf.cgm.uInt64Ty, vecTy.getSize()));
+        loc, cir::IntAttr::get(cgf.cgm.sizeTy, vecTy.getSize()));
   }
 
+  // The result type is size_t (target-dependent width); use it so the IntAttr
+  // width matches the APInt from EvaluateKnownConstInt.
   return builder.getConstant(
-      loc, cir::IntAttr::get(cgf.cgm.uInt64Ty,
+      loc, cir::IntAttr::get(cgf.cgm.sizeTy,
                              e->EvaluateKnownConstInt(cgf.getContext())));
 }
 

@@ -1522,10 +1522,10 @@ static void initializeBuffer(CodeGenModule &CGM, llvm::GlobalVariable *GV,
                              ArrayRef<llvm::Value *> Args) {
 
   LLVMContext &Ctx = CGM.getLLVMContext();
-  llvm::Function *InitResFunc = llvm::Function::Create(
-      llvm::FunctionType::get(CGM.VoidTy, false),
-      llvm::GlobalValue::InternalLinkage,
-      ("_init_buffer_" + GV->getName()).str(), CGM.getModule());
+  llvm::Function *InitResFunc =
+      llvm::Function::Create(llvm::FunctionType::get(CGM.VoidTy, false),
+                             llvm::GlobalValue::InternalLinkage,
+                             "_init_buffer_" + GV->getName(), CGM.getModule());
   InitResFunc->addFnAttr(llvm::Attribute::AlwaysInline);
 
   llvm::BasicBlock *EntryBB =

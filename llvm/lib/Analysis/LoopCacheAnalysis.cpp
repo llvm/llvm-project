@@ -560,9 +560,10 @@ CacheCost::CacheCost(const LoopVectorTy &Loops, const LoopInfo &LI,
   calculateCacheFootprint();
 }
 
-std::unique_ptr<CacheCost>
-CacheCost::getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR,
-                        DependenceInfo &DI, std::optional<unsigned> TRT) {
+static std::unique_ptr<CacheCost>
+getCacheCostImpl(Loop &Root, LoopInfo &LI, ScalarEvolution &SE,
+                 TargetTransformInfo &TTI, AAResults &AA, DependenceInfo &DI,
+                 std::optional<unsigned> TRT) {
   if (!Root.isOutermost()) {
     LLVM_DEBUG(dbgs() << "Expecting the outermost loop in a loop nest\n");
     return nullptr;
@@ -577,7 +578,13 @@ CacheCost::getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR,
     return nullptr;
   }
 
-  return std::make_unique<CacheCost>(Loops, AR.LI, AR.SE, AR.TTI, AR.AA, DI, TRT);
+  return std::make_unique<CacheCost>(Loops, LI, SE, TTI, AA, DI, TRT);
+}
+
+std::unique_ptr<CacheCost>
+CacheCost::getCacheCost(Loop &Root, LoopStandardAnalysisResults &AR,
+                        DependenceInfo &DI, std::optional<unsigned> TRT) {
+  return getCacheCostImpl(Root, AR.LI, AR.SE, AR.TTI, AR.AA, DI, TRT);
 }
 
 void CacheCost::calculateCacheFootprint() {
@@ -679,9 +686,6 @@ bool CacheCost::populateReferenceGroups(ReferenceGroupsTy &RefGroups) const {
 CacheCostTy
 CacheCost::computeLoopCacheCost(const Loop &L,
                                 const ReferenceGroupsTy &RefGroups) const {
-  if (!L.isLoopSimplifyForm())
-    return CacheCostTy::getInvalid();
-
   LLVM_DEBUG(dbgs() << "Considering loop '" << L.getName()
                     << "' as innermost loop.\n");
 
@@ -716,14 +720,20 @@ CacheCostTy CacheCost::computeRefGroupCacheCost(const ReferenceGroupTy &RG,
 //===----------------------------------------------------------------------===//
 // LoopCachePrinterPass implementation
 //
-PreservedAnalyses LoopCachePrinterPass::run(Loop &L, LoopAnalysisManager &AM,
-                                            LoopStandardAnalysisResults &AR,
-                                            LPMUpdater &U) {
-  Function *F = L.getHeader()->getParent();
-  DependenceInfo DI(F, &AR.AA, &AR.SE, &AR.LI);
+PreservedAnalyses LoopCachePrinterPass::run(Function &F,
+                                            FunctionAnalysisManager &FAM) {
+  OS << "Printing analysis 'Loop Cache Analysis' for function '" << F.getName()
+     << "':\n";
 
-  if (auto CC = CacheCost::getCacheCost(L, AR, DI))
-    OS << *CC;
+  auto &LI = FAM.getResult<LoopAnalysis>(F);
+  auto &SE = FAM.getResult<ScalarEvolutionAnalysis>(F);
+  auto &TTI = FAM.getResult<TargetIRAnalysis>(F);
+  auto &AA = FAM.getResult<AAManager>(F);
+  auto &DI = FAM.getResult<DependenceAnalysis>(F);
+  for (Loop *L : LI.getTopLevelLoops())
+    if (std::unique_ptr<CacheCost> CC =
+            getCacheCostImpl(*L, LI, SE, TTI, AA, DI, /*TRT=*/std::nullopt))
+      OS << *CC;
 
   return PreservedAnalyses::all();
 }

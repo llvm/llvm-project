@@ -1,4 +1,4 @@
-; RUN: opt %s -passes=loop-deletion -S | FileCheck %s --check-prefixes=CHECK
+; RUN: opt %s -passes=loop-deletion -S | FileCheck %s
 
 %class.Loc.95 = type { %class.Domain.96 }
 %class.Domain.96 = type { %class.DomainBase.97 }
