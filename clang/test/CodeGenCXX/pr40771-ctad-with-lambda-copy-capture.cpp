@@ -10,9 +10,7 @@ T t { R{q}, S{q} };
 
 // CHECK-LABEL: define internal void @__cxx_global_var_init.1() {{.*}} {
 // CHECK-NEXT: [[TMP_R:%[a-z0-9.]+]] = alloca %struct.R, align 1
-// CHECK-NEXT: [[TMP_Q1:%[a-z0-9.]+]] = alloca %struct.Q, align 1
 // CHECK-NEXT: [[TMP_S:%[a-z0-9.]+]] = alloca %struct.S, align 1
-// CHECK-NEXT: [[TMP_Q2:%[a-z0-9.]+]] = alloca %struct.Q, align 1
 // CHECK-NEXT: [[XPT:%[a-z0-9.]+]] = alloca ptr
 // CHECK-NEXT: [[SLOT:%[a-z0-9.]+]] = alloca i32
 // CHECK-NEXT: [[ACTIVE:%[a-z0-9.]+]] = alloca i1, align 1

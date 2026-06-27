@@ -111,12 +111,10 @@ void func_with_byval_arg(B b) {
 // CHECK-SAME: ) #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[B:%.*]] = alloca [[CLASS_B:%.*]], align 4, addrspace(5)
-// CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[CLASS_B]], align 4, addrspace(5)
+// CHECK-NEXT:    [[BYVAL_TEMP:%.*]] = alloca [[CLASS_B]], align 4, addrspace(5)
 // CHECK-NEXT:    [[B_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[B]] to ptr
-// CHECK-NEXT:    [[AGG_TMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[AGG_TMP]] to ptr
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[AGG_TMP_ASCAST]], ptr align 4 [[B_ASCAST]], i64 400, i1 false)
-// CHECK-NEXT:    [[AGG_TMP_ASCAST_ASCAST:%.*]] = addrspacecast ptr [[AGG_TMP_ASCAST]] to ptr addrspace(5)
-// CHECK-NEXT:    call void @_Z19func_with_byval_arg1B(ptr addrspace(5) noundef byref([[CLASS_B]]) align 4 [[AGG_TMP_ASCAST_ASCAST]]) #[[ATTR5]]
+// CHECK-NEXT:    call void @llvm.memcpy.p5.p0.i64(ptr addrspace(5) align 4 [[BYVAL_TEMP]], ptr align 4 [[B_ASCAST]], i64 400, i1 false)
+// CHECK-NEXT:    call void @_Z19func_with_byval_arg1B(ptr addrspace(5) noundef byref([[CLASS_B]]) align 4 [[BYVAL_TEMP]]) #[[ATTR5]]
 // CHECK-NEXT:    call void @_Z17func_with_ref_argR1B(ptr noundef nonnull align 4 dereferenceable(400) [[B_ASCAST]]) #[[ATTR5]]
 // CHECK-NEXT:    ret void
 //
@@ -129,11 +127,9 @@ void test_byval_arg_auto() {
 // CHECK-LABEL: define dso_local void @_Z21test_byval_arg_globalv(
 // CHECK-SAME: ) #[[ATTR1]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[AGG_TMP:%.*]] = alloca [[CLASS_B:%.*]], align 4, addrspace(5)
-// CHECK-NEXT:    [[AGG_TMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[AGG_TMP]] to ptr
-// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[AGG_TMP_ASCAST]], ptr align 4 addrspacecast (ptr addrspace(1) @g_b to ptr), i64 400, i1 false)
-// CHECK-NEXT:    [[AGG_TMP_ASCAST_ASCAST:%.*]] = addrspacecast ptr [[AGG_TMP_ASCAST]] to ptr addrspace(5)
-// CHECK-NEXT:    call void @_Z19func_with_byval_arg1B(ptr addrspace(5) noundef byref([[CLASS_B]]) align 4 [[AGG_TMP_ASCAST_ASCAST]]) #[[ATTR5]]
+// CHECK-NEXT:    [[BYVAL_TEMP:%.*]] = alloca [[CLASS_B:%.*]], align 4, addrspace(5)
+// CHECK-NEXT:    call void @llvm.memcpy.p5.p0.i64(ptr addrspace(5) align 4 [[BYVAL_TEMP]], ptr align 4 addrspacecast (ptr addrspace(1) @g_b to ptr), i64 400, i1 false)
+// CHECK-NEXT:    call void @_Z19func_with_byval_arg1B(ptr addrspace(5) noundef byref([[CLASS_B]]) align 4 [[BYVAL_TEMP]]) #[[ATTR5]]
 // CHECK-NEXT:    call void @_Z17func_with_ref_argR1B(ptr noundef nonnull align 4 dereferenceable(400) addrspacecast (ptr addrspace(1) @g_b to ptr)) #[[ATTR5]]
 // CHECK-NEXT:    ret void
 //

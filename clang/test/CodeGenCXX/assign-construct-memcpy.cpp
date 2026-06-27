@@ -81,9 +81,13 @@ void byval(foo f);
 
 void test7(const foo &x) {
   byval(x);
+// A trivially-copyable byval arg forwards the source; the byval boundary
+// makes the copy, so no separate memcpy is emitted.
 // CHECK-POD: test7
-// CHECK-POD: call void @llvm.memcpy.p0.p0.i64({{.*}} align 8 {{.*}} align 8 {{.*}}i64 24
+// CHECK-POD-NOT: call void @llvm.memcpy
+// CHECK-POD: call void @_Z5byval3foo(ptr noundef byval(%struct.foo) align 8
 
 // CHECK-NONPOD: test7
-// CHECK-NONPOD: call void @llvm.memcpy.p0.p0.i64({{.*}} align 8 {{.*}} align 8 {{.*}}i64 24
+// CHECK-NONPOD-NOT: call void @llvm.memcpy
+// CHECK-NONPOD: call void @_Z5byval3foo(ptr noundef byval(%struct.foo) align 8
 }
