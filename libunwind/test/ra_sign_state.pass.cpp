@@ -72,10 +72,16 @@ FUNC_BOUNDS_DECL(main_func);
 
 static _Unwind_Reason_Code frame_handler(struct _Unwind_Context *ctx,
                                          void *arg) {
+  printf("frame_handler\n");
   uint64_t ra_sign_state =
       (uint64_t)_Unwind_GetGR(ctx, UNW_AARCH64_RA_SIGN_STATE);
 
+  printf("ra_sign_state = %llu\n", ra_sign_state);
+
   uintptr_t ip = _Unwind_GetIP(ctx);
+
+  printf("ip = 0x%llx\n", ip);
+
   if (ip >= (uintptr_t)FUNC_START(main_func) &&
       ip < (uintptr_t)FUNC_END(main_func)) {
 
@@ -158,6 +164,8 @@ __attribute__((naked)) uint64_t check_set(const char *note) {
 #endif
 
 FUNC_ATTR(main_func) int main(int, char **) {
+  printf("ra_sign_state.pass.cpp\n");
+
   uint64_t ret;
 
   ret = check_vanilla("check_vanilla");
