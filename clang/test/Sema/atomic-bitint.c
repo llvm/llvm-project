@@ -7,8 +7,6 @@
 // code imposes no width cap of its own; widths past 128 are available wherever
 // the target accepts _BitInt > 128 (x86 and RISC-V today).
 
-// expected-no-diagnostics
-
 _Atomic(_BitInt(4))    a4;     // small
 _Atomic(_BitInt(9))    a9;     // non-power-of-two
 _Atomic(_BitInt(37))   a37;    // padded
@@ -35,9 +33,20 @@ void c11_builtins(_Atomic(_BitInt(37)) *p, _BitInt(37) v, _BitInt(37) *e) {
   (void)__c11_atomic_fetch_min(p, v, __ATOMIC_SEQ_CST);
 }
 
-// The GNU __atomic_* builtins take a plain _BitInt pointer.
+// The GNU __atomic_* builtins take a plain _BitInt pointer; the _fetch forms
+// return the new value.
 void gnu_builtins(_BitInt(37) *p, _BitInt(37) v) {
   (void)__atomic_load_n(p, __ATOMIC_SEQ_CST);
   __atomic_store_n(p, v, __ATOMIC_SEQ_CST);
   (void)__atomic_fetch_add(p, v, __ATOMIC_SEQ_CST);
+  (void)__atomic_add_fetch(p, v, __ATOMIC_SEQ_CST);
 }
+
+// Lifting the _BitInt rejection must not lose the atomic-specific checks.
+void rejects(_Atomic(_BitInt(37)) *ap, _BitInt(37) *p, _BitInt(37) v) {
+  (void)__c11_atomic_load(ap); // expected-error {{too few arguments to function call}}
+  (void)__c11_atomic_fetch_add(p, v, __ATOMIC_SEQ_CST); // expected-error {{must be a pointer to _Atomic}}
+}
+struct WithAtomicBitIntField {
+  _Atomic(_BitInt(5)) f : 3; // expected-error {{bit-field 'f' has non-integral type}}
+};

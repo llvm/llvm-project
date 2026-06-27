@@ -262,6 +262,146 @@ U37 min37(_Atomic(S37) *p, S37 v) {
   return __c11_atomic_fetch_min(p, v, __ATOMIC_SEQ_CST);
 }
 
+// Unsigned arithmetic RMW: the desired is zero-extended, not sign-extended.
+// CHECK-LABEL: define dso_local i64 @uadd37(
+// CHECK-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*]]:
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca i37, align 8
+// CHECK-NEXT:    [[V:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    store i64 [[V_COERCE]], ptr [[V]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[V]], align 8
+// CHECK-NEXT:    [[V1:%.*]] = trunc i64 [[TMP0]] to i37
+// CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[STOREDV:%.*]] = zext i37 [[V1]] to i64
+// CHECK-NEXT:    store i64 [[STOREDV]], ptr [[V_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[V_ADDR]], align 8
+// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i64 [[TMP2]] to i37
+// CHECK-NEXT:    [[STOREDV2:%.*]] = zext i37 [[LOADEDV]] to i64
+// CHECK-NEXT:    store i64 [[STOREDV2]], ptr [[DOTATOMICTMP]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[DOTATOMICTMP]], align 8
+// CHECK-NEXT:    [[LOADEDV3:%.*]] = trunc i64 [[TMP3]] to i37
+// CHECK-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i64, ptr [[TMP1]] seq_cst, align 8
+// CHECK-NEXT:    br label %[[ATOMIC_CONT:.*]]
+// CHECK:       [[ATOMIC_CONT]]:
+// CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ [[ATOMIC_LOAD]], %[[ENTRY]] ], [ [[TMP7:%.*]], %[[ATOMIC_CONT]] ]
+// CHECK-NEXT:    [[LOADEDV4:%.*]] = trunc i64 [[TMP4]] to i37
+// CHECK-NEXT:    [[NEW:%.*]] = add i37 [[LOADEDV4]], [[LOADEDV3]]
+// CHECK-NEXT:    [[STOREDV5:%.*]] = zext i37 [[NEW]] to i64
+// CHECK-NEXT:    store atomic i64 [[STOREDV5]], ptr [[ATOMIC_TEMP]] seq_cst, align 8
+// CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr [[ATOMIC_TEMP]], align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = cmpxchg ptr [[TMP1]], i64 [[TMP4]], i64 [[TMP5]] seq_cst seq_cst, align 8
+// CHECK-NEXT:    [[TMP7]] = extractvalue { i64, i1 } [[TMP6]], 0
+// CHECK-NEXT:    [[TMP8:%.*]] = extractvalue { i64, i1 } [[TMP6]], 1
+// CHECK-NEXT:    br i1 [[TMP8]], label %[[ATOMIC_EXIT:.*]], label %[[ATOMIC_CONT]]
+// CHECK:       [[ATOMIC_EXIT]]:
+// CHECK-NEXT:    store i37 [[LOADEDV4]], ptr [[RETVAL]], align 8
+// CHECK-NEXT:    [[TMP9:%.*]] = load i37, ptr [[RETVAL]], align 8
+// CHECK-NEXT:    [[COERCE_VAL_II:%.*]] = zext i37 [[TMP9]] to i64
+// CHECK-NEXT:    ret i64 [[COERCE_VAL_II]]
+//
+U37 uadd37(_Atomic(U37) *p, U37 v) {
+  return __c11_atomic_fetch_add(p, v, __ATOMIC_SEQ_CST);
+}
+
+// Signed max computes at the value width with a signed compare.
+// CHECK-LABEL: define dso_local i64 @max37(
+// CHECK-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*]]:
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca i37, align 8
+// CHECK-NEXT:    [[V:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    store i64 [[V_COERCE]], ptr [[V]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[V]], align 8
+// CHECK-NEXT:    [[V1:%.*]] = trunc i64 [[TMP0]] to i37
+// CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[STOREDV:%.*]] = sext i37 [[V1]] to i64
+// CHECK-NEXT:    store i64 [[STOREDV]], ptr [[V_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[V_ADDR]], align 8
+// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i64 [[TMP2]] to i37
+// CHECK-NEXT:    [[STOREDV2:%.*]] = sext i37 [[LOADEDV]] to i64
+// CHECK-NEXT:    store i64 [[STOREDV2]], ptr [[DOTATOMICTMP]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[DOTATOMICTMP]], align 8
+// CHECK-NEXT:    [[LOADEDV3:%.*]] = trunc i64 [[TMP3]] to i37
+// CHECK-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i64, ptr [[TMP1]] seq_cst, align 8
+// CHECK-NEXT:    br label %[[ATOMIC_CONT:.*]]
+// CHECK:       [[ATOMIC_CONT]]:
+// CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ [[ATOMIC_LOAD]], %[[ENTRY]] ], [ [[TMP8:%.*]], %[[ATOMIC_CONT]] ]
+// CHECK-NEXT:    [[LOADEDV4:%.*]] = trunc i64 [[TMP4]] to i37
+// CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt i37 [[LOADEDV4]], [[LOADEDV3]]
+// CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP5]], i37 [[LOADEDV4]], i37 [[LOADEDV3]]
+// CHECK-NEXT:    [[STOREDV5:%.*]] = sext i37 [[NEW]] to i64
+// CHECK-NEXT:    store atomic i64 [[STOREDV5]], ptr [[ATOMIC_TEMP]] seq_cst, align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[ATOMIC_TEMP]], align 8
+// CHECK-NEXT:    [[TMP7:%.*]] = cmpxchg ptr [[TMP1]], i64 [[TMP4]], i64 [[TMP6]] seq_cst seq_cst, align 8
+// CHECK-NEXT:    [[TMP8]] = extractvalue { i64, i1 } [[TMP7]], 0
+// CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { i64, i1 } [[TMP7]], 1
+// CHECK-NEXT:    br i1 [[TMP9]], label %[[ATOMIC_EXIT:.*]], label %[[ATOMIC_CONT]]
+// CHECK:       [[ATOMIC_EXIT]]:
+// CHECK-NEXT:    store i37 [[LOADEDV4]], ptr [[RETVAL]], align 8
+// CHECK-NEXT:    [[TMP10:%.*]] = load i37, ptr [[RETVAL]], align 8
+// CHECK-NEXT:    [[COERCE_VAL_II:%.*]] = zext i37 [[TMP10]] to i64
+// CHECK-NEXT:    ret i64 [[COERCE_VAL_II]]
+//
+S37 max37(_Atomic(S37) *p, S37 v) {
+  return __c11_atomic_fetch_max(p, v, __ATOMIC_SEQ_CST);
+}
+
+// Unsigned min computes at the value width with an unsigned compare.
+// CHECK-LABEL: define dso_local i64 @umin37(
+// CHECK-SAME: ptr noundef [[P:%.*]], i64 noundef [[V_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*]]:
+// CHECK-NEXT:    [[RETVAL:%.*]] = alloca i37, align 8
+// CHECK-NEXT:    [[V:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    [[V_ADDR:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    [[DOTATOMICTMP:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    [[ATOMIC_TEMP:%.*]] = alloca i64, align 8
+// CHECK-NEXT:    store i64 [[V_COERCE]], ptr [[V]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[V]], align 8
+// CHECK-NEXT:    [[V1:%.*]] = trunc i64 [[TMP0]] to i37
+// CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[STOREDV:%.*]] = zext i37 [[V1]] to i64
+// CHECK-NEXT:    store i64 [[STOREDV]], ptr [[V_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[P_ADDR]], align 8
+// CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[V_ADDR]], align 8
+// CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i64 [[TMP2]] to i37
+// CHECK-NEXT:    [[STOREDV2:%.*]] = zext i37 [[LOADEDV]] to i64
+// CHECK-NEXT:    store i64 [[STOREDV2]], ptr [[DOTATOMICTMP]], align 8
+// CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[DOTATOMICTMP]], align 8
+// CHECK-NEXT:    [[LOADEDV3:%.*]] = trunc i64 [[TMP3]] to i37
+// CHECK-NEXT:    [[ATOMIC_LOAD:%.*]] = load atomic i64, ptr [[TMP1]] seq_cst, align 8
+// CHECK-NEXT:    br label %[[ATOMIC_CONT:.*]]
+// CHECK:       [[ATOMIC_CONT]]:
+// CHECK-NEXT:    [[TMP4:%.*]] = phi i64 [ [[ATOMIC_LOAD]], %[[ENTRY]] ], [ [[TMP8:%.*]], %[[ATOMIC_CONT]] ]
+// CHECK-NEXT:    [[LOADEDV4:%.*]] = trunc i64 [[TMP4]] to i37
+// CHECK-NEXT:    [[TMP5:%.*]] = icmp ule i37 [[LOADEDV4]], [[LOADEDV3]]
+// CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP5]], i37 [[LOADEDV4]], i37 [[LOADEDV3]]
+// CHECK-NEXT:    [[STOREDV5:%.*]] = zext i37 [[NEW]] to i64
+// CHECK-NEXT:    store atomic i64 [[STOREDV5]], ptr [[ATOMIC_TEMP]] seq_cst, align 8
+// CHECK-NEXT:    [[TMP6:%.*]] = load i64, ptr [[ATOMIC_TEMP]], align 8
+// CHECK-NEXT:    [[TMP7:%.*]] = cmpxchg ptr [[TMP1]], i64 [[TMP4]], i64 [[TMP6]] seq_cst seq_cst, align 8
+// CHECK-NEXT:    [[TMP8]] = extractvalue { i64, i1 } [[TMP7]], 0
+// CHECK-NEXT:    [[TMP9:%.*]] = extractvalue { i64, i1 } [[TMP7]], 1
+// CHECK-NEXT:    br i1 [[TMP9]], label %[[ATOMIC_EXIT:.*]], label %[[ATOMIC_CONT]]
+// CHECK:       [[ATOMIC_EXIT]]:
+// CHECK-NEXT:    store i37 [[LOADEDV4]], ptr [[RETVAL]], align 8
+// CHECK-NEXT:    [[TMP10:%.*]] = load i37, ptr [[RETVAL]], align 8
+// CHECK-NEXT:    [[COERCE_VAL_II:%.*]] = zext i37 [[TMP10]] to i64
+// CHECK-NEXT:    ret i64 [[COERCE_VAL_II]]
+//
+U37 umin37(_Atomic(U37) *p, U37 v) {
+  return __c11_atomic_fetch_min(p, v, __ATOMIC_SEQ_CST);
+}
+
 // No padding: direct atomicrmw, no loop.
 // CHECK-LABEL: define dso_local i64 @add64(
 // CHECK-SAME: ptr noundef [[P:%.*]], i64 noundef [[V:%.*]]) #[[ATTR0]] {
