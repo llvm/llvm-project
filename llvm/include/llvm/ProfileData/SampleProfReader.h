@@ -515,6 +515,9 @@ public:
   /// Print all the profiles on stream \p OS in the JSON format.
   LLVM_ABI void dumpJson(raw_ostream &OS = dbgs());
 
+  /// Return the format version of the profile. For tests only.
+  uint64_t getFormatVersion() const { return FormatVersion; }
+
   /// Return the samples collected for function \p F.
   FunctionSamples *getSamplesFor(const Function &F) {
     // The function name may have been updated by adding suffix. Call
@@ -696,6 +699,9 @@ protected:
 
   /// Whether the function profiles use FS discriminators.
   bool ProfileIsFS = false;
+
+  /// Format version of the profile.
+  uint64_t FormatVersion = 0;
 
   /// If true, the profile has vtable profiles and reader should decode them
   /// to parse profiles correctly.
