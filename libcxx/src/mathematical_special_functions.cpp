@@ -19,14 +19,14 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 namespace __math {
 namespace {
 template <class _Ret>
-optional<_Ret> __check_nan() {
-  return nullopt;
+std::optional<_Ret> __check_nan() {
+  return std::nullopt;
 }
 
 template <class _Ret, class _Arg, class... _Args>
-optional<_Ret> __check_nan(_Arg __arg, _Args... __args) {
-  if constexpr (is_floating_point_v<_Arg>)
-    if (isnan(__arg))
+std::optional<_Ret> __check_nan(_Arg __arg, _Args... __args) {
+  if constexpr (std::is_floating_point_v<_Arg>)
+    if (std::isnan(__arg))
       return __arg;
   return __check_nan<_Ret>(__args...);
 }
@@ -39,7 +39,7 @@ __sf_result<_Ret> invoke_boost_math(Func f, _Args... __args) {
   try {
     return {.__domain_error = false, .__ret = f(__args...)};
   } catch (...) {
-    return {.__domain_error = true, .__ret = numeric_limits<_Ret>::quiet_NaN()};
+    return {.__domain_error = true, .__ret = std::numeric_limits<_Ret>::quiet_NaN()};
   }
 }
 } // namespace
