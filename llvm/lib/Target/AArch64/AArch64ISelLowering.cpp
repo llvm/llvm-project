@@ -17603,6 +17603,47 @@ static bool canLowerSRLToRoundingShiftForVT(SDValue Shift, EVT ResVT,
   return true;
 }
 
+static bool isNegatedInteger(SDValue Op) {
+  return Op.getOpcode() == ISD::SUB && isNullConstant(Op.getOperand(0));
+}
+
+static bool canUseDestructiveSVERightShift(SDValue Op) {
+  SDValue ShiftedValue = Op.getOperand(0);
+  if (ShiftedValue.hasOneUse())
+    return true;
+
+  bool IsLeftShift = ShiftedValue.getOpcode() == ISD::SHL;
+  if (ShiftedValue.getOpcode() == ISD::INTRINSIC_WO_CHAIN) {
+    auto *IID = dyn_cast<ConstantSDNode>(ShiftedValue.getOperand(0));
+    IsLeftShift = IID && (IID->getZExtValue() == Intrinsic::aarch64_neon_ushl ||
+                          IID->getZExtValue() == Intrinsic::aarch64_neon_sshl);
+  }
+
+  return IsLeftShift;
+}
+
+static bool isNegatedSplatShiftAmount(SDValue Op, SelectionDAG &DAG) {
+  SDValue Splat = DAG.getSplatValue(Op);
+  if (!Splat)
+    return false;
+
+  while (true) {
+    switch (Splat.getOpcode()) {
+    case ISD::ANY_EXTEND:
+    case ISD::SIGN_EXTEND:
+    case ISD::ZERO_EXTEND:
+    case ISD::TRUNCATE:
+    case ISD::AssertSext:
+    case ISD::AssertZext:
+    case ISD::SIGN_EXTEND_INREG:
+      Splat = Splat.getOperand(0);
+      continue;
+    default:
+      return isNegatedInteger(Splat);
+    }
+  }
+}
+
 SDValue AArch64TargetLowering::LowerVectorSRA_SRL_SHL(SDValue Op,
                                                       SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
@@ -17628,6 +17669,9 @@ SDValue AArch64TargetLowering::LowerVectorSRA_SRL_SHL(SDValue Op,
         Op.getOperand(0), Op.getOperand(1));
   case ISD::SRA:
   case ISD::SRL:
+    unsigned PredOpc = Op.getOpcode() == ISD::SRA ? AArch64ISD::SRA_PRED
+                                                  : AArch64ISD::SRL_PRED;
+
     if (VT.isScalableVector() &&
         (Subtarget->hasSVE2() ||
          (Subtarget->hasSME() && Subtarget->isStreaming()))) {
@@ -17640,13 +17684,9 @@ SDValue AArch64TargetLowering::LowerVectorSRA_SRL_SHL(SDValue Op,
     }
 
     if (VT.isScalableVector() ||
-        useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable())) {
-      unsigned Opc = Op.getOpcode() == ISD::SRA ? AArch64ISD::SRA_PRED
-                                                : AArch64ISD::SRL_PRED;
-      return LowerToPredicatedOp(Op, DAG, Opc);
-    }
+        useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()))
+      return LowerToPredicatedOp(Op, DAG, PredOpc);
 
-    // Right shift immediate
     if (isVShiftRImm(Op.getOperand(1), VT, false, Cnt) && Cnt < EltSize) {
       unsigned Opc =
           (Op.getOpcode() == ISD::SRA) ? AArch64ISD::VASHR : AArch64ISD::VLSHR;
@@ -17655,12 +17695,17 @@ SDValue AArch64TargetLowering::LowerVectorSRA_SRL_SHL(SDValue Op,
                          Op->getFlags());
     }
 
-    // Right shift register.  Note, there is not a shift right register
-    // instruction, but the shift left register instruction takes a signed
-    // value, where negative numbers specify a right shift.
+    // SVE preference for non-immediate shifts only. The SVE instruction is
+    // destructive, so prefer it only when the shifted value can be clobbered
+    // without needing a MOVPRFX. Keep NEON for splatted negated shift amounts
+    // because SSHL/USHL can consume the original value directly.
+    if (useSVEForFixedLengthVectorVT(VT, /*OverrideNEON=*/true) &&
+        canUseDestructiveSVERightShift(Op) &&
+        !isNegatedSplatShiftAmount(Op.getOperand(1), DAG))
+      return LowerToPredicatedOp(Op, DAG, PredOpc);
+
     unsigned Opc = (Op.getOpcode() == ISD::SRA) ? Intrinsic::aarch64_neon_sshl
                                                 : Intrinsic::aarch64_neon_ushl;
-    // negate the shift amount
     SDValue NegShift = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT),
                                    Op.getOperand(1));
     SDValue NegShiftLeft =
@@ -22845,10 +22890,6 @@ static SDValue performAddDotCombine(SDNode *N, SelectionDAG &DAG) {
 
   return DAG.getNode(Dot.getOpcode(), SDLoc(N), VT, A, Dot.getOperand(1),
                      Dot.getOperand(2));
-}
-
-static bool isNegatedInteger(SDValue Op) {
-  return Op.getOpcode() == ISD::SUB && isNullConstant(Op.getOperand(0));
 }
 
 // Try to fold
