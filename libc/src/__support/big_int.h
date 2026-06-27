@@ -637,7 +637,7 @@ public:
   //    256      4        16          10            3
   //    512      8        64          36            7
   LIBC_INLINE constexpr BigInt quick_mul_hi(const BigInt &other) const {
-    BigInt result;
+    BigInt result{};
     multiword::quick_mul_hi(result.val, val, other.val);
     return result;
   }
@@ -850,7 +850,7 @@ public:
 #define DEFINE_BINOP(OP)                                                       \
   LIBC_INLINE friend constexpr BigInt operator OP(const BigInt &lhs,           \
                                                   const BigInt &rhs) {         \
-    BigInt result;                                                             \
+    BigInt result{};                                                           \
     for (size_t i = 0; i < WORD_COUNT; ++i)                                    \
       result[i] = lhs[i] OP rhs[i];                                            \
     return result;                                                             \
@@ -868,7 +868,7 @@ public:
 #undef DEFINE_BINOP
 
   LIBC_INLINE constexpr BigInt operator~() const {
-    BigInt result;
+    BigInt result{};
     for (size_t i = 0; i < WORD_COUNT; ++i)
       result[i] = static_cast<WordType>(~val[i]);
     return result;
@@ -1315,7 +1315,7 @@ mask_trailing_ones() {
     return T::all_ones();
   constexpr size_t QUOTIENT = count / T::WORD_SIZE;
   constexpr size_t REMAINDER = count % T::WORD_SIZE;
-  T out; // zero initialized
+  T out{}; // zero initialized
   for (size_t i = 0; i <= QUOTIENT; ++i)
     out[i] = i < QUOTIENT
                  ? cpp::numeric_limits<typename T::word_type>::max()
@@ -1331,7 +1331,7 @@ LIBC_INLINE constexpr cpp::enable_if_t<is_big_int_v<T>, T> mask_leading_ones() {
     return T::all_ones();
   constexpr size_t QUOTIENT = (T::BITS - count - 1U) / T::WORD_SIZE;
   constexpr size_t REMAINDER = count % T::WORD_SIZE;
-  T out; // zero initialized
+  T out{}; // zero initialized
   for (size_t i = QUOTIENT; i < T::WORD_COUNT; ++i)
     out[i] = i > QUOTIENT
                  ? cpp::numeric_limits<typename T::word_type>::max()
