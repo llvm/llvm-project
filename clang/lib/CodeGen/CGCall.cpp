@@ -5840,10 +5840,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
             LValue DstLV = MakeAddrLValue(Address(Dst, ElemTy, Align), Ty);
             MustTailIndirectCopies.push_back({ScratchLV, DstLV, Ty});
           }
-          llvm::Value *Val = Dst;
-          if (ArgHasMaybeUndefAttr)
-            Val = Builder.CreateFreeze(Val);
-          IRCallArgs[FirstIRArg] = Val;
+          // No freeze: Dst is an incoming parameter pointer, never poison.
+          IRCallArgs[FirstIRArg] = Dst;
           break;
         }
         // No addressable source for this Indirect arg (rare; e.g. a scalar
