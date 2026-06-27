@@ -1728,9 +1728,8 @@ void RISCVAsmParser::FilterNearMisses(
               [DupCheckMatchClass](const std::pair<unsigned, unsigned> Pair) {
                 if (DupCheckMatchClass == ~0U || Pair.second == ~0U)
                   return Pair.second == DupCheckMatchClass;
-                else
-                  return isSubclass((MatchClassKind)DupCheckMatchClass,
-                                    (MatchClassKind)Pair.second);
+                return isSubclass((MatchClassKind)DupCheckMatchClass,
+                                  (MatchClassKind)Pair.second);
               }))
         break;
       OperandMissesSeen.insert(
@@ -1740,8 +1739,6 @@ void RISCVAsmParser::FilterNearMisses(
       Message.Loc = OperandLoc;
       if (!OperandDiag.empty()) {
         Message.Message = OperandDiag;
-      } else if (I.getOperandClass() == InvalidMatchClass) {
-        Message.Message = "too many operands for instruction";
       } else {
         Message.Message = "invalid operand for instruction";
         LLVM_DEBUG(
@@ -1756,9 +1753,8 @@ void RISCVAsmParser::FilterNearMisses(
     case NearMissInfo::NearMissFeature: {
       const FeatureBitset &MissingFeatures = I.getFeatures();
       // Don't report the same set of features twice.
-      if (FeatureMissesSeen.count(MissingFeatures))
+      if (!FeatureMissesSeen.insert(MissingFeatures).second)
         break;
-      FeatureMissesSeen.insert(MissingFeatures);
 
       NearMissMessage Message;
       Message.Loc = IDLoc;

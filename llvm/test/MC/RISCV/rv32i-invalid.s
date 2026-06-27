@@ -148,7 +148,7 @@ auipc a0, %pcrel_lo(foo) # CHECK: :[[@LINE]]:11: error: operand must be a symbol
 # TP-relative symbol names require a %tprel_add modifier.
 add a0, a0, tp, zero # CHECK: :[[@LINE]]:17: error: expected '%' relocation specifier
 add a0, a0, tp, %hi(foo) # CHECK: :[[@LINE]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-1]]:17: note: too many operands for instruction
+# CHECK: :[[@LINE-1]]:17: note: invalid operand for instruction
 # CHECK: :[[@LINE-2]]:17: note: operand must be a symbol with %tprel_add specifier
 add a0, tp, a0, %tprel_add(foo) # CHECK: :[[@LINE]]:13: error: the second input operand must be tp/x4 when using %tprel_add specifier
 
@@ -177,10 +177,10 @@ xori sp, 22, 220 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
 sub t0, t2, 1 # CHECK: :[[@LINE]]:13: error: invalid operand for instruction
 
 # Too many operands
-sltiu s2, s3, 0x50, 0x60 # CHECK: :[[@LINE]]:21: error: too many operands for instruction
+sltiu s2, s3, 0x50, 0x60 # CHECK: :[[@LINE]]:21: error: invalid operand for instruction
 
 # Memory operand not formatted correctly
-lw a4, a5, 111 # CHECK: :[[@LINE]]:12: error: too many operands for instruction
+lw a4, a5, 111 # CHECK: :[[@LINE]]:12: error: invalid operand for instruction
 
 # Too few operands
 ori a0, a1 # CHECK: :[[@LINE]]:11: error: too few operands for instruction

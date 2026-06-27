@@ -7,10 +7,10 @@
 # RUN: not llvm-mc -triple riscv32 < %s 2>&1 | FileCheck %s
 # RUN: not llvm-mc -triple riscv64 < %s 2>&1 | FileCheck %s
 
-ntl.p1 1 # CHECK: :[[@LINE]]:8: error: too many operands for instruction
-ntl.pall 2 # CHECK: :[[@LINE]]:10: error: too many operands for instruction
-ntl.s1 3 # CHECK: :[[@LINE]]:8: error: too many operands for instruction
-ntl.all 4 # CHECK: :[[@LINE]]:9: error: too many operands for instruction
+ntl.p1 1 # CHECK: :[[@LINE]]:8: error: invalid operand for instruction
+ntl.pall 2 # CHECK: :[[@LINE]]:10: error: invalid operand for instruction
+ntl.s1 3 # CHECK: :[[@LINE]]:8: error: invalid operand for instruction
+ntl.all 4 # CHECK: :[[@LINE]]:9: error: invalid operand for instruction
 
 ntl.p1 t0, t1 # CHECK: :[[@LINE]]:1: error: invalid instruction
 ntl.pall t0, t1 # CHECK: :[[@LINE]]:1: error: invalid instruction

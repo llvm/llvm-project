@@ -4,7 +4,7 @@
 # RUN:     | FileCheck %s -check-prefixes=CHECK,CHECK-OFFSET
 
 hfence.vvma zero, zero # CHECK: :[[@LINE]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-1]]:19: note: too many operands for instruction
+# CHECK: :[[@LINE-1]]:19: note: invalid operand for instruction
 # CHECK: :[[@LINE-2]]:1: note: instruction requires the following: 'H' (Hypervisor)
 
 hlv.h   a0, 0(a1) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'H' (Hypervisor)
