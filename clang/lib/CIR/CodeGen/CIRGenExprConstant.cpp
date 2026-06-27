@@ -1239,6 +1239,8 @@ struct ConstantLValue {
       : value(nullptr), hasOffsetApplied(false) {}
   /*implicit*/ ConstantLValue(cir::GlobalViewAttr address)
       : value(address), hasOffsetApplied(false) {}
+  /*implicit*/ ConstantLValue(cir::BlockAddrInfoAttr address)
+      : value(address), hasOffsetApplied(true) {}
 
   ConstantLValue() : value(nullptr), hasOffsetApplied(false) {}
 };
@@ -1519,8 +1521,18 @@ ConstantLValueEmitter::VisitPredefinedExpr(const PredefinedExpr *e) {
 
 ConstantLValue
 ConstantLValueEmitter::VisitAddrLabelExpr(const AddrLabelExpr *e) {
-  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: addr label expr");
-  return {};
+  // A label address taken in a constant context, e.g. a static computed-goto
+  // dispatch table `static const void *tbl[] = {&&L1, &&L2}`.  Besides emitting
+  // the constant, register the label as address-taken so a following
+  // `goto *tbl[i]` lists it among the indirect branch's successors.  A label is
+  // always function-local, so cgf is set here.
+  assert(emitter.cgf && "label address in a constant requires a function");
+  CIRGenFunction &cgf = *const_cast<CIRGenFunction *>(emitter.cgf);
+  auto func = cast<cir::FuncOp>(cgf.curFn);
+  cir::BlockAddrInfoAttr info = cir::BlockAddrInfoAttr::get(
+      &cgf.getMLIRContext(), func.getSymName(), e->getLabel()->getName());
+  cgf.indirectGotoTargets.push_back(info);
+  return info;
 }
 
 ConstantLValue ConstantLValueEmitter::VisitCallExpr(const CallExpr *e) {
@@ -1721,7 +1733,7 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &d) {
 
   // Try to emit the initializer.  Note that this can allow some things that
   // are not allowed by tryEmitPrivateForMemory alone.
-  if (APValue *value = d.evaluateValue())
+  if (const APValue *value = d.evaluateValue())
     return tryEmitPrivateForMemory(*value, destType);
 
   return {};

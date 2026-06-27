@@ -71,8 +71,6 @@ public:
   StringRef ShouldParse;
   StringRef Normalizer;
   StringRef Denormalizer;
-  StringRef ValueMerger;
-  StringRef ValueExtractor;
   int TableIndex = -1;
   std::vector<StringRef> Values;
   std::vector<StringRef> NormalizedValues;
@@ -118,10 +116,6 @@ struct SimpleEnumValueTable {
     OS << ", ";
     OS << Denormalizer;
     OS << ", ";
-    OS << ValueMerger;
-    OS << ", ";
-    OS << ValueExtractor;
-    OS << ", ";
     OS << TableIndex;
   }
 
@@ -155,7 +149,6 @@ size_t MarshallingInfo::NextTableIndex = 0;
 static MarshallingInfo createMarshallingInfo(const Record &R) {
   assert(!isa<UnsetInit>(R.getValueInit("KeyPath")) &&
          !isa<UnsetInit>(R.getValueInit("DefaultValue")) &&
-         !isa<UnsetInit>(R.getValueInit("ValueMerger")) &&
          "MarshallingInfo must have a provide a keypath, default value and a "
          "value merger");
 
@@ -173,8 +166,6 @@ static MarshallingInfo createMarshallingInfo(const Record &R) {
   Ret.ShouldParse = R.getValueAsString("ShouldParse");
   Ret.Normalizer = R.getValueAsString("Normalizer");
   Ret.Denormalizer = R.getValueAsString("Denormalizer");
-  Ret.ValueMerger = R.getValueAsString("ValueMerger");
-  Ret.ValueExtractor = R.getValueAsString("ValueExtractor");
 
   if (!isa<UnsetInit>(R.getValueInit("NormalizedValues"))) {
     assert(!isa<UnsetInit>(R.getValueInit("Values")) &&

@@ -535,12 +535,14 @@ bool RISCVAsmPrinter::emitDirectiveOptionArch() {
     if (STI->hasFeature(Feature.Value) == MCSTI.hasFeature(Feature.Value))
       continue;
 
-    if (!llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.Key))
+    if (!llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.key()))
       continue;
 
     auto Delta = STI->hasFeature(Feature.Value) ? RISCVOptionArchArgType::Plus
                                                 : RISCVOptionArchArgType::Minus;
-    NeedEmitStdOptionArgs.emplace_back(Delta, Feature.Key);
+    StringRef ExtName = Feature.key();
+    ExtName.consume_front("experimental-");
+    NeedEmitStdOptionArgs.emplace_back(Delta, ExtName.str());
   }
   if (!NeedEmitStdOptionArgs.empty()) {
     RTS.emitDirectiveOptionPush();
@@ -641,9 +643,9 @@ void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
         if (!errorToBool(ParseResult.takeError())) {
           auto &ISAInfo = *ParseResult;
           for (const auto &Feature : RISCVFeatureKV) {
-            if (ISAInfo->hasExtension(Feature.Key) &&
+            if (ISAInfo->hasExtension(Feature.key()) &&
                 !SubtargetInfo.hasFeature(Feature.Value))
-              SubtargetInfo.ToggleFeature(Feature.Key);
+              SubtargetInfo.ToggleFeature(Feature.key());
           }
         }
       }
@@ -1020,11 +1022,40 @@ void RISCVAsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
 
 void RISCVAsmPrinter::emitNoteGnuProperty(const Module &M) {
   assert(TM.getTargetTriple().isOSBinFormatELF() && "invalid binary format");
+  uint32_t GnuProps = 0;
   if (const Metadata *const Flag = M.getModuleFlag("cf-protection-return");
+      Flag && !mdconst::extract<ConstantInt>(Flag)->isZero())
+    GnuProps |= ELF::GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS;
+
+  if (const Metadata *const Flag = M.getModuleFlag("cf-protection-branch");
       Flag && !mdconst::extract<ConstantInt>(Flag)->isZero()) {
-    auto &RTS = static_cast<RISCVTargetELFStreamer &>(getTargetStreamer());
-    RTS.emitNoteGnuPropertySection(ELF::GNU_PROPERTY_RISCV_FEATURE_1_CFI_SS);
+    using namespace llvm::RISCVISAUtils;
+    const Metadata *const CFBranchLabelSchemeFlag =
+        M.getModuleFlag("cf-branch-label-scheme");
+    assert(CFBranchLabelSchemeFlag &&
+           "cf-protection=branch should come with cf-branch-label-scheme=... "
+           "on RISC-V targets");
+    const StringRef CFBranchLabelScheme =
+        cast<MDString>(CFBranchLabelSchemeFlag)->getString();
+    switch (llvm::RISCVCFI::getZicfilpLabelScheme(CFBranchLabelScheme)) {
+    case llvm::RISCVCFI::ZicfilpLabelSchemeKind::Invalid:
+      reportFatalInternalError("invalid RISC-V Zicfilp label scheme");
+    case llvm::RISCVCFI::ZicfilpLabelSchemeKind::Unlabeled:
+      GnuProps |= ELF::GNU_PROPERTY_RISCV_FEATURE_1_CFI_LP_UNLABELED;
+      break;
+    case llvm::RISCVCFI::ZicfilpLabelSchemeKind::FuncSig:
+      // TODO: Emit the func-sig bit after the feature is implemented
+      reportFatalUsageError("the complete func-sig label scheme feature is not "
+                            "implemented yet");
+      break;
+    }
   }
+
+  if (!GnuProps)
+    return;
+
+  auto &RTS = static_cast<RISCVTargetELFStreamer &>(getTargetStreamer());
+  RTS.emitNoteGnuPropertySection(GnuProps);
 }
 
 static MCOperand lowerSymbolOperand(const MachineOperand &MO, MCSymbol *Sym,
