@@ -168,6 +168,44 @@ jobs:
       LLVM_TOKEN_GENERATOR_CLIENT_ID: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
       LLVM_TOKEN_GENERATOR_PRIVATE_KEY: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
 
+  publish-winget:
+    name: Submit to WinGet repository
+    # winget-create is only supported on Windows
+    runs-on: windows-latest
+    permissions:
+      contents: read
+    needs:
+      - validate-tag
+      - release-binaries
+    # Only submit stable releases
+    if: >-
+      github.repository == 'llvm/llvm-project' &&
+      !contains(needs.validate-tag.outputs.release-version, '-rc')
+    env:
+      # winget-create will read the following environment variable to access the GitHub token needed for submitting a PR
+      # See https://aka.ms/winget-create-token
+      WINGET_CREATE_GITHUB_TOKEN: ${{ secrets.WINGET_CREATE_GITHUB_TOKEN }}
+      GITHUB_TOKEN: ${{ github.token }}
+
+    steps:
+      - name: Submit package using wingetcreate
+        shell: pwsh
+        run: |
+          # Get installer URLs from GitHub API
+          $releaseVersion = '${{ needs.validate-tag.outputs.release-version }}'
+          $releaseTag = "llvmorg-$releaseVersion"
+          $releaseApi = "https://api.github.com/repos/llvm/llvm-project/releases/tags/$releaseTag"
+          $assets = Invoke-RestMethod -Uri $releaseApi | Select-Object -ExpandProperty assets
+          $x64InstallerUrl = $assets | Where-Object -Property name -match 'LLVM.*win64.exe$' | Select -ExpandProperty browser_download_url
+          $arm64InstallerUrl = $assets | Where-Object -Property name -match 'LLVM.*woa64.exe$' | Select -ExpandProperty browser_download_url
+
+          # Update package using wingetcreate
+          curl.exe -JLO https://aka.ms/wingetcreate/latest
+          .\wingetcreate.exe update LLVM.LLVM `
+            --version $releaseVersion `
+            --urls "$x64InstallerUrl|x64" "$arm64InstallerUrl|arm64" `
+            --submit
+
   release-sources:
     name: Package Release Sources
     permissions:
