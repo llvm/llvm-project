@@ -743,6 +743,18 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
         return NS;
       }
 
+      // FIXME: GCC supports this, but codegen currently crashes when lowering
+      // a pointer input tied to a larger aggregate register output.
+      if (OutputDomain == AD_Other && InTy->isPointerType() &&
+          OutSize > InSize &&
+          !Context.getIntTypeForBitwidth(OutSize, /*Signed*/ false).isNull()) {
+        targetDiag(InputExpr->getBeginLoc(),
+                   diag::err_asm_tying_incompatible_types)
+            << InTy << OutTy << OutputExpr->getSourceRange()
+            << InputExpr->getSourceRange();
+        return NS;
+      }
+
       continue;
     }
 

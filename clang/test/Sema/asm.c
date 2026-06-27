@@ -352,6 +352,7 @@ void test19(long long x)
   st_size16 c;
   st_size32 d;
   st_size128 e;
+  char f[16];
   asm ("" : "=rm" (a): "0" (1)); // no-error
   asm ("" : "=rm" (d): "0" (1)); // no-error
   asm ("" : "=rm" (c): "0" (x)); // no-error
@@ -364,6 +365,8 @@ void test19(long long x)
   asm ("" : "=rm" (e): "0" (1)); // no-error
   // FIXME: This case should be supported by codegen, but it fails now.
   asm ("" : "=rm" (x): "0" (e)); // expected-error {{unsupported inline asm: input with type 'st_size128' (aka 'struct _st_size128') matching output with type 'long long'}}
+  // FIXME: This case should be supported by codegen, but it fails now.
+  asm ("" : "=r" (f): "0" (f)); // expected-error {{unsupported inline asm: input with type 'char *' matching output with type 'char[16]'}}
 }
 
 typedef int int2 __attribute__((ext_vector_type(2)));
