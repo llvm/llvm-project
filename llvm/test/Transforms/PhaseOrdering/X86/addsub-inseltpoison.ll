@@ -11,6 +11,7 @@
 ; Ideally, this should reach the backend with 1 fsub, 1 fadd, and 1 shuffle.
 ; That may require some coordination between VectorCombine, SLP, and other passes.
 ; The end goal is to get a single "vaddsubps" instruction for x86 with AVX.
+; NOTE: Try to keep in sync with CodeGen\X86\sse3-avx-addsub.ll
 
 define <2 x double> @test_addsub_v2f64(<2 x double> %A, <2 x double> %B) {
 ; CHECK-LABEL: @test_addsub_v2f64(
@@ -156,8 +157,8 @@ define <4 x float> @test_addsub_v4f32(<4 x float> %A, <4 x float> %B) {
   ret <4 x float> %vecinsert4
 }
 
-define <8 x float> @test_v8f32(<8 x float> %A, <8 x float> %B) {
-; SSE2-LABEL: @test_v8f32(
+define <8 x float> @test_addsub_v8f32(<8 x float> %A, <8 x float> %B) {
+; SSE2-LABEL: @test_addsub_v8f32(
 ; SSE2-NEXT:    [[TMP1:%.*]] = fsub <8 x float> [[A:%.*]], [[B:%.*]]
 ; SSE2-NEXT:    [[TMP2:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; SSE2-NEXT:    [[TMP3:%.*]] = fadd <8 x float> [[A]], [[B]]
@@ -165,13 +166,13 @@ define <8 x float> @test_v8f32(<8 x float> %A, <8 x float> %B) {
 ; SSE2-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> [[TMP4]], <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
 ; SSE2-NEXT:    ret <8 x float> [[TMP5]]
 ;
-; SSE4-LABEL: @test_v8f32(
+; SSE4-LABEL: @test_addsub_v8f32(
 ; SSE4-NEXT:    [[TMP1:%.*]] = fsub <8 x float> [[A:%.*]], [[B:%.*]]
 ; SSE4-NEXT:    [[TMP2:%.*]] = fadd <8 x float> [[A]], [[B]]
 ; SSE4-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
 ; SSE4-NEXT:    ret <8 x float> [[TMP3]]
 ;
-; AVX-LABEL: @test_v8f32(
+; AVX-LABEL: @test_addsub_v8f32(
 ; AVX-NEXT:    [[TMP1:%.*]] = fsub <8 x float> [[A:%.*]], [[B:%.*]]
 ; AVX-NEXT:    [[TMP2:%.*]] = fadd <8 x float> [[A]], [[B]]
 ; AVX-NEXT:    [[TMP3:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
@@ -406,6 +407,101 @@ define <4 x float> @test_addsub_v4f32_partial_01(<4 x float> %A, <4 x float> %B)
   ret <4 x float> %vecinsert2
 }
 
+define <4 x float> @negative_test_addsub_v4f32_partial_13(<4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: @negative_test_addsub_v4f32_partial_13(
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret <4 x float> [[TMP1]]
+;
+  %1 = extractelement <4 x float> %A, i32 1
+  %2 = extractelement <4 x float> %B, i32 1
+  %add = fadd float %1, %2
+  %3 = extractelement <4 x float> %A, i32 3
+  %4 = extractelement <4 x float> %B, i32 3
+  %add2 = fadd float %3, %4
+  %vecinsert1 = insertelement <4 x float> poison, float %add, i32 1
+  %vecinsert2 = insertelement <4 x float> %vecinsert1, float %add2, i32 3
+  ret <4 x float> %vecinsert2
+}
+
+define <4 x float> @negative_test_addsub_v4f32_partial_0(<4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: @negative_test_addsub_v4f32_partial_0(
+; CHECK-NEXT:    [[FOLDEXTEXTBINOP:%.*]] = fsub <4 x float> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[VECINSERT1:%.*]] = shufflevector <4 x float> [[FOLDEXTEXTBINOP]], <4 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    ret <4 x float> [[VECINSERT1]]
+;
+  %1 = extractelement <4 x float> %A, i32 0
+  %2 = extractelement <4 x float> %B, i32 0
+  %sub = fsub float %1, %2
+  %vecinsert1 = insertelement <4 x float> poison, float %sub, i32 0
+  ret <4 x float> %vecinsert1
+}
+
+define <4 x float> @negative_test_addsub_v4f32_partial_1(<4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: @negative_test_addsub_v4f32_partial_1(
+; CHECK-NEXT:    [[FOLDEXTEXTBINOP:%.*]] = fadd <4 x float> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[VECINSERT1:%.*]] = shufflevector <4 x float> [[FOLDEXTEXTBINOP]], <4 x float> poison, <4 x i32> <i32 poison, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    ret <4 x float> [[VECINSERT1]]
+;
+  %1 = extractelement <4 x float> %A, i32 1
+  %2 = extractelement <4 x float> %B, i32 1
+  %add = fadd float %1, %2
+  %vecinsert1 = insertelement <4 x float> poison, float %add, i32 1
+  ret <4 x float> %vecinsert1
+}
+
+define <4 x float> @negative_test_addsub_v4f32_partial_2(<4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: @negative_test_addsub_v4f32_partial_2(
+; CHECK-NEXT:    [[FOLDEXTEXTBINOP:%.*]] = fsub <4 x float> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[VECINSERT1:%.*]] = shufflevector <4 x float> [[FOLDEXTEXTBINOP]], <4 x float> poison, <4 x i32> <i32 poison, i32 poison, i32 2, i32 poison>
+; CHECK-NEXT:    ret <4 x float> [[VECINSERT1]]
+;
+  %1 = extractelement <4 x float> %A, i32 2
+  %2 = extractelement <4 x float> %B, i32 2
+  %sub = fsub float %1, %2
+  %vecinsert1 = insertelement <4 x float> poison, float %sub, i32 2
+  ret <4 x float> %vecinsert1
+}
+
+define <4 x float> @negative_test_addsub_v4f32_partial_3(<4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: @negative_test_addsub_v4f32_partial_3(
+; CHECK-NEXT:    [[FOLDEXTEXTBINOP:%.*]] = fadd <4 x float> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[VECINSERT1:%.*]] = shufflevector <4 x float> [[FOLDEXTEXTBINOP]], <4 x float> poison, <4 x i32> <i32 poison, i32 poison, i32 poison, i32 3>
+; CHECK-NEXT:    ret <4 x float> [[VECINSERT1]]
+;
+  %1 = extractelement <4 x float> %A, i32 3
+  %2 = extractelement <4 x float> %B, i32 3
+  %add = fadd float %1, %2
+  %vecinsert1 = insertelement <4 x float> poison, float %add, i32 3
+  ret <4 x float> %vecinsert1
+}
+
+define <4 x float> @negative_test_addsub_v4f32_constant(<4 x float> %A, <4 x float> %B) {
+; CHECK-LABEL: @negative_test_addsub_v4f32_constant(
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x float> <float -4.200000e+01, float 4.200000e+01, float poison, float poison>, <4 x float> [[B:%.*]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <4 x float> [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub <4 x float> [[A]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    ret <4 x float> [[TMP4]]
+;
+  %1 = extractelement <4 x float> %A, i32 0
+  %2 = extractelement <4 x float> %B, i32 0
+  %sub = fsub float %1, 42.0
+  %3 = extractelement <4 x float> %A, i32 2
+  %4 = extractelement <4 x float> %B, i32 2
+  %sub2 = fsub float %3, %4
+  %5 = extractelement <4 x float> %A, i32 1
+  %6 = extractelement <4 x float> %B, i32 1
+  %add = fadd float %5, 42.0
+  %7 = extractelement <4 x float> %A, i32 3
+  %8 = extractelement <4 x float> %B, i32 3
+  %add2 = fadd float %7, %8
+  %vecinsert1 = insertelement <4 x float> poison, float %add, i32 1
+  %vecinsert2 = insertelement <4 x float> %vecinsert1, float %add2, i32 3
+  %vecinsert3 = insertelement <4 x float> %vecinsert2, float %sub, i32 0
+  %vecinsert4 = insertelement <4 x float> %vecinsert3, float %sub2, i32 2
+  ret <4 x float> %vecinsert4
+}
+
 define <4 x float> @PR45015(<4 x float> %arg, <4 x float> %arg1) {
 ; CHECK-LABEL: @PR45015(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub <4 x float> [[ARG:%.*]], [[ARG1:%.*]]
@@ -440,7 +536,7 @@ define { <2 x float>, <2 x float> } @add_aggregate(<2 x float> %a0, <2 x float> 
 ; CHECK-LABEL: @add_aggregate(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x float> [[A0:%.*]], [[B0:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x float> [[A1:%.*]], [[B1:%.*]]
-; CHECK-NEXT:    [[FCA_0_INSERT:%.*]] = insertvalue { <2 x float>, <2 x float> } undef, <2 x float> [[TMP1]], 0
+; CHECK-NEXT:    [[FCA_0_INSERT:%.*]] = insertvalue { <2 x float>, <2 x float> } poison, <2 x float> [[TMP1]], 0
 ; CHECK-NEXT:    [[FCA_1_INSERT:%.*]] = insertvalue { <2 x float>, <2 x float> } [[FCA_0_INSERT]], <2 x float> [[TMP2]], 1
 ; CHECK-NEXT:    ret { <2 x float>, <2 x float> } [[FCA_1_INSERT]]
 ;
@@ -460,7 +556,7 @@ define { <2 x float>, <2 x float> } @add_aggregate(<2 x float> %a0, <2 x float> 
   %b11 = extractelement <2 x float> %b1, i32 1
   %add10 = fadd float %a11, %b11
   %retval.1.1.insert = insertelement <2 x float> %retval.1.0.insert, float %add10, i32 1
-  %fca.0.insert = insertvalue { <2 x float>, <2 x float> } undef, <2 x float> %retval.0.1.insert, 0
+  %fca.0.insert = insertvalue { <2 x float>, <2 x float> } poison, <2 x float> %retval.0.1.insert, 0
   %fca.1.insert = insertvalue { <2 x float>, <2 x float> } %fca.0.insert, <2 x float> %retval.1.1.insert, 1
   ret { <2 x float>, <2 x float> } %fca.1.insert
 }

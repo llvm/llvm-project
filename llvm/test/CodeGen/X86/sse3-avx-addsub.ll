@@ -36,13 +36,13 @@
 ;   return (double2){X[0], Y[1]};
 ; }
 
-define <4 x float> @test1(<4 x float> %A, <4 x float> %B) {
-; SSE-LABEL: test1:
+define <4 x float> @test_addsub_v4f32(<4 x float> %A, <4 x float> %B) {
+; SSE-LABEL: test_addsub_v4f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubps %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test1:
+; AVX-LABEL: test_addsub_v4f32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -52,14 +52,14 @@ define <4 x float> @test1(<4 x float> %A, <4 x float> %B) {
   ret <4 x float> %vecinit6
 }
 
-define <8 x float> @test2(<8 x float> %A, <8 x float> %B) {
-; SSE-LABEL: test2:
+define <8 x float> @test_addsub_v8f32(<8 x float> %A, <8 x float> %B) {
+; SSE-LABEL: test_addsub_v8f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubps %xmm2, %xmm0
 ; SSE-NEXT:    addsubps %xmm3, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test2:
+; AVX-LABEL: test_addsub_v8f32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubps %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
@@ -69,14 +69,14 @@ define <8 x float> @test2(<8 x float> %A, <8 x float> %B) {
   ret <8 x float> %vecinit14
 }
 
-define <4 x double> @test3(<4 x double> %A, <4 x double> %B) {
-; SSE-LABEL: test3:
+define <4 x double> @test_addsub_v4f64(<4 x double> %A, <4 x double> %B) {
+; SSE-LABEL: test_addsub_v4f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubpd %xmm2, %xmm0
 ; SSE-NEXT:    addsubpd %xmm3, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test3:
+; AVX-LABEL: test_addsub_v4f64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubpd %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
@@ -86,13 +86,13 @@ define <4 x double> @test3(<4 x double> %A, <4 x double> %B) {
   ret <4 x double> %vecinit6
 }
 
-define <2 x double> @test4(<2 x double> %A, <2 x double> %B) #0 {
-; SSE-LABEL: test4:
+define <2 x double> @test_addsub_v2f64(<2 x double> %A, <2 x double> %B) {
+; SSE-LABEL: test_addsub_v2f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubpd %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test4:
+; AVX-LABEL: test_addsub_v2f64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubpd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -102,8 +102,8 @@ define <2 x double> @test4(<2 x double> %A, <2 x double> %B) #0 {
   ret <2 x double> %vecinit2
 }
 
-define <16 x float> @test5(<16 x float> %A, <16 x float> %B) {
-; SSE-LABEL: test5:
+define <16 x float> @test_addsub_v16f32(<16 x float> %A, <16 x float> %B) {
+; SSE-LABEL: test_addsub_v16f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubps %xmm4, %xmm0
 ; SSE-NEXT:    addsubps %xmm5, %xmm1
@@ -111,13 +111,13 @@ define <16 x float> @test5(<16 x float> %A, <16 x float> %B) {
 ; SSE-NEXT:    addsubps %xmm7, %xmm3
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: test5:
+; AVX1-LABEL: test_addsub_v16f32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vaddsubps %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vaddsubps %ymm3, %ymm1, %ymm1
 ; AVX1-NEXT:    retq
 ;
-; AVX512-LABEL: test5:
+; AVX512-LABEL: test_addsub_v16f32:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vsubps %zmm1, %zmm0, %zmm2
 ; AVX512-NEXT:    movw $-21846, %ax # imm = 0xAAAA
@@ -131,8 +131,8 @@ define <16 x float> @test5(<16 x float> %A, <16 x float> %B) {
   ret <16 x float> %vecinit2
 }
 
-define <8 x double> @test6(<8 x double> %A, <8 x double> %B) {
-; SSE-LABEL: test6:
+define <8 x double> @test_addsub_v8f64(<8 x double> %A, <8 x double> %B) {
+; SSE-LABEL: test_addsub_v8f64:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubpd %xmm4, %xmm0
 ; SSE-NEXT:    addsubpd %xmm5, %xmm1
@@ -140,13 +140,13 @@ define <8 x double> @test6(<8 x double> %A, <8 x double> %B) {
 ; SSE-NEXT:    addsubpd %xmm7, %xmm3
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: test6:
+; AVX1-LABEL: test_addsub_v8f64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vaddsubpd %ymm2, %ymm0, %ymm0
 ; AVX1-NEXT:    vaddsubpd %ymm3, %ymm1, %ymm1
 ; AVX1-NEXT:    retq
 ;
-; AVX512-LABEL: test6:
+; AVX512-LABEL: test_addsub_v8f64:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vaddpd %zmm1, %zmm0, %zmm2
 ; AVX512-NEXT:    vsubpd %zmm1, %zmm0, %zmm0
@@ -158,13 +158,13 @@ define <8 x double> @test6(<8 x double> %A, <8 x double> %B) {
   ret <8 x double> %vecinit2
 }
 
-define <4 x float> @test1b(<4 x float> %A, ptr %B) {
-; SSE-LABEL: test1b:
+define <4 x float> @test_addsub_v4f32_load(<4 x float> %A, ptr %B) {
+; SSE-LABEL: test_addsub_v4f32_load:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubps (%rdi), %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test1b:
+; AVX-LABEL: test_addsub_v4f32_load:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubps (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -175,14 +175,14 @@ define <4 x float> @test1b(<4 x float> %A, ptr %B) {
   ret <4 x float> %vecinit6
 }
 
-define <8 x float> @test2b(<8 x float> %A, ptr %B) {
-; SSE-LABEL: test2b:
+define <8 x float> @test_addsub_v8f32_load(<8 x float> %A, ptr %B) {
+; SSE-LABEL: test_addsub_v8f32_load:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubps (%rdi), %xmm0
 ; SSE-NEXT:    addsubps 16(%rdi), %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test2b:
+; AVX-LABEL: test_addsub_v8f32_load:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubps (%rdi), %ymm0, %ymm0
 ; AVX-NEXT:    retq
@@ -193,14 +193,14 @@ define <8 x float> @test2b(<8 x float> %A, ptr %B) {
   ret <8 x float> %vecinit14
 }
 
-define <4 x double> @test3b(<4 x double> %A, ptr %B) {
-; SSE-LABEL: test3b:
+define <4 x double> @test_addsub_v4f64_load(<4 x double> %A, ptr %B) {
+; SSE-LABEL: test_addsub_v4f64_load:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubpd (%rdi), %xmm0
 ; SSE-NEXT:    addsubpd 16(%rdi), %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test3b:
+; AVX-LABEL: test_addsub_v4f64_load:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubpd (%rdi), %ymm0, %ymm0
 ; AVX-NEXT:    retq
@@ -211,13 +211,13 @@ define <4 x double> @test3b(<4 x double> %A, ptr %B) {
   ret <4 x double> %vecinit6
 }
 
-define <2 x double> @test4b(<2 x double> %A, ptr %B) {
-; SSE-LABEL: test4b:
+define <2 x double> @test_addsub_v2f64_load(<2 x double> %A, ptr %B) {
+; SSE-LABEL: test_addsub_v2f64_load:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubpd (%rdi), %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test4b:
+; AVX-LABEL: test_addsub_v2f64_load:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubpd (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -228,13 +228,13 @@ define <2 x double> @test4b(<2 x double> %A, ptr %B) {
   ret <2 x double> %vecinit2
 }
 
-define <4 x float> @test1c(<4 x float> %A, ptr %B) {
-; SSE-LABEL: test1c:
+define <4 x float> @test_addsub_v4f32_load_commute(<4 x float> %A, ptr %B) {
+; SSE-LABEL: test_addsub_v4f32_load_commute:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubps (%rdi), %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test1c:
+; AVX-LABEL: test_addsub_v4f32_load_commute:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubps (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -245,14 +245,14 @@ define <4 x float> @test1c(<4 x float> %A, ptr %B) {
   ret <4 x float> %vecinit6
 }
 
-define <8 x float> @test2c(<8 x float> %A, ptr %B) {
-; SSE-LABEL: test2c:
+define <8 x float> @test_addsub_v8f32_load_commute(<8 x float> %A, ptr %B) {
+; SSE-LABEL: test_addsub_v8f32_load_commute:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubps (%rdi), %xmm0
 ; SSE-NEXT:    addsubps 16(%rdi), %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test2c:
+; AVX-LABEL: test_addsub_v8f32_load_commute:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubps (%rdi), %ymm0, %ymm0
 ; AVX-NEXT:    retq
@@ -263,14 +263,14 @@ define <8 x float> @test2c(<8 x float> %A, ptr %B) {
   ret <8 x float> %vecinit14
 }
 
-define <4 x double> @test3c(<4 x double> %A, ptr %B) {
-; SSE-LABEL: test3c:
+define <4 x double> @test_addsub_v4f64_load_commute(<4 x double> %A, ptr %B) {
+; SSE-LABEL: test_addsub_v4f64_load_commute:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubpd (%rdi), %xmm0
 ; SSE-NEXT:    addsubpd 16(%rdi), %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test3c:
+; AVX-LABEL: test_addsub_v4f64_load_commute:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubpd (%rdi), %ymm0, %ymm0
 ; AVX-NEXT:    retq
@@ -281,13 +281,13 @@ define <4 x double> @test3c(<4 x double> %A, ptr %B) {
   ret <4 x double> %vecinit6
 }
 
-define <2 x double> @test4c(<2 x double> %A, ptr %B) {
-; SSE-LABEL: test4c:
+define <2 x double> @test_addsub_v2f64_load_commute(<2 x double> %A, ptr %B) {
+; SSE-LABEL: test_addsub_v2f64_load_commute:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    addsubpd (%rdi), %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: test4c:
+; AVX-LABEL: test_addsub_v2f64_load_commute:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vaddsubpd (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    retq
@@ -296,4 +296,208 @@ define <2 x double> @test4c(<2 x double> %A, ptr %B) {
   %add = fadd <2 x double> %A, %1
   %vecinit2 = shufflevector <2 x double> %add, <2 x double> %sub, <2 x i32> <i32 2, i32 1>
   ret <2 x double> %vecinit2
+}
+
+define <4 x float> @test_addsub_v4f32_partial_23(<4 x float> %A, <4 x float> %B) local_unnamed_addr #0 {
+; SSE-LABEL: test_addsub_v4f32_partial_23:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; SSE-NEXT:    movhlps {{.*#+}} xmm1 = xmm1[1,1]
+; SSE-NEXT:    movaps %xmm0, %xmm2
+; SSE-NEXT:    subps %xmm1, %xmm2
+; SSE-NEXT:    addps %xmm0, %xmm1
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,0],xmm2[0,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,0]
+; SSE-NEXT:    movaps %xmm2, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test_addsub_v4f32_partial_23:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vshufpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
+; AVX-NEXT:    vsubps %xmm1, %xmm0, %xmm2
+; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm2[0],xmm0[1],xmm2[2,3]
+; AVX-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; AVX-NEXT:    retq
+  %i1 = shufflevector <4 x float> %A, <4 x float> poison, <2 x i32> <i32 2, i32 3>
+  %i2 = shufflevector <4 x float> %B, <4 x float> poison, <2 x i32> <i32 2, i32 3>
+  %i3 = fsub <2 x float> %i1, %i2
+  %i4 = fadd <2 x float> %i1, %i2
+  %i5 = shufflevector <2 x float> %i3, <2 x float> %i4, <4 x i32> <i32 0, i32 3, i32 poison, i32 poison>
+  %i6 = shufflevector <4 x float> %i5, <4 x float> <float undef, float undef, float poison, float poison>, <4 x i32> <i32 4, i32 5, i32 0, i32 1>
+  ret <4 x float> %i6
+}
+
+define <4 x float> @test_addsub_v4f32_partial_03(<4 x float> %A, <4 x float> %B) local_unnamed_addr #0 {
+; SSE-LABEL: test_addsub_v4f32_partial_03:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps %xmm0, %xmm2
+; SSE-NEXT:    subps %xmm1, %xmm2
+; SSE-NEXT:    addps %xmm1, %xmm0
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,0],xmm2[2,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm0[2,0]
+; SSE-NEXT:    movaps %xmm2, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test_addsub_v4f32_partial_03:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsubps %xmm1, %xmm0, %xmm2
+; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm2[0,1,2],xmm0[3]
+; AVX-NEXT:    retq
+  %i1 = fsub <4 x float> %A, %B
+  %i2 = fadd <4 x float> %A, %B
+  %i3 = shufflevector <4 x float> %i1, <4 x float> <float poison, float undef, float undef, float poison>, <4 x i32> <i32 0, i32 5, i32 6, i32 poison>
+  %i4 = shufflevector <4 x float> %i3, <4 x float> %i2, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+  ret <4 x float> %i4
+}
+
+define <4 x float> @test_addsub_v4f32_partial_12(<4 x float> %A, <4 x float> %B) local_unnamed_addr #0 {
+; SSE-LABEL: test_addsub_v4f32_partial_12:
+; SSE:       # %bb.0:
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,2,2,3]
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,2,2,3]
+; SSE-NEXT:    movaps %xmm0, %xmm2
+; SSE-NEXT:    addps %xmm1, %xmm2
+; SSE-NEXT:    subps %xmm1, %xmm0
+; SSE-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test_addsub_v4f32_partial_12:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,2,2,3]
+; AVX-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[1,2,2,3]
+; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm2
+; AVX-NEXT:    vsubps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vunpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; AVX-NEXT:    retq
+  %i1 = shufflevector <4 x float> %A, <4 x float> poison, <2 x i32> <i32 1, i32 2>
+  %i2 = shufflevector <4 x float> %B, <4 x float> poison, <2 x i32> <i32 1, i32 2>
+  %i3 = fadd <2 x float> %i1, %i2
+  %i4 = fsub <2 x float> %i1, %i2
+  %i5 = shufflevector <2 x float> %i3, <2 x float> %i4, <4 x i32> <i32 0, i32 3, i32 poison, i32 poison>
+  %i6 = shufflevector <4 x float> %i5, <4 x float> <float undef, float poison, float poison, float undef>, <4 x i32> <i32 4, i32 0, i32 1, i32 7>
+  ret <4 x float> %i6
+}
+
+define <4 x float> @test_addsub_v4f32_partial_01(<4 x float> %A, <4 x float> %B) local_unnamed_addr #0 {
+; SSE-LABEL: test_addsub_v4f32_partial_01:
+; SSE:       # %bb.0:
+; SSE-NEXT:    addsubps %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: test_addsub_v4f32_partial_01:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vaddsubps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %i1 = shufflevector <4 x float> %A, <4 x float> poison, <2 x i32> <i32 0, i32 1>
+  %i2 = shufflevector <4 x float> %B, <4 x float> poison, <2 x i32> <i32 0, i32 1>
+  %i3 = fsub <2 x float> %i1, %i2
+  %i4 = fadd <2 x float> %i1, %i2
+  %i5 = shufflevector <2 x float> %i3, <2 x float> %i4, <2 x i32> <i32 0, i32 3>
+  %i6 = shufflevector <2 x float> %i5, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x float> %i6
+}
+
+define <4 x float> @negative_test_addsub_v4f32_partial_13(<4 x float> %A, <4 x float> %B) local_unnamed_addr #0 {
+; SSE-LABEL: negative_test_addsub_v4f32_partial_13:
+; SSE:       # %bb.0:
+; SSE-NEXT:    addps %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: negative_test_addsub_v4f32_partial_13:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %i1 = fadd <4 x float> %A, %B
+  %i2 = shufflevector <4 x float> %i1, <4 x float> poison, <4 x i32> <i32 1, i32 poison, i32 3, i32 poison>
+  %i3 = shufflevector <4 x float> %i2, <4 x float> <float undef, float poison, float undef, float poison>, <4 x i32> <i32 4, i32 0, i32 6, i32 2>
+  ret <4 x float> %i3
+}
+
+define <4 x float> @negative_test_addsub_v4f32_partial_0(<4 x float> %A, <4 x float> %B) local_unnamed_addr #0 {
+; SSE-LABEL: negative_test_addsub_v4f32_partial_0:
+; SSE:       # %bb.0:
+; SSE-NEXT:    subps %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: negative_test_addsub_v4f32_partial_0:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsubps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %i1 = fsub <4 x float> %A, %B
+  %i2 = shufflevector <4 x float> %i1, <4 x float> <float poison, float undef, float undef, float undef>, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+  ret <4 x float> %i2
+}
+
+define <4 x float> @negative_test_addsub_v4f32_partial_1(<4 x float> %A, <4 x float> %B) local_unnamed_addr #0 {
+; SSE-LABEL: negative_test_addsub_v4f32_partial_1:
+; SSE:       # %bb.0:
+; SSE-NEXT:    addps %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: negative_test_addsub_v4f32_partial_1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %i1 = fadd <4 x float> %A, %B
+  %i2 = shufflevector <4 x float> %i1, <4 x float> <float undef, float poison, float undef, float undef>, <4 x i32> <i32 4, i32 1, i32 6, i32 7>
+  ret <4 x float> %i2
+}
+
+define <4 x float> @negative_test_addsub_v4f32_partial_2(<4 x float> %A, <4 x float> %B) local_unnamed_addr #0 {
+; SSE-LABEL: negative_test_addsub_v4f32_partial_2:
+; SSE:       # %bb.0:
+; SSE-NEXT:    subps %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: negative_test_addsub_v4f32_partial_2:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vsubps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %i1 = fsub <4 x float> %A, %B
+  %i2 = shufflevector <4 x float> %i1, <4 x float> <float undef, float undef, float poison, float undef>, <4 x i32> <i32 4, i32 5, i32 2, i32 7>
+  ret <4 x float> %i2
+}
+
+define <4 x float> @negative_test_addsub_v4f32_partial_3(<4 x float> %A, <4 x float> %B) local_unnamed_addr #0 {
+; SSE-LABEL: negative_test_addsub_v4f32_partial_3:
+; SSE:       # %bb.0:
+; SSE-NEXT:    addps %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: negative_test_addsub_v4f32_partial_3:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vaddps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %i1 = fadd <4 x float> %A, %B
+  %i2 = shufflevector <4 x float> %i1, <4 x float> <float undef, float undef, float undef, float poison>, <4 x i32> <i32 4, i32 5, i32 6, i32 3>
+  ret <4 x float> %i2
+}
+
+define <4 x float> @negative_test_addsub_v4f32_constant(<4 x float> %A, <4 x float> %B) {
+; SSE-LABEL: negative_test_addsub_v4f32_constant:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps %xmm1, %xmm2
+; SSE-NEXT:    movlps {{.*#+}} xmm2 = mem[0,1],xmm2[2,3]
+; SSE-NEXT:    addps %xmm0, %xmm2
+; SSE-NEXT:    subps %xmm1, %xmm0
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm2[3,0]
+; SSE-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm0[0,2]
+; SSE-NEXT:    movaps %xmm2, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: negative_test_addsub_v4f32_constant:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vblendps {{.*#+}} xmm2 = mem[0,1],xmm1[2,3]
+; AVX-NEXT:    vaddps %xmm2, %xmm0, %xmm2
+; AVX-NEXT:    vsubps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm2[0,1],xmm0[2],xmm2[3]
+; AVX-NEXT:    retq
+  %i1 = shufflevector <4 x float> <float -4.200000e+01, float 4.200000e+01, float poison, float poison>, <4 x float> %B, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  %add = fadd <4 x float> %A, %i1
+  %sub = fsub <4 x float> %A, %i1
+  %res = shufflevector <4 x float> %add, <4 x float> %sub, <4 x i32> <i32 0, i32 1, i32 6, i32 3>
+  ret <4 x float> %res
 }
