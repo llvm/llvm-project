@@ -1575,6 +1575,19 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     return false;
   };
 
+  const auto isOddS16VectorStore = [=](const LegalityQuery &Query,
+                                       bool IsStore) -> bool {
+    const LLT DstTy = Query.Types[0];
+    const LLT MemTy = Query.MMODescrs[0].MemoryTy;
+
+    if (IsStore && DstTy.isVector() && DstTy == MemTy &&
+        DstTy.getElementType().getSizeInBits() == 16 &&
+        DstTy.getNumElements() % 2 != 0)
+      return true;
+
+    return false;
+  };
+
   unsigned GlobalAlign32 = ST.hasUnalignedBufferAccessEnabled() ? 0 : 32;
   unsigned GlobalAlign16 = ST.hasUnalignedBufferAccessEnabled() ? 0 : 16;
   unsigned GlobalAlign8 = ST.hasUnalignedBufferAccessEnabled() ? 0 : 8;
@@ -1699,7 +1712,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
         .fewerElementsIf(
             [=](const LegalityQuery &Query) -> bool {
               return Query.Types[0].isVector() &&
-                     needToSplitMemOp(Query, Op == G_LOAD);
+                     (needToSplitMemOp(Query, Op == G_LOAD) ||
+                      isOddS16VectorStore(Query, IsStore));
             },
             [=](const LegalityQuery &Query) -> std::pair<unsigned, LLT> {
               const LLT DstTy = Query.Types[0];
