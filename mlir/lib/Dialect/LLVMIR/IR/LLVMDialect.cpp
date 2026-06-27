@@ -1388,8 +1388,11 @@ static ParseResult parseCallTypeAndResolveOperands(
   }
   SmallVector<Type> argTypes;
   SmallVector<Type> resTypes;
+  SMLoc signatureLoc = parser.getCurrentLocation();
   if (call_interface_impl::parseFunctionSignature(parser, argTypes, argAttrs,
                                                   resTypes, resultAttrs)) {
+    if (parser.getCurrentLocation() != signatureLoc)
+      return failure();
     if (isDirect)
       return parser.emitError(trailingTypesLoc,
                               "expected direct call to have 1 trailing types");

@@ -241,6 +241,16 @@ func.func @call_missing_ptr_type(%callee : !llvm.func<i8 (i8)>, %arg : i8) {
 
 // -----
 
+func.func private @callee()
+
+func.func @call_missing_empty_result() {
+  // expected-error@+2 {{expected '->' followed by function result list}}
+  llvm.call @callee() : ()
+  llvm.return
+}
+
+// -----
+
 func.func private @standard_func_callee()
 
 func.func @call_missing_ptr_type(%arg : i8) {
