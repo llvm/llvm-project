@@ -85,7 +85,6 @@ private:
     return Ok{};
   }
 
-  // Adds a single component to the end of this path.
   ErrorOr<Ok> push_raw(char c) { return push_raw(cpp::string_view(&c, 1)); }
 
   cpp::string path_;
