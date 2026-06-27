@@ -159,6 +159,28 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  lgammaf_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    lgammaf_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.math.lgammaf
+)
+
+add_fp_unittest(
+  lgammaf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    lgammaf16_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.math.lgammaf16
+)
+
+add_fp_unittest(
   tanpif16_test
   SUITE
     libc-math-smoke-tests

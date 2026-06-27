@@ -309,6 +309,8 @@
 #include "math/ldexpf128.h"
 #include "math/ldexpf16.h"
 #include "math/ldexpl.h"
+#include "math/lgammaf.h"
+#include "math/lgammaf16.h"
 #include "math/llogb.h"
 #include "math/llogbbf16.h"
 #include "math/llogbf.h"
