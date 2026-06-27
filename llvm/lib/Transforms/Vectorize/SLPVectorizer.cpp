@@ -28757,6 +28757,12 @@ class HorizontalReduction {
            (match(I, m_LogicalAnd()) || match(I, m_LogicalOr()));
   }
 
+  /// Match an OR/UMax reduction whose only use is an equality compare against
+  /// zero, for example:
+  ///   %r = call iN @llvm.vector.reduce.or/umax(...)
+  ///   %c = icmp eq/ne iN %r, 0
+  ///
+  /// this is an all-zero / any-nonzero test of the reduced input lanes.
   std::optional<ReductionZeroTestInfo> matchReductionZeroTestUse() const {
     auto *Root = dyn_cast<Instruction>(ReductionRoot);
     if (!Root || !Root->getType()->isIntegerTy() || !Root->hasOneUse() ||
@@ -28772,6 +28778,12 @@ class HorizontalReduction {
     return ReductionZeroTestInfo{Cmp, Pred};
   }
 
+  /// Cost the boolean-vector form of a reduction zero-test:
+  ///   %cmp = icmp eq/ne <N x Ty> %v, zeroinitializer
+  ///   %r   = call i1 @llvm.vector.reduce.and/or.vNi1(%cmp)
+  ///
+  /// `eq` uses reduce.and for an all-zero test, while `ne` uses reduce.or for
+  /// an any-nonzero test.
   static InstructionCost
   getBoolReductionZeroTestCost(const TargetTransformInfo &TTI,
                                FixedVectorType *VecTy, CmpPredicate Pred,
@@ -28784,6 +28796,13 @@ class HorizontalReduction {
            TTI.getArithmeticReductionCost(ReductionOpcode, CmpTy, {}, CostKind);
   }
 
+  /// Cost the fixed-width mask+ctpop form of a reduction zero-test:
+  ///   %cmp  = icmp ne <N x Ty> %v, zeroinitializer
+  ///   %mask = bitcast <N x i1> %cmp to iN
+  ///   %cnt  = call iN @llvm.ctpop.iN(iN %mask)
+  ///   %r    = icmp eq/ne iN %cnt, 0
+  ///
+  /// `eq` tests all-zero lanes; `ne` tests any-nonzero lane.
   static InstructionCost getCtpopZeroTestCost(const TargetTransformInfo &TTI,
                                               FixedVectorType *VecTy,
                                               CmpPredicate Pred,
@@ -28807,6 +28826,16 @@ class HorizontalReduction {
     return CmpCost + BitcastCost + CtpopCost + ScalarCmpCost;
   }
 
+  /// Choose the cheaper lowering for an OR/UMax reduction zero-test:
+  ///   %r = call iN @llvm.vector.reduce.or/umax(...)
+  ///   %c = icmp eq/ne iN %r, 0
+  ///
+  /// Return Ctpop when the fixed-width mask+ctpop form is valid and cheaper
+  /// than the boolean reduction form, or when boolean reduction is invalid:
+  ///   %cmp  = icmp ne <N x Ty> %v, zeroinitializer
+  ///   %mask = bitcast <N x i1> %cmp to iN
+  ///   %cnt  = call iN @llvm.ctpop.iN(iN %mask)
+  ///   %c    = icmp eq/ne iN %cnt, 0
   static std::optional<ZeroTestLoweringInfo>
   getBestReductionZeroTestLowering(const TargetTransformInfo &TTI,
                                    FixedVectorType *VecTy, CmpPredicate Pred,
@@ -28830,6 +28859,19 @@ class HorizontalReduction {
     return ZeroTestLoweringInfo{ZeroTestLoweringKind::BoolReduction, BoolCost};
   }
 
+  /// Create the boolean-reduction form of a vector zero-test.
+  /// For a vector input:
+  ///   %vec = <N x Ty> ...
+  /// return:
+  ///   %cmp = icmp eq/ne <N x Ty> %vec, zeroinitializer
+  ///   %r   = call i1 @llvm.vector.reduce.and/or.vNi1(%cmp)
+  ///
+  /// `eq` creates an all-zero test:
+  ///   reduce.and(icmp eq %vec, 0)
+  /// `ne` creates an any-nonzero test:
+  ///   reduce.or(icmp ne %vec, 0)
+  ///
+  /// Return nullptr if the input is not a vector.
   static Value *createBoolReductionZeroTest(IRBuilderBase &Builder, Value *Vec,
                                             CmpPredicate Pred) {
     auto *VecTy = dyn_cast<VectorType>(Vec->getType());
@@ -28842,6 +28884,17 @@ class HorizontalReduction {
     return createSimpleReduction(Builder, Cmp, ReductionKind);
   }
 
+  /// Create the mask+ctpop form of a fixed-vector zero-test.
+  /// For a fixed vector input:
+  ///   %vec = <N x Ty> ...
+  /// return:
+  ///   %nz   = icmp ne <N x Ty> %vec, zeroinitializer
+  ///   %mask = bitcast <N x i1> %nz to iN
+  ///   %pop  = call iN @llvm.ctpop.iN(iN %mask)
+  ///   %r    = icmp eq/ne iN %pop, 0
+  ///
+  /// `eq` tests whether all lanes are zero; `ne` tests whether any lane is
+  /// non-zero. Return nullptr if the input is not a fixed vector.
   static Value *createCtpopZeroTest(IRBuilderBase &Builder, Value *Vec,
                                     CmpPredicate Pred) {
     auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
