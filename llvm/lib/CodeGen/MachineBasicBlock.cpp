@@ -936,6 +936,8 @@ void MachineBasicBlock::addPredecessor(MachineBasicBlock *Pred) {
 }
 
 void MachineBasicBlock::removePredecessor(MachineBasicBlock *Pred) {
+  // This is often called on many predecessors in reverse order.
+  // Do a reverse search and removal to avoid quadratic behavior in such cases.
   auto RI = llvm::find(reverse(Predecessors), Pred);
   assert(RI != Predecessors.rend() &&
          "Pred is not a predecessor of this block!");
