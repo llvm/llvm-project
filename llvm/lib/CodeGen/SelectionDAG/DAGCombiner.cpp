@@ -6307,11 +6307,13 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   if (SDValue RMINMAX = reassociateOps(Opcode, DL, N0, N1, N->getFlags()))
     return RMINMAX;
 
-  // For code size: smax(X, -1) -> or(X, ashr(X, BW-1))
+  // smax(X, -1) -> or(X, ashr(X, BW-1))
   // The arithmetic right shift sign-extends: 0 for X >= 0, -1 for X < 0.
   // OR-ing X with this mask yields X when non-negative and -1 when negative,
   // which matches smax(X, -1) using two instructions instead of compare+cmov.
-  if (ForCodeSize && Opcode == ISD::SMAX) {
+  // Beneficial for code size on x86-64 and for instruction count on
+  // AArch64/APX.
+  if (Opcode == ISD::SMAX) {
     if (auto *N1C = isConstOrConstSplat(N1)) {
       if (N1C->isAllOnes() &&
           !TLI.shouldAvoidTransformToShift(VT, VT.getScalarSizeInBits() - 1)) {
