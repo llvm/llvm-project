@@ -29,6 +29,7 @@
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyTargetMachine.h"
 #include "WebAssemblyUtilities.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -1837,7 +1838,8 @@ bool WebAssemblyCFGStackify::fixCallUnwindMismatches(MachineFunction &MF) {
   // multiple BBs.
   using TryRange = std::pair<MachineInstr *, MachineInstr *>;
   // In original CFG, <unwind destination BB, a vector of try/try_table ranges>
-  DenseMap<MachineBasicBlock *, SmallVector<TryRange, 4>> UnwindDestToTryRanges;
+  MapVector<MachineBasicBlock *, SmallVector<TryRange, 4>>
+      UnwindDestToTryRanges;
 
   // Gather possibly throwing calls (i.e., previously invokes) whose current
   // unwind destination is not the same as the original CFG. (Case 1)
@@ -2203,7 +2205,7 @@ bool WebAssemblyCFGStackify::fixCatchUnwindMismatches(MachineFunction &MF) {
   SmallVector<const MachineBasicBlock *, 8> EHPadStack;
   // For EH pads that have catch unwind mismatches, a map of <EH pad, its
   // correct unwind destination>.
-  DenseMap<MachineBasicBlock *, MachineBasicBlock *> EHPadToUnwindDest;
+  MapVector<MachineBasicBlock *, MachineBasicBlock *> EHPadToUnwindDest;
 
   for (auto &MBB : reverse(MF)) {
     for (auto &MI : reverse(MBB)) {

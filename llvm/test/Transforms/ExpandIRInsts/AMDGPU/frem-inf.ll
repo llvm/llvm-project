@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn -passes="require<libcall-lowering-info>,expand-ir-insts<O0>" %s -S -o - | FileCheck --check-prefixes CHECK %s
+; RUN: opt -mtriple=amdgcn -passes="require<libcall-lowering-info>,expand-ir-insts<O0>" %s -S -o - | FileCheck %s
 ; RUN: opt -mtriple=amdgcn -passes="require<libcall-lowering-info>,expand-ir-insts<O1>" %s -S -o - | FileCheck --check-prefixes CHECK,OPT1 %s
 
 ; Check the handling of potentially infinite numerators in the frem

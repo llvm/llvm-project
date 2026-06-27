@@ -15,6 +15,7 @@
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyTargetMachine.h"
 #include "WebAssemblyUtilities.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -297,7 +298,8 @@ bool WebAssemblyLateEHPrepare::replaceFuncletReturns(MachineFunction &MF) {
 bool WebAssemblyLateEHPrepare::addCatchRefsAndThrowRefs(MachineFunction &MF) {
   const auto &TII = *MF.getSubtarget<WebAssemblySubtarget>().getInstrInfo();
   auto &MRI = MF.getRegInfo();
-  DenseMap<MachineBasicBlock *, SmallVector<MachineInstr *, 2>> EHPadToRethrows;
+  MapVector<MachineBasicBlock *, SmallVector<MachineInstr *, 2>>
+      EHPadToRethrows;
 
   // Create a map of <EH pad, a vector of RETHROWs rethrowing its exception>
   for (auto &MBB : MF)

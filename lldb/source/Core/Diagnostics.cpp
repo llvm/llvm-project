@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Utility/Diagnostics.h"
+#include "lldb/Core/Diagnostics.h"
 #include "lldb/Utility/LLDBAssert.h"
 
 #include "llvm/Support/Error.h"

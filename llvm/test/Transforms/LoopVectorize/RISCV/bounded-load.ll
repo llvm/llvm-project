@@ -36,8 +36,8 @@ define i32 @evl_tail_folding_rejected(ptr %A, i32 %N) {
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i32 [ 0, %[[SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[CLAMPED:%.*]] = urem i32 [[IV]], 4
-; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[CLAMPED]]
+; CHECK-NEXT:    [[BOUNDED:%.*]] = urem i32 [[IV]], 4
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[BOUNDED]]
 ; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[GEP_A]], align 4
 ; CHECK-NEXT:    [[SUM_NEXT]] = add i32 [[SUM]], [[LV]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
@@ -53,8 +53,8 @@ entry:
 loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %sum = phi i32 [ 0, %entry ], [ %sum.next, %loop ]
-  %clamped = urem i32 %iv, 4
-  %gep.A = getelementptr inbounds i32, ptr %A, i32 %clamped
+  %bounded = urem i32 %iv, 4
+  %gep.A = getelementptr inbounds i32, ptr %A, i32 %bounded
   %lv = load i32, ptr %gep.A, align 4
   %sum.next = add i32 %sum, %lv
   %iv.next = add nuw nsw i32 %iv, 1

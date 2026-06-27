@@ -2496,12 +2496,6 @@ public:
     VPUser::addOperand(V);
   }
 
-  /// Returns the backedge value as a recipe. The backedge value is guaranteed
-  /// to be a recipe.
-  virtual VPRecipeBase &getBackedgeRecipe() {
-    return *getBackedgeValue()->getDefiningRecipe();
-  }
-
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print the recipe.
@@ -2592,13 +2586,6 @@ public:
   }
 
   VPValue *getBackedgeValue() override {
-    // TODO: All operands of base recipe must exist and be at same index in
-    // derived recipe.
-    llvm_unreachable(
-        "VPWidenIntOrFpInductionRecipe generates its own backedge value");
-  }
-
-  VPRecipeBase &getBackedgeRecipe() override {
     // TODO: All operands of base recipe must exist and be at same index in
     // derived recipe.
     llvm_unreachable(

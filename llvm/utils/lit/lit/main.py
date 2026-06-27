@@ -278,8 +278,6 @@ def run_tests(tests, lit_config, opts, discovered_tests):
         error = "warning: reached maximum number of test failures"
     except lit.run.TimeoutError:
         error = "warning: reached timeout"
-    except lit.run.WorkerCrashError as e:
-        lit_config.error(f"a worker process crashed: {e}")
 
     display.clear(interrupted)
     if error:

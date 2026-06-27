@@ -15,7 +15,7 @@
 // template <class charT, class traits, class Allocator>
 // class basic_syncbuf;
 
-// void swap(basic_syncbuf& other) noexcept;
+// void swap(basic_syncbuf& other);
 
 #include <syncstream>
 #include <sstream>
@@ -43,6 +43,7 @@ static void test_basic() {
     assert(std::__wrapped_streambuf_mutex::__instance().__get_count(&sstr2) == 1);
 #endif
 
+    ASSERT_NOT_NOEXCEPT(sync_buf1.swap(sync_buf2)); // LWG3498
     sync_buf1.swap(sync_buf2);
     assert(sync_buf1.get_wrapped() == &sstr2);
     assert(sync_buf2.get_wrapped() == &sstr1);

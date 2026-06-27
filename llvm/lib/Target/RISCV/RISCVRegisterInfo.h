@@ -177,6 +177,13 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   static bool isRVVRegClass(const TargetRegisterClass *RC) {
     return RISCVRI::isVRegClass(RC->TSFlags);
   }
+
+  static bool isFPRegister(MCRegister Reg) {
+    return RISCV::FPR16RegClass.contains(Reg) ||
+           RISCV::FPR32RegClass.contains(Reg) ||
+           RISCV::FPR64RegClass.contains(Reg) ||
+           RISCV::FPR128RegClass.contains(Reg);
+  }
 };
 } // namespace llvm
 

@@ -2892,7 +2892,11 @@ static int GetMatchingDistance(const common::LanguageFeatureControl &features,
           }
         }
       } else if (const auto *actualLastSymbol{evaluate::GetLastSymbol(*expr)}) {
-        actualCanUseImplicitCudaMemoryMode = true;
+        // Propagate any explicit CUDA data attribute from the referenced
+        // symbol (e.g. a device array operand inside RESHAPE()) so that
+        // Device-attributed dummies still match. Do NOT set
+        // actualCanUseImplicitCudaMemoryMode: the expression result is a
+        // temporary, not a user variable with unified/managed storage.
         const Symbol &resolved{
             semantics::ResolveAssociations(*actualLastSymbol)};
         if (const auto *actualObject{
