@@ -4026,12 +4026,12 @@ void discarded_body_local() {
 }
 } // namespace statement_expression
 
-<<<<<<< HEAD
 // This would normally trigger a suggestion warning if -Wlifetime-safety-suggestions was on.
 // Since it is off, we expect NO warnings or notes here.
 View suggestion_disabled_test(View a) {
   return a;
-=======
+}
+
 // Test case for false positive involving conditional operator in a loop.
 struct LoopCondBindS {
   int* get() const [[clang::lifetimebound]];
@@ -4046,5 +4046,4 @@ void test_loop_cond_bind(bool cond) {
     int x, y;
     consume_loop_cond_bind(cond ? &x : &y); // no-warning
   }
->>>>>>> 8bf29ea651b1 ([LifetimeSafety] Fix loop liveness leakage for conditional operator)
 }
