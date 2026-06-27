@@ -391,7 +391,7 @@ def RetCC_X86_Win64_C : CallingConv<[
 // X86-64 vectorcall return-value convention.
 def RetCC_X86_64_Vectorcall : CallingConv<[
   // Vectorcall calling convention always returns FP values in XMMs.
-  CCIfType<[f32, f64],
+  CCIfType<[f32, f64, f128],
     CCAssignToReg<[XMM0, XMM1, XMM2, XMM3]>>,
 
   // Otherwise, everything is the same as Windows X86-64 C CC.

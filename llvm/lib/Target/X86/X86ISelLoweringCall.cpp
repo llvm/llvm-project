@@ -696,7 +696,6 @@ bool X86TargetLowering::CanLowerReturn(
     case CallingConv::Win64:
       return true;
     case CallingConv::C:
-    case CallingConv::X86_VectorCall:
       return Subtarget.isTargetWin64() || Subtarget.isTargetUEFI64();
     default:
       return false;

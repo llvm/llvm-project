@@ -44,8 +44,6 @@ define win64cc fp128 @ret_win64(fp128 %a) {
 define x86_vectorcallcc fp128 @"\01ret_vectorcall"(fp128 %a) {
 ; WIN-LABEL: ret_vectorcall:
 ; WIN:       # %bb.0:
-; WIN-NEXT:    movq %rcx, %rax
-; WIN-NEXT:    movaps %xmm1, (%rcx)
 ; WIN-NEXT:    retq
 ;
 ; LINUX-LABEL: ret_vectorcall:

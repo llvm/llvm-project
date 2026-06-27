@@ -1421,12 +1421,12 @@ public:
   ABIArgInfo classifyArgForArm64ECVarArg(QualType Ty) const override {
     unsigned FreeSSERegs = 0;
     return classify(Ty, FreeSSERegs, /*IsReturnType=*/false,
-                    /*IsVectorCall=*/false, /*IsRegCall=*/false);
+                    llvm::CallingConv::C);
   }
 
 private:
   ABIArgInfo classify(QualType Ty, unsigned &FreeSSERegs, bool IsReturnType,
-                      bool IsVectorCall, bool IsRegCall) const;
+                      unsigned CC) const;
   ABIArgInfo reclassifyHvaArgForVectorCall(QualType Ty, unsigned &FreeSSERegs,
                                            const ABIArgInfo &current) const;
 
@@ -3338,8 +3338,9 @@ ABIArgInfo WinX86_64ABIInfo::reclassifyHvaArgForVectorCall(
 }
 
 ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
-                                      bool IsReturnType, bool IsVectorCall,
-                                      bool IsRegCall) const {
+                                      bool IsReturnType, unsigned CC) const {
+  bool IsVectorCall = CC == llvm::CallingConv::X86_VectorCall;
+  bool IsRegCall = CC == llvm::CallingConv::X86_RegCall;
 
   if (Ty->isVoidType())
     return ABIArgInfo::getIgnore();
@@ -3453,10 +3454,24 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
             llvm::Type::getInt64Ty(getVMContext()), 2));
 
       // Mingw64 GCC returns f128 via sret, and Clang matches that for
-      // compatibility.
-      if (BT->getKind() == BuiltinType::Float128)
-        return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace(),
-                                       /*ByVal=*/false);
+      // compatibility. This mirrors the X86 backend's CanLowerReturn logic.
+      if (BT->getKind() == BuiltinType::Float128) {
+        auto IsWin64F128StackCC = [this](unsigned CC) -> bool {
+          switch (CC) {
+          case llvm::CallingConv::Win64:
+            return true;
+          case llvm::CallingConv::C:
+            return getTarget().getTriple().isOSWindows() ||
+                   getTarget().getTriple().isUEFI();
+          default:
+            return false;
+          }
+        };
+
+        if (IsWin64F128StackCC(CC))
+          return getNaturalAlignIndirect(
+              Ty, getDataLayout().getAllocaAddrSpace(), /*ByVal=*/false);
+      }
       break;
 
     default:
@@ -3503,8 +3518,7 @@ void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   }
 
   if (!getCXXABI().classifyReturnType(FI))
-    FI.getReturnInfo() = classify(FI.getReturnType(), FreeSSERegs, true,
-                                  IsVectorCall, IsRegCall);
+    FI.getReturnInfo() = classify(FI.getReturnType(), FreeSSERegs, true, CC);
 
   if (IsVectorCall) {
     // We can use up to 6 SSE register parameters with vectorcall.
@@ -3522,8 +3536,7 @@ void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
     // registers are left.
     unsigned *MaybeFreeSSERegs =
         (IsVectorCall && ArgNum >= 6) ? &ZeroSSERegs : &FreeSSERegs;
-    I.info =
-        classify(I.type, *MaybeFreeSSERegs, false, IsVectorCall, IsRegCall);
+    I.info = classify(I.type, *MaybeFreeSSERegs, false, CC);
     ++ArgNum;
   }
 
