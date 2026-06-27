@@ -89,3 +89,51 @@ void cxx_rewritten_binary_operator_complex_expr() {
 // OGCG: %[[R_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[R_ADDR]], i32 0, i32 1
 // OGCG: store i32 %[[RESULT_REAL]], ptr %[[R_REAL_PTR]], align 4
 // OGCG: store i32 %[[RESULT_IMAG]], ptr %[[R_IMAG_PTR]], align 4
+
+struct Result {
+  int value;
+};
+
+struct SpaceshipResult {
+  Result operator<(int) const { return {}; }
+};
+
+struct Item {
+  SpaceshipResult operator<=>(const Item &) const { return {}; }
+};
+
+void cxx_rewritten_binary_operator_aggr_expr() {
+  Item a;
+  Item b;
+  Result r = a < b;
+}
+
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!rec_Item>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!rec_Item>
+// CIR: %[[R_ADDR:.*]] = cir.alloca "r" {{.*}} init : !cir.ptr<!rec_Result>
+// CIR: %[[TMP_ADDR:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_SpaceshipResult>
+// CIR: %[[OP_RESULT:.*]] = cir.call @_ZNK4ItemssERKS_(%[[A_ADDR]], %[[B_ADDR]]) : (!cir.ptr<!rec_Item> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, !cir.ptr<!rec_Item> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}) -> !rec_SpaceshipResult
+// CIR: cir.store {{.*}} %[[OP_RESULT]], %[[TMP_ADDR]] : !rec_SpaceshipResult, !cir.ptr<!rec_SpaceshipResult>
+// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !s32i
+// CIR: %[[RESULT:.*]] = cir.call @_ZNK15SpaceshipResultltEi(%[[TMP_ADDR]], %[[CONST_0]]) : (!cir.ptr<!rec_SpaceshipResult> {llvm.align = 1 : i64, llvm.dereferenceable = 1 : i64, llvm.nonnull, llvm.noundef}, !s32i {llvm.noundef}) -> !rec_Result
+// CIR: cir.store {{.*}} %[[RESULT]], %[[R_ADDR]] : !rec_Result, !cir.ptr<!rec_Result>
+
+// The difference between LLVM and OGCG is due to missing ABI lowering.
+
+// LLVM: %[[A_ADDR:.*]] = alloca %struct.Item, i64 1, align 1
+// LLVM: %[[B_ADDR:.*]] = alloca %struct.Item, i64 1, align 1
+// LLVM: %[[R_ADDR:.*]] = alloca %struct.Result, i64 1, align 4
+// LLVM: %[[TMP_ADDR:.*]] = alloca %struct.SpaceshipResult, i64 1, align 1
+// LLVM: %[[OP_RESULT:.*]] = call %struct.SpaceshipResult @_ZNK4ItemssERKS_(ptr noundef nonnull align 1 dereferenceable(1) %[[A_ADDR]], ptr noundef nonnull align 1 dereferenceable(1) %[[B_ADDR]])
+// LLVM: store %struct.SpaceshipResult %[[OP_RESULT]], ptr %[[TMP_ADDR]], align 1
+// LLVM: %[[RESULT:.*]] = call %struct.Result @_ZNK15SpaceshipResultltEi(ptr noundef nonnull align 1 dereferenceable(1) %[[TMP_ADDR]], i32 noundef 0)
+// LLVM: store %struct.Result %[[RESULT]], ptr %[[R_ADDR]], align 4
+
+// OGCG: %[[A_ADDR:.*]] = alloca %struct.Item, align 1
+// OGCG: %[[B_ADDR:.*]] = alloca %struct.Item, align 1
+// OGCG: %[[R_ADDR:.*]] = alloca %struct.Result, align 4
+// OGCG: %[[TMP_ADDR:.*]] = alloca %struct.SpaceshipResult, align 1
+// OGCG: call void @_ZNK4ItemssERKS_(ptr noundef nonnull align 1 dereferenceable(1) %[[A_ADDR]], ptr noundef nonnull align 1 dereferenceable(1) %[[B_ADDR]])
+// OGCG: %[[RESULT:.*]] = call i32 @_ZNK15SpaceshipResultltEi(ptr noundef nonnull align 1 dereferenceable(1) %[[TMP_ADDR]], i32 noundef 0)
+// OGCG: %[[R_ADDR_PTR:.*]] = getelementptr inbounds nuw %struct.Result, ptr %[[R_ADDR:.*]], i32 0, i32 0
+// OGCG: store i32 %[[RESULT:.*]], ptr %[[R_ADDR_PTR]], align 4
