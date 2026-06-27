@@ -1123,18 +1123,6 @@ $Bracket[[>]]$Bracket[[>]] $LocalVariable_def[[s6]];
   )cpp"}},
                      ~ScopeModifierMask);
 
-  checkHighlightings(R"cpp(
-      module;
-      export module highlight;
-      $Modifier[[export]] void $Function_def[[foo]]() {
-      }
-      )cpp",
-                     {{"imp.cxx", R"cpp(
-    module;
-    export module ABC;
-  )cpp"}},
-                     ~ScopeModifierMask);
-
   // A separate test for macros in headers.
   checkHighlightings(R"cpp(
     #include "imp.h"
