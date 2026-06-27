@@ -1027,20 +1027,22 @@ INTERCEPTOR(SSIZE_T, read, int fd, void *ptr, SIZE_T count) {
 #endif
 
 #if SANITIZER_INTERCEPT___READ_CHK
-INTERCEPTOR(SSIZE_T, __read_chk, int fd, void *ptr, SIZE_T count,
+INTERCEPTOR(SSIZE_T, __read_chk, int fd, void* ptr, SIZE_T count,
             SIZE_T buflen) {
-  void *ctx;
+  void* ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, __read_chk, fd, ptr, count, buflen);
   COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
-  SSIZE_T res = COMMON_INTERCEPTOR_BLOCK_REAL(__read_chk)(fd, ptr, count,
-                                                          buflen);
-  if (res > 0) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, res);
-  if (res >= 0 && fd >= 0) COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd);
+  SSIZE_T res =
+      COMMON_INTERCEPTOR_BLOCK_REAL(__read_chk)(fd, ptr, count, buflen);
+  if (res > 0)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, res);
+  if (res >= 0 && fd >= 0)
+    COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd);
   return res;
 }
-#define INIT___READ_CHK COMMON_INTERCEPT_FUNCTION(__read_chk)
+#  define INIT___READ_CHK COMMON_INTERCEPT_FUNCTION(__read_chk)
 #else
-#define INIT___READ_CHK
+#  define INIT___READ_CHK
 #endif
 
 #if SANITIZER_INTERCEPT_FREAD
@@ -1079,20 +1081,22 @@ INTERCEPTOR(SSIZE_T, pread, int fd, void *ptr, SIZE_T count, OFF_T offset) {
 #endif
 
 #if SANITIZER_INTERCEPT___PREAD_CHK
-INTERCEPTOR(SSIZE_T, __pread_chk, int fd, void *ptr, SIZE_T count,
-            OFF_T offset, SIZE_T buflen) {
-  void *ctx;
+INTERCEPTOR(SSIZE_T, __pread_chk, int fd, void* ptr, SIZE_T count, OFF_T offset,
+            SIZE_T buflen) {
+  void* ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, __pread_chk, fd, ptr, count, offset, buflen);
   COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
   SSIZE_T res = COMMON_INTERCEPTOR_BLOCK_REAL(__pread_chk)(fd, ptr, count,
                                                            offset, buflen);
-  if (res > 0) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, res);
-  if (res >= 0 && fd >= 0) COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd);
+  if (res > 0)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, res);
+  if (res >= 0 && fd >= 0)
+    COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd);
   return res;
 }
-#define INIT___PREAD_CHK COMMON_INTERCEPT_FUNCTION(__pread_chk)
+#  define INIT___PREAD_CHK COMMON_INTERCEPT_FUNCTION(__pread_chk)
 #else
-#define INIT___PREAD_CHK
+#  define INIT___PREAD_CHK
 #endif
 
 #if SANITIZER_INTERCEPT_PREAD64
@@ -1114,21 +1118,22 @@ INTERCEPTOR(SSIZE_T, pread64, int fd, void *ptr, SIZE_T count, OFF64_T offset) {
 #endif
 
 #if SANITIZER_INTERCEPT___PREAD64_CHK
-INTERCEPTOR(SSIZE_T, __pread64_chk, int fd, void *ptr, SIZE_T count,
+INTERCEPTOR(SSIZE_T, __pread64_chk, int fd, void* ptr, SIZE_T count,
             OFF64_T offset, SIZE_T buflen) {
-  void *ctx;
-  COMMON_INTERCEPTOR_ENTER(ctx, __pread64_chk, fd, ptr, count, offset,
-                           buflen);
+  void* ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, __pread64_chk, fd, ptr, count, offset, buflen);
   COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
   SSIZE_T res = COMMON_INTERCEPTOR_BLOCK_REAL(__pread64_chk)(fd, ptr, count,
                                                              offset, buflen);
-  if (res > 0) COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, res);
-  if (res >= 0 && fd >= 0) COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd);
+  if (res > 0)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, ptr, res);
+  if (res >= 0 && fd >= 0)
+    COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd);
   return res;
 }
-#define INIT___PREAD64_CHK COMMON_INTERCEPT_FUNCTION(__pread64_chk)
+#  define INIT___PREAD64_CHK COMMON_INTERCEPT_FUNCTION(__pread64_chk)
 #else
-#define INIT___PREAD64_CHK
+#  define INIT___PREAD64_CHK
 #endif
 
 #if SANITIZER_INTERCEPT_READV
