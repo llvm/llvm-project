@@ -751,8 +751,12 @@ const char *GetEnv(const char *name) {
 #  endif
 }
 
+// uClibc-ng does not provide __libc_stack_end.  It is only referenced as a
+// weak symbol below, but the runtime shared library is linked with -z defs,
+// which rejects even weak undefined symbols, so do not declare it at all on
+// uClibc-ng -- GetArgsAndEnv() uses the /proc/self/cmdline fallback there.
 #  if !SANITIZER_HAIKU && !SANITIZER_FREEBSD && !SANITIZER_NETBSD && \
-      !SANITIZER_GO
+      !SANITIZER_GO && !SANITIZER_UCLIBC
 extern "C" {
 SANITIZER_WEAK_ATTRIBUTE extern void *__libc_stack_end;
 }
@@ -804,7 +808,7 @@ static void GetArgsAndEnv(char ***argv, char ***envp) {
   *argv = __ps_strings->ps_argvstr;
   *envp = __ps_strings->ps_envstr;
 #  else  // SANITIZER_FREEBSD
-#    if !SANITIZER_GO
+#    if !SANITIZER_GO && !SANITIZER_UCLIBC
   if (&__libc_stack_end) {
     uptr *stack_end = (uptr *)__libc_stack_end;
     // Linux/sparc64 needs an adjustment, cf. glibc
@@ -821,13 +825,13 @@ static void GetArgsAndEnv(char ***argv, char ***envp) {
     *argv = (char **)(stack_end + 1);
     *envp = (char **)(stack_end + argc + 2);
   } else {
-#    endif  // !SANITIZER_GO
+#    endif  // !SANITIZER_GO && !SANITIZER_UCLIBC
     static const int kMaxArgv = 2000, kMaxEnvp = 2000;
     ReadNullSepFileToArray("/proc/self/cmdline", argv, kMaxArgv);
     ReadNullSepFileToArray("/proc/self/environ", envp, kMaxEnvp);
-#    if !SANITIZER_GO
+#    if !SANITIZER_GO && !SANITIZER_UCLIBC
   }
-#    endif  // !SANITIZER_GO
+#    endif  // !SANITIZER_GO && !SANITIZER_UCLIBC
 #  endif    // SANITIZER_HAIKU
 }
 

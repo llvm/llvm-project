@@ -666,6 +666,20 @@ typedef unsigned long __sanitizer_sigset_t;
 typedef unsigned __sanitizer_sigset_t;
 #  elif SANITIZER_HAIKU
 typedef uint64_t __sanitizer_sigset_t;
+#  elif SANITIZER_UCLIBC
+// uClibc-ng deliberately keeps sigset_t the same size as the kernel's
+// sigset_t to avoid translation in syscall wrappers; see uClibc-ng
+// libc/sysdeps/linux/common/bits/sigset.h.  Mirror that size here so
+// the static CHECK_TYPE_SIZE(sigset_t) / sa_mask offset checks agree
+// with the actual uClibc-ng layout (16 bytes on MIPS, 8 bytes
+// elsewhere -- *not* the 128 bytes glibc declares).
+struct __sanitizer_sigset_t {
+#    if SANITIZER_MIPS
+  uptr val[16 / sizeof(uptr)];
+#    else
+  uptr val[8 / sizeof(uptr)];
+#    endif
+};
 #  elif SANITIZER_LINUX
 struct __sanitizer_sigset_t {
   // The size is determined by looking at sizeof of real sigset_t on linux.
@@ -746,6 +760,21 @@ struct __sanitizer_sigaction {
   __sanitizer_sigset_t sa_mask;
   uptr sa_flags;
   void (*sa_restorer)();
+};
+#  elif SANITIZER_UCLIBC
+// uClibc-ng's struct sigaction mirrors the Linux kernel layout
+// (sa_flags / sa_restorer before sa_mask) so that the sigaction()
+// syscall wrapper can pass the struct to rt_sigaction without
+// translation; see uClibc-ng's
+// libc/sysdeps/linux/common/bits/sigaction.h.
+struct __sanitizer_sigaction {
+  union {
+    __sanitizer_sigactionhandler_ptr sigaction;
+    __sanitizer_sighandler_ptr handler;
+  };
+  unsigned long sa_flags;
+  void (*sa_restorer)();
+  __sanitizer_sigset_t sa_mask;
 };
 #  else  // !SANITIZER_ANDROID
 struct __sanitizer_sigaction {
