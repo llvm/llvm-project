@@ -1177,15 +1177,12 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
   const bool isTbss = (sec->flags & SHF_TLS) && sec->type == SHT_NOBITS;
   const bool sameMemRegion = state->memRegion == sec->memRegion;
   const bool prevLMARegionIsDefault = state->lmaRegion == nullptr;
+  const uint64_t oldAddress = sec->addr;
   const uint64_t savedDot = dot;
-  bool addressChanged = false;
   state->memRegion = sec->memRegion;
   state->lmaRegion = sec->lmaRegion;
 
-  if (!(sec->flags & SHF_ALLOC)) {
-    // Non-SHF_ALLOC sections have zero addresses.
-    dot = 0;
-  } else if (isTbss) {
+  if (isTbss) {
     // Allow consecutive SHF_TLS SHT_NOBITS output sections. The address range
     // starts from the end address of the previous tbss section.
     if (state->tbssAddr == 0)
@@ -1209,6 +1206,25 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
                          sec->name);
   }
 
+  if (!(sec->flags & SHF_ALLOC)) {
+    // Non-SHF_ALLOC sections usually have zero addresses, with two exceptions:
+    // 1) Explicit address expressions are still respected.
+    // 2) The presence of symbol assignments (not to `.`) is considered user
+    //    intent for the section to have an address.
+    bool hasAssign = false;
+    for (SectionCommand *cmd : sec->commands) {
+      if (auto *assign = dyn_cast<SymbolAssignment>(cmd)) {
+        if (assign->name != ".") {
+          hasAssign = true;
+          break;
+        }
+      }
+    }
+
+    if (!(hasSectionsCommand && sec->addrExpr) && !hasAssign)
+      dot = 0;
+  }
+
   state->outSec = sec;
   if (!(sec->addrExpr && hasSectionsCommand)) {
     // ALIGN is respected. sec->alignment is the max of ALIGN and the maximum of
@@ -1217,7 +1233,6 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
     dot = alignToPowerOf2(dot, sec->addralign);
     expandMemoryRegions(dot - pos);
   }
-  addressChanged = sec->addr != dot;
   sec->addr = dot;
 
   // state->lmaOffset is LMA minus VMA. If LMA is explicitly specified via AT()
@@ -1227,12 +1242,12 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
   // heuristics described in
   // https://sourceware.org/binutils/docs/ld/Output-Section-LMA.html
   if (sec->lmaExpr) {
-    state->lmaOffset = sec->lmaExpr().getValue() - dot;
+    state->lmaOffset = sec->lmaExpr().getValue() - sec->addr;
   } else if (MemoryRegion *mr = sec->lmaRegion) {
     uint64_t lmaStart = alignToPowerOf2(mr->curPos, sec->addralign);
     if (mr->curPos < lmaStart)
       expandMemoryRegion(mr, lmaStart - mr->curPos, sec->name);
-    state->lmaOffset = lmaStart - dot;
+    state->lmaOffset = lmaStart - sec->addr;
   } else if (!sameMemRegion || !prevLMARegionIsDefault) {
     state->lmaOffset = 0;
   }
@@ -1315,7 +1330,7 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
     state->tbssAddr = dot;
     dot = savedDot;
   }
-  return addressChanged;
+  return sec->addr != oldAddress;
 }
 
 static bool isDiscardable(const OutputSection &sec) {
