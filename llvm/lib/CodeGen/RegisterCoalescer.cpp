@@ -1814,6 +1814,14 @@ MachineInstr *RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
   } else
     LIS->removeVRegDefAt(DstLI, RegIndex);
 
+  // CopyMI is about to be erased. Its def of DstReg may itself be a partial
+  // subregister def, so flag it as <undef> up front: this keeps the scan below
+  // from treating it as a partial redef to repair, and lets shrinkToUses
+  // ignore it.
+  for (MachineOperand &MO : CopyMI->all_defs())
+    if (MO.getReg() == DstReg)
+      MO.setIsUndef(true);
+
   // Mark uses as undef.
   for (MachineOperand &MO : MRI->reg_nodbg_operands(DstReg)) {
     if (MO.isUndef())
@@ -1825,9 +1833,6 @@ MachineInstr *RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
     // undef value it read has been removed, that read has no incoming value,
     // so turn it into a read-undef def.
     if (MO.isDef()) {
-      if (MI == CopyMI)
-        continue;
-
       unsigned SubReg = MO.getSubReg();
       if (SubReg == 0 || !MO.readsReg())
         continue;
@@ -1865,14 +1870,6 @@ MachineInstr *RegisterCoalescer::eliminateUndefCopy(MachineInstr *CopyMI) {
     LLVM_DEBUG(dbgs() << "\tnew undef: " << UseIdx << '\t' << *MI);
   }
 
-  // A def of a subregister may be a use of the other subregisters, so
-  // deleting a def of a subregister may also remove uses. Since CopyMI
-  // is still part of the function (but about to be erased), mark all
-  // defs of DstReg in it as <undef>, so that shrinkToUses would
-  // ignore them.
-  for (MachineOperand &MO : CopyMI->all_defs())
-    if (MO.getReg() == DstReg)
-      MO.setIsUndef(true);
   LIS->shrinkToUses(&DstLI);
 
   return CopyMI;

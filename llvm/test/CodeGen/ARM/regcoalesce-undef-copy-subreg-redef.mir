@@ -1,0 +1,82 @@
+# RUN: llc -mtriple=armv8a-unknown-linux -run-pass=register-coalescer -verify-machineinstrs -o - %s | FileCheck %s
+
+# Regression test for issue #202263 (and the long-standing #200378). After
+# RegisterCoalescer eliminates the COPY of an undefined value, the partial
+# subregister redef that implicitly read it must become a read-undef def;
+# otherwise the coalescer asserts "Instruction is reading nonexistent value"
+# on targets that do not track subregister liveness.
+
+--- |
+  define void @init(i64 %0, i1 %c, ptr %1) {
+    ret void
+  }
+...
+---
+name:            init
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: dpair }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+  - { id: 3, class: gpr }
+  - { id: 4, class: gpr }
+  - { id: 5, class: dpr }
+  - { id: 7, class: dpr }
+  - { id: 8, class: qpr }
+  - { id: 9, class: dpr }
+  - { id: 11, class: gpr }
+  - { id: 12, class: dpr }
+  - { id: 13, class: dpr }
+  - { id: 14, class: gpr }
+  - { id: 15, class: qpr }
+  - { id: 16, class: dpr }
+  - { id: 17, class: dpr }
+  - { id: 18, class: qpr }
+liveins:
+  - { reg: '$r0', virtual-reg: '%1' }
+  - { reg: '$r1', virtual-reg: '%2' }
+  - { reg: '$r2', virtual-reg: '%3' }
+  - { reg: '$r3', virtual-reg: '%4' }
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $r0, $r1, $r2, $r3
+
+    %4:gpr = COPY killed $r3
+    %3:gpr = COPY killed $r2
+    %2:gpr = COPY killed $r1
+    %1:gpr = COPY killed $r0
+    TSTri killed %3, 1, 14 /* CC::al */, $noreg, implicit-def $cpsr
+    Bcc %bb.2, 0 /* CC::eq */, killed $cpsr
+    B %bb.1
+
+  bb.1:
+    BX_RET 14 /* CC::al */, $noreg
+
+  bb.2:
+    successors: %bb.1
+
+    ; The COPY of an undef value below feeds the dsub_1 partial redef. After the
+    ; copy is eliminated, that redef must become a read-undef def.
+    ; CHECK-LABEL: name: init
+    ; CHECK: undef [[Q:%[0-9]+]].dsub_1:qpr = VSETLNi32 undef [[Q]].dsub_1,
+    %5:dpr = VSETLNi32 undef %5, killed %1, 0, 14 /* CC::al */, $noreg
+    %7:dpr = COPY killed %5
+    %7:dpr = VSETLNi32 %7, killed %2, 1, 14 /* CC::al */, $noreg
+    undef %8.dsub_0:qpr = COPY undef %9:dpr
+    %8.dsub_1:qpr = COPY killed %7
+    %11:gpr = MOVi 1, 14 /* CC::al */, $noreg, $noreg
+    %12:dpr = COPY %8.dsub_0
+    %13:dpr = COPY killed %12
+    %13:dpr = VSETLNi32 %13, killed %11, 0, 14 /* CC::al */, $noreg
+    %14:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+    %15:qpr = COPY killed %8
+    %15.dsub_0:qpr = COPY %13
+    %16:dpr = COPY killed %13
+    %17:dpr = COPY killed %16
+    %17:dpr = VSETLNi32 %17, killed %14, 1, 14 /* CC::al */, $noreg
+    %18:qpr = COPY killed %15
+    %18.dsub_0:qpr = COPY killed %17
+    VST1q64 killed %4, 0, killed %18, 14 /* CC::al */, $noreg :: (store (s128) into %ir.1, align 8)
+    B %bb.1
+...
