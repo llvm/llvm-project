@@ -390,14 +390,16 @@ enum ValueType : uint32_t {
   /// function pointer in virtual function table
   eValueTypeVTableEntry = 10,
 
-  kLastValueType = eValueTypeVTableEntry
-};
+  kLastValueType = eValueTypeVTableEntry,
 
-/// A mask that we can use to check if the value type is synthetic or not.
-// NOTE: This limits the number of value types to 31, but that's 3x more than
-// what we currently have now. See lldb/Utility/ValueType.h for helpers for
-// working with synthetic value types.
-static constexpr unsigned ValueTypeSyntheticMask = 0x20;
+  /// A flag that indicates if the value type is synthetic or not.
+  // NOTE: This limits the number of value types to 31, but that's 3x more than
+  // what we currently have now. See lldb/Utility/ValueType.h for helpers for
+  // working with synthetic value types.
+  eValueTypeSyntheticFlag = 0x20,
+
+  kValueTypeFlagsMask = eValueTypeSyntheticFlag,
+};
 
 /// Token size/granularities for Input Readers.
 

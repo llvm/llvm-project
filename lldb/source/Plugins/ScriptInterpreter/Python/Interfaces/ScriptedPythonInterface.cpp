@@ -335,11 +335,13 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<
     error = Status::FromError(val.takeError());
     return std::nullopt;
   }
-  if (*val == eValueTypeInvalid || *val > kLastValueType) {
+  unsigned long long unmasked = *val & ~kValueTypeFlagsMask;
+  unsigned long long flags = *val & kValueTypeFlagsMask;
+  if (unmasked == eValueTypeInvalid || unmasked > kLastValueType) {
     error = Status::FromErrorStringWithFormatv(
-        "value type invalid or too large (got {0})", *val);
+        "value type invalid or too large (got {0} | {1:x})", unmasked, flags);
     return std::nullopt;
   }
 
-  return static_cast<ValueType>(*val);
+  return static_cast<ValueType>(unmasked | flags);
 }

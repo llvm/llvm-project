@@ -307,17 +307,9 @@ void ScriptedFrame::PopulateVariableListFromInterface(
       continue;
 
     // Ask the interface about the value type of this variable. If it doesn't
-    // specify any, use the original value type. If we encounter a variable, use
-    // a non-synthetic type unless it's overwritten.
-    std::optional<lldb::ValueType> desired_vt =
-        GetInterface()->GetValueTypeForVariable(v);
-    lldb::ValueType vt = [&] {
-      if (desired_vt)
-        return GetSyntheticValueType(*desired_vt);
-      if (v->GetVariable())
-        return v->GetValueType();
-      return GetSyntheticValueType(v->GetValueType());
-    }();
+    // specify any, use the original value type.
+    lldb::ValueType vt = GetInterface()->GetValueTypeForVariable(v).value_or(
+        GetSyntheticValueType(v->GetValueType()));
 
     if (IsSyntheticValueType(vt) && !include_synthetic_vars)
       continue;

@@ -556,9 +556,12 @@ class ValueProvidingFrame(ScriptedFrame):
         return None
 
     def get_value_type_for_variable(self, var):
-        if var.GetName() == "_handler_one":
+        name = var.GetName()
+        if name == "_handler_one":
+            return lldb.eValueTypeVariableLocal | lldb.eValueTypeSyntheticFlag
+        if name == "variable_in_main":
             return lldb.eValueTypeVariableLocal
-        return None  # Inherit the value type for others.
+        return None
 
     def get_variables(self):
         """"""
