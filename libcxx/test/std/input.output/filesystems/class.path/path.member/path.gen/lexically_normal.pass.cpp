@@ -108,7 +108,7 @@ int main(int, char**) {
       {"foo/bar/./..", "foo/"},
       {"foo/bar/./../", "foo/"},
 #ifdef _WIN32
-      /// A root-name followed by a dot-dot filename should not be removed.
+      // A root-name followed by a dot-dot filename should not be removed.
       {"C:..", "C:.."},
       {"C:..\\..", "C:..\\.."},
       {"C:foo\\..\\..", "C:.."},
