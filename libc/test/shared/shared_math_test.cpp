@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "shared/math.h"
+#include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
@@ -791,8 +792,6 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   EXPECT_FP_EQ(bfloat16(5.0),
                LIBC_NAMESPACE::shared::hypotbf16(bfloat16(4.0), bfloat16(3.0)));
 
-  EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::logbbf16(bfloat16(1.0f)));
-
   bfloat16 setpayloadbf16_res = bfloat16(0.0);
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::setpayloadbf16(&setpayloadbf16_res,
                                                       bfloat16(0.0)));
@@ -802,7 +801,9 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
                                                          bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(0.0), setpayloadsigbf16_res);
 
+  EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::logbbf16(bfloat16(1.0f)));
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::log_bf16(bfloat16(1.0)));
+  EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::log10bf16(bfloat16(1.0)));
 
   bfloat16 neg_min_denormal = FPBits::min_subnormal(Sign::NEG).get_val();
   EXPECT_FP_EQ(neg_min_denormal,
