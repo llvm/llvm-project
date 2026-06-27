@@ -219,7 +219,6 @@ for.i.end:                                        ; preds = %for.i.end_crit_edge
   ret i32 %add16
 }
 
-
 ; int h(int N, int M, int K) {
 ;   int sum = 0;
 ;   for (int i = 0; i < N; ++i) {
@@ -307,7 +306,6 @@ for.i.end:                                        ; preds = %for.i.end_crit_edge
   %sum.0.lcssa = phi i32 [ %split11, %for.i.end_crit_edge ], [ 0, %entry ]
   ret i32 %sum.0.lcssa
 }
-
 
 ; Same as @h but without the loop-invariant guard branches inside the outer
 ; loops (the "if (M > 0)" guard in for.i and "if (K > 0)" guard in for.j),

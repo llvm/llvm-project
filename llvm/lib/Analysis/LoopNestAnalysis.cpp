@@ -128,7 +128,7 @@ LoopNest::LoopNestEnum LoopNest::analyzeLoopNestForPerfectNest(
     return llvm::all_of(BB, [&](const Instruction &I) {
       bool IsSafeInstr =
           checkSafeInstruction(I, OuterLoopLatchCmp, OuterLoopLB);
-      if (IsSafeInstr) {
+      if (!IsSafeInstr) {
         DEBUG_WITH_TYPE(VerboseDebug, {
           dbgs() << "Instruction: " << I << "\nin basic block:" << BB
                  << "is unsafe.\n";
