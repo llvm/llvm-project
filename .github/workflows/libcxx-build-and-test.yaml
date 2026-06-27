@@ -51,8 +51,8 @@ jobs:
         cxx: [ 'clang++-23' ]
         include:
           - config: 'generic-gcc'
-            cc: 'gcc-15'
-            cxx: 'g++-15'
+            cc: 'gcc-16'
+            cxx: 'g++-16'
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
@@ -96,8 +96,8 @@ jobs:
         cxx: [ 'clang++-23' ]
         include:
           - config: 'generic-gcc-cxx11'
-            cc: 'gcc-15'
-            cxx: 'g++-15'
+            cc: 'gcc-16'
+            cxx: 'g++-16'
           - config: 'generic-cxx26'
             cc: 'clang-22'
             cxx: 'clang++-22'

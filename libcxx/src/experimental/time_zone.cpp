@@ -32,12 +32,6 @@
 // Work around https://gcc.gnu.org/bugzilla/show_bug.cgi?id=120502
 
 #include <__config>
-
-// TODO(LLVM 23): When upgrading to GCC 16 this can be removed
-#ifdef _LIBCPP_COMPILER_GCC
-#  pragma GCC optimize("-O0")
-#endif
-
 #include <algorithm>
 #include <cctype>
 #include <chrono>

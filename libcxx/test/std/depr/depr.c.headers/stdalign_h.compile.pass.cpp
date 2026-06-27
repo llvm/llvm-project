@@ -11,9 +11,6 @@
 // Even though <stdalign.h> is not provided by libc++,
 // we still test that using it with libc++ on the search path will work.
 
-// TODO: GCC doesn't provide a proper <stdalign.h> for C++ until 15.
-// UNSUPPORTED: gcc
-
 #include <stdalign.h>
 
 #ifndef __alignas_is_defined

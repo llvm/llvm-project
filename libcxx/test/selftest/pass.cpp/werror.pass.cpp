@@ -14,9 +14,6 @@
 
 // ADDITIONAL_COMPILE_FLAGS: -Wunused-variable
 
-// TODO: We don't enable -Werror on GCC right now, because too many tests fail.
-// UNSUPPORTED: gcc
-
 int main(int, char**) {
     int foo;
 }

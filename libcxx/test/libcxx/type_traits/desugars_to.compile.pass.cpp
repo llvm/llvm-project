@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // This test requires variable templates
-// UNSUPPORTED: gcc && c++11
+// ADDITIONAL_COMPILE_FLAGS: -Wno-c++14-extensions
 
 #include <__type_traits/desugars_to.h>
 
