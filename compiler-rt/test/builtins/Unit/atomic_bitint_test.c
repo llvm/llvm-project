@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <assert.h>
+#include <stdint.h>
 #include <stdio.h>
 
 typedef signed _BitInt(37) S37;
@@ -55,21 +56,25 @@ static void test_ops(void) {
 // Seed non-canonical padding through a union, then RMW. A loop that carried a
 // re-canonicalized expected would never match memory and hang here.
 static void test_dirty_padding(void) {
+  // uint64_t (not unsigned long, which is 32-bit on LLP64) so the padding bit
+  // is representable and the overlay matches the 8-byte atomic.
   union {
     _Atomic(S37) a;
-    unsigned long b;
+    uint64_t b;
   } s;
-  s.b = ((unsigned long)1 << 40) | 5u; // value bits 5, padding bit 40 set
+  s.b = ((uint64_t)1 << 40) | 5u; // value bits 5, padding bit 40 set
   S37 old = __c11_atomic_fetch_add(&s.a, 1, __ATOMIC_SEQ_CST);
   assert(old == 5 && (S37)s.a == 6);
+  assert((s.b >> 37) == 0); // padding canonicalized (positive value)
 
   union {
     _Atomic(U37) a;
-    unsigned long b;
+    uint64_t b;
   } u;
-  u.b = ((unsigned long)3 << 50) | 7u;
+  u.b = ((uint64_t)3 << 50) | 7u;
   U37 uold = __c11_atomic_fetch_add(&u.a, 1, __ATOMIC_SEQ_CST);
   assert(uold == 7 && (U37)u.a == 8);
+  assert((u.b >> 37) == 0); // padding canonicalized (zero-extended)
 
   // Wide padded width (libcall loop): _BitInt(200) has 56 padding bits in its
   // 32-byte storage. Set the overlay at value level (endian-independent): low
@@ -81,11 +86,35 @@ static void test_dirty_padding(void) {
   w.full = (unsigned _BitInt(256))5 | ((unsigned _BitInt(256))0xAA << 240);
   S200 wold = __c11_atomic_fetch_add(&w.a, 1, __ATOMIC_SEQ_CST);
   assert(wold == 5 && (S200)w.a == 6);
+  assert((w.full >> 200) == 0); // padding canonicalized (positive value)
+}
+
+// The _fetch builtins return the new value, not the old one.
+static void test_returns_new(void) {
+  S37 a = 100;
+  assert(__atomic_add_fetch(&a, 5, __ATOMIC_SEQ_CST) == 105);
+  assert(__atomic_sub_fetch(&a, 10, __ATOMIC_SEQ_CST) == 95);
+  U37 u = 0;
+  assert(__atomic_or_fetch(&u, 0xF, __ATOMIC_SEQ_CST) == 0xF);
+  S200 w = 100;
+  assert(__atomic_add_fetch(&w, 5, __ATOMIC_SEQ_CST) == 105);
+}
+
+// Each non-seq_cst ordering drives the loop's load/cmpxchg ordering.
+static void test_orderings(void) {
+  _Atomic(S37) a = 10;
+  (void)__c11_atomic_fetch_add(&a, 1, __ATOMIC_RELAXED);
+  (void)__c11_atomic_fetch_add(&a, 1, __ATOMIC_ACQUIRE);
+  (void)__c11_atomic_fetch_add(&a, 1, __ATOMIC_RELEASE);
+  (void)__c11_atomic_fetch_add(&a, 1, __ATOMIC_ACQ_REL);
+  assert((S37)a == 14);
 }
 
 int main(void) {
   test_ops();
   test_dirty_padding();
+  test_returns_new();
+  test_orderings();
   printf("PASS\n");
   return 0;
 }
