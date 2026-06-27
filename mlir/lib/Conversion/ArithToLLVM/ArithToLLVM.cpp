@@ -17,6 +17,7 @@
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/TypeUtilities.h"
 #include <type_traits>
 
@@ -736,7 +737,7 @@ struct ArithToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
       : ConvertToLLVMPatternInterface(dialect) {}
 
   void loadDependentDialects(MLIRContext *context) const final {
-    context->loadDialect<LLVM::LLVMDialect>();
+    context->loadDialect<LLVM::LLVMDialect, tensor::TensorDialect>();
   }
 
   /// Hook for derived dialect interface to provide conversion patterns

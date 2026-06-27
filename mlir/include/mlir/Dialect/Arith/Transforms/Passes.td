@@ -13,7 +13,7 @@ include "mlir/Pass/PassBase.td"
 
 def ArithExpandOpsPass : Pass<"arith-expand"> {
   let summary = "Legalize Arith ops to be convertible to LLVM.";
-  let dependentDialects = ["vector::VectorDialect"];
+  let dependentDialects = ["tensor::TensorDialect", "vector::VectorDialect"];
   let options =
       [Option<"includeBf16", "include-bf16", "bool", /*default=*/"false",
               "Enable the BF16 expansion patterns">,

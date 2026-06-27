@@ -180,7 +180,7 @@ def ArithToLLVMConversionPass : Pass<"convert-arith-to-llvm"> {
   let description = [{
     This pass converts supported Arith ops to LLVM dialect instructions.
   }];
-  let dependentDialects = ["LLVM::LLVMDialect"];
+  let dependentDialects = ["LLVM::LLVMDialect", "tensor::TensorDialect"];
   let options = [
     Option<"indexBitwidth", "index-bitwidth", "unsigned",
            /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
