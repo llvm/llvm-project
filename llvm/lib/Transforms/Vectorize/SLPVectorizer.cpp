@@ -28781,13 +28781,13 @@ class HorizontalReduction {
         Pred == ICmpInst::ICMP_EQ ? Instruction::And : Instruction::Or;
     return TTI.getCmpSelInstrCost(Instruction::ICmp, VecTy, CmpTy, Pred,
                                   CostKind) +
-           TTI.getArithmeticReductionCost(ReductionOpcode, CmpTy, {},
-                                          CostKind);
+           TTI.getArithmeticReductionCost(ReductionOpcode, CmpTy, {}, CostKind);
   }
 
-  static InstructionCost
-  getCtpopZeroTestCost(const TargetTransformInfo &TTI, FixedVectorType *VecTy,
-                       CmpPredicate Pred, TTI::TargetCostKind CostKind) {
+  static InstructionCost getCtpopZeroTestCost(const TargetTransformInfo &TTI,
+                                              FixedVectorType *VecTy,
+                                              CmpPredicate Pred,
+                                              TTI::TargetCostKind CostKind) {
     LLVMContext &Ctx = VecTy->getContext();
     ElementCount EC = VecTy->getElementCount();
     if (EC.isScalable())
@@ -28797,9 +28797,9 @@ class HorizontalReduction {
     auto *MaskIntTy = IntegerType::get(Ctx, EC.getFixedValue());
     InstructionCost CmpCost = TTI.getCmpSelInstrCost(
         Instruction::ICmp, VecTy, CmpTy, ICmpInst::ICMP_NE, CostKind);
-    InstructionCost BitcastCost = TTI.getCastInstrCost(
-        Instruction::BitCast, MaskIntTy, CmpTy, TTI::CastContextHint::None,
-        CostKind);
+    InstructionCost BitcastCost =
+        TTI.getCastInstrCost(Instruction::BitCast, MaskIntTy, CmpTy,
+                             TTI::CastContextHint::None, CostKind);
     IntrinsicCostAttributes ICA(Intrinsic::ctpop, MaskIntTy, {MaskIntTy});
     InstructionCost CtpopCost = TTI.getIntrinsicInstrCost(ICA, CostKind);
     InstructionCost ScalarCmpCost = TTI.getCmpSelInstrCost(
@@ -28836,8 +28836,7 @@ class HorizontalReduction {
     if (!VecTy)
       return nullptr;
 
-    Value *Cmp =
-        Builder.CreateICmp(Pred, Vec, Constant::getNullValue(VecTy));
+    Value *Cmp = Builder.CreateICmp(Pred, Vec, Constant::getNullValue(VecTy));
     RecurKind ReductionKind =
         Pred == ICmpInst::ICMP_EQ ? RecurKind::And : RecurKind::Or;
     return createSimpleReduction(Builder, Cmp, ReductionKind);
