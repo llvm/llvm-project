@@ -339,8 +339,8 @@ private:
                 "WordType must be unsigned integer.");
 
   struct Division {
-    BigInt quotient;
-    BigInt remainder;
+    BigInt quotient{};
+    BigInt remainder{};
   };
 
 public:
@@ -692,7 +692,7 @@ public:
   //   And finally we perform some extra alignment steps for the remaining bits.
   LIBC_INLINE constexpr cpp::optional<BigInt>
   div_uint_half_times_pow_2(multiword::half_width_t<WordType> x, size_t e) {
-    BigInt remainder;
+    BigInt remainder{};
     if (x == 0)
       return cpp::nullopt;
     if (e >= Bits) {
@@ -700,7 +700,7 @@ public:
       *this = BigInt<Bits, false, WordType>();
       return remainder;
     }
-    BigInt quotient;
+    BigInt quotient{};
     WordType x_word = static_cast<WordType>(x);
     constexpr size_t LOG2_WORD_SIZE =
         static_cast<size_t>(cpp::bit_width(WORD_SIZE) - 1);
@@ -1010,7 +1010,7 @@ private:
   LIBC_INLINE constexpr static Division divide_unsigned(const BigInt &dividend,
                                                         const BigInt &divider) {
     BigInt remainder = dividend;
-    BigInt quotient;
+    BigInt quotient{};
     if (remainder >= divider) {
       BigInt subtractor = divider;
       int cur_bit = multiword::countl_zero(subtractor.val) -
@@ -1391,6 +1391,11 @@ template <typename T>
 first_trailing_one(T value) {
   return value == 0 ? 0 : cpp::countr_zero(value) + 1;
 }
+
+static_assert(LIBC_NAMESPACE::cpp::is_trivially_constructible<
+              LIBC_NAMESPACE::BigInt<128, false>>::value);
+static_assert(LIBC_NAMESPACE::cpp::is_trivially_copyable<
+              LIBC_NAMESPACE::BigInt<128, false>>::value);
 
 } // namespace LIBC_NAMESPACE_DECL
 
