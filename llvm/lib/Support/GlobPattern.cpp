@@ -16,6 +16,9 @@
 
 using namespace llvm;
 
+static constexpr char PrefixMetacharacters[] = "?*[{\\";
+static constexpr char SuffixMetacharacters[] = "?*[]{}\\";
+
 // Expands character ranges and returns a bitmap.
 // For example, "a-cf-hz" is expanded to "abcfghz".
 static Expected<BitVector> expand(StringRef S, StringRef Original) {
@@ -135,7 +138,7 @@ parseBraceExpansions(StringRef S, std::optional<size_t> MaxSubPatterns) {
 static StringRef maxPlainSubstring(StringRef S) {
   StringRef Best;
   while (!S.empty()) {
-    size_t PrefixSize = S.find_first_of("?*[{\\");
+    size_t PrefixSize = S.find_first_of(PrefixMetacharacters);
     if (PrefixSize == std::string::npos)
       PrefixSize = S.size();
 
@@ -181,7 +184,7 @@ GlobPattern::create(StringRef S, std::optional<size_t> MaxSubPatterns) {
   Pat.Pattern = S;
 
   // Store the prefix that does not contain any metacharacter.
-  Pat.PrefixSize = S.find_first_of("?*[{\\");
+  Pat.PrefixSize = S.find_first_of(PrefixMetacharacters);
   if (Pat.PrefixSize == std::string::npos) {
     Pat.PrefixSize = S.size();
     return Pat;
@@ -189,7 +192,7 @@ GlobPattern::create(StringRef S, std::optional<size_t> MaxSubPatterns) {
   S = S.substr(Pat.PrefixSize);
 
   // Just in case we stop on unmatched opening brackets.
-  size_t SuffixStart = S.find_last_of("?*[]{}\\");
+  size_t SuffixStart = S.find_last_of(SuffixMetacharacters);
   assert(SuffixStart != std::string::npos);
   if (S[SuffixStart] == '\\')
     ++SuffixStart;

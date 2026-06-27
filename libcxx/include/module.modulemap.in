@@ -13,6 +13,7 @@ module std_config [system] {
   textual header "__configuration/language.h"
   textual header "__configuration/namespace.h"
   textual header "__configuration/platform.h"
+  textual header "__configuration/pstl.h"
   textual header "__configuration/utility.h"
   textual header "version"
 }
@@ -332,7 +333,6 @@ module std_core [system] {
       export std_core.type_traits.integral_constant
     }
     module is_within_lifetime                         { header "__type_traits/is_within_lifetime.h" }
-    module lazy                                       { header "__type_traits/lazy.h" }
     module make_32_64_or_128_bit                      { header "__type_traits/make_32_64_or_128_bit.h" }
     module make_const_lvalue_ref                      { header "__type_traits/make_const_lvalue_ref.h" }
     module make_signed                                { header "__type_traits/make_signed.h" }
@@ -2123,6 +2123,11 @@ module std [system] {
     module throw_system_error { header "__system_error/throw_system_error.h" }
 
     header "system_error"
+    export *
+  }
+
+  module text_encoding {
+    header "text_encoding"
     export *
   }
 

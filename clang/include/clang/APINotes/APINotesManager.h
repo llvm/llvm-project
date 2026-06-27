@@ -50,6 +50,11 @@ class APINotesManager {
   /// source file from which an entity was declared.
   bool ImplicitAPINotes;
 
+  /// Cached value of hasAPINotes() true once any current-module reader has
+  /// been loaded, or if implicit API notes lookup is enabled. Monotonic within
+  /// a compilation, so it can be tested per-declaration without recomputing.
+  bool HasAPINotes;
+
   /// Whether to apply all APINotes as optionally-applied versioned
   /// entities. This means that when building a Clang module,
   /// we capture every note on a given decl wrapped in a SwiftVersionedAttr
@@ -171,6 +176,8 @@ public:
       return {};
     return ArrayRef(CurrentModuleReaders).slice(0, HasPrivate ? 2 : 1);
   }
+
+  bool hasAPINotes() const { return HasAPINotes; }
 
   /// Find the API notes readers that correspond to the given source location.
   llvm::SmallVector<APINotesReader *, 2> findAPINotes(SourceLocation Loc);
