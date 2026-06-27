@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-tidy/ClangTidyModule.h"
-#include "clang-tidy/ClangTidyModuleRegistry.h"
+#include "clang-tidy/ClangTidyModule.h"
 
 #include "abi_tag_on_virtual.hpp"
 #include "header_exportable_declarations.hpp"
