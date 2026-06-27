@@ -157,10 +157,10 @@ parseFeatureBits(bool IsRV64, const FeatureBitset &FeatureBits) {
   unsigned XLen = IsRV64 ? 64 : 32;
   std::vector<std::string> FeatureVector;
   // Convert FeatureBitset to FeatureVector.
-  for (auto Feature : RISCVFeatureKV) {
+  for (const auto &Feature : RISCVFeatureKV) {
     if (FeatureBits[Feature.Value] &&
-        llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.Key))
-      FeatureVector.push_back(std::string("+") + Feature.Key);
+        llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.key()))
+      FeatureVector.push_back(std::string("+") + Feature.key());
   }
   return llvm::RISCVISAInfo::parseFeatures(XLen, FeatureVector);
 }

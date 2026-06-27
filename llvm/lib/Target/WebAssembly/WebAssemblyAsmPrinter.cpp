@@ -533,7 +533,7 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
   };
 
   for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
-    EmitFeature(KV.Key);
+    EmitFeature(KV.key());
   }
   // This pseudo-feature tells the linker whether shared memory would be safe
   EmitFeature("shared-mem");
