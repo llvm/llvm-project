@@ -76,8 +76,6 @@ void test() {
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   st - it;
 
-  auto c_it = std::as_const(v).begin();
-
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
   st - c_it;
   // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
