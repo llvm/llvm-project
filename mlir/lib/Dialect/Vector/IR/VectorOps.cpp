@@ -464,9 +464,8 @@ namespace {
 struct VectorInlinerInterface : public DialectInlinerInterface {
   using DialectInlinerInterface::DialectInlinerInterface;
 
-  /// All vector dialect ops can be inlined.
-  bool isLegalToInline(Operation *, Region *, bool, IRMapping &) const final {
-    return true;
+  bool isLegalToInline(Operation *op, Region *, bool, IRMapping &) const final {
+    return !isa<vector::YieldOp>(op) || isa<vector::MaskOp>(op->getParentOp());
   }
 };
 } // namespace
