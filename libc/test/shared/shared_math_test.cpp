@@ -768,6 +768,11 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
                                                         &canonicalizebf16_x));
   EXPECT_FP_EQ(bfloat16(0.0), canonicalizebf16_cx);
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::cbrtbf16(bfloat16(0.0)));
+  EXPECT_FP_EQ(bfloat16(1.0), LIBC_NAMESPACE::shared::cosbf16(bfloat16(0.0)));
+  EXPECT_FP_EQ(bfloat16(5.0), LIBC_NAMESPACE::shared::bf16addf(2.0f, 3.0f));
+  EXPECT_FP_EQ(bfloat16(5.0), LIBC_NAMESPACE::shared::bf16addl(2L, 3L));
+  EXPECT_FP_EQ(bfloat16(10.0),
+               LIBC_NAMESPACE::shared::bf16fmaf(2.0f, 3.0f, 4.0f));
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::ceilbf16(bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::copysignbf16(
                                   bfloat16(0.0), bfloat16(0.0)));

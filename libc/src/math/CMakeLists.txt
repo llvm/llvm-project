@@ -116,6 +116,7 @@ add_math_entrypoint_object(copysignf128)
 add_math_entrypoint_object(copysignbf16)
 
 add_math_entrypoint_object(cos)
+add_math_entrypoint_object(cosbf16)
 add_math_entrypoint_object(cosf)
 add_math_entrypoint_object(cosf16)
 

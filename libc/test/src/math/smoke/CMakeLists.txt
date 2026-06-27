@@ -13,6 +13,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  cosbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    cosbf16_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.math.cosbf16
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   cosf16_test
   SUITE
     libc-math-smoke-tests
