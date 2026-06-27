@@ -172,13 +172,13 @@ struct CUFPredefinedVarToGPU
     if (rewrittenWholeFunction)
       return;
 
-    // Host functions containing cuf.kernel or acc.parallel regions can still
-    // carry predefined vars in the kernel body. Rewrite them in-place as well.
+    // Host functions containing cuf.kernel or OpenACC compute regions can
+    // still carry predefined vars in the kernel body. Rewrite them in-place.
     funcOp.walk([&](cuf::KernelOp kernelOp) {
       rewritePredefinedVars(kernelOp.getRegion(), kernelOp.getLoc());
     });
-    funcOp.walk([&](mlir::acc::ParallelOp parallelOp) {
-      rewritePredefinedVars(parallelOp.getRegion(), parallelOp.getLoc());
+    funcOp.walk([&](mlir::acc::ComputeRegionOpInterface computeOp) {
+      rewritePredefinedVars(computeOp->getRegion(0), computeOp->getLoc());
     });
   }
 };
