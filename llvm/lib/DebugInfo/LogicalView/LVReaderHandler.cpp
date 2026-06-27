@@ -45,8 +45,8 @@ Error LVReaderHandler::createReader(StringRef Filename, LVReaders &Readers,
                                     StringRef FileFormatName,
                                     StringRef ExePath) {
   auto CreateOneReader = [&]() -> std::unique_ptr<LVReader> {
-    if (std::holds_alternative<ObjectFile *>(Input)) {
-      ObjectFile &Obj = *std::get<ObjectFile *>(Input);
+    if (auto ObjPtrPtr = std::get_if<ObjectFile *>(&Input)) {
+      ObjectFile &Obj = **ObjPtrPtr;
       if (Obj.isCOFF()) {
         COFFObjectFile *COFF = cast<COFFObjectFile>(&Obj);
         return std::make_unique<LVCodeViewReader>(Filename, FileFormatName,
@@ -56,16 +56,16 @@ Error LVReaderHandler::createReader(StringRef Filename, LVReaders &Readers,
         return std::make_unique<LVDWARFReader>(Filename, FileFormatName, Obj,
                                                W);
     }
-    if (std::holds_alternative<PDBFile *>(Input)) {
-      PDBFile &Pdb = *std::get<PDBFile *>(Input);
+    if (auto PdbPtrPtr = std::get_if<PDBFile *>(&Input)) {
+      PDBFile &Pdb = **PdbPtrPtr;
       return std::make_unique<LVCodeViewReader>(Filename, FileFormatName, Pdb,
                                                 W, ExePath);
     }
-    if (IRObjectFile **Ir = std::get_if<IRObjectFile *>(&Input))
+    if (auto Ir = std::get_if<IRObjectFile *>(&Input))
       return std::make_unique<LVIRReader>(Filename, FileFormatName, *Ir, W);
-    if (MemoryBufferRef **MemBuf = std::get_if<MemoryBufferRef *>(&Input)) {
+    if (auto MemBuf = std::get_if<MemoryBufferRef *>(&Input)) {
       // If the filename extension is '.ll' create an IR reader.
-      const StringRef IRFileExt = ".ll";
+      constexpr StringRef IRFileExt = ".ll";
       if (llvm::sys::path::extension(Filename) == IRFileExt)
         return std::make_unique<LVIRReader>(Filename, IRFileFormatName, *MemBuf,
                                             W);

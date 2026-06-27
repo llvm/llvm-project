@@ -41,7 +41,7 @@ class LVSymbol;
 class LVType;
 struct LVSourceLanguage;
 
-class LVIRReader final : public LVReader {
+class LLVM_ABI LVIRReader final : public LVReader {
   PointerUnion<object::IRObjectFile *, MemoryBufferRef *> InputFile;
 
   // Used by the metadata 'dump' functions, so the metadata nodes will be
