@@ -50,5 +50,6 @@ clang_target_link_libraries(ClangDocTests
 target_link_libraries(ClangDocTests
   PRIVATE
   clangDoc
+  clangDocSupport
   LLVMTestingSupport
   )

@@ -13,7 +13,7 @@
 #include "llvm/ADT/simple_ilist.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/StringSaver.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <type_traits>
 
@@ -38,7 +38,6 @@ enum class NodeKind {
   NK_Document,
 };
 
-// Forward declarations
 struct InlineNode;
 struct BlockNode;
 
@@ -46,12 +45,14 @@ struct BlockNode;
 // Inline nodes
 //===----------------------------------------------------------------------===//
 
-struct InlineNode
-    : llvm::ilist_node<InlineNode, llvm::ilist_sentinel_tracking<true>> {
+struct InlineNode : llvm::ilist_node<InlineNode> {
   NodeKind Kind;
   explicit InlineNode(NodeKind K) : Kind(K) {}
-  void dump(llvm::raw_ostream &OS = llvm::errs()) const;
+  void print(llvm::raw_ostream &OS) const;
+  LLVM_DUMP_METHOD void dump() const;
 };
+
+using InlineList = llvm::simple_ilist<InlineNode>;
 
 struct TextNode : InlineNode {
 private:
@@ -61,9 +62,8 @@ public:
   explicit TextNode(llvm::StringRef T)
       : InlineNode(NodeKind::NK_Text), Text(T) {}
   llvm::StringRef getText() const { return Text; }
-  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
-    OS << "TextNode: " << Text << "\n";
-  }
+  void print(llvm::raw_ostream &OS) const;
+  LLVM_DUMP_METHOD void dump() const;
   static bool classof(const InlineNode *N) {
     return N->Kind == NodeKind::NK_Text;
   }
@@ -78,9 +78,8 @@ public:
   explicit InlineCodeNode(llvm::StringRef C)
       : InlineNode(NodeKind::NK_InlineCode), Code(C) {}
   llvm::StringRef getCode() const { return Code; }
-  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
-    OS << "InlineCodeNode: " << Code << "\n";
-  }
+  void print(llvm::raw_ostream &OS) const;
+  LLVM_DUMP_METHOD void dump() const;
   static bool classof(const InlineNode *N) {
     return N->Kind == NodeKind::NK_InlineCode;
   }
@@ -88,22 +87,20 @@ public:
 static_assert(std::is_trivially_destructible_v<InlineCodeNode>);
 
 struct EmphasisNode : InlineNode {
-  llvm::simple_ilist<InlineNode, llvm::ilist_sentinel_tracking<true>> Children;
+  InlineList Children;
   EmphasisNode() : InlineNode(NodeKind::NK_Emphasis) {}
-  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
-    OS << "EmphasisNode\n";
-  }
+  void print(llvm::raw_ostream &OS) const;
+  LLVM_DUMP_METHOD void dump() const;
   static bool classof(const InlineNode *N) {
     return N->Kind == NodeKind::NK_Emphasis;
   }
 };
 
 struct StrongNode : InlineNode {
-  llvm::simple_ilist<InlineNode, llvm::ilist_sentinel_tracking<true>> Children;
+  InlineList Children;
   StrongNode() : InlineNode(NodeKind::NK_Strong) {}
-  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
-    OS << "StrongNode\n";
-  }
+  void print(llvm::raw_ostream &OS) const;
+  LLVM_DUMP_METHOD void dump() const;
   static bool classof(const InlineNode *N) {
     return N->Kind == NodeKind::NK_Strong;
   }
@@ -113,24 +110,20 @@ struct StrongNode : InlineNode {
 // Block nodes
 //===----------------------------------------------------------------------===//
 
-struct BlockNode
-    : llvm::ilist_node<BlockNode, llvm::ilist_sentinel_tracking<true>> {
+struct BlockNode : llvm::ilist_node<BlockNode> {
   NodeKind Kind;
   explicit BlockNode(NodeKind K) : Kind(K) {}
-  void dump(llvm::raw_ostream &OS = llvm::errs()) const;
+  void print(llvm::raw_ostream &OS) const;
+  LLVM_DUMP_METHOD void dump() const;
 };
 
-using InlineList =
-    llvm::simple_ilist<InlineNode, llvm::ilist_sentinel_tracking<true>>;
-using BlockList =
-    llvm::simple_ilist<BlockNode, llvm::ilist_sentinel_tracking<true>>;
+using BlockList = llvm::simple_ilist<BlockNode>;
 
 struct ParagraphNode : BlockNode {
   InlineList Children;
   ParagraphNode() : BlockNode(NodeKind::NK_Paragraph) {}
-  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
-    OS << "ParagraphNode\n";
-  }
+  void print(llvm::raw_ostream &OS) const;
+  LLVM_DUMP_METHOD void dump() const;
   static bool classof(const BlockNode *N) {
     return N->Kind == NodeKind::NK_Paragraph;
   }
@@ -145,9 +138,8 @@ public:
   explicit HeadingNode(unsigned L)
       : BlockNode(NodeKind::NK_Heading), Level(L) {}
   unsigned getLevel() const { return Level; }
-  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
-    OS << "HeadingNode: level=" << Level << "\n";
-  }
+  void print(llvm::raw_ostream &OS) const;
+  LLVM_DUMP_METHOD void dump() const;
   static bool classof(const BlockNode *N) {
     return N->Kind == NodeKind::NK_Heading;
   }
@@ -163,32 +155,29 @@ public:
       : BlockNode(NodeKind::NK_FencedCode), Lang(L), Code(C) {}
   llvm::StringRef getLang() const { return Lang; }
   llvm::StringRef getCode() const { return Code; }
-  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
-    OS << "FencedCodeNode: lang=" << Lang << "\n";
-  }
+  void print(llvm::raw_ostream &OS) const;
+  LLVM_DUMP_METHOD void dump() const;
   static bool classof(const BlockNode *N) {
     return N->Kind == NodeKind::NK_FencedCode;
   }
 };
 static_assert(std::is_trivially_destructible_v<FencedCodeNode>);
 
-struct ListItemNode : BlockNode {
+struct ListItemNode : BlockNode, llvm::ilist_node<ListItemNode> {
   InlineList Children;
   ListItemNode() : BlockNode(NodeKind::NK_ListItem) {}
-  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
-    OS << "ListItemNode\n";
-  }
+  void print(llvm::raw_ostream &OS) const;
+  LLVM_DUMP_METHOD void dump() const;
   static bool classof(const BlockNode *N) {
     return N->Kind == NodeKind::NK_ListItem;
   }
 };
 
 struct UnorderedListNode : BlockNode {
-  llvm::simple_ilist<ListItemNode, llvm::ilist_sentinel_tracking<true>> Items;
+  llvm::simple_ilist<ListItemNode> Items;
   UnorderedListNode() : BlockNode(NodeKind::NK_UnorderedList) {}
-  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
-    OS << "UnorderedListNode\n";
-  }
+  void print(llvm::raw_ostream &OS) const;
+  LLVM_DUMP_METHOD void dump() const;
   static bool classof(const BlockNode *N) {
     return N->Kind == NodeKind::NK_UnorderedList;
   }
@@ -199,13 +188,12 @@ private:
   unsigned Start;
 
 public:
-  llvm::simple_ilist<ListItemNode, llvm::ilist_sentinel_tracking<true>> Items;
+  llvm::simple_ilist<ListItemNode> Items;
   explicit OrderedListNode(unsigned S = 1)
       : BlockNode(NodeKind::NK_OrderedList), Start(S) {}
   unsigned getStart() const { return Start; }
-  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
-    OS << "OrderedListNode: start=" << Start << "\n";
-  }
+  void print(llvm::raw_ostream &OS) const;
+  LLVM_DUMP_METHOD void dump() const;
   static bool classof(const BlockNode *N) {
     return N->Kind == NodeKind::NK_OrderedList;
   }
@@ -214,9 +202,8 @@ public:
 struct BlockQuoteNode : BlockNode {
   BlockList Children;
   BlockQuoteNode() : BlockNode(NodeKind::NK_BlockQuote) {}
-  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
-    OS << "BlockQuoteNode\n";
-  }
+  void print(llvm::raw_ostream &OS) const;
+  LLVM_DUMP_METHOD void dump() const;
   static bool classof(const BlockNode *N) {
     return N->Kind == NodeKind::NK_BlockQuote;
   }
@@ -224,42 +211,44 @@ struct BlockQuoteNode : BlockNode {
 
 struct ThematicBreakNode : BlockNode {
   ThematicBreakNode() : BlockNode(NodeKind::NK_ThematicBreak) {}
-  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
-    OS << "ThematicBreakNode\n";
-  }
+  void print(llvm::raw_ostream &OS) const;
+  LLVM_DUMP_METHOD void dump() const;
   static bool classof(const BlockNode *N) {
     return N->Kind == NodeKind::NK_ThematicBreak;
   }
 };
 
 struct DocumentNode : BlockNode {
+  // FIXME: add constructor that accepts children once parser is in place
   BlockList Children;
   DocumentNode() : BlockNode(NodeKind::NK_Document) {}
-  void dump(llvm::raw_ostream &OS = llvm::errs()) const {
-    OS << "DocumentNode\n";
-  }
+  void print(llvm::raw_ostream &OS) const;
+  LLVM_DUMP_METHOD void dump() const;
   static bool classof(const BlockNode *N) {
     return N->Kind == NodeKind::NK_Document;
   }
 };
 
 //===----------------------------------------------------------------------===//
-// ASTContext - owns the arena and string pool
+// ASTContext - owns the arena
 //===----------------------------------------------------------------------===//
+
+template <typename T>
+using IsMarkdownNode = std::enable_if_t<std::is_base_of_v<InlineNode, T> ||
+                                        std::is_base_of_v<BlockNode, T>>;
 
 class ASTContext {
   llvm::BumpPtrAllocator Arena;
-  llvm::StringSaver SSaver;
   DocumentNode *Root = nullptr;
 
 public:
-  ASTContext() : SSaver(Arena) {}
+  ASTContext() = default;
 
-  template <typename T, typename... Args> T *allocate(Args &&...args) {
+  template <typename T, typename... Args, typename = IsMarkdownNode<T>>
+  T *allocate(Args &&...args) {
     return new (Arena.Allocate<T>()) T(std::forward<Args>(args)...);
   }
 
-  llvm::StringRef intern(llvm::StringRef S) { return SSaver.save(S); }
   DocumentNode *getRoot() { return Root; }
   void setRoot(DocumentNode *R) { Root = R; }
 };

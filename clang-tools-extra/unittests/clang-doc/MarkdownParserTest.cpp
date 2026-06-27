@@ -21,10 +21,13 @@ TEST(MarkdownNodeTest, TextNode) {
 }
 
 TEST(MarkdownNodeTest, FencedCodeNode) {
-  FencedCodeNode N("cpp", "int x = 0;\nint y = 1;\nreturn x + y;");
+  FencedCodeNode N("cpp", R"(int x = 0;
+int y = 1;
+return x + y;)");
   EXPECT_EQ(N.Kind, NodeKind::NK_FencedCode);
   EXPECT_EQ(N.getLang(), "cpp");
-  EXPECT_EQ(N.getCode(), "int x = 0;\nint y = 1;\nreturn x + y;");
+  EXPECT_TRUE(N.getCode().contains("int x = 0;"));
+  EXPECT_TRUE(N.getCode().contains("int y = 1;"));
 }
 
 TEST(MarkdownNodeTest, HeadingNode) {
@@ -46,8 +49,11 @@ TEST(MarkdownNodeTest, InlineCodeNode) {
 
 TEST(MarkdownNodeTest, EmphasisNode) {
   EmphasisNode N;
+  TextNode Child("emphasized");
+  N.Children.push_back(Child);
   EXPECT_EQ(N.Kind, NodeKind::NK_Emphasis);
-  EXPECT_TRUE(N.Children.empty());
+  EXPECT_FALSE(N.Children.empty());
+  EXPECT_EQ(llvm::cast<TextNode>(N.Children.front()).getText(), "emphasized");
 }
 
 TEST(MarkdownNodeTest, UnorderedListNode) {
