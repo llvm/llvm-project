@@ -654,19 +654,24 @@ As a result, ``EXCLUDES`` can easily produce false negatives:
 
 
 Negative requirements are an alternative to ``EXCLUDES`` that provide
-a stronger safety guarantee.  A negative requirement uses the  ``REQUIRES``
-attribute, in conjunction with the ``!`` operator, to indicate that a capability
-should *not* be held.
+a stronger safety guarantee.  A negative requirement uses either
+``REQUIRES_NEGATIVE`` or the ``REQUIRES`` attribute in conjunction with the
+``!`` operator to indicate that a capability should *not* be held.
+``REQUIRES_NEGATIVE(mu)`` does not require ``!mu`` to be a well-formed
+expression. More generally, its argument is interpreted the same way as a
+``REQUIRES`` argument, and then the capability requirement is inverted. For
+example, if ``!mu`` is well-formed, ``REQUIRES_NEGATIVE(!mu)`` is equivalent
+to ``REQUIRES(mu)``.
 
-For example, using ``REQUIRES(!mu)`` instead of ``EXCLUDES(mu)`` will produce
-the appropriate warnings:
+For example, using ``REQUIRES_NEGATIVE(mu)`` instead of ``EXCLUDES(mu)`` will
+produce the appropriate warnings:
 
 .. code-block:: c++
 
   class FooNeg {
     Mutex mu;
 
-    void foo() REQUIRES(!mu) {   // foo() now requires !mu.
+    void foo() REQUIRES_NEGATIVE(mu) {  // foo() now requires !mu.
       mu.Lock();
       bar();
       baz();
@@ -674,16 +679,16 @@ the appropriate warnings:
     }
 
     void bar() {
-      mu.Lock();       // WARNING!  Missing REQUIRES(!mu).
+      mu.Lock();       // WARNING!  Missing REQUIRES_NEGATIVE(mu).
       // ...
       mu.Unlock();
     }
 
     void baz() {
-      bif();           // WARNING!  Missing REQUIRES(!mu).
+      bif();           // WARNING!  Missing REQUIRES_NEGATIVE(mu).
     }
 
-    void bif() REQUIRES(!mu);
+    void bif() REQUIRES_NEGATIVE(mu);
   };
 
 
@@ -936,6 +941,9 @@ implementation.
 
   #define REQUIRES_SHARED(...) \
     THREAD_ANNOTATION_ATTRIBUTE__(requires_shared_capability(__VA_ARGS__))
+
+  #define REQUIRES_NEGATIVE(...) \
+    THREAD_ANNOTATION_ATTRIBUTE__(requires_negative_capability(__VA_ARGS__))
 
   #define ACQUIRE(...) \
     THREAD_ANNOTATION_ATTRIBUTE__(acquire_capability(__VA_ARGS__))

@@ -24,6 +24,7 @@
   __attribute__ ((exclusive_locks_required(__VA_ARGS__)))
 #define SHARED_LOCKS_REQUIRED(...) \
   __attribute__ ((shared_locks_required(__VA_ARGS__)))
+#define REQUIRES_NEGATIVE(...) __attribute__ ((requires_negative_capability(__VA_ARGS__)))
 #define NO_THREAD_SAFETY_ANALYSIS  __attribute__ ((no_thread_safety_analysis))
 
 
@@ -1301,6 +1302,89 @@ template int elr_variadic_template<Mutex, UnlockableMu>(Mutex&, UnlockableMu&);
 #endif
 
 
+//-----------------------------------------//
+//  Requires Negative Capability
+//-----------------------------------------//
+
+#if !__has_attribute(requires_negative_capability)
+#error "Should support requires_negative_capability attribute"
+#endif
+
+// takes one or more arguments, all locks (vars/fields)
+
+void rnc_function() __attribute__((requires_negative_capability)); // \
+  // expected-error {{'requires_negative_capability' attribute takes at least 1 argument}}
+
+void rnc_function_arg() REQUIRES_NEGATIVE(mu1);
+
+void rnc_function_args() REQUIRES_NEGATIVE(mu1, mu2);
+
+int rnc_testfn(int y) REQUIRES_NEGATIVE(mu1);
+
+int rnc_testfn(int y) {
+  int x REQUIRES_NEGATIVE(mu1) = y; // \
+    // expected-warning {{'requires_negative_capability' attribute on a variable requires the variable to be of function pointer type}}
+  return x;
+}
+
+int rnc_test_var REQUIRES_NEGATIVE(mu1); // \
+  // expected-warning {{'requires_negative_capability' attribute on a variable requires the variable to be of function pointer type}}
+
+void rnc_fun_params1(MutexLock& scope REQUIRES_NEGATIVE(mu1));
+void rnc_fun_params2(int lvar REQUIRES_NEGATIVE(mu1)); // \
+  // expected-warning {{'requires_negative_capability' attribute applies to function parameters only if their type is a reference to a 'scoped_lockable'-annotated type}}
+
+class RncFoo {
+ private:
+  int test_field REQUIRES_NEGATIVE(mu1); // \
+    // expected-warning {{'requires_negative_capability' attribute on a field requires the field to be of function pointer type}}
+  void test_method() REQUIRES_NEGATIVE(mu1);
+};
+
+class REQUIRES_NEGATIVE(mu1) RncTestClass { // \
+  // expected-warning {{'requires_negative_capability' attribute only applies to functions, variables, and non-static data members}}
+};
+
+// Check argument parsing.
+
+// legal attribute arguments
+int rnc_function_1() REQUIRES_NEGATIVE(muWrapper.mu);
+int rnc_function_2() REQUIRES_NEGATIVE(muDoubleWrapper.muWrapper->mu);
+int rnc_function_3() REQUIRES_NEGATIVE(muWrapper.getMu());
+int rnc_function_4() REQUIRES_NEGATIVE(*muWrapper.getMuPointer());
+int rnc_function_5() REQUIRES_NEGATIVE(&mu1);
+int rnc_function_6() REQUIRES_NEGATIVE(muRef);
+int rnc_function_7() REQUIRES_NEGATIVE(muDoubleWrapper.getWrapper()->getMu());
+int rnc_function_8() REQUIRES_NEGATIVE(muPointer);
+int rnc_function_9() REQUIRES_NEGATIVE(!&mu1);
+
+// illegal attribute arguments
+int rnc_function_bad_1() REQUIRES_NEGATIVE(1); // \
+  // expected-warning {{'requires_negative_capability' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'int'}}
+int rnc_function_bad_2() REQUIRES_NEGATIVE("mu"); // \
+  // expected-warning {{ignoring 'requires_negative_capability' attribute because its argument is invalid}}
+int rnc_function_bad_3() REQUIRES_NEGATIVE(muDoublePointer); // \
+  // expected-warning {{'requires_negative_capability' attribute requires arguments whose type is annotated with 'capability' attribute; type here is 'Mutex **'}}
+int rnc_function_bad_4() REQUIRES_NEGATIVE(umu); // \
+  // expected-warning {{'requires_negative_capability' attribute requires arguments whose type is annotated with 'capability' attribute}}
+
+template<typename Mu>
+int rnc_template(Mu& mu) REQUIRES_NEGATIVE(mu) {}
+
+template int rnc_template<Mutex>(Mutex&);
+// FIXME: warn on template instantiation.
+template int rnc_template<UnlockableMu>(UnlockableMu&);
+
+#if __cplusplus >= 201103
+
+template<typename... Mus>
+int rnc_variadic_template(Mus&... mus) REQUIRES_NEGATIVE(mus...) {}
+
+template int rnc_variadic_template<Mutex, Mutex>(Mutex&, Mutex&);
+// FIXME: warn on template instantiation.
+template int rnc_variadic_template<Mutex, UnlockableMu>(Mutex&, UnlockableMu&);
+
+#endif
 
 
 //-----------------------------------------//
@@ -1803,6 +1887,7 @@ void (*(&fp_ref_to_array)[4])(void) EXCLUSIVE_LOCK_FUNCTION(mu1) = fp_array; // 
 // C++11 spelling at the declaration prefix so attribute applies to variable.
 [[clang::acquire_capability(mu1)]] void (*fp_cxx11)(void);
 [[clang::requires_capability(mu1)]] void (*fp_cxx11_req)(void);
+[[clang::requires_negative_capability(mu1)]] void (*fp_cxx11_neg_req)(void);
 
 template <typename FuncPtr>
 struct DependentFPFields {
