@@ -2084,9 +2084,10 @@ ParseStatus RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
       // Accept a named Sys Reg if the required features are present.
       const auto &FeatureBits = getSTI().getFeatureBits();
       if (!SysReg->haveRequiredFeatures(FeatureBits)) {
-        const auto *Feature = llvm::find_if(RISCVFeatureKV, [&](auto Feature) {
-          return SysReg->FeaturesRequired[Feature.Value];
-        });
+        const auto *Feature =
+            llvm::find_if(RISCVFeatureKV, [&](const auto &Feature) {
+              return SysReg->FeaturesRequired[Feature.Value];
+            });
         auto ErrorMsg = std::string("system register '") + SysReg->Name + "' ";
         if (SysReg->IsRV32Only && FeatureBits[RISCV::Feature64Bit]) {
           ErrorMsg += "is RV32 only";
@@ -2095,7 +2096,7 @@ ParseStatus RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
         }
         if (Feature != std::end(RISCVFeatureKV)) {
           ErrorMsg +=
-              "requires '" + std::string(Feature->Key) + "' to be enabled";
+              "requires '" + std::string(Feature->key()) + "' to be enabled";
         }
 
         return Error(S, ErrorMsg);
@@ -3131,8 +3132,8 @@ ParseStatus RISCVAsmParser::parseDirective(AsmToken DirectiveID) {
 bool RISCVAsmParser::resetToArch(StringRef Arch, SMLoc Loc, std::string &Result,
                                  bool FromOptionDirective) {
   for (auto &Feature : RISCVFeatureKV)
-    if (llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.Key))
-      clearFeatureBits(Feature.Value, Feature.Key);
+    if (llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.key()))
+      clearFeatureBits(Feature.Value, Feature.key());
 
   auto ParseResult = llvm::RISCVISAInfo::parseArchString(
       Arch, /*EnableExperimentalExtension=*/true,
@@ -3150,8 +3151,8 @@ bool RISCVAsmParser::resetToArch(StringRef Arch, SMLoc Loc, std::string &Result,
   auto &ISAInfo = *ParseResult;
 
   for (auto &Feature : RISCVFeatureKV)
-    if (ISAInfo->hasExtension(Feature.Key))
-      setFeatureBits(Feature.Value, Feature.Key);
+    if (ISAInfo->hasExtension(Feature.key()))
+      setFeatureBits(Feature.Value, Feature.key());
 
   if (FromOptionDirective) {
     if (ISAInfo->getXLen() == 32 && isRV64())
@@ -3246,7 +3247,7 @@ bool RISCVAsmParser::parseDirectiveOption() {
           StringRef(Feature).starts_with("experimental-"))
         return Error(Loc, "unexpected experimental extensions");
       auto Ext = llvm::lower_bound(RISCVFeatureKV, Feature);
-      if (Ext == std::end(RISCVFeatureKV) || StringRef(Ext->Key) != Feature)
+      if (Ext == std::end(RISCVFeatureKV) || StringRef(Ext->key()) != Feature)
         return Error(Loc, "unknown extension feature");
 
       Args.emplace_back(Type, Arch.str());
@@ -3254,7 +3255,7 @@ bool RISCVAsmParser::parseDirectiveOption() {
       if (Type == RISCVOptionArchArgType::Plus) {
         FeatureBitset OldFeatureBits = STI->getFeatureBits();
 
-        setFeatureBits(Ext->Value, Ext->Key);
+        setFeatureBits(Ext->Value, Ext->key());
         auto ParseResult = RISCVFeatures::parseFeatureBits(isRV64(), STI->getFeatureBits());
         if (!ParseResult) {
           copySTI().setFeatureBits(OldFeatureBits);
@@ -3276,13 +3277,13 @@ bool RISCVAsmParser::parseDirectiveOption() {
         for (auto &Feature : RISCVFeatureKV) {
           if (getSTI().hasFeature(Feature.Value) &&
               Feature.Implies.test(Ext->Value))
-            return Error(Loc, Twine("can't disable ") + Ext->Key +
-                                  " extension; " + Feature.Key +
-                                  " extension requires " + Ext->Key +
+            return Error(Loc, Twine("can't disable ") + Ext->key() +
+                                  " extension; " + Feature.key() +
+                                  " extension requires " + Ext->key() +
                                   " extension");
         }
 
-        clearFeatureBits(Ext->Value, Ext->Key);
+        clearFeatureBits(Ext->Value, Ext->key());
       }
     } while (Parser.getTok().isNot(AsmToken::EndOfStatement));
 

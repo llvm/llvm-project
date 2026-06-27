@@ -111,7 +111,7 @@
 "`LWG3422 <https://wg21.link/LWG3422>`__","Issues of ``seed_seq``'s constructors","2021-10 (Virtual)","|Complete|","14","`#104372 <https://github.com/llvm/llvm-project/issues/104372>`__",""
 "`LWG3470 <https://wg21.link/LWG3470>`__","``convertible-to-non-slicing`` seems to reject valid case","2021-10 (Virtual)","|Complete|","14","`#104373 <https://github.com/llvm/llvm-project/issues/104373>`__",""
 "`LWG3480 <https://wg21.link/LWG3480>`__","``directory_iterator`` and ``recursive_directory_iterator`` are not C++20 ranges","2021-10 (Virtual)","|Complete|","14","`#104374 <https://github.com/llvm/llvm-project/issues/104374>`__",""
-"`LWG3498 <https://wg21.link/LWG3498>`__","Inconsistent ``noexcept``-specifiers for ``basic_syncbuf``","2021-10 (Virtual)","","","`#104375 <https://github.com/llvm/llvm-project/issues/104375>`__",""
+"`LWG3498 <https://wg21.link/LWG3498>`__","Inconsistent ``noexcept``-specifiers for ``basic_syncbuf``","2021-10 (Virtual)","|Complete|","18","`#104375 <https://github.com/llvm/llvm-project/issues/104375>`__",""
 "`LWG3535 <https://wg21.link/LWG3535>`__","``join_view::iterator::iterator_category`` and ``::iterator_concept`` lie","2021-10 (Virtual)","|Complete|","15","`#104376 <https://github.com/llvm/llvm-project/issues/104376>`__",""
 "`LWG3554 <https://wg21.link/LWG3554>`__","``chrono::parse`` needs ``const charT*`` and ``basic_string_view<charT>`` overloads","2021-10 (Virtual)","","","`#104377 <https://github.com/llvm/llvm-project/issues/104377>`__",""
 "`LWG3557 <https://wg21.link/LWG3557>`__","The ``static_cast`` expression in ``convertible_to`` has the wrong operand","2021-10 (Virtual)","|Complete|","14","`#104378 <https://github.com/llvm/llvm-project/issues/104378>`__",""

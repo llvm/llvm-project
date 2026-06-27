@@ -43,9 +43,10 @@ enum class MemoryObjectState {
   //   -> Dead (after the end of lifetime of an alloca)
   //   -> Freed (after free is called on a heap object)
   Alive,
-  // This memory object is out of lifetime. It is OK to perform
-  // operations that do not access its content, e.g., getelementptr.
-  // Otherwise, an immediate UB occurs.
+  // This memory object is out of lifetime. Its contents are poison. Loads and
+  // memory transfers from it are allowed and propagate poison, stores to it
+  // cause immediate UB, and non-accessing operations such as getelementptr are
+  // allowed.
   // Valid transition:
   //   -> Alive (after the start of lifetime of an alloca)
   Dead,
