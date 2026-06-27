@@ -16,7 +16,6 @@ add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN
   DIERef.cpp
   DWARFASTParser.cpp
   DWARFASTParserClang.cpp
-  DWARFASTParserFortran.cpp
   DWARFAttribute.cpp
   DWARFBaseDIE.cpp
   DWARFCompileUnit.cpp
@@ -58,9 +57,7 @@ add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN
     lldbPluginObjCLanguage
     lldbPluginCPlusPlusLanguage
     lldbPluginExpressionParserClang
-    lldbPluginFortranLanguage
     lldbPluginTypeSystemClang
-    lldbPluginTypeSystemFortran
   CLANG_LIBS
     clangAST
     clangBasic
@@ -69,3 +66,16 @@ add_lldb_library(lldbPluginSymbolFileDWARF PLUGIN
 add_dependencies(lldbPluginSymbolFileDWARF
   LLDBPluginSymbolFileDWARFPropertiesGen
   LLDBPluginSymbolFileDWARFPropertiesEnumGen)
+
+if("flang" IN_LIST LLVM_ENABLE_PROJECTS OR "all" IN_LIST LLVM_ENABLE_PROJECTS)
+
+  target_sources(lldbPluginSymbolFileDWARF PRIVATE 
+    DWARFASTParserFortran.cpp
+  )
+
+  target_link_libraries(lldbPluginSymbolFileDWARF PRIVATE 
+    lldbPluginFortranLanguage 
+    lldbPluginTypeSystemFortran
+  )
+
+endif()
