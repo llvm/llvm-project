@@ -272,3 +272,11 @@ func.func @distinct_objects(%arg: memref<?xf32>, %arg1: memref<?xf32>) attribute
   %0, %1 = memref.distinct_objects %arg, %arg1 {test.ptr = "distinct"} : memref<?xf32>, memref<?xf32>
   return
 }
+
+// -----
+
+// CHECK-LABEL: Testing : "non_string_test_ptr"
+func.func @non_string_test_ptr(%arg0: memref<100xf32>, %arg1: index) -> f32 attributes {test.ptr = {llvm.ptr = "ptr_a", test.a = 123 : i64}} {
+  %0 = memref.load %arg0[%arg1] {sibling = 0 : i64} : memref<100xf32>
+  return %0 : f32
+}

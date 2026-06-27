@@ -19,17 +19,19 @@
 
 using namespace mlir;
 
+static StringAttr getTestPtrAttr(Operation *op) {
+  return op->getAttrOfType<StringAttr>("test.ptr");
+}
+
 /// Print a value that is used as an operand of an alias query.
 static void printAliasOperand(Operation *op) {
-  llvm::errs() << op->getAttrOfType<StringAttr>("test.ptr").getValue();
+  llvm::errs() << getTestPtrAttr(op).getValue();
 }
 static void printAliasOperand(Value value) {
   if (BlockArgument arg = dyn_cast<BlockArgument>(value)) {
     Region *region = arg.getParentRegion();
     unsigned parentBlockNumber = arg.getOwner()->computeBlockNumber();
-    llvm::errs() << region->getParentOp()
-                        ->getAttrOfType<StringAttr>("test.ptr")
-                        .getValue()
+    llvm::errs() << getTestPtrAttr(region->getParentOp()).getValue()
                  << ".region" << region->getRegionNumber();
     if (parentBlockNumber != 0)
       llvm::errs() << ".block" << parentBlockNumber;
@@ -65,7 +67,7 @@ void TestAliasAnalysisBase::runAliasAnalysisOnOperation(
   // Collect all of the values to check for aliasing behavior.
   SmallVector<Value, 32> valsToCheck;
   op->walk([&](Operation *op) {
-    if (!op->getDiscardableAttr("test.ptr"))
+    if (!getTestPtrAttr(op))
       return;
     valsToCheck.append(op->result_begin(), op->result_end());
     for (Region &region : op->getRegions())
@@ -86,7 +88,7 @@ void TestAliasAnalysisModRefBase::runAliasAnalysisOnOperation(
   // Collect all of the values to check for aliasing behavior.
   SmallVector<Value, 32> valsToCheck;
   op->walk([&](Operation *op) {
-    if (!op->getDiscardableAttr("test.ptr"))
+    if (!getTestPtrAttr(op))
       return;
     valsToCheck.append(op->result_begin(), op->result_end());
     for (Region &region : op->getRegions())
@@ -97,7 +99,7 @@ void TestAliasAnalysisModRefBase::runAliasAnalysisOnOperation(
   // Check for aliasing behavior between each of the values.
   for (auto &it : valsToCheck) {
     op->walk([&](Operation *op) {
-      if (!op->getDiscardableAttr("test.ptr"))
+      if (!getTestPtrAttr(op))
         return;
       printModRefResult(aliasAnalysis.getModRef(op, it), op, it);
     });
