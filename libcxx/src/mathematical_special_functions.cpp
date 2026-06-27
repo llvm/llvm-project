@@ -14,6 +14,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+#if _LIBCPP_STD_VER >= 17
 
 namespace __math {
 namespace {
@@ -48,5 +49,6 @@ __sf_result<float> __assoc_laguerre(unsigned int __n, unsigned int __m, float __
 }
 } // namespace __math
 
+#endif
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
