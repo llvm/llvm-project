@@ -130,13 +130,13 @@ public:
   void collectSpillIndexUses(ArrayRef<LiveInterval *> StackIntervals,
                              SpillReferenceMap &Map) const;
 
-  /// Return true if the reload \p LoadMI of stack slot \p Slot is jointly
-  /// dominated by the slot's spill stores, i.e. every path from the entry
-  /// block to the load passes through a store to \p Slot before the load.
-  /// \p StoreFreeReachable is the set of blocks reachable from the entry block
-  /// without passing through any store block for \p Slot.
+  /// Return true if the reload \p LoadMI of the stack slot with live interval
+  /// \p SlotLI is jointly dominated by the slot's spill stores, i.e. every path
+  /// from the entry block to the load passes through a store to the slot before
+  /// the load. \p StoreFreeReachable is the set of blocks reachable from the
+  /// entry block without passing through any store block for the slot.
   bool isLoadJointlyDominatedByStores(
-      const MachineInstr &LoadMI, int Slot,
+      const MachineInstr &LoadMI, const LiveInterval &SlotLI,
       const SmallPtrSetImpl<MachineBasicBlock *> &StoreFreeReachable) const;
 
   /// Attempt to unspill VGPRs by finding a free register and replacing the
@@ -489,7 +489,7 @@ void AMDGPURewriteAGPRCopyMFMAImpl::collectSpillIndexUses(
 }
 
 bool AMDGPURewriteAGPRCopyMFMAImpl::isLoadJointlyDominatedByStores(
-    const MachineInstr &LoadMI, int Slot,
+    const MachineInstr &LoadMI, const LiveInterval &SlotLI,
     const SmallPtrSetImpl<MachineBasicBlock *> &StoreFreeReachable) const {
   const MachineBasicBlock *LoadMBB = LoadMI.getParent();
   if (!MDT.isReachableFromEntry(LoadMBB))
@@ -501,19 +501,19 @@ bool AMDGPURewriteAGPRCopyMFMAImpl::isLoadJointlyDominatedByStores(
 
   // Otherwise, there exists a path to this block that has not seen any store
   // yet. We must ensure that within this block there is a store to this slot
-  // before the load.
-  for (const MachineInstr &MI : *LoadMBB) {
-    if (&MI == &LoadMI)
-      break;
-    if (MI.mayStore()) {
-      for (const MachineOperand &MO : MI.operands()) {
-        if (MO.isFI() && MO.getIndex() == Slot)
-          return true;
-      }
-    }
-  }
-
-  return false;
+  // before the load. Consult the slot's LiveStacks interval rather than
+  // scanning instructions: if a store to the slot precedes the load in this
+  // block, the slot's live range segment covering the load begins after the
+  // block start. If there is no such store, the segment begins at or before
+  // the block start. If a live-in segment has coalesced with an in-block
+  // segment, it would imply a reload before a store. That scenario would
+  // lead to a joint-dominance violation. If the load reads an undef value, the
+  // segment is null.
+  SlotIndex LoadIdx = LIS.getInstructionIndex(LoadMI);
+  SlotIndex BlockStart = LIS.getMBBStartIdx(LoadMBB);
+  const LiveRange::Segment *Seg =
+      SlotLI.getSegmentContaining(LoadIdx.getBaseIndex());
+  return Seg && Seg->start > BlockStart;
 }
 
 void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
@@ -603,7 +603,7 @@ void AMDGPURewriteAGPRCopyMFMAImpl::eliminateSpillsOfReassignedVGPRs() const {
     // Every reachable reload must be jointly dominated by the slot's stores.
     if (!llvm::all_of(SpillReferences->second, [&](const MachineInstr *MI) {
           return !MI->mayLoad() ||
-                 isLoadJointlyDominatedByStores(*MI, Slot, StoreFreeReachable);
+                 isLoadJointlyDominatedByStores(*MI, *LI, StoreFreeReachable);
         })) {
       LLVM_DEBUG(
           dbgs() << "Skipping " << printReg(Slot, &TRI)
