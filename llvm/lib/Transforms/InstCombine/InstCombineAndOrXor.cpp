@@ -1484,10 +1484,13 @@ Value *InstCombinerImpl::foldLogicOfFCmps(FCmpInst *LHS, FCmpInst *RHS,
       // (fcmp ord x, 0.0) & (fcmp ord y, 0.0)  -> (fcmp ord x, y)
       // (fcmp uno x, 0.0) | (fcmp uno y, 0.0)  -> (fcmp uno x, y)
       Value *Y = RHS0;
-      if (IsLogicalSelect)
+      FastMathFlags FMF = LHS->getFastMathFlags() & RHS->getFastMathFlags();
+      if (IsLogicalSelect) {
         Y = Builder.CreateFreeze(Y, Y->getName() + ".fr");
-      return Builder.CreateFCmpFMF(PredL, LHS0, Y,
-                                   FMFSource::intersect(LHS, RHS));
+        FMF.setNoNaNs(false);
+        FMF.setNoInfs(false);
+      }
+      return Builder.CreateFCmpFMF(PredL, LHS0, Y, FMF);
     }
   }
 
