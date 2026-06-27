@@ -52,7 +52,7 @@ struct NotAnAllocator {
   friend bool operator<(NotAnAllocator, NotAnAllocator) { return false; }
 };
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     const int arr[] = {1, 2, 1, INT_MAX, 3};
     std::multiset s(std::begin(arr), std::end(arr));
@@ -212,5 +212,12 @@ int main(int, char**) {
 
   AssociativeContainerDeductionGuidesSfinaeAway<std::multiset, std::multiset<int>>();
 
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

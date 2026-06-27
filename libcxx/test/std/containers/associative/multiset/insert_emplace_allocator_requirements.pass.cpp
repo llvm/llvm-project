@@ -20,9 +20,16 @@
 #include "container_test_types.h"
 #include "../../set_allocator_requirement_test_templates.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   testMultisetInsert<TCT::multiset<> >();
   testMultisetEmplace<TCT::multiset<> >();
 
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

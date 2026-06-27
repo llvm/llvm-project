@@ -13,7 +13,7 @@
 // class multiset
 
 // template <class... Args>
-//   iterator emplace(Args&&... args);
+//   iterator emplace(Args&&... args); // constexpr since C++26
 
 #include <cassert>
 #include <set>
@@ -23,7 +23,7 @@
 #include "MoveOnly.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     typedef std::multiset<DefaultOnly> M;
     typedef M::iterator R;
@@ -84,5 +84,12 @@ int main(int, char**) {
     assert(set.begin() == iter);
   }
 
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

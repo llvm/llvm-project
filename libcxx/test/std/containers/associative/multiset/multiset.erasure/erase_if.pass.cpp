@@ -11,7 +11,7 @@
 
 // template <class T, class Compare, class Allocator, class Predicate>
 //   typename multiset<T, Compare, Allocator>::size_type
-//   erase_if(multiset<T, Compare, Allocator>& c, Predicate pred);
+//   erase_if(multiset<T, Compare, Allocator>& c, Predicate pred); // constexpr since C++26
 
 #include <set>
 
@@ -64,7 +64,7 @@ void test() {
   test0(S({1, 2, 3}), False, S({1, 2, 3}), 0);
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   test<std::multiset<int>>();
   test<std::multiset<int, std::less<int>, min_allocator<int>>>();
   test<std::multiset<int, std::less<int>, test_allocator<int>>>();
@@ -72,5 +72,12 @@ int main(int, char**) {
   test<std::multiset<long>>();
   test<std::multiset<double>>();
 
+  return true;
+}
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }
