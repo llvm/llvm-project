@@ -47,7 +47,7 @@ __sf_result<_Ret> __invoke_boost_math(_Func __f, _Args... __args) {
 } // namespace
 
 __sf_result<float> __assoc_laguerre(unsigned int __n, unsigned int __m, float __x) noexcept {
-  return __invoke_boost_math([&](auto... __args) { return boost::math::laguerre(__args...); }, __n, __m, __x);
+  return __invoke_boost_math([](auto... __args) { return boost::math::laguerre(__args...); }, __n, __m, __x);
 }
 } // namespace __math
 
