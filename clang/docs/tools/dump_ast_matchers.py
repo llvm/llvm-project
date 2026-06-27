@@ -5,6 +5,7 @@
 
 import collections
 import re
+import sys
 from pathlib import Path
 
 CURRENT_DIR = Path(__file__).resolve().parent
