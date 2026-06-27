@@ -16,6 +16,7 @@
 #include "Compiler.h"
 #include "ModulesBuilder.h"
 #include "ProjectModules.h"
+#include "SemanticHighlighting.h"
 #include "TestTU.h"
 #include "support/Path.h"
 #include "support/ThreadsafeFS.h"
@@ -1612,7 +1613,94 @@ struct TypeFromHeader {};
               testing::UnorderedElementsAre(named("TypeFromModule"),
                                             named("TypeFromHeader")));
 }
+/// Annotates the input code with provided semantic highlightings. Results look
+/// something like:
+///   class $Class[[X]] {
+///     $Primitive[[int]] $Field[[a]] = 0;
+///   };
+std::string annotate(llvm::StringRef Input,
+                     llvm::ArrayRef<HighlightingToken> Tokens) {
+  assert(llvm::is_sorted(
+      Tokens, [](const HighlightingToken &L, const HighlightingToken &R) {
+        return L.R.start < R.R.start;
+      }));
 
+  std::string Buf;
+  llvm::raw_string_ostream OS(Buf);
+  unsigned NextChar = 0;
+  for (auto &T : Tokens) {
+    unsigned StartOffset = llvm::cantFail(positionToOffset(Input, T.R.start));
+    unsigned EndOffset = llvm::cantFail(positionToOffset(Input, T.R.end));
+    assert(StartOffset <= EndOffset);
+    assert(NextChar <= StartOffset);
+
+    bool hasDef =
+        T.Modifiers & (1 << uint32_t(HighlightingModifier::Definition));
+    bool hasDecl =
+        T.Modifiers & (1 << uint32_t(HighlightingModifier::Declaration));
+    EXPECT_TRUE(!hasDef || hasDecl);
+
+    OS << Input.substr(NextChar, StartOffset - NextChar);
+    OS << '$' << T.Kind;
+    for (unsigned I = 0;
+         I <= static_cast<uint32_t>(HighlightingModifier::LastModifier); ++I) {
+      if (T.Modifiers & (1 << I)) {
+        // _decl_def is common and redundant, just print _def instead.
+        if (I != uint32_t(HighlightingModifier::Declaration) || !hasDef)
+          OS << '_' << static_cast<HighlightingModifier>(I);
+      }
+    }
+    OS << "[[" << Input.substr(StartOffset, EndOffset - StartOffset) << "]]";
+    NextChar = EndOffset;
+  }
+  OS << Input.substr(NextChar);
+  return std::move(OS.str());
+}
+
+TEST_F(PrerequisiteModulesTests, ModuleSemanticHighlighting) {
+  MockDirectoryCompilationDatabase CDB(TestDir, FS);
+
+  llvm::StringRef AnnotatedCode = R"cpp(
+      module;
+      $Modifier[[import]] $Namespace[[M]];
+      export module highlight;
+      $Modifier[[export]] void $Function_def_globalScope[[foo]]() {
+      }
+)cpp";
+  uint32_t ModifierMask = -1;
+  Annotations UseCpp(AnnotatedCode);
+
+  CDB.addFile("M.cppm", R"cpp(
+export module M;
+export struct TypeFromModule {};
+)cpp");
+
+  CDB.addFile("Use.cpp", UseCpp.code());
+
+  ModulesBuilder Builder(CDB);
+
+  auto Inputs = getInputs("Use.cpp", CDB);
+  Inputs.ModulesManager = &Builder;
+  Inputs.Opts.SkipPreambleBuild = true;
+
+  auto CI = buildCompilerInvocation(Inputs, DiagConsumer);
+  ASSERT_TRUE(CI);
+
+  auto Preamble =
+      buildPreamble(getFullPath("Use.cpp"), *CI, Inputs, /*StoreInMemory=*/true,
+                    /*PeambleCallback=*/nullptr);
+  ASSERT_TRUE(Preamble);
+  EXPECT_EQ(Preamble->Preamble.getBounds().Size, 0u);
+
+  auto AST = ParsedAST::build(getFullPath("Use.cpp"), Inputs, std::move(CI), {},
+                              Preamble);
+  auto Actual = getSemanticHighlightings(AST.value(),
+                                         /*IncludeInactiveRegionTokens=*/true);
+  for (auto &Token : Actual)
+    Token.Modifiers &= ModifierMask;
+
+  EXPECT_EQ(AnnotatedCode, annotate(UseCpp.code(), Actual));
+}
 } // namespace
 } // namespace clang::clangd
 
