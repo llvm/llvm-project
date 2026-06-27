@@ -435,6 +435,12 @@ exception_ptr current_exception() noexcept {
     __cpp_record.params.pExceptionObject = __exception_buffer;
   }
 
+  // Under MSVC C++ exception handling (/EHsc), C Win32 API functions like RaiseException
+  // are assumed not to throw synchronous C++ exceptions. As a result, stack unwinding
+  // initiated by RaiseException does not execute local destructors in this frame.
+  // We must explicitly reset __p here so that the reference count on the stored
+  // exception record is properly decremented before unwinding begins.
+  __p = nullptr;
   RaiseException(__record_copy.ExceptionCode, __record_copy.ExceptionFlags, __record_copy.NumberParameters,
                  __record_copy.ExceptionInformation);
   std::abort();
