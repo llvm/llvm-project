@@ -1303,6 +1303,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  exp10bf16
+  SRCS
+    exp10bf16.cpp
+  HDRS
+    ../exp10bf16.h
+  DEPENDS
+    libc.src.__support.math.exp10bf16
+)
+
+add_entrypoint_object(
   exp10f
   SRCS
     exp10f.cpp
