@@ -202,7 +202,7 @@ public:
     requires _Const && convertible_to<__inner_iterator<false>, __inner_iterator<true>>
       : __parent_(__i.__parent_), __inner_(std::move(__i.__inner_)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const
       noexcept(__noexcept_dereference(make_index_sequence<_Np>{})) {
     return std::apply(
         [&](const auto&... __iters) -> decltype(auto) { return std::invoke(*__parent_->__fun_, *__iters...); },
@@ -249,7 +249,7 @@ public:
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](difference_type __n) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator[](difference_type __n) const
     requires random_access_range<_Base>
   {
     return std::apply(
@@ -291,25 +291,25 @@ public:
     return __x.__inner_ <=> __y.__inner_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(const __iterator& __i, difference_type __n)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(const __iterator& __i, difference_type __n)
     requires random_access_range<_Base>
   {
     return __iterator(*__i.__parent_, __i.__inner_ + __n);
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(difference_type __n, const __iterator& __i)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(difference_type __n, const __iterator& __i)
     requires random_access_range<_Base>
   {
     return __iterator(*__i.__parent_, __i.__inner_ + __n);
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator-(const __iterator& __i, difference_type __n)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator-(const __iterator& __i, difference_type __n)
     requires random_access_range<_Base>
   {
     return __iterator(*__i.__parent_, __i.__inner_ - __n);
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type operator-(const __iterator& __x, const __iterator& __y)
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr difference_type operator-(const __iterator& __x, const __iterator& __y)
     requires sized_sentinel_for<__inner_iterator<_Const>, __inner_iterator<_Const>>
   {
     return __x.__inner_ - __y.__inner_;
@@ -344,14 +344,14 @@ public:
 
   template <bool _OtherConst>
     requires sized_sentinel_for<__inner_sentinel<_Const>, __inner_iterator<_OtherConst>>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr range_difference_t<__maybe_const<_OtherConst, _InnerView>>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr range_difference_t<__maybe_const<_OtherConst, _InnerView>>
   operator-(const __iterator<_OtherConst>& __x, const __sentinel& __y) {
     return __x.__inner_ - __y.__inner_;
   }
 
   template <bool _OtherConst>
     requires sized_sentinel_for<__inner_sentinel<_Const>, __inner_iterator<_OtherConst>>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr range_difference_t<__maybe_const<_OtherConst, _InnerView>>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr range_difference_t<__maybe_const<_OtherConst, _InnerView>>
   operator-(const __sentinel& __x, const __iterator<_OtherConst>& __y) {
     return __x.__inner_ - __y.__inner_;
   }
@@ -371,7 +371,7 @@ struct __fn : __range_adaptor_closure<__fn<_Np>> {
   }
 
   template <class _Range, class _Fn>
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Range&& __range, _Fn&& __fn) noexcept(
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr auto operator()(_Range&& __range, _Fn&& __fn) noexcept(
       noexcept(adjacent_transform_view<views::all_t<_Range&&>, decay_t<_Fn>, _Np>(
           std::forward<_Range>(__range), std::forward<_Fn>(__fn))))
       -> decltype(adjacent_transform_view<views::all_t<_Range&&>, decay_t<_Fn>, _Np>(
