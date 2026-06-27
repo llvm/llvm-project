@@ -719,7 +719,8 @@ struct ScalingTruncFOpConverter
       scaleETy = b.getF8E8M0Type();
       scaleTy = cloneToShapedType(scaleTy, scaleETy);
       scaleOperand = arith::TruncFOp::create(b, scaleTy, scaleOperand, nullptr,
-                                             op.getFastmathAttr(), nullptr);
+                                             op.getFastmathAttr(),
+                                             op.getFenvAttr());
     }
     if (!llvm::isa<Float8E8M0FNUType>(scaleETy)) {
       return rewriter.notifyMatchFailure(
@@ -733,7 +734,8 @@ struct ScalingTruncFOpConverter
     scaleOperand =
         arith::ExtFOp::create(b, inputTy, scaleOperand, op.getFastmathAttr());
     Value result = arith::DivFOp::create(b, inputOperand, scaleOperand,
-                                         op.getFastmathAttr());
+                                         op.getFastmathAttr(), nullptr,
+                                         op.getFenvAttr());
     Value resultCast = arith::TruncFOp::create(
         b, resultTy, result, op.getRoundingmodeAttr(), op.getFastmathAttr(),
         op.getFenvAttr());

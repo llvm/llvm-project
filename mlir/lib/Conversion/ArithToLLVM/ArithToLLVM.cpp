@@ -29,20 +29,21 @@ using namespace mlir;
 
 namespace {
 
-/// Lowering pattern that matches only when the source op's rounding mode
-/// presence agrees with `HasRoundingMode`. This allows registering two
-/// instances of the same pattern for one source op: one that handles the
-/// unconstrained case (no rounding mode, lowering to a regular LLVM op) and
-/// one that handles the constrained case (rounding mode present, lowering to
-/// a constrained LLVM intrinsic).
+/// Lowering pattern that matches only when the source op's constrained
+/// floating-point environment presence agrees with `IsConstrained`. A source
+/// op is considered constrained when it carries either the deprecated
+/// `roundingmode` attribute or the `#arith.fenv` attribute. This allows
+/// registering two instances of the same pattern for one source op: one that
+/// handles the unconstrained case (lowering to a regular LLVM op) and one that
+/// handles the constrained case (lowering to a constrained LLVM intrinsic).
 ///
-/// * `HasRoundingMode`: the pattern matches if and only if the source op has
-///   a rounding mode attribute.
+/// * `IsConstrained`: the pattern matches if and only if the source op carries
+///   a `roundingmode` or `#arith.fenv` attribute.
 /// * `AttrConvert`: attribute converter to translate source attributes to
 ///   target attributes.
 /// * `FailOnUnsupportedFP`: whether to fail if the source op has unsupported
 ///   floating point types.
-template <typename SourceOp, typename TargetOp, bool HasRoundingMode,
+template <typename SourceOp, typename TargetOp, bool IsConstrained,
           template <typename, typename> typename AttrConvert =
               AttrConvertPassThrough,
           bool FailOnUnsupportedFP = false>
@@ -56,7 +57,8 @@ struct ConstrainedVectorConvertToLLVMPattern
   LogicalResult
   matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (HasRoundingMode != static_cast<bool>(op.getRoundingModeAttr()))
+    bool opIsConstrained = op.getRoundingModeAttr() || op.getFenvAttr();
+    if (IsConstrained != opIsConstrained)
       return failure();
     return VectorConvertToLLVMPattern<
         SourceOp, TargetOp, AttrConvert,
@@ -89,11 +91,11 @@ struct IdentityBitcastLowering final
 
 using AddFOpLowering =
     ConstrainedVectorConvertToLLVMPattern<arith::AddFOp, LLVM::FAddOp,
-                                          /*HasRoundingMode=*/false,
+                                          /*IsConstrained=*/false,
                                           arith::AttrConvertFastMathToLLVM,
                                           /*FailOnUnsupportedFP=*/true>;
 using ConstrainedAddFOpLowering = ConstrainedVectorConvertToLLVMPattern<
-    arith::AddFOp, LLVM::ConstrainedFAddIntr, /*HasRoundingMode=*/true,
+    arith::AddFOp, LLVM::ConstrainedFAddIntr, /*IsConstrained=*/true,
     arith::AttrConverterConstrainedFPToLLVM, /*FailOnUnsupportedFP=*/true>;
 using AddIOpLowering =
     VectorConvertToLLVMPattern<arith::AddIOp, LLVM::AddOp,
@@ -103,11 +105,11 @@ using BitcastOpLowering =
     VectorConvertToLLVMPattern<arith::BitcastOp, LLVM::BitcastOp>;
 using DivFOpLowering =
     ConstrainedVectorConvertToLLVMPattern<arith::DivFOp, LLVM::FDivOp,
-                                          /*HasRoundingMode=*/false,
+                                          /*IsConstrained=*/false,
                                           arith::AttrConvertFastMathToLLVM,
                                           /*FailOnUnsupportedFP=*/true>;
 using ConstrainedDivFOpLowering = ConstrainedVectorConvertToLLVMPattern<
-    arith::DivFOp, LLVM::ConstrainedFDivIntr, /*HasRoundingMode=*/true,
+    arith::DivFOp, LLVM::ConstrainedFDivIntr, /*IsConstrained=*/true,
     arith::AttrConverterConstrainedFPToLLVM, /*FailOnUnsupportedFP=*/true>;
 using DivSIOpLowering =
     VectorConvertToLLVMPattern<arith::DivSIOp, LLVM::SDivOp>;
@@ -155,11 +157,11 @@ using MinUIOpLowering =
     VectorConvertToLLVMPattern<arith::MinUIOp, LLVM::UMinOp>;
 using MulFOpLowering =
     ConstrainedVectorConvertToLLVMPattern<arith::MulFOp, LLVM::FMulOp,
-                                          /*HasRoundingMode=*/false,
+                                          /*IsConstrained=*/false,
                                           arith::AttrConvertFastMathToLLVM,
                                           /*FailOnUnsupportedFP=*/true>;
 using ConstrainedMulFOpLowering = ConstrainedVectorConvertToLLVMPattern<
-    arith::MulFOp, LLVM::ConstrainedFMulIntr, /*HasRoundingMode=*/true,
+    arith::MulFOp, LLVM::ConstrainedFMulIntr, /*IsConstrained=*/true,
     arith::AttrConverterConstrainedFPToLLVM, /*FailOnUnsupportedFP=*/true>;
 using MulIOpLowering =
     VectorConvertToLLVMPattern<arith::MulIOp, LLVM::MulOp,
@@ -190,22 +192,22 @@ using SIToFPOpLowering =
     VectorConvertToLLVMPattern<arith::SIToFPOp, LLVM::SIToFPOp>;
 using SubFOpLowering =
     ConstrainedVectorConvertToLLVMPattern<arith::SubFOp, LLVM::FSubOp,
-                                          /*HasRoundingMode=*/false,
+                                          /*IsConstrained=*/false,
                                           arith::AttrConvertFastMathToLLVM,
                                           /*FailOnUnsupportedFP=*/true>;
 using ConstrainedSubFOpLowering = ConstrainedVectorConvertToLLVMPattern<
-    arith::SubFOp, LLVM::ConstrainedFSubIntr, /*HasRoundingMode=*/true,
+    arith::SubFOp, LLVM::ConstrainedFSubIntr, /*IsConstrained=*/true,
     arith::AttrConverterConstrainedFPToLLVM, /*FailOnUnsupportedFP=*/true>;
 using SubIOpLowering =
     VectorConvertToLLVMPattern<arith::SubIOp, LLVM::SubOp,
                                arith::AttrConvertOverflowToLLVM>;
 using TruncFOpLowering =
     ConstrainedVectorConvertToLLVMPattern<arith::TruncFOp, LLVM::FPTruncOp,
-                                          /*HasRoundingMode=*/false,
+                                          /*IsConstrained=*/false,
                                           AttrConvertPassThrough,
                                           /*FailOnUnsupportedFP=*/true>;
 using ConstrainedTruncFOpLowering = ConstrainedVectorConvertToLLVMPattern<
-    arith::TruncFOp, LLVM::ConstrainedFPTruncIntr, /*HasRoundingMode=*/true,
+    arith::TruncFOp, LLVM::ConstrainedFPTruncIntr, /*IsConstrained=*/true,
     arith::AttrConverterConstrainedFPToLLVM, /*FailOnUnsupportedFP=*/true>;
 using TruncIOpLowering =
     VectorConvertToLLVMPattern<arith::TruncIOp, LLVM::TruncOp,
@@ -300,6 +302,12 @@ struct CmpFOpLowering : public ConvertOpToLLVMPattern<arith::CmpFOp> {
 /// Extends to f32 via llvm.fpext, then truncates to the target type via
 /// llvm.fptrunc. This handles bf16 <-> f16, which is the only same-bitwidth
 /// pair of LLVM-supported FP types.
+///
+/// When the op carries a constrained floating-point environment (through the
+/// deprecated `roundingmode` attribute or the `#arith.fenv` attribute), the two
+/// steps lower to the constrained intrinsics instead: the widening `fpext` is
+/// exact and only carries the exception behavior, while the narrowing `fptrunc`
+/// carries both the rounding mode and the exception behavior.
 struct ConvertFOpLowering : public ConvertOpToLLVMPattern<arith::ConvertFOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
@@ -322,12 +330,33 @@ struct ConvertFOpLowering : public ConvertOpToLLVMPattern<arith::ConvertFOp> {
     if (!convertedType)
       return rewriter.notifyMatchFailure(op, "failed to convert result type");
 
+    // Derive the constrained floating-point environment, if any, from either
+    // the deprecated `roundingmode` attribute or the `#arith.fenv` attribute.
+    // The rounding mode only applies to the narrowing step; the exception
+    // behavior, when present, applies to both steps.
+    MLIRContext *ctx = rewriter.getContext();
+    LLVM::RoundingModeAttr roundingModeAttr;
+    LLVM::FPExceptionBehaviorAttr exceptionBehaviorAttr;
+    if (arith::FenvAttr fenvAttr = op.getFenvAttr()) {
+      roundingModeAttr = LLVM::RoundingModeAttr::get(
+          ctx, arith::convertArithRoundingModeToLLVM(
+                   fenvAttr.getDynamicRoundingModeOrDefault()));
+      exceptionBehaviorAttr = LLVM::FPExceptionBehaviorAttr::get(
+          ctx, arith::convertArithFPExceptionBehaviorToLLVM(
+                   fenvAttr.getExceptionModeOrDefault(),
+                   fenvAttr.getStrictExceptOrDefault()));
+    } else if (arith::RoundingModeAttr rmAttr = op.getRoundingmodeAttr()) {
+      roundingModeAttr = arith::convertArithRoundingModeAttrToLLVM(rmAttr);
+      exceptionBehaviorAttr = arith::getLLVMDefaultFPExceptionBehavior(*ctx);
+    }
+
     Value input = adaptor.getIn();
     Location loc = op.getLoc();
 
     if (!isa<LLVM::LLVMArrayType>(input.getType())) {
-      rewriter.replaceOp(op,
-                         emitConversion(rewriter, loc, input, convertedType));
+      rewriter.replaceOp(op, emitConversion(rewriter, loc, input, convertedType,
+                                            roundingModeAttr,
+                                            exceptionBehaviorAttr));
       return success();
     }
 
@@ -337,19 +366,32 @@ struct ConvertFOpLowering : public ConvertOpToLLVMPattern<arith::ConvertFOp> {
     return LLVM::detail::handleMultidimensionalVectors(
         op.getOperation(), adaptor.getOperands(), *getTypeConverter(),
         [&](Type llvm1DVectorTy, ValueRange operands) -> Value {
-          return emitConversion(rewriter, loc, operands.front(),
-                                llvm1DVectorTy);
+          return emitConversion(rewriter, loc, operands.front(), llvm1DVectorTy,
+                                roundingModeAttr, exceptionBehaviorAttr);
         },
         rewriter);
   }
 
 private:
   static Value emitConversion(ConversionPatternRewriter &rewriter, Location loc,
-                              Value input, Type targetType) {
+                              Value input, Type targetType,
+                              LLVM::RoundingModeAttr roundingModeAttr,
+                              LLVM::FPExceptionBehaviorAttr
+                                  exceptionBehaviorAttr) {
     Type f32Scalar = Float32Type::get(rewriter.getContext());
     Type f32Ty = f32Scalar;
     if (auto vecTy = dyn_cast<VectorType>(targetType))
       f32Ty = VectorType::get(vecTy.getShape(), f32Scalar);
+
+    // A constrained floating-point environment was requested: emit the
+    // constrained intrinsics carrying the rounding mode and exception behavior.
+    if (exceptionBehaviorAttr) {
+      Value ext = LLVM::ConstrainedFPExtIntr::create(rewriter, loc, f32Ty, input,
+                                                     exceptionBehaviorAttr);
+      return LLVM::ConstrainedFPTruncIntr::create(rewriter, loc, targetType, ext,
+                                                  roundingModeAttr,
+                                                  exceptionBehaviorAttr);
+    }
 
     Value ext = LLVM::FPExtOp::create(rewriter, loc, f32Ty, input);
     return LLVM::FPTruncOp::create(rewriter, loc, targetType, ext);

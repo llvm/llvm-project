@@ -37,13 +37,15 @@ using ConvertFMFMathToLLVMPattern =
     VectorConvertToLLVMPattern<SourceOp, TargetOp, ConvertFastMath,
                                FailOnUnsupportedFP>;
 
-/// Lowering pattern that matches only when the source op's rounding mode
-/// presence agrees with `HasRoundingMode`. Mirrors the helper of the same
-/// name in `mlir/lib/Conversion/ArithToLLVM/ArithToLLVM.cpp`. This lets us
-/// register two patterns for one math op: an unconstrained one that lowers
-/// to a regular LLVM op, and a constrained one (rounding mode present) that
-/// lowers to an `llvm.intr.experimental.constrained.*` intrinsic.
-template <typename SourceOp, typename TargetOp, bool HasRoundingMode,
+/// Lowering pattern that matches only when the source op's constrained
+/// floating-point environment presence agrees with `IsConstrained`. A source
+/// op is considered constrained when it carries either the deprecated
+/// `roundingmode` attribute or the `#arith.fenv` attribute. Mirrors the helper
+/// of the same name in `mlir/lib/Conversion/ArithToLLVM/ArithToLLVM.cpp`. This
+/// lets us register two patterns for one math op: an unconstrained one that
+/// lowers to a regular LLVM op, and a constrained one that lowers to an
+/// `llvm.intr.experimental.constrained.*` intrinsic.
+template <typename SourceOp, typename TargetOp, bool IsConstrained,
           template <typename, typename> typename AttrConvert =
               AttrConvertPassThrough,
           bool FailOnUnsupportedFP = true>
@@ -57,7 +59,8 @@ struct ConstrainedVectorConvertToLLVMPattern
   LogicalResult
   matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (HasRoundingMode != static_cast<bool>(op.getRoundingModeAttr()))
+    bool opIsConstrained = op.getRoundingModeAttr() || op.getFenvAttr();
+    if (IsConstrained != opIsConstrained)
       return failure();
     return VectorConvertToLLVMPattern<
         SourceOp, TargetOp, AttrConvert,
@@ -84,11 +87,11 @@ using FloorOpLowering =
     ConvertFMFMathToLLVMPattern<math::FloorOp, LLVM::FFloorOp>;
 using FmaOpLowering =
     ConstrainedVectorConvertToLLVMPattern<math::FmaOp, LLVM::FMAOp,
-                                          /*HasRoundingMode=*/false,
+                                          /*IsConstrained=*/false,
                                           ConvertFastMath,
                                           /*FailOnUnsupportedFP=*/true>;
 using ConstrainedFmaOpLowering = ConstrainedVectorConvertToLLVMPattern<
-    math::FmaOp, LLVM::ConstrainedFMAIntr, /*HasRoundingMode=*/true,
+    math::FmaOp, LLVM::ConstrainedFMAIntr, /*IsConstrained=*/true,
     arith::AttrConverterConstrainedFPToLLVM, /*FailOnUnsupportedFP=*/true>;
 using Log10OpLowering =
     ConvertFMFMathToLLVMPattern<math::Log10Op, LLVM::Log10Op>;

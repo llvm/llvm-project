@@ -45,6 +45,18 @@ convertArithRoundingModeAttrToLLVM(arith::RoundingModeAttr roundingModeAttr);
 LLVM::FPExceptionBehaviorAttr
 getLLVMDefaultFPExceptionBehavior(MLIRContext &context);
 
+/// Maps an arith floating-point exception mode and strict-exception flag, as
+/// described by an `#arith.fenv` attribute, to the corresponding LLVM
+/// constrained-intrinsic exception behavior:
+///
+///   masked            + strict_except=false -> fpexcept.ignore
+///   masked            + strict_except=true  -> fpexcept.strict
+///   unmasked|unknown  + strict_except=false -> fpexcept.maytrap
+///   unmasked|unknown  + strict_except=true  -> fpexcept.strict
+LLVM::FPExceptionBehavior
+convertArithFPExceptionBehaviorToLLVM(arith::FPExceptionMode exceptionMode,
+                                      bool strictExcept);
+
 // Attribute converter that populates a NamedAttrList by removing the fastmath
 // attribute from the source operation attributes, and replacing it with an
 // equivalent LLVM fastmath attribute.
@@ -145,25 +157,52 @@ public:
   AttrConverterConstrainedFPToLLVM(SourceOp srcOp) {
     // Copy the source attributes.
     convertedAttr = NamedAttrList{srcOp->getAttrs()};
+    MLIRContext *ctx = srcOp->getContext();
+
+    // The floating-point environment may be described either by the deprecated
+    // `roundingmode` attribute or by the `#arith.fenv` attribute. Collect both
+    // (the verifier guarantees they are never set at the same time) and remove
+    // them from the attributes carried over to the target op.
+    auto roundingModeAttr = dyn_cast_if_present<arith::RoundingModeAttr>(
+        convertedAttr.erase(srcOp.getRoundingModeAttrName()));
+    arith::FenvAttr fenvAttr = srcOp.getFenvAttr();
+    convertedAttr.erase(srcOp.getFenvAttrName());
+
+    // Determine the rounding mode. The `fenv` attribute takes precedence; when
+    // neither source carries one, fall back to the default dynamic rounding
+    // mode.
+    [[maybe_unused]] arith::RoundingMode roundingMode =
+        arith::FenvAttr::getDefaultDynamicRoundingMode();
+    if (fenvAttr)
+      roundingMode = fenvAttr.getDynamicRoundingModeOrDefault();
+    else if (roundingModeAttr)
+      roundingMode = roundingModeAttr.getValue();
 
     if constexpr (TargetOp::template hasTrait<
                       LLVM::RoundingModeOpInterface::Trait>()) {
-      // Get the name of the rounding mode attribute.
-      StringRef arithAttrName = srcOp.getRoundingModeAttrName();
-      // Remove the source attribute.
-      auto arithAttr =
-          cast<arith::RoundingModeAttr>(convertedAttr.erase(arithAttrName));
-      // Set the target attribute.
-      convertedAttr.set(TargetOp::getRoundingModeAttrName(),
-                        convertArithRoundingModeAttrToLLVM(arithAttr));
+      convertedAttr.set(
+          TargetOp::getRoundingModeAttrName(),
+          LLVM::RoundingModeAttr::get(
+              ctx, convertArithRoundingModeToLLVM(roundingMode)));
     }
     // Constrained intrinsics (llvm.intr.experimental.constrained.*) do not
     // support fastmath flags. Remove the arith fastmath attribute if present.
     if constexpr (SourceOp::template hasTrait<
                       arith::ArithFastMathInterface::Trait>())
       convertedAttr.erase(srcOp.getFastMathAttrName());
-    convertedAttr.set(TargetOp::getFPExceptionBehaviorAttrName(),
-                      getLLVMDefaultFPExceptionBehavior(*srcOp->getContext()));
+
+    // Determine the exception behavior from the `fenv` attribute, defaulting to
+    // `ignore` when no environment is specified (e.g. only a `roundingmode`
+    // attribute is present).
+    LLVM::FPExceptionBehavior exceptionBehavior =
+        LLVM::FPExceptionBehavior::Ignore;
+    if (fenvAttr)
+      exceptionBehavior = convertArithFPExceptionBehaviorToLLVM(
+          fenvAttr.getExceptionModeOrDefault(),
+          fenvAttr.getStrictExceptOrDefault());
+    convertedAttr.set(
+        TargetOp::getFPExceptionBehaviorAttrName(),
+        LLVM::FPExceptionBehaviorAttr::get(ctx, exceptionBehavior));
   }
 
   ArrayRef<NamedAttribute> getAttrs() const { return convertedAttr.getAttrs(); }

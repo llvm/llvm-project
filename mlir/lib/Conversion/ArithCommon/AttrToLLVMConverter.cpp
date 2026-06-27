@@ -81,3 +81,18 @@ mlir::arith::getLLVMDefaultFPExceptionBehavior(MLIRContext &context) {
   return LLVM::FPExceptionBehaviorAttr::get(&context,
                                             LLVM::FPExceptionBehavior::Ignore);
 }
+
+LLVM::FPExceptionBehavior mlir::arith::convertArithFPExceptionBehaviorToLLVM(
+    arith::FPExceptionMode exceptionMode, bool strictExcept) {
+  // A strict-exception requirement always maps to `strict`, which preserves
+  // both the side effects and the exact exception semantics regardless of the
+  // exception mode.
+  if (strictExcept)
+    return LLVM::FPExceptionBehavior::Strict;
+  // Without the strict requirement, a masked environment may ignore exceptions,
+  // while an unmasked or unknown environment must conservatively assume that
+  // traps may occur.
+  if (exceptionMode == arith::FPExceptionMode::Masked)
+    return LLVM::FPExceptionBehavior::Ignore;
+  return LLVM::FPExceptionBehavior::MayTrap;
+}

@@ -692,3 +692,21 @@ func.func @constrained_fma_with_fastmath(%a : f64, %b : f64, %c : f64) {
   %0 = math.fma %a, %b, %c to_nearest_even fastmath<fast> : f64
   return
 }
+
+// -----
+
+// The `#arith.fenv` attribute lowers to the constrained fma intrinsic, mapping
+// the dynamic rounding mode and the exception behavior derived from
+// `except_mode` and `strict_except`.
+// CHECK-LABEL: func @experimental_constrained_fma_fenv
+func.func @experimental_constrained_fma_fenv(%a : f64, %b : f64, %c : f64) {
+  // CHECK-NEXT: llvm.intr.experimental.constrained.fma %{{.*}}, %{{.*}}, %{{.*}} dynamic ignore : f64
+  %0 = math.fma %a, %b, %c fenv<> : f64
+  // masked + strict -> strict
+  // CHECK-NEXT: llvm.intr.experimental.constrained.fma %{{.*}}, %{{.*}}, %{{.*}} tonearest strict : f64
+  %1 = math.fma %a, %b, %c fenv<dynamic_rounding_mode = to_nearest_even, strict_except = true> : f64
+  // unknown + non-strict -> maytrap
+  // CHECK-NEXT: llvm.intr.experimental.constrained.fma %{{.*}}, %{{.*}}, %{{.*}} towardzero maytrap : f64
+  %2 = math.fma %a, %b, %c fenv<dynamic_rounding_mode = toward_zero, except_mode = unknown> : f64
+  return
+}

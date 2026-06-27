@@ -465,6 +465,47 @@ func.func @constrained_addf_with_fastmath(%arg0 : f64, %arg1 : f64) {
 
 // -----
 
+// Verify that the `#arith.fenv` attribute lowers to a constrained intrinsic,
+// mapping the dynamic rounding mode and the exception behavior. The exception
+// behavior depends on both `except_mode` and `strict_except`:
+//   masked           + strict_except=false -> ignore
+//   masked           + strict_except=true  -> strict
+//   unmasked|unknown + strict_except=false -> maytrap
+//   unmasked|unknown + strict_except=true  -> strict
+// CHECK-LABEL: experimental_constrained_fenv
+func.func @experimental_constrained_fenv(%arg0 : f64, %arg1 : f64) {
+// An empty fenv uses all defaults: dynamic rounding and ignored exceptions.
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 dynamic ignore
+  %0 = arith.addf %arg0, %arg1 fenv<> : f64
+// masked (default) + non-strict (default) -> ignore
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 tonearest ignore
+  %1 = arith.addf %arg0, %arg1 fenv<dynamic_rounding_mode = to_nearest_even> : f64
+// masked + strict -> strict
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 upward strict
+  %2 = arith.addf %arg0, %arg1 fenv<dynamic_rounding_mode = upward, strict_except = true> : f64
+// unmasked + non-strict -> maytrap
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 downward maytrap
+  %3 = arith.addf %arg0, %arg1 fenv<dynamic_rounding_mode = downward, except_mode = unmasked> : f64
+// unknown + non-strict -> maytrap
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 towardzero maytrap
+  %4 = arith.addf %arg0, %arg1 fenv<dynamic_rounding_mode = toward_zero, except_mode = unknown> : f64
+// unmasked + strict -> strict
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fadd %arg0, %arg1 tonearestaway strict
+  %5 = arith.addf %arg0, %arg1 fenv<dynamic_rounding_mode = to_nearest_away, except_mode = unmasked, strict_except = true> : f64
+  return
+}
+
+// -----
+
+// CHECK-LABEL: experimental_constrained_fptrunc_fenv
+func.func @experimental_constrained_fptrunc_fenv(%arg0 : f64) {
+// CHECK-NEXT: = llvm.intr.experimental.constrained.fptrunc %arg0 upward maytrap : f64 to f32
+  %0 = arith.truncf %arg0 fenv<dynamic_rounding_mode = upward, except_mode = unmasked> : f64 to f32
+  return
+}
+
+// -----
+
 // CHECK-LABEL: @convertf_f16_to_bf16
 func.func @convertf_f16_to_bf16(%arg0 : f16) -> bf16 {
 // CHECK-NEXT: %[[EXT:.*]] = llvm.fpext %arg0 : f16 to f32
@@ -492,6 +533,45 @@ func.func @convertf_vector(%arg0 : vector<2xf16>) -> vector<2xbf16> {
 // CHECK-NEXT: %[[EXT:.*]] = llvm.fpext %arg0 : vector<2xf16> to vector<2xf32>
 // CHECK-NEXT: %[[TRUNC:.*]] = llvm.fptrunc %[[EXT]] : vector<2xf32> to vector<2xbf16>
   %0 = arith.convertf %arg0 : vector<2xf16> to vector<2xbf16>
+// CHECK-NEXT: return %[[TRUNC]]
+  return %0 : vector<2xbf16>
+}
+
+// -----
+
+// A constrained floating-point environment lowers both conversion steps to the
+// constrained intrinsics: the widening `fpext` is exact and only carries the
+// exception behavior, while the narrowing `fptrunc` carries both the rounding
+// mode and the exception behavior.
+// CHECK-LABEL: @convertf_fenv
+func.func @convertf_fenv(%arg0 : f16) -> bf16 {
+// CHECK-NEXT: %[[EXT:.*]] = llvm.intr.experimental.constrained.fpext %arg0 maytrap : f16 to f32
+// CHECK-NEXT: %[[TRUNC:.*]] = llvm.intr.experimental.constrained.fptrunc %[[EXT]] upward maytrap : f32 to bf16
+  %0 = arith.convertf %arg0 fenv<dynamic_rounding_mode = upward, except_mode = unmasked> : f16 to bf16
+// CHECK-NEXT: return %[[TRUNC]]
+  return %0 : bf16
+}
+
+// -----
+
+// The deprecated `roundingmode` attribute also lowers to the constrained
+// intrinsics, using the default (`ignore`) exception behavior.
+// CHECK-LABEL: @convertf_roundingmode
+func.func @convertf_roundingmode(%arg0 : bf16) -> f16 {
+// CHECK-NEXT: %[[EXT:.*]] = llvm.intr.experimental.constrained.fpext %arg0 ignore : bf16 to f32
+// CHECK-NEXT: %[[TRUNC:.*]] = llvm.intr.experimental.constrained.fptrunc %[[EXT]] tonearest ignore : f32 to f16
+  %0 = arith.convertf %arg0 to_nearest_even : bf16 to f16
+// CHECK-NEXT: return %[[TRUNC]]
+  return %0 : f16
+}
+
+// -----
+
+// CHECK-LABEL: @convertf_fenv_vector
+func.func @convertf_fenv_vector(%arg0 : vector<2xf16>) -> vector<2xbf16> {
+// CHECK-NEXT: %[[EXT:.*]] = llvm.intr.experimental.constrained.fpext %arg0 strict : vector<2xf16> to vector<2xf32>
+// CHECK-NEXT: %[[TRUNC:.*]] = llvm.intr.experimental.constrained.fptrunc %[[EXT]] towardzero strict : vector<2xf32> to vector<2xbf16>
+  %0 = arith.convertf %arg0 fenv<dynamic_rounding_mode = toward_zero, strict_except = true> : vector<2xf16> to vector<2xbf16>
 // CHECK-NEXT: return %[[TRUNC]]
   return %0 : vector<2xbf16>
 }
