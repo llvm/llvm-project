@@ -22632,7 +22632,7 @@ void test11() {
   const my_facet f(1);
 
   {
-    double v = INFINITY;
+    long double v = INFINITY;
     std::ios ios(0);
     std::fixed(ios);
     ios.imbue(lc);
@@ -22652,7 +22652,7 @@ void test11() {
   }
 
   {
-    double v = NAN;
+    long double v = NAN;
     std::ios ios(0);
     std::fixed(ios);
     ios.imbue(lc);
