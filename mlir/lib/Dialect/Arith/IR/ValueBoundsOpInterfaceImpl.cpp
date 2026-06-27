@@ -278,25 +278,20 @@ struct MinUIOpInterface
     assert(value == minOp.getResult() && "invalid value");
 
     // ValueBoundsConstraintSet models values as signed integers (e.g. an i8
-    // 0xff is treated as -1, not 255). For an unsigned minimum it is enough
-    // that a single operand is provably non-negative: minui(x, y) is in
-    // [0, y] whenever y >= 0 (and symmetrically for x).
+    // 0xff is treated as -1, not 255).So, we can only derive bounds for minui 
+    // if both operands are provably non-negative.
     bool lhsNonNegative =
         ValueBoundsConstraintSet::isProvablyNonNegative(minOp.getLhs(), cstr);
     bool rhsNonNegative =
         ValueBoundsConstraintSet::isProvablyNonNegative(minOp.getRhs(), cstr);
-    if (!lhsNonNegative && !rhsNonNegative)
+    if (!lhsNonNegative || !rhsNonNegative)
       return;
 
     cstr.bound(value) >= 0;
-    if (lhsNonNegative) {
-      AffineExpr lhs = cstr.getExpr(minOp.getLhs());
-      cstr.bound(value) <= lhs;
-    }
-    if (rhsNonNegative) {
-      AffineExpr rhs = cstr.getExpr(minOp.getRhs());
-      cstr.bound(value) <= rhs;
-    }
+    AffineExpr lhs = cstr.getExpr(minOp.getLhs());
+    AffineExpr rhs = cstr.getExpr(minOp.getRhs());
+    cstr.bound(value) <= lhs;
+    cstr.bound(value) <= rhs;
   }
 };
 
@@ -309,9 +304,11 @@ struct MaxUIOpInterface
     assert(value == maxOp.getResult() && "invalid value");
 
     // See MinUIOpInterface comment
-    if (!ValueBoundsConstraintSet::isProvablyNonNegative(maxOp.getLhs(),
-                                                         cstr) ||
-        !ValueBoundsConstraintSet::isProvablyNonNegative(maxOp.getRhs(), cstr))
+    bool lhsNonNegative =
+        ValueBoundsConstraintSet::isProvablyNonNegative(maxOp.getLhs(), cstr);
+    bool rhsNonNegative =
+        ValueBoundsConstraintSet::isProvablyNonNegative(maxOp.getRhs(), cstr);
+    if (!lhsNonNegative || !rhsNonNegative)
       return;
 
     AffineExpr lhs = cstr.getExpr(maxOp.getLhs());
