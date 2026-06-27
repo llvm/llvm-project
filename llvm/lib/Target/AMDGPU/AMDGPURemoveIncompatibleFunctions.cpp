@@ -88,7 +88,7 @@ private:
 StringRef getFeatureName(unsigned Feature) {
   for (const SubtargetFeatureKV &KV : AMDGPUFeatureKV)
     if (Feature == KV.Value)
-      return KV.key();
+      return KV.Key;
 
   llvm_unreachable("Unknown Target feature");
 }
@@ -96,7 +96,7 @@ StringRef getFeatureName(unsigned Feature) {
 const SubtargetSubTypeKV *getGPUInfo(const GCNSubtarget &ST,
                                      StringRef GPUName) {
   for (const SubtargetSubTypeKV &KV : ST.getAllProcessorDescriptions())
-    if (StringRef(KV.key()) == GPUName)
+    if (StringRef(KV.Key) == GPUName)
       return &KV;
 
   return nullptr;
