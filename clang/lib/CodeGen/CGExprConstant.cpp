@@ -2572,6 +2572,11 @@ ConstantEmitter::tryEmitPrivate(const APValue &Value, QualType DestType,
   case APValue::Indeterminate:
     // Out-of-lifetime and indeterminate values can be modeled as 'undef'.
     return llvm::UndefValue::get(CGM.getTypes().ConvertType(DestType));
+  case APValue::Erroneous:
+    // Erroneous values are well-defined (not UB) in C++26, so use zero
+    // rather than undef to avoid reintroducing undefined behavior at the
+    // LLVM IR level.
+    return llvm::Constant::getNullValue(CGM.getTypes().ConvertType(DestType));
   case APValue::LValue:
     return ConstantLValueEmitter(*this, Value, DestType,
                                  EnablePtrAuthFunctionTypeDiscrimination)

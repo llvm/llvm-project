@@ -299,6 +299,7 @@ APValue::APValue(const APValue &RHS)
   switch (RHS.getKind()) {
   case None:
   case Indeterminate:
+  case Erroneous:
     Kind = RHS.getKind();
     break;
   case Int:
@@ -431,6 +432,7 @@ bool APValue::needsCleanup() const {
   switch (getKind()) {
   case None:
   case Indeterminate:
+  case Erroneous:
   case AddrLabelDiff:
     return false;
   case Struct:
@@ -491,6 +493,7 @@ void APValue::Profile(llvm::FoldingSetNodeID &ID) const {
   switch (Kind) {
   case None:
   case Indeterminate:
+  case Erroneous:
     return;
 
   case AddrLabelDiff:
@@ -723,6 +726,9 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
     return;
   case APValue::Indeterminate:
     Out << "<uninitialized>";
+    return;
+  case APValue::Erroneous:
+    Out << "<erroneous>";
     return;
   case APValue::Int:
     if (Ty->isBooleanType())
@@ -1151,6 +1157,7 @@ LinkageInfo LinkageComputer::getLVForValue(const APValue &V,
   switch (V.getKind()) {
   case APValue::None:
   case APValue::Indeterminate:
+  case APValue::Erroneous:
   case APValue::Int:
   case APValue::Float:
   case APValue::FixedPoint:

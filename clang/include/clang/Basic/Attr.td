@@ -100,6 +100,9 @@ class SubsetSubject<AttrSubject base, code check, string diag> : AttrSubject {
 def LocalVar : SubsetSubject<Var,
                               [{S->hasLocalStorage() && !isa<ParmVarDecl>(S)}],
                               "local variables">;
+def AutomaticStorageVar : SubsetSubject<Var,
+                              [{S->hasLocalStorage()}],
+                              "local variables or function parameters">;
 def NonParmVar : SubsetSubject<Var,
                                [{S->getKind() != Decl::ParmVar}],
                                "variables">;
@@ -4911,6 +4914,19 @@ def Uninitialized : InheritableAttr {
   let Subjects = SubjectList<[LocalVar]>;
   let PragmaAttributeSupport = 1;
   let Documentation = [UninitializedDocs];
+}
+
+// [dcl.attr.indet]/p1:
+// The attribute-token indeterminate may be applied to the definition of a block variable
+// with automatic storage duration or to a parameter-declaration of a function declaration. 
+// No attribute-argument-clause shall be present. The attribute specifies that the storage
+// of an object with automatic storage duration is initially indeterminate rather than
+// erroneous ([basic.indet]).
+def Indeterminate : InheritableAttr {
+  let Spellings = [CXX11<"", "indeterminate", 202403>];
+  let Subjects = SubjectList<[AutomaticStorageVar]>;
+  let LangOpts = [CPlusPlus];
+  let Documentation = [IndeterminateDocs];
 }
 
 def LoaderUninitialized : Attr {

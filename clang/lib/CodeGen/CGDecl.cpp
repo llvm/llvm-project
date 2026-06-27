@@ -1834,10 +1834,10 @@ bool CodeGenFunction::isTrivialInitializer(const Expr *Init) {
   return false;
 }
 
-void CodeGenFunction::emitZeroOrPatternForAutoVarInit(QualType type,
-                                                      const VarDecl &D,
-                                                      Address Loc) {
-  auto trivialAutoVarInit = getContext().getLangOpts().getTrivialAutoVarInit();
+void CodeGenFunction::emitZeroOrPatternForAutoVarInit(
+    QualType type, const VarDecl &D, Address Loc,
+    LangOptions::TrivialAutoVarInitKind Kind) {
+  auto trivialAutoVarInit = Kind;
   auto trivialAutoVarInitMaxSize =
       getContext().getLangOpts().TrivialAutoVarInitMaxSize;
   CharUnits Size = getContext().getTypeSizeInChars(type);
@@ -1996,13 +1996,27 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   auto hasNoTrivialAutoVarInitAttr = [&](const Decl *D) {
     return D && D->hasAttr<NoTrivialAutoVarInitAttr>();
   };
+
   // Note: constexpr already initializes everything correctly.
+  // C++26 [[indeterminate]] attribute opts out of erroneous initialization,
+  // restoring indeterminate (undefined) behavior.
+  const bool OptsOutOfInit =
+      D.isConstexpr() || D.getAttr<UninitializedAttr>() ||
+      D.hasAttr<IndeterminateAttr>() ||
+      hasNoTrivialAutoVarInitAttr(type->getAsTagDecl()) ||
+      hasNoTrivialAutoVarInitAttr(CurFuncDecl);
   LangOptions::TrivialAutoVarInitKind trivialAutoVarInit =
-      ((D.isConstexpr() || D.getAttr<UninitializedAttr>() ||
-        hasNoTrivialAutoVarInitAttr(type->getAsTagDecl()) ||
-        hasNoTrivialAutoVarInitAttr(CurFuncDecl))
-           ? LangOptions::TrivialAutoVarInitKind::Uninitialized
-           : getContext().getLangOpts().getTrivialAutoVarInit());
+      OptsOutOfInit ? LangOptions::TrivialAutoVarInitKind::Uninitialized
+                    : getContext().getLangOpts().getTrivialAutoVarInit();
+  // C++26 [basic.indet]: reading an erroneously initialized object has
+  // erroneous behavior with an implementation-defined (but fixed) value.
+  // LLVM's `undef` doesn't model this, so default to a fixed pattern when
+  // the user has not requested a specific auto-var-init kind.
+  if (!OptsOutOfInit &&
+      trivialAutoVarInit ==
+          LangOptions::TrivialAutoVarInitKind::Uninitialized &&
+      getContext().getLangOpts().CPlusPlus26)
+    trivialAutoVarInit = LangOptions::TrivialAutoVarInitKind::Pattern;
 
   auto initializeWhatIsTechnicallyUninitialized = [&](Address Loc) {
     if (trivialAutoVarInit ==
@@ -2013,7 +2027,7 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
     if (emission.IsEscapingByRef && !locIsByrefHeader)
       Loc = emitBlockByrefAddress(Loc, &D, /*follow=*/false);
 
-    return emitZeroOrPatternForAutoVarInit(type, D, Loc);
+    return emitZeroOrPatternForAutoVarInit(type, D, Loc, trivialAutoVarInit);
   };
 
   if (isTrivialInitializer(Init))

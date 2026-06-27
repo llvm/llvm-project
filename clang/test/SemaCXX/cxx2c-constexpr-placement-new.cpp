@@ -26,9 +26,8 @@ consteval int conversion() {
 }
 
 consteval int indeterminate() {
-    int * indeterminate; // expected-note {{declared here}}
-    new (indeterminate) int(0);
-    // expected-note@-1 {{read of uninitialized object is not allowed in a constant expression}}
+    int * indeterminate;
+    new (indeterminate) int(0); // expected-note {{read of uninitialized object is not allowed in a constant expression}}
     return 0;
 }
 

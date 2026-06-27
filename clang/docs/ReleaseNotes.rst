@@ -197,6 +197,7 @@ C++ Language Changes
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
+- Clang now supports `P2795R5 <https://wg21.link/p2795r5>`_ Erroneous behaviour for uninitialized reads.
 
 - Clang now propagates ``constinit`` and ``constexpr`` in structured bindings with tuple-like initializers.
 
