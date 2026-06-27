@@ -89,6 +89,33 @@ func.func @loop_yield(%arg2 : memref<10xf32, #spirv.storage_class<StorageBuffer>
   return
 }
 
+// CHECK-LABEL: @loop_yield_zero_trip
+func.func @loop_yield_zero_trip(%arg2 : memref<10xf32, #spirv.storage_class<StorageBuffer>>, %arg3 : memref<10xf32, #spirv.storage_class<StorageBuffer>>) {
+  %lb = arith.constant 4 : index
+  %ub = arith.constant 42 : index
+  %step = arith.constant 2 : index
+  // CHECK: %[[INITVAR1:.*]] = spirv.Constant 0.000000e+00 : f32
+  %s0 = arith.constant 0.0 : f32
+  // CHECK: %[[INITVAR2:.*]] = spirv.Constant 1.000000e+00 : f32
+  %s1 = arith.constant 1.0 : f32
+  // CHECK: %[[VAR1:.*]] = spirv.Variable : !spirv.ptr<f32, Function>
+  // CHECK: %[[VAR2:.*]] = spirv.Variable : !spirv.ptr<f32, Function>
+  // CHECK-DAG: spirv.Store "Function" %[[VAR1]], %[[INITVAR1]] : f32
+  // CHECK-DAG: spirv.Store "Function" %[[VAR2]], %[[INITVAR2]] : f32
+  // CHECK: spirv.mlir.loop {
+  // CHECK:   spirv.Branch ^[[HEADER:.*]](%{{.*}}, %[[INITVAR1]], %[[INITVAR2]] : i32, f32, f32)
+  // CHECK: }
+  %result:2 = scf.for %i0 = %lb to %ub step %step iter_args(%si = %s0, %sj = %s1) -> (f32, f32) {
+    %sn = arith.addf %si, %si : f32
+    scf.yield %sn, %sn : f32, f32
+  }
+  // CHECK-DAG: %[[OUT1:.*]] = spirv.Load "Function" %[[VAR1]] : f32
+  // CHECK-DAG: %[[OUT2:.*]] = spirv.Load "Function" %[[VAR2]] : f32
+  memref.store %result#0, %arg3[%lb] : memref<10xf32, #spirv.storage_class<StorageBuffer>>
+  memref.store %result#1, %arg3[%ub] : memref<10xf32, #spirv.storage_class<StorageBuffer>>
+  return
+}
+
 // CHECK-LABEL: @loop_unroll
 func.func @loop_unroll(%arg2 : memref<10xf32, #spirv.storage_class<StorageBuffer>>, %arg3 : memref<10xf32, #spirv.storage_class<StorageBuffer>>) {
   %lb = arith.constant 0 : index
