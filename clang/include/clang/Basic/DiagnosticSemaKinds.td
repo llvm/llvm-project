@@ -11085,13 +11085,13 @@ def warn_lifetime_safety_cross_tu_param_suggestion
 def warn_lifetime_safety_intra_tu_ctor_param_suggestion
     : Warning<"parameter in intra-TU constructor should be marked "
               "[[clang::lifetimebound]]">,
-      InGroup<LifetimeSafetyIntraTUSuggestionsConstructors>,
+      InGroup<LifetimeSafetyIntraTUConstructorSuggestions>,
       DefaultIgnore;
 
 def warn_lifetime_safety_cross_tu_ctor_param_suggestion
     : Warning<"parameter in cross-TU constructor should be marked "
               "[[clang::lifetimebound]]">,
-      InGroup<LifetimeSafetyCrossTUSuggestionsConstructors>,
+      InGroup<LifetimeSafetyCrossTUConstructorSuggestions>,
       DefaultIgnore;
 
 def warn_lifetime_safety_intra_tu_this_suggestion
