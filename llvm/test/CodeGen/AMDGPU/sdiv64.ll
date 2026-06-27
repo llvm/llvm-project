@@ -703,13 +703,13 @@ define amdgpu_kernel void @s_test_sdiv32_64(ptr addrspace(1) %out, i64 %x, i64 %
 ; GCN-LABEL: s_test_sdiv32_64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x9
-; GCN-NEXT:    s_load_dword s0, s[4:5], 0xe
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xd
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_ashr_i32 s4, s11, 31
-; GCN-NEXT:    s_ashr_i32 s6, s0, 31
-; GCN-NEXT:    s_add_u32 s0, s0, s6
+; GCN-NEXT:    s_ashr_i32 s6, s1, 31
+; GCN-NEXT:    s_add_u32 s0, s1, s6
 ; GCN-NEXT:    s_mov_b32 s7, s6
 ; GCN-NEXT:    s_addc_u32 s1, s6, s6
 ; GCN-NEXT:    s_xor_b64 s[12:13], s[0:1], s[6:7]
