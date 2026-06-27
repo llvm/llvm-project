@@ -6307,6 +6307,22 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   if (SDValue RMINMAX = reassociateOps(Opcode, DL, N0, N1, N->getFlags()))
     return RMINMAX;
 
+  // For code size: smax(X, -1) -> or(X, ashr(X, BW-1))
+  // The arithmetic right shift sign-extends: 0 for X >= 0, -1 for X < 0.
+  // OR-ing X with this mask yields X when non-negative and -1 when negative,
+  // which matches smax(X, -1) using two instructions instead of compare+cmov.
+  if (ForCodeSize && Opcode == ISD::SMAX) {
+    if (auto *N1C = isConstOrConstSplat(N1)) {
+      if (N1C->isAllOnes() &&
+          !TLI.shouldAvoidTransformToShift(VT, VT.getScalarSizeInBits() - 1)) {
+        SDValue Shift = DAG.getNode(
+            ISD::SRA, DL, VT, N0,
+            DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, DL));
+        return DAG.getNode(ISD::OR, DL, VT, N0, Shift);
+      }
+    }
+  }
+
   // If both operands are known to have the same sign (both non-negative or both
   // negative), flip between UMIN/UMAX and SMIN/SMAX.
   // Only do this if:
