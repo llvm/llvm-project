@@ -54,7 +54,7 @@ void MCELFStreamer::initSections(const MCSubtargetInfo &STI) {
   MCContext &Ctx = getContext();
   switchSection(Ctx.getObjectFileInfo()->getTextSection());
   emitCodeAlignment(Align(Ctx.getObjectFileInfo()->getTextSectionAlignment()),
-                    &STI);
+                    STI);
 }
 
 void MCELFStreamer::emitLabel(MCSymbol *S, SMLoc Loc) {

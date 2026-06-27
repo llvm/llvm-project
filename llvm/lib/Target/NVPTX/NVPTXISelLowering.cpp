@@ -108,6 +108,16 @@ static cl::opt<bool> UsePrecSqrtF32(
     cl::desc("NVPTX Specific: 0 use sqrt.approx, 1 use sqrt.rn."),
     cl::init(true));
 
+// PTX atom.add.f32 has fixed FTZ behavior that may not match the function's
+// (see shouldExpandAtomicRMWInIR), so by default we fall back to a CAS loop
+// when they disagree. This flag is an escape hatch to use atom.add anyway,
+// trading correct denormal handling for the speed of the native instruction.
+static cl::opt<bool> AllowFTZAtomics(
+    "nvptx-allow-ftz-atomics", cl::Hidden,
+    cl::desc("NVPTX Specific: Lower atomicrmw fadd to atom.add even when its "
+             "FTZ behavior does not match the function's denormal mode."),
+    cl::init(false));
+
 /// Whereas CUDA's implementation (see libdevice) uses ex2.approx for exp2(), it
 /// does NOT use lg2.approx for log2, so this is disabled by default.
 static cl::opt<bool> UseApproxLog2F32(
@@ -1003,6 +1013,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::FROUND, MVT::bf16, Promote);
   AddPromotedToType(ISD::FROUND, MVT::bf16, MVT::f32);
 
+  setOperationAction({ISD::LROUND, ISD::LLROUND}, {MVT::f32, MVT::f64}, Expand);
+
   // 'Expand' implements FCOPYSIGN without calling an external library.
   setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
   setOperationAction(ISD::FCOPYSIGN, MVT::v2f16, Expand);
@@ -1193,9 +1205,6 @@ SDValue NVPTXTargetLowering::getSqrtEstimate(SDValue Operand, SelectionDAG &DAG,
   }
 }
 
-static Align getArgumentAlignment(const CallBase *CB, Type *Ty, unsigned Idx,
-                                  const DataLayout &DL);
-
 std::string NVPTXTargetLowering::getPrototype(
     const DataLayout &DL, Type *RetTy, const ArgListTy &Args,
     const SmallVectorImpl<ISD::OutputArg> &Outs,
@@ -1212,7 +1221,8 @@ std::string NVPTXTargetLowering::getPrototype(
   } else {
     O << "(";
     if (shouldPassAsArray(RetTy)) {
-      const Align RetAlign = getArgumentAlignment(&CB, RetTy, 0, DL);
+      const Align RetAlign =
+          getPTXParamAlign(&CB, RetTy, AttributeList::ReturnIndex, DL);
       O << ".param .align " << RetAlign.value() << " .b8 _["
         << DL.getTypeAllocSize(RetTy) << "]";
     } else if (RetTy->isFloatingPointTy() || RetTy->isIntegerTy()) {
@@ -1260,14 +1270,14 @@ std::string NVPTXTargetLowering::getPrototype(
       Type *ETy = Args[I].IndirectType;
       Align InitialAlign = ArgOuts[0].Flags.getNonZeroByValAlign();
       Align ParamByValAlign =
-          getFunctionByValParamAlign(/*F=*/nullptr, ETy, InitialAlign, DL);
+          getDeviceByValParamAlign(/*F=*/nullptr, ETy, InitialAlign, DL);
 
       O << ".param .align " << ParamByValAlign.value() << " .b8 _["
         << ArgOuts[0].Flags.getByValSize() << "]";
     } else {
       if (shouldPassAsArray(Ty)) {
         Align ParamAlign =
-            getArgumentAlignment(&CB, Ty, I + AttributeList::FirstArgIndex, DL);
+            getPTXParamAlign(&CB, Ty, I + AttributeList::FirstArgIndex, DL);
         O << ".param .align " << ParamAlign.value() << " .b8 _["
           << DL.getTypeAllocSize(Ty) << "]";
         continue;
@@ -1298,37 +1308,6 @@ std::string NVPTXTargetLowering::getPrototype(
   O << ";";
 
   return Prototype;
-}
-
-static Align getArgumentAlignment(const CallBase *CB, Type *Ty, unsigned Idx,
-                                  const DataLayout &DL) {
-  if (!CB) {
-    // CallSite is zero, fallback to ABI type alignment
-    return DL.getABITypeAlign(Ty);
-  }
-
-  const Function *DirectCallee = CB->getCalledFunction();
-
-  if (!DirectCallee) {
-    // We don't have a direct function symbol, but that may be because of
-    // constant cast instructions in the call.
-
-    // With bitcast'd call targets, the instruction will be the call
-    if (const auto *CI = dyn_cast<CallInst>(CB)) {
-      // Check if we have call alignment metadata
-      if (MaybeAlign StackAlign = getAlign(*CI, Idx))
-        return StackAlign.value();
-    }
-    DirectCallee = getMaybeBitcastedCallee(CB);
-  }
-
-  // Check for function alignment information if we found that the
-  // ultimate target is a Function
-  if (DirectCallee)
-    return getFunctionArgumentAlignment(DirectCallee, Ty, Idx, DL);
-
-  // Call is indirect, fall back to the ABI type alignment
-  return DL.getABITypeAlign(Ty);
 }
 
 static MachinePointerInfo refinePtrAS(SDValue &Ptr, SelectionDAG &DAG,
@@ -1497,10 +1476,11 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         // so we don't need to worry whether it's naturally aligned or not.
         // See TargetLowering::LowerCallTo().
         const Align InitialAlign = ArgOuts[0].Flags.getNonZeroByValAlign();
-        return getFunctionByValParamAlign(CB->getCalledFunction(), ETy,
-                                          InitialAlign, DL);
+        return getDeviceByValParamAlign(CB->getCalledFunction(), ETy,
+                                        InitialAlign, DL);
       }
-      return getArgumentAlignment(CB, Arg.Ty, ArgI + 1, DL);
+      return getPTXParamAlign(CB, Arg.Ty, ArgI + AttributeList::FirstArgIndex,
+                              DL);
     }();
 
     const unsigned TySize = DL.getTypeAllocSize(ETy);
@@ -1634,7 +1614,8 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     const SDValue RetSymbol = DAG.getExternalSymbol("retval0", MVT::i32);
     const unsigned ResultSize = DL.getTypeAllocSize(RetTy);
     if (shouldPassAsArray(RetTy)) {
-      const Align RetAlign = getArgumentAlignment(CB, RetTy, 0, DL);
+      const Align RetAlign =
+          getPTXParamAlign(CB, RetTy, AttributeList::ReturnIndex, DL);
       MakeDeclareArrayParam(RetSymbol, RetAlign, ResultSize);
     } else {
       MakeDeclareScalarParam(RetSymbol, ResultSize);
@@ -1727,7 +1708,8 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     ComputePTXValueVTs(*this, DL, Ctx, CLI.CallConv, RetTy, VTs, Offsets);
     assert(VTs.size() == Ins.size() && "Bad value decomposition");
 
-    const Align RetAlign = getArgumentAlignment(CB, RetTy, 0, DL);
+    const Align RetAlign =
+        getPTXParamAlign(CB, RetTy, AttributeList::ReturnIndex, DL);
     const SDValue RetSymbol = DAG.getExternalSymbol("retval0", MVT::i32);
 
     // PTX Interoperability Guide 3.3(A): [Integer] Values shorter than
@@ -3189,8 +3171,6 @@ static SDValue lowerIntrinsicWOChain(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_prmt_rc16:
   case Intrinsic::nvvm_prmt_rc8:
     return lowerPrmtIntrinsic(Op, DAG);
-  case Intrinsic::nvvm_internal_addrspace_wrap:
-    return Op.getOperand(1);
   case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_is_canceled:
   case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_x:
   case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_y:
@@ -4140,8 +4120,10 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
 
       SDValue P;
       if (IsKernel) {
-        assert(isParamGridConstant(Arg) && "ByVal argument must be lowered to "
-                                           "grid_constant by NVPTXLowerArgs");
+        assert(Arg.getType()->getPointerAddressSpace() ==
+                   ADDRESS_SPACE_ENTRY_PARAM &&
+               "Kernel ByVal argument must be lowered to the param address "
+               "space by NVPTXLowerArgs");
         P = ArgSymbol;
         P.getNode()->setIROrder(Arg.getArgNo() + 1);
       } else {
@@ -4158,7 +4140,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       assert(VTs.size() == ArgIns.size() && "Size mismatch");
       assert(VTs.size() == Offsets.size() && "Size mismatch");
 
-      const Align ArgAlign = getFunctionArgumentAlignment(
+      const Align ArgAlign = getPTXParamAlign(
           &F, Ty, Arg.getArgNo() + AttributeList::FirstArgIndex, DL);
 
       unsigned I = 0;
@@ -4215,7 +4197,8 @@ NVPTXTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   LLVMContext &Ctx = *DAG.getContext();
 
   const SDValue RetSymbol = DAG.getExternalSymbol("func_retval0", MVT::i32);
-  const auto RetAlign = getFunctionParamOptimizedAlign(&F, RetTy, DL);
+  const auto RetAlign =
+      getPTXParamAlign(&F, RetTy, AttributeList::ReturnIndex, DL);
 
   // PTX Interoperability Guide 3.3(A): [Integer] Values shorter than
   // 32-bits are sign extended or zero extended, depending on whether
@@ -7475,21 +7458,53 @@ NVPTXTargetLowering::AtomicExpansionKind
 NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   Type *Ty = AI->getValOperand()->getType();
 
-  if (AI->isFloatingPointOperation()) {
-    if (AI->getOperation() == AtomicRMWInst::BinOp::FAdd) {
-      if (Ty->isHalfTy() && STI.getSmVersion() >= 70 &&
-          STI.getPTXVersion() >= 63)
-        return AtomicExpansionKind::None;
-      if (Ty->isBFloatTy() && STI.getSmVersion() >= 90 &&
-          STI.getPTXVersion() >= 78)
-        return AtomicExpansionKind::None;
-      if (Ty->isFloatTy())
-        return AtomicExpansionKind::None;
-      if (Ty->isDoubleTy() && STI.hasAtomAddF64())
+  // Try to lower LLVM atomicrmw fadd to PTX atomic.add.  This is complicated
+  // by the weird FTZ behavior PTX atom.add has:
+  //   - atom.add.f32 on global memory flushes denormals
+  //   - atom.add.f32 on shared memory does not flush denormals
+  //   - atom.add.f16 and atomic.add.bf16 never flush denormals
+  //
+  // We lower to atom.add only if the function's FTZ behavior matches that of
+  // atom.add; otherwise, we lower to a CAS loop. But we always allow
+  // atomic.add.bf16; even though it never flushes denormals, we never flush
+  // bf16 denormals when doing regular arithmetic, even when FTZ is enabled.
+  if (AI->isFloatingPointOperation() &&
+      AI->getOperation() == AtomicRMWInst::BinOp::FAdd) {
+    const bool FTZ =
+        AI->getFunction()->getDenormalMode(APFloat::IEEEsingle()).Output ==
+        DenormalMode::PreserveSign;
+
+    // AllowFTZAtomics forces atom.add regardless of the FTZ mismatch.
+    if (Ty->isFloatTy()) {
+      bool UseNative = AllowFTZAtomics;
+      switch (AI->getPointerAddressSpace()) {
+      case llvm::ADDRESS_SPACE_GLOBAL:
+        UseNative |= FTZ;
+        break;
+      case llvm::ADDRESS_SPACE_SHARED:
+      case llvm::ADDRESS_SPACE_SHARED_CLUSTER:
+        UseNative |= !FTZ;
+        break;
+      }
+      if (UseNative)
         return AtomicExpansionKind::None;
     }
-    return AtomicExpansionKind::CmpXChg;
+
+    if (Ty->isHalfTy() && (!FTZ || AllowFTZAtomics) &&
+        STI.getSmVersion() >= 70 && STI.getPTXVersion() >= 63)
+      return AtomicExpansionKind::None;
+
+    if (Ty->isBFloatTy() && STI.getSmVersion() >= 90 &&
+        STI.getPTXVersion() >= 78)
+      return AtomicExpansionKind::None;
+
+    if (Ty->isDoubleTy() && STI.hasAtomAddF64())
+      return AtomicExpansionKind::None;
   }
+
+  // PTX's only atomic fp op is `add`; all other ops expand to a CAS loop.
+  if (AI->isFloatingPointOperation())
+    return AtomicExpansionKind::CmpXChg;
 
   assert(Ty->isIntegerTy() && "Ty should be integer at this point");
   const unsigned BitWidth = cast<IntegerType>(Ty)->getBitWidth();

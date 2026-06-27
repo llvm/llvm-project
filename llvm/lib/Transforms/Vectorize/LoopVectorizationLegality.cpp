@@ -104,7 +104,8 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
                                        bool InterleaveOnlyWhenForced,
                                        OptimizationRemarkEmitter &ORE,
                                        const TargetTransformInfo *TTI)
-    : Width("vectorize.width", VectorizerParams::VectorizationFactor, HK_WIDTH),
+    : Width("vectorize.width",
+            VectorizerParams::VectorizationFactor.getKnownMinValue(), HK_WIDTH),
       Interleave("interleave.count", InterleaveOnlyWhenForced, HK_INTERLEAVE),
       Force("vectorize.enable", FK_Undefined, HK_FORCE),
       IsVectorized("isvectorized", 0, HK_ISVECTORIZED),
@@ -141,6 +142,10 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
   if (ForceScalableVectorization.getValue() !=
       LoopVectorizeHints::SK_Unspecified)
     Scalable.Value = ForceScalableVectorization.getValue();
+
+  // If force-vector-width is scalable, force scalable vectorization.
+  if (VectorizerParams::VectorizationFactor.isScalable())
+    Scalable.Value = SK_AlwaysScalable;
 
   // Scalable vectorization is disabled if no preference is specified.
   if ((LoopVectorizeHints::ScalableForceKind)Scalable.Value == SK_Unspecified)
@@ -1320,27 +1325,6 @@ bool LoopVectorizationLegality::isInductionPhi(const Value *V) const {
   return Inductions.count(PN);
 }
 
-const InductionDescriptor *
-LoopVectorizationLegality::getIntOrFpInductionDescriptor(PHINode *Phi) const {
-  if (!isInductionPhi(Phi))
-    return nullptr;
-  auto &ID = getInductionVars().find(Phi)->second;
-  if (ID.getKind() == InductionDescriptor::IK_IntInduction ||
-      ID.getKind() == InductionDescriptor::IK_FpInduction)
-    return &ID;
-  return nullptr;
-}
-
-const InductionDescriptor *
-LoopVectorizationLegality::getPointerInductionDescriptor(PHINode *Phi) const {
-  if (!isInductionPhi(Phi))
-    return nullptr;
-  auto &ID = getInductionVars().find(Phi)->second;
-  if (ID.getKind() == InductionDescriptor::IK_PtrInduction)
-    return &ID;
-  return nullptr;
-}
-
 bool LoopVectorizationLegality::isCastedInductionVariable(
     const Value *V) const {
   auto *Inst = dyn_cast<Instruction>(V);
@@ -1358,11 +1342,21 @@ bool LoopVectorizationLegality::isFixedOrderRecurrence(
 
 bool LoopVectorizationLegality::blockNeedsPredication(
     const BasicBlock *BB) const {
+  BasicBlock *Latch = TheLoop->getLoopLatch();
+
+  // Without a latch, we cannot properly answer blockNeedsPredication,
+  // return early.
+  if (!Latch) {
+    assert(ORE->allowExtraAnalysis(DEBUG_TYPE) &&
+           !canVectorizeLoopCFG(TheLoop, /*UseVPlanNativePath=*/false) &&
+           "Loop shape should have been rejected by earlier checks");
+    return false;
+  }
+
   // When vectorizing early exits, create predicates for the latch block only.
   // For a single early exit, it must be a direct predecessor of the latch.
   // For multiple early exits, they form a chain where each exiting block
   // dominates all subsequent blocks up to the latch.
-  BasicBlock *Latch = TheLoop->getLoopLatch();
   if (hasUncountableEarlyExit())
     return BB == Latch;
   return LoopAccessInfo::blockNeedsPredication(BB, TheLoop, DT);
@@ -1471,13 +1465,14 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
 
           auto *CurrI = dyn_cast<Instruction>(CurrV);
           if (!CurrI || !TheLoop->contains(CurrI)) {
+            BasicBlock *LoopPred = TheLoop->getLoopPredecessor();
+            Instruction *CtxI = LoopPred ? LoopPred->getTerminator() : nullptr;
+            assert((CtxI || ORE->allowExtraAnalysis(DEBUG_TYPE)) &&
+                   "Loop with multiple predecessors should have been rejected "
+                   "early.");
             // If operands from outside the loop may be poison then Ptr may also
             // be poison.
-            if (!isGuaranteedNotToBePoison(CurrV, AC,
-                                           TheLoop->getLoopPredecessor()
-                                               ->getTerminator()
-                                               ->getIterator(),
-                                           DT))
+            if (!isGuaranteedNotToBePoison(CurrV, AC, CtxI, DT))
               return false;
             continue;
           }
@@ -1539,8 +1534,8 @@ bool LoopVectorizationLegality::canVectorizeWithIfConvert() {
 }
 
 // Helper function to canVectorizeLoopNestCFG.
-bool LoopVectorizationLegality::canVectorizeLoopCFG(Loop *Lp,
-                                                    bool UseVPlanNativePath) {
+bool LoopVectorizationLegality::canVectorizeLoopCFG(
+    Loop *Lp, bool UseVPlanNativePath) const {
   assert((UseVPlanNativePath || Lp->isInnermost()) &&
          "VPlan-native path is not enabled.");
 
@@ -1788,16 +1783,16 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
   Instruction *L = nullptr;
   Value *Ptr = nullptr;
   Value *R = nullptr;
+  // The exit-condition load can appear on either side of the icmp.
   if (!match(Br->getCondition(),
-             m_OneUse(m_ICmp(m_OneUse(m_Instruction(L, m_Load(m_Value(Ptr)))),
-                             m_Value(R))))) {
+             m_OneUse(m_c_ICmp(m_OneUse(m_Instruction(L, m_Load(m_Value(Ptr)))),
+                               m_Value(R))))) {
     reportVectorizationFailure(
         "Early exit loop with store but no supported condition load",
         "NoConditionLoadForEarlyExitLoop", ORE, TheLoop);
     return false;
   }
 
-  // FIXME: Don't rely on operand ordering for the comparison.
   if (!TheLoop->isLoopInvariant(R)) {
     reportVectorizationFailure(
         "Early exit loop with store but no supported condition load",
@@ -1836,7 +1831,11 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
       if (&I == Load)
         continue;
 
-      if (I.mayWriteToMemory()) {
+      if (I.mayReadOrWriteMemory()) {
+        // We need to mask all other memory ops.
+        ConditionallyExecutedOps.insert(&I);
+        if (isa<LoadInst>(&I))
+          continue;
         if (auto *SI = dyn_cast<StoreInst>(&I)) {
           AliasResult AR = AA->alias(Ptr, SI->getPointerOperand());
           if (AR == AliasResult::NoAlias)
@@ -1942,12 +1941,14 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
       return false;
   }
 
-  // Bail out for ReadWrite loops with uncountable exits for now.
-  if (UncountableExitType == UncountableExitTrait::ReadWrite) {
-    reportVectorizationFailure(
-        "Writes to memory unsupported in early exit loops",
-        "Cannot vectorize early exit loop with writes to memory",
-        "WritesInEarlyExitLoop", ORE, TheLoop);
+  // TODO: Remove this restriction, should be straightforward to support.
+  if (UncountableExitType != UncountableExitTrait::None &&
+      !LAI->getStoresToInvariantAddresses().empty()) {
+    LLVM_DEBUG(dbgs() << "LV: Cannot vectorize early exit loops with stores to "
+                         "loop-invariant addresses\n");
+    reportVectorizationFailure("Cannot vectorize early exit loops with stores "
+                               "to loop-invariant addresses",
+                               "LoopInvariantStoresInEELoop", ORE, TheLoop);
     return false;
   }
 

@@ -19,6 +19,7 @@ endmacro()
 add_host_subdirectory(common
   common/ConPTYUtils.cpp
   common/DiagnosticsRendering.cpp
+  common/DomainSocket.cpp
   common/FileAction.cpp
   common/FileCache.cpp
   common/File.cpp
@@ -76,10 +77,10 @@ add_host_subdirectory(posix
   )
 
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
-  add_subdirectory(windows/PythonPathSetup)
   add_host_subdirectory(windows
     windows/ConnectionConPTYWindows.cpp
     windows/ConnectionGenericFileWindows.cpp
+    windows/DomainSocketWindows.cpp
     windows/FileSystem.cpp
     windows/FileWindows.cpp
     windows/Host.cpp
@@ -101,7 +102,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Windows")
   endif()
 else()
   add_host_subdirectory(posix
-    posix/DomainSocket.cpp
+    posix/DomainSocketPosix.cpp
     posix/FilePosix.cpp
     posix/FileSystemPosix.cpp
     posix/HostInfoPosix.cpp

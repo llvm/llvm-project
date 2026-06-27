@@ -92,6 +92,13 @@ const SimpleExecutorMemoryManagerSymbolNames
         "orc_rt_ci_sps_SimpleNativeMemoryMap_releaseMultiple",
 };
 
+const SimpleExecutorDylibManagerSymbolNames
+    orc_rt_NativeDylibManagerSPSSymbols = {
+        "orc_rt_ci_NativeDylibManager_Instance",
+        "orc_rt_ci_sps_NativeDylibManager_load",
+        "orc_rt_ci_sps_NativeDylibManager_lookup",
+};
+
 } // end namespace rt
 namespace rt_alt {
 const char *UnwindInfoManagerRegisterActionName =

@@ -39,6 +39,7 @@
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaDiagnostic.h"
+#include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenACC.h"
@@ -7673,6 +7674,15 @@ QualType TreeTransform<Derived>::TransformAttributedType(TypeLocBuilder &TLB,
   if (modifiedType.isNull())
     return QualType();
 
+  // HLSL: re-validate matrix-layout markers after substitution. If the
+  // post-substitution type is no longer a matrix, diagnose now.
+  if (SemaRef.getLangOpts().HLSL &&
+      SemaRef.HLSL().diagnoseMatrixLayoutInstantiation(
+          oldType->getAttrKind(), modifiedType,
+          TL.getAttr() ? TL.getAttr()->getLocation()
+                       : TL.getModifiedLoc().getBeginLoc()))
+    return QualType();
+
   // oldAttr can be null if we started with a QualType rather than a TypeLoc.
   const Attr *oldAttr = TL.getAttr();
   const Attr *newAttr = oldAttr ? getDerived().TransformAttr(oldAttr) : nullptr;
@@ -10995,13 +11005,25 @@ OMPClause *TreeTransform<Derived>::TransformOMPInitClause(OMPInitClause *C) {
     return nullptr;
 
   OMPInteropInfo InteropInfo(C->getIsTarget(), C->getIsTargetSync());
-  InteropInfo.PreferTypes.reserve(C->varlist_size() - 1);
-  for (Expr *E : llvm::drop_begin(C->varlist())) {
-    ExprResult ER = getDerived().TransformExpr(cast<Expr>(E));
-    if (ER.isInvalid())
-      return nullptr;
-    InteropInfo.PreferTypes.push_back(ER.get());
+  for (OMPInitClause::PrefView P : C->prefs()) {
+    Expr *NewFr = nullptr;
+    if (P.Fr) {
+      ExprResult ER = getDerived().TransformExpr(P.Fr);
+      if (ER.isInvalid())
+        return nullptr;
+      NewFr = ER.get();
+    }
+    SmallVector<Expr *, 2> NewAttrs;
+    NewAttrs.reserve(P.Attrs.size());
+    for (Expr *A : P.Attrs) {
+      ExprResult ER = getDerived().TransformExpr(A);
+      if (ER.isInvalid())
+        return nullptr;
+      NewAttrs.push_back(ER.get());
+    }
+    InteropInfo.Prefs.emplace_back(NewFr, std::move(NewAttrs));
   }
+  InteropInfo.HasPreferAttrs = C->hasPreferAttrs();
   return getDerived().RebuildOMPInitClause(IVR.get(), InteropInfo,
                                            C->getBeginLoc(), C->getLParenLoc(),
                                            C->getVarLoc(), C->getEndLoc());
@@ -16701,6 +16723,19 @@ template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformSubstNonTypeTemplateParmExpr(
     SubstNonTypeTemplateParmExpr *E) {
   Expr *OrigReplacement = E->getReplacement()->IgnoreImplicitAsWritten();
+
+  // Insert a constant-evaluated context for the transform.
+  // Otherwise, when a normalized constraint places the replacement inside
+  // an unevaluated operand (e.g. decltype), entities it refers to are not
+  // odr-used, and the constant evaluation performed by CheckTemplateArgument
+  // below can spuriously fail for otherwise valid replacements,
+  // e.g. when a call materializes a function parameter of class type whose
+  // special members were never instantiated.
+  EnterExpressionEvaluationContext ConstantEvaluated(
+      SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+      Sema::ReuseLambdaContextDecl,
+      Sema::ExpressionEvaluationContextRecord::EK_TemplateArgument);
+
   ExprResult Replacement = getDerived().TransformExpr(OrigReplacement);
   if (Replacement.isInvalid())
     return true;

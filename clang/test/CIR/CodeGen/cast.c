@@ -28,7 +28,7 @@ union Union toUnionAssign() {
   // CIR-LABEL: toUnionAssign()
   // LLVM-LABEL: toUnionAssign()
   //
-  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca !rec_Union, !cir.ptr<!rec_Union>, ["__retval"]
+  // CIR: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_Union>
   // LLVM: %[[RET_ALLOCA:.*]] = alloca %union.Union
   union Union u;
   u = (union Union)42;

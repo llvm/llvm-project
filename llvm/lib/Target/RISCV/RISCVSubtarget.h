@@ -191,10 +191,7 @@ public:
     return HasStdExtZfhmin || HasStdExtZfbfmin;
   }
 
-  bool hasCLZLike() const {
-    return HasStdExtZbb || HasVendorXTHeadBb ||
-           (HasVendorXCVbitmanip && !IsRV64);
-  }
+  bool hasCLZLike() const { return HasStdExtZbb || HasVendorXTHeadBb; }
   bool hasCTZLike() const {
     return HasStdExtZbb || (HasVendorXCVbitmanip && !IsRV64);
   }
@@ -249,9 +246,13 @@ public:
   }
 
   Align getZilsdAlign() const {
-    return Align(enableUnalignedScalarMem() ? 1
-                 : allowZilsd4ByteAlign()   ? 4
-                                            : 8);
+    if (enableUnalignedScalarMem())
+      return Align(1);
+
+    if (allowZilsdWordAlign())
+      return Align(4);
+
+    return Align(8);
   }
 
   unsigned getELen() const {
@@ -295,6 +296,16 @@ public:
     assert(i.id() < RISCV::NUM_TARGET_REGS && "Register out of range");
     return UserReservedRegister[i.id()];
   }
+
+  TargetRegisterClass const *getLargestFPRegClass() const {
+    if (HasStdExtQ)
+      return &RISCV::FPR128RegClass;
+    if (HasStdExtD)
+      return &RISCV::FPR64RegClass;
+    if (HasStdExtF)
+      return &RISCV::FPR32RegClass;
+    return nullptr;
+  };
 
   // XRay support - require D and C extensions.
   bool isXRaySupported() const override { return hasStdExtD() && hasStdExtC(); }

@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/Enum.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
@@ -159,6 +160,15 @@ public:
 
   template <typename T> HexNumber hex(T Value) { return HexNumber(Value); }
 
+  template <typename T, typename TEnum, unsigned NumStrs>
+  void printEnum(StringRef Label, T Value,
+                 EnumStrings<TEnum, NumStrs> EnumValues) {
+    if (StringRef Name = EnumValues.toString(Value); !Name.empty())
+      printHex(Label, Name, Value);
+    else
+      printHex(Label, Value);
+  }
+
   template <typename T, typename TEnum>
   void printEnum(StringRef Label, T Value,
                  ArrayRef<EnumEntry<TEnum>> EnumValues) {
@@ -176,6 +186,34 @@ public:
       printHex(Label, Name, Value);
     else
       printHex(Label, Value);
+  }
+
+  template <typename T, typename TFlag, unsigned NumStrs>
+  void printFlags(StringRef Label, T Value, EnumStrings<TFlag, NumStrs> Flags,
+                  TFlag EnumMask1 = {}, TFlag EnumMask2 = {},
+                  TFlag EnumMask3 = {}, ArrayRef<FlagEntry> ExtraFlags = {}) {
+    SmallVector<FlagEntry, 10> SetFlags(ExtraFlags);
+
+    for (const auto &Flag : Flags) {
+      if (Flag.value() == TFlag{})
+        continue;
+
+      TFlag EnumMask{};
+      if ((Flag.value() & EnumMask1) != TFlag{})
+        EnumMask = EnumMask1;
+      else if ((Flag.value() & EnumMask2) != TFlag{})
+        EnumMask = EnumMask2;
+      else if ((Flag.value() & EnumMask3) != TFlag{})
+        EnumMask = EnumMask3;
+      bool IsEnum = (Flag.value() & EnumMask) != TFlag{};
+      if ((!IsEnum && (Value & Flag.value()) == Flag.value()) ||
+          (IsEnum && (Value & EnumMask) == Flag.value())) {
+        SetFlags.emplace_back(Flag.name(), Flag.value());
+      }
+    }
+
+    llvm::sort(SetFlags, &flagName);
+    printFlagsImpl(Label, hex(Value), SetFlags);
   }
 
   template <typename T, typename TFlag>
@@ -202,6 +240,13 @@ public:
       }
     }
 
+    llvm::sort(SetFlags, &flagName);
+    printFlagsImpl(Label, hex(Value), SetFlags);
+  }
+
+  template <typename T>
+  void printFlags(StringRef Label, T Value,
+                  SmallVectorImpl<FlagEntry> &SetFlags) {
     llvm::sort(SetFlags, &flagName);
     printFlagsImpl(Label, hex(Value), SetFlags);
   }

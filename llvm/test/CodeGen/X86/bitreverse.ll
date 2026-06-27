@@ -2533,28 +2533,26 @@ define i528 @large_promotion(i528 %A) nounwind {
 ; X64GFNI-NEXT:    vpmovsxbw {{.*#+}} xmm3 = [15,16,17,18,15,20,21,22]
 ; X64GFNI-NEXT:    vpermw %zmm0, %zmm3, %zmm3
 ; X64GFNI-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm2
-; X64GFNI-NEXT:    vextracti32x4 $2, %zmm0, %xmm3
-; X64GFNI-NEXT:    vpsrldq {{.*#+}} xmm3 = xmm3[6,7,8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero
-; X64GFNI-NEXT:    vextracti32x4 $3, %zmm0, %xmm4
-; X64GFNI-NEXT:    vpsrldq {{.*#+}} xmm5 = xmm4[6,7,8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero
-; X64GFNI-NEXT:    vinsertf128 $1, %xmm5, %ymm3, %ymm3
+; X64GFNI-NEXT:    vextracti64x4 $1, %zmm0, %ymm3
+; X64GFNI-NEXT:    vpsrldq {{.*#+}} ymm3 = ymm3[6,7,8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,ymm3[22,23,24,25,26,27,28,29,30,31],zero,zero,zero,zero,zero,zero
 ; X64GFNI-NEXT:    vpunpcklqdq {{.*#+}} ymm2 = ymm2[0],ymm3[0],ymm2[2],ymm3[2]
 ; X64GFNI-NEXT:    vpxor %xmm3, %xmm3, %xmm3
-; X64GFNI-NEXT:    vpmovsxbw {{.*#+}} ymm5 = [16,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
-; X64GFNI-NEXT:    vpermi2w %ymm3, %ymm0, %ymm5
-; X64GFNI-NEXT:    vinserti64x4 $1, %ymm2, %zmm5, %zmm0
-; X64GFNI-NEXT:    vpbroadcastq {{[0-9]+}}(%rsp), %zmm2
-; X64GFNI-NEXT:    vpshufb {{.*#+}} zmm2 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm2[63,62,61,60,59,58,57,56]
-; X64GFNI-NEXT:    vgf2p8affineqb $0, %zmm1, %zmm2, %zmm1
+; X64GFNI-NEXT:    vpmovsxbw {{.*#+}} ymm4 = [16,0,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
+; X64GFNI-NEXT:    vpermi2w %ymm3, %ymm0, %ymm4
+; X64GFNI-NEXT:    vinserti64x4 $1, %ymm2, %zmm4, %zmm2
+; X64GFNI-NEXT:    vpbroadcastq {{[0-9]+}}(%rsp), %zmm3
+; X64GFNI-NEXT:    vpshufb {{.*#+}} zmm3 = zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zmm3[63,62,61,60,59,58,57,56]
+; X64GFNI-NEXT:    vgf2p8affineqb $0, %zmm1, %zmm3, %zmm1
 ; X64GFNI-NEXT:    vextracti32x4 $3, %zmm1, %xmm1
 ; X64GFNI-NEXT:    vpextrq $1, %xmm1, %rcx
 ; X64GFNI-NEXT:    shrq $48, %rcx
 ; X64GFNI-NEXT:    vmovd %ecx, %xmm1
-; X64GFNI-NEXT:    vporq %zmm0, %zmm1, %zmm0
-; X64GFNI-NEXT:    vpextrq $1, %xmm4, %rcx
+; X64GFNI-NEXT:    vporq %zmm2, %zmm1, %zmm1
+; X64GFNI-NEXT:    vextracti32x4 $3, %zmm0, %xmm0
+; X64GFNI-NEXT:    vpextrq $1, %xmm0, %rcx
 ; X64GFNI-NEXT:    shrq $48, %rcx
 ; X64GFNI-NEXT:    movw %cx, 64(%rdi)
-; X64GFNI-NEXT:    vmovdqu64 %zmm0, (%rdi)
+; X64GFNI-NEXT:    vmovdqu64 %zmm1, (%rdi)
 ; X64GFNI-NEXT:    vzeroupper
 ; X64GFNI-NEXT:    retq
   %Z = call i528 @llvm.bitreverse.i528(i528 %A)
