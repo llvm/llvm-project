@@ -27,7 +27,7 @@
 #include "Counter.h"
 
 template <class Set>
-bool set_equal(const Set& set, Set other) {
+TEST_CONSTEXPR_CXX26 bool set_equal(const Set& set, Set other) {
   return set == other;
 }
 
@@ -35,10 +35,10 @@ bool set_equal(const Set& set, Set other) {
 struct throw_comparator {
   bool& should_throw_;
 
-  throw_comparator(bool& should_throw) : should_throw_(should_throw) {}
+  TEST_CONSTEXPR_CXX26 throw_comparator(bool& should_throw) : should_throw_(should_throw) {}
 
   template <class T>
-  bool operator()(const T& lhs, const T& rhs) const {
+  TEST_CONSTEXPR_CXX26 bool operator()(const T& lhs, const T& rhs) const {
     if (should_throw_)
       throw 0;
     return lhs < rhs;
@@ -56,7 +56,8 @@ TEST_CONSTEXPR_CXX26 bool test() {
   }
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
-  {
+
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     bool do_throw = false;
     typedef std::multiset<Counter<int>, throw_comparator> set_type;
     set_type src({1, 3, 5}, throw_comparator(do_throw));
@@ -75,13 +76,15 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(set_equal(dst, set_type({2, 4, 5}, throw_comparator(do_throw))));
   }
 #endif
-  assert(Counter_base::gConstructed == 0);
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    assert(Counter_base::gConstructed == 0);
+  }
   struct comparator {
     comparator() = default;
 
     bool operator()(const Counter<int>& lhs, const Counter<int>& rhs) const { return lhs < rhs; }
   };
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     typedef std::multiset<Counter<int>, std::less<Counter<int>>> first_set_type;
     typedef std::multiset<Counter<int>, comparator> second_set_type;
     typedef std::set<Counter<int>, comparator> third_set_type;

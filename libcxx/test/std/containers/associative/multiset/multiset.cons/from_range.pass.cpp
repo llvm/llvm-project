@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=2000000
 
 // template<container-compatible-range<value_type> R>
 //   multiset(from_range_t, R&& rg, const Compare& comp = Compare(), const Allocator& = Allocator()); // C++23, constexpr since C++26
@@ -22,7 +23,7 @@
 #include "../../from_range_associative_containers.h"
 #include "test_macros.h"
 
-void test_duplicates() {
+TEST_CONSTEXPR_CXX26 void test_duplicates() {
   std::array input = {1, 2, 3, 3, 3, 4, 2, 1, 2};
   auto c           = std::multiset<int>(std::from_range, input);
   assert(std::ranges::is_permutation(input, c));

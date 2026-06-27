@@ -24,7 +24,7 @@
 #include "min_allocator.h"
 
 TEST_CONSTEXPR_CXX26 bool test() {
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     typedef std::multiset<DefaultOnly> M;
     typedef M::iterator R;
     M m;
@@ -41,7 +41,9 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(*m.begin() == DefaultOnly());
     assert(DefaultOnly::count == 2);
   }
-  assert(DefaultOnly::count == 0);
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    assert(DefaultOnly::count == 0);
+  }
   {
     typedef std::multiset<Emplaceable> M;
     typedef M::iterator R;

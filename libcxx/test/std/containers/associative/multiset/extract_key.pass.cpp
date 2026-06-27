@@ -20,7 +20,7 @@
 #include "Counter.h"
 
 template <class Container, class KeyTypeIter>
-void test(Container& c, KeyTypeIter first, KeyTypeIter last) {
+TEST_CONSTEXPR_CXX26 void test(Container& c, KeyTypeIter first, KeyTypeIter last) {
   std::size_t sz = c.size();
   assert((std::size_t)std::distance(first, last) == sz);
 
@@ -61,7 +61,7 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(!res);
   }
 
-  {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
     std::multiset<Counter<int>> m = {1, 2, 3, 4, 5, 6};
     {
       Counter<int> keys[] = {1, 2, 3, 4, 5, 6};

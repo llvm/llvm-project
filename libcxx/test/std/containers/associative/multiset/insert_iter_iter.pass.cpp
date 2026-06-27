@@ -184,9 +184,10 @@ TEST_CONSTEXPR_CXX26 void test_alloc() {
   }
 }
 
-TEST_CONSTEXPR_CXX26 void test() {
+TEST_CONSTEXPR_CXX26 bool test() {
   test_alloc<cpp17_input_iterator<int*>, std::allocator<int> >();
   test_alloc<cpp17_input_iterator<int*>, min_allocator<int> >();
+  return true;
 }
 
 int main(int, char**) {

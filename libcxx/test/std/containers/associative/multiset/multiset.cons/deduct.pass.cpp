@@ -49,7 +49,7 @@
 #include "test_allocator.h"
 
 struct NotAnAllocator {
-  friend bool operator<(NotAnAllocator, NotAnAllocator) { return false; }
+  friend TEST_CONSTEXPR_CXX26 bool operator<(NotAnAllocator, NotAnAllocator) { return false; }
 };
 
 TEST_CONSTEXPR_CXX26 bool test() {
