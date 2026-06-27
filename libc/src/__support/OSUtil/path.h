@@ -17,7 +17,7 @@
 #if defined(__linux__)
 #include "src/__support/OSUtil/linux/path.h"
 #else
-#error Path unavailable on this platfrom
+#error path.h unavailable on this platfrom
 #endif
 
 #endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_PATH_H
