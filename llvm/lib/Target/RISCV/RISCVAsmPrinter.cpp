@@ -51,10 +51,6 @@ using namespace llvm;
 STATISTIC(RISCVNumInstrsCompressed,
           "Number of RISC-V Compressed instructions emitted");
 
-namespace llvm {
-extern const SubtargetFeatureKV RISCVFeatureKV[RISCV::NumSubtargetFeatures];
-} // namespace llvm
-
 namespace {
 class RISCVAsmPrinter : public AsmPrinter {
 public:
@@ -531,7 +527,7 @@ bool RISCVAsmPrinter::emitDirectiveOptionArch() {
   RISCVTargetStreamer &RTS = getTargetStreamer();
   SmallVector<RISCVOptionArchArg> NeedEmitStdOptionArgs;
   const MCSubtargetInfo &MCSTI = TM.getMCSubtargetInfo();
-  for (const auto &Feature : RISCVFeatureKV) {
+  for (const auto &Feature : MCSTI.getAllProcessorFeatures()) {
     if (STI->hasFeature(Feature.Value) == MCSTI.hasFeature(Feature.Value))
       continue;
 
@@ -642,7 +638,7 @@ void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
             /*ExperimentalExtensionVersionCheck=*/true);
         if (!errorToBool(ParseResult.takeError())) {
           auto &ISAInfo = *ParseResult;
-          for (const auto &Feature : RISCVFeatureKV) {
+          for (const auto &Feature : SubtargetInfo.getAllProcessorFeatures()) {
             if (ISAInfo->hasExtension(Feature.key()) &&
                 !SubtargetInfo.hasFeature(Feature.Value))
               SubtargetInfo.ToggleFeature(Feature.key());
