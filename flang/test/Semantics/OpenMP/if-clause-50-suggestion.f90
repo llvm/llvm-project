@@ -6,7 +6,7 @@ subroutine f
   do i = 1, 10
   end do
 
-  !ERROR: IF clause is not allowed on directive TEAMS in OpenMP v5.0, try -fopenmp-version=52
+  !ERROR: IF clause is not allowed on TEAMS directive in OpenMP v5.0, try -fopenmp-version=52
   !$omp teams if(.true.)
   !$omp end teams
 
