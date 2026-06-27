@@ -43,7 +43,10 @@ static mlir::Block *getHoistDestBlock(cir::AllocaOp alloca) {
   mlir::Region *region = alloca->getParentRegion();
   while (true) {
     mlir::Operation *parentOp = region->getParentOp();
-    if (mlir::isa<cir::FuncOp>(parentOp) ||
+
+    // Note: We may want some kind of interface in the future for blocking
+    // alloca hoisting since other dialects may have similar restrictions.
+    if (parentOp->hasTrait<mlir::OpTrait::IsIsolatedFromAbove>() ||
         mlir::isa<mlir::omp::OutlineableOpenMPOpInterface>(parentOp))
       return &region->front();
     region = parentOp->getParentRegion();
