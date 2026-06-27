@@ -1632,16 +1632,16 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
     }
   }
 
-  // Perform the first clmul operation with the mu/mu' constant. Input is TC
-  // bits and Mu is TC+1 bits, so the result will be 2*TC bits.
+  // Perform the first clmul operation with the mu constant. Input is TC bits
+  // and mu is TC+1 bits, so the result will be 2*TC bits.
   Value *ClmulMu = Builder.CreateBinaryIntrinsic(
       Intrinsic::clmul, ClmulMuInput, MuExt, /*FMFSource=*/{}, "clmul.mu");
 
   // Extract the relevant bits from the result.
   Value *ClmulGPInput = GetMostSignificantTCBits(ClmulMu, 2 * TC, "quot");
 
-  // Perform the second clmul operation with the P(x)/P(x)' constant. Input is
-  // TC bits and GP is CRCBW+1 bits, so the result will be CRCBW+TC bits.
+  // Perform the second clmul operation with the P(x) constant. Input is TC bits
+  // and P(x) is CRCBW+1 bits, so the result will be CRCBW+TC bits.
   Value *ClmulGP = Builder.CreateBinaryIntrinsic(Intrinsic::clmul, ClmulGPInput,
                                                  FullGenPolyExt,
                                                  /*FMFSource=*/{}, "clmul.gp");

@@ -388,7 +388,7 @@ static APInt floorDivideGF2(APInt Dividend, APInt Divisor) {
   // Extend the divisor bit width to match the dividend.
   Divisor = Divisor.zext(Dividend.getBitWidth());
 
-  // Note that getActiveBits(x) returns deg(x)+1, but the computation below
+  // Note that getActiveBits(_) returns deg(_)+1, but the computation below
   // still holds.
   unsigned DivisorActiveBits = Divisor.getActiveBits();
 
@@ -439,7 +439,7 @@ HashRecognize::genBarrettConstants(const APInt &GenPoly, unsigned TripCount,
     FullGenPoly = FullGenPoly.reverseBits();
   }
 
-  // The final constants are mu/mu' and P(x)/P(x)', depending on
+  // The final constants are (mu or mu') and (P(x) or P(x)'), depending on
   // IsBigEndian.
   return {Mu, FullGenPoly};
 }
