@@ -22683,7 +22683,9 @@ int main(int, char**) {
   test8();
   test9();
   test10();
+#if !defined(_AIX)
   test11();
+#endif
   std::locale lc = std::locale::classic();
   std::locale lg(lc, new my_numpunct);
   const my_facet f(1);

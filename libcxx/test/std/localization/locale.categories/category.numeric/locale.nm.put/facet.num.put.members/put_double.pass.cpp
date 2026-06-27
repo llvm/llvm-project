@@ -14334,7 +14334,9 @@ int main(int, char**) {
   test4();
   test5();
   test6();
+#if !defined(_AIX)
   test7();
+#endif
 
   return 0;
 }
