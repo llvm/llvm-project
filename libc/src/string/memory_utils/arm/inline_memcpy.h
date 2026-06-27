@@ -199,7 +199,7 @@ copy_bytes_and_bump_pointers(Ptr &dst, CPtr &src, size_t size) {
   // `memcpy` prototype. This allows the compiler to merge consecutive
   // load/store (LDR, STR) instructions generated in
   // `copy_block_and_bump_pointers` with `BlockOp::kByWord` into load/store
-  // double (LDRD, STRD) instructions, this is is undesirable so we prevent the
+  // double (LDRD, STRD) instructions, this is undesirable so we prevent the
   // compiler from inferring `__restrict` with the following line.
   asm volatile("" : "+r"(dst), "+r"(src));
 #ifdef __ARM_FEATURE_UNALIGNED
