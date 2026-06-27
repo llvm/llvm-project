@@ -5259,13 +5259,16 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
   // constructor from a variable forwards the source LValue instead of
   // materializing an agg.tmp. EmitCall makes the real copy at the
   // Indirect/byval boundary. Under musttail this also keeps the value in
-  // storage that survives the tail call. CUDA surface/texture types are
-  // excluded: their copy lowers a global to a handle in EmitAggregateCopy,
-  // which forwarding would bypass.
+  // storage that survives the tail call. Types whose copy is not a plain
+  // memcpy in EmitAggregateCopy are excluded, since forwarding would bypass
+  // that special copy: CUDA surface/texture (lowered to a handle) and, under
+  // ObjC GC, records with object members (need a write barrier).
   if (HasAggregateEvalKind && type->isRecordType() &&
       type.isTriviallyCopyableType(getContext()) &&
       !type->isCUDADeviceBuiltinSurfaceType() &&
-      !type->isCUDADeviceBuiltinTextureType()) {
+      !type->isCUDADeviceBuiltinTextureType() &&
+      !(getLangOpts().getGC() != LangOptions::NonGC &&
+        type->getAsRecordDecl()->hasObjectMember())) {
     if (const auto *CCE = dyn_cast<CXXConstructExpr>(E)) {
       const CXXConstructorDecl *Ctor = CCE->getConstructor();
       if (Ctor->isCopyOrMoveConstructor() && Ctor->isTrivial() &&
