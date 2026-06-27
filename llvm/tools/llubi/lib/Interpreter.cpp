@@ -2401,6 +2401,7 @@ public:
 
         Instruction &I = *Top.PC;
         visit(&I);
+        Ctx.resetNoncacheableConstantBuffer();
         if (hasProgramExited())
           break;
 
