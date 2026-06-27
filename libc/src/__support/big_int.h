@@ -366,7 +366,8 @@ public:
 
   template <size_t OtherBits, bool OtherSigned, typename OtherWordType>
   LIBC_INLINE constexpr BigInt(
-      const BigInt<OtherBits, OtherSigned, OtherWordType> &other) {
+      const BigInt<OtherBits, OtherSigned, OtherWordType> &other)
+      : val{} {
     using BigIntOther = BigInt<OtherBits, OtherSigned, OtherWordType>;
     [[maybe_unused]] const bool should_sign_extend = Signed && other.is_neg();
 
@@ -491,7 +492,7 @@ public:
   LIBC_INLINE static constexpr BigInt one() { return BigInt(1); }
   LIBC_INLINE static constexpr BigInt all_ones() { return ~zero(); }
   LIBC_INLINE static constexpr BigInt min() {
-    BigInt out;
+    BigInt out{};
     if constexpr (SIGNED)
       out.set_msb();
     return out;
