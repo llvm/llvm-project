@@ -207,6 +207,11 @@ public:
         "fillMemoryOperands() requires getScratchMemoryRegister() > 0");
   }
 
+  virtual std::optional<MCInst> createCopyInstruction(MCRegister Src,
+                                                      MCRegister Dst) const {
+    llvm_unreachable("");
+  }
+
   // Returns a counter usable as a loop counter.
   virtual MCRegister getDefaultLoopCounterRegister(const Triple &) const {
     return MCRegister();
@@ -243,6 +248,9 @@ public:
     return make_error<Failure>(
         "targets with target-specific operands should implement this");
   }
+
+  // Process instructions that used reserved registers.
+  virtual void processInstructionReservedRegs(InstructionTemplate &IT) const {}
 
   // Returns true if this instruction is supported as a back-to-back
   // instructions.

@@ -63,6 +63,18 @@ bool InstructionTemplate::hasImmediateVariables() const {
   });
 }
 
+Operand InstructionTemplate::getMemOpReg() const {
+  auto &I = getInstr();
+  auto MemOpIt =
+      find_if(I.Operands, [](const Operand &Op) { return Op.isMemory(); });
+  assert(MemOpIt != I.Operands.end() &&
+         "Instruction must have memory operands");
+
+  const Operand &MemOp = *MemOpIt;
+  assert(MemOp.isReg() && "Memory operand expected to be register");
+  return MemOp;
+}
+
 MCInst InstructionTemplate::build() const {
   MCInst Result;
   Result.setOpcode(Instr->Description.Opcode);

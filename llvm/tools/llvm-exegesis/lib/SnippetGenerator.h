@@ -69,6 +69,12 @@ public:
   std::vector<RegisterValue> computeRegisterInitialValues(
       const std::vector<InstructionTemplate> &Snippet) const;
 
+  Error instantiateMemoryOperands(const LLVMState &State,
+                                  InstructionTemplate &IT, MCRegister Reg,
+                                  unsigned Offset,
+                                  std::vector<MCInst> &Prologue,
+                                  const BitVector &ForbiddenRegisters) const;
+
 protected:
   const LLVMState &State;
   const Options Opts;

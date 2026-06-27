@@ -88,28 +88,36 @@ static bool hasVariablesWithTiedOperands(const Instruction &Instr) {
 
 ParallelSnippetGenerator::~ParallelSnippetGenerator() = default;
 
-void ParallelSnippetGenerator::instantiateMemoryOperands(
+Error ParallelSnippetGenerator::callInstantiateMemoryOperands(
     const MCRegister ScratchSpacePointerInReg,
-    std::vector<InstructionTemplate> &Instructions) const {
+    std::vector<InstructionTemplate> &Instructions,
+    std::vector<MCInst> &Prologue, const BitVector &ForbiddenRegisters) const {
   if (!ScratchSpacePointerInReg)
-    return; // no memory operands.
+    return Error::success(); // no memory operands.
   const auto &ET = State.getExegesisTarget();
   const unsigned MemStep = ET.getMaxMemoryAccessSize();
   const size_t OriginalInstructionsSize = Instructions.size();
   size_t I = 0;
   for (InstructionTemplate &IT : Instructions) {
-    ET.fillMemoryOperands(IT, ScratchSpacePointerInReg, I * MemStep);
+    if (auto Err = instantiateMemoryOperands(
+            State, IT, ScratchSpacePointerInReg, I * MemStep, Prologue,
+            ForbiddenRegisters))
+      return Err;
     ++I;
   }
 
   while (Instructions.size() < kMinNumDifferentAddresses) {
     InstructionTemplate IT = Instructions[I % OriginalInstructionsSize];
-    ET.fillMemoryOperands(IT, ScratchSpacePointerInReg, I * MemStep);
+    if (auto Err = instantiateMemoryOperands(
+            State, IT, ScratchSpacePointerInReg, I * MemStep, Prologue,
+            ForbiddenRegisters))
+      return Err;
     ++I;
     Instructions.push_back(std::move(IT));
   }
   assert(I * MemStep < BenchmarkRunner::ScratchSpace::kSize &&
          "not enough scratch space");
+  return Error::success();
 }
 
 enum class RegRandomizationStrategy : uint8_t {
@@ -304,13 +312,19 @@ ParallelSnippetGenerator::generateCodeTemplates(
   if (SelfAliasing.empty()) {
     CT.Info = "instruction is parallel, repeating a random one.";
     CT.Instructions.push_back(std::move(Variant));
-    instantiateMemoryOperands(CT.ScratchSpacePointerInReg, CT.Instructions);
+    if (auto Err = callInstantiateMemoryOperands(CT.ScratchSpacePointerInReg,
+                                                 CT.Instructions, CT.Prologue,
+                                                 ForbiddenRegisters))
+      return std::move(Err);
     return getSingleton(std::move(CT));
   }
   if (SelfAliasing.hasImplicitAliasing()) {
     CT.Info = "instruction is serial, repeating a random one.";
     CT.Instructions.push_back(std::move(Variant));
-    instantiateMemoryOperands(CT.ScratchSpacePointerInReg, CT.Instructions);
+    if (auto Err = callInstantiateMemoryOperands(CT.ScratchSpacePointerInReg,
+                                                 CT.Instructions, CT.Prologue,
+                                                 ForbiddenRegisters))
+      return std::move(Err);
     return getSingleton(std::move(CT));
   }
   std::vector<CodeTemplate> Result;
@@ -343,8 +357,10 @@ ParallelSnippetGenerator::generateCodeTemplates(
       return make_error<StringError>(
           Twine("Failed to produce any snippet via: ").concat(CurrCT.Info),
           inconvertibleErrorCode());
-    instantiateMemoryOperands(CurrCT.ScratchSpacePointerInReg,
-                              CurrCT.Instructions);
+    if (auto Err = callInstantiateMemoryOperands(
+            CurrCT.ScratchSpacePointerInReg, CurrCT.Instructions,
+            CurrCT.Prologue, ForbiddenRegisters))
+      return std::move(Err);
     Result.push_back(std::move(CurrCT));
   }
   return Result;

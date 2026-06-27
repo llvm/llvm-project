@@ -89,12 +89,13 @@ static ExecutionMode getExecutionModes(const Instruction &Instr,
   return EM;
 }
 
-static void appendCodeTemplates(const LLVMState &State,
-                                InstructionTemplate Variant,
-                                const BitVector &ForbiddenRegisters,
-                                ExecutionMode ExecutionModeBit,
-                                StringRef ExecutionClassDescription,
-                                std::vector<CodeTemplate> &CodeTemplates) {
+static Error appendCodeTemplates(const LLVMState &State,
+                                 const SerialSnippetGenerator &Generator,
+                                 InstructionTemplate Variant,
+                                 const BitVector &ForbiddenRegisters,
+                                 ExecutionMode ExecutionModeBit,
+                                 StringRef ExecutionClassDescription,
+                                 std::vector<CodeTemplate> &CodeTemplates) {
   assert(isEnumValue(ExecutionModeBit) && "Bit must be a power of two");
   switch (ExecutionModeBit) {
   case ExecutionMode::ALWAYS_SERIAL_IMPLICIT_REGS_ALIAS:
@@ -108,7 +109,7 @@ static void appendCodeTemplates(const LLVMState &State,
     CT.Info = std::string(ExecutionClassDescription);
     CT.Instructions.push_back(std::move(Variant));
     CodeTemplates.push_back(std::move(CT));
-    return;
+    return Error::success();
   }
   case ExecutionMode::SERIAL_VIA_MEMORY_INSTR: {
     // Select back-to-back memory instruction.
@@ -126,7 +127,7 @@ static void appendCodeTemplates(const LLVMState &State,
       });
 
       if (DefOpIt == I.Operands.end())
-        return;
+        return Error::success();
 
       const Operand &DefOp = *DefOpIt;
       const ExegesisTarget &ET = State.getExegesisTarget();
@@ -139,17 +140,17 @@ static void appendCodeTemplates(const LLVMState &State,
       // Register classes of def operand and memory operand must be the same
       // to perform aliasing.
       if (!RegClass.contains(ScratchMemoryRegister))
-        return;
-
-      ET.fillMemoryOperands(Variant, ScratchMemoryRegister, 0);
-
-      // Only force the def register to ScratchMemoryRegister if the target
-      // hasn't assigned a value yet.
-      MCOperand &DefVal = Variant.getValueFor(DefOp);
-      if (!DefVal.isValid())
-        DefVal = MCOperand::createReg(ScratchMemoryRegister);
+        return Error::success();
 
       CodeTemplate CT;
+      const Operand &MemOp = Variant.getMemOpReg();
+      if (auto Err = Generator.instantiateMemoryOperands(
+              State, Variant, ScratchMemoryRegister, 0, CT.Prologue,
+              ForbiddenRegisters))
+        return Err;
+      MCOperand MemOpVal = Variant.getValueFor(MemOp);
+      Variant.getValueFor(DefOp) = MCOperand::createReg(MemOpVal.getReg());
+
       CT.Execution = ExecutionModeBit;
       CT.ScratchSpacePointerInReg = ScratchMemoryRegister;
 
@@ -159,7 +160,7 @@ static void appendCodeTemplates(const LLVMState &State,
     }
 
     // TODO: implement more cases
-    return;
+    return Error::success();
   }
   case ExecutionMode::SERIAL_VIA_EXPLICIT_REGS: {
     // Making the execution of this instruction serial by selecting one def
@@ -176,7 +177,7 @@ static void appendCodeTemplates(const LLVMState &State,
     CT.Info = std::string(ExecutionClassDescription);
     CT.Instructions.push_back(std::move(Variant));
     CodeTemplates.push_back(std::move(CT));
-    return;
+    return Error::success();
   }
   case ExecutionMode::SERIAL_VIA_NON_MEMORY_INSTR: {
     const Instruction &Instr = Variant.getInstr();
@@ -199,11 +200,12 @@ static void appendCodeTemplates(const LLVMState &State,
       CT.Instructions.push_back(std::move(OtherIT));
       CodeTemplates.push_back(std::move(CT));
     }
-    return;
+    return Error::success();
   }
   default:
     llvm_unreachable("Unhandled enum value");
   }
+  return Error::success();
 }
 
 SerialSnippetGenerator::~SerialSnippetGenerator() = default;
@@ -216,8 +218,10 @@ SerialSnippetGenerator::generateCodeTemplates(
       getExecutionModes(Variant.getInstr(), ForbiddenRegisters);
   for (const auto EC : kExecutionClasses) {
     for (const auto ExecutionModeBit : getExecutionModeBits(EM & EC.Mask))
-      appendCodeTemplates(State, Variant, ForbiddenRegisters, ExecutionModeBit,
-                          EC.Description, Results);
+      if (auto Err =
+              appendCodeTemplates(State, *this, Variant, ForbiddenRegisters,
+                                  ExecutionModeBit, EC.Description, Results))
+        return std::move(Err);
     if (!Results.empty())
       break;
   }

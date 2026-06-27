@@ -291,6 +291,8 @@ Error assembleToStream(const ExegesisTarget &ET,
       Entry.MBB->addLiveIn(Reg);
   }
 
+  Entry.addInstructions(Key.PrologueInstructions);
+
   const bool IsSnippetSetupComplete = generateSnippetSetupCode(
       ET, &TM->getMCSubtargetInfo(), Entry, Key, GenerateMemoryInstructions);
 

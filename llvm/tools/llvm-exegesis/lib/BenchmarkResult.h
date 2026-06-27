@@ -76,6 +76,8 @@ struct BenchmarkKey {
   uintptr_t SnippetAddress = 0;
   // The register that should be used to hold the loop counter.
   MCRegister LoopRegister;
+  // Instructions for inserting into entry.
+  std::vector<MCInst> PrologueInstructions;
 };
 
 struct BenchmarkMeasure {

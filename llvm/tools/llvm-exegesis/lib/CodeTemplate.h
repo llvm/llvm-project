@@ -38,6 +38,7 @@ struct InstructionTemplate {
   bool hasImmediateVariables() const;
   const Instruction &getInstr() const { return *Instr; }
   ArrayRef<MCOperand> getVariableValues() const { return VariableValues; }
+  Operand getMemOpReg() const;
   void setVariableValues(ArrayRef<MCOperand> NewVariableValues) {
     assert(VariableValues.size() == NewVariableValues.size() &&
            "Value count mismatch");
@@ -132,6 +133,8 @@ struct CodeTemplate {
   // If the template uses the provided scratch memory, the register in which
   // the pointer to this memory is passed in to the function.
   MCRegister ScratchSpacePointerInReg;
+
+  std::vector<MCInst> Prologue;
 
 #if defined(__GNUC__) && (defined(__clang__) || LLVM_GNUC_PREREQ(8, 0, 0))
   // FIXME: GCC7 bug workaround. Drop #if after GCC7 no longer supported.

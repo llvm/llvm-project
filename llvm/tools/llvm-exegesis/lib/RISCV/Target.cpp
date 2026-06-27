@@ -736,6 +736,10 @@ public:
   generateInstructionVariants(const Instruction &Instr,
                               unsigned MaxConfigsPerOpcode) const override;
 
+  virtual std::optional<MCInst>
+  createCopyInstruction(MCRegister Src, MCRegister Dst) const override;
+  void processInstructionReservedRegs(InstructionTemplate &IT) const override;
+
   void addTargetSpecificPasses(PassManagerBase &PM) const override {
     // Turn AVL operand of physical registers into virtual registers.
     PM.add(exegesis::createRISCVPreprocessingPass());
@@ -808,27 +812,16 @@ void ExegesisRISCVTarget::fillMemoryOperands(InstructionTemplate &IT,
                                              unsigned Offset) const {
   // TODO: for now we ignore Offset because have no way
   // to detect it in instruction.
-  auto &I = IT.getInstr();
-
-  auto MemOpIt =
-      find_if(I.Operands, [](const Operand &Op) { return Op.isMemory(); });
-  assert(MemOpIt != I.Operands.end() &&
-         "Instruction must have memory operands");
-
-  const Operand &MemOp = *MemOpIt;
-
-  assert(MemOp.isReg() && "Memory operand expected to be register");
-
-  unsigned Opcode = I.getOpcode();
-  if (Opcode == RISCV::C_LDSP || Opcode == RISCV::C_LWSP ||
-      Opcode == RISCV::C_SDSP || Opcode == RISCV::C_SWSP) {
-    IT.getValueFor(I.Operands[0]) = MCOperand::createReg(RISCV::X2);
-    // Force base register to SP (X2)
-    IT.getValueFor(MemOp) = MCOperand::createReg(RISCV::X2);
-    return;
-  }
-
+  const Operand &MemOp = IT.getMemOpReg();
   IT.getValueFor(MemOp) = MCOperand::createReg(Reg);
+}
+
+std::optional<MCInst>
+ExegesisRISCVTarget::createCopyInstruction(MCRegister Src,
+                                           MCRegister Dst) const {
+  if (!RISCV::GPRRegClass.contains(Src) || !RISCV::GPRRegClass.contains(Dst))
+    return std::nullopt;
+  return MCInstBuilder(RISCV::ADDI).addReg(Dst).addReg(Src).addImm(0);
 }
 
 const MCPhysReg UnavailableRegisters[4] = {RISCV::X0, DefaultLoopCounterReg,
@@ -888,6 +881,23 @@ ExegesisRISCVTarget::generateInstructionVariants(
       IT.getValueFor(Op) = MCOperand::createReg(ScratchMemoryReg);
     }
   return {IT};
+}
+
+// Process instructions that used reserved registers.
+void ExegesisRISCVTarget::processInstructionReservedRegs(
+    InstructionTemplate &IT) const {
+  MCOperand &AssignedValue = IT.getValueFor(IT.getMemOpReg());
+
+  switch (IT.getOpcode()) {
+  case RISCV::C_LWSP:
+  case RISCV::C_LDSP:
+  case RISCV::C_SWSP:
+  case RISCV::C_SDSP:
+    AssignedValue = MCOperand::createReg(RISCV::X2);
+    break;
+  default:
+    break;
+  }
 }
 
 } // anonymous namespace

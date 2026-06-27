@@ -54,9 +54,10 @@ private:
   //   mov eax, [rdi + 128]
   //   add eax, [rdi + 192]
   //   mov eax, [rdi + 256]
-  void instantiateMemoryOperands(
+  Error callInstantiateMemoryOperands(
       MCRegister ScratchSpaceReg,
-      std::vector<InstructionTemplate> &SnippetTemplate) const;
+      std::vector<InstructionTemplate> &SnippetTemplate,
+      std::vector<MCInst> &Prologue, const BitVector &ForbiddenRegisters) const;
 };
 
 } // namespace exegesis

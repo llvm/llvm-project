@@ -63,7 +63,6 @@ Error SnippetGenerator::generateConfigurations(
     const auto &ScratchRegAliases =
         State.getRATC().getRegister(ScratchSpacePointerInReg).aliasedBits();
     // If the instruction implicitly writes to ScratchSpacePointerInReg , abort.
-    // FIXME: We could make a copy of the scratch register.
     for (const auto &Op : Variant.getInstr().Operands) {
       if (Op.isDef() && Op.isImplicitReg() &&
           ScratchRegAliases.test(Op.getImplicitReg().id()))
@@ -95,6 +94,9 @@ Error SnippetGenerator::generateConfigurations(
             return Error;
           BC.Key.Instructions.push_back(Inst);
         }
+
+        BC.Key.PrologueInstructions = CT.Prologue;
+
         if (CT.ScratchSpacePointerInReg)
           BC.LiveIns.push_back(CT.ScratchSpacePointerInReg);
         BC.Key.RegisterInitialValues =
@@ -213,6 +215,74 @@ template <typename C> static decltype(auto) randomElement(const C &Container) {
   assert(!Container.empty() &&
          "Can't pick a random element from an empty container)");
   return Container[randomIndex(Container.size() - 1)];
+}
+
+// Instantiates memory operands for the given instruction template, ensuring
+// that the register used in the memory operand belongs to the required
+// register class.
+//
+// This function handles cases where the provided register (e.g., from a
+// forced scratch register insertion) may not be compatible with the memory
+// operand's register class. It attempts to:
+//   1. Use the provided register if it is already in the required class.
+//   2. Otherwise, reuse an existing register from the instruction template's
+//      memory operand if it is valid.
+//   3. As a fallback, allocate a free register from the required class and
+//      insert a copy prologue to move the value.
+Error SnippetGenerator::instantiateMemoryOperands(
+    const LLVMState &State, InstructionTemplate &IT, MCRegister Reg,
+    unsigned Offset, std::vector<MCInst> &Prologue,
+    const BitVector &ForbiddenRegisters) const {
+  const ExegesisTarget &ET = State.getExegesisTarget();
+  const Operand &MemOp = IT.getMemOpReg();
+  unsigned MemOpIndex = MemOp.getIndex();
+
+  const MCRegisterInfo &MRI = State.getRATC().regInfo();
+  const MCInstrDesc &Desc = IT.getInstr().Description;
+  const MCOperandInfo &OpInfo = Desc.operands()[MemOpIndex];
+  const MCRegisterClass &OpRC = MRI.getRegClass(OpInfo.RegClass);
+  unsigned OpBitSize = OpRC.getSizeInBits();
+
+  unsigned RegBitSize = 0;
+  for (unsigned RCId = 0, NumRC = MRI.getNumRegClasses(); RCId < NumRC;
+       ++RCId) {
+    const MCRegisterClass &RC = MRI.getRegClass(RCId);
+    if (RC.contains(Reg)) {
+      RegBitSize = RC.getSizeInBits();
+      break;
+    }
+  }
+
+  if (OpRC.contains(Reg) ||
+      (OpBitSize && RegBitSize && (OpBitSize != RegBitSize))) {
+    ET.fillMemoryOperands(IT, Reg, Offset);
+    return Error::success();
+  }
+
+  MCRegister NewReg;
+
+  ET.processInstructionReservedRegs(IT);
+  auto &MemOpValue = IT.getValueFor(MemOp);
+  if (MemOpValue.isValid() && MemOpValue.isReg()) {
+    NewReg = MemOpValue.getReg();
+  } else {
+    std::vector<MCPhysReg> Candidates;
+    for (MCPhysReg R : OpRC) {
+      if (!ForbiddenRegisters.test(R))
+        Candidates.push_back(R);
+    }
+
+    if (Candidates.empty())
+      return make_error<Failure>("No free register in required class");
+    NewReg = MCRegister::from(randomElement(Candidates));
+  }
+
+  auto Copy = ET.createCopyInstruction(Reg, NewReg);
+  if (!Copy)
+    return make_error<Failure>("Cannot copy into required register class");
+  Prologue.push_back(*Copy);
+  ET.fillMemoryOperands(IT, NewReg, Offset);
+  return Error::success();
 }
 
 static void setRegisterOperandValue(const RegisterOperandAssignment &ROV,
