@@ -9,15 +9,18 @@
 #include "InputFiles.h"
 #include "OutputSections.h"
 #include "RelocScan.h"
+#include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/ELFAttributes.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/RISCVAttributeParser.h"
 #include "llvm/Support/RISCVAttributes.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::object;
@@ -26,11 +29,62 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
+static void addZcmtOutputAttributes(Ctx &ctx);
+static bool discardZcmtOutputAttributes(Ctx &ctx);
+static bool shouldCreateZcmtSyntheticSections(Ctx &ctx);
+
 namespace {
+
+struct ZcmtJvtEntry {
+  const Symbol *sym = nullptr;
+  int64_t addend = 0;
+  bool usePlt = false;
+};
+
+class RISCVJvtSection final : public SyntheticSection {
+public:
+  explicit RISCVJvtSection(Ctx &ctx)
+      : SyntheticSection(ctx, ".riscv.jvt", SHT_PROGBITS,
+                         SHF_ALLOC | SHF_EXECINSTR, 64) {
+    entsize = ctx.arg.wordsize;
+  }
+
+  size_t getSize() const override { return entries.size() * ctx.arg.wordsize; }
+  bool isNeeded() const override { return keep; }
+  void writeTo(uint8_t *buf) override {
+    for (const ZcmtJvtEntry &entry : entries) {
+      uint64_t va = 0;
+      if (entry.sym)
+        va = (entry.usePlt ? entry.sym->getPltVA(ctx) : entry.sym->getVA(ctx)) +
+             entry.addend;
+      if (ctx.arg.is64) {
+        write64(ctx, buf, va);
+        buf += 8;
+      } else {
+        write32(ctx, buf, va);
+        buf += 4;
+      }
+    }
+  }
+
+  bool keep = false;
+  SmallVector<ZcmtJvtEntry, 0> entries;
+};
+
+struct ZcmtCandidateGroup {
+  Symbol *sym = nullptr;
+  int64_t addend = 0;
+  bool usePlt = false;
+  bool isJalt = false;
+  uint64_t benefit = 0;
+  uint64_t firstSeen = 0;
+  SmallVector<std::pair<InputSection *, uint64_t>, 0> sites;
+};
 
 class RISCV final : public TargetInfo {
 public:
   RISCV(Ctx &);
+  void initTargetSpecificSections() override;
   uint32_t calcEFlags() const override;
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   void writeGotHeader(uint8_t *buf) const override;
@@ -64,6 +118,20 @@ public:
   InputSection *baseSec = nullptr;
   // r_offset and r_addend pairs.
   SmallVector<std::pair<uint64_t, uint64_t>, 0> synthesizedAligns;
+
+  mutable std::unique_ptr<RISCVJvtSection> jvtSec;
+  mutable Defined *jvtSym = nullptr;
+  mutable DenseMap<std::pair<const InputSection *, uint64_t>, uint8_t>
+      zcmtSelectedSites;
+  mutable bool zcmtSelected = false;
+  mutable bool zcmtSelectionDone = false;
+  mutable bool zcmtWarnedDisabled = false;
+
+  bool zcmtEnabled() const;
+  std::optional<uint8_t> getZcmtIndex(const InputSection &sec,
+                                      uint64_t offset) const;
+  bool selectZcmtCandidates() const;
+  void discardEmptyJvt() const;
 };
 
 } // end anonymous namespace
@@ -74,6 +142,7 @@ public:
 #define INTERNAL_R_RISCV_GPREL_S 257
 #define INTERNAL_R_RISCV_X0REL_I 258
 #define INTERNAL_R_RISCV_X0REL_S 259
+#define INTERNAL_R_RISCV_ZCMT_JUMP 260
 
 const uint64_t dtpOffset = 0x800;
 
@@ -128,6 +197,8 @@ static uint32_t setLO12_S(uint32_t insn, uint32_t imm) {
          (extractBits(imm, 4, 0) << 7);
 }
 
+static uint32_t getEFlags(Ctx &ctx, InputFile *f);
+
 RISCV::RISCV(Ctx &ctx) : TargetInfo(ctx) {
   copyRel = R_RISCV_COPY;
   pltRel = R_RISCV_JUMP_SLOT;
@@ -156,6 +227,112 @@ RISCV::RISCV(Ctx &ctx) : TargetInfo(ctx) {
   pltHeaderSize = 32;
   pltEntrySize = 16;
   ipltEntrySize = 16;
+}
+
+void RISCV::initTargetSpecificSections() {
+  if (!shouldCreateZcmtSyntheticSections(ctx))
+    return;
+  jvtSec = std::make_unique<RISCVJvtSection>(ctx);
+  jvtSec->keep = true;
+  ctx.inputSections.push_back(jvtSec.get());
+
+  if (Symbol *s = ctx.symtab->find("__jvt_base$")) {
+    if (s->isDefined() || s->isCommon()) {
+      Err(ctx) << "duplicate definition of __jvt_base$";
+      return;
+    }
+    ctx.synthesizedSymbols.push_back(s);
+    s->resolve(ctx, Defined{ctx, ctx.internalFile, StringRef(), STB_GLOBAL,
+                            STV_HIDDEN, STT_NOTYPE, 0, 0, jvtSec.get()});
+    s->isUsedInRegularObj = true;
+    jvtSym = cast<Defined>(s);
+  }
+}
+
+static bool shouldCreateZcmtSyntheticSections(Ctx &ctx) {
+  return ctx.arg.relaxZcmt && !ctx.arg.shared && !ctx.arg.pie &&
+         !ctx.arg.relocatable && ctx.arg.relax;
+}
+
+static bool hasZcmtCompatibleProfile(Ctx &ctx, InputFile *file, bool diagnose) {
+  for (InputSectionBase *sec : file->getSections()) {
+    if (!sec || sec == &InputSection::discarded ||
+        sec->type != SHT_RISCV_ATTRIBUTES)
+      continue;
+
+    RISCVAttributeParser parser;
+    if (Error e = parser.parse(sec->content(), llvm::endianness::little)) {
+      if (diagnose)
+        Warn(ctx) << "--riscv-relax-zcmt is disabled because " << sec
+                  << " could not be parsed: " << std::move(e);
+      else
+        consumeError(std::move(e));
+      return false;
+    }
+
+    std::optional<StringRef> arch = parser.getAttributeString(RISCVAttrs::ARCH);
+    if (!arch)
+      continue;
+
+    auto maybeInfo = RISCVISAInfo::parseNormalizedArchString(*arch);
+    if (!maybeInfo) {
+      if (diagnose)
+        Warn(ctx) << "--riscv-relax-zcmt is disabled because " << sec << ": "
+                  << *arch << ": " << maybeInfo.takeError();
+      else
+        consumeError(maybeInfo.takeError());
+      return false;
+    }
+
+    const RISCVISAInfo &info = **maybeInfo;
+    if (info.hasExtension("zcd")) {
+      if (diagnose)
+        Warn(ctx) << "--riscv-relax-zcmt is disabled because " << sec
+                  << " advertises incompatible Zcd/compressed-FP profile";
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool RISCV::zcmtEnabled() const {
+  if (!ctx.arg.relaxZcmt)
+    return false;
+
+  if (ctx.arg.shared || ctx.arg.pie) {
+    if (!zcmtWarnedDisabled) {
+      Warn(ctx) << "--riscv-relax-zcmt is disabled for PIE and shared links";
+      zcmtWarnedDisabled = true;
+    }
+    return false;
+  }
+
+  if (!ctx.arg.relax) {
+    if (!zcmtWarnedDisabled) {
+      Warn(ctx) << "--riscv-relax-zcmt requires --relax";
+      zcmtWarnedDisabled = true;
+    }
+    return false;
+  }
+
+  for (InputFile *file : ctx.objectFiles)
+    if ((getEFlags(ctx, file) & EF_RISCV_RVC) == 0) {
+      if (!zcmtWarnedDisabled) {
+        Warn(ctx) << "--riscv-relax-zcmt is disabled because " << file
+                  << " is not marked RVC-capable";
+        zcmtWarnedDisabled = true;
+      }
+      return false;
+    }
+
+  for (InputFile *file : ctx.objectFiles)
+    if (!hasZcmtCompatibleProfile(ctx, file, !zcmtWarnedDisabled)) {
+      zcmtWarnedDisabled = true;
+      return false;
+    }
+
+  return true;
 }
 
 static uint32_t getEFlags(Ctx &ctx, InputFile *f) {
@@ -697,6 +874,243 @@ static bool relaxable(ArrayRef<Relocation> relocs, size_t i) {
   return i + 1 != relocs.size() && relocs[i + 1].type == R_RISCV_RELAX;
 }
 
+static uint16_t encodeZcmtJump(uint8_t index) {
+  return 0xa002 | (uint16_t(index) << 2);
+}
+
+std::optional<uint8_t> RISCV::getZcmtIndex(const InputSection &sec,
+                                           uint64_t offset) const {
+  auto it = zcmtSelectedSites.find({&sec, offset});
+  if (it == zcmtSelectedSites.end())
+    return std::nullopt;
+  return it->second;
+}
+
+static std::optional<bool> getZcmtKind(const InputSection &sec,
+                                       const Relocation &r) {
+  uint32_t rd;
+  if (r.type == R_RISCV_JAL) {
+    uint32_t insn = read32le(sec.content().data() + r.offset);
+    rd = extractBits(insn, 11, 7);
+  } else {
+    uint64_t insnPair = read64le(sec.content().data() + r.offset);
+    rd = extractBits(insnPair, 32 + 11, 32 + 7);
+  }
+  if (rd == X_X0)
+    return false;
+  if (rd == X_RA)
+    return true;
+  return std::nullopt;
+}
+
+static bool sameZcmtGroup(const ZcmtCandidateGroup &group, const Symbol *sym,
+                          int64_t addend, bool usePlt, bool isJalt) {
+  return group.sym == sym && group.addend == addend && group.usePlt == usePlt &&
+         group.isJalt == isJalt;
+}
+
+static uint64_t getZcmtBenefit(RelType origType, RelType relaxedType) {
+  if (origType == R_RISCV_CALL || origType == R_RISCV_CALL_PLT) {
+    if (relaxedType == R_RISCV_NONE)
+      return 6;
+    if (relaxedType == R_RISCV_JAL)
+      return 2;
+    return 0;
+  }
+  if (origType == R_RISCV_JAL &&
+      (relaxedType == R_RISCV_NONE || relaxedType == R_RISCV_JAL))
+    return 2;
+  return 0;
+}
+
+static void addZcmtCandidate(SmallVectorImpl<ZcmtCandidateGroup> &groups,
+                             InputSection &sec, const Relocation &r,
+                             uint64_t benefit, bool isJalt, uint64_t ordinal) {
+  const bool usePlt = r.expr == R_PLT_PC;
+  for (ZcmtCandidateGroup &group : groups) {
+    if (!sameZcmtGroup(group, r.sym, r.addend, usePlt, isJalt))
+      continue;
+    group.benefit += benefit;
+    group.sites.push_back({&sec, r.offset});
+    return;
+  }
+
+  ZcmtCandidateGroup &group = groups.emplace_back();
+  group.sym = r.sym;
+  group.addend = r.addend;
+  group.usePlt = usePlt;
+  group.isJalt = isJalt;
+  group.benefit = benefit;
+  group.firstSeen = ordinal;
+  group.sites.push_back({&sec, r.offset});
+}
+
+bool RISCV::selectZcmtCandidates() const {
+  assert(jvtSec && "JVT synthetic section must exist before Zcmt selection");
+  zcmtSelectionDone = true;
+  zcmtSelectedSites.clear();
+  jvtSec->entries.clear();
+
+  SmallVector<ZcmtCandidateGroup, 0> jtGroups;
+  SmallVector<ZcmtCandidateGroup, 0> jaltGroups;
+  SmallVector<InputSection *, 0> storage;
+  uint64_t ordinal = 0;
+
+  for (OutputSection *osec : ctx.outputSections) {
+    if (!(osec->flags & SHF_EXECINSTR))
+      continue;
+    for (InputSection *sec : getInputSections(*osec, storage)) {
+      if (!sec->relaxAux || !sec->relaxAux->relocDeltas)
+        continue;
+
+      MutableArrayRef<Relocation> relocs = sec->relocs();
+      RelaxAux &aux = *sec->relaxAux;
+      for (auto [i, r] : llvm::enumerate(relocs)) {
+        if (r.type != R_RISCV_CALL && r.type != R_RISCV_CALL_PLT &&
+            r.type != R_RISCV_JAL)
+          continue;
+        if (!relaxable(relocs, i))
+          continue;
+        if (!r.sym || (r.sym->isUndefined() && !r.sym->isUndefWeak()))
+          continue;
+
+        std::optional<bool> kind = getZcmtKind(*sec, r);
+        if (!kind)
+          continue;
+
+        uint64_t benefit = getZcmtBenefit(r.type, aux.relocTypes[i]);
+        if (benefit == 0)
+          continue;
+
+        addZcmtCandidate(*kind ? jaltGroups : jtGroups, *sec, r, benefit, *kind,
+                         ordinal++);
+      }
+    }
+  }
+
+  auto orderGroups = [](const ZcmtCandidateGroup &a,
+                        const ZcmtCandidateGroup &b) {
+    if (a.benefit != b.benefit)
+      return a.benefit > b.benefit;
+    return a.firstSeen < b.firstSeen;
+  };
+  llvm::stable_sort(jtGroups, orderGroups);
+  llvm::stable_sort(jaltGroups, orderGroups);
+
+  SmallVector<uint64_t, 33> jtPrefix(1, 0);
+  for (size_t i = 0, e = std::min<size_t>(32, jtGroups.size()); i != e; ++i)
+    jtPrefix.push_back(jtPrefix.back() + jtGroups[i].benefit);
+  SmallVector<uint64_t, 225> jaltPrefix(1, 0);
+  for (size_t i = 0, e = std::min<size_t>(224, jaltGroups.size()); i != e; ++i)
+    jaltPrefix.push_back(jaltPrefix.back() + jaltGroups[i].benefit);
+
+  const int64_t entryWidth = ctx.arg.wordsize;
+  int64_t bestNet = 0;
+  size_t bestJt = 0;
+  size_t bestJalt = 0;
+  for (size_t k = 1, e = jtPrefix.size(); k != e; ++k) {
+    int64_t net = int64_t(jtPrefix[k]) - int64_t(k) * entryWidth;
+    if (net > bestNet) {
+      bestNet = net;
+      bestJt = k;
+      bestJalt = 0;
+    }
+  }
+
+  const size_t freeJt = std::min<size_t>(32, jtGroups.size());
+  for (size_t m = 1, e = jaltPrefix.size(); m != e; ++m) {
+    int64_t net = int64_t(jtPrefix[freeJt]) + int64_t(jaltPrefix[m]) -
+                  int64_t(32 + m) * entryWidth;
+    if (net > bestNet) {
+      bestNet = net;
+      bestJt = freeJt;
+      bestJalt = m;
+    }
+  }
+
+  if (bestNet <= 0) {
+    if (jvtSym)
+      Err(ctx) << "__jvt_base$ is referenced but no profitable Zcmt jump "
+                  "table was selected";
+    jvtSec->keep = false;
+    discardEmptyJvt();
+    return discardZcmtOutputAttributes(ctx);
+  }
+
+  auto addSelectedSites = [&](const ZcmtCandidateGroup &group, uint8_t index) {
+    for (auto [sec, offset] : group.sites)
+      zcmtSelectedSites[{sec, offset}] = index;
+  };
+  auto setEntry = [&](size_t index, const ZcmtCandidateGroup &group) {
+    jvtSec->entries[index] = {group.sym, group.addend, group.usePlt};
+  };
+
+  const size_t entryCount = bestJalt ? 32 + bestJalt : bestJt;
+  jvtSec->entries.resize(entryCount);
+  for (size_t i = 0; i != bestJt; ++i) {
+    addSelectedSites(jtGroups[i], i);
+    setEntry(i, jtGroups[i]);
+  }
+  for (size_t i = 0; i != bestJalt; ++i) {
+    const uint8_t index = 32 + i;
+    addSelectedSites(jaltGroups[i], index);
+    setEntry(index, jaltGroups[i]);
+  }
+
+  if (Symbol *s = ctx.symtab->find("__jvt_base$"))
+    if ((s->isDefined() || s->isCommon()) && s != jvtSym) {
+      Err(ctx) << "duplicate definition of __jvt_base$";
+      return false;
+    }
+  const bool hadEarlyJvtSym = jvtSym;
+  if (!jvtSym) {
+    jvtSym = cast<Defined>(ctx.symtab->addSymbol(
+        Defined{ctx, ctx.internalFile, "__jvt_base$", STB_GLOBAL, STV_HIDDEN,
+                STT_NOTYPE, 0, 0, jvtSec.get()}));
+  }
+  if (ctx.in.symTab && !hadEarlyJvtSym)
+    ctx.in.symTab->addSymbol(jvtSym);
+
+  addZcmtOutputAttributes(ctx);
+  zcmtSelected = true;
+  return true;
+}
+
+void RISCV::discardEmptyJvt() const {
+  if (!jvtSec || !jvtSec->getParent())
+    return;
+
+  OutputSection *osec = jvtSec->getParent();
+  // A linker script may place .riscv.jvt into another output section such as
+  // .text. Only remove the parent when it is the orphan output section created
+  // solely for this synthetic input section.
+  const bool orphanJvt =
+      osec->name == ".riscv.jvt" &&
+      llvm::is_contained(ctx.script->orphanSections, jvtSec.get());
+  for (SectionCommand *cmd : osec->commands) {
+    auto *isd = dyn_cast<InputSectionDescription>(cmd);
+    if (!isd)
+      continue;
+    llvm::erase(isd->sectionBases, jvtSec.get());
+    llvm::erase(isd->sections, jvtSec.get());
+  }
+  llvm::erase(ctx.inputSections, jvtSec.get());
+  llvm::erase_if(ctx.script->orphanSections, [&](const InputSectionBase *sec) {
+    return sec == jvtSec.get();
+  });
+  jvtSec->parent = nullptr;
+  if (orphanJvt) {
+    llvm::erase(ctx.outputSections, osec);
+    llvm::erase_if(ctx.script->sectionCommands, [&](const SectionCommand *cmd) {
+      if (auto *osd = dyn_cast<OutputDesc>(cmd))
+        return &osd->osec == osec;
+      return false;
+    });
+    for (auto [i, sec] : llvm::enumerate(ctx.outputSections))
+      sec->sectionIndex = i + 1;
+  }
+}
+
 static void tlsdescToIe(Ctx &ctx, uint8_t *loc, const Relocation &rel,
                         uint64_t val) {
   switch (rel.type) {
@@ -755,6 +1169,7 @@ void RISCV::relocateAlloc(InputSection &sec, uint8_t *buf) const {
     case R_RISCV_ALIGN:
     case R_RISCV_RELAX:
     case R_RISCV_TPREL_ADD:
+    case INTERNAL_R_RISCV_ZCMT_JUMP:
       continue;
     case R_RISCV_TLSDESC_HI20:
       if (rel.expr == R_TLSDESC_PC) {
@@ -1025,8 +1440,23 @@ static bool relax(Ctx &ctx, int pass, InputSection &sec) {
       }
       break;
     }
+    case R_RISCV_JAL:
+      if (std::optional<uint8_t> index = static_cast<const RISCV &>(*ctx.target)
+                                             .getZcmtIndex(sec, r.offset)) {
+        sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_ZCMT_JUMP;
+        sec.relaxAux->writes.push_back(encodeZcmtJump(*index));
+        remove = 2;
+      }
+      break;
     case R_RISCV_CALL:
     case R_RISCV_CALL_PLT:
+      if (std::optional<uint8_t> index = static_cast<const RISCV &>(*ctx.target)
+                                             .getZcmtIndex(sec, r.offset)) {
+        sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_ZCMT_JUMP;
+        sec.relaxAux->writes.push_back(encodeZcmtJump(*index));
+        remove = 6;
+        break;
+      }
       // Prevent oscillation between states by disallowing the increment of
       // `remove` after a few passes. The previous `remove` value is
       // `cur-delta`.
@@ -1106,6 +1536,17 @@ bool RISCV::relaxOnce(int pass) const {
   if (pass == 0)
     initSymbolAnchors(ctx);
 
+  const bool enableZcmt = zcmtEnabled();
+  if (!enableZcmt && jvtSec && jvtSec->keep) {
+    if (jvtSym)
+      Err(ctx) << "__jvt_base$ is referenced but --riscv-relax-zcmt could not "
+                  "emit a jump table";
+    jvtSec->keep = false;
+    discardEmptyJvt();
+    discardZcmtOutputAttributes(ctx);
+    zcmtSelectionDone = true;
+  }
+
   SmallVector<InputSection *, 0> storage;
   bool changed = false;
   for (OutputSection *osec : ctx.outputSections) {
@@ -1115,6 +1556,8 @@ bool RISCV::relaxOnce(int pass) const {
       if (sec->relaxAux)
         changed |= relax(ctx, pass, *sec);
   }
+  if (!changed && enableZcmt && !zcmtSelectionDone)
+    changed = selectZcmtCandidates();
   return changed;
 }
 
@@ -1310,6 +1753,10 @@ void RISCV::finalizeRelax(int passes) const {
             skip = 4;
             write32le(p, aux.writes[writesIdx++]);
             break;
+          case INTERNAL_R_RISCV_ZCMT_JUMP:
+            skip = 2;
+            write16le(p, aux.writes[writesIdx++]);
+            break;
           case R_RISCV_32:
             // Used by relaxTlsLe to write a uint32_t then suppress the handling
             // in relocateAlloc.
@@ -1340,6 +1787,21 @@ void RISCV::finalizeRelax(int passes) const {
         } while (++i != e && rels[i].offset == cur);
         delta = aux.relocDeltas[i - 1];
       }
+      if (zcmtSelected) {
+        bool eraseNextRelax = false;
+        llvm::erase_if(sec->relocations, [&](const Relocation &rel) {
+          if (rel.type == INTERNAL_R_RISCV_ZCMT_JUMP) {
+            eraseNextRelax = true;
+            return true;
+          }
+          if (eraseNextRelax && rel.type == R_RISCV_RELAX) {
+            eraseNextRelax = false;
+            return true;
+          }
+          eraseNextRelax = false;
+          return false;
+        });
+      }
     }
   }
 }
@@ -1358,12 +1820,16 @@ public:
   }
 
   size_t getSize() const override { return size; }
+  bool isNeeded() const override { return keep; }
   void writeTo(uint8_t *buf) override;
+  void updateSize();
 
   static constexpr StringRef vendor = "riscv";
   DenseMap<unsigned, unsigned> intAttr;
   DenseMap<unsigned, StringRef> strAttr;
   size_t size = 0;
+  bool keep = true;
+  bool createdForZcmt = false;
 };
 } // namespace
 
@@ -1571,17 +2037,112 @@ mergeAttributesSection(Ctx &ctx,
     }
   }
 
+  merged.updateSize();
+  return &merged;
+}
+
+static void addZcmtOutputAttributes(Ctx &ctx) {
+  if (!ctx.in.riscvAttributes)
+    return;
+
+  auto &attrs = static_cast<RISCVAttributesSection &>(*ctx.in.riscvAttributes);
+  unsigned xlen = ctx.arg.is64 ? 64 : 32;
+  RISCVISAUtils::OrderedExtensionMap exts;
+  if (StringRef arch = attrs.strAttr.lookup(RISCVAttrs::ARCH); !arch.empty()) {
+    auto maybeInfo = RISCVISAInfo::parseNormalizedArchString(arch);
+    if (!maybeInfo) {
+      Err(ctx) << ".riscv.attributes: " << arch << ": "
+               << maybeInfo.takeError();
+      return;
+    }
+    RISCVISAInfo &info = **maybeInfo;
+    xlen = info.getXLen();
+    exts = info.getExtensions();
+  }
+
+  auto addExt = [&](StringRef name, RISCVISAUtils::ExtensionVersion version) {
+    auto [it, inserted] = exts.try_emplace(name.str(), version);
+    if (!inserted && std::tie(it->second.Major, it->second.Minor) <
+                         std::tie(version.Major, version.Minor))
+      it->second = version;
+  };
+  addExt("zca", {1, 0});
+  addExt("zicsr", {2, 0});
+  addExt("zcmt", {1, 0});
+
+  if (auto result = RISCVISAInfo::createFromExtMap(xlen, exts)) {
+    attrs.strAttr[RISCVAttrs::ARCH] = ctx.saver.save((*result)->toString());
+    attrs.updateSize();
+  } else {
+    Err(ctx) << result.takeError();
+  }
+}
+
+static bool discardZcmtOutputAttributes(Ctx &ctx) {
+  if (!ctx.in.riscvAttributes)
+    return false;
+
+  auto &attrs = static_cast<RISCVAttributesSection &>(*ctx.in.riscvAttributes);
+  // Drop the placeholder that was kept only so late Zcmt selection could
+  // populate attributes if it emitted table-jump instructions.
+  if (!attrs.createdForZcmt || attrs.size != 0)
+    return false;
+
+  attrs.keep = false;
+  OutputSection *osec = attrs.getParent();
+  if (!osec)
+    return false;
+
+  const bool orphanAttrs =
+      osec->name == ".riscv.attributes" &&
+      llvm::is_contained(ctx.script->orphanSections, &attrs);
+  for (SectionCommand *cmd : osec->commands) {
+    auto *isd = dyn_cast<InputSectionDescription>(cmd);
+    if (!isd)
+      continue;
+    llvm::erase(isd->sectionBases, &attrs);
+    llvm::erase(isd->sections, &attrs);
+  }
+  llvm::erase(ctx.inputSections, &attrs);
+  llvm::erase_if(ctx.script->orphanSections,
+                 [&](const InputSectionBase *sec) { return sec == &attrs; });
+  attrs.parent = nullptr;
+
+  if (!orphanAttrs)
+    return false;
+
+  // Orphan SHT_RISCV_ATTRIBUTES sections get an automatic PT_RISCV_ATTRIBUTES.
+  llvm::erase_if(ctx.phdrs, [&](const std::unique_ptr<PhdrEntry> &phdr) {
+    return phdr->p_type == PT_RISCV_ATTRIBUTES && phdr->firstSec == osec &&
+           phdr->lastSec == osec;
+  });
+  if (ctx.out.programHeaders)
+    ctx.out.programHeaders->size =
+        (ctx.arg.is64 ? sizeof(Elf64_Phdr) : sizeof(Elf32_Phdr)) *
+        ctx.phdrs.size();
+
+  llvm::erase(ctx.outputSections, osec);
+  llvm::erase_if(ctx.script->sectionCommands, [&](const SectionCommand *cmd) {
+    if (auto *osd = dyn_cast<OutputDesc>(cmd))
+      return &osd->osec == osec;
+    return false;
+  });
+  for (auto [i, sec] : llvm::enumerate(ctx.outputSections))
+    sec->sectionIndex = i + 1;
+  return true;
+}
+
+void RISCVAttributesSection::updateSize() {
   // The total size of headers: format-version [ <section-length> "vendor-name"
   // [ <file-tag> <size>.
-  size_t size = 5 + merged.vendor.size() + 1 + 5;
-  for (auto &attr : merged.intAttr)
+  size_t newSize = 5 + vendor.size() + 1 + 5;
+  for (auto &attr : intAttr)
     if (attr.second != 0)
-      size += getULEB128Size(attr.first) + getULEB128Size(attr.second);
-  for (auto &attr : merged.strAttr)
+      newSize += getULEB128Size(attr.first) + getULEB128Size(attr.second);
+  for (auto &attr : strAttr)
     if (!attr.second.empty())
-      size += getULEB128Size(attr.first) + attr.second.size() + 1;
-  merged.size = size;
-  return &merged;
+      newSize += getULEB128Size(attr.first) + attr.second.size() + 1;
+  size = newSize;
 }
 
 void RISCVAttributesSection::writeTo(uint8_t *buf) {
@@ -1619,8 +2180,18 @@ void elf::mergeRISCVAttributesSections(Ctx &ctx) {
       llvm::find_if(ctx.inputSections,
                     [](auto *s) { return s->type == SHT_RISCV_ATTRIBUTES; }) -
       ctx.inputSections.begin();
-  if (place == ctx.inputSections.size())
+  if (place == ctx.inputSections.size()) {
+    if (shouldCreateZcmtSyntheticSections(ctx)) {
+      // Zcmt selection runs after output sections are created. Insert an empty
+      // attributes section now so it can be populated if relaxation emits Zcmt.
+      ctx.in.riscvAttributes = std::make_unique<RISCVAttributesSection>(ctx);
+      auto &attrs =
+          static_cast<RISCVAttributesSection &>(*ctx.in.riscvAttributes);
+      attrs.createdForZcmt = true;
+      ctx.inputSections.push_back(&attrs);
+    }
     return;
+  }
 
   // Extract all SHT_RISCV_ATTRIBUTES sections into `sections`.
   SmallVector<InputSectionBase *, 0> sections;
