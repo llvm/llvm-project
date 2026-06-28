@@ -234,3 +234,27 @@ void test_conflicting_reduction_shared() {
     b = i;
   }
 }
+
+void test_conflicting_capture_kinds_map_firstprivate() {
+  Point p{1, 2};
+  auto [a, b] = p;
+  // map(a) creates by-ref capture, firstprivate(b) creates by-copy capture
+  // expected-error@+1{{bindings from structured binding 'b' require conflicting capture kinds (by-reference vs. by-copy)}}
+#pragma omp target map(a) firstprivate(b)
+  {
+    a++;
+    b++;
+  }
+}
+
+void test_conflicting_capture_kinds_map_private() {
+  Point p{1, 2};
+  auto [a, b] = p;
+  // map(a) creates by-ref capture, private(b) creates by-copy capture
+  // expected-error@+1{{bindings from structured binding 'b' require conflicting capture kinds (by-reference vs. by-copy)}}
+#pragma omp target map(a) private(b)
+  {
+    a++;
+    b++;
+  }
+}
