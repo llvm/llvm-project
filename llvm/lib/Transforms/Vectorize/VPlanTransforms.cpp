@@ -6951,8 +6951,7 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
 /// per-iteration input VF and narrower PHI VF. If successful, returns the chain
 /// of operations in the reduction.
 static std::optional<SmallVector<VPPartialReductionChain>>
-getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPCostContext &CostCtx,
-                    VFRange &Range) {
+getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
   // Get the backedge value from the reduction PHI and find the
   // ComputeReductionResult that uses it (directly or through a select for
   // predicated reductions).
@@ -6993,9 +6992,6 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPCostContext &CostCtx,
     if (!PHISize.hasKnownScalarFactor(ExtSrcSize))
       return std::nullopt;
 
-    // Check if a partial reduction chain is supported by the target (i.e. does
-    // not have an invalid cost) for the given VF range. Clamps the range and
-    // returns true if feasible for any VF.
     VPPartialReductionChain Link(
         {UpdateR, *ExtendedOp, RK,
          PrevValue == UpdateR->getOperand(0) ? 0U : 1U,
@@ -7025,7 +7021,7 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
     if (!RedPhiR)
       continue;
 
-    if (auto Chains = getScaledReductions(RedPhiR, CostCtx, Range))
+    if (auto Chains = getScaledReductions(RedPhiR))
       ChainsByPhi.try_emplace(RedPhiR, std::move(*Chains));
   }
 
@@ -7129,8 +7125,10 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
       transformToPartialReduction(Chain, Plan, Phi);
 }
 
-void VPlanTransforms::makeMemOpWideningDecisions(
-    VPlan &Plan, VFRange &Range, VPRecipeBuilder &RecipeBuilder) {
+void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
+                                                 VPRecipeBuilder &RecipeBuilder,
+                                                 PredicatedScalarEvolution &PSE,
+                                                 const Loop *L) {
   // Collect all loads/stores first. We will start with ones having simpler
   // decisions followed by more complex ones that are potentially
   // guided/dependent on the simpler ones.
@@ -7211,6 +7209,32 @@ void VPlanTransforms::makeMemOpWideningDecisions(
 
         return false;
       });
+
+  if (!RecipeBuilder.prefersVectorizedAddressing()) {
+    VPlanTransforms::runPass(
+        "makeVPlanMemOpDecision", ProcessSubset, Plan, [&](VPInstruction *VPI) {
+          Instruction *I = VPI->getUnderlyingInstr();
+          bool IsLoad = VPI->getOpcode() == Instruction::Load;
+          if (RecipeBuilder.isPredicatedInst(I) || !IsLoad ||
+              !vputils::isUsedByLoadStoreAddress(VPI))
+            return false;
+
+          // Scalarize loads used as addresses, matching the legacy CM. The load
+          // is single-scalar if the pointer is loop-invariant, otherwise it is
+          // replicated per-lane. No mask is needed as the load is not
+          // predicated.
+          VPValue *Ptr = VPI->getOperand(0);
+          const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, L);
+          bool IsSingleScalarLoad = !isa<SCEVCouldNotCompute>(PtrSCEV) &&
+                                    PSE.getSE()->isLoopInvariant(PtrSCEV, L);
+
+          ReplaceWith(VPI,
+                      new VPReplicateRecipe(
+                          I, Ptr, /*IsSingleScalar=*/IsSingleScalarLoad,
+                          /*Mask=*/nullptr, *VPI, *VPI, VPI->getDebugLoc()));
+          return true;
+        });
+  }
 
   VPlanTransforms::runPass("delegateMemOpWideningToLegacyCM", ProcessSubset,
                            Plan, [&](VPInstruction *VPI) {

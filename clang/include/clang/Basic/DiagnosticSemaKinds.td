@@ -9671,6 +9671,9 @@ def err_atomic_op_needs_atomic_int_or_fp : Error<
 def err_atomic_op_needs_atomic_int : Error<
   "address argument to atomic operation must be a pointer to "
   "%select{|atomic }0integer (%1 invalid)">;
+def err_atomic_op_needs_atomic_fp
+    : Error<"address argument to atomic operation must be a pointer to "
+            "%select{|atomic }0floating point type (%1 invalid)">;
 def warn_atomic_op_has_invalid_memory_order : Warning<
   "%select{|success |failure }0memory order argument to atomic operation is invalid">,
   InGroup<DiagGroup<"atomic-memory-ordering">>;
@@ -11878,6 +11881,9 @@ def err_opencl_type_not_found : Error<
   "%0 type %1 not found; include the base header with -finclude-default-header">;
 def warn_opencl_attr_deprecated_ignored : Warning <
   "%0 attribute is deprecated and ignored in %1">, InGroup<IgnoredAttributes>;
+def warn_deprecated_attribute : Warning<
+  "'%0' attribute is deprecated and may be removed in a future version of Clang">,
+  InGroup<DeprecatedAttributes>;
 def err_opencl_variadic_function : Error<
   "invalid prototype, variadic arguments are not allowed in OpenCL">;
 def err_opencl_requires_extension : Error<
