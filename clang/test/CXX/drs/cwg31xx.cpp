@@ -14,8 +14,6 @@
 // RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20
 // RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -fexperimental-new-constant-interpreter -verify-directives -verify=expected,since-cxx11,since-cxx14,since-cxx17,since-cxx20
 
-// cxx98-14-no-diagnostics
-
 namespace cwg3106 { // cwg3106: 2.7
 #if __cplusplus >= 201103L
 const char str[9] = R"(\u{1234})";
@@ -28,6 +26,25 @@ void f();
 static_assert(noexcept(noexcept(f())), "");
 #endif
 } // namespace cwg3128
+
+namespace cwg3129 { // cwg3129: 3.0
+
+float huge_f = 1e10000000000F;
+// expected-warning@-1 {{magnitude of floating-point constant too large for type 'float'; maximum is 3.40282347E+38}}
+float tiny_f = 1e-1000000000F;
+// expected-warning@-1 {{magnitude of floating-point constant too small for type 'float'; minimum is 1.40129846E-45}}
+
+double huge_d = 1e10000000000;
+// expected-warning@-1 {{magnitude of floating-point constant too large for type 'double'; maximum is 1.7976931348623157E+308}}
+double tiny_d = 1e-1000000000;
+// expected-warning@-1 {{magnitude of floating-point constant too small for type 'double'; minimum is 4.9406564584124654E-324}}
+
+long double huge_ld = 1e10000000000L;
+// expected-warning@-1 {{magnitude of floating-point constant too large for type 'long double'; maximum is 1.18973149535723176502E+4932}}
+long double tiny_ld = 1e-1000000000L;
+// expected-warning@-1 {{magnitude of floating-point constant too small for type 'long double'; minimum is 3.64519953188247460253E-4951}}
+
+} // namespace cwg3129
 
 namespace cwg3135 { // cwg3135: 23
 #if __cplusplus >= 201703L
