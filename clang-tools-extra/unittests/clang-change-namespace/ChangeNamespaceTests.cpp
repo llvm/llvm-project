@@ -46,7 +46,7 @@ public:
     if (!tooling::runToolOnCodeWithArgs(Factory->create(), Code, {"-std=c++11"},
                                         FileName))
       return "";
-    formatAndApplyAllReplacements(FileToReplacements, Context.Rewrite);
+    formatAndApplyAllReplacements(FileToReplacements, Context.Rewrite, "llvm");
     return format(Context.getRewrittenText(ID));
   }
 
@@ -63,10 +63,10 @@ public:
   }
 
 protected:
-  std::string FileName = "input.cc";
+  std::string FileName = "/test/input.cc";
   std::string OldNamespace = "na::nb";
   std::string NewNamespace = "x::y";
-  std::string FilePattern = "input.cc";
+  std::string FilePattern = "/test/input.cc";
 };
 
 TEST_F(ChangeNamespaceTest, NoMatchingNamespace) {
