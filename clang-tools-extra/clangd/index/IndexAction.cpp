@@ -34,9 +34,13 @@ namespace {
 std::optional<std::string> toURI(OptionalFileEntryRef File) {
   if (!File)
     return std::nullopt;
+  // Does *not* resolve symlinks
   auto AbsolutePath = File->getFileEntry().tryGetRealPathName();
   if (AbsolutePath.empty())
     return std::nullopt;
+  llvm::SmallString<128> RealPathName;
+  if (!llvm::sys::fs::real_path(AbsolutePath, RealPathName))
+    return URI::create(RealPathName).toString();
   return URI::create(AbsolutePath).toString();
 }
 
