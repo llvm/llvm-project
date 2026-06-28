@@ -349,7 +349,7 @@ Instruction *InstCombinerImpl::simplifyMaskedStore(IntrinsicInst &II) {
   APInt PoisonElts(DemandedElts.getBitWidth(), 0);
   if (Value *V = SimplifyDemandedVectorElts(II.getOperand(0), DemandedElts,
                                             PoisonElts))
-    return replaceArgOperand(II, 0, V);
+    return replaceOperand(II, 0, V);
 
   return nullptr;
 }
@@ -432,10 +432,10 @@ Instruction *InstCombinerImpl::simplifyMaskedScatter(IntrinsicInst &II) {
   APInt PoisonElts(DemandedElts.getBitWidth(), 0);
   if (Value *V = SimplifyDemandedVectorElts(II.getOperand(0), DemandedElts,
                                             PoisonElts))
-    return replaceArgOperand(II, 0, V);
+    return replaceOperand(II, 0, V);
   if (Value *V = SimplifyDemandedVectorElts(II.getOperand(1), DemandedElts,
                                             PoisonElts))
-    return replaceArgOperand(II, 1, V);
+    return replaceOperand(II, 1, V);
 
   return nullptr;
 }
