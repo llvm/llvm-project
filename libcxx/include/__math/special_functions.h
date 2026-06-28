@@ -27,6 +27,7 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 // assoc_laguerre
 [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI float assoc_laguerref(unsigned int __n, unsigned int __m, float __x) noexcept;
+[[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI long double assoc_laguerrel(unsigned int __n, unsigned int __m, long double __x) noexcept;
 
 #endif // _LIBCPP_STD_VER >= 17
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS

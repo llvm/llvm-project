@@ -66,7 +66,12 @@ _Ret __invoke_boost_math(_Func __f, _Args... __args) {
 }
 } // namespace
 
+// assoc_laguerre
 float assoc_laguerref(unsigned int __n, unsigned int __m, float __x) noexcept {
+  return __invoke_boost_math([](auto... __args) { return boost::math::laguerre(__args...); }, __n, __m, __x);
+}
+
+long double assoc_laguerrel(unsigned int __n, unsigned int __m, long double __x) noexcept {
   return __invoke_boost_math([](auto... __args) { return boost::math::laguerre(__args...); }, __n, __m, __x);
 }
 
