@@ -131,24 +131,37 @@ public:
 };
 
 class OriginFlowFact : public Fact {
+public:
+  struct LifetimeBoundInfo {
+    const Expr *Call = nullptr;
+    const ParmVarDecl *Param = nullptr;
+    bool isImplicitObject = false;
+  };
+
+private:
   OriginID OIDDest;
   OriginID OIDSrc;
   // True if the destination origin should be killed (i.e., its current loans
   // cleared) before the source origin's loans are flowed into it.
   bool KillDest;
+  std::optional<LifetimeBoundInfo> LifetimeBound;
 
 public:
   static bool classof(const Fact *F) {
     return F->getKind() == Kind::OriginFlow;
   }
 
-  OriginFlowFact(OriginID OIDDest, OriginID OIDSrc, bool KillDest)
+  OriginFlowFact(OriginID OIDDest, OriginID OIDSrc, bool KillDest,
+                 std::optional<LifetimeBoundInfo> LifetimeBound = std::nullopt)
       : Fact(Kind::OriginFlow), OIDDest(OIDDest), OIDSrc(OIDSrc),
-        KillDest(KillDest) {}
+        KillDest(KillDest), LifetimeBound(LifetimeBound) {}
 
   OriginID getDestOriginID() const { return OIDDest; }
   OriginID getSrcOriginID() const { return OIDSrc; }
   bool getKillDest() const { return KillDest; }
+  std::optional<LifetimeBoundInfo> getLifetimeBoundInfo() const {
+    return LifetimeBound;
+  }
 
   void dump(llvm::raw_ostream &OS, const LoanManager &,
             const OriginManager &OM) const override;
