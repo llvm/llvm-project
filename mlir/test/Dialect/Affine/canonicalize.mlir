@@ -609,6 +609,19 @@ func.func @fold_zero_iter_loops(%in : index) -> index {
 
 // -----
 
+// CHECK-LABEL: func @fold_empty_loop_iv
+//  CHECK-SAME:   %[[INIT:.*]]: index
+func.func @fold_empty_loop_iv(%init: index) -> (index, index) {
+  %res:2 = affine.for %i = 0 to 10 step 1 iter_args(%arg0 = %init, %arg1 = %init) -> (index, index) {
+    affine.yield %i, %arg1 : index, index
+  }
+  // CHECK: %[[C9:.*]] = arith.constant 9 : index
+  // CHECK: return %[[C9]], %[[INIT]] : index, index
+  return %res#0, %res#1 : index, index
+}
+
+// -----
+
 // CHECK-DAG: #[[$SET:.*]] = affine_set<(d0, d1)[s0] : (d0 >= 0, -d0 + 1022 >= 0, d1 >= 0, -d1 + s0 - 2 >= 0)>
 
 // CHECK-LABEL: func @canonicalize_affine_if
