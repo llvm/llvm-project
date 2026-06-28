@@ -92,3 +92,20 @@ Options
       g0 = 1, // Not allowed if AllowExplicitSequentialInitialValues is false.
       g1 = 2,
       g2 = 3,
+    };
+
+.. option:: AllowExplicitReferencedInitialValues
+
+  If set to `true`, enumerators initialized by referencing another enumerator
+  in the same enum are allowed, and the remaining enumerators are checked for
+  consistency. This implements the `INT09-C-EX1` exception from the CERT C
+  Coding Standard.
+  Default is `false`.
+
+  .. code-block:: c++
+
+    enum H {
+      h0,
+      h1,
+      h2 = h1, // Allowed if AllowExplicitReferencedInitialValues is true.
+    };

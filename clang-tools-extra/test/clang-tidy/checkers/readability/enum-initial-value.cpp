@@ -26,3 +26,12 @@ enum class EAll {
   EAll_b = 2,
   EAll_c = 3,
 };
+
+enum class ERef {
+  // CHECK-MESSAGES: :[[@LINE-1]]:1:  warning: initial values in enum 'ERef' are not consistent
+  ERef_a,
+  // CHECK-FIXES: ERef_a = 0,
+  ERef_b,
+  // CHECK-FIXES: ERef_b = 1,
+  ERef_last = ERef_b,
+};
