@@ -825,6 +825,40 @@ This is a performance optimization, which speeds up debugging by avoiding
 multiple round-trips for retrieving thread information. The information from this
 packet can be retrieved using a combination of `qThreadStopInfo` and `m` packets.
 
+## jAddressSpacesInfo
+
+Ask the server for the address spaces the process exposes.
+
+Most processes have a single, flat address space, but some (such as GPUs) have
+multiple address spaces where the same numeric address refers to different
+storage depending on the address space (for example global, local, private or
+generic memory). This packet lets the client discover those address spaces.
+
+This packet requires the `address-spaces+` feature from `qSupported`, which a
+server only advertises when its process exposes address spaces.
+
+The response is a JSON array of dictionaries, one per address space:
+```
+    [
+      {"name":"global","value":1,"is_thread_specific":false},
+      {"name":"local","value":2,"is_thread_specific":true}
+    ]
+```
+
+Each dictionary has the following keys:
+
+* `name`: the human readable name of the address space.
+* `value`: the integer identifier of the address space.
+* `is_thread_specific`: `true` if the same address-space value resolves to
+  different storage for different threads.
+
+If a server that advertised `address-spaces+` has no address spaces to report,
+it replies with an unsupported (empty) response.
+
+**Priority To Implement:** Low
+
+Only needed for targets that expose more than one address space.
+
 ### MultiMemRead
 
 Read memory from multiple memory ranges.

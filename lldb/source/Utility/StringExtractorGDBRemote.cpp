@@ -321,6 +321,8 @@ StringExtractorGDBRemote::GetServerPacketType() const {
       return eServerPacketType_jSignalsInfo;
     if (PACKET_MATCHES("jThreadsInfo"))
       return eServerPacketType_jThreadsInfo;
+    if (PACKET_MATCHES("jAddressSpacesInfo"))
+      return eServerPacketType_jAddressSpacesInfo;
 
     if (PACKET_MATCHES("jLLDBTraceSupported"))
       return eServerPacketType_jLLDBTraceSupported;
