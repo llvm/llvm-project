@@ -857,8 +857,8 @@ public:
       result[i] = lhs[i] OP rhs[i];                                            \
     return result;                                                             \
   }                                                                            \
-  LIBC_INLINE friend constexpr BigInt operator OP##=(BigInt &lhs,              \
-                                                     const BigInt &rhs) {      \
+  LIBC_INLINE friend constexpr BigInt operator OP## =                          \
+      (BigInt & lhs, const BigInt &rhs) {                                      \
     for (size_t i = 0; i < WORD_COUNT; ++i)                                    \
       lhs[i] OP## = rhs[i];                                                    \
     return lhs;                                                                \
