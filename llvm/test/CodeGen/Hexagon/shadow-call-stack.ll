@@ -77,11 +77,11 @@
 ; CHECK-LABEL: minsize_multicall:
 ; CHECK:      r19 = add(r19,#4)
 ; CHECK:      memw(r19+#-4) = r31
-; CHECK-NOT:  __restore_r16_through_r17_and_deallocframe
 ; CHECK:      {
 ; CHECK-DAG:  r19 = add(r19,#-4)
 ; CHECK-DAG:  r31 = memw(r19+#-4)
 ; CHECK:      }
+; CHECK-NOT:  __restore_
 ; CHECK:      jumpr r31
 
 ;; Minsize + tail call + multiple callee-saved registers: the tailcall restore
@@ -90,12 +90,12 @@
 ; CHECK-LABEL: minsize_tailcall:
 ; CHECK:      r19 = add(r19,#4)
 ; CHECK:      memw(r19+#-4) = r31
-; CHECK-NOT:  __restore_r16_through_r17_and_deallocframe_before_tailcall
 ; CHECK:      {
 ; CHECK-DAG:  r19 = add(r19,#-4)
 ; CHECK-DAG:  r31 = memw(r19+#-4)
 ; CHECK-DAG:  jump bar
 ; CHECK:      }
+; CHECK-NOT:  __restore_
 
 ;; Multiple return paths - each exit block gets its own SCS epilogue.
 ; CHECK-LABEL: multi_return:
