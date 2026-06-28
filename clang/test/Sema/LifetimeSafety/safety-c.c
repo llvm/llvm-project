@@ -63,7 +63,7 @@ void lifetimebound_call(void) {
   {
     int i;
     p = identity(&i); // expected-warning {{local variable 'i' does not live long enough}} \
-                      // expected-note {{result of call to 'identity' aliases the storage of local variable 'i'}}
+                      // expected-note {{result of call to 'identity' aliases the storage of local variable 'i' because parameter 'p' is marked [[clang::lifetimebound]]}}
   }                   // expected-note {{local variable 'i' is destroyed here}}
   (void)*p;           // expected-note {{later used here}}
 }
