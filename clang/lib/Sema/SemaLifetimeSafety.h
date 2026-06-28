@@ -101,10 +101,10 @@ class LifetimeSafetySemaHelperImpl : public LifetimeSafetySemaHelper {
 public:
   LifetimeSafetySemaHelperImpl(Sema &S) : S(S) {}
 
-  void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
-                           const Expr *MovedExpr, SourceLocation FreeLoc,
-                           llvm::ArrayRef<LifetimeSafetyAliasChainEntry>
-                               AliasChain) override {
+  void reportUseAfterScope(
+      const Expr *IssueExpr, const Expr *UseExpr, const Expr *MovedExpr,
+      SourceLocation FreeLoc,
+      llvm::ArrayRef<LifetimeSafetyAliasChainEntry> AliasChain) override {
     unsigned DiagID = MovedExpr
                           ? diag::warn_lifetime_safety_use_after_scope_moved
                           : diag::warn_lifetime_safety_use_after_scope;

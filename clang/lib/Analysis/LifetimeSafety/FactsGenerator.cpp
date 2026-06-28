@@ -1085,8 +1085,9 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
     flow(CallList, getOriginsList(*Args[0]), /*Kill=*/true);
     return;
   }
-  auto GetLifetimeBoundInfo = [FD, Call](unsigned I)
-      -> std::optional<OriginFlowFact::LifetimeBoundInfo> {
+  auto GetLifetimeBoundInfo =
+      [FD,
+       Call](unsigned I) -> std::optional<OriginFlowFact::LifetimeBoundInfo> {
     const ParmVarDecl *PVD = nullptr;
     if (const auto *Method = dyn_cast<CXXMethodDecl>(FD);
         Method && Method->isInstance() && !isa<CXXConstructorDecl>(FD)) {
@@ -1165,8 +1166,8 @@ void FactsGenerator::handleFunctionCall(const Expr *Call,
         // FIXME: Handle origin-shape mismatches gracefully so we can also flow
         // inner origins.
         CurrentBlockFacts.push_back(FactMgr.createFact<OriginFlowFact>(
-            CallList->getOuterOriginID(), ArgList->getOuterOriginID(),
-            KillSrc, GetLifetimeBoundInfo(I)));
+            CallList->getOuterOriginID(), ArgList->getOuterOriginID(), KillSrc,
+            GetLifetimeBoundInfo(I)));
         KillSrc = false;
       }
     } else if (shouldTrackPointerImplicitObjectArg(I)) {

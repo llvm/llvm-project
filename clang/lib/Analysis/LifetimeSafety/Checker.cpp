@@ -529,7 +529,8 @@ public:
   getAliasChain(llvm::ArrayRef<OriginFlowChainStep> OriginFlowChain) {
     llvm::SmallVector<LifetimeSafetyAliasChainEntry> rs;
     for (const OriginFlowChainStep &Step : OriginFlowChain) {
-      const Expr *CurrExpr = FactMgr.getOriginMgr().getOrigin(Step.OID).getExpr();
+      const Expr *CurrExpr =
+          FactMgr.getOriginMgr().getOrigin(Step.OID).getExpr();
       if (!CurrExpr)
         continue;
 
