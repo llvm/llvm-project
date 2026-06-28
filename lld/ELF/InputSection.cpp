@@ -431,15 +431,60 @@ InputSectionBase *InputSection::getRelocatedSection() const {
 
 template <class ELFT, class RelTy>
 void InputSection::copyRelocations(Ctx &ctx, uint8_t *buf) {
-  bool linkerRelax =
+  const InputSectionBase *const sec = getRelocatedSection();
+
+  const bool linkerRelax =
       ctx.arg.relax && is_contained({EM_RISCV, EM_LOONGARCH}, ctx.arg.emachine);
+  const bool mayReAlign =
+      ctx.arg.emitRelocs &&
+      is_contained({EM_RISCV, EM_LOONGARCH}, ctx.arg.emachine) && sec->relaxAux;
   if (!ctx.arg.relocatable && (linkerRelax || ctx.arg.branchToBranch)) {
     // On LoongArch and RISC-V, relaxation might change relocations: copy
     // from internal ones that are updated by relaxation.
-    InputSectionBase *sec = getRelocatedSection();
     copyRelocations<ELFT, RelTy>(
         ctx, buf,
         llvm::make_range(sec->relocations.begin(), sec->relocations.end()));
+  } else if (!ctx.arg.relocatable && mayReAlign) {
+    // On LoongArch and RISC-V, even with --no-relax, R_{RISCV,LARCH}_ALIGN will
+    // still be processed by the pipeline for alignment requirements. Thus,
+    // these offsets must be accounted for.
+    SmallVector<std::pair<uint64_t, uint32_t>> alignDeltas;
+    std::optional<uint64_t> prevRawOffset;
+    for (const auto &[i, r] : enumerate(sec->relocations)) {
+      // See comments on RelaxAux::relocDeltas.
+      const uint64_t lastDelta = i ? sec->relaxAux->relocDeltas[i - 1] : 0;
+      const uint64_t rawOffset = r.offset + lastDelta;
+      if (!prevRawOffset.has_value() || rawOffset != prevRawOffset) {
+        alignDeltas.emplace_back(rawOffset, lastDelta);
+        prevRawOffset = rawOffset;
+      }
+    }
+
+    // Convert the raw relocations in the input section into Relocation objects
+    // suitable to be used by copyRelocations below.
+    struct MapRel {
+      const ObjFile<ELFT> &file;
+      const SmallVector<std::pair<uint64_t, uint32_t>> &alignDeltas;
+      Relocation operator()(const RelTy &rel) const {
+        auto it = llvm::upper_bound(
+            alignDeltas, rel.r_offset,
+            [](uint64_t val, const auto &entry) { return val < entry.first; });
+        const uint32_t delta =
+            it != alignDeltas.begin() ? std::prev(it)->second : 0;
+        // RelExpr is not used so set to a dummy value.
+        return Relocation{R_NONE, rel.getType(false), rel.r_offset - delta,
+                          getAddend<ELFT>(rel), &file.getRelocTargetSym(rel)};
+      }
+    };
+
+    using RawRels = ArrayRef<RelTy>;
+    using MapRelIter =
+        llvm::mapped_iterator<typename RawRels::iterator, MapRel>;
+    auto mapRel = MapRel{*getFile<ELFT>(), alignDeltas};
+    RawRels rawRels = getDataAs<RelTy>();
+    auto rels = llvm::make_range(MapRelIter(rawRels.begin(), mapRel),
+                                 MapRelIter(rawRels.end(), mapRel));
+    copyRelocations<ELFT, RelTy>(ctx, buf, rels);
   } else {
     // Convert the raw relocations in the input section into Relocation objects
     // suitable to be used by copyRelocations below.
