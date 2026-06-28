@@ -226,16 +226,19 @@ public:
         break;
       }
 
-    llvm::SmallVector<OriginID> OriginFlowChain;
-
     using SearchState = std::pair<const CFGBlock *, OriginID>;
-    std::queue<SearchState> PendingStates;
+    struct DFSNode {
+      SearchState CurrState;
+      llvm::SmallVector<OriginID> OriginFlowChain;
+    };
+
+    llvm::SmallVector<DFSNode> PendingStates;
     llvm::SmallSet<SearchState, 16> VistedStates;
-    PendingStates.push({EndBlock, StartOID});
+    PendingStates.push_back({{EndBlock, StartOID}, {}});
 
     while (!PendingStates.empty()) {
-      auto [CurrBlock, CurrOID] = PendingStates.front();
-      PendingStates.pop();
+      DFSNode CurrNode = PendingStates.pop_back_val();
+      auto [CurrBlock, CurrOID] = CurrNode.CurrState;
 
       DEBUG_WITH_TYPE("LifetimeBuildOriginFlow",
                       llvm::dbgs() << "CurrBlockID: " << CurrBlock->getBlockID()
@@ -244,20 +247,20 @@ public:
       const auto [BuildResult, Complete] =
           buildOriginFlowChain(CurrBlock, CurrOID, TargetLoan);
       if (!BuildResult.empty()) {
-        OriginFlowChain.append(BuildResult);
+        CurrNode.OriginFlowChain.append(BuildResult);
         CurrOID = BuildResult.back();
       }
 
       if (Complete)
-        return OriginFlowChain;
+        return CurrNode.OriginFlowChain;
 
       DEBUG_WITH_TYPE("LifetimeBuildOriginFlow",
                       llvm::dbgs() << "EndOriginID: " << CurrOID << "\n");
 
-      for (const CFGBlock *Block : CurrBlock->preds()) {
-        SearchState NextState = {Block, CurrOID};
+      for (const CFGBlock *PredBlock : CurrBlock->preds()) {
+        SearchState NextState = {PredBlock, CurrOID};
         if (VistedStates.insert(NextState).second)
-          PendingStates.push(NextState);
+          PendingStates.push_back({NextState, CurrNode.OriginFlowChain});
       }
     }
 

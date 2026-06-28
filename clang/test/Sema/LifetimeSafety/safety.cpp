@@ -4094,9 +4094,52 @@ View suggestion_disabled_test(View a) {
   return a;
 }
 
+// Test case for false positive involving conditional operator in a loop.
+struct LoopCondBindS {
+  int* get() const [[clang::lifetimebound]];
+};
+void consume_loop_cond_bind(int*);
+void test_loop_cond_bind(bool cond) {
+  for (int i = 0; i < 2; i++) {
+    LoopCondBindS s;
+    consume_loop_cond_bind(cond ? s.get() : nullptr); // no-warning
+  }
+  for (int i = 0; i < 2; i++) {
+    int x, y;
+    consume_loop_cond_bind(cond ? &x : &y); // no-warning
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // buildOriginFlowChain
 //===----------------------------------------------------------------------===//
+
+#define BRANCH(con) \
+  if (con) {} else {}
+
+#define BRANCH10(con) \
+  BRANCH(con); \
+  BRANCH(con); \
+  BRANCH(con); \
+  BRANCH(con); \
+  BRANCH(con); \
+  BRANCH(con); \
+  BRANCH(con); \
+  BRANCH(con); \
+  BRANCH(con); \
+  BRANCH(con)
+
+#define BRANCH100(con) \
+  BRANCH10(con); \
+  BRANCH10(con); \
+  BRANCH10(con); \
+  BRANCH10(con); \
+  BRANCH10(con); \
+  BRANCH10(con); \
+  BRANCH10(con); \
+  BRANCH10(con); \
+  BRANCH10(con); \
+  BRANCH10(con)
 
 void used_variable_reassigned() {
   View p, q, r;
@@ -4136,18 +4179,46 @@ void multi_reassigned(bool condition) {
   p1.use();  // expected-note {{later used here}}
 }
 
-// Test case for false positive involving conditional operator in a loop.
-struct LoopCondBindS {
-  int* get() const [[clang::lifetimebound]];
-};
-void consume_loop_cond_bind(int*);
-void test_loop_cond_bind(bool cond) {
-  for (int i = 0; i < 2; i++) {
-    LoopCondBindS s;
-    consume_loop_cond_bind(cond ? s.get() : nullptr); // no-warning
-  }
-  for (int i = 0; i < 2; i++) {
-    int x, y;
-    consume_loop_cond_bind(cond ? &x : &y); // no-warning
-  }
+void test_exponential_paths(bool c) {
+  View v;
+  {
+    MyObj a;
+    View p = a;  // expected-warning{{local variable 'a' does not live long enough}}
+    BRANCH100(c);
+    v = p;  // expected-note {{local variable 'p' aliases the storage of local variable 'a'}}
+  }         // expected-note {{local variable 'a' is destroyed here}}
+  v.use();  // expected-note {{later used here}}
+}
+
+void test_multiple_paths(bool cond) {
+  View v;
+  {
+    MyObj a;
+    View p1, p2, p3;
+    p1 = a;     // expected-warning {{local variable 'a' does not live long enough}}
+    p2 = p1;
+    if (cond) {
+      p3 = p1;  // expected-note {{local variable 'p1' aliases the storage of local variable 'a'}}
+    } else {
+      p3 = p2;
+    }
+
+    v = p3; // expected-note {{local variable 'p3' aliases the storage of local variable 'a'}}
+  }         // expected-note {{local variable 'a' is destroyed here}}
+  v.use();  // expected-note {{later used here}}
+}
+
+void test_cyclic_cfg(int n) {
+  View v;
+  {
+    MyObj a;
+    View p;
+    p = a;  // expected-warning {{local variable 'a' does not live long enough}}
+    while (n > 0) {
+      p = p;
+      n--;
+    }
+    v = p;  // expected-note {{local variable 'p' aliases the storage of local variable 'a'}}
+  }         // expected-note {{local variable 'a' is destroyed here}}
+  v.use();  // expected-note {{later used here}}
 }
