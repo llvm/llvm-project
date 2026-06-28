@@ -13,6 +13,7 @@
 
 #include "RetainCountChecker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/DynamicType.h"
 #include <optional>
 
 using namespace clang;
@@ -347,15 +348,17 @@ static bool isReceiverUnconsumedSelf(const CallEvent &Call) {
   return false;
 }
 
-const static RetainSummary *getSummary(RetainSummaryManager &Summaries,
+static const RetainSummary *getSummary(RetainSummaryManager &Summaries,
                                        const CallEvent &Call,
-                                       QualType ReceiverType) {
+                                       QualType ReceiverType,
+                                       bool ReceiverIsClassObj = false) {
   const Expr *CE = Call.getOriginExpr();
   AnyCall C =
       CE ? *AnyCall::forExpr(CE)
          : AnyCall(cast<CXXDestructorDecl>(Call.getDecl()));
   return Summaries.getSummary(C, Call.hasNonZeroCallbackArg(),
-                              isReceiverUnconsumedSelf(Call), ReceiverType);
+                              isReceiverUnconsumedSelf(Call), ReceiverType,
+                              ReceiverIsClassObj);
 }
 
 void RetainCountChecker::checkPostCall(const CallEvent &Call,
@@ -364,16 +367,21 @@ void RetainCountChecker::checkPostCall(const CallEvent &Call,
 
   // Leave null if no receiver.
   QualType ReceiverType;
+  bool ReceiverIsClassObj = false;
   if (const auto *MC = dyn_cast<ObjCMethodCall>(&Call)) {
     if (MC->isInstanceMessage()) {
       SVal ReceiverV = MC->getReceiverSVal();
-      if (SymbolRef Sym = ReceiverV.getAsLocSymbol())
+      if (SymbolRef Sym = ReceiverV.getAsLocSymbol()) {
         if (const RefVal *T = getRefBinding(C.getState(), Sym))
           ReceiverType = T->getType();
+        if (getClassObjectDynamicTypeInfo(C.getState(), Sym))
+          ReceiverIsClassObj = true;
+      }
     }
   }
 
-  const RetainSummary *Summ = getSummary(Summaries, Call, ReceiverType);
+  const RetainSummary *Summ =
+      getSummary(Summaries, Call, ReceiverType, ReceiverIsClassObj);
 
   if (C.wasInlined) {
     processSummaryOfInlined(*Summ, Call, C);
