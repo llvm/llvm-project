@@ -1,7 +1,7 @@
 function(add_unittest_framework_library name)
   cmake_parse_arguments(
     "TEST_LIB"
-    "" # No optional arguments
+    "UNIT_AS_FULL_BUILD" # Optional arguments
     "" # No single value arguments
     "SRCS;HDRS;DEPENDS;COMPILE_OPTIONS" # Multi value arguments
     ${ARGN}
@@ -25,9 +25,13 @@ function(add_unittest_framework_library name)
     endif()
   endforeach()
 
-  if(LLVM_LIBC_FULL_BUILD)
+  if(LLVM_LIBC_FULL_BUILD AND NOT TEST_LIB_UNIT_AS_FULL_BUILD)
     # TODO: Build test framework with LIBC_FULL_BUILD in full build mode after
     # making LibcFPExceptionHelpers and LibcDeathTestExecutors hermetic.
+    # Libraries that opt in with UNIT_AS_FULL_BUILD are hermetic and are built in
+    # full-build mode so their layout matches the full-build tests that link
+    # them (e.g. the fenv_t-sized member in FEnvSafeTest, whose size differs
+    # between libc's fenv_t and the system one on some targets such as Darwin).
     set(LLVM_LIBC_FULL_BUILD "")
     _get_common_test_compile_options(compile_options "" "")
     set(LLVM_LIBC_FULL_BUILD ON)
@@ -131,6 +135,7 @@ add_header_library(
 
 add_unittest_framework_library(
   LibcFPTestHelpers
+  UNIT_AS_FULL_BUILD
   SRCS
     FEnvSafeTest.cpp
     RoundingModeUtils.cpp
