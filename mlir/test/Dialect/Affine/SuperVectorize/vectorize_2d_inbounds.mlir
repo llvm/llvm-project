@@ -8,7 +8,7 @@
 // RUN:   | FileCheck %s --check-prefix=MATMUL
 // RUN: mlir-opt %s \
 // RUN:   --affine-super-vectorize="virtual-vector-size=4" \
-// RUN:   --convert-vector-to-llvm \
+// RUN:   --convert-vector-to-llvm='enable-gep-inbounds-nuw=1' \
 // RUN:   --finalize-memref-to-llvm \
 // RUN:   --convert-func-to-llvm \
 // RUN:   | FileCheck %s --check-prefix=LLVM
@@ -22,8 +22,11 @@
 // CHECK-NOT: vector.transfer_write
 
 // LLVM-LABEL: llvm.func @copy
-// Verify that in_bounds lowers to plain llvm.load/store, not masked intrinsics.
+// Verify that in_bounds lowers to plain llvm.load/store with inbounds|nuw GEP,
+// not masked intrinsics, enabling LLVM to apply no-wrap optimizations.
+// LLVM:     llvm.getelementptr inbounds|nuw {{.*}} : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // LLVM:     llvm.load {{.*}} : !llvm.ptr -> vector<4xf32>
+// LLVM:     llvm.getelementptr inbounds|nuw {{.*}} : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // LLVM:     llvm.store {{.*}} : vector<4xf32>, !llvm.ptr
 // LLVM-NOT: llvm.intr.masked.load
 // LLVM-NOT: llvm.intr.masked.store

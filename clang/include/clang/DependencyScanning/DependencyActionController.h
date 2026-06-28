@@ -61,7 +61,7 @@ public:
   /// Finalizes the scan instance and modifies the resulting TU invocation.
   /// Returns true on success, false on failure.
   virtual bool finalize(CompilerInstance &ScanInstance,
-                        CompilerInvocation &NewInvocation) {
+                        CowCompilerInvocation &NewInvocation) {
     return true;
   }
 

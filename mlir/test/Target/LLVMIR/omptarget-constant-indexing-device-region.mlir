@@ -4,7 +4,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
   llvm.func @_QQmain() attributes {bindc_name = "main"} {
     %0 = llvm.mlir.addressof @_QFEsp : !llvm.ptr
     %1 = omp.map.info var_ptr(%0 : !llvm.ptr, !llvm.array<10 x i32>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "sp"}
-    omp.target map_entries(%1 -> %arg0 : !llvm.ptr) {
+    omp.target kernel_type(generic) map_entries(%1 -> %arg0 : !llvm.ptr) {
       %2 = llvm.mlir.constant(20 : i32) : i32
       %3 = llvm.mlir.constant(0 : i64) : i64
       %4 = llvm.getelementptr %arg0[0, %3] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<10 x i32>

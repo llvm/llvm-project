@@ -94,6 +94,7 @@ constexpr fltSemantics APFloatBase::semFloat8E8M0FNU = {
     fltNanEncoding::AllOnes,
     false,
     false,
+    false,
     false};
 
 constexpr fltSemantics APFloatBase::semFloat6E3M2FN = {
@@ -943,9 +944,10 @@ IEEEFloat &IEEEFloat::operator=(IEEEFloat &&rhs) {
 }
 
 bool IEEEFloat::isDenormal() const {
-  return isFiniteNonZero() && (exponent == semantics->minExponent) &&
-         (APInt::tcExtractBit(significandParts(),
-                              semantics->precision - 1) == 0);
+  return getSemantics().hasDenormals && isFiniteNonZero() &&
+         (exponent == semantics->minExponent) &&
+         (APInt::tcExtractBit(significandParts(), semantics->precision - 1) ==
+          0);
 }
 
 bool IEEEFloat::isSmallest() const {
@@ -3430,19 +3432,17 @@ APInt IEEEFloat::convertPPCDoubleDoubleLegacyAPFloatToAPInt() const {
 template <const fltSemantics &S>
 APInt IEEEFloat::convertIEEEFloatToAPInt() const {
   assert(semantics == &S);
-  const int bias = (semantics == &APFloatBase::semFloat8E8M0FNU)
-                       ? -S.minExponent
-                       : -(S.minExponent - 1);
   constexpr unsigned int trailing_significand_bits = S.precision - 1;
   constexpr int integer_bit_part = trailing_significand_bits / integerPartWidth;
   constexpr integerPart integer_bit =
       integerPart{1} << (trailing_significand_bits % integerPartWidth);
   constexpr uint64_t significand_mask = integer_bit - 1;
   constexpr unsigned int exponent_bits =
-      trailing_significand_bits ? (S.sizeInBits - 1 - trailing_significand_bits)
-                                : S.sizeInBits;
+      S.sizeInBits - (S.hasSignedRepr ? 1 : 0) - trailing_significand_bits;
   static_assert(exponent_bits < 64);
   constexpr uint64_t exponent_mask = (uint64_t{1} << exponent_bits) - 1;
+  constexpr bool is_zero_exp_reserved = S.hasDenormals || S.hasZero;
+  constexpr int bias = -(S.minExponent - (is_zero_exp_reserved ? 1 : 0));
 
   uint64_t myexponent;
   std::array<integerPart, partCountForBits(trailing_significand_bits)>
@@ -3737,55 +3737,40 @@ void IEEEFloat::initFromPPCDoubleDoubleLegacyAPInt(const APInt &api) {
 // NaN is represented by all 1's.
 // Bias is 127.
 void IEEEFloat::initFromFloat8E8M0FNUAPInt(const APInt &api) {
-  const uint64_t exponent_mask = 0xff;
-  uint64_t val = api.getRawData()[0];
-  uint64_t myexponent = val & exponent_mask;
-
-  initialize(&APFloatBase::semFloat8E8M0FNU);
-  assert(partCount() == 1);
-
-  // This format has unsigned representation only
-  sign = 0;
-
-  // Set the significand
-  // This format does not have any significand but the 'Pth' precision bit is
-  // always set to 1 for consistency in APFloat's internal representation.
-  uint64_t mysignificand = 1;
-  significandParts()[0] = mysignificand;
-
-  // This format can either have a NaN or fcNormal
-  // All 1's i.e. 255 is a NaN
-  if (val == exponent_mask) {
-    category = fcNaN;
-    exponent = exponentNaN();
-    return;
-  }
-  // Handle fcNormal...
-  category = fcNormal;
-  exponent = myexponent - 127; // 127 is bias
+  initFromIEEEAPInt<APFloatBase::semFloat8E8M0FNU>(api);
 }
 
 template <const fltSemantics &S>
 void IEEEFloat::initFromIEEEAPInt(const APInt &api) {
   assert(api.getBitWidth() == S.sizeInBits);
-  constexpr integerPart integer_bit = integerPart{1}
-                                      << ((S.precision - 1) % integerPartWidth);
-  constexpr uint64_t significand_mask = integer_bit - 1;
+
   constexpr unsigned int trailing_significand_bits = S.precision - 1;
+  constexpr integerPart integer_bit =
+      integerPart{1} << (trailing_significand_bits % integerPartWidth);
+  constexpr uint64_t significand_mask = integer_bit - 1;
+  constexpr unsigned int exponent_bits =
+      S.sizeInBits - (S.hasSignedRepr ? 1 : 0) - trailing_significand_bits;
   constexpr unsigned int stored_significand_parts =
       partCountForBits(trailing_significand_bits);
-  constexpr unsigned int exponent_bits =
-      S.sizeInBits - 1 - trailing_significand_bits;
   static_assert(exponent_bits < 64);
   constexpr uint64_t exponent_mask = (uint64_t{1} << exponent_bits) - 1;
-  constexpr int bias = -(S.minExponent - 1);
+  constexpr bool is_zero_exp_reserved = S.hasDenormals || S.hasZero;
+  constexpr int bias = -(S.minExponent - (is_zero_exp_reserved ? 1 : 0));
+  constexpr bool has_significand = trailing_significand_bits > 0;
 
   // Copy the bits of the significand. We need to clear out the exponent and
   // sign bit in the last word.
   std::array<integerPart, stored_significand_parts> mysignificand;
-  std::copy_n(api.getRawData(), mysignificand.size(), mysignificand.begin());
-  if constexpr (significand_mask != 0) {
-    mysignificand[mysignificand.size() - 1] &= significand_mask;
+  if constexpr (has_significand) {
+    std::copy_n(api.getRawData(), mysignificand.size(), mysignificand.begin());
+    if constexpr (significand_mask != 0) {
+      mysignificand[mysignificand.size() - 1] &= significand_mask;
+    }
+  } else {
+    std::fill_n(mysignificand.begin(), mysignificand.size(), 0);
+    // Always set integer bit to 1 for consistency in APFloat's internal
+    // representation.
+    mysignificand[0] = 1;
   }
 
   // We assume the last word holds the sign bit, the exponent, and potentially
@@ -3797,11 +3782,14 @@ void IEEEFloat::initFromIEEEAPInt(const APInt &api) {
   initialize(&S);
   assert(partCount() == mysignificand.size());
 
-  sign = static_cast<unsigned int>(last_word >> ((S.sizeInBits - 1) % 64));
+  sign = S.hasSignedRepr
+             ? static_cast<unsigned int>(last_word >> ((S.sizeInBits - 1) % 64))
+             : 0;
 
-  bool all_zero_significand = llvm::all_of(mysignificand, equal_to(0));
+  bool all_zero_significand =
+      has_significand && llvm::all_of(mysignificand, equal_to(0));
 
-  bool is_zero = myexponent == 0 && all_zero_significand;
+  bool is_zero = myexponent == 0 && all_zero_significand && S.hasZero;
 
   if constexpr (S.nonFiniteBehavior == fltNonfiniteBehavior::IEEE754) {
     if (myexponent - bias == ::exponentInf(S) && all_zero_significand) {
@@ -3841,7 +3829,7 @@ void IEEEFloat::initFromIEEEAPInt(const APInt &api) {
   category = fcNormal;
   exponent = myexponent - bias;
   std::copy_n(mysignificand.begin(), mysignificand.size(), significandParts());
-  if (myexponent == 0) // denormal
+  if (myexponent == 0 && S.hasDenormals) // denormal
     exponent = S.minExponent;
   else
     significandParts()[mysignificand.size()-1] |= integer_bit; // integer bit
