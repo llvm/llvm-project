@@ -1,6 +1,6 @@
 // Verifies lifetime of __gro local variable
 // Verify that coroutine promise and allocated memory are freed up on exception.
-// RUN: %clang_cc1 -std=c++20 -triple=x86_64-unknown-linux-gnu -emit-llvm -o - %s -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 -triple=x86_64-unknown-linux-gnu -fexceptions -fcxx-exceptions -emit-llvm -o - %s -disable-llvm-passes | FileCheck %s
 
 #include "Inputs/coroutine.h"
 
@@ -17,7 +17,7 @@ template <> struct std::coroutine_traits<int> {
     suspend_always initial_suspend() noexcept;
     suspend_always final_suspend() noexcept;
     void return_void() noexcept;
-    promise_type();
+    promise_type() noexcept;
     ~promise_type();
     void unhandled_exception() noexcept;
   };
@@ -97,14 +97,14 @@ class invoker {
 public:
   class invoker_promise {
   public:
-    invoker get_return_object() { return invoker{}; }
-    auto initial_suspend() { return suspend_always{}; }
+    invoker get_return_object() noexcept { return invoker{}; }
+    auto initial_suspend()  noexcept { return suspend_always{}; }
     auto final_suspend() noexcept { return suspend_always{}; }
-    void return_void() {}
-    void unhandled_exception() {}
+    void return_void() noexcept {}
+    void unhandled_exception() noexcept {}
   };
   using promise_type = invoker_promise;
-  invoker() {}
+  invoker() noexcept {}
   invoker(const invoker &) = delete;
   invoker &operator=(const invoker &) = delete;
   invoker(invoker &&) = delete;
@@ -132,15 +132,15 @@ namespace gh148953 {
 
 struct Task {
   struct promise_type {
-    Task get_return_object();
-    std::suspend_always initial_suspend() { return {}; }
+    Task get_return_object() noexcept;
+    std::suspend_always initial_suspend() noexcept { return {}; }
     std::suspend_always final_suspend() noexcept { return {}; }
-    void return_void() {}
-    void unhandled_exception() {}
+    void return_void() noexcept {}
+    void unhandled_exception() noexcept {}
   };
-  Task() {}
+  Task() noexcept {}
   // Different from `invoker`, this Task is copy constructible.
-  Task(const Task&) {};
+  Task(const Task&) noexcept {};
 };
 
 // NRVO on const qualified return type should work.
