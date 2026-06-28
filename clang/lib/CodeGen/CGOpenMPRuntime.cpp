@@ -10234,7 +10234,7 @@ public:
     if (CI.capturesVariable() || CI.capturesVariableByCopy()) {
       const VarDecl *VD = CI.getCapturedVar();
       if (auto *DD = dyn_cast<DecompositionDecl>(VD)) {
-        if (const VarDecl *OrigVar = DD->getOriginalVar()) {
+        if (const VarDecl *OrigVar = DD->getOriginalVar().Var) {
           // Check if the original variable has been explicitly mapped.
           for (const MapData &L : DeclComponentLists) {
             OMPClauseMappableExprCommon::MappableExprComponentListRef

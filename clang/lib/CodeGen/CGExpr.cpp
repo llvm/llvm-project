@@ -3616,7 +3616,7 @@ LValue CodeGenFunction::EmitOMPCapturedBindingLValue(const BindingDecl *BD) {
   // If so, use the original variable instead of DD to avoid capturing DD.
   const VarDecl *TargetDecl = DD;
   if (const auto *DecompDecl = dyn_cast<DecompositionDecl>(DD)) {
-    if (const VarDecl *OrigVar = DecompDecl->getOriginalVar()) {
+    if (const VarDecl *OrigVar = DecompDecl->getOriginalVar().Var) {
       auto It = LocalDeclMap.find(OrigVar->getCanonicalDecl());
       if (It != LocalDeclMap.end())
         // Original variable is mapped, use it instead.
