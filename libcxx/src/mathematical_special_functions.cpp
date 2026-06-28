@@ -8,19 +8,31 @@
 
 #include <__config>
 #include <__math/special_functions.h>
-#include <boost/math/special_functions.hpp>
 #include <cerrno>
 #include <cfenv>
 #include <cmath>
-#include <limits>
 #include <optional>
 #include <type_traits>
+
+#define BOOST_MATH_NO_EXCEPTIONS
+#include <boost/math/special_functions.hpp>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 #if _LIBCPP_STD_VER >= 17
 
 namespace {
+// Error policy for all Boost.Math calls: report domain/pole/overflow/evaluation
+// errors via errno (errno_on_error) instead of throwing. Boost sets errno to
+// EDOM (domain/pole/evaluation) or ERANGE (overflow) and returns NaN/inf. The
+// remaining categories (underflow/denorm/indeterminate) default to ignore.
+namespace __bmp = boost::math::policies;
+using __policy =
+    __bmp::policy<__bmp::domain_error<__bmp::errno_on_error>,
+                  __bmp::pole_error<__bmp::errno_on_error>,
+                  __bmp::overflow_error<__bmp::errno_on_error>,
+                  __bmp::evaluation_error<__bmp::errno_on_error>>;
+
 template <class _Ret>
 std::optional<_Ret> __check_nan() {
   return std::nullopt;
@@ -34,22 +46,36 @@ std::optional<_Ret> __check_nan(_Arg __arg, _Args... __args) {
   return __check_nan<_Ret>(__args...);
 }
 
+// Shared back-end for the C++17 mathematical special functions ([sf.cmath]).
+// Boost.Math is the compute kernel; this wrapper enforces the standard's
+// error-reporting rules ([sf.cmath.general]):
+//   1. NaN argument -> return NaN, do NOT report a domain error (the
+//      __check_nan pre-filter below).
+//   2. domain/range error -> report per <cmath> math_errhandling: errno = EDOM
+//      (domain/pole) or ERANGE (overflow), done by Boost's errno_on_error
+//      policy; and, when MATH_ERREXCEPT is set, raise the matching <cfenv>
+//      exception (done here, since Boost never touches <cfenv>).
+// Promotion: Boost's default promote_float=true computes float inputs in double
+// and rounds once -- more accurate and overflow-resistant, matching the
+// existing std::hermite(float) approach. We keep it.
 template <class _Func, class... _Args, class _Ret = std::invoke_result_t<_Func, _Args...>>
 _Ret __invoke_boost_math(_Func __f, _Args... __args) {
   if (auto __maybe_nan = __check_nan<_Ret>(__args...); __maybe_nan.has_value())
     return *__maybe_nan;
 
-  try {
-    return __f(__args...);
-  } catch (...) {
-#  if math_errhandling & MATH_ERRNO
-    errno = EDOM;
-#  endif
 #  if math_errhandling & MATH_ERREXCEPT
-    std::feraiseexcept(FE_INVALID);
+  errno = 0;
 #  endif
-    return std::numeric_limits<_Ret>::quiet_NaN();
-  }
+  _Ret __ret = __f(__args..., __policy{});
+  // Boost set errno via the policy; mirror it onto <cfenv>:
+  // EDOM (domain/pole) -> FE_INVALID, ERANGE (overflow) -> FE_OVERFLOW.
+#  if math_errhandling & MATH_ERREXCEPT
+  if (errno == EDOM)
+    std::feraiseexcept(FE_INVALID);
+  else if (errno == ERANGE)
+    std::feraiseexcept(FE_OVERFLOW);
+#  endif
+  return __ret;
 }
 } // namespace
 
