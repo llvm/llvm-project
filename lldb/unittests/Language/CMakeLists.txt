@@ -1,6 +1,6 @@
 add_subdirectory(CPlusPlus)
 add_subdirectory(CLanguages)
 add_subdirectory(ObjC)
-if("flang" IN_LIST LLVM_ENABLE_PROJECTS OR "all" IN_LIST LLVM_ENABLE_PROJECTS)  
+if(LLDB_ENABLE_FORTRAN)  
   add_subdirectory(Fortran)
 endif()
