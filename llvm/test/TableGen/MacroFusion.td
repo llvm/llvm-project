@@ -264,13 +264,6 @@ def TestFirstSameRegFusion: Fusion<"test-first-same-reg", "HasTestFirstSameRegFu
 // CHECK-PREDICATOR-EMPTY:
 // CHECK-PREDICATOR-NEXT:  #endif // GET_Test_MACRO_FUSION_PRED_IMPL
 
-// Check that we have generated target subfeature.
-// CHECK-SUBTARGET: { "fusion-test", "Test Fusion", Test::TestFusion,
-// CHECK-SUBTARGET: { "fusion-test-both-fusion-predicate", "Test BothFusionPredicate", Test::TestBothFusionPredicate,
-// CHECK-SUBTARGET: { "fusion-test-commutable", "Test Commutable Fusion", Test::TestCommutableFusion,
-// CHECK-SUBTARGET: { "fusion-test-first-same-reg", "Test FirstSameReg", Test::TestFirstSameRegFusion,
-// CHECK-SUBTARGET: { "fusion-test-single", "Test SingleFusion", Test::TestSingleFusion,
-
 // Check that we have generated `getMacroFusions()` function.
 // CHECK-SUBTARGET:      std::vector<MacroFusionPredTy> getMacroFusions() const final;
 

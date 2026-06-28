@@ -34,24 +34,27 @@ class MCInst;
 
 /// Used to provide key value pairs for feature and CPU bit flags.
 struct SubtargetFeatureKV {
-private:
-  const char *Key;                      ///< K-V key string
-  const char *Desc;                     ///< Help descriptor
-
-public:
+  uint16_t KeyStrOff;
+  uint16_t DescStrOff;
   unsigned Value;                       ///< K-V integer value
   FeatureBitArray Implies;              ///< K-V bit mask
 
-  constexpr SubtargetFeatureKV(const char *Key, const char *Desc,
+  constexpr SubtargetFeatureKV(uint16_t KeyStrOff, uint16_t DescStrOff,
                                unsigned Value, FeatureBitArray Implies)
-      : Key(Key), Desc(Desc), Value(Value), Implies(Implies) {}
+      : KeyStrOff(KeyStrOff), DescStrOff(DescStrOff), Value(Value),
+        Implies(Implies) {}
 
   // Because of relative string offsets, this type is not copyable.
   SubtargetFeatureKV(const SubtargetFeatureKV &) = delete;
   SubtargetFeatureKV &operator=(const SubtargetFeatureKV &) = delete;
 
-  const char *key() const { return Key; }
-  const char *desc() const { return Desc; }
+  const char *key() const {
+    return reinterpret_cast<const char *>(this) + KeyStrOff;
+  }
+
+  const char *desc() const {
+    return reinterpret_cast<const char *>(this) + DescStrOff;
+  }
 
   /// Compare routine for std::lower_bound
   bool operator<(StringRef S) const { return StringRef(key()) < S; }
@@ -60,6 +63,12 @@ public:
   bool operator<(const SubtargetFeatureKV &Other) const {
     return StringRef(key()) < StringRef(Other.key());
   }
+};
+
+template <size_t NumFeatures, size_t FeatureStrTabSize>
+struct SubtargetFeatureKVStorage {
+  SubtargetFeatureKV Features[NumFeatures];
+  char Strings[FeatureStrTabSize];
 };
 
 //===----------------------------------------------------------------------===//
