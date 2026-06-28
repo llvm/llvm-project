@@ -18,6 +18,7 @@
 #include <_Ccsid.h>
 #endif
 #ifdef __cplusplus
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
 #include <system_error>
@@ -103,6 +104,31 @@ inline ErrorOr<bool> needConversion(const Twine &FileName, const int FD = -1) {
   return needzOSConversion(FileName, FD);
 #endif
   return false;
+}
+
+inline ErrorOr<SmallString<32>>
+getEncodingNameFromFileTag(const Twine &FileName, const int FD = -1) {
+#ifdef __MVS__
+  ErrorOr<__ccsid_t> TagOrErr = getzOSFileTag(FileName, FD);
+  if (!TagOrErr)
+    return TagOrErr.getError();
+
+  __ccsid_t Tag = *TagOrErr;
+  if (Tag == 0)
+    return SmallString<32>(); // Return empty string for no tag
+
+  if (Tag == 1208)
+    return SmallString<32>("utf-8");
+
+  if (Tag == 1047)
+    return SmallString<32>("ibm-1047");
+
+  SmallString<32> Result;
+  raw_svector_ostream(Result) << Tag;
+  return Result;
+#else
+  return SmallString<32>(); // Return empty string for non-MVS platforms
+#endif
 }
 
 } /* namespace llvm */
