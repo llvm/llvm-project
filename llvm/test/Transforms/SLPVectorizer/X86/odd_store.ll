@@ -9,29 +9,48 @@
 ;}
 
 define void @foo(ptr noalias nocapture %A, ptr noalias nocapture %B, float %T) {
-; CHECK-LABEL: @foo(
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 10
-; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[TMP1]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fmul float [[TMP2]], [[T:%.*]]
-; CHECK-NEXT:    [[TMP4:%.*]] = fpext float [[TMP3]] to double
-; CHECK-NEXT:    [[TMP5:%.*]] = fadd double [[TMP4]], 4.000000e+00
-; CHECK-NEXT:    [[TMP6:%.*]] = fptosi double [[TMP5]] to i8
-; CHECK-NEXT:    store i8 [[TMP6]], ptr [[A:%.*]], align 1
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[B]], i64 11
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 1
-; CHECK-NEXT:    [[TMP9:%.*]] = load <2 x float>, ptr [[TMP7]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x float> poison, float [[T]], i32 0
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x float> [[TMP10]], <2 x float> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP16:%.*]] = fmul <2 x float> [[TMP9]], [[TMP11]]
-; CHECK-NEXT:    [[TMP17:%.*]] = fpext <2 x float> [[TMP16]] to <2 x double>
-; CHECK-NEXT:    [[TMP14:%.*]] = fadd <2 x double> [[TMP17]], <double 5.000000e+00, double 6.000000e+00>
-; CHECK-NEXT:    [[TMP15:%.*]] = fptosi <2 x double> [[TMP14]] to <2 x i8>
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i8> [[TMP15]], i32 0
-; CHECK-NEXT:    store i8 [[TMP12]], ptr [[TMP13]], align 1
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 2
-; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i8> [[TMP15]], i32 1
-; CHECK-NEXT:    store i8 [[TMP19]], ptr [[TMP20]], align 1
-; CHECK-NEXT:    ret void
+; NON-POW2-LABEL: @foo(
+; NON-POW2-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 10
+; NON-POW2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A:%.*]], i64 1
+; NON-POW2-NEXT:    [[TMP3:%.*]] = load <3 x float>, ptr [[TMP1]], align 4
+; NON-POW2-NEXT:    [[TMP4:%.*]] = insertelement <3 x float> poison, float [[T:%.*]], i32 0
+; NON-POW2-NEXT:    [[TMP5:%.*]] = shufflevector <3 x float> [[TMP4]], <3 x float> poison, <3 x i32> zeroinitializer
+; NON-POW2-NEXT:    [[TMP6:%.*]] = fmul <3 x float> [[TMP3]], [[TMP5]]
+; NON-POW2-NEXT:    [[TMP7:%.*]] = fpext <3 x float> [[TMP6]] to <3 x double>
+; NON-POW2-NEXT:    [[TMP8:%.*]] = fadd <3 x double> [[TMP7]], <double 4.000000e+00, double 5.000000e+00, double 6.000000e+00>
+; NON-POW2-NEXT:    [[TMP9:%.*]] = fptosi <3 x double> [[TMP8]] to <3 x i8>
+; NON-POW2-NEXT:    [[TMP10:%.*]] = extractelement <3 x i8> [[TMP9]], i32 0
+; NON-POW2-NEXT:    store i8 [[TMP10]], ptr [[A]], align 1
+; NON-POW2-NEXT:    [[TMP11:%.*]] = extractelement <3 x i8> [[TMP9]], i32 1
+; NON-POW2-NEXT:    store i8 [[TMP11]], ptr [[TMP2]], align 1
+; NON-POW2-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 2
+; NON-POW2-NEXT:    [[TMP13:%.*]] = extractelement <3 x i8> [[TMP9]], i32 2
+; NON-POW2-NEXT:    store i8 [[TMP13]], ptr [[TMP12]], align 1
+; NON-POW2-NEXT:    ret void
+;
+; POW2-ONLY-LABEL: @foo(
+; POW2-ONLY-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 10
+; POW2-ONLY-NEXT:    [[TMP2:%.*]] = load float, ptr [[TMP1]], align 4
+; POW2-ONLY-NEXT:    [[TMP3:%.*]] = fmul float [[TMP2]], [[T:%.*]]
+; POW2-ONLY-NEXT:    [[TMP4:%.*]] = fpext float [[TMP3]] to double
+; POW2-ONLY-NEXT:    [[TMP5:%.*]] = fadd double [[TMP4]], 4.000000e+00
+; POW2-ONLY-NEXT:    [[TMP6:%.*]] = fptosi double [[TMP5]] to i8
+; POW2-ONLY-NEXT:    store i8 [[TMP6]], ptr [[A:%.*]], align 1
+; POW2-ONLY-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[B]], i64 11
+; POW2-ONLY-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 1
+; POW2-ONLY-NEXT:    [[TMP9:%.*]] = load <2 x float>, ptr [[TMP7]], align 4
+; POW2-ONLY-NEXT:    [[TMP10:%.*]] = insertelement <2 x float> poison, float [[T]], i32 0
+; POW2-ONLY-NEXT:    [[TMP11:%.*]] = shufflevector <2 x float> [[TMP10]], <2 x float> poison, <2 x i32> zeroinitializer
+; POW2-ONLY-NEXT:    [[TMP12:%.*]] = fmul <2 x float> [[TMP9]], [[TMP11]]
+; POW2-ONLY-NEXT:    [[TMP13:%.*]] = fpext <2 x float> [[TMP12]] to <2 x double>
+; POW2-ONLY-NEXT:    [[TMP14:%.*]] = fadd <2 x double> [[TMP13]], <double 5.000000e+00, double 6.000000e+00>
+; POW2-ONLY-NEXT:    [[TMP15:%.*]] = fptosi <2 x double> [[TMP14]] to <2 x i8>
+; POW2-ONLY-NEXT:    [[TMP16:%.*]] = extractelement <2 x i8> [[TMP15]], i32 0
+; POW2-ONLY-NEXT:    store i8 [[TMP16]], ptr [[TMP8]], align 1
+; POW2-ONLY-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 2
+; POW2-ONLY-NEXT:    [[TMP18:%.*]] = extractelement <2 x i8> [[TMP15]], i32 1
+; POW2-ONLY-NEXT:    store i8 [[TMP18]], ptr [[TMP17]], align 1
+; POW2-ONLY-NEXT:    ret void
 ;
   %1 = getelementptr inbounds float, ptr %B, i64 10
   %2 = load float, ptr %1, align 4
