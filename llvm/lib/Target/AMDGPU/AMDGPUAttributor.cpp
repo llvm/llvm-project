@@ -199,10 +199,6 @@ public:
     return {ST.getMinFlatWorkGroupSize(), ST.getMaxFlatWorkGroupSize()};
   }
 
-  SmallVector<unsigned> getMaxNumWorkGroups(const Function &F) {
-    return AMDGPU::getMaxNumWorkGroups(F);
-  }
-
   /// Get code object version.
   unsigned getCodeObjectVersion() const { return CodeObjectVersion; }
 
@@ -1030,7 +1026,7 @@ struct AAAMDMaxNumWorkgroups
     Function *F = getAssociatedFunction();
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
 
-    SmallVector<unsigned> MaxNumWorkgroups = InfoCache.getMaxNumWorkGroups(*F);
+    SmallVector<unsigned> MaxNumWorkgroups = AMDGPU::getMaxNumWorkGroups(*F);
 
     X.takeKnownMinimum(MaxNumWorkgroups[0]);
     Y.takeKnownMinimum(MaxNumWorkgroups[1]);
