@@ -575,11 +575,6 @@ Changes in existing checks
   - Fixed false positives when pointers were later passed or bound through
     ``const``-qualified pointer references.
 
-- Improved :doc:`misc-coroutine-hostile-raii
-  <clang-tidy/checks/misc/coroutine-hostile-raii>` check by adding the option
-  `AllowedCallees`, that allows exempting safely awaitable callees from the
-  check.
-
 - Improved :doc:`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` by avoiding false positives when
   virtual inheritance causes concrete bases to be counted more than once.
