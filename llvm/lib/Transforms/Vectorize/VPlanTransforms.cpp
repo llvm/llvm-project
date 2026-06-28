@@ -5750,11 +5750,14 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
 /// must be the operand at index \p OpIdx for both the recipe at lane 0, \p
 /// WideMember0). A VPInterleaveRecipe can be narrowed to a wide load, if \p V
 /// is defined at \p Idx of a load interleave group.
+/// A live-in or recipe defined outside the loop region can be converted, if it
+/// is the same across all lanes, or we can create a BuildVector for it.
 static bool canNarrowLoad(VPSingleDefRecipe *WideMember0, unsigned OpIdx,
                           VPValue *OpV, unsigned Idx, bool IsScalable) {
   VPValue *Member0Op = WideMember0->getOperand(OpIdx);
   if (Member0Op->isDefinedOutsideLoopRegions()) {
-    // Operand matches Member0, broadcast across all fields.
+    // Operand matches Member0, broadcast across all fields for both live-ins
+    // and recipes.
     if (Member0Op == OpV)
       return true;
     // Otherwise distinct per-field VPValues are assembled into a BuildVector.
@@ -5889,7 +5892,7 @@ static VPValue *narrowInterleaveGroupOp(ArrayRef<VPValue *> Members,
   if (isAlreadyNarrow(V))
     return V;
 
-  auto *R = V->getDefiningRecipe();
+  VPRecipeBase *R = V->getDefiningRecipe();
   if (isa<VPWidenRecipe, VPWidenCastRecipe>(R)) {
     auto *WideMember0 = cast<VPRecipeWithIRFlags>(R);
     for (VPValue *Member : Members.drop_front())
