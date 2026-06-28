@@ -41,7 +41,7 @@ public:
   /// Builds the chain of origins through which a loan has propagated.
   ///
   /// Starting from the last fact of the block containing StartPoint, this
-  /// function performs a BFS over CFG blocks to explore all reachable blocks.
+  /// function performs a DFS over CFG blocks to explore all reachable blocks.
   /// Within each block, facts are processed in reverse order.
   ///
   /// The traversal follows OriginFlowFacts backwards to reconstruct the
