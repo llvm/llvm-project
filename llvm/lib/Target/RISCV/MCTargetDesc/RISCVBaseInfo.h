@@ -18,6 +18,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
@@ -624,7 +625,7 @@ int getLoadFPImm(APFloat FPImm);
 
 namespace RISCVSysReg {
 struct SysReg {
-  const char Name[32];
+  StringTable::Offset Name;
   unsigned Encoding;
   // FIXME: add these additional fields when needed.
   // Privilege Access: Read, Write, Read-Only.
@@ -658,7 +659,7 @@ struct SysReg {
 
 namespace RISCVInsnOpcode {
 struct RISCVOpcode {
-  char Name[10];
+  StringTable::Offset Name;
   uint8_t Value;
 };
 
