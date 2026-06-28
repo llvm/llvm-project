@@ -332,6 +332,8 @@ public:
   /// @param Bold bold/brighter text, default false
   /// @param BG if true change the background, default: change foreground
   /// @returns itself so it can be used within << invocations
+  ///
+  /// FIXME: If Color == SAVEDCOLOR, Bold == false is currently ignored.
   virtual raw_ostream &changeColor(enum Colors Color, bool Bold = false,
                                    bool BG = false);
 
