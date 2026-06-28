@@ -1585,8 +1585,10 @@ static std::string getGNUPtType(unsigned Arch, unsigned Type) {
 }
 
 constexpr EnumStringDef<unsigned, 2> ElfSegmentFlagsDefs[] = {
-    LLVM_READOBJ_ENUM_ENT(ELF, PF_X), LLVM_READOBJ_ENUM_ENT(ELF, PF_W),
-    LLVM_READOBJ_ENUM_ENT(ELF, PF_R)};
+    ENUM_ENT_1(PF_X),
+    ENUM_ENT_1(PF_W),
+    ENUM_ENT_1(PF_R),
+};
 constexpr auto ElfSegmentFlags = BUILD_ENUM_STRINGS(ElfSegmentFlagsDefs);
 
 constexpr EnumStringDef<unsigned, 2> ElfHeaderMipsFlagsDefs[] = {
@@ -1632,7 +1634,8 @@ constexpr EnumStringDef<unsigned, 2> ElfHeaderMipsFlagsDefs[] = {
     ENUM_ENT(EF_MIPS_ARCH_32R2, "mips32r2"),
     ENUM_ENT(EF_MIPS_ARCH_64R2, "mips64r2"),
     ENUM_ENT(EF_MIPS_ARCH_32R6, "mips32r6"),
-    ENUM_ENT(EF_MIPS_ARCH_64R6, "mips64r6")};
+    ENUM_ENT(EF_MIPS_ARCH_64R6, "mips64r6"),
+};
 constexpr auto ElfHeaderMipsFlags = BUILD_ENUM_STRINGS(ElfHeaderMipsFlagsDefs);
 
 #define X(NUM, ENUM, NAME) ENUM_ENT(ENUM, NAME),
@@ -1742,24 +1745,24 @@ constexpr auto ElfHeaderSPARCFlags =
     BUILD_ENUM_STRINGS(ElfHeaderSPARCFlagsDefs);
 
 constexpr EnumStringDef<unsigned, 2> ElfHeaderAVRFlagsDefs[] = {
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_AVR1),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_AVR2),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_AVR25),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_AVR3),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_AVR31),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_AVR35),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_AVR4),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_AVR5),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_AVR51),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_AVR6),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_AVRTINY),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_XMEGA1),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_XMEGA2),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_XMEGA3),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_XMEGA4),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_XMEGA5),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_XMEGA6),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_AVR_ARCH_XMEGA7),
+    ENUM_ENT_1(EF_AVR_ARCH_AVR1),
+    ENUM_ENT_1(EF_AVR_ARCH_AVR2),
+    ENUM_ENT_1(EF_AVR_ARCH_AVR25),
+    ENUM_ENT_1(EF_AVR_ARCH_AVR3),
+    ENUM_ENT_1(EF_AVR_ARCH_AVR31),
+    ENUM_ENT_1(EF_AVR_ARCH_AVR35),
+    ENUM_ENT_1(EF_AVR_ARCH_AVR4),
+    ENUM_ENT_1(EF_AVR_ARCH_AVR5),
+    ENUM_ENT_1(EF_AVR_ARCH_AVR51),
+    ENUM_ENT_1(EF_AVR_ARCH_AVR6),
+    ENUM_ENT_1(EF_AVR_ARCH_AVRTINY),
+    ENUM_ENT_1(EF_AVR_ARCH_XMEGA1),
+    ENUM_ENT_1(EF_AVR_ARCH_XMEGA2),
+    ENUM_ENT_1(EF_AVR_ARCH_XMEGA3),
+    ENUM_ENT_1(EF_AVR_ARCH_XMEGA4),
+    ENUM_ENT_1(EF_AVR_ARCH_XMEGA5),
+    ENUM_ENT_1(EF_AVR_ARCH_XMEGA6),
+    ENUM_ENT_1(EF_AVR_ARCH_XMEGA7),
     ENUM_ENT(EF_AVR_LINKRELAX_PREPARED, "relaxable"),
 };
 constexpr auto ElfHeaderAVRFlags = BUILD_ENUM_STRINGS(ElfHeaderAVRFlagsDefs);
@@ -1775,40 +1778,46 @@ constexpr auto ElfHeaderLoongArchFlags =
     BUILD_ENUM_STRINGS(ElfHeaderLoongArchFlagsDefs);
 
 constexpr EnumStringDef<unsigned, 2> ElfHeaderXtensaFlagsDefs[] = {
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_XTENSA_MACH_NONE),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_XTENSA_XT_INSN),
-    LLVM_READOBJ_ENUM_ENT(ELF, EF_XTENSA_XT_LIT)};
+    ENUM_ENT_1(EF_XTENSA_MACH_NONE),
+    ENUM_ENT_1(EF_XTENSA_XT_INSN),
+    ENUM_ENT_1(EF_XTENSA_XT_LIT),
+};
 constexpr auto ElfHeaderXtensaFlags =
     BUILD_ENUM_STRINGS(ElfHeaderXtensaFlagsDefs);
 
 constexpr EnumStringDef<unsigned, 2> ElfSymOtherFlagsDefs[] = {
-    LLVM_READOBJ_ENUM_ENT(ELF, STV_INTERNAL),
-    LLVM_READOBJ_ENUM_ENT(ELF, STV_HIDDEN),
-    LLVM_READOBJ_ENUM_ENT(ELF, STV_PROTECTED)};
+    ENUM_ENT_1(STV_INTERNAL),
+    ENUM_ENT_1(STV_HIDDEN),
+    ENUM_ENT_1(STV_PROTECTED),
+};
 constexpr auto ElfSymOtherFlags = BUILD_ENUM_STRINGS(ElfSymOtherFlagsDefs);
 
 constexpr EnumStringDef<unsigned, 2> ElfMipsSymOtherFlagsDefs[] = {
-    LLVM_READOBJ_ENUM_ENT(ELF, STO_MIPS_OPTIONAL),
-    LLVM_READOBJ_ENUM_ENT(ELF, STO_MIPS_PLT),
-    LLVM_READOBJ_ENUM_ENT(ELF, STO_MIPS_PIC),
-    LLVM_READOBJ_ENUM_ENT(ELF, STO_MIPS_MICROMIPS)};
+    ENUM_ENT_1(STO_MIPS_OPTIONAL),
+    ENUM_ENT_1(STO_MIPS_PLT),
+    ENUM_ENT_1(STO_MIPS_PIC),
+    ENUM_ENT_1(STO_MIPS_MICROMIPS),
+};
 constexpr auto ElfMipsSymOtherFlags =
     BUILD_ENUM_STRINGS(ElfMipsSymOtherFlagsDefs);
 
 constexpr EnumStringDef<unsigned, 2> ElfAArch64SymOtherFlagsDefs[] = {
-    LLVM_READOBJ_ENUM_ENT(ELF, STO_AARCH64_VARIANT_PCS)};
+    ENUM_ENT_1(STO_AARCH64_VARIANT_PCS),
+};
 constexpr auto ElfAArch64SymOtherFlags =
     BUILD_ENUM_STRINGS(ElfAArch64SymOtherFlagsDefs);
 
 constexpr EnumStringDef<unsigned, 2> ElfMips16SymOtherFlagsDefs[] = {
-    LLVM_READOBJ_ENUM_ENT(ELF, STO_MIPS_OPTIONAL),
-    LLVM_READOBJ_ENUM_ENT(ELF, STO_MIPS_PLT),
-    LLVM_READOBJ_ENUM_ENT(ELF, STO_MIPS_MIPS16)};
+    ENUM_ENT_1(STO_MIPS_OPTIONAL),
+    ENUM_ENT_1(STO_MIPS_PLT),
+    ENUM_ENT_1(STO_MIPS_MIPS16),
+};
 constexpr auto ElfMips16SymOtherFlags =
     BUILD_ENUM_STRINGS(ElfMips16SymOtherFlagsDefs);
 
 constexpr EnumStringDef<unsigned, 2> ElfRISCVSymOtherFlagsDefs[] = {
-    LLVM_READOBJ_ENUM_ENT(ELF, STO_RISCV_VARIANT_CC)};
+    ENUM_ENT_1(STO_RISCV_VARIANT_CC),
+};
 constexpr auto ElfRISCVSymOtherFlags =
     BUILD_ENUM_STRINGS(ElfRISCVSymOtherFlagsDefs);
 
@@ -2288,7 +2297,8 @@ constexpr EnumStringDef<unsigned> ElfDynamicDTFlagsDefs[] = {
     LLVM_READOBJ_DT_FLAG_ENT(DF, SYMBOLIC),
     LLVM_READOBJ_DT_FLAG_ENT(DF, TEXTREL),
     LLVM_READOBJ_DT_FLAG_ENT(DF, BIND_NOW),
-    LLVM_READOBJ_DT_FLAG_ENT(DF, STATIC_TLS)};
+    LLVM_READOBJ_DT_FLAG_ENT(DF, STATIC_TLS),
+};
 constexpr auto ElfDynamicDTFlags = BUILD_ENUM_STRINGS(ElfDynamicDTFlagsDefs);
 
 constexpr EnumStringDef<unsigned> ElfDynamicDTFlags1Defs[] = {
@@ -2338,7 +2348,8 @@ constexpr EnumStringDef<unsigned> ElfDynamicDTMipsFlagsDefs[] = {
     LLVM_READOBJ_DT_FLAG_ENT(RHF, REQUICKSTARTED),
     LLVM_READOBJ_DT_FLAG_ENT(RHF, CORD),
     LLVM_READOBJ_DT_FLAG_ENT(RHF, NO_UNRES_UNDEF),
-    LLVM_READOBJ_DT_FLAG_ENT(RHF, RLD_ORDER_SAFE)};
+    LLVM_READOBJ_DT_FLAG_ENT(RHF, RLD_ORDER_SAFE),
+};
 constexpr auto ElfDynamicDTMipsFlags =
     BUILD_ENUM_STRINGS(ElfDynamicDTMipsFlagsDefs);
 
