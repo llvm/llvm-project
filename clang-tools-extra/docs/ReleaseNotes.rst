@@ -601,6 +601,11 @@ Changes in existing checks
   Because it only sees one file at a time, the check can't be sure
   such entities aren't referenced in any other files of that module.
 
+- Improved :doc:`modernize-avoid-c-style-cast
+  <clang-tidy/checks/modernize/avoid-c-style-cast>` check by fixing an invalid
+  fix-it generated when replacing casts that directly follow a keyword or
+  identifier.
+
 - Improved :doc:`modernize-deprecated-headers
   <clang-tidy/checks/modernize/deprecated-headers>` check by avoiding false
   positives on project headers that use the same name as a standard library
