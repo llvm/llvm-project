@@ -52,6 +52,30 @@ func.func @affine_apply_ceildiv() -> index {
   func.return %1 : index
 }
 
+// CHECK-LABEL: func @affine_apply_floordiv_zero_symbol
+// CHECK: test.reflect_bounds {smax = 9223372036854775807 : index, smin = -9223372036854775808 : index, umax = -1 : index, umin = 0 : index}
+func.func @affine_apply_floordiv_zero_symbol() -> index {
+  %d0 = test.with_bounds { umin = 5 : index, umax = 10 : index,
+                           smin = 5 : index, smax = 10 : index } : index
+  %s0 = test.with_bounds { umin = 0 : index, umax = 0 : index,
+                           smin = 0 : index, smax = 0 : index } : index
+  %0 = affine.apply affine_map<(d0)[s0] -> (d0 floordiv s0)>(%d0)[%s0]
+  %1 = test.reflect_bounds %0 : index
+  func.return %1 : index
+}
+
+// CHECK-LABEL: func @affine_apply_ceildiv_zero_symbol
+// CHECK: test.reflect_bounds {smax = 9223372036854775807 : index, smin = -9223372036854775808 : index, umax = -1 : index, umin = 0 : index}
+func.func @affine_apply_ceildiv_zero_symbol() -> index {
+  %d0 = test.with_bounds { umin = 5 : index, umax = 10 : index,
+                           smin = 5 : index, smax = 10 : index } : index
+  %s0 = test.with_bounds { umin = 0 : index, umax = 0 : index,
+                           smin = 0 : index, smax = 0 : index } : index
+  %0 = affine.apply affine_map<(d0)[s0] -> (d0 ceildiv s0)>(%d0)[%s0]
+  %1 = test.reflect_bounds %0 : index
+  func.return %1 : index
+}
+
 // CHECK-LABEL: func @affine_apply_mod
 // CHECK: test.reflect_bounds {smax = 3 : index, smin = 0 : index, umax = 3 : index, umin = 0 : index}
 func.func @affine_apply_mod() -> index {
