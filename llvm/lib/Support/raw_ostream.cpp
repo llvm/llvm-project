@@ -295,13 +295,14 @@ void raw_ostream::copy_to_buffer(const char *Ptr, size_t Size) {
 }
 
 // Formatted output.
-raw_ostream &raw_ostream::operator<<(const format_object_base &Fmt) {
+raw_ostream &
+raw_ostream::operator<<(function_ref<size_t(char *, size_t)> Print) {
   // If we have more than a few bytes left in our output buffer, try
   // formatting directly onto its end.
   size_t NextBufferSize = 127;
   size_t BufferBytesLeft = OutBufEnd - OutBufCur;
   if (BufferBytesLeft > 3) {
-    size_t BytesUsed = Fmt.print(OutBufCur, BufferBytesLeft);
+    size_t BytesUsed = Print(OutBufCur, BufferBytesLeft);
 
     // Common case is that we have plenty of space.
     if (BytesUsed <= BufferBytesLeft) {
@@ -323,7 +324,7 @@ raw_ostream &raw_ostream::operator<<(const format_object_base &Fmt) {
     V.resize(NextBufferSize);
 
     // Try formatting into the SmallVector.
-    size_t BytesUsed = Fmt.print(V.data(), NextBufferSize);
+    size_t BytesUsed = Print(V.data(), NextBufferSize);
 
     // If BytesUsed fit into the vector, we win.
     if (BytesUsed <= NextBufferSize)
@@ -539,14 +540,6 @@ raw_ostream &raw_ostream::reverseColor() {
 }
 
 void raw_ostream::anchor() {}
-
-//===----------------------------------------------------------------------===//
-//  Formatted Output
-//===----------------------------------------------------------------------===//
-
-// Out of line virtual method.
-void format_object_base::home() {
-}
 
 //===----------------------------------------------------------------------===//
 //  raw_fd_ostream
