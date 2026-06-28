@@ -78,6 +78,21 @@ def _check_expected_version(comparison, expected, actual):
     return op_lookup[comparison](version.parse(actual), version.parse(expected))
 
 
+def _get_macos_sdk_version() -> str | None:
+    """ Returns the current macOS SDK version or None if this system doesn't
+    use a macOS SDK."""
+    if platform.mac_ver()[0] == "":
+        return None
+    try:
+        return (
+            subprocess.check_output(["xcrun", "--sdk", "macosx", "--show-sdk-version"])
+            .rstrip()
+            .decode("utf-8")
+        )
+    except Exception:
+        return None
+
+
 def _match_decorator_property(expected, actual):
     if expected is None:
         return True
@@ -256,6 +271,7 @@ def _decorateTest(
     swig_version=None,
     py_version=None,
     macos_version=None,
+    macos_sdk_version=None,
     remote=None,
     dwarf_version=None,
     setting=None,
@@ -306,6 +322,12 @@ def _decorateTest(
                 )
             )
         )
+        _sdk_ver = _get_macos_sdk_version()
+        skip_for_macos_sdk_version = macos_sdk_version is None
+        if macos_sdk_version is not None and _sdk_ver is not None:
+            skip_for_macos_sdk_version = _check_expected_version(
+                macos_sdk_version[0], macos_sdk_version[1], _sdk_ver
+            )
         skip_for_dwarf_version = (dwarf_version is None) or (
             _check_expected_version(
                 dwarf_version[0], dwarf_version[1], lldbplatformutil.getDwarfVersion()
@@ -327,6 +349,7 @@ def _decorateTest(
             (swig_version, skip_for_swig_version, "swig version"),
             (py_version, skip_for_py_version, "python version"),
             (macos_version, skip_for_macos_version, "macOS version"),
+            (macos_sdk_version, skip_for_macos_sdk_version, "macOS SDK version"),
             (remote, skip_for_remote, "platform locality (remote/local)"),
             (dwarf_version, skip_for_dwarf_version, "dwarf version"),
             (setting, skip_for_setting, "setting"),
@@ -386,6 +409,7 @@ def expectedFailureAll(
     swig_version=None,
     py_version=None,
     macos_version=None,
+    macos_sdk_version=None,
     remote=None,
     dwarf_version=None,
     setting=None,
@@ -404,6 +428,7 @@ def expectedFailureAll(
         swig_version=swig_version,
         py_version=py_version,
         macos_version=macos_version,
+        macos_sdk_version=macos_sdk_version,
         remote=remote,
         dwarf_version=dwarf_version,
         setting=setting,
@@ -429,6 +454,7 @@ def skipIf(
     swig_version=None,
     py_version=None,
     macos_version=None,
+    macos_sdk_version=None,
     remote=None,
     dwarf_version=None,
     setting=None,
@@ -447,6 +473,7 @@ def skipIf(
         swig_version=swig_version,
         py_version=py_version,
         macos_version=macos_version,
+        macos_sdk_version=macos_sdk_version,
         remote=remote,
         dwarf_version=dwarf_version,
         setting=setting,

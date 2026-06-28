@@ -177,14 +177,14 @@ std::string ObjCLanguage::ObjCMethodName::GetFullNameWithoutCategory() const {
 }
 
 std::vector<Language::MethodNameVariant>
-ObjCLanguage::GetMethodNameVariants(ConstString method_name) const {
+ObjCLanguage::GetMethodNameVariants(llvm::StringRef method_name) const {
   std::vector<Language::MethodNameVariant> variant_names;
   std::optional<const ObjCLanguage::ObjCMethodName> objc_method =
-      ObjCLanguage::ObjCMethodName::Create(method_name.GetStringRef(), false);
+      ObjCLanguage::ObjCMethodName::Create(method_name, false);
   if (!objc_method)
     return variant_names;
 
-  variant_names.emplace_back(ConstString(objc_method->GetSelector()),
+  variant_names.emplace_back(objc_method->GetSelector().str(),
                              lldb::eFunctionNameTypeSelector);
 
   const std::string name_sans_category =
@@ -192,29 +192,29 @@ ObjCLanguage::GetMethodNameVariants(ConstString method_name) const {
 
   if (objc_method->IsClassMethod() || objc_method->IsInstanceMethod()) {
     if (!name_sans_category.empty())
-      variant_names.emplace_back(ConstString(name_sans_category),
+      variant_names.emplace_back(name_sans_category,
                                  lldb::eFunctionNameTypeFull);
   } else {
     StreamString strm;
 
     strm.Printf("+%s", objc_method->GetFullName().c_str());
-    variant_names.emplace_back(ConstString(strm.GetString()),
+    variant_names.emplace_back(strm.GetString().str(),
                                lldb::eFunctionNameTypeFull);
     strm.Clear();
 
     strm.Printf("-%s", objc_method->GetFullName().c_str());
-    variant_names.emplace_back(ConstString(strm.GetString()),
+    variant_names.emplace_back(strm.GetString().str(),
                                lldb::eFunctionNameTypeFull);
     strm.Clear();
 
     if (!name_sans_category.empty()) {
       strm.Printf("+%s", name_sans_category.c_str());
-      variant_names.emplace_back(ConstString(strm.GetString()),
+      variant_names.emplace_back(strm.GetString().str(),
                                  lldb::eFunctionNameTypeFull);
       strm.Clear();
 
       strm.Printf("-%s", name_sans_category.c_str());
-      variant_names.emplace_back(ConstString(strm.GetString()),
+      variant_names.emplace_back(strm.GetString().str(),
                                  lldb::eFunctionNameTypeFull);
     }
   }
