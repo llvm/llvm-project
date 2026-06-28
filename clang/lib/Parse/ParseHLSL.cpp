@@ -118,7 +118,7 @@ static void fixSeparateAttrArgAndNumber(StringRef ArgStr, SourceLocation ArgLoc,
   Slot = new (Ctx) IdentifierLoc(ArgLoc, PP.getIdentifierInfo(FixedArg));
 }
 
-Parser::ParsedSemantic Parser::ParseHLSLSemantic() {
+Parser::ParsedSemantic Parser::ParseHLSLSemantic() const {
   assert(Tok.is(tok::identifier) && "Not a HLSL Annotation");
 
   // Semantic pattern: [A-Za-z_]([A-Za-z_0-9]*[A-Za-z_])?[0-9]*
@@ -133,11 +133,14 @@ Parser::ParsedSemantic Parser::ParseHLSLSemantic() {
   // Determine the start of the semantic index.
   unsigned IndexIndex = Identifier.find_last_not_of("0123456789") + 1;
 
-  // ParseHLSLSemantic being called on an indentifier, the first
+  // ParseHLSLSemantic being called on an identifier, the first
   // character cannot be a digit. This error should be handled by
   // the caller. We can assert here.
-  StringRef SemanticName = Identifier.take_front(IndexIndex);
-  assert(SemanticName.size() > 0);
+  // getIdentifierInfo copies the bytes into the identifier table,
+  // so Buffer can safely die when this function returns.
+  IdentifierInfo *Name =
+      PP.getIdentifierInfo(Identifier.take_front(IndexIndex));
+  assert(Name->getLength() > 0);
 
   unsigned Index = 0;
   bool Explicit = false;
@@ -149,7 +152,7 @@ Parser::ParsedSemantic Parser::ParseHLSLSemantic() {
     assert(!Failure);
   }
 
-  return {SemanticName, Index, Explicit};
+  return {Name, Index, Explicit};
 }
 
 void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
@@ -327,7 +330,7 @@ void Parser::ParseHLSLAnnotations(ParsedAttributes &Attrs,
         SourceLocation()));
     ArgExprs.push_back(IntegerLiteral::Create(
         Ctx, llvm::APInt(1, Semantic.Explicit), Ctx.BoolTy, SourceLocation()));
-    II = PP.getIdentifierInfo(Semantic.Name);
+    II = Semantic.Name;
     break;
   }
   case ParsedAttr::UnknownAttribute: // FIXME: maybe this is obsolete?
