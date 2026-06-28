@@ -550,20 +550,23 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             res = 1 if res != 0 else 0
 
         # Ensure the resulting output is always of string type.
-        try:
+        # Truncate output as soon as possible so that we don't serialize/process
+        # overly large strings. 10kiB output ought to be enough.
+        def convert_output(out, limit=10 * 1024) -> str:
             if out is None:
-                out = ""
-            else:
+                return ""
+            truncated = len(out) > limit
+            out = out[:limit]
+            try:
                 out = out.decode("utf-8", errors="replace")
-        except:
-            out = str(out)
-        try:
-            if err is None:
-                err = ""
-            else:
-                err = err.decode("utf-8", errors="replace")
-        except:
-            err = str(err)
+            except:
+                out = str(out)
+            if truncated:
+                out += "\n...\ndata was truncated"
+            return out
+
+        out = convert_output(out)
+        err = convert_output(err)
 
         # Gather the redirected output files for failed commands.
         output_files = []
