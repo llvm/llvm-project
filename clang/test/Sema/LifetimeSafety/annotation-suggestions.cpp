@@ -645,7 +645,7 @@ namespace make_unique_suggestion {
 struct LifetimeBoundCtor {
   View v;
   // FIXME: This test fails to propagate the lifetimebound in ctor if this is inferred (instead of the current explicit annotation).
-  LifetimeBoundCtor(const MyObj& obj [[clang::lifetimebound]]): v(obj) {} // expected-warning {{'lifetimebound' attribute has no effect on this function because return type 'make_unique_suggestion::LifetimeBoundCtor' cannot carry a lifetime}}
+  LifetimeBoundCtor(const MyObj& obj [[clang::lifetimebound]]): v(obj) {}
 };
 
 std::unique_ptr<LifetimeBoundCtor> create_target(const MyObj& obj) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
@@ -679,7 +679,7 @@ void test_new_allocation() {
 struct LifetimeBoundCtor {
   View v;
   LifetimeBoundCtor();
-  LifetimeBoundCtor(const MyObj& obj [[clang::lifetimebound]]) : v(obj) {} // expected-warning {{'lifetimebound' attribute has no effect on this function because return type 'new_allocation_suggestion::LifetimeBoundCtor' cannot carry a lifetime}}
+  LifetimeBoundCtor(const MyObj& obj [[clang::lifetimebound]]) : v(obj) {}
 };
 
 struct HasCtorField {

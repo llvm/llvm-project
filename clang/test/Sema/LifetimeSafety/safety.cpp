@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wlifetime-safety-experimental-destructor-use -Wlifetime-safety-annotation-placement -Wno-dangling -verify=expected,function %s
 // RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wlifetime-safety-experimental-destructor-use -Wno-dangling -verify=expected,tu %s
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wlifetime-safety-experimental-destructor-use -Wlifetime-safety-annotation-placement -Wno-dangling -fcxx-exceptions -verify=expected,function %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wlifetime-safety-experimental-destructor-use -Wno-dangling -fcxx-exceptions -verify=expected,function %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -3270,7 +3270,7 @@ S S::return_self_after_registration() const {
 
 struct SWithUserDefinedCopyLikeOps {
   SWithUserDefinedCopyLikeOps();
-  SWithUserDefinedCopyLikeOps(const std::string &s [[clang::lifetimebound]]) : owned(s), data(s) {} // function-warning {{'lifetimebound' attribute has no effect on this function because return type 'track_origins_for_lifetimebound_record_type::SWithUserDefinedCopyLikeOps' cannot carry a lifetime}}
+  SWithUserDefinedCopyLikeOps(const std::string &s [[clang::lifetimebound]]) : owned(s), data(s) {}
 
   SWithUserDefinedCopyLikeOps(const SWithUserDefinedCopyLikeOps &other) : owned("copy"), data(owned) {}
 
@@ -3333,7 +3333,7 @@ void from_typedef_return() {
 
 struct SWithOriginPropagatingCopy {
   SWithOriginPropagatingCopy();
-  SWithOriginPropagatingCopy(const std::string &s [[clang::lifetimebound]]) : data(s) {} // function-warning {{'lifetimebound' attribute has no effect on this function because return type 'track_origins_for_lifetimebound_record_type::SWithOriginPropagatingCopy' cannot carry a lifetime}}
+  SWithOriginPropagatingCopy(const std::string &s [[clang::lifetimebound]]) : data(s) {}
   SWithOriginPropagatingCopy(const SWithOriginPropagatingCopy &other) : data(other.data) {}
   std::string_view data;
 };
@@ -3350,7 +3350,7 @@ SWithOriginPropagatingCopy user_defined_copy_with_origin_propagation() {
 
 struct DefaultedOuter {
   DefaultedOuter();
-  DefaultedOuter(const std::string &s [[clang::lifetimebound]]) : inner(s) {} // function-warning {{'lifetimebound' attribute has no effect on this function because return type 'track_origins_for_lifetimebound_record_type::DefaultedOuter' cannot carry a lifetime}}
+  DefaultedOuter(const std::string &s [[clang::lifetimebound]]) : inner(s) {}
   SWithUserDefinedCopyLikeOps inner;
 };
 
