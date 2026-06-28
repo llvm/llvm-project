@@ -1,6 +1,3 @@
-FFLAGS ?= -g -O0
-
-a.out: frame.f90
-	$(FC) $(FFLAGS) $< -o a.out
+F_SOURCES := frame.f90
 	
 include Makefile.rules

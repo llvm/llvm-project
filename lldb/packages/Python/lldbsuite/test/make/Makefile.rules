@@ -536,6 +536,16 @@ ifneq "$(strip $(OBJCXX_SOURCES))" ""
 	endif
 endif
 
+#----------------------------------------------------------------------
+# Check if we have any Fortran source files
+#----------------------------------------------------------------------
+ifneq "$(strip $(F_SOURCES))" ""
+	ifeq "$(FC)" ""
+    $(error "No Fortran compiler found for fortran tests")
+  endif
+  OBJECTS +=$(strip $(F_SOURCES:.f90=.o))
+endif
+
 ifeq ($(CC_TYPE), clang)
 	CXXFLAGS += --driver-mode=g++
 endif
@@ -672,6 +682,9 @@ endif
 
 %.o: %.mm %.d
 	$(CXX) $(CXXFLAGS) -MT $@ -MD -MP -MF $*.d -c -o $@ $<
+
+%.o: %.f90
+	$(FC) $(CFLAGS) -c -o $@ $<
 
 #----------------------------------------------------------------------
 # Automatic variables based on items already entered. Below we create

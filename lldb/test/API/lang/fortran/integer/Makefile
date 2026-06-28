@@ -1,6 +1,3 @@
-FFLAGS ?= -g -O0
+F_SOURCES := integers.f90
 
-a.out: integers.f90
-	$(FC) $(FFLAGS) $< -o a.out
-	
 include Makefile.rules
