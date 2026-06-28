@@ -2728,7 +2728,6 @@ LambdaScopeInfo *Sema::getCurGenericLambda() {
   return nullptr;
 }
 
-
 bool Sema::shouldRetainCommentsFromLexer(SourceLocation Loc) const {
   if (LangOpts.CommentOpts.ParseAllComments)
     return true;
