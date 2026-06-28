@@ -11,11 +11,11 @@ struct [[gsl::Pointer()]] View {
 
 struct Plain {
   Plain() {}
-  Plain(const Plain &other [[clang::lifetimebound]]) {} // expected-warning {{'lifetimebound' attribute has no effect on this function because return type 'Plain' cannot carry a lifetime}}
+  Plain(const Plain &other [[clang::lifetimebound]]) {}
   Plain operator+(const Plain &other [[clang::lifetimebound]]) const { return {}; } // expected-warning {{'lifetimebound' attribute has no effect on this function because return type 'Plain' cannot carry a lifetime}}
   Plain &operator=(const Plain &other [[clang::lifetimebound]]) { return *this; }
   operator int() const [[clang::lifetimebound]] { return 0; } // expected-warning {{'lifetimebound' attribute has no effect on this function because return type 'int' cannot carry a lifetime}}
-  Plain(const Owner &o [[clang::lifetimebound]]) {} // expected-warning {{'lifetimebound' attribute has no effect on this function because return type 'Plain' cannot carry a lifetime}}
+  Plain(const Owner &o [[clang::lifetimebound]]) {}
 };
 
 enum Enum { Enumerator };

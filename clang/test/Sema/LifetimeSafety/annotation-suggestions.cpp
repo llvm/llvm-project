@@ -1,7 +1,7 @@
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wlifetime-safety-annotation-placement -Wno-dangling -I%t -I%S -verify %t/test_source.cpp
-// RUN: %clang_cc1 -fsyntax-only -std=c++23 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wlifetime-safety-annotation-placement -Wno-dangling -I%t -I%S -verify %t/test_source.cpp
+// RUN: %clang_cc1 -fsyntax-only -std=c++23 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -I%S -verify %t/test_source.cpp
 // RUN: %clang_cc1 -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wlifetime-safety -Wno-dangling -I%t -I%S -fixit %t/test_source.cpp
 // RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety-suggestions -Wno-dangling -I%t -I%S -Werror=lifetime-safety-suggestions %t/test_source.cpp
 
@@ -615,7 +615,7 @@ namespace make_unique_suggestion {
 struct LifetimeBoundCtor {
   View v;
   // FIXME: This test fails to propagate the lifetimebound in ctor if this is inferred (instead of the current explicit annotation).
-  LifetimeBoundCtor(const MyObj& obj [[clang::lifetimebound]]): v(obj) {} // expected-warning {{'lifetimebound' attribute has no effect on this function because return type 'make_unique_suggestion::LifetimeBoundCtor' cannot carry a lifetime}}
+  LifetimeBoundCtor(const MyObj& obj [[clang::lifetimebound]]): v(obj) {}
 };
 
 std::unique_ptr<LifetimeBoundCtor> create_target(const MyObj& obj) { // expected-warning {{parameter in intra-TU function should be marked [[clang::lifetimebound]]}}
@@ -649,7 +649,7 @@ void test_new_allocation() {
 struct LifetimeBoundCtor {
   View v;
   LifetimeBoundCtor();
-  LifetimeBoundCtor(const MyObj& obj [[clang::lifetimebound]]) : v(obj) {} // expected-warning {{'lifetimebound' attribute has no effect on this function because return type 'new_allocation_suggestion::LifetimeBoundCtor' cannot carry a lifetime}}
+  LifetimeBoundCtor(const MyObj& obj [[clang::lifetimebound]]) : v(obj) {}
 };
 
 struct HasCtorField {

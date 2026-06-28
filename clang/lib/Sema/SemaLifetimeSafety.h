@@ -49,7 +49,8 @@ inline bool IsLifetimeSafetyEnabled(Sema &S, const Decl *D) {
       diag::warn_lifetime_safety_intra_tu_param_suggestion,
       diag::warn_lifetime_safety_cross_tu_this_suggestion,
       diag::warn_lifetime_safety_intra_tu_this_suggestion,
-      diag::warn_lifetime_safety_inapplicable_lifetimebound};
+      diag::warn_lifetime_safety_inapplicable_lifetimebound,
+      diag::warn_lifetime_safety_inapplicable_lifetimebound_return};
   for (unsigned DiagID : DiagIDs)
     if (!Diags.isIgnored(DiagID, D->getBeginLoc()))
       return true;
@@ -353,19 +354,28 @@ public:
         << Attr->getRange();
   }
 
-  void reportInapplicableLifetimebound(const ParmVarDecl *PVD, QualType Type,
-                                       bool IsReturnType) override {
+  void reportInapplicableLifetimebound(const ParmVarDecl *PVD,
+                                       QualType Type) override {
     assert(PVD->hasAttr<LifetimeBoundAttr>() &&
            "Expected parameter to have lifetimebound attribute");
     const auto *Attr = PVD->getAttr<LifetimeBoundAttr>();
-    unsigned DiagID =
-        IsReturnType
-            ? diag::warn_lifetime_safety_inapplicable_lifetimebound_return
-            : diag::warn_lifetime_safety_inapplicable_lifetimebound;
-    S.Diag(Attr->getLocation(), DiagID) << Type << Attr->getRange();
+    S.Diag(Attr->getLocation(),
+           diag::warn_lifetime_safety_inapplicable_lifetimebound)
+        << Type << Attr->getRange();
   }
 
-  void reportInapplicableLifetimebound(const CXXMethodDecl *MD) override {
+  void reportInapplicableLifetimeboundReturnTy(const ParmVarDecl *PVD,
+                                               QualType Type) override {
+    assert(PVD->hasAttr<LifetimeBoundAttr>() &&
+           "Expected parameter to have lifetimebound attribute");
+    const auto *Attr = PVD->getAttr<LifetimeBoundAttr>();
+    S.Diag(Attr->getLocation(),
+           diag::warn_lifetime_safety_inapplicable_lifetimebound_return)
+        << Type << Attr->getRange();
+  }
+
+  void
+  reportInapplicableLifetimeboundReturnTy(const CXXMethodDecl *MD) override {
     const auto *Attr = getImplicitObjectParamLifetimeBoundAttr(MD);
     assert(Attr && "Expected lifetimebound attribute");
     S.Diag(Attr->getLocation(),

@@ -488,21 +488,18 @@ public:
     if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(FDef))
       ReturnType = AST.getTypeDeclType(cast<TypeDecl>(Ctor->getParent()));
 
-    bool ReturnTypeHasOrigins =
-        FactMgr.getOriginMgr().hasOrigins(ReturnType,
-                                          /*IntrinsicOnly=*/true);
+    bool ReturnTypeHasOrigins = FactMgr.getOriginMgr().hasOrigins(ReturnType);
     if (getImplicitObjectParamLifetimeBoundAttr(FDef) && !ReturnTypeHasOrigins)
-      SemaHelper->reportInapplicableLifetimebound(cast<CXXMethodDecl>(FDef));
+      SemaHelper->reportInapplicableLifetimeboundReturnTy(
+          cast<CXXMethodDecl>(FDef));
 
     for (const auto &PVD : FDef->parameters())
       if (PVD->hasAttr<LifetimeBoundAttr>()) {
         if (!FactMgr.getOriginMgr().hasOrigins(PVD->getType(),
                                                /*IntrinsicOnly=*/true))
-          SemaHelper->reportInapplicableLifetimebound(PVD, PVD->getType(),
-                                                      /*IsReturnType=*/false);
-        if (!ReturnTypeHasOrigins)
-          SemaHelper->reportInapplicableLifetimebound(PVD, ReturnType,
-                                                      /*IsReturnType=*/true);
+          SemaHelper->reportInapplicableLifetimebound(PVD, PVD->getType());
+        if (!ReturnTypeHasOrigins && !isa<CXXConstructorDecl>(FDef))
+          SemaHelper->reportInapplicableLifetimeboundReturnTy(PVD, ReturnType);
       }
   }
 
