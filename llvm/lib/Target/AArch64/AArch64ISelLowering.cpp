@@ -9690,14 +9690,12 @@ bool AArch64TargetLowering::isEligibleForTailCallOptimization(
     return false;
 
   // Byval parameters hand the function a pointer directly into the stack area
-  // we want to reuse during a tail call. Working around this *is* possible (see
-  // X86) but less efficient and uglier in LowerCall.
+  // we want to reuse during a tail call. We route such arguments via a
+  // temporary in the current frame, so a function with byval arguments can
+  // still be tail-called.
   for (Function::const_arg_iterator i = CallerF.arg_begin(),
                                     e = CallerF.arg_end();
        i != e; ++i) {
-    if (i->hasByValAttr())
-      return false;
-
     // On Windows, "inreg" attributes signify non-aggregate indirect returns.
     // In this case, it is necessary to save X0/X1 in the callee and return it
     // in X0. Tail call opt may interfere with this, so we disable tail call
@@ -9977,6 +9975,51 @@ getSMToggleCondition(const SMECallAttrs &CallAttrs) {
     return AArch64SME::IfCallerIsNonStreaming;
 
   llvm_unreachable("Unsupported attributes");
+}
+
+// Returns the type of copying which is required to set up a byval argument to
+// a tail-called function. This isn't needed for non-tail calls, because they
+// always need the equivalent of CopyOnce, but tail-calls sometimes need two to
+// avoid clobbering another argument (CopyViaTemp), and sometimes can be
+// optimised to zero copies when forwarding an argument from the caller's
+// caller (NoCopy).
+AArch64TargetLowering::ByValCopyKind
+AArch64TargetLowering::ByValNeedsCopyForTailCall(SelectionDAG &DAG, SDValue Src,
+                                                 SDValue Dst,
+                                                 ISD::ArgFlagsTy Flags) const {
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+
+  // Globals are always safe to copy from.
+  if (isa<GlobalAddressSDNode>(Src) || isa<ExternalSymbolSDNode>(Src))
+    return CopyOnce;
+
+  // Can only analyse frame index nodes, conservatively assume we need a
+  // temporary.
+  auto *SrcFrameIdxNode = dyn_cast<FrameIndexSDNode>(Src);
+  auto *DstFrameIdxNode = dyn_cast<FrameIndexSDNode>(Dst);
+  if (!SrcFrameIdxNode || !DstFrameIdxNode)
+    return CopyViaTemp;
+
+  int SrcFI = SrcFrameIdxNode->getIndex();
+  int DstFI = DstFrameIdxNode->getIndex();
+  assert(MFI.isFixedObjectIndex(DstFI) &&
+         "byval passed in non-fixed stack slot");
+
+  int64_t SrcOffset = MFI.getObjectOffset(SrcFI);
+  int64_t DstOffset = MFI.getObjectOffset(DstFI);
+
+  // If the source is in the local frame, then the copy to the argument memory
+  // is always valid.
+  bool FixedSrc = MFI.isFixedObjectIndex(SrcFI);
+  if (!FixedSrc || (FixedSrc && SrcOffset < 0))
+    return CopyOnce;
+
+  // If the value is already in the correct location, then no copying is
+  // needed. If not, then we need to copy via a temporary.
+  if (SrcOffset == DstOffset)
+    return NoCopy;
+  else
+    return CopyViaTemp;
 }
 
 /// Check whether a stack argument requires lowering in a tail call.
