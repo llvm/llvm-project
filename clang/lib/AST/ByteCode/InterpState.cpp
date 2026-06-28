@@ -19,8 +19,8 @@ using namespace clang::interp;
 
 InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
                          Context &Ctx, SourceMapper *M)
-    : State(Ctx.getASTContext(), Parent.getEvalStatus()), M(M), P(P), Stk(Stk),
-      Ctx(Ctx), BottomFrame(*this), Current(&BottomFrame),
+    : State(Ctx.getASTContext(), Parent.getSemaProxy(), Parent.getEvalStatus()),
+      M(M), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this), Current(&BottomFrame),
       StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
       InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
   InConstantContext = Parent.InConstantContext;
@@ -32,9 +32,9 @@ InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
 
 InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
                          Context &Ctx, const Function *Func)
-    : State(Ctx.getASTContext(), Parent.getEvalStatus()), M(nullptr), P(P),
-      Stk(Stk), Ctx(Ctx), BottomFrame(*this), Current(&BottomFrame),
-      StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
+    : State(Ctx.getASTContext(), Parent.getSemaProxy(), Parent.getEvalStatus()),
+      M(nullptr), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
+      Current(&BottomFrame), StepsLeft(Ctx.getLangOpts().ConstexprStepLimit),
       InfiniteSteps(StepsLeft == 0), EvalID(Ctx.getEvalID()) {
   InConstantContext = Parent.InConstantContext;
   CheckingPotentialConstantExpression =

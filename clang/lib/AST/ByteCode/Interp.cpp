@@ -21,6 +21,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/SemaProxy.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
@@ -1803,9 +1804,25 @@ bool CheckBitCast(InterpState &S, CodePtr OpPC, const Type *TargetType,
   return true;
 }
 
-static void compileFunction(InterpState &S, const Function *Func) {
+static void compileFunction(InterpState &S, const Function *Func,
+                            CodePtr OpPC) {
+  const FunctionDecl *Fn = Func->getDecl();
+
+  // [C++26] [temp.inst] p5
+  // [...] the function template specialization is implicitly instantiated
+  // when the specialization is referenced in a context that requires a function
+  // definition to exist or if the existence of the definition affects the
+  // semantics of the program.
+  if (FunctionDefinitionCanBeLazilyInstantiated(Fn) && S.inConstantContext()) {
+    SemaProxy *SP = S.getSemaProxy();
+    if (!SP)
+      return;
+    SP->instantiateFunctionDefinition(S.Current->getLocation(OpPC),
+                                      const_cast<FunctionDecl *>(Fn));
+  }
+
   const FunctionDecl *Definition;
-  if (!Func->getDecl()->getBody(Definition))
+  if (!Fn->getBody(Definition))
     return;
   if (!Definition)
     return;
@@ -1838,7 +1855,7 @@ bool CallVar(InterpState &S, CodePtr OpPC, const Function *Func,
   }
 
   if (!Func->isFullyCompiled())
-    compileFunction(S, Func);
+    compileFunction(S, Func, OpPC);
 
   if (!CheckCallable(S, OpPC, Func))
     return false;
@@ -1925,7 +1942,7 @@ bool Call(InterpState &S, CodePtr OpPC, const Function *Func,
   }
 
   if (!Func->isFullyCompiled())
-    compileFunction(S, Func);
+    compileFunction(S, Func, OpPC);
 
   if (!CheckCallable(S, OpPC, Func))
     return cleanup();
@@ -2343,7 +2360,7 @@ bool CallPtr(InterpState &S, CodePtr OpPC, uint32_t ArgSize,
   // because the Call/CallVirt below might access the instance pointer
   // but the Function's information about them is wrong.
   if (!F->isFullyCompiled())
-    compileFunction(S, F);
+    compileFunction(S, F, OpPC);
 
   if (!CheckCallable(S, OpPC, F))
     return false;

@@ -795,8 +795,8 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
   SmallVector<PartialDiagnosticAt, 2> EvaluationDiags;
   Expr::EvalResult EvalResult;
   EvalResult.Diag = &EvaluationDiags;
-  if (!SubstitutedAtomicExpr.get()->EvaluateAsConstantExpr(EvalResult,
-                                                           S.Context) ||
+  if (!SubstitutedAtomicExpr.get()->EvaluateAsMandatedConstantExpr(
+          EvalResult, S.Context, S.getProxyForEval()) ||
       !EvaluationDiags.empty()) {
     // C++2a [temp.constr.atomic]p1
     //   ...E shall be a constant expression of type bool.

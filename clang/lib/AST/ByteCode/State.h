@@ -20,6 +20,7 @@
 
 namespace clang {
 class OptionalDiagnostic;
+class SemaProxy;
 
 /// Kinds of access we can perform on an object, for diagnostics. Note that
 /// we consider a member function call to be a kind of access, even though
@@ -80,8 +81,8 @@ class SourceInfo;
 /// Interface for the VM to interact with the AST walker's context.
 class State {
 public:
-  State(ASTContext &ASTCtx, Expr::EvalStatus &EvalStatus)
-      : Ctx(ASTCtx), EvalStatus(EvalStatus) {}
+  State(ASTContext &ASTCtx, SemaProxy *Sema, Expr::EvalStatus &EvalStatus)
+      : Ctx(ASTCtx), Sema(Sema), EvalStatus(EvalStatus) {}
   virtual ~State();
 
   virtual const Frame *getCurrentFrame() = 0;
@@ -90,6 +91,7 @@ public:
 
   Expr::EvalStatus &getEvalStatus() const { return EvalStatus; }
   ASTContext &getASTContext() const { return Ctx; }
+  SemaProxy *getSemaProxy() const { return Sema; }
   const LangOptions &getLangOpts() const { return Ctx.getLangOpts(); }
 
   /// Note that we have had a side-effect, and determine whether we should
@@ -188,6 +190,7 @@ public:
 
   EvaluationMode EvalMode;
   ASTContext &Ctx;
+  SemaProxy *Sema;
   Expr::EvalStatus &EvalStatus;
 
 private:

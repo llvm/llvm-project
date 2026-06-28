@@ -819,6 +819,7 @@ Bug Fixes to C++ Support
 - Fixed an issue where Clang incorrectly accepted invalid unqualified uses of local nested class names outside their declaring scope. (#GH184622)
 - Fixed a crash when parsing invalid friend declaration with storage-class specifier. (#GH186569)
 - Fixed a missing vtable for ``dynamic_cast<FinalClass *>(this)`` in a function template. (#GH198511)
+- Instantiate constexpr functions as needed before they are evaluated. (#GH73232) (#GH35052) (#GH100897)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

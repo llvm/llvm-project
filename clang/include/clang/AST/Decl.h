@@ -70,6 +70,7 @@ class Module;
 class NamespaceDecl;
 class ParmVarDecl;
 class RecordDecl;
+class SemaProxy;
 class Stmt;
 class StringLiteral;
 class TagDecl;
@@ -1436,6 +1437,7 @@ public:
 
 private:
   const APValue *evaluateValueImpl(SmallVectorImpl<PartialDiagnosticAt> *Notes,
+                                   SemaProxy *SP,
                                    bool IsConstantInitialization) const;
 
 public:
@@ -1451,6 +1453,15 @@ public:
   /// \return \c true if this variable has constant destruction, \c false if
   ///         not.
   bool evaluateDestruction(SmallVectorImpl<PartialDiagnosticAt> &Notes) const;
+
+  /// Evaluate the destruction of a variable that is required by the language to
+  /// have constant destruction.
+  ///
+  /// \pre hasConstantInitialization()
+  /// \return \c true if this variable has constant destruction, \c false if
+  ///         not.
+  bool evaluateConstantDestruction(SmallVectorImpl<PartialDiagnosticAt> &Notes,
+                                   SemaProxy &SP) const;
 
   /// Determine whether this variable has constant initialization.
   ///
@@ -1468,8 +1479,9 @@ public:
   /// Evaluate the initializer of this variable to determine whether it's a
   /// constant initializer. Should only be called once, after completing the
   /// definition of the variable.
-  bool checkForConstantInitialization(
-      SmallVectorImpl<PartialDiagnosticAt> &Notes) const;
+  bool
+  checkForConstantInitialization(SmallVectorImpl<PartialDiagnosticAt> &Notes,
+                                 SemaProxy &SP) const;
 
   void setInitStyle(InitializationStyle Style) {
     VarDeclBits.InitStyle = Style;

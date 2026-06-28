@@ -18049,10 +18049,10 @@ Sema::VerifyIntegerConstantExpression(Expr *E, llvm::APSInt *Result,
 
   // Try to evaluate the expression, and produce diagnostics explaining why it's
   // not a constant expression as a side-effect.
-  bool Folded =
-      E->EvaluateAsRValue(EvalResult, Context, /*isConstantContext*/ true) &&
-      EvalResult.Val.isInt() && !EvalResult.HasSideEffects &&
-      (!getLangOpts().CPlusPlus || !EvalResult.HasUndefinedBehavior);
+  bool Folded = E->EvaluateAsMandatedConstantRValue(EvalResult, Context,
+                                                    getProxyForEval()) &&
+                EvalResult.Val.isInt() && !EvalResult.HasSideEffects &&
+                (!getLangOpts().CPlusPlus || !EvalResult.HasUndefinedBehavior);
 
   if (!isa<ConstantExpr>(E))
     E = ConstantExpr::Create(Context, E, EvalResult.Val);
@@ -18352,8 +18352,9 @@ ExprResult Sema::CheckForImmediateInvocation(ExprResult E, FunctionDecl *Decl) {
   APValue Cached;
   auto CheckConstantExpressionAndKeepResult = [&]() {
     Expr::EvalResult Eval;
-    bool Res = E.get()->EvaluateAsConstantExpr(
-        Eval, getASTContext(), ConstantExprKind::ImmediateInvocation);
+    bool Res = E.get()->EvaluateAsMandatedConstantExpr(
+        Eval, getASTContext(), getProxyForEval(),
+        ConstantExprKind::ImmediateInvocation);
     if (Res && !Eval.DiagEmitted) {
       Cached = std::move(Eval.Val);
       return true;
@@ -18408,8 +18409,9 @@ static void EvaluateAndDiagnoseImmediateInvocation(
   Expr::EvalResult Eval;
   Eval.Diag = &Notes;
   ConstantExpr *CE = Candidate.getPointer();
-  bool Result = CE->EvaluateAsConstantExpr(
-      Eval, SemaRef.getASTContext(), ConstantExprKind::ImmediateInvocation);
+  bool Result = CE->EvaluateAsMandatedConstantExpr(
+      Eval, SemaRef.getASTContext(), SemaRef.getProxyForEval(),
+      ConstantExprKind::ImmediateInvocation);
   if (!Result || !Notes.empty()) {
     SemaRef.FailedImmediateInvocations.insert(CE);
     Expr *InnerExpr = CE->getSubExpr()->IgnoreImplicit();

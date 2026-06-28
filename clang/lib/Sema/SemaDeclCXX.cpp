@@ -16516,8 +16516,8 @@ void Sema::FinalizeVarWithDestructor(VarDecl *VD, CXXRecordDecl *ClassDecl) {
     if (VD->getInit() && !VD->getInit()->isValueDependent())
       HasConstantInit = VD->evaluateValue();
     SmallVector<PartialDiagnosticAt, 8> Notes;
-    if (!VD->evaluateDestruction(Notes) && VD->isConstexpr() &&
-        HasConstantInit) {
+    if (!VD->evaluateConstantDestruction(Notes, getProxyForEval()) &&
+        VD->isConstexpr() && HasConstantInit) {
       Diag(VD->getLocation(),
            diag::err_constexpr_var_requires_const_destruction) << VD;
       for (const PartialDiagnosticAt &Note : Notes)
@@ -17933,7 +17933,8 @@ static bool EvaluateAsStringImpl(Sema &SemaRef, Expr *Message,
   SmallVector<PartialDiagnosticAt, 8> Notes;
   Status.Diag = &Notes;
   if (!Message->EvaluateCharRangeAsString(Result, EvaluatedSize.get(),
-                                          EvaluatedData.get(), Ctx, Status) ||
+                                          EvaluatedData.get(), Ctx,
+                                          SemaRef.getProxyForEval(), Status) ||
       !Notes.empty()) {
     SemaRef.Diag(Message->getBeginLoc(),
                  ErrorOnInvalidMessage ? diag::err_user_defined_msg_constexpr
