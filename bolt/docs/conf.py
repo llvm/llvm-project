@@ -21,6 +21,28 @@ globals().update(common_conf(tags, markdown=Markdown.NEVER))
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
+extensions = ["sphinx.ext.intersphinx", "sphinx.ext.todo"]
+
+try:
+    import myst_parser
+
+    extensions.append("myst_parser")
+except ImportError:
+    raise
+
+myst_heading_anchors = 6
+
+# Add any paths that contain templates here, relative to this directory.
+templates_path = ["_templates"]
+
+# The suffix of source filenames.
+source_suffix = [".rst", ".md"]
+
+# The encoding of source files.
+# source_encoding = 'utf-8-sig'
+
+# The master toctree document.
+master_doc = "index"
 extensions += ["sphinx.ext.intersphinx", "sphinx.ext.todo"]
 
 # General information about the project.
