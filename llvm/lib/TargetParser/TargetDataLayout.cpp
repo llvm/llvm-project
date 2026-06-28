@@ -552,6 +552,31 @@ static std::string computeVEDataLayout(const Triple &T) {
   return Ret;
 }
 
+static std::string computeSuperHDataLayout(const Triple &T) {
+
+  // Mixed-endian
+  std::string Ret = T.getArch() == Triple::sh_le ? "e" : "E";
+
+  // ELF name manging
+  Ret += "-m:e";
+
+  // 32-bit pointers, 32 bit aligned
+  Ret += "-p:32:32";
+
+  // 32 bit integers, 32 bit aligned
+  Ret += "-i32:32";
+
+  // 32 bit alignment of objects of aggregate type
+  Ret += "-a:0:32";
+
+  // 32 bit native integer width
+  Ret += "-n32";
+
+  // 32 bit natural stack alignment
+  Ret += "-S32";
+  return Ret;
+}
+
 std::string Triple::computeDataLayout(StringRef ABIName) const {
   switch (getArch()) {
   case Triple::arm:
@@ -611,6 +636,9 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
     return computeSparcDataLayout(*this);
   case Triple::systemz:
     return computeSystemZDataLayout(*this);
+  case Triple::sh:
+  case Triple::sh_le:
+    return computeSuperHDataLayout(*this);
   case Triple::tce:
     return "E-p:32:32:32-i1:8:8-i8:8:32-i16:16:32-i32:32:32-i64:32:32-"
            "f16:16:16-f32:32:32-f64:32:32-v64:64:64-i128:128-v128:128:128-"
