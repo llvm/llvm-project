@@ -923,15 +923,15 @@ static CallInst *canonicalizeConstantArg0ToArg1(CallInst &Call) {
   if (isa<Constant>(Arg0) && !isa<Constant>(Arg1)) {
     Call.setArgOperand(0, Arg1);
     Call.setArgOperand(1, Arg0);
-    auto CallAttr = Call.getAttributes();
-    auto LHSAttr = CallAttr.getParamAttrs(0);
-    auto RHSAttr = CallAttr.getParamAttrs(1);
+    AttributeList CallAttr = Call.getAttributes();
+    AttributeSet LHSAttr = CallAttr.getParamAttrs(0);
+    AttributeSet RHSAttr = CallAttr.getParamAttrs(1);
     LLVMContext &Ctx = Call.getContext();
-    Call.setAttributes(
-        CallAttr.removeAttributesAtIndex(Ctx, 0)
-            .removeAttributesAtIndex(Ctx, 1)
-            .addParamAttributes(Ctx, 0, AttrBuilder(Ctx, RHSAttr))
-            .addParamAttributes(Ctx, 1, AttrBuilder(Ctx, LHSAttr)));
+    Call.setAttributes(CallAttr
+                           .setAttributesAtIndex(
+                               Ctx, AttributeList::FirstArgIndex + 0, RHSAttr)
+                           .setAttributesAtIndex(
+                               Ctx, AttributeList::FirstArgIndex + 1, LHSAttr));
     return &Call;
   }
   return nullptr;
@@ -4107,8 +4107,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     Value *Arg = II->getArgOperand(0);
     Value *Vect;
 
-    if (Value *NewOp = simplifyReductionOperand(Arg, /*CanReorderLanes=*/true))
-      return replaceOperand(*II, 0, NewOp);
+    if (Value *NewOp =
+            simplifyReductionOperand(Arg, /*CanReorderLanes=*/true)) {
+      replaceUse(II->getOperandUse(0), NewOp);
+      return II;
+    }
 
     if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
       if (auto *FTy = dyn_cast<FixedVectorType>(Vect->getType()))
@@ -4144,7 +4147,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
       if (Value *NewOp =
               simplifyReductionOperand(Arg, /*CanReorderLanes=*/true)) {
-        return replaceOperand(*II, 0, NewOp);
+        replaceUse(II->getOperandUse(0), NewOp);
+        return II;
       }
 
       // vector.reduce.add.vNiM(splat(%x)) -> mul(%x, N)
@@ -4189,8 +4193,10 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       Value *Vect;
 
       if (Value *NewOp =
-              simplifyReductionOperand(Arg, /*CanReorderLanes=*/true))
-        return replaceOperand(*II, 0, NewOp);
+              simplifyReductionOperand(Arg, /*CanReorderLanes=*/true)) {
+        replaceUse(II->getOperandUse(0), NewOp);
+        return II;
+      }
 
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
         if (auto *VTy = dyn_cast<VectorType>(Vect->getType()))
@@ -4211,7 +4217,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
       if (Value *NewOp =
               simplifyReductionOperand(Arg, /*CanReorderLanes=*/true)) {
-        return replaceOperand(*II, 0, NewOp);
+        replaceUse(II->getOperandUse(0), NewOp);
+        return II;
       }
 
       // vector_reduce_mul(zext(<n x i1>)), or
@@ -4252,7 +4259,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
       if (Value *NewOp =
               simplifyReductionOperand(Arg, /*CanReorderLanes=*/true)) {
-        return replaceOperand(*II, 0, NewOp);
+        replaceUse(II->getOperandUse(0), NewOp);
+        return II;
       }
 
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
@@ -4293,7 +4301,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
       if (Value *NewOp =
               simplifyReductionOperand(Arg, /*CanReorderLanes=*/true)) {
-        return replaceOperand(*II, 0, NewOp);
+        replaceUse(II->getOperandUse(0), NewOp);
+        return II;
       }
 
       if (match(Arg, m_ZExtOrSExtOrSelf(m_Value(Vect)))) {
@@ -4327,7 +4336,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
                                 : 0;
     Value *Arg = II->getArgOperand(ArgIdx);
     if (Value *NewOp = simplifyReductionOperand(Arg, CanReorderLanes)) {
-      return replaceOperand(*II, ArgIdx, NewOp);
+      replaceUse(II->getOperandUse(ArgIdx), NewOp);
+      return nullptr;
     }
     break;
   }
