@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdpal < %s | FileCheck -check-prefix=GCN -enable-var-scope %s
+; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx600 < %s | FileCheck -check-prefix=GCN -enable-var-scope %s
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tonga < %s | FileCheck -check-prefix=GCN -enable-var-scope %s
 ; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 < %s | FileCheck -check-prefix=GCN -enable-var-scope %s
 

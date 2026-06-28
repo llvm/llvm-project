@@ -1068,10 +1068,10 @@ void CIRGenFunction::emitNewArrayInitializer(
       remainingSize = builder.createSub(loc, remainingSize, initSizeOp);
     }
 
-    // Create the memset.
-    mlir::Value castOp =
-        builder.createPtrBitcast(curPtr.getPointer(), cgm.voidTy);
-    builder.createMemSet(loc, castOp, builder.getConstInt(loc, cgm.uInt8Ty, 0),
+    // Create the memset.  Use the Address overload so the destination
+    // alignment from curPtr is carried onto the memset.
+    Address voidPtr = curPtr.withElementType(builder, cgm.voidTy);
+    builder.createMemSet(loc, voidPtr, builder.getConstInt(loc, cgm.uInt8Ty, 0),
                          remainingSize);
     return true;
   };
@@ -1228,12 +1228,11 @@ void CIRGenFunction::emitNewArrayInitializer(
     if (ctor->isTrivial()) {
       // If new expression did not specify value-initialization, then there
       // is no initialization.
-      if (!cce->requiresZeroInitialization())
+      if (!cce->requiresZeroInitialization() || ctor->getParent()->isEmpty())
         return;
 
-      cgm.errorNYI(cce->getSourceRange(),
-                   "emitNewArrayInitializer: trivial ctor zero-init");
-      return;
+      if (tryMemsetInitialization())
+        return;
     }
 
     // Store the new Cleanup position for irregular Cleanups.

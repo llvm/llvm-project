@@ -25,6 +25,7 @@
 #include "flang/Semantics/openmp-utils.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include "flang/Support/Flags.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Frontend/OpenMP/OMP.h.inc"
@@ -1654,6 +1655,13 @@ void AccAttributeVisitor::CheckAssociatedLoop(
     return;
   }
 
+  // Non-standard extension; warn for collapse(N>1) on a DO CONCURRENT.
+  if (outerDoConstruct.IsDoConcurrent() && level > 1) {
+    context_.Warn(common::UsageWarning::Portability,
+        GetContext().directiveSource,
+        "COLLAPSE on DO CONCURRENT is non-standard"_warn_en_US);
+  }
+
   const auto getNextDoConstruct =
       [this, forceCollapsed](const parser::Block &block,
           std::int64_t &level) -> const parser::DoConstruct * {
@@ -1849,8 +1857,9 @@ void AccAttributeVisitor::Post(const parser::Name &name) {
             context_.Warn(
                 common::LanguageFeature::OpenAccDefaultNoneScalarsStrict,
                 name.source,
-                "Implicit attribute inferred for DEFAULT(NONE) scalar '%s'"_warn_en_US,
-                symbol.name());
+                "OpenACC DEFAULT(NONE) ignored for scalar '%s' (%s)"_warn_en_US,
+                symbol.name(),
+                context_.openAccDefaultNoneScalarsStrictDisableOption());
           } else {
             context_.Say(name.source,
                 "The DEFAULT(NONE) clause requires that '%s' must be listed in a data-mapping clause"_err_en_US,
@@ -2728,7 +2737,8 @@ void OmpAttributeVisitor::CreateImplicitSymbols(
       // 4) not mapped target variable  -> firstprivate
       //    - i.e. implicit, but meets OpenMP specification rules for
       //    firstprivate "promotion"
-      if (IsTargetCaptureImplicitlyFirstprivatizeable(*symbol, prevDSA,
+      if (enableDelayedPrivatizationStaging &&
+          IsTargetCaptureImplicitlyFirstprivatizeable(*symbol, prevDSA,
               dataSharingAttributeFlags, dataMappingAttributeFlags,
               dirContext.defaultMap)) {
         prevDSA.set(Symbol::Flag::OmpImplicit);
@@ -3168,6 +3178,9 @@ void OmpAttributeVisitor::ResolveOmpObject(
           },
           [&](const parser::Name &name) { // common block
             ResolveOmpCommonBlock(name, ompFlag);
+          },
+          [&](const parser::OmpLocator &ref) {
+            // Do nothing here.
           },
           [&](const parser::OmpObject::Invalid &invalid) {
             switch (invalid.v) {

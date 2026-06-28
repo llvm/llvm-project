@@ -188,9 +188,9 @@ public:
     }
 
     if (callOp.getNumResults() <= 1) {
-      rewriter.replaceOpWithNewOp<emitc::CallOp>(
-          callOp, callOp.getResultTypes(), adaptor.getOperands(),
-          callOp->getAttrs());
+      rewriter.replaceOpWithNewOp<emitc::CallOp>(callOp, convertedResultTypes,
+                                                 adaptor.getOperands(),
+                                                 callOp->getAttrs());
       return success();
     }
 

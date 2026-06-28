@@ -261,6 +261,30 @@ static void emitAtomicFenceOp(CIRGenFunction &cgf, const CallExpr *expr,
                                  emitAtomicOpCallBackFn);
 }
 
+// Emit a runtime call to bool __atomic_is_lock_free(size_t size, void *ptr).
+// For the __c11 builtin the pointer is null, since an _Atomic object is always
+// suitably aligned.
+static RValue emitAtomicIsLockFree(CIRGenFunction &cgf, const CallExpr *e,
+                                   unsigned builtinID) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location loc = cgf.getLoc(e->getExprLoc());
+
+  mlir::Type sizeTy = cgf.convertType(cgf.getContext().getSizeType());
+  mlir::Value size = cgf.emitScalarExpr(e->getArg(0));
+  mlir::Value ptr;
+  if (builtinID == Builtin::BI__atomic_is_lock_free)
+    ptr = builder.createBitcast(cgf.emitScalarExpr(e->getArg(1)),
+                                builder.getVoidPtrTy());
+  else
+    ptr = builder.getNullPtr(builder.getVoidPtrTy(), loc);
+
+  cir::FuncOp func = cgf.cgm.createRuntimeFunction(
+      cir::FuncType::get({sizeTy, builder.getVoidPtrTy()}, builder.getBoolTy()),
+      "__atomic_is_lock_free");
+  return RValue::get(
+      builder.createCallOp(loc, func, mlir::ValueRange{size, ptr}).getResult());
+}
+
 namespace {
 struct WidthAndSignedness {
   unsigned width;
@@ -284,7 +308,7 @@ getIntegerWidthAndSignedness(const clang::ASTContext &astContext,
 template <typename OpTy>
 static std::pair<mlir::Value, mlir::Value>
 emitOverflowOp(CIRGenBuilderTy &builder, mlir::Location loc,
-               cir::IntType resultTy, mlir::Value lhs, mlir::Value rhs) {
+               mlir::Type resultTy, mlir::Value lhs, mlir::Value rhs) {
   auto op = OpTy::create(builder, loc, resultTy, lhs, rhs);
   return {op.getResult(), op.getOverflow()};
 }
@@ -1695,7 +1719,30 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                                    mlir::ValueRange{a, b, c}));
   }
   case Builtin::BI__builtin_elementwise_add_sat:
-  case Builtin::BI__builtin_elementwise_sub_sat:
+  case Builtin::BI__builtin_elementwise_sub_sat: {
+    // cir.add/cir.sub do not model i1 arithmetic, so a bool-element
+    // saturating add/sub is not representable through the saturated op.
+    // Bail before emitScalarExpr: an ext-vector-of-bool operand would
+    // otherwise hit the NYI bool-vector load, which returns a null value
+    // and would crash op0.getType().
+    QualType argTy = e->getArg(0)->getType();
+    if (argTy->isBooleanType() || argTy->isExtVectorBoolType()) {
+      cgm.errorNYI(e->getSourceRange(),
+                   "saturating add/sub on a boolean operand");
+      return RValue::get(nullptr);
+    }
+    mlir::Location loc = getLoc(e->getExprLoc());
+    mlir::Value op0 = emitScalarExpr(e->getArg(0));
+    mlir::Value op1 = emitScalarExpr(e->getArg(1));
+    assert(cir::isIntOrVectorOfIntType(op0.getType()) &&
+           "elementwise saturating add/sub requires integer operands");
+    mlir::Value val =
+        builtinIDIfNoAsmLabel == Builtin::BI__builtin_elementwise_add_sat
+            ? builder.createAdd(loc, op0, op1, cir::OverflowBehavior::Saturated)
+            : builder.createSub(loc, op0, op1,
+                                cir::OverflowBehavior::Saturated);
+    return RValue::get(val);
+  }
   case Builtin::BI__builtin_elementwise_max:
   case Builtin::BI__builtin_elementwise_min:
   case Builtin::BI__builtin_elementwise_maxnum:
@@ -1708,9 +1755,22 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_reduce_min:
   case Builtin::BI__builtin_reduce_add:
   case Builtin::BI__builtin_reduce_mul:
+    return errorBuiltinNYI(*this, e, builtinID);
   case Builtin::BI__builtin_reduce_xor:
+    return emitBuiltinWithOneOverloadedType<1>(
+        e, "vector.reduce.xor",
+        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
+            .getElementType());
   case Builtin::BI__builtin_reduce_or:
+    return emitBuiltinWithOneOverloadedType<1>(
+        e, "vector.reduce.or",
+        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
+            .getElementType());
   case Builtin::BI__builtin_reduce_and:
+    return emitBuiltinWithOneOverloadedType<1>(
+        e, "vector.reduce.and",
+        cast<cir::VectorType>(convertType(e->getArg(0)->getType()))
+            .getElementType());
   case Builtin::BI__builtin_reduce_assoc_fadd:
   case Builtin::BI__builtin_reduce_in_order_fadd:
   case Builtin::BI__builtin_reduce_maximum:
@@ -2126,10 +2186,27 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                     cir::SyncScopeKind::System));
     return RValue::get(nullptr);
   }
-  case Builtin::BI__builtin_nontemporal_load:
-  case Builtin::BI__builtin_nontemporal_store:
+  case Builtin::BI__builtin_nontemporal_load: {
+    Address addr = emitPointerWithAlignment(e->getArg(0));
+    LValue lv = makeAddrLValue(addr, e->getType(),
+                               LValueBaseInfo(AlignmentSource::Type));
+    lv.setNontemporal(true);
+    mlir::Value val = emitLoadOfScalar(lv, e->getExprLoc());
+    return RValue::get(val);
+  }
+  case Builtin::BI__builtin_nontemporal_store: {
+    mlir::Value val = emitScalarExpr(e->getArg(0));
+    Address addr = emitPointerWithAlignment(e->getArg(1));
+    val = emitToMemory(val, e->getArg(0)->getType());
+    LValue lv = makeAddrLValue(addr, e->getArg(0)->getType(),
+                               LValueBaseInfo(AlignmentSource::Type));
+    lv.setNontemporal(true);
+    emitStoreOfScalar(val, lv, /*isInit=*/false);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__c11_atomic_is_lock_free:
   case Builtin::BI__atomic_is_lock_free:
+    return emitAtomicIsLockFree(*this, e, builtinID);
   case Builtin::BI__atomic_test_and_set:
   case Builtin::BI__atomic_clear:
     return errorBuiltinNYI(*this, e, builtinID);
@@ -2196,7 +2273,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
 
     auto encompassingCIRTy = cir::IntType::get(
         &getMLIRContext(), encompassingInfo.width, encompassingInfo.isSigned);
-    auto resultCIRTy = mlir::cast<cir::IntType>(cgm.convertType(resultQTy));
+    mlir::Type resultCIRTy = cgm.convertType(resultQTy);
 
     mlir::Value x = emitScalarExpr(leftArg);
     mlir::Value y = emitScalarExpr(rightArg);
@@ -2242,7 +2319,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     //     first computed as a value of the encompassing type, and then it is
     //     truncated to the actual result type with a second overflow checking.
     //   - In CIRGen, the checked arithmetic operation directly produce the
-    //     checked arithmetic result in its expected type.
+    //     checked arithmetic result in its expected type, which may be a
+    //     `cir.bool`.
     //
     // So we don't need a truncation and a second overflow checking here.
 

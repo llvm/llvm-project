@@ -14,6 +14,14 @@
 # CHECK-SAME: "-lc"
 # CHECK-SAME: "-o" "{{.*}}.tmp.out"
 
+# RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c++ %s -### -Werror -o %t.out 2>&1 \
+# RUN:     --target=thumbv8m.main-none-eabihf --cstdlib=picolibc --sysroot= \
+# RUN:   | FileCheck --check-prefix=CHECK-CSTDLIB %s
+# CHECK-CSTDLIB:      "-cc1" "-triple" "thumbv8m.main-unknown-none-eabihf"
+# CHECK-CSTDLIB-SAME: "-internal-isystem" "[[SYSROOT:[^"]*]]/bin/../lib/clang-runtimes/arm-none-eabi/thumb/v8-m.main/fp/picolibc/include/c++/v1"
+# CHECK-CSTDLIB-NEXT: ld{{(.exe)?}}" "-Bstatic"
+# CHECK-CSTDLIB-SAME: "-L[[SYSROOT]]/bin/../lib/clang-runtimes/arm-none-eabi/thumb/v8-m.main/fp/picolibc/lib"
+
 # RUN: %clang --multi-lib-config=%s -no-canonical-prefixes -x c++ %s -### -o %t.out 2>&1 \
 # RUN:     --target=thumbv7em-none-eabi -mfpu=fpv4-sp-d16 --sysroot= \
 # RUN:   | FileCheck --check-prefix=CHECK-NO-MATCH %s
@@ -105,6 +113,9 @@ Variants:
 
 - Dir: arm-none-eabi/thumb/v8-m.main/fp
   Flags: [--target=thumbv8m.main-unknown-none-eabihf, -mfpu=fpv5-d16]
+
+- Dir: arm-none-eabi/thumb/v8-m.main/fp/picolibc
+  Flags: [--target=thumbv8m.main-unknown-none-eabihf, --cstdlib=picolibc, -mfpu=fpv5-d16]
 
 - Dir: arm-none-eabi/thumb/v8.1-m.main/fp
   Flags: [--target=thumbv8.1m.main-unknown-none-eabihf, -mfpu=fp-armv8-fullfp16-sp-d16]

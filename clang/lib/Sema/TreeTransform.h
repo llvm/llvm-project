@@ -2826,11 +2826,9 @@ public:
   /// By default, performs semantic analysis to build the new expression.
   /// Subclasses may override this routine to provide different behavior.
   ExprResult RebuildOffsetOfExpr(SourceLocation OperatorLoc,
-                                 TypeSourceInfo *Type,
-                                 ArrayRef<Sema::OffsetOfComponent> Components,
+                                 TypeSourceInfo *Type, const Designation &Desig,
                                  SourceLocation RParenLoc) {
-    return getSema().BuildBuiltinOffsetOf(OperatorLoc, Type, Components,
-                                          RParenLoc);
+    return getSema().BuildBuiltinOffsetOf(OperatorLoc, Type, Desig, RParenLoc);
   }
 
   /// Build a new sizeof, alignof or vec_step expression with a
@@ -13405,21 +13403,16 @@ TreeTransform<Derived>::TransformOffsetOfExpr(OffsetOfExpr *E) {
   if (!Type)
     return ExprError();
 
-  // Transform all of the components into components similar to what the
-  // parser uses.
+  // Transform all of the components into a Designation similar to what the
+  // parser builds.
   // FIXME: It would be slightly more efficient in the non-dependent case to
   // just map FieldDecls, rather than requiring the rebuilder to look for
   // the fields again. However, __builtin_offsetof is rare enough in
   // template code that we don't care.
   bool ExprChanged = false;
-  typedef Sema::OffsetOfComponent Component;
-  SmallVector<Component, 4> Components;
+  Designation Desig;
   for (unsigned I = 0, N = E->getNumComponents(); I != N; ++I) {
     const OffsetOfNode &ON = E->getComponent(I);
-    Component Comp;
-    Comp.isBrackets = true;
-    Comp.LocStart = ON.getSourceRange().getBegin();
-    Comp.LocEnd = ON.getSourceRange().getEnd();
     switch (ON.getKind()) {
     case OffsetOfNode::Array: {
       Expr *FromIndex = E->getIndexExpr(ON.getArrayExprIndex());
@@ -13428,26 +13421,30 @@ TreeTransform<Derived>::TransformOffsetOfExpr(OffsetOfExpr *E) {
         return ExprError();
 
       ExprChanged = ExprChanged || Index.get() != FromIndex;
-      Comp.isBrackets = true;
-      Comp.U.E = Index.get();
+      Designator AD =
+          Designator::CreateArrayDesignator(Index.get(), ON.getBeginLoc());
+      AD.setRBracketLoc(ON.getEndLoc());
+      Desig.AddDesignator(AD);
       break;
     }
 
     case OffsetOfNode::Field:
-    case OffsetOfNode::Identifier:
-      Comp.isBrackets = false;
-      Comp.U.IdentInfo = ON.getFieldName();
-      if (!Comp.U.IdentInfo)
+    case OffsetOfNode::Identifier: {
+      const IdentifierInfo *Name = ON.getFieldName();
+      if (!Name)
         continue;
-
+      // The leading designator has no '.'; subsequent ones do.
+      SourceLocation DotLoc =
+          Desig.empty() ? SourceLocation() : ON.getBeginLoc();
+      Desig.AddDesignator(
+          Designator::CreateFieldDesignator(Name, DotLoc, ON.getEndLoc()));
       break;
+    }
 
     case OffsetOfNode::Base:
       // Will be recomputed during the rebuild.
       continue;
     }
-
-    Components.push_back(Comp);
   }
 
   // If nothing changed, retain the existing expression.
@@ -13457,8 +13454,8 @@ TreeTransform<Derived>::TransformOffsetOfExpr(OffsetOfExpr *E) {
     return E;
 
   // Build a new offsetof expression.
-  return getDerived().RebuildOffsetOfExpr(E->getOperatorLoc(), Type,
-                                          Components, E->getRParenLoc());
+  return getDerived().RebuildOffsetOfExpr(E->getOperatorLoc(), Type, Desig,
+                                          E->getRParenLoc());
 }
 
 template<typename Derived>
@@ -16723,6 +16720,19 @@ template <typename Derived>
 ExprResult TreeTransform<Derived>::TransformSubstNonTypeTemplateParmExpr(
     SubstNonTypeTemplateParmExpr *E) {
   Expr *OrigReplacement = E->getReplacement()->IgnoreImplicitAsWritten();
+
+  // Insert a constant-evaluated context for the transform.
+  // Otherwise, when a normalized constraint places the replacement inside
+  // an unevaluated operand (e.g. decltype), entities it refers to are not
+  // odr-used, and the constant evaluation performed by CheckTemplateArgument
+  // below can spuriously fail for otherwise valid replacements,
+  // e.g. when a call materializes a function parameter of class type whose
+  // special members were never instantiated.
+  EnterExpressionEvaluationContext ConstantEvaluated(
+      SemaRef, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+      Sema::ReuseLambdaContextDecl,
+      Sema::ExpressionEvaluationContextRecord::EK_TemplateArgument);
+
   ExprResult Replacement = getDerived().TransformExpr(OrigReplacement);
   if (Replacement.isInvalid())
     return true;
