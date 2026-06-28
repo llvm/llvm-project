@@ -1577,11 +1577,12 @@ public:
       // Lookup the immediate from table of supported immediates.
       auto *Desc = AArch64ExactFPImm::lookupExactFPImmByEnum(ImmEnum);
       assert(Desc && "Unknown enum value");
+      StringRef DescRepr = AArch64ExactFPImm::getExactFPImmStr(Desc->Repr);
 
       // Calculate its FP value.
       APFloat RealVal(APFloat::IEEEdouble());
       auto StatusOrErr =
-          RealVal.convertFromString(Desc->Repr, APFloat::rmTowardZero);
+          RealVal.convertFromString(DescRepr, APFloat::rmTowardZero);
       if (errorToBool(StatusOrErr.takeError()) || *StatusOrErr != APFloat::opOK)
         llvm_unreachable("FP immediate is not exact");
 
@@ -3217,7 +3218,8 @@ ParseStatus AArch64AsmParser::tryParseRPRFMOperand(OperandVector &Operands) {
 
     auto RPRFM = AArch64RPRFM::lookupRPRFMByEncoding(MCE->getValue());
     Operands.push_back(AArch64Operand::CreatePrefetch(
-        prfop, RPRFM ? RPRFM->Name : "", S, getContext()));
+        prfop, RPRFM ? AArch64RPRFM::getRPRFMStr(RPRFM->Name) : "", S,
+        getContext()));
     return ParseStatus::Success;
   }
 
@@ -3252,9 +3254,10 @@ ParseStatus AArch64AsmParser::tryParsePrefetch(OperandVector &Operands) {
   auto LookupByEncoding = [](unsigned E) {
     if (IsSVEPrefetch) {
       if (auto Res = AArch64SVEPRFM::lookupSVEPRFMByEncoding(E))
-        return std::optional<StringRef>(Res->Name);
+        return std::optional<StringRef>(
+            AArch64SVEPRFM::getSVEPRFMStr(Res->Name));
     } else if (auto Res = AArch64PRFM::lookupPRFMByEncoding(E))
-      return std::optional<StringRef>(Res->Name);
+      return std::optional<StringRef>(AArch64PRFM::getPRFMStr(Res->Name));
     return std::optional<StringRef>();
   };
   unsigned MaxVal = IsSVEPrefetch ? 15 : 31;
@@ -4055,7 +4058,8 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     if (!IC)
       return TokError("invalid operand for IC instruction");
     else if (!IC->haveFeatures(getSTI().getFeatureBits())) {
-      std::string Str("IC " + std::string(IC->Name) + " requires: ");
+      std::string Str("IC " + std::string(AArch64IC::getICStr(IC->Name)) +
+                      " requires: ");
       setRequiredFeatureString(IC->getRequiredFeatures(), Str);
       return TokError(Str);
     }
@@ -4066,7 +4070,8 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     if (!DC)
       return TokError("invalid operand for DC instruction");
     else if (!DC->haveFeatures(getSTI().getFeatureBits())) {
-      std::string Str("DC " + std::string(DC->Name) + " requires: ");
+      std::string Str("DC " + std::string(AArch64DC::getDCStr(DC->Name)) +
+                      " requires: ");
       setRequiredFeatureString(DC->getRequiredFeatures(), Str);
       return TokError(Str);
     }
@@ -4076,7 +4081,8 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     if (!AT)
       return TokError("invalid operand for AT instruction");
     else if (!AT->haveFeatures(getSTI().getFeatureBits())) {
-      std::string Str("AT " + std::string(AT->Name) + " requires: ");
+      std::string Str("AT " + std::string(AArch64AT::getATStr(AT->Name)) +
+                      " requires: ");
       setRequiredFeatureString(AT->getRequiredFeatures(), Str);
       return TokError(Str);
     }
@@ -4086,7 +4092,9 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     if (!TLBI)
       return TokError("invalid operand for TLBI instruction");
     else if (!TLBI->haveFeatures(getSTI().getFeatureBits())) {
-      std::string Str("TLBI " + std::string(TLBI->Name) + " requires: ");
+      std::string Str("TLBI " +
+                      std::string(AArch64TLBI::getTLBIStr(TLBI->Name)) +
+                      " requires: ");
       setRequiredFeatureString(TLBI->getRequiredFeatures(), Str);
       return TokError(Str);
     }
@@ -4099,7 +4107,8 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     if (!GIC)
       return TokError("invalid operand for GIC instruction");
     else if (!GIC->haveFeatures(getSTI().getFeatureBits())) {
-      std::string Str("GIC " + std::string(GIC->Name) + " requires: ");
+      std::string Str("GIC " + std::string(AArch64GIC::getGICStr(GIC->Name)) +
+                      " requires: ");
       setRequiredFeatureString(GIC->getRequiredFeatures(), Str);
       return TokError(Str);
     }
@@ -4110,7 +4119,8 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     if (!GSB)
       return TokError("invalid operand for GSB instruction");
     else if (!GSB->haveFeatures(getSTI().getFeatureBits())) {
-      std::string Str("GSB " + std::string(GSB->Name) + " requires: ");
+      std::string Str("GSB " + std::string(AArch64GSB::getGSBStr(GSB->Name)) +
+                      " requires: ");
       setRequiredFeatureString(GSB->getRequiredFeatures(), Str);
       return TokError(Str);
     }
@@ -4121,7 +4131,9 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
     if (!PLBI)
       return TokError("invalid operand for PLBI instruction");
     else if (!PLBI->haveFeatures(getSTI().getFeatureBits())) {
-      std::string Str("PLBI " + std::string(PLBI->Name) + " requires: ");
+      std::string Str("PLBI " +
+                      std::string(AArch64PLBI::getPLBIStr(PLBI->Name)) +
+                      " requires: ");
       setRequiredFeatureString(PLBI->getRequiredFeatures(), Str);
       return TokError(Str);
     }
@@ -4216,7 +4228,9 @@ bool AArch64AsmParser::parseSyslAlias(StringRef Name, SMLoc NameLoc,
     if (!GICR)
       return Error(S2, "invalid operand for GICR instruction");
     else if (!GICR->haveFeatures(getSTI().getFeatureBits())) {
-      std::string Str("GICR " + std::string(GICR->Name) + " requires: ");
+      std::string Str("GICR " +
+                      std::string(AArch64GICR::getGICRStr(GICR->Name)) +
+                      " requires: ");
       setRequiredFeatureString(GICR->getRequiredFeatures(), Str);
       return Error(S2, Str);
     }
@@ -4304,9 +4318,9 @@ ParseStatus AArch64AsmParser::tryParseBarrierOperand(OperandVector &Operands) {
     if (Value < 0 || Value > 15)
       return Error(ExprLoc, "barrier operand out of range");
     auto DB = AArch64DB::lookupDBByEncoding(Value);
-    Operands.push_back(AArch64Operand::CreateBarrier(Value, DB ? DB->Name : "",
-                                                     ExprLoc, getContext(),
-                                                     false /*hasnXSModifier*/));
+    StringRef DBStr = DB ? AArch64DB::getDBStr(DB->Name) : "";
+    Operands.push_back(AArch64Operand::CreateBarrier(
+        Value, DBStr, ExprLoc, getContext(), false /*hasnXSModifier*/));
     return ParseStatus::Success;
   }
 
@@ -4362,9 +4376,9 @@ AArch64AsmParser::tryParseBarriernXSOperand(OperandVector &Operands) {
     if (Value != 16 && Value != 20 && Value != 24 && Value != 28)
       return Error(ExprLoc, "barrier operand out of range");
     auto DB = AArch64DBnXS::lookupDBnXSByImmValue(Value);
-    Operands.push_back(AArch64Operand::CreateBarrier(DB->Encoding, DB->Name,
-                                                     ExprLoc, getContext(),
-                                                     true /*hasnXSModifier*/));
+    StringRef DBName = AArch64DBnXS::getDBnXSStr(DB->Name);
+    Operands.push_back(AArch64Operand::CreateBarrier(
+        DB->Encoding, DBName, ExprLoc, getContext(), true /*hasnXSModifier*/));
     return ParseStatus::Success;
   }
 
