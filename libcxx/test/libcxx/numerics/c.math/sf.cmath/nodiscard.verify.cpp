@@ -15,6 +15,6 @@
 void test() {
   // clang-format off
   // assoc_laguerre
-  std::assoc_laguerref(0, 0, 0); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  std::assoc_laguerref(0, 0, 0.0f); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
   // clang-format on
 }
