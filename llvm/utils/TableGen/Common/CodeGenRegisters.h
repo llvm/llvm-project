@@ -206,6 +206,11 @@ public:
   // graph has been built.
   void computeSuperRegs(CodeGenRegBank &);
 
+  // Diagnose an explicit SubRegIndex whose declared size makes a sub-register
+  // extend past the register that contains it (an oversized lane mask that
+  // silently corrupts sub-register liveness and spilling). See the definition.
+  void checkSubRegIndexSizes(CodeGenRegBank &) const;
+
   const SubRegMap &getSubRegs() const {
     assert(SubRegsComplete && "Must precompute sub-registers");
     return SubRegs;
