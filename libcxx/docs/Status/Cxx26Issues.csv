@@ -264,7 +264,7 @@
 "`LWG2746 <https://wg21.link/LWG2746>`__","Inconsistency between requirements for ``emplace`` between ``optional`` and ``variant``","2026-03 (Croydon)","","","`#189806 <https://github.com/llvm/llvm-project/issues/189806>`__",""
 "`LWG3504 <https://wg21.link/LWG3504>`__","``condition_variable::wait_for`` is overspecified","2026-03 (Croydon)","","","`#189807 <https://github.com/llvm/llvm-project/issues/189807>`__",""
 "`LWG3599 <https://wg21.link/LWG3599>`__","The ``const`` overload of ``lazy_split_view::begin`` should be constrained by ``const Pattern``","2026-03 (Croydon)","","","`#189808 <https://github.com/llvm/llvm-project/issues/189808>`__",""
-"`LWG3662 <https://wg21.link/LWG3662>`__","``basic_string::append/assign(NTBS, pos, n)`` suboptimal","2026-03 (Croydon)","","","`#189809 <https://github.com/llvm/llvm-project/issues/189809>`__",""
+"`LWG3662 <https://wg21.link/LWG3662>`__","``basic_string::append/assign(NTBS, pos, n)`` suboptimal","2026-03 (Croydon)","|Complete|","23","`#189809 <https://github.com/llvm/llvm-project/issues/189809>`__",""
 "`LWG3777 <https://wg21.link/LWG3777>`__","Common ``cartesian_product_view`` produces an invalid range if the first range is input and one of the ranges is empty","2026-03 (Croydon)","","","`#189810 <https://github.com/llvm/llvm-project/issues/189810>`__",""
 "`LWG3797 <https://wg21.link/LWG3797>`__","``elements_view`` insufficiently constrained","2026-03 (Croydon)","","","`#189811 <https://github.com/llvm/llvm-project/issues/189811>`__",""
 "`LWG3831 <https://wg21.link/LWG3831>`__","Two-digit formatting of negative ``year`` is ambiguous","2026-03 (Croydon)","","","`#189812 <https://github.com/llvm/llvm-project/issues/189812>`__",""
