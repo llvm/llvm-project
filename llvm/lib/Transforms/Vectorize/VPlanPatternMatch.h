@@ -27,24 +27,19 @@ template <typename Val, typename Pattern> bool match(Val *V, const Pattern &P) {
   return P.match(V);
 }
 
-/// A match functor that can be used as a UnaryPredicate in functional
-/// algorithms like all_of.
-template <typename Val, typename Pattern> auto match_fn(const Pattern &P) {
-  return bind_back<match<Val, Pattern>>(P);
-}
-
 template <typename Pattern> bool match(VPUser *U, const Pattern &P) {
   auto *R = dyn_cast<VPRecipeBase>(U);
   return R && match(R, P);
 }
 
-/// Match functor for VPUser.
-template <typename Pattern> auto match_fn(const Pattern &P) {
-  return bind_back<match<Pattern>>(P);
-}
-
 template <typename Pattern> bool match(VPSingleDefRecipe *R, const Pattern &P) {
   return P.match(static_cast<const VPRecipeBase *>(R));
+}
+
+/// A match functor that can be used as a UnaryPredicate in functional
+/// algorithms like all_of.
+template <typename Pattern> auto match_fn(const Pattern &P) {
+  return [&P](auto *V) { return match(V, P); };
 }
 
 /// Match an arbitrary VPValue and ignore it.
@@ -659,6 +654,12 @@ template <typename Op0_t, typename Op1_t>
 inline AllRecipe_match<Instruction::URem, Op0_t, Op1_t>
 m_URem(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Binary<Instruction::URem, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::SRem, Op0_t, Op1_t>
+m_SRem(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_Binary<Instruction::SRem, Op0_t, Op1_t>(Op0, Op1);
 }
 
 /// Match a binary AND operation.

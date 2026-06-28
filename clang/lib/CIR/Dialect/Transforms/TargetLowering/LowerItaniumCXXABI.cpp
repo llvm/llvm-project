@@ -385,7 +385,8 @@ void LowerItaniumCXXABI::lowerGetMethod(
                             /*isNontemporal=*/false,
                             /*alignment=*/mlir::IntegerAttr(),
                             /*sync_scope=*/cir::SyncScopeKindAttr{},
-                            /*mem_order=*/cir::MemOrderAttr());
+                            /*mem_order=*/cir::MemOrderAttr(),
+                            /*invariant=*/false);
 
     // Apply the offset.
     // On ARM64, to reserve extra space in virtual member function pointers,
@@ -413,7 +414,8 @@ void LowerItaniumCXXABI::lowerGetMethod(
                                      /*isNontemporal=*/false,
                                      /*alignment=*/mlir::IntegerAttr(),
                                      /*sync_scope=*/cir::SyncScopeKindAttr{},
-                                     /*mem_order=*/cir::MemOrderAttr());
+                                     /*mem_order=*/cir::MemOrderAttr(),
+                                     /*invariant=*/false);
 
     cir::YieldOp::create(b, loc, fnPtr.getResult());
     assert(!cir::MissingFeatures::emitCFICheck());
@@ -787,7 +789,8 @@ static mlir::Value buildDynamicCastToVoidAfterNullCheck(
       /*isNontemporal=*/false,
       /*alignment=*/builder.getI64IntegerAttr(vtableElemAlign),
       /*sync_scope=*/cir::SyncScopeKindAttr(),
-      /*mem_order=*/cir::MemOrderAttr());
+      /*mem_order=*/cir::MemOrderAttr(),
+      /*invariant=*/false);
   mlir::Value elementPtr = cir::CastOp::create(builder, loc, vtableElemPtrTy,
                                                cir::CastKind::bitcast, vptr);
   mlir::Value minusTwo =
@@ -801,7 +804,8 @@ static mlir::Value buildDynamicCastToVoidAfterNullCheck(
       /*isNontemporal=*/false,
       /*alignment=*/builder.getI64IntegerAttr(vtableElemAlign),
       /*sync_scope=*/cir::SyncScopeKindAttr(),
-      /*mem_order=*/cir::MemOrderAttr());
+      /*mem_order=*/cir::MemOrderAttr(),
+      /*invariant=*/false);
 
   auto voidPtrTy =
       cir::PointerType::get(cir::VoidType::get(builder.getContext()));
@@ -910,7 +914,8 @@ mlir::Value LowerItaniumCXXABI::readArrayCookieImpl(
       builder, loc, countPtr, /*isDeref=*/false, /*isVolatile=*/false,
       /*isNontemporal=*/false,
       builder.getI64IntegerAttr(countAlignment.getQuantity()),
-      cir::SyncScopeKindAttr(), cir::MemOrderAttr());
+      cir::SyncScopeKindAttr(), cir::MemOrderAttr(),
+      /*invariant=*/false);
 }
 
 } // namespace cir

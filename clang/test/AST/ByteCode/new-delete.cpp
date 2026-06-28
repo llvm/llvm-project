@@ -1267,6 +1267,28 @@ namespace FreeNonBlockPointer {
   static_assert(foo() == 10); // both-error {{not an integral constant expression}}
 }
 
+namespace NonPrimitiveImplicitValueInitExpr {
+  constexpr int m() {
+    int r;
+    auto foo = new int[2][4][1]{};
+    r = foo[0][2][0];
+    delete[] foo;
+    return r;
+  }
+  static_assert(m() == 0);
+}
+
+namespace ZeroSizeElems {
+  typedef int U[0];
+
+  constexpr bool foo() {
+    auto p = new U[3.14]; // both-warning {{implicit conversion}}
+    delete[] p;
+    return true;
+  }
+  static_assert(foo());
+}
+
 #else
 /// Make sure we reject this prior to C++20
 constexpr int a() { // both-error {{never produces a constant expression}}

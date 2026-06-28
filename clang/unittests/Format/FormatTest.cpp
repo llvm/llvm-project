@@ -22558,7 +22558,7 @@ TEST_F(FormatTest, DoNotCrashOnInvalidInput) {
                 "LY52:                   ! [internal]");
   verifyNoCrash("operator foo *;");
   verifyNoCrash(
-      "  #xxxx??x<xxxxxxx||??x<xxxxxxx and xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
+      "#xxxx??x<xxxxxxx||??x<xxxxxxx and xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx");
 }
 
 TEST_F(FormatTest, FormatsTableGenCode) {
@@ -25209,6 +25209,19 @@ TEST_F(FormatTest, EnumTrailingComma) {
                "enum class MyEnum_E {\n"
                "  MY_ENUM = 0U\n"
                "};",
+               Style);
+
+  // Issue https://github.com/llvm/llvm-project/issues/205571
+  verifyFormat("#ifdef FOO\n"
+               "#else\n"
+               "#endif\n"
+               "enum {\n"
+               "  E = 1,\n"
+               "};",
+               "#ifdef FOO\n"
+               "#else\n"
+               "#endif\n"
+               "enum { E = 1 };",
                Style);
 }
 
