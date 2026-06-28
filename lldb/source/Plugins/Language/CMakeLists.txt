@@ -7,6 +7,6 @@ set_property(DIRECTORY PROPERTY LLDB_TOLERATED_PLUGIN_DEPENDENCIES
 add_subdirectory(CPlusPlus)
 add_subdirectory(ObjC)
 add_subdirectory(ObjCPlusPlus)
-if("flang" IN_LIST LLVM_ENABLE_PROJECTS OR "all" IN_LIST LLVM_ENABLE_PROJECTS)
+if(LLDB_ENABLE_FORTRAN)
   add_subdirectory(Fortran)
 endif()

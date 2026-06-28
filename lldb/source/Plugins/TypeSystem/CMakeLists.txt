@@ -4,6 +4,6 @@ set_property(DIRECTORY PROPERTY LLDB_TOLERATED_PLUGIN_DEPENDENCIES SymbolFile)
 
 add_subdirectory(Clang)
 
-if("flang" IN_LIST LLVM_ENABLE_PROJECTS OR "all" IN_LIST LLVM_ENABLE_PROJECTS)
+if(LLDB_ENABLE_FORTRAN)
   add_subdirectory(Fortran)
 endif()
