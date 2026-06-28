@@ -526,6 +526,9 @@ Attribute Changes in Clang
 - The ``modular_format`` attribute now supports the ``fixed`` aspect for C
   ISO 18037 fixed-point ``printf`` specifiers.
 
+- The ``const`` and ``pure`` attributes only apply to functions; they are now
+  diagnosed and ignored when applied to anything else.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Fixed bug in ``-Wdocumentation`` so that it correctly handles explicit
@@ -895,7 +898,10 @@ X86 Support
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
-Added support for the Arm AGI CPU via the ``-mcpu=armagicpu`` command-line option.
+- Support has been added for the following processors (-mcpu identifiers in parenthesis):
+
+* Arm AGI CPU (armagicpu).
+* Hisilicon hip12 core (hip12).
 
 Android Support
 ^^^^^^^^^^^^^^^
@@ -975,6 +981,8 @@ AIX Support
 - Added support for ``#pragma comment(copyright, "token_sequence")`` on AIX.
   This directive embeds a copyright or identifying string into the compiled object file. 
   The string is included in the final executable and loaded into memory at program runtime.
+- The driver relaxes the restrictions on the ``OBJECT_MODE`` environment
+  variable and now silently accepts ``32_64`` and ``any``.
 
 NetBSD Support
 ^^^^^^^^^^^^^^
@@ -1095,6 +1103,11 @@ Sanitizers
   warning for deprecated matches. Version 5 drops backward compatibility and
   requires rules to match canonicalized paths (without leading ``./``).
 
+- Sanitizer Special Case Lists (``-fsanitize-ignorelist``) and warning
+  suppression mappings (``--warning-suppression-mappings``) now recognize version
+  4 of the Special Case List format (indicated by ``#!special-case-list-v4``).
+  On Windows hosts, path matching is slash-agnostic (both forward slashes (``/``)
+  and backslashes (``\``) match either path separator in both patterns and paths).
 
 Python Binding Changes
 ----------------------

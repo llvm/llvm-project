@@ -6951,8 +6951,7 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
 /// per-iteration input VF and narrower PHI VF. If successful, returns the chain
 /// of operations in the reduction.
 static std::optional<SmallVector<VPPartialReductionChain>>
-getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPCostContext &CostCtx,
-                    VFRange &Range) {
+getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
   // Get the backedge value from the reduction PHI and find the
   // ComputeReductionResult that uses it (directly or through a select for
   // predicated reductions).
@@ -6993,9 +6992,6 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPCostContext &CostCtx,
     if (!PHISize.hasKnownScalarFactor(ExtSrcSize))
       return std::nullopt;
 
-    // Check if a partial reduction chain is supported by the target (i.e. does
-    // not have an invalid cost) for the given VF range. Clamps the range and
-    // returns true if feasible for any VF.
     VPPartialReductionChain Link(
         {UpdateR, *ExtendedOp, RK,
          PrevValue == UpdateR->getOperand(0) ? 0U : 1U,
@@ -7025,7 +7021,7 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
     if (!RedPhiR)
       continue;
 
-    if (auto Chains = getScaledReductions(RedPhiR, CostCtx, Range))
+    if (auto Chains = getScaledReductions(RedPhiR))
       ChainsByPhi.try_emplace(RedPhiR, std::move(*Chains));
   }
 
