@@ -717,7 +717,7 @@ static void emitDecoderCheckWithOpcDebug(raw_ostream &OS, indent Indent,
     AS << '"' << OpName << "\", \"" << DecoderName << "\", {";
     ListSeparator LS;
     for (const EncodingField &EF : OpInfo.Fields)
-      AS << LS << EF.Base << ", " << EF.Width;
+      AS << LS << '{' << EF.Base << ", " << EF.Width << '}';
     AS << '}';
   }
 
@@ -1570,29 +1570,31 @@ template <typename T> constexpr uint32_t InsnBitWidth = 0;
 #ifndef NDEBUG
 // Operand with no encoding fields: `Desc` is either "imm" (a constant
 // immediate) or "bits<0>" (no encoding at all).
-[[maybe_unused]] void reportOperandDecodeFailure(const char *Op,
+[[maybe_unused]] void reportOperandDecodeFailure(const char *OperandName,
                                                  const char *Desc,
                                                  const char *Decoder) {
-  dbgs() << "OPC_Decode for " << Op << ": " << Desc << " using " << Decoder
-         << " : FAIL\n";
+  dbgs() << "OPC_Decode for " << OperandName << ": " << Desc << " using "
+         << Decoder << " : FAIL\n";
 }
 
-// Operand with encoding fields, passed as (base, width) integer pairs.
-[[maybe_unused]] void reportOperandDecodeFailure(const char *Op,
-                                                 const char *Decoder,
-                                                 ArrayRef<uint32_t> Fields) {
-  dbgs() << "OPC_Decode for " << Op << ": ";
-  for (unsigned I = 0, E = Fields.size(); I != E; I += 2) {
-    if (I)
+// Operand with encoding fields, passed as (base, width) pairs.
+[[maybe_unused]] void
+reportOperandDecodeFailure(const char *OperandName, const char *Decoder,
+                           ArrayRef<std::pair<uint32_t, uint32_t>> Fields) {
+  dbgs() << "OPC_Decode for " << OperandName << ": ";
+  bool First = true;
+  for (auto [Base, Width] : Fields) {
+    if (!First)
       dbgs() << " + ";
-    dbgs() << "field(" << Fields[I] << ',' << Fields[I + 1] << ')';
+    First = false;
+    dbgs() << "field(" << Base << ',' << Width << ')';
   }
   dbgs() << " using " << Decoder << " : FAIL\n";
 }
 
-[[maybe_unused]] void reportInsnDecodeFailure(const char *Name,
+[[maybe_unused]] void reportInsnDecodeFailure(const char *InstName,
                                               const char *Decoder) {
-  dbgs() << "OPC_Decode for " << Name << ": insn using " << Decoder
+  dbgs() << "OPC_Decode for " << InstName << ": insn using " << Decoder
          << " : FAIL\n";
 }
 #endif // NDEBUG

@@ -26,28 +26,30 @@ def I : Instruction {
 
 // CHECK: #ifndef NDEBUG
 
-// CHECK{LITERAL}: [[maybe_unused]] void reportOperandDecodeFailure(const char *Op,
+// CHECK{LITERAL}: [[maybe_unused]] void reportOperandDecodeFailure(const char *OperandName,
 // CHECK-NEXT:                          const char *Desc,
 // CHECK-NEXT:                          const char *Decoder) {
-// CHECK-NEXT:   dbgs() << "OPC_Decode for " << Op << ": " << Desc << " using " << Decoder
-// CHECK-NEXT:          << " : FAIL\n";
+// CHECK-NEXT:   dbgs() << "OPC_Decode for " << OperandName << ": " << Desc << " using "
+// CHECK-NEXT:          << Decoder << " : FAIL\n";
 // CHECK-NEXT: }
 
-// CHECK{LITERAL}: [[maybe_unused]] void reportOperandDecodeFailure(const char *Op,
-// CHECK-NEXT:                          const char *Decoder,
-// CHECK-NEXT:                          ArrayRef<uint32_t> Fields) {
-// CHECK-NEXT:   dbgs() << "OPC_Decode for " << Op << ": ";
-// CHECK-NEXT:   for (unsigned I = 0, E = Fields.size(); I != E; I += 2) {
-// CHECK-NEXT:     if (I)
+// CHECK{LITERAL}: [[maybe_unused]] void
+// CHECK-NEXT: reportOperandDecodeFailure(const char *OperandName, const char *Decoder,
+// CHECK-NEXT:                          ArrayRef<std::pair<uint32_t, uint32_t>> Fields) {
+// CHECK-NEXT:   dbgs() << "OPC_Decode for " << OperandName << ": ";
+// CHECK-NEXT:   bool First = true;
+// CHECK-NEXT:   for (auto [Base, Width] : Fields) {
+// CHECK-NEXT:     if (!First)
 // CHECK-NEXT:       dbgs() << " + ";
-// CHECK-NEXT:     dbgs() << "field(" << Fields[I] << ',' << Fields[I + 1] << ')';
+// CHECK-NEXT:     First = false;
+// CHECK-NEXT:     dbgs() << "field(" << Base << ',' << Width << ')';
 // CHECK-NEXT:   }
 // CHECK-NEXT:   dbgs() << " using " << Decoder << " : FAIL\n";
 // CHECK-NEXT: }
 
-// CHECK{LITERAL}: [[maybe_unused]] void reportInsnDecodeFailure(const char *Name,
+// CHECK{LITERAL}: [[maybe_unused]] void reportInsnDecodeFailure(const char *InstName,
 // CHECK-NEXT:                          const char *Decoder) {
-// CHECK-NEXT:   dbgs() << "OPC_Decode for " << Name << ": insn using " << Decoder
+// CHECK-NEXT:   dbgs() << "OPC_Decode for " << InstName << ": insn using " << Decoder
 // CHECK-NEXT:          << " : FAIL\n";
 // CHECK-NEXT: }
 // CHECK-NEXT: #endif // NDEBUG
@@ -56,7 +58,7 @@ def I : Instruction {
 // CHECK:       case 0:
 // CHECK-NEXT:    tmp = fieldFromInstruction(insn, 0, 4);
 // CHECK-NEXT:    if (!Check(S, DecodeRCRegisterClass(MI, tmp, Address, Decoder))) {
-// CHECK-NEXT:      LLVM_DEBUG(reportOperandDecodeFailure("dst", "DecodeRCRegisterClass", {0, 4}));
+// CHECK-NEXT{LITERAL}:      LLVM_DEBUG(reportOperandDecodeFailure("dst", "DecodeRCRegisterClass", {{0, 4}}));
 // CHECK-NEXT:      return MCDisassembler::Fail;
 // CHECK-NEXT:    }
 // CHECK-NEXT:    return S;
