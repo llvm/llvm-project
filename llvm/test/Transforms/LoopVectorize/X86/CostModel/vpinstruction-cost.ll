@@ -20,9 +20,7 @@ define void @wide_or_replaced_with_add_vpinstruction(ptr %src, ptr noalias %dst)
 ; CHECK:  LV: Found an estimated cost of 1 for VF 1 For instruction: %iv.next = add nuw nsw i64 %iv, 1
 ; CHECK:  LV: Found an estimated cost of 1 for VF 1 For instruction: %exitcond = icmp eq i64 %iv.next, 32
 ; CHECK:  LV: Found an estimated cost of 0 for VF 1 For instruction: br i1 %exitcond, label %exit, label %loop.header
-; CHECK:  Cost of 1 for VF 2: induction instruction %iv.next = add nuw nsw i64 %iv, 1
-; CHECK:  Cost of 0 for VF 2: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
-; CHECK:  Cost of 0 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
+; CHECK:  Cost of 1 for VF 2: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%g.src> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%g.src>, ir<1>
@@ -44,9 +42,7 @@ define void @wide_or_replaced_with_add_vpinstruction(ptr %src, ptr noalias %dst)
 ; CHECK:  Cost of 0 for VF 2: IR %c = icmp ule i64 %l, 128
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<32>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<%cmp.n>
-; CHECK:  Cost of 1 for VF 4: induction instruction %iv.next = add nuw nsw i64 %iv, 1
-; CHECK:  Cost of 0 for VF 4: induction instruction %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
-; CHECK:  Cost of 0 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK:  Cost of 1 for VF 4: ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP4]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%g.src> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP5]]> = vector-pointer inbounds ir<%g.src>, ir<1>

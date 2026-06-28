@@ -5,8 +5,7 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-; DEBUG: Cost of Invalid for VF vscale x 1: induction instruction   %indvars.iv.next1295 = add i7 %indvars.iv1294, 1
-; DEBUG: Cost of Invalid for VF vscale x 1: induction instruction   %indvars.iv1294 = phi i7 [ %indvars.iv.next1295, %for.body ], [ 0, %entry ]
+; DEBUG: Cost of Invalid for VF vscale x 1: ir<%indvars.iv1294> = WIDEN-INDUCTION ir<0>, ir<1>, vp<%0>
 
 define void @induction_i7(ptr %dst) #0 {
 ; CHECK-LABEL: define void @induction_i7(
@@ -68,8 +67,7 @@ for.end:
 }
 
 
-; DEBUG: Cost of Invalid for VF vscale x 1: induction instruction   %indvars.iv.next1295 = add i3 %indvars.iv1294, 1
-; DEBUG: Cost of Invalid for VF vscale x 1: induction instruction   %indvars.iv1294 = phi i3 [ %indvars.iv.next1295, %for.body ], [ 0, %entry ]
+; DEBUG: Cost of Invalid for VF vscale x 1: ir<%indvars.iv1294> = WIDEN-INDUCTION ir<0>, ir<1>, vp<%0>
 
 define void @induction_i3_zext(ptr %dst) #0 {
 ; CHECK-LABEL: define void @induction_i3_zext(
