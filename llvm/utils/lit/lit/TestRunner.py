@@ -773,9 +773,9 @@ def executeScriptInternal(
             data = data.decode("utf-8", errors="replace")
             out += formatOutput(f"redirected output from '{name}'", data, limit=1024)
         if result.stdout.strip():
-            out += formatOutput("command stdout", result.stdout, limit=10*1024)
+            out += formatOutput("command stdout", result.stdout, limit=10240)
         if result.stderr.strip():
-            out += formatOutput("command stderr", result.stderr, limit=10*1024)
+            out += formatOutput("command stderr", result.stderr, limit=10240)
         if not result.stdout.strip() and not result.stderr.strip():
             out += "# note: command had no output on stdout or stderr\n"
 
