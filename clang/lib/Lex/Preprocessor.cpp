@@ -1746,16 +1746,13 @@ void Preprocessor::removePPCallbacks() {
 const char *Preprocessor::getCheckPoint(FileID FID, const char *Start) const {
   if (auto It = CheckPoints.find(FID); It != CheckPoints.end()) {
     const SmallVector<const char *> &FileCheckPoints = It->second;
-    const char *Last = nullptr;
-    // FIXME: Do better than a linear search.
-    for (const char *P : FileCheckPoints) {
-      if (P > Start)
-        break;
-      Last = P;
+    auto P =
+        std::upper_bound(FileCheckPoints.begin(), FileCheckPoints.end(), Start);
+    if (P == FileCheckPoints.begin()) {
+      return nullptr;
     }
-    return Last;
+    return *std::prev(P);
   }
-
   return nullptr;
 }
 
