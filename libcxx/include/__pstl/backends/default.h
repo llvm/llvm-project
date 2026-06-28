@@ -9,10 +9,10 @@
 #ifndef _LIBCPP___PSTL_BACKENDS_DEFAULT_H
 #define _LIBCPP___PSTL_BACKENDS_DEFAULT_H
 
+#include <__algorithm/any_of.h>
 #include <__algorithm/copy_n.h>
 #include <__algorithm/equal.h>
 #include <__algorithm/fill_n.h>
-#include <__algorithm/find.h>
 #include <__algorithm/for_each_n.h>
 #include <__algorithm/is_sorted.h>
 #include <__config>
@@ -185,17 +185,19 @@ struct __is_partitioned<__default_backend_tag, _ExecutionPolicy> {
 
 template <class _ExecutionPolicy>
 struct __find_first_of<__default_backend_tag, _ExecutionPolicy> {
-  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2>
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _Predicate>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator1>
   operator()(_Policy&& __policy,
              _ForwardIterator1 __first1,
              _ForwardIterator1 __last1,
              _ForwardIterator2 __first2,
-             _ForwardIterator2 __last2) const noexcept {
+             _ForwardIterator2 __last2,
+             _Predicate&& __pred) const noexcept {
     using _FindIf = __dispatch<__find_if, __current_configuration, _ExecutionPolicy>;
-    using _Ref    = __iterator_reference<_ForwardIterator1>;
-    return _FindIf()(__policy, std::move(__first1), std::move(__last1), [&](_Ref __element) {
-      return std::find(__first2, __last2, __element) != __last2;
+    using _Ref1   = __iterator_reference<_ForwardIterator1>;
+    using _Ref2   = __iterator_reference<_ForwardIterator2>;
+    return _FindIf()(__policy, std::move(__first1), std::move(__last1), [&](_Ref1 __element) {
+      return std::any_of(__first2, __last2, [&](_Ref2 __value) { return __pred(__element, __value); });
     });
   }
 };
