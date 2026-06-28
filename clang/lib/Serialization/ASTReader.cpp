@@ -12623,6 +12623,9 @@ void OMPClauseReader::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
 }
 
 void OMPClauseReader::VisitOMPThreadLimitClause(OMPThreadLimitClause *C) {
+  C->setModifier(Record.readEnum<OpenMPThreadLimitClauseModifier>());
+  C->setModifierLoc(Record.readSourceLocation());
+  C->setModifierExpr(Record.readSubExpr());
   VisitOMPClauseWithPreInit(C);
   C->setLParenLoc(Record.readSourceLocation());
   unsigned NumVars = C->varlist_size();
