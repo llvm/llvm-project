@@ -2340,6 +2340,24 @@ def : Pat<(v8i32 (zext_invec v16i16:$xj)), (v8i32 (VEXT2XV_WU_HU v16i16:$xj))>;
 def : Pat<(v8i32 (zext_invec v16i8:$vj)),
           (v8i32 (VEXT2XV_WU_BU (SUBREG_TO_REG v16i8:$vj, sub_128)))>;
 
+// SMLA
+def : Pat<(v8i32 (partial_reduce_smla v8i32:$Acc, v32i8:$LHS, v32i8:$RHS)),
+            (XVADD_W (XVADD_W
+              (XVHADDW_W_H (XVMULWEV_H_B $LHS, $RHS), (XVMULWEV_H_B $LHS, $RHS)),
+              (XVHADDW_W_H (XVMULWOD_H_B $LHS, $RHS), (XVMULWOD_H_B $LHS, $RHS))), $Acc)>;
+
+// UMLA
+def : Pat<(v8i32 (partial_reduce_umla v8i32:$Acc, v32i8:$LHS, v32i8:$RHS)),
+            (XVADD_W (XVADD_W
+              (XVHADDW_W_H (XVMULWEV_H_BU $LHS, $RHS), (XVMULWEV_H_BU $LHS, $RHS)),
+              (XVHADDW_W_H (XVMULWOD_H_BU $LHS, $RHS), (XVMULWOD_H_BU $LHS, $RHS))), $Acc)>;
+
+// SUMLA
+def : Pat<(v8i32 (partial_reduce_sumla v8i32:$Acc, v32i8:$LHS, v32i8:$RHS)),
+            (XVADD_W (XVADD_W
+              (XVHADDW_W_H (XVMULWEV_H_BU_B $RHS, $LHS), (XVMULWEV_H_BU_B $RHS, $LHS)),
+              (XVHADDW_W_H (XVMULWOD_H_BU_B $RHS, $LHS), (XVMULWOD_H_BU_B $RHS, $LHS))), $Acc)>;
+
 } // Predicates = [HasExtLASX]
 
 /// Intrinsic pattern

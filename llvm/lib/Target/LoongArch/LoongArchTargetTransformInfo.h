@@ -64,9 +64,7 @@ public:
       ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
       TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
       TTI::TargetCostKind CostKind,
-      std::optional<FastMathFlags> FMF) const override {
-    return InstructionCost::getInvalid();
-  }
+      std::optional<FastMathFlags> FMF) const override;
 };
 
 } // end namespace llvm
