@@ -8,6 +8,8 @@
 // RUN:   misc-const-correctness.TransformPointersAsValues: true}}' \
 // RUN: -- -fno-delayed-template-parsing
 
+// CHECK-MESSAGES: warning: The check 'misc-const-correctness' will not analyze lambdas because 'AnalyzeLambdas' has no effect while 'AnalyzeAutoVariables' is false. [clang-tidy-config]
+
 void auto_types_ignored() {
   int i = 0;
   // CHECK-MESSAGES: [[@LINE-1]]:3: warning: variable 'i' of type 'int' can be declared 'const'

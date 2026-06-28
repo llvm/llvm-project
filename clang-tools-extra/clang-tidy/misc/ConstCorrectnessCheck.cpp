@@ -82,6 +82,11 @@ ConstCorrectnessCheck::ConstCorrectnessCheck(StringRef Name,
         "The check 'misc-const-correctness' will not "
         "perform any analysis because 'AnalyzeValues', "
         "'AnalyzeReferences' and 'AnalyzePointers' are false.");
+
+  if (AnalyzeLambdas && !AnalyzeAutoVariables)
+    this->configurationDiag("The check 'misc-const-correctness' will not "
+                            "analyze lambdas because 'AnalyzeLambdas' has no "
+                            "effect while 'AnalyzeAutoVariables' is false.");
 }
 
 void ConstCorrectnessCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
