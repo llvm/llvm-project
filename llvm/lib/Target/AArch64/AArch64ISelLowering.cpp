@@ -10523,10 +10523,16 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       int32_t Offset = LocMemOffset + BEAlign;
 
       if (IsTailCall) {
-        // When the frame pointer is perfectly aligned for the tail call and the
-        // same stack argument is passed down intact, we can reuse it.
-        if (!FPDiff && !shouldLowerTailCallStackArg(MF, VA, Arg, Flags, Offset))
+        if (Flags.isByVal()) {
+          if (!ByValTemporaries[i])
+            // The argument is already in the right place.
+            continue;
+        } else if (!FPDiff &&
+                   !shouldLowerTailCallStackArg(MF, VA, Arg, Flags, Offset)) {
+          // When the frame pointer is perfectly aligned for the tail call and
+          // the same stack argument is passed down intact, we can reuse it.
           continue;
+        }
 
         Offset = Offset + FPDiff;
         int FI = MF.getFrameInfo().CreateFixedObject(OpSize, Offset, true);
@@ -10546,10 +10552,13 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
       }
 
       if (Outs[i].Flags.isByVal()) {
+        // For tail calls, copy from the (possibly staged) source chosen by the
+        // pre-pass above; the temporary never overlaps the destination.
+        SDValue ByValSrc = IsTailCall ? ByValTemporaries[i] : Arg;
         SDValue SizeNode =
             DAG.getConstant(Outs[i].Flags.getByValSize(), DL, MVT::i64);
         SDValue Cpy = DAG.getMemcpy(
-            Chain, DL, DstAddr, Arg, SizeNode,
+            Chain, DL, DstAddr, ByValSrc, SizeNode,
             Outs[i].Flags.getNonZeroByValAlign(),
             Outs[i].Flags.getNonZeroByValAlign(),
             /*isVol = */ false, /*AlwaysInline = */ false,
