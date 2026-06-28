@@ -401,15 +401,16 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
       for (const auto &Field : Index.Fields) {
         const Init *Value = EntryRec->getValueInit(Field.Name);
         std::string Repr = primaryRepresentation(Index.Loc, Field, Value);
-        if (isa<StringRecTy>(Field.RecType))
-          Repr = StringRef(Repr).upper();
         if (isa<StringRecTy>(Field.RecType)) {
           // TODO: if most strings are lower-case already, we can save space by
-          // converting all strings to lower case instead.
+          // converting all strings to lower case instead. If strings are not
+          // already all-uppercase, we currently store them twice -- but if most
+          // strings are all-lowercase, we can use the lowercase variant for
+          // case-insenstive comparison.
           OS << LS
              << StrTab.GetOrAddStringOffset(
                     StringRef(Value->getAsUnquotedString()).upper())
-             << " /* " << Repr << " */";
+             << " /* " << StringRef(Repr).upper() << " */";
         } else {
           OS << LS << Repr;
         }
