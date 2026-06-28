@@ -11,8 +11,7 @@
 
 ;--- valid64.ll
 ; UINT64_MAX * 1 * 1: product fits in 64-bit size_t.
-target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
-target triple = "spirv64-unknown-unknown"
+target datalayout = "p:64:64"
 
 define spir_kernel void @large_dim() !reqd_work_group_size !0 {
   ret void
@@ -22,8 +21,7 @@ define spir_kernel void @large_dim() !reqd_work_group_size !0 {
 
 ;--- overflow64.ll
 ; UINT64_MAX * 2 * 1: product overflows 64-bit size_t.
-target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
-target triple = "spirv64-unknown-unknown"
+target datalayout = "p:64:64"
 
 define spir_kernel void @overflow_product() !reqd_work_group_size !0 {
   ret void
@@ -33,8 +31,7 @@ define spir_kernel void @overflow_product() !reqd_work_group_size !0 {
 
 ;--- valid32.ll
 ; UINT32_MAX * 1 * 1: product fits in 32-bit size_t.
-target datalayout = "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
-target triple = "spirv32-unknown-unknown"
+target datalayout = "p:32:32"
 
 define spir_kernel void @large_dim() !reqd_work_group_size !0 {
   ret void
@@ -44,8 +41,7 @@ define spir_kernel void @large_dim() !reqd_work_group_size !0 {
 
 ;--- overflow32.ll
 ; UINT32_MAX * 2 * 1: product overflows 32-bit size_t.
-target datalayout = "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
-target triple = "spirv32-unknown-unknown"
+target datalayout = "p:32:32"
 
 define spir_kernel void @overflow_product() !reqd_work_group_size !0 {
   ret void
@@ -55,8 +51,7 @@ define spir_kernel void @overflow_product() !reqd_work_group_size !0 {
 
 ;--- operand-too-large32.ll
 ; i64 value > UINT32_MAX: operand does not fit in 32-bit size_t.
-target datalayout = "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
-target triple = "spirv32-unknown-unknown"
+target datalayout = "p:32:32"
 
 define spir_kernel void @operand_too_large() !reqd_work_group_size !0 {
   ret void
@@ -66,8 +61,7 @@ define spir_kernel void @operand_too_large() !reqd_work_group_size !0 {
 
 ;--- operand-too-large64.ll
 ; i128 value > UINT64_MAX: operand does not fit in 64-bit size_t.
-target datalayout = "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-n8:16:32:64-G1"
-target triple = "spirv64-unknown-unknown"
+target datalayout = "p:64:64"
 
 define spir_kernel void @operand_too_large() !reqd_work_group_size !0 {
   ret void
