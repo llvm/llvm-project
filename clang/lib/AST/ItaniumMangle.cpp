@@ -111,8 +111,8 @@ public:
   void mangleCXXCtorVTable(const CXXRecordDecl *RD, int64_t Offset,
                            const CXXRecordDecl *Type, raw_ostream &) override;
   void mangleCXXRTTI(QualType T, raw_ostream &) override;
-  void mangleCXXRTTIName(QualType T, raw_ostream &,
-                         bool NormalizeIntegers) override;
+  void mangleCXXRTTIName(QualType T, raw_ostream &, bool NormalizeIntegers,
+                         bool ShortenRTTINames) override;
   void mangleCanonicalTypeName(QualType T, raw_ostream &,
                                bool NormalizeIntegers) override;
 
@@ -7584,8 +7584,9 @@ void ItaniumMangleContextImpl::mangleCXXRTTI(QualType Ty, raw_ostream &Out) {
   Mangler.mangleType(Ty);
 }
 
-void ItaniumMangleContextImpl::mangleCXXRTTIName(
-    QualType Ty, raw_ostream &Out, bool NormalizeIntegers = false) {
+void ItaniumMangleContextImpl::mangleCXXRTTIName(QualType Ty, raw_ostream &Out,
+                                                 bool NormalizeIntegers = false,
+                                                 bool = false) {
   // <special-name> ::= TS <type>  # typeinfo name (null terminated byte string)
   CXXNameMangler Mangler(*this, Out, NormalizeIntegers);
   Mangler.getStream() << "_ZTS";

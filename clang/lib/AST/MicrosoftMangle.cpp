@@ -180,8 +180,8 @@ public:
                               int32_t VBPtrOffset, uint32_t VBIndex,
                               raw_ostream &Out) override;
   void mangleCXXRTTI(QualType T, raw_ostream &Out) override;
-  void mangleCXXRTTIName(QualType T, raw_ostream &Out,
-                         bool NormalizeIntegers) override;
+  void mangleCXXRTTIName(QualType T, raw_ostream &Out, bool NormalizeIntegers,
+                         bool ShortenRTTINames) override;
   void mangleCXXRTTIBaseClassDescriptor(const CXXRecordDecl *Derived,
                                         uint32_t NVOffset, int32_t VBPtrOffset,
                                         uint32_t VBTableOffset, uint32_t Flags,
@@ -332,6 +332,7 @@ class MicrosoftCXXNameMangler {
   ASTContext &getASTContext() const { return Context.getASTContext(); }
 
   const bool PointersAre64Bit;
+  const bool ShortenRTTINames;
 
   DiagnosticBuilder Error(SourceLocation, StringRef, StringRef);
   DiagnosticBuilder Error(SourceLocation, StringRef);
@@ -341,25 +342,31 @@ public:
   enum QualifierMangleMode { QMM_Drop, QMM_Mangle, QMM_Escape, QMM_Result };
   enum class TplArgKind { ClassNTTP, StructuralValue };
 
-  MicrosoftCXXNameMangler(MicrosoftMangleContextImpl &C, raw_ostream &Out_)
+  MicrosoftCXXNameMangler(MicrosoftMangleContextImpl &C, raw_ostream &Out_,
+                          bool ShortenRTTINamesIn = false)
       : Context(C), Out(Out_), Structor(nullptr), StructorType(-1),
         TemplateArgStringStorage(TemplateArgStringStorageAlloc),
         PointersAre64Bit(C.getASTContext().getTargetInfo().getPointerWidth(
-                             LangAS::Default) == 64) {}
+                             LangAS::Default) == 64),
+        ShortenRTTINames(ShortenRTTINamesIn) {}
 
   MicrosoftCXXNameMangler(MicrosoftMangleContextImpl &C, raw_ostream &Out_,
-                          const CXXConstructorDecl *D, CXXCtorType Type)
+                          const CXXConstructorDecl *D, CXXCtorType Type,
+                          bool ShortenRTTINamesIn = false)
       : Context(C), Out(Out_), Structor(getStructor(D)), StructorType(Type),
         TemplateArgStringStorage(TemplateArgStringStorageAlloc),
         PointersAre64Bit(C.getASTContext().getTargetInfo().getPointerWidth(
-                             LangAS::Default) == 64) {}
+                             LangAS::Default) == 64),
+        ShortenRTTINames(ShortenRTTINamesIn) {}
 
   MicrosoftCXXNameMangler(MicrosoftMangleContextImpl &C, raw_ostream &Out_,
-                          const CXXDestructorDecl *D, CXXDtorType Type)
+                          const CXXDestructorDecl *D, CXXDtorType Type,
+                          bool ShortenRTTINamesIn = false)
       : Context(C), Out(Out_), Structor(getStructor(D)), StructorType(Type),
         TemplateArgStringStorage(TemplateArgStringStorageAlloc),
         PointersAre64Bit(C.getASTContext().getTargetInfo().getPointerWidth(
-                             LangAS::Default) == 64) {}
+                             LangAS::Default) == 64),
+        ShortenRTTINames(ShortenRTTINamesIn) {}
 
   raw_ostream &getStream() const { return Out; }
 
@@ -963,7 +970,9 @@ void MicrosoftCXXNameMangler::mangleName(GlobalDecl GD) {
   // Always start with the unqualified name.
   mangleUnqualifiedName(GD);
 
-  mangleNestedName(GD);
+  const auto *RD = dyn_cast<CXXRecordDecl>(GD.getDecl());
+  if (!ShortenRTTINames || !RD || !RD->isLambda())
+    mangleNestedName(GD);
 
   // Terminate the whole name with an '@'.
   Out << '@';
@@ -1119,7 +1128,7 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
         // Mangle full template name into temporary buffer.
         llvm::SmallString<64> TemplateMangling;
         llvm::raw_svector_ostream Stream(TemplateMangling);
-        MicrosoftCXXNameMangler Extra(Context, Stream);
+        MicrosoftCXXNameMangler Extra(Context, Stream, ShortenRTTINames);
         Extra.mangleTemplateInstantiationName(TD, *TemplateArgs);
 
         // Use the string backref vector to possibly get a back reference.
@@ -1267,7 +1276,7 @@ void MicrosoftCXXNameMangler::mangleUnqualifiedName(GlobalDecl GD,
 
           // If the context is a variable or a class member and not a parameter,
           // it is encoded in a qualified name.
-          if (LambdaManglingNumber && LambdaContextDecl) {
+          if (!ShortenRTTINames && LambdaManglingNumber && LambdaContextDecl) {
             if ((isa<VarDecl>(LambdaContextDecl) ||
                  isa<FieldDecl>(LambdaContextDecl)) &&
                 !isa<ParmVarDecl>(LambdaContextDecl)) {
@@ -2173,7 +2182,7 @@ void MicrosoftCXXNameMangler::mangleTemplateArgValue(QualType T,
 void MicrosoftCXXNameMangler::mangleObjCProtocol(const ObjCProtocolDecl *PD) {
   llvm::SmallString<64> TemplateMangling;
   llvm::raw_svector_ostream Stream(TemplateMangling);
-  MicrosoftCXXNameMangler Extra(Context, Stream);
+  MicrosoftCXXNameMangler Extra(Context, Stream, ShortenRTTINames);
 
   Stream << "?$";
   Extra.mangleSourceName("Protocol");
@@ -2187,7 +2196,7 @@ void MicrosoftCXXNameMangler::mangleObjCLifetime(const QualType Type,
                                                  SourceRange Range) {
   llvm::SmallString<64> TemplateMangling;
   llvm::raw_svector_ostream Stream(TemplateMangling);
-  MicrosoftCXXNameMangler Extra(Context, Stream);
+  MicrosoftCXXNameMangler Extra(Context, Stream, ShortenRTTINames);
 
   Stream << "?$";
   switch (Quals.getObjCLifetime()) {
@@ -2216,7 +2225,7 @@ void MicrosoftCXXNameMangler::mangleObjCKindOfType(const ObjCObjectType *T,
                                                    SourceRange Range) {
   llvm::SmallString<64> TemplateMangling;
   llvm::raw_svector_ostream Stream(TemplateMangling);
-  MicrosoftCXXNameMangler Extra(Context, Stream);
+  MicrosoftCXXNameMangler Extra(Context, Stream, ShortenRTTINames);
 
   Stream << "?$";
   Extra.mangleSourceName("KindOf");
@@ -2468,7 +2477,7 @@ void MicrosoftCXXNameMangler::mangleAddressSpaceType(QualType T,
   assert(Quals.hasAddressSpace() && "Not valid without address space");
   llvm::SmallString<32> ASMangling;
   llvm::raw_svector_ostream Stream(ASMangling);
-  MicrosoftCXXNameMangler Extra(Context, Stream);
+  MicrosoftCXXNameMangler Extra(Context, Stream, ShortenRTTINames);
   Stream << "?$";
 
   LangAS AS = Quals.getAddressSpace();
@@ -3658,7 +3667,7 @@ void MicrosoftCXXNameMangler::mangleType(const ComplexType *T, Qualifiers,
 
   llvm::SmallString<64> TemplateMangling;
   llvm::raw_svector_ostream Stream(TemplateMangling);
-  MicrosoftCXXNameMangler Extra(Context, Stream);
+  MicrosoftCXXNameMangler Extra(Context, Stream, ShortenRTTINames);
   Stream << "?$";
   Extra.mangleSourceName("_Complex");
   Extra.mangleType(ElementType, Range, QMM_Escape);
@@ -3723,7 +3732,7 @@ void MicrosoftCXXNameMangler::mangleType(const VectorType *T, Qualifiers Quals,
 
     llvm::SmallString<64> TemplateMangling;
     llvm::raw_svector_ostream Stream(TemplateMangling);
-    MicrosoftCXXNameMangler Extra(Context, Stream);
+    MicrosoftCXXNameMangler Extra(Context, Stream, ShortenRTTINames);
     Stream << "?$";
     Extra.mangleSourceName("__vector");
     Extra.mangleType(QualType(ET ? static_cast<const Type *>(ET) : BitIntTy, 0),
@@ -3755,7 +3764,7 @@ void MicrosoftCXXNameMangler::mangleType(const ConstantMatrixType *T,
 
   llvm::SmallString<64> TemplateMangling;
   llvm::raw_svector_ostream Stream(TemplateMangling);
-  MicrosoftCXXNameMangler Extra(Context, Stream);
+  MicrosoftCXXNameMangler Extra(Context, Stream, ShortenRTTINames);
 
   Stream << "?$";
 
@@ -3905,7 +3914,7 @@ void MicrosoftCXXNameMangler::mangleType(const AtomicType *T, Qualifiers,
 
   llvm::SmallString<64> TemplateMangling;
   llvm::raw_svector_ostream Stream(TemplateMangling);
-  MicrosoftCXXNameMangler Extra(Context, Stream);
+  MicrosoftCXXNameMangler Extra(Context, Stream, ShortenRTTINames);
   Stream << "?$";
   Extra.mangleSourceName("_Atomic");
   Extra.mangleType(ValueType, Range, QMM_Escape);
@@ -3919,7 +3928,7 @@ void MicrosoftCXXNameMangler::mangleType(const PipeType *T, Qualifiers,
 
   llvm::SmallString<64> TemplateMangling;
   llvm::raw_svector_ostream Stream(TemplateMangling);
-  MicrosoftCXXNameMangler Extra(Context, Stream);
+  MicrosoftCXXNameMangler Extra(Context, Stream, ShortenRTTINames);
   Stream << "?$";
   Extra.mangleSourceName("ocl_pipe");
   Extra.mangleType(ElementType, Range, QMM_Escape);
@@ -3957,7 +3966,7 @@ void MicrosoftCXXNameMangler::mangleType(const BitIntType *T, Qualifiers,
                                          SourceRange Range) {
   llvm::SmallString<64> TemplateMangling;
   llvm::raw_svector_ostream Stream(TemplateMangling);
-  MicrosoftCXXNameMangler Extra(Context, Stream);
+  MicrosoftCXXNameMangler Extra(Context, Stream, ShortenRTTINames);
   Stream << "?$";
   if (T->isUnsigned())
     Extra.mangleSourceName("_UBitInt");
@@ -3989,7 +3998,7 @@ void MicrosoftCXXNameMangler::mangleType(const OverflowBehaviorType *T,
 
   llvm::SmallString<64> TemplateMangling;
   llvm::raw_svector_ostream Stream(TemplateMangling);
-  MicrosoftCXXNameMangler Extra(Context, Stream);
+  MicrosoftCXXNameMangler Extra(Context, Stream, ShortenRTTINames);
   Stream << "?$";
   if (T->isWrapKind()) {
     Extra.mangleSourceName("ObtWrap_");
@@ -4185,16 +4194,18 @@ void MicrosoftMangleContextImpl::mangleCXXVBTable(
 
 void MicrosoftMangleContextImpl::mangleCXXRTTI(QualType T, raw_ostream &Out) {
   msvc_hashing_ostream MHO(Out);
-  MicrosoftCXXNameMangler Mangler(*this, MHO);
+  MicrosoftCXXNameMangler Mangler(*this, MHO, /*ShortenRTTINames=*/true);
   Mangler.getStream() << "??_R0";
   Mangler.mangleType(T, SourceRange(), MicrosoftCXXNameMangler::QMM_Result);
   Mangler.getStream() << "@8";
 }
 
 void MicrosoftMangleContextImpl::mangleCXXRTTIName(
-    QualType T, raw_ostream &Out, bool NormalizeIntegers = false) {
-  MicrosoftCXXNameMangler Mangler(*this, Out);
-  Mangler.getStream() << '.';
+    QualType T, raw_ostream &Out, bool NormalizeIntegers = false,
+    bool ShortenRTTINames = false) {
+  Out << '.';
+  msvc_hashing_ostream MHO(Out);
+  MicrosoftCXXNameMangler Mangler(*this, MHO, ShortenRTTINames);
   Mangler.mangleType(T, SourceRange(), MicrosoftCXXNameMangler::QMM_Result);
 }
 

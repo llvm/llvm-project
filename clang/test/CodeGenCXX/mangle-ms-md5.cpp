@@ -34,6 +34,7 @@ struct Y4095 {
 Y4095::Y4095() {}
 // CHECK-DAG: @"??@a6a285da2eea70dba6b578022be61d81@??_R4@" = linkonce_odr constant %rtti.CompleteObjectLocator
 // CHECK-DAG: @"??@a6a285da2eea70dba6b578022be61d81@" = alias
+// CHECK-DAG: @"??@c14087f0ec22b387aea7c59083f4f546@" = linkonce_odr global %rtti.TypeDescriptor37 { ptr @"??_7type_info@@6B@", ptr null, [38 x i8] c".??@5ca87b4c7c2322ca1e21f8b01a23e135@\00" }, comdat
 
 // RUN: %clang_cc1 -DTHROW -fcxx-exceptions -fms-compatibility-version=18.0 -emit-llvm -o - -triple i686-pc-win32 %s | FileCheck --check-prefix=HAVECTOR %s
 // RUN: %clang_cc1 -DTHROW -fcxx-exceptions -fms-compatibility-version=19.0 -emit-llvm -o - -triple i686-pc-win32 %s | FileCheck --check-prefix=OMITCTOR %s
@@ -71,3 +72,19 @@ int X4088(z) = 1515;
 // Use initialization to verify mangled name association in the il
 int X4089(z) = 1717;
 // CHECK-DAG: @"??@0269945400a3474730d6880df0967d8f@" = dso_local global i32 1717, align 4
+
+#define R4090 X4089(r)
+struct R4090 {
+  R4090();
+  virtual void f();
+};
+R4090::R4090() {}
+// CHECK-DAG: @"??@{{[0-9a-f]+}}@" = linkonce_odr global %rtti.TypeDescriptor4096 { ptr @"??_7type_info@@6B@", ptr null, [4097 x i8] c".?AU{{r+}}@@\00" }, comdat
+
+#define R4091 C2(X4089(s), s)
+struct R4091 {
+  R4091();
+  virtual void f();
+};
+R4091::R4091() {}
+// CHECK-DAG: @"??@{{[0-9a-f]+}}@" = linkonce_odr global %rtti.TypeDescriptor37 { ptr @"??_7type_info@@6B@", ptr null, [38 x i8] c".??@c9d63594821ede4ea693d109deaa7a17@\00" }, comdat
