@@ -1192,6 +1192,9 @@ void ProcessGDBRemote::LoadStubBinaries() {
           allow_memory_image_last_resort);
     }
   }
+
+  // Cache the address spaces the remote exposes (empty for most processes).
+  m_address_spaces = m_gdb_comm.GetAddressSpaces();
 }
 
 void ProcessGDBRemote::MaybeLoadExecutableModule() {

@@ -14,6 +14,7 @@
 #include "NativeWatchpointList.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/MainLoop.h"
+#include "lldb/Utility/AddressSpace.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Iterable.h"
 #include "lldb/Utility/Status.h"
@@ -95,6 +96,12 @@ public:
 
   virtual Status GetMemoryRegionInfo(lldb::addr_t load_addr,
                                      MemoryRegionInfo &range_info);
+
+  /// Return the address spaces this process exposes. The default
+  /// implementation returns an empty list; processes that have multiple
+  /// address spaces (such as GPUs) override this. Served over the
+  /// "jAddressSpacesInfo" packet.
+  virtual std::vector<AddressSpaceInfo> GetAddressSpaces() { return {}; }
 
   virtual Status ReadMemory(lldb::addr_t addr, void *buf, size_t size,
                             size_t &bytes_read) = 0;

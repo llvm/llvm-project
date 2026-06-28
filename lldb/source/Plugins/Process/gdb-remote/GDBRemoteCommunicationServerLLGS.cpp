@@ -163,6 +163,9 @@ void GDBRemoteCommunicationServerLLGS::RegisterPacketHandlers() {
       StringExtractorGDBRemote::eServerPacketType_jThreadsInfo,
       &GDBRemoteCommunicationServerLLGS::Handle_jThreadsInfo);
   RegisterMemberFunctionHandler(
+      StringExtractorGDBRemote::eServerPacketType_jAddressSpacesInfo,
+      &GDBRemoteCommunicationServerLLGS::Handle_jAddressSpacesInfo);
+  RegisterMemberFunctionHandler(
       StringExtractorGDBRemote::eServerPacketType_qWatchpointSupportInfo,
       &GDBRemoteCommunicationServerLLGS::Handle_qWatchpointSupportInfo);
   RegisterMemberFunctionHandler(
@@ -3907,6 +3910,31 @@ GDBRemoteCommunicationServerLLGS::Handle_jThreadsInfo(
   StreamGDBRemote escaped_response;
   escaped_response.PutEscapedBytes(response.GetData(), response.GetSize());
   return SendPacketNoLock(escaped_response.GetString());
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteCommunicationServerLLGS::Handle_jAddressSpacesInfo(
+    StringExtractorGDBRemote &packet) {
+  Log *log = GetLog(LLDBLog::Process);
+
+  // Ensure we have a process.
+  if (!m_current_process ||
+      (m_current_process->GetID() == LLDB_INVALID_PROCESS_ID)) {
+    LLDB_LOGF(log,
+              "GDBRemoteCommunicationServerLLGS::%s failed, no process "
+              "available",
+              __FUNCTION__);
+    return SendErrorResponse(Status::FromErrorString("invalid process"));
+  }
+
+  std::vector<AddressSpaceInfo> address_spaces =
+      m_current_process->GetAddressSpaces();
+  if (address_spaces.empty())
+    return SendUnimplementedResponse(packet.GetStringRef().data());
+
+  StreamGDBRemote response;
+  response.PutAsJSONArray(address_spaces, /*hex_ascii=*/false);
+  return SendPacketNoLock(response.GetString());
 }
 
 GDBRemoteCommunication::PacketResult

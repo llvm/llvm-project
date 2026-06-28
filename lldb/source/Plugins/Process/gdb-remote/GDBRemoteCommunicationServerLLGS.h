@@ -268,6 +268,8 @@ protected:
 
   PacketResult Handle_jThreadsInfo(StringExtractorGDBRemote &packet);
 
+  PacketResult Handle_jAddressSpacesInfo(StringExtractorGDBRemote &packet);
+
   PacketResult Handle_qWatchpointSupportInfo(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_qFileLoadAddress(StringExtractorGDBRemote &packet);

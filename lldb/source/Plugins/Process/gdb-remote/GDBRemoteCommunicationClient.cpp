@@ -384,6 +384,7 @@ void GDBRemoteCommunicationClient::ResetDiscoverableSettings(bool did_exec) {
     m_attach_or_wait_reply = eLazyBoolCalculate;
     m_avoid_g_packets = eLazyBoolCalculate;
     m_supports_multiprocess = eLazyBoolCalculate;
+    m_supports_address_spaces = eLazyBoolCalculate;
     m_supports_qSaveCore = eLazyBoolCalculate;
     m_supports_qXfer_auxv_read = eLazyBoolCalculate;
     m_supports_qXfer_libraries_read = eLazyBoolCalculate;
@@ -1156,6 +1157,39 @@ GDBRemoteCommunicationClient::GetProcessStandaloneBinaries() {
   if (m_qProcessInfo_is_valid == eLazyBoolCalculate)
     GetCurrentProcessInfo();
   return m_binary_addresses;
+}
+
+std::vector<AddressSpaceInfo> GDBRemoteCommunicationClient::GetAddressSpaces() {
+  // The server replies with the unsupported response when it has no address
+  // spaces, so cache that to avoid re-sending the packet on every call.
+  if (m_supports_address_spaces == eLazyBoolNo)
+    return {};
+
+  StringExtractorGDBRemote response;
+  response.SetResponseValidatorToJSON();
+  if (SendPacketAndWaitForResponse("jAddressSpacesInfo", response) !=
+      PacketResult::Success)
+    return {};
+
+  if (response.IsUnsupportedResponse() || response.IsErrorResponse()) {
+    m_supports_address_spaces = eLazyBoolNo;
+    return {};
+  }
+  m_supports_address_spaces = eLazyBoolYes;
+
+  llvm::Expected<std::vector<AddressSpaceInfo>> info =
+      llvm::json::parse<std::vector<AddressSpaceInfo>>(response.Peek(),
+                                                       "AddressSpaceInfo");
+  if (info)
+    return std::move(*info);
+
+  // A bare JSON parse error is meaningless on its own, so log both the full
+  // response and the parse error rather than surfacing it to the user.
+  Log *log = GetLog(GDBRLog::Process);
+  LLDB_LOG_ERROR(log, info.takeError(),
+                 "malformed jAddressSpacesInfo response '{1}': {0}",
+                 response.GetStringRef());
+  return {};
 }
 
 bool GDBRemoteCommunicationClient::GetGDBServerVersion() {

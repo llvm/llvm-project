@@ -45,6 +45,7 @@
 #include "lldb/Target/ThreadList.h"
 #include "lldb/Target/ThreadPlanStack.h"
 #include "lldb/Target/Trace.h"
+#include "lldb/Utility/AddressSpace.h"
 #include "lldb/Utility/AddressableBits.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Args.h"
@@ -2045,6 +2046,13 @@ public:
   virtual Status
   GetMemoryRegions(lldb_private::MemoryRegionInfos &region_list);
 
+  /// Get the address spaces this process exposes (for example a GPU's global,
+  /// local, private or generic memory). Empty for processes with a single
+  /// address space. Populated from the process plugin when it connects.
+  const std::vector<AddressSpaceInfo> &GetAddressSpaces() const {
+    return m_address_spaces;
+  }
+
   /// Get the number of watchpoints supported by this target.
   ///
   /// We may be able to determine the number of watchpoints available
@@ -3498,6 +3506,9 @@ protected:
   ThreadList
       m_extended_thread_list; ///< Constituent for extended threads that may be
                               /// generated, cleared on natural stops
+  std::vector<AddressSpaceInfo>
+      m_address_spaces; ///< Address spaces reported by the process plugin,
+                        /// empty for single-address-space processes.
   lldb::RunDirection m_base_direction; ///< ThreadPlanBase run direction
   uint32_t m_extended_thread_stop_id; ///< The natural stop id when
                                       ///extended_thread_list was last updated
