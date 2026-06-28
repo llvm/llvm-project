@@ -227,6 +227,11 @@ New checks
   Finds instances where the result of a standard algorithm is used in a Boolean
   context without being compared to the end iterator.
 
+- New :doc:`bugprone-suspicious-fread-fwrite-return
+  <clang-tidy/checks/bugprone/suspicious-fread-fwrite-return>` check.
+
+  Finds suspicious checks of the return value of ``fread`` and ``fwrite``.
+
 - New :doc:`bugprone-unsafe-to-allow-exceptions
   <clang-tidy/checks/bugprone/unsafe-to-allow-exceptions>` check.
 

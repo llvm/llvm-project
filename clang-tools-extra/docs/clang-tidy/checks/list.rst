@@ -155,6 +155,7 @@ Clang-Tidy Checks
    :doc:`bugprone-string-literal-with-embedded-nul <bugprone/string-literal-with-embedded-nul>`,
    :doc:`bugprone-stringview-nullptr <bugprone/stringview-nullptr>`, "Yes"
    :doc:`bugprone-suspicious-enum-usage <bugprone/suspicious-enum-usage>`,
+   :doc:`bugprone-suspicious-fread-fwrite-return <bugprone/suspicious-fread-fwrite-return>`, "Yes"
    :doc:`bugprone-suspicious-include <bugprone/suspicious-include>`,
    :doc:`bugprone-suspicious-memory-comparison <bugprone/suspicious-memory-comparison>`,
    :doc:`bugprone-suspicious-memset-usage <bugprone/suspicious-memset-usage>`, "Yes"
