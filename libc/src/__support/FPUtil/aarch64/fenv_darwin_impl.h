@@ -24,13 +24,28 @@
 #include "hdr/types/fenv_t.h"
 #include "src/__support/FPUtil/FPBits.h"
 
+// libc's <fenv.h> spells the denormal/flush-to-zero exception FE_DENORM, while
+// the system (Apple) <fenv.h> used in an overlay build spells it FE_FLUSHTOZERO.
+// Provide the latter as an alias in a full build so the code below uses a single
+// name.
+#ifndef FE_FLUSHTOZERO
+#define FE_FLUSHTOZERO FE_DENORM
+#endif
+
 namespace LIBC_NAMESPACE_DECL {
 namespace fputil {
 
 struct FEnv {
   struct FPState {
+#ifdef LIBC_FULL_BUILD
+    // libc's own fenv_t: a 4-byte status word and a 4-byte control word.
+    uint32_t StatusWord;
+    uint32_t ControlWord;
+#else
+    // The system (Apple) fenv_t in an overlay build: two 64-bit words.
     uint64_t StatusWord;
     uint64_t ControlWord;
+#endif
   };
 
   static_assert(
@@ -54,6 +69,18 @@ struct FEnv {
   // __APPLE__ ARM64 has an extra flag that is raised when a denormal is flushed
   // to zero.
   static constexpr uint32_t EX_FLUSHTOZERO = 0x20;
+
+  // FPCR trap-enable bit masks.  These come from Apple's <fenv.h> (not the ACLE
+  // <arm_acle.h>), which a full build replaces with libc's own fenv headers, so
+  // define them here with the same values Apple uses.
+#ifdef LIBC_FULL_BUILD
+  static constexpr uint32_t __fpcr_trap_invalid = 0x00000100;
+  static constexpr uint32_t __fpcr_trap_divbyzero = 0x00000200;
+  static constexpr uint32_t __fpcr_trap_overflow = 0x00000400;
+  static constexpr uint32_t __fpcr_trap_underflow = 0x00000800;
+  static constexpr uint32_t __fpcr_trap_inexact = 0x00001000;
+  static constexpr uint32_t __fpcr_flush_to_zero = 0x01000000;
+#endif
 
   // Zero-th bit is the first bit.
   static constexpr uint32_t ROUNDING_CONTROL_BIT_POSITION = 22;
