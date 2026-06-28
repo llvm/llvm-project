@@ -10061,6 +10061,20 @@ static bool shouldLowerTailCallStackArg(const MachineFunction &MF,
   return true;
 }
 
+/// Make a copy of an aggregate at address specified by "Src" to address
+/// "Dst" with size and alignment information specified by the specific
+/// parameter attribute. The copy will be passed as a byval function parameter.
+static SDValue CreateCopyOfByValArgument(SDValue Src, SDValue Dst,
+                                         SDValue Chain, ISD::ArgFlagsTy Flags,
+                                         SelectionDAG &DAG, const SDLoc &dl) {
+  SDValue SizeNode = DAG.getIntPtrConstant(Flags.getByValSize(), dl);
+  Align Alignment = Flags.getNonZeroByValAlign();
+  return DAG.getMemcpy(Chain, dl, Dst, Src, SizeNode, Alignment, Alignment,
+                       /*isVolatile*/ false, /*AlwaysInline=*/true,
+                       /*CI=*/nullptr, std::nullopt, MachinePointerInfo(),
+                       MachinePointerInfo());
+}
+
 /// LowerCall - Lower a call to a callseq_start + CALL + callseq_end chain,
 /// and add input and output parameter nodes.
 SDValue
@@ -10203,6 +10217,74 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
     assert(FPDiff % 16 == 0 && "unaligned stack on tail call");
   }
 
+  // If we are doing a tail-call, any byval arguments will be written to stack
+  // space which was used for incoming arguments. If any the values being used
+  // are incoming byval arguments to this function, then they might be
+  // overwritten by the stores of the outgoing arguments. To avoid this, we
+  // need to make a temporary copy of them in local stack space, then copy back
+  // to the argument area.
+  // FIXME: There's potential to improve the code by using virtual registers for
+  // temporary storage, and letting the register allocator spill if needed.
+  SmallVector<SDValue, 8> ByValTemporaries;
+  SDValue ByValTempChain;
+  if (IsTailCall) {
+    // Use null SDValue to mean "no temporary recorded for this arg index".
+    ByValTemporaries.assign(OutVals.size(), SDValue());
+
+    SmallVector<SDValue, 8> ByValCopyChains;
+    for (const CCValAssign &VA : ArgLocs) {
+      unsigned ArgIdx = VA.getValNo();
+      SDValue Src = OutVals[ArgIdx];
+      ISD::ArgFlagsTy Flags = Outs[ArgIdx].Flags;
+
+      if (!Flags.isByVal())
+        continue;
+
+      auto PtrVT = getPointerTy(DAG.getDataLayout());
+
+      // Destination: where this byval should live in the callee’s frame
+      // after the tail call.
+      int64_t Offset = VA.getLocMemOffset() + FPDiff;
+      uint64_t Size = VA.getLocVT().getFixedSizeInBits() / 8;
+      int FI = MF.getFrameInfo().CreateFixedObject(Size, Offset,
+                                                   /*IsImmutable=*/true);
+      SDValue Dst = DAG.getFrameIndex(FI, PtrVT);
+
+      ByValCopyKind Copy = ByValNeedsCopyForTailCall(DAG, Src, Dst, Flags);
+
+      if (Copy == NoCopy) {
+        // If the argument is already at the correct offset on the stack
+        // (because we are forwarding a byval argument from our caller), we
+        // don't need any copying.
+        continue;
+      } else if (Copy == CopyOnce) {
+        // If the argument is in our local stack frame, no other argument
+        // preparation can clobber it, so we can copy it to the final location
+        // later.
+        ByValTemporaries[ArgIdx] = Src;
+      } else {
+        assert(Copy == CopyViaTemp && "unexpected enum value");
+        // If we might be copying this argument from the outgoing argument
+        // stack area, we need to copy via a temporary in the local stack
+        // frame.
+        MachineFrameInfo &MFI = MF.getFrameInfo();
+        int TempFrameIdx = MFI.CreateStackObject(Flags.getByValSize(),
+                                                 Flags.getNonZeroByValAlign(),
+                                                 /*isSS=*/false);
+        SDValue Temp =
+            DAG.getFrameIndex(TempFrameIdx, getPointerTy(DAG.getDataLayout()));
+
+        SDValue CopyChain =
+            CreateCopyOfByValArgument(Src, Temp, Chain, Flags, DAG, DL);
+        ByValCopyChains.push_back(CopyChain);
+        ByValTemporaries[ArgIdx] = Temp;
+      }
+    }
+    if (!ByValCopyChains.empty())
+      ByValTempChain =
+          DAG.getNode(ISD::TokenFactor, DL, MVT::Other, ByValCopyChains);
+  }
+
   auto DescribeCallsite =
       [&](OptimizationRemarkAnalysis &R) -> OptimizationRemarkAnalysis & {
     R << "call from '" << ore::NV("Caller", MF.getName()) << "' to '";
@@ -10260,6 +10342,10 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
        RegsToPass.emplace_back(F.PReg, Val);
     }
   }
+
+  if (ByValTempChain)
+    Chain =
+        DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chain, ByValTempChain);
 
   // Walk the register/memloc assignments, inserting copies/loads.
   unsigned ExtraArgLocs = 0;
