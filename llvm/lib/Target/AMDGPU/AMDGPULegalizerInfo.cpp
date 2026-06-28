@@ -1580,12 +1580,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     const LLT DstTy = Query.Types[0];
     const LLT MemTy = Query.MMODescrs[0].MemoryTy;
 
-    if (IsStore && DstTy.isVector() && DstTy == MemTy &&
-        DstTy.getElementType().getSizeInBits() == 16 &&
-        DstTy.getNumElements() % 2 != 0)
-      return true;
-
-    return false;
+    return IsStore && DstTy == MemTy &&
+           DstTy.getElementType().getSizeInBits() == 16 &&
+           DstTy.getNumElements() % 2 != 0;
   };
 
   unsigned GlobalAlign32 = ST.hasUnalignedBufferAccessEnabled() ? 0 : 32;
