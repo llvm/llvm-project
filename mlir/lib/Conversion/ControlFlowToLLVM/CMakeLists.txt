@@ -13,6 +13,7 @@ add_mlir_conversion_library(MLIRControlFlowToLLVM
 
   LINK_LIBS PUBLIC
   MLIRAnalysis
+  MLIRDataLayoutInterfaces
   MLIRControlFlowDialect
   MLIRLLVMCommonConversion
   MLIRLLVMDialect

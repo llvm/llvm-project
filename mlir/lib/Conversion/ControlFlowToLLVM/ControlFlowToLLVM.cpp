@@ -13,6 +13,7 @@
 
 #include "mlir/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.h"
 
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
@@ -273,11 +274,13 @@ struct ConvertControlFlowToLLVM
              ctx->getLoadedDialect<cf::ControlFlowDialect>();
     });
 
-    LowerToLLVMOptions options(ctx);
+    const auto &dataLayoutAnalysis = getAnalysis<DataLayoutAnalysis>();
+    LowerToLLVMOptions options(ctx,
+                               dataLayoutAnalysis.getAtOrAbove(getOperation()));
     if (indexBitwidth != kDeriveIndexBitwidthFromDataLayout)
       options.overrideIndexBitwidth(indexBitwidth);
 
-    LLVMTypeConverter converter(ctx, options);
+    LLVMTypeConverter converter(ctx, options, &dataLayoutAnalysis);
     RewritePatternSet patterns(ctx);
     mlir::cf::populateControlFlowToLLVMConversionPatterns(converter, patterns);
     mlir::cf::populateAssertToLLVMConversionPattern(converter, patterns);
