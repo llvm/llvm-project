@@ -358,7 +358,7 @@ public:
 
   LIBC_INLINE_VAR static constexpr size_t WORD_COUNT = Bits / WORD_SIZE;
 
-  cpp::array<WordType, WORD_COUNT> val{}; // zero initialized.
+  cpp::array<WordType, WORD_COUNT> val; // zero initialized.
 
   LIBC_INLINE constexpr BigInt() = default;
 
