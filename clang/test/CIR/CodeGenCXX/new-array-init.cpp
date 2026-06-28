@@ -45,7 +45,7 @@ void fn(int n) {
   // CIR: %[[REST_SIZE:.*]] = cir.sub %[[ADJ_SIZE]], %[[TWELVE]] : !u64i
   // CIR: %[[REST_ALLOC_AS_VOID:.*]] = cir.cast bitcast %[[NEXT_ELT3]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !u8i
-  // CIR: cir.libc.memset %[[REST_SIZE]] bytes at %[[REST_ALLOC_AS_VOID]] to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
+  // CIR: cir.libc.memset %[[REST_SIZE]] bytes at %[[REST_ALLOC_AS_VOID]]{{.*}} to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
 
   // LLVM: %[[N_ALLOCA:.*]] = alloca i32
   // LLVM: %[[N_LOAD:.*]] = load i32, ptr %[[N_ALLOCA]]
@@ -100,7 +100,7 @@ void fn_paren(int n) {
   // CIR: %[[REST_SIZE:.*]] = cir.sub %[[ADJ_SIZE]], %[[TWELVE]] : !u64i
   // CIR: %[[REST_ALLOC_AS_VOID:.*]] = cir.cast bitcast %[[NEXT_ELT3]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !u8i
-  // CIR: cir.libc.memset %[[REST_SIZE]] bytes at %[[REST_ALLOC_AS_VOID]] to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
+  // CIR: cir.libc.memset %[[REST_SIZE]] bytes at %[[REST_ALLOC_AS_VOID]]{{.*}} to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
 
   // LLVM: %[[N_ALLOCA:.*]] = alloca i32
   // LLVM: %[[N_LOAD:.*]] = load i32, ptr %[[N_ALLOCA]]
@@ -206,7 +206,7 @@ void const_sufficient() {
   // CIR: %[[REST_SIZE:.*]] = cir.sub %[[SIZE]], %[[INIT_SIZE]] : !u64i
   // CIR: %[[REST_PTR_DECAY:.*]] = cir.cast bitcast %[[ELT3]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !u8i
-  // CIR: cir.libc.memset %[[REST_SIZE]] bytes at %[[REST_PTR_DECAY]] to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
+  // CIR: cir.libc.memset %[[REST_SIZE]] bytes at %[[REST_PTR_DECAY]]{{.*}} to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
   // CIR: cir.return
 
   // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef 16)
@@ -243,7 +243,7 @@ void const_sufficient_paren() {
   // CIR: %[[REST_SIZE:.*]] = cir.sub %[[SIZE]], %[[INIT_SIZE]] : !u64i
   // CIR: %[[REST_PTR_DECAY:.*]] = cir.cast bitcast %[[ELT3]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !u8i
-  // CIR: cir.libc.memset %[[REST_SIZE]] bytes at %[[REST_PTR_DECAY]] to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
+  // CIR: cir.libc.memset %[[REST_SIZE]] bytes at %[[REST_PTR_DECAY]]{{.*}} to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
   // CIR: cir.return
 
   // LLVM: %[[ALLOC:.*]] = call{{.*}}nonnull ptr @_Znam(i64 noundef 16)
@@ -298,7 +298,7 @@ void string_nonconst(int n) {
   // CIR: %[[SIZE_LEFT:.*]] = cir.sub %[[SIZE]], %[[CONST_STR_SIZE]] : !u64i
   // CIR: %[[AFTER_COPY_CAST:.*]] = cir.cast bitcast %[[AFTER_COPY]] : !cir.ptr<!s8i> -> !cir.ptr<!void>
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !u8i
-  // CIR: cir.libc.memset %[[SIZE_LEFT]] bytes at %[[AFTER_COPY_CAST]] to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
+  // CIR: cir.libc.memset %[[SIZE_LEFT]] bytes at %[[AFTER_COPY_CAST]]{{.*}} to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
 
   // LLVM: %[[ARG_ALLOCA:.*]] = alloca i32
   // LLVM: %[[ARG_LOAD:.*]] = load i32, ptr %[[ARG_ALLOCA]]
@@ -334,7 +334,7 @@ void string_nonconst_paren(int n) {
   // CIR: %[[SIZE_LEFT:.*]] = cir.sub %[[SIZE]], %[[CONST_STR_SIZE]] : !u64i
   // CIR: %[[AFTER_COPY_CAST:.*]] = cir.cast bitcast %[[AFTER_COPY]] : !cir.ptr<!s8i> -> !cir.ptr<!void>
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !u8i
-  // CIR: cir.libc.memset %[[SIZE_LEFT]] bytes at %[[AFTER_COPY_CAST]] to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
+  // CIR: cir.libc.memset %[[SIZE_LEFT]] bytes at %[[AFTER_COPY_CAST]]{{.*}} to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
 
   // LLVM: %[[ARG_ALLOCA:.*]] = alloca i32
   // LLVM: %[[ARG_LOAD:.*]] = load i32, ptr %[[ARG_ALLOCA]]
@@ -370,7 +370,7 @@ void string_nonconst_paren_extra_paren(int n) {
   // CIR: %[[SIZE_LEFT:.*]] = cir.sub %[[SIZE]], %[[CONST_STR_SIZE]] : !u64i
   // CIR: %[[AFTER_COPY_CAST:.*]] = cir.cast bitcast %[[AFTER_COPY]] : !cir.ptr<!s8i> -> !cir.ptr<!void>
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !u8i
-  // CIR: cir.libc.memset %[[SIZE_LEFT]] bytes at %[[AFTER_COPY_CAST]] to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
+  // CIR: cir.libc.memset %[[SIZE_LEFT]] bytes at %[[AFTER_COPY_CAST]]{{.*}} to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
 
   // LLVM: %[[ARG_ALLOCA:.*]] = alloca i32
   // LLVM: %[[ARG_LOAD:.*]] = load i32, ptr %[[ARG_ALLOCA]]
@@ -540,7 +540,7 @@ void aggr_sufficient(int n) {
   // CIR: %[[REST_SIZE:.*]] = cir.sub %[[SIZE]], %[[TWO_ELTS_SIZE]] : !u64i
   // CIR: %[[REST_DECAY:.*]] = cir.cast bitcast %[[ELT2]] : !cir.ptr<!rec_Aggr2E0> -> !cir.ptr<!void>
   // CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !u8i
-  // CIR: cir.libc.memset %[[REST_SIZE]] bytes at %[[REST_DECAY]] to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
+  // CIR: cir.libc.memset %[[REST_SIZE]] bytes at %[[REST_DECAY]]{{.*}} to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
 
   // LLVM: %[[ARG:.*]] = alloca i32
   // LLVM: %[[GET_N:.*]] = load i32, ptr %[[ARG]]

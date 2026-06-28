@@ -108,7 +108,7 @@ end subroutine
 
 subroutine f09
   !$omp declare variant (sub:vsub) match (construct={parallel}) &
-!ERROR: At most one MATCH clause can appear on the DECLARE VARIANT directive
+!ERROR: At most one MATCH clause can appear on DECLARE VARIANT directive
   !$omp & match (construct={teams})
 contains
   subroutine vsub
