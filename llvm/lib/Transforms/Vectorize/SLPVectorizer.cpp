@@ -28788,6 +28788,9 @@ class HorizontalReduction {
   getBoolReductionZeroTestCost(const TargetTransformInfo &TTI,
                                FixedVectorType *VecTy, CmpPredicate Pred,
                                TTI::TargetCostKind CostKind) {
+    if (Pred != ICmpInst::ICMP_EQ && Pred != ICmpInst::ICMP_NE)
+      return InstructionCost::getInvalid();
+
     auto *CmpTy = cast<VectorType>(CmpInst::makeCmpResultType(VecTy));
     unsigned ReductionOpcode =
         Pred == ICmpInst::ICMP_EQ ? Instruction::And : Instruction::Or;
@@ -28807,6 +28810,9 @@ class HorizontalReduction {
                                               FixedVectorType *VecTy,
                                               CmpPredicate Pred,
                                               TTI::TargetCostKind CostKind) {
+    if (Pred != ICmpInst::ICMP_EQ && Pred != ICmpInst::ICMP_NE)
+      return InstructionCost::getInvalid();
+
     LLVMContext &Ctx = VecTy->getContext();
     ElementCount EC = VecTy->getElementCount();
     if (EC.isScalable())
@@ -28875,7 +28881,7 @@ class HorizontalReduction {
   static Value *createBoolReductionZeroTest(IRBuilderBase &Builder, Value *Vec,
                                             CmpPredicate Pred) {
     auto *VecTy = dyn_cast<VectorType>(Vec->getType());
-    if (!VecTy)
+    if (!VecTy || (Pred != ICmpInst::ICMP_EQ && Pred != ICmpInst::ICMP_NE))
       return nullptr;
 
     Value *Cmp = Builder.CreateICmp(Pred, Vec, Constant::getNullValue(VecTy));
@@ -28898,7 +28904,7 @@ class HorizontalReduction {
   static Value *createCtpopZeroTest(IRBuilderBase &Builder, Value *Vec,
                                     CmpPredicate Pred) {
     auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
-    if (!VecTy)
+    if (!VecTy || (Pred != ICmpInst::ICMP_EQ && Pred != ICmpInst::ICMP_NE))
       return nullptr;
 
     Type *MaskIntTy =
