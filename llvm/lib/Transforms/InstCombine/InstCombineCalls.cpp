@@ -2034,6 +2034,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       replaceOperand(*II, 0, Pair->first);
       replaceOperand(*II, 1, Pair->second);
       II->dropPoisonGeneratingAnnotations();
+      II->dropUBImplyingAttrsAndMetadata();
       return II;
     }
 

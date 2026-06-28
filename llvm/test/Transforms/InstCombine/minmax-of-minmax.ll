@@ -308,7 +308,7 @@ define i32 @umax_of_umax_umin_drop_range(i32 %x, i32 %y) {
 
 define i32 @umax_of_symmetric_drop_noundef(i1 %cond, i32 %x, i32 %y) {
 ; CHECK-LABEL: @umax_of_symmetric_drop_noundef(
-; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.umax.i32(i32 noundef [[Y:%.*]], i32 [[X:%.*]])
+; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.umax.i32(i32 [[Y:%.*]], i32 [[X:%.*]])
 ; CHECK-NEXT:    ret i32 [[MAX]]
 ;
   %sel1 = select i1 %cond, i32 %y, i32 %x
