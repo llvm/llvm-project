@@ -8,6 +8,7 @@
 
 #include "mlir/Conversion/VectorToLLVM/ConvertVectorToLLVMPass.h"
 
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -107,8 +108,13 @@ void ConvertVectorToLLVMPass::runOnOperation() {
   }
 
   // Convert to the LLVM IR dialect.
-  LowerToLLVMOptions options(&getContext());
-  LLVMTypeConverter converter(&getContext(), options);
+  // Use the module's data layout so that the index bitwidth is derived from the
+  // target (e.g. i32 on 32-bit targets) rather than hard-wired to i64, which
+  // mirrors what FinalizeMemRefToLLVMConversionPass does.
+  const auto &dataLayoutAnalysis = getAnalysis<DataLayoutAnalysis>();
+  LowerToLLVMOptions options(&getContext(),
+                             dataLayoutAnalysis.getAtOrAbove(getOperation()));
+  LLVMTypeConverter converter(&getContext(), options, &dataLayoutAnalysis);
   RewritePatternSet patterns(&getContext());
   populateVectorTransferLoweringPatterns(patterns);
   populateVectorToLLVMConversionPatterns(
