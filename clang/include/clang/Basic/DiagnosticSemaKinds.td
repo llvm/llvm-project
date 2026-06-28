@@ -12786,10 +12786,10 @@ def err_omp_transparent_invalid_value : Error<"invalid value for transparent cla
   " expected one of: omp_not_impex, omp_import, omp_export, omp_impex">;
 def err_omp_transparent_invalid_type : Error<
   "transparent clause cannot be applied to type: %0">;
-def err_omp_num_teams_multi_expr_not_allowed
-    : Error<"only two expressions allowed in 'num_teams' clause">;
 def err_omp_num_teams_lower_bound_larger
     : Error<"lower bound is greater than upper bound in 'num_teams' clause">;
+def err_omp_modifier_requires_version : Error<
+  "'%0' modifier in '%1' clause requires OpenMP %2 or later">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {
