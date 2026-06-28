@@ -28910,6 +28910,65 @@ class HorizontalReduction {
     return Builder.CreateICmp(Pred, Pop, ConstantInt::get(MaskIntTy, 0));
   }
 
+  /// Fold an eq/ne-zero test of a single integer reduction into a lane-wise
+  /// comparison and an i1 reduction. For example, transform:
+  ///   %r = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> %v)
+  ///   %cmp = icmp ne i8 %r, 0
+  /// into:
+  ///   %lanes = icmp ne <16 x i8> %v, zeroinitializer
+  ///   %cmp = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> %lanes)
+  Value *tryReplaceReductionZeroTest(BoUpSLP &V, IRBuilderBase &Builder,
+                                     const TargetTransformInfo &TTI,
+                                     Value *VectorizedTree) {
+    auto ZeroTest = matchReductionZeroTestUse();
+    if (!ZeroTest)
+      return nullptr;
+
+    auto *Reduction = dyn_cast<IntrinsicInst>(VectorizedTree);
+    Intrinsic::ID ReductionID = RdxKind == RecurKind::Or
+                                    ? Intrinsic::vector_reduce_or
+                                    : Intrinsic::vector_reduce_umax;
+    if (!Reduction || Reduction->getIntrinsicID() != ReductionID)
+      return nullptr;
+
+    Value *Vec = Reduction->getArgOperand(0);
+    auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
+    if (!VecTy || !VecTy->getElementType()->isIntegerTy())
+      return nullptr;
+
+    auto Lowering = getBestReductionZeroTestLowering(
+        TTI, VecTy, ZeroTest->Pred, TTI::TCK_RecipThroughput);
+    if (!Lowering)
+      return nullptr;
+
+    Builder.SetInsertPoint(cast<Instruction>(ReductionRoot));
+    Builder.SetCurrentDebugLocation(ZeroTest->Cmp->getDebugLoc());
+    Value *NewReduction = nullptr;
+    switch (Lowering->Kind) {
+    case ZeroTestLoweringKind::BoolReduction:
+      NewReduction = createBoolReductionZeroTest(Builder, Vec, ZeroTest->Pred);
+      break;
+    case ZeroTestLoweringKind::Ctpop:
+      NewReduction = createCtpopZeroTest(Builder, Vec, ZeroTest->Pred);
+      break;
+    }
+    assert(NewReduction && "Expected valid zero-test lowering.");
+
+    NewReduction->takeName(ZeroTest->Cmp);
+    ZeroTest->Cmp->replaceAllUsesWith(NewReduction);
+    salvageDebugInfo(*ZeroTest->Cmp);
+    ZeroTest->Cmp->dropAllReferences();
+    ZeroTest->Cmp->removeFromParent();
+    V.eraseInstruction(ZeroTest->Cmp);
+    V.eraseInstruction(Reduction);
+    // Reuse the count for the replaced reduction and account for the new
+    // vector compare.
+    ++NumVectorInstructions;
+    if (Lowering->Kind == ZeroTestLoweringKind::Ctpop)
+      NumVectorInstructions += 2;
+    return NewReduction;
+  }
+
   /// Checks if instruction is associative and can be vectorized.
   enum class ReductionOrdering { Unordered, Ordered, None };
   ReductionOrdering RK = ReductionOrdering::None;
@@ -30390,58 +30449,12 @@ public:
     }
     VectorizedTree = ExtraReductions.front().second;
 
-    // Fold an eq/ne-zero test of a single integer reduction into a lane-wise
-    // comparison and an i1 reduction. For example, transform:
-    //   %r = call i8 @llvm.vector.reduce.or.v16i8(<16 x i8> %v)
-    //   %cmp = icmp ne i8 %r, 0
-    // into:
-    //   %lanes = icmp ne <16 x i8> %v, zeroinitializer
-    //   %cmp = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> %lanes)
-    bool ReplacedZeroTest = false;
-    if (auto ZeroTest = matchReductionZeroTestUse()) {
-      auto *Reduction = dyn_cast<IntrinsicInst>(VectorizedTree);
-      Intrinsic::ID ReductionID = RdxKind == RecurKind::Or
-                                      ? Intrinsic::vector_reduce_or
-                                      : Intrinsic::vector_reduce_umax;
-      if (Reduction && Reduction->getIntrinsicID() == ReductionID) {
-        Value *Vec = Reduction->getArgOperand(0);
-        auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
-        if (VecTy && VecTy->getElementType()->isIntegerTy()) {
-          if (auto Lowering = getBestReductionZeroTestLowering(
-                  *TTI, VecTy, ZeroTest->Pred, TTI::TCK_RecipThroughput)) {
-            Builder.SetInsertPoint(cast<Instruction>(ReductionRoot));
-            Builder.SetCurrentDebugLocation(ZeroTest->Cmp->getDebugLoc());
-            Value *NewReduction = nullptr;
-            switch (Lowering->Kind) {
-            case ZeroTestLoweringKind::BoolReduction:
-              NewReduction =
-                  createBoolReductionZeroTest(Builder, Vec, ZeroTest->Pred);
-              break;
-            case ZeroTestLoweringKind::Ctpop:
-              NewReduction = createCtpopZeroTest(Builder, Vec, ZeroTest->Pred);
-              break;
-            }
-            assert(NewReduction && "Expected valid zero-test lowering.");
-            NewReduction->takeName(ZeroTest->Cmp);
-            ZeroTest->Cmp->replaceAllUsesWith(NewReduction);
-            VectorizedTree = NewReduction;
-            salvageDebugInfo(*ZeroTest->Cmp);
-            ZeroTest->Cmp->dropAllReferences();
-            ZeroTest->Cmp->removeFromParent();
-            V.eraseInstruction(ZeroTest->Cmp);
-            V.eraseInstruction(Reduction);
-            // Reuse the count for the replaced reduction and account for the
-            // new vector compare.
-            ++NumVectorInstructions;
-            if (Lowering->Kind == ZeroTestLoweringKind::Ctpop)
-              NumVectorInstructions += 2;
-            ReplacedZeroTest = true;
-          }
-        }
-      }
-    }
-
-    if (!ReplacedZeroTest)
+    // NewReduction is the profitable zero-test lowering, either a lane-wise
+    // compare followed by vector.reduce.{or,and}, or ctpop.
+    if (Value *NewReduction =
+            tryReplaceReductionZeroTest(V, Builder, *TTI, VectorizedTree))
+      VectorizedTree = NewReduction;
+    else
       ReductionRoot->replaceAllUsesWith(VectorizedTree);
 
     // The original scalar reduction is expected to have no remaining
