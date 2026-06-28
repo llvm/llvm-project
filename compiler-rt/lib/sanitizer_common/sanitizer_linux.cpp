@@ -1404,6 +1404,10 @@ void ForEachMappedRegion(link_map *map, void (*cb)(const void *, uptr)) {
   typedef ElfW(Ehdr) Elf_Ehdr;
 #    endif  // !SANITIZER_FREEBSD
   char *base = (char *)map->l_addr;
+  Dl_info info;
+  if (dladdr((void *)map->l_ld, &info) && info.dli_fbase) {
+    base = (char *)info.dli_fbase;
+  }
   Elf_Ehdr *ehdr = (Elf_Ehdr *)base;
   char *phdrs = base + ehdr->e_phoff;
   char *phdrs_end = phdrs + ehdr->e_phnum * ehdr->e_phentsize;
