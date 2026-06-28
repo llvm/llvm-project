@@ -331,16 +331,6 @@ unsigned CallBase::getNumSubclassExtraOperandsDynamic() const {
   return cast<CallBrInst>(this)->getNumIndirectDests() + 1;
 }
 
-void CallBase::dropPoisonGeneratingAndUBImplyingParamAttrs(unsigned ArgNo) {
-  AttributeMask AM = AttributeFuncs::getUBImplyingAttributes();
-  // TODO: Add a helper AttributeFuncs::getPoisonGeneratingAttributes
-  AM.addAttribute(Attribute::NoFPClass);
-  AM.addAttribute(Attribute::Range);
-  AM.addAttribute(Attribute::Alignment);
-  AM.addAttribute(Attribute::NonNull);
-  removeParamAttrs(ArgNo, AM);
-}
-
 bool CallBase::isIndirectCall() const {
   const Value *V = getCalledOperand();
   if (isa<Function>(V) || isa<Constant>(V))
