@@ -180,6 +180,17 @@ private:
 		m_set.namespaces.SetNameCaseInsensitive();
 	}
 
+	void SetStrictlyCaseSensitive() {
+		m_set.function_basenames.SetStrictlyCaseSensitive();
+		m_set.function_fullnames.SetStrictlyCaseSensitive();
+		m_set.function_methods.SetStrictlyCaseSensitive();
+		m_set.function_selectors.SetStrictlyCaseSensitive();
+		m_set.objc_class_selectors.SetStrictlyCaseSensitive();
+		m_set.globals.SetStrictlyCaseSensitive();
+		m_set.types.SetStrictlyCaseSensitive();
+		m_set.namespaces.SetStrictlyCaseSensitive();
+	}
+
   /// The DWARF file which we are indexing.
   SymbolFileDWARF *m_dwarf;
   /// Which dwarf units should we skip while building the index.

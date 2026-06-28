@@ -160,8 +160,12 @@ void ManualDWARFIndex::IndexUnit(DWARFUnit &unit, SymbolFileDWARFDwo *dwp,
 
   lldb::IdentifierCaseType cu_identifier_case = unit.GetIdentifierCase();
 
+  // If at least one of the Compile Units is case sensitive, then all compile  
+  // units will be case sensitive
   if(cu_identifier_case != eCaseSensitive)
     SetNameCaseInsensitive();
+  else
+    SetStrictlyCaseSensitive();
 
   // First check if the unit has a DWO ID. If it does then we only want to index
   // the .dwo file or nothing at all. If we have a compile unit where we can't
