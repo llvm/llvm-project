@@ -49,6 +49,12 @@ enum class WarningScope {
   IntraTU  // For warnings on functions local to a Translation Unit.
 };
 
+struct LifetimeSafetyAliasChainEntry {
+  const Expr *E = nullptr;
+  const ParmVarDecl *LifetimeBoundParam = nullptr;
+  bool LifetimeBoundImplicitObject = false;
+};
+
 /// Abstract interface for operations requiring Sema access.
 ///
 /// This class exists to break a circular dependency: the LifetimeSafety
@@ -67,7 +73,8 @@ public:
   virtual void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
                                    const Expr *MovedExpr,
                                    SourceLocation FreeLoc,
-                                   llvm::ArrayRef<const Expr *> ExprChain) {}
+                                   llvm::ArrayRef<LifetimeSafetyAliasChainEntry>
+                                       AliasChain) {}
 
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
                                     const Expr *ReturnExpr,

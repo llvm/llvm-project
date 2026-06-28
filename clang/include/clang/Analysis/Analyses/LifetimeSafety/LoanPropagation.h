@@ -29,6 +29,11 @@ namespace clang::lifetimes::internal {
 using LoanSet = llvm::ImmutableSet<LoanID>;
 using OriginLoanMap = llvm::ImmutableMap<OriginID, LoanSet>;
 
+struct OriginFlowChainStep {
+  OriginID OID;
+  const OriginFlowFact *FlowFact;
+};
+
 class LoanPropagationAnalysis {
 public:
   LoanPropagationAnalysis(const CFG &C, AnalysisDeclContext &AC, FactManager &F,
@@ -50,6 +55,15 @@ public:
 
   llvm::SmallVector<OriginID>
   buildOriginFlowChain(const UseFact *UF, const LoanID TargetLoan) const;
+
+  llvm::SmallVector<OriginFlowChainStep>
+  buildOriginFlowChainWithFacts(ProgramPoint StartPoint,
+                                const OriginID StartOID,
+                                const LoanID TargetLoan) const;
+
+  llvm::SmallVector<OriginFlowChainStep>
+  buildOriginFlowChainWithFacts(const UseFact *UF,
+                                const LoanID TargetLoan) const;
 
 private:
   class Impl;

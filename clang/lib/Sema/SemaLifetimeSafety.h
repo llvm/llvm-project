@@ -103,7 +103,8 @@ public:
 
   void reportUseAfterScope(const Expr *IssueExpr, const Expr *UseExpr,
                            const Expr *MovedExpr, SourceLocation FreeLoc,
-                           llvm::ArrayRef<const Expr *> ExprChain) override {
+                           llvm::ArrayRef<LifetimeSafetyAliasChainEntry>
+                               AliasChain) override {
     unsigned DiagID = MovedExpr
                           ? diag::warn_lifetime_safety_use_after_scope_moved
                           : diag::warn_lifetime_safety_use_after_scope;
@@ -117,7 +118,7 @@ public:
     S.Diag(FreeLoc, diag::note_lifetime_safety_destroyed_here)
         << DestroyedSubject;
 
-    reportAliasingChain(ExprChain);
+    reportAliasingChain(AliasChain);
 
     S.Diag(UseExpr->getExprLoc(), diag::note_lifetime_safety_used_here)
         << UseExpr->getSourceRange();
@@ -655,20 +656,46 @@ private:
     return CurrExpr->getSourceRange() != LastExpr->getSourceRange();
   }
 
-  void reportAliasingChain(llvm::ArrayRef<const Expr *> OriginExprChain) {
+  void reportAliasingChain(
+      llvm::ArrayRef<LifetimeSafetyAliasChainEntry> OriginExprChain) {
     if (OriginExprChain.empty())
       return;
 
-    const Expr *LastExpr = OriginExprChain.back();
+    LifetimeSafetyAliasChainEntry Last = OriginExprChain.back();
+    const Expr *LastExpr = Last.E;
     std::string IssueStr = getDiagSubjectDescription(LastExpr);
 
-    for (const Expr *CurrExpr : reverse(OriginExprChain.drop_back())) {
-      if (!shouldShowInAliasChain(CurrExpr, LastExpr))
+    for (LifetimeSafetyAliasChainEntry Curr :
+         reverse(OriginExprChain.drop_back())) {
+      const Expr *CurrExpr = Curr.E;
+      if (!shouldShowInAliasChain(CurrExpr, LastExpr)) {
+        if (!Last.LifetimeBoundImplicitObject && !Last.LifetimeBoundParam &&
+            (Curr.LifetimeBoundImplicitObject || Curr.LifetimeBoundParam)) {
+          Last.LifetimeBoundImplicitObject = Curr.LifetimeBoundImplicitObject;
+          Last.LifetimeBoundParam = Curr.LifetimeBoundParam;
+        }
         continue;
-      S.Diag(CurrExpr->getBeginLoc(),
-             diag::note_lifetime_safety_aliases_storage)
-          << CurrExpr->getSourceRange() << getDiagSubjectDescription(CurrExpr)
-          << IssueStr;
+      }
+      if (Last.LifetimeBoundImplicitObject || Last.LifetimeBoundParam) {
+        std::string LifetimeBoundSubject = "the implicit object parameter";
+        if (Last.LifetimeBoundParam) {
+          LifetimeBoundSubject = "parameter ";
+          if (Last.LifetimeBoundParam->getIdentifier())
+            LifetimeBoundSubject +=
+                "'" + Last.LifetimeBoundParam->getNameAsString() + "'";
+          else
+            LifetimeBoundSubject += "'<unnamed>'";
+        }
+        S.Diag(CurrExpr->getBeginLoc(),
+               diag::note_lifetime_safety_aliases_storage_lifetimebound)
+            << CurrExpr->getSourceRange() << getDiagSubjectDescription(CurrExpr)
+            << IssueStr << LifetimeBoundSubject;
+      } else
+        S.Diag(CurrExpr->getBeginLoc(),
+               diag::note_lifetime_safety_aliases_storage)
+            << CurrExpr->getSourceRange() << getDiagSubjectDescription(CurrExpr)
+            << IssueStr;
+      Last = Curr;
       LastExpr = CurrExpr;
     }
   }

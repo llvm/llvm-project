@@ -46,6 +46,8 @@ void OriginFlowFact::dump(llvm::raw_ostream &OS, const LoanManager &,
   OS << "\tSrc:  ";
   OM.dump(getSrcOriginID(), OS);
   OS << (getKillDest() ? "" : ", Merge");
+  if (getLifetimeBoundInfo())
+    OS << ", LifetimeBound";
   OS << "\n";
 }
 
