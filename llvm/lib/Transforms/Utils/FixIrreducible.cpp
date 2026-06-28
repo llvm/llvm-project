@@ -76,16 +76,15 @@
 // a PHINode in a header. Hence the above handling of PHINodes is sufficient and
 // no further processing is required to restore SSA.
 //
-// Limitation: The pass cannot handle switch statements and indirect
-//             branches. Both must be lowered to plain branches first.
+// Limitation: The pass cannot handle indirect branches. They must be lowered to
+//             plain branches first.
 //
-// CallBr support: CallBr is handled as a more general branch instruction which
-// can have multiple successors. The pass redirects the edges to intermediate
-// target blocks that unconditionally branch to the original callbr target
-// blocks. This allows the control flow hub to know to which of the original
-// target blocks to jump to.
-// Example input CFG:
-//                        Entry (callbr)
+// CallBr and Switch support: CallBr and Switch terminators are handled as a
+// more general branch instruction which can have multiple successors. The pass
+// redirects the edges to intermediate target blocks that unconditionally branch
+// to the original target blocks. This allows the control flow hub to know to
+// which of the original target blocks to jump to. Example input CFG:
+//                        Entry (callbr/switch)
 //                       /     \
 //                      v       v
 //                      H ----> B
@@ -95,7 +94,7 @@
 //                             Exit
 //
 // becomes:
-//                        Entry (callbr)
+//                        Entry (callbr/switch)
 //                       /     \
 //                      v       v
 //                 target.H   target.B
@@ -110,7 +109,7 @@
 // Note
 // OUTPUT CFG: Converted to a natural loop with a new header N.
 //
-//                        Entry (callbr)
+//                        Entry (callbr/switch)
 //                       /     \
 //                      v       v
 //                 target.H   target.B
@@ -133,6 +132,7 @@
 #include "llvm/Analysis/CycleAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -308,13 +308,15 @@ static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
                         << " -> " << printBasicBlock(Succ0)
                         << (Succ0 && Succ1 ? " " : "") << printBasicBlock(Succ1)
                         << '\n');
-    } else if (CallBrInst *CallBr = dyn_cast<CallBrInst>(P->getTerminator())) {
+    } else if (isa<CallBrInst>(P->getTerminator()) ||
+               isa<SwitchInst>(P->getTerminator())) {
       BasicBlock *NewSucc = nullptr;
-      for (unsigned I = 0; I < CallBr->getNumSuccessors(); ++I) {
-        BasicBlock *Succ = CallBr->getSuccessor(I);
+      Instruction *Term = P->getTerminator();
+      for (unsigned I = 0; I < Term->getNumSuccessors(); ++I) {
+        BasicBlock *Succ = Term->getSuccessor(I);
         if (Succ != Header)
           continue;
-        NewSucc = SplitCallBrEdge(P, Succ, I, NewSucc, &DTU, &CI, LI);
+        NewSucc = SplitMultiBrEdge(P, Succ, I, NewSucc, &DTU, &CI, LI);
         LLVM_DEBUG(dbgs() << "Added internal branch: "
                           << printBasicBlock(NewSucc) << " -> "
                           << printBasicBlock(Succ) << '\n');
@@ -322,8 +324,9 @@ static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
       if (NewSucc)
         CHub.addBranch(NewSucc, Header);
     } else {
-      reportFatalUsageError("unsupported block terminator: fix-irreducible "
-                            "only supports br and callbr instructions");
+      reportFatalUsageError(
+          "unsupported block terminator: fix-irreducible "
+          "only supports br, callbr, and switch instructions");
     }
   }
 
@@ -355,31 +358,32 @@ static bool fixIrreducible(CycleRef C, CycleInfo &CI, DominatorTree &DT,
                         << " -> " << printBasicBlock(Succ0)
                         << (Succ0 && Succ1 ? " " : "") << printBasicBlock(Succ1)
                         << '\n');
-    } else if (CallBrInst *CallBr = dyn_cast<CallBrInst>(P->getTerminator())) {
-      SmallDenseMap<BasicBlock *, BasicBlock *> CallBrTargets;
-      for (unsigned I = 0; I < CallBr->getNumSuccessors(); ++I) {
-        BasicBlock *Succ = CallBr->getSuccessor(I);
+    } else if (isa<CallBrInst>(P->getTerminator()) ||
+               isa<SwitchInst>(P->getTerminator())) {
+      SmallDenseMap<BasicBlock *, BasicBlock *> MultiBrTargets;
+      Instruction *Term = P->getTerminator();
+      for (unsigned I = 0; I < Term->getNumSuccessors(); ++I) {
+        BasicBlock *Succ = Term->getSuccessor(I);
         if (!CI.contains(C, Succ))
           continue;
-        auto It = CallBrTargets.find(Succ);
+        auto It = MultiBrTargets.find(Succ);
         BasicBlock *ExistingTarget =
-            (It != CallBrTargets.end()) ? It->second : nullptr;
+            (It != MultiBrTargets.end()) ? It->second : nullptr;
 
         BasicBlock *NewSucc =
-            SplitCallBrEdge(P, Succ, I, ExistingTarget, &DTU, &CI, LI);
-
+            SplitMultiBrEdge(P, Succ, I, ExistingTarget, &DTU, &CI, LI);
         if (!ExistingTarget) {
           CHub.addBranch(NewSucc, Succ);
-          CallBrTargets[Succ] = NewSucc;
+          MultiBrTargets[Succ] = NewSucc;
         }
-
         LLVM_DEBUG(dbgs() << "Added external branch: "
                           << printBasicBlock(NewSucc) << " -> "
                           << printBasicBlock(Succ) << '\n');
       }
     } else {
-      reportFatalUsageError("unsupported block terminator: fix-irreducible "
-                            "only supports br and callbr instructions");
+      reportFatalUsageError(
+          "unsupported block terminator: fix-irreducible "
+          "only supports br, callbr, and switch instructions");
     }
   }
 
