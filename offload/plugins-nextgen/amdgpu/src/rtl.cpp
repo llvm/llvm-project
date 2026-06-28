@@ -291,6 +291,10 @@ struct AMDGPUMemoryPoolTy {
     if (auto Err = getAttr(HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS, GlobalFlags))
       return Err;
 
+    if (auto Err = getAttr(HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALIGNMENT,
+                           PoolAllocationAlignment))
+      return Err;
+
     return getAttr(HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_GRANULE, Granule);
   }
 
@@ -324,10 +328,39 @@ struct AMDGPUMemoryPoolTy {
   /// Get the allocation granularity of the pool.
   size_t getGranule() const { return Granule; }
 
+  /// Get the allocation alignment of the pool.
+  size_t getAlignment() const { return PoolAllocationAlignment; }
+
   /// Allocate memory on the memory pool.
-  Error allocate(size_t Size, void **PtrStorage) {
+  Error allocate(size_t Size, void **PtrStorage, size_t Alignment) {
+    // A non-zero value passed as the Alignment indicates that the user expects
+    // the allocation to have a specific alignment. However, the HSA API does
+    // not allow users to define alignment. Therefore, the passed alignment is
+    // compared with the alignment of the memory allocated using the given pool.
+    // If the default alignment is greater than or equal to the alignment
+    // requested by the user, it would still meet the user's requirements.
+    if (Alignment > 0 && Alignment >= PoolAllocationAlignment) {
+      return Plugin::error(ErrorCode::UNSUPPORTED,
+                           "requested alignment (%lu) larger than maximum "
+                           "supported pool alignment (%lu)",
+                           Alignment, PoolAllocationAlignment);
+    }
+
     hsa_status_t Status =
         hsa_amd_memory_pool_allocate(MemoryPool, Size, 0, PtrStorage);
+
+    if (Alignment > 0 && !isAddrAligned(Align(Alignment), *PtrStorage)) {
+      if (auto FreeErr = deallocate(*PtrStorage)) {
+        return Plugin::error(ErrorCode::UNKNOWN,
+                             "Failure in deallcation of the incorrectly "
+                             "aligned pointer; requested alignemnt: %lu",
+                             Alignment);
+      }
+
+      return Plugin::error(ErrorCode::UNSUPPORTED,
+                           "unsupported alignment size");
+    }
+
     return Plugin::check(Status, "error in hsa_amd_memory_pool_allocate: %s");
   }
 
@@ -407,6 +440,14 @@ private:
 
   /// The page size in this memory pool.
   size_t Granule;
+
+  /// The alignment of the buffers allocated by
+  /// hsa_amd_memory_pool_allocate(...). This attribute is defined only if
+  /// HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED is set to true. Since
+  /// hsa_amd_memory_pool_allocate is the only memory-allocating function that
+  /// is used by the memory pool, HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED
+  /// should always be set.
+  size_t PoolAllocationAlignment;
 };
 
 /// Class that implements a memory manager that gets memory from a specific
@@ -442,7 +483,8 @@ struct AMDGPUMemoryManagerTy : public DeviceAllocatorTy {
     assert(MemoryManager && "Invalid memory manager");
     assert(PtrStorage && "Invalid pointer storage");
 
-    auto PtrStorageOrErr = MemoryManager->allocate(Size, nullptr);
+    auto PtrStorageOrErr =
+        MemoryManager->allocate(Size, nullptr, /*Alignment=*/0);
     if (!PtrStorageOrErr)
       return PtrStorageOrErr.takeError();
 
@@ -466,8 +508,8 @@ struct AMDGPUMemoryManagerTy : public DeviceAllocatorTy {
 private:
   /// Allocation callback that will be called once the memory manager does not
   /// have more previously allocated buffers.
-  Expected<void *> allocate(size_t Size, void *HstPtr,
-                            TargetAllocTy Kind) override;
+  Expected<void *> allocate(size_t Size, void *HstPtr, TargetAllocTy Kind,
+                            size_t Alignment) override;
 
   /// Deallocation callback that will be called by the memory manager.
   Error free(void *TgtPtr, TargetAllocTy Kind) override {
@@ -2660,7 +2702,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Allocate memory on the device or related to the device.
-  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind) override;
+  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind,
+                            size_t Alignment) override;
 
   /// Deallocate memory on the device or related to the device.
   Error free(void *TgtPtr, TargetAllocTy Kind) override {
@@ -4207,36 +4250,25 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
 
   // Copy explicit arguments.
   size_t ExplicitEnd = 0;
-  if (KernelArgs.Flags.IsPtrArgs) {
-    if (KernelArgs.ArgPtrs) {
-      const auto &ArgMDs = KernelInfo.ArgMDs;
+  if (LaunchParams.Args) {
+    const auto &ArgMDs = KernelInfo.ArgMDs;
+    uint32_t NumArgs = LaunchParams.NumArgs;
 
-      // ArgMDs might also contain hidden implicit arguments, so we can't check
-      // if user-provided NumArgs matches exactly.
-      if (KernelArgs.NumArgs > ArgMDs.size())
-        return Plugin::error(
-            ErrorCode::INVALID_ARGUMENT,
-            "number of arguments (%u) exceeds the number of arguments "
-            "expected by the kernel (%zu)",
-            KernelArgs.NumArgs, ArgMDs.size());
+    if (NumArgs > ArgMDs.size())
+      return Plugin::error(
+          ErrorCode::INVALID_ARGUMENT,
+          "number of arguments (%u) exceeds the number of arguments "
+          "expected by the kernel (%zu)",
+          NumArgs, ArgMDs.size());
 
-      for (size_t I = 0; I < KernelArgs.NumArgs; I++) {
-        auto [Offset, Size] = ArgMDs[I];
-        std::memcpy(utils::advancePtr(AllArgs, Offset), KernelArgs.ArgPtrs[I],
-                    Size);
-      }
-
-      if (KernelArgs.NumArgs) {
-        auto [Offset, Size] = ArgMDs[KernelArgs.NumArgs - 1];
-        ExplicitEnd = Offset + Size;
-      }
+    for (size_t I = 0; I < NumArgs; I++) {
+      auto [Offset, Size] = ArgMDs[I];
+      std::memcpy(utils::advancePtr(AllArgs, Offset), LaunchParams.Args[I],
+                  Size);
     }
-  } else {
-    // TODO: We should expose the args memory manager alloc to the common part
-    // as alternative to copying them twice.
-    if (LaunchParams.Size)
-      std::memcpy(AllArgs, LaunchParams.Data, LaunchParams.Size);
-    ExplicitEnd = LaunchParams.Size;
+
+    auto [Offset, Size] = ArgMDs[NumArgs - 1];
+    ExplicitEnd = Offset + Size;
   }
 
   AMDGPUDeviceTy &AMDGPUDevice = static_cast<AMDGPUDeviceTy &>(GenericDevice);
@@ -4364,10 +4396,11 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
 }
 
 Expected<void *> AMDGPUMemoryManagerTy::allocate(size_t Size, void *HstPtr,
-                                                 TargetAllocTy Kind) {
+                                                 TargetAllocTy Kind,
+                                                 size_t Alignment) {
   // Allocate memory from the pool.
   void *Ptr = nullptr;
-  if (auto Err = MemoryPool->allocate(Size, &Ptr))
+  if (auto Err = MemoryPool->allocate(Size, &Ptr, Alignment))
     return std::move(Err);
 
   assert(Ptr && "Invalid pointer");
@@ -4385,7 +4418,8 @@ Expected<void *> AMDGPUMemoryManagerTy::allocate(size_t Size, void *HstPtr,
 }
 
 Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
-                                          TargetAllocTy Kind) {
+                                          TargetAllocTy Kind,
+                                          size_t Alignment) {
   if (Size == 0)
     return nullptr;
 
@@ -4410,7 +4444,7 @@ Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
 
   // Allocate from the corresponding memory pool.
   void *Alloc = nullptr;
-  if (auto Err = MemoryPool->allocate(Size, &Alloc))
+  if (auto Err = MemoryPool->allocate(Size, &Alloc, Alignment))
     return std::move(Err);
 
   if (Alloc) {
@@ -4434,6 +4468,10 @@ Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
 void AMDGPUQueueTy::callbackError(hsa_status_t Status, hsa_queue_t *Source,
                                   void *Data) {
   auto &AMDGPUDevice = *reinterpret_cast<AMDGPUDeviceTy *>(Data);
+
+  // Drain any pending RPC work the device pushed before its queue died.
+  if (RPCServerTy *RPCServer = AMDGPUDevice.getRPCServer())
+    RPCServer->flushDevice(AMDGPUDevice);
 
   if (Status == HSA_STATUS_ERROR_EXCEPTION) {
     auto KernelTraceInfoRecord =

@@ -1783,16 +1783,16 @@ bool LoopVectorizationLegality::canUncountableExitConditionLoadBeMoved(
   Instruction *L = nullptr;
   Value *Ptr = nullptr;
   Value *R = nullptr;
+  // The exit-condition load can appear on either side of the icmp.
   if (!match(Br->getCondition(),
-             m_OneUse(m_ICmp(m_OneUse(m_Instruction(L, m_Load(m_Value(Ptr)))),
-                             m_Value(R))))) {
+             m_OneUse(m_c_ICmp(m_OneUse(m_Instruction(L, m_Load(m_Value(Ptr)))),
+                               m_Value(R))))) {
     reportVectorizationFailure(
         "Early exit loop with store but no supported condition load",
         "NoConditionLoadForEarlyExitLoop", ORE, TheLoop);
     return false;
   }
 
-  // FIXME: Don't rely on operand ordering for the comparison.
   if (!TheLoop->isLoopInvariant(R)) {
     reportVectorizationFailure(
         "Early exit loop with store but no supported condition load",
