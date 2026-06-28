@@ -8,8 +8,6 @@
 
 #include <__config>
 #include <__math/special_functions.h>
-#include <cerrno>
-#include <cfenv>
 #include <cmath>
 #include <optional>
 #include <type_traits>
@@ -51,10 +49,11 @@ std::optional<_Ret> __check_nan(_Arg __arg, _Args... __args) {
 // error-reporting rules ([sf.cmath.general]):
 //   1. NaN argument -> return NaN, do NOT report a domain error (the
 //      __check_nan pre-filter below).
-//   2. domain/range error -> report per <cmath> math_errhandling: errno = EDOM
-//      (domain/pole) or ERANGE (overflow), done by Boost's errno_on_error
-//      policy; and, when MATH_ERREXCEPT is set, raise the matching <cfenv>
-//      exception (done here, since Boost never touches <cfenv>).
+//   2. domain/range error -> reported via errno only: Boost's errno_on_error
+//      policy sets errno = EDOM (domain/pole/evaluation) or ERANGE (overflow).
+//      The <cfenv> floating-point-exception side of math_errhandling
+//      (MATH_ERREXCEPT) is intentionally not mirrored, matching the shipped
+//      std::hermite and libstdc++'s special-function implementations.
 // Promotion: Boost's default promote_float=true computes float inputs in double
 // and rounds once -- more accurate and overflow-resistant, matching the
 // existing std::hermite(float) approach. We keep it.
@@ -63,19 +62,7 @@ _Ret __invoke_boost_math(_Func __f, _Args... __args) {
   if (auto __maybe_nan = __check_nan<_Ret>(__args...); __maybe_nan.has_value())
     return *__maybe_nan;
 
-#  if math_errhandling & MATH_ERREXCEPT
-  errno = 0;
-#  endif
-  _Ret __ret = __f(__args..., __policy{});
-  // Boost set errno via the policy; mirror it onto <cfenv>:
-  // EDOM (domain/pole) -> FE_INVALID, ERANGE (overflow) -> FE_OVERFLOW.
-#  if math_errhandling & MATH_ERREXCEPT
-  if (errno == EDOM)
-    std::feraiseexcept(FE_INVALID);
-  else if (errno == ERANGE)
-    std::feraiseexcept(FE_OVERFLOW);
-#  endif
-  return __ret;
+  return __f(__args..., __policy{});
 }
 } // namespace
 
