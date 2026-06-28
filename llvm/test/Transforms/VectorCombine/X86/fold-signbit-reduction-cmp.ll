@@ -572,8 +572,8 @@ define i1 @i1_or_eq_0(<4 x i1> %x) {
 ; CHECK-LABEL: define i1 @i1_or_eq_0(
 ; CHECK-SAME: <4 x i1> [[X:%.*]]) {
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr <4 x i1> [[X]], zeroinitializer
-; CHECK-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[SHR]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i1 [[RED]], false
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i1> [[SHR]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shr = lshr <4 x i1> %x, splat (i1 0)
@@ -628,8 +628,8 @@ define i1 @i1_umax_eq_0(<4 x i1> %x) {
 ; CHECK-LABEL: define i1 @i1_umax_eq_0(
 ; CHECK-SAME: <4 x i1> [[X:%.*]]) {
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr <4 x i1> [[X]], zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[SHR]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i1 [[TMP1]], false
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i1> [[SHR]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shr = lshr <4 x i1> %x, splat (i1 0)
@@ -655,8 +655,8 @@ define i1 @i1_ashr_or_eq_0(<4 x i1> %x) {
 ; CHECK-LABEL: define i1 @i1_ashr_or_eq_0(
 ; CHECK-SAME: <4 x i1> [[X:%.*]]) {
 ; CHECK-NEXT:    [[SHR:%.*]] = ashr <4 x i1> [[X]], zeroinitializer
-; CHECK-NEXT:    [[RED:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[SHR]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i1 [[RED]], false
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i1> [[SHR]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shr = ashr <4 x i1> %x, splat (i1 0)
@@ -1056,8 +1056,8 @@ define i1 @negative_multi_op_mismatch(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-NEXT:    [[SA:%.*]] = lshr <4 x i32> [[A]], splat (i32 31)
 ; CHECK-NEXT:    [[SB:%.*]] = lshr <4 x i32> [[B]], splat (i32 31)
 ; CHECK-NEXT:    [[SUM:%.*]] = add <4 x i32> [[SA]], [[SB]]
-; CHECK-NEXT:    [[RED:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[SUM]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[RED]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <4 x i32> [[SUM]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = call i1 @llvm.vector.reduce.and.v4i1(<4 x i1> [[TMP1]])
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sa = lshr <4 x i32> %a, splat (i32 31)

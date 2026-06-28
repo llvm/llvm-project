@@ -789,10 +789,19 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
       continue;
 
     // Only traverse further through users that also define a value (and can
-    // thus have their own users walked).
-    for (VPUser *U : Cur->users())
+    // thus have their own users walked). Skip when Cur is only used as mask ,
+    // as well as loads: a loaded value does not depend on the load's operand.
+    for (VPUser *U : Cur->users()) {
+      auto *VPI = dyn_cast<VPInstruction>(U);
+      if (VPI && VPI->getMask() == Cur &&
+          none_of(VPI->operandsWithoutMask(),
+                  [Cur](VPValue *Op) { return Op == Cur; }))
+        continue;
+      if (match(U, m_VPInstruction<Instruction::Load>()))
+        continue;
       if (auto *SDR = dyn_cast<VPSingleDefRecipe>(U))
         WorkList.push_back(SDR);
+    }
   }
   return false;
 }

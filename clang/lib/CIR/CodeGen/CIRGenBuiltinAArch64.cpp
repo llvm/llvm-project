@@ -318,6 +318,18 @@ deriveNeonSISDIntrinsicOperandTypes(CIRGenFunction &cgf, unsigned modifier,
   return {funcResTy, std::move(argTypes)};
 }
 
+// Source-operand vector type for a common NEON binary intrinsic: the
+// double-element-width form of `vTy` when `WidenArgs` is set (e.g. vraddhn),
+// otherwise `vTy`.
+static cir::VectorType deriveNeonBinaryArgType(CIRGenBuilderTy &builder,
+                                               unsigned modifier,
+                                               cir::VectorType vTy) {
+  if (modifier & WidenArgs)
+    return builder.getExtendedOrTruncatedElementVectorType(vTy,
+                                                           /*isExtended=*/true);
+  return vTy;
+}
+
 static mlir::Value emitCommonNeonSISDBuiltinExpr(
     CIRGenFunction &cgf, const ARMNeonVectorIntrinsicInfo &info,
     llvm::SmallVectorImpl<mlir::Value> &ops, const CallExpr *expr) {
@@ -685,7 +697,30 @@ static mlir::Value emitCommonNeonBuiltinExpr(
     mlir::Value result = cgf.getBuilder().createXor(loc, ops[0], ops[1]);
     return cgf.getBuilder().createBitcast(result, ty);
   }
-  case NEON::BI__builtin_neon_vaddhn_v:
+  case NEON::BI__builtin_neon_vaddhn_v: {
+    // srcTy has double-width elements (e.g. <8 x i16> when VTy is <8 x i8>).
+    // Unsigned so createShiftRight emits lshr, not ashr.
+    cir::VectorType srcTy =
+        cgf.getBuilder().getExtendedOrTruncatedElementVectorType(
+            vTy, /*isExtended=*/true, /*isSigned=*/false);
+
+    // %sum = add <4 x i32> %lhs, %rhs
+    ops[0] = cgf.getBuilder().createBitcast(ops[0], srcTy);
+    ops[1] = cgf.getBuilder().createBitcast(ops[1], srcTy);
+    mlir::Value result = cgf.getBuilder().createAdd(loc, ops[0], ops[1]);
+
+    // %high = lshr <4 x i32> %sum, <i32 16, i32 16, i32 16, i32 16>
+    auto wideEltTy = mlir::cast<cir::IntType>(srcTy.getElementType());
+    mlir::Value shiftAmt = cgf.getBuilder().getConstantInt(
+        loc, wideEltTy, wideEltTy.getWidth() / 2);
+    mlir::Value shiftVec =
+        emitNeonShiftVector(cgf.getBuilder(), shiftAmt, srcTy, loc,
+                            /*neg=*/false);
+    result = cgf.getBuilder().createShiftRight(loc, result, shiftVec);
+
+    // %res = trunc <4 x i32> %high to <4 x i16>
+    return cgf.getBuilder().createIntCast(result, vTy);
+  }
   case NEON::BI__builtin_neon_vcale_v:
   case NEON::BI__builtin_neon_vcaleq_v:
   case NEON::BI__builtin_neon_vcalt_v:
@@ -1060,15 +1095,26 @@ static mlir::Value emitCommonNeonBuiltinExpr(
                      std::string("unimplemented AArch64 builtin call: ") +
                          cgf.getContext().BuiltinInfo.getName(builtinID));
     break;
+  case NEON::BI__builtin_neon_vhadd_v:
+  case NEON::BI__builtin_neon_vhaddq_v:
+  case NEON::BI__builtin_neon_vrhadd_v:
+  case NEON::BI__builtin_neon_vrhaddq_v:
   case NEON::BI__builtin_neon_vshl_v:
-  case NEON::BI__builtin_neon_vshlq_v: {
+  case NEON::BI__builtin_neon_vshlq_v:
+  case NEON::BI__builtin_neon_vraddhn_v: {
+    // Pick the signed/unsigned intrinsic when the builtin has both
+    // (UnsignedAlts); otherwise there is a single intrinsic.
+    unsigned intrinsic =
+        ((modifier & UnsignedAlts) && !usgn) ? altLLVMIntrinsic : llvmIntrinsic;
     llvm::StringRef llvmIntrName =
-        getLLVMIntrNameNoPrefix(static_cast<llvm::Intrinsic::ID>(
-            usgn ? llvmIntrinsic : altLLVMIntrinsic));
+        getLLVMIntrNameNoPrefix(static_cast<llvm::Intrinsic::ID>(intrinsic));
+
+    cir::VectorType argTy =
+        deriveNeonBinaryArgType(cgf.getBuilder(), modifier, vTy);
 
     mlir::Value result =
         emitNeonCall(cgf.getCIRGenModule(), cgf.getBuilder(),
-                     /*argTypes=*/{vTy, vTy}, ops, llvmIntrName,
+                     /*argTypes=*/{argTy, argTy}, ops, llvmIntrName,
                      /*funcResTy=*/vTy, loc);
     mlir::Type resultType = cgf.convertType(expr->getType());
     return cgf.getBuilder().createBitcast(result, resultType);
