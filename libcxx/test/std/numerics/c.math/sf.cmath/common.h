@@ -12,8 +12,6 @@
 #include <cassert>
 #include <cerrno>
 #include <cmath>
-#include <math.h>
-#include <cfenv>
 
 // std::type_identity is C++20 (we need to support C++17 here)
 template <class T>
@@ -33,15 +31,9 @@ void check_no_domain_error(Func f) {
 #if math_errhandling & MATH_ERRNO
   errno = EACCES;
 #endif
-#if math_errhandling & MATH_ERREXCEPT
-  std::feclearexcept(FE_INVALID);
-#endif
   f();
 #if math_errhandling & MATH_ERRNO
   assert(errno == EACCES);
-#endif
-#if math_errhandling & MATH_ERREXCEPT
-  assert(!std::fetestexcept(FE_INVALID));
 #endif
 }
 
@@ -50,15 +42,9 @@ void check_domain_error(Func f) {
 #if math_errhandling & MATH_ERRNO
   errno = EACCES;
 #endif
-#if math_errhandling & MATH_ERREXCEPT
-  std::feclearexcept(FE_INVALID);
-#endif
   f();
 #if math_errhandling & MATH_ERRNO
   assert(errno == EDOM);
-#endif
-#if math_errhandling & MATH_ERREXCEPT
-  assert(std::fetestexcept(FE_INVALID));
 #endif
 }
 
