@@ -212,6 +212,6 @@
 /llvm/lib/Target/AMDGPU/SIInsertWaitcnts* @Pierre-vh @ritter-x2a
 
 # Clang-Tidy tool
-/clang-tools-extra/clang-tidy/ @vbvictor
-/clang-tools-extra/test/clang-tidy/ @vbvictor
-/clang-tools-extra/docs/clang-tidy/ @vbvictor
+/clang-tools-extra/clang-tidy/ @vbvictor @zeyi2
+/clang-tools-extra/test/clang-tidy/ @vbvictor @zeyi2
+/clang-tools-extra/docs/clang-tidy/ @vbvictor @zeyi2
