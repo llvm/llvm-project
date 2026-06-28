@@ -194,11 +194,15 @@ class RealFile : public File {
   file_t FD;
   Status S;
   std::string RealName;
+  bool IsTextMode;
+  bool BufferWasRequested;
 
-  RealFile(file_t RawFD, StringRef NewName, StringRef NewRealPathName)
+  RealFile(file_t RawFD, StringRef NewName, StringRef NewRealPathName,
+           bool IsText)
       : FD(RawFD), S(NewName, {}, {}, {}, {}, {},
                      llvm::sys::fs::file_type::status_error, {}),
-        RealName(NewRealPathName.str()) {
+        RealName(NewRealPathName.str()), IsTextMode(IsText),
+        BufferWasRequested(false) {
     assert(FD != kInvalidFile && "Invalid or inactive file descriptor");
   }
 
@@ -213,6 +217,16 @@ public:
                                                    bool IsVolatile) override;
   std::error_code close() override;
   void setPath(const Twine &Path) override;
+  bool realFileCheckTextModeMismatch(bool RequestedIsText) const override {
+    bool HasMismatch = IsTextMode != RequestedIsText;
+    if (HasMismatch && BufferWasRequested) {
+      llvm::report_fatal_error(
+          "Text mode mismatch: file was previously opened with " +
+          Twine(IsTextMode ? "text" : "binary") + " mode, now requested with " +
+          Twine(RequestedIsText ? "text" : "binary") + " mode");
+    }
+    return HasMismatch;
+  }
 };
 
 } // namespace
@@ -242,6 +256,7 @@ RealFile::getBuffer(const Twine &Name, int64_t FileSize,
   auto BypassSandbox = sys::sandbox::scopedDisable();
 
   assert(FD != kInvalidFile && "cannot get buffer for closed file");
+  BufferWasRequested = true;
   return MemoryBuffer::getOpenFile(FD, Name, FileSize, RequiresNullTerminator,
                                    IsVolatile);
 }
@@ -320,8 +335,9 @@ private:
         adjustPath(Name, Storage), Flags, &RealName);
     if (!FDOrErr)
       return errorToErrorCode(FDOrErr.takeError());
+    bool IsText = (Flags & sys::fs::OF_Text) != sys::fs::OF_None;
     return std::unique_ptr<File>(
-        new RealFile(*FDOrErr, Name.str(), RealName.str()));
+        new RealFile(*FDOrErr, Name.str(), RealName.str(), IsText));
   }
 
   struct WorkingDirectory {
