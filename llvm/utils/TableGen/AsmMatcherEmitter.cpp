@@ -3958,7 +3958,8 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "      }\n";
     OS << "    }\n\n";
     OS << "    // Reject surplus operands as one more operand mismatch.\n";
-    OS << "    if (!MultipleInvalidOperands && ActualIdx < Operands.size()) {\n";
+    OS << "    if (!MultipleInvalidOperands && ActualIdx < Operands.size()) "
+          "{\n";
     OS << "      if (!OperandNearMiss) {\n";
     OS << "        DEBUG_WITH_TYPE(\"asm-matcher\", dbgs() << \"too many "
           "operands, recording near-miss at index \"\n";
