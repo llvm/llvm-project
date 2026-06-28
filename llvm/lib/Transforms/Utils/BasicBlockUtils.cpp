@@ -725,47 +725,47 @@ static bool updateCycleLoopInfo(TI *LCI, BasicBlock *CallBrBlock,
   return true;
 }
 
-BasicBlock *llvm::SplitCallBrEdge(BasicBlock *CallBrBlock, BasicBlock *Succ,
-                                  unsigned SuccIdx, DomTreeUpdater *DTU,
-                                  CycleInfo *CI, LoopInfo *LI,
-                                  bool *UpdatedLI) {
-  CallBrInst *CallBr = dyn_cast<CallBrInst>(CallBrBlock->getTerminator());
-  assert(CallBr && "expected callbr terminator");
-  assert(SuccIdx < CallBr->getNumSuccessors() &&
-         Succ == CallBr->getSuccessor(SuccIdx) && "invalid successor index");
+BasicBlock *llvm::SplitMultiBrEdge(BasicBlock *MultiBrBlock, BasicBlock *Succ,
+                                   unsigned SuccIdx, DomTreeUpdater *DTU,
+                                   CycleInfo *CI, LoopInfo *LI,
+                                   bool *UpdatedLI) {
+  Instruction *Term = MultiBrBlock->getTerminator();
+  assert(Term && "expected terminator");
+  assert(SuccIdx < Term->getNumSuccessors() &&
+         Succ == Term->getSuccessor(SuccIdx) && "invalid successor index");
 
-  // Create a new block between callbr and the specified successor.
+  // Create a new block between terminator and the specified successor.
   // splitBlockBefore cannot be re-used here since it cannot split if the split
   // point is a PHI node (because BasicBlock::splitBasicBlockBefore cannot
   // handle that). But we don't need to rewire every part of a potential PHI
-  // node. We only care about the edge between CallBrBlock and the original
+  // node. We only care about the edge between MultiBrBlock and the original
   // successor.
-  BasicBlock *CallBrTarget =
-      BasicBlock::Create(CallBrBlock->getContext(),
-                         CallBrBlock->getName() + ".target." + Succ->getName(),
-                         CallBrBlock->getParent());
+  BasicBlock *BrTarget =
+      BasicBlock::Create(MultiBrBlock->getContext(),
+                         MultiBrBlock->getName() + ".target." + Succ->getName(),
+                         MultiBrBlock->getParent());
   // Rewire control flow from the new target block to the original successor.
-  Succ->replacePhiUsesWith(CallBrBlock, CallBrTarget);
-  // Rewire control flow from callbr to the new target block.
-  CallBr->setSuccessor(SuccIdx, CallBrTarget);
+  Succ->replacePhiUsesWith(MultiBrBlock, BrTarget);
+  // Rewire control flow from the MultiBrBlock to the new target block.
+  Term->setSuccessor(SuccIdx, BrTarget);
   // Jump from the new target block to the original successor.
-  UncondBrInst::Create(Succ, CallBrTarget);
+  UncondBrInst::Create(Succ, BrTarget);
 
   bool Updated =
-      updateCycleLoopInfo<LoopInfo, Loop>(LI, CallBrBlock, CallBrTarget, Succ);
+      updateCycleLoopInfo<LoopInfo, Loop>(LI, MultiBrBlock, BrTarget, Succ);
   if (UpdatedLI)
     *UpdatedLI = Updated;
-  updateCycleLoopInfo<CycleInfo, Cycle>(CI, CallBrBlock, CallBrTarget, Succ);
+  updateCycleLoopInfo<CycleInfo, Cycle>(CI, MultiBrBlock, BrTarget, Succ);
   if (DTU) {
-    DTU->applyUpdates({{DominatorTree::Insert, CallBrBlock, CallBrTarget}});
-    if (DTU->getDomTree().dominates(CallBrBlock, Succ)) {
-      if (!is_contained(successors(CallBrBlock), Succ))
-        DTU->applyUpdates({{DominatorTree::Delete, CallBrBlock, Succ}});
-      DTU->applyUpdates({{DominatorTree::Insert, CallBrTarget, Succ}});
+    DTU->applyUpdates({{DominatorTree::Insert, MultiBrBlock, BrTarget}});
+    if (DTU->getDomTree().dominates(MultiBrBlock, Succ)) {
+      if (!is_contained(successors(MultiBrBlock), Succ))
+        DTU->applyUpdates({{DominatorTree::Delete, MultiBrBlock, Succ}});
+      DTU->applyUpdates({{DominatorTree::Insert, BrTarget, Succ}});
     }
   }
 
-  return CallBrTarget;
+  return BrTarget;
 }
 
 void llvm::setUnwindEdgeTo(Instruction *TI, BasicBlock *Succ) {

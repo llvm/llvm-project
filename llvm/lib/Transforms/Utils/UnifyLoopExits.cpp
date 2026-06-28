@@ -13,10 +13,10 @@
 // Limitation: This assumes that all terminators in the CFG are direct branches
 //             (the "br" instruction). The presence of any other control flow
 //             such as indirectbr or switch will cause an assert.
-//             The callbr terminator is supported by creating intermediate
-//             target blocks that unconditionally branch to the original target
-//             blocks. These intermediate target blocks can then be redirected
-//             through the ControlFlowHub as usual.
+//             The callbr and switch terminators are supported by creating
+//             intermediate target blocks that unconditionally branch to the
+//             original target blocks. These intermediate target blocks can then
+//             be redirected through the ControlFlowHub as usual.
 //
 //===----------------------------------------------------------------------===//
 
@@ -26,6 +26,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils.h"
@@ -159,7 +160,7 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
     return false;
 
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
-  SmallVector<BasicBlock *, 8> CallBrTargetBlocksToFix;
+  SmallVector<BasicBlock *, 8> MultiBrTargetBlocksToFix;
 
   // Redirect exiting edges through a control flow hub.
   ControlFlowHub CHub;
@@ -186,27 +187,30 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
                         << " -> " << printBasicBlock(Succ0)
                         << (Succ0 && Succ1 ? " " : "") << printBasicBlock(Succ1)
                         << '\n');
-    } else if (CallBrInst *CallBr = dyn_cast<CallBrInst>(BB->getTerminator())) {
-      for (unsigned J = 0; J < CallBr->getNumSuccessors(); ++J) {
-        BasicBlock *Succ = CallBr->getSuccessor(J);
+    } else if (isa<CallBrInst>(BB->getTerminator()) ||
+               isa<SwitchInst>(BB->getTerminator())) {
+      Instruction *Term = BB->getTerminator();
+      for (unsigned J = 0; J < Term->getNumSuccessors(); ++J) {
+        BasicBlock *Succ = Term->getSuccessor(J);
         if (L->contains(Succ))
           continue;
         bool UpdatedLI = false;
         BasicBlock *NewSucc =
-            SplitCallBrEdge(BB, Succ, J, &DTU, nullptr, &LI, &UpdatedLI);
-        // SplitCallBrEdge modifies the CFG because it creates an intermediate
+            SplitMultiBrEdge(BB, Succ, J, &DTU, nullptr, &LI, &UpdatedLI);
+        // SplitMultiBrEdge modifies the CFG because it creates an intermediate
         // block. So we need to set the changed flag no matter what the
         // ControlFlowHub is going to do later.
         Changed = true;
-        // Even if CallBr and Succ do not have a common parent loop, we need to
-        // add the new target block to the parent loop of the current loop.
+        // Even if the terminator and Succ do not have a common parent loop, we
+        // need to add the new target block to the parent loop of the current
+        // loop.
         if (!UpdatedLI)
-          CallBrTargetBlocksToFix.push_back(NewSucc);
+          MultiBrTargetBlocksToFix.push_back(NewSucc);
         // ExitingBlocks is later used to restore SSA, so we need to make sure
         // that the blocks used for phi nodes in the guard blocks match the
-        // predecessors of the guard blocks, which, in the case of callbr, are
-        // the new intermediate target blocks instead of the callbr blocks
-        // themselves.
+        // predecessors of the guard blocks, which, in the case of a callbr or
+        // switch terminator, are the new intermediate target blocks instead of
+        // the blocks themselves.
         ExitingBlocks[I] = NewSucc;
         CHub.addBranch(NewSucc, Succ);
         LLVM_DEBUG(dbgs() << "Added exiting branch: "
@@ -248,7 +252,7 @@ static bool unifyLoopExits(DominatorTree &DT, LoopInfo &LI, Loop *L) {
     for (auto *G : GuardBlocks) {
       ParentLoop->addBasicBlockToLoop(G, LI);
     }
-    for (auto *C : CallBrTargetBlocksToFix) {
+    for (auto *C : MultiBrTargetBlocksToFix) {
       ParentLoop->addBasicBlockToLoop(C, LI);
     }
     ParentLoop->verifyLoop();
