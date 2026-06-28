@@ -16,6 +16,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/InstructionCost.h"
@@ -112,13 +113,39 @@ void CodeMetrics::collectEphemeralValues(
   completeEphemeralValues(Visited, Worklist, EphValues);
 }
 
+/// Check if a block was previously marked dead by setting the terminator to
+/// `unreachable` and their is a statically evaluated conditional branch to NOT
+/// branch to the block. This is done for instance within the unroll pass,
+/// between unrolling inner/outer loops.
+static bool isBlockMarkedDead(const BasicBlock *BB) {
+  if (!isa<UnreachableInst>(BB->getTerminator()))
+    return false;
+  for (const BasicBlock *Pred : predecessors(BB)) {
+    auto *CondBr = dyn_cast<CondBrInst>(Pred->getTerminator());
+    if (!CondBr)
+      return false;
+    auto *Cond = dyn_cast<ConstantInt>(CondBr->getCondition());
+    if (!Cond)
+      return false;
+    // Check that the dead block is on the not-taken edge.
+    BasicBlock *TakenSucc =
+        Cond->isOne() ? CondBr->getSuccessor(0) : CondBr->getSuccessor(1);
+    if (TakenSucc == BB)
+      return false;
+  }
+  return true;
+}
+
 static bool extendsConvergenceOutsideLoop(const Instruction &I, const Loop *L) {
   if (!L)
     return false;
   if (!isa<ConvergenceControlInst>(I))
     return false;
   for (const auto *U : I.users()) {
-    if (!L->contains(cast<Instruction>(U)))
+    const auto *UserInst = cast<Instruction>(U);
+    if (isBlockMarkedDead(UserInst->getParent()))
+      continue;
+    if (!L->contains(UserInst))
       return true;
   }
   return false;
