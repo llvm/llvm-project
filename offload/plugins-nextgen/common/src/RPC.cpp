@@ -17,10 +17,6 @@
 #include "shared/rpc_opcodes.h"
 #include "shared/rpc_server.h"
 
-#ifdef OFFLOAD_HAS_FLANG_RT
-#include "flang/Runtime/io-api.h"
-#endif
-
 using namespace llvm;
 using namespace omp;
 using namespace target;
@@ -115,13 +111,18 @@ runServer(plugin::GenericDeviceTy &Device, void *Buffer,
   if (Status == rpc::RPC_UNHANDLED_OPCODE)
     Status = rpc::handle_libc_opcodes(*Port, NumLanes);
 
-#ifdef OFFLOAD_HAS_FLANG_RT
-  if (Status == rpc::RPC_UNHANDLED_OPCODE)
-    Status = static_cast<rpc::RPCStatus>(
-        Fortran::runtime::io::IONAME(HandleRPCOpcodes)(&*Port, NumLanes));
-#endif
-
   return Status;
+}
+
+static void flushServer(
+    plugin::GenericDeviceTy &Device, void *Buffer,
+    llvm::SmallSetVector<RPCServerTy::RPCServerCallbackTy, 0> Callbacks) {
+  bool Pending = true;
+  while (Pending) {
+    Pending = false;
+    if (runServer(Device, Buffer, Callbacks, Pending) != rpc::RPC_SUCCESS)
+      FAILURE_MESSAGE("Unhandled or invalid RPC opcode!\n");
+  }
 }
 
 void RPCServerTy::ServerThread::startThread() {
@@ -250,11 +251,20 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
 
 Error RPCServerTy::deinitDevice(plugin::GenericDeviceTy &Device) {
   std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
+  // Flush any requests the device may have pushed before being deinitialized.
+  if (void *Buffer = Buffers[Device.getDeviceId()])
+    flushServer(Device, Buffer, Callbacks);
   if (auto Err = Device.free(Buffers[Device.getDeviceId()], TARGET_ALLOC_HOST))
     return Err;
   Buffers[Device.getDeviceId()] = nullptr;
   Devices[Device.getDeviceId()] = nullptr;
   return Error::success();
+}
+
+void RPCServerTy::flushDevice(plugin::GenericDeviceTy &Device) {
+  std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
+  if (void *Buffer = Buffers[Device.getDeviceId()])
+    flushServer(Device, Buffer, Callbacks);
 }
 
 void RPCServerTy::registerCallback(RPCServerCallbackTy FnPtr) {

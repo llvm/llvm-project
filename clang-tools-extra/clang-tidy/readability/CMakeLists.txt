@@ -46,6 +46,7 @@ add_clang_library(clangTidyReadabilityModule STATIC
   RedundantFunctionPtrDereferenceCheck.cpp
   RedundantLambdaParameterListCheck.cpp
   RedundantMemberInitCheck.cpp
+  RedundantNestedIfCheck.cpp
   RedundantParenthesesCheck.cpp
   RedundantPreprocessorCheck.cpp
   RedundantQualifiedAliasCheck.cpp

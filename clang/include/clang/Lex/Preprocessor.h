@@ -2780,7 +2780,8 @@ private:
 
   /// Add a lexer to the top of the include stack and
   /// start lexing tokens from it instead of the current buffer.
-  void EnterSourceFileWithLexer(Lexer *TheLexer, ConstSearchDirIterator Dir);
+  void EnterSourceFileWithLexer(std::unique_ptr<Lexer> TheLexer,
+                                ConstSearchDirIterator Dir);
 
   /// Set the FileID for the preprocessor predefines.
   void setPredefinesFileID(FileID FID) {
@@ -2818,11 +2819,7 @@ private:
   // Caching stuff.
   void CachingLex(Token &Result);
 
-  bool InCachingLexMode() const {
-    // If the Lexer pointers are 0 and IncludeMacroStack is empty, it means
-    // that we are past EOF, not that we are in CachingLex mode.
-    return !CurPPLexer && !CurTokenLexer && !IncludeMacroStack.empty();
-  }
+  bool InCachingLexMode() const { return CurLexerCallback == CLK_CachingLexer; }
 
   void EnterCachingLexMode();
   void EnterCachingLexModeUnchecked();

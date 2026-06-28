@@ -97,8 +97,8 @@
 //   * llvm.nvvm.clz.ll              --> trunc i64 llvm.ctlz.i64(x) to i32
 //   * llvm.nvvm.popc.i              --> llvm.ctpop.i32
 //   * llvm.nvvm.popc.ll             --> trunc i64 llvm.ctpop.i64 to i32
-//   * llvm.nvvm.abs.i               --> select(x >= -x, x, -x)
-//   * llvm.nvvm.abs.ll              --> ibid.
+//   * llvm.nvvm.abs.i               --> llvm.abs.i32(x, true)
+//   * llvm.nvvm.abs.ll              --> llvm.abs.i64(x, true)
 //   * llvm.nvvm.max.i               --> select(x sge y, x, y)
 //   * llvm.nvvm.max.ll              --> ibid.
 //   * llvm.nvvm.max.ui              --> select(x uge y, x, y)
@@ -1887,41 +1887,6 @@ let TargetPrefix = "nvvm" in {
       PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty]>;
 
   //
-  // Atomic operations
-  //
-  class SCOPED_ATOMIC2_impl<LLVMType elty>
-        : Intrinsic<[elty],
-          [llvm_anyptr_ty, LLVMMatchType<0>],
-          [IntrArgMemOnly, IntrNoCallback, NoCapture<ArgIndex<0>>]>;
-  class SCOPED_ATOMIC3_impl<LLVMType elty>
-        : Intrinsic<[elty],
-          [llvm_anyptr_ty, LLVMMatchType<0>, LLVMMatchType<0>],
-          [IntrArgMemOnly, IntrNoCallback, NoCapture<ArgIndex<0>>]>;
-
-  multiclass PTXAtomicWithScope2<LLVMType elty> {
-    def _cta : SCOPED_ATOMIC2_impl<elty>;
-    def _sys : SCOPED_ATOMIC2_impl<elty>;
-  }
-  multiclass PTXAtomicWithScope3<LLVMType elty> {
-    def _cta : SCOPED_ATOMIC3_impl<elty>;
-    def _sys : SCOPED_ATOMIC3_impl<elty>;
-  }
-  multiclass PTXAtomicWithScope2_fi {
-    defm _f : PTXAtomicWithScope2<llvm_anyfloat_ty>;
-    defm _i : PTXAtomicWithScope2<llvm_anyint_ty>;
-  }
-  defm int_nvvm_atomic_add_gen    : PTXAtomicWithScope2_fi;
-  defm int_nvvm_atomic_inc_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_dec_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_exch_gen_i : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_xor_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_max_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_min_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_or_gen_i   : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_and_gen_i  : PTXAtomicWithScope2<llvm_anyint_ty>;
-  defm int_nvvm_atomic_cas_gen_i  : PTXAtomicWithScope3<llvm_anyint_ty>;
-
-  //
   // Bar.Sync
   //
   def int_nvvm_bar_warp_sync : NVVMBuiltin,
@@ -2171,21 +2136,6 @@ let IntrProperties = [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillRetur
   def int_nvvm_ldu_global_f : Intrinsic<[llvm_anyfloat_ty], [llvm_anyptr_ty, llvm_i32_ty]>;
   def int_nvvm_ldu_global_p : Intrinsic<[llvm_anyptr_ty], [llvm_anyptr_ty, llvm_i32_ty]>;
 }
-
-// Represents an explicit hole in the LLVM IR type system. It may be inserted by
-// the compiler in cases where a pointer is of the wrong type. In the backend
-// this intrinsic will be folded away and not equate to any instruction. It
-// should not be used by any frontend and should only be considered well defined
-// when added in the following cases:
-//
-//  - NVPTXLowerArgs: When wrapping a byval pointer argument to a kernel
-//    function to convert the address space from generic (0) to param (101).
-//    This accounts for the fact that the parameter symbols will occupy this
-//    space when lowered during ISel.
-//
-def int_nvvm_internal_addrspace_wrap :
-  NVVMPureIntrinsic<[llvm_anyptr_ty], [llvm_anyptr_ty],
-                [NoUndef<ArgIndex<0>>, NoUndef<RetIndex>]>;
 
 // Move intrinsics, used in nvvm internally
 

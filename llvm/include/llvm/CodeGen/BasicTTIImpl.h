@@ -68,7 +68,7 @@ class ScalarEvolution;
 class SCEV;
 class TargetMachine;
 
-extern cl::opt<unsigned> PartialUnrollingThreshold;
+extern LLVM_ABI cl::opt<unsigned> PartialUnrollingThreshold;
 
 /// Base class which can be used to help build a TTI implementation.
 ///
@@ -397,10 +397,16 @@ public:
                            const Function *Callee) const override {
     const TargetMachine &TM = getTLI()->getTargetMachine();
 
-    const FeatureBitset &CallerBits =
-        TM.getSubtargetImpl(*Caller)->getFeatureBits();
-    const FeatureBitset &CalleeBits =
-        TM.getSubtargetImpl(*Callee)->getFeatureBits();
+    const TargetSubtargetInfo *CallerSTI = TM.getSubtargetImpl(*Caller);
+    const TargetSubtargetInfo *CalleeSTI = TM.getSubtargetImpl(*Callee);
+    FeatureBitset InlineIgnoreFeatures = CallerSTI->getInlineIgnoreFeatures();
+    FeatureBitset InlineInverseFeatures = CallerSTI->getInlineInverseFeatures();
+    FeatureBitset CallerBits =
+        (CallerSTI->getFeatureBits() ^ InlineInverseFeatures) &
+        ~InlineIgnoreFeatures;
+    FeatureBitset CalleeBits =
+        (CalleeSTI->getFeatureBits() ^ InlineInverseFeatures) &
+        ~InlineIgnoreFeatures;
 
     // Inline a callee if its target-features are a subset of the callers
     // target-features.
@@ -654,9 +660,10 @@ public:
     if (!TargetTriple.isArch64Bit())
       return false;
 
-    // TODO: Triggers issues on aarch64 on darwin, so temporarily disable it
-    // there.
-    if (TargetTriple.getArch() == Triple::aarch64 && TargetTriple.isOSDarwin())
+    // Disable relative lookup tables for all AArch64 targets. Even AArch64's
+    // small code model allows a 4GB span of text + data, which might not fit
+    // in the 32-bit offsets relative lookup tables generate.
+    if (TargetTriple.isAArch64())
       return false;
 
     return true;
@@ -1043,7 +1050,10 @@ public:
     }
   }
 
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override { return 1; }
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override {
+    return 1;
+  }
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
@@ -1554,6 +1564,10 @@ public:
     if (getTLI()->getValueType(DL, Src,  true) == MVT::Other)
       return 4;
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Src);
+
+    // FIXME: Arbitrary cost
+    if (Opcode == Instruction::Load && CostKind == TTI::TCK_Latency)
+      return 4;
 
     // Assuming that all loads of legal types cost 1.
     InstructionCost Cost = LT.first;
@@ -3086,18 +3100,33 @@ public:
     case Intrinsic::clmul: {
       // This cost model should match the expansion in
       // TargetLowering::expandCLMUL.
-      InstructionCost PerBitCostMul =
-          thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind) +
-          thisT()->getArithmeticInstrCost(Instruction::Mul, RetTy, CostKind) +
+      unsigned BW = RetTy->getScalarSizeInBits();
+      InstructionCost AndCost =
+          thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind);
+      InstructionCost OrCost =
+          thisT()->getArithmeticInstrCost(Instruction::Or, RetTy, CostKind);
+      InstructionCost XorCost =
           thisT()->getArithmeticInstrCost(Instruction::Xor, RetTy, CostKind);
+      InstructionCost MulCost =
+          thisT()->getArithmeticInstrCost(Instruction::Mul, RetTy, CostKind);
+
+      // When the multiplication with holes approach is used, that emits 16
+      // MULs, 8 + 4 ANDs, 12 XORs and 3 ORs.
+      if (BW >= 32 && BW <= 64 &&
+          TLI->isOperationLegalOrCustom(ISD::MUL,
+                                        TLI->getValueType(DL, RetTy))) {
+        return 16 * MulCost + 12 * AndCost + 12 * XorCost + 3 * OrCost;
+      }
+
+      InstructionCost PerBitCostMul = AndCost + MulCost + XorCost;
       InstructionCost PerBitCostBittest =
-          thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind) +
+          AndCost +
           thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, RetTy,
                                       ICmpInst::BAD_ICMP_PREDICATE, CostKind) +
           thisT()->getCmpSelInstrCost(Instruction::ICmp, RetTy, RetTy,
                                       ICmpInst::ICMP_NE, CostKind);
       InstructionCost PerBitCost = std::min(PerBitCostMul, PerBitCostBittest);
-      return RetTy->getScalarSizeInBits() * PerBitCost;
+      return BW * PerBitCost;
     }
     default:
       break;
@@ -3539,7 +3568,7 @@ class BasicTTIImpl : public BasicTTIImplBase<BasicTTIImpl> {
   const TargetLoweringBase *getTLI() const { return TLI; }
 
 public:
-  explicit BasicTTIImpl(const TargetMachine *TM, const Function &F);
+  LLVM_ABI explicit BasicTTIImpl(const TargetMachine *TM, const Function &F);
 };
 
 } // end namespace llvm

@@ -453,6 +453,8 @@ private:
     short BracCount = 0;
     bool MemExpr = false;
     bool BracketUsed = false;
+    bool NegativeAdditiveTerm = false;
+    SMLoc NegativeAdditiveTermLoc;
     bool OffsetOperator = false;
     bool AttachToOperandIdx = false;
     bool IsPIC = false;
@@ -504,6 +506,9 @@ private:
     void setPIC() { IsPIC = true; }
 
     bool hadError() const { return State == IES_ERROR; }
+    SMLoc getErrorLoc(SMLoc DefaultLoc) const {
+      return NegativeAdditiveTerm ? NegativeAdditiveTermLoc : DefaultLoc;
+    }
     const InlineAsmIdentifierInfo &getIdentifierInfo() const { return Info; }
 
     bool regsUseUpError(StringRef &ErrMsg) {
@@ -693,6 +698,8 @@ private:
       case IES_OFFSET:
         State = IES_PLUS;
         IC.pushOperator(IC_PLUS);
+        NegativeAdditiveTerm = false;
+        NegativeAdditiveTermLoc = SMLoc();
         if (CurrState == IES_REGISTER && PrevState != IES_MULTIPLY) {
           // If we already have a BaseReg, then assume this is the IndexReg with
           // no explicit scale.
@@ -710,7 +717,7 @@ private:
       PrevState = CurrState;
       return false;
     }
-    bool onMinus(StringRef &ErrMsg) {
+    bool onMinus(SMLoc MinusLoc, StringRef &ErrMsg) {
       IntelExprState CurrState = State;
       switch (State) {
       default:
@@ -743,10 +750,12 @@ private:
         State = IES_MINUS;
         // push minus operator if it is not a negate operator
         if (CurrState == IES_REGISTER || CurrState == IES_RPAREN ||
-            CurrState == IES_INTEGER  || CurrState == IES_RBRAC  ||
-            CurrState == IES_OFFSET)
+            CurrState == IES_INTEGER || CurrState == IES_RBRAC ||
+            CurrState == IES_OFFSET) {
           IC.pushOperator(IC_MINUS);
-        else if (PrevState == IES_REGISTER && CurrState == IES_MULTIPLY) {
+          NegativeAdditiveTerm = true;
+          NegativeAdditiveTermLoc = MinusLoc;
+        } else if (PrevState == IES_REGISTER && CurrState == IES_MULTIPLY) {
           // We have negate operator for Scale: it's illegal
           ErrMsg = "Scale can't be negative";
           return true;
@@ -808,6 +817,7 @@ private:
         State = IES_ERROR;
         break;
       case IES_PLUS:
+      case IES_MINUS:
       case IES_LPAREN:
       case IES_LBRAC:
         State = IES_REGISTER;
@@ -819,6 +829,10 @@ private:
         if (PrevState == IES_INTEGER) {
           if (IndexReg)
             return regsUseUpError(ErrMsg);
+          if (NegativeAdditiveTerm) {
+            ErrMsg = "Scale can't be negative";
+            return true;
+          }
           State = IES_REGISTER;
           IndexReg = Reg;
           // Get the scale and replace the 'Scale * Register' with '0'.
@@ -901,6 +915,10 @@ private:
           // Index Register - Register * Scale
           if (IndexReg)
             return regsUseUpError(ErrMsg);
+          if (NegativeAdditiveTerm) {
+            ErrMsg = "Scale can't be negative";
+            return true;
+          }
           IndexReg = TmpReg;
           Scale = TmpInt;
           if (checkScale(Scale, ErrMsg))
@@ -1005,10 +1023,16 @@ private:
           } else {
             if (IndexReg)
               return regsUseUpError(ErrMsg);
+            if (NegativeAdditiveTerm) {
+              ErrMsg = "Scale can't be negative";
+              return true;
+            }
             IndexReg = TmpReg;
             Scale = 0;
           }
         }
+        NegativeAdditiveTerm = false;
+        NegativeAdditiveTermLoc = SMLoc();
         break;
       }
       PrevState = CurrState;
@@ -1070,6 +1094,10 @@ private:
           } else {
             if (IndexReg)
               return regsUseUpError(ErrMsg);
+            if (NegativeAdditiveTerm) {
+              ErrMsg = "Scale can't be negative";
+              return true;
+            }
             IndexReg = TmpReg;
             Scale = 0;
           }
@@ -1204,10 +1232,14 @@ private:
   /// SEH directives.
   bool parseSEHRegisterNumber(unsigned RegClassID, MCRegister &RegNo);
   bool parseDirectiveSEHPushReg(SMLoc);
+  bool parseDirectiveSEHPush2Regs(SMLoc, bool SwapRegs = false);
   bool parseDirectiveSEHSetFrame(SMLoc);
   bool parseDirectiveSEHSaveReg(SMLoc);
   bool parseDirectiveSEHSaveXMM(SMLoc);
   bool parseDirectiveSEHPushFrame(SMLoc);
+
+  bool ensureMasmEpilogContext(SMLoc Loc);
+  bool ensureMasmPrologContext(SMLoc Loc);
 
   unsigned checkTargetMatchPredicate(MCInst &Inst) override;
 
@@ -1968,7 +2000,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         if (!Val->evaluateAsAbsolute(Res, getStreamer().getAssemblerPtr()))
           return Error(ValueLoc, "expected absolute value");
         if (SM.onInteger(Res, ErrMsg))
-          return Error(ValueLoc, ErrMsg);
+          return Error(SM.getErrorLoc(ValueLoc), ErrMsg);
         break;
       }
       [[fallthrough]];
@@ -2015,7 +2047,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       if (Tok.is(AsmToken::Identifier)) {
         if (!ParseRegister(Reg, IdentLoc, End, /*RestoreOnFailure=*/true)) {
           if (SM.onRegister(Reg, ErrMsg))
-            return Error(IdentLoc, ErrMsg);
+            return Error(SM.getErrorLoc(IdentLoc), ErrMsg);
           break;
         }
         if (Parser.isParsingMasm()) {
@@ -2026,7 +2058,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
           if (!Field.empty() &&
               !MatchRegisterByName(Reg, ID, IdentLoc, IDEndLoc)) {
             if (SM.onRegister(Reg, ErrMsg))
-              return Error(IdentLoc, ErrMsg);
+              return Error(SM.getErrorLoc(IdentLoc), ErrMsg);
 
             AsmFieldInfo Info;
             SMLoc FieldStartLoc = SMLoc::getFromPointer(Field.data());
@@ -2035,7 +2067,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
             else if (SM.onPlus(ErrMsg))
               return Error(getTok().getLoc(), ErrMsg);
             else if (SM.onInteger(Info.Offset, ErrMsg))
-              return Error(IdentLoc, ErrMsg);
+              return Error(SM.getErrorLoc(IdentLoc), ErrMsg);
             SM.setTypeInfo(Info.Type);
 
             End = consumeToken();
@@ -2074,7 +2106,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         if (unsigned OpKind = IdentifyIntelInlineAsmOperator(Identifier)) {
           if (int64_t Val = ParseIntelInlineAsmOperator(OpKind)) {
             if (SM.onInteger(Val, ErrMsg))
-              return Error(IdentLoc, ErrMsg);
+              return Error(SM.getErrorLoc(IdentLoc), ErrMsg);
           } else {
             return true;
           }
@@ -2088,7 +2120,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
           return true;
         else if (SM.onIdentifierExpr(Val, Identifier, Info, FieldInfo.Type,
                                      true, ErrMsg))
-          return Error(IdentLoc, ErrMsg);
+          return Error(SM.getErrorLoc(IdentLoc), ErrMsg);
         break;
       }
       if (Parser.isParsingMasm()) {
@@ -2097,7 +2129,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
           if (ParseMasmOperator(OpKind, Val))
             return true;
           if (SM.onInteger(Val, ErrMsg))
-            return Error(IdentLoc, ErrMsg);
+            return Error(SM.getErrorLoc(IdentLoc), ErrMsg);
           break;
         }
         if (!getParser().lookUpType(Identifier, FieldInfo.Type)) {
@@ -2121,7 +2153,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
               EndDot = parseOptionalToken(AsmToken::Dot);
           }
           if (SM.onInteger(FieldInfo.Offset, ErrMsg))
-            return Error(IdentLoc, ErrMsg);
+            return Error(SM.getErrorLoc(IdentLoc), ErrMsg);
           break;
         }
       }
@@ -2129,7 +2161,7 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         return Error(Tok.getLoc(), "Unexpected identifier!");
       } else if (SM.onIdentifierExpr(Val, Identifier, Info, FieldInfo.Type,
                                      false, ErrMsg)) {
-        return Error(IdentLoc, ErrMsg);
+        return Error(SM.getErrorLoc(IdentLoc), ErrMsg);
       }
       break;
     }
@@ -2154,15 +2186,15 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
           AsmTypeInfo Type;
           if (SM.onIdentifierExpr(Val, Identifier, Info, Type,
                                   isParsingMSInlineAsm(), ErrMsg))
-            return Error(Loc, ErrMsg);
+            return Error(SM.getErrorLoc(Loc), ErrMsg);
           End = consumeToken();
         } else {
           if (SM.onInteger(IntVal, ErrMsg))
-            return Error(Loc, ErrMsg);
+            return Error(SM.getErrorLoc(Loc), ErrMsg);
         }
       } else {
         if (SM.onInteger(IntVal, ErrMsg))
-          return Error(Loc, ErrMsg);
+          return Error(SM.getErrorLoc(Loc), ErrMsg);
       }
       break;
     }
@@ -2171,8 +2203,8 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
         return Error(getTok().getLoc(), ErrMsg);
       break;
     case AsmToken::Minus:
-      if (SM.onMinus(ErrMsg))
-        return Error(getTok().getLoc(), ErrMsg);
+      if (SM.onMinus(getTok().getLoc(), ErrMsg))
+        return Error(SM.getErrorLoc(getTok().getLoc()), ErrMsg);
       break;
     case AsmToken::Tilde:   SM.onNot(); break;
     case AsmToken::Star:    SM.onStar(); break;
@@ -2192,13 +2224,13 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
       break;
     case AsmToken::RBrac:
       if (SM.onRBrac(ErrMsg)) {
-        return Error(Tok.getLoc(), ErrMsg);
+        return Error(SM.getErrorLoc(Tok.getLoc()), ErrMsg);
       }
       break;
     case AsmToken::LParen:  SM.onLParen(); break;
     case AsmToken::RParen:
       if (SM.onRParen(ErrMsg)) {
-        return Error(Tok.getLoc(), ErrMsg);
+        return Error(SM.getErrorLoc(Tok.getLoc()), ErrMsg);
       }
       break;
     }
@@ -4808,21 +4840,60 @@ bool X86AsmParser::ParseDirective(AsmToken DirectiveID) {
     return parseDirectiveFPOEndPrologue(DirectiveID.getLoc());
   else if (IDVal == ".cv_fpo_endproc")
     return parseDirectiveFPOEndProc(DirectiveID.getLoc());
-  else if (IDVal == ".seh_pushreg" ||
-           (Parser.isParsingMasm() && IDVal.equals_insensitive(".pushreg")))
+  else if (IDVal == ".seh_pushreg")
     return parseDirectiveSEHPushReg(DirectiveID.getLoc());
-  else if (IDVal == ".seh_setframe" ||
-           (Parser.isParsingMasm() && IDVal.equals_insensitive(".setframe")))
+  else if (IDVal == ".seh_push2regs")
+    return parseDirectiveSEHPush2Regs(DirectiveID.getLoc());
+  else if (IDVal == ".seh_setframe")
     return parseDirectiveSEHSetFrame(DirectiveID.getLoc());
-  else if (IDVal == ".seh_savereg" ||
-           (Parser.isParsingMasm() && IDVal.equals_insensitive(".savereg")))
+  else if (IDVal == ".seh_savereg")
     return parseDirectiveSEHSaveReg(DirectiveID.getLoc());
-  else if (IDVal == ".seh_savexmm" ||
-           (Parser.isParsingMasm() && IDVal.equals_insensitive(".savexmm128")))
+  else if (IDVal == ".seh_savexmm")
     return parseDirectiveSEHSaveXMM(DirectiveID.getLoc());
-  else if (IDVal == ".seh_pushframe" ||
-           (Parser.isParsingMasm() && IDVal.equals_insensitive(".pushframe")))
+  else if (IDVal == ".seh_pushframe")
     return parseDirectiveSEHPushFrame(DirectiveID.getLoc());
+  else if (Parser.isParsingMasm()) {
+    // MASM prolog directives.
+    if (IDVal.equals_insensitive(".pushreg")) {
+      return ensureMasmPrologContext(DirectiveID.getLoc()) ||
+             parseDirectiveSEHPushReg(DirectiveID.getLoc());
+    } else if (IDVal.equals_insensitive(".push2reg")) {
+      return ensureMasmPrologContext(DirectiveID.getLoc()) ||
+             parseDirectiveSEHPush2Regs(DirectiveID.getLoc());
+    } else if (IDVal.equals_insensitive(".setframe")) {
+      return ensureMasmPrologContext(DirectiveID.getLoc()) ||
+             parseDirectiveSEHSetFrame(DirectiveID.getLoc());
+    } else if (IDVal.equals_insensitive(".savereg")) {
+      return ensureMasmPrologContext(DirectiveID.getLoc()) ||
+             parseDirectiveSEHSaveReg(DirectiveID.getLoc());
+    } else if (IDVal.equals_insensitive(".savexmm128")) {
+      return ensureMasmPrologContext(DirectiveID.getLoc()) ||
+             parseDirectiveSEHSaveXMM(DirectiveID.getLoc());
+    } else if (IDVal.equals_insensitive(".pushframe")) {
+      return ensureMasmPrologContext(DirectiveID.getLoc()) ||
+             parseDirectiveSEHPushFrame(DirectiveID.getLoc());
+    }
+    // MASM epilog directives
+    if (IDVal.equals_insensitive(".popreg")) {
+      return ensureMasmEpilogContext(DirectiveID.getLoc()) ||
+             parseDirectiveSEHPushReg(DirectiveID.getLoc());
+    } else if (IDVal.equals_insensitive(".pop2reg")) {
+      // .pop2reg args are in the order they are popped, so reverse them to get
+      // the order they were pushed.
+      return ensureMasmEpilogContext(DirectiveID.getLoc()) ||
+             parseDirectiveSEHPush2Regs(DirectiveID.getLoc(),
+                                        /*SwapRegs=*/true);
+    } else if (IDVal.equals_insensitive(".unsetframe")) {
+      return ensureMasmEpilogContext(DirectiveID.getLoc()) ||
+             parseDirectiveSEHSetFrame(DirectiveID.getLoc());
+    } else if (IDVal.equals_insensitive(".restorereg")) {
+      return ensureMasmEpilogContext(DirectiveID.getLoc()) ||
+             parseDirectiveSEHSaveReg(DirectiveID.getLoc());
+    } else if (IDVal.equals_insensitive(".restorexmm128")) {
+      return ensureMasmEpilogContext(DirectiveID.getLoc()) ||
+             parseDirectiveSEHSaveXMM(DirectiveID.getLoc());
+    }
+  }
 
   return true;
 }
@@ -4880,7 +4951,7 @@ bool X86AsmParser::parseDirectiveEven(SMLoc L) {
     Section = getStreamer().getCurrentSectionOnly();
   }
   if (getContext().getAsmInfo().useCodeAlign(*Section))
-    getStreamer().emitCodeAlignment(Align(2), &getSTI(), 0);
+    getStreamer().emitCodeAlignment(Align(2), getSTI(), 0);
   else
     getStreamer().emitValueToAlignment(Align(2), 0, 1, 0);
   return false;
@@ -5047,6 +5118,30 @@ bool X86AsmParser::parseDirectiveSEHPushReg(SMLoc Loc) {
   return false;
 }
 
+bool X86AsmParser::parseDirectiveSEHPush2Regs(SMLoc Loc, bool SwapRegs) {
+  MCRegister Reg1;
+  if (parseSEHRegisterNumber(X86::GR64RegClassID, Reg1))
+    return true;
+
+  if (getLexer().isNot(AsmToken::Comma))
+    return TokError("expected comma between registers");
+  getParser().Lex();
+
+  MCRegister Reg2;
+  if (parseSEHRegisterNumber(X86::GR64RegClassID, Reg2))
+    return true;
+
+  if (getLexer().isNot(AsmToken::EndOfStatement))
+    return TokError("expected end of directive");
+
+  getParser().Lex();
+  // Swap regs to go from pop order to push order.
+  if (SwapRegs)
+    std::swap(Reg1, Reg2);
+  getStreamer().emitWinCFIPush2Regs(Reg1, Reg2, Loc);
+  return false;
+}
+
 bool X86AsmParser::parseDirectiveSEHSetFrame(SMLoc Loc) {
   MCRegister Reg;
   int64_t Off;
@@ -5107,6 +5202,20 @@ bool X86AsmParser::parseDirectiveSEHSaveXMM(SMLoc Loc) {
   return false;
 }
 
+bool X86AsmParser::ensureMasmPrologContext(SMLoc Loc) {
+  if (getStreamer().isWinCFIPrologEnded()) {
+    return Error(Loc, "prolog directive must be used inside a prolog");
+  }
+  return false;
+}
+
+bool X86AsmParser::ensureMasmEpilogContext(SMLoc Loc) {
+  if (!getStreamer().isInEpilogCFI()) {
+    return Error(Loc, "epilog directive must be used inside an epilog");
+  }
+  return false;
+}
+
 bool X86AsmParser::parseDirectiveSEHPushFrame(SMLoc Loc) {
   bool Code = false;
   StringRef CodeID;
@@ -5118,6 +5227,11 @@ bool X86AsmParser::parseDirectiveSEHPushFrame(SMLoc Loc) {
         return Error(startLoc, "expected @code");
       Code = true;
     }
+  } else if (getParser().isParsingMasm() &&
+             getLexer().is(AsmToken::Identifier) &&
+             getTok().getString().equals_insensitive("code")) {
+    getParser().Lex();
+    Code = true;
   }
 
   if (getLexer().isNot(AsmToken::EndOfStatement))

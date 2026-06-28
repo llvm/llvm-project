@@ -30,19 +30,9 @@
 #include "llvm/Frontend/OpenMP/OMPDeviceConstants.h"
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 #include "llvm/Support/DynamicLibrary.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-
-#if !defined(__BYTE_ORDER__) || !defined(__ORDER_LITTLE_ENDIAN__) ||           \
-    !defined(__ORDER_BIG_ENDIAN__)
-#error "Missing preprocessor definitions for endianness detection."
-#endif
-
-#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
-#define LITTLEENDIAN_CPU
-#elif defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
-#define BIGENDIAN_CPU
-#endif
 
 // The number of devices in this plugin.
 #define NUM_DEVICES 4
@@ -59,6 +49,7 @@ struct GenELF64KernelTy;
 struct GenELF64DeviceTy;
 struct GenELF64PluginTy;
 
+using llvm::endianness;
 using llvm::sys::DynamicLibrary;
 using namespace error;
 
@@ -102,9 +93,13 @@ struct GenELF64KernelTy : public GenericKernelTy {
     if (KernelArgs.Version < OMP_KERNEL_ARG_VERSION)
       return Plugin::error(ErrorCode::UNSUPPORTED,
                            "Incompatible kernel argument version for plugin");
+    // Cooperative kernel launch is not supported for host
+    if (KernelArgs.Flags.Cooperative)
+      return Plugin::error(ErrorCode::UNSUPPORTED,
+                           "cooperative kernel launch not supported for host");
     // TODO: The data will need to be copied locally if we ever support
     //       asynchronous kernel launches in the host interface.
-    Func(LaunchParams.Data);
+    Func(LaunchParams.Args);
     return Plugin::success();
   }
 
@@ -117,8 +112,9 @@ struct GenELF64KernelTy : public GenericKernelTy {
   }
 
 private:
-  /// Host kernel arguments are defined as a single, contiguous buffer.
-  using KernelTy = void(void *);
+  /// Host kernel arguments are defined as an array of pointers, one per
+  /// argument, each pointing to that argument's storage.
+  using KernelTy = void(void **);
   /// The kernel function to execute.
   KernelTy *Func;
 };
@@ -229,7 +225,8 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate memory. Use std::malloc in all cases.
-  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind) override {
+  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind,
+                            size_t /* Alignment */) override {
     if (Size == 0)
       return nullptr;
 
@@ -340,13 +337,15 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   };
 
   /// This plugin does not support the event API. Do nothing without failing.
-  Error createEventImpl(void **EventPtrStorage) override {
+  Error createEventImpl(void **EventPtrStorage, bool EnableProfiling) override {
     *EventPtrStorage = nullptr;
     return Plugin::success();
   }
-  Error destroyEventImpl(void *EventPtr) override { return Plugin::success(); }
-  Error recordEventImpl(void *EventPtr,
-                        AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+  Error destroyEventImpl(void *EventPtr, bool EnableProfiling) override {
+    return Plugin::success();
+  }
+  Error recordEventImpl(void *EventPtr, AsyncInfoWrapperTy &AsyncInfoWrapper,
+                        bool EnableProfiling) override {
     return Plugin::success();
   }
   Error waitEventImpl(void *EventPtr,
@@ -537,17 +536,15 @@ struct GenELF64PluginTy final : public GenericPluginTy {
 #elif defined(__s390x__)
     return llvm::Triple::systemz;
 #elif defined(__aarch64__)
-#ifdef LITTLEENDIAN_CPU
-    return llvm::Triple::aarch64;
-#else
-    return llvm::Triple::aarch64_be;
-#endif
+    if constexpr (endianness::native == endianness::little)
+      return llvm::Triple::aarch64;
+    else
+      return llvm::Triple::aarch64_be;
 #elif defined(__powerpc64__)
-#ifdef LITTLEENDIAN_CPU
-    return llvm::Triple::ppc64le;
-#else
-    return llvm::Triple::ppc64;
-#endif
+    if constexpr (endianness::native == endianness::little)
+      return llvm::Triple::ppc64le;
+    else
+      return llvm::Triple::ppc64;
 #elif defined(__riscv) && (__riscv_xlen == 64)
     return llvm::Triple::riscv64;
 #elif defined(__loongarch__) && (__loongarch_grlen == 64)

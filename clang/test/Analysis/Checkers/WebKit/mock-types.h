@@ -13,6 +13,22 @@ typedef T type;
 
 template<typename T> typename remove_reference<T>::type&& move(T&& t);
 
+template<typename T, typename U>
+T exchange(T& t, U&& u)
+{
+  T r = static_cast<T&&>(t);
+  t = static_cast<U&&>(u);
+  return r;
+}
+
+template<typename T>
+T exchange(T& t, decltype(nullptr))
+{
+  T r = static_cast<T&&>(t);
+  t = static_cast<T>(t);
+  return r;
+}
+
 }
 
 #endif
@@ -186,6 +202,7 @@ template <typename T> struct RefPtr {
     t = o.t;
     o.t = tmp;
   }
+  operator T*() { return t; }
   T *get() const { return t; }
   T *operator->() const { return t; }
   T &operator*() const { return *t; }
@@ -372,7 +389,7 @@ private:
   template <typename U> friend class CanMakeWeakPtr;
   template <typename U> friend class WeakPtr;
 
-  WeakPtrImpl& createWeakPtrImpl() {
+  WeakPtrImpl& [[clang::annotate_type("webkit.nodelete")]] createWeakPtrImpl() {
     if (!impl)
       impl = WeakPtrImpl::create(static_cast<T&>(*this));
     return *impl;
@@ -414,6 +431,9 @@ public:
       impl = nullptr;
     return *this;
   }
+
+  T* operator->() { return get(); }
+  operator T*() { return get(); }
 
   T* get() {
     return impl ? impl->get<T>() : nullptr;

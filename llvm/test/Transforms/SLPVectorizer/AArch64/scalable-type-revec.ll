@@ -19,4 +19,3 @@ vector.body:
   %active.lane.mask = phi <vscale x 16 x i1> [ zeroinitializer, %vector.ph ]
   ret <vscale x 16 x i1> %active.lane.mask
 }
-

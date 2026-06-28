@@ -832,6 +832,32 @@ void computeSPIRKernelABIInfo(CodeGenModule &CGM, CGFunctionInfo &FI);
 } // namespace CodeGen
 } // namespace clang
 
+#ifndef NDEBUG
+static const char *abiKindToString(ABIArgInfo::Kind K) {
+  switch (K) {
+  case ABIArgInfo::Direct:
+    return "Direct";
+  case ABIArgInfo::Extend:
+    return "Extend";
+  case ABIArgInfo::Indirect:
+    return "Indirect";
+  case ABIArgInfo::IndirectAliased:
+    return "IndirectAliased";
+  case ABIArgInfo::Ignore:
+    return "Ignore";
+  case ABIArgInfo::Expand:
+    return "Expand";
+  case ABIArgInfo::CoerceAndExpand:
+    return "CoerceAndExpand";
+  case ABIArgInfo::TargetSpecific:
+    return "TargetSpecific";
+  case ABIArgInfo::InAlloca:
+    return "InAlloca";
+  }
+  llvm_unreachable("Unknown kind");
+}
+#endif
+
 void CodeGenModule::computeABIInfoUsingLib(CGFunctionInfo &FI) {
   SmallVector<const llvm::abi::Type *> MappedArgTypes;
   MappedArgTypes.reserve(FI.arg_size());
@@ -849,12 +875,100 @@ void CodeGenModule::computeABIInfoUsingLib(CGFunctionInfo &FI) {
 
   getLLVMABITargetInfo(AbiMapper->getTypeBuilder()).computeInfo(*AbiFI);
 
-  FI.getReturnInfo() =
-      convertABIArgInfo(AbiFI->getReturnInfo(), FI.getReturnType());
+#ifndef NDEBUG
+  // With assertions enabled, also compute info using Clang ABI logic,
+  // so we can ensure the results are consistent.
+  getABIInfo().computeInfo(FI);
 
+  auto ConvertABIArgInfo = [&](ABIArgInfo &Target,
+                               const llvm::abi::ArgInfo &AbiInfo, QualType Type,
+                               int ArgNo) {
+    auto Check = [&](bool Cond, llvm::function_ref<void()> MessageFn) {
+      if (Cond)
+        return;
+      if (ArgNo == -1)
+        llvm::dbgs() << "For return value of type ";
+      else
+        llvm::dbgs() << "For argument " << ArgNo << " of type ";
+      llvm::dbgs() << Type << ": ";
+      MessageFn();
+      llvm::dbgs() << "\n";
+      abort();
+    };
+    auto CheckSimple = [&](auto TargetVal, auto ResVal, StringRef What) {
+      Check(TargetVal == ResVal, [&]() {
+        llvm::dbgs() << What << " mismatch (expected: " << TargetVal
+                     << ", given: " << ResVal << ")";
+      });
+    };
+
+    ABIArgInfo Res = convertABIArgInfo(AbiInfo, Type);
+    Check(Target.getKind() == Res.getKind(), [&]() {
+      llvm::dbgs() << "Kind mismatch (expected: "
+                   << abiKindToString(Target.getKind())
+                   << ", given: " << abiKindToString(Res.getKind()) << ")";
+    });
+
+    if (Res.canHaveCoerceToType()) {
+      // Normalize nullptr types.
+      llvm::Type *TargetType = Target.getCoerceToType();
+      llvm::Type *ResType = Res.getCoerceToType();
+      if (!TargetType)
+        TargetType = getTypes().ConvertType(Type);
+      if (!ResType)
+        ResType = getTypes().ConvertType(Type);
+
+      Check(TargetType == ResType, [&]() {
+        llvm::dbgs() << "CoerceToType mismatch (expected: " << *TargetType
+                     << ", given: " << *ResType << ")";
+      });
+    }
+
+    switch (Res.getKind()) {
+    case ABIArgInfo::Extend:
+      CheckSimple(Target.isSignExt(), Res.isSignExt(), "SignExt");
+      CheckSimple(Target.isZeroExt(), Res.isZeroExt(), "ZeroExt");
+      [[fallthrough]];
+    case ABIArgInfo::Direct:
+      CheckSimple(Target.getDirectAlign(), Res.getDirectAlign(), "DirectAlign");
+      CheckSimple(Target.getDirectOffset(), Res.getDirectOffset(),
+                  "DirectOffset");
+      break;
+    case ABIArgInfo::Indirect:
+      CheckSimple(Target.getIndirectByVal(), Res.getIndirectByVal(),
+                  "IndirectByVal");
+      [[fallthrough]];
+    case ABIArgInfo::IndirectAliased:
+      CheckSimple(Target.getIndirectAddrSpace(), Res.getIndirectAddrSpace(),
+                  "IndirectAddrSpace");
+      CheckSimple(Target.getIndirectRealign(), Res.getIndirectRealign(),
+                  "IndirectRealign");
+      Check(Target.getIndirectAlign() == Res.getIndirectAlign(), [&]() {
+        llvm::dbgs() << "IndirectAlign mismatch (expected: "
+                     << Target.getIndirectAlign().getQuantity()
+                     << ", given: " << Res.getIndirectAlign().getQuantity()
+                     << ")";
+      });
+      break;
+    default:
+      break;
+    }
+
+    Target = Res;
+  };
+#else
+  auto ConvertABIArgInfo =
+      [&](ABIArgInfo &Target, const llvm::abi::ArgInfo &AbiInfo, QualType Type,
+          int ArgNo) { Target = convertABIArgInfo(AbiInfo, Type); };
+#endif
+
+  ConvertABIArgInfo(FI.getReturnInfo(), AbiFI->getReturnInfo(),
+                    FI.getReturnType(), -1);
+
+  int ArgNo = 0;
   for (auto [CGArg, AbiArg] :
        llvm::zip_equal(FI.arguments(), AbiFI->arguments()))
-    CGArg.info = convertABIArgInfo(AbiArg.Info, CGArg.type);
+    ConvertABIArgInfo(CGArg.info, AbiArg.Info, CGArg.type, ArgNo++);
 }
 
 ABIArgInfo CodeGenModule::convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
@@ -2887,11 +3001,13 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   }
 
   bool hasUsedSRet = false;
-  SmallVector<llvm::AttributeSet, 4> ArgAttrs(IRFunctionArgs.totalIRArgs());
+  SmallVector<llvm::AttrBuilder, 4> ArgAttrs;
+  for (unsigned I = 0; I < IRFunctionArgs.totalIRArgs(); ++I)
+    ArgAttrs.emplace_back(getLLVMContext());
 
   // Attach attributes to sret.
   if (IRFunctionArgs.hasSRetArg()) {
-    llvm::AttrBuilder SRETAttrs(getLLVMContext());
+    llvm::AttrBuilder &SRETAttrs = ArgAttrs[IRFunctionArgs.getSRetArgNo()];
     SRETAttrs.addStructRetAttr(getTypes().ConvertTypeForMem(RetTy));
     SRETAttrs.addAttribute(llvm::Attribute::Writable);
     SRETAttrs.addAttribute(llvm::Attribute::DeadOnUnwind);
@@ -2899,16 +3015,12 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     if (RetAI.getInReg())
       SRETAttrs.addAttribute(llvm::Attribute::InReg);
     SRETAttrs.addAlignmentAttr(RetAI.getIndirectAlign().getQuantity());
-    ArgAttrs[IRFunctionArgs.getSRetArgNo()] =
-        llvm::AttributeSet::get(getLLVMContext(), SRETAttrs);
   }
 
   // Attach attributes to inalloca argument.
   if (IRFunctionArgs.hasInallocaArg()) {
-    llvm::AttrBuilder Attrs(getLLVMContext());
-    Attrs.addInAllocaAttr(FI.getArgStruct());
-    ArgAttrs[IRFunctionArgs.getInallocaArgNo()] =
-        llvm::AttributeSet::get(getLLVMContext(), Attrs);
+    ArgAttrs[IRFunctionArgs.getInallocaArgNo()].addInAllocaAttr(
+        FI.getArgStruct());
   }
 
   // Apply `nonnull`, `dereferenceable(N)` and `align N` to the `this` argument,
@@ -2921,23 +3033,21 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
 
     assert(IRArgs.second == 1 && "Expected only a single `this` pointer.");
 
-    llvm::AttrBuilder Attrs(getLLVMContext());
+    llvm::AttrBuilder &Attrs = ArgAttrs[IRArgs.first];
 
     QualType ThisTy = FI.arg_begin()->type.getTypePtr()->getPointeeType();
+    int64_t ThisSz = getMinimumObjectSize(ThisTy).getQuantity();
 
     if (!CodeGenOpts.NullPointerIsValid &&
         getTypes().getTargetAddressSpace(FI.arg_begin()->type) == 0) {
       Attrs.addAttribute(llvm::Attribute::NonNull);
-      Attrs.addDereferenceableAttr(getMinimumObjectSize(ThisTy).getQuantity());
+      Attrs.addDereferenceableAttr(ThisSz);
     } else {
       // FIXME dereferenceable should be correct here, regardless of
       // NullPointerIsValid. However, dereferenceable currently does not always
       // respect NullPointerIsValid and may imply nonnull and break the program.
       // See https://reviews.llvm.org/D66618 for discussions.
-      Attrs.addDereferenceableOrNullAttr(
-          getMinimumObjectSize(
-              FI.arg_begin()->type.castAs<PointerType>()->getPointeeType())
-              .getQuantity());
+      Attrs.addDereferenceableOrNullAttr(ThisSz);
     }
 
     llvm::Align Alignment =
@@ -2969,8 +3079,6 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         Attrs.addDeadOnReturnAttr(llvm::DeadOnReturnInfo(
             Context.getASTRecordLayout(ClassDecl).getDataSize().getQuantity()));
     }
-
-    ArgAttrs[IRArgs.first] = llvm::AttributeSet::get(getLLVMContext(), Attrs);
   }
 
   unsigned ArgNo = 0;
@@ -2983,10 +3091,8 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     // Add attribute for padding argument, if necessary.
     if (IRFunctionArgs.hasPaddingArg(ArgNo)) {
       if (AI.getPaddingInReg()) {
-        ArgAttrs[IRFunctionArgs.getPaddingArgNo(ArgNo)] =
-            llvm::AttributeSet::get(getLLVMContext(),
-                                    llvm::AttrBuilder(getLLVMContext())
-                                        .addAttribute(llvm::Attribute::InReg));
+        ArgAttrs[IRFunctionArgs.getPaddingArgNo(ArgNo)].addAttribute(
+            llvm::Attribute::InReg);
       }
     }
 
@@ -3169,14 +3275,14 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
     }
 
     if (FI.getExtParameterInfo(ArgNo).isNoEscape())
-      Attrs.addCapturesAttr(llvm::CaptureInfo::none());
+      Attrs.addCapturesAttr(
+          llvm::CaptureInfo(llvm::CaptureComponents::Address));
 
     if (Attrs.hasAttributes()) {
       unsigned FirstIRArg, NumIRArgs;
       std::tie(FirstIRArg, NumIRArgs) = IRFunctionArgs.getIRArgs(ArgNo);
       for (unsigned i = 0; i < NumIRArgs; i++)
-        ArgAttrs[FirstIRArg + i] = ArgAttrs[FirstIRArg + i].addAttributes(
-            getLLVMContext(), llvm::AttributeSet::get(getLLVMContext(), Attrs));
+        ArgAttrs[FirstIRArg + i].merge(Attrs);
     }
   }
   assert(ArgNo == FI.arg_size());
@@ -3205,17 +3311,20 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
           // in a way that can be called from here.
           if (i < FunctionType->getNumParams() &&
               FunctionType->getParamType(i)->isPointerTy()) {
-            ArgAttrs[i] =
-                ArgAttrs[i].addAttribute(getLLVMContext(), *MemAttrForPtrArgs);
+            ArgAttrs[i].addAttribute(*MemAttrForPtrArgs);
           }
         }
       }
     }
   }
 
+  SmallVector<llvm::AttributeSet, 4> ArgAttrSets;
+  for (const llvm::AttrBuilder &Attrs : ArgAttrs)
+    ArgAttrSets.push_back(llvm::AttributeSet::get(getLLVMContext(), Attrs));
+
   AttrList = llvm::AttributeList::get(
       getLLVMContext(), llvm::AttributeSet::get(getLLVMContext(), FuncAttrs),
-      llvm::AttributeSet::get(getLLVMContext(), RetAttrs), ArgAttrs);
+      llvm::AttributeSet::get(getLLVMContext(), RetAttrs), ArgAttrSets);
 }
 
 /// An argument came in as a promoted argument; demote it back to its
@@ -5133,13 +5242,17 @@ void CodeGenFunction::EmitCallArg(CallArgList &args, const Expr *E,
     return;
   }
 
-  if (HasAggregateEvalKind && isa<ImplicitCastExpr>(E) &&
-      cast<CastExpr>(E)->getCastKind() == CK_LValueToRValue &&
-      !type->isArrayParameterType() && !type.isNonTrivialToPrimitiveCopy()) {
-    LValue L = EmitLValue(cast<CastExpr>(E)->getSubExpr());
-    assert(L.isSimple());
-    args.addUncopiedAggregate(L, type);
-    return;
+  if (HasAggregateEvalKind) {
+    auto *ICE = dyn_cast<ImplicitCastExpr>(E);
+    if (ICE && ICE->getCastKind() == CK_LValueToRValue &&
+        ICE->getSubExpr()->getType().getAddressSpace() !=
+            LangAS::hlsl_constant &&
+        !type->isArrayParameterType() && !type.isNonTrivialToPrimitiveCopy()) {
+      LValue L = EmitLValue(cast<CastExpr>(E)->getSubExpr());
+      assert(L.isSimple());
+      args.addUncopiedAggregate(L, type);
+      return;
+    }
   }
 
   args.add(EmitAnyExprToTemp(E), type);

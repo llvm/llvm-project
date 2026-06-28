@@ -35,6 +35,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
 #include <functional>
 #include <iterator>
@@ -194,8 +195,9 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
     ArchName = "aarch64";
     FeaturesStr = "+all";
     break;
-  case llvm::Triple::riscv64: {
-    ArchName = "riscv64";
+  case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32: {
+    ArchName = TheTriple.getArchName();
     if (!Features)
       return createFatalBOLTError("RISCV target needs SubtargetFeatures");
     // We rely on relaxation for some transformations (e.g., promoting all calls

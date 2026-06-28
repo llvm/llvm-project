@@ -36,6 +36,7 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ReplaceConstant.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 
 #define DEBUG_TYPE "spirv-cbuffer-access"
 using namespace llvm;
@@ -63,10 +64,13 @@ static bool replaceCBufferAccesses(Module &M) {
   if (!CBufMD)
     return false;
 
+  SmallPtrSet<GlobalVariable *, 8> CBufferHandles;
   SmallVector<Constant *> CBufferGlobals;
-  for (const hlsl::CBufferMapping &Mapping : *CBufMD)
+  for (const hlsl::CBufferMapping &Mapping : *CBufMD) {
+    CBufferHandles.insert(Mapping.Handle);
     for (const hlsl::CBufferMember &Member : Mapping.Members)
       CBufferGlobals.push_back(Member.GV);
+  }
   convertUsersOfConstantsToInstructions(CBufferGlobals);
 
   for (const hlsl::CBufferMapping &Mapping : *CBufMD) {
@@ -100,6 +104,14 @@ static bool replaceCBufferAccesses(Module &M) {
       MemberGV->replaceAllUsesWith(GetPointerCall);
     }
   }
+
+  // Remove cbuffer handle globals from @llvm.compiler.used list.
+  llvm::removeFromUsedLists(M, [&](Constant *C) -> bool {
+    auto *GV = dyn_cast<GlobalVariable>(C);
+    return GV && CBufferHandles.contains(GV);
+  });
+  for (GlobalVariable *HandleGV : CBufferHandles)
+    HandleGV->removeDeadConstantUsers();
 
   // Now that all uses are replaced, clean up the globals and metadata.
   for (const hlsl::CBufferMapping &Mapping : *CBufMD) {

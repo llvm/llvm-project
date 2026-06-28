@@ -263,6 +263,12 @@ makeCommonInvocationForModuleBuild(CompilerInvocation CI) {
   resetBenignCodeGenOptions(frontend::GenerateModule, CI.getLangOpts(),
                             CI.getCodeGenOpts());
 
+  // Erase the command-line arguments. These don't make it into the final set of
+  // compilation arguments and will be re-populated during compilation itself.
+  // Keeping them around would make copies of the invocation expensive.
+  CI.getCodeGenOpts().Argv0 = nullptr;
+  CI.getCodeGenOpts().CommandLineArgs.clear();
+
   // Map output paths that affect behaviour to "-" so their existence is in the
   // context hash. The final path will be computed in addOutputPaths.
   if (!CI.getDiagnosticOpts().DiagnosticSerializationFile.empty())
@@ -465,9 +471,9 @@ static bool isSafeToIgnoreCWD(const CowCompilerInvocation &CI) {
   // command line inputs use relative paths.
   bool AnyRelative = false;
   CI.visitPaths([&](StringRef Path) {
-    assert(!AnyRelative && "Continuing path visitation despite returning true");
+    assert(!AnyRelative && "Continuing path visitation despite relative path");
     AnyRelative |= !Path.empty() && !llvm::sys::path::is_absolute(Path);
-    return AnyRelative;
+    return CowCompilerInvocation::VisitConstResult{/*Terminate=*/AnyRelative};
   });
   return !AnyRelative;
 }
@@ -525,57 +531,66 @@ void ModuleDepCollector::associateWithContextHash(
   assert(Inserted && "duplicate module mapping");
 }
 
-void ModuleDepCollectorPP::LexedFileChanged(FileID FID,
-                                            LexedFileChangeReason Reason,
-                                            SrcMgr::CharacteristicKind FileType,
-                                            FileID PrevFID,
-                                            SourceLocation Loc) {
-  if (Reason != LexedFileChangeReason::EnterFile)
-    return;
+/// Callback that records textual includes and direct modular includes/imports
+/// during preprocessing.
+class ModuleDepCollector::ModuleDepCollectorPP final : public PPCallbacks {
+  /// The parent dependency collector.
+  ModuleDepCollector &MDC;
 
-  SourceManager &SM = MDC.ScanInstance.getSourceManager();
+public:
+  ModuleDepCollectorPP(ModuleDepCollector &MDC) : MDC(MDC) {}
 
-  // Dependency generation really does want to go all the way to the
-  // file entry for a source location to find out what is depended on.
-  // We do not want #line markers to affect dependency generation!
-  if (std::optional<StringRef> Filename = SM.getNonBuiltinFilenameForID(FID))
-    MDC.addFileDep(llvm::sys::path::remove_leading_dotslash(*Filename));
-}
+  void LexedFileChanged(FileID FID, LexedFileChangeReason Reason,
+                        SrcMgr::CharacteristicKind FileType, FileID PrevFID,
+                        SourceLocation Loc) override {
+    if (Reason != LexedFileChangeReason::EnterFile)
+      return;
 
-void ModuleDepCollectorPP::HasInclude(SourceLocation Loc, StringRef FileName,
-                                      bool IsAngled, OptionalFileEntryRef File,
-                                      SrcMgr::CharacteristicKind FileType) {
-  if (File)
-    MDC.addFileDep(File->getName());
-}
+    SourceManager &SM = MDC.ScanInstance.getSourceManager();
 
-void ModuleDepCollectorPP::InclusionDirective(
-    SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
-    bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
-    StringRef SearchPath, StringRef RelativePath, const Module *SuggestedModule,
-    bool ModuleImported, SrcMgr::CharacteristicKind FileType) {
-  if (!File && !ModuleImported) {
-    // This is a non-modular include that HeaderSearch failed to find. Add it
-    // here as `FileChanged` will never see it.
-    MDC.addFileDep(FileName);
-  }
-  MDC.handleImport(SuggestedModule);
-}
-
-void ModuleDepCollectorPP::moduleImport(SourceLocation ImportLoc,
-                                        ModuleIdPath Path,
-                                        const Module *Imported) {
-  auto &PP = MDC.ScanInstance.getPreprocessor();
-  if (PP.getLangOpts().CPlusPlusModules && PP.isImportingCXXNamedModules()) {
-    P1689ModuleInfo RequiredModule;
-    RequiredModule.ModuleName = Path[0].getIdentifierInfo()->getName().str();
-    RequiredModule.Type = P1689ModuleInfo::ModuleType::NamedCXXModule;
-    MDC.RequiredStdCXXModules.push_back(std::move(RequiredModule));
-    return;
+    // Dependency generation really does want to go all the way to the
+    // file entry for a source location to find out what is depended on.
+    // We do not want #line markers to affect dependency generation!
+    if (std::optional<StringRef> Filename = SM.getNonBuiltinFilenameForID(FID))
+      MDC.addFileDep(llvm::sys::path::remove_leading_dotslash(*Filename));
   }
 
-  MDC.handleImport(Imported);
-}
+  void HasInclude(SourceLocation Loc, StringRef FileName, bool IsAngled,
+                  OptionalFileEntryRef File,
+                  SrcMgr::CharacteristicKind FileType) override {
+    if (File)
+      MDC.addFileDep(File->getName());
+  }
+
+  void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
+                          StringRef FileName, bool IsAngled,
+                          CharSourceRange FilenameRange,
+                          OptionalFileEntryRef File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
+                          SrcMgr::CharacteristicKind FileType) override {
+    if (!File && !ModuleImported) {
+      // This is a non-modular include that HeaderSearch failed to find. Add it
+      // here as `FileChanged` will never see it.
+      MDC.addFileDep(FileName);
+    }
+    MDC.handleImport(SuggestedModule);
+  }
+
+  void moduleImport(SourceLocation ImportLoc, ModuleIdPath Path,
+                    const Module *Imported) override {
+    auto &PP = MDC.ScanInstance.getPreprocessor();
+    if (PP.getLangOpts().CPlusPlusModules && PP.isImportingCXXNamedModules()) {
+      P1689ModuleInfo RequiredModule;
+      RequiredModule.ModuleName = Path[0].getIdentifierInfo()->getName().str();
+      RequiredModule.Type = P1689ModuleInfo::ModuleType::NamedCXXModule;
+      MDC.RequiredStdCXXModules.push_back(std::move(RequiredModule));
+      return;
+    }
+
+    MDC.handleImport(Imported);
+  }
+};
 
 void ModuleDepCollector::handleImport(const Module *Imported) {
   auto &MDC = *this;

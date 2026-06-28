@@ -57,9 +57,17 @@ ScriptedThread::Create(ScriptedProcess &process,
   }
 
   ExecutionContext exe_ctx(process);
+  // The legacy thread-spawn path (no script_object) needs to instantiate a
+  // *thread* Python class whose name comes from the process plugin, not the
+  // process's own class name. Build a thread-specific metadata for that case;
+  // when script_object is non-null the class name is unused so we just forward
+  // the process's metadata.
+  ScriptedMetadata thread_metadata =
+      script_object ? process.m_scripted_metadata
+                    : ScriptedMetadata(thread_class_name,
+                                       process.m_scripted_metadata.GetArgsSP());
   auto obj_or_err = scripted_thread_interface->CreatePluginObject(
-      thread_class_name, exe_ctx, process.m_scripted_metadata.GetArgsSP(),
-      script_object);
+      thread_metadata, exe_ctx, script_object);
 
   if (!obj_or_err) {
     llvm::consumeError(obj_or_err.takeError());

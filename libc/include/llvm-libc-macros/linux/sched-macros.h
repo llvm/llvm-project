@@ -25,6 +25,8 @@
 
 #define CPU_SETSIZE __CPU_SETSIZE
 #define NCPUBITS __NCPUBITS
+#define CPU_CLR_S(cpu, setsize, set) __sched_clrcpuset(cpu, setsize, set)
+#define CPU_CLR(cpu, set) CPU_CLR_S(cpu, sizeof(cpu_set_t), set)
 #define CPU_COUNT_S(setsize, set) __sched_getcpucount(setsize, set)
 #define CPU_COUNT(set) CPU_COUNT_S(sizeof(cpu_set_t), set)
 #define CPU_ZERO_S(setsize, set) __sched_setcpuzero(setsize, set)
@@ -33,5 +35,10 @@
 #define CPU_SET(cpu, set) CPU_SET_S(cpu, sizeof(cpu_set_t), set)
 #define CPU_ISSET_S(cpu, setsize, set) __sched_getcpuisset(cpu, setsize, set)
 #define CPU_ISSET(cpu, set) CPU_ISSET_S(cpu, sizeof(cpu_set_t), set)
+
+#define CPU_ALLOC_SIZE(count)                                                  \
+  ((((count) + NCPUBITS - 1) / NCPUBITS) * sizeof(__cpu_set_mask_t))
+#define CPU_ALLOC(count) __sched_cpualloc(count)
+#define CPU_FREE(set) __sched_cpufree(set)
 
 #endif // LLVM_LIBC_MACROS_LINUX_SCHED_MACROS_H

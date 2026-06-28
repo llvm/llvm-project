@@ -136,6 +136,7 @@ static void testSkipErasureCallbacks(Operation *op) {
       llvm::outs() << "Erasing ";
       printBlock(block);
       llvm::outs() << "\n";
+      block->dropAllDefinedValueUses();
       block->erase();
       return WalkResult::skip();
     }

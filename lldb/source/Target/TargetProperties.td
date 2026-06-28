@@ -263,7 +263,6 @@ let Definition = "process", Path = "target.process" in {
     DefaultFalse,
     Desc<"If true, stop when a shared library is loaded or unloaded.">;
   def DisableLangRuntimeUnwindPlans: Property<"disable-language-runtime-unwindplans", "Boolean">,
-    Global,
     DefaultFalse,
     Desc<"If true, language runtime augmented/overridden backtraces will not be used when printing a stack trace.">;
   def DetachKeepsStopped: Property<"detach-keeps-stopped", "Boolean">,

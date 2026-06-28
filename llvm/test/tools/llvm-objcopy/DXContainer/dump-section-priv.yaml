@@ -1,0 +1,35 @@
+## Check that --dump-section exports the raw PRIV part data, including when the
+## part size is not a multiple of 4.
+
+# RUN: yaml2obj %s -o %t.dxbc
+# RUN: llvm-objcopy --dump-section=PRIV=%t.priv %t.dxbc
+
+# RUN: wc -c %t.priv | FileCheck %s --check-prefix=PRIV-SIZE
+# PRIV-SIZE: 5
+
+# RUN: od -t x1 %t.priv | FileCheck %s --ignore-case
+# CHECK: de ad be ef 42
+
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       2
+Parts:
+  - Name:            DXIL
+    Size:            24
+    Program:
+      MajorVersion:    6
+      MinorVersion:    0
+      ShaderKind:      5
+      Size:            6
+      DXILMajorVersion: 0
+      DXILMinorVersion: 1
+      DXILSize:        0
+  - Name:            PRIV
+    Size:            5
+    PrivateData:     [ 0xDE, 0xAD, 0xBE, 0xEF, 0x42 ]
+...
