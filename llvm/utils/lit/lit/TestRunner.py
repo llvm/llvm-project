@@ -550,23 +550,20 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
             res = 1 if res != 0 else 0
 
         # Ensure the resulting output is always of string type.
-        # Truncate output as soon as possible so that we don't serialize/process
-        # overly large strings. 10kiB output ought to be enough.
-        def convert_output(out, limit=10 * 1024) -> str:
+        try:
             if out is None:
-                return ""
-            truncated = len(out) > limit
-            out = out[:limit]
-            try:
+                out = ""
+            else:
                 out = out.decode("utf-8", errors="replace")
-            except:
-                out = str(out)
-            if truncated:
-                out += "\n...\ndata was truncated"
-            return out
-
-        out = convert_output(out)
-        err = convert_output(err)
+        except:
+            out = str(out)
+        try:
+            if err is None:
+                err = ""
+            else:
+                err = err.decode("utf-8", errors="replace")
+        except:
+            err = str(err)
 
         # Gather the redirected output files for failed commands.
         output_files = []
@@ -776,9 +773,9 @@ def executeScriptInternal(
             data = data.decode("utf-8", errors="replace")
             out += formatOutput(f"redirected output from '{name}'", data, limit=1024)
         if result.stdout.strip():
-            out += formatOutput("command stdout", result.stdout)
+            out += formatOutput("command stdout", result.stdout, limit=10*1024)
         if result.stderr.strip():
-            out += formatOutput("command stderr", result.stderr)
+            out += formatOutput("command stderr", result.stderr, limit=10*1024)
         if not result.stdout.strip() and not result.stderr.strip():
             out += "# note: command had no output on stdout or stderr\n"
 
