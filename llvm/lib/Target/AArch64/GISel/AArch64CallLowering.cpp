@@ -262,8 +262,6 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
     LLT s64 = LLT::integer(64);
 
     if (IsTailCall) {
-      assert(!Flags.isByVal() && "byval unhandled with tail calls");
-
       Offset += FPDiff;
       int FI = MF.getFrameInfo().CreateFixedObject(Size, Offset, true);
       auto FIReg = MIRBuilder.buildFrameIndex(p0, FI);
@@ -1005,13 +1003,6 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
     return false;
   }
 
-  // Byval parameters hand the function a pointer directly into the stack area
-  // we want to reuse during a tail call. Working around this *is* possible (see
-  // X86).
-  //
-  // FIXME: In AArch64ISelLowering, this isn't worked around. Can/should we try
-  // it?
-  //
   // On Windows, "inreg" attributes signify non-aggregate indirect returns.
   // In this case, it is necessary to save/restore X0 in the callee. Tail
   // call opt interferes with this. So we disable tail call opt when the
@@ -1023,10 +1014,10 @@ bool AArch64CallLowering::isEligibleForTailCallOptimization(
   // because would have to move into the swifterror register before the
   // tail call.
   if (any_of(CallerF.args(), [](const Argument &A) {
-        return A.hasByValAttr() || A.hasInRegAttr() || A.hasSwiftErrorAttr();
+        return A.hasInRegAttr() || A.hasSwiftErrorAttr();
       })) {
-    LLVM_DEBUG(dbgs() << "... Cannot tail call from callers with byval, "
-                         "inreg, or swifterror arguments\n");
+    LLVM_DEBUG(dbgs() << "... Cannot tail call from callers with inreg"
+                         " or swifterror arguments\n");
     return false;
   }
 
