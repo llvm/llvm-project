@@ -1015,3 +1015,16 @@ struct OtherMoveSafeClasses {
     // aggressive-note@-2   {{Moved-from object 'Task' is moved}}
   }
 };
+
+template<class Container>
+void safeOperatorAfterMove(Container lst) {
+    Container dest;
+    lst.push_back(typename Container::value_type {});
+    std::move(lst.begin(), lst.end(), std::back_inserter(dest)); // no-warning
+    lst.size();
+}
+
+template void safeOperatorAfterMove<std::list<int>>(std::list<int>);
+template void safeOperatorAfterMove<std::list<std::string>>(std::list<std::string>);
+template void safeOperatorAfterMove<std::vector<int>>(std::vector<int>);
+template void safeOperatorAfterMove<std::vector<std::string>>(std::vector<std::string>);
