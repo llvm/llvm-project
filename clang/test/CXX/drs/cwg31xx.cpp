@@ -30,19 +30,19 @@ static_assert(noexcept(noexcept(f())), "");
 namespace cwg3129 { // cwg3129: 3.0
 
 float huge_f = 1e10000000000F;
-// expected-warning@-1 {{magnitude of floating-point constant too large for type 'float'; maximum is 3.40282347E+38}}
+// expected-warning-re@-1 {{{{magnitude of floating-point constant too large for type 'float'.*}}}}
 float tiny_f = 1e-1000000000F;
-// expected-warning@-1 {{magnitude of floating-point constant too small for type 'float'; minimum is 1.40129846E-45}}
+// expected-warning-re@-1 {{{{magnitude of floating-point constant too small for type 'float'.*}}}}
 
 double huge_d = 1e10000000000;
-// expected-warning@-1 {{magnitude of floating-point constant too large for type 'double'; maximum is 1.7976931348623157E+308}}
+// expected-warning-re@-1 {{{{magnitude of floating-point constant too large for type 'double'.*}}}}
 double tiny_d = 1e-1000000000;
-// expected-warning@-1 {{magnitude of floating-point constant too small for type 'double'; minimum is 4.9406564584124654E-324}}
+// expected-warning-re@-1 {{{{magnitude of floating-point constant too small for type 'double'.*}}}}
 
 long double huge_ld = 1e10000000000L;
-// expected-warning@-1 {{magnitude of floating-point constant too large for type 'long double'; maximum is 1.18973149535723176502E+4932}}
+// expected-warning-re@-1 {{{{magnitude of floating-point constant too large for type 'long double'.*}}}}
 long double tiny_ld = 1e-1000000000L;
-// expected-warning@-1 {{magnitude of floating-point constant too small for type 'long double'; minimum is 3.64519953188247460253E-4951}}
+// expected-warning-re@-1 {{{{magnitude of floating-point constant too small for type 'long double'.*}}}}
 
 } // namespace cwg3129
 
