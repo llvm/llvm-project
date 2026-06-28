@@ -26,7 +26,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
     %1 = llvm.alloca %0 x !llvm.array<4 x i32> : (i64) -> !llvm.ptr<5>
     %2 = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr
     %3 = omp.map.info var_ptr(%2 : !llvm.ptr, !llvm.array<4 x i32>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "red_array"}
-    omp.target map_entries(%3 -> %arg0 : !llvm.ptr) {
+    omp.target kernel_type(spmd) map_entries(%3 -> %arg0 : !llvm.ptr) {
       %4 = llvm.mlir.constant(1 : i32) : i32
       %5 = llvm.mlir.constant(1000 : i32) : i32
       omp.teams reduction(byref @add_reduction_byref_box_4xi32 %arg0 -> %arg1 : !llvm.ptr) {
@@ -41,9 +41,9 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
           omp.terminator
         } {omp.composite}
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
 }
@@ -96,7 +96,7 @@ module attributes {llvm.target_triple = "nvptx64-nvidia-cuda", omp.is_gpu = true
     %1 = llvm.alloca %0 x !llvm.array<4 x i32> : (i64) -> !llvm.ptr<5>
     %2 = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr
     %3 = omp.map.info var_ptr(%2 : !llvm.ptr, !llvm.array<4 x i32>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "red_array"}
-    omp.target map_entries(%3 -> %arg0 : !llvm.ptr) {
+    omp.target kernel_type(spmd) map_entries(%3 -> %arg0 : !llvm.ptr) {
       %4 = llvm.mlir.constant(1 : i32) : i32
       %5 = llvm.mlir.constant(1000 : i32) : i32
       omp.teams reduction(byref @add_reduction_byref_box_4xi32 %arg0 -> %arg1 : !llvm.ptr) {
@@ -111,9 +111,9 @@ module attributes {llvm.target_triple = "nvptx64-nvidia-cuda", omp.is_gpu = true
           omp.terminator
         } {omp.composite}
         omp.terminator
-      }
+      } {omp.combined}
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
 }

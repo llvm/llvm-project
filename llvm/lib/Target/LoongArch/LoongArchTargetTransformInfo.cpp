@@ -67,7 +67,9 @@ unsigned LoongArchTTIImpl::getRegisterClassForType(bool Vector,
   return LoongArchRegisterClass::GPRRC;
 }
 
-unsigned LoongArchTTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
+unsigned
+LoongArchTTIImpl::getMaxInterleaveFactor(ElementCount VF,
+                                         bool HasUnorderedReductions) const {
   return ST->getMaxInterleaveFactor();
 }
 

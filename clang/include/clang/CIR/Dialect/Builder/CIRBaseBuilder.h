@@ -234,7 +234,8 @@ public:
     mlir::IntegerAttr alignmentAttr = getAlignmentAttr(alignment);
     return cir::LoadOp::create(*this, loc, ptr, /*isDeref=*/false, isVolatile,
                                isNontemporal, alignmentAttr,
-                               cir::SyncScopeKindAttr{}, cir::MemOrderAttr{});
+                               cir::SyncScopeKindAttr{}, cir::MemOrderAttr{},
+                               /*invariant=*/false);
   }
 
   mlir::Value createAlignedLoad(mlir::Location loc, mlir::Value ptr,
@@ -429,7 +430,8 @@ public:
     return cir::LoadOp::create(*this, loc, addr, /*isDeref=*/false,
                                /*isVolatile=*/false, /*nontemporal=*/false,
                                alignmentAttr,
-                               /*sync_scope=*/{}, /*mem_order=*/{});
+                               /*sync_scope=*/{}, /*mem_order=*/{},
+                               /*invariant=*/false);
   }
 
   cir::PtrStrideOp createPtrStride(mlir::Location loc, mlir::Value base,
@@ -530,6 +532,15 @@ public:
 
   mlir::Value createIntCast(mlir::Value src, mlir::Type newTy) {
     return createCast(cir::CastKind::integral, src, newTy);
+  }
+
+  mlir::Value createBuiltinIntCast(mlir::Location loc, mlir::Value src,
+                                   mlir::Type newTy) {
+    return cir::BuiltinIntCastOp::create(*this, loc, newTy, src);
+  }
+
+  mlir::Value createBuiltinIntCast(mlir::Value src, mlir::Type newTy) {
+    return createBuiltinIntCast(src.getLoc(), src, newTy);
   }
 
   mlir::Value createIntToPtr(mlir::Value src, mlir::Type newTy) {

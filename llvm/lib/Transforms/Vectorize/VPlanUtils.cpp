@@ -155,8 +155,7 @@ GEPNoWrapFlags vputils::getGEPFlagsForPtr(VPValue *Ptr) {
   while (auto *PtrVPI = dyn_cast<VPInstruction>(Ptr)) {
     unsigned Opcode = PtrVPI->getOpcode();
     if (Opcode == Instruction::GetElementPtr) {
-      if (any_of(drop_begin(PtrVPI->operands()),
-                 [](VPValue *Op) { return !match(Op, m_ZeroInt()); }))
+      if (!all_of(drop_begin(PtrVPI->operands()), match_fn(m_ZeroInt())))
         return PtrVPI->getGEPNoWrapFlags();
       Ptr = PtrVPI->getOperand(0);
       continue;
@@ -790,10 +789,19 @@ bool vputils::isUsedByLoadStoreAddress(const VPValue *V) {
       continue;
 
     // Only traverse further through users that also define a value (and can
-    // thus have their own users walked).
-    for (VPUser *U : Cur->users())
+    // thus have their own users walked). Skip when Cur is only used as mask ,
+    // as well as loads: a loaded value does not depend on the load's operand.
+    for (VPUser *U : Cur->users()) {
+      auto *VPI = dyn_cast<VPInstruction>(U);
+      if (VPI && VPI->getMask() == Cur &&
+          none_of(VPI->operandsWithoutMask(),
+                  [Cur](VPValue *Op) { return Op == Cur; }))
+        continue;
+      if (match(U, m_VPInstruction<Instruction::Load>()))
+        continue;
       if (auto *SDR = dyn_cast<VPSingleDefRecipe>(U))
         WorkList.push_back(SDR);
+    }
   }
   return false;
 }

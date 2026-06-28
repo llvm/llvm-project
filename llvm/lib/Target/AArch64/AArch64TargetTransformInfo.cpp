@@ -276,10 +276,6 @@ bool AArch64TTIImpl::isMultiversionedFunction(const Function &F) const {
   return F.hasFnAttribute("fmv-features");
 }
 
-const FeatureBitset AArch64TTIImpl::InlineInverseFeatures = {
-    AArch64::FeatureExecuteOnly,
-};
-
 bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
                                          const Function *Callee) const {
   SMECallAttrs CallAttrs(*Caller, *Callee);
@@ -308,19 +304,7 @@ bool AArch64TTIImpl::areInlineCompatible(const Function *Caller,
       return false;
   }
 
-  const TargetMachine &TM = getTLI()->getTargetMachine();
-  const FeatureBitset &CallerBits =
-      TM.getSubtargetImpl(*Caller)->getFeatureBits();
-  const FeatureBitset &CalleeBits =
-      TM.getSubtargetImpl(*Callee)->getFeatureBits();
-  // Adjust the feature bitsets by inverting some of the bits. This is needed
-  // for target features that represent restrictions rather than capabilities,
-  // for example a "+execute-only" callee can be inlined into a caller without
-  // "+execute-only", but not vice versa.
-  FeatureBitset EffectiveCallerBits = CallerBits ^ InlineInverseFeatures;
-  FeatureBitset EffectiveCalleeBits = CalleeBits ^ InlineInverseFeatures;
-
-  return (EffectiveCallerBits & EffectiveCalleeBits) == EffectiveCalleeBits;
+  return BaseT::areInlineCompatible(Caller, Callee);
 }
 
 bool AArch64TTIImpl::areTypesABICompatible(const Function *Caller,
@@ -707,6 +691,10 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
         return LT.first * 3;
       case MVT::v2i32:
         return LT.first * 6;
+      case MVT::v4i32:
+        return LT.first * 11;
+      case MVT::v4i16:
+        return LT.first * 14;
       default:
         break;
       }
@@ -2600,6 +2588,12 @@ instCombineSVEVectorMlaU(InstCombiner &IC, IntrinsicInst &II) {
     return IC.replaceInstUsesWith(II, IC.Builder.CreateSub(Acc, MulOp1));
   if (match(MulOp1, m_AllOnes()))
     return IC.replaceInstUsesWith(II, IC.Builder.CreateSub(Acc, MulOp0));
+
+  if (isa<Constant>(MulOp0) && !isa<Constant>(MulOp1)) {
+    II.setArgOperand(2, MulOp1);
+    II.setArgOperand(3, MulOp0);
+    return &II;
+  }
 
   return std::nullopt;
 }
@@ -5294,8 +5288,10 @@ bool AArch64TTIImpl::isLegalMaskedExpandLoad(Type *DataTy,
          (ST->isSVEorStreamingSVEAvailable() && ST->hasSME2p2());
 }
 
-unsigned AArch64TTIImpl::getMaxInterleaveFactor(ElementCount VF) const {
-  if (VF.isScalar())
+unsigned
+AArch64TTIImpl::getMaxInterleaveFactor(ElementCount VF,
+                                       bool HasUnorderedReductions) const {
+  if (VF.isScalar() || (HasUnorderedReductions && VF.getKnownMinValue() <= 4))
     return 4;
   return ST->getMaxInterleaveFactor();
 }

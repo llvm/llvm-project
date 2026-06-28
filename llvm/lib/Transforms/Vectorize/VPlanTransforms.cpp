@@ -492,7 +492,7 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
       });
 
       // Remove phi recipes that are unused after merging the regions.
-      if (Phi1ToMove.getVPSingleValue()->getNumUsers() == 0) {
+      if (Phi1ToMove.getVPSingleValue()->user_empty()) {
         Phi1ToMove.eraseFromParent();
         continue;
       }
@@ -548,7 +548,7 @@ static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
   VPBlockUtils::insertTwoBlocksAfter(Pred, Exiting, Entry);
   VPBlockUtils::connectBlocks(Pred, Exiting);
 
-  if (PredRecipe->getNumUsers() != 0) {
+  if (!PredRecipe->user_empty()) {
     auto *PHIRecipe = new VPPredInstPHIRecipe(RecipeWithoutMask,
                                               RecipeWithoutMask->getDebugLoc());
     Exiting->appendRecipe(PHIRecipe);
@@ -802,8 +802,7 @@ static bool isDeadRecipe(VPRecipeBase &R) {
     return false;
 
   // Recipe is dead if no user keeps the recipe alive.
-  return all_of(R.definedValues(),
-                [](VPValue *V) { return V->getNumUsers() == 0; });
+  return all_of(R.definedValues(), [](VPValue *V) { return V->user_empty(); });
 }
 
 void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
@@ -894,7 +893,7 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
       auto *RepR = dyn_cast<VPReplicateRecipe>(U);
       // Skip recipes that shouldn't be narrowed.
       if (!Def || !isa<VPReplicateRecipe, VPWidenRecipe>(Def) ||
-          Def->getNumUsers() == 0 || !Def->getUnderlyingValue() ||
+          Def->user_empty() || !Def->getUnderlyingValue() ||
           (RepR && (RepR->isSingleScalar() || RepR->isPredicated())))
         continue;
 
@@ -2063,7 +2062,7 @@ static void simplifyBlends(VPlan &Plan) {
         // TODO: Find the most expensive mask that can be deadcoded, or a mask
         // that's used by multiple blends where it can be removed from them all.
         VPValue *Mask = Blend->getMask(I);
-        if (Mask->getNumUsers() == 1 && !match(Mask, m_False())) {
+        if (Mask->hasOneUse() && !match(Mask, m_False())) {
           StartIndex = I;
           break;
         }
@@ -2099,7 +2098,7 @@ static void simplifyBlends(VPlan &Plan) {
         NewBlend->setOperand(0, Inc1);
         NewBlend->setOperand(1, Inc0);
         NewBlend->setOperand(2, NewMask);
-        if (OldMask->getNumUsers() == 0)
+        if (OldMask->user_empty())
           cast<VPInstruction>(OldMask)->eraseFromParent();
       }
     }
@@ -5322,7 +5321,7 @@ void VPlanTransforms::materializeConstantVectorTripCount(
   assert(Plan.hasUF(BestUF) && "BestUF is not available in Plan");
 
   VPValue *TC = Plan.getTripCount();
-  if (TC->getNumUsers() == 0)
+  if (TC->user_empty())
     return;
 
   // Skip cases for which the trip count may be non-trivial to materialize.
@@ -5351,7 +5350,7 @@ void VPlanTransforms::materializeConstantVectorTripCount(
 void VPlanTransforms::materializeBackedgeTakenCount(VPlan &Plan,
                                                     VPBasicBlock *VectorPH) {
   VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
-  if (BTC->getNumUsers() == 0)
+  if (BTC->user_empty())
     return;
 
   VPBuilder Builder(VectorPH, VectorPH->begin());
@@ -5419,24 +5418,19 @@ void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
               VPDerivedIVRecipe>(&R))
         continue;
       for (VPValue *Def : R.definedValues()) {
-        // Skip recipes that are single-scalar or only have their first lane
-        // used.
+        // Skip recipes that are single-scalar.
         // TODO: The Defs skipped here may or may not be vector values.
         // Introduce Unpacks, and remove them later, if they are guaranteed to
         // produce scalar values.
-        if (vputils::isSingleScalar(Def) || vputils::onlyFirstLaneUsed(Def))
+        if (vputils::isSingleScalar(Def))
           continue;
 
-        // At the moment, we create unpacks only for scalar users outside
-        // replicate regions. Recipes inside replicate regions still extract the
-        // required lanes implicitly.
-        // TODO: Remove once replicate regions are unrolled completely.
-        auto IsCandidateUnpackUser = [Def](VPUser *U) {
-          VPRegionBlock *ParentRegion = cast<VPRecipeBase>(U)->getRegion();
-          return U->usesScalars(Def) &&
-                 (!ParentRegion || !ParentRegion->isReplicator());
-        };
-        if (none_of(Def->users(), IsCandidateUnpackUser))
+        // Only introduce an Unpack if some, but not all, users use the first
+        // lane only.
+        unsigned NumFirstLaneUsers = count_if(Def->users(), [&Def](VPUser *U) {
+          return U->usesFirstLaneOnly(Def);
+        });
+        if (!NumFirstLaneUsers || NumFirstLaneUsers == Def->getNumUsers())
           continue;
 
         auto *Unpack = new VPInstruction(VPInstruction::Unpack, {Def});
@@ -5444,10 +5438,9 @@ void VPlanTransforms::materializePacksAndUnpacks(VPlan &Plan) {
           Unpack->insertBefore(*VPBB, VPBB->getFirstNonPhi());
         else
           Unpack->insertAfter(&R);
-        Def->replaceUsesWithIf(Unpack,
-                               [&IsCandidateUnpackUser](VPUser &U, unsigned) {
-                                 return IsCandidateUnpackUser(&U);
-                               });
+        Def->replaceUsesWithIf(Unpack, [&Def](VPUser &U, unsigned) {
+          return U.usesFirstLaneOnly(Def);
+        });
       }
     }
   }
@@ -5460,7 +5453,7 @@ void VPlanTransforms::materializeVectorTripCount(
   VPSymbolicValue &VectorTC = Plan.getVectorTripCount();
   // There's nothing to do if there are no users of the vector trip count or its
   // IR value has already been set.
-  if (VectorTC.getNumUsers() == 0 || VectorTC.getUnderlyingValue())
+  if (VectorTC.user_empty() || VectorTC.getUnderlyingValue())
     return;
 
   VPValue *TC = Plan.getTripCount();
@@ -5540,7 +5533,7 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
   VPValue &VFxUF = Plan.getVFxUF();
   // If there are no users of the runtime VF, compute VFxUF by constant folding
   // the multiplication of VF and UF.
-  if (VF.getNumUsers() == 0) {
+  if (VF.user_empty()) {
     VPValue *RuntimeVFxUF =
         Builder.createElementCount(TCTy, VFEC * Plan.getConcreteUF());
     VFxUF.replaceAllUsesWith(RuntimeVFxUF);
@@ -5695,7 +5688,7 @@ void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
   // late expansion.
   for (VPRecipeBase &R : make_early_inc_range(*Entry)) {
     auto *ExpSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
-    if (!ExpSCEV || ExpSCEV->getNumUsers() == 0)
+    if (!ExpSCEV || ExpSCEV->user_empty())
       continue;
     Builder.setInsertPoint(ExpSCEV);
     VPValue *Expanded = Expander.tryToExpand(ExpSCEV->getSCEV());
@@ -6958,8 +6951,7 @@ matchExtendedReductionOperand(VPWidenRecipe *UpdateR, VPValue *Op) {
 /// per-iteration input VF and narrower PHI VF. If successful, returns the chain
 /// of operations in the reduction.
 static std::optional<SmallVector<VPPartialReductionChain>>
-getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPCostContext &CostCtx,
-                    VFRange &Range) {
+getScaledReductions(VPReductionPHIRecipe *RedPhiR) {
   // Get the backedge value from the reduction PHI and find the
   // ComputeReductionResult that uses it (directly or through a select for
   // predicated reductions).
@@ -7000,9 +6992,6 @@ getScaledReductions(VPReductionPHIRecipe *RedPhiR, VPCostContext &CostCtx,
     if (!PHISize.hasKnownScalarFactor(ExtSrcSize))
       return std::nullopt;
 
-    // Check if a partial reduction chain is supported by the target (i.e. does
-    // not have an invalid cost) for the given VF range. Clamps the range and
-    // returns true if feasible for any VF.
     VPPartialReductionChain Link(
         {UpdateR, *ExtendedOp, RK,
          PrevValue == UpdateR->getOperand(0) ? 0U : 1U,
@@ -7032,7 +7021,7 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
     if (!RedPhiR)
       continue;
 
-    if (auto Chains = getScaledReductions(RedPhiR, CostCtx, Range))
+    if (auto Chains = getScaledReductions(RedPhiR))
       ChainsByPhi.try_emplace(RedPhiR, std::move(*Chains));
   }
 
@@ -7136,8 +7125,10 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
       transformToPartialReduction(Chain, Plan, Phi);
 }
 
-void VPlanTransforms::makeMemOpWideningDecisions(
-    VPlan &Plan, VFRange &Range, VPRecipeBuilder &RecipeBuilder) {
+void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
+                                                 VPRecipeBuilder &RecipeBuilder,
+                                                 PredicatedScalarEvolution &PSE,
+                                                 const Loop *L) {
   // Collect all loads/stores first. We will start with ones having simpler
   // decisions followed by more complex ones that are potentially
   // guided/dependent on the simpler ones.
@@ -7218,6 +7209,32 @@ void VPlanTransforms::makeMemOpWideningDecisions(
 
         return false;
       });
+
+  if (!RecipeBuilder.prefersVectorizedAddressing()) {
+    VPlanTransforms::runPass(
+        "makeVPlanMemOpDecision", ProcessSubset, Plan, [&](VPInstruction *VPI) {
+          Instruction *I = VPI->getUnderlyingInstr();
+          bool IsLoad = VPI->getOpcode() == Instruction::Load;
+          if (RecipeBuilder.isPredicatedInst(I) || !IsLoad ||
+              !vputils::isUsedByLoadStoreAddress(VPI))
+            return false;
+
+          // Scalarize loads used as addresses, matching the legacy CM. The load
+          // is single-scalar if the pointer is loop-invariant, otherwise it is
+          // replicated per-lane. No mask is needed as the load is not
+          // predicated.
+          VPValue *Ptr = VPI->getOperand(0);
+          const SCEV *PtrSCEV = vputils::getSCEVExprForVPValue(Ptr, PSE, L);
+          bool IsSingleScalarLoad = !isa<SCEVCouldNotCompute>(PtrSCEV) &&
+                                    PSE.getSE()->isLoopInvariant(PtrSCEV, L);
+
+          ReplaceWith(VPI,
+                      new VPReplicateRecipe(
+                          I, Ptr, /*IsSingleScalar=*/IsSingleScalarLoad,
+                          /*Mask=*/nullptr, *VPI, *VPI, VPI->getDebugLoc()));
+          return true;
+        });
+  }
 
   VPlanTransforms::runPass("delegateMemOpWideningToLegacyCM", ProcessSubset,
                            Plan, [&](VPInstruction *VPI) {

@@ -3171,8 +3171,6 @@ static SDValue lowerIntrinsicWOChain(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_prmt_rc16:
   case Intrinsic::nvvm_prmt_rc8:
     return lowerPrmtIntrinsic(Op, DAG);
-  case Intrinsic::nvvm_internal_addrspace_wrap:
-    return Op.getOperand(1);
   case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_is_canceled:
   case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_x:
   case Intrinsic::nvvm_clusterlaunchcontrol_query_cancel_get_first_ctaid_y:
@@ -4122,8 +4120,10 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
 
       SDValue P;
       if (IsKernel) {
-        assert(isParamGridConstant(Arg) && "ByVal argument must be lowered to "
-                                           "grid_constant by NVPTXLowerArgs");
+        assert(Arg.getType()->getPointerAddressSpace() ==
+                   ADDRESS_SPACE_ENTRY_PARAM &&
+               "Kernel ByVal argument must be lowered to the param address "
+               "space by NVPTXLowerArgs");
         P = ArgSymbol;
         P.getNode()->setIROrder(Arg.getArgNo() + 1);
       } else {
