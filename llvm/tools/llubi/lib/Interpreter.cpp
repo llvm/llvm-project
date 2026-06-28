@@ -130,6 +130,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
           AnyValue::getPoisonValue(Ctx, C->getType()));
       return UnsupportedConstantValues.back();
     }
+    if (isa<MetadataAsValue>(V))
+      return None;
     return CurrentFrame->ValueMap.at(V);
   }
 
@@ -1624,6 +1626,9 @@ public:
     case Intrinsic::memset:
     case Intrinsic::memset_inline:
       return callMemSetIntrinsic(CB, Args);
+    case Intrinsic::experimental_noalias_scope_decl:
+      // FIXME: Not implemented yet. Currently it acts as a noop.
+      return AnyValue();
     default:
       Handler.onUnrecognizedInstruction(CB);
       setFailed();
