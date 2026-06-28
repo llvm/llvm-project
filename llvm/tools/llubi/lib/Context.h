@@ -306,6 +306,7 @@ class Context {
   // Temporary buffer for non-cacheable constants (e.g.,
   // undef/ptrtoint/inttoptr).
   SpecificBumpPtrAllocator<MaterializedConstant> NoncacheableConstBuffer;
+  size_t NoncacheableConstCount = 0;
   DenseMap<Function *, Pointer> FuncAddrMap;
   DenseMap<BasicBlock *, Pointer> BlockAddrMap;
   DenseMap<uint64_t, std::pair<Function *, IntrusiveRefCntPtr<MemoryObject>>>

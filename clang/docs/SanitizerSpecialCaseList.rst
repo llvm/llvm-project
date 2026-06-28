@@ -230,6 +230,18 @@ tool-specific docs.
     [{cfi-vcall,cfi-icall}]
     fun:*BadCfiCall
 
+
+.. note::
+
+  By default, ``src`` and ``mainfile`` are matched against the filename as seen
+  by LLVM. On Windows, this might involve a mix of forward and backslashes as
+  file separators, and writing patterns to match both variants can be
+  inconvenient.
+
+  Starting with version 4 (indicated by ``#!special-case-list-v4``), path matching
+  on Windows hosts is slash-agnostic: both forward slashes (``/``) and backslashes
+  (``\``) match either path separator in both patterns and paths.
+
 .. note::
 
   By default, path matching (for ``src`` and ``mainfile``) matches the query

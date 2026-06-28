@@ -1565,7 +1565,7 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
   Type *CRCTy = Info.LHS->getType();
   unsigned CRCBW = CRCTy->getIntegerBitWidth();
   std::array<Constant *, 256> CRCConstants;
-  transform(HashRecognize::genSarwateTable(Info.RHS, Info.ByteOrderSwapped),
+  transform(HashRecognize::genSarwateTable(Info.RHS, Info.IsBigEndian),
             CRCConstants.begin(),
             [CRCTy](const APInt &E) { return ConstantInt::get(CRCTy, E); });
   Constant *ConstArray =
@@ -1653,17 +1653,16 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
       Value *IVBits = Builder.CreateZExtOrTrunc(
           Builder.CreateShl(IV, 3, "iv.bits"), DataTy, "iv.indexer");
       Value *DataIndexer =
-          Info.ByteOrderSwapped
-              ? Builder.CreateShl(Data, IVBits, "data.indexer")
-              : Builder.CreateLShr(Data, IVBits, "data.indexer");
+          Info.IsBigEndian ? Builder.CreateShl(Data, IVBits, "data.indexer")
+                           : Builder.CreateLShr(Data, IVBits, "data.indexer");
       Indexer = Builder.CreateXor(
           DataIndexer,
           Builder.CreateZExtOrTrunc(Indexer, DataTy, "crc.indexer.cast"),
           "crc.data.indexer");
     }
 
-    Indexer = Info.ByteOrderSwapped ? HiIdx(Builder, Indexer, "indexer.hi")
-                                    : LoByte(Builder, Indexer, "indexer.lo");
+    Indexer = Info.IsBigEndian ? HiIdx(Builder, Indexer, "indexer.hi")
+                               : LoByte(Builder, Indexer, "indexer.lo");
 
     // Always index into a GEP using the index type.
     Indexer = Builder.CreateZExt(
@@ -1679,7 +1678,7 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
     // CRC-8.
     Value *CRCNext = CRCTableLd;
     if (CRCBW > 8) {
-      Value *CRCShift = Info.ByteOrderSwapped
+      Value *CRCShift = Info.IsBigEndian
                             ? Builder.CreateShl(CRC, 8, "crc.be.shift")
                             : Builder.CreateLShr(CRC, 8, "crc.le.shift");
       CRCNext = Builder.CreateXor(CRCShift, CRCTableLd, "crc.next");

@@ -35,6 +35,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
 #include <functional>
 #include <iterator>

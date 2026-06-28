@@ -46,3 +46,12 @@ add_header_library(
     libc.src.__support.FPUtil.generic.add_sub
     libc.src.__support.macros.config
 )
+
+add_header_library(
+  subdf3
+  HDRS
+    subdf3.h
+  DEPENDS
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.config
+)

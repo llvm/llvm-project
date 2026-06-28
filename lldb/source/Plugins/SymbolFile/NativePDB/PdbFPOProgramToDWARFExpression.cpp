@@ -14,10 +14,10 @@
 #include "lldb/Utility/Stream.h"
 #include "llvm/ADT/DenseMap.h"
 
+#include "llvm/ADT/Enum.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
-#include "llvm/Support/ScopedPrinter.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -36,18 +36,17 @@ static uint32_t ResolveLLDBRegisterNum(llvm::StringRef reg_name, llvm::Triple::A
       break;
   }
 
-  llvm::ArrayRef<llvm::EnumEntry<uint16_t>> register_names =
+  llvm::EnumStrings<uint16_t> register_names =
       llvm::codeview::getRegisterNames(cpu_type);
-  auto it = llvm::find_if(
-      register_names,
-      [&reg_name](const llvm::EnumEntry<uint16_t> &register_entry) {
-        return reg_name.compare_insensitive(register_entry.Name) == 0;
+  auto it =
+      llvm::find_if(register_names, [&reg_name](const auto &register_entry) {
+        return reg_name.compare_insensitive(register_entry.name()) == 0;
       });
 
   if (it == register_names.end())
     return LLDB_INVALID_REGNUM;
 
-  auto reg_id = static_cast<llvm::codeview::RegisterId>(it->Value);
+  auto reg_id = static_cast<llvm::codeview::RegisterId>(it->value());
   return npdb::GetLLDBRegisterNumber(arch_type, reg_id);
 }
 

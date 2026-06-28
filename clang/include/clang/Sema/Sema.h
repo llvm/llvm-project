@@ -7639,25 +7639,15 @@ public:
   ExprResult ActOnStmtExprResult(ExprResult E);
   void ActOnStmtExprError();
 
-  // __builtin_offsetof(type, identifier(.identifier|[expr])*)
-  struct OffsetOfComponent {
-    SourceLocation LocStart, LocEnd;
-    bool isBrackets; // true if [expr], false if .ident
-    union {
-      IdentifierInfo *IdentInfo;
-      Expr *E;
-    } U;
-  };
-
   /// __builtin_offsetof(type, a.b[123][456].c)
   ExprResult BuildBuiltinOffsetOf(SourceLocation BuiltinLoc,
                                   TypeSourceInfo *TInfo,
-                                  ArrayRef<OffsetOfComponent> Components,
+                                  const Designation &Desig,
                                   SourceLocation RParenLoc);
   ExprResult ActOnBuiltinOffsetOf(Scope *S, SourceLocation BuiltinLoc,
                                   SourceLocation TypeLoc,
                                   ParsedType ParsedArgTy,
-                                  ArrayRef<OffsetOfComponent> Components,
+                                  const Designation &Desig,
                                   SourceLocation RParenLoc);
 
   // __builtin_choose_expr(constExpr, expr1, expr2)

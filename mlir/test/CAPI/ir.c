@@ -2623,6 +2623,125 @@ int testInterfaces(MlirContext ctx) {
   return 0;
 }
 
+int testIRMapping(MlirContext ctx) {
+  fprintf(stderr, "@testIRMapping\n");
+  // CHECK-LABEL: @testIRMapping
+
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("arith"));
+
+  MlirIRMapping mapping = mlirIRMappingCreate();
+  assert(!mlirIRMappingIsNull(mapping));
+
+  const char *moduleStr = "func.func @f(%arg0: i32, %arg1: i32) -> i32 {\n"
+                          "  %0 = arith.addi %arg0, %arg1 : i32\n"
+                          "  return %0 : i32\n"
+                          "}\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleStr));
+
+  MlirBlock moduleBody = mlirModuleGetBody(module);
+  MlirOperation funcOp = mlirBlockGetFirstOperation(moduleBody);
+  MlirRegion funcRegion = mlirOperationGetRegion(funcOp, 0);
+  MlirBlock funcBody = mlirRegionGetFirstBlock(funcRegion);
+  MlirValue arg0 = mlirBlockGetArgument(funcBody, 0);
+  MlirValue arg1 = mlirBlockGetArgument(funcBody, 1);
+  MlirOperation addOp = mlirBlockGetFirstOperation(funcBody);
+  MlirValue addResult = mlirOperationGetResult(addOp, 0);
+
+  // --- Task 1: Map ---
+
+  mlirIRMappingMapValue(mapping, arg0, addResult);
+  mlirIRMappingMapBlock(mapping, funcBody, moduleBody);
+  mlirIRMappingMapOperation(mapping, addOp, funcOp);
+
+  // --- Task 2: Lookup ---
+
+  // Value lookup: mapped
+  MlirValue looked = mlirIRMappingLookupOrDefaultValue(mapping, arg0);
+  assert(mlirValueEqual(looked, addResult));
+
+  // Value lookup: unmapped returns default (the input itself)
+  MlirValue defaulted = mlirIRMappingLookupOrDefaultValue(mapping, arg1);
+  assert(mlirValueEqual(defaulted, arg1));
+
+  // Value lookup: unmapped returns null
+  MlirValue nullVal = mlirIRMappingLookupOrNullValue(mapping, arg1);
+  assert(mlirValueIsNull(nullVal));
+
+  // Block lookup: mapped
+  MlirBlock lookedBlock = mlirIRMappingLookupOrDefaultBlock(mapping, funcBody);
+  assert(mlirBlockEqual(lookedBlock, moduleBody));
+
+  // Operation lookup: mapped
+  MlirOperation lookedOp =
+      mlirIRMappingLookupOrDefaultOperation(mapping, addOp);
+  assert(mlirOperationEqual(lookedOp, funcOp));
+
+  // --- Task 3: Contains and Erase ---
+
+  assert(mlirIRMappingContainsValue(mapping, arg0));
+  assert(mlirIRMappingContainsBlock(mapping, funcBody));
+  assert(mlirIRMappingContainsOperation(mapping, addOp));
+  assert(!mlirIRMappingContainsValue(mapping, arg1));
+
+  // Erase value
+  mlirIRMappingEraseValue(mapping, arg0);
+  assert(!mlirIRMappingContainsValue(mapping, arg0));
+
+  // Erase block
+  mlirIRMappingEraseBlock(mapping, funcBody);
+  assert(!mlirIRMappingContainsBlock(mapping, funcBody));
+
+  // Erase operation
+  mlirIRMappingEraseOperation(mapping, addOp);
+  assert(!mlirIRMappingContainsOperation(mapping, addOp));
+
+  // Block lookup: unmapped returns null
+  MlirBlock nullBlock = mlirIRMappingLookupOrNullBlock(mapping, funcBody);
+  assert(mlirBlockIsNull(nullBlock));
+
+  // Operation lookup: unmapped returns null
+  MlirOperation nullOp = mlirIRMappingLookupOrNullOperation(mapping, addOp);
+  assert(mlirOperationIsNull(nullOp));
+
+  // Clear
+  mlirIRMappingMapValue(mapping, arg0, addResult);
+  mlirIRMappingClear(mapping);
+  assert(!mlirIRMappingContainsValue(mapping, arg0));
+
+  // --- Task 4: Clone with mapping ---
+
+  MlirIRMapping cloneMapping = mlirIRMappingCreate();
+  mlirIRMappingMapValue(cloneMapping, arg0, arg1);
+  mlirIRMappingMapValue(cloneMapping, arg1, arg0);
+
+  MlirOperation cloned = mlirOperationCloneWithMapping(addOp, cloneMapping);
+  assert(!mlirOperationIsNull(cloned));
+  assert(mlirIRMappingContainsValue(cloneMapping, addResult));
+
+  // The cloned op should have its operands remapped
+  MlirValue clonedOp0 = mlirOperationGetOperand(cloned, 0);
+  MlirValue clonedOp1 = mlirOperationGetOperand(cloned, 1);
+  assert(mlirValueEqual(clonedOp0, arg1));
+  assert(mlirValueEqual(clonedOp1, arg0));
+
+  // The original op should have its result remapped
+  MlirValue mappedValue =
+      mlirIRMappingLookupOrNullValue(cloneMapping, addResult);
+  assert(!mlirValueIsNull(mappedValue));
+  MlirValue clonedResult = mlirOperationGetResult(cloned, 0);
+  assert(mlirValueEqual(clonedResult, mappedValue));
+
+  mlirOperationDestroy(cloned);
+  mlirIRMappingDestroy(cloneMapping);
+  mlirIRMappingDestroy(mapping);
+  mlirModuleDestroy(module);
+
+  // CHECK: testIRMapping: PASSED
+  fprintf(stderr, "testIRMapping: PASSED\n");
+  return 0;
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
@@ -2674,6 +2793,8 @@ int main(void) {
     return 17;
   if (testInterfaces(ctx))
     return 18;
+  if (testIRMapping(ctx))
+    return 19;
 
   // CHECK: DESTROY MAIN CONTEXT
   // CHECK: reportResourceDelete: resource_i64_blob

@@ -2515,6 +2515,30 @@ def ScopedAtomicFetchMax : AtomicBuiltin {
   let Prototype = "void(...)";
 }
 
+def ScopedAtomicFetchFMinimum : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_fetch_fminimum"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicFetchFMaximum : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_fetch_fmaximum"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicFetchFMinimumNum : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_fetch_fminimum_num"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ScopedAtomicFetchFMaximumNum : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_fetch_fmaximum_num"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ScopedAtomicAddFetch : AtomicBuiltin {
   let Spellings = ["__scoped_atomic_add_fetch"];
   let Attributes = [CustomTypeChecking];
@@ -2663,6 +2687,30 @@ def AtomicFetchMax : AtomicBuiltin {
 
 def AtomicFetchMin : AtomicBuiltin {
   let Spellings = ["__atomic_fetch_min"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def AtomicFetchFMinimum : AtomicBuiltin {
+  let Spellings = ["__atomic_fetch_fminimum"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def AtomicFetchFMaximum : AtomicBuiltin {
+  let Spellings = ["__atomic_fetch_fmaximum"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def AtomicFetchFMinimumNum : AtomicBuiltin {
+  let Spellings = ["__atomic_fetch_fminimum_num"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def AtomicFetchFMaximumNum : AtomicBuiltin {
+  let Spellings = ["__atomic_fetch_fmaximum_num"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }

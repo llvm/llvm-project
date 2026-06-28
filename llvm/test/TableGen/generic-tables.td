@@ -24,11 +24,11 @@ include "llvm/TableGen/SearchableTable.td"
 
 // CHECK-LABEL: GET_ATable_IMPL
 // CHECK: constexpr AEntry ATable[] = {
-// CHECK-NOT:   { "aaa"
-// CHECK:       { "baz", 0x2, 0x6, 0xFFFFFFFF00000000 },
-// CHECK:       { "foo", 0x4, 0x4, 0x100000000 },
-// CHECK:       { "foobar", 0x4, 0x5, 0x100000000 },
-// CHECK:       { "bar", 0x5, 0x3, 0x100000000 },
+// CHECK-NOT:   "aaa"
+// CHECK:       { {{[0-9]+}} /* "baz" */, 0x2, 0x6, 0xFFFFFFFF00000000 },
+// CHECK:       { {{[0-9]+}} /* "foo" */, 0x4, 0x4, 0x100000000 },
+// CHECK:       { {{[0-9]+}} /* "foobar" */, 0x4, 0x5, 0x100000000 },
+// CHECK:       { {{[0-9]+}} /* "bar" */, 0x5, 0x3, 0x100000000 },
 // CHECK: };
 
 // CHECK: const AEntry *lookupATableByValues(uint8_t Val1, uint16_t Val2) {
@@ -61,10 +61,10 @@ def ATable : GenericTable {
 
 // CHECK-LABEL: GET_BTable_IMPL
 // CHECK: constexpr BTypeName BTable[] = {
-// CHECK:   { "BAlice", 0xAC, false,  },
-// CHECK:   { "BBob", 0x14, false, Bob == 13 },
-// CHECK:   { "BCharlie", 0x80, true, Charlie == 42 },
-// CHECK:   { "BEve", 0x4C, true, Eve == 108 },
+// CHECK:   { {{[0-9]+}} /* "BAlice" */, 0xAC, false,  },
+// CHECK:   { {{[0-9]+}} /* "BBob" */, 0x14, false, Bob == 13 },
+// CHECK:   { {{[0-9]+}} /* "BCharlie" */, 0x80, true, Charlie == 42 },
+// CHECK:   { {{[0-9]+}} /* "BEve" */, 0x4C, true, Eve == 108 },
 // CHECK:  };
 // CHECK: const BTypeName *lookupBTableByName(StringRef Name) {
 // CHECK:   return &BTable[Idx->_index];
@@ -118,9 +118,9 @@ def lookupBTableByNameAndFlag : SearchIndex {
 
 // CHECK: const CEntry *lookupCEntry(StringRef Name, unsigned Kind) {
 // CHECK: Index[] = {
-// CHECK:   { "ALICE", CBar, 1 },
-// CHECK:   { "ALICE", CFoo, 0 },
-// CHECK:   { "BOB", CBaz, 2 },
+// CHECK:   { {{[0-9]+}} /* "ALICE" */, CBar, 1 },
+// CHECK:   { {{[0-9]+}} /* "ALICE" */, CFoo, 0 },
+// CHECK:   { {{[0-9]+}} /* "BOB" */, CBaz, 2 },
 
 class CEnum;
 

@@ -581,6 +581,48 @@ void testGreedyRewriteDriverConfig(MlirContext ctx) {
   mlirGreedyRewriteDriverConfigDestroy(config);
 }
 
+void testCloneWithMapping(MlirContext ctx) {
+  // CHECK-LABEL: @testCloneWithMapping
+  fprintf(stderr, "@testCloneWithMapping\n");
+
+  const char *moduleString =
+      "%x, %y = \"dialect.create_values\"() : () -> (index, index)\n"
+      "%sum = \"dialect.add\"(%x, %y) : (index, index) -> index\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleString));
+  MlirBlock body = mlirModuleGetBody(module);
+
+  MlirOperation createValues = mlirBlockGetFirstOperation(body);
+  MlirValue x = mlirOperationGetResult(createValues, 0);
+  MlirValue y = mlirOperationGetResult(createValues, 1);
+  MlirOperation addOp = mlirOperationGetNextInBlock(createValues);
+
+  MlirRewriterBase rewriter = mlirIRRewriterCreate(ctx);
+  mlirRewriterBaseSetInsertionPointAfter(rewriter, addOp);
+
+  // Clone addOp with a mapping that swaps x -> y, y -> x
+  MlirIRMapping mapping = mlirIRMappingCreate();
+  mlirIRMappingMapValue(mapping, x, y);
+  mlirIRMappingMapValue(mapping, y, x);
+
+  MlirOperation cloned =
+      mlirRewriterBaseCloneWithMapping(rewriter, addOp, mapping);
+  assert(!mlirOperationIsNull(cloned));
+
+  // Verify operands are remapped
+  MlirValue clonedOp0 = mlirOperationGetOperand(cloned, 0);
+  MlirValue clonedOp1 = mlirOperationGetOperand(cloned, 1);
+  assert(mlirValueEqual(clonedOp0, y));
+  assert(mlirValueEqual(clonedOp1, x));
+
+  mlirIRMappingDestroy(mapping);
+  mlirIRRewriterDestroy(rewriter);
+  mlirModuleDestroy(module);
+
+  // CHECK: testCloneWithMapping: PASSED
+  fprintf(stderr, "testCloneWithMapping: PASSED\n");
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   mlirContextSetAllowUnregisteredDialects(ctx, true);
@@ -595,6 +637,7 @@ int main(void) {
   testOpModification(ctx);
   testReplaceUses(ctx);
   testGreedyRewriteDriverConfig(ctx);
+  testCloneWithMapping(ctx);
 
   mlirContextDestroy(ctx);
   return 0;

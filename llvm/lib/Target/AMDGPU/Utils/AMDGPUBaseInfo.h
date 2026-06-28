@@ -12,6 +12,7 @@
 #include "AMDGPUSubtarget.h"
 #include "SIDefines.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Module.h"
@@ -414,11 +415,13 @@ struct MIMGDimInfo {
   bool MSAA;
   bool DA;
   uint8_t Encoding;
-  const char *AsmSuffix;
+  StringTable::Offset AsmSuffix;
 };
 
 LLVM_READONLY
 const MIMGDimInfo *getMIMGDimInfo(unsigned DimEnum);
+
+LLVM_READONLY StringRef getMIMGDimInfoStr(StringTable::Offset);
 
 LLVM_READONLY
 const MIMGDimInfo *getMIMGDimInfoByEncoding(uint8_t DimEnc);

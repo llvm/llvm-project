@@ -57,8 +57,9 @@ struct PolynomialInfo {
   // the case of CRC, which must be zero.
   Value *ComputedValue;
 
-  // Set to true in the case of big-endian.
-  bool ByteOrderSwapped;
+  // The big-endian case implies that bits are reversed, in the case of bit-wise
+  // algorithms such as CRC.
+  bool IsBigEndian;
 
   // An optional auxiliary checksum that augments the LHS. In the case of CRC,
   // it is XOR'ed with the LHS, so that the computation's final remainder is
@@ -66,7 +67,7 @@ struct PolynomialInfo {
   Value *LHSAux;
 
   LLVM_ABI PolynomialInfo(unsigned TripCount, Value *LHS, const APInt &RHS,
-                          Value *ComputedValue, bool ByteOrderSwapped,
+                          Value *ComputedValue, bool IsBigEndian,
                           Value *LHSAux = nullptr);
 };
 
@@ -85,7 +86,7 @@ public:
   // Auxilary entry point after analysis to interleave the generating polynomial
   // and return a 256-entry CRC table.
   LLVM_ABI static CRCTable genSarwateTable(const APInt &GenPoly,
-                                           bool ByteOrderSwapped);
+                                           bool IsBigEndian);
 
   LLVM_ABI void print(raw_ostream &OS) const;
 
