@@ -21714,6 +21714,19 @@ bool Expr::EvaluateAsInitializer(const ASTContext &Ctx, const VarDecl *VD,
 
 bool VarDecl::evaluateDestruction(
     SmallVectorImpl<PartialDiagnosticAt> &Notes) const {
+  // This function is only meaningful for records and arrays of records.
+  QualType VarTy = getType();
+  if (VarTy->isArrayType()) {
+    QualType ElemTy = getASTContext().getBaseElementType(VarTy);
+    if (!ElemTy->isRecordType()) {
+      ensureEvaluatedStmt()->HasConstantDestruction = true;
+      return true;
+    }
+  } else if (!VarTy->isRecordType()) {
+    ensureEvaluatedStmt()->HasConstantDestruction = true;
+    return true;
+  }
+
   Expr::EvalStatus EStatus;
   EStatus.Diag = &Notes;
 
@@ -21728,15 +21741,13 @@ bool VarDecl::evaluateDestruction(
   APValue DestroyedValue;
   if (getEvaluatedValue())
     DestroyedValue = *getEvaluatedValue();
-  else if (!handleDefaultInitValue(getType(), DestroyedValue))
+  else if (!handleDefaultInitValue(VarTy, DestroyedValue))
     return false;
 
   if (Ctx.getLangOpts().EnableNewConstInterp) {
     EvalInfo Info(Ctx, EStatus,
                   IsConstantDestruction ? EvaluationMode::ConstantExpression
                                         : EvaluationMode::ConstantFold);
-    Info.setEvaluatingDecl(this, DestroyedValue,
-                           EvalInfo::EvaluatingDeclKind::Dtor);
     Info.InConstantContext = IsConstantDestruction;
     if (!Ctx.getInterpContext().evaluateDestruction(Info, this,
                                                     std::move(DestroyedValue)))
@@ -21745,7 +21756,7 @@ bool VarDecl::evaluateDestruction(
     return true;
   }
 
-  if (!EvaluateDestruction(Ctx, this, std::move(DestroyedValue), getType(),
+  if (!EvaluateDestruction(Ctx, this, std::move(DestroyedValue), VarTy,
                            getLocation(), EStatus, IsConstantDestruction) ||
       EStatus.HasSideEffects)
     return false;

@@ -86,7 +86,12 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   // Validate further transfer op semantics.
   SmallVector<int64_t> strides;
   int64_t offset;
-  if (failed(srcTy.getStridesAndOffset(strides, offset)) || strides.back() != 1)
+  if (failed(srcTy.getStridesAndOffset(strides, offset)))
+    return rewriter.notifyMatchFailure(xferOp,
+                                       "The memref strides cannot be inferred");
+  if (strides.empty())
+    return rewriter.notifyMatchFailure(xferOp, "0D memref is not supported");
+  if (strides.back() != 1)
     return rewriter.notifyMatchFailure(
         xferOp, "Buffer must be contiguous in the innermost dimension");
 
@@ -499,7 +504,7 @@ static LogicalResult lowerToScatteredLoadOp(vector::TransferReadOp readOp,
       /*l1_hint=*/xegpu::CachePolicyAttr{},
       /*l2_hint=*/xegpu::CachePolicyAttr{},
       /*l3_hint=*/xegpu::CachePolicyAttr{},
-      /*layout=*/nullptr);
+      /*layout=*/nullptr, /*contiguity=*/nullptr);
 
   rewriter.replaceOp(readOp, gatherOp.getResult());
   return success();
@@ -534,7 +539,7 @@ static LogicalResult lowerToScatteredStoreOp(vector::TransferWriteOp writeOp,
                                 /*l1_hint=*/xegpu::CachePolicyAttr{},
                                 /*l2_hint=*/xegpu::CachePolicyAttr{},
                                 /*l3_hint=*/xegpu::CachePolicyAttr{},
-                                /*layout=*/nullptr);
+                                /*layout=*/nullptr, /*contiguity=*/nullptr);
   rewriter.eraseOp(writeOp);
   return success();
 }
@@ -790,7 +795,7 @@ struct GatherLowering : public OpRewritePattern<vector::GatherOp> {
         /*l1_hint=*/xegpu::CachePolicyAttr{},
         /*l2_hint=*/xegpu::CachePolicyAttr{},
         /*l3_hint=*/xegpu::CachePolicyAttr{},
-        /*layout=*/nullptr);
+        /*layout=*/nullptr, /*contiguity=*/nullptr);
 
     auto selectOp =
         arith::SelectOp::create(rewriter, loc, gatherOp.getMask(),
@@ -825,7 +830,8 @@ struct ScatterLowering : public OpRewritePattern<vector::ScatterOp> {
                                   /*l1_hint=*/xegpu::CachePolicyAttr{},
                                   /*l2_hint=*/xegpu::CachePolicyAttr{},
                                   /*l3_hint=*/xegpu::CachePolicyAttr{},
-                                  /*layout=*/nullptr);
+                                  /*layout=*/nullptr,
+                                  /*contiguity=*/nullptr);
     rewriter.eraseOp(scatterOp);
     return success();
   }

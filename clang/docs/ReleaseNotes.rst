@@ -519,8 +519,15 @@ Attribute Changes in Clang
   about pointer lifetimes. It may be used to power optimizations in the future,
   however there are no concrete plans to do so at the moment.
 
-* The ``modular_format`` attribute now supports the ``fixed`` aspect for C
+- The attributes ``[[clang::opencl_global_device]]`` and ``[[clang::opencl_global_host]]``
+  are now deprecated. Clang emits a ``-Wdeprecated-attributes`` warning when
+  they are used.
+  
+- The ``modular_format`` attribute now supports the ``fixed`` aspect for C
   ISO 18037 fixed-point ``printf`` specifiers.
+
+- The ``const`` and ``pure`` attributes only apply to functions; they are now
+  diagnosed and ignored when applied to anything else.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -811,6 +818,7 @@ Bug Fixes to C++ Support
 - Fixed a crash in constant evaluation using placement new on an array which was later initialized. (#GH196450)
 - Fixed an issue where Clang incorrectly accepted invalid unqualified uses of local nested class names outside their declaring scope. (#GH184622)
 - Fixed a crash when parsing invalid friend declaration with storage-class specifier. (#GH186569)
+- Fixed a missing vtable for ``dynamic_cast<FinalClass *>(this)`` in a function template. (#GH198511)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -890,6 +898,11 @@ X86 Support
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
+- Support has been added for the following processors (-mcpu identifiers in parenthesis):
+
+* Arm AGI CPU (armagicpu).
+* Hisilicon hip12 core (hip12).
+
 Android Support
 ^^^^^^^^^^^^^^^
 
@@ -968,6 +981,8 @@ AIX Support
 - Added support for ``#pragma comment(copyright, "token_sequence")`` on AIX.
   This directive embeds a copyright or identifying string into the compiled object file. 
   The string is included in the final executable and loaded into memory at program runtime.
+- The driver relaxes the restrictions on the ``OBJECT_MODE`` environment
+  variable and now silently accepts ``32_64`` and ``any``.
 
 NetBSD Support
 ^^^^^^^^^^^^^^
@@ -977,6 +992,12 @@ WebAssembly Support
 
 - Fixed a crash when ``__funcref`` is applied to a non-function pointer type.
   (#GH118233)
+- WebAssembly reference types (``__externref_t`` and ``__funcref`` function
+  pointers) now lower to the opaque IR types ``target("wasm.externref")`` and
+  ``target("wasm.funcref")`` instead of ``ptr addrspace(10)`` /
+  ``ptr addrspace(20)``.
+- Fixed a compiler crash at ``-O2`` when reference-type values were passed
+  through control flow that the SLP vectorizer tried to vectorize.
 
 AVR Support
 ^^^^^^^^^^^
@@ -1082,6 +1103,11 @@ Sanitizers
   warning for deprecated matches. Version 5 drops backward compatibility and
   requires rules to match canonicalized paths (without leading ``./``).
 
+- Sanitizer Special Case Lists (``-fsanitize-ignorelist``) and warning
+  suppression mappings (``--warning-suppression-mappings``) now recognize version
+  4 of the Special Case List format (indicated by ``#!special-case-list-v4``).
+  On Windows hosts, path matching is slash-agnostic (both forward slashes (``/``)
+  and backslashes (``\``) match either path separator in both patterns and paths).
 
 Python Binding Changes
 ----------------------

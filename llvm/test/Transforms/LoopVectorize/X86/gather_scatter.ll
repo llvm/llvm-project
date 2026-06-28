@@ -742,15 +742,15 @@ define void @test_gather_not_profitable_pr48429(i32 %d, ptr readonly noalias %pt
 ; FVW2-NEXT:    [[TMP21:%.*]] = getelementptr inbounds float, ptr [[TMP16]], i64 [[IDXPROM]]
 ; FVW2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x float>, ptr [[TMP21]], align 4
 ; FVW2-NEXT:    [[TMP23:%.*]] = extractelement <2 x float> [[WIDE_LOAD]], i64 0
-; FVW2-NEXT:    [[TMP17:%.*]] = extractelement <2 x float> [[WIDE_LOAD]], i64 1
 ; FVW2-NEXT:    store float [[TMP23]], ptr [[TMP19]], align 4
+; FVW2-NEXT:    [[TMP17:%.*]] = extractelement <2 x float> [[WIDE_LOAD]], i64 1
 ; FVW2-NEXT:    store float [[TMP17]], ptr [[TMP20]], align 4
 ; FVW2-NEXT:    [[WIDE_LOAD8:%.*]] = load <2 x float>, ptr [[TMP16]], align 4
-; FVW2-NEXT:    [[TMP24:%.*]] = extractelement <2 x float> [[WIDE_LOAD8]], i64 0
-; FVW2-NEXT:    [[TMP26:%.*]] = extractelement <2 x float> [[WIDE_LOAD8]], i64 1
 ; FVW2-NEXT:    [[TMP25:%.*]] = getelementptr inbounds float, ptr [[TMP19]], i64 1
 ; FVW2-NEXT:    [[TMP22:%.*]] = getelementptr inbounds float, ptr [[TMP20]], i64 1
+; FVW2-NEXT:    [[TMP24:%.*]] = extractelement <2 x float> [[WIDE_LOAD8]], i64 0
 ; FVW2-NEXT:    store float [[TMP24]], ptr [[TMP25]], align 4
+; FVW2-NEXT:    [[TMP26:%.*]] = extractelement <2 x float> [[WIDE_LOAD8]], i64 1
 ; FVW2-NEXT:    store float [[TMP26]], ptr [[TMP22]], align 4
 ; FVW2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; FVW2-NEXT:    [[TMP30:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
