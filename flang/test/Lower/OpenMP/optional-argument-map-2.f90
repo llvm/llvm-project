@@ -1,4 +1,5 @@
-!RUN: %flang_fc1 -emit-hlfir -fopenmp %s -o - | FileCheck %s  --check-prefixes=CHECK,CHECK-FPRIV
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization-staging=false %s -o - | FileCheck %s  --check-prefixes=CHECK,CHECK-NO-FPRIV
+!RUN: %flang_fc1 -emit-hlfir -fopenmp -mmlir --enable-delayed-privatization-staging=true %s -o - | FileCheck %s  --check-prefixes=CHECK,CHECK-FPRIV
 
 module mod
   implicit none
@@ -82,3 +83,36 @@ end module mod
 ! CHECK-FPRIV:         hlfir.assign %[[VAL_28]]#0 to %[[VAL_26]]#0 : !fir.boxchar<1>, !fir.ref<!fir.char<1,4>>
 ! CHECK-FPRIV:       return
 ! CHECK-FPRIV:     }
+! CHECK-NO-FPRIV:  %[[VAL_8:.*]] = fir.is_present %[[VAL_3]]#1 : (!fir.ref<!fir.char<1,?>>) -> i1
+! CHECK-NO-FPRIV:  %[[VAL_9:.*]] = arith.constant 0 : index
+! CHECK-NO-FPRIV:  %[[VAL_10:.*]] = arith.constant 1 : index
+! CHECK-NO-FPRIV:  %[[VAL_11:.*]]:2 = fir.if %[[VAL_8]] -> (index, index) {
+! CHECK-NO-FPRIV:    %[[VAL_12:.*]]:2 = fir.unboxchar %[[VAL_3]]#0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+! CHECK-NO-FPRIV:       fir.result %[[VAL_12]]#1, %[[VAL_10]] : index, index
+! CHECK-NO-FPRIV:     } else {
+! CHECK-NO-FPRIV:       fir.result %[[VAL_9]], %[[VAL_9]] : index, index
+! CHECK-NO-FPRIV:     }
+! CHECK-NO-FPRIV:  %[[VAL_13:.*]] = arith.subi %[[VAL_14:.*]]#0, %[[VAL_10]] : index
+! CHECK-NO-FPRIV:  %[[VAL_15:.*]] = omp.map.bounds lower_bound(%[[VAL_9]] : index) upper_bound(%[[VAL_13]] : index) extent(%[[VAL_14]]#0 : index) stride(%[[VAL_14]]#1 : index) start_idx(%[[VAL_9]] : index) {stride_in_bytes = true}
+! CHECK-NO-FPRIV:  %[[VAL_16:.*]] = omp.map.info var_ptr(%[[VAL_3]]#1 : !fir.ref<!fir.char<1,?>>, !fir.char<1,?>) map_clauses(implicit) capture(ByCopy) bounds(%[[VAL_15]]) -> !fir.ref<!fir.char<1,?>> {name = "a"}
+! CHECK-NO-FPRIV:  fir.store %[[ARG0]] to %[[VAL_0]] : !fir.ref<!fir.boxchar<1>>
+! CHECK-NO-FPRIV:  %[[VAL_17:.*]] = arith.constant 0 : index
+! CHECK-NO-FPRIV:  %[[VAL_18:.*]] = arith.constant 1 : index
+! CHECK-NO-FPRIV:           %[[VAL_19:.*]]:2 = fir.unboxchar %[[ARG0]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+! CHECK-NO-FPRIV:           %[[VAL_20:.*]] = arith.subi %[[VAL_19]]#1, %[[VAL_18]] : index
+! CHECK-NO-FPRIV:           %[[VAL_21:.*]] = omp.map.bounds lower_bound(%[[VAL_17]] : index) upper_bound(%[[VAL_20]] : index) extent(%[[VAL_19]]#1 : index) stride(%[[VAL_18]] : index) start_idx(%[[VAL_17]] : index) {stride_in_bytes = true}
+! CHECK-NO-FPRIV:           %[[VAL_22:.*]] = fir.box_offset %[[VAL_0]] base_addr : (!fir.ref<!fir.boxchar<1>>) -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>
+! CHECK-NO-FPRIV:           %[[VAL_23:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>) map_clauses(implicit, to) capture(ByRef) var_ptr_ptr(%[[VAL_22]] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>, !fir.char<1,?>) bounds(%14) -> !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>> {name = ""}
+! CHECK-NO-FPRIV:           %[[VAL_24:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>) map_clauses(always, implicit, to) capture(ByRef) members(%[[VAL_23]] : [0] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>) -> !fir.ref<!fir.boxchar<1>> {name = ""}
+! CHECK-NO-FPRIV:           %[[VAL_26:.*]] = omp.map.info var_ptr(%[[VAL_0]] : !fir.ref<!fir.boxchar<1>>, !fir.boxchar<1>) map_clauses(attach, ref_ptr, ref_ptee) capture(ByRef) var_ptr_ptr(%[[VAL_22]] : !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>, !fir.char<1,?>) bounds(%[[VAL_21]]) -> !fir.ref<!fir.boxchar<1>>
+! CHECK-NO-FPRIV:  omp.target kernel_type(generic) map_entries(%[[VAL_7]] -> %[[VAL_27:.*]], %[[VAL_16]] -> %[[VAL_28:.*]], %[[VAL_24]] -> %[[VAL_29:.*]], %[[VAL_26]] -> %[[VAL_30:.*]], %[[VAL_23]] -> %[[VAL_30:.*]] : !fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,?>>, !fir.ref<!fir.boxchar<1>>, !fir.ref<!fir.boxchar<1>>, !fir.llvm_ptr<!fir.ref<!fir.char<1,?>>>) {
+! CHECK-NO-FPRIV:    %[[VAL_31:.*]] = fir.load %[[VAL_29]] : !fir.ref<!fir.boxchar<1>>
+! CHECK-NO-FPRIV:    %[[VAL_32:.*]]:2 = fir.unboxchar %[[VAL_31]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+! CHECK-NO-FPRIV:    %[[VAL_33:.*]] = arith.constant 4 : index
+! CHECK-NO-FPRIV:    %[[VAL_34:.*]]:2 = hlfir.declare %[[VAL_27]] typeparams %[[VAL_33]] {uniq_name = "_QMmodFroutine_boxcharEb"} : (!fir.ref<!fir.char<1,4>>, index) -> (!fir.ref<!fir.char<1,4>>, !fir.ref<!fir.char<1,4>>)
+! CHECK-NO-FPRIV:    %[[VAL_35:.*]]:2 = hlfir.declare %[[VAL_28]] typeparams %[[VAL_32]]#1 {fortran_attrs = #fir.var_attrs<intent_in, optional>, uniq_name = "_QMmodFroutine_boxcharEa"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK-NO-FPRIV:    hlfir.assign %[[VAL_35]]#0 to %[[VAL_34]]#0 : !fir.boxchar<1>, !fir.ref<!fir.char<1,4>>
+! CHECK-NO-FPRIV:    omp.terminator
+! CHECK-NO-FPRIV:  }
+! CHECK-NO-FPRIV:  return
+! CHECK-NO-FPRIV:}

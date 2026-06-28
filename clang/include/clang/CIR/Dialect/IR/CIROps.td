@@ -2383,7 +2383,7 @@ class CIR_BinOpOverflow<string mnemonic, list<Trait> traits = []>
     CIR_IntType:$rhs
   );
 
-  let results = (outs CIR_IntType:$result, CIR_BoolType:$overflow);
+  let results = (outs CIR_AnyIntOrBoolType:$result, CIR_BoolType:$overflow);
 
   let assemblyFormat = [{
     $lhs `,` $rhs `:` qualified(type($lhs)) `->` qualified(type($result))
@@ -2391,7 +2391,7 @@ class CIR_BinOpOverflow<string mnemonic, list<Trait> traits = []>
   }];
 
   let builders = [
-    OpBuilder<(ins "cir::IntType":$resultTy,
+    OpBuilder<(ins "mlir::Type":$resultTy,
                    "mlir::Value":$lhs,
                    "mlir::Value":$rhs), [{
       auto overflowTy = cir::BoolType::get($_builder.getContext());
@@ -2412,6 +2412,7 @@ def CIR_AddOverflowOp : CIR_BinOpOverflow<"add.overflow", [Commutative]> {
     ```
     %result, %overflow = cir.add.overflow %a, %b : !u32i -> !u32i
     %result, %overflow = cir.add.overflow %a, %b : !cir.int<s, 33> -> !s32i
+    %result, %overflow = cir.add.overflow %a, %b : !s32i -> !cir.bool
     ```
   }];
 }

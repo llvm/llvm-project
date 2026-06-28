@@ -12,6 +12,7 @@ class TestStack(TestBase):
     @skipIf(compiler=no_match("clang"))
     @skipIfLinux  # Declaration in some Linux headers causes LLDB to crash.
     @skipIf(bugnumber="rdar://97622854")
+    @skipIf(macos_sdk_version=["<", "16.0"])
     def test(self):
         self.build()
 

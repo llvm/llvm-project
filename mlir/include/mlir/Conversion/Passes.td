@@ -828,7 +828,11 @@ def MathToAPFloatConversionPass
     calls (APFloatWrappers.cpp). APFloat is a software implementation of
     floating-point mathmetic operations.
   }];
-  let dependentDialects = ["math::MathDialect", "func::FuncDialect"];
+  let dependentDialects = [
+    "math::MathDialect",
+    "func::FuncDialect",
+    "vector::VectorDialect"
+  ];
 }
 
 //===----------------------------------------------------------------------===//
