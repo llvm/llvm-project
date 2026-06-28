@@ -124,8 +124,6 @@ define void @i8_factor_2(ptr %data, i64 %n) {
 ; FIXED-NO-OPT:  Cost of 16 for VF 8: INTERLEAVE-GROUP with factor 2, ir<%p0>
 ; FIXED-NO-OPT:  Cost of 32 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%p0>
 ; FIXED-NO-OPT:  Cost of 32 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%p0>
-; FIXED-NO-OPT:  Cost of 64 for VF 32: INTERLEAVE-GROUP with factor 2, ir<%p0>
-; FIXED-NO-OPT:  Cost of 64 for VF 32: INTERLEAVE-GROUP with factor 2, ir<%p0>
 ;
 ; FIXED-OPT-NF2-LABEL: 'i8_factor_2'
 ; FIXED-OPT-NF2:  Cost of 3 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%p0>
@@ -136,8 +134,6 @@ define void @i8_factor_2(ptr %data, i64 %n) {
 ; FIXED-OPT-NF2:  Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 2, ir<%p0>
 ; FIXED-OPT-NF2:  Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%p0>
 ; FIXED-OPT-NF2:  Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%p0>
-; FIXED-OPT-NF2:  Cost of 8 for VF 32: INTERLEAVE-GROUP with factor 2, ir<%p0>
-; FIXED-OPT-NF2:  Cost of 8 for VF 32: INTERLEAVE-GROUP with factor 2, ir<%p0>
 ;
 ; FIXED-OPT-NF3-LABEL: 'i8_factor_2'
 ; FIXED-OPT-NF3:  Cost of 3 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%p0>
@@ -148,8 +144,6 @@ define void @i8_factor_2(ptr %data, i64 %n) {
 ; FIXED-OPT-NF3:  Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 2, ir<%p0>
 ; FIXED-OPT-NF3:  Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%p0>
 ; FIXED-OPT-NF3:  Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%p0>
-; FIXED-OPT-NF3:  Cost of 8 for VF 32: INTERLEAVE-GROUP with factor 2, ir<%p0>
-; FIXED-OPT-NF3:  Cost of 8 for VF 32: INTERLEAVE-GROUP with factor 2, ir<%p0>
 ;
 ; FIXED-OPT-NF4-LABEL: 'i8_factor_2'
 ; FIXED-OPT-NF4:  Cost of 3 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%p0>
@@ -160,8 +154,6 @@ define void @i8_factor_2(ptr %data, i64 %n) {
 ; FIXED-OPT-NF4:  Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 2, ir<%p0>
 ; FIXED-OPT-NF4:  Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%p0>
 ; FIXED-OPT-NF4:  Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%p0>
-; FIXED-OPT-NF4:  Cost of 8 for VF 32: INTERLEAVE-GROUP with factor 2, ir<%p0>
-; FIXED-OPT-NF4:  Cost of 8 for VF 32: INTERLEAVE-GROUP with factor 2, ir<%p0>
 ;
 ; FIXED-OPT-NF5-LABEL: 'i8_factor_2'
 ; FIXED-OPT-NF5:  Cost of 3 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%p0>
@@ -172,8 +164,6 @@ define void @i8_factor_2(ptr %data, i64 %n) {
 ; FIXED-OPT-NF5:  Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 2, ir<%p0>
 ; FIXED-OPT-NF5:  Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%p0>
 ; FIXED-OPT-NF5:  Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%p0>
-; FIXED-OPT-NF5:  Cost of 8 for VF 32: INTERLEAVE-GROUP with factor 2, ir<%p0>
-; FIXED-OPT-NF5:  Cost of 8 for VF 32: INTERLEAVE-GROUP with factor 2, ir<%p0>
 ;
 ; FIXED-OPT-NF6-LABEL: 'i8_factor_2'
 ; FIXED-OPT-NF6:  Cost of 3 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%p0>
@@ -184,8 +174,6 @@ define void @i8_factor_2(ptr %data, i64 %n) {
 ; FIXED-OPT-NF6:  Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 2, ir<%p0>
 ; FIXED-OPT-NF6:  Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%p0>
 ; FIXED-OPT-NF6:  Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%p0>
-; FIXED-OPT-NF6:  Cost of 8 for VF 32: INTERLEAVE-GROUP with factor 2, ir<%p0>
-; FIXED-OPT-NF6:  Cost of 8 for VF 32: INTERLEAVE-GROUP with factor 2, ir<%p0>
 ;
 ; FIXED-OPT-NF7-LABEL: 'i8_factor_2'
 ; FIXED-OPT-NF7:  Cost of 3 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%p0>
@@ -196,8 +184,6 @@ define void @i8_factor_2(ptr %data, i64 %n) {
 ; FIXED-OPT-NF7:  Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 2, ir<%p0>
 ; FIXED-OPT-NF7:  Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%p0>
 ; FIXED-OPT-NF7:  Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%p0>
-; FIXED-OPT-NF7:  Cost of 8 for VF 32: INTERLEAVE-GROUP with factor 2, ir<%p0>
-; FIXED-OPT-NF7:  Cost of 8 for VF 32: INTERLEAVE-GROUP with factor 2, ir<%p0>
 ;
 ; FIXED-OPT-NF8-LABEL: 'i8_factor_2'
 ; FIXED-OPT-NF8:  Cost of 3 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%p0>
@@ -208,8 +194,6 @@ define void @i8_factor_2(ptr %data, i64 %n) {
 ; FIXED-OPT-NF8:  Cost of 3 for VF 8: INTERLEAVE-GROUP with factor 2, ir<%p0>
 ; FIXED-OPT-NF8:  Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%p0>
 ; FIXED-OPT-NF8:  Cost of 4 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%p0>
-; FIXED-OPT-NF8:  Cost of 8 for VF 32: INTERLEAVE-GROUP with factor 2, ir<%p0>
-; FIXED-OPT-NF8:  Cost of 8 for VF 32: INTERLEAVE-GROUP with factor 2, ir<%p0>
 ;
 entry:
   br label %for.body
@@ -556,8 +540,6 @@ define void @i8_factor_4(ptr %data, i64 %n) {
 ; FIXED-NO-OPT:  Cost of 32 for VF 8: INTERLEAVE-GROUP with factor 4, ir<%p0>
 ; FIXED-NO-OPT:  Cost of 64 for VF 16: INTERLEAVE-GROUP with factor 4, ir<%p0>
 ; FIXED-NO-OPT:  Cost of 64 for VF 16: INTERLEAVE-GROUP with factor 4, ir<%p0>
-; FIXED-NO-OPT:  Cost of 128 for VF 32: INTERLEAVE-GROUP with factor 4, ir<%p0>
-; FIXED-NO-OPT:  Cost of 128 for VF 32: INTERLEAVE-GROUP with factor 4, ir<%p0>
 ;
 ; FIXED-OPT-NF2-LABEL: 'i8_factor_4'
 ; FIXED-OPT-NF2:  Cost of 8 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%p0>
@@ -568,8 +550,6 @@ define void @i8_factor_4(ptr %data, i64 %n) {
 ; FIXED-OPT-NF2:  Cost of 32 for VF 8: INTERLEAVE-GROUP with factor 4, ir<%p0>
 ; FIXED-OPT-NF2:  Cost of 64 for VF 16: INTERLEAVE-GROUP with factor 4, ir<%p0>
 ; FIXED-OPT-NF2:  Cost of 64 for VF 16: INTERLEAVE-GROUP with factor 4, ir<%p0>
-; FIXED-OPT-NF2:  Cost of 128 for VF 32: INTERLEAVE-GROUP with factor 4, ir<%p0>
-; FIXED-OPT-NF2:  Cost of 128 for VF 32: INTERLEAVE-GROUP with factor 4, ir<%p0>
 ;
 ; FIXED-OPT-NF3-LABEL: 'i8_factor_4'
 ; FIXED-OPT-NF3:  Cost of 8 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%p0>
@@ -580,8 +560,6 @@ define void @i8_factor_4(ptr %data, i64 %n) {
 ; FIXED-OPT-NF3:  Cost of 32 for VF 8: INTERLEAVE-GROUP with factor 4, ir<%p0>
 ; FIXED-OPT-NF3:  Cost of 64 for VF 16: INTERLEAVE-GROUP with factor 4, ir<%p0>
 ; FIXED-OPT-NF3:  Cost of 64 for VF 16: INTERLEAVE-GROUP with factor 4, ir<%p0>
-; FIXED-OPT-NF3:  Cost of 128 for VF 32: INTERLEAVE-GROUP with factor 4, ir<%p0>
-; FIXED-OPT-NF3:  Cost of 128 for VF 32: INTERLEAVE-GROUP with factor 4, ir<%p0>
 ;
 ; FIXED-OPT-NF4-LABEL: 'i8_factor_4'
 ; FIXED-OPT-NF4:  Cost of 5 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%p0>
@@ -592,8 +570,6 @@ define void @i8_factor_4(ptr %data, i64 %n) {
 ; FIXED-OPT-NF4:  Cost of 6 for VF 8: INTERLEAVE-GROUP with factor 4, ir<%p0>
 ; FIXED-OPT-NF4:  Cost of 8 for VF 16: INTERLEAVE-GROUP with factor 4, ir<%p0>
 ; FIXED-OPT-NF4:  Cost of 8 for VF 16: INTERLEAVE-GROUP with factor 4, ir<%p0>
-; FIXED-OPT-NF4:  Cost of 16 for VF 32: INTERLEAVE-GROUP with factor 4, ir<%p0>
-; FIXED-OPT-NF4:  Cost of 16 for VF 32: INTERLEAVE-GROUP with factor 4, ir<%p0>
 ;
 ; FIXED-OPT-NF5-LABEL: 'i8_factor_4'
 ; FIXED-OPT-NF5:  Cost of 8 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%p0>
@@ -604,8 +580,6 @@ define void @i8_factor_4(ptr %data, i64 %n) {
 ; FIXED-OPT-NF5:  Cost of 32 for VF 8: INTERLEAVE-GROUP with factor 4, ir<%p0>
 ; FIXED-OPT-NF5:  Cost of 64 for VF 16: INTERLEAVE-GROUP with factor 4, ir<%p0>
 ; FIXED-OPT-NF5:  Cost of 64 for VF 16: INTERLEAVE-GROUP with factor 4, ir<%p0>
-; FIXED-OPT-NF5:  Cost of 128 for VF 32: INTERLEAVE-GROUP with factor 4, ir<%p0>
-; FIXED-OPT-NF5:  Cost of 128 for VF 32: INTERLEAVE-GROUP with factor 4, ir<%p0>
 ;
 ; FIXED-OPT-NF6-LABEL: 'i8_factor_4'
 ; FIXED-OPT-NF6:  Cost of 8 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%p0>
@@ -616,8 +590,6 @@ define void @i8_factor_4(ptr %data, i64 %n) {
 ; FIXED-OPT-NF6:  Cost of 32 for VF 8: INTERLEAVE-GROUP with factor 4, ir<%p0>
 ; FIXED-OPT-NF6:  Cost of 64 for VF 16: INTERLEAVE-GROUP with factor 4, ir<%p0>
 ; FIXED-OPT-NF6:  Cost of 64 for VF 16: INTERLEAVE-GROUP with factor 4, ir<%p0>
-; FIXED-OPT-NF6:  Cost of 128 for VF 32: INTERLEAVE-GROUP with factor 4, ir<%p0>
-; FIXED-OPT-NF6:  Cost of 128 for VF 32: INTERLEAVE-GROUP with factor 4, ir<%p0>
 ;
 ; FIXED-OPT-NF7-LABEL: 'i8_factor_4'
 ; FIXED-OPT-NF7:  Cost of 8 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%p0>
@@ -628,8 +600,6 @@ define void @i8_factor_4(ptr %data, i64 %n) {
 ; FIXED-OPT-NF7:  Cost of 32 for VF 8: INTERLEAVE-GROUP with factor 4, ir<%p0>
 ; FIXED-OPT-NF7:  Cost of 64 for VF 16: INTERLEAVE-GROUP with factor 4, ir<%p0>
 ; FIXED-OPT-NF7:  Cost of 64 for VF 16: INTERLEAVE-GROUP with factor 4, ir<%p0>
-; FIXED-OPT-NF7:  Cost of 128 for VF 32: INTERLEAVE-GROUP with factor 4, ir<%p0>
-; FIXED-OPT-NF7:  Cost of 128 for VF 32: INTERLEAVE-GROUP with factor 4, ir<%p0>
 ;
 ; FIXED-OPT-NF8-LABEL: 'i8_factor_4'
 ; FIXED-OPT-NF8:  Cost of 8 for VF 2: INTERLEAVE-GROUP with factor 4, ir<%p0>
@@ -640,8 +610,6 @@ define void @i8_factor_4(ptr %data, i64 %n) {
 ; FIXED-OPT-NF8:  Cost of 32 for VF 8: INTERLEAVE-GROUP with factor 4, ir<%p0>
 ; FIXED-OPT-NF8:  Cost of 64 for VF 16: INTERLEAVE-GROUP with factor 4, ir<%p0>
 ; FIXED-OPT-NF8:  Cost of 64 for VF 16: INTERLEAVE-GROUP with factor 4, ir<%p0>
-; FIXED-OPT-NF8:  Cost of 128 for VF 32: INTERLEAVE-GROUP with factor 4, ir<%p0>
-; FIXED-OPT-NF8:  Cost of 128 for VF 32: INTERLEAVE-GROUP with factor 4, ir<%p0>
 ;
 entry:
   br label %for.body

@@ -5772,13 +5772,14 @@ static bool canNarrowLoad(VPSingleDefRecipe *WideMember0, unsigned OpIdx,
   return false;
 }
 
-static bool canNarrowOps(ArrayRef<VPValue *> Ops, bool IsScalable) {
+static bool canNarrowOps(ArrayRef<VPValue *> Ops, bool IsScalable,
+                         const TargetTransformInfo &TTI) {
   SmallVector<VPValue *> Ops0;
   auto *WideMember0 = dyn_cast<VPRecipeWithIRFlags>(Ops[0]);
   if (!WideMember0)
     return false;
   for (VPValue *V : Ops) {
-    if (!isa<VPWidenRecipe, VPWidenCastRecipe>(V))
+    if (!isa<VPWidenRecipe, VPWidenCastRecipe, VPWidenIntrinsicRecipe>(V))
       return false;
     auto *R = cast<VPRecipeWithIRFlags>(V);
     if (getOpcodeOrIntrinsicID(R) != getOpcodeOrIntrinsicID(WideMember0))
@@ -5794,7 +5795,16 @@ static bool canNarrowOps(ArrayRef<VPValue *> Ops, bool IsScalable) {
     for (VPValue *Op : Ops)
       OpsI.push_back(Op->getDefiningRecipe()->getOperand(Idx));
 
-    if (canNarrowOps(OpsI, IsScalable))
+    auto *WideIntrinsic0 = dyn_cast<VPWidenIntrinsicRecipe>(WideMember0);
+    if (WideIntrinsic0 &&
+        isVectorIntrinsicWithScalarOpAtArg(
+            WideIntrinsic0->getVectorIntrinsicID(), Idx, &TTI)) {
+      if (!all_of(OpsI, equal_to(OpsI.front())))
+        return false;
+      continue;
+    }
+
+    if (canNarrowOps(OpsI, IsScalable, TTI))
       continue;
 
     if (any_of(enumerate(OpsI), [WideMember0, Idx, IsScalable](const auto &P) {
@@ -5847,8 +5857,10 @@ isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
 
   for (ElementCount VF : VFs) {
     unsigned MinVal = VF.getKnownMinValue();
+
     unsigned GroupSize = GroupElementTy->getScalarSizeInBits() * MinVal;
-    if (IG->getFactor() == MinVal && GroupSize == GetVectorBitWidthForVF(VF))
+    if (MinVal % IG->getFactor() == 0 &&
+        GroupSize % GetVectorBitWidthForVF(VF) == 0)
       return {VF};
   }
   return std::nullopt;
@@ -5865,10 +5877,14 @@ static bool isAlreadyNarrow(VPValue *VPV) {
 // Convert the wide recipes defining the VPValues in \p Members feeding an
 // interleave group to a single narrow variant. The first member is reused as
 // the narrowed recipe. BuildVectors for live-in operands are inserted into \p
-// Preheader.
+// Preheader. \p RepeatFactor is the number of original iterations the narrowed
+// plan processes at once (VF / interleave factor); per-field live-ins are
+// repeated this many times so the assembled BuildVector spans all VF lanes.
 static VPValue *narrowInterleaveGroupOp(ArrayRef<VPValue *> Members,
                                         SmallPtrSetImpl<VPValue *> &NarrowedOps,
-                                        VPBasicBlock *Preheader) {
+                                        VPBasicBlock *Preheader,
+                                        const TargetTransformInfo &TTI,
+                                        unsigned RepeatFactor) {
   VPValue *V = Members.front();
   auto *R = V->getDefiningRecipe();
   if (NarrowedOps.contains(V))
@@ -5881,7 +5897,11 @@ static VPValue *narrowInterleaveGroupOp(ArrayRef<VPValue *> Members,
                            M->getScalarType() == V->getScalarType();
                   }) &&
            "expected distinct live-ins of matching scalar type");
-    auto *BV = new VPInstruction(VPInstruction::BuildVector, Members);
+    SmallVector<VPValue *> Vals;
+    Vals.reserve(Members.size() * RepeatFactor);
+    for (unsigned I = 0; I != RepeatFactor; ++I)
+      Vals.append(Members.begin(), Members.end());
+    auto *BV = new VPInstruction(VPInstruction::BuildVector, Vals);
     Preheader->appendRecipe(BV);
     NarrowedOps.insert(BV);
     return BV;
@@ -5890,7 +5910,7 @@ static VPValue *narrowInterleaveGroupOp(ArrayRef<VPValue *> Members,
   if (isAlreadyNarrow(V))
     return V;
 
-  if (isa<VPWidenRecipe, VPWidenCastRecipe>(R)) {
+  if (isa<VPWidenRecipe, VPWidenCastRecipe, VPWidenIntrinsicRecipe>(R)) {
     auto *WideMember0 = cast<VPRecipeWithIRFlags>(R);
     for (VPValue *Member : Members.drop_front())
       WideMember0->intersectFlags(*cast<VPRecipeWithIRFlags>(Member));
@@ -5898,8 +5918,18 @@ static VPValue *narrowInterleaveGroupOp(ArrayRef<VPValue *> Members,
       SmallVector<VPValue *> OpsI;
       for (VPValue *Member : Members)
         OpsI.push_back(Member->getDefiningRecipe()->getOperand(Idx));
-      WideMember0->setOperand(
-          Idx, narrowInterleaveGroupOp(OpsI, NarrowedOps, Preheader));
+      auto *WideIntrinsic0 = dyn_cast<VPWidenIntrinsicRecipe>(WideMember0);
+      if (WideIntrinsic0 &&
+          isVectorIntrinsicWithScalarOpAtArg(
+              WideIntrinsic0->getVectorIntrinsicID(), Idx, &TTI)) {
+        assert(all_of(OpsI, equal_to(OpsI.front())) &&
+               "scalar intrinsic operands must match");
+        WideMember0->setOperand(Idx, OpsI.front());
+        continue;
+      }
+      WideMember0->setOperand(Idx, narrowInterleaveGroupOp(OpsI, NarrowedOps,
+                                                           Preheader, TTI,
+                                                           RepeatFactor));
     }
     return V;
   }
@@ -5991,7 +6021,9 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
     // when checking all allowed consumers (store interleave groups) below.
     if (!InterleaveR)
       continue;
-
+    // Skip read interleave groups.
+    if (InterleaveR->getStoredValues().empty())
+      continue;
     // Try to find a single VF, where all interleave groups are consecutive and
     // saturate the full vector width. If we already have a candidate VF, check
     // if it is applicable for the current InterleaveR, otherwise look for a
@@ -6004,10 +6036,6 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
     if (!NarrowedVF || (VFToOptimize && NarrowedVF != VFToOptimize))
       return nullptr;
     VFToOptimize = NarrowedVF;
-
-    // Skip read interleave groups.
-    if (InterleaveR->getStoredValues().empty())
-      continue;
 
     // Narrow interleave groups, if all operands are already matching narrow
     // ops.
@@ -6035,7 +6063,7 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
     // Check if all values feeding InterleaveR are matching wide recipes, which
     // operands that can be narrowed.
     if (!canNarrowOps(InterleaveR->getStoredValues(),
-                      VFToOptimize->isScalable()))
+                      VFToOptimize->isScalable(), TTI))
       return nullptr;
     StoreGroups.push_back(InterleaveR);
   }
@@ -6043,6 +6071,12 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
   if (StoreGroups.empty())
     return nullptr;
 
+  unsigned CommonInterleaveFactor =
+      StoreGroups.front()->getInterleaveGroup()->getFactor();
+  if (any_of(StoreGroups, [CommonInterleaveFactor](auto *R) {
+        return R->getInterleaveGroup()->getFactor() != CommonInterleaveFactor;
+      }))
+    return nullptr;
   VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
   bool RequiresScalarEpilogue =
       MiddleVPBB->getNumSuccessors() == 1 &&
@@ -6065,10 +6099,16 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
   // Convert InterleaveGroup \p R to a single VPWidenLoadRecipe.
   SmallPtrSet<VPValue *, 4> NarrowedOps;
   VPBasicBlock *Preheader = Plan.getVectorPreheader();
+  // The narrowed plan processes VF / factor original iterations per vector
+  // iteration; per-field live-ins are repeated this many times when assembled
+  // into BuildVectors.
+  unsigned RepeatFactor =
+      VFToOptimize->getKnownMinValue() / CommonInterleaveFactor;
   // Narrow operation tree rooted at store groups.
   for (auto *StoreGroup : StoreGroups) {
-    VPValue *Res = narrowInterleaveGroupOp(StoreGroup->getStoredValues(),
-                                           NarrowedOps, Preheader);
+    VPValue *Res =
+        narrowInterleaveGroupOp(StoreGroup->getStoredValues(), NarrowedOps,
+                                Preheader, TTI, RepeatFactor);
     auto *SI =
         cast<StoreInst>(StoreGroup->getInterleaveGroup()->getInsertPos());
     auto *S = new VPWidenStoreRecipe(*SI, StoreGroup->getAddr(), Res, nullptr,
@@ -6087,16 +6127,11 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
 
   VPValue *UF = &Plan.getUF();
   VPValue *Step;
-  if (VFToOptimize->isScalable()) {
-    VPValue *VScale =
-        PHBuilder.createElementCount(CanIVTy, ElementCount::getScalable(1));
-    Step = PHBuilder.createOverflowingOp(Instruction::Mul, {VScale, UF},
-                                         {true, false});
-    Plan.getVF().replaceAllUsesWith(VScale);
-  } else {
-    Step = UF;
-    Plan.getVF().replaceAllUsesWith(Plan.getConstantInt(CanIVTy, 1));
-  }
+  VPValue *ScaleStep = PHBuilder.createElementCount(
+      CanIVTy, ElementCount::get(RepeatFactor, VFToOptimize->isScalable()));
+  Step = PHBuilder.createOverflowingOp(Instruction::Mul, {ScaleStep, UF},
+                                       {true, false});
+  Plan.getVF().replaceAllUsesWith(ScaleStep);
   // Materialize vector trip count with the narrowed step.
   materializeVectorTripCount(Plan, VectorPH, /*TailByMasking=*/false,
                              RequiresScalarEpilogue, Step);

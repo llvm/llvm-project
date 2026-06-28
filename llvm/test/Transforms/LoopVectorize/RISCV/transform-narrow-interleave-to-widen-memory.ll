@@ -280,54 +280,54 @@ define void @load_store_interleave_group_i32(ptr noalias %data) {
 ;
 ; EPILOGUE-LABEL: define void @load_store_interleave_group_i32(
 ; EPILOGUE-SAME: ptr noalias [[DATA:%.*]]) #[[ATTR0]] {
-; EPILOGUE-NEXT:  [[ENTRY:.*]]:
-; EPILOGUE-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; EPILOGUE-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
+; EPILOGUE-NEXT:  [[VECTOR_PH:.*]]:
+; EPILOGUE-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; EPILOGUE-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP3]], 2
 ; EPILOGUE-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 8)
 ; EPILOGUE-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 100, [[UMAX]]
-; EPILOGUE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; EPILOGUE:       [[VECTOR_PH]]:
+; EPILOGUE-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_BODY:.*]]
+; EPILOGUE:       [[VECTOR_BODY]]:
 ; EPILOGUE-NEXT:    [[TMP2:%.*]] = call i64 @llvm.vscale.i64()
 ; EPILOGUE-NEXT:    [[N_MOD_VF:%.*]] = urem i64 100, [[TMP2]]
 ; EPILOGUE-NEXT:    [[N_VEC:%.*]] = sub i64 100, [[N_MOD_VF]]
-; EPILOGUE-NEXT:    br label %[[VECTOR_BODY:.*]]
-; EPILOGUE:       [[VECTOR_BODY]]:
-; EPILOGUE-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; EPILOGUE-NEXT:    [[TMP4:%.*]] = shl nsw i64 [[INDEX]], 2
-; EPILOGUE-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[TMP4]]
-; EPILOGUE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP5]], align 8
-; EPILOGUE-NEXT:    store <vscale x 4 x i32> [[WIDE_LOAD]], ptr [[TMP5]], align 8
-; EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP2]]
-; EPILOGUE-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; EPILOGUE-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP6:![0-9]+]]
-; EPILOGUE:       [[MIDDLE_BLOCK]]:
-; EPILOGUE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 100, [[N_VEC]]
-; EPILOGUE-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
-; EPILOGUE:       [[SCALAR_PH]]:
-; EPILOGUE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; EPILOGUE-NEXT:    br label %[[LOOP:.*]]
 ; EPILOGUE:       [[LOOP]]:
-; EPILOGUE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; EPILOGUE-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[VECTOR_BODY]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
 ; EPILOGUE-NEXT:    [[MUL_2:%.*]] = shl nsw i64 [[IV]], 2
-; EPILOGUE-NEXT:    [[DATA_0:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[MUL_2]]
-; EPILOGUE-NEXT:    [[L_0:%.*]] = load i32, ptr [[DATA_0]], align 8
-; EPILOGUE-NEXT:    store i32 [[L_0]], ptr [[DATA_0]], align 8
-; EPILOGUE-NEXT:    [[ADD_1:%.*]] = or disjoint i64 [[MUL_2]], 1
+; EPILOGUE-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[MUL_2]]
+; EPILOGUE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[TMP4]], align 8
+; EPILOGUE-NEXT:    store <vscale x 4 x i32> [[WIDE_LOAD]], ptr [[TMP4]], align 8
+; EPILOGUE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[IV]], [[TMP2]]
+; EPILOGUE-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; EPILOGUE-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
+; EPILOGUE:       [[MIDDLE_BLOCK]]:
+; EPILOGUE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 100, [[N_VEC]]
+; EPILOGUE-NEXT:    br i1 [[CMP_N]], label %[[EXIT1:.*]], label %[[SCALAR_PH]]
+; EPILOGUE:       [[SCALAR_PH]]:
+; EPILOGUE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[VECTOR_PH]] ]
+; EPILOGUE-NEXT:    br label %[[LOOP1:.*]]
+; EPILOGUE:       [[LOOP1]]:
+; EPILOGUE-NEXT:    [[TMP0:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP1]] ]
+; EPILOGUE-NEXT:    [[ADD_3:%.*]] = shl nsw i64 [[TMP0]], 2
+; EPILOGUE-NEXT:    [[DATA_3:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[ADD_3]]
+; EPILOGUE-NEXT:    [[L_0:%.*]] = load i32, ptr [[DATA_3]], align 8
+; EPILOGUE-NEXT:    store i32 [[L_0]], ptr [[DATA_3]], align 8
+; EPILOGUE-NEXT:    [[ADD_1:%.*]] = or disjoint i64 [[ADD_3]], 1
 ; EPILOGUE-NEXT:    [[DATA_1:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[ADD_1]]
 ; EPILOGUE-NEXT:    [[L_1:%.*]] = load i32, ptr [[DATA_1]], align 8
 ; EPILOGUE-NEXT:    store i32 [[L_1]], ptr [[DATA_1]], align 8
-; EPILOGUE-NEXT:    [[ADD_2:%.*]] = add i64 [[MUL_2]], 2
+; EPILOGUE-NEXT:    [[ADD_2:%.*]] = add i64 [[ADD_3]], 2
 ; EPILOGUE-NEXT:    [[DATA_2:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[ADD_2]]
 ; EPILOGUE-NEXT:    [[L_2:%.*]] = load i32, ptr [[DATA_2]], align 8
 ; EPILOGUE-NEXT:    store i32 [[L_2]], ptr [[DATA_2]], align 8
-; EPILOGUE-NEXT:    [[ADD_3:%.*]] = add i64 [[MUL_2]], 3
-; EPILOGUE-NEXT:    [[DATA_3:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[ADD_3]]
-; EPILOGUE-NEXT:    [[L_3:%.*]] = load i32, ptr [[DATA_3]], align 8
-; EPILOGUE-NEXT:    store i32 [[L_3]], ptr [[DATA_3]], align 8
-; EPILOGUE-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; EPILOGUE-NEXT:    [[ADD_4:%.*]] = add i64 [[ADD_3]], 3
+; EPILOGUE-NEXT:    [[DATA_4:%.*]] = getelementptr inbounds i32, ptr [[DATA]], i64 [[ADD_4]]
+; EPILOGUE-NEXT:    [[L_3:%.*]] = load i32, ptr [[DATA_4]], align 8
+; EPILOGUE-NEXT:    store i32 [[L_3]], ptr [[DATA_4]], align 8
+; EPILOGUE-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[TMP0]], 1
 ; EPILOGUE-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 100
-; EPILOGUE-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
-; EPILOGUE:       [[EXIT]]:
+; EPILOGUE-NEXT:    br i1 [[EC]], label %[[EXIT1]], label %[[LOOP1]], !llvm.loop [[LOOP7:![0-9]+]]
+; EPILOGUE:       [[EXIT1]]:
 ; EPILOGUE-NEXT:    ret void
 ;
 entry:

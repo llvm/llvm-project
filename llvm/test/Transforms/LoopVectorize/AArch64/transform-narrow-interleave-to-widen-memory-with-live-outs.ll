@@ -32,9 +32,9 @@ define i64 @test_wide_op_live_out_constant_store_group(ptr noalias %res, ptr noa
 ; VF4:       [[VECTOR_BODY]]:
 ; VF4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VF4-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw { i64, i64 }, ptr [[RES]], i64 [[INDEX]]
-; VF4-NEXT:    store <8 x i64> zeroinitializer, ptr [[TMP0]], align 8
-; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; VF4-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
+; VF4-NEXT:    store <4 x i64> zeroinitializer, ptr [[TMP0]], align 8
+; VF4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; VF4-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INDEX_NEXT]], 98
 ; VF4-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF4:       [[MIDDLE_BLOCK]]:
 ; VF4-NEXT:    br label %[[SCALAR_PH:.*]]

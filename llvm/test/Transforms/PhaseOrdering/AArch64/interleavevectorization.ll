@@ -17,13 +17,20 @@ define void @add4(ptr noalias noundef %x, ptr noalias noundef %y, i32 noundef %n
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = or disjoint i64 [[OFFSET_IDX]], 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[Y:%.*]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i16>, ptr [[TMP0]], align 2
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[Y]], i64 [[TMP2]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[TMP0]], align 2
+; CHECK-NEXT:    [[WIDE_LOAD21:%.*]] = load <8 x i16>, ptr [[TMP4]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[X:%.*]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[WIDE_VEC24:%.*]] = load <32 x i16>, ptr [[TMP1]], align 2
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = add <32 x i16> [[WIDE_VEC24]], [[WIDE_VEC]]
-; CHECK-NEXT:    store <32 x i16> [[INTERLEAVED_VEC]], ptr [[TMP1]], align 2
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[X]], i64 [[TMP2]]
+; CHECK-NEXT:    [[WIDE_LOAD22:%.*]] = load <8 x i16>, ptr [[TMP1]], align 2
+; CHECK-NEXT:    [[WIDE_LOAD23:%.*]] = load <8 x i16>, ptr [[TMP5]], align 2
+; CHECK-NEXT:    [[TMP6:%.*]] = add <8 x i16> [[WIDE_LOAD22]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP7:%.*]] = add <8 x i16> [[WIDE_LOAD23]], [[WIDE_LOAD21]]
+; CHECK-NEXT:    store <8 x i16> [[TMP6]], ptr [[TMP1]], align 2
+; CHECK-NEXT:    store <8 x i16> [[TMP7]], ptr [[TMP5]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       for.end:
@@ -389,16 +396,26 @@ define void @addmul(ptr noalias noundef %x, ptr noundef %y, ptr noundef %z, i32 
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = or disjoint i64 [[OFFSET_IDX]], 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[Y:%.*]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <32 x i16>, ptr [[TMP0]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[Z:%.*]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[WIDE_VEC31:%.*]] = load <32 x i16>, ptr [[TMP1]], align 2
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[Y]], i64 [[TMP1]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[TMP0]], align 2
+; CHECK-NEXT:    [[WIDE_LOAD28:%.*]] = load <8 x i16>, ptr [[TMP3]], align 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[X:%.*]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    [[WIDE_VEC36:%.*]] = load <32 x i16>, ptr [[TMP2]], align 2
-; CHECK-NEXT:    [[TMP4:%.*]] = mul <32 x i16> [[WIDE_VEC31]], [[WIDE_VEC]]
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = add <32 x i16> [[TMP4]], [[WIDE_VEC36]]
-; CHECK-NEXT:    store <32 x i16> [[INTERLEAVED_VEC]], ptr [[TMP2]], align 2
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[X]], i64 [[TMP1]]
+; CHECK-NEXT:    [[WIDE_LOAD29:%.*]] = load <8 x i16>, ptr [[TMP2]], align 2
+; CHECK-NEXT:    [[WIDE_LOAD30:%.*]] = load <8 x i16>, ptr [[TMP12]], align 2
+; CHECK-NEXT:    [[TMP6:%.*]] = mul <8 x i16> [[WIDE_LOAD29]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP7:%.*]] = mul <8 x i16> [[WIDE_LOAD30]], [[WIDE_LOAD28]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[X1:%.*]], i64 [[OFFSET_IDX]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw [2 x i8], ptr [[X1]], i64 [[TMP1]]
+; CHECK-NEXT:    [[WIDE_LOAD31:%.*]] = load <8 x i16>, ptr [[TMP8]], align 2
+; CHECK-NEXT:    [[WIDE_LOAD32:%.*]] = load <8 x i16>, ptr [[TMP9]], align 2
+; CHECK-NEXT:    [[TMP10:%.*]] = add <8 x i16> [[TMP6]], [[WIDE_LOAD31]]
+; CHECK-NEXT:    [[TMP11:%.*]] = add <8 x i16> [[TMP7]], [[WIDE_LOAD32]]
+; CHECK-NEXT:    store <8 x i16> [[TMP10]], ptr [[TMP8]], align 2
+; CHECK-NEXT:    store <8 x i16> [[TMP11]], ptr [[TMP9]], align 2
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[FOR_END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       for.end:

@@ -683,33 +683,37 @@ VPInstruction *vputils::findCanonicalIVIncrement(VPlan &Plan) {
     if (!VFxUF.isMaterialized())
       return Step == &VFxUF;
 
+    // After narrowing interleave groups, the step is
+    //   ScaleStep * UF, with ScaleStep = VF / InterleaveFactor.
     VPSymbolicValue &UF = Plan.getUF();
     if (!UF.isMaterialized())
-      return Step == &UF ||
-             match(Step, m_c_Mul(m_Specific(&Plan.getUF()),
-                                 m_VPInstruction<VPInstruction::VScale>()));
+      return Step == &UF || match(Step, m_c_Mul(m_Specific(&UF), m_VPValue()));
 
     // Alias masking: step is number of active lanes of a dependence mask.
     if (match(Step, m_ZExtOrTruncOrSelf(
                         m_VPInstruction<VPInstruction::NumActiveLanes>())))
       return true;
 
+    // UF is now concrete, so the step has folded to ScaleStep * ConcreteUF.
+    // Extract its constant coefficient, treating fixed and scalable VF
+    // uniformly by ignoring any vscale factor (present only for scalable VF).
     unsigned ConcreteUF = Plan.getConcreteUF();
-    // Fixed VF: step is just the concrete UF.
-    if (match(Step, m_SpecificInt(ConcreteUF)))
-      return true;
+    uint64_t Coeff = 0;
+    if (match(Step, m_Shl(m_VPInstruction<VPInstruction::VScale>(),
+                          m_ConstantInt(Coeff))))
+      // mul(vscale, Coeff) may have been simplified to shl(vscale, log2(Coeff))
+      // when Coeff is a power of 2.
+      Coeff = uint64_t(1) << Coeff;
+    else if (match(Step, m_VPInstruction<VPInstruction::VScale>()))
+      // Bare vscale: coefficient is 1.
+      Coeff = 1;
+    else if (!match(Step, m_ConstantInt(Coeff)) &&
+             !match(Step, m_c_Mul(m_ConstantInt(Coeff),
+                                  m_VPInstruction<VPInstruction::VScale>())))
+      return false;
 
-    // Scalable VF: step involves VScale.
-    if (ConcreteUF == 1)
-      return match(Step, m_VPInstruction<VPInstruction::VScale>());
-    if (match(Step, m_c_Mul(m_SpecificInt(ConcreteUF),
-                            m_VPInstruction<VPInstruction::VScale>())))
-      return true;
-    // mul(VScale, ConcreteUF) may have been simplified to
-    // shl(VScale, log2(ConcreteUF)) when ConcreteUF is a power of 2.
-    return isPowerOf2_32(ConcreteUF) &&
-           match(Step, m_Shl(m_VPInstruction<VPInstruction::VScale>(),
-                             m_SpecificInt(Log2_32(ConcreteUF))));
+    // The step is ScaleStep * ConcreteUF.
+    return Coeff != 0 && Coeff % ConcreteUF == 0;
   };
 
   VPInstruction *Increment = nullptr;

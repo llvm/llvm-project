@@ -16,7 +16,7 @@ define dso_local void @f64_to_q15(ptr nofree noundef readonly captures(none) %pS
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP35]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP35]], 8
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP35]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP35]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP36:%.*]] = shl i64 [[N_VEC]], 5
 ; CHECK-NEXT:    [[TMP37:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[TMP36]]
@@ -31,37 +31,14 @@ define dso_local void @f64_to_q15(ptr nofree noundef readonly captures(none) %pS
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[TMP42]]
 ; CHECK-NEXT:    [[TMP43:%.*]] = shl i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[NEXT_GEP1:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[TMP43]]
-; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <32 x double>, ptr [[NEXT_GEP]], align 8, !tbaa [[DOUBLE_TBAA7:![0-9]+]]
-; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <32 x double> [[WIDE_VEC]], <32 x double> poison, <8 x i32> <i32 0, i32 4, i32 8, i32 12, i32 16, i32 20, i32 24, i32 28>
-; CHECK-NEXT:    [[STRIDED_VEC2:%.*]] = shufflevector <32 x double> [[WIDE_VEC]], <32 x double> poison, <8 x i32> <i32 1, i32 5, i32 9, i32 13, i32 17, i32 21, i32 25, i32 29>
-; CHECK-NEXT:    [[STRIDED_VEC3:%.*]] = shufflevector <32 x double> [[WIDE_VEC]], <32 x double> poison, <8 x i32> <i32 2, i32 6, i32 10, i32 14, i32 18, i32 22, i32 26, i32 30>
-; CHECK-NEXT:    [[STRIDED_VEC4:%.*]] = shufflevector <32 x double> [[WIDE_VEC]], <32 x double> poison, <8 x i32> <i32 3, i32 7, i32 11, i32 15, i32 19, i32 23, i32 27, i32 31>
-; CHECK-NEXT:    [[TMP10:%.*]] = fmul <8 x double> [[STRIDED_VEC]], splat (double 3.276800e+04)
-; CHECK-NEXT:    [[TMP11:%.*]] = fptosi <8 x double> [[TMP10]] to <8 x i32>
-; CHECK-NEXT:    [[TMP12:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> [[TMP11]], <8 x i32> splat (i32 -32768))
-; CHECK-NEXT:    [[TMP13:%.*]] = call <8 x i32> @llvm.smin.v8i32(<8 x i32> [[TMP12]], <8 x i32> splat (i32 32767))
-; CHECK-NEXT:    [[TMP14:%.*]] = trunc nsw <8 x i32> [[TMP13]] to <8 x i16>
-; CHECK-NEXT:    [[TMP15:%.*]] = fmul <8 x double> [[STRIDED_VEC2]], splat (double 3.276800e+04)
-; CHECK-NEXT:    [[TMP16:%.*]] = fptosi <8 x double> [[TMP15]] to <8 x i32>
-; CHECK-NEXT:    [[TMP17:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> [[TMP16]], <8 x i32> splat (i32 -32768))
-; CHECK-NEXT:    [[TMP18:%.*]] = call <8 x i32> @llvm.smin.v8i32(<8 x i32> [[TMP17]], <8 x i32> splat (i32 32767))
-; CHECK-NEXT:    [[TMP19:%.*]] = trunc nsw <8 x i32> [[TMP18]] to <8 x i16>
-; CHECK-NEXT:    [[TMP20:%.*]] = fmul <8 x double> [[STRIDED_VEC3]], splat (double 3.276800e+04)
-; CHECK-NEXT:    [[TMP21:%.*]] = fptosi <8 x double> [[TMP20]] to <8 x i32>
-; CHECK-NEXT:    [[TMP22:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> [[TMP21]], <8 x i32> splat (i32 -32768))
-; CHECK-NEXT:    [[TMP23:%.*]] = call <8 x i32> @llvm.smin.v8i32(<8 x i32> [[TMP22]], <8 x i32> splat (i32 32767))
-; CHECK-NEXT:    [[TMP24:%.*]] = trunc nsw <8 x i32> [[TMP23]] to <8 x i16>
+; CHECK-NEXT:    [[STRIDED_VEC4:%.*]] = load <8 x double>, ptr [[NEXT_GEP]], align 8, !tbaa [[DOUBLE_TBAA7:![0-9]+]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = fmul <8 x double> [[STRIDED_VEC4]], splat (double 3.276800e+04)
 ; CHECK-NEXT:    [[TMP26:%.*]] = fptosi <8 x double> [[TMP25]] to <8 x i32>
 ; CHECK-NEXT:    [[TMP27:%.*]] = call <8 x i32> @llvm.smax.v8i32(<8 x i32> [[TMP26]], <8 x i32> splat (i32 -32768))
 ; CHECK-NEXT:    [[TMP28:%.*]] = call <8 x i32> @llvm.smin.v8i32(<8 x i32> [[TMP27]], <8 x i32> splat (i32 32767))
 ; CHECK-NEXT:    [[TMP29:%.*]] = trunc nsw <8 x i32> [[TMP28]] to <8 x i16>
-; CHECK-NEXT:    [[TMP30:%.*]] = shufflevector <8 x i16> [[TMP14]], <8 x i16> [[TMP19]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP31:%.*]] = shufflevector <8 x i16> [[TMP24]], <8 x i16> [[TMP29]], <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEXT:    [[TMP32:%.*]] = shufflevector <16 x i16> [[TMP30]], <16 x i16> [[TMP31]], <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
-; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = shufflevector <32 x i16> [[TMP32]], <32 x i16> poison, <32 x i32> <i32 0, i32 8, i32 16, i32 24, i32 1, i32 9, i32 17, i32 25, i32 2, i32 10, i32 18, i32 26, i32 3, i32 11, i32 19, i32 27, i32 4, i32 12, i32 20, i32 28, i32 5, i32 13, i32 21, i32 29, i32 6, i32 14, i32 22, i32 30, i32 7, i32 15, i32 23, i32 31>
-; CHECK-NEXT:    store <32 x i16> [[INTERLEAVED_VEC]], ptr [[NEXT_GEP1]], align 2, !tbaa [[SHORT_TBAA9:![0-9]+]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
+; CHECK-NEXT:    store <8 x i16> [[TMP29]], ptr [[NEXT_GEP1]], align 2, !tbaa [[SHORT_TBAA9:![0-9]+]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP33:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP33]], label %[[MIDDLE_BLOCK:.*]], label %[[WHILE_BODY]], !llvm.loop [[LOOP11:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -69,13 +46,13 @@ define dso_local void @f64_to_q15(ptr nofree noundef readonly captures(none) %pS
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[WHILE_END_LOOPEXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi ptr [ [[TMP37]], %[[MIDDLE_BLOCK]] ], [ [[PSRC]], %[[WHILE_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i32 [ [[TMP39]], %[[MIDDLE_BLOCK]] ], [ [[SHR]], %[[WHILE_BODY_PREHEADER]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL6:%.*]] = phi ptr [ [[TMP41]], %[[MIDDLE_BLOCK]] ], [ [[PDST]], %[[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL2:%.*]] = phi i32 [ [[TMP39]], %[[MIDDLE_BLOCK]] ], [ [[SHR]], %[[WHILE_BODY_PREHEADER]] ]
+; CHECK-NEXT:    [[BC_RESUME_VAL3:%.*]] = phi ptr [ [[TMP41]], %[[MIDDLE_BLOCK]] ], [ [[PDST]], %[[WHILE_BODY_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[WHILE_BODY1:.*]]
 ; CHECK:       [[WHILE_BODY1]]:
 ; CHECK-NEXT:    [[PIN_068:%.*]] = phi ptr [ [[INCDEC_PTR15:%.*]], %[[WHILE_BODY1]] ], [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[BLKCNT_067:%.*]] = phi i32 [ [[DEC:%.*]], %[[WHILE_BODY1]] ], [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ]
-; CHECK-NEXT:    [[PDST_ADDR_066:%.*]] = phi ptr [ [[INCDEC_PTR20:%.*]], %[[WHILE_BODY1]] ], [ [[BC_RESUME_VAL6]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[BLKCNT_067:%.*]] = phi i32 [ [[DEC:%.*]], %[[WHILE_BODY1]] ], [ [[BC_RESUME_VAL2]], %[[SCALAR_PH]] ]
+; CHECK-NEXT:    [[PDST_ADDR_066:%.*]] = phi ptr [ [[INCDEC_PTR20:%.*]], %[[WHILE_BODY1]] ], [ [[BC_RESUME_VAL3]], %[[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[PIN_068]], i64 8
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[PIN_068]], align 8, !tbaa [[DOUBLE_TBAA7]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[TMP0]], 3.276800e+04
