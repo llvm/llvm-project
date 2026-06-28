@@ -2825,8 +2825,10 @@ MachineInstr *HexagonGlobalSchedulerImpl::MoveAndUpdateLiveness(
       OriginalInstruction->getIterator();
 
   // Remove our temporary instruction.
+  MachineBasicBlock *TempBB = InstrToMove->getParent();
+  assert(TempBB && "Temporary instruction is missing a parent block");
   MachineBasicBlock::instr_iterator kill_it(InstrToMove);
-  HomeBB->erase(kill_it);
+  TempBB->erase(kill_it);
 
   MachineBasicBlock::instr_iterator TargetHead(TargetPacket.getInstrIterator());
   MachineBasicBlock::instr_iterator TargetTail = getBundleEnd(TargetHead);
@@ -4972,24 +4974,40 @@ bool HexagonGlobalSchedulerImpl::performPullUp() {
     if (!EnableLocalPullUp && (*CurrentRegion)->size() < 2)
       continue;
 
+    // BasicBlockRegion uses a vector for MBB storage, and the region can be
+    // mutated while we are iterating (e.g. empty blocks removed). Avoid
+    // invalidated iterators by snapshotting the current block sequence first.
+    BasicBlockRegion *Region = *CurrentRegion;
+    std::vector<MachineBasicBlock *> RegionBlocks;
+    RegionBlocks.reserve(Region->size());
+    for (auto It = Region->getRootMBB(), End = Region->getLastMBB(); It != End;
+         ++It)
+      RegionBlocks.push_back(*It);
+
+    auto IsInRegion = [&](MachineBasicBlock *MBB) {
+      return Region->findMBB(MBB) != nullptr;
+    };
+
     // For all MBB in the region... except the last one.
     // ...except when we want to allow local pull-up.
-    for (auto ToThisBB = (*CurrentRegion)->getRootMBB(),
-              LastBBInRegion = (*CurrentRegion)->getLastMBB();
-         ToThisBB != LastBBInRegion; ++ToThisBB) {
+    for (size_t ToIdx = 0, ToE = RegionBlocks.size(); ToIdx != ToE; ++ToIdx) {
       // If we do not want to allow same BB pull-up, take an early exit.
-      if (!EnableLocalPullUp && (std::next(ToThisBB) == LastBBInRegion))
-        break;
-      if (multipleBranchesFromToBB(*ToThisBB))
+      if (!EnableLocalPullUp && (ToIdx + 1 == ToE))
         break;
 
-      auto FromThisBB = ToThisBB;
-      MachineBasicBlock::iterator ToThisBBEnd = (*ToThisBB)->end();
-      MachineBasicBlock::iterator MI = (*ToThisBB)->begin();
+      MachineBasicBlock *ToBB = RegionBlocks[ToIdx];
+      if (!IsInRegion(ToBB))
+        continue;
+      if (multipleBranchesFromToBB(ToBB))
+        break;
+
+      size_t FromIdx = ToIdx;
+      MachineBasicBlock::iterator ToThisBBEnd = ToBB->end();
+      MachineBasicBlock::iterator MI = ToBB->begin();
 
       LLVM_DEBUG(dbgs() << "\n\tHome iterator moved to new BB("
-                        << (*ToThisBB)->getNumber() << ")\n";
-                 (*ToThisBB)->dump());
+                        << ToBB->getNumber() << ")\n";
+                 ToBB->dump());
 
       // For all instructions in the BB.
       while (MI != ToThisBBEnd) {
@@ -4999,8 +5017,8 @@ bool HexagonGlobalSchedulerImpl::performPullUp() {
         // Trivial check that there are unused resources
         // in the current location (cycle).
         while (ResourcesAvailableInBundle(*CurrentRegion, WorkPoint)) {
-          LLVM_DEBUG(dbgs() << "\nxxxx Next Home in BB("
-                            << (*ToThisBB)->getNumber() << "):\n";
+          LLVM_DEBUG(dbgs() << "\nxxxx Next Home in BB(" << ToBB->getNumber()
+                            << "):\n";
                      DumpPacket(WorkPoint.getInstrIterator()));
           // Keep the path to the candidate.
           // It is the traveled path between home and work point.
@@ -5014,10 +5032,10 @@ bool HexagonGlobalSchedulerImpl::performPullUp() {
           // so it is safe to always begin with the next BB in the region.
           // Start from "next" BB in the region.
           if (EnableLocalPullUp) {
-            FromThisBB = ToThisBB;
+            FromIdx = ToIdx;
             FromHere = WorkPoint;
             ++FromHere;
-            FromThisBBEnd = (*FromThisBB)->end();
+            FromThisBBEnd = ToBB->end();
 
             // Initialize backtrack.
             // These are instructions between Home location
@@ -5026,10 +5044,15 @@ bool HexagonGlobalSchedulerImpl::performPullUp() {
                  I != IE; ++I)
               backtrack.push_back(&*I);
           } else {
-            FromThisBB = ToThisBB;
-            ++FromThisBB;
-            FromHere = (*FromThisBB)->begin();
-            FromThisBBEnd = (*FromThisBB)->end();
+            FromIdx = ToIdx + 1;
+            while (FromIdx < ToE && !IsInRegion(RegionBlocks[FromIdx]))
+              ++FromIdx;
+            if (FromIdx >= ToE)
+              break;
+
+            MachineBasicBlock *FromBB = RegionBlocks[FromIdx];
+            FromHere = FromBB->begin();
+            FromThisBBEnd = FromBB->end();
 
             // Initialize backtrack.
             // These are instructions between Home location
@@ -5044,20 +5067,19 @@ bool HexagonGlobalSchedulerImpl::performPullUp() {
             // If this BB is over, move onto the next one
             // in this region.
             if (FromHere == FromThisBBEnd) {
-              ++FromThisBB;
-              // Refresh LastBBInRegion in case tryMultipleInstructions modified
-              // the regions Elements vector, invalidating the iterator.
-              LastBBInRegion = (*CurrentRegion)->getLastMBB();
-              if (FromThisBB == LastBBInRegion)
+              ++FromIdx;
+              while (FromIdx < ToE && !IsInRegion(RegionBlocks[FromIdx]))
+                ++FromIdx;
+              if (FromIdx >= ToE)
                 break;
-              else {
-                LLVM_DEBUG(dbgs() << "\n\tNext BB in this region\n";
-                           (*FromThisBB)->dump());
-                FromThisBBEnd = (*FromThisBB)->end();
-                FromHere = (*FromThisBB)->begin();
-                if (FromThisBBEnd == FromHere)
-                  break;
-              }
+
+              MachineBasicBlock *FromBB = RegionBlocks[FromIdx];
+              LLVM_DEBUG(dbgs() << "\n\tNext BB in this region\n";
+                         FromBB->dump());
+              FromThisBBEnd = FromBB->end();
+              FromHere = FromBB->begin();
+              if (FromThisBBEnd == FromHere)
+                break;
             }
             if ((*FromHere).isDebugInstr()) {
               ++FromHere;
@@ -5076,8 +5098,6 @@ bool HexagonGlobalSchedulerImpl::performPullUp() {
             break;
         }
       }
-      // Refresh LastBBInRegion after potential CFG modifications.
-      LastBBInRegion = (*CurrentRegion)->getLastMBB();
     }
     // AllowUnlikelyPath is on by default,
     // if we wish to disable it, we can do so here.
