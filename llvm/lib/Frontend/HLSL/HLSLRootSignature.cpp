@@ -21,7 +21,7 @@ namespace rootsig {
 
 template <typename T>
 static raw_ostream &printFlags(raw_ostream &OS, const T Value,
-                               ArrayRef<EnumEntry<T>> Flags) {
+                               EnumStrings<T> Flags) {
   bool FlagSet = false;
   unsigned Remaining = llvm::to_underlying(Value);
   while (Remaining) {
@@ -30,7 +30,7 @@ static raw_ostream &printFlags(raw_ostream &OS, const T Value,
       if (FlagSet)
         OS << " | ";
 
-      StringRef MaybeFlag = enumToStringRef(T(Bit), Flags);
+      StringRef MaybeFlag = Flags.toString(T(Bit));
       if (!MaybeFlag.empty())
         OS << MaybeFlag;
       else
@@ -61,35 +61,35 @@ static raw_ostream &operator<<(raw_ostream &OS, const Register &Reg) {
 
 static raw_ostream &operator<<(raw_ostream &OS,
                                const llvm::dxbc::ShaderVisibility &Visibility) {
-  OS << enumToStringRef(Visibility, dxbc::getShaderVisibility());
+  OS << dxbc::getShaderVisibility().toString(Visibility);
 
   return OS;
 }
 
 static raw_ostream &operator<<(raw_ostream &OS,
                                const llvm::dxbc::SamplerFilter &Filter) {
-  OS << enumToStringRef(Filter, dxbc::getSamplerFilters());
+  OS << dxbc::getSamplerFilters().toString(Filter);
 
   return OS;
 }
 
 static raw_ostream &operator<<(raw_ostream &OS,
                                const dxbc::TextureAddressMode &Address) {
-  OS << enumToStringRef(Address, dxbc::getTextureAddressModes());
+  OS << dxbc::getTextureAddressModes().toString(Address);
 
   return OS;
 }
 
 static raw_ostream &operator<<(raw_ostream &OS,
                                const dxbc::ComparisonFunc &CompFunc) {
-  OS << enumToStringRef(CompFunc, dxbc::getComparisonFuncs());
+  OS << dxbc::getComparisonFuncs().toString(CompFunc);
 
   return OS;
 }
 
 static raw_ostream &operator<<(raw_ostream &OS,
                                const dxbc::StaticBorderColor &BorderColor) {
-  OS << enumToStringRef(BorderColor, dxbc::getStaticBorderColors());
+  OS << dxbc::getStaticBorderColors().toString(BorderColor);
 
   return OS;
 }
