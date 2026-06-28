@@ -4383,7 +4383,7 @@ void GNUELFDumper<ELFT>::printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
       SymbolType >= ELF::STT_LOOS && SymbolType < ELF::STT_HIOS)
     Fields[3].Str = enumToString(SymbolType, ArrayRef(AMDGPUSymbolTypes));
   else
-    Fields[3].Str = enumToString(SymbolType, ArrayRef(ElfSymbolTypes));
+    Fields[3].Str = getElfSymbolTypes().toStringOrHex(SymbolType, 1);
 
   Fields[4].Str =
       enumToString(Symbol.getBinding(), ArrayRef(ElfSymbolBindings));
@@ -4448,7 +4448,7 @@ void GNUELFDumper<ELFT>::printHashedSymbol(const Elf_Sym *Symbol,
       SymbolType >= ELF::STT_LOOS && SymbolType < ELF::STT_HIOS)
     Fields[4].Str = enumToString(SymbolType, ArrayRef(AMDGPUSymbolTypes));
   else
-    Fields[4].Str = enumToString(SymbolType, ArrayRef(ElfSymbolTypes));
+    Fields[4].Str = getElfSymbolTypes().toStringOrHex(SymbolType, 1);
 
   Fields[5].Str =
       enumToString(Symbol->getBinding(), ArrayRef(ElfSymbolBindings));
@@ -7403,7 +7403,7 @@ void GNUELFDumper<ELFT>::printMipsGOT(const MipsGOTParser<ELFT> &Parser) {
       OS.PadToColumn(31 + 2 * Bias);
       OS << to_string(format_hex_no_prefix(Sym.st_value, 8 + Bias));
       OS.PadToColumn(40 + 3 * Bias);
-      OS << enumToString(Sym.getType(), ArrayRef(ElfSymbolTypes));
+      OS << getElfSymbolTypes().toStringOrHex(Sym.getType(), 1);
       OS.PadToColumn(48 + 3 * Bias);
       OS << getSymbolSectionNdx(Sym, &Sym - this->dynamic_symbols().begin(),
                                 ShndxTable);
@@ -7457,7 +7457,7 @@ void GNUELFDumper<ELFT>::printMipsPLT(const MipsGOTParser<ELFT> &Parser) {
       OS.PadToColumn(20 + 2 * Bias);
       OS << to_string(format_hex_no_prefix(Sym.st_value, 8 + Bias));
       OS.PadToColumn(29 + 3 * Bias);
-      OS << enumToString(Sym.getType(), ArrayRef(ElfSymbolTypes));
+      OS << getElfSymbolTypes().toStringOrHex(Sym.getType(), 1);
       OS.PadToColumn(37 + 3 * Bias);
       OS << getSymbolSectionNdx(Sym, &Sym - this->dynamic_symbols().begin(),
                                 ShndxTable);
@@ -7903,7 +7903,7 @@ void LLVMELFDumper<ELFT>::printSymbol(const Elf_Sym &Symbol, unsigned SymIndex,
       SymbolType >= ELF::STT_LOOS && SymbolType < ELF::STT_HIOS)
     W.printEnum("Type", SymbolType, ArrayRef(AMDGPUSymbolTypes));
   else
-    W.printEnum("Type", SymbolType, ArrayRef(ElfSymbolTypes));
+    W.printEnum("Type", SymbolType, getElfSymbolTypes());
   if (Symbol.st_other == 0)
     printZeroSymbolOtherField(Symbol);
   else
@@ -8828,7 +8828,7 @@ void LLVMELFDumper<ELFT>::printMipsGOT(const MipsGOTParser<ELFT> &Parser) {
 
       const Elf_Sym &Sym = *Parser.getGotSym(&E);
       W.printHex("Value", Sym.st_value);
-      W.printEnum("Type", Sym.getType(), ArrayRef(ElfSymbolTypes));
+      W.printEnum("Type", Sym.getType(), getElfSymbolTypes());
 
       const unsigned SymIndex = &Sym - this->dynamic_symbols().begin();
       DataRegion<Elf_Word> ShndxTable(
@@ -8878,7 +8878,7 @@ void LLVMELFDumper<ELFT>::printMipsPLT(const MipsGOTParser<ELFT> &Parser) {
 
       const Elf_Sym &Sym = *Parser.getPltSym(&E);
       W.printHex("Value", Sym.st_value);
-      W.printEnum("Type", Sym.getType(), ArrayRef(ElfSymbolTypes));
+      W.printEnum("Type", Sym.getType(), getElfSymbolTypes());
       printSymbolSection(Sym, &Sym - this->dynamic_symbols().begin(),
                          ShndxTable);
 
