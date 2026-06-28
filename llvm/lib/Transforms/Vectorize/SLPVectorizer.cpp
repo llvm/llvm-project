@@ -28942,8 +28942,8 @@ class HorizontalReduction {
     if (!VecTy || !VecTy->getElementType()->isIntegerTy())
       return nullptr;
 
-    auto Lowering = getBestReductionZeroTestLowering(
-        TTI, VecTy, ZeroTest->Pred, TTI::TCK_RecipThroughput);
+    auto Lowering = getBestReductionZeroTestLowering(TTI, VecTy, ZeroTest->Pred,
+                                                     TTI::TCK_RecipThroughput);
     if (!Lowering)
       return nullptr;
 
