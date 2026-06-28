@@ -46,6 +46,9 @@
 .insn qc.ei 126, 7, 3, x31, 0x1000000(not_a_reg)
 # CHECK-ERR: [[@LINE-1]]:39: error: expected register
 
+.insn qc.ei 126, 7, 3, x31, 0x1000000(x31), extra
+# CHECK-ERR: [[@LINE-1]]:45: error: invalid operand for instruction
+
 .insn qc.eb 128, 0, 0, x0, 0, 0
 # CHECK-ERR: [[@LINE-1]]:13: error: opcode must be a valid opcode name or an immediate in the range [0, 127]
 
@@ -103,3 +106,6 @@
 
 .insn qc.es 127, 7, 3, x31, 0x1000000(not_a_reg)
 # CHECK-ERR: [[@LINE-1]]:39: error: expected register
+
+.insn qc.es 127, 7, 3, x31, 0x1000000(x31), extra
+# CHECK-ERR: [[@LINE-1]]:45: error: invalid operand for instruction
