@@ -41,3 +41,38 @@ entry:
 }
 
 declare i32 @i(ptr byval(%struct.p) align 4, i32)
+
+; The data on the stack overlaps with the space used to pass arguments to the tail call. To prevent
+; stepping on our own tail, the byval argument should pass through a temporary in the stack frame.
+define i32 @overlap_forward(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, ptr byval(%struct.p) align 8 %q, i64 %pad) nounwind {
+; CHECK-SD-LABEL: overlap_forward:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    sub sp, sp, #48
+; CHECK-SD-NEXT:    ldp q0, q1, [sp, #48]
+; CHECK-SD-NEXT:    mov w8, #99 // =0x63
+; CHECK-SD-NEXT:    ldr q2, [sp, #80]
+; CHECK-SD-NEXT:    stp q0, q1, [sp]
+; CHECK-SD-NEXT:    str q2, [sp, #32]
+; CHECK-SD-NEXT:    stur q0, [sp, #56]
+; CHECK-SD-NEXT:    stur q1, [sp, #72]
+; CHECK-SD-NEXT:    stur q2, [sp, #88]
+; CHECK-SD-NEXT:    str x8, [sp, #48]!
+; CHECK-SD-NEXT:    b overlap_callee
+;
+; CHECK-GI-LABEL: overlap_forward:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    mov w8, #99 // =0x63
+; CHECK-GI-NEXT:    str x8, [sp]
+; CHECK-GI-NEXT:    ldr q0, [sp]
+; CHECK-GI-NEXT:    stur q0, [sp, #8]
+; CHECK-GI-NEXT:    ldr q0, [sp, #16]
+; CHECK-GI-NEXT:    stur q0, [sp, #24]
+; CHECK-GI-NEXT:    ldr q0, [sp, #32]
+; CHECK-GI-NEXT:    stur q0, [sp, #40]
+; CHECK-GI-NEXT:    b overlap_callee
+entry:
+  %call = tail call i32 @overlap_callee(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, i64 99, ptr byval(%struct.p) align 8 %q) nounwind
+  ret i32 %call
+}
+
+declare i32 @overlap_callee(i64, i64, i64, i64, i64, i64, i64, i64, i64, ptr byval(%struct.p) align 8)
