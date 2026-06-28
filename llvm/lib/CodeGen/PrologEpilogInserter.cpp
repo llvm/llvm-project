@@ -1251,8 +1251,11 @@ void PEIImpl::insertZeroCallUsedRegs(MachineFunction &MF) {
 
           MCRegister Reg = MO.getReg();
           if (AllocatableSet[Reg.id()] && !MO.isImplicit() &&
-              (MO.isDef() || MO.isUse()))
-            UsedRegs.set(Reg.id());
+              (MO.isDef() || MO.isUse())) {
+            BitVector BackingRegisters = TRI.getUnderlyingRegisters(Reg);
+            for (MCRegister PhysicalReg : BackingRegisters.set_bits())
+              UsedRegs.set(PhysicalReg.id());
+          }
         }
       }
 

@@ -281,4 +281,59 @@ entry:
   ret double %mul
 }
 
+define double @used_zdinx(double noundef %a, double noundef %b, float noundef %c) #1 "zero-call-used-regs"="used" {
+; 64-BITS-LABEL: used_zdinx:
+; 64-BITS:       # %bb.0: # %entry
+; 64-BITS-NEXT:    fmul.d a0, a0, a1
+; 64-BITS-NEXT:    fcvt.d.s a1, a2
+; 64-BITS-NEXT:    fmul.d a0, a0, a1
+; 64-BITS-NEXT:    li a1, 0
+; 64-BITS-NEXT:    li a2, 0
+; 64-BITS-NEXT:    ret
+;
+; 32-BITS-LABEL: used_zdinx:
+; 32-BITS:       # %bb.0: # %entry
+; 32-BITS-NEXT:    fmul.d a0, a0, a2
+; 32-BITS-NEXT:    fcvt.d.s a2, a4
+; 32-BITS-NEXT:    fmul.d a0, a0, a2
+; 32-BITS-NEXT:    li a2, 0
+; 32-BITS-NEXT:    li a3, 0
+; 32-BITS-NEXT:    li a4, 0
+; 32-BITS-NEXT:    ret
+
+entry:
+  %conv = fpext float %c to double
+  %mul1 = fmul double %a, %b
+  %mul2 = fmul double %mul1, %conv
+  ret double %mul2
+}
+
+define double @used_arg_zdinx(double noundef %a, double noundef %b, float noundef %c) #1 "zero-call-used-regs"="used-arg" {
+; 64-BITS-LABEL: used_arg_zdinx:
+; 64-BITS:       # %bb.0: # %entry
+; 64-BITS-NEXT:    fmul.d a0, a0, a1
+; 64-BITS-NEXT:    fcvt.d.s a1, a2
+; 64-BITS-NEXT:    fmul.d a0, a0, a1
+; 64-BITS-NEXT:    li a1, 0
+; 64-BITS-NEXT:    li a2, 0
+; 64-BITS-NEXT:    ret
+;
+; 32-BITS-LABEL: used_arg_zdinx:
+; 32-BITS:       # %bb.0: # %entry
+; 32-BITS-NEXT:    fmul.d a0, a0, a2
+; 32-BITS-NEXT:    fcvt.d.s a2, a4
+; 32-BITS-NEXT:    fmul.d a0, a0, a2
+; 32-BITS-NEXT:    li a2, 0
+; 32-BITS-NEXT:    li a3, 0
+; 32-BITS-NEXT:    li a4, 0
+; 32-BITS-NEXT:    ret
+
+entry:
+  %conv = fpext float %c to double
+  %mul1 = fmul double %a, %b
+  %mul2 = fmul double %mul1, %conv
+  ret double %mul2
+}
+
 attributes #0 = { "target-cpu"="generic" "target-features"="+m,+f,+d" }
+attributes #1 = { "target-cpu"="generic" "target-features"="+m,+zdinx" }

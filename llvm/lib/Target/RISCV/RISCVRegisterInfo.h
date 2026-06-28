@@ -184,6 +184,8 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
            RISCV::FPR64RegClass.contains(Reg) ||
            RISCV::FPR128RegClass.contains(Reg);
   }
+
+  BitVector getUnderlyingRegisters(MCRegister Reg) const override;
 };
 } // namespace llvm
 
