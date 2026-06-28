@@ -61,6 +61,7 @@
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <cctype>
+#include <iterator>
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -2248,6 +2249,119 @@ void Clang::AddX86TargetArgs(const ArgList &Args,
   }
 }
 
+static StringRef getOptionName(StringRef Option, const char Delimiter = '=') {
+  size_t Index = Option.find(Delimiter);
+  if (Index != StringRef::npos)
+    Option = Option.substr(0, Index);
+  return Option;
+}
+
+static void checkAndRemoveLLVMArg(ArgStringList &CmdArgs, StringRef Opt) {
+  Opt = getOptionName(Opt);
+  if (CmdArgs.size() < 2)
+    return;
+
+  for (auto It = std::next(CmdArgs.begin()); It != CmdArgs.end(); ++It) {
+    StringRef Option = *It;
+    if (!Option.starts_with(Opt))
+      continue;
+    Option = getOptionName(Option);
+    if (Option != Opt)
+      continue;
+    if (StringRef(*(It - 1)) != "-mllvm")
+      continue;
+
+    It = CmdArgs.erase(It);
+    CmdArgs.erase(It - 1);
+    return;
+  }
+}
+
+static void pushBackLLVMArg(ArgStringList &CmdArgs, const char *A) {
+  checkAndRemoveLLVMArg(CmdArgs, A);
+  CmdArgs.push_back("-mllvm");
+  CmdArgs.push_back(A);
+}
+
+static void addQFloatLossyFastMathArgs(ArgStringList &CmdArgs) {
+  for (auto It = CmdArgs.begin(), Ie = CmdArgs.end(); It != Ie;) {
+    StringRef Option = *It;
+    if (Option == "-fmath-errno" || Option == "-ffp-contract=on") {
+      It = CmdArgs.erase(It);
+      Ie = CmdArgs.end();
+    } else {
+      ++It;
+    }
+  }
+
+  CmdArgs.push_back("-menable-no-infs");
+  CmdArgs.push_back("-menable-no-nans");
+  CmdArgs.push_back("-fapprox-func");
+  CmdArgs.push_back("-funsafe-math-optimizations");
+  CmdArgs.push_back("-fno-signed-zeros");
+  CmdArgs.push_back("-mreassociate");
+  CmdArgs.push_back("-freciprocal-math");
+  CmdArgs.push_back("-ffp-contract=fast");
+  CmdArgs.push_back("-ffast-math");
+  CmdArgs.push_back("-ffinite-math-only");
+  CmdArgs.push_back("-D__FAST_MATH__");
+  pushBackLLVMArg(CmdArgs, "-fast-math=true");
+}
+
+static void addQFloatBackendArg(const Driver &D, const ArgList &Args,
+                                ArgStringList &CmdArgs) {
+  auto HvxVerOpt = toolchains::HexagonToolChain::GetHVXVersion(Args);
+  bool HasHVX = HvxVerOpt.has_value();
+  std::string HvxVer = HasHVX ? *HvxVerOpt : std::string();
+  if (!Args.hasArg(options::OPT_mhexagon_hvx, options::OPT_mhexagon_hvx_EQ,
+                   options::OPT_mhexagon_hvx_ieee_fp) ||
+      !HasHVX)
+    return;
+  unsigned HvxVerNum = 0;
+  if (StringRef(HvxVer).drop_front(1).getAsInteger(10, HvxVerNum))
+    HvxVerNum = 0;
+
+  if (Arg *A = Args.getLastArg(options::OPT_mhexagon_hvx_qfloat,
+                               options::OPT_mhexagon_hvx_qfloat_EQ,
+                               options::OPT_mhexagon_hvx_ieee_fp)) {
+    if (HvxVerNum >= 79) {
+      if (A->getOption().matches(options::OPT_mhexagon_hvx_qfloat_EQ)) {
+        const char *Mode =
+            llvm::StringSwitch<const char *>(StringRef(A->getValue()).lower())
+                .Case("strict-ieee", "-hexagon-qfloat-mode=strict-ieee")
+                .Case("ieee", "-hexagon-qfloat-mode=ieee")
+                .Case("lossy", "-hexagon-qfloat-mode=lossy")
+                .Case("legacy", "-hexagon-qfloat-mode=legacy")
+                .Default(nullptr);
+        if (!Mode) {
+          D.Diag(diag::err_drv_invalid_value)
+              << A->getAsString(Args) << A->getValue();
+          return;
+        }
+        pushBackLLVMArg(CmdArgs, Mode);
+        if (strcmp(Mode, "-hexagon-qfloat-mode=lossy") == 0)
+          addQFloatLossyFastMathArgs(CmdArgs);
+      } else if (A->getOption().matches(options::OPT_mhexagon_hvx_qfloat)) {
+        pushBackLLVMArg(CmdArgs, "-hexagon-qfloat-mode=lossy");
+        addQFloatLossyFastMathArgs(CmdArgs);
+      } else {
+        pushBackLLVMArg(CmdArgs, "-hexagon-qfloat-mode=ieee");
+      }
+    } else {
+      if (Arg *QFloatArg = Args.getLastArg(options::OPT_mhexagon_hvx_qfloat,
+                                           options::OPT_mhexagon_hvx_qfloat_EQ,
+                                           options::OPT_mno_hexagon_hvx_qfloat);
+          QFloatArg &&
+          QFloatArg->getOption().matches(options::OPT_mhexagon_hvx_qfloat_EQ)) {
+        D.Diag(diag::warn_drv_unsupported_option_part_for_target)
+            << QFloatArg->getValue() << QFloatArg->getAsString(Args)
+            << (std::string("HVX ") + HvxVer +
+                "; falling back to legacy qfloat mode");
+      }
+    }
+  }
+}
+
 void Clang::AddHexagonTargetArgs(const ArgList &Args,
                                  ArgStringList &CmdArgs) const {
   CmdArgs.push_back("-mqdsp6-compat");
@@ -2267,6 +2381,8 @@ void Clang::AddHexagonTargetArgs(const ArgList &Args,
   }
   CmdArgs.push_back("-mllvm");
   CmdArgs.push_back("-machine-sink-split=0");
+
+  addQFloatBackendArg(getToolChain().getDriver(), Args, CmdArgs);
 }
 
 void Clang::AddLanaiTargetArgs(const ArgList &Args,

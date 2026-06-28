@@ -10179,11 +10179,6 @@ Logger &cxindex::Logger::operator<<(CXString Str) {
   return *this;
 }
 
-Logger &cxindex::Logger::operator<<(const llvm::format_object_base &Fmt) {
-  LogOS << Fmt;
-  return *this;
-}
-
 static llvm::ManagedStatic<std::mutex> LoggingMutex;
 
 cxindex::Logger::~Logger() {

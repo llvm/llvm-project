@@ -7040,6 +7040,9 @@ def mhexagon_hvx_length_EQ : Joined<["-"], "mhvx-length=">,
 def mhexagon_hvx_qfloat : Flag<["-"], "mhvx-qfloat">,
   Group<m_hexagon_Features_HVX_Group>,
   HelpText<"Enable Hexagon HVX QFloat instructions">;
+def mhexagon_hvx_qfloat_EQ : Joined<["-"], "mhvx-qfloat=">,
+  Group<m_hexagon_Features_HVX_Group>,
+  HelpText<"Enable Hexagon HVX QFloat instructions with mode: strict-ieee, ieee, lossy, legacy (v79+)">;
 def mno_hexagon_hvx_qfloat : Flag<["-"], "mno-hvx-qfloat">,
   Group<m_hexagon_Features_HVX_Group>,
   HelpText<"Disable Hexagon HVX QFloat instructions">;

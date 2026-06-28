@@ -68,10 +68,9 @@ void test_unsigned_65() {
 }
 #  endif
 
-// Byte-aligned widths whose value bits don't fill the object representation.
-// On platforms where sizeof(_BitInt(N)) rounds up to a power of two, these
-// types have padding bits in the high-order storage positions even though
-// their value width is a multiple of CHAR_BIT.
+// Byte-aligned widths whose value bits don't fill the object representation,
+// so the high-order storage holds padding bits even though the value width is
+// a multiple of CHAR_BIT.
 void test_unsigned_24() {
   // sizeof(_BitInt(24)) == 4 on x86_64; 8 padding bits.
   unsigned _BitInt(24) v = 0;
@@ -114,9 +113,12 @@ void test_unsigned_80() {
 }
 #    endif
 
-#    if __BITINT_MAXWIDTH__ >= 96
+// 32-bit x86 packs _BitInt(96) into 12 bytes (no padding), so std::byteswap
+// accepts it there; gate the case out. sizeof isn't available to the
+// preprocessor, so this is a target check rather than a has-padding predicate.
+#    if __BITINT_MAXWIDTH__ >= 96 && !defined(__i386__)
 void test_unsigned_96() {
-  // sizeof(_BitInt(96)) == 16 on x86_64; 32 padding bits.
+  // sizeof(_BitInt(96)) == 16 here; 32 padding bits.
   unsigned _BitInt(96) v = 0;
   // expected-error-re@*:* {{{{(std::byteswap requires T to have no padding bits|byteswap is unimplemented for integral types of this size)}}}}
   (void)std::byteswap(v);

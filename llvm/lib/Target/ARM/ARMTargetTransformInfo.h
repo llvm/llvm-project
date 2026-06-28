@@ -278,7 +278,8 @@ public:
     llvm_unreachable("Unsupported register kind");
   }
 
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override {
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override {
     return ST->getMaxInterleaveFactor();
   }
 

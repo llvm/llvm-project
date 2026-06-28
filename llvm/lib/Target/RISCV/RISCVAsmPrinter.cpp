@@ -51,10 +51,6 @@ using namespace llvm;
 STATISTIC(RISCVNumInstrsCompressed,
           "Number of RISC-V Compressed instructions emitted");
 
-namespace llvm {
-extern const SubtargetFeatureKV RISCVFeatureKV[RISCV::NumSubtargetFeatures];
-} // namespace llvm
-
 namespace {
 class RISCVAsmPrinter : public AsmPrinter {
 public:
@@ -531,16 +527,16 @@ bool RISCVAsmPrinter::emitDirectiveOptionArch() {
   RISCVTargetStreamer &RTS = getTargetStreamer();
   SmallVector<RISCVOptionArchArg> NeedEmitStdOptionArgs;
   const MCSubtargetInfo &MCSTI = TM.getMCSubtargetInfo();
-  for (const auto &Feature : RISCVFeatureKV) {
+  for (const auto &Feature : MCSTI.getAllProcessorFeatures()) {
     if (STI->hasFeature(Feature.Value) == MCSTI.hasFeature(Feature.Value))
       continue;
 
-    if (!llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.Key))
+    if (!llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.key()))
       continue;
 
     auto Delta = STI->hasFeature(Feature.Value) ? RISCVOptionArchArgType::Plus
                                                 : RISCVOptionArchArgType::Minus;
-    StringRef ExtName = Feature.Key;
+    StringRef ExtName = Feature.key();
     ExtName.consume_front("experimental-");
     NeedEmitStdOptionArgs.emplace_back(Delta, ExtName.str());
   }
@@ -642,10 +638,10 @@ void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
             /*ExperimentalExtensionVersionCheck=*/true);
         if (!errorToBool(ParseResult.takeError())) {
           auto &ISAInfo = *ParseResult;
-          for (const auto &Feature : RISCVFeatureKV) {
-            if (ISAInfo->hasExtension(Feature.Key) &&
+          for (const auto &Feature : SubtargetInfo.getAllProcessorFeatures()) {
+            if (ISAInfo->hasExtension(Feature.key()) &&
                 !SubtargetInfo.hasFeature(Feature.Value))
-              SubtargetInfo.ToggleFeature(Feature.Key);
+              SubtargetInfo.ToggleFeature(Feature.key());
           }
         }
       }

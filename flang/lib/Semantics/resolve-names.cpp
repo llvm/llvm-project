@@ -2186,29 +2186,39 @@ void OmpVisitor::ProcessReductionSpecifier(
 }
 
 void OmpVisitor::ResolveCriticalName(const parser::OmpArgument &arg) {
-  auto &globalScope{[&]() -> Scope & {
-    for (Scope *s{&currScope()};; s = &s->parent()) {
-      if (s->IsTopLevel()) {
-        return *s;
-      }
-    }
-    llvm_unreachable("Cannot find global scope");
-  }()};
+  auto *object{parser::Unwrap<parser::OmpObject>(arg.u)};
+  if (!object) {
+    return;
+  }
 
-  if (auto *object{parser::Unwrap<parser::OmpObject>(arg.u)}) {
-    if (auto *desg{parser::omp::GetDesignatorFromObj(*object)}) {
-      if (auto *name{parser::GetDesignatorNameIfDataRef(*desg)}) {
-        if (auto *symbol{FindInScope(globalScope, *name)}) {
-          if (!symbol->test(Symbol::Flag::OmpCriticalLock)) {
-            SayWithDecl(*name, *symbol,
-                "CRITICAL construct name '%s' conflicts with a previous declaration"_warn_en_US,
-                name->ToString());
-          }
-        } else {
-          name->symbol = &MakeSymbol(globalScope, name->source, Attrs{});
-          name->symbol->set(Symbol::Flag::OmpCriticalLock);
-        }
+  const parser::Name *name{common::visit( //
+      common::visitors{//
+          [&](const parser::Designator &x) -> const parser::Name * {
+            return parser::GetDesignatorNameIfDataRef(x);
+          },
+          [&](const parser::OmpLocator &x) -> const parser::Name * {
+            if (auto *res{std::get_if<parser::OmpReservedIdentifier>(&x.u)}) {
+              return &res->v;
+            }
+            return nullptr;
+          },
+          [&](const parser::Name &) -> const parser::Name * { return nullptr; },
+          [&](const parser::OmpObject::Invalid &) -> const parser::Name * {
+            return nullptr;
+          }},
+      object->u)};
+
+  if (name) {
+    if (auto *symbol{FindInScope(context().globalScope(), *name)}) {
+      if (!symbol->test(Symbol::Flag::OmpCriticalLock)) {
+        SayWithDecl(*name, *symbol,
+            "CRITICAL construct name '%s' conflicts with a previous declaration"_warn_en_US,
+            name->ToString());
       }
+    } else {
+      name->symbol =
+          &MakeSymbol(context().globalScope(), name->source, Attrs{});
+      name->symbol->set(Symbol::Flag::OmpCriticalLock);
     }
   }
 }

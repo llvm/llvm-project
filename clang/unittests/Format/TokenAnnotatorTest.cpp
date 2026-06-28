@@ -445,6 +445,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   ASSERT_EQ(Tokens.size(), 30u) << Tokens;
   EXPECT_TOKEN(Tokens[18], tok::star, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[19], tok::identifier, TT_StartOfName);
+
+  Tokens = annotate("foo ? a < b && c : bar");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::ampamp, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[6], tok::identifier, TT_Unknown); // Not TT_StartOfName
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
@@ -4219,10 +4224,6 @@ TEST_F(TokenAnnotatorTest, CppAltOperatorKeywords) {
   Tokens = annotate("a = b xor_eq c;");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::caretequal, TT_BinaryOperator);
-
-  Tokens = annotate("if (a and b) {}");
-  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
-  EXPECT_TOKEN(Tokens[3], tok::ampamp, TT_BinaryOperator);
 
   const auto StyleC = getLLVMStyle(FormatStyle::LK_C);
 

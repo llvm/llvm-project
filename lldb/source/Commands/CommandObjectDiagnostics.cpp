@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "CommandObjectDiagnostics.h"
+#include "lldb/Core/Debugger.h"
+#include "lldb/Core/Diagnostics.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -14,7 +16,6 @@
 #include "lldb/Interpreter/OptionValueEnumeration.h"
 #include "lldb/Interpreter/OptionValueUInt64.h"
 #include "lldb/Interpreter/Options.h"
-#include "lldb/Utility/Diagnostics.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -92,6 +93,10 @@ protected:
       result.AppendError(llvm::toString(std::move(error)));
       return;
     }
+
+    // Copy this debugger's file-backed logs into the directory. This used to be
+    // done by a Diagnostics callback registered by the Debugger.
+    GetDebugger().CopyLogFilesToDirectory(*directory);
 
     result.GetOutputStream() << "diagnostics written to " << *directory << '\n';
 

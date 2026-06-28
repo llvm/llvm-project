@@ -87,8 +87,10 @@ Potentially Breaking Changes
                                      <clang-tidy/checks/cppcoreguidelines/pro-type-member-init>`
   ``hicpp-move-const-arg``           :doc:`performance-move-const-arg
                                      <clang-tidy/checks/performance/move-const-arg>`
-  ``hicpp-multiway-paths-covered``   :doc:`bugprone-unhandled-code-paths
-                                     <clang-tidy/checks/bugprone/unhandled-code-paths>`
+  ``hicpp-multiway-paths-covered``   | :doc:`bugprone-unhandled-code-paths
+                                       <clang-tidy/checks/bugprone/unhandled-code-paths>`
+                                     | :doc:`readability-trivial-switch
+                                       <clang-tidy/checks/readability/trivial-switch>`
   ``hicpp-named-parameter``          :doc:`readability-named-parameter
                                      <clang-tidy/checks/readability/named-parameter>`
   ``hicpp-new-delete-operators``     :doc:`misc-new-delete-overloads
@@ -600,6 +602,11 @@ Changes in existing checks
   internal linkage to entities defined in C++ module interface units.
   Because it only sees one file at a time, the check can't be sure
   such entities aren't referenced in any other files of that module.
+
+- Improved :doc:`modernize-avoid-c-style-cast
+  <clang-tidy/checks/modernize/avoid-c-style-cast>` check by fixing an invalid
+  fix-it generated when replacing casts that directly follow a keyword or
+  identifier.
 
 - Improved :doc:`modernize-deprecated-headers
   <clang-tidy/checks/modernize/deprecated-headers>` check by avoiding false

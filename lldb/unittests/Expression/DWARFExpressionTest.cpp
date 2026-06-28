@@ -1195,10 +1195,11 @@ TEST_F(DWARFExpressionMockProcessTest, WASM_DW_OP_addr) {
   ASSERT_TRUE(CreateTestContext(&test_ctx, "wasm32-unknown-unknown-wasm"));
 
   ExecutionContext exe_ctx(test_ctx.target_sp, false);
-  // DW_OP_addr takes a single operand of address size width:
+  // DW_OP_addr takes a single operand of address size width. It denotes a
+  // location in the module's address space, i.e. a file address.
   EXPECT_THAT_EXPECTED(
       Evaluate({DW_OP_addr, 0x40, 0x0, 0x0, 0x0}, {}, {}, &exe_ctx),
-      ExpectLoadAddress(0x40));
+      ExpectFileAddress(0x40));
 }
 
 TEST_F(DWARFExpressionMockProcessTest, WASM_DW_OP_addr_index) {
@@ -1271,11 +1272,11 @@ DWARF:
   DWARFExpression expr(extractor);
 
   llvm::Expected<Value> result = evaluate(expr);
-  EXPECT_THAT_EXPECTED(result, ExpectLoadAddress(0x5678u));
+  EXPECT_THAT_EXPECTED(result, ExpectFileAddress(0x5678u));
 
   ASSERT_TRUE(expr.Update_DW_OP_addr(dwarf_cu, 0xdeadbeef));
   result = evaluate(expr);
-  EXPECT_THAT_EXPECTED(result, ExpectLoadAddress(0xdeadbeefu));
+  EXPECT_THAT_EXPECTED(result, ExpectFileAddress(0xdeadbeefu));
 }
 
 class CustomSymbolFileDWARF : public SymbolFileDWARF {
