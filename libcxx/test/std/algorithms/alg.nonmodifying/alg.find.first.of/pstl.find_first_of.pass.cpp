@@ -45,11 +45,11 @@ struct Test {
       unsigned sa = sizeof(ia) / sizeof(ia[0]);
       int ib[]    = {1, 3, 5, 7};
       unsigned sb = sizeof(ib) / sizeof(ib[0]);
-      assert(std::find_first_of(Iter(ia), Iter(ia + sa), Iter(ib), Iter(ib + sb)) == Iter(ia + 1));
+      assert(std::find_first_of(policy, Iter(ia), Iter(ia + sa), Iter(ib), Iter(ib + sb)) == Iter(ia + 1));
       int ic[] = {7};
-      assert(std::find_first_of(Iter(ia), Iter(ia + sa), Iter(ic), Iter(ic + 1)) == Iter(ia + sa));
-      assert(std::find_first_of(Iter(ia), Iter(ia + sa), Iter(ic), Iter(ic)) == Iter(ia + sa));
-      assert(std::find_first_of(Iter(ia), Iter(ia), Iter(ic), Iter(ic + 1)) == Iter(ia));
+      assert(std::find_first_of(policy, Iter(ia), Iter(ia + sa), Iter(ic), Iter(ic + 1)) == Iter(ia + sa));
+      assert(std::find_first_of(policy, Iter(ia), Iter(ia + sa), Iter(ic), Iter(ic)) == Iter(ia + sa));
+      assert(std::find_first_of(policy, Iter(ia), Iter(ia), Iter(ic), Iter(ic + 1)) == Iter(ia));
     }
     {
       int a[8192];
