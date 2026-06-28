@@ -617,10 +617,10 @@ multiclass SVE2p1_Cntp_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
   def : Pat<(vtd (op vt1:$Op1, (i32 4))), (inst $Op1, 1)>;
 }
 
-multiclass SVE2p1_While_PN_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
-                               Instruction inst> {
-  def : Pat<(vtd (op vt1:$Op1, vt1:$Op2, (i32 2))), (inst $Op1, $Op2, 0)>;
-  def : Pat<(vtd (op vt1:$Op1, vt1:$Op2, (i32 4))), (inst $Op1, $Op2, 1)>;
+multiclass SVE2p1_While_PN_Pat<int EltSize, SDPatternOperator op,
+                               ValueType vt1, Instruction inst> {
+  def : Pat<(op vt1:$Op1, vt1:$Op2, (i32 2), (i64 EltSize)), (inst $Op1, $Op2, 0)>;
+  def : Pat<(op vt1:$Op1, vt1:$Op2, (i32 4), (i64 EltSize)), (inst $Op1, $Op2, 1)>;
 }
 
 class SVE_3_Op_Imm_Pat<ValueType vtd, SDPatternOperator op, ValueType vt1,
@@ -727,6 +727,13 @@ class SVE_Sat_Shift_VG2_Pat<string name, SDPatternOperator intrinsic, ValueType 
 class SVE_Cvt_VG2_Pat<string name, SDPatternOperator intrinsic, ValueType out_vt, ValueType in_vt>
     : Pat<(out_vt (intrinsic in_vt:$Zn1, in_vt:$Zn2)),
                   (!cast<Instruction>(name) (REG_SEQUENCE ZPR2Mul2, in_vt:$Zn1, zsub0, in_vt:$Zn2, zsub1))>;
+
+class SVE_LUTI6_VG2_Index_Pat<ValueType vt, SDPatternOperator intrinsic,
+                              Instruction inst>
+    : Pat<(vt (intrinsic vt:$Op1, vt:$Op2, nxv16i8:$Op3,
+                         (i32 timm32_0_1:$Op4))),
+          (vt (inst (REG_SEQUENCE ZPR2, vt:$Op1, zsub0, vt:$Op2, zsub1),
+                    nxv16i8:$Op3, timm32_0_1:$Op4))>;
 
 //===----------------------------------------------------------------------===//
 // SVE pattern match helpers.
@@ -7577,7 +7584,7 @@ multiclass sve_int_perm_clast_vz<bit ab, string asm, SDPatternOperator op> {
   def : Pat<(bf16 (op nxv2i1:$Pg, bf16:$default, nxv2bf16:$vec)),
             (EXTRACT_SUBREG (!cast<Instruction>(NAME # _D) $Pg, (INSERT_SUBREG (IMPLICIT_DEF), $default, hsub), $vec), hsub)>;
   def : Pat<(f32 (op nxv2i1:$Pg, f32:$default, nxv2f32:$vec)),
-            (EXTRACT_SUBREG (!cast<Instruction>(NAME # _D) $Pg, (f64 (INSERT_SUBREG (IMPLICIT_DEF), $default, ssub)), $vec), ssub)>;            
+            (EXTRACT_SUBREG (!cast<Instruction>(NAME # _D) $Pg, (f64 (INSERT_SUBREG (IMPLICIT_DEF), $default, ssub)), $vec), ssub)>;
 }
 
 class sve_int_perm_clast_zz<bits<2> sz8_64, bit ab, string asm,
@@ -10495,10 +10502,8 @@ multiclass sve2p1_pcount_pn<string mnemonic, bits<3> opc> {
   defm : SVE2p1_Cntp_Pat<i64, int_aarch64_sve_cntp_c64, aarch64svcount, !cast<Instruction>(NAME # _D)>;
 }
 
-
 // SVE integer compare scalar count and limit (predicate-as-counter)
-class sve2p1_int_while_rr_pn<string mnemonic, bits<2> sz, bits<3> opc,
-                             PNRP8to15RegOp pnrty>
+class sve2p1_int_while_rr_pn<string mnemonic, bits<2> sz, bits<3> opc, PNRP8to15RegOp pnrty>
     : I<(outs pnrty:$PNd), (ins GPR64:$Rn, GPR64:$Rm, sve_vec_len_specifier_enum:$vl),
         mnemonic, "\t$PNd, $Rn, $Rm, $vl",
         "", []>, Sched<[]> {
@@ -10524,20 +10529,16 @@ class sve2p1_int_while_rr_pn<string mnemonic, bits<2> sz, bits<3> opc,
 }
 
 
-multiclass sve2p1_int_while_rr_pn<string mnemonic, bits<3> opc> {
- def _B : sve2p1_int_while_rr_pn<mnemonic, 0b00, opc, PNR8_p8to15>;
- def _H : sve2p1_int_while_rr_pn<mnemonic, 0b01, opc, PNR16_p8to15>;
- def _S : sve2p1_int_while_rr_pn<mnemonic, 0b10, opc, PNR32_p8to15>;
- def _D : sve2p1_int_while_rr_pn<mnemonic, 0b11, opc, PNR64_p8to15>;
+multiclass sve2p1_int_while_rr_pn<string mnemonic, bits<3> opc, SDNode OpNode> {
+  def _B : sve2p1_int_while_rr_pn<mnemonic, 0b00, opc, PNR8_p8to15>;
+  def _H : sve2p1_int_while_rr_pn<mnemonic, 0b01, opc, PNR16_p8to15>;
+  def _S : sve2p1_int_while_rr_pn<mnemonic, 0b10, opc, PNR32_p8to15>;
+  def _D : sve2p1_int_while_rr_pn<mnemonic, 0b11, opc, PNR64_p8to15>;
 
- defm : SVE2p1_While_PN_Pat<aarch64svcount, !cast<SDPatternOperator>("int_aarch64_sve_" # mnemonic # "_c8"),
-                            i64, !cast<Instruction>(NAME # _B)>;
- defm : SVE2p1_While_PN_Pat<aarch64svcount, !cast<SDPatternOperator>("int_aarch64_sve_" # mnemonic # "_c16"),
-                            i64, !cast<Instruction>(NAME # _H)>;
- defm : SVE2p1_While_PN_Pat<aarch64svcount, !cast<SDPatternOperator>("int_aarch64_sve_" # mnemonic # "_c32"),
-                            i64, !cast<Instruction>(NAME # _S)>;
- defm : SVE2p1_While_PN_Pat<aarch64svcount, !cast<SDPatternOperator>("int_aarch64_sve_" # mnemonic # "_c64"),
-                            i64, !cast<Instruction>(NAME # _D)>;
+  defm : SVE2p1_While_PN_Pat<8, OpNode, i64, !cast<Instruction>(NAME # _B)>;
+  defm : SVE2p1_While_PN_Pat<16, OpNode, i64, !cast<Instruction>(NAME # _H)>;
+  defm : SVE2p1_While_PN_Pat<32, OpNode, i64, !cast<Instruction>(NAME # _S)>;
+  defm : SVE2p1_While_PN_Pat<64, OpNode, i64, !cast<Instruction>(NAME # _D)>;
 }
 
 
@@ -11415,18 +11416,24 @@ multiclass sve2_luti4_vector_vg2_index<string mnemonic> {
 }
 
 // Look up table read with 6-bit indices
-multiclass sve2_luti6_vector_index<string mnemonic> {
+multiclass sve2_luti6_vector_index<string mnemonic, SDPatternOperator intrinsic> {
   def _H : sve2_lut_vector_index<ZPR16, ZZ_h, VectorIndexD32b, 0b1011, mnemonic> {
     bit idx;
     let Inst{23} = idx;
   }
+
+  def : SVE_LUTI6_VG2_Index_Pat<nxv8i16, intrinsic,
+                                !cast<Instruction>(NAME # _H)>;
+  def : SVE_LUTI6_VG2_Index_Pat<nxv8f16, intrinsic,
+                                !cast<Instruction>(NAME # _H)>;
+  def : SVE_LUTI6_VG2_Index_Pat<nxv8bf16, intrinsic,
+                                !cast<Instruction>(NAME # _H)>;
 }
 
 // Look up table
 class sve2_luti6_vector<string mnemonic>
     : I<(outs ZPR8:$Zd), (ins ZZ_b:$Zn, ZPRAny:$Zm),
-      mnemonic, "\t$Zd, $Zn, $Zm",
-      "", []>, Sched<[]> {
+        mnemonic, "\t$Zd, $Zn, $Zm", "", []>, Sched<[]> {
   bits<5> Zd;
   bits<5> Zn;
   bits<5> Zm;
@@ -11435,6 +11442,15 @@ class sve2_luti6_vector<string mnemonic>
   let Inst{15-10} = 0b101011;
   let Inst{9-5}   = Zn;
   let Inst{4-0}   = Zd;
+}
+
+multiclass sve2_luti6_vector<string mnemonic, SDPatternOperator intrinsic> {
+  def NAME : sve2_luti6_vector<mnemonic>;
+
+  def : Pat<(nxv16i8 (intrinsic nxv16i8:$Op1, nxv16i8:$Op2, nxv16i8:$Op3)),
+            (!cast<Instruction>(NAME) (REG_SEQUENCE ZPR2, nxv16i8:$Op1, zsub0,
+                                                     nxv16i8:$Op2, zsub1),
+                                       nxv16i8:$Op3)>;
 }
 
 //===----------------------------------------------------------------------===//

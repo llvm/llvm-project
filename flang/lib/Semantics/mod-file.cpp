@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mod-file.h"
+#include "resolve-names-utils.h"
 #include "resolve-names.h"
 #include "flang/Common/restorer.h"
 #include "flang/Evaluate/tools.h"
@@ -364,37 +365,68 @@ void ModFileWriter::PrepareRenamings(const Scope &scope) {
   }
 }
 
-static void PutOpenMPRequirements(llvm::raw_ostream &os, const Symbol &symbol) {
-  using RequiresClauses = WithOmpDeclarative::RequiresClauses;
-  using OmpMemoryOrderType = common::OmpMemoryOrderType;
-
-  const auto [reqs, order]{common::visit(
-      [&](auto &&details)
-          -> std::pair<const RequiresClauses *, const OmpMemoryOrderType *> {
-        if constexpr (std::is_convertible_v<decltype(details),
-                          const WithOmpDeclarative &>) {
-          return {details.ompRequires(), details.ompAtomicDefaultMemOrder()};
+static const WithOmpDeclarative *GetOmpDeclarative(const Symbol &symbol) {
+  return common::visit(
+      [&](auto &&details) -> const WithOmpDeclarative * {
+        using TypeD = llvm::remove_cvref_t<decltype(details)>;
+        if constexpr (std::is_base_of_v<WithOmpDeclarative, TypeD>) {
+          return &static_cast<const WithOmpDeclarative &>(details);
         } else {
-          return {nullptr, nullptr};
+          return nullptr;
         }
       },
-      symbol.details())};
+      symbol.details());
+}
 
-  if (order) {
-    llvm::omp::Clause admo{llvm::omp::Clause::OMPC_atomic_default_mem_order};
-    os << "!$omp requires "
-       << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(admo))
-       << '(' << parser::ToLowerCaseLetters(EnumToString(*order)) << ")\n";
+static void PutOpenMPRequirements(
+    llvm::raw_ostream &os, const Symbol &symbol, SemanticsContext &semaCtx) {
+  using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
+  unsigned version{semaCtx.langOptions().OpenMPVersion};
+
+  if (const auto *decls{GetOmpDeclarative(symbol)}) {
+    if (const OmpClauseSet &reqs{decls->ompRequires()}; reqs.count()) {
+      os << "!$omp "
+         << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                llvm::omp::Directive::OMPD_requires, version));
+      decls->printClauseSet(os, reqs, llvm::omp::Directive::OMPD_requires);
+      os << "\n";
+    }
   }
-  if (reqs) {
-    os << "!$omp requires";
-    reqs->IterateOverMembers([&](llvm::omp::Clause f) {
-      if (f != llvm::omp::Clause::OMPC_atomic_default_mem_order) {
-        os << ' '
-           << parser::ToLowerCaseLetters(llvm::omp::getOpenMPClauseName(f));
+}
+
+static void PutOpenMPDeclarativeDirectives(llvm::raw_ostream &os,
+    const SymbolVector &symbols, SemanticsContext &semaCtx) {
+  using OmpClauseSet = WithOmpDeclarative::OmpClauseSet;
+  unsigned version{semaCtx.langOptions().OpenMPVersion};
+
+  for (const Symbol &symbol : symbols) {
+    if (const auto *decls{GetOmpDeclarative(symbol)}) {
+      if (const OmpClauseSet &dtgt{decls->ompDeclTarget()}; dtgt.count()) {
+        os << "!$omp "
+           << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                  llvm::omp::Directive::OMPD_declare_target, version))
+           << " ";
+        decls->printClauseSet(
+            os, dtgt, llvm::omp::Directive::OMPD_declare_target, symbol.name());
+        os << "\n";
       }
-    });
-    os << "\n";
+      // Re-emit `!$omp groupprivate` (and its device_type) so a TU that `use`s
+      // this module recovers the directive from the .mod file. Common-block
+      // names must be wrapped in slashes when reparsed.
+      if (const OmpClauseSet &gp{decls->ompGroupprivate()}; gp.count()) {
+        os << "!$omp "
+           << parser::ToLowerCaseLetters(llvm::omp::getOpenMPDirectiveName(
+                  llvm::omp::Directive::OMPD_groupprivate, version))
+           << "(";
+        if (symbol.detailsIf<CommonBlockDetails>())
+          os << '/' << symbol.name() << '/';
+        else
+          os << symbol.name();
+        os << ") ";
+        decls->printClauseSet(os, gp, llvm::omp::Directive::OMPD_groupprivate);
+        os << "\n";
+      }
+    }
   }
 }
 
@@ -435,7 +467,9 @@ void ModFileWriter::PutSymbols(
   for (const Symbol &symbol : uses) {
     PutUse(symbol);
   }
-  PutOpenMPRequirements(decls_, DEREF(scope.symbol()));
+  PutOpenMPRequirements(decls_, DEREF(scope.symbol()), context_);
+  PutOpenMPDeclarativeDirectives(decls_, sorted, context_);
+
   for (const auto &set : scope.equivalenceSets()) {
     if (!set.empty() &&
         !set.front().symbol.test(Symbol::Flag::CompilerCreated)) {
@@ -1110,33 +1144,6 @@ void ModFileWriter::PutTypeParam(llvm::raw_ostream &os, const Symbol &symbol) {
       symbol.attrs());
   PutInit(os, details.init());
   os << '\n';
-}
-
-// Map a mangled reduction name to a valid Fortran accessibility identifier
-// for module file serialization (e.g., op.+ → operator(+), op.max → max).
-// Non-mangled names (procedure designators) are returned as-is.
-static std::string GetReductionFortranId(const SourceName &mangledName) {
-  llvm::StringRef name{mangledName.begin(), mangledName.size()};
-  if (!name.starts_with("op.")) {
-    return name.str();
-  }
-  llvm::StringRef suffix{name.drop_front(3)};
-  if (suffix == "+" || suffix == "-" || suffix == "*") {
-    return ("operator(" + suffix + ")").str();
-  }
-  llvm::StringRef logicalOp{llvm::StringSwitch<llvm::StringRef>(suffix)
-          .Case("AND", ".and.")
-          .Case("OR", ".or.")
-          .Case("EQV", ".eqv.")
-          .Case("NEQV", ".neqv.")
-          .Default("")};
-  if (!logicalOp.empty()) {
-    return ("operator(" + logicalOp + ")").str();
-  }
-  if (suffix.size() > 2 && suffix.front() == '.' && suffix.back() == '.') {
-    return ("operator(" + suffix + ")").str();
-  }
-  return suffix.str();
 }
 
 void ModFileWriter::PutUserReduction(

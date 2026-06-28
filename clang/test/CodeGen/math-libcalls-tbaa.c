@@ -14,20 +14,20 @@ float crealf(float _Complex);
 // Emit int TBAA metadata on FP math libcalls, which is useful for alias analysis
 
 // NONEWSTRUCTPATHTBAA-LABEL: define dso_local float @test_expf(
-// NONEWSTRUCTPATHTBAA-SAME: ptr noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// NONEWSTRUCTPATHTBAA-SAME: ptr nofree noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // NONEWSTRUCTPATHTBAA-NEXT:  [[ENTRY:.*:]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 40
 // NONEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[FLOAT_TBAA5:![0-9]+]]
-// NONEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call float @expf(float noundef [[TMP0]]) #[[ATTR9:[0-9]+]]
+// NONEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call float @expf(float noundef [[TMP0]]) #[[ATTR8:[0-9]+]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[MUL:%.*]] = fmul float [[TMP0]], [[CALL]]
 // NONEWSTRUCTPATHTBAA-NEXT:    ret float [[MUL]]
 //
 // NEWSTRUCTPATHTBAA-LABEL: define dso_local float @test_expf(
-// NEWSTRUCTPATHTBAA-SAME: ptr noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// NEWSTRUCTPATHTBAA-SAME: ptr nofree noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // NEWSTRUCTPATHTBAA-NEXT:  [[ENTRY:.*:]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 40
 // NEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA5:![0-9]+]]
-// NEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call float @expf(float noundef [[TMP0]]) #[[ATTR9:[0-9]+]]
+// NEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call float @expf(float noundef [[TMP0]]) #[[ATTR8:[0-9]+]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[MUL:%.*]] = fmul float [[TMP0]], [[CALL]]
 // NEWSTRUCTPATHTBAA-NEXT:    ret float [[MUL]]
 //
@@ -38,20 +38,20 @@ float test_expf (float num[]) {
 }
 
 // NONEWSTRUCTPATHTBAA-LABEL: define dso_local float @test_builtin_expf(
-// NONEWSTRUCTPATHTBAA-SAME: ptr noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// NONEWSTRUCTPATHTBAA-SAME: ptr nofree noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // NONEWSTRUCTPATHTBAA-NEXT:  [[ENTRY:.*:]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 40
 // NONEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[FLOAT_TBAA5]]
-// NONEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call float @expf(float noundef [[TMP0]]) #[[ATTR9]]
+// NONEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call float @expf(float noundef [[TMP0]]) #[[ATTR8]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[MUL:%.*]] = fmul float [[TMP0]], [[CALL]]
 // NONEWSTRUCTPATHTBAA-NEXT:    ret float [[MUL]]
 //
 // NEWSTRUCTPATHTBAA-LABEL: define dso_local float @test_builtin_expf(
-// NEWSTRUCTPATHTBAA-SAME: ptr noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// NEWSTRUCTPATHTBAA-SAME: ptr nofree noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // NEWSTRUCTPATHTBAA-NEXT:  [[ENTRY:.*:]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 40
 // NEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA5]]
-// NEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call float @expf(float noundef [[TMP0]]) #[[ATTR9]]
+// NEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call float @expf(float noundef [[TMP0]]) #[[ATTR8]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[MUL:%.*]] = fmul float [[TMP0]], [[CALL]]
 // NEWSTRUCTPATHTBAA-NEXT:    ret float [[MUL]]
 //
@@ -64,7 +64,7 @@ float test_builtin_expf (float num[]) {
 //
 // Negative test: fabs cannot set errno
 // NONEWSTRUCTPATHTBAA-LABEL: define dso_local double @test_fabs(
-// NONEWSTRUCTPATHTBAA-SAME: ptr noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+// NONEWSTRUCTPATHTBAA-SAME: ptr nofree noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 // NONEWSTRUCTPATHTBAA-NEXT:  [[ENTRY:.*:]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 80
 // NONEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[DOUBLE_TBAA7:![0-9]+]]
@@ -73,7 +73,7 @@ float test_builtin_expf (float num[]) {
 // NONEWSTRUCTPATHTBAA-NEXT:    ret double [[MUL]]
 //
 // NEWSTRUCTPATHTBAA-LABEL: define dso_local double @test_fabs(
-// NEWSTRUCTPATHTBAA-SAME: ptr noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
+// NEWSTRUCTPATHTBAA-SAME: ptr nofree noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR3:[0-9]+]] {
 // NEWSTRUCTPATHTBAA-NEXT:  [[ENTRY:.*:]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 80
 // NEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA7:![0-9]+]]
@@ -88,20 +88,20 @@ double test_fabs (double num[]) {
 }
 
 // NONEWSTRUCTPATHTBAA-LABEL: define dso_local double @test_remainder(
-// NONEWSTRUCTPATHTBAA-SAME: ptr noundef readonly captures(none) [[NUM:%.*]], double noundef [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// NONEWSTRUCTPATHTBAA-SAME: ptr nofree noundef readonly captures(none) [[NUM:%.*]], double noundef [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // NONEWSTRUCTPATHTBAA-NEXT:  [[ENTRY:.*:]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 80
 // NONEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[DOUBLE_TBAA7]]
-// NONEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call double @remainder(double noundef [[TMP0]], double noundef [[A]]) #[[ATTR9]]
+// NONEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call double @remainder(double noundef [[TMP0]], double noundef [[A]]) #[[ATTR8]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[MUL:%.*]] = fmul double [[TMP0]], [[CALL]]
 // NONEWSTRUCTPATHTBAA-NEXT:    ret double [[MUL]]
 //
 // NEWSTRUCTPATHTBAA-LABEL: define dso_local double @test_remainder(
-// NEWSTRUCTPATHTBAA-SAME: ptr noundef readonly captures(none) [[NUM:%.*]], double noundef [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// NEWSTRUCTPATHTBAA-SAME: ptr nofree noundef readonly captures(none) [[NUM:%.*]], double noundef [[A:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // NEWSTRUCTPATHTBAA-NEXT:  [[ENTRY:.*:]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 80
 // NEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA7]]
-// NEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call double @remainder(double noundef [[TMP0]], double noundef [[A]]) #[[ATTR9]]
+// NEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call double @remainder(double noundef [[TMP0]], double noundef [[A]]) #[[ATTR8]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[MUL:%.*]] = fmul double [[TMP0]], [[CALL]]
 // NEWSTRUCTPATHTBAA-NEXT:    ret double [[MUL]]
 //
@@ -115,27 +115,27 @@ double test_remainder (double num[], double a) {
 // TODO: frexp is not subject to any errors, but also writes to
 // its int pointer out argument, so it could emit int TBAA metadata.
 // NONEWSTRUCTPATHTBAA-LABEL: define dso_local double @test_frexp(
-// NONEWSTRUCTPATHTBAA-SAME: ptr noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
+// NONEWSTRUCTPATHTBAA-SAME: ptr nofree noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NONEWSTRUCTPATHTBAA-NEXT:  [[ENTRY:.*:]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[E:%.*]] = alloca i32, align 4
-// NONEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[E]]) #[[ATTR9]]
+// NONEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[E]]) #[[ATTR8]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 16
 // NONEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[DOUBLE_TBAA7]]
-// NONEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = call double @frexp(double noundef [[TMP0]], ptr noundef nonnull [[E]]) #[[ATTR9]]
+// NONEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = call double @frexp(double noundef [[TMP0]], ptr noundef nonnull [[E]]) #[[ATTR8]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[MUL:%.*]] = fmul double [[TMP0]], [[CALL]]
-// NONEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[E]]) #[[ATTR9]]
+// NONEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[E]]) #[[ATTR8]]
 // NONEWSTRUCTPATHTBAA-NEXT:    ret double [[MUL]]
 //
 // NEWSTRUCTPATHTBAA-LABEL: define dso_local double @test_frexp(
-// NEWSTRUCTPATHTBAA-SAME: ptr noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR5:[0-9]+]] {
+// NEWSTRUCTPATHTBAA-SAME: ptr nofree noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR3]] {
 // NEWSTRUCTPATHTBAA-NEXT:  [[ENTRY:.*:]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[E:%.*]] = alloca i32, align 4
-// NEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[E]]) #[[ATTR9]]
+// NEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[E]]) #[[ATTR8]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 16
 // NEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load double, ptr [[ARRAYIDX]], align 8, !tbaa [[TBAA7]]
-// NEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = call double @frexp(double noundef [[TMP0]], ptr noundef nonnull [[E]]) #[[ATTR9]]
+// NEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = call double @frexp(double noundef [[TMP0]], ptr noundef nonnull [[E]]) #[[ATTR8]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[MUL:%.*]] = fmul double [[TMP0]], [[CALL]]
-// NEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[E]]) #[[ATTR9]]
+// NEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[E]]) #[[ATTR8]]
 // NEWSTRUCTPATHTBAA-NEXT:    ret double [[MUL]]
 //
 double test_frexp (double num[]) {
@@ -149,41 +149,41 @@ double test_frexp (double num[]) {
 // Negative test: sincos is a library function, but is not a builtin function
 // checked in CodeGenFunction::EmitCallExpr.
 // NONEWSTRUCTPATHTBAA-LABEL: define dso_local float @test_sincos(
-// NONEWSTRUCTPATHTBAA-SAME: ptr noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
+// NONEWSTRUCTPATHTBAA-SAME: ptr nofree noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR6:[0-9]+]] {
 // NONEWSTRUCTPATHTBAA-NEXT:  [[ENTRY:.*:]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[SIN:%.*]] = alloca float, align 4
 // NONEWSTRUCTPATHTBAA-NEXT:    [[COS:%.*]] = alloca float, align 4
-// NONEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[SIN]]) #[[ATTR9]]
-// NONEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[COS]]) #[[ATTR9]]
+// NONEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[SIN]]) #[[ATTR8]]
+// NONEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[COS]]) #[[ATTR8]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 8
 // NONEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[FLOAT_TBAA5]]
-// NONEWSTRUCTPATHTBAA-NEXT:    call void @sincos(float noundef [[TMP0]], ptr noundef nonnull [[SIN]], ptr noundef nonnull [[COS]]) #[[ATTR9]]
+// NONEWSTRUCTPATHTBAA-NEXT:    call void @sincos(float noundef [[TMP0]], ptr noundef nonnull [[SIN]], ptr noundef nonnull [[COS]]) #[[ATTR8]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[TMP1:%.*]] = load float, ptr [[SIN]], align 4, !tbaa [[FLOAT_TBAA5]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[TMP2:%.*]] = load float, ptr [[COS]], align 4, !tbaa [[FLOAT_TBAA5]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[MUL:%.*]] = fmul float [[TMP1]], [[TMP2]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[TMP3:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[FLOAT_TBAA5]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[ADD:%.*]] = fadd float [[MUL]], [[TMP3]]
-// NONEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[COS]]) #[[ATTR9]]
-// NONEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[SIN]]) #[[ATTR9]]
+// NONEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[COS]]) #[[ATTR8]]
+// NONEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[SIN]]) #[[ATTR8]]
 // NONEWSTRUCTPATHTBAA-NEXT:    ret float [[ADD]]
 //
 // NEWSTRUCTPATHTBAA-LABEL: define dso_local float @test_sincos(
-// NEWSTRUCTPATHTBAA-SAME: ptr noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR7:[0-9]+]] {
+// NEWSTRUCTPATHTBAA-SAME: ptr nofree noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR6:[0-9]+]] {
 // NEWSTRUCTPATHTBAA-NEXT:  [[ENTRY:.*:]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[SIN:%.*]] = alloca float, align 4
 // NEWSTRUCTPATHTBAA-NEXT:    [[COS:%.*]] = alloca float, align 4
-// NEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[SIN]]) #[[ATTR9]]
-// NEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[COS]]) #[[ATTR9]]
+// NEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[SIN]]) #[[ATTR8]]
+// NEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[COS]]) #[[ATTR8]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 8
 // NEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA5]]
-// NEWSTRUCTPATHTBAA-NEXT:    call void @sincos(float noundef [[TMP0]], ptr noundef nonnull [[SIN]], ptr noundef nonnull [[COS]]) #[[ATTR9]]
+// NEWSTRUCTPATHTBAA-NEXT:    call void @sincos(float noundef [[TMP0]], ptr noundef nonnull [[SIN]], ptr noundef nonnull [[COS]]) #[[ATTR8]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[TMP1:%.*]] = load float, ptr [[SIN]], align 4, !tbaa [[TBAA5]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[TMP2:%.*]] = load float, ptr [[COS]], align 4, !tbaa [[TBAA5]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[MUL:%.*]] = fmul float [[TMP1]], [[TMP2]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[TMP3:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA5]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[ADD:%.*]] = fadd float [[MUL]], [[TMP3]]
-// NEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[COS]]) #[[ATTR9]]
-// NEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[SIN]]) #[[ATTR9]]
+// NEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[COS]]) #[[ATTR8]]
+// NEWSTRUCTPATHTBAA-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[SIN]]) #[[ATTR8]]
 // NEWSTRUCTPATHTBAA-NEXT:    ret float [[ADD]]
 //
 float test_sincos (float num[]) {
@@ -195,26 +195,26 @@ float test_sincos (float num[]) {
 
 // TODO: The builtin return a complex type
 // NONEWSTRUCTPATHTBAA-LABEL: define dso_local float @test_cacoshf(
-// NONEWSTRUCTPATHTBAA-SAME: ptr noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR7]] {
+// NONEWSTRUCTPATHTBAA-SAME: ptr nofree noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR6]] {
 // NONEWSTRUCTPATHTBAA-NEXT:  [[ENTRY:.*:]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 8
 // NONEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[FLOAT_TBAA5]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [2 x float] poison, float [[TMP0]], 0
 // NONEWSTRUCTPATHTBAA-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue [2 x float] [[DOTFCA_0_INSERT]], float 0.000000e+00, 1
-// NONEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call { float, float } @cacoshf([2 x float] noundef alignstack(8) [[DOTFCA_1_INSERT]]) #[[ATTR9]]
+// NONEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call { float, float } @cacoshf([2 x float] noundef alignstack(8) [[DOTFCA_1_INSERT]]) #[[ATTR8]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[TMP1:%.*]] = extractvalue { float, float } [[CALL]], 0
 // NONEWSTRUCTPATHTBAA-NEXT:    [[TMP2:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[FLOAT_TBAA5]]
 // NONEWSTRUCTPATHTBAA-NEXT:    [[ADD:%.*]] = fadd float [[TMP1]], [[TMP2]]
 // NONEWSTRUCTPATHTBAA-NEXT:    ret float [[ADD]]
 //
 // NEWSTRUCTPATHTBAA-LABEL: define dso_local float @test_cacoshf(
-// NEWSTRUCTPATHTBAA-SAME: ptr noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR7]] {
+// NEWSTRUCTPATHTBAA-SAME: ptr nofree noundef readonly captures(none) [[NUM:%.*]]) local_unnamed_addr #[[ATTR6]] {
 // NEWSTRUCTPATHTBAA-NEXT:  [[ENTRY:.*:]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr [[NUM]], i64 8
 // NEWSTRUCTPATHTBAA-NEXT:    [[TMP0:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA5]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[DOTFCA_0_INSERT:%.*]] = insertvalue [2 x float] poison, float [[TMP0]], 0
 // NEWSTRUCTPATHTBAA-NEXT:    [[DOTFCA_1_INSERT:%.*]] = insertvalue [2 x float] [[DOTFCA_0_INSERT]], float 0.000000e+00, 1
-// NEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call { float, float } @cacoshf([2 x float] noundef alignstack(8) [[DOTFCA_1_INSERT]]) #[[ATTR9]]
+// NEWSTRUCTPATHTBAA-NEXT:    [[CALL:%.*]] = tail call { float, float } @cacoshf([2 x float] noundef alignstack(8) [[DOTFCA_1_INSERT]]) #[[ATTR8]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[TMP1:%.*]] = extractvalue { float, float } [[CALL]], 0
 // NEWSTRUCTPATHTBAA-NEXT:    [[TMP2:%.*]] = load float, ptr [[ARRAYIDX]], align 4, !tbaa [[TBAA5]]
 // NEWSTRUCTPATHTBAA-NEXT:    [[ADD:%.*]] = fadd float [[TMP1]], [[TMP2]]

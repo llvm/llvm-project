@@ -832,7 +832,7 @@ void VPRegionBlock::dissolveToCFGLoop() {
   auto *Header = cast<VPBasicBlock>(getEntry());
   auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
   auto *CanIV = getCanonicalIV();
-  if (CanIV->getNumUsers() > 0) {
+  if (!CanIV->user_empty()) {
     VPlan &Plan = *getPlan();
     auto *Zero = Plan.getZero(CanIV->getType());
     DebugLoc DL = CanIV->getDebugLoc();
@@ -897,14 +897,6 @@ VPlan::~VPlan() {
   for (VPValue *VPV : getLiveIns())
     delete VPV;
   delete BackedgeTakenCount;
-}
-
-VPIRBasicBlock *VPlan::getExitBlock(BasicBlock *IRBB) const {
-  auto Iter = find_if(getExitBlocks(), [IRBB](const VPIRBasicBlock *VPIRBB) {
-    return VPIRBB->getIRBasicBlock() == IRBB;
-  });
-  assert(Iter != getExitBlocks().end() && "no exit block found");
-  return *Iter;
 }
 
 bool VPlan::isExitBlock(VPBlockBase *VPBB) {
@@ -1019,31 +1011,24 @@ void VPlan::execute(VPTransformState *State) {
 
   State->CFG.DTU.flush();
 
-  VPBasicBlock *Header = vputils::getFirstLoopHeader(*this, State->VPDT);
-  if (!Header)
-    return;
-
-  auto *LatchVPBB = cast<VPBasicBlock>(Header->getPredecessors()[1]);
-  BasicBlock *VectorLatchBB = State->CFG.VPBB2IRBB[LatchVPBB];
-
-  // Fix the latch value of canonical, reduction and first-order recurrences
-  // phis in the vector loop.
-  for (VPRecipeBase &R : Header->phis()) {
-    // Skip phi-like recipes that generate their backedege values themselves.
-    if (isa<VPWidenPHIRecipe>(&R))
+  // Fix the latch (backedge) value of all header phis in all loop headers.
+  for (VPBlockBase *VPB : vp_depth_first_shallow(getEntry())) {
+    if (!VPBlockUtils::isHeader(VPB, State->VPDT))
       continue;
+    auto *Header = cast<VPBasicBlock>(VPB);
+    auto *LatchVPBB = cast<VPBasicBlock>(Header->getPredecessors()[1]);
+    BasicBlock *VectorLatchBB = State->CFG.VPBB2IRBB[LatchVPBB];
 
-    auto *PhiR = cast<VPSingleDefRecipe>(&R);
-    // VPInstructions currently model scalar Phis only.
-    bool NeedsScalar = isa<VPInstruction>(PhiR) ||
-                       (isa<VPReductionPHIRecipe>(PhiR) &&
-                        cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
+    for (VPRecipeBase &R : Header->phis()) {
+      auto *PhiR = cast<VPSingleDefRecipe>(&R);
+      bool NeedsScalar =
+          isa<VPPhi>(PhiR) || (isa<VPReductionPHIRecipe>(PhiR) &&
+                               cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
 
-    Value *Phi = State->get(PhiR, NeedsScalar);
-    // VPHeaderPHIRecipe supports getBackedgeValue() but VPInstruction does
-    // not.
-    Value *Val = State->get(PhiR->getOperand(1), NeedsScalar);
-    cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
+      Value *Phi = State->get(PhiR, NeedsScalar);
+      Value *Val = State->get(PhiR->getOperand(1), NeedsScalar);
+      cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
+    }
   }
 }
 
@@ -1092,38 +1077,38 @@ bool VPlan::isOuterLoop() const {
 void VPlan::printLiveIns(raw_ostream &O) const {
   VPSlotTracker SlotTracker(this);
 
-  if (VF.getNumUsers() > 0) {
+  if (!VF.user_empty()) {
     O << "\nLive-in ";
     VF.printAsOperand(O, SlotTracker);
     O << " = VF";
   }
 
-  if (UF.getNumUsers() > 0) {
+  if (!UF.user_empty()) {
     O << "\nLive-in ";
     UF.printAsOperand(O, SlotTracker);
     O << " = UF";
   }
 
-  if (VFxUF.getNumUsers() > 0) {
+  if (!VFxUF.user_empty()) {
     O << "\nLive-in ";
     VFxUF.printAsOperand(O, SlotTracker);
     O << " = VF * UF";
   }
 
-  if (VectorTripCount.getNumUsers() > 0) {
+  if (!VectorTripCount.user_empty()) {
     O << "\nLive-in ";
     VectorTripCount.printAsOperand(O, SlotTracker);
     O << " = vector-trip-count";
   }
 
-  if (BackedgeTakenCount && BackedgeTakenCount->getNumUsers()) {
+  if (BackedgeTakenCount && !BackedgeTakenCount->user_empty()) {
     O << "\nLive-in ";
     BackedgeTakenCount->printAsOperand(O, SlotTracker);
     O << " = backedge-taken count";
   }
 
   O << "\n";
-  if (TripCount) {
+  if (TripCount && !TripCount->user_empty()) {
     if (isa<VPIRValue>(TripCount))
       O << "Live-in ";
     TripCount->printAsOperand(O, SlotTracker);
@@ -1328,13 +1313,6 @@ VPIRBasicBlock *VPlan::createVPIRBasicBlock(BasicBlock *IRBB) {
 Twine VPlanPrinter::getUID(const VPBlockBase *Block) {
   return (isa<VPRegionBlock>(Block) ? "cluster_N" : "N") +
          Twine(getOrCreateBID(Block));
-}
-
-Twine VPlanPrinter::getOrCreateName(const VPBlockBase *Block) {
-  const std::string &Name = Block->getName();
-  if (!Name.empty())
-    return Name;
-  return "VPB" + Twine(getOrCreateBID(Block));
 }
 
 void VPlanPrinter::dump() {
@@ -1570,11 +1548,11 @@ void VPSlotTracker::assignName(const VPValue *V) {
 }
 
 void VPSlotTracker::assignNames(const VPlan &Plan) {
-  if (Plan.VF.getNumUsers() > 0)
+  if (!Plan.VF.user_empty())
     assignName(&Plan.VF);
-  if (Plan.UF.getNumUsers() > 0)
+  if (!Plan.UF.user_empty())
     assignName(&Plan.UF);
-  if (Plan.VFxUF.getNumUsers() > 0)
+  if (!Plan.VFxUF.user_empty())
     assignName(&Plan.VFxUF);
   assignName(&Plan.VectorTripCount);
   if (Plan.BackedgeTakenCount)
@@ -1803,7 +1781,7 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
   unsigned AverageVectorTripCount = 0;
   unsigned RemainderAverageTripCount = 0;
   auto EC = VectorLoop->getLoopPreheader()->getParent()->getEntryCount();
-  auto IsProfiled = EC && EC->getCount();
+  auto IsProfiled = EC && *EC != 0;
   if (!OrigAverageTripCount) {
     if (!IsProfiled)
       return;

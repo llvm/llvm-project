@@ -1153,22 +1153,20 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_i
 ; GFX7-NEXT:    v_writelane_b32 v23, s55, 14
 ; GFX7-NEXT:    v_writelane_b32 v23, s30, 15
 ; GFX7-NEXT:    v_writelane_b32 v23, s31, 16
+; GFX7-NEXT:    s_lshr_b32 s5, s32, 6
 ; GFX7-NEXT:    v_lshr_b32_e64 v0, s32, 6
+; GFX7-NEXT:    s_add_i32 s4, s5, 0x4240
+; GFX7-NEXT:    ; implicit-def: $vgpr22 : SGPR spill to VGPR lane
 ; GFX7-NEXT:    v_add_i32_e32 v0, vcc, 64, v0
+; GFX7-NEXT:    v_writelane_b32 v22, s4, 0
+; GFX7-NEXT:    s_and_b64 s[4:5], 0, exec
 ; GFX7-NEXT:    ;;#ASMSTART
 ; GFX7-NEXT:    ; use alloca0 v0
 ; GFX7-NEXT:    ;;#ASMEND
 ; GFX7-NEXT:    ;;#ASMSTART
 ; GFX7-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc
 ; GFX7-NEXT:    ;;#ASMEND
-; GFX7-NEXT:    ; implicit-def: $vgpr22 : SGPR spill to VGPR lane
-; GFX7-NEXT:    v_writelane_b32 v22, vcc_lo, 0
-; GFX7-NEXT:    v_writelane_b32 v22, vcc_hi, 1
-; GFX7-NEXT:    s_lshr_b32 vcc_lo, s32, 6
-; GFX7-NEXT:    s_add_i32 s54, vcc_lo, 0x4240
-; GFX7-NEXT:    s_and_b64 vcc, 0, exec
-; GFX7-NEXT:    v_readlane_b32 vcc_lo, v22, 0
-; GFX7-NEXT:    v_readlane_b32 vcc_hi, v22, 1
+; GFX7-NEXT:    v_readlane_b32 s54, v22, 0
 ; GFX7-NEXT:    ;;#ASMSTART
 ; GFX7-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc, s54, scc
 ; GFX7-NEXT:    ;;#ASMEND

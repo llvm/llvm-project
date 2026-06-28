@@ -48,9 +48,10 @@ struct L0LaunchEnvTy {
   void **ArgPtrs = nullptr;
   std::unique_lock<std::mutex> Lock;
 
-  L0LaunchEnvTy(KernelPropertiesTy &KernelPR, KernelArgsTy &KernelArgs)
+  L0LaunchEnvTy(KernelPropertiesTy &KernelPR, KernelArgsTy &KernelArgs,
+                KernelLaunchParamsTy LaunchParams)
       : KernelPR(KernelPR), IsCooperative(KernelArgs.Flags.Cooperative),
-        IsPtrArg(KernelArgs.Flags.IsPtrArgs), ArgPtrs(KernelArgs.ArgPtrs),
+        IsPtrArg(LaunchParams.Args != nullptr), ArgPtrs(LaunchParams.Args),
         Lock(KernelPR.Mtx, std::defer_lock) {}
 };
 
