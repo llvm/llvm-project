@@ -109,6 +109,8 @@ enum CoverageFeature {
   CoverageTraceStores = 1 << 17,
   CoverageControlFlow = 1 << 18,
   CoverageTracePCEntryExit = 1 << 19,
+  CoverageTraceArgs = 1 << 20,
+  CoverageTraceRet = 1 << 21,
 };
 
 enum BinaryMetadataFeature {
@@ -1050,6 +1052,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   int InstrumentationTypes = CoverageTracePC | CoverageTracePCEntryExit |
                              CoverageTracePCGuard | CoverageInline8bitCounters |
                              CoverageTraceLoads | CoverageTraceStores |
+                             CoverageTraceArgs | CoverageTraceRet |
                              CoverageInlineBoolFlag | CoverageControlFlow;
   if ((CoverageFeatures & InsertionPointTypes) &&
       !(CoverageFeatures & InstrumentationTypes) && DiagnoseErrors) {
@@ -1061,9 +1064,10 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
   // trace-pc w/o func/bb/edge implies edge.
   if (!(CoverageFeatures & InsertionPointTypes)) {
-    if (CoverageFeatures & (CoverageTracePC | CoverageTracePCEntryExit |
-                            CoverageTracePCGuard | CoverageInline8bitCounters |
-                            CoverageInlineBoolFlag | CoverageControlFlow))
+    if (CoverageFeatures &
+        (CoverageTracePC | CoverageTracePCEntryExit | CoverageTracePCGuard |
+         CoverageInline8bitCounters | CoverageInlineBoolFlag |
+         CoverageControlFlow | CoverageTraceArgs | CoverageTraceRet))
       CoverageFeatures |= CoverageEdge;
 
     if (CoverageFeatures & CoverageStackDepth)
@@ -1424,6 +1428,8 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
       std::make_pair(CoverageStackDepth, "-fsanitize-coverage-stack-depth"),
       std::make_pair(CoverageTraceLoads, "-fsanitize-coverage-trace-loads"),
       std::make_pair(CoverageTraceStores, "-fsanitize-coverage-trace-stores"),
+      std::make_pair(CoverageTraceArgs, "-fsanitize-coverage-trace-args"),
+      std::make_pair(CoverageTraceRet, "-fsanitize-coverage-trace-ret"),
       std::make_pair(CoverageControlFlow, "-fsanitize-coverage-control-flow")};
   for (auto F : CoverageFlags) {
     if (CoverageFeatures & F.first)
@@ -1811,6 +1817,8 @@ int parseCoverageFeatures(const Driver &D, const llvm::opt::Arg *A,
                 .Case("stack-depth", CoverageStackDepth)
                 .Case("trace-loads", CoverageTraceLoads)
                 .Case("trace-stores", CoverageTraceStores)
+                .Case("trace-args", CoverageTraceArgs)
+                .Case("trace-ret", CoverageTraceRet)
                 .Case("control-flow", CoverageControlFlow)
                 .Default(0);
     if (F == 0 && DiagnoseErrors)

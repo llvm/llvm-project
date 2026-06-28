@@ -328,6 +328,8 @@ CODEGENOPT(SanitizeCoverageStackDepth, 1, 0, Benign) ///< Enable max stack depth
 VALUE_CODEGENOPT(SanitizeCoverageStackDepthCallbackMin , 32, 0, Benign) ///< Enable stack depth tracing callbacks.
 CODEGENOPT(SanitizeCoverageTraceLoads, 1, 0, Benign) ///< Enable tracing of loads.
 CODEGENOPT(SanitizeCoverageTraceStores, 1, 0, Benign) ///< Enable tracing of stores.
+CODEGENOPT(SanitizeCoverageTraceArgs, 1, 0, Benign) ///< Enable tracing of function args.
+CODEGENOPT(SanitizeCoverageTraceRet, 1, 0, Benign) ///< Enable tracing of return values.
 CODEGENOPT(SanitizeBinaryMetadataCovered, 1, 0, Benign) ///< Emit PCs for covered functions.
 CODEGENOPT(SanitizeBinaryMetadataAtomics, 1, 0, Benign) ///< Emit PCs for atomic operations.
 CODEGENOPT(SanitizeBinaryMetadataUAR, 1, 0, Benign) ///< Emit PCs for start of functions
