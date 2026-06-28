@@ -368,10 +368,10 @@ void SectionChunk::applyRelARM64(uint8_t *off, uint16_t type, OutputSection *os,
   }
 }
 
-void applyMipsBranch(uint8_t *off, int64_t v) {
+static void applyMipsBranch(uint8_t *off, int64_t v) {
   if (v & 3)
     error("misaligned jmp offset");
-  or32(off, (v >> 2) & 0x03FFFFFC);
+  add32(off, (v >> 2) & 0x03FFFFFC);
 }
 
 void SectionChunk::applyRelMIPS(uint8_t *off, uint16_t type, OutputSection *os,

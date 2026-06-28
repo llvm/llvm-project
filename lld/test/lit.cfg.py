@@ -62,7 +62,6 @@ tool_patterns = [
     "llvm-dwarfdump",
     "llvm-readelf",
     "llvm-readobj",
-    "llvm-windres",
     "obj2yaml",
     "yaml2obj",
     "opt",
