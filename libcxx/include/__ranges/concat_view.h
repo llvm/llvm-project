@@ -180,7 +180,7 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint()
     requires(approximately_sized_range<_Views> && ...)
   {
-    return apply(
+    return std::apply(
         [](auto... __sizes) static {
           using _CT = make_unsigned_t<common_type_t<decltype(__sizes)...>>;
           return (_CT(__sizes) + ...);
@@ -191,7 +191,7 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint() const
     requires(approximately_sized_range<const _Views> && ...)
   {
-    return apply(
+    return std::apply(
         [](auto... __sizes) static {
           using _CT = make_unsigned_t<common_type_t<decltype(__sizes)...>>;
           return (_CT(__sizes) + ...);

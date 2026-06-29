@@ -162,17 +162,17 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint() {
     if constexpr (approximately_sized_range<_View>) {
       auto __n = static_cast<range_difference_t<_View>>(ranges::reserve_hint(__base_));
-      return __to_unsigned_like(ranges::min(__n, __count_));
+      return std::__to_unsigned_like(ranges::min(__n, __count_));
     }
-    return __to_unsigned_like(__count_);
+    return std::__to_unsigned_like(__count_);
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint() const {
     if constexpr (approximately_sized_range<const _View>) {
       auto __n = static_cast<range_difference_t<const _View>>(ranges::reserve_hint(__base_));
-      return __to_unsigned_like(ranges::min(__n, __count_));
+      return std::__to_unsigned_like(ranges::min(__n, __count_));
     }
-    return __to_unsigned_like(__count_);
+    return std::__to_unsigned_like(__count_);
   }
 
 #  endif //_LIBCPP_STD_VER >= 26

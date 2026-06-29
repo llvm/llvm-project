@@ -137,14 +137,14 @@ public:
     requires approximately_sized_range<_View>
   {
     auto __s = static_cast<range_difference_t<decltype((__base_))>>(ranges::reserve_hint(__base_));
-    return __to_unsigned_like(__div_ceil(__s, __stride_));
+    return std::__to_unsigned_like(ranges::__div_ceil(__s, __stride_));
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto reserve_hint() const
     requires approximately_sized_range<const _View>
   {
     auto __s = static_cast<range_difference_t<decltype((__base_))>>(ranges::reserve_hint(__base_));
-    return __to_unsigned_like(__div_ceil(__s, __stride_));
+    return std::__to_unsigned_like(ranges::__div_ceil(__s, __stride_));
   }
 
 #  endif //_LIBCPP_STD_VER >= 26
