@@ -1074,8 +1074,15 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
   }
 
   case Type::ObjCObject:
-    cgm.errorNYI("VTableClassNameForType: ObjCObject");
-    break;
+    // Ignore protocol qualifiers.
+    ty = cast<ObjCObjectType>(ty)->getBaseType().getTypePtr();
+
+    // Handle id and Class.
+    if (isa<BuiltinType>(ty))
+      return classTypeInfo;
+
+    assert(isa<ObjCInterfaceType>(ty));
+    [[fallthrough]];
 
   case Type::ObjCInterface:
     cgm.errorNYI("VTableClassNameForType: ObjCInterface");
@@ -1564,17 +1571,24 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
     break;
   }
 
-  case Type::ObjCObject:
+  case Type::ObjCObject: {
+    // Drop protocol qualifiers.
+    const Type *T = cast<ObjCObjectType>(ty)->getBaseType().getTypePtr();
+    // The builtin types are abi::__class_type_infos and don't require
+    // extra fields.
+    if (isa<BuiltinType>(T))
+      break;
+  } [[fallthrough]];
+
   case Type::ObjCInterface:
-    cgm.errorNYI("buildTypeInfo: ObjCObject & ObjCInterface");
+    cgm.errorNYI("buildTypeInfo: ObjCInterface");
     break;
 
   case Type::ObjCObjectPointer:
-    cgm.errorNYI("buildTypeInfo: ObjCObjectPointer");
+    buildPointerTypeInfo(loc, cast<ObjCObjectPointerType>(ty)->getPointeeType());
     break;
 
   case Type::Pointer:
-    // We need to get the type info for the pointee type.
     buildPointerTypeInfo(loc, cast<PointerType>(ty)->getPointeeType());
     break;
 
