@@ -240,14 +240,14 @@ public:
 class LLVM_ABI DiagnosticInfoIgnoringInvalidDebugMetadata
     : public DiagnosticInfo {
 private:
-  /// The module that is concerned by this debug metadata version diagnostic.
+  /// The module that is concerned by this invalid debug metadata diagnostic.
   const Module &M;
 
 public:
-  /// \p The module that is concerned by this debug metadata version diagnostic.
+  /// \p The module that is concerned by this invalid debug metadata diagnostic.
   DiagnosticInfoIgnoringInvalidDebugMetadata(
       const Module &M, DiagnosticSeverity Severity = DS_Warning)
-      : DiagnosticInfo(DK_DebugMetadataVersion, Severity), M(M) {}
+      : DiagnosticInfo(DK_DebugMetadataInvalid, Severity), M(M) {}
 
   const Module &getModule() const { return M; }
 
@@ -469,7 +469,7 @@ private:
   const Function &Fn;
 
   /// Description of the resource type (e.g. stack size)
-  const char *ResourceName;
+  const Twine &ResourceName;
 
   /// The computed size usage
   uint64_t ResourceSize;
@@ -480,13 +480,14 @@ private:
 public:
   /// \p The function that is concerned by this stack size diagnostic.
   /// \p The computed stack size.
-  DiagnosticInfoResourceLimit(const Function &Fn, const char *ResourceName,
+  DiagnosticInfoResourceLimit(const Function &Fn,
+                              const Twine &ResourceName LLVM_LIFETIME_BOUND,
                               uint64_t ResourceSize, uint64_t ResourceLimit,
                               DiagnosticSeverity Severity = DS_Warning,
                               DiagnosticKind Kind = DK_ResourceLimit);
 
   const Function &getFunction() const { return Fn; }
-  const char *getResourceName() const { return ResourceName; }
+  const Twine &getResourceName() const { return ResourceName; }
   uint64_t getResourceSize() const { return ResourceSize; }
   uint64_t getResourceLimit() const { return ResourceLimit; }
 
@@ -500,13 +501,14 @@ public:
 
 class LLVM_ABI DiagnosticInfoStackSize : public DiagnosticInfoResourceLimit {
   void anchor() override;
+  const Twine ResourceNameStr{"stack frame size"};
 
 public:
   DiagnosticInfoStackSize(const Function &Fn, uint64_t StackSize,
                           uint64_t StackLimit,
                           DiagnosticSeverity Severity = DS_Warning)
-      : DiagnosticInfoResourceLimit(Fn, "stack frame size", StackSize,
-                                    StackLimit, Severity, DK_StackSize) {}
+      : DiagnosticInfoResourceLimit(Fn, ResourceNameStr, StackSize, StackLimit,
+                                    Severity, DK_StackSize) {}
 
   uint64_t getStackSize() const { return getResourceSize(); }
   uint64_t getStackLimit() const { return getResourceLimit(); }

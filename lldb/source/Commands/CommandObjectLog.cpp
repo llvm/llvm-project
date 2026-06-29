@@ -129,6 +129,9 @@ public:
       case 'F':
         log_options |= LLDB_LOG_OPTION_PREPEND_FILE_FUNCTION;
         break;
+      case 'j':
+        log_options |= LLDB_LOG_OPTION_JSON;
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -163,7 +166,7 @@ protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
     if (args.GetArgumentCount() < 2) {
       result.AppendErrorWithFormat(
-          "%s takes a log channel and one or more log types.\n",
+          "%s takes a log channel and one or more log types",
           m_cmd_name.c_str());
       return;
     }
@@ -257,7 +260,7 @@ protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
     if (args.empty()) {
       result.AppendErrorWithFormat(
-          "%s takes a log channel and one or more log types.\n",
+          "%s takes a log channel and one or more log types",
           m_cmd_name.c_str());
       return;
     }
@@ -273,7 +276,8 @@ protected:
       if (Log::DisableLogChannel(channel, args.GetArgumentArrayRef(),
                                  error_stream))
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
-      result.GetErrorStream() << error;
+      else
+        result.AppendError(error);
     }
   }
 };
@@ -372,7 +376,7 @@ protected:
   void DoExecute(Args &args, CommandReturnObject &result) override {
     if (args.empty()) {
       result.AppendErrorWithFormat(
-          "%s takes a log channel and one or more log types.\n",
+          "%s takes a log channel and one or more log types",
           m_cmd_name.c_str());
       return;
     }
@@ -444,7 +448,7 @@ protected:
 
     if (!result.Succeeded()) {
       result.AppendError("Missing subcommand");
-      result.AppendErrorWithFormat("Usage: %s\n", m_cmd_syntax.c_str());
+      result.AppendErrorWithFormat("Usage: %s", m_cmd_syntax.c_str());
     }
   }
 };
@@ -467,7 +471,7 @@ protected:
 
     if (!result.Succeeded()) {
       result.AppendError("Missing subcommand");
-      result.AppendErrorWithFormat("Usage: %s\n", m_cmd_syntax.c_str());
+      result.AppendErrorWithFormat("Usage: %s", m_cmd_syntax.c_str());
     }
   }
 };
@@ -488,7 +492,7 @@ protected:
 
     if (!result.Succeeded()) {
       result.AppendError("Missing subcommand");
-      result.AppendErrorWithFormat("Usage: %s\n", m_cmd_syntax.c_str());
+      result.AppendErrorWithFormat("Usage: %s", m_cmd_syntax.c_str());
     }
   }
 };
@@ -510,7 +514,7 @@ protected:
 
     if (!result.Succeeded()) {
       result.AppendError("Missing subcommand");
-      result.AppendErrorWithFormat("Usage: %s\n", m_cmd_syntax.c_str());
+      result.AppendErrorWithFormat("Usage: %s", m_cmd_syntax.c_str());
     }
   }
 };
@@ -552,7 +556,7 @@ protected:
 
     if (!result.Succeeded()) {
       result.AppendError("Missing subcommand");
-      result.AppendErrorWithFormat("Usage: %s\n", m_cmd_syntax.c_str());
+      result.AppendErrorWithFormat("Usage: %s", m_cmd_syntax.c_str());
     }
   }
 };

@@ -32,15 +32,6 @@ module m
   type(unified_array), allocatable :: ua(:)
 end module
 
-! CHECK-LABEL: fir.global linkonce_odr @_QMmE.c.device_array
-! CHECK: fir.insert_value %{{.*}}, %c1{{.*}}, ["memoryspace"
-
-! CHECK-LABEL: fir.global linkonce_odr @_QMmE.c.managed_array
-! CHECK: fir.insert_value %{{.*}}, %c2{{.*}}, ["memoryspace"
-
-! CHECK-LABEL: fir.global linkonce_odr @_QMmE.c.unified_array
-! CHECK: fir.insert_value %{{.*}}, %c3{{.*}}, ["memoryspace"
-
 program main
   use m
   type(device_array) :: local
@@ -50,3 +41,12 @@ end
 
 ! CHECK-LABEL: func.func @_QQmain()
 ! CHECK-COUNT-3: fir.call @_FortranAInitialize
+! CHECK-LABEL: fir.global linkonce_odr @_QMmE.c.device_array
+! CHECK: fir.insert_value %{{.*}}, %c1{{.*}}, ["memoryspace"
+
+! CHECK-LABEL: fir.global linkonce_odr @_QMmE.c.managed_array
+! CHECK: fir.insert_value %{{.*}}, %c2{{.*}}, ["memoryspace"
+
+! CHECK-LABEL: fir.global linkonce_odr @_QMmE.c.unified_array
+! CHECK: fir.insert_value %{{.*}}, %c3{{.*}}, ["memoryspace"
+

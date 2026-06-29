@@ -147,11 +147,10 @@ lldb::SectionSP MergeSections(lldb::SectionSP lhs, lldb::SectionSP rhs) {
   // Do a sanity check, these should be the same.
   if (lhs->GetFileAddress() != rhs->GetFileAddress())
     lhs_module_parent->ReportWarning(
-        "Mismatch addresses for section {0} when "
+        "mismatch addresses for section {0} when "
         "merging with {1}, expected: {2:x}, "
         "actual: {3:x}",
-        lhs->GetTypeAsCString(),
-        rhs_module_parent->GetFileSpec().GetPathAsConstString().GetCString(),
+        lhs->GetTypeAsCString(), rhs_module_parent->GetFileSpec().GetPath(),
         lhs->GetFileAddress(), rhs->GetFileAddress());
 
   // We want to take the greater of two sections. If LHS and RHS are both
@@ -682,9 +681,10 @@ ModuleSpecList ObjectFileELF::GetModuleSpecifications(
           uint32_t core_notes_crc = 0;
 
           if (!gnu_debuglink_crc) {
-            LLDB_SCOPED_TIMERF(
-                "Calculating module crc32 %s with size %" PRIu64 " KiB",
-                file.GetFilename().AsCString(), (length - file_offset) / 1024);
+            LLDB_SCOPED_TIMERF("Calculating module crc32 %s with size %" PRIu64
+                               " KiB",
+                               file.GetFilename().AsCString(""),
+                               (length - file_offset) / 1024);
 
             // For core files - which usually don't happen to have a
             // gnu_debuglink, and are pretty bulky - calculating whole
@@ -1484,8 +1484,8 @@ GetAttributeValueByTag(const DataExtractor &data, lldb::offset_t offset,
   return std::nullopt;
 }
 
-void ObjectFileELF::ParseRISCVAttributes(DataExtractor &data, uint64_t length,
-                                         ArchSpec &arch_spec) {
+void ObjectFileELF::ParseRISCVAttributes(const DataExtractor &data,
+                                         uint64_t length, ArchSpec &arch_spec) {
   Log *log = GetLog(LLDBLog::Modules);
 
   lldb::offset_t offset = 0;
@@ -1572,10 +1572,10 @@ void ObjectFileELF::ParseRISCVAttributes(DataExtractor &data, uint64_t length,
       /* EnableExperimentalExtension=*/true);
   if (auto error = isa_info.takeError()) {
     StreamString ss;
-    ss << "The .riscv.attributes section contains an invalid RISC-V arch "
+    ss << "the .riscv.attributes section contains an invalid RISC-V arch "
           "string: "
        << llvm::toString(std::move(error))
-       << "\n\tThis could result in misleading disassembler output.\n";
+       << "\n\tThis could result in misleading disassembler output\n";
     Debugger::ReportWarning(ss.GetString().str());
   }
 }
@@ -2184,7 +2184,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
         SectionSP module_section_sp = unified_section_list.FindSectionByType(
             eSectionTypeELFSymbolTable, true);
         if (module_section_sp)
-          unified_section_list.ReplaceSection(module_section_sp->GetID(),
+          unified_section_list.ReplaceSection(module_section_sp,
                                               symtab_section_sp);
         else
           unified_section_list.AddSection(symtab_section_sp);
@@ -2204,7 +2204,7 @@ std::shared_ptr<ObjectFileELF> ObjectFileELF::GetGnuDebugDataObjectFile() {
 
   if (!lldb_private::lzma::isAvailable()) {
     GetModule()->ReportWarning(
-        "No LZMA support found for reading .gnu_debugdata section");
+        "no LZMA support found for reading .gnu_debugdata section");
     return nullptr;
   }
 
@@ -2215,8 +2215,8 @@ std::shared_ptr<ObjectFileELF> ObjectFileELF::GetGnuDebugDataObjectFile() {
   auto err = lldb_private::lzma::uncompress(data.GetData(), uncompressedData);
   if (err) {
     GetModule()->ReportWarning(
-        "An error occurred while decompression the section {0}: {1}",
-        section->GetName().AsCString(), llvm::toString(std::move(err)).c_str());
+        "an error occurred while decompressing the section {0}: {1}",
+        section->GetName(), llvm::toString(std::move(err)).c_str());
     return nullptr;
   }
 
@@ -3043,7 +3043,7 @@ unsigned ObjectFileELF::ApplyRelocations(
   for (unsigned i = 0; i < num_relocations; ++i) {
     if (!rel.Parse(rel_data, &offset)) {
       GetModule()->ReportError(".rel{0}[{1:d}] failed to parse relocation",
-                               rel_section->GetName().AsCString(), i);
+                               rel_section->GetName(), i);
       break;
     }
     const Symbol *symbol = nullptr;
@@ -3058,8 +3058,7 @@ unsigned ObjectFileELF::ApplyRelocations(
         case R_ARM_REL32:
           GetModule()->ReportError("unsupported AArch32 relocation:"
                                    " .rel{0}[{1}], type {2}",
-                                   rel_section->GetName().AsCString(), i,
-                                   reloc_type(rel));
+                                   rel_section->GetName(), i, reloc_type(rel));
           break;
         default:
           assert(false && "unexpected relocation type");
@@ -3088,16 +3087,15 @@ unsigned ObjectFileELF::ApplyRelocations(
             *dst = value;
           } else {
             GetModule()->ReportError(".rel{0}[{1}] unknown symbol id: {2:d}",
-                                    rel_section->GetName().AsCString(), i,
-                                    reloc_symbol(rel));
+                                     rel_section->GetName(), i,
+                                     reloc_symbol(rel));
           }
           break;
         case R_386_NONE:
         case R_386_PC32:
           GetModule()->ReportError("unsupported i386 relocation:"
                                    " .rel{0}[{1}], type {2}",
-                                   rel_section->GetName().AsCString(), i,
-                                   reloc_type(rel));
+                                   rel_section->GetName(), i, reloc_type(rel));
           break;
         default:
           assert(false && "unexpected relocation type");
@@ -3333,7 +3331,7 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
           /*is_trampoline=*/false,
           /*is_artificial=*/true,
           /*section_sp=*/section_sp,
-          /*offset=*/0,
+          /*offset=*/entry_point_addr.GetOffset(),
           /*size=*/0, // FDE can span multiple symbols so don't use its size.
           /*size_is_valid=*/false,
           /*contains_linker_annotations=*/false,
@@ -3344,8 +3342,8 @@ void ObjectFileELF::ParseSymtab(Symtab &lldb_symtab) {
       // address.
       if (arch.GetMachine() == llvm::Triple::arm &&
           (entry_point_file_addr & 1)) {
-        symbol.GetAddressRef().SetOffset(entry_point_addr.GetOffset() ^ 1);
-        m_address_class_map[entry_point_file_addr ^ 1] =
+        symbol.GetAddressRef().Slide(-1);
+        m_address_class_map[entry_point_file_addr - 1] =
             AddressClass::eCodeAlternateISA;
       } else {
         m_address_class_map[entry_point_file_addr] = AddressClass::eCode;
@@ -3997,7 +3995,7 @@ size_t ObjectFileELF::ReadSectionData(Section *section,
       GetByteOrder() == eByteOrderLittle, GetAddressByteSize() == 8);
   if (!Decompressor) {
     GetModule()->ReportWarning(
-        "Unable to initialize decompressor for section '{0}': {1}",
+        "unable to initialize decompressor for section '{0}': {1}",
         section->GetName().GetCString(),
         llvm::toString(Decompressor.takeError()).c_str());
     section_data.Clear();
@@ -4008,7 +4006,7 @@ size_t ObjectFileELF::ReadSectionData(Section *section,
       std::make_shared<DataBufferHeap>(Decompressor->getDecompressedSize(), 0);
   if (auto error = Decompressor->decompress(
           {buffer_sp->GetBytes(), size_t(buffer_sp->GetByteSize())})) {
-    GetModule()->ReportWarning("Decompression of section '{0}' failed: {1}",
+    GetModule()->ReportWarning("decompression of section '{0}' failed: {1}",
                                section->GetName().GetCString(),
                                llvm::toString(std::move(error)).c_str());
     section_data.Clear();

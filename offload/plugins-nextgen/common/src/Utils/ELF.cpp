@@ -50,7 +50,14 @@ uint16_t utils::elf::getTargetMachine() {
 #elif defined(__loongarch__)
   return EM_LOONGARCH;
 #else
-#warning "Unknown ELF compilation target architecture"
+// #warning directive is available starting in C23 and C++23.
+#define UNKNOWN_ARCH_MSG "Unknown ELF compilation target architecture"
+#ifdef _MSC_VER
+#pragma message(UNKNOWN_ARCH_MSG)
+#else
+#warning UNKNOWN_ARCH_MSG
+#endif
+#undef UNKNOWN_ARCH_MSG
   return EM_NONE;
 #endif
 }
@@ -69,8 +76,7 @@ checkMachineImpl(const object::ELFObjectFile<ELFT> &ELFObj, uint16_t EMachine) {
         Header.e_ident[EI_ABIVERSION] != ELFABIVERSION_AMDGPU_HSA_V6)
       return createError("invalid AMD ABI version, must be version 5 or above");
     if ((Header.e_flags & EF_AMDGPU_MACH) < EF_AMDGPU_MACH_AMDGCN_GFX700 ||
-        (Header.e_flags & EF_AMDGPU_MACH) >
-            EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC)
+        (Header.e_flags & EF_AMDGPU_MACH) > EF_AMDGPU_MACH_AMDGCN_GFX13_GENERIC)
       return createError("unsupported AMDGPU architecture");
   } else if (Header.e_machine == EM_CUDA) {
     if (Header.e_ident[EI_ABIVERSION] == ELFABIVERSION_CUDA_V1) {
@@ -134,14 +140,14 @@ getSymbolFromGnuHashTable(StringRef Name, const typename ELFT::GnuHash &HashTab,
        I >= SymOffset && I < SymTab.size(); I = I + 1) {
     const uint32_t ChainHash = Chain[I - SymOffset];
 
-    if ((NameHash | 0x1) != (ChainHash | 0x1))
-      continue;
-
-    if (SymTab[I].st_name >= StrTab.size())
-      return createError("symbol [index " + Twine(I) +
-                         "] has invalid st_name: " + Twine(SymTab[I].st_name));
-    if (StrTab.drop_front(SymTab[I].st_name).data() == Name)
-      return &SymTab[I];
+    if ((NameHash | 0x1) == (ChainHash | 0x1)) {
+      if (SymTab[I].st_name >= StrTab.size())
+        return createError(
+            "symbol [index " + Twine(I) +
+            "] has invalid st_name: " + Twine(SymTab[I].st_name));
+      if (StrTab.drop_front(SymTab[I].st_name).data() == Name)
+        return &SymTab[I];
+    }
 
     if (ChainHash & 0x1)
       return nullptr;

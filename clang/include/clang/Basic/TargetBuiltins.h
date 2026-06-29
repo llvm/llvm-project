@@ -401,6 +401,9 @@ namespace clang {
     bool isOverloadFirstandLast() const {
       return Flags & IsOverloadFirstandLast;
     }
+    bool isOverloadDefaultAndOp0() const {
+      return Flags & IsOverloadDefaultAndOp0;
+    }
     bool isPrefetch() const { return Flags & IsPrefetch; }
     bool isReverseCompare() const { return Flags & ReverseCompare; }
     bool isAppendSVALL() const { return Flags & IsAppendSVALL; }
@@ -456,8 +459,9 @@ namespace clang {
   namespace SystemZ {
     enum {
         LastTIBuiltin = clang::Builtin::FirstTSBuiltin-1,
-#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
-#include "clang/Basic/BuiltinsSystemZ.def"
+#define GET_BUILTIN_ENUMERATORS
+#include "clang/Basic/BuiltinsSystemZ.inc"
+#undef GET_BUILTIN_ENUMERATORS
         LastTSBuiltin
     };
   }
@@ -472,12 +476,22 @@ namespace clang {
     };
   }
 
+  /// AVR builtins
+  namespace AVR {
+  enum {
+    LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
+#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
+#include "clang/Basic/BuiltinsAVR.def"
+    LastTSBuiltin
+  };
+  } // namespace AVR
+
   static constexpr uint64_t LargestBuiltinID = std::max<uint64_t>(
       {ARM::LastTSBuiltin, AArch64::LastTSBuiltin, BPF::LastTSBuiltin,
        PPC::LastTSBuiltin, NVPTX::LastTSBuiltin, AMDGPU::LastTSBuiltin,
        X86::LastTSBuiltin, VE::LastTSBuiltin, RISCV::LastTSBuiltin,
        Hexagon::LastTSBuiltin, Mips::LastTSBuiltin, XCore::LastTSBuiltin,
-       SystemZ::LastTSBuiltin, WebAssembly::LastTSBuiltin});
+       SystemZ::LastTSBuiltin, WebAssembly::LastTSBuiltin, AVR::LastTSBuiltin});
 
 } // end namespace clang.
 

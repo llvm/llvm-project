@@ -139,6 +139,10 @@ define <4 x i32> @csh_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; GISEL-LABEL: csh_v4i32:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    v_and_b32_e32 v4, 31, v4
+; GISEL-NEXT:    v_and_b32_e32 v5, 31, v5
+; GISEL-NEXT:    v_and_b32_e32 v6, 31, v6
+; GISEL-NEXT:    v_and_b32_e32 v7, 31, v7
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v8, v4, v0
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v9, v5, v1
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v10, v6, v2

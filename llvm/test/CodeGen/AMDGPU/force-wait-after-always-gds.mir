@@ -5,11 +5,11 @@
 # GCN:       bb.0
 # GCN:       DS_ADD_U32
 # GCN:       DS_SUB_U32
-# GCN-NEXT:  S_WAITCNT 64535
+# GCN-NEXT:  S_WAITCNT .Lgkmcnt_1
 # GCN-NEXT:  $vgpr3 = DS_ORDERED_COUNT
-# GCN-NEXT:  S_WAITCNT 64519
+# GCN-NEXT:  S_WAITCNT .Lgkmcnt_0
 # GCN-NEXT:  $vgpr4_vgpr5 = DS_ADD_GS_REG_RTN
-# GCN-NEXT:  S_WAITCNT 64519
+# GCN-NEXT:  S_WAITCNT .Lgkmcnt_0
 # GCN-NEXT:  S_NOP 0
 
 name:   test_ordered_count

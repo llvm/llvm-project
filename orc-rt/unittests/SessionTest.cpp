@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/Session.h"
+#include "orc-rt/QueueingRunner.h"
 #include "orc-rt/SPSWrapperFunction.h"
-#include "orc-rt/ThreadPoolTaskDispatcher.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -79,55 +79,31 @@ public:
   void doMoreConfig(int) noexcept {}
 };
 
-class EnqueueingDispatcher : public TaskDispatcher {
-public:
-  using OnShutdownRunFn = move_only_function<void()>;
-  EnqueueingDispatcher(std::deque<std::unique_ptr<Task>> &Tasks,
-                       OnShutdownRunFn OnShutdownRun = {})
-      : Tasks(Tasks), OnShutdownRun(std::move(OnShutdownRun)) {}
-  void dispatch(std::unique_ptr<Task> T) override {
-    Tasks.push_back(std::move(T));
-  }
-  void shutdown() override {
-    if (OnShutdownRun)
-      OnShutdownRun();
-  }
-
-  /// Run up to NumTasks (arbitrarily many if NumTasks == std::nullopt) tasks
-  /// from the front of the queue, returning the number actually run.
-  static size_t
-  runTasksFromFront(std::deque<std::unique_ptr<Task>> &Tasks,
-                    std::optional<size_t> NumTasks = std::nullopt) {
-    size_t NumRun = 0;
-
-    while (!Tasks.empty() && (!NumTasks || NumRun != *NumTasks)) {
-      auto T = std::move(Tasks.front());
-      Tasks.pop_front();
-      T->run();
-      ++NumRun;
-    }
-
-    return NumRun;
-  }
-
-private:
-  std::deque<std::unique_ptr<Task>> &Tasks;
-  OnShutdownRunFn OnShutdownRun;
-};
-
 class MockControllerAccess : public Session::ControllerAccess {
 public:
-  using OnConnectFn = move_only_function<void(BootstrapInfo &BI)>;
+  using OnConnectFn = move_only_function<Error(BootstrapInfo &BI)>;
 
-  MockControllerAccess(Session &SS) : Session::ControllerAccess(SS), SS(SS) {}
+  /// Hook used to defer controller-side work (the simulated controller
+  /// handler invocation, and the OnComplete callback for completed calls).
+  /// Tests typically wire this to push onto the same WorkQueue that the
+  /// Session's QueueingRunner uses, so that a single drain advances both
+  /// sides.
+  using PostFn = move_only_function<void(move_only_function<void()>)>;
+
+  MockControllerAccess(Session &SS, PostFn Post = {})
+      : Session::ControllerAccess(SS), Post(std::move(Post)) {}
 
   void setOnConnect(OnConnectFn OnConnect) {
     this->OnConnect = std::move(OnConnect);
   }
 
   void connect(BootstrapInfo BI) override {
-    if (OnConnect)
-      OnConnect(BI);
+    if (OnConnect) {
+      if (auto Err = OnConnect(BI)) {
+        reportError(std::move(Err));
+        notifyDisconnected();
+      }
+    }
   }
 
   void disconnect() override {
@@ -139,8 +115,8 @@ public:
 
   void callController(OnCallHandlerCompleteFn OnComplete, HandlerTag T,
                       WrapperFunctionBuffer ArgBytes) override {
-    // Simulate a call to the controller by dispatching a task to run the
-    // requested function.
+    // Simulate a call to the controller by running the requested function via
+    // the test-supplied Post hook (or inline, if no hook was provided).
     size_t CId;
     {
       std::scoped_lock<std::mutex> Lock(M);
@@ -151,12 +127,11 @@ public:
       ++Outstanding;
     }
 
-    SS.dispatch(makeGenericTask([this, CId, OnComplete = std::move(OnComplete),
-                                 T, ArgBytes = std::move(ArgBytes)]() mutable {
+    runOrPost([this, CId, T, ArgBytes = std::move(ArgBytes)]() mutable {
       auto Fn = reinterpret_cast<orc_rt_WrapperFunction>(T);
       Fn(reinterpret_cast<orc_rt_SessionRef>(this), CId, wfReturn,
          ArgBytes.release());
-    }));
+    });
 
     bool Notify = false;
     {
@@ -185,11 +160,10 @@ public:
       ++Outstanding;
     }
 
-    SS.dispatch(
-        makeGenericTask([OnComplete = std::move(OnComplete),
-                         ResultBytes = std::move(ResultBytes)]() mutable {
-          OnComplete(std::move(ResultBytes));
-        }));
+    runOrPost([OnComplete = std::move(OnComplete),
+               ResultBytes = std::move(ResultBytes)]() mutable {
+      OnComplete(std::move(ResultBytes));
+    });
 
     bool Notify = false;
     {
@@ -251,6 +225,13 @@ public:
   }
 
 private:
+  void runOrPost(move_only_function<void()> Work) {
+    if (Post)
+      Post(std::move(Work));
+    else
+      Work();
+  }
+
   static void wfReturn(orc_rt_SessionRef S, uint64_t CallId,
                        orc_rt_WrapperFunctionBuffer ResultBytes) {
     // Abuse "session" to refer to the ControllerAccess object.
@@ -259,7 +240,7 @@ private:
         CallId, WrapperFunctionBuffer(ResultBytes));
   }
 
-  Session &SS;
+  PostFn Post;
 
   std::mutex M;
   bool Shutdown = false;
@@ -285,16 +266,30 @@ private:
   orc_rt_WrapperFunction Fn;
 };
 
+/// Build a PostFn for MockControllerAccess that pushes its work onto the
+/// supplied queue. With this, a single QueueingRunner::runFIFOUntilEmpty(Q)
+/// call advances both Session-side and controller-side work.
+inline MockControllerAccess::PostFn postOnto(QueueingRunner<>::WorkQueue &Q) {
+  return
+      [&Q](move_only_function<void()> Work) { Q.push_back(std::move(Work)); };
+}
+
+void waitForShutdown(Session &S) {
+  std::promise<void> P;
+  auto F = P.get_future();
+  S.shutdown([P = std::move(P)]() mutable { P.set_value(); });
+  F.get();
+}
+
 TEST(SessionTest, TrivialConstructionAndDestruction) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
 }
 
 TEST(SessionTest, ReportError) {
   Error E = Error::success();
   cantFail(std::move(E)); // Force error into checked state.
 
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
+  Session S(mockExecutorProcessInfo(), noDispatch,
             [&](Error Err) { E = std::move(Err); });
   S.reportError(make_error<StringError>("foo"));
 
@@ -304,29 +299,13 @@ TEST(SessionTest, ReportError) {
     ADD_FAILURE() << "Missing error value";
 }
 
-TEST(SessionTest, DispatchTask) {
-  int X = 0;
-  std::deque<std::unique_ptr<Task>> Tasks;
-  Session S(mockExecutorProcessInfo(),
-            std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
-
-  EXPECT_EQ(Tasks.size(), 0U);
-  S.dispatch(makeGenericTask([&]() { ++X; }));
-  EXPECT_EQ(Tasks.size(), 1U);
-  auto T = std::move(Tasks.front());
-  Tasks.pop_front();
-  T->run();
-  EXPECT_EQ(X, 1);
-}
-
 TEST(SessionTest, SingleService) {
   size_t OpIdx = 0;
   std::optional<size_t> DetachOpIdx;
   std::optional<size_t> ShutdownOpIdx;
 
   {
-    Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-              noErrors);
+    Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
     S.addService(
         std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
   }
@@ -342,8 +321,7 @@ TEST(SessionTest, MultipleServices) {
   std::optional<size_t> ShutdownOpIdx[3];
 
   {
-    Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-              noErrors);
+    Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
     for (size_t I = 0; I != 3; ++I)
       S.addService(std::make_unique<MockService>(DetachOpIdx[I],
                                                  ShutdownOpIdx[I], OpIdx));
@@ -357,58 +335,295 @@ TEST(SessionTest, MultipleServices) {
   }
 }
 
-TEST(SessionTest, ExpectedShutdownSequence) {
+TEST(SessionTest, ScheduleShutdownFromOnDetachHandler) {
+  // Check that when we schedule a shutdown from an onDetach handler:
+  // 1. The shutdown is scheduled.
+  // 2. All onDetach handlers run before any onShutdown handlers.
+
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+
+  int OnDetachHandlersRun = 0;
+  bool OnShutdownHandlerRun = false;
+
+  S.addOnDetach([&]() { ++OnDetachHandlersRun; });
+  S.addOnDetach([&]() { S.shutdown(); });
+  S.addOnDetach([&]() { ++OnDetachHandlersRun; });
+  S.addOnShutdown([&]() {
+    EXPECT_EQ(OnDetachHandlersRun, 2);
+    OnShutdownHandlerRun = true;
+  });
+
+  S.detach();
+
+  EXPECT_TRUE(OnShutdownHandlerRun);
+}
+
+TEST(SessionTest, RedundantAsyncShutdown) {
+  // Check that redundant calls to shutdown have their callbacks run.
+  QueueingRunner<>::WorkQueue Tasks;
+  Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
+
+  // Initiate shutdown here, and wait for the on-shutdown callbacks to start
+  // running.
+  waitForShutdown(S);
+
+  // Now try to add a new on-shutdown callback and verify that it runs.
+  bool RedundantCallbackRan = false;
+  S.shutdown([&]() { RedundantCallbackRan = true; });
+  EXPECT_TRUE(RedundantCallbackRan);
+}
+
+TEST(SessionTest, ExpectedShutdownSequenceWithNoActiveManagedCodeCalls) {
   // Check that Session shutdown results in...
   // 1. Services being shut down.
-  // 2. The TaskDispatcher being shut down.
-  // 3. A call to OnShutdownComplete.
+  // 2. A call to OnShutdownComplete.
 
   size_t OpIdx = 0;
   std::optional<size_t> DetachOpIdx;
   std::optional<size_t> ShutdownOpIdx;
-
-  bool DispatcherShutDown = false;
   bool SessionShutdownComplete = false;
-  std::deque<std::unique_ptr<Task>> Tasks;
-  Session S(mockExecutorProcessInfo(),
-            std::make_unique<EnqueueingDispatcher>(
-                Tasks,
-                [&]() {
-                  EXPECT_TRUE(ShutdownOpIdx);
-                  EXPECT_EQ(*ShutdownOpIdx, 1);
-                  EXPECT_TRUE(SessionShutdownComplete);
-                  DispatcherShutDown = true;
-                }),
-            noErrors);
-  S.addService(
-      std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
 
-  S.shutdown([&]() {
-    EXPECT_FALSE(DispatcherShutDown);
-    SessionShutdownComplete = true;
-  });
-  S.waitForShutdown();
+  {
+    QueueingRunner<>::WorkQueue Tasks;
+    Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
+    S.addService(
+        std::make_unique<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx));
+
+    S.shutdown([&]() {
+      EXPECT_TRUE(ShutdownOpIdx);
+      EXPECT_EQ(*ShutdownOpIdx, 1);
+      SessionShutdownComplete = true;
+    });
+  }
 
   EXPECT_TRUE(SessionShutdownComplete);
 }
 
+TEST(SessionTest, ActiveManagedCallsDelayShutdown) {
+  QueueingRunner<>::WorkQueue Tasks;
+  Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
+
+  size_t OpIdx = 0;
+  std::optional<size_t> DetachOpIdx;
+  std::optional<size_t> ShutdownOpIdx;
+  S.createService<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx);
+
+  ASSERT_FALSE(DetachOpIdx);
+  ASSERT_FALSE(ShutdownOpIdx);
+
+  // Take a managed code call token. This should succeed.
+  auto Tok = TaskGroup::Token(S.managedCodeTaskGroup());
+  ASSERT_TRUE(Tok);
+
+  // We expect shutdown to wait for any active managed calls to complete.
+  bool ShutdownComplete = false;
+  S.shutdown([&]() { ShutdownComplete = true; });
+
+  // Detach should have happened, but shutdown should be waiting on token.
+  EXPECT_EQ(DetachOpIdx, 0U);
+  EXPECT_FALSE(ShutdownOpIdx);
+  EXPECT_FALSE(ShutdownComplete);
+
+  // The managed calls code group should have been closed. Assert that we
+  // can't get a new token.
+  ASSERT_FALSE(TaskGroup::Token(S.managedCodeTaskGroup()));
+
+  Tok = TaskGroup::Token(); // Reset token.
+
+  EXPECT_EQ(ShutdownOpIdx, 1U);
+
+  EXPECT_TRUE(ShutdownComplete);
+}
+
+static void managedSyncVoidFunction(int *P) { *P = 42; }
+
+TEST(SessionTest, SyncCallManagedCodeVoidFn) {
+  // Test synchronous calls to a void function while holding a
+  // ManagedCodeTaskGroup token.
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+
+  {
+    // Pre-shutdown we expect token acquisition to succeed and the function to
+    // run.
+    int X = 0;
+    bool CallSucceeded = S.callManagedCodeSync(managedSyncVoidFunction, &X);
+
+    EXPECT_TRUE(CallSucceeded);
+    EXPECT_EQ(X, 42U);
+  }
+
+  waitForShutdown(S);
+
+  {
+    // Post-shutdown we expect token acquisition to fail, and
+    // callManagedCodeSync to return false.
+    int X = 0;
+    bool CallSucceeded = S.callManagedCodeSync(managedSyncVoidFunction, &X);
+
+    EXPECT_FALSE(CallSucceeded);
+  }
+}
+
+static int managedSyncNonVoidFunction(int N) { return N + 1; }
+
+TEST(SessionTest, SyncCallManagedCodeNonVoidFn) {
+  // Test synchronous calls to a non-void function while holding a
+  // ManagedCodeTaskGroup token.
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+
+  {
+    // Pre-shutdown we expect token acquisition to succeed, the function to be
+    // run, and the result to be returned.
+    auto Result = S.callManagedCodeSync(managedSyncNonVoidFunction, 41);
+
+    EXPECT_TRUE(Result);
+    EXPECT_EQ(*Result, 42U);
+  }
+
+  waitForShutdown(S);
+
+  {
+    // Post-shutdown we expect token acquisition to fail, and
+    // callManagedCodeSync to return std::nullopt.
+    auto Result = S.callManagedCodeSync(managedSyncNonVoidFunction, 41);
+
+    EXPECT_EQ(Result, std::nullopt);
+  }
+}
+
+static void managedAsyncVoidFunction(move_only_function<void()> Return,
+                                     int *P) {
+  *P = 42;
+  Return();
+}
+
+TEST(SessionTest, AsyncCallManagedCodeVoidFn) {
+  // Test asynchronous calls to a void function while holding a
+  // ManagedCodeTaskGroup token.
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+
+  {
+    // Pre-shutdown we expect token acquisition to succeed, and the function
+    // and Return callback to be run.
+    int X = 0;
+    bool ReturnSucceeded = false;
+    S.callManagedCodeAsync([&](bool B) { ReturnSucceeded = B; },
+                           managedAsyncVoidFunction, &X);
+    EXPECT_TRUE(ReturnSucceeded);
+    EXPECT_EQ(X, 42U);
+  }
+
+  waitForShutdown(S);
+
+  {
+    // Post-shutdown we expect token acquisition to fail. Return should be
+    // with `false` and the function should not be called.
+    int X = 0;
+    bool ReturnSucceeded = false;
+    S.callManagedCodeAsync([&](bool B) { ReturnSucceeded = B; },
+                           managedAsyncVoidFunction, &X);
+    EXPECT_FALSE(ReturnSucceeded);
+    EXPECT_EQ(X, 0U);
+  }
+}
+
+static void managedAsyncNonVoidFunction(move_only_function<void(int)> Return,
+                                        int *P) {
+  Return(++*P);
+}
+
+TEST(SessionTest, AsyncCallManagedCodeNonVoidFn) {
+  // Test asynchronous calls to a non-void function while holding a
+  // ManagedCodeTaskGroup token.
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+
+  {
+    // Pre-shutdown we expect token acquisition to succeed, and the function
+    // and Return callback to be run.
+    int N = 41;
+    std::optional<int> Result;
+    S.callManagedCodeAsync([&](std::optional<int> N) { Result = N; },
+                           managedAsyncNonVoidFunction, &N);
+    EXPECT_TRUE(Result);
+    EXPECT_EQ(*Result, 42U);
+    EXPECT_EQ(N, 42U);
+  }
+
+  waitForShutdown(S);
+
+  {
+    // Post-shutdown we expect token acquisition to fail. Return should be
+    // with `std::nullopt` and the function should not be called.
+    int N = 41;
+    std::optional<int> Result;
+    S.callManagedCodeAsync([&](std::optional<int> N) { Result = N; },
+                           managedAsyncNonVoidFunction, &N);
+    EXPECT_EQ(Result, std::nullopt);
+    EXPECT_EQ(N, 41U);
+  }
+}
+
+TEST(SessionTest, AsyncCallManagedCodeHoldsTokenAcrossAsyncGap) {
+  // Verify that the ManagedCodeTaskGroup token is held until the async
+  // continuation runs, not just until callManagedCodeAsync returns. This
+  // ensures shutdown blocks for the duration of the actual async work.
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+
+  size_t OpIdx = 0;
+  std::optional<size_t> DetachOpIdx;
+  std::optional<size_t> ShutdownOpIdx;
+  S.createService<MockService>(DetachOpIdx, ShutdownOpIdx, OpIdx);
+
+  // The managed code function stashes its continuation instead of calling it.
+  std::optional<int> Result;
+  move_only_function<void(int)> StashedContinuation;
+  S.callManagedCodeAsync([&](std::optional<int> N) { Result = std::move(N); },
+                         [&](move_only_function<void(int)> Return, int N) {
+                           // Stash the continuation and return without calling
+                           // it.
+                           StashedContinuation = std::move(Return);
+                         },
+                         41);
+
+  // callManagedCodeAsync has returned, but the continuation hasn't been
+  // called yet. The token should still be held inside StashedContinuation.
+  ASSERT_TRUE(StashedContinuation);
+
+  // Request shutdown. It should detach but block on the outstanding token.
+  bool ShutdownComplete = false;
+  S.shutdown([&]() { ShutdownComplete = true; });
+
+  EXPECT_EQ(DetachOpIdx, 0U);
+  EXPECT_FALSE(ShutdownOpIdx);
+  EXPECT_FALSE(ShutdownComplete);
+
+  // Now invoke the stashed continuation and then destroy it, releasing the
+  // token.
+  StashedContinuation(42);
+  StashedContinuation = {};
+
+  // Check result.
+  EXPECT_EQ(Result, 42);
+
+  // Shutdown should now have completed.
+  EXPECT_EQ(ShutdownOpIdx, 1U);
+  EXPECT_TRUE(ShutdownComplete);
+}
+
 TEST(SessionTest, AddServiceAndUseRef) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   auto &CS = S.addService(std::make_unique<ConfigurableService>(42));
   CS.doMoreConfig(1);
 }
 
 TEST(SessionTest, CreateServiceAndUseRef) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   auto &CS = S.createService<ConfigurableService>(42);
   CS.doMoreConfig(1);
 }
 
 TEST(SessionTest, TryCreateServiceSuccess) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   auto CS = S.tryCreateService<ConfigurableService>(false);
   if (auto Err = CS.takeError()) {
     ADD_FAILURE() << "expected service creation to succeed";
@@ -417,8 +632,7 @@ TEST(SessionTest, TryCreateServiceSuccess) {
 }
 
 TEST(SessionTest, TryCreateServiceFailure) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
   auto CS = S.tryCreateService<ConfigurableService>(true);
   if (auto Err = CS.takeError())
     consumeError(std::move(Err));
@@ -429,15 +643,12 @@ TEST(SessionTest, TryCreateServiceFailure) {
 TEST(ControllerAccessTest, Basics) {
   // Test that we can set the ControllerAccess implementation and still shut
   // down as expected.
-  std::deque<std::unique_ptr<Task>> Tasks;
-  Session S(mockExecutorProcessInfo(),
-            std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
-  auto CA = std::make_shared<MockControllerAccess>(S);
-  S.attach(CA, BootstrapInfo(S));
+  QueueingRunner<>::WorkQueue Tasks;
+  Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
+  S.attach(std::make_shared<MockControllerAccess>(S, postOnto(Tasks)),
+           BootstrapInfo(S));
 
-  EnqueueingDispatcher::runTasksFromFront(Tasks);
-
-  S.waitForShutdown();
+  QueueingRunner<>::runFIFOUntilEmpty(Tasks);
 }
 
 static void add_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
@@ -452,29 +663,25 @@ static void add_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
 
 TEST(ControllerAccessTest, ValidCallToController) {
   // Simulate a call to a controller handler.
-  std::deque<std::unique_ptr<Task>> Tasks;
-  Session S(mockExecutorProcessInfo(),
-            std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
-  auto CA = std::make_shared<MockControllerAccess>(S);
-  S.attach(CA, BootstrapInfo(S));
+  QueueingRunner<>::WorkQueue Tasks;
+  Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
+  S.attach(std::make_shared<MockControllerAccess>(S, postOnto(Tasks)),
+           BootstrapInfo(S));
 
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
       S.callViaSession(reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
 
-  EnqueueingDispatcher::runTasksFromFront(Tasks);
+  QueueingRunner<>::runFIFOUntilEmpty(Tasks);
 
   EXPECT_EQ(Result, 42);
-
-  S.waitForShutdown();
 }
 
 TEST(ControllerAccessTest, CallToControllerBeforeAttach) {
   // Expect calls to the controller prior to attaching to fail.
-  std::deque<std::unique_ptr<Task>> Tasks;
-  Session S(mockExecutorProcessInfo(),
-            std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
+  QueueingRunner<>::WorkQueue Tasks;
+  Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
 
   Error Err = Error::success();
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
@@ -486,17 +693,14 @@ TEST(ControllerAccessTest, CallToControllerBeforeAttach) {
       41, 1);
 
   EXPECT_EQ(toString(std::move(Err)), "no controller attached");
-
-  S.waitForShutdown();
 }
 
 TEST(ControllerAccessTest, CallToControllerAfterDetach) {
   // Expect calls to the controller prior to attaching to fail.
-  std::deque<std::unique_ptr<Task>> Tasks;
-  Session S(mockExecutorProcessInfo(),
-            std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
-  auto CA = std::make_shared<MockControllerAccess>(S);
-  S.attach(CA, BootstrapInfo(S));
+  QueueingRunner<>::WorkQueue Tasks;
+  Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
+  S.attach(std::make_shared<MockControllerAccess>(S, postOnto(Tasks)),
+           BootstrapInfo(S));
 
   S.detach();
 
@@ -510,16 +714,13 @@ TEST(ControllerAccessTest, CallToControllerAfterDetach) {
       41, 1);
 
   EXPECT_EQ(toString(std::move(Err)), "no controller attached");
-
-  S.waitForShutdown();
 }
 
 TEST(ControllerAccessTest, CallFromController) {
   // Simulate a call from the controller.
-  std::deque<std::unique_ptr<Task>> Tasks;
-  Session S(mockExecutorProcessInfo(),
-            std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
-  auto CA = std::make_shared<MockControllerAccess>(S);
+  QueueingRunner<>::WorkQueue Tasks;
+  Session S(mockExecutorProcessInfo(), QueueingRunner(Tasks), noErrors);
+  auto CA = std::make_shared<MockControllerAccess>(S, postOnto(Tasks));
   S.attach(CA, BootstrapInfo(S));
 
   int32_t Result = 0;
@@ -527,28 +728,29 @@ TEST(ControllerAccessTest, CallFromController) {
       CallViaMockControllerAccess(*CA, add_sps_wrapper),
       [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
 
-  EnqueueingDispatcher::runTasksFromFront(Tasks);
+  QueueingRunner<>::runFIFOUntilEmpty(Tasks);
 
   EXPECT_EQ(Result, 42);
-
-  S.waitForShutdown();
 }
 
-TEST(ControllerAccessTest, RedundantAsyncShutdown) {
-  // Check that redundant calls to shutdown have their callbacks run.
-  std::deque<std::unique_ptr<Task>> Tasks;
-  Session S(mockExecutorProcessInfo(),
-            std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
-  S.waitForShutdown();
-
-  bool RedundantCallbackRan = false;
-  S.shutdown([&]() { RedundantCallbackRan = true; });
-  EXPECT_TRUE(RedundantCallbackRan);
+TEST(ControllerAccessTest, FailConnect) {
+  // Simulate failure to connect.
+  bool GotError = false;
+  std::string ErrMsg = "failed to connect";
+  Session S(mockExecutorProcessInfo(), noDispatch, [&](Error Err) {
+    GotError = true;
+    EXPECT_EQ(toString(std::move(Err)), ErrMsg);
+  });
+  BootstrapInfo BI(S);
+  auto CA = std::make_shared<MockControllerAccess>(S);
+  CA->setOnConnect(
+      [&](BootstrapInfo &BI) { return make_error<StringError>(ErrMsg); });
+  S.attach(std::move(CA), std::move(BI));
+  ASSERT_TRUE(GotError);
 }
 
 TEST(ControllerAccessTest, BootstrapInfoPassedToConnect) {
-  Session S(mockExecutorProcessInfo(), std::make_unique<NoDispatcher>(),
-            noErrors);
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
 
   // Test values.
   constexpr const char *SymName = "test_sym";
@@ -569,10 +771,9 @@ TEST(ControllerAccessTest, BootstrapInfoPassedToConnect) {
     EXPECT_EQ(BI.symbols().at(SymName), static_cast<const void *>(&Sym));
     EXPECT_EQ(BI.values().at(SecretKey), SecretValue);
     OnConnectRan = true;
+    return Error::success();
   });
   S.attach(CA, std::move(BI));
 
   ASSERT_TRUE(OnConnectRan);
-
-  S.waitForShutdown();
 }

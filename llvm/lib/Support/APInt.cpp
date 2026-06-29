@@ -23,6 +23,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SwapByteOrder.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cmath>
 #include <optional>
@@ -753,6 +754,17 @@ bool APInt::isSubsetOfSlowCase(const APInt &RHS) const {
   return true;
 }
 
+bool APInt::isInverseOfSlowCase(const APInt &RHS) const {
+  const unsigned Last = getNumWords() - 1;
+  for (unsigned I = 0; I != Last; ++I)
+    if ((U.pVal[I] ^ RHS.U.pVal[I]) != WORDTYPE_MAX)
+      return false;
+
+  unsigned TailBits = BitWidth - Last * APINT_BITS_PER_WORD;
+  WordType TailMask = llvm::maskTrailingOnes<WordType>(TailBits);
+  return (U.pVal[Last] ^ RHS.U.pVal[Last]) == TailMask;
+}
+
 APInt APInt::byteSwap() const {
   assert(BitWidth >= 16 && BitWidth % 8 == 0 && "Cannot byteswap!");
   if (BitWidth == 16)
@@ -776,33 +788,43 @@ APInt APInt::byteSwap() const {
 }
 
 APInt APInt::reverseBits() const {
-  switch (BitWidth) {
-  case 64:
-    return APInt(BitWidth, llvm::reverseBits<uint64_t>(U.VAL));
-  case 32:
-    return APInt(BitWidth, llvm::reverseBits<uint32_t>(U.VAL));
-  case 16:
-    return APInt(BitWidth, llvm::reverseBits<uint16_t>(U.VAL));
-  case 8:
-    return APInt(BitWidth, llvm::reverseBits<uint8_t>(U.VAL));
-  case 0:
-    return *this;
-  default:
-    break;
+  if (isSingleWord()) {
+    switch (BitWidth) {
+    case 64:
+      return APInt(BitWidth, llvm::reverseBits<uint64_t>(U.VAL));
+    case 32:
+      return APInt(BitWidth, llvm::reverseBits<uint32_t>(U.VAL));
+    case 16:
+      return APInt(BitWidth, llvm::reverseBits<uint16_t>(U.VAL));
+    case 8:
+      return APInt(BitWidth, llvm::reverseBits<uint8_t>(U.VAL));
+    case 1: // fallthrough
+    case 0:
+      return *this;
+    default:
+      return APInt(BitWidth,
+                   llvm::reverseBits<uint64_t>(U.VAL) >> (64 - BitWidth));
+    }
   }
 
-  APInt Val(*this);
-  APInt Reversed(BitWidth, 0);
-  unsigned S = BitWidth;
-
-  for (; Val != 0; Val.lshrInPlace(1)) {
-    Reversed <<= 1;
-    Reversed |= Val[0];
-    --S;
+  APInt Result(BitWidth, 0);
+  unsigned NumWords = getNumWords();
+  unsigned ExcessBits = NumWords * APINT_BITS_PER_WORD - BitWidth;
+  if (ExcessBits == 0) {
+    // Fast path. No cross-word shift needed.
+    for (unsigned I = 0; I < NumWords; ++I)
+      Result.U.pVal[I] = llvm::reverseBits<uint64_t>(U.pVal[NumWords - 1 - I]);
+    return Result;
   }
-
-  Reversed <<= S;
-  return Reversed;
+  // Holds reversed bits of the previous (more significant) word.
+  uint64_t PrevRev = llvm::reverseBits<uint64_t>(U.pVal[NumWords - 1]);
+  for (unsigned I = 0; I < NumWords - 1; ++I) {
+    uint64_t CurrRev = llvm::reverseBits<uint64_t>(U.pVal[NumWords - 2 - I]);
+    Result.U.pVal[I] = (PrevRev >> ExcessBits) | (CurrRev << (64 - ExcessBits));
+    PrevRev = CurrRev;
+  }
+  Result.U.pVal[NumWords - 1] = PrevRev >> ExcessBits;
+  return Result;
 }
 
 APInt llvm::APIntOps::GreatestCommonDivisor(APInt A, APInt B) {
@@ -1217,7 +1239,7 @@ unsigned APInt::nearestLogBase2() const {
 // the libc sqrt function is called. The result is rounded and then converted
 // back to a uint64_t which is then used to construct the result. Finally,
 // the Babylonian method for computing square roots is used.
-APInt APInt::sqrt() const {
+APInt APInt::sqrtFloor() const {
 
   // Determine the magnitude of the value.
   unsigned magnitude = getActiveBits();
@@ -1226,13 +1248,12 @@ APInt APInt::sqrt() const {
   // rounding errors in libc sqrt for small values.
   if (magnitude <= 5) {
     static const uint8_t results[32] = {
-      /*     0 */ 0,
-      /*  1- 2 */ 1, 1,
-      /*  3- 6 */ 2, 2, 2, 2,
-      /*  7-12 */ 3, 3, 3, 3, 3, 3,
-      /* 13-20 */ 4, 4, 4, 4, 4, 4, 4, 4,
-      /* 21-30 */ 5, 5, 5, 5, 5, 5, 5, 5, 5, 5,
-      /*    31 */ 6
+        /*     0 */ 0,
+        /*  1- 3 */ 1, 1, 1,
+        /*  4- 8 */ 2, 2, 2, 2, 2,
+        /*  9-15 */ 3, 3, 3, 3, 3, 3, 3,
+        /* 16-24 */ 4, 4, 4, 4, 4, 4, 4, 4, 4,
+        /* 25-31 */ 5, 5, 5, 5, 5, 5, 5,
     };
     return APInt(BitWidth, results[ (isSingleWord() ? U.VAL : U.pVal[0]) ]);
   }
@@ -1242,9 +1263,9 @@ APInt APInt::sqrt() const {
   // libc sqrt function which will probably use a hardware sqrt computation.
   // This should be faster than the algorithm below.
   if (magnitude < 52) {
-    return APInt(BitWidth,
-                 uint64_t(::round(::sqrt(double(isSingleWord() ? U.VAL
-                                                               : U.pVal[0])))));
+    return APInt(
+        BitWidth,
+        uint64_t(::floor(::sqrt(double(isSingleWord() ? U.VAL : U.pVal[0])))));
   }
 
   // Okay, all the short cuts are exhausted. We must compute it. The following
@@ -1272,23 +1293,7 @@ APInt APInt::sqrt() const {
       break;
     x_old = x_new;
   }
-
-  // Make sure we return the closest approximation
-  // NOTE: The rounding calculation below is correct. It will produce an
-  // off-by-one discrepancy with results from pari/gp. That discrepancy has been
-  // determined to be a rounding issue with pari/gp as it begins to use a
-  // floating point representation after 192 bits. There are no discrepancies
-  // between this algorithm and pari/gp for bit widths < 192 bits.
-  APInt square(x_old * x_old);
-  APInt nextSquare((x_old + 1) * (x_old +1));
-  if (this->ult(square))
-    return x_old;
-  assert(this->ule(nextSquare) && "Error in APInt::sqrt computation");
-  APInt midpoint((nextSquare - square).udiv(two));
-  APInt offset(*this - square);
-  if (offset.ult(midpoint))
-    return x_old;
-  return x_old + 1;
+  return x_old;
 }
 
 /// \returns the multiplicative inverse of an odd APInt modulo 2^BitWidth.
@@ -1755,7 +1760,7 @@ uint64_t APInt::urem(uint64_t RHS) const {
     return U.pVal[0] % RHS;
   if (llvm::isPowerOf2_64(RHS))
     // X % 2^w ===> X & (2^w - 1)
-    return getZExtValue() & (RHS - 1);
+    return U.pVal[0] & (RHS - 1);
 
   // We have to compute it the hard way. Invoke the Knuth divide algorithm.
   uint64_t Remainder;
@@ -2969,14 +2974,10 @@ llvm::APIntOps::SolveQuadraticEquationWrap(APInt A, APInt B, APInt C,
 
   APInt D = SqrB - 4*A*C;
   assert(D.isNonNegative() && "Negative discriminant");
-  APInt SQ = D.sqrt();
+  APInt SQ = D.sqrtFloor();
 
   APInt Q = SQ * SQ;
   bool InexactSQ = Q != D;
-  // The calculated SQ may actually be greater than the exact (non-integer)
-  // value. If that's the case, decrement SQ to get a value that is lower.
-  if (Q.sgt(D))
-    SQ -= 1;
 
   APInt X;
   APInt Rem;
@@ -3236,4 +3237,24 @@ APInt llvm::APIntOps::clmulr(const APInt &LHS, const APInt &RHS) {
 APInt llvm::APIntOps::clmulh(const APInt &LHS, const APInt &RHS) {
   assert(LHS.getBitWidth() == RHS.getBitWidth());
   return clmulr(LHS, RHS).lshr(1);
+}
+
+APInt llvm::APIntOps::pext(const APInt &Val, const APInt &Mask) {
+  unsigned BW = Val.getBitWidth();
+  assert(BW == Mask.getBitWidth() && "Operand mismatch");
+  APInt Result = APInt::getZero(BW);
+  for (unsigned I = 0, P = 0; I != BW; ++I)
+    if (Mask[I])
+      Result.setBitVal(P++, Val[I]);
+  return Result;
+}
+
+APInt llvm::APIntOps::pdep(const APInt &Val, const APInt &Mask) {
+  unsigned BW = Val.getBitWidth();
+  assert(BW == Mask.getBitWidth() && "Operand mismatch");
+  APInt Result = APInt::getZero(BW);
+  for (unsigned I = 0, P = 0; I != BW; ++I)
+    if (Mask[I])
+      Result.setBitVal(I, Val[P++]);
+  return Result;
 }

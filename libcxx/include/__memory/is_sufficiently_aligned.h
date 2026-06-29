@@ -21,7 +21,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <size_t _Alignment, class _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool __is_sufficiently_aligned(_Tp* __ptr) {
+[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool __is_sufficiently_aligned(_Tp* __ptr) {
   return reinterpret_cast<uintptr_t>(__ptr) % _Alignment == 0;
 }
 

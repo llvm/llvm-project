@@ -22,6 +22,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/float128.h"
 #include <memory>
+#include <optional>
 
 #define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
   do {                                                                         \
@@ -677,6 +678,8 @@ public:
 
   LLVM_ABI cmpResult compareAbsoluteValue(const IEEEFloat &) const;
 
+  LLVM_ABI APInt getNaNPayload() const;
+
 private:
   /// \name Simple Queries
   /// @{
@@ -923,6 +926,8 @@ public:
   LLVM_ABI bool isLargest() const;
   LLVM_ABI bool isInteger() const;
 
+  LLVM_ABI APInt getNaNPayload() const;
+
   LLVM_ABI void toString(SmallVectorImpl<char> &Str, unsigned FormatPrecision,
                          unsigned FormatMaxPadding,
                          bool TruncateZero = true) const;
@@ -1018,6 +1023,11 @@ struct fltSemantics {
 
   /* Whether the sign bit of this semantics is the most significant bit */
   bool hasSignBitInMSB = true;
+
+  /* Whether the format supports IEEE754 denormal representation.
+     If both hasDenormals and hasZero are false exponent 0 is assumed to be a
+     regular exponent instead of being reserved. This changes the bias by +1. */
+  bool hasDenormals = true;
 };
 
 // This is a interface class that is currently forwarding functionalities from
@@ -1404,6 +1414,24 @@ public:
     APFLOAT_DISPATCH_ON_SEMANTICS(convertFromAPInt(Input, IsSigned, RM));
   }
 
+  /// Fill this APFloat with the result of a string conversion.
+  ///
+  /// The following strings are accepted for conversion purposes:
+  /// * Decimal floating-point literals (e.g., `0.1e-5`)
+  /// * Hexadecimal floating-point literals (e.g., `0x1.0p-5`)
+  /// * Positive infinity via "inf", "INFINITY", "Inf", "+Inf", or "+inf".
+  /// * Negative infinity via "-inf", "-INFINITY", or "-Inf".
+  /// * Quiet NaNs via "nan", "NaN", "nan(...)", or "NaN(...)", where the
+  ///   "..." is either a decimal or hexadecimal integer representing the
+  ///   payload. A negative sign may be optionally provided.
+  /// * Signaling NaNs via "snan", "sNaN", "snan(...)", or "sNaN(...)", where
+  ///   the "..." is either a decimal or hexadecimal integer representing the
+  ///   payload. A negative sign may be optionally provided.
+  ///
+  /// If the input string is none of these forms, then an error is returned.
+  ///
+  /// If a floating-point exception occurs during conversion, then no error is
+  /// returned, and the exception is indicated via opStatus.
   LLVM_ABI Expected<opStatus> convertFromString(StringRef, roundingMode);
   APInt bitcastToAPInt() const {
     APFLOAT_DISPATCH_ON_SEMANTICS(bitcastToAPInt());
@@ -1536,6 +1564,14 @@ public:
     APFLOAT_DISPATCH_ON_SEMANTICS(isSmallestNormalized());
   }
 
+  /// If the value is a NaN value, return an integer containing the payload of
+  /// this value. This payload will include the quiet bit as part of the
+  /// returned integer.
+  APInt getNaNPayload() const {
+    assert(isNaN() && "Can only call this on a NaN value");
+    APFLOAT_DISPATCH_ON_SEMANTICS(getNaNPayload());
+  }
+
   /// Return the FPClassTest which will return true for the value.
   LLVM_ABI FPClassTest classify() const;
 
@@ -1571,6 +1607,22 @@ public:
   int getExactLog2() const {
     return isNegative() ? INT_MIN : getExactLog2Abs();
   }
+
+  // Returns true if this value is exactly 2^N.
+  LLVM_READONLY
+  bool isPowerOf2(int N) const { return N != INT_MIN && getExactLog2() == N; }
+
+  // Returns true if this value is exactly -(2^N).
+  LLVM_READONLY
+  bool isNegPowerOf2(int N) const {
+    return N != INT_MIN && isNegative() && getExactLog2Abs() == N;
+  }
+
+  // Returns true if this value is exactly +1.0.
+  LLVM_READONLY bool isOne() const { return isPowerOf2(0); }
+
+  // Returns true if this value is exactly -1.0.
+  LLVM_READONLY bool isMinusOne() const { return isNegPowerOf2(0); }
 
   LLVM_ABI friend hash_code hash_value(const APFloat &Arg);
   friend int ilogb(const APFloat &Arg);
@@ -1729,6 +1781,12 @@ inline APFloat maximumnum(const APFloat &A, const APFloat &B) {
     return A.isNegative() ? B : A;
   return A < B ? B : A;
 }
+
+/// Implement IEEE 754-2019 exp functions
+LLVM_READONLY
+LLVM_ABI std::optional<APFloat>
+exp(const APFloat &X, RoundingMode RM = APFloat::rmNearestTiesToEven,
+    APFloat::opStatus *Status = nullptr);
 
 inline raw_ostream &operator<<(raw_ostream &OS, const APFloat &V) {
   V.print(OS);

@@ -1,6 +1,100 @@
 // RUN: mlir-opt -split-input-file -verify-diagnostics %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
+// spirv.Any
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @any_vector2
+func.func @any_vector2(%arg0: vector<2xi1>) -> i1 {
+  // CHECK: spirv.Any %{{.*}} : vector<2xi1>
+  %0 = spirv.Any %arg0 : vector<2xi1>
+  return %0 : i1
+}
+
+// -----
+
+// CHECK-LABEL: @any_vector3
+func.func @any_vector3(%arg0: vector<3xi1>) -> i1 {
+  // CHECK: spirv.Any %{{.*}} : vector<3xi1>
+  %0 = spirv.Any %arg0 : vector<3xi1>
+  return %0 : i1
+}
+
+// -----
+
+// CHECK-LABEL: @any_vector4
+func.func @any_vector4(%arg0: vector<4xi1>) -> i1 {
+  // CHECK: spirv.Any %{{.*}} : vector<4xi1>
+  %0 = spirv.Any %arg0 : vector<4xi1>
+  return %0 : i1
+}
+
+// -----
+
+func.func @any_scalar(%arg0: i1) -> i1 {
+  // expected-error @+1 {{invalid kind of type specified: expected builtin.vector, but found 'i1'}}
+  %0 = spirv.Any %arg0 : i1
+  return %0 : i1
+}
+
+// -----
+
+func.func @any_wrong_result_type(%arg0: vector<2xi1>) -> vector<2xi1> {
+  // expected-error @+1 {{'spirv.Any' op result #0 must be bool, but got 'vector<2xi1>'}}
+  %0 = "spirv.Any"(%arg0) : (vector<2xi1>) -> vector<2xi1>
+  return %0 : vector<2xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.All
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @all_vector2
+func.func @all_vector2(%arg0: vector<2xi1>) -> i1 {
+  // CHECK: spirv.All %{{.*}} : vector<2xi1>
+  %0 = spirv.All %arg0 : vector<2xi1>
+  return %0 : i1
+}
+
+// -----
+
+// CHECK-LABEL: @all_vector3
+func.func @all_vector3(%arg0: vector<3xi1>) -> i1 {
+  // CHECK: spirv.All %{{.*}} : vector<3xi1>
+  %0 = spirv.All %arg0 : vector<3xi1>
+  return %0 : i1
+}
+
+// -----
+
+// CHECK-LABEL: @all_vector4
+func.func @all_vector4(%arg0: vector<4xi1>) -> i1 {
+  // CHECK: spirv.All %{{.*}} : vector<4xi1>
+  %0 = spirv.All %arg0 : vector<4xi1>
+  return %0 : i1
+}
+
+// -----
+
+func.func @all_scalar(%arg0: i1) -> i1 {
+  // expected-error @+1 {{invalid kind of type specified: expected builtin.vector, but found 'i1'}}
+  %0 = spirv.All %arg0 : i1
+  return %0 : i1
+}
+
+// -----
+
+func.func @all_wrong_result_type(%arg0: vector<2xi1>) -> vector<2xi1> {
+  // expected-error @+1 {{'spirv.All' op result #0 must be bool, but got 'vector<2xi1>'}}
+  %0 = "spirv.All"(%arg0) : (vector<2xi1>) -> vector<2xi1>
+  return %0 : vector<2xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.IEqual
 //===----------------------------------------------------------------------===//
 
@@ -81,6 +175,24 @@ func.func @isnan_scalar(%arg0: f32) -> i1 {
 func.func @isnan_vector(%arg0: vector<2xf32>) -> vector<2xi1> {
   // CHECK: spirv.IsNan {{.*}} : vector<2xf32>
   %0 = spirv.IsNan %arg0 : vector<2xf32>
+  return %0 : vector<2xi1>
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.IsNormal
+//===----------------------------------------------------------------------===//
+
+func.func @isnormal_scalar(%arg0: f32) -> i1 {
+  // CHECK: spirv.IsNormal {{.*}} : f32
+  %0 = spirv.IsNormal %arg0 : f32
+  return %0 : i1
+}
+
+func.func @isnormal_vector(%arg0: vector<2xf32>) -> vector<2xi1> {
+  // CHECK: spirv.IsNormal {{.*}} : vector<2xf32>
+  %0 = spirv.IsNormal %arg0 : vector<2xf32>
   return %0 : vector<2xi1>
 }
 
@@ -248,6 +360,24 @@ func.func @select_op_vec_condn_vec(%arg0: vector<3xi1>) -> () {
   %1 = spirv.Constant dense<[5.0, 6.0, 7.0]> : vector<3xf32>
   // CHECK: spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : vector<3xi1>, vector<3xf32>
   %2 = spirv.Select %arg0, %0, %1 : vector<3xi1>, vector<3xf32>
+  return
+}
+
+func.func @select_op_array(%arg0: i1, %arg1: !spirv.array<4 x i32>, %arg2: !spirv.array<4 x i32>) -> () {
+  // CHECK: spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, !spirv.array<4 x i32>
+  %0 = spirv.Select %arg0, %arg1, %arg2 : i1, !spirv.array<4 x i32>
+  return
+}
+
+func.func @select_op_struct(%arg0: i1, %arg1: !spirv.struct<(i32, i32)>, %arg2: !spirv.struct<(i32, i32)>) -> () {
+  // CHECK: spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, !spirv.struct<(i32, i32)>
+  %0 = spirv.Select %arg0, %arg1, %arg2 : i1, !spirv.struct<(i32, i32)>
+  return
+}
+
+func.func @select_op_matrix(%arg0: i1, %arg1: !spirv.matrix<4 x vector<3xf32>>, %arg2: !spirv.matrix<4 x vector<3xf32>>) -> () {
+  // CHECK: spirv.Select {{%.*}}, {{%.*}}, {{%.*}} : i1, !spirv.matrix<4 x vector<3xf32>>
+  %0 = spirv.Select %arg0, %arg1, %arg2 : i1, !spirv.matrix<4 x vector<3xf32>>
   return
 }
 

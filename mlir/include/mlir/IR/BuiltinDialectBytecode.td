@@ -116,12 +116,15 @@ def FileLineColLoc : DialectAttribute<(attr
 }
 }
 
-let cType = "FusedLoc",
-    cBuilder = "cast<FusedLoc>(getChecked<FusedLoc>([&]() { return reader.emitError(); }, context, $_args))" in {
+let cType = "FusedLoc" in {
 def FusedLoc : DialectAttribute<(attr
   Array<Location>:$locations
 )> {
   let printerPredicate = "!$_val.getMetadata()";
+  // FusedLoc::get(context, locs) may return UnknownLoc when locs is empty.
+  // Pass Attribute() explicitly to bypass the folding logic and always
+  // construct a FusedLoc via Base::getChecked.
+  let cBuilder = "cast<FusedLoc>(getChecked<FusedLoc>([&]() { return reader.emitError(); }, context, $_args, Attribute()))";
 }
 
 def FusedLocWithMetadata : DialectAttribute<(attr
@@ -129,6 +132,7 @@ def FusedLocWithMetadata : DialectAttribute<(attr
   Attribute:$metadata
 )> {
   let printerPredicate = "$_val.getMetadata()";
+  let cBuilder = "cast<FusedLoc>(getChecked<FusedLoc>([&]() { return reader.emitError(); }, context, $_args))";
 }
 }
 
@@ -201,6 +205,15 @@ def DistinctAttr : DialectAttribute<(attr
   Attribute:$referencedAttr
 )>;
 
+// Make easy to disable until version number gets added.
+class EnableAffineMapPrintingJuly2026<dag d> : DialectAttribute<d>;
+
+def AffineMapAttr : EnableAffineMapPrintingJuly2026<(attr
+  WithParser<"succeeded(readAffineMap($_reader, context, $_var))",
+    WithPrinter<"writeAffineMap($_writer, $_name)",
+    WithType<"AffineMap">>>:$value
+)>;
+
 // Types
 // -----
 
@@ -227,6 +240,14 @@ def BFloat16Type : DialectType<(type)>;
 
 def Float16Type : DialectType<(type)>;
 
+// Make it easy to stage the addition of new floating point types so that
+// readers can be updated first. This is enabled by default, but can be flipped
+// to DialectTypeNoPrint if staging needed.
+// Note: this will be removed post next release.
+class EnableFloatPrintingJune2026<dag d> : DialectType<d>;
+
+def FloatTF32Type : EnableFloatPrintingJune2026<(type)>;
+
 def Float32Type : DialectType<(type)>;
 
 def Float64Type : DialectType<(type)>;
@@ -234,6 +255,28 @@ def Float64Type : DialectType<(type)>;
 def Float80Type : DialectType<(type)>;
 
 def Float128Type : DialectType<(type)>;
+
+def Float8E5M2Type : EnableFloatPrintingJune2026<(type)>;
+
+def Float8E4M3Type : EnableFloatPrintingJune2026<(type)>;
+
+def Float8E4M3FNType : EnableFloatPrintingJune2026<(type)>;
+
+def Float8E5M2FNUZType : EnableFloatPrintingJune2026<(type)>;
+
+def Float8E4M3FNUZType : EnableFloatPrintingJune2026<(type)>;
+
+def Float8E4M3B11FNUZType : EnableFloatPrintingJune2026<(type)>;
+
+def Float8E3M4Type : EnableFloatPrintingJune2026<(type)>;
+
+def Float4E2M1FNType : EnableFloatPrintingJune2026<(type)>;
+
+def Float6E2M3FNType : EnableFloatPrintingJune2026<(type)>;
+
+def Float6E3M2FNType : EnableFloatPrintingJune2026<(type)>;
+
+def Float8E8M0FNUType : EnableFloatPrintingJune2026<(type)>;
 
 def ComplexType : DialectType<(type
   Type:$elementType
@@ -290,6 +333,8 @@ def UnrankedTensorType : DialectType<(type
   Type:$elementType
 )>;
 
+def TokenType : DialectType<(type)>;
+
 let cType = "VectorType" in {
 def VectorType : DialectType<(type
   Array<SignedVarIntList>:$shape,
@@ -342,6 +387,7 @@ def BuiltinDialectAttributes : DialectAttributes<"Builtin"> {
     SparseElementsAttr,
     DistinctAttr,
     FileLineColRange,
+    AffineMapAttr,
   ];
 }
 
@@ -367,7 +413,20 @@ def BuiltinDialectTypes : DialectTypes<"Builtin"> {
     UnrankedMemRefTypeWithMemSpace,
     UnrankedTensorType,
     VectorType,
-    VectorTypeWithScalableDims
+    VectorTypeWithScalableDims,
+    FloatTF32Type,
+    Float8E5M2Type,
+    Float8E4M3Type,
+    Float8E4M3FNType,
+    Float8E5M2FNUZType,
+    Float8E4M3FNUZType,
+    Float8E4M3B11FNUZType,
+    Float8E3M4Type,
+    Float4E2M1FNType,
+    Float6E2M3FNType,
+    Float6E3M2FNType,
+    Float8E8M0FNUType,
+    TokenType
   ];
 }
 

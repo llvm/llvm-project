@@ -13,34 +13,13 @@
 #ifndef ORC_RT_ALLOCACTION_H
 #define ORC_RT_ALLOCACTION_H
 
+#include "orc-rt/CallableTraitsHelper.h"
 #include "orc-rt/Error.h"
 #include "orc-rt/WrapperFunction.h"
 
 #include <vector>
 
 namespace orc_rt {
-namespace detail {
-
-template <typename Handler>
-struct AAHandlerTraits
-    : public AAHandlerTraits<
-          decltype(&std::remove_cv_t<std::remove_reference_t<Handler>>::
-                   operator())> {};
-
-template <typename... ArgTs>
-struct AAHandlerTraits<WrapperFunctionBuffer(ArgTs...)> {
-  typedef std::tuple<ArgTs...> ArgTuple;
-};
-
-template <typename Class, typename... ArgTs>
-struct AAHandlerTraits<WrapperFunctionBuffer (Class::*)(ArgTs...)>
-    : public AAHandlerTraits<WrapperFunctionBuffer(ArgTs...)> {};
-
-template <typename Class, typename... ArgTs>
-struct AAHandlerTraits<WrapperFunctionBuffer (Class::*)(ArgTs...) const>
-    : public AAHandlerTraits<WrapperFunctionBuffer(ArgTs...)> {};
-
-} // namespace detail
 
 /// An AllocActionFn is a function that takes an argument blob and returns an
 /// empty WrapperFunctionBuffer on success, or an out-of-band error on failure.
@@ -49,15 +28,16 @@ typedef orc_rt_WrapperFunctionBuffer (*AllocActionFn)(const char *ArgData,
 
 struct AllocActionFunction {
 
-  template <typename Deserializer, typename Handler>
+  template <typename Deserializer, typename Serializer, typename Handler>
   static WrapperFunctionBuffer handle(const char *ArgData, size_t ArgSize,
-                                      Deserializer &&D, Handler &&H) {
-    typename detail::AAHandlerTraits<Handler>::ArgTuple Args;
+                                      Deserializer &&D, Serializer &&S,
+                                      Handler &&H) {
+    typename CallableArgInfo<Handler>::args_tuple_type Args;
     if (!D.deserialize(ArgData, ArgSize, Args))
       return WrapperFunctionBuffer::createOutOfBandError(
           "Could not deserialize allocation action argument buffer");
 
-    return std::apply(std::forward<Handler>(H), std::move(Args));
+    return S.serialize(std::apply(std::forward<Handler>(H), std::move(Args)));
   }
 };
 

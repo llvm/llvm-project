@@ -63,7 +63,7 @@ class Value;
 // the information from the LLVM IR.
 // The idea is that ultimately we would be able to free up the memory used
 // by the LLVM IR as soon as the translation is over.
-class IRTranslator : public MachineFunctionPass {
+class LLVM_ABI IRTranslator : public MachineFunctionPass {
 public:
   static char ID;
 
@@ -649,6 +649,8 @@ private:
   bool HasTailCall = false;
 
   StackProtectorDescriptor SPDescriptor;
+
+  bool mayTranslateUserTypes(const User &U) const;
 
   /// Switch analysis and optimization.
   class GISelSwitchLowering : public SwitchCG::SwitchLowering {

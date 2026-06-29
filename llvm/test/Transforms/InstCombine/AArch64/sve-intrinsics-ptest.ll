@@ -25,11 +25,11 @@ define i1 @ptest_last_to_any(<vscale x 16 x i1> %a) #0 {
 
 define i1 @ptest_any1(<vscale x 2 x i1> %a) #0 {
 ; CHECK-LABEL: @ptest_any1(
-; CHECK-NEXT:    [[MASK:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 0)
+; CHECK-NEXT:    [[MASK:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 30)
 ; CHECK-NEXT:    [[OUT:%.*]] = call i1 @llvm.aarch64.sve.ptest.any.nxv2i1(<vscale x 2 x i1> [[MASK]], <vscale x 2 x i1> [[A:%.*]])
 ; CHECK-NEXT:    ret i1 [[OUT]]
 ;
-  %mask = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 0)
+  %mask = tail call <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32 30)
   %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %mask)
   %2 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1> %a)
   %out = call i1 @llvm.aarch64.sve.ptest.any.nxv16i1(<vscale x 16 x i1> %1, <vscale x 16 x i1> %2)
@@ -53,11 +53,11 @@ define i1 @ptest_any2(<vscale x 4 x i1> %a) #0 {
 
 define i1 @ptest_first(<vscale x 4 x i1> %a) #0 {
 ; CHECK-LABEL: @ptest_first(
-; CHECK-NEXT:    [[MASK:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 0)
+; CHECK-NEXT:    [[MASK:%.*]] = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 30)
 ; CHECK-NEXT:    [[OUT:%.*]] = call i1 @llvm.aarch64.sve.ptest.first.nxv4i1(<vscale x 4 x i1> [[MASK]], <vscale x 4 x i1> [[A:%.*]])
 ; CHECK-NEXT:    ret i1 [[OUT]]
 ;
-  %mask = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 0)
+  %mask = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 30)
   %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %mask)
   %2 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %a)
   %out = call i1 @llvm.aarch64.sve.ptest.first.nxv16i1(<vscale x 16 x i1> %1, <vscale x 16 x i1> %2)
@@ -76,11 +76,11 @@ define i1 @ptest_first_same_ops(<vscale x 2 x i1> %a) #0 {
 
 define i1 @ptest_last(<vscale x 8 x i1> %a) #0 {
 ; CHECK-LABEL: @ptest_last(
-; CHECK-NEXT:    [[MASK:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 0)
+; CHECK-NEXT:    [[MASK:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 30)
 ; CHECK-NEXT:    [[OUT:%.*]] = call i1 @llvm.aarch64.sve.ptest.last.nxv8i1(<vscale x 8 x i1> [[MASK]], <vscale x 8 x i1> [[A:%.*]])
 ; CHECK-NEXT:    ret i1 [[OUT]]
 ;
-  %mask = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 0)
+  %mask = tail call <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32 30)
   %1 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %mask)
   %2 = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1> %a)
   %out = call i1 @llvm.aarch64.sve.ptest.last.nxv16i1(<vscale x 16 x i1> %1, <vscale x 16 x i1> %2)
@@ -220,32 +220,5 @@ define i1 @ptest_any_orr_z(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscal
   %2 = call i1 @llvm.aarch64.sve.ptest.any.nxv16i1(<vscale x 16 x i1> %1, <vscale x 16 x i1> %1)
   ret i1 %2
 }
-
-declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32)
-declare <vscale x 8 x i1> @llvm.aarch64.sve.ptrue.nxv8i1(i32)
-declare <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32)
-declare <vscale x 2 x i1> @llvm.aarch64.sve.ptrue.nxv2i1(i32)
-
-declare i1 @llvm.aarch64.sve.ptest.any.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>)
-declare i1 @llvm.aarch64.sve.ptest.first.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>)
-declare i1 @llvm.aarch64.sve.ptest.last.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>)
-
-declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv8i1(<vscale x 8 x i1>)
-declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1>)
-declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv2i1(<vscale x 2 x i1>)
-
-declare <vscale x 16 x i1> @llvm.aarch64.sve.brka.z.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>)
-declare <vscale x 16 x i1> @llvm.aarch64.sve.brkb.z.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>)
-declare <vscale x 16 x i1> @llvm.aarch64.sve.brkpa.z.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>)
-declare <vscale x 16 x i1> @llvm.aarch64.sve.brkpb.z.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>)
-declare <vscale x 16 x i1> @llvm.aarch64.sve.rdffr.z(<vscale x 16 x i1>)
-
-declare <vscale x 16 x i1> @llvm.aarch64.sve.and.z.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>)
-declare <vscale x 16 x i1> @llvm.aarch64.sve.bic.z.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>)
-declare <vscale x 16 x i1> @llvm.aarch64.sve.eor.z.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>)
-declare <vscale x 16 x i1> @llvm.aarch64.sve.nand.z.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>)
-declare <vscale x 16 x i1> @llvm.aarch64.sve.nor.z.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>)
-declare <vscale x 16 x i1> @llvm.aarch64.sve.orn.z.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>)
-declare <vscale x 16 x i1> @llvm.aarch64.sve.orr.z.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>)
 
 attributes #0 = { "target-features"="+sve" }

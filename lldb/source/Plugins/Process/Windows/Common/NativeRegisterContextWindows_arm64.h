@@ -10,11 +10,13 @@
 #ifndef liblldb_NativeRegisterContextWindows_arm64_h_
 #define liblldb_NativeRegisterContextWindows_arm64_h_
 
+#include "NativeRegisterContextWindows.h"
+
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg_arm64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 #include "Plugins/Process/Utility/lldb-arm64-register-enums.h"
 
-#include "NativeRegisterContextWindows.h"
+#include "lldb/Host/windows/windows.h"
 
 namespace lldb_private {
 
@@ -41,6 +43,8 @@ public:
 
   Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
+  void InvalidateAllRegisters() override;
+
 protected:
   Status GPRRead(const uint32_t reg, RegisterValue &reg_value);
 
@@ -51,6 +55,9 @@ protected:
   Status FPRWrite(const uint32_t reg, const RegisterValue &reg_value);
 
 private:
+  PCONTEXT m_context;
+  std::shared_ptr<DataBufferHeap> m_context_buffer;
+
   bool IsGPR(uint32_t reg_index) const;
 
   bool IsFPR(uint32_t reg_index) const;
@@ -58,6 +65,8 @@ private:
   llvm::Error ReadHardwareDebugInfo() override;
 
   llvm::Error WriteHardwareDebugRegs(DREGType hwbType) override;
+
+  Status CacheAllRegisterValues();
 };
 
 } // namespace lldb_private

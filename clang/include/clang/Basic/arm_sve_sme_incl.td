@@ -78,6 +78,7 @@ include "arm_immcheck_incl.td"
 // R: scalar of 1/2 width element type (splat to vector type)
 // r: scalar of 1/4 width element type (splat to vector type)
 // @: unsigned scalar of 1/4 width element type (splat to vector type)
+// y: 1/2 width signed elements, 2x element count
 // e: 1/2 width unsigned elements, 2x element count
 // b: 1/4 width unsigned elements, 4x element count
 // h: 1/2 width elements, 2x element count
@@ -242,6 +243,7 @@ def IsInZT0                         : FlagType<0x400000000000>;
 def IsOutZT0                        : FlagType<0x800000000000>;
 def IsInOutZT0                      : FlagType<0x1000000000000>;
 def SetsFPMR                        : FlagType<0x2000000000000>;
+def IsOverloadDefaultAndOp0         : FlagType<0x4000000000000>; // Use {default type, typeof(operand0)} as overloaded types.
 
 defvar InvalidMode = "";
 

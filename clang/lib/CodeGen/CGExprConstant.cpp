@@ -21,6 +21,7 @@
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/MatrixUtils.h"
 #include "clang/AST/NSAPI.h"
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
@@ -1146,7 +1147,7 @@ EmitArrayConstant(CodeGenModule &CGM, llvm::ArrayType *DesiredType,
 // handled by constant folding.
 //
 // Constant folding is currently missing support for a few features supported
-// here: CK_ToUnion, CK_ReinterpretMemberPointer, and DesignatedInitUpdateExpr.
+// here: CK_ReinterpretMemberPointer, and DesignatedInitUpdateExpr.
 class ConstExprEmitter
     : public ConstStmtVisitor<ConstExprEmitter, llvm::Constant *, QualType> {
   CodeGenModule &CGM;
@@ -1922,7 +1923,7 @@ llvm::Constant *ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &D) {
 
   // Try to emit the initializer.  Note that this can allow some things that
   // are not allowed by tryEmitPrivateForMemory alone.
-  if (APValue *value = D.evaluateValue()) {
+  if (const APValue *value = D.evaluateValue()) {
     assert(!value->allowConstexprUnknown() &&
            "Constexpr unknown values are not allowed in CodeGen");
     return tryEmitPrivateForMemory(*value, destType);
@@ -2032,24 +2033,29 @@ llvm::Constant *ConstantEmitter::emitForMemory(CodeGenModule &CGM,
   }
 
   if (destType->isBitIntType()) {
-    ConstantAggregateBuilder Builder(CGM);
-    llvm::Type *LoadStoreTy = CGM.getTypes().convertTypeForLoadStore(destType);
-    // ptrtoint/inttoptr should not involve _BitInt in constant expressions, so
-    // casting to ConstantInt is safe here.
-    auto *CI = cast<llvm::ConstantInt>(C);
-    llvm::Constant *Res = llvm::ConstantFoldCastOperand(
-        destType->isSignedIntegerOrEnumerationType() ? llvm::Instruction::SExt
-                                                     : llvm::Instruction::ZExt,
-        CI, LoadStoreTy, CGM.getDataLayout());
-    if (CGM.getTypes().typeRequiresSplitIntoByteArray(destType, C->getType())) {
-      // Long _BitInt has array of bytes as in-memory type.
-      // So, split constant into individual bytes.
-      llvm::Type *DesiredTy = CGM.getTypes().ConvertTypeForMem(destType);
-      llvm::APInt Value = cast<llvm::ConstantInt>(Res)->getValue();
-      Builder.addBits(Value, /*OffsetInBits=*/0, /*AllowOverwrite=*/false);
-      return Builder.build(DesiredTy, /*AllowOversized*/ false);
+    llvm::Type *MemTy = CGM.getTypes().ConvertTypeForMem(destType);
+    if (C->getType() != MemTy) {
+      ConstantAggregateBuilder Builder(CGM);
+      llvm::Type *LoadStoreTy =
+          CGM.getTypes().convertTypeForLoadStore(destType);
+      // ptrtoint/inttoptr should not involve _BitInt in constant expressions,
+      // so casting to ConstantInt is safe here.
+      auto *CI = cast<llvm::ConstantInt>(C);
+      llvm::Constant *Res = llvm::ConstantFoldCastOperand(
+          destType->isSignedIntegerOrEnumerationType()
+              ? llvm::Instruction::SExt
+              : llvm::Instruction::ZExt,
+          CI, LoadStoreTy, CGM.getDataLayout());
+      if (CGM.getTypes().typeRequiresSplitIntoByteArray(destType,
+                                                        C->getType())) {
+        // Long _BitInt has array of bytes as in-memory type.
+        // So, split constant into individual bytes.
+        llvm::APInt Value = cast<llvm::ConstantInt>(Res)->getValue();
+        Builder.addBits(Value, /*OffsetInBits=*/0, /*AllowOverwrite=*/false);
+        return Builder.build(MemTy, /*AllowOversized*/ false);
+      }
+      return Res;
     }
-    return Res;
   }
 
   return C;
@@ -2640,8 +2646,7 @@ ConstantEmitter::tryEmitPrivate(const APValue &Value, QualType DestType,
     unsigned NumElts = NumRows * NumCols;
     SmallVector<llvm::Constant *, 16> Inits(NumElts);
 
-    bool IsRowMajor = CGM.getLangOpts().getDefaultMatrixMemoryLayout() ==
-                      LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+    bool IsRowMajor = isMatrixRowMajor(CGM.getLangOpts(), DestType);
 
     for (unsigned Row = 0; Row != NumRows; ++Row) {
       for (unsigned Col = 0; Col != NumCols; ++Col) {
@@ -2876,9 +2881,14 @@ llvm::Constant *ConstantEmitter::emitNullForMemory(CodeGenModule &CGM,
 }
 
 llvm::Constant *CodeGenModule::EmitNullConstant(QualType T) {
-  if (T->getAs<PointerType>())
-    return getNullPointer(
-        cast<llvm::PointerType>(getTypes().ConvertTypeForMem(T)), T);
+  if (T->getAs<PointerType>()) {
+    llvm::Type *LT = getTypes().ConvertTypeForMem(T);
+    if (auto *PT = dyn_cast<llvm::PointerType>(LT))
+      return getNullPointer(PT, T);
+    // Some pointer types do not lower to an LLVM pointer (e.g. a WebAssembly
+    // funcref, which is an opaque reference type). Use the type's zero value.
+    return llvm::Constant::getNullValue(LT);
+  }
 
   if (getTypes().isZeroInitializable(T))
     return llvm::Constant::getNullValue(getTypes().ConvertTypeForMem(T));

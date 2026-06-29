@@ -503,8 +503,8 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
               const Symbol *symbol =
                   symtab->FindSymbolContainingFileAddress(file_Addr);
               if (symbol) {
-                const char *symbol_name = symbol->GetName().AsCString();
-                if (symbol_name) {
+                llvm::StringRef symbol_name = symbol->GetName().GetStringRef();
+                if (!symbol_name.empty()) {
                   s->PutCStringColorHighlighted(symbol_name, settings);
                   addr_t delta =
                       file_Addr - symbol->GetAddressRef().GetFileAddress();
@@ -956,12 +956,6 @@ int Address::CompareModulePointerAndOffset(const Address &a, const Address &b) {
   if (a_file_addr > b_file_addr)
     return +1;
   return 0;
-}
-
-size_t Address::MemorySize() const {
-  // Noting special for the memory size of a single Address object, it is just
-  // the size of itself.
-  return sizeof(Address);
 }
 
 // NOTE: Be careful using this operator. It can correctly compare two

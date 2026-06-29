@@ -410,6 +410,16 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "basic_builtins_systemz_gen",
+    tbl_outs = {"include/clang/Basic/BuiltinsSystemZ.inc": ["-gen-clang-builtins"]},
+    tblgen = ":clang-tblgen",
+    td_file = "include/clang/Basic/BuiltinsSystemZ.td",
+    deps = [
+        ":BuiltinsBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
     name = "basic_builtins_x86_gen",
     tbl_outs = {"include/clang/Basic/BuiltinsX86.inc": ["-gen-clang-builtins"]},
     tblgen = ":clang-tblgen",
@@ -747,6 +757,7 @@ cc_library(
         ":basic_builtins_spirv_cl_gen",
         ":basic_builtins_spirv_common_gen",
         ":basic_builtins_spirv_vk_gen",
+        ":basic_builtins_systemz_gen",
         ":basic_builtins_x86_64_gen",
         ":basic_builtins_x86_gen",
         ":basic_riscv_andes_vector_builtins_gen",
@@ -767,6 +778,7 @@ cc_library(
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:TargetParser",
+        "//llvm:TransformUtils",
         "//llvm:config",
     ],
 )
@@ -1569,12 +1581,21 @@ cc_library(
     ],
 )
 
+td_library(
+    name = "FlangOptionsTdFiles",
+    srcs = ["include/clang/Options/FlangOptions.td"],
+    includes = ["include"],
+)
+
 gentbl_cc_library(
     name = "driver_options_inc_gen",
     tbl_outs = {"include/clang/Options/Options.inc": ["-gen-opt-parser-defs"]},
     tblgen = "//llvm:llvm-tblgen",
     td_file = "include/clang/Options/Options.td",
-    deps = ["//llvm:OptParserTdFiles"],
+    deps = [
+        ":FlangOptionsTdFiles",
+        "//llvm:OptParserTdFiles",
+    ],
 )
 
 cc_library(
@@ -1635,8 +1656,10 @@ cc_library(
         ":lex",
         ":options",
         ":parse",
+        ":scalable_static_analysis_analyses",
         ":scalable_static_analysis_core",
         ":scalable_static_analysis_frontend",
+        ":scalable_static_analysis_source_transformation",
         ":serialization",
         ":static_analyzer_checkers_gen",
         "//llvm:BinaryFormat",
@@ -2028,6 +2051,10 @@ cc_library(
         "include",
         "lib/DirectoryWatcher",
     ],
+    linkopts = select({
+        "@platforms//os:macos": ["-Wl,-framework,CoreServices"],
+        "//conditions:default": [],
+    }),
     deps = [
         "//llvm:Support",
     ],
@@ -2108,6 +2135,7 @@ cc_library(
         ":options",
         ":scalable_static_analysis_core",
         ":scalable_static_analysis_frontend",
+        ":scalable_static_analysis_source_transformation",
         ":static_analyzer_frontend",
         "//llvm:Option",
         "//llvm:Support",
@@ -2135,6 +2163,7 @@ cc_library(
         ":options",
         ":rewrite",
         ":sema",
+        ":serialization",
         ":tooling",
         ":unified_symbol_resolution",
         "//llvm:BitstreamReader",
@@ -2169,6 +2198,7 @@ cc_plugin_library(
         ":options",
         ":rewrite",
         ":sema",
+        ":serialization",
         ":tooling",
         ":unified_symbol_resolution",
         "//llvm:BitstreamReader",
@@ -2307,6 +2337,7 @@ cc_library(
         "//llvm:Support",
         "//llvm:Target",
         "//llvm:TargetParser",
+        "//llvm:TransformUtils",
         "//llvm:config",
     ],
 )
@@ -2433,6 +2464,7 @@ cc_binary(
         "//llvm:BitWriter",
         "//llvm:CodeGen",
         "//llvm:Core",
+        "//llvm:FrontendOffloading",
         "//llvm:LTO",
         "//llvm:Object",
         "//llvm:Option",
@@ -2614,28 +2646,34 @@ cc_library(
 cc_library(
     name = "scalable_static_analysis_core",
     srcs = glob([
-        "lib/ScalableStaticAnalysisFramework/Core/**/*.cpp",
-        "lib/ScalableStaticAnalysisFramework/Core/**/*.h",
+        "lib/ScalableStaticAnalysis/Core/**/*.cpp",
+        "lib/ScalableStaticAnalysis/Core/**/*.h",
     ]),
-    hdrs = glob(["include/clang/ScalableStaticAnalysisFramework/Core/**/*.h"] + [
-        "include/clang/ScalableStaticAnalysisFramework/SSAFBuiltinForceLinker.h",
-        "include/clang/ScalableStaticAnalysisFramework/SSAFForceLinker.h",
+    hdrs = glob(["include/clang/ScalableStaticAnalysis/Core/**/*.h"] + [
+        "include/clang/ScalableStaticAnalysis/SSAFBuiltinForceLinker.h",
+        "include/clang/ScalableStaticAnalysis/SSAFForceLinker.h",
     ]),
-    textual_hdrs = glob(["include/clang/ScalableStaticAnalysisFramework/Core/**/*.def"]),
+    textual_hdrs = glob([
+        "include/clang/ScalableStaticAnalysis/Core/**/*.def",
+        "include/clang/ScalableStaticAnalysis/*.def",
+    ]),
     deps = [
         ":ast",
         ":support",
         ":unified_symbol_resolution",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
 cc_library(
     name = "scalable_static_analysis_analyses",
     srcs = glob([
-        "lib/ScalableStaticAnalysisFramework/Analyses/**/*.cpp",
+        "lib/ScalableStaticAnalysis/Analyses/**/*.cpp",
+        "lib/ScalableStaticAnalysis/Analyses/**/*.h",
     ]),
-    hdrs = glob(["include/clang/ScalableStaticAnalysisFramework/Analyses/**/*.h"]),
+    hdrs = glob(["include/clang/ScalableStaticAnalysis/Analyses/**/*.h"]),
+    includes = ["lib/ScalableStaticAnalysis/Analyses"],
     deps = [
         ":analysis",
         ":ast",
@@ -2648,9 +2686,9 @@ cc_library(
 cc_library(
     name = "scalable_static_analysis_tool",
     srcs = glob([
-        "lib/ScalableStaticAnalysisFramework/Tool/**/*.cpp",
+        "lib/ScalableStaticAnalysis/Tool/**/*.cpp",
     ]),
-    hdrs = glob(["include/clang/ScalableStaticAnalysisFramework/Tool/**/*.h"]),
+    hdrs = glob(["include/clang/ScalableStaticAnalysis/Tool/**/*.h"]),
     deps = [
         ":basic",
         ":scalable_static_analysis_core",
@@ -2659,11 +2697,27 @@ cc_library(
 )
 
 cc_library(
+    name = "scalable_static_analysis_source_transformation",
+    srcs = glob([
+        "lib/ScalableStaticAnalysis/SourceTransformation/**/*.cpp",
+    ]),
+    hdrs = glob(["include/clang/ScalableStaticAnalysis/SourceTransformation/**/*.h"]),
+    deps = [
+        ":ast",
+        ":basic",
+        ":scalable_static_analysis_core",
+        ":support",
+        ":tooling_core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "scalable_static_analysis_frontend",
     srcs = glob([
-        "lib/ScalableStaticAnalysisFramework/Frontend/**/*.cpp",
+        "lib/ScalableStaticAnalysis/Frontend/**/*.cpp",
     ]),
-    hdrs = glob(["include/clang/ScalableStaticAnalysisFramework/Frontend/**/*.h"]),
+    hdrs = glob(["include/clang/ScalableStaticAnalysis/Frontend/**/*.h"]),
     deps = [
         ":ast",
         ":basic",
@@ -2671,6 +2725,7 @@ cc_library(
         ":scalable_static_analysis_core",
         ":sema",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -2679,7 +2734,9 @@ cc_binary(
     srcs = ["tools/clang-ssaf-format/SSAFFormat.cpp"],
     deps = [
         ":basic",
+        ":scalable_static_analysis_analyses",
         ":scalable_static_analysis_core",
+        ":scalable_static_analysis_source_transformation",
         ":scalable_static_analysis_tool",
         "//llvm:Option",
         "//llvm:Support",
@@ -2691,7 +2748,9 @@ cc_binary(
     srcs = ["tools/clang-ssaf-linker/SSAFLinker.cpp"],
     deps = [
         ":basic",
+        ":scalable_static_analysis_analyses",
         ":scalable_static_analysis_core",
+        ":scalable_static_analysis_source_transformation",
         ":scalable_static_analysis_tool",
         "//llvm:Option",
         "//llvm:Support",

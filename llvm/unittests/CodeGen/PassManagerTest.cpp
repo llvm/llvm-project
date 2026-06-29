@@ -75,7 +75,8 @@ private:
 
 AnalysisKey TestMachineFunctionAnalysis::Key;
 
-struct TestMachineFunctionPass : public PassInfoMixin<TestMachineFunctionPass> {
+struct TestMachineFunctionPass
+    : public OptionalPassInfoMixin<TestMachineFunctionPass> {
   TestMachineFunctionPass(int &Count, std::vector<int> &Counts)
       : Count(Count), Counts(Counts) {}
 
@@ -101,7 +102,8 @@ struct TestMachineFunctionPass : public PassInfoMixin<TestMachineFunctionPass> {
   std::vector<int> &Counts;
 };
 
-struct TestMachineModulePass : public PassInfoMixin<TestMachineModulePass> {
+struct TestMachineModulePass
+    : public OptionalPassInfoMixin<TestMachineModulePass> {
   TestMachineModulePass(int &Count, std::vector<int> &Counts)
       : Count(Count), Counts(Counts) {}
 
@@ -125,7 +127,7 @@ struct TestMachineModulePass : public PassInfoMixin<TestMachineModulePass> {
   std::vector<int> &Counts;
 };
 
-struct ReportWarningPass : public PassInfoMixin<ReportWarningPass> {
+struct ReportWarningPass : public OptionalPassInfoMixin<ReportWarningPass> {
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM) {
     auto &Ctx = MF.getContext();
@@ -216,7 +218,7 @@ TEST_F(PassManagerTest, Basic) {
 
   testing::internal::CaptureStderr();
   MPM.run(*M, MAM);
-  std::string Output = testing::internal::GetCapturedStderr();
+  testing::internal::GetCapturedStderr();
 
   EXPECT_EQ((std::vector<int>{10, 16, 18, 20, 30, 36, 38, 40}), Counts);
   EXPECT_EQ(40, Count);

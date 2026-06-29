@@ -13,6 +13,7 @@
 #include "mlir/Conversion/SCFToEmitC/SCFToEmitC.h"
 
 #include "mlir/Conversion/ConvertToEmitC/ToEmitCInterface.h"
+#include "mlir/Conversion/EmitCCommon/TypeConverter.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/EmitC/Transforms/TypeConversions.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -35,13 +36,14 @@ namespace {
 
 /// Implement the interface to convert SCF to EmitC.
 struct SCFToEmitCDialectInterface : public ConvertToEmitCPatternInterface {
-  using ConvertToEmitCPatternInterface::ConvertToEmitCPatternInterface;
+  SCFToEmitCDialectInterface(Dialect *dialect)
+      : ConvertToEmitCPatternInterface(dialect) {}
 
   /// Hook for derived dialect interface to provide conversion patterns
   /// and mark dialect legal for the conversion target.
   void populateConvertToEmitCConversionPatterns(
       ConversionTarget &target, TypeConverter &typeConverter,
-      RewritePatternSet &patterns) const final {
+      RewritePatternSet &patterns, std::optional<bool> lowerToCpp) const final {
     populateEmitCSizeTTypeConversions(typeConverter);
     populateSCFToEmitCConversionPatterns(patterns, typeConverter);
   }
@@ -518,13 +520,7 @@ void mlir::populateSCFToEmitCConversionPatterns(RewritePatternSet &patterns,
 
 void SCFToEmitCPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
-  TypeConverter typeConverter;
-  // Fallback for other types.
-  typeConverter.addConversion([](Type type) -> std::optional<Type> {
-    if (!emitc::isSupportedEmitCType(type))
-      return {};
-    return type;
-  });
+  EmitCTypeConverter typeConverter(&getContext());
   populateEmitCSizeTTypeConversions(typeConverter);
   populateSCFToEmitCConversionPatterns(patterns, typeConverter);
 

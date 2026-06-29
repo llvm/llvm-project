@@ -19,7 +19,7 @@
 #include "orc-rt/LockedAccess.h"
 #include "orc-rt/Service.h"
 #include "orc-rt/SimpleSymbolTable.h"
-#include "orc-rt/TaskDispatcher.h"
+#include "orc-rt/TaskGroup.h"
 #include "orc-rt/WrapperFunction.h"
 #include "orc-rt/move_only_function.h"
 
@@ -27,13 +27,14 @@
 #include "orc-rt-c/WrapperFunction.h"
 
 #include <cassert>
-#include <future>
+#include <condition_variable>
 #include <memory>
 #include <mutex>
+#include <optional>
+#include <type_traits>
 #include <vector>
 
 namespace orc_rt {
-
 class Session;
 
 inline orc_rt_SessionRef wrap(Session *S) noexcept {
@@ -46,10 +47,76 @@ inline Session *unwrap(orc_rt_SessionRef S) noexcept {
 
 /// Represents an ORC executor Session.
 class Session {
+private:
+  // Implementation helper for callManagedCodeSync (non-void version).
+  template <typename RetT> struct ManagedCodeSyncCaller {
+    template <typename FnT, typename... ArgTs>
+    static std::optional<RetT> call(TaskGroup::Token Tok, FnT &&Fn,
+                                    ArgTs &&...Args) {
+      if (!Tok)
+        return std::nullopt;
+      return std::forward<FnT>(Fn)(std::forward<ArgTs>(Args)...);
+    }
+  };
+
+  // Implementation helper for callManagedCodeSync (void version).
+  template <> struct ManagedCodeSyncCaller<void> {
+    template <typename FnT, typename... ArgTs>
+    static bool call(TaskGroup::Token Tok, FnT &&Fn, ArgTs &&...Args) {
+      if (!Tok)
+        return false;
+      std::forward<FnT>(Fn)(std::forward<ArgTs>(Args)...);
+      return true;
+    }
+  };
+
+  template <typename ReturnArgTupleT> struct ManagedCodeAsyncCaller;
+
+  // Implementation helper for callManagedCodeAsync (non-void version).
+  template <typename T>
+  struct ManagedCodeAsyncCaller<std::tuple<std::optional<T>>> {
+    template <typename ReturnT, typename FnT, typename... ArgTs>
+    static void call(TaskGroup::Token Tok, ReturnT &&Return, FnT &&Fn,
+                     ArgTs &&...Args) {
+      if (!Tok)
+        return std::forward<ReturnT>(Return)(std::nullopt);
+
+      std::forward<FnT>(Fn)([Tok = std::move(Tok), R = std::move(Return)](
+                                T Value) { R(std::move(Value)); },
+                            std::forward<ArgTs>(Args)...);
+    }
+  };
+
+  // Implementation helper for callManagedCodeAsync (void version).
+  template <> struct ManagedCodeAsyncCaller<std::tuple<bool>> {
+    template <typename ReturnT, typename FnT, typename... ArgTs>
+    static void call(TaskGroup::Token Tok, ReturnT &&Return, FnT &&Fn,
+                     ArgTs &&...Args) {
+      if (!Tok)
+        return std::forward<ReturnT>(Return)(false);
+
+      std::forward<FnT>(Fn)(
+          [Tok = std::move(Tok), R = std::move(Return)]() { R(true); },
+          std::forward<ArgTs>(Args)...);
+    }
+  };
+
 public:
   using ErrorReporterFn = move_only_function<void(Error)>;
   using OnDetachFn = move_only_function<void()>;
   using OnShutdownFn = move_only_function<void()>;
+
+  /// Callback used by the Session to run incoming wrapper-function calls.
+  ///
+  /// A ManagedCodeTaskGroup token is created for each call to this callback,
+  /// and implementations must eventually call either Fn (typically as
+  /// Fn(S, CallId, Return, ArgBytes.release())), or call Return directly to
+  /// bail out of the call (typically with
+  /// WrapperFunctionBuffer::createOutOfBandError(...)). Failing to do either
+  /// will block Session shutdown indefinitely.
+  using RunWrapperCall = move_only_function<void(
+      orc_rt_SessionRef S, uint64_t CallId, orc_rt_WrapperFunctionReturn Return,
+      orc_rt_WrapperFunction Fn, WrapperFunctionBuffer ArgBytes)>;
 
   using HandlerTag = void *;
   using OnCallHandlerCompleteFn =
@@ -152,9 +219,13 @@ public:
   /// program are not generally visible to ORC-RT, but can optionally be
   /// reported by calling the orc_rt_Session_reportError function.)
   ///
+  /// The RunCall callback will be invoked for every incoming wrapper-function
+  /// call, and is responsible for arranging the call to be run (inline,
+  /// queued, or posted to a thread pool, at the caller's discretion).
+  ///
   /// Note that entry into the reporter is not synchronized: it may be
   /// called from multiple threads concurrently.
-  Session(ExecutorProcessInfo EPI, std::unique_ptr<TaskDispatcher> Dispatcher,
+  Session(ExecutorProcessInfo EPI, RunWrapperCall RunCall,
           ErrorReporterFn ReportError);
 
   // Sessions are not copyable or moveable.
@@ -163,14 +234,15 @@ public:
   Session(Session &&) = delete;
   Session &operator=(Session &&) = delete;
 
+  /// Destroy the session object.
+  ///
+  /// This will trigger shutdown if it has not happened already. Destruction
+  /// will block until the Session lifecycle completes.
   ~Session();
 
   /// Provides information about the host process that the Session is running
   /// in.
   const ExecutorProcessInfo &processInfo() const noexcept { return EPI; }
-
-  /// Dispatch a task using the Session's TaskDispatcher.
-  void dispatch(std::unique_ptr<Task> T) { Dispatcher->dispatch(std::move(T)); }
 
   /// Report an error via the ErrorReporter function.
   void reportError(Error Err) { ReportError(std::move(Err)); }
@@ -215,11 +287,26 @@ public:
   /// take ownership of CA or call its connect method.
   void attach(std::shared_ptr<ControllerAccess> CA, BootstrapInfo BI);
 
+  /// Construct a ControllerAccessT with the given args, then immediately
+  /// attach using the given BootstrapInfo.
+  ///
+  /// This enables one-line attach operations in the common case where the
+  /// ControllerAccess implementation does not require any further
+  /// configuration after construction.
+  template <typename ControllerAccessT, typename... ArgTs>
+  void attach(BootstrapInfo BI, ArgTs &&...Args) {
+    attach(std::make_shared<ControllerAccessT>(std::forward<ArgTs>(Args)...),
+           std::move(BI));
+  }
+
   /// Initiate detach from the controller.
   ///
-  /// If attached, this will request disconnection from the controller and
-  /// then notify all Services via onDetach. The optional OnDetach callback
-  /// will be called once the detach is complete.
+  /// Signals that controller access is permanently unavailable and notifies
+  /// all Services via onDetach. If a controller is attached, this will
+  /// request disconnection first.
+  ///
+  /// The optional OnDetach callback will be called once the detach is
+  /// complete.
   ///
   /// If the Session is already detached or shut down, the callback (if
   /// provided) will be called immediately.
@@ -227,11 +314,16 @@ public:
 
   /// Initiate session shutdown.
   ///
-  /// Runs shutdown on registered resources in reverse order.
+  /// Shutdown proceeds through the following phases:
+  ///   1. Detach: If not already detached, disconnects the controller and
+  ///      notifies all Services via onDetach.
+  ///   2. Drain: Waits for all in-flight tasks accessing managed code to
+  ///      complete (via ManagedCodeTaskGroup).
+  ///   3. Shutdown services: Calls onShutdown on all Services in reverse
+  ///      order.
+  ///
+  /// The optional OnShutdown callback is called after step (3).
   void shutdown(OnShutdownFn OnShutdown = {});
-
-  /// Initiate session shutdown and block until complete.
-  void waitForShutdown();
 
   /// Register a callback to be called when the Session detaches from the
   /// controller. If the Session has already detached, the callback will be
@@ -241,6 +333,65 @@ public:
   /// Register a callback to be called when the Session shuts down. If the
   /// Session has already shut down, the callback will be called immediately.
   void addOnShutdown(OnShutdownFn OnShutdown);
+
+  /// Returns a reference to this Session's ManagedCodeTaskGroup.
+  ///
+  /// When calling code managed by a Session (e.g. JIT'd code, or library code
+  /// loaded on behalf of JIT'd code), clients should hold a token for this
+  /// group. That token will prevent the Session from shutting down any Services
+  /// (and the Session itself) until tasks accessing managed code have
+  /// completed.
+  ///
+  /// Clients should prefer using the callManagedCodeSync and
+  /// callManagedCodeAsync helpers to automatically acquire and hold a token
+  /// for the duration of a call.
+  const std::shared_ptr<TaskGroup> &managedCodeTaskGroup() const {
+    return ManagedCodeTaskGroup;
+  }
+
+  /// Synchronously call managed code.
+  ///
+  /// This helper tries to acquire a ManagedCodeTaskGroup token and then call
+  /// the given function object with the given arguments while holding the
+  /// token.
+  ///
+  /// If the token is successfully acquired then this function will return the
+  /// call result as a std::optional<T> (for a non-void return type T), or
+  /// boolean true (for void returns).
+  ///
+  /// If the token is not successfully acquired then this function will return
+  /// std::nullopt (for non-void return type) or boolean false (for void
+  /// returns).
+  template <typename FnT, typename... ArgTs>
+  decltype(auto) callManagedCodeSync(FnT &&Fn, ArgTs &&...Args) {
+    return ManagedCodeSyncCaller<std::invoke_result_t<FnT, ArgTs...>>::call(
+        TaskGroup::Token(ManagedCodeTaskGroup), std::forward<FnT>(Fn),
+        std::forward<ArgTs>(Args)...);
+  }
+
+  /// Asynchronously call managed code.
+  ///
+  /// ReturnT must be a function object that takes either a boolean or a
+  /// std::optional<T>.
+  ///
+  /// callManagedCodeAsync tries to acquire a ManagedCodeTaskGroup token and
+  /// then call the given async function object while holding that token.
+  ///
+  /// If the token is successfully acquired then this function will call Fn,
+  /// passing in a wrapped version of Return that takes a T (if Return takes a
+  /// std::optional<T>), or a wrapped version of Return that takes no arguments
+  /// (if Return takes a bool).
+  ///
+  /// If the token is not successfully acquired then this function will not
+  /// call Fn, but instead immediately call Return with std::nullopt (if Return
+  /// takes a std::optional<T>), or false (if Return takes a boolean).
+  template <typename ReturnT, typename FnT, typename... ArgTs>
+  void callManagedCodeAsync(ReturnT &&Return, FnT &&Fn, ArgTs &&...Args) {
+    ManagedCodeAsyncCaller<typename CallableArgInfo<ReturnT>::args_tuple_type>::
+        call(TaskGroup::Token(ManagedCodeTaskGroup),
+             std::forward<ReturnT>(Return), std::forward<FnT>(Fn),
+             std::forward<ArgTs>(Args)...);
+  }
 
   /// Call a tagged handler in the Controller.
   ///
@@ -299,7 +450,6 @@ private:
   };
 
   class NotificationService;
-  NotificationService &addNotificationService();
 
   void appendService(std::unique_ptr<Service> Srv);
 
@@ -309,31 +459,36 @@ private:
   void detachServices(std::vector<Service *> ToNotify, bool ShutdownRequested);
   void completeDetach();
 
-  void proceedToShutdown(std::unique_lock<std::mutex> &Lock);
+  void waitForManagedCodeTasksThenShutdown();
+  void proceedToShutdown();
   void shutdownServices(std::vector<Service *> ToNotify);
   void completeShutdown();
 
   void handleWrapperCall(uint64_t CallId, orc_rt_WrapperFunction Fn,
                          WrapperFunctionBuffer ArgBytes) {
-    dispatch(makeGenericTask([=, ArgBytes = std::move(ArgBytes)]() mutable {
-      Fn(wrap(this), CallId, wrapperReturn, ArgBytes.release());
-    }));
+    if (!ManagedCodeTaskGroup->acquireToken()) {
+      // The ManagedCodeTaskGroup is only closed after detach, so if token
+      // acquisition fails we don't try to return an error: the controller
+      // should already have signalled error to the caller, and we have no
+      // way to transmit an error anyway.
+      return;
+    }
+
+    RunCall(wrap(this), CallId, &wrapperReturn, Fn, std::move(ArgBytes));
   }
 
-  void sendWrapperResult(uint64_t CallId, WrapperFunctionBuffer ResultBytes) {
-    if (auto TmpCA = std::atomic_load(&CA))
-      TmpCA->sendWrapperResult(CallId, std::move(ResultBytes));
-  }
-
+  void sendWrapperResult(uint64_t CallId, WrapperFunctionBuffer ResultBytes);
   static void wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,
                             orc_rt_WrapperFunctionBuffer ResultBytes);
 
   ExecutorProcessInfo EPI;
-  std::unique_ptr<TaskDispatcher> Dispatcher;
+  RunWrapperCall RunCall;
+  std::shared_ptr<TaskGroup> ManagedCodeTaskGroup = TaskGroup::Create();
   std::shared_ptr<ControllerAccess> CA;
   ErrorReporterFn ReportError;
 
   mutable std::mutex M;
+  std::condition_variable CV;
   State CurrentState = State::Start;
   State TargetState = State::None;
   std::vector<std::unique_ptr<Service>> Services;
