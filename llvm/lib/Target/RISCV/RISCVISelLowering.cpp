@@ -15861,7 +15861,11 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         Vec = DAG.getBitcast(WideVT, Wide);
       }
 
-      SDValue Res = RedSum(MVT::i64, Vec, Ext(N->getOperand(2)));
+      // The result is truncated to i32, so the accumulator's upper bits are
+      // unused and need no sign/zero extension.
+      SDValue Acc =
+          DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i64, N->getOperand(2));
+      SDValue Res = RedSum(MVT::i64, Vec, Acc);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, MVT::i32, Res));
       return;
     }
