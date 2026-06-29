@@ -18,6 +18,8 @@
 
 using namespace llvm;
 
+const MCAsmInfo::AtSpecifier atSpecifiers[] = {{Xtensa::S_TPOFF, "TPOFF"}};
+
 XtensaMCAsmInfo::XtensaMCAsmInfo(const Triple &TT,
                                  const MCTargetOptions &Options)
     : MCAsmInfoELF(Options) {
@@ -32,6 +34,8 @@ XtensaMCAsmInfo::XtensaMCAsmInfo(const Triple &TT,
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::DwarfCFI;
   AlignmentIsInBytes = false;
+
+  initializeAtSpecifiers(atSpecifiers);
 }
 
 void XtensaMCAsmInfo::printSpecifierExpr(raw_ostream &OS,

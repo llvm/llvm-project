@@ -58,7 +58,7 @@ The following three cases are accepted:
   };
 
 This check corresponds to the CERT C Coding Standard recommendation `INT09-C. Ensure enumeration constants map to unique values
-<https://wiki.sei.cmu.edu/confluence/display/c/INT09-C.+Ensure+enumeration+constants+map+to+unique+values>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/recommendations/integers-int/int09-c/>`_.
 
 `cert-int09-c` redirects here as an alias of this check.
 

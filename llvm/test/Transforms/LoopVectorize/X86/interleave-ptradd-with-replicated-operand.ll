@@ -68,40 +68,40 @@ define ptr @test_interleave_ptradd_with_replicated_op(ptr %m) #0 {
 ; CHECK-NEXT:    [[STRIDED_VEC24:%.*]] = shufflevector <8 x i32> [[WIDE_VEC23]], <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[STRIDED_VEC25:%.*]] = shufflevector <8 x i32> [[WIDE_VEC23]], <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 ; CHECK-NEXT:    [[TMP25:%.*]] = add <4 x i32> [[STRIDED_VEC16]], [[STRIDED_VEC]]
-; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i32> [[TMP25]], i64 0
-; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i32> [[TMP25]], i64 1
-; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <4 x i32> [[TMP25]], i64 2
-; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <4 x i32> [[TMP25]], i64 3
 ; CHECK-NEXT:    [[TMP30:%.*]] = add <4 x i32> [[STRIDED_VEC19]], [[STRIDED_VEC18]]
-; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <4 x i32> [[TMP30]], i64 0
-; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i32> [[TMP30]], i64 1
-; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <4 x i32> [[TMP30]], i64 2
-; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <4 x i32> [[TMP30]], i64 3
 ; CHECK-NEXT:    [[TMP35:%.*]] = add <4 x i32> [[STRIDED_VEC22]], [[STRIDED_VEC21]]
-; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <4 x i32> [[TMP35]], i64 0
-; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <4 x i32> [[TMP35]], i64 1
-; CHECK-NEXT:    [[TMP38:%.*]] = extractelement <4 x i32> [[TMP35]], i64 2
-; CHECK-NEXT:    [[TMP39:%.*]] = extractelement <4 x i32> [[TMP35]], i64 3
 ; CHECK-NEXT:    [[TMP40:%.*]] = add <4 x i32> [[STRIDED_VEC25]], [[STRIDED_VEC24]]
-; CHECK-NEXT:    [[TMP41:%.*]] = extractelement <4 x i32> [[TMP40]], i64 0
-; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <4 x i32> [[TMP40]], i64 1
-; CHECK-NEXT:    [[TMP43:%.*]] = extractelement <4 x i32> [[TMP40]], i64 2
-; CHECK-NEXT:    [[TMP44:%.*]] = extractelement <4 x i32> [[TMP40]], i64 3
+; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <4 x i32> [[TMP25]], i64 0
 ; CHECK-NEXT:    store i32 [[TMP26]], ptr [[NEXT_GEP]], align 4
+; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <4 x i32> [[TMP25]], i64 1
 ; CHECK-NEXT:    store i32 [[TMP27]], ptr [[NEXT_GEP1]], align 4
+; CHECK-NEXT:    [[TMP28:%.*]] = extractelement <4 x i32> [[TMP25]], i64 2
 ; CHECK-NEXT:    store i32 [[TMP28]], ptr [[NEXT_GEP2]], align 4
+; CHECK-NEXT:    [[TMP29:%.*]] = extractelement <4 x i32> [[TMP25]], i64 3
 ; CHECK-NEXT:    store i32 [[TMP29]], ptr [[NEXT_GEP3]], align 4
+; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <4 x i32> [[TMP30]], i64 0
 ; CHECK-NEXT:    store i32 [[TMP31]], ptr [[NEXT_GEP4]], align 4
+; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i32> [[TMP30]], i64 1
 ; CHECK-NEXT:    store i32 [[TMP32]], ptr [[NEXT_GEP5]], align 4
+; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <4 x i32> [[TMP30]], i64 2
 ; CHECK-NEXT:    store i32 [[TMP33]], ptr [[NEXT_GEP6]], align 4
+; CHECK-NEXT:    [[TMP34:%.*]] = extractelement <4 x i32> [[TMP30]], i64 3
 ; CHECK-NEXT:    store i32 [[TMP34]], ptr [[NEXT_GEP7]], align 4
+; CHECK-NEXT:    [[TMP36:%.*]] = extractelement <4 x i32> [[TMP35]], i64 0
 ; CHECK-NEXT:    store i32 [[TMP36]], ptr [[NEXT_GEP8]], align 4
+; CHECK-NEXT:    [[TMP37:%.*]] = extractelement <4 x i32> [[TMP35]], i64 1
 ; CHECK-NEXT:    store i32 [[TMP37]], ptr [[NEXT_GEP9]], align 4
+; CHECK-NEXT:    [[TMP38:%.*]] = extractelement <4 x i32> [[TMP35]], i64 2
 ; CHECK-NEXT:    store i32 [[TMP38]], ptr [[NEXT_GEP10]], align 4
+; CHECK-NEXT:    [[TMP39:%.*]] = extractelement <4 x i32> [[TMP35]], i64 3
 ; CHECK-NEXT:    store i32 [[TMP39]], ptr [[NEXT_GEP11]], align 4
+; CHECK-NEXT:    [[TMP41:%.*]] = extractelement <4 x i32> [[TMP40]], i64 0
 ; CHECK-NEXT:    store i32 [[TMP41]], ptr [[NEXT_GEP12]], align 4
+; CHECK-NEXT:    [[TMP42:%.*]] = extractelement <4 x i32> [[TMP40]], i64 1
 ; CHECK-NEXT:    store i32 [[TMP42]], ptr [[NEXT_GEP13]], align 4
+; CHECK-NEXT:    [[TMP43:%.*]] = extractelement <4 x i32> [[TMP40]], i64 2
 ; CHECK-NEXT:    store i32 [[TMP43]], ptr [[NEXT_GEP14]], align 4
+; CHECK-NEXT:    [[TMP44:%.*]] = extractelement <4 x i32> [[TMP40]], i64 3
 ; CHECK-NEXT:    store i32 [[TMP44]], ptr [[NEXT_GEP15]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[TMP45:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96

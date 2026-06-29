@@ -17,7 +17,7 @@ condition (of ``if`` or a loop statement).
 
 This check corresponds to the CERT rule
 `EXP45-C. Do not perform assignments in selection statements
-<https://wiki.sei.cmu.edu/confluence/spaces/c/pages/87152228/EXP45-C.+Do+not+perform+assignments+in+selection+statements>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/expressions-exp/exp45-c/>`_.
 
 Examples
 ========

@@ -247,6 +247,79 @@ private:
   GetImageBaseSymbol GetImageBase;
   DenseMap<Section *, orc::ExecutorAddr> SectionStartCache;
 };
+
+// Synthesize COFF __imp_ Import Address Table (IAT) entries.
+//
+// For a dllimport reference, codegen emits an indirect access through a named
+// __imp_X symbol, e.g.
+//
+//     callq *__imp_bar(%rip)        ; or, for data: movq __imp_g(%rip), %rax
+//
+// where __imp_X is an undefined external. This pass supplies the missing IAT
+// entry by defining __imp_X over an 8-byte pointer slot that holds X's address:
+//
+//     __imp_bar:
+//         .quad bar                 ; X is resolved as an ordinary external
+//
+// X is left external, so its address is provided by whatever resolves the
+// JITDylib's externals (an import library, a DynamicLibrarySearchGenerator,
+// AutoImportGenerator, ...). If X is unresolvable the link fails, exactly as a
+// static link against the corresponding import library would.
+//
+// This is the COFF analog of the ELF/Mach-O GOT builder, but deliberately NOT
+// written as a TableManager/visitEdge pass like x86_64::GOTTableManager. ELF's
+// GOT references are *nameless* edge kinds, so that builder has to create an
+// anonymous entry and redirect every edge to it (and, for our case, would then
+// have to delete the now-orphaned __imp_X external so it isn't looked up).
+// COFF instead references a *named* __imp_X symbol, so the simpler and more
+// natural thing is to define that symbol over the slot: edges to __imp_X then
+// resolve to it with no edge rewriting and no orphan cleanup, call and
+// data-access references are handled identically, and sharing is automatic
+// because there is exactly one __imp_X symbol per import.
+//
+// Direct (non-dllimport) references such as `callq foo` are intentionally not
+// handled here: those are either kept in range by the slab allocator or thunked
+// by the opt-in AutoImportGenerator -- both outside this pass.
+Error synthesizeIATEntries_COFF_x86_64(LinkGraph &G) {
+  static constexpr StringRef ImpPrefix = "__imp_";
+
+  // Collect the external __imp_ symbols up front: we mutate the symbol lists
+  // below (makeDefined / addExternalSymbol).
+  SmallVector<Symbol *, 8> Imps;
+  for (auto *Sym : G.external_symbols())
+    if (Sym->hasName() && (*Sym->getName()).starts_with(ImpPrefix))
+      Imps.push_back(Sym);
+  if (Imps.empty())
+    return Error::success();
+
+  auto FindByName = [&](const orc::SymbolStringPtr &Name) -> Symbol * {
+    if (auto *Sym = G.findExternalSymbolByName(Name))
+      return Sym;
+    if (auto *Sym = G.findDefinedSymbolByName(Name))
+      return Sym;
+    return nullptr;
+  };
+
+  Section &IATSec = G.createSection("$__IAT", orc::MemProt::Read);
+
+  for (auto *Imp : Imps) {
+    orc::SymbolStringPtr Base =
+        G.intern((*Imp->getName()).drop_front(ImpPrefix.size()));
+
+    // Find the real target X, or add it as an external to be resolved normally.
+    Symbol *Target = FindByName(std::move(Base));
+    if (!Target)
+      Target = &G.addExternalSymbol(std::move(Base), 0,
+                                    /*IsWeaklyReferenced=*/false);
+
+    // 8-byte slot holding &X, with __imp_X defined over it.
+    Symbol &Slot = x86_64::createAnonymousPointer(G, IATSec, Target);
+    G.makeDefined(*Imp, Slot.getBlock(), 0, G.getPointerSize(), Linkage::Strong,
+                  Scope::Local, /*IsLive=*/true);
+  }
+
+  return Error::success();
+}
 } // namespace
 
 namespace llvm {
@@ -302,6 +375,11 @@ void link_COFF_x86_64(std::unique_ptr<LinkGraph> G,
       Config.PrePrunePasses.push_back(SEHFrameKeepAlivePass(".pdata"));
     } else
       Config.PrePrunePasses.push_back(markAllSymbolsLive);
+
+    // Synthesize __imp_X IAT entries for dllimport references, like the GOT/PLT
+    // builders for ELF/Mach-O. Runs in PostPrune (before external-symbol
+    // lookup) so the X targets it introduces are resolved normally.
+    Config.PostPrunePasses.push_back(synthesizeIATEntries_COFF_x86_64);
 
     // Add COFF edge lowering passes.
     Config.PreFixupPasses.push_back(COFFLinkGraphLowering_x86_64());

@@ -417,14 +417,16 @@ StringRef Preprocessor::getLastMacroWithSpelling(
 }
 
 void Preprocessor::recomputeCurLexerKind() {
-  if (CurLexer)
+  if (InCachingLexMode())
+    CurLexerCallback = CLK_CachingLexer;
+  else if (CurLexer)
     CurLexerCallback = CurLexer->isDependencyDirectivesLexer()
                            ? CLK_DependencyDirectivesLexer
                            : CLK_Lexer;
   else if (CurTokenLexer)
     CurLexerCallback = CLK_TokenLexer;
   else
-    CurLexerCallback = CLK_CachingLexer;
+    CurLexerCallback = CLK_Lexer;
 }
 
 bool Preprocessor::SetCodeCompletionPoint(FileEntryRef File,
@@ -1744,16 +1746,11 @@ void Preprocessor::removePPCallbacks() {
 const char *Preprocessor::getCheckPoint(FileID FID, const char *Start) const {
   if (auto It = CheckPoints.find(FID); It != CheckPoints.end()) {
     const SmallVector<const char *> &FileCheckPoints = It->second;
-    const char *Last = nullptr;
-    // FIXME: Do better than a linear search.
-    for (const char *P : FileCheckPoints) {
-      if (P > Start)
-        break;
-      Last = P;
-    }
-    return Last;
+    auto P = llvm::upper_bound(FileCheckPoints, Start);
+    if (P == FileCheckPoints.begin())
+      return nullptr;
+    return *std::prev(P);
   }
-
   return nullptr;
 }
 

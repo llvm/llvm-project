@@ -271,11 +271,15 @@ void fir::AllocaOp::handleBlockArgument(const mlir::MemorySlot &slot,
   // no-ops like fir.declare (i.e., to replace the FIR specific
   // isSlotOrDeclaredSlot).
   for (mlir::Operation *user : getOperation()->getUsers())
-    if (auto declareOp = mlir::dyn_cast<fir::DeclareOp>(user))
+    if (auto declareOp = mlir::dyn_cast<fir::DeclareOp>(user)) {
+      // Inlined dummy scopes may not dominate block-argument debug values.
+      if (declareOp.getDummyScope())
+        continue;
       fir::DeclareValueOp::create(
           builder, declareOp.getLoc(), argument, declareOp.getDummyScope(),
           declareOp.getUniqNameAttr(), declareOp.getFortranAttrsAttr(),
           declareOp.getDataAttrAttr(), declareOp.getDummyArgNoAttr());
+    }
 }
 
 std::optional<mlir::PromotableAllocationOpInterface>
@@ -3980,7 +3984,7 @@ void fir::DoLoopOp::getSuccessorRegions(
   // Loop-back (body → body): another iteration follows.
   regions.push_back(mlir::RegionSuccessor(&getRegion()));
   // Exit (body → parent): last iteration completes.
-  regions.push_back(mlir::RegionSuccessor::parent());
+  regions.push_back(mlir::RegionSuccessor(getOperation()));
 }
 
 // Note: when finalValue is set, result[0] tracks the IV's final value.
@@ -4003,7 +4007,7 @@ fir::DoLoopOp::getSuccessorInputs(mlir::RegionSuccessor successor) {
   //
   // %r#0 (finalValue IV) is excluded: it has no symmetric iter-arg slot in
   // the body, so it cannot participate in the 4-edge count check.
-  if (successor.isParent())
+  if (successor.isOperation())
     return getResults().drop_front(getFinalValue() ? 1 : 0);
   return getRegionIterArgs();
 }
@@ -5541,7 +5545,7 @@ void fir::IfOp::getSuccessorRegions(
     llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
   // The `then` and the `else` region branch back to the parent operation.
   if (!point.isParent()) {
-    regions.push_back(mlir::RegionSuccessor::parent());
+    regions.push_back(mlir::RegionSuccessor(getOperation()));
     return;
   }
 
@@ -5551,14 +5555,14 @@ void fir::IfOp::getSuccessorRegions(
   // Don't consider the else region if it is empty.
   mlir::Region *elseRegion = &this->getElseRegion();
   if (elseRegion->empty())
-    regions.push_back(mlir::RegionSuccessor::parent());
+    regions.push_back(mlir::RegionSuccessor(getOperation()));
   else
     regions.push_back(mlir::RegionSuccessor(elseRegion));
 }
 
 mlir::ValueRange
 fir::IfOp::getSuccessorInputs(mlir::RegionSuccessor successor) {
-  if (successor.isParent())
+  if (successor.isOperation())
     return getOperation()->getResults();
   return mlir::ValueRange();
 }
@@ -5577,7 +5581,7 @@ void fir::IfOp::getEntrySuccessorRegions(
     if (!getElseRegion().empty())
       regions.emplace_back(&getElseRegion());
     else
-      regions.push_back(mlir::RegionSuccessor::parent());
+      regions.push_back(mlir::RegionSuccessor(getOperation()));
   }
 }
 
@@ -5684,6 +5688,65 @@ void fir::IfOp::resultToSourceOps(llvm::SmallVectorImpl<mlir::Value> &results,
   term = getElseRegion().front().getTerminator();
   if (resultNum < term->getNumOperands())
     results.push_back(term->getOperand(resultNum));
+}
+
+// Fold away a fir.if that only forwards an optional argument or returns
+// fir.absent when it is not present:
+//
+//   %present = fir.is_present %var : (T) -> i1
+//   %r = fir.if %present -> (T) {
+//     fir.result %var : T
+//   } else {
+//     %absent = fir.absent T
+//     fir.result %absent : T
+//   }
+//
+// The result is always %var: optional arguments already encode presence.
+struct FoldPresentAbsentIfOp : public mlir::OpRewritePattern<fir::IfOp> {
+  using mlir::OpRewritePattern<fir::IfOp>::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(fir::IfOp ifOp,
+                  mlir::PatternRewriter &rewriter) const override {
+    if (ifOp.getNumResults() != 1)
+      return mlir::failure();
+
+    auto isPresentOp = ifOp.getCondition().getDefiningOp<fir::IsPresentOp>();
+    if (!isPresentOp)
+      return mlir::failure();
+
+    mlir::Value optionalVal = isPresentOp.getVal();
+    mlir::Type resultType = ifOp.getResult(0).getType();
+    if (optionalVal.getType() != resultType)
+      return mlir::failure();
+
+    mlir::Block &thenBlock = ifOp.getThenRegion().front();
+    if (thenBlock.getOperations().size() != 1)
+      return mlir::failure();
+    auto thenResult = mlir::dyn_cast<fir::ResultOp>(thenBlock.getTerminator());
+    if (!thenResult || thenResult.getNumOperands() != 1 ||
+        thenResult.getOperand(0) != optionalVal)
+      return mlir::failure();
+
+    if (ifOp.getElseRegion().empty())
+      return mlir::failure();
+    mlir::Block &elseBlock = ifOp.getElseRegion().front();
+    if (elseBlock.getOperations().size() > 2)
+      return mlir::failure();
+    auto elseResult = mlir::dyn_cast<fir::ResultOp>(elseBlock.getTerminator());
+    if (!elseResult || elseResult.getNumOperands() != 1)
+      return mlir::failure();
+    if (!elseResult.getOperand(0).getDefiningOp<fir::AbsentOp>())
+      return mlir::failure();
+
+    rewriter.replaceOp(ifOp, optionalVal);
+    return mlir::success();
+  }
+};
+
+void fir::IfOp::getCanonicalizationPatterns(mlir::RewritePatternSet &patterns,
+                                            mlir::MLIRContext *context) {
+  patterns.add<FoldPresentAbsentIfOp>(context);
 }
 
 //===----------------------------------------------------------------------===//
