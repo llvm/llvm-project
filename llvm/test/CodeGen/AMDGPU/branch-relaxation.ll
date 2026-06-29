@@ -6,7 +6,7 @@
 
 ; FIXME: We should use llvm-mc for this, but we can't even parse our own output.
 ;        See PR33579.
-; RUN: llc -mtriple=amdgcn -amdgpu-s-branch-bits=4 -amdgpu-long-branch-factor=0 -o %t.o -filetype=obj -simplifycfg-require-and-preserve-domtree=1 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -amdgpu-s-branch-bits=4 -amdgpu-long-branch-factor=0 -o %t.o -filetype=obj -simplifycfg-require-and-preserve-domtree=1 %s
 ; RUN: llvm-readobj -r %t.o | FileCheck --check-prefix=OBJ %s
 
 ; OBJ:       Relocations [

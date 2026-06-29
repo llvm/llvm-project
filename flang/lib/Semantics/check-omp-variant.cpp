@@ -40,7 +40,6 @@ namespace Fortran::semantics {
 using namespace Fortran::semantics::omp;
 
 void OmpStructureChecker::Enter(const parser::OmpClause::When &x) {
-  CheckAllowedClause(llvm::omp::Clause::OMPC_when);
   OmpVerifyModifiers(
       x.v, llvm::omp::OMPC_when, GetContext().clauseSource, context_);
 }
@@ -585,23 +584,10 @@ void OmpStructureChecker::Leave(const parser::OmpDirectiveSpecification &x) {
 
 void OmpStructureChecker::Enter(const parser::OmpMetadirectiveDirective &x) {
   EnterDirectiveNest(MetadirectiveNest);
-  PushContextAndClauseSets(
-      x.v.source, llvm::omp::Directive::OMPD_metadirective);
 }
 
 void OmpStructureChecker::Leave(const parser::OmpMetadirectiveDirective &) {
   ExitDirectiveNest(MetadirectiveNest);
-  dirContext_.pop_back();
-}
-
-void OmpStructureChecker::Enter(
-    const parser::OmpDelimitedMetadirectiveDirective &x) {
-  PushContextAndClauseSets(x.source, llvm::omp::Directive::OMPD_metadirective);
-}
-
-void OmpStructureChecker::Leave(
-    const parser::OmpDelimitedMetadirectiveDirective &) {
-  dirContext_.pop_back();
 }
 
 static const parser::traits::OmpContextSelectorSpecification *
@@ -701,7 +687,7 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
             CheckProcedureSymbol(base, arg.source);
             CheckProcedureSymbol(variant, arg.source);
           },
-          [&](const parser::OmpLocator &y) {
+          [&](const parser::OmpObject &y) {
             variant = GetArgumentSymbol(arg);
             CheckProcedureSymbol(variant, arg.source);
             const Scope &containingScope{context_.FindScope(x.source)};
@@ -742,13 +728,7 @@ void OmpStructureChecker::CheckOmpDeclareVariantDirective(
 }
 
 void OmpStructureChecker::Enter(const parser::OmpDeclareVariantDirective &x) {
-  const parser::OmpDirectiveName &dirName{x.v.DirName()};
-  PushContextAndClauseSets(dirName.source, dirName.v);
   CheckOmpDeclareVariantDirective(x);
-}
-
-void OmpStructureChecker::Leave(const parser::OmpDeclareVariantDirective &) {
-  dirContext_.pop_back();
 }
 
 } // namespace Fortran::semantics

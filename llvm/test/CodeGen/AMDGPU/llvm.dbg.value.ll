@@ -1,5 +1,5 @@
-; RUN: llc -O0 -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck -check-prefixes=GCN,NOOPT %s
-; RUN: llc -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck -check-prefixes=GCN,OPT %s
+; RUN: llc -O0 -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx700 < %s | FileCheck -check-prefixes=GCN,NOOPT %s
+; RUN: llc -mtriple=amdgcn-unknown-amdhsa -mcpu=gfx700 < %s | FileCheck -check-prefixes=GCN,OPT %s
 
 
 ; GCN-LABEL: {{^}}test_debug_value:

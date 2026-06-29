@@ -332,25 +332,25 @@ define { <4 x float>, <4 x i32> } @test_frexp_v4f32_v4i32(<4 x float> %a) {
 ; CHECK-NEXT:    bl frexpf
 ; CHECK-NEXT:    vldr d16, [sp, #80]
 ; CHECK-NEXT:    mov r5, r0
-; CHECK-NEXT:    vld1.32 {d8[0]}, [r8:32]
+; CHECK-NEXT:    vld1.32 {d10[0]}, [r8:32]
 ; CHECK-NEXT:    add.w r8, sp, #4
 ; CHECK-NEXT:    vmov r0, r7, d16
 ; CHECK-NEXT:    mov r1, r8
-; CHECK-NEXT:    vld1.32 {d8[1]}, [r6:32]
+; CHECK-NEXT:    vld1.32 {d10[1]}, [r6:32]
 ; CHECK-NEXT:    bl frexpf
-; CHECK-NEXT:    vld1.32 {d9[0]}, [r8:32]
-; CHECK-NEXT:    vmov s21, r5
+; CHECK-NEXT:    vld1.32 {d11[0]}, [r8:32]
+; CHECK-NEXT:    vmov s17, r5
 ; CHECK-NEXT:    mov r5, sp
 ; CHECK-NEXT:    mov r6, r0
 ; CHECK-NEXT:    mov r0, r7
 ; CHECK-NEXT:    mov r1, r5
-; CHECK-NEXT:    vmov s20, r9
+; CHECK-NEXT:    vmov s16, r9
 ; CHECK-NEXT:    bl frexpf
-; CHECK-NEXT:    vmov s23, r0
-; CHECK-NEXT:    vld1.32 {d9[1]}, [r5:32]
-; CHECK-NEXT:    vmov s22, r6
-; CHECK-NEXT:    vst1.32 {d10, d11}, [r4]!
-; CHECK-NEXT:    vst1.64 {d8, d9}, [r4]
+; CHECK-NEXT:    vmov s19, r0
+; CHECK-NEXT:    vld1.32 {d11[1]}, [r5:32]
+; CHECK-NEXT:    vmov s18, r6
+; CHECK-NEXT:    vst1.32 {d8, d9}, [r4]!
+; CHECK-NEXT:    vst1.64 {d10, d11}, [r4]
 ; CHECK-NEXT:    add sp, #16
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}
 ; CHECK-NEXT:    add sp, #4

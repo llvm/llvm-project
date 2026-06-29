@@ -11,4 +11,4 @@ for more information.
 This check corresponds to the CERT C++ Coding Standard rule
 `OOP57-CPP. Prefer special member functions and overloaded operators to C
 Standard Library functions
-<https://wiki.sei.cmu.edu/confluence/display/cplusplus/OOP57-CPP.+Prefer+special+member+functions+and+overloaded+operators+to+C+Standard+Library+functions>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/object-oriented-programming-oop/oop57-cpp/>`_.

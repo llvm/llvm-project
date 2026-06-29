@@ -1767,7 +1767,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
       continue;
     if (auto *DerivedIV = dyn_cast<VPDerivedIVRecipe>(VecV)) {
       VPValue *DIVTC = DerivedIV->getOperand(1);
-      if (DerivedIV->getNumUsers() == 1 && IsTC(DIVTC)) {
+      if (DerivedIV->hasOneUse() && IsTC(DIVTC)) {
         auto *NewSel = MiddleBuilder.createSelect(
             AnyNaNLane, LoopRegion->getCanonicalIV(), DIVTC);
         DerivedIV->moveAfter(&*MiddleBuilder.getInsertPoint());

@@ -18,6 +18,14 @@ types:
 enums: []
 objects: []
 functions:
+  - name: __sched_clrcpuset
+    standards:
+      - llvm_libc_ext
+    return_type: void
+    arguments:
+      - type: int
+      - type: size_t
+      - type: cpu_set_t *
   - name: __sched_cpualloc
     standards:
       - llvm_libc_ext

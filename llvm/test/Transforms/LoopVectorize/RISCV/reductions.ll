@@ -298,8 +298,7 @@ define i32 @smin(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP6]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP14]])
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp slt <vscale x 4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP8:%.*]] = select <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 4 x i32> @llvm.smin.nxv4i32(<vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[VEC_PHI]])
 ; CHECK-NEXT:    [[TMP9]] = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[TMP8]], <vscale x 4 x i32> [[VEC_PHI]], i32 [[TMP14]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP14]] to i64
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP10]], [[INDEX]]
@@ -320,8 +319,7 @@ for.body:
   %sum.010 = phi i32 [ 2, %entry ], [ %.sroa.speculated, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
   %0 = load i32, ptr %arrayidx, align 4
-  %cmp.i = icmp slt i32 %0, %sum.010
-  %.sroa.speculated = select i1 %cmp.i, i32 %0, i32 %sum.010
+  %.sroa.speculated = call i32 @llvm.smin(i32 %0, i32 %sum.010)
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body
@@ -346,8 +344,7 @@ define i32 @umax(ptr nocapture %a, ptr nocapture readonly %b, i64 %n) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 4, i1 true)
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = call <vscale x 4 x i32> @llvm.vp.load.nxv4i32.p0(ptr align 4 [[TMP6]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP14]])
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt <vscale x 4 x i32> [[WIDE_LOAD]], [[VEC_PHI]]
-; CHECK-NEXT:    [[TMP8:%.*]] = select <vscale x 4 x i1> [[TMP7]], <vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 4 x i32> @llvm.umax.nxv4i32(<vscale x 4 x i32> [[WIDE_LOAD]], <vscale x 4 x i32> [[VEC_PHI]])
 ; CHECK-NEXT:    [[TMP9]] = call <vscale x 4 x i32> @llvm.vp.merge.nxv4i32(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i32> [[TMP8]], <vscale x 4 x i32> [[VEC_PHI]], i32 [[TMP14]])
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP14]] to i64
 ; CHECK-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP10]], [[INDEX]]
@@ -368,8 +365,7 @@ for.body:
   %sum.010 = phi i32 [ 2, %entry ], [ %.sroa.speculated, %for.body ]
   %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
   %0 = load i32, ptr %arrayidx, align 4
-  %cmp.i = icmp ugt i32 %0, %sum.010
-  %.sroa.speculated = select i1 %cmp.i, i32 %0, i32 %sum.010
+  %.sroa.speculated = call i32 @llvm.umax(i32 %0, i32 %sum.010)
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %n
   br i1 %exitcond.not, label %for.end, label %for.body

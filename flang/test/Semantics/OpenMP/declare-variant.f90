@@ -33,7 +33,7 @@ contains
 end subroutine
 
 subroutine invalid_clause
-!ERROR: PRIVATE clause is not allowed on the DECLARE VARIANT directive
+!ERROR: PRIVATE clause is not allowed on DECLARE VARIANT directive
   !$omp declare variant (sub:vsub) match (construct={parallel}) private(x)
 contains
   subroutine vsub

@@ -492,8 +492,8 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
     setOperationAction({ISD::BSWAP, ISD::CTTZ, ISD::CTLZ}, VT, Expand);
 
-    // AMDGPU uses ADDC/SUBC/ADDE/SUBE
-    setOperationAction({ISD::ADDC, ISD::SUBC, ISD::ADDE, ISD::SUBE}, VT, Legal);
+    setOperationAction({ISD::ADDC, ISD::SUBC, ISD::ADDE, ISD::SUBE}, VT,
+                       Expand);
   }
 
   // The hardware supports 32-bit FSHR, but not FSHL.
@@ -1041,6 +1041,7 @@ bool AMDGPUTargetLowering::isZExtFree(EVT Src, EVT Dest) const {
 bool AMDGPUTargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
                                                  EVT DestVT) const {
   switch (N->getOpcode()) {
+  case ISD::ABS:
   case ISD::ADD:
   case ISD::SUB:
   case ISD::SHL:
@@ -1056,6 +1057,7 @@ bool AMDGPUTargetLowering::isNarrowingProfitable(SDNode *N, EVT SrcVT,
   case ISD::SMAX:
   case ISD::UMIN:
   case ISD::UMAX:
+  case ISD::USUBSAT:
     if (isTypeLegal(MVT::i16) &&
         (!DestVT.isVector() ||
          !isOperationLegal(ISD::ADD, MVT::v2i16))) { // Check if VOP3P
@@ -3463,6 +3465,16 @@ SDValue AMDGPUTargetLowering::LowerCTLS(SDValue Op, SelectionDAG &DAG) const {
                      DAG.getAllOnesConstant(SL, MVT::i32));
 }
 
+SDValue AMDGPUTargetLowering::LowerINT_TO_FP16(SDValue Op, SelectionDAG &DAG,
+                                               EVT FP16Ty) const {
+  assert(FP16Ty == MVT::f16 || FP16Ty == MVT::bf16);
+  SDLoc SL(Op);
+  SDValue Src = Op.getOperand(0);
+  SDValue ToF32 = DAG.getNode(Op.getOpcode(), SL, MVT::f32, Src);
+  SDValue FPRoundFlag = DAG.getIntPtrConstant(0, SL, /*isTarget=*/true);
+  return DAG.getNode(ISD::FP_ROUND, SL, FP16Ty, ToF32, FPRoundFlag);
+}
+
 SDValue AMDGPUTargetLowering::LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG,
                                                bool Signed) const {
   // The regular method converting a 64-bit integer to float roughly consists of
@@ -3628,27 +3640,11 @@ SDValue AMDGPUTargetLowering::LowerUINT_TO_FP(SDValue Op,
     return DAG.getNode(ISD::UINT_TO_FP, DL, DestVT, Ext);
   }
 
-  if (DestVT == MVT::bf16) {
-    SDLoc SL(Op);
-    SDValue ToF32 = DAG.getNode(ISD::UINT_TO_FP, SL, MVT::f32, Src);
-    SDValue FPRoundFlag = DAG.getIntPtrConstant(0, SL, /*isTarget=*/true);
-    return DAG.getNode(ISD::FP_ROUND, SL, MVT::bf16, ToF32, FPRoundFlag);
-  }
+  if (DestVT == MVT::bf16 || DestVT == MVT::f16)
+    return LowerINT_TO_FP16(Op, DAG, DestVT);
 
   if (SrcVT != MVT::i64)
     return Op;
-
-  if (DestVT == MVT::f16 && isTypeLegal(MVT::f16)) {
-    SDLoc DL(Op);
-
-    SDValue IntToFp32 = DAG.getNode(Op.getOpcode(), DL, MVT::f32, Src);
-    SDValue FPRoundFlag =
-        DAG.getIntPtrConstant(0, SDLoc(Op), /*isTarget=*/true);
-    SDValue FPRound =
-        DAG.getNode(ISD::FP_ROUND, DL, MVT::f16, IntToFp32, FPRoundFlag);
-
-    return FPRound;
-  }
 
   if (DestVT == MVT::f32)
     return LowerINT_TO_FP32(Op, DAG, false);
@@ -3674,30 +3670,13 @@ SDValue AMDGPUTargetLowering::LowerSINT_TO_FP(SDValue Op,
     return DAG.getNode(ISD::SINT_TO_FP, DL, DestVT, Ext);
   }
 
-  if (DestVT == MVT::bf16) {
-    SDLoc SL(Op);
-    SDValue ToF32 = DAG.getNode(ISD::SINT_TO_FP, SL, MVT::f32, Src);
-    SDValue FPRoundFlag = DAG.getIntPtrConstant(0, SL, /*isTarget=*/true);
-    return DAG.getNode(ISD::FP_ROUND, SL, MVT::bf16, ToF32, FPRoundFlag);
-  }
+  if (DestVT == MVT::bf16 || DestVT == MVT::f16)
+    return LowerINT_TO_FP16(Op, DAG, DestVT);
 
   if (SrcVT != MVT::i64)
     return Op;
 
   // TODO: Factor out code common with LowerUINT_TO_FP.
-
-  if (DestVT == MVT::f16 && isTypeLegal(MVT::f16)) {
-    SDLoc DL(Op);
-    SDValue Src = Op.getOperand(0);
-
-    SDValue IntToFp32 = DAG.getNode(Op.getOpcode(), DL, MVT::f32, Src);
-    SDValue FPRoundFlag =
-        DAG.getIntPtrConstant(0, SDLoc(Op), /*isTarget=*/true);
-    SDValue FPRound =
-        DAG.getNode(ISD::FP_ROUND, DL, MVT::f16, IntToFp32, FPRoundFlag);
-
-    return FPRound;
-  }
 
   if (DestVT == MVT::f32)
     return LowerINT_TO_FP32(Op, DAG, true);
@@ -3897,7 +3876,7 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT(const SDValue Op,
   if (SrcVT == MVT::f16 && DestVT == MVT::i16)
     return Op;
 
-  if (SrcVT == MVT::bf16) {
+  if (SrcVT == MVT::bf16 || (SrcVT == MVT::f16 && DestVT == MVT::i32)) {
     SDLoc DL(Op);
     SDValue PromotedSrc = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Src);
     return DAG.getNode(Op.getOpcode(), DL, DestVT, PromotedSrc);
@@ -3944,13 +3923,18 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
   uint64_t SatWidth = SatVT.getScalarSizeInBits();
   assert(SatWidth <= DstWidth && "Saturation width cannot exceed result width");
 
-  // Will be selected natively
-  if (DstVT == MVT::i32 && SatWidth == DstWidth &&
-      (SrcVT == MVT::f32 || SrcVT == MVT::f64))
-    return Op;
+  // Scalar cases will be selected natively to v_cvt_/s_cvt_ instructions.
+  // v2f32 -> v2i16 will be selected natively to v_cvt_pk_[iu]16_f32.
+  if (SatWidth == DstWidth) {
+    if ((DstVT == MVT::i32 && (SrcVT == MVT::f32 || SrcVT == MVT::f64)) ||
+        (DstVT == MVT::i16 && (SrcVT == MVT::f16 || SrcVT == MVT::f32)) ||
+        (DstVT == MVT::v2i16 && SrcVT == MVT::v2f32))
+      return Op;
+  }
 
-  if (DstVT == MVT::i16 && SatWidth == DstWidth && SrcVT == MVT::f16)
-    return Op;
+  // Vectors can only be selected natively.
+  if (DstVT.isVector())
+    return SDValue();
 
   // Perform all saturation at selected width (i16 or i32) and truncate
   if (SatWidth < DstWidth && SatWidth <= 32) {
@@ -3970,7 +3954,7 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
     SDValue IntSatVal;
 
     // Then, clamp at the saturation width using either i16 or i32 instructions
-    if (Op.getOpcode() == ISD::FP_TO_SINT_SAT) {
+    if (OpOpcode == ISD::FP_TO_SINT_SAT) {
       SDValue MinConst = DAG.getConstant(
           APInt::getSignedMaxValue(SatWidth).sext(ResultWidth), DL, ResultVT);
       SDValue MaxConst = DAG.getConstant(
@@ -3988,7 +3972,7 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
                              DstVT);
   }
 
-  // SatWidth == DstWidth
+  // SatWidth == DstWidth or SatWidth > 32
 
   // Saturate at i32 for i64 dst and f16/bf16 src (will invoke f16 promotion
   // below)
@@ -5395,6 +5379,12 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
     return Res;
   }
   case AMDGPUISD::FMED3: {
+    // med3 sorts a NaN input as smaller than everything regardless of its sign,
+    // so negating all operands does not sign-flip the median when an input may
+    // be NaN.
+    if (!N0->getFlags().hasNoNaNs())
+      return SDValue();
+
     SDValue Ops[3];
     for (unsigned I = 0; I < 3; ++I)
       Ops[I] = DAG.getNode(ISD::FNEG, SL, VT, N0->getOperand(I), N0->getFlags());

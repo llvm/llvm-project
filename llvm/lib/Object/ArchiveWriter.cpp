@@ -783,7 +783,6 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
                   LLVMContext &Context, ArrayRef<NewArchiveMember> NewMembers,
                   std::optional<bool> IsEC, function_ref<void(Error)> Warn) {
   static char PaddingData[8] = {'\n', '\n', '\n', '\n', '\n', '\n', '\n', '\n'};
-  uint64_t MemHeadPadSize = 0;
   uint64_t Pos =
       isAIXBigArchive(Kind) ? sizeof(object::BigArchive::FixLenHdr) : 0;
 
@@ -845,17 +844,17 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
       Entry.second = Entry.second > 1 ? 1 : 0;
   }
 
-  std::vector<std::unique_ptr<SymbolicFile>> SymFiles;
+  for (const NewArchiveMember &M : NewMembers) {
+    MemberData &D = Ret.emplace_back();
 
-  if (NeedSymbols != SymtabWritingMode::NoSymtab || isAIXBigArchive(Kind)) {
-    for (const NewArchiveMember &M : NewMembers) {
+    if (NeedSymbols != SymtabWritingMode::NoSymtab || isAIXBigArchive(Kind)) {
       Expected<std::unique_ptr<SymbolicFile>> SymFileOrErr = getSymbolicFile(
           M.Buf->getMemBufferRef(), Context, Kind, [&](Error Err) {
             Warn(createFileError(M.MemberName, std::move(Err)));
           });
       if (!SymFileOrErr)
         return createFileError(M.MemberName, SymFileOrErr.takeError());
-      SymFiles.push_back(std::move(*SymFileOrErr));
+      D.SymFile = std::move(*SymFileOrErr);
     }
   }
 
@@ -868,13 +867,13 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
       // AMD64). This may be a single ARM64EC object, but may also be separate
       // ARM64 and AMD64 objects.
       bool HaveArm64 = false, HaveEC = false;
-      for (std::unique_ptr<SymbolicFile> &SymFile : SymFiles) {
-        if (!SymFile)
+      for (const MemberData &D : Ret) {
+        if (!D.SymFile)
           continue;
         if (!HaveArm64)
-          HaveArm64 = isAnyArm64COFF(*SymFile);
+          HaveArm64 = isAnyArm64COFF(*D.SymFile);
         if (!HaveEC)
-          HaveEC = isECObject(*SymFile);
+          HaveEC = isECObject(*D.SymFile);
         if (HaveArm64 && HaveEC) {
           SymMap->UseECMap = true;
           break;
@@ -888,23 +887,23 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
   uint64_t PrevOffset = 0;
   uint64_t NextMemHeadPadSize = 0;
 
-  for (uint32_t Index = 0; Index < NewMembers.size(); ++Index) {
+  for (uint32_t Index = 0; Index < Ret.size(); ++Index) {
+    MemberData &D = Ret[Index];
     const NewArchiveMember *M = &NewMembers[Index];
-    std::string Header;
-    raw_string_ostream Out(Header);
+    raw_string_ostream Out(D.Header);
 
     MemoryBufferRef Buf = M->Buf->getMemBufferRef();
-    StringRef Data = Thin ? "" : Buf.getBuffer();
+    D.Data = Thin ? "" : Buf.getBuffer();
 
     // ld64 expects the members to be 8-byte aligned for 64-bit content and at
     // least 4-byte aligned for 32-bit content.  Opt for the larger encoding
     // uniformly.  This matches the behaviour with cctools and ensures that ld64
     // is happy with archives that we generate.
     unsigned MemberPadding =
-        isDarwin(Kind) ? offsetToAlignment(Data.size(), Align(8)) : 0;
+        isDarwin(Kind) ? offsetToAlignment(D.Data.size(), Align(8)) : 0;
     unsigned TailPadding =
-        offsetToAlignment(Data.size() + MemberPadding, Align(2));
-    StringRef Padding = StringRef(PaddingData, MemberPadding + TailPadding);
+        offsetToAlignment(D.Data.size() + MemberPadding, Align(2));
+    D.Padding = StringRef(PaddingData, MemberPadding + TailPadding);
 
     sys::TimePoint<std::chrono::seconds> ModTime;
     if (UniqueTimestamps)
@@ -921,36 +920,32 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
           std::move(StringMsg), object::object_error::parse_failed);
     }
 
-    std::unique_ptr<SymbolicFile> CurSymFile;
-    if (!SymFiles.empty())
-      CurSymFile = std::move(SymFiles[Index]);
-
     // In the big archive file format, we need to calculate and include the next
     // member offset and previous member offset in the file member header.
     if (isAIXBigArchive(Kind)) {
       uint64_t OffsetToMemData = Pos + sizeof(object::BigArMemHdrType) +
                                  alignTo(M->MemberName.size(), 2);
 
-      if (M == NewMembers.begin())
+      if (Index == 0)
         NextMemHeadPadSize =
             alignToPowerOf2(OffsetToMemData,
-                            getMemberAlignment(CurSymFile.get())) -
+                            getMemberAlignment(D.SymFile.get())) -
             OffsetToMemData;
 
-      MemHeadPadSize = NextMemHeadPadSize;
-      Pos += MemHeadPadSize;
+      D.PreHeadPadSize = NextMemHeadPadSize;
+      Pos += D.PreHeadPadSize;
       uint64_t NextOffset = Pos + sizeof(object::BigArMemHdrType) +
                             alignTo(M->MemberName.size(), 2) + alignTo(Size, 2);
 
       // If there is another member file after this, we need to calculate the
       // padding before the header.
-      if (Index + 1 != SymFiles.size()) {
+      if (Index + 1 != Ret.size()) {
         uint64_t OffsetToNextMemData =
             NextOffset + sizeof(object::BigArMemHdrType) +
             alignTo(NewMembers[Index + 1].MemberName.size(), 2);
         NextMemHeadPadSize =
             alignToPowerOf2(OffsetToNextMemData,
-                            getMemberAlignment(SymFiles[Index + 1].get())) -
+                            getMemberAlignment(Ret[Index + 1].SymFile.get())) -
             OffsetToNextMemData;
         NextOffset += NextMemHeadPadSize;
       }
@@ -962,20 +957,17 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
                         ModTime, Size);
     }
 
-    std::vector<unsigned> Symbols;
     if (NeedSymbols != SymtabWritingMode::NoSymtab) {
       Expected<std::vector<unsigned>> SymbolsOrErr =
-          getSymbols(CurSymFile.get(), Index + 1, SymNames, SymMap);
+          getSymbols(D.SymFile.get(), Index + 1, SymNames, SymMap);
       if (!SymbolsOrErr)
         return createFileError(M->MemberName, SymbolsOrErr.takeError());
-      Symbols = std::move(*SymbolsOrErr);
-      if (CurSymFile)
+      D.Symbols = std::move(*SymbolsOrErr);
+      if (D.SymFile)
         HasObject = true;
     }
 
-    Pos += Header.size() + Data.size() + Padding.size();
-    Ret.push_back({std::move(Symbols), std::move(Header), Data, Padding,
-                   MemHeadPadSize, std::move(CurSymFile)});
+    Pos += D.Header.size() + D.Data.size() + D.Padding.size();
   }
   // If there are no symbols, emit an empty symbol table, to satisfy Solaris
   // tools, older versions of which expect a symbol table in a non-empty

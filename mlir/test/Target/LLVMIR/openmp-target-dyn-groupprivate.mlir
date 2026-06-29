@@ -6,21 +6,21 @@
 
 module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   llvm.func @target_dyn_groupprivate_i64(%size : i64) {
-    omp.target dyn_groupprivate(%size : i64) {
+    omp.target kernel_type(generic) dyn_groupprivate(%size : i64) {
       omp.terminator
     }
     llvm.return
   }
 
   llvm.func @target_dyn_groupprivate_i16(%size : i16) {
-    omp.target dyn_groupprivate(%size : i16) {
+    omp.target kernel_type(generic) dyn_groupprivate(%size : i16) {
       omp.terminator
     }
     llvm.return
   }
 
   llvm.func @target_dyn_groupprivate_i32(%size : i32) {
-    omp.target dyn_groupprivate(%size : i32) {
+    omp.target kernel_type(generic) dyn_groupprivate(%size : i32) {
       omp.terminator
     }
     llvm.return

@@ -337,7 +337,7 @@ feature_test_macros = [
         {
             "name": "__cpp_lib_constant_wrapper",
             "values": {
-                "c++26": 202603,
+                "c++26": 202606,
             },
             "headers": ["utility"],
         },
@@ -1417,7 +1417,6 @@ feature_test_macros = [
                 "c++26": 202306  # P1885R12 Naming Text Encodings to Demystify Them
             },
             "headers": ["text_encoding"],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_three_way_comparison",

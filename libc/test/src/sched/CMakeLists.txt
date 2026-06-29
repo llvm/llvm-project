@@ -137,6 +137,7 @@ add_libc_unittest(
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
     libc.src.sched.sched_getaffinity
+    libc.src.sched.__sched_clrcpuset
     libc.src.sched.__sched_getcpucount
     libc.src.sched.__sched_getcpuisset
     libc.src.sched.__sched_setcpuset

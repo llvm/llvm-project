@@ -343,6 +343,7 @@ set(files
   __configuration/language.h
   __configuration/namespace.h
   __configuration/platform.h
+  __configuration/pstl.h
   __configuration/utility.h
   __coroutine/coroutine_handle.h
   __coroutine/coroutine_traits.h
@@ -1090,6 +1091,7 @@ set(files
   strstream
   syncstream
   system_error
+  text_encoding
   tgmath.h
   thread
   tuple

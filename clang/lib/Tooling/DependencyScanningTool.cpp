@@ -378,10 +378,11 @@ CompilerInstanceWithContext::initializeFromCommandline(
       std::make_unique<DiagnosticsEngineWithDiagOpts>(ModifiedCommandLine, FS,
                                                       DC);
 
-  if (CommandLine.size() >= 2 && CommandLine[1] == "-cc1") {
+  if (ModifiedCommandLine.size() >= 2 && ModifiedCommandLine[1] == "-cc1") {
     // The input command line is already a -cc1 invocation; initialize the
     // compiler instance directly from it.
-    CompilerInstanceWithContext CIWithContext(Tool.Worker, CWD, CommandLine);
+    CompilerInstanceWithContext CIWithContext(Tool.Worker, CWD,
+                                              ModifiedCommandLine);
     if (!CIWithContext.initialize(Controller,
                                   std::move(DiagEngineWithCmdAndOpts),
                                   std::move(OverlayFS)))
@@ -586,7 +587,11 @@ bool CompilerInstanceWithContext::computeDependencies(
   MDC->run(Consumer);
   MDC->applyDiscoveredDependencies(ModuleInvocation);
 
-  if (!Controller.finalize(CI, ModuleInvocation))
+  bool Success = ModuleInvocation.withCowRef<bool>(
+      [&](CowCompilerInvocation &CowModuleInvocation) {
+        return Controller.finalize(CI, CowModuleInvocation);
+      });
+  if (!Success)
     return false;
 
   Consumer.handleBuildCommand(

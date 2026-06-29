@@ -65,6 +65,10 @@ template <class T> void releaseDummyHandle(T Handle) {
   delete DummyHandlePtr;
 }
 
+template <typename... HandleT> void releaseDummyHandles(HandleT... Handles) {
+  (releaseDummyHandle(Handles), ...);
+}
+
 class MockLiboffload {
 public:
   MockLiboffload() { initDefault(); }
@@ -104,7 +108,14 @@ public:
               (ol_queue_handle_t Queue, ol_event_handle_t *Events,
                size_t NumEvents));
   MOCK_METHOD(ol_result_t, olCreateEvent,
-              (ol_queue_handle_t Queue, ol_event_handle_t *Event));
+              (ol_queue_handle_t Queue, ol_event_flags_t Flags,
+               ol_event_handle_t *Event));
+  MOCK_METHOD(ol_result_t, olLaunchKernel,
+              (ol_queue_handle_t Queue, ol_device_handle_t Device,
+               ol_symbol_handle_t Kernel,
+               const ol_kernel_launch_size_args_t *LaunchSizeArgs,
+               const ol_kernel_launch_prop_t *Properties, size_t NumArgs,
+               void **ArgPtrs, const size_t *ArgSizes));
 
   ol_result_t makeEmptyStrError(ol_errc_t Code) {
     auto [Iterator, Flag] =

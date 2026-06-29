@@ -18,12 +18,15 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include "llvm/TargetParser/SubtargetFeature.h"
 
 namespace llvm {
+
+class MCSubtargetInfo;
 
 namespace RISCVOp {
 enum OperandType : unsigned {
@@ -474,6 +477,7 @@ enum {
   MO_TLSDESC_LOAD_LO = 14,
   MO_TLSDESC_ADD_LO = 15,
   MO_TLSDESC_CALL = 16,
+  MO_QC_ACCESS = 17,
 
   // Used to differentiate between target-specific "direct" flags and "bitmask"
   // flags. A machine operand can only have one "direct" flag, but can have
@@ -621,7 +625,7 @@ int getLoadFPImm(APFloat FPImm);
 
 namespace RISCVSysReg {
 struct SysReg {
-  const char Name[32];
+  StringTable::Offset Name;
   unsigned Encoding;
   // FIXME: add these additional fields when needed.
   // Privilege Access: Read, Write, Read-Only.
@@ -655,7 +659,7 @@ struct SysReg {
 
 namespace RISCVInsnOpcode {
 struct RISCVOpcode {
-  char Name[10];
+  StringTable::Offset Name;
   uint8_t Value;
 };
 
@@ -686,9 +690,8 @@ enum ABI {
 };
 
 // Returns the target ABI, or else a StringError if the requested ABIName is
-// not supported for the given TT and FeatureBits combination.
-ABI computeTargetABI(const Triple &TT, const FeatureBitset &FeatureBits,
-                     StringRef ABIName);
+// not supported for the subtargets triple and FeatureBits combination.
+ABI computeTargetABI(const MCSubtargetInfo &STI, StringRef ABIName);
 
 ABI getTargetABI(StringRef ABIName);
 
@@ -707,7 +710,7 @@ namespace RISCVFeatures {
 void validate(const Triple &TT, const FeatureBitset &FeatureBits);
 
 llvm::Expected<std::unique_ptr<RISCVISAInfo>>
-parseFeatureBits(bool IsRV64, const FeatureBitset &FeatureBits);
+parseFeatureBits(const MCSubtargetInfo &STI);
 
 } // namespace RISCVFeatures
 

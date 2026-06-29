@@ -59,6 +59,7 @@ DEFINE_C_API_STRUCT(MlirOpPrintingFlags, void);
 DEFINE_C_API_STRUCT(MlirBlock, void);
 DEFINE_C_API_STRUCT(MlirRegion, void);
 DEFINE_C_API_STRUCT(MlirSymbolTable, void);
+DEFINE_C_API_STRUCT(MlirIRMapping, void);
 
 DEFINE_C_API_STRUCT(MlirAttribute, const void);
 DEFINE_C_API_STRUCT(MlirIdentifier, const void);
@@ -1301,6 +1302,94 @@ MLIR_CAPI_EXPORTED MlirLogicalResult mlirSymbolTableReplaceAllSymbolUses(
 MLIR_CAPI_EXPORTED void mlirSymbolTableWalkSymbolTables(
     MlirOperation from, bool allSymUsesVisible,
     void (*callback)(MlirOperation, bool, void *userData), void *userData);
+
+//===----------------------------------------------------------------------===//
+// IRMapping API
+//===----------------------------------------------------------------------===//
+
+/// Creates a new empty IRMapping.
+MLIR_CAPI_EXPORTED MlirIRMapping mlirIRMappingCreate(void);
+
+/// Destroys the given IRMapping.
+MLIR_CAPI_EXPORTED void mlirIRMappingDestroy(MlirIRMapping mapping);
+
+/// Checks whether an IRMapping is null.
+static inline bool mlirIRMappingIsNull(MlirIRMapping mapping) {
+  return !mapping.ptr;
+}
+
+/// Maps a Value in the mapping.
+MLIR_CAPI_EXPORTED void mlirIRMappingMapValue(MlirIRMapping mapping,
+                                              MlirValue from, MlirValue to);
+
+/// Maps a Block in the mapping.
+MLIR_CAPI_EXPORTED void mlirIRMappingMapBlock(MlirIRMapping mapping,
+                                              MlirBlock from, MlirBlock to);
+
+/// Maps an Operation in the mapping.
+MLIR_CAPI_EXPORTED void mlirIRMappingMapOperation(MlirIRMapping mapping,
+                                                  MlirOperation from,
+                                                  MlirOperation to);
+
+/// Clears all mappings.
+MLIR_CAPI_EXPORTED void mlirIRMappingClear(MlirIRMapping mapping);
+
+/// Looks up a mapped Value. Returns the mapped value, or the input value if
+/// no mapping exists.
+MLIR_CAPI_EXPORTED MlirValue
+mlirIRMappingLookupOrDefaultValue(MlirIRMapping mapping, MlirValue from);
+
+/// Looks up a mapped Value. Returns a null MlirValue if no mapping exists.
+MLIR_CAPI_EXPORTED MlirValue
+mlirIRMappingLookupOrNullValue(MlirIRMapping mapping, MlirValue from);
+
+/// Looks up a mapped Block. Returns the mapped block, or the input block if
+/// no mapping exists.
+MLIR_CAPI_EXPORTED MlirBlock
+mlirIRMappingLookupOrDefaultBlock(MlirIRMapping mapping, MlirBlock from);
+
+/// Looks up a mapped Block. Returns a null MlirBlock if no mapping exists.
+MLIR_CAPI_EXPORTED MlirBlock
+mlirIRMappingLookupOrNullBlock(MlirIRMapping mapping, MlirBlock from);
+
+/// Looks up a mapped Operation. Returns the mapped operation, or the input
+/// operation if no mapping exists.
+MLIR_CAPI_EXPORTED MlirOperation mlirIRMappingLookupOrDefaultOperation(
+    MlirIRMapping mapping, MlirOperation from);
+
+/// Looks up a mapped Operation. Returns a null MlirOperation if no mapping
+/// exists.
+MLIR_CAPI_EXPORTED MlirOperation
+mlirIRMappingLookupOrNullOperation(MlirIRMapping mapping, MlirOperation from);
+
+/// Returns true if the mapping contains a mapping for the given value.
+MLIR_CAPI_EXPORTED bool mlirIRMappingContainsValue(MlirIRMapping mapping,
+                                                   MlirValue value);
+
+/// Returns true if the mapping contains a mapping for the given block.
+MLIR_CAPI_EXPORTED bool mlirIRMappingContainsBlock(MlirIRMapping mapping,
+                                                   MlirBlock block);
+
+/// Returns true if the mapping contains a mapping for the given operation.
+MLIR_CAPI_EXPORTED bool mlirIRMappingContainsOperation(MlirIRMapping mapping,
+                                                       MlirOperation op);
+
+/// Erases a value mapping.
+MLIR_CAPI_EXPORTED void mlirIRMappingEraseValue(MlirIRMapping mapping,
+                                                MlirValue value);
+
+/// Erases a block mapping.
+MLIR_CAPI_EXPORTED void mlirIRMappingEraseBlock(MlirIRMapping mapping,
+                                                MlirBlock block);
+
+/// Erases an operation mapping.
+MLIR_CAPI_EXPORTED void mlirIRMappingEraseOperation(MlirIRMapping mapping,
+                                                    MlirOperation op);
+
+/// Clones the operation with the given mapping. The mapping is updated with
+/// the cloned operation's results and regions.
+MLIR_CAPI_EXPORTED MlirOperation
+mlirOperationCloneWithMapping(MlirOperation op, MlirIRMapping mapping);
 
 #ifdef __cplusplus
 }

@@ -2047,7 +2047,7 @@ private:
   ///
   /// \param DescriptorAddr Address of the descriptor to initialize
   /// \param DataPtr Pointer to the actual data the descriptor should reference
-  /// \param ElemType Type of elements in the array (may be array type)
+  /// \param SrcDescriptorAddr Address of the descriptor to copy metadata from
   /// \param DescriptorType Type of the descriptor structure
   /// \param DataPtrPtrGen Callback to get the base_ptr field in the descriptor
   ///
@@ -2057,6 +2057,22 @@ private:
       Type *DescriptorType,
       function_ref<InsertPointOrErrorTy(InsertPointTy, Value *, Value *&)>
           DataPtrPtrGen);
+
+  /// Allocate a by-ref reduction descriptor, copy \p SrcDescriptorAddr into it,
+  /// and update its data pointer to reference \p DataPtr.
+  ///
+  /// \param AllocaIP Insertion point for the descriptor allocation.
+  /// \param RI Reduction info containing descriptor type and access callback.
+  /// \param DataPtr Pointer to the actual data the descriptor should reference.
+  /// \param SrcDescriptorAddr Address of the descriptor to copy metadata from.
+  /// \param DescriptorPtrTy Pointer type expected by the descriptor consumer.
+  ///
+  /// \return The new descriptor address, or an Error if descriptor generation
+  ///         fails.
+  Expected<Value *> createReductionDescriptorCopy(
+      InsertPointTy AllocaIP, const ReductionInfo &RI, Value *DataPtr,
+      Value *SrcDescriptorAddr, Type *DescriptorPtrTy,
+      const Twine &Name = ".omp.reduction.byref_descriptor");
 
   /// Emits reduction function.
   /// \param ReducerName Name of the function calling the reduction.
@@ -2166,7 +2182,7 @@ public:
   /// 4. Call the OpenMP runtime on the GPU to reduce across teams.
   ///    The last team writes the global reduced value to memory.
   ///
-  ///     ret = __kmpc_nvptx_teams_reduce_nowait(...,
+  ///     ret = __kmpc_gpu_teams_reduce_nowait(...,
   ///             reduceData, shuffleReduceFn, interWarpCpyFn,
   ///             scratchpadCopyFn, loadAndReduceFn)
   ///
@@ -2331,18 +2347,26 @@ public:
   /// \param IsByRef For each reduction clause, whether the reduction is by-ref.
   /// \param IsTeamsReduction   Optional flag set if it is a teams
   ///                           reduction.
+  /// \param IsSPMD             Optional flag set when the surrounding kernel
+  ///                           is compiled in SPMD execution mode (every
+  ///                           reduction private is then known to be a
+  ///                           per-thread scratch alloca).  When false, the
+  ///                           teams-reduction call site emits per-thread
+  ///                           scratch and copies the team-local value in so
+  ///                           the runtime's cross-team work cannot race on
+  ///                           team-shared LDS storage produced by Generic
+  ///                           globalization (Generic-SPMD case after
+  ///                           OpenMPOpt SPMD-ization).
   /// \param GridValue          Optional GPU grid value.
-  /// \param ReductionBufNum    Optional OpenMPCUDAReductionBufNumValue to be
   /// used for teams reduction.
   /// \param SrcLocInfo         Source location information global.
   LLVM_ABI InsertPointOrErrorTy createReductionsGPU(
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       InsertPointTy CodeGenIP, ArrayRef<ReductionInfo> ReductionInfos,
       ArrayRef<bool> IsByRef, bool IsNoWait = false,
-      bool IsTeamsReduction = false,
+      bool IsTeamsReduction = false, bool IsSPMD = false,
       ReductionGenCBKind ReductionGenCBKind = ReductionGenCBKind::MLIR,
-      std::optional<omp::GV> GridValue = {}, unsigned ReductionBufNum = 1024,
-      Value *SrcLocInfo = nullptr);
+      std::optional<omp::GV> GridValue = {}, Value *SrcLocInfo = nullptr);
 
   // TODO: provide atomic and non-atomic reduction generators for reduction
   // operators defined by the OpenMP specification.
@@ -2729,7 +2753,6 @@ public:
     SmallVector<int32_t, 3> MaxThreads = {-1};
     int32_t MinThreads = 1;
     int32_t ReductionDataSize = 0;
-    int32_t ReductionBufferLength = 0;
   };
 
   /// Container to pass LLVM IR runtime values or constants related to the
@@ -3414,11 +3437,8 @@ public:
   /// \param Loc The insert and source location description.
   /// \param TeamsReductionDataSize The maximal size of all the reduction data
   ///        for teams reduction.
-  /// \param TeamsReductionBufferLength The number of elements (each of up to
-  ///        \p TeamsReductionDataSize size), in the teams reduction buffer.
   LLVM_ABI void createTargetDeinit(const LocationDescription &Loc,
-                                   int32_t TeamsReductionDataSize = 0,
-                                   int32_t TeamsReductionBufferLength = 1024);
+                                   int32_t TeamsReductionDataSize = 0);
 
   ///}
 

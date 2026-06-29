@@ -5,46 +5,46 @@
 
 target triple = "wasm32-unknown-unknown"
 
-define ptr addrspace(10) @select_externref_eq(i32 %a, ptr addrspace(10) %b, ptr addrspace(10) %c) {
+define target("wasm.externref") @select_externref_eq(i32 %a, target("wasm.externref") %b, target("wasm.externref") %c) {
 ; CHECK-LABEL: select_externref_eq:
 ; CHECK:         .functype select_externref_eq (i32, externref, externref) -> (externref)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    externref.select $push0=, $2, $1, $0
 ; CHECK-NEXT:    return $pop0
   %cmp = icmp eq i32 %a, 0
-  %cond = select i1 %cmp, ptr addrspace(10) %b, ptr addrspace(10) %c
-  ret ptr addrspace(10) %cond
+  %cond = select i1 %cmp, target("wasm.externref") %b, target("wasm.externref") %c
+  ret target("wasm.externref") %cond
 }
 
-define ptr addrspace(10) @select_externref_ne(i32 %a, ptr addrspace(10) %b, ptr addrspace(10) %c) {
+define target("wasm.externref") @select_externref_ne(i32 %a, target("wasm.externref") %b, target("wasm.externref") %c) {
 ; CHECK-LABEL: select_externref_ne:
 ; CHECK:         .functype select_externref_ne (i32, externref, externref) -> (externref)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    externref.select $push0=, $1, $2, $0
 ; CHECK-NEXT:    return $pop0
   %cmp = icmp ne i32 %a, 0
-  %cond = select i1 %cmp, ptr addrspace(10) %b, ptr addrspace(10) %c
-  ret ptr addrspace(10) %cond
+  %cond = select i1 %cmp, target("wasm.externref") %b, target("wasm.externref") %c
+  ret target("wasm.externref") %cond
 }
 
-define ptr addrspace(20) @select_funcref_eq(i32 %a, ptr addrspace(20) %b, ptr addrspace(20) %c) {
+define target("wasm.funcref") @select_funcref_eq(i32 %a, target("wasm.funcref") %b, target("wasm.funcref") %c) {
 ; CHECK-LABEL: select_funcref_eq:
 ; CHECK:         .functype select_funcref_eq (i32, funcref, funcref) -> (funcref)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    funcref.select $push0=, $2, $1, $0
 ; CHECK-NEXT:    return $pop0
   %cmp = icmp eq i32 %a, 0
-  %cond = select i1 %cmp, ptr addrspace(20) %b, ptr addrspace(20) %c
-  ret ptr addrspace(20) %cond
+  %cond = select i1 %cmp, target("wasm.funcref") %b, target("wasm.funcref") %c
+  ret target("wasm.funcref") %cond
 }
 
-define ptr addrspace(20) @select_funcref_ne(i32 %a, ptr addrspace(20) %b, ptr addrspace(20) %c) {
+define target("wasm.funcref") @select_funcref_ne(i32 %a, target("wasm.funcref") %b, target("wasm.funcref") %c) {
 ; CHECK-LABEL: select_funcref_ne:
 ; CHECK:         .functype select_funcref_ne (i32, funcref, funcref) -> (funcref)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    funcref.select $push0=, $1, $2, $0
 ; CHECK-NEXT:    return $pop0
   %cmp = icmp ne i32 %a, 0
-  %cond = select i1 %cmp, ptr addrspace(20) %b, ptr addrspace(20) %c
-  ret ptr addrspace(20) %cond
+  %cond = select i1 %cmp, target("wasm.funcref") %b, target("wasm.funcref") %c
+  ret target("wasm.funcref") %cond
 }

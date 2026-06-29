@@ -8,6 +8,7 @@
 # ===----------------------------------------------------------------------===##
 
 import argparse
+import contextlib
 import json
 import logging
 import os
@@ -77,12 +78,17 @@ def main(argv):
     parser.add_argument('--machine', type=str, required=True,
         help='The name of the machine for reporting LNT results.')
     parser.add_argument('--output', type=pathlib.Path, required=True,
-        help='Path where the resulting LNT JSON report is written. The file is overwritten if it already exists.')
+        help='Path where the resulting LNT JSON report is written. It is an error for the file to '
+             'already exist.')
     parser.add_argument('--filter', type=str, required=False,
         help="Optional test filter to pass to lit when running the benchmarks. This allows "
              "running only a subset of the benchmarks.")
     parser.add_argument('--spec-dir', type=pathlib.Path, required=False,
         help='Optional path to a SPEC installation to use for benchmarking.')
+    parser.add_argument('--build-dir', type=pathlib.Path, required=False,
+        help='Optional directory in which to keep build artifacts. By default, a temporary directory '
+             'is used and the build artifacts are discarded after the run. It is an error to specify '
+             'a build directory that already exists.')
     parser.add_argument('--git-repo', type=directory_path, default=os.getcwd(),
         help='Optional path to the Git repository to use. By default, the current working directory is used.')
     parser.add_argument('--dry-run', action='store_true',
@@ -121,17 +127,36 @@ def main(argv):
             if enforce_success:
                 raise
 
-    with tempfile.TemporaryDirectory() as build_dir:
-        build_dir = pathlib.Path(build_dir)
+    # Fail fast before doing any expensive work: refuse to overwrite existing results or artifacts.
+    if args.output.exists():
+        sys.exit(f'error: output report {args.output} already exists; not overwriting it')
+    if args.build_dir is not None and args.build_dir.exists():
+        sys.exit(f'error: build directory {args.build_dir} already exists; not overwriting it')
+
+    with contextlib.ExitStack() as stack:
+        # LNT tooling is throwaway: always install it into a temporary directory.
+        venv = pathlib.Path(stack.enter_context(tempfile.TemporaryDirectory()))
+
+        # The build artifacts are kept in --build-dir when it is given, and stored in a temporary directory
+        # otherwise.
+        if args.build_dir is not None:
+            artifacts = args.build_dir
+        else:
+            artifacts = pathlib.Path(stack.enter_context(tempfile.TemporaryDirectory()))
+        if not args.dry_run:
+            artifacts.mkdir(parents=True, exist_ok=True)
+        logging.info(f'Storing build artifacts in {artifacts}')
 
         logging.info('Installing LNT')
-        run(['python3', '-m', 'venv', build_dir / '.venv'])
-        run([build_dir / '.venv/bin/pip', 'install', 'llvm-lnt'])
+        run(['python3', '-m', 'venv', venv])
+        run([venv / 'bin/pip', 'install', 'llvm-lnt'])
 
         logging.info(f'Building libc++ at commit {args.benchmark_commit}')
         build_cmd = [args.git_repo / 'libcxx/utils/build-at-commit',
                         '--git-repo', args.git_repo,
-                        '--install-dir', build_dir / 'install',
+                        '--install-dir', artifacts / 'libcxx-install',
+                        '--tmp-src-dir', artifacts / 'libcxx-src',
+                        '--tmp-build-dir', artifacts / 'libcxx-build',
                         '--commit', args.benchmark_commit,
                         '--', '-DCMAKE_BUILD_TYPE=RelWithDebInfo', f'-DCMAKE_CXX_COMPILER={args.compiler}']
         run(build_cmd, enforce_success=False) # if the build fails, carry on: we'll fail later and submit empty LNT results
@@ -139,32 +164,36 @@ def main(argv):
         logging.info(f'Running benchmarks from {args.test_suite_commit} against libc++ {args.benchmark_commit}')
         cmd = [args.git_repo / 'libcxx/utils/test-at-commit',
                             '--git-repo', args.git_repo,
-                            '--build-dir', build_dir / 'bench',
+                            '--build-dir', artifacts / 'benchmarks',
                             '--test-suite-commit', args.test_suite_commit,
-                            '--libcxx-installation', build_dir / 'install',
+                            '--libcxx-installation', artifacts / 'libcxx-install',
                             '--',
                             '-j1', '--time-tests', '--test-output=failed',
                             '--param', f'compiler={args.compiler}',
                             '--param', 'optimization=speed',
                             '--param', 'std=c++26',
-                            build_dir / 'bench/libcxx/test/benchmarks']
+                            artifacts / 'benchmarks/libcxx/test/benchmarks']
         if args.spec_dir is not None:
             cmd += ['--param', f'spec_dir={args.spec_dir}']
         if args.filter is not None:
             cmd += ['--filter', args.filter]
         run(cmd, enforce_success=False) # some benchmarks may fail to build/run at some commits, and that's okay
-        with open(build_dir / 'benchmarks.lnt', 'w') as f:
-            run([args.git_repo / 'libcxx/utils/consolidate-benchmarks', build_dir / 'bench'], stdout=f)
+        consolidate = [args.git_repo / 'libcxx/utils/consolidate-benchmarks', artifacts / 'benchmarks']
+        if args.dry_run:
+            run(consolidate)
+        else:
+            with open(artifacts / 'benchmarks.lnt', 'w') as f:
+                run(consolidate, stdout=f)
 
         logging.info('Creating JSON report for LNT')
         order = len(subprocess.check_output(['git', '-C', args.git_repo, 'rev-list', args.benchmark_commit]).splitlines())
-        importreport = [build_dir / '.venv/bin/lnt', 'importreport', '--order', str(order), '--machine', args.machine]
+        importreport = [venv / 'bin/lnt', 'importreport', '--order', str(order), '--machine', args.machine]
         for arg in dict_to_params(gather_run_information(args)):
             importreport += ['--run-info', arg]
         for arg in dict_to_params(gather_machine_information(args)):
             importreport += ['--machine-info', arg]
         output = args.output.resolve()
-        importreport += [build_dir / 'benchmarks.lnt', output]
+        importreport += [artifacts / 'benchmarks.lnt', output]
         run(importreport)
         logging.info(f'Report written to {output}')
 

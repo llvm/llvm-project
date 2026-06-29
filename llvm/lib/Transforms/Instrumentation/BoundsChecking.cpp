@@ -41,13 +41,22 @@ STATISTIC(ChecksAdded, "Bounds checks added");
 STATISTIC(ChecksSkipped, "Bounds checks skipped");
 STATISTIC(ChecksUnable, "Bounds checks unable to add");
 
-class BuilderTy : public IRBuilder<TargetFolder> {
+class NoSanitizeInserter final : public IRBuilderDefaultInserter {
+  mutable MDNode *NoSanitizeMD = nullptr;
+
 public:
-  BuilderTy(BasicBlock *TheBB, BasicBlock::iterator IP, TargetFolder Folder)
-      : IRBuilder<TargetFolder>(TheBB, IP, Folder) {
-    SetNoSanitizeMetadata();
+  NoSanitizeInserter() = default;
+
+  void InsertHelper(Instruction *I, const Twine &Name,
+                    BasicBlock::iterator InsertPt) const override {
+    IRBuilderDefaultInserter::InsertHelper(I, Name, InsertPt);
+    if (!NoSanitizeMD)
+      NoSanitizeMD = MDNode::get(I->getContext(), {});
+    I->setMetadata(LLVMContext::MD_nosanitize, NoSanitizeMD);
   }
 };
+
+using BuilderTy = IRBuilder<TargetFolder, NoSanitizeInserter>;
 
 /// Gets the conditions under which memory accessing instructions will overflow.
 ///

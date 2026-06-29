@@ -1,16 +1,6 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: clang-doc --pretty-json --extra-arg -std=c++20 --output=%t --format=json --executor=standalone %s
+// RUN: clang-doc --pretty-json --extra-arg -std=c++20 --output=%t --format=json --executor=standalone %S/../Inputs/function-requires.cpp
 // RUN: FileCheck %s < %t/json/GlobalNamespace/index.json
-
-template<typename T>
-concept Incrementable = requires(T x) {
-  ++x;
-  x++;
-};
-
-template<typename T> void increment(T t) requires Incrementable<T>;
-
-template<Incrementable T> Incrementable auto incrementTwo(T t);
 
 // CHECK:       "Functions": [
 // CHECK-NEXT:    {

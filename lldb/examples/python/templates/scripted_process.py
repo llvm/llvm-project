@@ -532,6 +532,13 @@ class ScriptedFrame(metaclass=ABCMeta):
                 elif "hexagon" in self.arch:
                     self.register_info["sets"] = ["General Purpose Registers"]
                     self.register_info["registers"] = HEXAGON_GPR
+                elif "wasm" in self.arch:
+                    # WebAssembly is a stack machine with no general-purpose
+                    # register file, so there is no GPR layout to expose. Leave
+                    # the register info empty rather than raising, which would
+                    # otherwise prevent the scripted frame from constructing.
+                    self.register_info["sets"] = []
+                    self.register_info["registers"] = []
                 else:
                     raise ValueError("Unknown architecture", self.arch)
         return self.register_info

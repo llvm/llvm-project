@@ -19,6 +19,7 @@ class TestCase(TestBase):
     @add_test_categories(["libc++"])
     @skipIfRemote
     @skipIf(compiler=no_match("clang"))
+    @skipIf(macos_sdk_version=["<", "16.0"])
     def test(self):
         self.build()
 

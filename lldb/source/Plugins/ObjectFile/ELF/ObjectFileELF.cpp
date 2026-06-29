@@ -2184,7 +2184,7 @@ void ObjectFileELF::CreateSections(SectionList &unified_section_list) {
         SectionSP module_section_sp = unified_section_list.FindSectionByType(
             eSectionTypeELFSymbolTable, true);
         if (module_section_sp)
-          unified_section_list.ReplaceSection(module_section_sp->GetID(),
+          unified_section_list.ReplaceSection(module_section_sp,
                                               symtab_section_sp);
         else
           unified_section_list.AddSection(symtab_section_sp);

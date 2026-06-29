@@ -339,18 +339,8 @@ llvm::json::Value FileSpec::ToJSON() const {
 
 FileSpec::Style FileSpec::GetPathStyle() const { return m_style; }
 
-void FileSpec::SetDirectory(ConstString directory) {
-  m_directory = directory;
-  PathWasModified();
-}
-
 void FileSpec::SetDirectory(llvm::StringRef directory) {
   m_directory = ConstString(directory);
-  PathWasModified();
-}
-
-void FileSpec::SetFilename(ConstString filename) {
-  m_filename = filename;
   PathWasModified();
 }
 
@@ -407,8 +397,8 @@ llvm::StringRef FileSpec::GetFileNameExtension() const {
   return llvm::sys::path::extension(m_filename.GetStringRef(), m_style);
 }
 
-ConstString FileSpec::GetFileNameStrippingExtension() const {
-  return ConstString(llvm::sys::path::stem(m_filename.GetStringRef(), m_style));
+llvm::StringRef FileSpec::GetFileNameStrippingExtension() const {
+  return llvm::sys::path::stem(m_filename.GetStringRef(), m_style);
 }
 
 // Return the size in bytes that this object takes in memory. This returns the

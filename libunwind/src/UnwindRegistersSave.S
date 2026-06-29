@@ -807,6 +807,7 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   mov    x1,sp
   str    x1,      [x0, #0x0F8]
   str    x30,     [x0, #0x100]    // store return address as pc
+  str    xzr,     [x0, #0x108]    // zero __ra_sign_state
   // skip cpsr
 #if defined(__ARM_FP) && __ARM_FP != 0
   stp    d0, d1,  [x0, #0x110]

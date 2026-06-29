@@ -1568,7 +1568,7 @@ def fpimm_half : FPImmLeaf<fAny, [{
 }]>;
 
 def fpimm_one : FPImmLeaf<fAny, [{
-  return Imm.isExactlyValue(+1.0);
+  return Imm.isOne();
 }]>;
 
 def fpimm_two : FPImmLeaf<fAny, [{

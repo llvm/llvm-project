@@ -23,7 +23,7 @@ condition parameter.
 
 This check corresponds to the CERT C++ Coding Standard rule
 `CON54-CPP. Wrap functions that can spuriously wake up in a loop
-<https://wiki.sei.cmu.edu/confluence/display/cplusplus/CON54-CPP.+Wrap+functions+that+can+spuriously+wake+up+in+a+loop>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-cpp-coding-standard/rules/concurrency-con/con54-cpp/>`_.
 and CERT C Coding Standard rule
 `CON36-C. Wrap functions that can spuriously wake up in a loop
-<https://wiki.sei.cmu.edu/confluence/display/c/CON36-C.+Wrap+functions+that+can+spuriously+wake+up+in+a+loop>`_.
+<https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/concurrency-con/con36-c/>`_.

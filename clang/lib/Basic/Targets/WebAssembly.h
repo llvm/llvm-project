@@ -63,6 +63,7 @@ class LLVM_LIBRARY_VISIBILITY WebAssemblyTargetInfo : public TargetInfo {
   bool HasBulkMemory = false;
   bool HasBulkMemoryOpt = false;
   bool HasCallIndirectOverlong = false;
+  bool HasCooperativeThreading = false;
   bool HasCompactImports = false;
   bool HasExceptionHandling = false;
   bool HasExtendedConst = false;
@@ -111,8 +112,10 @@ public:
       PtrDiffType = SignedLong;
       IntPtrType = SignedLong;
     }
-    if (T.getOS() == llvm::Triple::WASIp3)
+    if (T.getOS() == llvm::Triple::WASIp3) {
       HasLibcallThreadContext = true;
+      HasCooperativeThreading = true;
+    }
   }
 
   StringRef getABI() const override;
@@ -142,7 +145,7 @@ private:
   bool isValidCPUName(StringRef Name) const final;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const final;
 
-  bool setCPU(const std::string &Name) final { return isValidCPUName(Name); }
+  bool setCPU(StringRef Name) final { return isValidCPUName(Name); }
 
   llvm::SmallVector<Builtin::InfosShard> getTargetBuiltins() const final;
 

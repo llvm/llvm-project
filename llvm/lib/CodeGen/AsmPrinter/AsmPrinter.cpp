@@ -1608,8 +1608,7 @@ void AsmPrinter::emitBBAddrMapSection(const MachineFunction &MF) {
     if (Features.FuncEntryCount) {
       OutStreamer->AddComment("function entry count");
       auto MaybeEntryCount = MF.getFunction().getEntryCount();
-      OutStreamer->emitULEB128IntValue(
-          MaybeEntryCount ? MaybeEntryCount->getCount() : 0);
+      OutStreamer->emitULEB128IntValue(MaybeEntryCount ? *MaybeEntryCount : 0);
     }
     const MachineBlockFrequencyInfo *MBFI =
         Features.BBFreq
@@ -2754,12 +2753,12 @@ void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
 
   MCSymbol *Stub = getSymbol(&GI);
   EmitLinkage(Stub);
-  OutStreamer->emitCodeAlignment(TextAlign, getIFuncMCSubtargetInfo());
+  OutStreamer->emitCodeAlignment(TextAlign, *getIFuncMCSubtargetInfo());
   OutStreamer->emitLabel(Stub);
   emitVisibility(Stub, GI.getVisibility());
   emitMachOIFuncStubBody(M, GI, LazyPointer);
 
-  OutStreamer->emitCodeAlignment(TextAlign, getIFuncMCSubtargetInfo());
+  OutStreamer->emitCodeAlignment(TextAlign, *getIFuncMCSubtargetInfo());
   OutStreamer->emitLabel(StubHelper);
   emitVisibility(StubHelper, GI.getVisibility());
   emitMachOIFuncStubHelperBody(M, GI, LazyPointer);
@@ -3833,7 +3832,7 @@ Align AsmPrinter::emitAlignment(Align Alignment, const GlobalObject *GV,
       STI = &getSubtargetInfo();
     else
       STI = &TM.getMCSubtargetInfo();
-    OutStreamer->emitCodeAlignment(Alignment, STI, MaxBytesToEmit);
+    OutStreamer->emitCodeAlignment(Alignment, *STI, MaxBytesToEmit);
   } else
     OutStreamer->emitValueToAlignment(Alignment, 0, 1, MaxBytesToEmit);
   return Alignment;

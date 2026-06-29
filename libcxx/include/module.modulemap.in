@@ -13,6 +13,7 @@ module std_config [system] {
   textual header "__configuration/language.h"
   textual header "__configuration/namespace.h"
   textual header "__configuration/platform.h"
+  textual header "__configuration/pstl.h"
   textual header "__configuration/utility.h"
   textual header "version"
 }
@@ -2122,6 +2123,11 @@ module std [system] {
     module throw_system_error { header "__system_error/throw_system_error.h" }
 
     header "system_error"
+    export *
+  }
+
+  module text_encoding {
+    header "text_encoding"
     export *
   }
 

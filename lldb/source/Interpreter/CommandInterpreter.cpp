@@ -436,6 +436,10 @@ void CommandInterpreter::Initialize() {
   if (cmd_obj_sp)
     AddAlias("image", cmd_obj_sp);
 
+  cmd_obj_sp = GetCommandSPExact("diagnostics report");
+  if (cmd_obj_sp)
+    AddAlias("bugreport", cmd_obj_sp);
+
   alias_arguments_vector_sp = std::make_shared<OptionArgVector>();
 
   cmd_obj_sp = GetCommandSPExact("dwim-print");
@@ -2962,7 +2966,6 @@ void CommandInterpreter::HandleCommandsFromFile(
   auto input_file_up =
       FileSystem::Instance().Open(cmd_file, File::eOpenOptionReadOnly);
   if (!input_file_up) {
-    std::string error = llvm::toString(input_file_up.takeError());
     result.AppendErrorWithFormatv(
         "error: an error occurred read file '{0}': {1}\n", cmd_file_path,
         llvm::fmt_consume(input_file_up.takeError()));
@@ -3263,8 +3266,6 @@ void CommandInterpreter::FindCommandsForApropos(llvm::StringRef search_word,
                                                 bool search_user_commands,
                                                 bool search_alias_commands,
                                                 bool search_user_mw_commands) {
-  CommandObject::CommandMap::const_iterator pos;
-
   if (search_builtin_commands)
     FindCommandsForApropos(search_word, commands_found, commands_help,
                            m_command_dict);

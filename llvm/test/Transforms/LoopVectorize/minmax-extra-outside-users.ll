@@ -16,8 +16,7 @@ define i32 @smin_three_exit_users(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ splat (i32 2147483647), %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP2]] = select <4 x i1> [[TMP1]], <4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP2]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -34,8 +33,7 @@ define i32 @smin_three_exit_users(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[MIN:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[MIN_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[MIN]], [[V]]
-; CHECK-NEXT:    [[MIN_NEXT]] = select i1 [[CMP]], i32 [[MIN]], i32 [[V]]
+; CHECK-NEXT:    [[MIN_NEXT]] = call i32 @llvm.smin.i32(i32 [[MIN]], i32 [[V]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
@@ -55,8 +53,7 @@ loop:
   %min = phi i32 [ 2147483647, %entry ], [ %min.next, %loop ]
   %gep = getelementptr inbounds i32, ptr %src, i64 %iv
   %v = load i32, ptr %gep, align 4
-  %cmp = icmp slt i32 %min, %v
-  %min.next = select i1 %cmp, i32 %min, i32 %v
+  %min.next = call i32 @llvm.smin(i32 %min, i32 %v)
   %iv.next = add nuw nsw i64 %iv, 1
   %ec = icmp eq i64 %iv.next, %n
   br i1 %ec, label %exit, label %loop
@@ -85,8 +82,7 @@ define i32 @smax_three_exit_users(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ splat (i32 -2147483648), %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[TMP2]] = select <4 x i1> [[TMP1]], <4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP2]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[VEC_PHI]], <4 x i32> [[WIDE_LOAD]])
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
@@ -103,8 +99,7 @@ define i32 @smax_three_exit_users(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[MAX:%.*]] = phi i32 [ [[BC_MERGE_RDX]], %[[SCALAR_PH]] ], [ [[MAX_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[MAX]], [[V]]
-; CHECK-NEXT:    [[MAX_NEXT]] = select i1 [[CMP]], i32 [[MAX]], i32 [[V]]
+; CHECK-NEXT:    [[MAX_NEXT]] = call i32 @llvm.smax.i32(i32 [[MAX]], i32 [[V]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP5:![0-9]+]]
@@ -124,8 +119,7 @@ loop:
   %max = phi i32 [ -2147483648, %entry ], [ %max.next, %loop ]
   %gep = getelementptr inbounds i32, ptr %src, i64 %iv
   %v = load i32, ptr %gep, align 4
-  %cmp = icmp sgt i32 %max, %v
-  %max.next = select i1 %cmp, i32 %max, i32 %v
+  %max.next = call i32 @llvm.smax(i32 %max, i32 %v)
   %iv.next = add nuw nsw i64 %iv, 1
   %ec = icmp eq i64 %iv.next, %n
   br i1 %ec, label %exit, label %loop

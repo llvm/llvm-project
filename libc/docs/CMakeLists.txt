@@ -54,6 +54,7 @@ if (SPHINX_FOUND)
       float
       glob
       inttypes
+      libgen
       locale
       nl_types
       net/if

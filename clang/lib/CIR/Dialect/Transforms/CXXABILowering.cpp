@@ -485,6 +485,12 @@ static mlir::TypedAttr lowerInitialValue(const LowerModule *lowerModule,
       return cir::GlobalViewAttr::get(convertedTy, gva.getSymbol(),
                                       gva.getIndices());
 
+    if (auto blockAddr =
+            mlir::dyn_cast_if_present<cir::BlockAddrInfoAttr>(initVal)) {
+      assert(convertedTy == ptrTy && "BlockAddrInfo type should not change");
+      return blockAddr;
+    }
+
     auto constPtr = mlir::cast_if_present<cir::ConstPtrAttr>(initVal);
     if (!constPtr)
       return {};

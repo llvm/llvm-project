@@ -444,3 +444,154 @@ define <32 x i8> @test_affine_affine_same_matrix_fold_256(<32 x i8> %src1, <32 x
   %xor = xor <32 x i8> %gfni1, %gfni2
   ret <32 x i8> %xor
 }
+
+define <16 x i8> @test_source_xor_fold_splat2(<16 x i8> %src) nounwind {
+; AVX-LABEL: test_source_xor_fold_splat2:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vgf2p8affineqb $127, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: test_source_xor_fold_splat2:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $127, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; AVX512-NEXT:    retq
+  %xor = xor <16 x i8> %src, splat(i8 255)
+  %bit2 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %xor, <16 x i8> splat(i8 2), i8 128)
+  ret <16 x i8> %bit2
+}
+
+define <16 x i8> @test_source_xor_fold_bitrev(<16 x i8> %src) nounwind {
+; AVX-LABEL: test_source_xor_fold_bitrev:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vgf2p8affineqb $255, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: test_source_xor_fold_bitrev:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $255, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
+; AVX512-NEXT:    retq
+  %xor = xor <16 x i8> %src, splat(i8 15)
+  %rev = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %xor, <16 x i8> <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128>, i8 15)
+  ret <16 x i8> %rev
+}
+
+define <16 x i8> @test_source_xor_fold_rotl2(<16 x i8> %src) nounwind {
+; AVX-LABEL: test_source_xor_fold_rotl2:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vgf2p8affineqb $5, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [32,16,8,4,2,1,128,64,32,16,8,4,2,1,128,64]
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: test_source_xor_fold_rotl2:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $5, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [32,16,8,4,2,1,128,64,32,16,8,4,2,1,128,64]
+; AVX512-NEXT:    retq
+  %xor = xor <16 x i8> %src, splat(i8 193)
+  %rotl2 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %xor, <16 x i8> <i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128, i8 64, i8 32, i8 16, i8 8, i8 4, i8 2, i8 1, i8 128, i8 64>, i8 2)
+  ret <16 x i8> %rotl2
+}
+
+define <16 x i8> @test_source_xor_fold_cumulative_parity(<16 x i8> %src) nounwind {
+; AVX-LABEL: test_source_xor_fold_cumulative_parity:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vgf2p8affineqb $158, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1]
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: test_source_xor_fold_cumulative_parity:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $158, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [255,127,63,31,15,7,3,1,255,127,63,31,15,7,3,1]
+; AVX512-NEXT:    retq
+  %xor = xor <16 x i8> %src, splat(i8 162)
+  %parity = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %xor, <16 x i8> <i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1, i8 255, i8 127, i8 63, i8 31, i8 15, i8 7, i8 3, i8 1>, i8 0)
+  ret <16 x i8> %parity
+}
+
+;; Positive test: multi-use still shortens the dependency chain
+define <16 x i8> @test_source_xor_fold_multiuse(<16 x i8> %src, ptr %sink) nounwind {
+; AVX-LABEL: test_source_xor_fold_multiuse:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm1
+; AVX-NEXT:    vmovdqa %xmm1, (%rdi)
+; AVX-NEXT:    vgf2p8affineqb $127, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: test_source_xor_fold_multiuse:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vgf2p8affineqb $127, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm1 # [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; AVX512-NEXT:    vpternlogq {{.*#+}} xmm0 = ~xmm0
+; AVX512-NEXT:    vmovdqa %xmm0, (%rdi)
+; AVX512-NEXT:    vmovdqa %xmm1, %xmm0
+; AVX512-NEXT:    retq
+  %xor = xor <16 x i8> %src, splat(i8 255)
+  store <16 x i8> %xor, ptr %sink
+  %bit2 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %xor, <16 x i8> splat(i8 2), i8 128)
+  ret <16 x i8> %bit2
+}
+
+define <16 x i8> @test_source_xor_no_fold_nonsplat_xor(<16 x i8> %src) nounwind {
+; AVX-LABEL: test_source_xor_no_fold_nonsplat_xor:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vgf2p8affineqb $128, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: test_source_xor_no_fold_nonsplat_xor:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512-NEXT:    vgf2p8affineqb $128, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; AVX512-NEXT:    retq
+  %xor = xor <16 x i8> %src, <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>
+  %bit2 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %xor, <16 x i8> splat(i8 2), i8 128)
+  ret <16 x i8> %bit2
+}
+
+define <16 x i8> @test_source_xor_no_fold_nonsplat_matrix(<16 x i8> %src) nounwind {
+; AVX-LABEL: test_source_xor_no_fold_nonsplat_matrix:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vgf2p8affineqb $15, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: test_source_xor_no_fold_nonsplat_matrix:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-NEXT:    vgf2p8affineqb $15, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+; AVX512-NEXT:    retq
+  %xor = xor <16 x i8> %src, splat(i8 15)
+  %gfni = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %xor, <16 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15>, i8 15)
+  ret <16 x i8> %gfni
+}
+
+define <16 x i8> @test_source_xor_no_fold_variable_xor(<16 x i8> %src, <16 x i8> %val) nounwind {
+; AVX-LABEL: test_source_xor_no_fold_variable_xor:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vgf2p8affineqb $128, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: test_source_xor_no_fold_variable_xor:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vgf2p8affineqb $128, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to2}, %xmm0, %xmm0 # [2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]
+; AVX512-NEXT:    retq
+  %xor = xor <16 x i8> %src, %val
+  %bit2 = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %xor, <16 x i8> splat(i8 2), i8 128)
+  ret <16 x i8> %bit2
+}
+
+define <16 x i8> @test_source_xor_no_fold_variable_matrix(<16 x i8> %src, <16 x i8> %matrix) nounwind {
+; AVX-LABEL: test_source_xor_no_fold_variable_matrix:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vgf2p8affineqb $15, %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+;
+; AVX512-LABEL: test_source_xor_no_fold_variable_matrix:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpxord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; AVX512-NEXT:    vgf2p8affineqb $15, %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %xor = xor <16 x i8> %src, splat(i8 15)
+  %gfni = call <16 x i8> @llvm.x86.vgf2p8affineqb.128(<16 x i8> %xor, <16 x i8> %matrix, i8 15)
+  ret <16 x i8> %gfni
+}

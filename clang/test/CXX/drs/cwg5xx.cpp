@@ -84,9 +84,6 @@ namespace cwg506 { // cwg506: 2.7
   // since-cxx11-error@-2 {{cannot pass object of non-trivial type 'NonPod' through variadic function; call will abort at runtime}}
 } // namespace cwg506
 
-// FIXME: Add tests here once CWG260 is resolved.
-// cwg507: dup 260
-
 // cwg508: na
 // cwg509: na
 // cwg510: na

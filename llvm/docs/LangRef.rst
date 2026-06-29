@@ -1357,7 +1357,11 @@ Currently, only the following parameter attributes are defined:
     ``byval`` parameters). This is not a valid attribute for return
     values.
 
-    The byval type argument indicates the in-memory value type.
+    The byval type argument is only used for its allocation size and alignment
+    (if there is no explicit align attribute). That is, the hidden copy is
+    interpreted as a call to memcpy with the allocation size of the specified type,
+    instead of loading from the pointee and storing back into the copy in the type.
+    In particular, the padding between field types of a struct type is still copied.
 
     The byval attribute also supports specifying an alignment with the
     ``align`` attribute. It indicates the alignment of the stack slot to
@@ -2390,6 +2394,14 @@ For example:
     This attribute indicates that the inliner should never inline this
     function in any situation. This attribute may not be used together
     with the ``alwaysinline`` attribute.
+``noipa``
+    Disables any interprocedural analysis that inspects the definition of this
+    function. This attribute is equivalent to moving this function definition to
+    a separate, optimizer-opaque, module. Any attributes on the function are
+    still respected (as they would be if they remained on a function declaration
+    in this module). This attribute does *not* control inlining or outlining.
+    Add the ``noinline`` and ``nooutline`` attributes as well in cases where
+    inlining and outlining should additionally be disabled.
 ``nomerge``
     This attribute indicates that calls to this function should never be merged
     during optimization. For example, it will prevent tail merging otherwise

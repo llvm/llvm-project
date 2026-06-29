@@ -700,7 +700,8 @@ namespace {
       Out.indent(2) << "Diagnostic options:\n";
 #define DIAGOPT(Name, Bits, Default) DUMP_BOOLEAN(DiagOpts.Name, #Name);
 #define ENUM_DIAGOPT(Name, Type, Bits, Default)                              \
-    Out.indent(4) << #Name << ": " << DiagOpts.get##Name() << "\n";
+    Out.indent(4) << #Name << ": "                                             \
+                  << static_cast<unsigned>(DiagOpts.get##Name()) << "\n";
 #define VALUE_DIAGOPT(Name, Bits, Default)                                   \
     Out.indent(4) << #Name << ": " << DiagOpts.Name << "\n";
 #include "clang/Basic/DiagnosticOptions.def"

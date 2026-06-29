@@ -181,16 +181,32 @@ inline auto m_ConstantInt() { return m_Isa<ConstantInt>(); }
 /// Match an arbitrary ConstantFP and ignore it.
 inline auto m_ConstantFP() { return m_Isa<ConstantFP>(); }
 
-struct constantexpr_match {
+template <typename SPTy> struct ContainsMatchingVectorElement_match {
+  SPTy SubPattern;
+  ContainsMatchingVectorElement_match(const SPTy &SP) : SubPattern(SP) {}
+
   template <typename ITy> bool match(ITy *V) const {
     auto *C = dyn_cast<Constant>(V);
-    return C && (isa<ConstantExpr>(C) || C->containsConstantExpression());
+    return C && C->containsMatchingVectorElement(
+                    [&](Constant *E) { return SubPattern.match(E); });
   }
 };
 
+/// Match a vector constant where at least one of its elements matches the
+/// subpattern. Scalable vector constants are not matched. Any bindings in the
+/// subpattern will be bound to the first match.
+template <typename SPTy>
+inline ContainsMatchingVectorElement_match<SPTy>
+m_ContainsMatchingVectorElement(const SPTy &SubPattern) {
+  return SubPattern;
+}
+
 /// Match a constant expression or a constant that contains a constant
 /// expression.
-inline constantexpr_match m_ConstantExpr() { return constantexpr_match(); }
+inline auto m_ConstantExpr() {
+  return m_CombineOr(m_Isa<ConstantExpr>(),
+                     m_ContainsMatchingVectorElement(m_Isa<ConstantExpr>()));
+}
 
 template <typename SubPattern_t> struct Splat_match {
   SubPattern_t SubPattern;
@@ -888,13 +904,12 @@ inline match_bind<const BasicBlock> m_BasicBlock(const BasicBlock *&V) {
 struct immconstant_ty {
   template <typename ITy> static bool isImmConstant(ITy *V) {
     if (auto *CV = dyn_cast<Constant>(V)) {
-      if (!isa<ConstantExpr>(CV) && !CV->containsConstantExpression())
+      if (!match(CV, m_ConstantExpr()))
         return true;
 
       if (CV->getType()->isVectorTy()) {
         if (auto *Splat = CV->getSplatValue(/*AllowPoison=*/true)) {
-          if (!isa<ConstantExpr>(Splat) &&
-              !Splat->containsConstantExpression()) {
+          if (!match(Splat, m_ConstantExpr())) {
             return true;
           }
         }
@@ -2447,37 +2462,25 @@ m_Br(const Cond_t &C, const TrueBlock_t &T, const FalseBlock_t &F) {
 }
 
 //===----------------------------------------------------------------------===//
-// Matchers for max/min idioms, eg: "select (sgt x, y), x, y" -> smax(x,y).
+// Matchers for fmax/fmin idioms, eg: "select (sgt x, y), x, y" -> smax(x,y).
 //
 
-template <typename CmpInst_t, typename LHS_t, typename RHS_t, typename Pred_t,
-          bool Commutable = false>
-struct MaxMin_match {
+template <typename LHS_t, typename RHS_t, typename Pred_t>
+struct FMaxMin_match {
   using PredType = Pred_t;
   LHS_t L;
   RHS_t R;
 
   // The evaluation order is always stable, regardless of Commutability.
   // The LHS is always matched first.
-  MaxMin_match(const LHS_t &LHS, const RHS_t &RHS) : L(LHS), R(RHS) {}
+  FMaxMin_match(const LHS_t &LHS, const RHS_t &RHS) : L(LHS), R(RHS) {}
 
   template <typename OpTy> bool match(OpTy *V) const {
-    if (auto *II = dyn_cast<IntrinsicInst>(V)) {
-      Intrinsic::ID IID = II->getIntrinsicID();
-      if ((IID == Intrinsic::smax && Pred_t::match(ICmpInst::ICMP_SGT)) ||
-          (IID == Intrinsic::smin && Pred_t::match(ICmpInst::ICMP_SLT)) ||
-          (IID == Intrinsic::umax && Pred_t::match(ICmpInst::ICMP_UGT)) ||
-          (IID == Intrinsic::umin && Pred_t::match(ICmpInst::ICMP_ULT))) {
-        Value *LHS = II->getOperand(0), *RHS = II->getOperand(1);
-        return (L.match(LHS) && R.match(RHS)) ||
-               (Commutable && L.match(RHS) && R.match(LHS));
-      }
-    }
     // Look for "(x pred y) ? x : y" or "(x pred y) ? y : x".
     auto *SI = dyn_cast<SelectInst>(V);
     if (!SI)
       return false;
-    auto *Cmp = dyn_cast<CmpInst_t>(SI->getCondition());
+    auto *Cmp = dyn_cast<FCmpInst>(SI->getCondition());
     if (!Cmp)
       return false;
     // At this point we have a select conditioned on a comparison.  Check that
@@ -2489,42 +2492,13 @@ struct MaxMin_match {
     if ((TrueVal != LHS || FalseVal != RHS) &&
         (TrueVal != RHS || FalseVal != LHS))
       return false;
-    typename CmpInst_t::Predicate Pred =
+    FCmpInst::Predicate Pred =
         LHS == TrueVal ? Cmp->getPredicate() : Cmp->getInversePredicate();
     // Does "(x pred y) ? x : y" represent the desired max/min operation?
     if (!Pred_t::match(Pred))
       return false;
     // It does!  Bind the operands.
-    return (L.match(LHS) && R.match(RHS)) ||
-           (Commutable && L.match(RHS) && R.match(LHS));
-  }
-};
-
-/// Helper class for identifying signed max predicates.
-struct smax_pred_ty {
-  static bool match(ICmpInst::Predicate Pred) {
-    return Pred == CmpInst::ICMP_SGT || Pred == CmpInst::ICMP_SGE;
-  }
-};
-
-/// Helper class for identifying signed min predicates.
-struct smin_pred_ty {
-  static bool match(ICmpInst::Predicate Pred) {
-    return Pred == CmpInst::ICMP_SLT || Pred == CmpInst::ICMP_SLE;
-  }
-};
-
-/// Helper class for identifying unsigned max predicates.
-struct umax_pred_ty {
-  static bool match(ICmpInst::Predicate Pred) {
-    return Pred == CmpInst::ICMP_UGT || Pred == CmpInst::ICMP_UGE;
-  }
-};
-
-/// Helper class for identifying unsigned min predicates.
-struct umin_pred_ty {
-  static bool match(ICmpInst::Predicate Pred) {
-    return Pred == CmpInst::ICMP_ULT || Pred == CmpInst::ICMP_ULE;
+    return L.match(LHS) && R.match(RHS);
   }
 };
 
@@ -2556,35 +2530,6 @@ struct ufmin_pred_ty {
   }
 };
 
-template <typename LHS, typename RHS>
-inline MaxMin_match<ICmpInst, LHS, RHS, smax_pred_ty> m_SMax(const LHS &L,
-                                                             const RHS &R) {
-  return MaxMin_match<ICmpInst, LHS, RHS, smax_pred_ty>(L, R);
-}
-
-template <typename LHS, typename RHS>
-inline MaxMin_match<ICmpInst, LHS, RHS, smin_pred_ty> m_SMin(const LHS &L,
-                                                             const RHS &R) {
-  return MaxMin_match<ICmpInst, LHS, RHS, smin_pred_ty>(L, R);
-}
-
-template <typename LHS, typename RHS>
-inline MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty> m_UMax(const LHS &L,
-                                                             const RHS &R) {
-  return MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty>(L, R);
-}
-
-template <typename LHS, typename RHS>
-inline MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty> m_UMin(const LHS &L,
-                                                             const RHS &R) {
-  return MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty>(L, R);
-}
-
-template <typename LHS, typename RHS>
-inline auto m_MaxOrMin(const LHS &L, const RHS &R) {
-  return m_CombineOr(m_SMax(L, R), m_SMin(L, R), m_UMax(L, R), m_UMin(L, R));
-}
-
 /// Match an 'ordered' floating point maximum function.
 /// Floating point has one special value 'NaN'. Therefore, there is no total
 /// order. However, if we can ignore the 'NaN' value (for example, because of a
@@ -2595,9 +2540,9 @@ inline auto m_MaxOrMin(const LHS &L, const RHS &R) {
 ///                         max(L, R)  iff L and R are not NaN
 ///  m_OrdFMax(L, R) =      R          iff L or R are NaN
 template <typename LHS, typename RHS>
-inline MaxMin_match<FCmpInst, LHS, RHS, ofmax_pred_ty> m_OrdFMax(const LHS &L,
-                                                                 const RHS &R) {
-  return MaxMin_match<FCmpInst, LHS, RHS, ofmax_pred_ty>(L, R);
+inline FMaxMin_match<LHS, RHS, ofmax_pred_ty> m_OrdFMax(const LHS &L,
+                                                        const RHS &R) {
+  return FMaxMin_match<LHS, RHS, ofmax_pred_ty>(L, R);
 }
 
 /// Match an 'ordered' floating point minimum function.
@@ -2610,9 +2555,9 @@ inline MaxMin_match<FCmpInst, LHS, RHS, ofmax_pred_ty> m_OrdFMax(const LHS &L,
 ///                         min(L, R)  iff L and R are not NaN
 ///  m_OrdFMin(L, R) =      R          iff L or R are NaN
 template <typename LHS, typename RHS>
-inline MaxMin_match<FCmpInst, LHS, RHS, ofmin_pred_ty> m_OrdFMin(const LHS &L,
-                                                                 const RHS &R) {
-  return MaxMin_match<FCmpInst, LHS, RHS, ofmin_pred_ty>(L, R);
+inline FMaxMin_match<LHS, RHS, ofmin_pred_ty> m_OrdFMin(const LHS &L,
+                                                        const RHS &R) {
+  return FMaxMin_match<LHS, RHS, ofmin_pred_ty>(L, R);
 }
 
 /// Match an 'unordered' floating point maximum function.
@@ -2625,9 +2570,9 @@ inline MaxMin_match<FCmpInst, LHS, RHS, ofmin_pred_ty> m_OrdFMin(const LHS &L,
 ///                         max(L, R)  iff L and R are not NaN
 ///  m_UnordFMax(L, R) =    L          iff L or R are NaN
 template <typename LHS, typename RHS>
-inline MaxMin_match<FCmpInst, LHS, RHS, ufmax_pred_ty>
-m_UnordFMax(const LHS &L, const RHS &R) {
-  return MaxMin_match<FCmpInst, LHS, RHS, ufmax_pred_ty>(L, R);
+inline FMaxMin_match<LHS, RHS, ufmax_pred_ty> m_UnordFMax(const LHS &L,
+                                                          const RHS &R) {
+  return FMaxMin_match<LHS, RHS, ufmax_pred_ty>(L, R);
 }
 
 /// Match an 'unordered' floating point minimum function.
@@ -2640,9 +2585,9 @@ m_UnordFMax(const LHS &L, const RHS &R) {
 ///                          min(L, R)  iff L and R are not NaN
 ///  m_UnordFMin(L, R) =     L          iff L or R are NaN
 template <typename LHS, typename RHS>
-inline MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>
-m_UnordFMin(const LHS &L, const RHS &R) {
-  return MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>(L, R);
+inline FMaxMin_match<LHS, RHS, ufmin_pred_ty> m_UnordFMin(const LHS &L,
+                                                          const RHS &R) {
+  return FMaxMin_match<LHS, RHS, ufmin_pred_ty>(L, R);
 }
 
 /// Match an 'ordered' or 'unordered' floating point maximum function.
@@ -2651,11 +2596,11 @@ m_UnordFMin(const LHS &L, const RHS &R) {
 /// 'no-nans-float-math' flag) a combination of a fcmp and select has 'maximum'
 /// semantics.
 template <typename LHS, typename RHS>
-inline match_combine_or<MaxMin_match<FCmpInst, LHS, RHS, ofmax_pred_ty>,
-                        MaxMin_match<FCmpInst, LHS, RHS, ufmax_pred_ty>>
+inline match_combine_or<FMaxMin_match<LHS, RHS, ofmax_pred_ty>,
+                        FMaxMin_match<LHS, RHS, ufmax_pred_ty>>
 m_OrdOrUnordFMax(const LHS &L, const RHS &R) {
-  return m_CombineOr(MaxMin_match<FCmpInst, LHS, RHS, ofmax_pred_ty>(L, R),
-                     MaxMin_match<FCmpInst, LHS, RHS, ufmax_pred_ty>(L, R));
+  return m_CombineOr(FMaxMin_match<LHS, RHS, ofmax_pred_ty>(L, R),
+                     FMaxMin_match<LHS, RHS, ufmax_pred_ty>(L, R));
 }
 
 /// Match an 'ordered' or 'unordered' floating point minimum function.
@@ -2664,11 +2609,11 @@ m_OrdOrUnordFMax(const LHS &L, const RHS &R) {
 /// 'no-nans-float-math' flag) a combination of a fcmp and select has 'minimum'
 /// semantics.
 template <typename LHS, typename RHS>
-inline match_combine_or<MaxMin_match<FCmpInst, LHS, RHS, ofmin_pred_ty>,
-                        MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>>
+inline match_combine_or<FMaxMin_match<LHS, RHS, ofmin_pred_ty>,
+                        FMaxMin_match<LHS, RHS, ufmin_pred_ty>>
 m_OrdOrUnordFMin(const LHS &L, const RHS &R) {
-  return m_CombineOr(MaxMin_match<FCmpInst, LHS, RHS, ofmin_pred_ty>(L, R),
-                     MaxMin_match<FCmpInst, LHS, RHS, ufmin_pred_ty>(L, R));
+  return m_CombineOr(FMaxMin_match<LHS, RHS, ofmin_pred_ty>(L, R),
+                     FMaxMin_match<LHS, RHS, ufmin_pred_ty>(L, R));
 }
 
 /// Matches a 'Not' as 'xor V, -1' or 'xor -1, V'.
@@ -2963,6 +2908,32 @@ inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_Cttz(const Opnd0 &Op0,
 }
 
 template <typename Opnd0, typename Opnd1>
+inline auto m_SMax(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_Intrinsic<Intrinsic::smax>(Op0, Op1);
+}
+
+template <typename Opnd0, typename Opnd1>
+inline auto m_SMin(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_Intrinsic<Intrinsic::smin>(Op0, Op1);
+}
+
+template <typename Opnd0, typename Opnd1>
+inline auto m_UMax(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_Intrinsic<Intrinsic::umax>(Op0, Op1);
+}
+
+template <typename Opnd0, typename Opnd1>
+inline auto m_UMin(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_Intrinsic<Intrinsic::umin>(Op0, Op1);
+}
+
+template <typename Opnd0, typename Opnd1>
+inline auto m_MaxOrMin(const Opnd0 &Op0, const Opnd1 &Op1) {
+  return m_CombineOr(m_SMax(Op0, Op1), m_SMin(Op0, Op1), m_UMax(Op0, Op1),
+                     m_UMin(Op0, Op1));
+}
+
+template <typename Opnd0, typename Opnd1>
 inline typename m_Intrinsic_Ty<Opnd0, Opnd1>::Ty m_FMinNum(const Opnd0 &Op0,
                                                            const Opnd1 &Op1) {
   return m_Intrinsic<Intrinsic::minnum>(Op0, Op1);
@@ -3128,37 +3099,6 @@ m_NSWNeg(const ValTy &V) {
   return m_NSWSub(m_ZeroInt(), V);
 }
 
-/// Matches an SMin with LHS and RHS in either order.
-template <typename LHS, typename RHS>
-inline MaxMin_match<ICmpInst, LHS, RHS, smin_pred_ty, true>
-m_c_SMin(const LHS &L, const RHS &R) {
-  return MaxMin_match<ICmpInst, LHS, RHS, smin_pred_ty, true>(L, R);
-}
-/// Matches an SMax with LHS and RHS in either order.
-template <typename LHS, typename RHS>
-inline MaxMin_match<ICmpInst, LHS, RHS, smax_pred_ty, true>
-m_c_SMax(const LHS &L, const RHS &R) {
-  return MaxMin_match<ICmpInst, LHS, RHS, smax_pred_ty, true>(L, R);
-}
-/// Matches a UMin with LHS and RHS in either order.
-template <typename LHS, typename RHS>
-inline MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty, true>
-m_c_UMin(const LHS &L, const RHS &R) {
-  return MaxMin_match<ICmpInst, LHS, RHS, umin_pred_ty, true>(L, R);
-}
-/// Matches a UMax with LHS and RHS in either order.
-template <typename LHS, typename RHS>
-inline MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty, true>
-m_c_UMax(const LHS &L, const RHS &R) {
-  return MaxMin_match<ICmpInst, LHS, RHS, umax_pred_ty, true>(L, R);
-}
-
-template <typename LHS, typename RHS>
-inline auto m_c_MaxOrMin(const LHS &L, const RHS &R) {
-  return m_CombineOr(m_c_SMax(L, R), m_c_SMin(L, R), m_c_UMax(L, R),
-                     m_c_UMin(L, R));
-}
-
 template <Intrinsic::ID IntrID, typename LHS, typename RHS>
 struct CommutativeBinaryIntrinsic_match {
   LHS L;
@@ -3179,6 +3119,33 @@ template <Intrinsic::ID IntrID, typename T0, typename T1>
 inline CommutativeBinaryIntrinsic_match<IntrID, T0, T1>
 m_c_Intrinsic(const T0 &Op0, const T1 &Op1) {
   return CommutativeBinaryIntrinsic_match<IntrID, T0, T1>(Op0, Op1);
+}
+
+/// Matches an SMin with LHS and RHS in either order.
+template <typename LHS, typename RHS>
+inline auto m_c_SMin(const LHS &L, const RHS &R) {
+  return m_c_Intrinsic<Intrinsic::smin>(L, R);
+}
+/// Matches an SMax with LHS and RHS in either order.
+template <typename LHS, typename RHS>
+inline auto m_c_SMax(const LHS &L, const RHS &R) {
+  return m_c_Intrinsic<Intrinsic::smax>(L, R);
+}
+/// Matches a UMin with LHS and RHS in either order.
+template <typename LHS, typename RHS>
+inline auto m_c_UMin(const LHS &L, const RHS &R) {
+  return m_c_Intrinsic<Intrinsic::umin>(L, R);
+}
+/// Matches a UMax with LHS and RHS in either order.
+template <typename LHS, typename RHS>
+inline auto m_c_UMax(const LHS &L, const RHS &R) {
+  return m_c_Intrinsic<Intrinsic::umax>(L, R);
+}
+
+template <typename LHS, typename RHS>
+inline auto m_c_MaxOrMin(const LHS &L, const RHS &R) {
+  return m_CombineOr(m_c_SMax(L, R), m_c_SMin(L, R), m_c_UMax(L, R),
+                     m_c_UMin(L, R));
 }
 
 /// Matches FAdd with LHS and RHS in either order.

@@ -238,6 +238,25 @@ OPTIONS
   initial directories from absolute paths. This option has no effect without
   :option:`--prefix`.
 
+.. option:: --source-dir <dir>
+
+  When disassembling with the :option:`--source` option, add ``dir`` to the
+  front of the source search path when looking up source files. For each source
+  file, llvm-objdump tries the path from the debug info, then each search
+  directory with the full path appended, then each search directory with only
+  the file name.
+  This option may be specified multiple times; each ``--source-dir`` adds one
+  directory. Options on the command line are searched in first to last order.
+  
+.. option:: --substitute-path <from> <to>
+
+  When disassembling with the :option:`--source` option, replace ``from`` with
+  ``to`` at the start of the directory part of source file paths when looking up
+  sources. A rule is applied only if ``from`` ends at a directory separator in
+  the path. This option may be specified multiple times; rules are evaluated in
+  the order given and the first matching rule is used, as in GDB
+  ``set substitute-path``.
+
 .. option:: --print-imm-hex
 
   Use hex format when printing immediate values in disassembly output (default).

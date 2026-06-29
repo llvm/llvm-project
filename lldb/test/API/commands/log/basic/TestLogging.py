@@ -4,6 +4,7 @@ Test lldb logging.  This test just makes sure logging doesn't crash, and produce
 
 
 import os
+import json
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -94,3 +95,32 @@ class LogTestCase(TestBase):
         self.runCmd("log disable lldb")
 
         self.assertTrue(os.path.isfile(self.log_file))
+
+    # Check that -j produces a valid JSONL log file where every line is a JSON
+    # object and the requested metadata flags surface as JSON fields rather
+    # than line prefixes.
+    def test_json_output(self):
+        if os.path.exists(self.log_file):
+            os.remove(self.log_file)
+
+        self.runCmd("log enable -j -s -T -p -F -f '%s' lldb commands" % self.log_file)
+        self.runCmd("help log")
+        self.runCmd("log disable lldb")
+
+        self.assertTrue(os.path.isfile(self.log_file))
+        with open(self.log_file, "r") as f:
+            lines = f.readlines()
+
+        self.assertGreater(len(lines), 0, "log file should not be empty")
+        for line in lines:
+            # Every line must parse as JSON on its own.
+            obj = json.loads(line)
+            self.assertIsInstance(obj, dict)
+            self.assertIn("message", obj)
+            # The flags we passed must turn into JSON fields.
+            self.assertIn("sequence", obj)
+            self.assertIn("timestamp", obj)
+            self.assertIn("pid", obj)
+            self.assertIn("tid", obj)
+            self.assertIn("file", obj)
+            self.assertIn("function", obj)

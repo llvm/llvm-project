@@ -8,25 +8,85 @@
 //
 // Tests for orc-rt's AllocAction.h APIs.
 //
+// These tests exercise the AllocAction layer directly, using a small bespoke
+// (de)serializer that exchanges raw int* values via memcpy. SPS-layer tests
+// live in SPSAllocActionTest.cpp.
+//
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/AllocAction.h"
-#include "orc-rt/ExecutorAddress.h"
-#include "orc-rt/SPSAllocAction.h"
 
-#include "AllocActionTestUtils.h"
 #include "gtest/gtest.h"
+
+#include <cstring>
 
 using namespace orc_rt;
 
-TEST(AllocActionTest, DefaultConstruct) {
-  AllocAction AA;
-  EXPECT_FALSE(AA);
+namespace {
+
+// A minimal AllocActionFunction (de)serializer pair that exchanges a single
+// int* via memcpy. Used to drive AllocActionFunction::handle without pulling
+// in SPS.
+struct IntPtrDeserializer {
+  bool deserialize(const char *ArgData, size_t ArgSize,
+                   std::tuple<int *> &Args) {
+    if (ArgSize != sizeof(int *))
+      return false;
+    memcpy(&std::get<0>(Args), ArgData, sizeof(int *));
+    return true;
+  }
+};
+
+struct IdentitySerializer {
+  static WrapperFunctionBuffer serialize(WrapperFunctionBuffer B) { return B; }
+};
+
+WrapperFunctionBuffer makeIntPtrArgBuffer(int *P) {
+  auto B = WrapperFunctionBuffer::allocate(sizeof(int *));
+  memcpy(B.data(), &P, sizeof(int *));
+  return B;
 }
+
+} // anonymous namespace
 
 static orc_rt_WrapperFunctionBuffer noopAction(const char *ArgData,
                                                size_t ArgSize) {
   return WrapperFunctionBuffer().release();
+}
+
+// Increments an int via pointer.
+static orc_rt_WrapperFunctionBuffer
+increment_int_ptr_action(const char *ArgData, size_t ArgSize) {
+  return AllocActionFunction::handle(ArgData, ArgSize, IntPtrDeserializer(),
+                                     IdentitySerializer(),
+                                     [](int *P) {
+                                       ++*P;
+                                       return WrapperFunctionBuffer();
+                                     })
+      .release();
+}
+
+// Decrements an int via pointer.
+static orc_rt_WrapperFunctionBuffer
+decrement_int_ptr_action(const char *ArgData, size_t ArgSize) {
+  return AllocActionFunction::handle(ArgData, ArgSize, IntPtrDeserializer(),
+                                     IdentitySerializer(),
+                                     [](int *P) {
+                                       --*P;
+                                       return WrapperFunctionBuffer();
+                                     })
+      .release();
+}
+
+// Always returns an out-of-band error.
+static orc_rt_WrapperFunctionBuffer fail_action(const char *ArgData,
+                                                size_t ArgSize) {
+  return WrapperFunctionBuffer::createOutOfBandError("failed").release();
+}
+
+TEST(AllocActionTest, DefaultConstruct) {
+  AllocAction AA;
+  EXPECT_FALSE(AA);
 }
 
 TEST(AllocActionTest, ConstructWithAction) {
@@ -34,38 +94,9 @@ TEST(AllocActionTest, ConstructWithAction) {
   EXPECT_TRUE(AA);
 }
 
-// Increments int via pointer.
-static orc_rt_WrapperFunctionBuffer
-increment_sps_allocaction(const char *ArgData, size_t ArgSize) {
-  return SPSAllocActionFunction<SPSExecutorAddr>::handle(
-             ArgData, ArgSize,
-             [](ExecutorAddr IntPtr) {
-               *IntPtr.toPtr<int *>() += 1;
-               return WrapperFunctionBuffer();
-             })
-      .release();
-}
-
-// Increments int via pointer.
-static orc_rt_WrapperFunctionBuffer
-decrement_sps_allocaction(const char *ArgData, size_t ArgSize) {
-  return SPSAllocActionFunction<SPSExecutorAddr>::handle(
-             ArgData, ArgSize,
-             [](ExecutorAddr IntPtr) {
-               *IntPtr.toPtr<int *>() -= 1;
-               return WrapperFunctionBuffer();
-             })
-      .release();
-}
-
-template <typename T>
-static WrapperFunctionBuffer makeExecutorAddrBuffer(T *P) {
-  return *spsSerialize<SPSArgList<SPSExecutorAddr>>(ExecutorAddr::fromPtr(P));
-}
-
 TEST(AllocActionTest, RunBasicAction) {
   int Val = 0;
-  AllocAction IncVal(increment_sps_allocaction, makeExecutorAddrBuffer(&Val));
+  AllocAction IncVal(increment_int_ptr_action, makeIntPtrArgBuffer(&Val));
   EXPECT_TRUE(IncVal);
   auto B = IncVal();
   EXPECT_TRUE(B.empty());
@@ -78,13 +109,12 @@ TEST(AllocActionTest, RunFinalizationActionsComplete) {
   std::vector<AllocActionPair> InitialActions;
 
   auto MakeAAOnVal = [&](AllocActionFn Fn) {
-    return *MakeAllocAction<SPSExecutorAddr>::from(Fn,
-                                                   ExecutorAddr::fromPtr(&Val));
+    return AllocAction(Fn, makeIntPtrArgBuffer(&Val));
   };
-  InitialActions.push_back({MakeAAOnVal(increment_sps_allocaction),
-                            MakeAAOnVal(decrement_sps_allocaction)});
-  InitialActions.push_back({MakeAAOnVal(increment_sps_allocaction),
-                            MakeAAOnVal(decrement_sps_allocaction)});
+  InitialActions.push_back({MakeAAOnVal(increment_int_ptr_action),
+                            MakeAAOnVal(decrement_int_ptr_action)});
+  InitialActions.push_back({MakeAAOnVal(increment_int_ptr_action),
+                            MakeAAOnVal(decrement_int_ptr_action)});
 
   auto DeallocActions = cantFail(runFinalizeActions(std::move(InitialActions)));
 
@@ -95,24 +125,18 @@ TEST(AllocActionTest, RunFinalizationActionsComplete) {
   EXPECT_EQ(Val, 0);
 }
 
-static orc_rt_WrapperFunctionBuffer fail_sps_allocaction(const char *ArgData,
-                                                         size_t ArgSize) {
-  return WrapperFunctionBuffer::createOutOfBandError("failed").release();
-}
-
 TEST(AllocActionTest, RunFinalizeActionsFail) {
   int Val = 0;
 
   std::vector<AllocActionPair> InitialActions;
 
   auto MakeAAOnVal = [&](AllocActionFn Fn) {
-    return *MakeAllocAction<SPSExecutorAddr>::from(Fn,
-                                                   ExecutorAddr::fromPtr(&Val));
+    return AllocAction(Fn, makeIntPtrArgBuffer(&Val));
   };
-  InitialActions.push_back({MakeAAOnVal(increment_sps_allocaction),
-                            MakeAAOnVal(decrement_sps_allocaction)});
-  InitialActions.push_back({*MakeAllocAction<>::from(fail_sps_allocaction),
-                            MakeAAOnVal(decrement_sps_allocaction)});
+  InitialActions.push_back({MakeAAOnVal(increment_int_ptr_action),
+                            MakeAAOnVal(decrement_int_ptr_action)});
+  InitialActions.push_back({AllocAction(fail_action, WrapperFunctionBuffer()),
+                            MakeAAOnVal(decrement_int_ptr_action)});
 
   auto DeallocActions = runFinalizeActions(std::move(InitialActions));
 
@@ -133,13 +157,12 @@ TEST(AllocActionTest, RunFinalizeActionsNullFinalize) {
   std::vector<AllocActionPair> InitialActions;
 
   auto MakeAAOnVal = [&](AllocActionFn Fn) {
-    return *MakeAllocAction<SPSExecutorAddr>::from(Fn,
-                                                   ExecutorAddr::fromPtr(&Val));
+    return AllocAction(Fn, makeIntPtrArgBuffer(&Val));
   };
-  InitialActions.push_back({MakeAAOnVal(increment_sps_allocaction),
-                            MakeAAOnVal(decrement_sps_allocaction)});
-  InitialActions.push_back({*MakeAllocAction<>::from(nullptr),
-                            MakeAAOnVal(decrement_sps_allocaction)});
+  InitialActions.push_back({MakeAAOnVal(increment_int_ptr_action),
+                            MakeAAOnVal(decrement_int_ptr_action)});
+  InitialActions.push_back({AllocAction(nullptr, WrapperFunctionBuffer()),
+                            MakeAAOnVal(decrement_int_ptr_action)});
 
   auto DeallocActions = cantFail(runFinalizeActions(std::move(InitialActions)));
 
@@ -158,13 +181,12 @@ TEST(AllocActionTest, RunFinalizeActionsNullDealloc) {
   std::vector<AllocActionPair> InitialActions;
 
   auto MakeAAOnVal = [&](AllocActionFn Fn) {
-    return *MakeAllocAction<SPSExecutorAddr>::from(Fn,
-                                                   ExecutorAddr::fromPtr(&Val));
+    return AllocAction(Fn, makeIntPtrArgBuffer(&Val));
   };
-  InitialActions.push_back({MakeAAOnVal(increment_sps_allocaction),
-                            MakeAAOnVal(decrement_sps_allocaction)});
-  InitialActions.push_back({MakeAAOnVal(increment_sps_allocaction),
-                            *MakeAllocAction<>::from(nullptr)});
+  InitialActions.push_back({MakeAAOnVal(increment_int_ptr_action),
+                            MakeAAOnVal(decrement_int_ptr_action)});
+  InitialActions.push_back({MakeAAOnVal(increment_int_ptr_action),
+                            AllocAction(nullptr, WrapperFunctionBuffer())});
 
   auto DeallocActions = cantFail(runFinalizeActions(std::move(InitialActions)));
 

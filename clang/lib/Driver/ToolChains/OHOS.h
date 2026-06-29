@@ -80,7 +80,7 @@ protected:
                                  StringRef SysRoot) const override;
   void addExtraOpts(llvm::opt::ArgStringList &CmdArgs) const override;
   SanitizerMask
-  getSupportedSanitizers(StringRef BoundArch,
+  getSupportedSanitizers(BoundArch BA,
                          Action::OffloadKind DeviceOffloadKind) const override;
   void addProfileRTLibs(const llvm::opt::ArgList &Args,
                              llvm::opt::ArgStringList &CmdArgs) const override;

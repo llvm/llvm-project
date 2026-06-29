@@ -397,10 +397,16 @@ public:
                            const Function *Callee) const override {
     const TargetMachine &TM = getTLI()->getTargetMachine();
 
-    const FeatureBitset &CallerBits =
-        TM.getSubtargetImpl(*Caller)->getFeatureBits();
-    const FeatureBitset &CalleeBits =
-        TM.getSubtargetImpl(*Callee)->getFeatureBits();
+    const TargetSubtargetInfo *CallerSTI = TM.getSubtargetImpl(*Caller);
+    const TargetSubtargetInfo *CalleeSTI = TM.getSubtargetImpl(*Callee);
+    FeatureBitset InlineIgnoreFeatures = CallerSTI->getInlineIgnoreFeatures();
+    FeatureBitset InlineInverseFeatures = CallerSTI->getInlineInverseFeatures();
+    FeatureBitset CallerBits =
+        (CallerSTI->getFeatureBits() ^ InlineInverseFeatures) &
+        ~InlineIgnoreFeatures;
+    FeatureBitset CalleeBits =
+        (CalleeSTI->getFeatureBits() ^ InlineInverseFeatures) &
+        ~InlineIgnoreFeatures;
 
     // Inline a callee if its target-features are a subset of the callers
     // target-features.
@@ -1044,7 +1050,10 @@ public:
     }
   }
 
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override { return 1; }
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override {
+    return 1;
+  }
 
   InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,

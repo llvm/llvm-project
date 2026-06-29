@@ -67,7 +67,8 @@
 
 // CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "amdgcn-amd-amdhsa"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
-// CHECK-SAME: "-emit-llvm-bc"
+// OLD-SAME: "-emit-obj"
+// NEW-SAME: "-emit-llvm-bc"
 // CHECK-SAME: {{.*}} "-main-file-name" "a.cu"
 // CHECK-SAME: "-fcuda-is-device" "-fno-threadsafe-statics" "-mllvm" "-amdgpu-internalize-symbols"
 // CHECK-SAME: "-fvisibility=hidden"
@@ -230,14 +231,14 @@
 // Check mixed AMDGCNSPIRV and concrete GPU arch.
 //
 
+// AMDGCNSPIRV: "-cc1" "-triple" "amdgcn-amd-amdhsa" {{.*}}"-emit-obj" {{.*}} "-target-cpu" "gfx900"{{.*}} "-o" "[[GFX900_OBJ:.*o]]"
+// AMDGCNSPIRV: {{".*lld.*"}} {{.*}}"-plugin-opt=mcpu=gfx900" {{.*}} "-o" "[[GFX900_CO:.*out]]" {{.*}}"[[GFX900_OBJ]]"
 // AMDGCNSPIRV: "-cc1" "-triple" "spirv64-amd-amdhsa" {{.*}}"-emit-llvm-bc" {{.*}}"-flto=full"{{.*}} "-fembed-bitcode=marker" "-disable-llvm-passes" {{.*}} "-o" "[[AMDGCNSPV_BC:.*bc]]"
 // AMDGCNSPIRV: {{".*llvm-link.*"}} "-o" "[[AMDGCNSPV_TMP:.*bc]]" "[[AMDGCNSPV_BC]]"
 // AMDGCNSPIRV: {{".*llvm-spirv.*"}} "--spirv-max-version=1.6" "--spirv-ext=+all" {{.*}} "[[AMDGCNSPV_TMP]]" {{.*}}"-o" "[[AMDGCNSPV_CO:.*out]]"
-// AMDGCNSPIRV: "-cc1" "-triple" "amdgcn-amd-amdhsa" {{.*}}"-emit-llvm-bc" {{.*}}"-flto=full"{{.*}} "-target-cpu" "gfx900"{{.*}} "-o" "[[GFX900_BC:.*bc]]"
-// AMDGCNSPIRV: {{".*lld.*"}} {{.*}}"-plugin-opt=mcpu=gfx900" {{.*}} "-o" "[[GFX900_CO:.*out]]" {{.*}}"[[GFX900_BC]]"
 // AMDGCNSPIRV: {{".*clang-offload-bundler.*"}} "-type=o"
-// AMDGCNSPIRV-SAME: "-targets={{.*}}hip-spirv64-amd-amdhsa--amdgcnspirv,hip-amdgcn-amd-amdhsa--gfx900"
-// AMDGCNSPIRV-SAME: "-input=[[AMDGCNSPV_CO]]" "-input=[[GFX900_CO]]"
+// AMDGCNSPIRV-SAME: "-targets={{.*}}hipv4-amdgcn-amd-amdhsa--gfx900,hipv4-spirv64-amd-amdhsa--amdgcnspirv"
+// AMDGCNSPIRV-SAME: "-input=[[GFX900_CO]]" "-input=[[AMDGCNSPV_CO]]"
 // AMDGCNSPIRV-NEW: "-cc1" "-triple" "spirv64-amd-amdhsa" {{.*}}"-emit-llvm-bc" {{.*}} "-o" "[[AMDGCNSPV_BC:[^"]*]]"
 
 // Check verbose printing with the new driver.

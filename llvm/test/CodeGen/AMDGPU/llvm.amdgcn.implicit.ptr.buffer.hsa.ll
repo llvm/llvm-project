@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=amdgcn-amd-amdhsa < %s 2>&1 | FileCheck -check-prefix=ERROR %s
+; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 < %s 2>&1 | FileCheck -check-prefix=ERROR %s
 
 ; ERROR: in function test_kernel{{.*}}: non-hsa intrinsic with hsa target
 define amdgpu_kernel void @test_kernel(ptr addrspace(1) %out) #1 {

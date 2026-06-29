@@ -537,16 +537,28 @@ void Paragraph::renderEscapedMarkdown(llvm::raw_ostream &OS) const {
 void Paragraph::renderMarkdown(llvm::raw_ostream &OS) const {
   bool NeedsSpace = false;
   bool HasChunks = false;
+  bool TextEndsWithNewline = false;
   std::string ParagraphText;
   ParagraphText.reserve(EstimatedStringSize);
   llvm::raw_string_ostream ParagraphTextOS(ParagraphText);
   for (auto &C : Chunks) {
+
+    if (TextEndsWithNewline) {
+      ParagraphTextOS << "\n";
+      TextEndsWithNewline = false;
+    }
+
     if (C.SpaceBefore || NeedsSpace)
       ParagraphTextOS << " ";
+
     switch (C.Kind) {
     case ChunkKind::PlainText:
       ParagraphTextOS << renderText(C.Contents, !HasChunks,
                                     /*EscapeMarkdown=*/false);
+      // renderText removes trailing newlines, but in case there are additional
+      // chunks to process, we need to keep track of the trailing newline and
+      // add it in the next iteration.
+      TextEndsWithNewline = llvm::StringRef(C.Contents).ends_with("\n");
       break;
     case ChunkKind::InlineCode:
       ParagraphTextOS << renderInlineBlock(C.Contents);

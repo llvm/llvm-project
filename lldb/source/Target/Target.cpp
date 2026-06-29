@@ -900,7 +900,8 @@ BreakpointName *Target::FindBreakpointName(ConstString name, bool can_create,
   }
 
   return m_breakpoint_names
-      .insert(std::make_pair(name, std::make_unique<BreakpointName>(name)))
+      .insert(std::make_pair(
+          name, std::make_unique<BreakpointName>(name.GetStringRef().str())))
       .first->second.get();
 }
 
@@ -930,8 +931,7 @@ void Target::ConfigureBreakpointName(
 
 void Target::ApplyNameToBreakpoints(BreakpointName &bp_name) {
   llvm::Expected<std::vector<BreakpointSP>> expected_vector =
-      m_breakpoint_list.FindBreakpointsByName(
-          bp_name.GetName().AsCString(nullptr));
+      m_breakpoint_list.FindBreakpointsByName(bp_name.GetName());
 
   if (!expected_vector) {
     LLDB_LOG(GetLog(LLDBLog::Breakpoints), "invalid breakpoint name: {}",

@@ -547,6 +547,14 @@ bool Sema::LookupTemplateName(LookupResult &Found, Scope *S, CXXScopeSpec &SS,
         } else {
           diagnoseTypo(Corrected, PDiag(diag::err_no_template_suggest) << Name);
         }
+
+        if (Corrected.WillReplaceSpecifier()) {
+          NestedNameSpecifier NNS = Corrected.getCorrectionSpecifier();
+          // In order to be valid, a non-empty CXXScopeSpec needs a source
+          // range.
+          SS.MakeTrivial(Context, NNS,
+                         NNS ? Found.getNameLoc() : SourceRange());
+        }
       }
     }
   }
