@@ -2137,21 +2137,6 @@ let IntrProperties = [IntrReadMem, IntrArgMemOnly, IntrNoCallback, IntrWillRetur
   def int_nvvm_ldu_global_p : Intrinsic<[llvm_anyptr_ty], [llvm_anyptr_ty, llvm_i32_ty]>;
 }
 
-// Represents an explicit hole in the LLVM IR type system. It may be inserted by
-// the compiler in cases where a pointer is of the wrong type. In the backend
-// this intrinsic will be folded away and not equate to any instruction. It
-// should not be used by any frontend and should only be considered well defined
-// when added in the following cases:
-//
-//  - NVPTXLowerArgs: When wrapping a byval pointer argument to a kernel
-//    function to convert the address space from generic (0) to param (101).
-//    This accounts for the fact that the parameter symbols will occupy this
-//    space when lowered during ISel.
-//
-def int_nvvm_internal_addrspace_wrap :
-  NVVMPureIntrinsic<[llvm_anyptr_ty], [llvm_anyptr_ty],
-                [NoUndef<ArgIndex<0>>, NoUndef<RetIndex>]>;
-
 // Move intrinsics, used in nvvm internally
 
 let IntrProperties = [IntrNoMem] in {

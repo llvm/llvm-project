@@ -294,3 +294,33 @@ namespace UnrelatedAndRootPtr{
   }
   static_assert(f());
 }
+
+namespace UnrelatedAndRootReference {
+  struct A {
+    virtual void foo();
+  };
+  struct B1 : A {};
+
+  struct B2 : A {};
+  struct C : B2 {};
+
+  constexpr C c;
+  static_assert(&dynamic_cast<B2 &>((B1 &)c), ""); // both-error {{not an integral constant expression}} \
+                                                   // both-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+}
+
+namespace Invalid {
+  struct S { virtual void s(); };
+  struct A : S {};
+  struct B : A {};
+  constexpr __UINTPTR_TYPE__ g = 0;
+  static_assert(&dynamic_cast<A&>((S&)(B&)g) == &(A&)(B&)g); // both-error {{not an integral constant expression}} \
+                                                             // both-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+
+  struct X : S { : ; }; // both-error {{expected expression}} \
+                        // both-error {{a type specifier is required for all declarations}}
+  constexpr X x; // both-error {{must be initialized by a constant expression}} \
+                 // both-note {{declared here}}
+  static_assert(&dynamic_cast<S&>((X&)x), ""); // both-error {{not an integral constant expression}} \
+                                               // both-note {{initializer of 'x' is not a constant expression}}
+}

@@ -176,6 +176,37 @@ def ACCLegalizeSerial : Pass<"acc-legalize-serial", "mlir::func::FuncOp"> {
 }
 
 
+def ACCEmitRemarksLoop : Pass<"acc-emit-remarks-loop", "mlir::func::FuncOp"> {
+  let summary = "Emit OpenACC loop parallelism mapping remarks";
+  let description = [{
+    This pass emits optimization remarks describing how loops inside OpenACC
+    compute regions are mapped to parallelism levels (gang, worker, vector,
+    sequential) and the corresponding GPU parallel dimensions.
+
+    The pass walks `acc.compute_region` operations that originated from OpenACC
+    compute constructs and reports remarks for each loop carrying an
+    `acc.par_dims` attribute.
+  }];
+  let options = [
+    Option<"gpuDimSeparator", "gpu-dim-separator", "std::string", "\".\"",
+           "Separator between GPU index prefix and axis name in remarks ">
+  ];
+}
+
+def ACCEmitRemarksPrivate
+    : Pass<"acc-emit-remarks-private", "mlir::func::FuncOp"> {
+  let summary = "Emit OpenACC private and firstprivate remarks";
+  let description = [{
+    This pass emits optimization remarks describing the private and firstprivate
+    variables associated with OpenACC compute and loop constructs.
+
+    The pass walks compute constructs and `acc.loop` operations and, for each,
+    reports the implicit and explicit `private` and `firstprivate` variables it
+    carries.
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect"];
+}
+
 def ACCLoopTiling : Pass<"acc-loop-tiling", "mlir::func::FuncOp"> {
   let summary = "Tile OpenACC loops with tile clauses";
   let description = [{
@@ -493,7 +524,8 @@ def ACCRoutineToGPUFunc : Pass<"acc-routine-to-gpu-func", "mlir::ModuleOp"> {
   let options = [ AccDeviceTypeOption ];
 }
 
-def ACCBindRoutine : Pass<"acc-bind-routine", "mlir::func::FuncOp"> {
+def ACCBindRoutine
+    : InterfacePass<"acc-bind-routine", "mlir::FunctionOpInterface"> {
   let summary = "Apply bind clause to function calls in ACC compute regions";
   let description = [{
     For calls inside offload regions that target a function with an

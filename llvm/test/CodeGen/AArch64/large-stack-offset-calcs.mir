@@ -1,0 +1,15 @@
+# RUN: llc -mtriple=arm64-apple-ios -run-pass=prologepilog %s -o - | FileCheck %s
+---
+name: large_stack_offset_calc
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 32768, alignment: 8 }
+body: |
+  ; CHECK-LABEL: name: large_stack_offset_calc
+  ; CHECK:      $[[BASE:x[0-9]+]] = ADDXri $sp, 10, 12
+  ; CHECK-NEXT: STRXui $x0, killed $[[BASE]], 317
+  bb.0:
+    liveins: $x0
+    STRXui $x0, %stack.0, 5437 :: (store (s64))
+    RET_ReallyLR
+...

@@ -75,7 +75,8 @@ bool CheckDowncast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
 /// Checks if the Descriptor is of a constexpr or const global variable.
-bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc);
+bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc,
+                   AccessKinds AK = AK_Read);
 
 bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
@@ -2051,6 +2052,14 @@ inline bool GetRefLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
 inline bool GetRefGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
   Block *B = S.P.getGlobal(I);
 
+  // If we're currently evaluating this variable, use that in-flight value.
+  // It will otherwise be diagnosed as non-initialized reference and we will
+  // complain about a missing initializer.
+  if (S.EvaluatingDecl && B->getDescriptor()->asVarDecl() == S.EvaluatingDecl) {
+    S.Stk.push<Pointer>(B);
+    return true;
+  }
+
   if (isConstexprUnknown(B)) {
     S.Stk.push<Pointer>(B);
     return true;
@@ -2169,6 +2178,8 @@ inline bool VirtBaseHelper(InterpState &S, CodePtr OpPC, const RecordDecl *Decl,
     return false;
   Pointer Base = Ptr.stripBaseCasts();
   const Record::Base *VirtBase = Base.getRecord()->getVirtualBase(Decl);
+  if (!VirtBase)
+    return false;
   S.Stk.push<Pointer>(Base.atField(VirtBase->Offset));
   return true;
 }
@@ -3641,6 +3652,7 @@ inline bool PushIgnoreDiags(InterpState &S, CodePtr OpPC) {
     return true;
   assert(S.PrevDiags == nullptr);
   S.PrevDiags = S.getEvalStatus().Diag;
+  S.PrevDiagsEmitted = S.getEvalStatus().DiagEmitted;
   S.getEvalStatus().Diag = nullptr;
   assert(!S.diagnosing());
   return true;
@@ -3651,6 +3663,7 @@ inline bool PopIgnoreDiags(InterpState &S, CodePtr OpPC) {
   --S.DiagIgnoreDepth;
   if (S.DiagIgnoreDepth == 0) {
     S.getEvalStatus().Diag = S.PrevDiags;
+    S.getEvalStatus().DiagEmitted = S.PrevDiagsEmitted;
     S.PrevDiags = nullptr;
   }
   return true;

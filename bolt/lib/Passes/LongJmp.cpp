@@ -22,8 +22,6 @@ using namespace llvm;
 namespace opts {
 extern cl::OptionCategory BoltCategory;
 extern cl::OptionCategory BoltOptCategory;
-extern llvm::cl::opt<unsigned> AlignText;
-extern cl::opt<unsigned> AlignFunctions;
 extern cl::opt<bool> UseOldText;
 extern cl::opt<bool> HotFunctionsAtEnd;
 
@@ -317,7 +315,9 @@ void LongJmpPass::tentativeBBLayout(const BinaryFunction &Func) {
 uint64_t LongJmpPass::tentativeLayoutRelocColdPart(
     const BinaryContext &BC, BinaryFunctionListType &SortedFunctions,
     uint64_t DotAddress) {
-  DotAddress = alignTo(DotAddress, llvm::Align(opts::AlignFunctions));
+  DotAddress =
+      alignTo(DotAddress, std::max<uint64_t>(BC.AlignFunctions,
+                                             BC.MaxColdCodeAlignment.load()));
   for (BinaryFunction *Func : SortedFunctions) {
     if (!Func->isSplit())
       continue;
@@ -330,8 +330,10 @@ uint64_t LongJmpPass::tentativeLayoutRelocColdPart(
     LLVM_DEBUG(dbgs() << Func->getPrintName() << " cold tentative: "
                       << Twine::utohexstr(DotAddress) << "\n");
     DotAddress += Func->estimateColdSize();
-    DotAddress = alignTo(DotAddress, Func->getConstantIslandAlignment());
-    DotAddress += Func->estimateConstantIslandSize();
+    if (uint64_t IslandSize = Func->estimateConstantIslandSize()) {
+      DotAddress = alignTo(DotAddress, Func->getConstantIslandAlignment());
+      DotAddress += IslandSize;
+    }
   }
   return DotAddress;
 }
@@ -371,11 +373,11 @@ LongJmpPass::tentativeLayoutRelocMode(const BinaryContext &BC,
     // after the last non-cold section. Account for it before assigning cold
     // fragment addresses so range checks see the hot-to-cold gap.
     if (opts::Hugify && !BC.HasFixedLoadAddress && !opts::HotFunctionsAtEnd)
-      DotAddress = alignTo(DotAddress, opts::AlignText);
+      DotAddress = alignTo(DotAddress, BC.AlignText);
     DotAddress = tentativeLayoutRelocColdPart(BC, SortedFunctions, DotAddress);
     ColdLayoutDone = true;
     if (opts::HotFunctionsAtEnd)
-      DotAddress = alignTo(DotAddress, opts::AlignText);
+      DotAddress = alignTo(DotAddress, BC.AlignText);
   };
   for (BinaryFunction *Func : SortedFunctions) {
     if (!BC.shouldEmit(*Func)) {
@@ -399,8 +401,10 @@ LongJmpPass::tentativeLayoutRelocMode(const BinaryContext &BC,
     else
       DotAddress += Func->estimateHotSize();
 
-    DotAddress = alignTo(DotAddress, Func->getConstantIslandAlignment());
-    DotAddress += Func->estimateConstantIslandSize();
+    if (uint64_t IslandSize = Func->estimateConstantIslandSize()) {
+      DotAddress = alignTo(DotAddress, Func->getConstantIslandAlignment());
+      DotAddress += IslandSize;
+    }
     ++CurrentIndex;
   }
 
@@ -440,16 +444,18 @@ void LongJmpPass::tentativeLayout(const BinaryContext &BC,
     // Initial padding
     if (EstimatedTextSize <= BC.OldTextSectionSize) {
       DotAddress = BC.OldTextSectionAddress;
-      uint64_t Pad =
-          offsetToAlignment(DotAddress, llvm::Align(opts::AlignText));
+      uint64_t Pad = offsetToAlignment(DotAddress, llvm::Align(BC.AlignText));
       if (Pad + EstimatedTextSize <= BC.OldTextSectionSize) {
         DotAddress += Pad;
       }
     }
   }
 
-  if (!EstimatedTextSize || EstimatedTextSize > BC.OldTextSectionSize)
-    DotAddress = alignTo(BC.LayoutStartAddress, opts::AlignText);
+  if (!EstimatedTextSize || EstimatedTextSize > BC.OldTextSectionSize) {
+    uint64_t TextAlign =
+        std::max<uint64_t>(BC.AlignText, BC.MaxMainCodeAlignment.load());
+    DotAddress = alignTo(BC.LayoutStartAddress, TextAlign);
+  }
 
   tentativeLayoutRelocMode(BC, SortedFunctions, DotAddress);
 }
