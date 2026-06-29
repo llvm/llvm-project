@@ -43288,6 +43288,22 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         TLI.isTypeLegal(Src.getOperand(0).getValueType()))
       return DAG.getNode(X86ISD::VBROADCAST, DL, VT, Src.getOperand(0));
 
+    // broadcast(truncate(extract_vector_elt(x, 0))) -> bitcast(broadcast(x)).
+    if (Src.getOpcode() == ISD::TRUNCATE &&
+        Src.getOperand(0).getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        isNullConstant(Src.getOperand(0).getOperand(1))) {
+      SDValue NewSrc = Src.getOperand(0).getOperand(0);
+      if (Src.getOperand(0).getValueType() ==
+              NewSrc.getValueType().getScalarType() &&
+          TLI.isTypeLegal(NewSrc.getValueType())) {
+        MVT VecVT = MVT::getVectorVT(Src.getSimpleValueType(),
+                                     NewSrc.getValueSizeInBits() /
+                                         Src.getValueSizeInBits());
+        return DAG.getNode(X86ISD::VBROADCAST, DL, VT,
+                           DAG.getBitcast(VecVT, NewSrc));
+      }
+    }
+
     // Share broadcast with the longest vector and extract low subvector (free).
     // Ensure the same SDValue from the SDNode use is being used.
     for (SDNode *User : Src->users())
