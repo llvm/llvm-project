@@ -4677,6 +4677,40 @@ SDValue DAGCombiner::visitSUBSAT(SDNode *N) {
   if (DAG.willNotOverflowSub(IsSigned, N0, N1))
     return DAG.getNode(ISD::SUB, DL, VT, N0, N1);
 
+  // Narrow a vXiN USUBSAT to a smaller type when the LHS is known to fit in
+  // fewer bits. If countMaxActiveBits(N0) <= NarrowBits, OR the upper bits of
+  // N1 with 1s so the narrow sat-sub saturates to zero in those positions.
+  // This allows targets with native narrow USUBSAT (e.g. vpsubusb/vpsubusw)
+  // to avoid emulation with vpmaxu + vsub.
+  if (!IsSigned && VT.isVector() && VT.isSimple()) {
+    unsigned ScalarBits = VT.getScalarSizeInBits();
+    if (ScalarBits > 8) {
+      KnownBits Known = DAG.computeKnownBits(N0);
+      unsigned ActiveBits = Known.countMaxActiveBits();
+      unsigned NarrowBits = 0;
+      if (ActiveBits <= 8)
+        NarrowBits = 8;
+      else if (ActiveBits <= 16 && ScalarBits > 16)
+        NarrowBits = 16;
+      if (NarrowBits) {
+        unsigned Scale = ScalarBits / NarrowBits;
+        unsigned NumElts = VT.getVectorNumElements() * Scale;
+        MVT NarrowSVT = MVT::getIntegerVT(NarrowBits);
+        MVT NarrowVT = MVT::getVectorVT(NarrowSVT, NumElts);
+        if (TLI.isOperationLegalOrCustom(ISD::USUBSAT, NarrowVT)) {
+          APInt UpperMask = APInt::getBitsSetFrom(ScalarBits, NarrowBits);
+          SDValue Mask = DAG.getConstant(UpperMask, DL, VT);
+          SDValue N1WithUpperOnes = DAG.getNode(ISD::OR, DL, VT, N1, Mask);
+          SDValue NarrowN0 = DAG.getBitcast(NarrowVT, N0);
+          SDValue NarrowN1 = DAG.getBitcast(NarrowVT, N1WithUpperOnes);
+          SDValue NarrowSub =
+              DAG.getNode(ISD::USUBSAT, DL, NarrowVT, NarrowN0, NarrowN1);
+          return DAG.getBitcast(VT, NarrowSub);
+        }
+      }
+    }
+  }
+
   return SDValue();
 }
 

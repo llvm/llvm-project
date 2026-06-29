@@ -158,14 +158,16 @@ define i32 @extract_last_active_v8i32(<8 x i32> %a, <8 x i1> %c) {
 ; CHECK-NEXT:    cmpb $1, %cl
 ; CHECK-NEXT:    sbbl %eax, %eax
 ; CHECK-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[2,3,2,3]
-; CHECK-NEXT:    psubusw %xmm2, %xmm0
-; CHECK-NEXT:    paddw %xmm2, %xmm0
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; CHECK-NEXT:    psubusw %xmm0, %xmm1
-; CHECK-NEXT:    paddw %xmm0, %xmm1
-; CHECK-NEXT:    pextrw $1, %xmm1, %ecx
-; CHECK-NEXT:    movd %xmm1, %edx
+; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = [65280,65280,65280,65280,65280,65280,65280,65280]
+; CHECK-NEXT:    por %xmm2, %xmm0
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[2,3,2,3]
+; CHECK-NEXT:    psubusb %xmm0, %xmm1
+; CHECK-NEXT:    paddw %xmm2, %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,1,1]
+; CHECK-NEXT:    psubusw %xmm1, %xmm0
+; CHECK-NEXT:    paddw %xmm1, %xmm0
+; CHECK-NEXT:    pextrw $1, %xmm0, %ecx
+; CHECK-NEXT:    movd %xmm0, %edx
 ; CHECK-NEXT:    cmpw %cx, %dx
 ; CHECK-NEXT:    cmoval %edx, %ecx
 ; CHECK-NEXT:    andl $7, %ecx

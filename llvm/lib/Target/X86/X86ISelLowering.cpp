@@ -2074,6 +2074,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::ROTR,             VT, Legal);
       setOperationAction(ISD::ABS,              VT, Legal);
       setOperationAction(ISD::CTPOP,            VT, Custom);
+      setOperationAction(ISD::USUBSAT, VT, Custom);
     }
 
     for (auto VT : { MVT::v64i8, MVT::v32i16 }) {

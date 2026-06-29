@@ -113,11 +113,12 @@ define void @v8i8(ptr %px, ptr %py, ptr %pz) nounwind {
 define void @v4i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-LABEL: v4i8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ldr s0, [x0]
-; CHECK-SD-NEXT:    ldr s1, [x1]
+; CHECK-SD-NEXT:    ldr s0, [x1]
+; CHECK-SD-NEXT:    ldr s1, [x0]
 ; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-SD-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-SD-NEXT:    uqsub v0.4h, v0.4h, v1.4h
+; CHECK-SD-NEXT:    orr v0.4h, #255, lsl #8
+; CHECK-SD-NEXT:    uqsub v0.8b, v1.8b, v0.8b
 ; CHECK-SD-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; CHECK-SD-NEXT:    str s0, [x2]
 ; CHECK-SD-NEXT:    ret
@@ -139,13 +140,15 @@ define void @v4i8(ptr %px, ptr %py, ptr %pz) nounwind {
 define void @v2i8(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-LABEL: v2i8:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ldr h0, [x0]
-; CHECK-SD-NEXT:    ldr h1, [x1]
-; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-SD-NEXT:    ldr h0, [x1]
+; CHECK-SD-NEXT:    ldr h1, [x0]
+; CHECK-SD-NEXT:    movi d2, #0xffffff00ffffff00
+; CHECK-SD-NEXT:    zip1 v0.8b, v0.8b, v0.8b
 ; CHECK-SD-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-SD-NEXT:    uqsub v0.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    orr v0.8b, v0.8b, v2.8b
+; CHECK-SD-NEXT:    uqsub v0.8b, v1.8b, v0.8b
 ; CHECK-SD-NEXT:    mov s1, v0.s[1]
 ; CHECK-SD-NEXT:    str b0, [x2]
 ; CHECK-SD-NEXT:    stur b1, [x2, #1]
@@ -189,11 +192,13 @@ define void @v4i16(ptr %px, ptr %py, ptr %pz) nounwind {
 define void @v2i16(ptr %px, ptr %py, ptr %pz) nounwind {
 ; CHECK-SD-LABEL: v2i16:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ldr s0, [x0]
-; CHECK-SD-NEXT:    ldr s1, [x1]
-; CHECK-SD-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-SD-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-SD-NEXT:    uqsub v0.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    ldr s0, [x1]
+; CHECK-SD-NEXT:    movi d1, #0xffff0000ffff0000
+; CHECK-SD-NEXT:    ldr s2, [x0]
+; CHECK-SD-NEXT:    zip1 v0.4h, v0.4h, v0.4h
+; CHECK-SD-NEXT:    ushll v2.4s, v2.4h, #0
+; CHECK-SD-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    uqsub v0.4h, v2.4h, v0.4h
 ; CHECK-SD-NEXT:    mov s1, v0.s[1]
 ; CHECK-SD-NEXT:    str h0, [x2]
 ; CHECK-SD-NEXT:    str h1, [x2, #2]

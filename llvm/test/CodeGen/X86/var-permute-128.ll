@@ -492,9 +492,11 @@ define <8 x i16> @var_shuffle_v8i16(<8 x i16> %v, <8 x i16> %indices) nounwind {
 define <8 x i16> @var_shuffle_zero_v8i16(<8 x i16> %v, <8 x i16> %indices) nounwind {
 ; SSE3-LABEL: var_shuffle_zero_v8i16:
 ; SSE3:       # %bb.0:
-; SSE3-NEXT:    movdqa %xmm0, %xmm2
+; SSE3-NEXT:    movaps %xmm0, %xmm2
+; SSE3-NEXT:    movdqa {{.*#+}} xmm0 = [65280,65280,65280,65280,65280,65280,65280,65280]
+; SSE3-NEXT:    por %xmm1, %xmm0
 ; SSE3-NEXT:    movdqa {{.*#+}} xmm3 = [8,8,8,8,8,8,8,8]
-; SSE3-NEXT:    psubusw %xmm1, %xmm3
+; SSE3-NEXT:    psubusb %xmm0, %xmm3
 ; SSE3-NEXT:    pxor %xmm0, %xmm0
 ; SSE3-NEXT:    pcmpeqw %xmm3, %xmm0
 ; SSE3-NEXT:    por %xmm0, %xmm1
@@ -506,7 +508,7 @@ define <8 x i16> @var_shuffle_zero_v8i16(<8 x i16> %v, <8 x i16> %indices) nounw
 ; SSE3-NEXT:    pextrw $5, %xmm1, %r9d
 ; SSE3-NEXT:    pextrw $6, %xmm1, %r10d
 ; SSE3-NEXT:    pextrw $7, %xmm1, %esi
-; SSE3-NEXT:    movdqa %xmm2, -24(%rsp)
+; SSE3-NEXT:    movaps %xmm2, -24(%rsp)
 ; SSE3-NEXT:    andl $7, %eax
 ; SSE3-NEXT:    movzwl -24(%rsp,%rax,2), %eax
 ; SSE3-NEXT:    andl $7, %ecx
@@ -543,14 +545,16 @@ define <8 x i16> @var_shuffle_zero_v8i16(<8 x i16> %v, <8 x i16> %indices) nounw
 ;
 ; SSSE3-LABEL: var_shuffle_zero_v8i16:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [8,8,8,8,8,8,8,8]
-; SSSE3-NEXT:    psubusw %xmm1, %xmm2
-; SSSE3-NEXT:    pxor %xmm3, %xmm3
-; SSSE3-NEXT:    pcmpeqw %xmm2, %xmm3
-; SSSE3-NEXT:    por %xmm3, %xmm1
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [65280,65280,65280,65280,65280,65280,65280,65280]
+; SSSE3-NEXT:    por %xmm1, %xmm2
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm3 = [8,8,8,8,8,8,8,8]
+; SSSE3-NEXT:    psubusb %xmm2, %xmm3
+; SSSE3-NEXT:    pxor %xmm2, %xmm2
+; SSSE3-NEXT:    pcmpeqw %xmm3, %xmm2
+; SSSE3-NEXT:    por %xmm2, %xmm1
 ; SSSE3-NEXT:    pmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [514,514,514,514,514,514,514,514]
 ; SSSE3-NEXT:    paddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [256,256,256,256,256,256,256,256]
-; SSSE3-NEXT:    por %xmm3, %xmm1
+; SSSE3-NEXT:    por %xmm2, %xmm1
 ; SSSE3-NEXT:    pshufb %xmm1, %xmm0
 ; SSSE3-NEXT:    retq
 ;

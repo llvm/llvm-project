@@ -100,15 +100,18 @@ define i8 @concat_icmp_v8i32_v4i32(<4 x i32> %a0, <4 x i32> %a1) {
 define i16 @concat_icmp_v16i16_v8i16(<8 x i16> %a0, <8 x i16> %a1) {
 ; SSE2-LABEL: concat_icmp_v16i16_v8i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2,2,2,2,2,2,2,2]
-; SSE2-NEXT:    movdqa %xmm2, %xmm3
-; SSE2-NEXT:    psubusw %xmm0, %xmm3
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [65280,65280,65280,65280,65280,65280,65280,65280]
+; SSE2-NEXT:    por %xmm2, %xmm0
+; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [2,2,2,2,2,2,2,2]
+; SSE2-NEXT:    movdqa %xmm3, %xmm4
+; SSE2-NEXT:    psubusb %xmm0, %xmm4
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    pcmpeqw %xmm0, %xmm4
+; SSE2-NEXT:    por %xmm2, %xmm1
+; SSE2-NEXT:    psubusb %xmm1, %xmm3
 ; SSE2-NEXT:    pcmpeqw %xmm0, %xmm3
-; SSE2-NEXT:    psubusw %xmm1, %xmm2
-; SSE2-NEXT:    pcmpeqw %xmm0, %xmm2
-; SSE2-NEXT:    packsswb %xmm2, %xmm3
-; SSE2-NEXT:    pmovmskb %xmm3, %eax
+; SSE2-NEXT:    packsswb %xmm3, %xmm4
+; SSE2-NEXT:    pmovmskb %xmm4, %eax
 ; SSE2-NEXT:    # kill: def $ax killed $ax killed $eax
 ; SSE2-NEXT:    retq
 ;
