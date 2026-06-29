@@ -677,6 +677,9 @@ regardless of ``-fprofiles``; its profile rules carry weight only when
     ``union_marker`` (see R6 / R8 below for usage examples). Both are gated on
     enforcement, and the marker is retained after the diagnostic so
     ``uninit_decl`` does not re-diagnose the entity.
+  - Is banned on a variable with static or thread storage duration by
+    ``static_marker`` (such a variable is zero-initialized, so the marker
+    contradicts paper §4.2; see R9 below).
 
 ``[[ref_to_uninit]]`` (also a standard C++11 attribute) marks a pointer,
 reference, or pointer/reference-returning function as referring to
@@ -729,7 +732,8 @@ constructors") -- an aggregate or trivially-default-constructible class type
 whose default-initialization leaves a scalar subobject indeterminate (e.g.
 ``struct S { int x; }; S s;``).  A class type with a user-provided default
 constructor is trusted; static / thread storage duration is excluded
-(zero-initialized by language rule).
+(zero-initialized by language rule -- a ``[[uninit]]`` marker on such a
+variable is instead rejected by ``static_marker`` (R9)).
 
 - Diagnostic: ``err_init_uninit_decl``.
 - Check site: ``Sema::ActOnUninitializedDecl`` in
@@ -744,13 +748,6 @@ constructor is trusted; static / thread storage duration is excluded
   whose only indeterminate scalars are all marked is trusted
   (e.g. ``struct A { int x [[uninit]]; }; A a;`` is accepted), while a
   mixed type still fires for its unmarked scalars.
-- Known gap: because static / thread storage is excluded here and
-  ``uninit_with_initializer`` (R4) sees no initializer for a zero-initialized
-  object, a ``[[uninit]]`` marker on a non-local static or thread-local
-  variable (e.g. ``static int x [[uninit]];``) is silently accepted -- even
-  though such an object is zero-initialized by language rule, so marking it
-  ``[[uninit]]`` contradicts paper §4.2 ("an initialized object marked
-  ``[[uninit]]`` is an error").
 
 R3. ``static_runtime_init`` -- pattern 1
 .........................................
@@ -940,6 +937,50 @@ A pointer must instead be initialized (e.g. to ``nullptr``).
   meaningless on a parameter); a pointer-to-member is not a pointer type and is
   out of scope.
 
+R9. ``static_marker`` -- pattern 1
+..................................
+
+A variable with static or thread storage duration is zero-initialized by
+language rule (paper §3), so it is an initialized object; marking it
+``[[uninit]]`` contradicts paper §4.2 ("an initialized object marked
+``[[uninit]]`` is an error").  A pointer must be initialized; a static is
+*already* initialized.
+
+.. code-block:: c++
+
+   int glob;                      // OK: zero-initialized
+   int glob2 [[uninit]];          // error: zero-initialized (static_marker)
+   static int s [[uninit]];       // error: also on an explicit static
+   thread_local int t [[uninit]]; // error: thread storage is zero-initialized too
+
+   void f() {
+     static int ls [[uninit]];    // error: also on a block-scope static
+   }
+
+   // Opt out if genuinely required:
+   [[profiles::suppress(std::init, rule: "static_marker")]] int x [[uninit]];  // OK
+
+- Diagnostic: ``err_init_uninit_static_marker`` (a ``%select`` distinguishes
+  static from thread storage).
+- Check site: ``Sema::ActOnUninitializedDecl`` in
+  ``clang/lib/Sema/SemaDecl.cpp``, beside the ``uninit_decl`` (R2) check --
+  *not* the ``Uninit`` attribute handler that hosts ``union_marker`` /
+  ``pointer_marker``.  The decl site is reached only for a definition with no
+  written initializer (so a non-defining ``extern`` declaration, handled
+  earlier, is excluded), and passing the ``VarDecl`` to
+  ``shouldEmitProfileViolation`` makes the rule fire on instantiations rather
+  than template patterns, like every other Decl-based rule.
+- Unlike ``uninit_decl``, ``std::byte`` is *not* exempt here: a static
+  ``std::byte`` is zero-initialized (it cannot be left indeterminate the way an
+  automatic one can), so the marker is still contradictory.
+- Partition with ``uninit_with_initializer`` (R4): a static ``[[uninit]]`` with
+  a real initializer -- an explicit one, or a constructor that actually runs
+  (e.g. ``static WithCtor w [[uninit]];``) -- is R4's; ``static_marker`` covers
+  only the zero-initialized, no-real-initializer case R4 treats as a consistent
+  no-op (it reuses ``defaultInitLeavesScalarIndeterminate`` with
+  ``HonorUninitMarkers=false``, R4's factual choice).  Exactly one diagnostic
+  fires in every case.
+
 Diagnostic suppression
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1010,7 +1051,11 @@ profiles.  When changing the framework, run them all with
   profile's ``static_runtime_init`` rule: non-local vars need a
   constant initializer; locals / static-locals / thread-locals are
   excluded; ``constinit`` failures still produce the existing hard error
-  regardless of ``-fprofiles``.
+  regardless of ``-fprofiles``.  Also the ``static_marker`` rule: a
+  ``[[uninit]]`` marker on a zero-initialized static or thread-local
+  variable (including ``std::byte``) is rejected, while the with-initializer
+  case stays ``uninit_with_initializer``, plus suppression and template
+  instantiation.
 - ``clang/test/SemaCXX/safety-profile-init-with-initializer.cpp`` -- the
   ``std::init`` profile's ``uninit_with_initializer`` rule: every
   combination of ``[[uninit]]`` placement (prefix / postfix) with
