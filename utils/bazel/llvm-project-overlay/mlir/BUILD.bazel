@@ -525,6 +525,7 @@ mlir_c_api_cc_library(
         "include/mlir/CAPI/AffineMap.h",
         "include/mlir/CAPI/Diagnostics.h",
         "include/mlir/CAPI/IR.h",
+        "include/mlir/CAPI/IRMapping.h",
         "include/mlir/CAPI/IntegerSet.h",
         "include/mlir/CAPI/Interfaces.h",
         "include/mlir/CAPI/Pass.h",
