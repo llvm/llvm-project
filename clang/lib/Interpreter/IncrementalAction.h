@@ -13,6 +13,7 @@
 #include "clang/Frontend/MultiplexConsumer.h"
 
 namespace llvm {
+class LLVMContext;
 class Module;
 }
 
@@ -35,6 +36,7 @@ private:
   bool IsTerminating = false;
   Interpreter &Interp;
   [[maybe_unused]] CompilerInstance &CI;
+  llvm::LLVMContext &LLVMCtx;
   std::unique_ptr<ASTConsumer> Consumer;
 
   /// When CodeGen is created the first llvm::Module gets cached in many places

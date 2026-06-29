@@ -85,7 +85,9 @@ IncrementalParser::ParseOrWrapTopLevelDecl() {
   DiagnosticsEngine &Diags = S.getDiagnostics();
   if (Diags.hasErrorOccurred()) {
     CleanUpPTU(C.getTranslationUnitDecl());
-
+    // Discard any partial CodeGen state to avoid contaminating the next cell.
+    Consumer->HandleTranslationUnit(C);
+    Act->GenModule();
     Diags.Reset(/*soft=*/true);
     Diags.getClient()->clear();
     return llvm::make_error<llvm::StringError>("Parsing failed.",
