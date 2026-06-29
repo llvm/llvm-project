@@ -416,6 +416,7 @@ private:
   SDValue combineFP_ROUND(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineFP_EXTEND(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineINT_TO_FP(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineFP_TO_INT(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineFCOPYSIGN(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineBSWAP(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineSETCC(SDNode *N, DAGCombinerInfo &DCI) const;
