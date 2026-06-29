@@ -134,9 +134,8 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   const Driver &D = ToolChain.getDriver();
   const llvm::Triple &Triple = ToolChain.getTriple();
   const llvm::Triple::ArchType Arch = ToolChain.getArch();
-  const bool IsPIE =
-      !Args.hasArg(options::OPT_shared) &&
-      (Args.hasArg(options::OPT_pie) || ToolChain.isPIEDefault(Args));
+  const bool IsPIE = Args.hasFlag(options::OPT_pie, options::OPT_no_pie,
+                                  ToolChain.isPIEDefault(Args));
   ArgStringList CmdArgs;
 
   // Silence warning for "clang -g foo.o -o foo"
@@ -473,7 +472,7 @@ FreeBSD::getDefaultUnwindTableLevel(const ArgList &Args) const {
 }
 
 bool FreeBSD::isPIEDefault(const llvm::opt::ArgList &Args) const {
-  return getSanitizerArgs(Args).requiresPIE();
+  return CLANG_DEFAULT_PIE || getSanitizerArgs(Args).requiresPIE();
 }
 
 SanitizerMask
