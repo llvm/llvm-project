@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
+#include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -1467,11 +1469,6 @@ static bool canSkipDemandedEltsInInsertChain(InsertElementInst &IE,
                                              unsigned VWidth) {
   unsigned DepthLimit = SimplifyDemandedVectorEltsDepthLimit;
 
-  // For narrow vectors, SimplifyDemandedVectorElts may reach the point where
-  // only the inserted lane is demanded and fold extract/insert pairs.
-  if (VWidth <= DepthLimit)
-    return false;
-
   // Only skip chain nodes that feed another insertelement; the final chain root
   // still runs the full query.
   if (!IE.hasOneUse())
@@ -1480,7 +1477,7 @@ static bool canSkipDemandedEltsInInsertChain(InsertElementInst &IE,
   if (!UserIE || UserIE->getOperand(0) != &IE)
     return false;
 
-  SmallVector<unsigned, 16> SeenIndices;
+  SmallBitVector SeenIndices(VWidth);
   auto HasNewIndexInRange = [&](InsertElementInst &Insert) {
     auto *Idx = dyn_cast<ConstantInt>(Insert.getOperand(2));
     // Let the normal SDVE path handle variable or out-of-range indices. The
@@ -1489,15 +1486,15 @@ static bool canSkipDemandedEltsInInsertChain(InsertElementInst &IE,
       return false;
 
     unsigned Index = Idx->getZExtValue();
-    if (is_contained(SeenIndices, Index))
+    if (SeenIndices.test(Index))
       return false;
 
-    SeenIndices.push_back(Index);
+    SeenIndices.set(Index);
     return true;
   };
 
   auto *Cur = &IE;
-  for (unsigned Depth = 0; Depth != DepthLimit; ++Depth) {
+  for ([[maybe_unused]] auto _ : llvm::seq(DepthLimit)) {
     // This loop scans the same base-chain window that the SDVE query would
     // inspect before hitting its depth limit. With distinct insert indices in
     // that window, the all-lanes query cannot remove a dead insert; with
@@ -1510,7 +1507,7 @@ static bool canSkipDemandedEltsInInsertChain(InsertElementInst &IE,
       return true;
 
     Cur = dyn_cast<InsertElementInst>(Base);
-    if (!Cur || Cur->getType() != IE.getType() || !Cur->hasOneUse())
+    if (!Cur || !Cur->hasOneUse())
       return false;
   }
 
@@ -1667,6 +1664,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
   case Instruction::InsertElement: {
     auto *IE = cast<InsertElementInst>(I);
     if (Depth == 0 && DemandedElts.isAllOnes() &&
+        VWidth > SimplifyDemandedVectorEltsDepthLimit &&
         canSkipDemandedEltsInInsertChain(*IE, VWidth))
       return nullptr;
 

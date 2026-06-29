@@ -1252,6 +1252,8 @@ define <2 x i8> @common_binop_demand_via_splat_mask_poison_3(<2 x i8> %x, <2 x i
   ret <2 x i8> %res
 }
 
+; A wide insert chain with distinct in-range indices should keep all inserts
+; while skipping redundant all-lanes SDVE scans of intermediate chain nodes.
 define <11 x i32> @wide_distinct_insert_chain(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7, i32 %a8, i32 %a9, i32 %a10) {
 ; CHECK-LABEL: @wide_distinct_insert_chain(
 ; CHECK-NEXT:    [[V0:%.*]] = insertelement <11 x i32> poison, i32 [[A0:%.*]], i64 0
@@ -1281,6 +1283,8 @@ define <11 x i32> @wide_distinct_insert_chain(i32 %a0, i32 %a1, i32 %a2, i32 %a3
   ret <11 x i32> %v10
 }
 
+; Duplicate insert indices must still use the normal SDVE path so overwritten
+; inserts can be removed.
 define <12 x i32> @wide_insert_chain_deep_duplicate(i32 %a0, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7, i32 %a8, i32 %a9, i32 %a10, i32 %a11) {
 ; CHECK-LABEL: @wide_insert_chain_deep_duplicate(
 ; CHECK-NEXT:    [[V1:%.*]] = insertelement <12 x i32> poison, i32 [[A1:%.*]], i64 0
@@ -1311,6 +1315,8 @@ define <12 x i32> @wide_insert_chain_deep_duplicate(i32 %a0, i32 %a1, i32 %a2, i
   ret <12 x i32> %v11
 }
 
+; Out-of-range insert indices must still use the normal SDVE path; the skip
+; helper only accepts in-range constant indices.
 define <11 x i32> @wide_insert_chain_out_of_range(i32 %a0, i32 %bad, i32 %a1, i32 %a2, i32 %a3, i32 %a4, i32 %a5, i32 %a6, i32 %a7, i32 %a8, i32 %a9, i32 %a10) {
 ; CHECK-LABEL: @wide_insert_chain_out_of_range(
 ; CHECK-NEXT:    [[V1:%.*]] = insertelement <11 x i32> poison, i32 [[A1:%.*]], i64 1
