@@ -33,12 +33,14 @@ void A::f() {}
 int main(int argc, char *argv[]) {
   void *p = create_B();
   // CHECK: runtime error: control flow integrity check for type 'A' failed during cast to unrelated type
+  // CHECK: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
   // CHECK: invalid vtable
   // CHECK: check failed in {{.*}}, vtable located in {{.*}}libtarget_uninstrumented.cpp.dynamic.so
   A *a = (A *)p;
   memset(p, 0, sizeof(A));
 
   // CHECK: runtime error: control flow integrity check for type 'A' failed during cast to unrelated type
+  // CHECK: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
   // CHECK: invalid vtable
   // CHECK: check failed in {{.*}}, vtable located in (unknown)
   a = (A *)p;
