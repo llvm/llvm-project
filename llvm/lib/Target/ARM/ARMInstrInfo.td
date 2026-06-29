@@ -4916,6 +4916,9 @@ def REV16 : AMiscA1I<0b01101011, 0b1011, (outs GPR:$Rd), (ins GPR:$Rm),
                Requires<[IsARM, HasV6]>,
            Sched<[WriteALU]>;
 
+def : ARMV6T2Pat<(cttz GPR:$Rn),
+                 (CLZ (RBIT GPR:$Rn))>;
+
 def : ARMV6Pat<(srl (bswap (extloadi16 addrmode3:$addr)), (i32 16)),
               (REV16 (LDRH addrmode3:$addr))>;
 def : ARMV6Pat<(truncstorei16 (srl (bswap GPR:$Rn), (i32 16)), addrmode3:$addr),
