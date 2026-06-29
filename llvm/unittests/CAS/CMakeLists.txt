@@ -54,7 +54,6 @@ add_llvm_unittest(CASTests
   NamedValuesSchemaTest.cpp
   ObjectStoreTest.cpp
   OnDiskCommonUtils.cpp
-  ThreadSafeAllocatorTest.cpp
   TreeSchemaTest.cpp
 
   ${ONDISK_CAS_TEST_SOURCES}
