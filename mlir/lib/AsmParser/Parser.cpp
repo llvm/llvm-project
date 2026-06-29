@@ -747,6 +747,24 @@ public:
                               ArrayRef<Argument> entryArguments,
                               bool isIsolatedNameScope);
 
+  /// Store region arguments for later retrieval (two-phase region parsing).
+  void stashRegionArguments(Region &region, ArrayRef<Argument> arguments) {
+    assert(!stashedRegionArgs.count(&region) &&
+           "region arguments already stashed; stashRegionArguments() called "
+           "twice for the same region");
+    stashedRegionArgs[&region] = SmallVector<Argument>(arguments);
+  }
+
+  /// Retrieve and consume previously stashed region arguments.
+  SmallVector<Argument> takeRegionArguments(Region &region) {
+    auto it = stashedRegionArgs.find(&region);
+    if (it == stashedRegionArgs.end())
+      return {};
+    auto args = std::move(it->second);
+    stashedRegionArgs.erase(it);
+    return args;
+  }
+
   //===--------------------------------------------------------------------===//
   // Block Parsing
   //===--------------------------------------------------------------------===//
@@ -860,6 +878,10 @@ private:
   /// their first reference, to allow checking for use of undefined values.
   DenseMap<Value, SMLoc> forwardRefPlaceholders;
 
+  /// Stashed region arguments for two-phase region parsing. Custom parsers
+  /// can stash arguments in one directive and retrieve them in another.
+  llvm::SmallDenseMap<Region *, SmallVector<Argument>, 1> stashedRegionArgs;
+
   /// Operations that define the placeholders. These are kept until the end of
   /// of the lifetime of the parser because some custom parsers may store
   /// references to them in local state and use them after forward references
@@ -893,6 +915,9 @@ OperationParser::OperationParser(ParserState &state, ModuleOp topLevelOp)
 }
 
 OperationParser::~OperationParser() {
+  assert(stashedRegionArgs.empty() &&
+         "all stashRegionArguments() calls must be paired with "
+         "takeRegionArguments()");
   for (Operation *op : forwardRefOps) {
     // Drop all uses of undefined forward declared reference and destroy
     // defining operation.
@@ -1943,6 +1968,15 @@ public:
 
     region = std::move(newRegion);
     return success();
+  }
+
+  void stashRegionArguments(Region &region,
+                            ArrayRef<Argument> arguments) override {
+    parser.stashRegionArguments(region, arguments);
+  }
+
+  SmallVector<Argument> takeRegionArguments(Region &region) override {
+    return parser.takeRegionArguments(region);
   }
 
   //===--------------------------------------------------------------------===//

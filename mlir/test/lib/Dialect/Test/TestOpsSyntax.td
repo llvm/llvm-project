@@ -552,6 +552,41 @@ def FormatCustomDirectiveRegions : TEST_Op<"format_custom_directive_regions"> {
   }];
 }
 
+def FormatTwoPhaseRegionOp
+    : TEST_Op<"format_two_phase_region_op", [IsolatedFromAbove, NoTerminator]> {
+  let regions = (region AnyRegion:$body);
+  let assemblyFormat = [{
+    custom<TwoPhaseRegionHeader>($body) attr-dict-with-keyword
+    custom<TwoPhaseRegionBody>(ref($body))
+  }];
+}
+
+def FormatTwoPhaseRegionWithOperandOp
+    : TEST_Op<"format_two_phase_region_with_operand_op", [IsolatedFromAbove,
+                                                          NoTerminator]> {
+  let arguments = (ins AnyType:$value);
+  let regions = (region AnyRegion:$body);
+  let assemblyFormat = [{
+    custom<TwoPhaseRegionHeader>($body)
+    `(` $value `:` type($value) `)`
+    attr-dict-with-keyword
+    custom<TwoPhaseRegionBody>(ref($body))
+  }];
+}
+
+def FormatTwoPhaseMultiRegionOp
+    : TEST_Op<"format_two_phase_multi_region_op", [IsolatedFromAbove,
+                                                   NoTerminator]> {
+  let regions = (region AnyRegion:$first, AnyRegion:$second);
+  let assemblyFormat = [{
+    custom<TwoPhaseRegionHeader>($first)
+    custom<TwoPhaseRegionHeader>($second)
+    attr-dict-with-keyword
+    custom<TwoPhaseRegionBody>(ref($first))
+    custom<TwoPhaseRegionBody>(ref($second))
+  }];
+}
+
 def FormatCustomDirectiveResults
     : TEST_Op<"format_custom_directive_results", [AttrSizedResultSegments]> {
   let results = (outs AnyType:$result, Optional<AnyType>:$optResult,

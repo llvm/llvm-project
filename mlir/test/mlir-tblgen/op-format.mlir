@@ -413,6 +413,115 @@ test.format_custom_directive_regions {
   "test.return"() : () -> ()
 }
 
+// CHECK: test.format_two_phase_region_op (%[[A:.*]]: i32, %[[B:.*]]: f64) {
+// CHECK-NEXT: }
+test.format_two_phase_region_op (%arg0 : i32, %arg1 : f64) {
+}
+
+// Declaration (no body) - region is empty, args are not preserved.
+// CHECK: test.format_two_phase_region_op ()
+test.format_two_phase_region_op (%arg0 : i32)
+
+// CHECK: test.format_two_phase_region_op ()
+test.format_two_phase_region_op ()
+
+// Empty body with no args round-trips to no body (NoTerminator).
+// CHECK: test.format_two_phase_region_op ()
+test.format_two_phase_region_op () {
+}
+
+// CHECK: test.format_two_phase_region_op (%{{.*}}: i32) attributes {foo = "bar"} {
+// CHECK-NEXT: }
+test.format_two_phase_region_op (%arg0 : i32) attributes {foo = "bar"} {
+}
+
+// CHECK: test.format_two_phase_region_op (%[[C:.*]]: i32, %[[D:.*]]: f64) {
+// CHECK-NEXT:   "test.op"(%[[C]], %[[D]]) : (i32, f64) -> ()
+// CHECK-NEXT: }
+test.format_two_phase_region_op (%arg0 : i32, %arg1 : f64) {
+  "test.op"(%arg0, %arg1) : (i32, f64) -> ()
+}
+
+// Multiple attributes between header and body.
+// CHECK: test.format_two_phase_region_op (%{{.*}}: i32) attributes {baz = 42 : i64, foo = "bar"} {
+// CHECK-NEXT: }
+test.format_two_phase_region_op (%arg0 : i32) attributes {foo = "bar", baz = 42 : i64} {
+}
+
+// Multiple blocks in the region.
+// CHECK: test.format_two_phase_region_op (%[[E:.*]]: i32) {
+// CHECK-NEXT:   "test.op"(%[[E]]) : (i32) -> ()
+// CHECK-NEXT: ^bb1:
+// CHECK-NEXT:   "test.op2"() : () -> ()
+// CHECK-NEXT: }
+test.format_two_phase_region_op (%arg0 : i32) {
+  "test.op"(%arg0) : (i32) -> ()
+^bb1:
+  "test.op2"() : () -> ()
+}
+
+// Nested operation using two-phase region parser.
+// CHECK: test.format_two_phase_region_op (%[[F:.*]]: i32) {
+// CHECK-NEXT:   test.format_two_phase_region_op (%[[G:.*]]: f64) {
+// CHECK-NEXT:     "test.op"(%[[G]]) : (f64) -> ()
+// CHECK-NEXT:   }
+// CHECK-NEXT: }
+test.format_two_phase_region_op (%arg0 : i32) {
+  test.format_two_phase_region_op (%arg1 : f64) {
+    "test.op"(%arg1) : (f64) -> ()
+  }
+}
+
+// Operand and type between header and body.
+// CHECK: %[[V:.*]] = "test.op"() : () -> i32
+// CHECK: test.format_two_phase_region_with_operand_op (%[[A:.*]]: f64)(%[[V]] : i32) attributes {tag = "hello"} {
+// CHECK-NEXT:   "test.use"(%[[A]]) : (f64) -> ()
+// CHECK-NEXT: }
+%tpr_v = "test.op"() : () -> i32
+test.format_two_phase_region_with_operand_op (%arg0 : f64) (%tpr_v : i32) attributes {tag = "hello"} {
+  "test.use"(%arg0) : (f64) -> ()
+}
+
+// Operand between header and body, no region body (declaration).
+// CHECK: test.format_two_phase_region_with_operand_op ()(%[[V]] : i32)
+test.format_two_phase_region_with_operand_op (%arg0 : f64) (%tpr_v : i32)
+
+// Multi-region two-phase parsing: both regions have args and bodies.
+// CHECK: test.format_two_phase_multi_region_op (%[[MR1:.*]]: i32) (%[[MR2:.*]]: f64) {
+// CHECK-NEXT:   "test.op"(%[[MR1]]) : (i32) -> ()
+// CHECK-NEXT: } {
+// CHECK-NEXT:   "test.op"(%[[MR2]]) : (f64) -> ()
+// CHECK-NEXT: }
+test.format_two_phase_multi_region_op (%arg0 : i32)(%arg1 : f64) {
+  "test.op"(%arg0) : (i32) -> ()
+} {
+  "test.op"(%arg1) : (f64) -> ()
+}
+
+// Multi-region: no bodies (declaration).
+// CHECK: test.format_two_phase_multi_region_op () ()
+test.format_two_phase_multi_region_op (%arg0 : i32)(%arg1 : f64)
+
+// Multi-region: only first region has a body.
+// CHECK: test.format_two_phase_multi_region_op (%[[MR3:.*]]: i32) () {
+// CHECK-NEXT:   "test.op"(%[[MR3]]) : (i32) -> ()
+// CHECK-NEXT: }
+test.format_two_phase_multi_region_op (%arg0 : i32)(%arg1 : f64) {
+  "test.op"(%arg0) : (i32) -> ()
+}
+
+// Multi-region with attributes between header and body.
+// CHECK: test.format_two_phase_multi_region_op (%[[MR4:.*]]: i32) (%[[MR5:.*]]: f64) attributes {key = "val"} {
+// CHECK-NEXT:   "test.op"(%[[MR4]]) : (i32) -> ()
+// CHECK-NEXT: } {
+// CHECK-NEXT:   "test.op"(%[[MR5]]) : (f64) -> ()
+// CHECK-NEXT: }
+test.format_two_phase_multi_region_op (%arg0 : i32)(%arg1 : f64) attributes {key = "val"} {
+  "test.op"(%arg0) : (i32) -> ()
+} {
+  "test.op"(%arg1) : (f64) -> ()
+}
+
 // CHECK: test.format_custom_directive_results : i64, i64 -> (i64)
 test.format_custom_directive_results : i64, i64 -> (i64)
 

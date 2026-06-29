@@ -1782,6 +1782,29 @@ public:
                       ArrayRef<Argument> arguments = {},
                       bool enableNameShadowing = false) = 0;
 
+  /// Store region entry arguments for later use by parseRegion or
+  /// parseOptionalRegion. This enables a two-phase region parsing pattern
+  /// where argument names are parsed before other constructs (e.g.,
+  /// attr-dict), then the region body is parsed in a separate step.
+  ///
+  /// Example ODS assembly format:
+  ///   custom<FuncHeader>($body) attr-dict-with-keyword
+  ///   custom<FuncBody>(ref($body))
+  ///
+  /// In the custom parser for FuncHeader:
+  ///   parser.parseArgumentList(args, Delimiter::Paren, /*allowType=*/true);
+  ///   parser.stashRegionArguments(region, args);
+  ///
+  /// In the custom parser for FuncBody:
+  ///   auto args = parser.takeRegionArguments(region);
+  ///   return parser.parseOptionalRegion(region, args);
+  virtual void stashRegionArguments(Region &region,
+                                    ArrayRef<Argument> arguments) = 0;
+
+  /// Retrieve and consume previously stashed region arguments.
+  /// Returns an empty vector if no arguments were stashed.
+  virtual SmallVector<Argument> takeRegionArguments(Region &region) = 0;
+
   //===--------------------------------------------------------------------===//
   // Successor Parsing
   //===--------------------------------------------------------------------===//
