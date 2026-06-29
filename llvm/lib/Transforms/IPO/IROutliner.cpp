@@ -24,6 +24,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <optional>
 #include <vector>
@@ -578,11 +579,49 @@ collectRegionsConstants(OutlinableRegion &Region,
   return ConstantsTheSame;
 }
 
+/// Check whether \p Region contains a non-uniform constant operand that cannot
+/// be replaced with a variable.
+///
+/// \param Region - The region to check for non-uniform constant operands.
+/// \param NotSame - The set of global value numbers that do not have the same
+/// constant in each region.
+/// \returns true if \p Region contains an illegal non-uniform constant operand,
+/// and false otherwise.
+static bool
+containsIllegalNonUniformConstant(OutlinableRegion &Region,
+                                  const DenseSet<unsigned> &NotSame) {
+  IRSimilarityCandidate &C = *Region.Candidate;
+
+  for (IRInstructionData &ID : C) {
+    Instruction *I = ID.Inst;
+    for (const Use &U : I->operands()) {
+      Value *V = U.get();
+      if (!isa<Constant>(V))
+        continue;
+
+      std::optional<unsigned> GVN = C.getGVN(V);
+      assert(GVN && "Expected a GVN for constant operand?");
+      if (NotSame.contains(*GVN) &&
+          !canReplaceOperandWithVariable(I, U.getOperandNo()))
+        return true;
+    }
+  }
+
+  return false;
+}
+
 void OutlinableGroup::findSameConstants(DenseSet<unsigned> &NotSame) {
   DenseMap<unsigned, Constant *> GVNToConstant;
 
   for (OutlinableRegion *Region : Regions)
     collectRegionsConstants(*Region, GVNToConstant, NotSame);
+
+  for (OutlinableRegion *Region : Regions) {
+    if (!containsIllegalNonUniformConstant(*Region, NotSame))
+      continue;
+    IgnoreGroup = true;
+    return;
+  }
 }
 
 void OutlinableGroup::collectGVNStoreSets(Module &M) {
