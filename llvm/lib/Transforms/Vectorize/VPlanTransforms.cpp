@@ -4568,13 +4568,15 @@ static bool handleUncountableExitsWithSideEffects(
   // against the full trip count, since we may be exiting the vector loop early.
   // If we didn't take an early exit, we should get the equivalent of VF from
   // the FirstActiveLane.
-  VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->end());
+  assert(match(MiddleVPBB->getTerminator(), m_BranchOnCond()) &&
+         "Expected BranchOnCond terminator for MiddleVPBB");
+  VPBuilder MiddleBuilder(MiddleVPBB->getTerminator());
   VPValue *ScalarIV = MiddleBuilder.createNaryOp(VPInstruction::ExtractLane,
                                                  {Zero, IV}, DebugLoc());
   VPValue *ExitIV = MiddleBuilder.createAdd(ScalarIV, FirstActive);
   VPValue *FullTC =
       MiddleBuilder.createICmp(CmpInst::ICMP_EQ, ExitIV, Plan.getTripCount());
-  MiddleBuilder.createNaryOp(VPInstruction::BranchOnCond, {FullTC});
+  MiddleVPBB->getTerminator()->setOperand(0, FullTC);
 
   // Update resume phi in scalar.ph.
   VPBasicBlock *ScalarPH = Plan.getScalarPreheader();
