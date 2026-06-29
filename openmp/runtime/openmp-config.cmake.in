@@ -20,8 +20,22 @@ set_property(TARGET OpenMP::omp APPEND PROPERTY
     INTERFACE_LINK_OPTIONS "-fopenmp"
 )
 
-if(libomp_install_rpath)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND libomp_install_rpath)
   set_property(TARGET OpenMP::omp APPEND PROPERTY
       INTERFACE_LINK_OPTIONS "-fno-openmp-implicit-rpath"
   )
 endif()
+
+foreach(lang IN ITEMS C CXX Fortran)
+  if(NOT TARGET OpenMP::OpenMP_${lang})
+    add_library(OpenMP::OpenMP_${lang} INTERFACE IMPORTED GLOBAL)
+    set_target_properties(OpenMP::OpenMP_${lang} PROPERTIES
+      INTERFACE_LINK_LIBRARIES OpenMP::omp
+    )
+  endif()
+  set(OpenMP_${lang}_FOUND TRUE)
+  set(OpenMP_${lang}_FLAGS "-fopenmp")
+  set(OpenMP_${lang}_LIB_NAMES "omp")
+endforeach()
+
+set(OpenMP_FOUND TRUE)
