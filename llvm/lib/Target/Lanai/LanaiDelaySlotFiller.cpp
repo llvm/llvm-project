@@ -139,6 +139,10 @@ bool FillerImpl::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
       // Record the filler instruction that filled the delay slot.
       // The instruction after it will be visited in the next iteration.
       LastFiller = ++I;
+      // RET has 2 delay slots, so we need to advance past the second filler
+      // too.
+      if (InstrWithSlot->getOpcode() == Lanai::RET)
+        ++LastFiller;
 
       // Bundle the delay slot filler to InstrWithSlot so that the machine
       // verifier doesn't expect this instruction to be a terminator.
@@ -232,28 +236,38 @@ bool FillerImpl::delayHasHazard(MachineBasicBlock::instr_iterator MI,
 void FillerImpl::insertDefsUses(MachineBasicBlock::instr_iterator MI,
                                 SmallSet<unsigned, 32> &RegDefs,
                                 SmallSet<unsigned, 32> &RegUses) {
-  // If MI is a call or return, just examine the explicit non-variadic operands.
-  const MCInstrDesc &MCID = MI->getDesc();
-  unsigned E = MI->isCall() || MI->isReturn() ? MCID.getNumOperands()
-                                              : MI->getNumOperands();
-  for (unsigned I = 0; I != E; ++I) {
-    const MachineOperand &MO = MI->getOperand(I);
-    unsigned Reg;
+  for (const MachineOperand &MO : MI->operands()) {
+    if (MO.isRegMask()) {
+      // For calls, the regmask clobbers many registers. However, we don't
+      // want to add all of those to RegDefs as it would prevent any useful
+      // delay slot filling. The caller-saved registers will be handled
+      // separately.
+      continue;
+    }
 
-    if (!MO.isReg() || !(Reg = MO.getReg()))
+    if (!MO.isReg())
       continue;
 
-    if (MO.isDef())
+    Register Reg = MO.getReg();
+    if (Reg != MO.getReg())
+      continue;
+
+    // For calls/returns, we must track implicit uses (function arguments)
+    // to prevent moving their definitions into the delay slot. We previously
+    // only looked at explicit operands which missed implicit argument uses.
+    if (MO.isDef()) {
+      // For implicit defs from calls (like return value $rv), we add them.
+      // But we've already filtered out regmasks above.
       RegDefs.insert(Reg);
-    else if (MO.isUse())
+    } else if (MO.isUse()) {
       RegUses.insert(Reg);
+    }
   }
 
-  // Call & return instructions defines SP implicitly. Implicit defines are not
-  // included in the RegDefs set of calls but instructions modifying SP cannot
-  // be inserted in the delay slot of a call/return as these instructions are
-  // expanded to multiple instructions with SP modified before the branch that
-  // has the delay slot.
+  // Call & return instructions define SP implicitly. Instructions modifying SP
+  // cannot be inserted in the delay slot of a call/return as these instructions
+  // are expanded to multiple instructions with SP modified before the branch
+  // that has the delay slot.
   if (MI->isCall() || MI->isReturn())
     RegDefs.insert(Lanai::SP);
 }

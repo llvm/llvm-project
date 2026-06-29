@@ -3544,8 +3544,7 @@ def isZOS : RuntimeLibcallPredicate<"TT.isOSzOS()">;
 def SystemZZOSSystemLibrary
     : SystemRuntimeLibrary<
           isSystemZZOS, (add DefaultLibcallImpls64,
-                            LibcallImpls<(add ZOSRuntimeLibcalls), isZOS>,
-                            DefaultStackProtector)>;
+                            LibcallImpls<(add ZOSRuntimeLibcalls), isZOS>)>;
 
 //===----------------------------------------------------------------------===//
 // WebAssembly Runtime Libcalls
