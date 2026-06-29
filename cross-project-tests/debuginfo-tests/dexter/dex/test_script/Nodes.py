@@ -189,6 +189,14 @@ class ExpectAll(Expect):
 
 
 class Value(Expect):
+    """Expect node used to test the value(s) for a single variable, functioning similarly to !value. Allows expecting
+    a single value, a list of values, and/or values of members for aggregate variables.
+
+    This node compares the expected values against the actual values observed in the debugger, and produces a set of
+    metrics quantifying the difference between expected and actual. Can be used with script rewriting to generate
+    expected values for the tested variable.
+    """
+
     def __init__(self, variable_name: str):
         self.variable_name = variable_name
         self.actual_values = None
@@ -262,6 +270,14 @@ class ValueAll(ExpectAll):
 
 
 class Type(Expect):
+    """Expect node used to test the type(s) for a single variable, functioning similarly to !value. Allows expecting
+    a single type, a list of types, and/or types of members for aggregate variables.
+
+    This node compares the expected types against the actual types observed in the debugger, and produces a set of
+    metrics quantifying the difference between expected and actual. Can be used with script rewriting to generate
+    expected types for the tested variable.
+    """
+
     def __init__(self, variable_name: str):
         self.variable_name = variable_name
         self.actual_values = None
