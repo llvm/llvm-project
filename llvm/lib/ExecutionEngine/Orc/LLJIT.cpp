@@ -8,6 +8,8 @@
 
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
@@ -518,13 +520,10 @@ GlobalCtorDtorScraper::operator()(ThreadSafeModule TSM,
       // If there's no llvm.global_c/dtor or it's just a decl then skip.
       if (!GlobalCOrDtors || GlobalCOrDtors->isDeclaration())
         return Error::success();
-      std::string InitOrDeInitFunctionName;
-      if (isCtor)
-        raw_string_ostream(InitOrDeInitFunctionName)
-            << InitFunctionPrefix << M.getModuleIdentifier();
-      else
-        raw_string_ostream(InitOrDeInitFunctionName)
-            << DeInitFunctionPrefix << M.getModuleIdentifier();
+      SmallString<64> InitOrDeInitFunctionName;
+      raw_svector_ostream(InitOrDeInitFunctionName)
+          << (isCtor ? InitFunctionPrefix : DeInitFunctionPrefix)
+          << M.getModuleIdentifier();
 
       MangleAndInterner Mangle(PS.getExecutionSession(), M.getDataLayout());
       auto InternedInitOrDeInitName = Mangle(InitOrDeInitFunctionName);
@@ -536,7 +535,7 @@ GlobalCtorDtorScraper::operator()(ThreadSafeModule TSM,
           FunctionType::get(Type::getVoidTy(Ctx), {}, false),
           GlobalValue::ExternalLinkage, InitOrDeInitFunctionName, &M);
       InitOrDeInitFunc->setVisibility(GlobalValue::HiddenVisibility);
-      std::vector<std::pair<Function *, unsigned>> InitsOrDeInits;
+      SmallVector<std::pair<Function *, unsigned>, 8> InitsOrDeInits;
       auto COrDtors = isCtor ? getConstructors(M) : getDestructors(M);
 
       for (auto E : COrDtors)
