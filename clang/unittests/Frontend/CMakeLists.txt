@@ -24,6 +24,7 @@ add_clang_unittest(FrontendTests
   clangSerialization
   clangTooling
   LLVM_COMPONENTS
+  ${LLVM_TARGETS_TO_BUILD}
   Support
   TargetParser
   )
