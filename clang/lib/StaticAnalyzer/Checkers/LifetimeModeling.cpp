@@ -8,7 +8,6 @@
 
 using namespace clang;
 using namespace ento;
-using namespace lifetimemodeling;
 
 REGISTER_SET_FACTORY_WITH_PROGRAMSTATE(LifetimeSourceSet, const MemRegion *)
 REGISTER_MAP_WITH_PROGRAMSTATE(LifetimeBoundMap, SVal, LifetimeSourceSet)
@@ -24,9 +23,12 @@ public:
 };
 
 } // namespace
-
+namespace clang {
+namespace ento {
+namespace lifetimemodeling {
 std::vector<const MemRegion *> getLifetimeSourceSet(ProgramStateRef State,
                                                     SVal Val) {
+
   std::vector<const MemRegion *> StoreRegion;
   if (const auto *SourceSet = State->get<LifetimeBoundMap>(Val)) {
     for (const MemRegion *Region : *SourceSet)
@@ -38,6 +40,10 @@ std::vector<const MemRegion *> getLifetimeSourceSet(ProgramStateRef State,
 bool isDeallocated(ProgramStateRef State, const MemRegion *Region) {
   return State->contains<DeallocatedSourceSet>(Region);
 }
+
+} // namespace lifetimemodeling
+} // namespace ento
+} // namespace clang
 
 static ProgramStateRef bindValues(ProgramStateRef State, SVal RetVal,
                                   const MemRegion *Source) {
