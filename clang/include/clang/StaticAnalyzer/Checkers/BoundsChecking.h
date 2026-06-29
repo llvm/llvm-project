@@ -16,8 +16,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_BOUNDSCHECKING_H
-#define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_BOUNDSCHECKING_H
+#ifndef LLVM_CLANG_STATICANALYZER_CHECKERS_BOUNDSCHECKING_H
+#define LLVM_CLANG_STATICANALYZER_CHECKERS_BOUNDSCHECKING_H
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <optional>
@@ -208,4 +208,4 @@ Messages getNonTaintMsgs(std::string RegName, SizeUnit SU, NonLoc Offset,
 } // namespace ento
 } // namespace clang
 
-#endif // LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_BOUNDSCHECKING_H
+#endif // LLVM_CLANG_STATICANALYZER_CHECKERS_BOUNDSCHECKING_H
