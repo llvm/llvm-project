@@ -13,7 +13,7 @@
 ; UINT64_MAX * 1 * 1: product fits in 64-bit size_t.
 target datalayout = "p:64:64"
 
-define spir_kernel void @large_dim() !reqd_work_group_size !0 {
+define void @large_dim() !reqd_work_group_size !0 {
   ret void
 }
 
@@ -23,7 +23,7 @@ define spir_kernel void @large_dim() !reqd_work_group_size !0 {
 ; UINT64_MAX * 2 * 1: product overflows 64-bit size_t.
 target datalayout = "p:64:64"
 
-define spir_kernel void @overflow_product() !reqd_work_group_size !0 {
+define void @overflow_product() !reqd_work_group_size !0 {
   ret void
 }
 
@@ -33,7 +33,7 @@ define spir_kernel void @overflow_product() !reqd_work_group_size !0 {
 ; UINT32_MAX * 1 * 1: product fits in 32-bit size_t.
 target datalayout = "p:32:32"
 
-define spir_kernel void @large_dim() !reqd_work_group_size !0 {
+define void @large_dim() !reqd_work_group_size !0 {
   ret void
 }
 
@@ -43,7 +43,7 @@ define spir_kernel void @large_dim() !reqd_work_group_size !0 {
 ; UINT32_MAX * 2 * 1: product overflows 32-bit size_t.
 target datalayout = "p:32:32"
 
-define spir_kernel void @overflow_product() !reqd_work_group_size !0 {
+define void @overflow_product() !reqd_work_group_size !0 {
   ret void
 }
 
@@ -53,7 +53,7 @@ define spir_kernel void @overflow_product() !reqd_work_group_size !0 {
 ; i64 value > UINT32_MAX: operand does not fit in 32-bit size_t.
 target datalayout = "p:32:32"
 
-define spir_kernel void @operand_too_large() !reqd_work_group_size !0 {
+define void @operand_too_large() !reqd_work_group_size !0 {
   ret void
 }
 
@@ -63,7 +63,7 @@ define spir_kernel void @operand_too_large() !reqd_work_group_size !0 {
 ; i128 value > UINT64_MAX: operand does not fit in 64-bit size_t.
 target datalayout = "p:64:64"
 
-define spir_kernel void @operand_too_large() !reqd_work_group_size !0 {
+define void @operand_too_large() !reqd_work_group_size !0 {
   ret void
 }
 
