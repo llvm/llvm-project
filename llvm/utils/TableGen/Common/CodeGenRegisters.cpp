@@ -399,6 +399,13 @@ CodeGenRegister::computeSubRegs(CodeGenRegBank &RegBank) {
 // [dsub_0, dsub_2, dsub_4]) deliberately place sub-registers at non-adjacent
 // offsets that extend past the nominal size, and are not bugs.
 void CodeGenRegister::checkSubRegIndexSizes(CodeGenRegBank &RegBank) const {
+  // Only registers that are covered by their sub-registers promise to be fully
+  // tiled by them; for those an explicit SubRegIndex extending past the
+  // register is a genuine bug. A register that is not covered by its
+  // sub-registers makes no such promise, so don't second-guess its layout.
+  if (!CoveredBySubRegs)
+    return;
+
   // This register's own bit size is the largest register class containing it.
   unsigned ParentSize = 0;
   for (const auto &RC : RegBank.getRegClasses()) {
@@ -431,8 +438,10 @@ void CodeGenRegister::checkSubRegIndexSizes(CodeGenRegBank &RegBank) const {
   if (Ranges.empty())
     return;
 
-  // Only contiguously-tiled registers are dense bit containers; anything with a
-  // gap or overlap is a strided/spaced tuple, which is allowed to exceed size.
+  // ExplicitSubRegIndices is in .td declaration order, not offset order, so
+  // sort by offset before scanning. Only a contiguous tiling is a dense bit
+  // container; anything left with a gap or overlap is a strided/spaced tuple
+  // (also covered-by-subregs), which is allowed to exceed the nominal size.
   llvm::sort(Ranges);
   unsigned Pos = 0;
   for (auto [Off, Sz] : Ranges) {
