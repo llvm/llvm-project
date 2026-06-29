@@ -421,6 +421,8 @@ Modified Compiler Flags
 - The `-fzero-call-used-regs` compiler flag is now allowed on RISC-V, only the
   "skip", "used-gpr", "used-gpr-arg", "all-gpr" and "all-gpr-arg" options are
   supported for the moment.
+- The `-fms-kernel` flag will now implicitly add -fno-delete-null-pointer-checks.
+  Still -fdelete-null-pointer-checks can be used to override this behavior.
 
 - Slightly changed hash id generation to get the unique linkage symbols names 
   by ``-unique-internal-linkage-names`` option. Now it uses a path that
