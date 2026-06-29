@@ -13,6 +13,9 @@
 //
 // Compile with -DEJIT_DIAG_ENABLE to activate logging.  When not defined,
 // all macros expand to nothing and incur zero runtime cost.
+// Define EJIT_SRE_DIAG together with EJIT_DIAG_ENABLE to route diagnostics
+// through the platform-provided SRE_printf(); otherwise diagnostics use
+// std::printf.
 //
 //===----------------------------------------------------------------------===//
 
@@ -21,19 +24,26 @@
 
 #ifdef EJIT_DIAG_ENABLE
 
+#ifdef EJIT_SRE_DIAG
 // Provided by the platform.  Must be declared exactly as written so the
 // linker can resolve it against the device firmware's libc / BSP.
 extern "C" int SRE_printf(const char *fmt, ...);
 
-// Split the prefix, payload, and newline into separate calls so the macro works
-// in C++17 without the GNU `, ##__VA_ARGS__` extension. Diagnostics are a
-// bring-up-only facility, so preserving one atomic printf call is not required.
-#define EJIT_DIAG(...)                                                     \
+// Keep diagnostics in a single call so the prefix and payload stay on one line.
+#define EJIT_DIAG(fmt, ...)                                                \
   do {                                                                     \
-    SRE_printf("[EJIT] %s:%d ", __func__, __LINE__);                       \
-    SRE_printf(__VA_ARGS__);                                               \
-    SRE_printf("\n");                                                      \
+    SRE_printf("[EJIT] %s:%d " fmt "\n", __func__, __LINE__,              \
+               ##__VA_ARGS__);                                             \
   } while (0)
+#else
+#include <cstdio>
+
+#define EJIT_DIAG(fmt, ...)                                                \
+  do {                                                                     \
+    std::printf("[EJIT] %s:%d " fmt "\n", __func__, __LINE__,              \
+                ##__VA_ARGS__);                                            \
+  } while (0)
+#endif
 
 #else // !EJIT_DIAG_ENABLE
 
