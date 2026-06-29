@@ -1635,22 +1635,40 @@ void AccVisitor::CopySymbolWithDevice(const parser::Name *name) {
 
 Symbol *AccVisitor::CopyUseDeviceSymbol(const Symbol &symbol) {
   const Symbol &ultimate{symbol.GetUltimate()};
-  Symbol *copy{currScope().CopySymbol(ultimate)};
+  // Key the device copy under the name as referenced here, which differs from
+  // the ultimate symbol's name for a USE-renamed variable, so that references
+  // inside the construct resolve to this copy rather than the host symbol.
+  const SourceName localName{symbol.name()};
+  Symbol *copy{nullptr};
+  // CopySymbol would key the copy under the ultimate's name; only use it when
+  // that matches the local name, otherwise reuse the host-associated symbol.
+  if (localName == ultimate.name()) {
+    copy = currScope().CopySymbol(ultimate);
+  }
   if (!copy) {
-    copy = FindInScope(currScope(), ultimate.name());
+    copy = FindInScope(currScope(), localName);
   }
   if (copy && copy->has<HostAssocDetails>()) {
     if (const auto *hostAssoc{copy->detailsIf<HostAssocDetails>()};
         hostAssoc && copy->owner().kind() == Scope::Kind::OpenACCConstruct) {
       Scope &hostScope{currScope().parent()};
-      if (!FindInScope(hostScope, ultimate.name())) {
+      if (!FindInScope(hostScope, localName)) {
         hostScope.CopySymbol(*copy);
       }
     }
     if (const auto *object{ultimate.detailsIf<ObjectEntityDetails>()}) {
       currScope().erase(copy->name());
       auto pair{currScope().try_emplace(
-          ultimate.name(), ultimate.attrs(), ObjectEntityDetails{*object})};
+          localName, ultimate.attrs(), ObjectEntityDetails{*object})};
+      copy = &*pair.first->second;
+      copy->flags() = ultimate.flags();
+    }
+  } else if (!copy) {
+    // USE-renamed object with no host-association symbol in this scope: key an
+    // object-entity copy under the local name (CopySymbol cannot rename).
+    if (const auto *object{ultimate.detailsIf<ObjectEntityDetails>()}) {
+      auto pair{currScope().try_emplace(
+          localName, ultimate.attrs(), ObjectEntityDetails{*object})};
       copy = &*pair.first->second;
       copy->flags() = ultimate.flags();
     }
@@ -1752,7 +1770,7 @@ public:
     // Iterate over elements of x, and resolve any common blocks that
     // are still unresolved.
     for (const parser::OmpObject &obj : x.v) {
-      auto *name{std::get_if<parser::Name>(&obj.u)};
+      auto *name{parser::omp::GetCommonBlockFromObj(obj)};
       if (name && !name->symbol) {
         Resolve(*name, currScope().MakeCommonBlock(name->source, name->source));
       }
@@ -2168,29 +2186,39 @@ void OmpVisitor::ProcessReductionSpecifier(
 }
 
 void OmpVisitor::ResolveCriticalName(const parser::OmpArgument &arg) {
-  auto &globalScope{[&]() -> Scope & {
-    for (Scope *s{&currScope()};; s = &s->parent()) {
-      if (s->IsTopLevel()) {
-        return *s;
-      }
-    }
-    llvm_unreachable("Cannot find global scope");
-  }()};
+  auto *object{parser::Unwrap<parser::OmpObject>(arg.u)};
+  if (!object) {
+    return;
+  }
 
-  if (auto *object{parser::Unwrap<parser::OmpObject>(arg.u)}) {
-    if (auto *desg{parser::omp::GetDesignatorFromObj(*object)}) {
-      if (auto *name{parser::GetDesignatorNameIfDataRef(*desg)}) {
-        if (auto *symbol{FindInScope(globalScope, *name)}) {
-          if (!symbol->test(Symbol::Flag::OmpCriticalLock)) {
-            SayWithDecl(*name, *symbol,
-                "CRITICAL construct name '%s' conflicts with a previous declaration"_warn_en_US,
-                name->ToString());
-          }
-        } else {
-          name->symbol = &MakeSymbol(globalScope, name->source, Attrs{});
-          name->symbol->set(Symbol::Flag::OmpCriticalLock);
-        }
+  const parser::Name *name{common::visit( //
+      common::visitors{//
+          [&](const parser::Designator &x) -> const parser::Name * {
+            return parser::GetDesignatorNameIfDataRef(x);
+          },
+          [&](const parser::OmpLocator &x) -> const parser::Name * {
+            if (auto *res{std::get_if<parser::OmpReservedIdentifier>(&x.u)}) {
+              return &res->v;
+            }
+            return nullptr;
+          },
+          [&](const parser::Name &) -> const parser::Name * { return nullptr; },
+          [&](const parser::OmpObject::Invalid &) -> const parser::Name * {
+            return nullptr;
+          }},
+      object->u)};
+
+  if (name) {
+    if (auto *symbol{FindInScope(context().globalScope(), *name)}) {
+      if (!symbol->test(Symbol::Flag::OmpCriticalLock)) {
+        SayWithDecl(*name, *symbol,
+            "CRITICAL construct name '%s' conflicts with a previous declaration"_warn_en_US,
+            name->ToString());
       }
+    } else {
+      name->symbol =
+          &MakeSymbol(context().globalScope(), name->source, Attrs{});
+      name->symbol->set(Symbol::Flag::OmpCriticalLock);
     }
   }
 }

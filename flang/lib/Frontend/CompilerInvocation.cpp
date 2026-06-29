@@ -122,7 +122,8 @@ static unsigned getOptimizationLevel(llvm::opt::ArgList &args,
 
 bool Fortran::frontend::parseDiagnosticArgs(clang::DiagnosticOptions &opts,
                                             llvm::opt::ArgList &args) {
-  opts.ShowColors = parseShowColorsArgs(args);
+  opts.setShowColors(parseShowColorsArgs(args) ? clang::ShowColorsKind::On
+                                               : clang::ShowColorsKind::Off);
 
   return true;
 }
@@ -891,7 +892,7 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
       Fortran::common::LanguageFeature::OpenAccDefaultNoneScalarsStrict,
       args.hasFlag(clang::options::OPT_fopenacc_default_none_scalars_strict,
                    clang::options::OPT_fno_openacc_default_none_scalars_strict,
-                   true));
+                   false));
 
   // -f{no-}openacc-multiple-names-in-routine
   opts.features.Enable(
@@ -1102,8 +1103,10 @@ static bool parseDiagArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
 
   // Default to off for `flang -fc1`.
   bool showColors{parseShowColorsArgs(args, false)};
-  diags.getDiagnosticOptions().ShowColors = showColors;
-  res.getDiagnosticOpts().ShowColors = showColors;
+  auto colorsMode =
+      showColors ? clang::ShowColorsKind::On : clang::ShowColorsKind::Off;
+  diags.getDiagnosticOptions().setShowColors(colorsMode);
+  res.getDiagnosticOpts().setShowColors(colorsMode);
   res.getFrontendOpts().showColors = showColors;
   return !diags.hasUncompilableErrorOccurred();
 }
@@ -1966,7 +1969,12 @@ CompilerInvocation::getSemanticsCtx(
       .set_maxErrors(getMaxErrors())
       .set_warningsAreErrors(getWarnAsErr())
       .set_moduleFileSuffix(getModuleFileSuffix())
-      .set_underscoring(getCodeGenOpts().Underscoring);
+      .set_underscoring(getCodeGenOpts().Underscoring)
+      .set_openAccDefaultNoneScalarsStrictDisableOption(
+          clang::getDriverOptTable()
+              .getOptionPrefixedName(
+                  clang::options::OPT_fno_openacc_default_none_scalars_strict)
+              .str());
 
   std::string compilerVersion = Fortran::common::getFlangFullVersion();
   Fortran::tools::setUpTargetCharacteristics(

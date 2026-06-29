@@ -41,7 +41,7 @@ enum Size : uint8_t {
  * @brief Very long number
  */
 enum : long long {
-  BigVal = 999999999999   ///< A very large value
+  BigVal = 999999999999 ///< A very large value
 };
 
 enum ColorUserSpecified {
@@ -56,9 +56,9 @@ public:
    * @brief File permission flags
    */
   enum {
-    Read    = 1,     ///< Permission to READ r
-    Write   = 2,     ///< Permission to WRITE w
-    Execute = 4      ///< Permission to EXECUTE x
+    Read = 1,   ///< Permission to READ r
+    Write = 2,  ///< Permission to WRITE w
+    Execute = 4 ///< Permission to EXECUTE x
   };
 };
 
@@ -80,8 +80,8 @@ namespace Vehicles {
  * @brief specify type of car
  */
 enum Car {
-  Sedan,    ///< Comment 1
-  SUV,      ///< Comment 2
+  Sedan, ///< Comment 1
+  SUV,   ///< Comment 2
   Pickup,
   Hatchback ///< Comment 4
 };
