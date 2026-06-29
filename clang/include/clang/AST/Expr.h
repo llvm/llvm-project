@@ -2468,7 +2468,7 @@ public:
         Data(reinterpret_cast<uintptr_t>(Field) | OffsetOfNode::Field) {}
 
   /// Create an offsetof node that refers to an identifier.
-  OffsetOfNode(SourceLocation DotLoc, IdentifierInfo *Name,
+  OffsetOfNode(SourceLocation DotLoc, const IdentifierInfo *Name,
                SourceLocation NameLoc)
       : Range(DotLoc.isValid() ? DotLoc : NameLoc, NameLoc),
         Data(reinterpret_cast<uintptr_t>(Name) | Identifier) {}
@@ -2495,7 +2495,7 @@ public:
 
   /// For a field or identifier offsetof node, returns the name of
   /// the field.
-  IdentifierInfo *getFieldName() const;
+  const IdentifierInfo *getFieldName() const;
 
   /// For a base class node, returns the base specifier.
   CXXBaseSpecifier *getBase() const {

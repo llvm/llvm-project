@@ -56,9 +56,9 @@ size_t c32rtomb(char* s, char32_t c32, mbstate_t* ps);
 #    pragma GCC system_header
 #  endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #  if !defined(_LIBCPP_CXX03_LANG)
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 using ::mbstate_t _LIBCPP_USING_IF_EXISTS;
 
@@ -71,9 +71,9 @@ using ::c16rtomb _LIBCPP_USING_IF_EXISTS;
 using ::mbrtoc32 _LIBCPP_USING_IF_EXISTS;
 using ::c32rtomb _LIBCPP_USING_IF_EXISTS;
 
-#  endif // _LIBCPP_CXX03_LANG
-
 _LIBCPP_END_NAMESPACE_STD
+
+#  endif // _LIBCPP_CXX03_LANG
 
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
