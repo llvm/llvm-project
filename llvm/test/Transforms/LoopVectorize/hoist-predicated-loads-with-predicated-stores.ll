@@ -1526,32 +1526,19 @@ define void @sink_multiple_store_groups_noalias_via_scev_srem(ptr %dst, ptr %src
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x double> poison, double [[TMP11]], i32 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> [[TMP13]], double [[TMP12]], i32 1
 ; CHECK-NEXT:    [[TMP15:%.*]] = srem <2 x i64> [[VEC_IND]], splat (i64 128)
-; CHECK-NEXT:    [[TMP16:%.*]] = xor <2 x i1> [[TMP10]], splat (i1 true)
-; CHECK-NEXT:    [[TMP17:%.*]] = fadd <2 x double> [[TMP14]], splat (double 8.000000e+00)
-; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x i1> [[TMP16]], i64 0
-; CHECK-NEXT:    br i1 [[TMP18]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
-; CHECK:       [[PRED_STORE_IF]]:
+; CHECK-NEXT:    [[TMP18:%.*]] = fadd <2 x double> [[TMP14]], splat (double 8.000000e+00)
 ; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i64> [[TMP15]], i64 0
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP19]]
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <2 x double> [[TMP17]], i64 0
-; CHECK-NEXT:    store double [[TMP21]], ptr [[TMP20]], align 8, !alias.scope [[META129]]
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
-; CHECK:       [[PRED_STORE_CONTINUE]]:
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x i1> [[TMP16]], i64 1
-; CHECK-NEXT:    br i1 [[TMP22]], label %[[PRED_STORE_IF2:.*]], label %[[PRED_STORE_CONTINUE3:.*]]
-; CHECK:       [[PRED_STORE_IF2]]:
+; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP19]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <2 x i64> [[TMP15]], i64 1
-; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP23]]
+; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP23]]
+; CHECK-NEXT:    [[TMP17:%.*]] = select <2 x i1> [[TMP10]], <2 x double> [[TMP14]], <2 x double> [[TMP18]]
+; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <2 x double> [[TMP17]], i64 0
+; CHECK-NEXT:    store double [[TMP22]], ptr [[TMP28]], align 8, !alias.scope [[META129]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <2 x double> [[TMP17]], i64 1
-; CHECK-NEXT:    store double [[TMP25]], ptr [[TMP24]], align 8, !alias.scope [[META129]]
-; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE3]]
-; CHECK:       [[PRED_STORE_CONTINUE3]]:
+; CHECK-NEXT:    store double [[TMP25]], ptr [[TMP32]], align 8, !alias.scope [[META129]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = extractelement <2 x i1> [[TMP10]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP26]], label %[[PRED_STORE_IF4:.*]], label %[[PRED_STORE_CONTINUE5:.*]]
 ; CHECK:       [[PRED_STORE_IF4]]:
-; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <2 x i64> [[TMP15]], i64 0
-; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP27]]
-; CHECK-NEXT:    store double [[TMP11]], ptr [[TMP28]], align 8, !alias.scope [[META129]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = getelementptr i8, ptr [[TMP28]], i64 16
 ; CHECK-NEXT:    store double 1.000000e+01, ptr [[TMP29]], align 8, !alias.scope [[META129]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE5]]
@@ -1559,9 +1546,6 @@ define void @sink_multiple_store_groups_noalias_via_scev_srem(ptr %dst, ptr %src
 ; CHECK-NEXT:    [[TMP30:%.*]] = extractelement <2 x i1> [[TMP10]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP30]], label %[[PRED_STORE_IF6:.*]], label %[[PRED_STORE_CONTINUE7]]
 ; CHECK:       [[PRED_STORE_IF6]]:
-; CHECK-NEXT:    [[TMP31:%.*]] = extractelement <2 x i64> [[TMP15]], i64 1
-; CHECK-NEXT:    [[TMP32:%.*]] = getelementptr double, ptr [[DST]], i64 [[TMP31]]
-; CHECK-NEXT:    store double [[TMP12]], ptr [[TMP32]], align 8, !alias.scope [[META129]]
 ; CHECK-NEXT:    [[TMP33:%.*]] = getelementptr i8, ptr [[TMP32]], i64 16
 ; CHECK-NEXT:    store double 1.000000e+01, ptr [[TMP33]], align 8, !alias.scope [[META129]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE7]]
@@ -1585,6 +1569,75 @@ loop:
   %cmp = icmp eq i32 %c, 0
   %v.1 = load double, ptr %gep.src, align 8
   %clamped = srem i64 %iv, 128
+  br i1 %cmp, label %then, label %else
+
+then:
+  %gep.dst1.then = getelementptr double, ptr %dst, i64 %clamped
+  store double %v.1, ptr %gep.dst1.then, align 8
+  %gep.dst2.then = getelementptr i8, ptr %gep.dst1.then, i64 16
+  store double 10.0, ptr %gep.dst2.then, align 8
+  br label %loop.latch
+
+else:
+  %r.1 = fadd double %v.1, 8.0
+  %gep.dst1.else = getelementptr double, ptr %dst, i64 %clamped
+  store double %r.1, ptr %gep.dst1.else, align 8
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add i64 %iv, 16
+  %exit.cond = icmp eq i64 %iv.next, 1600
+  br i1 %exit.cond, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @sink_multiple_store_groups_srem_maybe_negative(ptr %dst, ptr %src) {
+; CHECK-LABEL: define void @sink_multiple_store_groups_srem_maybe_negative(
+; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr double, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_FLAG:%.*]] = getelementptr i8, ptr [[GEP_SRC]], i64 152
+; CHECK-NEXT:    [[C:%.*]] = load i32, ptr [[GEP_FLAG]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C]], 0
+; CHECK-NEXT:    [[V_1:%.*]] = load double, ptr [[GEP_SRC]], align 8
+; CHECK-NEXT:    [[OFF:%.*]] = add i64 [[IV]], -16
+; CHECK-NEXT:    [[CLAMPED:%.*]] = srem i64 [[OFF]], 128
+; CHECK-NEXT:    br i1 [[CMP]], label %[[THEN:.*]], label %[[ELSE:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[GEP_DST1_THEN:%.*]] = getelementptr double, ptr [[DST]], i64 [[CLAMPED]]
+; CHECK-NEXT:    store double [[V_1]], ptr [[GEP_DST1_THEN]], align 8
+; CHECK-NEXT:    [[GEP_DST2_THEN:%.*]] = getelementptr i8, ptr [[GEP_DST1_THEN]], i64 16
+; CHECK-NEXT:    store double 1.000000e+01, ptr [[GEP_DST2_THEN]], align 8
+; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK:       [[ELSE]]:
+; CHECK-NEXT:    [[R_1:%.*]] = fadd double [[V_1]], 8.000000e+00
+; CHECK-NEXT:    [[GEP_DST1_ELSE:%.*]] = getelementptr double, ptr [[DST]], i64 [[CLAMPED]]
+; CHECK-NEXT:    store double [[R_1]], ptr [[GEP_DST1_ELSE]], align 8
+; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 16
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[IV_NEXT]], 1600
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %gep.src = getelementptr double, ptr %src, i64 %iv
+  %gep.flag = getelementptr i8, ptr %gep.src, i64 152
+  %c = load i32, ptr %gep.flag, align 4
+  %cmp = icmp eq i32 %c, 0
+  %v.1 = load double, ptr %gep.src, align 8
+  %off = add i64 %iv, -16
+  %clamped = srem i64 %off, 128
   br i1 %cmp, label %then, label %else
 
 then:
