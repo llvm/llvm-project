@@ -21,8 +21,8 @@ int main() {
   // CHECK: =2=
   fprintf(stderr, "=2=\n");
   // CFI-DIAG: runtime error: control flow integrity check for type 'void (int)' failed during indirect function call
-  // CFI-DIAG: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
   // CFI-DIAG-NEXT: ({{.*}}dynamic.so+0x{{[[:xdigit:]]+}}): note: f() {{(\(.cfi_jt\) )?}}defined here
+  // CFI-DIAG: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
   ((void (*)(int))f)(42); // UB here
   // CHECK-DIAG: =3=
   // CHECK-NOT: =3=
