@@ -173,6 +173,9 @@ Code actions
 - A new tweak "Create function body out-of-line" was added that creates
   an implementation for a function declaration.
 
+- The abbreviate function template tweak was introduced.
+  It allows converting function templates to their abbreviated form using auto parameters.
+
 Signature help
 ^^^^^^^^^^^^^^
 
