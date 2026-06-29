@@ -49,7 +49,7 @@ public:
   }
 
   virtual Error commit(std::unique_ptr<MemoryBuffer> MemBuf) {
-      return Error::success();
+    return Error::success();
   }
 
   bool Committed = false;
