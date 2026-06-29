@@ -6281,6 +6281,17 @@ bool Sema::GatherArgumentsForCall(SourceLocation CallLoc, FunctionDecl *FDecl,
         return true;
 
       Arg = ArgExpr.getAs<Expr>();
+
+      // The recognizers don't see through the CXXDefaultArgExpr wrapper, so
+      // check the underlying default-argument expression.
+      if (getLangOpts().Profiles) {
+        QualType PT = Param->getType();
+        if (PT->isPointerType() || PT->isReferenceType())
+          checkRefToUninitInit(Arg->getExprLoc(),
+                               Param->hasAttr<RefToUninitAttr>(),
+                               PT->isReferenceType(),
+                               cast<CXXDefaultArgExpr>(Arg)->getExpr());
+      }
     }
 
     // Check for array bounds violations for each argument to the call. This
