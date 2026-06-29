@@ -78,24 +78,26 @@ exit2: ; preds = %bb70.i, %bb13.i
 define void @CSE_eflags_live(i64 %length) "probe-stack"="__chkstk_darwin" {
 ; CHECK-LABEL: CSE_eflags_live:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    testq %rdi, %rdi
+; CHECK-NEXT:    je .LBB1_2
+; CHECK-NEXT:  # %bb.1: # %if.end6
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    .cfi_offset %rbp, -16
 ; CHECK-NEXT:    movq %rsp, %rbp
 ; CHECK-NEXT:    .cfi_def_cfa_register %rbp
-; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    je .LBB1_2
-; CHECK-NEXT:  # %bb.1: # %if.end6
-; CHECK-NEXT:    movq $-1, %rax
-; CHECK-NEXT:    cmovnsq %rdi, %rax
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    sarq $63, %rax
+; CHECK-NEXT:    orq %rdi, %rax
 ; CHECK-NEXT:    addq $15, %rax
 ; CHECK-NEXT:    andq $-16, %rax
 ; CHECK-NEXT:    callq __chkstk_darwin
 ; CHECK-NEXT:    subq %rax, %rsp
-; CHECK-NEXT:  .LBB1_2: # %cleanup78
 ; CHECK-NEXT:    movq %rbp, %rsp
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
+; CHECK-NEXT:    .cfi_restore %rbp
+; CHECK-NEXT:  .LBB1_2: # %cleanup78
 ; CHECK-NEXT:    retq
 entry:
   %cmp4 = icmp eq i64 %length, 0
