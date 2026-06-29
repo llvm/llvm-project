@@ -263,28 +263,38 @@ public:
                                   mlir::Block *defaultDestination,
                                   const APInt &lowerBound,
                                   const APInt &upperBound) const {
-    assert(lowerBound.sle(upperBound) && "Invalid range");
+    auto condType = mlir::cast<cir::IntType>(op.getCondition().getType());
+    bool isSigned = condType.isSigned();
+    assert(
+        (isSigned ? lowerBound.sle(upperBound) : lowerBound.ule(upperBound)) &&
+        "Invalid range");
     mlir::Block *resBlock = rewriter.createBlock(defaultDestination);
-    cir::IntType sIntType = cir::IntType::get(op.getContext(), 32, true);
-    cir::IntType uIntType = cir::IntType::get(op.getContext(), 32, false);
 
-    cir::ConstantOp rangeLength = cir::ConstantOp::create(
-        rewriter, op.getLoc(),
-        cir::IntAttr::get(sIntType, upperBound - lowerBound));
+    // Build the range check at the switch operand's width.  The classic
+    // `sub x, lo; ule (x - lo), (hi - lo)` idiom is a cyclic-distance test that
+    // is correct for both signed and unsigned switches, so the comparison is
+    // always unsigned.
+    cir::IntType uIntType =
+        cir::IntType::get(op.getContext(), condType.getWidth(), false);
 
     cir::ConstantOp lowerBoundValue = cir::ConstantOp::create(
-        rewriter, op.getLoc(), cir::IntAttr::get(sIntType, lowerBound));
+        rewriter, op.getLoc(), cir::IntAttr::get(condType, lowerBound));
     mlir::Value diffValue = cir::SubOp::create(
         rewriter, op.getLoc(), op.getCondition(), lowerBoundValue);
 
-    // Use unsigned comparison to check if the condition is in the range.
-    cir::CastOp uDiffValue = cir::CastOp::create(
-        rewriter, op.getLoc(), uIntType, CastKind::integral, diffValue);
-    cir::CastOp uRangeLength = cir::CastOp::create(
-        rewriter, op.getLoc(), uIntType, CastKind::integral, rangeLength);
+    // Use unsigned comparison to check if the condition is in the range.  A
+    // signed difference is reinterpreted as unsigned; an unsigned one already
+    // has the right type.
+    if (isSigned)
+      diffValue = cir::CastOp::create(rewriter, op.getLoc(), uIntType,
+                                      CastKind::integral, diffValue);
+
+    cir::ConstantOp rangeLength = cir::ConstantOp::create(
+        rewriter, op.getLoc(),
+        cir::IntAttr::get(uIntType, upperBound - lowerBound));
 
     cir::CmpOp cmpResult = cir::CmpOp::create(
-        rewriter, op.getLoc(), cir::CmpOpKind::le, uDiffValue, uRangeLength);
+        rewriter, op.getLoc(), cir::CmpOpKind::le, diffValue, rangeLength);
     cir::BrCondOp::create(rewriter, op.getLoc(), cmpResult, rangeDestination,
                           defaultDestination);
     return resBlock;
@@ -443,22 +453,28 @@ public:
         rewriter.eraseOp(caseOp);
     }
 
+    bool isSigned =
+        mlir::cast<cir::IntType>(op.getCondition().getType()).isSigned();
     for (auto [rangeVal, operand, destination] :
          llvm::zip(rangeValues, rangeOperands, rangeDestinations)) {
       APInt lowerBound = rangeVal.first;
       APInt upperBound = rangeVal.second;
 
-      // The case range is unreachable, skip it.
-      if (lowerBound.sgt(upperBound))
+      // An empty range (lo > hi in the switch's signedness) is unreachable.
+      if (isSigned ? lowerBound.sgt(upperBound) : lowerBound.ugt(upperBound))
         continue;
 
       // If range is small, add multiple switch instruction cases.
       // This magical number is from the original CGStmt code.
-      constexpr int kSmallRangeThreshold = 64;
-      if ((upperBound - lowerBound)
-              .ult(llvm::APInt(32, kSmallRangeThreshold))) {
-        for (APInt iValue = lowerBound; iValue.sle(upperBound); ++iValue) {
-          caseValues.push_back(iValue);
+      constexpr uint64_t kSmallRangeThreshold = 64;
+      APInt rangeSize = upperBound - lowerBound;
+      if (rangeSize.ult(kSmallRangeThreshold)) {
+        // Expand into individual cases with a count-based cursor so a range at
+        // the top of the domain cannot overflow the APInt and loop forever.
+        APInt caseValue = lowerBound;
+        for (uint64_t i = 0, e = rangeSize.getZExtValue(); i <= e;
+             ++i, ++caseValue) {
+          caseValues.push_back(caseValue);
           caseOperands.push_back(operand);
           caseDestinations.push_back(destination);
         }
