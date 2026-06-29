@@ -634,13 +634,12 @@ define ptr @phi_of_gep_different_type(i1 %c, ptr %p) {
 ; CHECK-LABEL: @phi_of_gep_different_type(
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[ELSE:%.*]]
 ; CHECK:       if:
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 4
 ; CHECK-NEXT:    br label [[JOIN:%.*]]
 ; CHECK:       else:
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[P]], i64 8
 ; CHECK-NEXT:    br label [[JOIN]]
 ; CHECK:       join:
-; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[GEP1]], [[IF]] ], [ [[GEP2]], [[ELSE]] ]
+; CHECK-NEXT:    [[DOTPN:%.*]] = phi i64 [ 4, [[IF]] ], [ 8, [[ELSE]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 [[DOTPN]]
 ; CHECK-NEXT:    ret ptr [[PHI]]
 ;
   br i1 %c, label %if, label %else
