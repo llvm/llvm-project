@@ -1963,8 +1963,11 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
     for (auto &SuccIter : OtherSuccIterRange) {
       Instruction *I2 = &*SuccIter;
       HasTerminator |= I2->isTerminator();
-      if (AllInstsAreIdentical && (!areIdenticalUpToCommutativity(I1, I2) ||
-                                   MMRAMetadata(*I1) != MMRAMetadata(*I2)))
+      if (AllInstsAreIdentical &&
+          (!areIdenticalUpToCommutativity(I1, I2) ||
+           MMRAMetadata(*I1) != MMRAMetadata(*I2) ||
+           I1->getMetadata(LLVMContext::MD_nontemporal) !=
+               I2->getMetadata(LLVMContext::MD_nontemporal)))
         AllInstsAreIdentical = false;
     }
 
