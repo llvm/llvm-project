@@ -27,3 +27,13 @@ add_header_library(
     libc.src.__support.FPUtil.generic.mul
     libc.src.__support.macros.config
 )
+
+add_header_library(
+  divtf3
+  HDRS
+    divtf3.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.macros.config
+)
