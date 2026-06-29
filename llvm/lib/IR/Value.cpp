@@ -869,7 +869,7 @@ bool Value::canBeFreed() const {
   }
 
   if (auto *ITP = dyn_cast<IntToPtrInst>(this);
-      ITP && ITP->hasMetadata(LLVMContext::MD_nofree))
+      ITP && ITP->hasMetadata(LLVMContext::MD_nofreeobj))
     return false;
 
   if (auto *CB = dyn_cast<CallBase>(this))
