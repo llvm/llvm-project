@@ -1315,6 +1315,17 @@ static Value *foldIDivShl(BinaryOperator &I, InstCombiner::BuilderTy &Builder) {
     }
   }
 
+  // X u/ (Y << Z) --> (X >> Z) u/ Y
+  // Defer to the (shl)/(shl) folds above when Op0 is also shl, and to the
+  // existing shl-of-pow2 + udiv-by-pow2 chain when Y is a power-of-2 constant.
+  if (!IsSigned &&
+      match(Op1, m_OneUse(m_NUWShl(m_Value(Y), m_Value(Z)))) &&
+      !match(Y, m_Power2()) &&
+      !match(Op0, m_Shl(m_Value(), m_Value()))) {
+    Value *NewLShr = Builder.CreateLShr(Op0, Z, "", I.isExact());
+    return Builder.CreateUDiv(NewLShr, Y, "", I.isExact());
+  }
+
   return nullptr;
 }
 
