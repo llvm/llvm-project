@@ -1,0 +1,12 @@
+#!/bin/sh
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
+PYTHONPATH="$(lldb -P)"
+export PYTHONPATH
+
+if [ "$(uname)" == "Darwin" ]; then
+  exec xcrun python3 $SCRIPT_DIR/lldb-mcp.py $@
+else
+  exec python3 $SCRIPT_DIR/lldb-mcp.py $@
+fi
