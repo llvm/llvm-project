@@ -564,6 +564,11 @@ func.func @non_convertible_arg_type(%arg: vector<1xtf32>) {
   return
 }
 
+// CHECK: llvm.func @no_inline() attributes {no_inline}
+func.func @no_inline() attributes {no_inline} {
+  return
+}
+
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%toplevel_module: !transform.any_op {transform.readonly}) {
     %func = transform.structured.match ops{["func.func"]} in %toplevel_module
