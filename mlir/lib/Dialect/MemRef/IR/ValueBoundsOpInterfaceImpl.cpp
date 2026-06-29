@@ -142,6 +142,50 @@ struct SubViewOpInterface
   }
 };
 
+struct AssumeAlignmentOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<AssumeAlignmentOpInterface,
+                                                   memref::AssumeAlignmentOp> {
+  void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
+                                       ValueBoundsConstraintSet &cstr) const {
+    auto assumeAlignmentOp = cast<memref::AssumeAlignmentOp>(op);
+    assert(value == assumeAlignmentOp.getResult() && "invalid value");
+
+    cstr.bound(value)[dim] ==
+        cstr.getExpr(assumeAlignmentOp.getViewSource(), dim);
+  }
+};
+
+struct ExtractStridedMetadataOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<
+          ExtractStridedMetadataOpInterface, memref::ExtractStridedMetadataOp> {
+  void populateBoundsForIndexValue(Operation *op, Value value,
+                                   ValueBoundsConstraintSet &cstr) const {
+    auto metadataOp = cast<memref::ExtractStridedMetadataOp>(op);
+
+    if (value == metadataOp.getOffset()) {
+      cstr.bound(value) == metadataOp.getConstifiedMixedOffset();
+      return;
+    }
+
+    for (auto [idx, size] : llvm::enumerate(metadataOp.getSizes())) {
+      if (value != size)
+        continue;
+      cstr.bound(value) >= 0;
+      cstr.bound(value) == cstr.getExpr(metadataOp.getSource(), idx);
+      return;
+    }
+
+    SmallVector<OpFoldResult> strides = metadataOp.getConstifiedMixedStrides();
+    for (auto [idx, stride] : llvm::enumerate(metadataOp.getStrides())) {
+      if (value != stride)
+        continue;
+      cstr.bound(value) == strides[idx];
+      return;
+    }
+    llvm_unreachable("unexpected index value from extract_strided_metadata");
+  }
+};
+
 } // namespace
 } // namespace memref
 } // namespace mlir
@@ -162,5 +206,9 @@ void mlir::memref::registerValueBoundsOpInterfaceExternalModels(
     memref::GetGlobalOp::attachInterface<memref::GetGlobalOpInterface>(*ctx);
     memref::RankOp::attachInterface<memref::RankOpInterface>(*ctx);
     memref::SubViewOp::attachInterface<memref::SubViewOpInterface>(*ctx);
+    memref::AssumeAlignmentOp::attachInterface<memref::AssumeAlignmentOpInterface>(
+        *ctx);
+    memref::ExtractStridedMetadataOp::attachInterface<memref::ExtractStridedMetadataOpInterface>(
+        *ctx);
   });
 }

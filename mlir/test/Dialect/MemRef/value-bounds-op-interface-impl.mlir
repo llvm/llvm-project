@@ -127,3 +127,40 @@ func.func @memref_subview(%m: memref<?xf32>, %sz: index) -> index {
   %1 = "test.reify_bound"(%0) {dim = 0} : (memref<?xf32, strided<[1], offset: 2>>) -> (index)
   return %1 : index
 }
+
+// -----
+
+// CHECK-LABEL: func @memref_assume_alignment(
+//  CHECK-SAME:     %[[sz:.*]]: index
+//       CHECK:   %[[c6:.*]] = arith.constant 6 : index
+//       CHECK:   %[[c1:.*]] = arith.constant 1 : index
+//       CHECK:   %[[dim:.*]] = memref.dim %{{.*}}, %[[c1]] : memref<6x?xf32>
+//       CHECK:   return %[[c6]], %[[dim]]
+func.func @memref_assume_alignment(%sz: index) -> (index, index) {
+  %0 = memref.alloc(%sz) : memref<6x?xf32>
+  %1 = memref.assume_alignment %0, 16 : memref<6x?xf32>
+  %2 = "test.reify_bound"(%1) {dim = 0} : (memref<6x?xf32>) -> (index)
+  %3 = "test.reify_bound"(%1) {dim = 1} : (memref<6x?xf32>) -> (index)
+  return %2, %3 : index, index
+}
+
+// -----
+
+// CHECK-LABEL: func @memref_extract_strided_metadata(
+//  CHECK-SAME:     %[[sz:.*]]: index
+//       CHECK:   %[[c0:.*]] = arith.constant 0 : index
+//       CHECK:   %[[c10:.*]] = arith.constant 10 : index
+//       CHECK:   %[[c1:.*]] = arith.constant 1 : index
+//       CHECK:   %[[dim:.*]] = memref.dim %{{.*}}, %[[c1]] : memref<10x?xf32>
+//       CHECK:   %[[c1_0:.*]] = arith.constant 1 : index
+//       CHECK:   return %[[c0]], %[[c10]], %[[dim]], %[[c1_0]]
+func.func @memref_extract_strided_metadata(%sz: index) -> (index, index, index, index) {
+  %0 = memref.alloc(%sz) : memref<10x?xf32>
+  %base, %offset, %sizes:2, %strides:2 = memref.extract_strided_metadata %0
+    : memref<10x?xf32> -> memref<f32>, index, index, index, index, index
+  %1 = "test.reify_bound"(%offset) : (index) -> (index)
+  %2 = "test.reify_bound"(%sizes#0) : (index) -> (index)
+  %3 = "test.reify_bound"(%sizes#1) : (index) -> (index)
+  %4 = "test.reify_bound"(%strides#1) : (index) -> (index)
+  return %1, %2, %3, %4 : index, index, index, index
+}
