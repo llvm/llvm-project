@@ -1,7 +1,10 @@
 #include "llvm/Analysis/HeapProvenanceAnalysis.h"
+#include "llvm/ADT/SCCIterator.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
-#include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
@@ -15,18 +18,21 @@ AnalysisKey ForwardHeapProvenanceAnalysis::Key;
 AnalysisKey BackwardHeapProvenanceAnalysis::Key;
 AnalysisKey HeapProvenanceAnalysis::Key;
 
-bool ForwardHeapProvenanceAnalysisResult::invalidate(Module &, const PreservedAnalyses &PA,
-                                                     ModuleAnalysisManager::Invalidator &) {
+bool ForwardHeapProvenanceAnalysisResult::invalidate(
+    Module &, const PreservedAnalyses &PA,
+    ModuleAnalysisManager::Invalidator &) {
   return false;
 }
 
-bool BackwardHeapProvenanceAnalysisResult::invalidate(Module &, const PreservedAnalyses &PA,
-                                                      ModuleAnalysisManager::Invalidator &) {
+bool BackwardHeapProvenanceAnalysisResult::invalidate(
+    Module &, const PreservedAnalyses &PA,
+    ModuleAnalysisManager::Invalidator &) {
   return false;
 }
 
-bool HeapProvenanceAnalysisResult::invalidate(Module &, const PreservedAnalyses &PA,
-                                              ModuleAnalysisManager::Invalidator &) {
+bool HeapProvenanceAnalysisResult::invalidate(
+    Module &, const PreservedAnalyses &PA,
+    ModuleAnalysisManager::Invalidator &) {
   return false;
 }
 
@@ -34,7 +40,8 @@ static bool isAllocLibCall(const Value *V, const TargetLibraryInfo *TLI) {
   return isAllocationFn(V, TLI);
 }
 
-static Value *getFreeLibCallOperand(const CallBase *CB, const TargetLibraryInfo *TLI) {
+static Value *getFreeLibCallOperand(const CallBase *CB,
+                                    const TargetLibraryInfo *TLI) {
   if (!CB || !TLI)
     return nullptr;
   const Function *Callee = CB->getCalledFunction();
@@ -169,7 +176,8 @@ ForwardHeapProvenanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
           if (CB->getArgOperand(i) == V) {
             Function *Callee = CB->getCalledFunction();
             if (!Callee)
-              Callee = dyn_cast<Function>(CB->getCalledOperand()->stripPointerCasts());
+              Callee = dyn_cast<Function>(
+                  CB->getCalledOperand()->stripPointerCasts());
             if (Callee && !Callee->isDeclaration() && i < Callee->arg_size()) {
               Argument *Arg = Callee->getArg(i);
               if (mergeIntoMap(Res.getMap(), Arg, Derived))
@@ -195,96 +203,238 @@ ForwardHeapProvenanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
 BackwardHeapProvenanceAnalysis::Result
 BackwardHeapProvenanceAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
   Result Res;
-  SmallVector<const Value *, 64> Worklist;
   FunctionAnalysisManager &FAM =
       MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  CallGraph &CG = MAM.getResult<CallGraphAnalysis>(M);
 
-  for (Function &F : M) {
-    if (F.isDeclaration())
-      continue;
-    auto &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
-    auto &PDT = FAM.getResult<PostDominatorTreeAnalysis>(F);
-    for (Instruction &I : instructions(F)) {
-      if (auto *CB = dyn_cast<CallBase>(&I)) {
-        if (Value *ArgVal = getFreeLibCallOperand(CB, &TLI)) {
-          if (!PDT.dominates(CB->getParent(), &F.getEntryBlock()))
-            continue;
-          HeapProvenanceLattice Info;
-          Info.State = HeapProvenanceLattice::StateKind::HeapChunkHead;
-          Info.Dir = HeapProvenanceLattice::Backward;
-          Info.HeadPayload = {HeapProvenanceLattice::Payload::Kind::Ref, ArgVal};
-          if (mergeIntoMap(Res.getMap(), ArgVal, Info))
-            Worklist.push_back(ArgVal);
-        }
-      }
-    }
-  }
+  for (scc_iterator<CallGraph *> SCCI = scc_begin(&CG); !SCCI.isAtEnd();
+       ++SCCI) {
+    for (CallGraphNode *CGN : *SCCI) {
+      Function *FnPtr = CGN->getFunction();
+      if (!FnPtr || FnPtr->isDeclaration())
+        continue;
+      Function &F = *FnPtr;
+      auto &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
 
-  if (Worklist.empty())
-    return Res;
-
-  while (!Worklist.empty()) {
-    const Value *V = Worklist.pop_back_val();
-    HeapProvenanceLattice Info = Res.getInfo(V);
-    if (!Info.isValid() || !(Info.Dir & HeapProvenanceLattice::Backward))
-      continue;
-
-    HeapProvenanceLattice BackInfo = Info;
-    BackInfo.Dir = HeapProvenanceLattice::Backward;
-    if (BackInfo.State == HeapProvenanceLattice::StateKind::HeapChunkHead)
-      BackInfo.State = HeapProvenanceLattice::StateKind::HeapChunkInterior;
-
-    if (auto *GEP = dyn_cast<GEPOperator>(const_cast<Value *>(V))) {
-      if (mergeIntoMap(Res.getMap(), GEP->getPointerOperand(), BackInfo))
-        Worklist.push_back(GEP->getPointerOperand());
-    } else if (auto *BC = dyn_cast<BitCastInst>(const_cast<Value *>(V))) {
-      if (mergeIntoMap(Res.getMap(), BC->getOperand(0), BackInfo))
-        Worklist.push_back(BC->getOperand(0));
-    } else if (auto *ASC = dyn_cast<AddrSpaceCastInst>(const_cast<Value *>(V))) {
-      if (mergeIntoMap(Res.getMap(), ASC->getOperand(0), BackInfo))
-        Worklist.push_back(ASC->getOperand(0));
-    } else if (auto *ITP = dyn_cast<IntToPtrInst>(const_cast<Value *>(V))) {
-      if (mergeIntoMap(Res.getMap(), ITP->getOperand(0), BackInfo))
-        Worklist.push_back(ITP->getOperand(0));
-    } else if (auto *PTI = dyn_cast<PtrToIntInst>(const_cast<Value *>(V))) {
-      if (mergeIntoMap(Res.getMap(), PTI->getOperand(0), BackInfo))
-        Worklist.push_back(PTI->getOperand(0));
-    } else if (auto *BO = dyn_cast<BinaryOperator>(const_cast<Value *>(V))) {
-      for (Value *Op : BO->operands())
-        if (mergeIntoMap(Res.getMap(), Op, BackInfo))
-          Worklist.push_back(Op);
-    } else if (isa<PHINode>(const_cast<Value *>(V)) || isa<SelectInst>(const_cast<Value *>(V))) {
-      // TODO: Propagating backward deallocation provenance across PHI nodes or
-      // Select instructions without path-sensitive join conditions is unsound.
-      // Stop backward propagation here to maintain lattice join soundness.
-    } else if (auto *Arg = dyn_cast<Argument>(const_cast<Value *>(V))) {
-      Function *Fn = Arg->getParent();
-      for (const User *FnU : Fn->users()) {
-        if (auto *CB = dyn_cast<CallBase>(FnU)) {
-          if (Arg->getArgNo() < CB->arg_size()) {
-            Value *CallOp = CB->getArgOperand(Arg->getArgNo());
-            if (mergeIntoMap(Res.getMap(), CallOp, BackInfo))
-              Worklist.push_back(CallOp);
-          }
-        }
-      }
-    } else if (auto *CB = dyn_cast<CallBase>(const_cast<Value *>(V))) {
-      Function *Callee = CB->getCalledFunction();
-      if (!Callee)
-        Callee = dyn_cast<Function>(CB->getCalledOperand()->stripPointerCasts());
-      if (Callee && !Callee->isDeclaration() && V->getType()->isPointerTy()) {
-        for (BasicBlock &CalleeBB : *Callee) {
-          if (auto *RI = dyn_cast<ReturnInst>(CalleeBB.getTerminator())) {
-            if (Value *RetVal = RI->getReturnValue()) {
-              if (mergeIntoMap(Res.getMap(), RetVal, BackInfo))
-                Worklist.push_back(RetVal);
+      // 1. Fast Bailout & Candidate Discovery
+      SmallVector<std::pair<Instruction *, Value *>, 4> Deallocs;
+      for (Instruction &I : instructions(F)) {
+        if (auto *CB = dyn_cast<CallBase>(&I)) {
+          if (Value *ArgVal = getFreeLibCallOperand(CB, &TLI)) {
+            Deallocs.push_back({&I, ArgVal});
+          } else if (Function *Callee = CB->getCalledFunction()) {
+            if (!Callee->isDeclaration()) {
+              for (Argument &Arg : Callee->args()) {
+                if (Arg.getArgNo() < CB->arg_size()) {
+                  HeapProvenanceLattice ArgInfo = Res.getInfo(&Arg);
+                  if (ArgInfo.State ==
+                      HeapProvenanceLattice::StateKind::HeapChunkHead)
+                    Deallocs.push_back({&I, CB->getArgOperand(Arg.getArgNo())});
+                }
+              }
             }
           }
         }
       }
+      if (Deallocs.empty())
+        continue;
+
+      SmallPtrSet<const Value *, 16> Candidates;
+      SmallVector<const Value *, 16> CandWorklist;
+      for (auto &Pair : Deallocs) {
+        if (Candidates.insert(Pair.second).second)
+          CandWorklist.push_back(Pair.second);
+      }
+      while (!CandWorklist.empty()) {
+        const Value *V = CandWorklist.pop_back_val();
+        auto addCand = [&](const Value *Op) {
+          if (Candidates.insert(Op).second)
+            CandWorklist.push_back(Op);
+        };
+        if (auto *GEP = dyn_cast<GEPOperator>(const_cast<Value *>(V)))
+          addCand(GEP->getPointerOperand());
+        else if (auto *BC = dyn_cast<BitCastInst>(const_cast<Value *>(V)))
+          addCand(BC->getOperand(0));
+        else if (auto *ASC =
+                     dyn_cast<AddrSpaceCastInst>(const_cast<Value *>(V)))
+          addCand(ASC->getOperand(0));
+        else if (auto *ITP = dyn_cast<IntToPtrInst>(const_cast<Value *>(V)))
+          addCand(ITP->getOperand(0));
+        else if (auto *PTI = dyn_cast<PtrToIntInst>(const_cast<Value *>(V)))
+          addCand(PTI->getOperand(0));
+        else if (auto *BO = dyn_cast<BinaryOperator>(const_cast<Value *>(V))) {
+          for (Value *Op : BO->operands())
+            addCand(Op);
+        } else if (auto *PHI = dyn_cast<PHINode>(const_cast<Value *>(V))) {
+          for (Value *InV : PHI->incoming_values())
+            addCand(InV);
+        } else if (auto *Sel = dyn_cast<SelectInst>(const_cast<Value *>(V))) {
+          addCand(Sel->getTrueValue());
+          addCand(Sel->getFalseValue());
+        }
+      }
+
+      // 2. Sparse Block-Level State Initialization
+      DenseMap<const BasicBlock *,
+               DenseMap<const Value *, HeapProvenanceLattice>>
+          BlockEntryState;
+      SmallVector<const BasicBlock *, 16> BBWorklist;
+      for (BasicBlock &BB : F) {
+        if (succ_empty(&BB)) {
+          for (const Value *C : Candidates) {
+            HeapProvenanceLattice Info;
+            Info.State = HeapProvenanceLattice::StateKind::Unknown;
+            Info.Dir = HeapProvenanceLattice::Backward;
+            BlockEntryState[&BB][C] = Info;
+          }
+          BBWorklist.push_back(&BB);
+        }
+      }
+      if (BBWorklist.empty()) {
+        for (BasicBlock &BB : F)
+          BBWorklist.push_back(&BB);
+      }
+
+      SmallPtrSet<const BasicBlock *, 16> InWorklist;
+      for (const BasicBlock *BB : BBWorklist)
+        InWorklist.insert(BB);
+
+      // 3. Meet & Backward Transfer Worklist Loop
+      while (!BBWorklist.empty()) {
+        const BasicBlock *BB = BBWorklist.pop_back_val();
+        InWorklist.erase(BB);
+
+        DenseMap<const Value *, HeapProvenanceLattice> ExitState;
+        if (succ_empty(BB)) {
+          ExitState = BlockEntryState[BB];
+        } else {
+          bool FirstSucc = true;
+          for (const BasicBlock *Succ : successors(BB)) {
+            auto It = BlockEntryState.find(Succ);
+            if (It == BlockEntryState.end())
+              continue;
+            const auto &SuccState = It->second;
+            for (const Value *C : Candidates) {
+              auto CIt = SuccState.find(C);
+              if (CIt == SuccState.end() || CIt->second.isUninit())
+                continue;
+              HeapProvenanceLattice SInfo = CIt->second;
+              if (auto *PHI = dyn_cast<PHINode>(const_cast<Value *>(C))) {
+                if (PHI->getParent() == Succ) {
+                  Value *InV = PHI->getIncomingValueForBlock(
+                      const_cast<BasicBlock *>(BB));
+                  auto InIt = SuccState.find(InV);
+                  if (InIt != SuccState.end())
+                    SInfo = InIt->second;
+                }
+              }
+              if (FirstSucc)
+                ExitState[C] = SInfo;
+              else
+                mergeLattice(C, ExitState[C], SInfo);
+            }
+            FirstSucc = false;
+          }
+        }
+
+        DenseMap<const Value *, HeapProvenanceLattice> CurState = ExitState;
+        for (const Instruction &IConst : llvm::reverse(*BB)) {
+          Instruction *I = const_cast<Instruction *>(&IConst);
+          if (auto *CB = dyn_cast<CallBase>(I)) {
+            if (Value *ArgVal = getFreeLibCallOperand(CB, &TLI)) {
+              if (Candidates.count(ArgVal)) {
+                HeapProvenanceLattice Info;
+                Info.State = HeapProvenanceLattice::StateKind::HeapChunkHead;
+                Info.Dir = HeapProvenanceLattice::Backward;
+                Info.HeadPayload = {HeapProvenanceLattice::Payload::Kind::Ref,
+                                    ArgVal};
+                CurState[ArgVal] = Info;
+              }
+            } else if (Function *Callee = CB->getCalledFunction()) {
+              if (!Callee->isDeclaration()) {
+                for (Argument &Arg : Callee->args()) {
+                  if (Arg.getArgNo() < CB->arg_size()) {
+                    HeapProvenanceLattice ArgInfo = Res.getInfo(&Arg);
+                    if (ArgInfo.State ==
+                        HeapProvenanceLattice::StateKind::HeapChunkHead) {
+                      Value *CallOp = CB->getArgOperand(Arg.getArgNo());
+                      if (Candidates.count(CallOp)) {
+                        HeapProvenanceLattice Info;
+                        Info.State =
+                            HeapProvenanceLattice::StateKind::HeapChunkHead;
+                        Info.Dir = HeapProvenanceLattice::Backward;
+                        Info.HeadPayload = {
+                            HeapProvenanceLattice::Payload::Kind::Ref, CallOp};
+                        CurState[CallOp] = Info;
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+          if (Candidates.count(I)) {
+            auto It = CurState.find(I);
+            if (It != CurState.end() && It->second.isValid()) {
+              HeapProvenanceLattice BackInfo = It->second;
+              if (BackInfo.State ==
+                  HeapProvenanceLattice::StateKind::HeapChunkHead)
+                BackInfo.State =
+                    HeapProvenanceLattice::StateKind::HeapChunkInterior;
+              auto transferOp = [&](Value *Op) {
+                if (Candidates.count(Op))
+                  mergeLattice(Op, CurState[Op], BackInfo);
+              };
+              if (auto *GEP = dyn_cast<GEPOperator>(I))
+                transferOp(GEP->getPointerOperand());
+              else if (auto *BC = dyn_cast<BitCastInst>(I))
+                transferOp(BC->getOperand(0));
+              else if (auto *ASC = dyn_cast<AddrSpaceCastInst>(I))
+                transferOp(ASC->getOperand(0));
+              else if (auto *ITP = dyn_cast<IntToPtrInst>(I))
+                transferOp(ITP->getOperand(0));
+              else if (auto *PTI = dyn_cast<PtrToIntInst>(I))
+                transferOp(PTI->getOperand(0));
+              else if (auto *BO = dyn_cast<BinaryOperator>(I)) {
+                for (Value *Op : BO->operands())
+                  transferOp(Op);
+              } else if (auto *PHI = dyn_cast<PHINode>(I)) {
+                for (Value *InV : PHI->incoming_values())
+                  transferOp(InV);
+              } else if (auto *Sel = dyn_cast<SelectInst>(I)) {
+                transferOp(Sel->getTrueValue());
+                transferOp(Sel->getFalseValue());
+              }
+            }
+          }
+        }
+
+        bool Changed = false;
+        auto &EntryState = BlockEntryState[BB];
+        for (const Value *C : Candidates) {
+          if (EntryState[C] != CurState[C]) {
+            EntryState[C] = CurState[C];
+            Changed = true;
+          }
+        }
+        if (Changed) {
+          for (const BasicBlock *Pred : predecessors(BB)) {
+            if (InWorklist.insert(Pred).second)
+              BBWorklist.push_back(Pred);
+          }
+        }
+      }
+
+      // 4. Populate Res.getMap()
+      for (const Value *C : Candidates) {
+        if (isa<Argument>(const_cast<Value *>(C))) {
+          mergeIntoMap(Res.getMap(), C, BlockEntryState[&F.getEntryBlock()][C]);
+        } else if (auto *I = dyn_cast<Instruction>(const_cast<Value *>(C))) {
+          mergeIntoMap(Res.getMap(), C, BlockEntryState[I->getParent()][C]);
+        }
+      }
     }
   }
-
   return Res;
 }
 
@@ -308,7 +458,8 @@ PreservedAnalyses HeapProvenancePrinterPass::run(Module &M,
   OS << "Printing analysis 'Heap Provenance Analysis' for module '"
      << M.getName() << "':\n";
   for (Function &F : M) {
-    if (F.isDeclaration()) continue;
+    if (F.isDeclaration())
+      continue;
     for (Argument &Arg : F.args()) {
       auto Info = Result.getInfo(&Arg);
       if (Info.isValid()) {
