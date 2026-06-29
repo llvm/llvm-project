@@ -20,6 +20,7 @@
 #include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {
+namespace regex {
 
 /// An arena-based pool for Regular Expression AST nodes.
 ///
@@ -44,9 +45,6 @@ class ExprPool {
     Block *next = nullptr;
     /// Number of nodes currently used in this block.
     size_t used = 0;
-
-    /// Initialises an empty block.
-    Block();
   };
 
   /// The first block in the allocation chain.
@@ -64,6 +62,14 @@ class ExprPool {
   /// load factor minimizes collisions and guarantees O(1) average interning
   /// time.
   static constexpr size_t HASH_TABLE_SIZE = 0x4000;
+
+  /// The maximum number of nodes allowed in the pool to prevent memory
+  /// exhaustion during compilation of highly complex or maliciously crafted
+  /// regular expressions. A limit of 10,000 nodes provides a sufficient budget
+  /// for most practical regexes while keeping the peak memory footprint
+  /// manageable (approx. 320KB-500KB depending on architecture).
+  static constexpr size_t MAX_NODE_LIMIT = 10000;
+
   /// Hash table storing pointers to unique Expr nodes.
   Expr **hashtable = nullptr;
 
@@ -77,13 +83,6 @@ class ExprPool {
   /// \returns A pointer to the unique, stable instance in the arena,
   ///          or REG_ESPACE on failure.
   cpp::expected<Expr *, int> intern(const Expr &e);
-
-  /// The maximum number of nodes allowed in the pool to prevent memory
-  /// exhaustion during compilation of highly complex or maliciously crafted
-  /// regular expressions. A limit of 10,000 nodes provides a sufficient budget
-  /// for most practical regexes while keeping the peak memory footprint
-  /// manageable (approx. 320KB-500KB depending on architecture).
-  static constexpr size_t MAX_NODE_LIMIT = 10000;
 
 public:
   ExprPool();
@@ -113,6 +112,7 @@ public:
   cpp::expected<Expr *, int> make_alt(Expr *l, Expr *r);
 };
 
+} // namespace regex
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_REGEX_REGEX_EXPR_POOL_H

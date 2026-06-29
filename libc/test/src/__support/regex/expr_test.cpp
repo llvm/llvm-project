@@ -15,9 +15,9 @@
 #include "src/__support/regex/regex_expr_pool.h"
 #include "test/UnitTest/Test.h"
 
-using LIBC_NAMESPACE::Expr;
-using LIBC_NAMESPACE::ExprKind;
-using LIBC_NAMESPACE::ExprPool;
+using LIBC_NAMESPACE::regex::Expr;
+using LIBC_NAMESPACE::regex::ExprKind;
+using LIBC_NAMESPACE::regex::ExprPool;
 
 TEST(LlvmLibcRegexExprTest, Interning) {
   ExprPool pool;

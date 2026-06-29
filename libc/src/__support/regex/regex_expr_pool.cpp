@@ -18,8 +18,10 @@
 #include "src/__support/hash.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/null_check.h"
+#include "src/string/memory_utils/inline_memset.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace regex {
 
 namespace {
 
@@ -49,14 +51,11 @@ uint64_t hash_expr(const Expr &e) {
 
 } // namespace
 
-ExprPool::Block::Block() : next(nullptr), used(0) {}
-
-ExprPool::ExprPool() : head(nullptr), current(nullptr), node_count(0) {
+ExprPool::ExprPool() {
   AllocChecker ac;
   hashtable = new (ac) Expr *[HASH_TABLE_SIZE];
   if (ac) {
-    for (size_t i = 0; i < HASH_TABLE_SIZE; ++i)
-      hashtable[i] = nullptr;
+    inline_memset(hashtable, 0, HASH_TABLE_SIZE * sizeof(Expr *));
   }
 }
 
@@ -114,7 +113,6 @@ cpp::expected<Expr *, int> ExprPool::intern(const Expr &e) {
   // 5. Node Initialisation: Copy the structural definition into the arena.
   Expr *new_node = &current->nodes[current->used];
   ++current->used;
-  LIBC_CRASH_ON_NULLPTR(new_node);
   *new_node = e;
   hashtable[idx] = new_node;
   node_count++;
@@ -122,13 +120,13 @@ cpp::expected<Expr *, int> ExprPool::intern(const Expr &e) {
 }
 
 cpp::expected<Expr *, int> ExprPool::empty_set() {
-  return intern(Expr(ExprKind::EmptySet));
+  return intern(Expr::make_empty_set());
 }
 cpp::expected<Expr *, int> ExprPool::empty_str() {
-  return intern(Expr(ExprKind::EmptyStr));
+  return intern(Expr::make_empty_str());
 }
 cpp::expected<Expr *, int> ExprPool::make_lit(char c) {
-  return intern(Expr(c));
+  return intern(Expr::make_literal(c));
 }
 
 cpp::expected<Expr *, int> ExprPool::make_concat(Expr *l, Expr *r) {
@@ -143,7 +141,7 @@ cpp::expected<Expr *, int> ExprPool::make_concat(Expr *l, Expr *r) {
     return r;
   if (r->kind == ExprKind::EmptyStr)
     return l;
-  return intern(Expr(ExprKind::Concat, l, r));
+  return intern(Expr::make_concat(l, r));
 }
 cpp::expected<Expr *, int> ExprPool::make_alt(Expr *l, Expr *r) {
   if (!l || !r)
@@ -157,7 +155,8 @@ cpp::expected<Expr *, int> ExprPool::make_alt(Expr *l, Expr *r) {
   // 2. R | R = R (Idempotency)
   if (l == r)
     return l;
-  return intern(Expr(ExprKind::Alt, l, r));
+  return intern(Expr::make_alt(l, r));
 }
 
+} // namespace regex
 } // namespace LIBC_NAMESPACE_DECL

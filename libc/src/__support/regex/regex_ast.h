@@ -17,6 +17,7 @@
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace regex {
 
 /// Enumeration of Regular Expression AST node types.
 enum class ExprKind {
@@ -51,13 +52,27 @@ struct Expr {
   };
 
   /// Default constructor creates an EmptySet node.
+  /// Public to allow array allocation in ExprPool::Block.
   constexpr Expr() : kind(ExprKind::EmptySet), ch('\0') {}
+
+private:
   /// Create a node of a specific kind with no data.
   constexpr Expr(ExprKind k) : kind(k), ch('\0') {}
   /// Create a Literal node.
   constexpr Expr(char c) : kind(ExprKind::Literal), ch(c) {}
   /// Create a binary node (Concat or Alt).
   constexpr Expr(ExprKind k, Expr *l, Expr *r) : kind(k), bin{l, r} {}
+
+public:
+  static constexpr Expr make_empty_set() { return Expr(ExprKind::EmptySet); }
+  static constexpr Expr make_empty_str() { return Expr(ExprKind::EmptyStr); }
+  static constexpr Expr make_literal(char c) { return Expr(c); }
+  static constexpr Expr make_concat(Expr *l, Expr *r) {
+    return Expr(ExprKind::Concat, l, r);
+  }
+  static constexpr Expr make_alt(Expr *l, Expr *r) {
+    return Expr(ExprKind::Alt, l, r);
+  }
 
   /// Equivalence check for hash-consing.
   bool operator==(const Expr &other) const {
@@ -77,6 +92,7 @@ struct Expr {
   }
 };
 
+} // namespace regex
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_REGEX_REGEX_AST_H
