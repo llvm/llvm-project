@@ -20112,7 +20112,7 @@ static SDValue performVecReduceAddCombineWithUADDLP(SDNode *N,
 static SDValue
 performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                              const AArch64Subtarget *ST) {
-  if (DCI.isBeforeLegalize())
+  if (DCI.isBeforeLegalize() || !ST->isSVEorStreamingSVEAvailable())
     return SDValue();
 
   if (SDValue Brk = optimizeBrk(N, DCI.DAG))
@@ -20161,17 +20161,16 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   EVT ExtVT = Extracts[0]->getValueType(0);
 
   if (!N->getValueType(0).isScalableVector() ||
-      !ST->isSVEorStreamingSVEAvailable() ||
       !(ST->hasSVE2p1() || ST->hasSME2())) {
 
-    // If the whilelo_x2 instruction is not available, prefer to use multiple
-    // smaller whilelo instructions
+    // If the whilelo_x2 instruction is not available or the types are
+    // fixed-width, prefer to use multiple smaller whilelo instructions.
     SmallVector<SDValue> Masks;
+    auto EC = DAG.getElementCount(DL, Idx.getValueType(), ExtMinEC);
     for (unsigned I = 0; I < NumExts; ++I) {
       if (I > 0)
-        Idx =
-            DAG.getNode(ISD::UADDSAT, DL, Idx.getValueType(), Idx,
-                        DAG.getElementCount(DL, Idx.getValueType(), ExtMinEC));
+        Idx = DAG.getNode(ISD::UADDSAT, DL, Idx.getValueType(), Idx, EC);
+
       auto ALMForPart =
           DAG.getNode(ISD::GET_ACTIVE_LANE_MASK, DL, ExtVT, Idx, TC);
       Masks.push_back(ALMForPart);

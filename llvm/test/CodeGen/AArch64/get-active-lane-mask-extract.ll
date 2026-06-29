@@ -272,7 +272,7 @@ define void @test_fixed_extract(i64 %i, i64 %n) #0 {
     ret void
 }
 
-; Negative test where the number of extracts is right, but they cannot be combined becallvm.fake.use
+; Negative test where the number of extracts is right, but they cannot be combined because
 ; there is not an extract for each part
 define void @test_4x2bit_duplicate_mask(i64 %i, i64 %n) #0 {
 ; CHECK-SVE-LABEL: test_4x2bit_duplicate_mask:
@@ -391,7 +391,7 @@ define void @test_2x32bit_mask_with_32bit_index_and_trip_count(i32 %i, i32 %n) #
   ret void
 }
 
-; Extra llvm.fake.use of the get_active_lane_mask from an extractelement, which is replaced with ptest_first.
+; Extra use of the get_active_lane_mask from an extractelement, which is replaced with ptest_first.
 
 define void @test_2x8bit_mask_with_extracts_and_ptest(i64 %i, i64 %n) {
 ; CHECK-SVE-LABEL: test_2x8bit_mask_with_extracts_and_ptest:
@@ -433,8 +433,8 @@ if.end:
     ret void
 }
 
-; Extra llvm.fake.use of the get_active_lane_mask from an extractelement, which is
-; replaced with ptest_first and reinterpret_casts becallvm.fake.use the extract is not nxv16i1.
+; Extra use of the get_active_lane_mask from an extractelement, which is
+; replaced with ptest_first and reinterpret_casts because the extract is not nxv16i1.
 
 define void @test_2x8bit_mask_with_extracts_and_reinterpret_casts(i64 %i, i64 %n) {
 ; CHECK-SVE-LABEL: test_2x8bit_mask_with_extracts_and_reinterpret_casts:
