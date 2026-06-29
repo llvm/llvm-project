@@ -36,6 +36,10 @@
 #include <time.h>      // clock_gettime(), time(), localtime_r() */
 #include <unistd.h>    // for read(), close()
 
+#if defined(__x86_64__)
+#include <x86intrin.h> // for __rdtsc()
+#endif
+
 using namespace llvm;
 using namespace llvm::object;
 typedef DILineInfoSpecifier::FileLineInfoKind FileLineInfoKind;
@@ -99,6 +103,9 @@ private:
 
   // perf mmap marker
   void *MarkerAddr = NULL;
+
+  // use arch-specific timestamp instead of CLOCK_MONOTONIC
+  bool UseArchTimestamp = false;
 
   // perf support ready
   bool SuccessfullyInitialized = false;
@@ -168,9 +175,17 @@ static inline uint64_t timespec_to_ns(const struct timespec *ts) {
   return ((uint64_t)ts->tv_sec * NanoSecPerSec) + ts->tv_nsec;
 }
 
-static inline uint64_t perf_get_timestamp(void) {
+static inline uint64_t perf_get_timestamp(bool use_arch_timestamp) {
   struct timespec ts;
   int ret;
+
+  if (use_arch_timestamp) {
+#if defined(__x86_64__)
+    return __rdtsc();
+#else
+    return 0;
+#endif
+  }
 
   ret = clock_gettime(CLOCK_MONOTONIC, &ts);
   if (ret)
@@ -181,8 +196,16 @@ static inline uint64_t perf_get_timestamp(void) {
 
 PerfJITEventListener::PerfJITEventListener()
     : Pid(sys::Process::getProcessId()) {
+
+  // check if arch-specific timestamp should be used
+  if (const char *UseArchTimestampEnv = getenv("JITDUMP_USE_ARCH_TIMESTAMP")) {
+    if (strcmp(UseArchTimestampEnv, "1") == 0 && perf_get_timestamp(true)) {
+      UseArchTimestamp = true;
+    }
+  }
+
   // check if clock-source is supported
-  if (!perf_get_timestamp()) {
+  if (!UseArchTimestamp && !perf_get_timestamp(false)) {
     errs() << "kernel does not support CLOCK_MONOTONIC\n";
     return;
   }
@@ -221,7 +244,8 @@ PerfJITEventListener::PerfJITEventListener()
   Header.Version = LLVM_PERF_JIT_VERSION;
   Header.TotalSize = sizeof(Header);
   Header.Pid = Pid;
-  Header.Timestamp = perf_get_timestamp();
+  Header.Timestamp = perf_get_timestamp(UseArchTimestamp);
+  Header.Flags = UseArchTimestamp ? JITDUMP_FLAGS_ARCH_TIMESTAMP : 0;
   Dumpstream->write(reinterpret_cast<const char *>(&Header), sizeof(Header));
 
   // Everything initialized, can do profiling now.
@@ -417,7 +441,7 @@ void PerfJITEventListener::NotifyCode(Expected<llvm::StringRef> &Symbol,
   rec.Prefix.TotalSize = sizeof(rec) +        // debug record itself
                          Symbol->size() + 1 + // symbol name
                          CodeSize;            // and code
-  rec.Prefix.Timestamp = perf_get_timestamp();
+  rec.Prefix.Timestamp = perf_get_timestamp(UseArchTimestamp);
 
   rec.CodeSize = CodeSize;
   rec.Vma = CodeAddr;
@@ -446,7 +470,7 @@ void PerfJITEventListener::NotifyDebug(uint64_t CodeAddr,
   LLVMPerfJitRecordDebugInfo rec;
   rec.Prefix.Id = JIT_CODE_DEBUG_INFO;
   rec.Prefix.TotalSize = sizeof(rec); // will be increased further
-  rec.Prefix.Timestamp = perf_get_timestamp();
+  rec.Prefix.Timestamp = perf_get_timestamp(UseArchTimestamp);
   rec.CodeAddr = CodeAddr;
   rec.NrEntry = Lines.size();
 
