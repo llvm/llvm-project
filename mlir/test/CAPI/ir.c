@@ -3420,6 +3420,69 @@ int testForwardSlice(MlirContext ctx) {
   return 0;
 }
 
+// Slice filter that treats `arith.muli` as a frontier.
+static bool sliceFilterExcludeMuli(MlirOperation op, void *userData) {
+  (void)userData;
+  MlirStringRef name = mlirIdentifierStr(mlirOperationGetName(op));
+  return !mlirStringRefEqual(name,
+                             mlirStringRefCreateFromCString("arith.muli"));
+}
+
+int testBackwardSlice(MlirContext ctx) {
+  fprintf(stderr, "@testBackwardSlice\n");
+  // CHECK-LABEL: @testBackwardSlice
+
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("arith"));
+
+  const char *moduleStr = "func.func @f(%arg0: i32) -> i32 {\n"
+                          "  %0 = arith.addi %arg0, %arg0 : i32\n"
+                          "  %1 = arith.muli %0, %arg0 : i32\n"
+                          "  %2 = arith.subi %1, %0 : i32\n"
+                          "  return %2 : i32\n"
+                          "}\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleStr));
+
+  MlirBlock moduleBody = mlirModuleGetBody(module);
+  MlirOperation funcOp = mlirBlockGetFirstOperation(moduleBody);
+  MlirRegion funcRegion = mlirOperationGetRegion(funcOp, 0);
+  MlirBlock funcBody = mlirRegionGetFirstBlock(funcRegion);
+  MlirOperation addOp = mlirBlockGetFirstOperation(funcBody);
+  MlirOperation mulOp = mlirOperationGetNextInBlock(addOp);
+  MlirOperation subOp = mlirOperationGetNextInBlock(mulOp);
+
+  // The backward slice of the subi is its transitive definitions: the muli and
+  // the addi (the subi itself is not included; block arguments have no defining
+  // op and are skipped).
+  intptr_t count = mlirGetBackwardSliceSize(subOp, NULL, NULL);
+  assert(count == 2);
+  MlirOperation slice[2];
+  mlirGetBackwardSlice(subOp, NULL, NULL, slice);
+  fprintf(stderr, "unfiltered backward slice:\n");
+  // CHECK: unfiltered backward slice:
+  printSlice(slice, count);
+  // CHECK-DAG: slice: arith.addi
+  // CHECK-DAG: slice: arith.muli
+
+  // With a filter that excludes the muli, propagation stops there. The addi is
+  // still reached directly through the subi's other operand, so it remains.
+  intptr_t filteredCount =
+      mlirGetBackwardSliceSize(subOp, sliceFilterExcludeMuli, NULL);
+  assert(filteredCount == 1);
+  mlirGetBackwardSlice(subOp, sliceFilterExcludeMuli, NULL, slice);
+  fprintf(stderr, "filtered backward slice:\n");
+  // CHECK: filtered backward slice:
+  printSlice(slice, filteredCount);
+  // CHECK-NEXT: slice: arith.addi
+  // CHECK-NOT: slice:
+
+  mlirModuleDestroy(module);
+
+  // CHECK: testBackwardSlice: PASSED
+  fprintf(stderr, "testBackwardSlice: PASSED\n");
+  return 0;
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
@@ -3482,6 +3545,8 @@ int main(void) {
     return 22;
   if (testForwardSlice(ctx))
     return 23;
+  if (testBackwardSlice(ctx))
+    return 24;
 
   // CHECK: DESTROY MAIN CONTEXT
   // CHECK: reportResourceDelete: resource_i64_blob

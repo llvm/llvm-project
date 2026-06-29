@@ -41,3 +41,33 @@ void mlirGetForwardSlice(MlirOperation op, MlirSliceFilterCallback filter,
   for (intptr_t i = 0, e = static_cast<intptr_t>(result.size()); i < e; ++i)
     slice[i] = wrap(result[i]);
 }
+
+static LogicalResult computeBackwardSlice(MlirOperation op,
+                                          MlirSliceFilterCallback filter,
+                                          void *filterUserData,
+                                          SetVector<Operation *> &result) {
+  BackwardSliceOptions options;
+  if (filter) {
+    options.filter = [filter, filterUserData](Operation *op) {
+      return filter(wrap(op), filterUserData);
+    };
+  }
+  return getBackwardSlice(unwrap(op), &result, options);
+}
+
+intptr_t mlirGetBackwardSliceSize(MlirOperation op,
+                                  MlirSliceFilterCallback filter,
+                                  void *filterUserData) {
+  SetVector<Operation *> result;
+  if (failed(computeBackwardSlice(op, filter, filterUserData, result)))
+    return -1;
+  return static_cast<intptr_t>(result.size());
+}
+
+void mlirGetBackwardSlice(MlirOperation op, MlirSliceFilterCallback filter,
+                          void *filterUserData, MlirOperation *slice) {
+  SetVector<Operation *> result;
+  (void)computeBackwardSlice(op, filter, filterUserData, result);
+  for (intptr_t i = 0, e = static_cast<intptr_t>(result.size()); i < e; ++i)
+    slice[i] = wrap(result[i]);
+}
