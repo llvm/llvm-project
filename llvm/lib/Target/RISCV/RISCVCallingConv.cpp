@@ -89,6 +89,10 @@ static const MCPhysReg ArgFPR32s[] = {RISCV::F10_F, RISCV::F11_F, RISCV::F12_F,
 static const MCPhysReg ArgFPR64s[] = {RISCV::F10_D, RISCV::F11_D, RISCV::F12_D,
                                       RISCV::F13_D, RISCV::F14_D, RISCV::F15_D,
                                       RISCV::F16_D, RISCV::F17_D};
+static const MCPhysReg ArgFPR128s[] = {RISCV::F10_Q, RISCV::F11_Q, RISCV::F12_Q,
+                                       RISCV::F13_Q, RISCV::F14_Q, RISCV::F15_Q,
+                                       RISCV::F16_Q, RISCV::F17_Q};
+
 // This is an interim calling convention and it may be changed in the future.
 static const MCPhysReg ArgVRs[] = {
     RISCV::V8,  RISCV::V9,  RISCV::V10, RISCV::V11, RISCV::V12, RISCV::V13,
@@ -175,6 +179,28 @@ ArrayRef<MCPhysReg> RISCV::getArgGPRs(const RISCVABI::ABI ABI) {
     return ArrayRef(ArgEGPRs);
 
   return ArrayRef(ArgIGPRs);
+}
+
+ArrayRef<MCPhysReg> RISCV::getArgFPRs(const RISCVSubtarget &STI) {
+  static const RISCVABI::ABI SoftFPABIs[] = {
+      RISCVABI::ABI_ILP32,
+      RISCVABI::ABI_ILP32E,
+      RISCVABI::ABI_LP64,
+      RISCVABI::ABI_LP64E,
+  };
+
+  RISCVABI::ABI ABI = STI.getTargetABI();
+
+  if (llvm::is_contained(SoftFPABIs, ABI) || !STI.hasStdExtF())
+    return {};
+
+  if (STI.hasStdExtQ())
+    return ArrayRef(ArgFPR128s);
+
+  if (STI.hasStdExtD())
+    return ArrayRef(ArgFPR64s);
+
+  return ArrayRef(ArgFPR32s);
 }
 
 static ArrayRef<MCPhysReg> getArgGPR16s(const RISCVABI::ABI ABI) {
