@@ -287,15 +287,10 @@ Error lto::DTLTO::addObjectFilesToLink() {
 
       auto &CacheStream = *(CachedFileStreamOrErr->get());
 
-      // Store a file path into the cache stream. This file later will be
-      // renamed into cache file.
-      *(CacheStream.OS) << Job.NativeObjectPath;
-      if (Error Err = CacheStream.commit())
+      // This object file will be renamed into cache entry file. The file
+      // memory buffer will be added to lld list of object files.
+      if (Error Err = CacheStream.commit(std::move(ObjFileMbOrErr.get())))
         return Err;
-
-      AddBufferFn AddBuffer = CacheStream.GetAddBuffer();
-      AddBuffer(Job.Task, Job.ModuleID, std::move(ObjFileMbOrErr.get()));
-
     } else {
       if (AddBuffer) {
         AddBuffer(Job.Task, Job.ModuleID, std::move(ObjFileMbOrErr.get()));
