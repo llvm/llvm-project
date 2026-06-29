@@ -674,8 +674,9 @@ regardless of ``-fprofiles``; its profile rules carry weight only when
     marker is accepted there (the object is genuinely left uninitialized).
   - Is banned on a pointer by ``pointer_marker`` (a pointer must be
     initialized, paper §4.1), and on a union object or member by
-    ``union_marker``. Both are gated on enforcement, and the marker is retained
-    after the diagnostic so ``uninit_decl`` does not re-diagnose the entity.
+    ``union_marker`` (see R6 / R8 below for usage examples). Both are gated on
+    enforcement, and the marker is retained after the diagnostic so
+    ``uninit_decl`` does not re-diagnose the entity.
 
 ``[[ref_to_uninit]]`` (also a standard C++11 attribute) marks a pointer,
 reference, or pointer/reference-returning function as referring to
@@ -823,6 +824,22 @@ R6. ``union_marker`` -- attribute handler
 §6.5): delayed initialization by assigning a member would be an erroneous
 assignment when compiled without the profile.
 
+.. code-block:: c++
+
+   union U { int x; float y; };
+
+   U a [[uninit]];   // error: [[uninit]] on a union variable (union_marker)
+   U b;              // error: a union must be initialized (uninit_decl / err_init_uninit_union)
+   U c = {1};        // OK
+   U d{};            // OK
+
+   union M {
+     int x [[uninit]];  // error: [[uninit]] on a union member (union_marker)
+     float y;
+   };
+
+   [[profiles::suppress(std::init)]] U e [[uninit]];  // OK
+
 - Diagnostic: ``err_init_union_marker``.
 - Check site: the ``Uninit`` handler in
   ``clang/lib/Sema/SemaDeclAttr.cpp``.  Unlike the reference / parameter /
@@ -887,6 +904,19 @@ R8. ``pointer_marker`` -- attribute handler
 ``[[uninit]]`` on a pointer is banned (paper §4.1): "a reference cannot
 be uninitialized.  The initialization profile requires the same for pointers."
 A pointer must instead be initialized (e.g. to ``nullptr``).
+
+.. code-block:: c++
+
+   int *p;             // error: must be initialized or marked [[uninit]] (uninit_decl)
+   int *q = nullptr;   // OK: the prescribed fix
+   int *r [[uninit]];  // error: [[uninit]] cannot be applied to a pointer (pointer_marker)
+
+   struct S {
+     int *p [[uninit]];  // error: also fires on a pointer data member
+   };
+
+   // Opt out if genuinely required:
+   [[profiles::suppress(std::init, rule: "pointer_marker")]] int *x [[uninit]];  // OK
 
 - Diagnostic: ``err_init_uninit_pointer_marker``.
 - Check site: the ``Uninit`` handler in
