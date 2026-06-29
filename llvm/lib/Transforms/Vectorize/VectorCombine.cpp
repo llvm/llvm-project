@@ -1447,19 +1447,36 @@ bool VectorCombine::scalarizeOpOrCmp(Instruction &I) {
           cast<Constant>(VecC), Builder.getInt64(*Index));
 
   Value *Scalar;
-  if (CI)
-    Scalar = Builder.CreateCmp(CI->getPredicate(), ScalarOps[0], ScalarOps[1]);
-  else if (UO || BO)
-    Scalar = Builder.CreateNAryOp(Opcode, ScalarOps);
-  else
+  if (CI) {
+    FPMathOperator *FPMO = dyn_cast<FPMathOperator>(&I);
+    FMFSource FMF;
+    if (FPMO)
+      FMF = FPMO->getFastMathFlags();
+    Scalar =
+        Builder.CreateFlaggedCmp(CI->getPredicate(), ScalarOps[0], ScalarOps[1],
+                                 FMF, CI->getName() + ".scalar");
+  } else if (UO) {
+    // FNeg is the only unary operator.
+    Scalar = Builder.CreateFNegFMF(ScalarOps[0], UO, UO->getName() + ".scalar");
+  } else if (BO) {
+    OverflowingBinaryOperator *OBO = dyn_cast<OverflowingBinaryOperator>(&I);
+    bool HasNUW = OBO ? OBO->hasNoUnsignedWrap() : false;
+    bool HasNSW = OBO ? OBO->hasNoSignedWrap() : false;
+    PossiblyDisjointInst *PDI = dyn_cast<PossiblyDisjointInst>(&I);
+    bool IsDisjoint = PDI ? PDI->isDisjoint() : false;
+    PossiblyExactOperator *PEO = dyn_cast<PossiblyExactOperator>(&I);
+    bool IsExact = PEO ? PEO->isExact() : false;
+    FPMathOperator *FPMO = dyn_cast<FPMathOperator>(&I);
+    FMFSource FMF;
+    if (FPMO)
+      FMF = FPMO->getFastMathFlags();
+
+    Scalar = Builder.CreateFlaggedBinOp(
+        BO->getOpcode(), ScalarOps[0], ScalarOps[1], BO->getName() + ".scalar",
+        HasNUW, HasNSW, IsExact, IsDisjoint, FMF);
+  } else {
     Scalar = Builder.CreateIntrinsic(ScalarTy, II->getIntrinsicID(), ScalarOps);
-
-  Scalar->setName(I.getName() + ".scalar");
-
-  // All IR flags are safe to back-propagate. There is no potential for extra
-  // poison to be created by the scalar instruction.
-  if (auto *ScalarInst = dyn_cast<Instruction>(Scalar))
-    ScalarInst->copyIRFlags(&I);
+  }
 
   Value *Insert = Builder.CreateInsertElement(NewVecC, Scalar, *Index);
   replaceValue(I, *Insert);

@@ -39,3 +39,230 @@ entry:
   %b = or disjoint <2 x i64> splat (i64 2), %a
   ret <2 x i64> %b
 }
+
+define i32 @pr193271(i32 %arg) {
+; CHECK-LABEL: define i32 @pr193271(
+; CHECK-SAME: i32 [[ARG:%.*]]) {
+; CHECK-NEXT:  [[SCALAR:%.*]] = add i32 [[ARG]], 1
+; CHECK-NEXT:  ret i32 [[SCALAR]]
+  %ret = add i32 %arg, 1
+  %insert = insertelement <2 x i32> zeroinitializer, i32 %ret, i64 0
+  %vecAdd = add nuw <2 x i32> %insert, zeroinitializer
+  ret i32 %ret
+}
+
+define <2 x i32> @test_add(i32 %arg) {
+; CHECK-LABEL: define <2 x i32> @test_add(
+; CHECK-SAME: i32 [[Arg:%.*]]) {
+; CHECK-NEXT:  [[ScalarAdd:%.*]] = add nuw nsw i32 1, [[Arg]]
+; CHECK-NEXT:  [[Insert:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[ScalarAdd]], i64 0
+; CHECK-NEXT:  ret <2 x i32> [[Insert]]
+  %vec0 = insertelement <2 x i32> zeroinitializer, i32 1, i64 0
+  %vec1 = insertelement <2 x i32> zeroinitializer, i32 %arg, i64 0
+  %vecAdd = add nuw nsw <2 x i32> %vec0, %vec1
+  ret <2 x i32> %vecAdd
+}
+
+define <2 x i32> @test_sub(i32 %arg) {
+; CHECK-LABEL: define <2 x i32> @test_sub(
+; CHECK-SAME: i32 [[Arg:%.*]]) {
+; CHECK-NEXT:  [[ScalarSub:%.*]] = sub nuw nsw i32 [[Arg]], 1
+; CHECK-NEXT:  [[Insert:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[ScalarSub]], i64 0
+; CHECK-NEXT:  ret <2 x i32> [[Insert]]
+  %vec0 = insertelement <2 x i32> zeroinitializer, i32 %arg, i64 0
+  %vec1 = insertelement <2 x i32> zeroinitializer, i32 1, i64 0
+  %vecSub = sub nuw nsw <2 x i32> %vec0, %vec1
+  ret <2 x i32> %vecSub
+}
+
+define <2 x i32> @test_mul(i32 %arg) {
+; CHECK-LABEL: define <2 x i32> @test_mul(
+; CHECK-SAME: i32 [[Arg:%.*]]) {
+; CHECK-NEXT:  [[ScalarMul:%.*]] = mul nuw nsw i32 [[Arg]], 3
+; CHECK-NEXT:  [[Insert:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[ScalarMul]], i64 0
+; CHECK-NEXT:  ret <2 x i32> [[Insert]]
+  %vec0 = insertelement <2 x i32> zeroinitializer, i32 %arg, i64 0
+  %vec1 = insertelement <2 x i32> zeroinitializer, i32 3, i64 0
+  %vecMul = mul nuw nsw <2 x i32> %vec0, %vec1
+  ret <2 x i32> %vecMul
+}
+
+define <2 x i32> @test_udiv(i32 %arg) {
+; CHECK-LABEL: define <2 x i32> @test_udiv(
+; CHECK-SAME: i32 [[Arg:%.*]]) {
+; CHECK-NEXT:  [[ScalarUdiv:%.*]] = udiv i32 [[Arg]], 3
+; CHECK-NEXT:  [[Insert:%.*]] = insertelement <2 x i32> poison, i32 [[ScalarUdiv]], i64 0
+; CHECK-NEXT:  ret <2 x i32> [[Insert]]
+  %vec0 = insertelement <2 x i32> zeroinitializer, i32 %arg, i64 0
+  %vec1 = insertelement <2 x i32> zeroinitializer, i32 3, i64 0
+  %vecUdiv = udiv <2 x i32> %vec0, %vec1
+  ret <2 x i32> %vecUdiv
+}
+
+define <2 x i32> @test_sdiv(i32 %arg) {
+; CHECK-LABEL: define <2 x i32> @test_sdiv(
+; CHECK-SAME: i32 [[Arg:%.*]]) {
+; CHECK-NEXT:  [[ScalarSdiv:%.*]] = sdiv i32 [[Arg]], 3
+; CHECK-NEXT:  [[Insert:%.*]] = insertelement <2 x i32> poison, i32 [[ScalarSdiv]], i64 0
+; CHECK-NEXT:  ret <2 x i32> [[Insert]]
+  %vec0 = insertelement <2 x i32> zeroinitializer, i32 %arg, i64 0
+  %vec1 = insertelement <2 x i32> zeroinitializer, i32 3, i64 0
+  %vecSdiv = sdiv <2 x i32> %vec0, %vec1
+  ret <2 x i32> %vecSdiv
+}
+
+define <2 x i32> @test_urem(i32 %arg) {
+; CHECK-LABEL: define <2 x i32> @test_urem(
+; CHECK-SAME: i32 [[Arg:%.*]]) {
+; CHECK-NEXT:  [[ScalarUrem:%.*]] = urem i32 [[Arg]], 3
+; CHECK-NEXT:  [[Insert:%.*]] = insertelement <2 x i32> poison, i32 [[ScalarUrem]], i64 0
+; CHECK-NEXT:  ret <2 x i32> [[Insert]]
+  %vec0 = insertelement <2 x i32> zeroinitializer, i32 %arg, i64 0
+  %vec1 = insertelement <2 x i32> zeroinitializer, i32 3, i64 0
+  %vecUrem = urem <2 x i32> %vec0, %vec1
+  ret <2 x i32> %vecUrem
+}
+
+define <2 x i32> @test_srem(i32 %arg) {
+; CHECK-LABEL: define <2 x i32> @test_srem(
+; CHECK-SAME: i32 [[Arg:%.*]]) {
+; CHECK-NEXT:  [[ScalarSrem:%.*]] = srem i32 [[Arg]], 3
+; CHECK-NEXT:  [[Insert:%.*]] = insertelement <2 x i32> poison, i32 [[ScalarSrem]], i64 0
+; CHECK-NEXT:  ret <2 x i32> [[Insert]]
+  %vec0 = insertelement <2 x i32> zeroinitializer, i32 %arg, i64 0
+  %vec1 = insertelement <2 x i32> zeroinitializer, i32 3, i64 0
+  %vecSrem = srem <2 x i32> %vec0, %vec1
+  ret <2 x i32> %vecSrem
+}
+
+define <2 x i32> @test_shl(i32 %arg) {
+; CHECK-LABEL: define <2 x i32> @test_shl(
+; CHECK-SAME: i32 [[Arg:%.*]]) {
+; CHECK-NEXT:  [[ScalarShl:%.*]] = shl nuw nsw i32 [[Arg]], 3
+; CHECK-NEXT:  [[Insert:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[ScalarShl]], i64 0
+; CHECK-NEXT:  ret <2 x i32> [[Insert]]
+  %vec0 = insertelement <2 x i32> zeroinitializer, i32 %arg, i64 0
+  %vec1 = insertelement <2 x i32> zeroinitializer, i32 3, i64 0
+  %vecShl = shl nuw nsw <2 x i32> %vec0, %vec1
+  ret <2 x i32> %vecShl
+}
+
+define <2 x i32> @test_lshr(i32 %arg) {
+; CHECK-LABEL: define <2 x i32> @test_lshr(
+; CHECK-SAME: i32 [[Arg:%.*]]) {
+; CHECK-NEXT:  [[ScalarLshr:%.*]] = lshr exact i32 [[Arg]], 3
+; CHECK-NEXT:  [[Insert:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[ScalarLshr]], i64 0
+; CHECK-NEXT:  ret <2 x i32> [[Insert]]
+  %vec0 = insertelement <2 x i32> zeroinitializer, i32 %arg, i64 0
+  %vec1 = insertelement <2 x i32> zeroinitializer, i32 3, i64 0
+  %vecLshr = lshr exact <2 x i32> %vec0, %vec1
+  ret <2 x i32> %vecLshr
+}
+
+define <2 x i32> @test_ashr(i32 %arg) {
+; CHECK-LABEL: define <2 x i32> @test_ashr(
+; CHECK-SAME: i32 [[Arg:%.*]]) {
+; CHECK-NEXT:  [[ScalarAshr:%.*]] = ashr exact i32 [[Arg]], 3
+; CHECK-NEXT:  [[Insert:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[ScalarAshr]], i64 0
+; CHECK-NEXT:  ret <2 x i32> [[Insert]]
+  %vec0 = insertelement <2 x i32> zeroinitializer, i32 %arg, i64 0
+  %vec1 = insertelement <2 x i32> zeroinitializer, i32 3, i64 0
+  %vecAshr = ashr exact <2 x i32> %vec0, %vec1
+  ret <2 x i32> %vecAshr
+}
+
+define <2 x i32> @test_and(i32 %arg) {
+; CHECK-LABEL: define <2 x i32> @test_and(
+; CHECK-SAME: i32 [[Arg:%.*]]) {
+; CHECK-NEXT:  [[ScalarAnd:%.*]] = and i32 [[Arg]], 3
+; CHECK-NEXT:  [[Insert:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[ScalarAnd]], i64 0
+; CHECK-NEXT:  ret <2 x i32> [[Insert]]
+  %vec0 = insertelement <2 x i32> zeroinitializer, i32 %arg, i64 0
+  %vec1 = insertelement <2 x i32> zeroinitializer, i32 3, i64 0
+  %vecAnd = and <2 x i32> %vec0, %vec1
+  ret <2 x i32> %vecAnd
+}
+
+define <2 x i32> @test_or(i32 %arg) {
+; CHECK-LABEL: define <2 x i32> @test_or(
+; CHECK-SAME: i32 [[Arg:%.*]]) {
+; CHECK-NEXT:  [[ScalarOr:%.*]] = or disjoint i32 [[Arg]], 3
+; CHECK-NEXT:  [[Insert:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[ScalarOr]], i64 0
+; CHECK-NEXT:  ret <2 x i32> [[Insert]]
+  %vec0 = insertelement <2 x i32> zeroinitializer, i32 %arg, i64 0
+  %vec1 = insertelement <2 x i32> zeroinitializer, i32 3, i64 0
+  %vecOr = or disjoint <2 x i32> %vec0, %vec1
+  ret <2 x i32> %vecOr
+}
+
+define <2 x i32> @test_xor(i32 %arg) {
+; CHECK-LABEL: define <2 x i32> @test_xor(
+; CHECK-SAME: i32 [[Arg:%.*]]) {
+; CHECK-NEXT:  [[ScalarXor:%.*]] = xor i32 [[Arg]], 3
+; CHECK-NEXT:  [[Insert:%.*]] = insertelement <2 x i32> zeroinitializer, i32 [[ScalarXor]], i64 0
+; CHECK-NEXT:  ret <2 x i32> [[Insert]]
+  %vec0 = insertelement <2 x i32> zeroinitializer, i32 %arg, i64 0
+  %vec1 = insertelement <2 x i32> zeroinitializer, i32 3, i64 0
+  %vecXor = xor <2 x i32> %vec0, %vec1
+  ret <2 x i32> %vecXor
+}
+
+define <2 x float> @test_fadd(float %arg) {
+; CHECK-LABEL: define <2 x float> @test_fadd(
+; CHECK-SAME: float [[Arg:%.*]]) {
+; CHECK-NEXT:  [[ScalarFAdd:%.*]] = fadd fast float [[Arg]], 3.000000e+00
+; CHECK-NEXT:  [[Insert:%.*]] = insertelement <2 x float> zeroinitializer, float [[ScalarFAdd]], i64 0
+; CHECK-NEXT:  ret <2 x float> [[Insert]]
+  %vec0 = insertelement <2 x float> zeroinitializer, float %arg, i64 0
+  %vec1 = insertelement <2 x float> zeroinitializer, float 3.000000e+00, i64 0
+  %vecFAdd = fadd fast <2 x float> %vec0, %vec1
+  ret <2 x float> %vecFAdd
+}
+
+define <2 x float> @test_fsub(float %arg) {
+; CHECK-LABEL: define <2 x float> @test_fsub(
+; CHECK-SAME: float [[Arg:%.*]]) {
+; CHECK-NEXT:  [[ScalarFSub:%.*]] = fsub fast float [[Arg]], 3.000000e+00
+; CHECK-NEXT:  [[Insert:%.*]] = insertelement <2 x float> zeroinitializer, float [[ScalarFSub]], i64 0
+; CHECK-NEXT:  ret <2 x float> [[Insert]]
+  %vec0 = insertelement <2 x float> zeroinitializer, float %arg, i64 0
+  %vec1 = insertelement <2 x float> zeroinitializer, float 3.000000e+00, i64 0
+  %vecFSub = fsub fast <2 x float> %vec0, %vec1
+  ret <2 x float> %vecFSub
+}
+
+define <2 x float> @test_fmul(float %arg) {
+; CHECK-LABEL: define <2 x float> @test_fmul(
+; CHECK-SAME: float [[Arg:%.*]]) {
+; CHECK-NEXT:  [[ScalarFMul:%.*]] = fmul fast float [[Arg]], 3.000000e+00
+; CHECK-NEXT:  [[Insert:%.*]] = insertelement <2 x float> zeroinitializer, float [[ScalarFMul]], i64 0
+; CHECK-NEXT:  ret <2 x float> [[Insert]]
+  %vec0 = insertelement <2 x float> zeroinitializer, float %arg, i64 0
+  %vec1 = insertelement <2 x float> zeroinitializer, float 3.000000e+00, i64 0
+  %vecFMul = fmul fast <2 x float> %vec0, %vec1
+  ret <2 x float> %vecFMul
+}
+
+define <2 x float> @test_fdiv(float %arg) {
+; CHECK-LABEL: define <2 x float> @test_fdiv(
+; CHECK-SAME: float [[Arg:%.*]]) {
+; CHECK-NEXT:  [[ScalarFDiv:%.*]] = fdiv fast float [[Arg]], 3.000000e+00
+; CHECK-NEXT:  [[Insert:%.*]] = insertelement <2 x float> splat (float +qnan), float [[ScalarFDiv]], i64 0
+; CHECK-NEXT:  ret <2 x float> [[Insert]]
+  %vec0 = insertelement <2 x float> zeroinitializer, float %arg, i64 0
+  %vec1 = insertelement <2 x float> zeroinitializer, float 3.000000e+00, i64 0
+  %vecFDiv = fdiv fast <2 x float> %vec0, %vec1
+  ret <2 x float> %vecFDiv
+}
+
+define <2 x float> @test_frem(float %arg) {
+; CHECK-LABEL: define <2 x float> @test_frem(
+; CHECK-SAME: float [[Arg:%.*]]) {
+; CHECK-NEXT:  [[ScalarFRem:%.*]] = frem fast float [[Arg]], 3.000000e+00
+; CHECK-NEXT:  [[Insert:%.*]] = insertelement <2 x float> splat (float +qnan), float [[ScalarFRem]], i64 0
+; CHECK-NEXT:  ret <2 x float> [[Insert]]
+  %vec0 = insertelement <2 x float> zeroinitializer, float %arg, i64 0
+  %vec1 = insertelement <2 x float> zeroinitializer, float 3.000000e+00, i64 0
+  %vecFRem = frem fast <2 x float> %vec0, %vec1
+  ret <2 x float> %vecFRem
+}
