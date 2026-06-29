@@ -64,7 +64,7 @@ public:
 
 #if 1
   unsigned getCSRCostScale(const MachineFunction &MF) const override {
-    return 30;
+    return 80;
   };
 #endif
   unsigned getCSRFirstUseCost(const MachineFunction &MF) const override {
