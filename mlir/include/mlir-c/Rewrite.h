@@ -605,6 +605,22 @@ mlirTypeConverterAddConversion(MlirTypeConverter typeConverter,
 MLIR_CAPI_EXPORTED MlirType
 mlirTypeConverterConvertType(MlirTypeConverter typeConverter, MlirType type);
 
+/// Callback type for type materializations. Given a builder (passed as a
+/// rewriter), the desired output type, the input values, and a location, the
+/// callback must build a cast-like operation that produces a single value of
+/// `outputType` and return it. Returning a null MlirValue indicates failure, in
+/// which case another registered materialization may be attempted.
+typedef MlirValue (*MlirTypeConverterMaterializationCallback)(
+    MlirRewriterBase rewriter, MlirType outputType, intptr_t nInputs,
+    MlirValue *inputs, MlirLocation loc, void *userData);
+
+/// Register a source materialization with the given TypeConverter. This is
+/// invoked when a replacement value must be converted back to its original
+/// source type because some uses persist beyond the main conversion.
+MLIR_CAPI_EXPORTED void mlirTypeConverterAddSourceMaterialization(
+    MlirTypeConverter typeConverter,
+    MlirTypeConverterMaterializationCallback callback, void *userData);
+
 //===----------------------------------------------------------------------===//
 /// ConversionPattern API
 //===----------------------------------------------------------------------===//

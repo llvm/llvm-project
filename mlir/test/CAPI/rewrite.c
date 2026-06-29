@@ -802,6 +802,130 @@ void testConversionTargetDynamicLegality(MlirContext ctx) {
   fprintf(stderr, "testConversionTargetDynamicLegality: PASSED\n");
 }
 
+// Type conversion callback: maps i32 -> i64 and leaves every other type
+// unchanged (identity). Used by the materialization tests below.
+static MlirLogicalResult widenI32ToI64(MlirType type, MlirType *result,
+                                       void *userData) {
+  (void)userData;
+  if (mlirTypeIsAInteger(type) && mlirIntegerTypeGetWidth(type) == 32)
+    *result = mlirIntegerTypeGet(mlirTypeGetContext(type), 64);
+  else
+    *result = type;
+  return mlirLogicalResultSuccess();
+}
+
+// Materialization callback: builds a `test.cast` op that produces a single
+// value of `outputType` from the given inputs, and records that it ran by
+// bumping the counter passed as userData.
+static MlirValue buildCastMaterialization(MlirRewriterBase rewriter,
+                                          MlirType outputType, intptr_t nInputs,
+                                          MlirValue *inputs, MlirLocation loc,
+                                          void *userData) {
+  intptr_t *counter = (intptr_t *)userData;
+  if (counter)
+    (*counter)++;
+  MlirOperationState state =
+      mlirOperationStateGet(mlirStringRefCreateFromCString("test.cast"), loc);
+  mlirOperationStateAddOperands(&state, nInputs, inputs);
+  mlirOperationStateAddResults(&state, 1, &outputType);
+  MlirOperation castOp = mlirOperationCreate(&state);
+  mlirRewriterBaseInsert(rewriter, castOp);
+  return mlirOperationGetResult(castOp, 0);
+}
+
+// Conversion pattern for `test.source`: replaces it with a `test.source_i64`
+// op whose result has the widened (i64) type. Because the original result type
+// (i32) differs from the replacement type (i64), persisting uses force the
+// framework to insert a source materialization.
+static MlirLogicalResult convertSource(MlirConversionPattern pattern,
+                                       MlirOperation op, intptr_t nOperands,
+                                       MlirValue *operands,
+                                       MlirConversionPatternRewriter rewriter,
+                                       void *userData) {
+  (void)pattern;
+  (void)nOperands;
+  (void)operands;
+  (void)userData;
+  MlirContext ctx = mlirOperationGetContext(op);
+  MlirLocation loc = mlirOperationGetLocation(op);
+  MlirType i64 = mlirIntegerTypeGet(ctx, 64);
+  MlirOperationState state = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("test.source_i64"), loc);
+  mlirOperationStateAddResults(&state, 1, &i64);
+  MlirOperation newOp = mlirOperationCreate(&state);
+
+  MlirRewriterBase base = mlirPatternRewriterAsBase(
+      mlirConversionPatternRewriterAsPatternRewriter(rewriter));
+  mlirRewriterBaseInsert(base, newOp);
+  MlirValue newVal = mlirOperationGetResult(newOp, 0);
+  mlirRewriterBaseReplaceOpWithValues(base, op, 1, &newVal);
+  return mlirLogicalResultSuccess();
+}
+
+void testTypeConverterSourceMaterialization(MlirContext ctx) {
+  // CHECK-LABEL: @testTypeConverterSourceMaterialization
+  fprintf(stderr, "@testTypeConverterSourceMaterialization\n");
+
+  // `test.source` produces an i32 that is consumed by the (legal) `test.user`.
+  // Converting `test.source` to an i64-producing op leaves `test.user` wanting
+  // the original i32, which triggers a source materialization back to i32.
+  const char *moduleString = "%0 = \"test.source\"() : () -> i32\n"
+                             "\"test.user\"(%0) : (i32) -> ()\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleString));
+  MlirOperation moduleOp = mlirModuleGetOperation(module);
+
+  MlirTypeConverter converter = mlirTypeConverterCreate();
+  mlirTypeConverterAddConversion(converter, widenI32ToI64, NULL);
+  intptr_t materializationCounter = 0;
+  mlirTypeConverterAddSourceMaterialization(converter, buildCastMaterialization,
+                                            &materializationCounter);
+
+  MlirRewritePatternSet patterns = mlirRewritePatternSetCreate(ctx);
+  MlirConversionPatternCallbacks callbacks = {NULL, NULL, convertSource};
+  MlirConversionPattern pattern = mlirOpConversionPatternCreate(
+      mlirStringRefCreateFromCString("test.source"), 1, ctx, converter,
+      callbacks, NULL, 0, NULL);
+  mlirRewritePatternSetAdd(patterns,
+                           mlirConversionPatternAsRewritePattern(pattern));
+  MlirFrozenRewritePatternSet frozen = mlirFreezeRewritePattern(patterns);
+
+  MlirConversionTarget target = mlirConversionTargetCreate(ctx);
+  mlirConversionTargetAddIllegalOp(
+      target, mlirStringRefCreateFromCString("test.source"));
+  mlirConversionTargetAddLegalOp(
+      target, mlirStringRefCreateFromCString("test.source_i64"));
+  mlirConversionTargetAddLegalOp(target,
+                                 mlirStringRefCreateFromCString("test.cast"));
+  mlirConversionTargetAddLegalOp(target,
+                                 mlirStringRefCreateFromCString("test.user"));
+  mlirConversionTargetAddLegalOp(
+      target, mlirStringRefCreateFromCString("builtin.module"));
+
+  MlirConversionConfig config = mlirConversionConfigCreate();
+  MlirLogicalResult result =
+      mlirApplyPartialConversion(moduleOp, target, frozen, config);
+  assert(mlirLogicalResultIsSuccess(result));
+  assert(materializationCounter > 0 &&
+         "source materialization callback must be invoked");
+
+  mlirOperationDump(moduleOp);
+  // clang-format off
+  // CHECK: %[[v:.*]] = "test.source_i64"() : () -> i64
+  // CHECK: %[[c:.*]] = "test.cast"(%[[v]]) : (i64) -> i32
+  // CHECK: "test.user"(%[[c]]) : (i32) -> ()
+  // clang-format on
+
+  mlirConversionConfigDestroy(config);
+  mlirConversionTargetDestroy(target);
+  mlirFrozenRewritePatternSetDestroy(frozen);
+  mlirTypeConverterDestroy(converter);
+  mlirModuleDestroy(module);
+
+  // CHECK: testTypeConverterSourceMaterialization: PASSED
+  fprintf(stderr, "testTypeConverterSourceMaterialization: PASSED\n");
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   mlirContextSetAllowUnregisteredDialects(ctx, true);
@@ -818,6 +942,7 @@ int main(void) {
   testGreedyRewriteDriverConfig(ctx);
   testCloneWithMapping(ctx);
   testConversionTargetDynamicLegality(ctx);
+  testTypeConverterSourceMaterialization(ctx);
 
   mlirContextDestroy(ctx);
   return 0;

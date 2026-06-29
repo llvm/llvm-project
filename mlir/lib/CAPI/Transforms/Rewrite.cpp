@@ -669,6 +669,38 @@ MlirType mlirTypeConverterConvertType(MlirTypeConverter typeConverter,
   return wrap(unwrap(typeConverter)->convertType(unwrap(type)));
 }
 
+namespace {
+/// Wraps a C materialization callback as a C++ materialization callback of the
+/// form `Value(OpBuilder &, Type, ValueRange, Location)`, shared by both source
+/// and target materializations. The builder is always a RewriterBase in the
+/// conversion driver, so it is safe to expose it as an MlirRewriterBase.
+std::function<Value(OpBuilder &, Type, ValueRange, Location)>
+wrapMaterializationCallback(MlirTypeConverterMaterializationCallback callback,
+                            void *userData) {
+  return [callback, userData](OpBuilder &builder, Type type, ValueRange inputs,
+                              Location loc) -> Value {
+    SmallVector<MlirValue> wrappedInputs;
+    wrappedInputs.reserve(inputs.size());
+    for (Value v : inputs)
+      wrappedInputs.push_back(wrap(v));
+    MlirValue result =
+        callback(wrap(static_cast<RewriterBase *>(&builder)), wrap(type),
+                 static_cast<intptr_t>(wrappedInputs.size()),
+                 wrappedInputs.data(), wrap(loc), userData);
+    return mlirValueIsNull(result) ? Value() : unwrap(result);
+  };
+}
+} // namespace
+
+void mlirTypeConverterAddSourceMaterialization(
+    MlirTypeConverter typeConverter,
+    MlirTypeConverterMaterializationCallback callback, void *userData) {
+  assert(callback && "expected non-null materialization callback");
+  unwrap(typeConverter)
+      ->addSourceMaterialization(
+          wrapMaterializationCallback(callback, userData));
+}
+
 //===----------------------------------------------------------------------===//
 /// ConversionPattern API
 //===----------------------------------------------------------------------===//
