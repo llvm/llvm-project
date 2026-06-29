@@ -290,7 +290,9 @@ std::string BoundsCheckResult::getMessage(PathSensitiveBugReport &BR,
   }
 
   std::optional<int64_t> OffsetN = getConcreteValue(Offset);
-  std::optional<int64_t> ExtentN = getConcreteValue(Extent);
+  // The extent must be ignored if we did not assume it as an upper bound:
+  std::optional<int64_t> ExtentN =
+      AssumedUpperBound ? getConcreteValue(Extent) : std::nullopt;
 
   if (!SU.tryConvertValuesFromBytes(OffsetN, ExtentN))
     SU = SizeUnit::bytes();
@@ -302,7 +304,7 @@ std::string BoundsCheckResult::getMessage(PathSensitiveBugReport &BR,
     Out << "index ";
     if (OffsetN)
       Out << "'" << OffsetN << "' ";
-  } else if (Extent) {
+  } else if (AssumedUpperBound) {
     Out << "byte offset ";
     if (OffsetN)
       Out << "'" << OffsetN << "' ";
@@ -314,7 +316,7 @@ std::string BoundsCheckResult::getMessage(PathSensitiveBugReport &BR,
   if (ShouldReportNonNegative) {
     Out << " non-negative";
   }
-  if (Extent) {
+  if (AssumedUpperBound) {
     if (ShouldReportNonNegative)
       Out << " and";
     Out << " less than ";
