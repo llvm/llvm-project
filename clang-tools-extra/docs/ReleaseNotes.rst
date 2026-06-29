@@ -566,7 +566,7 @@ Changes in existing checks
 
   - Enabled the check for variables declared with ``auto`` (configurable
     via the `AnalyzeAutoVariables` option) and lambdas (configurable
-    via `AnalyzeLambdas`).
+    via `AnalyzeLambdas` option).
 
   - Fixed false positive where calling a non-const member function on a
     pointer was incorrectly treated as mutating the pointer, when it only
