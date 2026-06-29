@@ -48,7 +48,7 @@ foldOperationIfPossible(uint64_t Const1, uint64_t Const2,
   bool ResultOverflowed;
   switch (Operator) {
   case dwarf::DW_OP_plus: {
-    auto Result = SaturatingAdd(Const1, Const2, &ResultOverflowed);
+    auto Result = SaturatingAdd(Const1, Const2, ResultOverflowed);
     if (ResultOverflowed)
       return std::nullopt;
     return Result;

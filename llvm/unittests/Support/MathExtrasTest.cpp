@@ -237,23 +237,23 @@ template <typename T> void SaturatingAddTestHelper() {
   bool ResultOverflowed;
 
   EXPECT_EQ(T(3), SaturatingAdd(T(1), T(2)));
-  EXPECT_EQ(T(3), SaturatingAdd(T(1), T(2), &ResultOverflowed));
+  EXPECT_EQ(T(3), SaturatingAdd(T(1), T(2), ResultOverflowed));
   EXPECT_FALSE(ResultOverflowed);
 
   EXPECT_EQ(Max, SaturatingAdd(Max, T(1)));
-  EXPECT_EQ(Max, SaturatingAdd(Max, T(1), &ResultOverflowed));
+  EXPECT_EQ(Max, SaturatingAdd(Max, T(1), ResultOverflowed));
   EXPECT_TRUE(ResultOverflowed);
 
   EXPECT_EQ(Max, SaturatingAdd(T(1), T(Max - 1)));
-  EXPECT_EQ(Max, SaturatingAdd(T(1), T(Max - 1), &ResultOverflowed));
+  EXPECT_EQ(Max, SaturatingAdd(T(1), T(Max - 1), ResultOverflowed));
   EXPECT_FALSE(ResultOverflowed);
 
   EXPECT_EQ(Max, SaturatingAdd(T(1), Max));
-  EXPECT_EQ(Max, SaturatingAdd(T(1), Max, &ResultOverflowed));
+  EXPECT_EQ(Max, SaturatingAdd(T(1), Max, ResultOverflowed));
   EXPECT_TRUE(ResultOverflowed);
 
   EXPECT_EQ(Max, SaturatingAdd(Max, Max));
-  EXPECT_EQ(Max, SaturatingAdd(Max, Max, &ResultOverflowed));
+  EXPECT_EQ(Max, SaturatingAdd(Max, Max, ResultOverflowed));
   EXPECT_TRUE(ResultOverflowed);
 
   EXPECT_EQ(T(6), SaturatingAdd(T(1), T(2), T(3)));
