@@ -3983,29 +3983,34 @@ void TargetLowering::computeKnownFPClassForTargetInstr(
 
 void TargetLowering::computeKnownBitsForFrameIndex(
   const int FrameIdx, KnownBits &Known, const MachineFunction &MF) const {
-  // The low bits are known zero if the pointer is aligned.
-  Known.Zero.setLowBits(Log2(MF.getFrameInfo().getObjectAlign(FrameIdx)));
+  computeKnownBitsForStackObjectPointer(
+      Known, MF, MF.getFrameInfo().getObjectAlign(FrameIdx));
 }
 
 void TargetLowering::computeKnownBitsForStackObjectPointer(
-    KnownBits &, const MachineFunction &) const {}
+    KnownBits &Known, const MachineFunction &, Align Alignment) const {
+  // The low bits are known zero if the pointer is aligned.
+  Known.Zero.setLowBits(Log2(Alignment));
+}
 
 SDValue TargetLowering::annotateStackObjectPointer(SDValue Ptr,
                                                    SelectionDAG &DAG,
-                                                   const SDLoc &DL) const {
+                                                   const SDLoc &DL,
+                                                   Align Alignment) const {
   EVT PtrVT = Ptr.getValueType();
 
   unsigned RegSize = PtrVT.getScalarSizeInBits();
   KnownBits Known(RegSize);
-  computeKnownBitsForStackObjectPointer(Known, DAG.getMachineFunction());
+  computeKnownBitsForStackObjectPointer(Known, DAG.getMachineFunction(),
+                                        Alignment);
 
   unsigned NumZeroBits = Known.countMinLeadingZeros();
   if (!NumZeroBits)
     return Ptr;
 
-  // TODO: Stack object alignment also gives low zero bits. This helper only
-  // materializes leading zero bits for now; use ISD::AssertAlign if those
-  // low-bit facts need to be represented here.
+  // TODO: This helper only materializes leading-zero facts. Use
+  // ISD::AssertAlign if callers need alignment-derived low-zero bits to be
+  // represented in the DAG.
   EVT FromVT = EVT::getIntegerVT(*DAG.getContext(), RegSize - NumZeroBits);
   return DAG.getNode(ISD::AssertZext, DL, PtrVT, Ptr, DAG.getValueType(FromVT));
 }

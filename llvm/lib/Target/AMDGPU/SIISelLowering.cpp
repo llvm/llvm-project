@@ -3728,7 +3728,8 @@ SDValue SITargetLowering::LowerFormalArguments(
 
     if (Arg.Flags.isSRet()) {
       // The return object should be reasonably addressable.
-      Val = annotateStackObjectPointer(Val, DAG, DL);
+      Val = annotateStackObjectPointer(Val, DAG, DL,
+                                       Arg.Flags.getNonZeroMemAlign());
     }
 
     Val = convertABITypeToValueType(DAG, Val, VA, DL);
@@ -19709,18 +19710,19 @@ void SITargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
 }
 
 void SITargetLowering::computeKnownBitsForStackObjectPointer(
-    KnownBits &Known, const MachineFunction &) const {
+    KnownBits &Known, const MachineFunction &MF, Align Alignment) const {
+  TargetLowering::computeKnownBitsForStackObjectPointer(Known, MF, Alignment);
+
+  // Set the high bits to zero based on the maximum allowed scratch size per
+  // wave. We can't use vaddr in MUBUF instructions if we don't know the address
+  // calculation won't overflow, so assume the sign bit is never set.
   Known.Zero.setHighBits(getSubtarget()->getKnownHighZeroBitsForFrameIndex());
 }
 
 void SITargetLowering::computeKnownBitsForFrameIndex(
     const int FI, KnownBits &Known, const MachineFunction &MF) const {
-  TargetLowering::computeKnownBitsForFrameIndex(FI, Known, MF);
-
-  // Set the high bits to zero based on the maximum allowed scratch size per
-  // wave. We can't use vaddr in MUBUF instructions if we don't know the address
-  // calculation won't overflow, so assume the sign bit is never set.
-  computeKnownBitsForStackObjectPointer(Known, MF);
+  computeKnownBitsForStackObjectPointer(Known, MF,
+                                        MF.getFrameInfo().getObjectAlign(FI));
 }
 
 static void knownBitsForWorkitemID(const GCNSubtarget &ST,

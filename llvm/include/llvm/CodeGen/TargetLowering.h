@@ -4428,10 +4428,10 @@ public:
                                              const MachineFunction &MF) const;
 
   /// Determine which bits of a stack object pointer are known to be 0.
-  /// The default implementation preserves the known bits passed into it.
-  virtual void
-  computeKnownBitsForStackObjectPointer(KnownBits &Known,
-                                        const MachineFunction &MF) const;
+  /// The default implementation computes low bits based on alignment.
+  virtual void computeKnownBitsForStackObjectPointer(KnownBits &Known,
+                                                     const MachineFunction &MF,
+                                                     Align Alignment) const;
 
   /// This method can be implemented by targets that want to expose additional
   /// information about sign bits to the DAG Combiner. The DemandedElts
@@ -5125,7 +5125,7 @@ public:
 
   /// Annotate a stack object pointer with known-bits assertions.
   SDValue annotateStackObjectPointer(SDValue Ptr, SelectionDAG &DAG,
-                                     const SDLoc &DL) const;
+                                     const SDLoc &DL, Align Alignment) const;
 
   /// This hook must be implemented to lower outgoing return values, described
   /// by the Outs array, into the specified DAG. The implementation should

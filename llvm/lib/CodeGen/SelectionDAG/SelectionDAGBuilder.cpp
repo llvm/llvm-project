@@ -2219,7 +2219,9 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
     MVT PtrValueVT = TLI.getPointerTy(DL, DL.getAllocaAddrSpace());
     SDValue RetPtr =
         DAG.getCopyFromReg(Chain, getCurSDLoc(), DemoteReg, PtrValueVT);
-    RetPtr = TLI.annotateStackObjectPointer(RetPtr, DAG, getCurSDLoc());
+    Align BaseAlign = DL.getPrefTypeAlign(I.getOperand(0)->getType());
+    RetPtr =
+        TLI.annotateStackObjectPointer(RetPtr, DAG, getCurSDLoc(), BaseAlign);
     SDValue RetOp = getValue(I.getOperand(0));
 
     SmallVector<EVT, 4> ValueVTs, MemVTs;
@@ -2229,7 +2231,6 @@ void SelectionDAGBuilder::visitRet(const ReturnInst &I) {
     unsigned NumValues = ValueVTs.size();
 
     SmallVector<SDValue, 4> Chains(NumValues);
-    Align BaseAlign = DL.getPrefTypeAlign(I.getOperand(0)->getType());
     for (unsigned i = 0; i != NumValues; ++i) {
       // An aggregate return value cannot wrap around the address space, so
       // offsets to its parts don't wrap either.
