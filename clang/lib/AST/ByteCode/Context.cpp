@@ -161,6 +161,24 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
   return true;
 }
 
+bool Context::evaluateDestruction(State &Parent, const VarDecl *VD,
+                                  APValue Value) {
+  assert(Stk.empty());
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+
+  auto Res = C.interpretDestructor(VD, Value);
+
+  if (Res.isInvalid()) {
+    C.cleanup();
+    Stk.clear();
+    return false;
+  }
+
+  assert(Stk.empty());
+
+  return true;
+}
+
 template <typename ResultT>
 bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
                                  const Expr *PtrExpr, ResultT &Result) {
@@ -176,11 +194,18 @@ bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
     return false;
   uint64_t Size = SizeValue.getInt().getZExtValue();
 
-  auto PtrRes = C.interpretAsPointer(PtrExpr, [&](const Pointer &Ptr) {
+  auto PtrRes = C.interpretAsPointer(PtrExpr, [&](InterpState &S, CodePtr OpPC,
+                                                  const Pointer &Ptr) {
     if (Size == 0) {
       if constexpr (std::is_same_v<ResultT, APValue>)
         Result = APValue(APValue::UninitArray{}, 0, 0);
       return true;
+    }
+
+    if (Ptr.isZero()) {
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_null)
+          << AK_Read;
+      return false;
     }
 
     if (!Ptr.isLive() || !Ptr.getFieldDesc()->isPrimitiveArray())
@@ -191,7 +216,8 @@ bool Context::evaluateStringRepr(State &Parent, const Expr *SizeExpr,
       return false;
 
     if (Size > Ptr.getNumElems()) {
-      Parent.FFDiag(SizeExpr, diag::note_constexpr_access_past_end) << AK_Read;
+      S.FFDiag(S.Current->getSource(OpPC), diag::note_constexpr_access_past_end)
+          << AK_Read;
       Size = Ptr.getNumElems();
     }
 
@@ -245,7 +271,8 @@ bool Context::evaluateString(State &Parent, const Expr *E,
   assert(Stk.empty());
   Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
 
-  auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
+  auto PtrRes = C.interpretAsPointer(E, [&](InterpState &S, CodePtr OpPC,
+                                            const Pointer &Ptr) {
     if (!Ptr.isBlockPointer())
       return false;
 
@@ -294,7 +321,8 @@ std::optional<uint64_t> Context::evaluateStrlen(State &Parent, const Expr *E) {
   Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
 
   std::optional<uint64_t> Result;
-  auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
+  auto PtrRes = C.interpretAsPointer(E, [&](InterpState &S, CodePtr OpPC,
+                                            const Pointer &Ptr) {
     if (!Ptr.isBlockPointer())
       return false;
 
@@ -345,7 +373,8 @@ Context::tryEvaluateObjectSize(State &Parent, const Expr *E, unsigned Kind) {
 
   std::optional<uint64_t> Result;
 
-  auto PtrRes = C.interpretAsLValuePointer(E, [&](const Pointer &Ptr) {
+  auto PtrRes = C.interpretAsLValuePointer(E, [&](InterpState &S, CodePtr OpPC,
+                                                  const Pointer &Ptr) {
     const Descriptor *DeclDesc = Ptr.getDeclDesc();
     if (!DeclDesc)
       return false;

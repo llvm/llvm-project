@@ -32,6 +32,7 @@ add_lldb_library(lldbCore NO_PLUGIN_DEPENDENCIES
   DebuggerEvents.cpp
   Declaration.cpp
   DemangledNameInfo.cpp
+  Diagnostics.cpp
   Disassembler.cpp
   DumpDataExtractor.cpp
   DumpRegisterValue.cpp

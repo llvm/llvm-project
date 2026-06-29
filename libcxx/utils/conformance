@@ -353,7 +353,7 @@ def link_github_issue(issue: str, meeting_voted: Optional[str], status: Optional
         cli = ['gh', 'project', 'item-edit', '--id', id,
                                 '--project-id', LIBCXX_CONFORMANCE_PROJECT_ID,
                                 '--field-id', LIBCXX_CONFORMANCE_MEETING_VOTED_ID, '--text', meeting_voted]
-        subprocess.check_call(cli)
+        subprocess.check_call(cli, stdout=subprocess.DEVNULL)
 
     # Adjust the 'Status' field of the item
     if status is not None:
@@ -362,7 +362,7 @@ def link_github_issue(issue: str, meeting_voted: Optional[str], status: Optional
                                 '--project-id', LIBCXX_CONFORMANCE_PROJECT_ID,
                                 '--field-id', LIBCXX_CONFORMANCE_STATUS_ID,
                                 '--single-select-option-id', option_id]
-        subprocess.check_call(cli)
+        subprocess.check_call(cli, stdout=subprocess.DEVNULL)
 
 def sync_csv(rows: List[Tuple], from_github: List[PaperInfo]) -> List[Tuple]:
     """
@@ -496,8 +496,8 @@ def github_link(issues, meeting_voted, status):
         link_github_issue(issue, meeting_voted, status)
 
 @github_cmd.command('create')
-@click.argument('csvfiles', nargs=-1, type=click.File('r'))
-@click.option('--load-github-from', type=click.File('r'), required=False,
+@click.argument('csvfiles', nargs=-1, type=click.File('r', encoding='utf-8'))
+@click.option('--load-github-from', type=click.File('r', encoding='utf-8'), required=False,
     help='Optionally load the Github Conformance tracking data from the given file. Useful to avoid '
          'running into API call limits when testing locally. See `conformance github download`.')
 @click.option('--labels', type=str, multiple=True,
@@ -524,6 +524,8 @@ def github_create(csvfiles, load_github_from, labels):
                     continue
                 yield row
 
+    all_labels = ('libc++', *labels)
+    to_create = []
     for row in all_csv_rows():
         paper = PaperInfo.from_csv_row(row)
 
@@ -536,36 +538,41 @@ def github_create(csvfiles, load_github_from, labels):
             logging.warning(f"Found row claiming to have a tracking issue, but failed to find a tracking issue on Github: {row}")
             continue
 
-        # Create the actual Github issue
-        cli = ['gh', 'issue', 'create', '--repo', 'llvm/llvm-project',
-                    '--title', f'{paper.paper_number}: {rst_to_markdown(paper.paper_name)}',
-                    '--body', f'**Link:** https://wg21.link/{paper.paper_number}',
-                    '--project', 'libc++ Standards Conformance',
-                    '--label', 'libc++']
+        title = rst_to_markdown(paper.paper_name)
+        body = f'**Link:** https://wg21.link/{paper.paper_number}'
+        if paper.notes:
+            body += f'\n\n```\nBEGIN-RST-NOTES\n{paper.notes}\nEND-RST-NOTES\n```'
 
-        for label in labels:
+        cli = ['gh', 'issue', 'create', '--repo', 'llvm/llvm-project',
+                    '--title', f'{paper.paper_number}: {title}',
+                    '--body', body,
+                    '--project', 'libc++ Standards Conformance']
+        for label in all_labels:
             cli += ['--label', label]
 
-        print("Do you want to create the following issue?")
-        print(cli)
-        answer = input("y/n: ")
-        if answer == 'n':
-            print("Not creating issue")
-            continue
-        elif answer != 'y':
-            print(f"Invalid answer {answer}, skipping")
-            continue
+        to_create.append((paper, title, cli))
 
-        logging.info("Creating issue")
+    if not to_create:
+        print("No new issues to create.")
+        return
+
+    print(f"Will create {len(to_create)} issue(s) with labels: {', '.join(all_labels)}")
+    for paper, title, _ in to_create:
+        print(f"  {paper.paper_number}: {title}")
+    answer = input(f"\nCreate all {len(to_create)} issue(s)? [y/N]: ")
+    if answer.strip().lower() != 'y':
+        print("Aborted, no issues created.")
+        return
+
+    for i, (paper, _, cli) in enumerate(to_create, 1):
+        print(f"[{i}/{len(to_create)}] Creating {paper.paper_number}... ", end='', flush=True)
         issue_link = subprocess.check_output(cli).decode().strip()
-        logging.info(f"Created tracking issue for {paper.paper_number}: {issue_link}")
-
-        logging.info(f"Linking {issue_link} to the libc++ Standards Conformance project")
+        print(issue_link)
         link_github_issue(issue_link, paper.meeting, paper.status)
 
 
 @github_cmd.command('download')
-@click.option('--output', '-o', type=click.File('w'), default='-',
+@click.option('--output', '-o', type=click.File('w', encoding='utf-8'), default='-',
     help='Save the data to the provided file. Default is stdout.')
 def github_download(output):
     """Download libc++ conformance tracking data from Github issues and save it locally."""
@@ -580,7 +587,7 @@ def csv_cmd():
 
 
 @csv_cmd.command('validate')
-@click.argument('files', nargs=-1, type=click.File('r'))
+@click.argument('files', nargs=-1, type=click.File('r', encoding='utf-8'))
 def csv_validate(files):
     """Validate the format of the provided CSV files."""
     for file in files:
@@ -591,10 +598,10 @@ def csv_validate(files):
 
 
 @csv_cmd.command('synchronize')
-@click.argument('files', nargs=-1, type=click.File('r'))
-@click.option('--output', '-o', type=click.File('w'), default='-',
+@click.argument('files', nargs=-1, type=click.File('r', encoding='utf-8'))
+@click.option('--output', '-o', type=click.File('w', encoding='utf-8'), default='-',
     help='Write the generated CSV to the specified file. Defaults to stdout.')
-@click.option('--load-github-from', type=click.File('r'), required=False,
+@click.option('--load-github-from', type=click.File('r', encoding='utf-8'), required=False,
     help='Optionally load the Github Conformance tracking data from the given file. Useful to avoid '
          'running into API call limits when testing locally. See `conformance github download`.')
 def csv_synchronize(files, output, load_github_from):
@@ -615,9 +622,9 @@ def csv_synchronize(files, output, load_github_from):
 
 @csv_cmd.command('create')
 @click.argument('issues', nargs=-1)
-@click.option('--output', '-o', type=click.File('w'), default='-',
+@click.option('--output', '-o', type=click.File('w', encoding='utf-8'), default='-',
     help='Write the generated CSV to the specified file. Defaults to stdout.')
-@click.option('--load-github-from', type=click.File('r'), required=False,
+@click.option('--load-github-from', type=click.File('r', encoding='utf-8'), required=False,
     help='Optionally load the Github Conformance tracking data from the given file. Useful to avoid '
          'running into API call limits when testing locally. See `conformance github download`.')
 def csv_create(issues, output, load_github_from):

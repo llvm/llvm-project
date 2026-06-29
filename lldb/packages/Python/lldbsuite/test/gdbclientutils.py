@@ -22,15 +22,18 @@ def checksum(message):
     return check % 256
 
 
-def frame_packet(message):
+def frame_packet(message, prefix):
     """
     Create a framed packet that's ready to send over the GDB connection
     channel.
 
-    Framing includes surrounding the message between $ and #, and appending
-    a two character hex checksum.
+    Framing means:
+    * Attaching the prefix. Which is usually '$' but for notifications will be
+      '%'.
+    * Appending a '#'.
+    * Adding a two character hex checksum.
     """
-    return "$%s#%02x" % (message, checksum(message))
+    return "%s%s#%02x" % (prefix, message, checksum(message))
 
 
 def escape_binary(message):
@@ -694,9 +697,9 @@ class MockGDBServer:
         self._receivedDataOffset = 0
         return packet
 
-    def _sendPacket(self, packet: str):
+    def _sendPacket(self, packet: str, prefix="$"):
         assert self._socket is not None
-        framed_packet = seven.bitcast_to_bytes(frame_packet(packet))
+        framed_packet = seven.bitcast_to_bytes(frame_packet(packet, prefix))
         self._socket.sendall(framed_packet)
 
     def _handlePacket(self, packet):

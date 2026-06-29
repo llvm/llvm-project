@@ -9,8 +9,6 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_WCTYPE_PERFECT_HASH_MAP_H
 #define LLVM_LIBC_SRC___SUPPORT_WCTYPE_PERFECT_HASH_MAP_H
 
-#define LIBC_ENABLE_CONSTEXPR 1
-
 #include "hdr/types/size_t.h"
 #include "hdr/types/wint_t.h"
 #include "src/__support/CPP/array.h"
@@ -28,8 +26,6 @@
 #ifdef DEBUGDEBUG
 #include "src/__support/OSUtil/io.h"
 #endif
-
-#undef LIBC_ENABLE_CONSTEXPR
 
 namespace LIBC_NAMESPACE_DECL {
 namespace wctype_internal {

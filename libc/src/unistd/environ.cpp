@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/unistd/environ.h"
+#include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
-// This is initialized to the correct value by the statup code.
-extern "C" {
-char **environ = nullptr;
-}
+// This is initialized to the correct value by the startup code.
+LLVM_LIBC_VARIABLE(char **, environ) = nullptr;
 
 } // namespace LIBC_NAMESPACE_DECL

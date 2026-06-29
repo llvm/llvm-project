@@ -291,6 +291,10 @@ struct AMDGPUMemoryPoolTy {
     if (auto Err = getAttr(HSA_AMD_MEMORY_POOL_INFO_GLOBAL_FLAGS, GlobalFlags))
       return Err;
 
+    if (auto Err = getAttr(HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALIGNMENT,
+                           PoolAllocationAlignment))
+      return Err;
+
     return getAttr(HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_GRANULE, Granule);
   }
 
@@ -324,10 +328,39 @@ struct AMDGPUMemoryPoolTy {
   /// Get the allocation granularity of the pool.
   size_t getGranule() const { return Granule; }
 
+  /// Get the allocation alignment of the pool.
+  size_t getAlignment() const { return PoolAllocationAlignment; }
+
   /// Allocate memory on the memory pool.
-  Error allocate(size_t Size, void **PtrStorage) {
+  Error allocate(size_t Size, void **PtrStorage, size_t Alignment) {
+    // A non-zero value passed as the Alignment indicates that the user expects
+    // the allocation to have a specific alignment. However, the HSA API does
+    // not allow users to define alignment. Therefore, the passed alignment is
+    // compared with the alignment of the memory allocated using the given pool.
+    // If the default alignment is greater than or equal to the alignment
+    // requested by the user, it would still meet the user's requirements.
+    if (Alignment > 0 && Alignment >= PoolAllocationAlignment) {
+      return Plugin::error(ErrorCode::UNSUPPORTED,
+                           "requested alignment (%lu) larger than maximum "
+                           "supported pool alignment (%lu)",
+                           Alignment, PoolAllocationAlignment);
+    }
+
     hsa_status_t Status =
         hsa_amd_memory_pool_allocate(MemoryPool, Size, 0, PtrStorage);
+
+    if (Alignment > 0 && !isAddrAligned(Align(Alignment), *PtrStorage)) {
+      if (auto FreeErr = deallocate(*PtrStorage)) {
+        return Plugin::error(ErrorCode::UNKNOWN,
+                             "Failure in deallcation of the incorrectly "
+                             "aligned pointer; requested alignemnt: %lu",
+                             Alignment);
+      }
+
+      return Plugin::error(ErrorCode::UNSUPPORTED,
+                           "unsupported alignment size");
+    }
+
     return Plugin::check(Status, "error in hsa_amd_memory_pool_allocate: %s");
   }
 
@@ -407,6 +440,14 @@ private:
 
   /// The page size in this memory pool.
   size_t Granule;
+
+  /// The alignment of the buffers allocated by
+  /// hsa_amd_memory_pool_allocate(...). This attribute is defined only if
+  /// HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED is set to true. Since
+  /// hsa_amd_memory_pool_allocate is the only memory-allocating function that
+  /// is used by the memory pool, HSA_AMD_MEMORY_POOL_INFO_RUNTIME_ALLOC_ALLOWED
+  /// should always be set.
+  size_t PoolAllocationAlignment;
 };
 
 /// Class that implements a memory manager that gets memory from a specific
@@ -442,7 +483,8 @@ struct AMDGPUMemoryManagerTy : public DeviceAllocatorTy {
     assert(MemoryManager && "Invalid memory manager");
     assert(PtrStorage && "Invalid pointer storage");
 
-    auto PtrStorageOrErr = MemoryManager->allocate(Size, nullptr);
+    auto PtrStorageOrErr =
+        MemoryManager->allocate(Size, nullptr, /*Alignment=*/0);
     if (!PtrStorageOrErr)
       return PtrStorageOrErr.takeError();
 
@@ -466,8 +508,8 @@ struct AMDGPUMemoryManagerTy : public DeviceAllocatorTy {
 private:
   /// Allocation callback that will be called once the memory manager does not
   /// have more previously allocated buffers.
-  Expected<void *> allocate(size_t Size, void *HstPtr,
-                            TargetAllocTy Kind) override;
+  Expected<void *> allocate(size_t Size, void *HstPtr, TargetAllocTy Kind,
+                            size_t Alignment) override;
 
   /// Deallocation callback that will be called by the memory manager.
   Error free(void *TgtPtr, TargetAllocTy Kind) override {
@@ -511,12 +553,14 @@ struct AMDGPUDeviceImageTy : public DeviceImageTy {
   findDeviceSymbol(GenericDeviceTy &Device, StringRef SymbolName) const;
 
   /// Get additional info for kernel, e.g., register spill counts
-  std::optional<offloading::amdgpu::AMDGPUKernelMetaData>
+  Expected<offloading::amdgpu::AMDGPUKernelMetaData>
   getKernelInfo(StringRef Identifier) const {
     auto It = KernelInfoMap.find(Identifier);
 
     if (It == KernelInfoMap.end())
-      return {};
+      return Plugin::error(ErrorCode::INVALID_BINARY,
+                           "could not find metadata for kernel %s",
+                           Identifier.str().c_str());
 
     return It->second;
   }
@@ -593,10 +637,10 @@ struct AMDGPUKernelTy : public GenericKernelTy {
     ODBG(OLDT_Module) << "ELFABIVersion: " << AMDImage.getELFABIVersion();
 
     // Get additional kernel info read from image
-    KernelInfo = AMDImage.getKernelInfo(getName());
-    if (!KernelInfo.has_value())
-      INFO(OMP_INFOTYPE_PLUGIN_KERNEL, Device.getDeviceId(),
-           "Could not read extra information for kernel %s.", getName());
+    auto KernelInfoOrErr = AMDImage.getKernelInfo(getName());
+    if (!KernelInfoOrErr)
+      return KernelInfoOrErr.takeError();
+    KernelInfo = std::move(*KernelInfoOrErr);
 
     return Plugin::success();
   }
@@ -649,7 +693,7 @@ private:
   uint32_t ImplicitArgsSize;
 
   /// Additional Info for the AMD GPU Kernel
-  std::optional<offloading::amdgpu::AMDGPUKernelMetaData> KernelInfo;
+  offloading::amdgpu::AMDGPUKernelMetaData KernelInfo;
 };
 
 /// Class representing an HSA signal. Signals are used to define dependencies
@@ -1688,12 +1732,22 @@ public:
 
   const AMDGPUQueueTy *getQueue() const { return Queue; }
 
-  /// Record an event by enqueuing a barrier marker packet on the stream.
+  /// Record an event on the stream. If \p EnableProfiling is true, a barrier
+  /// marker packet is enqueued to record timestamps.
   Error recordEvent(AMDGPUEventTy &Event,
-                    AMDGPUSignalTy *ReusedSignal = nullptr);
+                    AMDGPUSignalTy *ReusedSignal = nullptr,
+                    bool EnableProfiling = false);
 
   /// Make the stream wait on an event.
   Error waitEvent(const AMDGPUEventTy &Event);
+
+private:
+  /// Lightweight sync-only recording.
+  Error recordEventSyncOnly(AMDGPUEventTy &Event, AMDGPUSignalTy *ReusedSignal);
+
+  /// Full profiling recording.
+  Error recordEventWithProfiling(AMDGPUEventTy &Event,
+                                 AMDGPUSignalTy *ReusedSignal);
 
   friend struct AMDGPUStreamManagerTy;
 };
@@ -1720,7 +1774,7 @@ struct AMDGPUEventTy {
   }
 
   /// Record the current stream point on the event.
-  Error record(AMDGPUStreamTy &Stream) {
+  Error record(AMDGPUStreamTy &Stream, bool EnableProfiling = false) {
     std::lock_guard<std::mutex> Lock(Mutex);
 
     // Discard the previous recording and retained timing state, reusing the
@@ -1731,7 +1785,7 @@ struct AMDGPUEventTy {
 
     RecordedStream = &Stream;
 
-    if (auto Err = Stream.recordEvent(*this, Signal)) {
+    if (auto Err = Stream.recordEvent(*this, Signal, EnableProfiling)) {
       if (auto ResetErr = resetState())
         return joinErrors(std::move(Err), std::move(ResetErr));
       return Err;
@@ -1805,11 +1859,43 @@ protected:
 };
 
 Error AMDGPUStreamTy::recordEvent(AMDGPUEventTy &Event,
-                                  AMDGPUSignalTy *ReusedSignal) {
+                                  AMDGPUSignalTy *ReusedSignal,
+                                  bool EnableProfiling) {
   if (Queue == nullptr)
     return Plugin::error(ErrorCode::INVALID_NULL_POINTER,
                          "target queue was nullptr");
 
+  if (EnableProfiling)
+    return recordEventWithProfiling(Event, ReusedSignal);
+  return recordEventSyncOnly(Event, ReusedSignal);
+}
+
+Error AMDGPUStreamTy::recordEventSyncOnly(AMDGPUEventTy &Event,
+                                          AMDGPUSignalTy *ReusedSignal) {
+  std::lock_guard<std::mutex> StreamLock(Mutex);
+
+  if (size() > 0) {
+    // Record the synchronize identifier (to detect stale recordings) and
+    // the last valid stream's operation.
+    Event.RecordedSyncCycle = SyncCycle;
+    Event.RecordedSlot = last();
+
+    assert(Event.RecordedSyncCycle >= 0 && "Invalid recorded sync cycle");
+    assert(Event.RecordedSlot >= 0 && "Invalid recorded slot");
+  } else {
+    // The stream is empty, everything already completed, record nothing.
+    Event.RecordedSyncCycle = -1;
+    Event.RecordedSlot = -1;
+  }
+
+  // Return the unused reusable signal back to the manager.
+  if (ReusedSignal)
+    return SignalManager.returnResource(ReusedSignal);
+  return Plugin::success();
+}
+
+Error AMDGPUStreamTy::recordEventWithProfiling(AMDGPUEventTy &Event,
+                                               AMDGPUSignalTy *ReusedSignal) {
   // One use for the stream slot and one for the event timing signal.
   const uint32_t OutputSignalUses = 2;
 
@@ -2529,6 +2615,18 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// See GenericDeviceTy::getComputeUnitKind().
   std::string getComputeUnitKind() const override { return ComputeUnitKind; }
 
+  /// See GenericDeviceTy::getBlockLimit(uint32_t). The HSA launch configuration
+  /// is an int32_t grid representing blocks * threads. This means the block
+  /// limit depends on the user's requested thread count.
+  uint32_t getBlockLimit(uint32_t NumThreads) const override {
+    if (NumThreads == 0)
+      return GridValues.GV_Max_Teams;
+    uint64_t MaxGridItems =
+        uint64_t(GridValues.GV_Max_Teams) * getThreadLimit();
+    uint64_t MaxBlocks = MaxGridItems / NumThreads;
+    return std::min<uint64_t>(MaxBlocks, UINT32_MAX);
+  }
+
   /// Returns the clock frequency for the given AMDGPU device.
   uint64_t getClockFrequency() const override { return ClockFrequency; }
 
@@ -2604,7 +2702,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Allocate memory on the device or related to the device.
-  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind) override;
+  Expected<void *> allocate(size_t Size, void *, TargetAllocTy Kind,
+                            size_t Alignment) override;
 
   /// Deallocate memory on the device or related to the device.
   Error free(void *TgtPtr, TargetAllocTy Kind) override {
@@ -3015,7 +3114,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   };
 
   /// Create an event.
-  Error createEventImpl(void **EventPtrStorage) override {
+  Error createEventImpl(void **EventPtrStorage, bool EnableProfiling) override {
     AMDGPUEventTy **Event = reinterpret_cast<AMDGPUEventTy **>(EventPtrStorage);
     if (auto Err = AMDGPUEventManager.getResource(*Event))
       return Err;
@@ -3023,7 +3122,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Destroy a previously created event.
-  Error destroyEventImpl(void *EventPtr) override {
+  Error destroyEventImpl(void *EventPtr, bool EnableProfiling) override {
     AMDGPUEventTy *Event = reinterpret_cast<AMDGPUEventTy *>(EventPtr);
     assert(Event && "Invalid event");
 
@@ -3034,8 +3133,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
   /// Record the event.
-  Error recordEventImpl(void *EventPtr,
-                        AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+  Error recordEventImpl(void *EventPtr, AsyncInfoWrapperTy &AsyncInfoWrapper,
+                        bool EnableProfiling) override {
     AMDGPUEventTy *Event = reinterpret_cast<AMDGPUEventTy *>(EventPtr);
     assert(Event && "Invalid event");
 
@@ -3043,7 +3142,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     if (auto Err = getStream(AsyncInfoWrapper, Stream))
       return Err;
 
-    return Event->record(*Stream);
+    return Event->record(*Stream, EnableProfiling);
   }
 
   /// Make the stream wait on the event.
@@ -4149,11 +4248,28 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (auto Err = GenericDevice.getDeviceStackSize(StackSize))
     return Err;
 
-  // Copy the explicit arguments.
-  // TODO: We should expose the args memory manager alloc to the common part as
-  // 	   alternative to copying them twice.
-  if (LaunchParams.Size)
-    std::memcpy(AllArgs, LaunchParams.Data, LaunchParams.Size);
+  // Copy explicit arguments.
+  size_t ExplicitEnd = 0;
+  if (LaunchParams.Args) {
+    const auto &ArgMDs = KernelInfo.ArgMDs;
+    uint32_t NumArgs = LaunchParams.NumArgs;
+
+    if (NumArgs > ArgMDs.size())
+      return Plugin::error(
+          ErrorCode::INVALID_ARGUMENT,
+          "number of arguments (%u) exceeds the number of arguments "
+          "expected by the kernel (%zu)",
+          NumArgs, ArgMDs.size());
+
+    for (size_t I = 0; I < NumArgs; I++) {
+      auto [Offset, Size] = ArgMDs[I];
+      std::memcpy(utils::advancePtr(AllArgs, Offset), LaunchParams.Args[I],
+                  Size);
+    }
+
+    auto [Offset, Size] = ArgMDs[NumArgs - 1];
+    ExplicitEnd = Offset + Size;
+  }
 
   AMDGPUDeviceTy &AMDGPUDevice = static_cast<AMDGPUDeviceTy &>(GenericDevice);
 
@@ -4161,8 +4277,8 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (auto Err = AMDGPUDevice.getStream(AsyncInfoWrapper, Stream))
     return Err;
 
-  uint64_t ImplArgsOffset = llvm::alignTo(
-      LaunchParams.Size, alignof(hsa_utils::AMDGPUImplicitArgsTy));
+  uint64_t ImplArgsOffset =
+      llvm::alignTo(ExplicitEnd, alignof(hsa_utils::AMDGPUImplicitArgsTy));
   if (ArgsSize > ImplArgsOffset) {
     hsa_utils::AMDGPUImplicitArgsTy *ImplArgs =
         reinterpret_cast<hsa_utils::AMDGPUImplicitArgsTy *>(
@@ -4213,10 +4329,6 @@ Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
   if (!(getInfoLevel() & OMP_INFOTYPE_PLUGIN_KERNEL))
     return Plugin::success();
 
-  // We don't have data to print additional info, but no hard error
-  if (!KernelInfo.has_value())
-    return Plugin::success();
-
   // General Info
   auto *NumGroups = NumBlocks;
   auto *ThreadsPerGroup = NumThreads;
@@ -4227,12 +4339,12 @@ Error AMDGPUKernelTy::printLaunchInfoDetails(GenericDeviceTy &GenericDevice,
 
   // Details for AMDGPU kernels (read from image)
   // https://www.llvm.org/docs/AMDGPUUsage.html#code-object-v4-metadata
-  auto GroupSegmentSize = (*KernelInfo).GroupSegmentList;
-  auto SGPRCount = (*KernelInfo).SGPRCount;
-  auto VGPRCount = (*KernelInfo).VGPRCount;
-  auto SGPRSpillCount = (*KernelInfo).SGPRSpillCount;
-  auto VGPRSpillCount = (*KernelInfo).VGPRSpillCount;
-  auto MaxFlatWorkgroupSize = (*KernelInfo).MaxFlatWorkgroupSize;
+  auto GroupSegmentSize = KernelInfo.GroupSegmentList;
+  auto SGPRCount = KernelInfo.SGPRCount;
+  auto VGPRCount = KernelInfo.VGPRCount;
+  auto SGPRSpillCount = KernelInfo.SGPRSpillCount;
+  auto VGPRSpillCount = KernelInfo.VGPRSpillCount;
+  auto MaxFlatWorkgroupSize = KernelInfo.MaxFlatWorkgroupSize;
 
   // Prints additional launch info that contains the following.
   // Num Args: The number of kernel arguments
@@ -4284,10 +4396,11 @@ static Error Plugin::check(int32_t Code, const char *ErrFmt, ArgsTy... Args) {
 }
 
 Expected<void *> AMDGPUMemoryManagerTy::allocate(size_t Size, void *HstPtr,
-                                                 TargetAllocTy Kind) {
+                                                 TargetAllocTy Kind,
+                                                 size_t Alignment) {
   // Allocate memory from the pool.
   void *Ptr = nullptr;
-  if (auto Err = MemoryPool->allocate(Size, &Ptr))
+  if (auto Err = MemoryPool->allocate(Size, &Ptr, Alignment))
     return std::move(Err);
 
   assert(Ptr && "Invalid pointer");
@@ -4305,7 +4418,8 @@ Expected<void *> AMDGPUMemoryManagerTy::allocate(size_t Size, void *HstPtr,
 }
 
 Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
-                                          TargetAllocTy Kind) {
+                                          TargetAllocTy Kind,
+                                          size_t Alignment) {
   if (Size == 0)
     return nullptr;
 
@@ -4330,7 +4444,7 @@ Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
 
   // Allocate from the corresponding memory pool.
   void *Alloc = nullptr;
-  if (auto Err = MemoryPool->allocate(Size, &Alloc))
+  if (auto Err = MemoryPool->allocate(Size, &Alloc, Alignment))
     return std::move(Err);
 
   if (Alloc) {
@@ -4354,6 +4468,10 @@ Expected<void *> AMDGPUDeviceTy::allocate(size_t Size, void *,
 void AMDGPUQueueTy::callbackError(hsa_status_t Status, hsa_queue_t *Source,
                                   void *Data) {
   auto &AMDGPUDevice = *reinterpret_cast<AMDGPUDeviceTy *>(Data);
+
+  // Drain any pending RPC work the device pushed before its queue died.
+  if (RPCServerTy *RPCServer = AMDGPUDevice.getRPCServer())
+    RPCServer->flushDevice(AMDGPUDevice);
 
   if (Status == HSA_STATUS_ERROR_EXCEPTION) {
     auto KernelTraceInfoRecord =

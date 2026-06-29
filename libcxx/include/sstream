@@ -1296,7 +1296,7 @@ _LIBCPP_POP_MACROS
 
 #  endif // _LIBCPP_HAS_LOCALIZATION
 
-#  if _LIBCPP_STD_VER <= 20 && !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES)
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
 #    include <ostream>
 #    include <type_traits>
 #  endif

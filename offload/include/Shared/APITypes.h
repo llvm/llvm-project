@@ -105,8 +105,11 @@ struct KernelArgsTy {
     uint64_t IsCUDA : 1; // Was this kernel spawned via CUDA.
     uint64_t DynCGroupMemFallback : 2; // The fallback for dynamic cgroup mem.
     uint64_t Cooperative : 1; // Was this kernel spawned as cooperative.
-    uint64_t Unused : 59;
-  } Flags = {0, 0, 0, 0, 0};
+    uint64_t IsPtrArgs : 1;   // Arguments are laid out as an array of pointers.
+    uint64_t StrictBlocksAndThreads
+        : 1; // The user-requested number of blocks and threads are strict.
+    uint64_t Unused : 57;
+  } Flags = {0, 0, 0, 0, 0, 0, 0};
   // User-requested number of blocks (for x,y,z dimension).
   uint32_t UserNumBlocks[3] = {0, 0, 0};
   // User-requested number of threads (for x,y,z dimension).
@@ -120,14 +123,12 @@ static_assert(sizeof(KernelArgsTy) ==
                    4 * sizeof(void **) + 2 * sizeof(int64_t *)),
               "Invalid struct size");
 
-/// Flat array of kernel launch parameters and their total size.
+/// Array of pointers to kernel launch arguments and the size of that array.
 struct KernelLaunchParamsTy {
-  /// Size of the Data array.
-  size_t Size = 0;
-  /// Flat array of kernel parameters.
-  void *Data = nullptr;
-  /// Ptrs to the Data entries. Only strictly required for the host plugin.
-  void **Ptrs = nullptr;
+  /// Number of kernel arguments in \p Args.
+  uint32_t NumArgs = 0;
+  /// Array of \p NumArgs pointers, each pointing at one argument's value.
+  void **Args = nullptr;
 };
 
 /// The outcome of a kernel replay.

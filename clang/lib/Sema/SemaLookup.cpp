@@ -1589,17 +1589,19 @@ static Module *getDefiningModule(Sema &S, Decl *Entity) {
     // If this function was instantiated from a template, the defining module is
     // the module containing the pattern.
     if (FunctionDecl *Pattern = FD->getTemplateInstantiationPattern())
-      Entity = Pattern;
+      Entity = Pattern->getDefinition();
   } else if (CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Entity)) {
     if (CXXRecordDecl *Pattern = RD->getTemplateInstantiationPattern())
-      Entity = Pattern;
+      Entity = Pattern->getDefinition();
   } else if (EnumDecl *ED = dyn_cast<EnumDecl>(Entity)) {
     if (auto *Pattern = ED->getTemplateInstantiationPattern())
-      Entity = Pattern;
+      Entity = Pattern->getDefinition();
   } else if (VarDecl *VD = dyn_cast<VarDecl>(Entity)) {
     if (VarDecl *Pattern = VD->getTemplateInstantiationPattern())
-      Entity = Pattern;
+      Entity = Pattern->getDefinition();
   }
+  if (!Entity)
+    return nullptr;
 
   // Walk up to the containing context. That might also have been instantiated
   // from a template.

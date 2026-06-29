@@ -24,7 +24,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE constexpr double acos(double x) {
+LIBC_INLINE double acos(double x) {
   using DoubleDouble = fputil::DoubleDouble;
   using namespace asin_internal;
   using FPBits = fputil::FPBits<double>;
@@ -83,24 +83,24 @@ LIBC_INLINE constexpr double acos(double x) {
 
     // Get x^2 - idx/64 exactly.  When FMA is available, double-double
     // multiplication will be correct for all rounding modes.  Otherwise we use
-    // Float128 directly.
-    Float128 x_f128(x);
+    // DFloat128 directly.
+    DFloat128 x_f128(x);
 
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
     // u = x^2 - idx/64
-    Float128 u_hi(
+    DFloat128 u_hi(
         fputil::multiply_add(static_cast<double>(idx), -0x1.0p-6, x_sq.hi));
-    Float128 u = fputil::quick_add(u_hi, Float128(x_sq.lo));
+    DFloat128 u = fputil::quick_add(u_hi, DFloat128(x_sq.lo));
 #else
-    Float128 x_sq_f128 = fputil::quick_mul(x_f128, x_f128);
-    Float128 u = fputil::quick_add(
-        x_sq_f128, Float128(static_cast<double>(idx) * (-0x1.0p-6)));
+    DFloat128 x_sq_f128 = fputil::quick_mul(x_f128, x_f128);
+    DFloat128 u = fputil::quick_add(
+        x_sq_f128, DFloat128(static_cast<double>(idx) * (-0x1.0p-6)));
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
-    Float128 p_f128 = asin_eval(u, idx);
+    DFloat128 p_f128 = asin_eval(u, idx);
     // Flip the sign of x_f128 to perform subtraction.
     x_f128.sign = x_f128.sign.negate();
-    Float128 r =
+    DFloat128 r =
         fputil::quick_add(PI_OVER_TWO_F128, fputil::quick_mul(x_f128, p_f128));
 
     return static_cast<double>(r);
@@ -225,7 +225,7 @@ LIBC_INLINE constexpr double acos(double x) {
   if (LIBC_LIKELY(r_upper == r_lower))
     return r_upper;
 
-  // Ziv's accuracy test failed, we redo the computations in Float128.
+  // Ziv's accuracy test failed, we redo the computations in DFloat128.
   // Recalculate mod 1/64.
   idx = static_cast<unsigned>(fputil::nearest_integer(u * 0x1.0p6));
 
@@ -258,17 +258,18 @@ LIBC_INLINE constexpr double acos(double x) {
   double t = h * (-0.25) / u;
   double vll = fputil::multiply_add(vl, t, vl_lo);
   // m_v = -(v_hi + v_lo + v_ll).
-  Float128 m_v = fputil::quick_add(
-      Float128(vh), fputil::quick_add(Float128(vl), Float128(vll)));
+  DFloat128 m_v = fputil::quick_add(
+      DFloat128(vh), fputil::quick_add(DFloat128(vl), DFloat128(vll)));
   m_v.sign = xbits.sign();
 
-  // Perform computations in Float128:
+  // Perform computations in DFloat128:
   //   acos(x) = (v_hi + v_lo + vll) * P(u)         , when 0.5 <= x < 1,
   //           = pi - (v_hi + v_lo + vll) * P(u)    , when -1 < x <= -0.5.
-  Float128 y_f128(fputil::multiply_add(static_cast<double>(idx), -0x1.0p-6, u));
+  DFloat128 y_f128(
+      fputil::multiply_add(static_cast<double>(idx), -0x1.0p-6, u));
 
-  Float128 p_f128 = asin_eval(y_f128, idx);
-  Float128 r_f128 = fputil::quick_mul(m_v, p_f128);
+  DFloat128 p_f128 = asin_eval(y_f128, idx);
+  DFloat128 r_f128 = fputil::quick_mul(m_v, p_f128);
 
   if (xbits.is_neg())
     r_f128 = fputil::quick_add(PI_F128, r_f128);

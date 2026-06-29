@@ -21,10 +21,17 @@ generator.
 
 Many of the build configurations mentioned on this documentation page can be
 utilized by using a CMake cache. A CMake cache is essentially a configuration
-file that sets the necessary flags for a specific build configuration. The caches
-for Clang are located in :code:`/clang/cmake/caches` within the monorepo. They
-can be passed to CMake using the :code:`-C` flag as demonstrated in the examples
-below along with additional configuration flags.
+file that sets the necessary flags for a specific build configuration.
+
+The caches for Clang are located in :code:`/clang/cmake/caches` within the
+monorepo. They can be passed to CMake using the :code:`-C` flag as demonstrated
+in the examples below along with additional configuration flags.
+
+The caches for Flang are located in :code:`/flang/cmake/caches` within the
+monorepo. They can be passed to CMake using the :code:`-C` flag as demonstrated
+in the examples below along with additional configuration flags. Due to the
+Flang's heavy reliance on Clang, these caches ensure equal handling of Flang
+and Clang, resulting in both being built within the same arrangement.
 
 Bootstrap Builds
 ================
@@ -132,6 +139,14 @@ configuration with CMake with the following command:
   $ cmake -G Ninja -C <path to source>/clang/cmake/caches/PGO.cmake \
       <path to source>/llvm
 
+Similarly, to build optimized Flang (along with Clang), you can use the
+following command:
+
+.. code-block:: console
+
+  $ cmake -G Ninja -C <path to source>/flang/cmake/caches/PGO.cmake \
+      <path to source>/llvm
+
 There are several additional options that the cache file also accepts to modify
 the build, particularly the ``PGO_INSTRUMENT_LTO`` option. Setting this option to
 Thin or Full will enable ThinLTO or full LTO respectively, further enhancing
@@ -145,8 +160,8 @@ that also enables ThinLTO, use the following command:
       -DPGO_INSTRUMENT_LTO=Thin \
       <path to source>/llvm
 
-By default, clang will generate profile data by compiling a simple
-hello world program.  You can also tell clang to use an external
+By default, the compiler will generate profile data by compiling a simple
+hello world program.  You can also configure the use of an external
 project for generating profile data that may be a better fit for your
 use case.  The project you specify must either be a lit test suite
 (use the ``CLANG_PGO_TRAINING_DATA`` option) or a CMake project (use the
@@ -161,6 +176,18 @@ profile data you would use the following command:
   $ cmake -G Ninja -C <path to source>/clang/cmake/caches/PGO.cmake \
        -DBOOTSTRAP_CLANG_PGO_TRAINING_DATA_SOURCE_DIR=<path to llvm-test-suite> \
        -DBOOTSTRAP_CLANG_PGO_TRAINING_DEPS=runtimes
+
+Similarly, to build optimized Flang (along with Clang), you can use the
+following command:
+
+.. code-block:: console
+
+  $ cmake -G Ninja -C <path to source>/flang/cmake/caches/PGO.cmake \
+       -DBOOTSTRAP_CLANG_PGO_TRAINING_DATA_SOURCE_DIR=<path to llvm-test-suite> \
+       -DBOOTSTRAP_CLANG_PGO_TRAINING_DEPS=runtimes \
+       -DBOOTSTRAP_FLANG_PGO_TRAINING_DATA_SOURCE_DIR=<path to llvm-test-suite> \
+       -DBOOTSTRAP_FLANG_PGO_TRAINING_DATA_SOURCE_CMAKE_ARGS="-DTEST_SUITE_SUBDIRS=Fortran" \
+       -DBOOTSTRAP_FLANG_PGO_TRAINING_DEPS=runtimes
 
 The ``BOOTSTRAP\_`` prefix tells CMake to pass the variables on to the instrumented
 stage two build.  And the ``CLANG_PGO_TRAINING_DEPS`` option lets you specify
@@ -191,6 +218,12 @@ should be at a path something like:
 
   <build dir>/tools/clang/stage2-instrumented-bins/utils/perf-training/clang.profdata
 
+For Flang the profile data should be at a path something like:
+
+.. code-block:: console
+
+  <build dir>/tools/clang/stage2-instrumented-bins/flang.profdata
+
 You can feed that file into the ``LLVM_PROFDATA_FILE`` option when you build your
 optimized compiler.
 
@@ -201,6 +234,12 @@ variable for that purpose:
 .. code-block:: cmake
 
   set(CLANG_PGO_TRAINING_DEPS builtins runtimes CACHE STRING "")
+
+Similarly, for Flang you can make use of :code:`FLANG_PGO_TRAINING_DEPS`:
+
+.. code-block:: cmake
+
+  set(FLANG_PGO_TRAINING_DEPS builtins runtimes CACHE STRING "")
 
 The PGO cache has a slightly different stage naming scheme than other
 multi-stage builds. It generates three stages: stage1, stage2-instrumented, and
@@ -225,6 +264,10 @@ The PGO cache generates the following additional targets:
 
 **stage2-check-clang**
   Depends on stage2 and runs check-clang using the stage2 compiler.
+
+**stage2-check-flang**
+  Depends on stage2 and runs check-flang using the stage2 compiler (when using
+  the Flang's CMake caches)
 
 **stage2-check-all**
   Depends on stage2 and runs check-all using the stage2 compiler.
@@ -256,6 +299,20 @@ Then, build the BOLT-optimized binary by running the following ninja command:
 
   $ ninja clang-bolt
 
+Similarly, to get both Flang and Clang optimized, use the following CMake
+configuration:
+
+.. code-block:: console
+
+  $ cmake <path to source>/llvm -C <path to source>/flang/cmake/caches/BOLT.cmake
+
+Then, build the BOLT-optimized flang and clang binaries by running the following
+ninja command:
+
+.. code-block:: console
+
+  $ ninja flang-bolt
+
 If you're seeing errors in the build process, try building with a recent
 version of Clang/LLVM by setting the ``CMAKE_C_COMPILER`` and
 ``CMAKE_CXX_COMPILER`` flags to the appropriate values.
@@ -278,6 +335,23 @@ Then, to build the final optimized binary, build the stage2-clang-bolt target:
 .. code-block:: console
 
   $ ninja stage2-clang-bolt
+
+Similarly, to get both Flang and Clang optimized, use the following CMake
+configuration:
+
+.. code-block:: console
+
+  $ cmake -G Ninja <path to source>/llvm \
+      -C <path to source>/flang/cmake/caches/BOLT-PGO.cmake \
+      -DBOOTSTRAP_LLVM_ENABLE_LLD=ON \
+      -DBOOTSTRAP_BOOTSTRAP_LLVM_ENABLE_LLD=ON \
+      -DPGO_INSTRUMENT_LTO=Thin
+
+Then, to build the final optimized binaries, build the stage2-flang-bolt target:
+
+.. code-block:: console
+
+  $ ninja stage2-flang-bolt
 
 3-Stage Non-Determinism
 =======================

@@ -1,15 +1,21 @@
 // gnuwin32 printf does not work for this test because it will print \15 (CR)
 // whenever \12 (LF) is in the input string.
-UNSUPPORTED: system-windows
+// On z/OS, ebcdic output from printf is converted into utf-8 as
+// the output being redirected, causing the magic bytes to be incorrect.
+// TODO: use a builtin version of printf
+UNSUPPORTED: system-windows, system-zos
 // Header
 RUN: printf '\377lprofR\201' > %t
-RUN: printf '\0\0\0\0\0\0\0\12' >> %t
+RUN: printf '\0\0\0\0\0\0\0\13' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\2' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\3' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\4' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0\0\0\0\20' >> %t
 RUN: printf '\0\0\0\0\1\0\0\0' >> %t
@@ -22,22 +28,28 @@ RUN: printf '\0\0\0\0\0\0\0\0' >> %t
 RUN: printf '\134\370\302\114\333\030\275\254' >> %t
 RUN: printf '\0\0\0\0\0\0\0\1' >> %t
 RUN: printf '\1\0\0\0' >> %t
+RUN: printf '\0\0\0\0' >> %t
 RUN: printf '\3\0\0\0' >> %t
 RUN: printf '\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0' >> %t
 RUN: printf '\0\0\0\1' >> %t
-RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0' >> %t
 RUN: printf '\0\0\0\3' >> %t
+RUN: printf '\0\0\0\0' >> %t
 
 RUN: printf '\344\023\165\112\031\035\265\067' >> %t
 RUN: printf '\0\0\0\0\0\0\0\2' >> %t
-RUN: printf '\0\377\377\330' >> %t
-RUN: printf '\2\377\377\323' >> %t
+RUN: printf '\0\377\377\320' >> %t
+RUN: printf '\0\0\0\0' >> %t
+RUN: printf '\2\377\377\313' >> %t
 RUN: printf '\0\0\0\0' >> %t
 RUN: printf '\0\0\0\0' >> %t
 RUN: printf '\0\0\0\2' >> %t
-RUN: printf '\0\0\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0\0\0\0\0' >> %t
+RUN: printf '\0\0' >> %t
 RUN: printf '\0\0\0\1' >> %t
+RUN: printf '\0\0\0\0' >> %t
 
 RUN: printf '\0\0\0\0\0\0\0\023' >> %t
 RUN: printf '\0\0\0\0\0\0\0\067' >> %t

@@ -42,7 +42,6 @@ Prescanner::Prescanner(const Prescanner &that, Preprocessor &prepro,
       backslashFreeFormContinuation_{that.backslashFreeFormContinuation_},
       inFixedForm_{that.inFixedForm_},
       fixedFormColumnLimit_{that.fixedFormColumnLimit_},
-      freeFormColumnLimit_{that.freeFormColumnLimit_},
       encoding_{that.encoding_},
       prescannerNesting_{that.prescannerNesting_ + 1},
       skipLeadingAmpersand_{that.skipLeadingAmpersand_},
@@ -57,6 +56,8 @@ static inline int IsSpace(const char *p) {
     return 1;
   } else if (p[0] == '\xc2' && p[1] == '\xa0') { // UTF-8 NBSP
     return 2;
+  } else if (*p == '\r') { // bare carriage return retained in line
+    return 1;
   } else {
     return 0;
   }
@@ -569,9 +570,6 @@ void Prescanner::SkipToEndOfLine() {
 bool Prescanner::MustSkipToEndOfLine() const {
   if (inFixedForm_ && column_ > fixedFormColumnLimit_ && !tabInCurrentLine_) {
     return true; // skip over ignored columns in right margin (73:80)
-  } else if (!inFixedForm_ && (freeFormColumnLimit_ != 0) &&
-      column_ > freeFormColumnLimit_) {
-    return true;
   } else if (*at_ == '!' && !inCharLiteral_ &&
       (!inFixedForm_ || tabInCurrentLine_ || column_ != 6)) {
     return InCompilerDirective() ||

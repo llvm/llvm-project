@@ -10,6 +10,7 @@
 #include "Protocol/ProtocolEvents.h"
 #include "Protocol/ProtocolRequests.h"
 #include "TestingSupport/TestUtilities.h"
+#include "lldb/lldb-defines.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Testing/Support/Error.h"
@@ -759,6 +760,17 @@ TEST(ProtocolTypesTest, StepInTarget) {
   EXPECT_EQ(target.column, deserialized_target->column);
   EXPECT_EQ(target.endLine, deserialized_target->endLine);
   EXPECT_EQ(target.endColumn, deserialized_target->endColumn);
+
+  target.endLine = LLDB_INVALID_LINE_NUMBER;
+  target.endColumn = LLDB_INVALID_COLUMN_NUMBER;
+
+  EXPECT_EQ(R"({
+  "column": 320,
+  "id": 230,
+  "label": "the_function_name",
+  "line": 2
+})",
+            PrettyPrint(target));
 }
 
 TEST(ProtocolTypesTest, ReadMemoryArguments) {

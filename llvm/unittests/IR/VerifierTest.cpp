@@ -246,6 +246,25 @@ TEST(VerifierTest, DetectInvalidDebugInfo) {
     EXPECT_TRUE(verifyModule(M));
   }
   {
+    // A DICompileUnit whose dialect is outside the defined enumeration is
+    // rejected by the verifier. The textual IR parser, the bitcode reader,
+    // and the C API all guard against this, so this path is only reachable
+    // via programmatic IR construction.
+    LLVMContext C;
+    Module M("M", C);
+    DIBuilder DIB(M);
+    const uint16_t OutOfRangeDialect = dwarf::DW_LLVM_LANG_DIALECT_max + 1;
+    DIB.createCompileUnit(
+        DISourceLanguageName(dwarf::DW_LANG_C89, OutOfRangeDialect),
+        DIB.createFile("broken.c", "/"), "unittest", false, "", 0);
+    DIB.finalize();
+
+    std::string Error;
+    raw_string_ostream ErrorOS(Error);
+    EXPECT_TRUE(verifyModule(M, &ErrorOS));
+    EXPECT_TRUE(StringRef(Error).contains("invalid language dialect")) << Error;
+  }
+  {
     LLVMContext C;
     Module M("M", C);
     DIBuilder DIB(M);
@@ -550,7 +569,7 @@ TEST(VerifierTest, IntrinsicRetInvalidStruct) {
   for (StructType *STy : {NonLiteral, LiteralPacked}) {
     Module M("M", Ctx);
     FunctionType *IntrFTy = FunctionType::get(STy, I32Ty, /*isVarArg=*/false);
-    Function *Intr = Function::Create(IntrFTy, Function::InternalLinkage,
+    Function *Intr = Function::Create(IntrFTy, Function::ExternalLinkage,
                                       "llvm.nvvm.elect.sync", M);
 
     FunctionType *FTy =
@@ -564,7 +583,7 @@ TEST(VerifierTest, IntrinsicRetInvalidStruct) {
 
     std::string Error;
     raw_string_ostream ErrorOS(Error);
-    EXPECT_TRUE(verifyFunction(*F, &ErrorOS));
+    EXPECT_TRUE(verifyModule(M, &ErrorOS));
 
     EXPECT_TRUE(StringRef(Error).starts_with(
         "intrinsic return type expected literal non-packed struct with 2 "
