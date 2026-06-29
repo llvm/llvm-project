@@ -497,9 +497,7 @@ CodeGenModule::CodeGenModule(ASTContext &C,
 
   if (LangOpts.ObjC)
     createObjCRuntime();
-  // OpenCL types (e.g., event_t) are used by SPIR-V targets in SYCL device
-  // compilation. OpenCL runtime provides the required type conversions.
-  if (LangOpts.OpenCL || getTriple().isSPIROrSPIRV())
+  if (LangOpts.OpenCL)
     createOpenCLRuntime();
   if (LangOpts.OpenMP)
     createOpenMPRuntime();

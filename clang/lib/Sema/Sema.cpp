@@ -447,9 +447,6 @@ void Sema::Initialize() {
     addImplicitTypedef("size_t", Context.getSizeType());
   }
 
-  if (Context.getTargetInfo().getTriple().isSPIROrSPIRV())
-    addImplicitTypedef("__ocl_event_t", Context.OCLEventTy);
-
   // Initialize predefined OpenCL types and supported extensions and (optional)
   // core features.
   if (getLangOpts().OpenCL) {
