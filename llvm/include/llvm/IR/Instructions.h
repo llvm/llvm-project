@@ -172,6 +172,14 @@ private:
   }
 };
 
+/// A structure representing the attributes of a load or store instruction.
+struct LoadStoreInstAttributes {
+  bool IsVolatile = false;
+  Align Alignment;
+  AtomicOrdering Ordering = AtomicOrdering::NotAtomic;
+  SyncScope::ID SSID = SyncScope::System;
+};
+
 //===----------------------------------------------------------------------===//
 //                                LoadInst Class
 //===----------------------------------------------------------------------===//
@@ -247,6 +255,19 @@ public:
                  SyncScope::ID SSID = SyncScope::System) {
     setOrdering(Ordering);
     setSyncScopeID(SSID);
+  }
+
+  /// Returns the attributes of this load instruction.
+  LoadStoreInstAttributes getAttributes() const {
+    return {isVolatile(), getAlign(), getOrdering(), getSyncScopeID()};
+  }
+
+  /// Sets the attributes of this load instruction.
+  void setAttributes(const LoadStoreInstAttributes &Attrs) {
+    setVolatile(Attrs.IsVolatile);
+    setAlignment(Attrs.Alignment);
+    setOrdering(Attrs.Ordering);
+    setSyncScopeID(Attrs.SSID);
   }
 
   bool isSimple() const { return !isAtomic() && !isVolatile(); }
@@ -371,6 +392,19 @@ public:
                  SyncScope::ID SSID = SyncScope::System) {
     setOrdering(Ordering);
     setSyncScopeID(SSID);
+  }
+
+  /// Returns the attributes of this store instruction.
+  LoadStoreInstAttributes getAttributes() const {
+    return {isVolatile(), getAlign(), getOrdering(), getSyncScopeID()};
+  }
+
+  /// Sets the attributes of this store instruction.
+  void setAttributes(const LoadStoreInstAttributes &Attrs) {
+    setVolatile(Attrs.IsVolatile);
+    setAlignment(Attrs.Alignment);
+    setOrdering(Attrs.Ordering);
+    setSyncScopeID(Attrs.SSID);
   }
 
   bool isSimple() const { return !isAtomic() && !isVolatile(); }
