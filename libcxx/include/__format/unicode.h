@@ -65,9 +65,9 @@ static_assert(sizeof(__consume_result) == sizeof(char32_t));
 /// https://www.unicode.org/reports/tr29/#Grapheme_Cluster_Boundary_Rules
 ///
 /// The data tables used are
-/// https://www.unicode.org/Public/UCD/latest/ucd/auxiliary/GraphemeBreakProperty.txt
-/// https://www.unicode.org/Public/UCD/latest/ucd/emoji/emoji-data.txt
-/// https://www.unicode.org/Public/UCD/latest/ucd/auxiliary/GraphemeBreakTest.txt (for testing only)
+/// https://www.unicode.org/Public/18.0.0/ucd/auxiliary/GraphemeBreakProperty.txt
+/// https://www.unicode.org/Public/18.0.0/ucd/emoji/emoji-data.txt
+/// https://www.unicode.org/Public/18.0.0/ucd/auxiliary/GraphemeBreakTest.txt (for testing only)
 
 inline constexpr char32_t __replacement_character = U'\ufffd';
 
@@ -132,7 +132,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr bool __at_end() const noexcept { return __first_ == __last_; }
   _LIBCPP_HIDE_FROM_ABI constexpr _Iterator __position() const noexcept { return __first_; }
 
-  // https://www.unicode.org/versions/latest/ch03.pdf#G7404
+  // https://www.unicode.org/versions/Unicode18.0.0/core-spec/chapter-3/#G7404
   // Based on Table 3-7, Well-Formed UTF-8 Byte Sequences
   //
   // Code Points        First Byte Second Byte Third Byte Fourth Byte  Remarks
@@ -306,21 +306,55 @@ class __extended_grapheme_cluster_break {
 public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit __extended_grapheme_cluster_break(char32_t __first_code_point)
       : __prev_code_point_(__first_code_point),
-        __prev_property_(__extended_grapheme_custer_property_boundary::__get_property(__first_code_point)) {
+        __prev_property_(__extended_grapheme_custer_property_boundary::__get_property(__first_code_point)),
+        __pending_linker_(__indic_conjunct_break::__get_property(__first_code_point) == __inCB_property::__Linker) {
     // Initializes the active rule.
     if (__prev_property_ == __EGC_property::__Extended_Pictographic)
       __active_rule_ = __rule::__GB11_emoji;
     else if (__prev_property_ == __EGC_property::__Regional_Indicator)
       __active_rule_ = __rule::__GB12_GB13_regional_indicator;
-    else if (__indic_conjunct_break::__get_property(__first_code_point) == __inCB_property::__Consonant)
-      __active_rule_ = __rule::__GB9c_indic_conjunct_break;
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(char32_t __next_code_point) {
     __EGC_property __next_property = __extended_grapheme_custer_property_boundary::__get_property(__next_code_point);
     bool __result                  = __evaluate(__next_code_point, __next_property);
-    __prev_code_point_             = __next_code_point;
-    __prev_property_               = __next_property;
+
+    // *** GB9c: Indic_Conjunct_Break (InCB). ***
+    //
+    // Do not break within certain combinations with Indic_Conjunct_Break
+    // (InCB)=Linker. A Linker (optionally preceded by a run of InCB Extend or
+    // further Linker code points, themselves possibly preceded by a
+    // Consonant) is only known to belong with a following Consonant once
+    // that Consonant is actually seen; until then the Linker's own break
+    // decision is whatever the other rules say. `__pending_linker_` tracks
+    // whether such an unresolved Linker run is in progress; if so, and the
+    // next code point is the resolving Consonant, override the break
+    // decision to "do not break", regardless of what the other rules said.
+    __inCB_property __next_inCB = __indic_conjunct_break::__get_property(__next_code_point);
+    if (__pending_linker_ && __next_inCB == __inCB_property::__Consonant)
+      __result = false;
+
+    if (__result) {
+      // A break occurred; the new cluster starts fresh at __next_code_point.
+      __pending_linker_ = __next_inCB == __inCB_property::__Linker;
+    } else {
+      switch (__next_inCB) {
+      case __inCB_property::__Consonant:
+        __pending_linker_ = false; // The run is resolved.
+        break;
+      case __inCB_property::__Linker:
+        __pending_linker_ = true;
+        break;
+      case __inCB_property::__Extend:
+        break; // Carries the run forward without changing its state.
+      case __inCB_property::__none:
+        __pending_linker_ = false; // An unrelated code point breaks the run's contiguity.
+        break;
+      }
+    }
+
+    __prev_code_point_ = __next_code_point;
+    __prev_property_   = __next_property;
     return __result;
   }
 
@@ -337,8 +371,6 @@ private:
     switch (__active_rule_) {
     case __rule::__none:
       return __evaluate_none(__next_code_point, __next_property);
-    case __rule::__GB9c_indic_conjunct_break:
-      return __evaluate_GB9c_indic_conjunct_break(__next_code_point, __next_property);
     case __rule::__GB11_emoji:
       return __evaluate_GB11_emoji(__next_code_point, __next_property);
     case __rule::__GB12_GB13_regional_indicator:
@@ -348,6 +380,7 @@ private:
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr bool __evaluate_none(char32_t __next_code_point, __EGC_property __next_property) {
+    (void)__next_code_point;
     // *** Break at the start and end of text, unless the text is empty. ***
 
     _LIBCPP_ASSERT_INTERNAL(__prev_property_ != __EGC_property::__sot, "should be handled in the constructor"); // GB1
@@ -390,13 +423,6 @@ private:
     if (__prev_property_ == __EGC_property::__Prepend) // GB9b
       return false;
 
-    // *** Do not break within certain combinations with Indic_Conjunct_Break (InCB)=Linker. ***
-    if (__indic_conjunct_break::__get_property(__next_code_point) == __inCB_property::__Consonant) {
-      __active_rule_                     = __rule::__GB9c_indic_conjunct_break;
-      __GB9c_indic_conjunct_break_state_ = __GB9c_indic_conjunct_break_state::__Consonant;
-      return true;
-    }
-
     // *** Do not break within emoji modifier sequences or emoji zwj sequences. ***
     if (__next_property == __EGC_property::__Extended_Pictographic) {
       __active_rule_      = __rule::__GB11_emoji;
@@ -415,43 +441,6 @@ private:
 
     // *** Otherwise, break everywhere. ***
     return true; // GB999
-  }
-
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool
-  __evaluate_GB9c_indic_conjunct_break(char32_t __next_code_point, __EGC_property __next_property) {
-    __inCB_property __break = __indic_conjunct_break::__get_property(__next_code_point);
-    if (__break == __inCB_property::__none) {
-      __active_rule_ = __rule::__none;
-      return __evaluate_none(__next_code_point, __next_property);
-    }
-
-    switch (__GB9c_indic_conjunct_break_state_) {
-    case __GB9c_indic_conjunct_break_state::__Consonant:
-      if (__break == __inCB_property::__Extend) {
-        return false;
-      }
-      if (__break == __inCB_property::__Linker) {
-        __GB9c_indic_conjunct_break_state_ = __GB9c_indic_conjunct_break_state::__Linker;
-        return false;
-      }
-      __active_rule_ = __rule::__none;
-      return __evaluate_none(__next_code_point, __next_property);
-
-    case __GB9c_indic_conjunct_break_state::__Linker:
-      if (__break == __inCB_property::__Extend) {
-        return false;
-      }
-      if (__break == __inCB_property::__Linker) {
-        return false;
-      }
-      if (__break == __inCB_property::__Consonant) {
-        __GB9c_indic_conjunct_break_state_ = __GB9c_indic_conjunct_break_state::__Consonant;
-        return false;
-      }
-      __active_rule_ = __rule::__none;
-      return __evaluate_none(__next_code_point, __next_property);
-    }
-    __libcpp_unreachable();
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool
@@ -495,9 +484,12 @@ private:
   char32_t __prev_code_point_;
   __EGC_property __prev_property_;
 
+  // Tracks whether an unresolved Indic_Conjunct_Break (InCB) Linker run is in
+  // progress; see the GB9c handling in operator().
+  bool __pending_linker_;
+
   enum class __rule {
     __none,
-    __GB9c_indic_conjunct_break,
     __GB11_emoji,
     __GB12_GB13_regional_indicator,
   };
@@ -509,13 +501,6 @@ private:
     __ZWJ,
   };
   __GB11_emoji_state __GB11_emoji_state_ = __GB11_emoji_state::__Extended_Pictographic;
-
-  enum class __GB9c_indic_conjunct_break_state {
-    __Consonant,
-    __Linker,
-  };
-
-  __GB9c_indic_conjunct_break_state __GB9c_indic_conjunct_break_state_ = __GB9c_indic_conjunct_break_state::__Consonant;
 
   // NOLINTEND(readability-identifier-naming)
 };

@@ -48,13 +48,15 @@ inline constexpr int Cc = 65;
 inline constexpr int Cf = 170;
 inline constexpr int Cs = 2'048;
 inline constexpr int Co = 137'468;
-inline constexpr int Cn = 819'533;
+inline constexpr int Cn = 801'683;
 inline constexpr int C  = Cc + Cf + Cs + Co + Cn;
 
 // This is the final part of the Unicode properties table:
 //
-// 31350..323AF  ; Lo # [4192] CJK UNIFIED IDEOGRAPH-31350..CJK UNIFIED IDEOGRAPH-323AF
-// 323B0..E0000  ; Cn # [711761] <reserved-323B0>..<reserved-E0000>
+// 31350..33479  ; Lo # [8490] CJK UNIFIED IDEOGRAPH-31350..CJK UNIFIED IDEOGRAPH-33479
+// 3347A..3CFFF  ; Cn # [39814] <reserved-3347A>..<reserved-3CFFF>
+// 3D000..3FC3F  ; Lo # [11328] SEAL CHARACTER-3D000..SEAL CHARACTER-3FC3F
+// 3FC40..E0000  ; Cn # [656321] <reserved-3FC40>..<reserved-E0000>
 // E0001         ; Cf #       LANGUAGE TAG
 // E0002..E001F  ; Cn #  [30] <reserved-E0002>..<reserved-E001F>
 // E0020..E007F  ; Cf #  [96] TAG SPACE..CANCEL TAG
@@ -66,14 +68,14 @@ inline constexpr int C  = Cc + Cf + Cs + Co + Cn;
 // 100000..10FFFD; Co # [65534] <private-use-100000>..<private-use-10FFFD>
 // 10FFFE..10FFFF; Cn #   [2] <noncharacter-10FFFE>..<noncharacter-10FFFF>
 //
-// It can be observed all entries in the range 323B0..10FFFF are in the
+// It can be observed all entries in the range 3FC40..10FFFF are in the
 // categories Cf, Co, Cn, except a small range with the property Mn.
 // In order to reduce the size of the table only the entires in the range
-// [0000, 323B0) are stored in the table. The entries in the range
-// [323B0, 10FFFF] use a hand-crafted algorithm.
+// [0000, 3FC40) are stored in the table. The entries in the range
+// [3FC40, 10FFFF] use a hand-crafted algorithm.
 //
 // This means a number of entries are omitted
-inline constexpr int excluded = ((0x10FFFF - 0x323B0) + 1) - 240;
+inline constexpr int excluded = ((0x10FFFF - 0x3FC40) + 1) - 240;
 
 inline constexpr int entries = Z + C - excluded;
 
@@ -88,10 +90,10 @@ static constexpr int count_entries() {
 static_assert(count_entries() == entries);
 
 int main(int, char**) {
-  for (char32_t c = 0x31350; c <= 0x323AF; ++c) // 31350..323AF  ; Lo # [4192]
+  for (char32_t c = 0x31350; c <= 0x33479; ++c) // 31350..33479  ; Lo # [8490]
     assert(std::__escaped_output_table::__needs_escape(c) == false);
 
-  for (char32_t c = 0x323B0; c <= 0xE00FF; ++c) // 323B0..E00FF ; C
+  for (char32_t c = 0x3FC40; c <= 0xE00FF; ++c) // 3347A..E00FF ; C
     assert(std::__escaped_output_table::__needs_escape(c) == true);
 
   for (char32_t c = 0xE0100; c <= 0xE01EF; ++c) // E0100..E01EF  ; Mn # [240]
