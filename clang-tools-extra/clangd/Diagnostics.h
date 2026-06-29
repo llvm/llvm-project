@@ -138,7 +138,8 @@ std::optional<std::string> getDiagnosticDocURI(Diag::DiagSource, unsigned ID,
 class StoreDiags : public DiagnosticConsumer {
 public:
   // The ClangTidyContext populates Source and Name for clang-tidy diagnostics.
-  std::vector<Diag> take(const clang::tidy::ClangTidyContext *Tidy = nullptr);
+  std::vector<Diag> take(llvm::StringRef Code,
+                         const clang::tidy::ClangTidyContext *Tidy = nullptr);
 
   void BeginSourceFile(const LangOptions &Opts,
                        const Preprocessor *PP) override;

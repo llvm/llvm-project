@@ -570,7 +570,73 @@ int getSeverity(DiagnosticsEngine::Level L) {
   llvm_unreachable("Unknown diagnostic level!");
 }
 
-std::vector<Diag> StoreDiags::take(const clang::tidy::ClangTidyContext *Tidy) {
+// For clang-tidy diagnostics, generates a fix that suppresses the diagnostic
+// on the current line by appending a NOLINT comment.
+static std::optional<Fix> makeNolintFix(llvm::StringRef Code, const Diag &D) {
+  if (D.Source != Diag::ClangTidy || D.Name.empty() || !D.InsideMainFile)
+    return std::nullopt;
+
+  llvm::Expected<size_t> StartOffset = positionToOffset(Code, D.Range.start);
+  if (!StartOffset) {
+    llvm::consumeError(StartOffset.takeError());
+    return std::nullopt;
+  }
+  size_t LineEnd = Code.find('\n', *StartOffset);
+  if (LineEnd == llvm::StringRef::npos)
+    LineEnd = Code.size();
+  Position InsertPos = offsetToPosition(Code, LineEnd);
+
+  TextEdit Edit;
+  Edit.range = {InsertPos, InsertPos};
+  Edit.newText = llvm::formatv(" // NOLINT({0})", D.Name);
+
+  Fix F;
+  F.Message = llvm::formatv("suppress this warning with NOLINT");
+  F.Edits.push_back(std::move(Edit));
+
+  return F;
+}
+
+// For clang-tidy diagnostics, generates a fix that suppresses the diagnostic on
+// the current line by inserting a NOLINTNEXTLINE comment before the current
+// line.
+static std::optional<Fix> makeNolintNextLineFix(llvm::StringRef Code,
+                                                const Diag &D) {
+  if (D.Source != Diag::ClangTidy || D.Name.empty() || !D.InsideMainFile)
+    return std::nullopt;
+
+  llvm::Expected<size_t> StartOffset = positionToOffset(Code, D.Range.start);
+  if (!StartOffset) {
+    llvm::consumeError(StartOffset.takeError());
+    return std::nullopt;
+  }
+  size_t LineStart = Code.rfind('\n', *StartOffset);
+  if (LineStart == llvm::StringRef::npos)
+    LineStart = 0;
+  else
+    ++LineStart;
+
+  size_t LineTextStart = Code.find_first_not_of(" \t", LineStart);
+  if (LineTextStart == llvm::StringRef::npos || LineTextStart > *StartOffset)
+    LineTextStart = *StartOffset;
+
+  size_t Indentation = LineTextStart - LineStart;
+  Position InsertPos = offsetToPosition(Code, LineStart);
+
+  TextEdit Edit;
+  Edit.range = {InsertPos, InsertPos};
+  Edit.newText = std::string(Indentation, ' ');
+  Edit.newText.append(llvm::formatv("// NOLINTNEXTLINE({0})\n", D.Name));
+
+  Fix F;
+  F.Message = llvm::formatv("suppress this warning with NOLINTNEXTLINE");
+  F.Edits.push_back(std::move(Edit));
+
+  return F;
+}
+
+std::vector<Diag> StoreDiags::take(llvm::StringRef Code,
+                                   const clang::tidy::ClangTidyContext *Tidy) {
   // Do not forget to emit a pending diagnostic if there is one.
   flushLastDiag();
 
@@ -604,6 +670,10 @@ std::vector<Diag> StoreDiags::take(const clang::tidy::ClangTidyContext *Tidy) {
       if (!TidyDiag.empty()) {
         Diag.Name = std::move(TidyDiag);
         Diag.Source = Diag::ClangTidy;
+        if (auto NolintFix = makeNolintFix(Code, Diag))
+          Diag.Fixes.push_back(std::move(*NolintFix));
+        if (auto NolintNextLineFix = makeNolintNextLineFix(Code, Diag))
+          Diag.Fixes.push_back(std::move(*NolintNextLineFix));
         // clang-tidy bakes the name into diagnostic messages. Strip it out.
         // It would be much nicer to make clang-tidy not do this.
         auto CleanMessage = [&](std::string &Msg) {
