@@ -9989,7 +9989,8 @@ AArch64TargetLowering::ByValNeedsCopyForTailCall(SelectionDAG &DAG, SDValue Src,
                                                  ISD::ArgFlagsTy Flags) const {
   MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
 
-  // Globals are always safe to copy from.
+  // Globals and constant pools are not a part of the stack frame, hence
+  // always safe to copy from.
   if (isa<GlobalAddressSDNode>(Src) || isa<ExternalSymbolSDNode>(Src))
     return CopyOnce;
 
@@ -10010,8 +10011,7 @@ AArch64TargetLowering::ByValNeedsCopyForTailCall(SelectionDAG &DAG, SDValue Src,
 
   // If the source is in the local frame, then the copy to the argument memory
   // is always valid.
-  bool FixedSrc = MFI.isFixedObjectIndex(SrcFI);
-  if (!FixedSrc || (FixedSrc && SrcOffset < 0))
+  if (!MFI.isFixedObjectIndex(SrcFI) || SrcOffset < 0)
     return CopyOnce;
 
   // If the value is already in the correct location, then no copying is

@@ -11,10 +11,6 @@ define i32 @f(ptr byval(%struct.p) align 4 %q) nounwind {
 ;
 ; CHECK-GI-LABEL: f:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldp q1, q0, [sp]
-; CHECK-GI-NEXT:    stp q1, q0, [sp]
-; CHECK-GI-NEXT:    ldr q0, [sp, #32]
-; CHECK-GI-NEXT:    str q0, [sp, #32]
 ; CHECK-GI-NEXT:    b g
 entry:
   %call = tail call i32 @g(ptr byval(%struct.p) align 4 %q) nounwind
@@ -30,10 +26,6 @@ define i32 @h(ptr byval(%struct.p) align 4 %q, i32 %r) nounwind {
 ;
 ; CHECK-GI-LABEL: h:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    ldp q1, q0, [sp]
-; CHECK-GI-NEXT:    stp q1, q0, [sp]
-; CHECK-GI-NEXT:    ldr q0, [sp, #32]
-; CHECK-GI-NEXT:    str q0, [sp, #32]
 ; CHECK-GI-NEXT:    b i
 entry:
   %call = tail call i32 @i(ptr byval(%struct.p) align 4 %q, i32 %r) nounwind
@@ -61,14 +53,19 @@ define i32 @overlap_forward(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5
 ;
 ; CHECK-GI-LABEL: overlap_forward:
 ; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    sub sp, sp, #48
 ; CHECK-GI-NEXT:    mov w8, #99 // =0x63
-; CHECK-GI-NEXT:    str x8, [sp]
-; CHECK-GI-NEXT:    ldr q0, [sp]
-; CHECK-GI-NEXT:    stur q0, [sp, #8]
-; CHECK-GI-NEXT:    ldr q0, [sp, #16]
-; CHECK-GI-NEXT:    stur q0, [sp, #24]
-; CHECK-GI-NEXT:    ldr q0, [sp, #32]
-; CHECK-GI-NEXT:    stur q0, [sp, #40]
+; CHECK-GI-NEXT:    str x8, [sp, #48]
+; CHECK-GI-NEXT:    ldp q1, q0, [sp, #48]
+; CHECK-GI-NEXT:    stp q1, q0, [sp]
+; CHECK-GI-NEXT:    ldr q0, [sp, #80]
+; CHECK-GI-NEXT:    ldr q1, [sp]
+; CHECK-GI-NEXT:    str q0, [sp, #32]
+; CHECK-GI-NEXT:    stur q1, [sp, #56]
+; CHECK-GI-NEXT:    ldp q1, q0, [sp, #16]
+; CHECK-GI-NEXT:    stur q1, [sp, #72]
+; CHECK-GI-NEXT:    stur q0, [sp, #88]
+; CHECK-GI-NEXT:    add sp, sp, #48
 ; CHECK-GI-NEXT:    b overlap_callee
 entry:
   %call = tail call i32 @overlap_callee(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7, i64 99, ptr byval(%struct.p) align 8 %q) nounwind
