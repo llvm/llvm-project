@@ -48,3 +48,18 @@ add_entrypoint_object(
     libc.src.__support.File.platform_dir
     libc.src.errno.errno
 )
+
+add_entrypoint_object(
+  fdopendir
+  SRCS
+    fdopendir.cpp
+  HDRS
+    fdopendir.h
+  DEPENDS
+    libc.include.dirent
+    libc.hdr.types.DIR
+    libc.src.__support.File.dir
+    libc.src.__support.File.platform_dir
+    libc.src.errno.errno
+)
+
