@@ -281,20 +281,23 @@ if(LLVM_BUILD_INSTRUMENTED)
     )
     add_custom_target(generate-flang-profdata DEPENDS "${PROFDATA}")
 
-    # The clang and flang profdata pipelines clean and regenerate the same
-    # shared profraw directories (profiles/ and clang/utils/perf-training).
-    # Order flang after clang so flang's clean/regenerate never races clang's
-    # merge while it has a profraw mmap'd.
-    if(TARGET generate-profdata)
-      add_dependencies(generate-flang-profdata generate-profdata)
-    endif()
-
     if(FLANG_PGO_TRAINING_CLANG_COUPLING)
       string(TOUPPER "${LLVM_BUILD_INSTRUMENTED}" LLVM_BUILD_UPPER_INSTRUMENTED)
       if (LLVM_BUILD_UPPER_INSTRUMENTED STREQUAL "CSSPGO")
         message(STATUS "CSSPGO of flang is not supported")
       else()
         add_dependencies(clang-bootstrap-deps generate-flang-profdata)
+        # When clang drives the bootstrap PGO, clang's generate-profdata is
+        # also a bootstrap provider, so both pipelines run concurrently and
+        # clean/regenerate the same shared profraw dirs, racing each other's
+        # merge. Order flang after clang to remove the race. generate-profdata
+        # already runs in this case, so this adds no extra work; when flang
+        # drives the bootstrap (provider is generate-flang-profdata) the guard
+        # keeps it a no-op.
+        if(TARGET generate-profdata AND
+           "${PGO_OPT_PROFDATA_PROVIDER}" STREQUAL "generate-profdata")
+          add_dependencies(generate-flang-profdata generate-profdata)
+        endif()
       endif()
     endif()
   endif()
