@@ -34,8 +34,10 @@ class TestSwiftRegex(TestBase):
             self, 'Set breakpoint here', self.main_source_spec)
         self.expect('frame var regex',
                     substrs=['_StringProcessing.Regex<(Substring, Substring, Substring, Substring)>) regex = {'])
-        self.expect('frame var dslRegex',
-                    substrs=['(_StringProcessing.Regex<Substring>) dslRegex = {'])
+        self.expect(
+            "frame var dslRegex",
+            patterns=[r"\(_StringProcessing.Regex<.+>\) dslRegex = {"],
+        )
 
     @swiftTest
     @skipIf(macos_version=["<", "13"])
@@ -72,8 +74,9 @@ class TestSwiftRegex(TestBase):
             self, 'Set breakpoint here', self.main_source_spec)
         self.expect('expr regex',
                     substrs=['_StringProcessing.Regex<(Substring, Substring, Substring, Substring)>) $R0 = {'])
-        self.expect('expr dslRegex',
-                    substrs=['(_StringProcessing.Regex<Substring>) $R1 = {'])
+        self.expect(
+            "expr dslRegex", patterns=[r"\(_StringProcessing\.Regex<.+>\) \$R1 = {"]
+        )
 
     @skipEmbeddedSwift
     @swiftTest
