@@ -40,6 +40,8 @@ static const char AccentE[] = "\xaa\x4a\xb1\xc1\x63\x67\x9e\xc5\x74\x71\x72"
 
 // String with Cyrillic character ya.
 static const char CyrillicUTF[] = "\xd0\xaf";
+static const char TruncatedUTF[] = "\xc2";
+static const char MalformedUTF[] = {'\xc2', 'A', '\0'};
 
 TEST(ConverterEBCDIC, convertToEBCDIC) {
   // Hello string.
@@ -92,6 +94,22 @@ TEST(ConverterEBCDIC, convertFromEBCDIC) {
   ConverterEBCDIC::convertToUTF8(Src, Dst);
   EXPECT_STREQ(AccentUTF, static_cast<std::string>(Dst).c_str());
   Dst.clear();
+}
+
+TEST(ConverterEBCDIC, convertToEBCDICRejectsTruncatedUTF8) {
+  SmallString<8> Dst;
+
+  std::error_code EC =
+      ConverterEBCDIC::convertToEBCDIC(StringRef(TruncatedUTF, 1), Dst);
+  EXPECT_EQ(EC, std::errc::invalid_argument);
+}
+
+TEST(ConverterEBCDIC, convertToEBCDICRejectsMalformedUTF8Continuation) {
+  SmallString<8> Dst;
+
+  std::error_code EC =
+      ConverterEBCDIC::convertToEBCDIC(StringRef(MalformedUTF, 2), Dst);
+  EXPECT_EQ(EC, std::errc::illegal_byte_sequence);
 }
 
 } // namespace
