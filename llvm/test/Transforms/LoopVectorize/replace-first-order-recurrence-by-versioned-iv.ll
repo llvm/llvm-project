@@ -283,15 +283,16 @@ define void @replace_first_order_recurrence_with_versioned_iv_for_uniform_non_po
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP22]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP28:%.*]] = zext i32 [[TMP24]] to i64
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ [[TMP21]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[BC_RESUME_VAL5:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[TMP29:%.*]] = phi i32 [ [[TMP21]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[TMP23:%.*]] = phi i64 [ [[TMP28]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[PHI32:%.*]] = phi i32 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[I32NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[PHI64:%.*]] = phi i64 [ [[BC_RESUME_VAL5]], %[[SCALAR_PH]] ], [ [[I64NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[PHI32:%.*]] = phi i32 [ [[TMP29]], %[[SCALAR_PH]] ], [ [[I32NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[PHI64:%.*]] = phi i64 [ [[TMP23]], %[[SCALAR_PH]] ], [ [[I64NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[I32NEXT]] = add i32 [[PHI32]], 1
 ; CHECK-NEXT:    [[I64NEXT]] = zext i32 [[I32NEXT]] to i64
 ; CHECK-NEXT:    [[XIP:%.*]] = getelementptr inbounds double, ptr [[X]], i32 [[I32NEXT]]
