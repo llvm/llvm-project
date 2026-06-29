@@ -147,6 +147,7 @@ bool SPIRVInstrInfo::canUseFastMathFlags(const MachineInstr &MI,
   case SPIRV::OpFDivV:
   case SPIRV::OpFRemV:
   case SPIRV::OpFMod:
+  case SPIRV::OpFmaKHR:
     return true;
   case SPIRV::OpFNegateV:
   case SPIRV::OpFNegate:
