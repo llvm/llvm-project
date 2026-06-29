@@ -46,8 +46,6 @@ define i32 @cttz_elts_zero_poison_v3i32(<3 x i32> %v) {
   ret i32 %res
 }
 
-declare i32 @llvm.experimental.cttz.elts.i32.v3i32(<3 x i32>, i1)
-
 ; Predicate-style operand: <7 x i1> widens to <8 x i1>. This is the most
 ; common use case. The padded lane must be all-ones so the widened lane
 ; count (8) only appears when no original lane is active; the final
@@ -58,5 +56,3 @@ define i32 @cttz_elts_v7i1(<7 x i1> %v) {
   %res = call i32 @llvm.experimental.cttz.elts.i32.v7i1(<7 x i1> %v, i1 true)
   ret i32 %res
 }
-
-declare i32 @llvm.experimental.cttz.elts.i32.v7i1(<7 x i1>, i1)
