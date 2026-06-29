@@ -4328,6 +4328,20 @@ public:
 
   void printName(raw_ostream &OS, const PrintingPolicy &Policy) const override;
 
+  /// Result of attempting to extract the original variable from a
+  /// DecompositionDecl.
+  struct OriginalVarResult {
+    const VarDecl *Var = nullptr;
+    /// Diagnostic kind for err_omp_unsupported_structured_binding_init when
+    /// Var is nullptr. Only meaningful when Var is nullptr.
+    unsigned DiagKind = 3;
+  };
+
+  /// If this decomposition was initialized from a variable (e.g., auto [a,b] =
+  /// p), returns the variable. Otherwise returns nullptr with a diagnostic kind
+  /// indicating why extraction failed.
+  OriginalVarResult getOriginalVar() const;
+
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K == Decomposition; }
 };

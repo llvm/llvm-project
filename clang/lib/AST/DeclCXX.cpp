@@ -3765,6 +3765,49 @@ void DecompositionDecl::printName(llvm::raw_ostream &OS,
   OS << ']';
 }
 
+DecompositionDecl::OriginalVarResult DecompositionDecl::getOriginalVar() const {
+  OriginalVarResult Result;
+  const Expr *Init = getInit();
+  if (!Init)
+    return Result;
+
+  const Expr *Stripped = Init->IgnoreParenImpCasts();
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(Stripped)) {
+    Result.Var = dyn_cast<VarDecl>(DRE->getDecl());
+    return Result;
+  }
+  if (const auto *CE = dyn_cast<CXXConstructExpr>(Stripped)) {
+    if (CE->getNumArgs() == 1) {
+      const Expr *Arg = CE->getArg(0)->IgnoreParenImpCasts();
+      if (const auto *ArgDRE = dyn_cast<DeclRefExpr>(Arg)) {
+        Result.Var = dyn_cast<VarDecl>(ArgDRE->getDecl());
+        return Result;
+      }
+      if (isa<CallExpr>(Arg))
+        Result.DiagKind = 3;
+      else
+        Result.DiagKind = 2;
+      return Result;
+    }
+  }
+  if (isa<CallExpr>(Stripped)) {
+    Result.DiagKind = 0;
+  } else if (isa<InitListExpr>(Stripped) ||
+             isa<CXXStdInitializerListExpr>(Stripped)) {
+    Result.DiagKind = 1;
+  } else if (const auto *FCE = dyn_cast<CXXFunctionalCastExpr>(Stripped)) {
+    if (isa<InitListExpr>(FCE->getSubExpr()->IgnoreParenImpCasts()))
+      Result.DiagKind = 1;
+    else
+      Result.DiagKind = 3;
+  } else if (isa<MaterializeTemporaryExpr>(Init) ||
+             isa<CXXBindTemporaryExpr>(Init))
+    Result.DiagKind = 2;
+  else
+    Result.DiagKind = 3;
+  return Result;
+}
+
 void MSPropertyDecl::anchor() {}
 
 MSPropertyDecl *MSPropertyDecl::Create(ASTContext &C, DeclContext *DC,

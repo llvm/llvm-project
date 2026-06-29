@@ -10290,14 +10290,14 @@ def err_reference_to_local_in_enclosing_context : Error<
   "%select{%3|block literal|lambda expression|context}2">;
 def err_local_nested_class_invalid_scope : Error<
   "nested local class %0 must be defined in the same block scope as %1">;
-def err_capture_binding_openmp : Error<
-  "capturing a structured binding is not yet supported in OpenMP">;
 def ext_capture_binding : ExtWarn<
   "captured structured bindings are a C++20 extension">, InGroup<CXX20>;
 def warn_cxx17_compat_capture_binding : Warning<
   "captured structured bindings are incompatible with "
   "C++ standards before C++20">,
   InGroup<CXXPre20Compat>, DefaultIgnore;
+def err_capture_tuple_binding_openmp : Error<
+  "capturing tuple-like structured binding %0 is not yet supported in OpenMP">;
 
 def err_static_data_member_not_allowed_in_local_class : Error<
   "static data member %0 not allowed in local %sub{select_tag_type_kind}2 %1">;
@@ -12420,6 +12420,10 @@ def err_omp_parent_cancel_region_ordered : Error<
   "parent region for 'omp %select{cancellation point|cancel}0' construct cannot be ordered">;
 def err_omp_reduction_wrong_type : Error<"reduction type cannot be %select{qualified with 'const', 'volatile' or 'restrict'|a function|a reference|an array}0 type">;
 def err_omp_wrong_var_in_declare_reduction : Error<"only %select{'omp_priv' or 'omp_orig'|'omp_in' or 'omp_out'}0 variables are allowed in %select{initializer|combiner}0 expression">;
+def err_omp_array_reduction_on_binding : Error<
+  "array-type reductions on structured bindings are not yet supported">;
+def err_omp_udr_reduction_on_binding : Error<
+  "user-defined reductions on structured bindings are not yet supported">;
 def err_omp_declare_reduction_redefinition : Error<"redefinition of user-defined reduction for type %0">;
 def err_omp_mapper_wrong_type : Error<
   "mapper type must be of struct, union or class type">;
@@ -12710,6 +12714,17 @@ def note_omp_flush_order_clause_here : Note<
   "memory order clause '%0' is specified here">;
 def err_omp_non_lvalue_in_map_or_motion_clauses: Error<
   "expected addressable lvalue in '%0' clause">;
+def err_omp_unsupported_structured_binding_init : Error<
+  "mapping of structured binding initialized from %select{function call|"
+  "initializer list|temporary object|move expression}0 is not supported">;
+def err_omp_bindings_from_same_decomposition_with_different_dsa : Error<
+  "bindings from the same structured binding declaration cannot have "
+  "different data-sharing attributes">;
+def note_omp_previous_dsa_for_binding : Note<
+  "previous binding from the same declaration has '%0' attribute here">;
+def err_omp_decomposition_bindings_different_capture_kinds : Error<
+  "bindings from structured binding %0 require conflicting capture kinds "
+  "(by-reference vs. by-copy)">;
 def err_omp_var_expected : Error<
   "expected variable of the '%0' type%select{|, not %2}1">;
 def err_omp_non_pointer_type_array_shaping_base : Error<

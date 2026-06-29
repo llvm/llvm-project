@@ -9269,7 +9269,8 @@ public:
                                    const sema::Capture &From);
 
   /// Build a FieldDecl suitable to hold the given capture.
-  FieldDecl *BuildCaptureField(RecordDecl *RD, const sema::Capture &Capture);
+  FieldDecl *BuildCaptureField(RecordDecl *RD, const sema::Capture &Capture,
+                               bool IsOpenMP = false);
 
   /// Initialize the given capture with a suitable expression.
   ExprResult BuildCaptureInit(const sema::Capture &Capture,
