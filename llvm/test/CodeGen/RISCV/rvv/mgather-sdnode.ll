@@ -2540,3 +2540,17 @@ define <4 x i32> @diagonal_i32(ptr %base, <4 x i32> %vecidx) {
   ret <4 x i32> %res
 }
 
+define <vscale x 8 x i32> @mgather_baseidx_and_nxv8i16_nxv8i32(ptr %base, <vscale x 8 x i16> %idxs, <vscale x 8 x i1> %m, <vscale x 8 x i32> %passthru) {
+; CHECK-LABEL: mgather_baseidx_and_nxv8i16_nxv8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vsll.vi v8, v8, 2
+; CHECK-NEXT:    vsetvli zero, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vluxei16.v v12, (a0), v8, v0.t
+; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    ret
+  %eidxs = and <vscale x 8 x i16> %idxs, splat (i16 u0x3fff)
+  %ptrs = getelementptr inbounds i32, ptr %base, <vscale x 8 x i16> %eidxs
+  %v = call <vscale x 8 x i32> @llvm.masked.gather.nxv8i32.nxv8p0(<vscale x 8 x ptr> %ptrs, i32 4, <vscale x 8 x i1> %m, <vscale x 8 x i32> %passthru)
+  ret <vscale x 8 x i32> %v
+}

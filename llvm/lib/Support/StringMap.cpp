@@ -164,9 +164,8 @@ void StringMapImpl::RemoveKey(StringMapEntryBase *V) {
   assert(V == V2 && "Didn't find key?");
 }
 
-// Remove the StringMapEntry for the specified key from the table. Knuth
-// TAOCP 6.4 Algorithm R: walk forward sliding each following entry whose probe
-// path crosses the hole.
+// Knuth TAOCP 6.4 Algorithm R: walk forward sliding each following entry
+// whose probe path crosses the hole.
 void StringMapImpl::removeBucket(unsigned Bucket) {
   unsigned *HashTable = getHashTable(TheTable, NumBuckets);
   unsigned Mask = NumBuckets - 1;

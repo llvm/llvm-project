@@ -24,6 +24,12 @@ MODULE_PASS("aarch64-lower-homogeneous-prolog-epilog", AArch64LowerHomogeneousPr
 #endif
 #undef FUNCTION_PASS
 
+#ifndef LOOP_PASS
+#define LOOP_PASS(NAME, CREATE_PASS)
+#endif
+LOOP_PASS("aarch64-sve-shuffle-opts", SVEShuffleOptsPass(*static_cast<const AArch64TargetMachine *>(this)))
+#undef LOOP_PASS
+
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
@@ -54,6 +60,7 @@ MACHINE_FUNCTION_PASS("aarch64-redundantcondbranch", AArch64RedundantCondBranchP
 MACHINE_FUNCTION_PASS("aarch64-simd-instr-opt", AArch64SIMDInstrOptPass())
 MACHINE_FUNCTION_PASS("aarch64-simd-scalar", AArch64AdvSIMDScalarPass())
 MACHINE_FUNCTION_PASS("aarch64-sls-hardening", AArch64SLSHardeningPass())
+MACHINE_FUNCTION_PASS("aarch64-srlt-define-superregs", AArch64SRLTDefineSuperRegsPass())
 MACHINE_FUNCTION_PASS("aarch64-stack-tagging-pre-ra", AArch64StackTaggingPreRAPass())
 MACHINE_FUNCTION_PASS("aarch64-O0-prelegalizer-combiner",
                       AArch64O0PreLegalizerCombinerPass())
