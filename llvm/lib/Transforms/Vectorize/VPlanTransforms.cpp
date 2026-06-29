@@ -1492,16 +1492,11 @@ static void simplifyRecipe(VPSingleDefRecipe *Def) {
   // Drop the mask of a predicated store masked by the header mask (which is
   // guaranteed to be true at least for the first lane) and both the stored
   // value and the address are uniform across VF and UF. The header mask is
-  // still the abstract region value here, possibly clamped by an alias mask.
+  // still the abstract region value here.
   if (auto *RepR = dyn_cast<VPReplicateRecipe>(Def);
       RepR && RepR->isPredicated() && RepR->getOpcode() == Instruction::Store &&
       all_of(RepR->operandsWithoutMask(), vputils::isUniformAcrossVFsAndUFs) &&
-      match(RepR->getMask(),
-            m_CombineOr(
-                m_HeaderMask(),
-                m_c_BinaryAnd(
-                    m_HeaderMask(),
-                    m_VPInstruction<VPInstruction::IncomingAliasMask>())))) {
+      match(RepR->getMask(), m_HeaderMask())) {
     auto *Unmasked = new VPReplicateRecipe(
         RepR->getUnderlyingInstr(), RepR->operandsWithoutMask(),
         RepR->isSingleScalar(), /*Mask=*/nullptr, *RepR, *RepR,
