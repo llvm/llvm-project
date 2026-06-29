@@ -825,6 +825,22 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
 
   if (!DriverArgs.hasArg(options::OPT_nobuiltininc) && getTriple().isMusl())
     addSystemInclude(DriverArgs, CC1Args, ResourceDirInclude);
+
+  // For GCC compatibility, add an implicit include for musl-based or
+  // non-freestanding GNU systems where the target libc provides stdc-predef.h.
+  bool HasGlibcStdcPredef =
+      getTriple().isGNUEnvironment() && !SysRoot.empty() &&
+      D.getVFS().exists(concat(SysRoot, "/usr/include/stdc-predef.h"));
+
+  bool ShouldPreincludeStdcPredef =
+      (getTriple().isMusl() || HasGlibcStdcPredef) &&
+      !DriverArgs.hasFlag(options::OPT_ffreestanding, options::OPT_fhosted,
+                          false);
+
+  if (ShouldPreincludeStdcPredef) {
+    CC1Args.push_back("-include");
+    CC1Args.push_back("stdc-predef.h");
+  }
 }
 
 void Linux::addLibStdCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
