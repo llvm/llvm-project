@@ -35,7 +35,7 @@ namespace lld::coff {
 
 class ICF {
 public:
-  ICF(COFFLinkerContext &c) : ctx(c) {};
+  ICF(COFFLinkerContext &c) : ctx(c) {}
   void run();
 
 private:
