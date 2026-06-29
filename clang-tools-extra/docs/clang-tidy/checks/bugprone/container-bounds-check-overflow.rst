@@ -29,5 +29,5 @@ Options
 
     When set, the check will ignore the specified containers. The value is a
     comma-separated list of fully qualified container names. For example, to ignore
-    ``std::array`` and ``CustomClass``, set the option to ``::std::array,::CustomClass``.
-    The default is empty, meaning no containers are ignored.
+    ``std::array`` and ``CustomClass``, set the option to `::std::array,::CustomClass`.
+    The default is empty string, meaning no containers are ignored.
