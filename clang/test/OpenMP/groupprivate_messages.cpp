@@ -8,6 +8,7 @@
 #pragma omp groupprivate( // expected-error {{expected identifier}} expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp groupprivate() // expected-error {{expected identifier}}
 #pragma omp groupprivate(1) // expected-error {{expected unqualified-id}}
+#pragma omp groupprivate(a) // expected-error {{use of undeclared identifier 'a'}}
 struct CompleteSt{
  int a;
 };
