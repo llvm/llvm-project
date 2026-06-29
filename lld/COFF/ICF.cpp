@@ -102,8 +102,7 @@ bool ICF::isEligible(SectionChunk *c) {
 }
 
 // Split an equivalence class into smaller classes.
-template <bool constant>
-void ICF::segregate(size_t begin, size_t end) {
+template <bool constant> void ICF::segregate(size_t begin, size_t end) {
   while (begin < end) {
     // Divide [Begin, End) into two. Let Mid be the start index of the
     // second group.
@@ -157,8 +156,7 @@ bool ICF::sectionsEqual(const SectionChunk *a, const SectionChunk *b) {
     if constexpr (constant)
       if (d1->getValue() != d2->getValue())
         return false;
-    return d1->getChunk()->eqClass[cnt % 2] ==
-           d2->getChunk()->eqClass[cnt % 2];
+    return d1->getChunk()->eqClass[cnt % 2] == d2->getChunk()->eqClass[cnt % 2];
   };
 
   auto eqReloc = [&](const coff_relocation &r1, const coff_relocation &r2) {
@@ -175,8 +173,7 @@ bool ICF::sectionsEqual(const SectionChunk *a, const SectionChunk *b) {
     return a->getOutputCharacteristics() == b->getOutputCharacteristics() &&
            a->getSectionName() == b->getSectionName() &&
            a->header->SizeOfRawData == b->header->SizeOfRawData &&
-           a->checksum == b->checksum &&
-           a->getContents() == b->getContents() &&
+           a->checksum == b->checksum && a->getContents() == b->getContents() &&
            a->getMachine() == b->getMachine() && assocEquals(a, b);
   } else {
     Symbol *e1 = a->getEntryThunk();
