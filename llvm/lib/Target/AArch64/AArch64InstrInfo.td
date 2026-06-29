@@ -2488,10 +2488,7 @@ def MSR_FPMR : Pseudo<(outs), (ins GPR64:$val),
 // Generic system instructions
 def SYSxt  : SystemXtI<"sys">;
 def SYSLxt : SystemLXtI<1, "sysl">;
-def SYSLxt_GCS : GCSTiedSystemLXtPseudo,
-                 PseudoInstExpansion<(SYSLxt GPR64:$Rt, imm0_7:$op1,
-                                            sys_cr_op:$Cn, sys_cr_op:$Cm,
-                                            imm0_7:$op2)>;
+def SYSLxt_GCS : GCSTiedSystemLXtI<1, "sysl">;
 
 def : InstAlias<"sys $op1, $Cn, $Cm, $op2",
                 (SYSxt timm32_0_7:$op1, sys_cr_op:$Cn,

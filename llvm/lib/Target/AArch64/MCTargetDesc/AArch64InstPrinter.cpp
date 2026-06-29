@@ -90,6 +90,23 @@ void AArch64InstPrinter::printInst(const MCInst *MI, uint64_t Address,
       return;
     }
 
+  if (Opcode == AArch64::SYSLxt_GCS) {
+    unsigned Op2 = MI->getOperand(5).getImm();
+    StringRef Reg = getRegisterName(MI->getOperand(0).getReg());
+    if (Op2 == 1) {
+      O << "\tgcspopm";
+      if (Reg != "xzr")
+        O << "\t" << Reg;
+      printAnnotation(O, Annot);
+      return;
+    }
+    if (Op2 == 3) {
+      O << "\tgcsss2\t" << Reg;
+      printAnnotation(O, Annot);
+      return;
+    }
+  }
+
   if (Opcode == AArch64::SYSPxt || Opcode == AArch64::SYSPxt_XZR)
     if (printSyspAlias(MI, STI, O)) {
       printAnnotation(O, Annot);
