@@ -10357,41 +10357,30 @@ SDValue ARMTargetLowering::LowerCMP(SDValue Op, SelectionDAG &DAG) const {
   // Special case for Thumb1 UCMP only
   if (!IsSigned && Subtarget->isThumb1Only()) {
     // For Thumb unsigned comparison, use this sequence:
-    // subs r2, r0, r1   ; r2 = LHS - RHS, sets flags
-    // sbc r2, r2        ; r2 = r2 - r2 - !carry
-    // cmp r1, r0        ; compare RHS with LHS
-    // sbc r1, r1        ; r1 = r1 - r1 - !carry
-    // subs r0, r2, r1   ; r0 = r2 - r1 (final result)
+    // cmp r1, r0      @ r1 >= r0 ? Carry = 1 : Carry = 0
+    // mov r2, r0      @ r2 = r0
+    // sbc r2, r1      @ r2 = r0 - r1 - !Carry
+    // sbc r0, r2      @ r0 = r0 - r2 - !Carry'
+    // sub r0, r1      @ r0 = r0 - r1
 
-    // First subtraction: LHS - RHS
-    SDValue Sub1WithFlags = DAG.getNode(
-        ARMISD::SUBC, dl, DAG.getVTList(MVT::i32, FlagsVT), LHS, RHS);
-    SDValue Sub1Result = Sub1WithFlags.getValue(0);
-    SDValue Flags1 = Sub1WithFlags.getValue(1);
+    SDValue CmpFlags;
+    if (isCMN(LHS, ISD::SETUGT, DAG))
+      CmpFlags = DAG.getNode(ARMISD::CMN, dl, FlagsVT, RHS, LHS.getOperand(1));
+    else
+      CmpFlags = DAG.getNode(ARMISD::CMP, dl, FlagsVT, RHS, LHS);
 
-    // SUBE: Sub1Result - Sub1Result - !carry
-    // This gives 0 if LHS >= RHS (unsigned), -1 if LHS < RHS (unsigned)
-    SDValue Sbc1 =
-        DAG.getNode(ARMISD::SUBE, dl, DAG.getVTList(MVT::i32, FlagsVT),
-                    Sub1Result, Sub1Result, Flags1);
+    SDValue Sbc1 = DAG.getNode(
+        ARMISD::SUBE, dl, DAG.getVTList(MVT::i32, FlagsVT), LHS, RHS, CmpFlags);
     SDValue Sbc1Result = Sbc1.getValue(0);
+    SDValue Sbc1Flags = Sbc1.getValue(1);
 
-    // Second comparison: RHS vs LHS (reverse comparison)
-    SDValue CmpFlags = DAG.getNode(ARMISD::CMP, dl, FlagsVT, RHS, LHS);
-
-    // SUBE: RHS - RHS - !carry
-    // This gives 0 if RHS <= LHS (unsigned), -1 if RHS > LHS (unsigned)
-    SDValue Sbc2 = DAG.getNode(
-        ARMISD::SUBE, dl, DAG.getVTList(MVT::i32, FlagsVT), RHS, RHS, CmpFlags);
+    SDValue Sbc2 =
+        DAG.getNode(ARMISD::SUBE, dl, DAG.getVTList(MVT::i32, FlagsVT), LHS,
+                    Sbc1Result, Sbc1Flags);
     SDValue Sbc2Result = Sbc2.getValue(0);
 
-    // Final subtraction: Sbc1Result - Sbc2Result (no flags needed)
-    SDValue Result =
-        DAG.getNode(ISD::SUB, dl, MVT::i32, Sbc1Result, Sbc2Result);
-    if (Op.getValueType() != MVT::i32)
-      Result = DAG.getSExtOrTrunc(Result, dl, Op.getValueType());
-
-    return Result;
+    SDValue Result = DAG.getNode(ISD::SUB, dl, MVT::i32, Sbc2Result, RHS);
+    return DAG.getSExtOrTrunc(Result, dl, Op.getValueType());
   }
 
   // For the ARM assembly pattern:
@@ -10403,35 +10392,12 @@ SDValue ARMTargetLowering::LowerCMP(SDValue Op, SelectionDAG &DAG) const {
 
   // Optimization: if RHS is a subtraction against 0, use ADDC instead of SUBC
   unsigned Opcode = ARMISD::SUBC;
+  ISD::CondCode CC = IsSigned ? ISD::SETGT : ISD::SETUGT;
 
-  // Check if RHS is a subtraction against 0: (0 - X)
-  if (RHS.getOpcode() == ISD::SUB) {
-    SDValue SubLHS = RHS.getOperand(0);
-    SDValue SubRHS = RHS.getOperand(1);
-
-    // Check if it's 0 - X
-    if (isNullConstant(SubLHS)) {
-      bool CanUseAdd = false;
-      if (IsSigned) {
-        // For SCMP: only if X is known to never be INT_MIN (to avoid overflow)
-        if (RHS->getFlags().hasNoSignedWrap() || !DAG.computeKnownBits(SubRHS)
-                                                      .getSignedMinValue()
-                                                      .isMinSignedValue()) {
-          CanUseAdd = true;
-        }
-      } else {
-        // For UCMP: only if X is known to never be zero
-        if (DAG.isKnownNeverZero(SubRHS)) {
-          CanUseAdd = true;
-        }
-      }
-
-      if (CanUseAdd) {
-        Opcode = ARMISD::ADDC;
-        RHS = SubRHS; // Replace RHS with X, so we do LHS + X instead of
-                      // LHS - (0 - X)
-      }
-    }
+  if (isCMN(RHS, CC, DAG)) {
+    Opcode = ARMISD::ADDC;
+    RHS = RHS.getOperand(1); // Replace RHS with X, so we do LHS + X instead of
+                             // LHS - (0 - X)
   }
 
   // Generate the operation with flags
