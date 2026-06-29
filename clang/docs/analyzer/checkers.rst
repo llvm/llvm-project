@@ -3238,6 +3238,24 @@ Check for cases where the dynamic and the static type of an object are unrelated
  NSNumber *number = date;
  [number doubleValue];
 
+.. _alpha-core-NullTerminated:
+
+alpha.core.NullTerminated (C, C++)
+""""""""""""""""""""""""""""""""""
+Check for arrays not null-terminated passed to functions whose parameters are
+annotated with ``__attribute__((annotate("null_terminated")))``.
+
+.. code-block:: c
+
+ #define NULL_TERMINATED __attribute__((annotate("null_terminated")))
+
+ void receive(NULL_TERMINATED const int signals[]);
+
+ void caller(void) {
+   int sigs[] = {1, 2, 3};  // Missing null terminator
+   receive(sigs);           // warn: array argument is not null-terminated
+ }
+
 .. _alpha-core-PointerArithm:
 
 alpha.core.PointerArithm (C)

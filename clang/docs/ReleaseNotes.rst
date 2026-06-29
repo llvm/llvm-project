@@ -1110,6 +1110,13 @@ Moved checkers
 
 - The checker ``unix.cstring.UninitializedRead`` is now out of alpha.
 
+New checkers or options
+^^^^^^^^^^^^^^^^^^^^^^^
+
+- Introduced the ``alpha.core.NullTerminated`` checker to detect arrays missing
+  a null terminator passed as a parameter annotated with
+  ``__attribute__((annotate("null_terminated")))``.
+
 .. _release-notes-sanitizers:
 
 Sanitizers

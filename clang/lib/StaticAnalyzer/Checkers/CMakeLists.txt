@@ -73,6 +73,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   NoReturnFunctionChecker.cpp
   NonNullParamChecker.cpp
   NonnullGlobalConstantsChecker.cpp
+  NullTerminatedChecker.cpp
   NoOwnershipChangeVisitor.cpp
   NullabilityChecker.cpp
   NumberObjectConversionChecker.cpp

@@ -7,6 +7,7 @@
 // CHECK-NEXT: alpha.clone.CloneChecker:IgnoredFilesPattern = ""
 // CHECK-NEXT: alpha.clone.CloneChecker:MinimumCloneComplexity = 50
 // CHECK-NEXT: alpha.clone.CloneChecker:ReportNormalClones = true
+// CHECK-NEXT: alpha.core.NullTerminated:MaxArraySize = 1024
 // CHECK-NEXT: alpha.cplusplus.STLAlgorithmModeling:AggressiveStdFindModeling = false
 // CHECK-NEXT: alpha.osx.cocoa.DirectIvarAssignment:AnnotatedFunctions = false
 // CHECK-NEXT: apply-fixits = false
