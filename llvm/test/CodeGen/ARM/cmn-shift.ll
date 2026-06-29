@@ -61,16 +61,14 @@ if.end:
 define void @cmn_shiftx(i32 %a, i32 %b) {
 ; ARM-LABEL: cmn_shiftx:
 ; ARM:       @ %bb.0: @ %entry
-; ARM-NEXT:    rsb r1, r1, #0
-; ARM-NEXT:    cmp r1, r0, lsl #1
+; ARM-NEXT:    cmn r1, r0, lsl #1
 ; ARM-NEXT:    movne pc, lr
 ; ARM-NEXT:  .LBB2_1: @ %if.then
 ; ARM-NEXT:    b otherfn
 ;
 ; THUMB-LABEL: cmn_shiftx:
 ; THUMB:       @ %bb.0: @ %entry
-; THUMB-NEXT:    rsbs r1, r1, #0
-; THUMB-NEXT:    cmp.w r1, r0, lsl #1
+; THUMB-NEXT:    cmn.w r1, r0, lsl #1
 ; THUMB-NEXT:    it ne
 ; THUMB-NEXT:    bxne lr
 ; THUMB-NEXT:    b otherfn
