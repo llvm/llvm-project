@@ -2,3 +2,8 @@ node_modules
 *~
 syntaxes/ll.tmLanguage.json
 out/
+out
+.vscode-test
+*.vsix
+
+!.vscode
