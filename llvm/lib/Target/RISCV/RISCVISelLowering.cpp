@@ -19736,7 +19736,7 @@ static SDValue performReverseEVLCombine(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   VPLoadSDNode *VPLoad = nullptr;
-  // Check that all leaves are splats or vp_loads, and collect the latter.
+  // Find the single vp_load and check all other leaves are splats.
   SmallVector<SDValue> Worklist = {Op};
   while (!Worklist.empty()) {
     SDValue X = Worklist.pop_back_val();
