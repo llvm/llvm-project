@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Tuple
 from dex.dextIR import DextIR, StepIR
 from dex.evaluation.ExpectMatch import (
     DebuggerExpectMatch,
+    ExpectMatchContext,
     MatchResult,
     get_expect_match,
 )
@@ -28,15 +29,17 @@ from dex.evaluation.StateMatch import get_active_where_matches
 from dex.test_script import DexterScript, Scope
 from dex.test_script.Nodes import Expect, Value
 
-
 class DebuggerStepMatch:
     """Class used to record the match between a DexterScript and a StepIR, including the state match, determining which
     script nodes are "active", and the expect matches, which compare the debugger's output to the DexterScript's
     expected output."""
 
-    def __init__(self, step: StepIR, script: DexterScript):
+    def __init__(
+        self, step: StepIR, script: DexterScript, match_context: ExpectMatchContext
+    ):
         self.step = step
         self.script = script
+        self.match_context = match_context
         self.state_match = get_active_where_matches(script, step)
         expects_to_match = {
             expect
@@ -49,7 +52,10 @@ class DebuggerStepMatch:
             assert isinstance(expect, Value), "Non-Value expects currently unsupported"
             if expect in expects_to_match:
                 self.expect_matches[expect] = get_expect_match(
-                    expect, expected_value, step.watches[expect.get_watched_expr()]
+                    expect,
+                    expected_value,
+                    step.watches[expect.get_watched_expr()],
+                    self.match_context,
                 )
 
         script.visit_script(visit_expect=add_expected_values)
@@ -62,8 +68,9 @@ class DebuggerRunMatch(object):
     affect the match of another variable at step N+1, thus we go one step at a time.
     """
 
-    def __init__(self, context, dext_ir: DextIR):
-        self.context = context
+    def __init__(self, dex_context, dext_ir: DextIR):
+        self.dex_context = dex_context
+        self.match_context = ExpectMatchContext()
         self.dext_ir = dext_ir
         self.metrics: Dict[str, Metric] = {}
         self.step_matches: List[DebuggerStepMatch] = []
@@ -86,7 +93,9 @@ class DebuggerRunMatch(object):
 
         # Then produce all of our step matches.
         for step in self.dext_ir.steps:
-            self.step_matches.append(DebuggerStepMatch(step, script))
+            self.step_matches.append(
+                DebuggerStepMatch(step, script, self.match_context)
+            )
 
         # Then, for each expect, produce the list of results for just that variable.
         for step_match in self.step_matches:
