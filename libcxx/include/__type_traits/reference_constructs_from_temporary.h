@@ -11,6 +11,7 @@
 
 #include <__config>
 #include <__type_traits/integral_constant.h>
+#include <__type_traits/is_reference.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -30,8 +31,20 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool reference_constructs_from_tempo
 
 #endif
 
+// A non-reference type can never bind to a temporary, so the result is always `false` for such a
+// `_Tp`. We short-circuit before reaching the builtin because Clang's `__reference_constructs_from_temporary`
+// eagerly instantiates the construction of `_Up` (including the element's constructor exception
+// specification) even when `_Tp` is not a reference, which can hard-error on misbehaved types.
+//
+// https://godbolt.org/z/WMTK5cMa4
+//
+// TODO: remove this guard once the Clang builtin short-circuits on a non-reference first operand.
+template <class _Tp, class _Up, bool = is_reference<_Tp>::value>
+inline const bool __reference_constructs_from_temporary_v = false;
+
 template <class _Tp, class _Up>
-inline const bool __reference_constructs_from_temporary_v = __reference_constructs_from_temporary(_Tp, _Up);
+inline const bool __reference_constructs_from_temporary_v<_Tp, _Up, true> =
+    __reference_constructs_from_temporary(_Tp, _Up);
 
 _LIBCPP_END_NAMESPACE_STD
 
