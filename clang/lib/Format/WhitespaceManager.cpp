@@ -154,6 +154,7 @@ void WhitespaceManager::calculateLineBreakInformation() {
     auto &C = Changes[I];
     auto &P = Changes[I - 1];
     auto &PrevTokLength = P.TokenLength;
+    const auto *PP = I > 1 ? &Changes[I - 2] : nullptr;
     SourceLocation OriginalWhitespaceStart =
         C.OriginalWhitespaceRange.getBegin();
     SourceLocation PreviousOriginalWhitespaceEnd =
@@ -214,6 +215,7 @@ void WhitespaceManager::calculateLineBreakInformation() {
         (C.NewlinesBefore > 0 || C.Tok->is(tok::eof) ||
          (C.IsInsideToken && C.Tok->is(tok::comment))) &&
         P.Tok->is(tok::comment) &&
+        (P.NewlinesBefore == 0 || !PP || PP->IsTrailingComment) &&
         // FIXME: This is a dirty hack. The problem is that
         // BreakableLineCommentSection does comment reflow changes and here is
         // the aligning of trailing comments. Consider the case where we reflow
