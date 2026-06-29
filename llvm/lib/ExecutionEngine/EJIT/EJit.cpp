@@ -334,8 +334,11 @@ bool EJit::activate(const std::string &periodName, uint8_t cellIdx) {
 #endif
     return true;
   }
-  if (!runtimeState_->getRegistry().getArrays(periodName))
+  if (!runtimeState_->getRegistry().getArrays(periodName)) {
+    EJIT_DIAG("activate reject(%s,%u): unknown period (not a lifecycle/array)",
+              periodName.c_str(), cellIdx);
     return false;
+  }
   runtimeState_->activate(periodName, cellIdx);
   return true;
 #else
@@ -364,8 +367,11 @@ bool EJit::deactivate(const std::string &periodName, uint8_t cellIdx) {
 #endif
     return true;
   }
-  if (!runtimeState_->getRegistry().getArrays(periodName))
+  if (!runtimeState_->getRegistry().getArrays(periodName)) {
+    EJIT_DIAG("deactivate reject(%s,%u): unknown period (not a lifecycle/array)",
+              periodName.c_str(), cellIdx);
     return false;
+  }
   runtimeState_->deactivate(periodName, cellIdx);
   return true;
 #else
@@ -381,8 +387,11 @@ bool EJit::activateArray(const std::string &periodName, void *arrayPtr,
   // period matches periodName.
   const PeriodArrayInfo *info =
       runtimeState_->getRegistry().getArrayByBaseAddr(arrayPtr);
-  if (!info || info->periodName != periodName)
+  if (!info || info->periodName != periodName) {
+    EJIT_DIAG("activateArray reject(%s,%u): arrayPtr=%p not a registered %s array",
+              periodName.c_str(), cellIdx, arrayPtr, periodName.c_str());
     return false;
+  }
 #ifdef EJIT_SRE_TASKPOOL
   // The taskpool SwitchController identity is ONLY (dimType, instanceId) — it
   // carries NO array identity. A lifecycle may own several arrays (cell ->
@@ -397,11 +406,17 @@ bool EJit::activateArray(const std::string &periodName, void *arrayPtr,
   // invalidation.
   const std::vector<PeriodArrayInfo> *arrays =
       runtimeState_->getRegistry().getArrays(periodName);
-  if (!arrays || arrays->size() != 1)
+  if (!arrays || arrays->size() != 1) {
+    EJIT_DIAG("activateArray reject(%s,%u): lifecycle owns %zu array(s), need 1",
+              periodName.c_str(), cellIdx, arrays ? arrays->size() : 0);
     return false;
+  }
   uint32_t dt = EJitLifecycleRegistry::instance().lookup(periodName);
-  if (dt == kEJitInvalidDimType)
+  if (dt == kEJitInvalidDimType) {
+    EJIT_DIAG("activateArray reject(%s,%u): not a registered lifecycle",
+              periodName.c_str(), cellIdx);
     return false;
+  }
 #ifdef EJIT_SRE_SHARED_TASKPOOL
   if (EJitSharedTaskPool *sp = sharedTaskPool())
     sp->setInstanceEnabled(dt, cellIdx, /*enabled=*/true);
@@ -421,19 +436,28 @@ bool EJit::deactivateArray(const std::string &periodName, void *arrayPtr,
                            uint8_t cellIdx) {
   const PeriodArrayInfo *info =
       runtimeState_->getRegistry().getArrayByBaseAddr(arrayPtr);
-  if (!info || info->periodName != periodName)
+  if (!info || info->periodName != periodName) {
+    EJIT_DIAG("deactivateArray reject(%s,%u): arrayPtr=%p not a registered %s array",
+              periodName.c_str(), cellIdx, arrayPtr, periodName.c_str());
     return false;
+  }
 #ifdef EJIT_SRE_TASKPOOL
   // See activateArray: a multi-array (or zero-array) lifecycle is a clean
   // reject because (dimType, instanceId) cannot distinguish individual arrays —
   // see the detailed comment above. Rejection mutates nothing.
   const std::vector<PeriodArrayInfo> *arrays =
       runtimeState_->getRegistry().getArrays(periodName);
-  if (!arrays || arrays->size() != 1)
+  if (!arrays || arrays->size() != 1) {
+    EJIT_DIAG("deactivateArray reject(%s,%u): lifecycle owns %zu array(s), need 1",
+              periodName.c_str(), cellIdx, arrays ? arrays->size() : 0);
     return false;
+  }
   uint32_t dt = EJitLifecycleRegistry::instance().lookup(periodName);
-  if (dt == kEJitInvalidDimType)
+  if (dt == kEJitInvalidDimType) {
+    EJIT_DIAG("deactivateArray reject(%s,%u): not a registered lifecycle",
+              periodName.c_str(), cellIdx);
     return false;
+  }
 #ifdef EJIT_SRE_SHARED_TASKPOOL
   if (EJitSharedTaskPool *sp = sharedTaskPool())
     sp->setInstanceEnabled(dt, cellIdx, /*enabled=*/false);
@@ -465,8 +489,10 @@ bool EJit::activateAll(const std::string &periodName) {
 #endif
     return true;
   }
-  if (!runtimeState_->getRegistry().getArrays(periodName))
+  if (!runtimeState_->getRegistry().getArrays(periodName)) {
+    EJIT_DIAG("activateAll reject(%s): unknown period", periodName.c_str());
     return false;
+  }
   runtimeState_->activateAll(periodName);
   return true;
 #else
@@ -491,8 +517,10 @@ bool EJit::deactivateAll(const std::string &periodName) {
 #endif
     return true;
   }
-  if (!runtimeState_->getRegistry().getArrays(periodName))
+  if (!runtimeState_->getRegistry().getArrays(periodName)) {
+    EJIT_DIAG("deactivateAll reject(%s): unknown period", periodName.c_str());
     return false;
+  }
   runtimeState_->deactivateAll(periodName);
   return true;
 #else
@@ -549,13 +577,18 @@ bool EJit::registerBitcode(const std::string &funcName, const uint8_t *data,
   // Post-init runtime registration. The bool propagates to the caller (the C
   // ABI records a failure into the registration-error sink); construction-time
   // registration validates separately in the constructor (recordInitError).
-  if (!moduleLoader_)
+  if (!moduleLoader_) {
+    EJIT_DIAG("registerBitcode reject func=%s: no module loader", funcName.c_str());
     return false;
+  }
 #ifdef EJIT_SRE_TASKPOOL
   // Frozen after init: the worker reads the loader/registries lock-free, so no
   // runtime registration is allowed (nothing is mutated on rejection).
-  if (registrationFrozen())
+  if (registrationFrozen()) {
+    EJIT_DIAG("registerBitcode reject func=%s: registration frozen after init",
+              funcName.c_str());
     return false;
+  }
 #endif
   return moduleLoader_->registerBitcode(funcName, data, size);
 }
@@ -563,11 +596,17 @@ bool EJit::registerBitcode(const std::string &funcName, const uint8_t *data,
 bool EJit::registerPeriodArray(const std::string &periodName,
                                const std::string &varName, void *baseAddr,
                                uint64_t arraySize) {
-  if (!runtimeState_)
+  if (!runtimeState_) {
+    EJIT_DIAG("registerPeriodArray reject period=%s: no runtime state",
+              periodName.c_str());
     return false;
+  }
 #ifdef EJIT_SRE_TASKPOOL
-  if (registrationFrozen())
+  if (registrationFrozen()) {
+    EJIT_DIAG("registerPeriodArray reject period=%s: registration frozen",
+              periodName.c_str());
     return false;
+  }
 #endif
   runtimeState_->getRegistry().registerArray(periodName, varName, baseAddr,
                                              arraySize);
@@ -575,11 +614,17 @@ bool EJit::registerPeriodArray(const std::string &periodName,
 }
 
 bool EJit::registerStaticVar(const std::string &varName, void *varAddr) {
-  if (!runtimeState_)
+  if (!runtimeState_) {
+    EJIT_DIAG("registerStaticVar reject var=%s: no runtime state",
+              varName.c_str());
     return false;
+  }
 #ifdef EJIT_SRE_TASKPOOL
-  if (registrationFrozen())
+  if (registrationFrozen()) {
+    EJIT_DIAG("registerStaticVar reject var=%s: registration frozen",
+              varName.c_str());
     return false;
+  }
 #endif
   runtimeState_->getRegistry().registerStaticVar(varName, varAddr);
   return true;

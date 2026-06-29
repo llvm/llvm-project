@@ -34,10 +34,15 @@ void *EJitCache::getOrNull(uint64_t cacheKey) {
 bool EJitCache::put(uint64_t cacheKey, void *funcPtr,
                     size_t codeSize,
                     ArrayRef<std::string> periodDeps) {
+  EJIT_DIAG("cache put key=0x%016lx fn=%p size=%zu deps=%zu", cacheKey, funcPtr,
+            codeSize, periodDeps.size());
   std::unique_lock<decltype(mutex_)> lock(mutex_);
 
-  if (codeSize > maxSingleFuncSize_)
+  if (codeSize > maxSingleFuncSize_) {
+    EJIT_DIAG("cache put REJECT key=0x%016lx: size=%zu > maxSingle=%zu",
+              cacheKey, codeSize, maxSingleFuncSize_);
     return false;
+  }
 
   // 1. Remove old entry for the same key if present (re-compilation after
   //    deactivate).  Done first so the entry is never in an intermediate
@@ -78,12 +83,17 @@ bool EJitCache::put(uint64_t cacheKey, void *funcPtr,
 
 void EJitCache::invalidateByPeriod(const std::string &periodName,
                                    uint8_t cellIdx) {
+  EJIT_DIAG("cache invalidate begin period=%s cellIdx=%u", periodName.c_str(),
+            cellIdx);
   std::unique_lock<decltype(mutex_)> lock(mutex_);
   std::string dep = periodName + "=" + std::to_string(cellIdx);
 
   auto it = periodIndex_.find(dep);
-  if (it == periodIndex_.end())
+  if (it == periodIndex_.end()) {
+    EJIT_DIAG("cache invalidate period=%s cellIdx=%u: no matching entries",
+              periodName.c_str(), cellIdx);
     return;
+  }
 
   size_t removed = 0;
   for (uint64_t key : it->second) {
@@ -146,8 +156,11 @@ void EJitCache::evictLRU() {
 
   auto it = cache_.find(key);
   assert(it != cache_.end() && "lruList_/cache_ invariant broken");
-  if (it == cache_.end())
+  if (it == cache_.end()) {
+    EJIT_DIAG("cache evict LRU key=0x%016lx: INARIANT BROKEN (key not in cache)",
+              key);
     return;
+  }
 
   currentTotalSize_ -= it->second.codeSize;
 

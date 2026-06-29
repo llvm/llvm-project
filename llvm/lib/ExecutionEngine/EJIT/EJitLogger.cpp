@@ -1,6 +1,7 @@
 //===-- EJitLogger.cpp - EmbeddedJIT Error Logger -------------------------===//
 
 #include "llvm/ExecutionEngine/EJIT/EJitLogger.h"
+#include "llvm/ExecutionEngine/EJIT/EJitDiag.h"
 
 #ifndef EJIT_FREESTANDING
 
@@ -12,6 +13,8 @@ using namespace llvm::ejit;
 void EJitLogger::log(int code, const std::string &message,
                      const std::string &funcName, const std::string &cacheKey,
                      size_t attemptedMemUsage) {
+  EJIT_DIAG("logger log: code=%d func=%s key=%s msg=%s", code,
+            funcName.c_str(), cacheKey.c_str(), message.c_str());
   std::lock_guard<std::mutex> lock(mutex_);
   uint64_t ts = std::chrono::duration_cast<std::chrono::milliseconds>(
       std::chrono::steady_clock::now().time_since_epoch()).count();
@@ -56,6 +59,7 @@ std::vector<EJitError> EJitLogger::getErrors(size_t limit) const {
 }
 
 void EJitLogger::clear() {
+  EJIT_DIAG("logger clear: dropping %zu error(s)", count_);
   std::lock_guard<std::mutex> lock(mutex_);
   writeIdx_ = 0;
   count_ = 0;

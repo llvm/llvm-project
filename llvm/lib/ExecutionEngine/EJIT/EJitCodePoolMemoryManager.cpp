@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/EJIT/EJitCodePoolMemoryManager.h"
+#include "llvm/ExecutionEngine/EJIT/EJitDiag.h"
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/Orc/Shared/AllocationActions.h"
 #include "llvm/Support/MathExtras.h"
@@ -47,6 +48,7 @@ public:
     // enable_ex performs that sync on the target.
     if (Pool->usesPageSeal() && Size > 0) {
       if (auto Err = Pool->sealCodeRange(Base, Size)) {
+        EJIT_DIAG("finalize FAIL: sealCodeRange base=%p size=%zu", Base, Size);
         OnFinalized(std::move(Err));
         return;
       }
@@ -56,6 +58,7 @@ public:
         [this, OnFinalized = std::move(OnFinalized)](
             Expected<std::vector<WrapperFunctionCall>> DeallocActions) mutable {
           if (!DeallocActions) {
+            EJIT_DIAG("finalize FAIL: runFinalizeActions error base=%p", Base);
             OnFinalized(DeallocActions.takeError());
             return;
           }
@@ -95,16 +98,23 @@ void EJitCodePoolMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
 
   auto SegsSizes = BL.getContiguousPageBasedLayoutSizes(PageSize_);
   if (!SegsSizes) {
+    EJIT_DIAG("allocate FAIL: layout sizes error graph=%s",
+              G.getName().c_str());
     OnAllocated(SegsSizes.takeError());
     return;
   }
 
   uint64_t Total = SegsSizes->total();
+  EJIT_DIAG("allocate: graph=%s total=%llu pageSize=%zu",
+            G.getName().c_str(),
+            static_cast<unsigned long long>(Total), PageSize_);
 
   void *Slab = nullptr;
   if (Total > 0) {
     auto MemOrErr = Pool_.allocateCode(static_cast<size_t>(Total), PageSize_);
     if (!MemOrErr) {
+      EJIT_DIAG("allocate FAIL: pool allocateCode total=%llu",
+                static_cast<unsigned long long>(Total));
       OnAllocated(MemOrErr.takeError());
       return;
     }
@@ -133,10 +143,14 @@ void EJitCodePoolMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
   }
 
   if (auto Err = BL.apply()) {
+    EJIT_DIAG("allocate FAIL: BasicLayout apply error graph=%s",
+              G.getName().c_str());
     OnAllocated(std::move(Err));
     return;
   }
 
+  EJIT_DIAG("allocate OK: slab=%p total=%llu", Slab,
+            static_cast<unsigned long long>(Total));
   OnAllocated(
       std::make_unique<InFlightAllocImpl>(*this, G, std::move(BL), Slab,
                                           static_cast<size_t>(Total)));
@@ -144,14 +158,17 @@ void EJitCodePoolMemoryManager::allocate(const JITLinkDylib *JD, LinkGraph &G,
 
 void EJitCodePoolMemoryManager::deallocate(std::vector<FinalizedAlloc> Allocs,
                                            OnDeallocatedFunction OnDeallocated) {
+  EJIT_DIAG("deallocate: %zu finalized alloc(s)", Allocs.size());
   Error DeallocErr = Error::success();
   for (auto &Alloc : Allocs) {
     auto *Info = Alloc.release().toPtr<FinalizedInfo *>();
     // Run dealloc actions in reverse order. Pool memory is intentionally not
     // released in v1 (sealed/RX pages must not be recycled; see design doc).
     while (!Info->DeallocActions.empty()) {
-      if (auto Err = Info->DeallocActions.back().runWithSPSRetErrorMerged())
+      if (auto Err = Info->DeallocActions.back().runWithSPSRetErrorMerged()) {
+        EJIT_DIAG("deallocate FAIL: dealloc action error base=%p", Info->Base);
         DeallocErr = joinErrors(std::move(DeallocErr), std::move(Err));
+      }
       Info->DeallocActions.pop_back();
     }
     delete Info;

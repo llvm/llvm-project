@@ -1,6 +1,7 @@
 //===-- EJitOptimizer.cpp - JIT Optimization Pipeline ---------------------===//
 
 #include "llvm/ExecutionEngine/EJIT/EJitOptimizer.h"
+#include "llvm/ExecutionEngine/EJIT/EJitDiag.h"
 #include "llvm/ExecutionEngine/EJIT/EJitStructFieldPass.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -73,12 +74,18 @@ void EJitOptimizer::clearAnalyses() {
 
 void EJitOptimizer::runPipeline(Module &M,
                                 const SpecializationContext &ctx) {
+  EJIT_DIAG("pipeline begin func=%s key=0x%016lx opt=%d dims=%zu module=%s",
+            ctx.fnName.c_str(), ctx.cacheKey, static_cast<int>(ctx.optLevel),
+            ctx.dimensions.size(), M.getName().str().c_str());
+
   // 1. Parameter substitution: replace ejit_period_arr_ind args with constants
   preReplacePeriodIndices(M, ctx);
+  EJIT_DIAG("pipeline stage1 done: preReplacePeriodIndices");
 
   // 2. InstCombine: fold constant GEP chains from substituted params
   //    so StructFieldPass can compute correct byte offsets.
   runInstCombine(M);
+  EJIT_DIAG("pipeline stage2 done: InstCombine");
 
   // 3. Inline (L2+): currently disabled. The AOT pre-optimization in
   //    EJitRegisterBitcodePass already runs AlwaysInline + ModuleInliner(O2),
@@ -94,9 +101,12 @@ void EJitOptimizer::runPipeline(Module &M,
 
   // 4. StructFieldPass: replace may_const loads with runtime constants.
   runStructFieldPass(M);
+  EJIT_DIAG("pipeline stage4 done: StructFieldPass");
 
   // 5. Core optimization at the configured level
   runOptimizationPipeline(M, ctx.optLevel);
+  EJIT_DIAG("pipeline done func=%s key=0x%016lx", ctx.fnName.c_str(),
+            ctx.cacheKey);
 }
 
 void EJitOptimizer::preReplacePeriodIndices(
@@ -157,6 +167,8 @@ void EJitOptimizer::runStructFieldPass(Module &M) {
 
 void EJitOptimizer::runOptimizationPipeline(Module &M,
                                             OptimizationLevel level) {
+  EJIT_DIAG("pipeline stage5: core opt level=%d module=%s",
+            static_cast<int>(level), M.getName().str().c_str());
   // L1: SCCP + ADCE + SimplifyCFG — constant propagation, dead code
   // elimination, and CFG cleanup. Captures the vast majority of EJIT
   // performance gains (may_const load → constant → branch folding).

@@ -93,14 +93,19 @@ EJitModuleLoader::getOrCacheFuncMeta(uint32_t funcIdx) {
   if (it != funcMetaCache_.end())
     return it->second;
 
+  EJIT_DIAG("getOrCacheFuncMeta: building meta for funcIdx=%u", funcIdx);
   FuncMeta &meta = funcMetaCache_[funcIdx];
   auto Eit = entriesByFuncIdx_.find(funcIdx);
-  if (Eit == entriesByFuncIdx_.end())
+  if (Eit == entriesByFuncIdx_.end()) {
+    EJIT_DIAG("getOrCacheFuncMeta FAIL funcIdx=%u: not registered", funcIdx);
     return meta;
+  }
   const std::string FuncName = Eit->second.funcName;
 
   auto bitcode = getBitcodeByFuncIdx(funcIdx);
   if (!bitcode) {
+    EJIT_DIAG("getOrCacheFuncMeta FAIL funcIdx=%u func=%s: bitcode lookup error",
+              funcIdx, FuncName.c_str());
     consumeError(bitcode.takeError());
     return meta;
   }
@@ -110,6 +115,8 @@ EJitModuleLoader::getOrCacheFuncMeta(uint32_t funcIdx) {
       *bitcode, "meta_" + std::to_string(funcIdx) + ".bc");
   auto MOrErr = parseBitcodeFile(Buf->getMemBufferRef(), *Ctx);
   if (!MOrErr) {
+    EJIT_DIAG("getOrCacheFuncMeta FAIL funcIdx=%u func=%s: parse bitcode error",
+              funcIdx, FuncName.c_str());
     consumeError(MOrErr.takeError());
     return meta;
   }

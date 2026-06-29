@@ -127,10 +127,13 @@ bool EJitCompileDriver::sharedWorkerStart(
     uint64_t *outTaskId) {
   auto *drv = static_cast<EJitCompileDriver *>(ctx);
   if (!EJitSreTask::create(drv->sharedWorkerTask_, entry, entryCtx,
-                           "ejit-shared-worker"))
+                           "ejit-shared-worker")) {
+    EJIT_DIAG("shared worker start FAILED: SRE task create rejected");
     return false;
+  }
   if (outTaskId)
     *outTaskId = 1; // host has no numeric task id; diagnostic only.
+  EJIT_DIAG("shared worker started");
   return true;
 }
 
@@ -152,17 +155,32 @@ bool EJitCompileDriver::startSharedTaskPool() {
   sharedPool_.setRegistrationFingerprint(
       EJitFuncRegistry::instance().fingerprint() * 0x9e3779b97f4a7c15ULL ^
       EJitLifecycleRegistry::instance().fingerprint());
-  switch (sharedPool_.init()) {
+  EJitSharedTaskPool::InitResult r = sharedPool_.init();
+  switch (r) {
   case EJitSharedTaskPool::InitResult::BecameOwner:
+    EJIT_DIAG("shared taskpool init: became owner");
+    return true;
   case EJitSharedTaskPool::InitResult::AttachedReady:
+    EJIT_DIAG("shared taskpool init: attached ready");
     return true;
   case EJitSharedTaskPool::InitResult::OwnerFailed:
+    EJIT_DIAG("shared taskpool init FAILED: owner worker start failed");
+    return false;
   case EJitSharedTaskPool::InitResult::InitInProgress:
+    EJIT_DIAG("shared taskpool init FAILED: peer still initializing");
+    return false;
   case EJitSharedTaskPool::InitResult::AbiMismatch:
+    EJIT_DIAG("shared taskpool init FAILED: ABI mismatch (magic/version/size)");
+    return false;
   case EJitSharedTaskPool::InitResult::FingerprintMismatch:
+    EJIT_DIAG("shared taskpool init FAILED: registration fingerprint mismatch");
+    return false;
   case EJitSharedTaskPool::InitResult::NoState:
+    EJIT_DIAG("shared taskpool init FAILED: no shared state bound");
     return false;
   }
+  EJIT_DIAG("shared taskpool init FAILED: unknown result=%u",
+            static_cast<unsigned>(r));
   return false;
 }
 #endif
@@ -337,18 +355,28 @@ void *EJitCompileDriver::compileCold(uint64_t cacheKey, bool storeLru) {
 
 #ifdef EJIT_SRE_TASKPOOL
 void *EJitCompileDriver::compileNow(const EJitCompileRequest &req) {
-  if (req.numDims > 4)
+  EJIT_DIAG("compileNow begin func=%u dims=%u", req.funcIndex, req.numDims);
+  if (req.numDims > 4) {
+    EJIT_DIAG("compileNow reject func=%u: numDims=%u > 4", req.funcIndex,
+              req.numDims);
     return nullptr;
+  }
 
   // Validate the request: instanceIds must be encodable in the legacy 8-bit
   // cacheKey slots, and no two dims may share a dimType (a duplicated lifecycle
   // dimension).
   SmallVector<uint32_t, 4> seenDimTypes;
   for (uint32_t i = 0; i < req.numDims; ++i) {
-    if (req.dims[i].instanceId > 255u)
+    if (req.dims[i].instanceId > 255u) {
+      EJIT_DIAG("compileNow reject func=%u: instanceId=%u > 255 (dim[%u])",
+                req.funcIndex, req.dims[i].instanceId, i);
       return nullptr;
-    if (llvm::is_contained(seenDimTypes, req.dims[i].dimType))
+    }
+    if (llvm::is_contained(seenDimTypes, req.dims[i].dimType)) {
+      EJIT_DIAG("compileNow reject func=%u: duplicate dimType=%u (dim[%u])",
+                req.funcIndex, req.dims[i].dimType, i);
       return nullptr;
+    }
     seenDimTypes.push_back(req.dims[i].dimType);
   }
 
@@ -360,8 +388,11 @@ void *EJitCompileDriver::compileNow(const EJitCompileRequest &req) {
   uint8_t packedDims[4] = {0, 0, 0, 0};
   for (unsigned i = 0; i < meta.dimCount && i < 4; ++i) {
     uint32_t wantedType = meta.dimTypes[i];
-    if (wantedType == kEJitInvalidDimType)
+    if (wantedType == kEJitInvalidDimType) {
+      EJIT_DIAG("compileNow reject func=%u: meta dim[%u] dimType invalid",
+                req.funcIndex, i);
       return nullptr;
+    }
     bool found = false;
     for (uint32_t j = 0; j < req.numDims; ++j) {
       if (req.dims[j].dimType == wantedType) {
@@ -370,8 +401,11 @@ void *EJitCompileDriver::compileNow(const EJitCompileRequest &req) {
         break;
       }
     }
-    if (!found)
+    if (!found) {
+      EJIT_DIAG("compileNow reject func=%u: no request dim for meta dimType=%u",
+                req.funcIndex, wantedType);
       return nullptr;
+    }
   }
 
   uint64_t cacheKey = (static_cast<uint64_t>(req.funcIndex) << 32) |
@@ -379,6 +413,9 @@ void *EJitCompileDriver::compileNow(const EJitCompileRequest &req) {
                       (static_cast<uint64_t>(packedDims[1]) << 8) |
                       (static_cast<uint64_t>(packedDims[2]) << 16) |
                       (static_cast<uint64_t>(packedDims[3]) << 24);
+  EJIT_DIAG("compileNow dispatch func=%u key=0x%016lx dims=[%u,%u,%u,%u]",
+            req.funcIndex, cacheKey, packedDims[0], packedDims[1], packedDims[2],
+            packedDims[3]);
   return compileCold(cacheKey, /*storeLru=*/false);
 }
 #endif

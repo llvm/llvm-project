@@ -21,6 +21,7 @@
 #ifdef EJIT_SRE_CODE_POOL
 
 #include "llvm/ExecutionEngine/EJIT/EJitSrePlatform.h"
+#include "llvm/ExecutionEngine/EJIT/EJitDiag.h"
 
 #ifndef EJIT_SRE_CODE_POOL_SIZE
 #define EJIT_SRE_CODE_POOL_SIZE                                                \
@@ -77,6 +78,8 @@ llvm::ejit::makeSreCodePoolManager() {
   Opts.poolSize = static_cast<size_t>(kSrePoolSize);
   Opts.poolAlign = k2MiB; // large-page / split granularity
   Opts.minCodeAlign = 64;
+  EJIT_DIAG("makeSreCodePoolManager: poolSize=%llu poolAlign=%zu",
+            kSrePoolSize, k2MiB);
 #ifdef EJIT_CODE_POOL_4K_SEAL
   // Adapt to the platform's 4K execute-permission interface: the 2MiB pool is
   // split into 4K mappings at creation and sealed one 4KiB page at a time.
@@ -117,14 +120,24 @@ llvm::ejit::makeSreCodePoolManager() {
 
 bool llvm::ejit::prepareSreCodeForCurrentCore(const void *FnPtr) {
 #if !defined(EJIT_SRE_ENABLE_EX) || defined(EJIT_CODE_POOL_4K_SEAL)
+  EJIT_DIAG("prepareSreCode: unsupported config (FnPtr=%p), clean fallback",
+            FnPtr);
   (void)FnPtr;
   return false;
 #else
-  if (!FnPtr)
+  if (!FnPtr) {
+    EJIT_DIAG("prepareSreCode: null FnPtr, reject");
     return false;
+  }
   const auto Address = reinterpret_cast<uintptr_t>(FnPtr);
   const auto PoolBase = Address & ~(static_cast<uintptr_t>(k2MiB) - 1);
-  return ejit_sre_enable_ex(1, static_cast<unsigned long long>(PoolBase)) == 0;
+  unsigned Rc = ejit_sre_enable_ex(1, static_cast<unsigned long long>(PoolBase));
+  if (Rc != 0) {
+    EJIT_DIAG("prepareSreCode FAIL: enable_ex poolBase=0x%llx rc=%u",
+              static_cast<unsigned long long>(PoolBase), Rc);
+    return false;
+  }
+  return true;
 #endif
 }
 

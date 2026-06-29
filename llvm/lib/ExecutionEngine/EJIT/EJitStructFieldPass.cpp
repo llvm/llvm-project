@@ -1,6 +1,7 @@
 //===-- EJitStructFieldPass.cpp - JIT Constant Substitution ---------------===//
 
 #include "llvm/ExecutionEngine/EJIT/EJitStructFieldPass.h"
+#include "llvm/ExecutionEngine/EJIT/EJitDiag.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -21,6 +22,8 @@ using namespace llvm::ejit;
 #define DEBUG_TYPE "ejit-struct-field"
 
 void EJitStructFieldPass::initFromModule(Module &M) {
+  EJIT_DIAG("struct-field initFromModule module=%s globals=%zu",
+            M.getName().str().c_str(), M.global_size());
   // Build GV period map.
   for (GlobalVariable &GV : M.globals()) {
     MDNode *MD = GV.getMetadata(MD_EJIT_METADATA);
@@ -326,8 +329,12 @@ tryReplaceIndirect(LoadInst *LI, const Value *PtrOp,
 PreservedAnalyses
 EJitStructFieldPass::run(Function &F, FunctionAnalysisManager &AM) {
   Module *M = F.getParent();
-  if (!M)
+  if (!M) {
+    EJIT_DIAG("struct-field run SKIP func=%s: no parent module",
+              F.getName().str().c_str());
     return PreservedAnalyses::all();
+  }
+  EJIT_DIAG("struct-field run func=%s", F.getName().str().c_str());
 
   assert(mapsBuilt_ && "EJitStructFieldPass::initFromModule() must be "
                        "called before run()");
@@ -380,6 +387,8 @@ EJitStructFieldPass::run(Function &F, FunctionAnalysisManager &AM) {
     changed = true;
   }
 
+  EJIT_DIAG("struct-field run func=%s replaced=%zu", F.getName().str().c_str(),
+            replacements.size());
   LLVM_DEBUG(if (changed) dbgs() << "ejit-struct-field: replaced "
                                  << replacements.size() << " load(s) in "
                                  << F.getName() << "\n");

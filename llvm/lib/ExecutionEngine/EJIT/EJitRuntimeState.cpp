@@ -1,6 +1,7 @@
 //===-- EJitRuntimeState.cpp - Activate/Deactivate State ------------------===//
 
 #include "llvm/ExecutionEngine/EJIT/EJitRuntimeState.h"
+#include "llvm/ExecutionEngine/EJIT/EJitDiag.h"
 #include <cassert>
 #include <mutex>
 
@@ -9,6 +10,8 @@ using namespace llvm::ejit;
 void PeriodArrayRegistry::registerArray(const std::string &periodName,
                                         const std::string &varName,
                                         void *baseAddr, size_t size) {
+  EJIT_DIAG("registry registerArray period=%s var=%s base=%p size=%zu",
+            periodName.c_str(), varName.c_str(), baseAddr, size);
   PeriodArrayInfo info{varName, periodName, baseAddr, size};
   arraysByPeriod_[periodName].push_back(info);
   varNameIndex_[varName] = info;
@@ -17,6 +20,8 @@ void PeriodArrayRegistry::registerArray(const std::string &periodName,
 
 void PeriodArrayRegistry::registerStaticVar(const std::string &varName,
                                             void *varAddr) {
+  EJIT_DIAG("registry registerStaticVar var=%s addr=%p", varName.c_str(),
+            varAddr);
   staticVars_.push_back({varName, varAddr});
   staticVarIndex_[varName] = varAddr;
 }
@@ -55,6 +60,8 @@ PeriodArrayRegistry::getArrayByBaseAddr(void *addr) const {
 
 void EJitRuntimeState::activate(const std::string &periodName,
                                 uint8_t cellIdx) {
+  EJIT_DIAG("runtimeState activate period=%s cellIdx=%u", periodName.c_str(),
+            cellIdx);
 #ifndef EJIT_FREESTANDING
   std::lock_guard<decltype(mutex_)> lock(mutex_);
 #endif
@@ -69,6 +76,8 @@ void EJitRuntimeState::activate(const std::string &periodName,
 
 void EJitRuntimeState::deactivate(const std::string &periodName,
                                   uint8_t cellIdx) {
+  EJIT_DIAG("runtimeState deactivate period=%s cellIdx=%u", periodName.c_str(),
+            cellIdx);
 #ifndef EJIT_FREESTANDING
   std::lock_guard<decltype(mutex_)> lock(mutex_);
 #endif
@@ -81,8 +90,13 @@ void EJitRuntimeState::deactivate(const std::string &periodName,
 }
 
 void EJitRuntimeState::activateArray(void *arrayPtr, uint8_t cellIdx) {
-  assert(registry_.getArrayByBaseAddr(arrayPtr) &&
-         "activateArray: arrayPtr is not a registered period array");
+  if (!registry_.getArrayByBaseAddr(arrayPtr)) {
+    EJIT_DIAG("runtimeState activateArray FAIL: arrayPtr=%p not registered",
+              arrayPtr);
+    assert(registry_.getArrayByBaseAddr(arrayPtr) &&
+           "activateArray: arrayPtr is not a registered period array");
+  }
+  EJIT_DIAG("runtimeState activateArray ptr=%p cellIdx=%u", arrayPtr, cellIdx);
 #ifndef EJIT_FREESTANDING
   std::lock_guard<decltype(mutex_)> lock(mutex_);
 #endif
@@ -91,8 +105,14 @@ void EJitRuntimeState::activateArray(void *arrayPtr, uint8_t cellIdx) {
 }
 
 void EJitRuntimeState::deactivateArray(void *arrayPtr, uint8_t cellIdx) {
-  assert(registry_.getArrayByBaseAddr(arrayPtr) &&
-         "deactivateArray: arrayPtr is not a registered period array");
+  if (!registry_.getArrayByBaseAddr(arrayPtr)) {
+    EJIT_DIAG("runtimeState deactivateArray FAIL: arrayPtr=%p not registered",
+              arrayPtr);
+    assert(registry_.getArrayByBaseAddr(arrayPtr) &&
+           "deactivateArray: arrayPtr is not a registered period array");
+  }
+  EJIT_DIAG("runtimeState deactivateArray ptr=%p cellIdx=%u", arrayPtr,
+            cellIdx);
 #ifndef EJIT_FREESTANDING
   std::lock_guard<decltype(mutex_)> lock(mutex_);
 #endif
@@ -101,6 +121,7 @@ void EJitRuntimeState::deactivateArray(void *arrayPtr, uint8_t cellIdx) {
 }
 
 void EJitRuntimeState::activateAll(const std::string &periodName) {
+  EJIT_DIAG("runtimeState activateAll period=%s", periodName.c_str());
 #ifndef EJIT_FREESTANDING
   std::lock_guard<decltype(mutex_)> lock(mutex_);
 #endif
@@ -115,6 +136,7 @@ void EJitRuntimeState::activateAll(const std::string &periodName) {
 }
 
 void EJitRuntimeState::deactivateAll(const std::string &periodName) {
+  EJIT_DIAG("runtimeState deactivateAll period=%s", periodName.c_str());
 #ifndef EJIT_FREESTANDING
   std::lock_guard<decltype(mutex_)> lock(mutex_);
 #endif

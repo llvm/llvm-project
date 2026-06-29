@@ -7,20 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/EJIT/EJitCodePool.h"
+#include "llvm/ExecutionEngine/EJIT/EJitDiag.h"
 #include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 using namespace llvm::ejit;
-
-// Lightweight, default-empty trace hook for code-pool key paths. Expands to
-// nothing unless EJIT_CODE_POOL_TRACE is predefined for on-target bring-up
-// (for example, -D'EJIT_CODE_POOL_TRACE(...)=SRE_printf(__VA_ARGS__)').
-// Arguments are restricted to integers, pointers, and C strings.
-#ifndef EJIT_CODE_POOL_TRACE
-#define EJIT_CODE_POOL_TRACE(...)                                              \
-  do {                                                                         \
-  } while (0)
-#endif
 
 namespace {
 
@@ -55,6 +46,10 @@ EJitCodePoolManager::EJitCodePoolManager(Options Opts, RawAllocFn Alloc,
     if (Opts_.poolSize == 0)
       Opts_.poolSize = Opts_.poolAlign;
   }
+  EJIT_DIAG("code pool ctor: poolSize=%zu poolAlign=%zu minCodeAlign=%zu "
+            "fourKSeal=%u sealPage=%zu",
+            Opts_.poolSize, Opts_.poolAlign, Opts_.minCodeAlign,
+            static_cast<unsigned>(Opts_.fourKSeal), Opts_.sealPageSize);
 }
 
 EJitCodePoolManager::~EJitCodePoolManager() = default;
@@ -75,39 +70,44 @@ Error EJitCodePoolManager::newActivePoolLocked() {
   // poolAlign - 1.
   size_t RawSize = Opts_.fourKSeal ? (Opts_.poolSize + Opts_.poolAlign)
                                    : (Opts_.poolSize + Opts_.poolAlign - 1);
-  EJIT_CODE_POOL_TRACE("newActivePool:enter",
-                       (unsigned long long)Opts_.poolSize,
-                       (unsigned)Opts_.fourKSeal,
-                       (unsigned long long)RawSize);
+  EJIT_DIAG("newActivePool: poolSize=%zu fourKSeal=%u rawSize=%zu",
+            Opts_.poolSize, static_cast<unsigned>(Opts_.fourKSeal), RawSize);
   void *Raw = Alloc_ ? Alloc_(RawSize) : nullptr;
-  EJIT_CODE_POOL_TRACE("newActivePool:rawAlloc", Raw,
-                       (unsigned long long)RawSize);
-  if (!Raw)
+  if (!Raw) {
+    EJIT_DIAG("newActivePool FAIL: raw alloc %zu bytes returned null (hasAlloc=%u)",
+              RawSize, static_cast<unsigned>(static_cast<bool>(Alloc_)));
     return make_error<StringError>(
         "EJitCodePool: raw allocation of " + Twine(RawSize) + " bytes failed",
         inconvertibleErrorCode());
+  }
+  EJIT_DIAG("newActivePool: rawAlloc=%p size=%zu", Raw, RawSize);
 
   auto *RawBytes = static_cast<uint8_t *>(Raw);
   auto *Base = reinterpret_cast<uint8_t *>(
       alignUp(addr(RawBytes), Opts_.poolAlign));
-  EJIT_CODE_POOL_TRACE("newActivePool:alignedBase", Base);
+  EJIT_DIAG("newActivePool: alignedBase=%p", Base);
 
   if (Opts_.fourKSeal) {
     // The 2MiB-aligned usable window must stay inside the raw allocation.
-    if (addr(Base) + Opts_.poolSize > addr(RawBytes) + RawSize)
+    if (addr(Base) + Opts_.poolSize > addr(RawBytes) + RawSize) {
+      EJIT_DIAG("newActivePool FAIL: aligned window base=%p +%zu > raw %p +%zu",
+                Base, Opts_.poolSize, RawBytes, RawSize);
       return make_error<StringError>(
           "EJitCodePool: aligned pool window exceeds raw allocation",
           inconvertibleErrorCode());
+    }
     // Split the 2MiB-aligned region into 4K mappings before any enable_ex. One
     // split per pool; per-page enable_ex happens later at seal time.
     unsigned Rc = Split_ ? Split_(Base, Opts_.poolSize) : 1;
-    EJIT_CODE_POOL_TRACE("newActivePool:splitRc", Base,
-                         (unsigned long long)Opts_.poolSize, Rc);
-    if (Rc != 0)
+    if (Rc != 0) {
+      EJIT_DIAG("newActivePool FAIL: split_2m_to_4k base=%p size=%zu rc=%u",
+                Base, Opts_.poolSize, Rc);
       return make_error<StringError>(
           "EJitCodePool: split_2m_to_4k failed (rc=" + Twine(Rc) +
               ") for pool base " + Twine(addr(Base)),
           inconvertibleErrorCode());
+    }
+    EJIT_DIAG("newActivePool: split ok base=%p size=%zu", Base, Opts_.poolSize);
     ++SplitInvocations_;
   }
 
@@ -119,6 +119,7 @@ Error EJitCodePoolManager::newActivePoolLocked() {
   P->executable = false;
   Active_ = P.get();
   Pools_.push_back(std::move(P));
+  EJIT_DIAG("newActivePool OK: base=%p pools=%zu", Base, Pools_.size());
   return Error::success();
 }
 
@@ -126,25 +127,29 @@ Error EJitCodePoolManager::sealPoolLocked(CodePool &P) {
   if (P.executable)
     return Error::success(); // already sealed — never re-invoke enable_ex
   unsigned Rc = Seal_ ? Seal_(P.base) : 1;
-  if (Rc != 0)
+  if (Rc != 0) {
+    EJIT_DIAG("sealPool FAIL: enable_ex base=%p rc=%u", P.base, Rc);
     return make_error<StringError>(
         "EJitCodePool: enable_ex failed (rc=" + Twine(Rc) + ") for pool base " +
             Twine(addr(P.base)),
         inconvertibleErrorCode());
+  }
   P.executable = true;
   ++SealInvocations_;
+  EJIT_DIAG("sealPool OK: base=%p (invocations=%zu)", P.base, SealInvocations_);
   // Per platform guidance, enable_ex performs its own permission/cache
   // synchronization, so we deliberately do NOT call __builtin___clear_cache.
   return Error::success();
 }
 
 Expected<void *> EJitCodePoolManager::allocateCode(size_t Size, size_t Align) {
-  if (Size == 0)
+  if (Size == 0) {
+    EJIT_DIAG("allocateCode FAIL: zero-size request");
     return make_error<StringError>("EJitCodePool: zero-size allocation",
                                    inconvertibleErrorCode());
+  }
 
-  EJIT_CODE_POOL_TRACE("allocateCode:req", (unsigned long long)Size,
-                       (unsigned long long)Align);
+  EJIT_DIAG("allocateCode req: size=%zu align=%zu", Size, Align);
 
   size_t EffAlign = std::max(Align, Opts_.minCodeAlign);
   if (!isPowerOf2_64(EffAlign))
@@ -155,11 +160,14 @@ Expected<void *> EJitCodePoolManager::allocateCode(size_t Size, size_t Align) {
     EffAlign = std::max(EffAlign, Opts_.sealPageSize);
 
   // A single allocation can never span pools; reject oversize requests cleanly.
-  if (Size > Opts_.poolSize)
+  if (Size > Opts_.poolSize) {
+    EJIT_DIAG("allocateCode FAIL: size=%zu exceeds poolSize=%zu", Size,
+              Opts_.poolSize);
     return make_error<StringError>(
         "EJitCodePool: request of " + Twine(Size) +
             " bytes exceeds pool size " + Twine(Opts_.poolSize),
         inconvertibleErrorCode());
+  }
 
 #ifndef EJIT_FREESTANDING
   std::lock_guard<std::mutex> Lock(Mutex_);
@@ -179,7 +187,7 @@ Expected<void *> EJitCodePoolManager::allocateCode(size_t Size, size_t Align) {
     // Round the bump cursor up to a whole seal page so the next allocation
     // starts on a page this one does not share.
     Active_->used = alignUp(Off + Size, Opts_.sealPageSize);
-    EJIT_CODE_POOL_TRACE("allocateCode:res4k", Ptr, (unsigned long long)Size);
+    EJIT_DIAG("allocateCode res4k: ptr=%p size=%zu", Ptr, Size);
     return static_cast<void *>(Ptr);
   }
 
@@ -201,7 +209,7 @@ Expected<void *> EJitCodePoolManager::allocateCode(size_t Size, size_t Align) {
   size_t Off = alignUp(Active_->used, EffAlign);
   uint8_t *Ptr = Active_->base + Off;
   Active_->used = Off + Size;
-  EJIT_CODE_POOL_TRACE("allocateCode:res", Ptr, (unsigned long long)Size);
+  EJIT_DIAG("allocateCode res: ptr=%p size=%zu", Ptr, Size);
   return static_cast<void *>(Ptr);
 }
 
@@ -225,18 +233,20 @@ Error EJitCodePoolManager::sealPoolContaining(const void *Ptr) {
   // the whole pool) prevents the easy misuse of marking a 2MiB pool executable
   // off a single address.
   if (Opts_.fourKSeal) {
-    EJIT_CODE_POOL_TRACE("sealPoolContaining:unsupported4k", Ptr);
+    EJIT_DIAG("sealPoolContaining FAIL: unsupported in 4K mode ptr=%p", Ptr);
     return make_error<StringError>(
         "EJitCodePool: sealPoolContaining is not supported in 4K page-seal "
         "mode; use sealCodeRange to seal the written code range",
         inconvertibleErrorCode());
   }
   CodePool *P = findPoolLocked(Ptr);
-  if (!P)
+  if (!P) {
+    EJIT_DIAG("sealPoolContaining FAIL: ptr=%p not owned by any pool", Ptr);
     return make_error<StringError>(
         "EJitCodePool: address " + Twine(addr(Ptr)) +
             " is not owned by any code pool",
         inconvertibleErrorCode());
+  }
   return sealPoolLocked(*P);
 }
 
@@ -249,11 +259,14 @@ Error EJitCodePoolManager::sealAllWritablePools() {
   // code are RX), so "seal every writable pool" has no correct meaning. Return
   // an Error rather than silently no-op so a caller cannot mistakenly believe
   // all pools are now fully sealed. Use sealCodeRange per finalized allocation.
-  if (Opts_.fourKSeal)
+  if (Opts_.fourKSeal) {
+    EJIT_DIAG("sealAllWritablePools FAIL: unsupported in 4K mode");
     return make_error<StringError>(
         "EJitCodePool: sealAllWritablePools (whole-pool sealing) is not "
         "supported in 4K page-seal mode; use sealCodeRange",
         inconvertibleErrorCode());
+  }
+  EJIT_DIAG("sealAllWritablePools: pools=%zu", Pools_.size());
   Error Err = Error::success();
   for (auto &P : Pools_)
     if (!P->executable)
@@ -268,30 +281,37 @@ Error EJitCodePoolManager::sealCodeRange(const void *Start, size_t Size) {
   if (Size == 0)
     return Error::success();
   CodePool *P = findPoolLocked(Start);
-  if (!P)
+  if (!P) {
+    EJIT_DIAG("sealCodeRange FAIL: start=%p size=%zu not owned by any pool",
+              Start, Size);
     return make_error<StringError>(
         "EJitCodePool: address " + Twine(addr(Start)) +
             " is not owned by any code pool",
         inconvertibleErrorCode());
+  }
 
   // Seal every 4KiB page the written code overlaps: page-align the start down
   // and the end up, then enable_ex(1, pageVA) per page.
   size_t Page = Opts_.sealPageSize;
   uintptr_t PageStart = alignDownAddr(addr(Start), Page);
   uintptr_t PageEnd = alignUp(addr(Start) + Size, Page);
-  EJIT_CODE_POOL_TRACE("sealCodeRange", Start, (unsigned long long)Size,
-                       (unsigned long long)PageStart,
-                       (unsigned long long)PageEnd);
+  EJIT_DIAG("sealCodeRange: start=%p size=%zu pageStart=0x%llx pageEnd=0x%llx",
+            Start, Size, static_cast<unsigned long long>(PageStart),
+            static_cast<unsigned long long>(PageEnd));
   for (uintptr_t VA = PageStart; VA < PageEnd; VA += Page) {
     unsigned Rc = Seal_ ? Seal_(reinterpret_cast<void *>(VA)) : 1;
-    EJIT_CODE_POOL_TRACE("sealCodeRange:pageRc", (unsigned long long)VA, Rc);
-    if (Rc != 0)
+    if (Rc != 0) {
+      EJIT_DIAG("sealCodeRange FAIL: enable_ex page=0x%llx rc=%u",
+                static_cast<unsigned long long>(VA), Rc);
       return make_error<StringError>(
           "EJitCodePool: enable_ex failed (rc=" + Twine(Rc) + ") for page " +
               Twine(VA),
           inconvertibleErrorCode());
+    }
     ++SealInvocations_;
   }
+  EJIT_DIAG("sealCodeRange OK: start=%p size=%zu (invocations=%zu)", Start, Size,
+            SealInvocations_);
   // Per platform guidance, enable_ex performs its own permission/cache
   // synchronization, so we deliberately do NOT call __builtin___clear_cache.
   return Error::success();

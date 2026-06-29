@@ -1,6 +1,7 @@
 //===-- EJitOrcEngine.cpp - OrcJIT Engine Wrapper -------------------------===//
 
 #include "llvm/ExecutionEngine/EJIT/EJitOrcEngine.h"
+#include "llvm/ExecutionEngine/EJIT/EJitDiag.h"
 #include "llvm/ExecutionEngine/EJIT/EJitOptimizer.h"
 #include "llvm/ExecutionEngine/EJIT/EJitRuntimeState.h"
 #include "llvm/Bitcode/BitcodeReader.h"
@@ -57,6 +58,9 @@ Expected<std::unique_ptr<EJitOrcEngine>>
 EJitOrcEngine::Create(const Config &config,
                       PeriodArrayRegistry &periodReg,
                       EJitRuntimeState &runtimeState) {
+  EJIT_DIAG("create: opt=%d dump=%s",
+            static_cast<int>(config.optLevel),
+            config.dumpJITDir.empty() ? "(off)" : config.dumpJITDir.c_str());
   auto engine = std::unique_ptr<EJitOrcEngine>(new EJitOrcEngine());
   engine->P->periodReg = &periodReg;
   engine->P->runtimeState = &runtimeState;
@@ -74,8 +78,10 @@ EJitOrcEngine::Create(const Config &config,
 #else
   auto JTMBOrErr = orc::JITTargetMachineBuilder::detectHost();
 #endif
-  if (!JTMBOrErr)
+  if (!JTMBOrErr) {
+    EJIT_DIAG("create FAIL: target machine builder error");
     return JTMBOrErr.takeError();
+  }
 
   // Use Large code model so JITLink can generate 64-bit absolute relocations.
   JTMBOrErr->setCodeModel(CodeModel::Large);
@@ -114,8 +120,10 @@ EJitOrcEngine::Create(const Config &config,
 #endif
 
   auto J = Builder.create();
-  if (!J)
+  if (!J) {
+    EJIT_DIAG("create FAIL: LLJIT builder error");
     return J.takeError();
+  }
 
   engine->P->J = std::move(*J);
 
@@ -135,11 +143,14 @@ EJitOrcEngine::Create(const Config &config,
           orc::ExecutorSymbolDef(orc::ExecutorAddr::fromPtr(kv.varAddr),
                                  JITSymbolFlags::Exported);
     if (!symMap.empty()) {
+      size_t n = symMap.size();
       if (auto Err = JD.define(orc::absoluteSymbols(std::move(symMap))))
-        LLVM_DEBUG(dbgs() << "ejit-orc-engine: define static vars: "
-                          << toString(std::move(Err)) << "\n");
+        EJIT_DIAG("create: define %zu static var(s) FAILED: %s", n,
+                  toString(std::move(Err)).c_str());
     }
   }
+  EJIT_DIAG("create: static vars registered=%zu",
+            periodReg.getStaticVars().size());
 
   // Set up IR transform layer: runs the specialization pipeline during
   // JIT compilation (parameter substitution → InstCombine → StructFieldPass
@@ -187,18 +198,23 @@ EJitOrcEngine::Create(const Config &config,
         return std::move(TSM);
       });
 
+  EJIT_DIAG("create OK: LLJIT ready");
   return engine;
 }
 
 Error EJitOrcEngine::loadBitcodeModule(StringRef bitcodeData,
                                        uint64_t cacheKey,
                                        const std::string &origFnName) {
+  EJIT_DIAG("loadBitcode key=0x%016lx func=%s size=%zu", cacheKey,
+            origFnName.c_str(), bitcodeData.size());
   auto Ctx = std::make_unique<LLVMContext>();
   auto Buf = MemoryBuffer::getMemBuffer(
       bitcodeData, ("spec_" + std::to_string(cacheKey) + ".bc"));
   auto ModuleOrErr = parseBitcodeFile(Buf->getMemBufferRef(), *Ctx);
-  if (!ModuleOrErr)
+  if (!ModuleOrErr) {
+    EJIT_DIAG("loadBitcode FAIL key=0x%016lx: parse bitcode error", cacheKey);
     return ModuleOrErr.takeError();
+  }
 
   Triple TT((*ModuleOrErr)->getTargetTriple());
   if (TT.isAArch64() && TT.isOSBinFormatELF()) {
@@ -240,14 +256,16 @@ Error EJitOrcEngine::loadBitcodeModule(StringRef bitcodeData,
   auto it = P->specDylibs.find(cacheKey);
   if (it != P->specDylibs.end()) {
     if (auto Err = P->J->getExecutionSession().removeJITDylib(*it->second))
-      LLVM_DEBUG(dbgs() << "ejit-orc-engine: remove stale JD: "
-                        << toString(std::move(Err)) << "\n");
+      EJIT_DIAG("loadBitcode key=0x%016lx: remove stale JD FAILED: %s",
+                cacheKey, toString(std::move(Err)).c_str());
     P->specDylibs.erase(it);
   }
 
   auto JDOrErr = P->J->createJITDylib("spec_" + std::to_string(cacheKey));
-  if (!JDOrErr)
+  if (!JDOrErr) {
+    EJIT_DIAG("loadBitcode FAIL key=0x%016lx: create JITDylib error", cacheKey);
     return JDOrErr.takeError();
+  }
 
   // Resolve undefined function symbols from user-registered table.
   // Required for bare-metal where dynamic lookup (dlsym) is unavailable.
@@ -280,31 +298,42 @@ Error EJitOrcEngine::loadBitcodeModule(StringRef bitcodeData,
 
   // Define all collected symbols in the spec JITDylib before loading the
   // IR module so the JIT linker can resolve external references.
-  if (!globalSymbols.empty())
+  if (!globalSymbols.empty()) {
+    size_t nGlobals = globalSymbols.size();
     if (auto Err = JDOrErr->define(
             orc::absoluteSymbols(std::move(globalSymbols))))
-      LLVM_DEBUG(dbgs() << "ejit-orc-engine: define globals: "
-                        << toString(std::move(Err)) << "\n");
+      EJIT_DIAG("loadBitcode key=0x%016lx: define %zu global(s) FAILED: %s",
+                cacheKey, nGlobals, toString(std::move(Err)).c_str());
+  }
 
   if (auto Err = P->J->addIRModule(*JDOrErr,
-      orc::ThreadSafeModule(std::move(*ModuleOrErr), std::move(Ctx))))
+      orc::ThreadSafeModule(std::move(*ModuleOrErr), std::move(Ctx)))) {
+    EJIT_DIAG("loadBitcode FAIL key=0x%016lx: add IR module error", cacheKey);
     return Err;
+  }
 
   P->specDylibs[cacheKey] = &*JDOrErr;
+  EJIT_DIAG("loadBitcode OK key=0x%016lx func=%s", cacheKey, origFnName.c_str());
   return Error::success();
 }
 
 Expected<void *> EJitOrcEngine::lookup(uint64_t cacheKey,
                                        const std::string &name) {
   auto it = P->specDylibs.find(cacheKey);
-  if (it == P->specDylibs.end())
+  if (it == P->specDylibs.end()) {
+    EJIT_DIAG("lookup FAIL key=0x%016lx name=%s: no spec JITDylib", cacheKey,
+              name.c_str());
     return make_error<StringError>(
         "No specialization JITDylib found for: " + std::to_string(cacheKey),
         inconvertibleErrorCode());
+  }
 
   auto addr = P->J->lookup(*it->second, name);
-  if (!addr)
+  if (!addr) {
+    EJIT_DIAG("lookup FAIL key=0x%016lx name=%s: symbol not found", cacheKey,
+              name.c_str());
     return addr.takeError();
+  }
   void *Ptr = reinterpret_cast<void *>(addr->getValue());
 
 #ifdef EJIT_SRE_CODE_POOL
@@ -320,11 +349,16 @@ Expected<void *> EJitOrcEngine::lookup(uint64_t cacheKey,
   // code-pool memory manager), so nothing is done here.
   if (P->codePool && !P->codePool->usesPageSeal() &&
       P->codePool->contains(Ptr)) {
-    if (auto Err = P->codePool->sealPoolContaining(Ptr))
+    if (auto Err = P->codePool->sealPoolContaining(Ptr)) {
+      EJIT_DIAG("lookup FAIL key=0x%016lx ptr=%p: seal pool error", cacheKey,
+                Ptr);
       return std::move(Err);
+    }
   }
 #endif
 
+  EJIT_DIAG("lookup OK key=0x%016lx name=%s ptr=%p", cacheKey, name.c_str(),
+            Ptr);
   return Ptr;
 }
 
