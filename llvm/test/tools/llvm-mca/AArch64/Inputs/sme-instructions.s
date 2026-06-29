@@ -59,6 +59,8 @@ udot z0.s, z0.h, z0.h
 sqcvtn z0.h, {z0.s, z1.s}
 sqcvtun z0.b, {z0.s - z3.s}
 uqcvtn z0.h, {z0.s, z1.s}
+sqrshrn z0.h, {z0.s - z1.s}, #16
+uqrshrn z0.h, {z0.s - z1.s}, #16
 sqrshrn z0.b, {z0.s - z3.s}, #32
 sqrshrun z0.b, {z0.s - z3.s}, #32
 uqrshrn z0.b, {z0.s - z3.s}, #32

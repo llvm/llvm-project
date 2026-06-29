@@ -71,7 +71,12 @@ fvdott za.s[w8, 0, vgx4], {z0.b, z1.b}, z0.b[0]
 fscale {z0.s, z1.s}, {z0.s, z1.s}, z0.s
 luti2 {z0.h - z1.h}, zt0, z0[0]
 luti4 {z0.h - z1.h}, zt0, z0[0]
+ld1b {z0.b, z1.b}, pn8/z, [x0]
+ld1b {z0.b - z3.b}, pn8/z, [x0]
+ldnt1b {z0.b, z1.b}, pn8/z, [x0]
+ldnt1b {z0.b - z3.b}, pn8/z, [x0]
 mova {z0.s, z1.s}, za0h.s[w12, 0:1]
+mova z0.s, p0/m, za0h.s[w12, 0]
 mova za0h.b[w12, 0], p0/m, z0.b
 movt zt0[0], x0
 movt x0, zt0[0]
@@ -81,6 +86,8 @@ smin {z0.s, z1.s}, {z0.s, z1.s}, z0.s
 uclamp {z0.h, z1.h}, z0.h, z0.h
 umax {z0.s, z1.s}, {z0.s, z1.s}, z0.s
 umin {z0.s, z1.s}, {z0.s, z1.s}, z0.s
+smax {z0.s - z3.s}, {z0.s - z3.s}, z0.s
+umin {z0.s - z3.s}, {z0.s - z3.s}, z0.s
 scvtf {z0.s, z1.s}, {z0.s, z1.s}
 ucvtf {z0.s, z1.s}, {z0.s, z1.s}
 sel {z0.h, z1.h}, pn8, {z0.h, z1.h}, {z0.h, z1.h}
@@ -100,9 +107,7 @@ smops za0.s, p0/m, p0/m, z0.h, z0.h
 umopa za0.s, p0/m, p0/m, z0.h, z0.h
 umops za0.s, p0/m, p0/m, z0.h, z0.h
 sqcvt z0.h, {z0.s - z1.s}
-sqcvtn z0.h, {z0.s, z1.s}
 sqcvtun z0.b, {z0.s - z3.s}
-uqcvtn z0.h, {z0.s, z1.s}
 sqdmulh {z0.h - z1.h}, {z0.h - z1.h}, z0.h
 sqrshr z0.h, {z0.s - z1.s}, #16
 sqrshrn z0.b, {z0.s - z3.s}, #32
@@ -123,6 +128,10 @@ usmopa za0.s, p0/m, p0/m, z0.b, z0.b
 usmops za0.s, p0/m, p0/m, z0.b, z0.b
 sunpk {z0.h - z1.h}, z0.b
 uunpk {z0.h - z1.h}, z0.b
+st1b {z0.b, z1.b}, pn8, [x0]
+st1b {z0.b - z3.b}, pn8, [x0]
+stnt1b {z0.b, z1.b}, pn8, [x0]
+stnt1b {z0.b - z3.b}, pn8, [x0]
 suvdot za.s[w8, 0, vgx4], {z0.b - z3.b}, z0.b[0]
 uvdot za.s[w8, 0, vgx2], {z0.h, z1.h}, z0.h[0]
 svdot za.s[w8, 0, vgx2], {z0.h, z1.h}, z0.h[0]
@@ -136,7 +145,11 @@ zip1 z0.s, z0.s, z0.s
 zip2 z0.s, z0.s, z0.s
 
 // SME load instructions.
+ld1w {za0v.s[w12, 0]}, p0/z, [x0]
+ldr zt0, [x0]
 ldr za[w12, #0], [x0]
 
 // SME store instructions.
+st1w {za0h.s[w12, 0]}, p0, [x0]
+str zt0, [x0]
 str za[w12, #0], [x0]

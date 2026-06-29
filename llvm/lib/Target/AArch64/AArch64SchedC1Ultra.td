@@ -182,35 +182,35 @@ def C1UWrite_1c_1CMERNMRET : C1UCMEWrite<1, [C1UUnitCMERNMRET]>;
 
 def C1UWrite_2c_1CMELD: C1UCMEWrite<2, [C1UUnitCMELD]>;
 def C1UWrite_2c_1CMELD_1rc : C1UCMEWriteRC<2, [C1UUnitCMELD], [1]>;
-def C1UWrite_2c_1L_CMELD : C1UCMEWrite<2, [C1UUnitL, C1UUnitCMELD]>;
-def C1UWrite_2c_1I_1L_CMELD : C1UCMEWrite<2, [C1UUnitI, C1UUnitL,
+def C1UWrite_2c_1L_1CMELD : C1UCMEWrite<2, [C1UUnitL, C1UUnitCMELD]>;
+def C1UWrite_2c_1I_1L_1CMELD : C1UCMEWrite<2, [C1UUnitI, C1UUnitL,
                                               C1UUnitCMELD]>;
-def C1UWrite_2c_1V01_1L_CMELD : C1UCMEWrite<2, [C1UUnitV01, C1UUnitL,
+def C1UWrite_2c_1V01_1L_1CMELD : C1UCMEWrite<2, [C1UUnitV01, C1UUnitL,
                                                 C1UUnitCMELD]>;
-def C1UWrite_2c_1I_1V01_1L_CMELD
+def C1UWrite_2c_1I_1V01_1L_1CMELD
 
     : C1UCMEWrite<2, [C1UUnitI, C1UUnitV01, C1UUnitL, C1UUnitCMELD]>;
 
 def C1UWrite_2c_1CMEST : C1UCMEWrite<2, [C1UUnitCMEST]>;
 def C1UWrite_2c_1CMEST_1rc : C1UCMEWriteRC<2, [C1UUnitCMEST], [1]>;
-def C1UWrite_2c_1SA_CMEST : C1UCMEWrite<2, [C1UUnitSA, C1UUnitCMEST]>;
-def C1UWrite_2c_1SA_1V01_CMEST : C1UCMEWrite<2, [C1UUnitSA, C1UUnitV01,
+def C1UWrite_2c_1SA_1CMEST : C1UCMEWrite<2, [C1UUnitSA, C1UUnitCMEST]>;
+def C1UWrite_2c_1SA_1V01_1CMEST : C1UCMEWrite<2, [C1UUnitSA, C1UUnitV01,
                                                  C1UUnitCMEST]>;
-def C1UWrite_2c_1SA_1V01_1I_CMEST
+def C1UWrite_2c_1SA_1V01_1I_1CMEST
     : C1UCMEWrite<2, [C1UUnitSA, C1UUnitV01, C1UUnitI, C1UUnitCMEST]>;
-def C1UWrite_2c_2SA_2V01_CMEST : C1UCMEWrite<2, [C1UUnitSA, C1UUnitSA,
+def C1UWrite_2c_2SA_2V01_1CMEST : C1UCMEWrite<2, [C1UUnitSA, C1UUnitSA,
                                                  C1UUnitV01, C1UUnitV01,
                                                  C1UUnitCMEST]>;
-def C1UWrite_2c_3SA_3V01_CMEST : C1UCMEWrite<2, [C1UUnitSA, C1UUnitSA,
+def C1UWrite_2c_3SA_3V01_1CMEST : C1UCMEWrite<2, [C1UUnitSA, C1UUnitSA,
                                                  C1UUnitSA, C1UUnitV01,
                                                  C1UUnitV01, C1UUnitV01,
                                                  C1UUnitCMEST]>;
-def C1UWrite_2c_4SA_4V01_CMEST : C1UCMEWrite<2, [C1UUnitSA, C1UUnitSA,
+def C1UWrite_2c_4SA_4V01_1CMEST : C1UCMEWrite<2, [C1UUnitSA, C1UUnitSA,
                                                  C1UUnitSA, C1UUnitSA,
                                                  C1UUnitV01, C1UUnitV01,
                                                  C1UUnitV01, C1UUnitV01,
                                                  C1UUnitCMEST]>;
-def C1UWrite_11c_1SA_CMEST : C1UCMEWrite<11, [C1UUnitSA, C1UUnitCMEST]>;
+def C1UWrite_11c_1SA_1CMEST : C1UCMEWrite<11, [C1UUnitSA, C1UUnitCMEST]>;
 
 def C1UWrite_1c_1CMEPERM : C1UCMEWrite<1, [C1UUnitCMEPERM]>;
 def C1UWrite_1c_1CMEPERM_2rc : C1UCMEWriteRC<1, [C1UUnitCMEPERM], [2]>;
@@ -218,40 +218,40 @@ def C1UWrite_4c_1CMEPERM : C1UCMEWrite<4, [C1UUnitCMEPERM]>;
 def C1UWrite_4c_1CMEPERM_2rc : C1UCMEWriteRC<4, [C1UUnitCMEPERM], [2]>;
 def C1UWrite_4c_1CMEPERMF : C1UCMEWrite<4, [C1UUnitCMEPERMF]>;
 def C1UWrite_4c_1CMEPERMF_1rc : C1UCMEWriteRC<4, [C1UUnitCMEPERMF], [1]>;
-def C1UWrite_4c_1M_CMEPERM_1rc : C1UCMEWriteRC<4, [C1UUnitM, C1UUnitCMEPERM],
+def C1UWrite_4c_1M_1CMEPERM_1rc : C1UCMEWriteRC<4, [C1UUnitM, C1UUnitCMEPERM],
                                                [1, 2]>;
-def C1UWrite_4c_2M_CMEPERM_1rc : C1UCMEWriteRC<4, [C1UUnitM, C1UUnitM,
+def C1UWrite_4c_2M_1CMEPERM_1rc : C1UCMEWriteRC<4, [C1UUnitM, C1UUnitM,
                                                    C1UUnitCMEPERM],
                                                [2, 2, 2]>;
 
 def C1UWrite_5c_1CMEPERM_2rc : C1UCMEWriteRC<5, [C1UUnitCMEPERM], [2]>;
 def C1UWrite_5c_1CMEPERMF_2rc : C1UCMEWriteRC<5, [C1UUnitCMEPERMF], [2]>;
-def C1UWrite_8c_1CMEPERMF_VX0ALU_1rc
+def C1UWrite_8c_1CMEPERMF_1CMEVX0ALU_1rc
     : C1UCMEWriteRC<8, [C1UUnitCMEPERMF, C1UUnitCMEVX0ALU], [1, 1]>;
-def C1UWrite_8c_1CMEPERMF_PERMS_1rc : C1UCMEWriteRC<8, [C1UUnitCMEPERMF,
+def C1UWrite_8c_1CMEPERMF_1CMEPERMS_1rc : C1UCMEWriteRC<8, [C1UUnitCMEPERMF,
                                                       C1UUnitCMEPERM],
                                                   [1, 2]>;
 
-def C1UWrite_4c_1CMEVXALU_PERMF_1d1rc
+def C1UWrite_4c_1CMEVXALU_1CMEPERMF_1d1rc
     : C1UCMEWriteRC<4, [C1UUnitCMEVXALU, C1UUnitCMEPERMF], [2, 1]>;
-def C1UWrite_8c_1CMEVXALU_PERMS_1rc : C1UCMEWriteRC<8, [C1UUnitCMEVXALU,
+def C1UWrite_8c_1CMEVXALU_1CMEPERMS_1rc : C1UCMEWriteRC<8, [C1UUnitCMEVXALU,
                                                       C1UUnitCMEPERM],
                                                   [2, 2]>;
-def C1UWrite_8c_1CMEVXALU_PERMF_1rc
+def C1UWrite_8c_1CMEVXALU_1CMEPERMF_1rc
     : C1UCMEWriteRC<8, [C1UUnitCMEVXALU, C1UUnitCMEPERMF], [2, 1]>;
-def C1UWrite_12c_1CMEVXALU_PERMF_2d3rc
+def C1UWrite_12c_1CMEVXALU_1CMEPERMF_2d3rc
     : C1UCMEWriteRC<12, [C1UUnitCMEVXALU, C1UUnitCMEPERMF], [3, 1]>;
-def C1UWrite_12c_1CMEVX0ALU_PERMS_VXALU_2d5rc
+def C1UWrite_12c_1CMEVX0ALU_1CMEPERMS_VXALU_2d5rc
     : C1UCMEWriteRC<12, [C1UUnitCMEVX0ALU, C1UUnitCMEPERM,
                          C1UUnitCMEVXALU],
                     [2, 5, 2]>;
-def C1UWrite_16c_1CMEVXALU_PERMF_2d3rc
+def C1UWrite_16c_1CMEVXALU_1CMEPERMF_2d3rc
     : C1UCMEWriteRC<16, [C1UUnitCMEVXALU, C1UUnitCMEPERMF], [3, 1]>;
-def C1UWrite_16c_1CMEVXALU_PERMS_2d3rc
+def C1UWrite_16c_1CMEVXALU_1CMEPERMS_2d3rc
     : C1UCMEWriteRC<16, [C1UUnitCMEVXALU, C1UUnitCMEPERM], [3, 3]>;
-def C1UWrite_20c_1CMEVXALU_PERMS_1d2rc
+def C1UWrite_20c_1CMEVXALU_1CMEPERMS_1d2rc
     : C1UCMEWriteRC<20, [C1UUnitCMEVXALU, C1UUnitCMEPERM], [4, 4]>;
-def C1UWrite_24c_1CMEVXALU_PERMS_2d5rc
+def C1UWrite_24c_1CMEVXALU_1CMEPERMS_2d5rc
     : C1UCMEWriteRC<24, [C1UUnitCMEVXALU, C1UUnitCMEPERM], [5, 5]>;
 
 def C1UWrite_2c_1CMEPF_2rc : C1UCMEWriteRC<2, [C1UUnitCMEPF], [2]>;
@@ -259,26 +259,26 @@ def C1UWrite_4c_1CMEVXALU : C1UCMEWrite<4, [C1UUnitCMEVXALU]>;
 def C1UWrite_4c_1CMEVXALU_2rc : C1UCMEWriteRC<4, [C1UUnitCMEVXALU], [2]>;
 def C1UWrite_4c_1CMEVXALU_4rc : C1UCMEWriteRC<4, [C1UUnitCMEVXALU], [4]>;
 def C1UWrite_4c_1CMEVX0ALU : C1UCMEWrite<4, [C1UUnitCMEVX0ALU]>;
-def C1UWrite_4c_1CMEVX0ALU_PERMF_1rc
+def C1UWrite_4c_1CMEVX0ALU_1CMEPERMF_1rc
     : C1UCMEWriteRC<4, [C1UUnitCMEVX0ALU, C1UUnitCMEPERMF], [1, 1]>;
-def C1UWrite_4c_1CMEVX0ALU_PERMF_2rc
+def C1UWrite_4c_1CMEVX0ALU_1CMEPERMF_2rc
     : C1UCMEWriteRC<4, [C1UUnitCMEVX0ALU, C1UUnitCMEPERMF], [2, 2]>;
 def C1UWrite_4c_1CMEVXFPDOT : C1UCMEWrite<4, [C1UUnitCMEVXFPDOT]>;
 def C1UWrite_4c_1CMEVXMUL : C1UCMEWrite<4, [C1UUnitCMEVXMUL]>;
-def C1UWrite_4c_1M0_CMEVXALU : C1UCMEWrite<4, [C1UUnitM0, C1UUnitCMEVXALU]>;
-def C1UWrite_4c_1M_CMEVX0ALU : C1UCMEWrite<4, [C1UUnitM, C1UUnitCMEVX0ALU]>;
+def C1UWrite_4c_1M0_1CMEVXALU : C1UCMEWrite<4, [C1UUnitM0, C1UUnitCMEVXALU]>;
+def C1UWrite_4c_1M_1CMEVX0ALU : C1UCMEWrite<4, [C1UUnitM, C1UUnitCMEVX0ALU]>;
 def C1UWrite_5c_1CMEVXALU_1rc : C1UCMEWriteRC<5, [C1UUnitCMEVXALU], [2]>;
 def C1UWrite_5c_1CMEVXALU_4rc : C1UCMEWriteRC<5, [C1UUnitCMEVXALU], [4]>;
 def C1UWrite_8c_1CMEVXMUL_1rc : C1UCMEWriteRC<8, [C1UUnitCMEVXMUL], [2]>;
 def C1UWrite_8c_1CMEVXALU_1rc : C1UCMEWriteRC<8, [C1UUnitCMEVXALU], [2]>;
-def C1UWrite_12c_1M0_CMEPERMF_VX0ALU_2rc
+def C1UWrite_12c_1M0_1CMEPERMF_1CMEVX0ALU_2rc
     : C1UCMEWriteRC<12, [C1UUnitM0, C1UUnitCMEPERMF, C1UUnitCMEVX0ALU],
                     [1, 2, 2]>;
 
 def C1UWrite_6c_1CMEVXALU_4rc : C1UCMEWriteRC<6, [C1UUnitCMEVXALU], [4]>;
-def C1UWrite_7c_1L_CMELD : C1UCMEWrite<7, [C1UUnitL, C1UUnitCMELD]>;
+def C1UWrite_7c_1L_1CMELD : C1UCMEWrite<7, [C1UUnitL, C1UUnitCMELD]>;
 def C1UWrite_7c_1CMEPERMF_4rc : C1UCMEWriteRC<7, [C1UUnitCMEPERMF], [4]>;
-def C1UWrite_7c_1CMEVXALU_PERMF_1rc
+def C1UWrite_7c_1CMEVXALU_1CMEPERMF_1rc
     : C1UCMEWriteRC<7, [C1UUnitCMEVXALU, C1UUnitCMEPERMF], [2, 1]>;
 def C1UWrite_7c_1CMEVXALU_4rc : C1UCMEWriteRC<7, [C1UUnitCMEVXALU], [4]>;
 def C1UWrite_11c_1CMEVXALU_2rc : C1UCMEWriteRC<11, [C1UUnitCMEVXALU], [2]>;
@@ -296,7 +296,7 @@ def C1UWrite_5c_1CMEMML0_1rc : C1UCMEWriteRC<5, [C1UUnitCMEMML0], [1]>;
 def C1UWrite_9c_1CMEMML1 : C1UCMEWrite<9, [C1UUnitCMEMML1]>;
 def C1UWrite_9c_1CMEMML1_2rc : C1UCMEWriteRC<9, [C1UUnitCMEMML1], [2]>;
 def C1UWrite_9c_1CMEMML1_5rc : C1UCMEWriteRC<9, [C1UUnitCMEMML1], [5]>;
-def C1UWrite_13c_1CMEMML1_PERMF_5rc
+def C1UWrite_13c_1CMEMML1_1CMEPERMF_5rc
     : C1UCMEWriteRC<13, [C1UUnitCMEMML1, C1UUnitCMEPERMF], [5, 1]>;
 
 
@@ -847,37 +847,37 @@ def C1UWr_ZBFMAL_CME : C1USMEStreamingSchedWrite<C1UWrite_4c_1CMEVXMUL,
                                               C1UWr_ZBFMAL>;
 
 def C1UWrite_8c_1V_3V0134_CMEIntReduce
-    : C1USMEStreamingSchedWrite<C1UWrite_12c_1CMEVXALU_PERMF_2d3rc,
+    : C1USMEStreamingSchedWrite<C1UWrite_12c_1CMEVXALU_1CMEPERMF_2d3rc,
                              C1UWrite_8c_1V_3V0134>;
 def C1UWrite_6c_1V_2V0134_CMEIntReduce
-    : C1USMEStreamingSchedWrite<C1UWrite_12c_1CMEVXALU_PERMF_2d3rc,
+    : C1USMEStreamingSchedWrite<C1UWrite_12c_1CMEVXALU_1CMEPERMF_2d3rc,
                              C1UWrite_6c_1V_2V0134>;
 def C1UWrite_6c_2V_1V0134_CMEIntReduce
-    : C1USMEStreamingSchedWrite<C1UWrite_12c_1CMEVXALU_PERMF_2d3rc,
+    : C1USMEStreamingSchedWrite<C1UWrite_12c_1CMEVXALU_1CMEPERMF_2d3rc,
                              C1UWrite_6c_2V_1V0134>;
 def C1UWrite_4c_1V_1V0134_CMEIntReduce
-    : C1USMEStreamingSchedWrite<C1UWrite_12c_1CMEVXALU_PERMF_2d3rc,
+    : C1USMEStreamingSchedWrite<C1UWrite_12c_1CMEVXALU_1CMEPERMF_2d3rc,
                              C1UWrite_4c_1V_1V0134>;
 def C1UWrite_4c_2V_CMEIntReduce
-    : C1USMEStreamingSchedWrite<C1UWrite_12c_1CMEVXALU_PERMF_2d3rc,
+    : C1USMEStreamingSchedWrite<C1UWrite_12c_1CMEVXALU_1CMEPERMF_2d3rc,
                              C1UWrite_4c_2V>;
 def C1UWrite_8c_4V_CMEFPReduceH
-    : C1USMEStreamingSchedWrite<C1UWrite_24c_1CMEVXALU_PERMS_2d5rc,
+    : C1USMEStreamingSchedWrite<C1UWrite_24c_1CMEVXALU_1CMEPERMS_2d5rc,
                              C1UWrite_8c_4V>;
 def C1UWrite_6c_3V_CMEFPReduceS
-    : C1USMEStreamingSchedWrite<C1UWrite_20c_1CMEVXALU_PERMS_1d2rc,
+    : C1USMEStreamingSchedWrite<C1UWrite_20c_1CMEVXALU_1CMEPERMS_1d2rc,
                              C1UWrite_6c_3V>;
 def C1UWrite_8c_4V_CMEFPReduceMaxMin
-    : C1USMEStreamingSchedWrite<C1UWrite_16c_1CMEVXALU_PERMF_2d3rc,
+    : C1USMEStreamingSchedWrite<C1UWrite_16c_1CMEVXALU_1CMEPERMF_2d3rc,
                              C1UWrite_8c_4V>;
 def C1UWrite_6c_3V_CMEFPReduceMaxMin
-    : C1USMEStreamingSchedWrite<C1UWrite_16c_1CMEVXALU_PERMF_2d3rc,
+    : C1USMEStreamingSchedWrite<C1UWrite_16c_1CMEVXALU_1CMEPERMF_2d3rc,
                              C1UWrite_6c_3V>;
 def C1UWrite_4c_2V_CMEFPReduceD
-    : C1USMEStreamingSchedWrite<C1UWrite_16c_1CMEVXALU_PERMS_2d3rc,
+    : C1USMEStreamingSchedWrite<C1UWrite_16c_1CMEVXALU_1CMEPERMS_2d3rc,
                              C1UWrite_4c_2V>;
 def C1UWrite_4c_2V_CMEFPReduceMaxMinD
-    : C1USMEStreamingSchedWrite<C1UWrite_16c_1CMEVXALU_PERMF_2d3rc,
+    : C1USMEStreamingSchedWrite<C1UWrite_16c_1CMEVXALU_1CMEPERMF_2d3rc,
                              C1UWrite_4c_2V>;
 
 def C1UWrite_2c_1V_CME : C1USMEStreamingSchedWrite<C1UWrite_4c_1CMEVXALU,
@@ -897,27 +897,27 @@ def C1UWrite_4c_1V_CME : C1USMEStreamingSchedWrite<C1UWrite_4c_1CMEVXALU,
 def C1UWrite_4c_1V0134_CME : C1USMEStreamingSchedWrite<C1UWrite_4c_1CMEVXALU,
                                                     C1UWrite_4c_1V0134>;
 def C1UWrite_4c_1V0134_1V_CME
-    : C1USMEStreamingSchedWrite<C1UWrite_12c_1CMEVXALU_PERMF_2d3rc,
+    : C1USMEStreamingSchedWrite<C1UWrite_12c_1CMEVXALU_1CMEPERMF_2d3rc,
                              C1UWrite_4c_1V0134_1V>;
 def C1UWrite_4c_1V_1V0134_CME
-    : C1USMEStreamingSchedWrite<C1UWrite_12c_1CMEVXALU_PERMF_2d3rc,
+    : C1USMEStreamingSchedWrite<C1UWrite_12c_1CMEVXALU_1CMEPERMF_2d3rc,
                              C1UWrite_4c_1V_1V0134>;
-def C1UWrite_4c_2V_CME : C1USMEStreamingSchedWrite<C1UWrite_16c_1CMEVXALU_PERMF_2d3rc,
+def C1UWrite_4c_2V_CME : C1USMEStreamingSchedWrite<C1UWrite_16c_1CMEVXALU_1CMEPERMF_2d3rc,
                                                 C1UWrite_4c_2V>;
 def C1UWrite_4c_2V0134_CME : C1USMEStreamingSchedWrite<C1UWrite_4c_1CMEVXALU,
                                                     C1UWrite_4c_2V0134>;
 def C1UWrite_6c_1V_2V0134_CME
-    : C1USMEStreamingSchedWrite<C1UWrite_12c_1CMEVXALU_PERMF_2d3rc,
+    : C1USMEStreamingSchedWrite<C1UWrite_12c_1CMEVXALU_1CMEPERMF_2d3rc,
                              C1UWrite_6c_1V_2V0134>;
 def C1UWrite_6c_2V_1V0134_CME
-    : C1USMEStreamingSchedWrite<C1UWrite_12c_1CMEVXALU_PERMF_2d3rc,
+    : C1USMEStreamingSchedWrite<C1UWrite_12c_1CMEVXALU_1CMEPERMF_2d3rc,
                              C1UWrite_6c_2V_1V0134>;
-def C1UWrite_6c_3V_CME : C1USMEStreamingSchedWrite<C1UWrite_16c_1CMEVXALU_PERMF_2d3rc,
+def C1UWrite_6c_3V_CME : C1USMEStreamingSchedWrite<C1UWrite_16c_1CMEVXALU_1CMEPERMF_2d3rc,
                                                 C1UWrite_6c_3V>;
 def C1UWrite_8c_1V1_4rc_1CME
     : C1USMEStreamingSchedWrite<C1UWrite_10c_1CMEMC_10rc, C1UWrite_8c_1V1_4rc>;
 def C1UWrite_8c_1V_3V0134_CME
-    : C1USMEStreamingSchedWrite<C1UWrite_12c_1CMEVXALU_PERMF_2d3rc,
+    : C1USMEStreamingSchedWrite<C1UWrite_12c_1CMEVXALU_1CMEPERMF_2d3rc,
                              C1UWrite_8c_1V_3V0134>;
 def C1UWrite_9c_1V1_2rc_1CME
     : C1USMEStreamingSchedWrite<C1UWrite_11c_1CMEMC_11rc, C1UWrite_9c_1V1_2rc>;
@@ -938,13 +938,13 @@ def C1UWrite_13c_1V1_2rc_1CME
 def C1UWrite_20c_7V0_CME
     : C1USMEStreamingSchedWrite<C1UWrite_20c_7V0, C1UWrite_20c_7V0>;
 
-def C1UWrite_3c_1M0_CME : C1USMEStreamingSchedWrite<C1UWrite_4c_1M0_CMEVXALU,
+def C1UWrite_3c_1M0_CME : C1USMEStreamingSchedWrite<C1UWrite_4c_1M0_1CMEVXALU,
                                                  C1UWrite_3c_1M0>;
-def C1UWrite_5c_1M0_1V_CME : C1USMEStreamingSchedWrite<C1UWrite_4c_1M0_CMEVXALU,
+def C1UWrite_5c_1M0_1V_CME : C1USMEStreamingSchedWrite<C1UWrite_4c_1M0_1CMEVXALU,
                                                     C1UWrite_5c_1M0_1V>;
-def C1UWrite_5c_1V1_1V01_CME : C1USMEStreamingSchedWrite<C1UWrite_8c_1CMEVXALU_PERMF_1rc,
+def C1UWrite_5c_1V1_1V01_CME : C1USMEStreamingSchedWrite<C1UWrite_8c_1CMEVXALU_1CMEPERMF_1rc,
                                                       C1UWrite_5c_1V1_1V01>;
-def C1UWrite_5c_1V_1M0_CME : C1USMEStreamingSchedWrite<C1UWrite_4c_1M_CMEPERM_1rc,
+def C1UWrite_5c_1V_1M0_CME : C1USMEStreamingSchedWrite<C1UWrite_4c_1M_1CMEPERM_1rc,
                                                     C1UWrite_5c_1V_1M0>;
 def C1UWrite_7c_1M0_1V0134_CME
     : C1USMEStreamingSchedWrite<C1UCMEWriteRC<12, [C1UUnitM0, C1UUnitCMEVX0ALU,
@@ -958,64 +958,64 @@ def C1UWrite_8c_1M0_1V1_1V01_CME
                                            [8, 2]>,
                              C1UWrite_8c_1M0_1V1_1V01>;
 
-def C1UWrite_6c_1L_CME : C1USMEStreamingSchedWrite<C1UWrite_2c_1L_CMELD,
+def C1UWrite_6c_1L_CME : C1USMEStreamingSchedWrite<C1UWrite_2c_1L_1CMELD,
                                                 C1UWrite_6c_1L>;
-def C1UWrite_6c_1L_1I_CME : C1USMEStreamingSchedWrite<C1UWrite_2c_1I_1L_CMELD,
+def C1UWrite_6c_1L_1I_CME : C1USMEStreamingSchedWrite<C1UWrite_2c_1I_1L_1CMELD,
                                                    C1UWrite_6c_1L_1I>;
-def C1UWrite_6c_1L_1M_CME : C1USMEStreamingSchedWrite<C1UWrite_2c_1L_CMELD,
+def C1UWrite_6c_1L_1M_CME : C1USMEStreamingSchedWrite<C1UWrite_2c_1L_1CMELD,
                                                    C1UWrite_6c_1L_1M>;
-def C1UWrite_6c_2L_1I_CME : C1USMEStreamingSchedWrite<C1UWrite_2c_1I_1L_CMELD,
+def C1UWrite_6c_2L_1I_CME : C1USMEStreamingSchedWrite<C1UWrite_2c_1I_1L_1CMELD,
                                                    C1UWrite_6c_2L_1I>;
-def C1UWrite_7c_1L_1I_CME : C1USMEStreamingSchedWrite<C1UWrite_2c_1I_1L_CMELD,
+def C1UWrite_7c_1L_1I_CME : C1USMEStreamingSchedWrite<C1UWrite_2c_1I_1L_1CMELD,
                                                    C1UWrite_7c_1L_1I>;
-def C1UWrite_8c_2L_2V_CME : C1USMEStreamingSchedWrite<C1UWrite_2c_1V01_1L_CMELD,
+def C1UWrite_8c_2L_2V_CME : C1USMEStreamingSchedWrite<C1UWrite_2c_1V01_1L_1CMELD,
                                                    C1UWrite_8c_2L_2V>;
-def C1UWrite_8c_3L_3V_CME : C1USMEStreamingSchedWrite<C1UWrite_2c_1V01_1L_CMELD,
+def C1UWrite_8c_3L_3V_CME : C1USMEStreamingSchedWrite<C1UWrite_2c_1V01_1L_1CMELD,
                                                    C1UWrite_8c_3L_3V>;
 def C1UWrite_9c_2L_2V_1I_CME
-    : C1USMEStreamingSchedWrite<C1UWrite_2c_1I_1V01_1L_CMELD,
+    : C1USMEStreamingSchedWrite<C1UWrite_2c_1I_1V01_1L_1CMELD,
                              C1UWrite_9c_2L_2V_1I>;
 def C1UWrite_9c_3L_3V_1I_CME
-    : C1USMEStreamingSchedWrite<C1UWrite_2c_1I_1V01_1L_CMELD,
+    : C1USMEStreamingSchedWrite<C1UWrite_2c_1I_1V01_1L_1CMELD,
                              C1UWrite_9c_3L_3V_1I>;
 def C1UWrite_10c_4L_8V_CME
-    : C1USMEStreamingSchedWrite<C1UWrite_2c_1V01_1L_CMELD, C1UWrite_10c_4L_8V>;
+    : C1USMEStreamingSchedWrite<C1UWrite_2c_1V01_1L_1CMELD, C1UWrite_10c_4L_8V>;
 def C1UWrite_11c_4L_8V_1I_CME
-    : C1USMEStreamingSchedWrite<C1UWrite_2c_1I_1V01_1L_CMELD,
+    : C1USMEStreamingSchedWrite<C1UWrite_2c_1I_1V01_1L_1CMELD,
                              C1UWrite_11c_4L_8V_1I>;
 
 def C1UWrite_LdrQ_CME : SchedWriteVariant<[
                           SchedVar<FPIsQForm, [C1UWrite_7c_1L_1I_CME]>,
                           SchedVar<NoSchedPred, [C1UWrite_6c_1L_CME]>]>;
 
-def C1UWrite_1c_1SA_CME : C1USMEStreamingSchedWrite<C1UWrite_2c_1SA_CMEST,
+def C1UWrite_1c_1SA_CME : C1USMEStreamingSchedWrite<C1UWrite_2c_1SA_1CMEST,
                                                  C1UWrite_1c_1SA>;
 def C1UWrite_2c_1SA_1V01_CME
-    : C1USMEStreamingSchedWrite<C1UWrite_2c_1SA_1V01_CMEST,
+    : C1USMEStreamingSchedWrite<C1UWrite_2c_1SA_1V01_1CMEST,
                              C1UWrite_2c_1SA_1V01>;
 def C1UWrite_2c_1SA_1V01_1I_CME
-    : C1USMEStreamingSchedWrite<C1UWrite_2c_1SA_1V01_1I_CMEST,
+    : C1USMEStreamingSchedWrite<C1UWrite_2c_1SA_1V01_1I_1CMEST,
                              C1UWrite_2c_1SA_1V01_1I>;
 def C1UWrite_2c_2SA_2V01_CME
-    : C1USMEStreamingSchedWrite<C1UWrite_2c_2SA_2V01_CMEST,
+    : C1USMEStreamingSchedWrite<C1UWrite_2c_2SA_2V01_1CMEST,
                              C1UWrite_2c_2SA_2V01>;
 def C1UWrite_4c_2SA_2V01_CME
-    : C1USMEStreamingSchedWrite<C1UWrite_2c_2SA_2V01_CMEST,
+    : C1USMEStreamingSchedWrite<C1UWrite_2c_2SA_2V01_1CMEST,
                              C1UWrite_4c_2SA_2V01>;
 def C1UWrite_4c_2SA_2V01_1I_CME
-    : C1USMEStreamingSchedWrite<C1UWrite_2c_2SA_2V01_CMEST,
+    : C1USMEStreamingSchedWrite<C1UWrite_2c_2SA_2V01_1CMEST,
                              C1UWrite_4c_2SA_2V01_1I>;
 def C1UWrite_5c_3SA_3V01_CME
-    : C1USMEStreamingSchedWrite<C1UWrite_2c_3SA_3V01_CMEST,
+    : C1USMEStreamingSchedWrite<C1UWrite_2c_3SA_3V01_1CMEST,
                              C1UWrite_5c_3SA_3V01>;
 def C1UWrite_5c_3SA_3V01_1I_CME
-    : C1USMEStreamingSchedWrite<C1UWrite_2c_3SA_3V01_CMEST,
+    : C1USMEStreamingSchedWrite<C1UWrite_2c_3SA_3V01_1CMEST,
                              C1UWrite_5c_3SA_3V01_1I>;
 def C1UWrite_7c_4SA_4V01_CME
-    : C1USMEStreamingSchedWrite<C1UWrite_2c_4SA_4V01_CMEST,
+    : C1USMEStreamingSchedWrite<C1UWrite_2c_4SA_4V01_1CMEST,
                              C1UWrite_7c_4SA_4V01>;
 def C1UWrite_7c_4SA_4V01_1I_CME
-    : C1USMEStreamingSchedWrite<C1UWrite_2c_4SA_4V01_CMEST,
+    : C1USMEStreamingSchedWrite<C1UWrite_2c_4SA_4V01_1CMEST,
                              C1UWrite_7c_4SA_4V01_1I>;
 
 def C1UWrite_StrQ_CME : SchedWriteVariant<[
@@ -1028,60 +1028,60 @@ def C1UWrite_2c_1V_StreamingCME : C1USMEStreamingSchedWrite<C1UWrite_4c_1CMEVXAL
 def C1UWrite_3c_1V01_StreamingCME
     : C1USMEStreamingSchedWrite<C1UWrite_4c_1CMEVXALU, C1UWrite_3c_1V01>;
 def C1UWrite_2c_1M_StreamingCME
-    : C1USMEStreamingSchedWrite<C1UWrite_4c_1M_CMEVX0ALU, C1UWrite_2c_1M>;
+    : C1USMEStreamingSchedWrite<C1UWrite_4c_1M_1CMEVX0ALU, C1UWrite_2c_1M>;
 def C1UWrite_2c_2M_StreamingCME
-    : C1USMEStreamingSchedWrite<C1UWrite_4c_2M_CMEPERM_1rc, C1UWrite_2c_2M>;
+    : C1USMEStreamingSchedWrite<C1UWrite_4c_2M_1CMEPERM_1rc, C1UWrite_2c_2M>;
 def C1UWrite_2c_1V_StreamingCMEPERM
     : C1USMEStreamingSchedWrite<C1UWrite_4c_1CMEPERM, C1UWrite_2c_1V>;
-def C1UWrite_2c_1V_StreamingCMEVXALU_PERMS
-    : C1USMEStreamingSchedWrite<C1UWrite_8c_1CMEVXALU_PERMS_1rc, C1UWrite_2c_1V>;
+def C1UWrite_2c_1V_StreamingCMEVXALU_1CMEPERMS
+    : C1USMEStreamingSchedWrite<C1UWrite_8c_1CMEVXALU_1CMEPERMS_1rc, C1UWrite_2c_1V>;
 def C1UWrite_2c_1V_StreamingCMEVXALU_5c
     : C1USMEStreamingSchedWrite<C1UWrite_5c_1CMEVXALU_1rc, C1UWrite_2c_1V>;
 def C1UWrite_4c_1V_StreamingCMEMML0
     : C1USMEStreamingSchedWrite<C1UWrite_4c_1CMEMML0_1rc, C1UWrite_4c_1V>;
 def C1UWrite_2c_1M_StreamingCMEVX0ALU
-    : C1USMEStreamingSchedWrite<C1UWrite_4c_1M_CMEVX0ALU, C1UWrite_2c_1M>;
+    : C1USMEStreamingSchedWrite<C1UWrite_4c_1M_1CMEVX0ALU, C1UWrite_2c_1M>;
 def C1UWrite_2c_2M_StreamingCMEPERM
-    : C1USMEStreamingSchedWrite<C1UWrite_4c_2M_CMEPERM_1rc, C1UWrite_2c_2M>;
-def C1UWrite_2c_1V_CMEVXALU
+    : C1USMEStreamingSchedWrite<C1UWrite_4c_2M_1CMEPERM_1rc, C1UWrite_2c_2M>;
+def C1UWrite_2c_1V_1CMEVXALU
     : C1USMEStreamingSchedWrite<C1UWrite_4c_1CMEVXALU, C1UWrite_2c_1V>;
-def C1UWrite_2c_1V_CMEPERM
+def C1UWrite_2c_1V_1CMEPERM
     : C1USMEStreamingSchedWrite<C1UWrite_4c_1CMEPERM, C1UWrite_2c_1V>;
-def C1UWrite_2c_1V_CMEPERMF_1rc
+def C1UWrite_2c_1V_1CMEPERMF_1rc
     : C1USMEStreamingSchedWrite<C1UWrite_4c_1CMEPERMF_1rc, C1UWrite_2c_1V>;
-def C1UWrite_2c_1V_CMEPERM_1c
+def C1UWrite_2c_1V_1CMEPERM_1c
     : C1USMEStreamingSchedWrite<C1UWrite_1c_1CMEPERM, C1UWrite_2c_1V>;
-def C1UWrite_2c_1V0_CMEVX0ALU
+def C1UWrite_2c_1V0_1CMEVX0ALU
     : C1USMEStreamingSchedWrite<C1UWrite_4c_1CMEVX0ALU, C1UWrite_2c_1V0>;
-def C1UWrite_3c_1V01_CMEVXALU
+def C1UWrite_3c_1V01_1CMEVXALU
     : C1USMEStreamingSchedWrite<C1UWrite_4c_1CMEVXALU, C1UWrite_3c_1V01>;
-def C1UWrite_3c_1V_CMEVXALU
+def C1UWrite_3c_1V_1CMEVXALU
     : C1USMEStreamingSchedWrite<C1UWrite_4c_1CMEVXALU, C1UWrite_3c_1V>;
-def C1UWrite_3c_1V_CMEVXMUL
+def C1UWrite_3c_1V_1CMEVXMUL
     : C1USMEStreamingSchedWrite<C1UWrite_4c_1CMEVXMUL, C1UWrite_3c_1V>;
-def C1UWrite_4c_1V_CMEVXALU
+def C1UWrite_4c_1V_1CMEVXALU
     : C1USMEStreamingSchedWrite<C1UWrite_4c_1CMEVXALU, C1UWrite_4c_1V>;
-def C1UWrite_4c_1V_CMEVXMUL
+def C1UWrite_4c_1V_1CMEVXMUL
     : C1USMEStreamingSchedWrite<C1UWrite_4c_1CMEVXMUL, C1UWrite_4c_1V>;
-def C1UWrite_4c_1V0134_CMEVXMUL
+def C1UWrite_4c_1V0134_1CMEVXMUL
     : C1USMEStreamingSchedWrite<C1UWrite_4c_1CMEVXMUL, C1UWrite_4c_1V0134>;
-def C1UWrite_3c_1V0134_CMEVXMUL
+def C1UWrite_3c_1V0134_1CMEVXMUL
     : C1USMEStreamingSchedWrite<C1UWrite_4c_1CMEVXMUL, C1UWrite_3c_1V0134>;
-def C1UWrite_6c_1V0134_CMEVXMUL
+def C1UWrite_6c_1V0134_1CMEVXMUL
     : C1USMEStreamingSchedWrite<C1UWrite_4c_1CMEVXMUL, C1UWrite_6c_1V0134>;
-def C1UWrite_3c_1M0_1V_CMEPERMF_PERMS
-    : C1USMEStreamingSchedWrite<C1UWrite_8c_1CMEPERMF_PERMS_1rc,
+def C1UWrite_3c_1M0_1V_1CMEPERMF_1CMEPERMS
+    : C1USMEStreamingSchedWrite<C1UWrite_8c_1CMEPERMF_1CMEPERMS_1rc,
                              C1UWrite_3c_1M0_1V>;
-def C1UWrite_3c_1M0_CMEPERMF
+def C1UWrite_3c_1M0_1CMEPERMF
     : C1USMEStreamingSchedWrite<C1UWrite_4c_1CMEPERMF, C1UWrite_3c_1M0>;
 def C1UWrite_7c_1M0_1V0134_CMEINDEX_IRRI
-    : C1USMEStreamingSchedWrite<C1UWrite_4c_1CMEVXALU_PERMF_1d1rc,
+    : C1USMEStreamingSchedWrite<C1UWrite_4c_1CMEVXALU_1CMEPERMF_1d1rc,
                              C1UWrite_7c_1M0_1V0134>;
 def C1UWrite_7c_1M0_1V0134_CMEINDEX_RR
-    : C1USMEStreamingSchedWrite<C1UWrite_12c_1CMEVX0ALU_PERMS_VXALU_2d5rc,
+    : C1USMEStreamingSchedWrite<C1UWrite_12c_1CMEVX0ALU_1CMEPERMS_VXALU_2d5rc,
                              C1UWrite_7c_1M0_1V0134>;
 def C1UWrite_8c_1M0_1V1_1V01_CMECLAST
-    : C1USMEStreamingSchedWrite<C1UWrite_12c_1M0_CMEPERMF_VX0ALU_2rc,
+    : C1USMEStreamingSchedWrite<C1UWrite_12c_1M0_1CMEPERMF_1CMEVX0ALU_2rc,
                              C1UWrite_8c_1M0_1V1_1V01>;
 
 
@@ -1315,7 +1315,7 @@ def : InstRW<[C1UWrite_1c_1SA_1D], (instrs STGi, ST2Gi, STZGi,
 // FP min/max
 // FP negate
 // FP select
-def : SchedAlias<WriteF,     C1UWrite_2c_1V_CMEVXALU>;
+def : SchedAlias<WriteF,     C1UWrite_2c_1V_1CMEVXALU>;
 
 // FP compare
 def : SchedAlias<WriteFCmp,
@@ -1365,11 +1365,11 @@ def : InstRW<[C1UWrite_2c_1V0134_CME], (instregex "^FRINT[AIMNPXZ][HSD]r$",
 def : InstRW<[C1UWrite_3c_1M0_CME], (instregex "^[SU]CVTF[SU][WX][HSD]ri$")>;
 
 // FP convert, from vec to gen reg
-def : InstRW<[C1UWrite_3c_1V01_CMEVXALU],
+def : InstRW<[C1UWrite_3c_1V01_1CMEVXALU],
              (instregex "^FCVT[AMNPZ][SU][SU][WX][HSD]ri?$")>;
 
 // FP convert, Javascript from vec to gen reg
-def : SchedAlias<WriteFCvt, C1UWrite_3c_1V01_CMEVXALU>;
+def : SchedAlias<WriteFCvt, C1UWrite_3c_1V01_1CMEVXALU>;
 
 // FP convert, from vec to vec reg
 def : InstRW<[C1UWrite_3c_1V0134_CME], (instrs FCVTSHr, FCVTDHr, FCVTHSr, FCVTDSr,
@@ -1377,7 +1377,7 @@ def : InstRW<[C1UWrite_3c_1V0134_CME], (instrs FCVTSHr, FCVTDHr, FCVTHSr, FCVTDS
 
 // FP move, immed
 // FP move, register
-def : SchedAlias<WriteFImm, C1UWrite_2c_1V_CMEVXALU>;
+def : SchedAlias<WriteFImm, C1UWrite_2c_1V_1CMEVXALU>;
 
 // FP transfer, from gen to low half of vec reg
 def : InstRW<[C1UWrite_3c_1M0_CME],
@@ -1581,14 +1581,14 @@ def : InstRW<[C1UWrite_2c_1V_CME], (instregex "^[SU]SHLv")>;
 // ASIMD FP compare
 // ASIMD FP max/min, normal
 // ASIMD FP negate
-def : InstRW<[C1UWrite_2c_1V_CMEVXALU],
+def : InstRW<[C1UWrite_2c_1V_1CMEVXALU],
              (instregex "^FABSv", "^FADDv", "^FSUBv", "^FNEGv",
                         "^FMAXv", "^FMAXNMv", "^FMINv", "^FMINNMv")>;
 
 // ASIMD FP complex add
 // ASIMD FP max/min, pairwise
-def : InstRW<[C1UWrite_3c_1V_CMEVXMUL], (instregex "^FCADDv")>;
-def : InstRW<[C1UWrite_3c_1V_CMEVXALU],
+def : InstRW<[C1UWrite_3c_1V_1CMEVXMUL], (instregex "^FCADDv")>;
+def : InstRW<[C1UWrite_3c_1V_1CMEVXALU],
              (instregex "^(FMAXP|FMAXNMP|FMINP|FMINNMP)v")>;
 
 // ASIMD FP complex multiply add
@@ -1653,8 +1653,8 @@ def : InstRW<[C1UWrite_4c_2V_CME], (instregex "^(FMAX|FMIN)(NM)?Vv4(i16|i32)v$")
 def : InstRW<[C1UWrite_6c_3V_CME], (instregex "^(FMAX|FMIN)(NM)?Vv8i16v$")>;
 
 // ASIMD FP multiply
-def : InstRW<[C1UWrite_3c_1V_CMEVXMUL], (instregex "^FMULv", "^FMULXv")>;
-def : InstRW<[C1UWrite_3c_1V_CMEVXMUL], (instrs FMULX16, FMULX32, FMULX64)>;
+def : InstRW<[C1UWrite_3c_1V_1CMEVXMUL], (instregex "^FMULv", "^FMULXv")>;
+def : InstRW<[C1UWrite_3c_1V_1CMEVXMUL], (instrs FMULX16, FMULX32, FMULX64)>;
 
 // ASIMD FP multiply accumulate
 // ASIMD FP multiply accumulate long
@@ -1778,13 +1778,13 @@ def : InstRW<[C1UWrite_6c_3V], (instrs TBXv8i8Three, TBXv16i8Three)>;
 def : InstRW<[C1UWrite_6c_5V], (instrs TBXv8i8Four, TBXv16i8Four)>;
 
 // ASIMD transfer, element to gen reg
-def : InstRW<[C1USMEStreamingSchedWrite<C1UWrite_8c_1CMEVXALU_PERMS_1rc,
+def : InstRW<[C1USMEStreamingSchedWrite<C1UWrite_8c_1CMEVXALU_1CMEPERMS_1rc,
                                      C1UWrite_2c_3V>],
              (instregex "^SMOVv")>;
-def : InstRW<[C1USMEStreamingSchedWrite<C1UWrite_8c_1CMEVXALU_PERMS_1rc,
+def : InstRW<[C1USMEStreamingSchedWrite<C1UWrite_8c_1CMEVXALU_1CMEPERMS_1rc,
                                      C1UWrite_2c_3V>],
              (instregex "^UMOVvi(8|16)(_idx0)?$")>;
-def : InstRW<[C1USMEStreamingSchedWrite<C1UWrite_8c_1CMEVXALU_PERMS_1rc,
+def : InstRW<[C1USMEStreamingSchedWrite<C1UWrite_8c_1CMEVXALU_1CMEPERMS_1rc,
                                      C1UWrite_2c_1V>],
              (instregex "^UMOVvi(32|64)$")>;
 
@@ -2035,7 +2035,7 @@ def : InstRW<[C1UWrite_2c_1V0], (instregex "^SHA256SU[01]")>;
 def : InstRW<[C1UWrite_2c_1V0], (instregex "^SHA512(H|H2|SU0|SU1)")>;
 
 // Crypto SHA3 ops
-def : InstRW<[C1UWrite_2c_1V_CMEVXALU], (instrs BCAX, EOR3, RAX1, XAR)>;
+def : InstRW<[C1UWrite_2c_1V_1CMEVXALU], (instrs BCAX, EOR3, RAX1, XAR)>;
 
 // Crypto SM3 ops
 def : InstRW<[C1UWrite_2c_1V0], (instregex "^SM3PARTW[12]$", "^SM3SS1$",
@@ -2136,7 +2136,7 @@ def : InstRW<[C1UWrite_2c_1M], (instregex "^(ZIP|UZP)[12]_PPP_[BHSD]")>;
 // -----------------------------------------------------------------------------
 
 // Arithmetic, absolute diff
-def : InstRW<[C1UWrite_2c_1V_CMEVXALU], (instregex "^[SU]ABD_ZPmZ_[BHSD]",
+def : InstRW<[C1UWrite_2c_1V_1CMEVXALU], (instregex "^[SU]ABD_ZPmZ_[BHSD]",
                                               "^[SU]ABD_ZPZZ_[BHSD]")>;
 
 // Arithmetic, absolute diff accum
@@ -2146,10 +2146,10 @@ def : InstRW<[C1UWr_ZA_CME, C1URd_ZA, C1URd_ZA], (instregex "^[SU]ABA_ZZZ_[BHSD]
 def : InstRW<[C1UWr_ZA_CME, C1URd_ZA, C1URd_ZA], (instregex "^[SU]ABAL[TB]_ZZZ_[HSD]")>;
 
 // Arithmetic, absolute diff long
-def : InstRW<[C1UWrite_2c_1V_CMEVXALU], (instregex "^[SU]ABDL[TB]_ZZZ_[HSD]")>;
+def : InstRW<[C1UWrite_2c_1V_1CMEVXALU], (instregex "^[SU]ABDL[TB]_ZZZ_[HSD]")>;
 
 // Arithmetic, basic
-def : InstRW<[C1UWrite_2c_1V_CMEVXALU],
+def : InstRW<[C1UWrite_2c_1V_1CMEVXALU],
              (instregex "^(ABS|ADD|CNOT|NEG|SUB|SUBR)_ZPmZ_[BHSD]",
                         "^(ADD|SUB)_ZZZ_[BHSD]",
                         "^(ADD|SUB|SUBR)_ZPZZ_[BHSD]",
@@ -2162,7 +2162,7 @@ def : InstRW<[C1UWrite_2c_1V_CMEVXALU],
                         "^SSUBL(BT|TB)_ZZZ_[HSD]")>;
 
 // Arithmetic, complex
-def : InstRW<[C1UWrite_2c_1V_CMEVXALU],
+def : InstRW<[C1UWrite_2c_1V_1CMEVXALU],
              (instregex "^R?(ADD|SUB)HN[BT]_ZZZ_[BHS]",
                         "^SQ(ABS|ADD|NEG|SUB|SUBR)_ZPmZ_[BHSD]",
                         "^[SU]Q(ADD|SUB)_ZZZ_[BHSD]",
@@ -2171,17 +2171,17 @@ def : InstRW<[C1UWrite_2c_1V_CMEVXALU],
                         "^(UQSUB|UQSUBR)_ZPmZ_[BHSD]")>;
 
 // Arithmetic, large integer
-def : InstRW<[C1UWrite_2c_1V_CMEVXALU], (instregex "^(AD|SB)CL[BT]_ZZZ_[SD]")>;
+def : InstRW<[C1UWrite_2c_1V_1CMEVXALU], (instregex "^(AD|SB)CL[BT]_ZZZ_[SD]")>;
 
 // Arithmetic, pairwise add
-def : InstRW<[C1UWrite_2c_1V_CMEVXALU], (instregex "^ADDP_ZPmZ_[BHSD]")>;
+def : InstRW<[C1UWrite_2c_1V_1CMEVXALU], (instregex "^ADDP_ZPmZ_[BHSD]")>;
 
 // Arithmetic, pairwise add and accum long
 def : InstRW<[C1UWr_ZPA_CME, ReadDefault, C1URd_ZPA, C1URd_ZPA],
              (instregex "^[SU]ADALP_ZPmZ_[HSD]")>;
 
 // Arithmetic, shift
-def : InstRW<[C1UWrite_2c_1V_CMEVXALU],
+def : InstRW<[C1UWrite_2c_1V_1CMEVXALU],
              (instregex "^(ASR|LSL|LSR)_WIDE_ZPmZ_[BHS]",
                         "^(ASR|LSL|LSR)_WIDE_ZZZ_[BHS]",
                         "^(ASR|LSL|LSR)_ZPmI_[BHSD]",
@@ -2194,11 +2194,11 @@ def : InstRW<[C1UWrite_2c_1V_CMEVXALU],
 def : InstRW<[C1UWr_ZSA_CME, C1URd_ZSA], (instregex "^[SU]R?SRA_ZZI_[BHSD]")>;
 
 // Arithmetic, shift by immediate
-def : InstRW<[C1UWrite_2c_1V_CMEVXALU], (instregex "^SHRN[BT]_ZZI_[BHS]",
+def : InstRW<[C1UWrite_2c_1V_1CMEVXALU], (instregex "^SHRN[BT]_ZZI_[BHS]",
                                               "^[SU]SHLL[BT]_ZZI_[HSD]")>;
 
 // Arithmetic, shift by immediate and insert
-def : InstRW<[C1UWrite_2c_1V_CMEVXALU], (instregex "^(SLI|SRI)_ZZI_[BHSD]")>;
+def : InstRW<[C1UWrite_2c_1V_1CMEVXALU], (instregex "^(SLI|SRI)_ZZI_[BHSD]")>;
 
 // Arithmetic, shift complex
 def : InstRW<[C1UWrite_4c_1V_CME],
@@ -2221,13 +2221,13 @@ def : InstRW<[C1UWrite_4c_1V_CME], (instregex "^[SU]RSHLR?_ZPmZ_[BHSD]",
 def : InstRW<[C1UWrite_6c_2V1], (instregex "^(BDEP|BEXT|BGRP)_ZZZ_[BHSD]")>;
 
 // Bitwise select
-def : InstRW<[C1UWrite_2c_1V_CMEVXALU], (instregex "^(BSL|BSL1N|BSL2N|NBSL)_ZZZZ")>;
+def : InstRW<[C1UWrite_2c_1V_1CMEVXALU], (instregex "^(BSL|BSL1N|BSL2N|NBSL)_ZZZZ")>;
 
 // Count/reverse bits
-def : InstRW<[C1UWrite_2c_1V_CMEVXALU], (instregex "^(CLS|CLZ|CNT|RBIT)_ZPmZ_[BHSD]")>;
+def : InstRW<[C1UWrite_2c_1V_1CMEVXALU], (instregex "^(CLS|CLZ|CNT|RBIT)_ZPmZ_[BHSD]")>;
 
 // Broadcast logical bitmask immediate to vector
-def : InstRW<[C1UWrite_2c_1V_CMEPERM], (instrs DUPM_ZI)>;
+def : InstRW<[C1UWrite_2c_1V_1CMEPERM], (instrs DUPM_ZI)>;
 
 // Compare and set flags
 def : InstRW<[C1UWrite_2c_1V0_CME],
@@ -2235,7 +2235,7 @@ def : InstRW<[C1UWrite_2c_1V0_CME],
                         "^CMP(EQ|GE|GT|HI|HS|LE|LO|LS|LT|NE)_WIDE_PPzZZ_[BHS]")>;
 
 // Complex add
-def : InstRW<[C1UWrite_2c_1V_CMEVXALU], (instregex "^(SQ)?CADD_ZZI_[BHSD]")>;
+def : InstRW<[C1UWrite_2c_1V_1CMEVXALU], (instregex "^(SQ)?CADD_ZZI_[BHSD]")>;
 
 // Complex dot product 8-bit element
 def : InstRW<[C1UWr_ZDOTB_CME, C1URd_ZDOTB, C1URd_ZDOTB], (instrs CDOT_ZZZ_S, CDOT_ZZZI_S)>;
@@ -2267,10 +2267,10 @@ def : InstRW<[C1UWrite_3c_1V0134_CME], (instregex "^[SU]CVTF_ZPmZ_Sto[HS]")>;
 def : InstRW<[C1UWrite_3c_1V0134_CME], (instregex "^[SU]CVTF_ZPmZ_HtoH")>;
 
 // Copy, scalar
-def : InstRW<[C1UWrite_3c_1M0_1V_CMEPERMF_PERMS], (instregex "^CPY_ZPmR_[BHSD]")>;
+def : InstRW<[C1UWrite_3c_1M0_1V_1CMEPERMF_1CMEPERMS], (instregex "^CPY_ZPmR_[BHSD]")>;
 
 // Copy, scalar SIMD&FP or imm
-def : InstRW<[C1UWrite_2c_1V_CMEPERM_1c], (instregex "^CPY_ZPm[IV]_[BHSD]",
+def : InstRW<[C1UWrite_2c_1V_1CMEPERM_1c], (instregex "^CPY_ZPm[IV]_[BHSD]",
                                                  "^CPY_ZPzI_[BHSD]")>;
 
 // Divides, 32 bit
@@ -2295,20 +2295,20 @@ def : InstRW<[C1UWrite_2c_1V_StreamingCMEPERM], (instregex "^DUP_ZI_[BHSD]",
                                                        "^DUP_ZZI_[BHSDQ]")>;
 
 // Duplicate, scalar form
-def : InstRW<[C1UWrite_3c_1M0_CMEPERMF], (instregex "^DUP_ZR_[BHSD]")>;
+def : InstRW<[C1UWrite_3c_1M0_1CMEPERMF], (instregex "^DUP_ZR_[BHSD]")>;
 
 // Extend, sign or zero
-def : InstRW<[C1UWrite_2c_1V_CMEVXALU], (instregex "^[SU]XTB_ZPmZ_[HSD]",
+def : InstRW<[C1UWrite_2c_1V_1CMEVXALU], (instregex "^[SU]XTB_ZPmZ_[HSD]",
                                               "^[SU]XTH_ZPmZ_[SD]",
                                               "^[SU]XTW_ZPmZ_[D]")>;
 
 // Extract
-def : InstRW<[C1UWrite_2c_1V_CMEPERM], (instrs EXT_ZZI,
+def : InstRW<[C1UWrite_2c_1V_1CMEPERM], (instrs EXT_ZZI,
                                                 EXT_ZZI_CONSTRUCTIVE,
                                                 EXT_ZZI_B)>;
 
 // Extract narrow saturating
-def : InstRW<[C1UWrite_4c_1V_CMEVXALU], (instregex "^[SU]QXTN[BT]_ZZ_[BHS]",
+def : InstRW<[C1UWrite_4c_1V_1CMEVXALU], (instregex "^[SU]QXTN[BT]_ZZ_[BHS]",
                                               "^SQXTUN[BT]_ZZ_[BHS]")>;
 
 // Extract operation, SIMD and FP scalar form
@@ -2332,13 +2332,13 @@ def : InstRW<[C1UWrite_7c_1M0_1V0134_CMEINDEX_IRRI],
 def : InstRW<[C1UWrite_7c_1M0_1V0134_CMEINDEX_RR], (instregex "^INDEX_RR_[BHSD]")>;
 
 // insert operation, SIMD and FP scalar form
-def : InstRW<[C1UWrite_2c_1V_CMEPERM], (instregex "^INSR_ZV_[BHSD]")>;
+def : InstRW<[C1UWrite_2c_1V_1CMEPERM], (instregex "^INSR_ZV_[BHSD]")>;
 
 // insert operation, scalar
 def : InstRW<[C1UWrite_5c_1V_1M0_CME], (instregex "^INSR_ZR_[BHSD]")>;
 
 // Logical
-def : InstRW<[C1UWrite_2c_1V_CMEVXALU],
+def : InstRW<[C1UWrite_2c_1V_1CMEVXALU],
              (instregex "^(AND|EOR|ORR)_ZI",
                         "^(AND|BIC|EOR|ORR|EON|NAND|NOR)_ZZZ",
                         "^EOR(BT|TB)_ZZZ_[BHSD]",
@@ -2346,7 +2346,7 @@ def : InstRW<[C1UWrite_2c_1V_CMEVXALU],
                         "^NOT_ZPmZ_[BHSD]")>;
 
 // Max/min, basic and pairwise
-def : InstRW<[C1UWrite_2c_1V_CMEVXALU], (instregex "^[SU](MAX|MIN)_ZI_[BHSD]",
+def : InstRW<[C1UWrite_2c_1V_1CMEVXALU], (instregex "^[SU](MAX|MIN)_ZI_[BHSD]",
                                               "^[SU](MAX|MIN)P?_ZPmZ_[BHSD]",
                                               "^[SU](MAX|MIN)_ZPZZ_[BHSD]")>;
 
@@ -2357,18 +2357,18 @@ def : InstRW<[C1UWrite_2c_1V0], (instregex "^N?MATCH_PPzZZ_[BH]")>;
 def : InstRW<[C1UWr_ZMMA, C1URd_ZMMA, C1URd_ZMMA], (instrs SMMLA_ZZZ, UMMLA_ZZZ, USMMLA_ZZZ)>;
 
 // Move prefix
-def : InstRW<[C1UWrite_2c_1V_CMEPERM], (instregex "^MOVPRFX_ZP[mz]Z_[BHSD]",
+def : InstRW<[C1UWrite_2c_1V_1CMEPERM], (instregex "^MOVPRFX_ZP[mz]Z_[BHSD]",
                                               "^MOVPRFX_ZZ")>;
 
 // Multiply
-def : InstRW<[C1UWrite_4c_1V0134_CMEVXMUL],
+def : InstRW<[C1UWrite_4c_1V0134_1CMEVXMUL],
              (instregex "^MUL_(ZI|ZPmZ|ZZZI|ZZZ)_[BHSD]",
                         "^MUL_ZPZZ_[BHSD]",
                         "^[SU]MULH_(ZPmZ|ZZZ)_[BHSD]",
                         "^[SU]MULH_ZPZZ_[BHSD]")>;
 
 // Multiply long
-def : InstRW<[C1UWrite_4c_1V0134_CMEVXMUL],
+def : InstRW<[C1UWrite_4c_1V0134_1CMEVXMUL],
              (instregex "^[SU]MULL[BT]_ZZZI_[SD]",
                         "^[SU]MULL[BT]_ZZZ_[HSD]")>;
 
@@ -2397,12 +2397,12 @@ def : InstRW<[C1UWr_ZMASQL_CME, C1URd_ZMASQL, C1URd_ZMASQL],
                         "^SQDML[AS]L[BT]_ZZZI_[SD]")>;
 
 // Multiply saturating doubling high
-def : InstRW<[C1UWrite_4c_1V0134_CMEVXMUL],
+def : InstRW<[C1UWrite_4c_1V0134_1CMEVXMUL],
              (instregex "^SQDMULH_ZZZ_[BHSD]",
                         "^SQDMULH_ZZZI_[HSD]")>;
 
 // Multiply saturating doubling long
-def : InstRW<[C1UWrite_4c_1V0134_CMEVXMUL],
+def : InstRW<[C1UWrite_4c_1V0134_1CMEVXMUL],
              (instregex "^SQDMULL[BT]_ZZZ_[HSD]",
                         "^SQDMULL[BT]_ZZZI_[SD]")>;
 
@@ -2414,7 +2414,7 @@ def : InstRW<[C1UWr_ZMASQL_CME, C1URd_ZMASQL, C1URd_ZMASQL], (instregex "^SQRDML
 
 
 // Multiply saturating rounding doubling regular/complex, B, H, S element size
-def : InstRW<[C1UWrite_4c_1V0134_CMEVXMUL],
+def : InstRW<[C1UWrite_4c_1V0134_1CMEVXMUL],
              (instregex "^SQRDMULH_ZZZ_[BHS]",
                         "^SQRDMULH_ZZZI_[HS]",
                         "^SQRDMULH_ZZZI?_D")>;
@@ -2428,7 +2428,7 @@ def : InstRW<[C1UWrite_2c_1V0134], (instregex "^PMUL_ZZZ_B",
 def : InstRW<[C1UWrite_2c_1V_CME], (instregex "^([SU]Q)?(DEC|INC)[HWD]_ZPiI")>;
 
 // Reciprocal estimate
-def : InstRW<[C1UWrite_4c_1V0134_CMEVXMUL],
+def : InstRW<[C1UWrite_4c_1V0134_1CMEVXMUL],
              (instregex "^URECPE_ZPmZ_S", "^URSQRTE_ZPmZ_S")>;
 
 // Reduction, arithmetic, B form
@@ -2467,30 +2467,30 @@ def : InstRW<[C1USMEStreamingSchedWrite<C1UWrite_1c_1CMEPERM_2rc,
              (instregex "^SEL_ZPZZ_[BHSD]")>;
 
 // Table lookup
-def : InstRW<[C1UWrite_2c_1V_CMEPERMF_1rc], (instregex "^TBL_ZZZZ?_[BHSD]")>;
+def : InstRW<[C1UWrite_2c_1V_1CMEPERMF_1rc], (instregex "^TBL_ZZZZ?_[BHSD]")>;
 
 // Table lookup extension
-def : InstRW<[C1UWrite_2c_1V_CMEPERMF_1rc], (instregex "^TBX_ZZZ_[BHSD]")>;
+def : InstRW<[C1UWrite_2c_1V_1CMEPERMF_1rc], (instregex "^TBX_ZZZ_[BHSD]")>;
 
 // Transpose, vector form
-def : InstRW<[C1UWrite_2c_1V_CMEPERM], (instregex "^TRN[12]_ZZZ_[BHSDQ]")>;
+def : InstRW<[C1UWrite_2c_1V_1CMEPERM], (instregex "^TRN[12]_ZZZ_[BHSDQ]")>;
 
 // Unpack and extend
-def : InstRW<[C1UWrite_2c_1V_CMEPERM], (instregex "^[SU]UNPK(HI|LO)_ZZ_[HSD]")>;
+def : InstRW<[C1UWrite_2c_1V_1CMEPERM], (instregex "^[SU]UNPK(HI|LO)_ZZ_[HSD]")>;
 
 // Zip/unzip
-def : InstRW<[C1UWrite_2c_1V_CMEPERM], (instregex "^(UZP|ZIP)[12]_ZZZ_[BHSDQ]")>;
+def : InstRW<[C1UWrite_2c_1V_1CMEPERM], (instregex "^(UZP|ZIP)[12]_ZZZ_[BHSDQ]")>;
 
 // SVE floating-point instructions
 // -----------------------------------------------------------------------------
 
 // Floating point absolute value/difference
-def : InstRW<[C1UWrite_2c_1V_CMEVXALU], (instregex "^FAB[SD]_ZPmZ_[HSD]",
+def : InstRW<[C1UWrite_2c_1V_1CMEVXALU], (instregex "^FAB[SD]_ZPmZ_[HSD]",
                                               "^FABD_ZPZZ_[HSD]",
                                               "^FABS_ZPmZ_[HSD]")>;
 
 // Floating point arithmetic
-def : InstRW<[C1UWrite_2c_1V_CMEVXALU], (instregex "^F(ADD|SUB)_(ZPm[IZ]|ZZZ)_[HSD]",
+def : InstRW<[C1UWrite_2c_1V_1CMEVXALU], (instregex "^F(ADD|SUB)_(ZPm[IZ]|ZZZ)_[HSD]",
                                               "^F(ADD|SUB)_ZPZ[IZ]_[HSD]",
                                               "^FADDP_ZPmZZ_[HSD]",
                                               "^FNEG_ZPmZ_[HSD]",
@@ -2513,7 +2513,7 @@ def : InstRW<[C1UWrite_2c_1V0_CME], (instregex "^FACG[ET]_PPzZZ_[HSD]",
                                           "^FCMUO_PPzZZ_[HSD]")>;
 
 // Floating point complex add
-def : InstRW<[C1UWrite_3c_1V_CMEVXMUL], (instregex "^FCADD_ZPmZ_[HSD]")>;
+def : InstRW<[C1UWrite_3c_1V_1CMEVXMUL], (instregex "^FCADD_ZPmZ_[HSD]")>;
 
 // Floating point complex multiply add
 def : InstRW<[C1UWr_ZFCMA_CME, ReadDefault, C1URd_ZFCMA, C1URd_ZFCMA], (instregex "^FCMLA_ZPmZZ_[HSD]")>;
@@ -2534,13 +2534,13 @@ def : InstRW<[C1UWrite_3c_1V0134_CME], (instregex "^FCVT_ZPmZ_(HtoD|StoD|DtoS|Dt
 def : InstRW<[C1UWrite_3c_1V0134_CME], (instrs FCVTX_ZPmZ_DtoS, FCVTXNT_ZPmZ_DtoS)>;
 
 // Floating point base2 log, F16
-def : InstRW<[C1UWrite_3c_1V0134_CMEVXMUL], (instregex "^FLOGB_(ZPmZ|ZPZZ)_H")>;
+def : InstRW<[C1UWrite_3c_1V0134_1CMEVXMUL], (instregex "^FLOGB_(ZPmZ|ZPZZ)_H")>;
 
 // Floating point base2 log, F32
-def : InstRW<[C1UWrite_3c_1V0134_CMEVXMUL], (instregex "^FLOGB_(ZPmZ|ZPZZ)_S")>;
+def : InstRW<[C1UWrite_3c_1V0134_1CMEVXMUL], (instregex "^FLOGB_(ZPmZ|ZPZZ)_S")>;
 
 // Floating point base2 log, F64
-def : InstRW<[C1UWrite_3c_1V0134_CMEVXMUL], (instregex "^FLOGB_(ZPmZ|ZPZZ)_D")>;
+def : InstRW<[C1UWrite_3c_1V0134_1CMEVXMUL], (instregex "^FLOGB_(ZPmZ|ZPZZ)_D")>;
 
 // Floating point convert to integer, F16
 def : InstRW<[C1UWrite_3c_1V0134_CME], (instregex "^FCVTZ[SU]_ZPmZ_HtoH")>;
@@ -2553,7 +2553,7 @@ def : InstRW<[C1UWrite_3c_1V0134_CME],
              (instregex "^FCVTZ[SU]_ZPmZ_(HtoD|StoD|DtoS|DtoD)")>;
 
 // Floating point copy
-def : InstRW<[C1UWrite_2c_1V_CMEPERM_1c], (instregex "^FCPY_ZPmI_[HSD]",
+def : InstRW<[C1UWrite_2c_1V_1CMEPERM_1c], (instregex "^FCPY_ZPmI_[HSD]",
                                                  "^FDUP_ZI_[HSD]")>;
 
 // Floating point divide, F16
@@ -2566,16 +2566,16 @@ def : InstRW<[C1UWrite_11c_1V0_4rc_1CME], (instregex "^FDIVR?_(ZPmZ|ZPZZ)_S")>;
 def : InstRW<[C1UWrite_13c_1V0_2rc_1CME], (instregex "^FDIVR?_(ZPmZ|ZPZZ)_D")>;
 
 // Floating point min/max pairwise
-def : InstRW<[C1UWrite_2c_1V_CMEVXALU],
+def : InstRW<[C1UWrite_2c_1V_1CMEVXALU],
              (instregex "^F(MAX|MIN)(NM)?P_ZPmZZ_[HSD]")>;
 
 // Floating point min/max
-def : InstRW<[C1UWrite_2c_1V_CMEVXALU],
+def : InstRW<[C1UWrite_2c_1V_1CMEVXALU],
              (instregex "^F(MAX|MIN)(NM)?_ZPm[IZ]_[HSD]",
                         "^F(MAX|MIN)(NM)?_ZPZ[IZ]_[HSD]")>;
 
 // Floating point multiply
-def : InstRW<[C1UWrite_3c_1V_CMEVXMUL],
+def : InstRW<[C1UWrite_3c_1V_1CMEVXMUL],
              (instregex "^(FSCALE|FMULX)_ZPmZ_[HSD]",
                         "^FMULX_ZPZZ_[HSD]",
                         "^FMUL_(ZPm[IZ]|ZZZI?)_[HSD]",
@@ -2595,19 +2595,19 @@ def : InstRW<[C1UWr_ZFMAL_CME, C1URd_ZFMAL, C1URd_ZFMAL],
               (instregex "^FML[AS]L[BT]_ZZZI?_SHH", "^FMLAL(B|T|BB|TT|LB|LT|LBB|LTT|LBT|LTB)_(ZZZ|ZZZI)")>;
 
 // Floating point reciprocal estimate, F16
-def : InstRW<[C1UWrite_6c_1V0134_CMEVXMUL],
+def : InstRW<[C1UWrite_6c_1V0134_1CMEVXMUL],
              (instregex "^FR(ECP|SQRT)E_ZZ_H", "^FRECPX_ZPmZ_H")>;
 
 // Floating point reciprocal estimate, F32
-def : InstRW<[C1UWrite_4c_1V0134_CMEVXMUL],
+def : InstRW<[C1UWrite_4c_1V0134_1CMEVXMUL],
              (instregex "^FR(ECP|SQRT)E_ZZ_S", "^FRECPX_ZPmZ_S")>;
 
 // Floating point reciprocal estimate, F64
-def : InstRW<[C1UWrite_3c_1V0134_CMEVXMUL],
+def : InstRW<[C1UWrite_3c_1V0134_1CMEVXMUL],
              (instregex "^FR(ECP|SQRT)E_ZZ_D", "^FRECPX_ZPmZ_D")>;
 
 // Floating point reciprocal step
-def : InstRW<[C1UWrite_4c_1V_CMEVXMUL], (instregex "^F(RECPS|RSQRTS)_ZZZ_[HSD]")>;
+def : InstRW<[C1UWrite_4c_1V_1CMEVXMUL], (instregex "^F(RECPS|RSQRTS)_ZZZ_[HSD]")>;
 
 // Floating point reduction, F16
 def : InstRW<[C1UWrite_8c_4V_CMEFPReduceH], (instrs FADDV_VPZ_H)>;
@@ -2912,11 +2912,11 @@ def : InstRW<[C1UWrite_2c_1V_StreamingCME], (instregex "^(S|U)CLAMP_ZZZ")>;
 def : InstRW<[C1UWrite_3c_1V01_StreamingCME], (instregex "^(S|U)DOT_ZZZI?_HtoS")>;
 
 // Signed/unsigned saturating narrow conversion
-def : InstRW<[C1UWrite_2c_1V_StreamingCMEVXALU_PERMS],
-             (instregex "^(SQCVTN|SQCVTUN|UQCVTN)_Z2Z_StoH")>;
+def : InstRW<[C1UWrite_2c_1V_StreamingCMEVXALU_1CMEPERMS],
+             (instregex "^SQCVTUN_Z2Z_StoH")>;
 
 // Signed/unsigned saturating rounding shift-right narrow
-def : InstRW<[C1UWrite_3c_1V01_StreamingCME], (instregex "^(SQRSHRN|SQRSHRUN|UQRSHRN)_Z2ZI_StoH")>;
+def : InstRW<[C1UWrite_3c_1V01_StreamingCME], (instregex "^SQRSHRUN_Z2ZI_StoH")>;
 
 // Signed/unsigned pair-producing while compare
 def : InstRW<[C1UWrite_2c_1M_StreamingCMEVX0ALU],
@@ -2952,16 +2952,17 @@ def : InstRW<[C1UWrite_1c_1M], (instregex "^WHILE(GE|GT|HI|HS|LE|LO|LS|LT)_CXX_[
 
 // Horizontal and vertical ZA reductions.
 def : InstRW<[C1UWrite_4c_1CMEVXALU_4rc],
-             (instregex "^ADDHA_MPPZ_[SD]$", "^ADDVA_MPPZ_[SD]$")>;
+             (instregex "^ADDHA_MPPZ_(S(_PSEUDO_S)?|D(_PSEUDO_D)?)$",
+                        "^ADDVA_MPPZ_(S(_PSEUDO_S)?|D(_PSEUDO_D)?)$")>;
 
 // Outer-product ZA updates.
 def : InstRW<[C1UWrite_2c_1CMEMML0_2rc],
-             (instregex "^BMOPA_MPPZZ_S$", "^BMOPS_MPPZZ_S$",
-                        "^(SMOPA|UMOPA|SMOPS|UMOPS)_MPPZZ_(S|D|HtoS)$",
-                        "^(SUMOPA|USMOPA|SUMOPS|USMOPS)_MPPZZ_(S|D)$")>;
+             (instregex "^BMOPA_MPPZZ_S(_PSEUDO)?$", "^BMOPS_MPPZZ_S(_PSEUDO)?$",
+                        "^(SMOPA|UMOPA|SMOPS|UMOPS)_MPPZZ_(S|D|HtoS)(_PSEUDO)?$",
+                        "^(SUMOPA|USMOPA|SUMOPS|USMOPS)_MPPZZ_(S|D)(_PSEUDO)?$")>;
 def : InstRW<[C1UWrite_4c_1CMEMML0_2rc],
-             (instregex "^(FMOPA|FMOPS)_MPPZZ_(S|D|H)$",
-                        "^FMOP(AL|SL)_MPPZZ$",
+             (instregex "^(F?MOPA|F?MOPS)_MPPZZ_(S|D|H)(_PSEUDO)?$",
+                        "^F?MOP(AL|SL)_MPPZZ(_PSEUDO)?$",
                         "^(BFMOPA|BFMOPS)_MPPZZ(_H)?(_PSEUDO)?$")>;
 
 // ZA accumulators updated through multi-vector add/subtract operations.
@@ -2997,7 +2998,8 @@ def : InstRW<[C1UWrite_4c_1CMEVXALU_4rc],
              (instregex "^(S|U)(MAX|MIN)_VG4_4Z4Z_",
                         "^(S|U)RSHL_VG4_4Z4Z_")>;
 def : InstRW<[C1UWrite_5c_1CMEVXALU_4rc],
-             (instregex "^(FMAX|FMIN|FMAXNM|FMINNM)_VG4_4(ZZ|Z4Z)_",
+             (instregex "^(S|U)(MAX|MIN)_VG4_4ZZ_",
+                        "^(FMAX|FMIN|FMAXNM|FMINNM)_VG4_4(ZZ|Z4Z)_",
                         "^(BFMAX|BFMIN|BFMAXNM|BFMINNM)_VG4_4(Z2Z|ZZ)_",
                         "^SQDMULH_VG4_4(ZZ|Z4Z)_", "^(FRINT(A|M|N|P))_4Z4Z_",
                         "^FSCALE_4(ZZ|Z4Z)_")>;
@@ -3010,23 +3012,24 @@ def : InstRW<[C1UWrite_4c_1CMEVXALU_2rc],
                         "^FCVTL_2ZZ_H_S$", "^FCVT_Z4Z_StoB$")>;
 def : InstRW<[C1UWrite_6c_1CMEVXALU_4rc],
              (instregex "^(S|U)RSHL_VG4_4ZZ_")>;
-def : InstRW<[C1UWrite_4c_1CMEVX0ALU_PERMF_1rc],
+def : InstRW<[C1UWrite_4c_1CMEVX0ALU_1CMEPERMF_1rc],
              (instregex "^(S|U)CVTF_2Z2Z_StoS$")>;
-def : InstRW<[C1UWrite_4c_1CMEVX0ALU_PERMF_2rc],
+def : InstRW<[C1UWrite_4c_1CMEVX0ALU_1CMEPERMF_2rc],
              (instregex "^(S|U)CVTF_4Z4Z_StoS$")>;
 def : InstRW<[C1UWrite_4c_1CMEVXALU_4rc],
              (instregex "^FCVTZS_4Z4Z_StoS$", "^FCVTZU_4Z4Z_StoS$")>;
-def : InstRW<[C1UWrite_4c_1CMEVXALU_PERMF_1d1rc],
+def : InstRW<[C1UWrite_4c_1CMEVXALU_1CMEPERMF_1d1rc],
              (instregex "^FCVTN(B|T)?_Z2Z_(StoB|HtoB|StoH)$", "^FCVTN_Z4Z_StoB$")>;
-def : InstRW<[C1UWrite_7c_1CMEVXALU_PERMF_1rc],
+def : InstRW<[C1UWrite_7c_1CMEVXALU_1CMEPERMF_1rc],
              (instregex "^BFCVTN_Z2Z_(StoH|HtoB)$")>;
 def : InstRW<[C1UWrite_11c_1CMEVXALU_2rc],
              (instregex "^BFCVT_Z2Z_(StoH|HtoB)$", "^BF[12]CVT_2?ZZ_BtoH$",
                         "^BF[12]CVTL(T_ZZ|_2ZZ)_BtoH$")>;
-def : InstRW<[C1UWrite_8c_1CMEVXALU_PERMS_1rc],
+def : InstRW<[C1UWrite_8c_1CMEVXALU_1CMEPERMS_1rc],
              (instregex "^(SQCVT|UQCVT|SQCVTU|SQCVTN|SQCVTUN|UQCVTN)_Z4Z_",
-                        "^(SQCVT|UQCVT|SQCVTU)_Z2Z_StoH",
+                        "^(SQCVT|UQCVT|SQCVTU|SQCVTN|UQCVTN)_Z2Z_StoH",
                         "^SQRSHRU_VG2_Z2ZI_",
+                        "^(SQRSHRN|UQRSHRN)_Z2ZI_StoH",
                         "^(SQRSHR|UQRSHR|SQRSHRU|SQRSHRN|UQRSHRN|SQRSHRUN)_VG4_Z4ZI_")>;
 
 // SME integer and floating-point dot and multiply-accumulate families.
@@ -3074,20 +3077,20 @@ def : InstRW<[C1UWrite_5c_1CMEPERM_2rc],
              (instregex "^SEL_VG4_4ZC4Z4Z_")>;
 def : InstRW<[C1UWrite_5c_1CMEMML0_1rc],
              (instregex "^MOVA_MXI2Z_", "^MOVA_VG2_MXI2Z(_PSEUDO)?$",
-                        "^(INSERT|EXTRACT)_Z?MXIPZ")>;
+                        "^INSERT_MXIPZ")>;
 def : InstRW<[C1UWrite_2c_1CMEMML0_2rc],
              (instregex "^MOVA_MXI4Z_", "^MOVA_VG4_MXI4Z(_PSEUDO)?$")>;
 def : InstRW<[C1UWrite_9c_1CMEMML1],
-             (instregex "^MOVA_2ZMXI_")>;
+             (instregex "^MOVA_2ZMXI_", "^EXTRACT_ZPMXI_")>;
 def : InstRW<[C1UWrite_9c_1CMEMML1_2rc],
              (instregex "^MOVA_4ZMXI_")>;
 def : InstRW<[C1UWrite_9c_1CMEMML1_5rc],
              (instregex "^MOVA_VG2_2ZMXI$")>;
-def : InstRW<[C1UWrite_13c_1CMEMML1_PERMF_5rc],
+def : InstRW<[C1UWrite_13c_1CMEMML1_1CMEPERMF_5rc],
              (instregex "^MOVA_VG4_4ZMXI$")>;
 def : InstRW<[C1UWrite_4c_1CMEPERMF_1rc],
              (instrs MOVT_TIX)>;
-def : InstRW<[C1UWrite_8c_1CMEPERMF_VX0ALU_1rc],
+def : InstRW<[C1UWrite_8c_1CMEPERMF_1CMEVX0ALU_1rc],
              (instrs MOVT_XTI)>;
 def : InstRW<[C1UWrite_4c_1CMEPERMF_1rc],
              (instregex "^LUTI(2|4)?_(Z2ZZI|ZZZI|2ZZZ|ZTZI)")>;
@@ -3100,16 +3103,32 @@ def : InstRW<[C1UWrite_1c_1CMEMML0_2rc],
 def : InstRW<[C1UWrite_1c_1CMERNMRET],
              (instregex "^ZERO_T(_PSEUDO)?")>;
 def : InstRW<[C1UWrite_2c_1CMELD],
-             (instregex "^LD(NT)?1(B|H|W|D)_2Z_")>;
+             (instregex "^LD(NT)?1(B|H|W|D)_2Z(_.*)?$",
+                        "^LDR_(PPXI|TX(_PSEUDO)?)$",
+                        "^LDR_ZZXI(_STRIDED_CONTIGUOUS)?$")>;
 def : InstRW<[C1UWrite_2c_1CMELD_1rc],
-             (instregex "^LD(NT)?1(B|H|W|D)_4Z_")>;
-def : InstRW<[C1UWrite_7c_1L_CMELD],
+             // 3-reg fill pseudos expand to repeated 1-reg loads, so reuse the
+             // widest SME load bucket when there is no dedicated guide row.
+             (instregex "^LD(NT)?1(B|H|W|D)_4Z(_.*)?$",
+                        "^LDR_ZZZXI$",
+                        "^LDR_ZZZZXI(_STRIDED_CONTIGUOUS)?$")>;
+def : InstRW<[C1UWrite_7c_1L_1CMELD],
+             (instregex "^LD1_MXIPXX_[HV](_PSEUDO)?_[BDHSQ]$")>;
+def : InstRW<[C1UWrite_7c_1L_1CMELD],
              (instregex "^LDR_ZA(_PSEUDO)?")>;
 def : InstRW<[C1UWrite_2c_1CMEST],
-             (instregex "^ST(NT)?1(B|H|W|D)_2Z_")>;
+             (instregex "^([Ss][Tt](NT)?1([Bb]|[Hh]|[Ww]|[Dd]))_2[Zz](_.*)?$",
+                        "^STR_(PPXI|TX(_PSEUDO)?)$",
+                        "^STR_ZZXI(_STRIDED_CONTIGUOUS)?$")>;
 def : InstRW<[C1UWrite_2c_1CMEST_1rc],
-             (instregex "^ST(NT)?1(B|H|W|D)_4Z_")>;
-def : InstRW<[C1UWrite_11c_1SA_CMEST],
+             // 3-reg spill pseudos expand to repeated 1-reg stores, so reuse the
+             // widest SME store bucket when there is no dedicated guide row.
+             (instregex "^([Ss][Tt](NT)?1([Bb]|[Hh]|[Ww]|[Dd]))_4[Zz](_.*)?$",
+                        "^STR_ZZZXI$",
+                        "^STR_ZZZZXI(_STRIDED_CONTIGUOUS)?$")>;
+def : InstRW<[C1UWrite_11c_1SA_1CMEST],
+             (instregex "^ST1_MXIPXX_[HV]_[BDHSQ]$")>;
+def : InstRW<[C1UWrite_11c_1SA_1CMEST],
              (instregex "^STR_ZA(_PSEUDO)?")>;
 def : InstRW<[C1UWrite_2c_1CMEPF_2rc],
              (instrs RPRFM)>;
