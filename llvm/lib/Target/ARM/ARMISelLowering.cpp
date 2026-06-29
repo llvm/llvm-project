@@ -21632,8 +21632,8 @@ void ARMTargetLowering::insertSSPDeclarations(
 
 bool ARMTargetLowering::canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
                                                   unsigned &Cost) const {
-  // If we do not have NEON, vector types are not natively supported.
-  if (!Subtarget->hasNEON())
+  // If we do not have NEON or MVE, vector types are not natively supported.
+  if (!Subtarget->hasNEON() && !Subtarget->hasMVEIntegerOps())
     return false;
 
   // Floating point values and vector values map to the same register file.
@@ -21652,7 +21652,12 @@ bool ARMTargetLowering::canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
   unsigned BitWidth = VectorTy->getPrimitiveSizeInBits().getFixedValue();
   // We can do a store + vector extract on any vector that fits perfectly in a D
   // or Q register.
-  if (BitWidth == 64 || BitWidth == 128) {
+  if (Subtarget->hasNEON() && (BitWidth == 64 || BitWidth == 128)) {
+    Cost = 0;
+    return true;
+  }
+
+  if (Subtarget->hasMVEIntegerOps() && BitWidth == 128) {
     Cost = 0;
     return true;
   }
