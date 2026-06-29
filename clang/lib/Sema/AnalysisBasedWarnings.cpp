@@ -1706,12 +1706,24 @@ constexpr CFGUninitProfileEntry CFGUninitProfiles[] = {
      /*ExemptStdByte=*/true},
 };
 
-// If E names a non-static data member of the current object (an implicit or
-// explicit `this->m`), return that field; otherwise null. Access through any
-// other object (e.g. `other.m`) is not the current object's member.
+// True if E denotes the current object: `this` (the implicit/explicit pointer
+// of an arrow access) or `*this` (the object lvalue of a dot access).
+static bool isCurrentObjectBase(const Expr *E) {
+  E = E->IgnoreParenImpCasts();
+  if (isa<CXXThisExpr>(E))
+    return true;
+  const auto *UO = dyn_cast<UnaryOperator>(E);
+  return UO && UO->getOpcode() == UO_Deref &&
+         isa<CXXThisExpr>(UO->getSubExpr()->IgnoreParenImpCasts());
+}
+
+// If E names a non-static data member of the current object (`this->m`, the
+// implicit `m`, or the equivalent `(*this).m`), return that field; otherwise
+// null. Access through any other object (e.g. `other.m`) is not the current
+// object's member.
 static const FieldDecl *getCurrentObjectMember(const Expr *E) {
   const auto *ME = dyn_cast<MemberExpr>(E->IgnoreParenImpCasts());
-  if (!ME || !isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts()))
+  if (!ME || !isCurrentObjectBase(ME->getBase()))
     return nullptr;
   return dyn_cast<FieldDecl>(ME->getMemberDecl());
 }
