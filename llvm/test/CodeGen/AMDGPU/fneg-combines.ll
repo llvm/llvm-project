@@ -8171,8 +8171,7 @@ define float @v_fneg_select_f32(i32 %arg0, float %a, float %b, float %c) {
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
-; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -v2, -v1, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cond = icmp eq i32 %arg0, 0
   %select = select i1 %cond, float %a, float %b
@@ -8188,8 +8187,7 @@ define float @v_fneg_select_2_f32(i32 %arg0, float %a, float %b, float %c) {
 ; GCN-NEXT:    v_add_f32_e32 v1, 2.0, v1
 ; GCN-NEXT:    v_add_f32_e32 v2, 4.0, v2
 ; GCN-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GCN-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
-; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; GCN-NEXT:    v_cndmask_b32_e64 v0, -v2, -v1, vcc
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %cond = icmp eq i32 %arg0, 0
   %add.0 = fadd float %a, 2.0
@@ -8214,8 +8212,7 @@ define amdgpu_kernel void @v_fneg_posk_select_f32(ptr addrspace(1) %out, ptr add
 ; SI-NEXT:    v_add_i32_e32 v1, vcc, s0, v3
 ; SI-NEXT:    v_addc_u32_e32 v2, vcc, 0, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    v_cndmask_b32_e32 v0, 4.0, v4, vcc
-; SI-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; SI-NEXT:    v_cndmask_b32_e64 v0, -4.0, -v4, vcc
 ; SI-NEXT:    flat_store_dword v[1:2], v0
 ; SI-NEXT:    s_endpgm
 ;
@@ -8233,8 +8230,7 @@ define amdgpu_kernel void @v_fneg_posk_select_f32(ptr addrspace(1) %out, ptr add
 ; VI-NEXT:    v_add_u32_e32 v1, vcc, s0, v3
 ; VI-NEXT:    v_addc_u32_e32 v2, vcc, 0, v2, vcc
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; VI-NEXT:    v_cndmask_b32_e32 v0, 4.0, v4, vcc
-; VI-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; VI-NEXT:    v_cndmask_b32_e64 v0, -4.0, -v4, vcc
 ; VI-NEXT:    flat_store_dword v[1:2], v0
 ; VI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -8264,8 +8260,7 @@ define amdgpu_kernel void @v_fneg_negk_select_f32(ptr addrspace(1) %out, ptr add
 ; SI-NEXT:    v_add_i32_e32 v1, vcc, s0, v3
 ; SI-NEXT:    v_addc_u32_e32 v2, vcc, 0, v2, vcc
 ; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; SI-NEXT:    v_cndmask_b32_e32 v0, -4.0, v4, vcc
-; SI-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; SI-NEXT:    v_cndmask_b32_e64 v0, 4.0, -v4, vcc
 ; SI-NEXT:    flat_store_dword v[1:2], v0
 ; SI-NEXT:    s_endpgm
 ;
@@ -8283,8 +8278,7 @@ define amdgpu_kernel void @v_fneg_negk_select_f32(ptr addrspace(1) %out, ptr add
 ; VI-NEXT:    v_add_u32_e32 v1, vcc, s0, v3
 ; VI-NEXT:    v_addc_u32_e32 v2, vcc, 0, v2, vcc
 ; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
-; VI-NEXT:    v_cndmask_b32_e32 v0, -4.0, v4, vcc
-; VI-NEXT:    v_xor_b32_e32 v0, 0x80000000, v0
+; VI-NEXT:    v_cndmask_b32_e64 v0, 4.0, -v4, vcc
 ; VI-NEXT:    flat_store_dword v[1:2], v0
 ; VI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
