@@ -1290,7 +1290,7 @@ uptr GetPageSize() {
 #    if SANITIZER_LINUX && (defined(__x86_64__) || defined(__i386__)) && \
         defined(EXEC_PAGESIZE)
   return EXEC_PAGESIZE;
-#    elif SANITIZER_FREEBSD || SANITIZER_NETBSD
+#    elif SANITIZER_NETBSD
   // Use sysctl as sysconf can trigger interceptors internally.
   int pz = 0;
   uptr pzl = sizeof(pz);
