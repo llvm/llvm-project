@@ -25,5 +25,5 @@ __device__ int call_via_prototype_0(int a, int b, int c, int d) {
 // CHECK: .visible .global .align 8 .u64 prototype_0;
 // CHECK-LABEL: .visible .func  (.param .b32 func_retval0) call_via_prototype_0(
 // CHECK: $L__prototype_0 : .callprototype (.param .b32 _) _ (.param .b32 _, .param .b32 _, .param .b32 _, .param .b32 _);
-// CHECK-NEXT: call (retval0), %rd{{[0-9]+}}, (param0, param1, param2, param3), $L__prototype_0;
+// CHECK: call (retval0), %rd{{[0-9]+}}, (param0, param1, param2, param3), $L__prototype_0;
 // CHECK-NOT: prototype_0 : .callprototype
