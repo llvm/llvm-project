@@ -164,8 +164,9 @@ int RTDECL(CUFSetAssociatedStream)(void *p, cudaStream_t stream) {
 }
 }
 
-void *CUFAllocPinned(
-    std::size_t sizeInBytes, [[maybe_unused]] std::int64_t *asyncObject) {
+void *CUFAllocPinned(std::size_t sizeInBytes,
+    [[maybe_unused]] std::size_t alignment,
+    [[maybe_unused]] std::int64_t *asyncObject) {
   void *p;
   CUDA_REPORT_IF_ERROR(cudaMallocHost((void **)&p, sizeInBytes));
   return p;
@@ -173,7 +174,8 @@ void *CUFAllocPinned(
 
 void CUFFreePinned(void *p) { cudaFreeHost(p); }
 
-void *CUFAllocDevice(std::size_t sizeInBytes, std::int64_t *asyncObject) {
+void *CUFAllocDevice(std::size_t sizeInBytes,
+    [[maybe_unused]] std::size_t alignment, std::int64_t *asyncObject) {
   void *p;
   if (Fortran::runtime::executionEnvironment.cudaDeviceIsManaged) {
     CUDA_REPORT_IF_ERROR(
@@ -202,8 +204,9 @@ void CUFFreeDevice(void *p) {
   }
 }
 
-void *CUFAllocManaged(
-    std::size_t sizeInBytes, [[maybe_unused]] std::int64_t *asyncObject) {
+void *CUFAllocManaged(std::size_t sizeInBytes,
+    [[maybe_unused]] std::size_t alignment,
+    [[maybe_unused]] std::int64_t *asyncObject) {
   void *p;
   CUDA_REPORT_IF_ERROR(
       cudaMallocManaged((void **)&p, sizeInBytes, cudaMemAttachGlobal));
@@ -212,10 +215,11 @@ void *CUFAllocManaged(
 
 void CUFFreeManaged(void *p) { CUDA_REPORT_IF_ERROR(cudaFree(p)); }
 
-void *CUFAllocUnified(
-    std::size_t sizeInBytes, [[maybe_unused]] std::int64_t *asyncObject) {
+void *CUFAllocUnified(std::size_t sizeInBytes,
+    [[maybe_unused]] std::size_t alignment,
+    [[maybe_unused]] std::int64_t *asyncObject) {
   // Call alloc managed for the time being.
-  return CUFAllocManaged(sizeInBytes, asyncObject);
+  return CUFAllocManaged(sizeInBytes, alignment, asyncObject);
 }
 
 void CUFFreeUnified(void *p) {

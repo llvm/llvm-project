@@ -18,6 +18,7 @@ static constexpr unsigned kPinnedAllocatorPos = 1;
 static constexpr unsigned kDeviceAllocatorPos = 2;
 static constexpr unsigned kManagedAllocatorPos = 3;
 static constexpr unsigned kUnifiedAllocatorPos = 4;
+static constexpr unsigned kDefaultArrayAlignment = 64;
 
 RT_OFFLOAD_VAR_GROUP_END
 
