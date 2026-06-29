@@ -175,8 +175,6 @@
 ; CHECK-NEXT:      PostRA Machine Instruction Scheduler
 ; CHECK-NEXT:      Post RA top-down list latency scheduler
 ; CHECK-NEXT:      MVE VPT block insertion pass
-; CHECK-NEXT:      ARM Indirect Thunks
-; CHECK-NEXT:      ARM sls hardening pass
 ; CHECK-NEXT:      Analyze Machine Code For Garbage Collection
 ; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      Machine Natural Loop Construction
@@ -199,19 +197,19 @@
 ; CHECK-NEXT:      Machine Sanitizer Binary Metadata
 ; CHECK-NEXT:    Machine Outliner
 ; CHECK-NEXT:    FunctionPass Manager
-; CHECK-NEXT:      Lazy Machine Block Frequency Analysis
-; CHECK-NEXT:      Machine Optimization Remark Emitter
-; CHECK-NEXT:      Stack Frame Layout Analysis
+; CHECK-NEXT:      ARM Indirect Thunks
+; CHECK-NEXT:      ARM sls hardening pass
 ; CHECK-NEXT:      Reaching Definitions Analysis
 ; CHECK-NEXT:      ARM fix for Cortex-A57 AES Erratum 1742098
 ; CHECK-NEXT:      ARM Branch Targets
 ; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      ARM constant island placement and branch shortening pass
+; CHECK-NEXT:      Lazy Machine Block Frequency Analysis
+; CHECK-NEXT:      Machine Optimization Remark Emitter
+; CHECK-NEXT:      Stack Frame Layout Analysis
 ; CHECK-NEXT:      MachineDominator Tree Construction
 ; CHECK-NEXT:      Machine Natural Loop Construction
 ; CHECK-NEXT:      Reaching Definitions Analysis
 ; CHECK-NEXT:      ARM Low Overhead Loops pass
-; CHECK-NEXT:      Lazy Machine Block Frequency Analysis
-; CHECK-NEXT:      Machine Optimization Remark Emitter
 ; CHECK-NEXT:      ARM Assembly Printer
 ; CHECK-NEXT:      Free MachineFunction

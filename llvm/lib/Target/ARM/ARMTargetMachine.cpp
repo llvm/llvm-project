@@ -314,6 +314,7 @@ public:
   void addPreRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
+  void addPostBBSections() override;
   void addPreEmitPass2() override;
 
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
@@ -516,8 +517,6 @@ void ARMPassConfig::addPreSched2() {
   }
 
   addPass(createMVEVPTBlockPass());
-  addPass(createARMIndirectThunks());
-  addPass(createARMSLSHardeningPass());
 }
 
 void ARMPassConfig::addPreEmitPass() {
@@ -538,19 +537,37 @@ void ARMPassConfig::addPreEmitPass() {
   }
 }
 
-void ARMPassConfig::addPreEmitPass2() {
+void ARMPassConfig::addPostBBSections() {
+  // ARMIndirectThunks emits the __llvm_slsblr_thunk_* helpers in the module,
+  // and ARMSLSHardening rewrites returns/indirect branches/indirect calls in
+  // the function (with indirect calls turning into direct calls into those
+  // helpers).  The hardening pass therefore requires the thunk declarations
+  // to already be present, so insertion must come first.  Both must run after
+  // BasicBlockSections / MachineFunctionSplitter and after the machine
+  // outliner so that any outlined code is also hardened and so block
+  // addresses are final before barriers/thunk calls are inserted.
+  addPass(createARMIndirectThunks());
+  addPass(createARMSLSHardeningPass());
 
   // Inserts fixup instructions before unsafe AES operations. Instructions may
-  // be inserted at the start of blocks and at within blocks so this pass has to
-  // come before those below.
+  // be inserted at the start of blocks and at within blocks so this pass has
+  // to come before BTI insertion below.
   addPass(createARMFixCortexA57AES1742098Pass());
+
   // Inserts BTIs at the start of functions and indirectly-called basic blocks,
   // so passes cannot add to the start of basic blocks once this has run.
+  // Placing it here lets it see the final post-section, post-outliner,
+  // post-SLS layout.
   addPass(createARMBranchTargetsPass());
-  // Inserts Constant Islands. Block sizes cannot be increased after this point,
-  // as this may push the branch ranges and load offsets of accessing constant
-  // pools out of range..
+
+  // Inserts Constant Islands. Block sizes cannot be increased after this
+  // point, as this may push the branch ranges and load offsets of accessing
+  // constant pools out of range, so this must run after BasicBlockSections
+  // (and the machine outliner) so it sees final block placement.
   addPass(createARMConstantIslandPass());
+}
+
+void ARMPassConfig::addPreEmitPass2() {
   // Finalises Low-Overhead Loops. This replaces pseudo instructions with real
   // instructions, but the pseudos all have conservative sizes so that block
   // sizes will only be decreased by this pass.
