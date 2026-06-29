@@ -73,9 +73,10 @@ TEST(SubobjectVisitorTest, Basic) {
 
   RecordingVisitor Visitor(AST->getASTContext());
   Visitor.visit(AST->getASTContext().getTagType(ElaboratedTypeKeyword::None,
-                                                 std::nullopt, RD, false));
+                                                std::nullopt, RD, false));
 
   EXPECT_EQ(Visitor.VisitedBases.size(), 1u);
+  EXPECT_EQ(Visitor.VisitedBases[0], "Base");
   EXPECT_EQ(Visitor.VisitedFields.size(), 4u);
   EXPECT_EQ(Visitor.VisitedFields[0], "BaseF");
   EXPECT_EQ(Visitor.VisitedFields[1], "MemberF");
