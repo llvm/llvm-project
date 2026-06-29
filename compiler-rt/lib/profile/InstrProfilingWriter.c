@@ -256,7 +256,9 @@ COMPILER_RT_VISIBILITY int lprofWriteData(ProfDataWriter *Writer,
   const char *VNamesEnd = __llvm_profile_end_vtabnames();
   uint64_t Version = __llvm_profile_get_version();
   return lprofWriteDataImpl(Writer, DataBegin, DataEnd, CountersBegin,
-                            CountersEnd, BitmapBegin, BitmapEnd, VPDataReader,
+                            CountersEnd, BitmapBegin, BitmapEnd,
+                            /*UniformCountersBegin=*/NULL,
+                            /*UniformCountersEnd=*/NULL, VPDataReader,
                             NamesBegin, NamesEnd, VTableBegin, VTableEnd,
                             VNamesBegin, VNamesEnd, SkipNameDataWrite, Version);
 }
@@ -265,6 +267,7 @@ COMPILER_RT_VISIBILITY int lprofWriteDataImpl(
     ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
     const __llvm_profile_data *DataEnd, const char *CountersBegin,
     const char *CountersEnd, const char *BitmapBegin, const char *BitmapEnd,
+    const char *UniformCountersBegin, const char *UniformCountersEnd,
     VPDataReaderType *VPDataReader, const char *NamesBegin,
     const char *NamesEnd, const VTableProfData *VTableBegin,
     const VTableProfData *VTableEnd, const char *VNamesBegin,
@@ -286,6 +289,13 @@ COMPILER_RT_VISIBILITY int lprofWriteDataImpl(
       __llvm_profile_get_vtable_section_size(VTableBegin, VTableEnd);
   const uint64_t VNamesSize =
       __llvm_profile_get_name_size(VNamesBegin, VNamesEnd);
+  const uint64_t NumUniformCounters =
+      (UniformCountersBegin && UniformCountersEnd &&
+       UniformCountersEnd > UniformCountersBegin)
+          ? (UniformCountersEnd - UniformCountersBegin) / sizeof(uint64_t)
+          : 0;
+  const uint64_t UniformCountersSectionSize =
+      NumUniformCounters * sizeof(uint64_t);
 
   /* Create the header. */
   __llvm_profile_header Header;
@@ -293,12 +303,13 @@ COMPILER_RT_VISIBILITY int lprofWriteDataImpl(
   /* Determine how much padding is needed before/after the counters and after
    * the names. */
   uint64_t PaddingBytesBeforeCounters, PaddingBytesAfterCounters,
-      PaddingBytesAfterBitmapBytes, PaddingBytesAfterNames,
-      PaddingBytesAfterVTable, PaddingBytesAfterVNames;
+      PaddingBytesAfterBitmapBytes, PaddingBytesAfterUniformCounters,
+      PaddingBytesAfterNames, PaddingBytesAfterVTable, PaddingBytesAfterVNames;
   if (__llvm_profile_get_padding_sizes_for_counters(
-          DataSectionSize, CountersSectionSize, NumBitmapBytes, NamesSize,
-          VTableSectionSize, VNamesSize, &PaddingBytesBeforeCounters,
-          &PaddingBytesAfterCounters, &PaddingBytesAfterBitmapBytes,
+          DataSectionSize, CountersSectionSize, NumBitmapBytes,
+          NumUniformCounters, NamesSize, VTableSectionSize, VNamesSize,
+          &PaddingBytesBeforeCounters, &PaddingBytesAfterCounters,
+          &PaddingBytesAfterBitmapBytes, &PaddingBytesAfterUniformCounters,
           &PaddingBytesAfterNames, &PaddingBytesAfterVTable,
           &PaddingBytesAfterVNames) == -1)
     return -1;
@@ -315,12 +326,25 @@ COMPILER_RT_VISIBILITY int lprofWriteDataImpl(
 #ifdef _WIN64
   Header.CountersDelta = (uint32_t)Header.CountersDelta;
   Header.BitmapDelta = (uint32_t)Header.BitmapDelta;
+  Header.UniformCountersDelta = (uint32_t)Header.UniformCountersDelta;
 #endif
+
+  /* Recompute UniformCountersDelta from file layout. The macro initializer
+     uses in-memory pointer arithmetic which is wrong when sections are in
+     separate allocations (e.g., custom profiles from device PGO). */
+  if (NumUniformCounters > 0)
+    Header.UniformCountersDelta = DataSectionSize + PaddingBytesBeforeCounters +
+                                  CountersSectionSize +
+                                  PaddingBytesAfterCounters + NumBitmapBytes +
+                                  PaddingBytesAfterBitmapBytes;
+  else
+    Header.UniformCountersDelta = 0;
 
   /* The data and names sections are omitted in lightweight mode. */
   if (NumData == 0 && NamesSize == 0) {
     Header.CountersDelta = 0;
     Header.NamesDelta = 0;
+    Header.UniformCountersDelta = 0;
   }
 
   /* Write the profile header. */
@@ -340,6 +364,8 @@ COMPILER_RT_VISIBILITY int lprofWriteDataImpl(
       {NULL, sizeof(uint8_t), PaddingBytesAfterCounters, 1},
       {BitmapBegin, sizeof(uint8_t), NumBitmapBytes, 0},
       {NULL, sizeof(uint8_t), PaddingBytesAfterBitmapBytes, 1},
+      {UniformCountersBegin, sizeof(uint8_t), UniformCountersSectionSize, 0},
+      {NULL, sizeof(uint8_t), PaddingBytesAfterUniformCounters, 1},
       {SkipNameDataWrite ? NULL : NamesBegin, sizeof(uint8_t), NamesSize, 0},
       {NULL, sizeof(uint8_t), PaddingBytesAfterNames, 1},
       {VTableBegin, sizeof(uint8_t), VTableSectionSize, 0},
