@@ -111,7 +111,8 @@ struct DivSIOpInterface
     if ((lhsNonNegative && rhsPositive) || (lhsNonPositive && rhsNegative)) {
       cstr.bound(value) == lhs.floorDiv(rhs);
       cstr.bound(value) >= 0;
-    } else if ((lhsNonPositive && rhsPositive) || (lhsNonNegative && rhsNegative)) {
+    } else if ((lhsNonPositive && rhsPositive) ||
+               (lhsNonNegative && rhsNegative)) {
       cstr.bound(value) == lhs.ceilDiv(rhs);
       cstr.bound(value) <= 0;
     }
