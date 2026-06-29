@@ -1,0 +1,22 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=si-insert-waitcnts -o - %s | FileCheck %s
+
+# Check that an SMEM load is waited on before a following VMEM store that may
+# alias it, even when the two memory operands do not have identical IR Values.
+
+# CHECK-LABEL: name: smrd_vmem_may_alias_war
+# CHECK:      S_LOAD_DWORD_IMM
+# CHECK-NEXT: S_WAITCNT
+# CHECK-NEXT: GLOBAL_STORE_DWORD_SADDR
+---
+name: smrd_vmem_may_alias_war
+tracksRegLiveness: true
+machineFunctionInfo:
+  scratchRSrcReg: '$sgpr0_sgpr1_sgpr2_sgpr3'
+body: |
+  bb.0:
+    liveins: $sgpr4_sgpr5, $vgpr0, $vgpr2, $sgpr6_sgpr7, $sgpr8_sgpr9
+
+    $sgpr4 = S_LOAD_DWORD_IMM renamable $sgpr6_sgpr7, 0, 0 :: (dereferenceable load (s32), addrspace 1)
+    GLOBAL_STORE_DWORD_SADDR renamable $vgpr2, renamable $vgpr2, killed renamable $sgpr6_sgpr7, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    S_ENDPGM 0
+...
