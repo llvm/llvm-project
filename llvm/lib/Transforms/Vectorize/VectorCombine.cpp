@@ -6120,10 +6120,7 @@ bool VectorCombine::foldContiguousLoads(Instruction &I) {
   if (!DL->typeSizeEqualsStoreSize(EltTy))
     return false;
 
-  uint64_t ElementSizeBits = DL->getTypeStoreSizeInBits(EltTy);
-  if (ElementSizeBits % 8 != 0)
-    return false;
-  uint64_t ElementSizeBytes = ElementSizeBits / 8;
+  uint64_t ElementSizeBytes = DL->getTypeStoreSize(EltTy);
   unsigned NumElts = VT->getNumElements();
   Value *CommonBase = nullptr;
   APInt StartByteOffset(1, 0), FirstLoadByteOffset(1, 0);
