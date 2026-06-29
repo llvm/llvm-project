@@ -1610,6 +1610,24 @@ let isTerminator = 1, isBarrier = 1, PPC970_Unit = 7, hasSideEffects = 0 in {
                                 "bcctr 4, $BI, 0", IIC_BrB, []>;
     }
   }
+
+  // bctar - Branch Conditional to TAR (ISA 2.07 / POWER8)
+  let Predicates = [IsISA2_07] in {
+  let isBranch = 1, isIndirectBranch = 1 in {
+    let isCodeGenOnly = 1 in {
+      def BCCTAR : XLForm_2_br<19, 560, 0, (outs), (ins (pred $BIBO, $CR):$cond),
+                                "b${cond:cc}tar${cond:pm} ${cond:reg}", IIC_BrB,
+                                []>;
+    }
+  }
+  let isCall = 1, Defs = [LR] in {
+    let isCodeGenOnly = 1 in {
+      def BCCTARL : XLForm_2_br<19, 560, 1, (outs), (ins (pred $BIBO, $CR):$cond),
+                                 "b${cond:cc}tarl${cond:pm} ${cond:reg}", IIC_BrB,
+                                 []>;
+    }
+  }
+  }
 }
 
 // Set the float rounding mode.
@@ -5210,6 +5228,18 @@ let PPC970_Unit = 7, isBranch = 1, hasSideEffects = 0 in {
     def gBCCTRL : XLForm_2<19, 528, 1, (outs),
                            (ins u5imm:$BO, crbitrc:$BI, i32imm:$BH),
                            "bcctrl $BO, $BI, $BH", IIC_BrB, []>;
+
+  // bctar/bctarl - Branch Conditional to TAR (ISA 2.07 / POWER8)
+  let Predicates = [IsISA2_07] in {
+  let Uses = [RM] in
+    def gBCTAR : XLForm_2<19, 560, 0, (outs),
+                           (ins u5imm:$BO, crbitrc:$BI, i32imm:$BH),
+                           "bctar $BO, $BI, $BH", IIC_BrB, []>;
+  let Defs = [LR], Uses = [RM] in
+    def gBCTARL : XLForm_2<19, 560, 1, (outs),
+                            (ins u5imm:$BO, crbitrc:$BI, i32imm:$BH),
+                            "bctarl $BO, $BI, $BH", IIC_BrB, []>;
+  }
 }
 
 multiclass BranchSimpleMnemonicAT<string pm, int at> {
@@ -5229,6 +5259,10 @@ def : InstAlias<"bclr $bo, $bi", (gBCLR u5imm:$bo, crbitrc:$bi, 0)>;
 def : InstAlias<"bclrl $bo, $bi", (gBCLRL u5imm:$bo, crbitrc:$bi, 0)>;
 def : InstAlias<"bcctr $bo, $bi", (gBCCTR u5imm:$bo, crbitrc:$bi, 0)>;
 def : InstAlias<"bcctrl $bo, $bi", (gBCCTRL u5imm:$bo, crbitrc:$bi, 0)>;
+let Predicates = [IsISA2_07] in {
+def : InstAlias<"bctar $bo, $bi", (gBCTAR u5imm:$bo, crbitrc:$bi, 0)>;
+def : InstAlias<"bctarl $bo, $bi", (gBCTARL u5imm:$bo, crbitrc:$bi, 0)>;
+}
 
 multiclass BranchSimpleMnemonic1<string name, string pm, int bo> {
   def : InstAlias<"b"#name#pm#" $bi, $dst", (gBC bo, crbitrc:$bi, condbrtarget:$dst)>;
@@ -5242,6 +5276,10 @@ multiclass BranchSimpleMnemonic2<string name, string pm, int bo>
   : BranchSimpleMnemonic1<name, pm, bo> {
   def : InstAlias<"b"#name#"ctr"#pm#" $bi", (gBCCTR bo, crbitrc:$bi, 0)>;
   def : InstAlias<"b"#name#"ctrl"#pm#" $bi", (gBCCTRL bo, crbitrc:$bi, 0)>;
+  let Predicates = [IsISA2_07] in {
+    def : InstAlias<"b"#name#"tar"#pm#" $bi", (gBCTAR bo, crbitrc:$bi, 0)>;
+    def : InstAlias<"b"#name#"tarl"#pm#" $bi", (gBCTARL bo, crbitrc:$bi, 0)>;
+  }
 }
 defm : BranchSimpleMnemonic2<"t", "", 12>;
 defm : BranchSimpleMnemonic2<"f", "", 4>;
@@ -5253,6 +5291,22 @@ defm : BranchSimpleMnemonic1<"dnzt", "", 8>;
 defm : BranchSimpleMnemonic1<"dnzf", "", 0>;
 defm : BranchSimpleMnemonic1<"dzt", "", 10>;
 defm : BranchSimpleMnemonic1<"dzf", "", 2>;
+
+// bdnztar/bdztar - Branch Decrement CTR to TAR (ISA 2.07)
+let Predicates = [IsISA2_07] in {
+def : InstAlias<"bdnztar",   (gBCTAR 16, CR0LT, 0)>;
+def : InstAlias<"bdnztar+",  (gBCTAR 25, CR0LT, 0)>;
+def : InstAlias<"bdnztar-",  (gBCTAR 24, CR0LT, 0)>;
+def : InstAlias<"bdnztarl",  (gBCTARL 16, CR0LT, 0)>;
+def : InstAlias<"bdnztarl+", (gBCTARL 25, CR0LT, 0)>;
+def : InstAlias<"bdnztarl-", (gBCTARL 24, CR0LT, 0)>;
+def : InstAlias<"bdztar",    (gBCTAR 18, CR0LT, 0)>;
+def : InstAlias<"bdztar+",   (gBCTAR 27, CR0LT, 0)>;
+def : InstAlias<"bdztar-",   (gBCTAR 26, CR0LT, 0)>;
+def : InstAlias<"bdztarl",   (gBCTARL 18, CR0LT, 0)>;
+def : InstAlias<"bdztarl+",  (gBCTARL 27, CR0LT, 0)>;
+def : InstAlias<"bdztarl-",  (gBCTARL 26, CR0LT, 0)>;
+}
 
 multiclass BranchExtendedMnemonicPM<string name, string pm, int bibo> {
   def : InstAlias<"b"#name#pm#" $cc, $dst",
@@ -5294,6 +5348,18 @@ multiclass BranchExtendedMnemonicPM<string name, string pm, int bibo> {
                   (BCCCTRL (pred bibo, crrc:$cc))>;
   def : InstAlias<"b"#name#"ctrl"#pm,
                   (BCCCTRL (pred bibo, CR0))>;
+
+  let Predicates = [IsISA2_07] in {
+  def : InstAlias<"b"#name#"tar"#pm#" $cc",
+                  (BCCTAR (pred bibo, crrc:$cc))>;
+  def : InstAlias<"b"#name#"tar"#pm,
+                  (BCCTAR (pred bibo, CR0))>;
+
+  def : InstAlias<"b"#name#"tarl"#pm#" $cc",
+                  (BCCTARL (pred bibo, crrc:$cc))>;
+  def : InstAlias<"b"#name#"tarl"#pm,
+                  (BCCTARL (pred bibo, CR0))>;
+  }
 }
 multiclass BranchExtendedMnemonic<string name, int bibo> {
   defm : BranchExtendedMnemonicPM<name, "", bibo>;
