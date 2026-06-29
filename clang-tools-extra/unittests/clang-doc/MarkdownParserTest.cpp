@@ -21,9 +21,7 @@ TEST(MarkdownNodeTest, TextNode) {
 }
 
 TEST(MarkdownNodeTest, FencedCodeNode) {
-  FencedCodeNode N("cpp", R"(int x = 0;
-int y = 1;
-return x + y;)");
+  FencedCodeNode N("cpp", "int x = 0;\nint y = 1;");
   EXPECT_EQ(N.Kind, NodeKind::NK_FencedCode);
   EXPECT_EQ(N.getLang(), "cpp");
   EXPECT_TRUE(N.getCode().contains("int x = 0;"));
@@ -66,6 +64,31 @@ TEST(MarkdownNodeTest, ParagraphNode) {
   ParagraphNode N;
   EXPECT_EQ(N.Kind, NodeKind::NK_Paragraph);
   EXPECT_TRUE(N.Children.empty());
+}
+
+TEST(MarkdownNodeTest, DocumentNode) {
+  DocumentNode N;
+  EXPECT_EQ(N.Kind, NodeKind::NK_Document);
+  EXPECT_TRUE(N.Children.empty());
+}
+
+TEST(MarkdownNodeTest, ParagraphWithChildren) {
+  ParagraphNode Para;
+  TextNode Child("hello");
+  Para.Children.push_back(Child);
+  EXPECT_FALSE(Para.Children.empty());
+  EXPECT_EQ(llvm::cast<TextNode>(Para.Children.front()).getText(), "hello");
+}
+
+TEST(MarkdownNodeTest, UnorderedListWithItems) {
+  UnorderedListNode List;
+  ListItemNode Item;
+  TextNode Child("item text");
+  Item.Children.push_back(Child);
+  List.Items.push_back(Item);
+  EXPECT_FALSE(List.Items.empty());
+  EXPECT_EQ(llvm::cast<TextNode>(List.Items.front().Children.front()).getText(),
+            "item text");
 }
 
 } // namespace
