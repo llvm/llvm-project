@@ -3174,6 +3174,16 @@ bool Sema::shouldEmitProfileViolation(StringRef ProfileName, StringRef RuleName,
   // outcome of overload resolution or template instantiation, nor is it
   // possible to 'SFINAE out' failure of a program to satisfy a profile
   // requirement."
+  //
+  // A templated entity is not yet a phase-7 entity, so a profile rule must fire
+  // only on its instantiation -- where D is the instantiated, non-templated
+  // declaration -- not on the template pattern. Checking the pattern too would
+  // diagnose never-instantiated templates and double-fire (once when the
+  // pattern is parsed and again at each instantiation). Decl-less check sites
+  // (the [[uninit]] / [[ref_to_uninit]] markers and casts) pass D == nullptr;
+  // they run once at parse time and are unaffected.
+  if (D && D->isTemplated())
+    return false;
   if (isUnevaluatedContext())
     return false;
   if (currentEvaluationContext().isDiscardedStatementContext())

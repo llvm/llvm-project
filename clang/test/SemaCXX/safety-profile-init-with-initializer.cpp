@@ -101,9 +101,39 @@ struct [[profiles::suppress(std::init)]] WithClassLevelSuppressedNSDMI {
   int m [[uninit]] = 0; // OK: suppressed by the class-level attribute
 };
 
+// A profile rule fires on the instantiation, not on the template pattern, so a
+// dependent [[uninit]]-with-initializer is diagnosed exactly once.
 template <typename T>
 void template_marker_with_init() {
-  T x [[uninit]] = T{}; // expected-error 2 {{variable 'x' cannot be both '[[uninit]]' and have an initializer under profile 'std::init'}}
+  T x [[uninit]] = T{}; // expected-error {{variable 'x' cannot be both '[[uninit]]' and have an initializer under profile 'std::init'}}
   (void)x;
 }
 template void template_marker_with_init<int>(); // expected-note {{in instantiation of function template specialization 'template_marker_with_init<int>' requested here}}
+
+// A *non-dependent* declaration inside a template body is likewise diagnosed
+// once -- at instantiation -- not on the pattern.
+template <typename T>
+void template_nondependent_with_init() {
+  int x [[uninit]] = 0; // expected-error {{variable 'x' cannot be both '[[uninit]]' and have an initializer under profile 'std::init'}}
+  (void)x;
+}
+template void template_nondependent_with_init<int>(); // expected-note {{in instantiation of function template specialization 'template_nondependent_with_init<int>' requested here}}
+
+// An uninstantiated template pattern is not yet a phase-7 entity, so no profile
+// rule fires on it (no expected diagnostic here).
+template <typename T>
+void template_never_instantiated() {
+  int x [[uninit]] = 0;
+  (void)x;
+}
+
+// An NSDMI in a class template is checked once, when its initializer is
+// instantiated (here forced by initializing the specialization).
+template <typename T>
+struct WithTemplatedNSDMI {
+  T m [[uninit]] = T{}; // expected-error {{variable 'm' cannot be both '[[uninit]]' and have an initializer under profile 'std::init'}}
+};
+void use_templated_nsdmi() {
+  WithTemplatedNSDMI<int> w = {}; // expected-note {{in instantiation of default member initializer 'WithTemplatedNSDMI<int>::m' requested here}}
+  (void)w;
+}
