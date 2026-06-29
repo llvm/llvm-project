@@ -42,8 +42,10 @@ public:
     assert(!QT->isDependentType());
     QT = QT.getDesugaredType(Ctx);
 
-    if (auto *ResAtomicType = QT->getAs<AtomicType>())
-      QT = ResAtomicType->getValueType();
+    if (auto *ResAtomicType = QT->getAs<AtomicType>()) {
+      getDerived().visit(ResAtomicType->getValueType());
+      return;
+    }
 
     // If the type is an array, visit its element type. Separate traversal of
     // arrays is not needed because the array will be encountered as a
