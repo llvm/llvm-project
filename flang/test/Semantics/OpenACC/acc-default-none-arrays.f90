@@ -1,4 +1,4 @@
-! RUN: %python %S/../test_errors.py %s %flang -fopenacc -fno-openacc-default-none-scalars-strict
+! RUN: %python %S/../test_errors.py %s %flang -fopenacc -fno-openacc-default-none-scalars-strict -Wno-openacc-default-none-scalars-strict
 
 ! Verify that array sections explicitly listed in OpenACC data clauses are
 ! correctly registered as having a DSA, so DEFAULT(NONE) does not produce

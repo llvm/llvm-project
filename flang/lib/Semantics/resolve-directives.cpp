@@ -1957,8 +1957,8 @@ void AccAttributeVisitor::ResolveAccObject(
               }
             }
             if (ContainsStructureComponent(designator)) {
-              context_.Say(designator.source,
-                  "OpenACC subcomponent references are not yet supported in clauses"_todo_en_US);
+              // Do not register the base object for a component reference until
+              // OpenACC DSA tracking can distinguish subcomponents.
               return;
             }
             // GetFirstName extracts the base symbol from both bare data
@@ -1967,6 +1967,7 @@ void AccAttributeVisitor::ResolveAccObject(
             // that are explicitly listed in a data clause as array sections.
             // TODO: Multiple array sections of the same array with different
             // data sharing attributes is not currently supported.
+            // TODO: Subcomponent designators should also be tracked precisely.
             const parser::Name &baseName{parser::GetFirstName(designator)};
             if (auto *symbol{ResolveAcc(baseName, accFlag, currScope())}) {
               AddToContextObjectWithDSA(*symbol, accFlag);
