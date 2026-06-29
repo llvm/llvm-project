@@ -448,6 +448,9 @@ ExtractAPIAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 }
 
 bool ExtractAPIAction::PrepareToExecuteAction(CompilerInstance &CI) {
+  // ExtractAPI reads documentation comments off the AST
+  CI.getPreprocessorOpts().RetainComments = true;
+
   auto &Inputs = CI.getFrontendOpts().Inputs;
   if (Inputs.empty())
     return true;
