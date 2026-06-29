@@ -466,7 +466,7 @@ Please refer to the [Undefined Behavior Manual](https://llvm.org/docs/UndefinedB
         return report
 
 
-ALL_FORMATTERS = (DarkerFormatHelper(), ClangFormatHelper(), UndefGetFormatHelper())
+ALL_FORMATTERS = (DarkerFormatHelper(), ClangFormatHelper())
 
 
 def hook_main():
