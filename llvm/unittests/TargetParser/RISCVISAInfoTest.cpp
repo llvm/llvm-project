@@ -325,6 +325,16 @@ TEST(ParseArchString, AcceptsSupportedBaseISAsAndSetsXLenAndFLen) {
   EXPECT_EQ(InfoRV64GCV.getMaxELenFp(), 64U);
 }
 
+TEST(RISCVISAInfoTest, CanonicalExtensionOrderVP) {
+  auto MaybeISAInfo = RISCVISAInfo::parseArchString("rv64ipv", true);
+  ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
+
+  RISCVISAInfo &Info = **MaybeISAInfo;
+
+  // The canonical string should place 'v' before 'p'
+  EXPECT_EQ(Info.toString(), "rv64ivp");
+}
+
 TEST(ParseArchString, RejectsUnrecognizedExtensionNamesByDefault) {
   EXPECT_EQ(
       toString(
