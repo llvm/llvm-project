@@ -78,11 +78,4 @@ TEST_F(LlvmLibcVecExpfTest, Borderline) {
   EXPECT_SIMD_EQ(wrap_ref<ExpfOp>(x, 1.0), wrap_vector<ExpfOp>(x, 1.0));
 }
 
-TEST_F(LlvmLibcVecExpfTest, InFloatRange) {
-  constexpr uint32_t COUNT = 1'231;
-  constexpr uint32_t STEP = UINT32_MAX / COUNT;
-  for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-    float x = FPBits(v).get_val();
-    TEST_VARIED_CASES(x, ExpfOp);
-  }
-}
+TEST_F(LlvmLibcVecExpfTest, InFloatRange) { TEST_MATHVEC_FLOAT_RANGE(ExpfOp); }

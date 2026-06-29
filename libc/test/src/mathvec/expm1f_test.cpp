@@ -89,10 +89,5 @@ TEST_F(LlvmLibcVecExpm1fTest, Borderline) {
 }
 
 TEST_F(LlvmLibcVecExpm1fTest, InFloatRange) {
-  constexpr uint32_t COUNT = 100'000;
-  constexpr uint32_t STEP = 0x7f80'0000U / COUNT;
-  for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-    float x = FPBits(v).get_val();
-    TEST_VARIED_CASES(x, Expm1fOp);
-  }
+  TEST_MATHVEC_FLOAT_RANGE(Expm1fOp);
 }

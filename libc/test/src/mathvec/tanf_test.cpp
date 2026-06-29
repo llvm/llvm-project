@@ -112,11 +112,4 @@ TEST_F(LlvmLibcVecTanfTest, SpecificBitPatterns) {
   }
 }
 
-TEST_F(LlvmLibcVecTanfTest, InFloatRange) {
-  constexpr uint32_t COUNT = 100'000;
-  constexpr uint32_t STEP = 0x7f80'0000U / COUNT;
-  for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-    float x = FPBits(v).get_val();
-    TEST_VARIED_CASES(x, TanfOp);
-  }
-}
+TEST_F(LlvmLibcVecTanfTest, InFloatRange) { TEST_MATHVEC_FLOAT_RANGE(TanfOp); }
