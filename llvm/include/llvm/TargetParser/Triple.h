@@ -21,6 +21,7 @@
 
 namespace llvm {
 enum class ExceptionHandling;
+enum class IRMemLocation;
 class Twine;
 
 /// Triple - Helper class for working with autoconf configuration names. For
@@ -1192,6 +1193,10 @@ public:
 
   /// Tests if the environment supports dllimport/export annotations.
   bool hasDLLImportExport() const { return isOSWindows() || isPS(); }
+
+  StringRef getAArch64TargetMemLocName(IRMemLocation Kind) const;
+
+  std::string getTargetMemLocName(IRMemLocation Kind) const;
 
   /// @}
   /// @name Mutators
