@@ -2,7 +2,6 @@
 ; RUN: opt -passes=loop-vectorize -enable-epilogue-vectorization=false -S < %s | FileCheck %s --check-prefixes=CHECK
 ; RUN: opt -passes=loop-vectorize -enable-epilogue-vectorization=false -tail-folding-policy=must-fold-tail -S < %s | FileCheck %s --check-prefixes=CHECK-TAILFOLD
 
-target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-none-unknown-elf"
 
 define i32 @pred_reduction(ptr %src, ptr %cond, i64 %N) #0 {
@@ -703,6 +702,8 @@ for.inc:
 exit:
   ret i32 %sum.2
 }
+
+; UTC_ARGS: --disable
 
 ; Negative test - expect not to generate a partial reduction as phi
 ; has two update values
