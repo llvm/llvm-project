@@ -10124,7 +10124,7 @@ SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
 
 static SDValue isSpecificZeroAfterMaybeRounding(SelectionDAG &DAG,
                                                 const TargetLowering &TLI,
-                                                SDLoc DL, SDValue Val,
+                                                const SDLoc &DL, SDValue Val,
                                                 FPClassTest FPClass) {
   EVT VT = Val.getValueType();
   EVT CCVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
