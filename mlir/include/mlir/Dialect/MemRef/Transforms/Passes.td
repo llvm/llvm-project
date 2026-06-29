@@ -337,4 +337,16 @@ def FlattenMemrefsPass : Pass<"flatten-memref"> {
   ];
 }
 
+def ElevateAllocToGlobalPass : Pass<"memref-elevate-alloc-to-global", "ModuleOp"> {
+  let summary = "Elevate local memref.alloc operations to memref.global";
+  let description = [{
+    This pass moves local `memref.alloc` operations inside `func.func` ops to be
+    `memref.global` ops outside of the func op.
+  }];
+  let dependentDialects = [
+    "memref::MemRefDialect",
+    "func::FuncDialect"
+  ];
+}
+
 #endif // MLIR_DIALECT_MEMREF_TRANSFORMS_PASSES
