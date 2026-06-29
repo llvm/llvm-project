@@ -102,8 +102,8 @@ TEST(SubobjectVisitorTest, Atomic) {
   Visitor.visit(AST->getASTContext().getTagType(ElaboratedTypeKeyword::None,
                                                 std::nullopt, RD, false));
 
-  EXPECT_EQ(Visitor.VisitedBases.size(), 0);
-  EXPECT_EQ(Visitor.VisitedFields.size(), 2);
+  EXPECT_EQ(Visitor.VisitedBases.size(), 0u);
+  EXPECT_EQ(Visitor.VisitedFields.size(), 2u);
   EXPECT_EQ(Visitor.VisitedFields[0], "InnerAtomic");
   EXPECT_EQ(Visitor.VisitedFields[1], "SField");
 }
@@ -126,8 +126,8 @@ TEST(SubobjectVisitorTest, FAM) {
   Visitor.visit(AST->getASTContext().getTagType(ElaboratedTypeKeyword::None,
                                                 std::nullopt, RD, false));
 
-  EXPECT_EQ(Visitor.VisitedBases.size(), 0);
-  EXPECT_EQ(Visitor.VisitedFields.size(), 2);
+  EXPECT_EQ(Visitor.VisitedBases.size(), 0u);
+  EXPECT_EQ(Visitor.VisitedFields.size(), 2u);
   EXPECT_EQ(Visitor.VisitedFields[0], "Inner");
   EXPECT_EQ(Visitor.VisitedFields[1], "SField");
 }
