@@ -678,14 +678,15 @@ public:
 
   bool haveFastClmul(IntegerType *Ty) const override {
     // FIXME: clmul should really be Promote for any bitwidth under the largest
-    // legal bitwidth for clmul. This is a hack to get around that shortcoming.
-    auto *PromoteTy = cast_if_present<IntegerType>(
-        DL.getLargestLegalIntType(Ty->getContext()));
-    if (PromoteTy && Ty->getBitWidth() <= PromoteTy->getBitWidth())
-      Ty = PromoteTy;
+    // legal bitwidth for clmul. Using IndexTy instead of Ty is a hack to get
+    // around that shortcoming.
+    IntegerType *IndexTy =
+        DL.getIndexType(Ty->getContext(), DL.getAllocaAddrSpace());
+    if (Ty->getBitWidth() > IndexTy->getBitWidth())
+      return false;
 
     const TargetLoweringBase *TLI = getTLI();
-    EVT VT = TLI->getValueType(DL, Ty);
+    EVT VT = TLI->getValueType(DL, IndexTy);
     return TLI->isOperationLegalOrCustomOrPromote(ISD::CLMUL, VT);
   }
 
