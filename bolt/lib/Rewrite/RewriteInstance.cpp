@@ -2595,11 +2595,26 @@ bool RewriteInstance::analyzeRelocation(
     IsSectionRelocation = false;
   } else {
     const SymbolRef &Symbol = *SymbolIter;
-    SymbolName = std::string(cantFail(Symbol.getName()));
-    SymbolAddress = cantFail(Symbol.getAddress());
-    SkipVerification = (cantFail(Symbol.getType()) == SymbolRef::ST_Other);
+    Expected<StringRef> NameOrErr = Symbol.getName();
+    if (!NameOrErr) {
+      consumeError(NameOrErr.takeError());
+      return false;
+    }
+    SymbolName = std::string(*NameOrErr);
+    Expected<uint64_t> AddrOrErr = Symbol.getAddress();
+    if (!AddrOrErr) {
+      consumeError(AddrOrErr.takeError());
+      return false;
+    }
+    SymbolAddress = *AddrOrErr;
+    Expected<SymbolRef::Type> TypeOrErr = Symbol.getType();
+    if (!TypeOrErr) {
+      consumeError(TypeOrErr.takeError());
+      return false;
+    }
+    SkipVerification = (*TypeOrErr == SymbolRef::ST_Other);
     // Section symbols are marked as ST_Debug.
-    IsSectionRelocation = (cantFail(Symbol.getType()) == SymbolRef::ST_Debug);
+    IsSectionRelocation = (*TypeOrErr == SymbolRef::ST_Debug);
     // Check for PLT entry registered with symbol name
     if (!SymbolAddress && !IsWeakReference(Symbol) &&
         (IsAArch64 || BC->isRISCV())) {
@@ -3064,10 +3079,14 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
   symbol_iterator SymbolIter = Rel.getSymbol();
   if (SymbolIter != InputFile->symbol_end()) {
     SymbolRef Symbol = *SymbolIter;
-    section_iterator Section =
-        cantFail(Symbol.getSection(), "cannot get symbol section");
-    if (Section != InputFile->section_end()) {
-      Expected<StringRef> SectionName = Section->getName();
+    Expected<section_iterator> SectionOrErr = Symbol.getSection();
+    if (!SectionOrErr) {
+      BC->errs() << "BOLT-WARNING: unable to get section for relocation symbol"
+                 << " at offset 0x"
+                 << Twine::utohexstr(Rel.getOffset()) << '\n';
+      consumeError(SectionOrErr.takeError());
+    } else if (*SectionOrErr != InputFile->section_end()) {
+      Expected<StringRef> SectionName = (*SectionOrErr)->getName();
       if (SectionName && !SectionName->empty())
         ReferencedSection = BC->getUniqueSectionByName(*SectionName);
     } else if (BC->isRISCV() && ReferencedSymbol && ContainingBF &&
