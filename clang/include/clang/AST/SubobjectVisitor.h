@@ -22,7 +22,7 @@ namespace clang {
 /// first order. Both pre-order and post-order visitation are performed so that
 /// derived classes can maintain an access path to the visited elements.
 /// Subobjects include all base classes and non-static data members, including
-/// those that are not subobjects according to the C++standard like data
+/// those that are not subobjects according to the C++ standard like data
 /// members with a reference type. Virtual base classes are visited each time
 /// they appear in a class hierarchy despite there being only one actual
 /// subobject present in an object of a most derived type. Array elements are
