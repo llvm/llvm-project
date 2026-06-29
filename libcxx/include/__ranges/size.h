@@ -148,7 +148,7 @@ concept __member_reserve_hint = !__std_size<_Tp> && requires(_Tp&& __t) {
 };
 
 template <typename _Tp>
-concept __freestanding_reserve_hint =
+concept __unqualified_reserve_hint =
     !__std_size<_Tp> && !__member_reserve_hint<_Tp> && __class_or_enum<remove_cvref_t<_Tp>> && requires(_Tp&& __t) {
       { auto(reserve_hint(__t)) } -> __integer_like;
     };
@@ -169,7 +169,7 @@ struct __fn {
   }
 
   // `[range.prim.size.hint]`: `auto(reserve_hint(t))` is a valid expression
-  template <__freestanding_reserve_hint _Tp>
+  template <__unqualified_reserve_hint _Tp>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __integer_like auto operator()(_Tp&& __t) const
       noexcept(noexcept(auto(reserve_hint(__t)))) {
     return auto(reserve_hint(__t));
