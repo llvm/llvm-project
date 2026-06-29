@@ -126,6 +126,8 @@ void ProfileSummaryInfo::computeThresholds() {
       ProfileSummaryBuilder::getHotCountThreshold(DetailedSummary);
   ColdCountThreshold =
       ProfileSummaryBuilder::getColdCountThreshold(DetailedSummary);
+  HotCountThresholdForICP =
+      ProfileSummaryBuilder::getHotCountThresholdForICP(DetailedSummary);
   // When the hot and cold thresholds are identical, we would classify
   // a count value as both hot and cold since we are doing an inclusive check
   // (see ::is{Hot|Cold}Count(). To avoid this undesirable overlap, ensure the
@@ -180,8 +182,9 @@ bool ProfileSummaryInfo::hasLargeWorkingSetSize() const {
   return HasLargeWorkingSetSize && *HasLargeWorkingSetSize;
 }
 
-bool ProfileSummaryInfo::isHotCount(uint64_t C) const {
-  return HotCountThreshold && C >= *HotCountThreshold;
+bool ProfileSummaryInfo::isHotCount(uint64_t C, bool isForICP) const {
+  auto &Threshold = isForICP ? HotCountThresholdForICP : HotCountThreshold;
+  return Threshold && C >= *Threshold;
 }
 
 bool ProfileSummaryInfo::isColdCount(uint64_t C) const {

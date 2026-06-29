@@ -31,6 +31,7 @@ namespace llvm {
 
 LLVM_ABI extern cl::opt<bool> UseContextLessSummary;
 LLVM_ABI extern cl::opt<int> ProfileSummaryCutoffHot;
+LLVM_ABI extern cl::opt<int> ProfileSummaryCutoffHotICP;
 LLVM_ABI extern cl::opt<int> ProfileSummaryCutoffCold;
 LLVM_ABI extern cl::opt<unsigned> ProfileSummaryHugeWorkingSetSizeThreshold;
 LLVM_ABI extern cl::opt<unsigned> ProfileSummaryLargeWorkingSetSizeThreshold;
@@ -74,6 +75,8 @@ public:
   LLVM_ABI static const ProfileSummaryEntry &
   getEntryForPercentile(const SummaryEntryVector &DS, uint64_t Percentile);
   LLVM_ABI static uint64_t getHotCountThreshold(const SummaryEntryVector &DS);
+  LLVM_ABI static uint64_t
+  getHotCountThresholdForICP(const SummaryEntryVector &DS);
   LLVM_ABI static uint64_t getColdCountThreshold(const SummaryEntryVector &DS);
 };
 

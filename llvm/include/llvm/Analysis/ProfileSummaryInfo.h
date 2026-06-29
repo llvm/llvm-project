@@ -46,6 +46,8 @@ private:
   void computeThresholds();
   // Count thresholds to answer isHotCount and isColdCount queries.
   std::optional<uint64_t> HotCountThreshold, ColdCountThreshold;
+  // Count threshold for indirect call promotion hotness.
+  std::optional<uint64_t> HotCountThresholdForICP;
   // True if the working set size of the code is considered huge,
   // because the number of profile counts required to reach the hot
   // percentile is above a huge threshold.
@@ -179,7 +181,7 @@ public:
         PercentileCutoff, F, BFI);
   }
   /// Returns true if count \p C is considered hot.
-  LLVM_ABI bool isHotCount(uint64_t C) const;
+  LLVM_ABI bool isHotCount(uint64_t C, bool isForICP = false) const;
   /// Returns true if count \p C is considered cold.
   LLVM_ABI bool isColdCount(uint64_t C) const;
   /// Returns true if count \p C is considered hot with regard to a given
