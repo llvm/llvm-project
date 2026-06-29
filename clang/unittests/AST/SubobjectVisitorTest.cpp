@@ -41,13 +41,12 @@ public:
     VisitedFields.push_back(Name);
     return true;
   }
-
 };
 
 // Helper function to get a CXXRecordDecl by name
 const CXXRecordDecl *getCXXRecordDecl(ASTUnit *AST, const std::string &Name) {
-  auto Result = match(cxxRecordDecl(hasName(Name)).bind("record"),
-                      AST->getASTContext());
+  auto Result =
+      match(cxxRecordDecl(hasName(Name)).bind("record"), AST->getASTContext());
   if (Result.empty())
     return nullptr;
   return Result[0].getNodeAs<CXXRecordDecl>("record");
@@ -100,7 +99,7 @@ TEST(SubobjectVisitorTest, Atomic) {
 
   RecordingVisitor Visitor(AST->getASTContext());
   Visitor.visit(AST->getASTContext().getTagType(ElaboratedTypeKeyword::None,
-                                                 std::nullopt, RD, false));
+                                                std::nullopt, RD, false));
 
   EXPECT_EQ(Visitor.VisitedBases.size(), 0);
   EXPECT_EQ(Visitor.VisitedFields.size(), 2);
@@ -124,7 +123,7 @@ TEST(SubobjectVisitorTest, FAM) {
 
   RecordingVisitor Visitor(AST->getASTContext());
   Visitor.visit(AST->getASTContext().getTagType(ElaboratedTypeKeyword::None,
-                                                 std::nullopt, RD, false));
+                                                std::nullopt, RD, false));
 
   EXPECT_EQ(Visitor.VisitedBases.size(), 0);
   EXPECT_EQ(Visitor.VisitedFields.size(), 2);
