@@ -132,7 +132,7 @@ jobs:
       - windows_build_and_test
       - linux_build_and_test
     with:
-        JOB_NAME_TO_MATCH: "Linux::release / Build Multi-Arch Stages / math-libs (gfx94X-dcgpu, gfx942, linux-gfx942-1gpu-core42-ossci-rocm, false) / Stage - Math Libs (gfx94X-dcgpu)"
+        JOB_NAME_TO_MATCH: "Linux::release / Build Multi-Arch Stages / math-libs (gfx94X-dcgpu, gfx942, linux-gfx942-1gpu-ossci-rocm, false) / Stage - Math Libs (gfx94X-dcgpu)"
     secrets: inherit
 
 
