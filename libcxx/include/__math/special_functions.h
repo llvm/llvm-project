@@ -30,10 +30,16 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 // assoc_laguerre
 namespace __math {
 [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI float __assoc_laguerre(unsigned, unsigned, float) noexcept;
+[[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI double __assoc_laguerre(unsigned, unsigned, double) noexcept;
 [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI long double __assoc_laguerre(unsigned, unsigned, long double) noexcept;
 } // namespace __math
 
 [[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI float assoc_laguerref(unsigned __n, unsigned __m, float __x) noexcept {
+  return __math::__assoc_laguerre(__n, __m, __x);
+}
+
+template <class = int>
+_LIBCPP_HIDE_FROM_ABI double assoc_laguerre(unsigned __n, unsigned __m, double __x) noexcept {
   return __math::__assoc_laguerre(__n, __m, __x);
 }
 

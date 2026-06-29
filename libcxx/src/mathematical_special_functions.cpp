@@ -72,6 +72,10 @@ float __assoc_laguerre(unsigned __n, unsigned __m, float __x) noexcept {
   return __invoke_boost_math([](auto... __args) { return boost::math::laguerre(__args...); }, __n, __m, __x);
 }
 
+double __assoc_laguerre(unsigned __n, unsigned __m, double __x) noexcept {
+  return __invoke_boost_math([](auto... __args) { return boost::math::laguerre(__args...); }, __n, __m, __x);
+}
+
 long double __assoc_laguerre(unsigned __n, unsigned __m, long double __x) noexcept {
   return __invoke_boost_math([](auto... __args) { return boost::math::laguerre(__args...); }, __n, __m, __x);
 }
