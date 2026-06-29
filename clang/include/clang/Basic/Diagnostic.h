@@ -28,6 +28,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Format.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
@@ -43,7 +44,6 @@
 
 namespace llvm {
 class Error;
-class format_object_base;
 class raw_ostream;
 class MemoryBuffer;
 namespace vfs {
@@ -1598,8 +1598,13 @@ inline DiagnosticBuilder DiagnosticsEngine::Report(SourceLocation Loc,
 const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
                                       llvm::Error &&E);
 
+template <typename... Ts>
 const StreamingDiagnostic &operator<<(const StreamingDiagnostic &DB,
-                                      const llvm::format_object_base &Fmt);
+                                      llvm::format_object<Ts...> Fmt) {
+  SmallString<32> Buf;
+  llvm::raw_svector_ostream(Buf) << Fmt;
+  return DB << Buf;
+}
 
 inline DiagnosticBuilder DiagnosticsEngine::Report(unsigned DiagID) {
   return Report(SourceLocation(), DiagID);
