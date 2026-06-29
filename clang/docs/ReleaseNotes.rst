@@ -346,6 +346,11 @@ Non-comprehensive list of changes in this release
 - Linux and Windows toolchains now support Clang multilibs using
   ``-fmultilib-flag=``.
 
+- The GCC installation detector now finds vendor-prefixed musl toolchains, such
+  as Alpine Linux's ``<arch>-alpine-linux-musl[abi]``, when given a neutral
+  ``--target=<arch>-linux-musl[abi]``. Previously this only worked when the
+  exact distribution triple was passed. (#GH89146)
+
 - The SafeStack builtins ``__builtin___get_unsafe_stack_ptr``,
   ``__builtin___get_unsafe_stack_bottom``, ``__builtin___get_unsafe_stack_top``,
   and ``__builtin___get_unsafe_stack_start`` are now deprecated. Use the

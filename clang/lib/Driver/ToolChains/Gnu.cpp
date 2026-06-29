@@ -2206,6 +2206,38 @@ void Generic_GCC::GCCInstallationDetector::init(
       for (StringRef Candidate : CandidateTripleAliases)
         ScanLibDirForGCCTriple(TargetTriple, Args, LibDir, Candidate, false,
                                GCCDirExists, GCCCrossDirExists);
+
+      // Some musl distributions embed a vendor name in their GCC triple that a
+      // neutral --target cannot spell. For example Alpine ships its toolchain
+      // under <arch>-alpine-linux-musl[abi] (e.g. aarch64-alpine-linux-musl,
+      // armv7-alpine-linux-musleabihf), so --target=aarch64-linux-musl or
+      // --target=armv7-linux-musleabihf would otherwise fail to find it.
+      // Enumerate the GCC triple directories and try any entry whose
+      // architecture, OS and environment match the target, ignoring the vendor
+      // field. ScanLibDirForGCCTriple already de-duplicates installations, so
+      // candidates also covered above are harmless. Skip this when the user
+      // pinned an explicit --gcc-triple.
+      if (TargetTriple.isMusl() && !Args.hasArg(options::OPT_gcc_triple_EQ)) {
+        for (const char *GCCDir : {"/gcc", "/gcc-cross"}) {
+          if ((StringRef(GCCDir) == "/gcc" && !GCCDirExists) ||
+              (StringRef(GCCDir) == "/gcc-cross" && !GCCCrossDirExists))
+            continue;
+          std::error_code EC;
+          for (llvm::vfs::directory_iterator
+                   LI = VFS.dir_begin(LibDir + GCCDir, EC),
+                   LE;
+               !EC && LI != LE; LI = LI.increment(EC)) {
+            StringRef Name = llvm::sys::path::filename(LI->path());
+            llvm::Triple CandidateTriple(Name);
+            if (CandidateTriple.getArch() == TargetTriple.getArch() &&
+                CandidateTriple.getOS() == TargetTriple.getOS() &&
+                CandidateTriple.getEnvironment() ==
+                    TargetTriple.getEnvironment())
+              ScanLibDirForGCCTriple(TargetTriple, Args, LibDir, Name, false,
+                                     GCCDirExists, GCCCrossDirExists);
+          }
+        }
+      }
     }
     for (StringRef Suffix : CandidateBiarchLibDirs) {
       const std::string LibDir = Prefix + Suffix.str();
