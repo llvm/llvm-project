@@ -3203,6 +3203,8 @@ class ConvertsToRefPrivate {
   mutable T obj = 42;
 };
 
+struct NoConv {};
+struct Bad { template<class T> Bad(T v) noexcept(noexcept(member_ = v)) {} int member_; };
 
 void reference_binds_to_temporary_checks() {
   static_assert(!(__reference_binds_to_temporary(int &, int &)));
@@ -3243,6 +3245,9 @@ void reference_binds_to_temporary_checks() {
   // Test that function references are never considered bound to temporaries.
   static_assert(!__reference_binds_to_temporary(void(&)(), void()));
   static_assert(!__reference_binds_to_temporary(void(&&)(), void()));
+
+  static_assert(!__reference_binds_to_temporary(Bad, NoConv&&));  // Bad is not reference type.
+
 }
 
 
@@ -3325,7 +3330,7 @@ void reference_constructs_from_temporary_checks() {
   static_assert(!__reference_constructs_from_temporary(const int&, ExplicitConversionRef));
   static_assert(!__reference_constructs_from_temporary(int&&, ExplicitConversionRvalueRef));
 
-
+  static_assert(!__reference_constructs_from_temporary(Bad, NoConv&&));  // Bad is not reference type.
 }
 
 template<typename A, typename B, bool result = __reference_converts_from_temporary(A, B)>
@@ -3394,6 +3399,8 @@ void reference_converts_from_temporary_checks() {
   static_assert(!__reference_converts_from_temporary(AllPrivate, AllPrivate));
   // Make sure we don't emit "calling a private constructor" in SFINAE context.
   static_assert(!reference_converts_from_temporary_sfinae<AllPrivate, AllPrivate>());
+
+  static_assert(!__reference_converts_from_temporary(Bad, NoConv&&));  // Bad is not reference type.
 }
 
 void array_rank() {
