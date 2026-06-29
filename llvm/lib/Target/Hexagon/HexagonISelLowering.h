@@ -201,6 +201,10 @@ public:
   SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
 
+  MachineBasicBlock *
+  EmitInstrWithCustomInserter(MachineInstr &MI,
+                              MachineBasicBlock *MBB) const override;
+
   EVT getSetCCResultType(const DataLayout &, LLVMContext &C,
                          EVT VT) const override {
     if (!VT.isVector())
