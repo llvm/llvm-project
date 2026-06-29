@@ -102,3 +102,64 @@ struct [[profiles::suppress(std::init)]] SuppressedClass {
   int x;
   SuppressedClass() {}
 };
+
+struct Base { int b; };
+
+struct UninitBase : Base { // expected-note {{base class 'Base' declared here}}
+  UninitBase() {} // expected-error {{constructor does not initialize base class 'Base' under profile 'std::init'}}
+};
+
+struct BaseInitParen : Base {
+  BaseInitParen() : Base() {}
+};
+
+struct BaseInitBraces : Base {
+  BaseInitBraces() : Base{} {}
+};
+
+// A base with a user-provided default constructor is trusted.
+struct TrustedBaseCtor : WithCtor {
+  TrustedBaseCtor() {}
+};
+
+// A base whose only indeterminate scalar is [[uninit]]-marked is trusted.
+struct MarkedBaseSub : InnerMarked {
+  MarkedBaseSub() {}
+};
+
+struct MixedBaseMember : Base { // expected-note {{base class 'Base' declared here}}
+  int x; // expected-note {{member 'x' declared here}}
+  MixedBaseMember() {}
+  // expected-error@-1 {{constructor does not initialize member 'x' under profile 'std::init'}}
+  // expected-error@-2 {{constructor does not initialize base class 'Base' under profile 'std::init'}}
+};
+
+struct MultipleBases : Base, Inner {
+  // expected-note@-1 {{base class 'Base' declared here}}
+  // expected-note@-2 {{base class 'Inner' declared here}}
+  MultipleBases() {}
+  // expected-error@-1 {{constructor does not initialize base class 'Base' under profile 'std::init'}}
+  // expected-error@-2 {{constructor does not initialize base class 'Inner' under profile 'std::init'}}
+};
+
+struct OutOfLineBase : Base { // expected-note {{base class 'Base' declared here}}
+  OutOfLineBase();
+};
+OutOfLineBase::OutOfLineBase() {} // expected-error {{constructor does not initialize base class 'Base' under profile 'std::init'}}
+
+template <typename T>
+struct TmplBase : T { // expected-note {{base class 'Base' declared here}}
+  TmplBase() {} // expected-error {{constructor does not initialize base class 'Base' under profile 'std::init'}}
+};
+template struct TmplBase<Base>; // expected-note {{in instantiation of member function 'TmplBase<Base>::TmplBase' requested here}}
+
+struct SuppressedBaseByRule : Base {
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init, rule: "ctor_uninit_member")]] SuppressedBaseByRule() {}
+};
+
+// A virtual base is the most-derived constructor's responsibility, so leaving
+// it uninitialized here is deferred: no diagnostic.
+struct VirtualBase : virtual Base {
+  VirtualBase() {}
+};
