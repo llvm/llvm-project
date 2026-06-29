@@ -884,3 +884,38 @@ func.func @high_trip_count(%arg0: memref<1024x4096xf32>, %arg1: memref<8192x4096
   }
   return %alloc : memref<1024x8192xf32>
 }
+
+// -----
+
+// Producer is a flat 1-loop nest with stores covering all columns of row %i.
+// Consumer is a 3-deep reduction reading %out[i, j]. Fusion at depth 2 (inside
+// the consumer's %j) would re-execute the producer's stores per j, clobbering
+// reduction results written by previous j iterations. The pass must place the
+// producer outside the consumer's %j loop.
+
+// PRODUCER-CONSUMER-LABEL:    func @should_not_overfuse_flat_init_into_deep_consumer
+// PRODUCER-CONSUMER:            affine.for %{{.*}} = 0 to 2 {
+// PRODUCER-CONSUMER-NEXT:         affine.store
+// PRODUCER-CONSUMER-NEXT:         affine.store
+// PRODUCER-CONSUMER-NEXT:         affine.store
+// PRODUCER-CONSUMER-NEXT:         affine.for %{{.*}} = 0 to 3 {
+// PRODUCER-CONSUMER-NEXT:           affine.for %{{.*}} = 0 to 4 {
+func.func @should_not_overfuse_flat_init_into_deep_consumer(%a: memref<2x3x4xi32>, %out: memref<2x3xi32>) {
+  %z = arith.constant 0 : i32
+  affine.for %i = 0 to 2 {
+    affine.store %z, %out[%i, 0] : memref<2x3xi32>
+    affine.store %z, %out[%i, 1] : memref<2x3xi32>
+    affine.store %z, %out[%i, 2] : memref<2x3xi32>
+  }
+  affine.for %i0 = 0 to 2 {
+    affine.for %i1 = 0 to 3 {
+      affine.for %i2 = 0 to 4 {
+        %0 = affine.load %a[%i0, %i1, %i2] : memref<2x3x4xi32>
+        %1 = affine.load %out[%i0, %i1] : memref<2x3xi32>
+        %2 = arith.addi %0, %1 : i32
+        affine.store %2, %out[%i0, %i1] : memref<2x3xi32>
+      }
+    }
+  }
+  return
+}
