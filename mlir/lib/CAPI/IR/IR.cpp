@@ -1218,6 +1218,16 @@ void mlirValueReplaceAllUsesExcept(MlirValue oldValue, MlirValue newValue,
   oldValueCpp.replaceAllUsesExcept(newValueCpp, exceptionSet);
 }
 
+void mlirValueReplaceUsesWithIf(MlirValue of, MlirValue with,
+                                MlirOpOperandReplaceFilterCallback filter,
+                                void *userData) {
+  assert(filter && "expected non-null filter callback");
+  unwrap(of).replaceUsesWithIf(unwrap(with),
+                               [filter, userData](OpOperand &operand) -> bool {
+                                 return filter(wrap(&operand), userData);
+                               });
+}
+
 MlirLocation mlirValueGetLocation(MlirValue v) {
   return wrap(unwrap(v).getLoc());
 }
