@@ -7,7 +7,10 @@
 !===------------------------------------------------------------------------===!
 
 module mma
-  use __fortran_builtins, __ppc_types ! implicit dependencies, made explicit for CMake
+  ! implicit dependencies, made explicit for CMake
+  use __fortran_builtins
+  use __ppc_types
+
   implicit none
   private
 
