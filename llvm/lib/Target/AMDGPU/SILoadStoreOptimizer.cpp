@@ -1414,11 +1414,35 @@ SILoadStoreOptimizer::copyFromSrcRegs(CombineInfo &CI, CombineInfo &Paired,
   const auto *Src0 = TII->getNamedOperand(*CI.I, OpName);
   const auto *Src1 = TII->getNamedOperand(*Paired.I, OpName);
 
-  BuildMI(*MBB, InsertBefore, DL, TII->get(AMDGPU::REG_SEQUENCE), SrcReg)
-      .add(*Src0)
-      .addImm(SubRegIdx0)
-      .add(*Src1)
-      .addImm(SubRegIdx1);
+  // Make sure the generated REG_SEQUENCE has sensibly aligned registers.
+  const TargetRegisterClass *Src1RC = TRI->findCommonRegClass(
+      MRI->getRegClass(Src1->getReg()), Src1->getSubReg(), SuperRC, SubRegIdx1);
+  if (!Src1RC) {
+    unsigned Src1WSizeOffset = CI.Width;
+
+    auto BMI =
+        BuildMI(*MBB, InsertBefore, DL, TII->get(AMDGPU::REG_SEQUENCE), SrcReg)
+            .add(*Src0)
+            .addImm(SubRegIdx0);
+
+    unsigned Src1SubReg = Src1->getSubReg();
+    unsigned ChOffset = TRI->getChannelFromSubReg(Src1SubReg);
+    for (unsigned It = 0; It < Paired.Width; ++It) {
+      unsigned NewSubReg = Src1SubReg ? TRI->getSubRegFromChannel(ChOffset + It)
+                           : Paired.Width == 1
+                               ? 0
+                               : TRI->getSubRegFromChannel(ChOffset + It);
+      BMI.addUse(Src1->getReg(), getRegState(*Src1) & ~RegState::Define,
+                 NewSubReg)
+          .addImm(TRI->getSubRegFromChannel(It + Src1WSizeOffset));
+    }
+  } else {
+    BuildMI(*MBB, InsertBefore, DL, TII->get(AMDGPU::REG_SEQUENCE), SrcReg)
+        .add(*Src0)
+        .addImm(SubRegIdx0)
+        .add(*Src1)
+        .addImm(SubRegIdx1);
+  }
 
   return SrcReg;
 }
