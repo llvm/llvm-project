@@ -59,6 +59,20 @@ NumericLiteralInfo::NumericLiteralInfo(StringRef Text, char Separator) {
                C == Separator;
       },
       HasExponent ? ExponentLetterPos + 2 : Pos); // e.g. 1e-2f
+
+  const size_t DigitsStart =
+      BaseLetterPos == StringRef::npos ? 0 : BaseLetterPos + 1;
+  const size_t DigitsEnd = ExponentLetterPos != StringRef::npos
+                               ? ExponentLetterPos
+                           : SuffixPos != StringRef::npos ? SuffixPos
+                                                          : Text.size();
+  for (size_t I = DigitsStart; I < DigitsEnd; ++I) {
+    const char C = Text[I];
+    if (C != '.' && C != Separator && !(IsHex ? isHexDigit : isDigit)(C))
+      return; // non-digit,  invalid numeric literal
+  }
+
+  IsValid = true;
 }
 
 } // namespace format

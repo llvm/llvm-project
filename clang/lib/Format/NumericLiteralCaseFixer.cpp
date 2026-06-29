@@ -78,6 +78,10 @@ static bool matchesReservedSuffix(StringRef Suffix) {
 static std::string format(StringRef NumericLiteral, const FormatStyle &Style) {
   const char Separator = Style.isCpp() ? '\'' : '_';
   const NumericLiteralInfo Info(NumericLiteral, Separator);
+
+  if (!Info.IsValid)
+    return NumericLiteral.str();
+
   const bool HasBaseLetter = Info.BaseLetterPos != StringRef::npos;
   const bool HasExponent = Info.ExponentLetterPos != StringRef::npos;
   const bool HasSuffix = Info.SuffixPos != StringRef::npos;

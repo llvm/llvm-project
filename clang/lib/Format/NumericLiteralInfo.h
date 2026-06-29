@@ -19,6 +19,7 @@ struct NumericLiteralInfo {
   size_t DotPos = llvm::StringRef::npos;            // pos of decimal/hex point
   size_t ExponentLetterPos = llvm::StringRef::npos; // as in 9e9 and 0xFp9
   size_t SuffixPos = llvm::StringRef::npos;         // starting pos of suffix
+  bool IsValid = false;                             // valid numeric literal
 
   NumericLiteralInfo(llvm::StringRef Text, char Separator = '\'');
 };
