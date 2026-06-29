@@ -127,6 +127,19 @@ struct ExplicitThis {
   ExplicitThis() { int y = this->m; (void)y; } // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
 };
 
+// Writing through `(*this).m` is an initialization, so a later read of m is
+// fine -- the same as `this->m` (the reported false positive).
+struct DerefThisWriteThenRead {
+  int m [[uninit]];
+  DerefThisWriteThenRead() { (*this).m = 1; int y = m; (void)y; }
+};
+
+// A real read through `(*this).m` before assignment is still diagnosed.
+struct DerefThisReadBeforeInit {
+  int m [[uninit]]; // expected-note {{member 'm' declared here}}
+  DerefThisReadBeforeInit() { int y = (*this).m; (void)y; } // expected-error {{member 'm' is read before initialization under profile 'std::init'}}
+};
+
 struct OutOfLine {
   int m [[uninit]]; // expected-note {{member 'm' declared here}}
   OutOfLine();
