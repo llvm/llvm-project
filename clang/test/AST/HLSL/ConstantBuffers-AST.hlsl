@@ -71,6 +71,7 @@ ConstantBuffer<S> cb;
 struct Nested {
   S s;
   float b;
+  float getA() const { return s.a; }
 };
 ConstantBuffer<Nested> cb_nested;
 
@@ -116,5 +117,17 @@ float main() {
   // CHECK-NEXT: HLSLOutArgExpr {{.*}} 'ConstantBuffer<S>':'hlsl::ConstantBuffer<S>' lvalue inout
   takes_inout_cb(cb);
 
-  return f1 + f2 + f3;
+  // CHECK: VarDecl {{.*}} a 'float'
+  // CHECK-NEXT: ExprWithCleanups {{.*}} 'float'
+  // CHECK-NEXT: CXXMemberCallExpr {{.*}} 'float'
+  // CHECK-NEXT: MemberExpr {{.*}} '<bound member function type>' .getA
+  // CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'const Nested' lvalue
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'const Nested' <LValueToRValue>
+  // CHECK-NEXT: CXXMemberCallExpr {{.*}} 'const hlsl_constant Nested' lvalue
+  // CHECK-NEXT: MemberExpr {{.*}} '<bound member function type>' .operator const hlsl_constant Nested &
+  // CHECK-NEXT: ImplicitCastExpr {{.*}} 'const hlsl::ConstantBuffer<Nested>' lvalue <NoOp>
+  // CHECK-NEXT: DeclRefExpr {{.*}} 'ConstantBuffer<Nested>':'hlsl::ConstantBuffer<Nested>' lvalue Var {{.*}} 'cb_nested' 'ConstantBuffer<Nested>':'hlsl::ConstantBuffer<Nested>'
+  float a = cb_nested.getA();
+   
+  return f1 + f2 + f3 + a;
 }
