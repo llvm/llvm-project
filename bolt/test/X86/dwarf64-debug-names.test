@@ -1,0 +1,111 @@
+# REQUIRES: system-linux
+
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t.o
+# RUN: %clang %cflags -Wl,-q -Wl,-e,main %t.o -o %t.exe
+# RUN: llvm-dwarfdump --debug-info %t.exe | FileCheck --check-prefix=INPUT %s
+# RUN: llvm-bolt %t.exe --update-debug-sections --create-debug-names-section \
+# RUN:   -o %t.bolt
+# RUN: llvm-dwarfdump --debug-info --debug-names %t.bolt | \
+# RUN:   FileCheck --check-prefix=BOLT %s
+# RUN: llvm-dwarfdump --verify %t.bolt
+
+# INPUT-LABEL: .debug_info contents:
+# INPUT: Compile Unit:{{.*}} format = DWARF64, version = 0x0005
+# INPUT: DW_AT_name{{.*}}"dwarf64-debug-names.s"
+# INPUT: DW_TAG_subprogram
+# INPUT: DW_AT_name{{.*}}"main"
+# INPUT: DW_TAG_subprogram
+# INPUT: DW_AT_name{{.*}}"helper"
+
+# BOLT-LABEL: .debug_info contents:
+# BOLT: Compile Unit:{{.*}} format = DWARF64, version = 0x0005
+# BOLT: DW_AT_name{{.*}}"dwarf64-debug-names.s"
+# BOLT: DW_TAG_subprogram
+# BOLT: DW_AT_name{{.*}}"main"
+# BOLT: DW_TAG_subprogram
+# BOLT: DW_AT_name{{.*}}"helper"
+
+# BOLT-LABEL: .debug_names contents:
+# BOLT: Header {
+# BOLT: Format: DWARF64
+# BOLT: CU count: 1
+# BOLT: Name count: 2
+# BOLT: CU[0]: 0x00000000
+# BOLT: DW_IDX_die_offset: DW_FORM_ref4
+# BOLT: String: {{.*}} "main"
+# BOLT: DW_IDX_die_offset: 0x
+# BOLT: String: {{.*}} "helper"
+# BOLT: DW_IDX_die_offset: 0x
+
+  .text
+  .globl main
+  .type main,@function
+main:
+  callq helper
+  retq
+.Lmain_end:
+  .size main, .Lmain_end-main
+
+  .globl helper
+  .type helper,@function
+helper:
+  movl $42, %eax
+  retq
+.Lhelper_end:
+  .size helper, .Lhelper_end-helper
+
+  .section .debug_abbrev,"",@progbits
+.Labbrev:
+  .byte 1                         # Abbrev code
+  .byte 0x11                      # DW_TAG_compile_unit
+  .byte 1                         # DW_CHILDREN_yes
+  .byte 0x03                      # DW_AT_name
+  .byte 0x0e                      # DW_FORM_strp
+  .byte 0x13                      # DW_AT_language
+  .byte 0x05                      # DW_FORM_data2
+  .byte 0
+  .byte 0
+  .byte 2                         # Abbrev code
+  .byte 0x2e                      # DW_TAG_subprogram
+  .byte 0                         # DW_CHILDREN_no
+  .byte 0x03                      # DW_AT_name
+  .byte 0x0e                      # DW_FORM_strp
+  .byte 0x11                      # DW_AT_low_pc
+  .byte 0x01                      # DW_FORM_addr
+  .byte 0x12                      # DW_AT_high_pc
+  .byte 0x06                      # DW_FORM_data4
+  .byte 0x3f                      # DW_AT_external
+  .byte 0x19                      # DW_FORM_flag_present
+  .byte 0
+  .byte 0
+  .byte 0
+
+  .section .debug_info,"",@progbits
+  .long 0xffffffff                # DWARF64 marker
+  .quad .Lcu_end-.Lcu_start       # DWARF64 unit length
+.Lcu_start:
+  .short 5                        # Version
+  .byte 1                         # DW_UT_compile
+  .byte 8                         # Address size
+  .quad .Labbrev                  # Abbrev offset
+  .byte 1                         # DW_TAG_compile_unit
+  .quad .Lstr_file                # DW_AT_name
+  .short 0x000c                   # DW_LANG_C99
+  .byte 2                         # DW_TAG_subprogram
+  .quad .Lstr_main                # DW_AT_name
+  .quad main                      # DW_AT_low_pc
+  .long .Lmain_end-main           # DW_AT_high_pc
+  .byte 2                         # DW_TAG_subprogram
+  .quad .Lstr_helper              # DW_AT_name
+  .quad helper                    # DW_AT_low_pc
+  .long .Lhelper_end-helper       # DW_AT_high_pc
+  .byte 0                         # End children
+.Lcu_end:
+
+  .section .debug_str,"MS",@progbits,1
+.Lstr_file:
+  .asciz "dwarf64-debug-names.s"
+.Lstr_main:
+  .asciz "main"
+.Lstr_helper:
+  .asciz "helper"

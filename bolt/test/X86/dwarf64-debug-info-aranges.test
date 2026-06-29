@@ -1,0 +1,46 @@
+# REQUIRES: system-linux
+
+# RUN: rm -rf %t
+# RUN: split-file %s %t
+# RUN: %clang %cflags -gdwarf-5 -gdwarf64 -Wl,-q -Wl,-e,main \
+# RUN:   %t/main.c -o %t.exe
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections --keep-aranges
+# RUN: llvm-dwarfdump --debug-info --debug-aranges --debug-line %t.bolt | \
+# RUN:   FileCheck %s
+# RUN: llvm-dwarfdump --verify %t.bolt
+
+## BOLT must preserve DWARF64 .debug_info, .debug_aranges, and .debug_line
+## contributions whose offsets use the DWARF64 offset size.
+
+# CHECK-LABEL: .debug_info contents:
+# CHECK: Compile Unit: length = 0x{{[0-9a-f]+}}, format = DWARF64, version = 0x0005
+# CHECK: DW_TAG_compile_unit
+# CHECK: DW_AT_ranges
+# CHECK-SAME: rangelist =
+# CHECK: DW_TAG_subprogram
+# CHECK: DW_AT_name{{.*}}"helper"
+# CHECK: DW_AT_type{{.*}}"int"
+# CHECK: DW_TAG_subprogram
+# CHECK: DW_AT_name{{.*}}"main"
+# CHECK: DW_AT_type{{.*}}"int"
+# CHECK: DW_TAG_base_type
+# CHECK: DW_AT_name{{.*}}"int"
+
+# CHECK-LABEL: .debug_aranges contents:
+# CHECK: Address Range Header: length = 0x{{[0-9a-f]+}}, format = DWARF64, version = 0x0002, cu_offset = 0x0000000000000000, addr_size = 0x08, seg_size = 0x00
+# CHECK: [0x{{[0-9a-f]+}}, 0x{{[0-9a-f]+}})
+# CHECK: [0x{{[0-9a-f]+}}, 0x{{[0-9a-f]+}})
+
+# CHECK-LABEL: .debug_line contents:
+# CHECK: total_length:
+# CHECK-NEXT: format: DWARF64
+# CHECK: version: 5
+
+#--- main.c
+int helper(int x) {
+  return x + 1;
+}
+
+int main(void) {
+  return helper(41);
+}
