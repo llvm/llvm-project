@@ -151,18 +151,23 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
     // stream.
     struct MoveFileToCache : CachedFileStream {
       AddBufferFn AddBuffer;
+      std::string ModuleName;
       size_t Task;
-      SmallString<0> FilePath;
-      MoveFileToCache(AddBufferFn AddBuffer, std::string EntryPath, size_t Task)
-          : CachedFileStream(std::make_unique<raw_svector_ostream>(FilePath),
-                             std::move(EntryPath)),
-            AddBuffer(std::move(AddBuffer)), Task(Task) {}
+      StringRef FilePath;
+
+      MoveFileToCache(AddBufferFn AddBuffer, std::string EntryPath,
+                      std::string ModuleID, size_t Task)
+          : CachedFileStream({}, std::move(EntryPath)),
+            AddBuffer(std::move(AddBuffer)), ModuleName(ModuleID), Task(Task) {}
       virtual ~MoveFileToCache() = default;
 
-      virtual Error commit() override {
+      virtual Error commit(std::unique_ptr<MemoryBuffer> MemBuf) override {
         if (Committed)
           return createStringError(make_error_code(std::errc::invalid_argument),
                                    Twine("MoveFileToCache already committed."));
+
+        FilePath = MemBuf->getBufferIdentifier();
+        assert(!FilePath.empty() && "File path is empty.");
 
         // Rename/move native object file into cache directory, if they are
         // located the same device/logical drive, otherwise we use a copy.
@@ -178,6 +183,8 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
           return createStringError(EC, Twine("Failed to rename or copy file ") +
                                            FilePath + " to " + ObjectPathName +
                                            ": " + EC.message() + "\n");
+
+        AddBuffer(Task, ModuleName, std::move(MemBuf));
 
         Committed = true;
         return Error::success();
@@ -198,7 +205,7 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
       // destruction.
       if (CacheRename) {
         return std::make_unique<MoveFileToCache>(
-            AddBuffer, std::string(EntryPath.str()), Task);
+            AddBuffer, std::string(EntryPath.str()), ModuleName.str(), Task);
       }
 
       // Write to a temporary to avoid race condition
