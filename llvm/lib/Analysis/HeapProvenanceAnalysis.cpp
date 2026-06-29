@@ -42,16 +42,12 @@ static bool isAllocLibCall(const Value *V, const TargetLibraryInfo *TLI) {
 
 static Value *getFreeLibCallOperand(const CallBase *CB,
                                     const TargetLibraryInfo *TLI) {
-  if (!CB || !TLI)
+  if (!CB)
     return nullptr;
-  const Function *Callee = CB->getCalledFunction();
-  if (!Callee)
-    return nullptr;
-  LibFunc TLIFn;
-  if (TLI->getLibFunc(*Callee, TLIFn) && TLI->has(TLIFn) &&
-      isLibFreeFunction(Callee, TLIFn)) {
-    return CB->getArgOperand(0);
-  }
+  if (Value *Freed = getFreedOperand(CB, TLI))
+    return Freed;
+  if (Value *Reallocated = getReallocatedOperand(CB))
+    return Reallocated;
   return nullptr;
 }
 
