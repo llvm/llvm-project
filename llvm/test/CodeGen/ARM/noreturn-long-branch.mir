@@ -1,0 +1,58 @@
+# RUN: llc -mtriple=thumbv6m-none-eabi --run-pass=arm-cp-islands -o - %s | FileCheck %s
+#
+# This test file requires the branch instruction to be turned into a tBfar, aka
+# BL, treating the value written to LR as junk. It's OK that we overwrite LR,
+# even though it was not spilled on function entry, because the function never
+# returns, so the value of LR on entry isn't needed.
+
+--- |
+  ; ModuleID = 'llvmaeng5747b.ll'
+  source_filename = "llvmaeng5747b.ll"
+  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbv6m-unknown-none-eabi"
+  
+  ; Function Attrs: nounwind
+  declare i32 @llvm.arm.space(i32 immarg, i32) #0
+  
+  define dso_local noundef i32 @foo(ptr %p) local_unnamed_addr #1 {
+  entry:
+    br label %loop
+  
+  loop:                                             ; preds = %loop, %entry
+    %0 = load volatile i32, ptr %p, align 4
+    %1 = call i32 @llvm.arm.space(i32 8192, i32 %0)
+    br label %loop
+  }
+  
+  attributes #0 = { nounwind }
+  attributes #1 = { noreturn }
+...
+---
+name:            foo
+alignment:       2
+tracksRegLiveness: true
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+hasFakeUses:     false
+tracksDebugUserValues: true
+liveins:
+  - { reg: '$r0' }
+frameInfo:
+  maxAlignment:    1
+  maxCallFrameSize: 0
+  isCalleeSavedInfoValid: true
+machineFunctionInfo:
+  isLRSpilled:     false
+body:             |
+  bb.0.entry:
+    liveins: $r0
+  
+  bb.1.loop:
+    liveins: $r0
+  
+    renamable $r1 = tLDRi renamable $r0, 0, 14 /* CC::al */, $noreg :: (volatile load (s32) from %ir.p)
+    dead renamable $r1 = SPACE 8192, killed renamable $r1
+    tB %bb.1, 14 /* CC::al */, $noreg
+    ; CHECK: tBfar %bb.1, 14 /* CC::al */, $noreg
+...
