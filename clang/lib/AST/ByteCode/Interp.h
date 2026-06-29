@@ -75,7 +75,8 @@ bool CheckDowncast(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 bool CheckConst(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
 /// Checks if the Descriptor is of a constexpr or const global variable.
-bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc);
+bool CheckConstant(InterpState &S, CodePtr OpPC, const Descriptor *Desc,
+                   AccessKinds AK = AK_Read);
 
 bool CheckFinalLoad(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
 
@@ -2050,6 +2051,14 @@ inline bool GetRefLocal(InterpState &S, CodePtr OpPC, uint32_t I) {
 
 inline bool GetRefGlobal(InterpState &S, CodePtr OpPC, uint32_t I) {
   Block *B = S.P.getGlobal(I);
+
+  // If we're currently evaluating this variable, use that in-flight value.
+  // It will otherwise be diagnosed as non-initialized reference and we will
+  // complain about a missing initializer.
+  if (S.EvaluatingDecl && B->getDescriptor()->asVarDecl() == S.EvaluatingDecl) {
+    S.Stk.push<Pointer>(B);
+    return true;
+  }
 
   if (isConstexprUnknown(B)) {
     S.Stk.push<Pointer>(B);

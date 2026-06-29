@@ -22,6 +22,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/StringToOffsetTable.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <set>
 #include <string>
@@ -172,7 +173,7 @@ private:
                                   const GenericField &Field, TypeContext Ctx) {
     if (isa<StringRecTy>(Field.RecType)) {
       if (Ctx == TypeInStaticStruct)
-        return "const char *";
+        return "unsigned";
       if (Ctx == TypeInTempStruct)
         return "std::string";
       return "StringRef";
@@ -207,7 +208,8 @@ private:
   void emitLookupDeclaration(const GenericTable &Table,
                              const SearchIndex &Index, raw_ostream &OS);
   void emitLookupFunction(const GenericTable &Table, const SearchIndex &Index,
-                          bool IsPrimary, raw_ostream &OS);
+                          bool IsPrimary, StringToOffsetTable &StrTab,
+                          raw_ostream &OS);
   void emitIfdef(StringRef Guard, raw_ostream &OS);
 
   bool parseFieldType(GenericField &Field, const Init *II);
@@ -352,6 +354,7 @@ void SearchableTableEmitter::emitGenericEnum(const GenericEnum &Enum,
 void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
                                                 const SearchIndex &Index,
                                                 bool IsPrimary,
+                                                StringToOffsetTable &StrTab,
                                                 raw_ostream &OS) {
   OS << "\n";
   emitLookupDeclaration(Table, Index, OS);
@@ -396,11 +399,21 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
       OS << "    { ";
       ListSeparator LS;
       for (const auto &Field : Index.Fields) {
-        std::string Repr = primaryRepresentation(
-            Index.Loc, Field, EntryRec->getValueInit(Field.Name));
-        if (isa<StringRecTy>(Field.RecType))
-          Repr = StringRef(Repr).upper();
-        OS << LS << Repr;
+        const Init *Value = EntryRec->getValueInit(Field.Name);
+        std::string Repr = primaryRepresentation(Index.Loc, Field, Value);
+        if (isa<StringRecTy>(Field.RecType)) {
+          // TODO: if most strings are lower-case already, we can save space by
+          // converting all strings to lower case instead. If strings are not
+          // already all-uppercase, we currently store them twice -- but if most
+          // strings are all-lowercase, we can use the lowercase variant for
+          // case-insenstive comparison.
+          OS << LS
+             << StrTab.GetOrAddStringOffset(
+                    StringRef(Value->getAsUnquotedString()).upper())
+             << " /* " << StringRef(Repr).upper() << " */";
+        } else {
+          OS << LS << Repr;
+        }
       }
       OS << ", " << EntryIndex << " },\n";
     }
@@ -479,11 +492,20 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
   OS << "    bool operator()(const " << IndexTypeName
      << " &LHS, const KeyType &RHS) const {\n";
 
-  auto emitComparator = [&]() {
+  auto emitComparator = [&](bool LHSIsKey, bool RHSIsKey) {
     for (const auto &Field : Index.Fields) {
       if (isa<StringRecTy>(Field.RecType)) {
-        OS << "      int Cmp" << Field.Name << " = StringRef(LHS." << Field.Name
-           << ").compare(RHS." << Field.Name << ");\n";
+        if (LHSIsKey)
+          OS << "      StringRef LHSStr = LHS." << Field.Name << ";\n";
+        else
+          OS << "      StringRef LHSStr = " << Table.Name << "Strings[LHS."
+             << Field.Name << "];\n";
+        if (RHSIsKey)
+          OS << "      StringRef RHSStr = RHS." << Field.Name << ";\n";
+        else
+          OS << "      StringRef RHSStr = " << Table.Name << "Strings[RHS."
+             << Field.Name << "];\n";
+        OS << "      int Cmp" << Field.Name << " = LHSStr.compare(RHSStr);\n";
         OS << "      if (Cmp" << Field.Name << " < 0) return true;\n";
         OS << "      if (Cmp" << Field.Name << " > 0) return false;\n";
       } else if (Field.Enum) {
@@ -507,12 +529,12 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
     OS << "      return false;\n";
     OS << "    }\n";
   };
-  emitComparator();
+  emitComparator(false, true);
   bool ShouldReturnRange = Index.ReturnRange;
   if (ShouldReturnRange) {
     OS << "    bool operator()(const KeyType &LHS, const " << IndexTypeName
        << " &RHS) const {\n";
-    emitComparator();
+    emitComparator(true, false);
   }
 
   OS << "  };\n";
@@ -525,8 +547,13 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
 
   if (!ShouldReturnRange) {
     OS << "  if (Idx == Table.end()";
-    for (const auto &Field : Index.Fields)
-      OS << " ||\n      Key." << Field.Name << " != Idx->" << Field.Name;
+    for (const auto &Field : Index.Fields) {
+      OS << " ||\n      Key." << Field.Name << " != ";
+      if (isa<StringRecTy>(Field.RecType))
+        OS << Table.Name << "Strings[Idx->" << Field.Name << "]";
+      else
+        OS << "Idx->" << Field.Name;
+    }
   }
 
   if (ShouldReturnRange) {
@@ -571,9 +598,17 @@ void SearchableTableEmitter::emitGenericTable(const GenericTable &Table,
     OS << ";\n";
   }
 
+  bool HasStrings = false;
+  for (const auto &Field : Table.Fields)
+    HasStrings |= isa<StringRecTy>(Field.RecType);
+  if (HasStrings)
+    OS << "StringRef get" << Table.CppTypeName << "Str(StringTable::Offset);\n";
+
   OS << "#endif\n\n";
 
   emitIfdef((Twine("GET_") + Table.PreprocessorGuard + "_IMPL").str(), OS);
+
+  StringToOffsetTable StrTab;
 
   // The primary data table contains all the fields defined for this map.
   OS << "constexpr " << Table.CppTypeName << " " << Table.Name << "[] = {\n";
@@ -581,21 +616,44 @@ void SearchableTableEmitter::emitGenericTable(const GenericTable &Table,
     OS << "  { ";
 
     ListSeparator LS;
-    for (const auto &Field : Table.Fields)
-      OS << LS
-         << primaryRepresentation(Table.Locs[0], Field,
-                                  Entry->getValueInit(Field.Name));
+    for (const auto &Field : Table.Fields) {
+      OS << LS;
+      const Init *Value = Entry->getValueInit(Field.Name);
+      if (const auto *SI = dyn_cast<StringInit>(Value);
+          SI && !Field.IsCode && !SI->hasCodeFormat()) {
+        OS << StrTab.GetOrAddStringOffset(Value->getAsUnquotedString())
+           << " /* " << primaryRepresentation(Table.Locs[0], Field, Value)
+           << " */";
+      } else {
+        OS << primaryRepresentation(Table.Locs[0], Field, Value);
+      }
+    }
 
     OS << " }, // " << Idx << "\n";
   }
   OS << " };\n";
 
+  // Emit into string first so we can put the string table before the function.
+  // The lookup function might add more strings.
+  std::string LookupFunction;
+  raw_string_ostream LFOS(LookupFunction);
   // Indexes are sorted "{ Thing, PrimaryIdx }" arrays, so that a binary
   // search can be performed by "Thing".
   if (Table.PrimaryKey)
-    emitLookupFunction(Table, *Table.PrimaryKey, /*IsPrimary=*/true, OS);
+    emitLookupFunction(Table, *Table.PrimaryKey, /*IsPrimary=*/true, StrTab,
+                       LFOS);
   for (const auto &Index : Table.Indices)
-    emitLookupFunction(Table, *Index, /*IsPrimary=*/false, OS);
+    emitLookupFunction(Table, *Index, /*IsPrimary=*/false, StrTab, LFOS);
+
+  if (HasStrings) {
+    StrTab.EmitStringTableDef(OS, Table.Name + Twine("Strings"));
+    OS << "\nStringRef get" << Table.CppTypeName
+       << "Str(StringTable::Offset Offset) {\n";
+    OS << "  return " << Table.Name << "Strings[Offset];\n";
+    OS << "}\n";
+  }
+
+  OS << LookupFunction;
 
   OS << "#endif\n\n";
 }

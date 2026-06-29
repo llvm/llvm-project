@@ -2,7 +2,7 @@
 
 subroutine f00(x)
   integer :: x(10)
-!ERROR: AFFINITY clause is not allowed on directive TASK in OpenMP v4.5, try -fopenmp-version=50
+!ERROR: AFFINITY clause is not allowed on TASK directive in OpenMP v4.5, try -fopenmp-version=50
 !$omp task affinity(x)
   x = x + 1
 !$omp end task
