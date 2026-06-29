@@ -1024,7 +1024,6 @@ struct AAAMDMaxNumWorkgroups
 
   void initialize(Attributor &A) override {
     Function *F = getAssociatedFunction();
-    auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
 
     SmallVector<unsigned> MaxNumWorkgroups = AMDGPU::getMaxNumWorkGroups(*F);
 
