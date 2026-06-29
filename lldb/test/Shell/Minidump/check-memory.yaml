@@ -1,0 +1,52 @@
+# Check that looking up a memory region not present in the Minidump fails
+# even if it's in the /proc/<pid>/maps file.
+
+# RUN: yaml2obj %s -o %t
+# RUN: %lldb -c %t -o "process plugin check-memory 0x1000" \
+# RUN:             -o "process plugin check-memory 0x800" \
+# RUN:             -o "process plugin check-memory 0x1500" \
+# RUN:             -o "process plugin check-memory 0x2400" | FileCheck %s
+
+# CHECK-LABEL: (lldb) process plugin check-memory 0x1000
+# CHECK-NEXT: Address found in Minidump. Address located in range: [0000000000001000-0000000000001100) r??
+# CHECK-LABEL: (lldb) process plugin check-memory 0x800
+# CHECK-NEXT: Address not found in Minidump
+# CHECK-NEXT: No prior range found
+# CHECK-NEXT: Closest following range: [0000000000001000-0000000000001100) r??
+# CHECK-LABEL: (lldb) process plugin check-memory 0x1500
+# CHECK-NEXT: Address not found in Minidump
+# CHECK-NEXT: Closest prior range: [0000000000001000-0000000000001100) r??
+# CHECK-NEXT: Closest following range: [0000000000002000-0000000000002200) r??
+# CHECK-LABEL: (lldb) process plugin check-memory 0x2400
+# CHECK-NEXT: Address not found in Minidump
+# CHECK-NEXT: Closest prior range: [0000000000002000-0000000000002200) r??
+# CHECK-NEXT: No following range found
+
+--- !minidump
+Streams:
+  - Type:            SystemInfo
+    Processor Arch:  AMD64
+    Processor Level: 6
+    Processor Revision: 15876
+    Number of Processors: 40
+    Platform ID:     Linux
+    CSD Version:     'Linux 3.13.0-91-generic #138-Ubuntu SMP Fri Jun 24 17:00:34 UTC 2016 x86_64'
+    CPU:
+      Vendor ID:       GenuineIntel
+      Version Info:    0x00000000
+      Feature Info:    0x00000000
+  - Type:            LinuxProcStatus
+    Text:             |
+      Name:	test-yaml
+      Umask:	0002
+      State:	t (tracing stop)
+      Pid:	8567
+  - Type:            Memory64List
+    Memory Ranges:
+      - Start of Memory Range: 0x1000
+        Data Size:       0x100
+        Content :        ''
+      - Start of Memory Range: 0x2000
+        Data Size:       0x200
+        Content :        ''
+...
