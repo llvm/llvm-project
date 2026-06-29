@@ -984,7 +984,7 @@ bool SampleProfileReaderExtBinaryBase::collectFuncsFromModule() {
 std::error_code SampleProfileReaderExtBinaryBase::readFuncOffsetTable() {
   // If there are more than one function offset section, the profile associated
   // with the previous section has to be done reading before next one is read.
-  FuncOffsetTable.clear();
+  FuncOffsetTable.reset();
   FuncOffsetList.clear();
 
   auto Size = readNumber<uint64_t>();
@@ -995,7 +995,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncOffsetTable() {
   if (UseFuncOffsetList)
     FuncOffsetList.reserve(*Size);
   else
-    FuncOffsetTable.reserve(*Size);
+    FuncOffsetTable.emplace(InMemoryMode, *Size);
 
   for (uint64_t I = 0; I < *Size; ++I) {
     auto FContextHash(readSampleContextFromTable());
@@ -1012,7 +1012,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncOffsetTable() {
     else
       // Because Porfiles replace existing value with new value if collision
       // happens, we also use the latest offset so that they are consistent.
-      FuncOffsetTable[Hash] = *Offset;
+      FuncOffsetTable->insert(Hash, *Offset);
  }
 
  return sampleprof_error::success;
@@ -1074,12 +1074,11 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
     assert(!useFuncOffsetList());
     for (auto Name : FuncsToUse) {
       auto GUID = MD5Hash(Name);
-      auto iter = FuncOffsetTable.find(GUID);
-      if (iter == FuncOffsetTable.end())
-        continue;
-      const uint8_t *FuncProfileAddr = Start + iter->second;
-      if (std::error_code EC = readFuncProfile(FuncProfileAddr, Profiles))
-        return EC;
+      if (auto Offset = FuncOffsetTable->lookup(GUID)) {
+        const uint8_t *FuncProfileAddr = Start + *Offset;
+        if (std::error_code EC = readFuncProfile(FuncProfileAddr, Profiles))
+          return EC;
+      }
     }
   } else if (Remapper) {
     assert(useFuncOffsetList());
@@ -1096,13 +1095,11 @@ std::error_code SampleProfileReaderExtBinaryBase::readFuncProfiles(
   } else {
     assert(!useFuncOffsetList());
     for (auto Name : FuncsToUse) {
-
-      auto iter = FuncOffsetTable.find(MD5Hash(Name));
-      if (iter == FuncOffsetTable.end())
-        continue;
-      const uint8_t *FuncProfileAddr = Start + iter->second;
-      if (std::error_code EC = readFuncProfile(FuncProfileAddr, Profiles))
-        return EC;
+      if (auto Offset = FuncOffsetTable->lookup(MD5Hash(Name))) {
+        const uint8_t *FuncProfileAddr = Start + *Offset;
+        if (std::error_code EC = readFuncProfile(FuncProfileAddr, Profiles))
+          return EC;
+      }
     }
   }
 

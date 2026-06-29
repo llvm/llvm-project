@@ -1,0 +1,4 @@
+// Checks that LibASTMatchersReference.html is in sync with ASTMatchers.h
+// To fix failing test run dump_ast_matchers.py
+// RUN: %python %S/../../docs/tools/dump_ast_matchers.py %t
+// RUN: diff %t %S/../../docs/LibASTMatchersReference.html
