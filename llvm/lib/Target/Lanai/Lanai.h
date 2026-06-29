@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_LANAI_LANAI_H
 #define LLVM_LIB_TARGET_LANAI_LANAI_H
 
+#include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
@@ -21,9 +22,14 @@ class FunctionPass;
 class LanaiTargetMachine;
 class PassRegistry;
 
-// createLanaiISelDag - This pass converts a legalized DAG into a
+// createLanaiISelDagPass - This pass converts a legalized DAG into a
 // Lanai-specific DAG, ready for instruction scheduling.
-FunctionPass *createLanaiISelDag(LanaiTargetMachine &TM);
+class LanaiISelDAGToDAGPass : public SelectionDAGISelPass {
+public:
+  LanaiISelDAGToDAGPass(LanaiTargetMachine &TM);
+};
+
+FunctionPass *createLanaiISelDagLegacyPass(LanaiTargetMachine &TM);
 
 // createLanaiDelaySlotFillerPass - This pass fills delay slots
 // with useful instructions or nop's

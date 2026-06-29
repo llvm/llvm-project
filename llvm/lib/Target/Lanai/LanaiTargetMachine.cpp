@@ -99,7 +99,7 @@ void LanaiPassConfig::addIRPasses() {
 
 // Install an instruction selector pass.
 bool LanaiPassConfig::addInstSelector() {
-  addPass(createLanaiISelDag(getLanaiTargetMachine()));
+  addPass(createLanaiISelDagLegacyPass(getLanaiTargetMachine()));
   return false;
 }
 
