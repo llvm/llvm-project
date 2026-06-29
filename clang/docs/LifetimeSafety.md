@@ -489,8 +489,7 @@ enable categories of checks incrementally. For example, `-Wlifetime-safety`
 enables all dangling pointer checks, while `-Wlifetime-safety-permissive`
 enables only the high-confidence subset of these checks.
 
-- `-Wlifetime-safety-all`: Enables all lifetime safety warnings, including
-  : dangling pointer checks, annotation suggestions, and annotation validations.
+- `-Wlifetime-safety-all`: Enables all lifetime safety warnings, including dangling pointer checks, annotation suggestions, and annotation validations.
 - `-Wlifetime-safety`: Enables dangling pointer checks from both the `permissive` and `strict` groups listed below.
 
   - `-Wlifetime-safety-permissive`: Enables high-confidence checks for dangling pointers. **Recommended for initial adoption.**
