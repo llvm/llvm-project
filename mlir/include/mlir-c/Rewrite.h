@@ -621,6 +621,13 @@ MLIR_CAPI_EXPORTED void mlirTypeConverterAddSourceMaterialization(
     MlirTypeConverter typeConverter,
     MlirTypeConverterMaterializationCallback callback, void *userData);
 
+/// Register a target materialization with the given TypeConverter. This is
+/// invoked when a value must be converted to a target type according to a
+/// pattern's type converter.
+MLIR_CAPI_EXPORTED void mlirTypeConverterAddTargetMaterialization(
+    MlirTypeConverter typeConverter,
+    MlirTypeConverterMaterializationCallback callback, void *userData);
+
 //===----------------------------------------------------------------------===//
 /// ConversionPattern API
 //===----------------------------------------------------------------------===//

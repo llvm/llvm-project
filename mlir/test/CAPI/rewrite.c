@@ -926,6 +926,95 @@ void testTypeConverterSourceMaterialization(MlirContext ctx) {
   fprintf(stderr, "testTypeConverterSourceMaterialization: PASSED\n");
 }
 
+// Conversion pattern for `test.consumer`: replaces it with a
+// `test.consumer_legal` op that consumes the (already remapped) operands. The
+// operand of the original op has type i32 but its producer is not converted, so
+// the framework inserts a target materialization to i64 before invoking this
+// pattern -- the remapped `operands` are therefore the i64 cast results.
+static MlirLogicalResult convertConsumer(MlirConversionPattern pattern,
+                                         MlirOperation op, intptr_t nOperands,
+                                         MlirValue *operands,
+                                         MlirConversionPatternRewriter rewriter,
+                                         void *userData) {
+  (void)pattern;
+  (void)userData;
+  MlirLocation loc = mlirOperationGetLocation(op);
+  MlirOperationState state = mlirOperationStateGet(
+      mlirStringRefCreateFromCString("test.consumer_legal"), loc);
+  mlirOperationStateAddOperands(&state, nOperands, operands);
+  MlirOperation newOp = mlirOperationCreate(&state);
+
+  MlirRewriterBase base = mlirPatternRewriterAsBase(
+      mlirConversionPatternRewriterAsPatternRewriter(rewriter));
+  mlirRewriterBaseInsert(base, newOp);
+  mlirRewriterBaseEraseOp(base, op);
+  return mlirLogicalResultSuccess();
+}
+
+void testTypeConverterTargetMaterialization(MlirContext ctx) {
+  // CHECK-LABEL: @testTypeConverterTargetMaterialization
+  fprintf(stderr, "@testTypeConverterTargetMaterialization\n");
+
+  // `test.consumer` takes an i32 from the (legal, unconverted) `test.producer`.
+  // Converting `test.consumer` requires its operand as i64, which triggers a
+  // target materialization from i32 to i64.
+  const char *moduleString = "%0 = \"test.producer\"() : () -> i32\n"
+                             "\"test.consumer\"(%0) : (i32) -> ()\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleString));
+  MlirOperation moduleOp = mlirModuleGetOperation(module);
+
+  MlirTypeConverter converter = mlirTypeConverterCreate();
+  mlirTypeConverterAddConversion(converter, widenI32ToI64, NULL);
+  intptr_t materializationCounter = 0;
+  mlirTypeConverterAddTargetMaterialization(converter, buildCastMaterialization,
+                                            &materializationCounter);
+
+  MlirRewritePatternSet patterns = mlirRewritePatternSetCreate(ctx);
+  MlirConversionPatternCallbacks callbacks = {NULL, NULL, convertConsumer};
+  MlirConversionPattern pattern = mlirOpConversionPatternCreate(
+      mlirStringRefCreateFromCString("test.consumer"), 1, ctx, converter,
+      callbacks, NULL, 0, NULL);
+  mlirRewritePatternSetAdd(patterns,
+                           mlirConversionPatternAsRewritePattern(pattern));
+  MlirFrozenRewritePatternSet frozen = mlirFreezeRewritePattern(patterns);
+
+  MlirConversionTarget target = mlirConversionTargetCreate(ctx);
+  mlirConversionTargetAddIllegalOp(
+      target, mlirStringRefCreateFromCString("test.consumer"));
+  mlirConversionTargetAddLegalOp(
+      target, mlirStringRefCreateFromCString("test.producer"));
+  mlirConversionTargetAddLegalOp(
+      target, mlirStringRefCreateFromCString("test.consumer_legal"));
+  mlirConversionTargetAddLegalOp(target,
+                                 mlirStringRefCreateFromCString("test.cast"));
+  mlirConversionTargetAddLegalOp(
+      target, mlirStringRefCreateFromCString("builtin.module"));
+
+  MlirConversionConfig config = mlirConversionConfigCreate();
+  MlirLogicalResult result =
+      mlirApplyPartialConversion(moduleOp, target, frozen, config);
+  assert(mlirLogicalResultIsSuccess(result));
+  assert(materializationCounter > 0 &&
+         "target materialization callback must be invoked");
+
+  mlirOperationDump(moduleOp);
+  // clang-format off
+  // CHECK: %[[v:.*]] = "test.producer"() : () -> i32
+  // CHECK: %[[c:.*]] = "test.cast"(%[[v]]) : (i32) -> i64
+  // CHECK: "test.consumer_legal"(%[[c]]) : (i64) -> ()
+  // clang-format on
+
+  mlirConversionConfigDestroy(config);
+  mlirConversionTargetDestroy(target);
+  mlirFrozenRewritePatternSetDestroy(frozen);
+  mlirTypeConverterDestroy(converter);
+  mlirModuleDestroy(module);
+
+  // CHECK: testTypeConverterTargetMaterialization: PASSED
+  fprintf(stderr, "testTypeConverterTargetMaterialization: PASSED\n");
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   mlirContextSetAllowUnregisteredDialects(ctx, true);
@@ -943,6 +1032,7 @@ int main(void) {
   testCloneWithMapping(ctx);
   testConversionTargetDynamicLegality(ctx);
   testTypeConverterSourceMaterialization(ctx);
+  testTypeConverterTargetMaterialization(ctx);
 
   mlirContextDestroy(ctx);
   return 0;

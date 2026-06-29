@@ -701,6 +701,15 @@ void mlirTypeConverterAddSourceMaterialization(
           wrapMaterializationCallback(callback, userData));
 }
 
+void mlirTypeConverterAddTargetMaterialization(
+    MlirTypeConverter typeConverter,
+    MlirTypeConverterMaterializationCallback callback, void *userData) {
+  assert(callback && "expected non-null materialization callback");
+  unwrap(typeConverter)
+      ->addTargetMaterialization(
+          wrapMaterializationCallback(callback, userData));
+}
+
 //===----------------------------------------------------------------------===//
 /// ConversionPattern API
 //===----------------------------------------------------------------------===//
