@@ -12,6 +12,7 @@
 
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 
+#include "mlir/Analysis/FlatLinearValueConstraints.h"
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
@@ -313,7 +314,11 @@ bool mlir::affine::isContiguousAccess(Value iv, LoadOrStoreOp memoryOp,
   int uniqueVaryingIndexAlongIv = -1;
   auto accessMap = memoryOp.getAffineMap();
   SmallVector<Value, 4> mapOperands(memoryOp.getMapOperands());
+  // Inline affine.apply chains so the iv-coefficient check below sees iv even
+  // when it arrives through a derived value.
+  fullyComposeAffineMapAndOperands(&accessMap, &mapOperands);
   unsigned numDims = accessMap.getNumDims();
+  unsigned numSymbols = accessMap.getNumSymbols();
   for (unsigned i = 0, e = memRefType.getRank(); i < e; ++i) {
     // Gather map operands used in result expr 'i' in 'exprOperands'.
     SmallVector<Value, 4> exprOperands;
@@ -333,6 +338,24 @@ bool mlir::affine::isContiguousAccess(Value iv, LoadOrStoreOp memoryOp,
         }
         uniqueVaryingIndexAlongIv = i;
       }
+    }
+    // Only the contiguous (varying-along-iv) dimension constrains stride: a
+    // unit iv-coefficient is required there for the access to match
+    // contiguous vector lanes.
+    if (uniqueVaryingIndexAlongIv == static_cast<int>(i)) {
+      SmallVector<int64_t, 4> flattenedExpr;
+      if (failed(getFlattenedAffineExpr(resultExpr, numDims, numSymbols,
+                                        &flattenedExpr)))
+        return false;
+      int64_t ivCoeff = 0;
+      for (unsigned dim = 0; dim < numDims; ++dim)
+        if (mapOperands[dim] == iv)
+          ivCoeff += flattenedExpr[dim];
+      for (unsigned sym = 0; sym < numSymbols; ++sym)
+        if (mapOperands[numDims + sym] == iv)
+          ivCoeff += flattenedExpr[numDims + sym];
+      if (ivCoeff != 1)
+        return false;
     }
   }
 
