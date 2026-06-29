@@ -206,9 +206,9 @@ void mlir::memref::registerValueBoundsOpInterfaceExternalModels(
     memref::GetGlobalOp::attachInterface<memref::GetGlobalOpInterface>(*ctx);
     memref::RankOp::attachInterface<memref::RankOpInterface>(*ctx);
     memref::SubViewOp::attachInterface<memref::SubViewOpInterface>(*ctx);
-    memref::AssumeAlignmentOp::attachInterface<memref::AssumeAlignmentOpInterface>(
-        *ctx);
-    memref::ExtractStridedMetadataOp::attachInterface<memref::ExtractStridedMetadataOpInterface>(
-        *ctx);
+    memref::AssumeAlignmentOp::attachInterface<
+        memref::AssumeAlignmentOpInterface>(*ctx);
+    memref::ExtractStridedMetadataOp::attachInterface<
+        memref::ExtractStridedMetadataOpInterface>(*ctx);
   });
 }
