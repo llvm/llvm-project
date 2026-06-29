@@ -202,7 +202,7 @@ mlir::ArrayAttr updateArgAttrs(mlir::MLIRContext *ctx,
     mlir::DictionaryAttr existing = builder.getDictionaryAttr({});
     if (existingArgAttrs && oldIdx < existingArgAttrs.size())
       existing = mlir::cast<mlir::DictionaryAttr>(existingArgAttrs[oldIdx]);
-    if (auto flatTy = getFlattenedCoercedType(ac)) {
+    if (cir::RecordType flatTy = getFlattenedCoercedType(ac)) {
       // Direct + canFlatten: one empty attribute dict per flattened field; the
       // flattened scalar arguments carry no special ABI attributes.
       newArgAttrs.append(flatTy.getNumElements(),
@@ -394,6 +394,44 @@ void insertReturnCoercion(mlir::FunctionOpInterface funcOp,
     mlir::Value coerced =
         emitCoercion(builder, r.getLoc(), coercedRetTy, origVal, funcOp, dl);
     r->setOperand(0, coerced);
+  }
+}
+
+/// Decompose a struct value into one scalar call argument per field of \p
+/// recTy, appending the field values to \p newArgs.  When \p structVal is a
+/// plain (non-volatile, non-atomic) load straight from an alloca, read each
+/// field with cir.get_member + cir.load from that alloca, emitted at the
+/// original load's position so they observe the same memory state, and record
+/// the now-dead whole-struct load in \p replacedWholeLoads for later erasure.
+/// Otherwise (a call result, compound literal, or qualified load) extract each
+/// field from the value with cir.extract_member.  Loading the members from the
+/// alloca rather than extracting from a whole-struct value keeps the result in
+/// a form SROA can promote (it does not reason about extractvalue).  Shared by
+/// the Expand and Direct+canFlatten argument paths.
+static void
+emitStructFieldArgs(mlir::OpBuilder &builder, mlir::Location loc,
+                    mlir::Value structVal, cir::RecordType recTy,
+                    SmallVectorImpl<mlir::Value> &newArgs,
+                    SmallVectorImpl<cir::LoadOp> &replacedWholeLoads) {
+  cir::LoadOp wholeLoad = structVal.getDefiningOp<cir::LoadOp>();
+  cir::AllocaOp srcAlloca;
+  if (wholeLoad && !wholeLoad.getIsVolatile() && !wholeLoad.getMemOrder())
+    srcAlloca = wholeLoad.getAddr().getDefiningOp<cir::AllocaOp>();
+
+  if (srcAlloca) {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    builder.setInsertionPoint(wholeLoad);
+    for (auto [f, fieldTy] : llvm::enumerate(recTy.getMembers())) {
+      mlir::Type fieldPtrTy = cir::PointerType::get(fieldTy);
+      mlir::Value fieldPtr = cir::GetMemberOp::create(
+          builder, loc, fieldPtrTy, srcAlloca, /*name=*/"", /*index=*/f);
+      newArgs.push_back(cir::LoadOp::create(builder, loc, fieldPtr));
+    }
+    replacedWholeLoads.push_back(wholeLoad);
+  } else {
+    for (unsigned f = 0; f < recTy.getNumElements(); ++f)
+      newArgs.push_back(
+          cir::ExtractMemberOp::create(builder, loc, structVal, f));
   }
 }
 
@@ -915,7 +953,7 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteFunctionDefinition(
           entry.eraseArgument(blockArgIdx);
           continue;
         }
-        if (auto flatTy = getFlattenedCoercedType(ac))
+        if (cir::RecordType flatTy = getFlattenedCoercedType(ac))
           blockArgIdx += flatTy.getNumElements();
         else if (ac.kind == ArgKind::Expand)
           blockArgIdx += cast<cir::RecordType>(oldArgTypes[i]).getNumElements();
@@ -1032,14 +1070,13 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
     if (ac.kind == ArgKind::Ignore)
       continue;
     mlir::Value arg = argOperands[idx];
-    if (auto flatTy = getFlattenedCoercedType(ac)) {
+    if (cir::RecordType flatTy = getFlattenedCoercedType(ac)) {
       // Direct + canFlatten: pass one scalar call argument per field of the
       // ABI-coerced struct.  When the original and coerced types differ in
       // layout, coerce through a memory slot and read each field with
-      // cir.get_member + cir.load from that slot, rather than loading the
-      // whole coerced struct and extracting members from the value.  When the
-      // types are already identical there is no backing slot (arg is a plain
-      // struct value), so extract each field directly from the value.
+      // cir.get_member + cir.load from that slot.  When the types already
+      // match, decompose the struct value directly (reading from its source
+      // alloca when possible).
       if (arg.getType() != flatTy) {
         SmallPtrSet<mlir::Operation *, 4> coercionOps;
         mlir::Value coercedPtr =
@@ -1054,9 +1091,8 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
                                                 fieldPtr.getResult()));
         }
       } else {
-        for (unsigned f = 0; f < flatTy.getNumElements(); ++f)
-          newArgs.push_back(
-              cir::ExtractMemberOp::create(builder, call.getLoc(), arg, f));
+        emitStructFieldArgs(builder, call.getLoc(), arg, flatTy, newArgs,
+                            replacedWholeLoads);
       }
     } else if (ac.kind == ArgKind::Expand) {
       // Decompose the struct value into its constituent scalar fields and
@@ -1064,36 +1100,8 @@ CIRABIRewriteContext::rewriteCallSite(mlir::Operation *callOp,
       auto recTy = cast<cir::RecordType>(arg.getType());
       assert(recTy.isStruct() &&
              "Expand classification requires a struct type, not a union");
-
-      // When the operand is a load straight from an alloca, read each member
-      // directly from that alloca (get_member + load) instead of loading the
-      // whole struct and extracting from it; this matches classic CodeGen.
-      // The member loads are emitted at the original load's position so they
-      // observe the same memory state.  When there is no source alloca (a
-      // call result, compound literal, etc.) cir.extract_member on the value
-      // is the only correct lowering.
-      auto wholeLoad = arg.getDefiningOp<cir::LoadOp>();
-      cir::AllocaOp srcAlloca;
-      if (wholeLoad)
-        srcAlloca = wholeLoad.getAddr().getDefiningOp<cir::AllocaOp>();
-
-      if (srcAlloca) {
-        mlir::OpBuilder::InsertionGuard guard(builder);
-        builder.setInsertionPoint(wholeLoad);
-        for (auto [f, fieldTy] : llvm::enumerate(recTy.getMembers())) {
-          mlir::Type fieldPtrTy = cir::PointerType::get(fieldTy);
-          mlir::Value fieldPtr = cir::GetMemberOp::create(
-              builder, call.getLoc(), fieldPtrTy, srcAlloca, /*name=*/"",
-              /*index=*/f);
-          newArgs.push_back(
-              cir::LoadOp::create(builder, call.getLoc(), fieldPtr));
-        }
-        replacedWholeLoads.push_back(wholeLoad);
-      } else {
-        for (unsigned f = 0; f < recTy.getNumElements(); ++f)
-          newArgs.push_back(
-              cir::ExtractMemberOp::create(builder, call.getLoc(), arg, f));
-      }
+      emitStructFieldArgs(builder, call.getLoc(), arg, recTy, newArgs,
+                          replacedWholeLoads);
     } else if (ac.kind == ArgKind::Direct && ac.coercedType &&
                arg.getType() != ac.coercedType) {
       arg = emitCoercion(builder, call.getLoc(), ac.coercedType, arg,

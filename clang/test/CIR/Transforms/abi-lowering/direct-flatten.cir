@@ -46,8 +46,8 @@
 }
 
 // Arg whose original type already equals its coerced struct type: the
-// callee skips the back-coercion and the call site extracts fields straight
-// from the value (no coerce-slot round-trip).
+// callee skips the back-coercion and the call site reads each field from the
+// operand (from its source alloca when available, else by extraction).
 #flatten_self = {
   return = { kind = "direct" },
   args   = [ { kind = "direct", coerced_type = !rec_coerced_two,
@@ -219,7 +219,8 @@ cir.func @flatten_ignore_flatten_callee(
 
 // Arg type already equals the coerced struct type (origTy == flatTy): the
 // callee reassembles the fields but skips the back-coercion, and the call site
-// extracts each field directly from the value with no coerce-slot round-trip.
+// reads each field from the operand's source alloca (get_member + load) with
+// no coerce-slot round-trip.
 
 cir.func @takes_self_flat(%arg0: !rec_coerced_two)
     attributes { test_classify = #flatten_self } {
@@ -249,11 +250,30 @@ cir.func @caller_self_flat() attributes { test_classify = #passthrough } {
 }
 
 // CHECK:      cir.func{{.*}} @caller_self_flat()
-// Types already match, so each field is extracted directly from the loaded
-// value with cir.extract_member -- no coerce slot, no get_member + load.
-// CHECK:        %[[VAL:.*]] = cir.load %{{.*}} : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
-// CHECK:        %[[F0:.*]] = cir.extract_member %[[VAL]][0] : !rec_anon_struct -> !s64i
-// CHECK:        %[[F1:.*]] = cir.extract_member %[[VAL]][1] : !rec_anon_struct -> !s64i
+// CHECK:        %[[A:.*]] = cir.alloca "s"
+// The operand already has the coerced layout and comes from an alloca, so each
+// field is read with get_member + load straight from that alloca; the
+// whole-struct load is erased and there is no coerce-slot round-trip.
+// CHECK-NOT:    cir.alloca "coerce"
+// CHECK:        %[[P0:.*]] = cir.get_member %[[A]][0] {{.*}} -> !cir.ptr<!s64i>
+// CHECK:        %[[F0:.*]] = cir.load %[[P0]] : !cir.ptr<!s64i>, !s64i
+// CHECK:        %[[P1:.*]] = cir.get_member %[[A]][1] {{.*}} -> !cir.ptr<!s64i>
+// CHECK:        %[[F1:.*]] = cir.load %[[P1]] : !cir.ptr<!s64i>, !s64i
 // CHECK:        cir.call @takes_self_flat(%[[F0]], %[[F1]]) : (!s64i, !s64i) -> ()
+
+// Same origTy == flatTy case, but the operand is a struct value with no source
+// alloca (a constant): each field is extracted from the value directly.
+
+cir.func @caller_self_flat_const() attributes { test_classify = #passthrough } {
+  %v = cir.const #cir.zero : !rec_coerced_two
+  cir.call @takes_self_flat(%v) : (!rec_coerced_two) -> ()
+  cir.return
+}
+
+// CHECK:      cir.func{{.*}} @caller_self_flat_const()
+// CHECK:        %[[V:.*]] = cir.const #cir.zero : !rec_anon_struct
+// CHECK:        %[[G0:.*]] = cir.extract_member %[[V]][0] : !rec_anon_struct -> !s64i
+// CHECK:        %[[G1:.*]] = cir.extract_member %[[V]][1] : !rec_anon_struct -> !s64i
+// CHECK:        cir.call @takes_self_flat(%[[G0]], %[[G1]]) : (!s64i, !s64i) -> ()
 
 }
