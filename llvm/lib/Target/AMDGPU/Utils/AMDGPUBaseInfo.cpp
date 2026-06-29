@@ -699,7 +699,8 @@ CanBeVOPD getCanBeVOPD(unsigned Opc, unsigned EncodingFamily, bool VOPD3) {
   const VOPDComponentInfo *Info = getVOPDComponentHelper(Opc);
   if (!Info)
     return {false, false};
-  unsigned Key = (Info->VOPDOp << 5) | (EncodingFamily << 1) | (VOPD3 ? 1u : 0u);
+  unsigned Key =
+      (Info->VOPDOp << 5) | (EncodingFamily << 1) | (VOPD3 ? 1u : 0u);
   const VOPDXYInfo *XYInfo = getVOPDXYInfo(Key);
   if (!XYInfo)
     return {false, false};
