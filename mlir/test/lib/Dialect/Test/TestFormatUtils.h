@@ -225,6 +225,16 @@ mlir::ParseResult parseDummySuccessorRef(mlir::OpAsmParser &parser,
 void printDummySuccessorRef(mlir::OpAsmPrinter &printer, mlir::Operation *op,
                             mlir::Block *successor);
 
+//===----------------------------------------------------------------------===//
+// CustomDirectiveReflectBoundsOverflow
+//===----------------------------------------------------------------------===//
+
+mlir::ParseResult parseReflectBoundsOverflow(mlir::OpAsmParser &parser,
+                                             mlir::IntegerAttr &overflow);
+
+void printReflectBoundsOverflow(mlir::OpAsmPrinter &printer, mlir::Operation *,
+                                mlir::IntegerAttr overflow);
+
 } // end namespace test
 
 #endif // MLIR_TESTFORMATUTILS_H

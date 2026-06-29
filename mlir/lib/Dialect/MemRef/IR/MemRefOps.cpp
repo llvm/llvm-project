@@ -3753,20 +3753,21 @@ void SubViewOp::inferStridedMetadataRanges(
   // Compute the new offset, strides and sizes.
   ConstantIntRanges offset = sourceRange.getOffsets()[0];
   SmallVector<ConstantIntRanges> strides, sizes;
+  // Preserve nowrap proofs while combining metadata arithmetic.
 
   for (size_t i = 0, e = droppedDims.size(); i < e; ++i) {
     bool dropped = droppedDims.test(i);
     // Compute the new offset.
-    ConstantIntRanges off =
-        intrange::inferMul({offsetOperands[i].getValue(), srcStrides[i]});
-    offset = intrange::inferAdd({offset, off});
+    ConstantIntRanges off = intrange::inferMulWithOverflowFlags(
+        {offsetOperands[i].getValue(), srcStrides[i]});
+    offset = intrange::inferAddWithOverflowFlags({offset, off});
 
     // Skip dropped dimensions.
     if (dropped)
       continue;
     // Multiply the strides.
-    strides.push_back(
-        intrange::inferMul({stridesOperands[i].getValue(), srcStrides[i]}));
+    strides.push_back(intrange::inferMulWithOverflowFlags(
+        {stridesOperands[i].getValue(), srcStrides[i]}));
     // Get the sizes.
     sizes.push_back(sizeOperands[i].getValue());
   }

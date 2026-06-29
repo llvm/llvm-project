@@ -1,7 +1,7 @@
 // RUN: mlir-opt --int-range-optimizations %s | FileCheck %s
 
 // CHECK-LABEL: func @affine_apply_constant
-// CHECK: test.reflect_bounds {smax = 42 : index, smin = 42 : index, umax = 42 : index, umin = 42 : index}
+// CHECK: test.reflect_bounds {smax = 42 : index, smin = 42 : index, umax = 42 : index, umin = 42 : index} overflow<none>
 func.func @affine_apply_constant() -> index {
   %0 = affine.apply affine_map<() -> (42)>()
   %1 = test.reflect_bounds %0 : index
@@ -9,7 +9,7 @@ func.func @affine_apply_constant() -> index {
 }
 
 // CHECK-LABEL: func @affine_apply_add
-// CHECK: test.reflect_bounds {smax = 15 : index, smin = 6 : index, umax = 15 : index, umin = 6 : index}
+// CHECK: test.reflect_bounds {smax = 15 : index, smin = 6 : index, umax = 15 : index, umin = 6 : index} overflow<nsw, nuw>
 func.func @affine_apply_add() -> index {
   %d0 = test.with_bounds { umin = 2 : index, umax = 5 : index,
                            smin = 2 : index, smax = 5 : index } : index
@@ -20,8 +20,22 @@ func.func @affine_apply_add() -> index {
   func.return %1 : index
 }
 
+// CHECK-LABEL: func @affine_apply_add_overflow
+// CHECK: test.reflect_bounds {smax = 16 : index, smin = 7 : index, umax = 16 : index, umin = 7 : index} overflow<nsw, nuw>
+func.func @affine_apply_add_overflow() -> index {
+  %d0 = test.with_bounds { umin = 2 : index, umax = 5 : index,
+                           smin = 2 : index, smax = 5 : index } : index
+  %d1 = test.with_bounds { umin = 4 : index, umax = 10 : index,
+                           smin = 4 : index, smax = 10 : index } : index
+  %c1 = arith.constant 1 : index
+  %0 = affine.apply affine_map<(d0, d1) -> (d0 + d1)>(%d0, %d1)
+  %1 = arith.addi %0, %c1 overflow<nuw> : index
+  %2 = test.reflect_bounds %1 : index
+  func.return %2 : index
+}
+
 // CHECK-LABEL: func @affine_apply_mul
-// CHECK: test.reflect_bounds {smax = 30 : index, smin = 12 : index, umax = 30 : index, umin = 12 : index}
+// CHECK: test.reflect_bounds {smax = 30 : index, smin = 12 : index, umax = 30 : index, umin = 12 : index} overflow<nsw, nuw>
 func.func @affine_apply_mul() -> index {
   %d0 = test.with_bounds { umin = 2 : index, umax = 5 : index,
                            smin = 2 : index, smax = 5 : index } : index
@@ -33,7 +47,7 @@ func.func @affine_apply_mul() -> index {
 }
 
 // CHECK-LABEL: func @affine_apply_floordiv
-// CHECK: test.reflect_bounds {smax = 2 : index, smin = 1 : index, umax = 2 : index, umin = 1 : index}
+// CHECK: test.reflect_bounds {smax = 2 : index, smin = 1 : index, umax = 2 : index, umin = 1 : index} overflow<none>
 func.func @affine_apply_floordiv() -> index {
   %d0 = test.with_bounds { umin = 5 : index, umax = 10 : index,
                            smin = 5 : index, smax = 10 : index } : index
@@ -43,7 +57,7 @@ func.func @affine_apply_floordiv() -> index {
 }
 
 // CHECK-LABEL: func @affine_apply_ceildiv
-// CHECK: test.reflect_bounds {smax = 3 : index, smin = 2 : index, umax = 3 : index, umin = 2 : index}
+// CHECK: test.reflect_bounds {smax = 3 : index, smin = 2 : index, umax = 3 : index, umin = 2 : index} overflow<none>
 func.func @affine_apply_ceildiv() -> index {
   %d0 = test.with_bounds { umin = 5 : index, umax = 10 : index,
                            smin = 5 : index, smax = 10 : index } : index
@@ -53,7 +67,7 @@ func.func @affine_apply_ceildiv() -> index {
 }
 
 // CHECK-LABEL: func @affine_apply_mod
-// CHECK: test.reflect_bounds {smax = 3 : index, smin = 0 : index, umax = 3 : index, umin = 0 : index}
+// CHECK: test.reflect_bounds {smax = 3 : index, smin = 0 : index, umax = 3 : index, umin = 0 : index} overflow<none>
 func.func @affine_apply_mod() -> index {
   %d0 = test.with_bounds { umin = 5 : index, umax = 27 : index,
                            smin = 5 : index, smax = 27 : index } : index
@@ -63,7 +77,7 @@ func.func @affine_apply_mod() -> index {
 }
 
 // CHECK-LABEL: func @affine_apply_complex
-// CHECK: test.reflect_bounds {smax = 13 : index, smin = 5 : index, umax = 13 : index, umin = 5 : index}
+// CHECK: test.reflect_bounds {smax = 13 : index, smin = 5 : index, umax = 13 : index, umin = 5 : index} overflow<nsw, nuw>
 func.func @affine_apply_complex() -> index {
   %d0 = test.with_bounds { umin = 10 : index, umax = 20 : index,
                            smin = 10 : index, smax = 20 : index } : index
@@ -76,7 +90,7 @@ func.func @affine_apply_complex() -> index {
 }
 
 // CHECK-LABEL: func @affine_apply_with_symbols
-// CHECK: test.reflect_bounds {smax = 24 : index, smin = 9 : index, umax = 24 : index, umin = 9 : index}
+// CHECK: test.reflect_bounds {smax = 24 : index, smin = 9 : index, umax = 24 : index, umin = 9 : index} overflow<nsw, nuw>
 func.func @affine_apply_with_symbols() -> index {
   %d0 = test.with_bounds { umin = 2 : index, umax = 5 : index,
                            smin = 2 : index, smax = 5 : index } : index
@@ -89,7 +103,7 @@ func.func @affine_apply_with_symbols() -> index {
 }
 
 // CHECK-LABEL: func @affine_apply_sub
-// CHECK: test.reflect_bounds {smax = 1 : index, smin = -8 : index
+// CHECK: test.reflect_bounds {smax = 1 : index, smin = -8 : index, umax = -1 : index, umin = 0 : index} overflow<nsw>
 func.func @affine_apply_sub() -> index {
   %d0 = test.with_bounds { umin = 2 : index, umax = 5 : index,
                            smin = 2 : index, smax = 5 : index } : index
@@ -102,7 +116,7 @@ func.func @affine_apply_sub() -> index {
 }
 
 // CHECK-LABEL: func @affine_apply_mul_constant
-// CHECK: test.reflect_bounds {smax = 20 : index, smin = 8 : index, umax = 20 : index, umin = 8 : index}
+// CHECK: test.reflect_bounds {smax = 20 : index, smin = 8 : index, umax = 20 : index, umin = 8 : index} overflow<nsw, nuw>
 func.func @affine_apply_mul_constant() -> index {
   %d0 = test.with_bounds { umin = 2 : index, umax = 5 : index,
                            smin = 2 : index, smax = 5 : index } : index
@@ -113,7 +127,7 @@ func.func @affine_apply_mul_constant() -> index {
 }
 
 // CHECK-LABEL: func @affine_apply_mod_small_range
-// CHECK: test.reflect_bounds {smax = 2 : index, smin = 1 : index, umax = 2 : index, umin = 1 : index}
+// CHECK: test.reflect_bounds {smax = 2 : index, smin = 1 : index, umax = 2 : index, umin = 1 : index} overflow<none>
 func.func @affine_apply_mod_small_range() -> index {
   %d0 = test.with_bounds { umin = 5 : index, umax = 6 : index,
                            smin = 5 : index, smax = 6 : index } : index
@@ -124,7 +138,7 @@ func.func @affine_apply_mod_small_range() -> index {
 }
 
 // CHECK-LABEL: func @affine_apply_mod_already_in_range
-// CHECK: test.reflect_bounds {smax = 7 : index, smin = 5 : index, umax = 7 : index, umin = 5 : index}
+// CHECK: test.reflect_bounds {smax = 7 : index, smin = 5 : index, umax = 7 : index, umin = 5 : index} overflow<none>
 func.func @affine_apply_mod_already_in_range() -> index {
   %d0 = test.with_bounds { umin = 5 : index, umax = 7 : index,
                            smin = 5 : index, smax = 7 : index } : index
@@ -135,7 +149,7 @@ func.func @affine_apply_mod_already_in_range() -> index {
 }
 
 // CHECK-LABEL: func @affine_apply_mod_variable_divisor
-// CHECK: test.reflect_bounds {smax = 4 : index, smin = 0 : index, umax = 4 : index, umin = 0 : index}
+// CHECK: test.reflect_bounds {smax = 4 : index, smin = 0 : index, umax = 4 : index, umin = 0 : index} overflow<none>
 func.func @affine_apply_mod_variable_divisor() -> index {
   %d0 = test.with_bounds { umin = 10 : index, umax = 20 : index,
                            smin = 10 : index, smax = 20 : index } : index
@@ -148,7 +162,7 @@ func.func @affine_apply_mod_variable_divisor() -> index {
 }
 
 // CHECK-LABEL: func @affine_apply_mod_cross_boundary
-// CHECK: test.reflect_bounds {smax = 7 : index, smin = 0 : index, umax = 7 : index, umin = 0 : index}
+// CHECK: test.reflect_bounds {smax = 7 : index, smin = 0 : index, umax = 7 : index, umin = 0 : index} overflow<none>
 func.func @affine_apply_mod_cross_boundary() -> index {
   %d0 = test.with_bounds { umin = 14 : index, umax = 17 : index,
                            smin = 14 : index, smax = 17 : index } : index
@@ -160,7 +174,7 @@ func.func @affine_apply_mod_cross_boundary() -> index {
 }
 
 // CHECK-LABEL: func @affine_apply_mod_negative_dividend
-// CHECK: test.reflect_bounds {smax = 3 : index, smin = 0 : index, umax = 3 : index, umin = 0 : index}
+// CHECK: test.reflect_bounds {smax = 3 : index, smin = 0 : index, umax = 3 : index, umin = 0 : index} overflow<none>
 func.func @affine_apply_mod_negative_dividend() -> index {
   %d0 = test.with_bounds { umin = 0 : index, umax = 2 : index,
                            smin = -2 : index, smax = 2 : index } : index

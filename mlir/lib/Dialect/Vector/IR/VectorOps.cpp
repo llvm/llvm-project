@@ -8224,7 +8224,11 @@ void StepOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
   unsigned bitwidth = ConstantIntRanges::getStorageBitwidth(resultType);
   APInt zero(bitwidth, 0);
   APInt high(bitwidth, resultType.getDimSize(0) - 1);
-  ConstantIntRanges result = {zero, high, zero, high};
+  // vector.step produces the lane sequence [0, N-1]. That range is
+  // non-negative in both signed/unsigned views, so both no-wrap flags hold.
+  ConstantIntRanges result = {zero, high, zero, high,
+                              intrange::OverflowFlags::Nsw |
+                                  intrange::OverflowFlags::Nuw};
   setResultRanges(getResult(), result);
 }
 

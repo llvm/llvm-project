@@ -24,6 +24,7 @@
 
 #include <iterator>
 #include <optional>
+#include <utility>
 
 using namespace mlir;
 
@@ -100,7 +101,9 @@ mlir::intrange::inferIndexOp(const InferRangeFn &inferFn,
   bool truncEqual = false;
   switch (mode) {
   case intrange::CmpMode::Both:
-    truncEqual = (thirtyTwo == sixtyFourAsThirtyTwo);
+    // Overflow flags are auxiliary guarantees and should not decide whether
+    // the 64-bit result is a truncation-compatible match.
+    truncEqual = thirtyTwo.hasSameBounds(sixtyFourAsThirtyTwo);
     break;
   case intrange::CmpMode::Signed:
     truncEqual = (thirtyTwo.smin() == sixtyFourAsThirtyTwo.smin() &&
@@ -181,9 +184,147 @@ ConstantIntRanges mlir::intrange::truncRange(const ConstantIntRanges &range,
 // Addition
 //===----------------------------------------------------------------------===//
 
+template <typename Op>
+static bool isOverflowFree(const APInt &lhs, const APInt &rhs, Op op) {
+  bool overflow = false;
+  (void)op(lhs, rhs, overflow);
+  return !overflow;
+}
+
+template <typename Op>
+static bool
+areAllPairsOverflowFree(ArrayRef<std::pair<const APInt *, const APInt *>> pairs,
+                        Op op) {
+  for (const auto &[lhs, rhs] : pairs) {
+    if (!isOverflowFree(*lhs, *rhs, op))
+      return false;
+  }
+  return true;
+}
+
+static intrange::OverflowFlags updateOverflowFlags(
+    ArrayRef<ConstantIntRanges> args, intrange::OverflowFlags declaredFlags,
+    function_ref<bool(ArrayRef<ConstantIntRanges>)> isSignedOverflowFree,
+    function_ref<bool(ArrayRef<ConstantIntRanges>)> isUnsignedOverflowFree) {
+  intrange::OverflowFlags flags = declaredFlags;
+  if (!any(flags & intrange::OverflowFlags::Nsw) && isSignedOverflowFree(args))
+    flags |= intrange::OverflowFlags::Nsw;
+  if (!any(flags & intrange::OverflowFlags::Nuw) &&
+      isUnsignedOverflowFree(args))
+    flags |= intrange::OverflowFlags::Nuw;
+  return flags;
+}
+
+static bool isSignedAddOverflowFree(ArrayRef<ConstantIntRanges> argRanges) {
+  const APInt &lhsMin = argRanges[0].smin();
+  const APInt &lhsMax = argRanges[0].smax();
+  const APInt &rhsMin = argRanges[1].smin();
+  const APInt &rhsMax = argRanges[1].smax();
+  // Signed add is monotone in both operands, so it is enough to check
+  // the interval endpoints to prove no signed wrap for the whole range.
+  return areAllPairsOverflowFree(
+      {{&lhsMin, &rhsMin}, {&lhsMax, &rhsMax}},
+      [](const APInt &lhs, const APInt &rhs, bool &overflow) {
+        return lhs.sadd_ov(rhs, overflow);
+      });
+}
+
+static bool isUnsignedAddOverflowFree(ArrayRef<ConstantIntRanges> argRanges) {
+  return isOverflowFree(argRanges[0].umax(), argRanges[1].umax(),
+                        [](const APInt &lhs, const APInt &rhs, bool &overflow) {
+                          return lhs.uadd_ov(rhs, overflow);
+                        });
+}
+
+static bool isSignedSubOverflowFree(ArrayRef<ConstantIntRanges> argRanges) {
+  const APInt &lhsMin = argRanges[0].smin();
+  const APInt &lhsMax = argRanges[0].smax();
+  const APInt &rhsMin = argRanges[1].smin();
+  const APInt &rhsMax = argRanges[1].smax();
+  // For lhs - rhs, the extrema occur at (lhsMin - rhsMax) and
+  // (lhsMax - rhsMin). If both are no-wrap, the full interval is no-wrap.
+  return areAllPairsOverflowFree(
+      {{&lhsMin, &rhsMax}, {&lhsMax, &rhsMin}},
+      [](const APInt &lhs, const APInt &rhs, bool &overflow) {
+        return lhs.ssub_ov(rhs, overflow);
+      });
+}
+
+static bool isUnsignedSubOverflowFree(ArrayRef<ConstantIntRanges> argRanges) {
+  return argRanges[0].umin().uge(argRanges[1].umax());
+}
+
+static bool isSignedMulOverflowFree(ArrayRef<ConstantIntRanges> argRanges) {
+  const APInt &lhsMin = argRanges[0].smin();
+  const APInt &lhsMax = argRanges[0].smax();
+  const APInt &rhsMin = argRanges[1].smin();
+  const APInt &rhsMax = argRanges[1].smax();
+  // Signed multiply is not monotone across sign changes, so conservatively
+  // require all four corner products to be no-wrap.
+  return areAllPairsOverflowFree(
+      {{&lhsMin, &rhsMin},
+       {&lhsMin, &rhsMax},
+       {&lhsMax, &rhsMin},
+       {&lhsMax, &rhsMax}},
+      [](const APInt &lhs, const APInt &rhs, bool &overflow) {
+        return lhs.smul_ov(rhs, overflow);
+      });
+}
+
+static bool isUnsignedMulOverflowFree(ArrayRef<ConstantIntRanges> argRanges) {
+  return isOverflowFree(argRanges[0].umax(), argRanges[1].umax(),
+                        [](const APInt &lhs, const APInt &rhs, bool &overflow) {
+                          return lhs.umul_ov(rhs, overflow);
+                        });
+}
+
+intrange::OverflowFlags mlir::intrange::inferOverflowFlagsForAdd(
+    ArrayRef<ConstantIntRanges> args, intrange::OverflowFlags declaredFlags) {
+  return updateOverflowFlags(args, declaredFlags, isSignedAddOverflowFree,
+                             isUnsignedAddOverflowFree);
+}
+
+intrange::OverflowFlags mlir::intrange::inferOverflowFlagsForSub(
+    ArrayRef<ConstantIntRanges> args, intrange::OverflowFlags declaredFlags) {
+  return updateOverflowFlags(args, declaredFlags, isSignedSubOverflowFree,
+                             isUnsignedSubOverflowFree);
+}
+
+intrange::OverflowFlags mlir::intrange::inferOverflowFlagsForMul(
+    ArrayRef<ConstantIntRanges> args, intrange::OverflowFlags declaredFlags) {
+  return updateOverflowFlags(args, declaredFlags, isSignedMulOverflowFree,
+                             isUnsignedMulOverflowFree);
+}
+
+ConstantIntRanges
+mlir::intrange::inferAddWithOverflowFlags(ArrayRef<ConstantIntRanges> args,
+                                          OverflowFlags declaredFlags) {
+  ConstantIntRanges range = inferAdd(args, declaredFlags);
+  OverflowFlags overflowFlags = inferOverflowFlagsForAdd(args, declaredFlags);
+  return range.withOverflowFlags(overflowFlags);
+}
+
+ConstantIntRanges
+mlir::intrange::inferSubWithOverflowFlags(ArrayRef<ConstantIntRanges> args,
+                                          OverflowFlags declaredFlags) {
+  ConstantIntRanges range = inferSub(args, declaredFlags);
+  OverflowFlags overflowFlags = inferOverflowFlagsForSub(args, declaredFlags);
+  return range.withOverflowFlags(overflowFlags);
+}
+
+ConstantIntRanges
+mlir::intrange::inferMulWithOverflowFlags(ArrayRef<ConstantIntRanges> args,
+                                          OverflowFlags declaredFlags) {
+  ConstantIntRanges range = inferMul(args, declaredFlags);
+  OverflowFlags overflowFlags = inferOverflowFlagsForMul(args, declaredFlags);
+  return range.withOverflowFlags(overflowFlags);
+}
+
 ConstantIntRanges
 mlir::intrange::inferAdd(ArrayRef<ConstantIntRanges> argRanges,
                          OverflowFlags ovfFlags) {
+  // `inferAdd` computes bounds only. Overflow flags are inferred separately via
+  // `inferOverflowFlagsForAdd` and attached by the op-specific caller.
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
   ConstArithStdFn uadd = [=](const APInt &a,
@@ -217,6 +358,8 @@ mlir::intrange::inferAdd(ArrayRef<ConstantIntRanges> argRanges,
 ConstantIntRanges
 mlir::intrange::inferSub(ArrayRef<ConstantIntRanges> argRanges,
                          OverflowFlags ovfFlags) {
+  // `inferSub` computes bounds only. Overflow flags are inferred separately via
+  // `inferOverflowFlagsForSub` and attached by the op-specific caller.
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
   ConstArithStdFn usub = [=](const APInt &a,
@@ -249,6 +392,8 @@ mlir::intrange::inferSub(ArrayRef<ConstantIntRanges> argRanges,
 ConstantIntRanges
 mlir::intrange::inferMul(ArrayRef<ConstantIntRanges> argRanges,
                          OverflowFlags ovfFlags) {
+  // `inferMul` computes bounds only. Overflow flags are inferred separately via
+  // `inferOverflowFlagsForMul` and attached by the op-specific caller.
   const ConstantIntRanges &lhs = argRanges[0], &rhs = argRanges[1];
 
   ConstArithStdFn umul = [=](const APInt &a,
@@ -738,10 +883,16 @@ mlir::intrange::inferShapedDimOpInterface(ShapedDimOpInterface op,
       ConstantIntRanges::getStorageBitwidth(op->getResult(0).getType());
   APInt zero = APInt::getZero(width);
   APInt typeMax = APInt::getSignedMaxValue(width);
+  // Shaped dimensions are extents and therefore non-negative. We keep bound
+  // construction (`fromSigned` / `constant`) separate from overflow semantics
+  // and attach the no-wrap guarantees here at this op-specific inference site.
+  auto makeDimRange = [&](const ConstantIntRanges &range) {
+    return range.withOverflowFlags(OverflowFlags::Nsw | OverflowFlags::Nuw);
+  };
 
   auto shapedTy = cast<ShapedType>(op.getShapedValue().getType());
   if (!shapedTy.hasRank())
-    return ConstantIntRanges::fromSigned(zero, typeMax);
+    return makeDimRange(ConstantIntRanges::fromSigned(zero, typeMax));
 
   int64_t rank = shapedTy.getRank();
   int64_t minDim = 0;
@@ -763,11 +914,16 @@ mlir::intrange::inferShapedDimOpInterface(ShapedDimOpInterface op,
     int64_t length = shapedTy.getDimSize(i);
 
     if (ShapedType::isDynamic(length))
-      joinResult(ConstantIntRanges::fromSigned(zero, typeMax));
+      joinResult(makeDimRange(ConstantIntRanges::fromSigned(zero, typeMax)));
     else
-      joinResult(ConstantIntRanges::constant(APInt(width, length)));
+      joinResult(
+          makeDimRange(ConstantIntRanges::constant(APInt(width, length))));
   }
-  return result.value_or(ConstantIntRanges::fromSigned(zero, typeMax));
+  // `rangeUnion` keeps only flags common to all alternatives. Since every
+  // branch is decorated with the same dim no-wrap flags, the final result
+  // preserves those guarantees.
+  return result.value_or(
+      makeDimRange(ConstantIntRanges::fromSigned(zero, typeMax)));
 }
 
 //===----------------------------------------------------------------------===//
@@ -811,7 +967,8 @@ mlir::intrange::inferAffineExpr(AffineExpr expr,
         inferAffineExpr(binExpr.getLHS(), dimRanges, symbolRanges);
     ConstantIntRanges rhs =
         inferAffineExpr(binExpr.getRHS(), dimRanges, symbolRanges);
-    return inferAdd({lhs, rhs}, OverflowFlags::Nsw);
+    OverflowFlags declaredFlags = OverflowFlags::Nsw;
+    return inferAddWithOverflowFlags({lhs, rhs}, declaredFlags);
   }
   case AffineExprKind::Mul: {
     auto binExpr = cast<AffineBinaryOpExpr>(expr);
@@ -819,7 +976,8 @@ mlir::intrange::inferAffineExpr(AffineExpr expr,
         inferAffineExpr(binExpr.getLHS(), dimRanges, symbolRanges);
     ConstantIntRanges rhs =
         inferAffineExpr(binExpr.getRHS(), dimRanges, symbolRanges);
-    return inferMul({lhs, rhs}, OverflowFlags::Nsw);
+    OverflowFlags declaredFlags = OverflowFlags::Nsw;
+    return inferMulWithOverflowFlags({lhs, rhs}, declaredFlags);
   }
   case AffineExprKind::Mod: {
     auto binExpr = cast<AffineBinaryOpExpr>(expr);

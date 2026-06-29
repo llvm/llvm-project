@@ -13,36 +13,36 @@ func.func @launch_func(%arg0 : index) {
   gpu.launch blocks(%block_id_x, %block_id_y, %block_id_z) in (%grid_dim_x = %0, %grid_dim_y = %1, %grid_dim_z = %arg0)
       threads(%thread_id_x, %thread_id_y, %thread_id_z) in (%block_dim_x = %arg0, %block_dim_y = %0, %block_dim_z = %1) {
 
-    // CHECK: test.reflect_bounds {smax = 5 : index, smin = 3 : index, umax = 5 : index, umin = 3 : index}
-    // CHECK: test.reflect_bounds {smax = 11 : index, smin = 7 : index, umax = 11 : index, umin = 7 : index}
-    // CHECK: test.reflect_bounds {smax = 4294967295 : index, smin = 1 : index, umax = 4294967295 : index, umin = 1 : index}
+    // CHECK: test.reflect_bounds {smax = 5 : index, smin = 3 : index, umax = 5 : index, umin = 3 : index} overflow<nsw, nuw>
+    // CHECK: test.reflect_bounds {smax = 11 : index, smin = 7 : index, umax = 11 : index, umin = 7 : index} overflow<nsw, nuw>
+    // CHECK: test.reflect_bounds {smax = 4294967295 : index, smin = 1 : index, umax = 4294967295 : index, umin = 1 : index} overflow<nsw, nuw>
     %grid_dim_x0 = test.reflect_bounds %grid_dim_x : index
     %grid_dim_y0 = test.reflect_bounds %grid_dim_y : index
     %grid_dim_z0 = test.reflect_bounds %grid_dim_z : index
 
-    // CHECK: test.reflect_bounds {smax = 4 : index, smin = 0 : index, umax = 4 : index, umin = 0 : index}
-    // CHECK: test.reflect_bounds {smax = 10 : index, smin = 0 : index, umax = 10 : index, umin = 0 : index}
-    // CHECK: test.reflect_bounds {smax = 4294967294 : index, smin = 0 : index, umax = 4294967294 : index, umin = 0 : index}
+    // CHECK: test.reflect_bounds {smax = 4 : index, smin = 0 : index, umax = 4 : index, umin = 0 : index} overflow<nsw, nuw>
+    // CHECK: test.reflect_bounds {smax = 10 : index, smin = 0 : index, umax = 10 : index, umin = 0 : index} overflow<nsw, nuw>
+    // CHECK: test.reflect_bounds {smax = 4294967294 : index, smin = 0 : index, umax = 4294967294 : index, umin = 0 : index} overflow<nsw, nuw>
     %block_id_x0 = test.reflect_bounds %block_id_x : index
     %block_id_y0 = test.reflect_bounds %block_id_y : index
     %block_id_z0 = test.reflect_bounds %block_id_z : index
 
-    // CHECK: test.reflect_bounds {smax = 4294967295 : index, smin = 1 : index, umax = 4294967295 : index, umin = 1 : index}
-    // CHECK: test.reflect_bounds {smax = 5 : index, smin = 3 : index, umax = 5 : index, umin = 3 : index}
-    // CHECK: test.reflect_bounds {smax = 11 : index, smin = 7 : index, umax = 11 : index, umin = 7 : index}
+    // CHECK: test.reflect_bounds {smax = 4294967295 : index, smin = 1 : index, umax = 4294967295 : index, umin = 1 : index} overflow<nsw, nuw>
+    // CHECK: test.reflect_bounds {smax = 5 : index, smin = 3 : index, umax = 5 : index, umin = 3 : index} overflow<nsw, nuw>
+    // CHECK: test.reflect_bounds {smax = 11 : index, smin = 7 : index, umax = 11 : index, umin = 7 : index} overflow<nsw, nuw>
     %block_dim_x0 = test.reflect_bounds %block_dim_x : index
     %block_dim_y0 = test.reflect_bounds %block_dim_y : index
     %block_dim_z0 = test.reflect_bounds %block_dim_z : index
 
-    // CHECK: test.reflect_bounds {smax = 4294967294 : index, smin = 0 : index, umax = 4294967294 : index, umin = 0 : index}
-    // CHECK: test.reflect_bounds {smax = 4 : index, smin = 0 : index, umax = 4 : index, umin = 0 : index}
-    // CHECK: test.reflect_bounds {smax = 10 : index, smin = 0 : index, umax = 10 : index, umin = 0 : index}
+    // CHECK: test.reflect_bounds {smax = 4294967294 : index, smin = 0 : index, umax = 4294967294 : index, umin = 0 : index} overflow<nsw, nuw>
+    // CHECK: test.reflect_bounds {smax = 4 : index, smin = 0 : index, umax = 4 : index, umin = 0 : index} overflow<nsw, nuw>
+    // CHECK: test.reflect_bounds {smax = 10 : index, smin = 0 : index, umax = 10 : index, umin = 0 : index} overflow<nsw, nuw>
     %thread_id_x0 = test.reflect_bounds %thread_id_x : index
     %thread_id_y0 = test.reflect_bounds %thread_id_y : index
     %thread_id_z0 = test.reflect_bounds %thread_id_z : index
 
     // The launch bounds are not constant, and so this can't infer anything
-    // CHECK: test.reflect_bounds {smax = 4294967294 : index, smin = 0 : index, umax = 4294967294 : index, umin = 0 : index}
+    // CHECK: test.reflect_bounds {smax = 4294967294 : index, smin = 0 : index, umax = 4294967294 : index, umin = 0 : index} overflow<nsw, nuw>
     %thread_id_op = gpu.thread_id y
     %thread_id_op0 = test.reflect_bounds %thread_id_op : index
     gpu.terminator

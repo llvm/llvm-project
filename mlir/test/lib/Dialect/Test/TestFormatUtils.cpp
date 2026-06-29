@@ -8,6 +8,7 @@
 
 #include "TestFormatUtils.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/Interfaces/InferIntRangeInterface.h"
 
 using namespace mlir;
 using namespace test;
@@ -404,3 +405,76 @@ ParseResult test::parseDummySuccessorRef(OpAsmParser &parser,
 
 void test::printDummySuccessorRef(OpAsmPrinter &printer, Operation *op,
                                   Block *successor) { /* do nothing */ }
+
+//===----------------------------------------------------------------------===//
+// CustomDirectiveReflectBoundsOverflow
+//===----------------------------------------------------------------------===//
+
+ParseResult test::parseReflectBoundsOverflow(OpAsmParser &parser,
+                                             IntegerAttr &overflow) {
+  intrange::OverflowFlags flags = intrange::OverflowFlags::None;
+  if (failed(parser.parseOptionalKeyword("overflow"))) {
+    overflow = parser.getBuilder().getUI32IntegerAttr(
+        static_cast<uint32_t>(intrange::OverflowFlags::None));
+    return success();
+  }
+
+  if (parser.parseLess())
+    return failure();
+
+  auto parseOverflowFlag = [&](bool allowNone) -> ParseResult {
+    if (succeeded(parser.parseOptionalKeyword("nsw"))) {
+      flags |= intrange::OverflowFlags::Nsw;
+      return success();
+    }
+    if (succeeded(parser.parseOptionalKeyword("nuw"))) {
+      flags |= intrange::OverflowFlags::Nuw;
+      return success();
+    }
+    if (allowNone && succeeded(parser.parseOptionalKeyword("none")))
+      return success();
+    return parser.emitError(parser.getCurrentLocation())
+           << "expected overflow flag 'none', 'nsw', or 'nuw'";
+  };
+
+  if (failed(parseOverflowFlag(/*allowNone=*/true)))
+    return failure();
+
+  while (flags != intrange::OverflowFlags::None &&
+         succeeded(parser.parseOptionalComma())) {
+    if (failed(parseOverflowFlag(/*allowNone=*/false)))
+      return failure();
+  }
+
+  if (parser.parseGreater())
+    return failure();
+
+  overflow =
+      parser.getBuilder().getUI32IntegerAttr(static_cast<uint32_t>(flags));
+  return success();
+}
+
+void test::printReflectBoundsOverflow(OpAsmPrinter &printer, Operation *,
+                                      IntegerAttr overflow) {
+  intrange::OverflowFlags flags = intrange::OverflowFlags::None;
+  if (overflow)
+    flags = static_cast<intrange::OverflowFlags>(
+        overflow.getValue().getZExtValue());
+
+  printer << " overflow<";
+  bool emitted = false;
+  auto emitOverflowFlag = [&](intrange::OverflowFlags flag,
+                              StringLiteral keyword) {
+    if ((flags & flag) == intrange::OverflowFlags::None)
+      return;
+    if (emitted)
+      printer << ", ";
+    printer << keyword;
+    emitted = true;
+  };
+  emitOverflowFlag(intrange::OverflowFlags::Nsw, "nsw");
+  emitOverflowFlag(intrange::OverflowFlags::Nuw, "nuw");
+  if (!emitted)
+    printer << "none";
+  printer << '>';
+}

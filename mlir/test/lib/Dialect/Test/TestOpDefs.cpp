@@ -920,7 +920,10 @@ LogicalResult TestWithBoundsOp::verify() {
 
 void TestWithBoundsOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                          SetIntRangeFn setResultRanges) {
-  setResultRanges(getResult(), {getUmin(), getUmax(), getSmin(), getSmax()});
+  setResultRanges(getResult(),
+                  ConstantIntRanges(getUmin(), getUmax(), getSmin(), getSmax())
+                      .withOverflowFlags(intrange::OverflowFlags::Nsw |
+                                         intrange::OverflowFlags::Nuw));
 }
 
 //===----------------------------------------------------------------------===//
@@ -964,7 +967,10 @@ void TestWithBoundsRegionOp::print(OpAsmPrinter &p) {
 void TestWithBoundsRegionOp::inferResultRanges(
     ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRanges) {
   Value arg = getRegion().getArgument(0);
-  setResultRanges(arg, {getUmin(), getUmax(), getSmin(), getSmax()});
+  setResultRanges(arg,
+                  ConstantIntRanges(getUmin(), getUmax(), getSmin(), getSmax())
+                      .withOverflowFlags(intrange::OverflowFlags::Nsw |
+                                         intrange::OverflowFlags::Nuw));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1005,6 +1011,8 @@ void TestReflectBoundsOp::inferResultRanges(
   setUmaxAttr(b.getIntegerAttr(uIntTy, range.umax()));
   setSminAttr(b.getIntegerAttr(sIntTy, range.smin()));
   setSmaxAttr(b.getIntegerAttr(sIntTy, range.smax()));
+  setOverflowAttr(
+      b.getUI32IntegerAttr(static_cast<uint32_t>(range.getOverflowFlags())));
   setResultRanges(getResult(), range);
 }
 

@@ -85,7 +85,7 @@ func.func @no_analysis_of_loop_variants() -> index {
 }
 
 // CHECK-LABEL: func @region_args
-// CHECK: test.reflect_bounds {smax = 4 : index, smin = 3 : index, umax = 4 : index, umin = 3 : index}
+// CHECK: test.reflect_bounds {smax = 4 : index, smin = 3 : index, umax = 4 : index, umin = 3 : index} overflow<nsw, nuw>
 func.func @region_args() {
   test.with_bounds_region { umin = 3 : index, umax = 4 : index,
                             smin = 3 : index, smax = 4 : index } %arg0 : index {
@@ -148,7 +148,7 @@ func.func @dont_propagate_across_infinite_loop() -> index {
   ^bb0(%i1: index):
     scf.yield
   }
-  // CHECK: %[[ret:.*]] = test.reflect_bounds %[[loopRes]] : index
+  // CHECK: %[[ret:.*]] = test.reflect_bounds overflow<none> %[[loopRes]] : index
   %2 = test.reflect_bounds %1 : index
   // CHECK: return %[[ret]]
   return %2 : index
