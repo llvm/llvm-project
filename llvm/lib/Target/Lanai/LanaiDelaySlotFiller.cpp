@@ -139,6 +139,10 @@ bool FillerImpl::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
       // Record the filler instruction that filled the delay slot.
       // The instruction after it will be visited in the next iteration.
       LastFiller = ++I;
+      // RET has 2 delay slots, so we need to advance past the second filler
+      // too.
+      if (InstrWithSlot->getOpcode() == Lanai::RET)
+        ++LastFiller;
 
       // Bundle the delay slot filler to InstrWithSlot so that the machine
       // verifier doesn't expect this instruction to be a terminator.
