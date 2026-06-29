@@ -2387,6 +2387,9 @@ module std [system] {
       module transform_reduce {
         header "__pstl/cpu_algos/transform_reduce.h"
       }
+      module transform_scan {
+        header "__pstl/cpu_algos/transform_scan.h"
+      }
     }
     module dispatch           { header "__pstl/dispatch.h" }
     module handle_exception   { header "__pstl/handle_exception.h" }
