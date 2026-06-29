@@ -472,6 +472,8 @@ public:
   std::optional<int64_t> identifyObject(const void *Ptr) {
     return Allocator.identifyObject(Ptr);
   }
+
+  size_t getBytesAllocated() const { return Allocator.getBytesAllocated(); }
 };
 
 } // end namespace llvm
