@@ -63,7 +63,9 @@ elif config.lto_supported:
 else:
     config.unsupported = True
 
-default_ubsan_opts = list(config.default_sanitizer_opts) if config.default_sanitizer_opts else []
+default_ubsan_opts = (
+    list(config.default_sanitizer_opts) if config.default_sanitizer_opts else []
+)
 default_ubsan_opts.append("print_summary=1")
 default_ubsan_opts.append("report_error_type=1")
 config.environment["UBSAN_OPTIONS"] = ":".join(default_ubsan_opts)
