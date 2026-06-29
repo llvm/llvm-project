@@ -43,14 +43,14 @@ entry:
 ; M64: subq  %rax, %rsp
 ; M64: movq  %rsp, %rax
 
-; W64: movabsq $15, %rax
+; W64: movl $15, %eax
 ; W64: addq  %rcx, %rax
 ; W64: andq  $-16, %rax
 ; W64: callq __chkstk
 ; W64: subq  %rax, %rsp
 ; W64: leaq  48(%rsp), %rax
 
-; L64: movabsq $15, %rax
+; L64: movl $15, %eax
 ; L64: addq  %rcx, %rax
 ; L64: andq  $-16, %rax
 ; L64: movabsq $__chkstk, %r11
@@ -104,7 +104,7 @@ entry:
 ; M64: andq  $-128, [[R2]]
 ; M64: movq  [[R2]], %rsp
 
-; W64: movabsq $142, %rax
+; W64: movl $142, %eax
 ; W64: addq  %rcx, %rax
 ; W64: andq  $-16, %rax
 ; W64: callq __chkstk
@@ -137,7 +137,7 @@ entry:
 
 define void @two_allocas(i64 %a, i64 %b) nounwind {
 ; W64-LABEL: two_allocas:
-; W64:       movabsq $15, %rax
+; W64:       movl $15, %eax
 ; W64-NEXT:  addq %rcx, %rax
 ; W64-NEXT:  andq $-16, %rax
 ; W64-NEXT:  callq __chkstk
@@ -145,7 +145,7 @@ define void @two_allocas(i64 %a, i64 %b) nounwind {
 ; W64-NEXT:  leaq 32(%rsp), [[P:%r[a-z0-9]+]]
 ; W64:       movq [[P]], %rcx
 ; W64-NEXT:  callq use
-; W64:       movabsq $15, %rax
+; W64:       movl $15, %eax
 ; W64-NEXT:  addq %rsi, %rax
 ; W64-NEXT:  andq $-16, %rax
 ; W64-NEXT:  callq __chkstk
@@ -166,14 +166,14 @@ entry:
 
 define void @two_allocas_aligned(i64 %a, i64 %b) nounwind {
 ; W64-LABEL: two_allocas_aligned:
-; W64:       movabsq $142, %rax
+; W64:       movl $142, %eax
 ; W64-NEXT:  addq %rcx, %rax
 ; W64-NEXT:  andq $-16, %rax
 ; W64-NEXT:  callq __chkstk
 ; W64-NEXT:  subq %rax, %rsp
 ; W64-NEXT:  leaq 159(%rsp), [[P:%r[a-z0-9]+]]
 ; W64-NEXT:  andq $-128, [[P]]
-; W64:       movabsq $15, %rax
+; W64:       movl $15, %eax
 ; W64-NEXT:  addq %rdx, %rax
 ; W64-NEXT:  andq $-16, %rax
 ; W64-NEXT:  callq __chkstk
@@ -196,7 +196,7 @@ entry:
 
 define i64 @aligned_stack_args(i64 %n, i64 %x, ptr %dummy) nounwind {
 ; W64-LABEL: aligned_stack_args:
-; W64:       movabsq $78, %rax
+; W64:       movl $78, %eax
 ; W64-NEXT:  addq  %rcx, %rax
 ; W64-NEXT:  andq  $-16, %rax
 ; W64-NEXT:  callq __chkstk

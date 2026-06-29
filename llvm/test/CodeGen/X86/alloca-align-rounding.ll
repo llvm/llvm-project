@@ -23,7 +23,7 @@ define void @foo2(i64 %h) {
 ; CHECK: andq $-32, %rax
 ; WIN64-LABEL: foo2
 ; WIN64: andq $-32, %rsp
-; WIN64: movabsq $46, %rax
+; WIN64: movl $46, %eax
 ; WIN64: addq %rcx, %rax
 ; WIN64: andq $-16, %rax
 ; WIN64: callq __chkstk

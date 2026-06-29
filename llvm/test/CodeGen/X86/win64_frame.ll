@@ -178,7 +178,7 @@ define i32 @f8(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e) "frame-pointer"="all" {
 ; WIN32-NEXT:    movl 352(%rbp), %esi
 ; WIN32-NEXT:    movl %ecx, %ecx
 ; WIN32-NEXT:    shlq $2, %rcx
-; WIN32-NEXT:    movabsq $15, %rax
+; WIN32-NEXT:    movl $15, %eax
 ; WIN32-NEXT:    addq %rcx, %rax
 ; WIN32-NEXT:    andq $-16, %rax
 ; WIN32-NEXT:    callq __chkstk

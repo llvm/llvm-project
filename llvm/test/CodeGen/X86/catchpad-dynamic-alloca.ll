@@ -32,7 +32,7 @@ catch.switch:
 }
 
 ; CHECK-LABEL: test1:
-; CHECK:      movabsq $15, %rax
+; CHECK:      movl $15, %eax
 ; CHECK-NEXT: addq    %rdx, %rax
 ; CHECK-NEXT: andq    $-16, %rax
 ; CHECK-NEXT: callq   __chkstk
@@ -77,7 +77,7 @@ catch.switch:
 }
 
 ; CHECK-LABEL: test2:
-; CHECK:      movabsq $15, %rax
+; CHECK:      movl $15, %eax
 ; CHECK-NEXT: addq    %rdx, %rax
 ; CHECK-NEXT: andq    $-16, %rax
 ; CHECK-NEXT: callq   __chkstk

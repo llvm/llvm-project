@@ -82,7 +82,7 @@ define void @alloc_func(i32 %n) {
 ; X64: movl $42, -4(%rbp)
 ; X64: movl $13, -12(%rbp)
 ; X64: movl %ecx, %ecx
-; X64: movabsq $15, %rax
+; X64: movl $15, %eax
 ; X64: addq %rcx, %rax
 ; X64: andq $-16, %rax
 ; X64: callq __chkstk

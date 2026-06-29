@@ -264,7 +264,8 @@ Register X86DynAllocaExpander::materializeWinAllocaAmount(
   uint64_t Addend = AlignmentSlack + RoundUpBias;
 
   Register AddendReg = MRI->createVirtualRegister(&X86::GR64RegClass);
-  BuildMI(*MBB, I, DL, TII->get(X86::MOV64ri), AddendReg).addImm(Addend);
+  BuildMI(*MBB, I, DL, TII->get(X86::getMOVriOpcode(true, Addend)), AddendReg)
+      .addImm(Addend);
 
   Register UnalignedAmountReg = MRI->createVirtualRegister(&X86::GR64RegClass);
   BuildMI(*MBB, I, DL, TII->get(X86::ADD64rr), UnalignedAmountReg)

@@ -183,7 +183,7 @@ define void @test_vla(i32 %n) nounwind ssp {
 ; MSVC-X64-NEXT:    movq %rax, -8(%rbp)
 ; MSVC-X64-NEXT:    movl %ecx, %ecx
 ; MSVC-X64-NEXT:    shlq $2, %rcx
-; MSVC-X64-NEXT:    movabsq $15, %rax
+; MSVC-X64-NEXT:    movl $15, %eax
 ; MSVC-X64-NEXT:    addq %rcx, %rax
 ; MSVC-X64-NEXT:    andq $-16, %rax
 ; MSVC-X64-NEXT:    callq __chkstk
@@ -246,7 +246,7 @@ define void @test_vla(i32 %n) nounwind ssp {
 ; MSVC-X64-O0-NEXT:    movl %ecx, %eax
 ; MSVC-X64-O0-NEXT:    # kill: def $rax killed $eax
 ; MSVC-X64-O0-NEXT:    shlq $2, %rax
-; MSVC-X64-O0-NEXT:    movabsq $15, %rcx
+; MSVC-X64-O0-NEXT:    movl $15, %ecx
 ; MSVC-X64-O0-NEXT:    addq %rcx, %rax
 ; MSVC-X64-O0-NEXT:    andq $-16, %rax
 ; MSVC-X64-O0-NEXT:    callq __chkstk
@@ -330,7 +330,7 @@ define void @test_vla_realign(i32 %n) nounwind ssp {
 ; MSVC-X64-NEXT:    movq %rax, 56(%rbx)
 ; MSVC-X64-NEXT:    movl %ecx, %ecx
 ; MSVC-X64-NEXT:    shlq $2, %rcx
-; MSVC-X64-NEXT:    movabsq $15, %rax
+; MSVC-X64-NEXT:    movl $15, %eax
 ; MSVC-X64-NEXT:    addq %rcx, %rax
 ; MSVC-X64-NEXT:    andq $-16, %rax
 ; MSVC-X64-NEXT:    callq __chkstk
@@ -410,7 +410,7 @@ define void @test_vla_realign(i32 %n) nounwind ssp {
 ; MSVC-X64-O0-NEXT:    movl %ecx, %eax
 ; MSVC-X64-O0-NEXT:    # kill: def $rax killed $eax
 ; MSVC-X64-O0-NEXT:    shlq $2, %rax
-; MSVC-X64-O0-NEXT:    movabsq $15, %rcx
+; MSVC-X64-O0-NEXT:    movl $15, %ecx
 ; MSVC-X64-O0-NEXT:    addq %rcx, %rax
 ; MSVC-X64-O0-NEXT:    andq $-16, %rax
 ; MSVC-X64-O0-NEXT:    callq __chkstk
