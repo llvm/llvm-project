@@ -130,6 +130,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
           AnyValue::getPoisonValue(Ctx, C->getType()));
       return UnsupportedConstantValues.back();
     }
+    if (isa<MetadataAsValue>(V))
+      return None;
     return CurrentFrame->ValueMap.at(V);
   }
 
@@ -763,12 +765,8 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     }
 
     MutableArrayRef<Byte> DstBytes = DstMO->getBytes().slice(DstOffset, Len);
-    if (SrcMO->getState() == MemoryObjectState::Dead) {
-      fill(DstBytes, Byte::poison());
-    } else {
-      ArrayRef<Byte> SrcBytes = SrcMO->getBytes().slice(SrcOffset, Len);
-      std::memmove(DstBytes.data(), SrcBytes.data(), Len * sizeof(Byte));
-    }
+    ArrayRef<Byte> SrcBytes = SrcMO->getBytes().slice(SrcOffset, Len);
+    std::memmove(DstBytes.data(), SrcBytes.data(), Len * sizeof(Byte));
     return AnyValue();
   }
 
@@ -1018,6 +1016,7 @@ public:
         MO->setState(MemoryObjectState::Alive);
         fill(MO->getBytes(), Byte::undef());
       } else {
+        fill(MO->getBytes(), Byte::poison());
         MO->setState(MemoryObjectState::Dead);
       }
       return AnyValue();
@@ -1627,6 +1626,9 @@ public:
     case Intrinsic::memset:
     case Intrinsic::memset_inline:
       return callMemSetIntrinsic(CB, Args);
+    case Intrinsic::experimental_noalias_scope_decl:
+      // FIXME: Not implemented yet. Currently it acts as a noop.
+      return AnyValue();
     default:
       Handler.onUnrecognizedInstruction(CB);
       setFailed();
@@ -2577,6 +2579,7 @@ public:
 
         Instruction &I = *Top.PC;
         visit(&I);
+        Ctx.resetNoncacheableConstantBuffer();
         if (hasProgramExited())
           break;
 
