@@ -842,6 +842,25 @@ DependenceInfo::classifyPair(const SCEV *Src, const Loop *SrcLoopNest,
                              SmallBitVector &Loops) {
   SmallBitVector SrcLoops(MaxLevels + 1);
   SmallBitVector DstLoops(MaxLevels + 1);
+  const SCEVAddRecExpr *SrcAddRec = dyn_cast<SCEVAddRecExpr>(Src);
+  const SCEVAddRecExpr *DstAddRec = dyn_cast<SCEVAddRecExpr>(Dst);
+  if (SrcAddRec && DstAddRec &&
+      SrcAddRec->getStart() == DstAddRec->getStart() &&
+      SrcAddRec->getStepRecurrence(*SE) == DstAddRec->getStepRecurrence(*SE) &&
+      SrcAddRec->getLoop() != DstAddRec->getLoop() &&
+      haveSameSD(SrcAddRec->getLoop(), DstAddRec->getLoop()) &&
+      isLoopInvariant(SrcAddRec->getStart(), SrcLoopNest) &&
+      isLoopInvariant(DstAddRec->getStart(), DstLoopNest) &&
+      isLoopInvariant(SrcAddRec->getStepRecurrence(*SE), SrcLoopNest) &&
+      isLoopInvariant(DstAddRec->getStepRecurrence(*SE), DstLoopNest)) {
+    SrcLoops.set(mapSrcLoop(SrcAddRec->getLoop()));
+    DstLoops.set(mapDstLoop(DstAddRec->getLoop()));
+    Loops = SrcLoops;
+    Loops |= DstLoops;
+    assert(Loops.count() == 1 && "Expected one SameSD level");
+    return Subscript::SIV;
+  }
+
   if (!checkSrcSubscript(Src, SrcLoopNest, SrcLoops))
     return Subscript::NonLinear;
   if (!checkDstSubscript(Dst, DstLoopNest, DstLoops))
@@ -984,7 +1003,17 @@ bool DependenceInfo::strongSIVtest(const SCEVAddRecExpr *Src,
   LLVM_DEBUG(dbgs() << ", " << *DstConst->getType() << "\n");
   ++StrongSIVapplications;
   assert(0 < Level && Level <= CommonLevels && "level out of range");
+  bool IsSameSDLevel = SameSDLevels > 0 && Level > CommonLevels - SameSDLevels;
   Level--;
+
+  // Identical recurrences only have same-iteration dependences. This is useful
+  // for SameSD loops, where the addrecs are in different loops but share the
+  // same start and step.
+  if (IsSameSDLevel && SrcConst == DstConst) {
+    Result.DV[Level].Direction &= Dependence::DVEntry::EQ;
+    ++StrongSIVsuccesses;
+    return false;
+  }
 
   const SCEV *Delta = minusSCEVNoSignedOverflow(SrcConst, DstConst, *SE);
   if (!Delta)
