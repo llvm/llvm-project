@@ -871,13 +871,9 @@ TEST_F(FormatTestJS, AsyncFunctions) {
                "  // Comment.\n"
                "  return async.then();\n"
                "}");
-  verifyFormat("for await (const x of y) {\n"
-               "  console.log(x);\n"
-               "}");
+  verifyFormat("for await (const x of y) { console.log(x); }");
   verifyFormat("function asyncLoop() {\n"
-               "  for await (const x of y) {\n"
-               "    console.log(x);\n"
-               "  }\n"
+               "  for await (const x of y) { console.log(x); }\n"
                "}");
 }
 
@@ -1334,18 +1330,12 @@ TEST_F(FormatTestJS, ReturnStatements) {
 }
 
 TEST_F(FormatTestJS, ForLoops) {
-  verifyFormat("for (var i in [2, 3]) {\n"
-               "}");
-  verifyFormat("for (var i of [2, 3]) {\n"
-               "}");
-  verifyFormat("for (let {a, b} of x) {\n"
-               "}");
-  verifyFormat("for (let {a, b} of [x]) {\n"
-               "}");
-  verifyFormat("for (let [a, b] of [x]) {\n"
-               "}");
-  verifyFormat("for (let {a, b} in x) {\n"
-               "}");
+  verifyFormat("for (var i in [2, 3]) {}");
+  verifyFormat("for (var i of [2, 3]) {}");
+  verifyFormat("for (let {a, b} of x) {}");
+  verifyFormat("for (let {a, b} of [x]) {}");
+  verifyFormat("for (let [a, b] of [x]) {}");
+  verifyFormat("for (let {a, b} in x) {}");
 }
 
 TEST_F(FormatTestJS, WrapRespectsAutomaticSemicolonInsertion) {
@@ -1475,13 +1465,11 @@ TEST_F(FormatTestJS, AutomaticSemicolonInsertionHeuristic) {
                "} class Y {}",
                "  x  =  {a  : 1}\n"
                "   class  Y {  }");
-  verifyFormat("if (x) {\n"
-               "}\n"
+  verifyFormat("if (x) {}\n"
                "return 1",
                "if (x) {}\n"
                " return   1");
-  verifyFormat("if (x) {\n"
-               "}\n"
+  verifyFormat("if (x) {}\n"
                "class X {}",
                "if (x) {}\n"
                " class X {}");
@@ -1495,8 +1483,7 @@ TEST_F(FormatTestJS, ImportExportASI) {
   // Below "class Y {}" should ideally be on its own line.
   verifyFormat("export {x} class Y {}", "  export {x}\n"
                                         "  class  Y {\n}");
-  verifyFormat("if (x) {\n"
-               "}\n"
+  verifyFormat("if (x) {}\n"
                "export class Y {}",
                "if ( x ) { }\n"
                " export class Y {}");
@@ -1549,7 +1536,7 @@ TEST_F(FormatTestJS, RegexLiteralClassification) {
   verifyFormat("f(abc, /abc/);");
   verifyFormat("some_map[/abc/];");
   verifyFormat("var x = a ? /abc/ : /abc/;");
-  verifyFormat("for (var i = 0; /abc/.test(s[i]); i++) {\n}");
+  verifyFormat("for (var i = 0; /abc/.test(s[i]); i++) {}");
   verifyFormat("var x = !/abc/.test(y);");
   verifyFormat("var x = foo()! / 10;");
   verifyFormat("var x = a && /abc/.test(y);");
@@ -1672,8 +1659,8 @@ TEST_F(FormatTestJS, TypeAnnotations) {
   verifyFormat("function x(): string {\n  return 'x';\n}");
   verifyFormat("function x(): {x: string} {\n  return {x: 'x'};\n}");
   verifyFormat("function x(y: string): string {\n  return 'x';\n}");
-  verifyFormat("for (var y: string in x) {\n  x();\n}");
-  verifyFormat("for (var y: string of x) {\n  x();\n}");
+  verifyFormat("for (var y: string in x) { x(); }");
+  verifyFormat("for (var y: string of x) { x(); }");
   verifyFormat("function x(y: {a?: number;} = {}): number {\n"
                "  return 12;\n"
                "}");
@@ -2297,7 +2284,7 @@ TEST_F(FormatTestJS, WrapAfterParen) {
                "    });",
                getGoogleJSStyleWithColumns(40));
   verifyFormat("while (aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa &&\n"
-               "       bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb) {\n}");
+               "       bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb) {}");
 }
 
 TEST_F(FormatTestJS, JSDocAnnotations) {
@@ -2495,7 +2482,7 @@ TEST_F(FormatTestJS, NonNullAssertionOperator) {
   verifyFormat("let x = foo!.bar();");
   verifyFormat("let x = foo ? bar! : baz;");
   verifyFormat("let x = !foo;");
-  verifyFormat("if (!+a) {\n}");
+  verifyFormat("if (!+a) {}");
   verifyFormat("let x = foo[0]!;");
   verifyFormat("let x = (foo)!;");
   verifyFormat("let x = x(foo!);");
@@ -2903,8 +2890,7 @@ TEST_F(FormatTestJS, BreakAfterOpenBracket) {
                Style);
   verifyFormat("for await (const packageId of ops.api.iterateEmbeddedFiles(\n"
                "    this.getFileId().getDriveFile(),\n"
-               "    )) {\n"
-               "}",
+               "    )) {}",
                Style);
 }
 

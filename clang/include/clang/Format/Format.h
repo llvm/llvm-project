@@ -767,6 +767,11 @@ struct FormatStyle {
 
   /// Dependent on the value, ``while (true) { continue; }`` can be put on a
   /// single line.
+  ///
+  /// For blocks of if statements and loops, this option is overridden by
+  /// ``AllowShortIfStatementsOnASingleLine`` and
+  /// ``AllowShortLoopsOnASingleLine``, respectively, if they allow merging
+  /// the statement.
   /// \version 3.5
   ShortBlockStyle AllowShortBlocksOnASingleLine;
 
@@ -1023,6 +1028,10 @@ struct FormatStyle {
   };
 
   /// Dependent on the value, ``if (a) return;`` can be put on a single line.
+  ///
+  /// If merging is allowed, it also applies to braced if statements, e.g.
+  /// ``if (a) { return; }``, overriding ``AllowShortBlocksOnASingleLine``
+  /// and ``BraceWrapping.AfterControlStatement``.
   /// \version 3.3
   ShortIfStyle AllowShortIfStatementsOnASingleLine;
 
@@ -1062,6 +1071,10 @@ struct FormatStyle {
 
   /// If ``true``, ``while (true) continue;`` can be put on a single
   /// line.
+  ///
+  /// This also applies to braced loops, e.g. ``while (true) { continue; }``,
+  /// overriding ``AllowShortBlocksOnASingleLine`` and
+  /// ``BraceWrapping.AfterControlStatement``.
   /// \version 3.7
   bool AllowShortLoopsOnASingleLine;
 
