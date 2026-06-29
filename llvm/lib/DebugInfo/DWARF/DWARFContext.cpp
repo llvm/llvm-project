@@ -1890,7 +1890,7 @@ DWARFContext::getInliningInfoForAddress(object::SectionedAddress Address,
         Frame.Discriminator = CallDiscriminator;
       }
       // Get call file/line/column of a current DIE.
-      if (i + 1 < n) {
+      if (i < n && 1 < n - i) {
         FunctionDIE.getCallerFrame(CallFile, CallLine, CallColumn,
                                    CallDiscriminator);
       }

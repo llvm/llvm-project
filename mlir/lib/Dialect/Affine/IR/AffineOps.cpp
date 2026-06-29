@@ -5609,7 +5609,8 @@ public:
 
       unsigned j = 1;
       unsigned numDelinOuts = delinearizeOp.getNumResults();
-      for (; j + linArgIdx < numLinArgs && j + delinArgIdx < numDelinOuts;
+      for (; (j < numLinArgs && linArgIdx < numLinArgs - j) &&
+             j + delinArgIdx < numDelinOuts;
            ++j) {
         if (multiIndex[linArgIdx + j] !=
             delinearizeOp.getResult(delinArgIdx + j))

@@ -663,7 +663,8 @@ static std::vector<std::pair<uint64_t, uint64_t>>
 findX86PltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents) {
   // Do a lightweight parsing of PLT entries.
   std::vector<std::pair<uint64_t, uint64_t>> Result;
-  for (uint64_t Byte = 0, End = PltContents.size(); Byte + 6 < End; ) {
+  for (uint64_t Byte = 0, End = PltContents.size();
+       (Byte < End && 6 < End - Byte);) {
     // Recognize a jmp.
     if (PltContents[Byte] == 0xff && PltContents[Byte + 1] == 0xa3) {
       // The jmp instruction at the beginning of each PLT entry jumps to the
@@ -690,7 +691,8 @@ static std::vector<std::pair<uint64_t, uint64_t>>
 findX86_64PltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents) {
   // Do a lightweight parsing of PLT entries.
   std::vector<std::pair<uint64_t, uint64_t>> Result;
-  for (uint64_t Byte = 0, End = PltContents.size(); Byte + 6 < End; ) {
+  for (uint64_t Byte = 0, End = PltContents.size();
+       (Byte < End && 6 < End - Byte);) {
     // Recognize a jmp.
     if (PltContents[Byte] == 0xff && PltContents[Byte + 1] == 0x25) {
       // The jmp instruction at the beginning of each PLT entry jumps to the

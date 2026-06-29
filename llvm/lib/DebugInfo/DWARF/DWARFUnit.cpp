@@ -234,7 +234,8 @@ DWARFUnit::getAddrOffsetSectionItem(uint32_t Index) const {
   }
 
   uint64_t Offset = *AddrOffsetSectionBase + Index * getAddressByteSize();
-  if (AddrOffsetSection->Data.size() < Offset + getAddressByteSize())
+  if (AddrOffsetSection->Data.size() < Offset ||
+      AddrOffsetSection->Data.size() - Offset < getAddressByteSize())
     return std::nullopt;
   DWARFDataExtractor DA(Context.getDWARFObj(), *AddrOffsetSection,
                         IsLittleEndian, getAddressByteSize());
@@ -250,7 +251,8 @@ Expected<uint64_t> DWARFUnit::getStringOffsetSectionItem(uint32_t Index) const {
         inconvertibleErrorCode());
   unsigned ItemSize = getDwarfStringOffsetsByteSize();
   uint64_t Offset = getStringOffsetsBase() + Index * ItemSize;
-  if (StringOffsetSection.Data.size() < Offset + ItemSize)
+  if (StringOffsetSection.Data.size() < Offset ||
+      StringOffsetSection.Data.size() - Offset < ItemSize)
     return make_error<StringError>("DW_FORM_strx uses index " + Twine(Index) +
                                        ", which is too large",
                                    inconvertibleErrorCode());

@@ -5078,7 +5078,7 @@ Instruction *InstCombinerImpl::visitLandingPadInst(LandingPadInst &LI) {
   // advantageous because shorter filters are more likely to match, speeding up
   // unwinding, but mostly because it increases the effectiveness of the other
   // filter optimizations below.
-  for (unsigned i = 0, e = NewClauses.size(); i + 1 < e; ) {
+  for (unsigned i = 0, e = NewClauses.size(); (i < e && 1 < e - i);) {
     unsigned j;
     // Find the maximal 'j' s.t. the range [i, j) consists entirely of filters.
     for (j = i; j != e; ++j)

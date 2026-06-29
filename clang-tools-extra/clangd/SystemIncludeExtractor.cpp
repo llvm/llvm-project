@@ -114,7 +114,7 @@ struct DriverArgs {
 
       // Look for Language related flags.
       if (Arg.consume_front("-x")) {
-        if (Arg.empty() && I + 1 < E)
+        if (Arg.empty() && (I < E && 1 < E - I))
           Lang = Cmd.CommandLine[I + 1];
         else
           Lang = Arg.str();
@@ -128,22 +128,22 @@ struct DriverArgs {
       else if (Arg.consume_front("--sysroot")) {
         if (Arg.consume_front("="))
           Sysroot = Arg.str();
-        else if (Arg.empty() && I + 1 < E)
+        else if (Arg.empty() && (I < E && 1 < E - I))
           Sysroot = Cmd.CommandLine[I + 1];
       } else if (Arg.consume_front("-isysroot")) {
-        if (Arg.empty() && I + 1 < E)
+        if (Arg.empty() && (I < E && 1 < E - I))
           ISysroot = Cmd.CommandLine[I + 1];
         else
           ISysroot = Arg.str();
       } else if (Arg.consume_front("--target=")) {
         Target = Arg.str();
       } else if (Arg.consume_front("-target")) {
-        if (Arg.empty() && I + 1 < E)
+        if (Arg.empty() && (I < E && 1 < E - I))
           Target = Cmd.CommandLine[I + 1];
       } else if (Arg.consume_front("--stdlib")) {
         if (Arg.consume_front("="))
           Stdlib = Arg.str();
-        else if (Arg.empty() && I + 1 < E)
+        else if (Arg.empty() && (I < E && 1 < E - I))
           Stdlib = Cmd.CommandLine[I + 1];
       } else if (Arg.consume_front("-stdlib=")) {
         Stdlib = Arg.str();
@@ -155,7 +155,7 @@ struct DriverArgs {
         Specs.push_back(Arg.str());
       } else if (Arg.starts_with("--specs=")) {
         Specs.push_back(Arg.str());
-      } else if (Arg == "--specs" && I + 1 < E) {
+      } else if (Arg == "--specs" && (I < E && 1 < E - I)) {
         Specs.push_back(Arg.str());
         Specs.push_back(Cmd.CommandLine[I + 1]);
       }
@@ -462,7 +462,7 @@ std::string convertGlobToRegex(llvm::StringRef Glob) {
   RegStream << '^';
   for (size_t I = 0, E = Glob.size(); I < E; ++I) {
     if (Glob[I] == '*') {
-      if (I + 1 < E && Glob[I + 1] == '*') {
+      if ((I < E && 1 < E - I) && Glob[I + 1] == '*') {
         // Double star, accept any sequence.
         RegStream << ".*";
         // Also skip the second star.

@@ -162,7 +162,8 @@ Error MachOLinkGraphBuilder::createNormalizedSections() {
 
     // Get the section data if any.
     if (!isZeroFillSection(NSec)) {
-      if (DataOffset + NSec.Size > Obj.getData().size())
+      if ((DataOffset > Obj.getData().size() ||
+           NSec.Size > Obj.getData().size() - DataOffset))
         return make_error<JITLinkError>(
             "Section data extends past end of file");
 

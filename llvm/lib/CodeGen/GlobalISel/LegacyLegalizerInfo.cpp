@@ -218,7 +218,8 @@ LegacyLegalizerInfo::increaseToLargerTypesAndDecreaseToLargest(
   for (size_t i = 0; i < v.size(); ++i) {
     result.push_back(v[i]);
     LargestSizeSoFar = v[i].first;
-    if (i + 1 < v.size() && v[i + 1].first != v[i].first + 1) {
+    if ((i < v.size() && 1 < v.size() - i) &&
+        v[i + 1].first != v[i].first + 1) {
       result.push_back({LargestSizeSoFar + 1, IncreaseAction});
       LargestSizeSoFar = v[i].first + 1;
     }

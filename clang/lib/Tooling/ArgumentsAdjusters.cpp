@@ -157,7 +157,7 @@ ArgumentsAdjuster getStripPluginsAdjuster() {
       // plugin arguments are in the form:
       // -Xclang {-load, -plugin, -plugin-arg-<plugin-name>, -add-plugin}
       // -Xclang <arbitrary-argument>
-      if (I + 4 < E && Args[I] == "-Xclang" &&
+      if ((I < E && 4 < E - I) && Args[I] == "-Xclang" &&
           (Args[I + 1] == "-load" || Args[I + 1] == "-plugin" ||
            llvm::StringRef(Args[I + 1]).starts_with("-plugin-arg-") ||
            Args[I + 1] == "-add-plugin") &&

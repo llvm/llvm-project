@@ -82,7 +82,7 @@ Expected<ArrayRef<uint8_t>> MinidumpFile::getDataSlice(ArrayRef<uint8_t> Data,
                                                        uint64_t Size) {
   // Check for overflow.
   if (Offset + Size < Offset || Offset + Size < Size ||
-      Offset + Size > Data.size())
+      (Offset > Data.size() || Size > Data.size() - Offset))
     return createEOFError();
   return Data.slice(Offset, Size);
 }
@@ -166,8 +166,9 @@ MinidumpFile::getMemory64List(Error &Err) const {
     return make_range(end, end);
   }
 
-  if (!Descriptors->empty() &&
-      ListHeader->BaseRVA + Descriptors->front().DataSize > getData().size()) {
+  if (!Descriptors->empty() && (ListHeader->BaseRVA > getData().size() ||
+                                Descriptors->front().DataSize >
+                                    getData().size() - ListHeader->BaseRVA)) {
     Err = createError("Memory64List header RVA out of range");
     return make_range(end, end);
   }

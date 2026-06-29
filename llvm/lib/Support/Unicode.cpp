@@ -522,7 +522,7 @@ int columnWidthUTF8(StringRef Text) {
       continue;
     }
 
-    if (Length <= 0 || i + Length > Text.size())
+    if (Length <= 0 || (i > Text.size() || Length > Text.size() - i))
       return ErrorInvalidUTF8;
     UTF32 buf[1];
     const UTF8 *Start = reinterpret_cast<const UTF8 *>(Text.data() + i);

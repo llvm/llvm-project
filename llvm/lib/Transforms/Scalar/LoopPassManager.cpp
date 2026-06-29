@@ -53,7 +53,7 @@ void PassManager<Loop, LoopAnalysisManager, LoopStandardAnalysisResults &,
       auto *P = LoopPasses[IdxLP++].get();
       P->printPipeline(OS, MapClassName2PassName);
     }
-    if (Idx + 1 < Size)
+    if (Idx < Size && 1 < Size - Idx)
       OS << ',';
   }
 }

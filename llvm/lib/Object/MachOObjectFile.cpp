@@ -3469,7 +3469,8 @@ void MachOChainedFixupEntry::moveNext() {
   PointerValue = 0;
   SymbolName = {};
 
-  if (SegmentOffset + sizeof(RawValue) > SegmentData.size()) {
+  if (SegmentOffset > SegmentData.size() ||
+      sizeof(RawValue) > SegmentData.size() - SegmentOffset) {
     *E = malformedError("fixup in segment " + Twine(SegmentIndex) +
                         " at offset " + Twine(SegmentOffset) +
                         " extends past segment's end");

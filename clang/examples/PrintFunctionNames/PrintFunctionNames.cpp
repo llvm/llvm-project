@@ -97,7 +97,7 @@ protected:
         D.Report(DiagID) << args[i];
         return false;
       } else if (args[i] == "-parse-template") {
-        if (i + 1 >= e) {
+        if (i >= e || 1 >= e - i) {
           D.Report(D.getCustomDiagID(DiagnosticsEngine::Error,
                                      "missing -parse-template argument"));
           return false;

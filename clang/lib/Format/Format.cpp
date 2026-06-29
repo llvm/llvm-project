@@ -2917,7 +2917,7 @@ private:
         for (size_t i = 1; i < Input.size() - 1; i++) {
           switch (Input[i]) {
           case '\\':
-            if (!Escaped && i + 1 < Input.size() &&
+            if (!Escaped && (i < Input.size() && 1 < Input.size() - i) &&
                 ((IsSingle && Input[i + 1] == '"') ||
                  (!IsSingle && Input[i + 1] == '\''))) {
               // Remove this \, it's escaping a " or ' that no longer needs
@@ -4371,7 +4371,7 @@ reformat(const FormatStyle &Style, StringRef Code,
     if (NewCode) {
       Fixes = Fixes.merge(PassFixes.first);
       Penalty += PassFixes.second;
-      if (I + 1 < E) {
+      if (I < E && 1 < E - I) {
         CurrentCode = std::move(*NewCode);
         Env = Environment::make(
             *CurrentCode, FileName,

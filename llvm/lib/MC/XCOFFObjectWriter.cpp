@@ -1691,7 +1691,7 @@ void XCOFFWriter::writeSectionForCInfoSymSectionEntry(
 
   // Write out the payload one word at a time.
   size_t Index = 0;
-  while (Index + WordSize <= Metadata.size()) {
+  while (Index <= Metadata.size() && WordSize <= Metadata.size() - Index) {
     uint32_t NextWord =
         llvm::support::endian::read32be(Metadata.data() + Index);
     W.write<uint32_t>(NextWord);

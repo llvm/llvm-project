@@ -530,7 +530,7 @@ StringRef InstrProfSymtab::getFuncName(uint64_t Pointer, size_t Size) const {
   if (Pointer < Address)
     return StringRef();
   auto Offset = Pointer - Address;
-  if (Offset + Size > Data.size())
+  if (Offset > Data.size() || Size > Data.size() - Offset)
     return StringRef();
   return Data.substr(Pointer - Address, Size);
 }

@@ -325,7 +325,7 @@ std::pair<tooling::Replacements, unsigned> NamespaceEndCommentsFixer::analyze(
     if (Style.CompactNamespaces) {
       if (CompactedNamespacesCount == 0)
         NamespaceTokenText = NamespaceTok->TokenText;
-      if ((I + 1 < E) &&
+      if ((I < E && 1 < E - I) &&
           NamespaceTokenText ==
               getNamespaceTokenText(AnnotatedLines[I + 1], AnnotatedLines) &&
           StartLineIndex - CompactedNamespacesCount - 1 ==
@@ -350,7 +350,7 @@ std::pair<tooling::Replacements, unsigned> NamespaceEndCommentsFixer::analyze(
     const FormatToken *EndCommentNextTok = EndCommentPrevTok->Next;
     if (EndCommentNextTok && EndCommentNextTok->is(tok::comment))
       EndCommentNextTok = EndCommentNextTok->Next;
-    if (!EndCommentNextTok && I + 1 < E)
+    if (!EndCommentNextTok && (I < E && 1 < E - I))
       EndCommentNextTok = AnnotatedLines[I + 1]->First;
     bool AddNewline = EndCommentNextTok &&
                       EndCommentNextTok->NewlinesBefore == 0 &&

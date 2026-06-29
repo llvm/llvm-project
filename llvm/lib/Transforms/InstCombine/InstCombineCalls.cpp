@@ -4509,7 +4509,8 @@ static Bitset<256> parseFormatStringSpecifiers(StringRef FormatStr) {
       continue;
 
     // Check for escaped '%'.
-    if (I + 1 < FormatStr.size() && FormatStr[I + 1] == '%') {
+    if ((I < FormatStr.size() && 1 < FormatStr.size() - I) &&
+        FormatStr[I + 1] == '%') {
       ++I; // Skip the second '%'.
       continue;
     }

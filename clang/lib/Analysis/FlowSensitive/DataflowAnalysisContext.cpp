@@ -347,7 +347,7 @@ static void printAtomList(const llvm::SmallVector<Atom> &Atoms,
   OS << "(";
   for (size_t i = 0; i < Atoms.size(); ++i) {
     OS << Atoms[i];
-    if (i + 1 < Atoms.size())
+    if (i < Atoms.size() && 1 < Atoms.size() - i)
       OS << ", ";
   }
   OS << ")\n";

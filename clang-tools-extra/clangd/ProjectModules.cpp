@@ -81,12 +81,14 @@ parseCompileCommandInfo(tooling::CompileCommand Cmd, const ThreadsafeFS &TFS) {
       Result.OutputModuleFile = normalizePath(Arg, Cmd.Directory);
       continue;
     }
-    if (Arg == "-fmodule-output" && I + 1 < Cmd.CommandLine.size()) {
+    if (Arg == "-fmodule-output" &&
+        (I < Cmd.CommandLine.size() && 1 < Cmd.CommandLine.size() - I)) {
       Result.OutputModuleFile =
           normalizePath(Cmd.CommandLine[++I], Cmd.Directory);
       continue;
     }
-    if (SawPrecompile && Arg == "-o" && I + 1 < Cmd.CommandLine.size()) {
+    if (SawPrecompile && Arg == "-o" &&
+        (I < Cmd.CommandLine.size() && 1 < Cmd.CommandLine.size() - I)) {
       Result.OutputModuleFile =
           normalizePath(Cmd.CommandLine[++I], Cmd.Directory);
       continue;

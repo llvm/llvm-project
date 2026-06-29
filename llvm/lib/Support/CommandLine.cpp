@@ -868,7 +868,7 @@ void cl::TokenizeGNUCommandLine(StringRef Src, StringSaver &Saver,
     char C = Src[I];
 
     // Backslash escapes the next character.
-    if (I + 1 < E && C == '\\') {
+    if ((I < E && 1 < E - I) && C == '\\') {
       ++I; // Skip the escape.
       Token.push_back(Src[I]);
       continue;

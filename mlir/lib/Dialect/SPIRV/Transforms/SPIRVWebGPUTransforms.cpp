@@ -101,7 +101,7 @@ static Value lowerExtendedMultiplication(Operation *mulOp,
 
   for (auto [i, lhsDigit] : llvm::enumerate(lhsDigits)) {
     for (auto [j, rhsDigit] : llvm::enumerate(rhsDigits)) {
-      if (i + j >= resultDigits.size())
+      if (i >= resultDigits.size() || j >= resultDigits.size() - i)
         continue;
 
       if (lhsDigit == cst0 || rhsDigit == cst0)

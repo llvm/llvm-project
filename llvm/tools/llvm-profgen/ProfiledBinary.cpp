@@ -588,8 +588,9 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
   uint64_t SectionAddress = Section.getAddress();
   uint64_t SectSize = Section.getSize();
   uint64_t StartAddress = Symbols[SI].Addr;
-  uint64_t NextStartAddress =
-      (SI + 1 < SE) ? Symbols[SI + 1].Addr : SectionAddress + SectSize;
+  uint64_t NextStartAddress = (SI < SE && 1 < SE - SI)
+                                  ? Symbols[SI + 1].Addr
+                                  : SectionAddress + SectSize;
   FuncRange *FRange = findFuncRange(StartAddress);
   setIsFuncEntry(FRange, FunctionSamples::getCanonicalFnName(Symbols[SI].Name));
   StringRef SymbolName =

@@ -328,7 +328,7 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
     const size_t N = Branches.size();
     llvm::BitVector KnownAsClone(N);
 
-    for (size_t I = 0; I + 1 < N; I++) {
+    for (size_t I = 0; (I < N && 1 < N - I); I++) {
       // We have already seen Branches[i] as a clone of an earlier branch.
       if (KnownAsClone[I])
         continue;

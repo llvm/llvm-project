@@ -346,7 +346,8 @@ static Error processString(StringRef Str, NullHandlingMethod NullHandler,
     break;
 
   case NullHandlingMethod::CutAtDoubleNull:
-    for (size_t Pos = 0; Pos + 1 < Result.size(); ++Pos)
+    for (size_t Pos = 0; (Pos < Result.size() && 1 < Result.size() - Pos);
+         ++Pos)
       if (Result[Pos] == '\0' && Result[Pos + 1] == '\0')
         Result.resize(Pos);
     if (Result.size() > 0 && Result.back() == '\0')

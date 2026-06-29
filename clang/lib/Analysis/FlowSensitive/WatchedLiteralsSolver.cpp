@@ -206,7 +206,7 @@ public:
 
         // Remove the variable that was just assigned from the set of active
         // variables.
-        if (I + 1 < ActiveVars.size()) {
+        if (I < ActiveVars.size() && 1 < ActiveVars.size() - I) {
           // Replace the variable that was just assigned with the last active
           // variable for efficient removal.
           ActiveVars[I] = ActiveVars.back();

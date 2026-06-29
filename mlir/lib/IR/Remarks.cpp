@@ -61,7 +61,7 @@ static void printArgs(llvm::raw_ostream &os, llvm::ArrayRef<Remark::Arg> args) {
     else
       os << val;
 
-    if (i + 1 < sorted.size())
+    if (i < sorted.size() && 1 < sorted.size() - i)
       os << ", ";
   }
 }

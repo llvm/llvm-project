@@ -3005,7 +3005,7 @@ public:
       LLVM_DEBUG(dbgs() << "  Rewrite stores into shufflevectors:\n");
       while (Vals.size() > 1) {
         SmallVector<Value *, 8> Next;
-        for (unsigned I = 0, E = Vals.size(); I + 1 < E; I += 2) {
+        for (unsigned I = 0, E = Vals.size(); (I < E && 1 < E - I); I += 2) {
           Value *M =
               mergeTwoVectors(Vals[I], Vals[I + 1], DL, AllocatedEltTy, B);
           LLVM_DEBUG(dbgs() << "    shufflevector: " << *M << "\n");

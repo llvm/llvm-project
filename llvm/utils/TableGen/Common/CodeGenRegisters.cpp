@@ -2099,7 +2099,8 @@ void CodeGenRegBank::pruneUnitSets() {
       unsigned UnitWeight = RegUnits[SubSet.Units[0]].Weight;
       const RegUnitSet &SuperSet = RegUnitSets[SuperIdx];
       if (isRegUnitSubSet(SubSet.Units, SuperSet.Units) &&
-          (SubSet.Units.size() + 3 > SuperSet.Units.size()) &&
+          (SubSet.Units.size() > SuperSet.Units.size() ||
+           3 > SuperSet.Units.size() - SubSet.Units.size()) &&
           UnitWeight == RegUnits[SuperSet.Units[0]].Weight &&
           UnitWeight == RegUnits[SuperSet.Units.back()].Weight) {
         LLVM_DEBUG({

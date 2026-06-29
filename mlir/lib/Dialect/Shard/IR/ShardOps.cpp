@@ -592,7 +592,8 @@ LogicalResult ShardingOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
           numShards += gridShape[i];
         }
         for (int64_t i = 0; i <= numShards; ++i) {
-          if (shardedDimsOffsets.size() <= pos + i) {
+          if (shardedDimsOffsets.size() <= pos ||
+              shardedDimsOffsets.size() - pos <= i) {
             return emitError() << "sharded dims offsets has wrong size.";
           }
           if (ShapedType::isStatic(shardedDimsOffsets[pos + i])) {
