@@ -687,6 +687,66 @@ def CC_X86_Win64_VectorCall : CallingConv<[
   CCDelegateTo<CC_X86_Win64_C>
 ]>;
 
+def CC_X86_SysV64_Fast : CallingConv<[
+  // Handles byval parameters.  Note that we can't rely on the delegation
+  // to CC_X86_64_C for this because that happens after code that puts arguments
+  // in registers.
+  CCIfByVal<CCPassByVal<8, 8>>,
+
+  // Promote i1/i8/i16/v1i1 arguments to i32.
+  CCIfType<[i1, i8, i16, v1i1], CCPromoteToType<i32>>,
+
+  // Pointers are always passed in full 64-bit registers.
+  CCIfPtr<CCCustom<"CC_X86_64_Pointer">>,
+
+  // The first 22 integer arguments are passed in integer registers.
+  CCIfType<[i32], CCAssignToReg<[EDI, ESI, EDX, ECX, R8D, R9D, R16D, R17D,
+                                 R18D, R19D, R20D, R21D, R22D, R23D, R24D,
+                                 R25D, R26D, R27D, R28D, R29D, R30D, R31D]>>,
+
+  // i128 can be either passed in two i64 registers, or on the stack, but
+  // not split across register and stack. Handle this with a custom function.
+  CCIfType<[i64],
+           CCIfConsecutiveRegs<CCCustom<"CC_X86_64_I128">>>,
+
+  CCIfType<[i64], CCAssignToReg<[RDI, RSI, RDX, RCX, R8, R9, R16, R17, R18,
+                                 R19, R20, R21, R22, R23, R24, R25, R26, R27,
+                                 R28, R29, R30, R31]>>,
+
+  // Otherwise, drop to normal X86-64 CC.
+  CCDelegateTo<CC_X86_64_C>
+]>;
+
+def CC_X86_Win64_Fast : CallingConv<[
+  // Byval aggregates are passed by pointer
+  CCIfByVal<CCPassIndirect<i64>>,
+
+  // Promote i1/v1i1 arguments to i8.
+  CCIfType<[i1, v1i1], CCPromoteToType<i8>>,
+
+  // Pointers are always passed in full 64-bit registers.
+  CCIfPtr<CCCustom<"CC_X86_64_Pointer">>,
+
+  CCIfType<[i8], CCAssignToReg<[CL, DL, R8B, R9B, R16B, R17B, R18B, R19B, R20B,
+                                R21B, R22B, R23B, R24B, R25B, R26B, R27B]>>,
+
+  CCIfType<[i16], CCAssignToReg<[CX, DX, R8W, R9W, R16W, R17W, R18W, R19W, R20W,
+                                 R21W, R22W, R23W, R24W, R25W, R26W, R27W]>>,
+
+  CCIfType<[i32], CCAssignToReg<[ECX, EDX, R8D, R9D, R16D, R17D, R18D, R19D,
+                                 R20D, R21D, R22D, R23D, R24D, R25D, R26D, R27D]>>,
+
+  CCIfType<[i64], CCAssignToReg<[RCX, RDX, R8, R9, R16, R17, R18, R19, R20,
+                                 R21, R22, R23, R24, R25, R26, R27]>>,
+
+  // Otherwise, drop to normal X86-64-Win64 CC.
+  CCDelegateTo<CC_X86_Win64_C>
+]>;
+
+def CC_X86_64_Fast : CallingConv<[
+  CCIfSubtarget<"isTargetWin64()", CCDelegateTo<CC_X86_Win64_Fast>>,
+  CCDelegateTo<CC_X86_SysV64_Fast>
+]>;
 
 def CC_X86_64_GHC : CallingConv<[
   // Promote i8/i16/i32 arguments to i64.
@@ -1084,6 +1144,8 @@ def CC_X86_32 : CallingConv<[
 
 // This is the root argument convention for the X86-64 backend.
 def CC_X86_64 : CallingConv<[
+  CCIfCC<"CallingConv::Fast",
+    CCIfSubtarget<"hasEGPR()", CCDelegateTo<CC_X86_64_Fast>>>,
   CCIfCC<"CallingConv::GHC", CCDelegateTo<CC_X86_64_GHC>>,
   CCIfCC<"CallingConv::HiPE", CCDelegateTo<CC_X86_64_HiPE>>,
   CCIfCC<"CallingConv::AnyReg", CCDelegateTo<CC_X86_64_AnyReg>>,
