@@ -4043,6 +4043,11 @@ bool SIRegisterInfo::isAGPR(const MachineRegisterInfo &MRI,
 unsigned SIRegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
                                              MachineFunction &MF) const {
   unsigned MinOcc = ST.getOccupancyWithWorkGroupSizes(MF).first;
+  Function &F = MF.getFunction();
+  if (AMDGPU::getIntegerPairAttribute(F, "amdgpu-waves-per-eu", true) !=
+      std::nullopt) {
+    MinOcc = ST.getWavesPerEU(F).first;
+  }
   switch (RC->getID()) {
   default:
     return AMDGPUGenRegisterInfo::getRegPressureLimit(RC, MF);
