@@ -251,6 +251,8 @@ Type *LiveRegOptimizer::calculateConvertType(Type *OriginalType) {
 Value *LiveRegOptimizer::convertToOptType(Instruction *V,
                                           BasicBlock::iterator &InsertPt) {
   FixedVectorType *VTy = cast<FixedVectorType>(V->getType());
+  if (VTy->getScalarSizeInBits() % 8 != 0)
+    return nullptr;
   Type *NewTy = calculateConvertType(V->getType());
 
   TypeSize OriginalSize = DL.getTypeSizeInBits(VTy);
@@ -383,7 +385,8 @@ bool LiveRegOptimizer::optimizeLiveType(
     if (!ValMap.contains(D)) {
       BasicBlock::iterator InsertPt = std::next(D->getIterator());
       Value *ConvertVal = convertToOptType(D, InsertPt);
-      assert(ConvertVal);
+      if (!ConvertVal)
+        return false;
       ValMap[D] = ConvertVal;
     }
   }
