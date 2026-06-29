@@ -450,15 +450,13 @@ protected:
       const SFrameParser<ELFT::Endianness> &Parser,
       const typename SFrameParser<ELFT::Endianness>::FDERange::iterator FDE,
       ArrayRef<Relocation<ELFT>> Relocations, const Elf_Shdr *RelocSymTab);
-  // Callgraph - Main data structure to maintain per function callgraph
-  // information.
-  SmallVector<FunctionCallgraphInfo, 16> FuncCGInfos;
-
   // Read the SHT_LLVM_CALL_GRAPH type section and process its contents to
   // populate call graph related data structures which will be used to dump call
   // graph info. Returns false if there is no SHT_LLVM_CALL_GRAPH type section
   // in the input file.
-  bool processCallGraphSection(const Elf_Shdr *CGSection);
+  bool
+  processCallGraphSection(const Elf_Shdr *CGSection,
+                          SmallVectorImpl<FunctionCallgraphInfo> &FuncCGInfos);
 
   std::string getProgramHeadersNumString();
 
@@ -5337,7 +5335,9 @@ template <class ELFT> void GNUELFDumper<ELFT>::printCGProfile() {
 }
 
 template <class ELFT>
-bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
+bool ELFDumper<ELFT>::processCallGraphSection(
+    const Elf_Shdr *CGSection,
+    SmallVectorImpl<FunctionCallgraphInfo> &FuncCGInfos) {
   ArrayRef<uint8_t> Contents = cantFail(Obj.getSectionContents(*CGSection));
   DataExtractor Data(Contents, Obj.isLE());
   DataExtractor::Cursor C(0);
@@ -8338,12 +8338,15 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     return;
   }
 
+  std::unique_ptr<ListScope> CGI;
+  SmallVector<FunctionCallgraphInfo, 16> FuncCGInfos;
   for (const auto &CGMapEntry : *MapOrErr) {
     const Elf_Shdr *CGSection = CGMapEntry.first;
     const Elf_Shdr *CGRelSection = CGMapEntry.second;
 
-    this->FuncCGInfos.clear();
-    if (!this->processCallGraphSection(CGSection) || this->FuncCGInfos.empty())
+    FuncCGInfos.clear();
+    if (!this->processCallGraphSection(CGSection, FuncCGInfos) ||
+        FuncCGInfos.empty())
       continue;
 
     std::vector<Relocation<ELFT>> Relocations;
@@ -8416,9 +8419,9 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
       else
         PrintNonRelocatableFuncSymbol(FuncEntryPC);
     };
-
-    ListScope CGI(W, "CallGraph");
-    for (const FunctionCallgraphInfo &CGInfo : this->FuncCGInfos) {
+    if (!CGI)
+      CGI = std::make_unique<ListScope>(W, "CallGraph");
+    for (const FunctionCallgraphInfo &CGInfo : FuncCGInfos) {
       DictScope D(W, "Function");
       PrintFunc(CGInfo.FunctionAddress);
       W.printNumber("Version", CGInfo.FormatVersionNumber);

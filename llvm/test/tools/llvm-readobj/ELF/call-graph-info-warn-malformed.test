@@ -293,8 +293,6 @@ Symbols:
 # LLVM-FIRST-CGSECTION-NEXT:       NumIndirectTargetTypeIDs: 0
 # LLVM-FIRST-CGSECTION-NEXT:       IndirectTypeIDs: []
 # LLVM-FIRST-CGSECTION-NEXT:     }
-# LLVM-FIRST-CGSECTION-NEXT:   ]
-# LLVM-FIRST-CGSECTION-NEXT:   CallGraph [
 # LLVM-FIRST-CGSECTION-NEXT:     Function {
 # LLVM-FIRST-CGSECTION-NEXT:       Names: [bar]
 # LLVM-FIRST-CGSECTION-NEXT:       Address: 0x17A0
@@ -324,9 +322,7 @@ Symbols:
 # JSON-FIRST-CGSECTION-NEXT:          "NumIndirectTargetTypeIDs": 0,
 # JSON-FIRST-CGSECTION-NEXT:          "IndirectTypeIDs": []
 # JSON-FIRST-CGSECTION-NEXT:        }
-# JSON-FIRST-CGSECTION-NEXT:      }
-# JSON-FIRST-CGSECTION-NEXT:    ],
-# JSON-FIRST-CGSECTION-NEXT:    "CallGraph": [
+# JSON-FIRST-CGSECTION-NEXT:      },
 # JSON-FIRST-CGSECTION-NEXT:      {
 # JSON-FIRST-CGSECTION-NEXT:        "Function": {
 # JSON-FIRST-CGSECTION-NEXT:          "Names": [
@@ -361,7 +357,7 @@ Sections:
       0x90, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## FunctionEntryPC: 0x1790
       0x24, 0x44, 0xF7, 0x31, 0xF5, 0xEE, 0xCB, 0x3E, ## FunctionTypeID: 0x3ECBEEF531F74424
     ]
-  ## This following second call graph section will be completely ignored.
+  ## This following second call graph section will also be processed.
   - Type:   SHT_LLVM_CALL_GRAPH
     Link:   .text
     ContentArray: [
