@@ -885,62 +885,48 @@ define { <2 x double>, <2 x double> } @test_sincos_v2f64(<2 x double> %a) {
 define { fp128, fp128 } @test_sincos_f128(fp128 %a) {
 ; GNU-LABEL: test_sincos_f128:
 ; GNU:       @ %bb.0:
-; GNU-NEXT:    push {r4, r5, r7, lr}
+; GNU-NEXT:    push {r4, r5, r6, lr}
 ; GNU-NEXT:    sub sp, #40
 ; GNU-NEXT:    mov r12, r3
 ; GNU-NEXT:    ldr r3, [sp, #56]
-; GNU-NEXT:    add.w lr, sp, #8
+; GNU-NEXT:    add r5, sp, #8
 ; GNU-NEXT:    mov r4, r0
-; GNU-NEXT:    add r0, sp, #24
-; GNU-NEXT:    strd r0, lr, [sp]
 ; GNU-NEXT:    mov r0, r1
 ; GNU-NEXT:    mov r1, r2
 ; GNU-NEXT:    mov r2, r12
+; GNU-NEXT:    add r6, sp, #24
+; GNU-NEXT:    strd r6, r5, [sp]
 ; GNU-NEXT:    bl sincosl
-; GNU-NEXT:    ldrd r2, r3, [sp, #16]
-; GNU-NEXT:    ldrd r12, r1, [sp, #8]
-; GNU-NEXT:    str r3, [r4, #28]
-; GNU-NEXT:    ldrd r3, r5, [sp, #32]
-; GNU-NEXT:    ldrd lr, r0, [sp, #24]
-; GNU-NEXT:    strd r1, r2, [r4, #20]
-; GNU-NEXT:    add.w r1, r4, #8
-; GNU-NEXT:    stm.w r1, {r3, r5, r12}
-; GNU-NEXT:    strd lr, r0, [r4]
+; GNU-NEXT:    vld1.64 {d18, d19}, [r6]
+; GNU-NEXT:    vld1.64 {d16, d17}, [r5]
+; GNU-NEXT:    vst1.32 {d18, d19}, [r4:128]!
+; GNU-NEXT:    vst1.64 {d16, d17}, [r4:128]
 ; GNU-NEXT:    add sp, #40
-; GNU-NEXT:    pop {r4, r5, r7, pc}
+; GNU-NEXT:    pop {r4, r5, r6, pc}
 ;
 ; GNUEABI-LABEL: test_sincos_f128:
 ; GNUEABI:       @ %bb.0:
-; GNUEABI-NEXT:    .save {r4, r5, r11, lr}
-; GNUEABI-NEXT:    push {r4, r5, r11, lr}
+; GNUEABI-NEXT:    .save {r4, r5, r6, lr}
+; GNUEABI-NEXT:    push {r4, r5, r6, lr}
 ; GNUEABI-NEXT:    .pad #40
 ; GNUEABI-NEXT:    sub sp, sp, #40
 ; GNUEABI-NEXT:    mov r12, r3
 ; GNUEABI-NEXT:    ldr r3, [sp, #56]
 ; GNUEABI-NEXT:    mov r4, r0
-; GNUEABI-NEXT:    add r0, sp, #24
-; GNUEABI-NEXT:    add r5, sp, #8
-; GNUEABI-NEXT:    stm sp, {r0, r5}
 ; GNUEABI-NEXT:    mov r0, r1
 ; GNUEABI-NEXT:    mov r1, r2
 ; GNUEABI-NEXT:    mov r2, r12
+; GNUEABI-NEXT:    add r6, sp, #24
+; GNUEABI-NEXT:    add r5, sp, #8
+; GNUEABI-NEXT:    str r6, [sp]
+; GNUEABI-NEXT:    str r5, [sp, #4]
 ; GNUEABI-NEXT:    bl sincosl
-; GNUEABI-NEXT:    add r3, sp, #12
-; GNUEABI-NEXT:    ldr r12, [sp, #8]
-; GNUEABI-NEXT:    ldm r3, {r1, r2, r3}
-; GNUEABI-NEXT:    str r3, [r4, #28]
-; GNUEABI-NEXT:    ldr r0, [sp, #32]
-; GNUEABI-NEXT:    ldr lr, [sp, #24]
-; GNUEABI-NEXT:    ldr r5, [sp, #28]
-; GNUEABI-NEXT:    ldr r3, [sp, #36]
-; GNUEABI-NEXT:    str r2, [r4, #24]
-; GNUEABI-NEXT:    str r1, [r4, #20]
-; GNUEABI-NEXT:    add r1, r4, #8
-; GNUEABI-NEXT:    stm r1, {r0, r3, r12}
-; GNUEABI-NEXT:    str r5, [r4, #4]
-; GNUEABI-NEXT:    str lr, [r4]
+; GNUEABI-NEXT:    vld1.64 {d18, d19}, [r6]
+; GNUEABI-NEXT:    vld1.64 {d16, d17}, [r5]
+; GNUEABI-NEXT:    vst1.32 {d18, d19}, [r4:128]!
+; GNUEABI-NEXT:    vst1.64 {d16, d17}, [r4:128]
 ; GNUEABI-NEXT:    add sp, sp, #40
-; GNUEABI-NEXT:    pop {r4, r5, r11, pc}
+; GNUEABI-NEXT:    pop {r4, r5, r6, pc}
 ;
 ; IOS-LABEL: test_sincos_f128:
 ; IOS:       @ %bb.0:

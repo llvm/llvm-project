@@ -13834,6 +13834,19 @@ bool ARMTargetLowering::shouldFoldSelectWithIdentityConstant(
          SelectOpcode == ISD::VSELECT;
 }
 
+bool ARMTargetLowering::canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
+                                         const MachineFunction &MF) const {
+
+  if (MemVT.isVector() && !Subtarget->hasNEON() &&
+      !(MemVT.isFloatingPoint() ? Subtarget->hasMVEFloatOps()
+                                : Subtarget->hasMVEIntegerOps()))
+    return false;
+
+  bool NoFloat = MF.getFunction().hasFnAttribute(Attribute::NoImplicitFloat) ||
+                 !Subtarget->hasFPRegs() || Subtarget->useSoftFloat();
+  return !NoFloat || MemVT.getSizeInBits() <= 32;
+}
+
 bool ARMTargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {
   if (!Subtarget->hasNEON() && !Subtarget->hasMVEIntegerOps()) {
     if (Subtarget->isThumb1Only())

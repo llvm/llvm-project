@@ -2,15 +2,14 @@
 ; RUN: llc < %s -mtriple=armv8r-eabi -mcpu=cortex-a57 -mattr=use-misched -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
 
 ; CHECK:       ********** MI Scheduling **********
-; We need second, post-ra scheduling to have VSTM instruction combined from single-stores
+; Post-RA region uses VST1q64wb_fixed plus element stores (e.g. VSTRD), not VSTMDIA_UPD.
 ; CHECK:       ********** MI Scheduling **********
 ; CHECK:       schedule starting
-; CHECK:       VSTMDIA_UPD
+; CHECK:       VSTRD
 ; CHECK:       rdefs left
-; CHECK-NEXT:  Latency            : 4
-; CHECK:       Successors:
-; CHECK:       Data
-; CHECK-SAME:  Latency=1
+; CHECK-NEXT:  Latency            : 1
+; CHECK:       Predecessors:
+; CHECK:       Data Latency=1
 
 @a = dso_local global double 0.0, align 4
 @b = dso_local global double 0.0, align 4
