@@ -808,9 +808,10 @@ dropSwitchCasesThatMatchDefault(SwitchOp op, PatternRewriter &rewriter) {
 /// -> br ^bb2
 static void foldSwitch(SwitchOp op, PatternRewriter &rewriter,
                        const APInt &caseValue) {
+  uint64_t caseLimitedValue = caseValue.getLimitedValue();
   auto caseValues = op.getCaseValues();
   for (const auto &it : llvm::enumerate(caseValues->getValues<APInt>())) {
-    if (it.value() == caseValue) {
+    if (it.value().getLimitedValue() == caseLimitedValue) {
       rewriter.replaceOpWithNewOp<BranchOp>(
           op, op.getCaseDestinations()[it.index()],
           op.getCaseOperands(it.index()));
