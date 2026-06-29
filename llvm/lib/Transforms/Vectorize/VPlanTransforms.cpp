@@ -5750,18 +5750,21 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
 /// must be the operand at index \p OpIdx for both the recipe at lane 0, \p
 /// WideMember0). A VPInterleaveRecipe can be narrowed to a wide load, if \p V
 /// is defined at \p Idx of a load interleave group.
+/// A live-in or recipe defined outside the loop region can be converted, if it
+/// is the same across all lanes, or we can create a BuildVector for it.
 static bool canNarrowLoad(VPSingleDefRecipe *WideMember0, unsigned OpIdx,
                           VPValue *OpV, unsigned Idx, bool IsScalable) {
   VPValue *Member0Op = WideMember0->getOperand(OpIdx);
-  VPRecipeBase *Member0OpR = Member0Op->getDefiningRecipe();
-  if (!Member0OpR) {
-    // Member0's operand is a uniform live-in, broadcast across all fields.
+  if (Member0Op->isDefinedOutsideLoopRegions()) {
+    // Operand matches Member0, broadcast across all fields for both live-ins
+    // and recipes.
     if (Member0Op == OpV)
       return true;
-    // Otherwise distinct per-field live-ins are assembled into a BuildVector.
-    return !IsScalable && !OpV->hasDefiningRecipe() &&
+    // Otherwise distinct per-field VPValues are assembled into a BuildVector.
+    return !IsScalable && OpV->isDefinedOutsideLoopRegions() &&
            OpV->getScalarType() == Member0Op->getScalarType();
   }
+  VPRecipeBase *Member0OpR = Member0Op->getDefiningRecipe();
   if (auto *W = dyn_cast<VPWidenLoadRecipe>(Member0OpR))
     // For scalable VFs, the narrowed plan processes vscale iterations at once,
     // so a shared wide load cannot be narrowed to a uniform scalar; bail out.
@@ -5870,17 +5873,16 @@ static VPValue *narrowInterleaveGroupOp(ArrayRef<VPValue *> Members,
                                         SmallPtrSetImpl<VPValue *> &NarrowedOps,
                                         VPBasicBlock *Preheader) {
   VPValue *V = Members.front();
-  auto *R = V->getDefiningRecipe();
   if (NarrowedOps.contains(V))
     return V;
 
-  if (!R) {
+  if (V->isDefinedOutsideLoopRegions()) {
     assert(all_of(Members,
                   [V](VPValue *M) {
-                    return !M->hasDefiningRecipe() &&
+                    return M->isDefinedOutsideLoopRegions() &&
                            M->getScalarType() == V->getScalarType();
                   }) &&
-           "expected distinct live-ins of matching scalar type");
+           "expected distinct loop-invariant values of matching scalar type");
     auto *BV = new VPInstruction(VPInstruction::BuildVector, Members);
     Preheader->appendRecipe(BV);
     NarrowedOps.insert(BV);
@@ -5890,6 +5892,7 @@ static VPValue *narrowInterleaveGroupOp(ArrayRef<VPValue *> Members,
   if (isAlreadyNarrow(V))
     return V;
 
+  VPRecipeBase *R = V->getDefiningRecipe();
   if (isa<VPWidenRecipe, VPWidenCastRecipe>(R)) {
     auto *WideMember0 = cast<VPRecipeWithIRFlags>(R);
     for (VPValue *Member : Members.drop_front())
