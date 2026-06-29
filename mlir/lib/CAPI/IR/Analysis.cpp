@@ -38,3 +38,17 @@ intptr_t mlirGetForwardSlice(MlirOperation op, MlirSliceFilterCallback filter,
   getForwardSlice(unwrap(op), &result, options);
   return copySlice(result, n, slice);
 }
+
+intptr_t mlirGetBackwardSlice(MlirOperation op, MlirSliceFilterCallback filter,
+                              void *filterUserData, intptr_t n,
+                              MlirOperation *slice) {
+  SetVector<Operation *> result;
+  BackwardSliceOptions options;
+  if (filter)
+    options.filter = [filter, filterUserData](Operation *op) {
+      return filter(wrap(op), filterUserData);
+    };
+  if (failed(getBackwardSlice(unwrap(op), &result, options)))
+    return -1;
+  return copySlice(result, n, slice);
+}

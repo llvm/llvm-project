@@ -37,6 +37,20 @@ MLIR_CAPI_EXPORTED intptr_t mlirGetForwardSlice(MlirOperation op,
                                                 void *filterUserData,
                                                 intptr_t n, MlirOperation *slice);
 
+/// Computes the backward slice of the given operation, i.e. all its transitive
+/// definitions, not including the operation itself. The result operations are
+/// written (in slice order) into the caller-allocated `slice` buffer, up to `n`
+/// entries; the total number of operations in the slice is returned. A negative
+/// return value indicates the backward slice could not be computed. Passing
+/// `n == 0` (with `slice` ignored) queries the size. `filter` may be NULL to
+/// traverse all operations; otherwise it acts as a frontier (see
+/// MlirSliceFilterCallback).
+MLIR_CAPI_EXPORTED intptr_t mlirGetBackwardSlice(MlirOperation op,
+                                                 MlirSliceFilterCallback filter,
+                                                 void *filterUserData,
+                                                 intptr_t n,
+                                                 MlirOperation *slice);
+
 #ifdef __cplusplus
 }
 #endif
