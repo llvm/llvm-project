@@ -70,6 +70,7 @@ static_library("readability") {
     "StringCompareCheck.cpp",
     "SuspiciousCallArgumentCheck.cpp",
     "TrailingCommaCheck.cpp",
+    "TrivialSwitchCheck.cpp",
     "UniqueptrDeleteReleaseCheck.cpp",
     "UppercaseLiteralSuffixCheck.cpp",
     "UseAnyOfAllOfCheck.cpp",
