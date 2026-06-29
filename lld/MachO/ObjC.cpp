@@ -1345,7 +1345,7 @@ void ObjcCategoryMerger::doMerge() {
     }
     if (!merged)
       warn("ObjC category merging skipped for class symbol' " +
-           baseClass->getName().str() + "'\n");
+           baseClass->getName() + "'\n");
   }
 
   // Erase all categories that were merged

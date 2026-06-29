@@ -37,7 +37,7 @@ FIROpenACCSupportAnalysis::emitNYI(Location loc, const Twine &message) {
   TODO(loc, message);
   // Should be unreachable, but we return an actual diagnostic
   // to satisfy the interface.
-  return mlir::emitError(loc, "not yet implemented: " + message.str());
+  return mlir::emitError(loc, "not yet implemented: " + message);
 }
 
 bool FIROpenACCSupportAnalysis::isValidSymbolUse(Operation *user,

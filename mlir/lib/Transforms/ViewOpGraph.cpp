@@ -470,7 +470,7 @@ std::unique_ptr<Pass> mlir::createViewOpGraphPass(raw_ostream &os) {
 /// Generate a CFG for a region and show it in a window.
 static void llvmViewGraph(Region &region, const Twine &name) {
   int fd;
-  std::string filename = llvm::createGraphFilename(name.str(), fd);
+  std::string filename = llvm::createGraphFilename(name, fd);
   {
     llvm::raw_fd_ostream os(fd, /*shouldClose=*/true);
     if (fd == -1) {

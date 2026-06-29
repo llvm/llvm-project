@@ -339,7 +339,7 @@ macho::findPathCombination(const Twine &name,
       bool exists = fs::exists(location);
       searchedDylib(location, exists);
       if (exists)
-        return saver().save(location.str());
+        return saver().save(location);
     }
   }
   return {};
