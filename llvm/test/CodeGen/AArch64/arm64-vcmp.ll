@@ -234,3 +234,31 @@ define <1 x i64> @cmnez_d(<1 x i64> %A) nounwind {
   %mask = sext <1 x i1> %tst to <1 x i64>
   ret <1 x i64> %mask
 }
+
+; Check for the elimination of spurious type extensions
+define <16 x i1> @abdu_cmp(<16 x i8> %a, <16 x i8> %b, <16 x i8> %g) {
+; CHECK-LABEL: abdu_cmp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uabd.16b v0, v0, v1
+; CHECK-NEXT:    cmhi.16b v0, v2, v0
+; CHECK-NEXT:    ret
+  %za = zext <16 x i8> %a to <16 x i32>
+  %zb = zext <16 x i8> %b to <16 x i32>
+  %zg = zext <16 x i8> %g to <16 x i32>
+  %mx = call <16 x i32> @llvm.umax.v16i32(<16 x i32> %za, <16 x i32> %zb)
+  %mn = call <16 x i32> @llvm.umin.v16i32(<16 x i32> %za, <16 x i32> %zb)
+  %abdu = sub <16 x i32> %mx, %mn
+  %cond = icmp ult <16 x i32> %abdu, %zg
+  ret <16 x i1> %cond
+}
+
+define <16 x i1> @sext_cmp(<16 x i8> %a, <16 x i8> %b) {
+; CHECK-LABEL: sext_cmp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmgt.16b v0, v1, v0
+; CHECK-NEXT:    ret
+  %za = sext <16 x i8> %a to <16 x i32>
+  %zb = sext <16 x i8> %b to <16 x i32>
+  %cond = icmp slt <16 x i32> %za, %zb
+  ret <16 x i1> %cond
+}
