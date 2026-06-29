@@ -577,7 +577,9 @@ unsigned GCNSubtarget::getBaseMaxNumVGPRs(
   return std::clamp(Requested, Min, Max);
 }
 
-unsigned GCNSubtarget::getMaxNumVGPRs(const Function &F) const {
+unsigned
+GCNSubtarget::getMaxNumVGPRs(const Function &F,
+                             std::optional<unsigned> TargetOccupancy) const {
   // Temporarily check both the attribute and the subtarget feature, until the
   // latter is removed.
   unsigned DynamicVGPRBlockSize = AMDGPU::getDynamicVGPRBlockSize(F);
@@ -585,6 +587,14 @@ unsigned GCNSubtarget::getMaxNumVGPRs(const Function &F) const {
     DynamicVGPRBlockSize = getDynamicVGPRBlockSize();
 
   std::pair<unsigned, unsigned> Waves = getWavesPerEU(F);
+  if (TargetOccupancy) {
+    if (*TargetOccupancy >= Waves.first && *TargetOccupancy <= Waves.second)
+      Waves = {*TargetOccupancy, *TargetOccupancy};
+    else if (*TargetOccupancy < Waves.first)
+      Waves = {Waves.first, Waves.first};
+    else
+      Waves = {Waves.second, Waves.second};
+  }
   return getBaseMaxNumVGPRs(
       F, {getMinNumVGPRs(Waves.second, DynamicVGPRBlockSize),
           getMaxNumVGPRs(Waves.first, DynamicVGPRBlockSize)});
@@ -594,9 +604,9 @@ unsigned GCNSubtarget::getMaxNumVGPRs(const MachineFunction &MF) const {
   return getMaxNumVGPRs(MF.getFunction());
 }
 
-std::pair<unsigned, unsigned>
-GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
-  const unsigned MaxVectorRegs = getMaxNumVGPRs(F);
+std::pair<unsigned, unsigned> GCNSubtarget::getMaxNumVectorRegs(
+    const Function &F, std::optional<unsigned> TargetOccupancy) const {
+  const unsigned MaxVectorRegs = getMaxNumVGPRs(F, TargetOccupancy);
 
   unsigned MaxNumVGPRs = MaxVectorRegs;
   unsigned MaxNumAGPRs = 0;
