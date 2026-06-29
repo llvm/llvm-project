@@ -20,7 +20,7 @@ done:
 // CIR:   cir.scope {
 // CIR:     cir.if %{{.*}} {
 // CIR:       %[[T:.*]] = cir.load align(8) %[[P]]
-// CIR:       cir.goto.indirect %[[T]] : !cir.ptr<!void>
+// CIR:       cir.indirect_goto %[[T]] : !cir.ptr<!void>
 // CIR:     }
 // CIR:   }
 // CIR:   cir.label "done"
@@ -52,7 +52,7 @@ int nested_label(int x) {
 // CIR:   }
 // CIR:   cir.block_address <@nested_label, "inner"> : !cir.ptr<!void>
 // CIR:   %[[T:.*]] = cir.load align(8)
-// CIR:   cir.goto.indirect %[[T]] : !cir.ptr<!void>
+// CIR:   cir.indirect_goto %[[T]] : !cir.ptr<!void>
 
 // LLVM-LABEL: define dso_local i32 @nested_label
 // LLVM:   store ptr blockaddress(@nested_label, %[[INNER:[0-9]+]]), ptr %{{.*}}, align 8
@@ -76,7 +76,7 @@ out:
 // CIR:   cir.for : cond {
 // CIR:   } body {
 // CIR:     %[[T:.*]] = cir.load align(8)
-// CIR:     cir.goto.indirect %[[T]] : !cir.ptr<!void>
+// CIR:     cir.indirect_goto %[[T]] : !cir.ptr<!void>
 // CIR:   } step {
 // CIR:   }
 // CIR:   cir.label "out"
@@ -88,3 +88,31 @@ out:
 // OGCG-LABEL: define dso_local i32 @goto_in_loop
 // OGCG:   store ptr blockaddress(@goto_in_loop, %[[OUT:.*]]), ptr %{{.*}}, align 8
 // OGCG:   indirectbr ptr %{{.*}}, [label %[[OUT]]]
+
+// An address-taken label as the first statement of the function.
+int leading_label(int x) {
+first:;
+  void *p = &&first;
+  if (x)
+    goto *p;
+  return 0;
+}
+
+// CIR-LABEL: cir.func {{.*}} @leading_label
+// CIR:   cir.br ^bb1
+// CIR: ^bb1:
+// CIR:   cir.label "first"
+// CIR:   cir.block_address <@leading_label, "first"> : !cir.ptr<!void>
+// CIR:   cir.indirect_goto %{{.*}} : !cir.ptr<!void>
+
+// LLVM-LABEL: define dso_local i32 @leading_label
+// LLVM:   br label %[[FIRST:[0-9]+]]
+// LLVM: [[FIRST]]:
+// LLVM:   store ptr blockaddress(@leading_label, %[[FIRST]]), ptr %{{.*}}, align 8
+// LLVM:   indirectbr ptr %{{.*}}, [label %[[FIRST]]]
+
+// OGCG-LABEL: define dso_local i32 @leading_label
+// OGCG:   br label %[[FIRST:.*]]
+// OGCG: [[FIRST]]:
+// OGCG:   store ptr blockaddress(@leading_label, %[[FIRST]]), ptr %{{.*}}, align 8
+// OGCG:   indirectbr ptr %{{.*}}, [label %[[FIRST]]]

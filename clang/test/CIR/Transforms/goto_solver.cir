@@ -66,7 +66,7 @@ cir.func @d() {
   %1 = cir.block_address <@d, "label1"> : !cir.ptr<!void>
   cir.store align(8) %1, %0 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
   %2 = cir.load align(8) %0 : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
-  cir.goto.indirect %2 : !cir.ptr<!void>
+  cir.indirect_goto %2 : !cir.ptr<!void>
 ^bb1:
   cir.label "label1"
   cir.return

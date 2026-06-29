@@ -8,6 +8,7 @@
 #include "PassDetail.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -33,7 +34,7 @@ static void process(cir::FuncOp func,
   mlir::OpBuilder rewriter(func.getContext());
   llvm::StringMap<Block *> labels;
   llvm::SmallVector<cir::GotoOp, 4> gotos;
-  llvm::SmallVector<cir::GotoIndirectOp> indirectGotos;
+  llvm::SmallVector<cir::IndirectGotoOp> indirectGotos;
   // Labels whose address is taken by a cir.block_address op in this function,
   // in IR order.
   llvm::SmallVector<StringRef> opBlockAddrLabels;
@@ -43,7 +44,7 @@ static void process(cir::FuncOp func,
       labels.try_emplace(lab.getLabel(), lab->getBlock());
     } else if (auto goTo = dyn_cast<cir::GotoOp>(op)) {
       gotos.push_back(goTo);
-    } else if (auto indirect = dyn_cast<cir::GotoIndirectOp>(op)) {
+    } else if (auto indirect = dyn_cast<cir::IndirectGotoOp>(op)) {
       indirectGotos.push_back(indirect);
     } else if (auto blockAddr = dyn_cast<cir::BlockAddressOp>(op)) {
       opBlockAddrLabels.push_back(blockAddr.getBlockAddrInfo().getLabel());
@@ -94,7 +95,14 @@ static void process(cir::FuncOp func,
   // into one region, so the shared indirect-branch block and its successors all
   // live in func's body now -- the cross-region branch that broke a nested
   // `goto *` during CIRGen cannot arise here.
-  mlir::Location loc = indirectGotos.front().getLoc();
+  // The shared block represents every `goto *expr` that funnels into it, so
+  // fuse their locations when there is more than one.
+  llvm::SmallVector<mlir::Location> gotoLocs;
+  for (cir::IndirectGotoOp indirect : indirectGotos)
+    gotoLocs.push_back(indirect.getLoc());
+  mlir::Location loc = gotoLocs.size() == 1
+                           ? gotoLocs.front()
+                           : mlir::FusedLoc::get(func.getContext(), gotoLocs);
   mlir::Type addrType = indirectGotos.front().getAddr().getType();
   Block *indirectGotoBlock = rewriter.createBlock(
       &func.getBody(), func.getBody().end(), {addrType}, {loc});
@@ -125,12 +133,14 @@ void GotoSolverPass::runOnOperation() {
   // Block addresses can also appear in attributes outside of any function body,
   // such as global variable initializers.  Collect, per target function and in
   // initializer order, the labels referenced this way so their LabelOps survive
-  // and join the indirect branch's successors.
-  llvm::StringMap<llvm::SmallVector<StringRef>> globalBlockAddrLabels;
+  // and join the indirect branch's successors.  A SetVector keeps the first
+  // occurrence in order: a label named more than once across initializers needs
+  // to be a successor only once.
+  llvm::StringMap<llvm::SmallSetVector<StringRef, 4>> globalBlockAddrLabels;
   getOperation()->walk([&](mlir::Operation *op) {
     for (const mlir::NamedAttribute &namedAttr : op->getAttrs()) {
       namedAttr.getValue().walk([&](cir::BlockAddrInfoAttr info) {
-        globalBlockAddrLabels[info.getFunc().getValue()].push_back(
+        globalBlockAddrLabels[info.getFunc().getValue()].insert(
             info.getLabel());
       });
     }
@@ -139,7 +149,9 @@ void GotoSolverPass::runOnOperation() {
   static const llvm::SmallVector<StringRef> empty;
   getOperation()->walk([&](cir::FuncOp func) {
     auto it = globalBlockAddrLabels.find(func.getSymName());
-    process(func, it == globalBlockAddrLabels.end() ? empty : it->second);
+    process(func, it == globalBlockAddrLabels.end()
+                      ? llvm::ArrayRef<StringRef>(empty)
+                      : it->second.getArrayRef());
   });
 }
 

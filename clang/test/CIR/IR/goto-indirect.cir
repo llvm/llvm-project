@@ -5,11 +5,11 @@
 cir.func @f() {
   %0 = cir.alloca "p" align(8) init : !cir.ptr<!cir.ptr<!void>>
   %1 = cir.load align(8) %0 : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
-  cir.goto.indirect %1 : !cir.ptr<!void>
+  cir.indirect_goto %1 : !cir.ptr<!void>
 ^bb1:
   cir.label "l"
   cir.return
 }
 
 // CHECK: cir.func @f
-// CHECK:   cir.goto.indirect %{{.*}} : !cir.ptr<!void>
+// CHECK:   cir.indirect_goto %{{.*}} : !cir.ptr<!void>

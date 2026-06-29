@@ -1853,17 +1853,17 @@ def CIR_GotoOp : CIR_Op<"goto", [Terminator]> {
 }
 
 //===----------------------------------------------------------------------===//
-// GotoIndirectOp
+// IndirectGotoOp
 //===----------------------------------------------------------------------===//
 
-def CIR_GotoIndirectOp : CIR_Op<"goto.indirect", [Terminator]> {
+def CIR_IndirectGotoOp : CIR_Op<"indirect_goto", [Terminator]> {
   let summary = "Symbolic indirect goto";
   let description = [{
     Transfers control to the block whose address is held in `$addr`, the
     void-pointer value of a `goto *expr;` (the GNU computed-goto extension).
     Like `cir.goto`, it is symbolic: it references no successor block, so it is
     valid inside any region even before `FlattenCFG` merges nested scopes.
-    `GotoSolver` runs after `FlattenCFG` and rewrites each `cir.goto.indirect`
+    `GotoSolver` runs after `FlattenCFG` and rewrites each `cir.indirect_goto`
     into a `cir.br` to a shared block holding a `cir.indirect_br` over every
     address-taken label.
 
@@ -1871,7 +1871,7 @@ def CIR_GotoIndirectOp : CIR_Op<"goto.indirect", [Terminator]> {
 
     ```mlir
       %0 = cir.load %p : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
-      cir.goto.indirect %0 : !cir.ptr<!void>
+      cir.indirect_goto %0 : !cir.ptr<!void>
     ```
   }];
 

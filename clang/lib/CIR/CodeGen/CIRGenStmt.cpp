@@ -719,7 +719,7 @@ CIRGenFunction::emitIndirectGotoStmt(const IndirectGotoStmt &s) {
   // Emit a symbolic indirect goto.  GotoSolver resolves it into the shared
   // indirect-branch block after FlattenCFG merges regions, so this stays valid
   // even when the goto sits inside a nested scope.
-  cir::GotoIndirectOp::create(builder, getLoc(s.getSourceRange()), val);
+  cir::IndirectGotoOp::create(builder, getLoc(s.getSourceRange()), val);
 
   // The indirect goto ends the block; open a fresh one so codegen can resume.
   builder.createBlock(builder.getBlock()->getParent());
