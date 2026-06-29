@@ -290,7 +290,7 @@ public:
     if (const SymbolCast *SC = dyn_cast<SymbolCast>(Sym))
       return canReasonAbout(SVB.makeSymbolVal(SC->getOperand()));
 
-    if (const UnarySymExpr *USE = dyn_cast<UnarySymExpr>(Sym)) {
+    if (const auto *USE = dyn_cast<UnarySymExpr>(Sym)) {
       return canReasonAbout(SVB.makeSymbolVal(USE->getOperand()));
     }
 
