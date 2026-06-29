@@ -23,6 +23,8 @@ def setup_yaml_parser(loader):
         Value,
         DexRange,
         Label,
+        Then,
+        Address,
     ]
     for c in reg_classes:
         c.register_yaml(loader)
@@ -193,7 +195,91 @@ class Value(Expect):
 
 
 ##############
+## Execution Nodes: Can appear as leaf nodes directly under a state node to perform debugger actions when they become
+## active, to advance the debugger state.
+
+
+class Then:
+    """Used to perform actions, such as finishing the test or continuing. Will trigger as soon as it becomes active, and
+    intends to advance debugger state, so this must be used directly under a state node, e.g.:
+    `!where {line: 4}: !then finish`
+    """
+
+    def __init__(self, command: str):
+        self.command = command
+        if not self.is_valid():
+            raise DexterNodeError(self, f'Invalid !then command "{self.command}"')
+
+    def is_valid(self) -> bool:
+        valid_commands = ["finish", "step_out"]
+        if self.command not in valid_commands:
+            return False
+        return True
+
+    def __repr__(self):
+        return f"Then({self.command})"
+
+    @staticmethod
+    def constructor(loader, node):
+        return Then(loader.construct_scalar(node))
+
+    @staticmethod
+    def representer(dumper, data):
+        return dumper.represent_scalar("!then", data.command)
+
+    @staticmethod
+    def register_yaml(loader):
+        yaml.add_constructor("!then", Then.constructor, loader)
+        yaml.add_representer(Then, Then.representer)
+
+
+##############
 ## Utility Nodes: Can be used anywhere in a script as a form of syntactic sugar.
+
+
+class Address:
+    """Named label for an address, which may resolve to different values with each test run, but will resolve
+    consistently within a test run."""
+
+    def __init__(self, name: str, offset: int):
+        self.name = name
+        self.offset = offset
+        if not re.match(r"^([a-zA-Z_]\w*)$", name):
+            raise DexterNodeError(self, f'Invalid !address identifier "{name}"')
+
+    def __repr__(self):
+        if not self.offset:
+            offset_str = ""
+        elif self.offset > 0:
+            offset_str = f" + {self.offset}"
+        else:
+            offset_str = f" - {-self.offset}"
+        return f"Address({self.name}{offset_str})"
+
+    @staticmethod
+    def constructor(loader, node):
+        address_str = str(loader.construct_scalar(node)).strip()
+        offset = 0
+        if match := re.match(r"^([a-zA-Z_]\w*)\s*([+-])\s*(\d+)$", address_str):
+            identifier, sign, number = match.groups()
+            offset = int(number) if sign == "+" else -int(number)
+            address_str = identifier
+        return Address(address_str, offset)
+
+    @staticmethod
+    def representer(dumper, data: "Address"):
+        if not data.offset:
+            offset_str = ""
+        elif data.offset > 0:
+            offset_str = f"+{data.offset}"
+        else:
+            offset_str = f"-{-data.offset}"
+        return dumper.represent_scalar("!address", data.name + offset_str)
+
+    @staticmethod
+    def register_yaml(loader):
+        yaml.add_constructor("!address", Address.constructor, loader)
+        yaml.add_representer(Address, Address.representer)
 
 
 @dataclass(frozen=True)

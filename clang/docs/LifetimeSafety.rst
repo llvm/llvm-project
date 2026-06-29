@@ -462,6 +462,12 @@ more accurate checks in calling code.
 
 To enable annotation suggestions, use ``-Wlifetime-safety-suggestions``.
 
+Fix-it hints normally insert ``[[clang::lifetimebound]]``. If a visible
+object-like macro expands to ``[[clang::lifetimebound]]`` or
+``__attribute__((lifetimebound))``, Clang will use the last such macro
+visible at the insertion point. To force a project-specific macro spelling,
+use ``-lifetime-safety-lifetimebound-macro=<macro>``.
+
 .. code-block:: c++
 
   #include <string_view>
@@ -518,7 +524,9 @@ enables only the high-confidence subset of these checks.
 *   ``-Wlifetime-safety-suggestions``: Enables suggestions to add ``[[clang::lifetimebound]]`` to function parameters and ``this`` parameters.
 
   * ``-Wlifetime-safety-intra-tu-suggestions``: Suggestions for functions local to the translation unit.
+    * ``-Wlifetime-safety-intra-tu-constructor-suggestions``: Suggestions for constructors local to the translation unit.
   * ``-Wlifetime-safety-cross-tu-suggestions``: Suggestions for functions visible across translation units (e.g., in headers).
+    * ``-Wlifetime-safety-cross-tu-constructor-suggestions``: Suggestions for constructors visible across translation units.
 
 * ``-Wlifetime-safety-validations``: Enables checks that validate existing lifetime annotations.
 
@@ -688,5 +696,5 @@ Performance
 Lifetime analysis relies on Clang's CFG (Control Flow Graph). For functions
 with very large or complex CFGs, analysis time can sometimes be significant. To mitigate
 this, the analysis allows to skip functions where the number of CFG blocks exceeds
-a certain threshold, controlled by the ``-flifetime-safety-max-cfg-blocks=N`` language
+a certain threshold, controlled by the ``-lifetime-safety-max-cfg-blocks=N`` language
 option.

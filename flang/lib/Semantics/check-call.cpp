@@ -27,8 +27,8 @@ namespace characteristics = Fortran::evaluate::characteristics;
 
 namespace Fortran::semantics {
 
-void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
-    parser::ContextualMessages &messages, SemanticsContext &context) {
+void CheckImplicitInterfaceArgKeywords(
+    const evaluate::ActualArgument &arg, parser::ContextualMessages &messages) {
   auto restorer{
       messages.SetLocation(arg.sourceLocation().value_or(messages.at()))};
   if (auto kw{arg.keyword()}) {
@@ -36,6 +36,11 @@ void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
         "Keyword '%s=' may not appear in a reference to a procedure with an implicit interface"_err_en_US,
         *kw);
   }
+}
+
+void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
+    parser::ContextualMessages &messages, SemanticsContext &context) {
+  CheckImplicitInterfaceArgKeywords(arg, messages);
   auto type{arg.GetType()};
   if (type) {
     if (type->IsAssumedType()) {
@@ -512,27 +517,36 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       actualFirstSymbol && actualFirstSymbol->attrs().test(Attr::VOLATILE)};
   if (actualDerived && !actualDerived->IsVectorType()) {
     if (dummy.type.type().IsAssumedType()) {
-      if (!actualDerived->parameters().empty()) { // 15.5.2.4(2)
-        messages.Say(
-            "Actual argument associated with TYPE(*) %s may not have a parameterized derived type"_err_en_US,
-            dummyName);
-      }
-      if (const Symbol *
-          tbp{FindImmediateComponent(*actualDerived, [](const Symbol &symbol) {
-            return symbol.has<ProcBindingDetails>();
-          })}) { // 15.5.2.4(2)
-        evaluate::SayWithDeclaration(messages, *tbp,
-            "Actual argument associated with TYPE(*) %s may not have type-bound procedure '%s'"_err_en_US,
-            dummyName, tbp->name());
-      }
-      auto finals{FinalsForDerivedTypeInstantiation(*actualDerived)};
-      if (!finals.empty()) { // 15.5.2.4(2)
-        SourceName name{finals.front()->name()};
-        if (auto *msg{messages.Say(
-                "Actual argument associated with TYPE(*) %s may not have derived type '%s' with FINAL subroutine '%s'"_err_en_US,
-                dummyName, actualDerived->typeSymbol().name(), name)}) {
-          msg->Attach(name, "FINAL subroutine '%s' in derived type '%s'"_en_US,
-              name, actualDerived->typeSymbol().name());
+      // Assumed-type dummies with ignore_tkr(c) passed via descriptor to
+      // bind(C) procedures model opaque CFI argument passing; the callee does
+      // not access derived-type structure as TYPE(*).
+      const bool relaxAssumedTypeDerivedChecks{procedure.IsBindC() &&
+          dummy.ignoreTKR.test(common::IgnoreTKR::Contiguous) &&
+          dummy.IsPassedByDescriptor(/*isBindC=*/true)};
+      if (!relaxAssumedTypeDerivedChecks) {
+        if (!actualDerived->parameters().empty()) { // F2023 15.5.2.5 p2
+          messages.Say(
+              "Actual argument associated with TYPE(*) %s may not have a parameterized derived type"_err_en_US,
+              dummyName);
+        }
+        if (const Symbol *tbp{FindImmediateComponent(
+                *actualDerived, [](const Symbol &symbol) {
+                  return symbol.has<ProcBindingDetails>();
+                })}) { // F2023 15.5.2.5 p2
+          evaluate::SayWithDeclaration(messages, *tbp,
+              "Actual argument associated with TYPE(*) %s may not have type-bound procedure '%s'"_err_en_US,
+              dummyName, tbp->name());
+        }
+        auto finals{FinalsForDerivedTypeInstantiation(*actualDerived)};
+        if (!finals.empty()) { // F2023 15.5.2.5 p2
+          SourceName name{finals.front()->name()};
+          if (auto *msg{messages.Say(
+                  "Actual argument associated with TYPE(*) %s may not have derived type '%s' with FINAL subroutine '%s'"_err_en_US,
+                  dummyName, actualDerived->typeSymbol().name(), name)}) {
+            msg->Attach(name,
+                "FINAL subroutine '%s' in derived type '%s'"_en_US, name,
+                actualDerived->typeSymbol().name());
+          }
         }
       }
     }
@@ -1172,7 +1186,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     if (!skipCudaDataAttrCheck &&
         !common::AreCompatibleCUDADataAttrs(dummyDataAttr, actualDataAttr,
             dummy.ignoreTKR, /*allowUnifiedMatchingRule=*/true,
-            isHostDeviceProc, &context.languageFeatures())) {
+            isHostDeviceProc, &context.languageFeatures(), actualIsVariable)) {
       auto toStr{[](std::optional<common::CUDADataAttr> x) {
         return x ? "ATTRIBUTES("s +
                 parser::ToUpperCaseLetters(common::EnumToString(*x)) + ")"s

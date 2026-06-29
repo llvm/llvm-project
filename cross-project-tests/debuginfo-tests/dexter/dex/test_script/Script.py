@@ -20,6 +20,7 @@ from dex.test_script.Nodes import (
     Expect,
     FileLabels,
     Where,
+    Then,
     setup_yaml_parser,
 )
 
@@ -138,6 +139,16 @@ class Scope:
         return next_scope.file
 
 
+class ScriptLoadContext:
+    """Contains information about the context that the script was loaded from."""
+
+    def __init__(self, file: str, lines: List[str], start_line: int, stop_line: int):
+        self.file = file
+        self.lines = lines
+        self.start_line = start_line
+        self.stop_line = stop_line
+
+
 class DexterScript:
     def __init__(
         self,
@@ -145,10 +156,12 @@ class DexterScript:
         script_obj,
         scope: Scope,
         source_root_dir: Optional[str],
+        load_context: ScriptLoadContext,
     ):
         self.context = context
         self.script_obj = script_obj
         self.root_scope = scope
+        self.load_context = load_context
         self.label_dict = LabelDict()
         assert scope.file is not None
         self.base_dir = (
@@ -176,7 +189,10 @@ class DexterScript:
                 if result := do(visit_where, key, scope):
                     return result
                 new_scope = scope.add_where(key)
-                if result := self._visit_script(
+                if isinstance(value, Then):
+                    if result := do(visit_then, value, new_scope):
+                        return result
+                elif result := self._visit_script(
                     value, new_scope, visit_where, visit_expect, visit_then
                 ):
                     return result
@@ -191,6 +207,7 @@ class DexterScript:
         self,
         visit_where: Optional[Callable[[Where, Scope], Any]] = None,
         visit_expect: Optional[Callable[[Expect, Any, Scope], Any]] = None,
+        visit_then: Optional[Callable[[Then, Scope], Any]] = None,
     ) -> Any:
         """Visits all nodes in the script in pre-order traversal, calling any non-none provided visitor functions for
         each respective node type. Note that we do not visit expected values independently of their associated expect;
@@ -199,7 +216,7 @@ class DexterScript:
         If any visit function returns a truthy value, traversal will early-exit and this function returns that value;
         otherwise, this function returns None."""
         return self._visit_script(
-            self.script_obj, self.root_scope, visit_where, visit_expect
+            self.script_obj, self.root_scope, visit_where, visit_expect, visit_then
         )
 
     @property
@@ -266,6 +283,7 @@ def get_script(context, file, loader, source_root_dir: Optional[str]) -> DexterS
                 try_load_yaml("\n".join(lines), loader),
                 root_scope,
                 source_root_dir,
+                ScriptLoadContext(file, lines, start_line=0, stop_line=len(lines)),
             )
         except (Error, yaml.YAMLError) as e:
             raise Error(f"File '{file}' was not a valid Dexter script:\n{e}")
@@ -288,6 +306,7 @@ def get_script(context, file, loader, source_root_dir: Optional[str]) -> DexterS
                 ),
                 root_scope,
                 source_root_dir,
+                ScriptLoadContext(file, lines, start_line, stop_line),
             )
         except (Error, yaml.YAMLError) as e:
             attempted_scripts.append((start_line, e))
@@ -325,3 +344,15 @@ def get_dexter_script(context, test_file, source_root_dir: Optional[str]):
 
         script.visit_script(visit_where=check_explicit_files)
         return script, source_files
+
+
+def write_dexter_script_file(script: DexterScript) -> str:
+    load_context = script.load_context
+    script_lines = script.dump().splitlines(True)
+    write_lines = (
+        load_context.lines[: load_context.start_line]
+        + script_lines
+        + ["...\n"]
+        + load_context.lines[load_context.stop_line :]
+    )
+    return "".join(write_lines)
