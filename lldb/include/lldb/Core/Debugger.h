@@ -267,8 +267,9 @@ public:
   void SetLoggingCallback(lldb::LogOutputCallback log_callback, void *baton);
 
   /// Copy this debugger's file-backed log files into the given directory, for
-  /// inclusion in a diagnostics bundle. Best-effort; failures are skipped.
-  void CopyLogFilesToDirectory(const FileSpec &dir);
+  /// inclusion in a diagnostics bundle. Returns the names of the files that
+  /// were copied. Best-effort: files that cannot be copied are skipped.
+  std::vector<std::string> CopyLogFilesToDirectory(const FileSpec &dir);
 
   Status SetPropertyValue(const ExecutionContext *exe_ctx,
                           VarSetOperationType op, llvm::StringRef property_path,
