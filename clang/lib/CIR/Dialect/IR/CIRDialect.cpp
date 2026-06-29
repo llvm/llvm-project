@@ -17,8 +17,8 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 
 #include "mlir/IR/Attributes.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
