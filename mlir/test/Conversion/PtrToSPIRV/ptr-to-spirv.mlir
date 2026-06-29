@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -convert-ptr-to-spirv | FileCheck %s
+// RUN: mlir-opt %s --split-input-file --convert-ptr-to-spirv | FileCheck %s
 
 !ptr = !ptr.ptr<#ptr.generic_space>
 

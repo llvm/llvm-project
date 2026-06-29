@@ -16,6 +16,7 @@
 #include "mlir/Dialect/SPIRV/Transforms/SPIRVConversion.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
 #include <limits>
 
 namespace mlir {
@@ -52,26 +53,22 @@ static LogicalResult getMemoryAccessAttrs(std::optional<int64_t> alignment,
   return success();
 }
 
-static LogicalResult checkSupportedPtrLoad(ptr::LoadOp op,
-                                           PatternRewriter &rewriter) {
-  if (op.getVolatile_() || op.getNontemporal() || op.getInvariant() ||
+static bool hasInvariantAttr(ptr::LoadOp op) { return op.getInvariant(); }
+
+static bool hasInvariantAttr(ptr::StoreOp) { return false; }
+
+template <typename OpTy>
+static LogicalResult checkSupportedPtrMemoryOp(OpTy op,
+                                               PatternRewriter &rewriter) {
+  StringRef opName = op->getName().getStringRef();
+  if (op.getVolatile_() || op.getNontemporal() || hasInvariantAttr(op) ||
       op.getInvariantGroup())
     return rewriter.notifyMatchFailure(
-        op, "unsupported ptr.load memory operand for SPIR-V lowering");
+        op, llvm::Twine("unsupported ") + opName +
+                " memory operand for SPIR-V lowering");
   if (op.getOrdering() != ptr::AtomicOrdering::not_atomic)
-    return rewriter.notifyMatchFailure(
-        op, "unsupported atomic ptr.load for SPIR-V lowering");
-  return success();
-}
-
-static LogicalResult checkSupportedPtrStore(ptr::StoreOp op,
-                                            PatternRewriter &rewriter) {
-  if (op.getVolatile_() || op.getNontemporal() || op.getInvariantGroup())
-    return rewriter.notifyMatchFailure(
-        op, "unsupported ptr.store memory operand for SPIR-V lowering");
-  if (op.getOrdering() != ptr::AtomicOrdering::not_atomic)
-    return rewriter.notifyMatchFailure(
-        op, "unsupported atomic ptr.store for SPIR-V lowering");
+    return rewriter.notifyMatchFailure(op, llvm::Twine("unsupported atomic ") +
+                                               opName + " for SPIR-V lowering");
   return success();
 }
 
@@ -79,22 +76,18 @@ static FailureOr<Value>
 castAddressToPointeeType(Operation *op, Value address, Type pointeeType,
                          spirv::StorageClass storageClass, Location loc,
                          PatternRewriter &rewriter) {
-  if (!isa<IntegerType>(address.getType())) {
-    (void)rewriter.notifyMatchFailure(op, "expected integer address operand");
-    return failure();
-  }
-  if (storageClass != spirv::StorageClass::PhysicalStorageBuffer) {
-    (void)rewriter.notifyMatchFailure(
+  if (!isa<IntegerType>(address.getType()))
+    return rewriter.notifyMatchFailure(op, "expected integer address operand");
+  if (storageClass != spirv::StorageClass::PhysicalStorageBuffer)
+    return rewriter.notifyMatchFailure(
         op, "only PhysicalStorageBuffer pointer materialization is supported");
-    return failure();
-  }
 
   auto typedPtrType = spirv::PointerType::get(pointeeType, storageClass);
   return spirv::ConvertUToPtrOp::create(rewriter, loc, typedPtrType, address)
       .getResult();
 }
 
-struct PtrTypeOffsetOpConverter final
+struct PtrTypeOffsetOpPattern final
     : public OpConversionPattern<ptr::TypeOffsetOp> {
   using Base::Base;
 
@@ -120,7 +113,7 @@ struct PtrTypeOffsetOpConverter final
   }
 };
 
-struct PtrAddOpConverter final : public OpConversionPattern<ptr::PtrAddOp> {
+struct PtrAddOpPattern final : public OpConversionPattern<ptr::PtrAddOp> {
   using Base::Base;
 
   LogicalResult
@@ -151,17 +144,18 @@ struct PtrAddOpConverter final : public OpConversionPattern<ptr::PtrAddOp> {
   }
 };
 
-struct PtrLoadOpConverter final : public OpConversionPattern<ptr::LoadOp> {
-  PtrLoadOpConverter(const SPIRVTypeConverter &typeConverter,
-                     MLIRContext *context, spirv::StorageClass storageClass)
+struct PtrLoadOpPattern final : public OpConversionPattern<ptr::LoadOp> {
+  PtrLoadOpPattern(const SPIRVTypeConverter &typeConverter,
+                   MLIRContext *context, spirv::StorageClass storageClass)
       : OpConversionPattern<ptr::LoadOp>(typeConverter, context),
         storageClass(storageClass) {}
 
   LogicalResult
   matchAndRewrite(ptr::LoadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (failed(checkSupportedPtrLoad(op, rewriter)))
-      return failure();
+    if (failed(checkSupportedPtrMemoryOp(op, rewriter)))
+      return rewriter.notifyMatchFailure(
+          op, "unsupported ptr.load for SPIR-V lowering");
 
     Type convertedType = getTypeConverter()->convertType(op.getType());
     if (!convertedType)
@@ -171,7 +165,8 @@ struct PtrLoadOpConverter final : public OpConversionPattern<ptr::LoadOp> {
         castAddressToPointeeType(op, adaptor.getPtr(), convertedType,
                                  storageClass, op.getLoc(), rewriter);
     if (failed(ptr))
-      return failure();
+      return rewriter.notifyMatchFailure(
+          op, "could not materialize SPIR-V pointer for ptr.load");
 
     spirv::MemoryAccessAttr accessAttr;
     IntegerAttr alignmentAttr;
@@ -188,23 +183,25 @@ private:
   spirv::StorageClass storageClass;
 };
 
-struct PtrStoreOpConverter final : public OpConversionPattern<ptr::StoreOp> {
-  PtrStoreOpConverter(const SPIRVTypeConverter &typeConverter,
-                      MLIRContext *context, spirv::StorageClass storageClass)
+struct PtrStoreOpPattern final : public OpConversionPattern<ptr::StoreOp> {
+  PtrStoreOpPattern(const SPIRVTypeConverter &typeConverter,
+                    MLIRContext *context, spirv::StorageClass storageClass)
       : OpConversionPattern<ptr::StoreOp>(typeConverter, context),
         storageClass(storageClass) {}
 
   LogicalResult
   matchAndRewrite(ptr::StoreOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    if (failed(checkSupportedPtrStore(op, rewriter)))
-      return failure();
+    if (failed(checkSupportedPtrMemoryOp(op, rewriter)))
+      return rewriter.notifyMatchFailure(
+          op, "unsupported ptr.store for SPIR-V lowering");
 
     Type valueType = adaptor.getValue().getType();
     FailureOr<Value> ptr = castAddressToPointeeType(
         op, adaptor.getPtr(), valueType, storageClass, op.getLoc(), rewriter);
     if (failed(ptr))
-      return failure();
+      return rewriter.notifyMatchFailure(
+          op, "could not materialize SPIR-V pointer for ptr.store");
 
     spirv::MemoryAccessAttr accessAttr;
     IntegerAttr alignmentAttr;
@@ -286,9 +283,9 @@ void mlir::ptr::populatePtrToSPIRVTypeConversions(
 void mlir::ptr::populatePtrToSPIRVPatterns(
     const SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns,
     spirv::StorageClass storageClass) {
-  patterns.add<PtrAddOpConverter, PtrTypeOffsetOpConverter>(
-      typeConverter, patterns.getContext());
-  patterns.add<PtrLoadOpConverter, PtrStoreOpConverter>(
+  patterns.add<PtrAddOpPattern, PtrTypeOffsetOpPattern>(typeConverter,
+                                                        patterns.getContext());
+  patterns.add<PtrLoadOpPattern, PtrStoreOpPattern>(
       typeConverter, patterns.getContext(), storageClass);
 }
 
