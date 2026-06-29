@@ -143,14 +143,17 @@ template <typename T>
 struct S {
   [[noreturn]] static void nrcall();
   [[noreturn]] void mem_nrcall();
+
+  void (*indirect_mem_noreturn)(void) __attribute__((noreturn));
 };
 
 void instantiate() {
   (void)noreturn_test9<S>(); // expected-note {{in instantiation of function template specialization 'noreturn_test9<S>' requested here}}
 }
 
-[[gnu::const]] int memfn() { // expected-note {{function declared 'const' here}}
-  S{}.mem_nrcall(); // expected-warning {{calling a 'noreturn' function from a function with the 'const' attribute is undefined behavior}}
+[[gnu::const]] int memfn() {   // expected-note 2 {{function declared 'const' here}}
+  S{}.mem_nrcall();            // expected-warning {{calling a 'noreturn' function from a function with the 'const' attribute is undefined behavior}}
+  S{}.indirect_mem_noreturn(); // expected-warning {{calling a 'noreturn' function from a function with the 'const' attribute is undefined behavior}}
 }
 
 __attribute__((pure)) int noreturn_test10() {
