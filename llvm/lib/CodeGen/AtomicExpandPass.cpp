@@ -385,10 +385,14 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
   }
 
   if (auto *RMWI = dyn_cast<AtomicRMWInst>(I)) {
-    bool IsElementwiseExpand = RMWI->isElementwise() && TLI->shouldExpandAtomicRMWInIR(RMWI) == TargetLoweringBase::AtomicExpansionKind::Expand;
+    bool IsElementwiseExpand =
+        RMWI->isElementwise() &&
+        TLI->shouldExpandAtomicRMWInIR(RMWI) ==
+            TargetLoweringBase::AtomicExpansionKind::Expand;
 
     if (!atomicSizeSupported(TLI, RMWI)) {
-      // Elementwise expansion may split an atomicrmw into smaller, supported atomic sizes.
+      // Elementwise expansion may split an atomicrmw into smaller, supported
+      // atomic sizes.
       if (!IsElementwiseExpand) {
         expandAtomicRMWToLibcall(RMWI);
         return true;
