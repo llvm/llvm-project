@@ -246,8 +246,7 @@ define float @select_fcmp_one(float %x, float %y, float %a, float %b) {
 ; CHECK-GISEL:       ; %bb.0:
 ; CHECK-GISEL-NEXT:    fcmp s0, s1
 ; CHECK-GISEL-NEXT:    cset w8, mi
-; CHECK-GISEL-NEXT:    cset w9, gt
-; CHECK-GISEL-NEXT:    orr w8, w8, w9
+; CHECK-GISEL-NEXT:    csinc w8, w8, wzr, le
 ; CHECK-GISEL-NEXT:    tst w8, #0x1
 ; CHECK-GISEL-NEXT:    fcsel s0, s2, s3, ne
 ; CHECK-GISEL-NEXT:    ret
@@ -297,8 +296,7 @@ define float @select_fcmp_ueq(float %x, float %y, float %a, float %b) {
 ; CHECK-GISEL:       ; %bb.0:
 ; CHECK-GISEL-NEXT:    fcmp s0, s1
 ; CHECK-GISEL-NEXT:    cset w8, eq
-; CHECK-GISEL-NEXT:    cset w9, vs
-; CHECK-GISEL-NEXT:    orr w8, w8, w9
+; CHECK-GISEL-NEXT:    csinc w8, w8, wzr, vc
 ; CHECK-GISEL-NEXT:    tst w8, #0x1
 ; CHECK-GISEL-NEXT:    fcsel s0, s2, s3, ne
 ; CHECK-GISEL-NEXT:    ret
@@ -378,8 +376,7 @@ define float @select_fcmp_true(float %x, float %a, float %b) {
 ; CHECK-GISEL:       ; %bb.0:
 ; CHECK-GISEL-NEXT:    fcmp s0, s0
 ; CHECK-GISEL-NEXT:    cset w8, eq
-; CHECK-GISEL-NEXT:    cset w9, vs
-; CHECK-GISEL-NEXT:    orr w8, w8, w9
+; CHECK-GISEL-NEXT:    csinc w8, w8, wzr, vc
 ; CHECK-GISEL-NEXT:    tst w8, #0x1
 ; CHECK-GISEL-NEXT:    fcsel s0, s1, s2, ne
 ; CHECK-GISEL-NEXT:    ret
