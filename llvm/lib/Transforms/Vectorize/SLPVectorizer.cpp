@@ -6262,8 +6262,9 @@ private:
     /// bundle
     void
     scheduleInternalStores(ScheduleBundle &Bundle,
-                           function_ref<void(ScheduleEntity *)> ScheduleCall) {
-      if (Bundle.isReady())
+                           function_ref<void(ScheduleEntity *)> ScheduleCall,
+                           const OrdersType &CurrentOrder) {
+      if (Bundle.isReady() || !CurrentOrder.empty())
         return;
       // Make sure all bundle members are:
       // (1) Only dependent on other members of the bundle
@@ -6322,7 +6323,8 @@ private:
     /// std::nullopt if \p VL is allowed to be scheduled.
     std::optional<ScheduleBundle *>
     tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
-                      const InstructionsState &S, const EdgeInfo &EI);
+                      const InstructionsState &S, const EdgeInfo &EI,
+                      const OrdersType &CurrentOrder);
 
     /// Allocates schedule data chunk.
     ScheduleData *allocateScheduleDataChunks();
@@ -13027,8 +13029,8 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
   BlockScheduling &BS = *BSRef;
 
   SetVector<Value *> UniqueValues(llvm::from_range, VL);
-  std::optional<ScheduleBundle *> BundlePtr =
-      BS.tryScheduleBundle(UniqueValues.getArrayRef(), this, S, UserTreeIdx);
+  std::optional<ScheduleBundle *> BundlePtr = BS.tryScheduleBundle(
+      UniqueValues.getArrayRef(), this, S, UserTreeIdx, CurrentOrder);
 #ifdef EXPENSIVE_CHECKS
   // Make sure we didn't break any internal invariants
   BS.verify();
@@ -25154,7 +25156,8 @@ BoUpSLP::ScheduleBundle &BoUpSLP::BlockScheduling::buildBundle(
 std::optional<BoUpSLP::ScheduleBundle *>
 BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
                                             const InstructionsState &S,
-                                            const EdgeInfo &EI) {
+                                            const EdgeInfo &EI,
+                                            const OrdersType &CurrentOrder) {
   // No need to schedule PHIs, insertelement, extractelement and extractvalue
   // instructions.
   if (isa<PHINode>(S.getMainOp()) ||
@@ -25461,7 +25464,7 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
         ReadyInsts.remove(SE);
         schedule(*SLP, S, EI, SE, ReadyInsts);
       };
-      scheduleInternalStores(Bundle, ScheduleCall);
+      scheduleInternalStores(Bundle, ScheduleCall, CurrentOrder);
     }
     while (((!Bundle && ReSchedule) || (Bundle && !Bundle.isReady())) &&
            !ReadyInsts.empty()) {
@@ -26237,7 +26240,10 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
       BS->schedule(R, Invalid, EdgeInfo(), SE, ReadyInsts);
       Scheduled.insert(PickedInst);
     };
-    BS->scheduleInternalStores(*Bundle, ScheduleCall);
+    // Order already checked when scheduling initially. The TreeEntry's order
+    // now may reflect ordering pushed down the tree.
+    OrdersType EmptyOrder;
+    BS->scheduleInternalStores(*Bundle, ScheduleCall, EmptyOrder);
   }
 
   // Do the "real" scheduling.
