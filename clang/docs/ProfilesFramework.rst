@@ -945,7 +945,8 @@ not used, and keep the pointer and reference recognizers symmetric.
 - Check sites: variable initialization
   (``Sema::CheckCompleteVariableDeclaration``), default member initializers
   (``Sema::ActOnFinishCXXInClassMemberInitializer``), pointer assignment
-  (``Sema::CreateBuiltinBinOp``), call arguments
+  (``Sema::CreateBuiltinBinOp``), call arguments -- including arguments
+  supplied by a parameter's default argument
   (``Sema::GatherArgumentsForCall``), and return statements
   (``Sema::BuildReturnStmt``).  A dependent target type defers to
   instantiation.
