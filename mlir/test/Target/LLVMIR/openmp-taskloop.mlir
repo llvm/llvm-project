@@ -19,15 +19,18 @@ llvm.func @_QPtest() {
   %7 = llvm.mlir.constant(1 : i32) : i32
   %8 = llvm.mlir.constant(5 : i32) : i32
   %9 = llvm.mlir.constant(1 : i32) : i32
-  omp.taskloop private(@_QFtestEa_firstprivate_i32 %3 -> %arg0, @_QFtestEi_private_i32 %1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
-    omp.loop_nest (%arg2) : i32 = (%7) to (%8) inclusive step (%9) {
-      llvm.store %arg2, %arg1 : i32, !llvm.ptr
-      %10 = llvm.load %arg0 : !llvm.ptr -> i32
-      %11 = llvm.mlir.constant(1 : i32) : i32
-      %12 = llvm.add %10, %11 : i32
-      llvm.store %12, %arg0 : i32, !llvm.ptr
-      omp.yield
+  omp.taskloop.context private(@_QFtestEa_firstprivate_i32 %3 -> %arg0, @_QFtestEi_private_i32 %1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
+    omp.taskloop.wrapper {
+      omp.loop_nest (%arg2) : i32 = (%7) to (%8) inclusive step (%9) {
+        llvm.store %arg2, %arg1 : i32, !llvm.ptr
+        %10 = llvm.load %arg0 : !llvm.ptr -> i32
+        %11 = llvm.mlir.constant(1 : i32) : i32
+        %12 = llvm.add %10, %11 : i32
+        llvm.store %12, %arg0 : i32, !llvm.ptr
+        omp.yield
+      }
     }
+    omp.terminator
   }
   llvm.return
 }
@@ -50,7 +53,7 @@ llvm.func @_QPtest() {
 // CHECK:         %[[VAL_9:.*]] = load i32, ptr %[[VAL_1]], align 4
 // CHECK:         store i32 %[[VAL_9]], ptr %[[VAL_6]], align 4
 // CHECK:         br label %[[VAL_10:.*]]
-// CHECK:       omp.taskloop.start:                               ; preds = %[[VAL_8]]
+// CHECK:       omp.taskloop.wrapper.start:                               ; preds = %[[VAL_8]]
 // CHECK:         br label %[[VAL_11:.*]]
 // CHECK:       codeRepl:                                         ; preds = %[[VAL_10]]
 // CHECK:         %[[VAL_12:.*]] = getelementptr { i64, i64, i64, ptr }, ptr %[[STRUCTARG]], i32 0, i32 0
@@ -92,11 +95,13 @@ llvm.func @_QPtest() {
 // CHECK:       taskloop.body:                                    ; preds = %[[VAL_36:.*]]
 // CHECK:         %[[VAL_37:.*]] = getelementptr { i32 }, ptr %[[VAL_33]], i32 0, i32 0
 // CHECK:         br label %[[VAL_38:.*]]
-// CHECK:       omp.taskloop.region:                              ; preds = %[[VAL_35]]
+// CHECK:       omp.taskloop.context.region:                      ; preds = %[[VAL_35]]
+// CHECK:         br label %[[VAL_38_1:.*]]
+// CHECK:       omp.taskloop.wrapper.region:                              ; preds = %[[VAL_38]]
 // CHECK:         br label %[[VAL_39:.*]]
-// CHECK:       omp_loop.preheader:                               ; preds = %[[VAL_38]]
+// CHECK:       omp_loop.preheader:                               ; preds = %[[VAL_38_1]]
 // CHECK:         %[[VAL_40:.*]] = sub i64 %[[VAL_29]], %[[VAL_27]]
-// CHECK:         %[[VAL_41:.*]] = sdiv i64 %[[VAL_40]], 1
+// CHECK:         %[[VAL_41:.*]] = sdiv i64 %[[VAL_40]], %[[VAL_31]]
 // CHECK:         %[[VAL_42:.*]] = add i64 %[[VAL_41]], 1
 // CHECK:         %[[VAL_43:.*]] = trunc i64 %[[VAL_42]] to i32
 // CHECK:         %[[VAL_44:.*]] = trunc i64 %[[VAL_27]] to i32
@@ -111,7 +116,9 @@ llvm.func @_QPtest() {
 // CHECK:         br label %[[VAL_53:.*]]
 // CHECK:       omp_loop.after:                                   ; preds = %[[VAL_52]]
 // CHECK:         br label %[[VAL_54:.*]]
-// CHECK:       omp.region.cont:                                  ; preds = %[[VAL_53]]
+// CHECK:       omp.region.cont2:                                  ; preds = %[[VAL_53]]
+// CHECK:         br label %[[VAL_54_1:.*]]
+// CHECK:       omp.region.cont:                                  ; preds = %[[VAL_54]]
 // CHECK:         tail call void @free(ptr %[[VAL_33]])
 // CHECK:         br label %[[VAL_55:.*]]
 // CHECK:       omp_loop.body:                                    ; preds = %[[VAL_49]]
@@ -124,12 +131,12 @@ llvm.func @_QPtest() {
 // CHECK:         %[[VAL_60:.*]] = add i32 %[[VAL_59]], 1
 // CHECK:         store i32 %[[VAL_60]], ptr %[[VAL_37]], align 4
 // CHECK:         br label %[[VAL_61:.*]]
-// CHECK:       omp.region.cont2:                                 ; preds = %[[VAL_58]]
+// CHECK:       omp.region.cont3:                                 ; preds = %[[VAL_58]]
 // CHECK:         br label %[[VAL_46]]
 // CHECK:       omp_loop.inc:                                     ; preds = %[[VAL_61]]
 // CHECK:         %[[VAL_48]] = add nuw i32 %[[VAL_47]], 1
 // CHECK:         br label %[[VAL_45]]
-// CHECK:       taskloop.exit.exitStub:                           ; preds = %[[VAL_54]]
+// CHECK:       taskloop.exit.exitStub:                           ; preds = %[[VAL_54_1]]
 // CHECK:         ret void
 
 // CHECK-LABEL: define internal void @omp_taskloop_dup(
@@ -148,4 +155,3 @@ llvm.func @_QPtest() {
 // CHECK:         %[[VAL_75:.*]] = load i32, ptr %[[VAL_71]], align 4
 // CHECK:         store i32 %[[VAL_75]], ptr %[[VAL_72]], align 4
 // CHECK:         ret void
-

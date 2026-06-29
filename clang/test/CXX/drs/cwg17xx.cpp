@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -std=c++98 %s -verify=expected -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++17 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++23 %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++2c %s -verify=expected,since-cxx11 -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected
+// RUN: %clang_cc1 -std=c++11 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++14 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++17 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++20 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++23 %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
+// RUN: %clang_cc1 -std=c++2c %s -fexceptions -fcxx-exceptions -pedantic-errors -verify-directives -verify=expected,since-cxx11
 
 namespace cwg1710 { // cwg1710: no
 // FIXME: all of the following is well-formed
@@ -222,3 +222,43 @@ template <template <typename> class Template, typename Argument>
 using Bind = Instantiate<Internal<Template>::template Bind, Argument>;
 #endif
 } // namespace cwg1794
+
+namespace cwg1780 { // cwg1780: 23
+#if __cplusplus >= 201103L
+
+#if __cplusplus >= 201703L
+#define CONSTEXPR constexpr
+#elif __cplusplus >= 201103L
+#define CONSTEXPR
+#endif
+
+auto l = []() -> int { return 5; };
+using L = decltype(l);
+class A {
+    friend CONSTEXPR auto L::operator()() const -> int;
+    // since-cxx11-error@-1 {{a member of a lambda should not be the target of a friend declaration}}
+};
+
+#undef CONSTEXPR
+
+#if __cplusplus >= 201402L
+auto gl = [](auto a) { return 5; }; // #cwg1780-spec
+using GL = decltype(gl);
+
+template <>
+auto GL::operator()(int a) const {
+// since-cxx11-error@-1 {{a member of a lambda should not be explicitly specialized}}
+//   since-cxx11-note-re@#cwg1780-spec {{{{'\(lambda at .+\)'}} defined here}}
+    return 6;
+}
+
+auto gll = [](auto a) -> int { return 5; }; // #cwg1780-inst
+
+using GLL = decltype(gll);
+template auto GLL::operator()<int>(int a) const -> int;
+// since-cxx11-error@-1 {{a member of a lambda should not be explicitly instantiated}}
+//   since-cxx11-note-re@#cwg1780-inst {{{{'\(lambda at .+\)'}} defined here}}
+#endif
+
+#endif
+} // namespace cwg1780

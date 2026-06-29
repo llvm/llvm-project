@@ -156,6 +156,8 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_PREL32:
   case R_AARCH64_PREL64:
     return R_PC;
+  case R_AARCH64_TLS_DTPREL64:
+    return R_DTPREL;
   case R_AARCH64_NONE:
     return R_NONE;
   default:
@@ -649,6 +651,9 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     checkInt(ctx, loc, val, 32, rel);
     write32(ctx, loc, val);
     break;
+  case R_AARCH64_TLS_DTPREL64:
+    write64(ctx, loc, val);
+    break;
   case R_AARCH64_ADD_ABS_LO12_NC:
   case R_AARCH64_AUTH_GOT_ADD_LO12_NC:
     write32Imm12(loc, val);
@@ -782,6 +787,14 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_HI12:
     checkUInt(ctx, loc, val, 24, rel);
+    if (ctx.arg.relax && (val >> 12) == 0) {
+      uint32_t inst = read32le(loc);
+      // The W-form zero-extends Xd, so only the X-form is a nop.
+      if ((inst & (1u << 31)) && (inst & 0x1f) == ((inst >> 5) & 0x1f)) {
+        write32le(loc, 0xd503201f); // nop
+        break;
+      }
+    }
     write32Imm12(loc, val >> 12);
     break;
   case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:

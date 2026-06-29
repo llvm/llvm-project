@@ -34,8 +34,8 @@ void emit_simple_parallel() {
 void parallel_with_operations() {
   // CHECK: cir.func{{.*}}@parallel_with_operations
   int a, b;
-  // CHECK-NEXT: cir.alloca{{.*}}["a"]
-  // CHECK-NEXT: cir.alloca{{.*}}["b"]
+  // CHECK-NEXT: cir.alloca "a"
+  // CHECK-NEXT: cir.alloca "b"
   // TODO(OMP): At the moment this results in 3 NYI diagnostics, 1 each for the
   // clauses + 1 for the CapturedStmt. When those are implemented, the check
   // lines will need updating.
@@ -47,11 +47,11 @@ void parallel_with_operations() {
   // CHECK-NEXT: omp.parallel {
   // CHECK-NEXT: cir.load align(4) %{{.*}}
   // CHECK-NEXT: cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: cir.binop(add, %{{.*}}, %{{.*}}) nsw : !s32i
+  // CHECK-NEXT: cir.add nsw %{{.*}}, %{{.*}} : !s32i
   // CHECK-NEXT: cir.store align(4) %{{.*}}, %{{.*}} : !s32i, !cir.ptr<!s32i>
   // CHECK-NEXT: cir.load align(4) %{{.*}}
   // CHECK-NEXT: cir.const #cir.int<1> : !s32i
-  // CHECK-NEXT: cir.binop(add, %{{.*}}, %{{.*}}) nsw : !s32i
+  // CHECK-NEXT: cir.add nsw %{{.*}}, %{{.*}} : !s32i
   // CHECK-NEXT: cir.store align(4) %{{.*}}, %{{.*}} : !s32i, !cir.ptr<!s32i>
   // CHECK-NEXT: omp.terminator
   // CHECK-NEXT: }

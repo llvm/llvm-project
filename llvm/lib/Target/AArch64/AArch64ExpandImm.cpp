@@ -720,3 +720,18 @@ void AArch64_IMM::expandMOVImm(uint64_t Imm, unsigned BitSize,
   // four-instruction sequence.
   expandMOVImmSimple(Imm, BitSize, OneChunks, ZeroChunks, Insn);
 }
+
+void AArch64_IMM::expandMOVAddr(unsigned Opcode, unsigned TargetFlags,
+                                bool IsTargetMachO,
+                                SmallVectorImpl<AddrInsnModel> &Insn) {
+  if (Opcode == AArch64::MOVaddrBA && IsTargetMachO) {
+    // Block address on Mach-O goes through a constant pool.
+    Insn.push_back({AArch64::ADRP});
+    Insn.push_back({AArch64::LDRXui});
+    return;
+  }
+  Insn.push_back({AArch64::ADRP});
+  if (TargetFlags & AArch64II::MO_TAGGED)
+    Insn.push_back({AArch64::MOVKXi});
+  Insn.push_back({AArch64::ADDXri});
+}

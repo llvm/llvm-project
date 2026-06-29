@@ -24,13 +24,13 @@ Record::Record(const RecordDecl *Decl, BaseList &&SrcBases,
 
   for (Base &B : Bases) {
     BaseMap[B.Decl] = &B;
-    if (!HasPtrField)
-      HasPtrField |= B.R->hasPtrField();
+    if (!this->HasPtrField)
+      this->HasPtrField |= B.R->hasPtrField();
   }
   for (Base &V : VirtualBases) {
     VirtualBaseMap[V.Decl] = &V;
-    if (!HasPtrField)
-      HasPtrField |= V.R->hasPtrField();
+    if (!this->HasPtrField)
+      this->HasPtrField |= V.R->hasPtrField();
   }
 }
 
@@ -63,6 +63,7 @@ const Record::Base *Record::getBase(QualType T) const {
 
 const Record::Base *Record::getVirtualBase(const RecordDecl *FD) const {
   auto It = VirtualBaseMap.find(FD);
-  assert(It != VirtualBaseMap.end() && "Missing virtual base");
+  if (It == VirtualBaseMap.end())
+    return nullptr;
   return It->second;
 }

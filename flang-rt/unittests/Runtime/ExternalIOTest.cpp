@@ -13,9 +13,11 @@
 #include "CrashHandlerFixture.h"
 #include "gtest/gtest.h"
 #include "flang-rt/runtime/descriptor.h"
+#include "flang/Runtime/extensions.h"
 #include "flang/Runtime/io-api.h"
 #include "flang/Runtime/main.h"
 #include "flang/Runtime/stop.h"
+#include <cstdio>
 #include <cstring>
 #include <string_view>
 
@@ -745,6 +747,60 @@ TEST(ExternalIOTests, TestWriteAfterEndfile) {
       << "EndIoStatement() for Close";
 }
 
+TEST(ExternalIOTests, TestUnformattedWriteAfterEndfile) {
+  // Test that unformatted write after ENDFILE with IOSTAT= returns
+  // IostatWriteAfterEndfile instead of crashing. This specifically tests
+  // the fix in BeginUnformattedIO() that checks IsAfterEndfile() before
+  // calling io.Emit().
+  //
+  // OPEN(NEWUNIT=unit,ACCESS='SEQUENTIAL',ACTION='READWRITE',&
+  //   FORM='UNFORMATTED',STATUS='SCRATCH')
+  auto *io{IONAME(BeginOpenNewUnit)(__FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(SetAccess)(io, "SEQUENTIAL", 10))
+      << "SetAccess(SEQUENTIAL)";
+  ASSERT_TRUE(IONAME(SetAction)(io, "READWRITE", 9)) << "SetAction(READWRITE)";
+  ASSERT_TRUE(IONAME(SetForm)(io, "UNFORMATTED", 11)) << "SetForm(UNFORMATTED)";
+  ASSERT_TRUE(IONAME(SetStatus)(io, "SCRATCH", 7)) << "SetStatus(SCRATCH)";
+  int unit{-1};
+  ASSERT_TRUE(IONAME(GetNewUnit)(io, unit)) << "GetNewUnit()";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for OpenNewUnit";
+
+  // Set up descriptor for I/O
+  StaticDescriptor<0> staticDescriptor;
+  Descriptor &desc{staticDescriptor.descriptor()};
+  std::int64_t buffer{1234};
+  static constexpr std::size_t recl{sizeof buffer};
+  desc.Establish(TypeCode{CFI_type_int64_t}, recl, &buffer, 0);
+  desc.Check();
+
+  // WRITE(unit) buffer
+  io = IONAME(BeginUnformattedOutput)(unit, __FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(OutputDescriptor)(io, desc)) << "OutputDescriptor()";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement for WRITE before ENDFILE";
+
+  // ENDFILE(unit)
+  io = IONAME(BeginEndfile)(unit, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement for ENDFILE";
+
+  // WRITE(unit,IOSTAT=iostat) buffer - should return error, not crash
+  buffer = 5678;
+  io = IONAME(BeginUnformattedOutput)(unit, __FILE__, __LINE__);
+  IONAME(EnableHandlers)(io, true /*IOSTAT=*/);
+  // The write may or may not succeed at OutputDescriptor depending on
+  // when the error is detected, but EndIoStatement must return the error
+  IONAME(OutputDescriptor)(io, desc);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatWriteAfterEndfile)
+      << "EndIoStatement for unformatted WRITE after ENDFILE";
+
+  // CLOSE(UNIT=unit)
+  io = IONAME(BeginClose)(unit, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Close";
+}
+
 TEST(ExternalIOTests, TestUTF8Encoding) {
   // OPEN(FILE="utf8test",NEWUNIT=unit,ACCESS='SEQUENTIAL',ACTION='READWRITE',&
   //   FORM='FORMATTED',STATUS='REPLACE',ENCODING='UTF-8')
@@ -950,6 +1006,39 @@ TEST(ExternalIOTests, BigUnitNumbers) {
         IostatUnitOverflow);
     EXPECT_EQ(std::strncmp(msg, expectedMsg, n), 0);
   }
+}
+
+TEST(ExternalIOTests, OpenAppend) {
+  FILE *file{std::fopen("openappend", "w")};
+  std::fprintf(file, "foo");
+  std::fclose(file);
+
+  // OPEN(10,POSITION='APPEND')
+  Cookie io{IONAME(BeginOpenUnit)(10, __FILE__, __LINE__)};
+  ASSERT_TRUE(IONAME(SetFile)(io, "openappend", 10)) << "SetFile(openappend)";
+  ASSERT_TRUE(IONAME(SetPosition)(io, "APPEND", 6)) << "SetPosition(APPEND)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Open";
+  // FTELL(10)
+  ASSERT_EQ(RTNAME(Ftell)(10), 3u);
+  // CLOSE(10)
+  io = IONAME(BeginClose)(10, __FILE__, __LINE__);
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Close";
+
+  // OPEN(10,POSITION='APPEND')
+  io = IONAME(BeginOpenUnit)(10, __FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(SetFile)(io, "openappend", 10)) << "SetFile(openappend)";
+  ASSERT_TRUE(IONAME(SetAccess)(io, "APPEND", 6)) << "SetAccess(APPEND)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Open";
+  // FTELL(10)
+  ASSERT_EQ(RTNAME(Ftell)(10), 3u);
+  // CLOSE(10)
+  io = IONAME(BeginClose)(10, __FILE__, __LINE__);
+  ASSERT_TRUE(IONAME(SetStatus)(io, "DELETE", 6)) << "SetStatus(DELETE)";
+  ASSERT_EQ(IONAME(EndIoStatement)(io), IostatOk)
+      << "EndIoStatement() for Close";
 }
 
 TEST(ExternalIOTests, OpenNewExtant) {

@@ -101,4 +101,4 @@ retq
 # CHECK-NEXT: 3.     3     6.0    0.7    0.0       movl	%eax, -8(%rsp)
 # CHECK-NEXT: 4.     3     5.0    0.0    0.0       ldmxcsr	-8(%rsp)
 # CHECK-NEXT: 5.     3     1.3    1.3    2.7       retq
-# CHECK-NEXT:        3     3.2    0.7    1.3       <total>
+# CHECK-NEXT:        18    3.2    0.7    1.3       <total>

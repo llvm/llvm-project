@@ -194,6 +194,11 @@ bool Parser::ExpectAndConsumeSemi(unsigned DiagID, StringRef TokenUsed) {
   return ExpectAndConsume(tok::semi, DiagID , TokenUsed);
 }
 
+bool Parser::isLikelyAtStartOfNewDeclaration() {
+  return Tok.isAtStartOfLine() &&
+         isDeclarationSpecifier(ImplicitTypenameContext::No);
+}
+
 void Parser::ConsumeExtraSemi(ExtraSemiKind Kind, DeclSpec::TST TST) {
   if (!Tok.is(tok::semi)) return;
 
@@ -1853,7 +1858,7 @@ bool Parser::TryKeywordIdentFallback(bool DisableKeyword) {
 }
 
 bool Parser::TryAnnotateTypeOrScopeToken(
-    ImplicitTypenameContext AllowImplicitTypename) {
+    ImplicitTypenameContext AllowImplicitTypename, bool IsAddressOfOperand) {
   assert((Tok.is(tok::identifier) || Tok.is(tok::coloncolon) ||
           Tok.is(tok::kw_typename) || Tok.is(tok::annot_cxxscope) ||
           Tok.is(tok::kw_decltype) || Tok.is(tok::annot_template_id) ||
@@ -1969,9 +1974,11 @@ bool Parser::TryAnnotateTypeOrScopeToken(
 
   CXXScopeSpec SS;
   if (getLangOpts().CPlusPlus)
-    if (ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
-                                       /*ObjectHasErrors=*/false,
-                                       /*EnteringContext*/ false))
+    if (ParseOptionalCXXScopeSpecifier(
+            SS, /*ObjectType=*/nullptr,
+            /*ObjectHasErrors=*/false,
+            /*EnteringContext=*/false,
+            /*IsAddressOfOperand=*/IsAddressOfOperand))
       return true;
 
   return TryAnnotateTypeOrScopeTokenAfterScopeSpec(SS, !WasScopeAnnotation,
@@ -2444,7 +2451,13 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
                           /*DiagnoseEmptyAttrs=*/false,
                           /*WarnOnUnknownAttrs=*/true);
 
-  if (PP.hadModuleLoaderFatalFailure()) {
+  // Clang modules can inject token streams while loading, so a fatal loader
+  // failure must stop parsing. C++20 named module imports are ordinary
+  // declarations, and a prior failed import should not hide later diagnostics.
+  bool IsCXX20NamedModuleImport =
+      getLangOpts().CPlusPlusModules && !IsObjCAtImport && !Path.empty();
+
+  if (PP.hadModuleLoaderFatalFailure() && !IsCXX20NamedModuleImport) {
     // With a fatal failure in the module loader, we abort parsing.
     cutOffParsing();
     return nullptr;

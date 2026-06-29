@@ -98,7 +98,8 @@ func.func @not_enough_loop_results(%arg0: index, %init: f32) {
 // -----
 
 func.func @scf_for_incorrect_result_type(%arg0: index, %init: f32) {
-  // expected-error @below{{0-th region iter_arg and 0-th loop result have different type: 'f32' != 'f64'}}
+  // expected-error @below{{along control flow edge from parent to Operation scf.for: successor operand type #0 'f32' should match successor input type #0 'f64'}}
+  // expected-note @below{{region branch point}}
   "scf.for"(%arg0, %arg0, %arg0, %init) (
     {
     ^bb0(%i0 : index, %iter: f32):
@@ -417,7 +418,7 @@ func.func @reduceReturn_not_inside_reduce(%arg0 : f32) {
 
 func.func @std_if_incorrect_yield(%arg0: i1, %arg1: f32)
 {
-  // expected-error@+1 {{along control flow edge from Operation scf.yield to parent: region branch point has 1 operands, but region successor needs 2 inputs}}
+  // expected-error@+1 {{along control flow edge from Operation scf.yield to Operation scf.if: region branch point has 1 operands, but region successor needs 2 inputs}}
   %x, %y = scf.if %arg0 -> (f32, f32) {
     %0 = arith.addf %arg1, %arg1 : f32
     // expected-note@+1 {{region branch point}}
@@ -494,11 +495,12 @@ func.func @std_for_operands_mismatch_3(%arg0 : index, %arg1 : index, %arg2 : ind
 func.func @std_for_operands_mismatch_4(%arg0 : index, %arg1 : index, %arg2 : index) {
   %s0 = arith.constant 0.0 : f32
   %t0 = arith.constant 1.0 : f32
-  // expected-error @below {{1-th region iter_arg and 1-th yielded value have different type: 'f32' != 'i32'}}
+  // expected-error @below {{along control flow edge from Operation scf.yield to Region #0: successor operand type #1 'i32' should match successor input type #1 'f32'}}
   %result1:2 = scf.for %i0 = %arg0 to %arg1 step %arg2
                     iter_args(%si = %s0, %ti = %t0) -> (f32, f32) {
     %sn = arith.addf %si, %si : f32
     %ic = arith.constant 1 : i32
+    // expected-note @below {{region branch point}}
     scf.yield %sn, %ic : f32, i32
   }
   return
@@ -617,7 +619,7 @@ func.func @while_cross_region_type_mismatch() {
 
 func.func @while_result_type_mismatch() {
   %true = arith.constant true
-  // expected-error@+1 {{along control flow edge from Operation scf.condition to parent: region branch point has 1 operands, but region successor needs 0 inputs}}
+  // expected-error@+1 {{along control flow edge from Operation scf.condition to Operation scf.while: region branch point has 1 operands, but region successor needs 0 inputs}}
   scf.while : () -> () {
     // expected-note@+1 {{region branch point}}
     scf.condition(%true) %true : i1

@@ -8,7 +8,10 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
+@skipIfWasm  # no expression evaluation
 class UniqueTypesTestCase4(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def do_test(self, debug_flags):
         """Test that we display the correct template instantiation."""
         self.build(dictionary=debug_flags)

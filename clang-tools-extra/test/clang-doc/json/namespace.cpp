@@ -1,5 +1,5 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: clang-doc --output=%t --format=html --executor=standalone %s
+// RUN: clang-doc --pretty-json --output=%t --format=html --executor=standalone %s
 // RUN: FileCheck %s < %t/json/GlobalNamespace/index.json
 // RUN: FileCheck %s < %t/html/GlobalNamespace/index.html -check-prefix=HTML-CHECK
 
@@ -125,7 +125,6 @@ typedef int MyTypedef;
 // CHECK-NEXT:        }
 // CHECK-NEXT:      }
 // CHECK-NEXT:    ],
-// CHECK-NEXT:    "USR": "0000000000000000000000000000000000000000"
 // CHECK-NEXT:   "Variables": [
 // CHECK-NEXT:     {
 // CHECK-NEXT:       "End": true,

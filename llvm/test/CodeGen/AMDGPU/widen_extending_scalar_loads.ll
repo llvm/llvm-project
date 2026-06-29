@@ -317,6 +317,22 @@ define amdgpu_kernel void @constant_load_i16_align4_invariant(ptr addrspace(1) %
   ret void
 }
 
+; The widened i32 load reads bytes outside the original i16 load, so !noundef
+; must not be carried over.
+define amdgpu_kernel void @constant_load_i16_align4_noundef(ptr addrspace(1) %out, ptr addrspace(4) %in) #0 {
+; OPT-LABEL: @constant_load_i16_align4_noundef(
+; OPT-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[IN:%.*]], align 4
+; OPT-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
+; OPT-NEXT:    [[EXT:%.*]] = sext i16 [[TMP2]] to i32
+; OPT-NEXT:    store i32 [[EXT]], ptr addrspace(1) [[OUT:%.*]], align 4
+; OPT-NEXT:    ret void
+;
+  %ld = load i16, ptr addrspace(4) %in, align 4, !noundef !6
+  %ext = sext i16 %ld to i32
+  store i32 %ext, ptr addrspace(1) %out
+  ret void
+}
+
 attributes #0 = { nounwind }
 
 ; OPT: !0 = !{i32 5, i32 0}

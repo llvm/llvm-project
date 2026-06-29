@@ -581,3 +581,29 @@ module attributes {transform.with_named_sequence} {
      transform.yield
  }
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/103703
+// unroll_and_jam on a loop with zero trip count used to crash because the
+// unroll factor was set to 0 (= tripCount) and then used as a SmallVector size
+// with unsigned underflow.
+
+// CHECK-LABEL: @loop_unroll_and_jam_zero_trip_count
+// CHECK:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK:       scf.for %{{.*}} = %[[C0]] to %[[C0]] step %[[C0]]
+func.func @loop_unroll_and_jam_zero_trip_count() {
+  %c0 = arith.constant 0 : index
+  scf.for %arg0 = %c0 to %c0 step %c0 {
+    %0 = arith.addi %arg0, %arg0 : index
+  }
+  return
+}
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["arith.addi"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 {op_name = "scf.for"} : (!transform.any_op) -> !transform.op<"scf.for">
+    transform.loop.unroll_and_jam %1 {factor = 3 : i64} : !transform.op<"scf.for">
+    transform.yield
+  }
+}

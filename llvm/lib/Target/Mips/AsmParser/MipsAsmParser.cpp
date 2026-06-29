@@ -523,10 +523,11 @@ public:
   };
 
   MipsAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
-                const MCInstrInfo &MII, const MCTargetOptions &Options)
-      : MCTargetAsmParser(Options, sti, MII),
-        ABI(MipsABIInfo::computeTargetABI(sti.getTargetTriple(),
-                                          Options.getABIName())) {
+                const MCInstrInfo &MII)
+      : MCTargetAsmParser(sti, MII),
+        ABI(MipsABIInfo::computeTargetABI(
+            sti.getTargetTriple(),
+            parser.getContext().getTargetOptions().getABIName())) {
     MCAsmParserExtension::Initialize(parser);
 
     parser.addAliasForDirective(".asciiz", ".asciz");
@@ -710,6 +711,11 @@ public:
   bool useSoftFloat() const {
     return getSTI().hasFeature(Mips::FeatureSoftFloat);
   }
+
+  bool isSingleFloat() const {
+    return getSTI().hasFeature(Mips::FeatureSingleFloat);
+  }
+
   bool hasMT() const {
     return getSTI().hasFeature(Mips::FeatureMT);
   }
@@ -2956,7 +2962,7 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
          static_cast<const MCSymbolELF *>(Res.getAddSym())->getBinding() ==
              ELF::STB_LOCAL);
     // For O32, "$"-prefixed symbols are recognized as temporary while
-    // .L-prefixed symbols are not (PrivateGlobalPrefix is "$"). Recognize ".L"
+    // .L-prefixed symbols are not (InternalSymbolPrefix is "$"). Recognize ".L"
     // manually.
     if (ABI.IsO32() && Res.getAddSym()->getName().starts_with(".L"))
       IsLocalSym = true;
@@ -6043,6 +6049,9 @@ bool MipsAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_SImm16_Relaxed:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected 16-bit signed immediate");
+  case Match_SImm18_Lsl3:
+    return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
+                 "expected both 18-bit signed immediate and multiple of 8");
   case Match_SImm19_Lsl2:
     return Error(RefineErrorLoc(IDLoc, Operands, ErrorInfo),
                  "expected both 19-bit signed immediate and multiple of 4");
