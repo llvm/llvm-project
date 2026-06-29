@@ -14,6 +14,7 @@
 // less, strictly in this order. Changes to this list should be intentional.
 
 // CHECK: [{{[0-9]+\.[0-9]+}}] [[#PID:]] [[#TID:]]: starting scanning command:{{.*}}tu.c
+// CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID]]: init_compiler_instance_with_context:{{.*}}
 // CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID]]: timestamp_read: {{.*}}[[PCMFILE:.*\.pcm]]
 // CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID]]: pcm_read_cached: {{.*}}[[PCMFILE]]
 // CHECK-NEXT: [{{[0-9]+\.[0-9]+}}] [[#PID]] [[#TID]]: pcm_read_disk: {{.*}}[[PCMFILE]]

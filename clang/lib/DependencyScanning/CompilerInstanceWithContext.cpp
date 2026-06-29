@@ -102,8 +102,8 @@ bool CompilerInstanceWithContext::initializeScanInstance(
 
 bool CompilerInstanceWithContext::prescanModulesAsync(
     AsyncModuleCompiles &Compiles, DependencyActionController &Controller) {
-  auto ModCache =
-      makeInProcessModuleCache(Worker.Service.getModuleCacheEntries());
+  auto ModCache = makeInProcessModuleCache(
+      Worker.Service.getModuleCacheEntries(), Worker.Service.getLogger());
   CompilerInstance PrescanCI(
       std::make_shared<CompilerInvocation>(CIPtr->getInvocation()),
       Worker.PCHContainerOps, std::move(ModCache));
