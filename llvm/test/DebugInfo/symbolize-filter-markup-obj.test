@@ -1,0 +1,16 @@
+## Test that --obj populates the build ID cache for --filter-markup.
+## The debug binary is reused from symbolize-build-id.test.
+
+# RUN: split-file %s %t
+# RUN: llvm-symbolizer --obj=%p/Inputs/.build-id/ab/b50d82b6bdc861.debug \
+# RUN:   --filter-markup < %t/input > %t.output 2>&1
+# RUN: FileCheck %s --input-file=%t.output --match-full-lines \
+# RUN:   --implicit-check-not {{.}}
+
+# CHECK: [[BEGIN:\[{3}]]ELF module #0x0 "a.o"; BuildID=abb50d82b6bdc861 [0x0-0x2fffff](r)[[END:\]{3}]]
+# CHECK: main[/tmp/dbginfo[[SEP:[/\\]]]dwarfdump-test.cc:16]
+
+;--- input
+{{{module:0:a.o:elf:abb50d82b6bdc861}}}
+{{{mmap:0:0x300000:load:0:r:0}}}
+{{{pc:0x20112f}}}
