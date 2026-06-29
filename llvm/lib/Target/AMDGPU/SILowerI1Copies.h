@@ -43,7 +43,6 @@ public:
   virtual ~PhiLoweringHelper() = default;
 
 protected:
-  bool IsWave32 = false;
   MachineFunction *MF = nullptr;
   MachineDominatorTree *DT = nullptr;
   MachinePostDominatorTree *PDT = nullptr;
@@ -62,6 +61,7 @@ public:
   bool isConstantLaneMask(Register Reg, bool &Val) const;
   MachineBasicBlock::iterator
   getSaluInsertionAtEnd(MachineBasicBlock &MBB) const;
+  void insertMask(const Incoming &Incoming, Register DstReg);
 
   void initializeLaneMaskRegisterAttributes(Register LaneMask) {
     LaneMaskRegAttrs = MRI->getVRegAttrs(LaneMask);
