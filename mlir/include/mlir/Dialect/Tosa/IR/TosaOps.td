@@ -2340,7 +2340,11 @@ def Tosa_ReshapeOp : Tosa_InferTensorTypeOp<"reshape", [Pure]> {
 
   list<Availability> availability = [
     Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
-    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16, Tosa_EXT_INT64]>,
+    Extension<[Tosa_EXT_FP8E4M3, Tosa_EXT_FP8E5M2, Tosa_EXT_BF16,
+               Tosa_EXT_INT64, Tosa_EXT_MX_COMMON, Tosa_EXT_MX_FP4E2M1,
+               Tosa_EXT_MX_FP6E2M3, Tosa_EXT_MX_FP6E3M2,
+               Tosa_EXT_MX_FP8E4M3, Tosa_EXT_MX_FP8E5M2,
+               Tosa_EXT_MX_INT8]>,
   ];
 
   let extraClassDeclaration = [{
@@ -2354,6 +2358,8 @@ def Tosa_ReshapeOp : Tosa_InferTensorTypeOp<"reshape", [Pure]> {
 
 //===----------------------------------------------------------------------===//
 // Operator: reshape_block_scaled
+//
+// Note: This operation is deprecated. It will be removed in the future.
 //===----------------------------------------------------------------------===//
 def Tosa_ReshapeBlockScaledOp
     : Tosa_InferTensorTypeOp<"reshape_block_scaled", [Pure]> {
@@ -2366,6 +2372,8 @@ def Tosa_ReshapeBlockScaledOp
     single non-block-scaled tensor of any rank. No data conversion happens during
     a reshape operation. Reshape must retain the relationship between values
     and their scale in a block for block-scaled content.
+
+    Note: This operation is deprecated. It will be removed in the future.
   }];
 
   let hasVerifier = 1;
