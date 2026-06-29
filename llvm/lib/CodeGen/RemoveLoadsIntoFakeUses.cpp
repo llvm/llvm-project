@@ -108,17 +108,17 @@ bool RemoveLoadsIntoFakeUses::run(MachineFunction &MF) {
 
   bool AnyChanges = false;
 
-  LiveRegUnits LivePhysRegs;
+  LiveRegUnits LiveRegUnits;
   const MachineRegisterInfo *MRI = &MF.getRegInfo();
   const TargetSubtargetInfo &ST = MF.getSubtarget();
   const TargetInstrInfo *TII = ST.getInstrInfo();
   const TargetRegisterInfo *TRI = ST.getRegisterInfo();
 
   SmallVector<MachineInstr *> RegFakeUses;
-  LivePhysRegs.init(*TRI);
+  LiveRegUnits.init(*TRI);
   for (MachineBasicBlock *MBB : post_order(&MF)) {
     RegFakeUses.clear();
-    LivePhysRegs.addLiveOuts(*MBB);
+    LiveRegUnits.addLiveOuts(*MBB);
 
     for (MachineInstr &MI : make_early_inc_range(reverse(*MBB))) {
       if (MI.isFakeUse()) {
@@ -127,7 +127,7 @@ bool RemoveLoadsIntoFakeUses::run(MachineFunction &MF) {
         // Track the Fake Uses that use these register units so that we can
         // delete them if we delete the corresponding load.
         RegFakeUses.push_back(&MI);
-        // Do not record FAKE_USE uses in LivePhysRegs so that we can recognize
+        // Do not record FAKE_USE uses in LiveRegUnits so that we can recognize
         // otherwise-unused loads.
         continue;
       }
@@ -137,7 +137,7 @@ bool RemoveLoadsIntoFakeUses::run(MachineFunction &MF) {
       if (MI.getRestoreSize(TII)) {
         Register Reg = MI.getOperand(0).getReg();
         // Don't delete live physreg defs, or any reserved register defs.
-        if (!LivePhysRegs.available(Reg) || MRI->isReserved(Reg))
+        if (!LiveRegUnits.available(Reg) || MRI->isReserved(Reg))
           continue;
         // There should typically be an exact match between the loaded register
         // and the FAKE_USE, but sometimes regalloc will choose to load a larger
@@ -171,7 +171,7 @@ bool RemoveLoadsIntoFakeUses::run(MachineFunction &MF) {
         continue;
       }
 
-      // In addition to tracking LivePhysRegs, we need to clear RegFakeUses each
+      // In addition to tracking LiveRegUnits, we need to clear RegFakeUses each
       // time a register is defined, as existing FAKE_USEs no longer apply to
       // that register.
       if (!RegFakeUses.empty()) {
@@ -188,7 +188,7 @@ bool RemoveLoadsIntoFakeUses::run(MachineFunction &MF) {
         }
       }
       if (!MI.isDebugInstr())
-        LivePhysRegs.stepBackward(MI);
+        LiveRegUnits.stepBackward(MI);
     }
   }
 
