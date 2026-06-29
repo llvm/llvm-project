@@ -340,7 +340,7 @@
 "`LWG4554 <https://wg21.link/LWG4554>`__","Remove undefined behaviour from ``hive`` for invalid limits","2026-03 (Croydon)","","","`#189882 <https://github.com/llvm/llvm-project/issues/189882>`__",""
 "`LWG4555 <https://wg21.link/LWG4555>`__","Remove ``is_consteval_only``","2026-03 (Croydon)","","","`#189883 <https://github.com/llvm/llvm-project/issues/189883>`__",""
 "`LWG4556 <https://wg21.link/LWG4556>`__","Unclear properties of reflection strings","2026-03 (Croydon)","","","`#189884 <https://github.com/llvm/llvm-project/issues/189884>`__",""
-"`LWG4557 <https://wg21.link/LWG4557>`__","Remove ``constexpr`` from ``owner_less`` and ``owner_before``","2026-03 (Croydon)","","","`#189885 <https://github.com/llvm/llvm-project/issues/189885>`__",""
+"`LWG4557 <https://wg21.link/LWG4557>`__","Remove ``constexpr`` from ``owner_less`` and ``owner_before``","2026-03 (Croydon)","|Nothing To Do|","","`#189885 <https://github.com/llvm/llvm-project/issues/189885>`__",""
 "","","","","","",""
 "`LWG4139 <https://wg21.link/LWG4139>`__","§[time.zone.leap] recursive constraint in ``<=>``","Not Adopted Yet","|Complete|","20","`#118369 <https://github.com/llvm/llvm-project/issues/118369>`__",""
 "`LWG3456 <https://wg21.link/LWG3456>`__","Pattern used by ``std::from_chars`` is underspecified (option B)","Not Adopted Yet","|Complete|","20","`#118370 <https://github.com/llvm/llvm-project/issues/118370>`__",""
