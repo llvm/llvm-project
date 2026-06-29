@@ -873,6 +873,19 @@ INTERCEPTOR(int, atexit, void (*func)()) {
 }
 #  endif
 
+#  if CAN_SANITIZE_LEAKS
+// TODO: Intercept more program-killing functions that behave like exit().
+INTERCEPTOR(void, exit, int status) {
+  if (AsanInited() && common_flags()->detect_leaks &&
+      common_flags()->leak_check_at_exit) {
+    // Capture the boundary before libc runs atexit handlers.
+    __lsan::RecordExitCallerSP(GET_CURRENT_FRAME());
+  }
+  REAL(exit)(status);
+}
+
+#  endif
+
 #  if ASAN_INTERCEPT_PTHREAD_ATFORK
 extern "C" {
 extern int _pthread_atfork(void (*prepare)(), void (*parent)(),
@@ -1001,6 +1014,10 @@ void InitializeAsanInterceptors() {
 
 #  if ASAN_INTERCEPT_ATEXIT
   ASAN_INTERCEPT_FUNC(atexit);
+#  endif
+
+#  if CAN_SANITIZE_LEAKS
+  ASAN_INTERCEPT_FUNC(exit);
 #  endif
 
 #  if ASAN_INTERCEPT_PTHREAD_ATFORK
