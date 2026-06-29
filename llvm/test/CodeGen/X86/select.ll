@@ -627,13 +627,21 @@ define void @test8(i1 %c, ptr %dst.addr, <6 x i32> %src1,<6 x i32> %src2) nounwi
 ;; Test integer select between values and constants.
 
 define i64 @test9(i64 %x, i64 %y) nounwind readnone ssp noredzone {
-; CHECK-LABEL: test9:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpq $1, %rdi
-; CHECK-NEXT:    sbbq %rax, %rax
-; CHECK-NEXT:    orq %rsi, %rax
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: test9:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    testq %rdi, %rdi
+; GENERIC-NEXT:    movq $-1, %rax
+; GENERIC-NEXT:    cmovneq %rsi, %rax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: test9:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    testq %rdi, %rdi
+; ATOM-NEXT:    movq $-1, %rax
+; ATOM-NEXT:    cmovneq %rsi, %rax
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: test9:
 ; ATHLON:       ## %bb.0:
@@ -667,13 +675,21 @@ define i64 @test9(i64 %x, i64 %y) nounwind readnone ssp noredzone {
 
 ;; Same as test9
 define i64 @test9a(i64 %x, i64 %y) nounwind readnone ssp noredzone {
-; CHECK-LABEL: test9a:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    cmpq $1, %rdi
-; CHECK-NEXT:    sbbq %rax, %rax
-; CHECK-NEXT:    orq %rsi, %rax
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: test9a:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    testq %rdi, %rdi
+; GENERIC-NEXT:    movq $-1, %rax
+; GENERIC-NEXT:    cmovneq %rsi, %rax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: test9a:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    testq %rdi, %rdi
+; ATOM-NEXT:    movq $-1, %rax
+; ATOM-NEXT:    cmovneq %rsi, %rax
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: test9a:
 ; ATHLON:       ## %bb.0:
@@ -779,13 +795,21 @@ define i64 @test10(i64 %x, i64 %y) nounwind readnone ssp noredzone {
 }
 
 define i64 @test11(i64 %x, i64 %y) nounwind readnone ssp noredzone {
-; CHECK-LABEL: test11:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    negq %rdi
-; CHECK-NEXT:    sbbq %rax, %rax
-; CHECK-NEXT:    orq %rsi, %rax
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: test11:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    testq %rdi, %rdi
+; GENERIC-NEXT:    movq $-1, %rax
+; GENERIC-NEXT:    cmoveq %rsi, %rax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: test11:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    testq %rdi, %rdi
+; ATOM-NEXT:    movq $-1, %rax
+; ATOM-NEXT:    cmoveq %rsi, %rax
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: test11:
 ; ATHLON:       ## %bb.0:
@@ -818,13 +842,21 @@ define i64 @test11(i64 %x, i64 %y) nounwind readnone ssp noredzone {
 }
 
 define i64 @test11a(i64 %x, i64 %y) nounwind readnone ssp noredzone {
-; CHECK-LABEL: test11a:
-; CHECK:       ## %bb.0:
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    negq %rdi
-; CHECK-NEXT:    sbbq %rax, %rax
-; CHECK-NEXT:    orq %rsi, %rax
-; CHECK-NEXT:    retq
+; GENERIC-LABEL: test11a:
+; GENERIC:       ## %bb.0:
+; GENERIC-NEXT:    testq %rdi, %rdi
+; GENERIC-NEXT:    movq $-1, %rax
+; GENERIC-NEXT:    cmoveq %rsi, %rax
+; GENERIC-NEXT:    retq
+;
+; ATOM-LABEL: test11a:
+; ATOM:       ## %bb.0:
+; ATOM-NEXT:    testq %rdi, %rdi
+; ATOM-NEXT:    movq $-1, %rax
+; ATOM-NEXT:    cmoveq %rsi, %rax
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    nop
+; ATOM-NEXT:    retq
 ;
 ; ATHLON-LABEL: test11a:
 ; ATHLON:       ## %bb.0:

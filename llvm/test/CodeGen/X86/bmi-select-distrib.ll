@@ -128,30 +128,23 @@ define i32 @and_neg_select_pos_i32(i1 %a0, i32 inreg %a1) nounwind {
 define i16 @and_select_neg_i16(i1 %a0, i16 %a1) nounwind {
 ; X86-LABEL: and_select_neg_i16:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andb $1, %cl
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, %esi
-; X86-NEXT:    negl %esi
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    cmpb $1, %cl
-; X86-NEXT:    sbbl %eax, %eax
-; X86-NEXT:    orl %esi, %eax
-; X86-NEXT:    andl %edx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    negl %edx
+; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $65535, %eax # imm = 0xFFFF
+; X86-NEXT:    cmovnel %edx, %eax
+; X86-NEXT:    andl %ecx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
-; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: and_select_neg_i16:
 ; X64:       # %bb.0:
-; X64-NEXT:    andb $1, %dil
 ; X64-NEXT:    movl %esi, %ecx
 ; X64-NEXT:    negl %ecx
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    cmpb $1, %dil
-; X64-NEXT:    sbbl %eax, %eax
-; X64-NEXT:    orl %ecx, %eax
+; X64-NEXT:    testb $1, %dil
+; X64-NEXT:    movl $65535, %eax # imm = 0xFFFF
+; X64-NEXT:    cmovnel %ecx, %eax
 ; X64-NEXT:    andl %esi, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
@@ -200,22 +193,17 @@ define <4 x i32> @and_select_neg_v4xi32(i1 %a0, <4 x i32> %a1) nounwind {
 define i32 @and_select_no_neg(i1 %a0, i32 inreg %a1) nounwind {
 ; X86-LABEL: and_select_no_neg:
 ; X86:       # %bb.0:
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andb $1, %cl
-; X86-NEXT:    xorl %edx, %edx
-; X86-NEXT:    cmpb $1, %cl
-; X86-NEXT:    sbbl %edx, %edx
-; X86-NEXT:    orl %eax, %edx
-; X86-NEXT:    andl %edx, %eax
+; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $-1, %ecx
+; X86-NEXT:    cmovnel %eax, %ecx
+; X86-NEXT:    andl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: and_select_no_neg:
 ; X64:       # %bb.0:
-; X64-NEXT:    andb $1, %dil
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    cmpb $1, %dil
-; X64-NEXT:    sbbl %eax, %eax
-; X64-NEXT:    orl %esi, %eax
+; X64-NEXT:    testb $1, %dil
+; X64-NEXT:    movl $-1, %eax
+; X64-NEXT:    cmovnel %esi, %eax
 ; X64-NEXT:    andl %esi, %eax
 ; X64-NEXT:    retq
   %sub = sub i32 %a1, 0
@@ -255,26 +243,19 @@ define i32 @and_select_neg_wrong_const(i1 %a0, i32 inreg %a1) nounwind {
 define i32 @and_select_neg_different_op(i1 %a0, i32 inreg %a1, i32 inreg %a2) nounwind {
 ; X86-LABEL: and_select_neg_different_op:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andb $1, %cl
 ; X86-NEXT:    negl %edx
-; X86-NEXT:    xorl %esi, %esi
-; X86-NEXT:    cmpb $1, %cl
-; X86-NEXT:    sbbl %esi, %esi
-; X86-NEXT:    orl %edx, %esi
-; X86-NEXT:    andl %esi, %eax
-; X86-NEXT:    popl %esi
+; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $-1, %ecx
+; X86-NEXT:    cmovnel %edx, %ecx
+; X86-NEXT:    andl %ecx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: and_select_neg_different_op:
 ; X64:       # %bb.0:
-; X64-NEXT:    andb $1, %dil
 ; X64-NEXT:    negl %edx
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    cmpb $1, %dil
-; X64-NEXT:    sbbl %eax, %eax
-; X64-NEXT:    orl %edx, %eax
+; X64-NEXT:    testb $1, %dil
+; X64-NEXT:    movl $-1, %eax
+; X64-NEXT:    cmovnel %edx, %eax
 ; X64-NEXT:    andl %esi, %eax
 ; X64-NEXT:    retq
   %sub = sub i32 0, %a2
@@ -427,29 +408,22 @@ define i64 @and_select_sub_1_to_blsr_i64(i1 %a0, i64 %a1) nounwind {
 define i16 @and_select_sub_1_i16(i1 %a0, i16 %a1) nounwind {
 ; X86-LABEL: and_select_sub_1_i16:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andb $1, %cl
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    leal -1(%edx), %esi
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    cmpb $1, %cl
-; X86-NEXT:    sbbl %eax, %eax
-; X86-NEXT:    orl %esi, %eax
-; X86-NEXT:    andl %edx, %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    leal -1(%ecx), %edx
+; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $65535, %eax # imm = 0xFFFF
+; X86-NEXT:    cmovnel %edx, %eax
+; X86-NEXT:    andl %ecx, %eax
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
-; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: and_select_sub_1_i16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-NEXT:    andb $1, %dil
 ; X64-NEXT:    leal -1(%rsi), %ecx
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    cmpb $1, %dil
-; X64-NEXT:    sbbl %eax, %eax
-; X64-NEXT:    orl %ecx, %eax
+; X64-NEXT:    testb $1, %dil
+; X64-NEXT:    movl $65535, %eax # imm = 0xFFFF
+; X64-NEXT:    cmovnel %ecx, %eax
 ; X64-NEXT:    andl %esi, %eax
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
@@ -492,27 +466,20 @@ define <4 x i32> @and_select_sub_1_v4xi32(i1 %a0, <4 x i32> %a1) nounwind {
 define i32 @and_select_no_sub_1(i1 %a0, i32 inreg %a1) nounwind {
 ; X86-LABEL: and_select_no_sub_1:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andb $1, %cl
-; X86-NEXT:    leal -2(%eax), %edx
-; X86-NEXT:    xorl %esi, %esi
-; X86-NEXT:    cmpb $1, %cl
-; X86-NEXT:    sbbl %esi, %esi
-; X86-NEXT:    orl %edx, %esi
-; X86-NEXT:    andl %esi, %eax
-; X86-NEXT:    popl %esi
+; X86-NEXT:    leal -2(%eax), %ecx
+; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $-1, %edx
+; X86-NEXT:    cmovnel %ecx, %edx
+; X86-NEXT:    andl %edx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: and_select_no_sub_1:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-NEXT:    andb $1, %dil
 ; X64-NEXT:    leal -2(%rsi), %ecx
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    cmpb $1, %dil
-; X64-NEXT:    sbbl %eax, %eax
-; X64-NEXT:    orl %ecx, %eax
+; X64-NEXT:    testb $1, %dil
+; X64-NEXT:    movl $-1, %eax
+; X64-NEXT:    cmovnel %ecx, %eax
 ; X64-NEXT:    andl %esi, %eax
 ; X64-NEXT:    retq
   %sub = add i32 %a1, -2
@@ -551,27 +518,20 @@ define i32 @and_select_sub_1_wrong_const(i1 %a0, i32 inreg %a1) nounwind {
 define i32 @and_select_sub_1_different_op(i1 %a0, i32 inreg %a1, i32 inreg %a2) nounwind {
 ; X86-LABEL: and_select_sub_1_different_op:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andb $1, %cl
-; X86-NEXT:    decl %edx
-; X86-NEXT:    xorl %esi, %esi
-; X86-NEXT:    cmpb $1, %cl
-; X86-NEXT:    sbbl %esi, %esi
-; X86-NEXT:    orl %edx, %esi
-; X86-NEXT:    andl %esi, %eax
-; X86-NEXT:    popl %esi
+; X86-NEXT:    leal -1(%edx), %ecx
+; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $-1, %edx
+; X86-NEXT:    cmovnel %ecx, %edx
+; X86-NEXT:    andl %edx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: and_select_sub_1_different_op:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $edx killed $edx def $rdx
-; X64-NEXT:    andb $1, %dil
 ; X64-NEXT:    leal -1(%rdx), %ecx
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    cmpb $1, %dil
-; X64-NEXT:    sbbl %eax, %eax
-; X64-NEXT:    orl %ecx, %eax
+; X64-NEXT:    testb $1, %dil
+; X64-NEXT:    movl $-1, %eax
+; X64-NEXT:    cmovnel %ecx, %eax
 ; X64-NEXT:    andl %esi, %eax
 ; X64-NEXT:    retq
   %sub = add i32 %a2, -1
@@ -809,27 +769,20 @@ define i32 @xor_select_no_sub_1(i1 %a0, i32 inreg %a1) nounwind {
 define i32 @xor_select_sub_1_wrong_const(i1 %a0, i32 inreg %a1) nounwind {
 ; X86-LABEL: xor_select_sub_1_wrong_const:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    andb $1, %cl
-; X86-NEXT:    leal -1(%eax), %edx
-; X86-NEXT:    xorl %esi, %esi
-; X86-NEXT:    cmpb $1, %cl
-; X86-NEXT:    sbbl %esi, %esi
-; X86-NEXT:    orl %edx, %esi
-; X86-NEXT:    xorl %esi, %eax
-; X86-NEXT:    popl %esi
+; X86-NEXT:    leal -1(%eax), %ecx
+; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $-1, %edx
+; X86-NEXT:    cmovnel %ecx, %edx
+; X86-NEXT:    xorl %edx, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: xor_select_sub_1_wrong_const:
 ; X64:       # %bb.0:
 ; X64-NEXT:    # kill: def $esi killed $esi def $rsi
-; X64-NEXT:    andb $1, %dil
 ; X64-NEXT:    leal -1(%rsi), %ecx
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    cmpb $1, %dil
-; X64-NEXT:    sbbl %eax, %eax
-; X64-NEXT:    orl %ecx, %eax
+; X64-NEXT:    testb $1, %dil
+; X64-NEXT:    movl $-1, %eax
+; X64-NEXT:    cmovnel %ecx, %eax
 ; X64-NEXT:    xorl %esi, %eax
 ; X64-NEXT:    retq
   %sub = add i32 %a1, -1
