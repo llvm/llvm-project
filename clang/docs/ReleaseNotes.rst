@@ -623,6 +623,10 @@ Improvements to Clang's diagnostics
 - Clang now emits ``-Wsizeof-pointer-memaccess`` when snprintf/vsnprintf use the sizeof
   the destination buffer(dynamically allocated) in the len parameter(#GH162366)
 
+- Fixed a false positive ``-Wunneeded-internal-declaration`` warning for
+  referenced ``constexpr`` functions used during constant evaluation.
+  (#GH196564)
+
 - Added ``-Wmodule-map-path-outside-directory`` (off by default) to warn on
   header and umbrella directory paths that use ``..`` to refer outside the module
   directory in module maps found via implicit search
