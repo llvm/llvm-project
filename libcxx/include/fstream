@@ -642,6 +642,9 @@ const char* basic_filebuf<_CharT, _Traits>::__make_mdstring(ios_base::openmode _
 // non-atomic check and creation. Since AIX cannot provide atomic exclusive-open
 // semantics via fopen(), returning nullptr is the correct behaviour.
 // _AIX is defined by clang on AIX; __TOS_AIX__ is defined by both clang and XLC.
+#      if defined(_AIX) || defined(__TOS_AIX__)
+#        warning 'exclusive mode is unsupported on this target'
+#      endif
 #      if !defined(_AIX) && !defined(__TOS_AIX__)
   case ios_base::out | ios_base::noreplace:
   case ios_base::out | ios_base::trunc | ios_base::noreplace:
