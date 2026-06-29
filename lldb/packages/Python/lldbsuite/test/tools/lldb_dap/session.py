@@ -53,6 +53,7 @@ from .utils import (
     DebugAdapter,
     EventHistory,
     MessageHandler,
+    OutputBuffer,
     SubProcessSpawner,
     redirect_stream,
 )
@@ -149,12 +150,12 @@ class _DAPSessionState:
         self._lock = threading.RLock()
         self._initialized: bool = False
         self._capabilities = Capabilities()
-        self.output_streams = {
-            OutputCategory.STDOUT: io.StringIO(),
-            OutputCategory.STDERR: io.StringIO(),
-            OutputCategory.CONSOLE: io.StringIO(),
-            OutputCategory.IMPORTANT: io.StringIO(),
-            OutputCategory.TELEMETRY: io.StringIO(),
+        self.output_buffers = {
+            OutputCategory.STDOUT: OutputBuffer(),
+            OutputCategory.STDERR: OutputBuffer(),
+            OutputCategory.CONSOLE: OutputBuffer(),
+            OutputCategory.IMPORTANT: OutputBuffer(),
+            OutputCategory.TELEMETRY: OutputBuffer(),
         }
         self._stopped_thread_id: Optional[int] = None
         self._stop_generation: int = 0
@@ -322,15 +323,15 @@ class Session:
             if (thread_id := event.body.threadId) and not event.body.preserveFocusHint:
                 self._state.set_stopped_thread_id(thread_id)
         elif isinstance(event, OutputEvent):
-            category = self._state.output_streams[event.body.category]
-            category.write(event.body.output)
+            category_buffer = self._state.output_buffers[event.body.category]
+            category_buffer.write(event.body.output)
         elif isinstance(event, ExitedEvent):
             # If we have a 'runInTerminal' process it must have exited.
             if self._reverse_process:
                 self.verify_reverse_process_exited()
 
                 # Join the redirect threads here. so any tail bytes are flushed
-                # into the StringIOs before the test reads them.
+                # into the output buffer before the test reads them.
                 for thread in self._reverse_process_io_threads:
                     thread.join(self._message_timeout)
 
@@ -398,12 +399,12 @@ class Session:
                 body=RunInTerminalResponse.Body(processId=process.pid),
             )
             if proc_stdout := process.stdout:
-                out_stream = self._state.output_streams[OutputCategory.STDOUT]
-                out_thread = redirect_stream(proc_stdout, out_stream, "stdout")
+                out_buffer = self._state.output_buffers[OutputCategory.STDOUT]
+                out_thread = redirect_stream(proc_stdout, out_buffer, "stdout")
                 self._reverse_process_io_threads.append(out_thread)
             if proc_stderr := process.stderr:
-                err_stream = self._state.output_streams[OutputCategory.STDERR]
-                err_thread = redirect_stream(proc_stderr, err_stream, "stderr")
+                err_buffer = self._state.output_buffers[OutputCategory.STDERR]
+                err_thread = redirect_stream(proc_stderr, err_buffer, "stderr")
                 self._reverse_process_io_threads.append(err_thread)
 
         self._send_response(response)
@@ -415,17 +416,17 @@ class Session:
         # Sanity check.
         assert self._state.is_initialized
 
-    def get_stdout(self):
-        return self._state.output_streams[OutputCategory.STDOUT].getvalue()
+    def get_stdout(self) -> str:
+        return self._state.output_buffers[OutputCategory.STDOUT].getvalue()
 
     def get_console(self) -> str:
-        return self._state.output_streams[OutputCategory.CONSOLE].getvalue()
+        return self._state.output_buffers[OutputCategory.CONSOLE].getvalue()
 
     def get_stderr(self) -> str:
-        return self._state.output_streams[OutputCategory.STDERR].getvalue()
+        return self._state.output_buffers[OutputCategory.STDERR].getvalue()
 
     def get_important(self) -> str:
-        return self._state.output_streams[OutputCategory.IMPORTANT].getvalue()
+        return self._state.output_buffers[OutputCategory.IMPORTANT].getvalue()
 
     def send_request(
         self, request_args: ArgsProtocol[AnyResponse]

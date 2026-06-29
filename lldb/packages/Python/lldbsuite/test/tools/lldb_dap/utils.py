@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import bisect
 import contextlib
+import io
 import itertools
 import json
 import os
@@ -490,8 +491,28 @@ class EventHistory:
                 self._new_event_condition.wait(remaining_time)
 
 
+class OutputBuffer:
+    """A Thread safe io.StringIO."""
+
+    def __init__(self):
+        self._buf = io.StringIO()
+        self._lock = threading.Lock()
+
+    def write(self, text: str) -> int:
+        with self._lock:
+            return self._buf.write(text)
+
+    def flush(self):
+        with self._lock:
+            self._buf.flush()
+
+    def getvalue(self) -> str:
+        with self._lock:
+            return self._buf.getvalue()
+
+
 def redirect_stream(
-    in_stream: IO[bytes], out_stream: IO[str], thread_name: str
+    in_stream: IO[bytes], out_buffer: OutputBuffer, thread_name: str
 ) -> threading.Thread:
     """
     Creates a new thread that redirects stream from `in_stream` to
@@ -501,21 +522,21 @@ def redirect_stream(
     Returns a thread that redirects the stream.
     """
 
-    def read_loop(in_stream: IO[bytes], out_stream: IO[str]):
+    def read_loop(in_stream: IO[bytes], out_buffer: OutputBuffer):
         with contextlib.suppress(OSError, ValueError):  # Nothing to report.
             while True:
                 chunk = in_stream.read(4096)
                 if not chunk:
                     break
 
-                out_stream.write(chunk.decode(errors="replace"))
-                out_stream.flush()
+                out_buffer.write(chunk.decode(errors="replace"))
+                out_buffer.flush()
 
     thread_name = f"redirect_{thread_name}"
     redirect_thread = threading.Thread(
         target=read_loop,
         name=thread_name,
-        args=[in_stream, out_stream],
+        args=[in_stream, out_buffer],
         daemon=True,
     )
     redirect_thread.start()
