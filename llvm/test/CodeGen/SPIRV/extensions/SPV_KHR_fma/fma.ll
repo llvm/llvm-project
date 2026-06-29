@@ -1,6 +1,6 @@
 ; RUN: llc -verify-machineinstrs -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_fma %s -o - | FileCheck %s
 ; RUN: llc -verify-machineinstrs -mtriple=spirv64-unknown-unknown < %s | FileCheck --check-prefix=CHECK-NO-EXT %s
-; TODO: Add spirv-val validation once the extension is supported.
+; RUN: %if spirv-tools %{ llc -verify-machineinstrs -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_fma %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: OpCapability FmaKHR
 ; CHECK: OpExtension "SPV_KHR_fma"
