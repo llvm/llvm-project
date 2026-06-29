@@ -816,6 +816,18 @@ func.func @load_non_temporal(%arg0 : memref<32xf32, affine_map<(d0) -> (d0)>>) {
 
 // -----
 
+// CHECK-LABEL: func @load_invariant(
+// CHECK-INTERFACE-LABEL: func @load_invariant(
+func.func @load_invariant(%arg0 : memref<32xf32, affine_map<(d0) -> (d0)>>) {
+  %1 = arith.constant 7 : index
+  // CHECK: llvm.load %{{.*}} invariant : !llvm.ptr -> f32
+  // CHECK-INTERFACE: llvm.load
+  %2 = memref.load %arg0[%1] {invariant = true} : memref<32xf32, affine_map<(d0) -> (d0)>>
+  func.return
+}
+
+// -----
+
 // CHECK-LABEL: func @load_with_alignment(
 // CHECK-INTERFACE-LABEL: func @load_with_alignment(
 func.func @load_with_alignment(%arg0 : memref<32xf32>, %arg1 : index) {
