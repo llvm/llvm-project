@@ -146,10 +146,10 @@ def OwnershipBasedBufferDeallocationPass
            "earlier deallocations.">,
   ];
 
-  let dependentDialects = [
-    "mlir::bufferization::BufferizationDialect", "mlir::arith::ArithDialect",
-    "mlir::memref::MemRefDialect", "mlir::scf::SCFDialect"
-  ];
+  let dependentDialects = ["mlir::bufferization::BufferizationDialect",
+                           "mlir::arith::ArithDialect",
+                           "mlir::memref::MemRefDialect",
+                           "mlir::scf::SCFDialect"];
 }
 
 def BufferDeallocationSimplificationPass
@@ -163,10 +163,9 @@ def BufferDeallocationSimplificationPass
     some memref isn't deallocated twice (double free).
   }];
 
-  let dependentDialects = [
-    "mlir::bufferization::BufferizationDialect", "mlir::arith::ArithDialect",
-    "mlir::memref::MemRefDialect"
-  ];
+  let dependentDialects = ["mlir::bufferization::BufferizationDialect",
+                           "mlir::arith::ArithDialect",
+                           "mlir::memref::MemRefDialect"];
 }
 
 def OptimizeAllocationLivenessPass
@@ -185,28 +184,26 @@ def OptimizeAllocationLivenessPass
 }
 
 def StaticMemoryPlannerAnalysisPass
-    : Pass<"static-memory-planner-analysis"> {
+    : InterfacePass<"static-memory-planner-analysis", "FunctionOpInterface"> {
   let summary = "Transforms same-block alloc/dealloc pairs into static arena "
                 "allocation with computed offsets";
   let description = [{
     This pass identifies and transforms `memref.alloc` / `memref.dealloc` pairs
-    in the same basic block into a single static arena allocation. All eligible
-    allocations are packed into a shared i8 byte buffer with aligned offsets,
-    and accessed via `memref.view` operations.
+    in the same basic block into a single static arena allocation.
 
-    For each allocation the pass checks a conservative eligibility envelope:
+    For each `memref.alloc` the pass checks a conservative eligibility
+    envelope:
     - Static memref shape.
-    - Unique same-block dealloc (found via `MemoryEffects::Free`).
-    - Not nested inside any loop or conditional region (e.g., `scf.for`,
-      `scf.while`, `scf.forall`, `scf.parallel`, `scf.if`).
-    - No cross-block alias or escaping use (alias set resolved via
-      `BufferViewFlowAnalysis`).
+    - Unique same-block `memref.dealloc`.
+    - Allocations in nested blocks are ignored for now.
 
-    Eligible allocations are packed into a single arena using a trivial
-    sequential allocation strategy with alignment padding. The arena is an
-    i8 byte buffer (`memref<Nxi8>`) that can hold allocations of different
-    element types. Each original allocation is replaced with a `memref.view`
-    operation that creates a typed view into the arena at the computed offset.
+    Eligible allocations are packed into a single arena. Currently, we use a
+    trivial sequential allocation strategy with alignment padding. But the
+    interface will also allow any packing algorithm to be plugged in as long as
+    it respects the interface. The arena is an i8 byte buffer
+    (`memref<Nxi8>`) that can hold allocations of different element types.
+    Each original allocation is replaced with a `memref.view` operation that
+    creates a typed view into the arena at the computed offset.
 
     Ineligible allocations are skipped and retain their original
     alloc/dealloc operations. Skip reasons are reported via op remarks.
@@ -237,11 +234,11 @@ def StaticMemoryPlannerAnalysisPass
     ```
   }];
 
-  let options =
-      [Option<"arenaMode", "arena-mode", "std::string",
-              /*default=*/"\"allocate\"",
-              "Arena allocation mode: 'allocate' creates arena via AllocOp, "
-              "'arg' extracts arena from function arguments">];
+  let options = [Option<
+      "arenaMode", "arena-mode", "std::string",
+      /*default=*/"\"allocate\"",
+      "Arena allocation mode: 'allocate' creates arena via AllocOp, "
+      "'arg' extracts arena from function arguments">];
 
   let statistics =
       [Statistic<"numEligible", "num-eligible",
@@ -273,10 +270,8 @@ def LowerDeallocationsPass : Pass<"bufferization-lower-deallocations"> {
     library functions to avoid code-size blow-up.
   }];
 
-  let dependentDialects = [
-    "arith::ArithDialect", "memref::MemRefDialect", "scf::SCFDialect",
-    "func::FuncDialect"
-  ];
+  let dependentDialects = ["arith::ArithDialect", "memref::MemRefDialect",
+                           "scf::SCFDialect", "func::FuncDialect"];
 }
 
 def BufferHoistingPass : Pass<"buffer-hoisting", "func::FuncOp"> {
@@ -334,7 +329,8 @@ def BufferResultsToOutParamsPass
        Option<"hoistDynamicAllocs", "hoist-dynamic-allocs", "bool",
               /*default=*/"false", "Hoist dynamic allocations to call sites.">,
        Option<"modifyPublicFunctions", "modify-public-functions", "bool",
-              /*default=*/"false", "Modify function signatures of public "
+              /*default=*/"false",
+              "Modify function signatures of public "
               "functions.">,
   ];
   let dependentDialects = ["memref::MemRefDialect"];
@@ -351,10 +347,11 @@ def DropEquivalentBufferResultsPass
     Note: If a bbArg buffer is not returned directly but casted to beforehand,
     the buffer is still considered equivalent.
   }];
-  let options = [
-    Option<"modifyPublicFunctions", "modify-public-functions", "bool",
-           /*default=*/"false", "Modify function signatures of public "
-           "functions.">,
+  let options = [Option<"modifyPublicFunctions", "modify-public-functions",
+                        "bool",
+                        /*default=*/"false",
+                        "Modify function signatures of public "
+                        "functions.">,
   ];
   let dependentDialects = ["memref::MemRefDialect"];
 }
@@ -539,7 +536,8 @@ def OneShotBufferizePass : Pass<"one-shot-bufferize", "ModuleOp"> {
               /*default=*/"false",
               "Test only: Annotate IR with RaW conflicts. Requires "
               "test-analysis-only.">,
-       Option<"unknownTypeConversion", "unknown-type-conversion", "LayoutMapOption",
+       Option<"unknownTypeConversion", "unknown-type-conversion",
+              "LayoutMapOption",
               /*default=*/"LayoutMapOption::FullyDynamicLayoutMap",
               "Controls layout maps for non-inferrable memref types.",
               layoutMapClValues.values>,
@@ -548,18 +546,16 @@ def OneShotBufferizePass : Pass<"one-shot-bufferize", "ModuleOp"> {
               "Sets the alignment of newly allocated buffers.">,
   ];
 
-  let statistics = [
-    Statistic<"numBufferAlloc", "num-buffer-alloc",
-              "Number of buffer allocations">,
-    Statistic<"numTensorInPlace", "num-tensor-in-place",
-              "Number of in-place tensor OpOperands">,
-    Statistic<"numTensorOutOfPlace", "num-tensor-out-of-place",
-              "Number of out-of-place tensor OpOperands">,
+  let statistics = [Statistic<"numBufferAlloc", "num-buffer-alloc",
+                              "Number of buffer allocations">,
+                    Statistic<"numTensorInPlace", "num-tensor-in-place",
+                              "Number of in-place tensor OpOperands">,
+                    Statistic<"numTensorOutOfPlace", "num-tensor-out-of-place",
+                              "Number of out-of-place tensor OpOperands">,
   ];
 
-  let dependentDialects = [
-    "bufferization::BufferizationDialect", "memref::MemRefDialect"
-  ];
+  let dependentDialects = ["bufferization::BufferizationDialect",
+                           "memref::MemRefDialect"];
 }
 
 def PromoteBuffersToStackPass
@@ -573,13 +569,14 @@ def PromoteBuffersToStackPass
     shaped buffers that are limited by the rank of the tensor can be
     converted. They are only transformed if they are considered to be small.
   }];
-  let options = [
-    Option<"maxAllocSizeInBytes", "max-alloc-size-in-bytes", "unsigned",
-           /*default=*/"1024",
-           "Maximal size in bytes to promote allocations to stack.">,
-    Option<"maxRankOfAllocatedMemRef", "max-rank-of-allocated-memref", "unsigned",
-           /*default=*/"1",
-           "Maximal memref rank to promote dynamic buffers.">,
+  let options =
+      [Option<"maxAllocSizeInBytes", "max-alloc-size-in-bytes", "unsigned",
+              /*default=*/"1024",
+              "Maximal size in bytes to promote allocations to stack.">,
+       Option<"maxRankOfAllocatedMemRef", "max-rank-of-allocated-memref",
+              "unsigned",
+              /*default=*/"1",
+              "Maximal memref rank to promote dynamic buffers.">,
   ];
 }
 
