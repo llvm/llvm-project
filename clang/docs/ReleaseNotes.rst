@@ -690,6 +690,10 @@ Improvements to Clang's diagnostics
 - Diagnostics for the C++11 range-based for statement now report the correct
   iterator type in notes for invalid iterator types.
 
+ - Reworded the ``-Wimplicit-function-declaration`` diagnostic to make it more
+   clear that the type selected for the implicit declaration is based on the
+   signature of a standard (C, C++, POSIX) library function. (#GH146924)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
