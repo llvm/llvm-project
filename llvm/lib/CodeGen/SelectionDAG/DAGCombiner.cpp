@@ -6321,14 +6321,14 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   if (TLI.isTypeLegal(VT) &&
       !TLI.shouldAvoidTransformToShift(VT, VT.getScalarSizeInBits() - 1)) {
     if (Opcode == ISD::SMAX && TLI.isOperationExpand(ISD::SMAX, VT) &&
-        N0.getOpcode() != ISD::SMIN && isAllOnesConstant(N1)) {
+        N0.getOpcode() != ISD::SMIN && sd_match(N1, m_AllOnes())) {
       SDValue ShiftAmt =
           DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, DL);
       SDValue Shift = DAG.getNode(ISD::SRA, DL, VT, N0, ShiftAmt);
       return DAG.getNode(ISD::OR, DL, VT, N0, Shift);
     }
     if (Opcode == ISD::SMIN && TLI.isOperationExpand(ISD::SMIN, VT) &&
-        N0.getOpcode() != ISD::SMAX && isNullConstant(N1)) {
+        N0.getOpcode() != ISD::SMAX && sd_match(N1, m_Zero())) {
       SDValue ShiftAmt =
           DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, DL);
       SDValue Shift = DAG.getNode(ISD::SRA, DL, VT, N0, ShiftAmt);
