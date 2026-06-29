@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "X86ISelDAGToDAG.h"
 #include "X86.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86Subtarget.h"
