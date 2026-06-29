@@ -1,4 +1,5 @@
 add_mlir_unittest(MLIRTransformDialectTests
+  TransformNamedSequenceCreate.cpp
   BuildOnlyExtensionTest.cpp
   Preload.cpp
 )
