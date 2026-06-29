@@ -503,3 +503,5 @@ void BPFDAGToDAGISel::PreprocessTrunc(SDNode *Node,
 FunctionPass *llvm::createBPFISelDag(BPFTargetMachine &TM) {
   return new BPFDAGToDAGISelLegacy(TM);
 }
+
+#undef PASS_NAME

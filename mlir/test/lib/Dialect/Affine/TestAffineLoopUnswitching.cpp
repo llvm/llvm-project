@@ -64,3 +64,5 @@ void registerTestAffineLoopUnswitchingPass() {
   PassRegistration<TestAffineLoopUnswitching>();
 }
 } // namespace mlir
+
+#undef PASS_NAME

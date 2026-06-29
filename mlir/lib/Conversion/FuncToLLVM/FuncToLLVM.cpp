@@ -926,3 +926,5 @@ void mlir::registerConvertFuncToLLVMInterface(DialectRegistry &registry) {
     dialect->addInterfaces<FuncToLLVMDialectInterface>();
   });
 }
+
+#undef PASS_NAME

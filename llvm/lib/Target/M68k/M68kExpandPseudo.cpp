@@ -319,3 +319,5 @@ bool M68kExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
 FunctionPass *llvm::createM68kExpandPseudoPass() {
   return new M68kExpandPseudo();
 }
+
+#undef PASS_NAME

@@ -947,3 +947,5 @@ INITIALIZE_PASS(M68kGlobalBaseReg, DEBUG_TYPE, PASS_NAME, false, false)
 FunctionPass *llvm::createM68kGlobalBaseRegPass() {
   return new M68kGlobalBaseReg();
 }
+
+#undef PASS_NAME

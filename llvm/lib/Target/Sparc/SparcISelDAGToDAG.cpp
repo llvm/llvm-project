@@ -419,3 +419,5 @@ bool SparcDAGToDAGISel::SelectInlineAsmMemoryOperand(
 FunctionPass *llvm::createSparcISelDag(SparcTargetMachine &TM) {
   return new SparcDAGToDAGISelLegacy(TM);
 }
+
+#undef PASS_NAME

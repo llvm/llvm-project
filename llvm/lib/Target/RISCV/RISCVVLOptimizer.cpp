@@ -1350,3 +1350,5 @@ bool RISCVVLOptimizer::runOnMachineFunction(MachineFunction &MF) {
   DemandedVLs.clear();
   return MadeChange;
 }
+
+#undef PASS_NAME

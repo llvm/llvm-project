@@ -410,3 +410,5 @@ FunctionPass *llvm::createCSKYISelDag(CSKYTargetMachine &TM,
                                       CodeGenOptLevel OptLevel) {
   return new CSKYDAGToDAGISelLegacy(TM, OptLevel);
 }
+
+#undef PASS_NAME

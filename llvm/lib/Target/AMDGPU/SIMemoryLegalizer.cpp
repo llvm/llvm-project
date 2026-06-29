@@ -2646,3 +2646,5 @@ char &llvm::SIMemoryLegalizerID = SIMemoryLegalizerLegacy::ID;
 FunctionPass *llvm::createSIMemoryLegalizerPass() {
   return new SIMemoryLegalizerLegacy();
 }
+
+#undef PASS_NAME

@@ -88,3 +88,5 @@ void registerTestAffineAccessAnalysisPass() {
   PassRegistration<TestAccessAnalysis>();
 }
 } // namespace mlir
+
+#undef PASS_NAME

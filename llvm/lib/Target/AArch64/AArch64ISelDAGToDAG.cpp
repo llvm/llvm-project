@@ -8244,3 +8244,5 @@ void AArch64DAGToDAGISel::PreprocessISelDAG() {
 
   SelectionDAGISel::PreprocessISelDAG();
 }
+
+#undef PASS_NAME

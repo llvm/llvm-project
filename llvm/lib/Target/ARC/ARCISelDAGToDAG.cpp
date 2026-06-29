@@ -187,3 +187,5 @@ void ARCDAGToDAGISel::Select(SDNode *N) {
   }
   SelectCode(N);
 }
+
+#undef PASS_NAME

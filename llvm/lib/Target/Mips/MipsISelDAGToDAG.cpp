@@ -310,3 +310,5 @@ MipsDAGToDAGISelLegacy::MipsDAGToDAGISelLegacy(
     : SelectionDAGISelLegacy(ID, std::move(S)) {}
 
 INITIALIZE_PASS(MipsDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
+
+#undef PASS_NAME

@@ -304,3 +304,5 @@ bool Thumb2ITBlock::runOnMachineFunction(MachineFunction &Fn) {
 /// createThumb2ITBlockPass - Returns an instance of the Thumb2 IT blocks
 /// insertion pass.
 FunctionPass *llvm::createThumb2ITBlockPass() { return new Thumb2ITBlock(); }
+
+#undef PASS_NAME

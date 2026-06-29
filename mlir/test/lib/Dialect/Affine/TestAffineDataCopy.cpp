@@ -153,3 +153,5 @@ void registerTestAffineDataCopyPass() {
   PassRegistration<TestAffineDataCopy>();
 }
 } // namespace mlir
+
+#undef PASS_NAME

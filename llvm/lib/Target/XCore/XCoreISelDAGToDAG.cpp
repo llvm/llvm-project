@@ -247,3 +247,5 @@ bool XCoreDAGToDAGISel::tryBRIND(SDNode *N) {
   CurDAG->SelectNodeTo(N, XCore::BAU_1r, MVT::Other, nextAddr, Glue);
   return true;
 }
+
+#undef PASS_NAME

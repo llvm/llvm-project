@@ -87,3 +87,5 @@ char RISCVLandingPadSetup::ID = 0;
 FunctionPass *llvm::createRISCVLandingPadSetupPass() {
   return new RISCVLandingPadSetup();
 }
+
+#undef PASS_NAME

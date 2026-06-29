@@ -322,3 +322,5 @@ void mlir::cf::registerConvertControlFlowToLLVMInterface(
     dialect->addInterfaces<ControlFlowToLLVMDialectInterface>();
   });
 }
+
+#undef PASS_NAME

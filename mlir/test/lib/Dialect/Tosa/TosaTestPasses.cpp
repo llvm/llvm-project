@@ -226,3 +226,5 @@ void registerTosaTestQuantUtilAPIPass() {
   PassRegistration<TosaTestQuantUtilAPI>();
 }
 } // namespace mlir
+
+#undef PASS_NAME

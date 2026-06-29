@@ -360,3 +360,5 @@ void LanaiDAGToDAGISel::selectFrameIndex(SDNode *Node) {
 FunctionPass *llvm::createLanaiISelDag(LanaiTargetMachine &TM) {
   return new LanaiDAGToDAGISelLegacy(TM);
 }
+
+#undef PASS_NAME

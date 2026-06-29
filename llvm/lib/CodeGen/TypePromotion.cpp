@@ -1061,3 +1061,5 @@ PreservedAnalyses TypePromotionPass::run(Function &F,
   PA.preserve<LoopAnalysis>();
   return PA;
 }
+
+#undef PASS_NAME

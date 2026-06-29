@@ -311,3 +311,5 @@ INITIALIZE_PASS(M68kCollapseMOVEM, DEBUG_TYPE, PASS_NAME, false, false)
 FunctionPass *llvm::createM68kCollapseMOVEMPass() {
   return new M68kCollapseMOVEM();
 }
+
+#undef PASS_NAME

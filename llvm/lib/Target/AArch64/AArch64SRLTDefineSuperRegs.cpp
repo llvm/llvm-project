@@ -267,3 +267,5 @@ AArch64SRLTDefineSuperRegsPass::run(MachineFunction &MF,
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
+
+#undef PASS_NAME

@@ -241,3 +241,5 @@ void registerTestAffineReifyValueBoundsPass() {
   PassRegistration<TestReifyValueBounds>();
 }
 } // namespace mlir
+
+#undef PASS_NAME

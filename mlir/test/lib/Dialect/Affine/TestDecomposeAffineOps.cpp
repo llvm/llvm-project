@@ -55,3 +55,5 @@ void registerTestDecomposeAffineOpPass() {
   PassRegistration<TestDecomposeAffineOps>();
 }
 } // namespace mlir
+
+#undef PASS_NAME

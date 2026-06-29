@@ -499,3 +499,5 @@ FunctionPass *llvm::createLoongArchISelDag(LoongArchTargetMachine &TM,
                                            CodeGenOptLevel OptLevel) {
   return new LoongArchDAGToDAGISelLegacy(TM, OptLevel);
 }
+
+#undef PASS_NAME

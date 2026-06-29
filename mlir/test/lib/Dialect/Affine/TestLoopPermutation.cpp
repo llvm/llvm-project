@@ -79,3 +79,5 @@ void registerTestLoopPermutationPass() {
   PassRegistration<TestLoopPermutation>();
 }
 } // namespace mlir
+
+#undef PASS_NAME

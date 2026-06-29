@@ -339,3 +339,5 @@ SDNode *VEDAGToDAGISel::getGlobalBaseReg() {
 FunctionPass *llvm::createVEISelDag(VETargetMachine &TM) {
   return new VEDAGToDAGISelLegacy(TM);
 }
+
+#undef PASS_NAME

@@ -92,3 +92,5 @@ char RISCVZacasABIFix::ID = 0;
 FunctionPass *llvm::createRISCVZacasABIFixPass() {
   return new RISCVZacasABIFix();
 }
+
+#undef PASS_NAME

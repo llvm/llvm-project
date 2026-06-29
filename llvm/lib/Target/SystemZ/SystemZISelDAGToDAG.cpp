@@ -2136,3 +2136,5 @@ void SystemZDAGToDAGISel::PreprocessISelDAG() {
   if (MadeChange)
     CurDAG->RemoveDeadNodes();
 }
+
+#undef PASS_NAME

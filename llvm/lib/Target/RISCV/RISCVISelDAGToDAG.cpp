@@ -5036,3 +5036,5 @@ RISCVDAGToDAGISelLegacy::RISCVDAGToDAGISelLegacy(RISCVTargetMachine &TM,
           ID, std::make_unique<RISCVDAGToDAGISel>(TM, OptLevel)) {}
 
 INITIALIZE_PASS(RISCVDAGToDAGISelLegacy, DEBUG_TYPE, PASS_NAME, false, false)
+
+#undef PASS_NAME

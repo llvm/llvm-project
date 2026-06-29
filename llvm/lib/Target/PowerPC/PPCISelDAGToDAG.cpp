@@ -7970,3 +7970,5 @@ FunctionPass *llvm::createPPCISelDag(PPCTargetMachine &TM,
                                      CodeGenOptLevel OptLevel) {
   return new PPCDAGToDAGISelLegacy(TM, OptLevel);
 }
+
+#undef PASS_NAME

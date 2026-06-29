@@ -2319,3 +2319,5 @@ void NVPTXDAGToDAGISel::selectBR_JT(SDNode *N) {
 
   ReplaceNode(N, BrxEnd);
 }
+
+#undef PASS_NAME

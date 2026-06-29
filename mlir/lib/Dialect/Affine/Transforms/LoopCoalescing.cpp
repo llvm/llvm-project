@@ -48,3 +48,5 @@ std::unique_ptr<OperationPass<func::FuncOp>>
 mlir::affine::createLoopCoalescingPass() {
   return std::make_unique<LoopCoalescingPass>();
 }
+
+#undef PASS_NAME

@@ -462,3 +462,5 @@ void MSP430DAGToDAGISel::Select(SDNode *Node) {
   // Select the default instruction
   SelectCode(Node);
 }
+
+#undef PASS_NAME

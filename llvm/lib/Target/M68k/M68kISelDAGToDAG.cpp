@@ -1156,3 +1156,5 @@ bool M68kDAGToDAGISel::SelectInlineAsmMemoryOperand(
     return true;
   }
 }
+
+#undef PASS_NAME

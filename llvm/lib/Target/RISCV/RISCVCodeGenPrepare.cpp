@@ -456,3 +456,5 @@ PreservedAnalyses RISCVCodeGenPreparePass::run(Function &F,
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
+
+#undef PASS_NAME
