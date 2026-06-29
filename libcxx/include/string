@@ -3833,50 +3833,43 @@ _LIBCPP_HIDE_FROM_ABI constexpr _String __integer_to_string(_Integer __val) {
 
 #    if !defined(_LIBCPP_BUILDING_LIBRARY)
 
-[[nodiscard]] [[__gnu__::__gnu_inline__, __gnu__::__noinline__]] extern inline constexpr string to_string(int __val) {
+[[nodiscard, __gnu__::__gnu_inline__, __gnu__::__noinline__]] inline constexpr string to_string(int __val) {
   return std::__integer_to_string<string>(__val);
 }
-[[nodiscard]] [[__gnu__::__gnu_inline__, __gnu__::__noinline__]] extern inline constexpr string
-to_string(unsigned __val) {
+[[nodiscard, __gnu__::__gnu_inline__, __gnu__::__noinline__]] inline constexpr string to_string(unsigned __val) {
   return std::__integer_to_string<string>(__val);
 }
-[[nodiscard]] [[__gnu__::__gnu_inline__, __gnu__::__noinline__]] extern inline constexpr string to_string(long __val) {
+[[nodiscard, __gnu__::__gnu_inline__, __gnu__::__noinline__]] inline constexpr string to_string(long __val) {
   return std::__integer_to_string<string>(__val);
 }
-[[nodiscard]] [[__gnu__::__gnu_inline__, __gnu__::__noinline__]] extern inline constexpr string
-to_string(unsigned long __val) {
+[[nodiscard, __gnu__::__gnu_inline__, __gnu__::__noinline__]] inline constexpr string to_string(unsigned long __val) {
   return std::__integer_to_string<string>(__val);
 }
-[[nodiscard]] [[__gnu__::__gnu_inline__, __gnu__::__noinline__]] extern inline constexpr string
-to_string(long long __val) {
+[[nodiscard, __gnu__::__gnu_inline__, __gnu__::__noinline__]] inline constexpr string to_string(long long __val) {
   return std::__integer_to_string<string>(__val);
 }
-[[nodiscard]] [[__gnu__::__gnu_inline__, __gnu__::__noinline__]] extern inline constexpr string
+[[nodiscard, __gnu__::__gnu_inline__, __gnu__::__noinline__]] inline constexpr string
 to_string(unsigned long long __val) {
   return std::__integer_to_string<string>(__val);
 }
 
 #      if _LIBCPP_HAS_WIDE_CHARACTERS
-[[nodiscard]] [[__gnu__::__gnu_inline__, __gnu__::__noinline__]] extern inline constexpr wstring to_wstring(int __val) {
+[[nodiscard, __gnu__::__gnu_inline__, __gnu__::__noinline__]] inline constexpr wstring to_wstring(int __val) {
   return std::__integer_to_string<wstring>(__val);
 }
-[[nodiscard]] [[__gnu__::__gnu_inline__, __gnu__::__noinline__]] extern inline constexpr wstring
-to_wstring(unsigned __val) {
+[[nodiscard, __gnu__::__gnu_inline__, __gnu__::__noinline__]] inline constexpr wstring to_wstring(unsigned __val) {
   return std::__integer_to_string<wstring>(__val);
 }
-[[nodiscard]] [[__gnu__::__gnu_inline__, __gnu__::__noinline__]] extern inline constexpr wstring
-to_wstring(long __val) {
+[[nodiscard, __gnu__::__gnu_inline__, __gnu__::__noinline__]] inline constexpr wstring to_wstring(long __val) {
   return std::__integer_to_string<wstring>(__val);
 }
-[[nodiscard]] [[__gnu__::__gnu_inline__, __gnu__::__noinline__]] extern inline constexpr wstring
-to_wstring(unsigned long __val) {
+[[nodiscard, __gnu__::__gnu_inline__, __gnu__::__noinline__]] inline constexpr wstring to_wstring(unsigned long __val) {
   return std::__integer_to_string<wstring>(__val);
 }
-[[nodiscard]] [[__gnu__::__gnu_inline__, __gnu__::__noinline__]] extern inline constexpr wstring
-to_wstring(long long __val) {
+[[nodiscard, __gnu__::__gnu_inline__, __gnu__::__noinline__]] inline constexpr wstring to_wstring(long long __val) {
   return std::__integer_to_string<wstring>(__val);
 }
-[[nodiscard]] [[__gnu__::__gnu_inline__, __gnu__::__noinline__]] extern inline constexpr wstring
+[[nodiscard, __gnu__::__gnu_inline__, __gnu__::__noinline__]] inline constexpr wstring
 to_wstring(unsigned long long __val) {
   return std::__integer_to_string<wstring>(__val);
 }
