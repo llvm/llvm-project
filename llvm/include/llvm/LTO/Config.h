@@ -257,6 +257,11 @@ struct Config {
   /// splitting the module.
   ModuleHookFn PreCodeGenModuleHook;
 
+  /// This module hook is called before emitting textual assembly.
+  using SaveTempsAsmFn =
+      std::function<void(unsigned Task, const Module &, StringRef AsmText)>;
+  SaveTempsAsmFn SaveTempsAsmHook;
+
   /// A combined index hook is called after all per-module indexes have been
   /// combined (ThinLTO-specific). It can be used to implement -save-temps for
   /// the combined index.

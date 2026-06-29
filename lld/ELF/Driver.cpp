@@ -620,8 +620,8 @@ static void checkZOptions(Ctx &ctx, opt::InputArgList &args) {
 }
 
 constexpr const char *saveTempsValues[] = {
-    "resolution", "preopt",     "promote", "internalize",  "import",
-    "opt",        "precodegen", "prelink", "combinedindex"};
+    "resolution", "preopt",     "promote", "internalize",   "import",
+    "opt",        "precodegen", "prelink", "combinedindex", "asm"};
 
 LinkerDriver::LinkerDriver(Ctx &ctx) : ctx(ctx) {}
 
@@ -1550,16 +1550,16 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       !args.hasArg(OPT_relocatable) || args.hasArg(OPT_force_group_allocation);
 
   if (args.hasArg(OPT_save_temps)) {
-    // --save-temps implies saving all temps.
-    ctx.arg.saveTempsArgs.insert_range(saveTempsValues);
-  } else {
-    for (auto *arg : args.filtered(OPT_save_temps_eq)) {
-      StringRef s = arg->getValue();
-      if (llvm::is_contained(saveTempsValues, s))
-        ctx.arg.saveTempsArgs.insert(s);
-      else
-        ErrAlways(ctx) << "unknown --save-temps value: " << s;
-    }
+    // --save-temps implies saving all temps except "asm".
+    ctx.arg.saveTempsArgs.insert_range(llvm::make_filter_range(
+        saveTempsValues, [](StringRef Str) { return Str != "asm"; }));
+  }
+  for (auto *arg : args.filtered(OPT_save_temps_eq)) {
+    StringRef s = arg->getValue();
+    if (llvm::is_contained(saveTempsValues, s))
+      ctx.arg.saveTempsArgs.insert(s);
+    else
+      ErrAlways(ctx) << "unknown --save-temps value: " << s;
   }
 
   ctx.arg.searchPaths = args::getStrings(args, OPT_library_path);

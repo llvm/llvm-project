@@ -14,6 +14,8 @@
 ;; Create the .all dir with save-temps saving everything, this will be used to compare
 ;; with the output from individualized save-temps later
 ; RUN: ld.lld main.o thin1.o --save-temps -o %t/all/a.out
+;; --save-temps should not produce .s files.
+; RUN: not ls *.s 2>/dev/null
 ; RUN: mv a.out.lto.* *.o.*.bc %t/all
 ;; Sanity check that everything got moved
 ; RUN: ls | count 2
@@ -92,6 +94,12 @@
 ;; %t/all3 needs at least 1 copy of a.out, move it over now since its the last block
 ; RUN: mv a.out %t/all3
 ; RUN: mv *.resolution.txt %t/all3
+; RUN: ls | count 2
+
+;; Check asm.
+; RUN: ld.lld main.o thin1.o --save-temps=asm
+; RUN: cmp %t/all/a.out a.out && rm -f a.out
+; RUN: ls main.o.s thin1.o.s && rm main.o.s thin1.o.s
 ; RUN: ls | count 2
 
 ;; If no files were left out from individual stages, the .all3 dir should be identical to .all
