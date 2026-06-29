@@ -14,7 +14,7 @@
 #ifndef NVVMIR_ENUMS
 #define NVVMIR_ENUMS
 
-include "mlir/Dialect/LLVMIR/NVVMDialect.td"
+include "mlir/Dialect/NVVM/IR/NVVMDialect.td"
 include "mlir/IR/EnumAttr.td"
 
 // Attributes for the floating point rounding modes supported by PTX

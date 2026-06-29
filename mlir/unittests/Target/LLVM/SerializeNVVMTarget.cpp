@@ -8,7 +8,7 @@
 
 #include "mlir/Config/mlir-config.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/NVVM/IR/NVVMDialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/InitAllDialects.h"
 #include "mlir/Parser/Parser.h"

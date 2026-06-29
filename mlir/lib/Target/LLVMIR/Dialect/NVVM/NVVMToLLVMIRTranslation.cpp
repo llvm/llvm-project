@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Target/LLVMIR/Dialect/NVVM/NVVMToLLVMIRTranslation.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/NVVM/IR/NVVMDialect.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
@@ -700,7 +700,7 @@ public:
           "cannot be translated to LLVM IR without an active insertion "
           "point; make sure the op is inside a function");
     Operation &opInst = *op;
-#include "mlir/Dialect/LLVMIR/NVVMConversions.inc"
+#include "mlir/Dialect/NVVM/IR/NVVMConversions.inc"
 
     return failure();
   }

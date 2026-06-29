@@ -14,7 +14,7 @@
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
 
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/NVVM/IR/NVVMDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Target/LLVM/NVVM/Target.h"

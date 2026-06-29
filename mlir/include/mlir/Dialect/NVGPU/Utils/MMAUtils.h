@@ -13,7 +13,7 @@
 #ifndef MLIR_DIALECT_NVGPU_UTILS_MMAUTILS_H
 #define MLIR_DIALECT_NVGPU_UTILS_MMAUTILS_H
 
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/NVVM/IR/NVVMDialect.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Types.h"

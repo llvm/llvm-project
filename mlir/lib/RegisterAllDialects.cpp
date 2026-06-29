@@ -43,7 +43,6 @@
 #include "mlir/Dialect/IRDL/IR/IRDL.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/LLVMIR/ROCDLDialect.h"
 #include "mlir/Dialect/LLVMIR/Transforms/InlinerInterfaceImpl.h"
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
@@ -62,6 +61,7 @@
 #include "mlir/Dialect/MemRef/Transforms/RuntimeOpVerification.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/NVGPU/Transforms/MemoryAccessOpInterfacesImpl.h"
+#include "mlir/Dialect/NVVM/IR/NVVMDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
@@ -176,7 +176,6 @@ void mlir::registerAllDialects(DialectRegistry &registry) {
   gpu::registerIndexedAccessOpInterfaceExternalModels(registry);
   gpu::registerValueBoundsOpInterfaceExternalModels(registry);
   LLVM::registerInlinerInterface(registry);
-  NVVM::registerInlinerInterface(registry);
   linalg::registerAllDialectInterfaceImplementations(registry);
   linalg::registerRuntimeVerifiableOpInterfaceExternalModels(registry);
   memref::registerAllocationOpInterfaceExternalModels(registry);

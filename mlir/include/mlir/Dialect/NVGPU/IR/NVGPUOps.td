@@ -20,7 +20,7 @@
 #ifndef MLIR_DIALECT_NVGPU_IR_NVGPUOPS_TD
 #define MLIR_DIALECT_NVGPU_IR_NVGPUOPS_TD
 
-include "mlir/Dialect/LLVMIR/NVVMEnums.td"
+include "mlir/Dialect/NVVM/IR/NVVMEnums.td"
 include "mlir/Dialect/NVGPU/IR/NVGPU.td"
 include "mlir/Dialect/NVGPU/IR/NVGPUTypes.td"
 

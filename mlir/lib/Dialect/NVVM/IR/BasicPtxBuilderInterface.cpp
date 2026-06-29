@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h"
+#include "mlir/Dialect/NVVM/IR/BasicPtxBuilderInterface.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Location.h"
@@ -31,7 +31,7 @@
 // BasicPtxBuilderInterface
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.cpp.inc"
+#include "mlir/Dialect/NVVM/IR/BasicPtxBuilderInterface.cpp.inc"
 
 using namespace mlir;
 using namespace NVVM;

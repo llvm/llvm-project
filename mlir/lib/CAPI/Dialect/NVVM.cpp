@@ -8,6 +8,6 @@
 
 #include "mlir-c/Dialect/NVVM.h"
 #include "mlir/CAPI/Registration.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/NVVM/IR/NVVMDialect.h"
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(NVVM, nvvm, mlir::NVVM::NVVMDialect)

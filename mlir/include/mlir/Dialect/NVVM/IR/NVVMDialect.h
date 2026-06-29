@@ -11,14 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_LLVMIR_NVVMDIALECT_H_
-#define MLIR_DIALECT_LLVMIR_NVVMDIALECT_H_
+#ifndef MLIR_DIALECT_NVVM_IR_NVVMDIALECT_H_
+#define MLIR_DIALECT_NVVM_IR_NVVMDIALECT_H_
 
 #include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h"
+#include "mlir/Dialect/NVVM/IR/BasicPtxBuilderInterface.h"
+#include "mlir/Dialect/NVVM/IR/NVVMRequiresSMTraits.h"
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/OpDefinition.h"
@@ -27,7 +27,7 @@
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 
-#include "mlir/Dialect/LLVMIR/NVVMOpsEnums.h.inc"
+#include "mlir/Dialect/NVVM/IR/NVVMOpsEnums.h.inc"
 
 namespace mlir {
 namespace NVVM {
@@ -65,11 +65,11 @@ std::pair<mlir::Type, unsigned> inferMMAType(mlir::NVVM::MMATypes type,
 
 ///// Ops /////
 #define GET_ATTRDEF_CLASSES
-#include "mlir/Dialect/LLVMIR/NVVMOpsAttributes.h.inc"
+#include "mlir/Dialect/NVVM/IR/NVVMOpsAttributes.h.inc"
 
 #define GET_OP_CLASSES
-#include "mlir/Dialect/LLVMIR/NVVMOps.h.inc"
+#include "mlir/Dialect/NVVM/IR/NVVMOps.h.inc"
 
-#include "mlir/Dialect/LLVMIR/NVVMOpsDialect.h.inc"
+#include "mlir/Dialect/NVVM/IR/NVVMOpsDialect.h.inc"
 
-#endif /* MLIR_DIALECT_LLVMIR_NVVMDIALECT_H_ */
+#endif /* MLIR_DIALECT_NVVM_IR_NVVMDIALECT_H_ */
