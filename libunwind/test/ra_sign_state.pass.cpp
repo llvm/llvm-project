@@ -76,7 +76,7 @@ static _Unwind_Reason_Code frame_handler(struct _Unwind_Context *ctx,
   uint64_t ra_sign_state =
       (uint64_t)_Unwind_GetGR(ctx, UNW_AARCH64_RA_SIGN_STATE);
 
-  printf("ra_sign_state = %llu\n", ra_sign_state);
+  printf("ra_sign_state = 0x%" PRIx64 "\n", ra_sign_state);
 
   uintptr_t ip = _Unwind_GetIP(ctx);
 
