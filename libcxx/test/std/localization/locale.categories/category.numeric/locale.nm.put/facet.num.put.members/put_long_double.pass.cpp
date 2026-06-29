@@ -22684,6 +22684,7 @@ int main(int, char**) {
   test9();
   test10();
 #if !defined(_AIX)
+  // TODO: AIX system libc seems to yield wrong capitalization for Infinity and NaN.
   test11();
 #endif
   std::locale lc = std::locale::classic();
