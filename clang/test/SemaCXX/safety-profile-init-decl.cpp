@@ -120,3 +120,19 @@ void template_uninit() {
   (void)x;
 }
 template void template_uninit<int>(); // expected-note {{in instantiation of function template specialization 'template_uninit<int>' requested here}}
+
+// A *non-dependent* uninitialized local in a template body is diagnosed once --
+// at instantiation -- not on the template pattern (no double-fire).
+template <typename T>
+void template_uninit_nondependent() {
+  int x;            // expected-error {{variable 'x' must be initialized or marked '[[uninit]]' under profile 'std::init'}}
+  (void)x;
+}
+template void template_uninit_nondependent<int>(); // expected-note {{in instantiation of function template specialization 'template_uninit_nondependent<int>' requested here}}
+
+// An uninstantiated template pattern never reaches phase 7, so no rule fires.
+template <typename T>
+void template_uninit_never_instantiated() {
+  int x;
+  (void)x;
+}

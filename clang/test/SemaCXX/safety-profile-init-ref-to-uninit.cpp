@@ -218,6 +218,15 @@ void template_bad() {
 }
 template void template_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_bad<int>' requested here}}
 
+// A *non-dependent* pointer bound to uninitialized memory inside a template
+// body is diagnosed once, at instantiation, not on the pattern (no double-fire).
+template <typename T>
+void template_nondependent_bad() {
+  int *p = &g_uninit; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)p;
+}
+template void template_nondependent_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_nondependent_bad<int>' requested here}}
+
 // A default-initialized new-expression that leaves a scalar subobject
 // indeterminate (e.g. new int, new int[n], paper §1.2 / §4.3) is a source of
 // uninitialized free-store memory; new T(...), new T{...}, and a type with a
