@@ -752,6 +752,10 @@ at the first such read, with a ``note_init_uninit_member_here`` note.  Details:
   members; a member given a value by the *written* member-initializer list is
   assigned at body entry (no false positive and no spurious "marker + list-init"
   contradiction).
+- A member access on the current object is recognized whether spelled
+  ``this->m``, implicitly as ``m``, or as the equivalent ``(*this).m``; an
+  access through any other object (``other.m``) is not the current object's
+  member.
 - There is **no** constructor-exit requirement: a ``[[uninit]]`` member that is
   simply never read is left as-is (paper §5.1/§5.3), exactly as R5 structurally
   excuses a marked member -- the two checks are complementary.
