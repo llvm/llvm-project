@@ -4642,21 +4642,6 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
     SYCL().DiagIfDeviceCode(Loc, diag::err_variadic_device_fn)
         << diag::OffloadLang::SYCL;
 
-  // Diagnose calls to noreturn functions from within a function declared as
-  // being const or pure; this is undefined behavior. But only if the
-  // expression is actually evaluated.
-  if ((FD && FD->isNoReturn()) || (Proto && Proto->getNoReturnAttr())) {
-    if (const Decl *D = getCurFunctionDecl(/*AllowLambda=*/true);
-        D && (D->hasAttr<ConstAttr>() || D->hasAttr<PureAttr>())) {
-      DiagRuntimeBehavior(Loc, nullptr,
-                          PDiag(diag::warn_const_pure_noreturn_call)
-                              << D->hasAttr<ConstAttr>());
-      DiagRuntimeBehavior(D->getLocation(), nullptr,
-                          PDiag(diag::note_const_pure_noreturn_call)
-                              << D->hasAttr<ConstAttr>());
-    }
-  }
-
   if (FD)
     diagnoseArgDependentDiagnoseIfAttrs(FD, ThisArg, Args, Loc);
 }
