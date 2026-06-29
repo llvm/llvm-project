@@ -14168,6 +14168,9 @@ def err_init_union_marker : ProfileRuleError<
 def err_init_uninit_pointer_marker : ProfileRuleError<
   "'[[uninit]]' cannot be applied to a pointer under profile '%0'; "
   "initialize the pointer (for example to 'nullptr')">;
+def err_init_uninit_static_marker : ProfileRuleError<
+  "'[[uninit]]' cannot be applied to variable %1 with %select{static|thread}2 "
+  "storage duration under profile '%0'; it is zero-initialized">;
 def err_init_ctor_uninit_member : ProfileRuleError<
   "constructor does not initialize member %1 under profile '%0'">;
 def note_init_uninit_member_here : Note<

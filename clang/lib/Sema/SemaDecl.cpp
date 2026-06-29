@@ -14750,6 +14750,35 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
           << Profile << Var->getDeclName();
     }
 
+    // std::init / static_marker: a variable with static or thread storage
+    // duration is zero-initialized by language rule (paper §3), so it is an
+    // initialized object; marking it [[uninit]] contradicts paper §4.2 ("an
+    // initialized object marked [[uninit]] is an error"). The case with a real
+    // initializer -- explicit, or a constructor that actually runs -- is
+    // already caught by uninit_with_initializer (R4, in
+    // CheckCompleteVariableDeclaration below); this covers the zero-initialized,
+    // no-real-initializer case R4 treats as a consistent no-op. The factual
+    // (HonorUninitMarkers=false) walk matches R4: a static object whose only
+    // indeterminate scalars are themselves marked is still zero-initialized.
+    if (!Var->isInvalidDecl() &&
+        (Var->getStorageDuration() == SD_Static ||
+         Var->getStorageDuration() == SD_Thread) &&
+        Var->hasAttr<UninitAttr>() &&
+        // A union or pointer object marked [[uninit]] is already rejected by
+        // union_marker / pointer_marker (regardless of storage duration), and
+        // they retain the marker; do not pile a second diagnostic on top.
+        !Var->getType()->isUnionType() && !Var->getType()->isPointerType() &&
+        shouldEmitProfileViolation(Profile, "static_marker", Var->getLocation(),
+                                   Var) &&
+        (!Var->getInit() ||
+         (BaseTy->isRecordType() &&
+          defaultInitLeavesScalarIndeterminate(
+              Var->getType(), /*HonorUninitMarkers=*/false)))) {
+      bool IsThread = Var->getStorageDuration() == SD_Thread;
+      Diag(Var->getLocation(), diag::err_init_uninit_static_marker)
+          << Profile << Var->getDeclName() << IsThread;
+    }
+
     CheckCompleteVariableDeclaration(Var);
   }
 }
