@@ -41,8 +41,7 @@ class ArrayBoundChecker : public Checker<check::PostStmt<ArraySubscriptExpr>,
   void handleAccessExpr(const Expr *E, CheckerContext &C) const;
 
   void reportOOB(CheckerContext &C, ProgramStateRef ErrorState, Messages Msgs,
-                 NonLoc Offset, std::optional<NonLoc> Extent,
-                 bool IsTaintBug = false) const;
+                 ArrayRef<NonLoc> Extent, bool IsTaintBug = false) const;
 
   static void markPartsInteresting(PathSensitiveBugReport &BR,
                                    ProgramStateRef ErrorState, NonLoc Val,
@@ -204,15 +203,20 @@ void ArrayBoundChecker::handleAccessExpr(const Expr *E,
     Messages Msgs =
         getTaintMsgs(RN, OffsetName,
                      /*AlsoMentionUnderflow=*/Res.assumedNonNegative());
-    reportOOB(C, Res.getState(), Msgs, ByteOffset, Extent,
-              /*IsTaintBug=*/true);
+    SmallVector<NonLoc, 2> Interesting = {ByteOffset};
+    if (Extent)
+      Interesting.push_back(*Extent);
+    reportOOB(C, Res.getState(), Msgs, Interesting, /*IsTaintBug=*/true);
     return;
   }
   default: {
     SizeUnit SU = SizeUnit::forSVal(Location, C.getASTContext());
-    Messages Msgs =
-        getNonTaintMsgs(RN, SU, ByteOffset, Extent, *Res.getBadOffsetKind());
-    reportOOB(C, Res.getState(), Msgs, ByteOffset, Extent);
+    BadOffsetKind BOK = *Res.getBadOffsetKind();
+    Messages Msgs = getNonTaintMsgs(RN, SU, ByteOffset, Extent, BOK);
+    SmallVector<NonLoc, 2> Interesting = {ByteOffset};
+    if (Extent && BOK != BadOffsetKind::Negative)
+      Interesting.push_back(*Extent);
+    reportOOB(C, Res.getState(), Msgs, Interesting);
     return;
   }
   }
@@ -242,8 +246,7 @@ void ArrayBoundChecker::markPartsInteresting(PathSensitiveBugReport &BR,
 }
 
 void ArrayBoundChecker::reportOOB(CheckerContext &C, ProgramStateRef ErrorState,
-                                  Messages Msgs, NonLoc Offset,
-                                  std::optional<NonLoc> Extent,
+                                  Messages Msgs, ArrayRef<NonLoc> Interesting,
                                   bool IsTaintBug /*=false*/) const {
 
   ExplodedNode *ErrorNode = C.generateErrorNode(ErrorState);
@@ -266,9 +269,8 @@ void ArrayBoundChecker::reportOOB(CheckerContext &C, ProgramStateRef ErrorState,
   //   (which is technically true, but irrelevant).
   // If trackExpressionValue() becomes reliable, it should be applied instead
   // of this custom markPartsInteresting().
-  markPartsInteresting(*BR, ErrorState, Offset, IsTaintBug);
-  if (Extent)
-    markPartsInteresting(*BR, ErrorState, *Extent, IsTaintBug);
+  for (NonLoc Val : Interesting)
+    markPartsInteresting(*BR, ErrorState, Val, IsTaintBug);
 
   C.emitReport(std::move(BR));
 }
