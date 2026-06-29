@@ -1806,6 +1806,8 @@ Value *AtomicExpandImpl::insertRMWCmpXchgLoop(
   // addIncoming is done first so that any replaceAllUsesWith calls during
   // normalization correctly update the PHI incoming value.
   InitLoaded->setVolatile(IsVolatile);
+  if (MetadataSrc)
+    copyMetadataForAtomic(*InitLoaded, *MetadataSrc);
   if (TLI->shouldIssueAtomicLoadForAtomicEmulationLoop()) {
     InitLoaded->setAtomic(AtomicOrdering::Monotonic, SSID);
     // The newly created load might need to be lowered further. Because it is
