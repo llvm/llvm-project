@@ -42,7 +42,7 @@ MCStreamer *Target::createMCObjectStreamer(
   case Triple::UnknownObjectFormat:
     llvm_unreachable("Unknown object format");
   case Triple::COFF:
-    assert((T.isOSWindows() || T.isUEFI()) &&
+    assert(T.isOSWindowsOrUEFI() &&
            "only Windows and UEFI COFF are supported");
     S = COFFStreamerCtorFn(Ctx, std::move(TAB), std::move(OW),
                            std::move(Emitter));
