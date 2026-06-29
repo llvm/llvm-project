@@ -41,6 +41,34 @@ class Function;
 class MachineFunction;
 class PassInstrumentationCallbacks;
 
+class ExtendedIRTraits {
+  public:
+  ExtendedIRTraits() = default;
+  ExtendedIRTraits(const ExtendedIRTraits&) = delete;
+  ExtendedIRTraits& operator=(const ExtendedIRTraits&) = delete;
+
+  ExtendedIRTraits(ExtendedIRTraits&&) = delete;
+  ExtendedIRTraits& operator=(ExtendedIRTraits&&) = delete;
+
+  virtual ~ExtendedIRTraits() = default;
+  virtual std::optional<std::string> getIRName(Any IR) = 0;
+};
+
+struct ExtendedIRContext {
+  ExtendedIRContext() = default;
+  ExtendedIRContext(const ExtendedIRContext&) = delete;
+  ExtendedIRContext& operator=(const ExtendedIRContext&) = delete;
+
+  ExtendedIRContext(ExtendedIRContext&&) = delete;
+  ExtendedIRContext& operator=(ExtendedIRContext&&) = delete;
+
+  llvm::SmallVector<std::unique_ptr<ExtendedIRTraits>> traits;
+  // Add an ExtendedIRTraits to the traits vector
+  void addTrait(std::unique_ptr<ExtendedIRTraits> trait) {
+    traits.push_back(std::move(trait));
+  }
+};
+
 /// Instrumentation to print IR before/after passes.
 ///
 /// Needs state to be able to print module after pass that invalidates IR unit
@@ -209,9 +237,9 @@ public:
 // 6.  When a pass is run on an IR that is not interesting (based on options).
 // 7.  When a pass is ignored (pass manager or adapter pass).
 // 8.  To compare two IR representations (of type \p T).
-template <typename IRUnitT> class LLVM_ABI ChangeReporter {
+template <typename IRUnitT> class LLVM_ABI ChangeReporter : public ExtendedIRContext {
 protected:
-  ChangeReporter(bool RunInVerboseMode) : VerboseMode(RunInVerboseMode) {}
+  ChangeReporter(bool RunInVerboseMode) : ExtendedIRContext(), VerboseMode(RunInVerboseMode) {}
 
 public:
   virtual ~ChangeReporter();
