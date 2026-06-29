@@ -2058,10 +2058,10 @@ bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestTypePtr,
   // Our given pointer, limited by the base that's currently being initialized,
   // if any.
   PtrView LimitedPtr;
-  if (S.InitializingPtrs.empty()) {
+  if (S.InitializingPtrs.empty() ||
+      S.InitializingPtrs.back().block() != Ptr.block()) {
     LimitedPtr = Ptr.stripBaseCasts().view();
   } else {
-    // FIXME: Is this always the correct block?
     LimitedPtr = S.InitializingPtrs.back();
     assert(LimitedPtr.block() == Ptr.block());
   }
