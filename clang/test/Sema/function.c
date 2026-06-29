@@ -118,3 +118,11 @@ void const Bar (void); // ok on decl
 void const Bar (void) // expected-warning {{function cannot return qualified void type 'const void'}}
 {
 }
+
+// PR #182484
+int gh182154_g(int);
+int gh182154_h(int);
+int gh182154_x = 0;
+gh182154_g(gh182154_h(gh182154_x)...); // expected-error 2{{type specifier missing, defaults to 'int'}} \
+                                       // expected-error {{a parameter list without types is only allowed in a function definition}} \
+                                       // expected-error {{requires a comma prior to the ellipsis}}
