@@ -3158,10 +3158,34 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                                           IntrR->getScalarType(), {}, {}, DL);
 
   // Transforms the VPReductionRecipe inside the VPExpressionRecipe.
-  if (auto *ExpressionR = dyn_cast<VPExpressionRecipe>(&CurRecipe))
-    if (match(ExpressionR->getOperand(ExpressionR->getNumOperands() - 1),
-              m_RemoveMask(HeaderMask, Mask)))
-      return ExpressionR->convertToEVL(EVL, Mask);
+  if (auto *Expr = dyn_cast<VPExpressionRecipe>(&CurRecipe))
+    if (match(Expr->getOperand(Expr->getNumOperands() - 1),
+              m_RemoveMask(HeaderMask, Mask))) {
+      auto PrevR = std::prev(Expr->getIterator());
+      Expr->decompose();
+      VPReductionRecipe *Red =
+          cast<VPReductionRecipe>(&*std::prev(Expr->getIterator()));
+
+      // Collect the recipes contained by the ExpressionRecipe except the last
+      // VPReductionRecipe.
+      SmallVector<VPSingleDefRecipe *, 4> Expressions;
+      for (auto &R :
+           make_range(std::next(PrevR), std::prev(Expr->getIterator())))
+        Expressions.push_back(cast<VPSingleDefRecipe>(&R));
+
+      // Convert to VPReductionEVLRecipe.
+      auto *NewRed = new VPReductionEVLRecipe(
+          *Red, EVL, Mask ? Mask : Plan->getTrue(), Red->getDebugLoc());
+      NewRed->insertBefore(Expr);
+      Expressions.push_back(NewRed);
+      auto *NewExpr =
+          new VPExpressionRecipe(Expr->getExpressionType(), Expressions);
+
+      // Replace uses and remove the old non-EVL reduction.
+      Red->replaceAllUsesWith(NewExpr);
+      Red->eraseFromParent();
+      return NewExpr;
+    }
   return nullptr;
 }
 

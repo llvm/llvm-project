@@ -3495,32 +3495,6 @@ VPExpressionRecipe::VPExpressionRecipe(
       R->replaceUsesOfWith(LiveIn, Tmp);
 }
 
-VPExpressionRecipe *VPExpressionRecipe::convertToEVL(VPValue &EVL,
-                                                     VPValue *Mask) {
-  // Clone the VPExpressionRecipe.
-  SmallVector<VPSingleDefRecipe *, 4> NewExpressionRecipes;
-  for (auto *R : ExpressionRecipes)
-    NewExpressionRecipes.push_back(R->clone());
-  for (auto *New : NewExpressionRecipes) {
-    for (const auto &[Idx, Old] : enumerate(ExpressionRecipes))
-      New->replaceUsesOfWith(Old, NewExpressionRecipes[Idx]);
-    // Update placeholder operands in the cloned recipe to use the external
-    // operands, to be internalized when the evl expression is constructed.
-    for (const auto &[Placeholder, OutsideOp] :
-         zip(LiveInPlaceholders, operands()))
-      New->replaceUsesOfWith(Placeholder, OutsideOp);
-  }
-
-  // Transforms to EVL reduction.
-  auto *Red = cast<VPReductionRecipe>(NewExpressionRecipes.pop_back_val());
-  if (!Mask)
-    Mask = getParent()->getPlan()->getTrue();
-  auto *NewRed = new VPReductionEVLRecipe(*Red, EVL, Mask, Red->getDebugLoc());
-  delete Red;
-  NewExpressionRecipes.push_back(NewRed);
-  return new VPExpressionRecipe(ExpressionType, NewExpressionRecipes);
-}
-
 void VPExpressionRecipe::decompose() {
   for (auto *R : ExpressionRecipes)
     // Since the list could contain duplicates, make sure the recipe hasn't

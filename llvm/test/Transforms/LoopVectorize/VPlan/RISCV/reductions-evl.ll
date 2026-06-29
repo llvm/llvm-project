@@ -349,6 +349,7 @@ define i64 @print_extended_reduction(ptr nocapture readonly %x, ptr nocapture re
 ; CHECK-NEXT:      CLONE ir<%arrayidx> = getelementptr inbounds ir<%x>, vp<[[VP6]]>
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = vector-pointer inbounds ir<%arrayidx>, ir<1>
 ; CHECK-NEXT:      WIDEN ir<%load0> = vp.load vp<[[VP7]]>, vp<%evl>
+; CHECK-NEXT:      WIDEN-CAST ir<%conv0> = zext ir<%load0> to i64
 ; CHECK-NEXT:      EXPRESSION vp<[[VP8]]> = ir<true> + reduce.add (ir<%load0> zext to i64, vp<%evl>, ir<true>)
 ; CHECK-NEXT:      EMIT vp<%current.iteration.next> = add vp<%evl>, vp<[[VP5]]>
 ; CHECK-NEXT:      EMIT vp<%avl.next> = sub nuw vp<%avl>, vp<%evl>
@@ -517,6 +518,7 @@ define i64 @print_mulacc_extended(ptr nocapture readonly %x, ptr nocapture reado
 ; CHECK-NEXT:      WIDEN-CAST ir<%conv0> = sext ir<%load0> to i32
 ; CHECK-NEXT:      WIDEN-CAST ir<%conv1> = sext ir<%load1> to i32
 ; CHECK-NEXT:      WIDEN ir<%mul> = mul nsw ir<%conv0>, ir<%conv1>
+; CHECK-NEXT:      WIDEN-CAST ir<%conv> = sext ir<%mul> to i64
 ; CHECK-NEXT:      EXPRESSION vp<[[VP9]]> = ir<true> + reduce.add (ir<%mul> sext to i64, vp<%evl>, ir<true>)
 ; CHECK-NEXT:      EMIT vp<%current.iteration.next> = add vp<%evl>, vp<[[VP5]]>
 ; CHECK-NEXT:      EMIT vp<%avl.next> = sub nuw vp<%avl>, vp<%evl>
@@ -948,6 +950,7 @@ define i64 @print_ext_mulacc_extended_const(ptr %start, ptr %end) {
 ; CHECK-NEXT:      WIDEN ir<%l> = vp.load vp<[[VP9]]>, vp<%evl>
 ; CHECK-NEXT:      WIDEN-CAST ir<%l.ext> = zext ir<%l> to i32
 ; CHECK-NEXT:      WIDEN ir<%mul> = mul ir<%l.ext>, ir<63>
+; CHECK-NEXT:      WIDEN-CAST ir<%mul.ext> = zext ir<%mul> to i64
 ; CHECK-NEXT:      EXPRESSION vp<[[VP10]]> = ir<true> + reduce.add (ir<%mul> zext to i64, vp<%evl>, ir<true>)
 ; CHECK-NEXT:      EMIT-SCALAR vp<[[VP11:%[0-9]+]]> = zext vp<%evl> to i64
 ; CHECK-NEXT:      EMIT vp<%current.iteration.next> = add vp<[[VP11]]>, vp<[[VP6]]>
@@ -1032,6 +1035,7 @@ define i64 @print_ext_mulacc_not_extended_const(ptr %start, ptr %end) {
 ; CHECK-NEXT:      WIDEN ir<%l> = vp.load vp<[[VP9]]>, vp<%evl>
 ; CHECK-NEXT:      WIDEN-CAST ir<%l.ext> = sext ir<%l> to i32
 ; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = shl ir<%l.ext>, ir<7>
+; CHECK-NEXT:      WIDEN-CAST ir<%mul.ext> = sext vp<[[VP10]]> to i64
 ; CHECK-NEXT:      EXPRESSION vp<[[VP11]]> = ir<true> + reduce.add (vp<[[VP10]]> sext to i64, vp<%evl>, ir<true>)
 ; CHECK-NEXT:      EMIT-SCALAR vp<[[VP12:%[0-9]+]]> = zext vp<%evl> to i64
 ; CHECK-NEXT:      EMIT vp<%current.iteration.next> = add vp<[[VP12]]>, vp<[[VP6]]>
@@ -1115,6 +1119,7 @@ define i64 @print_ext_mul_two_uses(i64 %n, ptr %a, i16 %b, i32 %c) {
 ; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%res2> = phi (add) vp<[[VP4]]>, vp<[[VP7:%[0-9]+]]>
 ; CHECK-NEXT:      EMIT-SCALAR vp<%avl> = phi [ vp<[[VP3]]>, vector.ph ], [ vp<%avl.next>, vector.body ]
 ; CHECK-NEXT:      EMIT-SCALAR vp<%evl> = EXPLICIT-VECTOR-LENGTH vp<%avl>
+; CHECK-NEXT:      WIDEN-CAST ir<%mul.ext> = zext ir<%mul> to i64
 ; CHECK-NEXT:      EXPRESSION vp<[[VP7]]> = ir<true> + reduce.add (ir<%mul> zext to i64, vp<%evl>, ir<true>)
 ; CHECK-NEXT:      EMIT-SCALAR vp<[[VP8:%[0-9]+]]> = zext vp<%evl> to i64
 ; CHECK-NEXT:      EMIT vp<%current.iteration.next> = add vp<[[VP8]]>, vp<[[VP6]]>

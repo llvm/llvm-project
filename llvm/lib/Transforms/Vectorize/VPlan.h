@@ -3567,6 +3567,7 @@ class VPExpressionRecipe : public VPSingleDefRecipe {
   /// Type of the expression.
   ExpressionTypes ExpressionType;
 
+public:
   /// Construct a new VPExpressionRecipe by internalizing recipes in \p
   /// ExpressionRecipes. External operands (i.e. not defined by another recipe
   /// in the expression) are replaced by temporary VPValues and the original
@@ -3576,7 +3577,6 @@ class VPExpressionRecipe : public VPSingleDefRecipe {
   VPExpressionRecipe(ExpressionTypes ExpressionType,
                      ArrayRef<VPSingleDefRecipe *> ExpressionRecipes);
 
-public:
   VPExpressionRecipe(VPWidenCastRecipe *Ext, VPReductionRecipe *Red)
       : VPExpressionRecipe(ExpressionTypes::ExtendedReduction, {Ext, Red}) {}
   VPExpressionRecipe(VPWidenCastRecipe *Ext, VPWidenRecipe *Neg,
@@ -3657,13 +3657,13 @@ public:
     return getOperand(getNumOperands() - OpIdx);
   }
 
-  /// Returns a new VPExpressionRecipe with VPReductionEVLRecipe.
-  VPExpressionRecipe *convertToEVL(VPValue &EVL, VPValue *Mask);
-
   /// Insert the recipes of the expression back into the VPlan, directly before
   /// the current recipe. Leaves the expression recipe empty, which must be
   /// removed before codegen.
   void decompose();
+
+  /// Returns the expression type of this recipe.
+  ExpressionTypes getExpressionType() const { return ExpressionType; }
 
   unsigned getVFScaleFactor() const {
     auto *PR = dyn_cast<VPReductionRecipe>(ExpressionRecipes.back());
