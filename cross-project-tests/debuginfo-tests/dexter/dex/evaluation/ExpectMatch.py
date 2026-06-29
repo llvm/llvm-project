@@ -198,6 +198,9 @@ class DebuggerExpectMatch:
                     self.expect, None, None, self.provisional_match_context
                 )
             else:
+                # Recursively invoke get_expect_match, which will create a `DebuggerExpectMatch` for all values in
+                # sub_expected and select the best match, or return a match against None if sub_expected contains no
+                # values that match `value`.
                 sub_expect_results[sub_expect] = get_expect_match(
                     self.expect, sub_expected, value, self.provisional_match_context
                 )
