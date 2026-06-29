@@ -95,6 +95,7 @@
 #include <limits>
 #include <optional>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -773,10 +774,31 @@ AST_MATCHER_P(ClassTemplateSpecializationDecl, hasSpecializedTemplate,
 
 /// Matches an entity that has been implicitly added by the compiler (e.g.
 /// implicit default/copy constructors).
+///
+/// For example, given:
+/// \code
+///   int i, j;
+///   auto l = [&, j]() { return i; };
+/// \endcode
+/// lambdaCapture(isImplicit())
+///   matches the capture of i but not of j.
+/// Given:
+/// \code
+///   struct Outer {
+///     struct Inner {} inner;
+///   } outer = {};
+/// \endcode
+/// initListExpr(isImplicit())
+///   matches the implicitly added Inner initializer inside InitListExpr node
+///   for the explicit initializer of Outer.
 AST_POLYMORPHIC_MATCHER(isImplicit,
                         AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Attr,
-                                                        LambdaCapture)) {
-  return Node.isImplicit();
+                                                        LambdaCapture,
+                                                        InitListExpr)) {
+  if constexpr (std::is_same_v<NodeType, InitListExpr>)
+    return !Node.isExplicit();
+  else
+    return Node.isImplicit();
 }
 
 /// Matches templateSpecializationTypes, class template specializations,
@@ -8806,6 +8828,26 @@ AST_MATCHER_P(OMPExecutableDirective, hasAnyClause,
 extern const internal::VariadicDynCastAllOfMatcher<Stmt,
                                                    OMPTargetUpdateDirective>
     ompTargetUpdateDirective;
+
+/// Matches any ``#pragma omp split`` executable directive.
+///
+/// Given
+///
+/// \code
+///   #pragma omp split counts(2, omp_fill)
+///   for (int i = 0; i < n; ++i) {}
+/// \endcode
+///
+/// ``ompSplitDirective()`` matches the split directive.
+extern const internal::VariadicDynCastAllOfMatcher<Stmt, OMPSplitDirective>
+    ompSplitDirective;
+
+/// Matches OpenMP ``counts`` clause used by ``#pragma omp split``.
+///
+/// Given ``#pragma omp split counts(1, 2, omp_fill)``, ``ompCountsClause()``
+/// matches the ``counts`` clause node.
+extern const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPCountsClause>
+    ompCountsClause;
 
 /// Matches OpenMP ``default`` clause.
 ///

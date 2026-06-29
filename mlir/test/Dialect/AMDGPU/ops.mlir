@@ -523,15 +523,15 @@ func.func @raw_buffer_store_scalar(%value : f32, %dst : memref<f32>) {
 
 // CHECK-LABEL: func @raw_buffer_atomic_fadd_f32_to_rank_1
 func.func @raw_buffer_atomic_fadd_f32_to_rank_1(%value : f32, %dst : memref<128xf32>, %offset : i32, %idx0 : i32) {
-  // CHECK: amdgpu.raw_buffer_atomic_fadd {indexOffset = 1 : i32} %{{.*}} -> %{{.*}}[{{.*}}] sgprOffset %{{.*}} : f32 -> memref<128xf32>, i32
-  amdgpu.raw_buffer_atomic_fadd {boundsCheck = true, indexOffset = 1 : i32} %value -> %dst[%idx0] sgprOffset %offset : f32 -> memref<128xf32>, i32
+  // CHECK: %{{.*}} = amdgpu.raw_buffer_atomic_fadd {indexOffset = 1 : i32} %{{.*}} -> %{{.*}}[{{.*}}] sgprOffset %{{.*}} : f32 -> memref<128xf32>, i32
+  %old = amdgpu.raw_buffer_atomic_fadd {boundsCheck = true, indexOffset = 1 : i32} %value -> %dst[%idx0] sgprOffset %offset : f32 -> memref<128xf32>, i32
   func.return
 }
 
 // CHECK-LABEL: func @raw_buffer_atomic_fadd_f32_to_rank_4
 func.func @raw_buffer_atomic_fadd_f32_to_rank_4(%value : f32, %dst : memref<128x64x32x16xf32>, %offset : i32, %idx0 : i32, %idx1 : i32, %idx2 : i32, %idx3 : i32) {
-  // CHECK: amdgpu.raw_buffer_atomic_fadd {indexOffset = 1 : i32} %{{.*}} -> %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}] sgprOffset %{{.*}} : f32 -> memref<128x64x32x16xf32>, i32, i32, i32, i32
-  amdgpu.raw_buffer_atomic_fadd {boundsCheck = true, indexOffset = 1 : i32} %value -> %dst[%idx0, %idx1, %idx2, %idx3] sgprOffset %offset : f32 -> memref<128x64x32x16xf32>, i32, i32, i32, i32
+  // CHECK: %{{.*}} = amdgpu.raw_buffer_atomic_fadd {indexOffset = 1 : i32} %{{.*}} -> %{{.*}}[%{{.*}}, %{{.*}}, %{{.*}}] sgprOffset %{{.*}} : f32 -> memref<128x64x32x16xf32>, i32, i32, i32, i32
+  %old = amdgpu.raw_buffer_atomic_fadd {boundsCheck = true, indexOffset = 1 : i32} %value -> %dst[%idx0, %idx1, %idx2, %idx3] sgprOffset %offset : f32 -> memref<128x64x32x16xf32>, i32, i32, i32, i32
   func.return
 }
 
@@ -551,10 +551,12 @@ func.func @lds_barrier() {
 
 // CHECK-LABEL: func @sched_barrier
 func.func @sched_barrier() {
-  // CHECK: amdgpu.sched_barrier allow = <none>
-  amdgpu.sched_barrier allow = <none>
-  // CHECK: amdgpu.sched_barrier allow = <valu|all_vmem>
-  amdgpu.sched_barrier allow = <valu|all_vmem>
+  // CHECK: amdgpu.sched_barrier allow = none
+  amdgpu.sched_barrier allow = none
+  // CHECK: amdgpu.sched_barrier allow = valu|all_vmem
+  amdgpu.sched_barrier allow = valu|all_vmem
+  // CHECK: amdgpu.sched_barrier allow = all
+  amdgpu.sched_barrier allow = all
   func.return
 }
 
@@ -649,11 +651,39 @@ func.func @scaled_mfma(%arg0 : f8E8M0FNU, %arg1 : vector<32xf6E2M3FN>, %arg2 : v
   func.return %0 : vector<16xf32>
 }
 
+// CHECK-LABEL: func @sparse_mfma
+func.func @sparse_mfma(%a16_4 : vector<4xf16>, %b16_8 : vector<8xf16>,
+                       %a16_8 : vector<8xf16>, %b16_16 : vector<16xf16>,
+                       %a8_8 : vector<8xi8>, %b8_16 : vector<16xi8>,
+                       %a8_16 : vector<16xi8>, %b8_32 : vector<32xi8>,
+                       %c4f : vector<4xf32>, %c4i : vector<4xi32>,
+                       %idx4xi8 : vector<4xi8>, %idx2xi16 : vector<2xi16>,
+                       %idxI32 : i32) {
+  // CHECK: amdgpu.sparse_mfma 16x16x32 {{.*}} sparse({{.*}} : vector<4xi8>)
+  %0 = amdgpu.sparse_mfma 16x16x32 %a16_4 * %b16_8 + %c4f sparse(%idx4xi8 : vector<4xi8>) { abid = 3 : i32, cbsz = 0 : i32 } : vector<4xf16>, vector<8xf16>, vector<4xf32>
+  // CHECK: amdgpu.sparse_mfma 16x16x64 {{.*}} sparse({{.*}} : vector<2xi16>)
+  %1 = amdgpu.sparse_mfma 16x16x64 %a8_8 * %b8_16 + %c4i sparse(%idx2xi16 : vector<2xi16>) { abid = 1 : i32, cbsz = 0 : i32 } : vector<8xi8>, vector<16xi8>, vector<4xi32>
+  // CHECK: amdgpu.sparse_mfma 16x16x64 {{.*}} sparse({{.*}} : vector<2xi16>)
+  %2 = amdgpu.sparse_mfma 16x16x64 %a16_8 * %b16_16 + %c4f sparse(%idx2xi16 : vector<2xi16>) { abid = 1 : i32, cbsz = 0 : i32 } : vector<8xf16>, vector<16xf16>, vector<4xf32>
+  // CHECK: amdgpu.sparse_mfma 16x16x128 {{.*}} sparse({{.*}} : i32)
+  %3 = amdgpu.sparse_mfma 16x16x128 %a8_16 * %b8_32 + %c4i sparse(%idxI32 : i32) { abid = 0 : i32, cbsz = 0 : i32 } : vector<16xi8>, vector<32xi8>, vector<4xi32>
+  func.return
+}
+
 // CHECK-LABEL: func @transpose_load
 func.func @transpose_load(%idx1 : index, %idx2 : index, %mem : memref<128x32xf16, 3>) -> vector<4xf16> {
   // CHECK: amdgpu.transpose_load
   %0 = amdgpu.transpose_load %mem[%idx1, %idx2] : memref<128x32xf16, 3> -> vector<4xf16>
   func.return %0 : vector<4xf16>
+}
+
+// CHECK-LABEL: func @global_transpose_load
+func.func @global_transpose_load(%i : index, %j : index,
+    %mem : memref<128x256xf16, #gpu.address_space<global>>) -> vector<8xf16> {
+  // CHECK: amdgpu.global_transpose_load
+  %0 = amdgpu.global_transpose_load %mem[%i, %j]
+         : memref<128x256xf16, #gpu.address_space<global>> -> vector<8xf16>
+  func.return %0 : vector<8xf16>
 }
 
 // CHECK-LABEL: func @gather_to_lds
@@ -669,6 +699,15 @@ func.func @gather_to_lds(%idx1 : index, %idx2 : index, %mem1 : memref<32xf16>, %
   amdgpu.gather_to_lds %mem2[%idx1, %idx2], %smem1[%idx1] : vector<2xf16>, memref<32x32xf16>, memref<32xf16,    #gpu.address_space<workgroup>>
   amdgpu.gather_to_lds %mem1[%idx1], %smem3[%idx1, %idx2] : vector<2xf16>, memref<32xf16>,   memref<?x?xf16, strided<[?, 1]>, #gpu.address_space<workgroup>>
   rocdl.wait.asyncmark 0
+  func.return
+}
+
+// CHECK-LABEL: func @gather_to_lds_integer_fat_raw_buffer_address_space
+func.func @gather_to_lds_integer_fat_raw_buffer_address_space(%idx : index,
+    %mem : memref<32xf16, 7>,
+    %smem : memref<32xf16, #gpu.address_space<workgroup>>) {
+  // CHECK: amdgpu.gather_to_lds
+  amdgpu.gather_to_lds %mem[%idx], %smem[%idx] : vector<2xf16>, memref<32xf16, 7>, memref<32xf16, #gpu.address_space<workgroup>>
   func.return
 }
 
@@ -731,10 +770,10 @@ func.func @memory_counter_wait() {
 }
 
 // CHECK-LABEL: func @make_dma_base
-// CHECK-SAME: (%[[IDX:.+]]: index, %[[MEM:.+]]: memref<8xi32>, %[[SMEM:.+]]: memref<8xi32, #gpu.address_space<workgroup>>)
-func.func @make_dma_base(%idx: index, %mem: memref<8xi32>, %smem: memref<8xi32, #gpu.address_space<workgroup>>) {
-  // CHECK: amdgpu.make_dma_base %[[MEM]][%[[IDX]]], %[[SMEM]][%[[IDX]]] : memref<8xi32>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
-  amdgpu.make_dma_base %mem[%idx], %smem[%idx] : memref<8xi32>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+// CHECK-SAME: (%[[IDX:.+]]: index, %[[MEM:.+]]: memref<8xi32, #gpu.address_space<global>>, %[[SMEM:.+]]: memref<8xi32, #gpu.address_space<workgroup>>)
+func.func @make_dma_base(%idx: index, %mem: memref<8xi32, #gpu.address_space<global>>, %smem: memref<8xi32, #gpu.address_space<workgroup>>) {
+  // CHECK: amdgpu.make_dma_base %[[MEM]][%[[IDX]]], %[[SMEM]][%[[IDX]]] : memref<8xi32, #gpu.address_space<global>>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
+  amdgpu.make_dma_base %mem[%idx], %smem[%idx] : memref<8xi32, #gpu.address_space<global>>, memref<8xi32, #gpu.address_space<workgroup>> -> !amdgpu.tdm_base<i32>
   func.return
 }
 
@@ -864,4 +903,78 @@ func.func @ds_barrier_ops(%barrier: memref<!amdgpu.ds_barrier_state, #gpu.addres
   // CHECK: [[PARITY:%.*]] = amdgpu.ds_barrier_state_phase_parity [[STATE]] : !amdgpu.ds_barrier_state -> i1
   %parity = amdgpu.ds_barrier_state_phase_parity %state : !amdgpu.ds_barrier_state -> i1
   func.return
+}
+
+// CHECK-LABEL: func @dot_f16_f32
+func.func @dot_f16_f32(%a: vector<2xf16>, %b: vector<2xf16>, %c: f32) -> f32 {
+  // CHECK: amdgpu.dot {{.*}} : vector<2xf16>, vector<2xf16>, f32
+  %r = amdgpu.dot %a * %b + %c : vector<2xf16>, vector<2xf16>, f32
+  // CHECK: amdgpu.dot {{.*}} {clamp} : vector<2xf16>, vector<2xf16>, f32
+  %s = amdgpu.dot %a * %b + %c {clamp} : vector<2xf16>, vector<2xf16>, f32
+  func.return %r : f32
+}
+
+// CHECK-LABEL: func @dot_f16_f16
+func.func @dot_f16_f16(%a: vector<2xf16>, %b: vector<2xf16>, %c: f16) -> f16 {
+  // CHECK: amdgpu.dot {{.*}} : vector<2xf16>, vector<2xf16>, f16
+  %r = amdgpu.dot %a * %b + %c : vector<2xf16>, vector<2xf16>, f16
+  func.return %r : f16
+}
+
+// CHECK-LABEL: func @dot_bf16
+func.func @dot_bf16(%a: vector<2xbf16>, %b: vector<2xbf16>, %c: f32, %d: bf16) {
+  // CHECK: amdgpu.dot {{.*}} {clamp} : vector<2xbf16>, vector<2xbf16>, f32
+  %r = amdgpu.dot %a * %b + %c {clamp} : vector<2xbf16>, vector<2xbf16>, f32
+  // CHECK: amdgpu.dot {{.*}} : vector<2xbf16>, vector<2xbf16>, bf16
+  %s = amdgpu.dot %a * %b + %d : vector<2xbf16>, vector<2xbf16>, bf16
+  func.return
+}
+
+// CHECK-LABEL: func @dot_i16
+func.func @dot_i16(%a: vector<2xi16>, %b: vector<2xi16>, %c: i32) -> i32 {
+  // CHECK: amdgpu.dot {{.*}} : vector<2xi16>, vector<2xi16>, i32
+  %r = amdgpu.dot %a * %b + %c : vector<2xi16>, vector<2xi16>, i32
+  // CHECK: amdgpu.dot {{.*}} {clamp} : vector<2xi16>, vector<2xi16>, i32
+  %s = amdgpu.dot %a * %b + %c {clamp} : vector<2xi16>, vector<2xi16>, i32
+  // CHECK: amdgpu.dot {{.*}} {unsignedA, unsignedB} : vector<2xi16>, vector<2xi16>, i32
+  %t = amdgpu.dot %a * %b + %c {unsignedA, unsignedB} : vector<2xi16>, vector<2xi16>, i32
+  func.return %r : i32
+}
+
+// CHECK-LABEL: func @dot_i8
+func.func @dot_i8(%a: vector<4xi8>, %b: vector<4xi8>, %c: i32) -> i32 {
+  // CHECK: amdgpu.dot {{.*}} : vector<4xi8>, vector<4xi8>, i32
+  %r = amdgpu.dot %a * %b + %c : vector<4xi8>, vector<4xi8>, i32
+  // CHECK: amdgpu.dot {{.*}} {clamp, unsignedA, unsignedB} : vector<4xi8>, vector<4xi8>, i32
+  %s = amdgpu.dot %a * %b + %c {unsignedA, unsignedB, clamp} : vector<4xi8>, vector<4xi8>, i32
+  // CHECK: amdgpu.dot {{.*}} {unsignedB} : vector<4xi8>, vector<4xi8>, i32
+  %t = amdgpu.dot %a * %b + %c {unsignedB} : vector<4xi8>, vector<4xi8>, i32
+  // CHECK: amdgpu.dot {{.*}} {unsignedA} : vector<4xi8>, vector<4xi8>, i32
+  %u = amdgpu.dot %a * %b + %c {unsignedA} : vector<4xi8>, vector<4xi8>, i32
+  func.return %r : i32
+}
+
+// CHECK-LABEL: func @dot_i4
+func.func @dot_i4(%a: vector<8xi4>, %b: vector<8xi4>, %c: i32) -> i32 {
+  // CHECK: amdgpu.dot {{.*}} : vector<8xi4>, vector<8xi4>, i32
+  %r = amdgpu.dot %a * %b + %c : vector<8xi4>, vector<8xi4>, i32
+  // CHECK: amdgpu.dot {{.*}} {clamp, unsignedA, unsignedB} : vector<8xi4>, vector<8xi4>, i32
+  %s = amdgpu.dot %a * %b + %c {unsignedA, unsignedB, clamp} : vector<8xi4>, vector<8xi4>, i32
+  // CHECK: amdgpu.dot {{.*}} {unsignedA} : vector<8xi4>, vector<8xi4>, i32
+  %t = amdgpu.dot %a * %b + %c {unsignedA} : vector<8xi4>, vector<8xi4>, i32
+  func.return %r : i32
+}
+
+// CHECK-LABEL: func @dot_fp8
+func.func @dot_fp8(%a: vector<4xf8E4M3FN>, %b: vector<4xf8E4M3FN>,
+                   %e: vector<4xf8E5M2>, %c: f32) -> f32 {
+  // CHECK: amdgpu.dot {{.*}} : vector<4xf8E4M3FN>, vector<4xf8E4M3FN>, f32
+  %r0 = amdgpu.dot %a * %a + %c : vector<4xf8E4M3FN>, vector<4xf8E4M3FN>, f32
+  // CHECK: amdgpu.dot {{.*}} : vector<4xf8E4M3FN>, vector<4xf8E5M2>, f32
+  %r1 = amdgpu.dot %a * %e + %c : vector<4xf8E4M3FN>, vector<4xf8E5M2>, f32
+  // CHECK: amdgpu.dot {{.*}} : vector<4xf8E5M2>, vector<4xf8E4M3FN>, f32
+  %r2 = amdgpu.dot %e * %a + %c : vector<4xf8E5M2>, vector<4xf8E4M3FN>, f32
+  // CHECK: amdgpu.dot {{.*}} : vector<4xf8E5M2>, vector<4xf8E5M2>, f32
+  %r3 = amdgpu.dot %e * %e + %c : vector<4xf8E5M2>, vector<4xf8E5M2>, f32
+  func.return %r0 : f32
 }

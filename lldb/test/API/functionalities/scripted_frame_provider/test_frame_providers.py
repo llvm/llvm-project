@@ -555,10 +555,22 @@ class ValueProvidingFrame(ScriptedFrame):
         """No register context."""
         return None
 
+    def get_value_type_for_variable(self, var):
+        name = var.GetName()
+        if name == "_handler_one":
+            return lldb.eValueTypeVariableLocal | lldb.eValueTypeSyntheticFlag
+        if name == "variable_in_main":
+            return lldb.eValueTypeVariableLocal
+        return None
+
     def get_variables(self):
         """"""
         out = lldb.SBValueList()
         out.Append(self.variable)
+        # Produce a fake value to be displayed.
+        out.Append(
+            self.variable.CreateValueFromExpression("_handler_one", "(uint32_t)1")
+        )
         return out
 
     def get_value_for_variable_expression(self, expr, options, error: lldb.SBError):

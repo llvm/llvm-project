@@ -21,6 +21,7 @@
 #include "lldb/Interpreter/CommandObject.h"
 #include "lldb/Interpreter/CommandObjectMultiword.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
+#include "lldb/Interpreter/Property.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/Language.h"
@@ -335,7 +336,7 @@ void CommandCompletions::SourceFiles(CommandInterpreter &interpreter,
   SourceFileCompleter completer(interpreter, request);
 
   if (searcher == nullptr) {
-    lldb::TargetSP target_sp = interpreter.GetDebugger().GetSelectedTarget();
+    lldb::TargetSP target_sp = interpreter.GetSelectedTarget();
     SearchFilterForUnconstrainedSearches null_searcher(target_sp);
     completer.DoCompletion(&null_searcher);
   } else {
@@ -549,7 +550,7 @@ void CommandCompletions::Modules(CommandInterpreter &interpreter,
   ModuleCompleter completer(interpreter, request);
 
   if (searcher == nullptr) {
-    lldb::TargetSP target_sp = interpreter.GetDebugger().GetSelectedTarget();
+    lldb::TargetSP target_sp = interpreter.GetSelectedTarget();
     SearchFilterForUnconstrainedSearches null_searcher(target_sp);
     completer.DoCompletion(&null_searcher);
   } else {
@@ -581,7 +582,7 @@ void CommandCompletions::Symbols(CommandInterpreter &interpreter,
   SymbolCompleter completer(interpreter, request);
 
   if (searcher == nullptr) {
-    lldb::TargetSP target_sp = interpreter.GetDebugger().GetSelectedTarget();
+    lldb::TargetSP target_sp = interpreter.GetSelectedTarget();
     SearchFilterForUnconstrainedSearches null_searcher(target_sp);
     completer.DoCompletion(&null_searcher);
   } else {
@@ -592,8 +593,9 @@ void CommandCompletions::Symbols(CommandInterpreter &interpreter,
 void CommandCompletions::SettingsNames(CommandInterpreter &interpreter,
                                        CompletionRequest &request,
                                        SearchFilter *searcher) {
-  // Cache the full setting name list
+  // Cache the full setting name/description list.
   static StringList g_property_names;
+  static StringList g_property_descriptions;
   if (g_property_names.GetSize() == 0) {
     // Generate the full setting name list on demand
     lldb::OptionValuePropertiesSP properties_sp(
@@ -603,11 +605,24 @@ void CommandCompletions::SettingsNames(CommandInterpreter &interpreter,
       properties_sp->DumpValue(nullptr, strm, OptionValue::eDumpOptionName);
       const std::string &str = std::string(strm.GetString());
       g_property_names.SplitIntoLines(str.c_str(), str.size());
+
+      // Look up the description for each setting name so it can be displayed
+      // alongside the completion.
+      for (const std::string &name : g_property_names) {
+        std::string description;
+        if (const Property *property =
+                properties_sp->GetPropertyAtPath(nullptr, name))
+          description = property->GetDescription().str();
+        g_property_descriptions.AppendString(description);
+      }
     }
   }
 
-  for (const std::string &s : g_property_names)
-    request.TryCompleteCurrentArg(s);
+  assert(g_property_names.GetSize() == g_property_descriptions.GetSize() &&
+         "Not all properties got descriptions?");
+  for (size_t i = 0; i < g_property_names.GetSize(); ++i)
+    request.TryCompleteCurrentArg(g_property_names[i],
+                                  g_property_descriptions[i]);
 }
 
 void CommandCompletions::PlatformPluginNames(CommandInterpreter &interpreter,
@@ -652,7 +667,7 @@ void CommandCompletions::Registers(CommandInterpreter &interpreter,
 void CommandCompletions::Breakpoints(CommandInterpreter &interpreter,
                                      CompletionRequest &request,
                                      SearchFilter *searcher) {
-  lldb::TargetSP target = interpreter.GetDebugger().GetSelectedTarget();
+  lldb::TargetSP target = interpreter.GetSelectedTarget();
   if (!target)
     return;
 
@@ -683,7 +698,7 @@ void CommandCompletions::Breakpoints(CommandInterpreter &interpreter,
 void CommandCompletions::BreakpointNames(CommandInterpreter &interpreter,
                                          CompletionRequest &request,
                                          SearchFilter *searcher) {
-  lldb::TargetSP target = interpreter.GetDebugger().GetSelectedTarget();
+  lldb::TargetSP target = interpreter.GetSelectedTarget();
   if (!target)
     return;
 
@@ -722,7 +737,7 @@ void CommandCompletions::ProcessIDs(CommandInterpreter &interpreter,
   platform_sp->FindProcesses(match_info, process_infos);
   for (const ProcessInstanceInfo &info : process_infos)
     request.TryCompleteCurrentArg(std::to_string(info.GetProcessID()),
-                                  info.GetNameAsStringRef());
+                                  info.GetName());
 }
 
 void CommandCompletions::ProcessNames(CommandInterpreter &interpreter,
@@ -735,7 +750,7 @@ void CommandCompletions::ProcessNames(CommandInterpreter &interpreter,
   ProcessInstanceInfoMatch match_info;
   platform_sp->FindProcesses(match_info, process_infos);
   for (const ProcessInstanceInfo &info : process_infos)
-    request.TryCompleteCurrentArg(info.GetNameAsStringRef());
+    request.TryCompleteCurrentArg(info.GetName());
 }
 
 void CommandCompletions::TypeLanguages(CommandInterpreter &interpreter,

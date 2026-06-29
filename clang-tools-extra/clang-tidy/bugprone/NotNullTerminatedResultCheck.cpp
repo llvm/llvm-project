@@ -293,19 +293,14 @@ isFixedGivenLengthAndUnknownSrc(const MatchFinder::MatchResult &Result) {
 static void lengthExprHandle(const Expr *LengthExpr,
                              LengthHandleKind LengthHandle,
                              const MatchFinder::MatchResult &Result,
-                             DiagnosticBuilder &Diag) {
+                             const DiagnosticBuilder &Diag) {
   LengthExpr = LengthExpr->IgnoreParenImpCasts();
 
   // See whether we work with a macro.
-  bool IsMacroDefinition = false;
   const StringRef LengthExprStr = exprToStr(LengthExpr, Result);
-  Preprocessor::macro_iterator It = PP->macro_begin();
-  while (It != PP->macro_end() && !IsMacroDefinition) {
-    if (It->first->getName() == LengthExprStr)
-      IsMacroDefinition = true;
-
-    ++It;
-  }
+  const bool IsMacroDefinition = llvm::any_of(PP->macros(), [=](const auto &M) {
+    return M.first->getName() == LengthExprStr;
+  });
 
   // Try to obtain an 'IntegerLiteral' and adjust it.
   if (!IsMacroDefinition) {
@@ -365,14 +360,14 @@ static void lengthExprHandle(const Expr *LengthExpr,
 
 static void lengthArgHandle(LengthHandleKind LengthHandle,
                             const MatchFinder::MatchResult &Result,
-                            DiagnosticBuilder &Diag) {
+                            const DiagnosticBuilder &Diag) {
   const auto *LengthExpr = Result.Nodes.getNodeAs<Expr>(LengthExprName);
   lengthExprHandle(LengthExpr, LengthHandle, Result, Diag);
 }
 
 static void lengthArgPosHandle(unsigned ArgPos, LengthHandleKind LengthHandle,
                                const MatchFinder::MatchResult &Result,
-                               DiagnosticBuilder &Diag) {
+                               const DiagnosticBuilder &Diag) {
   const auto *FunctionExpr = Result.Nodes.getNodeAs<CallExpr>(FunctionExprName);
   lengthExprHandle(FunctionExpr->getArg(ArgPos), LengthHandle, Result, Diag);
 }
@@ -380,7 +375,7 @@ static void lengthArgPosHandle(unsigned ArgPos, LengthHandleKind LengthHandle,
 // The string handler functions are only operates with plain 'char'/'wchar_t'
 // without 'unsigned/signed', therefore we need to cast it.
 static bool isDestExprFix(const MatchFinder::MatchResult &Result,
-                          DiagnosticBuilder &Diag) {
+                          const DiagnosticBuilder &Diag) {
   const auto *Dest = Result.Nodes.getNodeAs<Expr>(DestExprName);
   if (!Dest)
     return false;
@@ -397,7 +392,7 @@ static bool isDestExprFix(const MatchFinder::MatchResult &Result,
 // If the destination array is the same length as the given length we have to
 // increase the capacity by one to create space for the null terminator.
 static bool isDestCapacityFix(const MatchFinder::MatchResult &Result,
-                              DiagnosticBuilder &Diag) {
+                              const DiagnosticBuilder &Diag) {
   const bool IsOverflows = isDestCapacityOverflows(Result);
   if (IsOverflows)
     if (const Expr *CapacityExpr = getDestCapacityExpr(Result))
@@ -407,7 +402,7 @@ static bool isDestCapacityFix(const MatchFinder::MatchResult &Result,
 }
 
 static void removeArg(int ArgPos, const MatchFinder::MatchResult &Result,
-                      DiagnosticBuilder &Diag) {
+                      const DiagnosticBuilder &Diag) {
   // This is the following structure: (src, '\0', strlen(src))
   //                     ArgToRemove:             ~~~~~~~~~~~
   //                          LHSArg:       ~~~~
@@ -423,7 +418,7 @@ static void removeArg(int ArgPos, const MatchFinder::MatchResult &Result,
 
 static void renameFunc(StringRef NewFuncName,
                        const MatchFinder::MatchResult &Result,
-                       DiagnosticBuilder &Diag) {
+                       const DiagnosticBuilder &Diag) {
   const auto *FunctionExpr = Result.Nodes.getNodeAs<CallExpr>(FunctionExprName);
   const int FuncNameLength =
       FunctionExpr->getDirectCallee()->getIdentifier()->getLength();
@@ -438,7 +433,7 @@ static void renameFunc(StringRef NewFuncName,
 
 static void renameMemcpy(StringRef Name, bool IsCopy, bool IsSafe,
                          const MatchFinder::MatchResult &Result,
-                         DiagnosticBuilder &Diag) {
+                         const DiagnosticBuilder &Diag) {
   SmallString<10> NewFuncName;
   NewFuncName = (Name[0] != 'w') ? "str" : "wcs";
   NewFuncName += IsCopy ? "cpy" : "ncpy";
@@ -448,7 +443,7 @@ static void renameMemcpy(StringRef Name, bool IsCopy, bool IsSafe,
 
 static void insertDestCapacityArg(bool IsOverflows, StringRef Name,
                                   const MatchFinder::MatchResult &Result,
-                                  DiagnosticBuilder &Diag) {
+                                  const DiagnosticBuilder &Diag) {
   const auto *FunctionExpr = Result.Nodes.getNodeAs<CallExpr>(FunctionExprName);
   SmallString<64> NewSecondArg;
 
@@ -469,7 +464,7 @@ static void insertDestCapacityArg(bool IsOverflows, StringRef Name,
 
 static void insertNullTerminatorExpr(StringRef Name,
                                      const MatchFinder::MatchResult &Result,
-                                     DiagnosticBuilder &Diag) {
+                                     const DiagnosticBuilder &Diag) {
   const auto *FunctionExpr = Result.Nodes.getNodeAs<CallExpr>(FunctionExprName);
   const int FuncLocStartColumn = Result.SourceManager->getPresumedColumnNumber(
       FunctionExpr->getBeginLoc());
@@ -796,25 +791,21 @@ void NotNullTerminatedResultCheck::check(
 
   if (WantToUseSafeFunctions && PP->isMacroDefined("__STDC_LIB_EXT1__")) {
     std::optional<bool> AreSafeFunctionsWanted;
-
-    Preprocessor::macro_iterator It = PP->macro_begin();
-    while (It != PP->macro_end() && !AreSafeFunctionsWanted) {
-      if (It->first->getName() == "__STDC_WANT_LIB_EXT1__") {
-        const auto *MI = PP->getMacroInfo(It->first);
-        // PP->getMacroInfo() returns nullptr if macro has no definition.
-        if (MI) {
-          const auto &T = MI->tokens().back();
-          if (T.isLiteral() && T.getLiteralData()) {
-            const StringRef ValueStr =
-                StringRef(T.getLiteralData(), T.getLength());
-            llvm::APInt IntValue;
-            ValueStr.getAsInteger(10, IntValue);
-            AreSafeFunctionsWanted = IntValue.getZExtValue();
-          }
-        }
+    for (const auto &M : PP->macros()) {
+      if (M.first->getName() != "__STDC_WANT_LIB_EXT1__")
+        continue;
+      const auto *MI = PP->getMacroInfo(M.first);
+      // PP->getMacroInfo() returns nullptr if macro has no definition.
+      if (!MI)
+        continue;
+      const auto &T = MI->tokens().back();
+      if (T.isLiteral() && T.getLiteralData()) {
+        const StringRef ValueStr(T.getLiteralData(), T.getLength());
+        llvm::APInt IntValue;
+        ValueStr.getAsInteger(10, IntValue);
+        AreSafeFunctionsWanted = IntValue.getZExtValue();
+        break;
       }
-
-      ++It;
     }
 
     if (AreSafeFunctionsWanted)

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn < %s | FileCheck -enable-var-scope -check-prefixes=SI,GCN,FUNC %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -enable-var-scope -check-prefixes=SI,GCN,FUNC %s
 
 ; RUN: llc -mtriple=amdgcn -mcpu=fiji < %s | FileCheck -enable-var-scope -check-prefixes=VI,GCN,FUNC %s
 

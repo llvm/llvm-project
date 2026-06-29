@@ -13,6 +13,9 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#ifndef LLVM_SUPPORT_CONVERTEBCDIC_H
+#define LLVM_SUPPORT_CONVERTEBCDIC_H
+
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
@@ -27,3 +30,5 @@ LLVM_ABI void convertToUTF8(StringRef Source, SmallVectorImpl<char> &Result);
 
 } // namespace ConverterEBCDIC
 } // namespace llvm
+
+#endif // LLVM_SUPPORT_CONVERTEBCDIC_H

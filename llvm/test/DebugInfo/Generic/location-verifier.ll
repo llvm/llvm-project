@@ -1,4 +1,4 @@
-; RUN: llvm-as -disable-output -o - < %s 2>&1 | FileCheck %s
+; RUN: not llvm-as -disable-output -o - < %s 2>&1 | FileCheck %s
 ; ModuleID = 'test.c'
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.10.0"
@@ -27,7 +27,6 @@ attributes #0 = { nounwind ssp uwtable }
 !10 = !{i32 2, !"Debug Info Version", i32 3}
 !11 = !{i32 1, !"PIC Level", i32 2}
 !12 = !{!"clang version 3.7.0 "}
-; An old-style DILocation should not pass verify.
-; CHECK: invalid !dbg metadata attachment
+; An old-style DILocation should not parse.
+; CHECK: invalid !dbg metadata
 !13 = !{i32 2, i32 2, !4, null}
-; CHECK: warning: ignoring invalid debug info

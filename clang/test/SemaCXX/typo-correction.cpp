@@ -612,7 +612,7 @@ int bar() {
 
 namespace testIncludeTypeInTemplateArgument {
 template <typename T, typename U>
-void foo(T t = {}, U = {}); // expected-note {{candidate template ignored}}
+void foo(T t = {}, U = {}); // expected-note {{template argument for template type parameter must be a type}}
 
 class AddObservation {}; // expected-note {{declared here}}
 int bar1() {
@@ -786,4 +786,16 @@ void function() {
 }
 }
 
+namespace GH204561 {
+  template <class> struct A {
+    int B { 0; // expected-error {{expected '}'}} expected-note {{to match this '{'}}
+  };
+  template struct A<int>;
 
+  template <class> int x = 0; // expected-note {{'x' declared here}}
+  template <> template <class U> int A<int>::x<U &> = 4;
+  // expected-error@-1 {{no template named 'x' in 'GH204561::A<int>'; did you mean simply 'x'?}}
+  // expected-error@-2 {{extraneous template parameter list in template specialization}}
+
+  template int x<int &>;
+} // namespace GH204561

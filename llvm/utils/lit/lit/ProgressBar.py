@@ -147,19 +147,19 @@ class _PosixTerminalController(TerminalController):
         # Colors
         set_fg = self._tigetstr("setf")
         if set_fg:
-            for i, color in zip(range(len(self._COLORS)), self._COLORS):
+            for i, color in enumerate(self._COLORS):
                 setattr(self, color, self._tparm(set_fg, i))
         set_fg_ansi = self._tigetstr("setaf")
         if set_fg_ansi:
-            for i, color in zip(range(len(self._ANSICOLORS)), self._ANSICOLORS):
+            for i, color in enumerate(self._ANSICOLORS):
                 setattr(self, color, self._tparm(set_fg_ansi, i))
         set_bg = self._tigetstr("setb")
         if set_bg:
-            for i, color in zip(range(len(self._COLORS)), self._COLORS):
+            for i, color in enumerate(self._COLORS):
                 setattr(self, "BG_" + color, self._tparm(set_bg, i))
         set_bg_ansi = self._tigetstr("setab")
         if set_bg_ansi:
-            for i, color in zip(range(len(self._ANSICOLORS)), self._ANSICOLORS):
+            for i, color in enumerate(self._ANSICOLORS):
                 setattr(self, "BG_" + color, self._tparm(set_bg_ansi, i))
 
     def _tparm(self, arg, index):
@@ -297,7 +297,7 @@ class ProgressBar:
     BAR = "%s${%s}[${BOLD}%s%s${NORMAL}${%s}]${NORMAL}%s"
     HEADER = "${BOLD}${CYAN}%s${NORMAL}\n\n"
 
-    def __init__(self, term, header, useETA=True):
+    def __init__(self, term, header, minOutputInterval, useETA=True):
         self.term = term
         if not (self.term.CLEAR_EOL and self.term.UP and self.term.BOL):
             raise ValueError(
@@ -321,7 +321,23 @@ class ProgressBar:
             self.startTime = time.time()
         # self.update(0, '')
 
+        self.lastUpdateTime = 0
+        self.minOutputInterval = minOutputInterval
+        # the checks preceeding us should prevent getting here if output is redirected
+        # - we don't want to rate limit (ie drop) output to a file
+        assert sys.stdout.isatty()
+
     def update(self, percent, message):
+        # ratelimit updates
+        if self.minOutputInterval is not None:
+            now = time.time()
+            if now - self.lastUpdateTime < self.minOutputInterval:
+                # ... too soon. Technically, this means we could 'starve'
+                # the output if the next update takes too long to come, but that
+                # doesn't seem to be an issue in practice
+                return
+            self.lastUpdateTime = now
+
         if self.cleared:
             sys.stdout.write(self.header)
             self.cleared = 0

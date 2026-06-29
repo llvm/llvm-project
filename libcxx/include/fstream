@@ -220,6 +220,7 @@ _LIBCPP_PUSH_MACROS
 #    include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 #    if _LIBCPP_STD_VER >= 23 && defined(_LIBCPP_WIN32API)
 _LIBCPP_EXPORTED_FROM_ABI void* __filebuf_windows_native_handle(FILE* __file) noexcept;
@@ -598,6 +599,17 @@ template <class _CharT, class _Traits>
 inline bool basic_filebuf<_CharT, _Traits>::is_open() const {
   return __file_ != nullptr;
 }
+
+// Configures the fopen close-on-exec mode character, if any. This string will
+// be appended to any mode string used by fstream for fopen/fdopen.
+//
+// Not all platforms support this, but it helps avoid fd-leaks on platforms that
+// do.
+#    if defined(__BIONIC__)
+#      define _LIBCPP_FOPEN_CLOEXEC_MODE "e"
+#    else
+#      define _LIBCPP_FOPEN_CLOEXEC_MODE
+#    endif
 
 template <class _CharT, class _Traits>
 const char* basic_filebuf<_CharT, _Traits>::__make_mdstring(ios_base::openmode __mode) _NOEXCEPT {
@@ -1616,13 +1628,14 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_ofstream<char>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS basic_filebuf<char>;
 #    endif
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
 #  endif // _LIBCPP_HAS_FILESYSTEM && _LIBCPP_HAS_LOCALIZATION
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
 #    include <atomic>
 #    include <concepts>
 #    include <cstdlib>
@@ -1634,7 +1647,7 @@ _LIBCPP_POP_MACROS
 #    include <type_traits>
 #  endif
 
-#  if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 23
+#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 23
 #    include <filesystem>
 #  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)

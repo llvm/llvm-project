@@ -166,6 +166,12 @@ def Tosa_MatMulOpQuantInfoBuilder : OpBuilder<
                                a, b);
   }]>;
 
+def Tosa_MatMulTOpQuantInfoBuilder
+    : OpBuilder<(ins "Type":$outputType, "Value":$a, "Value":$b), [{
+    buildMatMulTOpWithQuantInfo($_builder, $_state, outputType,
+                                a, b);
+  }]>;
+
 // Both the tosa.avg_pool2d and unary ops use the same
 // UnaryOpQuantizationAttr but the avg_pool operator has its own builder as it
 // has additional parameters not part of the unary ops.
@@ -484,18 +490,18 @@ def Tosa_RoundingModeAttr
     : Tosa_I32EnumAttr<"RoundingMode", "Supported rounding modes", "rounding_mode",
                     [Tosa_ROUNDING_SINGLE_ROUND, Tosa_ROUNDING_INEXACT_ROUND, Tosa_ROUNDING_DOUBLE_ROUND]>;
 
+def Tosa_BLOCK_SIZE_1 : I32EnumAttrCase<"BLOCK_SIZE_1", 1>;
 def Tosa_BLOCK_SIZE_32 : I32EnumAttrCase<"BLOCK_SIZE_32", 32>;
 
 def Tosa_BlockSizeAttr
-    : Tosa_I32EnumAttr<"BlockSize", "Block size for the block_scaled formats", "block_size",
-                    [Tosa_BLOCK_SIZE_32]> {
+    : Tosa_I32EnumAttr<"BlockSize", "Block size for the block_scaled formats",
+                       "block_size", [Tosa_BLOCK_SIZE_1, Tosa_BLOCK_SIZE_32]> {
   let extraClassDeclaration = [{
     static uint32_t getBlockSizeValue(BlockSize blockSize) {
       return static_cast<uint32_t>(blockSize);
     }
   }];
 }
-
 
 //===----------------------------------------------------------------------===//
 // TOSA Interfaces.

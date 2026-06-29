@@ -73,6 +73,22 @@ func.func @test_matmul_non_const_zps(%arg0: tensor<1x14x19xf32>, %arg1: tensor<1
 
 // -----
 
+func.func @test_matmul_t_non_const_a_zp(%arg0: tensor<1x14x19xf32>, %arg1: tensor<1x28x19xf32>, %a_zp: tensor<1xf32>) -> tensor<1x14x28xf32> {
+  %b_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %0 = tosa.matmul_t %arg0, %arg1, %a_zp, %b_zp : (tensor<1x14x19xf32>, tensor<1x28x19xf32>, tensor<1xf32>, tensor<1xf32>)  -> tensor<1x14x28xf32>
+  return %0 : tensor<1x14x28xf32>
+}
+
+// -----
+
+func.func @test_matmul_t_non_const_b_zp(%arg0: tensor<1x14x19xf32>, %arg1: tensor<1x28x19xf32>, %b_zp: tensor<1xf32>) -> tensor<1x14x28xf32> {
+  %a_zp = "tosa.const"() <{values = dense<0.0> : tensor<1xf32>}> : () -> tensor<1xf32>
+  %0 = tosa.matmul_t %arg0, %arg1, %a_zp, %b_zp : (tensor<1x14x19xf32>, tensor<1x28x19xf32>, tensor<1xf32>, tensor<1xf32>)  -> tensor<1x14x28xf32>
+  return %0 : tensor<1x14x28xf32>
+}
+
+// -----
+
 func.func @test_negate_non_const_zps(%arg0: tensor<1xf32>, %input1_zp: tensor<1xf32>, %output_zp: tensor<1xf32>) -> tensor<1xf32> {
   %0 = tosa.negate %arg0, %input1_zp, %output_zp {} : (tensor<1xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<1xf32>
   return %0 : tensor<1xf32>
@@ -99,8 +115,8 @@ func.func @test_avg_pool2d_adaptive_non_const_zps(%arg0: tensor<1x32x32x8xf32>, 
 
 // -----
 
-func.func @test_slice_shape_non_const_start_size(%arg0: tensor<1xi32>, %arg1: tensor<1xi32>) -> !tosa.shape<3> {
+func.func @test_slice_shape_non_const_start_size(%arg0: tensor<1xi32>, %arg1: tensor<1xi32>) {
   %0 = tosa.const_shape {values = dense<[4, 5, 6, 7, 8, 9]> : tensor<6xindex>} : () -> !tosa.shape<6>
   %3 = tosa.slice_shape %0, %arg0, %arg1 : (!tosa.shape<6>, tensor<1xi32>, tensor<1xi32>) -> !tosa.shape<3>
-  return %3 : !tosa.shape<3>
+  return
 }

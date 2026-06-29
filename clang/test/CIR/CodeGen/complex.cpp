@@ -30,7 +30,7 @@ float _Complex cf2 = { 1.0f, 2.0f };
 
 void foo() { int _Complex c = {}; }
 
-// CIR: %[[INIT:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["c", init]
+// CIR: %[[INIT:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[COMPLEX:.*]] = cir.const #cir.zero : !cir.complex<!s32i>
 // CIR: cir.store{{.*}} %[[COMPLEX]], %[[INIT]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
@@ -45,7 +45,7 @@ void foo() { int _Complex c = {}; }
 
 void foo2() { int _Complex c = {1, 2}; }
 
-// CIR: %[[INIT:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["c", init]
+// CIR: %[[INIT:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[COMPLEX:.*]] = cir.const #cir.const_complex<#cir.int<1> : !s32i, #cir.int<2> : !s32i> : !cir.complex<!s32i>
 // CIR: cir.store{{.*}} %[[COMPLEX]], %[[INIT]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
@@ -64,7 +64,7 @@ void foo3() {
   int _Complex c = {a, b};
 }
 
-// CIR: %[[INIT:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["c", init]
+// CIR: %[[INIT:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!s32i>
 // CIR: %[[TMP_B:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!s32i>
 // CIR: %[[COMPLEX:.*]] = cir.complex.create %[[TMP_A]], %[[TMP_B]] : !s32i -> !cir.complex<!s32i>
@@ -90,7 +90,7 @@ void foo4() {
   int _Complex c = {1, a};
 }
 
-// CIR: %[[INIT:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["c", init]
+// CIR: %[[INIT:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[CONST_1:.*]] = cir.const #cir.int<1> : !s32i
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!s32i>, !s32i
 // CIR: %[[COMPLEX:.*]] = cir.complex.create %[[CONST_1]], %[[TMP_A]] : !s32i -> !cir.complex<!s32i>
@@ -112,7 +112,7 @@ void foo5() {
   float _Complex c = {1.0f, 2.0f};
 }
 
-// CIR: %[[INIT:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["c", init]
+// CIR: %[[INIT:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[COMPLEX:.*]] = cir.const #cir.const_complex<#cir.fp<1.000000e+00> : !cir.float, #cir.fp<2.000000e+00> : !cir.float> : !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[COMPLEX]], %[[INIT]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
@@ -131,7 +131,7 @@ void foo6() {
   float _Complex c = {a, b};
 }
 
-// CIR: %[[INIT:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["c", init]
+// CIR: %[[INIT:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.float>, !cir.float
 // CIR: %[[TMP_B:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.float>, !cir.float
 // CIR: %[[COMPLEX:.*]] = cir.complex.create %[[TMP_A]], %[[TMP_B]] : !cir.float -> !cir.complex<!cir.float>
@@ -157,7 +157,7 @@ void foo7() {
   float _Complex c = {a, 2.0f};
 }
 
-// CIR: %[[INIT:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["c", init]
+// CIR: %[[INIT:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.float>, !cir.float
 // CIR: %[[CONST_2F:.*]] = cir.const #cir.fp<2.000000e+00> : !cir.float
 // CIR: %[[COMPLEX:.*]] = cir.complex.create %[[TMP_A]], %[[CONST_2F]] : !cir.float -> !cir.complex<!cir.float>
@@ -195,7 +195,7 @@ void foo9(double a, double b) {
   double _Complex c = __builtin_complex(a, b);
 }
 
-// CIR: %[[INIT:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["c", init]
+// CIR: %[[INIT:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.complex<!cir.double>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.double>, !cir.double
 // CIR: %[[TMP_B:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.double>, !cir.double
 // CIR: %[[COMPLEX:.*]] = cir.complex.create %[[TMP_A]], %[[TMP_B]] : !cir.double -> !cir.complex<!cir.double>
@@ -221,7 +221,7 @@ void foo10() {
   double *realPtr = &__real__ c;
 }
 
-// CIR: %[[COMPLEX:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["c"]
+// CIR: %[[COMPLEX:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!cir.complex<!cir.double>>
 // CIR: %[[REAL_PTR:.*]] = cir.complex.real_ptr %[[COMPLEX]] : !cir.ptr<!cir.complex<!cir.double>> -> !cir.ptr<!cir.double>
 
 // LLVM: %[[COMPLEX:.*]] = alloca { double, double }, i64 1, align 8
@@ -235,7 +235,7 @@ void foo11() {
   double *imagPtr = &__imag__ c;
 }
 
-// CIR: %[[COMPLEX:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["c"]
+// CIR: %[[COMPLEX:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!cir.complex<!cir.double>>
 // CIR: %[[IMAG_PTR:.*]] = cir.complex.imag_ptr %[[COMPLEX]] : !cir.ptr<!cir.complex<!cir.double>> -> !cir.ptr<!cir.double>
 
 // LLVM: %[[COMPLEX:.*]] = alloca { double, double }, i64 1, align 8
@@ -249,8 +249,8 @@ void foo12() {
   double imag = __imag__ c;
 }
 
-// CIR: %[[COMPLEX:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["c"]
-// CIR: %[[INIT:.*]] = cir.alloca !cir.double, !cir.ptr<!cir.double>, ["imag", init]
+// CIR: %[[COMPLEX:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!cir.complex<!cir.double>>
+// CIR: %[[INIT:.*]] = cir.alloca "imag" {{.*}} init : !cir.ptr<!cir.double>
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[COMPLEX]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
 // CIR: %[[IMAG:.*]] = cir.complex.imag %[[TMP]] : !cir.complex<!cir.double> -> !cir.double
 // CIR: cir.store{{.*}} %[[IMAG]], %[[INIT]] : !cir.double, !cir.ptr<!cir.double>
@@ -272,8 +272,8 @@ void foo13() {
   double real = __real__ c;
 }
 
-// CIR: %[[COMPLEX:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["c"]
-// CIR: %[[INIT:.*]] = cir.alloca !cir.double, !cir.ptr<!cir.double>, ["real", init]
+// CIR: %[[COMPLEX:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!cir.complex<!cir.double>>
+// CIR: %[[INIT:.*]] = cir.alloca "real" {{.*}} init : !cir.ptr<!cir.double>
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[COMPLEX]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
 // CIR: %[[REAL:.*]] = cir.complex.real %[[TMP]] : !cir.complex<!cir.double> -> !cir.double
 // CIR: cir.store{{.*}} %[[REAL]], %[[INIT]] : !cir.double, !cir.ptr<!cir.double>
@@ -311,8 +311,8 @@ void foo15() {
   int _Complex b = a;
 }
 
-// CIR: %[[COMPLEX_A:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["a"]
-// CIR: %[[COMPLEX_B:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["b", init]
+// CIR: %[[COMPLEX_A:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[COMPLEX_B:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[COMPLEX_A]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR: cir.store{{.*}} %[[TMP_A]], %[[COMPLEX_B]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
@@ -336,7 +336,7 @@ int foo16(int _Complex a, int _Complex b) {
   return __imag__ a + __imag__ b;
 }
 
-// CIR: %[[RET:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR: %[[RET:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR: %[[COMPLEX_A:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR: %[[A_IMAG:.*]] = cir.complex.imag %[[COMPLEX_A]] : !cir.complex<!s32i> -> !s32i
 // CIR: %[[COMPLEX_B:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
@@ -369,7 +369,7 @@ int foo17(int _Complex a, int _Complex b) {
   return __real__ a + __real__ b;
 }
 
-// CIR: %[[RET:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
+// CIR: %[[RET:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
 // CIR: %[[COMPLEX_A:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR: %[[A_REAL:.*]] = cir.complex.real %[[COMPLEX_A]] : !cir.complex<!s32i> -> !s32i
 // CIR: %[[COMPLEX_B:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
@@ -548,9 +548,9 @@ void foo22(int _Complex a, int _Complex b) {
   int _Complex c = (a, b);
 }
 
-// CIR: %[[COMPLEX_A:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["a", init]
-// CIR: %[[COMPLEX_B:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["b", init]
-// CIR: %[[RESULT:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["c", init]
+// CIR: %[[COMPLEX_A:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[COMPLEX_B:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[RESULT:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[TMP_B:.*]] = cir.load{{.*}} %[[COMPLEX_B]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR: cir.store{{.*}} %[[TMP_B]], %[[RESULT]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
@@ -577,10 +577,10 @@ void foo23(int _Complex a, int _Complex b) {
   int _Complex c = _Generic(a, int _Complex: b, default: f);
 }
 
-// CIR: %[[COMPLEX_A:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["a", init]
-// CIR: %[[COMPLEX_B:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["b", init]
-// CIR: %[[COMPLEX_F:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["f"]
-// CIR: %[[RESULT:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["c", init]
+// CIR: %[[COMPLEX_A:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[COMPLEX_B:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[COMPLEX_F:.*]] = cir.alloca "f" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[RESULT:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[COMPLEX_B]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR: cir.store{{.*}} %[[TMP]], %[[RESULT]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
@@ -609,10 +609,10 @@ void foo24() {
   int _Complex r = arr[1];
 }
 
-// CIR: %[[ARR:.*]] = cir.alloca !cir.array<!cir.complex<!s32i> x 2>, !cir.ptr<!cir.array<!cir.complex<!s32i> x 2>>, ["arr"]
-// CIR: %[[RESULT:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["r", init]
-// CIR: %[[IDX:.*]] = cir.const #cir.int<1> : !s32i
-// CIR: %[[RESULT_VAL:.*]] = cir.get_element %[[ARR]][%[[IDX]] : !s32i] : !cir.ptr<!cir.array<!cir.complex<!s32i> x 2>> -> !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[ARR:.*]] = cir.alloca "arr" {{.*}} : !cir.ptr<!cir.array<!cir.complex<!s32i> x 2>>
+// CIR: %[[RESULT:.*]] = cir.alloca "r" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[IDX:.*]] = cir.const #cir.int<1> : !s64i
+// CIR: %[[RESULT_VAL:.*]] = cir.get_element %[[ARR]][%[[IDX]] : !s64i] : !cir.ptr<!cir.array<!cir.complex<!s32i> x 2>> -> !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[RESULT_VAL]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR: cir.store{{.*}} %[[TMP]], %[[RESULT]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
@@ -640,7 +640,7 @@ void foo25() {
   template_foo<__builtin_complex(1.0, 2.0)>();
 }
 
-// CIR: %[[INIT:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["C", init]
+// CIR: %[[INIT:.*]] = cir.alloca "C" {{.*}} init : !cir.ptr<!cir.complex<!cir.double>>
 // CIR: %[[COMPLEX:.*]] = cir.const #cir.const_complex<#cir.fp<1.000000e+00> : !cir.double, #cir.fp<2.000000e+00> : !cir.double> : !cir.complex<!cir.double>
 // CIR: cir.store{{.*}} %[[COMPLEX]], %[[INIT]] : !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>
 
@@ -657,8 +657,8 @@ void foo26(int _Complex* a) {
   int _Complex b = *a;
 }
 
-// CIR: %[[COMPLEX_A_PTR:.*]] = cir.alloca !cir.ptr<!cir.complex<!s32i>>, !cir.ptr<!cir.ptr<!cir.complex<!s32i>>>, ["a", init]
-// CIR: %[[COMPLEX_B:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["b", init]
+// CIR: %[[COMPLEX_A_PTR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.ptr<!cir.complex<!s32i>>>
+// CIR: %[[COMPLEX_B:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[COMPLEX_A:.*]] = cir.load deref {{.*}} %[[COMPLEX_A_PTR]] : !cir.ptr<!cir.ptr<!cir.complex<!s32i>>>, !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[TMP:.*]] = cir.load{{.*}} %[[COMPLEX_A]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR: cir.store{{.*}} %[[TMP]], %[[COMPLEX_B]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
@@ -685,10 +685,10 @@ void foo27(bool cond, int _Complex a, int _Complex b) {
   int _Complex c = cond ? a : b;
 }
 
-// CIR: %[[COND:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cond", init]
-// CIR: %[[COMPLEX_A:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["a", init]
-// CIR: %[[COMPLEX_B:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["b", init]
-// CIR: %[[RESULT:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["c", init]
+// CIR: %[[COND:.*]] = cir.alloca "cond" {{.*}} init : !cir.ptr<!cir.bool>
+// CIR: %[[COMPLEX_A:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[COMPLEX_B:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[RESULT:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[TMP_COND:.*]] = cir.load{{.*}} %[[COND]] : !cir.ptr<!cir.bool>, !cir.bool
 // CIR: %[[RESULT_VAL:.*]] = cir.ternary(%[[TMP_COND]], true {
 // CIR:   %[[TMP_A:.*]] = cir.load{{.*}} %[[COMPLEX_A]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
@@ -721,7 +721,7 @@ void foo27(bool cond, int _Complex a, int _Complex b) {
 // OGCG: %[[COND:.*]] = alloca i8, align 1
 // OGCG: %[[RESULT:.*]] = alloca { i32, i32 }, align 4
 // OGCG: %[[TMP_COND:.*]] = load i8, ptr %[[COND]], align 1
-// OGCG: %[[COND_VAL:.*]] = trunc i8 %[[TMP_COND]] to i1
+// OGCG: %[[COND_VAL:.*]] = icmp ne i8 %[[TMP_COND]], 0
 // OGCG: br i1 %[[COND_VAL]], label %[[TRUE_BB:.*]], label %[[FALSE_BB:.*]]
 // OGCG: [[TRUE_BB]]:
 // OGCG:  %[[A_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[COMPLEX_A]], i32 0, i32 0
@@ -748,7 +748,7 @@ void foo28() {
   int _Complex a = IntComplex();
 }
 
-// CIR: %[[INIT:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["a", init]
+// CIR: %[[INIT:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[COMPLEX:.*]] = cir.const #cir.zero : !cir.complex<!s32i>
 // CIR: cir.store align(4) %[[COMPLEX]], %[[INIT]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
@@ -766,7 +766,7 @@ void foo29() {
   int _Complex a = IntComplex{};
 }
 
-// CIR: %[[INIT:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["a", init]
+// CIR: %[[INIT:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[COMPLEX:.*]] = cir.const #cir.zero : !cir.complex<!s32i>
 // CIR: cir.store{{.*}} %[[COMPLEX]], %[[INIT]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
@@ -783,7 +783,7 @@ void foo30() {
   float _Complex a = { 1.0f };
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[CONST_1F:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
 // CIR: %[[CONST_0F:.*]] = cir.const #cir.fp<0.000000e+00> : !cir.float
 // CIR: %[[COMPLEX:.*]] = cir.complex.create %[[CONST_1F]], %[[CONST_0F]] : !cir.float -> !cir.complex<!cir.float>
@@ -807,8 +807,8 @@ void foo31() {
   int r = __real__ w.c;
 }
 
-// CIR: %[[W_ADDR:.*]] = cir.alloca !rec_Wrapper, !cir.ptr<!rec_Wrapper>, ["w"]
-// CIR: %[[REAL_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["r", init]
+// CIR: %[[W_ADDR:.*]] = cir.alloca "w" {{.*}} : !cir.ptr<!rec_Wrapper>
+// CIR: %[[REAL_ADDR:.*]] = cir.alloca "r" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[ELEM_PTR:.*]] = cir.get_member %[[W_ADDR]][0] {name = "c"} : !cir.ptr<!rec_Wrapper> -> !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[TMP_ELEM_PTR:.*]] = cir.load{{.*}} %[[ELEM_PTR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR: %[[REAL:.*]] = cir.complex.real %[[TMP_ELEM_PTR]] : !cir.complex<!s32i> -> !s32i
@@ -816,7 +816,7 @@ void foo31() {
 
 // LLVM: %[[W_ADDR:.*]] = alloca %struct.Wrapper, i64 1, align 4
 // LLVM: %[[REAL_ADDR:.*]] = alloca i32, i64 1, align 4
-// LLVM: %[[ELEM_PTR:.*]] = getelementptr %struct.Wrapper, ptr %[[W_ADDR]], i32 0, i32 0
+// LLVM: %[[ELEM_PTR:.*]] = getelementptr inbounds nuw %struct.Wrapper, ptr %[[W_ADDR]], i32 0, i32 0
 // LLVM: %[[TMP_ELEM_PTR:.*]] = load { i32, i32 }, ptr %[[ELEM_PTR]], align 4
 // LLVM: %[[REAL:.*]] = extractvalue { i32, i32 } %[[TMP_ELEM_PTR]], 0
 // LLVM: store i32 %[[REAL]], ptr %[[REAL_ADDR]], align 4
@@ -837,7 +837,7 @@ void foo32() {
   int r = __real__ con.c;
 }
 
-// CIR: %[[REAL_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["r", init]
+// CIR: %[[REAL_ADDR:.*]] = cir.alloca "r" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[ELEM_PTR:.*]] = cir.get_global @_ZN9Container1cE : !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[ELEM:.*]] = cir.load{{.*}} %[[ELEM_PTR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CIR: %[[REAL:.*]] = cir.complex.real %[[ELEM]] : !cir.complex<!s32i> -> !s32i
@@ -856,8 +856,8 @@ void foo33(__builtin_va_list a) {
   float _Complex b = __builtin_va_arg(a, float _Complex);
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.ptr<!rec___va_list_tag>, !cir.ptr<!cir.ptr<!rec___va_list_tag>>, ["a", init]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.ptr<!rec___va_list_tag>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: cir.store %[[ARG_0:.*]], %[[A_ADDR]] : !cir.ptr<!rec___va_list_tag>, !cir.ptr<!cir.ptr<!rec___va_list_tag>>
 // CIR: %[[VA_TAG:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.ptr<!rec___va_list_tag>>, !cir.ptr<!rec___va_list_tag>
 // CIR: %[[COMPLEX:.*]] = cir.va_arg %[[VA_TAG]] : (!cir.ptr<!rec___va_list_tag>) -> !cir.complex<!cir.float>
@@ -913,7 +913,7 @@ void foo34() {
   __c11_atomic_init(&a, {1.0f, 2.0f});
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[CONST_COMPLEX:.*]] = cir.const #cir.const_complex<#cir.fp<1.000000e+00> : !cir.float, #cir.fp<2.000000e+00> : !cir.float> : !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[CONST_COMPLEX]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
@@ -931,8 +931,8 @@ void foo35() {
   _Float16 real = __real__ a;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>, ["a"]
-// CIR: %[[REAL_ADDR:.*]] = cir.alloca !cir.f16, !cir.ptr<!cir.f16>, ["real", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.f16>>
+// CIR: %[[REAL_ADDR:.*]] = cir.alloca "real" {{.*}} init : !cir.ptr<!cir.f16>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.f16>>, !cir.complex<!cir.f16>
 // CIR: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.f16> -> !cir.f16
 // CIR: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.f16> -> !cir.f16
@@ -968,8 +968,8 @@ void foo36() {
   _Float16 imag = __imag__ a;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>, ["a"]
-// CIR: %[[IMAG_ADDR:.*]] = cir.alloca !cir.f16, !cir.ptr<!cir.f16>, ["imag", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.f16>>
+// CIR: %[[IMAG_ADDR:.*]] = cir.alloca "imag" {{.*}} init : !cir.ptr<!cir.f16>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.f16>>, !cir.complex<!cir.f16>
 // CIR: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.f16> -> !cir.f16
 // CIR: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.f16> -> !cir.f16
@@ -1005,8 +1005,8 @@ void foo37() {
   _Complex float b = __extension__ a;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[TMP_A]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
@@ -1031,8 +1031,8 @@ void real_on_non_glvalue() {
   float b = __real__(+a);
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["b", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.float>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR: %[[RESULT_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
 // CIR: cir.store{{.*}} %[[RESULT_REAL]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
@@ -1056,8 +1056,8 @@ void imag_on_non_glvalue() {
   float b = __imag__(+a);
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["b", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.float>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR: %[[RESULT_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.float> -> !cir.float
 // CIR: cir.store{{.*}} %[[RESULT_IMAG]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
@@ -1081,9 +1081,9 @@ void atomic_complex_type() {
   float _Complex b = __c11_atomic_load(&a, __ATOMIC_RELAXED);
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b", init]
-// CIR: %[[ATOMIC_TMP_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["atomic-temp"]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[ATOMIC_TMP_ADDR:.*]] = cir.alloca "atomic-temp" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[A_PTR:.*]] = cir.cast bitcast %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>> -> !cir.ptr<!u64i>
 // CIR: %[[ATOMIC_TMP_PTR:.*]] = cir.cast bitcast %[[ATOMIC_TMP_ADDR]] : !cir.ptr<!cir.complex<!cir.float>> -> !cir.ptr<!u64i>
 // CIR: %[[TMP_A_ATOMIC:.*]] = cir.load{{.*}} atomic(relaxed) %[[A_PTR]] : !cir.ptr<!u64i>, !u64i
@@ -1119,8 +1119,8 @@ void real_on_scalar_glvalue() {
   float b = __real__ a;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["a"]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["b", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.float>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.float>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.float>, !cir.float
 // CIR: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.float -> !cir.float
 // CIR: cir.store{{.*}} %[[A_REAL]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
@@ -1140,8 +1140,8 @@ void imag_on_scalar_glvalue() {
   float b = __imag__ a;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["a"]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["b", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.float>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.float>
 // CIR: %[[TMP_A:.*]] = cir.load %[[A_ADDR]] : !cir.ptr<!cir.float>, !cir.float
 // CIR: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.float -> !cir.float
 // CIR: cir.store{{.*}} %[[A_IMAG]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
@@ -1159,8 +1159,8 @@ void real_on_scalar_with_type_promotion() {
   _Float16 b = __real__ a;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.f16, !cir.ptr<!cir.f16>, ["a"]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.f16, !cir.ptr<!cir.f16>, ["b", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.f16>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.f16>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.f16>, !cir.f16
 // CIR: %[[TMP_A_F32:.*]] = cir.cast floating %[[TMP_A]] : !cir.f16 -> !cir.float
 // CIR: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A_F32]] : !cir.float -> !cir.float
@@ -1186,8 +1186,8 @@ void imag_on_scalar_with_type_promotion() {
   _Float16 b = __imag__ a;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.f16, !cir.ptr<!cir.f16>, ["a"]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.f16, !cir.ptr<!cir.f16>, ["b", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.f16>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.f16>
 // CIR: %[[TMP_A:.*]] = cir.load %[[A_ADDR]] : !cir.ptr<!cir.f16>, !cir.f16
 // CIR: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.f16 -> !cir.f16
 // CIR: %[[A_IMAG_F16:.*]] = cir.cast floating %[[A_IMAG]] : !cir.f16 -> !cir.f16
@@ -1195,19 +1195,19 @@ void imag_on_scalar_with_type_promotion() {
 
 // LLVM: %[[A_ADDR:.*]] = alloca half, i64 1, align 2
 // LLVM: %[[B_ADDR:.*]] = alloca half, i64 1, align 2
-// LLVM: store half 0xH0000, ptr %[[B_ADDR]], align 2
+// LLVM: store half 0.000000e+00, ptr %[[B_ADDR]], align 2
 
 // OGCG: %[[A_ADDR:.*]] = alloca half, align 2
 // OGCG: %[[B_ADDR:.*]] = alloca half, align 2
-// OGCG: store half 0xH0000, ptr %[[B_ADDR]], align 2
+// OGCG: store half 0.000000e+00, ptr %[[B_ADDR]], align 2
 
 void imag_on_const_scalar() {
   float a;
   float b = __imag__ 1.0f;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["a"]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["b", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.float>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.float>
 // CIR: %[[CONST_ONE:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
 // CIR: %[[CONST_IMAG:.*]] = cir.complex.imag %[[CONST_ONE]] : !cir.float -> !cir.float
 // CIR: cir.store{{.*}} %[[CONST_IMAG]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
@@ -1225,8 +1225,8 @@ void real_on_scalar_from_real_with_type_promotion() {
   _Float16 b = __real__(__real__ a);
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>, ["a"]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.f16, !cir.ptr<!cir.f16>, ["b", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.f16>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.f16>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.f16>>, !cir.complex<!cir.f16>
 // CIR: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.f16> -> !cir.f16
 // CIR: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.f16> -> !cir.f16
@@ -1263,8 +1263,8 @@ void real_on_scalar_from_imag_with_type_promotion() {
   _Float16 b = __real__(__imag__ a);
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.f16>, !cir.ptr<!cir.complex<!cir.f16>>, ["a"]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.f16, !cir.ptr<!cir.f16>, ["b", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.f16>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.f16>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.f16>>, !cir.complex<!cir.f16>
 // CIR: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.complex<!cir.f16> -> !cir.f16
 // CIR: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.complex<!cir.f16> -> !cir.f16
@@ -1298,7 +1298,7 @@ void real_on_scalar_from_imag_with_type_promotion() {
 
 void complex_type_parameter(float _Complex a) {}
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: cir.store %{{.*}}, %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
 // TODO(CIR): the difference between the CIR LLVM and OGCG is because the lack of calling convention lowering,
@@ -1315,8 +1315,8 @@ void complex_type_argument() {
   complex_type_parameter(a);
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a"]
-// CIR: %[[ARG_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["coerce"]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[ARG_ADDR:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[TMP_A]], %[[ARG_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[TMP_ARG:.*]] = cir.load{{.*}} %[[ARG_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
@@ -1346,7 +1346,7 @@ float _Complex complex_type_return_type() {
   return { 1.0f, 2.0f };
 }
 
-// CIR: %[[RET_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["__retval"]
+// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[RET_VAL:.*]] = cir.const #cir.const_complex<#cir.fp<1.000000e+00> : !cir.float, #cir.fp<2.000000e+00> : !cir.float> : !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[RET_VAL]], %[[RET_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[TMP_RET:.*]] = cir.load %[[RET_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
@@ -1371,8 +1371,8 @@ void real_on_scalar_bool() {
   bool b = __real__ a;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["a"]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.bool>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.bool>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.bool>, !cir.bool
 // CIR: %[[A_REAL:.*]] = cir.complex.real %[[TMP_A]] : !cir.bool -> !cir.bool
 // CIR: cir.store{{.*}} %[[A_REAL]], %[[B_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
@@ -1387,7 +1387,7 @@ void real_on_scalar_bool() {
 // OGCG: %[[A_ADDR:.*]] = alloca i8, align 1
 // OGCG: %[[B_ADDR:.*]] = alloca i8, align 1
 // OGCG: %[[TMP_A:.*]] = load i8, ptr %[[A_ADDR]], align 1
-// OGCG: %[[TMP_A_I1:.*]] = trunc i8 %[[TMP_A]] to i1
+// OGCG: %[[TMP_A_I1:.*]] = icmp ne i8 %[[TMP_A]], 0
 // OGCG: %[[TMP_A_I8:.*]] = zext i1 %[[TMP_A_I1]] to i8
 // OGCG: store i8 %[[TMP_A_I8]], ptr %[[B_ADDR]], align 1
 
@@ -1396,8 +1396,8 @@ void imag_on_scalar_bool() {
   bool b = __imag__ a;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["a"]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.bool>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.bool>
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.bool>, !cir.bool
 // CIR: %[[A_IMAG:.*]] = cir.complex.imag %[[TMP_A]] : !cir.bool -> !cir.bool
 // CIR: cir.store{{.*}} %[[A_IMAG]], %[[B_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
@@ -1415,7 +1415,7 @@ void imag_on_scalar_bool() {
 void function_with_complex_default_arg(
     float _Complex a = __builtin_complex(1.0f, 2.2f)) {}
 
-// CIR: %[[ARG_0_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a", init]
+// CIR: %[[ARG_0_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: cir.store %{{.*}}, %[[ARG_0_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
 // TODO(CIR): the difference between the CIR LLVM and OGCG is because the lack of calling convention lowering,
@@ -1430,7 +1430,7 @@ void calling_function_with_default_arg() {
   function_with_complex_default_arg();
 }
 
-// CIR: %[[DEFAULT_ARG_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["coerce"]
+// CIR: %[[DEFAULT_ARG_ADDR:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[DEFAULT_ARG_VAL:.*]] = cir.const #cir.const_complex<#cir.fp<1.000000e+00> : !cir.float, #cir.fp<2.200000e+00> : !cir.float> : !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[DEFAULT_ARG_VAL]], %[[DEFAULT_ARG_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[TMP_DEFAULT_ARG:.*]] = cir.load{{.*}} %[[DEFAULT_ARG_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
@@ -1439,7 +1439,7 @@ void calling_function_with_default_arg() {
 // TODO(CIR): the difference between the CIR LLVM and OGCG is because the lack of calling convention lowering,
 
 // LLVM: %[[DEFAULT_ARG_ADDR:.*]] = alloca { float, float }, i64 1, align 4
-// LLVM: store { float, float } { float 1.000000e+00, float 0x40019999A0000000 }, ptr %[[DEFAULT_ARG_ADDR]], align 4
+// LLVM: store { float, float } { float 1.000000e+00, float 2.200000e+00 }, ptr %[[DEFAULT_ARG_ADDR]], align 4
 // LLVM: %[[TMP_DEFAULT_ARG:.*]] = load { float, float }, ptr %[[DEFAULT_ARG_ADDR]], align 4
 // LLVM: call void @_Z33function_with_complex_default_argCf({ float, float } {{.*}} %[[TMP_DEFAULT_ARG]])
 
@@ -1447,7 +1447,7 @@ void calling_function_with_default_arg() {
 // OGCG: %[[DEFAULT_ARG_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[DEFAULT_ARG_ADDR]], i32 0, i32 0
 // OGCG: %[[DEFAULT_ARG_IMAG_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[DEFAULT_ARG_ADDR]], i32 0, i32 1
 // OGCG: store float 1.000000e+00, ptr %[[DEFAULT_ARG_REAL_PTR]], align 4
-// OGCG: store float 0x40019999A0000000, ptr %[[DEFAULT_ARG_IMAG_PTR]], align 4
+// OGCG: store float 2.200000e+00, ptr %[[DEFAULT_ARG_IMAG_PTR]], align 4
 // OGCG: %[[TMP_DEFAULT_ARG:.*]] = load <2 x float>, ptr %[[DEFAULT_ARG_ADDR]], align 4
 // OGCG: call void @_Z33function_with_complex_default_argCf(<2 x float> {{.*}} %[[TMP_DEFAULT_ARG]])
 
@@ -1455,7 +1455,7 @@ void calling_function_that_return_complex() {
   float _Complex a = complex_type_return_type();
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[RESULT:.*]] = cir.call @_Z24complex_type_return_typev() : () -> (!cir.complex<!cir.float> {llvm.noundef})
 // CIR: cir.store{{.*}} %[[RESULT]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
@@ -1484,9 +1484,9 @@ void imag_literal_gnu_extension() {
   int _Complex c = 3i;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a", init]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["b", init]
-// CIR: %[[C_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["c", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.double>>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[COMPLEX_A:.*]] = cir.const #cir.const_complex<#cir.fp<0.000000e+00> : !cir.float, #cir.fp<3.000000e+00> : !cir.float> : !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[COMPLEX_A]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[COMPLEX_B:.*]] = cir.const #cir.const_complex<#cir.fp<0.000000e+00> : !cir.double, #cir.fp<3.000000e+00> : !cir.double> : !cir.complex<!cir.double>
@@ -1527,10 +1527,10 @@ void load_store_volatile() {
   c = d;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["a"]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["b"]
-// CIR: %[[C_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["c"]
-// CIR: %[[D_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["d"]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.double>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.complex<!cir.double>>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[D_ADDR:.*]] = cir.alloca "d" {{.*}} : !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[TMP_B:.*]] = cir.load volatile {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
 // CIR: cir.store volatile {{.*}} %[[TMP_B]], %[[A_ADDR]] : !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>
 // CIR: %[[TMP_D:.*]] = cir.load volatile {{.*}} %[[D_ADDR]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
@@ -1585,14 +1585,14 @@ void load_store_volatile_2() {
   dv = d;
 }
 
-// CIR: %[[AV_ADDR:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["av"]
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["a"]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["b"]
-// CIR: %[[BV_ADDR:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["bv"]
-// CIR: %[[C_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["c"]
-// CIR: %[[CV_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["cv"]
-// CIR: %[[DV_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["dv"]
-// CIR: %[[D_ADDR:.*]] = cir.alloca !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>, ["d"]
+// CIR: %[[AV_ADDR:.*]] = cir.alloca "av" {{.*}} : !cir.ptr<!cir.complex<!cir.double>>
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.double>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.complex<!cir.double>>
+// CIR: %[[BV_ADDR:.*]] = cir.alloca "bv" {{.*}} : !cir.ptr<!cir.complex<!cir.double>>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[CV_ADDR:.*]] = cir.alloca "cv" {{.*}} : !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[DV_ADDR:.*]] = cir.alloca "dv" {{.*}} : !cir.ptr<!cir.complex<!s32i>>
+// CIR: %[[D_ADDR:.*]] = cir.alloca "d" {{.*}} : !cir.ptr<!cir.complex<!s32i>>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
 // CIR: cir.store volatile {{.*}} %[[TMP_A]], %[[AV_ADDR]] : !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>
 // CIR: %[[TMP_BV:.*]] = cir.load volatile {{.*}} %[[BV_ADDR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
@@ -1664,9 +1664,9 @@ bool eq_float_complex_and_float(float _Complex a, float b) {
   return a == b;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a", init]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["b", init]
-// CIR: %[[RET_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["__retval"]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.float>
+// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bool>
 // CIR: cir.store %[[ARG_0:.*]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 // CIR: cir.store %[[ARG_1:.*]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
@@ -1712,9 +1712,9 @@ bool eq_float_and_float_complex(float a, float _Complex b) {
   return a == b;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["a", init]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b", init]
-// CIR: %[[RET_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["__retval"]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.float>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bool>
 // CIR: cir.store %[[ARG_0:.*]], %[[A_ADDR]] : !cir.float, !cir.ptr<!cir.float>
 // CIR: cir.store %[[ARG_1:.*]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.float>, !cir.float
@@ -1760,9 +1760,9 @@ bool ne_float_complex_and_float(float _Complex a, float b) {
   return a != b;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["a", init]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["b", init]
-// CIR: %[[RET_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["__retval"]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.float>
+// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bool>
 // CIR: cir.store %[[ARG_0:.*]], %[[A_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 // CIR: cir.store %[[ARG_1:.*]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
@@ -1808,9 +1808,9 @@ bool ne_float_and_float_complex(float a, float _Complex b) {
   return a != b;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["a", init]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>, ["b", init]
-// CIR: %[[RET_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["__retval"]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!cir.float>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
+// CIR: %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bool>
 // CIR: cir.store %[[ARG_0:.*]], %[[A_ADDR]] : !cir.float, !cir.ptr<!cir.float>
 // CIR: cir.store %[[ARG_1:.*]], %[[B_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.float>, !cir.float
@@ -1858,9 +1858,9 @@ void compare_two_complex_bin_ops() {
   bool c = a + b != b + a;
 }
 
-// CIR: %[[A_ADDR:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["a"]
-// CIR: %[[B_ADDR:.*]] = cir.alloca !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>>, ["b"]
-// CIR: %[[C_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["c", init]
+// CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.complex<!cir.double>>
+// CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} : !cir.ptr<!cir.complex<!cir.double>>
+// CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.bool>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
 // CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.double>>, !cir.complex<!cir.double>
 // CIR: %[[COMPLEX_AB:.*]] = cir.complex.add %[[TMP_A]], %[[TMP_B]] : !cir.complex<!cir.double>

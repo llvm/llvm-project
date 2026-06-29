@@ -157,11 +157,12 @@ inline bool conformsWithPassByRef(mlir::Type t) {
 /// Is `t` a derived (record) type?
 inline bool isa_derived(mlir::Type t) { return mlir::isa<fir::RecordType>(t); }
 
-/// Is `t` type(c_ptr) or type(c_funptr)?
+/// Is `t` type(c_ptr), type(c_funptr), or type(c_devptr)?
 inline bool isa_builtin_cptr_type(mlir::Type t) {
   if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(t))
     return recTy.getName().ends_with("T__builtin_c_ptr") ||
-           recTy.getName().ends_with("T__builtin_c_funptr");
+           recTy.getName().ends_with("T__builtin_c_funptr") ||
+           recTy.getName().ends_with("T__builtin_c_devptr");
   return false;
 }
 

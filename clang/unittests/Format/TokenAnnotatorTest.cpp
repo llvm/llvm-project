@@ -433,6 +433,23 @@ TEST_F(TokenAnnotatorTest, UnderstandsUsesOfStarAndAmp) {
   EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_Unknown); // Not TT_CastRParen
   EXPECT_TOKEN(Tokens[10], tok::amp, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[11], tok::identifier, TT_StartOfName);
+
+  Tokens = annotate("template <typename T>\n"
+                    "concept C = requires(T t) { [](auto &c) {}(t); };");
+  ASSERT_EQ(Tokens.size(), 30u) << Tokens;
+  EXPECT_TOKEN(Tokens[18], tok::amp, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[19], tok::identifier, TT_StartOfName);
+
+  Tokens = annotate("template <typename T>\n"
+                    "concept C = requires(T t) { [](auto *c) {}(t); };");
+  ASSERT_EQ(Tokens.size(), 30u) << Tokens;
+  EXPECT_TOKEN(Tokens[18], tok::star, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[19], tok::identifier, TT_StartOfName);
+
+  Tokens = annotate("foo ? a < b && c : bar");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::ampamp, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[6], tok::identifier, TT_Unknown); // Not TT_StartOfName
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsUsesOfPlusAndMinus) {
@@ -1918,9 +1935,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsAsm) {
                     ":);");
   ASSERT_EQ(Tokens.size(), 10u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
+  EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_InlineASMParen);
   EXPECT_TOKEN(Tokens[3], tok::colon, TT_InlineASMColon);
   EXPECT_TOKEN(Tokens[4], tok::colon, TT_InlineASMColon);
   EXPECT_TOKEN(Tokens[6], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[7], tok::r_paren, TT_InlineASMParen);
 
   Tokens = annotate("asm volatile (\n"
                     "\"a_label:\"\n"
@@ -1929,9 +1948,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsAsm) {
                     ":);");
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
+  EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_InlineASMParen);
   EXPECT_TOKEN(Tokens[4], tok::colon, TT_InlineASMColon);
   EXPECT_TOKEN(Tokens[5], tok::colon, TT_InlineASMColon);
   EXPECT_TOKEN(Tokens[7], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_InlineASMParen);
 
   Tokens = annotate("__asm__(\n"
                     "\"a_label:\"\n"
@@ -1940,9 +1961,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsAsm) {
                     ": y);");
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
+  EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_InlineASMParen);
   EXPECT_TOKEN(Tokens[3], tok::colon, TT_InlineASMColon);
   EXPECT_TOKEN(Tokens[5], tok::colon, TT_InlineASMColon);
   EXPECT_TOKEN(Tokens[6], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[8], tok::r_paren, TT_InlineASMParen);
 
   Tokens = annotate("__asm volatile (\n"
                     "\"a_label:\"\n"
@@ -1952,9 +1975,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsAsm) {
                     ":);");
   ASSERT_EQ(Tokens.size(), 12u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
+  EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_InlineASMParen);
   EXPECT_TOKEN(Tokens[5], tok::colon, TT_InlineASMColon);
   EXPECT_TOKEN(Tokens[6], tok::colon, TT_InlineASMColon);
   EXPECT_TOKEN(Tokens[8], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[9], tok::r_paren, TT_InlineASMParen);
 
   Tokens = annotate("asm(\n"
                     "\"insn\"\n"
@@ -1963,9 +1988,11 @@ TEST_F(TokenAnnotatorTest, UnderstandsAsm) {
                     ": \"memory\");");
   ASSERT_EQ(Tokens.size(), 19u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
+  EXPECT_TOKEN(Tokens[1], tok::l_paren, TT_InlineASMParen);
   EXPECT_TOKEN(Tokens[3], tok::colon, TT_InlineASMColon);
   EXPECT_TOKEN(Tokens[13], tok::colon, TT_InlineASMColon);
   EXPECT_TOKEN(Tokens[14], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[16], tok::r_paren, TT_InlineASMParen);
 
   Tokens = annotate("__asm__ volatile (\n"
                     "\"ldr r1, [r0, %%[sym]]\"\n"
@@ -1974,9 +2001,21 @@ TEST_F(TokenAnnotatorTest, UnderstandsAsm) {
                     ");");
   ASSERT_EQ(Tokens.size(), 21u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
+  EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_InlineASMParen);
   EXPECT_TOKEN(Tokens[4], tok::colon, TT_InlineASMColon);
   EXPECT_TOKEN(Tokens[5], tok::colon, TT_InlineASMColon);
   EXPECT_TOKEN(Tokens[6], tok::l_square, TT_InlineASMSymbolicNameLSquare);
+  EXPECT_TOKEN(Tokens[18], tok::r_paren, TT_InlineASMParen);
+
+  Tokens = annotate("__asm__ volatile inline goto (\"nop\" : : : : l );");
+  ASSERT_EQ(Tokens.size(), 14u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::kw_asm, TT_Unknown);
+  EXPECT_TOKEN(Tokens[4], tok::l_paren, TT_InlineASMParen);
+  EXPECT_TOKEN(Tokens[6], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[7], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[8], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[9], tok::colon, TT_InlineASMColon);
+  EXPECT_TOKEN(Tokens[11], tok::r_paren, TT_InlineASMParen);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsObjCBlock) {
@@ -3028,6 +3067,61 @@ TEST_F(TokenAnnotatorTest, UnderstandsVerilogOperators) {
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::hash, TT_Unknown);
   EXPECT_TOKEN(Tokens[4], tok::hashhash, TT_Unknown);
+
+  // A protected data block that is not empty should be treated as a single
+  // token.
+  Tokens = Annotate(
+      "`pragma protect data_block, encoding=(enctype=\"base64\", bytes=2)\n"
+      "0+0=\n"
+      "`pragma protect end_protected");
+  ASSERT_EQ(Tokens.size(), 22u) << Tokens;
+  EXPECT_TOKEN(Tokens[16], tok::string_literal, TT_VerilogProtected);
+  Tokens = Annotate(
+      "`pragma protect data_block, encoding=(enctype=\"base64\", bytes=2)\n"
+      "0+0=");
+  ASSERT_EQ(Tokens.size(), 18u) << Tokens;
+  EXPECT_TOKEN(Tokens[16], tok::string_literal, TT_VerilogProtected);
+  EXPECT_EQ(Tokens[16]->TokenText, "0+0=");
+  Tokens = Annotate("`pragma protect data_block\n"
+                    "0\n"
+                    "+0=\n"
+                    "`pragma protect end_protected");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::string_literal, TT_VerilogProtected);
+  EXPECT_EQ(Tokens[4]->TokenText, "0\n+0=");
+  Tokens = Annotate("`pragma protect data_block\n"
+                    "0+0=\n"
+                    "`pragma protect end_protected");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::string_literal, TT_VerilogProtected);
+  EXPECT_EQ(Tokens[4]->TokenText, "0+0=");
+
+  // A protected block that is empty should not have tokens.
+  Tokens = Annotate("`pragma protect data_block");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
+  Tokens = Annotate("`pragma protect data_block\n");
+  ASSERT_EQ(Tokens.size(), 5u) << Tokens;
+  Tokens = Annotate("`pragma protect data_block\n"
+                    "`pragma protect end_protected");
+  ASSERT_EQ(Tokens.size(), 9u) << Tokens;
+
+  // The standard allows uuencode as well. The program should not confuse the
+  // backticks added by the encoding as the end pragma.
+  Tokens = Annotate("`pragma protect data_block\n"
+                    "`\n"
+                    "end\n"
+                    "`pragma protect end_protected");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::string_literal, TT_VerilogProtected);
+  EXPECT_EQ(Tokens[4]->TokenText, "`\nend");
+  Tokens = Annotate("`pragma protect data_block\n"
+                    "!````\n"
+                    "`\n"
+                    "end\n"
+                    "`pragma protect end_protected");
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::string_literal, TT_VerilogProtected);
+  EXPECT_EQ(Tokens[4]->TokenText, "!````\n`\nend");
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandTableGenTokens) {
@@ -3633,6 +3727,10 @@ TEST_F(TokenAnnotatorTest, StartOfName) {
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::identifier, TT_StartOfName);
 
+  Tokens = annotate("export import foo;");
+  ASSERT_EQ(Tokens.size(), 5u);
+  EXPECT_TOKEN(Tokens[2], tok::identifier, TT_Unknown); // Not StartOfName
+
   auto Style = getLLVMStyle();
   Style.StatementAttributeLikeMacros.push_back("emit");
   Tokens = annotate("emit foo = 0;", Style);
@@ -3980,6 +4078,12 @@ TEST_F(TokenAnnotatorTest, BraceKind) {
   Tokens = annotate("&(type){v}");
   ASSERT_EQ(Tokens.size(), 8u) << Tokens;
   EXPECT_BRACE_KIND(Tokens[4], BK_BracedInit);
+
+  Tokens = annotate("a = {x * x, x * x};");
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_BRACE_KIND(Tokens[2], BK_BracedInit);
+  EXPECT_TOKEN(Tokens[4], tok::star, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[8], tok::star, TT_BinaryOperator);
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsElaboratedTypeSpecifier) {
