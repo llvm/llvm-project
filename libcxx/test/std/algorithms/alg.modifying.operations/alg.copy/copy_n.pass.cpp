@@ -61,6 +61,15 @@ struct TestIterators {
       assert(base(r) == ib + N / 2);
       for (unsigned i = 0; i < N / 2; ++i)
         assert(ia[i] == ib[i]);
+
+      { // A negative count is a no-op that returns the unchanged output iterator.
+        // Regression test for https://llvm.org/PR193613.
+        int source[]  = {1, 2, 3};
+        int dest[]    = {-1, -2, -3};
+        OutIter ret   = std::copy_n(InIter(source), -5, OutIter(dest));
+        assert(base(ret) == dest);
+        assert(dest[0] == -1 && dest[1] == -2 && dest[2] == -3);
+      }
     }
   };
 };
@@ -80,6 +89,13 @@ TEST_CONSTEXPR_CXX20 bool test_vector_bool(std::size_t N) {
     std::copy_n(in.begin(), N, out.begin() + 4);
     for (std::size_t i = 0; i < N; ++i)
       assert(out[i + 4] == in[i]);
+  }
+  { // Negative count test
+    std::vector<bool> source(N, true);
+    std::vector<bool> dest(N, false);
+    std::vector<bool>::iterator r = std::copy_n(source.begin(), -5, dest.begin());
+    assert(r == dest.begin());
+    assert(dest == std::vector<bool>(N, false));
   }
 
   return true;

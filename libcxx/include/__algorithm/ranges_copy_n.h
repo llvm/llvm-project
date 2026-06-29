@@ -38,6 +38,8 @@ struct __copy_n {
     requires indirectly_copyable<_Ip, _Op>
   _LIBCPP_HIDE_FROM_ABI constexpr copy_n_result<_Ip, _Op>
   operator()(_Ip __first, iter_difference_t<_Ip> __n, _Op __result) const {
+    if (__n < 0) [[__unlikely__]]
+      return {std::move(__first), std::move(__result)};
     return std::__copy_n<_RangeAlgPolicy>(std::move(__first), __n, std::move(__result));
   }
 };

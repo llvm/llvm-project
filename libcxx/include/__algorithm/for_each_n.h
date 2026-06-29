@@ -12,6 +12,7 @@
 
 #include <__algorithm/for_each.h>
 #include <__algorithm/for_each_n_segment.h>
+#include <__assert>
 #include <__config>
 #include <__functional/identity.h>
 #include <__iterator/iterator_traits.h>
@@ -63,6 +64,7 @@ __for_each_n(_InputIterator __first, _Size __orig_n, _Func&& __f, _Proj& __proj)
 template <class _InputIterator, class _Size, class _Func>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
 for_each_n(_InputIterator __first, _Size __orig_n, _Func __f) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__orig_n >= 0, "for_each_n requires a non-negative count");
   __identity __proj;
   return std::__for_each_n(__first, __orig_n, __f, __proj);
 }
