@@ -30,6 +30,19 @@ struct AllocOpInterface
   }
 };
 
+struct AssumeAlignmentOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<AssumeAlignmentOpInterface,
+                                                   memref::AssumeAlignmentOp> {
+  void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
+                                       ValueBoundsConstraintSet &cstr) const {
+    auto assumeAlignmentOp = cast<memref::AssumeAlignmentOp>(op);
+    assert(value == assumeAlignmentOp.getResult() && "invalid value");
+
+    cstr.bound(value)[dim] ==
+        cstr.getExpr(assumeAlignmentOp.getViewSource(), dim);
+  }
+};
+
 struct CastOpInterface
     : public ValueBoundsOpInterface::ExternalModel<CastOpInterface, CastOp> {
   void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
@@ -67,6 +80,37 @@ struct ExpandShapeOpInterface
     auto expandOp = cast<memref::ExpandShapeOp>(op);
     assert(value == expandOp.getResult() && "invalid value");
     cstr.bound(value)[dim] == expandOp.getMixedOutputShape()[dim];
+  }
+};
+
+struct ExtractStridedMetadataOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<
+          ExtractStridedMetadataOpInterface, memref::ExtractStridedMetadataOp> {
+  void populateBoundsForIndexValue(Operation *op, Value value,
+                                   ValueBoundsConstraintSet &cstr) const {
+    auto metadataOp = cast<memref::ExtractStridedMetadataOp>(op);
+
+    if (value == metadataOp.getOffset()) {
+      cstr.bound(value) == metadataOp.getConstifiedMixedOffset();
+      return;
+    }
+
+    for (auto [idx, size] : llvm::enumerate(metadataOp.getSizes())) {
+      if (value != size)
+        continue;
+      cstr.bound(value) >= 0;
+      cstr.bound(value) == cstr.getExpr(metadataOp.getSource(), idx);
+      return;
+    }
+
+    SmallVector<OpFoldResult> strides = metadataOp.getConstifiedMixedStrides();
+    for (auto [idx, stride] : llvm::enumerate(metadataOp.getStrides())) {
+      if (value != stride)
+        continue;
+      cstr.bound(value) == strides[idx];
+      return;
+    }
+    llvm_unreachable("unexpected index value from extract_strided_metadata");
   }
 };
 
@@ -139,50 +183,6 @@ struct SubViewOpInterface
       }
     }
     llvm_unreachable("could not find non-rank-reduced dim");
-  }
-};
-
-struct AssumeAlignmentOpInterface
-    : public ValueBoundsOpInterface::ExternalModel<AssumeAlignmentOpInterface,
-                                                   memref::AssumeAlignmentOp> {
-  void populateBoundsForShapedValueDim(Operation *op, Value value, int64_t dim,
-                                       ValueBoundsConstraintSet &cstr) const {
-    auto assumeAlignmentOp = cast<memref::AssumeAlignmentOp>(op);
-    assert(value == assumeAlignmentOp.getResult() && "invalid value");
-
-    cstr.bound(value)[dim] ==
-        cstr.getExpr(assumeAlignmentOp.getViewSource(), dim);
-  }
-};
-
-struct ExtractStridedMetadataOpInterface
-    : public ValueBoundsOpInterface::ExternalModel<
-          ExtractStridedMetadataOpInterface, memref::ExtractStridedMetadataOp> {
-  void populateBoundsForIndexValue(Operation *op, Value value,
-                                   ValueBoundsConstraintSet &cstr) const {
-    auto metadataOp = cast<memref::ExtractStridedMetadataOp>(op);
-
-    if (value == metadataOp.getOffset()) {
-      cstr.bound(value) == metadataOp.getConstifiedMixedOffset();
-      return;
-    }
-
-    for (auto [idx, size] : llvm::enumerate(metadataOp.getSizes())) {
-      if (value != size)
-        continue;
-      cstr.bound(value) >= 0;
-      cstr.bound(value) == cstr.getExpr(metadataOp.getSource(), idx);
-      return;
-    }
-
-    SmallVector<OpFoldResult> strides = metadataOp.getConstifiedMixedStrides();
-    for (auto [idx, stride] : llvm::enumerate(metadataOp.getStrides())) {
-      if (value != stride)
-        continue;
-      cstr.bound(value) == strides[idx];
-      return;
-    }
-    llvm_unreachable("unexpected index value from extract_strided_metadata");
   }
 };
 
