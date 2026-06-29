@@ -1091,3 +1091,37 @@ namespace GH178324 {
   template <class> void c() { decltype(a(current()))::e; }
 } // namespace GH178324
 #endif
+
+namespace std {
+	struct source_location {
+		struct __impl {
+			const char* _M_file_name;
+			const char* _M_function_name;
+			unsigned _M_line;
+			unsigned _M_column;
+		};
+	};
+}
+
+constexpr int numeric_sl_b () {
+	constexpr auto x0 = __builtin_source_location(), x = __builtin_source_location_at(0);
+	constexpr auto y = __builtin_source_location_at(1);
+	constexpr auto z = __builtin_source_location_at(2);
+	static_assert(x0->_M_line == 1107, "line numbers wrong");
+	static_assert(x->_M_line == 1107, "line numbers wrong");
+	static_assert(y->_M_line == 1118, "line numbers wrong");
+	static_assert(z->_M_line == 1122, "line numbers wrong");
+	return x->_M_line + y->_M_line + z->_M_line;
+}
+
+constexpr int numeric_sl_a () {
+	return numeric_sl_b();
+}
+
+constexpr int numeric_sl_a_b () {
+	constexpr int v = numeric_sl_a();
+	static_assert(v == (1'107 + 1'118 + 1'122), "line numbers wrong");
+	return v;
+}
+
+static_assert(numeric_sl_a_b() == 3'341);

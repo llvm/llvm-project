@@ -5019,23 +5019,27 @@ enum class SourceLocIdentKind {
 
 /// Represents a function call to one of __builtin_LINE(), __builtin_COLUMN(),
 /// __builtin_FUNCTION(), __builtin_FUNCSIG(), __builtin_FILE(),
-/// __builtin_FILE_NAME() or __builtin_source_location().
+/// __builtin_FILE_NAME(), __builtin_source_location(), or
+/// __builtin_source_location_at(unsigned long long distance).
 class SourceLocExpr final : public Expr {
   SourceLocation BuiltinLoc, RParenLoc;
   DeclContext *ParentContext;
+  Expr *CallStackDistance;
 
 public:
   SourceLocExpr(const ASTContext &Ctx, SourceLocIdentKind Type,
                 QualType ResultTy, SourceLocation BLoc,
-                SourceLocation RParenLoc, DeclContext *Context);
+                SourceLocation RParenLoc, DeclContext *Context,
+                Expr *CallStackDistance = nullptr);
 
   /// Build an empty call expression.
   explicit SourceLocExpr(EmptyShell Empty) : Expr(SourceLocExprClass, Empty) {}
 
   /// Return the result of evaluating this SourceLocExpr in the specified
   /// (and possibly null) default argument or initialization context.
-  APValue EvaluateInContext(const ASTContext &Ctx,
-                            const Expr *DefaultExpr) const;
+  APValue EvaluateInContext(
+      const ASTContext &Ctx, const Expr *DefaultExpr,
+      std::optional<SourceLocation> PrecomputedLoc = std::nullopt) const;
 
   /// Return a string representing the name of the specific builtin function.
   StringRef getBuiltinStr() const;
@@ -5063,6 +5067,9 @@ public:
   /// representing the resolved value. Otherwise return null.
   const DeclContext *getParentContext() const { return ParentContext; }
   DeclContext *getParentContext() { return ParentContext; }
+
+  const Expr *getCallStackDistance() const { return CallStackDistance; }
+  Expr *getCallStackDistance() { return CallStackDistance; }
 
   SourceLocation getLocation() const { return BuiltinLoc; }
   SourceLocation getBeginLoc() const { return BuiltinLoc; }

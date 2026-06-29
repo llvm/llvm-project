@@ -1,0 +1,3 @@
+"Paper #","Paper Name","Meeting","Status","First released version","GitHub issue","Notes"
+"`P1040R10 <https://wg21.link/P1040R10>`__","``std::embed``","2026-06 (Brno)","","","`#190578 <https://github.com/llvm/llvm-project/pull/190578>`__","Experimental"
+"", "", "", "", "", "", ""

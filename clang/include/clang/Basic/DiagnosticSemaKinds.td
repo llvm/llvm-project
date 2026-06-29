@@ -852,6 +852,11 @@ def err_builtin_definition : Error<"definition of builtin function %0">;
 def err_builtin_redeclare : Error<"cannot redeclare builtin function %0">;
 def err_invalid_builtin_argument : Error<"invalid argument '%0' to %1">;
 
+/// __builtin_std_embed type checking errors
+def err_invalid_builtin_std_embed_argument : Error<
+  "invalid argument to '__builtin_std_embed': %0 should be %1">;
+
+
 def err_arm_invalid_specialreg : Error<"invalid special register for builtin">;
 def err_arm_invalid_coproc : Error<"coprocessor %0 must be configured as "
   "%select{GCP|CDE}1">;
@@ -13633,7 +13638,7 @@ def err_riscv_attribute_interrupt_invalid_combination : Error<
 def err_riscv_builtin_invalid_twiden : Error<"RISC-V XSfmm twiden must be 1, 2 or 4">;
 
 def err_std_source_location_impl_not_found : Error<
-  "'std::source_location::__impl' was not found; it must be defined before '__builtin_source_location' is called">;
+  "'std::source_location::__impl' was not found; it must be defined before '__builtin_source_location' or '__builtin_source_location_at' are called">;
 def err_std_source_location_impl_malformed : Error<
   "'std::source_location::__impl' must be standard-layout and have only two 'const char *' fields '_M_file_name' and '_M_function_name', and two integral fields '_M_line' and '_M_column'">;
 

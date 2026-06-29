@@ -569,6 +569,8 @@ void CompilerInstance::createASTContext() {
       getLangOpts(), PP.getSourceManager(), PP.getIdentifierTable(),
       PP.getSelectorTable(), PP.getBuiltinInfo(), PP.TUKind);
   Context->InitBuiltinTypes(getTarget(), getAuxTarget());
+  Context->setCurrentPreprocessorOptions(PP.getPreprocessorOpts());
+  Context->InputDependencyPatterns = PP.InputDependencyPatterns;
   setASTContext(std::move(Context));
 }
 

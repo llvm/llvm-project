@@ -31,9 +31,11 @@
 #    define _LIBCPP_STD_VER 20
 #  elif __cplusplus <= 202302L
 #    define _LIBCPP_STD_VER 23
-#  else
-// Expected release year of the next C++ standard
+#  elif __cplusplus <= 202603L
 #    define _LIBCPP_STD_VER 26
+#  else
+// whatever the __cplusplus macro says it should be
+#    define _LIBCPP_STD_VER ((__cplusplus / 100) - 2000)
 #  endif
 #endif // __cplusplus
 // NOLINTEND(libcpp-cpp-version-check)

@@ -3053,6 +3053,7 @@ private:
   bool CheckInvalidBuiltinCountedByRef(const Expr *E,
                                        BuiltinCountedByRefKind K);
   bool BuiltinCountedByRef(CallExpr *TheCall);
+  bool BuiltinStdEmbed(CallExpr *TheCall);
 
   // Matrix builtin handling.
   ExprResult BuiltinMatrixTranspose(CallExpr *TheCall, ExprResult CallResult);
@@ -7662,10 +7663,11 @@ public:
                             TypeSourceInfo *TInfo, SourceLocation RPLoc);
 
   // __builtin_LINE(), __builtin_FUNCTION(), __builtin_FUNCSIG(),
-  // __builtin_FILE(), __builtin_COLUMN(), __builtin_source_location()
+  // __builtin_FILE(), __builtin_COLUMN(), __builtin_source_location(),
+  // __builtin_source_location_at(unsigned long long distance)
   ExprResult ActOnSourceLocExpr(SourceLocIdentKind Kind,
-                                SourceLocation BuiltinLoc,
-                                SourceLocation RPLoc);
+                                SourceLocation BuiltinLoc, SourceLocation RPLoc,
+                                Expr *CallStackDistance = nullptr);
 
   // #embed
   ExprResult ActOnEmbedExpr(SourceLocation EmbedKeywordLoc,
@@ -7674,7 +7676,8 @@ public:
   // Build a potentially resolved SourceLocExpr.
   ExprResult BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,
                                 SourceLocation BuiltinLoc, SourceLocation RPLoc,
-                                DeclContext *ParentContext);
+                                DeclContext *ParentContext,
+                                Expr *CallStackDistance = nullptr);
 
   // __null
   ExprResult ActOnGNUNullExpr(SourceLocation TokenLoc);

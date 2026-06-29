@@ -229,6 +229,8 @@ BuildASTContext(CompilerInstance &CI, SelectorTable &ST, Builtin::Context &BC) {
       CI.getLangOpts(), CI.getSourceManager(),
       PP.getIdentifierTable(), ST, BC, PP.TUKind);
   AST->InitBuiltinTypes(CI.getTarget());
+  AST->setCurrentPreprocessorOptions(PP.getPreprocessorOpts());
+  AST->InputDependencyPatterns = PP.InputDependencyPatterns;
   return AST;
 }
 

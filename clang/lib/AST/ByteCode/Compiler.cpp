@@ -3710,7 +3710,7 @@ bool Compiler<Emitter>::VisitSourceLocExpr(const SourceLocExpr *E) {
     return this->visit(LValueExpr);
 
   // Otherwise, we have a decl (which is the case for
-  // __builtin_source_location).
+  // __builtin_source_location/__builtin_source_location_at).
   assert(Base.is<const ValueDecl *>());
   assert(Val.getLValuePath().size() == 0);
   const auto *BaseDecl = Base.dyn_cast<const ValueDecl *>();

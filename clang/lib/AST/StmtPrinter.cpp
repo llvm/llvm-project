@@ -1305,7 +1305,14 @@ void StmtPrinter::VisitOpenACCCacheConstruct(OpenACCCacheConstruct *S) {
 //===----------------------------------------------------------------------===//
 
 void StmtPrinter::VisitSourceLocExpr(SourceLocExpr *Node) {
-  OS << Node->getBuiltinStr() << "()";
+  OS << Node->getBuiltinStr();
+  if (Node->getCallStackDistance()) {
+    OS << "(";
+    PrintExpr(Node->getCallStackDistance());
+    OS << ")";
+  } else {
+    OS << "()";
+  }
 }
 
 void StmtPrinter::VisitEmbedExpr(EmbedExpr *Node) {

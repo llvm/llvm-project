@@ -91,7 +91,7 @@
 #    error "__cpp_lib_freestanding_expected should not be defined before c++26"
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
 
 #  ifndef __cpp_lib_constrained_equality
 #    error "__cpp_lib_constrained_equality should be defined in c++26"
@@ -120,6 +120,35 @@
 #    endif
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  ifndef __cpp_lib_constrained_equality
+#    error "__cpp_lib_constrained_equality should be defined in c++29"
+#  endif
+#  if __cpp_lib_constrained_equality != 202411L
+#    error "__cpp_lib_constrained_equality should have the value 202411L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_expected
+#    error "__cpp_lib_expected should be defined in c++29"
+#  endif
+#  if __cpp_lib_expected != 202211L
+#    error "__cpp_lib_expected should have the value 202211L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_freestanding_expected
+#      error "__cpp_lib_freestanding_expected should be defined in c++29"
+#    endif
+#    if __cpp_lib_freestanding_expected != 202311L
+#      error "__cpp_lib_freestanding_expected should have the value 202311L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_freestanding_expected
+#      error "__cpp_lib_freestanding_expected should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on

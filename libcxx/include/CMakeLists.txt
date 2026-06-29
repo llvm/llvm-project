@@ -1012,6 +1012,7 @@ set(files
   cwchar
   cwctype
   deque
+  embed
   errno.h
   exception
   execution

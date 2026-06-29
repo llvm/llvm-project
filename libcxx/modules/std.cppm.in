@@ -54,6 +54,7 @@ module;
 #include <cwchar>
 #include <cwctype>
 #include <deque>
+#include <embed>
 #include <exception>
 #include <execution>
 #include <expected>

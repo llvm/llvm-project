@@ -7628,6 +7628,7 @@ ExpectedStmt ASTNodeImporter::VisitSourceLocExpr(SourceLocExpr *E) {
   auto ToType = importChecked(Err, E->getType());
   auto BLoc = importChecked(Err, E->getBeginLoc());
   auto RParenLoc = importChecked(Err, E->getEndLoc());
+  auto CallStackDistance = importChecked(Err, E->getCallStackDistance());
   if (Err)
     return std::move(Err);
   auto ParentContextOrErr = Importer.ImportContext(E->getParentContext());
@@ -7636,7 +7637,7 @@ ExpectedStmt ASTNodeImporter::VisitSourceLocExpr(SourceLocExpr *E) {
 
   return new (Importer.getToContext())
       SourceLocExpr(Importer.getToContext(), E->getIdentKind(), ToType, BLoc,
-                    RParenLoc, *ParentContextOrErr);
+                    RParenLoc, *ParentContextOrErr, CallStackDistance);
 }
 
 ExpectedStmt ASTNodeImporter::VisitVAArgExpr(VAArgExpr *E) {

@@ -5758,8 +5758,9 @@ struct EnsureImmediateInvocationInDefaultArgs
         !SemaRef.CurContext->isDependentContext() || DC->isDependentContext())
       DC = SemaRef.CurContext;
 
-    return getDerived().RebuildSourceLocExpr(
-        E->getIdentKind(), E->getType(), E->getBeginLoc(), E->getEndLoc(), DC);
+    return getDerived().RebuildSourceLocExpr(E->getIdentKind(), E->getType(),
+                                             E->getBeginLoc(), E->getEndLoc(),
+                                             DC, E->getCallStackDistance());
   }
 };
 
@@ -17481,7 +17482,8 @@ static CXXRecordDecl *LookupStdSourceLocationImpl(Sema &S, SourceLocation Loc) {
 
 ExprResult Sema::ActOnSourceLocExpr(SourceLocIdentKind Kind,
                                     SourceLocation BuiltinLoc,
-                                    SourceLocation RPLoc) {
+                                    SourceLocation RPLoc,
+                                    Expr *CallStackDistance) {
   QualType ResultTy;
   switch (Kind) {
   case SourceLocIdentKind::File:
@@ -17504,20 +17506,34 @@ ExprResult Sema::ActOnSourceLocExpr(SourceLocIdentKind Kind,
       if (!StdSourceLocationImplDecl)
         return ExprError();
     }
+    if (CallStackDistance) {
+      ExprResult MaybeRValueDistance =
+          DefaultLvalueConversion(CallStackDistance);
+      if (MaybeRValueDistance.isInvalid())
+        return ExprError();
+      CallStackDistance = MaybeRValueDistance.get();
+      if (!CallStackDistance->getType()->isIntegralOrEnumerationType()) {
+        Diag(CallStackDistance->getBeginLoc(), diag::err_ice_not_integral)
+            << CallStackDistance->getType();
+        return ExprError();
+      }
+    }
     ResultTy = Context.getPointerType(
         Context.getCanonicalTagType(StdSourceLocationImplDecl).withConst());
     break;
   }
 
-  return BuildSourceLocExpr(Kind, ResultTy, BuiltinLoc, RPLoc, CurContext);
+  return BuildSourceLocExpr(Kind, ResultTy, BuiltinLoc, RPLoc, CurContext,
+                            CallStackDistance);
 }
 
 ExprResult Sema::BuildSourceLocExpr(SourceLocIdentKind Kind, QualType ResultTy,
                                     SourceLocation BuiltinLoc,
                                     SourceLocation RPLoc,
-                                    DeclContext *ParentContext) {
-  return new (Context)
-      SourceLocExpr(Context, Kind, ResultTy, BuiltinLoc, RPLoc, ParentContext);
+                                    DeclContext *ParentContext,
+                                    Expr *CallStackDistance) {
+  return new (Context) SourceLocExpr(Context, Kind, ResultTy, BuiltinLoc, RPLoc,
+                                     ParentContext, CallStackDistance);
 }
 
 ExprResult Sema::ActOnEmbedExpr(SourceLocation EmbedKeywordLoc,

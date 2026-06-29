@@ -57,7 +57,7 @@
 #    endif
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
 
 #  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_constexpr_cmath
@@ -72,6 +72,21 @@
 #    endif
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_cmath
+#      error "__cpp_lib_constexpr_cmath should be defined in c++29"
+#    endif
+#    if __cpp_lib_constexpr_cmath != 202202L
+#      error "__cpp_lib_constexpr_cmath should have the value 202202L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_cmath
+#      error "__cpp_lib_constexpr_cmath should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on

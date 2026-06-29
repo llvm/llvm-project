@@ -1097,6 +1097,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
   case tok::kw___builtin_FUNCSIG:
   case tok::kw___builtin_LINE:
   case tok::kw___builtin_source_location:
+  case tok::kw___builtin_source_location_at:
     if (NotPrimaryExpression)
       *NotPrimaryExpression = true;
     // This parses the complete suffix; we can return early.
@@ -2589,13 +2590,8 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
   case tok::kw___builtin_FUNCTION:
   case tok::kw___builtin_FUNCSIG:
   case tok::kw___builtin_LINE:
-  case tok::kw___builtin_source_location: {
-    // Attempt to consume the r-paren.
-    if (Tok.isNot(tok::r_paren)) {
-      Diag(Tok, diag::err_expected) << tok::r_paren;
-      SkipUntil(tok::r_paren, StopAtSemi);
-      return ExprError();
-    }
+  case tok::kw___builtin_source_location:
+  case tok::kw___builtin_source_location_at: {
     SourceLocIdentKind Kind = [&] {
       switch (T) {
       case tok::kw___builtin_FILE:
@@ -2611,12 +2607,31 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
       case tok::kw___builtin_COLUMN:
         return SourceLocIdentKind::Column;
       case tok::kw___builtin_source_location:
+      case tok::kw___builtin_source_location_at:
         return SourceLocIdentKind::SourceLocStruct;
       default:
         llvm_unreachable("invalid keyword");
       }
     }();
-    Res = Actions.ActOnSourceLocExpr(Kind, StartLoc, ConsumeParen());
+    Expr *CallStackDistanceExpr = nullptr;
+    if (Kind == SourceLocIdentKind::SourceLocStruct &&
+        Tok.isNot(tok::r_paren)) {
+      // optional expression for traveling up the stack
+      ExprResult MaybeCallStackDistanceExpr(ParseAssignmentExpression());
+      if (MaybeCallStackDistanceExpr.isInvalid()) {
+        SkipUntil(tok::r_paren, StopAtSemi);
+        return ExprError();
+      }
+      CallStackDistanceExpr = MaybeCallStackDistanceExpr.get();
+    }
+    // Check for the final r-paren.
+    if (Tok.isNot(tok::r_paren)) {
+      Diag(Tok, diag::err_expected) << tok::r_paren;
+      SkipUntil(tok::r_paren, StopAtSemi);
+      return ExprError();
+    }
+    Res = Actions.ActOnSourceLocExpr(Kind, StartLoc, ConsumeParen(),
+                                     CallStackDistanceExpr);
     break;
   }
   }
