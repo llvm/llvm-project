@@ -17,7 +17,7 @@ using namespace lldb_private;
 
 void MemoryRegionInfoCache::Clear() { m_region_infos.Clear(); }
 
-void MemoryRegionInfoCache::Erase(addr_t load_addr, addr_t size) {
+void MemoryRegionInfoCache::Erase(addr_t load_addr, size_t size) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   uint32_t start_idx = m_region_infos.FindEntryIndexThatContains(load_addr);
   uint32_t end_idx =
@@ -26,11 +26,11 @@ void MemoryRegionInfoCache::Erase(addr_t load_addr, addr_t size) {
     return;
 
   if (start_idx == UINT32_MAX)
-    m_region_infos.Erase(end_idx, end_idx);
+    m_region_infos.Erase(end_idx, end_idx + 1);
   else if (end_idx == UINT32_MAX)
-    m_region_infos.Erase(start_idx, start_idx);
+    m_region_infos.Erase(start_idx, start_idx + 1);
   else
-    m_region_infos.Erase(start_idx, end_idx);
+    m_region_infos.Erase(start_idx, end_idx + 1);
   m_region_infos.Sort();
 }
 

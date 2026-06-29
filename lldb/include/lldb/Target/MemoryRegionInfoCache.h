@@ -25,7 +25,7 @@ public:
   void Clear();
 
   /// Remove cached information about region containing \p addr, if any.
-  void Erase(lldb::addr_t addr, lldb::addr_t size);
+  void Erase(lldb::addr_t addr, size_t size);
 
   /// Return a MemoryRegionInfo that covers \p load_addr,
   /// returns empty optional if there is no entry.
@@ -34,9 +34,10 @@ public:
   /// Add a MemoryRegionInfo to the collection.
   void AddRegion(const MemoryRegionInfo &region_info);
 
+  size_t GetSize() { return m_region_infos.GetSize(); }
+
 private:
-  typedef RangeDataVector<lldb::addr_t, lldb::addr_t,
-                          lldb_private::MemoryRegionInfo>
+  typedef RangeDataVector<lldb::addr_t, size_t, lldb_private::MemoryRegionInfo>
       InfoMap;
   InfoMap m_region_infos;
   mutable std::recursive_mutex m_mutex;
