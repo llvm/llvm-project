@@ -12997,8 +12997,6 @@ def err_coroutine_promise_type_incomplete : Error<
 def err_coroutine_type_missing_specialization : Error<
   "this function cannot be a coroutine: missing definition of "
   "specialization %0">;
-def err_coroutine_promise_incompatible_return_functions : Error<
-  "the coroutine promise type %0 declares both 'return_value' and 'return_void'">;
 def note_coroutine_promise_implicit_await_transform_required_here : Note<
   "call to 'await_transform' implicitly required by 'co_await' here">;
 def note_coroutine_promise_suspend_implicitly_required : Note<

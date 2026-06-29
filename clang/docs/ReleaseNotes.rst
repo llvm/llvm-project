@@ -195,6 +195,11 @@ C++ Language Changes
 - ``__is_trivially_equality_comparable`` no longer returns false for all enum types. (#GH132672)
 - ``auto`` parameters are now available in all C++ language modes as an extension.
 
+C++2d Feature Support
+^^^^^^^^^^^^^^^^^^^^^
+
+- Clang now supports `P3950R1 <https://wg21.link/p3950r1>`_ ``return_value`` & ``return_void`` are not mutually exclusive. This change is applied as a DR to all C++ language modes.
+
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 

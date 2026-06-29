@@ -699,19 +699,19 @@ struct bad_promise_6 {
   suspend_always initial_suspend();
   suspend_always final_suspend() noexcept;
   void unhandled_exception();
-  void return_void();           // expected-note 2 {{member 'return_void' first declared here}}
-  void return_value(int) const; // expected-note 2 {{member 'return_value' first declared here}}
+  void return_void();
+  void return_value(int) const;
   void return_value(int);
 };
-coro<bad_promise_6> bad_implicit_return() { // expected-error {{'bad_promise_6' declares both 'return_value' and 'return_void'}}
+coro<bad_promise_6> bad_implicit_return() {
   co_await a;
 }
 
 template <class T>
-coro<T> bad_implicit_return_dependent(T) { // expected-error {{'bad_promise_6' declares both 'return_value' and 'return_void'}}
+coro<T> bad_implicit_return_dependent(T) {
   co_await a;
 }
-template coro<bad_promise_6> bad_implicit_return_dependent(bad_promise_6); // expected-note {{in instantiation}}
+template coro<bad_promise_6> bad_implicit_return_dependent(bad_promise_6);
 
 struct bad_promise_7 { // expected-note 2 {{defined here}}
   coro<bad_promise_7> get_return_object();

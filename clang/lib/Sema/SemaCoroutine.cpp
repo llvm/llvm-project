@@ -1715,12 +1715,14 @@ bool CoroutineStmtBuilder::makeOnFallthrough() {
          "cannot make statement while the promise type is dependent");
 
   // [dcl.fct.def.coroutine]/p6
-  // If searches for the names return_void and return_value in the scope of
-  // the promise type each find any declarations, the program is ill-formed.
   // [Note 1: If return_void is found, flowing off the end of a coroutine is
   // equivalent to a co_return with no operand. Otherwise, flowing off the end
   // of a coroutine results in undefined behavior ([stmt.return.coroutine]). —
   // end note]
+  //
+  // Note: A promise type declaring both return_void and return_value was
+  // previously ill-formed, but this is allowed since P3950 which was adopted
+  // into C++2d as a DR.
   bool HasRVoid, HasRValue;
   LookupResult LRVoid =
       lookupMember(S, "return_void", PromiseRecordDecl, Loc, HasRVoid);
@@ -1728,19 +1730,7 @@ bool CoroutineStmtBuilder::makeOnFallthrough() {
       lookupMember(S, "return_value", PromiseRecordDecl, Loc, HasRValue);
 
   StmtResult Fallthrough;
-  if (HasRVoid && HasRValue) {
-    // FIXME Improve this diagnostic
-    S.Diag(FD.getLocation(),
-           diag::err_coroutine_promise_incompatible_return_functions)
-        << PromiseRecordDecl;
-    S.Diag(LRVoid.getRepresentativeDecl()->getLocation(),
-           diag::note_member_first_declared_here)
-        << LRVoid.getLookupName();
-    S.Diag(LRValue.getRepresentativeDecl()->getLocation(),
-           diag::note_member_first_declared_here)
-        << LRValue.getLookupName();
-    return false;
-  } else if (!HasRVoid && !HasRValue) {
+  if (!HasRVoid && !HasRValue) {
     // We need to set 'Fallthrough'. Otherwise the other analysis part might
     // think the coroutine has defined a return_value method. So it might emit
     // **false** positive warning. e.g.,
