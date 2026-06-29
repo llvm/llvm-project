@@ -265,7 +265,7 @@ if(TARGET sanitizer-ignorelists)
   # Installing/distributing hwasan also installs the sanitizer ignorelists.
   if(TARGET install-hwasan)
     add_dependencies(install-hwasan install-sanitizer-ignorelists)
-    add_dependencies(install-hwasan-stripped install-sanitizer-ignorelists-stripped)
+    add_dependencies(install-hwasan-stripped install-sanitizer-ignorelists)
   endif()
 endif()
 

@@ -90,7 +90,7 @@ if(TARGET sanitizer-ignorelists)
   # Installing/distributing msan also installs the sanitizer ignorelists.
   if(TARGET install-msan)
     add_dependencies(install-msan install-sanitizer-ignorelists)
-    add_dependencies(install-msan-stripped install-sanitizer-ignorelists-stripped)
+    add_dependencies(install-msan-stripped install-sanitizer-ignorelists)
   endif()
 endif()
 

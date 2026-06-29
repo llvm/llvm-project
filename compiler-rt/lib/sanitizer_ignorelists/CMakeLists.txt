@@ -27,12 +27,9 @@ add_custom_target(sanitizer-ignorelist-files DEPENDS ${sanitizer_ignorelist_outp
 set_target_properties(sanitizer-ignorelist-files PROPERTIES FOLDER "Compiler-RT/Resources")
 add_dependencies(sanitizer-ignorelists sanitizer-ignorelist-files)
 
-# Install in the Clang resource directory. Each sanitizer runtime's install
-# target (install-asan, install-hwasan, ...) depends on
-# install-sanitizer-ignorelists, so installing or distributing any sanitizer
-# also installs the ignorelists. These install targets are created
-# unconditionally (like compiler-rt's other parent install targets) so the
-# runtime install targets can depend on them under multi-config generators too.
+# Install in the Clang resource directory. No -stripped variant: the ignorelists
+# are plain text, so both the stripped and unstripped install targets depend on
+# this one.
 install(FILES ${SANITIZER_IGNORELIST_FILES}
   DESTINATION ${COMPILER_RT_INSTALL_DATA_DIR}
   COMPONENT sanitizer-ignorelists)
@@ -42,15 +39,7 @@ add_custom_target(install-sanitizer-ignorelists
   COMMAND "${CMAKE_COMMAND}"
           -DCMAKE_INSTALL_COMPONENT=sanitizer-ignorelists
           -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
-add_custom_target(install-sanitizer-ignorelists-stripped
-  DEPENDS sanitizer-ignorelists
-  COMMAND "${CMAKE_COMMAND}"
-          -DCMAKE_INSTALL_COMPONENT=sanitizer-ignorelists
-          -DCMAKE_INSTALL_DO_STRIP=1
-          -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
 set_target_properties(install-sanitizer-ignorelists PROPERTIES
   FOLDER "Compiler-RT/Installation")
-set_target_properties(install-sanitizer-ignorelists-stripped PROPERTIES
-  FOLDER "Compiler-RT/Installation")
 add_dependencies(install-compiler-rt install-sanitizer-ignorelists)
-add_dependencies(install-compiler-rt-stripped install-sanitizer-ignorelists-stripped)
+add_dependencies(install-compiler-rt-stripped install-sanitizer-ignorelists)

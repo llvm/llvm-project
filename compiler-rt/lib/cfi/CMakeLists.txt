@@ -49,6 +49,6 @@ if(TARGET sanitizer-ignorelists)
   # Installing/distributing cfi also installs the sanitizer ignorelists.
   if(TARGET install-cfi)
     add_dependencies(install-cfi install-sanitizer-ignorelists)
-    add_dependencies(install-cfi-stripped install-sanitizer-ignorelists-stripped)
+    add_dependencies(install-cfi-stripped install-sanitizer-ignorelists)
   endif()
 endif()

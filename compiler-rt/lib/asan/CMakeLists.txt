@@ -398,7 +398,7 @@ if(TARGET sanitizer-ignorelists)
   # Installing/distributing asan also installs the sanitizer ignorelists.
   if(TARGET install-asan)
     add_dependencies(install-asan install-sanitizer-ignorelists)
-    add_dependencies(install-asan-stripped install-sanitizer-ignorelists-stripped)
+    add_dependencies(install-asan-stripped install-sanitizer-ignorelists)
   endif()
 endif()
 
