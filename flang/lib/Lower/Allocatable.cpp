@@ -470,8 +470,7 @@ private:
       const Fortran::parser::Name &baseName =
           Fortran::parser::GetFirstName(*sc);
       if (baseName.symbol &&
-          (Fortran::semantics::HasCUDAAttr(*baseName.symbol) ||
-           Fortran::semantics::HasCUDAComponent(*baseName.symbol))) {
+          Fortran::semantics::HasCUDAAttr(*baseName.symbol)) {
         sym = baseName.symbol;
         return true;
       }
@@ -662,7 +661,7 @@ private:
     fir::ExtendedValue exv = isSource ? sourceExv : moldExv;
 
     bool sourceIsDevice = false;
-    if (const Fortran::semantics::Symbol * sym{GetLastSymbol(sourceExpr)})
+    if (const Fortran::semantics::Symbol *sym{GetLastSymbol(sourceExpr)})
       if (Fortran::semantics::IsCUDADevice(*sym))
         sourceIsDevice = true;
 
@@ -825,7 +824,7 @@ private:
     mlir::Type retTy = fir::runtime::getModel<int>()(builder.getContext());
 
     bool isSourceDevice = false;
-    if (const Fortran::semantics::Symbol * sym{GetLastSymbol(sourceExpr)})
+    if (const Fortran::semantics::Symbol *sym{GetLastSymbol(sourceExpr)})
       if (Fortran::semantics::IsCUDADevice(*sym))
         isSourceDevice = true;
 
