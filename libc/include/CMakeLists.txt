@@ -203,63 +203,6 @@ add_header_macro(
     .llvm-libc-macros.sysexits_macros
 )
 
-
-# TODO: This should be conditional on POSIX networking being included.
-file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/arpa)
-
-add_header_macro(
-  arpa_inet
-  ../libc/include/arpa/inet.yaml
-  arpa/inet.h
-  DEPENDS
-    .llvm_libc_common_h
-    .inttypes
-    .llvm-libc-types.in_addr_t
-    .llvm-libc-types.struct_in_addr
-    .llvm-libc-macros.inet_address_macros
-)
-
-file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/netinet)
-
-add_header_macro(
-  netinet_in
-  ../libc/include/netinet/in.yaml
-  netinet/in.h
-  DEPENDS
-    .llvm-libc-macros.netinet_in_macros
-    .llvm-libc-macros.inet_address_macros
-    .llvm-libc-types.in_addr_t
-    .llvm-libc-types.in_port_t
-    .llvm-libc-types.sa_family_t
-    .llvm-libc-types.struct_sockaddr_in
-    .llvm-libc-types.struct_sockaddr_in6
-    .llvm-libc-types.struct_in_addr
-    .llvm-libc-types.struct_in6_addr
-    .llvm-libc-types.struct_ip_mreq
-    .llvm-libc-types.struct_ip_mreq_source
-    .llvm-libc-types.struct_ip_mreqn
-    .llvm-libc-types.struct_ip_msfilter
-    .llvm-libc-types.struct_ip_opts
-    .llvm_libc_common_h
-)
-
-add_header_macro(
-  netinet_tcp
-  ../libc/include/netinet/tcp.yaml
-  netinet/tcp.h
-  DEPENDS
-    .llvm_libc_common_h
-)
-
-add_header_macro(
-  netinet_udp
-  ../libc/include/netinet/udp.yaml
-  netinet/udp.h
-  DEPENDS
-    .llvm-libc-types.struct_udphdr
-    .llvm_libc_common_h
-)
-
 add_header_macro(
   assert
   ../libc/include/assert.yaml
@@ -950,6 +893,66 @@ add_header_macro(
     .llvm-libc-types.pid_t
     .llvm-libc-types.struct_rusage
     .llvm-libc-types.siginfo_t
+)
+
+# TODO: This should be conditional on POSIX networking being included.
+file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/netinet)
+
+add_header_macro(
+  netinet_in
+  ../libc/include/netinet/in.yaml
+  netinet/in.h
+  DEPENDS
+    .llvm-libc-macros.netinet_in_macros
+    .llvm-libc-macros.inet_address_macros
+    .llvm-libc-types.in_addr_t
+    .llvm-libc-types.in_port_t
+    .llvm-libc-types.sa_family_t
+    .llvm-libc-types.struct_sockaddr_in
+    .llvm-libc-types.struct_sockaddr_in6
+    .llvm-libc-types.struct_in_addr
+    .llvm-libc-types.struct_in6_addr
+    .llvm-libc-types.struct_ip_mreq
+    .llvm-libc-types.struct_ip_mreq_source
+    .llvm-libc-types.struct_ip_mreqn
+    .llvm-libc-types.struct_ip_msfilter
+    .llvm-libc-types.struct_ip_opts
+    .llvm_libc_common_h
+    .sys_socket
+)
+
+add_header_macro(
+  netinet_tcp
+  ../libc/include/netinet/tcp.yaml
+  netinet/tcp.h
+  DEPENDS
+    .llvm_libc_common_h
+)
+
+add_header_macro(
+  netinet_udp
+  ../libc/include/netinet/udp.yaml
+  netinet/udp.h
+  DEPENDS
+    .llvm-libc-types.struct_udphdr
+    .llvm_libc_common_h
+)
+
+file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/arpa)
+
+add_header_macro(
+  arpa_inet
+  ../libc/include/arpa/inet.yaml
+  arpa/inet.h
+  DEPENDS
+    .inttypes
+    .llvm_libc_common_h
+    .llvm-libc-types.in_addr_t
+    .llvm-libc-types.in_port_t
+    .llvm-libc-types.socklen_t
+    .llvm-libc-types.struct_in_addr
+    .llvm-libc-macros.inet_address_macros
+    .netinet_in
 )
 
 add_header_macro(

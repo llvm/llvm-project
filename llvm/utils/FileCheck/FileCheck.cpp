@@ -856,7 +856,7 @@ static void DumpEllipsisOrElidedLines(raw_ostream &OS, std::string &ElidedLines,
   unsigned EllipsisLines = 3;
   if (EllipsisLines < StringRef(ElidedLines).count('\n')) {
     for (unsigned i = 0; i < EllipsisLines; ++i) {
-      WithColor(OS, raw_ostream::BLACK, /*Bold=*/true)
+      WithColor(OS, raw_ostream::BRIGHT_BLACK, /*Bold=*/true)
           << right_justify(".", LabelWidthGlobal);
       OS << '\n';
     }
@@ -980,7 +980,7 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
     }
 
     // Print right-aligned line number.
-    WithColor(*LineOS, raw_ostream::BLACK, /*Bold=*/true, /*BF=*/false,
+    WithColor(*LineOS, raw_ostream::BRIGHT_BLACK, /*Bold=*/true, /*BG=*/false,
               TheColorMode)
         << format_decimal(Line, LabelWidthGlobal) << ": ";
 
@@ -1003,8 +1003,16 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
       WithColor COS(*LineOS, raw_ostream::SAVEDCOLOR, /*Bold=*/false,
                     /*BG=*/false, TheColorMode);
       bool InMatch = false;
-      if (Req.Verbose)
-        COS.changeColor(raw_ostream::CYAN, true, true);
+      if (Req.Verbose) {
+        COS.changeColor(raw_ostream::CYAN, /*Bold=*/true, /*BG=*/true);
+      } else {
+        // Our goal is to use the output streams's default color so that input
+        // text is legibile in both light and dark themes.  SAVEDCOLOR above
+        // currently ignores the Bold=false there, so we override it with
+        // resetColor here, which ensures consistent colors with the resetColor
+        // below anyway.
+        COS.resetColor();
+      }
       for (unsigned Col = 1; InputFilePtr != InputFileEnd && !Newline; ++Col) {
         bool WasInMatch = InMatch;
         InMatch = false;
@@ -1014,6 +1022,8 @@ static void DumpAnnotatedInput(raw_ostream &OS, const FileCheckRequest &Req,
             break;
           }
         }
+        // If !Req.Verbose, FoundAndExpectedMatches is empty, so InMatch and
+        // WasInMatch remain false, so these color transitions never happen.
         if (!WasInMatch && InMatch)
           COS.resetColor();
         else if (WasInMatch && !InMatch)

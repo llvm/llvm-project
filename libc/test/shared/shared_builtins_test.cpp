@@ -15,15 +15,21 @@ TEST(LlvmLibcSharedBuiltinsTest, AllFloat) {
 }
 
 TEST(LlvmLibcSharedBuiltinsTest, AllDouble) {
-  // TODO: assertions for shared::*df3 builtins.
+  EXPECT_FP_EQ(3.0, LIBC_NAMESPACE::shared::adddf3(1.0, 2.0));
+  EXPECT_FP_EQ(2.0, LIBC_NAMESPACE::shared::subdf3(5.0, 3.0));
 }
 
 #ifdef LIBC_TYPES_HAS_FLOAT128
 
 TEST(LlvmLibcSharedBuiltinsTest, AllFloat128) {
-  namespace shared = LIBC_NAMESPACE::shared;
-
-  EXPECT_FP_EQ(float128(3.0), shared::addtf3(float128(1.0), float128(2.0)));
+  EXPECT_FP_EQ(float128(3.0),
+               LIBC_NAMESPACE::shared::addtf3(float128(1.0), float128(2.0)));
+  EXPECT_FP_EQ(float128(3.0),
+               LIBC_NAMESPACE::shared::divtf3(float128(6.0), float128(2.0)));
+  EXPECT_FP_EQ(float128(6.0),
+               LIBC_NAMESPACE::shared::multf3(float128(2.0), float128(3.0)));
+  EXPECT_FP_EQ(float128(2.0),
+               LIBC_NAMESPACE::shared::subtf3(float128(5.0), float128(3.0)));
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT128
