@@ -903,12 +903,11 @@ static bool tryToSinkOrHoistRecurrenceUsers(VPBasicBlock *HeaderVPBB,
 /// Returns true if \p PhiR's increment is used in an exit block.
 static bool isUsedInExitBlock(VPlan &Plan, VPPhi *PhiR) {
   for (auto *EB : Plan.getExitBlocks())
-    for (VPRecipeBase &R : EB->phis())
-      for (VPValue *Op : R.operands()) {
-        if (match(Op,
-                  m_ExtractLastLaneOfLastPart(m_Specific(PhiR->getOperand(1)))))
-          return true;
-      }
+    for (VPRecipeBase &R : EB->phis()) {
+      if (any_of(R.operands(), match_fn(m_ExtractLastLaneOfLastPart(
+                                   m_Specific(PhiR->getOperand(1))))))
+        return true;
+    }
   return false;
 }
 

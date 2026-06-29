@@ -877,9 +877,8 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
     }
 
     bool IsFOR = RecurrenceDescriptor::isFixedOrderRecurrence(Phi, TheLoop, DT);
-    if (IsFOR) {
+    if (IsFOR)
       FixedOrderRecurrences.insert(Phi);
-    }
 
     // As a last resort, coerce the PHI to a AddRec expression
     // and re-try classifying it a an induction PHI.
