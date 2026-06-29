@@ -1,4 +1,4 @@
-//===- BuiltinCAS.h ---------------------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,13 +12,12 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/CAS/BuiltinCASContext.h"
 #include "llvm/CAS/ObjectStore.h"
-#include <cstddef>
 
 namespace llvm::cas {
 class ActionCache;
 namespace ondisk {
 class UnifiedOnDiskCache;
-}
+} // namespace ondisk
 namespace builtin {
 
 /// Common base class for builtin CAS implementations using the same CASContext.
