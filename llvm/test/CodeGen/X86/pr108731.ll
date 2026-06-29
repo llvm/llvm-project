@@ -17,9 +17,9 @@ define i64 @test_i64(i64 %w, i64 %x, i64 %y, i64 %z) {
 ; BMI-LABEL: test_i64:
 ; BMI:       # %bb.0: # %Entry
 ; BMI-NEXT:    andq %rdx, %rsi
-; BMI-NEXT:    andnq %rdi, %rsi, %rax
-; BMI-NEXT:    andnq %rcx, %rdx, %rcx
-; BMI-NEXT:    andnq %rax, %rcx, %rax
+; BMI-NEXT:    andnq %rcx, %rdx, %rax
+; BMI-NEXT:    andnq %rdi, %rax, %rax
+; BMI-NEXT:    andnq %rax, %rsi, %rax
 ; BMI-NEXT:    retq
 Entry:
   %and1 = and i64 %y, %x
@@ -46,9 +46,9 @@ define i32 @test_i32(i32 %w, i32 %x, i32 %y, i32 %z) {
 ; BMI-LABEL: test_i32:
 ; BMI:       # %bb.0: # %Entry
 ; BMI-NEXT:    andl %edx, %esi
-; BMI-NEXT:    andnl %edi, %esi, %eax
-; BMI-NEXT:    andnl %ecx, %edx, %ecx
-; BMI-NEXT:    andnl %eax, %ecx, %eax
+; BMI-NEXT:    andnl %ecx, %edx, %eax
+; BMI-NEXT:    andnl %edi, %eax, %eax
+; BMI-NEXT:    andnl %eax, %esi, %eax
 ; BMI-NEXT:    retq
 Entry:
   %and1 = and i32 %y, %x
