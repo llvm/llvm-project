@@ -25,6 +25,7 @@
 #include "make_string.h"
 #include "min_allocator.h"
 #include "test_macros.h"
+#include "visitors.h"
 
 template <class Context, class To, class From>
 void test(From value) {
@@ -33,6 +34,9 @@ void test(From value) {
 
   LIBCPP_ASSERT(format_args.__size() == 1);
   assert(format_args.get(0));
+
+  // https://github.com/llvm/llvm-project/issues/139582
+  format_args.get(0).visit(limited_visitor<Context>{});
 
   auto result = format_args.get(0).visit([v = To(value)](auto a) -> To {
     if constexpr (std::is_same_v<To, decltype(a)>) {
@@ -57,6 +61,9 @@ void test_handle(T value) {
 
   LIBCPP_ASSERT(format_args.__size() == 1);
   assert(format_args.get(0));
+
+  // https://github.com/llvm/llvm-project/issues/139582
+  format_args.get(0).visit(limited_visitor<Context>{});
 
   format_args.get(0).visit([](auto a) {
     assert((std::is_same_v<decltype(a), typename std::basic_format_arg<Context>::handle>));
