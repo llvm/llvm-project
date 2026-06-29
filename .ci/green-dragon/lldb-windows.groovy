@@ -77,6 +77,8 @@ cmake -G Ninja ^
 
 if not exist ..\\llvm-build\\test mkdir ..\\llvm-build\\test
 
+ninja check-lldb -C ..\\llvm-build || exit /b 1
+
 cmake -B ..\\llvm-build\\ ^
     -DLLDB_TEST_USE_LLDB_SERVER=1 ^
     -DLLVM_LIT_ARGS="-v --time-tests --xunit-xml-output=C:\\workspace\\llvm-build\\test\\results-lldb-server.xml" || exit /b 1
