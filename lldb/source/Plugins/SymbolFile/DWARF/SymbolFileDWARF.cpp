@@ -926,8 +926,11 @@ Function *SymbolFileDWARF::ParseFunction(CompileUnit &comp_unit,
     for (const auto &range : *die_ranges) {
       if (range.valid() && range.LowPC < m_first_code_address)
         continue;
+      // Require the low PC to resolve to a section. This rejects addresses that
+      // don't correspond to any real code, such as the "(dead code)" tombstone
+      // a linker leaves on the DW_AT_low_pc of an eliminated function.
       if (Address base_addr(range.LowPC, module_sp->GetSectionList());
-          base_addr.IsValid() && FixupAddress(base_addr))
+          base_addr.IsSectionOffset() && FixupAddress(base_addr))
         ranges.emplace_back(std::move(base_addr), range.HighPC - range.LowPC);
     }
   } else {

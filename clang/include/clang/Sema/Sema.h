@@ -848,6 +848,7 @@ enum class CCEKind {
                            ///< message.
   StaticAssertMessageData, ///< Call to data() in a static assert
                            ///< message.
+  PackIndex ///< Index of a pack indexing expression or specifier.
 };
 
 /// Enums for the diagnostics of target, target_version and target_clones.

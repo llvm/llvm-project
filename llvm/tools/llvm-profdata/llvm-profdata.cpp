@@ -826,6 +826,7 @@ loadInput(const WeightedFile &Input, SymbolRemapper *Remapper,
       I.Name = (*Remapper)(I.Name);
     const StringRef FuncName = I.Name;
     bool Reported = false;
+
     WC->Writer.addRecord(std::move(I), Input.Weight, [&](Error E) {
       if (Reported) {
         consumeError(std::move(E));
@@ -2975,6 +2976,16 @@ static int showInstrProfile(ShowFormat SFormat, raw_fd_ostream &OS) {
           OS << (I == Start ? "" : ", ") << Func.Counts[I];
         }
         OS << "]\n";
+
+        // Show uniformity bits if present
+        if (!Func.UniformityBits.empty()) {
+          OS << "    Block uniformity: [";
+          for (size_t I = Start, E = Func.Counts.size(); I < E; ++I) {
+            bool IsUniform = Func.isBlockUniform(I);
+            OS << (I == Start ? "" : ", ") << (IsUniform ? "U" : "D");
+          }
+          OS << "]\n";
+        }
       }
 
       if (ShowIndirectCallTargets) {

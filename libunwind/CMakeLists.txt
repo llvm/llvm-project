@@ -137,6 +137,19 @@ set(LIBUNWIND_INSTALL_INCLUDE_DIR "${CMAKE_INSTALL_INCLUDEDIR}" CACHE STRING
 set(LIBUNWIND_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE STRING
     "Path where built libunwind runtime libraries should be installed.")
 
+# On platforms that don't support shared library targets
+# (e.g. CMAKE_SYSTEM_NAME of "Generic", used for GPU and other
+# baremetal targets), the shared library target is not built at
+# all. The global TARGET_SUPPORTS_SHARED_LIBS property is left
+# undefined on platforms that do support shared libraries, and only
+# set to FALSE on those that don't.  See
+# https://gitlab.kitware.com/cmake/cmake/-/issues/25759.
+get_property(LIBUNWIND_TARGET_SUPPORTS_SHARED_LIBS GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS)
+if(NOT DEFINED LIBUNWIND_TARGET_SUPPORTS_SHARED_LIBS OR LIBUNWIND_TARGET_SUPPORTS_SHARED_LIBS)
+  set(LIBUNWIND_SUPPORTS_SHARED_LIBRARY ON)
+else()
+  set(LIBUNWIND_SUPPORTS_SHARED_LIBRARY OFF)
+endif()
 set(LIBUNWIND_SHARED_OUTPUT_NAME "unwind" CACHE STRING "Output name for the shared libunwind runtime library.")
 set(LIBUNWIND_STATIC_OUTPUT_NAME "unwind" CACHE STRING "Output name for the static libunwind runtime library.")
 

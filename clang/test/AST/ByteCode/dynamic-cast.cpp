@@ -295,6 +295,20 @@ namespace UnrelatedAndRootPtr{
   static_assert(f());
 }
 
+namespace UnrelatedAndRootReference {
+  struct A {
+    virtual void foo();
+  };
+  struct B1 : A {};
+
+  struct B2 : A {};
+  struct C : B2 {};
+
+  constexpr C c;
+  static_assert(&dynamic_cast<B2 &>((B1 &)c), ""); // both-error {{not an integral constant expression}} \
+                                                   // both-note {{cast that performs the conversions of a reinterpret_cast is not allowed in a constant expression}}
+}
+
 namespace Invalid {
   struct S { virtual void s(); };
   struct A : S {};
@@ -309,4 +323,18 @@ namespace Invalid {
                  // both-note {{declared here}}
   static_assert(&dynamic_cast<S&>((X&)x), ""); // both-error {{not an integral constant expression}} \
                                                // both-note {{initializer of 'x' is not a constant expression}}
+}
+
+namespace UnrelatedInitializingPtr {
+  struct A {
+    virtual void foo();
+  };
+  struct B : A {};
+  struct C : A {};
+  struct D : B {};
+
+  constexpr D d;
+  constexpr A &a = (B &)d;
+  constexpr auto p = dynamic_cast<C &>(a); // both-error {{must be initialized by a constant expression}} \
+                                           // both-note {{reference dynamic_cast failed: dynamic type 'UnrelatedInitializingPtr::D' of operand does not have a base class of type 'C'}}
 }

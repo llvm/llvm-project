@@ -2058,10 +2058,10 @@ bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestTypePtr,
   // Our given pointer, limited by the base that's currently being initialized,
   // if any.
   PtrView LimitedPtr;
-  if (S.InitializingPtrs.empty()) {
+  if (S.InitializingPtrs.empty() ||
+      S.InitializingPtrs.back().block() != Ptr.block()) {
     LimitedPtr = Ptr.stripBaseCasts().view();
   } else {
-    // FIXME: Is this always the correct block?
     LimitedPtr = S.InitializingPtrs.back();
     assert(LimitedPtr.block() == Ptr.block());
   }
@@ -2139,14 +2139,15 @@ bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestTypePtr,
   std::optional<PtrView> Result;
   // First, check simple downcasts without ambiguities.
   for (PtrView Iter = Ptr.view();;) {
+    if (Iter.isRoot() || !Iter.isBaseClass())
+      break;
+
     if (typesMatch(TargetType, Iter.getType())) {
       Result = Iter;
       break;
     }
     // Moving DOWN the type hierarchy.
     Iter = Iter.getBase();
-    if (Iter.isRoot() || !Iter.isBaseClass())
-      break;
   }
 
   // Simply walking down the type hierarchy has produced a valid result, use

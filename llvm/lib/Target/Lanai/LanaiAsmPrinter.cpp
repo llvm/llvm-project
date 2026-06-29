@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "LanaiAsmPrinter.h"
 #include "LanaiAluCode.h"
 #include "LanaiCondCode.h"
 #include "LanaiMCInstLower.h"
@@ -18,9 +19,14 @@
 #include "MCTargetDesc/LanaiInstPrinter.h"
 #include "TargetInfo/LanaiTargetInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Mangler.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
@@ -246,4 +252,34 @@ INITIALIZE_PASS(LanaiAsmPrinter, "lanai-asm-printer", "Lanai Assembly Printer",
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeLanaiAsmPrinter() {
   RegisterAsmPrinter<LanaiAsmPrinter> X(getTheLanaiTarget());
+}
+
+PreservedAnalyses LanaiAsmPrinterBeginPass::run(Module &M,
+                                                ModuleAnalysisManager &MAM) {
+  LanaiAsmPrinter &AsmPrinter = static_cast<LanaiAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+LanaiAsmPrinterPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  LanaiAsmPrinter &AsmPrinter = static_cast<LanaiAsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
+  setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses LanaiAsmPrinterEndPass::run(Module &M,
+                                              ModuleAnalysisManager &MAM) {
+  LanaiAsmPrinter &AsmPrinter = static_cast<LanaiAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doFinalization(M);
+  return PreservedAnalyses::all();
 }
