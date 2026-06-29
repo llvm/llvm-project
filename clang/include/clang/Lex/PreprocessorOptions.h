@@ -157,11 +157,6 @@ public:
   /// clients don't use them.
   bool WriteCommentListToPCH = true;
 
-  /// Force the front end to retain all documentation comments in the AST, even
-  /// when no comment consuming diagnostic or language option is enabled. Tools
-  /// that query comments after parsing set this
-  bool RetainComments = false;
-
   /// When enabled, preprocessor is in a mode for parsing a single file only.
   ///
   /// Disables #includes of other files and if there are unresolved identifiers

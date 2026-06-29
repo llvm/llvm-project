@@ -2732,7 +2732,7 @@ bool Sema::shouldRetainCommentsFromLexer(SourceLocation Loc) const {
   if (LangOpts.CommentOpts.ParseAllComments)
     return true;
 
-  if (PP.getPreprocessorOpts().RetainComments)
+  if (LangOpts.CommentOpts.RetainComments)
     return true;
 
   // When building a PCH the comments are serialized into the AST file
@@ -2754,7 +2754,7 @@ bool Sema::shouldRetainCommentsFromLexer(SourceLocation Loc) const {
 }
 
 void Sema::ActOnComment(SourceRange Comment) {
-  if (!LangOpts.RetainCommentsFromSystemHeaders &&
+  if (!LangOpts.CommentOpts.RetainCommentsFromSystemHeaders &&
       SourceMgr.isInSystemHeader(Comment.getBegin()))
     return;
   if (!shouldRetainCommentsFromLexer(Comment.getBegin()))

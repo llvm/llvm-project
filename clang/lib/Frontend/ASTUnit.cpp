@@ -1535,7 +1535,7 @@ ASTUnit *ASTUnit::LoadFromCompilerInvocationAction(
   CI->getPreprocessorOpts().RetainRemappedFileBuffers = true;
   // libclang and other ASTUnit clients query documentation comments after
   // parsing, so keep them in the AST.
-  CI->getPreprocessorOpts().RetainComments = true;
+  CI->getLangOpts().CommentOpts.RetainComments = true;
   CI->getFrontendOpts().DisableFree = false;
   ProcessWarningOptions(AST->getDiagnostics(), CI->getDiagnosticOpts(),
                         AST->getFileManager().getVirtualFileSystem());
@@ -1646,7 +1646,7 @@ bool ASTUnit::LoadFromCompilerInvocation(
   Invocation->getPreprocessorOpts().RetainRemappedFileBuffers = true;
   // libclang and other ASTUnit clients query documentation comments after
   // parsing, so keep them in the AST.
-  Invocation->getPreprocessorOpts().RetainComments = true;
+  Invocation->getLangOpts().CommentOpts.RetainComments = true;
   Invocation->getFrontendOpts().DisableFree = false;
   getDiagnostics().Reset();
   ProcessWarningOptions(getDiagnostics(), Invocation->getDiagnosticOpts(),
