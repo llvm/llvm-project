@@ -33,7 +33,8 @@ public:
   using LabelTy = uint32_t;
   using AddrTy = uintptr_t;
   using Local = Scope::Local;
-  using PtrCallback = llvm::function_ref<bool(const Pointer &)>;
+  using PtrCallback =
+      llvm::function_ref<bool(InterpState &S, CodePtr OpPC, const Pointer &)>;
 
   EvaluationResult interpretExpr(const Expr *E,
                                  bool ConvertResultToRValue = false,
