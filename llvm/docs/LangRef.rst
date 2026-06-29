@@ -1357,7 +1357,11 @@ Currently, only the following parameter attributes are defined:
     ``byval`` parameters). This is not a valid attribute for return
     values.
 
-    The byval type argument indicates the in-memory value type.
+    The byval type argument is only used for its allocation size and alignment
+    (if there is no explicit align attribute). That is, the hidden copy is
+    interpreted as a call to memcpy with the allocation size of the specified type,
+    instead of loading from the pointee and storing back into the copy in the type.
+    In particular, the padding between field types of a struct type is still copied.
 
     The byval attribute also supports specifying an alignment with the
     ``align`` attribute. It indicates the alignment of the stack slot to

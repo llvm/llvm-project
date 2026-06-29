@@ -156,7 +156,7 @@ private:
     AL->print(*OS);
   }
 
-  void Write(Printable P) { *OS << P << '\n'; }
+  void Write(Printable P) { *OS << P; }
 
   template <typename T> void Write(ArrayRef<T> Vs) {
     for (const T &V : Vs)
