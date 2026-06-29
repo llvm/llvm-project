@@ -25,7 +25,7 @@ static void writeOffset(raw_ostream &OS, uint64_t Value,
     support::endian::write(OS, Value, llvm::endianness::little);
   else
     support::endian::write(OS, static_cast<uint32_t>(Value),
-                         llvm::endianness::little);
+                           llvm::endianness::little);
 }
 
 DWARF5AcceleratorTable::DWARF5AcceleratorTable(
@@ -115,7 +115,8 @@ void DWARF5AcceleratorTable::setCurrentUnit(DWARFUnit &Unit,
   CurrentUnit = nullptr;
   CurrentUnitOffset = UnitStartOffset;
   // .debug_names is emitted as a single contribution, so mixed DWARF32/DWARF64
-  // inputs need one common section offset size. Use DWARF64 if any unit is DWARF64.
+  // inputs need one common section offset size. Use DWARF64 if any unit is
+  // DWARF64.
   if (Unit.getFormParams().Format == dwarf::DwarfFormat::DWARF64)
     Format = dwarf::DwarfFormat::DWARF64;
   std::optional<uint64_t> DWOID = Unit.getDWOId();
@@ -784,7 +785,7 @@ static constexpr uint32_t getDebugNamesHeaderSize() {
 
 void DWARF5AcceleratorTable::emitHeader() const {
   constexpr uint32_t HeaderSize = getDebugNamesHeaderSize();
-  // .debug_names Header 
+  // .debug_names Header
   // Length (DWARF64 needs escaped marker)
   if (Format == dwarf::DwarfFormat::DWARF64)
     support::endian::write(*FullTableStream, dwarf::DW_LENGTH_DWARF64,
