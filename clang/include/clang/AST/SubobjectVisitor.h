@@ -42,6 +42,22 @@ public:
     assert(!QT->isDependentType());
     QT = QT.getDesugaredType(Ctx);
 
+    // FunctionType, FunctionProtoType, and FunctionNoProtoType are never
+    // the type of a subobject.
+
+    // ObjCObjectType and ObjCInterfaceType are never the type of a
+    // subobject due to the Objective-C object allocation model.
+
+    // PointerType, BlockPointerType, ReferenceType, LValueReferenceType,
+    // RValueReferenceType, MemberPointerType, and ObjCObjectPointerType
+    // may all be the type of a subobject, but they do not contain other
+    // subobjects; the pointee type should not be visited.
+
+    // ComplexType, VectorType, ExtVectorType, MatrixType, PipeType,
+    // EnumType, and OverflowBehaviorType all have an element or
+    // underlying type that could be visited. However, in each of these
+    // cases, the lower type is constrained to a fundamental type and
+    // therefore doesn't contain any fields or base classes.
     if (auto *ResAtomicType = QT->getAs<AtomicType>()) {
       getDerived().visit(ResAtomicType->getValueType());
       return;
