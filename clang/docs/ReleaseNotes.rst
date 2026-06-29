@@ -821,6 +821,10 @@ Bug Fixes to C++ Support
 - Fixed a crash when parsing invalid friend declaration with storage-class specifier. (#GH186569)
 - Fixed a missing vtable for ``dynamic_cast<FinalClass *>(this)`` in a function template. (#GH198511)
 - Fixed an assertion failure during init-list checking of an array whose element type is an incomplete class. (#GH140685)
+- Fixed a crash when a dependent qualified type whose nested-name-specifier contains an
+  intermediate dependent member (e.g. ``A<T>::B::C``) was written without the ``typename``
+  keyword. The intermediate member was speculatively resolved against the template pattern and
+  the resulting type spuriously stayed dependent after instantiation. (#GH174301)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
