@@ -6318,17 +6318,19 @@ SDValue DAGCombiner::visitIMINMAX(SDNode *N) {
   // type (isOperationExpand), the type is legal (not needing splitting), and
   // the operand is not a min/max chain (preserving saturation patterns such as
   // RISCV-P sati which combine smin+smax into a single instruction).
+  APInt C;
   if (TLI.isTypeLegal(VT) &&
-      !TLI.shouldAvoidTransformToShift(VT, VT.getScalarSizeInBits() - 1)) {
+      !TLI.shouldAvoidTransformToShift(VT, VT.getScalarSizeInBits() - 1) &&
+      sd_match(N1, m_ConstInt(C))) {
     if (Opcode == ISD::SMAX && TLI.isOperationExpand(ISD::SMAX, VT) &&
-        N0.getOpcode() != ISD::SMIN && sd_match(N1, m_AllOnes())) {
+        N0.getOpcode() != ISD::SMIN && C.isAllOnes()) {
       SDValue ShiftAmt =
           DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, DL);
       SDValue Shift = DAG.getNode(ISD::SRA, DL, VT, N0, ShiftAmt);
       return DAG.getNode(ISD::OR, DL, VT, N0, Shift);
     }
     if (Opcode == ISD::SMIN && TLI.isOperationExpand(ISD::SMIN, VT) &&
-        N0.getOpcode() != ISD::SMAX && sd_match(N1, m_Zero())) {
+        N0.getOpcode() != ISD::SMAX && C.isZero()) {
       SDValue ShiftAmt =
           DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, DL);
       SDValue Shift = DAG.getNode(ISD::SRA, DL, VT, N0, ShiftAmt);
