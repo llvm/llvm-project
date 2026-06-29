@@ -796,6 +796,13 @@ def warn_const_attr_with_pure_attr : Warning<
 def warn_pure_function_returns_void : Warning<
   "'%select{pure|const}0' attribute on function returning 'void'; attribute ignored">,
   InGroup<IgnoredAttributes>;
+def warn_const_pure_noreturn_call : Warning<
+  "calling a 'noreturn' function from a function with the "
+  "'%select{pure|const}0' attribute is undefined behavior">,
+  InGroup<DiagGroup<"noreturn-const-pure">>;
+def note_const_pure_noreturn_call : Note<
+  "function declared '%select{pure|const}0' here">;
+
 
 def warn_suggest_noreturn_function : Warning<
   "%select{function|method}0 %1 could be declared with attribute 'noreturn'">,
@@ -11083,6 +11090,18 @@ def warn_lifetime_safety_cross_tu_param_suggestion
     : Warning<"parameter in cross-TU function should be marked "
               "[[clang::lifetimebound]]">,
       InGroup<LifetimeSafetyCrossTUSuggestions>,
+      DefaultIgnore;
+
+def warn_lifetime_safety_intra_tu_ctor_param_suggestion
+    : Warning<"parameter in intra-TU constructor should be marked "
+              "[[clang::lifetimebound]]">,
+      InGroup<LifetimeSafetyIntraTUConstructorSuggestions>,
+      DefaultIgnore;
+
+def warn_lifetime_safety_cross_tu_ctor_param_suggestion
+    : Warning<"parameter in cross-TU constructor should be marked "
+              "[[clang::lifetimebound]]">,
+      InGroup<LifetimeSafetyCrossTUConstructorSuggestions>,
       DefaultIgnore;
 
 def warn_lifetime_safety_intra_tu_this_suggestion
