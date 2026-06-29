@@ -1706,6 +1706,217 @@ constexpr CFGUninitProfileEntry CFGUninitProfiles[] = {
      /*ExemptStdByte=*/true},
 };
 
+// If E names a non-static data member of the current object (an implicit or
+// explicit `this->m`), return that field; otherwise null. Access through any
+// other object (e.g. `other.m`) is not the current object's member.
+static const FieldDecl *getCurrentObjectMember(const Expr *E) {
+  const auto *ME = dyn_cast<MemberExpr>(E->IgnoreParenImpCasts());
+  if (!ME || !isa<CXXThisExpr>(ME->getBase()->IgnoreParenImpCasts()))
+    return nullptr;
+  return dyn_cast<FieldDecl>(ME->getMemberDecl());
+}
+
+// std::init constructor-body check (paper §7.1 "initialized ... before use").
+//
+// A [[uninit]] scalar data member is deliberately *not* required to be
+// initialized by the constructor (paper §5.1 excepts members with an
+// uninitialized indicator; §5.3 leaves them for users). What is required is
+// that such a member is not *read* before it is given a value (§4.5: reading an
+// uninitialized object, except std::byte, is erroneous). This is the member
+// analog of the R1 rule for [[uninit]] locals.
+//
+// A forward definite-assignment dataflow over the constructor body: a scalar
+// member is "assigned" by a plain `m = e` (for a built-in type a write is its
+// initialization, §4.5) and a member is definitely assigned at a point only if
+// assigned on every path reaching it (§1.3: all branches are considered
+// executed). A value read of a member that is not definitely assigned there is
+// the violation. There is no constructor-exit requirement: a member that is
+// simply never read is left as-is, exactly as the structural ctor_uninit_member
+// check (R5) excuses a marked member.
+static void checkInitProfileCtorBody(Sema &S, const CXXConstructorDecl *Ctor,
+                                     AnalysisDeclContext &AC) {
+  CFG *cfg = AC.getCFG();
+  if (!cfg)
+    return;
+
+  // Target members: [[uninit]] built-in scalar (arithmetic or enum) members
+  // whose assignment counts as initialization (§4.5). std::byte is exempt
+  // (§4.5), matching R1/R2. Class-type and array members (which would need
+  // construct_at flow modeling) and pointers (banned with [[uninit]] by R8) are
+  // out of scope here.
+  SmallVector<const FieldDecl *, 4> Members;
+  llvm::DenseMap<const FieldDecl *, unsigned> Index;
+  for (const FieldDecl *F : Ctor->getParent()->fields()) {
+    if (!F->hasAttr<UninitAttr>() || !F->getDeclName() ||
+        F->hasInClassInitializer())
+      continue;
+    QualType T = F->getType();
+    if (!T->isIntegralOrEnumerationType() && !T->isFloatingType())
+      continue;
+    if (S.Context.getBaseElementType(T)->isStdByteType())
+      continue;
+    Index[F] = Members.size();
+    Members.push_back(F);
+  }
+  if (Members.empty())
+    return;
+  const unsigned N = Members.size();
+
+  // Statements lexically in the constructor body. Member-initializer-list
+  // expressions are excluded so the check concerns body reads only; a member
+  // initialized in the written init list instead seeds the entry state below.
+  llvm::SmallPtrSet<const Stmt *, 32> BodyStmts;
+  if (const Stmt *Body = Ctor->getBody()) {
+    SmallVector<const Stmt *, 32> Stack(1, Body);
+    while (!Stack.empty()) {
+      const Stmt *Cur = Stack.pop_back_val();
+      if (!Cur || !BodyStmts.insert(Cur).second)
+        continue;
+      for (const Stmt *Child : Cur->children())
+        Stack.push_back(Child);
+    }
+  }
+
+  // A member given a value by the written member-initializer list is assigned
+  // at body entry, so a later body read is fine and no "marker + list-init"
+  // contradiction is introduced (that is not specified by the paper).
+  llvm::BitVector Seed(N, false);
+  for (const CXXCtorInitializer *Init : Ctor->inits()) {
+    if (!Init->isWritten() || !Init->isAnyMemberInitializer())
+      continue;
+    if (const FieldDecl *F = Init->getAnyMember()) {
+      auto It = Index.find(F);
+      if (It != Index.end())
+        Seed.set(It->second);
+    }
+  }
+
+  // Per-block ordered events recovered from the linearized CFG: a member load
+  // (an lvalue-to-rvalue conversion of `this->m`) is a Read; `m = e` is a Write
+  // that marks m assigned after the RHS is evaluated; a compound assignment
+  // `m op= e` both reads and then writes m.
+  enum EventKind { Read, Write, ReadWrite };
+  struct Event {
+    EventKind Kind;
+    unsigned Idx;
+    const Expr *E;
+  };
+  const unsigned NumBlocks = cfg->getNumBlockIDs();
+  std::vector<SmallVector<Event, 4>> Events(NumBlocks);
+  std::vector<llvm::BitVector> Gen(NumBlocks, llvm::BitVector(N, false));
+  for (const CFGBlock *B : *cfg) {
+    auto &BlockEvents = Events[B->getBlockID()];
+    for (const CFGElement &Elem : *B) {
+      auto OptStmt = Elem.getAs<CFGStmt>();
+      if (!OptStmt)
+        continue;
+      const Stmt *St = OptStmt->getStmt();
+      if (!BodyStmts.count(St))
+        continue;
+      if (const auto *ICE = dyn_cast<ImplicitCastExpr>(St)) {
+        if (ICE->getCastKind() != CK_LValueToRValue)
+          continue;
+        const FieldDecl *F = getCurrentObjectMember(ICE->getSubExpr());
+        if (!F)
+          continue;
+        auto It = Index.find(F);
+        if (It != Index.end())
+          BlockEvents.push_back({Read, It->second, ICE});
+      } else if (const auto *BO = dyn_cast<BinaryOperator>(St)) {
+        if (!BO->isAssignmentOp())
+          continue;
+        const FieldDecl *F = getCurrentObjectMember(BO->getLHS());
+        if (!F)
+          continue;
+        auto It = Index.find(F);
+        if (It == Index.end())
+          continue;
+        BlockEvents.push_back(
+            {BO->isCompoundAssignmentOp() ? ReadWrite : Write, It->second, BO});
+        Gen[B->getBlockID()].set(It->second);
+      }
+    }
+  }
+
+  // Forward "definitely assigned" dataflow: entry state is the seed; a block's
+  // entry is the intersection over its predecessors' exits (a member is
+  // definitely assigned only if assigned on every incoming path); a block's
+  // exit adds the members it assigns. Unprocessed (unreachable) predecessors
+  // keep the all-assigned top, so unreachable code is never flagged.
+  std::vector<llvm::BitVector> EntryState(NumBlocks, llvm::BitVector(N, true));
+  std::vector<llvm::BitVector> ExitState(NumBlocks, llvm::BitVector(N, true));
+  const CFGBlock &CFGEntry = cfg->getEntry();
+  ForwardDataflowWorklist Worklist(*cfg, AC);
+  Worklist.enqueueBlock(&CFGEntry);
+  while (const CFGBlock *B = Worklist.dequeue()) {
+    llvm::BitVector In(N, true);
+    if (B == &CFGEntry) {
+      In = Seed;
+    } else {
+      bool First = true;
+      for (const CFGBlock *Pred : B->preds()) {
+        if (!Pred)
+          continue;
+        if (First) {
+          In = ExitState[Pred->getBlockID()];
+          First = false;
+        } else {
+          In &= ExitState[Pred->getBlockID()];
+        }
+      }
+    }
+    EntryState[B->getBlockID()] = In;
+    In |= Gen[B->getBlockID()];
+    if (In != ExitState[B->getBlockID()]) {
+      ExitState[B->getBlockID()] = In;
+      Worklist.enqueueSuccessors(B);
+    }
+  }
+
+  // Replay each block from its fixpoint entry state and collect reads of a
+  // member that is not yet definitely assigned at that point.
+  std::vector<SmallVector<const Expr *, 2>> Offending(N);
+  for (const CFGBlock *B : *cfg) {
+    llvm::BitVector Assigned = EntryState[B->getBlockID()];
+    for (const Event &Ev : Events[B->getBlockID()]) {
+      switch (Ev.Kind) {
+      case Read:
+        if (!Assigned.test(Ev.Idx))
+          Offending[Ev.Idx].push_back(Ev.E);
+        break;
+      case Write:
+        Assigned.set(Ev.Idx);
+        break;
+      case ReadWrite:
+        if (!Assigned.test(Ev.Idx))
+          Offending[Ev.Idx].push_back(Ev.E);
+        Assigned.set(Ev.Idx);
+        break;
+      }
+    }
+  }
+
+  // Report at the first offending read (in source order) that is not
+  // suppressed, once per member, mirroring the local-variable reporter.
+  for (unsigned I = 0; I != N; ++I) {
+    if (Offending[I].empty())
+      continue;
+    llvm::sort(Offending[I], [&](const Expr *A, const Expr *Bx) {
+      return S.SourceMgr.isBeforeInTranslationUnit(A->getBeginLoc(),
+                                                   Bx->getBeginLoc());
+    });
+    for (const Expr *R : Offending[I]) {
+      if (!S.shouldEmitProfileViolation("std::init", "uninit_read", R, AC))
+        continue;
+      S.Diag(R->getBeginLoc(), diag::err_init_member_read_before_init)
+          << "std::init" << Members[I]->getDeclName();
+      S.Diag(Members[I]->getLocation(), diag::note_init_uninit_member_here)
+          << Members[I]->getDeclName();
+      break;
+    }
+  }
+}
+
 class UninitValsDiagReporter : public UninitVariablesHandler {
   Sema &S;
   AnalysisDeclContext &AC;
@@ -2905,6 +3116,11 @@ static void runUninitProfileAnalysisAfterError(Sema &S, const Decl *D) {
     UninitVariablesAnalysisStats stats = {};
     runUninitializedVariablesAnalysis(*cast<DeclContext>(D), *cfg, AC, reporter,
                                       stats);
+    // Keep the constructor-body read-before-init check alive after a TU error,
+    // for parity with the normal path.
+    if (S.isProfileEnforced("std::init"))
+      if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(D))
+        checkInitProfileCtorBody(S, Ctor, AC);
   }
 }
 
@@ -3427,6 +3643,12 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
       }
     }
   }
+
+  // std::init: diagnose a read of a [[uninit]] scalar member before it is
+  // assigned in the constructor body, reusing the CFG built above.
+  if (S.isProfileEnforced("std::init"))
+    if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(D))
+      checkInitProfileCtorBody(S, Ctor, AC);
 
   // TODO: Enable lifetime safety analysis for other languages once it is
   // stable.

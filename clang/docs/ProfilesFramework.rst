@@ -630,12 +630,18 @@ The ``std::init`` Profile (initial slice)
 
 A slice of the proposed initialization profile.  It does not yet implement
 classes that expose uninitialized memory to users (paper §6.2) or random-access
-initialization of uninitialized arrays (paper §6.4); and the constructor-body
-flow check that would let a ``[[uninit]]`` member be initialized by
-assignment in the body (the dynamic half of paper §6.1) is deferred to a future
-CFG-based pass.  Until it lands, a ``[[uninit]]`` data member is trusted,
-and writes *through* a ``[[ref_to_uninit]]`` pointer/reference are not yet
-verified (the paper relegates them to ``construct_at`` or suppression).
+initialization of uninitialized arrays (paper §6.4).  A read of a scalar
+``[[uninit]]`` data member before it is assigned in a constructor body *is*
+diagnosed by R1 via a CFG-based definite-assignment pass over the body (paper
+§7.1 "initialized ... before use").  Class-type and array members (which need
+``construct_at`` flow modeling), ``construct_at``/``destroy_at`` flow, and
+double-initialization / double-destruction detection remain deferred.  The
+constructor is *not* required to initialize a ``[[uninit]]`` member (paper §5.1
+excepts members with an uninitialized indicator, and §5.3 leaves such a member
+for the user): the obligation is keyed on a read before assignment, not on the
+constructor's end.  Writes *through* a ``[[ref_to_uninit]]`` pointer/reference
+are not yet verified (the paper relegates them to ``construct_at`` or
+suppression).
 
 Dynamically-created objects are covered when bound: a ``new`` expression that
 default-initializes its allocated object and leaves a scalar subobject
@@ -720,6 +726,40 @@ and surface the ``std::init`` diagnostic.
 A read of an uninitialized ``std::byte`` is not diagnosed (paper §4 exempts
 ``std::byte``).  The exemption is per-entry via ``CFGUninitProfileEntry`` so it
 applies to ``std::init`` but not the generic ``test::uninit_read`` profile.
+
+The same ``std::init`` guarantee also covers a ``[[uninit]]`` scalar *data
+member* read before it is assigned in a constructor body.
+``checkInitProfileCtorBody`` in ``clang/lib/Sema/AnalysisBasedWarnings.cpp``
+runs a forward definite-assignment dataflow over the constructor-body CFG: a
+member is assigned by a plain ``m = e`` (for a built-in type a write is its
+initialization, paper §4.5) and is *definitely assigned* at a point only if
+assigned on every path reaching it (the meet is intersection, paper §1.3
+"consider all branches ... executed").  A value read (an lvalue-to-rvalue load,
+including the RHS of an assignment or a compound assignment) of a member that is
+not yet definitely assigned is reported via ``err_init_member_read_before_init``
+at the first such read, with a ``note_init_uninit_member_here`` note.  Details:
+
+- It runs from ``IssueWarnings`` for an enforced ``std::init`` constructor,
+  reusing the CFG built for the uninitialized-variables analysis, and also from
+  the post-error path (``runUninitProfileAnalysisAfterError``) so an earlier TU
+  error does not silently disable it.
+- It reuses the ``uninit_read`` rule name (it enforces the same "no read of an
+  uninitialized object" guarantee), so
+  ``[[profiles::suppress(std::init, rule: "uninit_read")]]`` -- checked at the
+  read site via the ``Stmt``/``AnalysisDeclContext`` suppression overload --
+  covers it, and the ``std::byte`` exemption applies.
+- Target members are ``[[uninit]]`` built-in scalar (arithmetic or enum)
+  members; a member given a value by the *written* member-initializer list is
+  assigned at body entry (no false positive and no spurious "marker + list-init"
+  contradiction).
+- There is **no** constructor-exit requirement: a ``[[uninit]]`` member that is
+  simply never read is left as-is (paper §5.1/§5.3), exactly as R5 structurally
+  excuses a marked member -- the two checks are complementary.
+- Out of scope here (deferred, conservative omissions, not extensions):
+  class-type and array members, ``construct_at`` flow, and double-init/destroy
+  detection.  Taking the address of a member or binding a reference to it is R7
+  (``ref_to_uninit``) territory and is treated as neither a read nor an
+  initialization by this pass.
 
 R2. ``uninit_decl`` -- pattern 1
 .................................

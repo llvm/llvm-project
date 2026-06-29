@@ -14145,6 +14145,8 @@ def err_profile_ctor_final_test : ProfileRuleError<
   "profile '%0'">;
 def err_init_uninit_read : ProfileRuleError<
   "variable %1 is read before initialization under profile '%0'">;
+def err_init_member_read_before_init : ProfileRuleError<
+  "member %1 is read before initialization under profile '%0'">;
 def err_init_uninit_decl : ProfileRuleError<
   "variable %1 must be initialized or marked '[[uninit]]' under "
   "profile '%0'">;
