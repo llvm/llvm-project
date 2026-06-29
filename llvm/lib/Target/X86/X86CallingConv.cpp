@@ -87,6 +87,17 @@ static ArrayRef<MCPhysReg> CC_X86_64_VectorCallGetGPRs() {
   return RegListGPR;
 }
 
+/// Return true if \p VT is a vectorcall vector type.
+///
+/// Per the vectorcall spec, vector types are float, double, or SIMD types such
+/// as __m128/__m256. x86_fp80 is an x87 type and must use the non-vector rules
+/// (see CC_X86_Win64_C). Argument handling matches RetCC_X86_*_VectorCall in
+/// X86CallingConv.td, which also passes f128 in XMM registers.
+static bool CC_X86_IsVectorCallVectorType(MVT VT) {
+  return VT == MVT::f32 || VT == MVT::f64 || VT == MVT::f128 ||
+         (VT.isVector() && VT.getSizeInBits() >= 128);
+}
+
 static bool CC_X86_VectorCallAssignRegister(unsigned &ValNo, MVT &ValVT,
                                             MVT &LocVT,
                                             CCValAssign::LocInfo &LocInfo,
@@ -139,8 +150,7 @@ static bool CC_X86_64_VectorCall(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   // Process only vector types as defined by vectorcall spec:
   // "A vector type is either a floating-point type, for example,
   //  a float or double, or an SIMD vector type, for example, __m128 or __m256".
-  if (!(ValVT.isFloatingPoint() ||
-        (ValVT.isVector() && ValVT.getSizeInBits() >= 128))) {
+  if (!CC_X86_IsVectorCallVectorType(ValVT)) {
     // If R9 was already assigned it means that we are after the fourth element
     // and because this is not an HVA / Vector type, we need to allocate
     // shadow XMM register.
@@ -199,10 +209,8 @@ static bool CC_X86_32_VectorCall(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   // Process only vector types as defined by vectorcall spec:
   // "A vector type is either a floating point type, for example,
   //  a float or double, or an SIMD vector type, for example, __m128 or __m256".
-  if (!(ValVT.isFloatingPoint() ||
-        (ValVT.isVector() && ValVT.getSizeInBits() >= 128))) {
+  if (!CC_X86_IsVectorCallVectorType(ValVT))
     return false;
-  }
 
   if (ArgFlags.isHva())
     return true; // If this is an HVA - Stop the search.
@@ -216,7 +224,7 @@ static bool CC_X86_32_VectorCall(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
   // In case we did not find an available XMM register for a vector -
   // pass it indirectly.
   // It is similar to CCPassIndirect, with the addition of inreg.
-  if (!ValVT.isFloatingPoint()) {
+  if (ValVT.isVector()) {
     LocVT = MVT::i32;
     LocInfo = CCValAssign::Indirect;
     ArgFlags.setInReg();
