@@ -14,6 +14,7 @@
 #include "clang/Lex/LiteralSupport.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/OpenMPKinds.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/LexDiagnostic.h"
@@ -1019,7 +1020,9 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
       // ToDo: more precise check for CUDA.
       // TODO: AMDGPU might also support it in the future.
       if ((Target.hasFloat16Type() || LangOpts.CUDA ||
-           (LangOpts.OpenMPIsTargetDevice && Target.getTriple().isNVPTX())) &&
+           isOpenMPAccelerator(Target.getTriple(),
+                               LangOpts.OpenMPIsTargetDevice, /*NVPTX=*/true,
+                               /*AMDGPU=*/false, /*SPIRV=*/false)) &&
           s + 2 < ThisTokEnd && s[1] == '1' && s[2] == '6') {
         s += 2; // success, eat up 2 characters.
         isFloat16 = true;
