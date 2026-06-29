@@ -5093,9 +5093,36 @@ Register SITargetLowering::getRegisterByName(const char *RegName, LLT VT,
 MachineBasicBlock *
 SITargetLowering::splitKillBlock(MachineInstr &MI,
                                  MachineBasicBlock *BB) const {
-  MachineBasicBlock *SplitBB = BB->splitAt(MI, /*UpdateLiveIns=*/true);
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
+  const SIRegisterInfo *TRI = getSubtarget()->getRegisterInfo();
+
+  // Default split point is the KILL instruction itself
+  MachineInstr *SplitIt = &MI;
+
+  // Scan backwards from MI to see if SCC is defined before the KILL.
+  for (auto It = MachineBasicBlock::reverse_iterator(MI.getIterator()),
+            E = BB->rend();
+       It != E; ++It) {
+    if (It->isDebugInstr())
+      continue;
+
+    // If the SCC def is found, update SplitIT with It and break.
+    if (It->definesRegister(AMDGPU::SCC, TRI)) {
+      SplitIt = &*It;
+      break;
+    }
+
+    // since scc is calleer-saved, the scan aborts.
+    if (It->isCall())
+      break;
+  }
+
+  MachineInstr *SplitPoint =
+      SplitIt != &BB->front() ? SplitIt->getPrevNode() : &MI;
+  MachineBasicBlock *SplitBB = BB->splitAt(*SplitPoint, /*UpdateLiveIns=*/true);
+
   MI.setDesc(TII->getKillTerminatorFromPseudo(MI.getOpcode()));
+
   return SplitBB;
 }
 

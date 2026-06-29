@@ -15,7 +15,7 @@ body: |
   ; CHECK-LABEL: name: lower-wwm-copies
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $vgpr0, $scc
+  ; CHECK-NEXT:   liveins: $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $sgpr0 = IMPLICIT_DEF
   ; CHECK-NEXT:   S_CMP_EQ_U32 $sgpr0, 0, implicit-def $scc
@@ -32,7 +32,7 @@ body: |
   ; CHECK-NEXT:   $vgpr2 = COPY $vgpr1
   ; CHECK-NEXT:   $exec = S_MOV_B64 killed $sgpr2_sgpr3
   bb.0:
-    liveins: $vgpr0, $scc
+    liveins: $vgpr0
     $sgpr0 = IMPLICIT_DEF
     S_CMP_EQ_U32 $sgpr0, 0, implicit-def $scc
     $vgpr1 = WWM_COPY $vgpr0
