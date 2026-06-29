@@ -54,10 +54,6 @@ STATISTIC(RISCVNumInstrsCompressed,
 static cl::opt<bool> AddBuildAttributes("riscv-add-build-attributes",
                                         cl::init(false));
 
-namespace llvm {
-extern const SubtargetFeatureKV RISCVFeatureKV[RISCV::NumSubtargetFeatures];
-} // namespace llvm
-
 namespace {
 struct RISCVOperand;
 
@@ -333,8 +329,7 @@ public:
 
     // Use computeTargetABI to check if ABIName is valid. If invalid, output
     // error message.
-    RISCVABI::computeTargetABI(STI.getTargetTriple(), STI.getFeatureBits(),
-                               ABIName);
+    RISCVABI::computeTargetABI(STI, ABIName);
 
     const MCObjectFileInfo *MOFI = Parser.getContext().getObjectFileInfo();
     ParserOptions.IsPicEnabled = MOFI->isPositionIndependent();
@@ -2083,18 +2078,19 @@ ParseStatus RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
 
       // Accept a named Sys Reg if the required features are present.
       const auto &FeatureBits = getSTI().getFeatureBits();
+      const auto &AllFeatures = getSTI().getAllProcessorFeatures();
       if (!SysReg->haveRequiredFeatures(FeatureBits)) {
         const auto *Feature =
-            llvm::find_if(RISCVFeatureKV, [&](const auto &Feature) {
+            llvm::find_if(AllFeatures, [&](const auto &Feature) {
               return SysReg->FeaturesRequired[Feature.Value];
             });
         auto ErrorMsg = std::string("system register '") + SysReg->Name + "' ";
         if (SysReg->IsRV32Only && FeatureBits[RISCV::Feature64Bit]) {
           ErrorMsg += "is RV32 only";
-          if (Feature != std::end(RISCVFeatureKV))
+          if (Feature != std::end(AllFeatures))
             ErrorMsg += " and ";
         }
-        if (Feature != std::end(RISCVFeatureKV)) {
+        if (Feature != std::end(AllFeatures)) {
           ErrorMsg +=
               "requires '" + std::string(Feature->key()) + "' to be enabled";
         }
@@ -3131,7 +3127,8 @@ ParseStatus RISCVAsmParser::parseDirective(AsmToken DirectiveID) {
 
 bool RISCVAsmParser::resetToArch(StringRef Arch, SMLoc Loc, std::string &Result,
                                  bool FromOptionDirective) {
-  for (auto &Feature : RISCVFeatureKV)
+  const auto &AllFeatures = getSTI().getAllProcessorFeatures();
+  for (auto &Feature : AllFeatures)
     if (llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.key()))
       clearFeatureBits(Feature.Value, Feature.key());
 
@@ -3150,7 +3147,7 @@ bool RISCVAsmParser::resetToArch(StringRef Arch, SMLoc Loc, std::string &Result,
   }
   auto &ISAInfo = *ParseResult;
 
-  for (auto &Feature : RISCVFeatureKV)
+  for (auto &Feature : AllFeatures)
     if (ISAInfo->hasExtension(Feature.key()))
       setFeatureBits(Feature.Value, Feature.key());
 
@@ -3246,8 +3243,9 @@ bool RISCVAsmParser::parseDirectiveOption() {
       if (!enableExperimentalExtension() &&
           StringRef(Feature).starts_with("experimental-"))
         return Error(Loc, "unexpected experimental extensions");
-      auto Ext = llvm::lower_bound(RISCVFeatureKV, Feature);
-      if (Ext == std::end(RISCVFeatureKV) || StringRef(Ext->key()) != Feature)
+      const auto &AllFeatures = getSTI().getAllProcessorFeatures();
+      auto Ext = llvm::lower_bound(AllFeatures, Feature);
+      if (Ext == std::end(AllFeatures) || StringRef(Ext->key()) != Feature)
         return Error(Loc, "unknown extension feature");
 
       Args.emplace_back(Type, Arch.str());
@@ -3256,7 +3254,7 @@ bool RISCVAsmParser::parseDirectiveOption() {
         FeatureBitset OldFeatureBits = STI->getFeatureBits();
 
         setFeatureBits(Ext->Value, Ext->key());
-        auto ParseResult = RISCVFeatures::parseFeatureBits(isRV64(), STI->getFeatureBits());
+        auto ParseResult = RISCVFeatures::parseFeatureBits(*STI);
         if (!ParseResult) {
           copySTI().setFeatureBits(OldFeatureBits);
           setAvailableFeatures(ComputeAvailableFeatures(OldFeatureBits));
@@ -3274,7 +3272,7 @@ bool RISCVAsmParser::parseDirectiveOption() {
         // It is invalid to disable an extension that there are other enabled
         // extensions depend on it.
         // TODO: Make use of RISCVISAInfo to handle this
-        for (auto &Feature : RISCVFeatureKV) {
+        for (auto &Feature : AllFeatures) {
           if (getSTI().hasFeature(Feature.Value) &&
               Feature.Implies.test(Ext->Value))
             return Error(Loc, Twine("can't disable ") + Ext->key() +
@@ -3292,8 +3290,7 @@ bool RISCVAsmParser::parseDirectiveOption() {
 
     getTargetStreamer().emitDirectiveOptionArch(Args);
 
-    if (auto ParseResult =
-            RISCVFeatures::parseFeatureBits(isRV64(), STI->getFeatureBits()))
+    if (auto ParseResult = RISCVFeatures::parseFeatureBits(*STI))
       getTargetStreamer().setArchString((*ParseResult)->toString());
     return false;
   }
@@ -3324,8 +3321,7 @@ bool RISCVAsmParser::parseDirectiveOption() {
 
     getTargetStreamer().emitDirectiveOptionRVC();
     setFeatureBits(RISCV::FeatureStdExtC, "c");
-    if (auto ParseResult =
-            RISCVFeatures::parseFeatureBits(isRV64(), STI->getFeatureBits()))
+    if (auto ParseResult = RISCVFeatures::parseFeatureBits(*STI))
       getTargetStreamer().setArchString((*ParseResult)->toString());
     return false;
   }
@@ -3337,8 +3333,7 @@ bool RISCVAsmParser::parseDirectiveOption() {
     getTargetStreamer().emitDirectiveOptionNoRVC();
     clearFeatureBits(RISCV::FeatureStdExtC, "c");
     clearFeatureBits(RISCV::FeatureStdExtZca, "zca");
-    if (auto ParseResult =
-            RISCVFeatures::parseFeatureBits(isRV64(), STI->getFeatureBits()))
+    if (auto ParseResult = RISCVFeatures::parseFeatureBits(*STI))
       getTargetStreamer().setArchString((*ParseResult)->toString());
     return false;
   }
