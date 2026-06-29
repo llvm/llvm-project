@@ -693,7 +693,7 @@ Asynchronously copies a tensor from LDS into global memory.
 }
 
 //===----------------------------------------------------------------------===//
-// Scalar Bit Manipulation Builtins
+// Bit Manipulation Builtins
 //===----------------------------------------------------------------------===//
 
 def DocCatBitManip : DocumentationCategory<"Bit Manipulation Builtins"> {
