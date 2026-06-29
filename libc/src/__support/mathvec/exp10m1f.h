@@ -10,7 +10,9 @@
 #define LLVM_LIBC_SRC___SUPPORT_MATHVEC_EXP10M1F_H
 
 #include "src/__support/CPP/simd.h"
-#define LIBC_MATH (LIBC_MATH_NO_ERRNO | LIBC_MATH_NO_EXCEPT)
+#define LIBC_MATH_HAS_NO_ERRNO
+#define LIBC_MATH_HAS_NO_EXCEPT
+#define LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
 #include "src/__support/math/exp10m1f.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -19,12 +21,7 @@ namespace mathvec {
 
 template <size_t N>
 LIBC_INLINE cpp::simd<float, N> exp10m1f(cpp::simd<float, N> x) {
-  cpp::simd<float, N> result;
-
-  for (size_t i = 0; i < N; ++i)
-    result[i] = math::exp10m1f(x[i]);
-
-  return result;
+  return cpp::map(x, [](float a) { return math::exp10m1f(a); });
 }
 
 } // namespace mathvec

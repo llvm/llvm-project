@@ -21,6 +21,7 @@
 #include "src/__support/CPP/utility/integer_sequence.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h"
 
 #include <stddef.h>
 
@@ -399,6 +400,16 @@ LIBC_INLINE constexpr static auto concat(cpp::simd<T, N> x, cpp::simd<T, M> y,
 template <size_t... Sizes, typename T, size_t N> auto split(cpp::simd<T, N> x) {
   static_assert((... + Sizes) == N, "split sizes must sum to vector size");
   return internal::split<T, N, 0, Sizes...>(x);
+}
+
+// Scalar to vector function helper.
+template <typename T, size_t N, typename F>
+LIBC_INLINE static cpp::simd<T, N> map(cpp::simd<T, N> v, F f) {
+  cpp::simd<T, N> r;
+  LIBC_LOOP_UNROLL
+  for (size_t i = 0; i < N; ++i)
+    r[i] = f(v[i]);
+  return r;
 }
 
 // TODO: where expressions, scalar overloads, ABI types.
