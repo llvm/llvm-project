@@ -78,7 +78,7 @@ TEST(AllocatableTest, MoveAlloc) {
 TEST(AllocatableTest, AllocateArrayIsAligned) {
   using Fortran::common::TypeCategory;
 #if !defined(_WIN32)
-  // Since a single std::malloc result may happen to be 64-byte aligned 
+  // Since a single std::malloc result may happen to be 64-byte aligned
   // allocate multiple arrays and check that all of them are aligned correctly
   constexpr int count{32};
   OwningPtr<Descriptor> arrays[count];

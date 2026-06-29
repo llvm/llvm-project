@@ -33,15 +33,15 @@ TEST(Pointer, BasicAllocateDeallocate) {
 
 TEST(Pointer, AllocateArrayIsAligned) {
 #if !defined(_WIN32)
-  // Since a single std::malloc result may happen to be 64-byte aligned 
+  // Since a single std::malloc result may happen to be 64-byte aligned
   // allocate multiple arrays and check that all of them are aligned correctly
   constexpr int count{32};
   OwningPtr<Descriptor> pointers[count];
   for (int i{0}; i < count; ++i) {
     // REAL(8), POINTER :: p(:)
-    pointers[i] = Descriptor::Create(
-        TypeCode{Fortran::common::TypeCategory::Real, 8}, 8, nullptr, 1, nullptr,
-        CFI_attribute_pointer);
+    pointers[i] =
+        Descriptor::Create(TypeCode{Fortran::common::TypeCategory::Real, 8}, 8,
+            nullptr, 1, nullptr, CFI_attribute_pointer);
     // ALLOCATE(p(100))
     RTNAME(PointerSetBounds)(*pointers[i], 0, 1, 100);
     RTNAME(PointerAllocate)
