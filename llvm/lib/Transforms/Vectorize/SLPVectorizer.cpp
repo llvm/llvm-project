@@ -6271,9 +6271,9 @@ private:
       // (3) Store instructions
       // If all of these are satisfied, then can schedule them
       // one at a time
-      SmallDenseMap<ScheduleEntity *, unsigned> BundleMembers;
+      SmallDenseMap<ScheduleEntity *, std::pair<unsigned, int>> BundleMembers;
       for (auto [Idx, BM] : enumerate(Bundle.getBundle()))
-        BundleMembers[BM] = Idx;
+        BundleMembers[BM] = {Idx, BM->getUnscheduledDeps()};
       for (ScheduleEntity *BundleMember : Bundle.getBundle()) {
         auto *SD = dyn_cast<ScheduleData>(BundleMember);
         if (!SD || !isa<StoreInst>(SD->getInst()))
@@ -6282,19 +6282,26 @@ private:
           continue;
         for (ScheduleData *MemDep : SD->getMemoryDependencies()) {
           if (!BundleMembers.contains(MemDep))
+            continue;
+          if (BundleMembers[MemDep].first >= BundleMembers[SD].first)
             return;
-          if (BundleMembers[MemDep] >= BundleMembers[SD])
-            return;
+          --BundleMembers[MemDep].second;
         }
       }
+      for (auto &[BM, P] : BundleMembers)
+        if (P.second != 0)
+          return;
 
-      while (!Bundle.isReady()) {
+      bool ForwardProgress = true;
+      while (ForwardProgress) {
+        ForwardProgress = false;
         for (ScheduleEntity *BundleMember : Bundle.getBundle()) {
           if (BundleMember->isScheduled() || !BundleMember->isReady())
             continue;
           LLVM_DEBUG(dbgs() << "SLP: schedule ready bundle member "
                             << *BundleMember << "\n");
           ScheduleCall(BundleMember);
+          ForwardProgress = true;
         }
       }
       return;
