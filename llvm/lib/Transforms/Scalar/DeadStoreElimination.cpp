@@ -986,6 +986,10 @@ struct DSEState {
   DenseMap<const Value *, uint64_t> InvisibleToCallerAfterRetBounded;
   // Keep track of blocks with throwing instructions not modeled in MemorySSA.
   SmallPtrSet<BasicBlock *, 16> ThrowingBlocks;
+  // True if the function contains any convergent memory(none) calls. Such calls
+  // observe addrspace(5) per-lane private scratch across all lanes without
+  // appearing as reads in MemorySSA.
+  bool HasConvergentNoMemCall = false;
   // Post-order numbers for each basic block. Used to figure out if memory
   // accesses are executed before another access.
   DenseMap<BasicBlock *, unsigned> PostOrderNumbers;
@@ -1198,6 +1202,10 @@ DSEState::DSEState(Function &F, AliasAnalysis &AA, MemorySSA &MSSA,
       MemoryAccess *MA = MSSA.getMemoryAccess(&I);
       if (I.mayThrow() && !MA)
         ThrowingBlocks.insert(I.getParent());
+      if (!HasConvergentNoMemCall)
+        if (auto *CB = dyn_cast<CallBase>(&I))
+          if (CB->isConvergent() && CB->doesNotAccessMemory())
+            HasConvergentNoMemCall = true;
 
       auto *MD = dyn_cast_or_null<MemoryDef>(MA);
       if (MD && MemDefs.size() < MemorySSADefsPerBlockLimit &&
@@ -1465,7 +1473,17 @@ DSEState::getLocForInst(Instruction *I, bool ConsiderInitializesAttr) {
 }
 
 bool DSEState::isRemovable(Instruction *I) {
-  assert(getLocForWrite(I) && "Must have analyzable write");
+  auto MaybeLoc = getLocForWrite(I);
+  assert(MaybeLoc && "Must have analyzable write");
+
+  // Warp-wide operations (e.g. ballot/bpermute/shuffle on AMPGPU) carry
+  // memory(none) so MemorySSA does not model them as reads. However, they
+  // observe addrspace(5) per-lane private scratch across all lanes, making it
+  // unsound for DSE to eliminate writes to addrspace(5) in convergent
+  // functions that contain such calls.
+  if (F.isConvergent() && HasConvergentNoMemCall &&
+      MaybeLoc->Ptr->getType()->getPointerAddressSpace() == 5)
+    return false;
 
   // Don't remove volatile/atomic stores.
   if (StoreInst *SI = dyn_cast<StoreInst>(I))
