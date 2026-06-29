@@ -165,13 +165,6 @@ public:
   const ssaf::SSAFOptions &getSSAFOpts() const { return *SSAFOpts; }
   /// @}
 
-  /// Visitation.
-  /// @{
-  /// Visits paths stored in the invocation. The callback may return true to
-  /// short-circuit the visitation, or return false to continue visiting.
-  void visitPaths(llvm::function_ref<bool(StringRef)> Callback) const;
-  /// @}
-
   /// Command line generation.
   /// @{
   using StringAllocator = llvm::function_ref<const char *(const Twine &)>;
@@ -205,12 +198,6 @@ public:
   ///
   /// This is a (less-efficient) wrapper over generateCC1CommandLine().
   std::vector<std::string> getCC1CommandLine() const;
-
-protected:
-  /// Visits paths stored in the invocation. This is generally unsafe to call
-  /// directly, and each sub-class need to ensure calling this doesn't violate
-  /// its invariants.
-  void visitPathsImpl(llvm::function_ref<bool(std::string &)> Predicate);
 
 private:
   /// Generate command line options from DiagnosticOptions.
@@ -314,14 +301,6 @@ public:
   R withCowRef(llvm::function_ref<R(CowCompilerInvocation &)> Fn);
   template <class R>
   R withCowRef(llvm::function_ref<R(const CowCompilerInvocation &)> Fn) const;
-
-  /// Visitation.
-  /// @{
-  /// Visits paths stored in the invocation. The callback may return true to
-  /// short-circuit the visitation, or return false to continue visiting. This
-  /// is allowed to mutate the visited paths.
-  void visitPaths(llvm::function_ref<bool(std::string &)> Callback);
-  /// @}
 
   /// Create a compiler invocation from a list of input options.
   /// \returns true on success.
@@ -445,13 +424,30 @@ public:
   ssaf::SSAFOptions &getMutSSAFOpts();
   /// @}
 
+  /// The result of mutable visitation.
+  struct VisitMutResult {
+    /// Whether to replace the given StringRef with the modified std::string &.
+    bool Replace = false;
+    /// Whether to short-circuit the visitation.
+    bool Terminate = false;
+  };
+
   /// Visits paths stored in the invocation, allowing the callback to mutate
-  /// them. To preserve the copy-on-write invariant for groups whose paths the
-  /// caller might modify, this ensures unique ownership of every option group
-  /// up front; if the callback only inspects (and does not mutate) the paths,
-  /// the const \c visitPaths overload should be used instead to avoid those
-  /// per-group copies.
-  void visitMutPaths(llvm::function_ref<bool(std::string &)> Callback);
+  /// them via the out-param. This upholds the same copy-on-write semantics as
+  /// the mutable getters.
+  void visitMutPaths(
+      llvm::function_ref<VisitMutResult(StringRef, std::string &)> Cb);
+
+  /// The result of const visitation.
+  struct VisitConstResult {
+    /// Whether to short-circuit the visitation.
+    bool Terminate = false;
+
+    operator VisitMutResult() const { return {/*Replace=*/false, Terminate}; }
+  };
+
+  /// Visits paths stored in the invocation.
+  void visitPaths(llvm::function_ref<VisitConstResult(StringRef)> Cb) const;
 };
 
 template <class R>

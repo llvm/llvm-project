@@ -115,7 +115,7 @@ void exhaustion_test1 () {
     ptrs = alloc_series ( 32 );
     std::printf("Allocated %zu 32 byte chunks\n", ptrs.size());
     while ( ptrs.size () > 0 )
-        fallback_free ( pop ( ptrs, ptrs.size () % 1 == 1 ));
+      fallback_free(pop(ptrs, ptrs.size() % 2 == 1));
     print_free_list ();
 }
 
@@ -151,7 +151,7 @@ void exhaustion_test2 () {
     std::printf("Allocated %zu { 32, 48, 72, 108, 162 ... } byte chunks\n",
                 ptrs.size());
     while ( ptrs.size () > 0 )
-        fallback_free ( pop ( ptrs, ptrs.size () % 1 == 1 ));
+      fallback_free(pop(ptrs, ptrs.size() % 2 == 1));
     print_free_list ();
 
 }
@@ -185,7 +185,7 @@ void exhaustion_test3 () {
     ptrs = alloc_series ( allocs, sizeof ( allocs ) / sizeof ( allocs[0] ));
     std::printf("Allocated %zu chunks\n", ptrs.size());
     while ( ptrs.size () > 0 )
-        fallback_free ( pop ( ptrs, ptrs.size () % 1 == 1 ));
+      fallback_free(pop(ptrs, ptrs.size() % 2 == 1));
     print_free_list ();
 
 }

@@ -673,10 +673,17 @@ Warnings to detect use-after-free and related temporal safety bugs based on life
   }];
 }
 
+def LifetimeSafetyCrossTUConstructorSuggestions
+    : DiagGroup<"lifetime-safety-cross-tu-constructor-suggestions">;
+def LifetimeSafetyIntraTUConstructorSuggestions
+    : DiagGroup<"lifetime-safety-intra-tu-constructor-suggestions">;
+
 def LifetimeSafetyCrossTUSuggestions
-    : DiagGroup<"lifetime-safety-cross-tu-suggestions">;
+    : DiagGroup<"lifetime-safety-cross-tu-suggestions",
+                [LifetimeSafetyCrossTUConstructorSuggestions]>;
 def LifetimeSafetyIntraTUSuggestions
-    : DiagGroup<"lifetime-safety-intra-tu-suggestions">;
+    : DiagGroup<"lifetime-safety-intra-tu-suggestions",
+                [LifetimeSafetyIntraTUConstructorSuggestions]>;
 def LifetimeSafetySuggestions
     : DiagGroup<"lifetime-safety-suggestions",
                 [LifetimeSafetyCrossTUSuggestions,

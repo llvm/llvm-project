@@ -125,6 +125,7 @@ add_fp_unittest(
     libc.src.__support.math.exp10f
     libc.src.__support.math.exp10f16
     libc.src.__support.math.expf
+    libc.src.__support.math.expbf16
     libc.src.__support.math.expf16
     libc.src.__support.math.f16add
     libc.src.__support.math.f16addf
@@ -826,7 +827,12 @@ add_fp_unittest(
   SRCS
     shared_builtins_test.cpp
   DEPENDS
+    libc.src.__support.builtins.adddf3
     libc.src.__support.builtins.addtf3
+    libc.src.__support.builtins.divtf3
+    libc.src.__support.builtins.multf3
+    libc.src.__support.builtins.subdf3
+    libc.src.__support.builtins.subtf3
 )
 
 add_fp_unittest(

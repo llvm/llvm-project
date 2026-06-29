@@ -71,6 +71,17 @@ C/C++ Language Potentially Breaking Changes
   Clang would previously ``break`` out of the ``while`` loop, whereas GCC (since version 9) would
   ``break`` out of the ``for`` loop here. Now, Clang and GCC both break out of the ``for`` loop.
 
+- Clang now parses line and digit directives, module names, and original filenames as unevaluated
+  strings. This means that code containing strings with escape sequences such as
+
+  .. code-block:: c++
+
+    # 1 "original\x12source.c"
+    #pragma clang module import "\x41"
+    # 50 "a\012.c"
+
+  are now ill-formed.
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
@@ -744,6 +755,7 @@ Bug Fixes in This Version
 - Fixed crash when checking for overflow for unary operator that can't overflow (#GH170072)
 - Clang no longer handles a `" q-char-sequence "` header name as a string literal (#GH132643).
 - Fixed an assertion where we improperly handled implicit conversions to integral types from an atomic-type with a conversion function. (#GH201770)
+- Fixed assertion failures involving code completion with delayed default arguments and exception specifications. (#GH200879)
 - Fixed a regression where calling a function that takes a class-type parameter by value inside ``decltype`` of a concept could be incorrectly rejected when used as a non-type template argument. (#GH175831)
 
 Bug Fixes to Compiler Builtins
@@ -790,7 +802,9 @@ Bug Fixes to C++ Support
 - Fixed crash instantiating class member specializations.
 - Fix a problem where a substitution failure when evaluating a type requirement
   could directly make the program ill-formed.
+- Typo correction now corrects the name qualifier for invalid template names.
 - Fix a problem where pack index expressions where incorrectly being regarded as equivalent.
+- Correctly diagnose narrowing in pack index expressions. (#GH205650)
 - Fixed a bug where captured variables in non-mutable lambdas were incorrectly treated as mutable
   when used inside decltype in the return type. (#GH180460)
 - Fixed a crash when evaluating uninitialized GCC vector/ext_vector_type vectors in ``constexpr``. (#GH180044)
@@ -819,6 +833,7 @@ Bug Fixes to C++ Support
 - Fixed an issue where Clang incorrectly accepted invalid unqualified uses of local nested class names outside their declaring scope. (#GH184622)
 - Fixed a crash when parsing invalid friend declaration with storage-class specifier. (#GH186569)
 - Fixed a missing vtable for ``dynamic_cast<FinalClass *>(this)`` in a function template. (#GH198511)
+- Fixed an assertion failure during init-list checking of an array whose element type is an incomplete class. (#GH140685)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -981,6 +996,8 @@ AIX Support
 - Added support for ``#pragma comment(copyright, "token_sequence")`` on AIX.
   This directive embeds a copyright or identifying string into the compiled object file. 
   The string is included in the final executable and loaded into memory at program runtime.
+- The driver relaxes the restrictions on the ``OBJECT_MODE`` environment
+  variable and now silently accepts ``32_64`` and ``any``.
 
 NetBSD Support
 ^^^^^^^^^^^^^^
@@ -1067,6 +1084,9 @@ Crash and bug fixes
 
 - Fixed ``security.VAList`` checker producing false positives when analyzing
   C23 code where ``va_start`` expands to ``__builtin_c23_va_start``.
+  
+- Fixed a compiler crash when combining ``_Atomic`` and ``__auto_type``
+  in C, for example ``_Atomic __auto_type x = expr``. (#GH118058)
 
 Improvements
 ^^^^^^^^^^^^
@@ -1101,6 +1121,11 @@ Sanitizers
   warning for deprecated matches. Version 5 drops backward compatibility and
   requires rules to match canonicalized paths (without leading ``./``).
 
+- Sanitizer Special Case Lists (``-fsanitize-ignorelist``) and warning
+  suppression mappings (``--warning-suppression-mappings``) now recognize version
+  4 of the Special Case List format (indicated by ``#!special-case-list-v4``).
+  On Windows hosts, path matching is slash-agnostic (both forward slashes (``/``)
+  and backslashes (``\``) match either path separator in both patterns and paths).
 
 Python Binding Changes
 ----------------------

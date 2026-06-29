@@ -11,6 +11,7 @@
 #include "mlir-c/Support.h"
 #include "mlir-c/Transforms.h"
 #include "mlir/CAPI/IR.h"
+#include "mlir/CAPI/IRMapping.h"
 #include "mlir/CAPI/Rewrite.h"
 #include "mlir/CAPI/Support.h"
 #include "mlir/CAPI/Wrap.h"
@@ -21,6 +22,8 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/WalkPatternRewriteDriver.h"
+
+#include <cassert>
 
 using namespace mlir;
 
@@ -116,6 +119,12 @@ MlirOperation mlirRewriterBaseClone(MlirRewriterBase rewriter,
 MlirOperation mlirRewriterBaseCloneWithoutRegions(MlirRewriterBase rewriter,
                                                   MlirOperation op) {
   return wrap(unwrap(rewriter)->cloneWithoutRegions(*unwrap(op)));
+}
+
+MlirOperation mlirRewriterBaseCloneWithMapping(MlirRewriterBase rewriter,
+                                               MlirOperation op,
+                                               MlirIRMapping mapping) {
+  return wrap(unwrap(rewriter)->clone(*unwrap(op), *unwrap(mapping)));
 }
 
 void mlirRewriterBaseCloneRegionBefore(MlirRewriterBase rewriter,
@@ -566,6 +575,64 @@ void mlirConversionTargetAddLegalDialect(MlirConversionTarget target,
 void mlirConversionTargetAddIllegalDialect(MlirConversionTarget target,
                                            MlirStringRef dialectName) {
   unwrap(target)->addIllegalDialect(unwrap(dialectName));
+}
+
+namespace {
+/// Wraps a C dynamic-legality callback as a C++ DynamicLegalityCallbackFn,
+/// translating the tri-state MlirConversionTargetLegality result into the
+/// std::optional<bool> expected by ConversionTarget (NO_OPINION -> nullopt).
+ConversionTarget::DynamicLegalityCallbackFn
+wrapLegalityCallback(MlirConversionTargetDynamicLegalityCallback callback,
+                     void *userData) {
+  return [callback, userData](Operation *op) -> std::optional<bool> {
+    switch (callback(wrap(op), userData)) {
+    case MLIR_CONVERSION_TARGET_LEGALITY_LEGAL:
+      return true;
+    case MLIR_CONVERSION_TARGET_LEGALITY_ILLEGAL:
+      return false;
+    case MLIR_CONVERSION_TARGET_LEGALITY_NO_OPINION:
+      return std::nullopt;
+    }
+    llvm_unreachable("unknown MlirConversionTargetLegality");
+  };
+}
+} // namespace
+
+void mlirConversionTargetAddDynamicallyLegalOp(
+    MlirConversionTarget target, MlirStringRef opName,
+    MlirConversionTargetDynamicLegalityCallback callback, void *userData) {
+  assert(callback && "expected non-null legality callback");
+  MLIRContext *ctx = &unwrap(target)->getContext();
+  OperationName name(unwrap(opName), ctx);
+  unwrap(target)->addDynamicallyLegalOp(
+      name, wrapLegalityCallback(callback, userData));
+}
+
+void mlirConversionTargetAddDynamicallyLegalDialect(
+    MlirConversionTarget target, MlirStringRef dialectName,
+    MlirConversionTargetDynamicLegalityCallback callback, void *userData) {
+  assert(callback && "expected non-null legality callback");
+  unwrap(target)->addDynamicallyLegalDialect(
+      wrapLegalityCallback(callback, userData), unwrap(dialectName));
+}
+
+void mlirConversionTargetMarkOpRecursivelyLegal(
+    MlirConversionTarget target, MlirStringRef opName,
+    MlirConversionTargetDynamicLegalityCallback callback, void *userData) {
+  MLIRContext *ctx = &unwrap(target)->getContext();
+  OperationName name(unwrap(opName), ctx);
+  ConversionTarget::DynamicLegalityCallbackFn fn;
+  if (callback)
+    fn = wrapLegalityCallback(callback, userData);
+  unwrap(target)->markOpRecursivelyLegal(name, fn);
+}
+
+void mlirConversionTargetMarkUnknownOpDynamicallyLegal(
+    MlirConversionTarget target,
+    MlirConversionTargetDynamicLegalityCallback callback, void *userData) {
+  assert(callback && "expected non-null legality callback");
+  unwrap(target)->markUnknownOpDynamicallyLegal(
+      wrapLegalityCallback(callback, userData));
 }
 
 //===----------------------------------------------------------------------===//
