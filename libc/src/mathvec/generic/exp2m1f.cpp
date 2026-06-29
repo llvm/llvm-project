@@ -1,9 +1,14 @@
-//===-- Single-precision SIMD 2^x - 1 vector function ---------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Implementation of the single-precision SIMD exp2m1 vector function.
+///
 //===----------------------------------------------------------------------===//
 
 #include "src/mathvec/exp2m1f.h"
