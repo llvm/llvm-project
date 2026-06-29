@@ -34,14 +34,12 @@ define fastcc ptr @wrongUseOfPostDominate(ptr readonly %s, i32 %off, ptr readnon
 ; ENABLE-NEXT:  .LBB0_4: @ %while.body
 ; ENABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; ENABLE-NEXT:    ldrb r3, [r0]
+; ENABLE-NEXT:    subs r1, r1, #1
 ; ENABLE-NEXT:    ldrb r3, [r12, r3]
 ; ENABLE-NEXT:    add r0, r0, r3
-; ENABLE-NEXT:    sub r3, r1, #1
-; ENABLE-NEXT:    cmp r3, r1
-; ENABLE-NEXT:    bhs .LBB0_6
+; ENABLE-NEXT:    blo .LBB0_6
 ; ENABLE-NEXT:  @ %bb.5: @ %while.body
 ; ENABLE-NEXT:    @ in Loop: Header=BB0_4 Depth=1
-; ENABLE-NEXT:    mov r1, r3
 ; ENABLE-NEXT:    cmp r0, r2
 ; ENABLE-NEXT:    blo .LBB0_4
 ; ENABLE-NEXT:  .LBB0_6: @ %if.end29
@@ -124,14 +122,12 @@ define fastcc ptr @wrongUseOfPostDominate(ptr readonly %s, i32 %off, ptr readnon
 ; DISABLE-NEXT:  .LBB0_4: @ %while.body
 ; DISABLE-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; DISABLE-NEXT:    ldrb r3, [r0]
+; DISABLE-NEXT:    subs r1, r1, #1
 ; DISABLE-NEXT:    ldrb r3, [r12, r3]
 ; DISABLE-NEXT:    add r0, r0, r3
-; DISABLE-NEXT:    sub r3, r1, #1
-; DISABLE-NEXT:    cmp r3, r1
-; DISABLE-NEXT:    bhs .LBB0_6
+; DISABLE-NEXT:    blo .LBB0_6
 ; DISABLE-NEXT:  @ %bb.5: @ %while.body
 ; DISABLE-NEXT:    @ in Loop: Header=BB0_4 Depth=1
-; DISABLE-NEXT:    mov r1, r3
 ; DISABLE-NEXT:    cmp r0, r2
 ; DISABLE-NEXT:    blo .LBB0_4
 ; DISABLE-NEXT:  .LBB0_6: @ %if.end29
