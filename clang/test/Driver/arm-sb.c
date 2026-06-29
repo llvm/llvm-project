@@ -14,3 +14,7 @@
 // RUN: %clang -### -target aarch64-none-elf -march=armv8.5a+nosb %s 2>&1 | FileCheck %s --check-prefix=NOSB
 // ABSENT-NOT: "-target-feature" "+sb"
 // ABSENT-NOT: "-target-feature" "-sb"
+
+// RUN: %clang -### -target aarch64-none-elf -mcpu=neoverse-v2+sb %s 2>&1 | FileCheck %s --check-prefix=REDUNDANT
+// REDUNDANT-NOT: "-target-feature" "+sb"
+// REDUNDANT-NOT: "-target-feature" "-sb"
