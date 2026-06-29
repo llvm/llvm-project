@@ -18586,6 +18586,88 @@ ARMTargetLowering::PerformCMOVCombine(SDNode *N, SelectionDAG &DAG) const {
   SDValue RHS = Cmp.getOperand(1);
   ARMCC::CondCodes CC = (ARMCC::CondCodes)ARMcc->getAsZExtVal();
 
+  // Thumb1 branchless code generation for zext(setcc Z, 0) + X -> (X + 1) or X
+  // x + (z!=0): RSBS rtmp, z, #0; SBCS rtmp, rtmp; SUBS x, rtmp
+  // x + (z==0): SUBS rtmp, z, #1; SBCS rtmp, rtmp; SUBS x, rtmp
+  // x - (z!=0): RSBS rtmp, z, #0; SBCS rtmp, rtmp; ADDS x, rtmp
+  // x - (z==0): SUBS rtmp, z, #1; SBCS rtmp, rtmp; ADDS x, rtmp
+  if (Subtarget->isThumb1Only() && isNullConstant(RHS)) {
+    SDValue Base;
+    bool AddIsTrueVal = false;
+    unsigned Opc = 0;
+
+    auto IsAddOne = [&](SDValue Op, SDValue Other) {
+      return Op.getOpcode() == ISD::ADD &&
+             (Op.getOperand(0) == Other || Op.getOperand(1) == Other) &&
+             (isOneConstant(Op.getOperand(0)) ||
+              isOneConstant(Op.getOperand(1)));
+    };
+
+    auto IsSubOne = [&](SDValue Op, SDValue Other) {
+      if (Op.getOpcode() == ISD::SUB && Op.getOperand(0) == Other &&
+          isOneConstant(Op.getOperand(1)))
+        return true;
+      if (Op.getOpcode() == ISD::ADD &&
+          (Op.getOperand(0) == Other || Op.getOperand(1) == Other)) {
+        SDValue Const =
+            (Op.getOperand(0) == Other) ? Op.getOperand(1) : Op.getOperand(0);
+        return isAllOnesConstant(Const);
+      }
+      return false;
+    };
+
+    if (IsAddOne(TrueVal, FalseVal)) {
+      Base = FalseVal;
+      AddIsTrueVal = true;
+      Opc = ISD::SUB;
+    } else if (IsAddOne(FalseVal, TrueVal)) {
+      Base = TrueVal;
+      AddIsTrueVal = false;
+      Opc = ISD::SUB;
+    } else if (IsSubOne(TrueVal, FalseVal)) {
+      Base = FalseVal;
+      AddIsTrueVal = true;
+      Opc = ISD::ADD;
+    } else if (IsSubOne(FalseVal, TrueVal)) {
+      Base = TrueVal;
+      AddIsTrueVal = false;
+      Opc = ISD::ADD;
+    }
+
+    if (Base.getNode()) {
+      bool IsNE = (CC == ARMCC::NE);
+      bool ApplyOpIfZNotZero = AddIsTrueVal ? IsNE : !IsNE;
+
+      // Logic:
+      // If ApplyOpIfZNotZero:
+      //   RSBS rtmp, LHS, #0 (C=0 if LHS!=0)
+      // Else:
+      //   SUBS rtmp, LHS, #1 (C=0 if LHS==0)
+      // Then:
+      //   SBCS rtmp, rtmp (rtmp = -NOT(C))
+      //   If Opc == SUB (Increment): Base - (-NOT(C)) = Base + NOT(C)
+      //   If Opc == ADD (Decrement): Base + (-NOT(C)) = Base - NOT(C)
+
+      SDValue Tmp;
+      if (ApplyOpIfZNotZero) {
+        // C=0 if z != 0
+        Tmp = DAG.getNode(ARMISD::SUBC, dl, DAG.getVTList(VT, MVT::i32),
+                          DAG.getConstant(0, dl, VT), LHS);
+      } else {
+        // C=0 if z == 0
+        Tmp = DAG.getNode(ARMISD::SUBC, dl, DAG.getVTList(VT, MVT::i32), LHS,
+                          DAG.getConstant(1, dl, VT));
+      }
+
+      // rtmp = -1 if condition is met, 0 otherwise
+      SDValue ResMask =
+          DAG.getNode(ARMISD::SUBE, dl, DAG.getVTList(VT, MVT::i32), Tmp, Tmp,
+                      SDValue(Tmp.getNode(), 1));
+
+      return DAG.getNode(Opc, dl, VT, Base, ResMask);
+    }
+  }
+
   // BFI is only available on V6T2+.
   if (!Subtarget->isThumb1Only() && Subtarget->hasV6T2Ops()) {
     SDValue R = PerformCMOVToBFICombine(N, DAG);
