@@ -799,10 +799,19 @@ body does not count.  A member whose own default-initialization leaves an
 *unacknowledged* scalar subobject indeterminate (a nested aggregate) is
 flagged as well; a member whose type's indeterminate scalars are all
 themselves marked ``[[uninit]]`` is trusted (the same
-``HonorUninitMarkers`` walk as R2, paper §6.2).
+``HonorUninitMarkers`` walk as R2, paper §6.2).  A direct non-virtual
+base-class subobject left indeterminate is flagged the same way: the
+guarantee is over the *complete object* (paper §5.1, §7.1), and -- unlike a
+member -- a base cannot carry an ``[[uninit]]`` marker, so it must always be
+initialized.  A written base-initializer (``: Base(...)`` / ``: Base{}``) or
+a base with a user-provided default constructor is trusted.
 
 - Diagnostic: ``err_init_ctor_uninit_member`` (with a
-  ``note_init_uninit_member_here`` note at the member).
+  ``note_init_uninit_member_here`` note at the member); for a base subobject,
+  ``err_init_ctor_uninit_base`` (with a ``note_init_uninit_base_here`` note).
+  Both share the ``ctor_uninit_member`` rule name, so one
+  ``[[profiles::suppress(std::init, rule: "ctor_uninit_member")]]`` covers
+  members and bases alike.
 - Opt-in table: ``ConstructorFinalizationProfiles`` (pattern 4).
 - Reference and const members keep their existing dedicated diagnostics;
   anonymous-aggregate members and unnamed bit-fields are skipped (named
@@ -811,10 +820,13 @@ themselves marked ``[[uninit]]`` is trusted (the same
   mutually exclusive, so a constructor initializes at most one (paper §6.5;
   see R6). A union *data member* of a non-union class is still checked, and
   must be initialized via the member-initializer list.
-- Known gaps: base-class subobjects of the constructed class are not checked
-  -- only direct non-static data members -- so a user-provided constructor
-  that leaves a base subobject uninitialized (paper §6.1) is not diagnosed.
-  A const member is skipped here but is treated as indeterminate by
+- Known gaps: *virtual* base-class subobjects are not checked.  A virtual
+  base is initialized by the most-derived constructor, which is not a local
+  property of the constructor being checked, so flagging an intermediate
+  constructor would push a redundant (and possibly surprising) ``: V()`` onto
+  code that correctly relies on the most-derived class; under-diagnosing here
+  is the safer, paper-consistent default.  Direct non-virtual bases are
+  checked.  A const member is skipped here but is treated as indeterminate by
   ``defaultInitLeavesScalarIndeterminate`` (R2).
 
 R6. ``union_marker`` -- attribute handler

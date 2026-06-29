@@ -7087,12 +7087,21 @@ void runStdInitCtorUninitMemberCallback(Sema &S, CXXConstructorDecl *Ctor) {
   if (Ctor->getParent()->isUnion())
     return;
 
-  // Members given a written member-initializer by this constructor.
+  // Members and direct bases given a written initializer by this constructor.
   llvm::SmallPtrSet<const FieldDecl *, 8> Written;
-  for (const CXXCtorInitializer *Init : Ctor->inits())
-    if (Init->isWritten() && Init->isAnyMemberInitializer())
+  llvm::SmallPtrSet<const Type *, 4> WrittenBases;
+  for (const CXXCtorInitializer *Init : Ctor->inits()) {
+    if (!Init->isWritten())
+      continue;
+    if (Init->isAnyMemberInitializer()) {
       if (const FieldDecl *F = Init->getAnyMember())
         Written.insert(F);
+    } else if (Init->isBaseInitializer()) {
+      if (const Type *T = Init->getBaseClass())
+        WrittenBases.insert(
+            S.Context.getCanonicalType(QualType(T, 0)).getTypePtr());
+    }
+  }
 
   for (const FieldDecl *F : Ctor->getParent()->fields()) {
     // Anonymous aggregate members and unnamed bit-fields are skipped; a named
@@ -7114,6 +7123,32 @@ void runStdInitCtorUninitMemberCallback(Sema &S, CXXConstructorDecl *Ctor) {
         << "std::init" << F->getDeclName();
     S.Diag(F->getLocation(), diag::note_init_uninit_member_here)
         << F->getDeclName();
+  }
+
+  // The guarantee is over the complete object (paper §5.1, §7.1), so a
+  // direct base-class subobject left indeterminate is as much a violation as a
+  // member. A base cannot carry an [[uninit]] marker (the attribute's subjects
+  // are Var/Field), so an indeterminate base must always be initialized -- there
+  // is no marker escape. Virtual bases are the most-derived constructor's
+  // responsibility, not a local property of this constructor, so they are
+  // deferred. A written base-initializer initializes the base; an implicit
+  // (non-written) one is default-init, handled by the indeterminate check.
+  for (const CXXBaseSpecifier &Base : Ctor->getParent()->bases()) {
+    if (Base.isVirtual())
+      continue;
+    if (WrittenBases.count(
+            S.Context.getCanonicalType(Base.getType()).getTypePtr()))
+      continue;
+    if (!S.defaultInitLeavesScalarIndeterminate(Base.getType(),
+                                                /*HonorUninitMarkers=*/true))
+      continue;
+    if (!S.shouldEmitProfileViolation("std::init", "ctor_uninit_member",
+                                      Ctor->getLocation(), Ctor))
+      continue;
+    S.Diag(Ctor->getLocation(), diag::err_init_ctor_uninit_base)
+        << "std::init" << Base.getType();
+    S.Diag(Base.getBeginLoc(), diag::note_init_uninit_base_here)
+        << Base.getType();
   }
 }
 
