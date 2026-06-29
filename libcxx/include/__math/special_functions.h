@@ -47,6 +47,11 @@ assoc_laguerrel(unsigned __n, unsigned __m, long double __x) noexcept {
   return __math::__assoc_laguerre(__n, __m, __x);
 }
 
+template <class _Int, std::enable_if_t<std::is_integral_v<_Int>, int> = 0>
+[[nodiscard]] _LIBCPP_HIDE_FROM_ABI double assoc_laguerre(unsigned __n, unsigned __m, _Int __x) noexcept {
+  return __math::__assoc_laguerre(__n, __m, static_cast<double>(__x));
+}
+
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 // hermite
