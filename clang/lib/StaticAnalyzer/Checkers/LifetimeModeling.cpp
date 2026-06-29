@@ -23,12 +23,12 @@ public:
 };
 
 } // namespace
+
 namespace clang {
 namespace ento {
 namespace lifetimemodeling {
 std::vector<const MemRegion *> getLifetimeSourceSet(ProgramStateRef State,
                                                     SVal Val) {
-
   std::vector<const MemRegion *> StoreRegion;
   if (const auto *SourceSet = State->get<LifetimeBoundMap>(Val)) {
     for (const MemRegion *Region : *SourceSet)

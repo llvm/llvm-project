@@ -1,8 +1,8 @@
-#include "clang/StaticAnalyzer/Checkers/LifetimeModeling.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
+#include "clang/StaticAnalyzer/Checkers/LifetimeModeling.h"
+#include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 
 using namespace clang;
 using namespace ento;
@@ -10,13 +10,16 @@ using namespace ento;
 namespace {
 class ReportDanglingPtrDeref : public Checker<check::Location> {
 public:
-  void checkLocation(SVal Loc, bool IsLoad, const Stmt *S, CheckerContext &C) const;
-  void reportUseAfterScope(const MemRegion *Region, ExplodedNode *N, CheckerContext &C) const;
+  void checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
+                     CheckerContext &C) const;
+  void reportUseAfterScope(const MemRegion *Region, ExplodedNode *N,
+                           CheckerContext &C) const;
   const BugType BugMsg{this, "ReportDanglingPtrDeref", "LifetimeBound"};
 };
 } // namespace
 
-void ReportDanglingPtrDeref::checkLocation(SVal Loc, bool IsLoad, const Stmt *S, CheckerContext &C) const {
+void ReportDanglingPtrDeref::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
+                                           CheckerContext &C) const {
   ProgramStateRef State = C.getState();
 
   if (const MemRegion *LocRegion = Loc.getAsRegion()) {
@@ -27,7 +30,9 @@ void ReportDanglingPtrDeref::checkLocation(SVal Loc, bool IsLoad, const Stmt *S,
   }
 }
 
-void ReportDanglingPtrDeref::reportUseAfterScope(const MemRegion *Region, ExplodedNode *N, CheckerContext &C) const {
+void ReportDanglingPtrDeref::reportUseAfterScope(const MemRegion *Region,
+                                                 ExplodedNode *N,
+                                                 CheckerContext &C) const {
   auto BR = std::make_unique<PathSensitiveBugReport>(
       BugMsg,
       (llvm::Twine("Use of '") + Region->getString() +
