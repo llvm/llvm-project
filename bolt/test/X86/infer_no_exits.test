@@ -2,7 +2,8 @@
 # RUN: %clangxx %cxxflags %p/Inputs/infer_no_exits.s -o %t.exe
 # RUN: link_fdata %s %t.exe %t.preagg PREAGG
 # RUN: perf2bolt %t.exe -p %t.preagg --pa -o %t.fdata -w %t.yaml
-# RUN: sed -i '0,/hash:/s/0x[0-9A-Fa-f]\{16\}/0x0000000000000000/' %t.yaml
+# RUN: sed '1,/hash:/s/0x[0-9A-Fa-f]\{16\}/0x0000000000000000/' %t.yaml > %t.yaml.out
+# RUN: mv %t.yaml.out %t.yaml
 # RUN: llvm-bolt %t.exe -data %t.yaml -o %t.null -v=1 -infer-stale-profile 2>&1 \
 # RUN:   | FileCheck %s
 
