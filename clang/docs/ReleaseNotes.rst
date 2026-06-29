@@ -71,6 +71,17 @@ C/C++ Language Potentially Breaking Changes
   Clang would previously ``break`` out of the ``while`` loop, whereas GCC (since version 9) would
   ``break`` out of the ``for`` loop here. Now, Clang and GCC both break out of the ``for`` loop.
 
+- Clang now parses line and digit directives, module names, and original filenames as unevaluated
+  strings. This means that code containing strings with escape sequences such as
+
+  .. code-block:: c++
+
+    # 1 "original\x12source.c"
+    #pragma clang module import "\x41"
+    # 50 "a\012.c"
+
+  are now ill-formed.
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
