@@ -393,7 +393,7 @@ IncrementalExecutorBuilder::create(llvm::orc::ThreadSafeContext &TSC,
   llvm::Error Err = llvm::Error::success();
   std::unique_ptr<IncrementalExecutor> Executor;
 #ifdef __EMSCRIPTEN__
-  Executor = std::make_unique<WasmIncrementalExecutor>(Err);
+  Executor = std::make_unique<WasmIncrementalExecutor>(Err, LLVMArgs);
 #else
   Executor = std::make_unique<OrcIncrementalExecutor>(TSC, *JITBuilder, Err);
 #endif
