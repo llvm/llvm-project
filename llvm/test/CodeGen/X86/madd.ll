@@ -3882,3 +3882,21 @@ define <3 x i32> @oddvector_shl(<12 x i16> %A) {
    %ret = add <3 x i32> %odd, %even
    ret <3 x i32> %ret
 }
+
+define <4 x i32> @shl15(<8 x i16> %x) {
+; SSE-LABEL: shl15:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [32768,32768,32768,32768,32768,32768,32768,32768]
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: shl15:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [32768,32768,32768,32768,32768,32768,32768,32768]
+; AVX-NEXT:    retq
+  %s = sext <8 x i16> %x to <8 x i32>
+  %m = shl <8 x i32> %s, splat (i32 15)
+  %even = shufflevector <8 x i32> %m, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %odd = shufflevector <8 x i32> %m, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %r = add <4 x i32> %even, %odd
+  ret <4 x i32> %r
+}
