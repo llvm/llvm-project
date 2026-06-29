@@ -38,8 +38,7 @@ namespace __math {
   return __math::__assoc_laguerre(__n, __m, __x);
 }
 
-template <class = int>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI double assoc_laguerre(unsigned __n, unsigned __m, double __x) noexcept {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI double assoc_laguerre(unsigned __n, unsigned __m, double __x) noexcept {
   return __math::__assoc_laguerre(__n, __m, __x);
 }
 

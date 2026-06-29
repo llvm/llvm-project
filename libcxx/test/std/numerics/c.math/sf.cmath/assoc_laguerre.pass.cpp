@@ -19,9 +19,9 @@
 
 #include "common.h"
 
-// Each suffixed overload is fixed to a single floating-point type, so it is
-// tested directly with that type. The unsuffixed std::assoc_laguerre overloads
-// (and the integer-argument overload) are not implemented yet.
+// Each overload is fixed to a single floating-point type, so it is tested
+// directly with that type. The integer-argument overload
+// (assoc_laguerre(unsigned, unsigned, Integer) -> double) is not implemented yet.
 template <class T, class Func>
 void test(Func assoc_laguerre) {
   // sample values
