@@ -494,6 +494,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, VT, Legal);
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Legal);
     }
+    for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
+      setOperationAction(ISD::TRUNCATE, VT, Legal);
   }
 
   // Set DAG combine for LA32 and LA64.
@@ -517,6 +519,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine(ISD::VSELECT);
     setTargetDAGCombine(ISD::FP_TO_SINT);
     setTargetDAGCombine(ISD::FP_TO_UINT);
+    setTargetDAGCombine(ISD::UINT_TO_FP);
   }
 
   // Set DAG combine for 'LASX' feature.
@@ -3822,6 +3825,10 @@ SDValue LoongArchTargetLowering::lowerCONCAT_VECTORS(SDValue Op,
   MVT ResVT = Op.getSimpleValueType();
   assert(ResVT.is256BitVector() && Op.getNumOperands() == 2);
 
+  if (Op.getOperand(0).getOpcode() == ISD::TRUNCATE &&
+      Op.getOperand(1).getOpcode() == ISD::TRUNCATE)
+    return Op;
+
   unsigned NumOperands = Op.getNumOperands();
   unsigned NumFreezeUndef = 0;
   unsigned NumZero = 0;
@@ -5820,6 +5827,22 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     unsigned MinElts = VT.getVectorNumElements();
     unsigned WidenNumElts = WidenVT.getVectorNumElements();
     unsigned InBits = InVT.getSizeInBits();
+
+    // v8i64 -> (v8i32) -> v8i8
+    if (InVT == MVT::v8i64 && WidenVT.is128BitVector()) {
+      InVT = MVT::getVectorVT(MVT::getIntegerVT(256 / MinElts), MinElts);
+      In = DAG.getNode(N->getOpcode(), DL, InVT, In);
+      InBits = 256;
+    }
+
+    // v8i32 -> v8i8 / v4i64 -> v4i16 / v4i64 -> v4i8
+    if ((InVT == MVT::v8i32 || InVT == MVT::v4i64) &&
+        WidenVT.is128BitVector()) {
+      InVT = MVT::getVectorVT(MVT::getIntegerVT(128 / MinElts), MinElts);
+      In = DAG.getNode(N->getOpcode(), DL, InVT, In);
+      InBits = 128;
+      InEltVT = InVT.getVectorElementType();
+    }
 
     if ((128 % InBits) == 0 && WidenVT.is128BitVector()) {
       if ((InEltVT.getSizeInBits() % EltVT.getSizeInBits()) == 0) {
@@ -8050,11 +8073,35 @@ static SDValue performVANDNCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue ExtendSrcToDst(SDNode *N, SelectionDAG &DAG, unsigned ExtendOp) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+  SDValue Src = N->getOperand(0);
+  EVT SrcVT = Src.getValueType();
+
+  unsigned DstElts = VT.getVectorNumElements();
+  unsigned SrcEltBits = SrcVT.getScalarSizeInBits();
+  unsigned DstEltBits = VT.getScalarSizeInBits();
+
+  if (SrcEltBits >= DstEltBits)
+    return SDValue();
+
+  MVT WidenEltVT = MVT::getIntegerVT(DstEltBits);
+  MVT WidenSrcVT = MVT::getVectorVT(WidenEltVT, DstElts);
+
+  SDValue Extend = DAG.getNode(ExtendOp, DL, WidenSrcVT, Src);
+  return DAG.getNode(N->getOpcode(), DL, VT, Extend);
+}
+
 static SDValue performSINT_TO_FPCombine(SDNode *N, SelectionDAG &DAG,
                                         TargetLowering::DAGCombinerInfo &DCI,
                                         const LoongArchSubtarget &Subtarget) {
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
+
+  // Sign-extend src to avoid scalarization.
+  if (VT.isVector())
+    return ExtendSrcToDst(N, DAG, ISD::SIGN_EXTEND);
 
   if (VT != MVT::f32 && VT != MVT::f64)
     return SDValue();
@@ -8085,6 +8132,19 @@ static SDValue performSINT_TO_FPCombine(SDNode *N, SelectionDAG &DAG,
     DAG.ReplaceAllUsesOfValueWith(SDValue(LN0, 1), Load.getValue(1));
     return DAG.getNode(LoongArchISD::SITOF, SDLoc(N), VT, Load);
   }
+
+  return SDValue();
+}
+
+static SDValue performUINT_TO_FPCombine(SDNode *N, SelectionDAG &DAG,
+                                        TargetLowering::DAGCombinerInfo &DCI,
+                                        const LoongArchSubtarget &Subtarget) {
+  SDLoc DL(N);
+  EVT VT = N->getValueType(0);
+
+  // Zero-extend src to avoid scalarization.
+  if (VT.isVector())
+    return ExtendSrcToDst(N, DAG, ISD::ZERO_EXTEND);
 
   return SDValue();
 }
@@ -8469,6 +8529,8 @@ SDValue LoongArchTargetLowering::PerformDAGCombine(SDNode *N,
     return performEXTENDCombine(N, DAG, DCI, Subtarget);
   case ISD::SINT_TO_FP:
     return performSINT_TO_FPCombine(N, DAG, DCI, Subtarget);
+  case ISD::UINT_TO_FP:
+    return performUINT_TO_FPCombine(N, DAG, DCI, Subtarget);
   case ISD::FP_TO_SINT:
   case ISD::FP_TO_UINT:
     return performFP_TO_INTCombine(N, DAG, DCI, Subtarget);

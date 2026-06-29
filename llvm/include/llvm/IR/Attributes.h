@@ -582,9 +582,6 @@ private:
 
   static AttributeList getImpl(LLVMContext &C, ArrayRef<AttributeSet> AttrSets);
 
-  AttributeList setAttributesAtIndex(LLVMContext &C, unsigned Index,
-                                     AttributeSet Attrs) const;
-
 public:
   AttributeList() = default;
 
@@ -606,6 +603,11 @@ public:
                                     AttributeSet Attrs);
   LLVM_ABI static AttributeList get(LLVMContext &C, unsigned Index,
                                     const AttrBuilder &B);
+
+  /// Set the attribute set at the given index.
+  /// Returns a new list because attribute lists are immutable.
+  [[nodiscard]] LLVM_ABI AttributeList setAttributesAtIndex(
+      LLVMContext &C, unsigned Index, AttributeSet Attrs) const;
 
   // TODO: remove non-AtIndex versions of these methods.
   /// Add an attribute to the attribute set at the given index.
