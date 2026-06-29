@@ -100,14 +100,15 @@ template <typename T>
 static T pyTryCast(nanobind::handle object) {
   try {
     return nanobind::cast<T>(object);
-  } catch (nanobind::cast_error &err) {
+  } catch (std::exception &err) {
+    if (object.is_none()) {
+      std::string msg = std::string("Invalid attribute (None?) when attempting "
+                                    "to create an ArrayAttribute (") +
+                        err.what() + ")";
+      throw std::runtime_error(msg.c_str());
+    }
     std::string msg = std::string("Invalid attribute when attempting to "
                                   "create an ArrayAttribute (") +
-                      err.what() + ")";
-    throw std::runtime_error(msg.c_str());
-  } catch (std::runtime_error &err) {
-    std::string msg = std::string("Invalid attribute (None?) when attempting "
-                                  "to create an ArrayAttribute (") +
                       err.what() + ")";
     throw std::runtime_error(msg.c_str());
   }

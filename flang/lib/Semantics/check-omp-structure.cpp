@@ -649,16 +649,6 @@ bool OmpStructureChecker::HasRequires(llvm::omp::Clause req) {
       DEREF(unit.symbol()).details());
 }
 
-void OmpStructureChecker::Enter(const parser::OmpLocator &x) {
-  if (auto *reserved{parser::Unwrap<parser::OmpReservedIdentifier>(x.u)}) {
-    std::string name{parser::ToLowerCaseLetters(reserved->v.source.ToString())};
-    if (!llvm::is_contained(llvm::omp::getReservedLocatorNames(), name)) {
-      context_.Say(reserved->v.source, "'%s' is not a valid locator"_err_en_US,
-          parser::ToUpperCaseLetters(name));
-    }
-  }
-}
-
 void OmpStructureChecker::CheckArgumentObjectKind(const parser::OmpClause &x) {
   unsigned version{context_.langOptions().OpenMPVersion};
   llvm::omp::Directive dirId{GetContext().directive};
@@ -3229,6 +3219,11 @@ void OmpStructureChecker::Enter(const parser::OpenMPCriticalConstruct &x) {
     if (auto *object{parser::Unwrap<parser::OmpObject>(arg.u)}) {
       if (auto *designator{GetDesignatorFromObj(*object)}) {
         return parser::GetDesignatorNameIfDataRef(*designator);
+      } else if (auto *locator{std::get_if<parser::OmpLocator>(&object->u)}) {
+        if (auto *res{
+                std::get_if<parser::OmpReservedIdentifier>(&locator->u)}) {
+          return &res->v;
+        }
       }
     }
     return static_cast<const parser::Name *>(nullptr);

@@ -2154,43 +2154,45 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
     }
 
     assert(!R->isUnion());
-    unsigned InitIndex = 0;
-    for (const Expr *Init : Inits) {
-      // Skip unnamed bitfields.
-      while (InitIndex < R->getNumFields() &&
-             R->getField(InitIndex)->isUnnamedBitField())
-        ++InitIndex;
+    for (unsigned BI = 0; BI != R->getNumBases(); ++BI) {
+      const Expr *Init = Inits[BI];
+      const Record::Base *B = R->getBase(BI);
+      if (!this->emitGetPtrBase(B->Offset, Init))
+        return false;
+      if (!this->visitInitializerPop(Init))
+        return false;
+    }
 
+    unsigned FieldIndex = 0;
+    for (unsigned FI = R->getNumBases(); FI != Inits.size();) {
+      const Record::Field *FieldToInit = R->getField(FieldIndex);
+      if (FieldToInit->isUnnamedBitField()) {
+        ++FieldIndex;
+        continue;
+      }
+
+      const Expr *Init = Inits[FI];
       // If this is a child of a DesignatedInitUpdateExpr, skip elements which
       // aren't supposed to be modified.
       if (isa<NoInitExpr>(Init)) {
-        ++InitIndex;
+        ++FieldIndex;
+        ++FI;
         continue;
       }
 
       if (OptPrimType T = classify(Init)) {
-        const Record::Field *FieldToInit = R->getField(InitIndex);
         if (!initPrimitiveField(FieldToInit, Init, *T))
           return false;
-        ++InitIndex;
-      } else {
-        // Initializer for a direct base class.
-        if (const Record::Base *B = R->getBase(Init->getType())) {
-          if (!this->emitGetPtrBase(B->Offset, Init))
-            return false;
-
-          if (!this->visitInitializerPop(Init))
-            return false;
-          // Base initializers don't increase InitIndex, since they don't count
-          // into the Record's fields.
-        } else {
-          const Record::Field *FieldToInit = R->getField(InitIndex);
-          if (!initCompositeField(FieldToInit, Init))
-            return false;
-          ++InitIndex;
-        }
+      } else if (!initCompositeField(FieldToInit, Init)) {
+        return false;
       }
+
+      ++FI;
+      ++FieldIndex;
     }
+
+    assert(R->getNumVirtualBases() == 0);
+
     return this->emitFinishInit(E);
   }
 
@@ -3487,33 +3489,8 @@ bool Compiler<Emitter>::VisitCXXReinterpretCastExpr(
     return this->emitInvalidCast(CastKind::Reinterpret, /*Fatal=*/true, E);
 
   if (FromT == PT_Ptr || ToT == PT_Ptr) {
-    // Both types could be PT_Ptr because their expressions are glvalues.
-    OptPrimType PointeeFromT;
-    if (SubExpr->getType()->isPointerOrReferenceType())
-      PointeeFromT = classify(SubExpr->getType()->getPointeeType());
-    else
-      PointeeFromT = classify(SubExpr->getType());
-
-    OptPrimType PointeeToT;
-    if (E->getType()->isPointerOrReferenceType())
-      PointeeToT = classify(E->getType()->getPointeeType());
-    else
-      PointeeToT = classify(E->getType());
-
-    bool Fatal = true;
-    if (PointeeToT && PointeeFromT) {
-      if (isIntegerOrBoolType(*PointeeFromT) &&
-          isIntegerOrBoolType(*PointeeToT))
-        Fatal = false;
-      else if (E->getCastKind() == CK_LValueBitCast)
-        Fatal = false;
-    } else {
-      Fatal = SubExpr->getType().getTypePtr() != E->getType().getTypePtr();
-    }
-
-    if (!this->emitInvalidCast(CastKind::Reinterpret, Fatal, E))
+    if (!this->emitInvalidCast(CastKind::Reinterpret, /*Fatal=*/false, E))
       return false;
-
     if (E->getCastKind() == CK_LValueBitCast)
       return this->delegate(SubExpr);
     return this->VisitCastExpr(E);

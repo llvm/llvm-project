@@ -80,15 +80,21 @@ bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
       return TryCand.Reason != NoCand;
   }
 
-  if (!RegionPolicy.DisableLatencyHeuristic)
+  // Do latency scheduling by trying to not increase the scheduled latency
+  // (going bottom-up). This is important for performance, but it is best to
+  // only do it when likely beneficial and not "move everything around": Only
+  // apply this to SUs that have somewhat longer latencies, and don't push an
+  // SU upwards if it's on the critical path.
+  if (!RegionPolicy.DisableLatencyHeuristic &&
+      std::max(TryCand.SU->Latency, Cand.SU->Latency) >= 5)
     if (const SUnit *HigherSU =
             TryCand.SU->getHeight() > Cand.SU->getHeight()   ? TryCand.SU
             : TryCand.SU->getHeight() < Cand.SU->getHeight() ? Cand.SU
                                                              : nullptr)
       if (HigherSU->getHeight() > Zone->getScheduledLatency() &&
           HigherSU->getDepth() < computeRemLatency(*Zone)) {
-        // The higher SU increases the scheduled latency but is not on the
-        // Critical Path by Depth, so put it above the other one.
+        // HigherSU would increase the scheduled latency and there is room
+        // above for it next to the critical path, so wait with it.
         tryLess(TryCand.SU->getHeight(), Cand.SU->getHeight(), TryCand, Cand,
                 GenericSchedulerBase::BotHeightReduce);
         return TryCand.Reason != NoCand;
