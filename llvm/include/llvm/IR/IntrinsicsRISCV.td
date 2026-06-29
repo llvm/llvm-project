@@ -2076,6 +2076,14 @@ class RVPBinaryIntrinsic
                               [IntrNoMem, IntrSpeculatable]>;
   def int_riscv_predsum  : RVPReductionIntrinsic;
   def int_riscv_predsumu : RVPReductionIntrinsic;
+
+  // Packed Merge
+  class RVPTernaryIntrinsic
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, LLVMMatchType<0>,
+                             LLVMMatchType<0>],
+                            [IntrNoMem, IntrSpeculatable]>;
+  def int_riscv_pmerge : RVPTernaryIntrinsic;
 } // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//
