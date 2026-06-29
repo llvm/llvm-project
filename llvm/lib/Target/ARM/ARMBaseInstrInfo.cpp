@@ -481,7 +481,9 @@ bool ARMBaseInstrInfo::SubsumesPredicate(ArrayRef<MachineOperand> Pred1,
   case ARMCC::GE:
     return CC2 == ARMCC::GT;
   case ARMCC::LE:
-    return CC2 == ARMCC::LT;
+    return CC2 == ARMCC::LT || CC2 == ARMCC::EQ;
+  case ARMCC::NE:
+    return CC2 == ARMCC::HI || CC2 == ARMCC::GT;
   }
 }
 
