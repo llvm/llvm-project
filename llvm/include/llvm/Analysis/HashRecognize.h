@@ -90,13 +90,11 @@ public:
 
   // Auxilary entry point after analysis to generate constants for a GF(2)
   // Barrett Reduction.
-  // The first APInt is the constant used in the first clmul operation, which is
-  // mu = floor(x^(BW+TC) / P(x)); bit width is TC+1.
-  // The second APInt is the constant used in the second clmul operation, which
-  // is the generating polynomial P(x) with the implied x^BW term included; bit
-  // width is BW+1.
-  // Both constants are bit-reflected across their respective
-  // widths for bit-reflected CRCs.
+  // Returns a pair of Mu of bitwidth TC+1 and FullGenPoly of bitwidth BW+1.
+  // Mu is used in the first clmul operation. Mu = floor(x^(BW+TC) / P(x)).
+  // FullGenPoly is used in the second clmul operation, and is \p GenPoly
+  // with the implied BW'th bit.
+  // Endianness is accounted for using \p ByteOrderSwapped.
   LLVM_ABI static std::pair<APInt, APInt>
   genBarrettConstants(const APInt &GenPoly, unsigned TripCount,
                       bool ByteOrderSwapped);

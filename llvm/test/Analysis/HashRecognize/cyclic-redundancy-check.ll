@@ -640,6 +640,56 @@ exit:                                              ; preds = %loop
   ret i32 %crc.next
 }
 
+define i8 @crc8.le.tc8.data32(i8 %checksum, i32 %msg) {
+; CHECK-LABEL: 'crc8.le.tc8.data32'
+; CHECK-NEXT:  Found little-endian CRC-8 loop with trip count 8
+; CHECK-NEXT:    Initial CRC: i8 %checksum
+; CHECK-NEXT:    Generating polynomial: 59
+; CHECK-NEXT:    Computed CRC: %crc.next = select i1 %check.sb, i8 %crc.lshr, i8 %crc.xor
+; CHECK-NEXT:    Auxiliary data: i32 %msg
+; CHECK-NEXT:    Computed CRC lookup table:
+; CHECK-NEXT:  0 16 32 48 55 39 23 7 25 9 57 41 46 62 14 30
+; CHECK-NEXT:  50 34 18 2 5 21 37 53 43 59 11 27 28 12 60 44
+; CHECK-NEXT:  19 3 51 35 36 52 4 20 10 26 42 58 61 45 29 13
+; CHECK-NEXT:  33 49 1 17 22 6 54 38 56 40 24 8 15 31 47 63
+; CHECK-NEXT:  38 54 6 22 17 1 49 33 63 47 31 15 8 24 40 56
+; CHECK-NEXT:  20 4 52 36 35 51 3 19 13 29 45 61 58 42 26 10
+; CHECK-NEXT:  53 37 21 5 2 18 34 50 44 60 12 28 27 11 59 43
+; CHECK-NEXT:  7 23 39 55 48 32 16 0 30 14 62 46 41 57 9 25
+; CHECK-NEXT:  59 43 27 11 12 28 44 60 34 50 2 18 21 5 53 37
+; CHECK-NEXT:  9 25 41 57 62 46 30 14 16 0 48 32 39 55 7 23
+; CHECK-NEXT:  40 56 8 24 31 15 63 47 49 33 17 1 6 22 38 54
+; CHECK-NEXT:  26 10 58 42 45 61 13 29 3 19 35 51 52 36 20 4
+; CHECK-NEXT:  29 13 61 45 42 58 10 26 4 20 36 52 51 35 19 3
+; CHECK-NEXT:  47 63 15 31 24 8 56 40 54 38 22 6 1 17 33 49
+; CHECK-NEXT:  14 30 46 62 57 41 25 9 23 7 55 39 32 48 0 16
+; CHECK-NEXT:  60 44 28 12 11 27 43 59 37 53 5 21 18 2 50 34
+; CHECK-NEXT:    Computed CRC Barrett constants:
+; CHECK-NEXT:  Mu = 107, FullGenPoly = 119
+;
+entry:
+  br label %loop
+
+loop:                                              ; preds = %loop, %entry
+  %crc = phi i8 [ %checksum, %entry ], [ %crc.next, %loop ]
+  %data = phi i32 [ %msg, %entry ], [ %data.next, %loop ]
+  %iv = phi i8 [ 0, %entry ], [ %iv.next, %loop ]
+  %data.trunc = trunc i32 %data to i8
+  %xor.crc.data = xor i8 %crc, %data.trunc
+  %sb.crc.data = and i8 %xor.crc.data, 1
+  %check.sb = icmp eq i8 %sb.crc.data, 0
+  %crc.lshr = lshr i8 %crc, 1
+  %crc.xor = xor i8 %crc.lshr, 59
+  %crc.next = select i1 %check.sb, i8 %crc.lshr, i8 %crc.xor
+  %iv.next = add nuw nsw i8 %iv, 1
+  %data.next = lshr i32 %data, 1
+  %exit.cond = icmp samesign ult i8 %iv, 7
+  br i1 %exit.cond, label %loop, label %exit
+
+exit:                                              ; preds = %loop
+  ret i8 %crc.next
+}
+
 define i16 @crc16.be.tc8.zext.data(i8 %msg, i16 %checksum) {
 ; CHECK-LABEL: 'crc16.be.tc8.zext.data'
 ; CHECK-NEXT:  Found big-endian CRC-16 loop with trip count 8
