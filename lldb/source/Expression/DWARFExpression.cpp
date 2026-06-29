@@ -1525,8 +1525,11 @@ llvm::Expected<Value> DWARFExpression::Evaluate(
 
     case DW_OP_plus_uconst: {
       const uint64_t uconst_value = op->getRawOperand(0);
+      const int byte_size = stack.back().GetScalar().GetByteSize();
       // Implicit conversion from a UINT to a Scalar...
       stack.back().GetScalar() += uconst_value;
+      if (byte_size > 0 && byte_size < 8)
+        stack.back().GetScalar().TruncOrExtendTo(byte_size * 8, false);
       if (!stack.back().GetScalar().IsValid())
         return llvm::createStringError("DW_OP_plus_uconst failed");
     } break;
