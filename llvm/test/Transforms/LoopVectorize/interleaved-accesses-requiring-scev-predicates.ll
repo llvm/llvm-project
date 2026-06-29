@@ -131,12 +131,12 @@ define void @wrap_predicate_for_interleave_group_wraps_for_known_trip_count(ptr 
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw nsw <4 x i64> [[VEC_IND]], splat (i64 5)
 ; CHECK-NEXT:    [[TMP1:%.*]] = and <4 x i64> [[TMP0]], splat (i64 9)
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i64> [[TMP1]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i64> [[TMP1]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP1]], i64 2
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[TMP1]], i64 3
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i32, ptr [[X]], i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i64> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i32, ptr [[X]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i64> [[TMP1]], i64 2
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i32, ptr [[X]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <4 x i64> [[TMP1]], i64 3
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i32, ptr [[X]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = load i32, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[TMP7]], align 4
