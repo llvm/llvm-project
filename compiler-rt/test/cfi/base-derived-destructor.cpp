@@ -83,7 +83,7 @@ int main() {
 
   // CFI-DIAG: runtime error: control flow integrity check for type 'B' failed during base-to-derived cast
   // CFI-DIAG-NEXT: note: vtable is of type '{{(class )?}}A<{{(class )?}}B>'
-  // CFI-DIAG: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
+  // CFI-DIAG: SUMMARY: UndefinedBehaviorSanitizer: cfi-derived-cast
   B* b = new B;
   break_optimization(b);
   delete b; // UB here
