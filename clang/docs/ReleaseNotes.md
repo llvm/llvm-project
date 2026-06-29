@@ -274,6 +274,14 @@ features cannot lower the translation-unit ABI level;
 
 - All options of the `-fzero-call-used-regs` compiler flag are now allowed on RISC-V.
 
+- ``-ftrivial-auto-var-init=zero`` and ``-ftrivial-auto-var-init=pattern`` now
+  initialize variables whose declaration is bypassed by ``goto`` or ``switch``,
+  which were previously left uninitialized. Initialization follows the lifetime
+  rules of each language: in C++ a variables lifetime restarts whenever its
+  scope is re-entered, so it is reinitialized through bypassing jumps. In C,
+  its lifetime begins at entry into the enclosing block, so it is initialized
+  at that block's entry.
+
 ### Removed Compiler Flags
 
 ### Attribute Changes in Clang
