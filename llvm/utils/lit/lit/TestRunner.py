@@ -627,8 +627,8 @@ def formatOutput(title, data, limit=None):
         return ""
     if not limit is None and len(data) > limit:
         msg = (
-            f"data was truncated ({limit}/{len(data)})" +
-            " (change limit with -D output_limit=N)"
+            f"data was truncated ({limit}/{len(data)})"
+            + " (change limit with -D output_limit=N)"
         )
         data = data[:limit] + "\n...\n"
     else:
