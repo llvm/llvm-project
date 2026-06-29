@@ -1,0 +1,21 @@
+; Test inferCallsiteSamples with --infer-callsite-samples
+
+; Baseline: no inference
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t1 --profile-summary-cold-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0 --infer-callsite-samples=0
+; RUN: FileCheck %s --input-file %t1 --check-prefix=CHECK-BASELINE
+
+; With probeless inference: creates FunctionSamples for probeless main
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/inline-cs-pseudoprobe.perfscript --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin --output=%t2 --profile-summary-cold-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0 --infer-callsite-samples=1
+; RUN: FileCheck %s --input-file %t2 --check-prefix=CHECK-INFER
+
+; Baseline: main does not appear, foo total is 74
+; CHECK-BASELINE:     [main:2 @ foo]:74:0
+; CHECK-BASELINE:     [main:2 @ foo:8 @ bar]:28:14
+; CHECK-BASELINE-NOT: [main]:
+
+; Infer: main gets FunctionSamples inferred from foo's head samples.
+; CHECK-INFER:     [main:2 @ foo]:74:0
+; CHECK-INFER:     [main:2 @ foo:8 @ bar]:28:14
+; CHECK-INFER:     [main]:1:0
+; CHECK-INFER-NEXT: 2: 1 foo:1
+; CHECK-INFER-NEXT: !CFGChecksum: 281479271677951
