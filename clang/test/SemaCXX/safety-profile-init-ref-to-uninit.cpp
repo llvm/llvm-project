@@ -364,3 +364,56 @@ void template_new_bad() {
   (void)p;
 }
 template void template_new_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_new_bad<int>' requested here}}
+
+// The call-argument, pointer-assignment, and return sites pass no Decl, so
+// (unlike the variable-init site, template_nondependent_bad above) their
+// deferral cannot come from D->isTemplated(). They must still fire exactly
+// once, at instantiation -- not twice, and not on the pattern.
+template <typename T>
+void template_call_arg_unmarked() {
+  take_ptr(&g_uninit); // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+template void template_call_arg_unmarked<int>(); // expected-note {{in instantiation of function template specialization 'template_call_arg_unmarked<int>' requested here}}
+
+template <typename T>
+void template_call_arg_marked() {
+  take_uninit_ptr(&g_init); // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+}
+template void template_call_arg_marked<int>(); // expected-note {{in instantiation of function template specialization 'template_call_arg_marked<int>' requested here}}
+
+template <typename T>
+void template_assignment_bad() {
+  int *p = nullptr;
+  p = &g_uninit; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  (void)p;
+}
+template void template_assignment_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_assignment_bad<int>' requested here}}
+
+template <typename T>
+int *template_return_bad() {
+  return &g_uninit; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+}
+template int *template_return_bad<int>(); // expected-note {{in instantiation of function template specialization 'template_return_bad<int>' requested here}}
+
+// A never-instantiated template stays silent: the deferred checks never run.
+template <typename T>
+void template_never_instantiated() {
+  take_ptr(&g_uninit);
+  int *p = nullptr;
+  p = &g_uninit;
+  (void)p;
+}
+
+// A violation in a discarded if-constexpr branch is never instantiated, so it
+// is not diagnosed -- even though the dependent condition keeps the branch live
+// on the pattern (where the check now defers).
+template <typename T>
+void template_discarded_branch() {
+  if constexpr (sizeof(T) > 1000) {
+    take_ptr(&g_uninit);
+    int *p = nullptr;
+    p = &g_uninit;
+    (void)p;
+  }
+}
+template void template_discarded_branch<int>();

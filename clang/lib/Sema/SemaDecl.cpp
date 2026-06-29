@@ -15091,6 +15091,14 @@ void Sema::checkRefToUninitInit(SourceLocation Loc, bool TargetIsRefToUninit,
   // not a source the user wrote, so it must not drive this rule.
   if (!Src || isa<RecoveryExpr>(Src->IgnoreParens()))
     return;
+  // The call-argument, default-argument, assignment, and return sites pass no
+  // Decl, so the D->isTemplated() deferral in shouldEmitProfileViolation can't
+  // fire. Defer on a template pattern here instead: the binding is re-checked
+  // on the instantiated expression, so firing on the pattern double-diagnoses
+  // and wrongly fires in discarded if-constexpr branches / never-instantiated
+  // templates. The variable and data-member sites pass D and are unaffected.
+  if (!D && CurContext && CurContext->isDependentContext())
+    return;
   static constexpr StringRef Profile = "std::init";
   static constexpr StringRef Rule = "ref_to_uninit";
   if (!shouldEmitProfileViolation(Profile, Rule, Loc, D))
