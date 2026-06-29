@@ -1101,7 +1101,13 @@ void WaitcntBrackets::recordAsyncMark(MachineInstr &Inst) {
   // limit every time we push a new mark, but that seems like unnecessary work
   // in practical cases. We do separately truncate the array when processing a
   // loop, which should be sufficient.
-  AsyncMarks.push_back(AsyncScore);
+  CounterValueArray MergedScore = AsyncScore;
+  if (!AsyncMarks.empty()) {
+    const CounterValueArray &PrevMark = AsyncMarks.back();
+    for (AMDGPU::InstCounterType T : inst_counter_types(Context->MaxCounter))
+      MergedScore[T] = std::max(AsyncScore[T], PrevMark[T]);
+  }
+  AsyncMarks.push_back(MergedScore);
   AsyncScore = {};
   LLVM_DEBUG({
     dbgs() << "recordAsyncMark:\n" << Inst;
