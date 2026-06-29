@@ -16943,38 +16943,37 @@ static SDValue PerformSTORECombine(SDNode *N,
 
   // Split a store of a VMOVDRR into two integer stores to avoid mixing NEON and
   // ARM stores of arguments in the same cache line.
-  if (StVal.getNode()->getOpcode() == ARMISD::VMOVDRR &&
-      StVal.getNode()->hasOneUse()) {
-    SelectionDAG  &DAG = DCI.DAG;
+  if (StVal.getOpcode() == ARMISD::VMOVDRR && StVal->hasOneUse()) {
+    SelectionDAG &DAG = DCI.DAG;
     bool isBigEndian = DAG.getDataLayout().isBigEndian();
     SDLoc DL(St);
     SDValue BasePtr = St->getBasePtr();
-    SDValue NewST1 = DAG.getStore(
-        St->getChain(), DL, StVal.getNode()->getOperand(isBigEndian ? 1 : 0),
-        BasePtr, St->getPointerInfo(), St->getBaseAlign(),
-        St->getMemOperand()->getFlags());
+    SDValue NewST1 =
+        DAG.getStore(St->getChain(), DL, StVal.getOperand(isBigEndian ? 1 : 0),
+                     BasePtr, St->getPointerInfo(), St->getBaseAlign(),
+                     St->getMemOperand()->getFlags());
 
     SDValue OffsetPtr = DAG.getNode(ISD::ADD, DL, MVT::i32, BasePtr,
                                     DAG.getConstant(4, DL, MVT::i32));
     return DAG.getStore(NewST1.getValue(0), DL,
-                        StVal.getNode()->getOperand(isBigEndian ? 0 : 1),
-                        OffsetPtr, St->getPointerInfo().getWithOffset(4),
+                        StVal.getOperand(isBigEndian ? 0 : 1), OffsetPtr,
+                        St->getPointerInfo().getWithOffset(4),
                         St->getBaseAlign(), St->getMemOperand()->getFlags());
   }
 
   if (StVal.getValueType() == MVT::i64 &&
-      StVal.getNode()->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
-
+      StVal.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
     // Bitcast an i64 store extracted from a vector to f64.
     // Otherwise, the i64 value will be legalized to a pair of i32 values.
     SelectionDAG &DAG = DCI.DAG;
     SDLoc dl(StVal);
     SDValue IntVec = StVal.getOperand(0);
-    EVT FloatVT = EVT::getVectorVT(*DAG.getContext(), MVT::f64,
-                                   IntVec.getValueType().getVectorNumElements());
+    EVT FloatVT =
+        EVT::getVectorVT(*DAG.getContext(), MVT::f64,
+                         IntVec.getValueType().getVectorNumElements());
     SDValue Vec = DAG.getNode(ISD::BITCAST, dl, FloatVT, IntVec);
-    SDValue ExtElt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::f64,
-                                 Vec, StVal.getOperand(1));
+    SDValue ExtElt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::f64, Vec,
+                                 StVal.getOperand(1));
     dl = SDLoc(N);
     SDValue V = DAG.getNode(ISD::BITCAST, dl, MVT::i64, ExtElt);
     // Make the DAGCombiner fold the bitcasts.
