@@ -115,10 +115,10 @@ public:
     const auto *TLI = ST.getTargetLowering();
 
     Type *EltTy = VTy->getElementType();
-    // If the element size is not less than the convert to scalar size, then we
-    // can't do any bit packing
+    // If the element size is not is not a multiple scalar size, then we can't
+    // do any bit packing
     if (!EltTy->isIntegerTy() ||
-        EltTy->getScalarSizeInBits() > ConvertToScalar->getScalarSizeInBits())
+        ConvertToScalar->getScalarSizeInBits() % EltTy->getScalarSizeInBits())
       return false;
 
     // Only coerce illegal types
