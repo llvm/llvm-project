@@ -59,6 +59,16 @@ void mlir::registerConvertMemRefToEmitCInterface(DialectRegistry &registry) {
 // Conversion Patterns
 //===----------------------------------------------------------------------===//
 
+Type convertMemRefType(MemRefType opTy, const TypeConverter *typeConverter) {
+  Type resultTy;
+  if (opTy.getRank() == 0) {
+    resultTy = typeConverter->convertType(mlir::getElementTypeOrSelf(opTy));
+  } else {
+    resultTy = typeConverter->convertType(opTy);
+  }
+  return resultTy;
+}
+
 namespace {
 struct ConvertAlloca final : public OpConversionPattern<memref::AllocaOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -72,11 +82,6 @@ struct ConvertAlloca final : public OpConversionPattern<memref::AllocaOp> {
           op.getLoc(), "cannot transform alloca with dynamic shape");
     }
 
-    if (op.getType().getRank() == 0) {
-      return rewriter.notifyMatchFailure(
-          op.getLoc(), "cannot transform alloca with zero rank");
-    }
-
     if (op.getAlignment().value_or(1) > 1) {
       // TODO: Allow alignment if it is not more than the natural alignment
       // of the C array.
@@ -84,25 +89,28 @@ struct ConvertAlloca final : public OpConversionPattern<memref::AllocaOp> {
           op.getLoc(), "cannot transform alloca with alignment requirement");
     }
 
-    auto resultTy = getTypeConverter()->convertType(op.getType());
-    if (!resultTy) {
+    auto resultTy = convertMemRefType(op.getType(), getTypeConverter());
+    if (!resultTy)
       return rewriter.notifyMatchFailure(op.getLoc(), "cannot convert type");
-    }
+
     auto noInit = emitc::OpaqueAttr::get(getContext(), "");
+    // Rank-0 path
+    if (op.getType().getRank() == 0) {
+      auto var = emitc::VariableOp::create(
+          rewriter, op.getLoc(), emitc::LValueType::get(resultTy), noInit);
+
+      auto ptr = emitc::AddressOfOp::create(rewriter, op.getLoc(),
+                                            emitc::PointerType::get(resultTy),
+                                            var.getResult());
+
+      rewriter.replaceOp(op, ptr.getResult());
+      return success();
+    }
+    // Rank > 0 path
     rewriter.replaceOpWithNewOp<emitc::VariableOp>(op, resultTy, noInit);
     return success();
   }
 };
-
-Type convertMemRefType(MemRefType opTy, const TypeConverter *typeConverter) {
-  Type resultTy;
-  if (opTy.getRank() == 0) {
-    resultTy = typeConverter->convertType(mlir::getElementTypeOrSelf(opTy));
-  } else {
-    resultTy = typeConverter->convertType(opTy);
-  }
-  return resultTy;
-}
 
 static Value calculateMemrefTotalSizeBytes(Location loc, MemRefType memrefType,
                                            OpBuilder &builder,
