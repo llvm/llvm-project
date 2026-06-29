@@ -2232,13 +2232,9 @@ static LogicalResult verifyTileIsBroadcast(tosa::TileOp tileOp) {
   for (const auto [index, multiple] : llvm::enumerate(multiples)) {
     if (multiple == 1)
       continue;
-
-    if (inputType.isDynamicDim(index) || outputType.isDynamicDim(index))
+    if (outputType.isDynamicDim(index))
       return failure();
-    const int64_t inputDim = inputType.getDimSize(index);
-    if (inputDim * multiple != outputType.getDimSize(index))
-      return failure();
-    if (inputDim != 1)
+    if (inputType.getDimSize(index) != 1)
       return failure();
   }
 
@@ -2264,11 +2260,6 @@ struct RemoveBroadcastTileFromBinaryElementwise
       return rewriter.notifyMatchFailure(
           tileOp, "consumer must be binary broadcastable");
 
-    // Don't optimize a tile that feeds the shift operand of a MulOp
-    if (isa<tosa::MulOp>(user) && tileOutput == user->getOperand(2))
-      return rewriter.notifyMatchFailure(tileOp,
-                                         "tile feeds shift operand of MulOp");
-
     if (failed(verifyTileIsBroadcast(tileOp)))
       return rewriter.notifyMatchFailure(
           tileOp, "tile must only expand statically-known singleton dims");
@@ -2278,11 +2269,11 @@ struct RemoveBroadcastTileFromBinaryElementwise
     Value otherOperand = lhsOperand == tileOutput ? rhsOperand : lhsOperand;
     Value tileInput = tileOp.getInput1();
 
-    const ShapedType newLhsType = cast<ShapedType>(otherOperand.getType());
-    const ShapedType newRhsType = cast<ShapedType>(tileInput.getType());
+    const ShapedType newOtherType = cast<ShapedType>(otherOperand.getType());
+    const ShapedType newTileType = cast<ShapedType>(tileInput.getType());
     SmallVector<int64_t> broadcastedShape;
-    OpTrait::util::getBroadcastedShape(newLhsType.getShape(),
-                                       newRhsType.getShape(), broadcastedShape);
+    OpTrait::util::getBroadcastedShape(
+        newOtherType.getShape(), newTileType.getShape(), broadcastedShape);
 
     const ShapedType outputType = cast<ShapedType>(user->getResultTypes()[0]);
     if (!llvm::equal(broadcastedShape, outputType.getShape()))

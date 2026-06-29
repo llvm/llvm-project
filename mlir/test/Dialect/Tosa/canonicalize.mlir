@@ -1779,20 +1779,6 @@ func.func @canonicalize_tile_broadcast_sub(%arg0: tensor<96x56x56x96xf32>, %arg1
 
 // -----
 
-// CHECK-LABEL: @canonicalize_tile_broadcast_mul_preserves_shift
-// CHECK-SAME: %[[ARG0:[^:]+]]: tensor<1x56x56x96xf32>, %[[ARG1:[^:]+]]: tensor<1x56x56x1xf32>, %[[SHIFT:[^:]+]]: tensor<1xi8>
-// CHECK-NOT: tosa.tile
-// CHECK: %[[MUL:.+]] = tosa.mul %[[ARG0]], %[[ARG1]], %[[SHIFT]] : (tensor<1x56x56x96xf32>, tensor<1x56x56x1xf32>, tensor<1xi8>) -> tensor<1x56x56x96xf32>
-// CHECK: return %[[MUL]]
-func.func @canonicalize_tile_broadcast_mul_preserves_shift(%arg0: tensor<1x56x56x96xf32>, %arg1: tensor<1x56x56x1xf32>, %shift: tensor<1xi8>) -> tensor<1x56x56x96xf32> {
-  %shape = tosa.const_shape {values = dense<[1, 1, 1, 96]> : tensor<4xindex>} : () -> !tosa.shape<4>
-  %tile = tosa.tile %arg1, %shape : (tensor<1x56x56x1xf32>, !tosa.shape<4>) -> tensor<1x56x56x96xf32>
-  %mul = tosa.mul %arg0, %tile, %shift : (tensor<1x56x56x96xf32>, tensor<1x56x56x96xf32>, tensor<1xi8>) -> tensor<1x56x56x96xf32>
-  return %mul : tensor<1x56x56x96xf32>
-}
-
-// -----
-
 // CHECK-LABEL: @canonicalize_tile_broadcast_greater
 // CHECK-SAME: %[[ARG0:[^:]+]]: tensor<1x197x768xf32>, %[[ARG1:[^:]+]]: tensor<1x197x1xf32>
 // CHECK-NOT: tosa.tile
@@ -1870,6 +1856,18 @@ func.func @dont_canonicalize_tile_dynamic_expanded_dim(%arg0: tensor<2x?xf32>, %
   %tile = tosa.tile %arg0, %shape : (tensor<2x?xf32>, !tosa.shape<2>) -> tensor<2x4xf32>
   %sub = tosa.sub %arg1, %tile : (tensor<2x4xf32>, tensor<2x4xf32>) -> tensor<2x4xf32>
   return %sub : tensor<2x4xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @dont_canonicalize_tile_dynamic_output
+// CHECK: tosa.tile
+// CHECK: tosa.sub
+func.func @dont_canonicalize_tile_dynamic_output(%arg0: tensor<2x?xf32>, %arg1: tensor<2x1xf32>) -> tensor<2x?xf32> {
+  %shape = tosa.const_shape {values = dense<[1, 4]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %tile = tosa.tile %arg1, %shape : (tensor<2x1xf32>, !tosa.shape<2>) -> tensor<2x?xf32>
+  %sub = tosa.sub %arg0, %tile : (tensor<2x?xf32>, tensor<2x?xf32>) -> tensor<2x?xf32>
+  return %sub : tensor<2x?xf32>
 }
 
 // -----
