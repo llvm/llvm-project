@@ -28,8 +28,8 @@ public:
 
   constable_iter() = default;
 
-  template <class U = constable_iter>
-  const constable_iter& operator=(const std::type_identity_t<constable_iter>&) const;
+  template <class = void>
+  const constable_iter& operator=(const constable_iter&) const;
 
   char operator*() const;
 
