@@ -292,6 +292,14 @@ bool VectorCombine::vectorizeLoadInsert(Instruction &I) {
       ScalarTy = Type::getIntNTy(I.getContext(), ScalarSize);
       MinVecTy = VectorType::get(ScalarTy, MinVecNumElts, false);
       NeedCast = true;
+
+      // In the NeedCast case, the shuffle result is later bitcast to the final
+      // vector type. This is only valid when the widened load vector and the
+      // final result vector have the same total bit width. Cases like <16 x i8>
+      // to <3 x i32> would require a different intermediate shuffle type, so
+      // leave them for a separate enhancement.
+      if (DL->getTypeSizeInBits(MinVecTy) != DL->getTypeSizeInBits(I.getType()))
+        return false;
     }
 
     OffsetEltIndex = Offset.udiv(ScalarSizeInBytes).getZExtValue();
