@@ -15,9 +15,10 @@
 #  pragma GCC system_header
 #endif
 
+#if _LIBCPP_STD_VER >= 17
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& as_const(_Tp& __t) noexcept {
   return __t;
@@ -25,8 +26,9 @@ template <class _Tp>
 
 template <class _Tp>
 void as_const(const _Tp&&) = delete;
-#endif
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 17
 
 #endif // _LIBCPP___UTILITY_AS_CONST_H

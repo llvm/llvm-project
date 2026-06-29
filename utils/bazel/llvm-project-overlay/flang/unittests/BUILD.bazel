@@ -220,6 +220,7 @@ cc_test(
     srcs = glob(["Frontend/*.cpp"]),
     deps = [
         "//clang:basic",
+        "//clang:options",
         "//flang:EvaluateHeaders",
         "//flang:FrontendHeaders",
         "//flang:FrontendToolHeaders",

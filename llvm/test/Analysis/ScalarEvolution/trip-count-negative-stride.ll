@@ -562,9 +562,9 @@ declare void @llvm.assume(i1)
 define void @step_is_neg_addrec_slt_8(i64 %n) {
 ; CHECK-LABEL: 'step_is_neg_addrec_slt_8'
 ; CHECK-NEXT:  Determining loop execution counts for: @step_is_neg_addrec_slt_8
-; CHECK-NEXT:  Loop %inner: backedge-taken count is (7 /u {0,+,-1}<%outer.header>)
+; CHECK-NEXT:  Loop %inner: backedge-taken count is (7 /u {0,+,-1}<nuw><nsw><%outer.header>)
 ; CHECK-NEXT:  Loop %inner: constant max backedge-taken count is i32 8
-; CHECK-NEXT:  Loop %inner: symbolic max backedge-taken count is (7 /u {0,+,-1}<%outer.header>)
+; CHECK-NEXT:  Loop %inner: symbolic max backedge-taken count is (7 /u {0,+,-1}<nuw><nsw><%outer.header>)
 ; CHECK-NEXT:  Loop %inner: Trip multiple is 1
 ; CHECK-NEXT:  Loop %outer.header: backedge-taken count is i64 0
 ; CHECK-NEXT:  Loop %outer.header: constant max backedge-taken count is i64 0
@@ -600,9 +600,9 @@ exit:
 define void @step_is_neg_addrec_slt_var(i32 %n) {
 ; CHECK-LABEL: 'step_is_neg_addrec_slt_var'
 ; CHECK-NEXT:  Determining loop execution counts for: @step_is_neg_addrec_slt_var
-; CHECK-NEXT:  Loop %inner: backedge-taken count is ({0,+,1}<nuw><nsw><%outer.header> + ({0,+,-1}<nsw><%outer.header> smax %n))
+; CHECK-NEXT:  Loop %inner: backedge-taken count is ({0,+,1}<nuw><nsw><%outer.header> + ({0,+,-1}<nuw><nsw><%outer.header> smax %n))
 ; CHECK-NEXT:  Loop %inner: constant max backedge-taken count is i32 2147483647
-; CHECK-NEXT:  Loop %inner: symbolic max backedge-taken count is ({0,+,1}<nuw><nsw><%outer.header> + ({0,+,-1}<nsw><%outer.header> smax %n))
+; CHECK-NEXT:  Loop %inner: symbolic max backedge-taken count is ({0,+,1}<nuw><nsw><%outer.header> + ({0,+,-1}<nuw><nsw><%outer.header> smax %n))
 ; CHECK-NEXT:  Loop %inner: Trip multiple is 1
 ; CHECK-NEXT:  Loop %outer.header: backedge-taken count is i64 0
 ; CHECK-NEXT:  Loop %outer.header: constant max backedge-taken count is i64 0
@@ -638,9 +638,9 @@ exit:
 define void @step_is_neg_addrec_unknown_start(i32 %n) {
 ; CHECK-LABEL: 'step_is_neg_addrec_unknown_start'
 ; CHECK-NEXT:  Determining loop execution counts for: @step_is_neg_addrec_unknown_start
-; CHECK-NEXT:  Loop %inner: backedge-taken count is ({(-1 * %n),+,1}<nw><%outer.header> + (8 smax {%n,+,-1}<nsw><%outer.header>))
+; CHECK-NEXT:  Loop %inner: backedge-taken count is ({(-1 * %n),+,1}<nuw><nsw><%outer.header> + (8 smax {%n,+,-1}<nuw><nsw><%outer.header>))
 ; CHECK-NEXT:  Loop %inner: constant max backedge-taken count is i32 -2147483640
-; CHECK-NEXT:  Loop %inner: symbolic max backedge-taken count is ({(-1 * %n),+,1}<nw><%outer.header> + (8 smax {%n,+,-1}<nsw><%outer.header>))
+; CHECK-NEXT:  Loop %inner: symbolic max backedge-taken count is ({(-1 * %n),+,1}<nuw><nsw><%outer.header> + (8 smax {%n,+,-1}<nuw><nsw><%outer.header>))
 ; CHECK-NEXT:  Loop %inner: Trip multiple is 1
 ; CHECK-NEXT:  Loop %outer.header: backedge-taken count is i64 0
 ; CHECK-NEXT:  Loop %outer.header: constant max backedge-taken count is i64 0

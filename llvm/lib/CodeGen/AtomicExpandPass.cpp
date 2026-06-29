@@ -174,24 +174,26 @@ public:
 struct ReplacementIRBuilder
     : IRBuilder<InstSimplifyFolder, IRBuilderCallbackInserter> {
   MDNode *MMRAMD = nullptr;
+  MDNode *PCSectionsMD = nullptr;
 
   // Preserves the DebugLoc from I, and preserves still valid metadata.
   // Enable StrictFP builder mode when appropriate.
   explicit ReplacementIRBuilder(Instruction *I, const DataLayout &DL)
-      : IRBuilder(I->getContext(), InstSimplifyFolder(DL),
-                  IRBuilderCallbackInserter(
-                      [this](Instruction *I) { addMMRAMD(I); })) {
+      : IRBuilder(
+            I->getContext(), InstSimplifyFolder(DL),
+            IRBuilderCallbackInserter([this](Instruction *I) { addMD(I); })) {
     SetInsertPoint(I);
-    this->CollectMetadataToCopy(I, {LLVMContext::MD_pcsections});
     if (BB->getParent()->getAttributes().hasFnAttr(Attribute::StrictFP))
       this->setIsFPConstrained(true);
 
     MMRAMD = I->getMetadata(LLVMContext::MD_mmra);
+    PCSectionsMD = I->getMetadata(LLVMContext::MD_pcsections);
   }
 
-  void addMMRAMD(Instruction *I) {
+  void addMD(Instruction *I) {
     if (canInstructionHaveMMRAs(*I))
       I->setMetadata(LLVMContext::MD_mmra, MMRAMD);
+    I->setMetadata(LLVMContext::MD_pcsections, PCSectionsMD);
   }
 };
 

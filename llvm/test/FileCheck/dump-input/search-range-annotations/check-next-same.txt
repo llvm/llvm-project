@@ -1,0 +1,61 @@
+; Because -dump-input-filter=error includes a failed directive's search range
+; start, input line 1 below is revealed, and -dump-input-context=2 reveals lines
+; 2-3.  Those lines are where the actual problem is because that is where the
+; CHECK-NEXT/CHECK-SAME directive was expected to match but did not.  The line
+; where CHECK-NEXT/CHECK-SAME actually matched, line 13, is typically less
+; useful information.
+
+RUN: rm -rf %t
+RUN: split-file %s %t
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -dump-input-context=2 -v %t/next.txt < %t/input.txt \
+RUN:               -dump-input-filter=error 2>&1 | \
+RUN:   FileCheck %s -match-full-lines -check-prefixes=DMP,DMP_NEXT
+
+RUN: %ProtectFileCheckOutput \
+RUN: not FileCheck -dump-input-context=2 -v %t/same.txt < %t/input.txt \
+RUN:               -dump-input-filter=error 2>&1 | \
+RUN:   FileCheck %s -match-full-lines -check-prefixes=DMP,DMP_SAME
+
+          DMP:<<<<<<
+     DMP-NEXT:          1: start 
+     DMP-NEXT:check:1      ^~~~~
+DMP_NEXT-NEXT:next:2'0         {   search range start (exclusive)
+DMP_SAME-NEXT:same:2'0         {   search range start (exclusive)
+     DMP-NEXT:          2: foo0 
+     DMP-NEXT:          3: foo1 
+     DMP-NEXT:          .
+     DMP-NEXT:          .
+     DMP-NEXT:          .
+     DMP-NEXT:         11: foo9 
+     DMP-NEXT:         12: foo10 
+     DMP-NEXT:         13: end 
+DMP_NEXT-NEXT:next:2'1     !~~   error: match on wrong line
+DMP_SAME-NEXT:same:2'1     !~~   error: match on wrong line
+DMP_NEXT-NEXT:next:2'2         } search range end (exclusive)
+DMP_SAME-NEXT:same:2'2         } search range end (exclusive)
+     DMP-NEXT:>>>>>>
+
+;--- next.txt
+CHECK: start
+CHECK-NEXT: end
+
+;--- same.txt
+CHECK: start
+CHECK-SAME: end
+
+;--- input.txt
+start
+foo0
+foo1
+foo2
+foo3
+foo4
+foo5
+foo6
+foo7
+foo8
+foo9
+foo10
+end
