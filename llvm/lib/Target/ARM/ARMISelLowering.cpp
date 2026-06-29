@@ -20485,9 +20485,11 @@ const char *ARMTargetLowering::LowerXConstraint(EVT ConstraintVT) const {
     return "r";
   if (ConstraintVT.isFloatingPoint())
     return "w";
-  if (ConstraintVT.isVector() && Subtarget->hasNEON() &&
-     (ConstraintVT.getSizeInBits() == 64 ||
-      ConstraintVT.getSizeInBits() == 128))
+  if (ConstraintVT.isVector() &&
+      (Subtarget->hasNEON() || Subtarget->hasMVEIntegerOps() ||
+       Subtarget->hasMVEFloatOps()) &&
+      (ConstraintVT.getSizeInBits() == 64 ||
+       ConstraintVT.getSizeInBits() == 128))
     return "w";
 
   return "r";
