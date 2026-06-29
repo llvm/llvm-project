@@ -351,6 +351,10 @@ public:
       BlockToFacts[B->getBlockID()].assign(NewFacts.begin(), NewFacts.end());
   }
 
+  void appendBlockFact(const CFGBlock *B, const Fact *F) {
+    BlockToFacts[B->getBlockID()].push_back(F);
+  }
+
   template <typename FactType, typename... Args>
   FactType *createFact(Args &&...args) {
     void *Mem = FactAllocator.Allocate<FactType>();

@@ -134,6 +134,7 @@ static_library("Checkers") {
     "UninitializedObject/UninitializedPointee.cpp",
     "UnixAPIChecker.cpp",
     "UnreachableCodeChecker.cpp",
+    "UseAfterLifetimeEnd.cpp",
     "VAListChecker.cpp",
     "VLASizeChecker.cpp",
     "VforkChecker.cpp",

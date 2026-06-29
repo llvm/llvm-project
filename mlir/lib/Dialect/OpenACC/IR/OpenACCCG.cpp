@@ -793,6 +793,34 @@ ParseResult ComputeRegionOp::parse(OpAsmParser &parser,
 }
 
 //===----------------------------------------------------------------------===//
+// GPUSharedMemoryOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult GPUSharedMemoryOp::verify() {
+  if (getNumCopies() <= 0)
+    return emitOpError("num_copies must be positive");
+  if (getStaticUpperBoundBytes() <= 0)
+    return emitOpError("static_upper_bound_bytes must be positive");
+
+  bool hasScaling = static_cast<bool>(getDynamicSharedMemoryScalingBytes());
+  bool hasFixed = static_cast<bool>(getDynamicSharedMemoryFixedBytes());
+  if (hasScaling != hasFixed)
+    return emitOpError(
+        "dynamic_shared_memory_scaling_bytes and "
+        "dynamic_shared_memory_fixed_bytes must both be present or both be "
+        "absent");
+
+  auto resultTy = cast<MemRefType>(getResult().getType());
+  auto addrSpace =
+      dyn_cast_if_present<gpu::AddressSpaceAttr>(resultTy.getMemorySpace());
+  if (!addrSpace ||
+      addrSpace.getValue() != gpu::GPUDialect::getWorkgroupAddressSpace())
+    return emitOpError("result memref must use #gpu.address_space<workgroup>");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // PredicateRegionOp
 //===----------------------------------------------------------------------===//
 
