@@ -679,6 +679,9 @@ Improvements to Clang's diagnostics
 - Diagnostics for the C++11 range-based for statement now report the correct
   iterator type in notes for invalid iterator types.
 
+- Fixed a missing ``-Wconstant-conversion`` diagnostic for ``signed char``
+  array initialization. (#GH181730)
+
 Improvements to Clang's time-trace
 ----------------------------------
 

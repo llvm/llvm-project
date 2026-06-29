@@ -13186,7 +13186,8 @@ static void DiagnoseNullConversion(Sema &S, Expr *E, QualType T,
 }
 
 // Helper function to filter out cases for constant width constant conversion.
-// Don't warn on char array initialization or for non-decimal values.
+// Don't warn on unsigned char / unsigned plain char array initialization or for
+// non-decimal values.
 static bool isSameWidthConstantConversion(Sema &S, Expr *E, QualType T,
                                           SourceLocation CC) {
   // If initializing from a constant, and the constant starts with '0',
@@ -13199,12 +13200,17 @@ static bool isSameWidthConstantConversion(Sema &S, Expr *E, QualType T,
       return false;
   }
 
-  // If the CC location points to a '{', and the type is char, then assume
-  // assume it is an array initialization.
+  // If the CC location points to a '{', and the destination type is plain char
+  // with unsigned signedness or unsigned char, then assume this is an array
+  // initialization. Keep warning for signed char arrays and plain char arrays
+  // with signed signedness, where values such as 255 change sign.
   if (CC.isValid() && T->isCharType()) {
+    const auto *BT =
+        dyn_cast<BuiltinType>(S.Context.getCanonicalType(T).getTypePtr());
     const char FirstContextCharacter =
         S.getSourceManager().getCharacterData(CC)[0];
-    if (FirstContextCharacter == '{')
+    if (BT && BT->getKind() != BuiltinType::SChar &&
+        BT->getKind() != BuiltinType::Char_S && FirstContextCharacter == '{')
       return false;
   }
 
