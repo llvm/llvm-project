@@ -567,6 +567,7 @@ LoadInst *AtomicExpandImpl::convertAtomicLoadToIntegerType(LoadInst *LI) {
   NewLI->setAlignment(LI->getAlign());
   NewLI->setVolatile(LI->isVolatile());
   NewLI->setAtomic(LI->getOrdering(), LI->getSyncScopeID());
+  copyMetadataForAtomic(*NewLI, *LI);
   LLVM_DEBUG(dbgs() << "Replaced " << *LI << " with " << *NewLI << "\n");
 
   Value *NewVal = LI->getType()->isPtrOrPtrVectorTy()
@@ -690,6 +691,7 @@ bool AtomicExpandImpl::expandAtomicLoadToCmpXchg(LoadInst *LI) {
       AtomicCmpXchgInst::getStrongestFailureOrdering(Order),
       LI->getSyncScopeID());
   Pair->setVolatile(LI->isVolatile());
+  copyMetadataForAtomic(*Pair, *LI);
   Value *Loaded = Builder.CreateExtractValue(Pair, 0, "loaded");
   if (NeedBitcast)
     Loaded = Builder.CreateBitCast(Loaded, Ty);
@@ -723,6 +725,7 @@ StoreInst *AtomicExpandImpl::convertAtomicStoreToIntegerType(StoreInst *SI) {
   NewSI->setAlignment(SI->getAlign());
   NewSI->setVolatile(SI->isVolatile());
   NewSI->setAtomic(SI->getOrdering(), SI->getSyncScopeID());
+  copyMetadataForAtomic(*NewSI, *SI);
   LLVM_DEBUG(dbgs() << "Replaced " << *SI << " with " << *NewSI << "\n");
   SI->eraseFromParent();
   return NewSI;
@@ -1452,6 +1455,7 @@ AtomicExpandImpl::convertCmpXchgToIntegerType(AtomicCmpXchgInst *CI) {
       CI->getFailureOrdering(), CI->getSyncScopeID());
   NewCI->setVolatile(CI->isVolatile());
   NewCI->setWeak(CI->isWeak());
+  copyMetadataForAtomic(*NewCI, *CI);
   LLVM_DEBUG(dbgs() << "Replaced " << *CI << " with " << *NewCI << "\n");
 
   Value *OldVal = Builder.CreateExtractValue(NewCI, 0);
