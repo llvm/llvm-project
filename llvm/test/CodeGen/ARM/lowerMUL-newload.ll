@@ -4,7 +4,7 @@
 define arm_aapcs_vfpcc <4 x i16> @mla_args(<4 x i16> %vec0, <4 x i16> %vec1, <4 x i16> %vec2) {
 ; CHECK-LABEL: mla_args:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmull.u16 q8, d1, d0
+; CHECK-NEXT:    vmull.s16 q8, d1, d0
 ; CHECK-NEXT:    vaddw.u16 q8, q8, d2
 ; CHECK-NEXT:    vmovn.i32 d0, q8
 ; CHECK-NEXT:    bx lr
@@ -50,8 +50,8 @@ entry:
 define arm_aapcs_vfpcc <4 x i16> @addmul_args(<4 x i16> %vec0, <4 x i16> %vec1, <4 x i16> %vec2) {
 ; CHECK-LABEL: addmul_args:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    vmull.u16 q8, d1, d2
-; CHECK-NEXT:    vmlal.u16 q8, d0, d2
+; CHECK-NEXT:    vmull.s16 q8, d1, d2
+; CHECK-NEXT:    vmlal.s16 q8, d0, d2
 ; CHECK-NEXT:    vmovn.i32 d0, q8
 ; CHECK-NEXT:    bx lr
 entry:
