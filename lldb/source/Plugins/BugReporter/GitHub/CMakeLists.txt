@@ -1,5 +1,5 @@
-add_lldb_library(lldbPluginBugReporterGitHub PLUGIN
-  BugReporterGitHub.cpp
+add_lldb_library(lldbPluginGitHubReporter PLUGIN
+  GitHubReporter.cpp
 
   LINK_COMPONENTS
     Support

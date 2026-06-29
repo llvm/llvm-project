@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Plugins/BugReporter/GitHub/BugReporterGitHub.h"
+#include "Plugins/BugReporter/GitHub/GitHubReporter.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Host/Host.h"
 
@@ -15,28 +15,28 @@
 
 using namespace lldb_private;
 
-LLDB_PLUGIN_DEFINE(BugReporterGitHub)
+LLDB_PLUGIN_DEFINE(GitHubReporter)
 
 // A GitHub "new issue" URL is fetched with GET, so its length is bounded (the
 // server rejects very long URLs). Keep the pre-filled body well under that so
 // the rest of the URL always fits. The full payload lives in the bundle.
 static constexpr size_t g_max_body_size = 6000;
 
-void BugReporterGitHub::Initialize() {
+void GitHubReporter::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                 "File a bug as a GitHub issue.",
-                                &BugReporterGitHub::CreateInstance);
+                                &GitHubReporter::CreateInstance);
 }
 
-void BugReporterGitHub::Terminate() {
-  PluginManager::UnregisterPlugin(&BugReporterGitHub::CreateInstance);
+void GitHubReporter::Terminate() {
+  PluginManager::UnregisterPlugin(&GitHubReporter::CreateInstance);
 }
 
-std::unique_ptr<BugReporter> BugReporterGitHub::CreateInstance() {
-  return std::make_unique<BugReporterGitHub>();
+std::unique_ptr<BugReporter> GitHubReporter::CreateInstance() {
+  return std::make_unique<GitHubReporter>();
 }
 
-llvm::Error BugReporterGitHub::File(const Diagnostics::Report &report) {
+llvm::Error GitHubReporter::File(const Diagnostics::Report &report) {
   std::string body;
   llvm::raw_string_ostream os(body);
   os << "### LLDB version\n" << report.version << "\n\n";

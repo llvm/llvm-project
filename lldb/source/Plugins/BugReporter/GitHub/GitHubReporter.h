@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_BUGREPORTER_GITHUB_BUGREPORTERGITHUB_H
-#define LLDB_SOURCE_PLUGINS_BUGREPORTER_GITHUB_BUGREPORTERGITHUB_H
+#ifndef LLDB_SOURCE_PLUGINS_BUGREPORTER_GITHUB_GITHUBREPORTER_H
+#define LLDB_SOURCE_PLUGINS_BUGREPORTER_GITHUB_GITHUBREPORTER_H
 
 #include "lldb/Core/BugReporter.h"
 
@@ -16,7 +16,7 @@ namespace lldb_private {
 /// Opens a pre-filled github.com/llvm/llvm-project "new issue" page. The body
 /// carries a short summary and points at the on-disk bundle to attach, since
 /// large artifacts cannot travel in the URL.
-class BugReporterGitHub : public BugReporter {
+class GitHubReporter : public BugReporter {
 public:
   static void Initialize();
   static void Terminate();
@@ -30,4 +30,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_BUGREPORTER_GITHUB_BUGREPORTERGITHUB_H
+#endif // LLDB_SOURCE_PLUGINS_BUGREPORTER_GITHUB_GITHUBREPORTER_H
