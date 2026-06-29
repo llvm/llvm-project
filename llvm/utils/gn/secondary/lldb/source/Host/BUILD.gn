@@ -18,6 +18,7 @@ static_library("Host") {
   sources = [
     "common/ConPTYUtils.cpp",
     "common/DiagnosticsRendering.cpp",
+    "common/DomainSocket.cpp",
     "common/File.cpp",
     "common/FileAction.cpp",
     "common/FileCache.cpp",
@@ -70,6 +71,7 @@ static_library("Host") {
     sources += [
       "windows/ConnectionConPTYWindows.cpp",
       "windows/ConnectionGenericFileWindows.cpp",
+      "windows/DomainSocketWindows.cpp",
       "windows/FileSystem.cpp",
       "windows/FileWindows.cpp",
       "windows/Host.cpp",
@@ -87,7 +89,7 @@ static_library("Host") {
     ]
   } else {
     sources += [
-      "posix/DomainSocket.cpp",
+      "posix/DomainSocketPosix.cpp",
       "posix/FilePosix.cpp",
       "posix/FileSystemPosix.cpp",
       "posix/HostInfoPosix.cpp",
