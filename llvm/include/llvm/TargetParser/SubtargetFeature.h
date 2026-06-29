@@ -20,6 +20,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <array>
@@ -83,6 +84,32 @@ public:
   constexpr bool test(unsigned I) const { return (*this)[I]; }
 
   constexpr size_t size() const { return MAX_SUBTARGET_FEATURES; }
+
+  /// Iterates over every bit position, yielding whether it is set. Pair with
+  /// llvm::enumerate to recover the feature index.
+  class const_iterator
+      : public iterator_facade_base<const_iterator, std::forward_iterator_tag,
+                                    bool, std::ptrdiff_t, const bool *, bool> {
+    const FeatureBitset *Parent = nullptr;
+    unsigned Index = 0;
+
+  public:
+    const_iterator() = default;
+    const_iterator(const FeatureBitset &Parent, unsigned Index)
+        : Parent(&Parent), Index(Index) {}
+
+    bool operator*() const { return (*Parent)[Index]; }
+    const_iterator &operator++() {
+      ++Index;
+      return *this;
+    }
+    bool operator==(const const_iterator &RHS) const {
+      return Index == RHS.Index;
+    }
+  };
+
+  const_iterator begin() const { return const_iterator(*this, 0); }
+  const_iterator end() const { return const_iterator(*this, size()); }
 
   bool any() const {
     return llvm::any_of(Bits, [](uint64_t I) { return I != 0; });
