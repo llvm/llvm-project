@@ -359,7 +359,7 @@ public:
         Ty->isBlockPointerType() || Ty->isReferenceType()) {
       return fromBinOp(
           Solver, Exp, BO_NE,
-          Solver->mkBitvector(llvm::APSInt("0"), Ctx.getTypeSize(Ty)),
+          Solver->mkBitvector(llvm::APSInt::getUnsigned(0), Ctx.getTypeSize(Ty)),
           Ty->isSignedIntegerOrEnumerationType());
     }
 
