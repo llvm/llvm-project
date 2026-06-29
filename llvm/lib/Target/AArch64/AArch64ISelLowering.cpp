@@ -26803,35 +26803,32 @@ static SDValue performCTTZCombine(SDNode *N,
     return DAG.getNode(ISD::TRUNCATE, DL, MVT::i64, Ctz);
   };
 
-  // Narrow toward CompressedBits. shrn-pair is only used once since it
-  // leaves the i8 lanes already packed.
   SDValue Cur = Mask;
-  bool UsedShrnPair = false;
-  while (Cur.getValueType().getSizeInBits() > CompressedBits) {
+  // Narrow wide lanes toward CompressedBits with xtn.
+  while (Cur.getValueType().getScalarSizeInBits() > MinLaneBits &&
+         Cur.getValueType().getSizeInBits() > CompressedBits) {
     EVT CurVT = Cur.getValueType();
     unsigned CurLaneBits = CurVT.getScalarSizeInBits();
-    if (CurLaneBits == MinLaneBits) {
-      if (UsedShrnPair)
-        break;
-      if (CurVT.getSizeInBits() <= QRegBits) {
-        Cur = ShrnPair(Cur);
-      } else {
-        // Split into Q-reg-sized halves so each ShrnPair stays in range.
-        EVT HalfVT = CurVT.getHalfNumVectorElementsVT(Ctx);
-        SDValue Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Cur,
-                                 DAG.getConstant(0, DL, MVT::i64));
-        SDValue Hi = DAG.getNode(
-            ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Cur,
-            DAG.getConstant(HalfVT.getVectorNumElements(), DL, MVT::i64));
-        Cur = DAG.getNode(ISD::CONCAT_VECTORS, DL, HalfVT, ShrnPair(Lo),
-                          ShrnPair(Hi));
-      }
-      UsedShrnPair = true;
+    EVT NarrowVT = CurVT.changeVectorElementType(
+        Ctx, EVT::getIntegerVT(Ctx, CurLaneBits / 2));
+    Cur = DAG.getNode(ISD::TRUNCATE, DL, NarrowVT, Cur);
+  }
+
+  // If still too wide, pack two lanes per byte with shrn.
+  if (Cur.getValueType().getSizeInBits() > CompressedBits) {
+    EVT CurVT = Cur.getValueType();
+    if (CurVT.getSizeInBits() <= QRegBits) {
+      Cur = ShrnPair(Cur);
     } else {
-      // For wider lanes, xtn each lane down to half its width.
-      EVT NarrowVT = CurVT.changeVectorElementType(
-          Ctx, EVT::getIntegerVT(Ctx, CurLaneBits / 2));
-      Cur = DAG.getNode(ISD::TRUNCATE, DL, NarrowVT, Cur);
+      // Split into Q-reg-sized halves so each ShrnPair stays in range.
+      EVT HalfVT = CurVT.getHalfNumVectorElementsVT(Ctx);
+      SDValue Lo = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Cur,
+                               DAG.getConstant(0, DL, MVT::i64));
+      SDValue Hi = DAG.getNode(
+          ISD::EXTRACT_SUBVECTOR, DL, HalfVT, Cur,
+          DAG.getConstant(HalfVT.getVectorNumElements(), DL, MVT::i64));
+      Cur = DAG.getNode(ISD::CONCAT_VECTORS, DL, HalfVT, ShrnPair(Lo),
+                        ShrnPair(Hi));
     }
   }
 

@@ -2,13 +2,6 @@
 ; RUN: llc -mtriple=aarch64-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,CHECK-LE
 ; RUN: llc -mtriple=aarch64_be-linux-gnu < %s | FileCheck %s --check-prefixes=CHECK,CHECK-BE
 
-declare i16 @llvm.cttz.i16(i16, i1)
-declare i8 @llvm.cttz.i8(i8, i1)
-declare i4 @llvm.cttz.i4(i4, i1)
-declare i2 @llvm.cttz.i2(i2, i1)
-declare i32 @llvm.cttz.i32(i32, i1)
-declare i64 @llvm.cttz.i64(i64, i1)
-
 define i16 @cttz_v16i8(<16 x i8> %v) {
 ; CHECK-LE-LABEL: cttz_v16i8:
 ; CHECK-LE:       // %bb.0:
@@ -407,6 +400,28 @@ define i32 @cttz_bitcast_from_float(float %f) {
   ret i32 %ctz
 }
 
+define <4 x i32> @cttz_vector_result_no_fold(<4 x i32> %v) {
+; CHECK-LE-LABEL: cttz_vector_result_no_fold:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    rev32 v0.16b, v0.16b
+; CHECK-LE-NEXT:    rbit v0.16b, v0.16b
+; CHECK-LE-NEXT:    clz v0.4s, v0.4s
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: cttz_vector_result_no_fold:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    rev32 v0.16b, v0.16b
+; CHECK-BE-NEXT:    rbit v0.16b, v0.16b
+; CHECK-BE-NEXT:    clz v0.4s, v0.4s
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ret
+  %ctz = call <4 x i32> @llvm.cttz.v4i32(<4 x i32> %v, i1 false)
+  ret <4 x i32> %ctz
+}
+
 define i3 @cttz_v3i8_non_pow2_lanes(<3 x i8> %v) {
 ; CHECK-LE-LABEL: cttz_v3i8_non_pow2_lanes:
 ; CHECK-LE:       // %bb.0:
@@ -611,15 +626,122 @@ define i32 @cttz_v32i8(<32 x i8> %v) {
   ret i32 %ctz
 }
 
+define i32 @cttz_v32i16(<32 x i16> %v) {
+; CHECK-LE-LABEL: cttz_v32i16:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    cmlt v1.8h, v1.8h, #0
+; CHECK-LE-NEXT:    cmlt v0.8h, v0.8h, #0
+; CHECK-LE-NEXT:    cmlt v3.8h, v3.8h, #0
+; CHECK-LE-NEXT:    cmlt v2.8h, v2.8h, #0
+; CHECK-LE-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
+; CHECK-LE-NEXT:    uzp1 v1.16b, v2.16b, v3.16b
+; CHECK-LE-NEXT:    shrn v0.8b, v0.8h, #4
+; CHECK-LE-NEXT:    shrn2 v0.16b, v1.8h, #4
+; CHECK-LE-NEXT:    mov x8, v0.d[1]
+; CHECK-LE-NEXT:    fmov x9, d0
+; CHECK-LE-NEXT:    rbit x10, x9
+; CHECK-LE-NEXT:    cmp x9, #0
+; CHECK-LE-NEXT:    rbit x8, x8
+; CHECK-LE-NEXT:    clz x10, x10
+; CHECK-LE-NEXT:    clz x8, x8
+; CHECK-LE-NEXT:    add x8, x8, #64
+; CHECK-LE-NEXT:    csel x8, x10, x8, ne
+; CHECK-LE-NEXT:    lsr x0, x8, #2
+; CHECK-LE-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: cttz_v32i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v1.8h, v1.8h
+; CHECK-BE-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-BE-NEXT:    rev64 v2.8h, v2.8h
+; CHECK-BE-NEXT:    rev64 v3.8h, v3.8h
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
+; CHECK-BE-NEXT:    cmlt v1.8h, v1.8h, #0
+; CHECK-BE-NEXT:    cmlt v0.8h, v0.8h, #0
+; CHECK-BE-NEXT:    cmlt v2.8h, v2.8h, #0
+; CHECK-BE-NEXT:    cmlt v3.8h, v3.8h, #0
+; CHECK-BE-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
+; CHECK-BE-NEXT:    uzp1 v1.16b, v2.16b, v3.16b
+; CHECK-BE-NEXT:    shrn v0.8b, v0.8h, #4
+; CHECK-BE-NEXT:    shrn2 v0.16b, v1.8h, #4
+; CHECK-BE-NEXT:    rev64 v0.16b, v0.16b
+; CHECK-BE-NEXT:    mov x8, v0.d[1]
+; CHECK-BE-NEXT:    fmov x9, d0
+; CHECK-BE-NEXT:    clz x10, x9
+; CHECK-BE-NEXT:    cmp x9, #0
+; CHECK-BE-NEXT:    clz x8, x8
+; CHECK-BE-NEXT:    add x8, x8, #64
+; CHECK-BE-NEXT:    csel x8, x10, x8, ne
+; CHECK-BE-NEXT:    lsr x0, x8, #2
+; CHECK-BE-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-BE-NEXT:    ret
+  %cmp = icmp slt <32 x i16> %v, splat (i16 0)
+  %bm = bitcast <32 x i1> %cmp to i32
+  %ctz = call i32 @llvm.cttz.i32(i32 %bm, i1 false)
+  ret i32 %ctz
+}
+
+define i16 @cttz_v16i32(<16 x i32> %v) {
+; CHECK-LE-LABEL: cttz_v16i32:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    cmlt v3.4s, v3.4s, #0
+; CHECK-LE-NEXT:    cmlt v2.4s, v2.4s, #0
+; CHECK-LE-NEXT:    cmlt v1.4s, v1.4s, #0
+; CHECK-LE-NEXT:    cmlt v0.4s, v0.4s, #0
+; CHECK-LE-NEXT:    uzp1 v2.8h, v2.8h, v3.8h
+; CHECK-LE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-LE-NEXT:    uzp1 v0.16b, v0.16b, v2.16b
+; CHECK-LE-NEXT:    shrn v0.8b, v0.8h, #4
+; CHECK-LE-NEXT:    fmov x8, d0
+; CHECK-LE-NEXT:    rbit x8, x8
+; CHECK-LE-NEXT:    clz x8, x8
+; CHECK-LE-NEXT:    lsr x0, x8, #2
+; CHECK-LE-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: cttz_v16i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    rev64 v3.4s, v3.4s
+; CHECK-BE-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-BE-NEXT:    rev64 v1.4s, v1.4s
+; CHECK-BE-NEXT:    rev64 v2.4s, v2.4s
+; CHECK-BE-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
+; CHECK-BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-BE-NEXT:    ext v1.16b, v1.16b, v1.16b, #8
+; CHECK-BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
+; CHECK-BE-NEXT:    cmlt v3.4s, v3.4s, #0
+; CHECK-BE-NEXT:    cmlt v1.4s, v1.4s, #0
+; CHECK-BE-NEXT:    cmlt v0.4s, v0.4s, #0
+; CHECK-BE-NEXT:    cmlt v2.4s, v2.4s, #0
+; CHECK-BE-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-BE-NEXT:    uzp1 v2.8h, v2.8h, v3.8h
+; CHECK-BE-NEXT:    uzp1 v0.16b, v0.16b, v2.16b
+; CHECK-BE-NEXT:    shrn v0.8b, v0.8h, #4
+; CHECK-BE-NEXT:    fmov x8, d0
+; CHECK-BE-NEXT:    rbit x8, x8
+; CHECK-BE-NEXT:    clz x8, x8
+; CHECK-BE-NEXT:    lsr x0, x8, #2
+; CHECK-BE-NEXT:    // kill: def $w0 killed $w0 killed $x0
+; CHECK-BE-NEXT:    ret
+  %cmp = icmp slt <16 x i32> %v, splat (i32 0)
+  %bm = bitcast <16 x i1> %cmp to i16
+  %ctz = call i16 @llvm.cttz.i16(i16 %bm, i1 false)
+  ret i16 %ctz
+}
+
 define i64 @cttz_v64i8_too_many_lanes(<64 x i8> %v) {
 ; CHECK-LE-LABEL: cttz_v64i8_too_many_lanes:
 ; CHECK-LE:       // %bb.0:
-; CHECK-LE-NEXT:    adrp x8, .LCPI19_0
+; CHECK-LE-NEXT:    adrp x8, .LCPI22_0
 ; CHECK-LE-NEXT:    cmlt v3.16b, v3.16b, #0
 ; CHECK-LE-NEXT:    cmlt v2.16b, v2.16b, #0
 ; CHECK-LE-NEXT:    cmlt v1.16b, v1.16b, #0
 ; CHECK-LE-NEXT:    cmlt v0.16b, v0.16b, #0
-; CHECK-LE-NEXT:    ldr q4, [x8, :lo12:.LCPI19_0]
+; CHECK-LE-NEXT:    ldr q4, [x8, :lo12:.LCPI22_0]
 ; CHECK-LE-NEXT:    and v3.16b, v3.16b, v4.16b
 ; CHECK-LE-NEXT:    and v2.16b, v2.16b, v4.16b
 ; CHECK-LE-NEXT:    and v1.16b, v1.16b, v4.16b
@@ -651,8 +773,8 @@ define i64 @cttz_v64i8_too_many_lanes(<64 x i8> %v) {
 ; CHECK-BE:       // %bb.0:
 ; CHECK-BE-NEXT:    rev64 v0.16b, v0.16b
 ; CHECK-BE-NEXT:    rev64 v3.16b, v3.16b
-; CHECK-BE-NEXT:    adrp x8, .LCPI19_0
-; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI19_0
+; CHECK-BE-NEXT:    adrp x8, .LCPI22_0
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI22_0
 ; CHECK-BE-NEXT:    rev64 v2.16b, v2.16b
 ; CHECK-BE-NEXT:    rev64 v1.16b, v1.16b
 ; CHECK-BE-NEXT:    ld1 { v4.16b }, [x8]
