@@ -11,7 +11,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATHVEC_ATANHF_H
 #define LLVM_LIBC_SRC___SUPPORT_MATHVEC_ATANHF_H
 

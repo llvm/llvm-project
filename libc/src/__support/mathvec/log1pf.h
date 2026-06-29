@@ -11,7 +11,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATHVEC_LOG1PF_H
 #define LLVM_LIBC_SRC___SUPPORT_MATHVEC_LOG1PF_H
 

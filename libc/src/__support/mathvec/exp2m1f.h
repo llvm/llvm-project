@@ -11,7 +11,6 @@
 ///
 //===----------------------------------------------------------------------===//
 
-
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATHVEC_EXP2M1F_H
 #define LLVM_LIBC_SRC___SUPPORT_MATHVEC_EXP2M1F_H
 
