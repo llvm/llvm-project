@@ -157,7 +157,33 @@ void AIXABIInfo::appendAttributeMangling(StringRef AttrStr,
     return;
   }
 
-  assert(0 && "specifying target features on an FMV is unsupported on AIX");
+  // Handle feature strings
+  if (!Info.Features.empty()) {
+    assert(Info.Features.size() == 1 && "one feature per version for now");
+    StringRef Feature = Info.Features[0];
+    std::string MangledFeature;
+
+    // Handle negation prefix "no-" specially - convert to "no_"
+    if (Feature.starts_with("no-")) {
+      MangledFeature = "no_";
+      Feature = Feature.drop_front(3);
+    } else if (Feature.starts_with("+")) {
+      // Remove leading '+' for positive features
+      Feature = Feature.drop_front(1);
+    } else if (Feature.starts_with("-")) {
+      // Leading '-' means negation, convert to "no_"
+      MangledFeature = "no_";
+      Feature = Feature.drop_front(1);
+    }
+
+    // Append the base feature name and replace hyphens with underscores
+    MangledFeature += Feature.str();
+    std::replace(MangledFeature.begin(), MangledFeature.end(), '-', '_');
+    Out << "." << MangledFeature;
+    return;
+  }
+
+  llvm_unreachable("Invalid target_clones parameter");
 }
 
 class AIXTargetCodeGenInfo : public TargetCodeGenInfo {

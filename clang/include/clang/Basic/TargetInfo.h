@@ -1467,6 +1467,18 @@ public:
     return true;
   }
 
+  /// Validate feature name for target_clones attribute (subset with runtime
+  /// detection) Default implementation delegates to isValidFeatureName
+  virtual bool isValidClonesFeatureName(StringRef Feature) const {
+    return isValidFeatureName(Feature);
+  }
+
+  /// Get __builtin_cpu_supports() argument for a feature
+  /// Returns empty string if feature has no runtime detection
+  virtual StringRef getBuiltinCpuSupportsName(StringRef Feature) const {
+    return "";
+  }
+
   /// Returns true if feature has an impact on target code
   /// generation.
   virtual bool doesFeatureAffectCodeGen(StringRef Feature) const {

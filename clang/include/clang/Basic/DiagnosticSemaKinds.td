@@ -11516,6 +11516,10 @@ def err_ppc_invalid_test_data_class_type : Error<
   "expected a 'float', 'double' or '__float128' for the first argument">;
 def err_ppc_invalid_arg_type : Error<
   "argument %0 must be of type %1">;
+def err_ppc_feature_no_runtime_detection : Error<
+  "feature '%0' cannot be used with 'target_clones' because it has no "
+  "runtime detection; use 'target' attribute instead">;
+
 def err_x86_builtin_invalid_rounding : Error<
   "invalid rounding argument">;
 def err_x86_builtin_invalid_scale : Error<

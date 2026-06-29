@@ -3133,18 +3133,49 @@ void CodeGenFunction::EmitPPCAIXMultiVersionResolver(
     assert(RO.Features.size() == 1 &&
            "for now one feature requirement per version");
 
-    assert(RO.Features[0].starts_with("cpu="));
-    StringRef CPU = RO.Features[0].split("=").second.trim();
-    StringRef Feature = llvm::StringSwitch<StringRef>(CPU)
-                            .Case("pwr7", "arch_2_06")
-                            .Case("pwr8", "arch_2_07")
-                            .Case("pwr9", "arch_3_00")
-                            .Case("pwr10", "arch_3_1")
-                            .Case("pwr11", "arch_3_1")
-                            .Default("error");
+    StringRef FeatureStr = RO.Features[0];
+    StringRef BuiltinCpuSupportsArg;
+    bool IsNegated = false;
 
-    llvm::Value *Condition = EmitPPCBuiltinCpu(
-        Builtin::BI__builtin_cpu_supports, Builder.getInt1Ty(), Feature);
+    if (FeatureStr.starts_with("cpu=")) {
+      // CPU specification - map to ISA level
+      StringRef CPU = FeatureStr.split("=").second.trim();
+      BuiltinCpuSupportsArg = llvm::StringSwitch<StringRef>(CPU)
+                                  .Case("pwr7", "arch_2_06")
+                                  .Case("pwr8", "arch_2_07")
+                                  .Case("pwr9", "arch_3_00")
+                                  .Case("pwr10", "arch_3_1")
+                                  .Case("pwr11", "arch_3_1")
+                                  .Default("error");
+    } else {
+      // Feature string - check for "no-" negation prefix
+      StringRef BaseFeature = FeatureStr;
+
+      // Feature strings arrive here already normalized:
+      // - Positive features: just the name (e.g., "altivec")
+      // - Negated features: "no-" prefix (e.g., "no-altivec")
+      if (BaseFeature.starts_with("no-")) {
+        IsNegated = true;
+        BaseFeature = BaseFeature.drop_front(3);
+      }
+
+      BuiltinCpuSupportsArg =
+          getTarget().getBuiltinCpuSupportsName(BaseFeature);
+
+      // All features in target_clones must have runtime detection
+      assert(!BuiltinCpuSupportsArg.empty() &&
+             "feature without runtime detection should have been rejected in "
+             "Sema");
+    }
+
+    llvm::Value *Condition =
+        EmitPPCBuiltinCpu(Builtin::BI__builtin_cpu_supports,
+                          Builder.getInt1Ty(), BuiltinCpuSupportsArg);
+
+    // Negate the condition if this is a negated feature
+    if (IsNegated) {
+      Condition = Builder.CreateNot(Condition, "neg");
+    }
 
     llvm::BasicBlock *ThenBlock = createBasicBlock("if.version", Resolver);
     CurBlock = createBasicBlock("if.else", Resolver);

@@ -67,7 +67,7 @@ int __attribute__((target("branch-protection=none"))) birch_tree(void) { return 
 
 #elifdef __powerpc__
 
-int __attribute__((target("float128,arch=pwr9"))) foo(void) { return 4; }
+int __attribute__((target("float128,cpu=pwr9"))) foo(void) { return 4; }
 //expected-error@+1 {{'target' attribute takes one argument}}
 int __attribute__((target())) bar(void) { return 4; }
 // no warning, tune is supported for PPC

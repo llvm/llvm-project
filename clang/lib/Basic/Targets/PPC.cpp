@@ -719,17 +719,54 @@ llvm::APInt PPCTargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
     return llvm::APInt(32, 0);
   assert(Features.size() == 1 && "one feature/cpu per clone on PowerPC");
   ParsedTargetAttr ParsedAttr = parseTargetAttr(Features[0]);
+
+  // Priority scheme: Features requiring POWERXX are higher than cpu=pwrXX
+  // but lower than cpu=pwr(XX+1). This ensures proper version selection.
+  // Example: mma (POWER10 feature) > cpu=pwr10 > power9-vector (POWER9 feature)
+
   if (!ParsedAttr.CPU.empty()) {
     int Priority = llvm::StringSwitch<int>(ParsedAttr.CPU)
-                       .Case("pwr7", 1)
-                       .Case("pwr8", 2)
-                       .Case("pwr9", 3)
-                       .Case("pwr10", 4)
-                       .Case("pwr11", 5)
+                       .Case("pwr7", 100)
+                       .Case("pwr8", 200)
+                       .Case("pwr9", 300)
+                       .Case("pwr10", 400)
+                       .Case("pwr11", 500)
                        .Default(0);
     return llvm::APInt(32, Priority);
   }
-  assert(false && "unimplemented");
+
+  // Feature strings: priority between cpu=pwrN and cpu=pwr(N+1)
+  if (!ParsedAttr.Features.empty()) {
+    StringRef Feature = ParsedAttr.Features[0];
+    // Remove leading '+' or '-'
+    if (Feature.starts_with("+") || Feature.starts_with("-"))
+      Feature = Feature.drop_front(1);
+
+    int Priority = llvm::StringSwitch<int>(Feature)
+                       // POWER10 features (between pwr10=400 and pwr11=500)
+                       .Case("mma", 419)
+                       .Case("paired-vector-memops", 418)
+                       .Case("pcrel", 417)
+                       .Case("power10-vector", 416)
+                       .Case("prefixed", 415)
+                       // POWER9 features (between pwr9=300 and pwr10=400)
+                       .Case("float128", 312)
+                       .Case("power9-vector", 311)
+                       // POWER8 features (between pwr8=200 and pwr9=300)
+                       .Case("crypto", 214)
+                       .Case("direct-move", 213)
+                       .Case("power8-vector", 212)
+                       .Case("htm", 211)
+                       // POWER7 features (between pwr7=100 and pwr8=200)
+                       .Case("popcntd", 112)
+                       .Case("vsx", 111)
+                       // Base features: 50-99 (below pwr7=100)
+                       .Case("altivec", 50)
+                       .Default(0);
+
+    return llvm::APInt(32, Priority);
+  }
+
   return llvm::APInt(32, 0);
 }
 
@@ -820,6 +857,89 @@ bool PPCTargetInfo::isValidCPUName(StringRef Name) const {
 
 void PPCTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
   llvm::PPC::fillValidCPUList(Values);
+}
+
+bool PPCTargetInfo::isValidFeatureName(StringRef Name) const {
+  // All 28 PPC features valid for target attribute
+  return llvm::StringSwitch<bool>(Name)
+      // Features with runtime detection (valid for target_clones)
+      .Case("altivec", true)
+      .Case("htm", true)
+      .Case("mma", true)
+      .Case("vsx", true)
+      .Case("crypto", true)
+      .Case("direct-move", true)
+      .Case("float128", true)
+      .Case("paired-vector-memops", true)
+      .Case("pcrel", true)
+      .Case("popcntd", true)
+      .Case("power8-vector", true)
+      .Case("power9-vector", true)
+      .Case("power10-vector", true)
+      .Case("prefixed", true)
+      // Features without runtime checks (NOT valid for target_clones)
+      .Case("aix-shared-lib-tls-model-opt", true)
+      .Case("aix-small-local-dynamic-tls", true)
+      .Case("aix-small-local-exec-tls", true)
+      .Case("cmpb", true)
+      .Case("crbits", true)
+      .Case("fprnd", true)
+      .Case("invariant-function-descriptors", true)
+      .Case("isel", true)
+      .Case("longcall", true)
+      .Case("mfcrf", true)
+      .Case("mfocrf", true)
+      .Case("privileged", true)
+      .Case("rop-protect", true)
+      .Case("secure-plt", true)
+      .Default(false);
+}
+
+bool PPCTargetInfo::isValidClonesFeatureName(StringRef Name) const {
+  // Only 14 features with runtime detection are valid for target_clones
+  return llvm::StringSwitch<bool>(Name)
+      // Direct mappings (4 features)
+      .Case("altivec", true)
+      .Case("htm", true)
+      .Case("mma", true)
+      .Case("vsx", true)
+      // ISA level mappings (10 features)
+      .Case("crypto", true)
+      .Case("direct-move", true)
+      .Case("float128", true)
+      .Case("paired-vector-memops", true)
+      .Case("pcrel", true)
+      .Case("popcntd", true)
+      .Case("power8-vector", true)
+      .Case("power9-vector", true)
+      .Case("power10-vector", true)
+      .Case("prefixed", true)
+      .Default(false);
+}
+
+StringRef
+PPCTargetInfo::getBuiltinCpuSupportsName(StringRef FeatureName) const {
+  // Map feature names to __builtin_cpu_supports() strings
+  // Only returns non-empty for features with runtime detection
+  return llvm::StringSwitch<StringRef>(FeatureName)
+      // Direct mappings (4 features)
+      .Case("altivec", "altivec")
+      .Case("htm", "htm")
+      .Case("mma", "mma")
+      .Case("vsx", "vsx")
+      // ISA level mappings (10 features)
+      .Case("popcntd", "arch_2_06")
+      .Case("crypto", "arch_2_07")
+      .Case("direct-move", "arch_2_07")
+      .Case("power8-vector", "arch_2_07")
+      .Case("float128", "arch_3_00")
+      .Case("power9-vector", "arch_3_00")
+      .Case("paired-vector-memops", "arch_3_1")
+      .Case("pcrel", "arch_3_1")
+      .Case("power10-vector", "arch_3_1")
+      .Case("prefixed", "arch_3_1")
+      // Features without runtime checks return empty string
+      .Default("");
 }
 
 void PPCTargetInfo::adjust(DiagnosticsEngine &Diags, LangOptions &Opts,

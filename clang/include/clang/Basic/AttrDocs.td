@@ -3407,8 +3407,12 @@ For backward compatibility with earlier Clang releases, a function alias with an
 ``.ifunc`` suffix is also emitted. The  ``.ifunc`` suffixed symbol is a deprecated
 feature and support for it may be removed in the future.
 
-For PowerPC targets, ``target_clones`` is supported on AIX only. Only CPU
-(specified as ``cpu=CPU``) and ``default`` options are allowed. IFUNC is supported
+For PowerPC targets, ``target_clones`` is supported on AIX only. The attribute
+contains comma-separated strings of one of:
+(a) ``default``, (b) ``cpu=CPU``, (c) ``FEATURE`` or ``no-FEATURE``.
+The minimum CPU supported is ``pwr7`` (long spelling such as ``power7`` is accepted).
+The list of target features is a subset of what's allowed on ``target``, limited
+to what is detectable at runtime using ``__builtin_cpu_supports``. IFUNC is supported
 on AIX in Clang, so dispatch is implemented similar to other targets using IFUNC.
 An FMV function that is only declared in a translation unit is treated as a
 non-FMV. The resolver and the function clones are given internal linkage.
