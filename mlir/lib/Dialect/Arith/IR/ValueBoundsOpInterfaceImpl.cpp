@@ -278,7 +278,7 @@ struct MinUIOpInterface
     assert(value == minOp.getResult() && "invalid value");
 
     // ValueBoundsConstraintSet models values as signed integers (e.g. an i8
-    // 0xff is treated as -1, not 255).So, we can only derive bounds for minui 
+    // 0xff is treated as -1, not 255).So, we can only derive bounds for minui
     // if both operands are provably non-negative.
     bool lhsNonNegative =
         ValueBoundsConstraintSet::isProvablyNonNegative(minOp.getLhs(), cstr);
