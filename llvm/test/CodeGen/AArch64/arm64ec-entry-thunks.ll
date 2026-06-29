@@ -85,7 +85,7 @@ define i64 @simple_integers(i8, i16, i32, i64) nounwind {
   ret i64 0
 }
 
-; NOTE: Only half, float, and double are supported.
+; NOTE: Half, bfloat16, float, and double are supported.
 define double @simple_floats(half, float, double) nounwind {
 ; CHECK-LABEL:    .def    $ientry_thunk$cdecl$d$__llvm_h__fd;
 ; CHECK:          .section        .wowthk$aa,"xr",discard,$ientry_thunk$cdecl$d$__llvm_h__fd
@@ -126,6 +126,48 @@ define double @simple_floats(half, float, double) nounwind {
 ; CHECK-NEXT:     .seh_endfunclet
 ; CHECK-NEXT:     .seh_endproc
   ret double 0.0
+}
+
+define bfloat @simple_bfloat(bfloat %0, bfloat %1) nounwind {
+; CHECK-LABEL:    .def    $ientry_thunk$cdecl$bf16$bf16bf16;
+; CHECK:          .section        .wowthk$aa,"xr",discard,$ientry_thunk$cdecl$bf16$bf16bf16
+; CHECK:          // %bb.0:
+; CHECK-NEXT:     stp     q6, q7, [sp, #-176]!            // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_px    q6, 176
+; CHECK-NEXT:     stp     q8, q9, [sp, #32]               // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q8, 32
+; CHECK-NEXT:     stp     q10, q11, [sp, #64]             // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q10, 64
+; CHECK-NEXT:     stp     q12, q13, [sp, #96]             // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q12, 96
+; CHECK-NEXT:     stp     q14, q15, [sp, #128]            // 32-byte Folded Spill
+; CHECK-NEXT:     .seh_save_any_reg_p     q14, 128
+; CHECK-NEXT:     stp     x29, x30, [sp, #160]            // 16-byte Folded Spill
+; CHECK-NEXT:     .seh_save_fplr  160
+; CHECK-NEXT:     add     x29, sp, #160
+; CHECK-NEXT:     .seh_add_fp     160
+; CHECK-NEXT:     .seh_endprologue
+; CHECK-NEXT:     blr     x9
+; CHECK-NEXT:     adrp    x8, __os_arm64x_dispatch_ret
+; CHECK-NEXT:     ldr     x0, [x8, :lo12:__os_arm64x_dispatch_ret]
+; CHECK-NEXT:     .seh_startepilogue
+; CHECK-NEXT:     ldp     x29, x30, [sp, #160]            // 16-byte Folded Reload
+; CHECK-NEXT:     .seh_save_fplr  160
+; CHECK-NEXT:     ldp     q14, q15, [sp, #128]            // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q14, 128
+; CHECK-NEXT:     ldp     q12, q13, [sp, #96]             // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q12, 96
+; CHECK-NEXT:     ldp     q10, q11, [sp, #64]             // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q10, 64
+; CHECK-NEXT:     ldp     q8, q9, [sp, #32]               // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_p     q8, 32
+; CHECK-NEXT:     ldp     q6, q7, [sp], #176              // 32-byte Folded Reload
+; CHECK-NEXT:     .seh_save_any_reg_px    q6, 176
+; CHECK-NEXT:     .seh_endepilogue
+; CHECK-NEXT:     br      x0
+; CHECK-NEXT:     .seh_endfunclet
+; CHECK-NEXT:     .seh_endproc
+  ret bfloat %0
 }
 
 define void @has_varargs(...) nounwind {
@@ -603,6 +645,9 @@ start:
 ; CHECK-NEXT:     .word   1
 ; CHECK-NEXT:     .symidx "#simple_floats"
 ; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$d$__llvm_h__fd
+; CHECK-NEXT:     .word   1
+; CHECK-NEXT:     .symidx "#simple_bfloat"
+; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$bf16$bf16bf16
 ; CHECK-NEXT:     .word   1
 ; CHECK-NEXT:     .symidx "#has_varargs"
 ; CHECK-NEXT:     .symidx $ientry_thunk$cdecl$v$varargs

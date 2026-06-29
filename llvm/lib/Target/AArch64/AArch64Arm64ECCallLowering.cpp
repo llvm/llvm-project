@@ -323,6 +323,11 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
     return direct(T);
   }
 
+  if (T->isBFloatTy()) {
+    Out << "bf16";
+    return direct(T);
+  }
+
   if (T->isFloatTy()) {
     Out << "f";
     return direct(T);
@@ -334,8 +339,9 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
   }
 
   if (T->isFloatingPointTy()) {
-    report_fatal_error("Only 16, 32, and 64 bit floating points are supported "
-                       "for ARM64EC thunks");
+    report_fatal_error(
+        "Only half, bfloat16, float, and double are supported for ARM64EC "
+        "thunks");
   }
 
   auto &DL = M->getDataLayout();
@@ -349,11 +355,13 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
     uint64_t ElementCnt = T->getArrayNumElements();
     uint64_t ElementSizePerBytes = DL.getTypeSizeInBits(ElementTy) / 8;
     uint64_t TotalSizeBytes = ElementCnt * ElementSizePerBytes;
-    if (ElementTy->isHalfTy() || ElementTy->isFloatTy() ||
-        ElementTy->isDoubleTy()) {
+    if (ElementTy->isHalfTy() || ElementTy->isBFloatTy() ||
+        ElementTy->isFloatTy() || ElementTy->isDoubleTy()) {
       if (ElementTy->isHalfTy())
         // Prefix with `llvm` since MSVC doesn't specify `_Float16`
         Out << "__llvm_H__";
+      else if (ElementTy->isBFloatTy())
+        Out << "BF16";
       else if (ElementTy->isFloatTy())
         Out << "F";
       else if (ElementTy->isDoubleTy())
@@ -369,10 +377,10 @@ ThunkArgInfo AArch64Arm64ECCallLowering::canonicalizeThunkType(
         // Struct is passed directly on Arm64, but indirectly on X64.
         return pointerIndirection(T);
       }
-    } else if (T->isFloatingPointTy()) {
+    } else if (ElementTy->isFloatingPointTy()) {
       report_fatal_error(
-          "Only 16, 32, and 64 bit floating points are supported "
-          "for ARM64EC thunks");
+          "Only half, bfloat16, float, and double are supported for ARM64EC "
+          "thunks");
     }
   }
 
