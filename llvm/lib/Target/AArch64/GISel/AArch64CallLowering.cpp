@@ -298,6 +298,23 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
     MIRBuilder.buildCopy(PhysReg, ExtReg);
   }
 
+  enum ByValCopyKind { CopyOnce, CopyViaTemp, NoCopy };
+  ByValCopyKind classifyByValForTailCall(Register SrcPtr,
+                                         const CCValAssign &VA) const {
+    return CopyViaTemp;
+  }
+
+  void copyArgumentMemory(const CallLowering::ArgInfo &Arg, Register DstPtr,
+                          Register SrcPtr, const MachinePointerInfo &DstPtrInfo,
+                          Align DstAlign, const MachinePointerInfo &SrcPtrInfo,
+                          Align SrcAlign, uint64_t MemSize,
+                          CCValAssign &VA) const override {
+    // Otherwise just use the default implementation.
+    CallLowering::OutgoingValueHandler::copyArgumentMemory(
+        Arg, DstPtr, SrcPtr, DstPtrInfo, DstAlign, SrcPtrInfo, SrcAlign,
+        MemSize, VA);
+  }
+
   /// Check whether a stack argument requires lowering in a tail call.
   static bool shouldLowerTailCallStackArg(const MachineFunction &MF,
                                           const CCValAssign &VA,
