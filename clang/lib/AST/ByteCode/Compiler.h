@@ -457,6 +457,8 @@ private:
   bool checkLiteralType(const Expr *E);
   bool maybeEmitDeferredVarInit(const VarDecl *VD);
 
+  bool isPunningDereference(const Expr *E);
+
   bool refersToUnion(const Expr *E);
 
 protected:
