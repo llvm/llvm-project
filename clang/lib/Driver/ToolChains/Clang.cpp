@@ -9915,6 +9915,18 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
             !UsesProfileGenerate && !TC->getTriple().isSPIRV())
           CmdArgs.push_back("--no-lto");
       }
+ 
+      if (Kind == Action::OFK_HIP && TC->getTriple().isAMDGCN() &&
+          Args.hasArg(options::OPT_hipstdpar)) {
+        CmdArgs.push_back(Args.MakeArgString(
+            "--device-compiler=" + TC->getTripleString() + "=-mllvm"));
+        CmdArgs.push_back(Args.MakeArgString(
+            "--device-compiler=" + TC->getTripleString() +
+            "=-amdgpu-enable-hipstdpar"));
+        CmdArgs.push_back(Args.MakeArgString(
+            "--device-linker=" + TC->getTripleString() +
+            "=-plugin-opt=-amdgpu-enable-hipstdpar"));
+      }
     }
   }
 
