@@ -126,10 +126,6 @@ AnyValue ExecutorBase::load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
           PtrVal, Ctx.getEffectiveTypeStoreSize(ValTy), Alignment,
           /*IsStore=*/false);
       MO) {
-    // Load from a dead stack object yields poison value.
-    if (MO->getState() == MemoryObjectState::Dead)
-      return AnyValue::getPoisonValue(Ctx, ValTy);
-
     bool ContainsUndefinedBits = false;
     AnyValue Res = Ctx.load(*MO, Offset, ValTy,
                             NoUndef ? &ContainsUndefinedBits : nullptr);
