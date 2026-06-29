@@ -118,6 +118,9 @@ void AnyValue::print(raw_ostream &OS) const {
   case StorageKind::Pointer:
     PtrVal.print(OS);
     break;
+  case StorageKind::Byte:
+    ByteVal.print(OS);
+    break;
   case StorageKind::Poison:
     OS << "poison";
     break;
@@ -147,6 +150,9 @@ void AnyValue::destroy() {
   case StorageKind::Pointer:
     PtrVal.~Pointer();
     break;
+  case StorageKind::Byte:
+    ByteVal.~ByteValue();
+    break;
   case StorageKind::Poison:
   case StorageKind::None:
     break;
@@ -167,6 +173,9 @@ AnyValue::AnyValue(const AnyValue &Other) : Kind(Other.Kind) {
   case StorageKind::Pointer:
     new (&PtrVal) Pointer(Other.PtrVal);
     break;
+  case StorageKind::Byte:
+    new (&ByteVal) ByteValue(Other.ByteVal);
+    break;
   case StorageKind::Poison:
   case StorageKind::None:
     break;
@@ -185,6 +194,9 @@ AnyValue::AnyValue(AnyValue &&Other) : Kind(Other.Kind) {
     break;
   case StorageKind::Pointer:
     new (&PtrVal) Pointer(std::move(Other.PtrVal));
+    break;
+  case StorageKind::Byte:
+    new (&ByteVal) ByteValue(std::move(Other.ByteVal));
     break;
   case StorageKind::Poison:
   case StorageKind::None:
@@ -211,6 +223,9 @@ AnyValue &AnyValue::operator=(const AnyValue &Other) {
   case StorageKind::Pointer:
     new (&PtrVal) Pointer(Other.PtrVal);
     break;
+  case StorageKind::Byte:
+    new (&ByteVal) ByteValue(Other.ByteVal);
+    break;
   case StorageKind::Poison:
   case StorageKind::None:
     break;
@@ -236,6 +251,9 @@ AnyValue &AnyValue::operator=(AnyValue &&Other) {
   case StorageKind::Pointer:
     new (&PtrVal) Pointer(std::move(Other.PtrVal));
     break;
+  case StorageKind::Byte:
+    new (&ByteVal) ByteValue(std::move(Other.ByteVal));
+    break;
   case StorageKind::Poison:
   case StorageKind::None:
     break;
@@ -250,6 +268,9 @@ AnyValue &AnyValue::operator=(AnyValue &&Other) {
 AnyValue AnyValue::getPoisonValue(Context &Ctx, Type *Ty) {
   if (Ty->isFloatingPointTy() || Ty->isIntegerTy() || Ty->isPointerTy())
     return AnyValue::poison();
+  if (Ty->isByteTy())
+    return ByteValue::poison(Ty->getByteBitWidth(),
+                             Ctx.getDataLayout().isLittleEndian());
   if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
     uint32_t NumElements = Ctx.getEVL(VecTy->getElementCount());
     return AnyValue(std::vector<AnyValue>(NumElements, AnyValue::poison()));
@@ -275,6 +296,9 @@ AnyValue AnyValue::getNullValue(Context &Ctx, Type *Ty) {
     return AnyValue(APFloat::getZero(Ty->getFltSemantics()));
   if (Ty->isPointerTy())
     return Pointer::null(Ty->getPointerAddressSpace(), Ctx.getDataLayout());
+  if (Ty->isByteTy())
+    return ByteValue::zero(Ty->getByteBitWidth(),
+                           Ctx.getDataLayout().isLittleEndian());
   if (auto *VecTy = dyn_cast<VectorType>(Ty)) {
     uint32_t NumElements = Ctx.getEVL(VecTy->getElementCount());
     return AnyValue(std::vector<AnyValue>(
@@ -298,6 +322,68 @@ AnyValue AnyValue::getNullValue(Context &Ctx, Type *Ty) {
 AnyValue AnyValue::getVectorSplat(const AnyValue &Scalar, size_t NumElements) {
   assert(!Scalar.isAggregate() && !Scalar.isNone() && "Expect a scalar value");
   return AnyValue(std::vector<AnyValue>(NumElements, Scalar));
+}
+
+ByteValue::ByteValue(const APInt &V, bool IsLittleEndian)
+    : BitWidth(V.getBitWidth()), IsLittleEndian(IsLittleEndian) {
+  Val.resize(divideCeil(BitWidth, 8));
+  MutableBytesView View(Val, IsLittleEndian);
+  for (uint32_t I = 0; I < BitWidth; I += 8)
+    View[I / 8] = Byte::concrete(static_cast<uint8_t>(
+        V.extractBitsAsZExtValue(std::min(BitWidth - I, 8U), I)));
+}
+ByteValue ByteValue::zero(uint32_t BitWidth, bool IsLittleEndian) {
+  return ByteValue(
+      BitWidth, std::vector<Byte>(divideCeil(BitWidth, 8), Byte::concrete(0)),
+      IsLittleEndian);
+}
+
+ByteValue ByteValue::poison(uint32_t BitWidth, bool IsLittleEndian) {
+  return ByteValue(BitWidth,
+                   std::vector<Byte>(divideCeil(BitWidth, 8), Byte::poison()),
+                   IsLittleEndian, /*ImplicitClearHighBits=*/true);
+}
+
+void ByteValue::print(raw_ostream &OS) const {
+  OS << 'b' << BitWidth << ' ';
+  for (const Byte &V : Val) {
+    bool IsFullByte = (BitWidth & 7) == 0 ||
+                      (IsLittleEndian ? &Val.back() : &Val.front()) != &V;
+    // Try to print a byte in short form
+    if (IsFullByte && V.ConcreteMask == 255 && V.TagMask == 0) {
+      // Concrete value without provenance.
+      OS << "0x" << hexdigit(V.Value >> 4) << hexdigit(V.Value & 15);
+    } else if (IsFullByte && V.ConcreteMask == 0) {
+      assert(V.Value == 0 && "Byte values don't contain undef bits.");
+      // Poison bytes.
+      OS << "0x!!";
+    } else {
+      uint32_t BitEnd = IsFullByte ? 8 : BitWidth & 7;
+      for (uint32_t I = 0; I != BitEnd; ++I) {
+        uint32_t Mask = 1U << (BitEnd - 1 - I);
+        if (V.ConcreteMask & Mask)
+          OS << (V.Value & Mask ? '1' : '0');
+        else {
+          assert((V.Value & Mask) == 0 &&
+                 "Byte values don't contain undef bits.");
+          OS << '!';
+        }
+      }
+      if (uint32_t TagMask = V.ConcreteMask & V.TagMask) {
+        // Print tags if available.
+        OS << '(';
+        for (uint32_t I = 0; I != BitEnd; ++I) {
+          uint32_t Mask = 1U << (BitEnd - 1 - I);
+          if (TagMask & Mask)
+            OS << (V.TagValue & Mask ? '1' : '0');
+          else
+            OS << '!';
+        }
+        OS << ')';
+      }
+    }
+    OS << ' ';
+  }
 }
 
 } // namespace llvm::ubi

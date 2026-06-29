@@ -78,8 +78,18 @@ static void applyAlignAttr(AnyValue &V, Align Alignment) {
 
 static bool violatesNoUndefAttr(AnyValue &V) {
   bool ContainsPoison = false;
-  forEachScalarValue(
-      V, [&](AnyValue &Scalar) { ContainsPoison |= Scalar.isPoison(); });
+  forEachScalarValue(V, [&](AnyValue &Scalar) {
+    if (Scalar.isPoison()) {
+      ContainsPoison = true;
+      return;
+    }
+    if (Scalar.isByte() && !ContainsPoison) {
+      // For non-byte-sized values, high bits are always zeroed out.
+      ContainsPoison = any_of(Scalar.asByte().bytes(), [](const Byte &V) {
+        return V.ConcreteMask != 255;
+      });
+    }
+  });
   return ContainsPoison;
 }
 
