@@ -138,6 +138,18 @@ ContentCache::getBufferOrNone(DiagnosticsEngine &Diag, FileManager &FM,
   // return paths.
   IsBufferInvalid = true;
 
+  // If a converter is set, open the file in binary mode to get raw bytes
+  // and avoid platform-specific auto-conversion (e.g., EBCDIC->ASCII on z/OS,
+  // CRLF->LF on Windows). The explicit converter will handle all transformations.
+  bool NeedsExplicitConversion = FileIDConverterInfo.getPointer() != nullptr;
+  bool IsText = !NeedsExplicitConversion;
+
+  auto BufferOrError = FM.getBufferForFile(*ContentsEntry, IsFileVolatile,
+                                           /*RequiresNullTerminator=*/true,
+                                           /*MaybeLimit=*/std::nullopt,
+                                           IsText);
+
+>>>>>>> de18010595aa (Use converters for tagged files)
   // If we were unable to open the file, then we are in an inconsistent
   // situation where the content cache referenced a file which no longer
   // exists. Most likely, we were using a stat cache with an invalid entry but
@@ -648,7 +660,24 @@ FileID SourceManager::createFileID(FileEntryRef SourceFile,
   }
 
   llvm::ErrorOr<llvm::TextEncodingConverter *> Converter = nullptr;
-  if (!InputEncodingName.empty()) {
+  llvm::ErrorOr<llvm::SmallString<32>> Ccsid =
+      llvm::getEncodingNameFromFileTag(SourceFile.getName());
+  if (!Ccsid) {
+    Diag.Report(SourceLocation(), diag::err_cannot_open_file)
+        << SourceFile.getName() << Ccsid.getError().message();
+    return FileID();
+  }
+  if (!Ccsid->empty()) {
+    // File has a tag, use the converter from SourceManager's cache
+    Converter = getOrCreateConverter(*Ccsid);
+    if (!Converter) {
+      Diag.Report(SourceLocation(), diag::err_cannot_open_file)
+          << SourceFile.getName()
+          << (llvm::Twine("cannot create converter from encoding '") + *Ccsid + "'");
+      return FileID();
+    }
+    IR.setFileTagged(true);
+  } else if (!InputEncodingName.empty()) {
     // No file tag but -finput-charset conversion is desired.
     // Get the converter from the cache using the input encoding name.
     Converter = getOrCreateConverter(InputEncodingName);
