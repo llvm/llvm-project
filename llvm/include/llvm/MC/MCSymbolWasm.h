@@ -92,10 +92,6 @@ public:
   StringRef getImportModule() const {
     if (ImportModule)
       return *ImportModule;
-    // Use a default module name of "env" for now, for compatibility with
-    // existing tools.
-    // TODO(sbc): Find a way to specify a default value in the object format
-    // without picking a hardcoded value like this.
     return "env";
   }
   void setImportModule(StringRef Name) { ImportModule = Name; }

@@ -8,9 +8,48 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
+#include "clang/AST/Expr.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
+
+namespace {
+
+void warnInvalidWebAssemblyImportModuleAnnotation(const AnnotateAttr *AA,
+                                                  CodeGenModule &CGM) {
+  CGM.getDiags().Report(AA->getLocation(), diag::warn_fe_backend_unsupported)
+      << "ignoring 'annotate(\"wasm-import-module\", ...)' because it "
+         "requires exactly one string literal argument";
+}
+
+void maybeSetWebAssemblyImportModuleMetadata(const VarDecl *VD,
+                                             llvm::GlobalVariable *GV,
+                                             CodeGen::CodeGenModule &CGM) {
+  for (const auto *AA : VD->specific_attrs<AnnotateAttr>()) {
+    if (AA->getAnnotation() != "wasm-import-module")
+      continue;
+
+    if (AA->args_size() != 1) {
+      warnInvalidWebAssemblyImportModuleAnnotation(AA, CGM);
+      continue;
+    }
+
+    const auto *Module = dyn_cast<StringLiteral>(
+        (*AA->args_begin())->IgnoreUnlessSpelledInSource());
+    if (!Module) {
+      warnInvalidWebAssemblyImportModuleAnnotation(AA, CGM);
+      continue;
+    }
+
+    llvm::LLVMContext &Ctx = CGM.getLLVMContext();
+    GV->setMetadata(
+        "wasm.import.module",
+        llvm::MDNode::get(Ctx, llvm::MDString::get(Ctx, Module->getString())));
+  }
+}
+
+} // namespace
 
 //===----------------------------------------------------------------------===//
 // WebAssembly ABI Implementation
@@ -57,6 +96,12 @@ public:
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override {
     TargetCodeGenInfo::setTargetAttributes(D, GV, CGM);
+    if (const auto *VD = dyn_cast_or_null<VarDecl>(D)) {
+      if (auto *Global = dyn_cast<llvm::GlobalVariable>(GV))
+        maybeSetWebAssemblyImportModuleMetadata(VD, Global, CGM);
+      return;
+    }
+
     if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D)) {
       if (const auto *Attr = FD->getAttr<WebAssemblyImportModuleAttr>()) {
         llvm::Function *Fn = cast<llvm::Function>(GV);

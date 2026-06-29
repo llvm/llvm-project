@@ -55,6 +55,18 @@ using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
 
+static StringRef getWasmImportModuleMetadata(const GlobalVariable &GV) {
+  MDNode *MD = GV.getMetadata("wasm.import.module");
+  if (!MD || MD->getNumOperands() == 0)
+    return {};
+
+  auto *Name = dyn_cast<MDString>(MD->getOperand(0));
+  if (!Name)
+    return {};
+
+  return Name->getString();
+}
+
 extern cl::opt<bool> WasmKeepRegisters;
 
 //===----------------------------------------------------------------------===//
@@ -212,6 +224,14 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
   emitVisibility(Sym, GV->getVisibility(), !GV->isDeclaration());
   emitSymbolType(Sym);
+  if (GV->isDeclaration()) {
+    StringRef ImportModule = getWasmImportModuleMetadata(*GV);
+    if (!ImportModule.empty()) {
+      Sym->setImportModule(OutContext.allocateString(ImportModule));
+      getTargetStreamer()->emitImportModule(Sym, ImportModule);
+    }
+  }
+
   if (GV->hasInitializer()) {
     assert(getSymbolPreferLocal(*GV) == Sym);
     emitLinkage(GV, Sym);
@@ -485,7 +505,7 @@ void WebAssemblyAsmPrinter::EmitProducerInfo(Module &M) {
     OutStreamer->switchSection(Producers);
     OutStreamer->emitULEB128IntValue(FieldCount);
     for (auto &Producers : {std::make_pair("language", &Languages),
-            std::make_pair("processed-by", &Tools)}) {
+                            std::make_pair("processed-by", &Tools)}) {
       if (Producers.second->empty())
         continue;
       OutStreamer->emitULEB128IntValue(strlen(Producers.first));
