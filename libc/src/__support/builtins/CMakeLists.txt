@@ -7,3 +7,13 @@ add_header_library(
     libc.src.__support.FPUtil.generic.add_sub
     libc.src.__support.macros.config
 )
+
+add_header_library(
+  subtf3
+  HDRS
+    subtf3.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.config
+)
