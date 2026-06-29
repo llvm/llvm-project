@@ -35,26 +35,26 @@ int main(int argc, char *argv[]) {
     // Create an object with a vtable in an unaddressable memory region.
     *(uintptr_t *)p = (uintptr_t)vtable + 64;
     // CHECK-UNADDR: runtime error: control flow integrity check for type 'A' failed during cast
-    // CHECK-UNADDR: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
     // CHECK-UNADDR: note: invalid vtable
     // CHECK-UNADDR: <memory cannot be printed>
+    // CHECK-UNADDR: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
     // CHECK-UNADDR: runtime error: control flow integrity check for type 'A' failed during cast
-    // CHECK-UNADDR: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
     // CHECK-UNADDR: note: invalid vtable
     // CHECK-UNADDR: <memory cannot be printed>
+    // CHECK-UNADDR: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
   } else if (argc > 1 && strcmp(argv[1], "zero") == 0) {
     // Create an object with a vtable outside of any known DSO, but still in an
     // addressable area.
     void *vtable = calloc(1, 128);
     *(uintptr_t *)p = (uintptr_t)vtable + 64;
     // CHECK-ZERO: runtime error: control flow integrity check for type 'A' failed during cast
-    // CHECK-ZERO: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
     // CHECK-ZERO: note: invalid vtable
     // CHECK-ZERO: 00 00 00 00 00 00 00 00
+    // CHECK-ZERO: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
     // CHECK-ZERO: runtime error: control flow integrity check for type 'A' failed during cast
-    // CHECK-ZERO: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
     // CHECK-ZERO: note: invalid vtable
     // CHECK-ZERO: 00 00 00 00 00 00 00 00
+    // CHECK-ZERO: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
   } else {
     // Create an object with a seemingly fine vtable, but with an unaddressable
     // typeinfo pointer.
@@ -62,13 +62,13 @@ int main(int argc, char *argv[]) {
     memset(vtable, 0xFE, 128);
     *(uintptr_t *)p = (uintptr_t)vtable + 64;
     // CHECK-TYPEINFO: runtime error: control flow integrity check for type 'A' failed during cast
-    // CHECK-TYPEINFO: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
     // CHECK-TYPEINFO: note: invalid vtable
     // CHECK-TYPEINFO: fe fe fe fe fe fe fe fe
+    // CHECK-TYPEINFO: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
     // CHECK-TYPEINFO: runtime error: control flow integrity check for type 'A' failed during cast
-    // CHECK-TYPEINFO: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
     // CHECK-TYPEINFO: note: invalid vtable
     // CHECK-TYPEINFO: fe fe fe fe fe fe fe fe
+    // CHECK-TYPEINFO: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
   }
 
   A *volatile pa = reinterpret_cast<A *>(p);

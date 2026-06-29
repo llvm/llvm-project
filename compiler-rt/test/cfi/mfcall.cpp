@@ -63,14 +63,14 @@ int main(int argc, char **argv) {
   switch (argv[1][0]) {
     case 'a':
       // A: runtime error: control flow integrity check for type 'int (S::*)()' failed during non-virtual pointer to member function call
-      // A: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
       // A: note: S::f1() {{.*}}defined here
+      // A: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
       (s.*bitcast<S_int>(&S::f1))();
       break;
     case 'b':
       // B: runtime error: control flow integrity check for type 'int (T::*)()' failed during non-virtual pointer to member function call
-      // B: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
       // B: note: S::f2() {{.*}}defined here
+      // B: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
       (t.*bitcast<T_int>(&S::f2))();
       break;
     case 'c':
