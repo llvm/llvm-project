@@ -7879,7 +7879,8 @@ namespace {
 
 template <typename T>
 static uint64_t read(StringRef Contents, ptrdiff_t Offset) {
-  if (Offset > Contents.size() || sizeof(T) > Contents.size() - Offset) {
+  if (Offset > static_cast<ptrdiff_t>(Contents.size()) ||
+      sizeof(T) > Contents.size() - Offset) {
     outs() << "warning: attempt to read past end of buffer\n";
     return T();
   }
@@ -8318,7 +8319,8 @@ static void printMachOUnwindInfoSection(const MachOObjectFile *Obj,
            << format("0x%08" PRIx32, IndexEntries[i].FunctionOffset) << '\n';
 
     Pos = IndexEntries[i].SecondLevelPageStart;
-    if (Pos > Contents.size() || sizeof(uint32_t) > Contents.size() - Pos) {
+    if (Pos > static_cast<ptrdiff_t>(Contents.size()) ||
+        sizeof(uint32_t) > Contents.size() - Pos) {
       outs() << "warning: invalid offset for second level page: " << Pos << '\n';
       continue;
     }
