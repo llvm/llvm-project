@@ -38,10 +38,10 @@ module {
           %4 = llvm.extractvalue %arg2[1] : !llvm.struct<(ptr, i64)>
           llvm.call @touch(%3, %4) : (!llvm.ptr, i64) -> ()
           omp.yield
-        } {omp.combined}
+        }
       }
       omp.terminator
-    }
+    } {omp.combined}
     llvm.return
   }
 }
