@@ -1,0 +1,54 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+module {
+  cir.offload.container {
+    builtin.module @device_0 attributes {cir.offload.kind = #cir.offload_kind<device>} { // expected-error {{expects 'cir.offload.kind' value 'host'}}
+    }
+  }
+}
+
+// -----
+
+module {
+  cir.offload.container {
+    builtin.module @host_0 attributes {cir.offload.kind = #cir.offload_kind<host>} {
+    }
+    builtin.module @host_1 attributes {cir.offload.kind = #cir.offload_kind<host>} { // expected-error {{expects 'cir.offload.kind' value 'device'}}
+    }
+  }
+}
+
+// -----
+
+module {
+  cir.offload.container {
+    builtin.module @host { // expected-error {{expects 'cir.offload.kind' offload kind attribute}}
+    }
+  }
+}
+
+// -----
+
+module {
+  cir.offload.container { // expected-error {{expects only nested builtin.module ops}}
+    builtin.module @host attributes {cir.offload.kind = #cir.offload_kind<host>} {
+    }
+    cir.const #cir.int<0> : !cir.int<s, 32>
+  }
+}
+
+// -----
+
+module {
+  cir.offload.container { // expected-error {{expects at least one device module}}
+    builtin.module @host attributes {cir.offload.kind = #cir.offload_kind<host>} {
+    }
+  }
+}
+
+// -----
+
+module {
+  cir.offload.container { // expected-error {{expects host module as the first nested op}}
+  }
+}
