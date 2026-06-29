@@ -56,17 +56,25 @@ endfunction(find_all_header_files)
 function(llvm_process_sources OUT_VAR)
   cmake_parse_arguments(ARG "PARTIAL_SOURCES_INTENDED" "" "ADDITIONAL_HEADERS;ADDITIONAL_HEADER_DIRS" ${ARGN})
   set(sources ${ARG_UNPARSED_ARGUMENTS})
-  llvm_check_source_file_list(${sources})
+
+  if(LLVM_ENABLE_EXPENSIVE_CMAKE_CHECKS)
+    llvm_check_source_file_list(${sources})
+  endif()
+
+  if(ARG_ADDITIONAL_HEADERS)
+    set_source_files_properties(${ARG_ADDITIONAL_HEADERS} PROPERTIES HEADER_FILE_ONLY ON)
+    list(APPEND sources ${ARG_ADDITIONAL_HEADERS})
+  endif()
 
   # This adds .td and .h files to the Visual Studio solution:
-  add_td_sources(sources)
-  find_all_header_files(hdrs "${ARG_ADDITIONAL_HEADER_DIRS}")
-  if (hdrs)
-    set_source_files_properties(${hdrs} PROPERTIES HEADER_FILE_ONLY ON)
+  if(MSVC OR LLVM_ENABLE_EXPENSIVE_CMAKE_CHECKS)
+    add_td_sources(sources)
+    find_all_header_files(hdrs "${ARG_ADDITIONAL_HEADER_DIRS}")
+    if (hdrs)
+      set_source_files_properties(${hdrs} PROPERTIES HEADER_FILE_ONLY ON)
+    endif()
+    list(APPEND sources ${hdrs})
   endif()
-  set_source_files_properties(${ARG_ADDITIONAL_HEADERS} PROPERTIES HEADER_FILE_ONLY ON)
-  list(APPEND sources ${ARG_ADDITIONAL_HEADERS} ${hdrs})
-
   set( ${OUT_VAR} ${sources} PARENT_SCOPE )
 endfunction(llvm_process_sources)
 
