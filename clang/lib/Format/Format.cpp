@@ -4330,12 +4330,6 @@ reformat(const FormatStyle &Style, StringRef Code,
     }
   }
 
-  if (Style.SeparateDefinitionBlocks != FormatStyle::SDS_Leave) {
-    Passes.emplace_back([&](const Environment &Env) {
-      return DefinitionBlockSeparator(Env, Expanded).process();
-    });
-  }
-
   if (Style.Language == FormatStyle::LK_ObjC &&
       !Style.ObjCPropertyAttributeOrder.empty()) {
     Passes.emplace_back([&](const Environment &Env) {
@@ -4353,6 +4347,12 @@ reformat(const FormatStyle &Style, StringRef Code,
   Passes.emplace_back([&](const Environment &Env) {
     return Formatter(Env, Expanded, Status).process();
   });
+
+  if (Style.SeparateDefinitionBlocks != FormatStyle::SDS_Leave) {
+    Passes.emplace_back([&](const Environment &Env) {
+      return DefinitionBlockSeparator(Env, Expanded).process();
+    });
+  }
 
   if (Style.isJavaScript() &&
       Style.InsertTrailingCommas == FormatStyle::TCS_Wrapped) {
