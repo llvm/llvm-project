@@ -15,6 +15,8 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/Ptr/IR/PtrAttrs.h"
+#include "mlir/Dialect/Ptr/IR/PtrDialect.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Target/LLVMIR/Import.h"
 
@@ -44,25 +46,21 @@ static void setMLIRDataLayout(mlir::ModuleOp &mod, const llvm::DataLayout &dl) {
   mlir::DataLayoutSpecInterface dlSpec =
       mlir::translateDataLayout(dl, mlirContext);
 
-  // Add a CIR-native pointer data-layout entry so cir.ptr / cir.vptr size and
-  // alignment are driven by the data layout rather than hardcoded.
-  // The value stores {size-in-bits, abi-align-in-bits} keyed on cir.ptr.
-  //
-  // TODO(cir): Only the default address space is recorded and
-  // address-space-dependent pointer sizes are not modeled yet. Emit
-  // per-address-space entries.
+  // Record cir.ptr size/alignment as a #ptr.spec entry keyed on cir.ptr.
+  // TODO(cir): only the default address space is recorded.
   assert(!cir::MissingFeatures::dataLayoutPtrHandlingBasedOnLangAS());
   constexpr unsigned kBitsInByte = 8;
   unsigned ptrSizeBits = dl.getPointerSizeInBits(/*AS=*/0);
-  unsigned ptrAlignBits =
+  unsigned ptrAbiBits =
       dl.getPointerABIAlignment(/*AS=*/0).value() * kBitsInByte;
+  unsigned ptrPrefBits =
+      dl.getPointerPrefAlignment(/*AS=*/0).value() * kBitsInByte;
   auto ptrKey = cir::PointerType::get(cir::VoidType::get(mlirContext));
-  auto ptrVal = mlir::DenseI32ArrayAttr::get(
-      mlirContext,
-      {static_cast<int32_t>(ptrSizeBits), static_cast<int32_t>(ptrAlignBits)});
+  auto ptrSpec = mlir::ptr::SpecAttr::get(mlirContext, ptrSizeBits, ptrAbiBits,
+                                          ptrPrefBits);
   llvm::SmallVector<mlir::DataLayoutEntryInterface> entries(
       dlSpec.getEntries().begin(), dlSpec.getEntries().end());
-  entries.push_back(mlir::DataLayoutEntryAttr::get(ptrKey, ptrVal));
+  entries.push_back(mlir::DataLayoutEntryAttr::get(ptrKey, ptrSpec));
 
   mod->setAttr(mlir::DLTIDialect::kDataLayoutAttrName,
                mlir::DataLayoutSpecAttr::get(mlirContext, entries));
@@ -75,7 +73,8 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
 
   mlirContext = std::make_unique<mlir::MLIRContext>();
   cir::registerAllDialects(*mlirContext);
-  mlirContext->loadDialect<mlir::DLTIDialect, cir::CIRDialect>();
+  mlirContext->loadDialect<mlir::DLTIDialect, mlir::ptr::PtrDialect,
+                           cir::CIRDialect>();
   mlirContext->getOrLoadDialect<mlir::acc::OpenACCDialect>();
   mlirContext->getOrLoadDialect<mlir::omp::OpenMPDialect>();
 
