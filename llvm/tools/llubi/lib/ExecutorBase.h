@@ -64,6 +64,9 @@ struct Frame {
   // Reserved for in-flight subroutines.
   Function *ResolvedCallee = nullptr;
   SmallVector<AnyValue> CalleeArgs;
+  // Temporary memory objects created via pointer arguments with byval.
+  // They belong to the caller.
+  SmallVector<IntrusiveRefCntPtr<MemoryObject>> CalleeByValArgs;
   AnyValue CalleeRetVal;
 
   Frame(Function &F, CallBase *CallSite, Frame *LastFrame,
@@ -99,12 +102,12 @@ public:
   DiagnosticReporter reportImmediateUB();
   DiagnosticReporter reportError();
 
-  /// Check if the upcoming memory access is valid. Returns the offset relative
-  /// to the underlying object if it is valid.
-  std::optional<uint64_t> verifyMemAccess(const MemoryObject &MO,
-                                          const APInt &Address,
-                                          uint64_t AccessSize, Align Alignment,
-                                          bool IsStore);
+  /// Check if the upcoming memory access is valid. Returns the resolved memory
+  /// object and offset if it is valid.
+  std::pair<MemoryObject *, uint64_t> verifyMemAccess(const Pointer &Ptr,
+                                                      uint64_t AccessSize,
+                                                      Align Alignment,
+                                                      bool IsStore);
 
   AnyValue load(const AnyValue &Ptr, Align Alignment, Type *ValTy,
                 bool NoUndef);

@@ -36,10 +36,13 @@ RUN: llvm-bolt %t.exe -p %p/Inputs/pre-aggregated.txt --pa -o %t.null | FileChec
 RUN: llvm-bolt %t.exe --pa -perfdata %p/Inputs/pre-aggregated.txt -perfdata %p/Inputs/pre-aggregated.txt -o %t.multi-perfdata.null | FileCheck %s --check-prefix=CHECK-MULTI
 RUN: llvm-bolt %t.exe --pa -p %p/Inputs/pre-aggregated.txt,%p/Inputs/pre-aggregated.txt -o %t.multi-perfdata-comma.null | FileCheck %s --check-prefix=CHECK-MULTI
 RUN: not llvm-bolt %t.exe --pa -p %p/Inputs/pre-aggregated.txt -p %t.missing -o %t.multi-perfdata-missing.null 2>&1 | FileCheck %s --check-prefix=CHECK-MISSING
+RUN: llvm-bolt %t.exe --pa -p %p/Inputs/pre-aggregated.txt -p %p/Inputs/pre-aggregated-bad-type.txt -o %t.multi-perfdata-bad-type.null 2>&1 | FileCheck %s --check-prefix=CHECK-BAD-TYPE-WARNING
+RUN: llvm-bolt %t.exe --pa -p %p/Inputs/pre-aggregated-bad-type.txt -p %p/Inputs/pre-aggregated.txt -o %t.multi-perfdata-bad-type.null 2>&1 | FileCheck %s --check-prefix=CHECK-BAD-TYPE-WARNING
 
 CHECK: BOLT-INFO: 4 out of 7 functions in the binary (57.1%) have non-empty execution profile
 CHECK-MULTI: BOLT-INFO: 4 out of 7 functions in the binary (57.1%) have non-empty execution profile
 CHECK-MISSING: {{.*}}missing': No such file or directory.
+CHECK-BAD-TYPE-WARNING: PERF2BOLT-WARNING: {{.*}}pre-aggregated-bad-type.txt: Error reading BOLT data input file: line 1, column 2: expected T, R, S, E, B, F, f or r
 
 RUN: FileCheck %s -check-prefix=PERF2BOLT --input-file %t
 RUN: FileCheck %s -check-prefix=NEWFORMAT --input-file %t.new

@@ -71,6 +71,17 @@ C/C++ Language Potentially Breaking Changes
   Clang would previously ``break`` out of the ``while`` loop, whereas GCC (since version 9) would
   ``break`` out of the ``for`` loop here. Now, Clang and GCC both break out of the ``for`` loop.
 
+- Clang now parses line and digit directives, module names, and original filenames as unevaluated
+  strings. This means that code containing strings with escape sequences such as
+
+  .. code-block:: c++
+
+    # 1 "original\x12source.c"
+    #pragma clang module import "\x41"
+    # 50 "a\012.c"
+
+  are now ill-formed.
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
@@ -113,6 +124,8 @@ ABI Changes in This Version
   compilers. On most targets this is not a breaking change because ``fastcc``
   and the platform C calling convention agree for ``void(ptr)``. It is an ABI
   break on i686, MIPS O32, PowerPC64 ELFv1, and Lanai.
+- Fixed incorrect struct return when single large vector (256/512-bit) used on
+  x86-64 targets. (#GH203760) The bug was introduced since Clang 21. (#GH120670)
 
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
@@ -191,6 +204,7 @@ C++ Language Changes
 --------------------
 
 - ``__is_trivially_equality_comparable`` no longer returns false for all enum types. (#GH132672)
+- ``auto`` parameters are now available in all C++ language modes as an extension.
 
 C++2c Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -304,6 +318,10 @@ Non-comprehensive list of changes in this release
   integers including ``_BitInt`` types. This includes constexpr evaluation
   support.
 
+- Added ``__builtin_elementwise_pext`` and ``__builtin_elementwise_pdep`` for
+  parallel bit extract and parallel bit deposit operations on integers including
+  ``_BitInt`` types. This includes constexpr evaluation support.
+
 - Deprecated float types support from ``__builtin_elementwise_max`` and
   ``__builtin_elementwise_min``.
 
@@ -381,6 +399,28 @@ New Compiler Flags
   be aligned to 4-byte alignment rather than fully unaligned or fully (8-byte)
   aligned.
 
+- New ``-cl`` option ``/pathmap:`` added to match MSVC. This option acts as a
+  clang's ``-ffile-prefix-map=value`` and has known differences in behaviour
+  with the CL's option that do not affect the functionality: nomalizes the
+  macro prefix map pathes -- removes `./` and uses the target's platform-
+  specific path separator character when expanding the preprocessor macros -- 
+  ``-ffile-reproducible`` (but not the debug and coverage prefix maps);
+  does not require ``/experimental:deterministic`` as by MSVC. It needed for
+  removing a hostname from a mangling hash gen, but clang-cl does not use
+  a hostname when generates the hashes. Known issues -- does not remap the
+  source file pathes within PCH/PCM files.
+
+- New ``-cl`` option ``/experimental:deterministic`` added to match CL's option.
+  This enables warning emission on usage of non-deterministic macros __DATE__,
+  __TIME__ and __TIMESTAMP__ and provides reproducable COFF's timestamp for
+  the output object files.
+
+- New ``-cl`` option ``/d1nodatetime`` added to match CL's option. This option
+  undefines the standard macros __DATE__, __TIME__ and __TIMESTAMP__ to allow
+  reproducable builds. These macros can be redefined from the command line if
+  necessary. ``/d1nodatetime-`` can be used to turn this feature off if
+  necessary to override the common build settings.
+
 Deprecated Compiler Flags
 -------------------------
 
@@ -389,11 +429,20 @@ Modified Compiler Flags
 - The `-mno-outline` and `-moutline` compiler flags are now allowed on RISC-V and X86, which both support the machine outliner.
 - The `-mno-outline` flag will now add the `nooutline` IR attribute, so that
   `-mno-outline` and `-moutline` objects can be mixed correctly during LTO.
+- The `-fzero-call-used-regs` compiler flag is now allowed on RISC-V, only the
+  "skip", "used-gpr", "used-gpr-arg", "all-gpr" and "all-gpr-arg" options are
+  supported for the moment.
 
 - Slightly changed hash id generation to get the unique linkage symbols names 
   by ``-unique-internal-linkage-names`` option. Now it uses a path that
   normalized in favor of the target system (same as the preprocessor does
   for the file macros) and allows the reproducable IDs on any build system.
+- ``-fprofile-update=atomic`` will now promote counter updates out of loops,
+  similar to the non-atomic case ([#202487](https://github.com/llvm/llvm-project/pull/202487)).
+
+- The ``-cl`` ``/Brepro`` option was modified to match the original CL's option
+  and now defines the standard macros __DATE__, __TIME__ and __TIMESTAMP__ to
+  "1". The previous functionality remains unchanged.
 
 Removed Compiler Flags
 ----------------------
@@ -480,6 +529,16 @@ Attribute Changes in Clang
   instead be used by warnings and static analyses to provide more information
   about pointer lifetimes. It may be used to power optimizations in the future,
   however there are no concrete plans to do so at the moment.
+
+- The attributes ``[[clang::opencl_global_device]]`` and ``[[clang::opencl_global_host]]``
+  are now deprecated. Clang emits a ``-Wdeprecated-attributes`` warning when
+  they are used.
+  
+- The ``modular_format`` attribute now supports the ``fixed`` aspect for C
+  ISO 18037 fixed-point ``printf`` specifiers.
+
+- The ``const`` and ``pure`` attributes only apply to functions; they are now
+  diagnosed and ignored when applied to anything else.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -625,6 +684,9 @@ Improvements to Clang's diagnostics
 - Clang now rejects inline asm constraints and clobbers that contain an
   embedded null character, instead of silently truncating them. (#GH173900)
 
+- Added ``-Wstringop-overread`` to warn when ``memcpy``, ``memmove``, ``memcmp``,
+  and related builtins read more bytes than the source buffer size (#GH83728).
+  
 - Diagnostics for the C++11 range-based for statement now report the correct
   iterator type in notes for invalid iterator types.
 
@@ -643,6 +705,7 @@ Improvements to Coverage Mapping
 Bug Fixes in This Version
 -------------------------
 
+- Fixed an assertion when comparing a fixed point type with a ``_BitInt`` type. (#GH196948)
 - Fixed atomic boolean compound assignment; the conversion back to atomic bool would be miscompiled. (#GH33210)
 - Correctly handle default template argument when establishing subsumption. (#GH188640)
 - Fixed a failed assertion in the preprocessor when ``__has_embed`` parameters are missing parentheses. (#GH175088)
@@ -682,11 +745,18 @@ Bug Fixes in This Version
 - Fixed a potential stack-use-after-return issue in Clang when copy-initializing
   an array via an element-at-a-time copy loop (#GH192026)
 - Fixed an issue where certain designated initializers would be rejected for constexpr variables. (#GH193373)
+- Fixed ``clang::Preprocessor::recomputeCurLexerKind`` to avoid default fallback to ``CurLexerCallback = CLK_CachingLexer;``. This prevents code-completion
+  EOF handling from accidentally restoring CLK_CachingLexer while a tentative parse is still active, which could trigger a caching lexer re-entry assertion
+  in clangd signature help. (#GH200677)
 - Fixed a crash when ``#embed`` is used with C++ modules (#GH195350)
+- Fixed an assertion in constant evaluation when using a defaulted comparison operator in a ``union``. (#GH147127)
+- Fixed a bug where ``-x cuda`` caused clang to immediately resolve templates that should not be. (#GH200545)
 - Fixed an issue where ``__typeof_unqual`` and ``__typeof_unqual__`` were rejected as a declaration specifier in block scope in C++.
 - Fixed crash when checking for overflow for unary operator that can't overflow (#GH170072)
 - Clang no longer handles a `" q-char-sequence "` header name as a string literal (#GH132643).
-- Fixed an assertion when ``__attribute__((alloc_size))`` is used with an argument type wider than the target's pointer width. (#GH190445)
+- Fixed an assertion where we improperly handled implicit conversions to integral types from an atomic-type with a conversion function. (#GH201770)
+- Fixed assertion failures involving code completion with delayed default arguments and exception specifications. (#GH200879)
+- Fixed a regression where calling a function that takes a class-type parameter by value inside ``decltype`` of a concept could be incorrectly rejected when used as a non-type template argument. (#GH175831)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -704,6 +774,11 @@ Bug Fixes to Attribute Support
 - Fixed a crash when a ``section`` attribute or ``#pragma clang section`` caused a
   section type conflict with a declaration whose name is not a simple identifier,
   such as a lambda's call operator. (#GH192264)
+- Fixed a regression where attributed types (such as those carrying ``_Nonnull``/``_Nullable`` attributes)
+  were not deduplicated, because the attributes' arguments were not taken into
+  account when uniquing them. The duplications could substantially increase the
+  size of precompiled headers and modules (PCH/PCM), and the time spent loading
+  them. (#GH200961)
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -722,13 +797,14 @@ Bug Fixes to C++ Support
 - Fixed an alias template CTAD crash.
 - Correctly diagnose uses of ``co_await`` / ``co_yield`` in the default argument of nested function declarations. (#GH98923)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
-- Fixed clang incorrectly rejecting several cases of out-of-line definitions. (#GH101330)
 - Clang incorrectly instantiated variable specializations outside of the immediate context. (#GH54439)
 - Fixed a crash when pack expansions are used as arguments for non-pack parameters of built-in templates. (#GH180307)
 - Fixed crash instantiating class member specializations.
 - Fix a problem where a substitution failure when evaluating a type requirement
   could directly make the program ill-formed.
+- Typo correction now corrects the name qualifier for invalid template names.
 - Fix a problem where pack index expressions where incorrectly being regarded as equivalent.
+- Correctly diagnose narrowing in pack index expressions. (#GH205650)
 - Fixed a bug where captured variables in non-mutable lambdas were incorrectly treated as mutable
   when used inside decltype in the return type. (#GH180460)
 - Fixed a crash when evaluating uninitialized GCC vector/ext_vector_type vectors in ``constexpr``. (#GH180044)
@@ -756,6 +832,8 @@ Bug Fixes to C++ Support
 - Fixed a crash in constant evaluation using placement new on an array which was later initialized. (#GH196450)
 - Fixed an issue where Clang incorrectly accepted invalid unqualified uses of local nested class names outside their declaring scope. (#GH184622)
 - Fixed a crash when parsing invalid friend declaration with storage-class specifier. (#GH186569)
+- Fixed a missing vtable for ``dynamic_cast<FinalClass *>(this)`` in a function template. (#GH198511)
+- Fixed an assertion failure during init-list checking of an array whose element type is an incomplete class. (#GH140685)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -766,6 +844,7 @@ Bug Fixes to AST Handling
 - Fixed the SourceLocation and SourceRange of reversed rewritten CXXOperatorCallExpr. (#GH192467)
 - Fixed a assertion when ``__block`` is used on global variables in C mode. (#GH183974)
 - Added missing AST nodes representing the ``decltype`` specifiers in destructor call to AST.
+- Fixed a missing ODR violation diagnostic introduced by the inline assembly string or clobber list. (#GH198616)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -800,9 +879,15 @@ Miscellaneous Clang Crashes Fixed
 - Fixed an assertion failure in ``isAtEndOfMacroExpansion`` on macro expansions crossing the boundary of two fileIDs. (#GH115007), (#GH21755)
 - Fixed an assertion failure when ``__builtin_dump_struct`` is used with an
   immediate-escalated callable. (#GH192846)
+- Fixed a crash when passing one sized implicitly casted vector to a ``abs`` function. (#GH204777)
+- Fixed a crash when diagnosing an invalid out-of-line definition of a member class template. (#GH201490)
 
 OpenACC Specific Changes
 ------------------------
+
+OpenCL Specific Changes
+-----------------------
+- Added support for OpenCL C 3.1 language version (``-cl-std=CL3.1``).
 
 Target Specific Changes
 -----------------------
@@ -828,6 +913,11 @@ X86 Support
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
 
+- Support has been added for the following processors (-mcpu identifiers in parenthesis):
+
+* Arm AGI CPU (armagicpu).
+* Hisilicon hip12 core (hip12).
+
 Android Support
 ^^^^^^^^^^^^^^^
 
@@ -838,6 +928,30 @@ Windows Support
   19.15 (Visual Studio 2017 version 15.8) and later. (#GH47114)
 - ``-fmacro-prefix-map=`` (``-ffile-prefix-map=``) now affects an anonymous namespace hash generation
   for the MSVC targets and allows deterministic symbol mangling for reproducible builds.
+
+- Added the ``-fwinx64-eh-unwind=`` flag to select the x64 Windows unwind info
+  version (``v1``, ``v2-best-effort``, ``v2-required``, or ``v3``). The legacy
+  ``-fwinx64-eh-unwindv2=`` flag is deprecated; it is still accepted and mapped
+  onto the new flag as follows:
+
+  .. list-table::
+     :header-rows: 1
+
+     * - Legacy ``-fwinx64-eh-unwindv2=``
+       - New ``-fwinx64-eh-unwind=``
+     * - ``disabled``
+       - ``v1`` (default; no flag forwarded)
+     * - ``best-effort``
+       - ``v2-best-effort``
+     * - ``required``
+       - ``v2-required``
+
+  The MSVC-compatible ``/d2epilogunwind`` and ``/d2epilogunwindrequirev2``
+  options map to ``v2-best-effort`` and ``v2-required`` respectively.
+
+- When targeting Windows x64 with EGPR (`-mapx-features=egpr`), Clang now
+  automatically enables V3 unwind info (`-fwinx64-eh-unwind=v3`) if no
+  explicit unwind version was specified.
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
@@ -851,6 +965,9 @@ RISC-V Support
 - Tenstorrent Ascalon D8 was renamed to Ascalon X. Use `tt-ascalon-x` with `-mcpu` or `-mtune`.
 - Intrinsics were added for the 'Zvabd` (RISC-V Integer Vector Absolute Difference) extension.
 - Intrinsics were added for the 'Zvzip` (Reordering Structured Data in Vector Registers) extension.
+- A new ``-mtune`` syntax was added to support processor-specific tuning feature string
+  Currently this new syntax is gated by the ``-mexperimental-mtune-syntax`` flag.
+
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -876,6 +993,11 @@ AIX Support
   archive has been renamed from ``libatomic.a`` to ``libcompiler_rt.a`` to avoid conflicts
   between the LLVM libatomic and the GNU libatomic from the AIX toolbox as they share
   the same library name.
+- Added support for ``#pragma comment(copyright, "token_sequence")`` on AIX.
+  This directive embeds a copyright or identifying string into the compiled object file. 
+  The string is included in the final executable and loaded into memory at program runtime.
+- The driver relaxes the restrictions on the ``OBJECT_MODE`` environment
+  variable and now silently accepts ``32_64`` and ``any``.
 
 NetBSD Support
 ^^^^^^^^^^^^^^
@@ -885,6 +1007,12 @@ WebAssembly Support
 
 - Fixed a crash when ``__funcref`` is applied to a non-function pointer type.
   (#GH118233)
+- WebAssembly reference types (``__externref_t`` and ``__funcref`` function
+  pointers) now lower to the opaque IR types ``target("wasm.externref")`` and
+  ``target("wasm.funcref")`` instead of ``ptr addrspace(10)`` /
+  ``ptr addrspace(20)``.
+- Fixed a compiler crash at ``-O2`` when reference-type values were passed
+  through control flow that the SLP vectorizer tried to vectorize.
 
 AVR Support
 ^^^^^^^^^^^
@@ -956,6 +1084,15 @@ Crash and bug fixes
 
 - Fixed ``security.VAList`` checker producing false positives when analyzing
   C23 code where ``va_start`` expands to ``__builtin_c23_va_start``.
+  
+- Fixed a compiler crash when combining ``_Atomic`` and ``__auto_type``
+  in C, for example ``_Atomic __auto_type x = expr``. (#GH118058)
+
+Improvements
+^^^^^^^^^^^^
+
+- ``alpha.unix.PthreadLock`` now emits path notes on lock, unlock, destroy,
+  and init operations.
 
 .. comment:
   This is for the Static Analyzer.
@@ -965,11 +1102,30 @@ Crash and bug fixes
     - Improvements
     - Moved checkers
 
+
+Moved checkers
+^^^^^^^^^^^^^^
+
+- The checker ``unix.cstring.UninitializedRead`` is now out of alpha.
+
 .. _release-notes-sanitizers:
 
 Sanitizers
 ----------
 - UndefinedBehaviorSanitizer now supports ``__ubsan_default_suppressions``.
+
+- Sanitizer Special Case Lists (``-fsanitize-ignorelist``) now support
+  Version 4 of the Special Case List format, which introduces a transition
+  period for leading dot-slash (``./``) canonicalization in path matching.
+  Version 4 matches both canonicalized and non-canonicalized paths but emits a
+  warning for deprecated matches. Version 5 drops backward compatibility and
+  requires rules to match canonicalized paths (without leading ``./``).
+
+- Sanitizer Special Case Lists (``-fsanitize-ignorelist``) and warning
+  suppression mappings (``--warning-suppression-mappings``) now recognize version
+  4 of the Special Case List format (indicated by ``#!special-case-list-v4``).
+  On Windows hosts, path matching is slash-agnostic (both forward slashes (``/``)
+  and backslashes (``\``) match either path separator in both patterns and paths).
 
 Python Binding Changes
 ----------------------
@@ -996,6 +1152,10 @@ OpenMP Support
   ``fallback`` modifier (``fb_nullify`` or ``fb_preserve``) with OpenMP >= 61.
 - Added support for ``local`` clause with declare_target directive when
   OpenMP >= 60.
+- Fixed the identity element used for ``reduction(* : x)`` over C++ class types
+  (e.g. ``std::complex``). The private copy is now initialized to the
+  multiplicative identity instead of being value-initialized, which previously
+  produced a wrong result (the product collapsed to the additive identity).
 
 SYCL Support
 ------------

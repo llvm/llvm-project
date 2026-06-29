@@ -14,6 +14,7 @@ mlir_target_link_libraries(MLIRVectorTestPasses PUBLIC
   MLIRLinalgTransforms
   MLIRLLVMDialect
   MLIRMemRefDialect
+  MLIRNVGPUDialect
   MLIRPass
   MLIRSCFDialect
   MLIRTensorDialect

@@ -2085,6 +2085,7 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
         Lo = merge(Lo, FieldLo);
         Hi = merge(Hi, FieldHi);
         if (returnCXXRecordGreaterThan128InMem() &&
+            !isEmptyRecord(getContext(), I.getType(), true) &&
             (Size > 128 && (Size != getContext().getTypeSize(I.getType()) ||
                             Size > getNativeVectorSizeForAVXABI(AVXLevel)))) {
           // The only case a 256(or 512)-bit wide vector could be used to return

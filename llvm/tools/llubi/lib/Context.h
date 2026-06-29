@@ -15,6 +15,7 @@
 #include "llvm/AsmParser/AsmParserContext.h"
 #include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Operator.h"
 #include <map>
 #include <optional>
 #include <random>
@@ -42,9 +43,10 @@ enum class MemoryObjectState {
   //   -> Dead (after the end of lifetime of an alloca)
   //   -> Freed (after free is called on a heap object)
   Alive,
-  // This memory object is out of lifetime. It is OK to perform
-  // operations that do not access its content, e.g., getelementptr.
-  // Otherwise, an immediate UB occurs.
+  // This memory object is out of lifetime. Its contents are poison. Loads and
+  // memory transfers from it are allowed and propagate poison, stores to it
+  // cause immediate UB, and non-accessing operations such as getelementptr are
+  // allowed.
   // Valid transition:
   //   -> Alive (after the start of lifetime of an alloca)
   Dead,
@@ -200,6 +202,17 @@ public:
 using ConstBytesView = BytesView<ArrayRef<Byte>>;
 using MutableBytesView = BytesView<MutableArrayRef<Byte>>;
 
+class MaterializedConstant : public AnyValue {
+  bool Cacheable;
+
+public:
+  MaterializedConstant(std::nullopt_t) : Cacheable(false) {}
+  MaterializedConstant(AnyValue V, bool Cacheable)
+      : AnyValue(std::move(V)), Cacheable(Cacheable) {}
+
+  bool isCacheable() const { return Cacheable; }
+};
+
 /// The global context for the interpreter.
 /// It tracks global state such as heap memory objects and floating point
 /// environment.
@@ -237,8 +250,40 @@ class Context {
   // Mapping from tags to provenances. Tags are lazily generated when a
   // pointer is captured by memory.
   DenseMap<APInt, IntrusiveRefCntPtr<Provenance>> TaggedProvenances;
-  // TODO: Maintains a global list of 'exposed' provenances. This is used to
-  // convert an address back to a pointer with a previously exposed provenance.
+  // Maintains a global list of 'exposed' provenances. This is used to convert
+  // an address back to a pointer with a previously exposed provenance. In
+  // theory the provenance is picked from all previously exposed provenances
+  // using angelic non-determinism. Since llubi is just an interpreter, we make
+  // two approximations:
+  //   1. Each address maps to at most one memory object during the execution of
+  //   the program, as AllocationBase increases monotonically.
+  //   2. We maintain the set of exposed provenances. When ptrtoint executes,
+  //   the provenance is inserted to the set. When inttoptr executes, it yields
+  //   a pointer with a wildcard provenance. That is, each later use will check
+  //   whether there is an exposed provenance in the snapshot allowing the
+  //   operation. The invalid provenance will be masked out after the operation.
+  //   If we cannot pick one, it is UB.
+
+  /// Exposed provenances are grouped by associated memory objects for efficient
+  /// invalidation.
+  struct ExposedProvenance {
+    IntrusiveRefCntPtr<Provenance> Prov;
+    uint64_t Generation;
+
+    bool operator<(const ExposedProvenance &RHS) const {
+      return Generation < RHS.Generation;
+    }
+  };
+  struct ExposedProvenanceSet {
+    // (Provenance, Generation)
+    SmallVector<ExposedProvenance> List;
+    // FIXME: Implement a partial order comparator for provenance instead of
+    // deduplicating by pointers.
+    SmallPtrSet<Provenance *, 4> Set;
+  };
+  std::map<uint64_t, ExposedProvenanceSet> ExposedProvenances;
+  // Global version number for the set of exposed provenances.
+  uint64_t ExposedProvenanceSetGeneration = 0;
 
   /// Get the tag for the given pointer provenance.
   APInt getTag(uint32_t BitWidth, Provenance &Prov);
@@ -247,9 +292,21 @@ class Context {
   void toBytes(const AnyValue &Val, Type *Ty, uint32_t OffsetInBits,
                MutableBytesView Bytes, bool PaddingBits);
 
+  AnyValue computePtrAdd(const Pointer &Ptr, const APInt &Offset,
+                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset);
+  AnyValue computePtrAdd(const AnyValue &Ptr, const APInt &Offset,
+                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset);
+  AnyValue computeScaledPtrAdd(const AnyValue &Ptr, const AnyValue &Index,
+                               const APInt &Scale, GEPNoWrapFlags Flags,
+                               AnyValue &AccumulatedOffset);
+
   // Constants
   // Use std::map to avoid iterator/reference invalidation.
-  std::map<Constant *, AnyValue> ConstCache;
+  std::map<Constant *, MaterializedConstant> ConstCache;
+  // Temporary buffer for non-cacheable constants (e.g.,
+  // undef/ptrtoint/inttoptr).
+  SpecificBumpPtrAllocator<MaterializedConstant> NoncacheableConstBuffer;
+  size_t NoncacheableConstCount = 0;
   DenseMap<Function *, Pointer> FuncAddrMap;
   DenseMap<BasicBlock *, Pointer> BlockAddrMap;
   DenseMap<uint64_t, std::pair<Function *, IntrusiveRefCntPtr<MemoryObject>>>
@@ -257,7 +314,8 @@ class Context {
   DenseMap<uint64_t, std::pair<BasicBlock *, IntrusiveRefCntPtr<MemoryObject>>>
       ValidBlockTargets;
   DenseMap<GlobalVariable *, Pointer> GlobalAddrMap;
-  std::optional<AnyValue> getConstantValueImpl(Constant *C);
+  MaterializedConstant getConstantValueImpl(Constant *C);
+  MaterializedConstant evaluateConstantExpression(ConstantExpr *CE);
 
   // Floating-point environment
   RoundingMode CurrentRoundingMode = RoundingMode::NearestTiesToEven;
@@ -319,7 +377,12 @@ public:
   uint64_t getEffectiveTypeAllocSize(Type *Ty);
   uint64_t getEffectiveTypeStoreSize(Type *Ty);
 
-  const AnyValue *getConstantValue(Constant *C);
+  /// Returns a pointer to an evaluated constant \p C. If it cannot be
+  /// evaluated, returns nullptr. Note that it returns a pointer to a temporary
+  /// buffer when \p C is not context-free. The caller is responsible for
+  /// calling resetNoncacheableConstantBuffer after all references are dropped.
+  const MaterializedConstant *getConstantValue(Constant *C);
+  void resetNoncacheableConstantBuffer();
   IntrusiveRefCntPtr<MemoryObject> allocate(uint64_t Size, uint64_t Align,
                                             StringRef Name, unsigned AS,
                                             MemInitKind InitKind,
@@ -329,6 +392,22 @@ public:
   /// Derive a pointer from a memory object with offset 0.
   /// Please use Pointer's interface for further manipulations.
   Pointer deriveFromMemoryObject(IntrusiveRefCntPtr<MemoryObject> Obj);
+  /// Mark this provenance as exposed. It is no-op if it is not associated with
+  /// a memory object or a wildcard provenance.
+  void exposeProvenance(Provenance &Prov);
+  /// A helper to check both concrete and wildcard provenance. Please don't
+  /// report UB inside the \p Check callback due to the existence of wildcard
+  /// provenance.
+  /// Returns the resolved memory object if success. \p Ptr is guaranteed to be
+  /// within the bounds of the returned memory object. But the state is not
+  /// checked, for better diagnostic messages. If \p HasSideEffect is true, some
+  /// invalid provenances will be masked out. Note that in this case the caller
+  /// must report UB when the result is nullptr.
+  MemoryObject *checkProvenance(const Pointer &Ptr,
+                                function_ref<bool(const Provenance &)> Check,
+                                bool HasSideEffect = true);
+  /// Returns the snapshot of currently exposed provenances.
+  IntrusiveRefCntPtr<Provenance> getWildcardProvenance();
   /// Convert byte sequence to a value of the given type. Uninitialized bits are
   /// flushed according to the options.
   /// If \p ContainsUndefinedBits is provided, it will be set to true when there
@@ -348,6 +427,9 @@ public:
 
   /// Freeze the value in-place.
   void freeze(AnyValue &Val, Type *Ty);
+
+  AnyValue computeGEP(GEPOperator &GEP,
+                      function_ref<const AnyValue &(Value *V)> GetValue);
 
   Function *getTargetFunction(const Pointer &Ptr);
   BasicBlock *getTargetBlock(const Pointer &Ptr);
