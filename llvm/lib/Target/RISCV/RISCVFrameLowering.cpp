@@ -1434,7 +1434,6 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
 
 static MCRegister getPhysicalGPR(const TargetRegisterInfo &TRI,
                                  MCRegister Reg) {
-
   if (RISCV::GPRRegClass.contains(Reg))
     return Reg;
 
