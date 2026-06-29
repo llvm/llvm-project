@@ -10,6 +10,7 @@
 
 // <cmath>
 
+// double      assoc_laguerre(unsigned n, unsigned m, double x);
 // float       assoc_laguerref(unsigned n, unsigned m, float x);
 // long double assoc_laguerrel(unsigned n, unsigned m, long double x);
 
@@ -45,6 +46,8 @@ void test(Func assoc_laguerre) {
 }
 
 int main(int, char**) {
+  test<double>([](unsigned n, unsigned m, double x) { return std::assoc_laguerre(n, m, x); });
+
   test<float>([](unsigned n, unsigned m, float x) { return std::assoc_laguerref(n, m, x); });
   test<long double>([](unsigned n, unsigned m, long double x) { return std::assoc_laguerrel(n, m, x); });
 
