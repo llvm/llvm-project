@@ -189,6 +189,8 @@ TEST_F(ObjectContainerMachOFilesetTest, ZeroCmdSize) {
   // Before the fix ParseFileset loops ~0x7FFFFFFF times and never returns.
   (void)ObjectContainerMachOFileset::GetModuleSpecifications(FileSpec(), DataSP,
                                                              0, sizeof(kData));
+}
+
 // Regression fixture: a universal (fat) Mach-O whose header claims a huge
 // nfat_arch (here 0xAFAFAFAF) but provides no fat_arch entries beyond the
 // header bytes.  Found by lldb-target-fuzzer.
