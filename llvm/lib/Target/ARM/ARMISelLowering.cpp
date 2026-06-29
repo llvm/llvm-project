@@ -1625,14 +1625,23 @@ static bool isS16(const SDValue &Op, SelectionDAG &DAG) {
 }
 
 /// IntCCToARMCC - Convert a DAG integer condition code to an ARM CC
-static ARMCC::CondCodes IntCCToARMCC(ISD::CondCode CC) {
+static ARMCC::CondCodes IntCCToARMCC(ISD::CondCode CC, SDValue RHS,
+                                     bool ForbidMIandPL = false) {
   switch (CC) {
   default: llvm_unreachable("Unknown condition code!");
   case ISD::SETNE:  return ARMCC::NE;
   case ISD::SETEQ:  return ARMCC::EQ;
   case ISD::SETGT:  return ARMCC::GT;
-  case ISD::SETGE:  return ARMCC::GE;
-  case ISD::SETLT:  return ARMCC::LT;
+  case ISD::SETGE:
+    if (!ForbidMIandPL && isNullConstant(RHS)) {
+      return ARMCC::PL;
+    }
+    return ARMCC::GE;
+  case ISD::SETLT:
+    if (!ForbidMIandPL && isNullConstant(RHS)) {
+      return ARMCC::MI;
+    }
+    return ARMCC::LT;
   case ISD::SETLE:  return ARMCC::LE;
   case ISD::SETUGT: return ARMCC::HI;
   case ISD::SETUGE: return ARMCC::HS;
@@ -4507,7 +4516,8 @@ static bool isCMN(SDValue Op, ISD::CondCode CC, SelectionDAG &DAG) {
 /// the given operands.
 SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
                                      SDValue &ARMcc, SelectionDAG &DAG,
-                                     const SDLoc &dl) const {
+                                     const SDLoc &dl,
+                                     bool ForbidMIandPL) const {
   if (ConstantSDNode *RHSC = dyn_cast<ConstantSDNode>(RHS.getNode())) {
     unsigned C = RHSC->getZExtValue();
     if (!isLegalICmpImmediate((int32_t)C)) {
@@ -4608,47 +4618,37 @@ SDValue ARMTargetLowering::getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
     return Shift.getValue(1);
   }
 
-  ARMCC::CondCodes CondCode = IntCCToARMCC(CC);
+  unsigned CompareType = ARMISD::CMP;
+  if (isCMN(RHS, CC, DAG)) {
+    CompareType = ARMISD::CMN;
+    RHS = RHS.getOperand(1);
+  } else if (isCMN(LHS, CC, DAG)) {
+    CompareType = ARMISD::CMN;
+    LHS = LHS.getOperand(1);
+    CC = ISD::getSetCCSwappedOperands(CC);
+  }
+
+  ARMCC::CondCodes CondCode = IntCCToARMCC(CC, RHS, ForbidMIandPL);
 
   // If the RHS is a constant zero then the V (overflow) flag will never be
   // set. This can allow us to simplify GE to PL or LT to MI, which can be
   // simpler for other passes (like the peephole optimiser) to deal with.
-  if (isNullConstant(RHS)) {
+  if (!ForbidMIandPL && isNullConstant(RHS)) {
     switch (CondCode) {
-      default: break;
-      case ARMCC::GE:
-        CondCode = ARMCC::PL;
-        break;
-      case ARMCC::LT:
-        CondCode = ARMCC::MI;
-        break;
+    default:
+      break;
+    case ARMCC::GE:
+      CondCode = ARMCC::PL;
+      break;
+    case ARMCC::LT:
+      CondCode = ARMCC::MI;
+      break;
     }
   }
 
-  unsigned CompareType;
-  switch (CondCode) {
-  default:
-    CompareType = ARMISD::CMP;
-    break;
-  case ARMCC::EQ:
-  case ARMCC::NE:
-    // Uses only Z Flag
+  if (CompareType == ARMISD::CMP &&
+      (CondCode == ARMCC::EQ || CondCode == ARMCC::NE)) {
     CompareType = ARMISD::CMPZ;
-    break;
-  }
-
-  // TODO: Remove CMPZ check once we generalize and remove the CMPZ enum from
-  // the codebase.
-
-  // TODO: When we have a solution to the vselect predicate not allowing pl/mi
-  // all the time, allow those cases to be cmn too no matter what.
-  if (CompareType != ARMISD::CMPZ && isCMN(RHS, CC, DAG)) {
-    CompareType = ARMISD::CMN;
-    RHS = RHS.getOperand(1);
-  } else if (CompareType != ARMISD::CMPZ && isCMN(LHS, CC, DAG)) {
-    CompareType = ARMISD::CMN;
-    LHS = LHS.getOperand(1);
-    CondCode = IntCCToARMCC(ISD::getSetCCSwappedOperands(CC));
   }
 
   ARMcc = DAG.getConstant(CondCode, dl, MVT::i32);
@@ -5212,6 +5212,13 @@ static SDValue matchCSET(unsigned &Opcode, bool &InvertCond, SDValue TrueVal,
   return TrueVal;
 }
 
+static SDValue getInvertedARMCondCode(SDValue ARMcc, SelectionDAG &DAG) {
+  ARMCC::CondCodes CondCode =
+      (ARMCC::CondCodes)cast<ConstantSDNode>(ARMcc)->getZExtValue();
+  CondCode = ARMCC::getOppositeCondition(CondCode);
+  return DAG.getConstant(CondCode, SDLoc(ARMcc), MVT::i32);
+}
+
 SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
@@ -5312,22 +5319,25 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
     // inverting the compare condition, swapping 'less' and 'greater') and
     // sometimes need to swap the operands to the VSEL (which inverts the
     // condition in the sense of firing whenever the previous condition didn't)
-    if (Subtarget->hasFPARMv8Base() && (TrueVal.getValueType() == MVT::f16 ||
+    bool hasVSelRestrictions =
+        Subtarget->hasFPARMv8Base() && (TrueVal.getValueType() == MVT::f16 ||
                                         TrueVal.getValueType() == MVT::f32 ||
-                                        TrueVal.getValueType() == MVT::f64)) {
-      ARMCC::CondCodes CondCode = IntCCToARMCC(CC);
-      if (CondCode == ARMCC::LT || CondCode == ARMCC::LE ||
-          CondCode == ARMCC::VC || CondCode == ARMCC::NE) {
-        CC = ISD::getSetCCInverse(CC, LHS.getValueType());
+                                        TrueVal.getValueType() == MVT::f64);
+
+    SDValue ARMcc;
+    SDValue Cmp = getARMCmp(LHS, RHS, CC, ARMcc, DAG, dl, hasVSelRestrictions);
+
+    if (hasVSelRestrictions) {
+      // No MI or PL
+      switch (ARMcc->getAsZExtVal()) {
+      case ARMCC::LT:
+      case ARMCC::LE:
+      case ARMCC::VC:
+      case ARMCC::NE:
+        ARMcc = getInvertedARMCondCode(ARMcc, DAG);
         std::swap(TrueVal, FalseVal);
       }
     }
-
-    SDValue ARMcc;
-    SDValue Cmp = getARMCmp(LHS, RHS, CC, ARMcc, DAG, dl);
-    // Choose GE over PL, which vsel does now support
-    if (ARMcc->getAsZExtVal() == ARMCC::PL)
-      ARMcc = DAG.getConstant(ARMCC::GE, dl, MVT::i32);
     return getCMOV(dl, VT, FalseVal, TrueVal, ARMcc, Cmp, DAG);
   }
 
@@ -5472,9 +5482,9 @@ ARMTargetLowering::OptimizeVFPBrcond(SDValue Op, SelectionDAG &DAG) const {
     expandf64Toi32(RHS, DAG, RHS1, RHS2);
     LHS2 = DAG.getNode(ISD::AND, dl, MVT::i32, LHS2, Mask);
     RHS2 = DAG.getNode(ISD::AND, dl, MVT::i32, RHS2, Mask);
-    ARMCC::CondCodes CondCode = IntCCToARMCC(CC);
+    ARMCC::CondCodes CondCode = IntCCToARMCC(CC, RHS);
     ARMcc = DAG.getConstant(CondCode, dl, MVT::i32);
-    SDValue Ops[] = { Chain, ARMcc, LHS1, LHS2, RHS1, RHS2, Dest };
+    SDValue Ops[] = {Chain, ARMcc, LHS1, LHS2, RHS1, RHS2, Dest};
     return DAG.getNode(ARMISD::BCC_i64, dl, MVT::Other, Ops);
   }
 
@@ -5492,13 +5502,6 @@ SDValue ARMTargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
                             DAG.getConstant(0, DL, MVT::i32));
   return DAG.getNode(ARMISD::CMOV, DL, MVT::i32, Op.getOperand(0), Neg,
                      DAG.getConstant(ARMCC::MI, DL, MVT::i32), Cmp);
-}
-
-static SDValue getInvertedARMCondCode(SDValue ARMcc, SelectionDAG &DAG) {
-  ARMCC::CondCodes CondCode =
-      (ARMCC::CondCodes)cast<ConstantSDNode>(ARMcc)->getZExtValue();
-  CondCode = ARMCC::getOppositeCondition(CondCode);
-  return DAG.getConstant(CondCode, SDLoc(ARMcc), MVT::i32);
 }
 
 SDValue ARMTargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
@@ -6752,8 +6755,11 @@ static SDValue LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) {
 
   SDValue FVal = DAG.getConstant(0, DL, MVT::i32);
   SDValue TVal = DAG.getConstant(1, DL, MVT::i32);
-  SDValue ARMcc = DAG.getConstant(
-      IntCCToARMCC(cast<CondCodeSDNode>(Cond)->get()), DL, MVT::i32);
+  SDValue ARMcc =
+      DAG.getConstant(IntCCToARMCC(cast<CondCodeSDNode>(Cond)->get(), RHS,
+                                   /*ForbidMIandPL=*/true),
+                      DL, MVT::i32);
+
   return DAG.getNode(ARMISD::CMOV, DL, Op.getValueType(), FVal, TVal, ARMcc,
                      Cmp.getValue(1));
 }

@@ -707,7 +707,8 @@ class VectorType;
     SDValue getCMOV(const SDLoc &dl, EVT VT, SDValue FalseVal, SDValue TrueVal,
                     SDValue ARMcc, SDValue Flags, SelectionDAG &DAG) const;
     SDValue getARMCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
-                      SDValue &ARMcc, SelectionDAG &DAG, const SDLoc &dl) const;
+                      SDValue &ARMcc, SelectionDAG &DAG, const SDLoc &dl,
+                      bool ForbidMIandPL = false) const;
     SDValue getVFPCmp(SDValue LHS, SDValue RHS, SelectionDAG &DAG,
                       const SDLoc &dl, bool Signaling = false) const;
 

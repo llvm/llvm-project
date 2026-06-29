@@ -14,16 +14,16 @@ define i32 @icmp64_sge_0(i64 %x, i64 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV6M-NEXT:  @ %bb.1: @ %then
 ; CHECKV6M-NEXT:    cmp r3, #0
 ; CHECKV6M-NEXT:    mov r3, r0
-; CHECKV6M-NEXT:    blt .LBB0_7
+; CHECKV6M-NEXT:    bmi .LBB0_7
 ; CHECKV6M-NEXT:  @ %bb.2: @ %then
 ; CHECKV6M-NEXT:    cmp r1, #0
-; CHECKV6M-NEXT:    blt .LBB0_8
+; CHECKV6M-NEXT:    bmi .LBB0_8
 ; CHECKV6M-NEXT:  .LBB0_3: @ %then
 ; CHECKV6M-NEXT:    adds r0, r0, r3
 ; CHECKV6M-NEXT:    bx lr
 ; CHECKV6M-NEXT:  .LBB0_4: @ %else
 ; CHECKV6M-NEXT:    cmp r1, #0
-; CHECKV6M-NEXT:    bge .LBB0_6
+; CHECKV6M-NEXT:    bpl .LBB0_6
 ; CHECKV6M-NEXT:  @ %bb.5: @ %else
 ; CHECKV6M-NEXT:    mov r0, r2
 ; CHECKV6M-NEXT:  .LBB0_6: @ %else
@@ -31,7 +31,7 @@ define i32 @icmp64_sge_0(i64 %x, i64 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV6M-NEXT:  .LBB0_7: @ %then
 ; CHECKV6M-NEXT:    mov r3, r2
 ; CHECKV6M-NEXT:    cmp r1, #0
-; CHECKV6M-NEXT:    bge .LBB0_3
+; CHECKV6M-NEXT:    bpl .LBB0_3
 ; CHECKV6M-NEXT:  .LBB0_8: @ %then
 ; CHECKV6M-NEXT:    mov r0, r2
 ; CHECKV6M-NEXT:    adds r0, r0, r3
@@ -105,16 +105,16 @@ define i32 @icmp64_sgt_m1(i64 %x, i64 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV6M-NEXT:  @ %bb.1: @ %then
 ; CHECKV6M-NEXT:    cmp r3, #0
 ; CHECKV6M-NEXT:    mov r3, r0
-; CHECKV6M-NEXT:    blt .LBB1_7
+; CHECKV6M-NEXT:    bmi .LBB1_7
 ; CHECKV6M-NEXT:  @ %bb.2: @ %then
 ; CHECKV6M-NEXT:    cmp r1, #0
-; CHECKV6M-NEXT:    blt .LBB1_8
+; CHECKV6M-NEXT:    bmi .LBB1_8
 ; CHECKV6M-NEXT:  .LBB1_3: @ %then
 ; CHECKV6M-NEXT:    adds r0, r0, r3
 ; CHECKV6M-NEXT:    bx lr
 ; CHECKV6M-NEXT:  .LBB1_4: @ %else
 ; CHECKV6M-NEXT:    cmp r3, #0
-; CHECKV6M-NEXT:    bge .LBB1_6
+; CHECKV6M-NEXT:    bpl .LBB1_6
 ; CHECKV6M-NEXT:  @ %bb.5: @ %else
 ; CHECKV6M-NEXT:    mov r0, r2
 ; CHECKV6M-NEXT:  .LBB1_6: @ %else
@@ -122,7 +122,7 @@ define i32 @icmp64_sgt_m1(i64 %x, i64 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV6M-NEXT:  .LBB1_7: @ %then
 ; CHECKV6M-NEXT:    mov r3, r2
 ; CHECKV6M-NEXT:    cmp r1, #0
-; CHECKV6M-NEXT:    bge .LBB1_3
+; CHECKV6M-NEXT:    bpl .LBB1_3
 ; CHECKV6M-NEXT:  .LBB1_8: @ %then
 ; CHECKV6M-NEXT:    mov r0, r2
 ; CHECKV6M-NEXT:    adds r0, r0, r3
@@ -196,16 +196,16 @@ define i32 @icmp32_sge_0(i32 %x, i32 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV6M-NEXT:  @ %bb.1: @ %then
 ; CHECKV6M-NEXT:    cmp r1, #0
 ; CHECKV6M-NEXT:    mov r1, r2
-; CHECKV6M-NEXT:    blt .LBB2_7
+; CHECKV6M-NEXT:    bmi .LBB2_7
 ; CHECKV6M-NEXT:  @ %bb.2: @ %then
 ; CHECKV6M-NEXT:    cmp r0, #0
-; CHECKV6M-NEXT:    blt .LBB2_8
+; CHECKV6M-NEXT:    bmi .LBB2_8
 ; CHECKV6M-NEXT:  .LBB2_3: @ %then
 ; CHECKV6M-NEXT:    adds r0, r2, r1
 ; CHECKV6M-NEXT:    pop {r4, pc}
 ; CHECKV6M-NEXT:  .LBB2_4: @ %else
 ; CHECKV6M-NEXT:    cmp r0, #0
-; CHECKV6M-NEXT:    bge .LBB2_6
+; CHECKV6M-NEXT:    bpl .LBB2_6
 ; CHECKV6M-NEXT:  @ %bb.5: @ %else
 ; CHECKV6M-NEXT:    mov r2, r3
 ; CHECKV6M-NEXT:  .LBB2_6: @ %else
@@ -214,7 +214,7 @@ define i32 @icmp32_sge_0(i32 %x, i32 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV6M-NEXT:  .LBB2_7: @ %then
 ; CHECKV6M-NEXT:    mov r1, r3
 ; CHECKV6M-NEXT:    cmp r0, #0
-; CHECKV6M-NEXT:    bge .LBB2_3
+; CHECKV6M-NEXT:    bpl .LBB2_3
 ; CHECKV6M-NEXT:  .LBB2_8: @ %then
 ; CHECKV6M-NEXT:    mov r2, r3
 ; CHECKV6M-NEXT:    adds r0, r2, r1
@@ -290,16 +290,16 @@ define i32 @icmp32_sgt_m1(i32 %x, i32 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV6M-NEXT:  @ %bb.1: @ %then
 ; CHECKV6M-NEXT:    cmp r1, #0
 ; CHECKV6M-NEXT:    mov r1, r2
-; CHECKV6M-NEXT:    blt .LBB3_7
+; CHECKV6M-NEXT:    bmi .LBB3_7
 ; CHECKV6M-NEXT:  @ %bb.2: @ %then
 ; CHECKV6M-NEXT:    cmp r0, #0
-; CHECKV6M-NEXT:    blt .LBB3_8
+; CHECKV6M-NEXT:    bmi .LBB3_8
 ; CHECKV6M-NEXT:  .LBB3_3: @ %then
 ; CHECKV6M-NEXT:    adds r0, r2, r1
 ; CHECKV6M-NEXT:    pop {r4, pc}
 ; CHECKV6M-NEXT:  .LBB3_4: @ %else
 ; CHECKV6M-NEXT:    cmp r1, #0
-; CHECKV6M-NEXT:    bge .LBB3_6
+; CHECKV6M-NEXT:    bpl .LBB3_6
 ; CHECKV6M-NEXT:  @ %bb.5: @ %else
 ; CHECKV6M-NEXT:    mov r2, r3
 ; CHECKV6M-NEXT:  .LBB3_6: @ %else
@@ -308,7 +308,7 @@ define i32 @icmp32_sgt_m1(i32 %x, i32 %y, i32 %a, i32 %b, i1 %c) {
 ; CHECKV6M-NEXT:  .LBB3_7: @ %then
 ; CHECKV6M-NEXT:    mov r1, r3
 ; CHECKV6M-NEXT:    cmp r0, #0
-; CHECKV6M-NEXT:    bge .LBB3_3
+; CHECKV6M-NEXT:    bpl .LBB3_3
 ; CHECKV6M-NEXT:  .LBB3_8: @ %then
 ; CHECKV6M-NEXT:    mov r2, r3
 ; CHECKV6M-NEXT:    adds r0, r2, r1

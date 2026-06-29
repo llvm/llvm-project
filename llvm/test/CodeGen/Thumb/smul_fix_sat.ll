@@ -456,7 +456,7 @@ define i64 @func7(i64 %x, i64 %y) nounwind {
 ; ARM-NEXT:    adcs r7, r2
 ; ARM-NEXT:    cmp r3, #0
 ; ARM-NEXT:    mov r3, r0
-; ARM-NEXT:    bge .LBB6_8
+; ARM-NEXT:    bpl .LBB6_8
 ; ARM-NEXT:  @ %bb.7:
 ; ARM-NEXT:    mov r3, r4
 ; ARM-NEXT:  .LBB6_8:
