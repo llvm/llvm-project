@@ -22,7 +22,6 @@
 
 template <class T, class Allocator>
 TEST_CONSTEXPR_CXX26 void test1(unsigned n, Allocator const& alloc = Allocator()) {
-#if TEST_STD_VER >= 11
   typedef std::list<T, Allocator> C;
   {
     C d(n, alloc);
@@ -30,10 +29,6 @@ TEST_CONSTEXPR_CXX26 void test1(unsigned n, Allocator const& alloc = Allocator()
     assert(static_cast<std::size_t>(std::distance(d.begin(), d.end())) == n);
     assert(d.get_allocator() == alloc);
   }
-#else
-  ((void)n);
-  ((void)alloc);
-#endif
 }
 
 TEST_CONSTEXPR_CXX26 bool test() {
@@ -59,6 +54,18 @@ TEST_CONSTEXPR_CXX26 bool test() {
     assert(*i == 0);
     ++i;
     assert(*i == 0);
+  }
+  {
+    std::list<int, std::allocator<int> > l(3, std::allocator<int>());
+    assert(l.size() == 3);
+    assert(std::distance(l.begin(), l.end()) == 3);
+    std::list<int, std::allocator<int> >::const_iterator i = l.begin();
+    assert(*i == 0);
+    ++i;
+    assert(*i == 0);
+    ++i;
+    assert(*i == 0);
+    test1<int, std::allocator<int> >(3);
   }
 #if TEST_STD_VER >= 11
   {
