@@ -257,7 +257,6 @@ private:
   MemoryAccess *
   getPreviousDefRecursive(BasicBlock *,
                           DenseMap<BasicBlock *, TrackingVH<MemoryAccess>> &);
-  MemoryAccess *recursePhi(MemoryAccess *Phi);
   MemoryAccess *tryRemoveTrivialPhi(MemoryPhi *Phi);
   template <class RangeType>
   MemoryAccess *tryRemoveTrivialPhi(MemoryPhi *Phi, RangeType &Operands);
