@@ -58,7 +58,7 @@ const parser::ArrayElement *GetArrayElementFromObj(
 
 std::optional<parser::CharBlock> GetObjectSource(
     const parser::OmpObject &object) {
-  if (auto *name{std::get_if<parser::Name>(&object.u)}) {
+  if (auto *name{GetCommonBlockFromObj(object)}) {
     return name->source;
   } else if (auto *desg{GetDesignatorFromObj(object)}) {
     return GetLastName(*desg).source;
