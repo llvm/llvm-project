@@ -132,6 +132,9 @@ static bool assignBindings(Module &M, DXILResourceBindingInfo &DRBI,
 
 PreservedAnalyses DXILResourceImplicitBinding::run(Module &M,
                                                    ModuleAnalysisManager &AM) {
+  if (auto *DH = M.getContext().getDiagHandlerPtr())
+    if (DH->HasErrors)
+      return PreservedAnalyses::all();
 
   DXILResourceBindingInfo &DRBI = AM.getResult<DXILResourceBindingAnalysis>(M);
   DXILResourceTypeMap &DRTM = AM.getResult<DXILResourceTypeAnalysis>(M);
@@ -155,6 +158,10 @@ public:
   DXILResourceImplicitBindingLegacy() : ModulePass(ID) {}
 
   bool runOnModule(Module &M) override {
+    if (auto *DH = M.getContext().getDiagHandlerPtr())
+      if (DH->HasErrors)
+        return false;
+
     DXILResourceTypeMap &DRTM =
         getAnalysis<DXILResourceTypeWrapperPass>().getResourceTypeMap();
     DXILResourceBindingInfo &DRBI =
