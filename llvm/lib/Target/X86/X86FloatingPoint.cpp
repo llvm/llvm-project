@@ -327,6 +327,10 @@ static unsigned getFPReg(const MachineOperand &MO) {
   return Reg - X86::FP0;
 }
 
+static bool isFPPhysReg(Register Reg) {
+  return Reg >= X86::FP0 && Reg <= X86::FP6;
+}
+
 bool FPS::shouldRun(MachineFunction &MF) {
   // We only need to run this pass if there are any FP registers used in this
   // function.  If it is all integer, there is nothing for us to do!
@@ -361,21 +365,21 @@ bool FPS::run(MachineFunction &MF, EdgeBundles *FunctionBundles) {
   LiveBundle &Bundle =
       LiveBundles[Bundles->getBundle(Entry->getNumber(), false)];
 
-  // In regcall convention, some FP registers may not be passed through
-  // the stack, so they will need to be assigned to the stack first
+  // In regcall convention, FP arguments may be passed in x87 registers
+  // rather than on the memory stack, so they need to be assigned to the
+  // x87 stack before processing the entry block.
   if ((Entry->getParent()->getFunction().getCallingConv() ==
        CallingConv::X86_RegCall) &&
       (Bundle.Mask && !Bundle.FixCount)) {
-    // In the register calling convention, up to one FP argument could be
-    // saved in the first FP register.
     // If bundle.mask is non-zero and Bundle.FixCount is zero, it means
-    // that the FP registers contain arguments.
-    // The actual value is passed in FP0.
-    // Here we fix the stack and mark FP0 as pre-assigned register.
-    assert((Bundle.Mask & 0xFE) == 0 &&
-           "Only FP0 could be passed as an argument");
-    Bundle.FixCount = 1;
-    Bundle.FixStack[0] = 0;
+    // that the FP registers contain arguments. Assign them to ST(0).. in
+    // increasing FP register order.
+    unsigned Idx = 0;
+    for (unsigned Reg = 0; Reg < 7; ++Reg) {
+      if (Bundle.Mask & (1u << Reg))
+        Bundle.FixStack[Idx++] = Reg;
+    }
+    Bundle.FixCount = Idx;
   }
 
   bool Changed = false;
@@ -508,7 +512,7 @@ bool FPS::processBasicBlock(MachineFunction &MF, MachineBasicBlock &BB) {
       // Check if Reg is live on the stack. An inline-asm register operand that
       // is in the clobber list and marked dead might not be live on the stack.
       static_assert(X86::FP7 - X86::FP0 == 7, "sequential FP regnumbers");
-      if (Reg >= X86::FP0 && Reg <= X86::FP6 && isLive(Reg - X86::FP0)) {
+      if (isFPPhysReg(Reg) && isLive(Reg - X86::FP0)) {
         LLVM_DEBUG(dbgs() << "Register FP#" << Reg - X86::FP0 << " is dead!\n");
         freeStackSlotAfter(I, Reg - X86::FP0);
       }
@@ -1056,7 +1060,7 @@ void FPS::handleCall(MachineBasicBlock::iterator &I) {
         ClobbersFPStack = true;
     }
 
-    if (!Op.isReg() || Op.getReg() < X86::FP0 || Op.getReg() > X86::FP6)
+    if (!Op.isReg() || !isFPPhysReg(Op.getReg()))
       continue;
 
     assert(Op.isImplicit() && "Expected implicit def/use");
@@ -1110,7 +1114,7 @@ void FPS::handleReturn(MachineBasicBlock::iterator &I) {
 
   for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
     MachineOperand &Op = MI.getOperand(i);
-    if (!Op.isReg() || Op.getReg() < X86::FP0 || Op.getReg() > X86::FP6)
+    if (!Op.isReg() || !isFPPhysReg(Op.getReg()))
       continue;
     // FP Register uses must be kills unless there are two uses of the same
     // register, in which case only one will be a kill.
@@ -1695,7 +1699,7 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
     // and "f") to kill afer the instruction.
     unsigned FPKills = ((1u << NumFPRegs) - 1) & ~0xff;
     for (const MachineOperand &Op : MI.operands()) {
-      if (!Op.isReg() || Op.getReg() < X86::FP0 || Op.getReg() > X86::FP6)
+      if (!Op.isReg() || !isFPPhysReg(Op.getReg()))
         continue;
       unsigned FPReg = getFPReg(Op);
 
@@ -1724,7 +1728,7 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
     // With the stack layout fixed, rewrite the FP registers.
     for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
       MachineOperand &Op = MI.getOperand(i);
-      if (!Op.isReg() || Op.getReg() < X86::FP0 || Op.getReg() > X86::FP6)
+      if (!Op.isReg() || !isFPPhysReg(Op.getReg()))
         continue;
 
       unsigned FPReg = getFPReg(Op);
