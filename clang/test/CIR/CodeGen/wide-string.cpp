@@ -6,7 +6,8 @@
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
 // CIR: cir.global external @some_array = #cir.const_array<[#cir.int<97> : !u16i], trailing_zeros> : !cir.array<!u16i x 10>
-// LLVM: @some_array = global [10 x i16] [i16 97, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0]
+// CIR splits the wide string literal's trailing zeros; classic keeps it whole.
+// LLVM: @some_array = global <{ i16, [9 x i16] }> <{ i16 97, [9 x i16] zeroinitializer }>
 // OGCG: @some_array = global [10 x i16] [i16 97, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0, i16 0]
 char16_t some_array[10] = u"a";
 
