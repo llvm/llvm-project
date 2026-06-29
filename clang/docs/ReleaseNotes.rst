@@ -193,6 +193,7 @@ C++ Language Changes
 --------------------
 
 - ``__is_trivially_equality_comparable`` no longer returns false for all enum types. (#GH132672)
+- ``auto()`` casts are accepted as an extension pre-C++23.
 - ``auto`` parameters are now available in all C++ language modes as an extension.
 
 C++2c Feature Support
