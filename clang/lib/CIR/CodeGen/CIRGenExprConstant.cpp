@@ -55,9 +55,7 @@ class RecordBuilderInitList {
     return std::holds_alternative<const InitListExpr *>(value);
   }
 
-  bool holdsAPValue() const {
-    return std::holds_alternative<APValue>(value);
-  }
+  bool holdsAPValue() const { return std::holds_alternative<APValue>(value); }
 
   const Expr *getExpr() {
     assert(holdsExpr());
