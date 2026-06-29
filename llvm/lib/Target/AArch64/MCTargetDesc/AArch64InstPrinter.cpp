@@ -1143,7 +1143,8 @@ bool AArch64InstPrinter::printSyspAlias(const MCInst *MI,
     const AArch64TLBIP::TLBIP *TLBIP = AArch64TLBIP::lookupTLBIPByEncoding(
         getSystemEncoding(Op1, Cn, Cm, Op2));
     if (TLBIP && TLBIP->haveFeatures(STI.getFeatureBits())) {
-      std::string Str = (Twine("tlbip\t") + TLBIP->Name).str();
+      std::string Str =
+          (Twine("tlbip\t") + AArch64TLBIP::getTLBIPStr(TLBIP->Name)).str();
       llvm::transform(Str, Str.begin(), ::tolower);
 
       O << '\t' << Str << ", ";
@@ -1725,7 +1726,7 @@ void AArch64InstPrinter::printGPRSeqPairsClassOperand(const MCInst *MI,
   static_assert(size == 64 || size == 32,
                 "Template parameter must be either 32 or 64");
   MCRegister Reg = MI->getOperand(OpNum).getReg();
-  if (Reg == AArch64::XZR) {
+  if (Reg == AArch64::XZR_XZR) {
     printRegName(O, AArch64::XZR);
     O << ", ";
     printRegName(O, AArch64::XZR);
