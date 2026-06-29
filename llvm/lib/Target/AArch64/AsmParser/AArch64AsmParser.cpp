@@ -162,6 +162,7 @@ private:
   bool parseSysAlias(StringRef Name, SMLoc NameLoc, OperandVector &Operands);
   bool parseSyslAlias(StringRef Name, SMLoc NameLoc, OperandVector &Operands);
   bool parseSyspAlias(StringRef Name, SMLoc NameLoc, OperandVector &Operands);
+  bool parseHintAlias(StringRef Name, SMLoc NameLoc, OperandVector &Operands);
   void createSysAlias(uint16_t Encoding, OperandVector &Operands, SMLoc S);
   AArch64CC::CondCode parseCondCodeString(StringRef Cond,
                                           std::string &Suggestion);
@@ -267,9 +268,6 @@ private:
   template <bool IsSVEPrefetch = false>
   ParseStatus tryParsePrefetch(OperandVector &Operands);
   ParseStatus tryParseRPRFMOperand(OperandVector &Operands);
-  ParseStatus tryParsePSBHint(OperandVector &Operands);
-  ParseStatus tryParseBTIHint(OperandVector &Operands);
-  ParseStatus tryParseCMHPriorityHint(OperandVector &Operands);
   ParseStatus tryParseTIndexHint(OperandVector &Operands);
   ParseStatus tryParseAdrpLabel(OperandVector &Operands);
   ParseStatus tryParseAdrLabel(OperandVector &Operands);
@@ -300,7 +298,6 @@ private:
   ParseStatus tryParseGPR64x8(OperandVector &Operands);
   ParseStatus tryParseImmRange(OperandVector &Operands);
   template <int> ParseStatus tryParseAdjImm0_63(OperandVector &Operands);
-  ParseStatus tryParsePHintInstOperand(OperandVector &Operands);
 
 public:
   enum AArch64MatchResultTy {
@@ -372,10 +369,6 @@ private:
     k_ShiftExtend,
     k_FPImm,
     k_Barrier,
-    k_PSBHint,
-    k_PHint,
-    k_BTIHint,
-    k_CMHPriorityHint,
     k_TIndexHint,
   } Kind;
 
@@ -491,26 +484,6 @@ private:
     unsigned Val;
   };
 
-  struct PSBHintOp {
-    const char *Data;
-    unsigned Length;
-    unsigned Val;
-  };
-  struct PHintOp {
-    const char *Data;
-    unsigned Length;
-    unsigned Val;
-  };
-  struct BTIHintOp {
-    const char *Data;
-    unsigned Length;
-    unsigned Val;
-  };
-  struct CMHPriorityHintOp {
-    const char *Data;
-    unsigned Length;
-    unsigned Val;
-  };
   struct TIndexHintOp {
     const char *Data;
     unsigned Length;
@@ -524,28 +497,24 @@ private:
   };
 
   union {
-    struct TokOp Tok;
-    struct RegOp Reg;
-    struct MatrixRegOp MatrixReg;
-    struct MatrixTileListOp MatrixTileList;
-    struct VectorListOp VectorList;
-    struct VectorIndexOp VectorIndex;
-    struct ImmOp Imm;
-    struct ShiftedImmOp ShiftedImm;
-    struct ImmRangeOp ImmRange;
-    struct CondCodeOp CondCode;
-    struct FPImmOp FPImm;
-    struct BarrierOp Barrier;
-    struct SysRegOp SysReg;
-    struct SysCRImmOp SysCRImm;
-    struct PrefetchOp Prefetch;
-    struct PSBHintOp PSBHint;
-    struct PHintOp PHint;
-    struct BTIHintOp BTIHint;
-    struct CMHPriorityHintOp CMHPriorityHint;
-    struct TIndexHintOp TIndexHint;
-    struct ShiftExtendOp ShiftExtend;
-    struct SVCROp SVCR;
+    TokOp Tok;
+    RegOp Reg;
+    MatrixRegOp MatrixReg;
+    MatrixTileListOp MatrixTileList;
+    VectorListOp VectorList;
+    VectorIndexOp VectorIndex;
+    ImmOp Imm;
+    ShiftedImmOp ShiftedImm;
+    ImmRangeOp ImmRange;
+    CondCodeOp CondCode;
+    FPImmOp FPImm;
+    BarrierOp Barrier;
+    SysRegOp SysReg;
+    SysCRImmOp SysCRImm;
+    PrefetchOp Prefetch;
+    TIndexHintOp TIndexHint;
+    ShiftExtendOp ShiftExtend;
+    SVCROp SVCR;
   };
 
   // Keep the MCContext around as the MCExprs may need manipulated during
@@ -604,18 +573,6 @@ public:
       break;
     case k_Prefetch:
       Prefetch = o.Prefetch;
-      break;
-    case k_PSBHint:
-      PSBHint = o.PSBHint;
-      break;
-    case k_PHint:
-      PHint = o.PHint;
-      break;
-    case k_BTIHint:
-      BTIHint = o.BTIHint;
-      break;
-    case k_CMHPriorityHint:
-      CMHPriorityHint = o.CMHPriorityHint;
       break;
     case k_TIndexHint:
       TIndexHint = o.TIndexHint;
@@ -762,46 +719,6 @@ public:
   unsigned getPrefetch() const {
     assert(Kind == k_Prefetch && "Invalid access!");
     return Prefetch.Val;
-  }
-
-  unsigned getPSBHint() const {
-    assert(Kind == k_PSBHint && "Invalid access!");
-    return PSBHint.Val;
-  }
-
-  unsigned getPHint() const {
-    assert(Kind == k_PHint && "Invalid access!");
-    return PHint.Val;
-  }
-
-  StringRef getPSBHintName() const {
-    assert(Kind == k_PSBHint && "Invalid access!");
-    return StringRef(PSBHint.Data, PSBHint.Length);
-  }
-
-  StringRef getPHintName() const {
-    assert(Kind == k_PHint && "Invalid access!");
-    return StringRef(PHint.Data, PHint.Length);
-  }
-
-  unsigned getBTIHint() const {
-    assert(Kind == k_BTIHint && "Invalid access!");
-    return BTIHint.Val;
-  }
-
-  StringRef getBTIHintName() const {
-    assert(Kind == k_BTIHint && "Invalid access!");
-    return StringRef(BTIHint.Data, BTIHint.Length);
-  }
-
-  unsigned getCMHPriorityHint() const {
-    assert(Kind == k_CMHPriorityHint && "Invalid access!");
-    return CMHPriorityHint.Val;
-  }
-
-  StringRef getCMHPriorityHintName() const {
-    assert(Kind == k_CMHPriorityHint && "Invalid access!");
-    return StringRef(CMHPriorityHint.Data, CMHPriorityHint.Length);
   }
 
   unsigned getTIndexHint() const {
@@ -1566,10 +1483,6 @@ public:
   }
   bool isSysCR() const { return Kind == k_SysCR; }
   bool isPrefetch() const { return Kind == k_Prefetch; }
-  bool isPSBHint() const { return Kind == k_PSBHint; }
-  bool isPHint() const { return Kind == k_PHint; }
-  bool isBTIHint() const { return Kind == k_BTIHint; }
-  bool isCMHPriorityHint() const { return Kind == k_CMHPriorityHint; }
   bool isTIndexHint() const { return Kind == k_TIndexHint; }
   bool isShiftExtend() const { return Kind == k_ShiftExtend; }
   bool isShifter() const {
@@ -2242,26 +2155,6 @@ public:
     Inst.addOperand(MCOperand::createImm(getPrefetch()));
   }
 
-  void addPSBHintOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(getPSBHint()));
-  }
-
-  void addPHintOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(getPHint()));
-  }
-
-  void addBTIHintOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(getBTIHint()));
-  }
-
-  void addCMHPriorityHintOperands(MCInst &Inst, unsigned N) const {
-    assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(getCMHPriorityHint()));
-  }
-
   void addTIndexHintOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createImm(getTIndexHint()));
@@ -2555,17 +2448,6 @@ public:
     return Op;
   }
 
-  static std::unique_ptr<AArch64Operand>
-  CreatePHintInst(unsigned Val, StringRef Str, SMLoc S, MCContext &Ctx) {
-    auto Op = std::make_unique<AArch64Operand>(k_PHint, Ctx);
-    Op->PHint.Val = Val;
-    Op->PHint.Data = Str.data();
-    Op->PHint.Length = Str.size();
-    Op->StartLoc = S;
-    Op->EndLoc = S;
-    return Op;
-  }
-
   static std::unique_ptr<AArch64Operand> CreateSysCR(unsigned Val, SMLoc S,
                                                      SMLoc E, MCContext &Ctx) {
     auto Op = std::make_unique<AArch64Operand>(k_SysCR, Ctx);
@@ -2581,45 +2463,8 @@ public:
                                                         MCContext &Ctx) {
     auto Op = std::make_unique<AArch64Operand>(k_Prefetch, Ctx);
     Op->Prefetch.Val = Val;
-    Op->Barrier.Data = Str.data();
-    Op->Barrier.Length = Str.size();
-    Op->StartLoc = S;
-    Op->EndLoc = S;
-    return Op;
-  }
-
-  static std::unique_ptr<AArch64Operand> CreatePSBHint(unsigned Val,
-                                                       StringRef Str,
-                                                       SMLoc S,
-                                                       MCContext &Ctx) {
-    auto Op = std::make_unique<AArch64Operand>(k_PSBHint, Ctx);
-    Op->PSBHint.Val = Val;
-    Op->PSBHint.Data = Str.data();
-    Op->PSBHint.Length = Str.size();
-    Op->StartLoc = S;
-    Op->EndLoc = S;
-    return Op;
-  }
-
-  static std::unique_ptr<AArch64Operand> CreateBTIHint(unsigned Val,
-                                                       StringRef Str,
-                                                       SMLoc S,
-                                                       MCContext &Ctx) {
-    auto Op = std::make_unique<AArch64Operand>(k_BTIHint, Ctx);
-    Op->BTIHint.Val = Val | 32;
-    Op->BTIHint.Data = Str.data();
-    Op->BTIHint.Length = Str.size();
-    Op->StartLoc = S;
-    Op->EndLoc = S;
-    return Op;
-  }
-
-  static std::unique_ptr<AArch64Operand>
-  CreateCMHPriorityHint(unsigned Val, StringRef Str, SMLoc S, MCContext &Ctx) {
-    auto Op = std::make_unique<AArch64Operand>(k_CMHPriorityHint, Ctx);
-    Op->CMHPriorityHint.Val = Val;
-    Op->CMHPriorityHint.Data = Str.data();
-    Op->CMHPriorityHint.Length = Str.size();
+    Op->Prefetch.Data = Str.data();
+    Op->Prefetch.Length = Str.size();
     Op->StartLoc = S;
     Op->EndLoc = S;
     return Op;
@@ -2737,18 +2582,6 @@ void AArch64Operand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
       OS << "<prfop invalid #" << getPrefetch() << ">";
     break;
   }
-  case k_PSBHint:
-    OS << getPSBHintName();
-    break;
-  case k_PHint:
-    OS << getPHintName();
-    break;
-  case k_BTIHint:
-    OS << getBTIHintName();
-    break;
-  case k_CMHPriorityHint:
-    OS << getCMHPriorityHintName();
-    break;
   case k_TIndexHint:
     OS << getTIndexHintName();
     break;
@@ -3310,23 +3143,6 @@ ParseStatus AArch64AsmParser::tryParsePrefetch(OperandVector &Operands) {
   return ParseStatus::Success;
 }
 
-/// tryParsePSBHint - Try to parse a PSB operand, mapped to Hint command
-ParseStatus AArch64AsmParser::tryParsePSBHint(OperandVector &Operands) {
-  SMLoc S = getLoc();
-  const AsmToken &Tok = getTok();
-  if (Tok.isNot(AsmToken::Identifier))
-    return TokError("invalid operand for instruction");
-
-  auto PSB = AArch64PSBHint::lookupPSBByName(Tok.getString());
-  if (!PSB)
-    return TokError("invalid operand for instruction");
-
-  Operands.push_back(AArch64Operand::CreatePSBHint(
-      PSB->Encoding, Tok.getString(), S, getContext()));
-  Lex(); // Eat identifier token.
-  return ParseStatus::Success;
-}
-
 ParseStatus AArch64AsmParser::tryParseSyspXzrPair(OperandVector &Operands) {
   SMLoc StartLoc = getLoc();
 
@@ -3357,41 +3173,6 @@ ParseStatus AArch64AsmParser::tryParseSyspXzrPair(OperandVector &Operands) {
   Operands.push_back(AArch64Operand::CreateReg(
       RegNum, RegKind::Scalar, StartLoc, getLoc(), getContext()));
 
-  return ParseStatus::Success;
-}
-
-/// tryParseBTIHint - Try to parse a BTI operand, mapped to Hint command
-ParseStatus AArch64AsmParser::tryParseBTIHint(OperandVector &Operands) {
-  SMLoc S = getLoc();
-  const AsmToken &Tok = getTok();
-  if (Tok.isNot(AsmToken::Identifier))
-    return TokError("invalid operand for instruction");
-
-  auto BTI = AArch64BTIHint::lookupBTIByName(Tok.getString());
-  if (!BTI)
-    return TokError("invalid operand for instruction");
-
-  Operands.push_back(AArch64Operand::CreateBTIHint(
-      BTI->Encoding, Tok.getString(), S, getContext()));
-  Lex(); // Eat identifier token.
-  return ParseStatus::Success;
-}
-
-/// tryParseCMHPriorityHint - Try to parse a CMHPriority operand
-ParseStatus AArch64AsmParser::tryParseCMHPriorityHint(OperandVector &Operands) {
-  SMLoc S = getLoc();
-  const AsmToken &Tok = getTok();
-  if (Tok.isNot(AsmToken::Identifier))
-    return TokError("invalid operand for instruction");
-
-  auto CMHPriority =
-      AArch64CMHPriorityHint::lookupCMHPriorityHintByName(Tok.getString());
-  if (!CMHPriority)
-    return TokError("invalid operand for instruction");
-
-  Operands.push_back(AArch64Operand::CreateCMHPriorityHint(
-      CMHPriority->Encoding, Tok.getString(), S, getContext()));
-  Lex(); // Eat identifier token.
   return ParseStatus::Success;
 }
 
@@ -4305,12 +4086,127 @@ bool AArch64AsmParser::parseSyspAlias(StringRef Name, SMLoc NameLoc,
   return false;
 }
 
+/// parseHintAlias - Some named HINT encodings have aliases. Parse them
+/// specially so that we create a HINT MCInst.
+bool AArch64AsmParser::parseHintAlias(StringRef Name, SMLoc NameLoc,
+                                      OperandVector &Operands) {
+  if (Name.contains('.'))
+    return TokError("invalid operand");
+
+  enum class HintAliasKind { Invalid, BTI, PSB, SHUH, STCPH, STSHH, TSB };
+  HintAliasKind Kind = StringSwitch<HintAliasKind>(Name)
+                           .Case("bti", HintAliasKind::BTI)
+                           .Case("psb", HintAliasKind::PSB)
+                           .Case("shuh", HintAliasKind::SHUH)
+                           .Case("stcph", HintAliasKind::STCPH)
+                           .Case("stshh", HintAliasKind::STSHH)
+                           .Case("tsb", HintAliasKind::TSB)
+                           .Default(HintAliasKind::Invalid);
+  if (Kind == HintAliasKind::Invalid)
+    llvm_unreachable("unknown HINT alias");
+
+  Mnemonic = Name;
+  Operands.push_back(
+      AArch64Operand::CreateToken("hint", NameLoc, getContext()));
+
+  const AsmToken &Tok = getTok();
+  SMLoc S = Tok.getLoc();
+  unsigned Imm;
+
+  switch (Kind) {
+  case HintAliasKind::Invalid:
+    llvm_unreachable("unknown HINT alias");
+  case HintAliasKind::STCPH:
+    Imm = 52;
+    break;
+  case HintAliasKind::BTI:
+    if (Tok.is(AsmToken::EndOfStatement)) {
+      Imm = 32;
+    } else if (Tok.is(AsmToken::Identifier)) {
+      StringRef Op = Tok.getString();
+      if (Op == "r")
+        Imm = 32;
+      else if (Op == "c")
+        Imm = 34;
+      else if (Op == "j")
+        Imm = 36;
+      else if (Op == "jc")
+        Imm = 38;
+      else
+        return TokError("invalid operand for instruction");
+      Lex(); // Eat operand.
+    } else {
+      return TokError("invalid operand for instruction");
+    }
+    break;
+  case HintAliasKind::SHUH:
+    if (Tok.is(AsmToken::EndOfStatement)) {
+      Imm = 50;
+    } else if (Tok.is(AsmToken::Identifier) && Tok.getString() == "ph") {
+      Imm = 51;
+      Lex(); // Eat operand.
+    } else {
+      return TokError("invalid operand for instruction");
+    }
+    break;
+  case HintAliasKind::PSB:
+  case HintAliasKind::STSHH:
+  case HintAliasKind::TSB: {
+    if ((Kind == HintAliasKind::PSB || Kind == HintAliasKind::TSB) &&
+        Tok.is(AsmToken::EndOfStatement))
+      return Error(NameLoc, "too few operands for instruction");
+
+    if (Tok.isNot(AsmToken::Identifier)) {
+      return TokError("invalid operand for instruction");
+    }
+
+    StringRef Op = Tok.getString();
+    switch (Kind) {
+    case HintAliasKind::STSHH:
+      if (Op == "keep")
+        Imm = 48;
+      else if (Op == "strm")
+        Imm = 49;
+      else
+        return TokError("invalid operand for instruction");
+      break;
+    case HintAliasKind::PSB:
+      if (Op != "csync")
+        return TokError("invalid operand for instruction");
+      if (!getSTI().hasFeature(AArch64::FeatureAll) &&
+          !getSTI().hasFeature(AArch64::FeatureSPE))
+        return TokError("instruction requires: spe");
+      Imm = 17;
+      break;
+    case HintAliasKind::TSB:
+      if (Op != "csync")
+        return TokError("invalid operand for instruction");
+      if (!getSTI().hasFeature(AArch64::FeatureAll) &&
+          !getSTI().hasFeature(AArch64::FeatureTRACEV8_4))
+        return TokError("instruction requires: tracev8.4");
+      Imm = 18;
+      break;
+    default:
+      llvm_unreachable("unexpected HINT alias kind");
+    }
+    Lex(); // Eat operand.
+    break;
+  }
+  }
+
+  Operands.push_back(AArch64Operand::CreateImm(
+      MCConstantExpr::create(Imm, getContext()), S, getLoc(), getContext()));
+
+  if (parseToken(AsmToken::EndOfStatement, "unexpected token in argument list"))
+    return true;
+
+  return false;
+}
+
 ParseStatus AArch64AsmParser::tryParseBarrierOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = getTok();
 
-  if (Mnemonic == "tsb" && Tok.isNot(AsmToken::Identifier))
-    return TokError("'csync' operand expected");
   if (parseOptionalToken(AsmToken::Hash) || Tok.is(AsmToken::Integer)) {
     // Immediate operand.
     const MCExpr *ImmVal;
@@ -4342,15 +4238,11 @@ ParseStatus AArch64AsmParser::tryParseBarrierOperand(OperandVector &Operands) {
     return TokError("invalid operand for instruction");
 
   StringRef Operand = Tok.getString();
-  auto TSB = AArch64TSB::lookupTSBByName(Operand);
   auto DB = AArch64DB::lookupDBByName(Operand);
   // The only valid named option for ISB is 'sy'
   if (Mnemonic == "isb" && (!DB || DB->Encoding != AArch64DB::sy))
     return TokError("'sy' or #imm operand expected");
-  // The only valid named option for TSB is 'csync'
-  if (Mnemonic == "tsb" && (!TSB || TSB->Encoding != AArch64TSB::csync))
-    return TokError("'csync' operand expected");
-  if (!DB && !TSB) {
+  if (!DB) {
     if (Mnemonic == "dsb") {
       // This case is a no match here, but it might be matched by the nXS
       // variant.
@@ -4359,9 +4251,9 @@ ParseStatus AArch64AsmParser::tryParseBarrierOperand(OperandVector &Operands) {
     return TokError("invalid barrier option name");
   }
 
-  Operands.push_back(AArch64Operand::CreateBarrier(
-      DB ? DB->Encoding : TSB->Encoding, Tok.getString(), getLoc(),
-      getContext(), false /*hasnXSModifier*/));
+  Operands.push_back(
+      AArch64Operand::CreateBarrier(DB->Encoding, Tok.getString(), getLoc(),
+                                    getContext(), false /*hasnXSModifier*/));
   Lex(); // Consume the option
 
   return ParseStatus::Success;
@@ -4445,23 +4337,6 @@ ParseStatus AArch64AsmParser::tryParseSysReg(OperandVector &Operands) {
                                    PStateImm, getContext()));
   Lex(); // Eat identifier
 
-  return ParseStatus::Success;
-}
-
-ParseStatus
-AArch64AsmParser::tryParsePHintInstOperand(OperandVector &Operands) {
-  SMLoc S = getLoc();
-  const AsmToken &Tok = getTok();
-  if (Tok.isNot(AsmToken::Identifier))
-    return TokError("invalid operand for instruction");
-
-  auto PH = AArch64PHint::lookupPHintByName(Tok.getString());
-  if (!PH)
-    return TokError("invalid operand for instruction");
-
-  Operands.push_back(AArch64Operand::CreatePHintInst(
-      PH->Encoding, Tok.getString(), S, getContext()));
-  Lex(); // Eat identifier token.
   return ParseStatus::Success;
 }
 
@@ -5534,6 +5409,11 @@ bool AArch64AsmParser::parseInstruction(ParseInstructionInfo &Info,
   // TLBIP instructions are aliases for the SYSP instruction.
   if (Head == "tlbip")
     return parseSyspAlias(Head, NameLoc, Operands);
+
+  // These mnemonics are aliases for HINT instructions.
+  if (Head == "bti" || Head == "stshh" || Head == "psb" || Head == "tsb" ||
+      Head == "shuh" || Head == "stcph")
+    return parseHintAlias(Name, NameLoc, Operands);
 
   Operands.push_back(AArch64Operand::CreateToken(Head, NameLoc, getContext()));
   Mnemonic = Head;
