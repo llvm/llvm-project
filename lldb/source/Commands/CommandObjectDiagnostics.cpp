@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CommandObjectDiagnostics.h"
+#include "lldb/Core/Diagnostics.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -14,7 +15,8 @@
 #include "lldb/Interpreter/OptionValueEnumeration.h"
 #include "lldb/Interpreter/OptionValueUInt64.h"
 #include "lldb/Interpreter/Options.h"
-#include "lldb/Utility/Diagnostics.h"
+
+#include "llvm/Support/JSON.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -85,15 +87,19 @@ protected:
       return;
     }
 
-    llvm::Error error = Diagnostics::Instance().Create(*directory);
-    if (error) {
+    // Collect the diagnostics bundle into the directory.
+    llvm::Expected<Diagnostics::Report> report =
+        Diagnostics::Instance().Collect(GetDebugger(), m_exe_ctx, *directory);
+    if (!report) {
       result.AppendErrorWithFormat("failed to write diagnostics to %s",
                                    directory->GetPath().c_str());
-      result.AppendError(llvm::toString(std::move(error)));
+      result.AppendError(llvm::toString(report.takeError()));
       return;
     }
 
-    result.GetOutputStream() << "diagnostics written to " << *directory << '\n';
+    // Print the report as JSON so the user can review what a bug report would
+    // carry. The bundle directory and its files are listed under "attachments".
+    result.GetOutputStream().Format("{0:2}\n", toJSON(*report));
 
     result.SetStatus(eReturnStatusSuccessFinishResult);
   }

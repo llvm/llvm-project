@@ -119,6 +119,24 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
   SmallVector<AssumptionCache::ResultElem, 16> Affected;
   findAffectedValues(CI, TTI, Affected);
 
+  // If a value appears more than once in an AssumeInst e.g., 'ptr %arg1' in:
+  //     call void @llvm.assume(i1 true)
+  //                   [ "dereferenceable"(ptr %arg1, i64 1),
+  //                     "align"(ptr %arg1, i64 8) ]
+  // it will appear multiple times in Affected, but we may (depending on
+  // how the results in AffectedValues.find_as(AV.Assume) are ordered)
+  // nullify multiple instances of Elem.Assume during one iteration of the
+  // 'for (auto &AV : Affected)' loop below. The next iteration of that for
+  // loop may then find only a match to a different AssumeInst, resulting in
+  // an assertion failure. Avoid this by counting the number of expected
+  // matches.
+#ifndef NDEBUG
+  DenseMap<Value *, int> ExpectedMatches;
+  for (auto &AV : Affected)
+    if (AffectedValues.find_as(AV.Assume) != AffectedValues.end())
+      ExpectedMatches[AV.Assume]++;
+#endif
+
   for (auto &AV : Affected) {
     auto AVI = AffectedValues.find_as(AV.Assume);
     if (AVI == AffectedValues.end())
@@ -129,15 +147,30 @@ void AssumptionCache::removeAffectedValues(AssumeInst *CI) {
       if (Elem.Assume == CI) {
         Found = true;
         Elem.Assume = nullptr;
+
+#ifndef NDEBUG
+        ExpectedMatches[AV.Assume]--;
+#endif
+        assert(ExpectedMatches[AV.Assume] >= 0);
+        // After ExpectedMatches[AV.Assume] == 0, we still need to iterate
+        // through this loop to determine the value of HasNonnull, to avoid
+        // prematurely calling AffectedValues.erase(AVI).
       }
       HasNonnull |= !!Elem.Assume;
       if (HasNonnull && Found)
         break;
     }
-    assert(Found && "already unregistered or incorrect cache state");
+
+    assert(ExpectedMatches[AV.Assume] == 0 ||
+           Found && "already unregistered or incorrect cache state");
+
     if (!HasNonnull)
       AffectedValues.erase(AVI);
   }
+
+  assert(
+      none_of(Affected, [&](auto &AV) { return ExpectedMatches[AV.Assume]; }) &&
+      "already unregistered or incorrect cache state");
 }
 
 void AssumptionCache::unregisterAssumption(AssumeInst *CI) {
