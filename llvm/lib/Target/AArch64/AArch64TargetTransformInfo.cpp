@@ -5232,26 +5232,24 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
     return InstructionCost::getInvalid();
 
   if (!UseMaskForGaps && Factor <= TLI->getMaxSupportedInterleaveFactor()) {
-    unsigned MinElts = VecVTy->getElementCount().getKnownMinValue();
-    auto *SubVecTy =
-        VectorType::get(VecVTy->getElementType(),
-                        VecVTy->getElementCount().divideCoefficientBy(Factor));
+    ElementCount EC = VecVTy->getElementCount();
+
+    auto *SubVecTy = VectorType::get(VecVTy->getElementType(),
+                                     EC.divideCoefficientBy(Factor));
 
     // ldN/stN only support legal vector types of size 64 or 128 in bits.
     // Accesses having vector types that are a multiple of 128 bits can be
     // matched to more than one ldN/stN instruction.
     bool UseScalable;
-    if (MinElts % Factor == 0 &&
+    if (EC.isKnownMultipleOf(Factor) &&
         TLI->isLegalInterleavedAccessType(SubVecTy, DL, UseScalable))
       return Factor * TLI->getNumInterleavedAccesses(SubVecTy, DL, UseScalable);
 
     // Cost the alternative approach for scalable vectors where the interleave
     // factor is larger than the VF: use a contiguous load/store of the full
     // wide vector followed by deinterleave/interleave shuffles.
-    if (VecTy->isScalableTy() && MinElts % Factor == 0) {
-      unsigned SubVecElts = SubVecTy->getElementCount().getKnownMinValue();
-
-      if (SubVecElts < 2)
+    if (VecTy->isScalableTy() && EC.isKnownMultipleOf(Factor)) {
+      if (SubVecTy->getElementCount() == ElementCount::getScalable(1))
         return InstructionCost::getInvalid();
 
       // Cost of the contiguous memory operation on the wide vector.
@@ -5270,16 +5268,14 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
       if (!MemCost.isValid())
         return InstructionCost::getInvalid();
 
-      // llvm.vector.deinterleaveN is lowered as log2(Factor) deinterleave2
-      // operations. Each deinterleave2 on a pair of SVE registers emits one
-      // uzp1 + one uzp2.
+      // llvm.vector.deinterleaveN is lowered as a binary tree of deinterleave2
+      // operations. A binary tree producing Factor leaf vectors has
+      // (Factor -1) inner deinterleave2 nodes. Each deinterleave2 on a pair of
+      // SVE registers emits one uzp1 + one uzp2.
+      // Total shuffle cost: (Factor - 1) deinterleave2 operations, each
+      // processing LT.first legal vector parts,with one uzp shuffle per part.
       auto LT = getTypeLegalizationCost(VecTy);
-      if (!LT.first.isValid())
-        return InstructionCost::getInvalid();
-
-      // Total shuffle cost: log2(Factor) levels, each processing
-      // LT.first legal vector parts, with one uzp shuffle per part.
-      InstructionCost ShuffleCost = Log2_32(Factor) * LT.first;
+      InstructionCost ShuffleCost = (Factor - 1) * LT.first;
 
       return MemCost + ShuffleCost;
     }

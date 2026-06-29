@@ -6,7 +6,7 @@ target triple = "aarch64"
 ; Check the backend lowering for factor-4 deinterleave when the result
 ; sub-vectors are smaller than the interleave factor.
 
-define void @deinterleave4_nxv8i16_uitofp_f64(
+define void @deinterleave4_nxv8i16_uitofp_f64(<vscale x 8 x i16> %wide.vec, <vscale x 2 x double> %mul, ptr %out) #0 {
 ; CHECK-LABEL: deinterleave4_nxv8i16_uitofp_f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uunpkhi z2.s, z0.h
@@ -48,7 +48,6 @@ define void @deinterleave4_nxv8i16_uitofp_f64(
 ; CHECK-NEXT:    mov v7.d[1], v1.d[0]
 ; CHECK-NEXT:    stp q2, q7, [x0]
 ; CHECK-NEXT:    ret
-    <vscale x 8 x i16> %wide.vec, <vscale x 2 x double> %mul, ptr %out) #0 {
   %d = call { <vscale x 2 x i16>, <vscale x 2 x i16>,
               <vscale x 2 x i16>, <vscale x 2 x i16> }
        @llvm.vector.deinterleave4.nxv8i16(<vscale x 8 x i16> %wide.vec)
@@ -83,7 +82,7 @@ define void @deinterleave4_nxv8i16_uitofp_f64(
 }
 
 
-define void @deinterleave4_nxv8i16_zext_i64(
+define void @deinterleave4_nxv8i16_zext_i64(<vscale x 8 x i16> %wide.vec, ptr %out) #0 {
 ; CHECK-LABEL: deinterleave4_nxv8i16_zext_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uunpkhi z1.s, z0.h
@@ -109,7 +108,6 @@ define void @deinterleave4_nxv8i16_zext_i64(
 ; CHECK-NEXT:    str z4, [x0, #2, mul vl]
 ; CHECK-NEXT:    str z0, [x0, #3, mul vl]
 ; CHECK-NEXT:    ret
-    <vscale x 8 x i16> %wide.vec, ptr %out) #0 {
   %d = call { <vscale x 2 x i16>, <vscale x 2 x i16>,
               <vscale x 2 x i16>, <vscale x 2 x i16> }
        @llvm.vector.deinterleave4.nxv8i16(<vscale x 8 x i16> %wide.vec)
@@ -138,7 +136,7 @@ define void @deinterleave4_nxv8i16_zext_i64(
 ; Shuffle optimization pass should be used for the in loop
 ; test and replace uunpk/uzp with tbl shuffles.
 
-define void @deinterleave4_nxv8i16_zext_i64_in_loop(
+define void @deinterleave4_nxv8i16_zext_i64_in_loop(ptr noalias %in, ptr noalias %out, i64 %n) #0 {
 ; CHECK-LABEL: deinterleave4_nxv8i16_zext_i64_in_loop:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    index z7.d, #0, #4
@@ -178,7 +176,6 @@ define void @deinterleave4_nxv8i16_zext_i64_in_loop(
 ; CHECK-NEXT:    str z2, [x1, #2, mul vl]
 ; CHECK-NEXT:    str z3, [x1, #3, mul vl]
 ; CHECK-NEXT:    ret
-    ptr noalias %in, ptr noalias %out, i64 %n) #0 {
 entry:
   br label %loop
 
