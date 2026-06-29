@@ -529,6 +529,10 @@ Attribute Changes in Clang
 - The ``const`` and ``pure`` attributes only apply to functions; they are now
   diagnosed and ignored when applied to anything else.
 
+- The malloc attribute can now be applied to functions returning span-like structures (structs
+  containing a pointer field and a size integer field). Currently, this is primarily used for
+  Allocation Token instrumentation.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Fixed bug in ``-Wdocumentation`` so that it correctly handles explicit
