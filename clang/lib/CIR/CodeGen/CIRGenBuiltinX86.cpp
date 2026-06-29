@@ -1872,7 +1872,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
         builtinID == X86::BI__builtin_ia32_movntss)
       src = builder.createExtractElement(loc, ops[1], 0);
 
-    cir::StoreOp so = builder.createStore(loc, src, dest, false, true);
+    cir::StoreOp so =
+        builder.createStore(loc, src, dest,
+                            /*isVolatile=*/false, /*isNontemporal=*/true);
     return so.getValue();
   }
   case X86::BI__builtin_ia32_vprotbi:
