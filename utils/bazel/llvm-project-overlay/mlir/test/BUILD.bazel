@@ -1256,5 +1256,6 @@ cc_library(
         "//mlir:XeGPUDialect",
         "//mlir:XeGPUTransforms",
         "//mlir:XeGPUUtils",
+        "//mlir:XeGPUuArch",
     ],
 )

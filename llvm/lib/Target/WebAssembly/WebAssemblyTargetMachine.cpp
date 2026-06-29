@@ -119,7 +119,6 @@ LLVMInitializeWebAssemblyTarget() {
   initializeWebAssemblyDebugFixupPass(PR);
   initializeWebAssemblyPeepholePass(PR);
   initializeWebAssemblyMCLowerPrePassPass(PR);
-  initializeWebAssemblyLowerRefTypesIntPtrConvPass(PR);
   initializeWebAssemblyFixBrTableDefaultsPass(PR);
   initializeWebAssemblyDAGToDAGISelLegacyPass(PR);
 }
@@ -336,9 +335,9 @@ private:
     std::string Ret;
     for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
       if (Features[KV.Value])
-        Ret += (StringRef("+") + KV.Key + ",").str();
+        Ret += (StringRef("+") + KV.key() + ",").str();
       else
-        Ret += (StringRef("-") + KV.Key + ",").str();
+        Ret += (StringRef("-") + KV.key() + ",").str();
     }
     // remove trailing ','
     Ret.pop_back();
@@ -404,7 +403,7 @@ private:
     for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
       if (Features[KV.Value]) {
         // Mark features as used
-        std::string MDKey = (StringRef("wasm-feature-") + KV.Key).str();
+        std::string MDKey = (StringRef("wasm-feature-") + KV.key()).str();
         M.addModuleFlag(Module::ModFlagBehavior::Error, MDKey,
                         wasm::WASM_FEATURE_PREFIX_USED);
       }
@@ -677,7 +676,6 @@ void WebAssemblyPassConfig::addPreEmitPass() {
 
 bool WebAssemblyPassConfig::addPreISel() {
   TargetPassConfig::addPreISel();
-  addPass(createWebAssemblyLowerRefTypesIntPtrConv());
   return false;
 }
 

@@ -1595,7 +1595,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::CLMUL, MVT::i8, Custom);
     setOperationAction(ISD::CLMUL, {MVT::v8i8, MVT::v16i8}, Legal);
     if (Subtarget->hasAES()) {
-      setOperationAction(ISD::CLMUL, {MVT::i16, MVT::i32, MVT::i64}, Custom);
+      setOperationAction(ISD::CLMUL, {MVT::i16, MVT::i32, MVT::i64, MVT::v4i32},
+                         Custom);
       setOperationAction(ISD::CLMUL, {MVT::v1i64, MVT::v2i64}, Legal);
       setOperationAction(ISD::CLMULH, {MVT::v1i64, MVT::v2i64}, Legal);
     }
@@ -8315,10 +8316,26 @@ SDValue AArch64TargetLowering::LowerCLMUL(SDValue Op, SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
   assert((VT == MVT::i64 || VT == MVT::i32 || VT == MVT::i16 || VT == MVT::i8 ||
-          VT == MVT::nxv8i16 || VT == MVT::nxv2i64) &&
+          VT == MVT::v4i32 || VT == MVT::nxv8i16 || VT == MVT::nxv2i64) &&
          "Unexpected Type");
   uint64_t ScalarSize = VT.getScalarSizeInBits();
   APInt HiWordMask = APInt::getBitsSet(ScalarSize, ScalarSize / 2, ScalarSize);
+
+  if (VT == MVT::v4i32) {
+    SDValue LoIdx = DAG.getVectorIdxConstant(0, DL);
+    SDValue HiIdx = DAG.getVectorIdxConstant(2, DL);
+    SDValue LoA = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32,
+                              Op.getOperand(0), LoIdx);
+    SDValue LoB = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32,
+                              Op.getOperand(1), LoIdx);
+    SDValue HiA = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32,
+                              Op.getOperand(0), HiIdx);
+    SDValue HiB = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, MVT::v2i32,
+                              Op.getOperand(1), HiIdx);
+    SDValue LoCLMUL = DAG.getNode(ISD::CLMUL, DL, MVT::v2i32, LoA, LoB);
+    SDValue HiCLMUL = DAG.getNode(ISD::CLMUL, DL, MVT::v2i32, HiA, HiB);
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, LoCLMUL, HiCLMUL);
+  }
 
   if (VT == MVT::nxv2i64) {
     SDValue OpA =
@@ -19758,7 +19775,7 @@ bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(
     return Subtarget->hasFullFP16();
   case MVT::f32:
   case MVT::f64:
-    return true;
+    return Subtarget->hasFPARMv8();
   case MVT::bf16:
     return VT.isScalableVector() && Subtarget->hasBF16() &&
            Subtarget->isNonStreamingSVEorSME2Available();
@@ -19774,7 +19791,7 @@ bool AArch64TargetLowering::isFMAFasterThanFMulAndFAdd(const Function &F,
   switch (Ty->getScalarType()->getTypeID()) {
   case Type::FloatTyID:
   case Type::DoubleTyID:
-    return true;
+    return Subtarget->hasFPARMv8();
   default:
     return false;
   }
@@ -24455,6 +24472,109 @@ tryCombineFADDReductionWithZero(SDNode *N, SelectionDAG &DAG,
   return Elts[0];
 }
 
+/// Returns the element size of a predicate-as-counter while intrinsic.
+static unsigned getPredCounterWhileElementSize(Intrinsic::ID IID) {
+  switch (IID) {
+  case Intrinsic::aarch64_sve_whilege_c8:
+  case Intrinsic::aarch64_sve_whilegt_c8:
+  case Intrinsic::aarch64_sve_whilelt_c8:
+  case Intrinsic::aarch64_sve_whilele_c8:
+  case Intrinsic::aarch64_sve_whilehs_c8:
+  case Intrinsic::aarch64_sve_whilehi_c8:
+  case Intrinsic::aarch64_sve_whilelo_c8:
+  case Intrinsic::aarch64_sve_whilels_c8:
+    return 8;
+  case Intrinsic::aarch64_sve_whilege_c16:
+  case Intrinsic::aarch64_sve_whilegt_c16:
+  case Intrinsic::aarch64_sve_whilelt_c16:
+  case Intrinsic::aarch64_sve_whilele_c16:
+  case Intrinsic::aarch64_sve_whilehs_c16:
+  case Intrinsic::aarch64_sve_whilehi_c16:
+  case Intrinsic::aarch64_sve_whilelo_c16:
+  case Intrinsic::aarch64_sve_whilels_c16:
+    return 16;
+  case Intrinsic::aarch64_sve_whilege_c32:
+  case Intrinsic::aarch64_sve_whilegt_c32:
+  case Intrinsic::aarch64_sve_whilelt_c32:
+  case Intrinsic::aarch64_sve_whilele_c32:
+  case Intrinsic::aarch64_sve_whilehs_c32:
+  case Intrinsic::aarch64_sve_whilehi_c32:
+  case Intrinsic::aarch64_sve_whilelo_c32:
+  case Intrinsic::aarch64_sve_whilels_c32:
+    return 32;
+  case Intrinsic::aarch64_sve_whilege_c64:
+  case Intrinsic::aarch64_sve_whilegt_c64:
+  case Intrinsic::aarch64_sve_whilelt_c64:
+  case Intrinsic::aarch64_sve_whilele_c64:
+  case Intrinsic::aarch64_sve_whilehs_c64:
+  case Intrinsic::aarch64_sve_whilehi_c64:
+  case Intrinsic::aarch64_sve_whilelo_c64:
+  case Intrinsic::aarch64_sve_whilels_c64:
+    return 64;
+  default:
+    llvm_unreachable("Unexpected IID");
+  }
+}
+
+/// Returns the ISD opcode for a predicate-as-counter while intrinsic.
+static unsigned getPredCounterWhileOpcode(Intrinsic::ID IID) {
+  switch (IID) {
+  case Intrinsic::aarch64_sve_whilege_c8:
+  case Intrinsic::aarch64_sve_whilege_c16:
+  case Intrinsic::aarch64_sve_whilege_c32:
+  case Intrinsic::aarch64_sve_whilege_c64:
+    return AArch64ISD::WHILEGE_PRED_COUNTER;
+  case Intrinsic::aarch64_sve_whilegt_c8:
+  case Intrinsic::aarch64_sve_whilegt_c16:
+  case Intrinsic::aarch64_sve_whilegt_c32:
+  case Intrinsic::aarch64_sve_whilegt_c64:
+    return AArch64ISD::WHILEGT_PRED_COUNTER;
+  case Intrinsic::aarch64_sve_whilelt_c8:
+  case Intrinsic::aarch64_sve_whilelt_c16:
+  case Intrinsic::aarch64_sve_whilelt_c32:
+  case Intrinsic::aarch64_sve_whilelt_c64:
+    return AArch64ISD::WHILELT_PRED_COUNTER;
+  case Intrinsic::aarch64_sve_whilele_c8:
+  case Intrinsic::aarch64_sve_whilele_c16:
+  case Intrinsic::aarch64_sve_whilele_c32:
+  case Intrinsic::aarch64_sve_whilele_c64:
+    return AArch64ISD::WHILELE_PRED_COUNTER;
+  case Intrinsic::aarch64_sve_whilehs_c8:
+  case Intrinsic::aarch64_sve_whilehs_c16:
+  case Intrinsic::aarch64_sve_whilehs_c32:
+  case Intrinsic::aarch64_sve_whilehs_c64:
+    return AArch64ISD::WHILEHS_PRED_COUNTER;
+  case Intrinsic::aarch64_sve_whilehi_c8:
+  case Intrinsic::aarch64_sve_whilehi_c16:
+  case Intrinsic::aarch64_sve_whilehi_c32:
+  case Intrinsic::aarch64_sve_whilehi_c64:
+    return AArch64ISD::WHILEHI_PRED_COUNTER;
+  case Intrinsic::aarch64_sve_whilelo_c8:
+  case Intrinsic::aarch64_sve_whilelo_c16:
+  case Intrinsic::aarch64_sve_whilelo_c32:
+  case Intrinsic::aarch64_sve_whilelo_c64:
+    return AArch64ISD::WHILELO_PRED_COUNTER;
+  case Intrinsic::aarch64_sve_whilels_c8:
+  case Intrinsic::aarch64_sve_whilels_c16:
+  case Intrinsic::aarch64_sve_whilels_c32:
+  case Intrinsic::aarch64_sve_whilels_c64:
+    return AArch64ISD::WHILELS_PRED_COUNTER;
+  default:
+    llvm_unreachable("Unexpected IID");
+  }
+}
+
+/// Lower a predicate-as-counter while intrinsic to an AArch64ISD node.
+static SDValue lowerPredCounterWhile(Intrinsic::ID IID, SDNode *N,
+                                     SelectionDAG &DAG) {
+  SDLoc DL(N);
+  unsigned ElementSizeInBits = getPredCounterWhileElementSize(IID);
+  return DAG.getNode(getPredCounterWhileOpcode(IID), DL,
+                     DAG.getVTList(MVT::aarch64svcount, FlagsVT),
+                     N->getOperand(1), N->getOperand(2), N->getOperand(3),
+                     DAG.getTargetConstant(ElementSizeInBits, DL, MVT::i64));
+}
+
 static SDValue performIntrinsicCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const AArch64Subtarget *Subtarget) {
@@ -24792,6 +24912,39 @@ static SDValue performIntrinsicCombine(SDNode *N,
   case Intrinsic::aarch64_sve_bsl2n:
   case Intrinsic::aarch64_sve_nbsl:
     return combineSVEBitSel(IID, N, DAG);
+  case Intrinsic::aarch64_sve_whilege_c8:
+  case Intrinsic::aarch64_sve_whilege_c16:
+  case Intrinsic::aarch64_sve_whilege_c32:
+  case Intrinsic::aarch64_sve_whilege_c64:
+  case Intrinsic::aarch64_sve_whilegt_c8:
+  case Intrinsic::aarch64_sve_whilegt_c16:
+  case Intrinsic::aarch64_sve_whilegt_c32:
+  case Intrinsic::aarch64_sve_whilegt_c64:
+  case Intrinsic::aarch64_sve_whilelt_c8:
+  case Intrinsic::aarch64_sve_whilelt_c16:
+  case Intrinsic::aarch64_sve_whilelt_c32:
+  case Intrinsic::aarch64_sve_whilelt_c64:
+  case Intrinsic::aarch64_sve_whilele_c8:
+  case Intrinsic::aarch64_sve_whilele_c16:
+  case Intrinsic::aarch64_sve_whilele_c32:
+  case Intrinsic::aarch64_sve_whilele_c64:
+  case Intrinsic::aarch64_sve_whilehs_c8:
+  case Intrinsic::aarch64_sve_whilehs_c16:
+  case Intrinsic::aarch64_sve_whilehs_c32:
+  case Intrinsic::aarch64_sve_whilehs_c64:
+  case Intrinsic::aarch64_sve_whilehi_c8:
+  case Intrinsic::aarch64_sve_whilehi_c16:
+  case Intrinsic::aarch64_sve_whilehi_c32:
+  case Intrinsic::aarch64_sve_whilehi_c64:
+  case Intrinsic::aarch64_sve_whilelo_c8:
+  case Intrinsic::aarch64_sve_whilelo_c16:
+  case Intrinsic::aarch64_sve_whilelo_c32:
+  case Intrinsic::aarch64_sve_whilelo_c64:
+  case Intrinsic::aarch64_sve_whilels_c8:
+  case Intrinsic::aarch64_sve_whilels_c16:
+  case Intrinsic::aarch64_sve_whilels_c32:
+  case Intrinsic::aarch64_sve_whilels_c64:
+    return lowerPredCounterWhile(IID, N, DAG);
   }
   return SDValue();
 }
@@ -32944,7 +33097,8 @@ SDValue AArch64TargetLowering::LowerToScalableOp(SDValue Op,
     Ops.push_back(convertToScalableVector(DAG, ContainerVT, V));
   }
 
-  auto ScalableRes = DAG.getNode(Op.getOpcode(), SDLoc(Op), ContainerVT, Ops);
+  auto ScalableRes =
+      DAG.getNode(Op.getOpcode(), SDLoc(Op), ContainerVT, Ops, Op->getFlags());
   return convertFromScalableVector(DAG, VT, ScalableRes);
 }
 

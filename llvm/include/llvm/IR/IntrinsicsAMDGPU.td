@@ -2476,6 +2476,7 @@ def int_amdgcn_inverse_ballot :
 // Lowers to S_BITREPLICATE_B64_B32.
 // The argument must be uniform; otherwise, the result is undefined.
 def int_amdgcn_s_bitreplicate :
+  ClangBuiltin<"__builtin_amdgcn_s_bitreplicate">,
   DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_i32_ty], [IntrNoMem, IntrConvergent]>;
 
 // Lowers to S_QUADMASK_B{32,64}
