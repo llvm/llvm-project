@@ -44,7 +44,6 @@ public:
   MSP430ISelDAGToDAGPass(MSP430TargetMachine &TM, CodeGenOptLevel OptLevel);
 };
 
-
 FunctionPass *createMSP430ISelDag(MSP430TargetMachine &TM,
                                   CodeGenOptLevel OptLevel);
 
