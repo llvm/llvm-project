@@ -23336,6 +23336,24 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
            return !SI || isCommutative(SI);
          })))
       I->setHasNoUnsignedWrap(/*b=*/false);
+    // add nsw X, INT_MIN is not equivalent to sub nsw X, INT_MIN, because
+    // negating INT_MIN overflows. When an add/sub lane is converted to the
+    // opposite opcode its constant is negated, so nsw no longer holds and must
+    // be dropped.
+    if (!MinBWs.contains(E) &&
+        (Opcode == Instruction::Add || Opcode == Instruction::Sub) &&
+        any_of(UniqueInsts, [&](Value *V) {
+          auto *SI = cast<Instruction>(V);
+          if (SI->getOpcode() == Opcode ||
+              !is_contained({Instruction::Add, Instruction::Sub},
+                            SI->getOpcode()))
+            return false;
+          return any_of(SI->operands(), [](Value *Op) {
+            const auto *CI = dyn_cast<ConstantInt>(Op);
+            return CI && CI->getValue().isMinSignedValue();
+          });
+        }))
+      I->setHasNoSignedWrap(/*b=*/false);
     if (auto *ICmp = dyn_cast<ICmpInst>(I); ICmp && It == MinBWs.end())
       ICmp->setSameSign(/*B=*/false);
     return I;
