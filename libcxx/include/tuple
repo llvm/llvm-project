@@ -625,8 +625,6 @@ public:
 #    if _LIBCPP_STD_VER >= 23
   template <class... _Up>
   static constexpr bool __has_danglings() {
-    // The fold expands `_Tp` and `_Up` in lockstep, so it is only well-formed when the packs have
-    // equal length. The discarded branch is not instantiated when the lengths differ.
     if constexpr (sizeof...(_Up) == sizeof...(_Tp))
       return (__reference_constructs_from_temporary_v<_Tp, _Up&&> || ...);
     else
