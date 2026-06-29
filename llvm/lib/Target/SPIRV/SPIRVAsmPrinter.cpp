@@ -47,7 +47,6 @@ using namespace llvm;
 
 namespace {
 enum class SPIRVFPContractMode { On, Off, Fast };
-} // namespace
 
 static cl::opt<SPIRVFPContractMode> SPIRVFPContract(
     "spirv-fp-contract",
@@ -61,7 +60,6 @@ static cl::opt<SPIRVFPContractMode> SPIRVFPContract(
                    "Suppress ContractionOff on all kernel entry points")),
     cl::init(SPIRVFPContractMode::On));
 
-namespace {
 class SPIRVAsmPrinter : public AsmPrinter {
   unsigned NLabels = 0;
   SmallPtrSet<const MachineBasicBlock *, 8> LabeledMBB;
