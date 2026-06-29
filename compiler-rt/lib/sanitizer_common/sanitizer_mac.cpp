@@ -688,9 +688,9 @@ static void MapToMacos(u16 *major, u16 *minor) {
     return;
   }
 #  else
-   // macOS 26 and later have aligned version strings.
-   if (*major >= 26)
-     return;
+  // macOS 26 and later have aligned version strings.
+  if (*major >= 26)
+    return;
 #  endif
 
   // Below are mappings for pre-macOS-25-aligned releases
