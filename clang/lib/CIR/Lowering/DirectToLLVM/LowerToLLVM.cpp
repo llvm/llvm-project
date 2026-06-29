@@ -613,7 +613,6 @@ adjustGlobalTypeForFlexibleArrayInit(mlir::Type llvmType, mlir::Attribute init,
   if (cast<cir::ArrayType>(lastInitType).getSize() == 0)
     return llvmType;
 
-
   llvm::SmallVector<mlir::Type> newBody{structTy.getBody()};
   newBody[newBody.size() - 1] = converter.convertType(lastInitType);
 
