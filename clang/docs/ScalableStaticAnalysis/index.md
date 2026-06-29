@@ -1,19 +1,20 @@
-==================================
-Scalable Static Analysis Framework
-==================================
+# Scalable Static Analysis Framework
 
 This is a framework for writing cross-translation unit analyses in a scalable and extensible setting.
 
-.. toctree::
-   :numbered:
-   :maxdepth: 2
-   :glob:
+```{toctree}
+:glob: true
+:maxdepth: 2
+:numbered: true
 
-   user-docs/*
+user-docs/*
+```
 
-:doc:`Developer documentation <developer-docs/index>`
+{doc}`Developer documentation <developer-docs/index>`
 
-.. toctree::
-   :hidden:
+```{toctree}
+:hidden: true
 
-   developer-docs/index
+developer-docs/index
+```
+
