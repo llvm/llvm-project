@@ -99,9 +99,14 @@ static bool doubleBuffer(Value oldMemRef, AffineForOp forOp) {
           forOp.getLoc(), oldMemRef, dim.index()));
   }
 
+  // Propagate alignment from the original alloc op, if any.
+  IntegerAttr alignment;
+  if (auto oldAllocOp = oldMemRef.getDefiningOp<memref::AllocOp>())
+    alignment = oldAllocOp.getAlignmentAttr();
+
   // Create and place the alloc right before the 'affine.for' operation.
-  Value newMemRef = memref::AllocOp::create(bOuter, forOp.getLoc(),
-                                            newMemRefType, allocOperands);
+  Value newMemRef = memref::AllocOp::create(
+      bOuter, forOp.getLoc(), newMemRefType, allocOperands, alignment);
 
   // Create 'iv mod 2' value to index the leading dimension.
   auto d0 = bInner.getAffineDimExpr(0);
