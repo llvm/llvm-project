@@ -47,7 +47,7 @@ Error LanaiCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
 }
 
 void LanaiCodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) const {
-  // TODO(boomanaiden154): Add LanaiMemAluCombiner when it has been ported.
+  addMachineFunctionPass(LanaiMemAluCombinerPass(), PMW);
 }
 
 void LanaiCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {

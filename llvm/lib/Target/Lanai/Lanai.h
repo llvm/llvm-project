@@ -48,11 +48,17 @@ createLanaiDelaySlotFillerLegacyPass(const LanaiTargetMachine &TM);
 
 // createLanaiMemAluCombinerPass - This pass combines loads/stores and
 // arithmetic operations.
-FunctionPass *createLanaiMemAluCombinerPass();
+class LanaiMemAluCombinerPass : public PassInfoMixin<LanaiMemAluCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createLanaiMemAluCombinerLegacyPass();
 
 void initializeLanaiAsmPrinterPass(PassRegistry &);
 void initializeLanaiDAGToDAGISelLegacyPass(PassRegistry &);
-void initializeLanaiMemAluCombinerPass(PassRegistry &);
+void initializeLanaiMemAluCombinerLegacyPass(PassRegistry &);
 
 } // namespace llvm
 
