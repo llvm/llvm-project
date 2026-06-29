@@ -5469,6 +5469,8 @@ def STLEXD : AIstlex<0b01, (outs GPR:$Rd),
 }
 }
 
+// As far as LLVM is concerned this writes to the system's exclusive monitors.
+let mayLoad = 1, mayStore = 1 in
 def CLREX : AXI<(outs), (ins), MiscFrm, NoItinerary, "clrex",
                 [(int_arm_clrex)]>,
             Requires<[IsARM, HasV6K]>  {

@@ -3889,6 +3889,8 @@ def t2STLEXD : T2I_strex<0b1111, (outs rGPR:$Rd),
 }
 }
 
+// As far as LLVM is concerned this writes to the system's exclusive monitors.
+let mayLoad = 1, mayStore = 1 in
 def t2CLREX : T2I<(outs), (ins), NoItinerary, "clrex", "", [(int_arm_clrex)]>,
             Requires<[IsThumb, HasV7Clrex]>  {
   let Inst{31-16} = 0xf3bf;
