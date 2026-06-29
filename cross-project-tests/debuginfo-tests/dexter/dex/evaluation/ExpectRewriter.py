@@ -258,7 +258,7 @@ class ScriptExpectRewriter:
         ):
             if expected_value is not None:
                 return
-            if expect.get_watched_scope() is not None:
+            if isinstance(expect, ExpectAll):
                 self.scope_expect_rewrites[expect] = []
                 return
             if isinstance(expect, Step):
