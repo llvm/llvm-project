@@ -65,6 +65,9 @@ enum PredefinedDeclIDs {
   /// The internal '__builtin_ms_va_list' typedef.
   PREDEF_DECL_BUILTIN_MS_VA_LIST_ID,
 
+  /// The internal '__memory_scope' typedef.
+  PREDEF_DECL_MEMORY_SCOPE_ID,
+
   /// The predeclared '_GUID' struct.
   PREDEF_DECL_BUILTIN_MS_GUID_ID,
 

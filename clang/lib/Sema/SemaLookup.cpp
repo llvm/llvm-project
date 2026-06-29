@@ -2214,6 +2214,66 @@ bool LookupResult::isAvailableForLookup(Sema &SemaRef, NamedDecl *ND) {
   return false;
 }
 
+/// Diagnose user redeclaration of the __memory_scope builtin.
+static void DiagnoseMemoryScopeConflict(Sema &S, LookupResult &R) {
+  // Don't diagnose during typo correction
+  if (R.isSuppressingAmbiguousDiagnostics())
+    return;
+
+  IdentifierInfo &II = S.Context.Idents.get("__memory_scope");
+  DeclContext::lookup_result Existing =
+      S.Context.getTranslationUnitDecl()->lookup(DeclarationName(&II));
+  if (!Existing.empty()) {
+    S.Diag(R.getNameLoc(), diag::warn_memory_scope_redeclared)
+        << "__memory_scope";
+    for (NamedDecl *D : Existing) {
+      S.Diag(D->getLocation(), diag::note_previous_decl) << D;
+    }
+  }
+}
+
+/// Try to create a builtin __memory_scope typedef or enumerator.
+/// Returns true if a declaration was added to R.
+static bool TryCreateMemoryScopeEnum(Sema &S, LookupResult &R,
+                                     const IdentifierInfo &II) {
+  // Don't create builtins during redeclaration lookup - this would conflict
+  // with user declarations of the same name
+  if (R.isForRedeclaration())
+    return false;
+  if (!II.getName().starts_with("__memory_scope"))
+    return false;
+
+  TypedefDecl *TD = S.Context.getOrCreateMemoryScopeDecl();
+
+  // We are looking up __memory_scope typedef itself
+  if (II.getName() == "__memory_scope") {
+    assert(TD && "can't reach here if the user redeclared the enum type");
+    R.addDecl(TD);
+    R.resolveKind();
+    return true;
+  }
+
+  // Else we are looking up a __memory_scope enumerator
+  if (!TD) {
+    // Failed to create the builtin enum because the user has already declared
+    // an enum with the same name.
+    DiagnoseMemoryScopeConflict(S, R);
+    return false;
+  }
+  const EnumType *ET = TD->getUnderlyingType()->getAs<EnumType>();
+  EnumDecl *ED = ET->getDecl();
+  // Find the specific enumerator
+  for (auto *Enumerator : ED->enumerators()) {
+    if (Enumerator->getName() == II.getName()) {
+      R.addDecl(Enumerator);
+      R.resolveKind();
+      return true;
+    }
+  }
+
+  return false;
+}
+
 bool Sema::LookupName(LookupResult &R, Scope *S, bool AllowBuiltinCreation,
                       bool ForceNoCPlusPlus) {
   DeclarationName Name = R.getLookupName();
@@ -2309,6 +2369,12 @@ bool Sema::LookupName(LookupResult &R, Scope *S, bool AllowBuiltinCreation,
   } else {
     // Perform C++ unqualified name lookup.
     if (CppLookupName(R, S))
+      return true;
+  }
+
+  // Check for enum __memory_scope even when AllowBuiltinCreation is false.
+  if (IdentifierInfo *II = Name.getAsIdentifierInfo()) {
+    if (TryCreateMemoryScopeEnum(*this, R, *II))
       return true;
   }
 

@@ -1901,12 +1901,12 @@
 // WEBASSEMBLY64-NEXT:#define __LONG_MAX__ 9223372036854775807L
 // WEBASSEMBLY64-NEXT:#define __LONG_WIDTH__ 64
 // WEBASSEMBLY64-NEXT:#define __LP64__ 1
-// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_CLUSTR 5
-// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_DEVICE 1
-// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_SINGLE 4
-// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_SYSTEM 0
-// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_WRKGRP 2
-// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_WVFRNT 3
+// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_CLUSTR __memory_scope_cluster
+// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_DEVICE __memory_scope_device
+// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_SINGLE __memory_scope_singlethread
+// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_SYSTEM __memory_scope_system
+// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_WRKGRP __memory_scope_workgroup
+// WEBASSEMBLY-NEXT:#define __MEMORY_SCOPE_WVFRNT __memory_scope_wavefront
 // WEBASSEMBLY-NEXT:#define __NO_INLINE__ 1
 // WEBASSEMBLY-NEXT:#define __NO_MATH_ERRNO__ 1
 // WEBASSEMBLY-NEXT:#define __OBJC_BOOL_IS_BOOL 0
@@ -2232,12 +2232,12 @@
 // AVR:#define __LDBL_MIN__ 1.17549435e-38L
 // AVR:#define __LONG_LONG_MAX__ 9223372036854775807LL
 // AVR:#define __LONG_MAX__ 2147483647L
-// AVR:#define __MEMORY_SCOPE_CLUSTR 5
-// AVR:#define __MEMORY_SCOPE_DEVICE 1
-// AVR:#define __MEMORY_SCOPE_SINGLE 4
-// AVR:#define __MEMORY_SCOPE_SYSTEM 0
-// AVR:#define __MEMORY_SCOPE_WRKGRP 2
-// AVR:#define __MEMORY_SCOPE_WVFRNT 3
+// AVR:#define __MEMORY_SCOPE_CLUSTR __memory_scope_cluster
+// AVR:#define __MEMORY_SCOPE_DEVICE __memory_scope_device
+// AVR:#define __MEMORY_SCOPE_SINGLE __memory_scope_singlethread
+// AVR:#define __MEMORY_SCOPE_SYSTEM __memory_scope_system
+// AVR:#define __MEMORY_SCOPE_WRKGRP __memory_scope_workgroup
+// AVR:#define __MEMORY_SCOPE_WVFRNT __memory_scope_wavefront
 // AVR:#define __NO_INLINE__ 1
 // AVR:#define __ORDER_BIG_ENDIAN__ 4321
 // AVR:#define __ORDER_LITTLE_ENDIAN__ 1234
@@ -2538,12 +2538,12 @@
 // RISCV32: #define __LITTLE_ENDIAN__ 1
 // RISCV32: #define __LONG_LONG_MAX__ 9223372036854775807LL
 // RISCV32: #define __LONG_MAX__ 2147483647L
-// RISCV32: #define __MEMORY_SCOPE_CLUSTR 5
-// RISCV32: #define __MEMORY_SCOPE_DEVICE 1
-// RISCV32: #define __MEMORY_SCOPE_SINGLE 4
-// RISCV32: #define __MEMORY_SCOPE_SYSTEM 0
-// RISCV32: #define __MEMORY_SCOPE_WRKGRP 2
-// RISCV32: #define __MEMORY_SCOPE_WVFRNT 3
+// RISCV32: #define __MEMORY_SCOPE_CLUSTR __memory_scope_cluster
+// RISCV32: #define __MEMORY_SCOPE_DEVICE __memory_scope_device
+// RISCV32: #define __MEMORY_SCOPE_SINGLE __memory_scope_singlethread
+// RISCV32: #define __MEMORY_SCOPE_SYSTEM __memory_scope_system
+// RISCV32: #define __MEMORY_SCOPE_WRKGRP __memory_scope_workgroup
+// RISCV32: #define __MEMORY_SCOPE_WVFRNT __memory_scope_wavefront
 // RISCV32: #define __NO_INLINE__ 1
 // RISCV32: #define __POINTER_WIDTH__ 32
 // RISCV32: #define __PRAGMA_REDEFINE_EXTNAME 1
@@ -2763,12 +2763,12 @@
 // RISCV64: #define __LONG_LONG_MAX__ 9223372036854775807LL
 // RISCV64: #define __LONG_MAX__ 9223372036854775807L
 // RISCV64: #define __LP64__ 1
-// RISCV64: #define __MEMORY_SCOPE_CLUSTR 5
-// RISCV64: #define __MEMORY_SCOPE_DEVICE 1
-// RISCV64: #define __MEMORY_SCOPE_SINGLE 4
-// RISCV64: #define __MEMORY_SCOPE_SYSTEM 0
-// RISCV64: #define __MEMORY_SCOPE_WRKGRP 2
-// RISCV64: #define __MEMORY_SCOPE_WVFRNT 3
+// RISCV64: #define __MEMORY_SCOPE_CLUSTR __memory_scope_cluster
+// RISCV64: #define __MEMORY_SCOPE_DEVICE __memory_scope_device
+// RISCV64: #define __MEMORY_SCOPE_SINGLE __memory_scope_singlethread
+// RISCV64: #define __MEMORY_SCOPE_SYSTEM __memory_scope_system
+// RISCV64: #define __MEMORY_SCOPE_WRKGRP __memory_scope_workgroup
+// RISCV64: #define __MEMORY_SCOPE_WVFRNT __memory_scope_wavefront
 // RISCV64: #define __NO_INLINE__ 1
 // RISCV64: #define __POINTER_WIDTH__ 64
 // RISCV64: #define __PRAGMA_REDEFINE_EXTNAME 1
@@ -3027,12 +3027,12 @@
 // XTENSA: #define __LONG_LONG_MAX__ 9223372036854775807LL
 // XTENSA: #define __LONG_MAX__ 2147483647L
 // XTENSA: #define __LONG_WIDTH__ 32
-// XTENSA: #define __MEMORY_SCOPE_CLUSTR 5
-// XTENSA: #define __MEMORY_SCOPE_DEVICE 1
-// XTENSA: #define __MEMORY_SCOPE_SINGLE 4
-// XTENSA: #define __MEMORY_SCOPE_SYSTEM 0
-// XTENSA: #define __MEMORY_SCOPE_WRKGRP 2
-// XTENSA: #define __MEMORY_SCOPE_WVFRNT 3
+// XTENSA: #define __MEMORY_SCOPE_CLUSTR __memory_scope_cluster
+// XTENSA: #define __MEMORY_SCOPE_DEVICE __memory_scope_device
+// XTENSA: #define __MEMORY_SCOPE_SINGLE __memory_scope_singlethread
+// XTENSA: #define __MEMORY_SCOPE_SYSTEM __memory_scope_system
+// XTENSA: #define __MEMORY_SCOPE_WRKGRP __memory_scope_workgroup
+// XTENSA: #define __MEMORY_SCOPE_WVFRNT __memory_scope_wavefront
 // XTENSA: #define __NO_INLINE__ 1
 // XTENSA: #define __NO_MATH_ERRNO__ 1
 // XTENSA: #define __OBJC_BOOL_IS_BOOL 0

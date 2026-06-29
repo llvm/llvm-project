@@ -1266,6 +1266,84 @@ TypedefDecl *ASTContext::getUInt128Decl() const {
   return UInt128Decl;
 }
 
+TypedefDecl *ASTContext::getOrCreateMemoryScopeDecl() {
+  // Return cached value if already created
+  if (MemoryScopeDecl)
+    return MemoryScopeDecl;
+
+  // Check if user has already declared enum __memory_scope
+  // If so, we cannot create our builtin - return nullptr to signal error
+  const char *EnumName = "__memory_scope";
+  IdentifierInfo &II = Idents.get(EnumName);
+  DeclContext::lookup_result Existing =
+      getTranslationUnitDecl()->lookup(DeclarationName(&II));
+  if (!Existing.empty()) {
+    // User declared __memory_scope before we could create the builtin
+    // Return nullptr - caller will diagnose this error
+    return nullptr;
+  }
+
+  // Create enum (unscoped, works in both C and C++)
+  EnumDecl *MemoryScopeEnum = EnumDecl::Create(
+      *this, getTranslationUnitDecl(), SourceLocation(), SourceLocation(),
+      &Idents.get(EnumName), nullptr, false, false, true);
+
+  MemoryScopeEnum->setIntegerType(IntTy);
+  MemoryScopeEnum->setImplicit();
+  MemoryScopeEnum->startDefinition();
+
+  // Create enumerators
+  int MaxValue = 0;
+  llvm::APSInt Val(getIntWidth(IntTy), false);
+
+#define MEMORY_SCOPE_ENUMERATORS(ENUM)                                         \
+  ENUM(__memory_scope_system, 0)                                               \
+  ENUM(__memory_scope_device, 1)                                               \
+  ENUM(__memory_scope_workgroup, 2)                                            \
+  ENUM(__memory_scope_wavefront, 3)                                            \
+  ENUM(__memory_scope_singlethread, 4)                                         \
+  ENUM(__memory_scope_cluster, 5)
+
+#define ADD_ENUMERATOR(Name, Value)                                            \
+  Val = Value;                                                                 \
+  if ((Value) > MaxValue)                                                      \
+    MaxValue = (Value);                                                        \
+  {                                                                            \
+    EnumConstantDecl *Constant =                                               \
+        EnumConstantDecl::Create(*this, MemoryScopeEnum, SourceLocation(),     \
+                                 &Idents.get(#Name), IntTy, nullptr, Val);     \
+    Constant->setImplicit();                                                   \
+    MemoryScopeEnum->addDecl(Constant);                                        \
+  }
+
+  MEMORY_SCOPE_ENUMERATORS(ADD_ENUMERATOR)
+#undef ADD_ENUMERATOR
+#undef MEMORY_SCOPE_ENUMERATORS
+
+  unsigned NumPositiveBits =
+      MaxValue > 0 ? llvm::APInt(32, MaxValue).getActiveBits() : 0;
+  MemoryScopeEnum->completeDefinition(IntTy, IntTy, NumPositiveBits, 0);
+
+  QualType EnumType = getCanonicalTagType(MemoryScopeEnum);
+  if (getLangOpts().CPlusPlus) {
+    for (EnumConstantDecl *Constant : MemoryScopeEnum->enumerators())
+      Constant->setType(EnumType);
+  }
+
+  getTranslationUnitDecl()->addDecl(MemoryScopeEnum);
+
+  // Create a typedef so we can use it without 'enum' keyword in C
+  TypedefDecl *TypedefD = TypedefDecl::Create(
+      *this, getTranslationUnitDecl(), SourceLocation(), SourceLocation(),
+      &Idents.get(EnumName), getTrivialTypeSourceInfo(EnumType));
+  TypedefD->setImplicit();
+  getTranslationUnitDecl()->addDecl(TypedefD);
+
+  // Cache the typedef (mutable field allows modification in const method)
+  MemoryScopeDecl = TypedefD;
+  return TypedefD;
+}
+
 void ASTContext::InitBuiltinType(CanQualType &R, BuiltinType::Kind K) {
   auto *Ty = new (*this, alignof(BuiltinType)) BuiltinType(K);
   R = CanQualType::CreateUnsafe(QualType(Ty, 0));

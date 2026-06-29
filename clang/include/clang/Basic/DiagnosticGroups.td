@@ -1236,6 +1236,7 @@ def UserDefinedWarnings : DiagGroup<"user-defined-warnings">;
 def UndeclaredSelector : DiagGroup<"undeclared-selector">;
 def ImplicitAtomic : DiagGroup<"implicit-atomic-properties">;
 def AtomicAlignment : DiagGroup<"atomic-alignment">;
+def AtomicMemoryScope : DiagGroup<"atomic-memory-scope">;
 def CustomAtomic : DiagGroup<"custom-atomic-properties">;
 def AtomicProperties : DiagGroup<"atomic-properties",
                                  [ImplicitAtomic, CustomAtomic]>;

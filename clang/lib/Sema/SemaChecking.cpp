@@ -2195,6 +2195,39 @@ CheckBuiltinTargetInSupported(Sema &S, CallExpr *TheCall,
   return true;
 }
 
+/// CheckScopedAtomicScopeArgument - Check the scope argument for scoped atomic
+/// operations and fences. Warns if a wrong enum type is used, and optionally
+/// warns if a non-enum type is used instead of the __memory_scope enum.
+static void CheckScopedAtomicScopeArgument(Sema &S, Expr *Scope) {
+  Expr *OrigScope = Scope->IgnoreParenImpCasts();
+
+  if (const auto *EnumTy = OrigScope->getType()->getAs<EnumType>()) {
+    if (EnumTy->getDecl()->getName() == "__memory_scope")
+      return;
+    S.Diag(OrigScope->getBeginLoc(), diag::warn_atomic_scope_wrong_enum)
+        << OrigScope->getSourceRange();
+    return;
+  }
+
+  // In C, enumerators have type int, not the enum type. Check if this is a
+  // reference to an enumerator to detect wrong enum usage in C.
+  if (auto *DRE = dyn_cast<DeclRefExpr>(OrigScope)) {
+    if (auto *ECD = dyn_cast<EnumConstantDecl>(DRE->getDecl())) {
+      if (auto *EnumDecl = dyn_cast<clang::EnumDecl>(ECD->getDeclContext())) {
+        if (EnumDecl->getName() == "__memory_scope")
+          return;
+        S.Diag(OrigScope->getBeginLoc(), diag::warn_atomic_scope_wrong_enum)
+            << OrigScope->getSourceRange();
+        return;
+      }
+    }
+  }
+
+  // Not an enum. But this warning is disabled by default.
+  S.Diag(OrigScope->getBeginLoc(), diag::warn_atomic_scope_incorrect_type)
+      << OrigScope->getSourceRange();
+}
+
 static void CheckNonNullArgument(Sema &S, const Expr *ArgExpr,
                                  SourceLocation CallSiteLoc);
 
@@ -3399,6 +3432,14 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     Diag(TheCall->getBeginLoc(), diag::warn_atomic_implicit_seq_cst)
         << TheCall->getCallee()->getSourceRange();
     break;
+  case Builtin::BI__scoped_atomic_thread_fence: {
+    // Validate the scope argument (second argument)
+    if (TheCall->getNumArgs() >= 2) {
+      Expr *Scope = TheCall->getArg(1);
+      CheckScopedAtomicScopeArgument(*this, Scope);
+    }
+    break;
+  }
   case Builtin::BI__builtin_nontemporal_load:
   case Builtin::BI__builtin_nontemporal_store:
     return BuiltinNontemporalOverloaded(TheCallResult);
@@ -5531,12 +5572,21 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
 
   if (auto ScopeModel = AtomicExpr::getScopeModel(Op)) {
     auto *Scope = Args[Args.size() - 1];
+
+    // If the scope is an integer constant, validate its value
     if (std::optional<llvm::APSInt> Result =
             Scope->getIntegerConstantExpr(Context)) {
       if (!ScopeModel->isValid(Result->getZExtValue()))
         Diag(Scope->getBeginLoc(), diag::err_atomic_op_has_invalid_sync_scope)
             << Scope->getSourceRange();
     }
+
+    if (IsScoped) {
+      // In the case of language-agnostic builtins, also check if it uses the
+      // builtin enum type "__memory_scope".
+      CheckScopedAtomicScopeArgument(*this, Scope);
+    }
+
     SubExprs.push_back(Scope);
   }
 

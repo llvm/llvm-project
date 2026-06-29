@@ -8512,6 +8512,12 @@ Decl *ASTReader::getPredefinedDecl(PredefinedDeclIDs ID) {
     NewLoaded = Context.getBuiltinVaListDecl();
     break;
 
+  case PREDEF_DECL_MEMORY_SCOPE_ID:
+    if (Context.MemoryScopeDecl)
+      return Context.MemoryScopeDecl;
+    NewLoaded = Context.getOrCreateMemoryScopeDecl();
+    break;
+
   case PREDEF_DECL_VA_LIST_TAG:
     if (Context.VaListTagDecl)
       return Context.VaListTagDecl;
