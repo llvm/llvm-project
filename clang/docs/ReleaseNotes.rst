@@ -71,6 +71,17 @@ C/C++ Language Potentially Breaking Changes
   Clang would previously ``break`` out of the ``while`` loop, whereas GCC (since version 9) would
   ``break`` out of the ``for`` loop here. Now, Clang and GCC both break out of the ``for`` loop.
 
+- Clang now parses line and digit directives, module names, and original filenames as unevaluated
+  strings. This means that code containing strings with escape sequences such as
+
+  .. code-block:: c++
+
+    # 1 "original\x12source.c"
+    #pragma clang module import "\x41"
+    # 50 "a\012.c"
+
+  are now ill-formed.
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 
@@ -527,7 +538,9 @@ Attribute Changes in Clang
   ISO 18037 fixed-point ``printf`` specifiers.
 
 - The ``const`` and ``pure`` attributes only apply to functions; they are now
-  diagnosed and ignored when applied to anything else.
+  diagnosed and ignored when applied to anything else. Additionally, calling
+  a function marked ``noreturn`` from a function marked ``const`` or ``pure``
+  is now diagnosed as undefined behavior (#GH129022).
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -820,6 +833,7 @@ Bug Fixes to C++ Support
 - Fixed an issue where Clang incorrectly accepted invalid unqualified uses of local nested class names outside their declaring scope. (#GH184622)
 - Fixed a crash when parsing invalid friend declaration with storage-class specifier. (#GH186569)
 - Fixed a missing vtable for ``dynamic_cast<FinalClass *>(this)`` in a function template. (#GH198511)
+- Fixed an assertion failure during init-list checking of an array whose element type is an incomplete class. (#GH140685)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -1070,6 +1084,9 @@ Crash and bug fixes
 
 - Fixed ``security.VAList`` checker producing false positives when analyzing
   C23 code where ``va_start`` expands to ``__builtin_c23_va_start``.
+  
+- Fixed a compiler crash when combining ``_Atomic`` and ``__auto_type``
+  in C, for example ``_Atomic __auto_type x = expr``. (#GH118058)
 
 Improvements
 ^^^^^^^^^^^^

@@ -1485,7 +1485,7 @@ bool Free(InterpState &S, CodePtr OpPC, bool DeleteIsArrayForm,
   if (!RunDestructors(S, OpPC, BlockToDelete))
     return false;
 
-  if (!Allocator.deallocate(Source, BlockToDelete, S)) {
+  if (!Allocator.deallocate(Source, BlockToDelete)) {
     // Nothing has been deallocated, this must be a double-delete.
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.FFDiag(Loc, diag::note_constexpr_double_delete);
@@ -2139,14 +2139,15 @@ bool DynamicCast(InterpState &S, CodePtr OpPC, const Type *DestTypePtr,
   std::optional<PtrView> Result;
   // First, check simple downcasts without ambiguities.
   for (PtrView Iter = Ptr.view();;) {
+    if (Iter.isRoot() || !Iter.isBaseClass())
+      break;
+
     if (typesMatch(TargetType, Iter.getType())) {
       Result = Iter;
       break;
     }
     // Moving DOWN the type hierarchy.
     Iter = Iter.getBase();
-    if (Iter.isRoot() || !Iter.isBaseClass())
-      break;
   }
 
   // Simply walking down the type hierarchy has produced a valid result, use
