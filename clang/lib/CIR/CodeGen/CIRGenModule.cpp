@@ -1449,7 +1449,7 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
 
   if (getLangOpts().CUDA &&
       (isCUDASharedVar || isCUDAShadowVar || isCUDADeviceShadowVar)) {
-    init = cir::PoisonAttr::get(convertType(vd->getType()));
+    init = cir::UndefAttr::get(convertType(vd->getType()));
   } else if (vd->hasAttr<LoaderUninitializedAttr>()) {
     errorNYI(vd->getSourceRange(),
              "emitGlobalVarDefinition: loader uninitialized attribute");
@@ -1598,12 +1598,30 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
     emitCXXGlobalVarDeclInitFunc(vd, gv, needsGlobalCtor);
 }
 
+bool CIRGenModule::shouldEmitFunction(GlobalDecl gd) {
+  if (getFunctionLinkage(gd) !=
+      cir::GlobalLinkageKind::AvailableExternallyLinkage)
+    return true;
+
+  const auto *fd = cast<FunctionDecl>(gd.getDecl());
+  // Inline builtins must be emitted; the body is redirected to a `.inline`
+  // symbol in CIRGenFunction::generateCode.
+  if (fd->isInlineBuiltinDeclaration())
+    return true;
+
+  // PR9614 / glibc btowc workaround: an available_externally function whose
+  // body just calls itself (via asm label or __builtin_* lowering on the
+  // same name) is not a valid stand-in for the real implementation.  Drop
+  // it from the IR so the optimizer doesn't reason about its body.
+  return !getCXXABI().getMangleContext().isTriviallyRecursive(fd);
+}
+
 void CIRGenModule::emitGlobalDefinition(clang::GlobalDecl gd,
                                         mlir::Operation *op) {
   const auto *decl = cast<ValueDecl>(gd.getDecl());
   if (const auto *fd = dyn_cast<FunctionDecl>(decl)) {
-    // TODO(CIR): Skip generation of CIR for functions with available_externally
-    // linkage at -O0.
+    if (!shouldEmitFunction(gd))
+      return;
 
     if (const auto *method = dyn_cast<CXXMethodDecl>(decl)) {
       // Make sure to emit the definition(s) before we emit the thunks. This is
@@ -3863,29 +3881,6 @@ void CIRGenModule::mapBlockAddress(cir::BlockAddrInfoAttr blockInfo,
          "attempting to map a blockaddress info that is already mapped");
 }
 
-void CIRGenModule::mapUnresolvedBlockAddress(cir::BlockAddressOp op) {
-  [[maybe_unused]] auto result = unresolvedBlockAddressToLabel.insert(op);
-  assert(result.second &&
-         "attempting to map a blockaddress operation that is already mapped");
-}
-
-void CIRGenModule::mapResolvedBlockAddress(cir::BlockAddressOp op,
-                                           cir::LabelOp label) {
-  [[maybe_unused]] auto result = blockAddressToLabel.try_emplace(op, label);
-  assert(result.second &&
-         "attempting to map a blockaddress operation that is already mapped");
-}
-
-void CIRGenModule::updateResolvedBlockAddress(cir::BlockAddressOp op,
-                                              cir::LabelOp newLabel) {
-  auto *it = blockAddressToLabel.find(op);
-  assert(it != blockAddressToLabel.end() &&
-         "trying to update a blockaddress not previously mapped");
-  assert(!it->second && "blockaddress already has a resolved label");
-
-  it->second = newLabel;
-}
-
 cir::LabelOp
 CIRGenModule::lookupBlockAddressInfo(cir::BlockAddrInfoAttr blockInfo) {
   return blockAddressInfoToLabel.lookup(blockInfo);
@@ -4002,8 +3997,7 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
 
   gv.setAlignment(align.getAsAlign().value());
   if (supportsCOMDAT() && gv.isWeakForLinker())
-    errorNYI(mte->getSourceRange(),
-             "Global temporary with comdat/weak linkage");
+    gv.setComdat(true);
   if (varDecl->getTLSKind())
     setTLSMode(gv, *varDecl, /*isExtendingDecl=*/true);
   mlir::Operation *cv = gv;

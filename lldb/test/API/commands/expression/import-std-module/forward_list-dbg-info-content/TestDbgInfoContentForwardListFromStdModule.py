@@ -11,6 +11,7 @@ class TestDbgInfoContentForwardList(TestBase):
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
     @skipIf(macos_version=["<", "15.0"])
+    @skipIf(macos_sdk_version=["<", "16.0"])
     def test(self):
         self.build()
 

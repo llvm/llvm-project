@@ -167,4 +167,3 @@ int* g() {
   (void)p;
   return nullptr; // no-warning
 }
-

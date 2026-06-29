@@ -797,7 +797,6 @@ def UseAfterLifetimeEnd : Checker<"UseAfterLifetimeEnd">,
   HelpText<"Check for uses of references or pointers that "
            "outlive their bound object">,
   Dependencies<[LifetimeModeling]>,
-  Documentation<NotDocumented>;
 
 } // end: "alpha.cplusplus"
 
