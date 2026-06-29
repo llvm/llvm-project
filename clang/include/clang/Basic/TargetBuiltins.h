@@ -457,13 +457,18 @@ namespace clang {
 
   /// SystemZ builtins
   namespace SystemZ {
-    enum {
-        LastTIBuiltin = clang::Builtin::FirstTSBuiltin-1,
+  enum {
+    LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
 #define GET_BUILTIN_ENUMERATORS
 #include "clang/Basic/BuiltinsSystemZ.inc"
 #undef GET_BUILTIN_ENUMERATORS
-        LastTSBuiltin
-    };
+    FirstZOSBuiltin,
+    LastSystemZBuiltin = FirstZOSBuiltin - 1,
+#define GET_BUILTIN_ENUMERATORS
+#include "clang/Basic/BuiltinsZOS.inc"
+#undef GET_BUILTIN_ENUMERATORS
+    LastTSBuiltin
+  };
   }
 
   /// WebAssembly builtins
