@@ -36,8 +36,8 @@ define void @func0() sspreq {
 ; CHECK:                    * DSA Size [[#%#x,DSA_SIZE:]]
 ; CHECK:                    stmg  6,{{[0-9]+}},2064(4)
 ; CHECK:                    llilh [[REG_CANARY_OFF_HIGH:[0-9]+]],[[#%u,CANARY_OFF_HIGH:div(DSA_SIZE,65536)]]
-; CHECK:                    la    [[REG_CANARY_OFF_HIGH]],0([[REG_CANARY_OFF_HIGH]],4)
-; CHECK:                    llgt  [[REG1:[0-9]+]],1208
+; CHECK-DAG:                la    [[REG_CANARY_OFF_HIGH]],0([[REG_CANARY_OFF_HIGH]],4)
+; CHECK-DAG:                llgt  [[REG1:[0-9]+]],1208
 ; CHECK:                    mvc   [[#%u,2040+mul(div(DSA_SIZE,32),32)-mul(CANARY_OFF_HIGH,65536)]](8,[[REG_CANARY_OFF_HIGH]]),152([[REG1]])
 ; ...
 ; CHECK:                    llilh [[REG_CANARY_OFF_HIGH_2:[0-9]+]],[[#%u,CANARY_OFF_HIGH_2:div(DSA_SIZE,65536)]]
@@ -63,35 +63,6 @@ define void @func1() sspreq {
 }
 
 ; Test converting XPLeaf functions to non-leaf functions if they need stack protection
-
-; TODO: Currently any function that needs to store data on the stack is
-; converted to a non-leaf function, so XPLeaf functions never write to the
-; stack, and thus there is no way for them to cause stack corruption.
-;
-; Eventually we'll start taking advantage of the 2048 bytes of space between R4
-; and the caller's stack frame to eliminate the need to convert some functions
-; that would have been XPLeaf functions. At which point, it will be possible for
-; an XPLeaf function to corrupt the stack.
-;
-; Since stack protection protects against corruption of the caller's stack
-; frame and not corruption of the callee's stack frame, it doesn't matter that
-; XPLeaf functions don't have a stack frame of their own - that's not what we'd
-; be protecting anyways.
-;
-; Thus, we'll have to choose what to do with functions that need stack protection
-; but could remain as XPLeaf functions by using those 2048 bytes of space.
-; We have 3 options:
-; 1. Convert them to non-leaf functions and continue protecting them as before.
-; 2. Keep them as XPLeaf functions, but give up on stack protecting them
-; 3. Keep them as XPLeaf functions, and try to stack protect them without making
-;    any function calls in the failure case. This would probably involve
-;    delaying the invocation of __stack_chk_fail/__CEL4SFCR until we return to
-;    the caller.
-;
-; If we choose option 1, leave this test as is and remove this TODO.
-; If we choose option 2, make sure we don't try to stack protect these functions.
-; If we choose option 3, this test needs to be replaced, but what we replace it
-; with will depend on how we implement the failure case.
 
 ; Based on func3_64 in call-zos-03.ll
 ; CHECK-LABEL: func2_64
@@ -123,8 +94,8 @@ entry:
 ; CHECK-NEXT:               *   Bit 2: 1 = Uses alloca
 ; CHECK:                    stmg  4,[[SPILLHI:[0-9]+]],[[#%u,2048-mul(div(DSA_SIZE,32),32)]](4)
 ; CHECK:                    aghi  4,-[[#%u,mul(div(DSA_SIZE,32),32)]]
-; CHECK:                    lgr   [[ALLOCAREG:[0-9]+]],4
-; CHECK:                    llgt  [[REG1:[0-9]+]],1208
+; CHECK-DAG:                lgr   [[ALLOCAREG:[0-9]+]],4
+; CHECK-DAG:                llgt  [[REG1:[0-9]+]],1208
 ; CHECK:                    mvc   [[#%u,2040+mul(div(DSA_SIZE,32),32)]](8,[[ALLOCAREG]]),152([[REG1]])
 ; ...
 ; CHECK:                    llgt  [[REG3:[0-9]+]],1208

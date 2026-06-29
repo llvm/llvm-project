@@ -1814,9 +1814,15 @@ void SystemZInstrInfo::expandStackGuardPseudo(MachineInstr &MI,
   // said guard into the scratch register AddrReg.
   if (GuardType.empty() || (GuardType == "tls")) {
     if (STI.isTargetzOS()) {
+      enum { OFFSET_PSALAA = 0x4B8 };
       enum { OFFSET_CEELAA_STACK_GUARD = 0x98 };
-      BuildMI(MBB, MI, DL, get(SystemZ::LOAD_LIBRARY_ANCHOR_AREA_ADDR),
-              AddrReg);
+      // Load LAA
+      // LLGT <reg>,1208
+      BuildMI(MBB, MI, MI.getDebugLoc(), get(SystemZ::LLGT))
+          .addReg(MI.getOperand(0).getReg())
+          .addReg(0)
+          .addImm(OFFSET_PSALAA)
+          .addReg(0);
       Offset = OFFSET_CEELAA_STACK_GUARD;
     } else {
       // Emit a load of the TLS block's address
@@ -1867,9 +1873,6 @@ unsigned SystemZInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return 14;
   if (MI.getOpcode() == SystemZ::LOAD_GLOBAL_STACKGUARD_ADDR)
     // Both larl and lgrl are 6 bytes long.
-    return 6;
-  if (MI.getOpcode() == SystemZ::LOAD_LIBRARY_ANCHOR_AREA_ADDR)
-    // llgt(6)
     return 6;
 
   return MI.getDesc().getSize();

@@ -780,9 +780,6 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case SystemZ::LOAD_GLOBAL_STACKGUARD_ADDR:
     lowerLOAD_GLOBAL_STACKGUARD_ADDR(*MI, Lower);
     return;
-  case SystemZ::LOAD_LIBRARY_ANCHOR_AREA_ADDR:
-    lowerLOAD_LIBRARY_ANCHOR_AREA_ADDR(*MI, Lower);
-    return;
 
   default:
     Lower.lower(MI, LoweredMI);
@@ -1093,22 +1090,6 @@ void SystemZAsmPrinter::lowerLOAD_GLOBAL_STACKGUARD_ADDR(
                        .addExpr(MCSymbolRefExpr::create(
                            getSymbol(GV), SystemZ::S_GOTENT, OutContext)));
   }
-}
-
-void SystemZAsmPrinter::lowerLOAD_LIBRARY_ANCHOR_AREA_ADDR(
-    const MachineInstr &MI, SystemZMCInstLower &Lower) {
-  Register AddrReg = MI.getOperand(0).getReg();
-  const SystemZSubtarget &STI = MF->getSubtarget<SystemZSubtarget>();
-
-  assert(STI.isTargetzOS() &&
-         "LOAD_LIBRARY_ANCHOR_AREA_ADDR is only for XPLINK64 on z/OS");
-
-  enum { OFFSET_PSALAA = 0x4B8 };
-  EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::LLGT)
-                                   .addReg(AddrReg)
-                                   .addReg(0)
-                                   .addImm(OFFSET_PSALAA)
-                                   .addReg(0));
 }
 
 // The *alignment* of 128-bit vector types is different between the software

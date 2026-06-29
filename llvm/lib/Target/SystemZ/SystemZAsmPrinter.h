@@ -174,8 +174,6 @@ private:
                                 SystemZMCInstLower &Lower);
   void lowerLOAD_GLOBAL_STACKGUARD_ADDR(const MachineInstr &MI,
                                         SystemZMCInstLower &Lower);
-  void lowerLOAD_LIBRARY_ANCHOR_AREA_ADDR(const MachineInstr &MI,
-                                          SystemZMCInstLower &Lower);
   void emitAttributes(Module &M);
 };
 } // end namespace llvm
