@@ -63,6 +63,7 @@ long z3_crash3(long a) {
 
 // Previously Z3 analysis crashed in this case, validate
 // that this no longer happens.
+// no-crash: GH #205037
 int unary_operand_in_binary_op(int size, int mask) {
   return size & ~mask;
 }
