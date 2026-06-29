@@ -15,6 +15,7 @@
 
 #include <chrono>
 #include <cassert>
+#include <ratio>
 #include <type_traits>
 #include <utility>
 
@@ -25,6 +26,7 @@ using month          = std::chrono::month;
 using day            = std::chrono::day;
 using year_month_day = std::chrono::year_month_day;
 using years          = std::chrono::years;
+using decades        = std::chrono::duration<int, std::ratio_multiply<std::ratio<10>, years::period>>;
 
 constexpr bool test() {
   for (int i = 1000; i <= 1010; ++i) {
@@ -43,6 +45,22 @@ constexpr bool test() {
     assert(static_cast<int>((ym).year()) == i + 1);
     assert(ym.month() == m);
     assert(ym.day() == d);
+  }
+
+  { // Ambiguity test
+    for (unsigned int i = 0; i < 10; i++) {
+      year y{2011};
+      month m{i};
+      year_month_day ymd(y, m, day{1});
+
+      ymd += decades(1);
+      assert(ymd.year() == y + years{10});
+      assert(ymd.month() == m);
+
+      ymd -= decades(2);
+      assert(ymd.year() == y - years{10});
+      assert(ymd.month() == m);
+    }
   }
 
   return true;
