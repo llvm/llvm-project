@@ -69,7 +69,7 @@ $ llvm-bolt $CPATH/clang-7 -o $CPATH/clang-7.bolt -b clang-7.yaml \
     -split-all-cold -dyno-stats -icf=1 -use-gnu-stack
 ```
 The output will look similar to the one below:
-```t
+```text
 ...
 BOLT-INFO: enabling relocation mode
 BOLT-INFO: 11415 functions out of 104526 simple functions (10.9%) have non-empty execution profile.
