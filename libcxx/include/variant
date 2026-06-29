@@ -554,7 +554,7 @@ private:
   }
 
   template <class, class _Tp>
-  using __expander = _Tp;
+  using __expander _LIBCPP_NODEBUG = _Tp;
 
   template <size_t _Ip, class _Fp, class... _Vs>
   _LIBCPP_HIDE_FROM_ABI static constexpr auto __make_fdiagonal_impl() {
@@ -1593,6 +1593,7 @@ template < class _Visitor, class... _Vs, typename>
 _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) visit(_Visitor&& __visitor, _Vs&&... __vs) {
   using __variant_detail::__visitation::__variant;
   std::__throw_if_valueless(std::forward<_Vs>(__vs)...);
+  // NOLINTNEXTLINE(bugprone-use-after-move) __throw_if_valueless doesn't actually forward the variants
   return __variant::__visit_value(std::forward<_Visitor>(__visitor), std::forward<_Vs>(__vs)...);
 }
 

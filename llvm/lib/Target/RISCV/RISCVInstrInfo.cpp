@@ -548,8 +548,8 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       if (STI.hasStdExtP()) {
         // On RV32P, `padd.dw` is a GPR Pair Add
         BuildMI(MBB, MBBI, DL, get(RISCV::PADD_DW), DstReg)
-            .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc))
-            .addReg(RISCV::X0_Pair);
+            .addReg(RISCV::X0_Pair)
+            .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc));
         return;
       }
     }
@@ -2007,6 +2007,7 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   switch (Opcode) {
   case RISCV::PseudoMV_FPR16INX:
   case RISCV::PseudoMV_FPR32INX:
+  case RISCV::PseudoClearGPR:
     // MV is always compressible to either c.mv or c.li rd, 0.
     return STI.hasStdExtZca() ? 2 : 4;
   // Below cases are for short forward branch pseudos
@@ -3608,7 +3609,9 @@ RISCVInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_TLSDESC_HI, "riscv-tlsdesc-hi"},
       {MO_TLSDESC_LOAD_LO, "riscv-tlsdesc-load-lo"},
       {MO_TLSDESC_ADD_LO, "riscv-tlsdesc-add-lo"},
-      {MO_TLSDESC_CALL, "riscv-tlsdesc-call"}};
+      {MO_TLSDESC_CALL, "riscv-tlsdesc-call"},
+      {MO_QC_ACCESS, "riscv-qc-access"},
+  };
   return ArrayRef(TargetFlags);
 }
 bool RISCVInstrInfo::isFunctionSafeToOutlineFrom(
@@ -3941,6 +3944,28 @@ MachineBasicBlock::iterator RISCVInstrInfo::insertOutlinedCall(
                       .addGlobalAddress(M.getNamedValue(MF.getName()), 0,
                                         RISCVII::MO_CALL));
   return It;
+}
+
+void RISCVInstrInfo::buildClearRegister(Register Reg, MachineBasicBlock &MBB,
+                                        MachineBasicBlock::iterator Iter,
+                                        DebugLoc &DL,
+                                        bool AllowSideEffects) const {
+
+  const MachineFunction &MF = *MBB.getParent();
+  const RISCVRegisterInfo &TRI = *STI.getRegisterInfo();
+
+  if (TRI.isGeneralPurposeRegister(MF, Reg)) {
+    BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearGPR), Reg);
+  } else if (RISCV::FPR32RegClass.contains(Reg)) {
+    BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearFPR32), Reg);
+  } else if (RISCV::FPR64RegClass.contains(Reg)) {
+    BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearFPR64), Reg);
+  } else if (RISCV::FPR128RegClass.contains(Reg)) {
+    BuildMI(MBB, Iter, DL, get(RISCV::PseudoClearFPR128), Reg);
+  } else {
+    llvm::reportFatalInternalError(
+        "buildClearRegister is not implemented for vector registers");
+  }
 }
 
 std::optional<RegImmPair> RISCVInstrInfo::isAddImmediate(const MachineInstr &MI,

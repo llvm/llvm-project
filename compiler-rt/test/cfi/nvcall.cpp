@@ -51,6 +51,7 @@ int main() {
 
   // CFI-DIAG: runtime error: control flow integrity check for type 'B' failed during non-virtual call
   // CFI-DIAG-NEXT: note: vtable is of type '{{(struct )?}}A'
+  // CFI-DIAG: SUMMARY: UndefinedBehaviorSanitizer: cfi-bad-type
   ((B *)a)->f(); // UB here
 
   // CFI-NOT: {{^2$}}
