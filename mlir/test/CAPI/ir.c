@@ -2900,6 +2900,62 @@ int testDominanceInfo(MlirContext ctx) {
   return 0;
 }
 
+int testDestinationStyleOpInterface(MlirContext ctx) {
+  fprintf(stderr, "@testDestinationStyleOpInterface\n");
+  // CHECK-LABEL: @testDestinationStyleOpInterface
+
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("linalg"));
+
+  // linalg.fill is a destination-style op: `ins(%val)` is the input operand
+  // (operand 0) and `outs(%init)` is the init/destination operand (operand 1).
+  const char *moduleStr =
+      "func.func @f(%val: f32, %init: tensor<4xf32>) -> tensor<4xf32> {\n"
+      "  %0 = linalg.fill ins(%val : f32) outs(%init : tensor<4xf32>) -> "
+      "tensor<4xf32>\n"
+      "  return %0 : tensor<4xf32>\n"
+      "}\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleStr));
+
+  MlirBlock moduleBody = mlirModuleGetBody(module);
+  MlirOperation funcOp = mlirBlockGetFirstOperation(moduleBody);
+  MlirRegion funcRegion = mlirOperationGetRegion(funcOp, 0);
+  MlirBlock funcBody = mlirRegionGetFirstBlock(funcRegion);
+  MlirValue initArg = mlirBlockGetArgument(funcBody, 1);
+  MlirOperation fillOp = mlirBlockGetFirstOperation(funcBody);
+
+  // The linalg.fill op implements the interface.
+  MlirTypeID id = mlirDestinationStyleOpInterfaceTypeID();
+  assert(!mlirTypeIDIsNull(id));
+  assert(mlirOperationImplementsInterface(fillOp, id));
+
+  // One input, one init.
+  assert(mlirDestinationStyleOpInterfaceGetNumDpsInputs(fillOp) == 1);
+  assert(mlirDestinationStyleOpInterfaceGetNumDpsInits(fillOp) == 1);
+
+  MlirOpOperand inputOperand =
+      mlirDestinationStyleOpInterfaceGetDpsInputOperand(fillOp, 0);
+  MlirOpOperand initOperand =
+      mlirDestinationStyleOpInterfaceGetDpsInitOperand(fillOp, 0);
+
+  // Classification of operands as input vs. init.
+  assert(mlirDestinationStyleOpInterfaceIsDpsInput(fillOp, inputOperand));
+  assert(mlirDestinationStyleOpInterfaceIsDpsInit(fillOp, initOperand));
+  assert(!mlirDestinationStyleOpInterfaceIsDpsInput(fillOp, initOperand));
+  assert(!mlirDestinationStyleOpInterfaceIsDpsInit(fillOp, inputOperand));
+
+  // The input is operand 0; the init is operand 1 and matches the %init arg.
+  assert(mlirOpOperandGetOperandNumber(inputOperand) == 0);
+  assert(mlirOpOperandGetOperandNumber(initOperand) == 1);
+  assert(mlirValueEqual(mlirOpOperandGetValue(initOperand), initArg));
+
+  mlirModuleDestroy(module);
+
+  // CHECK: testDestinationStyleOpInterface: PASSED
+  fprintf(stderr, "testDestinationStyleOpInterface: PASSED\n");
+  return 0;
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
@@ -2955,6 +3011,8 @@ int main(void) {
     return 19;
   if (testDominanceInfo(ctx))
     return 20;
+  if (testDestinationStyleOpInterface(ctx))
+    return 21;
 
   // CHECK: DESTROY MAIN CONTEXT
   // CHECK: reportResourceDelete: resource_i64_blob

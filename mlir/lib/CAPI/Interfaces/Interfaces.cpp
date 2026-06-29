@@ -15,6 +15,7 @@
 #include "mlir/CAPI/Support.h"
 #include "mlir/CAPI/Wrap.h"
 #include "mlir/IR/ValueRange.h"
+#include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "llvm/ADT/ScopeExit.h"
 #include <optional>
@@ -344,4 +345,45 @@ void mlirMemoryEffectsOpInterfaceAttachFallbackModel(
       opInfo->getInterface<MemoryEffectOpInterfaceFallbackModel>());
   assert(model && "Failed to get MemoryEffectOpInterfaceFallbackModel");
   model->setCallbacks(callbacks);
+}
+
+//===---------------------------------------------------------------------===//
+// DestinationStyleOpInterface
+//===---------------------------------------------------------------------===//
+
+MlirTypeID mlirDestinationStyleOpInterfaceTypeID(void) {
+  return wrap(DestinationStyleOpInterface::getInterfaceID());
+}
+
+intptr_t mlirDestinationStyleOpInterfaceGetNumDpsInits(MlirOperation op) {
+  return cast<DestinationStyleOpInterface>(unwrap(op)).getNumDpsInits();
+}
+
+MlirOpOperand mlirDestinationStyleOpInterfaceGetDpsInitOperand(MlirOperation op,
+                                                               intptr_t i) {
+  return wrap(
+      cast<DestinationStyleOpInterface>(unwrap(op)).getDpsInitOperand(i));
+}
+
+intptr_t mlirDestinationStyleOpInterfaceGetNumDpsInputs(MlirOperation op) {
+  return cast<DestinationStyleOpInterface>(unwrap(op)).getNumDpsInputs();
+}
+
+MlirOpOperand
+mlirDestinationStyleOpInterfaceGetDpsInputOperand(MlirOperation op,
+                                                  intptr_t i) {
+  return wrap(
+      cast<DestinationStyleOpInterface>(unwrap(op)).getDpsInputOperand(i));
+}
+
+bool mlirDestinationStyleOpInterfaceIsDpsInput(MlirOperation op,
+                                               MlirOpOperand operand) {
+  return cast<DestinationStyleOpInterface>(unwrap(op))
+      .isDpsInput(unwrap(operand));
+}
+
+bool mlirDestinationStyleOpInterfaceIsDpsInit(MlirOperation op,
+                                              MlirOpOperand operand) {
+  return cast<DestinationStyleOpInterface>(unwrap(op))
+      .isDpsInit(unwrap(operand));
 }
