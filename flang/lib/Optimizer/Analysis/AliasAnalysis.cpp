@@ -951,9 +951,14 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
 
   // TODO: limit to Fortran functions??
   // 1. Detect variables that can be accessed indirectly.
-  fir::AliasAnalysis aliasAnalysis;
+  // Reuse this AliasAnalysis instance instead of constructing a fresh one per
+  // query. getCallModRef is only reached from getModRef, and getSource/alias
+  // never call getModRef, so there is no recursion. varSrc is used only to
+  // classify var (kind/attributes); getCallModRef never inspects its
+  // scopedOrigins, so skip their (potentially expensive) collection.
   fir::AliasAnalysis::Source varSrc =
-      aliasAnalysis.getSource(var, /*getLastInstantiationPoint=*/true);
+      getSource(var, /*getLastInstantiationPoint=*/true,
+                /*collectScopedOrigins=*/false);
   // If the variable is not a user variable, we cannot safely assume that
   // Fortran semantics apply (e.g., a bare alloca/allocmem result may very well
   // be placed in an allocatable/pointer descriptor and escape).
@@ -991,8 +996,7 @@ ModRefResult AliasAnalysis::getCallModRef(Operation *op, Value var) {
   }
   // 2. Check if the variable is passed via the arguments.
   for (auto arg : call.getArgs()) {
-    if (fir::conformsWithPassByRef(arg.getType()) &&
-        !aliasAnalysis.alias(arg, var).isNo()) {
+    if (fir::conformsWithPassByRef(arg.getType()) && !alias(arg, var).isNo()) {
       // TODO: intent(in) would allow returning Ref here. This can be obtained
       // in the func.func attributes for direct calls, but the module lookup is
       // linear with the number of MLIR symbols, which would introduce a pseudo

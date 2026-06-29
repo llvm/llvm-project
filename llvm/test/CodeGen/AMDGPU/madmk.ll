@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mattr=+mad-mac-f32-insts < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx600 -mattr=+mad-mac-f32-insts < %s | FileCheck -check-prefix=GCN -check-prefix=SI %s
 ; XUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck -check-prefix=GCN -check-prefix=VI %s
 
  ; FIXME: None of these trigger madmk emission anymore. It is still
