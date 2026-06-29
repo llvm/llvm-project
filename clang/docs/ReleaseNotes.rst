@@ -230,6 +230,31 @@ C Language Changes
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
 
+- Clang now supports C2y's new syntax for ``if`` and ``switch`` statements with
+  initializer and condition variables, as specified in
+  `N3356 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3356.htm>`_. For
+  example:
+
+  .. code-block:: c
+
+    if (bool x = true; x) {
+      // ...
+    }
+
+    if (bool x = true) {
+      // ...
+    }
+
+    // attribute list on declarations are also supported
+    switch ([[maybe_unused]] int x = 1) {
+    default:
+      // ...
+    }
+
+    if (bool x [[maybe_unused]] = true; x) {
+      // ...
+    }
+
 - Implemented the type-specific C2y ``<stdbit.h>`` rotate functions with constexpr
   evaluation support:
   ``stdc_rotate_left_{uc,us,ui,ul,ull}`` and
