@@ -13,8 +13,8 @@ define i32 @reduce_i1(i32 %arg) {
 ; V8M-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:2 Lat:2 SizeLat:2 for: %V8 = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> undef)
 ; V8M-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:2 Lat:2 SizeLat:2 for: %V16 = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> undef)
 ; V8M-NEXT:  Cost Model: Found costs of RThru:33 CodeSize:2 Lat:2 SizeLat:2 for: %V32 = call i1 @llvm.vector.reduce.or.v32i1(<32 x i1> undef)
-; V8M-NEXT:  Cost Model: Found costs of RThru:65 CodeSize:2 Lat:2 SizeLat:2 for: %V64 = call i1 @llvm.vector.reduce.or.v64i1(<64 x i1> undef)
-; V8M-NEXT:  Cost Model: Found costs of RThru:129 CodeSize:2 Lat:2 SizeLat:2 for: %V128 = call i1 @llvm.vector.reduce.or.v128i1(<128 x i1> undef)
+; V8M-NEXT:  Cost Model: Found costs of RThru:66 CodeSize:3 Lat:3 SizeLat:3 for: %V64 = call i1 @llvm.vector.reduce.or.v64i1(<64 x i1> undef)
+; V8M-NEXT:  Cost Model: Found costs of RThru:132 CodeSize:5 Lat:5 SizeLat:5 for: %V128 = call i1 @llvm.vector.reduce.or.v128i1(<128 x i1> undef)
 ; V8M-NEXT:  Cost Model: Found costs of 1 for: ret i32 undef
 ;
 ; NEON-LABEL: 'reduce_i1'
@@ -24,8 +24,8 @@ define i32 @reduce_i1(i32 %arg) {
 ; NEON-NEXT:  Cost Model: Found costs of 2 for: %V8 = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> undef)
 ; NEON-NEXT:  Cost Model: Found costs of 2 for: %V16 = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> undef)
 ; NEON-NEXT:  Cost Model: Found costs of RThru:97 CodeSize:2 Lat:2 SizeLat:2 for: %V32 = call i1 @llvm.vector.reduce.or.v32i1(<32 x i1> undef)
-; NEON-NEXT:  Cost Model: Found costs of RThru:193 CodeSize:2 Lat:2 SizeLat:2 for: %V64 = call i1 @llvm.vector.reduce.or.v64i1(<64 x i1> undef)
-; NEON-NEXT:  Cost Model: Found costs of RThru:385 CodeSize:2 Lat:2 SizeLat:2 for: %V128 = call i1 @llvm.vector.reduce.or.v128i1(<128 x i1> undef)
+; NEON-NEXT:  Cost Model: Found costs of RThru:194 CodeSize:3 Lat:3 SizeLat:3 for: %V64 = call i1 @llvm.vector.reduce.or.v64i1(<64 x i1> undef)
+; NEON-NEXT:  Cost Model: Found costs of RThru:388 CodeSize:5 Lat:5 SizeLat:5 for: %V128 = call i1 @llvm.vector.reduce.or.v128i1(<128 x i1> undef)
 ; NEON-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; MVE-LABEL: 'reduce_i1'
@@ -35,8 +35,8 @@ define i32 @reduce_i1(i32 %arg) {
 ; MVE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:2 Lat:2 SizeLat:2 for: %V8 = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> undef)
 ; MVE-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:2 Lat:2 SizeLat:2 for: %V16 = call i1 @llvm.vector.reduce.or.v16i1(<16 x i1> undef)
 ; MVE-NEXT:  Cost Model: Found costs of RThru:257 CodeSize:2 Lat:2 SizeLat:2 for: %V32 = call i1 @llvm.vector.reduce.or.v32i1(<32 x i1> undef)
-; MVE-NEXT:  Cost Model: Found costs of RThru:513 CodeSize:2 Lat:2 SizeLat:2 for: %V64 = call i1 @llvm.vector.reduce.or.v64i1(<64 x i1> undef)
-; MVE-NEXT:  Cost Model: Found costs of RThru:1025 CodeSize:2 Lat:2 SizeLat:2 for: %V128 = call i1 @llvm.vector.reduce.or.v128i1(<128 x i1> undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:514 CodeSize:3 Lat:3 SizeLat:3 for: %V64 = call i1 @llvm.vector.reduce.or.v64i1(<64 x i1> undef)
+; MVE-NEXT:  Cost Model: Found costs of RThru:1028 CodeSize:5 Lat:5 SizeLat:5 for: %V128 = call i1 @llvm.vector.reduce.or.v128i1(<128 x i1> undef)
 ; MVE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
   %V1   = call i1 @llvm.vector.reduce.or.v1i1(<1 x i1> undef)

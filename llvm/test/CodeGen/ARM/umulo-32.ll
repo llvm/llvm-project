@@ -31,14 +31,11 @@ define i32 @test2(ptr %m_degree) ssp {
 ; CHECK-LABEL: test2:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    movs r4, #0
 ; CHECK-NEXT:    ldr r1, [r0]
 ; CHECK-NEXT:    lsls r0, r1, #3
 ; CHECK-NEXT:    lsrs r2, r0, #3
-; CHECK-NEXT:    subs r1, r1, r2
-; CHECK-NEXT:    subs r2, r1, #1
-; CHECK-NEXT:    sbcs r1, r2
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    cmp r1, #0
+; CHECK-NEXT:    cmp r1, r2
 ; CHECK-NEXT:    beq .LBB1_2
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:    mvns r0, r4
