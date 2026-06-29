@@ -454,7 +454,7 @@ the underlying bug. When origin tracking is enabled, the
 ``--enable-origin-stacktraces`` flag must be passed to actually trigger the
 collecting of stacktraces; this flag can be passed as-is to collect stacktraces
 all the time, or it can be passed with a comma-separated list of pass names (in
-their internal PascalCase form) to enable collecting stacktrace during only
+their internal PascalCase form) to enable collecting stacktraces during only
 those passes.
 
 If using origin tracking, it is recommended to also build LLVM with debug info
