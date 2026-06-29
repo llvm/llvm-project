@@ -3,6 +3,7 @@
 ; RUN: not llvm-as -disable-output %t/load-scalar.ll 2>&1 | FileCheck %t/load-scalar.ll
 ; RUN: not llvm-as -disable-output %t/load-scalable.ll 2>&1 | FileCheck %t/load-scalable.ll
 ; RUN: not llvm-as -disable-output %t/load-odd-sized.ll 2>&1 | FileCheck %t/load-odd-sized.ll
+; RUN: not llvm-as -disable-output %t/load-non-byte.ll 2>&1 | FileCheck %t/load-non-byte.ll
 
 ;--- load-non-atomic.ll
 ; CHECK: elementwise load must be atomic
@@ -30,4 +31,11 @@ define <vscale x 2 x i32> @bad_scalable(ptr %p) {
 define <5 x i32> @bad_odd_sized_vector(ptr %p) {
   %v = load atomic elementwise <5 x i32>, ptr %p monotonic, align 4
   ret <5 x i32> %v
+}
+
+;--- load-non-byte.ll
+; CHECK: atomic memory access' size must be byte-sized
+define <4 x i1> @bad_non_byte(ptr %p) {
+  %v = load atomic elementwise <4 x i1>, ptr %p monotonic, align 4
+  ret <4 x i1> %v
 }

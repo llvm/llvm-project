@@ -6383,9 +6383,7 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
         return error("Load operand is not a pointer type");
 
       Type *Ty = nullptr;
-      bool HasExplicitType =
-          Record.size() == OpNum + 5 || Record.size() == OpNum + 6;
-      if (HasExplicitType) {
+      if (Record.size() >= OpNum + 5) {
         ResTypeID = Record[OpNum++];
         Ty = getTypeByID(ResTypeID);
       } else {
