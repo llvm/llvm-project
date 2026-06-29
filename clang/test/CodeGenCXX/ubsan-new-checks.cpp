@@ -75,7 +75,7 @@ S3 *func_07() {
   // CHECK-LABEL: define {{.*}} @_Z7func_07v
   // CHECK:       and i64 %{{.*}}, 31, !nosanitize
   // CHECK:       icmp eq i64 %{{.*}}, 0, !nosanitize
-  // CHECK:       and i64 %{{.*}}, 3, !nosanitize
+  // CHECK:       and i64 %{{.*}}, 15, !nosanitize
   // CHECK:       icmp eq i64 %{{.*}}, 0, !nosanitize
   // CHECK:       ret ptr
   return new S3;
@@ -85,7 +85,7 @@ S3 *func_08() {
   // CHECK-LABEL: define {{.*}} @_Z7func_08v
   // CHECK:       and i64 %{{.*}}, 31, !nosanitize
   // CHECK:       icmp eq i64 %{{.*}}, 0, !nosanitize
-  // CHECK:       and i64 %{{.*}}, 3, !nosanitize
+  // CHECK:       and i64 %{{.*}}, 15, !nosanitize
   // CHECK:       icmp eq i64 %{{.*}}, 0, !nosanitize
   // CHECK:       ret ptr
   return new S3[10];
