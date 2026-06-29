@@ -357,10 +357,10 @@ public:
 
     if (Ty->isIntegralOrEnumerationType() || Ty->isAnyPointerType() ||
         Ty->isBlockPointerType() || Ty->isReferenceType()) {
-      return fromBinOp(
-          Solver, Exp, BO_NE,
-          Solver->mkBitvector(llvm::APSInt::getUnsigned(0), Ctx.getTypeSize(Ty)),
-          Ty->isSignedIntegerOrEnumerationType());
+      return fromBinOp(Solver, Exp, BO_NE,
+                       Solver->mkBitvector(llvm::APSInt::getUnsigned(0),
+                                           Ctx.getTypeSize(Ty)),
+                       Ty->isSignedIntegerOrEnumerationType());
     }
 
     llvm_unreachable("Unsupported type for boolean conversion!");
