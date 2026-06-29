@@ -8,7 +8,7 @@
 ;  A[2] = (T * B[12] + 6.0);
 ;}
 
-define i32 @foo(ptr noalias nocapture %A, ptr noalias nocapture %B, float %T) {
+define void @foo(ptr noalias nocapture %A, ptr noalias nocapture %B, float %T) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds float, ptr [[B:%.*]], i64 10
 ; CHECK-NEXT:    [[TMP2:%.*]] = load float, ptr [[TMP1]], align 4
@@ -31,7 +31,7 @@ define i32 @foo(ptr noalias nocapture %A, ptr noalias nocapture %B, float %T) {
 ; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 2
 ; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i8> [[TMP15]], i32 1
 ; CHECK-NEXT:    store i8 [[TMP19]], ptr [[TMP20]], align 1
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret void
 ;
   %1 = getelementptr inbounds float, ptr %B, i64 10
   %2 = load float, ptr %1, align 4
@@ -56,7 +56,7 @@ define i32 @foo(ptr noalias nocapture %A, ptr noalias nocapture %B, float %T) {
   %19 = fptosi double %18 to i8
   %20 = getelementptr inbounds i8, ptr %A, i64 2
   store i8 %19, ptr %20, align 1
-  ret i32 undef
+  ret void
 }
 
 ; PR41892
