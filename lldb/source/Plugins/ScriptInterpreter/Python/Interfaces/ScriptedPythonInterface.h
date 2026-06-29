@@ -836,6 +836,11 @@ lldb::ValueObjectListSP
 ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectListSP>(
     python::PythonObject &p, Status &error);
 
+template <>
+std::optional<lldb::ValueType>
+ScriptedPythonInterface::ExtractValueFromPythonObject<
+    std::optional<lldb::ValueType>>(python::PythonObject &p, Status &error);
+
 } // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_PYTHON_INTERFACES_SCRIPTEDPYTHONINTERFACE_H
