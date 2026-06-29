@@ -1,5 +1,8 @@
 ; RUN: llc < %s | FileCheck %s
+; RUN: llc -enable-new-pm < %s | FileCheck %s
 ; RUN: llc --lanai-nop-delay-filler < %s | \
+; RUN:   FileCheck %s --check-prefix=NOP
+; RUN: llc -enable-new-pm --lanai-nop-delay-filler < %s | \
 ; RUN:   FileCheck %s --check-prefix=NOP
 
 ; The delay slot after 'bt f' cannot be filled with the 'or' instruction
