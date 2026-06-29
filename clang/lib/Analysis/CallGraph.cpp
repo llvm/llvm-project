@@ -205,8 +205,7 @@ void CallGraph::addNodesForVarInit(VarDecl *VD) {
   if (!VD->hasGlobalStorage())
     return;
   if (Expr *Init = VD->getInit()) {
-    CGBuilder builder(this, Root);
-    builder.Visit(Init);
+    CGBuilder{this, Root}.Visit(Init);
   }
 }
 
