@@ -471,9 +471,9 @@ static bool isSafeToIgnoreCWD(const CowCompilerInvocation &CI) {
   // command line inputs use relative paths.
   bool AnyRelative = false;
   CI.visitPaths([&](StringRef Path) {
-    assert(!AnyRelative && "Continuing path visitation despite returning true");
+    assert(!AnyRelative && "Continuing path visitation despite relative path");
     AnyRelative |= !Path.empty() && !llvm::sys::path::is_absolute(Path);
-    return AnyRelative;
+    return CowCompilerInvocation::VisitConstResult{/*Terminate=*/AnyRelative};
   });
   return !AnyRelative;
 }

@@ -1,0 +1,280 @@
+// RUN: cir-opt %s -cir-call-conv-lowering="classification-attr=test_classify" \
+// RUN:   | FileCheck %s
+
+!s64i = !cir.int<s, 64>
+!s32i = !cir.int<s, 32>
+!rec_TwoLong = !cir.struct<"TwoLong" {!s64i, !s64i}>
+!rec_ThreeInt = !cir.struct<"ThreeInt" {!s32i, !s32i, !s32i}>
+!rec_OneInt = !cir.struct<"OneInt" {!s32i}>
+
+#expand_two = {
+  return = { kind = "direct" },
+  args   = [ { kind = "expand" } ]
+}
+
+#expand_three = {
+  return = { kind = "direct" },
+  args   = [ { kind = "expand" } ]
+}
+
+#expand_one = {
+  return = { kind = "direct" },
+  args   = [ { kind = "expand" } ]
+}
+
+#expand_expand = {
+  return = { kind = "direct" },
+  args   = [ { kind = "expand" }, { kind = "expand" } ]
+}
+
+#expand_ignore_expand = {
+  return = { kind = "direct" },
+  args   = [ { kind = "expand" },
+             { kind = "ignore" },
+             { kind = "expand" } ]
+}
+
+#sret_expand = {
+  return = { kind = "indirect", indirect_align = 8 },
+  args   = [ { kind = "expand" } ]
+}
+
+#passthrough = {
+  return = { kind = "direct" },
+  args   = [ ]
+}
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+// The single struct arg becomes two i64 block args, stored field-by-field
+// straight into the parameter's own alloca; the original whole-struct store
+// is gone and no scratch alloca/reload is introduced.
+
+cir.func @takes_two_long(%arg0: !rec_TwoLong)
+    attributes { test_classify = #expand_two } {
+  %0 = cir.alloca "p" align(8) init : !cir.ptr<!rec_TwoLong>
+  cir.store %arg0, %0 : !rec_TwoLong, !cir.ptr<!rec_TwoLong>
+  cir.return
+}
+
+// CHECK-LABEL: cir.func{{.*}} @takes_two_long(
+// CHECK-SAME:    %[[F0:.*]]: !s64i, %[[F1:.*]]: !s64i)
+// CHECK-NOT:     ["expand"]
+// CHECK:         %[[P:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!rec_TwoLong>
+// CHECK:         %[[P0:.*]] = cir.get_member %[[P]][0]
+// CHECK:         cir.store %[[F0]], %[[P0]] : !s64i, !cir.ptr<!s64i>
+// CHECK:         %[[P1:.*]] = cir.get_member %[[P]][1]
+// CHECK:         cir.store %[[F1]], %[[P1]] : !s64i, !cir.ptr<!s64i>
+// CHECK-NOT:     cir.load %[[P]] : !cir.ptr<!rec_TwoLong>
+
+// The body loads the spilled struct back (here for the return), so that load
+// stays; only the original arg store is replaced.
+
+cir.func @returns_expanded(%arg0: !rec_TwoLong) -> !rec_TwoLong
+    attributes { test_classify = #expand_two } {
+  %0 = cir.alloca "s" align(8) init : !cir.ptr<!rec_TwoLong>
+  cir.store %arg0, %0 : !rec_TwoLong, !cir.ptr<!rec_TwoLong>
+  %1 = cir.load %0 : !cir.ptr<!rec_TwoLong>, !rec_TwoLong
+  cir.return %1 : !rec_TwoLong
+}
+
+// CHECK-LABEL: cir.func{{.*}} @returns_expanded(
+// CHECK-SAME:    %[[F0:.*]]: !s64i, %[[F1:.*]]: !s64i) -> !rec_TwoLong
+// CHECK:         %[[S:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!rec_TwoLong>
+// CHECK:         %[[P0:.*]] = cir.get_member %[[S]][0]
+// CHECK:         cir.store %[[F0]], %[[P0]] : !s64i, !cir.ptr<!s64i>
+// CHECK:         %[[P1:.*]] = cir.get_member %[[S]][1]
+// CHECK:         cir.store %[[F1]], %[[P1]] : !s64i, !cir.ptr<!s64i>
+// CHECK:         %[[STRUCT:.*]] = cir.load %[[S]] : !cir.ptr<!rec_TwoLong>, !rec_TwoLong
+// CHECK:         cir.return %[[STRUCT]] : !rec_TwoLong
+
+// Three-field expansion.
+
+cir.func @takes_three_int(%arg0: !rec_ThreeInt)
+    attributes { test_classify = #expand_three } {
+  %0 = cir.alloca "s" align(4) init : !cir.ptr<!rec_ThreeInt>
+  cir.store %arg0, %0 : !rec_ThreeInt, !cir.ptr<!rec_ThreeInt>
+  cir.return
+}
+
+// CHECK-LABEL: cir.func{{.*}} @takes_three_int(
+// CHECK-SAME:    %[[A:.*]]: !s32i, %[[B:.*]]: !s32i, %[[C:.*]]: !s32i)
+// CHECK:         %[[S:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!rec_ThreeInt>
+// CHECK:         %[[P0:.*]] = cir.get_member %[[S]][0]
+// CHECK:         cir.store %[[A]], %[[P0]] : !s32i, !cir.ptr<!s32i>
+// CHECK:         %[[P1:.*]] = cir.get_member %[[S]][1]
+// CHECK:         cir.store %[[B]], %[[P1]] : !s32i, !cir.ptr<!s32i>
+// CHECK:         %[[P2:.*]] = cir.get_member %[[S]][2]
+// CHECK:         cir.store %[[C]], %[[P2]] : !s32i, !cir.ptr<!s32i>
+
+// Forward declaration: signature is flattened, no body to instrument.
+
+cir.func private @takes_two_long_decl(!rec_TwoLong)
+    attributes { test_classify = #expand_two }
+
+// CHECK-LABEL: cir.func{{.*}} @takes_two_long_decl(!s64i, !s64i)
+// CHECK-NOT:   !rec_TwoLong
+
+// Caller whose operand is a load of an alloca: read each member directly
+// from that alloca (get_member + load); the whole-struct load is dropped.
+
+cir.func @caller_two_long() attributes { test_classify = #passthrough } {
+  %0 = cir.alloca "s" align(8) : !cir.ptr<!rec_TwoLong>
+  %1 = cir.load %0 : !cir.ptr<!rec_TwoLong>, !rec_TwoLong
+  cir.call @takes_two_long(%1) : (!rec_TwoLong) -> ()
+  cir.return
+}
+
+// CHECK-LABEL: cir.func{{.*}} @caller_two_long()
+// CHECK:         %[[S:.*]] = cir.alloca "s" {{.*}}: !cir.ptr<!rec_TwoLong>
+// CHECK-NOT:     cir.load %[[S]] : !cir.ptr<!rec_TwoLong>
+// CHECK:         %[[P0:.*]] = cir.get_member %[[S]][0]
+// CHECK:         %[[F0:.*]] = cir.load %[[P0]] : !cir.ptr<!s64i>, !s64i
+// CHECK:         %[[P1:.*]] = cir.get_member %[[S]][1]
+// CHECK:         %[[F1:.*]] = cir.load %[[P1]] : !cir.ptr<!s64i>, !s64i
+// CHECK:         cir.call @takes_two_long(%[[F0]], %[[F1]]) : (!s64i, !s64i) -> ()
+
+// Expand composed with Ignore: the middle arg is dropped; the two Expand
+// args each store their two fields into their own alloca.
+
+cir.func @expand_ignore_expand_callee(
+    %a: !rec_TwoLong, %b: !rec_TwoLong, %c: !rec_TwoLong)
+    attributes { test_classify = #expand_ignore_expand } {
+  %0 = cir.alloca "a" align(8) init : !cir.ptr<!rec_TwoLong>
+  %1 = cir.alloca "c" align(8) init : !cir.ptr<!rec_TwoLong>
+  cir.store %a, %0 : !rec_TwoLong, !cir.ptr<!rec_TwoLong>
+  cir.store %c, %1 : !rec_TwoLong, !cir.ptr<!rec_TwoLong>
+  cir.return
+}
+
+// CHECK-LABEL: cir.func{{.*}} @expand_ignore_expand_callee(
+// CHECK-SAME:    %[[A0:.*]]: !s64i, %[[A1:.*]]: !s64i, %[[C0:.*]]: !s64i, %[[C1:.*]]: !s64i)
+// CHECK:         %[[A:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!rec_TwoLong>
+// CHECK:         %[[C:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!rec_TwoLong>
+// CHECK:         %[[AP0:.*]] = cir.get_member %[[A]][0]
+// CHECK:         cir.store %[[A0]], %[[AP0]] : !s64i, !cir.ptr<!s64i>
+// CHECK:         %[[AP1:.*]] = cir.get_member %[[A]][1]
+// CHECK:         cir.store %[[A1]], %[[AP1]] : !s64i, !cir.ptr<!s64i>
+// CHECK:         %[[CP0:.*]] = cir.get_member %[[C]][0]
+// CHECK:         cir.store %[[C0]], %[[CP0]] : !s64i, !cir.ptr<!s64i>
+// CHECK:         %[[CP1:.*]] = cir.get_member %[[C]][1]
+// CHECK:         cir.store %[[C1]], %[[CP1]] : !s64i, !cir.ptr<!s64i>
+
+// One-field expansion: the single block arg is retyped in place.
+
+cir.func @takes_one_int(%arg0: !rec_OneInt)
+    attributes { test_classify = #expand_one } {
+  %0 = cir.alloca "s" align(4) init : !cir.ptr<!rec_OneInt>
+  cir.store %arg0, %0 : !rec_OneInt, !cir.ptr<!rec_OneInt>
+  cir.return
+}
+
+// CHECK-LABEL: cir.func{{.*}} @takes_one_int(
+// CHECK-SAME:    %[[F:.*]]: !s32i)
+// CHECK:         %[[S:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!rec_OneInt>
+// CHECK:         %[[P:.*]] = cir.get_member %[[S]][0]
+// CHECK:         cir.store %[[F]], %[[P]] : !s32i, !cir.ptr<!s32i>
+
+// Two consecutive Expand args: exercises the running block-arg index across
+// multiple expansions.  Each expansion stores into its own alloca at its own
+// store position, so the field-store ordering is deterministic.
+
+cir.func @two_expand_args(%a: !rec_TwoLong, %b: !rec_ThreeInt)
+    attributes { test_classify = #expand_expand } {
+  %0 = cir.alloca "a" align(8) init : !cir.ptr<!rec_TwoLong>
+  %1 = cir.alloca "b" align(4) init : !cir.ptr<!rec_ThreeInt>
+  cir.store %a, %0 : !rec_TwoLong, !cir.ptr<!rec_TwoLong>
+  cir.store %b, %1 : !rec_ThreeInt, !cir.ptr<!rec_ThreeInt>
+  cir.return
+}
+
+// CHECK-LABEL: cir.func{{.*}} @two_expand_args(
+// CHECK-SAME:    %[[A0:.*]]: !s64i, %[[A1:.*]]: !s64i, %[[B0:.*]]: !s32i, %[[B1:.*]]: !s32i, %[[B2:.*]]: !s32i)
+// CHECK:         %[[A:.*]] = cir.alloca "a" {{.*}} init : !cir.ptr<!rec_TwoLong>
+// CHECK:         %[[B:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!rec_ThreeInt>
+// CHECK:         cir.get_member %[[A]][0]
+// CHECK:         cir.store %[[A0]], %{{.*}} : !s64i, !cir.ptr<!s64i>
+// CHECK:         cir.get_member %[[B]][0]
+// CHECK:         cir.store %[[B0]], %{{.*}} : !s32i, !cir.ptr<!s32i>
+
+// Caller with two Expand operands, both loads of allocas.
+
+cir.func @caller_two_expand() attributes { test_classify = #passthrough } {
+  %0 = cir.alloca "a" align(8) : !cir.ptr<!rec_TwoLong>
+  %1 = cir.alloca "b" align(4) : !cir.ptr<!rec_ThreeInt>
+  %a = cir.load %0 : !cir.ptr<!rec_TwoLong>, !rec_TwoLong
+  %b = cir.load %1 : !cir.ptr<!rec_ThreeInt>, !rec_ThreeInt
+  cir.call @two_expand_args(%a, %b) : (!rec_TwoLong, !rec_ThreeInt) -> ()
+  cir.return
+}
+
+// CHECK-LABEL: cir.func{{.*}} @caller_two_expand()
+// CHECK:         %[[A:.*]] = cir.alloca "a" {{.*}}: !cir.ptr<!rec_TwoLong>
+// CHECK:         %[[B:.*]] = cir.alloca "b" {{.*}}: !cir.ptr<!rec_ThreeInt>
+// CHECK-NOT:     cir.load %[[A]] : !cir.ptr<!rec_TwoLong>
+// CHECK-NOT:     cir.load %[[B]] : !cir.ptr<!rec_ThreeInt>
+// CHECK:         cir.get_member %[[A]][0]
+// CHECK:         cir.get_member %[[A]][1]
+// CHECK:         cir.get_member %[[B]][0]
+// CHECK:         cir.get_member %[[B]][1]
+// CHECK:         cir.get_member %[[B]][2]
+// CHECK:         cir.call @two_expand_args(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}) : (!s64i, !s64i, !s32i, !s32i, !s32i) -> ()
+
+// Fallback: the operand is not a load of an alloca (here a struct constant),
+// so members are taken with cir.extract_member on the value.
+
+cir.func @caller_const() attributes { test_classify = #passthrough } {
+  %v = cir.const #cir.zero : !rec_TwoLong
+  cir.call @takes_two_long(%v) : (!rec_TwoLong) -> ()
+  cir.return
+}
+
+// CHECK-LABEL: cir.func{{.*}} @caller_const()
+// CHECK:         %[[V:.*]] = cir.const #cir.zero : !rec_TwoLong
+// CHECK:         %[[F0:.*]] = cir.extract_member %[[V]][0] : !rec_TwoLong -> !s64i
+// CHECK:         %[[F1:.*]] = cir.extract_member %[[V]][1] : !rec_TwoLong -> !s64i
+// CHECK:         cir.call @takes_two_long(%[[F0]], %[[F1]]) : (!s64i, !s64i) -> ()
+
+// sret return + Expand arg: the sret pointer is block arg 0 (sretOffset = 1)
+// and the Expand arg's two scalar block args follow at slots 1 and 2.
+
+cir.func @sret_and_expand(%arg0: !rec_TwoLong) -> !rec_TwoLong
+    attributes { test_classify = #sret_expand } {
+  %0 = cir.alloca "s" align(8) init : !cir.ptr<!rec_TwoLong>
+  cir.store %arg0, %0 : !rec_TwoLong, !cir.ptr<!rec_TwoLong>
+  %1 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_TwoLong>
+  %z = cir.const #cir.zero : !rec_TwoLong
+  cir.store %z, %1 : !rec_TwoLong, !cir.ptr<!rec_TwoLong>
+  %2 = cir.load %1 : !cir.ptr<!rec_TwoLong>, !rec_TwoLong
+  cir.return %2 : !rec_TwoLong
+}
+
+// CHECK-LABEL: cir.func{{.*}} @sret_and_expand(
+// CHECK-SAME:     llvm.sret = !rec_TwoLong
+// CHECK-SAME:     %[[F0:.*]]: !s64i, %[[F1:.*]]: !s64i)
+// CHECK-NOT:   -> !rec_TwoLong
+// CHECK:         %[[S:.*]] = cir.alloca "s" {{.*}} init : !cir.ptr<!rec_TwoLong>
+// CHECK:         %[[P0:.*]] = cir.get_member %[[S]][0]
+// CHECK:         cir.store %[[F0]], %[[P0]] : !s64i, !cir.ptr<!s64i>
+// CHECK:         %[[P1:.*]] = cir.get_member %[[S]][1]
+// CHECK:         cir.store %[[F1]], %[[P1]] : !s64i, !cir.ptr<!s64i>
+
+// The block arg has no spill store (e.g. DCE removed it): the signature is
+// still flattened to scalar field args, but no get_member/store is emitted.
+
+cir.func @takes_two_long_unused(%arg0: !rec_TwoLong)
+    attributes { test_classify = #expand_two } {
+  cir.return
+}
+
+// CHECK-LABEL: cir.func{{.*}} @takes_two_long_unused(
+// CHECK-SAME:    %{{.*}}: !s64i, %{{.*}}: !s64i)
+// CHECK-NOT:     cir.get_member
+// CHECK-NOT:     cir.store
+// CHECK:         cir.return
+
+}
