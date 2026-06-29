@@ -26,7 +26,7 @@ define amdgpu_kernel void @test_fmed3_srcmods(ptr addrspace(1) %out, float %src0
 ; GCN: v_xor_b32_e32 v{{[0-9]+}}, 0x80000000, [[MED3]]
 define amdgpu_kernel void @test_fneg_fmed3_no_nnan(ptr addrspace(1) %out, float %src0, float %src1, float %src2) #1 {
   %med3 = call float @llvm.amdgcn.fmed3.f32(float %src0, float %src1, float %src2)
-  %neg.med3 = fsub float -0.0, %med3
+  %neg.med3 = fneg float %med3
   store float %neg.med3, ptr addrspace(1) %out
   ret void
 }
