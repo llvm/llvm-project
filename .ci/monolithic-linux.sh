@@ -38,6 +38,11 @@ if [[ " ${runtime_targets} " == *" check-libclc "* ]]; then
     -D LLVM_RUNTIME_TARGETS="default;amdgcn-amd-amdhsa-llvm"
   )
 fi
+if [[ ";${runtimes};" == *";openmp;"* && " ${runtime_targets} " != *" openmp "* ]]; then
+  runtime_cmake_args+=(
+    -D LIBOMP_FORTRAN_MODULES_ONLY=ON
+  )
+fi
 
 start-group "CMake"
 
