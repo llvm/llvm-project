@@ -538,7 +538,9 @@ Attribute Changes in Clang
   ISO 18037 fixed-point ``printf`` specifiers.
 
 - The ``const`` and ``pure`` attributes only apply to functions; they are now
-  diagnosed and ignored when applied to anything else.
+  diagnosed and ignored when applied to anything else. Additionally, calling
+  a function marked ``noreturn`` from a function marked ``const`` or ``pure``
+  is now diagnosed as undefined behavior (#GH129022).
 
 Improvements to Clang's diagnostics
 -----------------------------------
