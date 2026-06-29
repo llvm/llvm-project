@@ -37,6 +37,10 @@ void populateWrapFuncInClass(
     RewritePatternSet &patterns, StringRef funcName,
     DenseMap<FuncOp, llvm::DenseSet<GlobalOp>> &globalsToMove);
 
+/// Populates `patterns` with patterns to add reflection map for EmitC classes.
+void populateMLGOAddReflectionMapPatterns(RewritePatternSet &patterns,
+                                          StringRef namedAttribute);
+
 } // namespace emitc
 } // namespace mlir
 
