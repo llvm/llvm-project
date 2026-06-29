@@ -487,8 +487,6 @@ public:
       if (OperandTy == Ctx.BoolTy && OperandTy != RetTy &&
           RetTy->isIntegerType()) {
 
-        // Converting an expression from bool to a non-bool integer invalidates
-        // it
         if (hasComparison)
           *hasComparison = false;
 
