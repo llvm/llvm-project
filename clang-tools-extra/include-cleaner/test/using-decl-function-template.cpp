@@ -6,17 +6,14 @@
 // indirect header is stale (remove it) AND that the origin header is missing
 // (insert it).
 //
-// BUG: for a *function template* (unlike a plain function, a class template, or
-// a variable template) the use is recorded on the specialization / using-shadow
-// decl, never on the primary FunctionTemplateDecl. So WalkAST's VisitUsingDecl
-// downgrades the reference to the origin to RefType::Ambiguous, the origin
-// header is never *demanded*, and include-cleaner removes the indirect header
-// without inserting the origin -- a build-breaking suggestion.
-//
-// Once WalkAST.cpp treats a used function-template using-decl as an explicit
-// reference, this should pass; drop the XFAIL below at that point.
-//
-// XFAIL: *
+// Regression: for a *function template* (unlike a plain function, a class
+// template, or a variable template) the call is recorded on the implicitly
+// instantiated specialization, not on the primary FunctionTemplateDecl. If
+// WalkAST's VisitUsingDecl only inspected the primary decl it would downgrade
+// the reference to the origin to RefType::Ambiguous, never *demand* the origin
+// header, and remove the indirect header without inserting the origin -- a
+// build-breaking suggestion. VisitUsingDecl consults the specializations to
+// avoid this.
 
 #include "func_template_reexport.h"
 

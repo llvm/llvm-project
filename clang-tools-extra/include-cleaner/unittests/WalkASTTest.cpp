@@ -281,6 +281,22 @@ template<> void $ambiguous^function(int);       // full specialization
            "using ns::^function;");
 }
 
+TEST(WalkAST, UsedFunctionTemplateFromUsingDecl) {
+  // A call to a function template named through a using-decl marks the
+  // specialization (not the primary FunctionTemplateDecl) as used. The
+  // using-decl must still report the primary template as an explicit reference,
+  // otherwise the origin header is never demanded. See the unused case above,
+  // which stays ambiguous.
+  testWalk(R"cpp(
+namespace ns {
+template<class T> void $explicit^function(T);  // primary template
+template<> void $ambiguous^function(int);      // full specialization
+}
+  )cpp",
+           "using ns::^function;\n"
+           "void run() { function(0); }");
+}
+
 TEST(WalkAST, Alias) {
   testWalk(R"cpp(
     namespace ns { int x; }
@@ -331,6 +347,22 @@ TEST(WalkAST, Using) {
     })cpp",
            "using ns::^x;");
   testWalk("namespace ns { struct S; } using ns::$explicit^S;", "^S *s;");
+
+  // A used function template named via a using-decl is explicit, even though
+  // the call is recorded against the (instantiated) specialization rather than
+  // the primary FunctionTemplateDecl. The specialization is additionally
+  // reported as ambiguous at the same location.
+  testWalk(R"cpp(
+    namespace ns {
+      template <class T> void $explicit^$ambiguous^x(T);
+    })cpp",
+           "using ns::^x; void foo() { x(0); }");
+  // An unused function template stays ambiguous.
+  testWalk(R"cpp(
+    namespace ns {
+      template <class T> void $ambiguous^x(T);
+    })cpp",
+           "using ns::^x;");
 
   testWalk(R"cpp(
     namespace ns {
