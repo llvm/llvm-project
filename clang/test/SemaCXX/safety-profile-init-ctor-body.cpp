@@ -94,6 +94,21 @@ struct MarkerWithListInit {
   MarkerWithListInit() : m(0) { int y = m; (void)y; }
 };
 
+// A delegating constructor's target initializes the members before the body
+// runs (paper §5.1), so its body is not analyzed.
+struct Delegating {
+  int m [[uninit]];
+  Delegating() : Delegating(0) { int y = m; (void)y; }
+  Delegating(int v) : m(v) {}
+};
+
+// A read of another object's member is not a read of the current object.
+struct ReadsOtherObject {
+  int m [[uninit]];
+  ReadsOtherObject() { m = 0; }
+  ReadsOtherObject(const ReadsOtherObject &o) { m = o.m; }
+};
+
 struct MultipleMembers {
   int a [[uninit]];
   int b [[uninit]]; // expected-note {{member 'b' declared here}}
