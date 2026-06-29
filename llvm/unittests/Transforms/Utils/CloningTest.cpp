@@ -853,7 +853,7 @@ TEST(CloneFunction, CloneFunctionWithRetainedNodes) {
     !30 = !DILocalVariable(name: "const_ptr", scope: !3, type: !29)
     !31 = !DISubroutineType(types: !32)
     !32 = !{null}
-    !33 = !DIGlobalVariableExpression(var: !33, expr: !DIExpression())
+    !33 = !DIGlobalVariableExpression(var: !34, expr: !DIExpression())
     !34 = distinct !DIGlobalVariable(name: "global_var", scope: !3, file: !1, line: 5, type: !22, isLocal: true, isDefinition: true)
   )";
 
