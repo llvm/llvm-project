@@ -679,7 +679,7 @@ public:
   bool haveFastClmul(IntegerType *Ty) const override {
     // FIXME: clmul should really be Promote for any bitwidth under the largest
     // legal bitwidth for clmul. This is a hack to get around that shortcoming.
-    auto *PromoteTy = dyn_cast_if_present<IntegerType>(
+    auto *PromoteTy = cast_if_present<IntegerType>(
         DL.getLargestLegalIntType(Ty->getContext()));
     if (PromoteTy && Ty->getBitWidth() <= PromoteTy->getBitWidth())
       Ty = PromoteTy;
