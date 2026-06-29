@@ -820,7 +820,7 @@ void TargetPassConfig::addStripDebugPass() {
 }
 
 void TargetPassConfig::addCheckDebugPass() {
-  PM->add(createCheckDebugMachineModulePass());
+  PM->add(createCheckDebugMachineModuleLegacyPass());
 }
 
 void TargetPassConfig::addMachinePrePasses(bool AllowDebugify) {
