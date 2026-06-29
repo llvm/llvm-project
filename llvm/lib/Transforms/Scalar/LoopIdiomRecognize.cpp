@@ -32,6 +32,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -1673,15 +1674,10 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
   // Finally, clean up the loop as much as possible so it can be trivially
   // deleted.
   {
-    // Add the loop PHI nodes to a worklist since deleting a PHI invalidates the
-    // iterator.
-    SmallVector<PHINode *, 3> LoopPHIs;
-    for (PHINode &PN : CurLoop->getHeader()->phis()) {
+    for (PHINode &PN : make_early_inc_range(CurLoop->getHeader()->phis())) {
       PN.replaceAllUsesWith(PoisonValue::get(PN.getType()));
-      LoopPHIs.push_back(&PN);
+      RecursivelyDeleteDeadPHINode(&PN);
     }
-    for (PHINode *PN : LoopPHIs)
-      RecursivelyDeleteDeadPHINode(PN);
     // Replace the exit condition with constant true/false to always cause a
     // branch to the exit block.
     deleteDeadInstruction(CurLoop->getLatchCmpInst());
