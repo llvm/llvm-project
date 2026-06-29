@@ -2290,16 +2290,24 @@ Value *llvm::addDiffRuntimeChecks(
     // Compute the distance between first/last bytes of the accessed memory
     // during one vector loop iteration. This is equal to
     // VF*IC*Stride-(Stride-AccessSize).
+    uint64_t ICTimesStride = IC * AbsCommonStrideInBytes;
+    if (!isUIntN(Ty->getScalarSizeInBits(), ICTimesStride)) {
+      // This is probably UB in the original IR, but let's be conservative:
+      Ty = Ty->getWithNewBitWidth(Ty->getScalarSizeInBits() * 2);
+      assert(isUIntN(Ty->getScalarSizeInBits(), ICTimesStride));
+    }
     auto *VectorIterAccessSpan =
         ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
-                             ConstantInt::get(Ty, IC * AbsCommonStrideInBytes));
+                             ConstantInt::get(Ty, ICTimesStride));
     VectorIterAccessSpan = ChkBuilder.CreateSub(
         VectorIterAccessSpan,
         ConstantInt::get(Ty, AbsCommonStrideInBytes - AccessSize));
     const SCEV *SinkStartRewritten = Rewriter.visit(SinkStart);
     const SCEV *SrcStartRewritten = Rewriter.visit(SrcStart);
     Value *Diff = Expander.expandCodeFor(
-        SE.getMinusSCEV(SinkStartRewritten, SrcStartRewritten), Ty, Loc);
+        SE.getNoopOrSignExtend(
+            SE.getMinusSCEV(SinkStartRewritten, SrcStartRewritten), Ty),
+        Ty, Loc);
 
     // Check if the same compare has already been created earlier. In that case,
     // there is no need to check it again.
