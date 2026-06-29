@@ -107,6 +107,25 @@ const ParsedAttrInfo &ParsedAttrInfo::get(const AttributeCommonInfo &A) {
   if ((size_t)A.getParsedKind() < std::size(AttrInfoMap))
     return *AttrInfoMap[A.getParsedKind()];
 
+  // If this is an annotation then return an appropriate ParsedAttrInfo.
+  static const ParsedAttrInfo AnnotationAttrInfo(
+      AttributeCommonInfo::AT_CXX26Annotation, // AttrKind
+      1,                                       // NumArgs
+      0,                                       // OptArgs
+      1,                                       // NumArgMembers
+      1,                                       // HasCustomParsing
+      0,                                       // AcceptsExprPack
+      0,                                       // IsTargetSpecific
+      1,                                       // IsType
+      1,                                       // IsStmt
+      0,                                       // IsKnownToGCC
+      0,                                       // IsSupportedByPragmaAttribute
+      {},                                      // Spellings
+      nullptr                                  // ArgNames
+  );
+  if (A.getSyntax() == AttributeCommonInfo::AS_Annotation)
+    return AnnotationAttrInfo;
+
   // If this is an ignored attribute then return an appropriate ParsedAttrInfo.
   static const ParsedAttrInfo IgnoredParsedAttrInfo(
       AttributeCommonInfo::IgnoredAttribute);
@@ -184,6 +203,10 @@ bool ParsedAttr::isTargetSpecificAttr() const {
   return getInfo().IsTargetSpecific;
 }
 
+bool ParsedAttr::isAnnotationAttr() const {
+  return getParsedKind() == AT_CXX26Annotation;
+}
+
 bool ParsedAttr::isTypeAttr() const { return getInfo().IsType; }
 
 bool ParsedAttr::isStmtAttr() const { return getInfo().IsStmt; }
@@ -194,8 +217,8 @@ bool ParsedAttr::existsInTarget(const TargetInfo &Target) const {
   // If the attribute has a target-specific spelling, check that it exists.
   // Only call this if the attr is not ignored/unknown. For most targets, this
   // function just returns true.
-  bool HasSpelling = K != IgnoredAttribute && K != UnknownAttribute &&
-                     K != NoSemaHandlerAttribute;
+  bool HasSpelling = !isAnnotationAttr() && K != IgnoredAttribute &&
+                     K != UnknownAttribute && K != NoSemaHandlerAttribute;
   bool TargetSpecificSpellingExists =
       !HasSpelling ||
       getInfo().spellingExistsInTarget(Target, getAttributeSpellingListIndex());
@@ -215,7 +238,7 @@ bool ParsedAttr::slidesFromDeclToDeclSpecLegacyBehavior() const {
     // atributes.
     return false;
 
-  assert(isStandardAttributeSyntax() || isAlignas());
+  assert(isStandardAttributeSyntax() || isAlignas() || isCXX26Annotation());
 
   // We have historically allowed some type attributes with standard attribute
   // syntax to slide to the decl-specifier-seq, so we have to keep supporting

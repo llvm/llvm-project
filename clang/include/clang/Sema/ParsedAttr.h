@@ -216,6 +216,20 @@ private:
       memcpy(getArgsBuffer(), args, numArgs * sizeof(ArgsUnion));
   }
 
+  /// Constructor for an annotation with expression argument
+  ParsedAttr(SourceRange attrRange, AttributeScopeInfo scope, ArgsUnion *args,
+             unsigned numArgs, Form formUsed, SourceLocation ellipsisLoc)
+      : AttributeCommonInfo(attrRange, ParsedAttr::Kind::AT_CXX26Annotation,
+                            ParsedAttr::Form::Annotation()),
+        EllipsisLoc(ellipsisLoc), NumArgs(numArgs), Invalid(false),
+        UsedAsTypeAttr(false), IsAvailability(false),
+        IsTypeTagForDatatype(false), IsProperty(false), HasParsedType(false),
+        HasProcessingCache(false), IsPragmaClangAttribute(false),
+        Info(ParsedAttrInfo::get(*this)) {
+    assert(numArgs == 1);
+    memcpy(getArgsBuffer(), args, sizeof(ArgsUnion));
+  }
+
   /// Constructor for availability attributes.
   ParsedAttr(IdentifierInfo *attrName, SourceRange attrRange,
              AttributeScopeInfo scope, IdentifierLoc *Parm,
@@ -504,6 +518,7 @@ public:
   /// error. Returns false if a diagnostic is produced.
   bool checkAtMostNumArgs(class Sema &S, unsigned Num) const;
 
+  bool isAnnotationAttr() const;
   bool isTargetSpecificAttr() const;
   bool isTypeAttr() const;
   bool isStmtAttr() const;
@@ -731,6 +746,22 @@ public:
   /// Removes the attributes from \c List, which are owned by \c Pool, and adds
   /// them at the end of this \c AttributePool.
   void takeFrom(ParsedAttributesView &List, AttributePool &Pool);
+
+  // Create a Cxx26 annotation
+  ParsedAttr *create(SourceRange attrRange, AttributeScopeInfo scope,
+                     ArgsUnion *args, unsigned numArgs, ParsedAttr::Form form,
+                     SourceLocation ellipsisLoc = SourceLocation()) {
+    // Only annotations are allowed to pass through without an identifier
+    assert(form.getSyntax() == ParsedAttr::Syntax::AS_Annotation);
+
+    void *memory = allocate(
+        ParsedAttr::totalSizeToAlloc<ArgsUnion, detail::AvailabilityData,
+                                     detail::TypeTagForDatatypeData, ParsedType,
+                                     detail::PropertyData>(numArgs, 0, 0, 0,
+                                                           0));
+    return add(new (memory) ParsedAttr(attrRange, scope, args, numArgs, form,
+                                       ellipsisLoc));
+  }
 
   ParsedAttr *create(IdentifierInfo *attrName, SourceRange attrRange,
                      AttributeScopeInfo scope, ArgsUnion *args,
@@ -972,6 +1003,16 @@ public:
     clearListOnly();
     pool.clear();
     Range = SourceRange();
+  }
+
+  /// Add annotation with expression argument
+  ParsedAttr *addNew(SourceRange attrRange, AttributeScopeInfo scope,
+                     ArgsUnion *args, unsigned numArgs, ParsedAttr::Form form,
+                     SourceLocation ellipsisLoc = SourceLocation()) {
+    ParsedAttr *attr =
+        pool.create(attrRange, scope, args, numArgs, form, ellipsisLoc);
+    addAtEnd(attr);
+    return attr;
   }
 
   /// Add attribute with expression arguments.
