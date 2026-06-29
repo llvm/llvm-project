@@ -391,6 +391,40 @@ TEST_F(DefinitionBlockSeparatorTest, Always) {
                Style, Prefix + Infix + Postfix);
 }
 
+TEST_F(DefinitionBlockSeparatorTest, AlwaysMaxEmptyLinesZeroAllman) {
+  FormatStyle Style = getLLVMStyle();
+  Style.BreakBeforeBraces = FormatStyle::BS_Allman;
+  Style.MaxEmptyLinesToKeep = 0;
+  Style.SeparateDefinitionBlocks = FormatStyle::SDS_Always;
+
+  constexpr StringRef Expected = "uint32_t my_function(uint32_t a1)\n"
+                                 "{\n"
+                                 "  uint32_t b = a1 + 1;\n"
+                                 "  return a1;\n"
+                                 "}\n"
+                                 "\n"
+                                 "uint32_t other_function(uint32_t a1)\n"
+                                 "{\n"
+                                 "  uint32_t b = a1 + 1;\n"
+                                 "  return a1;\n"
+                                 "}\n";
+
+  constexpr StringRef Input = "uint32_t my_function(uint32_t a1)\n"
+                              "\n"
+                              "{\n"
+                              "  uint32_t b = a1 + 1;\n"
+                              "  return a1;\n"
+                              "}\n"
+                              "uint32_t other_function(uint32_t a1)\n"
+                              "\n"
+                              "{\n"
+                              "  uint32_t b = a1 + 1;\n"
+                              "  return a1;\n"
+                              "}\n";
+
+  verifyFormat(Input, Style, Expected);
+}
+
 TEST_F(DefinitionBlockSeparatorTest, Never) {
   FormatStyle Style = getLLVMStyle();
   Style.SeparateDefinitionBlocks = FormatStyle::SDS_Never;
