@@ -11,6 +11,7 @@
 
 #include <ranges>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 
 struct DefaultConstructibleView : std::ranges::view_base {

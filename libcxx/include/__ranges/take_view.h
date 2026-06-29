@@ -37,6 +37,7 @@
 #include <__ranges/view_interface.h>
 #include <__type_traits/decay.h>
 #include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/make_unsigned.h>
 #include <__type_traits/maybe_const.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/auto_cast.h>
