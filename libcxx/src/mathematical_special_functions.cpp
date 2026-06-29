@@ -19,6 +19,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 #if _LIBCPP_STD_VER >= 17
 
+namespace __math {
 namespace {
 // Error policy for all Boost.Math calls: report domain/pole/overflow/evaluation
 // errors via errno (errno_on_error) instead of throwing. Boost sets errno to
@@ -67,13 +68,15 @@ _Ret __invoke_boost_math(_Func __f, _Args... __args) {
 } // namespace
 
 // assoc_laguerre
-float assoc_laguerref(unsigned int __n, unsigned int __m, float __x) noexcept {
+float __assoc_laguerre(unsigned __n, unsigned __m, float __x) noexcept {
   return __invoke_boost_math([](auto... __args) { return boost::math::laguerre(__args...); }, __n, __m, __x);
 }
 
-long double assoc_laguerrel(unsigned int __n, unsigned int __m, long double __x) noexcept {
+long double __assoc_laguerre(unsigned __n, unsigned __m, long double __x) noexcept {
   return __invoke_boost_math([](auto... __args) { return boost::math::laguerre(__args...); }, __n, __m, __x);
 }
+
+} // namespace __math
 
 #endif
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS

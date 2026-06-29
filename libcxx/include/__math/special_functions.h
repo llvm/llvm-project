@@ -11,6 +11,7 @@
 #define _LIBCPP___MATH_SPECIAL_FUNCTIONS_H
 
 #include <__config>
+#include <__configuration/attributes.h>
 #include <__math/copysign.h>
 #include <__math/traits.h>
 #include <__type_traits/enable_if.h>
@@ -26,8 +27,19 @@ _LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 #if _LIBCPP_STD_VER >= 17
 
 // assoc_laguerre
-[[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI float assoc_laguerref(unsigned int __n, unsigned int __m, float __x) noexcept;
-[[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI long double assoc_laguerrel(unsigned int __n, unsigned int __m, long double __x) noexcept;
+namespace __math {
+[[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI float __assoc_laguerre(unsigned, unsigned, float) noexcept;
+[[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI long double __assoc_laguerre(unsigned, unsigned, long double) noexcept;
+} // namespace __math
+
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI float assoc_laguerref(unsigned __n, unsigned __m, float __x) noexcept {
+  return __math::__assoc_laguerre(__n, __m, __x);
+}
+
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI long double
+assoc_laguerrel(unsigned __n, unsigned __m, long double __x) noexcept {
+  return __math::__assoc_laguerre(__n, __m, __x);
+}
 
 #endif // _LIBCPP_STD_VER >= 17
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
