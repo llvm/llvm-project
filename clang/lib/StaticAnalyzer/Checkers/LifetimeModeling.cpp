@@ -31,9 +31,12 @@ std::vector<const MemRegion *> getLifetimeSourceSet(ProgramStateRef State,
   if (const auto *SourceSet = State->get<LifetimeBoundMap>(Val)) {
     for (const MemRegion *Region : *SourceSet)
       StoreRegion.push_back(Region);
-    return StoreRegion;
   }
   return StoreRegion;
+}
+
+bool isDeallocated(ProgramStateRef State, const MemRegion *Region) {
+  return State->contains<DeallocatedSourceSet>(Region);
 }
 
 static ProgramStateRef bindValues(ProgramStateRef State, SVal RetVal,

@@ -10,6 +10,7 @@ namespace ento {
 namespace lifetimemodeling {
 
 std::vector<const MemRegion *> getLifetimeSourceSet(ProgramStateRef, SVal);
+bool isDeallocated(ProgramStateRef, const MemRegion *);
 
 } // namespace lifetimemodeling
 } // namespace ento

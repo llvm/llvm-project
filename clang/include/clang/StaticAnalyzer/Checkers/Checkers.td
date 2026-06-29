@@ -799,6 +799,14 @@ def UseAfterLifetimeEnd : Checker<"UseAfterLifetimeEnd">,
   Dependencies<[LifetimeModeling]>,
   Documentation<NotDocumented>;
 
+<<<<<<< Updated upstream
+=======
+def ReportDanglingPtrDeref : Checker<"ReportDanglingPtrDeref">,
+  HelpText<"Check for dereferences of a dangling pointer">,
+  Dependencies<[LifetimeModeling]>,
+  Documentation<NotDocumented>;
+
+>>>>>>> Stashed changes
 } // end: "alpha.cplusplus"
 
 //===----------------------------------------------------------------------===//
