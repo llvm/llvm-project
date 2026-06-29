@@ -20,6 +20,7 @@ add_entrypoint_object(
     libc.hdr.limits_macros
     libc.hdr.types.size_t
     libc.src.__support.common
+    libc.src.__support.CPP.optional
     libc.src.__support.CPP.string
     libc.src.__support.CPP.string_view
     libc.src.__support.error_or

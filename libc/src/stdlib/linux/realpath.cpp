@@ -15,6 +15,7 @@
 #include "hdr/errno_macros.h"
 #include "hdr/limits_macros.h"
 #include "hdr/types/size_t.h"
+#include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/OSUtil/path.h"
@@ -26,9 +27,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 namespace {
-
-// Dummy struct to represent success in `ErrorOr` when no value is needed.
-struct Ok {};
 
 // Container for a fully resolved, canonical path.
 //
@@ -43,7 +41,7 @@ public:
 
   void set_to_root() { path_ = path::SEPARATOR; }
 
-  ErrorOr<Ok> set_to_cwd() { return Error(ENOSYS); }
+  cpp::optional<Error> set_to_cwd() { return Error(ENOSYS); }
 
   // Removes the trailing path component.
   void set_to_parent() {
@@ -55,10 +53,10 @@ public:
   }
 
   // Adds a single component to the end of this path.
-  ErrorOr<Ok> push_component(cpp::string_view component) {
+  cpp::optional<Error> push_component(cpp::string_view component) {
     if (!path::is_root(path_)) {
-      if (ErrorOr<Ok> res = push_raw(path::SEPARATOR); !res)
-        return res;
+      if (cpp::optional<Error> err = push_raw(path::SEPARATOR); err)
+        return err;
     }
 
     return push_raw(component);
@@ -75,17 +73,19 @@ public:
   }
 
 private:
-  ErrorOr<Ok> push_raw(cpp::string_view value) {
+  cpp::optional<Error> push_raw(cpp::string_view value) {
     // -1 because PATH_MAX includes a null-terminator.
     size_t remaining_bytes = (PATH_MAX - 1) - path_.size();
     if (value.size() > remaining_bytes)
       return Error(ENAMETOOLONG);
 
     path_ += value;
-    return Ok{};
+    return cpp::nullopt;
   }
 
-  ErrorOr<Ok> push_raw(char c) { return push_raw(cpp::string_view(&c, 1)); }
+  cpp::optional<Error> push_raw(char c) {
+    return push_raw(cpp::string_view(&c, 1));
+  }
 
   cpp::string path_;
 };
@@ -136,8 +136,8 @@ private:
   cpp::string_view view_;
 };
 
-ErrorOr<Ok> resolve_path(PendingPath &pending_path,
-                         ResolvedPath &resolved_path) {
+cpp::optional<Error> resolve_path(PendingPath &pending_path,
+                                  ResolvedPath &resolved_path) {
   while (!pending_path.empty()) {
     cpp::string_view component = pending_path.advance_component();
     if (component.empty() || component == ".")
@@ -148,11 +148,11 @@ ErrorOr<Ok> resolve_path(PendingPath &pending_path,
       continue;
     }
 
-    if (ErrorOr<Ok> res = resolved_path.push_component(component); !res)
-      return res;
+    if (cpp::optional<Error> err = resolved_path.push_component(component); err)
+      return err;
   }
 
-  return Ok{};
+  return cpp::nullopt;
 }
 
 ErrorOr<char *> realpath_impl(const char *__restrict path_cstr,
@@ -171,12 +171,12 @@ ErrorOr<char *> realpath_impl(const char *__restrict path_cstr,
 
   ResolvedPath resolved_path;
   if (!path::is_absolute(path)) {
-    if (ErrorOr<Ok> res = resolved_path.set_to_cwd(); !res)
-      return Error(res.error());
+    if (cpp::optional<Error> err = resolved_path.set_to_cwd(); err)
+      return *err;
   }
 
-  if (ErrorOr<Ok> res = resolve_path(pending_path, resolved_path); !res)
-    return Error(res.error());
+  if (cpp::optional<Error> err = resolve_path(pending_path, resolved_path); err)
+    return *err;
 
   if (resolved_path_buf != nullptr) {
     resolved_path.copy_to(resolved_path_buf);
