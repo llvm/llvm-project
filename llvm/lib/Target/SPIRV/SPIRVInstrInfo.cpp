@@ -171,7 +171,7 @@ bool SPIRVInstrInfo::canUseFastMathFlags(const MachineInstr &MI,
   }
 }
 
-bool SPIRVInstrInfo::canUseNSW(const MachineInstr &MI) const {
+bool SPIRVInstrInfo::canUseIntegerWrapDecoration(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case SPIRV::OpIAddS:
   case SPIRV::OpIAddV:
@@ -182,22 +182,6 @@ bool SPIRVInstrInfo::canUseNSW(const MachineInstr &MI) const {
   case SPIRV::OpShiftLeftLogicalS:
   case SPIRV::OpShiftLeftLogicalV:
   case SPIRV::OpSNegate:
-    return true;
-  default:
-    return false;
-  }
-}
-
-bool SPIRVInstrInfo::canUseNUW(const MachineInstr &MI) const {
-  switch (MI.getOpcode()) {
-  case SPIRV::OpIAddS:
-  case SPIRV::OpIAddV:
-  case SPIRV::OpISubS:
-  case SPIRV::OpISubV:
-  case SPIRV::OpIMulS:
-  case SPIRV::OpIMulV:
-  case SPIRV::OpShiftLeftLogicalS:
-  case SPIRV::OpShiftLeftLogicalV:
     return true;
   default:
     return false;
