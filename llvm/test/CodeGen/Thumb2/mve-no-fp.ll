@@ -60,9 +60,7 @@ define i32 @fptoui_sat_i32_f32(float %x) {
 ; CHECK-NEXT:    mov r0, r4
 ; CHECK-NEXT:    bl __aeabi_fcmpgt
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r5, #-1
-; CHECK-NEXT:    mov r0, r5
+; CHECK-NEXT:    csinv r0, r5, zr, eq
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  @ %bb.1:
@@ -107,8 +105,7 @@ define i64 @fptosi_sat_i64_f64(double %x) {
 ; CHECK-NEXT:    mov r1, r4
 ; CHECK-NEXT:    mov r2, r6
 ; CHECK-NEXT:    mov r3, r4
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r7, #-1
+; CHECK-NEXT:    csinv r7, r7, zr, eq
 ; CHECK-NEXT:    bl __aeabi_dcmpun
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    mov r0, r6
@@ -164,43 +161,40 @@ define i64 @fptosu_sat_i64_f64(double %x) {
 ; CHECK-NEXT:    mov r5, r0
 ; CHECK-NEXT:    bl __aeabi_d2ulz
 ; CHECK-NEXT:    vldr d0, .LCPI3_0
-; CHECK-NEXT:    mov r7, r0
-; CHECK-NEXT:    mov r6, r1
+; CHECK-NEXT:    mov r9, r0
+; CHECK-NEXT:    mov r8, r1
 ; CHECK-NEXT:    mov r0, r5
-; CHECK-NEXT:    vmov r10, r9, d0
+; CHECK-NEXT:    vmov r11, r10, d0
 ; CHECK-NEXT:    mov r1, r4
-; CHECK-NEXT:    mov r2, r10
-; CHECK-NEXT:    mov r3, r9
+; CHECK-NEXT:    mov r2, r11
+; CHECK-NEXT:    mov r3, r10
 ; CHECK-NEXT:    bl __aeabi_dcmpge
 ; CHECK-NEXT:    vldr d0, .LCPI3_1
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    csel r7, r7, r0, ne
+; CHECK-NEXT:    csel r9, r9, r0, ne
 ; CHECK-NEXT:    mov r0, r5
-; CHECK-NEXT:    vmov r8, r11, d0
+; CHECK-NEXT:    vmov r7, r6, d0
 ; CHECK-NEXT:    mov r1, r4
-; CHECK-NEXT:    mov r2, r8
-; CHECK-NEXT:    mov r3, r11
+; CHECK-NEXT:    mov r2, r7
+; CHECK-NEXT:    mov r3, r6
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    mov r0, r5
 ; CHECK-NEXT:    mov r1, r4
-; CHECK-NEXT:    mov r2, r10
-; CHECK-NEXT:    mov r3, r9
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r7, #-1
+; CHECK-NEXT:    mov r2, r11
+; CHECK-NEXT:    mov r3, r10
+; CHECK-NEXT:    csinv r9, r9, zr, eq
 ; CHECK-NEXT:    bl __aeabi_dcmpge
 ; CHECK-NEXT:    cmp r0, #0
 ; CHECK-NEXT:    mov r1, r4
-; CHECK-NEXT:    csel r6, r6, r0, ne
+; CHECK-NEXT:    csel r8, r8, r0, ne
 ; CHECK-NEXT:    mov r0, r5
-; CHECK-NEXT:    mov r2, r8
-; CHECK-NEXT:    mov r3, r11
+; CHECK-NEXT:    mov r2, r7
+; CHECK-NEXT:    mov r3, r6
 ; CHECK-NEXT:    bl __aeabi_dcmpgt
 ; CHECK-NEXT:    cmp r0, #0
-; CHECK-NEXT:    it ne
-; CHECK-NEXT:    movne.w r6, #-1
-; CHECK-NEXT:    mov r0, r7
-; CHECK-NEXT:    mov r1, r6
+; CHECK-NEXT:    mov r0, r9
+; CHECK-NEXT:    csinv r1, r8, zr, eq
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11, pc}
 ; CHECK-NEXT:    .p2align 3
