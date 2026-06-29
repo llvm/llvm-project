@@ -179,6 +179,35 @@ void test_call_arguments() {
   [[profiles::suppress(std::init)]] { take_ptr(&g_uninit); } // OK: suppressed
 }
 
+// A defaulted pointer or reference argument is checked against the parameter's
+// [[ref_to_uninit]] marking at the call site, like an explicit argument. The
+// declarations themselves stay clean; the diagnostic fires at the call.
+void def_uninit_ptr(int *p [[ref_to_uninit]] = &g_uninit);
+void def_uninit_ptr_bad(int *p [[ref_to_uninit]] = &g_init);
+void def_ptr(int *p = &g_init);
+void def_ptr_bad(int *p = &g_uninit);
+void def_uninit_ref(int &r [[ref_to_uninit]] = g_uninit);
+void def_uninit_ref_bad(int &r [[ref_to_uninit]] = g_init);
+void def_ref(int &r = g_init);
+void def_ref_bad(int &r = g_uninit);
+
+void test_default_arguments() {
+  def_uninit_ptr();     // OK
+  def_uninit_ptr_bad(); // expected-error {{pointer marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  def_ptr();            // OK
+  def_ptr_bad();        // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  def_uninit_ref();     // OK
+  def_uninit_ref_bad(); // expected-error {{reference marked '[[ref_to_uninit]]' must refer to uninitialized memory under profile 'std::init'}}
+  def_ref();            // OK
+  def_ref_bad();        // expected-error {{reference to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+
+  // An explicit argument overrides the default and is checked on its own merits.
+  def_ptr_bad(&g_init); // OK
+
+  // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+  [[profiles::suppress(std::init)]] { def_ptr_bad(); } // OK: suppressed
+}
+
 struct Inner { int m; };
 
 // Member access through a [[ref_to_uninit]] pointer denotes uninitialized
