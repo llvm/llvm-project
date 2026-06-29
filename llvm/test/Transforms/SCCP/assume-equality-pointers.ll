@@ -118,6 +118,20 @@ merge:
   ret i32 %v
 }
 
+define ptr @assume_pointers_equality_maybe_different_provenance_5(ptr %x) {
+; CHECK-LABEL: define ptr @assume_pointers_equality_maybe_different_provenance_5(
+; CHECK-SAME: ptr [[X:%.*]]) {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[X]], inttoptr (i64 12345678 to ptr)
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[X]], i64 8
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %cmp = icmp eq ptr %x, inttoptr (i64 12345678 to ptr)
+  call void @llvm.assume(i1 %cmp)
+  %gep = getelementptr i8, ptr %x, i64 8
+  ret ptr %gep
+}
+
 define i1 @assume_pointers_equality_can_replace_valid(ptr %x, ptr %y) {
 ; CHECK-LABEL: define i1 @assume_pointers_equality_can_replace_valid(
 ; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]]) {

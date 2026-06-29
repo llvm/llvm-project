@@ -98,17 +98,9 @@ bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
   if (V->getType()->isPointerTy()) {
     const auto &LV = getLatticeValueFor(V);
     if (LV.mayHaveDifferentProvenance()) {
-      const DataLayout *DL = nullptr;
-      if (auto *I = dyn_cast<Instruction>(V))
-        DL = &I->getDataLayout();
-      else if (auto *A = dyn_cast<Argument>(V))
-        DL = &A->getParent()->getDataLayout();
-
-      if (!DL)
-        return false;
-
+      const DataLayout &DL = getDataLayout();
       bool Changed = V->replaceUsesWithIf(Const, [&](Use &U) {
-        bool CanReplace = canReplacePointersInUseIfEqual(U, Const, *DL);
+        bool CanReplace = canReplacePointersInUseIfEqual(U, Const, DL);
         if (CanReplace)
           LLVM_DEBUG(dbgs() << "  Constant pointer: " << *Const << " = " << *V
                             << '\n');
@@ -853,6 +845,8 @@ private:
   void visitInstruction(Instruction &I);
 
 public:
+  const DataLayout &getDataLayout() const { return DL; }
+
   void addPredicateInfo(Function &F, DominatorTree &DT, AssumptionCache &AC) {
     FnPredicateInfo.insert({&F, std::make_unique<PredicateInfo>(
                                     F, DT, AC, PredicateInfoAllocator)});
@@ -1871,9 +1865,14 @@ void SCCPInstVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
     return (void)markOverdefined(&I);
   }
 
-  if (Constant *C = ConstantFoldInstOperands(&I, Operands, DL))
+  if (Constant *C = ConstantFoldInstOperands(&I, Operands, DL)) {
     markConstant(&I, C);
-  else
+    // The pointer operand's lattice has found to be a constant, however, the
+    // returned pointer of the GEP may not be freely substituted, as it may have
+    // been derived from a pointer with potentially different provenance.
+    if (PtrState.mayHaveDifferentProvenance())
+      ValueState[&I].setMayHaveDifferentProvenance(true);
+  } else
     markOverdefined(&I);
 }
 
@@ -2357,6 +2356,10 @@ SCCPSolver::SCCPSolver(
     : Visitor(new SCCPInstVisitor(DL, std::move(GetTLI), Ctx)) {}
 
 SCCPSolver::~SCCPSolver() = default;
+
+const DataLayout &SCCPSolver::getDataLayout() const {
+  return Visitor->getDataLayout();
+}
 
 void SCCPSolver::addPredicateInfo(Function &F, DominatorTree &DT,
                                   AssumptionCache &AC) {

@@ -74,6 +74,8 @@ public:
 
   LLVM_ABI ~SCCPSolver();
 
+  LLVM_ABI const DataLayout &getDataLayout() const;
+
   LLVM_ABI void addPredicateInfo(Function &F, DominatorTree &DT,
                                  AssumptionCache &AC);
 
