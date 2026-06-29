@@ -48,6 +48,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Registry.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 #include <cstddef>
@@ -2376,6 +2377,59 @@ private:
   /// buffer controlled by this lexer, otherwise return the next unexpanded
   /// token.
   std::optional<Token> peekNextPPToken() const;
+
+  /// Check whether the next preprocessing token can form a header-name token
+  /// or matches one of the specified token kinds.
+  ///
+  /// This performs a lookahead without consuming tokens:
+  ///  - First, it temporarily enables `ParsingFilename` to attempt forming a
+  ///    `tok::header_name` (e.g. `<foo>` or "foo").
+  ///  - If that succeeds, returns true.
+  ///  - Otherwise, it restores normal lexing mode and checks whether the next
+  ///    token matches any of the provided kinds `Ks...`.
+  ///
+  /// This helper is used to classify tokens in contexts such as C++20 `import`
+  /// and `#include`, ensuring consistent handling of header-name lexing and
+  /// avoiding unintended lexer state changes.
+  template <typename... Ts> bool isNextPPTokenHeaderNameOrOneOf(Ts... Ks) {
+    // First, tries to form a valid header-name token.
+    llvm::SaveAndRestore<bool> SavedParsingFilename(CurPPLexer->ParsingFilename,
+                                                    true);
+    if (auto NextTok = peekNextPPToken()) {
+      if (NextTok->is(tok::header_name))
+        return true;
+
+      // In ParsingFilename mode, both <...> and "..." are lexed as header-name
+      // tokens. If a valid header-name is formed, return immediately.
+      //
+      // Otherwise, we may need to re-lex the token in normal mode. This is
+      // required for '<' to correctly handle cases such as digraphs ('<:',
+      // '<%') and situations where macro expansion affects token boundaries,
+      // e.g.:
+      //
+      //   #define VECTOR vector>
+      //   #include <VECTOR
+      //
+      // In such cases, the initial lex in ParsingFilename mode may fail to form
+      // a header-name, and only normal lexing yields the correct tokenization.
+      // For all other tokens, the result is identical between the two modes, so
+      // we can classify them directly and avoid calling the relatively
+      // expensive second peekNextPPToken() on the common path.
+      if (NextTok->isNot(tok::less)) {
+        if (NextTok->is(tok::raw_identifier))
+          LookUpIdentifierInfo(*NextTok);
+        return NextTok->isOneOf(Ks...);
+      }
+    }
+
+    //  If that fails and it's not one of the other tokens, then it's not a
+    //  directive.
+    CurPPLexer->ParsingFilename = false;
+    if (auto NextTok = peekNextPPToken()) {
+      return NextTok->isOneOf(Ks...);
+    }
+    return false;
+  }
 
   /// Identifiers used for SEH handling in Borland. These are only
   /// allowed in particular circumstances
