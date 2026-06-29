@@ -68,6 +68,8 @@ function(_get_common_test_compile_options output_var c_test flags)
       if(NOT c_test)
         list(APPEND compile_options "-fext-numeric-literals")
       endif()
+      # Silience stringop-overflow warnings from gcc.
+      list(APPEND compile_options "-Wno-stringop-overflow")
     else()
       list(APPEND compile_options "-Wno-c99-extensions")
       list(APPEND compile_options "-Wno-gnu-imaginary-constant")
