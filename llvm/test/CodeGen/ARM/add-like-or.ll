@@ -258,8 +258,8 @@ define i32 @multiuse(i32 %i, ptr %x, ptr %y) {
 ;
 ; CHECK-T2-LABEL: multiuse:
 ; CHECK-T2:       @ %bb.0: @ %entry
-; CHECK-T2-NEXT:    lsls r0, r0, #1
-; CHECK-T2-NEXT:    adds r0, #1
+; CHECK-T2-NEXT:    movs r2, #1
+; CHECK-T2-NEXT:    orr.w r0, r2, r0, lsl #1
 ; CHECK-T2-NEXT:    ldr.w r1, [r1, r0, lsl #2]
 ; CHECK-T2-NEXT:    add r0, r1
 ; CHECK-T2-NEXT:    bx lr
