@@ -19,6 +19,9 @@ def ElideReinterpretCastPass : Pass<"memref-elide-reinterpret-cast"> {
     operations to obtain compatible shapes with equivalent ops that operate on
     compatible shapes directly. This simplifies conversion to EmitC.
 }];
+  let dependentDialects = [
+      "arith::ArithDialect", "scf::SCFDialect"
+  ];
 }
 
 def ExpandOpsPass : Pass<"memref-expand"> {

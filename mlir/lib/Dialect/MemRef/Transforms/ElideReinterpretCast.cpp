@@ -11,10 +11,12 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/MemRef/Transforms/Transforms.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/Repeated.h"
+#include <array>
 #include <cassert>
 #include <optional>
 
@@ -29,171 +31,408 @@ using namespace mlir;
 
 namespace {
 
-/// Returns true if `rc` represents a scalar view (all sizes == 1)
-/// into a memref that has exactly one non-unit dimension located at
-/// either the first or last position (i.e. a "row" or "column").
-///
-/// Examples that return true:
-///
-///   // Row-major slice (last dim is non-unit)
-///   memref.reinterpret_cast %buff to offset: [%off],
-///     sizes: [1, 1, 1], strides: [1, 1, 1]
-///     : memref<1x1x8xi32> to memref<1x1x1xi32>
-///
-///   // Column-major slice (first dim is non-unit)
-///   memref.reinterpret_cast %buff to offset: [%off],
-///     sizes: [1, 1], strides: [1, 1]
-///     : memref<2x1xf32> to memref<1x1xf32>
-///
-///   // Random strides
-///   memref.reinterpret_cast %buff to offset: [%off],
-///     sizes: [1, 1], strides: [10, 100]
-///     : memref<2x1xf32, strided<[10, 100]>>
-///         to memref<1x1xf32>
-///
-///   // Rank-1 case
-///   memref.reinterpret_cast %buf to offset: [%off],
-///     sizes: [1], strides: [1]
-///     : memref<8xi32> to memref<1xi32>
-///
-/// Examples that return false:
-///
-///   // More non-unit dims
-///   memref.reinterpret_cast %buff to offset: [%off],
-///     sizes: [1, 1, 1], strides: [1, 1, 1]
-///     : memref<1x2x8xi32> to memref<1x1x1xi32>
-///
-///   // View is not scalar (size != 1)
-///   memref.reinterpret_cast %buff to offset: [%off],
-///     sizes: [2, 1], strides: [1, 1]
-///     : memref<1x2xf32> to memref<2x1xf32>
-///
-///   // Base has non-identity layout
-///   %buff = memref.alloc() : memref<1x2xf32, strided<[1, 3]>>
-///   memref.reinterpret_cast %buff to offset: [%off],
-///     sizes: [1, 1], strides: [1, 1]
-///     : memref<1x2xf32, strided<[1, 3]>> to memref<1x1xf32>
-static bool isScalarSlice(memref::ReinterpretCastOp rc) {
-  auto rcInputTy = dyn_cast<MemRefType>(rc.getSource().getType());
-  auto rcOutputTy = dyn_cast<MemRefType>(rc.getType());
+//===----------------------------------------------------------------------===//
+// Copy Rewrite Helpers
+//===----------------------------------------------------------------------===//
 
-  // Reject strided base - logic for computing linear idx is TODO
-  if (!rcInputTy.getLayout().isIdentity())
-    return false;
+/// Non-unit reinterpret_cast result dimension and the source dimension it
+/// advances through.
+struct NonUnitDimAssocMapForRC {
+  unsigned resultDimPos;
+  unsigned sourceDimPos;
+};
 
-  // Reject non-matching ranks
-  unsigned srcRank = rcInputTy.getRank();
-  if (srcRank != rcOutputTy.getRank())
-    return false;
+/// Copy-relevant information derived from a reinterpret_cast.
+struct AssocMapAndOffsetsForRC {
+  // Non-unit dimensions of the reinterpret_cast result.
+  SmallVector<NonUnitDimAssocMapForRC> assocMap;
+  // Delinearized offsets to in-bounds reinterpret_cast source indices.
+  // Optional since it is only supported for static offsets.
+  std::optional<SmallVector<int64_t>> delinearizedOffsets;
+};
 
-  ArrayRef<int64_t> sizes = rc.getStaticSizes();
+/// Records the reinterpret_cast result dimensions that span more than one
+/// element and maps each one to its corresponding source dimension.
+static bool findSourceDimForResultDim(memref::ReinterpretCastOp rc,
+                                      AssocMapAndOffsetsForRC &mapAndOffs) {
+  MemRefType resType = dyn_cast<MemRefType>(rc.getType());
+  MemRefType srcType = dyn_cast<MemRefType>(rc.getSource().getType());
+  assert(srcType.getLayout().isIdentity() &&
+         "Expecting identity source layout.");
 
-  // View must be scalar: memref<1x...x1>
-  if (!llvm::all_of(rcOutputTy.getShape(),
-                    [](int64_t dim) { return dim == 1; }))
-    return false;
+  SmallVector<int64_t> srcIdentityStrides = computeStrides(srcType.getShape());
 
-  // Sizes must all be statically 1
-  if (!llvm::all_of(sizes, [](int64_t size) {
-        return !ShapedType::isDynamic(size) && size == 1;
-      }))
-    return false;
+  // Reusing a source dimension would require delinearizing the combined linear
+  // offset, which is TODO.
+  SmallVector<bool> usedSrcDims(srcType.getRank(), false);
 
-  // Rank-1 special case
-  if (srcRank == 1) {
-    // Reject non-scalar output
-    if (rcOutputTy.getDimSize(0) > 1)
+  for (auto [resultDim, resultSize] : llvm::enumerate(resType.getShape())) {
+    if (resultSize == 1)
+      continue;
+
+    // TODO: Support dynamic strides on non-unit result dimensions.
+    if (ShapedType::isDynamic(rc.getStaticStrides()[resultDim]))
       return false;
-  }
 
-  int nonUnitCount =
-      std::count_if(rcInputTy.getShape().begin(), rcInputTy.getShape().end(),
-                    [](int dim) { return dim != 1; });
-  return nonUnitCount == 1;
+    int64_t resultStride = rc.getStaticStrides()[resultDim];
+    std::optional<unsigned> srcDim;
+    // Find an unused source dimension with matching stride and enough elements.
+    for (auto [idx, stride] : llvm::enumerate(srcIdentityStrides)) {
+      if (usedSrcDims[idx] || stride != resultStride ||
+          srcType.getDimSize(idx) < resultSize)
+        continue;
+
+      if (!srcDim || srcType.getDimSize(idx) < srcType.getDimSize(*srcDim))
+        srcDim = idx;
+    }
+    if (!srcDim)
+      return false;
+
+    usedSrcDims[*srcDim] = true;
+    mapAndOffs.assocMap.push_back(
+        NonUnitDimAssocMapForRC{static_cast<unsigned>(resultDim), *srcDim});
+  }
+  return true;
 }
 
-/// Rewrites `memref.copy` of a 1-element MemRef as a scalar load-store pair
+/// Returns source indices for a static reinterpret_cast offset of an
+/// identity-layout source.
+static std::optional<SmallVector<int64_t>>
+delinearizeStaticRCOffset(memref::ReinterpretCastOp rc) {
+  ArrayRef<int64_t> rcOffsets = rc.getStaticOffsets();
+  // FIXME: Despite what `getStaticOffsets` implies, `reinterpret_cast` takes
+  // only a single offset. That should be fixed at the op definition level.
+  assert(rcOffsets.size() == 1 && "Expecting single offset");
+  assert(ShapedType::isStatic(rcOffsets[0]) && "expected static offset");
+
+  assert(rcOffsets[0] >= 0 &&
+         "static reinterpret_cast offset must be non-negative");
+
+  MemRefType srcType = dyn_cast<MemRefType>(rc.getSource().getType());
+  assert(srcType.getLayout().isIdentity() &&
+         "Expecting identity source layout.");
+  if (srcType.getRank() == 0) {
+    assert(rcOffsets[0] == 0 &&
+           "non-zero static offset is invalid for rank-0 source memref");
+    return SmallVector<int64_t>{};
+  }
+
+  SmallVector<int64_t> offsetIdxs(srcType.getRank(), 0);
+  int64_t remainder = rcOffsets[0];
+  SmallVector<int64_t> srcStrides = computeStrides(srcType.getShape());
+  // Convert the linear reinterpret_cast offset to per-dimension source starting
+  // indices.
+  for (auto [dim, stride] : llvm::enumerate(srcStrides)) {
+    offsetIdxs[dim] = remainder / stride;
+    assert(offsetIdxs[dim] < srcType.getDimSize(dim) &&
+           "static reinterpret_cast offset must delinearize to in-bounds "
+           "source indices");
+    remainder %= stride;
+  }
+
+  assert(remainder == 0 &&
+         "Assuming identity source layout, the trailing stride == 1 "
+         "so, the remainder should be 0 at the end of index calculation.");
+  return offsetIdxs;
+}
+
+/// Returns the unique non-unit dim or nullopt of # non-unit-dims != 1.
+static std::optional<unsigned> getSingleNonUnitDim(MemRefType type) {
+  assert(type.hasStaticShape() && "expected static shape");
+  ArrayRef<int64_t> shape = type.getShape();
+
+  // Find all non-unit dims
+  auto nonUnitDims = llvm::make_filter_range(
+      llvm::enumerate(shape), [](auto it) { return it.value() != 1; });
+
+  // Expect single non-unit dims
+  if (llvm::range_size(nonUnitDims) != 1)
+    return std::nullopt;
+
+  // Return the index of the unique non-unit dim.
+  return (*nonUnitDims.begin()).index();
+}
+
+/// Returns the copy-relevant reinterpret_cast information: non-unit result
+/// dimensions, their source-dimension mapping, and optional source starting
+/// indices for a static offset.
 ///
-/// The pattern matches a reinterpret_cast that creates a scalar view
-/// (`sizes = [1, ..., 1]`) into a memref with a single non-unit dimension.
-/// Since the view contains only one element, the accessed address is
-/// determined solely by the base pointer and the offset.
+/// Examples that return rewrite info:
 ///
-/// Two layouts are supported:
-///   * row-major slice  (stride pattern [N, ..., 1])
-///   * column-major slice (stride pattern [1, ..., N])
+///   // Scalar-shaped copy into a source with at most one non-unit dimension.
+///   There are
+///   // no non-unit result dimensions, so dynamic strides in the strided memref
+///   // do not affect index mapping.
+///   copy memref<1 x ... x 1 x f32>
+///     to reinterpret_cast memref<source-shape>
+///       to memref<1 x ... x 1 x f32, strided<[?, ..., ?], offset: ?>>
 ///
-/// BEFORE (row-major slice)
-///   %view = memref.reinterpret_cast %base
-///     to offset: [%off], sizes: [1, ..., 1], strides: [N, ..., 1]
-///       : memref<1x...xNxf32>
-///         to memref<1x...x1xf32, strided<[N, ..., 1], offset: ?>>
-///   memref.copy %src, %view
-///     : memref<1x...x1xf32>
-///       to memref<1x...x1xf32, strided<[N, ..., 1], offset: ?>>
+///   // Effectively-1D copy. The single non-unit strided memref dimension is
+///   // mapped to an identity-layout source dimension by its static stride.
+///   copy memref<1 x ... x N x ... x 1 x f32>
+///     to reinterpret_cast memref<source-shape>
+///       to memref<1 x ... x N x ... x 1 x f32, strided<[..., S, ...]>>
 ///
-/// AFTER
-///   %c0 = arith.constant 0 : index
-///   %v  = memref.load %src[%c0, ..., %c0] : memref<1x...x1xf32>
-///   memref.store %v, %base[%c0, ..., %off] : memref<1x...xNxf32>
+///   // Multidimensional copy with static offset. Each non-unit strided memref
+///   // dimension is mapped independently by its static stride.
+///   copy memref<1 x ... x N_0 x ... x N_K x ... x 1 x f32>
+///     to reinterpret_cast memref<source-shape>
+///       to memref<1 x ... x N_0 x ... x N_K x ... x 1 x f32,
+///                 strided<[..., S_0, ..., S_1, ...], offset: O>>
 ///
-/// BEFORE (column-major slice)
-///   %view = memref.reinterpret_cast %base
-///     to offset: [%off], sizes: [1, ..., 1], strides: [1, ..., N]
-///       : memref<Nx...x1xf32>
-///         to memref<1x...x1xf32, strided<[1, ..., N], offset: ?>>
-///   memref.copy %src, %view
-///     : memref<1x...x1xf32>
-///       to memref<1x...x1xf32, strided<[1, ..., N], offset: ?>>
+/// Examples that return no info:
 ///
-/// AFTER
-///   %c0 = arith.constant 0 : index
-///   %v  = memref.load %src[%c0, ..., %c0] : memref<1x...x1xf32>
-///   memref.store %v, %base[%off, ..., %c0] : memref<Nx...x1xf32>
-struct CopyToScalarLoadAndStore : public OpRewritePattern<memref::CopyOp> {
+///   // Dynamic stride on a non-unit strided memref dimension.
+///   copy memref<1xNxf32>
+///     to reinterpret_cast memref<1xNxMxf32>
+///       to memref<1xNxf32, strided<[?, ?]>>
+///
+///   // Multidimensional copy with dynamic linear offset.
+///   copy memref<1xNxKxf32>
+///     to reinterpret_cast memref<1xNxMxf32>
+///       to memref<1xNxKxf32, strided<[N*M, M, 1], offset: ?>>
+static std::optional<AssocMapAndOffsetsForRC>
+getAssocMapAndOffsetsForRC(memref::ReinterpretCastOp rc) {
+  MemRefType srcType = dyn_cast<MemRefType>(rc.getSource().getType());
+  MemRefType resType = dyn_cast<MemRefType>(rc.getType());
+
+  // Ranked memref types are required to statically build load/store index
+  // lists.
+  if (!srcType || !resType)
+    return std::nullopt;
+
+  // TODO: Support rank-modifying reinterpret_casts
+  if (srcType.getRank() != resType.getRank())
+    return std::nullopt;
+
+  // TODO: Support dynamic shapes with mixed size operands as loop bounds.
+  if (!(srcType.hasStaticShape() && resType.hasStaticShape()))
+    return std::nullopt;
+
+  // TODO: Support non-identity source layouts by computing source strides from
+  // the layout map.
+  if (!srcType.getLayout().isIdentity())
+    return std::nullopt;
+
+  AssocMapAndOffsetsForRC mapAndOffs;
+
+  // reinterpret_cast result dimensions must map to distinct source dimensions.
+  if (!findSourceDimForResultDim(rc, mapAndOffs))
+    return std::nullopt;
+
+  ArrayRef<int64_t> rcOffsets = rc.getStaticOffsets();
+  // FIXME: Despite what `getStaticOffsets` implies, `reinterpret_cast` takes
+  // only a single offset. That should be fixed at the op definition level.
+  assert(rcOffsets.size() == 1 && "Expecting single offset");
+  // Static ReinterpretCast offset
+  if (ShapedType::isStatic(rcOffsets[0])) {
+    // Delinearize static ReinterpretCast offset as in-bounds indices (one for
+    // every source dimension).
+    mapAndOffs.delinearizedOffsets = delinearizeStaticRCOffset(rc);
+    assert(
+        mapAndOffs.delinearizedOffsets &&
+        "static reinterpret_cast offset must delinearize to in-bounds source "
+        "indices");
+
+    assert(
+        llvm::all_of(
+            mapAndOffs.assocMap,
+            [&](const NonUnitDimAssocMapForRC &assocMap) {
+              return (*mapAndOffs.delinearizedOffsets)[assocMap.sourceDimPos] +
+                         resType.getDimSize(assocMap.resultDimPos) <=
+                     srcType.getDimSize(assocMap.sourceDimPos);
+            }) &&
+        "reinterpret_cast metadata describes an invalid accessible region");
+    return mapAndOffs;
+  }
+
+  // Dynamic ReinterpretCast offset.
+  // TODO: Support dynamic offsets into sources with multiple non-unit
+  // dimensions by delinearizing the offset into source start indices at runtime
+  // before adding loop IVs.
+  if (mapAndOffs.assocMap.size() > 1)
+    return std::nullopt;
+  // Only sources with a single non-unit dimension can receive a dynamic offset
+  // directly.
+  if (!getSingleNonUnitDim(srcType))
+    return std::nullopt;
+
+  return mapAndOffs;
+}
+
+/// Rewrites supported copy operations through `memref.reinterpret_cast` to
+/// scalar load/store operations.
+///
+///   // BEFORE (scalar copy)
+///   %strided = memref.reinterpret_cast %dst
+///     to offset: [O], sizes: [1, ..., 1], strides: [...]
+///   memref.copy %src, %strided
+///
+///   // AFTER
+///   %v = memref.load %src[0, ..., 0]
+///   memref.store %v, %dst[delinearized(O)]
+///
+///   // BEFORE (effectively-1D copy)
+///   %strided = memref.reinterpret_cast %dst
+///     to offset: [O], sizes: [1, N, 1], strides: [...]
+///   memref.copy %src, %strided
+///
+///   // AFTER
+///   scf.for %i = 0 to N step 1 {
+///     %v = memref.load %src[0, %i, 0]
+///     memref.store %v, %dst[delinearized(O) + mapped(%i)]
+///   }
+///
+///   // BEFORE (multidimensional copy with static offset)
+///   %strided = memref.reinterpret_cast %dst
+///     to offset: [O], sizes: [1, N, K], strides: [...]
+///   memref.copy %src, %strided
+///
+///   // AFTER
+///   scf.for %i = 0 to N step 1 {
+///     scf.for %j = 0 to K step 1 {
+///       %v = memref.load %src[0, %i, %j]
+///       memref.store %v, %dst[delinearized(O) + mapped(%i, %j)]
+///     }
+///   }
+struct CopyToLoadAndStore : public OpRewritePattern<memref::CopyOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
   LogicalResult matchAndRewrite(memref::CopyOp op,
                                 PatternRewriter &rewriter) const final {
+    Value src = op.getSource();
+    MemRefType cpSrcType = cast<MemRefType>(src.getType());
+    if (!cpSrcType || !cpSrcType.hasStaticShape())
+      return rewriter.notifyMatchFailure(
+          op, "only ranked, static copy sources are supported.");
     Value rcOutput = op.getTarget();
     auto rc = rcOutput.getDefiningOp<memref::ReinterpretCastOp>();
     if (!rc)
       return rewriter.notifyMatchFailure(
           op, "target is not a memref.reinterpret_cast");
 
-    if (!isScalarSlice(rc))
+    std::optional<AssocMapAndOffsetsForRC> mapAndOffs =
+        getAssocMapAndOffsetsForRC(rc);
+    if (!mapAndOffs)
       return rewriter.notifyMatchFailure(
-          op, "reinterpret_cast does not match scalar slice");
+          op, "reinterpret_cast does not match scalar or loop copy region");
 
     Location loc = op.getLoc();
-
-    Value src = op.getSource();
     Value dst = rc.getSource();
+    MemRefType dstType = cast<MemRefType>(dst.getType());
 
-    auto dstType = cast<MemRefType>(dst.getType());
-    unsigned dstRank = dstType.getRank();
+    // Reuse common index constants across bounds, steps, and static offsets,
+    // but avoid creating them for rank-0 copies.
+    std::array<Value, 2> cachedIndexConstants;
+    auto getOrCreateIndexConstant = [&](int64_t value) -> Value {
+      if (value == 0 || value == 1) {
+        Value &cached = cachedIndexConstants[value];
+        if (!cached)
+          cached = arith::ConstantIndexOp::create(rewriter, loc, value);
+        return cached;
+      }
+      return arith::ConstantIndexOp::create(rewriter, loc, value);
+    };
+    auto getZeroIdxs = [&](int64_t rank) {
+      SmallVector<Value> idxs;
+      idxs.reserve(rank);
+      if (rank != 0)
+        idxs.append(rank, getOrCreateIndexConstant(0));
+      return idxs;
+    };
 
-    Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+    // Create loop bounds before moving the insertion point into the loop nest,
+    // so loop-invariant constants are emitted outside the generated loops.
+    SmallVector<Value> upperBounds;
+    upperBounds.reserve(mapAndOffs->assocMap.size());
+    MemRefType rcResType = dyn_cast<MemRefType>(rc.getType());
+    for (const NonUnitDimAssocMapForRC &assocMap : mapAndOffs->assocMap)
+      upperBounds.push_back(getOrCreateIndexConstant(
+          rcResType.getDimSize(assocMap.resultDimPos)));
 
-    auto srcType = cast<MemRefType>(src.getType());
-    Repeated<Value> loadIndices(srcType.getRank(), zero);
-    auto offsets = rc.getMixedOffsets();
-    assert(offsets.size() == 1 && "Expecting single offset");
-    OpFoldResult offset = offsets[0];
-    Value storeOffset = getValueOrCreateConstantIndexOp(rewriter, loc, offset);
-    unsigned offsetDim = dstType.getDimSize(0) == 1 ? dstRank - 1 : 0;
-    SmallVector<Value> storeIndices(dstRank, zero);
-    storeIndices[offsetDim] = storeOffset;
+    SmallVector<Value> rcSrcStoreIdxs = getZeroIdxs(dstType.getRank());
+    std::optional<unsigned> srcNonUnitDimPos;
+    // Static offset has been delinearized in function gating rewrite.
+    if (mapAndOffs->delinearizedOffsets) {
+      for (auto [idx, offset] :
+           llvm::enumerate(*mapAndOffs->delinearizedOffsets)) {
+        if (offset == 0)
+          continue;
+        rcSrcStoreIdxs[idx] = getOrCreateIndexConstant(offset);
+      }
+    } else {
+      // Without runtime delinearization, use the dynamic offset directly only
+      // when the source has a single non-unit dimension.
+      assert(mapAndOffs->assocMap.size() <= 1 &&
+             "Expecting single non-unit dimension mapping.");
+      srcNonUnitDimPos = getSingleNonUnitDim(dstType);
+      assert(srcNonUnitDimPos &&
+             "Expecting single non-unit dimension source to receive the "
+             "dynamic offset.");
+
+      SmallVector<OpFoldResult> rcOffsets = rc.getMixedOffsets();
+      // FIXME: Despite what `getMixedOffsets` implies, `reinterpret_cast` takes
+      // only a single offset. That should be fixed at the op definition level.
+      assert(rcOffsets.size() == 1 && "Expecting single offset");
+      rcSrcStoreIdxs[*srcNonUnitDimPos] =
+          getValueOrCreateConstantIndexOp(rewriter, loc, rcOffsets[0]);
+    }
+
+    // Scope for OpBuilder::InsertionGuard.
+    {
+      OpBuilder::InsertionGuard guard(rewriter);
+      Value lowerBound;
+      Value step;
+      if (!upperBounds.empty()) {
+        lowerBound = getOrCreateIndexConstant(0);
+        step = getOrCreateIndexConstant(1);
+      }
+      SmallVector<Value> loopIvs;
+      loopIvs.reserve(mapAndOffs->assocMap.size());
+
+      // Build one nested loop per non-unit strided memref dimension.
+      for (Value upperBound : upperBounds) {
+        scf::ForOp loop =
+            scf::ForOp::create(rewriter, loc, lowerBound, upperBound, step);
+        loopIvs.push_back(loop.getInductionVar());
+        rewriter.setInsertionPointToStart(loop.getBody());
+      }
+
+      // Load indices are zero except for non-unit strided memref dimensions,
+      // which use the corresponding loop induction variables.
+      SmallVector<Value> loadIdxs = getZeroIdxs(cpSrcType.getRank());
+      unsigned loopIndex = 0;
+      for (const NonUnitDimAssocMapForRC &assocMap : mapAndOffs->assocMap)
+        loadIdxs[assocMap.resultDimPos] = loopIvs[loopIndex++];
+
+      // Store indices start from the offset-derived source indices. Add each
+      // loop IV to the mapped source dimension.
+      SmallVector<Value> storeIdxs(rcSrcStoreIdxs);
+      loopIndex = 0;
+      for (const NonUnitDimAssocMapForRC &assocMap : mapAndOffs->assocMap) {
+        Value iv = loopIvs[loopIndex++];
+        // Add each IV to one source index.
+        if (storeIdxs[assocMap.sourceDimPos] == getOrCreateIndexConstant(0)) {
+          storeIdxs[assocMap.sourceDimPos] = iv;
+        } else {
+          storeIdxs[assocMap.sourceDimPos] = arith::AddIOp::create(
+              rewriter, loc, storeIdxs[assocMap.sourceDimPos], iv);
+        }
+      }
+
+      // Emit the scalar load/store at the innermost loop body, or directly at
+      // the original copy location for scalar copies.
+      Value val = memref::LoadOp::create(rewriter, loc, src, loadIdxs);
+      memref::StoreOp::create(rewriter, loc, val, dst, storeIdxs);
+    }
+
     // If the only user of `rc` is the current Op (which is about to be erased),
     // we can safely erase it.
-    if (rcOutput.hasOneUse())
-      rewriter.eraseOp(rc);
-
-    Value val = memref::LoadOp::create(rewriter, loc, src, loadIndices);
-    memref::StoreOp::create(rewriter, loc, val, dst, storeIndices);
-
+    bool eraseRc = rcOutput.hasOneUse();
     rewriter.eraseOp(op);
+    if (eraseRc)
+      rewriter.eraseOp(rc);
     return success();
   }
 };
@@ -296,7 +535,7 @@ static bool isPureRankExpansionOrCollapsingRC(memref::ReinterpretCastOp rc) {
   if (!inputNonUnitDim || !outputNonUnitDim)
     return false;
 
-  // The source and result must either both have a single non-unit dimension
+  // The base and result must either both have a single non-unit dimension
   // or both be all-ones.
   if (inputNonUnitDim->allOnes != outputNonUnitDim->allOnes)
     return false;
@@ -340,7 +579,7 @@ static bool isPureRankExpansionOrCollapsingRC(memref::ReinterpretCastOp rc) {
 }
 
 /// Rewrites `memref.load` through a pure rank-only `reinterpret_cast` by
-/// mapping the load indices directly onto the source MemRef.
+/// mapping the load indices directly onto the base MemRef.
 
 /// Shape restriction gated by isPureRankExpansionOrCollapsingRC().
 ///
@@ -466,7 +705,11 @@ struct ElideReinterpretCastPass
       auto rc = op.getTarget().getDefiningOp<memref::ReinterpretCastOp>();
       if (!rc)
         return true;
-      return !isScalarSlice(rc);
+      // Pattern applies only when the copy source shape is static and the
+      // reinterpret_cast result can be mapped back to base memref indices.
+      MemRefType cpSrcType = dyn_cast<MemRefType>(op.getSource().getType());
+      return !(cpSrcType && cpSrcType.hasStaticShape() &&
+               getAssocMapAndOffsetsForRC(rc));
     });
     target.addDynamicallyLegalOp<memref::LoadOp>([](memref::LoadOp op) {
       auto rc = op.getMemRef().getDefiningOp<memref::ReinterpretCastOp>();
@@ -474,7 +717,8 @@ struct ElideReinterpretCastPass
         return true;
       return !isPureRankExpansionOrCollapsingRC(rc);
     });
-    target.addLegalDialect<arith::ArithDialect, memref::MemRefDialect>();
+    target.addLegalDialect<arith::ArithDialect, memref::MemRefDialect,
+                           scf::SCFDialect>();
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();
@@ -485,6 +729,6 @@ struct ElideReinterpretCastPass
 
 void mlir::memref::populateElideReinterpretCastPatterns(
     RewritePatternSet &patterns) {
-  patterns.add<CopyToScalarLoadAndStore, RewriteLoadFromReinterpretCast>(
+  patterns.add<CopyToLoadAndStore, RewriteLoadFromReinterpretCast>(
       patterns.getContext());
 }
