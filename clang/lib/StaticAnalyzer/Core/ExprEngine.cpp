@@ -983,7 +983,6 @@ void ExprEngine::processCFGElement(const CFGElement E, ExplodedNode *Pred,
     case CFGElement::CleanupFunction:
       ProcessCleanupFunction(E.castAs<CFGCleanupFunction>(), Pred);
       return;
-    case CFGElement::LifetimeEnds:
     case CFGElement::FullExprCleanup:
     case CFGElement::ScopeBegin:
     case CFGElement::ScopeEnd:
@@ -1625,20 +1624,17 @@ void ExprEngine::ProcessCleanupFunction(const CFGCleanupFunction CF,
   SVal VLoc = State->getLValue(VD, SF);
 
   const CallExpr *CE = CF.getPseudoCallExpr();
-  const ImplicitCastExpr *Callee = cast<ImplicitCastExpr>(CE->getCallee());
-  const UnaryOperator *VarAddr = cast<UnaryOperator>(CE->getArg(0));
-  State = State->BindExpr(Callee->getSubExpr(), SF, VF);
-  State = State->BindExpr(Callee, SF, VF);
-  State = State->BindExpr(VarAddr->getSubExpr(), SF, VLoc);
-  State = State->BindExpr(VarAddr, SF, VLoc);
+  State = State->BindExpr(CE->getCallee(), SF, VF);
+  State = State->BindExpr(CE->getArg(0), SF, VLoc);
 
   // Copied from ExprEngine::VisitCallExpr
   CallEventManager &CEMgr = getStateManager().getCallEventManager();
-  CallEventRef<> CallTemplate = CEMgr.getSimpleCall(CE, State, SF, CF);
+  CallEventRef<> CallTemplate =
+      CEMgr.getSimpleCall(CE, State, SF, getCFGElementRef());
   ExplodedNodeSet Dst;
   evalCall(Dst, Pred, *CallTemplate);
 
-  Engine.enqueueStmtNode(Dst, getCurrBlock(), currStmtIdx);
+  Engine.enqueueStmtNodes(Dst, getCurrBlock(), currStmtIdx);
 }
 
 void ExprEngine::processCleanupTemporaryBranch(const CXXBindTemporaryExpr *BTE,

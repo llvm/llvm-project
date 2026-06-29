@@ -5582,27 +5582,28 @@ CFGImplicitDtor::getDestructorDecl(ASTContext &astContext) const {
   llvm_unreachable("getKind() returned bogus value");
 }
 
-static const CallExpr *CFGCleanupFunction::createPseudoCallExpr(VarDecl *VD) {
+const CallExpr *CFGCleanupFunction::createPseudoCallExpr(VarDecl *VD) {
   const ASTContext &Ctx = VD->getASTContext();
   const CleanupAttr *A = VD->getAttr<CleanupAttr>();
-  const FunctionDecl *FD = A->getFunctionDecl();
+  FunctionDecl *FD = A->getFunctionDecl();
 
   DeclRefExpr *RV = new (&Ctx)
       DeclRefExpr(Ctx, VD, /*RefersToEnclosingVariableOrCapture=*/false,
                   VD->getType(), VK_LValue, A->getLocation());
-  UnaryOperator *UO =
-      UnaryOperator::create(Ctx, DR, Ctx->getPointerType(VD->getType()),
-                            UO_AddrOf, VK_LValue, OK_Ordinary, A->getLocation(),
-                            /*CanOverflow=*/false, FPOptionsOverride());
+  UnaryOperator *UO = UnaryOperator::Create(
+      Ctx, RV, UO_AddrOf, Ctx.getPointerType(VD->getType()), VK_LValue,
+      OK_Ordinary, A->getLocation(),
+      /*CanOverflow=*/false, FPOptionsOverride());
+  Expr *Args[1] = {UO};
   DeclRefExpr *RF = new (&Ctx)
       DeclRefExpr(Ctx, FD, /*RefersToEnclosingVariableOrCapture=*/false,
                   FD->getType(), VK_LValue, A->getLocation());
-  ImplictCastExpr *IC = ImplicitCastExpr::create(
-      Ctx, Ctx->getPointeeType(FD->getType()), CK_FunctionToPointerDecay, RF,
+  ImplicitCastExpr *IC = ImplicitCastExpr::Create(
+      Ctx, Ctx.getPointerType(FD->getType()), CK_FunctionToPointerDecay, RF,
       nullptr, VK_LValue, FPOptionsOverride());
-  Expr *Args[1] = {IC};
-  CallExpr *CE = CallExpr::create(Ctx, Args, FD->getReturnType(), VK_RValue,
-                                  A->getLocation(), FPOptionsOverride());
+  CallExpr *CE =
+      CallExpr::Create(Ctx, IC, Args, FD->getReturnType(), VK_PRValue,
+                       A->getLocation(), FPOptionsOverride());
 
   return CE;
 }
