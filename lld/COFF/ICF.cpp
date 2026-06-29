@@ -39,12 +39,12 @@ public:
   void run();
 
 private:
-  void segregate(size_t begin, size_t end, bool constant);
+  template <bool constant> void segregate(size_t begin, size_t end);
 
   bool assocEquals(const SectionChunk *a, const SectionChunk *b);
 
-  bool sectionsEqual(const SectionChunk *a, const SectionChunk *b,
-                     bool constant);
+  template <bool constant>
+  bool sectionsEqual(const SectionChunk *a, const SectionChunk *b);
 
   bool isEligible(SectionChunk *c);
 
@@ -102,13 +102,14 @@ bool ICF::isEligible(SectionChunk *c) {
 }
 
 // Split an equivalence class into smaller classes.
-void ICF::segregate(size_t begin, size_t end, bool constant) {
+template <bool constant>
+void ICF::segregate(size_t begin, size_t end) {
   while (begin < end) {
     // Divide [Begin, End) into two. Let Mid be the start index of the
     // second group.
     auto bound = std::stable_partition(
-        chunks.begin() + begin + 1, chunks.begin() + end, [=](SectionChunk *s) {
-          return sectionsEqual(chunks[begin], s, constant);
+        chunks.begin() + begin + 1, chunks.begin() + end, [&](SectionChunk *s) {
+          return sectionsEqual<constant>(chunks[begin], s);
         });
     size_t mid = bound - chunks.begin();
 
@@ -144,45 +145,49 @@ bool ICF::assocEquals(const SectionChunk *a, const SectionChunk *b) {
 }
 
 // Compare the "non-moving" or "moving" parts of two sections.
-bool ICF::sectionsEqual(const SectionChunk *a, const SectionChunk *b,
-                        bool constant) {
-  auto eqSym = [=](Symbol *b1, Symbol *b2) {
+template <bool constant>
+bool ICF::sectionsEqual(const SectionChunk *a, const SectionChunk *b) {
+  auto eqSym = [&](Symbol *b1, Symbol *b2) {
     if (b1 == b2)
       return true;
     auto *d1 = dyn_cast<DefinedRegular>(b1);
     auto *d2 = dyn_cast<DefinedRegular>(b2);
-    if (!d1 || !d2 || (constant && d1->getValue() != d2->getValue()))
+    if (!d1 || !d2)
       return false;
+    if constexpr (constant)
+      if (d1->getValue() != d2->getValue())
+        return false;
     return d1->getChunk()->eqClass[cnt % 2] ==
            d2->getChunk()->eqClass[cnt % 2];
   };
 
-  auto eqReloc = [=](const coff_relocation &r1, const coff_relocation &r2) {
-    if (constant &&
-        (r1.Type != r2.Type || r1.VirtualAddress != r2.VirtualAddress))
-      return false;
+  auto eqReloc = [&](const coff_relocation &r1, const coff_relocation &r2) {
+    if constexpr (constant)
+      if (r1.Type != r2.Type || r1.VirtualAddress != r2.VirtualAddress)
+        return false;
     return eqSym(a->file->getSymbol(r1.SymbolTableIndex),
                  b->file->getSymbol(r2.SymbolTableIndex));
   };
   if (!llvm::equal(a->getRelocs(), b->getRelocs(), eqReloc))
     return false;
 
-  if (constant)
+  if constexpr (constant) {
     return a->getOutputCharacteristics() == b->getOutputCharacteristics() &&
            a->getSectionName() == b->getSectionName() &&
            a->header->SizeOfRawData == b->header->SizeOfRawData &&
            a->checksum == b->checksum &&
            a->getContents() == b->getContents() &&
            a->getMachine() == b->getMachine() && assocEquals(a, b);
+  } else {
+    Symbol *e1 = a->getEntryThunk();
+    Symbol *e2 = b->getEntryThunk();
+    if ((e1 || e2) && (!e1 || !e2 || !eqSym(e1, e2)))
+      return false;
 
-  Symbol *e1 = a->getEntryThunk();
-  Symbol *e2 = b->getEntryThunk();
-  if ((e1 || e2) && (!e1 || !e2 || !eqSym(e1, e2)))
-    return false;
-
-  // Check associated children sections, i.e. exception handling data, for
-  // equality.
-  return assocEquals(a, b);
+    // Check associated children sections, i.e. exception handling data, for
+    // equality.
+    return assocEquals(a, b);
+  }
 }
 
 // Find the first Chunk after Begin that has a different class from Begin.
@@ -282,13 +287,13 @@ void ICF::run() {
   });
 
   // Compare static contents and assign unique IDs for each static content.
-  forEachClass([&](size_t begin, size_t end) { segregate(begin, end, true); });
+  forEachClass([&](size_t begin, size_t end) { segregate<true>(begin, end); });
 
   // Split groups by comparing relocations until convergence is obtained.
   do {
     repeat = false;
     forEachClass(
-        [&](size_t begin, size_t end) { segregate(begin, end, false); });
+        [&](size_t begin, size_t end) { segregate<false>(begin, end); });
   } while (repeat);
 
   Log(ctx) << "ICF needed " << Twine(cnt) << " iterations";
