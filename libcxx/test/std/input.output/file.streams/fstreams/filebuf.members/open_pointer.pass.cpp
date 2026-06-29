@@ -84,13 +84,13 @@ int main(int, char**)
 
             std::filebuf f;
             f.open(tmp.c_str(), mode);
-#if defined(_AIX) || defined(__TOS_AIX__)
+#  if defined(_AIX) || defined(__TOS_AIX__)
             // AIX fopen() does not support the 'x' (exclusive) mode suffix;
             // open() returns nullptr for all noreplace modes regardless of whether the file exists.
             assert(!f.is_open());
-#else
+#  else
             assert(f.is_open()); // since it doesn't exist
-#endif
+#  endif
           }
         }
 
@@ -112,13 +112,13 @@ int main(int, char**)
 
             std::wfilebuf f;
             f.open(tmp.c_str(), mode);
-#if defined(_AIX) || defined(__TOS_AIX__)
+#    if defined(_AIX) || defined(__TOS_AIX__)
             // AIX fopen() does not support the 'x' (exclusive) mode suffix;
             // open() returns nullptr for all noreplace modes regardless of whether the file exists.
             assert(!f.is_open());
-#else
+#    else
             assert(f.is_open()); // since it doesn't exist
-#endif
+#    endif
           }
         }
 #  endif
