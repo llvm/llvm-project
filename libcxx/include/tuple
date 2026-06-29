@@ -633,13 +633,14 @@ public:
       return false;
   }
 
-  template <class _Tuple,
-            class _Seq = make_index_sequence<tuple_size_v<remove_reference_t<_Tuple>>>, class = void>
+  template <class _Tuple, class _Seq = make_index_sequence<tuple_size_v<remove_reference_t<_Tuple>>>, class = void>
   static inline constexpr bool __has_danglings_from_tuple_like = false;
 
   template <class _Tuple, size_t... _Idx>
-  static inline constexpr bool __has_danglings_from_tuple_like<_Tuple, index_sequence<_Idx...>,
-    enable_if_t<__has_danglings<decltype(std::get<_Idx>(std::declval<_Tuple>()))...>()>> = true;
+  static inline constexpr bool __has_danglings_from_tuple_like<
+      _Tuple,
+      index_sequence<_Idx...>,
+      enable_if_t<__has_danglings<decltype(std::get<_Idx>(std::declval<_Tuple>()))...>()>> = true;
 
   template <class... _Up>
   static inline constexpr bool __has_danglings_from_utypes =
