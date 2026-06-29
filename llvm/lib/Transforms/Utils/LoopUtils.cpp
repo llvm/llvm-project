@@ -2287,13 +2287,14 @@ Value *llvm::addDiffRuntimeChecks(
   for (const auto &[SrcStart, SinkStart, AccessSize, AbsCommonStrideInBytes,
                     NeedsFreeze] : Checks) {
     Type *Ty = SinkStart->getType();
-    // Compute the range of the accessed memory during one vector loop
-    // iteration. This is equal to VF*IC*Stride-(Stride-AccessSize).
-    auto *VectorIterAccessRange =
+    // Compute the distance between first/last bytes of the accessed memory
+    // during one vector loop iteration. This is equal to
+    // VF*IC*Stride-(Stride-AccessSize).
+    auto *VectorIterAccessSpan =
         ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
                              ConstantInt::get(Ty, IC * AbsCommonStrideInBytes));
-    VectorIterAccessRange = ChkBuilder.CreateSub(
-        VectorIterAccessRange,
+    VectorIterAccessSpan = ChkBuilder.CreateSub(
+        VectorIterAccessSpan,
         ConstantInt::get(Ty, AbsCommonStrideInBytes - AccessSize));
     const SCEV *SinkStartRewritten = Rewriter.visit(SinkStart);
     const SCEV *SrcStartRewritten = Rewriter.visit(SrcStart);
@@ -2302,13 +2303,13 @@ Value *llvm::addDiffRuntimeChecks(
 
     // Check if the same compare has already been created earlier. In that case,
     // there is no need to check it again.
-    Value *IsConflict = SeenCompares.lookup({Diff, VectorIterAccessRange});
+    Value *IsConflict = SeenCompares.lookup({Diff, VectorIterAccessSpan});
     if (IsConflict)
       continue;
 
     IsConflict =
-        ChkBuilder.CreateICmpULT(Diff, VectorIterAccessRange, "diff.check");
-    SeenCompares.insert({{Diff, VectorIterAccessRange}, IsConflict});
+        ChkBuilder.CreateICmpULT(Diff, VectorIterAccessSpan, "diff.check");
+    SeenCompares.insert({{Diff, VectorIterAccessSpan}, IsConflict});
     if (NeedsFreeze)
       IsConflict =
           ChkBuilder.CreateFreeze(IsConflict, IsConflict->getName() + ".fr");
