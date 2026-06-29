@@ -20,12 +20,15 @@ struct FieldWithNSDMIPrefix {
   [[uninit]] int m = 0; // expected-error {{variable 'm' cannot be both '[[uninit]]' and have an initializer under profile 'std::init'}}
 };
 
+// A static data member is a zero-initialized static object, so its definition
+// is rejected by static_marker (paper section 4.2), even though the marker
+// attaches to the declaration; the error fires at the out-of-line definition.
 struct WithStaticDataMember {
   static int s [[uninit]];
   [[uninit]] static int t;
 };
-int WithStaticDataMember::s;
-int WithStaticDataMember::t;
+int WithStaticDataMember::s; // expected-error {{'[[uninit]]' cannot be applied to variable 's' with static storage duration under profile 'std::init'; it is zero-initialized}}
+int WithStaticDataMember::t; // expected-error {{'[[uninit]]' cannot be applied to variable 't' with static storage duration under profile 'std::init'; it is zero-initialized}}
 
 struct MultipleFields {
   int a [[uninit]];

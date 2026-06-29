@@ -9,8 +9,15 @@
 [[profiles::enforce(std::init)]];
 
 int g_init = 0;
-[[uninit]] int g_uninit;
-[[uninit]] int g_uninit_arr[3];
+// Static fixtures supplying uninitialized memory for the pointer/reference
+// tests below. A static [[uninit]] is rejected by static_marker (paper section
+// 4.2), so suppress that rule here: the test deliberately creates uninitialized
+// static storage, and suppression keeps the marker (the source stays
+// "uninitialized memory" for the ref_to_uninit checks).
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(std::init, rule: "static_marker")]] [[uninit]] int g_uninit;
+// no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
+[[profiles::suppress(std::init, rule: "static_marker")]] [[uninit]] int g_uninit_arr[3];
 [[ref_to_uninit]] int *allocate(int n);
 [[ref_to_uninit]] void *alloc_void();
 [[ref_to_uninit]] int &get_uninit_ref();
