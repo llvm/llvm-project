@@ -442,6 +442,45 @@ static bool isTopLevelValueOrAbove(Value value, Region *region) {
   return false;
 }
 
+/// Returns true if `value` can appear as an operand in a pure-op chain that
+/// ultimately produces a valid affine symbol. Index-typed values delegate to
+/// `isValidSymbol`. Any compile-time constant (integer, float, etc.) is
+/// accepted. Non-constant, non-index values are further restricted to integers
+/// that are either top-level or results of pure ops with valid operands.
+static bool isValidAffineSymbolOperand(Value value, Region *region) {
+  // Index-typed values use the standard symbol check.
+  if (value.getType().isIndex())
+    return affine::isValidSymbol(value, region);
+
+  // Only integer-typed non-index values are considered for the top-level and
+  // pure-op recursion cases. Float (and other) types must bottom out in
+  // constants below.
+  bool isIntegerTyped = value.getType().isSignlessInteger() ||
+                        value.getType().isSignedInteger() ||
+                        value.getType().isUnsignedInteger();
+
+  // Top-level integer values are valid.
+  if (isIntegerTyped && region && isTopLevelValueOrAbove(value, region))
+    return true;
+
+  auto *defOp = value.getDefiningOp();
+  if (!defOp)
+    return false;
+
+  // Any compile-time constant (integer, float, etc.) is valid.
+  if (defOp->hasTrait<OpTrait::ConstantLike>())
+    return true;
+
+  if (!isIntegerTyped)
+    return false;
+
+  // Pure op whose operands are all valid.
+  return isPure(defOp) &&
+         llvm::all_of(defOp->getOperands(), [&](Value operand) {
+           return isValidAffineSymbolOperand(operand, region);
+         });
+}
+
 /// A value can be used as a symbol for `region` iff it meets one of the
 /// following conditions:
 /// *) It is a constant.
@@ -468,13 +507,14 @@ bool mlir::affine::isValidSymbol(Value value, Region *region) {
     return false;
 
   // Constant operation is ok.
-  Attribute operandCst;
-  if (matchPattern(defOp, m_Constant(&operandCst)))
+  if (defOp->hasTrait<OpTrait::ConstantLike>())
     return true;
 
-  // `Pure` operation that whose operands are valid symbolic identifiers.
+  // `Pure` operation whose operands are valid symbolic identifiers. Non-index
+  // typed operands (e.g., integer operands to `arith.index_cast`) are also
+  // accepted if they are constants or top-level values.
   if (isPure(defOp) && llvm::all_of(defOp->getOperands(), [&](Value operand) {
-        return affine::isValidSymbol(operand, region);
+        return isValidAffineSymbolOperand(operand, region);
       })) {
     return true;
   }
