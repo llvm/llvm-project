@@ -2,6 +2,9 @@
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -ferror-limit 100 -o - %s -Wuninitialized
 
+// RUN: %clang_cc1 -verify=omp50 -fopenmp -fopenmp-version=50 -DOMP50 -std=c++11 -ferror-limit 100 -o - %s -Wuninitialized
+
+#ifndef OMP50
 void foo() {
 }
 
@@ -58,7 +61,7 @@ T tmain(T argc) {
 #pragma omp teams num_teams(3.14) // expected-error 2 {{expression must have integral or unscoped enumeration type, not 'double'}}
   foo();
 #pragma omp target
-#pragma omp teams num_teams (1, 2, 3) // expected-error {{only two expressions allowed in 'num_teams' clause}}
+#pragma omp teams num_teams (1, 2, 3) // expected-error {{only one expression allowed in 'num_teams' clause}}
   foo();
 #pragma omp target
 #pragma omp teams thread_limit(1, 2, 3) // expected-error {{only one expression allowed in 'thread_limit' clause}}
@@ -118,7 +121,7 @@ int main(int argc, char **argv) {
   foo();
 
 #pragma omp target
-#pragma omp teams num_teams (1, 2, 3) // expected-error {{only two expressions allowed in 'num_teams' clause}}
+#pragma omp teams num_teams (1, 2, 3) // expected-error {{only one expression allowed in 'num_teams' clause}}
   foo();
 
 #pragma omp target
@@ -132,28 +135,28 @@ int main(int argc, char **argv) {
 void test_invalid_syntax() {
   int a = 1, b = 2, c = 3;
 
-  // expected-error@+1 {{only two expressions allowed in 'num_teams' clause}}
+  // expected-error@+1 {{only one expression allowed in 'num_teams' clause}}
   #pragma omp teams num_teams(a, b, c)
   { }
   // expected-error@+1 {{lower bound is greater than upper bound in 'num_teams' clause}}
   #pragma omp teams num_teams(10:5)
   { }
 
-  // expected-error@+1 {{only two expressions allowed in 'num_teams' clause}}
+  // expected-error@+1 {{only one expression allowed in 'num_teams' clause}}
   #pragma omp target teams num_teams(a, b, c)
   { }
   // expected-error@+1 {{lower bound is greater than upper bound in 'num_teams' clause}}
   #pragma omp target teams num_teams(8:3)
   { }
 
-  // expected-error@+1 {{only two expressions allowed in 'num_teams' clause}}
+  // expected-error@+1 {{only one expression allowed in 'num_teams' clause}}
   #pragma omp target teams distribute num_teams(a, b, c)
   for (int i = 0; i < 100; ++i) { }
   // expected-error@+1 {{lower bound is greater than upper bound in 'num_teams' clause}}
   #pragma omp target teams distribute num_teams(15:7)
   for (int i = 0; i < 100; ++i) { }
 
-  // expected-error@+1 {{only two expressions allowed in 'num_teams' clause}}
+  // expected-error@+1 {{only one expression allowed in 'num_teams' clause}}
   #pragma omp target teams distribute parallel for num_teams(a, b, c)
   for (int i = 0; i < 100; ++i) { }
   // expected-error@+1 {{lower bound is greater than upper bound in 'num_teams' clause}}
@@ -161,14 +164,14 @@ void test_invalid_syntax() {
   for (int i = 0; i < 100; ++i) { }
 
   // Test target teams distribute parallel for simd directive
-  // expected-error@+1 {{only two expressions allowed in 'num_teams' clause}}
+  // expected-error@+1 {{only one expression allowed in 'num_teams' clause}}
   #pragma omp target teams distribute parallel for simd num_teams(a, b, c)
   for (int i = 0; i < 100; ++i) { }
   // expected-error@+1 {{lower bound is greater than upper bound in 'num_teams' clause}}
   #pragma omp target teams distribute parallel for simd num_teams(20:6)
   for (int i = 0; i < 100; ++i) { }
 
-  // expected-error@+1 {{only two expressions allowed in 'num_teams' clause}}
+  // expected-error@+1 {{only one expression allowed in 'num_teams' clause}}
   #pragma omp target teams distribute simd num_teams(a, b, c)
   for (int i = 0; i < 100; ++i) { }
   // expected-error@+1 {{lower bound is greater than upper bound in 'num_teams' clause}}
@@ -181,8 +184,10 @@ void test_non_matching_delimiters() {
   int arr[10];
   int x = 5;
 
+  // expected-error@+6 {{expected ')'}}
+  // expected-error@+5 {{expected ')'}}
   // expected-error@+4 {{expected ')'}}
-  // expected-error@+3 {{expected ')'}}
+  // expected-note@+3 {{to match this '('}}
   // expected-note@+2 {{to match this '('}}
   // expected-note@+1 {{to match this '('}}
   #pragma omp teams num_teams((x + 1:10)
@@ -204,16 +209,20 @@ void test_multi_level_non_matching_delimiters() {
   int arr[10][10];
   int x = 5, y = 10;
 
+  // expected-error@+6 {{expected ')'}}
+  // expected-error@+5 {{expected ')'}}
   // expected-error@+4 {{expected ')'}}
   // expected-note@+3 {{to match this '('}}
-  // expected-error@+2 {{expected ')'}}
+  // expected-note@+2 {{to match this '('}}
   // expected-note@+1 {{to match this '('}}
   #pragma omp teams num_teams(((x + 1) * 2:10)
   { }
 
+  // expected-error@+6 {{expected ')'}}
+  // expected-error@+5 {{expected ')'}}
   // expected-error@+4 {{expected ')'}}
   // expected-note@+3 {{to match this '('}}
-  // expected-error@+2 {{expected ')'}}
+  // expected-note@+2 {{to match this '('}}
   // expected-note@+1 {{to match this '('}}
   #pragma omp teams num_teams((x + (y - 1):10)
   { }
@@ -235,15 +244,22 @@ void test_multi_level_non_matching_delimiters() {
   #pragma omp teams num_teams(arr[0][1:arr[2][3)
   { }
 }
+#endif
 
 template<int Lower, int Upper>
 void test_template_type_constants() {
-  // expected-error@+1 {{lower bound is greater than upper bound in 'num_teams' clause}}
+  // expected-error@+2 {{lower bound is greater than upper bound in 'num_teams' clause}}
+  // omp50-error@+1 {{'lower_bound' modifier in 'num_teams' clause requires OpenMP 5.1 or later}}
   #pragma omp teams num_teams(Lower:Upper)
+  {}
+
+  // omp50-error@+1 {{'lower_bound' modifier in 'num_teams' clause requires OpenMP 5.1 or later}}
+  #pragma omp teams num_teams(Upper:Lower)
   {}
 }
 
 void instantiate_template_invalid() {
   test_template_type_constants<10, 5>(); // expected-note {{in instantiation of function template specialization 'test_template_type_constants<10, 5>' requested here}}
 }
+
 
