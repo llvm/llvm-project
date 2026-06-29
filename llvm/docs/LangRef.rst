@@ -1580,10 +1580,20 @@ Currently, only the following parameter attributes are defined:
     the same sense as for ``nofree``).
 
     On return values, this indicates that the underlying object of the return
-    value cannot be freed at all after this point.
+    value cannot be freed from this point forward, for the duration of the
+    program's execution.
 
     Unlike ``nofree``, it is not possible to free the underlying object through
     a different pointer either.
+
+    ``nofreeobj`` on arguments implies ``nofree``. ``nofreeobj`` is primarily
+    useful in cases where it's not possible to mark the argument as ``noalias``.
+    The combination of ``nofree`` and ``noalias`` does *not* imply ``nofreeobj``
+    by itself, because it still allows freeing the underlying object through
+    a different pointer, as long as the object is never accessed through the
+    ``noalias`` pointer. However, it does imply ``nofreeobj`` if such an access
+    exists, for example in the form of the implied read of a ``dereferenceable``
+    attribute.
 
 .. _nest:
 
