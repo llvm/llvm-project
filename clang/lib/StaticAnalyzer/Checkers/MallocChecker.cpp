@@ -672,6 +672,17 @@ private:
                                              SVal Init, ProgramStateRef State,
                                              AllocationFamily Family) const;
 
+  /// Models a non-successful memory allocation.
+  /// Can be used if the allocation function may return null on failure when the
+  /// size to be allocated is non-zero.
+  ///
+  /// \param [in] Call The expression that allocates memory.
+  /// \param [in] SizeArgI1 Index of the argument that specifies the allocation
+  /// size or count. -1 if not applicable.
+  /// \param [in] SizeArgI2 Index of another argument that specifies allocation
+  /// size (i. e. "element size"). -1 if not applicable.
+  /// \param [in] State The \c ProgramState right before allocation.
+  /// \returns The ProgramState right after an unsuccessful allocation.
   [[nodiscard]] ProgramStateRef FailedAlloc(CheckerContext &C,
                                             const CallEvent &Call,
                                             int SizeArgI1, int SizeArgI2,
