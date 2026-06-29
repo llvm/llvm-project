@@ -6877,6 +6877,99 @@ When ``#pragma comment(copyright, ...)`` appears in a C++20 module interface
 unit, the copyright string is embedded only in the object file compiled from
 that interface unit. Importing TUs do not re-emit the string.
 
+Preserving Identifying Variables with -mloadtime-comment-vars
+--------------------------------------------------------------
+
+The ``-mloadtime-comment-vars=`` flag accepts a comma-separated list of
+mangled variable names that should be preserved in the final object file as
+loadtime identifying strings. This is an AIX-specific feature; on other
+targets the compiler emits a warning. Names are matched against each
+variable's mangled name, and unrecognised names are silently ignored.
+
+This flag complements ``#pragma comment(copyright, ...)`` for codebases that
+already use the traditional UNIX convention of embedding identifying strings
+directly in source variables rather than via a pragma.
+
+Syntax:
+
+.. code-block:: console
+
+  -mloadtime-comment-vars=<var1>[,<var2>,...]
+
+In C, variable names are not mangled, so the mangled name is identical to the source
+identifier (for example, ``sccsid``). In C++, the mangled name follows the
+Itanium C++ ABI, so a namespace-scoped or class-scoped variable must be named
+using its mangled form:
+
+.. code-block:: c++
+
+  namespace N { char sccsid[] = "@(#) MyApp Version 1.0"; }   // N::sccsid   -> _ZN1N6sccsidE
+  const char *App::version = "@(#) Built 2026-06-25";         // App::version -> _ZN3App7versionE
+
+.. code-block:: console
+
+  -mloadtime-comment-vars=_ZN1N6sccsidE,_ZN3App7versionE
+
+Valid variable types:
+
+A variable named in the list must meet all of these conditions to be
+preserved:
+
+- It must be defined at file, namespace, or class scope (a function-local
+  ``static`` variable is not supported).
+- Its type must be a character pointer (``char *``, ``const char *``) or a
+  character array (``char[]``, ``const char[]``).
+- It must have static storage duration and must not be ``volatile``-qualified.
+- It must be constant-initialized, so that the string is present in the object
+  at load time. A dynamically initialized variable (whose value is computed by
+  a start-up constructor) is not preserved.
+- A character *pointer* must be initialized directly with a string literal (for
+  example, ``char *p = "@(#) ...";``). A pointer bound to some other object
+  -- even a constant one, such as another character array -- does not itself
+  carry the identifying string and is not preserved.
+
+A variable that is named in the list but is ``volatile``-qualified, does not
+have static storage duration (for example, a ``thread_local`` variable), is
+dynamically initialized, or is a pointer not bound to a string literal, is
+diagnosed with a warning and is not preserved. Variables of an unsupported type
+-- for example, an ``int`` or a ``struct`` -- or without an initializer are
+silently skipped, as are function-local ``static`` variables and names that are
+not defined in the translation unit.
+
+Example:
+
+.. code-block:: c
+
+  static char *sccsid = "@(#) MyApp Version 1.0";
+  static char  version[] = "@(#) Built 2026-05-24";
+
+  void foo() {}
+
+Compiled with:
+
+.. code-block:: console
+
+  clang -target powerpc64-ibm-aix \
+    -mloadtime-comment-vars=sccsid,version \
+    -c source.c -o source.o
+
+Both ``sccsid`` and ``version`` are retained in the object file.
+
+.. code-block:: console
+
+  $ what source.o
+  source.o:
+           MyApp Version 1.0
+           Built 2026-05-24
+
+Interaction with ``#pragma comment(copyright, ...)`` :
+
+The two mechanisms can be used together in the same translation unit. The
+pragma produces a dedicated ``__loadtime_comment_str`` symbol placed in the
+``__loadtime_comment`` section, while ``-mloadtime-comment-vars`` preserves
+the named source variables in place using ``.ref`` directives. Both sets of
+strings appear in the final object file independently.
+
 Evaluating Object Size
 ======================
 

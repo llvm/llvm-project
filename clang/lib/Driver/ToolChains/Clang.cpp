@@ -6338,6 +6338,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   else if (UnwindTables)
      CmdArgs.push_back("-funwind-tables=1");
 
+  // Forward loadtime-comment vars option to cc1 only on AIX targets.
+  if (Arg *A = Args.getLastArg(options::OPT_mloadtime_comment_vars_EQ)) {
+    if (Triple.isOSAIX())
+      A->render(Args, CmdArgs);
+    else
+      D.Diag(diag::warn_drv_unsupported_option_for_target)
+          << A->getAsString(Args) << TripleStr;
+  }
+
   // Sframe unwind tables are independent of the other types. Although also
   // defined for aarch64, only x86_64 support is implemented at the moment.
   if (Arg *A = Args.getLastArg(options::OPT_gsframe)) {
