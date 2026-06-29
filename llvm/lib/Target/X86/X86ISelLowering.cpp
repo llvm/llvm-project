@@ -64854,8 +64854,7 @@ X86TargetLowering::getStackProbeSymbolName(const MachineFunction &MF) const {
 
   // Generally, if we aren't on Windows, the platform ABI does not include
   // support for stack probes, so don't emit them.
-  if (!Subtarget.isOSWindowsOrUEFI() ||
-      Subtarget.isTargetMachO() ||
+  if (!Subtarget.isOSWindowsOrUEFI() || Subtarget.isTargetMachO() ||
       MF.getFunction().hasFnAttribute("no-stack-arg-probe"))
     return "";
 
