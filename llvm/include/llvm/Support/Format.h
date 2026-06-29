@@ -27,7 +27,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataTypes.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdio>
 #include <optional>
@@ -36,47 +35,24 @@
 
 namespace llvm {
 
-/// These are templated helper classes used by the format function that
-/// capture the object to be formatted and the format string. When actually
-/// printed, this synthesizes the string into a temporary buffer provided and
-/// returns whether or not it is big enough.
-
-namespace detail {
-template <typename T> struct decay_if_c_char_array {
-  using type = T;
-};
-template <std::size_t N> struct decay_if_c_char_array<char[N]> {
-  using type = const char *;
-};
-template <typename T>
-using decay_if_c_char_array_t = typename decay_if_c_char_array<T>::type;
-} // namespace detail
-
-template <typename... Ts> class format_object {
+/// This is a helper class used for handling formatted output.  It is the
+/// abstract base class of a templated derived class.
+class LLVM_ABI format_object_base {
+protected:
   const char *Fmt;
-  std::tuple<detail::decay_if_c_char_array_t<Ts>...> Vals;
+  ~format_object_base() = default; // Disallow polymorphic deletion.
+  format_object_base(const format_object_base &) = default;
+  virtual void home(); // Out of line virtual method.
 
-  template <std::size_t... Is>
-  int snprint_tuple(char *Buffer, unsigned BufferSize,
-                    std::index_sequence<Is...>) const {
-#ifdef _MSC_VER
-    return _snprintf(Buffer, BufferSize, Fmt, std::get<Is>(Vals)...);
-#else
-    return snprintf(Buffer, BufferSize, Fmt, std::get<Is>(Vals)...);
-#endif
-  }
+  /// Call snprintf() for this object, on the given buffer and size.
+  virtual int snprint(char *Buffer, unsigned BufferSize) const = 0;
 
 public:
-  format_object(const char *fmt, const Ts &...vals) : Fmt(fmt), Vals(vals...) {
-    static_assert(
-        (std::is_scalar_v<detail::decay_if_c_char_array_t<Ts>> && ...),
-        "format can't be used with non fundamental / non pointer type");
-  }
+  format_object_base(const char *fmt) : Fmt(fmt) {}
 
-  int snprint(char *Buffer, unsigned BufferSize) const {
-    return snprint_tuple(Buffer, BufferSize, std::index_sequence_for<Ts...>());
-  }
-
+  /// Format the object into the specified buffer.  On success, this returns
+  /// the length of the formatted string.  If the buffer is too small, this
+  /// returns a length to retry with, which will be larger than BufferSize.
   unsigned print(char *Buffer, unsigned BufferSize) const {
     assert(BufferSize && "Invalid buffer size!");
 
@@ -97,12 +73,48 @@ public:
   }
 };
 
+/// These are templated helper classes used by the format function that
+/// capture the object to be formatted and the format string. When actually
+/// printed, this synthesizes the string into a temporary buffer provided and
+/// returns whether or not it is big enough.
+
+namespace detail {
+template <typename T> struct decay_if_c_char_array {
+  using type = T;
+};
+template <std::size_t N> struct decay_if_c_char_array<char[N]> {
+  using type = const char *;
+};
+template <typename T>
+using decay_if_c_char_array_t = typename decay_if_c_char_array<T>::type;
+} // namespace detail
+
 template <typename... Ts>
-raw_ostream &operator<<(raw_ostream &OS, format_object<Ts...> Fmt) {
-  OS <<
-      [&Fmt](char *Buf, size_t Size) -> size_t { return Fmt.print(Buf, Size); };
-  return OS;
-}
+class format_object final : public format_object_base {
+  std::tuple<detail::decay_if_c_char_array_t<Ts>...> Vals;
+
+  template <std::size_t... Is>
+  int snprint_tuple(char *Buffer, unsigned BufferSize,
+                    std::index_sequence<Is...>) const {
+#ifdef _MSC_VER
+    return _snprintf(Buffer, BufferSize, Fmt, std::get<Is>(Vals)...);
+#else
+    return snprintf(Buffer, BufferSize, Fmt, std::get<Is>(Vals)...);
+#endif
+  }
+
+public:
+  format_object(const char *fmt, const Ts &... vals)
+      : format_object_base(fmt), Vals(vals...) {
+    static_assert(
+        (std::is_scalar_v<detail::decay_if_c_char_array_t<Ts>> && ...),
+        "format can't be used with non fundamental / non pointer type");
+  }
+
+  int snprint(char *Buffer, unsigned BufferSize) const override {
+    return snprint_tuple(Buffer, BufferSize, std::index_sequence_for<Ts...>());
+  }
+};
 
 /// These are helper functions used to produce formatted output.  They use
 /// template type deduction to construct the appropriate instance of the

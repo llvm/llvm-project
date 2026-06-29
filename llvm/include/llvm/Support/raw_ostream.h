@@ -13,7 +13,6 @@
 #ifndef LLVM_SUPPORT_RAW_OSTREAM_H
 #define LLVM_SUPPORT_RAW_OSTREAM_H
 
-#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compiler.h"
@@ -306,7 +305,7 @@ public:
   raw_ostream &write(const char *Ptr, size_t Size);
 
   // Formatted output, see the format() function in Support/Format.h.
-  raw_ostream &operator<<(function_ref<size_t(char *, size_t)> Print);
+  raw_ostream &operator<<(const format_object_base &Fmt);
 
   // Formatted output, see the leftJustify() function in Support/Format.h.
   raw_ostream &operator<<(const FormattedString &);
