@@ -618,20 +618,31 @@ bool SemaPPC::checkTargetClonesAttr(const SmallVectorImpl<StringRef> &Params,
     const StringRef Param = Params[I].trim();
     const SourceLocation &Loc = Locs[I];
 
-    if (Param.empty() || Param.ends_with(','))
-      return Diag(Loc, diag::warn_unsupported_target_attribute)
-             << Unsupported << None << "" << TargetClones;
-
     if (Param.contains(','))
       HasComma = true;
 
     StringRef LHS;
     StringRef RHS = Param;
+    // TODO: simplify the logic to diagnose empty strings
+    bool checkTrailingEmpty = false;
     do {
       std::tie(LHS, RHS) = RHS.split(',');
       LHS = LHS.trim();
+
+      // After processing last non-empty item, check if we need to process
+      // trailing empty
+      if (RHS.empty() && !LHS.empty() && Param.ends_with(',')) {
+        checkTrailingEmpty = true;
+      }
+
       const SourceLocation &CurLoc =
           Loc.getLocWithOffset(LHS.data() - Param.data());
+
+      // Check for empty string (from trailing comma, leading comma, or ",,")
+      if (LHS.empty()) {
+        return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+               << Unknown << None << "" << TargetClones;
+      }
 
       if (LHS.starts_with("cpu=")) {
         StringRef CPUStr = LHS.drop_front(sizeof("cpu=") - 1);
@@ -644,9 +655,30 @@ bool SemaPPC::checkTargetClonesAttr(const SmallVectorImpl<StringRef> &Params,
       } else if (LHS == "default") {
         HasDefault = true;
       } else {
-        // it's a feature string, but not supported yet.
-        return Diag(CurLoc, diag::warn_unsupported_target_attribute)
-               << Unsupported << None << LHS << TargetClones;
+        // Handle feature strings
+        StringRef FeatureName = LHS;
+        bool IsNegated = false;
+
+        // Check for negation prefix
+        if (FeatureName.starts_with("no-")) {
+          IsNegated = true;
+          FeatureName = FeatureName.drop_front(3);
+        }
+
+        // First check if it's a valid feature name at all
+        if (!TargetInfo.isValidFeatureName(FeatureName)) {
+          return Diag(CurLoc, diag::warn_unsupported_target_attribute)
+                 << Unknown << None << LHS << TargetClones;
+        }
+
+        // Check if feature is valid for target_clones (has runtime detection)
+        // Use virtual method that defaults to isValidFeatureName for non-PPC
+        // targets
+        if (!TargetInfo.isValidClonesFeatureName(FeatureName)) {
+          // Feature is valid for target attribute but not target_clones
+          return Diag(CurLoc, diag::err_ppc_feature_no_runtime_detection)
+                 << FeatureName;
+        }
       }
       SmallString<64> CPU;
       if (LHS.starts_with("cpu=")) {
@@ -660,6 +692,15 @@ bool SemaPPC::checkTargetClonesAttr(const SmallVectorImpl<StringRef> &Params,
         continue;
       }
       NewParams.push_back(LHS);
+
+      // If we just processed the last item and there's a trailing comma,
+      // do one more iteration to catch the empty string
+      if (checkTrailingEmpty) {
+        LHS = "";
+        const SourceLocation &EmptyCurLoc = Loc.getLocWithOffset(Param.size());
+        return Diag(EmptyCurLoc, diag::warn_unsupported_target_attribute)
+               << Unknown << None << "" << TargetClones;
+      }
     } while (!RHS.empty());
   }
   if (HasComma && Params.size() > 1)
