@@ -85,3 +85,16 @@ entry:
   store <2 x i8> %zext_ofl, ptr %out_overflow
   ret void
 }
+
+; CHECK: OpFunction
+; CHECK: %[[#AR:]] = OpFunctionParameter %[[#Int]]
+; CHECK: %[[#BR:]] = OpFunctionParameter %[[#Int]]
+; CHECK: %[[#ResR:]] = OpIAdd %[[#Int]] %[[#AR]] %[[#BR]]
+; CHECK: %[[#Ins0:]] = OpCompositeInsert %[[#StructR:]] %[[#ResR]] %[[#]] 0
+; CHECK: %[[#Ins1:]] = OpCompositeInsert %[[#StructR]] %[[#]] %[[#Ins0]] 1
+; CHECK: OpReturnValue %[[#Ins1]]
+define spir_func { i32, i1 } @test_sadd_overflow_ret(i32 %a, i32 %b) {
+entry:
+  %res = call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %a, i32 %b)
+  ret { i32, i1 } %res
+}
