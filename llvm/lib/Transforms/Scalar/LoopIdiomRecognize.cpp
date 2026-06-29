@@ -1581,10 +1581,11 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
 
   IRBuilder<> Builder(CurLoop->getLoopPreheader()->getTerminator());
 
-  auto GetMostSignificantTCBits = [&, TC](Value *Op, unsigned BW,
-                                          const Twine &Name) {
+  auto GetMostSignificantTCBits = [&](Value *Op, unsigned BW,
+                                      const Twine &Name) {
     unsigned OpBW = Op->getType()->getIntegerBitWidth();
-    assert(BW > TC && OpBW > TC);
+    assert(BW > TC && OpBW > TC &&
+           "Trip count should not exceed the bit width");
     if (Info.IsBigEndian)
       return Builder.CreateLShr(Op, BW - TC, Name + ".be.lshr");
     auto *Mask = ConstantInt::get(Ctx, APInt::getLowBitsSet(OpBW, TC));
@@ -1600,12 +1601,12 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
   if (!Info.IsBigEndian || CRCBW == TC)
     CRCAlignTC = LHS;
   else if (CRCBW > TC)
-    CRCAlignTC = Builder.CreateLShr(LHS, CRCBW - TC, "crc.be.lshr");
+    CRCAlignTC = Builder.CreateLShr(LHS, CRCBW - TC, "crc.be.tcbits");
   else
-    CRCAlignTC = Builder.CreateShl(LHS, TC - CRCBW, "crc.be.shl");
+    CRCAlignTC = Builder.CreateShl(LHS, TC - CRCBW, "crc.be.tcbits");
 
   // If auxiliary data is present, XOR it in with the CRC.
-  Value *ClmulMuInput = CRCAlignTC;
+  Value *ClmulMuInput;
   if (Value *Data = Info.LHSAux) {
     unsigned DataBW = Data->getType()->getIntegerBitWidth();
     // For big-endian CRC loops where auxiliary data is XORed with the CRC
@@ -1625,11 +1626,16 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
         // Extract the useful bits of the data and discard the rest.
         Data = GetMostSignificantTCBits(Data, DataBW, "data");
       }
-      // This is always a zext since TripCount <= DataBW < ClmulBW.
-      Data = Builder.CreateZExt(Data, ClmulTy, "data.ext");
+      // This is usually a zext, but DataBW may exceed ClmulBW if both CRCBW and
+      // TC are small enough.
+      Data = Builder.CreateZExtOrTrunc(Data, ClmulTy, "data.cast");
 
       ClmulMuInput = Builder.CreateXor(CRCAlignTC, Data, "xor.crc.data");
+    } else {
+      ClmulMuInput = CRCAlignTC;
     }
+  } else {
+    ClmulMuInput = CRCAlignTC;
   }
 
   // Perform the first clmul operation with the mu constant. Input is TC bits
@@ -1674,16 +1680,14 @@ bool LoopIdiomRecognize::optimizeCRCLoopUsingClmul(const PolynomialInfo &Info) {
       PN.replaceAllUsesWith(PoisonValue::get(PN.getType()));
       LoopPHIs.push_back(&PN);
     }
-    for (PHINode *PN : LoopPHIs) {
+    for (PHINode *PN : LoopPHIs)
       RecursivelyDeleteDeadPHINode(PN);
-    }
     // Replace the exit condition with constant true/false to always cause a
     // branch to the exit block.
     deleteDeadInstruction(CurLoop->getLatchCmpInst());
-    CondBrInst *BrInst =
-        cast<CondBrInst>(CurLoop->getLoopLatch()->getTerminator());
-    bool BrToExitCond = BrInst->getSuccessor(0) == CurLoop->getExitBlock();
-    BrInst->setCondition(ConstantInt::getBool(Ctx, BrToExitCond));
+    auto *BrInst = cast<CondBrInst>(CurLoop->getLoopLatch()->getTerminator());
+    BrInst->setCondition(ConstantInt::getBool(
+        Ctx, BrInst->getSuccessor(0) == CurLoop->getExitBlock()));
     SE->forgetLoop(CurLoop);
   }
 

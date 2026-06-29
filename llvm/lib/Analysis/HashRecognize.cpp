@@ -395,7 +395,8 @@ static APInt floorDivideGF2(APInt Dividend, APInt Divisor) {
   // Q = 0
   APInt Quotient = APInt::getZero(Dividend.getBitWidth());
   // S != 0 and deg(S) >= deg(P)
-  while (!Dividend.isZero() && Dividend.getActiveBits() >= DivisorActiveBits) {
+  // (S != 0 implied by DivisorActiveBits > 0)
+  while (Dividend.getActiveBits() >= DivisorActiveBits) {
     // T = S[deg(S)] / P[deg(P)]
     unsigned Shift = Dividend.getActiveBits() - DivisorActiveBits;
     // Q = Q + T
@@ -640,7 +641,7 @@ void HashRecognize::print(raw_ostream &OS) const {
   Mu.print(OS, false);
   OS << ", FullGenPoly = ";
   FullGenPoly.print(OS, false);
-  OS << '\n';
+  OS << "\n";
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
