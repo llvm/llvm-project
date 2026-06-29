@@ -559,7 +559,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         server.send_ack()
 
     def add_verified_launch_packets(self, launch_args):
-        if os.environ.get("LLDB_LAUNCH_FLAG_USE_PIPES", 0) == 1:
+        if os.environ.get("LLDB_LAUNCH_FLAG_USE_PIPES", "0") == "1":
             self.test_sequence.add_log_lines(
                 [
                     "read packet: %s"
