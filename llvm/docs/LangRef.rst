@@ -1574,6 +1574,17 @@ Currently, only the following parameter attributes are defined:
 
     This is not a valid attribute for return values.
 
+``nofreeobj``
+    On arguments, this indicates that the underlying object of the argument
+    cannot be freed during the execution of the function (where "during" is in
+    the same sense as for ``nofree``).
+
+    On return values, this indicates that the underlying object of the return
+    value cannot be freed at all after this point.
+
+    Unlike ``nofree``, it is not possible to free the underlying object through
+    a different pointer either.
+
 .. _nest:
 
 ``nest``
