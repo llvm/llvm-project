@@ -51,8 +51,9 @@ struct AssocMapAndOffsetsForRC {
   std::optional<SmallVector<int64_t>> delinearizedOffsets;
 };
 
-/// Records the reinterpret_cast result dimensions that span more than one
-/// element and maps each one to its corresponding source dimension.
+/// Maps each non-unit result dimension to a source dimension. Returns false if
+/// a stride of a non-unit dimension in the rc result is dynamic or no distinct
+/// source dimension matches.
 static bool findSourceDimForResultDim(memref::ReinterpretCastOp rc,
                                       AssocMapAndOffsetsForRC &mapAndOffs) {
   MemRefType resType = dyn_cast<MemRefType>(rc.getType());
@@ -62,8 +63,9 @@ static bool findSourceDimForResultDim(memref::ReinterpretCastOp rc,
 
   SmallVector<int64_t> srcIdentityStrides = computeStrides(srcType.getShape());
 
-  // Reusing a source dimension would require delinearizing the combined linear
-  // offset, which is TODO.
+  // Each non-unit result dimension needs one source dimension to receive its
+  // loop IV. Combining multiple IVs into one source index would require
+  // linearizing the result position which is TODO.
   SmallVector<bool> usedSrcDims(srcType.getRank(), false);
 
   for (auto [resultDim, resultSize] : llvm::enumerate(resType.getShape())) {
@@ -76,14 +78,16 @@ static bool findSourceDimForResultDim(memref::ReinterpretCastOp rc,
 
     int64_t resultStride = rc.getStaticStrides()[resultDim];
     std::optional<unsigned> srcDim;
-    // Find an unused source dimension with matching stride and enough elements.
+    // Pick the first unused source dimension with the same stride.
     for (auto [idx, stride] : llvm::enumerate(srcIdentityStrides)) {
-      if (usedSrcDims[idx] || stride != resultStride ||
-          srcType.getDimSize(idx) < resultSize)
+      if (usedSrcDims[idx] || stride != resultStride)
         continue;
 
-      if (!srcDim || srcType.getDimSize(idx) < srcType.getDimSize(*srcDim))
-        srcDim = idx;
+      assert(srcType.getDimSize(idx) >= resultSize &&
+             "reinterpret_cast result dimension does not fit in the matching "
+             "source dimension");
+      srcDim = idx;
+      break;
     }
     if (!srcDim)
       return false;
@@ -120,7 +124,7 @@ delinearizeStaticRCOffset(memref::ReinterpretCastOp rc) {
   SmallVector<int64_t> offsetIdxs(srcType.getRank(), 0);
   int64_t remainder = rcOffsets[0];
   SmallVector<int64_t> srcStrides = computeStrides(srcType.getShape());
-  // Convert the linear reinterpret_cast offset to per-dimension source starting
+  // Convert the scalar reinterpret_cast offset to per-dimension source starting
   // indices.
   for (auto [dim, stride] : llvm::enumerate(srcStrides)) {
     offsetIdxs[dim] = remainder / stride;
