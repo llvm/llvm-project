@@ -263,6 +263,32 @@ func.func @switch_on_const_with_match(%caseOperand0 : f32, %caseOperand1 : f32, 
     "foo.bb4Terminator"(%bb4Arg) : (f32) -> ()
 }
 
+// CHECK-LABEL: func @switch_on_const_with_match_diff_width(
+// CHECK-SAME: %[[CASE_OPERAND_0:[a-zA-Z0-9_]+]]
+// CHECK-SAME: %[[CASE_OPERAND_1:[a-zA-Z0-9_]+]]
+// CHECK-SAME: %[[CASE_OPERAND_2:[a-zA-Z0-9_]+]]
+func.func @switch_on_const_with_match_diff_width(%caseOperand0 : f32, %caseOperand1 : f32, %caseOperand2 : f32) {
+  // add predecessors for all blocks to avoid other canonicalizations.
+  "foo.pred"() [^bb1, ^bb2, ^bb3, ^bb4] : () -> ()
+  ^bb1:
+    // CHECK-NOT: cf.switch
+    // CHECK: cf.br ^[[BB4:[a-zA-Z0-9_]+]](%[[CASE_OPERAND_2]]
+    %c0_i32 = llvm.mlir.constant(1 : index) : i32
+    cf.switch %c0_i32 : i32, [
+      default: ^bb2(%caseOperand0 : f32),
+      -1: ^bb3(%caseOperand1 : f32),
+      1: ^bb4(%caseOperand2 : f32)
+    ]
+  ^bb2(%bb2Arg : f32):
+    "foo.bb2Terminator"(%bb2Arg) : (f32) -> ()
+  ^bb3(%bb3Arg : f32):
+    "foo.bb3Terminator"(%bb3Arg) : (f32) -> ()
+  // CHECK: ^[[BB4]]({{.*}}):
+  // CHECK-NEXT: "foo.bb4Terminator"
+  ^bb4(%bb4Arg : f32):
+    "foo.bb4Terminator"(%bb4Arg) : (f32) -> ()
+}
+
 // CHECK-LABEL: func @switch_passthrough(
 // CHECK-SAME: %[[FLAG:[a-zA-Z0-9_]+]]
 // CHECK-SAME: %[[CASE_OPERAND_0:[a-zA-Z0-9_]+]]
