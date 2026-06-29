@@ -730,10 +730,9 @@ try {
                 ]
                 String fujitsuSuiteName = 'Fujitsu'
                 String gfortranSuiteName = 'GFortran'
-                List<String> downstreamSuites = [gfortranSuiteName, 'NAGLLVM']
-                if (timerTrigger) {
-                    downstreamSuites.addAll([fujitsuSuiteName, 'Polyhedron'])
-                }
+                List<String> downstreamSuites = [
+                    gfortranSuiteName, 'NAGLLVM', fujitsuSuiteName, 'Polyhedron'
+                ]
                 for (suite in downstreamSuites) {
                     String suiteName = suite
                     List suiteParams = [
