@@ -103,6 +103,7 @@ add_subdirectory(${LLVM_LIBGCC_LIBUNWIND_PATH} ${LLVM_LIBGCC_LIBUNWIND_BINARY_DI
 add_custom_target(gcc_s.ver
   SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/gcc_s.ver.in
   COMMAND ${CMAKE_C_COMPILER} -E
+  $<$<C_COMPILER_ID:Clang,AppleClang>:--target=${CMAKE_C_COMPILER_TARGET}>
     -xc ${CMAKE_CURRENT_SOURCE_DIR}/gcc_s.ver.in
     -o ${CMAKE_CURRENT_BINARY_DIR}/gcc_s.ver
 )
