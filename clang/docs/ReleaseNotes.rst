@@ -679,6 +679,11 @@ Improvements to Clang's diagnostics
 - Diagnostics for the C++11 range-based for statement now report the correct
   iterator type in notes for invalid iterator types.
 
+- ``-Wtautological-pointer-compare`` and ``-Wpointer-bool-conversion`` now
+  diagnose a reference to a function (e.g. of type ``void (&)()``) compared
+  against or converted to a null pointer, the same as a bare function name.
+  (#GH46362)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
