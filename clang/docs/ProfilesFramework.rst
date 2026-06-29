@@ -755,6 +755,9 @@ at the first such read, with a ``note_init_uninit_member_here`` note.  Details:
 - There is **no** constructor-exit requirement: a ``[[uninit]]`` member that is
   simply never read is left as-is (paper §5.1/§5.3), exactly as R5 structurally
   excuses a marked member -- the two checks are complementary.
+- A *delegating* constructor is skipped: its target initializes the members
+  before the delegating body runs, so trusting the target (paper §5.1) avoids a
+  false positive, matching how R5 skips delegating constructors.
 - Out of scope here (deferred, conservative omissions, not extensions):
   class-type and array members, ``construct_at`` flow, and double-init/destroy
   detection.  Taking the address of a member or binding a reference to it is R7

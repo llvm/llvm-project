@@ -1735,6 +1735,13 @@ static const FieldDecl *getCurrentObjectMember(const Expr *E) {
 // check (R5) excuses a marked member.
 static void checkInitProfileCtorBody(Sema &S, const CXXConstructorDecl *Ctor,
                                      AnalysisDeclContext &AC) {
+  // A delegating constructor leaves member initialization to its target (paper
+  // §5.1 trusts the constructor that runs first), so by the time the delegating
+  // body runs the members are already initialized; analyzing its body would
+  // falsely flag a read. This mirrors how ctor_uninit_member (R5) skips them.
+  if (Ctor->isDelegatingConstructor())
+    return;
+
   CFG *cfg = AC.getCFG();
   if (!cfg)
     return;
