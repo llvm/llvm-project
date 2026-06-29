@@ -48,6 +48,15 @@ public:
 //       version.
 LLVM_ABI bool isCycleInvariant(const MachineCycle *Cycle, MachineInstr &I);
 
+/// Returns true if this machine instruction loads from global offset table or
+/// constant pool.
+bool mayLoadFromGOTOrConstantPool(MachineInstr &MI);
+
+/// Returns true if this machine instruction can be a sink candidate.
+bool isSinkIntoCycleCandidate(MachineInstr &MI, MachineCycle *Cycle,
+                              MachineRegisterInfo *MRI,
+                              const TargetInstrInfo *TII);
+
 class MachineCycleAnalysis : public AnalysisInfoMixin<MachineCycleAnalysis> {
   friend AnalysisInfoMixin<MachineCycleAnalysis>;
   LLVM_ABI static AnalysisKey Key;
