@@ -88,8 +88,9 @@ TEST(SubobjectVisitorTest, Atomic) {
     struct S {
       int SField;
     };
+    typedef S STypDef;
     struct T {
-      _Atomic S InnerAtomic;
+      _Atomic STypDef InnerAtomic;
     };
   )cpp");
   ASSERT_TRUE(AST.get());
