@@ -315,7 +315,7 @@ Non-comprehensive list of changes in this release
   ``__builtin_elementwise_min``.
 
 - Added header ``endian.h`` which contains byte order helpers specified in POSIX
-
+  
 - Added #pragma loop licm(disable) for llvm.loop.licm.disable metadata
 
 - Added a new ``ExplicitInstantiationDecl`` AST node to represent explicit
@@ -691,6 +691,11 @@ Improvements to Coverage Mapping
 - Consteval member functions are no longer emitted in coverage mappings,
   matching the existing behavior for free consteval functions. (#GH164448)
 
+Improvements to Clang's compile-time performance
+------------------------------------------------
+- Improved the performance of ``auto`` deduction by adding a fast path
+  for simple cases, including ``auto``, ``const auto``, and ``auto*``. (#GH186274)
+  
 Bug Fixes in This Version
 -------------------------
 
