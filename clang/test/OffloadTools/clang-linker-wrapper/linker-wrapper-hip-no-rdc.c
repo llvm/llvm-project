@@ -67,3 +67,18 @@ __attribute__((visibility("protected"), used)) int x;
 // handing it to the LTO link.
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --wrapper-verbose --dry-run --no-lto --emit-fatbin-only --linker-path=/usr/bin/ld %t.out -o %t.nolto.hipfb 2>&1 | FileCheck %s --check-prefix=NO-LTO
 // NO-LTO: clang{{.*}} -mcpu=gfx1200{{.*}} -x ir {{.*}}-flto=none
+
+// With --no-lto, device-link codegen happens in the clang -x ir step.
+// Device-linker -mllvm options must still reach that backend invocation.
+// RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --wrapper-verbose --dry-run --no-lto --emit-fatbin-only --linker-path=/usr/bin/ld \
+// RUN:   --device-linker=amdgcn-amd-amdhsa=-mllvm \
+// RUN:   --device-linker=amdgcn-amd-amdhsa=-time-passes \
+// RUN:   --device-linker=amdgcn-amd-amdhsa=-mllvm=-stats \
+// RUN:   %t.out -o %t.nolto.opts.hipfb 2>&1 | FileCheck %s --check-prefix=NO-LTO-OPTS
+// NO-LTO-OPTS: clang{{.*}} -mcpu=gfx1200
+// NO-LTO-OPTS-SAME: -mllvm -time-passes
+// NO-LTO-OPTS-SAME: -mllvm -stats
+// NO-LTO-OPTS-SAME: -x ir
+// NO-LTO-OPTS-SAME: -Xlinker -mllvm
+// NO-LTO-OPTS-SAME: -Xlinker -time-passes
+// NO-LTO-OPTS-SAME: -Xlinker -mllvm=-stats

@@ -534,11 +534,36 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
     Triple.isAMDGPU() ? CmdArgs.push_back(Args.MakeArgString("-mcpu=" + Arch))
                       : CmdArgs.push_back(Args.MakeArgString("-march=" + Arch));
 
+  bool NonLTO = Args.hasArg(OPT_no_lto) && !Triple.isSPIRV();
+
+  auto AddBackendOption = [&](StringRef Arg) {
+    CmdArgs.append({"-mllvm", Args.MakeArgString(Arg)});
+  };
+
   // Forward all of the `--offload-opt` and `-mllvm` options to the device.
-  for (auto &Arg : Args.filtered(OPT_offload_opt_eq_minus, OPT_mllvm))
+  for (auto &Arg : Args.filtered(OPT_offload_opt_eq_minus, OPT_mllvm)) {
+    if (NonLTO && Arg->getOption().matches(OPT_mllvm))
+      AddBackendOption(Arg->getValue());
     CmdArgs.append(
         {"-Xlinker",
          Args.MakeArgString("--plugin-opt=" + StringRef(Arg->getValue()))});
+  }
+
+  // In the non-LTO path, this Clang invocation performs device-link codegen.
+  // Mirror explicit device-linker -mllvm options so they reach that backend
+  // invocation as they do in the LTO path.
+  if (NonLTO) {
+    auto LinkerArgs = Args.getAllArgValues(OPT_linker_arg_EQ);
+    for (auto I = LinkerArgs.begin(), E = LinkerArgs.end(); I != E; ++I) {
+      StringRef Arg = *I;
+      if (Arg == "-mllvm") {
+        if (++I != E)
+          AddBackendOption(*I);
+      } else if (Arg.consume_front("-mllvm=")) {
+        AddBackendOption(Arg);
+      }
+    }
+  }
 
   if (!Triple.isNVPTX() && !Triple.isSPIRV())
     CmdArgs.push_back("-Wl,--no-undefined");
@@ -551,7 +576,7 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   //        share a unified interface.
   // SPIR-V has no non-LTO pipeline so a --no-lto leaked from a concrete arch in
   // a multi-target compile is ignored. Which is a workaround to remove.
-  if (Args.hasArg(OPT_no_lto) && !Triple.isSPIRV())
+  if (NonLTO)
     CmdArgs.append({"-x", "ir"});
   for (StringRef InputFile : InputFiles)
     CmdArgs.push_back(InputFile);
@@ -615,7 +640,7 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   for (StringRef Arg : Args.getAllArgValues(OPT_compiler_arg_EQ))
     CmdArgs.push_back(Args.MakeArgString(Arg));
 
-  if (Args.hasArg(OPT_no_lto) && !Triple.isSPIRV())
+  if (NonLTO)
     CmdArgs.append({"-flto=none", "-Wno-unused-command-line-argument"});
 
   if (Error Err = executeCommands(*ClangPath, CmdArgs))
