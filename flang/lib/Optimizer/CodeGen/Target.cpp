@@ -1389,10 +1389,13 @@ struct TargetSparcV9 : public GenericTarget<TargetSparcV9> {
 //===----------------------------------------------------------------------===//
 
 namespace {
+// RISCV64 calling convention specification:
+// https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc#procedure-calling-convention
 struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
   using GenericTarget::GenericTarget;
 
   static constexpr int defaultWidth = 64;
+  static constexpr int defaultWidthBytes = defaultWidth / 8;
 
   CodeGenSpecifics::Marshalling
   complexArgumentType(mlir::Location loc, mlir::Type eleTy) const override {
@@ -1424,6 +1427,316 @@ struct TargetRISCV64 : public GenericTarget<TargetRISCV64> {
       typeTodo(sem, loc, "return");
     }
     return marshal;
+  }
+
+  bool hasHardFloatABI(mlir::Location loc) const {
+    auto abi = getTargetABI();
+
+    if (abi == "lp64d")
+      return true;
+    if (abi == "lp64")
+      return false;
+    TODO(loc, "RISCV64 BIND(C) support for " + abi);
+  }
+
+  CodeGenSpecifics::Marshalling
+  passOnTheStack(unsigned short recAlign, mlir::Type ty, bool isResult) const {
+    CodeGenSpecifics::Marshalling marshal;
+    // The stack is always 8 byte aligned
+    unsigned short align = std::max(recAlign, static_cast<unsigned short>(8));
+    marshal.emplace_back(fir::ReferenceType::get(ty),
+                         AT{align, /*byval=*/!isResult, /*sret=*/isResult});
+    return marshal;
+  }
+
+  const llvm::SmallVector<mlir::Type>
+  flattenTypeList(mlir::Location loc, const mlir::Type type) const {
+    llvm::SmallVector<mlir::Type> flatTypes;
+
+    llvm::TypeSwitch<mlir::Type>(type)
+        .Case([&](mlir::IntegerType intTy) {
+          if (intTy.getWidth() <= 128)
+            flatTypes.push_back(intTy);
+          else
+            TODO(loc,
+                 "integerType with width exceeding 128 bits is unsupported");
+        })
+        .Case([&](mlir::FloatType floatTy) {
+          if (floatTy.getWidth() <= 64)
+            flatTypes.push_back(floatTy);
+          else
+            TODO(loc, "128 bit float is not supported by RISCV64");
+        })
+        .Case([&](mlir::ComplexType cmplx) {
+          const auto *sem = &floatToSemantics(kindMap, cmplx.getElementType());
+          if (sem == &llvm::APFloat::IEEEsingle() ||
+              sem == &llvm::APFloat::IEEEdouble())
+            std::fill_n(std::back_inserter(flatTypes), 2,
+                        cmplx.getElementType());
+          else
+            TODO(loc, "unsupported complex type(not IEEEsingle, IEEEdouble"
+                      "as a structure component for BIND(C), "
+                      "VALUE derived type argument and type return");
+        })
+        .Case([&](fir::LogicalType logicalTy) {
+          const unsigned width =
+              kindMap.getLogicalBitsize(logicalTy.getFKind());
+          flatTypes.push_back(mlir::IntegerType::get(type.getContext(), width));
+        })
+        .Case([&](fir::CharacterType charTy) {
+          if (charTy.getLen() == 1)
+            flatTypes.push_back(mlir::IntegerType::get(type.getContext(), 8));
+          else
+            TODO(loc,
+                 "fir.type value arg character components must have length 1");
+        })
+        .Case([&](fir::SequenceType seqTy) {
+          if (!seqTy.hasDynamicExtents()) {
+            const std::uint64_t numOfEle = seqTy.getConstantArraySize();
+            mlir::Type eleTy = seqTy.getEleTy();
+            // Don't check for subtype again if element-type is scalar.
+            if (mlir::isa<mlir::IntegerType, mlir::FloatType, fir::LogicalType>(
+                    eleTy)) {
+              std::fill_n(std::back_inserter(flatTypes), numOfEle, eleTy);
+            } else {
+              llvm::SmallVector<mlir::Type> subTypeList =
+                  flattenTypeList(loc, eleTy);
+              if (subTypeList.size() != 0)
+                for (std::uint64_t i = 0; i < numOfEle; ++i)
+                  llvm::copy(subTypeList, std::back_inserter(flatTypes));
+            }
+          } else
+            TODO(loc, "unsupported dynamic extent sequence type as a structure "
+                      "component for BIND(C), "
+                      "VALUE derived type argument and type return");
+        })
+        .Case([&](fir::RecordType recTy) {
+          for (auto &component : recTy.getTypeList()) {
+            mlir::Type eleTy = component.second;
+            llvm::SmallVector<mlir::Type> subTypeList =
+                flattenTypeList(loc, eleTy);
+            if (subTypeList.size() != 0)
+              llvm::copy(subTypeList, std::back_inserter(flatTypes));
+          }
+        })
+        .Case([&](fir::VectorType vecTy) {
+          TODO(loc, "passing vector argument to C by value is not supported");
+        })
+        .Default([&](mlir::Type ty) {
+          if (fir::conformsWithPassByRef(ty))
+            flatTypes.push_back(
+                mlir::IntegerType::get(type.getContext(), defaultWidth));
+          else
+            TODO(loc, "unsupported component type for BIND(C), VALUE derived "
+                      "type argument and type return");
+        });
+
+    return flatTypes;
+  }
+
+  static bool floatAndCanPassInRegister(const mlir::Type &ty) {
+    return mlir::isa<mlir::FloatType>(ty) &&
+           mlir::cast<mlir::FloatType>(ty).getWidth() <= defaultWidth;
+  }
+
+  static bool integerAndCanPassInRegister(const mlir::Type &ty) {
+    return mlir::isa<mlir::IntegerType>(ty) &&
+           mlir::cast<mlir::IntegerType>(ty).getWidth() <= defaultWidth;
+  }
+
+  void checkAvailableRegisters(mlir::Location loc,
+                               const Marshalling &previousArguments,
+                               int &gprArgs, int &fprArgs) const {
+    for (auto [ty, attr] : previousArguments) {
+      if (gprArgs <= 0 && fprArgs <= 0)
+        break;
+
+      if (attr.isByVal()) {
+        if (gprArgs)
+          gprArgs--;
+        continue;
+      }
+
+      llvm::TypeSwitch<mlir::Type>(ty)
+          .Case<mlir::IntegerType>([&](mlir::IntegerType intTy) {
+            if (gprArgs > 1 && intTy.getWidth() > 64)
+              gprArgs -= 2;
+            else if (gprArgs)
+              gprArgs--;
+          })
+          .Case<mlir::FloatType>([&](mlir::FloatType floatTy) {
+            if (fprArgs)
+              fprArgs--;
+          })
+          .Case<fir::SequenceType>([&](fir::SequenceType seqTy) {
+            auto sizeSeqTy = fir::getTypeSizeAndAlignmentOrCrash(
+                                 loc, seqTy, getDataLayout(), kindMap)
+                                 .first;
+            assert((sizeSeqTy <= 2 * defaultWidthBytes) &&
+                   "arrays can't be passed by value to bind(c) and "
+                   "if array is a record field it was marshalled before");
+
+            if (sizeSeqTy <= defaultWidthBytes && gprArgs) {
+              gprArgs--;
+              return;
+            }
+            if (sizeSeqTy <= 2 * defaultWidthBytes && gprArgs) {
+              // We try to use two registers.
+              if (gprArgs > 1)
+                gprArgs -= 2;
+              else
+                gprArgs--;
+            }
+          })
+          // NOTE: Tuples are only used to marshal result types and so can't
+          // appear in `previousArguments`.
+          .Default([&](mlir::Type ty) {
+            if (fir::conformsWithPassByRef(ty) && gprArgs)
+              gprArgs--;
+          });
+    }
+  }
+
+  CodeGenSpecifics::Marshalling
+  getIntCCArgs(mlir::MLIRContext *context,
+               CodeGenSpecifics::Marshalling marshal, std::uint64_t recordSize,
+               std::uint64_t recordAlign) const {
+    assert(recordSize <= defaultWidthBytes * 2);
+
+    // NOTE: Clang doesn't handle split struct case when only a single register
+    // remains. In general it lets the code generator take care of properly
+    // handling excess integer register usage, do the same for Flang.
+    // For more info see comment in: llvm/lib/Target/RISCV/RISCVCallingConv.cpp
+    if (recordSize <= defaultWidthBytes) {
+      // Pass this as an integer.
+      int width = llvm::PowerOf2Ceil(recordSize * 8);
+      marshal.emplace_back(mlir::IntegerType::get(context, width), AT{});
+      return marshal;
+    }
+
+    // Splitting of large scalars is handled in the backend.
+    if (recordAlign == 2 * defaultWidthBytes) {
+      marshal.emplace_back(mlir::IntegerType::get(context, 2 * defaultWidth),
+                           AT{});
+      return marshal;
+    }
+
+    auto intTy = mlir::IntegerType::get(context, defaultWidth);
+    marshal.emplace_back(fir::SequenceType::get({2}, intTy), AT{});
+    return marshal;
+  }
+
+  CodeGenSpecifics::Marshalling
+  classifyStruct(mlir::Location loc, fir::RecordType recTy, int gprArgs,
+                 int fprArgs, bool isResult,
+                 const Marshalling &previousArguments) const {
+    auto [recordSize, recordAlign] = fir::getTypeSizeAndAlignmentOrCrash(
+        loc, recTy, getDataLayout(), kindMap);
+
+    CodeGenSpecifics::Marshalling marshal;
+    mlir::MLIRContext *context = recTy.getContext();
+
+    // Have to do this first to catch any illegal types in the record.
+    const llvm::SmallVector<mlir::Type> &flattenedTypes =
+        flattenTypeList(loc, recTy);
+
+    // This is odd and some targets reject it. The spec says to ignore it.
+    // IIRC Fortran does not allow empty structs and not all versions of C do.
+    // Try to do something sensible, rather than crashing.
+    if (recordSize == 0)
+      return passOnTheStack(recordAlign, recTy, isResult);
+
+    if (recordSize > 2 * defaultWidthBytes)
+      // This struct must go to the stack because it cannot be passed using only
+      // registers.
+      return passOnTheStack(recordAlign, recTy, isResult);
+
+    checkAvailableRegisters(loc, previousArguments, gprArgs, fprArgs);
+
+    if (flattenedTypes.size() == 1 &&
+        floatAndCanPassInRegister(flattenedTypes[0])) {
+      // A struct containing just one floating-point real is passed as though it
+      // were a standalone floating-point real.
+      if (fprArgs) {
+        marshal.emplace_back(flattenedTypes[0], AT{});
+        return marshal;
+      }
+      return getIntCCArgs(context, marshal, recordSize, recordAlign);
+    }
+
+    if (flattenedTypes.size() == 2 &&
+        floatAndCanPassInRegister(flattenedTypes[0]) &&
+        floatAndCanPassInRegister(flattenedTypes[1])) {
+      // A struct containing two floating-point reals is passed in two
+      // floating-point registers, if neither real is
+      // more than ABI_FLEN bits wide and at least two floating-point argument
+      // registers are available. (The registers need not be an aligned pair.)
+      // Otherwise, it is passed according to the integer calling convention.
+      if (fprArgs > 1) {
+        if (isResult)
+          // Results have to be passed in single return type so use tuples.
+          marshal.emplace_back(
+              mlir::TupleType::get(context, mlir::TypeRange{flattenedTypes[0],
+                                                            flattenedTypes[1]}),
+              AT{});
+        else {
+          // Clang flattens this as two floats, so do the same.
+          marshal.emplace_back(flattenedTypes[0], AT{});
+          marshal.emplace_back(flattenedTypes[1], AT{});
+        }
+        return marshal;
+      }
+      return getIntCCArgs(context, marshal, recordSize, recordAlign);
+    }
+
+    if (flattenedTypes.size() == 2 &&
+        ((floatAndCanPassInRegister(flattenedTypes[0]) &&
+          integerAndCanPassInRegister(flattenedTypes[1])) ||
+         (integerAndCanPassInRegister(flattenedTypes[0]) &&
+          floatAndCanPassInRegister(flattenedTypes[1])))) {
+      // A struct containing one floating-point real and one integer (or
+      // bitfield), in either order, is passed in a floating-point register and
+      // an integer register, provided the floating-point real is no more than
+      // ABI_FLEN bits wide and the integer is no more than XLEN bits wide, and
+      // at least one floating-point argument register and at least one integer
+      // argument register is available. If the struct is passed in this manner,
+      // and the integer is narrower than XLEN bits, the remaining bits are
+      // unspecified. If the struct is not passed in this manner, then it is
+      // passed according to the integer calling convention.
+      if (gprArgs && fprArgs) {
+        if (isResult)
+          marshal.emplace_back(
+              mlir::TupleType::get(context, mlir::TypeRange{flattenedTypes[0],
+                                                            flattenedTypes[1]}),
+              AT{});
+        else {
+          // Clang flattens this as one float and one integer, so do the same.
+          marshal.emplace_back(flattenedTypes[0], AT{});
+          marshal.emplace_back(flattenedTypes[1], AT{});
+        }
+        return marshal;
+      }
+    }
+
+    return getIntCCArgs(context, marshal, recordSize, recordAlign);
+  }
+
+  CodeGenSpecifics::Marshalling
+  structArgumentType(mlir::Location loc, fir::RecordType recTy,
+                     const Marshalling &previousArguments) const override {
+    int gprArgs = 8;
+    int fprArgs = hasHardFloatABI(loc) ? 8 : 0;
+
+    return classifyStruct(loc, recTy, gprArgs, fprArgs, /*isResult=*/false,
+                          previousArguments);
+  }
+
+  CodeGenSpecifics::Marshalling
+  structReturnType(mlir::Location loc, fir::RecordType recTy) const override {
+    int gprArgs = 2;
+    int fprArgs = hasHardFloatABI(loc) ? 2 : 0;
+
+    return classifyStruct(loc, recTy, gprArgs, fprArgs, /*isResult=*/true, {});
   }
 };
 } // namespace
