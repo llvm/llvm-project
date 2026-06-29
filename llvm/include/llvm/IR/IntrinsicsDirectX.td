@@ -42,7 +42,7 @@ def int_dx_resource_getpointer
 
 def int_dx_resource_getbasepointer
     : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_any_ty],
-                            [IntrReadMem, IntrInaccessibleMemOnly]>;
+                            [IntrConvergent, IntrNoMem]>;
 
 def int_dx_resource_nonuniformindex
     : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
