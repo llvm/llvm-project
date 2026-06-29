@@ -13,6 +13,7 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/AffineExpr.h"
 #include "mlir-c/AffineMap.h"
+#include "mlir-c/Analysis.h"
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/Diagnostics.h"
@@ -3347,6 +3348,78 @@ int testOperationEquivalence(MlirContext ctx) {
   return 0;
 }
 
+// Prints the names of the operations in a slice buffer, for FileCheck.
+static void printSlice(MlirOperation *slice, intptr_t n) {
+  for (intptr_t i = 0; i < n; ++i) {
+    MlirStringRef name = mlirIdentifierStr(mlirOperationGetName(slice[i]));
+    fprintf(stderr, "slice: %.*s\n", (int)name.length, name.data);
+  }
+}
+
+// Slice filter that treats `arith.subi` as a frontier (stops propagation
+// through it, and excludes it from the slice).
+static bool sliceFilterExcludeSubi(MlirOperation op, void *userData) {
+  (void)userData;
+  MlirStringRef name = mlirIdentifierStr(mlirOperationGetName(op));
+  return !mlirStringRefEqual(name,
+                             mlirStringRefCreateFromCString("arith.subi"));
+}
+
+int testForwardSlice(MlirContext ctx) {
+  fprintf(stderr, "@testForwardSlice\n");
+  // CHECK-LABEL: @testForwardSlice
+
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("arith"));
+
+  const char *moduleStr = "func.func @f(%arg0: i32) -> i32 {\n"
+                          "  %0 = arith.addi %arg0, %arg0 : i32\n"
+                          "  %1 = arith.muli %0, %arg0 : i32\n"
+                          "  %2 = arith.subi %1, %0 : i32\n"
+                          "  return %2 : i32\n"
+                          "}\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleStr));
+
+  MlirBlock moduleBody = mlirModuleGetBody(module);
+  MlirOperation funcOp = mlirBlockGetFirstOperation(moduleBody);
+  MlirRegion funcRegion = mlirOperationGetRegion(funcOp, 0);
+  MlirBlock funcBody = mlirRegionGetFirstBlock(funcRegion);
+  MlirOperation addOp = mlirBlockGetFirstOperation(funcBody);
+
+  // The forward slice of the addi is its transitive users: the muli, the subi
+  // and the return (the addi itself is not included). Query the size first,
+  // then fill a buffer.
+  intptr_t count = mlirGetForwardSliceSize(addOp, NULL, NULL);
+  assert(count == 3);
+  MlirOperation slice[3];
+  mlirGetForwardSlice(addOp, NULL, NULL, slice);
+  fprintf(stderr, "unfiltered forward slice:\n");
+  // CHECK: unfiltered forward slice:
+  printSlice(slice, count);
+  // CHECK-DAG: slice: arith.muli
+  // CHECK-DAG: slice: arith.subi
+  // CHECK-DAG: slice: func.return
+
+  // With a filter that excludes the subi, propagation stops there: only the
+  // muli remains. The return is only reachable through the (excluded) subi, so
+  // it drops out of the slice as well.
+  intptr_t filteredCount =
+      mlirGetForwardSliceSize(addOp, sliceFilterExcludeSubi, NULL);
+  assert(filteredCount == 1);
+  mlirGetForwardSlice(addOp, sliceFilterExcludeSubi, NULL, slice);
+  fprintf(stderr, "filtered forward slice:\n");
+  // CHECK: filtered forward slice:
+  printSlice(slice, filteredCount);
+  // CHECK-NEXT: slice: arith.muli
+  // CHECK-NOT: slice:
+
+  mlirModuleDestroy(module);
+
+  // CHECK: testForwardSlice: PASSED
+  fprintf(stderr, "testForwardSlice: PASSED\n");
+  return 0;
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
@@ -3407,6 +3480,8 @@ int main(void) {
     return 21;
   if (testOperationEquivalence(ctx))
     return 22;
+  if (testForwardSlice(ctx))
+    return 23;
 
   // CHECK: DESTROY MAIN CONTEXT
   // CHECK: reportResourceDelete: resource_i64_blob
