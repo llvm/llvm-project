@@ -3923,22 +3923,18 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
   uint64_t SatWidth = SatVT.getScalarSizeInBits();
   assert(SatWidth <= DstWidth && "Saturation width cannot exceed result width");
 
-  // Select v2f32 -> v2i16 natively to v_cvt_pk_[iu]16_f32.
-  if (DstVT.isVector()) {
-    if (DstVT == MVT::v2i16 && SatWidth == 16 && SrcVT == MVT::v2f32)
+  // Scalar cases will be selected natively to v_cvt_/s_cvt_ instructions.
+  // v2f32 -> v2i16 will be selected natively to v_cvt_pk_[iu]16_f32.
+  if (SatWidth == DstWidth) {
+    if ((DstVT == MVT::i32 && (SrcVT == MVT::f32 || SrcVT == MVT::f64)) ||
+        (DstVT == MVT::i16 && (SrcVT == MVT::f16 || SrcVT == MVT::f32)) ||
+        (DstVT == MVT::v2i16 && SrcVT == MVT::v2f32))
       return Op;
-
-    return SDValue();
   }
 
-  // Will be selected natively
-  if (DstVT == MVT::i32 && SatWidth == DstWidth &&
-      (SrcVT == MVT::f32 || SrcVT == MVT::f64))
-    return Op;
-
-  if (DstVT == MVT::i16 && SatWidth == DstWidth &&
-      (SrcVT == MVT::f16 || SrcVT == MVT::f32))
-    return Op;
+  // Vectors can only be selected natively.
+  if (DstVT.isVector())
+    return SDValue();
 
   // Perform all saturation at selected width (i16 or i32) and truncate
   if (SatWidth < DstWidth && SatWidth <= 32) {
@@ -3958,7 +3954,7 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
     SDValue IntSatVal;
 
     // Then, clamp at the saturation width using either i16 or i32 instructions
-    if (Op.getOpcode() == ISD::FP_TO_SINT_SAT) {
+    if (OpOpcode == ISD::FP_TO_SINT_SAT) {
       SDValue MinConst = DAG.getConstant(
           APInt::getSignedMaxValue(SatWidth).sext(ResultWidth), DL, ResultVT);
       SDValue MaxConst = DAG.getConstant(
@@ -3976,7 +3972,7 @@ SDValue AMDGPUTargetLowering::LowerFP_TO_INT_SAT(const SDValue Op,
                              DstVT);
   }
 
-  // SatWidth == DstWidth
+  // SatWidth == DstWidth or SatWidth > 32
 
   // Saturate at i32 for i64 dst and f16/bf16 src (will invoke f16 promotion
   // below)

@@ -202,7 +202,7 @@ define void @reduce_f64_fast(double %arg) {
 ; AVX512-NEXT:  Cost Model: Found costs of 0 for: %V1 = call fast double @llvm.vector.reduce.fadd.v1f64(double %arg, <1 x double> undef)
 ; AVX512-NEXT:  Cost Model: Found costs of 2 for: %V2 = call fast double @llvm.vector.reduce.fadd.v2f64(double %arg, <2 x double> undef)
 ; AVX512-NEXT:  Cost Model: Found costs of 3 for: %V4 = call fast double @llvm.vector.reduce.fadd.v4f64(double %arg, <4 x double> undef)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:6 Lat:17 SizeLat:6 for: %V8 = call fast double @llvm.vector.reduce.fadd.v8f64(double %arg, <8 x double> undef)
+; AVX512-NEXT:  Cost Model: Found costs of 4 for: %V8 = call fast double @llvm.vector.reduce.fadd.v8f64(double %arg, <8 x double> undef)
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:21 SizeLat:7 for: %V16 = call fast double @llvm.vector.reduce.fadd.v16f64(double %arg, <16 x double> undef)
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
@@ -274,7 +274,7 @@ define void @reduce_f32_fast(float %arg) {
 ; AVX512-NEXT:  Cost Model: Found costs of 2 for: %V2 = call fast float @llvm.vector.reduce.fadd.v2f32(float %arg, <2 x float> undef)
 ; AVX512-NEXT:  Cost Model: Found costs of 3 for: %V4 = call fast float @llvm.vector.reduce.fadd.v4f32(float %arg, <4 x float> undef)
 ; AVX512-NEXT:  Cost Model: Found costs of 4 for: %V8 = call fast float @llvm.vector.reduce.fadd.v8f32(float %arg, <8 x float> undef)
-; AVX512-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:24 SizeLat:8 for: %V16 = call fast float @llvm.vector.reduce.fadd.v16f32(float %arg, <16 x float> undef)
+; AVX512-NEXT:  Cost Model: Found costs of 5 for: %V16 = call fast float @llvm.vector.reduce.fadd.v16f32(float %arg, <16 x float> undef)
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:9 Lat:28 SizeLat:9 for: %V32 = call fast float @llvm.vector.reduce.fadd.v32f32(float %arg, <32 x float> undef)
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
