@@ -1043,20 +1043,16 @@ public:
                          TheNamespace.Items, SwiftVersion);
   }
 
-  bool getWhereParameters(
-      const Function &Function,
-      std::optional<llvm::ArrayRef<llvm::StringRef>> &WhereParameters) {
-    WhereParameters = std::nullopt;
+  std::pair<bool, std::optional<llvm::ArrayRef<llvm::StringRef>>>
+  getWhereParameters(const Function &Function) {
     if (!Function.Where)
-      return true;
+      return {true, std::nullopt};
 
     if (!Function.Where->Parameters) {
       emitError("'Where' requires 'Parameters'");
-      return false;
+      return {false, std::nullopt};
     }
-    WhereParameters =
-        llvm::ArrayRef<llvm::StringRef>(*Function.Where->Parameters);
-    return true;
+    return {true, llvm::ArrayRef<llvm::StringRef>(*Function.Where->Parameters)};
   }
 
   template <typename FuncOrMethodInfo>
@@ -1167,15 +1163,15 @@ public:
     }
 
     for (const auto &CXXMethod : T.Methods) {
-      std::optional<llvm::ArrayRef<llvm::StringRef>> WhereParameters;
-      if (!getWhereParameters(CXXMethod, WhereParameters))
+      auto WhereParameters = getWhereParameters(CXXMethod);
+      if (!WhereParameters.first)
         continue;
 
       CXXMethodInfo MI;
       convertFunction(CXXMethod, MI);
-      if (WhereParameters)
-        Writer.addCXXMethod(TagCtxID, CXXMethod.Name, *WhereParameters, MI,
-                            SwiftVersion);
+      if (WhereParameters.second)
+        Writer.addCXXMethod(TagCtxID, CXXMethod.Name, *WhereParameters.second,
+                            MI, SwiftVersion);
       else
         Writer.addCXXMethod(TagCtxID, CXXMethod.Name, MI, SwiftVersion);
     }
@@ -1248,13 +1244,13 @@ public:
     // Write all global functions.
     llvm::StringSet<> KnownNameOnlyFunctions;
     for (const auto &Function : TLItems.Functions) {
-      std::optional<llvm::ArrayRef<llvm::StringRef>> WhereParameters;
-      if (!getWhereParameters(Function, WhereParameters))
+      auto WhereParameters = getWhereParameters(Function);
+      if (!WhereParameters.first)
         continue;
 
       // Check for duplicate name-only global functions. Selector-aware
       // duplicate diagnostics are handled by a later overload-matching PR.
-      if (!WhereParameters &&
+      if (!WhereParameters.second &&
           !KnownNameOnlyFunctions.insert(Function.Name).second) {
         emitError(llvm::Twine("multiple definitions of global function '") +
                   Function.Name + "'");
@@ -1263,9 +1259,9 @@ public:
 
       GlobalFunctionInfo GFI;
       convertFunction(Function, GFI);
-      if (WhereParameters)
-        Writer.addGlobalFunction(Ctx, Function.Name, *WhereParameters, GFI,
-                                 SwiftVersion);
+      if (WhereParameters.second)
+        Writer.addGlobalFunction(Ctx, Function.Name, *WhereParameters.second,
+                                 GFI, SwiftVersion);
       else
         Writer.addGlobalFunction(Ctx, Function.Name, GFI, SwiftVersion);
     }
