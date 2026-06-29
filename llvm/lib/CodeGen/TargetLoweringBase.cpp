@@ -1188,6 +1188,9 @@ void TargetLoweringBase::initActions() {
     // Carry-less multiply
     setOperationAction({ISD::CLMUL, ISD::CLMULR, ISD::CLMULH}, VT, Expand);
 
+    // Bit extract/deposit (compress/expand)
+    setOperationAction({ISD::PEXT, ISD::PDEP}, VT, Expand);
+
     // Saturated trunc
     setOperationAction(ISD::TRUNCATE_SSAT_S, VT, Expand);
     setOperationAction(ISD::TRUNCATE_SSAT_U, VT, Expand);
@@ -2798,9 +2801,9 @@ MachineMemOperand::Flags TargetLoweringBase::getLoadMemOperandFlags(
 
   // Dereferenceability analysis is expensive, skip at O0.
   if (OptLevel != CodeGenOptLevel::None &&
-      isDereferenceableAndAlignedPointer(LI.getPointerOperand(), LI.getType(),
-                                         LI.getAlign(), DL, &LI, AC,
-                                         /*DT=*/nullptr, LibInfo)) {
+      isDereferenceableAndAlignedPointer(
+          LI.getPointerOperand(), LI.getType(), LI.getAlign(),
+          SimplifyQuery(DL, LibInfo, /*DT=*/nullptr, AC, &LI))) {
     Flags |= MachineMemOperand::MODereferenceable;
   } else if (LI.hasMetadata(LLVMContext::MD_dereferenceable)) {
     Flags |= MachineMemOperand::MODereferenceable;

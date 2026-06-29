@@ -4,7 +4,6 @@
 ; RUN: llc -mtriple=aarch64-windows-msvc -mattr=+sve < %s -o - | FileCheck -check-prefixes=SVE,SVEWINDOWS %s
 ; RUN: llc -mtriple=aarch64-windows-msvc < %s -o - | FileCheck -check-prefixes=WINDOWS %s
 
-; GISEL:       warning: Instruction selection used fallback path for testExpbf16
 
 define double @testExp(double %val, i32 %a) {
 ; SVE-LABEL: testExp:
@@ -53,6 +52,37 @@ define double @testExpIntrinsic(double %val, i32 %a) {
 ; WINDOWS-NEXT:    b ldexp
 entry:
   %call = tail call fast double @llvm.ldexp.f64(double %val, i32 %a)
+  ret double %call
+}
+
+; A sub-int exponent must be sign-extended to int on the libcall path;
+; PromoteIntOp_ExpOp must not crash on it.
+define double @testExpIntrinsic_i16(double %val, i16 %a) nounwind {
+; SVE-LABEL: testExpIntrinsic_i16:
+; SVE:       // %bb.0: // %entry
+; SVE-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; SVE-NEXT:    sxth w0, w0
+; SVE-NEXT:    bl ldexp
+; SVE-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; SVE-NEXT:    ret
+;
+; GISEL-LABEL: testExpIntrinsic_i16:
+; GISEL:       // %bb.0: // %entry
+; GISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; GISEL-NEXT:    sxth w0, w0
+; GISEL-NEXT:    bl ldexp
+; GISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; GISEL-NEXT:    ret
+;
+; WINDOWS-LABEL: testExpIntrinsic_i16:
+; WINDOWS:       // %bb.0: // %entry
+; WINDOWS-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
+; WINDOWS-NEXT:    sxth w0, w0
+; WINDOWS-NEXT:    bl ldexp
+; WINDOWS-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
+; WINDOWS-NEXT:    ret
+entry:
+  %call = tail call fast double @llvm.ldexp.f64.i16(double %val, i16 %a)
   ret double %call
 }
 
@@ -293,9 +323,12 @@ define bfloat @testExpbf16(bfloat %val, i32 %a) {
 ; GISEL-NEXT:    bl ldexpf
 ; GISEL-NEXT:    fmov w9, s0
 ; GISEL-NEXT:    mov w8, #32767 // =0x7fff
+; GISEL-NEXT:    fcmp s0, #0.0
 ; GISEL-NEXT:    ubfx w10, w9, #16, #1
 ; GISEL-NEXT:    add w8, w9, w8
-; GISEL-NEXT:    add w8, w10, w8
+; GISEL-NEXT:    orr w9, w9, #0x400000
+; GISEL-NEXT:    add w8, w8, w10
+; GISEL-NEXT:    csel w8, w9, w8, vs
 ; GISEL-NEXT:    lsr w8, w8, #16
 ; GISEL-NEXT:    fmov s0, w8
 ; GISEL-NEXT:    // kill: def $h0 killed $h0 killed $s0

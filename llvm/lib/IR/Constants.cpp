@@ -378,10 +378,14 @@ Constant *Constant::getNullValue(Type *Ty) {
   case Type::PointerTyID:
     return ConstantPointerNull::get(cast<PointerType>(Ty));
   case Type::FixedVectorTyID:
-  case Type::ScalableVectorTyID:
-    if (cast<VectorType>(Ty)->getElementType()->isPointerTy())
+  case Type::ScalableVectorTyID: {
+    Type *EltTy = cast<VectorType>(Ty)->getElementType();
+    if (EltTy->isFloatingPointTy())
+      return ConstantFP::get(Ty, APFloat::getZero(EltTy->getFltSemantics()));
+    if (EltTy->isPointerTy())
       return ConstantPointerNull::get(Ty);
     return ConstantAggregateZero::get(Ty);
+  }
   case Type::StructTyID:
   case Type::ArrayTyID:
     return ConstantAggregateZero::get(Ty);
@@ -2056,7 +2060,7 @@ BlockAddress *BlockAddress::get(Function *F, BasicBlock *BB) {
 
 BlockAddress::BlockAddress(Type *Ty, BasicBlock *BB)
     : Constant(Ty, Value::BlockAddressVal, AllocMarker) {
-  setOperand(0, BB);
+  Block = BB;
   BB->setHasAddressTaken(true);
 }
 
@@ -2089,7 +2093,7 @@ Value *BlockAddress::handleOperandChangeImpl(Value *From, Value *To) {
   // erase invalidates iterators/references, hence the duplicate NewBB lookup.
   getContext().pImpl->BlockAddresses.erase(getBasicBlock());
   getContext().pImpl->BlockAddresses[NewBB] = this;
-  setOperand(0, NewBB);
+  Block = NewBB;
   getBasicBlock()->setHasAddressTaken(true);
 
   // If we just want to keep the existing value, then return null.

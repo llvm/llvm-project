@@ -25,6 +25,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
 #include <memory>
 #include <optional>
@@ -107,6 +108,8 @@ PointerFlowMatcher::addEdges(Expected<EntityPointerLevelSet> &&LHS,
     return LHS.takeError();
   if (!RHS)
     return RHS.takeError();
+  if (RHS->empty())
+    return llvm::Error::success();
   for (auto L : *LHS)
     Results[L].insert(RHS->begin(), RHS->end());
   return llvm::Error::success();
@@ -222,9 +225,8 @@ llvm::Error matchInitializerListForRecordDecl(PointerFlowMatcher &Matcher,
   if (RecordTy->isUnion()) {
     auto *InitField = ILE->getInitializedFieldInUnion();
 
-    if (!InitField)
+    if (!InitField || ILE->inits().empty())
       return llvm::Error::success();
-    assert(!ILE->inits().empty());
     return Matcher.matchesInitializerList(InitField, ILE->getInit(0));
   }
   // Handle struct/class:
@@ -299,7 +301,11 @@ PointerFlowMatcher::matchesInitializerList(const ValueDecl *Base,
   if (Type->isArrayType())
     return matchInitializerListForArray(*this, Base, ILE,
                                         ArrayElementIndirectLevel);
-  // Must be the case of using a initializer-list for a scalar:
+
+  // Must be the case of using a initializer-list for a scalar.
+  // The initializer-list can be either singleton or empty:
+  if (ILE->getNumInits() == 0)
+    return llvm::Error::success();
   return matchesInitializerList(Base, ILE->getInit(0));
 }
 
@@ -308,7 +314,8 @@ public:
   PointerFlowTUSummaryExtractor(TUSummaryBuilder &Builder)
       : TUSummaryExtractor(Builder) {}
 
-  Expected<std::unique_ptr<PointerFlowEntitySummary>>
+  /// \return a non-null unique pointer to a PointerFlowEntitySummary
+  std::unique_ptr<PointerFlowEntitySummary>
   extractEntitySummary(const NamedDecl *Contributor, ASTContext &Ctx,
                        TUSummaryExtractor &Extractor) {
     PointerFlowMatcher Matcher(Ctx, Extractor);
@@ -316,7 +323,7 @@ public:
       auto Err = Matcher.matches(Node, Contributor);
 
       if (Err)
-        llvm::report_fatal_error(std::move(Err));
+        logWarningFromError(std::move(Err));
     };
 
     findMatchesIn(Contributor, MatchAction);
@@ -331,18 +338,18 @@ public:
     for (auto *CD : Contributors) {
       auto EntitySummary = extractEntitySummary(CD, Ctx, *this);
 
-      if (!EntitySummary)
-        llvm::reportFatalInternalError(EntitySummary.takeError());
-      assert(*EntitySummary);
-      if ((*EntitySummary)->empty())
+      assert(EntitySummary);
+      if (EntitySummary->empty())
         continue;
 
       std::optional<EntityId> ContributorId = addEntity(CD);
-      if (!ContributorId)
-        llvm::reportFatalInternalError(makeEntityNameErr(Ctx, CD));
+      if (!ContributorId) {
+        logWarningFromError(makeEntityNameErr(Ctx, CD));
+        continue;
+      }
 
       [[maybe_unused]] auto [_, InsertionSucceeded] =
-          SummaryBuilder.addSummary(*ContributorId, std::move(*EntitySummary));
+          SummaryBuilder.addSummary(*ContributorId, std::move(EntitySummary));
 
       assert(InsertionSucceeded && "duplicated contributor extraction");
     }

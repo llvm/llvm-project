@@ -10,8 +10,8 @@ define void @snippet1_i8(ptr %ret, ptr %a) nounwind {
 ; RV32-LABEL: snippet1_i8:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    lbu a2, 0(a1)
-; RV32-NEXT:    lbu a1, 2(a1)
 ; RV32-NEXT:    li a3, 183
+; RV32-NEXT:    lbu a1, 2(a1)
 ; RV32-NEXT:    mul a2, a2, a3
 ; RV32-NEXT:    srli a2, a2, 8
 ; RV32-NEXT:    sub a1, a1, a2
@@ -29,8 +29,8 @@ define void @snippet1_i8(ptr %ret, ptr %a) nounwind {
 ; RV64-LABEL: snippet1_i8:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lbu a2, 0(a1)
-; RV64-NEXT:    lbu a1, 2(a1)
 ; RV64-NEXT:    li a3, 183
+; RV64-NEXT:    lbu a1, 2(a1)
 ; RV64-NEXT:    mul a2, a2, a3
 ; RV64-NEXT:    srli a2, a2, 8
 ; RV64-NEXT:    sub a1, a1, a2

@@ -453,12 +453,12 @@ define i64 @cls_i64_not_32(i64 %x) {
 define i128 @sll_i128(i128 %x, i128 %y) {
 ; CHECK-LABEL: sll_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sll a3, a0, a2
+; CHECK-NEXT:    slli a3, a2, 57
 ; CHECK-NEXT:    slx a1, a0, a2
-; CHECK-NEXT:    slli a2, a2, 57
-; CHECK-NEXT:    srai a2, a2, 63
-; CHECK-NEXT:    mvm a1, a3, a2
-; CHECK-NEXT:    andn a0, a3, a2
+; CHECK-NEXT:    sll a0, a0, a2
+; CHECK-NEXT:    srai a3, a3, 63
+; CHECK-NEXT:    mvm a1, a0, a3
+; CHECK-NEXT:    andn a0, a0, a3
 ; CHECK-NEXT:    ret
   %b = shl i128 %x, %y
   ret i128 %b
@@ -467,9 +467,8 @@ define i128 @sll_i128(i128 %x, i128 %y) {
 define i128 @sll_small_i128(i128 %x, i128 %y) {
 ; CHECK-LABEL: sll_small_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sll a3, a0, a2
 ; CHECK-NEXT:    slx a1, a0, a2
-; CHECK-NEXT:    mv a0, a3
+; CHECK-NEXT:    sll a0, a0, a2
 ; CHECK-NEXT:    ret
   %a = and i128 %y, 63
   %b = shl i128 %x, %a
@@ -501,8 +500,9 @@ define i128 @slli_i128(i128 %x) {
 define i128 @slli_i128_large(i128 %x) {
 ; CHECK-LABEL: slli_i128_large:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    slli a1, a0, 7
+; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    li a0, 0
+; CHECK-NEXT:    slli a1, a1, 7
 ; CHECK-NEXT:    ret
   %a = shl i128 %x, 71
   ret i128 %a
@@ -511,12 +511,12 @@ define i128 @slli_i128_large(i128 %x) {
 define i128 @srl_i128(i128 %x, i128 %y) {
 ; CHECK-LABEL: srl_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srl a3, a1, a2
+; CHECK-NEXT:    slli a3, a2, 57
 ; CHECK-NEXT:    srx a0, a1, a2
-; CHECK-NEXT:    slli a2, a2, 57
-; CHECK-NEXT:    srai a2, a2, 63
-; CHECK-NEXT:    mvm a0, a3, a2
-; CHECK-NEXT:    andn a1, a3, a2
+; CHECK-NEXT:    srl a1, a1, a2
+; CHECK-NEXT:    srai a3, a3, 63
+; CHECK-NEXT:    mvm a0, a1, a3
+; CHECK-NEXT:    andn a1, a1, a3
 ; CHECK-NEXT:    ret
   %b = lshr i128 %x, %y
   ret i128 %b
@@ -559,8 +559,9 @@ define i128 @srli_i128(i128 %x) {
 define i128 @srli_i128_large(i128 %x) {
 ; CHECK-LABEL: srli_i128_large:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    srli a0, a1, 7
+; CHECK-NEXT:    mv a0, a1
 ; CHECK-NEXT:    li a1, 0
+; CHECK-NEXT:    srli a0, a0, 7
 ; CHECK-NEXT:    ret
   %a = lshr i128 %x, 71
   ret i128 %a
@@ -569,12 +570,12 @@ define i128 @srli_i128_large(i128 %x) {
 define i128 @sra_i128(i128 %x, i128 %y) {
 ; CHECK-LABEL: sra_i128:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sra a3, a1, a2
+; CHECK-NEXT:    slli a3, a2, 57
 ; CHECK-NEXT:    srx a0, a1, a2
-; CHECK-NEXT:    slli a2, a2, 57
-; CHECK-NEXT:    srai a2, a2, 63
-; CHECK-NEXT:    mvm a0, a3, a2
-; CHECK-NEXT:    sra a1, a3, a2
+; CHECK-NEXT:    sra a1, a1, a2
+; CHECK-NEXT:    srai a3, a3, 63
+; CHECK-NEXT:    mvm a0, a1, a3
+; CHECK-NEXT:    sra a1, a1, a3
 ; CHECK-NEXT:    ret
   %b = ashr i128 %x, %y
   ret i128 %b
@@ -1773,4 +1774,25 @@ define i64 @test_plui_w_remat(ptr %p) nounwind {
   tail call void asm sideeffect "", "~{x1},~{x3},~{x4},~{x5},~{x6},~{x7},~{x8},~{x9},~{x10},~{x11},~{x12},~{x13},~{x14},~{x15},~{x16},~{x17},~{x18},~{x19},~{x20},~{x21},~{x22},~{x23},~{x24},~{x25},~{x26},~{x27},~{x28},~{x29},~{x30},~{x31}"()
   ; Use the constant again - it should be rematerialized, not spilled/reloaded
   ret i64 u0x7640000076400000
+}
+
+; The 0x0101010101010101 can be materialized with pli.b
+; The multiply makes the upper 10 bits of the and result unneeded
+; causing the mask to become 0x0001010101010101. Make sure we can still match
+; the pli.b
+define i64 @and_mul_32bitsplat(i64 %x) {
+; CHECK-LABEL: and_mul_32bitsplat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lui a1, %hi(.LCPI136_0)
+; CHECK-NEXT:    ld a1, %lo(.LCPI136_0)(a1)
+; CHECK-NEXT:    lui a2, 65664
+; CHECK-NEXT:    addi a2, a2, 1024
+; CHECK-NEXT:    slli a3, a2, 27
+; CHECK-NEXT:    and a0, a0, a1
+; CHECK-NEXT:    add a2, a2, a3
+; CHECK-NEXT:    mul a0, a0, a2
+; CHECK-NEXT:    ret
+  %a = and i64 %x, u0x0101010101010101
+  %b = mul i64 %a, u0x0080402010080400
+  ret i64 %b
 }

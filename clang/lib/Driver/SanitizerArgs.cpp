@@ -771,7 +771,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   }
 
   // Check that LTO is enabled if we need it.
-  if ((Kinds & NeedsLTO) && !D.isUsingLTO() && DiagnoseErrors) {
+  if ((Kinds & NeedsLTO) && !TC.isUsingLTO(Args) && DiagnoseErrors) {
     D.Diag(diag::err_drv_argument_only_allowed_with)
         << lastArgumentForMask(D, Args, Kinds & NeedsLTO) << "-flto";
   }

@@ -652,6 +652,10 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
   case Intrinsic::aarch64_neon_uqshrn:
   case Intrinsic::aarch64_neon_uqrshrn:
   case Intrinsic::aarch64_neon_sqneg:
+  case Intrinsic::aarch64_neon_sqabs:
+  case Intrinsic::aarch64_neon_scalar_uqxtn:
+  case Intrinsic::aarch64_neon_scalar_sqxtn:
+  case Intrinsic::aarch64_neon_scalar_sqxtun:
   case Intrinsic::aarch64_crypto_sha1h:
   case Intrinsic::aarch64_crypto_sha1c:
   case Intrinsic::aarch64_crypto_sha1p:
