@@ -2296,7 +2296,7 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
       if (ConstVal == 0 && !T.isWebAssemblyReferenceType()) {
         if (getLangOpts().OpenCL) {
           Diag(ArraySize->getBeginLoc(), diag::err_typecheck_zero_array_size)
-              << 3 << ArraySize->getSourceRange();
+              << 2 << ArraySize->getSourceRange();
           return QualType();
         }
 
