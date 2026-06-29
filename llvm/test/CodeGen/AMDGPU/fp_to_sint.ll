@@ -346,7 +346,7 @@ define amdgpu_kernel void @fp_to_sint_i64 (ptr addrspace(1) %out, float %in) {
 ; GFX11-SDAG-NEXT:    v_xor_b32_e32 v1, v1, v3
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX11-SDAG-NEXT:    v_xor_b32_e32 v0, v0, v3
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-SDAG-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, v3
 ; GFX11-SDAG-NEXT:    v_sub_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
@@ -533,11 +533,11 @@ define amdgpu_kernel void @fp_to_sint_v2i64(ptr addrspace(1) %out, <2 x float> %
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-SDAG-NEXT:    v_xor_b32_e32 v5, v5, v1
 ; GFX11-SDAG-NEXT:    v_xor_b32_e32 v8, v3, v1
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX11-SDAG-NEXT:    v_sub_co_u32 v2, vcc_lo, v4, v0
 ; GFX11-SDAG-NEXT:    v_sub_co_ci_u32_e64 v3, null, v7, v0, vcc_lo
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    v_sub_co_u32 v0, vcc_lo, v5, v1
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX11-SDAG-NEXT:    v_sub_co_ci_u32_e64 v1, null, v8, v1, vcc_lo
 ; GFX11-SDAG-NEXT:    global_store_b128 v6, v[0:3], s[0:1]
 ; GFX11-SDAG-NEXT:    s_endpgm
@@ -836,12 +836,10 @@ define amdgpu_kernel void @fp_to_sint_v4i64(ptr addrspace(1) %out, <4 x float> %
 ; GFX11-SDAG-NEXT:    v_xor_b32_e32 v1, v1, v9
 ; GFX11-SDAG-NEXT:    v_sub_co_ci_u32_e64 v3, null, v11, v5, vcc_lo
 ; GFX11-SDAG-NEXT:    v_sub_co_u32 v6, vcc_lo, v6, v10
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    v_sub_co_ci_u32_e64 v7, null, v4, v10, vcc_lo
 ; GFX11-SDAG-NEXT:    v_sub_co_u32 v4, vcc_lo, v15, v12
 ; GFX11-SDAG-NEXT:    v_sub_co_ci_u32_e64 v5, null, v14, v12, vcc_lo
 ; GFX11-SDAG-NEXT:    v_sub_co_u32 v0, vcc_lo, v1, v9
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    v_sub_co_ci_u32_e64 v1, null, v13, v9, vcc_lo
 ; GFX11-SDAG-NEXT:    s_clause 0x1
 ; GFX11-SDAG-NEXT:    global_store_b128 v8, v[4:7], s[4:5] offset:16

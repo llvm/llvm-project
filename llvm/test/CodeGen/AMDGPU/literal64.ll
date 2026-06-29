@@ -30,7 +30,6 @@ define amdgpu_ps void @v_add_u64(i64 %a, ptr addrspace(1) %out) {
 ; GFX13-LABEL: v_add_u64:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    v_add_co_u32 v0, vcc_lo, 0x12345678, v0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_add_co_ci_u32_e64 v1, null, 15, v1, vcc_lo
 ; GFX13-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GFX13-NEXT:    s_endpgm
@@ -65,7 +64,6 @@ define amdgpu_ps void @v_add_neg_u64(i64 %a, ptr addrspace(1) %out) {
 ; GFX13-LABEL: v_add_neg_u64:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    v_add_co_u32 v0, vcc_lo, 0xedcba988, v0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_add_co_ci_u32_e64 v1, null, -16, v1, vcc_lo
 ; GFX13-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GFX13-NEXT:    s_endpgm
@@ -100,7 +98,6 @@ define amdgpu_ps void @v_sub_u64(i64 %a, ptr addrspace(1) %out) {
 ; GFX13-LABEL: v_sub_u64:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    v_sub_co_u32 v0, vcc_lo, 0x12345678, v0
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    v_sub_co_ci_u32_e64 v1, null, 15, v1, vcc_lo
 ; GFX13-NEXT:    global_store_b64 v[2:3], v[0:1], off
 ; GFX13-NEXT:    s_endpgm
@@ -383,7 +380,7 @@ define amdgpu_ps <2 x float> @v_lshl_add_u64(i64 %a) {
 ; GFX13-LABEL: v_lshl_add_u64:
 ; GFX13:       ; %bb.0:
 ; GFX13-NEXT:    v_lshlrev_b64_e32 v[0:1], 1, v[0:1]
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX13-NEXT:    v_add_co_u32 v0, vcc_lo, 0x12345678, v0
 ; GFX13-NEXT:    v_add_co_ci_u32_e64 v1, null, 15, v1, vcc_lo
 ; GFX13-NEXT:    ; return to shader part epilog

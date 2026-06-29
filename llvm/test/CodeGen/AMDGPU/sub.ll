@@ -779,7 +779,6 @@ define amdgpu_kernel void @v_sub_i64(ptr addrspace(1) noalias %out, ptr addrspac
 ; GFX12-NEXT:    global_load_b64 v[2:3], v2, s[4:5]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, v2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_sub_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; GFX12-NEXT:    global_store_b64 v4, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_endpgm
@@ -875,7 +874,6 @@ define amdgpu_kernel void @v_test_sub_v2i64(ptr addrspace(1) %out, ptr addrspace
 ; GFX12-NEXT:    global_load_b128 v[4:7], v4, s[4:5]
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_sub_co_u32 v2, vcc_lo, v2, v6
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_sub_co_ci_u32_e64 v3, null, v3, v7, vcc_lo
 ; GFX12-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, v4
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
@@ -1008,7 +1006,6 @@ define amdgpu_kernel void @v_test_sub_v4i64(ptr addrspace(1) %out, ptr addrspace
 ; GFX12-NEXT:    global_load_b128 v[12:15], v12, s[6:7] offset:16
 ; GFX12-NEXT:    s_wait_loadcnt 0x2
 ; GFX12-NEXT:    v_sub_co_u32 v2, vcc_lo, v6, v2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_sub_co_ci_u32_e64 v3, null, v7, v3, vcc_lo
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_sub_co_u32 v10, vcc_lo, v10, v14

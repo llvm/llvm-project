@@ -347,7 +347,7 @@ define i128 @mad_i64_i32_sextops_i32_i128(i32 %arg0, i32 %arg1, i128 %arg2) #0 {
 ; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-NEXT:    v_mad_u64_u32 v[0:1], null, v14, v15, v[9:10]
 ; GFX1100-NEXT:    v_add_co_u32 v7, vcc_lo, v0, v12
-; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_4)
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_4)
 ; GFX1100-NEXT:    v_add_co_ci_u32_e64 v8, null, v1, v13, vcc_lo
 ; GFX1100-NEXT:    v_add_co_u32 v0, vcc_lo, v6, v2
 ; GFX1100-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v11, v3, vcc_lo
@@ -375,7 +375,7 @@ define i128 @mad_i64_i32_sextops_i32_i128(i32 %arg0, i32 %arg1, i128 %arg2) #0 {
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1150-NEXT:    v_add_co_ci_u32_e64 v9, null, 0, 0, s0
 ; GFX1150-NEXT:    v_mad_u64_u32 v[8:9], null, v13, v14, v[8:9]
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1150-NEXT:    v_add_co_u32 v8, vcc_lo, v8, v0
 ; GFX1150-NEXT:    v_add_co_ci_u32_e64 v9, null, v9, v1, vcc_lo
 ; GFX1150-NEXT:    v_add_co_u32 v0, vcc_lo, v6, v2
@@ -1278,11 +1278,10 @@ define i64 @mad_i64_i32_thrice(i32 %arg0, i32 %arg1, i64 %arg2, i64 %arg3, i64 %
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    v_mad_i64_i32 v[8:9], null, v0, v1, 0
-; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1100-NEXT:    v_add_co_u32 v0, vcc_lo, v8, v2
 ; GFX1100-NEXT:    v_add_co_ci_u32_e64 v1, null, v9, v3, vcc_lo
 ; GFX1100-NEXT:    v_add_co_u32 v2, vcc_lo, v8, v4
-; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1100-NEXT:    v_add_co_ci_u32_e64 v3, null, v9, v5, vcc_lo
 ; GFX1100-NEXT:    v_add_co_u32 v4, vcc_lo, v8, v6
 ; GFX1100-NEXT:    v_add_co_ci_u32_e64 v5, null, v9, v7, vcc_lo
@@ -1298,11 +1297,10 @@ define i64 @mad_i64_i32_thrice(i32 %arg0, i32 %arg1, i64 %arg2, i64 %arg3, i64 %
 ; GFX1150:       ; %bb.0:
 ; GFX1150-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1150-NEXT:    v_mad_i64_i32 v[0:1], null, v0, v1, 0
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1150-NEXT:    v_add_co_u32 v2, vcc_lo, v0, v2
 ; GFX1150-NEXT:    v_add_co_ci_u32_e64 v3, null, v1, v3, vcc_lo
 ; GFX1150-NEXT:    v_add_co_u32 v4, vcc_lo, v0, v4
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1150-NEXT:    v_add_co_ci_u32_e64 v5, null, v1, v5, vcc_lo
 ; GFX1150-NEXT:    v_add_co_u32 v0, vcc_lo, v0, v6
 ; GFX1150-NEXT:    v_add_co_ci_u32_e64 v1, null, v1, v7, vcc_lo
@@ -1404,7 +1402,7 @@ define i64 @mad_i64_i32_secondary_use(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1100-NEXT:    v_mad_i64_i32 v[4:5], null, v0, v1, 0
-; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1100-NEXT:    v_add_co_u32 v0, vcc_lo, v4, v2
 ; GFX1100-NEXT:    v_add_co_ci_u32_e64 v1, null, v5, v3, vcc_lo
 ; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -1416,7 +1414,7 @@ define i64 @mad_i64_i32_secondary_use(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; GFX1150:       ; %bb.0:
 ; GFX1150-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX1150-NEXT:    v_mad_i64_i32 v[0:1], null, v0, v1, 0
-; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1150-NEXT:    v_add_co_u32 v2, vcc_lo, v0, v2
 ; GFX1150-NEXT:    v_add_co_ci_u32_e64 v3, null, v1, v3, vcc_lo
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -2044,10 +2042,10 @@ define i64 @lshr_mad_i64_negative_3(i64 %arg0) #0 {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_and_b32_e32 v2, 0xfffffc00, v2
 ; GFX11-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_sub_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;

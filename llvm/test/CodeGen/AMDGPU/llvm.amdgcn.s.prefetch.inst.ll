@@ -96,10 +96,9 @@ define amdgpu_ps void @prefetch_inst_vgpr_imm_base_sgpr_len(ptr addrspace(4) %pt
 ; GFX12-GISEL-LABEL: prefetch_inst_vgpr_imm_base_sgpr_len:
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x200, v0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
 ; GFX12-GISEL-NEXT:    s_prefetch_inst s[2:3], 0x0, s0, 0
 ; GFX12-GISEL-NEXT:    s_endpgm
@@ -116,10 +115,9 @@ define amdgpu_ps void @prefetch_inst_vgpr_imm_base_sgpr_len(ptr addrspace(4) %pt
 ; GFX1250-GISEL:       ; %bb.0:
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
 ; GFX1250-GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, 0x200, v0
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-GISEL-NEXT:    v_add_co_ci_u32_e64 v1, null, 0, v1, vcc_lo
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1250-GISEL-NEXT:    v_readfirstlane_b32 s3, v1
 ; GFX1250-GISEL-NEXT:    s_prefetch_inst s[2:3], 0x0, s0, 0
 ; GFX1250-GISEL-NEXT:    s_endpgm

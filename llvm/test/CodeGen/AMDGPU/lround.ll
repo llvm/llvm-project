@@ -305,7 +305,7 @@ define i64 @intrinsic_lround_i64_f32(float %arg) {
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-SDAG-NEXT:    v_xor_b32_e32 v1, v1, v3
 ; GFX11-SDAG-NEXT:    v_xor_b32_e32 v0, v0, v3
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-SDAG-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, v3
 ; GFX11-SDAG-NEXT:    v_sub_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -334,7 +334,7 @@ define i64 @intrinsic_lround_i64_f32(float %arg) {
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v3
 ; GFX11-GISEL-NEXT:    v_xor_b32_e32 v1, v1, v3
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-GISEL-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, v3
 ; GFX11-GISEL-NEXT:    v_sub_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -596,7 +596,7 @@ define i64 @intrinsic_llround_i64_f32(float %arg) {
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-SDAG-NEXT:    v_xor_b32_e32 v1, v1, v3
 ; GFX11-SDAG-NEXT:    v_xor_b32_e32 v0, v0, v3
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-SDAG-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, v3
 ; GFX11-SDAG-NEXT:    v_sub_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -625,7 +625,7 @@ define i64 @intrinsic_llround_i64_f32(float %arg) {
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v3
 ; GFX11-GISEL-NEXT:    v_xor_b32_e32 v1, v1, v3
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-GISEL-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, v3
 ; GFX11-GISEL-NEXT:    v_sub_co_ci_u32_e64 v1, null, v1, v3, vcc_lo
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -1346,10 +1346,9 @@ define <2 x i64> @intrinsic_lround_v2i64_v2f32(<2 x float> %arg) {
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-SDAG-NEXT:    v_xor_b32_e32 v3, v3, v6
 ; GFX11-SDAG-NEXT:    v_xor_b32_e32 v4, v0, v6
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-SDAG-NEXT:    v_sub_co_u32 v0, vcc_lo, v1, v5
 ; GFX11-SDAG-NEXT:    v_sub_co_ci_u32_e64 v1, null, v2, v5, vcc_lo
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    v_sub_co_u32 v2, vcc_lo, v4, v6
 ; GFX11-SDAG-NEXT:    v_sub_co_ci_u32_e64 v3, null, v3, v6, vcc_lo
 ; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
@@ -1397,10 +1396,9 @@ define <2 x i64> @intrinsic_lround_v2i64_v2f32(<2 x float> %arg) {
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-GISEL-NEXT:    v_xor_b32_e32 v5, v0, v3
 ; GFX11-GISEL-NEXT:    v_sub_co_u32 v0, vcc_lo, v1, v6
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-GISEL-NEXT:    v_sub_co_ci_u32_e64 v1, null, v2, v6, vcc_lo
 ; GFX11-GISEL-NEXT:    v_sub_co_u32 v2, vcc_lo, v5, v3
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_sub_co_ci_u32_e64 v3, null, v4, v3, vcc_lo
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 entry:
