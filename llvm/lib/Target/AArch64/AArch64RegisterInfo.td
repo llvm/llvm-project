@@ -1308,10 +1308,6 @@ def ZPR3  : RegisterClass<"AArch64", [untyped], 128, (add ZSeqTriples)> {
   let Size = 384;
   let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPR3RegClassID, 0, 32>";
 }
-def ZPR3_3b : RegisterClass<"AArch64", [untyped], 128, (add (trunc ZSeqTriples, 8))> {
-  let Size = 384;
-  let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPR3_3bRegClassID, 0, 8>";
-}
 def ZPR4 : RegisterClass<"AArch64", [untyped], 128, (add ZSeqQuads)> {
   let Size = 512;
   let DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPR4RegClassID, 0, 32>";
@@ -1429,8 +1425,11 @@ class ZPRVectorListMul<int ElementWidth, int NumRegs, string RegClassSuffix = ""
                                  # "AArch64::ZPR" # RegClassSuffix # "RegClassID" # ">";
 }
 
-def ZZZ_Any_3b  : RegisterOperand<ZPR3_3b, "printTypedVectorList<0,0>"> {
-  let ParserMatchClass = ZPRVectorListMul<0, 3, "_3b">;
+let EncoderMethod = "EncodeRegMul_MinMax<1, 0, 7>",
+    DecoderMethod = "DecodeSimpleRegisterClass<AArch64::ZPR3RegClassID, 0, 8>" in {
+  def ZZZ_Any_3b  : RegisterOperand<ZPR3, "printTypedVectorList<0,0>"> {
+    let ParserMatchClass = ZPRVectorListMul<0, 3, "_3b">;
+  }
 }
 
 let EncoderMethod = "EncodeRegMul_MinMax<2, 0, 30>",
