@@ -1691,7 +1691,7 @@ OffsetOfExpr::OffsetOfExpr(const ASTContext &C, QualType type,
   setDependence(computeDependence(this));
 }
 
-IdentifierInfo *OffsetOfNode::getFieldName() const {
+const IdentifierInfo *OffsetOfNode::getFieldName() const {
   assert(getKind() == Field || getKind() == Identifier);
   if (getKind() == Field)
     return getField()->getIdentifier();
