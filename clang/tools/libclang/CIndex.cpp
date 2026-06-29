@@ -6486,6 +6486,10 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("attribute(aligned)");
   case CXCursor_ConceptDecl:
     return cxstring::createRef("ConceptDecl");
+  case CXCursor_VarTemplate:
+    return cxstring::createRef("VarTemplate");
+  case CXCursor_VarTemplatePartialSpecialization:
+    return cxstring::createRef("VarTemplatePartialSpecialization");
   case CXCursor_OpenACCComputeConstruct:
     return cxstring::createRef("OpenACCComputeConstruct");
   case CXCursor_OpenACCLoopConstruct:

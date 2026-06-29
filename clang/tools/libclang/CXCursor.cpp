@@ -1442,41 +1442,58 @@ CXCursor clang_Cursor_getArgument(CXCursor C, unsigned i) {
 
 int clang_Cursor_getNumTemplateArguments(CXCursor C) {
   CXCursorKind kind = clang_getCursorKind(C);
-  if (kind != CXCursor_FunctionDecl && kind != CXCursor_StructDecl &&
-      kind != CXCursor_ClassDecl &&
-      kind != CXCursor_ClassTemplatePartialSpecialization) {
+  if (kind != CXCursor_FunctionDecl && kind != CXCursor_CXXMethod &&
+      kind != CXCursor_StructDecl && kind != CXCursor_ClassDecl &&
+      kind != CXCursor_ClassTemplatePartialSpecialization &&
+      kind != CXCursor_VarDecl &&
+      kind != CXCursor_VarTemplatePartialSpecialization) {
     return -1;
   }
 
-  if (const auto *FD =
-          llvm::dyn_cast_if_present<clang::FunctionDecl>(getCursorDecl(C))) {
+  const TemplateArgumentList *TAL = nullptr;
+  const Decl *D = getCursorDecl(C);
+
+  if (const auto *FD = dyn_cast_if_present<FunctionDecl>(D)) {
     const FunctionTemplateSpecializationInfo *SpecInfo =
         FD->getTemplateSpecializationInfo();
     if (!SpecInfo) {
       return -1;
     }
-    return SpecInfo->TemplateArguments->size();
+    TAL = SpecInfo->TemplateArguments;
   }
 
-  if (const auto *SD =
-          llvm::dyn_cast_if_present<clang::ClassTemplateSpecializationDecl>(
-              getCursorDecl(C))) {
-    return SD->getTemplateArgs().size();
+  if (!TAL) {
+    if (const auto *SD =
+            dyn_cast_if_present<ClassTemplateSpecializationDecl>(D)) {
+      TAL = &SD->getTemplateArgs();
+    } else if (const auto *VD =
+                   dyn_cast_if_present<VarTemplateSpecializationDecl>(D)) {
+      TAL = &VD->getTemplateArgs();
+    }
   }
 
-  return -1;
+  if (!TAL)
+    return -1;
+
+  unsigned ArgCount = TAL->size();
+  for (unsigned I = 0; I < TAL->size(); ++I) {
+    const TemplateArgument &Arg = TAL->get(I);
+    if (Arg.getKind() == TemplateArgument::Pack)
+      ArgCount += Arg.pack_size() - 1;
+  }
+  return ArgCount;
 }
 
 enum CXGetTemplateArgumentStatus {
   /** The operation completed successfully */
   CXGetTemplateArgumentStatus_Success = 0,
 
-  /** The specified cursor did not represent a FunctionDecl or
-      ClassTemplateSpecializationDecl.                         */
+  /** The specified cursor did not represent a FunctionDecl,
+      ClassTemplateSpecializationDecl, or VarTemplateSpecializationDecl. */
   CXGetTemplateArgumentStatus_CursorNotCompatibleDecl = -1,
 
-  /** The specified cursor was not castable to a FunctionDecl or
-      ClassTemplateSpecializationDecl.                         */
+  /** The specified cursor was not castable to a FunctionDecl,
+      ClassTemplateSpecializationDecl, or VarTemplateSpecializationDecl. */
   CXGetTemplateArgumentStatus_BadDeclCast = -2,
 
   /** A NULL FunctionTemplateSpecializationInfo was retrieved. */
@@ -1489,14 +1506,18 @@ enum CXGetTemplateArgumentStatus {
 static int clang_Cursor_getTemplateArgument(CXCursor C, unsigned I,
                                             TemplateArgument *TA) {
   CXCursorKind kind = clang_getCursorKind(C);
-  if (kind != CXCursor_FunctionDecl && kind != CXCursor_StructDecl &&
-      kind != CXCursor_ClassDecl &&
-      kind != CXCursor_ClassTemplatePartialSpecialization) {
+  if (kind != CXCursor_FunctionDecl && kind != CXCursor_CXXMethod &&
+      kind != CXCursor_StructDecl && kind != CXCursor_ClassDecl &&
+      kind != CXCursor_ClassTemplatePartialSpecialization &&
+      kind != CXCursor_VarDecl &&
+      kind != CXCursor_VarTemplatePartialSpecialization) {
     return -1;
   }
 
-  if (const auto *FD =
-          llvm::dyn_cast_if_present<clang::FunctionDecl>(getCursorDecl(C))) {
+  const TemplateArgumentList *TAL = nullptr;
+  const Decl *D = getCursorDecl(C);
+
+  if (const auto *FD = dyn_cast_if_present<FunctionDecl>(D)) {
 
     const FunctionTemplateSpecializationInfo *SpecInfo =
         FD->getTemplateSpecializationInfo();
@@ -1504,26 +1525,41 @@ static int clang_Cursor_getTemplateArgument(CXCursor C, unsigned I,
       return CXGetTemplateArgumentStatus_NullTemplSpecInfo;
     }
 
-    if (I >= SpecInfo->TemplateArguments->size()) {
-      return CXGetTemplateArgumentStatus_InvalidIndex;
-    }
-
-    *TA = SpecInfo->TemplateArguments->get(I);
-    return 0;
+    TAL = SpecInfo->TemplateArguments;
   }
 
-  if (const auto *SD =
-          llvm::dyn_cast_if_present<clang::ClassTemplateSpecializationDecl>(
-              getCursorDecl(C))) {
-    if (I >= SD->getTemplateArgs().size()) {
-      return CXGetTemplateArgumentStatus_InvalidIndex;
+  if (!TAL) {
+    if (const auto *SD =
+            dyn_cast_if_present<ClassTemplateSpecializationDecl>(D)) {
+      TAL = &SD->getTemplateArgs();
+    } else if (const auto *VD =
+                   dyn_cast_if_present<VarTemplateSpecializationDecl>(D)) {
+      TAL = &VD->getTemplateArgs();
     }
-
-    *TA = SD->getTemplateArgs()[I];
-    return 0;
   }
 
-  return CXGetTemplateArgumentStatus_BadDeclCast;
+  if (!TAL)
+    return CXGetTemplateArgumentStatus_BadDeclCast;
+
+  unsigned Current = 0;
+  for (unsigned J = 0; J < TAL->size(); ++J) {
+    const auto &TACand = TAL->get(J);
+    if (TACand.getKind() == TemplateArgument::Pack) {
+      if (I < Current + TACand.pack_size()) {
+        *TA = TACand.pack_elements()[I - Current];
+        return 0;
+      }
+      Current += TACand.pack_size();
+      continue;
+    }
+    if (Current == I) {
+      *TA = TACand;
+      return 0;
+    }
+    Current++;
+  }
+
+  return CXGetTemplateArgumentStatus_InvalidIndex;
 }
 
 enum CXTemplateArgumentKind clang_Cursor_getTemplateArgumentKind(CXCursor C,
@@ -1574,6 +1610,27 @@ CXType clang_Cursor_getTemplateArgumentType(CXCursor C, unsigned I) {
   return cxtype::MakeCXType(TA.getAsType(), getCursorTU(C));
 }
 
+CXType clang_Cursor_getConstantTemplateArgumentType(CXCursor C, unsigned I) {
+  TemplateArgument TA;
+  if (clang_Cursor_getTemplateArgument(C, I, &TA) !=
+      CXGetTemplateArgumentStatus_Success) {
+    return cxtype::MakeCXType(QualType(), getCursorTU(C));
+  }
+
+  switch (TA.getKind()) {
+  case TemplateArgument::Integral:
+    return cxtype::MakeCXType(TA.getIntegralType(), getCursorTU(C));
+  case TemplateArgument::Declaration:
+    return cxtype::MakeCXType(TA.getParamTypeForDecl(), getCursorTU(C));
+  case TemplateArgument::NullPtr:
+    return cxtype::MakeCXType(TA.getNullPtrType(), getCursorTU(C));
+  case TemplateArgument::StructuralValue:
+    return cxtype::MakeCXType(TA.getStructuralValueType(), getCursorTU(C));
+  default:
+    return cxtype::MakeCXType(QualType(), getCursorTU(C));
+  }
+}
+
 long long clang_Cursor_getTemplateArgumentValue(CXCursor C, unsigned I) {
   TemplateArgument TA;
   if (clang_Cursor_getTemplateArgument(C, I, &TA) !=
@@ -1605,6 +1662,56 @@ unsigned long long clang_Cursor_getTemplateArgumentUnsignedValue(CXCursor C,
   }
 
   return TA.getAsIntegral().getZExtValue();
+}
+
+int clang_Cursor_getNumTemplateParameters(CXCursor C) {
+  CXCursorKind kind = clang_getCursorKind(C);
+  if (kind != CXCursor_ClassTemplate && kind != CXCursor_FunctionTemplate &&
+      kind != CXCursor_VarTemplate)
+    return -1;
+
+  const Decl *D = getCursorDecl(C);
+  if (const auto *CTD = dyn_cast_if_present<ClassTemplateDecl>(D))
+    return CTD->getTemplateParameters()->size();
+  if (const auto *FTD = dyn_cast_if_present<FunctionTemplateDecl>(D))
+    return FTD->getTemplateParameters()->size();
+  if (const auto *VTD = dyn_cast_if_present<VarTemplateDecl>(D))
+    return VTD->getTemplateParameters()->size();
+
+  return -1;
+}
+
+CXCursor clang_Cursor_getTemplateParameter(CXCursor C, unsigned I) {
+  CXCursorKind kind = clang_getCursorKind(C);
+  if (kind != CXCursor_ClassTemplate && kind != CXCursor_FunctionTemplate &&
+      kind != CXCursor_VarTemplate)
+    return clang_getNullCursor();
+
+  const Decl *D = getCursorDecl(C);
+  const TemplateParameterList *TPL = nullptr;
+  if (const auto *CTD = dyn_cast_if_present<ClassTemplateDecl>(D))
+    TPL = CTD->getTemplateParameters();
+  else if (const auto *FTD = dyn_cast_if_present<FunctionTemplateDecl>(D))
+    TPL = FTD->getTemplateParameters();
+  else if (const auto *VTD = dyn_cast_if_present<VarTemplateDecl>(D))
+    TPL = VTD->getTemplateParameters();
+
+  if (!TPL || I >= TPL->size())
+    return clang_getNullCursor();
+
+  const NamedDecl *ND = TPL->getParam(I);
+  return MakeCXCursor(ND, getCursorTU(C));
+}
+
+unsigned clang_Cursor_isTemplateParameterPack(CXCursor C) {
+  const Decl *D = getCursorDecl(C);
+  if (const auto *TTPD = dyn_cast_if_present<TemplateTypeParmDecl>(D))
+    return TTPD->isParameterPack();
+  if (const auto *NTTPD = dyn_cast_if_present<NonTypeTemplateParmDecl>(D))
+    return NTTPD->isParameterPack();
+  if (const auto *TTPD = dyn_cast_if_present<TemplateTemplateParmDecl>(D))
+    return TTPD->isParameterPack();
+  return 0;
 }
 
 //===----------------------------------------------------------------------===//

@@ -104,8 +104,9 @@ enum CXCursorKind clang_getTemplateCursorKind(CXCursor C) {
   using namespace clang::cxcursor;
   
   switch (C.kind) {
-  case CXCursor_ClassTemplate: 
+  case CXCursor_ClassTemplate:
   case CXCursor_FunctionTemplate:
+  case CXCursor_VarTemplate:
     if (const TemplateDecl *Template
                            = dyn_cast_or_null<TemplateDecl>(getCursorDecl(C)))
       return MakeCXCursor(Template->getTemplatedDecl(), getCursorTU(C)).kind;
@@ -128,7 +129,10 @@ enum CXCursorKind clang_getTemplateCursorKind(CXCursor C) {
       }
     }
     break;
-      
+
+  case CXCursor_VarTemplatePartialSpecialization:
+    return CXCursor_VarDecl;
+
   default:
     break;
   }
@@ -166,7 +170,19 @@ CXCursor clang_getSpecializedCursorTemplate(CXCursor C) {
     if (!Template)
       Template = Function->getInstantiatedFromMemberFunction();
   } else if (const VarDecl *Var = dyn_cast<VarDecl>(D)) {
-    if (Var->isStaticDataMember())
+    if (const VarTemplatePartialSpecializationDecl *PartialSpec =
+            dyn_cast<VarTemplatePartialSpecializationDecl>(Var))
+      Template = PartialSpec->getSpecializedTemplate();
+    else if (const VarTemplateSpecializationDecl *VTSpec =
+                 dyn_cast<VarTemplateSpecializationDecl>(Var)) {
+      llvm::PointerUnion<VarTemplateDecl *,
+                         VarTemplatePartialSpecializationDecl *>
+          Result = VTSpec->getSpecializedTemplateOrPartial();
+      if (isa<VarTemplateDecl *>(Result))
+        Template = cast<VarTemplateDecl *>(Result);
+      else
+        Template = cast<VarTemplatePartialSpecializationDecl *>(Result);
+    } else if (Var->isStaticDataMember())
       Template = Var->getInstantiatedFromStaticDataMember();
   } else if (const RedeclarableTemplateDecl *Tmpl
                                         = dyn_cast<RedeclarableTemplateDecl>(D))
