@@ -385,30 +385,20 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
   }
 
   if (auto *RMWI = dyn_cast<AtomicRMWInst>(I)) {
-    if (RMWI->isElementwise()) {
-      auto ExpansionKind = TLI->shouldExpandAtomicRMWInIR(RMWI);
-      if (ExpansionKind ==
-          TargetLoweringBase::AtomicExpansionKind::Elementwise) {
-        // If the target wants fence-based lowering for this elementwise RMW,
-        // insert the fences and downgrade the RMW ordering before splitting.
-        // The split operations inherit the downgraded ordering, so they
-        // do not each get their own fence pair.
-        tryInsertFencesForAtomic(
-            RMWI, isStrongerThanMonotonic(RMWI->getOrdering()),
-            TLI->atomicOperationOrderAfterFenceSplit(RMWI));
-        expandElementwiseAtomicRMW(RMWI);
+    bool IsElementwiseExpand = RMWI->isElementwise() && TLI->shouldExpandAtomicRMWInIR(RMWI) == TargetLoweringBase::AtomicExpansionKind::Expand;
+
+    if (!atomicSizeSupported(TLI, RMWI)) {
+      // Elementwise expansion may split an atomicrmw into smaller, supported atomic sizes.
+      if (!IsElementwiseExpand) {
+        expandAtomicRMWToLibcall(RMWI);
         return true;
       }
     }
 
-    if (!atomicSizeSupported(TLI, RMWI)) {
-      expandAtomicRMWToLibcall(RMWI);
-      return true;
-    }
-
     bool MadeChange = false;
-    if (TLI->shouldCastAtomicRMWIInIR(RMWI) ==
-        TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
+    if (!IsElementwiseExpand &&
+        TLI->shouldCastAtomicRMWIInIR(RMWI) ==
+            TargetLoweringBase::AtomicExpansionKind::CastToInteger) {
       RMWI = convertAtomicXchgToIntegerType(RMWI);
       MadeChange = true;
     }
@@ -421,8 +411,11 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     // - into a load if it is idempotent
     // - into a Cmpxchg/LL-SC loop otherwise
     // we try them in that order.
-    MadeChange |= (isIdempotentRMW(RMWI) && simplifyIdempotentRMW(RMWI)) ||
-                  tryExpandAtomicRMW(RMWI);
+    if (IsElementwiseExpand)
+      MadeChange |= tryExpandAtomicRMW(RMWI);
+    else
+      MadeChange |= (isIdempotentRMW(RMWI) && simplifyIdempotentRMW(RMWI)) ||
+                    tryExpandAtomicRMW(RMWI);
     return MadeChange;
   }
 
@@ -625,12 +618,12 @@ AtomicExpandImpl::convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI) {
   return NewRMWI;
 }
 
-/// Halve an elementwise vector atomicrmw and feed each half back through the
+/// Generic Expand handling for elementwise vector atomicrmw instructions.
+/// Halve an `atomicrmw elementwise <N x T>` and feed each half back through the
 /// normal atomic expansion pipeline. The target's shouldExpandAtomicRMWInIR()
 /// is re-queried at the halved width and may return any expansion kind there
-/// (e.g. None to preserve as a native vector atomic, Elementwise to keep
-/// halving, CmpXChg to emit one wide cmpxchg loop at the halved width). Three
-/// cases:
+/// (e.g. None to preserve as a native vector atomic, Expand to keep halving,
+/// CmpXChg to emit one wide cmpxchg loop at the halved width). Three cases:
 ///   N == 1: collapse directly to one scalar atomicrmw T
 ///   N == 2: split into two scalar atomicrmw T (low at Ptr, high at
 ///           gep inbounds T, Ptr, 1); reassemble via two insertelement's.
@@ -980,6 +973,12 @@ bool AtomicExpandImpl::tryExpandAtomicRMW(AtomicRMWInst *AI) {
     TLI->emitCmpArithAtomicRMWIntrinsic(AI);
     return true;
   }
+  case TargetLoweringBase::AtomicExpansionKind::Expand:
+    if (AI->isElementwise()) {
+      expandElementwiseAtomicRMW(AI);
+      return true;
+    }
+    llvm_unreachable("Unhandled atomicrmw Expand case");
   case TargetLoweringBase::AtomicExpansionKind::NotAtomic:
     return lowerAtomicRMWInst(AI);
   case TargetLoweringBase::AtomicExpansionKind::CustomExpand:

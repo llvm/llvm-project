@@ -2,7 +2,7 @@
 ; RUN: opt -S %s -passes='require<libcall-lowering-info>,atomic-expand' -mtriple=x86_64-linux-gnu | FileCheck %s
 
 ; By default, elementwise atomicrmws are treated the same as the non-elementwise versions and are not expanded.
-; Targets in the future can take advantage of elementwise expansion by returning AtomicExpansionKind::Elementwise from shouldExpandAtomicRMWInIR.
+; Targets in the future can take advantage of elementwise expansion by returning AtomicExpansionKind::Expand from shouldExpandAtomicRMWInIR.
 ; Elementwise atomics work on integer vectors, but normal atomics don't.
 
 define <4 x i32> @atomicrmw_add_elementwise(ptr %p, <4 x i32> %v) {

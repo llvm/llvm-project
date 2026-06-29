@@ -7475,15 +7475,15 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
 
     // Collapse <1 x T> elementwise RMWs to scalar RMWs
     if (VecTy->getNumElements() == 1)
-      return AtomicExpansionKind::Elementwise;
+      return AtomicExpansionKind::Expand;
 
-    // If the scalar lane op is natively supported, return
-    // Elementwise so halving eventually bottoms out at the scalar base
-    // case, where this hook returns None for each scalar lane and the
-    // scalar `atom.*` instruction is preserved.
+    // If the scalar lane op is natively supported, return Expand so halving
+    // eventually bottoms out at the scalar base case, where this hook returns
+    // None for each scalar lane and the scalar `atom.*` instruction is
+    // preserved.
     if (getScalarAtomicRMWExpansion(AI->getOperation(), LaneTy, STI) ==
         AtomicExpansionKind::None)
-      return AtomicExpansionKind::Elementwise;
+      return AtomicExpansionKind::Expand;
 
     // If the whole vector fits a single native cmpxchg, emit one wide
     // cmpxchg loop at the current width.
@@ -7494,7 +7494,7 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
 
     // If the vector is too wide for a single native cmpxchg, halve further to
     // emit multiple cmpxchg loops.
-    return AtomicExpansionKind::Elementwise;
+    return AtomicExpansionKind::Expand;
   }
 
   return getScalarAtomicRMWExpansion(AI->getOperation(),
@@ -7532,7 +7532,7 @@ bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
   if (auto *RI = dyn_cast<AtomicRMWInst>(I)) {
     AtomicExpansionKind Expansion = shouldExpandAtomicRMWInIR(RI);
     return Expansion == AtomicExpansionKind::CmpXChg ||
-           Expansion == AtomicExpansionKind::Elementwise ||
+           (RI->isElementwise() && Expansion == AtomicExpansionKind::Expand) ||
            RI->getOrdering() == AtomicOrdering::SequentiallyConsistent;
   }
   return false;
@@ -7620,8 +7620,9 @@ Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
         STI.getMinCmpXchgSizeInBits();
   else {
     AtomicExpansionKind Expansion = shouldExpandAtomicRMWInIR(RI);
-    NeedsTrailingAcquireFence = Expansion == AtomicExpansionKind::CmpXChg ||
-                                Expansion == AtomicExpansionKind::Elementwise;
+    NeedsTrailingAcquireFence =
+        Expansion == AtomicExpansionKind::CmpXChg ||
+        (RI->isElementwise() && Expansion == AtomicExpansionKind::Expand);
   }
 
   if (NeedsTrailingAcquireFence)
