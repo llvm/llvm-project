@@ -23,7 +23,7 @@
 class constable_iter {
 public:
   using iterator_category = std::input_iterator_tag;
-  using difference_type   = std::ptrdiff_t;
+  using difference_type   = int;
   using value_type        = char;
 
   constable_iter() = default;
