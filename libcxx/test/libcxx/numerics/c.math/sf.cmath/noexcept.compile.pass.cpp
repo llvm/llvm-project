@@ -16,5 +16,8 @@
 
 void test() {
   // assoc_laguerre
+  ASSERT_NOEXCEPT(std::assoc_laguerre(0, 0, 0.0));
+
   ASSERT_NOEXCEPT(std::assoc_laguerref(0, 0, 0.0f));
+  ASSERT_NOEXCEPT(std::assoc_laguerrel(0, 0, 0.0l));
 }
