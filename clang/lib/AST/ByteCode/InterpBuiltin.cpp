@@ -2637,13 +2637,29 @@ static bool interp__builtin_elementwise_fp_binop(
         Fn,
     bool IsScalar = false) {
   assert((Call->getNumArgs() == 2) || (Call->getNumArgs() == 3));
+
+  // Single floating-point case.
+  if (!Call->getArg(0)->getType()->isVectorType()) {
+    assert(!Call->getArg(1)->getType()->isVectorType());
+    assert(Call->getNumArgs() == 2);
+    const Floating &RHS = S.Stk.pop<Floating>();
+    const Floating &LHS = S.Stk.pop<Floating>();
+    std::optional<APFloat> Result =
+        Fn(LHS.getAPFloat(), RHS.getAPFloat(), std::nullopt);
+    if (!Result)
+      return false;
+    Floating R = S.allocFloat(Result->getSemantics());
+    R.copy(*Result);
+    S.Stk.push<Floating>(R);
+    return true;
+  }
+
   const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
   assert(VT->getElementType()->isFloatingType());
   unsigned NumElems = VT->getNumElements();
 
   // Vector case.
-  assert(Call->getArg(0)->getType()->isVectorType() &&
-         Call->getArg(1)->getType()->isVectorType());
+  assert(Call->getArg(1)->getType()->isVectorType());
   assert(VT->getElementType() ==
          Call->getArg(1)->getType()->castAs<VectorType>()->getElementType());
   assert(VT->getNumElements() ==
@@ -2832,82 +2848,6 @@ interp__builtin_ia32_pack(InterpState &S, CodePtr, const CallExpr *E,
   }
 
   Dst.initializeAllElements();
-  return true;
-}
-
-static bool interp__builtin_elementwise_maxmin(InterpState &S, CodePtr OpPC,
-                                               const CallExpr *Call,
-                                               unsigned BuiltinID) {
-  assert(Call->getNumArgs() == 2);
-
-  QualType Arg0Type = Call->getArg(0)->getType();
-
-  // TODO: Support floating-point types.
-  if (!(Arg0Type->isIntegerType() ||
-        (Arg0Type->isVectorType() &&
-         Arg0Type->castAs<VectorType>()->getElementType()->isIntegerType())))
-    return false;
-
-  if (!Arg0Type->isVectorType()) {
-    assert(!Call->getArg(1)->getType()->isVectorType());
-    APSInt RHS;
-    if (!popToAPSInt(S, Call->getArg(1), RHS))
-      return false;
-    APSInt LHS;
-    if (!popToAPSInt(S, Arg0Type, LHS))
-      return false;
-    APInt Result;
-    if (BuiltinID == Builtin::BI__builtin_elementwise_max) {
-      Result = std::max(LHS, RHS);
-    } else if (BuiltinID == Builtin::BI__builtin_elementwise_min) {
-      Result = std::min(LHS, RHS);
-    } else {
-      llvm_unreachable("Wrong builtin ID");
-    }
-
-    pushInteger(S, APSInt(Result, !LHS.isSigned()), Call->getType());
-    return true;
-  }
-
-  // Vector case.
-  assert(Call->getArg(0)->getType()->isVectorType() &&
-         Call->getArg(1)->getType()->isVectorType());
-  const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
-  assert(VT->getElementType() ==
-         Call->getArg(1)->getType()->castAs<VectorType>()->getElementType());
-  assert(VT->getNumElements() ==
-         Call->getArg(1)->getType()->castAs<VectorType>()->getNumElements());
-  assert(VT->getElementType()->isIntegralOrEnumerationType());
-
-  const Pointer &RHS = S.Stk.pop<Pointer>();
-  const Pointer &LHS = S.Stk.pop<Pointer>();
-  const Pointer &Dst = S.Stk.peek<Pointer>();
-  PrimType ElemT = *S.getContext().classify(VT->getElementType());
-  unsigned NumElems = VT->getNumElements();
-  for (unsigned I = 0; I != NumElems; ++I) {
-    APSInt Elem1;
-    APSInt Elem2;
-    INT_TYPE_SWITCH_NO_BOOL(ElemT, {
-      Elem1 = LHS.elem<T>(I).toAPSInt();
-      Elem2 = RHS.elem<T>(I).toAPSInt();
-    });
-
-    APSInt Result;
-    if (BuiltinID == Builtin::BI__builtin_elementwise_max) {
-      Result = APSInt(std::max(Elem1, Elem2),
-                      Call->getType()->isUnsignedIntegerOrEnumerationType());
-    } else if (BuiltinID == Builtin::BI__builtin_elementwise_min) {
-      Result = APSInt(std::min(Elem1, Elem2),
-                      Call->getType()->isUnsignedIntegerOrEnumerationType());
-    } else {
-      llvm_unreachable("Wrong builtin ID");
-    }
-
-    INT_TYPE_SWITCH_NO_BOOL(ElemT,
-                            { Dst.elem<T>(I) = static_cast<T>(Result); });
-  }
-  Dst.initializeAllElements();
-
   return true;
 }
 
@@ -5569,8 +5509,30 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         [](const APSInt &LHS, const APSInt &RHS) { return LHS.rotr(RHS); });
 
   case Builtin::BI__builtin_elementwise_max:
-  case Builtin::BI__builtin_elementwise_min:
-    return interp__builtin_elementwise_maxmin(S, OpPC, Call, BuiltinID);
+  case Builtin::BI__builtin_elementwise_min: {
+    QualType Arg0Type = Call->getArg(0)->getType();
+    QualType ElemType = Arg0Type->isVectorType()
+                            ? Arg0Type->castAs<VectorType>()->getElementType()
+                            : Arg0Type;
+    if (!ElemType->isIntegerType())
+      return false;
+    bool IsMax = BuiltinID == Builtin::BI__builtin_elementwise_max;
+    return interp__builtin_elementwise_int_binop(
+        S, OpPC, Call, [IsMax](const APSInt &LHS, const APSInt &RHS) {
+          return IsMax ? std::max(LHS, RHS) : std::min(LHS, RHS);
+        });
+  }
+
+  case Builtin::BI__builtin_elementwise_maxnum:
+  case Builtin::BI__builtin_elementwise_minnum: {
+    bool IsMax = BuiltinID == Builtin::BI__builtin_elementwise_maxnum;
+    return interp__builtin_elementwise_fp_binop(
+        S, OpPC, Call,
+        [IsMax](const APFloat &LHS, const APFloat &RHS,
+                std::optional<APSInt>) -> std::optional<APFloat> {
+          return IsMax ? maxnum(LHS, RHS) : minnum(LHS, RHS);
+        });
+  }
 
   case clang::X86::BI__builtin_ia32_phaddw128:
   case clang::X86::BI__builtin_ia32_phaddw256:

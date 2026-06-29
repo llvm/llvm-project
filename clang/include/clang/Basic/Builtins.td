@@ -1597,13 +1597,13 @@ def ElementwiseMin : Builtin {
 
 def ElementwiseMaxNum : Builtin {
   let Spellings = ["__builtin_elementwise_maxnum"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
 def ElementwiseMinNum : Builtin {
   let Spellings = ["__builtin_elementwise_minnum"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
   let Prototype = "void(...)";
 }
 
