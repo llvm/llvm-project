@@ -191,8 +191,8 @@ int assumingExtent(int arg) {
 }
 
 int *extentInterestingness(int arg) {
-  // Verify that in an out-of-bounds access issue the extent is marked as
-  // interesting (so assumptions about its value are printed).
+  // Verify that in a buffer overflow issue the extent is marked as interesting
+  // (so assumptions about its value are printed).
   int *mem = (int*)malloc(arg);
 
   TenElements[arg] = 123;
@@ -201,6 +201,18 @@ int *extentInterestingness(int arg) {
   return &mem[12];
   // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}
   // expected-note@-2 {{Access of 'int' element in the heap area at index 12}}
+}
+
+int *extentNonInterestingInUnderflow(int arg) {
+  // Verify that in a buffer underflow issue the extent is _not_ marked as
+  // interesting (because it does not influence anything).
+  int *mem = (int*)malloc(arg);
+
+  TenElements[arg] = 123; // no-note: arg is not interesting
+
+  return &mem[-2];
+  // expected-warning@-1 {{Out of bound access to memory preceding the heap area}}
+  // expected-note@-2 {{Access of 'int' element in the heap area at negative index -2}}
 }
 
 int triggeredByAnyReport(int arg) {
