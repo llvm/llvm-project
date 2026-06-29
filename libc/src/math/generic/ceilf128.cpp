@@ -8,10 +8,13 @@
 
 #include "src/math/ceilf128.h"
 #include "src/__support/math/ceilf128.h"
+#include "src/__support/FPUtil/float128.h"
+
+using LIBC_NAMESPACE::fputil::Float128;
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float128, ceilf128, (float128 x)) {
+LLVM_LIBC_FUNCTION(Float128, ceilf128, (Float128 x)) {
   return math::ceilf128(x);
 }
 
