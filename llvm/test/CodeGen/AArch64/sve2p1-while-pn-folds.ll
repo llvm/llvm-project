@@ -19,10 +19,7 @@ define i1 @whilege_first_active(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilege_first_active:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilege pn8.b, x0, x1, vlx4
-; CHECK-NEXT:    pext p0.b, pn8[0]
-; CHECK-NEXT:    mov z0.b, p0/z, #1 // =0x1
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    cset w0, mi
 ; CHECK-NEXT:    ret
   %while = call target("aarch64.svcount") @llvm.aarch64.sve.whilege.c8(i64 %a, i64 %b, i32 4)
   %pext = call <vscale x 16 x i1> @llvm.aarch64.sve.pext.nxv16i1(target("aarch64.svcount") %while, i32 0)
@@ -34,10 +31,7 @@ define i1 @whilegt_first_active(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilegt_first_active:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilegt pn8.h, x0, x1, vlx4
-; CHECK-NEXT:    pext p0.h, pn8[0]
-; CHECK-NEXT:    mov z0.h, p0/z, #1 // =0x1
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    cset w0, mi
 ; CHECK-NEXT:    ret
   %while = call target("aarch64.svcount") @llvm.aarch64.sve.whilegt.c16(i64 %a, i64 %b, i32 4)
   %pext = call <vscale x 8 x i1> @llvm.aarch64.sve.pext.nxv8i1(target("aarch64.svcount") %while, i32 0)
@@ -49,10 +43,7 @@ define i1 @whilelt_first_active(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilelt_first_active:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilelt pn8.s, x0, x1, vlx4
-; CHECK-NEXT:    pext p0.s, pn8[0]
-; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    cset w0, mi
 ; CHECK-NEXT:    ret
   %while = call target("aarch64.svcount") @llvm.aarch64.sve.whilelt.c32(i64 %a, i64 %b, i32 4)
   %pext = call <vscale x 4 x i1> @llvm.aarch64.sve.pext.nxv4i1(target("aarch64.svcount") %while, i32 0)
@@ -64,10 +55,7 @@ define i1 @whilele_first_active(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilele_first_active:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilele pn8.d, x0, x1, vlx4
-; CHECK-NEXT:    pext p0.d, pn8[0]
-; CHECK-NEXT:    mov z0.d, p0/z, #1 // =0x1
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    cset w0, mi
 ; CHECK-NEXT:    ret
   %while = call target("aarch64.svcount") @llvm.aarch64.sve.whilele.c64(i64 %a, i64 %b, i32 4)
   %pext = call <vscale x 2 x i1> @llvm.aarch64.sve.pext.nxv2i1(target("aarch64.svcount") %while, i32 0)
@@ -79,10 +67,7 @@ define i1 @whilehs_first_active(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilehs_first_active:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilehs pn8.b, x0, x1, vlx4
-; CHECK-NEXT:    pext p0.b, pn8[0]
-; CHECK-NEXT:    mov z0.b, p0/z, #1 // =0x1
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    cset w0, mi
 ; CHECK-NEXT:    ret
   %while = call target("aarch64.svcount") @llvm.aarch64.sve.whilehs.c8(i64 %a, i64 %b, i32 4)
   %pext = call <vscale x 16 x i1> @llvm.aarch64.sve.pext.nxv16i1(target("aarch64.svcount") %while, i32 0)
@@ -94,10 +79,7 @@ define i1 @whilehi_first_active(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilehi_first_active:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilehi pn8.h, x0, x1, vlx4
-; CHECK-NEXT:    pext p0.h, pn8[0]
-; CHECK-NEXT:    mov z0.h, p0/z, #1 // =0x1
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    cset w0, mi
 ; CHECK-NEXT:    ret
   %while = call target("aarch64.svcount") @llvm.aarch64.sve.whilehi.c16(i64 %a, i64 %b, i32 4)
   %pext = call <vscale x 8 x i1> @llvm.aarch64.sve.pext.nxv8i1(target("aarch64.svcount") %while, i32 0)
@@ -109,10 +91,7 @@ define i1 @whilelo_first_active(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilelo_first_active:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilelo pn8.s, x0, x1, vlx4
-; CHECK-NEXT:    pext p0.s, pn8[0]
-; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    cset w0, mi
 ; CHECK-NEXT:    ret
   %while = call target("aarch64.svcount") @llvm.aarch64.sve.whilelo.c32(i64 %a, i64 %b, i32 4)
   %pext = call <vscale x 4 x i1> @llvm.aarch64.sve.pext.nxv4i1(target("aarch64.svcount") %while, i32 0)
@@ -124,10 +103,7 @@ define i1 @whilels_first_active(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilels_first_active:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    whilels pn8.d, x0, x1, vlx4
-; CHECK-NEXT:    pext p0.d, pn8[0]
-; CHECK-NEXT:    mov z0.d, p0/z, #1 // =0x1
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    cset w0, mi
 ; CHECK-NEXT:    ret
   %while = call target("aarch64.svcount") @llvm.aarch64.sve.whilels.c64(i64 %a, i64 %b, i32 4)
   %pext = call <vscale x 2 x i1> @llvm.aarch64.sve.pext.nxv2i1(target("aarch64.svcount") %while, i32 0)
@@ -139,10 +115,8 @@ define void @whilege_first_active_branch(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilege_first_active_branch:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    whilege pn8.b, x0, x1, vlx4
-; CHECK-NEXT:    pext p0.b, pn8[0]
-; CHECK-NEXT:    mov z0.b, p0/z, #1 // =0x1
-; CHECK-NEXT:    fmov w8, s0
-; CHECK-NEXT:    tbz w8, #0, .LBB8_2
+; CHECK-NEXT:    cset w8, mi
+; CHECK-NEXT:    cbz w8, .LBB8_2
 ; CHECK-NEXT:  // %bb.1: // %then
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
@@ -166,9 +140,7 @@ define void @whilelo_first_active_branch(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilelo_first_active_branch:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    whilelo pn8.s, x0, x1, vlx4
-; CHECK-NEXT:    pext p0.s, pn8[0]
-; CHECK-NEXT:    mov z0.s, p0/z, #1 // =0x1
-; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    cset w8, mi
 ; CHECK-NEXT:    tbnz w8, #0, .LBB9_2
 ; CHECK-NEXT:  // %bb.1: // %then
 ; CHECK-NEXT:    //APP
