@@ -737,10 +737,13 @@ private:
   struct VMEMInfo {
     // Scores for all instruction counters. Zero-initialized.
     CounterValueArray Scores{};
-    // For VGPRs, we need to track an additional fine-grained set of pending events.
+    // For VGPRs, we need to track an additional fine-grained set of pending
+    // events.
     HWEvents VGPRPendingEvents;
 
-    bool empty() const { return all_of(Scores, equal_to(0)) && !VGPRPendingEvents; }
+    bool empty() const {
+      return all_of(Scores, equal_to(0)) && !VGPRPendingEvents;
+    }
   };
 
   /// Wait cnt scores for every sgpr, the DS_CNT (corresponding to LGKMcnt
@@ -2827,7 +2830,8 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
 
   for (auto &[TID, Info] : VMem) {
     if (auto It = Other.VMem.find(TID); It != Other.VMem.end()) {
-      HWEvents NewVGPRContext = Info.VGPRPendingEvents | It->second.VGPRPendingEvents;
+      HWEvents NewVGPRContext =
+          Info.VGPRPendingEvents | It->second.VGPRPendingEvents;
       StrictDom |= NewVGPRContext != Info.VGPRPendingEvents;
       Info.VGPRPendingEvents = NewVGPRContext;
     }
