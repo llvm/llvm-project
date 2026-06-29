@@ -236,16 +236,16 @@ define amdgpu_kernel void @v_shl_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GCN-NEXT:    v_lshlrev_b32_e32 v16, 5, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_clause 0x3
-; GCN-NEXT:    global_load_b128 v[0:3], v16, s[2:3] offset:48
 ; GCN-NEXT:    global_load_b128 v[4:7], v16, s[2:3] offset:32
 ; GCN-NEXT:    global_load_b128 v[8:11], v16, s[2:3]
+; GCN-NEXT:    global_load_b128 v[0:3], v16, s[2:3] offset:48
 ; GCN-NEXT:    global_load_b128 v[12:15], v16, s[2:3] offset:16
-; GCN-NEXT:    s_wait_loadcnt 0x1
+; GCN-NEXT:    s_wait_loadcnt 0x2
 ; GCN-NEXT:    v_lshlrev_b64_e32 v[6:7], v6, v[10:11]
+; GCN-NEXT:    v_lshlrev_b64_e32 v[4:5], v4, v[8:9]
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    v_lshlrev_b64_e32 v[2:3], v2, v[14:15]
 ; GCN-NEXT:    v_lshlrev_b64_e32 v[0:1], v0, v[12:13]
-; GCN-NEXT:    v_lshlrev_b64_e32 v[4:5], v4, v[8:9]
 ; GCN-NEXT:    s_clause 0x1
 ; GCN-NEXT:    global_store_b128 v16, v[0:3], s[0:1] offset:16
 ; GCN-NEXT:    global_store_b128 v16, v[4:7], s[0:1]
@@ -304,26 +304,26 @@ define amdgpu_kernel void @v_shl_v8i64(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GCN-NEXT:    v_lshlrev_b32_e32 v32, 6, v0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_clause 0x7
-; GCN-NEXT:    global_load_b128 v[0:3], v32, s[2:3]
 ; GCN-NEXT:    global_load_b128 v[4:7], v32, s[2:3] offset:16
-; GCN-NEXT:    global_load_b128 v[8:11], v32, s[2:3] offset:64
 ; GCN-NEXT:    global_load_b128 v[12:15], v32, s[2:3] offset:80
-; GCN-NEXT:    global_load_b128 v[16:19], v32, s[2:3] offset:32
+; GCN-NEXT:    global_load_b128 v[0:3], v32, s[2:3]
+; GCN-NEXT:    global_load_b128 v[8:11], v32, s[2:3] offset:64
 ; GCN-NEXT:    global_load_b128 v[20:23], v32, s[2:3] offset:48
 ; GCN-NEXT:    global_load_b128 v[24:27], v32, s[2:3] offset:112
+; GCN-NEXT:    global_load_b128 v[16:19], v32, s[2:3] offset:32
 ; GCN-NEXT:    global_load_b128 v[28:31], v32, s[2:3] offset:96
-; GCN-NEXT:    s_wait_loadcnt 0x5
-; GCN-NEXT:    v_lshlrev_b64_e32 v[2:3], v10, v[2:3]
-; GCN-NEXT:    v_lshlrev_b64_e32 v[0:1], v8, v[0:1]
-; GCN-NEXT:    s_wait_loadcnt 0x4
+; GCN-NEXT:    s_wait_loadcnt 0x6
 ; GCN-NEXT:    v_lshlrev_b64_e32 v[6:7], v14, v[6:7]
 ; GCN-NEXT:    v_lshlrev_b64_e32 v[4:5], v12, v[4:5]
-; GCN-NEXT:    s_wait_loadcnt 0x1
+; GCN-NEXT:    s_wait_loadcnt 0x4
+; GCN-NEXT:    v_lshlrev_b64_e32 v[2:3], v10, v[2:3]
+; GCN-NEXT:    v_lshlrev_b64_e32 v[0:1], v8, v[0:1]
+; GCN-NEXT:    s_wait_loadcnt 0x2
 ; GCN-NEXT:    v_lshlrev_b64_e32 v[22:23], v26, v[22:23]
+; GCN-NEXT:    v_lshlrev_b64_e32 v[20:21], v24, v[20:21]
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    v_lshlrev_b64_e32 v[18:19], v30, v[18:19]
 ; GCN-NEXT:    v_lshlrev_b64_e32 v[16:17], v28, v[16:17]
-; GCN-NEXT:    v_lshlrev_b64_e32 v[20:21], v24, v[20:21]
 ; GCN-NEXT:    s_clause 0x3
 ; GCN-NEXT:    global_store_b128 v32, v[16:19], s[0:1] offset:32
 ; GCN-NEXT:    global_store_b128 v32, v[20:23], s[0:1] offset:48
@@ -358,13 +358,13 @@ define amdgpu_kernel void @v_shl_v16i64(ptr addrspace(1) %out, ptr addrspace(1) 
 ; GFX1250-NEXT:    global_load_b128 v[12:15], v52, s[2:3] offset:128
 ; GFX1250-NEXT:    global_load_b128 v[16:19], v52, s[2:3] offset:64
 ; GFX1250-NEXT:    global_load_b128 v[20:23], v52, s[2:3] offset:192
-; GFX1250-NEXT:    global_load_b128 v[24:27], v52, s[2:3] offset:96
 ; GFX1250-NEXT:    global_load_b128 v[28:31], v52, s[2:3] offset:112
-; GFX1250-NEXT:    global_load_b128 v[32:35], v52, s[2:3] offset:80
-; GFX1250-NEXT:    global_load_b128 v[36:39], v52, s[2:3] offset:32
-; GFX1250-NEXT:    global_load_b128 v[40:43], v52, s[2:3] offset:48
-; GFX1250-NEXT:    global_load_b128 v[44:47], v52, s[2:3] offset:224
 ; GFX1250-NEXT:    global_load_b128 v[48:51], v52, s[2:3] offset:240
+; GFX1250-NEXT:    global_load_b128 v[40:43], v52, s[2:3] offset:48
+; GFX1250-NEXT:    global_load_b128 v[24:27], v52, s[2:3] offset:96
+; GFX1250-NEXT:    global_load_b128 v[44:47], v52, s[2:3] offset:224
+; GFX1250-NEXT:    global_load_b128 v[36:39], v52, s[2:3] offset:32
+; GFX1250-NEXT:    global_load_b128 v[32:35], v52, s[2:3] offset:80
 ; GFX1250-NEXT:    s_wait_loadcnt 0xb
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[2:3], v2, v[6:7]
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[0:1], v0, v[4:5]
@@ -377,10 +377,9 @@ define amdgpu_kernel void @v_shl_v16i64(ptr addrspace(1) %out, ptr addrspace(1) 
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[18:19], v22, v[18:19]
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[16:17], v20, v[16:17]
 ; GFX1250-NEXT:    global_load_b128 v[20:23], v52, s[2:3] offset:160
-; GFX1250-NEXT:    s_wait_loadcnt 0x4
+; GFX1250-NEXT:    s_wait_loadcnt 0x5
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[26:27], v46, v[26:27]
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[24:25], v44, v[24:25]
-; GFX1250-NEXT:    s_wait_loadcnt 0x3
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[30:31], v50, v[30:31]
 ; GFX1250-NEXT:    v_lshlrev_b64_e32 v[28:29], v48, v[28:29]
 ; GFX1250-NEXT:    s_wait_loadcnt 0x2
@@ -418,18 +417,18 @@ define amdgpu_kernel void @v_shl_v16i64(ptr addrspace(1) %out, ptr addrspace(1) 
 ; GFX1251-NEXT:    global_load_b128 v[12:15], v52, s[2:3] offset:128
 ; GFX1251-NEXT:    global_load_b128 v[16:19], v52, s[2:3] offset:176
 ; GFX1251-NEXT:    global_load_b128 v[20:23], v52, s[2:3] offset:48
+; GFX1251-NEXT:    global_load_b128 v[36:39], v52, s[2:3] offset:112
 ; GFX1251-NEXT:    global_load_b128 v[24:27], v52, s[2:3] offset:32
 ; GFX1251-NEXT:    global_load_b128 v[28:31], v52, s[2:3] offset:160
 ; GFX1251-NEXT:    global_load_b128 v[32:35], v52, s[2:3] offset:96
-; GFX1251-NEXT:    global_load_b128 v[36:39], v52, s[2:3] offset:112
-; GFX1251-NEXT:    global_load_b128 v[40:43], v52, s[2:3] offset:64
 ; GFX1251-NEXT:    global_load_b128 v[44:47], v52, s[2:3] offset:80
+; GFX1251-NEXT:    global_load_b128 v[40:43], v52, s[2:3] offset:64
 ; GFX1251-NEXT:    s_wait_loadcnt 0xa
 ; GFX1251-NEXT:    v_lshlrev_b64_e32 v[2:3], v2, v[6:7]
 ; GFX1251-NEXT:    v_lshlrev_b64_e32 v[0:1], v0, v[4:5]
 ; GFX1251-NEXT:    s_clause 0x1
-; GFX1251-NEXT:    global_load_b128 v[4:7], v52, s[2:3] offset:224
 ; GFX1251-NEXT:    global_load_b128 v[48:51], v52, s[2:3] offset:240
+; GFX1251-NEXT:    global_load_b128 v[4:7], v52, s[2:3] offset:224
 ; GFX1251-NEXT:    s_wait_loadcnt 0xa
 ; GFX1251-NEXT:    v_lshlrev_b64_e32 v[10:11], v14, v[10:11]
 ; GFX1251-NEXT:    v_lshlrev_b64_e32 v[8:9], v12, v[8:9]
@@ -439,14 +438,14 @@ define amdgpu_kernel void @v_shl_v16i64(ptr addrspace(1) %out, ptr addrspace(1) 
 ; GFX1251-NEXT:    s_clause 0x1
 ; GFX1251-NEXT:    global_load_b128 v[16:19], v52, s[2:3] offset:208
 ; GFX1251-NEXT:    global_load_b128 v[20:23], v52, s[2:3] offset:192
-; GFX1251-NEXT:    s_wait_loadcnt 0x8
+; GFX1251-NEXT:    s_wait_loadcnt 0x7
 ; GFX1251-NEXT:    v_lshlrev_b64_e32 v[26:27], v30, v[26:27]
 ; GFX1251-NEXT:    v_lshlrev_b64_e32 v[24:25], v28, v[24:25]
 ; GFX1251-NEXT:    s_wait_loadcnt 0x3
+; GFX1251-NEXT:    v_lshlrev_b64_e32 v[38:39], v50, v[38:39]
+; GFX1251-NEXT:    s_wait_loadcnt 0x2
 ; GFX1251-NEXT:    v_lshlrev_b64_e32 v[6:7], v6, v[34:35]
 ; GFX1251-NEXT:    v_lshlrev_b64_e32 v[4:5], v4, v[32:33]
-; GFX1251-NEXT:    s_wait_loadcnt 0x2
-; GFX1251-NEXT:    v_lshlrev_b64_e32 v[38:39], v50, v[38:39]
 ; GFX1251-NEXT:    v_lshlrev_b64_e32 v[36:37], v48, v[36:37]
 ; GFX1251-NEXT:    s_wait_loadcnt 0x1
 ; GFX1251-NEXT:    v_lshlrev_b64_e32 v[18:19], v18, v[46:47]
