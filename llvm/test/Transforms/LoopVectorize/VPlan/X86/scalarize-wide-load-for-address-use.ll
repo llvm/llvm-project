@@ -199,15 +199,16 @@ define void @load_feeds_mask_reaching_address(ptr noalias %src, ptr noalias %dst
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%gep> = getelementptr ir<%src>, ir<%iv>
-; CHECK-NEXT:      REPLICATE ir<%val> = load ir<%gep>
+; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer ir<%gep>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%val> = load vp<[[VP4]]>
 ; CHECK-NEXT:      EMIT ir<%cmp> = fcmp ole ir<0.000000e+00>, ir<%val>
 ; CHECK-NEXT:    Successor(s): then
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    then:
 ; CHECK-NEXT:      EMIT ir<%idx> = add ir<%iv>, ir<1>, ir<%cmp>
 ; CHECK-NEXT:      EMIT ir<%gep2> = getelementptr ir<@tbl.a>, ir<%idx>
-; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = vector-pointer ir<%gep2>, ir<1>
-; CHECK-NEXT:      WIDEN ir<%val2> = load vp<[[VP4]]>, ir<%cmp>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer ir<%gep2>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%val2> = load vp<[[VP5]]>, ir<%cmp>
 ; CHECK-NEXT:      REPLICATE store ir<%val2>, ir<%dst>, ir<%cmp>
 ; CHECK-NEXT:    Successor(s): latch
 ; CHECK-EMPTY:
