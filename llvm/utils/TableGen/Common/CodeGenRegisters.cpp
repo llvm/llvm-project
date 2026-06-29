@@ -417,7 +417,7 @@ void CodeGenRegister::checkSubRegIndexSizes(CodeGenRegBank &RegBank) const {
 
   // Collect the explicit sub-register (offset, size) ranges. Bail on any
   // register with incomplete or non-contiguous range info.
-  SmallVector<std::pair<unsigned, unsigned>, 8> Ranges;
+  SmallVector<std::pair<unsigned, unsigned>> Ranges;
   for (const CodeGenSubRegIndex *Idx : ExplicitSubRegIndices) {
     if (!Idx->Range.hasDefault())
       return;
