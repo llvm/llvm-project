@@ -607,6 +607,7 @@ test_load() {
   resd = _mm_loadl_pd(md1, dp);
   resd = _mm_loadr_pd(dp);
   resd = _mm_loadu_pd(dp);
+  resi = _mm_loadu_si64(mip);
   resi = _mm_loadu_si128(mip);
 }
 
@@ -653,6 +654,9 @@ test_load() {
 // CHECK-LABEL: define available_externally <2 x double> @_mm_loadu_pd
 // CHECK: %[[ADDR:[0-9a-zA-Z_.]+]] = load ptr, ptr %{{[0-9a-zA-Z_.]+}}, align 8
 // CHECK: call <2 x double> @vec_vsx_ld(int, double const*)(i32 noundef signext 0, ptr noundef %[[ADDR]])
+
+// CHECK-LABEL: define available_externally <2 x i64> @_mm_loadu_si64
+// CHECK: call <2 x i64> @_mm_set_epi64(i64 noundef 0, i64 noundef %{{[0-9a-zA-Z_.]+}})
 
 // CHECK-LABEL: define available_externally <2 x i64> @_mm_loadu_si128
 // CHECK: load ptr, ptr %{{[0-9a-zA-Z_.]+}}, align 8

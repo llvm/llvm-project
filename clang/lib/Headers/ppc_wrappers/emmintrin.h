@@ -764,6 +764,12 @@ extern __inline __m128i
 
 extern __inline __m128i
     __attribute__((__gnu_inline__, __always_inline__, __artificial__))
+    _mm_loadu_si64(void const *__P) {
+  return _mm_set_epi64((__m64)0LL, *(__m64 *)__P);
+}
+
+extern __inline __m128i
+    __attribute__((__gnu_inline__, __always_inline__, __artificial__))
     _mm_loadl_epi64(__m128i_u const *__P) {
   return _mm_set_epi64((__m64)0LL, *(__m64 *)__P);
 }
