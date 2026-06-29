@@ -2425,6 +2425,8 @@ void testDiagnostics(void) {
   MlirAttribute nullAttr = {0};
   MlirLocation fusedLoc = mlirLocationFusedGet(ctx, 2, locs, nullAttr);
   mlirEmitError(fusedLoc, "test diagnostics");
+  mlirEmitWarning(unknownLoc, "test warning");
+  mlirEmitRemark(unknownLoc, "test remark");
   mlirContextDetachDiagnosticHandler(ctx, id);
   mlirEmitError(unknownLoc, "more test diagnostics");
   // CHECK-LABEL: @test_diagnostics
@@ -2454,6 +2456,12 @@ void testDiagnostics(void) {
   // CHECK: processing diagnostic (userData: 42) <<
   // CHECK:   test diagnostics
   // CHECK:   loc(fused["named", callsite("other-file.c":2:3 at "file.c":1:2)])
+  // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   test warning
+  // CHECK:   loc(unknown)
+  // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   test remark
+  // CHECK:   loc(unknown)
   // CHECK: deleting user data (userData: 42)
   // CHECK-NOT: processing diagnostic
   // CHECK:     more test diagnostics
