@@ -107,7 +107,8 @@ LANGSTANDARD(c2y, "c2y",
              LineComment | C99 | C11 | C17 | C23 | C2y | Digraphs | HexFloat, 202400)
 LANGSTANDARD(gnu2y, "gnu2y",
              C, "Working Draft for ISO C2y with GNU extensions",
-             LineComment | C99 | C11 | C17 | C23 | C2y | Digraphs | GNUMode | HexFloat, 202400)
+             LineComment | C99 | C11 | C17 | C23 | C2y | Digraphs | GNUMode
+                 | HexFloat, 202400)
 // TODO: Add the iso9899:202y alias once ISO publishes the standard.
 
 // C++ modes
