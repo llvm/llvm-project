@@ -426,13 +426,14 @@ public:
   bool hasAndNot(SDValue Y) const override {
     EVT VT = Y.getValueType();
 
-    if (!VT.isVector())
-      return hasAndNotCompare(Y);
-
     if (VT.isScalableVector())
       return true;
 
-    return VT.getFixedSizeInBits() >= 64; // vector 'bic'
+    if (VT.isVector())
+      return VT.getFixedSizeInBits() >= 64; // vector 'bic'
+
+    // We can use bic for any scalar.
+    return true;
   }
 
   bool shouldProduceAndByConstByHoistingConstFromShiftsLHSOfAnd(
