@@ -33,9 +33,8 @@ namespace {
 /// that are already in a normalized form.
 struct AffineLoopNormalizePass
     : public affine::impl::AffineLoopNormalizeBase<AffineLoopNormalizePass> {
-  explicit AffineLoopNormalizePass(bool promoteSingleIter) {
-    this->promoteSingleIter = promoteSingleIter;
-  }
+  using affine::impl::AffineLoopNormalizeBase<
+      AffineLoopNormalizePass>::AffineLoopNormalizeBase;
 
   void runOnOperation() override {
     getOperation().walk([&](Operation *op) {
@@ -48,8 +47,3 @@ struct AffineLoopNormalizePass
 };
 
 } // namespace
-
-std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::affine::createAffineLoopNormalizePass(bool promoteSingleIter) {
-  return std::make_unique<AffineLoopNormalizePass>(promoteSingleIter);
-}
