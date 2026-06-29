@@ -18,3 +18,9 @@
 # RUN: %lldb --no-lldbinit -b -o 'bugreport --no-open -d %t.report2' 2>&1 | FileCheck %s --check-prefix=ALIAS
 # ALIAS: Bug report written to
 # RUN: test -f %t.report2/commands.txt
+
+# An unknown reporter name is rejected after the bundle is written.
+# RUN: rm -rf %t.report3
+# RUN: not %lldb --no-lldbinit -b -o 'diagnostics report -P nonesuch -d %t.report3' 2>&1 | FileCheck %s --check-prefix=BADNAME
+# BADNAME: error: no bug reporter named 'nonesuch'
+# RUN: test -f %t.report3/commands.txt

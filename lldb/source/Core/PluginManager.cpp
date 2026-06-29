@@ -778,7 +778,14 @@ void PluginManager::UnregisterPlugin(
   GetBugReporterInstances().UnregisterPlugin(create_callback);
 }
 
-std::unique_ptr<BugReporter> PluginManager::CreateBugReporterInstance() {
+std::unique_ptr<BugReporter>
+PluginManager::CreateBugReporterInstance(llvm::StringRef name) {
+  if (!name.empty()) {
+    if (auto create_callback =
+            GetBugReporterInstances().GetCallbackForName(name))
+      return create_callback();
+    return nullptr;
+  }
   for (const auto &instance : GetBugReporterInstances().GetSnapshot()) {
     if (auto plugin_up = instance.create_callback())
       return plugin_up;

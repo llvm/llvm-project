@@ -236,7 +236,8 @@ public:
 
   static void UnregisterPlugin(BugReporterCreateInstance create_callback);
 
-  static std::unique_ptr<BugReporter> CreateBugReporterInstance();
+  static std::unique_ptr<BugReporter>
+  CreateBugReporterInstance(llvm::StringRef name = {});
 
   // Disassembler
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,

@@ -726,6 +726,10 @@ let Command = "diagnostics report" in {
   def diagnostics_report_no_open
       : Option<"no-open", "n">,
         Desc<"Write the bundle but do not open the bug tracker.">;
+  def diagnostics_report_plugin
+      : Option<"plugin", "P">,
+        Arg<"Plugin">,
+        Desc<"File the report with the named bug reporter plugin.">;
 }
 
 let Command = "expression" in {

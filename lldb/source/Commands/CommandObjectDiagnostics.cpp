@@ -140,6 +140,9 @@ public:
       case 'n':
         no_open = true;
         break;
+      case 'P':
+        plugin = option_arg.str();
+        break;
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -149,6 +152,7 @@ public:
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       directory.Clear();
       no_open = false;
+      plugin.clear();
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
@@ -157,6 +161,7 @@ public:
 
     FileSpec directory;
     bool no_open = false;
+    std::string plugin;
   };
 
   Options *GetOptions() override { return &m_options; }
@@ -199,9 +204,13 @@ protected:
 
     // No-tracker handling lives in the fallback reporter's File(), not here.
     std::unique_ptr<BugReporter> reporter =
-        PluginManager::CreateBugReporterInstance();
+        PluginManager::CreateBugReporterInstance(m_options.plugin);
     if (!reporter) {
-      result.AppendError("no bug reporter is available");
+      if (!m_options.plugin.empty())
+        result.AppendErrorWithFormat("no bug reporter named '%s'",
+                                     m_options.plugin.c_str());
+      else
+        result.AppendError("no bug reporter is available");
       return;
     }
     if (llvm::Error error = reporter->File(*report)) {
