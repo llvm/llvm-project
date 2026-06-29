@@ -86,11 +86,6 @@ public:
     /// Identical to GetMaxValue but for the GDB client to use.
     static uint64_t GetMaxValue(unsigned start, unsigned end);
 
-    /// Extract value of the field from a whole register value.
-    uint64_t GetValue(uint64_t register_value) const {
-      return (register_value & GetMask()) >> m_start;
-    }
-
     const std::string &GetName() const { return m_name; }
     unsigned GetStart() const { return m_start; }
     unsigned GetEnd() const { return m_end; }
@@ -132,7 +127,7 @@ public:
   /// This assumes that:
   /// * There is at least one field.
   /// * The fields are sorted in descending order.
-  /// Gaps are allowed, they will be filled with anonymous padding fields.
+  /// Gaps are allowed.
   RegisterFlags(std::string id, unsigned size,
                 const std::vector<Field> &fields);
 
@@ -144,23 +139,6 @@ public:
   /// Make a string where each line contains the name of a field that has
   /// enum values, and lists what those values are.
   std::string DumpEnums(uint32_t max_width) const;
-
-  // Reverse the order of the fields, keeping their values the same.
-  // For example a field from bit 31 to 30 with value 0b10 will become bits
-  // 1 to 0, with the same 0b10 value.
-  // Use this when you are going to show the register using a bitfield struct
-  // type. If that struct expects MSB first and you are on little endian where
-  // LSB would be first, this corrects that (and vice versa for big endian).
-  template <typename T> T ReverseFieldOrder(T value) const {
-    T ret = 0;
-    unsigned shift = 0;
-    for (auto field : GetFields()) {
-      ret |= field.GetValue(value) << shift;
-      shift += field.GetSizeInBits();
-    }
-
-    return ret;
-  }
 
   const std::vector<Field> &GetFields() const { return m_fields; }
   const std::string &GetID() const { return m_id; }
