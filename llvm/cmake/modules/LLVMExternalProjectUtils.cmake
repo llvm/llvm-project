@@ -59,6 +59,9 @@ endfunction()
 #     Targets for toolchain tools (defaults to clang;lld)
 #   DEPENDS targets...
 #     Targets that this project depends on
+#   ORDER_DEPENDS targets...
+#     Targets that this project depends on for build ordering only without
+#     forcing a reconfigure.
 #   EXTRA_TARGETS targets...
 #     Extra targets in the subproject to generate targets for
 #   PASSTHROUGH_PREFIXES prefix...
@@ -74,7 +77,7 @@ function(llvm_ExternalProject_Add name source_dir)
   cmake_parse_arguments(ARG
     "ENABLE_FORTRAN;USE_TOOLCHAIN;EXCLUDE_FROM_ALL;NO_INSTALL;ALWAYS_CLEAN"
     "SOURCE_DIR;FOLDER"
-    "CMAKE_ARGS;TOOLCHAIN_TOOLS;RUNTIME_LIBRARIES;DEPENDS;EXTRA_TARGETS;PASSTHROUGH_PREFIXES;STRIP_TOOL;TARGET_TRIPLE"
+    "CMAKE_ARGS;TOOLCHAIN_TOOLS;RUNTIME_LIBRARIES;DEPENDS;ORDER_DEPENDS;EXTRA_TARGETS;PASSTHROUGH_PREFIXES;STRIP_TOOL;TARGET_TRIPLE"
     ${ARGN})
   canonicalize_tool_name(${name} nameCanon)
 
@@ -438,6 +441,10 @@ function(llvm_ExternalProject_Add name source_dir)
       PROPERTIES FOLDER "${ARG_FOLDER}"
     )
   endif ()
+
+  if(ARG_ORDER_DEPENDS)
+    add_dependencies(${name}-configure ${ARG_ORDER_DEPENDS})
+  endif()
 
   if(ARG_USE_TOOLCHAIN)
     set(force_deps DEPENDS ${TOOLCHAIN_BINS})

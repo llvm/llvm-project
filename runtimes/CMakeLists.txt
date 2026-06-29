@@ -466,19 +466,18 @@ if(SUB_COMPONENTS)
 endif()
 
 # If the user requested 'compile_commands.json' we merge the generated JSON from
-# the created directories.
+# the created directories into the main build's compile_commands.json.
 if(CMAKE_EXPORT_COMPILE_COMMANDS AND NOT ("${LLVM_BINARY_DIR}" STREQUAL "${CMAKE_BINARY_DIR}"))
-  # Make a dependency so that we don't error if the file gets deleted somehow.
-  add_custom_command(OUTPUT ${CMAKE_BINARY_DIR}/compile_commands.json
-                     COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_BINARY_DIR}/compile_commands.json)
-
   file(TO_NATIVE_PATH "${LLVM_MAIN_SRC_DIR}/utils/merge-json.py" MERGE_JSON_PATH)
-  add_custom_command(OUTPUT ${LLVM_BINARY_DIR}/compile_commands.json
-                     COMMAND ${CMAKE_COMMAND} -E touch ${LLVM_BINARY_DIR}/compile_commands.json
-                     COMMAND ${Python3_EXECUTABLE} ${MERGE_JSON_PATH}
-                             ${LLVM_BINARY_DIR}/compile_commands.json
-                             ${CMAKE_BINARY_DIR}/compile_commands.json
-                             -o ${LLVM_BINARY_DIR}/compile_commands.json
-                     DEPENDS ${CMAKE_BINARY_DIR}/compile_commands.json)
-  add_custom_target(merge_runtime_commands ALL DEPENDS ${LLVM_BINARY_DIR}/compile_commands.json)
+  add_custom_command(
+    OUTPUT ${CMAKE_BINARY_DIR}/merge_compile_commands.stamp
+    COMMAND ${Python3_EXECUTABLE} ${MERGE_JSON_PATH}
+            ${LLVM_BINARY_DIR}/compile_commands.json
+            ${CMAKE_BINARY_DIR}/compile_commands.json
+            -o ${LLVM_BINARY_DIR}/compile_commands.json
+    COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_BINARY_DIR}/merge_compile_commands.stamp
+    DEPENDS ${CMAKE_BINARY_DIR}/compile_commands.json
+    COMMENT "Merging runtime compile commands")
+  add_custom_target(merge_runtime_commands ALL
+    DEPENDS ${CMAKE_BINARY_DIR}/merge_compile_commands.stamp)
 endif()
