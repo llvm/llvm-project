@@ -436,19 +436,23 @@ private:
 class CFGCleanupFunction final : public CFGElement {
 public:
   CFGCleanupFunction() = default;
-  CFGCleanupFunction(const VarDecl *VD)
-      : CFGElement(Kind::CleanupFunction, VD) {
-    assert(VD->hasAttr<CleanupAttr>());
-  }
+  CFGCleanupFunction(VarDecl *VD)
+      : CFGElement(Kind::CleanupFunction, createPseudoCallExpr(VD)) {}
 
   const VarDecl *getVarDecl() const {
-    return static_cast<const VarDecl *>(Data1.getPointer());
+    return cast<VarDecl>(
+        cast<DeclRefExpr>(
+            cast<UnaryOperator>(getPseudoCallExpr()->getArg(0))->getSubExpr())
+            ->getDecl());
   }
 
   /// Returns the function to be called when cleaning up the var decl.
   const FunctionDecl *getFunctionDecl() const {
-    const CleanupAttr *A = getVarDecl()->getAttr<CleanupAttr>();
-    return A->getFunctionDecl();
+    return getPseudoCallExpr()->getDirectCallee();
+  }
+
+  const CallExpr *getPseudoCallExpr() const {
+    return static_cast<const CallExpr *>(Data1.getPointer());
   }
 
 private:
@@ -457,6 +461,8 @@ private:
   static bool isKind(const CFGElement E) {
     return E.getKind() == Kind::CleanupFunction;
   }
+
+  static const CallExpr *createPseudoCallExpr(VarDecl *VD);
 };
 
 /// Represents C++ object destructor implicitly generated for automatic object
@@ -1222,7 +1228,7 @@ public:
     Elements.push_back(CFGAutomaticObjDtor(VD, S), C);
   }
 
-  void appendCleanupFunction(const VarDecl *VD, BumpVectorContext &C) {
+  void appendCleanupFunction(VarDecl *VD, BumpVectorContext &C) {
     Elements.push_back(CFGCleanupFunction(VD), C);
   }
 

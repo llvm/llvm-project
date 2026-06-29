@@ -1613,7 +1613,8 @@ void ExprEngine::ProcessTemporaryDtor(const CFGTemporaryDtor D,
                      /*IsBase=*/false, CleanPred, Dst, CallOpts);
 }
 
-void ExprEngine::ProcessCleanupFunction(const CFGCleanupFunction CF, ExplodedNode *Pred) {
+void ExprEngine::ProcessCleanupFunction(const CFGCleanupFunction CF,
+                                        ExplodedNode *Pred) {
   ProgramStateRef State = Pred->getState();
   const StackFrame *SF = Pred->getStackFrame();
 
@@ -1623,12 +1624,13 @@ void ExprEngine::ProcessCleanupFunction(const CFGCleanupFunction CF, ExplodedNod
   const VarDecl *VD = CF.getVarDecl();
   SVal VLoc = State->getLValue(VD, SF);
 
-  const CallExpr *CE = nullptr; // CF.getPseudoCallExpr();
-  // assert(CE->getNumArgs() == 1 && "Invalid cleanup function definition!");
-  const Expr *Callee = nullptr; // CE->getCallee();
-  const Expr *VarAddr = nullptr; // CE->getArg(0);
-  State = State->BindExpr(Callee, SF, VF, false);
-  State = State->BindExpr(VarAddr, SF, VLoc, false);
+  const CallExpr *CE = CF.getPseudoCallExpr();
+  const ImplicitCastExpr *Callee = cast<ImplicitCastExpr>(CE->getCallee());
+  const UnaryOperator *VarAddr = cast<UnaryOperator>(CE->getArg(0));
+  State = State->BindExpr(Callee->getSubExpr(), SF, VF);
+  State = State->BindExpr(Callee, SF, VF);
+  State = State->BindExpr(VarAddr->getSubExpr(), SF, VLoc);
+  State = State->BindExpr(VarAddr, SF, VLoc);
 
   // Copied from ExprEngine::VisitCallExpr
   CallEventManager &CEMgr = getStateManager().getCallEventManager();
