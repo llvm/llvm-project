@@ -194,8 +194,9 @@ protected:
 
     Stream &out = result.GetOutputStream();
     out << "Bug report written to " << directory->GetPath() << "\n";
-    out << "WARNING: the report may contain file paths, command history and "
-           "program data. Review it before attaching it to a public issue.\n";
+    result.AppendWarning("the report may contain file paths, command history "
+                         "and program data. Review it before attaching it to a "
+                         "public issue");
 
     if (m_options.no_open) {
       result.SetStatus(eReturnStatusSuccessFinishResult);
