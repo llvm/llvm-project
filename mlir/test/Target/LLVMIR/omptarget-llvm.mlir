@@ -624,7 +624,7 @@ module attributes {omp.target_triples = ["amdgcn-amd-amdhsa"]} {
   llvm.func @_QPomp_target_is_device_ptr(%arg0 : !llvm.ptr) {
     %map = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.ptr)
         map_clauses(is_device_ptr) capture(ByRef) -> !llvm.ptr {name = ""}
-    omp.target map_entries(%map -> %ptr_arg : !llvm.ptr) {
+    omp.target kernel_type(generic) map_entries(%map -> %ptr_arg : !llvm.ptr) {
       omp.terminator
     }
     llvm.return

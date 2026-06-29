@@ -1097,20 +1097,15 @@ VOPD::InstInfo getVOPDInstInfo(unsigned VOPDOpcode,
   return VOPD::InstInfo(OpXInfo, OpYInfo);
 }
 
-namespace IsaInfo {
-
-AMDGPUTargetID::AMDGPUTargetID(const MCSubtargetInfo &STI,
-                               StringRef FeatureString)
-    : Arch(parseArchAMDGCN(STI.getCPU())),
-      TargetTripleString(
-          STI.getTargetTriple().normalize(Triple::CanonicalForm::FOUR_IDENT)),
-      XnackSetting(STI.getFeatureBits().test(FeatureSupportsXNACK)
-                       ? TargetIDSetting::Any
-                       : TargetIDSetting::Unsupported),
-      SramEccSetting(STI.getFeatureBits().test(FeatureSupportsSRAMECC)
-                         ? TargetIDSetting::Any
-                         : TargetIDSetting::Unsupported),
-      IsAMDHSA(STI.getTargetTriple().getOS() == Triple::AMDHSA) {
+TargetID createAMDGPUTargetID(const MCSubtargetInfo &STI,
+                              StringRef FeatureString) {
+  TargetID TargetID(parseArchAMDGCN(STI.getCPU()), STI.getTargetTriple(),
+                    STI.getFeatureBits().test(FeatureSupportsXNACK)
+                        ? TargetIDSetting::Any
+                        : TargetIDSetting::Unsupported,
+                    STI.getFeatureBits().test(FeatureSupportsSRAMECC)
+                        ? TargetIDSetting::Any
+                        : TargetIDSetting::Unsupported);
 
   // Check if xnack or sramecc is explicitly enabled or disabled.  In the
   // absence of the target features we assume we must generate code that can run
@@ -1134,12 +1129,12 @@ AMDGPUTargetID::AMDGPUTargetID(const MCSubtargetInfo &STI,
   // Targets without on/off mode support keep their initial setting (Any).
 
   bool XnackSupported = STI.getFeatureBits().test(FeatureXNACKOnOffModes);
-  bool SramEccSupported = isSramEccSupported();
+  bool SramEccSupported = TargetID.isSramEccSupported();
 
   if (XnackRequested) {
     if (XnackSupported) {
-      XnackSetting =
-          *XnackRequested ? TargetIDSetting::On : TargetIDSetting::Off;
+      TargetID.setXnackSetting(*XnackRequested ? TargetIDSetting::On
+                                               : TargetIDSetting::Off);
     } else {
       // If a specific xnack setting was requested and this GPU does not support
       // xnack emit a warning. Setting will remain set to "Unsupported".
@@ -1155,8 +1150,8 @@ AMDGPUTargetID::AMDGPUTargetID(const MCSubtargetInfo &STI,
 
   if (SramEccRequested) {
     if (SramEccSupported) {
-      SramEccSetting =
-          *SramEccRequested ? TargetIDSetting::On : TargetIDSetting::Off;
+      TargetID.setSramEccSetting(*SramEccRequested ? TargetIDSetting::On
+                                                   : TargetIDSetting::Off);
     } else {
       // If a specific sramecc setting was requested and this GPU does not
       // support sramecc emit a warning. Setting will remain set to
@@ -1170,111 +1165,11 @@ AMDGPUTargetID::AMDGPUTargetID(const MCSubtargetInfo &STI,
       }
     }
   }
+
+  return TargetID;
 }
 
-AMDGPUTargetID::AMDGPUTargetID(GPUKind Arch, StringRef TargetTripleString,
-                               TargetIDSetting XnackSetting,
-                               TargetIDSetting SramEccSetting, bool IsAMDHSA)
-    : Arch(Arch), TargetTripleString(TargetTripleString),
-      XnackSetting(XnackSetting), SramEccSetting(SramEccSetting),
-      IsAMDHSA(IsAMDHSA) {}
-
-static TargetIDSetting
-getTargetIDSettingFromFeatureString(StringRef FeatureString) {
-  if (FeatureString.ends_with("-"))
-    return TargetIDSetting::Off;
-  if (FeatureString.ends_with("+"))
-    return TargetIDSetting::On;
-
-  llvm_unreachable("Malformed feature string");
-}
-
-void AMDGPUTargetID::setTargetIDFromTargetIDStream(StringRef TargetID) {
-  SmallVector<StringRef, 3> TargetIDSplit;
-  TargetID.split(TargetIDSplit, ':');
-
-  for (const auto &FeatureString : TargetIDSplit) {
-    if (FeatureString.starts_with("xnack"))
-      XnackSetting = getTargetIDSettingFromFeatureString(FeatureString);
-    if (FeatureString.starts_with("sramecc"))
-      SramEccSetting = getTargetIDSettingFromFeatureString(FeatureString);
-  }
-}
-
-std::optional<AMDGPUTargetID>
-AMDGPUTargetID::parseTargetIDString(StringRef TargetIDDirective) {
-  // Split on '-' to get arch-vendor-os-environment-processor:features
-  // There is a single dash separator after the 4-component triple
-  SmallVector<StringRef, 5> Parts;
-  TargetIDDirective.split(Parts, '-', /*MaxSplit=*/4);
-  if (Parts.size() < 4)
-    return std::nullopt;
-
-  Triple TT(Parts[0], Parts[1], Parts[2], Parts[3]);
-  if (!TT.isAMDGCN())
-    return std::nullopt;
-
-  SmallVector<StringRef, 3> FeatureSplit;
-  Parts[4].split(FeatureSplit, ':');
-  if (FeatureSplit.empty())
-    return std::nullopt;
-
-  StringRef CPUName = FeatureSplit[0];
-
-  // Determine xnack/sramecc support based on the architecture attributes
-  GPUKind Arch = parseArchAMDGCN(CPUName);
-  unsigned ArchAttr = getArchAttrAMDGCN(Arch);
-
-  TargetIDSetting XnackSetting = (ArchAttr & FEATURE_XNACK)
-                                     ? TargetIDSetting::Any
-                                     : TargetIDSetting::Unsupported;
-  TargetIDSetting SramEccSetting = (ArchAttr & FEATURE_SRAMECC)
-                                       ? TargetIDSetting::Any
-                                       : TargetIDSetting::Unsupported;
-
-  for (StringRef FeatureString :
-       ArrayRef<StringRef>(FeatureSplit).drop_front(1)) {
-    if (FeatureString.starts_with("xnack"))
-      XnackSetting = getTargetIDSettingFromFeatureString(FeatureString);
-    else if (FeatureString.starts_with("sramecc"))
-      SramEccSetting = getTargetIDSettingFromFeatureString(FeatureString);
-  }
-
-  return AMDGPUTargetID(Arch, TT.normalize(Triple::CanonicalForm::FOUR_IDENT),
-                        XnackSetting, SramEccSetting,
-                        TT.getOS() == Triple::AMDHSA);
-}
-
-void AMDGPUTargetID::print(raw_ostream &StreamRep) const {
-  StreamRep << TargetTripleString << '-' << getArchNameAMDGCN(Arch);
-
-  if (IsAMDHSA) {
-    // sramecc.
-    if (getSramEccSetting() == TargetIDSetting::Off)
-      StreamRep << ":sramecc-";
-    else if (getSramEccSetting() == TargetIDSetting::On)
-      StreamRep << ":sramecc+";
-
-    // xnack.
-    if (getXnackSetting() == TargetIDSetting::Off)
-      StreamRep << ":xnack-";
-    else if (getXnackSetting() == TargetIDSetting::On)
-      StreamRep << ":xnack+";
-  }
-}
-
-std::string AMDGPUTargetID::toString() const {
-  std::string Str;
-  raw_string_ostream OS(Str);
-  OS << *this;
-  return Str;
-}
-
-bool AMDGPUTargetID::operator==(const AMDGPUTargetID &Other) const {
-  return Arch == Other.Arch && XnackSetting == Other.XnackSetting &&
-         SramEccSetting == Other.SramEccSetting && IsAMDHSA == Other.IsAMDHSA &&
-         TargetTripleString == Other.TargetTripleString;
-}
+namespace IsaInfo {
 
 unsigned getInstCacheLineSize(const MCSubtargetInfo &STI) {
   if (STI.getFeatureBits().test(FeatureInstCacheLineSize128))
@@ -3963,19 +3858,18 @@ ClusterDimsAttr ClusterDimsAttr::get(const Function &F) {
 
 } // namespace AMDGPU
 
-raw_ostream &operator<<(raw_ostream &OS,
-                        const AMDGPU::IsaInfo::TargetIDSetting S) {
+raw_ostream &operator<<(raw_ostream &OS, const AMDGPU::TargetIDSetting S) {
   switch (S) {
-  case (AMDGPU::IsaInfo::TargetIDSetting::Unsupported):
+  case (AMDGPU::TargetIDSetting::Unsupported):
     OS << "Unsupported";
     break;
-  case (AMDGPU::IsaInfo::TargetIDSetting::Any):
+  case (AMDGPU::TargetIDSetting::Any):
     OS << "Any";
     break;
-  case (AMDGPU::IsaInfo::TargetIDSetting::Off):
+  case (AMDGPU::TargetIDSetting::Off):
     OS << "Off";
     break;
-  case (AMDGPU::IsaInfo::TargetIDSetting::On):
+  case (AMDGPU::TargetIDSetting::On):
     OS << "On";
     break;
   }
