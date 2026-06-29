@@ -42,20 +42,20 @@ int __attribute__((target_clones("cpu=pwr9,default"))) redef3(void) { return 1; 
 int __attribute__((target_clones("cpu=pwr9,cpu=power9", "cpu=power9, default")))
 dupes(void) { return 1; }
 
-// expected-warning@+1 {{unsupported '' in the 'target_clones' attribute string;}}
+// expected-warning@+1 {{unknown '' in the 'target_clones' attribute string;}}
 void __attribute__((target_clones("")))
 empty_target_1(void);
-// expected-warning@+1 {{unsupported '' in the 'target_clones' attribute string;}}
+// expected-warning@+1 {{unknown '' in the 'target_clones' attribute string;}}
 void __attribute__((target_clones(",default")))
 empty_target_2(void);
-// expected-warning@+1 {{unsupported '' in the 'target_clones' attribute string;}}
+// expected-warning@+1 {{unknown '' in the 'target_clones' attribute string;}}
 void __attribute__((target_clones("default,")))
 empty_target_3(void);
-// expected-warning@+1 {{unsupported '' in the 'target_clones' attribute string;}}
+// expected-warning@+1 {{unknown '' in the 'target_clones' attribute string;}}
 void __attribute__((target_clones("default, ,cpu=pwr7")))
 empty_target_4(void);
 
-// expected-warning@+1 {{unsupported '' in the 'target_clones' attribute string;}}
+// expected-warning@+1 {{unknown '' in the 'target_clones' attribute string;}}
 void __attribute__((target_clones("default,cpu=pwr7", "")))
 empty_target_5(void);
 
@@ -130,3 +130,92 @@ gh173684_empty_attribute_args(void);
 // expected-error@+1 {{'target_clones' multiversioning requires a default target}}
 void __attribute__((target_clones))
 gh173684_empty_attribute_args_2(void);
+
+// TODO: Consider combining some of these tests into fewer test cases with multiple features
+// e.g., target_clones("feature1", "feature2", "feature3", ..., "default") to test
+// feature1, feature2, feature3 all in one declaration instead of separate functions
+
+// Test that all valid feature names are accepted (no diagnostics expected)
+void __attribute__((target_clones("altivec", "default")))
+valid_feature_altivec(void);
+
+void __attribute__((target_clones("vsx", "default")))
+valid_feature_vsx(void);
+
+void __attribute__((target_clones("crypto", "default")))
+valid_feature_crypto(void);
+
+void __attribute__((target_clones("power8-vector", "default")))
+valid_feature_power8_vector(void);
+
+void __attribute__((target_clones("power9-vector", "default")))
+valid_feature_power9_vector(void);
+
+void __attribute__((target_clones("power10-vector", "default")))
+valid_feature_power10_vector(void);
+
+void __attribute__((target_clones("mma", "default")))
+valid_feature_mma(void);
+
+void __attribute__((target_clones("htm", "default")))
+valid_feature_htm(void);
+
+// isel is always available on AIX (no runtime check), so it's not valid for target_clones
+// expected-error@+1 {{feature 'isel' cannot be used with 'target_clones' because it has no runtime detection; use 'target' attribute instead}}
+void __attribute__((target_clones("isel", "default")))
+invalid_feature_isel(void);
+
+// expected-error@+1 {{feature 'isel' cannot be used with 'target_clones' because it has no runtime detection; use 'target' attribute instead}}
+void __attribute__((target_clones("no-isel", "default")))
+invalid_feature_no_isel(void);
+
+// Test that negated valid feature names are accepted (no diagnostics expected)
+void __attribute__((target_clones("no-altivec", "default")))
+valid_feature_no_altivec(void);
+
+void __attribute__((target_clones("no-vsx", "default")))
+valid_feature_no_vsx(void);
+
+void __attribute__((target_clones("no-crypto", "default")))
+valid_feature_no_crypto(void);
+
+void __attribute__((target_clones("no-power8-vector", "default")))
+valid_feature_no_power8_vector(void);
+
+void __attribute__((target_clones("no-power9-vector", "default")))
+valid_feature_no_power9_vector(void);
+
+void __attribute__((target_clones("no-power10-vector", "default")))
+valid_feature_no_power10_vector(void);
+
+void __attribute__((target_clones("no-mma", "default")))
+valid_feature_no_mma(void);
+
+void __attribute__((target_clones("no-htm", "default")))
+valid_feature_no_htm(void);
+
+// Test multiple valid features together (one example with mixing warning)
+// expected-warning@+1 {{mixing 'target_clones' specifier mechanisms is permitted for GCC compatibility}}
+void __attribute__((target_clones("altivec,vsx", "default")))
+valid_multiple_features_1(void);
+
+// Use separate string literals to avoid mixing warning
+void __attribute__((target_clones("vsx", "crypto", "htm", "default")))
+valid_multiple_features_2(void);
+
+void __attribute__((target_clones("power9-vector", "mma", "default")))
+valid_multiple_features_3(void);
+
+// Test mix of features and negations
+void __attribute__((target_clones("altivec", "no-vsx", "default")))
+valid_mixed_features_1(void);
+
+void __attribute__((target_clones("vsx", "no-crypto", "default")))
+valid_mixed_features_2(void);
+
+// Test features with CPU specifications
+void __attribute__((target_clones("altivec", "cpu=pwr8", "default")))
+valid_feature_with_cpu_1(void);
+
+void __attribute__((target_clones("vsx", "crypto", "cpu=pwr9", "default")))
+valid_feature_with_cpu_2(void);
