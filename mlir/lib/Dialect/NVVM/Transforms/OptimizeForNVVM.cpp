@@ -1,4 +1,4 @@
-//===- OptimizeForNVVM.cpp - Optimize LLVM IR for NVVM ---------===//
+//===- OptimizeForNVVM.cpp - Optimize LLVM IR for NVVM --------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/LLVMIR/Transforms/OptimizeForNVVM.h"
+#include "mlir/Dialect/NVVM/Transforms/OptimizeForNVVM.h"
 
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/Builders.h"
@@ -15,10 +15,10 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
-namespace LLVM {
+namespace NVVM {
 #define GEN_PASS_DEF_NVVMOPTIMIZEFORTARGETPASS
-#include "mlir/Dialect/LLVMIR/Transforms/Passes.h.inc"
-} // namespace LLVM
+#include "mlir/Dialect/NVVM/Transforms/Passes.h.inc"
+} // namespace NVVM
 } // namespace mlir
 
 using namespace mlir;
@@ -40,7 +40,7 @@ private:
 };
 
 struct NVVMOptimizeForTarget
-    : public LLVM::impl::NVVMOptimizeForTargetPassBase<NVVMOptimizeForTarget> {
+    : public NVVM::impl::NVVMOptimizeForTargetPassBase<NVVMOptimizeForTarget> {
   void runOnOperation() override;
 
   void getDependentDialects(DialectRegistry &registry) const override {
