@@ -7101,11 +7101,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       // thread and team counts in the device.
       if (Args.hasFlag(options::OPT_fopenmp_assume_teams_oversubscription,
                        options::OPT_fno_openmp_assume_teams_oversubscription,
-                       /*Default=*/false))
+                       /*Default=*/TargetFastUsed))
         CmdArgs.push_back("-fopenmp-assume-teams-oversubscription");
       if (Args.hasFlag(options::OPT_fopenmp_assume_threads_oversubscription,
                        options::OPT_fno_openmp_assume_threads_oversubscription,
-                       /*Default=*/false))
+                       /*Default=*/TargetFastUsed))
         CmdArgs.push_back("-fopenmp-assume-threads-oversubscription");
 
       // Handle -fopenmp-assume-no-thread-state (implied by target-fast)
