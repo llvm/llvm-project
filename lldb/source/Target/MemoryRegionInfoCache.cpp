@@ -19,6 +19,13 @@ void MemoryRegionInfoCache::Clear() { m_region_infos.Clear(); }
 
 void MemoryRegionInfoCache::Erase(addr_t load_addr, size_t size) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
+
+  // If load_addr+size would overflow, do nothing.
+  // Likely this is an LLDB_INVALID_ADDRESS plus something.
+  uint64_t max_minus_addr = std::numeric_limits<addr_t>::max() - load_addr;
+  if (size > max_minus_addr)
+    return;
+
   uint32_t start_idx = m_region_infos.FindEntryIndexThatContains(load_addr);
   uint32_t end_idx =
       m_region_infos.FindEntryIndexThatContains(load_addr + size);

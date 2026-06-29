@@ -86,4 +86,14 @@ TEST(MemoryRegionInfoTest, CacheErasing) {
   ASSERT_EQ(cache.GetSize(), 2U);
   cache.Erase(0x2400, 1);
   ASSERT_EQ(cache.GetSize(), 2U);
+
+  cache.AddRegion(MemoryRegionInfo({0x0, 0x1000}, eLazyBoolYes, eLazyBoolYes,
+                                   eLazyBoolYes, eLazyBoolNo, eLazyBoolNo,
+                                   ConstString("Zeroth entry")));
+
+  // Do an Erase that overflows, confirm entry at 0 is not erased.
+  cache.Erase(LLDB_INVALID_ADDRESS, 1);
+  ASSERT_EQ(cache.GetSize(), 3U);
+  ri = cache.GetMemoryRegion(0x0);
+  ASSERT_TRUE(ri);
 }
