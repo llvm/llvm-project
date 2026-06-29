@@ -97,6 +97,11 @@ Makes programs 10x faster by doing Special New Thing.
 * The ``modular-format`` attribute now supports the ``fixed`` aspect for C
   ISO 18037 fixed-point ``printf`` specifiers.
 
+* Added `noipa` attribute which disables interprocedural analyses that inspect
+  the definition of the function. This attribute does *not* control inlining or
+  outlining. Add the `noinline` and `nooutline` attributes as well in cases
+  where inlining and outlining should additionally be disabled.
+
 ### Changes to LLVM infrastructure
 
 * Removed ``Constant::isZeroValue``. It was functionally identical to
@@ -379,6 +384,8 @@ Makes programs 10x faster by doing Special New Thing.
   * Highlights matching keywords in its output when color is enabled.
   * Searches the components of settings paths. For example `apropos qemu-user` will now
     show `platform.plugin.qemu-user` as one of the results.
+* Reading global and static variables on WebAssembly targets now works correctly. Previously their
+  values could not be read because data sections were mapped to the wrong address space.
 
 #### Deprecated APIs
 

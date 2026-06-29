@@ -21748,8 +21748,6 @@ bool VarDecl::evaluateDestruction(
     EvalInfo Info(Ctx, EStatus,
                   IsConstantDestruction ? EvaluationMode::ConstantExpression
                                         : EvaluationMode::ConstantFold);
-    Info.setEvaluatingDecl(this, DestroyedValue,
-                           EvalInfo::EvaluatingDeclKind::Dtor);
     Info.InConstantContext = IsConstantDestruction;
     if (!Ctx.getInterpContext().evaluateDestruction(Info, this,
                                                     std::move(DestroyedValue)))
