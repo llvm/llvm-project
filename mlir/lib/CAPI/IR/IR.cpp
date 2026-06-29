@@ -692,6 +692,16 @@ MlirOperation mlirOperationGetParentOperation(MlirOperation op) {
   return wrap(unwrap(op)->getParentOp());
 }
 
+MlirOperation mlirOperationGetParentWithName(MlirOperation op,
+                                             MlirStringRef opName) {
+  StringRef name = unwrap(opName);
+  for (Operation *parent = unwrap(op)->getParentOp(); parent;
+       parent = parent->getParentOp())
+    if (parent->getName().getStringRef() == name)
+      return wrap(parent);
+  return {nullptr};
+}
+
 intptr_t mlirOperationGetNumRegions(MlirOperation op) {
   return static_cast<intptr_t>(unwrap(op)->getNumRegions());
 }

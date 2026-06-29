@@ -667,6 +667,12 @@ MLIR_CAPI_EXPORTED MlirBlock mlirOperationGetBlock(MlirOperation op);
 MLIR_CAPI_EXPORTED MlirOperation
 mlirOperationGetParentOperation(MlirOperation op);
 
+/// Walks up the ancestor chain of the given operation (not including the
+/// operation itself) and returns the first parent operation whose name matches
+/// `opName`. Returns a null operation if no such ancestor exists.
+MLIR_CAPI_EXPORTED MlirOperation
+mlirOperationGetParentWithName(MlirOperation op, MlirStringRef opName);
+
 /// Returns the number of regions attached to the given operation.
 MLIR_CAPI_EXPORTED intptr_t mlirOperationGetNumRegions(MlirOperation op);
 
