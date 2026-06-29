@@ -62,6 +62,17 @@ private:
   std::unique_ptr<DiagnosticsConsumer> DiagConsumer;
 };
 
+/// Compress serialized diagnostics. This is done transparently by serialization
+/// and is only exposed here for testing.
+StringRef compressCachedDiagonstics(StringRef Buffer,
+                                    SmallVectorImpl<uint8_t> &Storage);
+
+/// Decompress serialized diagnostics. This is done transparently by replay
+/// and is only exposed here for testing.
+Expected<StringRef>
+decompressCachedDiagonstics(StringRef Buffer,
+                            SmallVectorImpl<uint8_t> &Storage);
+
 } // namespace cas
 } // namespace clang
 

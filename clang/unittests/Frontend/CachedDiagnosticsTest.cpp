@@ -12,6 +12,8 @@
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/TextDiagnosticBuffer.h"
+#include "llvm/Support/Compression.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/PrefixMapper.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -52,8 +54,11 @@ public:
   }
 };
 
-/// Capture and serialize one warning emitted at the start of \p Path.
-static std::string captureOneWarning(FileManager &FileMgr, StringRef Path) {
+/// Capture and serialize one warning emitted at the start of a \c FileID
+/// created by the callback \p CreateFile.
+static std::string
+captureOneWarning(FileManager &FileMgr,
+                  llvm::function_ref<FileID(SourceManager &SM)> CreateFile) {
   DiagnosticOptions DiagOpts;
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> Diags(new DiagnosticsEngine(
       DiagnosticIDs::create(), DiagOpts, new IgnoringDiagConsumer()));
@@ -64,9 +69,7 @@ static std::string captureOneWarning(FileManager &FileMgr, StringRef Path) {
   CachingDiagnosticsProcessor Processor(std::move(Mapper), FileMgr);
   Processor.insertDiagConsumer(*Diags);
 
-  auto FE = FileMgr.getFileRef(Path);
-  EXPECT_TRUE((bool)FE);
-  FileID FID = SrcMgr.createFileID(*FE, SourceLocation(), SrcMgr::C_User);
+  FileID FID = CreateFile(SrcMgr);
   SourceLocation Loc = SrcMgr.getLocForStartOfFile(FID);
 
   unsigned DiagID =
@@ -81,9 +84,18 @@ static std::string captureOneWarning(FileManager &FileMgr, StringRef Path) {
   return **Serialized;
 }
 
+/// Capture and serialize one warning emitted at the start of \p Path.
+static std::string captureOneWarningInFile(FileManager &FM, StringRef Path) {
+  return captureOneWarning(FM, [&](SourceManager &SM) {
+    auto FE = FM.getFileRef(Path);
+    EXPECT_TRUE((bool)FE);
+    return SM.createFileID(*FE, SourceLocation(), SrcMgr::C_User);
+  });
+}
+
 TEST(CachedDiagnosticsTest, ReplayRoundTrip) {
   auto FileMgr = makeInMemoryFileManager(TestPath, TestContents);
-  std::string Serialized = captureOneWarning(*FileMgr, TestPath);
+  std::string Serialized = captureOneWarningInFile(*FileMgr, TestPath);
   ASSERT_FALSE(Serialized.empty());
 
   llvm::PrefixMapper Mapper;
@@ -97,7 +109,7 @@ TEST(CachedDiagnosticsTest, ReplayRoundTrip) {
 TEST(CachedDiagnosticsTest, ReplayWithMissingFileReturnsError) {
   // Capture diagnostics referencing a real file (only the path is recorded).
   auto FileMgr = makeInMemoryFileManager(TestPath, TestContents);
-  std::string Serialized = captureOneWarning(*FileMgr, TestPath);
+  std::string Serialized = captureOneWarningInFile(*FileMgr, TestPath);
   ASSERT_FALSE(Serialized.empty());
 
   // Replay against a fresh FileManager whose VFS does not contain the file.
@@ -155,6 +167,54 @@ TEST(CachedDiagnosticsTest, CaptureFailureAbortsSerialization) {
   auto Serialized = Processor.serializeEmittedDiagnostics();
   EXPECT_THAT_EXPECTED(Serialized, llvm::Failed());
   Processor.removeDiagConsumer(*Diags);
+}
+
+/// Capture and serialize one warning emitted at the start of an in-memory
+/// buffer that is not associated with a \p FileEntry.
+static std::string captureOneInlineBufferWarning(FileManager &FM) {
+  return captureOneWarning(FM, [&](SourceManager &SM) {
+    auto Buf = llvm::MemoryBuffer::getMemBufferCopy(TestContents, "<inline>");
+    return SM.createFileID(std::move(Buf));
+  });
+}
+
+TEST(CachedDiagnosticsTest, ReplayWithInvalidBase64ReturnsError) {
+  // Decompress, replace one character inside the base64 buffer field with an
+  // invalid character, and ensure replay fails with an Error.
+
+  auto FileMgr = makeInMemoryFileManager(TestPath, TestContents);
+  std::string Serialized = captureOneInlineBufferWarning(*FileMgr);
+  ASSERT_FALSE(Serialized.empty());
+
+  SmallVector<uint8_t, 512> Storage;
+  StringRef YamlStr;
+  ASSERT_THAT_ERROR(
+      decompressCachedDiagonstics(Serialized, Storage).moveInto(YamlStr),
+      llvm::Succeeded());
+  std::string Yaml(YamlStr);
+
+  constexpr llvm::StringLiteral BufferKey = "buffer:";
+  size_t Pos = Yaml.find(BufferKey);
+  ASSERT_NE(Pos, std::string::npos);
+  // Skip ahead to the value.
+  size_t ValuePos = Pos + BufferKey.size();
+  while (ValuePos < Yaml.size() &&
+         (Yaml[ValuePos] == ' ' || Yaml[ValuePos] == '\t'))
+    ++ValuePos;
+  ASSERT_LT(ValuePos, Yaml.size());
+  // Corrupt the encoded value.
+  Yaml[ValuePos] = '_';
+
+  std::string Corrupted = std::string(compressCachedDiagonstics(Yaml, Storage));
+
+  llvm::PrefixMapper Mapper;
+  CachingDiagnosticsProcessor Replay(std::move(Mapper), *FileMgr);
+  TextDiagnosticBuffer Consumer;
+  EXPECT_THAT_ERROR(
+      Replay.replayCachedDiagnostics(Corrupted, Consumer),
+      llvm::FailedWithMessage(testing::HasSubstr("base64 decode failed:")));
+  // Error occurs before diagnostic could be emited.
+  EXPECT_EQ(Consumer.getNumWarnings(), 0u);
 }
 
 } // anonymous namespace

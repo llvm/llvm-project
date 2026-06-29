@@ -570,7 +570,10 @@ template <> struct MappingTraits<cached_diagnostics::SLocEntry::FileInfo> {
       io.mapOptional("buffer", EncodedContents);
       if (EncodedContents) {
         std::vector<char> Decoded;
-        cantFail(decodeBase64(*EncodedContents, Decoded));
+        if (Error E = decodeBase64(*EncodedContents, Decoded)) {
+          io.setError("base64 decode failed: " + toString(std::move(E)));
+          return;
+        }
         s.Buffer = MemoryBuffer::getMemBufferCopy(
             StringRef(Decoded.data(), Decoded.size()), s.Filename);
       }
@@ -677,58 +680,71 @@ CachedDiagnosticSerializer::serializeEmittedDiagnostics() {
   // need to track whether compression was used or not, see doc-comments of \p
   // serializeEmittedDiagnostics().
   SmallVector<uint8_t, 512> CompressedBuffer;
-  if (compression::zstd::isAvailable()) {
-    compression::zstd::compress(arrayRefFromStringRef(YamlContents),
-                                CompressedBuffer);
+  StringRef Output = compressCachedDiagonstics(YamlContents, CompressedBuffer);
+  return Output.str();
+}
 
-  } else if (compression::zlib::isAvailable()) {
-    compression::zlib::compress(arrayRefFromStringRef(YamlContents),
-                                CompressedBuffer);
-  }
-  if (!CompressedBuffer.empty()) {
-    raw_svector_ostream BufOS((SmallVectorImpl<char> &)CompressedBuffer);
+StringRef
+clang::cas::compressCachedDiagonstics(StringRef Buffer,
+                                      SmallVectorImpl<uint8_t> &Storage) {
+  if (!compression::zstd::isAvailable() && !compression::zlib::isAvailable())
+    return Buffer;
+
+  auto Format = compression::zstd::isAvailable() ? compression::Format::Zstd
+                                                 : compression::Format::Zlib;
+  compression::compress(Format, arrayRefFromStringRef(Buffer), Storage);
+  if (!Storage.empty()) {
+    raw_svector_ostream BufOS((SmallVectorImpl<char> &)Storage);
     support::endian::Writer Writer(BufOS, endianness::little);
-    Writer.write(uint32_t(YamlContents.size()));
-    return toStringRef(CompressedBuffer).str();
+    Writer.write(uint32_t(Buffer.size()));
   }
+  return toStringRef(Storage);
+}
 
-  return YamlContents.str();
+Expected<StringRef>
+clang::cas::decompressCachedDiagonstics(StringRef Buffer,
+                                        SmallVectorImpl<uint8_t> &Storage) {
+  if (!compression::zstd::isAvailable() && !compression::zlib::isAvailable())
+    return Buffer;
+
+  auto Format = compression::zstd::isAvailable() ? compression::Format::Zstd
+                                                 : compression::Format::Zlib;
+
+  uint32_t UncompressedSize =
+      support::endian::read<uint32_t, llvm::endianness::little>(
+          Buffer.data() + Buffer.size() - sizeof(uint32_t));
+  StringRef CompressedData = Buffer.drop_back(sizeof(uint32_t));
+  if (Error E =
+          compression::decompress(Format, arrayRefFromStringRef(CompressedData),
+                                  Storage, UncompressedSize))
+    return E;
+  return toStringRef(Storage);
 }
 
 Error CachedDiagnosticSerializer::deserializeCachedDiagnostics(
     StringRef Buffer) {
-
-  StringRef YamlContents;
   SmallVector<uint8_t, 512> UncompressedBuffer;
-  if (compression::zstd::isAvailable() || compression::zlib::isAvailable()) {
-    uint32_t UncompressedSize =
-        support::endian::read<uint32_t, llvm::endianness::little>(
-            Buffer.data() + Buffer.size() - sizeof(uint32_t));
-    StringRef CompressedData = Buffer.drop_back(sizeof(uint32_t));
-    if (compression::zstd::isAvailable()) {
-      if (Error E = compression::zstd::decompress(
-              arrayRefFromStringRef(CompressedData), UncompressedBuffer,
-              UncompressedSize)) {
-        return E;
-      }
-    } else {
-      if (Error E = compression::zlib::decompress(
-              arrayRefFromStringRef(CompressedData), UncompressedBuffer,
-              UncompressedSize)) {
-        return E;
-      }
-    }
-    YamlContents = toStringRef(UncompressedBuffer);
-  } else {
-    YamlContents = Buffer;
-  }
+  StringRef YamlContents;
+  if (Error E = decompressCachedDiagonstics(Buffer, UncompressedBuffer)
+                    .moveInto(YamlContents))
+    return E;
+
+  SmallString<0> YamlParseError;
+  auto CaptureYamlError = [](const SMDiagnostic &D, void *Ctx) {
+    SmallString<0> &YamlParseError = *(SmallString<0> *)Ctx;
+    raw_svector_ostream OS(YamlParseError);
+    D.print(/*ProgName=*/nullptr, OS, /*ShowColors=*/false,
+            /*ShowKindLabel=*/true);
+  };
 
   CachedDiags.clear();
-  yaml::Input YIn(YamlContents);
+  yaml::Input YIn(YamlContents, /*Ctx=*/nullptr, CaptureYamlError,
+                  &YamlParseError);
   YIn >> CachedDiags;
   if (YIn.error())
     return createStringError(YIn.error(),
-                             "failed deserializing cached diagnostics");
+                             "failed deserializing cached diagnostics: " +
+                                 YamlParseError);
 
   assert(DiagEngine.getMaxCustomDiagID() == std::nullopt &&
          "existing custom diagnostics will conflict");
