@@ -1433,7 +1433,7 @@ bool Sema::CheckCXXThisType(SourceLocation Loc, QualType Type) {
   const auto *Method = dyn_cast<CXXMethodDecl>(DC);
   if (Method && Method->isExplicitObjectMemberFunction()) {
     Diag(Loc, diag::err_invalid_this_use) << 1;
-  } else if (Method && isLambdaCallWithExplicitObjectParameter(CurContext)) {
+  } else if (Method && isLambdaCallWithExplicitObjectParameter(DC)) {
     Diag(Loc, diag::err_invalid_this_use) << 1;
   } else {
     Diag(Loc, diag::err_invalid_this_use) << 0;
@@ -5344,9 +5344,11 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     case ICK_HLSL_Matrix_Truncation: {
       auto *FromMat = From->getType()->castAs<ConstantMatrixType>();
       QualType TruncTy = FromMat->getElementType();
-      if (auto *ToMat = ToType->getAs<ConstantMatrixType>())
-        TruncTy = Context.getConstantMatrixType(TruncTy, ToMat->getNumRows(),
-                                                ToMat->getNumColumns());
+      // Preserve any sugar (e.g. `row_major`/`column_major` HLSL TypeAttrs) on
+      // `ToType` so that downstream CodeGen can query the destination layout
+      // from the cast node itself rather than falling back to the TU default.
+      if (ToType->getAs<ConstantMatrixType>())
+        TruncTy = ToType;
       From = ImpCastExprToType(From, TruncTy, CK_HLSLMatrixTruncation,
                                From->getValueKind())
                  .get();

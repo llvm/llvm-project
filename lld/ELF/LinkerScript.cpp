@@ -1193,7 +1193,9 @@ bool LinkerScript::assignOffsets(OutputSection *sec) {
     else
       dot = state->tbssAddr;
   } else {
-    if (state->memRegion)
+    // If there is an explicit address expression this takes precedence over
+    // the memory region address.
+    if (state->memRegion && !(hasSectionsCommand && sec->addrExpr))
       dot = state->memRegion->curPos;
     if (sec->addrExpr)
       setDot(sec->addrExpr, sec->location, false);

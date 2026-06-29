@@ -39,13 +39,13 @@
 // CHECK:  [[UndefA]] = !DIMacro(type: DW_MACINFO_undef, line: 11, name: "A")
 
 // CHECK:  [[DefineD1]] = !DIMacro(type: DW_MACINFO_define, line: 15, name: "D1", value: "1")
-// CHECK:  [[FileInclude1]] = !DIMacroFile(line: 16, file: [[HeaderFile]], nodes: [[N3:![0-9]+]])
+// CHECK:  [[FileInclude1]] = !DIMacroFile(line: 16, file: [[SourceIncludeHeaderFile:![0-9]+]], nodes: [[N3:![0-9]+]])
 // CHECK:  [[N3]] = !{[[DefineAx:![0-9]+]], [[UndefA]]}
 // CHECK:  [[DefineAx]] = !DIMacro(type: DW_MACINFO_define, line: 3, name: "A(x,y,z)", value: "(x)")
 // CHECK:  [[UndefD1]] = !DIMacro(type: DW_MACINFO_undef, line: 17, name: "D1") 
 
 // CHECK:  [[DefineD2]] = !DIMacro(type: DW_MACINFO_define, line: 18, name: "D2", value: "2")
-// CHECK:  [[FileInclude2]] = !DIMacroFile(line: 19, file: [[HeaderFile]], nodes: [[N4:![0-9]+]])
+// CHECK:  [[FileInclude2]] = !DIMacroFile(line: 19, file: [[SourceIncludeHeaderFile]], nodes: [[N4:![0-9]+]])
 // CHECK:  [[N4]] = !{[[DefineAy:![0-9]+]], [[UndefA]]}
 // CHECK:  [[DefineAy]] = !DIMacro(type: DW_MACINFO_define, line: 7, name: "A(x,y,z)", value: "(y)")
 // CHECK:  [[UndefD2]] = !DIMacro(type: DW_MACINFO_undef, line: 20, name: "D2")

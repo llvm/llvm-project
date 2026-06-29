@@ -37,7 +37,7 @@ DependencyScanningWorker::DependencyScanningWorker(
   }
 
   DepFS = llvm::makeIntrusiveRefCnt<DependencyScanningWorkerFilesystem>(
-      Service.getSharedCache(), std::move(BaseFS));
+      Service, std::move(BaseFS));
 }
 
 DependencyScanningWorker::~DependencyScanningWorker() = default;

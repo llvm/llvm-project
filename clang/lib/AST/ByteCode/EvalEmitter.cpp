@@ -73,6 +73,21 @@ EvaluationResult EvalEmitter::interpretDecl(const VarDecl *VD, const Expr *Init,
   return std::move(this->EvalResult);
 }
 
+EvaluationResult EvalEmitter::interpretDestructor(const VarDecl *VD,
+                                                  const APValue &Value) {
+  assert(VD);
+  S.setEvalLocation(VD->getLocation());
+  S.EvaluatingDecl = VD;
+  S.EvalKind = EvaluationKind::Dtor;
+  EvalResult.setSource(VD);
+
+  if (!this->visitDtorCall(VD, Value))
+    EvalResult.setInvalid();
+
+  S.EvaluatingDecl = nullptr;
+  return std::move(this->EvalResult);
+}
+
 EvaluationResult EvalEmitter::interpretAsPointer(const Expr *E,
                                                  PtrCallback PtrCB) {
   S.setEvalLocation(E->getExprLoc());
@@ -122,7 +137,7 @@ Scope::Local EvalEmitter::createLocal(Descriptor *D) {
   // Allocate memory for a local.
   auto Memory = std::make_unique<char[]>(sizeof(Block) + D->getAllocSize());
   auto *B = new (Memory.get()) Block(Ctx.getEvalID(), D, /*IsStatic=*/false);
-  B->invokeCtor();
+  B->invokeCtorNoMemset();
 
   // Initialize local variable inline descriptor.
   auto &Desc = B->getBlockDesc<InlineDescriptor>();
@@ -220,7 +235,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
   if (this->PtrCB)
     return (*this->PtrCB)(Ptr);
 
-  if (!EvalResult.checkReturnValue(S, Ctx, Ptr, Info))
+  if (!EvalResult.checkDynamicAllocations(S, Ctx, Ptr, Info))
     return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;
@@ -266,7 +281,17 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
     if (!Ptr.isLive() && !Ptr.isTemporary())
       return false;
 
-    EvalResult.takeValue(Ptr.toAPValue(Ctx.getASTContext()));
+    // If the variable of this pointer is being evaluated when returning
+    // its value, mark it as constexpr-unknown.
+    APValue V = Ptr.toAPValue(Ctx.getASTContext());
+    if (const Descriptor *DeclDesc = Ptr.getDeclDesc();
+        DeclDesc && S.EvaluatingDecl &&
+        DeclDesc->asVarDecl() == S.EvaluatingDecl &&
+        S.getLangOpts().CPlusPlus23 &&
+        S.EvaluatingDecl->getType()->isReferenceType()) {
+      V.setConstexprUnknown(true);
+    }
+    EvalResult.takeValue(std::move(V));
   }
 
   return true;
@@ -280,13 +305,13 @@ bool EvalEmitter::emitRetVoid(SourceInfo Info) {
 bool EvalEmitter::emitRetValue(SourceInfo Info) {
   const auto &Ptr = S.Stk.pop<Pointer>();
 
-  if (!EvalResult.checkReturnValue(S, Ctx, Ptr, Info))
+  if (!EvalResult.checkDynamicAllocations(S, Ctx, Ptr, Info))
     return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;
 
   if (std::optional<APValue> APV =
-          Ptr.toRValue(S.getASTContext(), EvalResult.getSourceType())) {
+          Ptr.toRValue(Ctx, EvalResult.getSourceType())) {
     EvalResult.takeValue(std::move(*APV));
     return true;
   }

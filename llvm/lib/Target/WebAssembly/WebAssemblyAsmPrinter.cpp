@@ -206,7 +206,8 @@ void WebAssemblyAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
     computeLegalValueVTs(TLI, GV->getParent()->getContext(),
                          GV->getDataLayout(), GlobalVT, VTs);
 
-    WebAssembly::wasmSymbolSetType(Sym, GlobalVT, VTs);
+    WebAssembly::wasmSymbolSetType(Sym, GlobalVT, VTs,
+                                   /*Mutable=*/!GV->isConstant());
   }
 
   emitVisibility(Sym, GV->getVisibility(), !GV->isDeclaration());
@@ -532,7 +533,7 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
   };
 
   for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
-    EmitFeature(KV.Key);
+    EmitFeature(KV.key());
   }
   // This pseudo-feature tells the linker whether shared memory would be safe
   EmitFeature("shared-mem");

@@ -26,7 +26,7 @@ public:
   explicit InstCountPass(bool IsPreOptimization = false)
       : IsPreOptimization(IsPreOptimization) {}
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 } // end namespace llvm

@@ -14,6 +14,8 @@
 
 namespace llvm {
 
+class SIInstrInfo;
+
 class SIFrameLowering final : public AMDGPUFrameLowering {
 public:
   SIFrameLowering(StackDirection D, Align StackAl, int LAO,
@@ -55,6 +57,25 @@ public:
                                        const TargetRegisterInfo *TRI,
                                        std::vector<CalleeSavedInfo> &CSI) const;
 
+private:
+  /// Spill a single CSR according to @p CS
+  ///
+  /// This is a separate method so it an be shared between the block-ops enabled
+  /// and disabled paths. Even when block-ops are enabled we may not have a
+  /// viable block for a specific register, so it will fall back to this
+  /// implementation.
+  ///
+  /// @p LiveInRoots conveys whether we are tracking liveness, and if we are
+  /// it captures the original live-ins before spilling in a way that can be
+  /// (relatively) efficiently checked without enumerating all register aliases.
+  /// See @c buildLiveInRoots in the implementation.
+  void spillCalleeSavedRegisterWithoutBlockOps(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
+      const CalleeSavedInfo &CS, const SIInstrInfo *TII,
+      const SIRegisterInfo &TRI,
+      const std::optional<SparseBitVector<>> &LiveInRoots) const;
+
+public:
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
                                  ArrayRef<CalleeSavedInfo> CSI,
@@ -119,6 +140,13 @@ public:
            const DebugLoc &DL, const MCCFIInstruction &CFIInst,
            MachineInstr::MIFlag flag = MachineInstr::FrameSetup) const;
 
+  /// Create a CFI index describing a spill of the VGPR/AGPR \p Reg to another
+  /// VGPR/AGPR \p RegCopy and build a MachineInstr around it.
+  MachineInstr *buildCFIForVRegToVRegSpill(MachineBasicBlock &MBB,
+                                           MachineBasicBlock::iterator MBBI,
+                                           const DebugLoc &DL,
+                                           const MCRegister Reg,
+                                           const MCRegister RegCopy) const;
   /// Create a CFI index describing a spill of an SGPR to a single lane of
   /// a VGPR and build a MachineInstr around it.
   MachineInstr *buildCFIForSGPRToVGPRSpill(MachineBasicBlock &MBB,
@@ -133,11 +161,26 @@ public:
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       const DebugLoc &DL, MCRegister SGPR,
       ArrayRef<SIRegisterInfo::SpilledReg> VGPRSpills) const;
+  /// Create a CFI index describing a spill of a SGPR to VMEM and
+  /// build a MachineInstr around it.
+  MachineInstr *buildCFIForSGPRToVMEMSpill(MachineBasicBlock &MBB,
+                                           MachineBasicBlock::iterator MBBI,
+                                           const DebugLoc &DL, MCRegister SGPR,
+                                           int64_t Offset) const;
+  /// Create a CFI index describing a spill of a VGPR to VMEM and
+  /// build a MachineInstr around it.
+  MachineInstr *buildCFIForVGPRToVMEMSpill(MachineBasicBlock &MBB,
+                                           MachineBasicBlock::iterator MBBI,
+                                           const DebugLoc &DL, MCRegister VGPR,
+                                           int64_t Offset) const;
   MachineInstr *buildCFIForRegToSGPRPairSpill(MachineBasicBlock &MBB,
                                               MachineBasicBlock::iterator MBBI,
                                               const DebugLoc &DL,
                                               MCRegister Reg,
                                               MCRegister SGPRPair) const;
+  MachineInstr *buildCFIForSameValue(MachineBasicBlock &MBB,
+                                     MachineBasicBlock::iterator MBBI,
+                                     const DebugLoc &DL, MCRegister Reg) const;
   // Returns true if the function may need to reserve space on the stack for the
   // CWSR trap handler.
   bool mayReserveScratchForCWSR(const MachineFunction &MF) const;

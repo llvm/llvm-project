@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UnretainedLocalVarsChecker -fobjc-arc -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UnretainedLocalVarsChecker -fobjc-runtime-has-weak -fobjc-weak -fobjc-arc -verify %s
 
 #import "objc-mock-types.h"
 
@@ -15,6 +15,16 @@ void foo() {
 void foo2() {
   SomeObj *bar = provide();
   [bar doWork];
+}
+
+void foo3() {
+  SomeObj *bar = provide();
+  IOSurfaceRef surface;
+  // expected-warning@-1{{Local variable 'surface' is unretained and unsafe [alpha.webkit.UnretainedLocalVarsChecker]}}
+}
+
+void foo4() {
+  __weak SomeObj *bar = provide();
 }
 
 void bar() {

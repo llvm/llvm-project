@@ -793,3 +793,57 @@ __mmask8 test_mm512_mask_cmp_pd_mask_true_us(__mmask8 m, __m512d a, __m512d b) {
   // CHECK: call <8 x i1> @llvm.x86.avx512.mask.cmp.pd.512(<8 x double> %{{.*}}, <8 x double> %{{.*}}, i32 31, <8 x i1> {{.*}}, i32 4)
   return _mm512_mask_cmp_pd_mask(m, a, b, _CMP_TRUE_US);
 }
+
+// The scalar masked compares are always emitted as the target intrinsic (there
+// is no fcmp lowering for them). Under strict FP the predicate (e.g.
+// _CMP_NLT_US = 5, a signaling predicate) and the SAE/rounding control
+// (_MM_FROUND_NO_EXC = 8, otherwise _MM_FROUND_CUR_DIRECTION = 4) must be
+// preserved verbatim, mirroring the packed compares above.
+
+__mmask8 test_mm_cmp_round_ss_mask(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_round_ss_mask
+  // CHECK: call i8 @llvm.x86.avx512.mask.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 5, i8 -1, i32 8)
+  return _mm_cmp_round_ss_mask(a, b, _CMP_NLT_US, _MM_FROUND_NO_EXC);
+}
+
+__mmask8 test_mm_mask_cmp_round_ss_mask(__mmask8 m, __m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_mask_cmp_round_ss_mask
+  // CHECK: call i8 @llvm.x86.avx512.mask.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 5, i8 %{{.*}}, i32 8)
+  return _mm_mask_cmp_round_ss_mask(m, a, b, _CMP_NLT_US, _MM_FROUND_NO_EXC);
+}
+
+__mmask8 test_mm_cmp_ss_mask(__m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_cmp_ss_mask
+  // CHECK: call i8 @llvm.x86.avx512.mask.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 5, i8 -1, i32 4)
+  return _mm_cmp_ss_mask(a, b, _CMP_NLT_US);
+}
+
+__mmask8 test_mm_mask_cmp_ss_mask(__mmask8 m, __m128 a, __m128 b) {
+  // CHECK-LABEL: test_mm_mask_cmp_ss_mask
+  // CHECK: call i8 @llvm.x86.avx512.mask.cmp.ss(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 5, i8 %{{.*}}, i32 4)
+  return _mm_mask_cmp_ss_mask(m, a, b, _CMP_NLT_US);
+}
+
+__mmask8 test_mm_cmp_round_sd_mask(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_round_sd_mask
+  // CHECK: call i8 @llvm.x86.avx512.mask.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i32 5, i8 -1, i32 8)
+  return _mm_cmp_round_sd_mask(a, b, _CMP_NLT_US, _MM_FROUND_NO_EXC);
+}
+
+__mmask8 test_mm_mask_cmp_round_sd_mask(__mmask8 m, __m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_mask_cmp_round_sd_mask
+  // CHECK: call i8 @llvm.x86.avx512.mask.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i32 5, i8 %{{.*}}, i32 8)
+  return _mm_mask_cmp_round_sd_mask(m, a, b, _CMP_NLT_US, _MM_FROUND_NO_EXC);
+}
+
+__mmask8 test_mm_cmp_sd_mask(__m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_cmp_sd_mask
+  // CHECK: call i8 @llvm.x86.avx512.mask.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i32 5, i8 -1, i32 4)
+  return _mm_cmp_sd_mask(a, b, _CMP_NLT_US);
+}
+
+__mmask8 test_mm_mask_cmp_sd_mask(__mmask8 m, __m128d a, __m128d b) {
+  // CHECK-LABEL: test_mm_mask_cmp_sd_mask
+  // CHECK: call i8 @llvm.x86.avx512.mask.cmp.sd(<2 x double> %{{.*}}, <2 x double> %{{.*}}, i32 5, i8 %{{.*}}, i32 4)
+  return _mm_mask_cmp_sd_mask(m, a, b, _CMP_NLT_US);
+}
