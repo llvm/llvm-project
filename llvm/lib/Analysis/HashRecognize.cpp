@@ -412,9 +412,9 @@ static APInt floorDivideGF2(APInt Dividend, APInt Divisor) {
 // (https://web.archive.org/web/20131224125630/https://www.intel.com/content/dam/www/public/us/en/documents/white-papers/fast-crc-computation-generic-polynomials-pclmulqdq-paper.pdf),
 // with some adjustments to account for the fact that bit width and trip count
 // can vary.
-std::pair<APInt, APInt>
-HashRecognize::genBarrettConstants(const APInt &GenPoly, unsigned TripCount,
-                                   bool IsBigEndian) {
+std::pair<APInt, APInt> HashRecognize::genBarrettConstants(const APInt &GenPoly,
+                                                           unsigned TripCount,
+                                                           bool IsBigEndian) {
   unsigned BW = GenPoly.getBitWidth();
 
   // Recover the full generating polynomial in normal form by reflecting the LE
