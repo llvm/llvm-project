@@ -49,8 +49,7 @@ define <vscale x 1 x i1> @and_nxv1i1(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b)
 define <vscale x 16 x i1> @and_and_nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: and_and_nxv16i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and p2.b, p1/z, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p2.b
+; CHECK-NEXT:    and p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %op = and <vscale x 16 x i1> %a, %b
   %res = and <vscale x 16 x i1> %pg, %op
@@ -60,8 +59,7 @@ define <vscale x 16 x i1> @and_and_nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 
 define <vscale x 8 x i1> @and_and_nxv8i1(<vscale x 8 x i1> %pg, <vscale x 8 x i1> %a, <vscale x 8 x i1> %b) {
 ; CHECK-LABEL: and_and_nxv8i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and p2.b, p1/z, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p2.b
+; CHECK-NEXT:    and p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %op = and <vscale x 8 x i1> %a, %b
   %res = and <vscale x 8 x i1> %pg, %op
@@ -71,8 +69,7 @@ define <vscale x 8 x i1> @and_and_nxv8i1(<vscale x 8 x i1> %pg, <vscale x 8 x i1
 define <vscale x 4 x i1> @and_and_nxv4i1(<vscale x 4 x i1> %pg, <vscale x 4 x i1> %a, <vscale x 4 x i1> %b) {
 ; CHECK-LABEL: and_and_nxv4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and p2.b, p1/z, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p2.b
+; CHECK-NEXT:    and p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %op = and <vscale x 4 x i1> %a, %b
   %res = and <vscale x 4 x i1> %pg, %op
@@ -82,8 +79,7 @@ define <vscale x 4 x i1> @and_and_nxv4i1(<vscale x 4 x i1> %pg, <vscale x 4 x i1
 define <vscale x 2 x i1> @and_and_nxv2i1(<vscale x 2 x i1> %pg, <vscale x 2 x i1> %a, <vscale x 2 x i1> %b) {
 ; CHECK-LABEL: and_and_nxv2i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and p2.b, p1/z, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p2.b
+; CHECK-NEXT:    and p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %op = and <vscale x 2 x i1> %a, %b
   %res = and <vscale x 2 x i1> %pg, %op
@@ -93,8 +89,7 @@ define <vscale x 2 x i1> @and_and_nxv2i1(<vscale x 2 x i1> %pg, <vscale x 2 x i1
 define <vscale x 1 x i1> @and_and_nxv1i1(<vscale x 1 x i1> %pg, <vscale x 1 x i1> %a, <vscale x 1 x i1> %b) {
 ; CHECK-LABEL: and_and_nxv1i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and p2.b, p1/z, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p2.b
+; CHECK-NEXT:    and p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %op = and <vscale x 1 x i1> %a, %b
   %res = and <vscale x 1 x i1> %pg, %op
@@ -104,8 +99,7 @@ define <vscale x 1 x i1> @and_and_nxv1i1(<vscale x 1 x i1> %pg, <vscale x 1 x i1
 define <vscale x 16 x i1> @and_bic_nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: and_bic_nxv16i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic p2.b, p1/z, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p2.b
+; CHECK-NEXT:    bic p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %not.b = xor <vscale x 16 x i1> %b, splat (i1 true)
   %op = and <vscale x 16 x i1> %a, %not.b
@@ -116,8 +110,7 @@ define <vscale x 16 x i1> @and_bic_nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 
 define <vscale x 8 x i1> @and_bic_nxv8i1(<vscale x 8 x i1> %pg, <vscale x 8 x i1> %a, <vscale x 8 x i1> %b) {
 ; CHECK-LABEL: and_bic_nxv8i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic p2.b, p1/z, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p2.b
+; CHECK-NEXT:    bic p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %not.b = xor <vscale x 8 x i1> %b, splat (i1 true)
   %op = and <vscale x 8 x i1> %a, %not.b
@@ -128,8 +121,7 @@ define <vscale x 8 x i1> @and_bic_nxv8i1(<vscale x 8 x i1> %pg, <vscale x 8 x i1
 define <vscale x 4 x i1> @and_bic_nxv4i1(<vscale x 4 x i1> %pg, <vscale x 4 x i1> %a, <vscale x 4 x i1> %b) {
 ; CHECK-LABEL: and_bic_nxv4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic p2.b, p1/z, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p2.b
+; CHECK-NEXT:    bic p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %not.b = xor <vscale x 4 x i1> %b, splat (i1 true)
   %op = and <vscale x 4 x i1> %a, %not.b
@@ -140,8 +132,7 @@ define <vscale x 4 x i1> @and_bic_nxv4i1(<vscale x 4 x i1> %pg, <vscale x 4 x i1
 define <vscale x 2 x i1> @and_bic_nxv2i1(<vscale x 2 x i1> %pg, <vscale x 2 x i1> %a, <vscale x 2 x i1> %b) {
 ; CHECK-LABEL: and_bic_nxv2i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic p2.b, p1/z, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p2.b
+; CHECK-NEXT:    bic p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %not.b = xor <vscale x 2 x i1> %b, splat (i1 true)
   %op = and <vscale x 2 x i1> %a, %not.b
@@ -152,8 +143,7 @@ define <vscale x 2 x i1> @and_bic_nxv2i1(<vscale x 2 x i1> %pg, <vscale x 2 x i1
 define <vscale x 1 x i1> @and_bic_nxv1i1(<vscale x 1 x i1> %pg, <vscale x 1 x i1> %a, <vscale x 1 x i1> %b) {
 ; CHECK-LABEL: and_bic_nxv1i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic p2.b, p1/z, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p2.b
+; CHECK-NEXT:    bic p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %not.b = xor <vscale x 1 x i1> %b, splat (i1 true)
   %op = and <vscale x 1 x i1> %a, %not.b
@@ -164,9 +154,7 @@ define <vscale x 1 x i1> @and_bic_nxv1i1(<vscale x 1 x i1> %pg, <vscale x 1 x i1
 define <vscale x 16 x i1> @and_eor_nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: and_eor_nxv16i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p3.b
-; CHECK-NEXT:    eor p1.b, p3/z, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    eor p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %op = xor <vscale x 16 x i1> %a, %b
   %res = and <vscale x 16 x i1> %pg, %op
@@ -176,9 +164,7 @@ define <vscale x 16 x i1> @and_eor_nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 
 define <vscale x 8 x i1> @and_eor_nxv8i1(<vscale x 8 x i1> %pg, <vscale x 8 x i1> %a, <vscale x 8 x i1> %b) {
 ; CHECK-LABEL: and_eor_nxv8i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p3.h
-; CHECK-NEXT:    eor p1.b, p3/z, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    eor p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %op = xor <vscale x 8 x i1> %a, %b
   %res = and <vscale x 8 x i1> %pg, %op
@@ -188,9 +174,7 @@ define <vscale x 8 x i1> @and_eor_nxv8i1(<vscale x 8 x i1> %pg, <vscale x 8 x i1
 define <vscale x 4 x i1> @and_eor_nxv4i1(<vscale x 4 x i1> %pg, <vscale x 4 x i1> %a, <vscale x 4 x i1> %b) {
 ; CHECK-LABEL: and_eor_nxv4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p3.s
-; CHECK-NEXT:    eor p1.b, p3/z, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    eor p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %op = xor <vscale x 4 x i1> %a, %b
   %res = and <vscale x 4 x i1> %pg, %op
@@ -200,9 +184,7 @@ define <vscale x 4 x i1> @and_eor_nxv4i1(<vscale x 4 x i1> %pg, <vscale x 4 x i1
 define <vscale x 2 x i1> @and_eor_nxv2i1(<vscale x 2 x i1> %pg, <vscale x 2 x i1> %a, <vscale x 2 x i1> %b) {
 ; CHECK-LABEL: and_eor_nxv2i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p3.d
-; CHECK-NEXT:    eor p1.b, p3/z, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    eor p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %op = xor <vscale x 2 x i1> %a, %b
   %res = and <vscale x 2 x i1> %pg, %op
@@ -212,9 +194,7 @@ define <vscale x 2 x i1> @and_eor_nxv2i1(<vscale x 2 x i1> %pg, <vscale x 2 x i1
 define <vscale x 1 x i1> @and_eor_nxv1i1(<vscale x 1 x i1> %pg, <vscale x 1 x i1> %a, <vscale x 1 x i1> %b) {
 ; CHECK-LABEL: and_eor_nxv1i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p3.d
-; CHECK-NEXT:    eor p1.b, p3/z, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    eor p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %op = xor <vscale x 1 x i1> %a, %b
   %res = and <vscale x 1 x i1> %pg, %op
@@ -224,10 +204,7 @@ define <vscale x 1 x i1> @and_eor_nxv1i1(<vscale x 1 x i1> %pg, <vscale x 1 x i1
 define <vscale x 16 x i1> @and_orn_nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: and_orn_nxv16i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p3.b
-; CHECK-NEXT:    not p2.b, p3/z, p2.b
-; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    orn p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %not.b = xor <vscale x 16 x i1> %b, splat (i1 true)
   %op = or <vscale x 16 x i1> %a, %not.b
@@ -238,10 +215,7 @@ define <vscale x 16 x i1> @and_orn_nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 
 define <vscale x 8 x i1> @and_orn_nxv8i1(<vscale x 8 x i1> %pg, <vscale x 8 x i1> %a, <vscale x 8 x i1> %b) {
 ; CHECK-LABEL: and_orn_nxv8i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p3.h
-; CHECK-NEXT:    not p2.b, p3/z, p2.b
-; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    orn p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %not.b = xor <vscale x 8 x i1> %b, splat (i1 true)
   %op = or <vscale x 8 x i1> %a, %not.b
@@ -252,10 +226,7 @@ define <vscale x 8 x i1> @and_orn_nxv8i1(<vscale x 8 x i1> %pg, <vscale x 8 x i1
 define <vscale x 4 x i1> @and_orn_nxv4i1(<vscale x 4 x i1> %pg, <vscale x 4 x i1> %a, <vscale x 4 x i1> %b) {
 ; CHECK-LABEL: and_orn_nxv4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p3.s
-; CHECK-NEXT:    not p2.b, p3/z, p2.b
-; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    orn p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %not.b = xor <vscale x 4 x i1> %b, splat (i1 true)
   %op = or <vscale x 4 x i1> %a, %not.b
@@ -266,10 +237,7 @@ define <vscale x 4 x i1> @and_orn_nxv4i1(<vscale x 4 x i1> %pg, <vscale x 4 x i1
 define <vscale x 2 x i1> @and_orn_nxv2i1(<vscale x 2 x i1> %pg, <vscale x 2 x i1> %a, <vscale x 2 x i1> %b) {
 ; CHECK-LABEL: and_orn_nxv2i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p3.d
-; CHECK-NEXT:    not p2.b, p3/z, p2.b
-; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    orn p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %not.b = xor <vscale x 2 x i1> %b, splat (i1 true)
   %op = or <vscale x 2 x i1> %a, %not.b
@@ -280,19 +248,7 @@ define <vscale x 2 x i1> @and_orn_nxv2i1(<vscale x 2 x i1> %pg, <vscale x 2 x i1
 define <vscale x 1 x i1> @and_orn_nxv1i1(<vscale x 1 x i1> %pg, <vscale x 1 x i1> %a, <vscale x 1 x i1> %b) {
 ; CHECK-LABEL: and_orn_nxv1i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
-; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Spill
-; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
-; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    ptrue p3.d
-; CHECK-NEXT:    punpklo p4.h, p3.b
-; CHECK-NEXT:    eor p2.b, p3/z, p2.b, p4.b
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
-; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
-; CHECK-NEXT:    addvl sp, sp, #1
-; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    orn p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %not.b = xor <vscale x 1 x i1> %b, splat (i1 true)
   %op = or <vscale x 1 x i1> %a, %not.b
@@ -303,8 +259,7 @@ define <vscale x 1 x i1> @and_orn_nxv1i1(<vscale x 1 x i1> %pg, <vscale x 1 x i1
 define <vscale x 16 x i1> @and_orr_nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: and_orr_nxv16i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    orr p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %op = or <vscale x 16 x i1> %a, %b
   %res = and <vscale x 16 x i1> %pg, %op
@@ -314,8 +269,7 @@ define <vscale x 16 x i1> @and_orr_nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 
 define <vscale x 8 x i1> @and_orr_nxv8i1(<vscale x 8 x i1> %pg, <vscale x 8 x i1> %a, <vscale x 8 x i1> %b) {
 ; CHECK-LABEL: and_orr_nxv8i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    orr p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %op = or <vscale x 8 x i1> %a, %b
   %res = and <vscale x 8 x i1> %pg, %op
@@ -325,8 +279,7 @@ define <vscale x 8 x i1> @and_orr_nxv8i1(<vscale x 8 x i1> %pg, <vscale x 8 x i1
 define <vscale x 4 x i1> @and_orr_nxv4i1(<vscale x 4 x i1> %pg, <vscale x 4 x i1> %a, <vscale x 4 x i1> %b) {
 ; CHECK-LABEL: and_orr_nxv4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    orr p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %op = or <vscale x 4 x i1> %a, %b
   %res = and <vscale x 4 x i1> %pg, %op
@@ -336,8 +289,7 @@ define <vscale x 4 x i1> @and_orr_nxv4i1(<vscale x 4 x i1> %pg, <vscale x 4 x i1
 define <vscale x 2 x i1> @and_orr_nxv2i1(<vscale x 2 x i1> %pg, <vscale x 2 x i1> %a, <vscale x 2 x i1> %b) {
 ; CHECK-LABEL: and_orr_nxv2i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    orr p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %op = or <vscale x 2 x i1> %a, %b
   %res = and <vscale x 2 x i1> %pg, %op
@@ -347,8 +299,7 @@ define <vscale x 2 x i1> @and_orr_nxv2i1(<vscale x 2 x i1> %pg, <vscale x 2 x i1
 define <vscale x 1 x i1> @and_orr_nxv1i1(<vscale x 1 x i1> %pg, <vscale x 1 x i1> %a, <vscale x 1 x i1> %b) {
 ; CHECK-LABEL: and_orr_nxv1i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b
-; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    orr p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %op = or <vscale x 1 x i1> %a, %b
   %res = and <vscale x 1 x i1> %pg, %op
@@ -358,8 +309,7 @@ define <vscale x 1 x i1> @and_orr_nxv1i1(<vscale x 1 x i1> %pg, <vscale x 1 x i1
 define <vscale x 16 x i1> @and_nand_nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: and_nand_nxv16i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and p2.b, p1/z, p1.b, p2.b
-; CHECK-NEXT:    bic p0.b, p0/z, p0.b, p2.b
+; CHECK-NEXT:    nand p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %and = and <vscale x 16 x i1> %a, %b
   %op = xor <vscale x 16 x i1> %and, splat (i1 true)
@@ -370,8 +320,7 @@ define <vscale x 16 x i1> @and_nand_nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16
 define <vscale x 8 x i1> @and_nand_nxv8i1(<vscale x 8 x i1> %pg, <vscale x 8 x i1> %a, <vscale x 8 x i1> %b) {
 ; CHECK-LABEL: and_nand_nxv8i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and p2.b, p1/z, p1.b, p2.b
-; CHECK-NEXT:    bic p0.b, p0/z, p0.b, p2.b
+; CHECK-NEXT:    nand p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %and = and <vscale x 8 x i1> %a, %b
   %op = xor <vscale x 8 x i1> %and, splat (i1 true)
@@ -382,8 +331,7 @@ define <vscale x 8 x i1> @and_nand_nxv8i1(<vscale x 8 x i1> %pg, <vscale x 8 x i
 define <vscale x 4 x i1> @and_nand_nxv4i1(<vscale x 4 x i1> %pg, <vscale x 4 x i1> %a, <vscale x 4 x i1> %b) {
 ; CHECK-LABEL: and_nand_nxv4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and p2.b, p1/z, p1.b, p2.b
-; CHECK-NEXT:    bic p0.b, p0/z, p0.b, p2.b
+; CHECK-NEXT:    nand p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %and = and <vscale x 4 x i1> %a, %b
   %op = xor <vscale x 4 x i1> %and, splat (i1 true)
@@ -394,8 +342,7 @@ define <vscale x 4 x i1> @and_nand_nxv4i1(<vscale x 4 x i1> %pg, <vscale x 4 x i
 define <vscale x 2 x i1> @and_nand_nxv2i1(<vscale x 2 x i1> %pg, <vscale x 2 x i1> %a, <vscale x 2 x i1> %b) {
 ; CHECK-LABEL: and_nand_nxv2i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and p2.b, p1/z, p1.b, p2.b
-; CHECK-NEXT:    bic p0.b, p0/z, p0.b, p2.b
+; CHECK-NEXT:    nand p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %and = and <vscale x 2 x i1> %a, %b
   %op = xor <vscale x 2 x i1> %and, splat (i1 true)
@@ -406,8 +353,7 @@ define <vscale x 2 x i1> @and_nand_nxv2i1(<vscale x 2 x i1> %pg, <vscale x 2 x i
 define <vscale x 1 x i1> @and_nand_nxv1i1(<vscale x 1 x i1> %pg, <vscale x 1 x i1> %a, <vscale x 1 x i1> %b) {
 ; CHECK-LABEL: and_nand_nxv1i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and p2.b, p1/z, p1.b, p2.b
-; CHECK-NEXT:    bic p0.b, p0/z, p0.b, p2.b
+; CHECK-NEXT:    nand p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %and = and <vscale x 1 x i1> %a, %b
   %op = xor <vscale x 1 x i1> %and, splat (i1 true)
@@ -418,8 +364,7 @@ define <vscale x 1 x i1> @and_nand_nxv1i1(<vscale x 1 x i1> %pg, <vscale x 1 x i
 define <vscale x 16 x i1> @and_nor_nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 x i1> %a, <vscale x 16 x i1> %b) {
 ; CHECK-LABEL: and_nor_nxv16i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b
-; CHECK-NEXT:    bic p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    nor p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %or = or <vscale x 16 x i1> %a, %b
   %op = xor <vscale x 16 x i1> %or, splat (i1 true)
@@ -430,8 +375,7 @@ define <vscale x 16 x i1> @and_nor_nxv16i1(<vscale x 16 x i1> %pg, <vscale x 16 
 define <vscale x 8 x i1> @and_nor_nxv8i1(<vscale x 8 x i1> %pg, <vscale x 8 x i1> %a, <vscale x 8 x i1> %b) {
 ; CHECK-LABEL: and_nor_nxv8i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b
-; CHECK-NEXT:    bic p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    nor p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %or = or <vscale x 8 x i1> %a, %b
   %op = xor <vscale x 8 x i1> %or, splat (i1 true)
@@ -442,8 +386,7 @@ define <vscale x 8 x i1> @and_nor_nxv8i1(<vscale x 8 x i1> %pg, <vscale x 8 x i1
 define <vscale x 4 x i1> @and_nor_nxv4i1(<vscale x 4 x i1> %pg, <vscale x 4 x i1> %a, <vscale x 4 x i1> %b) {
 ; CHECK-LABEL: and_nor_nxv4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b
-; CHECK-NEXT:    bic p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    nor p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %or = or <vscale x 4 x i1> %a, %b
   %op = xor <vscale x 4 x i1> %or, splat (i1 true)
@@ -454,8 +397,7 @@ define <vscale x 4 x i1> @and_nor_nxv4i1(<vscale x 4 x i1> %pg, <vscale x 4 x i1
 define <vscale x 2 x i1> @and_nor_nxv2i1(<vscale x 2 x i1> %pg, <vscale x 2 x i1> %a, <vscale x 2 x i1> %b) {
 ; CHECK-LABEL: and_nor_nxv2i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b
-; CHECK-NEXT:    bic p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    nor p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %or = or <vscale x 2 x i1> %a, %b
   %op = xor <vscale x 2 x i1> %or, splat (i1 true)
@@ -466,8 +408,7 @@ define <vscale x 2 x i1> @and_nor_nxv2i1(<vscale x 2 x i1> %pg, <vscale x 2 x i1
 define <vscale x 1 x i1> @and_nor_nxv1i1(<vscale x 1 x i1> %pg, <vscale x 1 x i1> %a, <vscale x 1 x i1> %b) {
 ; CHECK-LABEL: and_nor_nxv1i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sel p1.b, p1, p1.b, p2.b
-; CHECK-NEXT:    bic p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    nor p0.b, p0/z, p1.b, p2.b
 ; CHECK-NEXT:    ret
   %or = or <vscale x 1 x i1> %a, %b
   %op = xor <vscale x 1 x i1> %or, splat (i1 true)
