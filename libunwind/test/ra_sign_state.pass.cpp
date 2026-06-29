@@ -80,7 +80,7 @@ static _Unwind_Reason_Code frame_handler(struct _Unwind_Context *ctx,
 
   uintptr_t ip = _Unwind_GetIP(ctx);
 
-  printf("ip = 0x%llx\n", ip);
+  printf("ip = 0x%lx\n", ip);
 
   if (ip >= (uintptr_t)FUNC_START(main_func) &&
       ip < (uintptr_t)FUNC_END(main_func)) {
