@@ -2995,6 +2995,18 @@ private:
     }
   }
 
+  /// Return true if the builder's current insertion point is within a
+  /// `fir.do_concurrent.loop` region (i.e. a plain DO loop being lowered here
+  /// is nested inside a DO CONCURRENT body).
+  bool isInsideDoConcurrentLoop() {
+    mlir::Block *block = builder->getInsertionBlock();
+    if (!block)
+      return false;
+    mlir::Operation *parentOp = block->getParentOp();
+    return parentOp && (mlir::isa<fir::DoConcurrentLoopOp>(parentOp) ||
+                        parentOp->getParentOfType<fir::DoConcurrentLoopOp>());
+  }
+
   /// Generate FIR to begin a structured or unstructured increment loop nest.
   void genFIRIncrementLoopBegin(
       IncrementLoopNestInfo &incrementLoopNestInfo,
@@ -3049,6 +3061,27 @@ private:
 
         // The loop variable is a doLoop op argument.
         mlir::Type loopVarType = info.getLoopVariableType();
+
+        // Plain DO loops nested in a DO CONCURRENT body can be lowered without
+        // the secondary-induction iter_arg: recompute the DO variable from the
+        // induction variable. This keeps the body free of a loop-carried value
+        // that would hide memory recurrences (e.g. reductions) from later
+        // analyses, matching how loops in OpenACC regions are lowered.
+        if (getLoweringOptions().getDoConcurrentCleanNestedLoops() &&
+            isInsideDoConcurrentLoop()) {
+          auto loopOp = fir::DoLoopOp::create(
+              *builder, loc, lowerValue, upperValue, stepValue,
+              /*unordered=*/false, /*finalCountValue=*/false,
+              /*iterArgs=*/mlir::ValueRange{});
+          info.loopOp = loopOp;
+          builder->setInsertionPointToStart(loopOp.getBody());
+          mlir::Value loopValue = builder->createConvert(
+              loc, loopVarType, loopOp.getInductionVar());
+          fir::StoreOp::create(*builder, loc, loopValue, info.loopVariable);
+          addLoopAnnotationAttr(info, dirs);
+          continue;
+        }
+
         auto loopOp = fir::DoLoopOp::create(
             *builder, loc, lowerValue, upperValue, stepValue,
             /*unordered=*/false,
@@ -3203,6 +3236,13 @@ private:
         // End fir.do_loop.
         // Decrement tripVariable.
         auto doLoopOp = mlir::cast<fir::DoLoopOp>(info.loopOp);
+        // A clean iter_arg-free loop (DoConcurrentCleanNestedLoops) has no
+        // loop-carried DO variable to step or write back; its terminator is
+        // already in place.
+        if (doLoopOp.getNumRegionIterArgs() == 0) {
+          builder->setInsertionPointAfter(doLoopOp);
+          continue;
+        }
         builder->setInsertionPointToEnd(doLoopOp.getBody());
         // Step loopVariable to help optimizations such as vectorization.
         // Induction variable elimination will clean up as necessary.
