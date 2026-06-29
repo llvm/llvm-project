@@ -118,7 +118,7 @@ int notdead() {
 // CHECK: _ZZ7notdeadvEN3$_0clEv
 // CHECK: ret i32 %cond
 
-/// The conmparison of those two parameters should NOT work.
+/// The comparison of those two parameters should NOT work.
 bool paramcmp(const int& lhs, const int& rhs) {
   if (&lhs == &rhs)
     return true;
