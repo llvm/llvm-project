@@ -108,6 +108,24 @@ add_libc_test(
 )
 
 add_libc_test(
+  annex_k_include_order_test
+  C_TEST
+  UNIT_TEST_ONLY
+  SUITE
+    libc_include_tests
+  SRCS
+    annex_k_include_order_test.c
+  COMPILE_OPTIONS
+    -std=c11
+    -Werror=implicit-function-declaration
+    -Wno-unknown-attributes
+  DEPENDS
+    libc.include.llvm-libc-types.locale_t
+    libc.include.stdio
+    libc.include.string
+)
+
+add_libc_test(
   issubnormal_test
   SUITE
     libc_include_tests
