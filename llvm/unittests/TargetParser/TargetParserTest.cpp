@@ -537,26 +537,33 @@ INSTANTIATE_TEST_SUITE_P(
 static constexpr unsigned NumARMCPUArchs = 95;
 
 TEST(FeatureBitsetTest, Iterator) {
-  // Empty bitset: every position is visited and reports false.
+  // Empty bitset yields nothing.
   FeatureBitset Empty;
-  unsigned Count = 0;
-  for (bool IsSet : Empty) {
-    EXPECT_FALSE(IsSet);
-    ++Count;
+  EXPECT_EQ(Empty.begin(), Empty.end());
+  for (unsigned Index : Empty) {
+    (void)Index;
+    FAIL() << "empty bitset should yield no set bits";
   }
-  EXPECT_EQ(Count, Empty.size());
 
-  // enumerate recovers the set feature indices.
+  // Yields the set indices in order, crossing the 63/64 word boundary.
   FeatureBitset Bits;
   Bits.set(0).set(5).set(63).set(64).set(200);
   std::vector<unsigned> SetIndices;
-  for (auto [Index, IsSet] : enumerate(Bits))
-    if (IsSet)
-      SetIndices.push_back(Index);
+  for (unsigned Index : Bits)
+    SetIndices.push_back(Index);
   EXPECT_EQ(SetIndices, (std::vector<unsigned>{0, 5, 63, 64, 200}));
 
-  for (auto [Index, IsSet] : enumerate(Bits))
-    EXPECT_EQ(IsSet, Bits[Index]);
+  // Every yielded index is set, and the count matches.
+  for (unsigned Index : Bits)
+    EXPECT_TRUE(Bits[Index]);
+  EXPECT_EQ(SetIndices.size(), Bits.count());
+
+  // The final position is reached.
+  FeatureBitset Last;
+  unsigned LastIndex = Last.size() - 1;
+  Last.set(LastIndex);
+  SetIndices.assign(Last.begin(), Last.end());
+  EXPECT_EQ(SetIndices, (std::vector<unsigned>{LastIndex}));
 }
 
 TEST(TargetParserTest, testARMCPUArchList) {

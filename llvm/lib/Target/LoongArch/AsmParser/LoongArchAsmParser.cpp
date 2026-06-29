@@ -1795,12 +1795,10 @@ bool LoongArchAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     assert(MissingFeatures.any() && "Unknown missing features!");
     bool FirstFeature = true;
     std::string Msg = "instruction requires the following:";
-    for (auto [Index, IsSet] : enumerate(MissingFeatures)) {
-      if (IsSet) {
-        Msg += FirstFeature ? " " : ", ";
-        Msg += getSubtargetFeatureName(Index);
-        FirstFeature = false;
-      }
+    for (unsigned Index : MissingFeatures) {
+      Msg += FirstFeature ? " " : ", ";
+      Msg += getSubtargetFeatureName(Index);
+      FirstFeature = false;
     }
     return Error(IDLoc, Msg);
   }

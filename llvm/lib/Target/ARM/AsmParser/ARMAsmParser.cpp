@@ -12857,9 +12857,8 @@ ARMAsmParser::FilterNearMisses(SmallVectorImpl<NearMissInfo> &NearMissesIn,
       raw_svector_ostream OS(Message.Message);
 
       OS << "instruction requires:";
-      for (auto [Index, IsSet] : enumerate(MissingFeatures))
-        if (IsSet)
-          OS << ' ' << getSubtargetFeatureName(Index);
+      for (unsigned Index : MissingFeatures)
+        OS << ' ' << getSubtargetFeatureName(Index);
 
       NearMissesOut.emplace_back(Message);
 
