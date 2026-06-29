@@ -494,6 +494,8 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SIGN_EXTEND_VECTOR_INREG, VT, Legal);
       setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Legal);
     }
+    for (MVT VT : {MVT::v16i8, MVT::v8i16, MVT::v4i32})
+      setOperationAction(ISD::TRUNCATE, VT, Legal);
   }
 
   // Set DAG combine for LA32 and LA64.
@@ -3822,6 +3824,10 @@ SDValue LoongArchTargetLowering::lowerCONCAT_VECTORS(SDValue Op,
   MVT ResVT = Op.getSimpleValueType();
   assert(ResVT.is256BitVector() && Op.getNumOperands() == 2);
 
+  if (Op.getOperand(0).getOpcode() == ISD::TRUNCATE &&
+      Op.getOperand(1).getOpcode() == ISD::TRUNCATE)
+    return Op;
+
   unsigned NumOperands = Op.getNumOperands();
   unsigned NumFreezeUndef = 0;
   unsigned NumZero = 0;
@@ -5820,6 +5826,22 @@ void LoongArchTargetLowering::ReplaceNodeResults(
     unsigned MinElts = VT.getVectorNumElements();
     unsigned WidenNumElts = WidenVT.getVectorNumElements();
     unsigned InBits = InVT.getSizeInBits();
+
+    // v8i64 -> (v8i32) -> v8i8
+    if (InVT == MVT::v8i64 && WidenVT.is128BitVector()) {
+      InVT = MVT::getVectorVT(MVT::getIntegerVT(256 / MinElts), MinElts);
+      In = DAG.getNode(N->getOpcode(), DL, InVT, In);
+      InBits = 256;
+    }
+
+    // v8i32 -> v8i8 / v4i64 -> v4i16 / v4i64 -> v4i8
+    if ((InVT == MVT::v8i32 || InVT == MVT::v4i64) &&
+        WidenVT.is128BitVector()) {
+      InVT = MVT::getVectorVT(MVT::getIntegerVT(128 / MinElts), MinElts);
+      In = DAG.getNode(N->getOpcode(), DL, InVT, In);
+      InBits = 128;
+      InEltVT = InVT.getVectorElementType();
+    }
 
     if ((128 % InBits) == 0 && WidenVT.is128BitVector()) {
       if ((InEltVT.getSizeInBits() % EltVT.getSizeInBits()) == 0) {
