@@ -102,7 +102,8 @@ static bool runSCCP(Function &F, const DataLayout &DL,
     }
 
     MadeChanges |= Solver.simplifyInstsInBlock(BB, InsertedValues,
-                                               NumInstRemoved, NumInstReplaced);
+                                               NumInstRemoved, NumInstReplaced,
+                                               /*Eager=*/true);
   }
 
   // Remove unreachable blocks and non-feasible edges.
