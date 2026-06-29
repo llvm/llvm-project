@@ -76,11 +76,11 @@ char32_t c32;
 // OGCG:  @c32 = global i32 0, align 4
 
 _BitInt(20) sb20;
-// CHECK: @sb20 = global i20 0, align 4
+// CHECK: @sb20 = global i32 0, align 4
 // OGCG:  @sb20 = global i32 0, align 4
 
 unsigned _BitInt(48) ub48;
-// CHECK: @ub48 = global i48 0, align 8
+// CHECK: @ub48 = global i64 0, align 8
 // OGCG:  @ub48 = global i64 0, align 8
 
 bool boolfalse = false;
