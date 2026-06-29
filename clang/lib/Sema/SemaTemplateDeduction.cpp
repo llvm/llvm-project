@@ -3741,8 +3741,10 @@ CheckOriginalCallArgDeduction(Sema &S, TemplateDeductionInfo &Info,
   QualType A = OriginalArg.OriginalArgType;
   QualType OriginalParamType = OriginalArg.OriginalParamType;
 
-  // Check for type equality (top-level cv-qualifiers are ignored).
-  if (Context.hasSameUnqualifiedType(A, DeducedA))
+  // Check for type equality (top-level cv-qualifiers and _Atomic are ignored,
+  // since _Atomic is treated as a qualifier).
+  if (Context.hasSameType(A.getAtomicUnqualifiedType(),
+                          DeducedA.getAtomicUnqualifiedType()))
     return TemplateDeductionResult::Success;
 
   // Strip off references on the argument types; they aren't needed for
@@ -5110,6 +5112,25 @@ namespace {
       NewTL.setNameLoc(TL.getNameLoc());
       NewTL.setQualifierLoc(TL.getQualifierLoc());
       return Result;
+    }
+
+    QualType TransformAtomicType(TypeLocBuilder &TLB, AtomicTypeLoc TL) {
+      // When building the function parameter for placeholder type deduction
+      // (Replacement is the invented template parameter), dig through _Atomic
+      // around an auto placeholder so deduction matches the non-atomic
+      // argument. The _Atomic wrapper is re-applied by the final substitution
+      // pass, which uses a concrete Replacement and falls through to the
+      // default transform.
+      //
+      // This handles only the simple case where _Atomic wraps auto directly
+      // (e.g. _Atomic(auto)), which is what the C standard currently permits.
+      // If more complex forms such as _Atomic(auto*) are ever allowed, the
+      // correct fix would be to treat _Atomic as a qualifier inside
+      // DeduceTemplateArgumentsByTypeMatch instead.
+      if (isa_and_nonnull<TemplateTypeParmType>(Replacement) &&
+          TL.getValueLoc().getType()->getContainedAutoType())
+        return getDerived().TransformType(TLB, TL.getValueLoc());
+      return inherited::TransformAtomicType(TLB, TL);
     }
 
     ExprResult TransformLambdaExpr(LambdaExpr *E) {
