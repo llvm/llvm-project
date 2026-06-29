@@ -391,6 +391,11 @@ def LocationSnapshot : Pass<"snapshot-op-locations"> {
 
 def LoopInvariantCodeMotionPass : Pass<"loop-invariant-code-motion"> {
   let summary = "Hoist loop invariant instructions outside of the loop";
+  let options = [
+    Option<"useAliasAnalysis", "use-aa", "bool",
+       /*default=*/"false",
+       "Use alias analysis to hoist memory operations (experimental).">,
+  ];
 }
 
 def LoopInvariantSubsetHoistingPass : Pass<"loop-invariant-subset-hoisting"> {
