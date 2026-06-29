@@ -35,7 +35,8 @@ typedef bool (*MlirSliceFilterCallback)(MlirOperation op, void *userData);
 MLIR_CAPI_EXPORTED intptr_t mlirGetForwardSlice(MlirOperation op,
                                                 MlirSliceFilterCallback filter,
                                                 void *filterUserData,
-                                                intptr_t n, MlirOperation *slice);
+                                                intptr_t n,
+                                                MlirOperation *slice);
 
 /// Computes the backward slice of the given operation, i.e. all its transitive
 /// definitions, not including the operation itself. The result operations are
@@ -50,6 +51,25 @@ MLIR_CAPI_EXPORTED intptr_t mlirGetBackwardSlice(MlirOperation op,
                                                  void *filterUserData,
                                                  intptr_t n,
                                                  MlirOperation *slice);
+
+//===----------------------------------------------------------------------===//
+// Topological sort
+//===----------------------------------------------------------------------===//
+
+/// Returns the blocks of the given region sorted by dominance, a stable order
+/// in which a block appears after all blocks that dominate it. The result
+/// blocks are written into the caller-allocated `blocks` buffer, up to `n`
+/// entries; the total number of blocks in the region is returned. Passing
+/// `n == 0` (with `blocks` ignored) queries the size.
+MLIR_CAPI_EXPORTED intptr_t mlirRegionGetBlocksSortedByDominance(
+    MlirRegion region, intptr_t n, MlirBlock *blocks);
+
+/// Topologically sorts the `nOps` operations in `ops` (taking region semantics
+/// into account) so that definitions come before uses, writing the result into
+/// the caller-allocated `sorted` buffer, which must have room for `nOps`
+/// entries. The input operations need not all belong to the same block.
+MLIR_CAPI_EXPORTED void mlirTopologicalSort(intptr_t nOps, MlirOperation *ops,
+                                            MlirOperation *sorted);
 
 #ifdef __cplusplus
 }

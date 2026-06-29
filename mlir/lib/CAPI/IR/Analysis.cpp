@@ -9,6 +9,7 @@
 #include "mlir-c/Analysis.h"
 
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/CAPI/IR.h"
 #include "mlir/CAPI/Support.h"
 
@@ -51,4 +52,23 @@ intptr_t mlirGetBackwardSlice(MlirOperation op, MlirSliceFilterCallback filter,
   if (failed(getBackwardSlice(unwrap(op), &result, options)))
     return -1;
   return copySlice(result, n, slice);
+}
+
+intptr_t mlirRegionGetBlocksSortedByDominance(MlirRegion region, intptr_t n,
+                                              MlirBlock *blocks) {
+  SetVector<Block *> sorted = getBlocksSortedByDominance(*unwrap(region));
+  intptr_t count = static_cast<intptr_t>(sorted.size());
+  for (intptr_t i = 0, e = std::min(count, n); i < e; ++i)
+    blocks[i] = wrap(sorted[i]);
+  return count;
+}
+
+void mlirTopologicalSort(intptr_t nOps, MlirOperation *ops,
+                         MlirOperation *sorted) {
+  SetVector<Operation *> toSort;
+  for (intptr_t i = 0; i < nOps; ++i)
+    toSort.insert(unwrap(ops[i]));
+  SetVector<Operation *> result = topologicalSort(toSort);
+  for (intptr_t i = 0, e = static_cast<intptr_t>(result.size()); i < e; ++i)
+    sorted[i] = wrap(result[i]);
 }

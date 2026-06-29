@@ -3033,6 +3033,80 @@ int testBackwardSlice(MlirContext ctx) {
   return 0;
 }
 
+int testTopologicalSort(MlirContext ctx) {
+  fprintf(stderr, "@testTopologicalSort\n");
+  // CHECK-LABEL: @testTopologicalSort
+
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("arith"));
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("cf"));
+
+  // Blocks sorted by dominance: the entry block dominates all others and must
+  // come first; the merge block ^bb3 comes last.
+  const char *cfgStr = "func.func @g(%cond: i1) -> i32 {\n"
+                       "  %c0 = arith.constant 0 : i32\n"
+                       "  %c1 = arith.constant 1 : i32\n"
+                       "  cf.cond_br %cond, ^bb1, ^bb2\n"
+                       "^bb1:\n"
+                       "  cf.br ^bb3(%c0 : i32)\n"
+                       "^bb2:\n"
+                       "  cf.br ^bb3(%c1 : i32)\n"
+                       "^bb3(%result: i32):\n"
+                       "  return %result : i32\n"
+                       "}\n";
+  MlirModule cfgModule =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(cfgStr));
+  MlirBlock cfgModuleBody = mlirModuleGetBody(cfgModule);
+  MlirOperation gFuncOp = mlirBlockGetFirstOperation(cfgModuleBody);
+  MlirRegion gRegion = mlirOperationGetRegion(gFuncOp, 0);
+  MlirBlock entry = mlirRegionGetFirstBlock(gRegion);
+  MlirBlock bb3 = mlirBlockGetNextInRegion(
+      mlirBlockGetNextInRegion(mlirBlockGetNextInRegion(entry)));
+
+  MlirBlock blocks[4];
+  intptr_t numBlocks = mlirRegionGetBlocksSortedByDominance(gRegion, 4, blocks);
+  assert(numBlocks == 4);
+  // The entry block dominates everything (reported first); the merge block is
+  // dominated by the entry (reported last).
+  assert(mlirBlockEqual(blocks[0], entry));
+  assert(mlirBlockEqual(blocks[3], bb3));
+
+  mlirModuleDestroy(cfgModule);
+
+  // Topological sort of a set of operations passed in reverse program order.
+  const char *chainStr = "func.func @f(%arg0: i32) -> i32 {\n"
+                         "  %0 = arith.addi %arg0, %arg0 : i32\n"
+                         "  %1 = arith.muli %0, %arg0 : i32\n"
+                         "  %2 = arith.subi %1, %0 : i32\n"
+                         "  return %2 : i32\n"
+                         "}\n";
+  MlirModule chainModule =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(chainStr));
+  MlirBlock chainModuleBody = mlirModuleGetBody(chainModule);
+  MlirOperation fFuncOp = mlirBlockGetFirstOperation(chainModuleBody);
+  MlirRegion fRegion = mlirOperationGetRegion(fFuncOp, 0);
+  MlirBlock fBody = mlirRegionGetFirstBlock(fRegion);
+  MlirOperation addOp = mlirBlockGetFirstOperation(fBody);
+  MlirOperation mulOp = mlirOperationGetNextInBlock(addOp);
+  MlirOperation subOp = mlirOperationGetNextInBlock(mulOp);
+
+  // Pass them reversed; the sort must restore defs-before-uses order.
+  MlirOperation unsorted[3] = {subOp, mulOp, addOp};
+  MlirOperation sorted[3];
+  mlirTopologicalSort(3, unsorted, sorted);
+  fprintf(stderr, "topo sort:\n");
+  // CHECK: topo sort:
+  printSlice(sorted, 3);
+  // CHECK-NEXT: slice: arith.addi
+  // CHECK-NEXT: slice: arith.muli
+  // CHECK-NEXT: slice: arith.subi
+
+  mlirModuleDestroy(chainModule);
+
+  // CHECK: testTopologicalSort: PASSED
+  fprintf(stderr, "testTopologicalSort: PASSED\n");
+  return 0;
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
@@ -3092,6 +3166,8 @@ int main(void) {
     return 21;
   if (testBackwardSlice(ctx))
     return 22;
+  if (testTopologicalSort(ctx))
+    return 23;
 
   // CHECK: DESTROY MAIN CONTEXT
   // CHECK: reportResourceDelete: resource_i64_blob
