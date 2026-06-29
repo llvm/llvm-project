@@ -7,6 +7,8 @@
 !===------------------------------------------------------------------------===!
 
 module mma
+  use __ppc_types ! implicit dependencies, made explicit for CMake
+
   implicit none
   private
 

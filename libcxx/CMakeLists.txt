@@ -2,6 +2,14 @@
 # Setup Project
 #===============================================================================
 cmake_minimum_required(VERSION 3.20.0)
+if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
+  message(WARNING
+    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
+    "minimum version of CMake required to build LLVM will become 3.31.0, and "
+    "using an older CMake will become an error. Please upgrade your CMake to "
+    "at least 3.31.0 now to avoid issues in the future.")
+endif()
+
 set(LLVM_SUBPROJECT_TITLE "libc++")
 
 # Unset the C++ Standard: other projects sometimes override this global property, which
@@ -445,6 +453,19 @@ set(LIBCXX_INSTALL_RUNTIME_DIR "${CMAKE_INSTALL_BINDIR}" CACHE STRING
 set(LIBCXX_INSTALL_MODULES_DIR "share/libc++/v1" CACHE STRING
     "Path where target-agnostic libc++ module source files should be installed.")
 
+# On platforms that don't support shared library targets
+# (e.g. CMAKE_SYSTEM_NAME of "Generic", used for GPU and other
+# baremetal targets), the shared library target is not built at
+# all. The global TARGET_SUPPORTS_SHARED_LIBS property is left
+# undefined on platforms that do support shared libraries, and only
+# set to FALSE on those that don't. See
+# https://gitlab.kitware.com/cmake/cmake/-/issues/25759.
+get_property(LIBCXX_TARGET_SUPPORTS_SHARED_LIBS GLOBAL PROPERTY TARGET_SUPPORTS_SHARED_LIBS)
+if(NOT DEFINED LIBCXX_TARGET_SUPPORTS_SHARED_LIBS OR LIBCXX_TARGET_SUPPORTS_SHARED_LIBS)
+  set(LIBCXX_SUPPORTS_SHARED_LIBRARY ON)
+else()
+  set(LIBCXX_SUPPORTS_SHARED_LIBRARY OFF)
+endif()
 set(LIBCXX_SHARED_OUTPUT_NAME "c++" CACHE STRING "Output name for the shared libc++ runtime library.")
 set(LIBCXX_STATIC_OUTPUT_NAME "c++" CACHE STRING "Output name for the static libc++ runtime library.")
 

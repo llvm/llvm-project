@@ -322,3 +322,26 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectListSP>(
 
   return out;
 }
+
+template <>
+std::optional<lldb::ValueType>
+ScriptedPythonInterface::ExtractValueFromPythonObject<
+    std::optional<lldb::ValueType>>(python::PythonObject &p, Status &error) {
+  if (p.IsNone())
+    return std::nullopt;
+
+  llvm::Expected<unsigned long long> val = p.AsUnsignedLongLong();
+  if (!val) {
+    error = Status::FromError(val.takeError());
+    return std::nullopt;
+  }
+  unsigned long long unmasked = *val & ~kValueTypeFlagsMask;
+  unsigned long long flags = *val & kValueTypeFlagsMask;
+  if (unmasked == eValueTypeInvalid || unmasked > kLastValueType) {
+    error = Status::FromErrorStringWithFormatv(
+        "value type invalid or too large (got {0} | {1:x})", unmasked, flags);
+    return std::nullopt;
+  }
+
+  return static_cast<ValueType>(unmasked | flags);
+}

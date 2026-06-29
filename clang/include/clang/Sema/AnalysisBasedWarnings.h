@@ -117,6 +117,11 @@ public:
   // Issue warnings that require whole-translation-unit analysis.
   void IssueWarnings(TranslationUnitDecl *D);
 
+  // Run analysis-based warnings on an implicitly-defined function body (e.g. a
+  // defaulted/implicit default constructor). Such functions never reach the
+  // normal IssueWarnings path.
+  void IssueWarningsForImplicitFunction(const Decl *D);
+
   void registerVarDeclWarning(VarDecl *VD, PossiblyUnreachableDiag PUD);
 
   void issueWarningsForRegisteredVarDecl(VarDecl *VD);

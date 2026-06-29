@@ -1094,9 +1094,11 @@ bool RISCVInsertVSETVLI::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF)
     insertReadVL(MBB);
 
-  for (MachineBasicBlock &MBB : MF) {
-    insertVSETMTK(MBB, VSETTM);
-    insertVSETMTK(MBB, VSETTK);
+  if (ST->hasVendorXSfmmbase()) {
+    for (MachineBasicBlock &MBB : MF) {
+      insertVSETMTK(MBB, VSETTM);
+      insertVSETMTK(MBB, VSETTK);
+    }
   }
 
   BlockInfo.clear();

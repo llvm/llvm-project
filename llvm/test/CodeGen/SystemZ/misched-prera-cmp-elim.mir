@@ -9,8 +9,9 @@
 # CHECK-NEXT: fun0:%bb.0
 # CHECK:      ********** MI Scheduling **********
 # CHECK-NEXT: fun0:%bb.1
-# CHECK:      Queue BotQ.A: 4 5
-# CHECK-NEXT:   Cand SU(4) FIRST
+# CHECK:      Queue BotQ.A: 6 4
+# CHECK-NEXT:   Cand SU(6) FIRST
+# CHECK-NEXT:   Cand SU(4) WEAK
 # CHECK-NEXT: Pick Bot WEAK       [pre-RA]
 # CHECK-NEXT: Scheduling SU(4) %7:gr32bit = NRK %6:gr32bit, %0:gr32bit, implicit-def dead $cc
 # CHECK:      *** Final schedule for %bb.1 ***
@@ -19,8 +20,8 @@
 # CHECK-NEXT: SU(2):   %6:gr32bit = LHIMux 0
 # CHECK-NEXT: SU(3):   %6:gr32bit = LOCHIMux %6:gr32bit(tied-def 0), 1, 14, 8, implicit $cc
 # CHECK-NEXT: SU(5):   %3:addr32bit = OILMux %3:addr32bit(tied-def 0), 1, implicit-def dead $cc
-# CHECK-NEXT: SU(4):   %7:gr32bit = NRK %6:gr32bit, %0:gr32bit, implicit-def dead $cc
 # CHECK-NEXT: SU(6):   %8:gr32bit = SLLK %1:gr32bit, %3:addr32bit, 0
+# CHECK-NEXT: SU(4):   %7:gr32bit = NRK %6:gr32bit, %0:gr32bit, implicit-def dead $cc
 # CHECK-NEXT: SU(7):   CHIMux %7:gr32bit, 0, implicit-def $cc
 # CHECK-NEXT: SU(8):   %8:gr32bit = LOCHIMux %8:gr32bit(tied-def 0), 0, 14, 8, implicit $cc
 # CHECK-NEXT: SU(9):   %4:gr32bit = ORK %8:gr32bit, %4:gr32bit, implicit-def dead $cc

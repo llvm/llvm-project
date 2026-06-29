@@ -25,7 +25,7 @@ void test() {
   foo<>();
   foo<S1, S2, S3>();
 }
-// CIR-DAG: cir.global "private" constant cir_private @__const._Z3fooIJ2S12S22S3EEDav.values = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<0> : !s32i]> : !cir.array<!s32i x 4>
+// CIR-DAG: cir.global "private" constant cir_private @__const._Z3fooIJ2S12S22S3EEDav.values = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i], trailing_zeros> : !cir.array<!s32i x 4>
 // LLVM-DAG: @__const._Z3fooIJ2S12S22S3EEDav.values = private constant [4 x i32] [i32 1, i32 2, i32 3, i32 0]
 // OGCG-DAG: @__const._Z3fooIJ2S12S22S3EEDav.values = private {{.*}}constant [4 x i32] [i32 1, i32 2, i32 3, i32 0]
 // CIR-DAG: cir.global "private" constant cir_private @__const._Z3fooIJEEDav.values = #cir.zero : !cir.array<!s32i x 1>

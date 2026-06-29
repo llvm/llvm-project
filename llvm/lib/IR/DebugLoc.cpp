@@ -14,9 +14,12 @@ using namespace llvm;
 
 #if LLVM_ENABLE_DEBUGLOC_TRACKING_ORIGIN
 #include "llvm/Support/Signals.h"
+namespace llvm {
+bool DebugLocOriginCollectionEnabled = false;
+} // namespace llvm
 
 DbgLocOrigin::DbgLocOrigin(bool ShouldCollectTrace) {
-  if (!ShouldCollectTrace)
+  if (!ShouldCollectTrace || !DebugLocOriginCollectionEnabled)
     return;
   auto &[Depth, StackTrace] = StackTraces.emplace_back();
   Depth = sys::getStackTrace(StackTrace);

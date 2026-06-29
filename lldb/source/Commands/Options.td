@@ -915,6 +915,9 @@ let Command = "log enable" in {
       : Option<"file-function", "F">,
         Group<1>,
         Desc<"Prepend the names of files and function that generate the logs.">;
+  def log_json : Option<"json", "j">,
+                 Group<1>,
+                 Desc<"Emit each log message as its own JSON object.">;
 }
 
 let Command = "log dump" in {

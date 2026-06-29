@@ -16,6 +16,10 @@
 // UNSUPPORTED: availability-te-environment-missing
 // UNSUPPORTED: LLVM-LIBC-FIXME
 
+// FIXME: gets failed on Armv7/Linux Ubuntu 18.04 LTS board (remote exec) with
+//        "Environment mismatch: Expected ID 3, received: {106,UTF-8}"
+// XFAIL: buildhost=windows && target=armv7-unknown-linux-gnueabihf
+
 // std::text_encoding::environment()
 
 #include <algorithm>

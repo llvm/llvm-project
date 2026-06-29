@@ -524,7 +524,9 @@ enables only the high-confidence subset of these checks.
 *   ``-Wlifetime-safety-suggestions``: Enables suggestions to add ``[[clang::lifetimebound]]`` to function parameters and ``this`` parameters.
 
   * ``-Wlifetime-safety-intra-tu-suggestions``: Suggestions for functions local to the translation unit.
+    * ``-Wlifetime-safety-intra-tu-constructor-suggestions``: Suggestions for constructors local to the translation unit.
   * ``-Wlifetime-safety-cross-tu-suggestions``: Suggestions for functions visible across translation units (e.g., in headers).
+    * ``-Wlifetime-safety-cross-tu-constructor-suggestions``: Suggestions for constructors visible across translation units.
 
 * ``-Wlifetime-safety-validations``: Enables checks that validate existing lifetime annotations.
 

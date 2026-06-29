@@ -12594,6 +12594,9 @@ void OMPClauseReader::VisitOMPAllocateClause(OMPAllocateClause *C) {
 }
 
 void OMPClauseReader::VisitOMPNumTeamsClause(OMPNumTeamsClause *C) {
+  C->setModifier(Record.readEnum<OpenMPNumTeamsClauseModifier>());
+  C->setModifierLoc(Record.readSourceLocation());
+  C->setModifierExpr(Record.readSubExpr());
   VisitOMPClauseWithPreInit(C);
   C->setLParenLoc(Record.readSourceLocation());
   unsigned NumVars = C->varlist_size();

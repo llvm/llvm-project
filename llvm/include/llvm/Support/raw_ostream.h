@@ -306,7 +306,7 @@ public:
   raw_ostream &write(const char *Ptr, size_t Size);
 
   // Formatted output, see the format() function in Support/Format.h.
-  raw_ostream &operator<<(function_ref<size_t(char *, size_t)> Print);
+  raw_ostream &operator<<(function_ref<int(char *, size_t)> Snprint);
 
   // Formatted output, see the leftJustify() function in Support/Format.h.
   raw_ostream &operator<<(const FormattedString &);

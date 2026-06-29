@@ -10,6 +10,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Pass/Pass.h"
 
 namespace fir {
@@ -171,10 +172,13 @@ struct CUFPredefinedVarToGPU
     if (rewrittenWholeFunction)
       return;
 
-    // Host functions containing cuf.kernel regions can still carry predefined
-    // vars in the kernel body. Rewrite them in-place as well.
+    // Host functions containing cuf.kernel or OpenACC compute regions can
+    // still carry predefined vars in the kernel body. Rewrite them in-place.
     funcOp.walk([&](cuf::KernelOp kernelOp) {
       rewritePredefinedVars(kernelOp.getRegion(), kernelOp.getLoc());
+    });
+    funcOp.walk([&](mlir::acc::ComputeRegionOpInterface computeOp) {
+      rewritePredefinedVars(computeOp->getRegion(0), computeOp->getLoc());
     });
   }
 };

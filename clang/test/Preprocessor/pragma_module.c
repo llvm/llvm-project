@@ -12,6 +12,8 @@
 #pragma clang module import foo ? bar // expected-warning {{extra tokens at end of #pragma}}
 #pragma clang module import foo. // expected-error {{expected identifier after '.' in module name}}
 #pragma clang module import foo.bar.baz.quux // expected-error {{no submodule named 'bar' in module 'foo'}}
+#pragma clang module import "\x41" // expected-error {{invalid escape sequence '\x41' in an unevaluated string literal}}
+#pragma clang module import "foo"."\x41" // expected-error {{invalid escape sequence '\x41' in an unevaluated string literal}}
 
 #pragma clang module begin ! // expected-error {{expected module name}}
 

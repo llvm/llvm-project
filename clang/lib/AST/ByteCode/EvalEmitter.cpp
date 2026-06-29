@@ -233,7 +233,7 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
   const Pointer &Ptr = S.Stk.pop<Pointer>();
   // If we're returning a raw pointer, call our callback.
   if (this->PtrCB)
-    return (*this->PtrCB)(Ptr);
+    return (*this->PtrCB)(S, OpPC, Ptr);
 
   if (!EvalResult.checkDynamicAllocations(S, Ctx, Ptr, Info))
     return false;

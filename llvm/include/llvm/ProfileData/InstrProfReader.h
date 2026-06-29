@@ -349,6 +349,7 @@ private:
   uint64_t Version;
   uint64_t CountersDelta;
   uint64_t BitmapDelta;
+  uint64_t UniformCountersDelta;
   uint64_t NamesDelta;
   const RawInstrProf::ProfileData<IntPtrT> *Data;
   const RawInstrProf::ProfileData<IntPtrT> *DataEnd;
@@ -358,6 +359,8 @@ private:
   const char *CountersEnd;
   const char *BitmapStart;
   const char *BitmapEnd;
+  const char *UniformCountersStart;
+  const char *UniformCountersEnd;
   const char *NamesStart;
   const char *NamesEnd;
   const char *VNamesStart = nullptr;
@@ -469,6 +472,7 @@ private:
   Error readFuncHash(NamedInstrProfRecord &Record);
   Error readRawCounts(InstrProfRecord &Record);
   Error readRawBitmapBytes(InstrProfRecord &Record);
+  Error readRawUniformCounters(InstrProfRecord &Record);
   Error readValueProfilingData(InstrProfRecord &Record);
   bool atEnd() const { return Data == DataEnd; }
 
@@ -482,6 +486,7 @@ private:
       // with respect to the next record.
       CountersDelta -= sizeof(*Data);
       BitmapDelta -= sizeof(*Data);
+      UniformCountersDelta -= sizeof(*Data);
     }
     Data++;
     ValueDataStart += CurValueDataSize;

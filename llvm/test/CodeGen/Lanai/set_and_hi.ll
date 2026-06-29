@@ -1,4 +1,5 @@
 ; RUN: llc < %s | FileCheck %s
+; RUN: llc -enable-new-pm < %s | FileCheck %s
 
 ; Test matching of and_hi.
 

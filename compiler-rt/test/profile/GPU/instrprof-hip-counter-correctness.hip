@@ -1,10 +1,10 @@
 // Quantitative device-counter correctness: the drained device profile must carry
 // the *exact* per-region execution counts produced by the kernel, not merely
 // "some counts are present". A single launch of 64 threads over classify() must
-// record a function entry count of 64 and an even-branch block count of 32
-// (idx % 2 == 0 holds for exactly half of idx in [0, 64)). This pins the drain +
-// dedup path against silent under/over-counting (e.g. a dedup bug that dropped
-// or doubled a section would change these numbers).
+// record a function entry count of 64, an even-branch block count of 32, and
+// matching block uniformity data. This pins the drain + dedup path against
+// silent under/over-counting (e.g. a dedup bug that dropped or doubled a section
+// would change these numbers).
 //
 // REQUIRES: hip, amdgpu
 // RUN: rm -rf %t.dir && mkdir -p %t.dir
@@ -23,6 +23,7 @@
 // CHECK: _Z8classifyPii:
 // CHECK: Function count: 64
 // CHECK: Block counts: [0, 32]
+// CHECK-NEXT: Block uniformity: [U, D]
 
 #include <hip/hip_runtime.h>
 #include <cstdio>

@@ -214,6 +214,19 @@ ConstRecordAttr::verify(function_ref<InFlightDiagnostic()> emitError,
   if (!sTy)
     return emitError() << "expected !cir.struct or !cir.union type";
 
+  // union record initializer is just a single element that has to match one of
+  // the fields in the union (the new active member).
+  if (sTy.isUnion()) {
+    if (members.size() != 1)
+      return emitError() << "union constant must have exactly one element, got "
+                         << members.size();
+    auto m = mlir::cast<mlir::TypedAttr>(members[0]);
+    if (!llvm::is_contained(sTy.getMembers(), m.getType()))
+      return emitError() << "union element type " << m.getType()
+                         << " is not a member of " << sTy;
+    return success();
+  }
+
   if (sTy.getMembers().size() != members.size())
     return emitError() << "number of elements must match";
 

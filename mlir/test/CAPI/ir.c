@@ -17,6 +17,7 @@
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/Dialect/Func.h"
+#include "mlir-c/Dominance.h"
 #include "mlir-c/IntegerSet.h"
 #include "mlir-c/Interfaces.h"
 #include "mlir-c/RegisterEverything.h"
@@ -2742,6 +2743,163 @@ int testIRMapping(MlirContext ctx) {
   return 0;
 }
 
+int testDominanceInfo(MlirContext ctx) {
+  fprintf(stderr, "@testDominanceInfo\n");
+  // CHECK-LABEL: @testDominanceInfo
+
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("arith"));
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("cf"));
+
+  // Test operation dominance in a single block
+  const char *linearStr = "func.func @f(%arg0: i32) -> i32 {\n"
+                          "  %c0 = arith.constant 0 : i32\n"
+                          "  %c1 = arith.constant 1 : i32\n"
+                          "  %sum = arith.addi %c0, %c1 : i32\n"
+                          "  return %sum : i32\n"
+                          "}\n";
+  MlirModule linearModule =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(linearStr));
+  MlirBlock linearModuleBody = mlirModuleGetBody(linearModule);
+  MlirOperation linearFuncOp = mlirBlockGetFirstOperation(linearModuleBody);
+  MlirRegion linearFuncRegion = mlirOperationGetRegion(linearFuncOp, 0);
+  MlirBlock linearFuncBody = mlirRegionGetFirstBlock(linearFuncRegion);
+
+  MlirOperation c0Op = mlirBlockGetFirstOperation(linearFuncBody);
+  MlirOperation c1Op = mlirOperationGetNextInBlock(c0Op);
+  MlirOperation addOp = mlirOperationGetNextInBlock(c1Op);
+
+  MlirDominanceInfo domInfo = mlirDominanceInfoCreate(linearFuncOp);
+
+  // Earlier ops dominate later ops
+  assert(mlirDominanceInfoProperlyDominatesOperation(domInfo, c0Op, c1Op));
+  assert(mlirDominanceInfoProperlyDominatesOperation(domInfo, c0Op, addOp));
+  assert(mlirDominanceInfoProperlyDominatesOperation(domInfo, c1Op, addOp));
+  assert(!mlirDominanceInfoProperlyDominatesOperation(domInfo, addOp, c0Op));
+
+  // dominates includes self
+  assert(mlirDominanceInfoDominatesOperation(domInfo, c0Op, c0Op));
+  assert(!mlirDominanceInfoProperlyDominatesOperation(domInfo, c0Op, c0Op));
+
+  // Value dominance
+  MlirValue c0Result = mlirOperationGetResult(c0Op, 0);
+  assert(mlirDominanceInfoValueProperlyDominates(domInfo, c0Result, addOp));
+
+  // A value does not properly dominate an op that precedes its definition
+  MlirValue addResult = mlirOperationGetResult(addOp, 0);
+  assert(!mlirDominanceInfoValueProperlyDominates(domInfo, addResult, c0Op));
+
+  // dominates is reflexive on the defining op: a value dominates (but does not
+  // properly dominate) the op that defines it.
+  assert(mlirDominanceInfoValueDominates(domInfo, c0Result, c0Op));
+  assert(!mlirDominanceInfoValueProperlyDominates(domInfo, c0Result, c0Op));
+  assert(mlirDominanceInfoValueDominates(domInfo, c0Result, addOp));
+  assert(!mlirDominanceInfoValueDominates(domInfo, addResult, c0Op));
+
+  mlirDominanceInfoDestroy(domInfo);
+  mlirModuleDestroy(linearModule);
+
+  // Test block dominance with CFG
+  const char *cfgStr = "func.func @g(%cond: i1) -> i32 {\n"
+                       "  %c0 = arith.constant 0 : i32\n"
+                       "  %c1 = arith.constant 1 : i32\n"
+                       "  cf.cond_br %cond, ^bb1, ^bb2\n"
+                       "^bb1:\n"
+                       "  cf.br ^bb3(%c0 : i32)\n"
+                       "^bb2:\n"
+                       "  cf.br ^bb3(%c1 : i32)\n"
+                       "^bb3(%result: i32):\n"
+                       "  return %result : i32\n"
+                       "}\n";
+  MlirModule cfgModule =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(cfgStr));
+  MlirBlock cfgModuleBody = mlirModuleGetBody(cfgModule);
+  MlirOperation cfgFuncOp = mlirBlockGetFirstOperation(cfgModuleBody);
+  MlirRegion cfgFuncRegion = mlirOperationGetRegion(cfgFuncOp, 0);
+
+  MlirBlock bb0 = mlirRegionGetFirstBlock(cfgFuncRegion);
+  MlirBlock bb1 = mlirBlockGetNextInRegion(bb0);
+  MlirBlock bb2 = mlirBlockGetNextInRegion(bb1);
+  MlirBlock bb3 = mlirBlockGetNextInRegion(bb2);
+
+  MlirDominanceInfo cfgDomInfo = mlirDominanceInfoCreate(cfgFuncOp);
+
+  // Entry dominates all
+  assert(mlirDominanceInfoDominatesBlock(cfgDomInfo, bb0, bb1));
+  assert(mlirDominanceInfoDominatesBlock(cfgDomInfo, bb0, bb2));
+  assert(mlirDominanceInfoDominatesBlock(cfgDomInfo, bb0, bb3));
+
+  // Siblings don't dominate each other
+  assert(!mlirDominanceInfoDominatesBlock(cfgDomInfo, bb1, bb2));
+  assert(!mlirDominanceInfoDominatesBlock(cfgDomInfo, bb2, bb1));
+
+  // Self-dominance vs proper dominance
+  assert(mlirDominanceInfoDominatesBlock(cfgDomInfo, bb0, bb0));
+  assert(!mlirDominanceInfoProperlyDominatesBlock(cfgDomInfo, bb0, bb0));
+
+  // Proper dominance across distinct blocks: entry properly dominates the
+  // merge block, but neither branch does (bb3 is reachable from both).
+  assert(mlirDominanceInfoProperlyDominatesBlock(cfgDomInfo, bb0, bb3));
+  assert(!mlirDominanceInfoProperlyDominatesBlock(cfgDomInfo, bb1, bb3));
+
+  // Nearest common dominator
+  MlirBlock common =
+      mlirDominanceInfoFindNearestCommonDominator(cfgDomInfo, bb1, bb2);
+  assert(mlirBlockEqual(common, bb0));
+
+  // NCD of a block with itself is the block itself
+  assert(mlirBlockEqual(
+      mlirDominanceInfoFindNearestCommonDominator(cfgDomInfo, bb3, bb3), bb3));
+
+  // NCD when one block dominates the other is the dominator
+  assert(mlirBlockEqual(
+      mlirDominanceInfoFindNearestCommonDominator(cfgDomInfo, bb0, bb3), bb0));
+
+  // Reachable from entry
+  assert(mlirDominanceInfoIsReachableFromEntry(cfgDomInfo, bb3));
+
+  // Invalidate (no crash)
+  mlirDominanceInfoInvalidate(cfgDomInfo);
+
+  // PostDominanceInfo
+  MlirPostDominanceInfo postDomInfo = mlirPostDominanceInfoCreate(cfgFuncOp);
+
+  // bb3 post-dominates all other blocks (it's the merge point)
+  assert(mlirPostDominanceInfoPostDominatesBlock(postDomInfo, bb3, bb0));
+  assert(mlirPostDominanceInfoPostDominatesBlock(postDomInfo, bb3, bb1));
+  assert(mlirPostDominanceInfoPostDominatesBlock(postDomInfo, bb3, bb2));
+
+  // bb1 does not post-dominate bb0
+  assert(!mlirPostDominanceInfoPostDominatesBlock(postDomInfo, bb1, bb0));
+
+  // Self post-dominance vs proper
+  assert(mlirPostDominanceInfoPostDominatesBlock(postDomInfo, bb3, bb3));
+  assert(
+      !mlirPostDominanceInfoProperlyPostDominatesBlock(postDomInfo, bb3, bb3));
+
+  // Operation post-dominance within a single block
+  MlirOperation cfgC0Op = mlirBlockGetFirstOperation(bb0);
+  MlirOperation cfgC1Op = mlirOperationGetNextInBlock(cfgC0Op);
+  assert(mlirPostDominanceInfoProperlyPostDominatesOperation(postDomInfo,
+                                                             cfgC1Op, cfgC0Op));
+  assert(!mlirPostDominanceInfoProperlyPostDominatesOperation(
+      postDomInfo, cfgC0Op, cfgC1Op));
+
+  // PostDominates (includes self)
+  assert(mlirPostDominanceInfoPostDominatesOperation(postDomInfo, cfgC0Op,
+                                                     cfgC0Op));
+
+  // Invalidate (no crash)
+  mlirPostDominanceInfoInvalidate(postDomInfo);
+
+  mlirPostDominanceInfoDestroy(postDomInfo);
+  mlirDominanceInfoDestroy(cfgDomInfo);
+  mlirModuleDestroy(cfgModule);
+
+  // CHECK: testDominanceInfo: PASSED
+  fprintf(stderr, "testDominanceInfo: PASSED\n");
+  return 0;
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
@@ -2795,6 +2953,8 @@ int main(void) {
     return 18;
   if (testIRMapping(ctx))
     return 19;
+  if (testDominanceInfo(ctx))
+    return 20;
 
   // CHECK: DESTROY MAIN CONTEXT
   // CHECK: reportResourceDelete: resource_i64_blob

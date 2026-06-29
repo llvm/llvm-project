@@ -1272,17 +1272,17 @@ nb::object PyOperation::create(std::string_view name,
         auto &attribute = nb::cast<PyAttribute &>(it.second);
         // TODO: Verify attribute originates from the same context.
         mlirAttributes.emplace_back(std::move(key), attribute);
-      } catch (nb::cast_error &err) {
+      } catch (std::exception &err) {
+        if (it.second.is_none()) {
+          std::string msg = join(
+              "Found an invalid (`None`?) attribute value for the key \"", key,
+              "\" when attempting to create the operation \"", name, "\"");
+          throw std::runtime_error(msg);
+        }
         std::string msg = join("Invalid attribute value for the key \"", key,
                                "\" when attempting to create the operation \"",
                                name, "\" (", err.what(), ")");
         throw nb::type_error(msg.c_str());
-      } catch (std::runtime_error &) {
-        // This exception seems thrown when the value is "None".
-        std::string msg = join(
-            "Found an invalid (`None`?) attribute value for the key \"", key,
-            "\" when attempting to create the operation \"", name, "\"");
-        throw std::runtime_error(msg);
       }
     }
   }

@@ -110,7 +110,7 @@ Block *DynamicAllocator::allocate(const Descriptor *D, unsigned EvalID,
 }
 
 bool DynamicAllocator::deallocate(const Expr *Source,
-                                  const Block *BlockToDelete, InterpState &S) {
+                                  const Block *BlockToDelete) {
   auto It = AllocationSites.find(Source);
   if (It == AllocationSites.end())
     return false;
@@ -123,7 +123,10 @@ bool DynamicAllocator::deallocate(const Expr *Source,
     return BlockToDelete == A.block();
   });
 
-  assert(AllocIt != Site.Allocations.end());
+  // The allocation site it fine, but this block doesn't belong to it. Must've
+  // already been deleted.
+  if (AllocIt == Site.Allocations.end())
+    return false;
 
   Block *B = AllocIt->block();
   assert(B->isInitialized());

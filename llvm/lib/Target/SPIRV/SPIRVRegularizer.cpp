@@ -162,7 +162,7 @@ static void runLowerI1Comparisons(Function &F) {
     if (!Cmp)
       continue;
 
-    bool IsI1 = Cmp->getOperand(0)->getType()->isIntegerTy(1);
+    bool IsI1 = Cmp->getOperand(0)->getType()->getScalarType()->isIntegerTy(1);
     if (!IsI1)
       continue;
 

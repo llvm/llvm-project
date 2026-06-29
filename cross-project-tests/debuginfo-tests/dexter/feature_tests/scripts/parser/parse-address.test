@@ -1,0 +1,15 @@
+RUN: %dexter_regression_test_run --binary %s --use-script --skip-run -- %s 2>&1 | FileCheck %s
+
+Tests that we can correctly parse+print !address nodes.
+
+CHECK:      ? !where {function: foo}
+CHECK-NEXT: : !value 'a': !address 'foo'
+CHECK-NEXT:   !value 'b': !address 'foo+1'
+CHECK-NEXT:   !value 'c': !address '_bar-12'
+
+---
+!where {function: foo}:
+    !value a: !address foo
+    !value b: !address foo + 1
+    !value c: !address _bar -12
+...

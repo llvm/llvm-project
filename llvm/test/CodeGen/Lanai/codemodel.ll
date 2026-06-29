@@ -1,7 +1,11 @@
 ; RUN: llc -mtriple=lanai < %s | FileCheck %s
+; RUN: llc -enable-new-pm -mtriple=lanai < %s | FileCheck %s
 ; RUN: llc -mtriple=lanai < %s -code-model=small  | FileCheck -check-prefix CHECK-SMALL %s
+; RUN: llc -enable-new-pm -mtriple=lanai < %s -code-model=small  | FileCheck -check-prefix CHECK-SMALL %s
 ; RUN: not llc -mtriple=lanai < %s -code-model=tiny 2>&1 | FileCheck -check-prefix CHECK-TINY %s
+; RUN: not llc -enable-new-pm -mtriple=lanai < %s -code-model=tiny 2>&1 | FileCheck -check-prefix CHECK-TINY %s
 ; RUN: not llc -mtriple=lanai < %s -code-model=kernel 2>&1 | FileCheck -check-prefix CHECK-KERNEL %s
+; RUN: not llc -enable-new-pm -mtriple=lanai < %s -code-model=kernel 2>&1 | FileCheck -check-prefix CHECK-KERNEL %s
 
 ; CHECK-TINY: Target does not support the tiny CodeModel
 ; CHECK-KERNEL: Target does not support the kernel CodeModel

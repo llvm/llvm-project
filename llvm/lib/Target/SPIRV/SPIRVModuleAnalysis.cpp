@@ -2773,20 +2773,21 @@ static void handleMIFlagDecoration(
     MachineInstr &I, const SPIRVSubtarget &ST, const SPIRVInstrInfo &TII,
     SPIRV::RequirementHandler &Reqs, const SPIRVGlobalRegistry *GR,
     SPIRV::FPFastMathDefaultInfoVector &FPFastMathDefaultInfoVec) {
-  if (I.getFlag(MachineInstr::MIFlag::NoSWrap) && TII.canUseNSW(I) &&
-      getSymbolicOperandRequirements(SPIRV::OperandCategory::DecorationOperand,
-                                     SPIRV::Decoration::NoSignedWrap, ST, Reqs)
-          .IsSatisfiable) {
-    buildOpDecorate(I.getOperand(0).getReg(), I, TII,
-                    SPIRV::Decoration::NoSignedWrap, {});
-  }
-  if (I.getFlag(MachineInstr::MIFlag::NoUWrap) && TII.canUseNUW(I) &&
-      getSymbolicOperandRequirements(SPIRV::OperandCategory::DecorationOperand,
-                                     SPIRV::Decoration::NoUnsignedWrap, ST,
-                                     Reqs)
-          .IsSatisfiable) {
-    buildOpDecorate(I.getOperand(0).getReg(), I, TII,
-                    SPIRV::Decoration::NoUnsignedWrap, {});
+  if (TII.canUseIntegerWrapDecoration(I)) {
+    if (I.getFlag(MachineInstr::MIFlag::NoSWrap) &&
+        getSymbolicOperandRequirements(
+            SPIRV::OperandCategory::DecorationOperand,
+            SPIRV::Decoration::NoSignedWrap, ST, Reqs)
+            .IsSatisfiable)
+      buildOpDecorate(I.getOperand(0).getReg(), I, TII,
+                      SPIRV::Decoration::NoSignedWrap, {});
+    if (I.getFlag(MachineInstr::MIFlag::NoUWrap) &&
+        getSymbolicOperandRequirements(
+            SPIRV::OperandCategory::DecorationOperand,
+            SPIRV::Decoration::NoUnsignedWrap, ST, Reqs)
+            .IsSatisfiable)
+      buildOpDecorate(I.getOperand(0).getReg(), I, TII,
+                      SPIRV::Decoration::NoUnsignedWrap, {});
   }
   // In Kernel environments, FPFastMathMode on OpExtInst is valid per core
   // spec. For other instruction types, SPV_KHR_float_controls2 is required.

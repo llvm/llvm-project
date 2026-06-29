@@ -24,6 +24,7 @@ def setup_yaml_parser(loader):
         DexRange,
         Label,
         Then,
+        Address,
     ]
     for c in reg_classes:
         c.register_yaml(loader)
@@ -234,6 +235,51 @@ class Then:
 
 ##############
 ## Utility Nodes: Can be used anywhere in a script as a form of syntactic sugar.
+
+
+class Address:
+    """Named label for an address, which may resolve to different values with each test run, but will resolve
+    consistently within a test run."""
+
+    def __init__(self, name: str, offset: int):
+        self.name = name
+        self.offset = offset
+        if not re.match(r"^([a-zA-Z_]\w*)$", name):
+            raise DexterNodeError(self, f'Invalid !address identifier "{name}"')
+
+    def __repr__(self):
+        if not self.offset:
+            offset_str = ""
+        elif self.offset > 0:
+            offset_str = f" + {self.offset}"
+        else:
+            offset_str = f" - {-self.offset}"
+        return f"Address({self.name}{offset_str})"
+
+    @staticmethod
+    def constructor(loader, node):
+        address_str = str(loader.construct_scalar(node)).strip()
+        offset = 0
+        if match := re.match(r"^([a-zA-Z_]\w*)\s*([+-])\s*(\d+)$", address_str):
+            identifier, sign, number = match.groups()
+            offset = int(number) if sign == "+" else -int(number)
+            address_str = identifier
+        return Address(address_str, offset)
+
+    @staticmethod
+    def representer(dumper, data: "Address"):
+        if not data.offset:
+            offset_str = ""
+        elif data.offset > 0:
+            offset_str = f"+{data.offset}"
+        else:
+            offset_str = f"-{-data.offset}"
+        return dumper.represent_scalar("!address", data.name + offset_str)
+
+    @staticmethod
+    def register_yaml(loader):
+        yaml.add_constructor("!address", Address.constructor, loader)
+        yaml.add_representer(Address, Address.representer)
 
 
 @dataclass(frozen=True)

@@ -80,12 +80,14 @@ public:
                    bool HasCounter,
                    AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &
-  addTextureHandle(ResourceClass RC, bool IsROV, ResourceDimension RD,
+  addTextureHandle(ResourceClass RC, bool IsROV, bool IsArray,
+                   ResourceDimension RD,
                    AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &addSamplerHandle();
   BuiltinTypeDeclBuilder &addConstantBufferConversionToType();
-  BuiltinTypeDeclBuilder &addArraySubscriptOperators(
-      ResourceDimension Dim = ResourceDimension::Unknown);
+  BuiltinTypeDeclBuilder &
+  addArraySubscriptOperators(ResourceDimension Dim = ResourceDimension::Unknown,
+                             bool IsArray = false);
 
   // Builtin types constructors
   BuiltinTypeDeclBuilder &addDefaultHandleConstructor(
@@ -100,18 +102,27 @@ public:
 
   // Builtin types methods
   BuiltinTypeDeclBuilder &addLoadMethods();
-  BuiltinTypeDeclBuilder &addTextureLoadMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addTextureLoadMethods(ResourceDimension Dim,
+                                                bool IsArray = false);
   BuiltinTypeDeclBuilder &addByteAddressBufferLoadMethods();
   BuiltinTypeDeclBuilder &addByteAddressBufferStoreMethods();
-  BuiltinTypeDeclBuilder &addSampleMethods(ResourceDimension Dim);
-  BuiltinTypeDeclBuilder &addSampleBiasMethods(ResourceDimension Dim);
-  BuiltinTypeDeclBuilder &addSampleGradMethods(ResourceDimension Dim);
-  BuiltinTypeDeclBuilder &addSampleLevelMethods(ResourceDimension Dim);
-  BuiltinTypeDeclBuilder &addSampleCmpMethods(ResourceDimension Dim);
-  BuiltinTypeDeclBuilder &addSampleCmpLevelZeroMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addSampleMethods(ResourceDimension Dim,
+                                           bool IsArray = false);
+  BuiltinTypeDeclBuilder &addSampleBiasMethods(ResourceDimension Dim,
+                                               bool IsArray = false);
+  BuiltinTypeDeclBuilder &addSampleGradMethods(ResourceDimension Dim,
+                                               bool IsArray = false);
+  BuiltinTypeDeclBuilder &addSampleLevelMethods(ResourceDimension Dim,
+                                                bool IsArray = false);
+  BuiltinTypeDeclBuilder &addSampleCmpMethods(ResourceDimension Dim,
+                                              bool IsArray = false);
+  BuiltinTypeDeclBuilder &addSampleCmpLevelZeroMethods(ResourceDimension Dim,
+                                                       bool IsArray = false);
   BuiltinTypeDeclBuilder &addCalculateLodMethods(ResourceDimension Dim);
-  BuiltinTypeDeclBuilder &addGatherMethods(ResourceDimension Dim);
-  BuiltinTypeDeclBuilder &addGatherCmpMethods(ResourceDimension Dim);
+  BuiltinTypeDeclBuilder &addGatherMethods(ResourceDimension Dim,
+                                           bool IsArray = false);
+  BuiltinTypeDeclBuilder &addGatherCmpMethods(ResourceDimension Dim,
+                                              bool IsArray = false);
   BuiltinTypeDeclBuilder &addIncrementCounterMethod();
   BuiltinTypeDeclBuilder &addDecrementCounterMethod();
   BuiltinTypeDeclBuilder &addHandleAccessFunction(DeclarationName &Name,
@@ -138,7 +149,7 @@ private:
   BuiltinTypeDeclBuilder &
   addResourceMember(StringRef MemberName, ResourceClass RC,
                     ResourceDimension RD, bool IsROV, bool RawBuffer,
-                    bool IsCounter, QualType ElementTy,
+                    bool IsCounter, bool IsArray, QualType ElementTy,
                     AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &addFriend(CXXRecordDecl *Friend);
   CXXRecordDecl *addPrivateNestedRecord(StringRef Name);
@@ -146,7 +157,7 @@ private:
   CXXRecordDecl *addMipsType(ResourceDimension Dim, QualType ReturnType);
   BuiltinTypeDeclBuilder &
   addHandleMember(ResourceClass RC, ResourceDimension RD, bool IsROV,
-                  bool RawBuffer, QualType ElementTy,
+                  bool RawBuffer, bool IsArray, QualType ElementTy,
                   AccessSpecifier Access = AccessSpecifier::AS_private);
   BuiltinTypeDeclBuilder &
   addCounterHandleMember(ResourceClass RC, bool IsROV, bool RawBuffer,

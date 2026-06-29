@@ -311,6 +311,7 @@ void InstrProfCorrelatorImpl<IntPtrT>::addDataProbe(uint64_t NameRef,
       // In this mode, CounterPtr actually stores the section relative address
       // of the counter.
       maybeSwap<IntPtrT>(CounterOffset),
+      /*UniformCounterPtr=*/maybeSwap<IntPtrT>(0),
       // TODO: MC/DC is not yet supported.
       /*BitmapOffset=*/maybeSwap<IntPtrT>(0),
       maybeSwap<IntPtrT>(FunctionPtr),
@@ -318,6 +319,7 @@ void InstrProfCorrelatorImpl<IntPtrT>::addDataProbe(uint64_t NameRef,
       /*ValuesPtr=*/maybeSwap<IntPtrT>(0),
       maybeSwap<uint32_t>(NumCounters),
       /*NumValueSites=*/{maybeSwap<uint16_t>(0), maybeSwap<uint16_t>(0)},
+      /*OffloadDeviceWaveSize=*/maybeSwap<uint16_t>(0),
       // TODO: MC/DC is not yet supported.
       /*NumBitmapBytes=*/maybeSwap<uint32_t>(0),
   });
