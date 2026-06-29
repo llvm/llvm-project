@@ -656,6 +656,30 @@ size_t mlirOperationHashValue(MlirOperation op) {
   return OperationEquivalence::computeHash(unwrap(op));
 }
 
+/// Translates the C equivalence flags to mlir::OperationEquivalence::Flags. The
+/// enumerator values are kept in sync, asserted below.
+static OperationEquivalence::Flags
+unwrapEquivalenceFlags(MlirOperationEquivalenceFlags flags) {
+  static_assert(MLIR_OPERATION_EQUIVALENCE_NONE == OperationEquivalence::None &&
+                    MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS ==
+                        OperationEquivalence::IgnoreLocations &&
+                    MLIR_OPERATION_EQUIVALENCE_IGNORE_DISCARDABLE_ATTRS ==
+                        OperationEquivalence::IgnoreDiscardableAttrs &&
+                    MLIR_OPERATION_EQUIVALENCE_IGNORE_PROPERTIES ==
+                        OperationEquivalence::IgnoreProperties &&
+                    MLIR_OPERATION_EQUIVALENCE_IGNORE_COMMUTATIVITY ==
+                        OperationEquivalence::IgnoreCommutativity,
+                "MlirOperationEquivalenceFlags out of sync with "
+                "OperationEquivalence::Flags");
+  return static_cast<OperationEquivalence::Flags>(flags);
+}
+
+bool mlirOperationIsStructurallyEquivalent(
+    MlirOperation lhs, MlirOperation rhs, MlirOperationEquivalenceFlags flags) {
+  return OperationEquivalence::isEquivalentTo(unwrap(lhs), unwrap(rhs),
+                                              unwrapEquivalenceFlags(flags));
+}
+
 MlirContext mlirOperationGetContext(MlirOperation op) {
   return wrap(unwrap(op)->getContext());
 }

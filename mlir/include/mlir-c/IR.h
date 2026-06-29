@@ -635,6 +635,31 @@ MLIR_CAPI_EXPORTED bool mlirOperationEqual(MlirOperation op,
 /// Compute a hash for the given operation.
 MLIR_CAPI_EXPORTED size_t mlirOperationHashValue(MlirOperation op);
 
+/// Flags controlling structural operation equivalence and hashing. These mirror
+/// `mlir::OperationEquivalence::Flags` and may be combined with bitwise OR.
+typedef enum MlirOperationEquivalenceFlags {
+  /// No flags: locations, discardable attributes, properties and
+  /// commutativity are all significant.
+  MLIR_OPERATION_EQUIVALENCE_NONE = 0,
+  /// Ignore the locations attached to operations.
+  MLIR_OPERATION_EQUIVALENCE_IGNORE_LOCATIONS = 1,
+  /// Ignore the discardable attributes attached to operations.
+  MLIR_OPERATION_EQUIVALENCE_IGNORE_DISCARDABLE_ATTRS = 2,
+  /// Ignore the properties attached to operations.
+  MLIR_OPERATION_EQUIVALENCE_IGNORE_PROPERTIES = 4,
+  /// Ignore commutativity, comparing operands in an order-sensitive way.
+  MLIR_OPERATION_EQUIVALENCE_IGNORE_COMMUTATIVITY = 8,
+} MlirOperationEquivalenceFlags;
+
+/// Checks whether two operations are structurally equivalent, i.e. they have
+/// the same name, attributes, operand and result types, and recursively
+/// equivalent regions. Operand equivalence is tracked structurally during the
+/// traversal (operands need not be the exact same SSA values). The comparison
+/// is parameterized by `flags` (see MlirOperationEquivalenceFlags).
+MLIR_CAPI_EXPORTED bool
+mlirOperationIsStructurallyEquivalent(MlirOperation lhs, MlirOperation rhs,
+                                      MlirOperationEquivalenceFlags flags);
+
 /// Gets the context this operation is associated with
 MLIR_CAPI_EXPORTED MlirContext mlirOperationGetContext(MlirOperation op);
 
