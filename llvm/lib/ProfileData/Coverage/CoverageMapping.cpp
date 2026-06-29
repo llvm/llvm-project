@@ -1604,8 +1604,19 @@ LineCoverageStats::LineCoverageStats(
   // wrapped count.
   if (WrappedSegment)
     ExecutionCount = WrappedSegment->Count;
-  if (!MinRegionCount)
+  if (!MinRegionCount) {
+    // If no region entries on this line and the wrapping segment is a gap
+    // region, check for non-gap segments with HasCount (e.g., continuation
+    // of a covered region after a gap). Use their max count instead of the
+    // gap's count of 0.
+    if (WrappedSegment && WrappedSegment->IsGapRegion) {
+      for (const auto *LS : LineSegments) {
+        if (!LS->IsGapRegion && LS->HasCount)
+          ExecutionCount = std::max(ExecutionCount, LS->Count);
+      }
+    }
     return;
+  }
   for (const auto *LS : LineSegments)
     if (isStartOfRegion(LS))
       ExecutionCount = std::max(ExecutionCount, LS->Count);
