@@ -330,15 +330,14 @@ function(_mlir_python_install_sources name source_root_dir destination)
 endfunction()
 
 # Define exception handling and RTTI flags.
-function(_mlir_python_eh_rtti_flags out_var)
+macro(_mlir_python_eh_rtti_flags)
   set(eh_rtti_enable)
   if(MSVC)
     set(eh_rtti_enable /EHsc /GR)
   elseif(LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL)
     set(eh_rtti_enable -frtti -fexceptions)
   endif()
-  set(${out_var} "${eh_rtti_enable}" PARENT_SCOPE)
-endfunction()
+endmacro()
 
 function(build_nanobind_lib)
   cmake_parse_arguments(ARG
@@ -377,7 +376,7 @@ function(build_nanobind_lib)
     # Avoid some warnings from upstream nanobind.
     # If a superproject set MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES, let
     # the super project handle compile options as it wishes.
-    _mlir_python_eh_rtti_flags(eh_rtti_enable)
+    _mlir_python_eh_rtti_flags()
     target_compile_options(${NB_LIBRARY_TARGET_NAME}
       PRIVATE
         -Wno-c++98-compat-extra-semi
@@ -992,7 +991,7 @@ function(add_mlir_python_extension libname extname nb_library_target_name)
 
   # The extension itself must be compiled with RTTI and exceptions enabled.
   # Also, some warning classes triggered by nanobind are disabled.
-  _mlir_python_eh_rtti_flags(eh_rtti_enable)
+  _mlir_python_eh_rtti_flags()
 
   if(ARG__PRIVATE_SUPPORT_LIB)
     add_library(${libname} SHARED ${ARG_SOURCES})
