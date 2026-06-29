@@ -39,6 +39,7 @@
 #include "UseEmplaceCheck.h"
 #include "UseEqualsDefaultCheck.h"
 #include "UseEqualsDeleteCheck.h"
+#include "UseIfConstevalCheck.h"
 #include "UseIntegerSignComparisonCheck.h"
 #include "UseNodiscardCheck.h"
 #include "UseNoexceptCheck.h"
@@ -90,6 +91,8 @@ public:
     CheckFactories.registerCheck<PassByValueCheck>("modernize-pass-by-value");
     CheckFactories.registerCheck<UseDesignatedInitializersCheck>(
         "modernize-use-designated-initializers");
+    CheckFactories.registerCheck<UseIfConstevalCheck>(
+        "modernize-use-if-consteval");
     CheckFactories.registerCheck<UseIntegerSignComparisonCheck>(
         "modernize-use-integer-sign-comparison");
     CheckFactories.registerCheck<UseRangesCheck>("modernize-use-ranges");
