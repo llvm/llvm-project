@@ -229,8 +229,8 @@ H::~H() { call_in_dtor(); }
 // CLANG22-MSABI-NEXT: br i1 %[[CHCK2]], label %dtor.call_class_delete, label %dtor.call_glob_delete
 //
 // CLANG22-MSABI-LABEL: dtor.call_glob_delete:
-// CLANG22-MSABI64: call void @"??3@YAXPEAX_K@Z"(ptr noundef %{{.*}}, i64 noundef 48)
-// CLANG22-MSABI32: call void @"??3@YAXPAXIW4align_val_t@std@@@Z"(ptr noundef %{{.*}}, i32 noundef 32, i32 noundef 16)
+// CLANG22-MSABI64: call void @"?__global_delete@@YAXPEAX_K@Z"(ptr noundef %{{.*}}, i64 noundef 48)
+// CLANG22-MSABI32: call void @"?__global_delete@@YAXPAXIW4align_val_t@std@@@Z"(ptr noundef %{{.*}}, i32 noundef 32, i32 noundef 16)
 // CLANG22-MSABI-NEXT: br label %[[RETURN:.*]]
 //
 // CLANG21-MSABI: dtor.call_delete:
@@ -284,8 +284,8 @@ I::~I() { call_in_dtor(); }
 // CLANG22-MSABI-NEXT: br i1 %[[CHCK2]], label %dtor.call_class_delete, label %dtor.call_glob_delete
 //
 // CLANG22-MSABI: dtor.call_glob_delete:
-// CLANG22-MSABI64: call void @"??3@YAXPEAX_KW4align_val_t@std@@@Z"(ptr noundef %{{.*}}, i64 noundef 96, i64 noundef 32)
-// CLANG22-MSABI32: call void @"??3@YAXPAXIW4align_val_t@std@@@Z"(ptr noundef %{{.*}}, i32 noundef 64, i32 noundef 32)
+// CLANG22-MSABI64: call void @"?__global_delete@@YAXPEAX_KW4align_val_t@std@@@Z"(ptr noundef %{{.*}}, i64 noundef 96, i64 noundef 32)
+// CLANG22-MSABI32: call void @"?__global_delete@@YAXPAXIW4align_val_t@std@@@Z"(ptr noundef %{{.*}}, i32 noundef 64, i32 noundef 32)
 // CLANG22-MSABI-NEXT: br label %[[RETURN:.*]]
 //
 // CLANG21-MSABI: dtor.call_delete:

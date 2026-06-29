@@ -953,6 +953,14 @@ Windows Support
   automatically enables V3 unwind info (`-fwinx64-eh-unwind=v3`) if no
   explicit unwind version was specified.
 
+- In MSVC compatibility mode, scalar and vector deleting destructors now call
+  ``__global_delete`` instead of directly referencing ``::operator delete``.
+  This matches MSVC's behavior and fixes ``LNK2001`` linker errors in
+  environments (such as kernel mode) where no global ``::operator delete``
+  exists. When the translation unit contains a ``::delete`` expression, a
+  ``__global_delete`` forwarding body that calls ``::operator delete`` is
+  emitted automatically.
+
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 

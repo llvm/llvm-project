@@ -29,6 +29,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include "llvm/Transforms/Utils/SanitizerStats.h"
 #include <optional>
 
@@ -1409,6 +1410,88 @@ static bool CanSkipVTablePointerInitialization(CodeGenFunction &CGF,
   return true;
 }
 
+/// Get or create the MSVC-compatible __global_delete wrapper function.
+///
+/// Destructor helpers call __global_delete instead of ::operator delete
+/// directly. __global_delete is a weak symbol that defaults to
+/// __empty_global_delete (a trap) via /ALTERNATENAME. When this TU contains
+/// a ::delete expression, a real forwarding body is emitted at end-of-file
+/// (see CodeGenModule::Release). If ::delete is never used anywhere in the
+/// program, the trap default wins - but that path is unreachable at runtime,
+/// so it only fires if something is seriously wrong (e.g., memory
+/// corruption). Both symbols are compiler-generated.
+static llvm::Constant *
+getOrCreateMSVCGlobalDeleteWrapper(CodeGenModule &CGM,
+                                   const FunctionDecl *GlobOD) {
+  assert(CGM.getTarget().getCXXABI().isMicrosoft() &&
+         "__global_delete wrapper is only used with the Microsoft ABI");
+  llvm::Module &M = CGM.getModule();
+  llvm::LLVMContext &LLVMCtx = M.getContext();
+
+  llvm::Constant *GlobDeleteCallee = CGM.GetAddrOfFunction(GlobOD);
+  auto *GlobDeleteFn = cast<llvm::Function>(GlobDeleteCallee);
+  llvm::FunctionType *FnTy = GlobDeleteFn->getFunctionType();
+
+  // Derive __global_delete and __empty_global_delete mangled names.
+  // Global ::operator delete mangling:   ??3@<signature>
+  // Global ::operator delete[] mangling: ??_V@<signature>
+  // We construct:
+  //   ?__global_delete@@<signature>
+  //   ?__empty_global_delete@@<signature>
+  StringRef GlobDeleteMangledName = GlobDeleteFn->getName();
+  StringRef Signature;
+  if (GlobDeleteMangledName.starts_with("??3@"))
+    Signature = GlobDeleteMangledName.substr(4);
+  else if (GlobDeleteMangledName.starts_with("??_V@"))
+    Signature = GlobDeleteMangledName.substr(5);
+  else
+    llvm_unreachable("unexpected global operator delete mangling");
+
+  std::string GlobalDeleteName = ("?__global_delete@@" + Signature).str();
+  std::string EmptyGlobalDeleteName =
+      ("?__empty_global_delete@@" + Signature).str();
+
+  // Only set up the wrapper once per module.
+  if (llvm::Function *Existing = M.getFunction(GlobalDeleteName))
+    return Existing;
+
+  // Create __empty_global_delete fallback (trap - this path is unreachable
+  // at runtime when ::delete is never used; see the doc comment above).
+  llvm::Function *EmptyFn = llvm::Function::Create(
+      FnTy, llvm::GlobalValue::LinkOnceODRLinkage, EmptyGlobalDeleteName, &M);
+  EmptyFn->setComdat(M.getOrInsertComdat(EmptyGlobalDeleteName));
+  EmptyFn->setUnnamedAddr(llvm::GlobalValue::UnnamedAddr::Global);
+  CGM.SetLLVMFunctionAttributesForDefinition(GlobOD, EmptyFn);
+  auto *BB = llvm::BasicBlock::Create(LLVMCtx, "", EmptyFn);
+  llvm::Function *TrapFn =
+      llvm::Intrinsic::getOrInsertDeclaration(&M, llvm::Intrinsic::trap);
+  auto *TrapCall = llvm::CallInst::Create(TrapFn, {}, "", BB);
+  TrapCall->setDoesNotReturn();
+  TrapCall->setDoesNotThrow();
+  new llvm::UnreachableInst(LLVMCtx, BB);
+
+  // Emit /ALTERNATENAME linker directive: if __global_delete isn't provided,
+  // fall back to the trapping __empty_global_delete.
+  std::string AltOption =
+      "/alternatename:" + GlobalDeleteName + "=" + EmptyGlobalDeleteName;
+  auto *AltMD =
+      llvm::MDNode::get(LLVMCtx, {llvm::MDString::get(LLVMCtx, AltOption)});
+  M.getOrInsertNamedMetadata("llvm.linker.options")->addOperand(AltMD);
+
+  // Nothing directly uses this function other than the /alternatename
+  // directive, so explicitly mark it as used.
+  appendToUsed(M, {EmptyFn});
+
+  // Return the __global_delete wrapper function to call.
+  auto GlobalDeleteCallee = M.getOrInsertFunction(GlobalDeleteName, FnTy);
+
+  // Register this variant so we can emit a real forwarding body at end-of-TU
+  // if this TU contains any direct use of global ::operator delete.
+  CGM.addPendingGlobalDelete(GlobalDeleteName, GlobOD);
+
+  return cast<llvm::Function>(GlobalDeleteCallee.getCallee());
+}
+
 static void EmitConditionalArrayDtorCall(const CXXDestructorDecl *DD,
                                          CodeGenFunction &CGF,
                                          llvm::Value *ShouldDeleteCondition) {
@@ -1492,9 +1575,18 @@ static void EmitConditionalArrayDtorCall(const CXXDestructorDecl *DD,
       CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
 
       CGF.EmitBlock(GlobDelete);
+      // Use __global_delete wrapper instead of directly calling
+      // ::operator delete to match MSVC's behavior. See the doc comment on
+      // getOrCreateMSVCGlobalDeleteWrapper for details.
+      llvm::Constant *GlobalDeleteWrapper = getOrCreateMSVCGlobalDeleteWrapper(
+          CGF.CGM, Dtor->getGlobalArrayOperatorDelete());
+      // For dllexport classes, emit forwarding bodies since the dtor is
+      // exported and another TU may not provide the forwarding body.
+      if (Dtor->hasAttr<DLLExportAttr>())
+        CGF.CGM.noteDirectGlobalDelete();
       CGF.EmitDeleteCall(Dtor->getGlobalArrayOperatorDelete(), allocatedPtr,
                          CGF.getContext().getCanonicalTagType(ClassDecl),
-                         numElements, cookieSize);
+                         numElements, cookieSize, GlobalDeleteWrapper);
     }
   } else {
     // No operators delete[] were found, so emit a trap.
@@ -1721,9 +1813,12 @@ void EmitConditionalDtorDeleteCall(CodeGenFunction &CGF,
   CGF.Builder.CreateCondBr(ShouldCallDelete, continueBB, callDeleteBB);
 
   CGF.EmitBlock(callDeleteBB);
-  auto EmitDeleteAndGoToEnd = [&](const FunctionDecl *DeleteOp) {
+  auto EmitDeleteAndGoToEnd = [&](const FunctionDecl *DeleteOp,
+                                  llvm::Constant *CalleeOverride = nullptr) {
     CGF.EmitDeleteCall(DeleteOp, LoadThisForDtorDelete(CGF, Dtor),
-                       Context.getCanonicalTagType(ClassDecl));
+                       Context.getCanonicalTagType(ClassDecl),
+                       /*NumElements=*/nullptr, /*CookieSize=*/CharUnits(),
+                       CalleeOverride);
     if (ReturnAfterDelete)
       CGF.EmitBranchThroughCleanup(CGF.ReturnBlock);
     else
@@ -1747,7 +1842,16 @@ void EmitConditionalDtorDeleteCall(CodeGenFunction &CGF,
     CGF.Builder.CreateCondBr(ShouldCallGlobDelete, ClassDelete, GlobDelete);
     CGF.EmitBlock(GlobDelete);
 
-    EmitDeleteAndGoToEnd(GlobOD);
+    // Use __global_delete wrapper instead of directly calling
+    // ::operator delete to match MSVC's behavior. See the doc comment on
+    // getOrCreateMSVCGlobalDeleteWrapper for details.
+    llvm::Constant *GlobalDeleteWrapper =
+        getOrCreateMSVCGlobalDeleteWrapper(CGF.CGM, GlobOD);
+    // For dllexport classes, emit forwarding bodies since the dtor is
+    // exported and another TU may not provide the forwarding body.
+    if (Dtor->hasAttr<DLLExportAttr>())
+      CGF.CGM.noteDirectGlobalDelete();
+    EmitDeleteAndGoToEnd(GlobOD, GlobalDeleteWrapper);
     CGF.EmitBlock(ClassDelete);
   }
   EmitDeleteAndGoToEnd(OD);
