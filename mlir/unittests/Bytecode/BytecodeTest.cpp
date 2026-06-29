@@ -19,7 +19,9 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/MemoryBufferRef.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -229,6 +231,38 @@ TEST(Bytecode, OpWithoutProperties) {
 
   EXPECT_TRUE(OperationEquivalence::computeHash(op.get()) ==
               OperationEquivalence::computeHash(roundtripped));
+}
+
+TEST(Bytecode, SourceMgrLifetimeExtendedByReader) {
+  MLIRContext context;
+
+  // Create a trivial module and serialize it to bytecode.
+  OwningOpRef<ModuleOp> module =
+      ModuleOp::create(UnknownLoc::get(&context));
+  std::string bytecode;
+  llvm::raw_string_ostream os(bytecode);
+  ASSERT_TRUE(succeeded(writeBytecodeToFile(module.get(), os)));
+
+  // Build a BytecodeReader whose SourceMgr goes out of scope immediately after
+  // construction. The reader must keep it alive via shared ownership, otherwise
+  // readTopLevel will access freed memory (UAF).
+  ParserConfig config(&context);
+  std::shared_ptr<BytecodeReader> reader;
+  {
+    auto sourceMgr = std::make_shared<llvm::SourceMgr>();
+    auto buffer = llvm::MemoryBuffer::getMemBufferCopy(bytecode, "model");
+    sourceMgr->AddNewSourceBuffer(std::move(buffer), llvm::SMLoc());
+    llvm::MemoryBufferRef bufRef =
+        *sourceMgr->getMemoryBuffer(sourceMgr->getMainFileID());
+
+    reader = std::make_shared<BytecodeReader>(
+        bufRef, config, /*lazyLoad=*/true, sourceMgr);
+    // sourceMgr destroyed here — reader must have extended its lifetime.
+  }
+
+  Block block;
+  EXPECT_TRUE(succeeded(
+      reader->readTopLevel(&block, [](Operation *) { return true; })));
 }
 
 TEST(Bytecode, DeepCallSiteLoc) {
