@@ -538,9 +538,7 @@ Attribute Changes in Clang
   ISO 18037 fixed-point ``printf`` specifiers.
 
 - The ``const`` and ``pure`` attributes only apply to functions; they are now
-  diagnosed and ignored when applied to anything else. Additionally, calling
-  a function marked ``noreturn`` from a function marked ``const`` or ``pure``
-  is now diagnosed as undefined behavior (#GH129022).
+  diagnosed and ignored when applied to anything else.
 
 Improvements to Clang's diagnostics
 -----------------------------------
@@ -806,6 +804,7 @@ Bug Fixes to C++ Support
   could directly make the program ill-formed.
 - Typo correction now corrects the name qualifier for invalid template names.
 - Fix a problem where pack index expressions where incorrectly being regarded as equivalent.
+- Correctly diagnose narrowing in pack index expressions. (#GH205650)
 - Fixed a bug where captured variables in non-mutable lambdas were incorrectly treated as mutable
   when used inside decltype in the return type. (#GH180460)
 - Fixed a crash when evaluating uninitialized GCC vector/ext_vector_type vectors in ``constexpr``. (#GH180044)

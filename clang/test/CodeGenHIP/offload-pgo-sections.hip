@@ -3,7 +3,7 @@
 
 // Verify the per-TU __llvm_profile_sections_<CUID> global for HIP+PGO.
 // Device side: clang emits the names-postfix marker, and the InstrProfiling
-// pass emits the populated 7-pointer struct in addrspace(1) -- but only when
+// pass emits the populated 9-pointer struct in addrspace(1) -- but only when
 // the TU actually has profile data records. Host compile: void* shadow
 // registered with the HIP runtime and the profile runtime's drain list.
 
@@ -58,32 +58,43 @@ __global__ void kernel(int *p) { *p = helper(*p); }
 // DEV-DAG: @__stop___llvm_prf_cnts = external hidden addrspace(1) global i8
 // DEV-DAG: @__start___llvm_prf_data = external hidden addrspace(1) global i8
 // DEV-DAG: @__stop___llvm_prf_data = external hidden addrspace(1) global i8
+// DEV-DAG: @__start___llvm_prf_ucnts = external hidden addrspace(1) global i8
+// DEV-DAG: @__stop___llvm_prf_ucnts = external hidden addrspace(1) global i8
 // DEV-DAG: @__llvm_profile_raw_version = external addrspace(1) constant i64
 // DEV-DAG: @__llvm_prf_nm_[[CUID:[0-9a-f]+]] = protected addrspace(1) constant {{.*}}section "__llvm_prf_names"
-// DEV-DAG: @__llvm_profile_sections_[[CUID]] = protected addrspace(1) constant {{.*}}@__start___llvm_prf_names{{.*}}@__stop___llvm_prf_names{{.*}}@__start___llvm_prf_cnts{{.*}}@__stop___llvm_prf_cnts{{.*}}@__start___llvm_prf_data{{.*}}@__stop___llvm_prf_data{{.*}}@__llvm_profile_raw_version
+// DEV-DAG: @__llvm_profile_sections_[[CUID]] = protected addrspace(1) constant {{.*}}@__start___llvm_prf_names{{.*}}@__stop___llvm_prf_names{{.*}}@__start___llvm_prf_cnts{{.*}}@__stop___llvm_prf_cnts{{.*}}@__start___llvm_prf_data{{.*}}@__stop___llvm_prf_data{{.*}}@__start___llvm_prf_ucnts{{.*}}@__stop___llvm_prf_ucnts{{.*}}@__llvm_profile_raw_version
 // DEV-DAG: @llvm.compiler.used = {{.*}}@__llvm_profile_sections_[[CUID]]
 
 // HOST: @__llvm_profile_sections_[[CUID:[0-9a-f]+]] = global ptr null
+// HOST-DAG: @__llvm_profile_shadow_data_[[CUID]]_{{[0-9]+}} = global ptr null
+// HOST-DAG: @__llvm_profile_shadow_cnts_[[CUID]]_{{[0-9]+}} = global ptr null
+// HOST-DAG: @__llvm_profile_shadow_ucnts_[[CUID]]_{{[0-9]+}} = global ptr null
 // HOST-DAG: @__llvm_profile_shadow_names_[[CUID]]_{{[0-9]+}} = global ptr null
 // HOST: @llvm.compiler.used = {{.*}}@__llvm_profile_sections_[[CUID]]
 // HOST: define internal void @__hip_register_globals
 // HOST: call void @__hipRegisterVar({{.*}}@__llvm_profile_sections_[[CUID]],
 // HOST: call void @__llvm_profile_offload_register_shadow_variable(ptr @__llvm_profile_sections_[[CUID]])
+// HOST-DAG: call void @__llvm_profile_offload_register_section_shadow_variable(ptr @__llvm_profile_shadow_data_[[CUID]]_{{[0-9]+}})
+// HOST-DAG: call void @__llvm_profile_offload_register_section_shadow_variable(ptr @__llvm_profile_shadow_cnts_[[CUID]]_{{[0-9]+}})
+// HOST-DAG: call void @__llvm_profile_offload_register_section_shadow_variable(ptr @__llvm_profile_shadow_ucnts_[[CUID]]_{{[0-9]+}})
 // HOST: call void @__llvm_profile_offload_register_section_shadow_variable(ptr @__llvm_profile_shadow_names_[[CUID]]_{{[0-9]+}})
 
 // HOST-RDC: @__llvm_profile_sections_[[CUID:[0-9a-f]+]] = global ptr null
 // HOST-RDC-DAG: @__llvm_profile_shadow_data_[[CUID]]_0 = global ptr null
 // HOST-RDC-DAG: @__llvm_profile_shadow_cnts_[[CUID]]_1 = global ptr null
-// HOST-RDC-DAG: @__llvm_profile_shadow_names_[[CUID]]_2 = global ptr null
+// HOST-RDC-DAG: @__llvm_profile_shadow_ucnts_[[CUID]]_2 = global ptr null
+// HOST-RDC-DAG: @__llvm_profile_shadow_names_[[CUID]]_3 = global ptr null
 // HOST-RDC-DAG: @.offloading.entry.{{.*}} = weak constant %struct.__tgt_offload_entry {{.*}}ptr @__llvm_profile_sections_[[CUID]]
 // HOST-RDC-DAG: @.offloading.entry.{{.*}} = weak constant %struct.__tgt_offload_entry {{.*}}ptr @__llvm_profile_shadow_data_[[CUID]]_0
 // HOST-RDC-DAG: @.offloading.entry.{{.*}} = weak constant %struct.__tgt_offload_entry {{.*}}ptr @__llvm_profile_shadow_cnts_[[CUID]]_1
-// HOST-RDC-DAG: @.offloading.entry.{{.*}} = weak constant %struct.__tgt_offload_entry {{.*}}ptr @__llvm_profile_shadow_names_[[CUID]]_2
+// HOST-RDC-DAG: @.offloading.entry.{{.*}} = weak constant %struct.__tgt_offload_entry {{.*}}ptr @__llvm_profile_shadow_ucnts_[[CUID]]_2
+// HOST-RDC-DAG: @.offloading.entry.{{.*}} = weak constant %struct.__tgt_offload_entry {{.*}}ptr @__llvm_profile_shadow_names_[[CUID]]_3
 // HOST-RDC: define internal void @__llvm_profile_register_shadow.[[CUID]]()
 // HOST-RDC: call void @__llvm_profile_offload_register_shadow_variable(ptr @__llvm_profile_sections_[[CUID]])
 // HOST-RDC-DAG: call void @__llvm_profile_offload_register_section_shadow_variable(ptr @__llvm_profile_shadow_data_[[CUID]]_0)
 // HOST-RDC-DAG: call void @__llvm_profile_offload_register_section_shadow_variable(ptr @__llvm_profile_shadow_cnts_[[CUID]]_1)
-// HOST-RDC-DAG: call void @__llvm_profile_offload_register_section_shadow_variable(ptr @__llvm_profile_shadow_names_[[CUID]]_2)
+// HOST-RDC-DAG: call void @__llvm_profile_offload_register_section_shadow_variable(ptr @__llvm_profile_shadow_ucnts_[[CUID]]_2)
+// HOST-RDC-DAG: call void @__llvm_profile_offload_register_section_shadow_variable(ptr @__llvm_profile_shadow_names_[[CUID]]_3)
 
 // NONE-NOT: __llvm_profile_sections_
 // NONE-NOT: __llvm_profile_offload_register_shadow_variable

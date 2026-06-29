@@ -34,7 +34,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeLanaiTarget() {
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   initializeLanaiAsmPrinterPass(PR);
   initializeLanaiDAGToDAGISelLegacyPass(PR);
-  initializeLanaiMemAluCombinerPass(PR);
+  initializeLanaiMemAluCombinerLegacyPass(PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -106,11 +106,11 @@ bool LanaiPassConfig::addInstSelector() {
 // Implemented by targets that want to run passes immediately before
 // machine code is emitted.
 void LanaiPassConfig::addPreEmitPass() {
-  addPass(createLanaiDelaySlotFillerPass(getLanaiTargetMachine()));
+  addPass(createLanaiDelaySlotFillerLegacyPass(getLanaiTargetMachine()));
 }
 
 // Run passes after prolog-epilog insertion and before the second instruction
 // scheduling pass.
 void LanaiPassConfig::addPreSched2() {
-  addPass(createLanaiMemAluCombinerPass());
+  addPass(createLanaiMemAluCombinerLegacyPass());
 }
