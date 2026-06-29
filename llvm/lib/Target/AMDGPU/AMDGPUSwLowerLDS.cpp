@@ -696,7 +696,7 @@ void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
           getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, LIOperand);
       LoadInst *NewLI = IRB.CreateAlignedLoad(LI->getType(), Replacement,
                                               LI->getAlign(), LI->isVolatile());
-      NewLI->setAttributes(LI->getAttributes());
+      NewLI->setProperties(LI->getProperties());
       AsanInfo.Instructions.insert(NewLI);
       LI->replaceAllUsesWith(NewLI);
       LI->eraseFromParent();
@@ -706,7 +706,7 @@ void AMDGPUSwLowerLDS::translateLDSMemoryOperationsToGlobalMemory(
           getTranslatedGlobalMemoryPtrOfLDS(LoadMallocPtr, SIOperand);
       StoreInst *NewSI = IRB.CreateAlignedStore(
           SI->getValueOperand(), Replacement, SI->getAlign(), SI->isVolatile());
-      NewSI->setAttributes(SI->getAttributes());
+      NewSI->setProperties(SI->getProperties());
       AsanInfo.Instructions.insert(NewSI);
       SI->replaceAllUsesWith(NewSI);
       SI->eraseFromParent();

@@ -172,8 +172,8 @@ private:
   }
 };
 
-/// A structure representing the attributes of a load or store instruction.
-struct LoadStoreInstAttributes {
+/// A structure representing the properties of a load or store instruction.
+struct LoadStoreInstProperties {
   bool IsVolatile = false;
   Align Alignment;
   AtomicOrdering Ordering = AtomicOrdering::NotAtomic;
@@ -257,17 +257,17 @@ public:
     setSyncScopeID(SSID);
   }
 
-  /// Returns the attributes of this load instruction.
-  LoadStoreInstAttributes getAttributes() const {
+  /// Returns the properties of this load instruction.
+  LoadStoreInstProperties getProperties() const {
     return {isVolatile(), getAlign(), getOrdering(), getSyncScopeID()};
   }
 
-  /// Sets the attributes of this load instruction.
-  void setAttributes(const LoadStoreInstAttributes &Attrs) {
-    setVolatile(Attrs.IsVolatile);
-    setAlignment(Attrs.Alignment);
-    setOrdering(Attrs.Ordering);
-    setSyncScopeID(Attrs.SSID);
+  /// Sets the properties of this load instruction.
+  void setProperties(const LoadStoreInstProperties &Props) {
+    setVolatile(Props.IsVolatile);
+    setAlignment(Props.Alignment);
+    setOrdering(Props.Ordering);
+    setSyncScopeID(Props.SSID);
   }
 
   bool isSimple() const { return !isAtomic() && !isVolatile(); }
@@ -394,17 +394,17 @@ public:
     setSyncScopeID(SSID);
   }
 
-  /// Returns the attributes of this store instruction.
-  LoadStoreInstAttributes getAttributes() const {
+  /// Returns the properties of this store instruction.
+  LoadStoreInstProperties getProperties() const {
     return {isVolatile(), getAlign(), getOrdering(), getSyncScopeID()};
   }
 
-  /// Sets the attributes of this store instruction.
-  void setAttributes(const LoadStoreInstAttributes &Attrs) {
-    setVolatile(Attrs.IsVolatile);
-    setAlignment(Attrs.Alignment);
-    setOrdering(Attrs.Ordering);
-    setSyncScopeID(Attrs.SSID);
+  /// Sets the properties of this store instruction.
+  void setProperties(const LoadStoreInstProperties &Props) {
+    setVolatile(Props.IsVolatile);
+    setAlignment(Props.Alignment);
+    setOrdering(Props.Ordering);
+    setSyncScopeID(Props.SSID);
   }
 
   bool isSimple() const { return !isAtomic() && !isVolatile(); }

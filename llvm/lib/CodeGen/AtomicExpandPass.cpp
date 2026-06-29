@@ -564,7 +564,7 @@ LoadInst *AtomicExpandImpl::convertAtomicLoadToIntegerType(LoadInst *LI) {
   Value *Addr = LI->getPointerOperand();
 
   auto *NewLI = Builder.CreateLoad(NewTy, Addr);
-  NewLI->setAttributes(LI->getAttributes());
+  NewLI->setProperties(LI->getProperties());
   LLVM_DEBUG(dbgs() << "Replaced " << *LI << " with " << *NewLI << "\n");
 
   Value *NewVal = LI->getType()->isPtrOrPtrVectorTy()
@@ -718,7 +718,7 @@ StoreInst *AtomicExpandImpl::convertAtomicStoreToIntegerType(StoreInst *SI) {
   Value *Addr = SI->getPointerOperand();
 
   StoreInst *NewSI = Builder.CreateStore(NewVal, Addr);
-  NewSI->setAttributes(SI->getAttributes());
+  NewSI->setProperties(SI->getProperties());
   LLVM_DEBUG(dbgs() << "Replaced " << *SI << " with " << *NewSI << "\n");
   SI->eraseFromParent();
   return NewSI;
