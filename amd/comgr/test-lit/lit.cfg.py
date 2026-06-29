@@ -5,7 +5,9 @@ import lit.formats
 
 config.name = "Comgr"
 config.suffixes = {".hip", ".cl", ".c", ".cpp", ".s"}
-config.test_format = lit.formats.ShTest(True)
+config.test_format = lit.formats.ShTest(
+    execute_external=True, force_execute_external=True
+)
 
 config.excludes = ["comgr-sources"]
 
