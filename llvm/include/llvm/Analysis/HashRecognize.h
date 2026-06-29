@@ -94,10 +94,10 @@ public:
   // Mu is used in the first clmul operation. Mu = floor(x^(BW+TC) / P(x)).
   // FullGenPoly is used in the second clmul operation, and is \p GenPoly
   // with the implied BW'th bit.
-  // Endianness is accounted for using \p ByteOrderSwapped.
+  // Endianness is accounted for using \p IsBigEndian.
   LLVM_ABI static std::pair<APInt, APInt>
   genBarrettConstants(const APInt &GenPoly, unsigned TripCount,
-                      bool ByteOrderSwapped);
+                      bool IsBigEndian);
 
   LLVM_ABI void print(raw_ostream &OS) const;
 
