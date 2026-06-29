@@ -511,13 +511,6 @@ define void @wider_nusw_does_not_imply_narrower(ptr %dst, i64 %n) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = trunc i64 [[INDEX]] to i32
-; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[OFFSET_IDX]], 1
-; CHECK-NEXT:    [[TMP18:%.*]] = add i32 [[OFFSET_IDX]], 2
-; CHECK-NEXT:    [[TMP19:%.*]] = add i32 [[OFFSET_IDX]], 3
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i32> poison, i32 [[OFFSET_IDX]], i32 0
-; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i32> [[TMP20]], i32 [[TMP17]], i32 1
-; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x i32> [[TMP21]], i32 [[TMP18]], i32 2
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i32> [[TMP26]], i32 [[TMP19]], i32 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = and i32 [[OFFSET_IDX]], 15
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext nneg i32 [[TMP10]] to i64
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw i8, ptr [[DST]], i64 [[TMP11]]
@@ -533,12 +526,12 @@ define void @wider_nusw_does_not_imply_narrower(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[UMAX4]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[TMP24:%.*]] = phi i64 [ [[TMP23]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[TMP25:%.*]] = phi i32 [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[TMP17:%.*]] = phi i64 [ [[TMP23]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; CHECK-NEXT:    [[TMP18:%.*]] = phi i32 [ [[TMP13]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV_ZEXT:%.*]] = phi i64 [ [[TMP24]], %[[SCALAR_PH]] ], [ [[IV_NEXT_ZEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[TMP25]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_ZEXT:%.*]] = phi i64 [ [[TMP17]], %[[SCALAR_PH]] ], [ [[IV_NEXT_ZEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[TMP18]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_MOD:%.*]] = and i32 [[IV]], 15
 ; CHECK-NEXT:    [[IV_MOD_ZEXT:%.*]] = zext nneg i32 [[IV_MOD]] to i64
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds nuw i8, ptr [[DST]], i64 [[IV_MOD_ZEXT]]

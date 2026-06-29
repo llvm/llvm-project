@@ -270,17 +270,7 @@ define void @replace_first_order_recurrence_with_versioned_iv_for_uniform_non_po
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP20:%.*]] = trunc i64 [[INDEX]] to i32
-; CHECK-NEXT:    [[TMP24:%.*]] = add i32 [[TMP20]], 1
-; CHECK-NEXT:    [[TMP27:%.*]] = add i32 [[TMP20]], 2
-; CHECK-NEXT:    [[TMP28:%.*]] = add i32 [[TMP20]], 3
 ; CHECK-NEXT:    [[TMP29:%.*]] = add i32 [[TMP20]], 1
-; CHECK-NEXT:    [[TMP33:%.*]] = add i32 [[TMP24]], 1
-; CHECK-NEXT:    [[TMP34:%.*]] = add i32 [[TMP27]], 1
-; CHECK-NEXT:    [[TMP35:%.*]] = add i32 [[TMP28]], 1
-; CHECK-NEXT:    [[TMP23:%.*]] = insertelement <4 x i32> poison, i32 [[TMP29]], i32 0
-; CHECK-NEXT:    [[TMP36:%.*]] = insertelement <4 x i32> [[TMP23]], i32 [[TMP33]], i32 1
-; CHECK-NEXT:    [[TMP37:%.*]] = insertelement <4 x i32> [[TMP36]], i32 [[TMP34]], i32 2
-; CHECK-NEXT:    [[TMP38:%.*]] = insertelement <4 x i32> [[TMP37]], i32 [[TMP35]], i32 3
 ; CHECK-NEXT:    [[TMP25:%.*]] = getelementptr inbounds double, ptr [[X]], i32 [[TMP29]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr inbounds double, ptr [[Y]], i32 [[TMP20]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x double>, ptr [[TMP25]], align 8
@@ -293,12 +283,12 @@ define void @replace_first_order_recurrence_with_versioned_iv_for_uniform_non_po
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX3]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
-; CHECK-NEXT:    [[TMP31:%.*]] = phi i32 [ [[TMP21]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
-; CHECK-NEXT:    [[TMP32:%.*]] = phi i64 [ [[TMP30]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[TMP23:%.*]] = phi i32 [ [[TMP21]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
+; CHECK-NEXT:    [[TMP24:%.*]] = phi i64 [ [[TMP30]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ], [ 0, %[[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[PHI32:%.*]] = phi i32 [ [[TMP31]], %[[SCALAR_PH]] ], [ [[I32NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[PHI64:%.*]] = phi i64 [ [[TMP32]], %[[SCALAR_PH]] ], [ [[I64NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[PHI32:%.*]] = phi i32 [ [[TMP23]], %[[SCALAR_PH]] ], [ [[I32NEXT:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[PHI64:%.*]] = phi i64 [ [[TMP24]], %[[SCALAR_PH]] ], [ [[I64NEXT:%.*]], %[[FOR_BODY]] ]
 ; CHECK-NEXT:    [[I32NEXT]] = add i32 [[PHI32]], 1
 ; CHECK-NEXT:    [[I64NEXT]] = zext i32 [[I32NEXT]] to i64
 ; CHECK-NEXT:    [[XIP:%.*]] = getelementptr inbounds double, ptr [[X]], i32 [[I32NEXT]]
