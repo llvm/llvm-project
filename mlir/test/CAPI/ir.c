@@ -2900,6 +2900,45 @@ int testDominanceInfo(MlirContext ctx) {
   return 0;
 }
 
+int testOperationIsAncestor(MlirContext ctx) {
+  fprintf(stderr, "@testOperationIsAncestor\n");
+  // CHECK-LABEL: @testOperationIsAncestor
+
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("arith"));
+
+  const char *moduleStr = "func.func @f() {\n"
+                          "  %c0 = arith.constant 0 : i32\n"
+                          "  return\n"
+                          "}\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleStr));
+  MlirOperation moduleOp = mlirModuleGetOperation(module);
+  MlirBlock moduleBody = mlirModuleGetBody(module);
+  MlirOperation funcOp = mlirBlockGetFirstOperation(moduleBody);
+  MlirRegion funcRegion = mlirOperationGetRegion(funcOp, 0);
+  MlirBlock funcBody = mlirRegionGetFirstBlock(funcRegion);
+  MlirOperation constOp = mlirBlockGetFirstOperation(funcBody);
+
+  // The module and the func both (properly) contain the constant.
+  assert(mlirOperationIsAncestor(moduleOp, constOp));
+  assert(mlirOperationIsProperAncestor(moduleOp, constOp));
+  assert(mlirOperationIsAncestor(funcOp, constOp));
+  assert(mlirOperationIsProperAncestor(funcOp, constOp));
+
+  // An operation is its own ancestor, but not its own proper ancestor.
+  assert(mlirOperationIsAncestor(constOp, constOp));
+  assert(!mlirOperationIsProperAncestor(constOp, constOp));
+
+  // The containment relation is not symmetric.
+  assert(!mlirOperationIsAncestor(constOp, moduleOp));
+
+  mlirModuleDestroy(module);
+
+  // CHECK: testOperationIsAncestor: PASSED
+  fprintf(stderr, "testOperationIsAncestor: PASSED\n");
+  return 0;
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   registerAllUpstreamDialects(ctx);
@@ -2955,6 +2994,8 @@ int main(void) {
     return 19;
   if (testDominanceInfo(ctx))
     return 20;
+  if (testOperationIsAncestor(ctx))
+    return 21;
 
   // CHECK: DESTROY MAIN CONTEXT
   // CHECK: reportResourceDelete: resource_i64_blob
