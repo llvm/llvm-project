@@ -5,12 +5,10 @@
 // RUN: %clang_cc1 -std=c++20 -triple nvptx-nvidia-cuda -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
-// On a target with 32-bit pointers (e.g. nvptx) both a data pointer (!cir.ptr)
-// and the vtable pointer (!cir.vptr) are 4 bytes wide. The pointer width is
-// carried by a CIR-native data-layout entry keyed on cir.ptr, so the field
-// following a pointer lands at the AST-mandated offset. Sizing pointers as a
-// hardcoded 64 bits previously tripped the record layout builder (insertPadding:
-// assertion `offset >= size`) on every record containing a pointer.
+// On a 32-bit-pointer target such as nvptx, !cir.ptr and !cir.vptr are 4 bytes
+// wide, driven by the #cir.ptr_spec data-layout entry. Hardcoded 64-bit widths
+// used to trip the record layout builder (insertPadding: offset >= size) on
+// every record containing a pointer.
 
 struct S {
   int *p;
@@ -27,13 +25,13 @@ public:
 
 void A::f() {}
 
-// The module carries a CIR-native pointer data-layout entry ({size, abi-align}
+// The module carries a #cir.ptr_spec pointer data-layout entry (size/abi/preferred
 // in bits) that drives both cir.ptr and cir.vptr widths. The 4-byte pointer is
 // immediately followed by 'x' at offset 4 with no padding, and each record is
 // 4-byte aligned.
 // CIR-DAG: !rec_S = !cir.struct<"S" {!cir.ptr<!s32i>, !s32i}>
 // CIR-DAG: !rec_A = !cir.struct<class "A" {!cir.vptr, !s32i}>
-// CIR-DAG: !cir.ptr<!cir.void> = array<i32: 32, 32>
+// CIR-DAG: !cir.ptr<!cir.void> = #cir.ptr_spec<size = 32, abi = 32, preferred = 32, index = 32>
 // CIR: cir.global external @s = #cir.zero : !rec_S {alignment = 4 : i64}
 // CIR: cir.global{{.*}}@_ZTV1A = #cir.vtable<{{.*}}{alignment = 4 : i64}
 

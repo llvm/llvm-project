@@ -16,9 +16,9 @@
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/Target/LLVMIR/Import.h"
 
 #include "clang/AST/DeclGroup.h"
+#include "clang/CIR/CIRDataLayoutSpec.h"
 #include "clang/CIR/CIRGenerator.h"
 #include "clang/CIR/InitAllDialects.h"
 #include "clang/CIR/MissingFeatures.h"
@@ -39,35 +39,6 @@ CIRGenerator::~CIRGenerator() {
   assert(deferredInlineMemberFuncDefs.empty() || diags.hasErrorOccurred());
 }
 
-static void setMLIRDataLayout(mlir::ModuleOp &mod, const llvm::DataLayout &dl) {
-  mlir::MLIRContext *mlirContext = mod.getContext();
-  mlir::DataLayoutSpecInterface dlSpec =
-      mlir::translateDataLayout(dl, mlirContext);
-
-  // Add a CIR-native pointer data-layout entry so cir.ptr / cir.vptr size and
-  // alignment are driven by the data layout rather than hardcoded.
-  // The value stores {size-in-bits, abi-align-in-bits} keyed on cir.ptr.
-  //
-  // TODO(cir): Only the default address space is recorded and
-  // address-space-dependent pointer sizes are not modeled yet. Emit
-  // per-address-space entries.
-  assert(!cir::MissingFeatures::dataLayoutPtrHandlingBasedOnLangAS());
-  constexpr unsigned kBitsInByte = 8;
-  unsigned ptrSizeBits = dl.getPointerSizeInBits(/*AS=*/0);
-  unsigned ptrAlignBits =
-      dl.getPointerABIAlignment(/*AS=*/0).value() * kBitsInByte;
-  auto ptrKey = cir::PointerType::get(cir::VoidType::get(mlirContext));
-  auto ptrVal = mlir::DenseI32ArrayAttr::get(
-      mlirContext,
-      {static_cast<int32_t>(ptrSizeBits), static_cast<int32_t>(ptrAlignBits)});
-  llvm::SmallVector<mlir::DataLayoutEntryInterface> entries(
-      dlSpec.getEntries().begin(), dlSpec.getEntries().end());
-  entries.push_back(mlir::DataLayoutEntryAttr::get(ptrKey, ptrVal));
-
-  mod->setAttr(mlir::DLTIDialect::kDataLayoutAttrName,
-               mlir::DataLayoutSpecAttr::get(mlirContext, entries));
-}
-
 void CIRGenerator::Initialize(ASTContext &astContext) {
   using namespace llvm;
 
@@ -84,7 +55,7 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
   mlir::ModuleOp mod = cgm->getModule();
   llvm::DataLayout layout =
       llvm::DataLayout(astContext.getTargetInfo().getDataLayoutString());
-  setMLIRDataLayout(mod, layout);
+  cir::setMLIRDataLayout(mod, layout);
 }
 
 bool CIRGenerator::verifyModule() const { return cgm->verifyModule(); }
