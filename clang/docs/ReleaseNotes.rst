@@ -692,6 +692,10 @@ Improvements to Clang's diagnostics
 - Diagnostics for the C++11 range-based for statement now report the correct
   iterator type in notes for invalid iterator types.
 
+- ``-Wunused-template`` is now part of ``-Wall``. It diagnoses unused function
+  and variable templates with internal linkage, which in a header is a latent
+  ODR hazard. It can be disabled with ``-Wno-unused-template``. (#GH202945)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
