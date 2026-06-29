@@ -648,6 +648,7 @@ define amdgpu_kernel void @s_ctpop_i65(ptr addrspace(1) noalias %out, i65 %val) 
 ; GFX12-NEXT:    s_clause 0x1
 ; GFX12-NEXT:    s_load_u8 s6, s[4:5], 0x34
 ; GFX12-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX12-NEXT:    ; implicit-def: $sgpr7
 ; GFX12-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_and_b64 s[4:5], s[6:7], 1

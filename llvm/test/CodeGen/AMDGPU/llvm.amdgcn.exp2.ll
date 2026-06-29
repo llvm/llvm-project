@@ -124,6 +124,7 @@ define half @v_exp2_f16(half %src)  {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_exp_f16_e32 v0.l, v0.l
+; GFX11-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: v_exp2_f16:
@@ -134,6 +135,7 @@ define half @v_exp2_f16(half %src)  {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_exp_f16_e32 v0.l, v0.l
+; GFX12-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %exp2 = call half @llvm.amdgcn.exp2.f16(half %src)
   ret half %exp2
@@ -150,6 +152,7 @@ define half @v_exp2_f16_uniform(half inreg %src)  {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_exp_f16_e32 v0.l, s0
+; GFX11-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: v_exp2_f16_uniform:
@@ -179,6 +182,7 @@ define half @v_fabs_exp2_f16(half %src)  {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_exp_f16_e64 v0.l, |v0.l|
+; GFX11-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: v_fabs_exp2_f16:
@@ -189,6 +193,7 @@ define half @v_fabs_exp2_f16(half %src)  {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_exp_f16_e64 v0.l, |v0.l|
+; GFX12-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fabs.src = call half @llvm.fabs.f16(half %src)
   %exp2 = call half @llvm.amdgcn.exp2.f16(half %fabs.src)
@@ -206,6 +211,7 @@ define half @v_fneg_fabs_exp2_f16(half %src)  {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_exp_f16_e64 v0.l, -|v0.l|
+; GFX11-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-LABEL: v_fneg_fabs_exp2_f16:
@@ -216,6 +222,7 @@ define half @v_fneg_fabs_exp2_f16(half %src)  {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_exp_f16_e64 v0.l, -|v0.l|
+; GFX12-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %fabs.src = call half @llvm.fabs.f16(half %src)
   %neg.fabs.src = fneg half %fabs.src

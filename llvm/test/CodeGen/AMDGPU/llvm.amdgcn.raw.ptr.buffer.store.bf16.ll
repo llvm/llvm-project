@@ -29,12 +29,14 @@ define amdgpu_ps void @buffer_store_bf16(ptr addrspace(8) inreg %rsrc, bfloat %d
 ;
 ; GFX11-LABEL: buffer_store_bf16:
 ; GFX11:       ; %bb.0:
+; GFX11-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-NEXT:    buffer_store_b16 v0, v1, s[0:3], 0 offen
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: buffer_store_bf16:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX12-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-NEXT:    buffer_store_b16 v0, v1, s[0:3], null offen
 ; GFX12-NEXT:    s_endpgm
   call void @llvm.amdgcn.raw.ptr.buffer.store.bf16(bfloat %data, ptr addrspace(8) %rsrc, i32 %offset, i32 0, i32 0)

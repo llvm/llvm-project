@@ -57,8 +57,9 @@ define noundef i64 @srem64_3(i64 noundef %i)  {
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v2, 31, v5
 ; GFX942-NEXT:    v_lshl_add_u64 v[2:3], v[4:5], 0, v[2:3]
 ; GFX942-NEXT:    v_mad_u64_u32 v[4:5], s[0:1], v2, 3, 0
-; GFX942-NEXT:    v_mov_b32_e32 v2, v5
-; GFX942-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], v3, 3, v[2:3]
+; GFX942-NEXT:    v_mov_b32_e32 v6, v5
+; GFX942-NEXT:    ; implicit-def: $vgpr7
+; GFX942-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], v3, 3, v[6:7]
 ; GFX942-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v4
 ; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_subb_co_u32_e32 v1, vcc, v1, v2, vcc
@@ -144,8 +145,9 @@ define noundef i64 @srem64_6(i64 noundef %i)  {
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v2, 31, v5
 ; GFX942-NEXT:    v_lshl_add_u64 v[2:3], v[4:5], 0, v[2:3]
 ; GFX942-NEXT:    v_mad_u64_u32 v[4:5], s[0:1], v2, 3, 0
-; GFX942-NEXT:    v_mov_b32_e32 v2, v5
-; GFX942-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], v3, 3, v[2:3]
+; GFX942-NEXT:    v_mov_b32_e32 v6, v5
+; GFX942-NEXT:    ; implicit-def: $vgpr7
+; GFX942-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], v3, 3, v[6:7]
 ; GFX942-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v4
 ; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_subb_co_u32_e32 v1, vcc, v1, v2, vcc
@@ -219,9 +221,10 @@ define noundef i64 @urem64_3(i64 noundef %i)  {
 ; GFX942-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], v1, s2, v[2:3]
 ; GFX942-NEXT:    v_alignbit_b32 v2, v3, v2, 1
 ; GFX942-NEXT:    v_mad_u64_u32 v[4:5], s[0:1], v2, 3, 0
-; GFX942-NEXT:    v_mov_b32_e32 v2, v5
-; GFX942-NEXT:    v_lshrrev_b32_e32 v3, 1, v3
-; GFX942-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], v3, 3, v[2:3]
+; GFX942-NEXT:    v_mov_b32_e32 v6, v5
+; GFX942-NEXT:    v_lshrrev_b32_e32 v2, 1, v3
+; GFX942-NEXT:    ; implicit-def: $vgpr7
+; GFX942-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], v2, 3, v[6:7]
 ; GFX942-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v4
 ; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_subb_co_u32_e32 v1, vcc, v1, v2, vcc
@@ -289,9 +292,10 @@ define noundef i64 @urem64_6(i64 noundef %i)  {
 ; GFX942-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], v1, s2, v[2:3]
 ; GFX942-NEXT:    v_alignbit_b32 v2, v3, v2, 2
 ; GFX942-NEXT:    v_mad_u64_u32 v[4:5], s[0:1], v2, 6, 0
-; GFX942-NEXT:    v_mov_b32_e32 v2, v5
-; GFX942-NEXT:    v_lshrrev_b32_e32 v3, 2, v3
-; GFX942-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], v3, 6, v[2:3]
+; GFX942-NEXT:    v_mov_b32_e32 v6, v5
+; GFX942-NEXT:    v_lshrrev_b32_e32 v2, 2, v3
+; GFX942-NEXT:    ; implicit-def: $vgpr7
+; GFX942-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], v2, 6, v[6:7]
 ; GFX942-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v4
 ; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_subb_co_u32_e32 v1, vcc, v1, v2, vcc
@@ -1066,8 +1070,9 @@ define noundef i64 @srem64_i32max(i64 noundef %i)  {
 ; GFX942-NEXT:    v_lshl_add_u64 v[2:3], v[6:7], 0, v[4:5]
 ; GFX942-NEXT:    s_brev_b32 s2, -2
 ; GFX942-NEXT:    v_mad_u64_u32 v[4:5], s[0:1], v2, s2, 0
-; GFX942-NEXT:    v_mov_b32_e32 v2, v5
-; GFX942-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], v3, s2, v[2:3]
+; GFX942-NEXT:    v_mov_b32_e32 v6, v5
+; GFX942-NEXT:    ; implicit-def: $vgpr7
+; GFX942-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], v3, s2, v[6:7]
 ; GFX942-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v4
 ; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_subb_co_u32_e32 v1, vcc, v1, v2, vcc
@@ -1247,9 +1252,10 @@ define noundef i64 @urem64_i32max(i64 noundef %i)  {
 ; GFX942-NEXT:    v_lshl_add_u64 v[2:3], v[4:5], 0, v[2:3]
 ; GFX942-NEXT:    v_alignbit_b32 v2, v3, v2, 30
 ; GFX942-NEXT:    v_mad_u64_u32 v[4:5], s[0:1], v2, s2, 0
-; GFX942-NEXT:    v_mov_b32_e32 v2, v5
-; GFX942-NEXT:    v_lshrrev_b32_e32 v3, 30, v3
-; GFX942-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], v3, s2, v[2:3]
+; GFX942-NEXT:    v_mov_b32_e32 v6, v5
+; GFX942-NEXT:    v_lshrrev_b32_e32 v2, 30, v3
+; GFX942-NEXT:    ; implicit-def: $vgpr7
+; GFX942-NEXT:    v_mad_u64_u32 v[2:3], s[0:1], v2, s2, v[6:7]
 ; GFX942-NEXT:    v_sub_co_u32_e32 v0, vcc, v0, v4
 ; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_subb_co_u32_e32 v1, vcc, v1, v2, vcc

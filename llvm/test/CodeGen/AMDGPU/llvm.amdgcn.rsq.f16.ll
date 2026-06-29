@@ -74,6 +74,7 @@ define amdgpu_kernel void @rsq_f16(
 ; SDAG-GFX12-TRUE16-NEXT:    s_mov_b32 s7, 0x31016000
 ; SDAG-GFX12-TRUE16-NEXT:    s_mov_b32 s10, s6
 ; SDAG-GFX12-TRUE16-NEXT:    s_mov_b32 s11, s7
+; SDAG-GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; SDAG-GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; SDAG-GFX12-TRUE16-NEXT:    s_mov_b32 s8, s2
 ; SDAG-GFX12-TRUE16-NEXT:    s_mov_b32 s9, s3

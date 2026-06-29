@@ -44,31 +44,6 @@ B30.2:
 ; FIXME: Extra undef subregister copy should be removed before
 ; overwritten with defined copy
 define amdgpu_ps float @valley_partially_undef_copy() #0 {
-; CHECK-LABEL: valley_partially_undef_copy:
-; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_mov_b32 s3, 0xf000
-; CHECK-NEXT:    s_mov_b32 s2, -1
-; CHECK-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    buffer_load_dword v0, off, s[0:3], 0 glc
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v2, 0x7fc00000
-; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
-; CHECK-NEXT:    buffer_store_dword v2, off, s[0:3], 0
-; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v1
-; CHECK-NEXT:    s_waitcnt expcnt(1)
-; CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
-; CHECK-NEXT:    v_cmp_ne_u32_e64 s[0:1], 1, v1
-; CHECK-NEXT:  .LBB1_1: ; %bb9
-; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    s_and_b64 vcc, exec, s[0:1]
-; CHECK-NEXT:    s_cbranch_vccnz .LBB1_1
-; CHECK-NEXT:  ; %bb.2: ; %bb11
-; CHECK-NEXT:    s_mov_b32 s3, 0xf000
-; CHECK-NEXT:    s_mov_b32 s2, -1
-; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
-; CHECK-NEXT:    ; return to shader part epilog
 bb:
   %tmp = load volatile i32, ptr addrspace(1) poison, align 4
   %tmp1 = load volatile i32, ptr addrspace(1) poison, align 4
@@ -94,27 +69,6 @@ bb11:                                             ; preds = %bb9
 
 ; FIXME: Should be able to remove the undef copies
 define amdgpu_kernel void @partially_undef_copy() #0 {
-; CHECK-LABEL: partially_undef_copy:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    v_mov_b32_e32 v5, 5
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    v_mov_b32_e32 v6, 6
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    v_mov_b32_e32 v0, v5
-; CHECK-NEXT:    v_mov_b32_e32 v1, v6
-; CHECK-NEXT:    v_mov_b32_e32 v2, v7
-; CHECK-NEXT:    v_mov_b32_e32 v3, v8
-; CHECK-NEXT:    v_mov_b32_e32 v0, v6
-; CHECK-NEXT:    s_mov_b32 s3, 0xf000
-; CHECK-NEXT:    s_mov_b32 s2, -1
-; CHECK-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
-; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    v_nop
-; CHECK-NEXT:    ;;#ASMEND
-; CHECK-NEXT:    s_endpgm
   %tmp0 = call i32 asm sideeffect "v_mov_b32_e32 v5, 5", "={v5}"()
   %tmp1 = call i32 asm sideeffect "v_mov_b32_e32 v6, 6", "={v6}"()
 

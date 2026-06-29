@@ -2668,6 +2668,11 @@ private:
   ///   %dst = COPY %src  <-- This value is a copy of a pruned value.
   bool isPrunedValue(unsigned ValNo, JoinVals &Other);
 
+  /// Return true if \p ImpDef is a sub-register IMPLICIT_DEF that materializes
+  /// a real undef lane consumed by a later same-block, non-undef full-register
+  /// (e.g. tied / read-modify-write) use of its register.
+  bool isSubRegLaneProvider(const MachineInstr *ImpDef) const;
+
 public:
   JoinVals(LiveRange &LR, Register Reg, unsigned SubIdx, LaneBitmask LaneMask,
            SmallVectorImpl<VNInfo *> &newVNInfo, const CoalescerPair &cp,
@@ -2820,6 +2825,32 @@ bool JoinVals::valuesIdentical(VNInfo *Value0, VNInfo *Value1,
   return Orig0->def == Orig1->def && Reg0 == Reg1;
 }
 
+bool JoinVals::isSubRegLaneProvider(const MachineInstr *ImpDef) const {
+  if (!ImpDef || !ImpDef->isImplicitDef())
+    return false;
+  const MachineOperand &DefMO = ImpDef->getOperand(0);
+  if (DefMO.getSubReg() == 0)
+    return false;
+  Register DefReg = DefMO.getReg();
+  const MachineRegisterInfo &MRI = ImpDef->getMF()->getRegInfo();
+  const MachineBasicBlock *MBB = ImpDef->getParent();
+  SlotIndex ImpDefIdx = Indexes->getInstructionIndex(*ImpDef);
+  for (const MachineOperand &MO : MRI.use_nodbg_operands(DefReg)) {
+    // We are looking for a tied (read-modify-write) full-register use later in
+    // the same block. it reads every lane
+    // - including the undef lane this IMPLICIT_DEF provides - and then
+    // redefines the register in place.
+    if (MO.isUndef() || MO.getSubReg() != 0 || !MO.isTied())
+      continue;
+    const MachineInstr *UseMI = MO.getParent();
+    if (UseMI->getParent() != MBB)
+      continue;
+    if (Indexes->getInstructionIndex(*UseMI) > ImpDefIdx)
+      return true;
+  }
+  return false;
+}
+
 JoinVals::ConflictResolution JoinVals::analyzeValue(unsigned ValNo,
                                                     JoinVals &Other) {
   Val &V = Vals[ValNo];
@@ -2845,7 +2876,9 @@ JoinVals::ConflictResolution JoinVals::analyzeValue(unsigned ValNo,
       V.WriteLanes = V.ValidLanes = LaneBitmask::getLane(0);
       if (DefMI->isImplicitDef()) {
         V.ValidLanes = LaneBitmask::getNone();
-        V.ErasableImplicitDef = true;
+        // A sub-register IMPLICIT_DEF read by a same-block full-register use is
+        // a real lane provider, not a disposable placeholder; keep it.
+        V.ErasableImplicitDef = !isSubRegLaneProvider(DefMI);
       }
     } else {
       bool Redef = false;
@@ -2884,7 +2917,10 @@ JoinVals::ConflictResolution JoinVals::analyzeValue(unsigned ValNo,
         //
         // Clearing the valid lanes is deferred until it is sure this can be
         // erased.
-        V.ErasableImplicitDef = true;
+        //
+        // A sub-register IMPLICIT_DEF read by a same-block full-register use is
+        // a real lane provider, not a disposable placeholder; keep it.
+        V.ErasableImplicitDef = !isSubRegLaneProvider(DefMI);
       }
     }
   }
@@ -2983,7 +3019,12 @@ JoinVals::ConflictResolution JoinVals::analyzeValue(unsigned ValNo,
     return CR_Replace;
 
   // Check for simple erasable conflicts.
-  if (DefMI->isImplicitDef())
+  //
+  // A sub-register IMPLICIT_DEF that materializes a real undef lane consumed by
+  // a same-block full-register use must not be erased here: it overlaps the
+  // neighbouring lane's data value, but writes a disjoint lane, so let the
+  // lane-based resolution below (CR_Replace) handle it instead of erasing it.
+  if (DefMI->isImplicitDef() && !isSubRegLaneProvider(DefMI))
     return CR_Erase;
 
   // Include the non-conflict where DefMI is a coalescable copy that kills

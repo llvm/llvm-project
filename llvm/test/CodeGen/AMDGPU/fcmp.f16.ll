@@ -282,6 +282,8 @@ define amdgpu_kernel void @fcmp_f16_lt_abs(
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s15, s11
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s6, s10
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s7, s11
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-TRUE16-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s12, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s13, s3

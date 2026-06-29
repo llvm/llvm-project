@@ -27,6 +27,7 @@ define amdgpu_kernel void @sext_i16_to_i64_uniform(ptr addrspace(1) %out, i16 %a
 ; GCN-NEXT:    s_load_dword s6, s[4:5], 0xb
 ; GCN-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0xd
 ; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
+; GCN-NEXT:    ; implicit-def: $sgpr7
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
 ; GCN-NEXT:    s_mov_b32 s2, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)

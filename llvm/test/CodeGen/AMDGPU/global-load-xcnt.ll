@@ -169,6 +169,7 @@ define i16 @test_v7i16_load_store(ptr addrspace(1) %ptr1, ptr addrspace(1) %ptr2
 ; GCN-GISEL-REAL16-NEXT:    v_mov_b64_e32 v[18:19], 8
 ; GCN-GISEL-REAL16-NEXT:    v_mov_b64_e32 v[20:21], 10
 ; GCN-GISEL-REAL16-NEXT:    v_mov_b64_e32 v[22:23], 12
+; GCN-GISEL-REAL16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GCN-GISEL-REAL16-NEXT:    s_wait_loadcnt 0x0
 ; GCN-GISEL-REAL16-NEXT:    v_pk_add_u16 v1, v6, v10
 ; GCN-GISEL-REAL16-NEXT:    v_pk_add_u16 v4, v4, v8

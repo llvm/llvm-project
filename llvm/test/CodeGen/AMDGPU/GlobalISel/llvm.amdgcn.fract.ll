@@ -9,6 +9,7 @@ define amdgpu_ps half @s_fract_f16(half inreg %src) {
 ; GFX12-LABEL: s_fract_f16:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_fract_f16_e32 v0.l, s0
+; GFX12-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_2)
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-NEXT:    s_add_f16 s0, s0, s0
@@ -24,6 +25,7 @@ define amdgpu_ps half @v_fract_f16(half %src) {
 ; GFX12-LABEL: v_fract_f16:
 ; GFX12:       ; %bb.0:
 ; GFX12-NEXT:    v_fract_f16_e32 v0.l, v0.l
+; GFX12-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_f16_e32 v0.l, v0.l, v0.l
 ; GFX12-NEXT:    ; return to shader part epilog

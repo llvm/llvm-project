@@ -9,13 +9,17 @@ define arm_aapcs_vfpcc <4 x i32> @loads_i32(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r1]
 ; CHECK-NEXT:    vldrw.u32 q1, [r0]
 ; CHECK-NEXT:    vmov.i64 q2, #0xffffffff
+; CHECK-NEXT:    @ implicit-def: $s1
+; CHECK-NEXT:    @ implicit-def: $s3
 ; CHECK-NEXT:    vmov.f32 s0, s12
 ; CHECK-NEXT:    vmov.f32 s2, s13
+; CHECK-NEXT:    @ implicit-def: $s13
 ; CHECK-NEXT:    vmov lr, r0, d2
 ; CHECK-NEXT:    vand q0, q0, q2
 ; CHECK-NEXT:    vmov r1, r5, d1
 ; CHECK-NEXT:    vmov.f32 s12, s14
 ; CHECK-NEXT:    vmov.f32 s14, s15
+; CHECK-NEXT:    @ implicit-def: $s15
 ; CHECK-NEXT:    vand q2, q3, q2
 ; CHECK-NEXT:    vmov r4, r3, d5
 ; CHECK-NEXT:    asrs r6, r0, #31
@@ -135,8 +139,11 @@ define arm_aapcs_vfpcc void @load_store_i32(ptr %A, ptr %B, ptr %C, ptr %D) {
 ; CHECK-NEXT:    push.w {r4, r5, r6, r7, r8, r9, r11, lr}
 ; CHECK-NEXT:    vldrw.u32 q1, [r1]
 ; CHECK-NEXT:    vmov.i64 q0, #0xffffffff
+; CHECK-NEXT:    @ implicit-def: $s9
+; CHECK-NEXT:    @ implicit-def: $s11
 ; CHECK-NEXT:    vmov.f32 s8, s6
 ; CHECK-NEXT:    vmov.f32 s10, s7
+; CHECK-NEXT:    @ implicit-def: $s7
 ; CHECK-NEXT:    vand q2, q2, q0
 ; CHECK-NEXT:    vmov.f32 s6, s5
 ; CHECK-NEXT:    vmov r1, r12, d5
@@ -352,6 +359,8 @@ define arm_aapcs_vfpcc void @mul_i32(ptr %A, ptr %B, i64 %C, ptr %D) {
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    ldr.w lr, [sp, #20]
 ; CHECK-NEXT:    vmov.f32 s10, s1
+; CHECK-NEXT:    @ implicit-def: $s1
+; CHECK-NEXT:    @ implicit-def: $s1
 ; CHECK-NEXT:    vmov.f32 s14, s5
 ; CHECK-NEXT:    vmov r5, s4
 ; CHECK-NEXT:    vmov.f32 s4, s6

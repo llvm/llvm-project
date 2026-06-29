@@ -1932,6 +1932,8 @@ define amdgpu_kernel void @test_fmax_f16_v_ieee_on(ptr addrspace(1) %out, half %
 ; GFX12-GISEL-LABEL: test_fmax_f16_v_ieee_on:
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    s_lshr_b32 s3, s2, 16
 ; GFX12-GISEL-NEXT:    v_max_num_f16_e64 v0.l, s2, s2
@@ -1963,10 +1965,16 @@ define amdgpu_ps half @test_fmax_f16_v_ieee_off(half %a, half %b) #0 {
 ; GFX9-NEXT:    v_max_f16_e32 v0, v0, v1
 ; GFX9-NEXT:    ; return to shader part epilog
 ;
-; GFX12-LABEL: test_fmax_f16_v_ieee_off:
-; GFX12:       ; %bb.0:
-; GFX12-NEXT:    v_max_num_f16_e32 v0.l, v0.l, v1.l
-; GFX12-NEXT:    ; return to shader part epilog
+; GFX12-SDAG-LABEL: test_fmax_f16_v_ieee_off:
+; GFX12-SDAG:       ; %bb.0:
+; GFX12-SDAG-NEXT:    v_max_num_f16_e32 v0.l, v0.l, v1.l
+; GFX12-SDAG-NEXT:    ; return to shader part epilog
+;
+; GFX12-GISEL-LABEL: test_fmax_f16_v_ieee_off:
+; GFX12-GISEL:       ; %bb.0:
+; GFX12-GISEL-NEXT:    v_max_num_f16_e32 v0.l, v0.l, v1.l
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-GISEL-NEXT:    ; return to shader part epilog
   %val = call half @llvm.maxnum.f16(half %a, half %b)
   ret half %val
 }
@@ -2054,6 +2062,8 @@ define amdgpu_kernel void @test_fmax_f16_s_ieee_on(ptr addrspace(1) %out, half i
 ; GFX12-GISEL-NEXT:    s_load_u16 s2, s[4:5], 0x2c
 ; GFX12-GISEL-NEXT:    s_load_u16 s3, s[4:5], 0x2e
 ; GFX12-GISEL-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr0_hi16
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-GISEL-NEXT:    v_max_num_f16_e64 v0.l, s2, s2
 ; GFX12-GISEL-NEXT:    v_max_num_f16_e64 v1.l, s3, s3

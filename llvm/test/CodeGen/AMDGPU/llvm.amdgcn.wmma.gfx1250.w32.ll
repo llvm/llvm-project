@@ -2621,25 +2621,47 @@ bb:
 }
 
 define amdgpu_ps void @test_swmmac_f32_16x16x64_bf16(<16 x bfloat> %A, <32 x bfloat> %B, <8 x float> %C, i16 %Index, ptr addrspace(1) %out) {
-; GFX1250-LABEL: test_swmmac_f32_16x16x64_bf16:
-; GFX1250:       ; %bb.0: ; %bb
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_swmmac_f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 matrix_b_reuse
-; GFX1250-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
-; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
-; GFX1250-NEXT:    global_store_b128 v[34:35], v[24:27], off
-; GFX1250-NEXT:    s_endpgm
+; GFX1250-FAKE16-LABEL: test_swmmac_f32_16x16x64_bf16:
+; GFX1250-FAKE16:       ; %bb.0: ; %bb
+; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-FAKE16-NEXT:    v_swmmac_f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 matrix_b_reuse
+; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
+; GFX1250-FAKE16-NEXT:    s_clause 0x1
+; GFX1250-FAKE16-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
+; GFX1250-FAKE16-NEXT:    global_store_b128 v[34:35], v[24:27], off
+; GFX1250-FAKE16-NEXT:    s_endpgm
 ;
-; GISEL-LABEL: test_swmmac_f32_16x16x64_bf16:
-; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GISEL-NEXT:    v_swmmac_f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 matrix_b_reuse
-; GISEL-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
-; GISEL-NEXT:    s_clause 0x1
-; GISEL-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
-; GISEL-NEXT:    global_store_b128 v[34:35], v[24:27], off
-; GISEL-NEXT:    s_endpgm
+; GISEL-FAKE16-LABEL: test_swmmac_f32_16x16x64_bf16:
+; GISEL-FAKE16:       ; %bb.0: ; %bb
+; GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GISEL-FAKE16-NEXT:    v_swmmac_f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 matrix_b_reuse
+; GISEL-FAKE16-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
+; GISEL-FAKE16-NEXT:    s_clause 0x1
+; GISEL-FAKE16-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
+; GISEL-FAKE16-NEXT:    global_store_b128 v[34:35], v[24:27], off
+; GISEL-FAKE16-NEXT:    s_endpgm
+;
+; GFX1250-REAL16-LABEL: test_swmmac_f32_16x16x64_bf16:
+; GFX1250-REAL16:       ; %bb.0: ; %bb
+; GFX1250-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-REAL16-NEXT:    ; implicit-def: $vgpr32_hi16
+; GFX1250-REAL16-NEXT:    v_swmmac_f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 matrix_b_reuse
+; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
+; GFX1250-REAL16-NEXT:    s_clause 0x1
+; GFX1250-REAL16-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
+; GFX1250-REAL16-NEXT:    global_store_b128 v[34:35], v[24:27], off
+; GFX1250-REAL16-NEXT:    s_endpgm
+;
+; GISEL-REAL16-LABEL: test_swmmac_f32_16x16x64_bf16:
+; GISEL-REAL16:       ; %bb.0: ; %bb
+; GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GISEL-REAL16-NEXT:    ; implicit-def: $vgpr32_hi16
+; GISEL-REAL16-NEXT:    v_swmmac_f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 matrix_b_reuse
+; GISEL-REAL16-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
+; GISEL-REAL16-NEXT:    s_clause 0x1
+; GISEL-REAL16-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
+; GISEL-REAL16-NEXT:    global_store_b128 v[34:35], v[24:27], off
+; GISEL-REAL16-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x64.bf16.v8f32.v16bf16.v32bf16.i16(i1 0, <16 x bfloat> %A, i1 0, <32 x bfloat> %B, <8 x float> %C, i16 %Index, i1 false, i1 true)
   store <8 x float> %res, ptr addrspace(1) %out
@@ -2647,21 +2669,39 @@ bb:
 }
 
 define amdgpu_ps void @test_swmmac_bf16_16x16x64_bf16(<16 x bfloat> %A, <32 x bfloat> %B, <8 x bfloat> %C, i16 %Index, ptr addrspace(1) %out) {
-; GFX1250-LABEL: test_swmmac_bf16_16x16x64_bf16:
-; GFX1250:       ; %bb.0: ; %bb
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_swmmac_bf16_16x16x64_bf16 v[24:27], v[0:7], v[8:23], v28 matrix_b_reuse
-; GFX1250-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
-; GFX1250-NEXT:    global_store_b128 v[30:31], v[24:27], off
-; GFX1250-NEXT:    s_endpgm
+; GFX1250-FAKE16-LABEL: test_swmmac_bf16_16x16x64_bf16:
+; GFX1250-FAKE16:       ; %bb.0: ; %bb
+; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-FAKE16-NEXT:    v_swmmac_bf16_16x16x64_bf16 v[24:27], v[0:7], v[8:23], v28 matrix_b_reuse
+; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
+; GFX1250-FAKE16-NEXT:    global_store_b128 v[30:31], v[24:27], off
+; GFX1250-FAKE16-NEXT:    s_endpgm
 ;
-; GISEL-LABEL: test_swmmac_bf16_16x16x64_bf16:
-; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GISEL-NEXT:    v_swmmac_bf16_16x16x64_bf16 v[24:27], v[0:7], v[8:23], v28 matrix_b_reuse
-; GISEL-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
-; GISEL-NEXT:    global_store_b128 v[30:31], v[24:27], off
-; GISEL-NEXT:    s_endpgm
+; GISEL-FAKE16-LABEL: test_swmmac_bf16_16x16x64_bf16:
+; GISEL-FAKE16:       ; %bb.0: ; %bb
+; GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GISEL-FAKE16-NEXT:    v_swmmac_bf16_16x16x64_bf16 v[24:27], v[0:7], v[8:23], v28 matrix_b_reuse
+; GISEL-FAKE16-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
+; GISEL-FAKE16-NEXT:    global_store_b128 v[30:31], v[24:27], off
+; GISEL-FAKE16-NEXT:    s_endpgm
+;
+; GFX1250-REAL16-LABEL: test_swmmac_bf16_16x16x64_bf16:
+; GFX1250-REAL16:       ; %bb.0: ; %bb
+; GFX1250-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-REAL16-NEXT:    ; implicit-def: $vgpr28_hi16
+; GFX1250-REAL16-NEXT:    v_swmmac_bf16_16x16x64_bf16 v[24:27], v[0:7], v[8:23], v28 matrix_b_reuse
+; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
+; GFX1250-REAL16-NEXT:    global_store_b128 v[30:31], v[24:27], off
+; GFX1250-REAL16-NEXT:    s_endpgm
+;
+; GISEL-REAL16-LABEL: test_swmmac_bf16_16x16x64_bf16:
+; GISEL-REAL16:       ; %bb.0: ; %bb
+; GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GISEL-REAL16-NEXT:    ; implicit-def: $vgpr28_hi16
+; GISEL-REAL16-NEXT:    v_swmmac_bf16_16x16x64_bf16 v[24:27], v[0:7], v[8:23], v28 matrix_b_reuse
+; GISEL-REAL16-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
+; GISEL-REAL16-NEXT:    global_store_b128 v[30:31], v[24:27], off
+; GISEL-REAL16-NEXT:    s_endpgm
 bb:
   %res = call <8 x bfloat> @llvm.amdgcn.swmmac.bf16.16x16x64.bf16.v8bf16.v16bf16.v32bf16.i16(i1 0, <16 x bfloat> %A, i1 0, <32 x bfloat> %B, <8 x bfloat> %C, i16 %Index, i1 false, i1 true)
   store <8 x bfloat> %res, ptr addrspace(1) %out
@@ -2669,25 +2709,47 @@ bb:
 }
 
 define amdgpu_ps void @test_swmmac_bf16f32_16x16x64_bf16(<16 x bfloat> %A, <32 x bfloat> %B, <8 x float> %C, i16 %Index, ptr addrspace(1) %out) {
-; GFX1250-LABEL: test_swmmac_bf16f32_16x16x64_bf16:
-; GFX1250:       ; %bb.0: ; %bb
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_swmmac_bf16f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 matrix_b_reuse
-; GFX1250-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
-; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
-; GFX1250-NEXT:    global_store_b128 v[34:35], v[24:27], off
-; GFX1250-NEXT:    s_endpgm
+; GFX1250-FAKE16-LABEL: test_swmmac_bf16f32_16x16x64_bf16:
+; GFX1250-FAKE16:       ; %bb.0: ; %bb
+; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-FAKE16-NEXT:    v_swmmac_bf16f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 matrix_b_reuse
+; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
+; GFX1250-FAKE16-NEXT:    s_clause 0x1
+; GFX1250-FAKE16-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
+; GFX1250-FAKE16-NEXT:    global_store_b128 v[34:35], v[24:27], off
+; GFX1250-FAKE16-NEXT:    s_endpgm
 ;
-; GISEL-LABEL: test_swmmac_bf16f32_16x16x64_bf16:
-; GISEL:       ; %bb.0: ; %bb
-; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GISEL-NEXT:    v_swmmac_bf16f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 matrix_b_reuse
-; GISEL-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
-; GISEL-NEXT:    s_clause 0x1
-; GISEL-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
-; GISEL-NEXT:    global_store_b128 v[34:35], v[24:27], off
-; GISEL-NEXT:    s_endpgm
+; GISEL-FAKE16-LABEL: test_swmmac_bf16f32_16x16x64_bf16:
+; GISEL-FAKE16:       ; %bb.0: ; %bb
+; GISEL-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GISEL-FAKE16-NEXT:    v_swmmac_bf16f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 matrix_b_reuse
+; GISEL-FAKE16-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
+; GISEL-FAKE16-NEXT:    s_clause 0x1
+; GISEL-FAKE16-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
+; GISEL-FAKE16-NEXT:    global_store_b128 v[34:35], v[24:27], off
+; GISEL-FAKE16-NEXT:    s_endpgm
+;
+; GFX1250-REAL16-LABEL: test_swmmac_bf16f32_16x16x64_bf16:
+; GFX1250-REAL16:       ; %bb.0: ; %bb
+; GFX1250-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-REAL16-NEXT:    ; implicit-def: $vgpr32_hi16
+; GFX1250-REAL16-NEXT:    v_swmmac_bf16f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 matrix_b_reuse
+; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
+; GFX1250-REAL16-NEXT:    s_clause 0x1
+; GFX1250-REAL16-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
+; GFX1250-REAL16-NEXT:    global_store_b128 v[34:35], v[24:27], off
+; GFX1250-REAL16-NEXT:    s_endpgm
+;
+; GISEL-REAL16-LABEL: test_swmmac_bf16f32_16x16x64_bf16:
+; GISEL-REAL16:       ; %bb.0: ; %bb
+; GISEL-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GISEL-REAL16-NEXT:    ; implicit-def: $vgpr32_hi16
+; GISEL-REAL16-NEXT:    v_swmmac_bf16f32_16x16x64_bf16 v[24:31], v[0:7], v[8:23], v32 matrix_b_reuse
+; GISEL-REAL16-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
+; GISEL-REAL16-NEXT:    s_clause 0x1
+; GISEL-REAL16-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
+; GISEL-REAL16-NEXT:    global_store_b128 v[34:35], v[24:27], off
+; GISEL-REAL16-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.swmmac.bf16f32.16x16x64.bf16.v8f32.v16bf16.v32bf16.i16(i1 0, <16 x bfloat> %A, i1 0, <32 x bfloat> %B, <8 x float> %C, i16 %Index, i1 false, i1 true)
   store <8 x float> %res, ptr addrspace(1) %out
@@ -2804,16 +2866,19 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_fp8_fp8(<8 x i32> %A, <16 x i32
 ; GISEL-LABEL: test_swmmac_f16_16x16x128_fp8_fp8:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GISEL-NEXT:    v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] matrix_b_reuse
 ; GISEL-NEXT:    v_dual_mov_b32 v32, v29 :: v_dual_mov_b32 v33, v30
+; GISEL-NEXT:    ; implicit-def: $vgpr29
+; GISEL-NEXT:    v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] matrix_b_reuse
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[24:27], off
 ; GISEL-NEXT:    s_endpgm
 ;
 ; GFX1250-REAL16-LABEL: test_swmmac_f16_16x16x128_fp8_fp8:
 ; GFX1250-REAL16:       ; %bb.0: ; %bb
 ; GFX1250-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-REAL16-NEXT:    v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] matrix_b_reuse
 ; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
+; GFX1250-REAL16-NEXT:    ; implicit-def: $vgpr28_hi16
+; GFX1250-REAL16-NEXT:    ; implicit-def: $vgpr29
+; GFX1250-REAL16-NEXT:    v_swmmac_f16_16x16x128_fp8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] matrix_b_reuse
 ; GFX1250-REAL16-NEXT:    global_store_b128 v[30:31], v[24:27], off
 ; GFX1250-REAL16-NEXT:    s_endpgm
 bb:
@@ -2836,16 +2901,19 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_fp8_bf8(<8 x i32> %A, <16 x i32
 ; GISEL-LABEL: test_swmmac_f16_16x16x128_fp8_bf8:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GISEL-NEXT:    v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] matrix_b_reuse
 ; GISEL-NEXT:    v_dual_mov_b32 v32, v29 :: v_dual_mov_b32 v33, v30
+; GISEL-NEXT:    ; implicit-def: $vgpr29
+; GISEL-NEXT:    v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] matrix_b_reuse
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[24:27], off
 ; GISEL-NEXT:    s_endpgm
 ;
 ; GFX1250-REAL16-LABEL: test_swmmac_f16_16x16x128_fp8_bf8:
 ; GFX1250-REAL16:       ; %bb.0: ; %bb
 ; GFX1250-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-REAL16-NEXT:    v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] matrix_b_reuse
 ; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
+; GFX1250-REAL16-NEXT:    ; implicit-def: $vgpr28_hi16
+; GFX1250-REAL16-NEXT:    ; implicit-def: $vgpr29
+; GFX1250-REAL16-NEXT:    v_swmmac_f16_16x16x128_fp8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] matrix_b_reuse
 ; GFX1250-REAL16-NEXT:    global_store_b128 v[30:31], v[24:27], off
 ; GFX1250-REAL16-NEXT:    s_endpgm
 bb:
@@ -2868,16 +2936,19 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_bf8_fp8(<8 x i32> %A, <16 x i32
 ; GISEL-LABEL: test_swmmac_f16_16x16x128_bf8_fp8:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GISEL-NEXT:    v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] matrix_b_reuse
 ; GISEL-NEXT:    v_dual_mov_b32 v32, v29 :: v_dual_mov_b32 v33, v30
+; GISEL-NEXT:    ; implicit-def: $vgpr29
+; GISEL-NEXT:    v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] matrix_b_reuse
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[24:27], off
 ; GISEL-NEXT:    s_endpgm
 ;
 ; GFX1250-REAL16-LABEL: test_swmmac_f16_16x16x128_bf8_fp8:
 ; GFX1250-REAL16:       ; %bb.0: ; %bb
 ; GFX1250-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-REAL16-NEXT:    v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] matrix_b_reuse
 ; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
+; GFX1250-REAL16-NEXT:    ; implicit-def: $vgpr28_hi16
+; GFX1250-REAL16-NEXT:    ; implicit-def: $vgpr29
+; GFX1250-REAL16-NEXT:    v_swmmac_f16_16x16x128_bf8_fp8 v[24:27], v[0:7], v[8:23], v[28:29] matrix_b_reuse
 ; GFX1250-REAL16-NEXT:    global_store_b128 v[30:31], v[24:27], off
 ; GFX1250-REAL16-NEXT:    s_endpgm
 bb:
@@ -2900,16 +2971,19 @@ define amdgpu_ps void @test_swmmac_f16_16x16x128_bf8_bf8(<8 x i32> %A, <16 x i32
 ; GISEL-LABEL: test_swmmac_f16_16x16x128_bf8_bf8:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GISEL-NEXT:    v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] matrix_b_reuse
 ; GISEL-NEXT:    v_dual_mov_b32 v32, v29 :: v_dual_mov_b32 v33, v30
+; GISEL-NEXT:    ; implicit-def: $vgpr29
+; GISEL-NEXT:    v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] matrix_b_reuse
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[24:27], off
 ; GISEL-NEXT:    s_endpgm
 ;
 ; GFX1250-REAL16-LABEL: test_swmmac_f16_16x16x128_bf8_bf8:
 ; GFX1250-REAL16:       ; %bb.0: ; %bb
 ; GFX1250-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-REAL16-NEXT:    v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] matrix_b_reuse
 ; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
+; GFX1250-REAL16-NEXT:    ; implicit-def: $vgpr28_hi16
+; GFX1250-REAL16-NEXT:    ; implicit-def: $vgpr29
+; GFX1250-REAL16-NEXT:    v_swmmac_f16_16x16x128_bf8_bf8 v[24:27], v[0:7], v[8:23], v[28:29] matrix_b_reuse
 ; GFX1250-REAL16-NEXT:    global_store_b128 v[30:31], v[24:27], off
 ; GFX1250-REAL16-NEXT:    s_endpgm
 bb:
@@ -2943,15 +3017,15 @@ bb:
 }
 
 define amdgpu_ps void @test_swmmac_f32_16x16x64_f16(<16 x half> %A, <32 x half> %B, <8 x float> %C, i16 %Index, ptr addrspace(1) %out) {
-; GFX1250-LABEL: test_swmmac_f32_16x16x64_f16:
-; GFX1250:       ; %bb.0: ; %bb
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_swmmac_f32_16x16x64_f16 v[24:31], v[0:7], v[8:23], v32 matrix_b_reuse
-; GFX1250-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
-; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
-; GFX1250-NEXT:    global_store_b128 v[34:35], v[24:27], off
-; GFX1250-NEXT:    s_endpgm
+; GFX1250-FAKE16-LABEL: test_swmmac_f32_16x16x64_f16:
+; GFX1250-FAKE16:       ; %bb.0: ; %bb
+; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-FAKE16-NEXT:    v_swmmac_f32_16x16x64_f16 v[24:31], v[0:7], v[8:23], v32 matrix_b_reuse
+; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
+; GFX1250-FAKE16-NEXT:    s_clause 0x1
+; GFX1250-FAKE16-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
+; GFX1250-FAKE16-NEXT:    global_store_b128 v[34:35], v[24:27], off
+; GFX1250-FAKE16-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_swmmac_f32_16x16x64_f16:
 ; GISEL:       ; %bb.0: ; %bb
@@ -2962,6 +3036,17 @@ define amdgpu_ps void @test_swmmac_f32_16x16x64_f16(<16 x half> %A, <32 x half> 
 ; GISEL-NEXT:    global_store_b128 v[36:37], v[24:27], off
 ; GISEL-NEXT:    global_store_b128 v[36:37], v[28:31], off offset:16
 ; GISEL-NEXT:    s_endpgm
+;
+; GFX1250-REAL16-LABEL: test_swmmac_f32_16x16x64_f16:
+; GFX1250-REAL16:       ; %bb.0: ; %bb
+; GFX1250-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-REAL16-NEXT:    ; implicit-def: $vgpr32_hi16
+; GFX1250-REAL16-NEXT:    v_swmmac_f32_16x16x64_f16 v[24:31], v[0:7], v[8:23], v32 matrix_b_reuse
+; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v35, v34 :: v_dual_mov_b32 v34, v33
+; GFX1250-REAL16-NEXT:    s_clause 0x1
+; GFX1250-REAL16-NEXT:    global_store_b128 v[34:35], v[28:31], off offset:16
+; GFX1250-REAL16-NEXT:    global_store_b128 v[34:35], v[24:27], off
+; GFX1250-REAL16-NEXT:    s_endpgm
 bb:
   %res = call <8 x float> @llvm.amdgcn.swmmac.f32.16x16x64.f16.v8f32.v16f16.v32f16.i16(i1 0, <16 x half> %A, i1 0, <32 x half> %B, <8 x float> %C, i16 %Index, i1 false, i1 true)
   store <8 x float> %res, ptr addrspace(1) %out
@@ -2969,13 +3054,13 @@ bb:
 }
 
 define amdgpu_ps void @test_swmmac_f16_16x16x64_f16(<16 x half> %A, <32 x half> %B, <8 x half> %C, i16 %Index, ptr addrspace(1) %out) {
-; GFX1250-LABEL: test_swmmac_f16_16x16x64_f16:
-; GFX1250:       ; %bb.0: ; %bb
-; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-NEXT:    v_swmmac_f16_16x16x64_f16 v[24:27], v[0:7], v[8:23], v28 matrix_b_reuse
-; GFX1250-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
-; GFX1250-NEXT:    global_store_b128 v[30:31], v[24:27], off
-; GFX1250-NEXT:    s_endpgm
+; GFX1250-FAKE16-LABEL: test_swmmac_f16_16x16x64_f16:
+; GFX1250-FAKE16:       ; %bb.0: ; %bb
+; GFX1250-FAKE16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-FAKE16-NEXT:    v_swmmac_f16_16x16x64_f16 v[24:27], v[0:7], v[8:23], v28 matrix_b_reuse
+; GFX1250-FAKE16-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
+; GFX1250-FAKE16-NEXT:    global_store_b128 v[30:31], v[24:27], off
+; GFX1250-FAKE16-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: test_swmmac_f16_16x16x64_f16:
 ; GISEL:       ; %bb.0: ; %bb
@@ -2984,6 +3069,15 @@ define amdgpu_ps void @test_swmmac_f16_16x16x64_f16(<16 x half> %A, <32 x half> 
 ; GISEL-NEXT:    v_dual_mov_b32 v32, v29 :: v_dual_mov_b32 v33, v30
 ; GISEL-NEXT:    global_store_b128 v[32:33], v[24:27], off
 ; GISEL-NEXT:    s_endpgm
+;
+; GFX1250-REAL16-LABEL: test_swmmac_f16_16x16x64_f16:
+; GFX1250-REAL16:       ; %bb.0: ; %bb
+; GFX1250-REAL16-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-REAL16-NEXT:    ; implicit-def: $vgpr28_hi16
+; GFX1250-REAL16-NEXT:    v_swmmac_f16_16x16x64_f16 v[24:27], v[0:7], v[8:23], v28 matrix_b_reuse
+; GFX1250-REAL16-NEXT:    v_dual_mov_b32 v31, v30 :: v_dual_mov_b32 v30, v29
+; GFX1250-REAL16-NEXT:    global_store_b128 v[30:31], v[24:27], off
+; GFX1250-REAL16-NEXT:    s_endpgm
 bb:
   %res = call <8 x half> @llvm.amdgcn.swmmac.f16.16x16x64.f16.v8f16.v16f16.v32f16.i16(i1 0, <16 x half> %A, i1 0, <32 x half> %B, <8 x half> %C, i16 %Index, i1 false, i1 true)
   store <8 x half> %res, ptr addrspace(1) %out
@@ -3034,6 +3128,3 @@ declare <8 x half> @llvm.amdgcn.swmmac.f16.16x16x128.bf8.bf8.v8f16.v8i32.v16i32.
 declare <8 x i32> @llvm.amdgcn.swmmac.i32.16x16x128.iu8.v8i32.v8i32.v16i32.i64(i1 immarg, <8 x i32>, i1 immarg, <16 x i32>, <8 x i32>, i64 %Index, i1, i1)
 declare <8 x float> @llvm.amdgcn.swmmac.f32.16x16x64.f16.v8f32.v16f16.v32f16.i16(i1, <16 x half>, i1, <32 x half>, <8 x float>, i16, i1, i1)
 declare <8 x half> @llvm.amdgcn.swmmac.f16.16x16x64.f16.v8f16.v16f16.v32f16.i16(i1, <16 x half>, i1, <32 x half>, <8 x half>, i16, i1, i1)
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; GISEL-FAKE16: {{.*}}
-; GISEL-REAL16: {{.*}}

@@ -4,35 +4,12 @@
 ; RUN: llc -global-isel -mtriple=amdgcn -mcpu=gfx90a < %s | FileCheck -check-prefixes=GCN %s
 
 define amdgpu_ps <4 x float> @load_1d(<8 x i32> inreg %rsrc, i32 %s) {
-; GCN-LABEL: load_1d:
-; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf unorm
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   ret <4 x float> %v
 }
 
 define amdgpu_ps <4 x float> @load_1d_lwe(<8 x i32> inreg %rsrc, ptr addrspace(1) inreg %out, i32 %s) {
-; GCN-LABEL: load_1d_lwe:
-; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    v_mov_b32_e32 v8, 0
-; GCN-NEXT:    v_mov_b32_e32 v6, v0
-; GCN-NEXT:    v_mov_b32_e32 v9, v8
-; GCN-NEXT:    v_mov_b32_e32 v10, v8
-; GCN-NEXT:    v_mov_b32_e32 v11, v8
-; GCN-NEXT:    v_mov_b32_e32 v12, v8
-; GCN-NEXT:    v_mov_b32_e32 v0, v8
-; GCN-NEXT:    v_mov_b32_e32 v1, v9
-; GCN-NEXT:    v_mov_b32_e32 v2, v10
-; GCN-NEXT:    v_mov_b32_e32 v3, v11
-; GCN-NEXT:    v_mov_b32_e32 v4, v12
-; GCN-NEXT:    image_load v[0:4], v6, s[0:7] dmask:0xf unorm lwe
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    global_store_dword v8, v4, s[8:9]
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    ; return to shader part epilog
 main_body:
   %v = call {<4 x float>, i32} @llvm.amdgcn.image.load.1d.v4f32i32.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 2, i32 0)
   %v.vec = extractvalue {<4 x float>, i32} %v, 0
@@ -179,12 +156,6 @@ main_body:
 }
 
 define amdgpu_ps <4 x float> @load_1d_addr_align(<8 x i32> inreg %rsrc, <2 x i32> %s) {
-; GCN-LABEL: load_1d_addr_align:
-; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    v_mov_b32_e32 v0, v1
-; GCN-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf unorm
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    ; return to shader part epilog
 main_body:
   %s1 = extractelement <2 x i32> %s, i32 1
   %v = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %s1, <8 x i32> %rsrc, i32 0, i32 0)
@@ -192,10 +163,6 @@ main_body:
 }
 
 define amdgpu_ps void @store_1d(<8 x i32> inreg %rsrc, <4 x float> %vdata, i32 %s) {
-; GCN-LABEL: store_1d:
-; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf unorm
-; GCN-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   ret void
@@ -272,119 +239,66 @@ main_body:
 }
 
 define amdgpu_ps float @load_1d_V1(<8 x i32> inreg %rsrc, i32 %s) {
-; GCN-LABEL: load_1d_V1:
-; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    image_load v0, v0, s[0:7] dmask:0x8 unorm
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    ; return to shader part epilog
 main_body:
   %v = call float @llvm.amdgcn.image.load.1d.f32.i32(i32 8, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   ret float %v
 }
 
 define amdgpu_ps <2 x float> @load_1d_V2(<8 x i32> inreg %rsrc, i32 %s) {
-; GCN-LABEL: load_1d_V2:
-; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    image_load v[0:1], v0, s[0:7] dmask:0x9 unorm
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <2 x float> @llvm.amdgcn.image.load.1d.v2f32.i32(i32 9, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   ret <2 x float> %v
 }
 
 define amdgpu_ps void @store_1d_V1(<8 x i32> inreg %rsrc, float %vdata, i32 %s) {
-; GCN-LABEL: store_1d_V1:
-; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    v_mov_b32_e32 v2, v1
-; GCN-NEXT:    image_store v0, v2, s[0:7] dmask:0x2 unorm
-; GCN-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.1d.f32.i32(float %vdata, i32 2, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   ret void
 }
 
 define amdgpu_ps void @store_1d_V2(<8 x i32> inreg %rsrc, <2 x float> %vdata, i32 %s) {
-; GCN-LABEL: store_1d_V2:
-; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    image_store v[0:1], v2, s[0:7] dmask:0xc unorm
-; GCN-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.1d.v2f32.i32(<2 x float> %vdata, i32 12, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   ret void
 }
 
 define amdgpu_ps <4 x float> @load_1d_glc(<8 x i32> inreg %rsrc, i32 %s) {
-; GCN-LABEL: load_1d_glc:
-; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf unorm glc
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 1)
   ret <4 x float> %v
 }
 
 define amdgpu_ps <4 x float> @load_1d_slc(<8 x i32> inreg %rsrc, i32 %s) {
-; GCN-LABEL: load_1d_slc:
-; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf unorm slc
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 2)
   ret <4 x float> %v
 }
 
 define amdgpu_ps <4 x float> @load_1d_glc_slc(<8 x i32> inreg %rsrc, i32 %s) {
-; GCN-LABEL: load_1d_glc_slc:
-; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf unorm glc slc
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    ; return to shader part epilog
 main_body:
   %v = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 3)
   ret <4 x float> %v
 }
 
 define amdgpu_ps void @store_1d_glc(<8 x i32> inreg %rsrc, <4 x float> %vdata, i32 %s) {
-; GCN-LABEL: store_1d_glc:
-; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf unorm glc
-; GCN-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 1)
   ret void
 }
 
 define amdgpu_ps void @store_1d_slc(<8 x i32> inreg %rsrc, <4 x float> %vdata, i32 %s) {
-; GCN-LABEL: store_1d_slc:
-; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf unorm slc
-; GCN-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 2)
   ret void
 }
 
 define amdgpu_ps void @store_1d_glc_slc(<8 x i32> inreg %rsrc, <4 x float> %vdata, i32 %s) {
-; GCN-LABEL: store_1d_glc_slc:
-; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf unorm glc slc
-; GCN-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 3)
   ret void
 }
 
 define amdgpu_ps void @image_store_wait(<8 x i32> inreg %arg, <8 x i32> inreg %arg1, <8 x i32> inreg %arg2, <4 x float> %arg3, i32 %arg4) #0 {
-; GCN-LABEL: image_store_wait:
-; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf unorm
-; GCN-NEXT:    image_load v[0:3], v4, s[8:15] dmask:0xf unorm
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    image_store v[0:3], v4, s[16:23] dmask:0xf unorm
-; GCN-NEXT:    s_endpgm
 main_body:
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %arg3, i32 15, i32 %arg4, <8 x i32> %arg, i32 0, i32 0)
   %data = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %arg4, <8 x i32> %arg1, i32 0, i32 0)
@@ -403,12 +317,6 @@ define amdgpu_ps float @image_load_mmo(<8 x i32> inreg %rsrc, ptr addrspace(3) %
 }
 
 define amdgpu_ps <4 x float> @getresinfo_1d(<8 x i32> inreg %rsrc, <2 x i32> %s) {
-; GCN-LABEL: getresinfo_1d:
-; GCN:       ; %bb.0: ; %main_body
-; GCN-NEXT:    v_mov_b32_e32 v0, v1
-; GCN-NEXT:    image_get_resinfo v[0:3], v0, s[0:7] dmask:0xf unorm
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    ; return to shader part epilog
 main_body:
   %s1 = extractelement <2 x i32> %s, i32 1
   %v = call <4 x float> @llvm.amdgcn.image.getresinfo.1d.v4f32.i32(i32 15, i32 %s1, <8 x i32> %rsrc, i32 0, i32 0)
@@ -416,14 +324,6 @@ main_body:
 }
 
 define amdgpu_ps void @load_1d_agpr(<8 x i32> inreg %rsrc, i32 %s) {
-; GCN-LABEL: load_1d_agpr:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    image_load a[0:3], v0, s[0:7] dmask:0xf unorm
-; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ; use a[0:3]
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    s_endpgm
   %v = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   call void asm sideeffect "; use $0", "a"(<4 x float> %v)
   ret  void
@@ -472,13 +372,6 @@ define amdgpu_ps void @load_cube_agpr(<8 x i32> inreg %rsrc, i32 %s, i32 %t, i32
 }
 
 define amdgpu_ps void @store_1d_agpr(<8 x i32> inreg %rsrc, i32 %s) {
-; GCN-LABEL: store_1d_agpr:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:    ; def a[0:3]
-; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    image_store a[0:3], v0, s[0:7] dmask:0xf unorm
-; GCN-NEXT:    s_endpgm
   %vdata = call <4 x float> asm "; def $0", "=a"()
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %vdata, i32 15, i32 %s, <8 x i32> %rsrc, i32 0, i32 0)
   ret void

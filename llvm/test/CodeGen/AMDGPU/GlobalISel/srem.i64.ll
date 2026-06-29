@@ -360,6 +360,7 @@ define amdgpu_ps i64 @s_srem_i64(i64 inreg %num, i64 inreg %den) {
 ; CHECK-NEXT:    s_cselect_b64 s[6:7], s[6:7], s[10:11]
 ; CHECK-NEXT:    s_xor_b64 s[6:7], s[6:7], s[0:1]
 ; CHECK-NEXT:    s_sub_u32 s0, s6, s0
+; CHECK-NEXT:    ; implicit-def: $sgpr1
 ; CHECK-NEXT:    s_mov_b32 s6, 0
 ; CHECK-NEXT:    s_branch .LBB1_3
 ; CHECK-NEXT:  .LBB1_2:

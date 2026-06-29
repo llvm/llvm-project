@@ -196,6 +196,7 @@ define <3 x float> @exp10_v3f32(<3 x float> %x) {
 ; CHECK-NEXT:    vmov s16, r0
 ; CHECK-NEXT:    mov r1, r4
 ; CHECK-NEXT:    vmov s18, r6
+; CHECK-NEXT:    @ implicit-def: $s19
 ; CHECK-NEXT:    vmov r2, r3, d9
 ; CHECK-NEXT:    vpop {d8, d9}
 ; CHECK-NEXT:    pop {r4, r5, r6, pc}

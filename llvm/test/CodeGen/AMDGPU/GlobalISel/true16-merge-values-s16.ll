@@ -38,6 +38,7 @@ define amdgpu_ps i48 @test_merge_values_vgpr(<3 x i16> %src0, <3 x i16> %src1) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_and_b32_e32 v0, v0, v2
 ; GFX11-NEXT:    v_and_b32_e32 v1, v1, v3
+; GFX11-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
@@ -50,6 +51,7 @@ define amdgpu_ps i48 @test_merge_values_vgpr(<3 x i16> %src0, <3 x i16> %src1) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_and_b32_e32 v0, v0, v2
 ; GFX12-NEXT:    v_and_b32_e32 v1, v1, v3
+; GFX12-NEXT:    ; implicit-def: $vgpr1_hi16
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-NEXT:    v_readfirstlane_b32 s1, v1

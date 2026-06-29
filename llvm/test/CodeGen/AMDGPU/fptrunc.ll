@@ -1860,6 +1860,7 @@ define half @fabs_fptrunc_f32_to_f16(float %x) {
 ; GFX11-SAFE-GISEL:       ; %bb.0:
 ; GFX11-SAFE-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SAFE-GISEL-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
+; GFX11-SAFE-GISEL-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-SAFE-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SAFE-GISEL-NEXT:    v_and_b16 v0.l, 0x7fff, v0.l
 ; GFX11-SAFE-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -1884,6 +1885,7 @@ define half @fabs_fptrunc_f32_to_f16(float %x) {
 ; GFX11-UNSAFE-GISEL-TRUE16:       ; %bb.0:
 ; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    v_and_b16 v0.l, 0x7fff, v0.l
 ; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -1948,6 +1950,7 @@ define half @fneg_fabs_fptrunc_f32_to_f16(float %x) {
 ; GFX11-SAFE-GISEL:       ; %bb.0:
 ; GFX11-SAFE-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-SAFE-GISEL-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
+; GFX11-SAFE-GISEL-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-SAFE-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SAFE-GISEL-NEXT:    v_or_b16 v0.l, 0x8000, v0.l
 ; GFX11-SAFE-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -1972,6 +1975,7 @@ define half @fneg_fabs_fptrunc_f32_to_f16(float %x) {
 ; GFX11-UNSAFE-GISEL-TRUE16:       ; %bb.0:
 ; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    v_cvt_f16_f32_e32 v0.l, v0
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    v_or_b16 v0.l, 0x8000, v0.l
 ; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -2310,6 +2314,7 @@ define half @fabs_fptrunc_f64_to_f16(double %x) {
 ; GFX11-SAFE-GISEL-NEXT:    v_cndmask_b32_e32 v0, v3, v0, vcc_lo
 ; GFX11-SAFE-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-SAFE-GISEL-NEXT:    v_and_or_b32 v0, 0x8000, v1, v0
+; GFX11-SAFE-GISEL-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-SAFE-GISEL-NEXT:    v_and_b16 v0.l, 0x7fff, v0.l
 ; GFX11-SAFE-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2461,6 +2466,7 @@ define half @fabs_fptrunc_f64_to_f16(double %x) {
 ; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    v_cndmask_b32_e32 v0, v3, v0, vcc_lo
 ; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    v_and_or_b32 v0, 0x8000, v1, v0
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    v_and_b16 v0.l, 0x7fff, v0.l
 ; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;

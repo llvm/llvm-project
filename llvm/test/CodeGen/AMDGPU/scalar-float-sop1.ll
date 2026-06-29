@@ -194,11 +194,13 @@ define amdgpu_vs half @frint_f16(half inreg %val) {
 ; GISEL-GFX11-LABEL: frint_f16:
 ; GISEL-GFX11:       ; %bb.0:
 ; GISEL-GFX11-NEXT:    v_rndne_f16_e32 v0.l, s0
+; GISEL-GFX11-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GISEL-GFX11-NEXT:    ; return to shader part epilog
 ;
 ; GISEL-GFX12-LABEL: frint_f16:
 ; GISEL-GFX12:       ; %bb.0:
 ; GISEL-GFX12-NEXT:    v_rndne_f16_e32 v0.l, s0
+; GISEL-GFX12-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GISEL-GFX12-NEXT:    ; return to shader part epilog
   %res = call half @llvm.rint.f16(half %val)
   ret half %res

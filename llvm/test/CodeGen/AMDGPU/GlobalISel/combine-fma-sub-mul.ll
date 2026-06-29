@@ -173,6 +173,7 @@ define half @test_half_sub_mul(half %x, half %y, half %z) {
 ; GFX11-CONTRACT-TRUE16:       ; %bb.0: ; %.entry
 ; GFX11-CONTRACT-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-CONTRACT-TRUE16-NEXT:    v_fma_f16 v0.l, v0.l, v1.l, -v2.l
+; GFX11-CONTRACT-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-CONTRACT-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-CONTRACT-FAKE16-LABEL: test_half_sub_mul:
@@ -185,6 +186,7 @@ define half @test_half_sub_mul(half %x, half %y, half %z) {
 ; GFX11-DENORM-TRUE16:       ; %bb.0: ; %.entry
 ; GFX11-DENORM-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-DENORM-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v1.l
+; GFX11-DENORM-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-DENORM-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-DENORM-TRUE16-NEXT:    v_sub_f16_e32 v0.l, v0.l, v2.l
 ; GFX11-DENORM-TRUE16-NEXT:    s_setpc_b64 s[30:31]
@@ -246,6 +248,7 @@ define half @test_half_sub_mul_rhs(half %x, half %y, half %z) {
 ; GFX11-CONTRACT-TRUE16:       ; %bb.0: ; %.entry
 ; GFX11-CONTRACT-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-CONTRACT-TRUE16-NEXT:    v_fma_f16 v0.l, -v0.l, v1.l, v2.l
+; GFX11-CONTRACT-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-CONTRACT-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-CONTRACT-FAKE16-LABEL: test_half_sub_mul_rhs:
@@ -258,6 +261,7 @@ define half @test_half_sub_mul_rhs(half %x, half %y, half %z) {
 ; GFX11-DENORM-TRUE16:       ; %bb.0: ; %.entry
 ; GFX11-DENORM-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-DENORM-TRUE16-NEXT:    v_mul_f16_e32 v0.l, v0.l, v1.l
+; GFX11-DENORM-TRUE16-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX11-DENORM-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-DENORM-TRUE16-NEXT:    v_sub_f16_e32 v0.l, v2.l, v0.l
 ; GFX11-DENORM-TRUE16-NEXT:    s_setpc_b64 s[30:31]

@@ -9,6 +9,8 @@ define arm_aapcs_vfpcc <2 x float> @complex_add_v2f32(<2 x float> %a, <2 x float
 ; CHECK-LABEL: complex_add_v2f32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vadd.f32 s5, s5, s0
+; CHECK-NEXT:    @ implicit-def: $s6
+; CHECK-NEXT:    @ implicit-def: $s7
 ; CHECK-NEXT:    vsub.f32 s4, s4, s1
 ; CHECK-NEXT:    vmov q0, q1
 ; CHECK-NEXT:    bx lr

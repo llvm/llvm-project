@@ -60,6 +60,7 @@ define amdgpu_cs half @v_s_exp_f16(half inreg %src) {
 ; GFX12-GISEL-LABEL: v_s_exp_f16:
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    v_exp_f16_e32 v0.l, s0
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GCN-GISEL-LABEL: v_s_exp_f16:
@@ -170,6 +171,7 @@ define amdgpu_cs half @v_s_log_f16(half inreg %src) {
 ; GFX12-GISEL-LABEL: v_s_log_f16:
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    v_log_f16_e32 v0.l, s0
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GCN-GISEL-LABEL: v_s_log_f16:
@@ -728,6 +730,7 @@ define amdgpu_cs half @srcmods_abs_f16(half inreg %src) {
 ; GFX12-GISEL-LABEL: srcmods_abs_f16:
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    v_log_f16_e64 v0.l, |s0|
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GCN-GISEL-LABEL: srcmods_abs_f16:
@@ -751,6 +754,7 @@ define amdgpu_cs half @srcmods_neg_f16(half inreg %src) {
 ; GFX12-GISEL-LABEL: srcmods_neg_f16:
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    v_log_f16_e64 v0.l, -s0
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-NEXT:    ; return to shader part epilog
 ;
 ; GCN-GISEL-LABEL: srcmods_neg_f16:
@@ -797,6 +801,7 @@ define amdgpu_cs half @fdiv_f16_i16(half inreg %a, i16 inreg %b) {
 ; GFX12-GISEL-LABEL: fdiv_f16_i16:
 ; GFX12-GISEL:       ; %bb.0:
 ; GFX12-GISEL-NEXT:    v_cvt_f16_u16_e32 v0.l, s1
+; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s1, v0
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_va_sdst(0)

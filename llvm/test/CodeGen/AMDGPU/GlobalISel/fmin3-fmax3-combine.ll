@@ -621,6 +621,7 @@ define half @fmaximum3_f16(half %a, half %b, half %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_maximum3_f16 v0.l, v0.l, v1.l, v2.l
+; GFX12-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %m1 = call half @llvm.maximum.f16(half %a, half %b)
   %m2 = call half @llvm.maximum.f16(half %m1, half %c)
@@ -647,6 +648,7 @@ define half @fminimum3_f16(half %a, half %b, half %c) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_minimum3_f16 v0.l, v0.l, v1.l, v2.l
+; GFX12-NEXT:    ; implicit-def: $vgpr0_hi16
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %m1 = call half @llvm.minimum.f16(half %a, half %b)
   %m2 = call half @llvm.minimum.f16(half %m1, half %c)

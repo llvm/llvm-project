@@ -1576,6 +1576,7 @@ define { <8 x half>, <8 x half>, <8 x half> } @test_vld3q_lane_f16(ptr, <8 x hal
 ; CHECK-NEXT:    @ kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-NEXT:    @ implicit-def: $q3
 ; CHECK-NEXT:    vld3.16 {d1[3], d3[3], d5[3]}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1589,6 +1590,7 @@ define { <4 x half>, <4 x half>, <4 x half> } @test_vld3_lane_f16(ptr, <4 x half
 ; CHECK-NEXT:    @ kill: def $d2 killed $d2 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    @ kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    @ kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    @ implicit-def: $d3
 ; CHECK-NEXT:    vld3.16 {d0[3], d1[3], d2[3]}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1649,6 +1651,7 @@ define void @test_vst3lane_p0i8_v8f16(ptr, <8 x half>, <8 x half>, <8 x half>) {
 ; CHECK-NEXT:    @ kill: def $q2 killed $q2 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
 ; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1_q2_q3 def $q0_q1_q2_q3
+; CHECK-NEXT:    @ implicit-def: $q3
 ; CHECK-NEXT:    vst3.16 {d0[0], d2[0], d4[0]}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
@@ -1661,6 +1664,7 @@ define void @test_vst3lane_p0i8_v4f16(ptr, <4 x half>, <4 x half>, <4 x half>) {
 ; CHECK-NEXT:    @ kill: def $d2 killed $d2 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    @ kill: def $d1 killed $d1 killed $q0_q1 def $q0_q1
 ; CHECK-NEXT:    @ kill: def $d0 killed $d0 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    @ implicit-def: $d3
 ; CHECK-NEXT:    vst3.16 {d0[0], d1[0], d2[0]}, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
