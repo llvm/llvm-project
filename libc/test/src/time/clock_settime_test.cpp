@@ -8,12 +8,12 @@
 
 #include "hdr/time_macros.h"
 #include "hdr/types/struct_timespec.h"
+#include "src/__support/macros/properties/architectures.h"
 #include "src/time/clock_settime.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 
 using LlvmLibcClockSetTime = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
-
 #ifdef CLOCK_MONOTONIC
 TEST_F(LlvmLibcClockSetTime, MonotonicIsNotSettable) {
   timespec ts = {0, 0};
@@ -40,12 +40,19 @@ TEST_F(LlvmLibcClockSetTime, InvalidTimespecNsec) {
 TEST_F(LlvmLibcClockSetTime, NullPointerIsEFAULT) {
   int result = LIBC_NAMESPACE::clock_settime(CLOCK_REALTIME, nullptr);
   ASSERT_EQ(result, -1);
+#ifdef LIBC_TARGET_ARCH_IS_GPU
+  ASSERT_ERRNO_EQ(EINVAL);
+#endif
   ASSERT_ERRNO_EQ(EFAULT);
 }
 
 TEST_F(LlvmLibcClockSetTime, ClockIsSet) {
   timespec ts = {0, 0};
   int result = LIBC_NAMESPACE::clock_settime(CLOCK_REALTIME, &ts);
+#ifdef LIBC_TARGET_ARCH_IS_GPU
+  ASSERT_EQ(result, -1);
+  ASSERT_ERRNO_EQ(EINVAL);
+#endif
   if (result == 0) {
     ASSERT_ERRNO_SUCCESS();
   } else {

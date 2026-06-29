@@ -20,3 +20,14 @@ add_object_library(
     libc.hdr.types.struct_timespec
     .time_utils
 )
+
+add_object_library(
+  clock_settime
+  SRCS
+    clock_settime.cpp
+  HDRS
+    ../clock_settime.h
+  DEPENDS
+    libc.hdr.types.clockid_t
+    libc.hdr.types.struct_timespec
+)
