@@ -322,8 +322,6 @@ static Register adjustPreloadedArgType(MachineIRBuilder &B, Register Src,
                      : DstTy;
   if (SrcTy.getSizeInBits() != IntDstTy.getSizeInBits())
     Src = B.buildAnyExtOrTrunc(IntDstTy, Src).getReg(0);
-  else if (SrcTy != IntDstTy)
-    Src = B.buildBitcast(IntDstTy, Src).getReg(0);
 
   if (DstTy.isPointer())
     return B.buildIntToPtr(DstTy, Src).getReg(0);
@@ -429,19 +427,18 @@ static void allocatePreloadKernArgSGPRs(
     if (!InPreloadSequence || !Arg.hasInRegAttr())
       break;
 
-    unsigned ArgIdx = Arg.getArgNo();
-    if (InIdx < SplitArgs.size() && SplitArgs[InIdx].OrigArgIndex != ArgIdx)
-      break;
-
-    for (; InIdx < SplitArgs.size() && SplitArgs[InIdx].OrigArgIndex == ArgIdx;
+    for (unsigned ArgIdx = Arg.getArgNo();
+         InIdx < SplitArgs.size() && SplitArgs[InIdx].OrigArgIndex == ArgIdx;
          ++InIdx) {
       const CCValAssign &ArgLoc = ArgLocs[InIdx];
       assert(ArgLoc.isMemLoc());
       const Align KernelArgBaseAlign = Align(16);
       unsigned ArgOffset = ArgLoc.getLocMemOffset();
       Align Alignment = commonAlignment(KernelArgBaseAlign, ArgOffset);
+      // CCValAssign may need a rounded legal MVT, but preload SGPR accounting
+      // must follow the original kernarg byte layout.
       unsigned NumAllocSGPRs =
-          alignTo(ArgLoc.getLocVT().getFixedSizeInBits(), 32) / 32;
+          alignTo(DL.getTypeAllocSize(SplitArgs[InIdx].Ty), 4) / 4;
 
       if (Arg.hasAttribute("amdgpu-hidden-argument")) {
         // Hidden arguments are laid out after the explicit kernargs, aligned to
