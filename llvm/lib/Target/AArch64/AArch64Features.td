@@ -830,6 +830,10 @@ def FeatureAlignCmpCSelPairs : SubtargetFeature<
     "Align certain CMP/FCMP and CSEL/FCSEL instruction pairs",
     [], InlineIgnore>;
 
+def FeatureAlignPageCrossFuncs : SubtargetFeature<
+    "align-page-cross-funcs", "HasAlignPageCrossFuncs", "true",
+    "Page-cross alignment for large nested-loop functions">;
+
 def FeatureFuseCryptoEOR : SubtargetFeature<
     "fuse-crypto-eor", "HasFuseCryptoEOR", "true",
     "CPU fuses AES/PMULL and EOR operations",
