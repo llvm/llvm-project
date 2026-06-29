@@ -87,6 +87,36 @@ static LogicalResult inlinePayload(OpBuilder &b, LinalgOp linalgOp,
 //===----------------------------------------------------------------------===//
 
 namespace {
+
+/// Helper implementing the generalized LinalgOp tiled implementation.
+static FailureOr<TilingResult>
+getTiledImplForLinalgOp(Operation *op, OpBuilder &b,
+                        ArrayRef<OpFoldResult> offsets,
+                        ArrayRef<OpFoldResult> sizes) {
+  Location loc = op->getLoc();
+  LinalgOp linalgOp = cast<LinalgOp>(op);
+  SmallVector<Value> valuesToTile = linalgOp->getOperands();
+  SmallVector<Value> tiledOperands =
+      makeTiledShapes(b, loc, linalgOp, valuesToTile, offsets, sizes, {}, true);
+  SmallVector<Operation *> generatedSlices = llvm::map_to_vector(
+      llvm::make_filter_range(
+          tiledOperands,
+          [](Value v) -> bool {
+            return isa_and_nonnull<tensor::ExtractSliceOp, memref::SubViewOp>(
+                v.getDefiningOp());
+          }),
+      [](Value v) -> Operation * { return v.getDefiningOp(); });
+
+  SmallVector<Type> resultTensorTypes =
+      getTensorOutputTypes(linalgOp, tiledOperands);
+
+  Operation *tiledOp = clone(b, linalgOp, resultTensorTypes, tiledOperands);
+  offsetIndices(b, cast<LinalgOp>(tiledOp), offsets);
+
+  return TilingResult{
+      {tiledOp}, SmallVector<Value>(tiledOp->getResults()), generatedSlices};
+}
+
 /// External model implementation of TilingInterface for LinalgOps. An external
 /// model implementation is used for now till the use of `TilingInterface` is
 /// on-par with the current Linalg tiling + fusion patterns. Once it is
@@ -124,30 +154,7 @@ struct LinalgOpTilingInterface
   getTiledImplementation(Operation *op, OpBuilder &b,
                          ArrayRef<OpFoldResult> offsets,
                          ArrayRef<OpFoldResult> sizes) const {
-    // Leave the `sizeBounds` value empty. That is only needed when the `sizes`
-    // specified could lead to out of bounds accesses.
-    Location loc = op->getLoc();
-    LinalgOp linalgOp = cast<LinalgOp>(op);
-    SmallVector<Value> valuesToTile = linalgOp->getOperands();
-    SmallVector<Value> tiledOperands = makeTiledShapes(
-        b, loc, linalgOp, valuesToTile, offsets, sizes, {}, true);
-    SmallVector<Operation *> generatedSlices = llvm::map_to_vector(
-        llvm::make_filter_range(
-            tiledOperands,
-            [](Value v) -> bool {
-              return isa_and_nonnull<tensor::ExtractSliceOp, memref::SubViewOp>(
-                  v.getDefiningOp());
-            }),
-        [](Value v) -> Operation * { return v.getDefiningOp(); });
-
-    SmallVector<Type> resultTensorTypes =
-        getTensorOutputTypes(linalgOp, tiledOperands);
-
-    Operation *tiledOp = clone(b, linalgOp, resultTensorTypes, tiledOperands);
-    offsetIndices(b, cast<LinalgOp>(tiledOp), offsets);
-
-    return TilingResult{
-        {tiledOp}, SmallVector<Value>(tiledOp->getResults()), generatedSlices};
+    return getTiledImplForLinalgOp(op, b, offsets, sizes);
   }
 
   /// Utility to fetch the offsets and sizes when applied as per the indexing
@@ -385,6 +392,53 @@ struct LinalgOpTilingInterface
                                             mappedSizes));
   }
 };
+
+/// Validate tile sizes against `ScaledContractOp` constraints.
+static LogicalResult
+verifyScaledContractTileSizes(linalg::ScaledContractOp scaledContractOp,
+                              ArrayRef<OpFoldResult> sizes) {
+  SmallVector<AffineMap> maps = scaledContractOp.getIndexingMapsArray();
+  for (AffineMap scaleMap : {maps[1], maps[3]}) {
+    for (AffineExpr expr : scaleMap.getResults()) {
+      auto binExpr = dyn_cast<AffineBinaryOpExpr>(expr);
+      if (!binExpr)
+        continue;
+      assert(binExpr.getKind() == AffineExprKind::FloorDiv &&
+             "expected floordiv in scale expression");
+      // For each dimension that uses block-scaling, the corresponding tile size
+      // must be divisible by the scale factor to prevent tiles with dynamic
+      // scale ranges. These cannot be currently expressed by indexing maps.
+      unsigned dimPos = cast<AffineDimExpr>(binExpr.getLHS()).getPosition();
+      int64_t scaleFactor =
+          cast<AffineConstantExpr>(binExpr.getRHS()).getValue();
+      FailureOr<int64_t> tileSize =
+          ValueBoundsConstraintSet::computeConstantBound(
+              presburger::BoundType::UB, sizes[dimPos],
+              /*stopCondition=*/nullptr, ValueBoundsOptions{/*closedUB=*/true});
+      if (succeeded(tileSize) &&
+          !(*tileSize % scaleFactor == 0 || scaleFactor % *tileSize == 0)) {
+        return scaledContractOp.emitOpError()
+               << "tile size " << *tileSize << " for dim " << dimPos
+               << " must divide or be divisible by scale factor "
+               << scaleFactor;
+      }
+    }
+  }
+  return success();
+}
+
+/// Specialization for ScaledContractOp with extra validation to ensure scaling
+/// schemes are compatible with tile sizes.
+template <>
+FailureOr<TilingResult>
+LinalgOpTilingInterface<linalg::ScaledContractOp>::getTiledImplementation(
+    Operation *op, OpBuilder &b, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes) const {
+  auto scaledContractOp = cast<linalg::ScaledContractOp>(op);
+  if (failed(verifyScaledContractTileSizes(scaledContractOp, sizes)))
+    return failure();
+  return getTiledImplForLinalgOp(op, b, offsets, sizes);
+}
 
 //===----------------------------------------------------------------------===//
 // External Model for implementing `PartialReductionInterface` for `LinalgOp`s.

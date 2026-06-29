@@ -308,6 +308,34 @@ func.func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?x?xf32>, %c3: memref
 
 // -----
 
+#scaledA = affine_map<(m, n, k) -> (m, k)>
+#scaledScaleA = affine_map<(m, n, k) -> (m floordiv 32, k floordiv 128)>
+#scaledB = affine_map<(m, n, k) -> (n, k)>
+#scaledScaleB = affine_map<(m, n, k) -> (n)>
+#scaledC = affine_map<(m, n, k) -> (m, n)>
+func.func @scaled_contract_named_op(
+    %a: memref<256x512xi8>, %sa: memref<8x4xf8E8M0FNU>, %b: memref<128x512xi8>,
+    %sb: memref<128xf8E8M0FNU>, %c: memref<256x128xf32>,
+    %ta: tensor<256x512xi8>, %tsa: tensor<8x4xf8E8M0FNU>, %tb: tensor<128x512xi8>,
+    %tsb: tensor<128xf8E8M0FNU>, %tc: tensor<256x128xf32>)
+  -> tensor<256x128xf32>
+{
+  linalg.scaled_contract
+      indexing_maps = [#scaledA, #scaledScaleA, #scaledB, #scaledScaleB, #scaledC]
+      ins(%a, %sa, %b, %sb : memref<256x512xi8>, memref<8x4xf8E8M0FNU>, memref<128x512xi8>, memref<128xf8E8M0FNU>)
+      outs(%c : memref<256x128xf32>)
+  %res = linalg.scaled_contract
+      indexing_maps = [#scaledA, #scaledScaleA, #scaledB, #scaledScaleB, #scaledC]
+      ins(%ta, %tsa, %tb, %tsb : tensor<256x512xi8>, tensor<8x4xf8E8M0FNU>, tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+      outs(%tc : tensor<256x128xf32>) -> tensor<256x128xf32>
+  return %res : tensor<256x128xf32>
+}
+// CHECK-LABEL: func @scaled_contract_named_op
+//       CHECK:   linalg.scaled_contract
+//       CHECK:   linalg.scaled_contract
+
+// -----
+
 func.func @fill_tensor(%arg0 : index, %arg1 : index, %arg2 : f32) -> tensor<?x?xf32> {
   %0 = tensor.empty(%arg0, %arg1) : tensor<?x?xf32>
   %1 = linalg.fill ins(%arg2 : f32) outs(%0 : tensor<?x?xf32>) -> tensor<?x?xf32>

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --transform-interpreter --split-input-file -canonicalize | FileCheck %s
+// RUN: mlir-opt %s --transform-interpreter --split-input-file -canonicalize -verify-diagnostics | FileCheck %s
 
 // CHECK-LABEL: func.func @fuse_unary
 func.func @fuse_unary(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
@@ -665,5 +665,180 @@ module attributes {transform.with_named_sequence} {
     %transformed, %loops:1 = transform.structured.fuse %0 tile_sizes [1, 0, 0] interchange [0, 1, 2] {apply_cleanup} : 
       (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">)
     transform.yield 
+  }
+}
+
+// -----
+
+// Tiling and fusing `linalg.scaled_contract` must respect the block-scaling
+// scheme encoded in the scale indexing maps: along every block-scaled iteration
+// dimension the tile size must divide or be divisible by the block factor.
+
+//   CHECK-DAG: #[[$MAP_M:.+]] = affine_map<(d0) -> (d0 floordiv 32)>
+// CHECK-LABEL: func.func @fuse_scaled_contract_with_producer(
+//  CHECK-SAME:     %[[A:[a-zA-Z0-9]+]]: tensor<256x512xi8>
+//  CHECK-SAME:     %[[SCALE_A:[a-zA-Z0-9]+]]: tensor<8x4xf8E8M0FNU>
+//  CHECK-SAME:     %[[B:[a-zA-Z0-9]+]]: tensor<128x512xi8>
+//  CHECK-SAME:     %[[SCALE_B:[a-zA-Z0-9]+]]: tensor<128xf8E8M0FNU>
+//  CHECK-SAME:     %[[INIT:[a-zA-Z0-9]+]]: tensor<256x128xf32>
+func.func @fuse_scaled_contract_with_producer(%A: tensor<256x512xi8>, %scaleA: tensor<8x4xf8E8M0FNU>,
+    %B: tensor<128x512xi8>, %scaleB: tensor<128xf8E8M0FNU>,
+    %init: tensor<256x128xf32>) -> tensor<256x128xf32> {
+//   CHECK-DAG:   %[[CST:.+]] = arith.constant 0.0{{.*}} : f32
+//       CHECK:   scf.for %[[IV_M:[a-zA-Z0-9]+]] = %{{.+}} step %{{.+}} iter_args(%[[INIT_M:.+]] = %[[INIT]])
+//       CHECK:     scf.for %[[IV_N:[a-zA-Z0-9]+]] = %{{.+}} step %{{.+}} iter_args(%[[INIT_N:.+]] = %[[INIT_M]])
+//   CHECK-DAG:       %[[OFF_M:.+]] = affine.apply #[[$MAP_M]](%[[IV_M]])
+//   CHECK-DAG:       %[[A_TILE:.+]] = tensor.extract_slice %[[A]][%[[IV_M]], 0] [32, 512] [1, 1]
+//   CHECK-DAG:       %[[SA_TILE:.+]] = tensor.extract_slice %[[SCALE_A]][%[[OFF_M]], 0] [1, 4] [1, 1]
+//   CHECK-DAG:       %[[B_TILE:.+]] = tensor.extract_slice %[[B]][%[[IV_N]], 0] [16, 512] [1, 1]
+//   CHECK-DAG:       %[[SB_TILE:.+]] = tensor.extract_slice %[[SCALE_B]][%[[IV_N]]] [16] [1]
+//   CHECK-DAG:       %[[C_TILE:.+]] = tensor.extract_slice %[[INIT_N]][%[[IV_M]], %[[IV_N]]] [32, 16] [1, 1]
+//       CHECK:       %[[FILL:.+]] = linalg.fill ins(%[[CST]] : f32) outs(%[[C_TILE]] : tensor<32x16xf32>)
+//       CHECK:       %[[RES:.+]] = linalg.scaled_contract
+//  CHECK-SAME:           ins(%[[A_TILE]], %[[SA_TILE]], %[[B_TILE]], %[[SB_TILE]] :
+//  CHECK-SAME:           outs(%[[FILL]] : tensor<32x16xf32>) -> tensor<32x16xf32>
+//       CHECK:       tensor.insert_slice %[[RES]] into %[[INIT_N]][%[[IV_M]], %[[IV_N]]] [32, 16] [1, 1]
+  %cst = arith.constant 0.0 : f32
+  %C = linalg.fill ins(%cst : f32) outs(%init : tensor<256x128xf32>) -> tensor<256x128xf32>
+  %D = linalg.scaled_contract
+    indexing_maps = [
+      affine_map<(m, n, k) -> (m, k)>,
+      affine_map<(m, n, k) -> (m floordiv 32, k floordiv 128)>,
+      affine_map<(m, n, k) -> (n, k)>,
+      affine_map<(m, n, k) -> (n)>,
+      affine_map<(m, n, k) -> (m, n)>]
+    ins(%A, %scaleA, %B, %scaleB
+      : tensor<256x512xi8>, tensor<8x4xf8E8M0FNU>, tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+    outs(%C : tensor<256x128xf32>) -> tensor<256x128xf32>
+  return %D : tensor<256x128xf32>
+}
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.scaled_contract"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loops:2 = transform.structured.fuse %0 tile_sizes [32, 16, 0]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+//   CHECK-DAG: #[[$MAP_M:.+]] = affine_map<(d0) -> (d0 floordiv 32)>
+// CHECK-LABEL: func.func @fuse_scaled_contract_with_consumer(
+//  CHECK-SAME:     %[[A:[a-zA-Z0-9]+]]: tensor<256x512xi8>
+//  CHECK-SAME:     %[[SCALE_A:[a-zA-Z0-9]+]]: tensor<8x4xf8E8M0FNU>
+//  CHECK-SAME:     %[[B:[a-zA-Z0-9]+]]: tensor<128x512xi8>
+//  CHECK-SAME:     %[[SCALE_B:[a-zA-Z0-9]+]]: tensor<128xf8E8M0FNU>
+//  CHECK-SAME:     %[[C:[a-zA-Z0-9]+]]: tensor<256x128xf32>
+//  CHECK-SAME:     %[[OUT:[a-zA-Z0-9]+]]: tensor<256x128xf32>
+func.func @fuse_scaled_contract_with_consumer(%A: tensor<256x512xi8>, %scaleA: tensor<8x4xf8E8M0FNU>,
+    %B: tensor<128x512xi8>, %scaleB: tensor<128xf8E8M0FNU>,
+    %C: tensor<256x128xf32>, %out: tensor<256x128xf32>) -> tensor<256x128xf32> {
+//       CHECK:   scf.for %[[IV_M:[a-zA-Z0-9]+]] = %{{.+}} step %{{.+}} iter_args(%[[INIT_M:.+]] = %[[OUT]])
+//       CHECK:     scf.for %[[IV_N:[a-zA-Z0-9]+]] = %{{.+}} step %{{.+}} iter_args(%[[INIT_N:.+]] = %[[INIT_M]])
+//   CHECK-DAG:       %[[OFF_M:.+]] = affine.apply #[[$MAP_M]](%[[IV_M]])
+//   CHECK-DAG:       %[[A_TILE:.+]] = tensor.extract_slice %[[A]][%[[IV_M]], 0] [32, 512] [1, 1]
+//   CHECK-DAG:       %[[SA_TILE:.+]] = tensor.extract_slice %[[SCALE_A]][%[[OFF_M]], 0] [1, 4] [1, 1]
+//   CHECK-DAG:       %[[B_TILE:.+]] = tensor.extract_slice %[[B]][%[[IV_N]], 0] [16, 512] [1, 1]
+//   CHECK-DAG:       %[[SB_TILE:.+]] = tensor.extract_slice %[[SCALE_B]][%[[IV_N]]] [16] [1]
+//   CHECK-DAG:       %[[C_TILE:.+]] = tensor.extract_slice %[[C]][%[[IV_M]], %[[IV_N]]] [32, 16] [1, 1]
+//       CHECK:       %[[SC:.+]] = linalg.scaled_contract
+//  CHECK-SAME:           ins(%[[A_TILE]], %[[SA_TILE]], %[[B_TILE]], %[[SB_TILE]] :
+//  CHECK-SAME:           outs(%[[C_TILE]] : tensor<32x16xf32>) -> tensor<32x16xf32>
+//       CHECK:       %[[OUT_TILE:.+]] = tensor.extract_slice %[[INIT_N]][%[[IV_M]], %[[IV_N]]] [32, 16] [1, 1]
+//       CHECK:       %[[COPY:.+]] = linalg.copy ins(%[[SC]] : tensor<32x16xf32>) outs(%[[OUT_TILE]] : tensor<32x16xf32>)
+//       CHECK:       tensor.insert_slice %[[COPY]] into %[[INIT_N]][%[[IV_M]], %[[IV_N]]] [32, 16] [1, 1]
+  %D = linalg.scaled_contract
+    indexing_maps = [
+      affine_map<(m, n, k) -> (m, k)>,
+      affine_map<(m, n, k) -> (m floordiv 32, k floordiv 128)>,
+      affine_map<(m, n, k) -> (n, k)>,
+      affine_map<(m, n, k) -> (n)>,
+      affine_map<(m, n, k) -> (m, n)>]
+    ins(%A, %scaleA, %B, %scaleB
+      : tensor<256x512xi8>, tensor<8x4xf8E8M0FNU>, tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+    outs(%C : tensor<256x128xf32>) -> tensor<256x128xf32>
+  %E = linalg.copy ins(%D : tensor<256x128xf32>) outs(%out : tensor<256x128xf32>) -> tensor<256x128xf32>
+  return %E : tensor<256x128xf32>
+}
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.copy"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loops:2 = transform.structured.fuse %0 tile_sizes [32, 16]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+func.func @negative_fuse_scaled_contract_partial_scaling_block(%A: tensor<256x512xi8>, %scaleA: tensor<8x4xf8E8M0FNU>,
+    %B: tensor<128x512xi8>, %scaleB: tensor<128xf8E8M0FNU>,
+    %init: tensor<256x128xf32>) -> tensor<256x128xf32> {
+  %cst = arith.constant 0.0 : f32
+  %C = linalg.fill ins(%cst : f32) outs(%init : tensor<256x128xf32>) -> tensor<256x128xf32>
+  // expected-error @below {{'linalg.scaled_contract' op tile size 48 for dim 0 must divide or be divisible by scale factor 32}}
+  // expected-error @below {{'linalg.scaled_contract' op failed to tile operation}}
+  // expected-error @below {{'linalg.scaled_contract' op failed to generate tiling loops}}
+  %D = linalg.scaled_contract
+    indexing_maps = [
+      affine_map<(m, n, k) -> (m, k)>,
+      affine_map<(m, n, k) -> (m floordiv 32, k floordiv 128)>,
+      affine_map<(m, n, k) -> (n, k)>,
+      affine_map<(m, n, k) -> (n)>,
+      affine_map<(m, n, k) -> (m, n)>]
+    ins(%A, %scaleA, %B, %scaleB
+      : tensor<256x512xi8>, tensor<8x4xf8E8M0FNU>, tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+    outs(%C : tensor<256x128xf32>) -> tensor<256x128xf32>
+  return %D : tensor<256x128xf32>
+}
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.scaled_contract"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loops:2 = transform.structured.fuse %0 tile_sizes [48, 16, 0]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
+  }
+}
+
+// -----
+
+// CHECK-LABEL: func.func @negative_fuse_scaled_contract_partial_consumer_scaling_block(
+//  CHECK-SAME:     %[[A:[a-zA-Z0-9]+]]: tensor<256x512xi8>
+//  CHECK-SAME:     %[[SCALE_A:[a-zA-Z0-9]+]]: tensor<8x4xf8E8M0FNU>
+//  CHECK-SAME:     %[[B:[a-zA-Z0-9]+]]: tensor<128x512xi8>
+//  CHECK-SAME:     %[[SCALE_B:[a-zA-Z0-9]+]]: tensor<128xf8E8M0FNU>
+//  CHECK-SAME:     %[[C:[a-zA-Z0-9]+]]: tensor<256x128xf32>
+//  CHECK-SAME:     %[[OUT:[a-zA-Z0-9]+]]: tensor<256x128xf32>
+func.func @negative_fuse_scaled_contract_partial_consumer_scaling_block(%A: tensor<256x512xi8>, %scaleA: tensor<8x4xf8E8M0FNU>,
+    %B: tensor<128x512xi8>, %scaleB: tensor<128xf8E8M0FNU>,
+    %C: tensor<256x128xf32>, %out: tensor<256x128xf32>) -> tensor<256x128xf32> {
+//       CHECK:   %[[FULL:.+]] = linalg.scaled_contract
+//  CHECK-SAME:       outs(%[[C]] : tensor<256x128xf32>) -> tensor<256x128xf32>
+//       CHECK:   scf.for %[[IV_M:[a-zA-Z0-9]+]] = %{{.+}} step %{{.+}}
+//       CHECK:     scf.for %[[IV_N:[a-zA-Z0-9]+]] = %{{.+}} step %{{.+}}
+//       CHECK:       %[[D_TILE:.+]] = tensor.extract_slice %[[FULL]][%[[IV_M]], %[[IV_N]]] [%{{.+}}, 16] [1, 1]
+//       CHECK:       %[[COPY:.+]] = linalg.copy ins(%[[D_TILE]] :
+//       CHECK:       tensor.insert_slice %[[COPY]]
+  // expected-error @below {{'linalg.scaled_contract' op tile size 48 for dim 0 must divide or be divisible by scale factor 32}}
+  %D = linalg.scaled_contract
+    indexing_maps = [
+      affine_map<(m, n, k) -> (m, k)>,
+      affine_map<(m, n, k) -> (m floordiv 32, k floordiv 128)>,
+      affine_map<(m, n, k) -> (n, k)>,
+      affine_map<(m, n, k) -> (n)>,
+      affine_map<(m, n, k) -> (m, n)>]
+    ins(%A, %scaleA, %B, %scaleB
+      : tensor<256x512xi8>, tensor<8x4xf8E8M0FNU>, tensor<128x512xi8>, tensor<128xf8E8M0FNU>)
+    outs(%C : tensor<256x128xf32>) -> tensor<256x128xf32>
+  %E = linalg.copy ins(%D : tensor<256x128xf32>) outs(%out : tensor<256x128xf32>) -> tensor<256x128xf32>
+  return %E : tensor<256x128xf32>
+}
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %0 = transform.structured.match ops{["linalg.copy"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1, %loops:2 = transform.structured.fuse %0 tile_sizes [48, 16]
+      : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+    transform.yield
   }
 }
