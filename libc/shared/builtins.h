@@ -21,6 +21,7 @@
 #include "builtins/addtf3.h"
 #include "builtins/divtf3.h"
 #include "builtins/multf3.h"
+#include "builtins/subdf3.h"
 #include "builtins/subtf3.h"
 
 #endif // LLVM_LIBC_SHARED_BUILTINS_H
