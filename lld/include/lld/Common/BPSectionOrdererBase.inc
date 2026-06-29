@@ -177,7 +177,10 @@ auto BPOrderer<D>::computeOrder(
   if (!profilePath.empty()) {
     auto fs = vfs::getRealFileSystem();
     auto readerOrErr = InstrProfReader::create(profilePath, *fs);
-    lld::checkError(readerOrErr.takeError());
+    if (!readerOrErr) {
+      lld::error(toString(readerOrErr.takeError()));
+      return DenseMap<const Section *, int>{};
+    }
 
     reader = std::move(readerOrErr.get());
     for (auto &entry : *reader) {
