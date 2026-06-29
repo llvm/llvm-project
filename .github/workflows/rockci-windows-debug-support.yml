@@ -15,30 +15,28 @@ on:
     inputs:
       linux_amdgpu_families:
         type: string
-        description: "Insert comma-separated list of Linux GPU families to build and test. ex: gfx94X, gfx1201X"
+        description: "Insert comma-separated list of Linux GPU families to build and test. ex: gfx94X, gfx120X"
         default: ""
       linux_test_labels:
         type: string
         description: "If enabled, reduce test set on Linux to the list of labels prefixed with 'test:'. ex: test:rocprim, test:hipcub"
         default: ""
-      linux_use_prebuilt_artifacts:
-        type: boolean
-        description: "If enabled, the CI will pull Linux artifacts using artifact_run_id and only run tests"
       windows_amdgpu_families:
         type: string
-        description: "Insert comma-separated list of Windows GPU families to build and test. ex: gfx94X, gfx1201X"
+        description: "Insert comma-separated list of Windows GPU families to build and test. ex: gfx94X, gfx120X"
         default: ""
       windows_test_labels:
         type: string
         description: "If enabled, reduce test set on Windows to the list of labels prefixed with 'test:' ex: test:rocprim, test:hipcub"
         default: ""
-      windows_use_prebuilt_artifacts:
-        type: boolean
-        description: "If enabled, the CI will pull Windows artifacts using artifact_run_id and only run tests"
-      artifact_run_id:
+      prebuilt_stages:
         type: string
-        description: "If provided, the tests will run on this artifact ID"
         default: ""
+        description: "Comma-separated build stages to skip (or 'all' for all stages); artifacts are copied from baseline_run_id instead"
+      baseline_run_id:
+        type: string
+        default: ""
+        description: "Workflow run ID to copy prebuilt stage artifacts from; required when prebuilt_stages is set"
 
 permissions:
   contents: read
@@ -53,36 +51,25 @@ concurrency:
 
 jobs:
   setup:
-    uses: ./.github/workflows/setup.yml
+    uses: ./.github/workflows/setup_multi_arch.yml
     with:
       build_variant: "release"
 
   windows_build_and_test:
-    name: Windows::${{ matrix.variant.family }}::${{ matrix.variant.build_variant_label }}
+    name: Windows::${{ fromJSON(needs.setup.outputs.windows_build_config || '{}').build_variant_label || 'skip' }}
     needs: setup
     if: >-
       ${{
-        needs.setup.outputs.windows_variants != '[]'
+        needs.setup.outputs.windows_build_config != '' &&
+        needs.setup.outputs.enable_build_jobs == 'true'
       }}
-    strategy:
-      fail-fast: false
-      matrix:
-        variant: ${{ fromJSON(needs.setup.outputs.windows_variants) }}
-    uses: ./.github/workflows/ci_windows.yml
+    uses: ./.github/workflows/multi_arch_ci_windows.yml
+    secrets: inherit
     with:
-      amdgpu_families: ${{ matrix.variant.family }}
-      artifact_group: ${{ matrix.variant.artifact_group }}
-      test_runs_on: ${{ matrix.variant.test-runs-on }}
-      build_variant_label: ${{ matrix.variant.build_variant_label }}
-      build_variant_suffix: ${{ matrix.variant.build_variant_suffix }}
-      build_variant_cmake_preset: ${{ matrix.variant.build_variant_cmake_preset }}
+      build_config: ${{ needs.setup.outputs.windows_build_config }}
       test_labels: ${{ needs.setup.outputs.windows_test_labels }}
-      artifact_run_id: ${{ inputs.artifact_run_id }}
-      expect_failure: ${{ matrix.variant.expect_failure == true }}
-      use_prebuilt_artifacts: ${{ inputs.windows_use_prebuilt_artifacts == true && 'true' || 'false' }}
       rocm_package_version: ${{ needs.setup.outputs.rocm_package_version }}
       test_type: 'smoke'
-      sanity_check_only_for_family: ${{ matrix.variant.sanity_check_only_for_family == true }}
     permissions:
       contents: read
       id-token: write
@@ -93,7 +80,8 @@ jobs:
 
   ci_summary:
     name: CI Summary
-    if: always()
+    if: ${{ false }}
+    #if: always()
     needs:
       - setup
       - windows_build_and_test
