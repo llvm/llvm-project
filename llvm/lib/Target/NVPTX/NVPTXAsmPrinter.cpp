@@ -402,13 +402,13 @@ void NVPTXAsmPrinter::emitCallPrototype(const CallBase &CB,
 
   const FunctionType *FTy = CB.getFunctionType();
   const unsigned NumArgs = FTy->getNumParams();
-  const bool HasVAArgs = FTy->isVarArg() && CB.arg_size() > NumArgs;
 
   interleave(seq(NumArgs), O, MakeArg, ", ");
 
-  if (HasVAArgs)
+  if (FTy->isVarArg() && CB.arg_size() > NumArgs)
     O << (NumArgs ? "," : "") << " .param .align "
       << STI.getMaxRequiredAlignment() << " .b8 _[]";
+
   O << ")";
   if (shouldEmitPTXNoReturn(&CB, TM))
     O << " .noreturn";
