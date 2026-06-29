@@ -6069,6 +6069,11 @@ foreach lmul = MxList in {
   }
 }
 
+// Used by -fzero-call-used-regs to zero out registers.
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+def PseudoClearVR : Pseudo<(outs VR:$vd), (ins), []>,
+                    PseudoInstExpansion<(VMV_V_I VR:$vd, 0)>;
+
 //===----------------------------------------------------------------------===//
 // 6. Configuration-Setting Instructions
 //===----------------------------------------------------------------------===//

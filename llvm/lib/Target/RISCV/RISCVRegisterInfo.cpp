@@ -835,6 +835,9 @@ bool RISCVRegisterInfo::isArgumentRegister(const MachineFunction &MF,
   if (TRI->isFPRegister(Reg))
     return llvm::is_contained(RISCV::getArgFPRs(STI), Reg);
 
+  if (RISCV::VRRegClass.contains(Reg))
+    return llvm::is_contained(RISCV::getArgVRs(STI), Reg);
+
   return false;
 }
 
