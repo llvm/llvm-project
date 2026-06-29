@@ -1343,11 +1343,10 @@ Error writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
   return Temp->keep(ArcName);
 }
 
-Expected<std::unique_ptr<MemoryBuffer>>
-writeArchiveToBuffer(ArrayRef<NewArchiveMember> NewMembers,
-                     SymtabWritingMode WriteSymtab, object::Archive::Kind Kind,
-                     bool Deterministic, bool Thin,
-                     function_ref<void(Error)> Warn) {
+Expected<std::unique_ptr<MemoryBuffer>> writeArchiveToBuffer(
+    ArrayRef<NewArchiveMember> NewMembers, SymtabWritingMode WriteSymtab,
+    object::Archive::Kind Kind, bool Deterministic, bool Thin,
+    std::optional<StringRef> Identifier, function_ref<void(Error)> Warn) {
   SmallVector<char, 0> ArchiveBufferVector;
   raw_svector_ostream ArchiveStream(ArchiveBufferVector);
 
@@ -1356,8 +1355,14 @@ writeArchiveToBuffer(ArrayRef<NewArchiveMember> NewMembers,
                                Deterministic, Thin, std::nullopt, Warn))
     return std::move(E);
 
+  if (Identifier)
+    return std::make_unique<SmallVectorMemoryBuffer>(
+        std::move(ArchiveBufferVector), *Identifier,
+        /*RequiresNullTerminator=*/false);
+
   return std::make_unique<SmallVectorMemoryBuffer>(
-      std::move(ArchiveBufferVector), /*RequiresNullTerminator=*/false);
+      std::move(ArchiveBufferVector),
+      /*RequiresNullTerminator=*/false);
 }
 
 } // namespace llvm
