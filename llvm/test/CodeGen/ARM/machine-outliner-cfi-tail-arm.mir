@@ -1,0 +1,80 @@
+# NOTE: Assertions checked against llc output for arm--.
+# RUN: llc -mtriple=arm-- -run-pass=machine-outliner -verify-machineinstrs \
+# RUN:   -enable-machine-outliner=always %s -o - | FileCheck %s
+
+# Outlining CFI instructions is unsafe if we cannot outline all of the CFI
+# instructions from a function. This mirrors X86 machine-outliner-cfi-tail.mir:
+# when every CFI in the function is part of the same tail-outlined sequence, the
+# outliner emits a tail jump and moves the CFI into OUTLINED_FUNCTION_0.
+
+--- |
+  define void @foo() #0 { ret void }
+  define void @bar() #0 { ret void }
+  define void @baz() #0 { ret void }
+  attributes #0 = { minsize optsize noredzone }
+...
+---
+name:            foo
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $lr
+    ; CHECK-LABEL: name: foo
+    ; CHECK: TAILJMPd @OUTLINED_FUNCTION_0
+    $r2 = MOVi 3, 14 /* CC::al */, $noreg, $noreg
+    CFI_INSTRUCTION def_cfa_offset 8
+    CFI_INSTRUCTION offset $lr, -4
+    CFI_INSTRUCTION offset $r7, -8
+    $r0 = MOVi 1, 14 /* CC::al */, $noreg, $noreg
+    $r1 = MOVi 2, 14 /* CC::al */, $noreg, $noreg
+    $r3 = MOVi 3, 14 /* CC::al */, $noreg, $noreg
+    $r4 = MOVi 4, 14 /* CC::al */, $noreg, $noreg
+    BX_RET 14 /* CC::al */, $noreg
+...
+---
+name:            bar
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $lr
+    ; CHECK-LABEL: name: bar
+    ; CHECK: TAILJMPd @OUTLINED_FUNCTION_0
+    $r2 = MOVi 3, 14 /* CC::al */, $noreg, $noreg
+    CFI_INSTRUCTION def_cfa_offset 8
+    CFI_INSTRUCTION offset $lr, -4
+    CFI_INSTRUCTION offset $r7, -8
+    $r0 = MOVi 1, 14 /* CC::al */, $noreg, $noreg
+    $r1 = MOVi 2, 14 /* CC::al */, $noreg, $noreg
+    $r3 = MOVi 3, 14 /* CC::al */, $noreg, $noreg
+    $r4 = MOVi 4, 14 /* CC::al */, $noreg, $noreg
+    BX_RET 14 /* CC::al */, $noreg
+...
+---
+name:            baz
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $lr
+    ; CHECK-LABEL: name: baz
+    ; CHECK: TAILJMPd @OUTLINED_FUNCTION_0
+    $r2 = MOVi 3, 14 /* CC::al */, $noreg, $noreg
+    CFI_INSTRUCTION def_cfa_offset 8
+    CFI_INSTRUCTION offset $lr, -4
+    CFI_INSTRUCTION offset $r7, -8
+    $r0 = MOVi 1, 14 /* CC::al */, $noreg, $noreg
+    $r1 = MOVi 2, 14 /* CC::al */, $noreg, $noreg
+    $r3 = MOVi 3, 14 /* CC::al */, $noreg, $noreg
+    $r4 = MOVi 4, 14 /* CC::al */, $noreg, $noreg
+    BX_RET 14 /* CC::al */, $noreg
+
+    ; CHECK-LABEL: name:            OUTLINED_FUNCTION_0
+    ; CHECK: $r2 = MOVi 3
+    ; CHECK: CFI_INSTRUCTION def_cfa_offset 8
+    ; CHECK: CFI_INSTRUCTION offset $lr, -4
+    ; CHECK: CFI_INSTRUCTION offset $r7, -8
+    ; CHECK: $r0 = MOVi 1
+    ; CHECK: $r1 = MOVi 2
+    ; CHECK: $r3 = MOVi 3
+    ; CHECK: $r4 = MOVi 4
+    ; CHECK: BX_RET
+...
