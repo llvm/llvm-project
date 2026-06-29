@@ -1432,46 +1432,22 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   emitSiFiveCLICStackSwap(MF, MBB, MBBI, DL);
 }
 
-static MCRegister getPhysicalGPR(MCRegister Reg) {
-  switch (Reg) {
-#define CASE(n)                                                                \
-  case RISCV::X##n:                                                            \
-  case RISCV::X##n##_H:                                                        \
-  case RISCV::X##n##_W:                                                        \
-    return RISCV::X##n
-    CASE(0);
-    CASE(1);
-    CASE(2);
-    CASE(3);
-    CASE(4);
-    CASE(5);
-    CASE(6);
-    CASE(7);
-    CASE(8);
-    CASE(9);
-    CASE(10);
-    CASE(11);
-    CASE(12);
-    CASE(13);
-    CASE(14);
-    CASE(15);
-    CASE(16);
-    CASE(17);
-    CASE(18);
-    CASE(19);
-    CASE(20);
-    CASE(21);
-    CASE(22);
-    CASE(23);
-    CASE(24);
-    CASE(25);
-    CASE(26);
-    CASE(27);
-    CASE(28);
-    CASE(29);
-    CASE(30);
-    CASE(31);
-#undef CASE
+static MCRegister getPhysicalGPR(const TargetRegisterInfo &TRI,
+                                 MCRegister Reg) {
+
+  if (RISCV::GPRRegClass.contains(Reg))
+    return Reg;
+
+  std::array<TargetRegisterClass const *, 2> RegisterClasses = {
+      &RISCV::GPRF16RegClass, &RISCV::GPRF32RegClass};
+  std::array<unsigned, 2> SubIdx = {RISCV::sub_16, RISCV::sub_32};
+
+  for (auto [RegClass, SubReg] : zip(RegisterClasses, SubIdx)) {
+    if (RegClass->contains(Reg)) {
+      if (MCRegister Super =
+              TRI.getMatchingSuperReg(Reg, SubReg, &RISCV::GPRRegClass))
+        return Super;
+    }
   }
 
   llvm::reportFatalInternalError(
@@ -1526,8 +1502,7 @@ void RISCVFrameLowering::emitZeroCallUsedRegs(BitVector RegsToZero,
 
   for (MCRegister Reg : RegsToZero.set_bits()) {
     if (TRI.isGeneralPurposeRegister(MF, Reg)) {
-      if (MCRegister MaybeReg = getPhysicalGPR(Reg))
-        FinalRegsToZero.set(MaybeReg.id());
+      FinalRegsToZero.set(getPhysicalGPR(TRI, Reg).id());
     } else if (TRI.isFPRegister(Reg)) {
       if (MCRegister MaybeReg = getLargestFPRegisterOrZero(STI, TRI, Reg))
         FinalRegsToZero.set(MaybeReg.id());
