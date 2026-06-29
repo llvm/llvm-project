@@ -1043,6 +1043,17 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
                              int64_t PatternSize, int64_t Size,
                              AsyncInfoWrapperTy &AsyncInfoWrapper) = 0;
 
+  /// Prefetch the memory range \p Mem of size \p Size to the device.
+  /// \p ToHost selects the direction of the migration: when true the data is
+  /// moved towards the host, otherwise towards the device. Backends that do
+  /// not natively support prefetching treat the call as a no-op.
+  Error dataPrefetch(const void *Mem, int64_t Size, bool ToHost,
+                     __tgt_async_info *AsyncInfo);
+  virtual Error dataPrefetchImpl(const void *Mem, int64_t Size, bool ToHost,
+                                 AsyncInfoWrapperTy &AsyncInfoWrapper) {
+    return Plugin::success();
+  }
+
   /// Run the kernel associated with \p EntryPtr
   Error launchKernel(void *EntryPtr, void **ArgPtrs, ptrdiff_t *ArgOffsets,
                      KernelArgsTy &KernelArgs,

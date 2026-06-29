@@ -214,3 +214,39 @@ def olMemUnregister : Function {
   ];
   let returns = [];
 }
+
+def ol_usm_migration_flags_t : Typedef {
+  let desc = "USM migration flags, indicating the direction data is migrated in.";
+  let value = "uint32_t";
+}
+
+def ol_usm_migration_flag_t : Enum {
+  let desc = "USM migration flags, indicating the direction data is migrated in.";
+  let is_bit_field = 1;
+  let etors = [
+    Etor<"HOST_TO_DEVICE", "Migrate data from the host to the device specified to olMemPrefetch">,
+    Etor<"DEVICE_TO_HOST", "Migrate data from the device specified to olMemPrefetch back to the host">,
+  ];
+}
+
+def olMemPrefetch : Function {
+  let desc = "Enqueue a command to migrate USM memory between the host and a device.";
+  let details = [
+      "Prefetch is a hint that migrates a USM allocation between the host and a device "
+      "so subsequent accesses on the target side are faster. The contents of the memory "
+      "are unchanged - only its physical location may change.",
+      "Prefetching may not be supported for all devices or allocation types. If it is not "
+      "supported the prefetch is ignored and the call still returns success.",
+  ];
+  let params = [
+    Param<"ol_queue_handle_t", "Queue", "handle of the queue", PARAM_IN>,
+    Param<"const void*", "Mem", "pointer into the USM allocation to be prefetched", PARAM_IN>,
+    Param<"size_t", "Size", "size in bytes of the region to be prefetched. Zero is allowed and is a no-op.", PARAM_IN>,
+    Param<"ol_usm_migration_flags_t", "Flags", "direction of the migration; exactly one of the OL_USM_MIGRATION_FLAG_* values", PARAM_IN>,
+  ];
+  let returns = [
+    Return<"OL_ERRC_INVALID_ENUMERATION", [
+      "Flags contains bits other than the defined OL_USM_MIGRATION_FLAG_* values"
+    ]>,
+  ];
+}

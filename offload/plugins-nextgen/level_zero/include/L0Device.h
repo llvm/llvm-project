@@ -507,6 +507,8 @@ public:
   Error dataFillImpl(void *TgtPtr, const void *PatternPtr, int64_t PatternSize,
                      int64_t Size,
                      AsyncInfoWrapperTy &AsyncInfoWrapper) override;
+  Error dataPrefetchImpl(const void *Mem, int64_t Size, bool ToHost,
+                         AsyncInfoWrapperTy &AsyncInfoWrapper) override;
   Error synchronizeImpl(__tgt_async_info &AsyncInfo,
                         bool ReleaseQueue) override;
   Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,

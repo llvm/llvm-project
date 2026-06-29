@@ -927,6 +927,41 @@ struct CUDADeviceTy : public GenericDeviceTy {
     return Plugin::check(Res, "error in cuMemset: %s");
   }
 
+  /// Prefetch managed memory to the device or back to the host.
+  Error dataPrefetchImpl(const void *Mem, int64_t Size, bool ToHost,
+                         AsyncInfoWrapperTy &AsyncInfoWrapper) override {
+    if (Size == 0)
+      return Plugin::success();
+    if (auto Err = setContext())
+      return Err;
+
+    CUstream Stream;
+    if (auto Err = getStream(AsyncInfoWrapper, Stream))
+      return Err;
+
+    // Certain cuda devices and Windows do not have support for some Unified
+    // Memory features. cuMemPrefetchAsync requires concurrent memory access
+    // for managed memory. Therefore, ignore prefetch hint if concurrent managed
+    // memory access is not available.
+    int ConcurrentManagedAccess = 0;
+    if (getDeviceAttrRaw(CU_DEVICE_ATTRIBUTE_CONCURRENT_MANAGED_ACCESS,
+                         ConcurrentManagedAccess) != CUDA_SUCCESS ||
+        !ConcurrentManagedAccess)
+      return Plugin::success();
+
+    // Prefetch only works with USM (managed) memory; ignore the hint otherwise.
+    unsigned int IsManaged = 0;
+    if (cuPointerGetAttribute(&IsManaged, CU_POINTER_ATTRIBUTE_IS_MANAGED,
+                              (CUdeviceptr)Mem) != CUDA_SUCCESS ||
+        !IsManaged)
+      return Plugin::success();
+
+    CUdevice Dst = ToHost ? CU_DEVICE_CPU : Device;
+    CUresult Res =
+        cuMemPrefetchAsync((CUdeviceptr)Mem, (size_t)Size, Dst, Stream);
+    return Plugin::check(Res, "error in cuMemPrefetchAsync: %s");
+  }
+
   /// Initialize the async info for interoperability purposes.
   Error initAsyncInfoImpl(AsyncInfoWrapperTy &AsyncInfoWrapper) override {
     if (auto Err = setContext())

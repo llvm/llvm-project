@@ -1155,6 +1155,14 @@ Error GenericDeviceTy::dataFill(void *TgtPtr, const void *PatternPtr,
   return Err;
 }
 
+Error GenericDeviceTy::dataPrefetch(const void *Mem, int64_t Size, bool ToHost,
+                                    __tgt_async_info *AsyncInfo) {
+  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+  auto Err = dataPrefetchImpl(Mem, Size, ToHost, AsyncInfoWrapper);
+  AsyncInfoWrapper.finalize(Err);
+  return Err;
+}
+
 Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
                                     ptrdiff_t *ArgOffsets,
                                     KernelArgsTy &KernelArgs,

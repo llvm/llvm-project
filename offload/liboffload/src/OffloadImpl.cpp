@@ -1030,6 +1030,18 @@ Error olMemFill_impl(ol_queue_handle_t Queue, void *Ptr, size_t PatternSize,
                                          Queue->AsyncInfo);
 }
 
+Error olMemPrefetch_impl(ol_queue_handle_t Queue, const void *Mem, size_t Size,
+                         ol_usm_migration_flags_t Flags) {
+  if ((Flags & ~(OL_USM_MIGRATION_FLAG_HOST_TO_DEVICE |
+                 OL_USM_MIGRATION_FLAG_DEVICE_TO_HOST)) != 0)
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "olMemPrefetch flags '%i' are invalid", Flags);
+
+  bool ToHost = (Flags & OL_USM_MIGRATION_FLAG_DEVICE_TO_HOST) != 0;
+  return Queue->Device->Device->dataPrefetch(Mem, Size, ToHost,
+                                             Queue->AsyncInfo);
+}
+
 Error olCreateProgram_impl(ol_device_handle_t Device, const void *ProgData,
                            size_t ProgDataSize, ol_program_handle_t *Program) {
   StringRef Buffer(reinterpret_cast<const char *>(ProgData), ProgDataSize);

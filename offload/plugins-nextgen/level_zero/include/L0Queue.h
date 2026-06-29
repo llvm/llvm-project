@@ -74,6 +74,12 @@ public:
     return memoryFillImpl(Ptr, Pattern, PatternSize, Size);
   }
 
+  Error memoryPrefetch(const void *Ptr, size_t Size) {
+    if (Size == 0)
+      return Plugin::success();
+    return memoryPrefetchImpl(Ptr, Size);
+  }
+
   Error dispatchLaunchKernel(ze_kernel_handle_t Kernel, L0LaunchEnvTy &KEnv,
                              ze_event_handle_t SignalEvent = nullptr,
                              uint32_t NumWaitEvents = 0,
@@ -135,6 +141,9 @@ public:
   virtual Error memoryFillImpl(void *Ptr, const void *Pattern,
                                size_t PatternSize, size_t Size) {
     return CmdList->appendMemoryFill(Ptr, Pattern, PatternSize, Size);
+  }
+  virtual Error memoryPrefetchImpl(const void *Ptr, size_t Size) {
+    return CmdList->appendMemoryPrefetch(Ptr, Size);
   }
   virtual Error dataFenceImpl() = 0;
 
