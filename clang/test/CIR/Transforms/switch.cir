@@ -342,4 +342,28 @@ module {
 // CHECK:    %[[LEN:.*]] = cir.const #cir.int<8999999999999999999> : !u64i
 // CHECK:    %[[CMP:.*]] = cir.cmp le %[[SUB]], %[[LEN]] : !u64i
 // CHECK:    cir.brcond %[[CMP]]
+
+  // A small range at the top of the signed domain expands to individual cases.
+  // The expansion cursor must stop at the upper bound instead of incrementing
+  // past INT_MAX, which would wrap and make the expansion loop run forever.
+  cir.func @flatCaseRangeTopExpand(%arg0: !s32i) {
+    cir.switch (%arg0 : !s32i) {
+      cir.case(range, [#cir.int<2147483645> : !s32i,
+                       #cir.int<2147483647> : !s32i]) {
+        cir.break
+      }
+      cir.case(default, []) {
+        cir.break
+      }
+      cir.yield
+    }
+    cir.return
+  }
+
+// CHECK:  cir.func{{.*}} @flatCaseRangeTopExpand(%arg0: !s32i) {
+// CHECK:    cir.switch.flat %{{.*}} : !s32i, ^bb[[#DEFAULT:]] [
+// CHECK-NEXT:      2147483645: ^bb[[#CASE:]],
+// CHECK-NEXT:      2147483646: ^bb[[#CASE]],
+// CHECK-NEXT:      2147483647: ^bb[[#CASE]]
+// CHECK-NEXT:    ]
 }

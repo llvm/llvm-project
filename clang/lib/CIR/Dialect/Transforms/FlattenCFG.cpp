@@ -275,16 +275,19 @@ public:
     // is correct for both signed and unsigned switches, so the comparison is
     // always unsigned.
     cir::IntType uIntType =
-        cir::IntType::get(op.getContext(), condType.getWidth(), false);
+        cir::IntType::get(op.getContext(), condType.getWidth(),
+                          /*isSigned=*/false);
 
     cir::ConstantOp lowerBoundValue = cir::ConstantOp::create(
         rewriter, op.getLoc(), cir::IntAttr::get(condType, lowerBound));
     mlir::Value diffValue = cir::SubOp::create(
         rewriter, op.getLoc(), op.getCondition(), lowerBoundValue);
 
-    // Use unsigned comparison to check if the condition is in the range.  A
-    // signed difference is reinterpreted as unsigned; an unsigned one already
-    // has the right type.
+    // Use an unsigned comparison to check whether the condition is in range.
+    // cir.cmp takes its signedness from the operand type, so a signed
+    // difference needs a same-width integral cast to the unsigned type (a
+    // signedness reinterpretation) to make the `le` unsigned; an unsigned
+    // difference already has the right type.
     if (isSigned)
       diffValue = cir::CastOp::create(rewriter, op.getLoc(), uIntType,
                                       CastKind::integral, diffValue);
@@ -469,14 +472,18 @@ public:
       constexpr uint64_t kSmallRangeThreshold = 64;
       APInt rangeSize = upperBound - lowerBound;
       if (rangeSize.ult(kSmallRangeThreshold)) {
-        // Expand into individual cases with a count-based cursor so a range at
-        // the top of the domain cannot overflow the APInt and loop forever.
+        // Expand into individual cases.  Break on equality before incrementing
+        // so the cursor never steps past the top of the domain: when
+        // upperBound is the type's maximum, ++caseValue would wrap and a
+        // value-based loop condition would never terminate.
         APInt caseValue = lowerBound;
-        for (uint64_t i = 0, e = rangeSize.getZExtValue(); i <= e;
-             ++i, ++caseValue) {
+        while (true) {
           caseValues.push_back(caseValue);
           caseOperands.push_back(operand);
           caseDestinations.push_back(destination);
+          if (caseValue == upperBound)
+            break;
+          ++caseValue;
         }
         continue;
       }
