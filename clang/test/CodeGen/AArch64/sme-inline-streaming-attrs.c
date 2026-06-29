@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -S -o /dev/null -target-feature +sme -target-feature +sme2 -verify -DTEST_NONE %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -S -o /dev/null -target-feature +sme -target-feature +sme2 -verify -DTEST_COMPATIBLE %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -S -o /dev/null -target-feature +sme -target-feature +sme2 -verify -DTEST_STREAMING %s
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -S -o /dev/null -target-feature +sme -target-feature +sme2 -verify -DTEST_LOCALLY %s
+// RUN: %clang_cc1 -Waarch64-sme-attributes -triple aarch64-none-linux-gnu -S -o /dev/null -target-feature +sme -target-feature +sme2 -verify -DTEST_NONE %s
+// RUN: %clang_cc1 -Waarch64-sme-attributes -triple aarch64-none-linux-gnu -S -o /dev/null -target-feature +sme -target-feature +sme2 -verify -DTEST_COMPATIBLE %s
+// RUN: %clang_cc1 -Waarch64-sme-attributes -triple aarch64-none-linux-gnu -S -o /dev/null -target-feature +sme -target-feature +sme2 -verify -DTEST_STREAMING %s
+// RUN: %clang_cc1 -Waarch64-sme-attributes -triple aarch64-none-linux-gnu -S -o /dev/null -target-feature +sme -target-feature +sme2 -verify -DTEST_LOCALLY %s
 
 // REQUIRES: aarch64-registered-target
 
