@@ -317,7 +317,13 @@ static bool ConvertEnumCaseValues(SemanticsContext &context,
   }
   const semantics::Symbol &ordSym{*ordIter->second};
   EnumCaseValueConverter visitor{context, enumType, ordSym};
-  parser::Walk(cases, visitor);
+  // Walk only each case's CaseStmt so that the conversion never descends
+  // into an arm's body, where a nested SELECT CASE could otherwise have its
+  // own CASE values converted against this enumeration type.
+  for (const auto &c : cases) {
+    const auto &stmt{std::get<parser::Statement<parser::CaseStmt>>(c.t)};
+    parser::Walk(stmt.statement, visitor);
+  }
   return visitor.ok;
 }
 

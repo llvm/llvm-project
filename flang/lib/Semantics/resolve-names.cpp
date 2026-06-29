@@ -6021,6 +6021,16 @@ void DeclarationVisitor::Post(const parser::EnumDef &) {
 // F2023 R766 EnumerationTypeDef — scope is pushed in Post(EnumerationTypeStmt)
 // and popped in Post(EndEnumerationTypeStmt).
 bool DeclarationVisitor::Pre(const parser::EnumerationTypeDef &x) {
+  const auto &source{
+      std::get<parser::Statement<parser::EnumerationTypeStmt>>(x.t).source};
+  // ENUMERATION TYPE is an experimental feature: semantics are partially
+  // implemented.  FIR lowering is not implemented.
+  if (!context().IsEnabled(common::LanguageFeature::EnumerationType)) {
+    Say(source, "F2023 ENUMERATION TYPEs are not yet implemented"_err_en_US);
+    return false;
+  }
+  Say(source,
+      "ENUMERATION TYPE support is incomplete and should be enabled only for testing"_warn_en_US);
   BeginAttrs();
   return true;
 }

@@ -1,15 +1,18 @@
-! RUN: %python %S/test_errors.py %s %flang_fc1
+! RUN: %python %S/test_errors.py %s %flang_fc1 -fenumeration-type
 ! Test relational operators and SELECT CASE for enumeration types (F2023 7.6.2)
 
 module enum_mod
+  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: color
     enumerator :: red, green, blue
   end enumeration type
 
+  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: direction
     enumerator :: north, south, east, west
   end enumeration type
 
+  !WARNING: ENUMERATION TYPE support is incomplete and should be enabled only for testing
   enumeration type :: w_value
     enumerator :: w1, w2, w3, w4, w5
   end enumeration type
@@ -115,3 +118,87 @@ subroutine test_select_case_non_enum_derived()
     case default
   end select
 end subroutine
+
+subroutine test_select_case_nested_integer(w, j)
+  use enum_mod
+  type(w_value), intent(in) :: w
+  integer, intent(in) :: j
+
+  ! Valid: an ordinary integer SELECT CASE nested in an arm of an
+  ! enumeration SELECT CASE must not be checked against the enum type.
+  select case (w)
+    case (w1)
+      select case (j)
+        case (1)
+          print *, 'one'
+        case (2:4)
+          print *, 'few'
+        case default
+          print *, 'many'
+      end select
+    case (w2)
+      print *, 'w2'
+  end select
+end subroutine
+
+subroutine test_select_case_nested_same_enum(w)
+  use enum_mod
+  type(w_value), intent(in) :: w
+
+  ! Valid: a nested SELECT CASE over the same enumeration type.
+  select case (w)
+    case (w1)
+      select case (w)
+        case (w2)
+          print *, 'inner w2'
+        case (w3:w5)
+          print *, 'inner range'
+      end select
+    case (w2)
+      print *, 'w2'
+  end select
+end subroutine
+
+subroutine test_select_case_nested_different_enum(w, c)
+  use enum_mod
+  type(w_value), intent(in) :: w
+  type(color), intent(in) :: c
+
+  ! Valid: a nested SELECT CASE over a different enumeration type.
+  select case (w)
+    case (w1)
+      select case (c)
+        case (red)
+          print *, 'red'
+        case (green)
+          print *, 'green'
+      end select
+    case (w2)
+      print *, 'w2'
+  end select
+end subroutine
+
+subroutine test_select_case_nested_under_do_if(w, j, n)
+  use enum_mod
+  type(w_value), intent(in) :: w
+  integer, intent(in) :: j, n
+  integer :: i
+
+  ! Valid: nested integer SELECT CASE buried under DO/IF in an enum arm.
+  select case (w)
+    case (w1)
+      do i = 1, n
+        if (j > 0) then
+          select case (j)
+            case (1)
+              print *, 'one'
+            case default
+              print *, 'other'
+          end select
+        end if
+      end do
+    case (w2)
+      print *, 'w2'
+  end select
+end subroutine
+
