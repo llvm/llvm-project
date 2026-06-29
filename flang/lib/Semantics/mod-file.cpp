@@ -73,6 +73,7 @@ static bool FileContentsMatch(
     const std::string &, const std::string &, const std::string &);
 static ModuleCheckSumType ComputeCheckSum(const std::string_view &);
 static std::string CheckSumString(ModuleCheckSumType);
+static bool ScopeHasCUDAModuleVariables(const Scope &);
 
 // Collect symbols needed for a subprogram interface
 class SubprogramSymbolCollector {
@@ -1762,6 +1763,14 @@ Scope *ModFileReader::Read(SourceName name, std::optional<bool> isIntrinsic,
     if (isIntrinsic.value_or(false)) {
       moduleSymbol->attrs().set(Attr::INTRINSIC);
     }
+    if (context_.languageFeatures().IsEnabled(
+            common::LanguageFeature::OpenACC) &&
+        !context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) &&
+        ScopeHasCUDAModuleVariables(*moduleSymbol->scope())) {
+      Say("use", name, ancestorName,
+          "CUDA is not enabled, but '%s' defines CUDA symbols"_err_en_US,
+          sourceFile->path());
+    }
     return moduleSymbol->scope();
   } else {
     return nullptr;
@@ -1795,6 +1804,25 @@ static std::optional<SourceName> GetSubmoduleParent(
   } else {
     return std::nullopt;
   }
+}
+
+static bool ScopeHasCUDAModuleVariables(const Scope &scope) {
+  for (const auto &[_, symbolRef] : scope) {
+    const Symbol &symbol{*symbolRef};
+    if (const auto *object{symbol.detailsIf<ObjectEntityDetails>()}) {
+      if (object->cudaDataAttr()) {
+        return true;
+      }
+      const DeclTypeSpec *type{object->type()};
+      const DerivedTypeSpec *derived{type ? type->AsDerived() : nullptr};
+      if (derived &&
+          FindUltimateComponent(*derived,
+              [](const Symbol &component) { return HasCUDAAttr(component); })) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 void SubprogramSymbolCollector::Collect() {
