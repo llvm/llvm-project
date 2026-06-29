@@ -1022,6 +1022,11 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, const JobAction &JA,
         A->render(Args, CmdArgs);
     }
   }
+
+  //-fpseudo-probe-for-profiling
+  if (Args.hasFlag(options::OPT_fpseudo_probe_for_profiling,
+                   options::OPT_fno_pseudo_probe_for_profiling, false))
+    CmdArgs.push_back("-fpseudo-probe-for-profiling");
 }
 
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,

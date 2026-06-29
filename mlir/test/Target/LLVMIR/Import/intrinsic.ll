@@ -517,6 +517,9 @@ define void @masked_load_store_intrinsics(ptr %vec, <7 x i1> %mask) {
   ; CHECK:  llvm.intr.masked.store %[[VAL2]], %[[VEC]], %[[MASK]] {alignment = 8 : i32}
   ; CHECK-SAME:  vector<7xf32>, vector<7xi1> into !llvm.ptr
   call void @llvm.masked.store.v7f32.p0(<7 x float> %2, ptr %vec, i32 8, <7 x i1> %mask)
+  ; CHECK:  llvm.intr.masked.store %[[VAL2]], %[[VEC]], %[[MASK]] {alignment = 8 : i32, nontemporal}
+  ; CHECK-SAME:  vector<7xf32>, vector<7xi1> into !llvm.ptr 
+  call void @llvm.masked.store.v7f32.p0(<7 x float> %2, ptr %vec, i32 8, <7 x i1> %mask), !nontemporal !{i32 1}
   ret void
 }
 

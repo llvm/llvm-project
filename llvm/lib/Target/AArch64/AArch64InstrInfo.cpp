@@ -2670,14 +2670,6 @@ bool AArch64InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         .addReg(Reg, RegState::Kill)
         .addImm(0)
         .addMemOperand(*MI.memoperands_begin());
-  } else if (TM.getCodeModel() == CodeModel::Tiny) {
-    // FIXME: This is computing the stack protector value as a constant
-    // pc-relative offset, not loading it from memory. Which is maybe
-    // an interesting compromise in some environments, but it looks like it
-    // was done accidentally.  And it probably shouldn't be tied to the
-    // code model.
-    BuildMI(MBB, MI, DL, get(AArch64::ADR), Reg)
-        .addGlobalAddress(GV, 0, OpFlags);
   } else {
     BuildMI(MBB, MI, DL, get(AArch64::ADRP), Reg)
         .addGlobalAddress(GV, 0, OpFlags | AArch64II::MO_PAGE);
@@ -7296,8 +7288,25 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI,
   if (MinOff <= NewOffset && NewOffset <= MaxOff)
     Offset = Remainder;
   else {
-    NewOffset = NewOffset < 0 ? MinOff : MaxOff;
-    Offset = Offset - (NewOffset * Scale);
+    // Try to minimise the number of instructions required to materialise the
+    // offset calculation. Specifically, for fixed offsets, if masking out the
+    // low 12 bits leaves a legal add immediate, we can realise the offset
+    // calculation with a single add instruction. Whenever this is possible,
+    // prefer this split.
+    int64_t HighPart = Offset & ~0xFFF;
+    int64_t LowPart = Offset & 0xFFF;
+    int64_t LowScaled = LowPart / Scale;
+    if (!IsMulVL && NewOffset >= 0 && LowPart % Scale == 0 &&
+        MinOff <= LowScaled && LowScaled <= MaxOff &&
+        AArch64_AM::isLegalArithImmed(HighPart)) {
+      NewOffset = LowScaled;
+      Offset = HighPart;
+    } else {
+      // Default to a greedy split: take the memop immediate to be maximum /
+      // minimum expressible offset and materialise the remainder.
+      NewOffset = NewOffset < 0 ? MinOff : MaxOff;
+      Offset = Offset - (NewOffset * Scale);
+    }
   }
 
   if (EmittableOffset)

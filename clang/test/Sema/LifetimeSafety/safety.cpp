@@ -4025,3 +4025,25 @@ void discarded_body_local() {
   (void)({ int x = 7; &x; }); // no-warning
 }
 } // namespace statement_expression
+
+// This would normally trigger a suggestion warning if -Wlifetime-safety-suggestions was on.
+// Since it is off, we expect NO warnings or notes here.
+View suggestion_disabled_test(View a) {
+  return a;
+}
+
+// Test case for false positive involving conditional operator in a loop.
+struct LoopCondBindS {
+  int* get() const [[clang::lifetimebound]];
+};
+void consume_loop_cond_bind(int*);
+void test_loop_cond_bind(bool cond) {
+  for (int i = 0; i < 2; i++) {
+    LoopCondBindS s;
+    consume_loop_cond_bind(cond ? s.get() : nullptr); // no-warning
+  }
+  for (int i = 0; i < 2; i++) {
+    int x, y;
+    consume_loop_cond_bind(cond ? &x : &y); // no-warning
+  }
+}
