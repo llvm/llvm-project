@@ -736,7 +736,7 @@ This class provides the following fields.
   lookup functions. Refer to the second example below for further details.
 
 * ``bit DisallowSparseTable``. When set to 1 (the default), prevents the
-  emitter from generating a sparse direct-lookup array for this table. Set to 
+  emitter from generating a sparse direct-lookup array for this table. Set to
   0 to allow the emitter to emit a sparse directly-indexed array when the
   primary key qualifies (see below).
 
