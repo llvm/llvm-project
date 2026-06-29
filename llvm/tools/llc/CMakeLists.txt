@@ -13,6 +13,7 @@ set(LLVM_LINK_COMPONENTS
   IRReader
   MC
   MIRParser
+  Option
   Passes
   Plugins
   Remarks
@@ -25,11 +26,16 @@ set(LLVM_LINK_COMPONENTS
   Vectorize
   )
 
+set(LLVM_TARGET_DEFINITIONS Opts.td)
+tablegen(LLVM Opts.inc -gen-opt-parser-defs)
+add_public_tablegen_target(LlcOptsTableGen)
+
 add_llvm_tool(llc
   llc.cpp
   NewPMDriver.cpp
 
   DEPENDS
+  LlcOptsTableGen
   intrinsics_gen
   SUPPORT_PLUGINS
   )
