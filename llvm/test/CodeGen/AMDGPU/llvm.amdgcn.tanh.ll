@@ -111,6 +111,7 @@ define amdgpu_ps float @tanh_f32_scalar(float inreg %src) {
   ret float %tanh
 }
 
+; TODO: Really these should be constant folded
 define amdgpu_ps float @tanh_f32_constant_4.0() {
 ; GFX1250-LABEL: tanh_f32_constant_4.0:
 ; GFX1250:       ; %bb.0:
