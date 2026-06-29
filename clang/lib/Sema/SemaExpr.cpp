@@ -17303,6 +17303,7 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
              diag::err_first_argument_to_va_arg_not_of_type_va_list)
         << OrigExpr->getType() << E->getSourceRange());
 
+  QualType PromoteType;
   if (!TInfo->getType()->isDependentType()) {
     if (RequireCompleteType(TInfo->getTypeLoc().getBeginLoc(), TInfo->getType(),
                             diag::err_second_parameter_to_va_arg_incomplete,
@@ -17333,7 +17334,6 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
 
     // Check for va_arg where arguments of the given type will be promoted
     // (i.e. this va_arg is guaranteed to have undefined behavior).
-    QualType PromoteType;
     if (Context.isPromotableIntegerType(TInfo->getType())) {
       PromoteType = Context.getPromotedIntegerType(TInfo->getType());
       // [cstdarg.syn]p1 defers the C++ behavior to what the C standard says,
@@ -17371,13 +17371,17 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
       if (!PromoteType.isNull() && !UnderlyingType->isBooleanType() &&
           PromoteType->isUnsignedIntegerType() !=
               UnderlyingType->isUnsignedIntegerType()) {
-        UnderlyingType =
-            UnderlyingType->isUnsignedIntegerType()
-                ? Context.getCorrespondingSignedType(UnderlyingType)
-                : Context.getCorrespondingUnsignedType(UnderlyingType);
-        if (Context.typesAreCompatible(PromoteType, UnderlyingType,
-                                       /*CompareUnqualified*/ true))
-          PromoteType = QualType();
+
+        if (!UnderlyingType->isUnsignedIntegerType() ||
+            UnderlyingType->hasSignedIntegerRepresentation()) {
+          UnderlyingType =
+              UnderlyingType->isUnsignedIntegerType()
+                  ? Context.getCorrespondingSignedType(UnderlyingType)
+                  : Context.getCorrespondingUnsignedType(UnderlyingType);
+          if (Context.typesAreCompatible(PromoteType, UnderlyingType,
+                                         /*CompareUnqualified*/ true))
+            PromoteType = QualType();
+        }
       }
     }
     if (TInfo->getType()->isSpecificBuiltinType(BuiltinType::Float))
@@ -17391,6 +17395,15 @@ ExprResult Sema::BuildVAArgExpr(SourceLocation BuiltinLoc,
   }
 
   QualType T = TInfo->getType().getNonLValueExprType(Context);
+  if (!PromoteType.isNull()) {
+    QualType BaseType = TInfo->getType();
+    if (const auto *ED = BaseType->getAsEnumDecl())
+      BaseType = ED->getIntegerType();
+    const auto *BT = BaseType->getAs<BuiltinType>();
+    if (BT && (BT->getKind() == BuiltinType::Char16 ||
+               BT->getKind() == BuiltinType::Char32))
+      T = PromoteType.getNonLValueExprType(Context);
+  }
   return new (Context) VAArgExpr(BuiltinLoc, E, TInfo, RPLoc, T, IsMS);
 }
 

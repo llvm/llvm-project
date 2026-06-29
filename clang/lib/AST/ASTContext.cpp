@@ -12511,6 +12511,10 @@ QualType ASTContext::getCorrespondingSignedType(QualType T) const {
   case BuiltinType::UChar:
   case BuiltinType::Char8:
     return SignedCharTy;
+  case BuiltinType::Char16:
+    return ShortTy;
+  case BuiltinType::Char32:
+    return IntTy;
   case BuiltinType::UShort:
     return ShortTy;
   case BuiltinType::UInt:
