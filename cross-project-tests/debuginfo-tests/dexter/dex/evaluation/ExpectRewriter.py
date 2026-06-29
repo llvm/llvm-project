@@ -31,7 +31,7 @@ class ExpectedValueRewriter:
                 sub_value.expression: expected_value
                 for sub_value in sub_values
                 if (
-                    expected_value := ExpectedValueWriter(
+                    expected_value := ExpectedValueRewriter(
                         expect, sub_value
                     ).expected_value
                 )
