@@ -5,7 +5,7 @@
 // RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
 // RUN: %if spirv-tools %{ spirv-val %t %}
 
-spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, Int16, Int64], []> {
   spirv.func @math(%arg0 : f32, %arg1 : f32, %arg2 : i32) "None" {
     // CHECK: {{%.*}} = spirv.GL.Exp {{%.*}} : f32
     %0 = spirv.GL.Exp %arg0 : f32
@@ -119,6 +119,25 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
     %2 = spirv.GL.FindILsb %arg0 : i32
     spirv.Return
   }
+
+  spirv.func @findilsb_i64(%arg0 : i64) "None" {
+    // CHECK: spirv.GL.FindILsb {{%.*}} : i64
+    %0 = spirv.GL.FindILsb %arg0 : i64
+    spirv.Return
+  }
+
+  spirv.func @findilsb_i16(%arg0 : i16) "None" {
+    // CHECK: spirv.GL.FindILsb {{%.*}} : i16
+    %0 = spirv.GL.FindILsb %arg0 : i16
+    spirv.Return
+  }
+
+  spirv.func @findilsb_vector_i64(%arg0 : vector<2xi64>) "None" {
+    // CHECK: spirv.GL.FindILsb {{%.*}} : vector<2xi64>
+    %0 = spirv.GL.FindILsb %arg0 : vector<2xi64>
+    spirv.Return
+  }
+
   spirv.func @findsmsb(%arg0 : i32) "None" {
     // CHECK: spirv.GL.FindSMsb {{%.*}} : i32
     %2 = spirv.GL.FindSMsb %arg0 : i32
