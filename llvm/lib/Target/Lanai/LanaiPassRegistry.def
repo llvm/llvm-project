@@ -18,10 +18,5 @@
 #endif
 MACHINE_FUNCTION_PASS("lanai-delay-slot-fillter", LanaiDelaySlotFillerPass())
 MACHINE_FUNCTION_PASS("lanai-isel", LanaiISelDAGToDAGPass(*this))
+MACHINE_FUNCTION_PASS("lanai-mem-alu-combiner", LanaiMemAluCombinerPass())
 #undef MACHINE_FUNCTION_PASS
-
-#ifndef DUMMY_MACHINE_FUNCTION_PASS
-#define DUMMY_MACHINE_FUNCTION_PASS(NAME, PASS_NAME)
-#endif
-DUMMY_MACHINE_FUNCTION_PASS("lanai-mem-alu-combiner", LanaiMemAluCombiner())
-#undef DUMMY_MACHINE_FUNCTION_PASS
