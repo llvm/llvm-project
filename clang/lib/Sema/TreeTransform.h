@@ -3484,6 +3484,14 @@ public:
     return getSema().BuildCXXThisExpr(ThisLoc, ThisType, isImplicit);
   }
 
+  /// Build a new C struct implicit 'this' expression.
+  ///
+  /// By default, performs semantic analysis to build the new expression.
+  /// Subclasses may override this routine to provide different behavior.
+  ExprResult RebuildCThisExpr(SourceLocation Loc, QualType Type) {
+    return CThisExpr::Create(getSema().Context, Loc, Type);
+  }
+
   /// Build a new C++ throw expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
@@ -14784,6 +14792,25 @@ TreeTransform<Derived>::TransformCXXThisExpr(CXXThisExpr *E) {
   }
 
   return getDerived().RebuildCXXThisExpr(E->getBeginLoc(), T, E->isImplicit());
+}
+
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformCThisExpr(CThisExpr *E) {
+  // We must transform the underlying struct pointer type in case 
+  // it was instantiated from a generic or template context.
+  TypeSourceInfo *TSI = getSema().Context.getTrivialTypeSourceInfo(
+      E->getType(), E->getBeginLoc());
+  TypeSourceInfo *InstTSI = getDerived().TransformType(TSI);
+  if (!InstTSI)
+    return ExprError();
+
+  // Optimization: If the type didn't actually change during transformation, 
+  // and we aren't forced to rebuild, just return the original node.
+  if (!getDerived().AlwaysRebuild() && InstTSI == TSI)
+    return E;
+
+  // Otherwise, rebuild the node with the newly transformed type.
+  return getDerived().RebuildCThisExpr(E->getBeginLoc(), InstTSI->getType());
 }
 
 template<typename Derived>

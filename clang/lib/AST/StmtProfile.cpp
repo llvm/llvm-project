@@ -2141,6 +2141,10 @@ void StmtProfiler::VisitCXXThisExpr(const CXXThisExpr *S) {
   ID.AddBoolean(S->isCapturedByCopyInLambdaWithExplicitObjectParameter());
 }
 
+void StmtProfiler::VisitCThisExpr(const CThisExpr *S) {
+  VisitExpr(S);
+}
+
 void StmtProfiler::VisitCXXThrowExpr(const CXXThrowExpr *S) {
   VisitExpr(S);
 }

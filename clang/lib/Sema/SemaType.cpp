@@ -9983,9 +9983,25 @@ QualType Sema::BuildTypeofExprType(Expr *E, TypeOfKind Kind) {
 static void
 BuildTypeCoupledDecls(Expr *E,
                       llvm::SmallVectorImpl<TypeCoupledDeclRefInfo> &Decls) {
-  // Currently, 'counted_by' only allows direct DeclRefExpr to FieldDecl.
-  auto *CountDecl = cast<DeclRefExpr>(E)->getDecl();
-  Decls.push_back(TypeCoupledDeclRefInfo(CountDecl, /*IsDref*/ false));
+  ValueDecl *CountDecl = nullptr;
+
+  if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+    CountDecl = DRE->getDecl();
+  } else if (auto *ME = dyn_cast<MemberExpr>(E)) {
+    Expr *Base = ME->getBase()->IgnoreParenImpCasts();
+    
+    // Drill down through any nested anonymous structs
+    while (auto *InnerME = dyn_cast<MemberExpr>(Base)) 
+      Base = InnerME->getBase()->IgnoreParenImpCasts();
+    
+    assert(isa<CThisExpr>(Base) && 
+           "Expected CThisExpr base for MemberExpr count");
+    CountDecl = ME->getMemberDecl();
+  } else {
+    llvm_unreachable("CountExpr must be a DeclRefExpr or a CThis-based MemberExpr");
+  }
+
+  Decls.push_back(TypeCoupledDeclRefInfo(CountDecl, /*IsDref=*/false));
 }
 
 QualType Sema::BuildCountAttributedArrayOrPointerType(QualType WrappedTy,

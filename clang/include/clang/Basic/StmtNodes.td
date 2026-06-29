@@ -137,6 +137,7 @@ def UserDefinedLiteral : StmtNode<CallExpr>;
 def CXXBoolLiteralExpr : StmtNode<Expr>;
 def CXXNullPtrLiteralExpr : StmtNode<Expr>;
 def CXXThisExpr : StmtNode<Expr>;
+def CThisExpr : StmtNode<Expr>; 
 def CXXThrowExpr : StmtNode<Expr>;
 def CXXDefaultArgExpr : StmtNode<Expr>;
 def CXXDefaultInitExpr : StmtNode<Expr>;

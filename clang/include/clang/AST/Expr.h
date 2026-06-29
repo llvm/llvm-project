@@ -1513,6 +1513,66 @@ public:
   }
 };
 
+/// \brief Represents an implicit reference to the enclosing object inside an
+/// attribute argument that names a sibling field.
+///
+/// In C, an attribute on a struct member can name another member of the
+/// same record (e.g., \c __counted_by(size) or \c GUARDED_BY(mu_)). C has
+/// no \c this keyword, so unqualified field references in this context
+/// are modelled as a \c MemberExpr whose base is a \c CThisExpr of pointer
+/// type to the enclosing record. This serves as the C-side equivalent of
+/// \c CXXThisExpr for the purposes of attribute argument resolution and
+/// Thread Safety Analysis.
+///
+/// Example:
+/// \code
+/// struct Buffer {
+///   size_t size;
+///   int *data __attribute__((counted_by(size)));
+/// };
+/// \endcode
+///
+/// Here, the identifier \c size inside the attribute resolves to a
+/// \c MemberExpr with a \c CThisExpr of type \c "struct Buffer *" as
+/// its implicit base.
+class CThisExpr : public Expr {
+  SourceLocation Loc;
+
+  friend class ASTStmtReader;
+  friend class ASTReader;
+
+  CThisExpr(SourceLocation L, QualType Ty)
+      : Expr(CThisExprClass, Ty, VK_PRValue, OK_Ordinary), Loc(L) {
+    setDependence(ExprDependence::None); 
+  }
+
+  CThisExpr(EmptyShell Empty) : Expr(CThisExprClass, Empty) {}
+
+public:
+  static CThisExpr *Create(const ASTContext &Ctx, SourceLocation L,
+                           QualType Ty);
+
+  static CThisExpr *CreateEmpty(const ASTContext &Ctx);
+
+  SourceLocation getLocation() const { return Loc; }
+  void setLocation(SourceLocation L) { Loc = L; }
+
+  SourceLocation getBeginLoc() const { return getLocation(); }
+  SourceLocation getEndLoc() const { return getLocation(); }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == CThisExprClass;
+  }
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+};
+
 class IntegerLiteral : public Expr, public APIntStorage {
   SourceLocation Loc;
 
@@ -3566,7 +3626,13 @@ public:
 
   /// Determine whether the base of this explicit is implicit.
   bool isImplicitAccess() const {
-    return getBase() && getBase()->isImplicitCXXThis();
+    if (!getBase()) return false;
+    
+    // Preserve the original C++ behavior
+    if (getBase()->isImplicitCXXThis()) return true;
+    
+    // Check for our new CThisExpr safely using the StmtClass enum
+    return getBase()->IgnoreImplicit()->getStmtClass() == Stmt::CThisExprClass;
   }
 
   /// Returns true if this member expression refers to a method that
