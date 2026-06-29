@@ -38,7 +38,7 @@ class TestTraceExport(TraceIntelPTTestCaseBase):
 
         self.expect(
             f"thread trace export ctf --file {ctf_test_file}",
-            substrs=["error: Process is not being traced"],
+            substrs=["error: process is not being traced"],
             error=True,
         )
 
