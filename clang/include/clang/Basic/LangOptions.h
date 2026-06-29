@@ -319,6 +319,13 @@ public:
     BKey
   };
 
+  enum class SignReturnAddressHardeningKind {
+    /// Regular return address signing.
+    None,
+    /// Hardened return address signing with load of return address.
+    LoadReturnAddress
+  };
+
   enum class ThreadModelKind {
     /// POSIX Threads.
     POSIX,
