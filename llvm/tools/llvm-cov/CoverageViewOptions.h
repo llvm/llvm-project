@@ -49,6 +49,7 @@ struct CoverageViewOptions {
   bool SkipFunctions;
   bool SkipBranches;
   bool BinaryCounters;
+  bool MergeBinaryCoverage;
   OutputFormat Format;
   BranchOutputType ShowBranches;
   std::string ShowOutputDirectory;
