@@ -125,6 +125,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.inttypes.wcstoimax
     libc.src.inttypes.wcstoumax
 
+    # libgen.h entrypoints
+    libc.src.libgen.basename
+    libc.src.libgen.dirname
+
     # stdbit.h entrypoints
     libc.src.stdbit.stdc_bit_ceil_uc
     libc.src.stdbit.stdc_bit_ceil_ui
@@ -510,6 +514,8 @@ endif()
 
 set(TARGET_LIBM_ENTRYPOINTS
     # complex.h entrypoints
+    libc.src.complex.carg
+    libc.src.complex.cargf
     libc.src.complex.creal
     libc.src.complex.crealf
     libc.src.complex.creall
@@ -1025,6 +1031,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.canonicalizebf16
   libc.src.math.ceilbf16
   libc.src.math.copysignbf16
+  libc.src.math.expbf16
   libc.src.math.fabsbf16
   libc.src.math.fdimbf16
   libc.src.math.floorbf16
@@ -1072,6 +1079,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.setpayloadbf16
   libc.src.math.setpayloadsigbf16
   libc.src.math.sqrtbf16
+  libc.src.math.tanbf16
   libc.src.math.truncbf16
   libc.src.math.totalorderbf16
   libc.src.math.totalordermagbf16
@@ -1296,6 +1304,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_setspecific
 
     # sched.h entrypoints
+    libc.src.sched.__sched_clrcpuset
     libc.src.sched.__sched_cpualloc
     libc.src.sched.__sched_cpufree
     libc.src.sched.__sched_getcpucount
@@ -1365,6 +1374,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.stdlib.exit
     libc.src.stdlib.getenv
     libc.src.stdlib.setenv
+    libc.src.stdlib.unsetenv
     libc.src.stdlib.mbstowcs
     libc.src.stdlib.mbtowc
     libc.src.stdlib.mblen

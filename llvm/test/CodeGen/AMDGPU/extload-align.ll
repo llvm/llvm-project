@@ -1,4 +1,4 @@
-; RUN: llc -debug-only=machine-scheduler -mtriple=amdgcn-- %s -o - 2>&1| FileCheck -check-prefix=DEBUG %s
+; RUN: llc -debug-only=machine-scheduler -mtriple=amdgcn-- -mcpu=gfx600 %s -o - 2>&1| FileCheck -check-prefix=DEBUG %s
 ; REQUIRES: asserts
 
 ; Verify that the extload generated from %eval has the default

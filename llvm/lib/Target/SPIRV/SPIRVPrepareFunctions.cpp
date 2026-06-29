@@ -145,14 +145,12 @@ static bool lowerIntrinsicToFunction(IntrinsicInst *Intrinsic,
     Intrinsic->setCalledFunction(F);
     return true;
   }
-  // TODO copy arguments attributes: nocapture writeonly.
   FunctionCallee FC =
       M->getOrInsertFunction(FuncName, Intrinsic->getFunctionType());
   auto IntrinsicID = Intrinsic->getIntrinsicID();
   Intrinsic->setCalledFunction(FC);
-
-  F = dyn_cast<Function>(FC.getCallee());
-  assert(F && "Callee must be a function");
+  F = cast<Function>(FC.getCallee());
+  F->setAttributes(Intrinsic->getAttributes());
 
   switch (IntrinsicID) {
   case Intrinsic::memset: {

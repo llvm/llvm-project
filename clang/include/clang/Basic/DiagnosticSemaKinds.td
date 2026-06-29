@@ -796,6 +796,13 @@ def warn_const_attr_with_pure_attr : Warning<
 def warn_pure_function_returns_void : Warning<
   "'%select{pure|const}0' attribute on function returning 'void'; attribute ignored">,
   InGroup<IgnoredAttributes>;
+def warn_const_pure_noreturn_call : Warning<
+  "calling a 'noreturn' function from a function with the "
+  "'%select{pure|const}0' attribute is undefined behavior">,
+  InGroup<DiagGroup<"noreturn-const-pure">>;
+def note_const_pure_noreturn_call : Note<
+  "function declared '%select{pure|const}0' here">;
+
 
 def warn_suggest_noreturn_function : Warning<
   "%select{function|method}0 %1 could be declared with attribute 'noreturn'">,
@@ -9671,6 +9678,9 @@ def err_atomic_op_needs_atomic_int_or_fp : Error<
 def err_atomic_op_needs_atomic_int : Error<
   "address argument to atomic operation must be a pointer to "
   "%select{|atomic }0integer (%1 invalid)">;
+def err_atomic_op_needs_atomic_fp
+    : Error<"address argument to atomic operation must be a pointer to "
+            "%select{|atomic }0floating point type (%1 invalid)">;
 def warn_atomic_op_has_invalid_memory_order : Warning<
   "%select{|success |failure }0memory order argument to atomic operation is invalid">,
   InGroup<DiagGroup<"atomic-memory-ordering">>;
@@ -11082,6 +11092,18 @@ def warn_lifetime_safety_cross_tu_param_suggestion
       InGroup<LifetimeSafetyCrossTUSuggestions>,
       DefaultIgnore;
 
+def warn_lifetime_safety_intra_tu_ctor_param_suggestion
+    : Warning<"parameter in intra-TU constructor should be marked "
+              "[[clang::lifetimebound]]">,
+      InGroup<LifetimeSafetyIntraTUConstructorSuggestions>,
+      DefaultIgnore;
+
+def warn_lifetime_safety_cross_tu_ctor_param_suggestion
+    : Warning<"parameter in cross-TU constructor should be marked "
+              "[[clang::lifetimebound]]">,
+      InGroup<LifetimeSafetyCrossTUConstructorSuggestions>,
+      DefaultIgnore;
+
 def warn_lifetime_safety_intra_tu_this_suggestion
     : Warning<"implicit this in intra-TU function should be marked "
               "[[clang::lifetimebound]]">,
@@ -11878,6 +11900,9 @@ def err_opencl_type_not_found : Error<
   "%0 type %1 not found; include the base header with -finclude-default-header">;
 def warn_opencl_attr_deprecated_ignored : Warning <
   "%0 attribute is deprecated and ignored in %1">, InGroup<IgnoredAttributes>;
+def warn_deprecated_attribute : Warning<
+  "'%0' attribute is deprecated and may be removed in a future version of Clang">,
+  InGroup<DeprecatedAttributes>;
 def err_opencl_variadic_function : Error<
   "invalid prototype, variadic arguments are not allowed in OpenCL">;
 def err_opencl_requires_extension : Error<
@@ -12780,10 +12805,10 @@ def err_omp_transparent_invalid_value : Error<"invalid value for transparent cla
   " expected one of: omp_not_impex, omp_import, omp_export, omp_impex">;
 def err_omp_transparent_invalid_type : Error<
   "transparent clause cannot be applied to type: %0">;
-def err_omp_num_teams_multi_expr_not_allowed
-    : Error<"only two expressions allowed in 'num_teams' clause">;
 def err_omp_num_teams_lower_bound_larger
     : Error<"lower bound is greater than upper bound in 'num_teams' clause">;
+def err_omp_modifier_requires_version : Error<
+  "'%0' modifier in '%1' clause requires OpenMP %2 or later">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {
@@ -14267,7 +14292,7 @@ def warn_amdgcn_unguarded_asm_stmt
     InGroup<UnguardedBuiltinUsageAMDGPU>, DefaultIgnore;
 def note_amdgcn_unguarded_asm_silence
   : Note<"enclose the '%0' ASM sequence in a scope controlled by a "
-         "__builtin_amdgcn_is_processor check to silence this warning">;
+         "__builtin_amdgcn_processor_is check to silence this warning">;
 def err_amdgcn_incompatible_builtin
   : Error<"%0 cannot be invoked in the current context, as it requires the "
           "'%1' feature(s)%select{|, which '%3' does not provide}2">;

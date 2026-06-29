@@ -156,6 +156,12 @@ void f(int a, double b, const char *cpc, const void *cpv, X *pX) {
   return (void)g();
 }
 
+int cast_after_return(double d) {
+  return(int)d;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: C-style casts are discouraged; use static_cast [
+  // CHECK-FIXES: return static_cast<int>(d);
+}
+
 template <typename T>
 void template_function(T t, int n) {
   int i = (int)t;
