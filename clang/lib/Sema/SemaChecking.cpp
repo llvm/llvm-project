@@ -5014,6 +5014,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     AOEVT_None = 0,
     AOEVT_Pointer = 1,
     AOEVT_FP = 2,
+    AOEVT_Int = 4,
   };
   unsigned ArithAllows = AOEVT_None;
 
@@ -5065,6 +5066,17 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
     ArithAllows = AOEVT_Pointer | AOEVT_FP;
     Form = Arithmetic;
     break;
+  case AtomicExpr::AO__atomic_fetch_fminimum:
+  case AtomicExpr::AO__atomic_fetch_fmaximum:
+  case AtomicExpr::AO__atomic_fetch_fminimum_num:
+  case AtomicExpr::AO__atomic_fetch_fmaximum_num:
+  case AtomicExpr::AO__scoped_atomic_fetch_fminimum:
+  case AtomicExpr::AO__scoped_atomic_fetch_fmaximum:
+  case AtomicExpr::AO__scoped_atomic_fetch_fminimum_num:
+  case AtomicExpr::AO__scoped_atomic_fetch_fmaximum_num:
+    ArithAllows = AOEVT_FP;
+    Form = Arithmetic;
+    break;
   case AtomicExpr::AO__atomic_fetch_max:
   case AtomicExpr::AO__atomic_fetch_min:
   case AtomicExpr::AO__atomic_max_fetch:
@@ -5079,7 +5091,7 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   case AtomicExpr::AO__opencl_atomic_fetch_min:
   case AtomicExpr::AO__hip_atomic_fetch_max:
   case AtomicExpr::AO__hip_atomic_fetch_min:
-    ArithAllows = AOEVT_FP;
+    ArithAllows = AOEVT_Int | AOEVT_FP;
     Form = Arithmetic;
     break;
   case AtomicExpr::AO__c11_atomic_fetch_and:
@@ -5257,7 +5269,9 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
           &Context.getTargetInfo().getLongDoubleFormat() ==
               &llvm::APFloat::x87DoubleExtended();
       if (ValType->isIntegerType())
-        return true;
+        // Special case: f-prefixed operations (AOEVT_FP exactly) reject
+        // integers. Explicit AOEVT_Int or other combinations allow integers.
+        return (AllowedType & AOEVT_Int) || AllowedType != AOEVT_FP;
       if (ValType->isPointerType())
         return AllowedType & AOEVT_Pointer;
       if (!(ValType->isFloatingType() && (AllowedType & AOEVT_FP)))
@@ -5268,13 +5282,16 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
       return true;
     };
     if (!IsAllowedValueType(ValType, ArithAllows)) {
-      auto DID = ArithAllows & AOEVT_FP
+      auto DID =
+          ArithAllows == AOEVT_FP
+              ? diag::err_atomic_op_needs_atomic_fp
+              : (ArithAllows & AOEVT_FP
                      ? (ArithAllows & AOEVT_Pointer
                             ? diag::err_atomic_op_needs_atomic_int_ptr_or_fp
                             : diag::err_atomic_op_needs_atomic_int_or_fp)
                      : (ArithAllows & AOEVT_Pointer
                             ? diag::err_atomic_op_needs_atomic_int_or_ptr
-                            : diag::err_atomic_op_needs_atomic_int);
+                            : diag::err_atomic_op_needs_atomic_int));
       Diag(ExprRange.getBegin(), DID)
           << IsC11 << Ptr->getType() << Ptr->getSourceRange();
       return ExprError();
