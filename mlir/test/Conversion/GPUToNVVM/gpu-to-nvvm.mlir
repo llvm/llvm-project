@@ -785,6 +785,26 @@ gpu.module @test_module_33 {
   }
 }
 
+// CHECK-LABEL: gpu.module @test_module_preexisting_kernel_attrs
+"gpu.module"() <{sym_name = "test_module_preexisting_kernel_attrs"}> ({
+  // CHECK: llvm.func @legacy_kernel_attr() attributes {gpu.kernel, nvvm.kernel}
+  "gpu.func"() <{function_type = () -> ()}> ({
+    "gpu.return"() : () -> ()
+  }) {gpu.kernel, sym_name = "legacy_kernel_attr"} : () -> ()
+
+  // CHECK-LABEL: llvm.func @preexisting_gpu_known_block_size()
+  // CHECK: attributes {gpu.kernel, gpu.known_block_size = array<i32: 32, 1, 1>, nvvm.kernel, nvvm.maxntid = array<i32: 32, 1, 1>}
+  "gpu.func"() <{function_type = () -> (), known_block_size = array<i32: 32, 1, 1>, kernel}> ({
+    "gpu.return"() : () -> ()
+  }) {gpu.known_block_size = array<i32: 64, 1, 1>, sym_name = "preexisting_gpu_known_block_size"} : () -> ()
+
+  // CHECK-LABEL: llvm.func @preexisting_nvvm_maxntid()
+  // CHECK: attributes {gpu.kernel, gpu.known_block_size = array<i32: 32, 1, 1>, nvvm.kernel, nvvm.maxntid = array<i32: 32, 1, 1>}
+  "gpu.func"() <{function_type = () -> (), known_block_size = array<i32: 32, 1, 1>, kernel}> ({
+    "gpu.return"() : () -> ()
+  }) {nvvm.maxntid = array<i32: 64, 1, 1>, sym_name = "preexisting_nvvm_maxntid"} : () -> ()
+}) : () -> ()
+
 
 gpu.module @test_module_34 {
   // CHECK-LABEL: llvm.func @memref_signature(
