@@ -183,7 +183,7 @@ static cl::opt<ElementCount> EpilogueVectorizationForceVF(
     cl::Hidden,
     cl::desc("When epilogue vectorization is enabled, and a value greater than "
              "1 is specified, forces the given VF for all applicable epilogue "
-             "loops."));
+             "loops. Note: This allows all scalable VFs >= vscale x 1."));
 
 static cl::opt<unsigned> EpilogueVectorizationMinVF(
     "epilogue-vectorization-minimum-VF", cl::Hidden,
@@ -3470,10 +3470,10 @@ std::unique_ptr<VPlan> LoopVectorizationPlanner::selectBestEpiloguePlan(
     }
 
     LLVM_DEBUG(dbgs() << "LEV: Epilogue vectorization factor is forced.\n");
-    ElementCount ForcedEC = EpilogueVectorizationForceVF;
-    if (hasPlanWithVF(ForcedEC)) {
-      std::unique_ptr<VPlan> Clone(getPlanFor(ForcedEC).duplicate());
-      Clone->setVF(ForcedEC);
+    if (hasPlanWithVF(EpilogueVectorizationForceVF)) {
+      std::unique_ptr<VPlan> Clone(
+          getPlanFor(EpilogueVectorizationForceVF).duplicate());
+      Clone->setVF(EpilogueVectorizationForceVF);
       return Clone;
     }
 
