@@ -3,6 +3,7 @@
 
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include <vector>
 
 namespace clang {
@@ -11,6 +12,7 @@ namespace lifetimemodeling {
 
 std::vector<const MemRegion *> getLifetimeSourceSet(ProgramStateRef, SVal);
 bool isDeallocated(ProgramStateRef, const MemRegion *);
+ProgramStateRef removeDeadBindings(ProgramStateRef, SymbolReaper &);
 
 } // namespace lifetimemodeling
 } // namespace ento

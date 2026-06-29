@@ -1,6 +1,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
+#include "clang/StaticAnalyzer/Checkers/LifetimeModeling.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
@@ -10,16 +11,10 @@
 using namespace clang;
 using namespace ento;
 
-REGISTER_SET_FACTORY_WITH_PROGRAMSTATE(LifetimeSourceSet, const MemRegion *)
-REGISTER_MAP_WITH_PROGRAMSTATE(LifetimeBoundMap, SVal, LifetimeSourceSet)
-
 namespace {
 class UseAfterLifetimeEnd
-    : public Checker<check::PostCall, check::EndFunction, check::DeadSymbols> {
+    : public Checker<check::EndFunction, check::DeadSymbols> {
 public:
-  void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
-  void printState(raw_ostream &Out, ProgramStateRef State, const char *NL,
-                  const char *Sep) const override;
   void reportDanglingSource(const MemRegion *Region, ExplodedNode *N,
                             CheckerContext &C) const;
   void checkReturnedBorrower(SVal Val, ProgramStateRef State,
@@ -30,50 +25,6 @@ public:
 };
 
 } // namespace
-
-static ProgramStateRef bindValues(ProgramStateRef State, SVal RetVal,
-                                  const MemRegion *Source) {
-  LifetimeSourceSet::Factory &F = State->get_context<LifetimeSourceSet>();
-
-  const LifetimeSourceSet *LSet = State->get<LifetimeBoundMap>(RetVal);
-  LifetimeSourceSet Set = LSet ? *LSet : F.getEmptySet();
-  Set = F.add(Set, Source);
-  State = State->set<LifetimeBoundMap>(RetVal, Set);
-  return State;
-}
-
-void UseAfterLifetimeEnd::checkPostCall(const CallEvent &Call,
-                                        CheckerContext &C) const {
-  ProgramStateRef State = C.getState();
-
-  const auto *FC = dyn_cast<AnyFunctionCall>(&Call);
-  if (!FC)
-    return;
-
-  const FunctionDecl *FD = FC->getDecl();
-  if (!FD)
-    return;
-
-  SVal RetVal = Call.getReturnValue();
-
-  for (const ParmVarDecl *PVD : FD->parameters()) {
-    if (PVD->hasAttr<LifetimeBoundAttr>()) {
-      unsigned Idx = PVD->getFunctionScopeIndex();
-      SVal Arg = Call.getArgSVal(Idx);
-      if (const MemRegion *ArgValRegion = Arg.getAsRegion())
-        State = bindValues(State, RetVal, ArgValRegion);
-    }
-  }
-
-  if (const auto *IC = dyn_cast<CXXInstanceCall>(&Call)) {
-    if (lifetimes::implicitObjectParamIsLifetimeBound(FD)) {
-      if (const MemRegion *AttrRegion = IC->getCXXThisVal().getAsRegion()) {
-        State = bindValues(State, RetVal, AttrRegion);
-      }
-    }
-  }
-  C.addTransition(State);
-}
 
 static bool hasDanglingSource(const MemRegion *Source, ProgramStateRef State,
                               CheckerContext &C) {
@@ -94,9 +45,10 @@ static bool hasDanglingSource(const MemRegion *Source, ProgramStateRef State,
 
 void UseAfterLifetimeEnd::checkReturnedBorrower(SVal Val, ProgramStateRef State,
                                                 CheckerContext &C) const {
-  if (auto *SourceSet = State->get<LifetimeBoundMap>(Val)) {
+  auto SourceSet = lifetimemodeling::getLifetimeSourceSet(State, Val);
+  if (!SourceSet.empty()) {
     ExplodedNode *N = nullptr;
-    for (const MemRegion *Region : *SourceSet) {
+    for (const MemRegion *Region : SourceSet) {
       if (hasDanglingSource(Region, State, C)) {
         if (!N)
           N = C.generateNonFatalErrorNode();
@@ -114,10 +66,6 @@ void UseAfterLifetimeEnd::checkEndFunction(const ReturnStmt *RS,
     return;
 
   ProgramStateRef State = C.getState();
-  auto LBMap = State->get<LifetimeBoundMap>();
-
-  if (LBMap.isEmpty())
-    return;
 
   const Expr *RetExpr = RS->getRetValue();
   if (!RetExpr)
@@ -141,35 +89,9 @@ void UseAfterLifetimeEnd::reportDanglingSource(const MemRegion *Region,
 
 void UseAfterLifetimeEnd::checkDeadSymbols(SymbolReaper &SymReaper,
                                            CheckerContext &C) const {
-  ProgramStateRef State = C.getState();
-  LifetimeBoundMapTy LBMap = State->get<LifetimeBoundMap>();
-
-  for (SVal Val : llvm::make_first_range(LBMap)) {
-    if (const MemRegion *ValRegion = Val.getAsRegion()) {
-      if (!SymReaper.isLiveRegion(ValRegion))
-        State = State->remove<LifetimeBoundMap>(Val);
-    } else if (SymbolRef ValRef =
-                   Val.getAsSymbol(/*IncludeBaseRegions=*/true)) {
-      if (!SymReaper.isLive(ValRef))
-        State = State->remove<LifetimeBoundMap>(Val);
-    }
-  }
-
+  ProgramStateRef State =
+      lifetimemodeling::removeDeadBindings(C.getState(), SymReaper);
   C.addTransition(State);
-}
-
-void UseAfterLifetimeEnd::printState(raw_ostream &Out, ProgramStateRef State,
-                                     const char *NL, const char *Sep) const {
-  auto LBMap = State->get<LifetimeBoundMap>();
-
-  if (LBMap.isEmpty())
-    return;
-
-  Out << Sep << "LifetimeBound bindings:" << NL;
-  for (auto &&[OriginSym, SourceSet] : LBMap) {
-    for (const auto *Region : SourceSet)
-      Out << " Origin " << OriginSym << " contains Loan " << Region << NL;
-  }
 }
 
 namespace {
@@ -222,27 +144,14 @@ void DebugUseAfterLifetimeEnd::analyzerDumpLifetimeOriginsOf(
   }
 
   SVal ArgSVal = Call.getArgSVal(0);
-  const LifetimeSourceSet *SourceSet = State->get<LifetimeBoundMap>(ArgSVal);
+  auto SourceSet = lifetimemodeling::getLifetimeSourceSet(State, ArgSVal);
 
-  if (!SourceSet)
+  if (SourceSet.empty())
     return;
-
-  llvm::SmallString<128> Str;
-  llvm::raw_svector_ostream OS(Str);
-  OS << " Origin " << ArgSVal << " bound to ";
-
-  if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
-    bool First = true;
-    for (const MemRegion *Region : *SourceSet) {
-      if (!First)
-        OS << ", ";
-      OS << Region;
-      First = false;
-    }
 
   if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
     llvm::SmallVector<std::string> RegionNames =
-        to_vector(map_range(llvm::make_pointee_range(*SourceSet),
+        to_vector(map_range(llvm::make_pointee_range(SourceSet),
                             std::mem_fn(&MemRegion::getString)));
     llvm::sort(RegionNames);
 
