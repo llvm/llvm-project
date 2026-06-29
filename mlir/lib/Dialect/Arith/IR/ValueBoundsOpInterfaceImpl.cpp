@@ -89,6 +89,84 @@ struct FloorDivSIOpInterface
   }
 };
 
+struct CeilDivSIOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<CeilDivSIOpInterface,
+                                                   CeilDivSIOp> {
+  void populateBoundsForIndexValue(Operation *op, Value value,
+                                   ValueBoundsConstraintSet &cstr) const {
+    auto divSIOp = cast<CeilDivSIOp>(op);
+    assert(value == divSIOp.getResult() && "invalid value");
+
+    AffineExpr lhs = cstr.getExpr(divSIOp.getLhs());
+    AffineExpr rhs = cstr.getExpr(divSIOp.getRhs());
+    cstr.bound(value) == lhs.ceilDiv(rhs);
+  }
+};
+
+struct RemSIOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<RemSIOpInterface, RemSIOp> {
+  void populateBoundsForIndexValue(Operation *op, Value value,
+                                   ValueBoundsConstraintSet &cstr) const {
+    auto remSIOp = cast<RemSIOp>(op);
+    assert(value == remSIOp.getResult() && "invalid value");
+
+    Value lhsValue = remSIOp.getLhs();
+    Value rhsValue = remSIOp.getRhs();
+    AffineExpr rhs = cstr.getExpr(rhsValue);
+    bool rhsPositive =
+        ValueBoundsConstraintSet::isProvablyPositive(rhsValue, cstr);
+    bool rhsNegative =
+        ValueBoundsConstraintSet::isProvablyNegative(rhsValue, cstr);
+
+    // The result of remsi has the same sign as the dividend (lhs) and also
+    // fulfills |result| < |rhs|. The sign of lhs does not need to be a
+    // compile-time constant: it is sufficient if the constraint set can prove
+    // it. For lhs == 0 both branches may fire, which is consistent since the
+    // result is then 0. f.e:
+    //   lhs   rhs   result   bounds
+    //   ----  ----  ------   --------------------------------------------------
+    //    7     3      1      0 <= val && val <= rhs-1 = 2      -> [0, 2]
+    //    7    -3      1      0 <= val && val <= -rhs-1 = 2     -> [0, 2]
+    //   -7     3     -1      val <= 0 && val >= 1-rhs = -2     -> [-2, 0]
+    //   -7    -3     -1      val <= 0 && val >= rhs+1 = -2     -> [-2, 0]
+    //    0     3      0      both lhs branches fire (0<=val and val<=0) -> val
+    //    == 0
+    if (ValueBoundsConstraintSet::isProvablyNonPositive(lhsValue, cstr)) {
+      cstr.bound(value) <= 0;
+      if (rhsPositive)
+        cstr.bound(value) >= 1 - rhs;
+      if (rhsNegative)
+        cstr.bound(value) >= rhs + 1;
+    }
+    if (ValueBoundsConstraintSet::isProvablyNonNegative(lhsValue, cstr)) {
+      cstr.bound(value) >= 0;
+      if (rhsPositive)
+        cstr.bound(value) <= rhs - 1;
+      if (rhsNegative)
+        cstr.bound(value) <= -rhs - 1;
+    }
+  }
+};
+
+struct RemUIOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<RemUIOpInterface, RemUIOp> {
+  void populateBoundsForIndexValue(Operation *op, Value value,
+                                   ValueBoundsConstraintSet &cstr) const {
+    auto remUIOp = cast<RemUIOp>(op);
+    assert(value == remUIOp.getResult() && "invalid value");
+
+    Value rhsValue = remUIOp.getRhs();
+    AffineExpr rhs = cstr.getExpr(rhsValue);
+
+    // remui computes an unsigned remainder, so for a provably positive divisor
+    // the result is always in [0, rhs - 1].
+    if (ValueBoundsConstraintSet::isProvablyPositive(rhsValue, cstr)) {
+      cstr.bound(value) >= 0;
+      cstr.bound(value) <= rhs - 1;
+    }
+  }
+};
+
 struct SelectOpInterface
     : public ValueBoundsOpInterface::ExternalModel<SelectOpInterface,
                                                    SelectOp> {
@@ -190,6 +268,55 @@ struct MaxSIOpInterface
     cstr.bound(value) >= rhs;
   }
 };
+
+struct MinUIOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<MinUIOpInterface,
+                                                   arith::MinUIOp> {
+  void populateBoundsForIndexValue(Operation *op, Value value,
+                                   ValueBoundsConstraintSet &cstr) const {
+    auto minOp = cast<arith::MinUIOp>(op);
+    assert(value == minOp.getResult() && "invalid value");
+
+    // ValueBoundsConstraintSet models values as signed integers (e.g. an i8
+    // 0xff is treated as -1, not 255).So, we can only derive bounds for minui
+    // if both operands are provably non-negative.
+    bool lhsNonNegative =
+        ValueBoundsConstraintSet::isProvablyNonNegative(minOp.getLhs(), cstr);
+    bool rhsNonNegative =
+        ValueBoundsConstraintSet::isProvablyNonNegative(minOp.getRhs(), cstr);
+    if (!lhsNonNegative || !rhsNonNegative)
+      return;
+
+    cstr.bound(value) >= 0;
+    AffineExpr lhs = cstr.getExpr(minOp.getLhs());
+    AffineExpr rhs = cstr.getExpr(minOp.getRhs());
+    cstr.bound(value) <= lhs;
+    cstr.bound(value) <= rhs;
+  }
+};
+
+struct MaxUIOpInterface
+    : public ValueBoundsOpInterface::ExternalModel<MaxUIOpInterface,
+                                                   arith::MaxUIOp> {
+  void populateBoundsForIndexValue(Operation *op, Value value,
+                                   ValueBoundsConstraintSet &cstr) const {
+    auto maxOp = cast<arith::MaxUIOp>(op);
+    assert(value == maxOp.getResult() && "invalid value");
+
+    // See MinUIOpInterface comment
+    bool lhsNonNegative =
+        ValueBoundsConstraintSet::isProvablyNonNegative(maxOp.getLhs(), cstr);
+    bool rhsNonNegative =
+        ValueBoundsConstraintSet::isProvablyNonNegative(maxOp.getRhs(), cstr);
+    if (!lhsNonNegative || !rhsNonNegative)
+      return;
+
+    AffineExpr lhs = cstr.getExpr(maxOp.getLhs());
+    AffineExpr rhs = cstr.getExpr(maxOp.getRhs());
+    cstr.bound(value) >= lhs;
+    cstr.bound(value) >= rhs;
+  }
+};
 } // namespace
 } // namespace arith
 } // namespace mlir
@@ -202,8 +329,13 @@ void mlir::arith::registerValueBoundsOpInterfaceExternalModels(
     arith::SubIOp::attachInterface<arith::SubIOpInterface>(*ctx);
     arith::MulIOp::attachInterface<arith::MulIOpInterface>(*ctx);
     arith::FloorDivSIOp::attachInterface<arith::FloorDivSIOpInterface>(*ctx);
+    arith::CeilDivSIOp::attachInterface<arith::CeilDivSIOpInterface>(*ctx);
+    arith::RemSIOp::attachInterface<arith::RemSIOpInterface>(*ctx);
+    arith::RemUIOp::attachInterface<arith::RemUIOpInterface>(*ctx);
     arith::SelectOp::attachInterface<arith::SelectOpInterface>(*ctx);
     arith::MinSIOp::attachInterface<arith::MinSIOpInterface>(*ctx);
     arith::MaxSIOp::attachInterface<arith::MaxSIOpInterface>(*ctx);
+    arith::MinUIOp::attachInterface<arith::MinUIOpInterface>(*ctx);
+    arith::MaxUIOp::attachInterface<arith::MaxUIOpInterface>(*ctx);
   });
 }
