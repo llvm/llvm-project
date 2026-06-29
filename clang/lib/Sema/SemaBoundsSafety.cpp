@@ -15,6 +15,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/ADT/FoldingSet.h"
 
 namespace clang {
 
@@ -69,9 +70,199 @@ enum class CountedByInvalidPointeeTypeKind {
   VALID,
 };
 
+static std::optional<bool> checkBoundsAttrTypeConflictsAndMisc(
+    Sema &S, QualType Ty, SourceLocation AttrLoc,
+    const Sema::BoundsAttrFlags &Flags, StringRef AttrSpelling,
+    bool AllowRedecl, bool AutoPtrAttributed, Expr *AttrArg) {
+  // FIXME: The diagnostics here need re-working:
+  // * Some of these clearly could be upstream checks as they don't depend on
+  //   attributes missing from upstream.
+  // * Some diagnostics want the attribute spelling and some don't. This seems
+  //   really inconsistent.
+
+  assert(AttrSpelling.size() > 0);
+  // Light sugar peel: AttributedType(PtrAutoAttr) marks an internally
+  // promoted pointer (e.g. __ptrauto); when present the upper-bound
+  // conflict is suppressed because the bound wasn't user-spelled.
+  // TODO(dliew): Remove me. This code was adapted from the AttributedType
+  // handling in `LateBoundsAttrDiagContext::diagnoseCountAttributedTypeShape`
+  // (SemaDeclAttr.cpp:6530) and
+  // `LateBoundsAttrDiagContext::diagnoseDynamicRangePointerTypeShape`
+  // (SemaDeclAttr.cpp:6692).
+  while (const auto *AT = dyn_cast<AttributedType>(Ty.getTypePtr())) {
+    if (AT->getAttrKind() == attr::PtrAutoAttr)
+      AutoPtrAttributed = true;
+    Ty = AT->getModifiedType();
+  }
+  const Type *T = Ty.getTypePtr();
+
+  // A __terminated_by pointer cannot also carry a count or range attribute
+  // unless the terminator was auto-inferred via __ptrauto.
+  // TODO(dliew): Remove me. This code was lifted from
+  // `LateBoundsAttrDiagContext::diagnoseCountAttributedTypeShape`
+  // (SemaDeclAttr.cpp:6542) and
+  // `LateBoundsAttrDiagContext::diagnoseDynamicRangePointerTypeShape`
+  // (SemaDeclAttr.cpp:6704).
+  if (isa<ValueTerminatedType>(T) && !AutoPtrAttributed) {
+    S.Diag(AttrLoc, diag::err_bounds_safety_terminated_by_wrong_pointer_type);
+    return false;
+  }
+
+  if (Flags.IsEndedBy) {
+    // Handle ended_by conflicts with counted_by/sized_by or existing
+    // ended_by.
+    // TODO(dliew): Remove me. This code was lifted from
+    // `LateBoundsAttrDiagContext::diagnoseDynamicRangePointerTypeShape`
+    // (SemaDeclAttr.cpp:6710).
+    if (isa<CountAttributedType>(T)) {
+      S.Diag(AttrLoc,
+             diag::err_bounds_safety_conflicting_count_range_attributes);
+      return false;
+    }
+    if (const auto *DRPT = dyn_cast<DynamicRangePointerType>(T)) {
+      if (DRPT->getEndPointer() != nullptr) {
+        if (!AllowRedecl) {
+          S.Diag(AttrLoc,
+                 diag::err_bounds_safety_conflicting_pointer_attributes)
+              << /*pointer*/ 1 << /*end*/ 3;
+          return false;
+        }
+        assert(AttrArg &&
+               "AllowRedecl path requires AttrArg for canonicalization");
+        ExprResult CanonEnd =
+            S.CanonicalizeRangeEndPtrExpr(AttrArg, /*ScopeCheck=*/false);
+        if (CanonEnd.isInvalid())
+          return false;
+        llvm::FoldingSetNodeID NewID, OldID;
+        CanonEnd.get()->Profile(NewID, S.getASTContext(),
+                                /*Canonical=*/true);
+        DRPT->getEndPointer()->Profile(OldID, S.getASTContext(),
+                                       /*Canonical=*/true);
+        if (NewID != OldID) {
+          S.Diag(AttrLoc,
+                 diag::err_bounds_safety_conflicting_pointer_attributes)
+              << /*pointer*/ 1 << /*end*/ 3;
+          return false;
+        }
+        return true;
+      }
+      // started_by-only DRPT: ended_by may still be added, fall through.
+    }
+  } else {
+    // Handle counted_by/sized_by conflicts with ended_by or existing
+    // counted_by/sized_by.
+    // TODO(dliew): Remove me. This code was lifted from
+    // `LateBoundsAttrDiagContext::diagnoseCountAttributedTypeShape`
+    // (SemaDeclAttr.cpp:6551).
+    if (const auto *CAT = dyn_cast<CountAttributedType>(T)) {
+      if (!AllowRedecl) {
+        S.Diag(AttrLoc, diag::err_bounds_safety_conflicting_pointer_attributes)
+            << /*pointer*/ CAT->isPointerType() << /*count*/ 2;
+        return false;
+      }
+      assert(AttrArg &&
+             "AllowRedecl path requires AttrArg for canonicalization");
+      // AllowRedecl: canonicalize the new count expression and compare
+      // against the existing one.
+      ExprResult CanonCount = S.CanonicalizeBoundsCountExpr(
+          AttrArg, Flags.CountInBytes, Flags.OrNull, /*ScopeCheck=*/false,
+          CAT->isArrayType());
+      if (CanonCount.isInvalid())
+        return false;
+      llvm::FoldingSetNodeID NewID, OldID;
+      CanonCount.get()->Profile(NewID, S.getASTContext(), /*Canonical=*/true);
+      if (const Expr *OldCnt = CAT->getCountExpr())
+        OldCnt->Profile(OldID, S.getASTContext(), /*Canonical=*/true);
+      if (NewID != OldID) {
+        S.Diag(AttrLoc, diag::err_bounds_safety_conflicting_pointer_attributes)
+            << /*pointer*/ CAT->isPointerType() << /*count*/ 2;
+        return false;
+      }
+      return true;
+    }
+    if (isa<DynamicRangePointerType>(T)) {
+      S.Diag(AttrLoc,
+             diag::err_bounds_safety_conflicting_count_range_attributes);
+      return false;
+    }
+  }
+
+  // An AtomicType wrapping a pointer: emit the diagnostic but return true so
+  // the caller still constructs the AtomicType instead of bailing out.
+  // TODO(dliew): Remove me. This code was lifted from
+  // `LateBoundsAttrDiagContext::diagnoseCountAttributedTypeShape`
+  // (SemaDeclAttr.cpp:6616) and
+  // `LateBoundsAttrDiagContext::diagnoseDynamicRangePointerTypeShape`
+  // (SemaDeclAttr.cpp:6763).
+  if (const auto *ATy = dyn_cast<AtomicType>(T)) {
+    if (ATy->getValueType()->isPointerType()) {
+      if (Flags.IsEndedBy) {
+        S.Diag(AttrLoc, diag::err_bounds_safety_atomic_unsupported_attribute)
+            << /*ended_by*/ 6;
+      } else {
+        unsigned DiagIndex = Flags.CountInBytes ? 3 : 2;
+        if (Flags.OrNull)
+          DiagIndex += 2;
+        S.Diag(AttrLoc, diag::err_bounds_safety_atomic_unsupported_attribute)
+            << DiagIndex;
+      }
+      return true;
+    }
+  }
+
+  // Pointer with explicit upper-bound (__bidi_indexable / __indexable):
+  // conflict with count/end attributes.
+  // TODO(dliew): Remove me. This code was lifted from
+  // `LateBoundsAttrDiagContext::diagnoseCountAttributedTypeShape`
+  // (SemaDeclAttr.cpp:6654) and
+  // `LateBoundsAttrDiagContext::diagnoseDynamicRangePointerTypeShape`
+  // (SemaDeclAttr.cpp:6773).
+  if (const auto *PT = dyn_cast<PointerType>(T)) {
+    auto FAttr = PT->getPointerAttributes();
+    if (FAttr.hasUpperBound() && !AutoPtrAttributed) {
+      S.Diag(AttrLoc,
+             diag::err_bounds_safety_conflicting_count_bound_attributes)
+          << AttrSpelling << (FAttr.hasLowerBound() ? 0 : 1);
+      return false;
+    }
+  }
+
+  // Array specifics for the counted_by family: a complete-size array
+  // with count is invalid; sized_by on an incomplete array is invalid.
+  // TODO(dliew): Remove me. This code was lifted from
+  // `LateBoundsAttrDiagContext::diagnoseCountAttributedTypeShape`
+  // (SemaDeclAttr.cpp:6623).
+  if (!Flags.IsEndedBy && Ty->isArrayType()) {
+    const ArrayType *AT = S.getASTContext().getAsArrayType(Ty);
+    if (AT && !AT->hasAttr(attr::ArrayDecayDiscardsCountInParameters)) {
+      if (AT->isIncompleteArrayType()) {
+        if (Flags.CountInBytes) {
+          S.Diag(AttrLoc, diag::err_bounds_safety_sized_by_array)
+              << AttrSpelling;
+          return false;
+        }
+      } else {
+        S.Diag(AttrLoc, diag::err_bounds_safety_complete_array_with_count);
+        return false;
+      }
+    }
+  }
+
+  return std::nullopt;
+}
+
 bool Sema::ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
                                        SourceRange AttrRange,
-                                       BoundsAttrFlags &Flags) {
+                                       BoundsAttrFlags &Flags,
+                                       bool FullBoundsSafetyDiagnostics,
+                                       StringRef AttrSpelling, bool AllowRedecl,
+                                       bool AutoPtrAttributed, Expr *AttrArg) {
+  if (FullBoundsSafetyDiagnostics)
+    if (std::optional<bool> Result = checkBoundsAttrTypeConflictsAndMisc(
+            *this, Ty, AttrLoc, Flags, AttrSpelling, AllowRedecl,
+            AutoPtrAttributed, AttrArg))
+      return *Result;
+
   BoundsAttributedType::BoundsAttrKind Kind = getBoundsAttrKind(Flags);
 
   // ended_by only applies to pointers, not arrays.
