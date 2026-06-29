@@ -10,13 +10,14 @@
 
 // constexpr basic_string& append(const charT* s, size_type pos, size_type n);
 
-#include <string>
-#include <stdexcept>
 #include <cassert>
+#include <stdexcept>
+#include <string>
 
-#include "test_macros.h"
-#include "min_allocator.h"
 #include "asan_testing.h"
+#include "min_allocator.h"
+#include "test_allocator.h"
+#include "test_macros.h"
 
 template <class S>
 TEST_CONSTEXPR_CXX20 void
@@ -67,7 +68,7 @@ TEST_CONSTEXPR_CXX20 void test_string() {
   test(S("123456789012345678901234567890"), "", 0, 0, S("123456789012345678901234567890"));
   test(S("123456789012345678901234567890"), "12345", 1, 3, S("123456789012345678901234567890234"));
   test(S("123456789012345678901234567890"),
-       "12345678901234567890",
+       "1234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890",
        5,
        10,
        S("1234567890123456789012345678906789012345"));
@@ -78,6 +79,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
 #if TEST_STD_VER >= 11
   test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
   test_string<std::basic_string<char, std::char_traits<char>, safe_allocator<char>>>();
+  test_string<std::basic_string<char, std::char_traits<char>, limited_allocator<char, 96>>>();
 #endif
 
   return true;
