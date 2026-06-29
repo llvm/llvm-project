@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Lanai.h"
+#include "LanaiAsmPrinter.h"
 #include "LanaiTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/IR/PassInstrumentation.h"
@@ -33,6 +34,9 @@ public:
   Error addInstSelector(PassManagerWrapper &PMW) const;
   void addPreSched2(PassManagerWrapper &PMW) const;
   void addPreEmitPass(PassManagerWrapper &PMW) const;
+  void addAsmPrinterBegin(PassManagerWrapper &PMW) const;
+  void addAsmPrinter(PassManagerWrapper &PMW) const;
+  void addAsmPrinterEnd(PassManagerWrapper &PMW) const;
 };
 
 void LanaiCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
@@ -54,11 +58,33 @@ void LanaiCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) const {
   addMachineFunctionPass(LanaiDelaySlotFillerPass(), PMW);
 }
 
+void LanaiCodeGenPassBuilder::addAsmPrinterBegin(
+    PassManagerWrapper &PMW) const {
+  addModulePass(LanaiAsmPrinterBeginPass(), PMW, /*Force=*/true);
+}
+
+void LanaiCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) const {
+  addMachineFunctionPass(LanaiAsmPrinterPass(), PMW);
+}
+
+void LanaiCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) const {
+  addModulePass(LanaiAsmPrinterEndPass(), PMW);
+}
+
 } // namespace
 
-void LanaiTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
+void LanaiTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "LanaiPassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
+  // TODO(boomanaiden154): Move this into the base CodeGenPassBuilder once all
+  // targets that currently implement it have a ported asm-printer pass.
+  if (PIC) {
+    PIC->addClassToPassName(LanaiAsmPrinterBeginPass::name(),
+                            "lanai-asm-printer-begin");
+    PIC->addClassToPassName(LanaiAsmPrinterPass::name(), "lanai-asmprinter");
+    PIC->addClassToPassName(LanaiAsmPrinterEndPass::name(),
+                            "lanai-asm-printer-end");
+  }
 }
 
 Error LanaiTargetMachine::buildCodeGenPipeline(
