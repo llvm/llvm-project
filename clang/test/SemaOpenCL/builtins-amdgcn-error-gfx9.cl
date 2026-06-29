@@ -16,6 +16,12 @@ void test_gfx9_builtins(global half *out0, half a0, half b0, half c0,
   *out1 = __builtin_amdgcn_s_bitreplicate(a1); // expected-error {{'__builtin_amdgcn_s_bitreplicate' needs target feature gfx9-insts}}
 }
 
+void test_s_bitreplicate(global unsigned long *out, unsigned int a)
+{
+  *out = __builtin_amdgcn_s_bitreplicate(); // expected-error {{too few arguments to function call, expected 1, have 0}}
+  *out = __builtin_amdgcn_s_bitreplicate(a, a); // expected-error {{too many arguments to function call, expected 1, have 2}}
+}
+
 void test_mov_dpp(global int* out, int src, int i, int2 i2, struct S s, float _Complex fc)
 {
   *out = __builtin_amdgcn_mov_dpp(src, i, 0, 0, false); // expected-error{{argument to '__builtin_amdgcn_mov_dpp' must be a constant integer}}
