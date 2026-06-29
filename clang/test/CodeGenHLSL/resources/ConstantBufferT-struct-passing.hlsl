@@ -91,13 +91,13 @@ void case3() {
 // CHECK-NEXT: [[CB_A_PTR:%.*]] = getelementptr inbounds %S, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_PTR]], i32 0, i32 0
 // CHECK-NEXT: [[TMP_A_PTR:%.*]] = getelementptr inbounds %struct.S, ptr [[TMP]], i32 0, i32 0
 // CHECK-NEXT: [[CBUFLOAD:%.*]] = load float, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_A_PTR]], align 4
-// CHECK-NEXT: store float [[CBUFLOAD]], ptr [[S_A_PTR]], align 4
+// CHECK-NEXT: store float [[CBUFLOAD]], ptr [[TMP_A_PTR]], align 4
   
 // tmp.b
 // CHECK-NEXT: [[CB_B_PTR:%.*]] = getelementptr inbounds %S, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_PTR]], i32 0, i32 2
 // CHECK-NEXT: [[TMP_B_PTR:%.*]] = getelementptr inbounds %struct.S, ptr [[TMP]], i32 0, i32 1
 // CHECK-NEXT: [[CBUFLOAD2:%.*]] = load <2 x double>, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_B_PTR]], align 8
-// CHECK-NEXT: store <2 x double> [[CBUFLOAD2]], ptr [[S_B_PTR]], align 8
+// CHECK-NEXT: store <2 x double> [[CBUFLOAD2]], ptr [[TMP_B_PTR]], align 8
 
 // CHECK-NEXT: call {{.*}}void @useS(S)(ptr noundef dead_on_return [[TMP]])
   useS(CBS);
@@ -111,29 +111,29 @@ void case4() {
 
 // t.p
 // CHECK-NEXT: [[CB_P_PTR:%.*]] = getelementptr inbounds %T, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_PTR]], i32 0, i32 0
-// CHECK-NEXT: [[T_P_PTR:%.*]] = getelementptr inbounds %struct.T, ptr %t, i32 0, i32 0
+// CHECK-NEXT: [[TMP_P_PTR:%.*]] = getelementptr inbounds %struct.T, ptr %t, i32 0, i32 0
 
 // t.p.a
 // CHECK-NEXT: [[CB_P_A_PTR:%.*]] = getelementptr inbounds %P, ptr addrspace([[CONST_ADDR_SPACE]]) %1, i32 0, i32 0
-// CHECK-NEXT: [[T_P_A_PTR:%.*]] = getelementptr inbounds %struct.P, ptr %2, i32 0, i32 0
+// CHECK-NEXT: [[TMP_P_A_PTR:%.*]] = getelementptr inbounds %struct.P, ptr %2, i32 0, i32 0
 // CHECK-NEXT: [[CBUF_LOAD1:%.*]] = load float, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_P_A_PTR]], align 4
-// CHECK-NEXT: store float [[CBUF_LOAD1]], ptr [[T_P_A_PTR]], align 4
+// CHECK-NEXT: store float [[CBUF_LOAD1]], ptr [[TMP_P_A_PTR]], align 4
 
 // t.arr
 // CHECK-NEXT: [[CB_ARR_PTR:%.*]] = getelementptr inbounds %T, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_PTR]], i32 0, i32 2
-// CHECK-NEXT: [[T_ARR_PTR:%.*]] = getelementptr inbounds %struct.T, ptr %t, i32 0, i32 1
+// CHECK-NEXT: [[TMP_ARR_PTR:%.*]] = getelementptr inbounds %struct.T, ptr %t, i32 0, i32 1
 
 // t.arr[0]
 // CHECK-NEXT: [[CB_ARR_0_PTR:%.*]] = getelementptr inbounds <{ [1 x <{ i32, target("[[PADDING_TYPE]]", 12) }>], i32 }>, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_ARR_PTR]], i32 0, i32 0, i32 0, i32 0
-// CHECK-NEXT: [[T_ARR_0_PTR:%.*]] = getelementptr inbounds [2 x i32], ptr [[T_ARR_PTR]], i32 0, i32 0
+// CHECK-NEXT: [[TMP_ARR_0_PTR:%.*]] = getelementptr inbounds [2 x i32], ptr [[TMP_ARR_PTR]], i32 0, i32 0
 // CHECK-NEXT: [[CBUF_LOAD2:%.*]] = load i32, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_ARR_0_PTR]], align 4
-// CHECK-NEXT: store i32 [[CBUF_LOAD2]], ptr [[T_ARR_0_PTR]], align 4
+// CHECK-NEXT: store i32 [[CBUF_LOAD2]], ptr [[TMP_ARR_0_PTR]], align 4
 
 // t.arr[1]
 // CHECK-NEXT: [[CB_ARR_1_PTR:%.*]] = getelementptr inbounds <{ [1 x <{ i32, target("[[PADDING_TYPE]]", 12) }>], i32 }>, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_ARR_PTR]], i32 0, i32 1
-// CHECK-NEXT: [[T_ARR_1_PTR:%.*]] = getelementptr inbounds [2 x i32], ptr [[T_ARR_PTR]], i32 0, i32 1
+// CHECK-NEXT: [[TMP_ARR_1_PTR:%.*]] = getelementptr inbounds [2 x i32], ptr [[TMP_ARR_PTR]], i32 0, i32 1
 // CHECK-NEXT: [[CBUF_LOAD3:%.*]] = load i32, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_ARR_1_PTR]], align 4
-// CHECK-NEXT: store i32 [[CBUF_LOAD3]], ptr [[T_ARR_1_PTR]], align 4
+// CHECK-NEXT: store i32 [[CBUF_LOAD3]], ptr [[TMP_ARR_1_PTR]], align 4
 
   T t = CBT;
 }
@@ -146,29 +146,29 @@ void case5() {
 
 // t.p
 // CHECK-NEXT: [[CB_P_PTR:%.*]] = getelementptr inbounds %T, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_PTR]], i32 0, i32 0
-// CHECK-NEXT: [[T_P_PTR:%.*]] = getelementptr inbounds %struct.T, ptr %t, i32 0, i32 0
+// CHECK-NEXT: [[TMP_P_PTR:%.*]] = getelementptr inbounds %struct.T, ptr %t, i32 0, i32 0
 
 // t.p.a
 // CHECK-NEXT: [[CB_P_A_PTR:%.*]] = getelementptr inbounds %P, ptr addrspace([[CONST_ADDR_SPACE]]) %1, i32 0, i32 0
-// CHECK-NEXT: [[T_P_A_PTR:%.*]] = getelementptr inbounds %struct.P, ptr %2, i32 0, i32 0
+// CHECK-NEXT: [[TMP_P_A_PTR:%.*]] = getelementptr inbounds %struct.P, ptr %2, i32 0, i32 0
 // CHECK-NEXT: [[CBUF_LOAD1:%.*]] = load float, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_P_A_PTR]], align 4
-// CHECK-NEXT: store float [[CBUF_LOAD1]], ptr [[T_P_A_PTR]], align 4
+// CHECK-NEXT: store float [[CBUF_LOAD1]], ptr [[TMP_P_A_PTR]], align 4
 
 // t.arr
 // CHECK-NEXT: [[CB_ARR_PTR:%.*]] = getelementptr inbounds %T, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_PTR]], i32 0, i32 2
-// CHECK-NEXT: [[T_ARR_PTR:%.*]] = getelementptr inbounds %struct.T, ptr %t, i32 0, i32 1
+// CHECK-NEXT: [[TMP_ARR_PTR:%.*]] = getelementptr inbounds %struct.T, ptr %t, i32 0, i32 1
 
 // t.arr[0]
 // CHECK-NEXT: [[CB_ARR_0_PTR:%.*]] = getelementptr inbounds <{ [1 x <{ i32, target("[[PADDING_TYPE]]", 12) }>], i32 }>, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_ARR_PTR]], i32 0, i32 0, i32 0, i32 0
-// CHECK-NEXT: [[T_ARR_0_PTR:%.*]] = getelementptr inbounds [2 x i32], ptr [[T_ARR_PTR]], i32 0, i32 0
+// CHECK-NEXT: [[TMP_ARR_0_PTR:%.*]] = getelementptr inbounds [2 x i32], ptr [[TMP_ARR_PTR]], i32 0, i32 0
 // CHECK-NEXT: [[CBUF_LOAD2:%.*]] = load i32, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_ARR_0_PTR]], align 4
-// CHECK-NEXT: store i32 [[CBUF_LOAD2]], ptr [[T_ARR_0_PTR]], align 4
+// CHECK-NEXT: store i32 [[CBUF_LOAD2]], ptr [[TMP_ARR_0_PTR]], align 4
 
 // t.arr[1]
 // CHECK-NEXT: [[CB_ARR_1_PTR:%.*]] = getelementptr inbounds <{ [1 x <{ i32, target("[[PADDING_TYPE]]", 12) }>], i32 }>, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_ARR_PTR]], i32 0, i32 1
-// CHECK-NEXT: [[T_ARR_1_PTR:%.*]] = getelementptr inbounds [2 x i32], ptr [[T_ARR_PTR]], i32 0, i32 1
+// CHECK-NEXT: [[TMP_ARR_1_PTR:%.*]] = getelementptr inbounds [2 x i32], ptr [[TMP_ARR_PTR]], i32 0, i32 1
 // CHECK-NEXT: [[CBUF_LOAD3:%.*]] = load i32, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_ARR_1_PTR]], align 4
-// CHECK-NEXT: store i32 [[CBUF_LOAD3]], ptr [[T_ARR_1_PTR]], align 4
+// CHECK-NEXT: store i32 [[CBUF_LOAD3]], ptr [[TMP_ARR_1_PTR]], align 4
 
 // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i{{(32|64)}}(ptr align 1 [[TMP]], ptr align 1 %t, i{{(32|64)}} 12, i1 false)
 
@@ -183,29 +183,29 @@ void case6() {
 
 // t.p
 // CHECK-NEXT: [[CB_P_PTR:%.*]] = getelementptr inbounds %T, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_PTR]], i32 0, i32 0
-// CHECK-NEXT: [[T_P_PTR:%.*]] = getelementptr inbounds %struct.T, ptr [[TMP]], i32 0, i32 0
+// CHECK-NEXT: [[TMP_P_PTR:%.*]] = getelementptr inbounds %struct.T, ptr [[TMP]], i32 0, i32 0
 
 // t.p.a
 // CHECK-NEXT: [[CB_P_A_PTR:%.*]] = getelementptr inbounds %P, ptr addrspace([[CONST_ADDR_SPACE]]) %1, i32 0, i32 0
-// CHECK-NEXT: [[T_P_A_PTR:%.*]] = getelementptr inbounds %struct.P, ptr %2, i32 0, i32 0
+// CHECK-NEXT: [[TMP_P_A_PTR:%.*]] = getelementptr inbounds %struct.P, ptr %2, i32 0, i32 0
 // CHECK-NEXT: [[CBUF_LOAD1:%.*]] = load float, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_P_A_PTR]], align 4
-// CHECK-NEXT: store float [[CBUF_LOAD1]], ptr [[T_P_A_PTR]], align 4
+// CHECK-NEXT: store float [[CBUF_LOAD1]], ptr [[TMP_P_A_PTR]], align 4
 
 // t.arr
 // CHECK-NEXT: [[CB_ARR_PTR:%.*]] = getelementptr inbounds %T, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_PTR]], i32 0, i32 2
-// CHECK-NEXT: [[T_ARR_PTR:%.*]] = getelementptr inbounds %struct.T, ptr [[TMP]], i32 0, i32 1
+// CHECK-NEXT: [[TMP_ARR_PTR:%.*]] = getelementptr inbounds %struct.T, ptr [[TMP]], i32 0, i32 1
 
 // t.arr[0]
 // CHECK-NEXT: [[CB_ARR_0_PTR:%.*]] = getelementptr inbounds <{ [1 x <{ i32, target("[[PADDING_TYPE]]", 12) }>], i32 }>, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_ARR_PTR]], i32 0, i32 0, i32 0, i32 0
-// CHECK-NEXT: [[T_ARR_0_PTR:%.*]] = getelementptr inbounds [2 x i32], ptr [[T_ARR_PTR]], i32 0, i32 0
+// CHECK-NEXT: [[TMP_ARR_0_PTR:%.*]] = getelementptr inbounds [2 x i32], ptr [[TMP_ARR_PTR]], i32 0, i32 0
 // CHECK-NEXT: [[CBUF_LOAD2:%.*]] = load i32, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_ARR_0_PTR]], align 4
-// CHECK-NEXT: store i32 [[CBUF_LOAD2]], ptr [[T_ARR_0_PTR]], align 4
+// CHECK-NEXT: store i32 [[CBUF_LOAD2]], ptr [[TMP_ARR_0_PTR]], align 4
 
 // t.arr[1]
 // CHECK-NEXT: [[CB_ARR_1_PTR:%.*]] = getelementptr inbounds <{ [1 x <{ i32, target("[[PADDING_TYPE]]", 12) }>], i32 }>, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_ARR_PTR]], i32 0, i32 1
-// CHECK-NEXT: [[T_ARR_1_PTR:%.*]] = getelementptr inbounds [2 x i32], ptr [[T_ARR_PTR]], i32 0, i32 1
+// CHECK-NEXT: [[TMP_ARR_1_PTR:%.*]] = getelementptr inbounds [2 x i32], ptr [[TMP_ARR_PTR]], i32 0, i32 1
 // CHECK-NEXT: [[CBUF_LOAD3:%.*]] = load i32, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_ARR_1_PTR]], align 4
-// CHECK-NEXT: store i32 [[CBUF_LOAD3]], ptr [[T_ARR_1_PTR]], align 4
+// CHECK-NEXT: store i32 [[CBUF_LOAD3]], ptr [[TMP_ARR_1_PTR]], align 4
   useT(CBT);
 }
 
