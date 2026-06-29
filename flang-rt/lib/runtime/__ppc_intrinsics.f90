@@ -7,6 +7,7 @@
 !===------------------------------------------------------------------------===!
 
 module __ppc_intrinsics
+  use __fortran_builtins, __ppc_types ! implicit dependencies, made explicit for CMake
 
   private
 
