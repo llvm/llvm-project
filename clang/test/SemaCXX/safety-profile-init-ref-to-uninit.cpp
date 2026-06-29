@@ -117,6 +117,25 @@ void test_assignment() {
   (void)p; (void)q;
 }
 
+// Assignment through indirection: the assigned-to pointer is reached by
+// dereference or subscript, so it cannot carry a local [[ref_to_uninit]]
+// marker. It is the default unmarked pointer and must not be bound to
+// uninitialized memory, exactly as a directly-named pointer would be.
+void test_assignment_indirect() {
+  int *p = nullptr;
+  int **pp = &p;
+  *pp = &g_uninit;   // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  *pp = &g_init;     // OK
+  (*pp) = &g_uninit; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  *pp = new int;     // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  *pp = new int(0);  // OK
+
+  int *arr[3] = {};
+  arr[0] = &g_uninit; // expected-error {{pointer to uninitialized memory must be marked '[[ref_to_uninit]]' under profile 'std::init'}}
+  arr[1] = &g_init;   // OK
+  (void)pp; (void)arr;
+}
+
 void test_suppress() {
   // no-profiles-warning@+1 {{'profiles::suppress' attribute ignored}}
   [[profiles::suppress(std::init, rule: "ref_to_uninit")]] int *s = &g_uninit; // OK: suppressed
