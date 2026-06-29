@@ -535,12 +535,12 @@ bool RISCVAsmPrinter::emitDirectiveOptionArch() {
     if (STI->hasFeature(Feature.Value) == MCSTI.hasFeature(Feature.Value))
       continue;
 
-    if (!llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.key()))
+    if (!llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.Key))
       continue;
 
     auto Delta = STI->hasFeature(Feature.Value) ? RISCVOptionArchArgType::Plus
                                                 : RISCVOptionArchArgType::Minus;
-    StringRef ExtName = Feature.key();
+    StringRef ExtName = Feature.Key;
     ExtName.consume_front("experimental-");
     NeedEmitStdOptionArgs.emplace_back(Delta, ExtName.str());
   }
@@ -643,9 +643,9 @@ void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
         if (!errorToBool(ParseResult.takeError())) {
           auto &ISAInfo = *ParseResult;
           for (const auto &Feature : RISCVFeatureKV) {
-            if (ISAInfo->hasExtension(Feature.key()) &&
+            if (ISAInfo->hasExtension(Feature.Key) &&
                 !SubtargetInfo.hasFeature(Feature.Value))
-              SubtargetInfo.ToggleFeature(Feature.key());
+              SubtargetInfo.ToggleFeature(Feature.Key);
           }
         }
       }

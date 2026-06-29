@@ -335,9 +335,9 @@ private:
     std::string Ret;
     for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
       if (Features[KV.Value])
-        Ret += (StringRef("+") + KV.key() + ",").str();
+        Ret += (StringRef("+") + KV.Key + ",").str();
       else
-        Ret += (StringRef("-") + KV.key() + ",").str();
+        Ret += (StringRef("-") + KV.Key + ",").str();
     }
     // remove trailing ','
     Ret.pop_back();
@@ -403,7 +403,7 @@ private:
     for (const SubtargetFeatureKV &KV : WebAssemblyFeatureKV) {
       if (Features[KV.Value]) {
         // Mark features as used
-        std::string MDKey = (StringRef("wasm-feature-") + KV.key()).str();
+        std::string MDKey = (StringRef("wasm-feature-") + KV.Key).str();
         M.addModuleFlag(Module::ModFlagBehavior::Error, MDKey,
                         wasm::WASM_FEATURE_PREFIX_USED);
       }

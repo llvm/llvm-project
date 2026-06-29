@@ -28,8 +28,7 @@ static const T *Find(StringRef S, ArrayRef<T> A) {
   // Binary search the array
   auto F = llvm::lower_bound(A, S);
   // If not found then return NULL
-  if (F == A.end() || StringRef(F->key()) != S)
-    return nullptr;
+  if (F == A.end() || StringRef(F->Key) != S) return nullptr;
   // Return the found array item
   return F;
 }
@@ -98,7 +97,7 @@ static void ApplyFeatureFlag(FeatureBitset &Bits, StringRef Feature,
 static size_t getLongestEntryLength(ArrayRef<SubtargetFeatureKV> Table) {
   size_t MaxLen = 0;
   for (auto &I : Table)
-    MaxLen = std::max(MaxLen, std::strlen(I.key()));
+    MaxLen = std::max(MaxLen, std::strlen(I.Key));
   return MaxLen;
 }
 
@@ -139,8 +138,7 @@ static void Help(ArrayRef<StringRef> CPUNames,
   // Print the Feature table.
   errs() << "Available features for this target:\n\n";
   for (auto &Feature : FeatTable)
-    errs() << format("  %-*s - %s.\n", MaxFeatLen, Feature.key(),
-                     Feature.desc());
+    errs() << format("  %-*s - %s.\n", MaxFeatLen, Feature.Key, Feature.Desc);
   errs() << '\n';
 
   errs() << "Use +feature to enable a feature, or -feature to disable it.\n"
@@ -356,8 +354,8 @@ const MCSchedModel &MCSubtargetInfo::getSchedModelForCPU(StringRef CPU) const {
              << " (ignoring processor)\n";
     return MCSchedModel::Default;
   }
-  assert(CPUEntry->schedModel() && "Missing processor SchedModel value");
-  return *CPUEntry->schedModel();
+  assert(CPUEntry->SchedModel && "Missing processor SchedModel value");
+  return *CPUEntry->SchedModel;
 }
 
 InstrItineraryData
@@ -371,12 +369,13 @@ void MCSubtargetInfo::initInstrItins(InstrItineraryData &InstrItins) const {
                                   ForwardingPaths);
 }
 
-std::vector<const SubtargetFeatureKV *>
+std::vector<SubtargetFeatureKV>
 MCSubtargetInfo::getEnabledProcessorFeatures() const {
-  std::vector<const SubtargetFeatureKV *> EnabledFeatures;
-  for (const SubtargetFeatureKV &FeatureKV : ProcFeatures)
-    if (FeatureBits.test(FeatureKV.Value))
-      EnabledFeatures.push_back(&FeatureKV);
+  std::vector<SubtargetFeatureKV> EnabledFeatures;
+  auto IsEnabled = [&](const SubtargetFeatureKV &FeatureKV) {
+    return FeatureBits.test(FeatureKV.Value);
+  };
+  llvm::copy_if(ProcFeatures, std::back_inserter(EnabledFeatures), IsEnabled);
   return EnabledFeatures;
 }
 
