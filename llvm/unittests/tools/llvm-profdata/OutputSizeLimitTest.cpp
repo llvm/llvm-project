@@ -168,3 +168,5 @@ TEST(TestOutputSizeLimit, TestOutputSizeLimitExtBinaryCompressed) {
                          Succeeded());
 }
 #endif
+
+#undef RETURN_IF_ERROR
