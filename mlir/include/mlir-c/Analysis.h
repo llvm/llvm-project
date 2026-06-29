@@ -64,6 +64,30 @@ MLIR_CAPI_EXPORTED void mlirGetBackwardSlice(MlirOperation op,
                                              void *filterUserData,
                                              MlirOperation *slice);
 
+//===----------------------------------------------------------------------===//
+// Topological sort
+//===----------------------------------------------------------------------===//
+
+/// Returns the number of blocks in the given region, i.e. the number of entries
+/// mlirRegionGetBlocksSortedByDominance will write. Use this to allocate the
+/// buffer passed to mlirRegionGetBlocksSortedByDominance.
+MLIR_CAPI_EXPORTED intptr_t
+mlirRegionGetBlocksSortedByDominanceSize(MlirRegion region);
+
+/// Writes the blocks of the given region, sorted by dominance (a stable order
+/// in which a block appears after all blocks that dominate it), into the
+/// caller-allocated `blocks` buffer, which must have room for
+/// mlirRegionGetBlocksSortedByDominanceSize() entries.
+MLIR_CAPI_EXPORTED void
+mlirRegionGetBlocksSortedByDominance(MlirRegion region, MlirBlock *blocks);
+
+/// Topologically sorts the `nOps` operations in `ops` (taking region semantics
+/// into account) so that definitions come before uses, writing the result into
+/// the caller-allocated `sorted` buffer, which must have room for `nOps`
+/// entries. The input operations need not all belong to the same block.
+MLIR_CAPI_EXPORTED void mlirTopologicalSort(intptr_t nOps, MlirOperation *ops,
+                                            MlirOperation *sorted);
+
 #ifdef __cplusplus
 }
 #endif

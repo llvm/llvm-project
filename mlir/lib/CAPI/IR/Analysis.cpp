@@ -9,6 +9,7 @@
 #include "mlir-c/Analysis.h"
 
 #include "mlir/Analysis/SliceAnalysis.h"
+#include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/CAPI/IR.h"
 #include "mlir/CAPI/Support.h"
 
@@ -70,4 +71,26 @@ void mlirGetBackwardSlice(MlirOperation op, MlirSliceFilterCallback filter,
   (void)computeBackwardSlice(op, filter, filterUserData, result);
   for (intptr_t i = 0, e = static_cast<intptr_t>(result.size()); i < e; ++i)
     slice[i] = wrap(result[i]);
+}
+
+intptr_t mlirRegionGetBlocksSortedByDominanceSize(MlirRegion region) {
+  return static_cast<intptr_t>(
+      getBlocksSortedByDominance(*unwrap(region)).size());
+}
+
+void mlirRegionGetBlocksSortedByDominance(MlirRegion region,
+                                          MlirBlock *blocks) {
+  SetVector<Block *> sorted = getBlocksSortedByDominance(*unwrap(region));
+  for (intptr_t i = 0, e = static_cast<intptr_t>(sorted.size()); i < e; ++i)
+    blocks[i] = wrap(sorted[i]);
+}
+
+void mlirTopologicalSort(intptr_t nOps, MlirOperation *ops,
+                         MlirOperation *sorted) {
+  SetVector<Operation *> toSort;
+  for (intptr_t i = 0; i < nOps; ++i)
+    toSort.insert(unwrap(ops[i]));
+  SetVector<Operation *> result = topologicalSort(toSort);
+  for (intptr_t i = 0, e = static_cast<intptr_t>(result.size()); i < e; ++i)
+    sorted[i] = wrap(result[i]);
 }
