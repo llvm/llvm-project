@@ -10,8 +10,10 @@
 // RUN: mlir-capi-rewrite-test 2>&1 | FileCheck %s
 
 #include "mlir-c/Rewrite.h"
+#include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir-c/IR.h"
+#include "mlir-c/RegisterEverything.h"
 
 #include <assert.h>
 #include <inttypes.h>
@@ -1960,6 +1962,57 @@ void testTypeConverter1ToNConversionErasure(MlirContext ctx) {
   fprintf(stderr, "testTypeConverter1ToNConversionErasure: PASSED\n");
 }
 
+void testDialectMaterializeConstant(MlirContext ctx) {
+  // CHECK-LABEL: @testDialectMaterializeConstant
+  fprintf(stderr, "@testDialectMaterializeConstant\n");
+
+  MlirDialectRegistry registry = mlirDialectRegistryCreate();
+  mlirRegisterAllDialects(registry);
+  mlirContextAppendDialectRegistry(ctx, registry);
+  mlirDialectRegistryDestroy(registry);
+
+  MlirDialect arith =
+      mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("arith"));
+  mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("func"));
+
+  const char *moduleString = "func.func @f() {\n"
+                             "  return\n"
+                             "}\n";
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleString));
+  MlirBlock body = mlirModuleGetBody(module);
+  MlirOperation funcOp = mlirBlockGetFirstOperation(body);
+  MlirRegion funcRegion = mlirOperationGetRegion(funcOp, 0);
+  MlirBlock funcBody = mlirRegionGetFirstBlock(funcRegion);
+
+  MlirRewriterBase rewriter = mlirIRRewriterCreate(ctx);
+  mlirRewriterBaseSetInsertionPointToStart(rewriter, funcBody);
+
+  // Materialize an i32 constant of value 42 using the arith dialect's hook.
+  MlirType i32 = mlirIntegerTypeGet(ctx, 32);
+  MlirAttribute value = mlirIntegerAttrGet(i32, 42);
+  MlirLocation loc = mlirLocationUnknownGet(ctx);
+  MlirOperation constOp =
+      mlirDialectMaterializeConstant(arith, rewriter, value, i32, loc);
+  assert(!mlirOperationIsNull(constOp));
+  mlirOperationDump(constOp);
+  // CHECK: arith.constant 42 : i32
+
+  // A dialect that does not materialize the given constant returns null. The
+  // func dialect has no constant materializer, so it returns a null operation.
+  MlirDialect func =
+      mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("func"));
+  MlirOperation none =
+      mlirDialectMaterializeConstant(func, rewriter, value, i32, loc);
+  assert(mlirOperationIsNull(none));
+
+  mlirIRRewriterDestroy(rewriter);
+  mlirModuleDestroy(module);
+
+  // CHECK: testDialectMaterializeConstant: PASSED
+  fprintf(stderr, "testDialectMaterializeConstant: PASSED\n");
+}
+
 int main(void) {
   MlirContext ctx = mlirContextCreate();
   mlirContextSetAllowUnregisteredDialects(ctx, true);
@@ -1988,6 +2041,7 @@ int main(void) {
   testConversionReplaceOpWithMultipleRanges(ctx);
   testTypeConverter1ToNOperandRequires1ToNCallback(ctx);
   testTypeConverter1ToNConversionErasure(ctx);
+  testDialectMaterializeConstant(ctx);
 
   mlirContextDestroy(ctx);
   return 0;
