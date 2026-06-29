@@ -59681,9 +59681,9 @@ static SDValue matchPMADDWD(SelectionDAG &DAG, SDNode *N,
     if (N0.getValueType().getScalarType() != MVT::i16)
       return SDValue();
 
-    // A shift by more than 15 would overflow an i16.
+    // A shift by more 15 or more would overflow a signed i16.
     if (!ISD::matchUnaryPredicate(Mul.getOperand(1), [](ConstantSDNode *C) {
-          return C->getAPIntValue().ule(15);
+          return C->getAPIntValue().ult(15);
         }))
       return SDValue();
 

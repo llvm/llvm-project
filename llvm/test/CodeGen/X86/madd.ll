@@ -3883,16 +3883,52 @@ define <3 x i32> @oddvector_shl(<12 x i16> %A) {
    ret <3 x i32> %ret
 }
 
+; Don't form pmaddwd for shift by 15, because this would get interpreted as
+; a multiply by -2^15 rather than +2^15.
 define <4 x i32> @shl15(<8 x i16> %x) {
-; SSE-LABEL: shl15:
-; SSE:       # %bb.0:
-; SSE-NEXT:    pmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [32768,32768,32768,32768,32768,32768,32768,32768]
-; SSE-NEXT:    retq
+; SSE2-LABEL: shl15:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3]
+; SSE2-NEXT:    psrad $16, %xmm1
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4,4,5,5,6,6,7,7]
+; SSE2-NEXT:    psrad $16, %xmm0
+; SSE2-NEXT:    pslld $15, %xmm0
+; SSE2-NEXT:    pslld $15, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm2
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,2],xmm0[0,2]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,3],xmm0[1,3]
+; SSE2-NEXT:    paddd %xmm2, %xmm1
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    retq
 ;
-; AVX-LABEL: shl15:
-; AVX:       # %bb.0:
-; AVX-NEXT:    vpmaddwd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [32768,32768,32768,32768,32768,32768,32768,32768]
-; AVX-NEXT:    retq
+; SSE42-LABEL: shl15:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; SSE42-NEXT:    pmovsxwd %xmm1, %xmm1
+; SSE42-NEXT:    pmovsxwd %xmm0, %xmm0
+; SSE42-NEXT:    pslld $15, %xmm0
+; SSE42-NEXT:    pslld $15, %xmm1
+; SSE42-NEXT:    phaddd %xmm1, %xmm0
+; SSE42-NEXT:    retq
+;
+; AVX1-LABEL: shl15:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
+; AVX1-NEXT:    vpmovsxwd %xmm1, %xmm1
+; AVX1-NEXT:    vpmovsxwd %xmm0, %xmm0
+; AVX1-NEXT:    vpslld $15, %xmm0, %xmm0
+; AVX1-NEXT:    vpslld $15, %xmm1, %xmm1
+; AVX1-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX256-LABEL: shl15:
+; AVX256:       # %bb.0:
+; AVX256-NEXT:    vpmovsxwd %xmm0, %ymm0
+; AVX256-NEXT:    vpslld $15, %ymm0, %ymm0
+; AVX256-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX256-NEXT:    vphaddd %xmm1, %xmm0, %xmm0
+; AVX256-NEXT:    vzeroupper
+; AVX256-NEXT:    retq
   %s = sext <8 x i16> %x to <8 x i32>
   %m = shl <8 x i32> %s, splat (i32 15)
   %even = shufflevector <8 x i32> %m, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
