@@ -759,7 +759,8 @@ private:
 
   // This function handles both ASCII and Unicode identifiers after
   // the first codepoint of the identifyier has been parsed.
-  bool LexIdentifierContinue(Token &Result, const char *CurPtr);
+  bool LexIdentifierContinue(Token &Result, const char *CurPtr,
+                             bool HasDollar = false);
 
   bool LexNumericConstant    (Token &Result, const char *CurPtr);
   bool LexStringLiteral      (Token &Result, const char *CurPtr,

@@ -1182,7 +1182,7 @@ StringRef Lexer::getImmediateMacroNameForDiagnostics(
 }
 
 bool Lexer::isAsciiIdentifierContinueChar(char c, const LangOptions &LangOpts) {
-  return isAsciiIdentifierContinue(c, LangOpts.DollarIdents);
+  return isAsciiIdentifierContinue(c, LangOpts.DollarMacros);
 }
 
 bool Lexer::isNewLineEscaped(const char *BufferStart, const char *Str) {
@@ -1633,7 +1633,7 @@ static bool isAllowedIDChar(uint32_t C, const LangOptions &LangOpts,
                             bool &IsExtension) {
   if (LangOpts.AsmPreprocessor) {
     return false;
-  } else if (LangOpts.DollarIdents && '$' == C) {
+  } else if ((LangOpts.DollarMacros || LangOpts.DollarIdents) && '$' == C) {
     return true;
   } else if (LangOpts.CPlusPlus || LangOpts.C23) {
     // A non-leading codepoint must have the XID_Continue property.
@@ -2005,8 +2005,9 @@ fastParseASCIIIdentifier(const char *CurPtr,
   return CurPtr;
 }
 
-bool Lexer::LexIdentifierContinue(Token &Result, const char *CurPtr) {
-  // Match [_A-Za-z0-9]*, we have already matched an identifier start.
+bool Lexer::LexIdentifierContinue(Token &Result, const char *CurPtr,
+                                  bool HasDollar) {
+  // Match [_A-Za-z0-9$]*, we have already matched an identifier start.
 
   while (true) {
 
@@ -2020,12 +2021,14 @@ bool Lexer::LexIdentifierContinue(Token &Result, const char *CurPtr) {
       continue;
     }
     if (C == '$') {
-      // If we hit a $ and they are not supported in identifiers, we are done.
-      if (!LangOpts.DollarIdents)
+      // If we hit a $ and they are not supported in macros, we are done.
+      if (!LangOpts.DollarMacros && !LangOpts.DollarIdents)
         break;
       // Otherwise, emit a diagnostic and continue.
       if (!isLexingRawMode())
         Diag(CurPtr, diag::ext_dollar_in_identifier);
+
+      HasDollar = true;
       CurPtr = ConsumeChar(CurPtr, Size, Result);
       continue;
     }
@@ -2048,9 +2051,12 @@ bool Lexer::LexIdentifierContinue(Token &Result, const char *CurPtr) {
 
   // Fill in Result.IdentifierInfo and update the token kind,
   // looking up the identifier in the identifier table.
-  const IdentifierInfo *II = PP->LookUpIdentifierInfo(Result);
+  IdentifierInfo *II = PP->LookUpIdentifierInfo(Result);
   // Note that we have to call PP->LookUpIdentifierInfo() even for code
   // completion, it writes IdentifierInfo into Result, and callers rely on it.
+
+  if (HasDollar)
+    II->setDollarIdentifier(true);
 
   // If the completion point is at the end of an identifier, we want to treat
   // the identifier as incomplete even if it resolves to a macro or a keyword.
@@ -4104,16 +4110,17 @@ LexStart:
     MIOpt.ReadToken();
     return LexIdentifierContinue(Result, CurPtr);
   case '$':   // $ in identifiers.
-    if (LangOpts.DollarIdents) {
-      if (!isLexingRawMode())
-        Diag(CurPtr-1, diag::ext_dollar_in_identifier);
-      // Notify MIOpt that we read a non-whitespace/non-comment token.
-      MIOpt.ReadToken();
-      return LexIdentifierContinue(Result, CurPtr);
+    if (!LangOpts.DollarMacros && !LangOpts.DollarIdents) {
+      Kind = tok::unknown;
+      break;
     }
 
-    Kind = tok::unknown;
-    break;
+    if (!isLexingRawMode())
+      Diag(CurPtr - 1, diag::ext_dollar_in_identifier);
+
+    // Notify MIOpt that we read a non-whitespace/non-comment token.
+    MIOpt.ReadToken();
+    return LexIdentifierContinue(Result, CurPtr, true);
 
   // C99 6.4.4: Character Constants.
   case '\'':

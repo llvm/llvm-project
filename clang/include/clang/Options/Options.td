@@ -2306,6 +2306,11 @@ defm dollars_in_identifiers : BoolFOption<"dollars-in-identifiers",
   PosFlag<SetTrue, [], [ClangOption], "Allow">,
   NegFlag<SetFalse, [], [ClangOption], "Disallow">,
   BothFlags<[], [ClangOption, CC1Option], " '$' in identifiers">>;
+defm dollars_in_macros : BoolFOption<"dollars-in-macros",
+  LangOpts<"DollarMacros">, Default<!strconcat("!", asm_preprocessor.KeyPath)>,
+  PosFlag<SetTrue, [], [CC1Option], "Allow">,
+  NegFlag<SetFalse, [], [CC1Option], "Disallow">,
+  BothFlags<[], [CC1Option], " '$' in macros">>;
 
 defm dwarf2_cfi_asm
     : BoolFOption<"dwarf2-cfi-asm", CodeGenOpts<"Dwarf2CFIAsm">, DefaultFalse,

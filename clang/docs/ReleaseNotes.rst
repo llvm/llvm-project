@@ -71,6 +71,28 @@ C/C++ Language Potentially Breaking Changes
   Clang would previously ``break`` out of the ``while`` loop, whereas GCC (since version 9) would
   ``break`` out of the ``for`` loop here. Now, Clang and GCC both break out of the ``for`` loop.
 
+- Clang now allows `$` to appear in identifiers during preprocessing, even when they are not
+  otherwise supported in identifiers (e.g. when compiling with ``-fno-dollars-in-identifiers``).
+  
+  Previously preprocessing behavior was depending on whether `$` is supported in identifiers or not.
+  This changed whether a `$` was parsed as (part of) an identifier token or a separate token.
+  
+  For example consider:
+
+  .. code-block:: c++
+
+    #define f(x) #x
+    #define g(x) f(x)
+    #define foo bar
+    g($foo)
+
+  Before this change, preprocessing beavior would silently change - if `$` is allowed in identifiers,
+  the code above would expand to `"$foo"` and `"$bar"` otherwise. Now, it will always expand to `"$foo"`,
+  regardless of support for `$` in identifiers.
+
+  The previous behavior can be restored by passing the option ``-fno-dollars-in-macros`` to the clang frontend (in 
+  conjunction with ``-fno-dollars-in-identifiers``).
+
 C++ Specific Potentially Breaking Changes
 -----------------------------------------
 

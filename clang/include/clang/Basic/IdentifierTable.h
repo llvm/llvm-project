@@ -256,7 +256,11 @@ class alignas(IdentifierInfoAlignment) IdentifierInfo {
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsKeywordInCpp : 1;
 
-  // 21 bits left in a 64-bit word.
+  // True if this identifier contains a $
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsDollarIdentifier : 1;
+
+  // 20 bits left in a 64-bit word.
 
   // Managed by the language front-end.
   void *FETokenInfo = nullptr;
@@ -466,6 +470,15 @@ public:
   bool isExtensionToken() const { return IsExtension; }
   void setIsExtensionToken(bool Val) {
     IsExtension = Val;
+    if (Val)
+      NeedsHandleIdentifier = true;
+    else
+      RecomputeNeedsHandleIdentifier();
+  }
+
+  bool isDollarIdentifier() const { return IsDollarIdentifier; }
+  void setDollarIdentifier(bool Val) {
+    IsDollarIdentifier = Val;
     if (Val)
       NeedsHandleIdentifier = true;
     else
